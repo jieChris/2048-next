@@ -1,5 +1,6 @@
 window.requestAnimationFrame(function () {
   var modeKey = "standard_4x4_pow2_no_undo";
+  var bootstrap = window.LegacyBootstrapRuntime;
   function readPracticeRulesetParam() {
     try {
       var params = new URLSearchParams(window.location.search || "");
@@ -26,35 +27,8 @@ window.requestAnimationFrame(function () {
     return cfg;
   }
 
-  function attachLegacyEngineBridge(modeKey, modeConfig, manager) {
-    var bridgeApi = window.LegacyBridge;
-    if (bridgeApi && typeof bridgeApi.attachLegacyEngineToWindow === "function") {
-      return bridgeApi.attachLegacyEngineToWindow(manager, modeKey, modeConfig);
-    }
-    window.__legacyEngine = {
-      manager: manager || null,
-      modeKey: modeKey || "",
-      modeConfig: modeConfig || null
-    };
-    return window.__legacyEngine;
-  }
-
-  function startGameWithBootstrap(modeKey, modeConfig) {
-    var bootstrap = window.LegacyBootstrapRuntime;
-    if (bootstrap && typeof bootstrap.startGame === "function") {
-      return bootstrap.startGame({
-        modeKey: modeKey,
-        modeConfig: modeConfig,
-        inputManagerCtor: KeyboardInputManager,
-        defaultBoardWidth: 4
-      });
-    }
-
-    var boardWidth = modeConfig && modeConfig.board_width ? modeConfig.board_width : 4;
-    game_manager = new GameManager(boardWidth, KeyboardInputManager, HTMLActuator, LocalScoreManager);
-    window.game_manager = game_manager;
-    attachLegacyEngineBridge(modeKey, modeConfig, window.game_manager);
-    return window.game_manager;
+  if (!bootstrap || typeof bootstrap.startGame !== "function") {
+    throw new Error("LegacyBootstrapRuntime.startGame is required");
   }
 
   if (typeof document !== "undefined" && document.body) {
@@ -70,7 +44,12 @@ window.requestAnimationFrame(function () {
     }
   }
 
-  startGameWithBootstrap(modeKey, window.GAME_MODE_CONFIG);
+  bootstrap.startGame({
+    modeKey: modeKey,
+    modeConfig: window.GAME_MODE_CONFIG,
+    inputManagerCtor: KeyboardInputManager,
+    defaultBoardWidth: 4
+  });
 
 });
 

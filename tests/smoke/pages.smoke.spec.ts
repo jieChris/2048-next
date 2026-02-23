@@ -5,17 +5,18 @@ interface SmokePage {
   path: string;
   expectGameManager: boolean;
   expectLegacyEngine: boolean;
+  expectBootstrapRuntime: boolean;
 }
 
 const PAGES: SmokePage[] = [
-  { name: "index", path: "/index.html", expectGameManager: true, expectLegacyEngine: true },
-  { name: "undo", path: "/undo_2048.html", expectGameManager: true, expectLegacyEngine: true },
-  { name: "capped", path: "/capped_2048.html", expectGameManager: true, expectLegacyEngine: true },
-  { name: "practice", path: "/Practice_board.html", expectGameManager: true, expectLegacyEngine: true },
-  { name: "play", path: "/play.html?mode_key=standard_4x4_pow2_no_undo", expectGameManager: true, expectLegacyEngine: true },
-  { name: "replay", path: "/replay.html", expectGameManager: true, expectLegacyEngine: true },
-  { name: "modes", path: "/modes.html", expectGameManager: false, expectLegacyEngine: false },
-  { name: "history", path: "/history.html", expectGameManager: false, expectLegacyEngine: false }
+  { name: "index", path: "/index.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true },
+  { name: "undo", path: "/undo_2048.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true },
+  { name: "capped", path: "/capped_2048.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true },
+  { name: "practice", path: "/Practice_board.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true },
+  { name: "play", path: "/play.html?mode_key=standard_4x4_pow2_no_undo", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true },
+  { name: "replay", path: "/replay.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true },
+  { name: "modes", path: "/modes.html", expectGameManager: false, expectLegacyEngine: false, expectBootstrapRuntime: false },
+  { name: "history", path: "/history.html", expectGameManager: false, expectLegacyEngine: false, expectBootstrapRuntime: false }
 ];
 
 function shouldIgnoreConsoleError(text: string): boolean {
@@ -47,6 +48,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
       const hasGameManager = await page.evaluate(() => Boolean((window as any).game_manager));
       const hasLegacyEngine = await page.evaluate(() => Boolean((window as any).__legacyEngine));
+      const hasBootstrapRuntime = await page.evaluate(
+        () => Boolean((window as any).LegacyBootstrapRuntime?.startGame)
+      );
+      const hasLegacyEngineConfig = await page.evaluate(() => {
+        const payload = (window as any).__legacyEngine;
+        return Boolean(payload && payload.engineConfig && Number(payload.engineConfig.width) > 0);
+      });
 
       expect(
         hasGameManager,
@@ -56,6 +64,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         hasLegacyEngine,
         `${entry.name} __legacyEngine presence mismatch`
       ).toBe(entry.expectLegacyEngine);
+      expect(
+        hasBootstrapRuntime,
+        `${entry.name} LegacyBootstrapRuntime presence mismatch`
+      ).toBe(entry.expectBootstrapRuntime);
+      if (entry.expectLegacyEngine) {
+        expect(
+          hasLegacyEngineConfig,
+          `${entry.name} __legacyEngine.engineConfig contract mismatch`
+        ).toBe(true);
+      }
 
       expect(pageErrors, `${entry.name} page errors:\n${pageErrors.join("\n")}`).toEqual([]);
       expect(

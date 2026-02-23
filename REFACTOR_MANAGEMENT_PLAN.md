@@ -42,7 +42,7 @@ Deliverables:
 - Thin legacy entry files that call shared bootstrap.
 - Current progress:
   - Added shared runtime bootstrap entry: `js/legacy_bootstrap_runtime.js`
-  - `application/play/capped/replay` now use shared `startGame` path with local fallback
+  - `application/play/capped/replay` now use shared `LegacyBootstrapRuntime.startGame` as single startup path
 
 Acceptance:
 - No behavior difference on game flow and mode selection.
@@ -51,13 +51,16 @@ Acceptance:
 Rollback:
 - Feature flag or commit rollback to previous entry scripts.
 
-### M3 - Pure Core Extraction
+### M3 - Pure Core Extraction (in progress)
 Goal:
 - Move deterministic game rules out of `js/game_manager.js` into `src/core`.
 
 Deliverables:
 - Core modules for move/merge/spawn/outcome logic.
 - Unit tests for pow2 and fibonacci paths.
+- Current progress:
+  - Extracted pure rules helpers to `src/core/rules.ts`
+  - Added unit tests in `tests/unit/core-rules.spec.ts`
 
 Acceptance:
 - Same board transition and score outputs for golden test vectors.
