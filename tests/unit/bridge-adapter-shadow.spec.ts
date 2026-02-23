@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyAdapterMoveResultToParityState,
+  buildAdapterParityABDiffSummary,
   buildAdapterSessionParityReport,
   createInitialAdapterParityState
 } from "../../src/bridge/adapter-shadow";
@@ -138,5 +139,100 @@ describe("bridge adapter shadow", () => {
     expect(report.isScoreAligned).toBeNull();
     expect(report.undoUsedFromSnapshot).toBeNull();
     expect(report.snapshotUpdatedAt).toBeNull();
+  });
+
+  it("builds comparable AB diff summary when both reports exist", () => {
+    const legacyReport = buildAdapterSessionParityReport({
+      parityState: applyAdapterMoveResultToParityState(createInitialAdapterParityState("standard"), {
+        reason: "move",
+        direction: 0,
+        moved: true,
+        score: 128,
+        over: false,
+        won: false,
+        at: 100
+      }),
+      snapshot: {
+        adapterMode: "legacy-bridge",
+        modeKey: "standard",
+        updatedAt: 100,
+        lastMoveResult: {
+          score: 128,
+          undoUsed: 1
+        }
+      },
+      modeKey: "standard",
+      adapterMode: "legacy-bridge"
+    });
+
+    const coreReport = buildAdapterSessionParityReport({
+      parityState: applyAdapterMoveResultToParityState(createInitialAdapterParityState("standard"), {
+        reason: "move",
+        direction: 0,
+        moved: true,
+        score: 128,
+        over: false,
+        won: false,
+        at: 120
+      }),
+      snapshot: {
+        adapterMode: "core-adapter",
+        modeKey: "standard",
+        updatedAt: 121,
+        lastMoveResult: {
+          score: 128,
+          undoUsed: 1
+        }
+      },
+      modeKey: "standard",
+      adapterMode: "core-adapter"
+    });
+
+    const diff = buildAdapterParityABDiffSummary({
+      legacyBridgeReport: legacyReport,
+      coreAdapterReport: coreReport,
+      modeKey: "standard"
+    });
+
+    expect(diff.modeKey).toBe("standard");
+    expect(diff.hasLegacyReport).toBe(true);
+    expect(diff.hasCoreReport).toBe(true);
+    expect(diff.comparable).toBe(true);
+    expect(diff.scoreDelta).toBe(0);
+    expect(diff.isScoreMatch).toBe(true);
+    expect(diff.undoUsedDelta).toBe(0);
+    expect(diff.bothScoreAligned).toBe(true);
+  });
+
+  it("returns non-comparable AB diff when one side is missing", () => {
+    const coreReport = buildAdapterSessionParityReport({
+      parityState: null,
+      snapshot: {
+        adapterMode: "core-adapter",
+        modeKey: "standard",
+        updatedAt: 200,
+        lastMoveResult: {
+          score: 256,
+          undoUsed: 2
+        }
+      },
+      modeKey: "standard",
+      adapterMode: "core-adapter"
+    });
+
+    const diff = buildAdapterParityABDiffSummary({
+      legacyBridgeReport: null,
+      coreAdapterReport: coreReport,
+      modeKey: "standard"
+    });
+
+    expect(diff.modeKey).toBe("standard");
+    expect(diff.hasLegacyReport).toBe(false);
+    expect(diff.hasCoreReport).toBe(true);
+    expect(diff.comparable).toBe(false);
+    expect(diff.scoreDelta).toBeNull();
+    expect(diff.isScoreMatch).toBeNull();
+    expect(diff.undoUsedDelta).toBeNull();
+    expect(diff.bothScoreAligned).toBeNull();
   });
 });

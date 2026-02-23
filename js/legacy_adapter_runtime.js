@@ -2,6 +2,7 @@
   "use strict";
 
   if (!global) return;
+  var PARITY_REPORT_KEY_PREFIX = "engine_adapter_parity_report_v1:";
 
   function normalizeAdapterMode(raw) {
     if (raw === "core" || raw === "core-adapter") return "core-adapter";
@@ -43,6 +44,45 @@
     if (storageMode) return storageMode;
 
     return "legacy-bridge";
+  }
+
+  function normalizeModeKey(modeKey) {
+    return typeof modeKey === "string" && modeKey ? modeKey : "unknown";
+  }
+
+  function isPlainObject(value) {
+    return !!value && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function buildAdapterParityReportStorageKey(modeKey, adapterMode) {
+    var normalizedAdapterMode = normalizeAdapterMode(adapterMode) || "legacy-bridge";
+    return PARITY_REPORT_KEY_PREFIX + normalizeModeKey(modeKey) + ":" + normalizedAdapterMode;
+  }
+
+  function readAdapterParityReportFromStorage(storage, modeKey, adapterMode) {
+    if (!storage || typeof storage.getItem !== "function") return null;
+    try {
+      var raw = storage.getItem(buildAdapterParityReportStorageKey(modeKey, adapterMode));
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      return isPlainObject(parsed) ? parsed : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function writeAdapterParityReportToStorage(storage, modeKey, adapterMode, report) {
+    if (!storage || typeof storage.setItem !== "function") return false;
+    if (!isPlainObject(report)) return false;
+    try {
+      storage.setItem(
+        buildAdapterParityReportStorageKey(modeKey, adapterMode),
+        JSON.stringify(report)
+      );
+      return true;
+    } catch (_err) {
+      return false;
+    }
   }
 
   function attachLegacyBridgeWithAdapter(options) {
@@ -108,6 +148,38 @@
           adapterMode: payload.adapterMode
         });
       };
+      payload.readStoredAdapterParityReport = function (targetAdapterMode) {
+        return readAdapterParityReportFromStorage(
+          global.localStorage || null,
+          snapshotModeKey,
+          targetAdapterMode || payload.adapterMode
+        );
+      };
+      payload.writeStoredAdapterParityReport = function (report, targetAdapterMode) {
+        return writeAdapterParityReportToStorage(
+          global.localStorage || null,
+          snapshotModeKey,
+          targetAdapterMode || payload.adapterMode,
+          report
+        );
+      };
+      payload.readAdapterParityABDiff = function () {
+        if (!shadowApi || typeof shadowApi.buildAdapterParityABDiffSummary !== "function") return null;
+        return shadowApi.buildAdapterParityABDiffSummary({
+          legacyBridgeReport: payload.readStoredAdapterParityReport("legacy-bridge"),
+          coreAdapterReport: payload.readStoredAdapterParityReport("core-adapter"),
+          modeKey: snapshotModeKey
+        });
+      };
+
+      function syncAdapterParityDiagnostics() {
+        payload.adapterParityReport = payload.readAdapterParityReport();
+        if (payload.adapterParityReport && typeof payload.writeStoredAdapterParityReport === "function") {
+          payload.writeStoredAdapterParityReport(payload.adapterParityReport, payload.adapterMode);
+        }
+        payload.adapterParityABDiff =
+          typeof payload.readAdapterParityABDiff === "function" ? payload.readAdapterParityABDiff() : null;
+      }
 
       if (adapterMode === "core-adapter") {
         if (shadowApi && typeof shadowApi.attachAdapterMoveResultShadow === "function") {
@@ -116,15 +188,15 @@
             modeKey: snapshotModeKey,
             onStateChange: function (state) {
               payload.adapterParityState = state || null;
-              payload.adapterParityReport = payload.readAdapterParityReport();
+              syncAdapterParityDiagnostics();
             }
           });
           payload.adapterParityState = payload.readAdapterParityState();
-          payload.adapterParityReport = payload.readAdapterParityReport();
+          syncAdapterParityDiagnostics();
         } else {
           payload.adapterShadowBinding = null;
           payload.adapterParityState = null;
-          payload.adapterParityReport = payload.readAdapterParityReport();
+          syncAdapterParityDiagnostics();
         }
       } else {
         if (shadowApi && typeof shadowApi.detachAdapterMoveResultShadow === "function") {
@@ -132,7 +204,7 @@
         }
         payload.adapterShadowBinding = null;
         payload.adapterParityState = null;
-        payload.adapterParityReport = payload.readAdapterParityReport();
+        syncAdapterParityDiagnostics();
       }
     }
     return payload;

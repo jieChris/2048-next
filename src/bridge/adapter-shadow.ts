@@ -56,6 +56,37 @@ export interface AdapterSessionParityReportInput {
   adapterMode?: string | null | undefined;
 }
 
+export interface AdapterParityABDiffSummary {
+  modeKey: string;
+  hasLegacyReport: boolean;
+  hasCoreReport: boolean;
+  comparable: boolean;
+  comparedAt: number;
+  legacyScore: number | null;
+  coreScore: number | null;
+  scoreDelta: number | null;
+  isScoreMatch: boolean | null;
+  legacyUndoUsed: number | null;
+  coreUndoUsed: number | null;
+  undoUsedDelta: number | null;
+  legacyUndoEvents: number | null;
+  coreUndoEvents: number | null;
+  undoEventsDelta: number | null;
+  legacyWonEvents: number | null;
+  coreWonEvents: number | null;
+  wonEventsDelta: number | null;
+  legacyOverEvents: number | null;
+  coreOverEvents: number | null;
+  overEventsDelta: number | null;
+  bothScoreAligned: boolean | null;
+}
+
+export interface AdapterParityABDiffInput {
+  legacyBridgeReport: AdapterSessionParityReport | null | undefined;
+  coreAdapterReport: AdapterSessionParityReport | null | undefined;
+  modeKey?: string | null | undefined;
+}
+
 const DEFAULT_REASON = "move";
 
 function normalizeModeKey(modeKey: string | null | undefined): string {
@@ -83,6 +114,25 @@ function normalizeAdapterMode(
   adapterMode: string | null | undefined
 ): "legacy-bridge" | "core-adapter" {
   return adapterMode === "core-adapter" ? "core-adapter" : "legacy-bridge";
+}
+
+function normalizeReport(
+  report: AdapterSessionParityReport | null | undefined,
+  expectedAdapterMode: "legacy-bridge" | "core-adapter"
+): AdapterSessionParityReport | null {
+  if (!report || typeof report !== "object") return null;
+  if (report.adapterMode !== expectedAdapterMode) return null;
+  return report;
+}
+
+function toDelta(
+  legacyValue: number | null | undefined,
+  coreValue: number | null | undefined
+): number | null {
+  const left = toFiniteNumberOrNull(legacyValue);
+  const right = toFiniteNumberOrNull(coreValue);
+  if (left === null || right === null) return null;
+  return right - left;
 }
 
 function cloneCounters(counters: AdapterParityCounters): AdapterParityCounters {
@@ -206,5 +256,60 @@ export function buildAdapterSessionParityReport(
     wonEvents: counters.wonEvents,
     overEvents: counters.overEvents,
     snapshotUpdatedAt: snapshot ? toFiniteNumberOrNull(snapshot.updatedAt) : null
+  };
+}
+
+export function buildAdapterParityABDiffSummary(
+  input: AdapterParityABDiffInput
+): AdapterParityABDiffSummary {
+  const legacyReport = normalizeReport(input.legacyBridgeReport, "legacy-bridge");
+  const coreReport = normalizeReport(input.coreAdapterReport, "core-adapter");
+  const modeKey = normalizeModeKey(input.modeKey || coreReport?.modeKey || legacyReport?.modeKey);
+  const comparable =
+    !!legacyReport &&
+    !!coreReport &&
+    normalizeModeKey(legacyReport.modeKey) === normalizeModeKey(coreReport.modeKey) &&
+    normalizeModeKey(legacyReport.modeKey) === modeKey;
+  const scoreDelta = comparable
+    ? toDelta(legacyReport?.lastScoreFromSnapshot, coreReport?.lastScoreFromSnapshot)
+    : null;
+  const isScoreMatch = scoreDelta === null ? null : scoreDelta === 0;
+  const bothScoreAligned =
+    comparable &&
+    legacyReport?.isScoreAligned === true &&
+    coreReport?.isScoreAligned === true &&
+    isScoreMatch === true;
+
+  return {
+    modeKey: modeKey,
+    hasLegacyReport: !!legacyReport,
+    hasCoreReport: !!coreReport,
+    comparable: comparable,
+    comparedAt: Date.now(),
+    legacyScore: legacyReport?.lastScoreFromSnapshot ?? null,
+    coreScore: coreReport?.lastScoreFromSnapshot ?? null,
+    scoreDelta: scoreDelta,
+    isScoreMatch: isScoreMatch,
+    legacyUndoUsed: legacyReport?.undoUsedFromSnapshot ?? null,
+    coreUndoUsed: coreReport?.undoUsedFromSnapshot ?? null,
+    undoUsedDelta: comparable
+      ? toDelta(legacyReport?.undoUsedFromSnapshot, coreReport?.undoUsedFromSnapshot)
+      : null,
+    legacyUndoEvents: legacyReport?.undoEvents ?? null,
+    coreUndoEvents: coreReport?.undoEvents ?? null,
+    undoEventsDelta: comparable
+      ? toDelta(legacyReport?.undoEvents, coreReport?.undoEvents)
+      : null,
+    legacyWonEvents: legacyReport?.wonEvents ?? null,
+    coreWonEvents: coreReport?.wonEvents ?? null,
+    wonEventsDelta: comparable
+      ? toDelta(legacyReport?.wonEvents, coreReport?.wonEvents)
+      : null,
+    legacyOverEvents: legacyReport?.overEvents ?? null,
+    coreOverEvents: coreReport?.overEvents ?? null,
+    overEventsDelta: comparable
+      ? toDelta(legacyReport?.overEvents, coreReport?.overEvents)
+      : null,
+    bothScoreAligned: comparable ? bothScoreAligned : null
   };
 }

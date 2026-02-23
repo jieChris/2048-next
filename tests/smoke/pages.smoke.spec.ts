@@ -94,7 +94,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         () =>
           Boolean(
             (window as any).CoreAdapterShadowRuntime?.attachAdapterMoveResultShadow &&
-              (window as any).CoreAdapterShadowRuntime?.buildAdapterSessionParityReport
+              (window as any).CoreAdapterShadowRuntime?.buildAdapterSessionParityReport &&
+              (window as any).CoreAdapterShadowRuntime?.buildAdapterParityABDiffSummary
           )
       );
       const hasCoreRulesRuntime = await page.evaluate(
@@ -369,6 +370,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
               typeof payload.emitMoveResult !== "function" ||
               typeof payload.readAdapterParityState !== "function" ||
               typeof payload.readAdapterParityReport !== "function" ||
+              typeof payload.readAdapterParityABDiff !== "function" ||
               !manager ||
               typeof manager.publishAdapterMoveResult !== "function"
             ) {
@@ -399,6 +401,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
             const snapshot = payload.adapterSnapshot;
             const parityState = payload.readAdapterParityState();
             const parityReport = payload.readAdapterParityReport();
+            const parityABDiff = payload.readAdapterParityABDiff();
             return Boolean(
               captured &&
                 captured.reason === "smoke-contract" &&
@@ -409,6 +412,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 (parityReport === null ||
                   (typeof parityReport === "object" &&
                     parityReport.modeKey === (payload.modeKey || "unknown")))
+                &&
+                (parityABDiff === null ||
+                  (typeof parityABDiff === "object" &&
+                    parityABDiff.modeKey === (payload.modeKey || "unknown")))
                 &&
                 (payload.adapterParityReport === null ||
                   typeof payload.adapterParityReport === "object")
@@ -427,6 +434,39 @@ test.describe("Legacy Multi-Page Smoke", () => {
   }
 
   test("core-adapter shadow path updates parity state", async ({ page }) => {
+    const legacyResponse = await page.goto("/index.html?engine_adapter=legacy-bridge", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(legacyResponse, "Legacy seed response should exist").not.toBeNull();
+    expect(legacyResponse?.ok(), "Legacy seed response should be 2xx").toBeTruthy();
+
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(300);
+
+    const seededLegacy = await page.evaluate(() => {
+      const payload = (window as any).__legacyEngine;
+      const manager = (window as any).game_manager;
+      if (
+        !payload ||
+        payload.adapterMode !== "legacy-bridge" ||
+        typeof payload.readAdapterParityReport !== "function" ||
+        !manager ||
+        typeof manager.publishAdapterMoveResult !== "function"
+      ) {
+        return false;
+      }
+
+      manager.publishAdapterMoveResult({
+        reason: "smoke-ab-legacy",
+        direction: 1,
+        moved: true
+      });
+
+      const report = payload.readAdapterParityReport();
+      return Boolean(report && report.adapterMode === "legacy-bridge");
+    });
+    expect(seededLegacy, "legacy bridge parity seed failed").toBe(true);
+
     const response = await page.goto("/index.html?engine_adapter=core-adapter", {
       waitUntil: "domcontentloaded"
     });
@@ -444,6 +484,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         payload.adapterMode !== "core-adapter" ||
         typeof payload.readAdapterParityState !== "function" ||
         typeof payload.readAdapterParityReport !== "function" ||
+        typeof payload.readAdapterParityABDiff !== "function" ||
         !manager ||
         typeof manager.publishAdapterMoveResult !== "function"
       ) {
@@ -452,6 +493,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
       const before = payload.readAdapterParityState();
       const beforeReport = payload.readAdapterParityReport();
+      const beforeABDiff = payload.readAdapterParityABDiff();
       manager.publishAdapterMoveResult({
         reason: "smoke-core-adapter",
         direction: 2,
@@ -459,13 +501,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
       });
       const after = payload.readAdapterParityState();
       const afterReport = payload.readAdapterParityReport();
+      const afterABDiff = payload.readAdapterParityABDiff();
       return {
         payloadModeKey: payload.modeKey || "unknown",
         payloadParityReport: payload.adapterParityReport || null,
+        payloadParityABDiff: payload.adapterParityABDiff || null,
         before,
         after,
         beforeReport,
-        afterReport
+        afterReport,
+        beforeABDiff,
+        afterABDiff
       };
     });
 
@@ -484,5 +530,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(result?.afterReport?.isScoreAligned).toBe(true);
     expect(result?.payloadParityReport?.modeKey).toBe(result?.payloadModeKey);
     expect(result?.payloadParityReport?.isScoreAligned).toBe(true);
+    expect(result?.beforeABDiff?.modeKey).toBe(result?.payloadModeKey);
+    expect(result?.afterABDiff?.modeKey).toBe(result?.payloadModeKey);
+    expect(result?.afterABDiff?.hasCoreReport).toBe(true);
+    expect(result?.afterABDiff?.hasLegacyReport).toBe(true);
+    expect(result?.afterABDiff?.comparable).toBe(true);
+    expect(result?.afterABDiff?.isScoreMatch).toBe(true);
+    expect(result?.payloadParityABDiff?.modeKey).toBe(result?.payloadModeKey);
   });
 });

@@ -1765,6 +1765,26 @@ GameManager.prototype.getAdapterSessionParityReport = function () {
   return null;
 };
 
+GameManager.prototype.getAdapterSessionParityABDiff = function () {
+  var bridge = this.getLegacyAdapterBridge();
+  if (!bridge || typeof bridge !== "object") return null;
+
+  if (typeof bridge.readAdapterParityABDiff === "function") {
+    var diff = bridge.readAdapterParityABDiff();
+    if (!diff || typeof diff !== "object") return null;
+    var clonedDiff = this.safeClonePlain(diff, null);
+    if (clonedDiff) {
+      bridge.adapterParityABDiff = clonedDiff;
+    }
+    return clonedDiff;
+  }
+
+  if (bridge.adapterParityABDiff && typeof bridge.adapterParityABDiff === "object") {
+    return this.safeClonePlain(bridge.adapterParityABDiff, null);
+  }
+  return null;
+};
+
 GameManager.prototype.publishAdapterMoveResult = function (meta) {
   var bridge = this.getLegacyAdapterBridge();
   if (!bridge || typeof bridge.emitMoveResult !== "function") return false;
@@ -1810,6 +1830,15 @@ GameManager.prototype.publishAdapterMoveResult = function (meta) {
   }
   if (typeof bridge.readAdapterParityReport === "function") {
     bridge.adapterParityReport = bridge.readAdapterParityReport();
+    if (
+      bridge.adapterParityReport &&
+      typeof bridge.writeStoredAdapterParityReport === "function"
+    ) {
+      bridge.writeStoredAdapterParityReport(bridge.adapterParityReport, bridge.adapterMode);
+    }
+  }
+  if (typeof bridge.readAdapterParityABDiff === "function") {
+    bridge.adapterParityABDiff = bridge.readAdapterParityABDiff();
   }
   return true;
 };
@@ -4553,6 +4582,7 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
     replay: this.serializeV3(),
     replay_string: this.serialize(),
     adapter_parity_report_v1: this.getAdapterSessionParityReport(),
+    adapter_parity_ab_diff_v1: this.getAdapterSessionParityABDiff(),
     client_version: (window.GAME_CLIENT_VERSION || "1.8"),
     end_reason: this.over ? "game_over" : "win_stop"
   };

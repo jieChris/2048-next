@@ -32,6 +32,19 @@
     return adapterMode === "core-adapter" ? "core-adapter" : "legacy-bridge";
   }
 
+  function normalizeReport(report, expectedAdapterMode) {
+    if (!report || typeof report !== "object") return null;
+    if (report.adapterMode !== expectedAdapterMode) return null;
+    return report;
+  }
+
+  function toDelta(legacyValue, coreValue) {
+    var left = toFiniteNumberOrNull(legacyValue);
+    var right = toFiniteNumberOrNull(coreValue);
+    if (left === null || right === null) return null;
+    return right - left;
+  }
+
   function cloneCounters(counters) {
     return {
       totalEvents: counters.totalEvents,
@@ -241,6 +254,64 @@
     };
   }
 
+  function buildAdapterParityABDiffSummary(input) {
+    var opts = input || {};
+    var legacyReport = normalizeReport(opts.legacyBridgeReport, "legacy-bridge");
+    var coreReport = normalizeReport(opts.coreAdapterReport, "core-adapter");
+    var modeKey = normalizeModeKey(
+      opts.modeKey ||
+      (coreReport && coreReport.modeKey) ||
+      (legacyReport && legacyReport.modeKey)
+    );
+    var comparable = !!legacyReport &&
+      !!coreReport &&
+      normalizeModeKey(legacyReport.modeKey) === normalizeModeKey(coreReport.modeKey) &&
+      normalizeModeKey(legacyReport.modeKey) === modeKey;
+    var scoreDelta = comparable
+      ? toDelta(legacyReport && legacyReport.lastScoreFromSnapshot, coreReport && coreReport.lastScoreFromSnapshot)
+      : null;
+    var isScoreMatch = scoreDelta === null ? null : scoreDelta === 0;
+    var bothScoreAligned = comparable &&
+      legacyReport &&
+      legacyReport.isScoreAligned === true &&
+      coreReport &&
+      coreReport.isScoreAligned === true &&
+      isScoreMatch === true;
+
+    return {
+      modeKey: modeKey,
+      hasLegacyReport: !!legacyReport,
+      hasCoreReport: !!coreReport,
+      comparable: comparable,
+      comparedAt: Date.now(),
+      legacyScore: legacyReport ? legacyReport.lastScoreFromSnapshot : null,
+      coreScore: coreReport ? coreReport.lastScoreFromSnapshot : null,
+      scoreDelta: scoreDelta,
+      isScoreMatch: isScoreMatch,
+      legacyUndoUsed: legacyReport ? legacyReport.undoUsedFromSnapshot : null,
+      coreUndoUsed: coreReport ? coreReport.undoUsedFromSnapshot : null,
+      undoUsedDelta: comparable
+        ? toDelta(legacyReport && legacyReport.undoUsedFromSnapshot, coreReport && coreReport.undoUsedFromSnapshot)
+        : null,
+      legacyUndoEvents: legacyReport ? legacyReport.undoEvents : null,
+      coreUndoEvents: coreReport ? coreReport.undoEvents : null,
+      undoEventsDelta: comparable
+        ? toDelta(legacyReport && legacyReport.undoEvents, coreReport && coreReport.undoEvents)
+        : null,
+      legacyWonEvents: legacyReport ? legacyReport.wonEvents : null,
+      coreWonEvents: coreReport ? coreReport.wonEvents : null,
+      wonEventsDelta: comparable
+        ? toDelta(legacyReport && legacyReport.wonEvents, coreReport && coreReport.wonEvents)
+        : null,
+      legacyOverEvents: legacyReport ? legacyReport.overEvents : null,
+      coreOverEvents: coreReport ? coreReport.overEvents : null,
+      overEventsDelta: comparable
+        ? toDelta(legacyReport && legacyReport.overEvents, coreReport && coreReport.overEvents)
+        : null,
+      bothScoreAligned: comparable ? bothScoreAligned : null
+    };
+  }
+
   global.CoreAdapterShadowRuntime = global.CoreAdapterShadowRuntime || {};
   global.CoreAdapterShadowRuntime.createInitialAdapterParityState = createInitialAdapterParityState;
   global.CoreAdapterShadowRuntime.applyAdapterMoveResultToParityState = applyAdapterMoveResultToParityState;
@@ -248,4 +319,5 @@
   global.CoreAdapterShadowRuntime.detachAdapterMoveResultShadow = detachAdapterMoveResultShadow;
   global.CoreAdapterShadowRuntime.getAdapterParityState = getAdapterParityState;
   global.CoreAdapterShadowRuntime.buildAdapterSessionParityReport = buildAdapterSessionParityReport;
+  global.CoreAdapterShadowRuntime.buildAdapterParityABDiffSummary = buildAdapterParityABDiffSummary;
 })(typeof window !== "undefined" ? window : undefined);
