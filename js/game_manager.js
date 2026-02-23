@@ -1159,6 +1159,13 @@ GameManager.prototype.getCoreUndoTileRestoreRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreUndoRestorePayloadRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreUndoRestorePayloadRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
   var moveApplyCore = this.getCoreMoveApplyRuntime();
   if (moveApplyCore && typeof moveApplyCore.planTileInteraction === "function") {
@@ -1444,6 +1451,37 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
   }
 
   return fallback;
+};
+
+GameManager.prototype.computeUndoRestorePayload = function (prev) {
+  var undoRestorePayloadCore = this.getCoreUndoRestorePayloadRuntime();
+  if (
+    undoRestorePayloadCore &&
+    typeof undoRestorePayloadCore.computeUndoRestorePayload === "function"
+  ) {
+    return undoRestorePayloadCore.computeUndoRestorePayload({
+      prev: prev || {},
+      fallbackScore: this.score
+    }) || {};
+  }
+
+  var source = prev && typeof prev === "object" ? prev : {};
+  var score =
+    Number.isFinite(source.score) && typeof source.score === "number"
+      ? Number(source.score)
+      : (Number.isFinite(this.score) && typeof this.score === "number" ? Number(this.score) : 0);
+  var rawTiles = Array.isArray(source.tiles) ? source.tiles : [];
+  var tiles = [];
+  for (var i = 0; i < rawTiles.length; i++) {
+    var item = rawTiles[i];
+    if (!item || typeof item !== "object") continue;
+    tiles.push(item);
+  }
+
+  return {
+    score: score,
+    tiles: tiles
+  };
 };
 
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
@@ -3074,11 +3112,16 @@ GameManager.prototype.move = function (direction) {
     }
     if (this.undoStack.length > 0) {
       var prev = this.undoStack.pop();
+      var undoPayload = this.computeUndoRestorePayload(prev);
 
       this.grid.build();
-      this.score = prev.score;
-      for (var i in prev.tiles) {
-        var t = this.createUndoRestoreTile(prev.tiles[i]);
+      this.score =
+        Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
+          ? Number(undoPayload.score)
+          : 0;
+      var undoTiles = Array.isArray(undoPayload.tiles) ? undoPayload.tiles : [];
+      for (var i = 0; i < undoTiles.length; i++) {
+        var t = this.createUndoRestoreTile(undoTiles[i]);
         var tile = new Tile({x: t.x, y: t.y}, t.value);
         tile.previousPosition = {
           x: t.previousPosition.x,

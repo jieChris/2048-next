@@ -78,6 +78,7 @@ Deliverables:
   - Added `src/core/undo-snapshot.ts` and `js/core_undo_snapshot_runtime.js` to delegate undo snapshot creation/normalization at move start
   - Added `src/core/undo-tile-snapshot.ts` and `js/core_undo_tile_snapshot_runtime.js` to delegate undo tile serialization (`tile.save` equivalent) before move/merge apply
   - Added `src/core/undo-tile-restore.ts` and `js/core_undo_tile_restore_runtime.js` to delegate undo tile hydration payload mapping during snapshot restore
+  - Added `src/core/undo-restore-payload.ts` and `js/core_undo_restore_payload_runtime.js` to delegate restore payload normalization (`score` + `tiles` list) before undo hydration
 
 Acceptance:
 - Same board transition and score outputs for golden test vectors.
@@ -130,5 +131,5 @@ Rollback:
 
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
-2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore`).
-3. Continue extracting deterministic move execution helpers (undo stack payload state normalization before restore) while keeping UI/storage behavior unchanged.
+2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload`).
+3. Continue extracting deterministic move execution helpers (undo snapshot push/read parity guards and payload shape checks) while keeping UI/storage behavior unchanged.
