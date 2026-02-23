@@ -593,12 +593,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
         storedRate: window.localStorage.getItem("custom_spawn_4x4_four_rate_v1"),
         introText: introNode ? String(introNode.textContent || "") : "",
         hasRuntime: Boolean((window as any).CoreCustomSpawnRuntime?.applyCustomFourRateToModeConfig),
-        hasHeaderRuntime: Boolean((window as any).CorePlayHeaderRuntime?.buildPlayModeIntroText)
+        hasHeaderRuntime: Boolean((window as any).CorePlayHeaderRuntime?.buildPlayModeIntroText),
+        hasModeCatalogRuntime: Boolean((window as any).CoreModeCatalogRuntime?.resolveCatalogModeWithDefault)
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.hasHeaderRuntime).toBe(true);
+    expect(snapshot.hasModeCatalogRuntime).toBe(true);
     expect(snapshot.key).toBe("spawn_custom_4x4_pow2_no_undo");
     expect(snapshot.label).toContain("4率 25%");
     expect(snapshot.introText).toContain("4率25%");
@@ -624,11 +626,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
         key: cfg && typeof cfg.key === "string" ? cfg.key : null,
         ruleset: cfg && typeof cfg.ruleset === "string" ? cfg.ruleset : null,
         spawnTable: cfg && Array.isArray(cfg.spawn_table) ? cfg.spawn_table : null,
-        hasRuntime: Boolean((window as any).CorePracticeModeRuntime?.buildPracticeModeConfig)
+        hasRuntime: Boolean((window as any).CorePracticeModeRuntime?.buildPracticeModeConfig),
+        hasModeCatalogRuntime: Boolean((window as any).CoreModeCatalogRuntime?.resolveCatalogModeWithDefault)
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasModeCatalogRuntime).toBe(true);
     expect(snapshot.key).toBe("practice_legacy");
     expect(snapshot.ruleset).toBe("fibonacci");
     expect(snapshot.spawnTable).toEqual([

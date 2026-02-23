@@ -46,6 +46,7 @@ Deliverables:
   - Added play query parser helper `src/bootstrap/play-query.ts` with runtime mirror `js/core_play_query_runtime.js`, and `play_application.js` now delegates `mode_key/challenge_id` resolution to shared bootstrap helper
   - Added play header formatter helper `src/bootstrap/play-header.ts` with runtime mirror `js/core_play_header_runtime.js`, and `play_application.js` now delegates intro-line formatting to shared bootstrap helper
   - Added practice-mode helper `src/bootstrap/practice-mode.ts` with runtime mirror `js/core_practice_mode_runtime.js`, and `application.js` now delegates `practice_ruleset` parsing plus config projection to shared bootstrap helper
+  - Added mode-catalog resolver helper `src/bootstrap/mode-catalog.ts` with runtime mirror `js/core_mode_catalog_runtime.js`, and `application.js` / `play_application.js` now share unified `ModeCatalog` fallback resolution
 
 Acceptance:
 - No behavior difference on game flow and mode selection.

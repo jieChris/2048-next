@@ -1,4 +1,11 @@
 (function () {
+  var modeCatalogRuntime = window.CoreModeCatalogRuntime;
+  if (
+    !modeCatalogRuntime ||
+    typeof modeCatalogRuntime.resolveCatalogModeWithDefault !== "function"
+  ) {
+    throw new Error("CoreModeCatalogRuntime is required");
+  }
   var playHeaderRuntime = window.CorePlayHeaderRuntime;
   if (
     !playHeaderRuntime ||
@@ -190,8 +197,11 @@
   bootstrap.startGameOnAnimationFrame(function () {
     var modeKey = parseModeKey();
     var challengeId = parseChallengeId();
-    var modeConfig = (window.ModeCatalog && window.ModeCatalog.getMode(modeKey)) ||
-      (window.ModeCatalog && window.ModeCatalog.getMode("standard_4x4_pow2_no_undo"));
+    var modeConfig = modeCatalogRuntime.resolveCatalogModeWithDefault(
+      window.ModeCatalog,
+      modeKey,
+      DEFAULT_MODE_KEY
+    );
 
     if (!modeConfig) {
       alert("无效模式，已回退到标准模式");

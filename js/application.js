@@ -2,6 +2,13 @@ var bootstrap = window.LegacyBootstrapRuntime;
 if (!bootstrap || typeof bootstrap.startGameOnAnimationFrame !== "function") {
   throw new Error("LegacyBootstrapRuntime.startGameOnAnimationFrame is required");
 }
+var modeCatalogRuntime = window.CoreModeCatalogRuntime;
+if (
+  !modeCatalogRuntime ||
+  typeof modeCatalogRuntime.resolveCatalogModeWithDefault !== "function"
+) {
+  throw new Error("CoreModeCatalogRuntime is required");
+}
 var practiceModeRuntime = window.CorePracticeModeRuntime;
 if (
   !practiceModeRuntime ||
@@ -18,16 +25,17 @@ bootstrap.startGameOnAnimationFrame(function () {
     modeKey = document.body.getAttribute("data-mode-id") || modeKey;
   }
 
-  if (window.ModeCatalog && typeof window.ModeCatalog.getMode === "function") {
-    window.GAME_MODE_CONFIG = window.ModeCatalog.getMode(modeKey) ||
-      window.ModeCatalog.getMode("standard_4x4_pow2_no_undo");
+  window.GAME_MODE_CONFIG = modeCatalogRuntime.resolveCatalogModeWithDefault(
+    window.ModeCatalog,
+    modeKey,
+    "standard_4x4_pow2_no_undo"
+  );
 
-    if (modeKey === "practice_legacy" && window.GAME_MODE_CONFIG) {
-      window.GAME_MODE_CONFIG = practiceModeRuntime.buildPracticeModeConfig(
-        window.GAME_MODE_CONFIG,
-        practiceModeRuntime.parsePracticeRuleset(window.location.search || "")
-      );
-    }
+  if (modeKey === "practice_legacy" && window.GAME_MODE_CONFIG) {
+    window.GAME_MODE_CONFIG = practiceModeRuntime.buildPracticeModeConfig(
+      window.GAME_MODE_CONFIG,
+      practiceModeRuntime.parsePracticeRuleset(window.location.search || "")
+    );
   }
 
   return {
