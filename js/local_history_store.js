@@ -98,6 +98,36 @@
     return num > 0 ? num : null;
   }
 
+  function normalizeBurnInStatus(raw) {
+    if (raw === "match") return "match";
+    if (raw === "mismatch") return "mismatch";
+    return "incomplete";
+  }
+
+  function toBurnInRecords(records) {
+    var list = Array.isArray(records) ? records : [];
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      out.push({
+        hasDiagnostics: hasAdapterParityDiagnostics(list[i]),
+        status: getAdapterParityStatus(list[i])
+      });
+    }
+    return out;
+  }
+
+  function getBurnInRuntime() {
+    try {
+      var runtime = window && window.CoreBurnInGateRuntime;
+      if (!runtime) return null;
+      if (typeof runtime.summarizeBurnInWindow !== "function") return null;
+      if (typeof runtime.summarizeSustainedBurnIn !== "function") return null;
+      return runtime;
+    } catch (_err) {
+      return null;
+    }
+  }
+
   function buildBurnInGate(comparable, mismatchRate, minComparable, maxMismatchRate) {
     var gateStatus = "insufficient_sample";
     var passGate = null;
@@ -125,9 +155,9 @@
     var incomplete = 0;
 
     for (var i = 0; i < list.length; i++) {
-      var item = list[i];
-      if (hasAdapterParityDiagnostics(item)) withDiagnostics += 1;
-      var status = getAdapterParityStatus(item);
+      var item = list[i] || {};
+      if (item.hasDiagnostics === true) withDiagnostics += 1;
+      var status = normalizeBurnInStatus(item.status);
       if (status === "match") {
         comparable += 1;
         match += 1;
@@ -152,6 +182,63 @@
       mismatchRate: mismatchRate,
       gateStatus: gate.gateStatus,
       passGate: gate.passGate
+    };
+  }
+
+  function summarizeSustainedBurnIn(records, sustainedWindowSize, sustainedWindows, minComparable, maxMismatchRate) {
+    var list = Array.isArray(records) ? records : [];
+    var windowSize = toPositiveIntegerOrNull(sustainedWindowSize) || 0;
+    var windows = toPositiveIntegerOrNull(sustainedWindows) || 3;
+    var sustainedWindowDetails = [];
+    if (windowSize > 0) {
+      for (var i = 0; i < windows; i++) {
+        var start = i * windowSize;
+        if (start >= list.length) break;
+        var windowRecords = list.slice(start, start + windowSize);
+        var stat = summarizeBurnInWindow(windowRecords, minComparable, maxMismatchRate);
+        stat.windowIndex = i + 1;
+        sustainedWindowDetails.push(stat);
+      }
+    }
+
+    var sustainedConsecutivePass = 0;
+    for (var j = 0; j < sustainedWindowDetails.length; j++) {
+      if (sustainedWindowDetails[j].passGate === true) sustainedConsecutivePass += 1;
+      else break;
+    }
+
+    var sustainedGateStatus = "insufficient_window";
+    var sustainedPassGate = null;
+    if (sustainedWindowDetails.length >= windows) {
+      if (sustainedConsecutivePass >= windows) {
+        sustainedGateStatus = "pass";
+        sustainedPassGate = true;
+      } else {
+        var hasSampleInsufficient = false;
+        for (var k = 0; k < windows; k++) {
+          if (sustainedWindowDetails[k].gateStatus === "insufficient_sample") {
+            hasSampleInsufficient = true;
+            break;
+          }
+        }
+        if (hasSampleInsufficient) {
+          sustainedGateStatus = "insufficient_sample";
+          sustainedPassGate = null;
+        } else {
+          sustainedGateStatus = "fail";
+          sustainedPassGate = false;
+        }
+      }
+    }
+
+    return {
+      sustainedWindows: windows,
+      sustainedWindowSize: windowSize,
+      sustainedEvaluatedWindows: sustainedWindowDetails.length,
+      sustainedConsecutivePass: sustainedConsecutivePass,
+      sustainedGateStatus: sustainedGateStatus,
+      sustainedPassGate: sustainedPassGate,
+      sustainedWindowDetails: sustainedWindowDetails
     };
   }
 
@@ -191,54 +278,60 @@
       page += 1;
     }
 
-    var source = sampleLimit === null ? matched : matched.slice(0, sampleLimit);
-    var primary = summarizeBurnInWindow(source, minComparable, maxMismatchRate);
+    var matchedBurnInRecords = toBurnInRecords(matched);
+    var sourceBurnInRecords = sampleLimit === null
+      ? matchedBurnInRecords
+      : matchedBurnInRecords.slice(0, sampleLimit);
+    var burnInRuntime = getBurnInRuntime();
+    var primary = null;
+    if (burnInRuntime) {
+      primary = burnInRuntime.summarizeBurnInWindow(sourceBurnInRecords, {
+        minComparable: minComparable,
+        maxMismatchRate: maxMismatchRate
+      });
+    }
+    if (!isPlainObject(primary)) {
+      primary = summarizeBurnInWindow(sourceBurnInRecords, minComparable, maxMismatchRate);
+    }
+
     var sustainedWindowSize = sampleLimit === null ? matched.length : sampleLimit;
-    var sustainedWindowDetails = [];
-    if (sustainedWindowSize > 0) {
-      for (var w = 0; w < sustainedWindows; w++) {
-        var start = w * sustainedWindowSize;
-        if (start >= matched.length) break;
-        var windowRecords = matched.slice(start, start + sustainedWindowSize);
-        var stat = summarizeBurnInWindow(windowRecords, minComparable, maxMismatchRate);
-        stat.windowIndex = w + 1;
-        sustainedWindowDetails.push(stat);
-      }
+    var sustained = null;
+    if (burnInRuntime) {
+      sustained = burnInRuntime.summarizeSustainedBurnIn(matchedBurnInRecords, {
+        windowSize: sustainedWindowSize,
+        sustainedWindows: sustainedWindows,
+        minComparable: minComparable,
+        maxMismatchRate: maxMismatchRate
+      });
+    }
+    if (!isPlainObject(sustained)) {
+      sustained = summarizeSustainedBurnIn(
+        matchedBurnInRecords,
+        sustainedWindowSize,
+        sustainedWindows,
+        minComparable,
+        maxMismatchRate
+      );
     }
 
-    var sustainedConsecutivePass = 0;
-    for (var z = 0; z < sustainedWindowDetails.length; z++) {
-      if (sustainedWindowDetails[z].passGate === true) sustainedConsecutivePass += 1;
-      else break;
-    }
-
-    var sustainedGateStatus = "insufficient_window";
-    var sustainedPassGate = null;
-    if (sustainedWindowDetails.length >= sustainedWindows) {
-      if (sustainedConsecutivePass >= sustainedWindows) {
-        sustainedGateStatus = "pass";
-        sustainedPassGate = true;
-      } else {
-        var hasSampleInsufficient = false;
-        for (var y = 0; y < sustainedWindows; y++) {
-          if (sustainedWindowDetails[y].gateStatus === "insufficient_sample") {
-            hasSampleInsufficient = true;
-            break;
-          }
-        }
-        if (hasSampleInsufficient) {
-          sustainedGateStatus = "insufficient_sample";
-          sustainedPassGate = null;
-        } else {
-          sustainedGateStatus = "fail";
-          sustainedPassGate = false;
-        }
-      }
-    }
+    var sustainedWindowDetails = Array.isArray(sustained.sustainedWindowDetails)
+      ? sustained.sustainedWindowDetails
+      : [];
+    var sustainedConsecutivePass = Number.isFinite(sustained.sustainedConsecutivePass)
+      ? Number(sustained.sustainedConsecutivePass)
+      : 0;
+    var sustainedGateStatus = typeof sustained.sustainedGateStatus === "string"
+      ? sustained.sustainedGateStatus
+      : "insufficient_window";
+    var sustainedPassGate = sustained.sustainedPassGate === true
+      ? true
+      : sustained.sustainedPassGate === false
+        ? false
+        : null;
 
     return {
       matchedRecords: matched.length,
-      evaluatedRecords: source.length,
+      evaluatedRecords: sourceBurnInRecords.length,
       sampleLimit: sampleLimit,
       sustainedWindows: sustainedWindows,
       sustainedWindowSize: sustainedWindowSize,
