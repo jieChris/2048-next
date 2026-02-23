@@ -587,6 +587,38 @@ GameManager.prototype.resolveReplayExecution = function (action) {
   throw "Unknown replay action";
 };
 
+GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
+  var replayLifecycleCore = this.getCoreReplayLifecycleRuntime();
+  if (replayLifecycleCore && typeof replayLifecycleCore.normalizeReplaySeekTarget === "function") {
+    return replayLifecycleCore.normalizeReplaySeekTarget({
+      targetIndex: targetIndex,
+      hasReplayMoves: !!this.replayMoves,
+      replayMovesLength: this.replayMoves ? this.replayMoves.length : 0
+    });
+  }
+
+  if (targetIndex < 0) targetIndex = 0;
+  if (this.replayMoves && targetIndex > this.replayMoves.length) targetIndex = this.replayMoves.length;
+  return targetIndex;
+};
+
+GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
+  var replayLifecycleCore = this.getCoreReplayLifecycleRuntime();
+  if (replayLifecycleCore && typeof replayLifecycleCore.planReplayStep === "function") {
+    return replayLifecycleCore.planReplayStep({
+      action: action,
+      hasReplaySpawns: !!this.replaySpawns,
+      spawnAtIndex: spawnAtIndex
+    }) || {};
+  }
+
+  var shouldInjectForcedSpawn = !!this.replaySpawns && !Array.isArray(action);
+  return {
+    shouldInjectForcedSpawn: shouldInjectForcedSpawn,
+    forcedSpawn: shouldInjectForcedSpawn ? spawnAtIndex : undefined
+  };
+};
+
 GameManager.prototype.setBoardFromMatrix = function (board) {
   if (!Array.isArray(board) || board.length !== this.height) throw "Invalid board matrix";
   this.grid = new Grid(this.width, this.height);
@@ -1463,6 +1495,13 @@ GameManager.prototype.getCoreReplayImportRuntime = function () {
 GameManager.prototype.getCoreReplayExecutionRuntime = function () {
   if (typeof window === "undefined") return null;
   var core = window.CoreReplayExecutionRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
+GameManager.prototype.getCoreReplayLifecycleRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreReplayLifecycleRuntime;
   if (!core || typeof core !== "object") return null;
   return core;
 };
@@ -4354,10 +4393,13 @@ GameManager.prototype.resume = function () {
       }
       
       var action = self.replayMoves[self.replayIndex];
-      
-      // Inject Forced Spawn if v2
-      if (self.replaySpawns && !Array.isArray(action)) {
-          self.forcedSpawn = self.replaySpawns[self.replayIndex];
+
+      var stepPlan = self.planReplayStep(
+        action,
+        self.replaySpawns ? self.replaySpawns[self.replayIndex] : undefined
+      );
+      if (stepPlan.shouldInjectForcedSpawn) {
+        self.forcedSpawn = stepPlan.forcedSpawn;
       }
       
       self.executeReplayAction(action);
@@ -4373,9 +4415,7 @@ GameManager.prototype.setSpeed = function (multiplier) {
 };
 
 GameManager.prototype.seek = function (targetIndex) {
-    // Clamp targetIndex
-    if (targetIndex < 0) targetIndex = 0;
-    if (this.replayMoves && targetIndex > this.replayMoves.length) targetIndex = this.replayMoves.length;
+    targetIndex = this.normalizeReplaySeekTarget(targetIndex);
 
     this.pause(); // Pause while seeking
 
@@ -4392,8 +4432,12 @@ GameManager.prototype.seek = function (targetIndex) {
     // Fast forward to target
     while (this.replayIndex < targetIndex) {
         var action = this.replayMoves[this.replayIndex];
-        if (this.replaySpawns && !Array.isArray(action)) {
-            this.forcedSpawn = this.replaySpawns[this.replayIndex];
+        var stepPlan = this.planReplayStep(
+          action,
+          this.replaySpawns ? this.replaySpawns[this.replayIndex] : undefined
+        );
+        if (stepPlan.shouldInjectForcedSpawn) {
+            this.forcedSpawn = stepPlan.forcedSpawn;
         }
         this.executeReplayAction(action);
         this.replayIndex++;

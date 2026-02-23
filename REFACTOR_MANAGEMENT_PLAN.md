@@ -85,6 +85,7 @@ Deliverables:
   - Added `src/core/replay-legacy.ts` and `js/core_replay_legacy_runtime.js` to delegate legacy replay (`REPLAY_v1/v2/v2S`) parser/import decode path
   - Added `src/core/replay-import.ts` and `js/core_replay_import_runtime.js` to delegate replay import envelope parsing (`JSON v3`/`REPLAY_v4C`) and mode-code mapping
   - Added `src/core/replay-execution.ts` and `js/core_replay_execution_runtime.js` to delegate replay action kind-routing and execution payload projection (`move/undo/practice`)
+  - Added `src/core/replay-lifecycle.ts` and `js/core_replay_lifecycle_runtime.js` to delegate replay lifecycle helpers (`seek` target clamp and per-step forced-spawn injection planning)
 
 Acceptance:
 - Same board transition and score outputs for golden test vectors.
@@ -137,5 +138,5 @@ Rollback:
 
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
-2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution`).
-3. Continue extracting deterministic replay lifecycle helpers (`resume/seek` replay index & forced-spawn injection decisions) while keeping UI/storage behavior unchanged.
+2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-lifecycle`).
+3. Continue extracting deterministic replay control helpers (`pause/resume/setSpeed` state transitions and interval delay selection) while keeping UI/storage behavior unchanged.
