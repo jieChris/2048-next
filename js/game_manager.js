@@ -1089,6 +1089,13 @@ GameManager.prototype.getCoreMovePathRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreScoringRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreScoringRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
   var core = this.getCoreRulesRuntime();
   if (core && typeof core.normalizeSpawnTable === "function") {
@@ -2833,17 +2840,34 @@ GameManager.prototype.move = function (direction) {
     // IPS counts only effective move inputs (invalid directions are excluded).
     this.recordIpsInput();
 
-    var mergeGain = this.score - scoreBeforeMove;
-    if (mergeGain > 0) {
-      this.comboStreak += 1;
-      if (this.comboMultiplier > 1 && this.comboStreak > 1) {
-        var comboBonus = Math.floor(mergeGain * (this.comboMultiplier - 1) * (this.comboStreak - 1));
-        if (comboBonus > 0) {
-          this.score += comboBonus;
-        }
+    var scoringCore = this.getCoreScoringRuntime();
+    if (scoringCore && typeof scoringCore.computePostMoveScore === "function") {
+      var scoreResult = scoringCore.computePostMoveScore({
+        scoreBeforeMove: scoreBeforeMove,
+        scoreAfterMerge: this.score,
+        comboStreak: this.comboStreak,
+        comboMultiplier: this.comboMultiplier
+      }) || {};
+
+      if (Number.isFinite(scoreResult.score)) {
+        this.score = Number(scoreResult.score);
+      }
+      if (Number.isInteger(scoreResult.comboStreak) && scoreResult.comboStreak >= 0) {
+        this.comboStreak = scoreResult.comboStreak;
       }
     } else {
-      this.comboStreak = 0;
+      var mergeGain = this.score - scoreBeforeMove;
+      if (mergeGain > 0) {
+        this.comboStreak += 1;
+        if (this.comboMultiplier > 1 && this.comboStreak > 1) {
+          var comboBonus = Math.floor(mergeGain * (this.comboMultiplier - 1) * (this.comboStreak - 1));
+          if (comboBonus > 0) {
+            this.score += comboBonus;
+          }
+        }
+      } else {
+        this.comboStreak = 0;
+      }
     }
 
     this.addRandomTile();
