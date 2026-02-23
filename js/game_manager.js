@@ -1152,6 +1152,13 @@ GameManager.prototype.getCoreUndoTileSnapshotRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreUndoTileRestoreRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreUndoTileRestoreRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
   var moveApplyCore = this.getCoreMoveApplyRuntime();
   if (moveApplyCore && typeof moveApplyCore.planTileInteraction === "function") {
@@ -1398,6 +1405,45 @@ GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
       y: target ? target.y : null
     }
   };
+};
+
+GameManager.prototype.createUndoRestoreTile = function (snapshot) {
+  var source = snapshot && typeof snapshot === "object" ? snapshot : {};
+  var previous = source.previousPosition && typeof source.previousPosition === "object"
+    ? source.previousPosition
+    : {};
+  var fallback = {
+    x: source.x,
+    y: source.y,
+    value: source.value,
+    previousPosition: {
+      x: previous.x,
+      y: previous.y
+    }
+  };
+
+  var undoTileRestoreCore = this.getCoreUndoTileRestoreRuntime();
+  if (undoTileRestoreCore && typeof undoTileRestoreCore.createUndoRestoreTile === "function") {
+    var computed = undoTileRestoreCore.createUndoRestoreTile({
+      x: source.x,
+      y: source.y,
+      value: source.value,
+      previousPosition: {
+        x: previous.x,
+        y: previous.y
+      }
+    }) || {};
+    if (
+      computed &&
+      typeof computed === "object" &&
+      computed.previousPosition &&
+      typeof computed.previousPosition === "object"
+    ) {
+      return computed;
+    }
+  }
+
+  return fallback;
 };
 
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
@@ -3032,7 +3078,7 @@ GameManager.prototype.move = function (direction) {
       this.grid.build();
       this.score = prev.score;
       for (var i in prev.tiles) {
-        var t = prev.tiles[i];
+        var t = this.createUndoRestoreTile(prev.tiles[i]);
         var tile = new Tile({x: t.x, y: t.y}, t.value);
         tile.previousPosition = {
           x: t.previousPosition.x,
