@@ -44,6 +44,7 @@ Deliverables:
   - Added shared runtime bootstrap entry: `js/legacy_bootstrap_runtime.js`
   - `application/play/capped/replay` now use shared `LegacyBootstrapRuntime.startGame` as single startup path
   - Added play query parser helper `src/bootstrap/play-query.ts` with runtime mirror `js/core_play_query_runtime.js`, and `play_application.js` now delegates `mode_key/challenge_id` resolution to shared bootstrap helper
+  - Added play header formatter helper `src/bootstrap/play-header.ts` with runtime mirror `js/core_play_header_runtime.js`, and `play_application.js` now delegates intro-line formatting to shared bootstrap helper
 
 Acceptance:
 - No behavior difference on game flow and mode selection.
