@@ -88,6 +88,7 @@ Deliverables:
   - Added `src/core/replay-lifecycle.ts` and `js/core_replay_lifecycle_runtime.js` to delegate replay lifecycle helpers (`seek` target clamp and per-step forced-spawn injection planning)
   - Added `src/core/replay-timer.ts` and `js/core_replay_timer_runtime.js` to delegate replay timer state transitions (`pause/resume/setSpeed`) and tick-stop decision
   - Added `src/core/replay-flow.ts` and `js/core_replay_flow_runtime.js` to delegate replay flow helpers (tick-end state and seek rewind strategy)
+  - Added `src/core/replay-loop.ts` and `js/core_replay_loop_runtime.js` to delegate replay step-loop orchestration (current-action projection + forced-spawn injection decision + replay-index advance plan) shared by `resume` and `seek`
 
 Acceptance:
 - Same board transition and score outputs for golden test vectors.
@@ -140,5 +141,5 @@ Rollback:
 
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
-2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-lifecycle/replay-timer/replay-flow`).
-3. Continue extracting deterministic replay step-loop helpers (action execution + index advancement orchestration shared by `resume` and `seek`) while keeping UI/storage behavior unchanged.
+2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-lifecycle/replay-timer/replay-flow/replay-loop`).
+3. Continue extracting deterministic replay control helpers around `resume/seek` control flow boundaries (tick stop gate + rewind restart action application contract) while keeping UI/storage behavior unchanged.
