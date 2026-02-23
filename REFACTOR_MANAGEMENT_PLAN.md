@@ -85,6 +85,7 @@ Deliverables:
   - Added `src/core/replay-legacy.ts` and `js/core_replay_legacy_runtime.js` to delegate legacy replay (`REPLAY_v1/v2/v2S`) parser/import decode path
   - Added `src/core/replay-import.ts` and `js/core_replay_import_runtime.js` to delegate replay import envelope parsing (`JSON v3`/`REPLAY_v4C`) and mode-code mapping
   - Added `src/core/replay-execution.ts` and `js/core_replay_execution_runtime.js` to delegate replay action kind-routing and execution payload projection (`move/undo/practice`)
+  - Added `src/core/replay-dispatch.ts` and `js/core_replay_dispatch_runtime.js` to delegate replay execution dispatch planning (`move` / `insertCustomTile` side-effect contract) after action resolution
   - Added `src/core/replay-lifecycle.ts` and `js/core_replay_lifecycle_runtime.js` to delegate replay lifecycle helpers (`seek` target clamp and per-step forced-spawn injection planning)
   - Added `src/core/replay-timer.ts` and `js/core_replay_timer_runtime.js` to delegate replay timer state transitions (`pause/resume/setSpeed`) and tick-stop decision
   - Added `src/core/replay-flow.ts` and `js/core_replay_flow_runtime.js` to delegate replay flow helpers (tick-end state and seek rewind strategy)
@@ -143,5 +144,5 @@ Rollback:
 
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
-2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-lifecycle/replay-timer/replay-flow/replay-control/replay-loop`).
-3. Continue extracting deterministic replay action-dispatch boundaries (action-kind resolution + execution side-effect contract) while keeping UI/storage behavior unchanged.
+2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-dispatch/replay-lifecycle/replay-timer/replay-flow/replay-control/replay-loop`).
+3. Start M4 adapter replacement scaffolding: define typed adapter boundary from legacy input/actuator/storage to core engine while keeping legacy UI unchanged.

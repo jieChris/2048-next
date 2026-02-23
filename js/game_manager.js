@@ -587,6 +587,33 @@ GameManager.prototype.resolveReplayExecution = function (action) {
   throw "Unknown replay action";
 };
 
+GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
+  var replayDispatchCore = this.getCoreReplayDispatchRuntime();
+  if (replayDispatchCore && typeof replayDispatchCore.planReplayDispatch === "function") {
+    return replayDispatchCore.planReplayDispatch(resolvedExecution) || {};
+  }
+
+  if (resolvedExecution.kind === "m") {
+    return {
+      method: "move",
+      args: [resolvedExecution.dir]
+    };
+  }
+  if (resolvedExecution.kind === "u") {
+    return {
+      method: "move",
+      args: [-1]
+    };
+  }
+  if (resolvedExecution.kind === "p") {
+    return {
+      method: "insertCustomTile",
+      args: [resolvedExecution.x, resolvedExecution.y, resolvedExecution.value]
+    };
+  }
+  throw "Unknown replay action";
+};
+
 GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
   var replayLifecycleCore = this.getCoreReplayLifecycleRuntime();
   if (replayLifecycleCore && typeof replayLifecycleCore.normalizeReplaySeekTarget === "function") {
@@ -1657,6 +1684,13 @@ GameManager.prototype.getCoreReplayImportRuntime = function () {
 GameManager.prototype.getCoreReplayExecutionRuntime = function () {
   if (typeof window === "undefined") return null;
   var core = window.CoreReplayExecutionRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
+GameManager.prototype.getCoreReplayDispatchRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreReplayDispatchRuntime;
   if (!core || typeof core !== "object") return null;
   return core;
 };
@@ -4548,16 +4582,13 @@ GameManager.prototype.import = function (replayString) {
 
 GameManager.prototype.executeReplayAction = function (action) {
   var resolved = this.resolveReplayExecution(action);
-  if (resolved.kind === "m") {
-    this.move(resolved.dir);
+  var dispatchPlan = this.planReplayDispatch(resolved);
+  if (dispatchPlan.method === "move") {
+    this.move(dispatchPlan.args[0]);
     return;
   }
-  if (resolved.kind === "u") {
-    this.move(-1);
-    return;
-  }
-  if (resolved.kind === "p") {
-    this.insertCustomTile(resolved.x, resolved.y, resolved.value);
+  if (dispatchPlan.method === "insertCustomTile") {
+    this.insertCustomTile(dispatchPlan.args[0], dispatchPlan.args[1], dispatchPlan.args[2]);
     return;
   }
   throw "Unknown replay action";
