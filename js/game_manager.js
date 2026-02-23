@@ -341,6 +341,64 @@ GameManager.prototype.decodeBoardV4 = function (encoded) {
   return rows;
 };
 
+GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
+  var replayV4Core = this.getCoreReplayV4ActionsRuntime();
+  if (replayV4Core && typeof replayV4Core.decodeReplayV4Actions === "function") {
+    return replayV4Core.decodeReplayV4Actions(actionsEncoded) || {};
+  }
+
+  var replayMoves = [];
+  var replaySpawns = [];
+  var i = 0;
+  while (i < actionsEncoded.length) {
+    var token = this.decodeReplay128(actionsEncoded.charAt(i++));
+    if (token < 127) {
+      var dir = (token >> 5) & 3;
+      var is4 = (token >> 4) & 1;
+      var posIdx = token & 15;
+      var x = posIdx % 4;
+      var y = Math.floor(posIdx / 4);
+      replayMoves.push(dir);
+      replaySpawns.push({ x: x, y: y, value: is4 ? 4 : 2 });
+      continue;
+    }
+    if (i >= actionsEncoded.length) throw "Invalid v4C escape";
+    var subtype = this.decodeReplay128(actionsEncoded.charAt(i++));
+    if (subtype === 0) {
+      var raw127 = 127;
+      var dir127 = (raw127 >> 5) & 3;
+      var is4_127 = (raw127 >> 4) & 1;
+      var posIdx127 = raw127 & 15;
+      replayMoves.push(dir127);
+      replaySpawns.push({
+        x: posIdx127 % 4,
+        y: Math.floor(posIdx127 / 4),
+        value: is4_127 ? 4 : 2
+      });
+    } else if (subtype === 1) {
+      replayMoves.push(-1);
+      replaySpawns.push(null);
+    } else if (subtype === 2) {
+      if (i + 1 >= actionsEncoded.length) throw "Invalid v4C practice action";
+      var cell = this.decodeReplay128(actionsEncoded.charAt(i++));
+      var exp = this.decodeReplay128(actionsEncoded.charAt(i++));
+      if (cell < 0 || cell > 15) throw "Invalid v4C practice cell";
+      var px = (cell >> 2) & 3;
+      var py = cell & 3;
+      var value = exp === 0 ? 0 : Math.pow(2, exp);
+      replayMoves.push(["p", px, py, value]);
+      replaySpawns.push(null);
+    } else {
+      throw "Unknown v4C escape subtype";
+    }
+  }
+
+  return {
+    replayMoves: replayMoves,
+    replaySpawns: replaySpawns
+  };
+};
+
 GameManager.prototype.setBoardFromMatrix = function (board) {
   if (!Array.isArray(board) || board.length !== this.height) throw "Invalid board matrix";
   this.grid = new Grid(this.width, this.height);
@@ -1196,6 +1254,13 @@ GameManager.prototype.getCoreUndoStackEntryRuntime = function () {
 GameManager.prototype.getCoreReplayCodecRuntime = function () {
   if (typeof window === "undefined") return null;
   var core = window.CoreReplayCodecRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
+GameManager.prototype.getCoreReplayV4ActionsRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreReplayV4ActionsRuntime;
   if (!core || typeof core !== "object") return null;
   return core;
 };
@@ -3981,16 +4046,6 @@ GameManager.prototype.import = function (replayString) {
     }
 
     var trimmed = replayString.trim();
-    var decodeMoveSpawnCode = function (rawCode) {
-      var dir = (rawCode >> 5) & 3;
-      var is4 = (rawCode >> 4) & 1;
-      var posIdx = rawCode & 15;
-      var x = posIdx % 4;
-      var y = Math.floor(posIdx / 4);
-      self.replayMoves.push(dir);
-      self.replaySpawns.push({ x: x, y: y, value: is4 ? 4 : 2 });
-    };
-
     var startReplay = function () {
       self.replayIndex = 0;
       self.replayDelay = 200;
@@ -4043,38 +4098,9 @@ GameManager.prototype.import = function (replayString) {
       var initialBoardEncoded = body.substring(1, 17);
       var actionsEncoded = body.substring(17);
       var initialBoard = this.decodeBoardV4(initialBoardEncoded);
-
-      this.replayMoves = [];
-      this.replaySpawns = [];
-
-      var i = 0;
-      while (i < actionsEncoded.length) {
-        var token = this.decodeReplay128(actionsEncoded.charAt(i++));
-        if (token < 127) {
-          decodeMoveSpawnCode(token);
-          continue;
-        }
-        if (i >= actionsEncoded.length) throw "Invalid v4C escape";
-        var subtype = this.decodeReplay128(actionsEncoded.charAt(i++));
-        if (subtype === 0) {
-          decodeMoveSpawnCode(127);
-        } else if (subtype === 1) {
-          this.replayMoves.push(-1);
-          this.replaySpawns.push(null);
-        } else if (subtype === 2) {
-          if (i + 1 >= actionsEncoded.length) throw "Invalid v4C practice action";
-          var cell = this.decodeReplay128(actionsEncoded.charAt(i++));
-          var exp = this.decodeReplay128(actionsEncoded.charAt(i++));
-          if (cell < 0 || cell > 15) throw "Invalid v4C practice cell";
-          var px = (cell >> 2) & 3;
-          var py = cell & 3;
-          var value = exp === 0 ? 0 : Math.pow(2, exp);
-          this.replayMoves.push(["p", px, py, value]);
-          this.replaySpawns.push(null);
-        } else {
-          throw "Unknown v4C escape subtype";
-        }
-      }
+      var decodedV4Actions = this.decodeReplayV4Actions(actionsEncoded);
+      this.replayMoves = Array.isArray(decodedV4Actions.replayMoves) ? decodedV4Actions.replayMoves : [];
+      this.replaySpawns = Array.isArray(decodedV4Actions.replaySpawns) ? decodedV4Actions.replaySpawns : [];
 
       this.disableSessionSync = true;
       this.restartWithBoard(initialBoard, replayModeConfigV4, { asReplay: true });
