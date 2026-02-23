@@ -673,7 +673,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#history-export-mismatch-btn")).toBeVisible();
     await expect(page.locator("#history-burnin-summary")).toContainText("可比较样本 2");
     await expect(page.locator("#history-burnin-summary")).toContainText("不一致 1");
-    await expect(page.locator("#history-burnin-summary")).toContainText("样本不足");
+    await expect(page.locator("#history-burnin-summary")).toContainText("单窗口: 样本不足");
+    await expect(page.locator("#history-burnin-summary")).toContainText("连续窗口: 窗口不足");
+    await expect(page.locator("#history-burnin-summary")).toContainText("连续门槛: 最近 3 个窗口");
     await expect(page.locator(".history-burnin-focus-mismatch")).toHaveCount(1);
 
     await page.click(".history-burnin-focus-mismatch");

@@ -10,7 +10,8 @@
     keyword: "",
     sortBy: "ended_desc",
     adapterParityFilter: "all",
-    burnInWindow: "200"
+    burnInWindow: "200",
+    sustainedWindows: "3"
   };
   var BURN_IN_MIN_COMPARABLE = 50;
   var BURN_IN_MAX_MISMATCH_RATE = 1;
@@ -255,6 +256,13 @@
     return "history-burnin-gate-warn";
   }
 
+  function getSustainedGateLabel(status) {
+    if (status === "pass") return "连续达标";
+    if (status === "fail") return "连续未达标";
+    if (status === "insufficient_window") return "窗口不足";
+    return "样本不足";
+  }
+
   function renderBurnInSummary(summary) {
     var panel = el("history-burnin-summary");
     if (!panel) return;
@@ -268,6 +276,20 @@
       : ("最近 " + summary.evaluatedRecords + " 条（窗口 " + summary.sampleLimit + "）");
     var gateLabel = getBurnInGateLabel(summary.gateStatus);
     var gateClass = getBurnInGateClass(summary.gateStatus);
+    var sustainedGateLabel = getSustainedGateLabel(summary.sustainedGateStatus);
+    var sustainedGateClass = getBurnInGateClass(
+      summary.sustainedGateStatus === "pass" || summary.sustainedGateStatus === "fail"
+        ? summary.sustainedGateStatus
+        : "warn"
+    );
+    var sustainedWindowSize = Number.isFinite(summary.sustainedWindowSize) ? summary.sustainedWindowSize : 0;
+    var sustainedRequired = Number.isFinite(summary.sustainedWindows) ? summary.sustainedWindows : 0;
+    var sustainedEvaluated = Number.isFinite(summary.sustainedEvaluatedWindows)
+      ? summary.sustainedEvaluatedWindows
+      : 0;
+    var sustainedConsecutive = Number.isFinite(summary.sustainedConsecutivePass)
+      ? summary.sustainedConsecutivePass
+      : 0;
     var mismatchAction = "";
     if ((summary.mismatch || 0) > 0) {
       mismatchAction = "<button class='replay-button history-burnin-focus-mismatch'>仅看不一致</button>";
@@ -276,7 +298,10 @@
     panel.innerHTML =
       "<div class='history-burnin-head'>" +
         "<div class='history-burnin-title'>Cutover Burn-in 统计</div>" +
-        "<span class='history-burnin-gate " + gateClass + "'>" + escapeHtml(gateLabel) + "</span>" +
+        "<div class='history-burnin-gates'>" +
+          "<span class='history-burnin-gate " + gateClass + "'>单窗口: " + escapeHtml(gateLabel) + "</span>" +
+          "<span class='history-burnin-gate " + sustainedGateClass + "'>连续窗口: " + escapeHtml(sustainedGateLabel) + "</span>" +
+        "</div>" +
       "</div>" +
       "<div class='history-burnin-grid'>" +
         "<span>采样: " + escapeHtml(limitText) + "</span>" +
@@ -290,6 +315,16 @@
       "<div class='history-burnin-note'>" +
         "门槛: 可比较 >= " + escapeHtml(summary.minComparable) +
         "，不一致率 <= " + escapeHtml(formatPercent(summary.maxMismatchRate)) +
+      "</div>" +
+      "<div class='history-burnin-note'>" +
+        "连续门槛: 最近 " + escapeHtml(sustainedRequired) +
+        " 个窗口（每窗口 " + escapeHtml(sustainedWindowSize) +
+        " 条）均需单窗口达标" +
+      "</div>" +
+      "<div class='history-burnin-note'>" +
+        "连续通过 " + escapeHtml(sustainedConsecutive) +
+        "/" + escapeHtml(sustainedRequired) +
+        "，已评估窗口 " + escapeHtml(sustainedEvaluated) +
       "</div>" +
       (mismatchAction ? "<div class='history-burnin-actions'>" + mismatchAction + "</div>" : "");
 
@@ -597,6 +632,8 @@
     state.adapterParityFilter = ((adapterFilterInput && adapterFilterInput.value) || "all").trim();
     var burnInWindowInput = el("history-burnin-window");
     state.burnInWindow = ((burnInWindowInput && burnInWindowInput.value) || "200").trim();
+    var sustainedWindowInput = el("history-sustained-window");
+    state.sustainedWindows = ((sustainedWindowInput && sustainedWindowInput.value) || "3").trim();
   }
 
   function loadHistory(resetPage) {
@@ -625,6 +662,7 @@
         keyword: state.keyword,
         sort_by: state.sortBy,
         sample_limit: state.burnInWindow,
+        sustained_windows: state.sustainedWindows,
         min_comparable: BURN_IN_MIN_COMPARABLE,
         max_mismatch_rate: BURN_IN_MAX_MISMATCH_RATE
       });
@@ -786,6 +824,13 @@
     var burnInWindow = el("history-burnin-window");
     if (burnInWindow) {
       burnInWindow.addEventListener("change", function () {
+        loadHistory(true);
+      });
+    }
+
+    var sustainedWindow = el("history-sustained-window");
+    if (sustainedWindow) {
+      sustainedWindow.addEventListener("change", function () {
         loadHistory(true);
       });
     }

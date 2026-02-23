@@ -2098,6 +2098,13 @@ input[type=range]::-webkit-slider-runnable-track {
   margin-bottom: 8px;
 }
 
+.history-burnin-gates {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .history-burnin-title {
   font-size: 14px;
   font-weight: bold;

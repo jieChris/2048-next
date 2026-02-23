@@ -98,6 +98,63 @@
     return num > 0 ? num : null;
   }
 
+  function buildBurnInGate(comparable, mismatchRate, minComparable, maxMismatchRate) {
+    var gateStatus = "insufficient_sample";
+    var passGate = null;
+    if (comparable >= minComparable) {
+      if (mismatchRate !== null && mismatchRate <= maxMismatchRate) {
+        gateStatus = "pass";
+        passGate = true;
+      } else {
+        gateStatus = "fail";
+        passGate = false;
+      }
+    }
+    return {
+      gateStatus: gateStatus,
+      passGate: passGate
+    };
+  }
+
+  function summarizeBurnInWindow(records, minComparable, maxMismatchRate) {
+    var list = Array.isArray(records) ? records : [];
+    var withDiagnostics = 0;
+    var comparable = 0;
+    var match = 0;
+    var mismatch = 0;
+    var incomplete = 0;
+
+    for (var i = 0; i < list.length; i++) {
+      var item = list[i];
+      if (hasAdapterParityDiagnostics(item)) withDiagnostics += 1;
+      var status = getAdapterParityStatus(item);
+      if (status === "match") {
+        comparable += 1;
+        match += 1;
+      } else if (status === "mismatch") {
+        comparable += 1;
+        mismatch += 1;
+      } else {
+        incomplete += 1;
+      }
+    }
+
+    var mismatchRate = comparable > 0 ? (mismatch * 100) / comparable : null;
+    var gate = buildBurnInGate(comparable, mismatchRate, minComparable, maxMismatchRate);
+
+    return {
+      recordCount: list.length,
+      withDiagnostics: withDiagnostics,
+      comparable: comparable,
+      match: match,
+      mismatch: mismatch,
+      incomplete: incomplete,
+      mismatchRate: mismatchRate,
+      gateStatus: gate.gateStatus,
+      passGate: gate.passGate
+    };
+  }
+
   function getAdapterParityBurnInSummary(options) {
     options = options || {};
     var sampleLimitInput = options.sample_limit;
@@ -112,6 +169,9 @@
 
     var maxMismatchRate = toFiniteNumberOrNull(options.max_mismatch_rate);
     if (maxMismatchRate === null || maxMismatchRate < 0) maxMismatchRate = 1;
+
+    var sustainedWindows = toPositiveIntegerOrNull(options.sustained_windows);
+    if (sustainedWindows === null) sustainedWindows = 3;
 
     var matched = [];
     var page = 1;
@@ -132,36 +192,47 @@
     }
 
     var source = sampleLimit === null ? matched : matched.slice(0, sampleLimit);
-    var withDiagnostics = 0;
-    var comparable = 0;
-    var match = 0;
-    var mismatch = 0;
-    var incomplete = 0;
-    for (var j = 0; j < source.length; j++) {
-      var item = source[j];
-      if (hasAdapterParityDiagnostics(item)) withDiagnostics += 1;
-      var status = getAdapterParityStatus(item);
-      if (status === "match") {
-        comparable += 1;
-        match += 1;
-      } else if (status === "mismatch") {
-        comparable += 1;
-        mismatch += 1;
-      } else {
-        incomplete += 1;
+    var primary = summarizeBurnInWindow(source, minComparable, maxMismatchRate);
+    var sustainedWindowSize = sampleLimit === null ? matched.length : sampleLimit;
+    var sustainedWindowDetails = [];
+    if (sustainedWindowSize > 0) {
+      for (var w = 0; w < sustainedWindows; w++) {
+        var start = w * sustainedWindowSize;
+        if (start >= matched.length) break;
+        var windowRecords = matched.slice(start, start + sustainedWindowSize);
+        var stat = summarizeBurnInWindow(windowRecords, minComparable, maxMismatchRate);
+        stat.windowIndex = w + 1;
+        sustainedWindowDetails.push(stat);
       }
     }
 
-    var mismatchRate = comparable > 0 ? (mismatch * 100) / comparable : null;
-    var gateStatus = "insufficient_sample";
-    var passGate = null;
-    if (comparable >= minComparable) {
-      if (mismatchRate !== null && mismatchRate <= maxMismatchRate) {
-        gateStatus = "pass";
-        passGate = true;
+    var sustainedConsecutivePass = 0;
+    for (var z = 0; z < sustainedWindowDetails.length; z++) {
+      if (sustainedWindowDetails[z].passGate === true) sustainedConsecutivePass += 1;
+      else break;
+    }
+
+    var sustainedGateStatus = "insufficient_window";
+    var sustainedPassGate = null;
+    if (sustainedWindowDetails.length >= sustainedWindows) {
+      if (sustainedConsecutivePass >= sustainedWindows) {
+        sustainedGateStatus = "pass";
+        sustainedPassGate = true;
       } else {
-        gateStatus = "fail";
-        passGate = false;
+        var hasSampleInsufficient = false;
+        for (var y = 0; y < sustainedWindows; y++) {
+          if (sustainedWindowDetails[y].gateStatus === "insufficient_sample") {
+            hasSampleInsufficient = true;
+            break;
+          }
+        }
+        if (hasSampleInsufficient) {
+          sustainedGateStatus = "insufficient_sample";
+          sustainedPassGate = null;
+        } else {
+          sustainedGateStatus = "fail";
+          sustainedPassGate = false;
+        }
       }
     }
 
@@ -169,16 +240,23 @@
       matchedRecords: matched.length,
       evaluatedRecords: source.length,
       sampleLimit: sampleLimit,
+      sustainedWindows: sustainedWindows,
+      sustainedWindowSize: sustainedWindowSize,
+      sustainedEvaluatedWindows: sustainedWindowDetails.length,
+      sustainedConsecutivePass: sustainedConsecutivePass,
+      sustainedGateStatus: sustainedGateStatus,
+      sustainedPassGate: sustainedPassGate,
+      sustainedWindowDetails: sustainedWindowDetails,
       minComparable: minComparable,
       maxMismatchRate: maxMismatchRate,
-      withDiagnostics: withDiagnostics,
-      comparable: comparable,
-      match: match,
-      mismatch: mismatch,
-      incomplete: incomplete,
-      mismatchRate: mismatchRate,
-      gateStatus: gateStatus,
-      passGate: passGate
+      withDiagnostics: primary.withDiagnostics,
+      comparable: primary.comparable,
+      match: primary.match,
+      mismatch: primary.mismatch,
+      incomplete: primary.incomplete,
+      mismatchRate: primary.mismatchRate,
+      gateStatus: primary.gateStatus,
+      passGate: primary.passGate
     };
   }
 

@@ -140,6 +140,7 @@ Deliverables:
   - Added canary policy control panel on `history.html` with one-click actions for “默认 core canary / 强制 legacy 回滚 / 解除回滚 / 重置基线” and visible policy-source diagnostics
   - `LegacyAdapterRuntime` now exposes `resolveAdapterModePolicy` plus storage policy mutators (`setStoredAdapterDefaultMode` / `setStoredForceLegacy`), enabling reproducible cutover operations without touching gameplay code
   - Smoke suite now validates canary policy panel behavior end-to-end (policy writes, effective-mode source transitions, and storage-key reset)
+  - Burn-in gate now includes sustained-window checks (default 3 windows) so cutover readiness is judged by continuous stability, not single-window fluctuation
 
 Acceptance:
 - Session-level parity on key metrics (score, win/lose state, tile cap behavior).
