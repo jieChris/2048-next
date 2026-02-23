@@ -142,6 +142,7 @@ Deliverables:
   - Smoke suite now validates canary policy panel behavior end-to-end (policy writes, effective-mode source transitions, and storage-key reset)
   - Burn-in gate now includes sustained-window checks (default 3 windows) so cutover readiness is judged by continuous stability, not single-window fluctuation
   - Extracted burn-in gate computation to typed module `src/bridge/burnin-gate.ts` with runtime mirror `js/core_burnin_gate_runtime.js`, and `LocalHistoryStore` now delegates window/sustained gate summary through this shared bridge helper
+  - Consolidated entry startup shell by adding `LegacyBootstrapRuntime.startGameOnAnimationFrame`, and migrated `application/play/capped/replay` entry scripts to the shared startup wrapper to reduce duplicated frame/bootstrap guard logic
 
 Acceptance:
 - Session-level parity on key metrics (score, win/lose state, tile cap behavior).

@@ -207,7 +207,12 @@
     setupChallengeModeIntro(modeConfig);
   }
 
-  window.requestAnimationFrame(function () {
+  var bootstrap = window.LegacyBootstrapRuntime;
+  if (!bootstrap || typeof bootstrap.startGameOnAnimationFrame !== "function") {
+    throw new Error("LegacyBootstrapRuntime.startGameOnAnimationFrame is required");
+  }
+
+  bootstrap.startGameOnAnimationFrame(function () {
     var modeKey = parseModeKey();
     var challengeId = parseChallengeId();
     var modeConfig = (window.ModeCatalog && window.ModeCatalog.getMode(modeKey)) ||
@@ -216,27 +221,23 @@
     if (!modeConfig) {
       alert("无效模式，已回退到标准模式");
       window.location.href = "play.html?mode_key=standard_4x4_pow2_no_undo";
-      return;
+      return null;
     }
 
     modeConfig = resolveCustomSpawnModeConfig(modeKey, modeConfig);
     if (!modeConfig) {
       window.location.href = "modes.html";
-      return;
+      return null;
     }
 
     window.GAME_MODE_CONFIG = modeConfig;
     window.GAME_CHALLENGE_CONTEXT = challengeId ? { id: challengeId, mode_key: modeConfig.key } : null;
     setupHeader(modeConfig);
-    var bootstrap = window.LegacyBootstrapRuntime;
-    if (!bootstrap || typeof bootstrap.startGame !== "function") {
-      throw new Error("LegacyBootstrapRuntime.startGame is required");
-    }
-    bootstrap.startGame({
+    return {
       modeKey: modeConfig.key,
       modeConfig: modeConfig,
       inputManagerCtor: KeyboardInputManager,
       defaultBoardWidth: 4
-    });
+    };
   });
 })();

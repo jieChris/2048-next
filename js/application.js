@@ -1,6 +1,10 @@
-window.requestAnimationFrame(function () {
+var bootstrap = window.LegacyBootstrapRuntime;
+if (!bootstrap || typeof bootstrap.startGameOnAnimationFrame !== "function") {
+  throw new Error("LegacyBootstrapRuntime.startGameOnAnimationFrame is required");
+}
+
+bootstrap.startGameOnAnimationFrame(function () {
   var modeKey = "standard_4x4_pow2_no_undo";
-  var bootstrap = window.LegacyBootstrapRuntime;
   function readPracticeRulesetParam() {
     try {
       var params = new URLSearchParams(window.location.search || "");
@@ -27,10 +31,6 @@ window.requestAnimationFrame(function () {
     return cfg;
   }
 
-  if (!bootstrap || typeof bootstrap.startGame !== "function") {
-    throw new Error("LegacyBootstrapRuntime.startGame is required");
-  }
-
   if (typeof document !== "undefined" && document.body) {
     modeKey = document.body.getAttribute("data-mode-id") || modeKey;
   }
@@ -44,13 +44,12 @@ window.requestAnimationFrame(function () {
     }
   }
 
-  bootstrap.startGame({
+  return {
     modeKey: modeKey,
     modeConfig: window.GAME_MODE_CONFIG,
     inputManagerCtor: KeyboardInputManager,
     defaultBoardWidth: 4
-  });
-
+  };
 });
 
 function handle_undo() {

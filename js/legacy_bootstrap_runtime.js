@@ -85,8 +85,37 @@
     return manager;
   }
 
+  function scheduleNextFrame(callback) {
+    if (typeof callback !== "function") return;
+    if (typeof global.requestAnimationFrame === "function") {
+      global.requestAnimationFrame(callback);
+      return;
+    }
+    if (typeof global.setTimeout === "function") {
+      global.setTimeout(callback, 0);
+      return;
+    }
+    callback();
+  }
+
+  function startGameOnAnimationFrame(optionsOrFactory) {
+    var result = null;
+    scheduleNextFrame(function () {
+      var options = typeof optionsOrFactory === "function"
+        ? optionsOrFactory()
+        : optionsOrFactory;
+      if (options === null || options === undefined || options === false) {
+        result = null;
+        return;
+      }
+      result = startGame(options);
+    });
+    return result;
+  }
+
   global.LegacyBootstrapRuntime = global.LegacyBootstrapRuntime || {};
   global.LegacyBootstrapRuntime.resolveModeConfig = resolveModeConfig;
   global.LegacyBootstrapRuntime.attachLegacyBridge = attachLegacyBridge;
   global.LegacyBootstrapRuntime.startGame = startGame;
+  global.LegacyBootstrapRuntime.startGameOnAnimationFrame = startGameOnAnimationFrame;
 })(typeof window !== "undefined" ? window : undefined);

@@ -82,7 +82,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const hasGameManager = await page.evaluate(() => Boolean((window as any).game_manager));
       const hasLegacyEngine = await page.evaluate(() => Boolean((window as any).__legacyEngine));
       const hasBootstrapRuntime = await page.evaluate(
-        () => Boolean((window as any).LegacyBootstrapRuntime?.startGame)
+        () =>
+          Boolean(
+            (window as any).LegacyBootstrapRuntime?.startGame &&
+              (window as any).LegacyBootstrapRuntime?.startGameOnAnimationFrame
+          )
       );
       const hasLegacyAdapterRuntime = await page.evaluate(
         () => Boolean((window as any).LegacyAdapterRuntime?.attachLegacyBridgeWithAdapter)
