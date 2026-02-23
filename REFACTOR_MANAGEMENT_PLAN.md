@@ -73,6 +73,7 @@ Deliverables:
   - Added `src/core/post-move.ts` and `js/core_post_move_runtime.js` to delegate post-move lifecycle transitions (`successfulMoveCount/over/endTime/startTimer` decisions)
   - Added `src/core/move-apply.ts` and `js/core_move_apply_runtime.js` to delegate per-tile merge-vs-move decision and target selection
   - Added `src/core/post-move-record.ts` and `js/core_post_move_record_runtime.js` to delegate post-move replay/history write decisions
+  - Added `src/core/post-undo-record.ts` and `js/core_post_undo_record_runtime.js` to delegate undo replay/history write decisions
 
 Acceptance:
 - Same board transition and score outputs for golden test vectors.
@@ -125,5 +126,5 @@ Rollback:
 
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
-2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record`).
-3. Continue extracting deterministic move execution helpers (undo snapshot/restore path) while keeping UI/storage behavior unchanged.
+2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record`).
+3. Continue extracting deterministic move execution helpers (undo snapshot/restore normalization path) while keeping UI/storage behavior unchanged.

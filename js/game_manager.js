@@ -1124,6 +1124,13 @@ GameManager.prototype.getCorePostMoveRecordRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCorePostUndoRecordRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CorePostUndoRecordRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
   var moveApplyCore = this.getCoreMoveApplyRuntime();
   if (moveApplyCore && typeof moveApplyCore.planTileInteraction === "function") {
@@ -1206,6 +1213,34 @@ GameManager.prototype.computePostMoveRecord = function (direction) {
     shouldPushSessionAction: shouldPushSessionAction,
     sessionAction: shouldPushSessionAction ? ["m", direction] : null,
     shouldResetLastSpawn: true
+  };
+};
+
+GameManager.prototype.computePostUndoRecord = function (direction) {
+  var postUndoRecordCore = this.getCorePostUndoRecordRuntime();
+  if (postUndoRecordCore && typeof postUndoRecordCore.computePostUndoRecord === "function") {
+    return postUndoRecordCore.computePostUndoRecord({
+      replayMode: !!this.replayMode,
+      direction: direction,
+      hasSessionReplayV3: !!this.sessionReplayV3
+    }) || {};
+  }
+
+  if (this.replayMode) {
+    return {
+      shouldRecordMoveHistory: false,
+      shouldAppendCompactUndo: false,
+      shouldPushSessionAction: false,
+      sessionAction: null
+    };
+  }
+
+  var shouldPushSessionAction = !!this.sessionReplayV3;
+  return {
+    shouldRecordMoveHistory: true,
+    shouldAppendCompactUndo: true,
+    shouldPushSessionAction: shouldPushSessionAction,
+    sessionAction: shouldPushSessionAction ? ["u"] : null
   };
 };
 
@@ -2863,12 +2898,18 @@ GameManager.prototype.move = function (direction) {
       this.undoUsed++;
       
       // Record undo in history if valid
-      if (!this.replayMode) {
+      var postUndoRecord = this.computePostUndoRecord(direction);
+      if (postUndoRecord.shouldRecordMoveHistory) {
           this.moveHistory.push(direction);
+      }
+      if (postUndoRecord.shouldAppendCompactUndo) {
           this.appendCompactUndo();
-          if (this.sessionReplayV3) {
-              this.sessionReplayV3.actions.push(["u"]);
-          }
+      }
+      if (postUndoRecord.shouldPushSessionAction && this.sessionReplayV3) {
+          var undoAction = Array.isArray(postUndoRecord.sessionAction)
+            ? postUndoRecord.sessionAction
+            : ["u"];
+          this.sessionReplayV3.actions.push(undoAction);
       }
       
       this.actuate();
