@@ -1737,6 +1737,60 @@ GameManager.prototype.getCoreReplayLegacyRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getLegacyAdapterBridge = function () {
+  if (typeof window === "undefined") return null;
+  var payload = window.__legacyEngine;
+  if (!payload || typeof payload !== "object") return null;
+  if (payload.manager !== this) return null;
+  return payload;
+};
+
+GameManager.prototype.publishAdapterMoveResult = function (meta) {
+  var bridge = this.getLegacyAdapterBridge();
+  if (!bridge || typeof bridge.emitMoveResult !== "function") return false;
+
+  var input = meta && typeof meta === "object" ? meta : {};
+  var modeKey = typeof bridge.modeKey === "string" && bridge.modeKey
+    ? bridge.modeKey
+    : (this.modeKey || this.mode || "");
+  var timestamp = Date.now();
+  var adapterMode =
+    typeof bridge.adapterMode === "string" && bridge.adapterMode
+      ? bridge.adapterMode
+      : "legacy-bridge";
+  var detail = {
+    reason: typeof input.reason === "string" && input.reason ? input.reason : "move",
+    direction: Number.isInteger(input.direction) ? input.direction : null,
+    moved: input.moved === true,
+    modeKey: modeKey,
+    adapterMode: adapterMode,
+    score: Number.isFinite(this.score) ? Number(this.score) : 0,
+    over: !!this.over,
+    won: !!this.won,
+    replayMode: !!this.replayMode,
+    successfulMoveCount:
+      Number.isInteger(this.successfulMoveCount) && this.successfulMoveCount >= 0
+        ? this.successfulMoveCount
+        : 0,
+    undoUsed: Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0,
+    undoDepth: Array.isArray(this.undoStack) ? this.undoStack.length : 0,
+    at: timestamp
+  };
+
+  bridge.emitMoveResult(detail);
+  if (typeof bridge.syncAdapterSnapshot === "function") {
+    var snapshot = {
+      adapterMode: adapterMode,
+      modeKey: modeKey || "unknown",
+      updatedAt: timestamp,
+      lastMoveResult: detail
+    };
+    bridge.syncAdapterSnapshot(snapshot);
+    bridge.adapterSnapshot = snapshot;
+  }
+  return true;
+};
+
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
   var moveApplyCore = this.getCoreMoveApplyRuntime();
   if (moveApplyCore && typeof moveApplyCore.planTileInteraction === "function") {
@@ -3833,6 +3887,11 @@ GameManager.prototype.move = function (direction) {
       if (shouldStartTimer) {
           this.startTimer();
       }
+      this.publishAdapterMoveResult({
+        reason: "undo",
+        direction: direction,
+        moved: true
+      });
     }
     return;
   }
@@ -4032,6 +4091,11 @@ GameManager.prototype.move = function (direction) {
     } else if (this.timerStatus === 0 && !this.over) {
       this.startTimer();
     }
+    this.publishAdapterMoveResult({
+      reason: "move",
+      direction: direction,
+      moved: true
+    });
   }
 };
 

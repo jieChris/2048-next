@@ -350,10 +350,45 @@ test.describe("Legacy Multi-Page Smoke", () => {
         expect(
           await page.evaluate(() => {
             const payload = (window as any).__legacyEngine;
+            const manager = (window as any).game_manager;
+            if (
+              !payload ||
+              typeof payload.syncAdapterSnapshot !== "function" ||
+              typeof payload.emitMoveResult !== "function" ||
+              !manager ||
+              typeof manager.publishAdapterMoveResult !== "function"
+            ) {
+              return false;
+            }
+
+            const ioApi = (window as any).LegacyAdapterIoRuntime;
+            if (!ioApi || typeof ioApi.buildAdapterMoveResultEventName !== "function") {
+              return false;
+            }
+
+            const eventName = ioApi.buildAdapterMoveResultEventName(payload.modeKey || "");
+            let captured: any = null;
+            const handler = (event: Event) => {
+              captured = (event as CustomEvent).detail || null;
+            };
+            window.addEventListener(eventName, handler as EventListener);
+            try {
+              manager.publishAdapterMoveResult({
+                reason: "smoke-contract",
+                direction: 0,
+                moved: false
+              });
+            } finally {
+              window.removeEventListener(eventName, handler as EventListener);
+            }
+
+            const snapshot = payload.adapterSnapshot;
             return Boolean(
-              payload &&
-                typeof payload.syncAdapterSnapshot === "function" &&
-                typeof payload.emitMoveResult === "function"
+              captured &&
+                captured.reason === "smoke-contract" &&
+                snapshot &&
+                snapshot.lastMoveResult &&
+                snapshot.lastMoveResult.reason === "smoke-contract"
             );
           }),
           `${entry.name} __legacyEngine.adapter io contract mismatch`
