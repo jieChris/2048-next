@@ -409,6 +409,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 (parityReport === null ||
                   (typeof parityReport === "object" &&
                     parityReport.modeKey === (payload.modeKey || "unknown")))
+                &&
+                (payload.adapterParityReport === null ||
+                  typeof payload.adapterParityReport === "object")
             );
           }),
           `${entry.name} __legacyEngine.adapter io contract mismatch`
@@ -458,6 +461,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const afterReport = payload.readAdapterParityReport();
       return {
         payloadModeKey: payload.modeKey || "unknown",
+        payloadParityReport: payload.adapterParityReport || null,
         before,
         after,
         beforeReport,
@@ -478,5 +482,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(result?.afterReport?.wonEvents).toBe(result?.after?.counters?.wonEvents);
     expect(result?.afterReport?.overEvents).toBe(result?.after?.counters?.overEvents);
     expect(result?.afterReport?.isScoreAligned).toBe(true);
+    expect(result?.payloadParityReport?.modeKey).toBe(result?.payloadModeKey);
+    expect(result?.payloadParityReport?.isScoreAligned).toBe(true);
   });
 });

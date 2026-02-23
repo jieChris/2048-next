@@ -1745,6 +1745,26 @@ GameManager.prototype.getLegacyAdapterBridge = function () {
   return payload;
 };
 
+GameManager.prototype.getAdapterSessionParityReport = function () {
+  var bridge = this.getLegacyAdapterBridge();
+  if (!bridge || typeof bridge !== "object") return null;
+
+  if (typeof bridge.readAdapterParityReport === "function") {
+    var report = bridge.readAdapterParityReport();
+    if (!report || typeof report !== "object") return null;
+    var clonedReport = this.safeClonePlain(report, null);
+    if (clonedReport) {
+      bridge.adapterParityReport = clonedReport;
+    }
+    return clonedReport;
+  }
+
+  if (bridge.adapterParityReport && typeof bridge.adapterParityReport === "object") {
+    return this.safeClonePlain(bridge.adapterParityReport, null);
+  }
+  return null;
+};
+
 GameManager.prototype.publishAdapterMoveResult = function (meta) {
   var bridge = this.getLegacyAdapterBridge();
   if (!bridge || typeof bridge.emitMoveResult !== "function") return false;
@@ -4532,6 +4552,7 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
     ended_at: endedAt,
     replay: this.serializeV3(),
     replay_string: this.serialize(),
+    adapter_parity_report_v1: this.getAdapterSessionParityReport(),
     client_version: (window.GAME_CLIENT_VERSION || "1.8"),
     end_reason: this.over ? "game_over" : "win_stop"
   };

@@ -122,6 +122,7 @@ Deliverables:
   - Added session-level parity report projection (`score/undo/win/over` counters + score alignment) via `buildAdapterSessionParityReport` in `src/bridge/adapter-shadow.ts` and runtime mirror
   - Bridge payload now exposes `readAdapterParityReport` and keeps `adapterParityReport` synchronized after move-result publish and shadow updates
   - Smoke suite now validates parity-report contract in both default adapter contract checks and `core-adapter` toggle path
+  - Session submit payload now carries `adapter_parity_report_v1` diagnostics for cutover auditing without changing scoring/submission behavior
 
 Acceptance:
 - Session-level parity on key metrics (score, win/lose state, tile cap behavior).
@@ -160,4 +161,4 @@ Rollback:
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
 2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-dispatch/replay-lifecycle/replay-timer/replay-flow/replay-control/replay-loop`).
-3. Continue M4 by wiring parity-report snapshots into session submit/diagnostic payloads for cutover readiness auditing.
+3. Continue M4 by adding A/B parity diff summaries (legacy-bridge vs core-adapter shadow) to accelerate cutover confidence checks.
