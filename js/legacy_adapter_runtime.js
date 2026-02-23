@@ -99,6 +99,15 @@
         if (!shadowApi || typeof shadowApi.getAdapterParityState !== "function") return null;
         return shadowApi.getAdapterParityState(snapshotModeKey);
       };
+      payload.readAdapterParityReport = function () {
+        if (!shadowApi || typeof shadowApi.buildAdapterSessionParityReport !== "function") return null;
+        return shadowApi.buildAdapterSessionParityReport({
+          parityState: payload.readAdapterParityState(),
+          snapshot: payload.adapterSnapshot,
+          modeKey: snapshotModeKey,
+          adapterMode: payload.adapterMode
+        });
+      };
 
       if (adapterMode === "core-adapter") {
         if (shadowApi && typeof shadowApi.attachAdapterMoveResultShadow === "function") {
@@ -107,12 +116,15 @@
             modeKey: snapshotModeKey,
             onStateChange: function (state) {
               payload.adapterParityState = state || null;
+              payload.adapterParityReport = payload.readAdapterParityReport();
             }
           });
           payload.adapterParityState = payload.readAdapterParityState();
+          payload.adapterParityReport = payload.readAdapterParityReport();
         } else {
           payload.adapterShadowBinding = null;
           payload.adapterParityState = null;
+          payload.adapterParityReport = payload.readAdapterParityReport();
         }
       } else {
         if (shadowApi && typeof shadowApi.detachAdapterMoveResultShadow === "function") {
@@ -120,6 +132,7 @@
         }
         payload.adapterShadowBinding = null;
         payload.adapterParityState = null;
+        payload.adapterParityReport = payload.readAdapterParityReport();
       }
     }
     return payload;

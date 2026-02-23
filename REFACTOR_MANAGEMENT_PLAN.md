@@ -119,6 +119,9 @@ Deliverables:
   - Added typed shadow parity projection helpers in `src/bridge/adapter-shadow.ts` and runtime mirror `js/core_adapter_shadow_runtime.js`
   - `LegacyAdapterRuntime` now attaches move-result shadow listener in `core-adapter` mode and exposes parity-state reads on bridge payload
   - Smoke suite now includes a `core-adapter` toggle scenario to verify shadow parity counters advance on published move-result events
+  - Added session-level parity report projection (`score/undo/win/over` counters + score alignment) via `buildAdapterSessionParityReport` in `src/bridge/adapter-shadow.ts` and runtime mirror
+  - Bridge payload now exposes `readAdapterParityReport` and keeps `adapterParityReport` synchronized after move-result publish and shadow updates
+  - Smoke suite now validates parity-report contract in both default adapter contract checks and `core-adapter` toggle path
 
 Acceptance:
 - Session-level parity on key metrics (score, win/lose state, tile cap behavior).
@@ -157,4 +160,4 @@ Rollback:
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
 2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-dispatch/replay-lifecycle/replay-timer/replay-flow/replay-control/replay-loop`).
-3. Continue M4 by mapping shadow parity snapshots into a session-level parity report (score/undo/win-over counters) for cutover readiness checks.
+3. Continue M4 by wiring parity-report snapshots into session submit/diagnostic payloads for cutover readiness auditing.

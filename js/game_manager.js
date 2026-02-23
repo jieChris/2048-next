@@ -1788,6 +1788,9 @@ GameManager.prototype.publishAdapterMoveResult = function (meta) {
     bridge.syncAdapterSnapshot(snapshot);
     bridge.adapterSnapshot = snapshot;
   }
+  if (typeof bridge.readAdapterParityReport === "function") {
+    bridge.adapterParityReport = bridge.readAdapterParityReport();
+  }
   return true;
 };
 

@@ -19,6 +19,19 @@
     return Number.isFinite(value) ? Number(value) : fallback;
   }
 
+  function toFiniteNumberOrNull(value) {
+    var num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  }
+
+  function isPlainObject(value) {
+    return !!value && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function normalizeAdapterMode(adapterMode) {
+    return adapterMode === "core-adapter" ? "core-adapter" : "legacy-bridge";
+  }
+
   function cloneCounters(counters) {
     return {
       totalEvents: counters.totalEvents,
@@ -166,10 +179,73 @@
     return cloneState(stateByMode[normalizeModeKey(modeKey)]);
   }
 
+  function buildAdapterSessionParityReport(input) {
+    var opts = input || {};
+    var parity = opts.parityState || null;
+    var snapshot = isPlainObject(opts.snapshot) ? opts.snapshot : null;
+    var snapshotLastMove = snapshot && isPlainObject(snapshot.lastMoveResult)
+      ? snapshot.lastMoveResult
+      : null;
+    var parityScore = parity ? toFiniteNumberOrNull(parity.lastScore) : null;
+    var snapshotScore = snapshotLastMove ? toFiniteNumberOrNull(snapshotLastMove.score) : null;
+    var scoreDelta = parityScore !== null && snapshotScore !== null ? parityScore - snapshotScore : null;
+    var isScoreAligned = scoreDelta !== null ? scoreDelta === 0 : null;
+
+    var counters = parity
+      ? cloneCounters(parity.counters || {})
+      : {
+          totalEvents: 0,
+          moveEvents: 0,
+          undoEvents: 0,
+          movedEvents: 0,
+          overEvents: 0,
+          wonEvents: 0
+        };
+    counters.totalEvents = Number.isFinite(counters.totalEvents) ? Number(counters.totalEvents) : 0;
+    counters.moveEvents = Number.isFinite(counters.moveEvents) ? Number(counters.moveEvents) : 0;
+    counters.undoEvents = Number.isFinite(counters.undoEvents) ? Number(counters.undoEvents) : 0;
+    counters.movedEvents = Number.isFinite(counters.movedEvents) ? Number(counters.movedEvents) : 0;
+    counters.overEvents = Number.isFinite(counters.overEvents) ? Number(counters.overEvents) : 0;
+    counters.wonEvents = Number.isFinite(counters.wonEvents) ? Number(counters.wonEvents) : 0;
+
+    var modeKey = normalizeModeKey(
+      (snapshot && typeof snapshot.modeKey === "string" ? snapshot.modeKey : null) ||
+        (parity && typeof parity.modeKey === "string" ? parity.modeKey : null) ||
+        opts.modeKey
+    );
+    var adapterMode = normalizeAdapterMode(
+      (snapshot && typeof snapshot.adapterMode === "string" ? snapshot.adapterMode : null) ||
+        opts.adapterMode
+    );
+
+    return {
+      modeKey: modeKey,
+      adapterMode: adapterMode,
+      hasParityState: !!parity,
+      hasSnapshot: !!snapshot,
+      counters: cloneCounters(counters),
+      lastReason: parity && typeof parity.lastReason === "string" && parity.lastReason
+        ? parity.lastReason
+        : DEFAULT_REASON,
+      lastDirection: parity ? normalizeDirection(parity.lastDirection) : null,
+      lastEventAt: parity && Number.isFinite(parity.lastEventAt) ? Number(parity.lastEventAt) : 0,
+      lastScoreFromParity: parityScore,
+      lastScoreFromSnapshot: snapshotScore,
+      scoreDelta: scoreDelta,
+      isScoreAligned: isScoreAligned,
+      undoEvents: counters.undoEvents,
+      undoUsedFromSnapshot: snapshotLastMove ? toFiniteNumberOrNull(snapshotLastMove.undoUsed) : null,
+      wonEvents: counters.wonEvents,
+      overEvents: counters.overEvents,
+      snapshotUpdatedAt: snapshot ? toFiniteNumberOrNull(snapshot.updatedAt) : null
+    };
+  }
+
   global.CoreAdapterShadowRuntime = global.CoreAdapterShadowRuntime || {};
   global.CoreAdapterShadowRuntime.createInitialAdapterParityState = createInitialAdapterParityState;
   global.CoreAdapterShadowRuntime.applyAdapterMoveResultToParityState = applyAdapterMoveResultToParityState;
   global.CoreAdapterShadowRuntime.attachAdapterMoveResultShadow = attachAdapterMoveResultShadow;
   global.CoreAdapterShadowRuntime.detachAdapterMoveResultShadow = detachAdapterMoveResultShadow;
   global.CoreAdapterShadowRuntime.getAdapterParityState = getAdapterParityState;
+  global.CoreAdapterShadowRuntime.buildAdapterSessionParityReport = buildAdapterSessionParityReport;
 })(typeof window !== "undefined" ? window : undefined);
