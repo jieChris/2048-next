@@ -1061,6 +1061,13 @@ GameManager.prototype.getCoreSpecialRulesRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreDirectionLockRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreDirectionLockRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
   var core = this.getCoreRulesRuntime();
   if (core && typeof core.normalizeSpawnTable === "function") {
@@ -1292,6 +1299,29 @@ GameManager.prototype.getAvailableCells = function () {
 };
 
 GameManager.prototype.getLockedDirection = function () {
+  var directionLockCore = this.getCoreDirectionLockRuntime();
+  if (directionLockCore && typeof directionLockCore.getLockedDirectionState === "function") {
+    var computed = directionLockCore.getLockedDirectionState({
+      directionLockRules: this.directionLockRules,
+      successfulMoveCount: this.successfulMoveCount,
+      lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
+      lockedDirectionTurn: this.lockedDirectionTurn,
+      lockedDirection: this.lockedDirection,
+      initialSeed: this.initialSeed
+    }, function (seed) {
+      var rng = new Math.seedrandom(seed);
+      return rng();
+    }) || {};
+
+    if (Number.isInteger(computed.lockedDirection)) {
+      this.lockedDirection = computed.lockedDirection;
+    }
+    if (Number.isInteger(computed.lockedDirectionTurn)) {
+      this.lockedDirectionTurn = computed.lockedDirectionTurn;
+    }
+    return Number.isInteger(computed.activeDirection) ? computed.activeDirection : null;
+  }
+
   var rules = this.directionLockRules;
   if (!rules) return null;
   var everyK = Number(rules.every_k_moves);
