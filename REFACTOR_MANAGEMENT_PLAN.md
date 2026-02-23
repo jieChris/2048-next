@@ -75,6 +75,7 @@ Deliverables:
   - Added `src/core/post-move-record.ts` and `js/core_post_move_record_runtime.js` to delegate post-move replay/history write decisions
   - Added `src/core/post-undo-record.ts` and `js/core_post_undo_record_runtime.js` to delegate undo replay/history write decisions
   - Added `src/core/undo-restore.ts` and `js/core_undo_restore_runtime.js` to delegate undo snapshot-restore normalization (combo/move counters, direction-lock state, timer resume decision)
+  - Added `src/core/undo-snapshot.ts` and `js/core_undo_snapshot_runtime.js` to delegate undo snapshot creation/normalization at move start
 
 Acceptance:
 - Same board transition and score outputs for golden test vectors.
@@ -127,5 +128,5 @@ Rollback:
 
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
-2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore`).
-3. Continue extracting deterministic move execution helpers (undo snapshot/restore normalization path) while keeping UI/storage behavior unchanged.
+2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot`).
+3. Continue extracting deterministic move execution helpers (undo tile snapshot serialization path) while keeping UI/storage behavior unchanged.

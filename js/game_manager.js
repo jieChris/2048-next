@@ -1138,6 +1138,13 @@ GameManager.prototype.getCoreUndoRestoreRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreUndoSnapshotRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreUndoSnapshotRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
   var moveApplyCore = this.getCoreMoveApplyRuntime();
   if (moveApplyCore && typeof moveApplyCore.planTileInteraction === "function") {
@@ -1283,6 +1290,68 @@ GameManager.prototype.computeUndoRestoreState = function (prev) {
     shouldClearMessage: true,
     shouldStartTimer: this.timerStatus === 0
   };
+};
+
+GameManager.prototype.createUndoSnapshotState = function () {
+  var undoSnapshotCore = this.getCoreUndoSnapshotRuntime();
+  var fallback = {
+    score: Number.isFinite(this.score) ? Number(this.score) : 0,
+    tiles: [],
+    comboStreak: Number.isInteger(this.comboStreak) && this.comboStreak >= 0 ? this.comboStreak : 0,
+    successfulMoveCount:
+      Number.isInteger(this.successfulMoveCount) && this.successfulMoveCount >= 0
+        ? this.successfulMoveCount
+        : 0,
+    lockConsumedAtMoveCount:
+      Number.isInteger(this.lockConsumedAtMoveCount) ? this.lockConsumedAtMoveCount : -1,
+    lockedDirectionTurn:
+      Number.isInteger(this.lockedDirectionTurn) ? this.lockedDirectionTurn : null,
+    lockedDirection:
+      Number.isInteger(this.lockedDirection) ? this.lockedDirection : null,
+    undoUsed: Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0
+  };
+
+  if (undoSnapshotCore && typeof undoSnapshotCore.createUndoSnapshot === "function") {
+    var computed = undoSnapshotCore.createUndoSnapshot({
+      score: this.score,
+      comboStreak: this.comboStreak,
+      successfulMoveCount: this.successfulMoveCount,
+      lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
+      lockedDirectionTurn: this.lockedDirectionTurn,
+      lockedDirection: this.lockedDirection,
+      undoUsed: this.undoUsed
+    }) || {};
+    return {
+      score: Number.isFinite(computed.score) ? Number(computed.score) : fallback.score,
+      tiles: Array.isArray(computed.tiles) ? computed.tiles : [],
+      comboStreak:
+        Number.isInteger(computed.comboStreak) && computed.comboStreak >= 0
+          ? computed.comboStreak
+          : fallback.comboStreak,
+      successfulMoveCount:
+        Number.isInteger(computed.successfulMoveCount) && computed.successfulMoveCount >= 0
+          ? computed.successfulMoveCount
+          : fallback.successfulMoveCount,
+      lockConsumedAtMoveCount:
+        Number.isInteger(computed.lockConsumedAtMoveCount)
+          ? computed.lockConsumedAtMoveCount
+          : fallback.lockConsumedAtMoveCount,
+      lockedDirectionTurn:
+        Number.isInteger(computed.lockedDirectionTurn)
+          ? computed.lockedDirectionTurn
+          : fallback.lockedDirectionTurn,
+      lockedDirection:
+        Number.isInteger(computed.lockedDirection)
+          ? computed.lockedDirection
+          : fallback.lockedDirection,
+      undoUsed:
+        Number.isInteger(computed.undoUsed) && computed.undoUsed >= 0
+          ? computed.undoUsed
+          : fallback.undoUsed
+    };
+  }
+
+  return fallback;
 };
 
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
@@ -3001,16 +3070,7 @@ GameManager.prototype.move = function (direction) {
   var traversals = this.buildTraversals(vector);
   var moved      = false;
   var scoreBeforeMove = this.score;
-  var undo       = {
-    score: this.score,
-    tiles: [],
-    comboStreak: this.comboStreak,
-    successfulMoveCount: this.successfulMoveCount,
-    lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
-    lockedDirectionTurn: this.lockedDirectionTurn,
-    lockedDirection: this.lockedDirection,
-    undoUsed: this.undoUsed
-  };
+  var undo       = this.createUndoSnapshotState();
 
   // Save the current tile positions and remove merger information
   this.prepareTiles();
