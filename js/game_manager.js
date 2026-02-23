@@ -1054,6 +1054,13 @@ GameManager.prototype.getCoreModeRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreSpecialRulesRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreSpecialRulesRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
   var core = this.getCoreRulesRuntime();
   if (core && typeof core.normalizeSpawnTable === "function") {
@@ -1217,6 +1224,28 @@ GameManager.prototype.normalizeSpecialRules = function (rules) {
 };
 
 GameManager.prototype.applySpecialRulesState = function () {
+  var specialCore = this.getCoreSpecialRulesRuntime();
+  if (specialCore && typeof specialCore.computeSpecialRulesState === "function") {
+    var computed = specialCore.computeSpecialRulesState(
+      this.specialRules || {},
+      this.width,
+      this.height,
+      this.clonePlain.bind(this)
+    ) || {};
+    this.blockedCellSet = computed.blockedCellSet && typeof computed.blockedCellSet === "object"
+      ? computed.blockedCellSet
+      : {};
+    this.blockedCellsList = Array.isArray(computed.blockedCellsList) ? computed.blockedCellsList : [];
+    this.undoLimit = (Number.isInteger(computed.undoLimit) && computed.undoLimit >= 0)
+      ? computed.undoLimit
+      : null;
+    this.comboMultiplier = (Number.isFinite(computed.comboMultiplier) && computed.comboMultiplier > 1)
+      ? Number(computed.comboMultiplier)
+      : 1;
+    this.directionLockRules = computed.directionLockRules || null;
+    return;
+  }
+
   var rules = this.specialRules || {};
   var blockedRaw = Array.isArray(rules.blocked_cells) ? rules.blocked_cells : [];
   this.blockedCellSet = {};
