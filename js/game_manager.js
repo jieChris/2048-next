@@ -260,6 +260,11 @@ GameManager.prototype.getActionKind = function (action) {
 };
 
 GameManager.prototype.encodeReplay128 = function (code) {
+  var replayCodecCore = this.getCoreReplayCodecRuntime();
+  if (replayCodecCore && typeof replayCodecCore.encodeReplay128 === "function") {
+    return replayCodecCore.encodeReplay128(code);
+  }
+
   if (!Number.isInteger(code) || code < 0 || code >= GameManager.REPLAY128_TOTAL) {
     throw "Invalid replay code";
   }
@@ -272,6 +277,11 @@ GameManager.prototype.encodeReplay128 = function (code) {
 };
 
 GameManager.prototype.decodeReplay128 = function (char) {
+  var replayCodecCore = this.getCoreReplayCodecRuntime();
+  if (replayCodecCore && typeof replayCodecCore.decodeReplay128 === "function") {
+    return replayCodecCore.decodeReplay128(char);
+  }
+
   if (!char || char.length !== 1) throw "Invalid replay char";
   var code = char.charCodeAt(0);
   if (
@@ -286,6 +296,11 @@ GameManager.prototype.decodeReplay128 = function (char) {
 };
 
 GameManager.prototype.encodeBoardV4 = function (board) {
+  var replayCodecCore = this.getCoreReplayCodecRuntime();
+  if (replayCodecCore && typeof replayCodecCore.encodeBoardV4 === "function") {
+    return replayCodecCore.encodeBoardV4(board);
+  }
+
   if (!Array.isArray(board) || board.length !== 4) throw "Invalid initial board";
   var out = "";
   for (var y = 0; y < 4; y++) {
@@ -307,6 +322,11 @@ GameManager.prototype.encodeBoardV4 = function (board) {
 };
 
 GameManager.prototype.decodeBoardV4 = function (encoded) {
+  var replayCodecCore = this.getCoreReplayCodecRuntime();
+  if (replayCodecCore && typeof replayCodecCore.decodeBoardV4 === "function") {
+    return replayCodecCore.decodeBoardV4(encoded);
+  }
+
   if (typeof encoded !== "string" || encoded.length !== 16) throw "Invalid encoded board";
   var rows = [];
   var idx = 0;
@@ -1169,6 +1189,13 @@ GameManager.prototype.getCoreUndoRestorePayloadRuntime = function () {
 GameManager.prototype.getCoreUndoStackEntryRuntime = function () {
   if (typeof window === "undefined") return null;
   var core = window.CoreUndoStackEntryRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
+GameManager.prototype.getCoreReplayCodecRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreReplayCodecRuntime;
   if (!core || typeof core !== "object") return null;
   return core;
 };
