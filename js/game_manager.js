@@ -619,6 +619,57 @@ GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
   };
 };
 
+GameManager.prototype.computeReplayPauseState = function () {
+  var replayTimerCore = this.getCoreReplayTimerRuntime();
+  if (replayTimerCore && typeof replayTimerCore.computeReplayPauseState === "function") {
+    return replayTimerCore.computeReplayPauseState() || {};
+  }
+  return {
+    isPaused: true,
+    shouldClearInterval: true
+  };
+};
+
+GameManager.prototype.computeReplayResumeState = function () {
+  var replayTimerCore = this.getCoreReplayTimerRuntime();
+  if (replayTimerCore && typeof replayTimerCore.computeReplayResumeState === "function") {
+    return replayTimerCore.computeReplayResumeState({
+      replayDelay: this.replayDelay
+    }) || {};
+  }
+  return {
+    isPaused: false,
+    shouldClearInterval: true,
+    delay: this.replayDelay || 200
+  };
+};
+
+GameManager.prototype.computeReplaySpeedState = function (multiplier) {
+  var replayTimerCore = this.getCoreReplayTimerRuntime();
+  if (replayTimerCore && typeof replayTimerCore.computeReplaySpeedState === "function") {
+    return replayTimerCore.computeReplaySpeedState({
+      multiplier: multiplier,
+      isPaused: !!this.isPaused,
+      baseDelay: 200
+    }) || {};
+  }
+  return {
+    replayDelay: 200 / multiplier,
+    shouldResume: !this.isPaused
+  };
+};
+
+GameManager.prototype.shouldStopReplayAtTick = function (replayIndex, replayMovesLength) {
+  var replayTimerCore = this.getCoreReplayTimerRuntime();
+  if (replayTimerCore && typeof replayTimerCore.shouldStopReplayAtTick === "function") {
+    return !!replayTimerCore.shouldStopReplayAtTick({
+      replayIndex: replayIndex,
+      replayMovesLength: replayMovesLength
+    });
+  }
+  return replayIndex >= replayMovesLength;
+};
+
 GameManager.prototype.setBoardFromMatrix = function (board) {
   if (!Array.isArray(board) || board.length !== this.height) throw "Invalid board matrix";
   this.grid = new Grid(this.width, this.height);
@@ -1502,6 +1553,13 @@ GameManager.prototype.getCoreReplayExecutionRuntime = function () {
 GameManager.prototype.getCoreReplayLifecycleRuntime = function () {
   if (typeof window === "undefined") return null;
   var core = window.CoreReplayLifecycleRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
+GameManager.prototype.getCoreReplayTimerRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreReplayTimerRuntime;
   if (!core || typeof core !== "object") return null;
   return core;
 };
@@ -4374,19 +4432,25 @@ GameManager.prototype.executeReplayAction = function (action) {
 };
 
 GameManager.prototype.pause = function () {
-    this.isPaused = true;
-    clearInterval(this.replayInterval);
+    var pauseState = this.computeReplayPauseState();
+    this.isPaused = pauseState.isPaused !== false;
+    if (pauseState.shouldClearInterval !== false) {
+      clearInterval(this.replayInterval);
+    }
 };
 
 GameManager.prototype.resume = function () {
-    this.isPaused = false;
+    var resumeState = this.computeReplayResumeState();
+    this.isPaused = !!resumeState.isPaused ? true : false;
     var self = this;
-    clearInterval(this.replayInterval);
+    if (resumeState.shouldClearInterval !== false) {
+      clearInterval(this.replayInterval);
+    }
     
-    var delay = this.replayDelay || 200;
+    var delay = resumeState.delay;
     
     this.replayInterval = setInterval(function() {
-      if (self.replayIndex >= self.replayMoves.length) {
+      if (self.shouldStopReplayAtTick(self.replayIndex, self.replayMoves.length)) {
         self.pause();
         self.replayMode = false;
         return;
@@ -4408,8 +4472,9 @@ GameManager.prototype.resume = function () {
 };
 
 GameManager.prototype.setSpeed = function (multiplier) {
-    this.replayDelay = 200 / multiplier;
-    if (!this.isPaused) {
+    var speedState = this.computeReplaySpeedState(multiplier);
+    this.replayDelay = speedState.replayDelay;
+    if (speedState.shouldResume) {
         this.resume(); // Restart interval with new delay
     }
 };
