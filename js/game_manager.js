@@ -1047,6 +1047,13 @@ GameManager.prototype.getCoreRulesRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreModeRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreModeRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
   var core = this.getCoreRulesRuntime();
   if (core && typeof core.normalizeSpawnTable === "function") {
@@ -1099,6 +1106,19 @@ GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) 
 };
 
 GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
+  var modeCore = this.getCoreModeRuntime();
+  if (modeCore && typeof modeCore.normalizeModeConfig === "function") {
+    return modeCore.normalizeModeConfig({
+      modeKey: modeKey,
+      rawConfig: rawConfig,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+      defaultModeConfig: GameManager.DEFAULT_MODE_CONFIG,
+      normalizeSpawnTable: this.normalizeSpawnTable.bind(this),
+      getTheoreticalMaxTile: this.getTheoreticalMaxTile.bind(this),
+      normalizeSpecialRules: this.normalizeSpecialRules.bind(this)
+    });
+  }
+
   var cfg = rawConfig ? this.clonePlain(rawConfig) : this.clonePlain(GameManager.DEFAULT_MODE_CONFIG);
   cfg.key = cfg.key || modeKey || GameManager.DEFAULT_MODE_KEY;
   cfg.board_width = Number.isInteger(cfg.board_width) && cfg.board_width > 0 ? cfg.board_width : 4;
@@ -1188,6 +1208,10 @@ GameManager.prototype.applyModeConfig = function (modeConfig) {
 };
 
 GameManager.prototype.normalizeSpecialRules = function (rules) {
+  var modeCore = this.getCoreModeRuntime();
+  if (modeCore && typeof modeCore.normalizeSpecialRules === "function") {
+    return modeCore.normalizeSpecialRules(rules);
+  }
   if (!rules || typeof rules !== "object" || Array.isArray(rules)) return {};
   return this.clonePlain(rules);
 };
