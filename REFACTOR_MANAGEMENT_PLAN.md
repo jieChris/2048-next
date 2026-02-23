@@ -65,6 +65,7 @@ Deliverables:
   - Added `src/core/mode.ts` and `js/core_mode_runtime.js` to delegate mode-config normalization from `js/game_manager.js`
   - Added `src/core/special-rules.ts` and `js/core_special_rules_runtime.js` to delegate special-rule state projection
   - Added `src/core/direction-lock.ts` and `js/core_direction_lock_runtime.js` to delegate deterministic direction-lock state computation
+  - Added `src/core/grid-scan.ts` and `js/core_grid_scan_runtime.js` to delegate available-cell scanning with blocked-cell awareness
 
 Acceptance:
 - Same board transition and score outputs for golden test vectors.
@@ -118,4 +119,4 @@ Rollback:
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
 2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock`).
-3. Continue extracting deterministic board-transition helpers (available-cells / move-scan path) behind runtime delegation with legacy fallback.
+3. Continue extracting deterministic board-transition helpers (tile-match scan / move-availability path) behind runtime delegation with legacy fallback.

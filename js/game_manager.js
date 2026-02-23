@@ -1068,6 +1068,13 @@ GameManager.prototype.getCoreDirectionLockRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreGridScanRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreGridScanRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
   var core = this.getCoreRulesRuntime();
   if (core && typeof core.normalizeSpawnTable === "function") {
@@ -1288,6 +1295,18 @@ GameManager.prototype.isBlockedCell = function (x, y) {
 };
 
 GameManager.prototype.getAvailableCells = function () {
+  var gridCore = this.getCoreGridScanRuntime();
+  if (gridCore && typeof gridCore.getAvailableCells === "function") {
+    return gridCore.getAvailableCells(
+      this.width,
+      this.height,
+      this.isBlockedCell.bind(this),
+      this.grid && typeof this.grid.cellAvailable === "function"
+        ? this.grid.cellAvailable.bind(this.grid)
+        : function () { return false; }
+    );
+  }
+
   var out = [];
   for (var x = 0; x < this.width; x++) {
     for (var y = 0; y < this.height; y++) {
