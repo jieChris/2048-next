@@ -26,6 +26,19 @@ window.requestAnimationFrame(function () {
     return cfg;
   }
 
+  function attachLegacyEngineBridge(modeKey, modeConfig, manager) {
+    var bridgeApi = window.LegacyBridge;
+    if (bridgeApi && typeof bridgeApi.attachLegacyEngineToWindow === "function") {
+      return bridgeApi.attachLegacyEngineToWindow(manager, modeKey, modeConfig);
+    }
+    window.__legacyEngine = {
+      manager: manager || null,
+      modeKey: modeKey || "",
+      modeConfig: modeConfig || null
+    };
+    return window.__legacyEngine;
+  }
+
   if (typeof document !== "undefined" && document.body) {
     modeKey = document.body.getAttribute("data-mode-id") || modeKey;
   }
@@ -45,10 +58,7 @@ window.requestAnimationFrame(function () {
 
   game_manager = new GameManager(boardWidth, KeyboardInputManager, HTMLActuator, LocalScoreManager);
   window.game_manager = game_manager;
-    window.__legacyEngine = {
-    manager: window.game_manager,
-    modeKey: modeKey
-  };
+  attachLegacyEngineBridge(modeKey, window.GAME_MODE_CONFIG, window.game_manager);
 
 });
 

@@ -1,4 +1,17 @@
 window.requestAnimationFrame(function () {
+  function attachLegacyEngineBridge(modeKey, modeConfig, manager) {
+    var bridgeApi = window.LegacyBridge;
+    if (bridgeApi && typeof bridgeApi.attachLegacyEngineToWindow === "function") {
+      return bridgeApi.attachLegacyEngineToWindow(manager, modeKey, modeConfig);
+    }
+    window.__legacyEngine = {
+      manager: manager || null,
+      modeKey: modeKey || "",
+      modeConfig: modeConfig || null
+    };
+    return window.__legacyEngine;
+  }
+
   if (window.ModeCatalog && typeof window.ModeCatalog.getMode === "function") {
     window.GAME_MODE_CONFIG = window.ModeCatalog.getMode("capped_4x4_pow2_no_undo");
   }
@@ -9,4 +22,9 @@ window.requestAnimationFrame(function () {
 
   var gm = new GameManager(boardWidth, CappedInputManager, HTMLActuator, LocalScoreManager);
   window.game_manager = gm;
+  attachLegacyEngineBridge(
+    (window.GAME_MODE_CONFIG && window.GAME_MODE_CONFIG.key) || "capped_4x4_pow2_no_undo",
+    window.GAME_MODE_CONFIG,
+    window.game_manager
+  );
 });

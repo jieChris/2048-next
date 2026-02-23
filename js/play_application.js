@@ -22,6 +22,19 @@
     return v && v.trim() ? v.trim() : "";
   }
 
+  function attachLegacyEngineBridge(modeKey, modeConfig, manager) {
+    var bridgeApi = window.LegacyBridge;
+    if (bridgeApi && typeof bridgeApi.attachLegacyEngineToWindow === "function") {
+      return bridgeApi.attachLegacyEngineToWindow(manager, modeKey, modeConfig);
+    }
+    window.__legacyEngine = {
+      manager: manager || null,
+      modeKey: modeKey || "",
+      modeConfig: modeConfig || null
+    };
+    return window.__legacyEngine;
+  }
+
   function compactModeLabel(modeConfig) {
     var raw = modeConfig && (modeConfig.label || modeConfig.key) ? (modeConfig.label || modeConfig.key) : "模式";
     return raw
@@ -231,5 +244,6 @@
 
     var gm = new GameManager(modeConfig.board_width, KeyboardInputManager, HTMLActuator, LocalScoreManager);
     window.game_manager = gm;
+    attachLegacyEngineBridge(modeConfig.key, modeConfig, window.game_manager);
   });
 })();
