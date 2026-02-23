@@ -113,5 +113,5 @@ Rollback:
 
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
-2. Push `feature/core-shell` and verify GitHub smoke workflow.
-3. Start M2 by extracting shared bootstrap module from `application/play/capped/replay`.
+2. Run `npm run test:unit` and stabilize the new core rules test baseline.
+3. Wire `src/core/rules.ts` into `js/game_manager.js` incrementally (spawn + merge path first) under parity checks.
