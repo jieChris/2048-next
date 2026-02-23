@@ -14,17 +14,18 @@ interface SmokePage {
   expectCoreMoveScanRuntime: boolean;
   expectCoreMovePathRuntime: boolean;
   expectCoreScoringRuntime: boolean;
+  expectCoreMergeEffectsRuntime: boolean;
 }
 
 const PAGES: SmokePage[] = [
-  { name: "index", path: "/index.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true },
-  { name: "undo", path: "/undo_2048.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true },
-  { name: "capped", path: "/capped_2048.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true },
-  { name: "practice", path: "/Practice_board.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true },
-  { name: "play", path: "/play.html?mode_key=standard_4x4_pow2_no_undo", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true },
-  { name: "replay", path: "/replay.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true },
-  { name: "modes", path: "/modes.html", expectGameManager: false, expectLegacyEngine: false, expectBootstrapRuntime: false, expectCoreRulesRuntime: false, expectCoreModeRuntime: false, expectCoreSpecialRulesRuntime: false, expectCoreDirectionLockRuntime: false, expectCoreGridScanRuntime: false, expectCoreMoveScanRuntime: false, expectCoreMovePathRuntime: false, expectCoreScoringRuntime: false },
-  { name: "history", path: "/history.html", expectGameManager: false, expectLegacyEngine: false, expectBootstrapRuntime: false, expectCoreRulesRuntime: false, expectCoreModeRuntime: false, expectCoreSpecialRulesRuntime: false, expectCoreDirectionLockRuntime: false, expectCoreGridScanRuntime: false, expectCoreMoveScanRuntime: false, expectCoreMovePathRuntime: false, expectCoreScoringRuntime: false }
+  { name: "index", path: "/index.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true, expectCoreMergeEffectsRuntime: true },
+  { name: "undo", path: "/undo_2048.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true, expectCoreMergeEffectsRuntime: true },
+  { name: "capped", path: "/capped_2048.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true, expectCoreMergeEffectsRuntime: true },
+  { name: "practice", path: "/Practice_board.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true, expectCoreMergeEffectsRuntime: true },
+  { name: "play", path: "/play.html?mode_key=standard_4x4_pow2_no_undo", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true, expectCoreMergeEffectsRuntime: true },
+  { name: "replay", path: "/replay.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true, expectCoreMergeEffectsRuntime: true },
+  { name: "modes", path: "/modes.html", expectGameManager: false, expectLegacyEngine: false, expectBootstrapRuntime: false, expectCoreRulesRuntime: false, expectCoreModeRuntime: false, expectCoreSpecialRulesRuntime: false, expectCoreDirectionLockRuntime: false, expectCoreGridScanRuntime: false, expectCoreMoveScanRuntime: false, expectCoreMovePathRuntime: false, expectCoreScoringRuntime: false, expectCoreMergeEffectsRuntime: false },
+  { name: "history", path: "/history.html", expectGameManager: false, expectLegacyEngine: false, expectBootstrapRuntime: false, expectCoreRulesRuntime: false, expectCoreModeRuntime: false, expectCoreSpecialRulesRuntime: false, expectCoreDirectionLockRuntime: false, expectCoreGridScanRuntime: false, expectCoreMoveScanRuntime: false, expectCoreMovePathRuntime: false, expectCoreScoringRuntime: false, expectCoreMergeEffectsRuntime: false }
 ];
 
 function shouldIgnoreConsoleError(text: string): boolean {
@@ -83,6 +84,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const hasCoreScoringRuntime = await page.evaluate(
         () => Boolean((window as any).CoreScoringRuntime?.computePostMoveScore)
       );
+      const hasCoreMergeEffectsRuntime = await page.evaluate(
+        () => Boolean((window as any).CoreMergeEffectsRuntime?.computeMergeEffects)
+      );
       const hasLegacyEngineConfig = await page.evaluate(() => {
         const payload = (window as any).__legacyEngine;
         return Boolean(payload && payload.engineConfig && Number(payload.engineConfig.width) > 0);
@@ -132,6 +136,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         hasCoreScoringRuntime,
         `${entry.name} CoreScoringRuntime presence mismatch`
       ).toBe(entry.expectCoreScoringRuntime);
+      expect(
+        hasCoreMergeEffectsRuntime,
+        `${entry.name} CoreMergeEffectsRuntime presence mismatch`
+      ).toBe(entry.expectCoreMergeEffectsRuntime);
       if (entry.expectLegacyEngine) {
         expect(
           hasLegacyEngineConfig,

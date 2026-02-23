@@ -1096,6 +1096,59 @@ GameManager.prototype.getCoreScoringRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreMergeEffectsRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreMergeEffectsRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
+GameManager.prototype.computeMergeEffects = function (mergedValue) {
+  var mergeEffectsCore = this.getCoreMergeEffectsRuntime();
+  if (mergeEffectsCore && typeof mergeEffectsCore.computeMergeEffects === "function") {
+    return mergeEffectsCore.computeMergeEffects({
+      mergedValue: mergedValue,
+      isCappedMode: this.isCappedMode(),
+      cappedTargetValue: this.getCappedTargetValue(),
+      reached32k: !!this.reached32k
+    }) || {};
+  }
+
+  var value = Number(mergedValue);
+  var cappedMode = this.isCappedMode();
+  var cappedTarget = Number(this.getCappedTargetValue());
+  var hasCappedTarget = Number.isFinite(cappedTarget) && cappedTarget > 0;
+  var reached32k = !!this.reached32k;
+  var result = {
+    shouldRecordCappedMilestone: false,
+    shouldSetWon: false,
+    shouldSetReached32k: false,
+    timerIdsToStamp: [],
+    showSubTimerContainer: false,
+    hideTimerRows: []
+  };
+
+  if (!Number.isInteger(value) || value <= 0) return result;
+  if (cappedMode && hasCappedTarget && value === cappedTarget) {
+    result.shouldRecordCappedMilestone = true;
+  } else if (!cappedMode && value === 2048) {
+    result.shouldSetWon = true;
+  }
+  if (value === 8192) {
+    result.timerIdsToStamp.push(reached32k ? "timer8192-sub" : "timer8192");
+  }
+  if (value === 16384) {
+    result.timerIdsToStamp.push(reached32k ? "timer16384-sub" : "timer16384");
+  }
+  if (value === 32768) {
+    result.shouldSetReached32k = true;
+    result.timerIdsToStamp.push("timer32768");
+    result.showSubTimerContainer = true;
+    result.hideTimerRows = [16, 32];
+  }
+  return result;
+};
+
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
   var core = this.getCoreRulesRuntime();
   if (core && typeof core.normalizeSpawnTable === "function") {
@@ -2782,45 +2835,41 @@ GameManager.prototype.move = function (direction) {
 
           var timeStr = self.pretty(self.time);
           self.recordTimerMilestone(merged.value, timeStr);
-          if (self.isCappedMode() && merged.value === self.getCappedTargetValue()) {
+          var mergeEffects = self.computeMergeEffects(merged.value);
+          if (mergeEffects.shouldRecordCappedMilestone) {
              self.recordCappedMilestone(timeStr);
-          } else if (!self.isCappedMode() && merged.value === 2048) {
+          }
+          if (mergeEffects.shouldSetWon) {
              self.won = true;
           }
-          if (merged.value === 8192) {
-             if (self.reached32k) {
-                 // Sub timer logic
-                 var sub = document.getElementById("timer8192-sub");
-                 if (sub && sub.textContent === "") sub.textContent = timeStr;
-             } else {
-                 // Normal timer logic
-                 var el = document.getElementById("timer8192");
-                 if (el && el.textContent === "") el.textContent = timeStr;
-             }
+
+          var timerIdsToStamp = Array.isArray(mergeEffects.timerIdsToStamp)
+            ? mergeEffects.timerIdsToStamp
+            : [];
+          for (var timerIndex = 0; timerIndex < timerIdsToStamp.length; timerIndex++) {
+            var timerId = timerIdsToStamp[timerIndex];
+            var timerEl = document.getElementById(timerId);
+            if (!timerEl) continue;
+            if (timerId === "timer32768") {
+              if (timerEl.innerHTML === "") timerEl.textContent = timeStr;
+            } else {
+              if (timerEl.textContent === "") timerEl.textContent = timeStr;
+            }
           }
-          if (merged.value === 16384) {
-             if (self.reached32k) {
-                 // Sub timer logic
-                 var sub = document.getElementById("timer16384-sub");
-                 if (sub && sub.textContent === "") sub.textContent = timeStr;
-             } else {
-                 // Normal timer logic
-                 var el = document.getElementById("timer16384");
-                 if (el && el.textContent === "") el.textContent = timeStr;
-             }
-          }
-          if (merged.value === 32768) {
+
+          if (mergeEffects.shouldSetReached32k) {
              self.reached32k = true; // Flag reached
-             if (document.getElementById("timer32768") && document.getElementById("timer32768").innerHTML === "") {
-                 document.getElementById("timer32768").textContent = timeStr;
-             }
+          }
+          if (mergeEffects.showSubTimerContainer) {
              // Show sub-timer container
              var subContainer = document.getElementById("timer32k-sub-container");
              if (subContainer) subContainer.style.display = "block";
-             
-             // Hide 16 and 32 to save space (Limit to 12 items)
-             if (document.getElementById("timer-row-16")) document.getElementById("timer-row-16").style.display = "none";
-             if (document.getElementById("timer-row-32")) document.getElementById("timer-row-32").style.display = "none";
+          }
+
+          var hideTimerRows = Array.isArray(mergeEffects.hideTimerRows) ? mergeEffects.hideTimerRows : [];
+          for (var hideIndex = 0; hideIndex < hideTimerRows.length; hideIndex++) {
+             var rowEl = document.getElementById("timer-row-" + String(hideTimerRows[hideIndex]));
+             if (rowEl) rowEl.style.display = "none";
           }
 
         } else {
