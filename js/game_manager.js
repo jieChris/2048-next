@@ -1117,6 +1117,13 @@ GameManager.prototype.getCoreMoveApplyRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCorePostMoveRecordRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CorePostMoveRecordRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
   var moveApplyCore = this.getCoreMoveApplyRuntime();
   if (moveApplyCore && typeof moveApplyCore.planTileInteraction === "function") {
@@ -1148,6 +1155,57 @@ GameManager.prototype.planTileInteraction = function (cell, positions, next, mer
     kind: shouldMerge ? "merge" : "move",
     target: targetLegacy,
     moved: !this.positionsEqual(cell, targetLegacy)
+  };
+};
+
+GameManager.prototype.computePostMoveRecord = function (direction) {
+  var postMoveRecordCore = this.getCorePostMoveRecordRuntime();
+  if (postMoveRecordCore && typeof postMoveRecordCore.computePostMoveRecord === "function") {
+    return postMoveRecordCore.computePostMoveRecord({
+      replayMode: !!this.replayMode,
+      direction: direction,
+      lastSpawn: this.lastSpawn ? {
+        x: this.lastSpawn.x,
+        y: this.lastSpawn.y,
+        value: this.lastSpawn.value
+      } : null,
+      width: this.width,
+      height: this.height,
+      isFibonacciMode: this.isFibonacciMode(),
+      hasSessionReplayV3: !!this.sessionReplayV3
+    }) || {};
+  }
+
+  if (this.replayMode) {
+    return {
+      shouldRecordMoveHistory: false,
+      compactMoveCode: null,
+      shouldPushSessionAction: false,
+      sessionAction: null,
+      shouldResetLastSpawn: false
+    };
+  }
+
+  var compactMoveCode = null;
+  if (
+    this.lastSpawn &&
+    this.width === 4 &&
+    this.height === 4 &&
+    !this.isFibonacciMode() &&
+    (this.lastSpawn.value === 2 || this.lastSpawn.value === 4)
+  ) {
+    var valBit = this.lastSpawn.value === 4 ? 1 : 0;
+    var posIdx = this.lastSpawn.x + this.lastSpawn.y * 4;
+    compactMoveCode = (direction << 5) | (valBit << 4) | posIdx;
+  }
+
+  var shouldPushSessionAction = !!this.sessionReplayV3;
+  return {
+    shouldRecordMoveHistory: true,
+    compactMoveCode: compactMoveCode,
+    shouldPushSessionAction: shouldPushSessionAction,
+    sessionAction: shouldPushSessionAction ? ["m", direction] : null,
+    shouldResetLastSpawn: true
   };
 };
 
@@ -2866,7 +2924,7 @@ GameManager.prototype.move = function (direction) {
 
         var mergedValue = next ? self.getMergedValue(tile.value, next.value) : null;
         var interaction = self.planTileInteraction(cell, positions, next, mergedValue);
-        if (interaction.kind === "merge" && mergedValue !== null) {
+        if (interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null) {
           // We need to save tile since it will get removed
           undo.tiles.push(tile.save(interaction.target));
 
@@ -2998,29 +3056,22 @@ GameManager.prototype.move = function (direction) {
     this.undoStack.push(undo);
     
     // Record move for replay
-    if (!this.replayMode) {
-        this.moveHistory.push(direction);
-        
-        // V2 Logging: Record (Move + Spawn)
-        // Code = (Dir * 32) + (Is4 * 16) + (PosIndex)
-        // PosIndex = x + y*4
-        if (
-          this.lastSpawn &&
-          this.width === 4 &&
-          this.height === 4 &&
-          !this.isFibonacciMode() &&
-          (this.lastSpawn.value === 2 || this.lastSpawn.value === 4)
-        ) {
-            var valBit = (this.lastSpawn.value === 4) ? 1 : 0;
-            var posIdx = this.lastSpawn.x + this.lastSpawn.y * 4;
-            var code = (direction << 5) | (valBit << 4) | posIdx;
-            this.appendCompactMoveCode(code);
-        }
-        if (this.sessionReplayV3) {
-            this.sessionReplayV3.actions.push(["m", direction]);
-        }
-        this.lastSpawn = null;
-    } // If in replay mode, we don't record the playback as new moves
+    var postMoveRecord = this.computePostMoveRecord(direction);
+    if (postMoveRecord.shouldRecordMoveHistory) {
+      this.moveHistory.push(direction);
+    }
+    if (Number.isInteger(postMoveRecord.compactMoveCode)) {
+      this.appendCompactMoveCode(postMoveRecord.compactMoveCode);
+    }
+    if (postMoveRecord.shouldPushSessionAction && this.sessionReplayV3) {
+      var action = Array.isArray(postMoveRecord.sessionAction)
+        ? postMoveRecord.sessionAction
+        : ["m", direction];
+      this.sessionReplayV3.actions.push(action);
+    }
+    if (postMoveRecord.shouldResetLastSpawn) {
+      this.lastSpawn = null;
+    }
 
     this.actuate();
 
