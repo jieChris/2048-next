@@ -86,7 +86,7 @@ describe("core rules: getMergedValue", () => {
   });
 
   it("rejects invalid fibonacci merges", () => {
-    expect(getMergedValue(1, 2, "fibonacci", Infinity)).toBeNull();
+    expect(getMergedValue(1, 3, "fibonacci", Infinity)).toBeNull();
     expect(getMergedValue(5, 5, "fibonacci", Infinity)).toBeNull();
     expect(getMergedValue(13, 21, "fibonacci", 21)).toBeNull();
   });
