@@ -669,8 +669,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".history-adapter-badge-mismatch")).toHaveCount(1);
     await expect(page.locator(".history-adapter-badge-match")).toHaveCount(1);
     await expect(page.locator("#history-export-mismatch-btn")).toBeVisible();
+    await expect(page.locator("#history-burnin-summary")).toContainText("可比较样本 2");
+    await expect(page.locator("#history-burnin-summary")).toContainText("不一致 1");
+    await expect(page.locator("#history-burnin-summary")).toContainText("样本不足");
+    await expect(page.locator(".history-burnin-focus-mismatch")).toHaveCount(1);
 
-    await page.selectOption("#history-adapter-filter", "mismatch");
+    await page.click(".history-burnin-focus-mismatch");
+    await expect(page.locator("#history-adapter-filter")).toHaveValue("mismatch");
     await expect(page.locator(".history-item")).toHaveCount(1);
     await expect(page.locator(".history-adapter-badge-mismatch")).toHaveCount(1);
     await expect(page.locator("#history-summary")).toContainText("共 1 条记录");

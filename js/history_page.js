@@ -9,8 +9,11 @@
     modeKey: "",
     keyword: "",
     sortBy: "ended_desc",
-    adapterParityFilter: "all"
+    adapterParityFilter: "all",
+    burnInWindow: "200"
   };
+  var BURN_IN_MIN_COMPARABLE = 50;
+  var BURN_IN_MAX_MISMATCH_RATE = 1;
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -185,6 +188,73 @@
       " · 诊断筛选: " + (filterMap[state.adapterParityFilter] || "全部");
   }
 
+  function formatPercent(value) {
+    var num = toFiniteNumberOrNull(value);
+    if (num === null) return "-";
+    return num.toFixed(2) + "%";
+  }
+
+  function getBurnInGateLabel(status) {
+    if (status === "pass") return "达标";
+    if (status === "fail") return "未达标";
+    return "样本不足";
+  }
+
+  function getBurnInGateClass(status) {
+    if (status === "pass") return "history-burnin-gate-pass";
+    if (status === "fail") return "history-burnin-gate-fail";
+    return "history-burnin-gate-warn";
+  }
+
+  function renderBurnInSummary(summary) {
+    var panel = el("history-burnin-summary");
+    if (!panel) return;
+    if (!isPlainObject(summary)) {
+      panel.innerHTML = "<div class='history-burnin-empty'>暂无 burn-in 数据</div>";
+      return;
+    }
+
+    var limitText = summary.sampleLimit === null
+      ? ("全部 " + summary.evaluatedRecords + " 条")
+      : ("最近 " + summary.evaluatedRecords + " 条（窗口 " + summary.sampleLimit + "）");
+    var gateLabel = getBurnInGateLabel(summary.gateStatus);
+    var gateClass = getBurnInGateClass(summary.gateStatus);
+    var mismatchAction = "";
+    if ((summary.mismatch || 0) > 0) {
+      mismatchAction = "<button class='replay-button history-burnin-focus-mismatch'>仅看不一致</button>";
+    }
+
+    panel.innerHTML =
+      "<div class='history-burnin-head'>" +
+        "<div class='history-burnin-title'>Cutover Burn-in 统计</div>" +
+        "<span class='history-burnin-gate " + gateClass + "'>" + escapeHtml(gateLabel) + "</span>" +
+      "</div>" +
+      "<div class='history-burnin-grid'>" +
+        "<span>采样: " + escapeHtml(limitText) + "</span>" +
+        "<span>诊断记录 " + escapeHtml(summary.withDiagnostics) + "</span>" +
+        "<span>可比较样本 " + escapeHtml(summary.comparable) + "</span>" +
+        "<span>一致 " + escapeHtml(summary.match) + "</span>" +
+        "<span>不一致 " + escapeHtml(summary.mismatch) + "</span>" +
+        "<span>样本不足 " + escapeHtml(summary.incomplete) + "</span>" +
+        "<span>不一致率 " + escapeHtml(formatPercent(summary.mismatchRate)) + "</span>" +
+      "</div>" +
+      "<div class='history-burnin-note'>" +
+        "门槛: 可比较 >= " + escapeHtml(summary.minComparable) +
+        "，不一致率 <= " + escapeHtml(formatPercent(summary.maxMismatchRate)) +
+      "</div>" +
+      (mismatchAction ? "<div class='history-burnin-actions'>" + mismatchAction + "</div>" : "");
+
+    var mismatchBtn = panel.querySelector(".history-burnin-focus-mismatch");
+    if (mismatchBtn) {
+      mismatchBtn.addEventListener("click", function () {
+        var adapterFilter = el("history-adapter-filter");
+        if (adapterFilter) adapterFilter.value = "mismatch";
+        state.adapterParityFilter = "mismatch";
+        loadHistory(true);
+      });
+    }
+  }
+
   function downloadSingleRecord(item) {
     if (!window.LocalHistoryStore) return;
     var payload = window.LocalHistoryStore.exportRecords([item.id]);
@@ -296,6 +366,8 @@
     state.sortBy = (el("history-sort").value || "ended_desc").trim();
     var adapterFilterInput = el("history-adapter-filter");
     state.adapterParityFilter = ((adapterFilterInput && adapterFilterInput.value) || "all").trim();
+    var burnInWindowInput = el("history-burnin-window");
+    state.burnInWindow = ((burnInWindowInput && burnInWindowInput.value) || "200").trim();
   }
 
   function loadHistory(resetPage) {
@@ -314,6 +386,21 @@
 
     renderHistory(result);
     buildSummary(result);
+    var burnInSummary = null;
+    if (
+      window.LocalHistoryStore &&
+      typeof window.LocalHistoryStore.getAdapterParityBurnInSummary === "function"
+    ) {
+      burnInSummary = window.LocalHistoryStore.getAdapterParityBurnInSummary({
+        mode_key: state.modeKey,
+        keyword: state.keyword,
+        sort_by: state.sortBy,
+        sample_limit: state.burnInWindow,
+        min_comparable: BURN_IN_MIN_COMPARABLE,
+        max_mismatch_rate: BURN_IN_MAX_MISMATCH_RATE
+      });
+    }
+    renderBurnInSummary(burnInSummary);
     setStatus("", false);
 
     var prevBtn = el("history-prev-page");
@@ -462,6 +549,13 @@
     var adapterFilter = el("history-adapter-filter");
     if (adapterFilter) {
       adapterFilter.addEventListener("change", function () {
+        loadHistory(true);
+      });
+    }
+
+    var burnInWindow = el("history-burnin-window");
+    if (burnInWindow) {
+      burnInWindow.addEventListener("change", function () {
         loadHistory(true);
       });
     }

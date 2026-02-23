@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>2048 本地历史记录</title>
-  <link href="style/main.css?v=1771941002000" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=1772003002000" rel="stylesheet" type="text/css">
   <link rel="shortcut icon" href="favicon.ico?v=42">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
@@ -44,6 +44,15 @@
           <option value="incomplete">样本不足</option>
         </select>
 
+        <label>Burn-in窗口</label>
+        <select id="history-burnin-window" class="settings-select portal-inline-select">
+          <option value="50">最近50条</option>
+          <option value="100">最近100条</option>
+          <option value="200" selected>最近200条</option>
+          <option value="500">最近500条</option>
+          <option value="all">全部</option>
+        </select>
+
         <button class="replay-button" id="history-load-btn">刷新</button>
       </div>
 
@@ -58,6 +67,7 @@
 
       <div id="history-status" class="portal-status"></div>
       <div id="history-summary" class="portal-muted"></div>
+      <div id="history-burnin-summary" class="history-burnin-card"></div>
     </div>
 
     <div class="portal-actions-inline" style="justify-content:flex-end; margin-bottom:10px;">
@@ -70,7 +80,7 @@
 
   <script src="js/theme_manager.js?v=1771600400000"></script>
   <script src="js/mode_catalog.js?v=1771905000000"></script>
-  <script src="js/local_history_store.js?v=1771941000000"></script>
-  <script src="js/history_page.js?v=1771941001000"></script>
+  <script src="js/local_history_store.js?v=1772003000000"></script>
+  <script src="js/history_page.js?v=1772003001000"></script>
 </body>
 </html>

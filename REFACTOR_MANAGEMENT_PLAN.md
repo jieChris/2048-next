@@ -134,6 +134,9 @@ Deliverables:
   - `LocalHistoryStore.listRecords` now supports `adapter_parity_filter` and shared `getAdapterParityStatus` classification for stable filtering/export behavior
   - Adapter resolver now supports controlled default cutover (`engine_adapter_default`) with explicit rollback switch (`engine_adapter_force_legacy`) across query/storage/global policy inputs
   - Smoke suite now validates default-core cutover and forced-legacy rollback behavior end-to-end on gameplay pages
+  - Added history burn-in panel with rolling window stats (`50/100/200/500/all`) and gating projection (`可比较样本` + `不一致率`) for cutover readiness
+  - `LocalHistoryStore` now exposes `getAdapterParityBurnInSummary` so QA can consistently read mismatch-rate gates from persisted local sessions
+  - Burn-in panel now provides one-click “仅看不一致” shortcut to jump from gate view to actionable mismatch records
 
 Acceptance:
 - Session-level parity on key metrics (score, win/lose state, tile cap behavior).
@@ -172,4 +175,4 @@ Rollback:
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
 2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-dispatch/replay-lifecycle/replay-timer/replay-flow/replay-control/replay-loop`).
-3. Start M5 burn-in checklist execution: run fixed-window parity sampling under default `core-adapter`, track mismatch/export volume from history page, and gate final default switch on stable mismatch thresholds.
+3. Execute M5 burn-in checklist in canary flow: set `engine_adapter_default_mode=core-adapter`, monitor history burn-in gate for sustained pass window, and keep `engine_adapter_force_legacy=1` as emergency rollback switch.

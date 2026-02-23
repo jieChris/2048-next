@@ -86,6 +86,102 @@
     return "incomplete";
   }
 
+  function hasAdapterParityDiagnostics(record) {
+    if (!isPlainObject(record)) return false;
+    return isPlainObject(record.adapter_parity_report_v1) || isPlainObject(record.adapter_parity_ab_diff_v1);
+  }
+
+  function toPositiveIntegerOrNull(value) {
+    var num = Number(value);
+    if (!Number.isFinite(num)) return null;
+    num = Math.floor(num);
+    return num > 0 ? num : null;
+  }
+
+  function getAdapterParityBurnInSummary(options) {
+    options = options || {};
+    var sampleLimitInput = options.sample_limit;
+    var sampleLimit = null;
+    if (!(typeof sampleLimitInput === "string" && sampleLimitInput.toLowerCase() === "all")) {
+      sampleLimit = toPositiveIntegerOrNull(sampleLimitInput);
+      if (sampleLimit !== null) sampleLimit = Math.min(sampleLimit, MAX_RECORDS);
+    }
+
+    var minComparable = toPositiveIntegerOrNull(options.min_comparable);
+    if (minComparable === null) minComparable = 50;
+
+    var maxMismatchRate = toFiniteNumberOrNull(options.max_mismatch_rate);
+    if (maxMismatchRate === null || maxMismatchRate < 0) maxMismatchRate = 1;
+
+    var matched = [];
+    var page = 1;
+    while (page <= 100) {
+      var result = listRecords({
+        mode_key: options.mode_key || "",
+        keyword: options.keyword || "",
+        sort_by: options.sort_by || "ended_desc",
+        adapter_parity_filter: "all",
+        page: page,
+        page_size: 500
+      });
+      var items = result && Array.isArray(result.items) ? result.items : [];
+      if (!items.length) break;
+      for (var i = 0; i < items.length; i++) matched.push(items[i]);
+      if (matched.length >= (result.total || 0)) break;
+      page += 1;
+    }
+
+    var source = sampleLimit === null ? matched : matched.slice(0, sampleLimit);
+    var withDiagnostics = 0;
+    var comparable = 0;
+    var match = 0;
+    var mismatch = 0;
+    var incomplete = 0;
+    for (var j = 0; j < source.length; j++) {
+      var item = source[j];
+      if (hasAdapterParityDiagnostics(item)) withDiagnostics += 1;
+      var status = getAdapterParityStatus(item);
+      if (status === "match") {
+        comparable += 1;
+        match += 1;
+      } else if (status === "mismatch") {
+        comparable += 1;
+        mismatch += 1;
+      } else {
+        incomplete += 1;
+      }
+    }
+
+    var mismatchRate = comparable > 0 ? (mismatch * 100) / comparable : null;
+    var gateStatus = "insufficient_sample";
+    var passGate = null;
+    if (comparable >= minComparable) {
+      if (mismatchRate !== null && mismatchRate <= maxMismatchRate) {
+        gateStatus = "pass";
+        passGate = true;
+      } else {
+        gateStatus = "fail";
+        passGate = false;
+      }
+    }
+
+    return {
+      matchedRecords: matched.length,
+      evaluatedRecords: source.length,
+      sampleLimit: sampleLimit,
+      minComparable: minComparable,
+      maxMismatchRate: maxMismatchRate,
+      withDiagnostics: withDiagnostics,
+      comparable: comparable,
+      match: match,
+      mismatch: mismatch,
+      incomplete: incomplete,
+      mismatchRate: mismatchRate,
+      gateStatus: gateStatus,
+      passGate: passGate
+    };
+  }
+
   function normalizeRecord(raw) {
     raw = raw || {};
     var modeKey = typeof raw.mode_key === "string" && raw.mode_key ? raw.mode_key : "unknown";
@@ -331,6 +427,7 @@
     importRecords: importRecords,
     download: download,
     getAll: readAll,
-    getAdapterParityStatus: getAdapterParityStatus
+    getAdapterParityStatus: getAdapterParityStatus,
+    getAdapterParityBurnInSummary: getAdapterParityBurnInSummary
   };
 })();
