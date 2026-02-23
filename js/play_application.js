@@ -35,6 +35,24 @@
     return window.__legacyEngine;
   }
 
+  function startGameWithBootstrap(modeConfig) {
+    var bootstrap = window.LegacyBootstrapRuntime;
+    if (bootstrap && typeof bootstrap.startGame === "function") {
+      return bootstrap.startGame({
+        modeKey: modeConfig && modeConfig.key ? modeConfig.key : "",
+        modeConfig: modeConfig,
+        inputManagerCtor: KeyboardInputManager,
+        defaultBoardWidth: 4
+      });
+    }
+
+    var boardWidth = modeConfig && modeConfig.board_width ? modeConfig.board_width : 4;
+    var gm = new GameManager(boardWidth, KeyboardInputManager, HTMLActuator, LocalScoreManager);
+    window.game_manager = gm;
+    attachLegacyEngineBridge(modeConfig.key, modeConfig, window.game_manager);
+    return window.game_manager;
+  }
+
   function compactModeLabel(modeConfig) {
     var raw = modeConfig && (modeConfig.label || modeConfig.key) ? (modeConfig.label || modeConfig.key) : "模式";
     return raw
@@ -242,8 +260,6 @@
     window.GAME_CHALLENGE_CONTEXT = challengeId ? { id: challengeId, mode_key: modeConfig.key } : null;
     setupHeader(modeConfig);
 
-    var gm = new GameManager(modeConfig.board_width, KeyboardInputManager, HTMLActuator, LocalScoreManager);
-    window.game_manager = gm;
-    attachLegacyEngineBridge(modeConfig.key, modeConfig, window.game_manager);
+    startGameWithBootstrap(modeConfig);
   });
 })();

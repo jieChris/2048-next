@@ -33,13 +33,16 @@ Acceptance:
 Rollback:
 - Revert only test/CI commits (no runtime impact).
 
-### M2 - Bootstrap Consolidation
+### M2 - Bootstrap Consolidation (in progress)
 Goal:
 - Deduplicate startup logic across entry scripts.
 
 Deliverables:
 - `src/bootstrap/*` for mode parsing and startup wiring.
 - Thin legacy entry files that call shared bootstrap.
+- Current progress:
+  - Added shared runtime bootstrap entry: `js/legacy_bootstrap_runtime.js`
+  - `application/play/capped/replay` now use shared `startGame` path with local fallback
 
 Acceptance:
 - No behavior difference on game flow and mode selection.

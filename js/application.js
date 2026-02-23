@@ -39,6 +39,24 @@ window.requestAnimationFrame(function () {
     return window.__legacyEngine;
   }
 
+  function startGameWithBootstrap(modeKey, modeConfig) {
+    var bootstrap = window.LegacyBootstrapRuntime;
+    if (bootstrap && typeof bootstrap.startGame === "function") {
+      return bootstrap.startGame({
+        modeKey: modeKey,
+        modeConfig: modeConfig,
+        inputManagerCtor: KeyboardInputManager,
+        defaultBoardWidth: 4
+      });
+    }
+
+    var boardWidth = modeConfig && modeConfig.board_width ? modeConfig.board_width : 4;
+    game_manager = new GameManager(boardWidth, KeyboardInputManager, HTMLActuator, LocalScoreManager);
+    window.game_manager = game_manager;
+    attachLegacyEngineBridge(modeKey, modeConfig, window.game_manager);
+    return window.game_manager;
+  }
+
   if (typeof document !== "undefined" && document.body) {
     modeKey = document.body.getAttribute("data-mode-id") || modeKey;
   }
@@ -52,13 +70,7 @@ window.requestAnimationFrame(function () {
     }
   }
 
-  var boardWidth = window.GAME_MODE_CONFIG && window.GAME_MODE_CONFIG.board_width
-    ? window.GAME_MODE_CONFIG.board_width
-    : 4;
-
-  game_manager = new GameManager(boardWidth, KeyboardInputManager, HTMLActuator, LocalScoreManager);
-  window.game_manager = game_manager;
-  attachLegacyEngineBridge(modeKey, window.GAME_MODE_CONFIG, window.game_manager);
+  startGameWithBootstrap(modeKey, window.GAME_MODE_CONFIG);
 
 });
 
