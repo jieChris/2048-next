@@ -89,6 +89,7 @@ Deliverables:
   - Added `src/core/replay-timer.ts` and `js/core_replay_timer_runtime.js` to delegate replay timer state transitions (`pause/resume/setSpeed`) and tick-stop decision
   - Added `src/core/replay-flow.ts` and `js/core_replay_flow_runtime.js` to delegate replay flow helpers (tick-end state and seek rewind strategy)
   - Extended `src/core/replay-flow.ts` and `js/core_replay_flow_runtime.js` with seek-rewind restart planning (`board/seed/none` restart contract + replay-index apply contract) to reduce `seek` branch logic in `js/game_manager.js`
+  - Added `src/core/replay-control.ts` and `js/core_replay_control_runtime.js` to delegate replay tick-boundary control planning (`shouldStopAtTick` + end-state application contract for pause/replayMode)
   - Added `src/core/replay-loop.ts` and `js/core_replay_loop_runtime.js` to delegate replay step-loop orchestration (current-action projection + forced-spawn injection decision + replay-index advance plan) shared by `resume` and `seek`
 
 Acceptance:
@@ -142,5 +143,5 @@ Rollback:
 
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
-2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-lifecycle/replay-timer/replay-flow/replay-loop`).
-3. Continue extracting deterministic replay control helpers around `resume` tick-stop boundaries (stop gate + end-state apply contract) while keeping UI/storage behavior unchanged.
+2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-lifecycle/replay-timer/replay-flow/replay-control/replay-loop`).
+3. Continue extracting deterministic replay action-dispatch boundaries (action-kind resolution + execution side-effect contract) while keeping UI/storage behavior unchanged.

@@ -704,6 +704,31 @@ GameManager.prototype.computeReplayEndState = function () {
   };
 };
 
+GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, replayEndState) {
+  var replayControlCore = this.getCoreReplayControlRuntime();
+  if (replayControlCore && typeof replayControlCore.planReplayTickBoundary === "function") {
+    return replayControlCore.planReplayTickBoundary({
+      shouldStopAtTick: shouldStopAtTick,
+      replayEndState: replayEndState
+    }) || {};
+  }
+
+  if (!shouldStopAtTick) {
+    return {
+      shouldStop: false,
+      shouldPause: false,
+      shouldApplyReplayMode: false,
+      replayMode: true
+    };
+  }
+  return {
+    shouldStop: true,
+    shouldPause: replayEndState && replayEndState.shouldPause !== false,
+    shouldApplyReplayMode: true,
+    replayMode: replayEndState && replayEndState.replayMode === true
+  };
+};
+
 GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
   var replayFlowCore = this.getCoreReplayFlowRuntime();
   if (replayFlowCore && typeof replayFlowCore.planReplaySeekRewind === "function") {
@@ -1653,6 +1678,13 @@ GameManager.prototype.getCoreReplayTimerRuntime = function () {
 GameManager.prototype.getCoreReplayFlowRuntime = function () {
   if (typeof window === "undefined") return null;
   var core = window.CoreReplayFlowRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
+GameManager.prototype.getCoreReplayControlRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreReplayControlRuntime;
   if (!core || typeof core !== "object") return null;
   return core;
 };
@@ -4550,12 +4582,18 @@ GameManager.prototype.resume = function () {
     var delay = resumeState.delay;
     
     this.replayInterval = setInterval(function() {
-      if (self.shouldStopReplayAtTick(self.replayIndex, self.replayMoves.length)) {
-        var replayEndState = self.computeReplayEndState();
-        if (replayEndState.shouldPause !== false) {
+      var shouldStopAtTick = self.shouldStopReplayAtTick(self.replayIndex, self.replayMoves.length);
+      var tickBoundaryPlan = self.planReplayTickBoundary(
+        shouldStopAtTick,
+        shouldStopAtTick ? self.computeReplayEndState() : undefined
+      );
+      if (tickBoundaryPlan.shouldStop) {
+        if (tickBoundaryPlan.shouldPause) {
           self.pause();
         }
-        self.replayMode = replayEndState.replayMode === true;
+        if (tickBoundaryPlan.shouldApplyReplayMode) {
+          self.replayMode = tickBoundaryPlan.replayMode;
+        }
         return;
       }
       
