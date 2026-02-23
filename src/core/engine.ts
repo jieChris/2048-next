@@ -1,4 +1,4 @@
-﻿export type Ruleset = "pow2" | "fibonacci";
+export type Ruleset = "pow2" | "fibonacci";
 
 export interface EngineConfig {
   width: number;
@@ -10,8 +10,11 @@ export interface EngineConfig {
 
 export class Engine {
   private started = false;
+  public readonly config: EngineConfig;
 
-  constructor(public readonly config: EngineConfig) {}
+  constructor(config: EngineConfig) {
+    this.config = config;
+  }
 
   start(): void {
     this.started = true;
