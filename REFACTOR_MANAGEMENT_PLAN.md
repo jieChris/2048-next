@@ -107,6 +107,11 @@ Goal:
 Deliverables:
 - Adapter mapping input, actuator, persistence to new engine.
 - Runtime toggle for A/B validation.
+- Current progress:
+  - Added adapter mode resolver helpers in `src/bridge/adapter-mode.ts` and runtime mirror `js/legacy_adapter_runtime.js`
+  - `js/legacy_bootstrap_runtime.js` now routes bridge attachment through `LegacyAdapterRuntime.attachLegacyBridgeWithAdapter` when available
+  - Bridge payload now carries `adapterMode` metadata and preserves existing startup behavior (`legacy-bridge` default)
+  - Fixed bootstrap bridge-attach argument order so `__legacyEngine.manager` correctly binds to `window.game_manager`
 
 Acceptance:
 - Session-level parity on key metrics (score, win/lose state, tile cap behavior).
@@ -145,4 +150,4 @@ Rollback:
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
 2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-dispatch/replay-lifecycle/replay-timer/replay-flow/replay-control/replay-loop`).
-3. Start M4 adapter replacement scaffolding: define typed adapter boundary from legacy input/actuator/storage to core engine while keeping legacy UI unchanged.
+3. Continue M4 by extracting adapter-side actuator/storage IO boundary contracts (state snapshot read/write + move result emit) while keeping runtime on legacy execution path by default.

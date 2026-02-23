@@ -64,6 +64,7 @@
       manager: manager || null,
       modeKey: modeKey || "",
       modeConfig: modeConfig || null,
+      adapterMode: "legacy-bridge",
       engineConfig: bridge.engine.config,
       engine: bridge.engine,
       start: bridge.start,

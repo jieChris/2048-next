@@ -23,6 +23,16 @@
   }
 
   function attachLegacyBridge(manager, modeKey, modeConfig) {
+    var adapterApi = global.LegacyAdapterRuntime;
+    if (adapterApi && typeof adapterApi.attachLegacyBridgeWithAdapter === "function") {
+      return adapterApi.attachLegacyBridgeWithAdapter({
+        manager: manager || null,
+        modeKey: modeKey || "",
+        modeConfig: modeConfig || null,
+        bridgeApi: global.LegacyBridge || null
+      });
+    }
+
     var bridgeApi = global.LegacyBridge;
     if (bridgeApi && typeof bridgeApi.attachLegacyEngineToWindow === "function") {
       return bridgeApi.attachLegacyEngineToWindow(manager, modeKey, modeConfig);
@@ -68,9 +78,9 @@
 
     global.game_manager = manager;
     attachLegacyBridge(
+      manager,
       opts.modeKey || (global.GAME_MODE_CONFIG && global.GAME_MODE_CONFIG.key) || "",
-      global.GAME_MODE_CONFIG || null,
-      manager
+      global.GAME_MODE_CONFIG || null
     );
     return manager;
   }
