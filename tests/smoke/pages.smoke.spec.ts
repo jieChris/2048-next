@@ -539,6 +539,37 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(result?.payloadParityABDiff?.modeKey).toBe(result?.payloadModeKey);
   });
 
+  test("adapter rollout default and rollback switch are respected", async ({ page }) => {
+    const defaultCoreResponse = await page.goto("/index.html?engine_adapter_default=core-adapter", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(defaultCoreResponse, "Default-core response should exist").not.toBeNull();
+    expect(defaultCoreResponse?.ok(), "Default-core response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const defaultCoreMode = await page.evaluate(() => {
+      const payload = (window as any).__legacyEngine;
+      return payload && typeof payload.adapterMode === "string" ? payload.adapterMode : null;
+    });
+    expect(defaultCoreMode).toBe("core-adapter");
+
+    const forcedLegacyResponse = await page.goto(
+      "/index.html?engine_adapter_default=core-adapter&engine_adapter_force_legacy=1",
+      { waitUntil: "domcontentloaded" }
+    );
+    expect(forcedLegacyResponse, "Forced-legacy response should exist").not.toBeNull();
+    expect(forcedLegacyResponse?.ok(), "Forced-legacy response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const forcedLegacyMode = await page.evaluate(() => {
+      const payload = (window as any).__legacyEngine;
+      return payload && typeof payload.adapterMode === "string" ? payload.adapterMode : null;
+    });
+    expect(forcedLegacyMode).toBe("legacy-bridge");
+  });
+
   test("history page renders adapter diagnostics for local records", async ({ page }) => {
     const response = await page.goto("/history.html", {
       waitUntil: "domcontentloaded"

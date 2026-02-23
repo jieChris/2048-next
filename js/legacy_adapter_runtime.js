@@ -10,11 +10,46 @@
     return null;
   }
 
+  function normalizeForceLegacyFlag(raw) {
+    if (raw === true || raw === 1) return true;
+    if (typeof raw !== "string") return false;
+    var normalized = raw.trim().toLowerCase();
+    if (!normalized) return false;
+    return (
+      normalized === "1" ||
+      normalized === "true" ||
+      normalized === "yes" ||
+      normalized === "on" ||
+      normalized === "legacy" ||
+      normalized === "legacy-bridge"
+    );
+  }
+
   function readAdapterModeFromQuery() {
     try {
       if (!global.location || typeof global.location.search !== "string") return null;
       var params = new URLSearchParams(global.location.search || "");
       return params.get("engine_adapter");
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function readAdapterDefaultModeFromQuery() {
+    try {
+      if (!global.location || typeof global.location.search !== "string") return null;
+      var params = new URLSearchParams(global.location.search || "");
+      return params.get("engine_adapter_default");
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function readForceLegacyFromQuery() {
+    try {
+      if (!global.location || typeof global.location.search !== "string") return null;
+      var params = new URLSearchParams(global.location.search || "");
+      return params.get("engine_adapter_force_legacy");
     } catch (_err) {
       return null;
     }
@@ -29,10 +64,33 @@
     }
   }
 
+  function readAdapterDefaultModeFromStorage() {
+    try {
+      if (!global.localStorage || typeof global.localStorage.getItem !== "function") return null;
+      return global.localStorage.getItem("engine_adapter_default_mode");
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function readForceLegacyFromStorage() {
+    try {
+      if (!global.localStorage || typeof global.localStorage.getItem !== "function") return null;
+      return global.localStorage.getItem("engine_adapter_force_legacy");
+    } catch (_err) {
+      return null;
+    }
+  }
+
   function resolveAdapterMode(input) {
     var opts = input || {};
     var explicit = normalizeAdapterMode(opts.adapterMode);
     if (explicit) return explicit;
+
+    if (normalizeForceLegacyFlag(opts.forceLegacy)) return "legacy-bridge";
+    if (normalizeForceLegacyFlag(global.__engineAdapterForceLegacy)) return "legacy-bridge";
+    if (normalizeForceLegacyFlag(readForceLegacyFromQuery())) return "legacy-bridge";
+    if (normalizeForceLegacyFlag(readForceLegacyFromStorage())) return "legacy-bridge";
 
     var globalMode = normalizeAdapterMode(global.__engineAdapterMode);
     if (globalMode) return globalMode;
@@ -42,6 +100,14 @@
 
     var storageMode = normalizeAdapterMode(readAdapterModeFromStorage());
     if (storageMode) return storageMode;
+
+    var defaultMode = normalizeAdapterMode(
+      opts.defaultMode ||
+      global.__engineAdapterDefault ||
+      readAdapterDefaultModeFromQuery() ||
+      readAdapterDefaultModeFromStorage()
+    );
+    if (defaultMode) return defaultMode;
 
     return "legacy-bridge";
   }
