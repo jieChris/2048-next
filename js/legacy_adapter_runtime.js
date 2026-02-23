@@ -93,6 +93,34 @@
           detail: detail || {}
         });
       };
+
+      var shadowApi = global.CoreAdapterShadowRuntime;
+      payload.readAdapterParityState = function () {
+        if (!shadowApi || typeof shadowApi.getAdapterParityState !== "function") return null;
+        return shadowApi.getAdapterParityState(snapshotModeKey);
+      };
+
+      if (adapterMode === "core-adapter") {
+        if (shadowApi && typeof shadowApi.attachAdapterMoveResultShadow === "function") {
+          payload.adapterShadowBinding = shadowApi.attachAdapterMoveResultShadow({
+            target: global,
+            modeKey: snapshotModeKey,
+            onStateChange: function (state) {
+              payload.adapterParityState = state || null;
+            }
+          });
+          payload.adapterParityState = payload.readAdapterParityState();
+        } else {
+          payload.adapterShadowBinding = null;
+          payload.adapterParityState = null;
+        }
+      } else {
+        if (shadowApi && typeof shadowApi.detachAdapterMoveResultShadow === "function") {
+          shadowApi.detachAdapterMoveResultShadow(snapshotModeKey);
+        }
+        payload.adapterShadowBinding = null;
+        payload.adapterParityState = null;
+      }
     }
     return payload;
   }

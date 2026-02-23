@@ -116,6 +116,9 @@ Deliverables:
   - Legacy adapter payload now exposes adapter IO methods (`syncAdapterSnapshot` / `emitMoveResult`) and reads initial adapter snapshot metadata
   - Wired non-invasive game-manager adapter hook to publish move-result metadata on successful move/undo paths and sync adapter snapshot metadata via bridge IO contracts
   - Smoke suite now validates adapter IO contract end-to-end (bridge methods + move-result event dispatch + snapshot sync)
+  - Added typed shadow parity projection helpers in `src/bridge/adapter-shadow.ts` and runtime mirror `js/core_adapter_shadow_runtime.js`
+  - `LegacyAdapterRuntime` now attaches move-result shadow listener in `core-adapter` mode and exposes parity-state reads on bridge payload
+  - Smoke suite now includes a `core-adapter` toggle scenario to verify shadow parity counters advance on published move-result events
 
 Acceptance:
 - Session-level parity on key metrics (score, win/lose state, tile cap behavior).
@@ -154,4 +157,4 @@ Rollback:
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
 2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-dispatch/replay-lifecycle/replay-timer/replay-flow/replay-control/replay-loop`).
-3. Continue M4 by adding a `core-adapter` shadow consumer path (listen to adapter move-result metadata and project typed parity counters) without changing gameplay execution path.
+3. Continue M4 by mapping shadow parity snapshots into a session-level parity report (score/undo/win-over counters) for cutover readiness checks.
