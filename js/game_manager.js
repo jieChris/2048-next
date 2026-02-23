@@ -1075,6 +1075,13 @@ GameManager.prototype.getCoreGridScanRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreMoveScanRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreMoveScanRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
   var core = this.getCoreRulesRuntime();
   if (core && typeof core.normalizeSpawnTable === "function") {
@@ -2926,11 +2933,35 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
 };
 
 GameManager.prototype.movesAvailable = function () {
+  var moveScanCore = this.getCoreMoveScanRuntime();
+  if (moveScanCore && typeof moveScanCore.movesAvailable === "function") {
+    return moveScanCore.movesAvailable(
+      this.getAvailableCells().length,
+      this.tileMatchesAvailable()
+    );
+  }
   return this.getAvailableCells().length > 0 || this.tileMatchesAvailable();
 };
 
 // Check for available matches between tiles (more expensive check)
 GameManager.prototype.tileMatchesAvailable = function () {
+  var moveScanCore = this.getCoreMoveScanRuntime();
+  if (moveScanCore && typeof moveScanCore.tileMatchesAvailable === "function") {
+    var selfCore = this;
+    return moveScanCore.tileMatchesAvailable(
+      this.width,
+      this.height,
+      this.isBlockedCell.bind(this),
+      function (cell) {
+        var tile = selfCore.grid.cellContent(cell);
+        return tile ? tile.value : null;
+      },
+      function (a, b) {
+        return selfCore.getMergedValue(a, b) !== null;
+      }
+    );
+  }
+
   var self = this;
 
   var tile;
