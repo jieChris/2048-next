@@ -728,6 +728,34 @@ GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
   };
 };
 
+GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
+  var replayFlowCore = this.getCoreReplayFlowRuntime();
+  if (replayFlowCore && typeof replayFlowCore.planReplaySeekRestart === "function") {
+    return replayFlowCore.planReplaySeekRestart({
+      shouldRewind: !!(rewindPlan && rewindPlan.shouldRewind),
+      strategy: rewindPlan ? rewindPlan.strategy : "none",
+      replayIndexAfterRewind: rewindPlan ? rewindPlan.replayIndexAfterRewind : this.replayIndex
+    }) || {};
+  }
+
+  var shouldRewind = !!(rewindPlan && rewindPlan.shouldRewind);
+  if (!shouldRewind) {
+    return {
+      shouldRestartWithBoard: false,
+      shouldRestartWithSeed: false,
+      shouldApplyReplayIndex: false,
+      replayIndex: rewindPlan ? rewindPlan.replayIndexAfterRewind : this.replayIndex
+    };
+  }
+
+  return {
+    shouldRestartWithBoard: rewindPlan.strategy === "board",
+    shouldRestartWithSeed: rewindPlan.strategy === "seed",
+    shouldApplyReplayIndex: true,
+    replayIndex: rewindPlan.replayIndexAfterRewind
+  };
+};
+
 GameManager.prototype.setBoardFromMatrix = function (board) {
   if (!Array.isArray(board) || board.length !== this.height) throw "Invalid board matrix";
   this.grid = new Grid(this.width, this.height);
@@ -4555,13 +4583,15 @@ GameManager.prototype.seek = function (targetIndex) {
     this.pause(); // Pause while seeking
 
     var rewindPlan = this.planReplaySeekRewind(targetIndex);
-    if (rewindPlan.shouldRewind) {
-        if (rewindPlan.strategy === "board") {
-            this.restartWithBoard(this.replayStartBoardMatrix, this.modeConfig, { asReplay: true });
-        } else {
-            this.restartWithSeed(this.initialSeed, this.modeConfig);
-        }
-        this.replayIndex = rewindPlan.replayIndexAfterRewind;
+    var restartPlan = this.planReplaySeekRestart(rewindPlan);
+    if (restartPlan.shouldRestartWithBoard) {
+        this.restartWithBoard(this.replayStartBoardMatrix, this.modeConfig, { asReplay: true });
+    }
+    if (restartPlan.shouldRestartWithSeed) {
+        this.restartWithSeed(this.initialSeed, this.modeConfig);
+    }
+    if (restartPlan.shouldApplyReplayIndex) {
+        this.replayIndex = restartPlan.replayIndex;
     }
 
     // Fast forward to target

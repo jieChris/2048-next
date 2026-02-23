@@ -158,7 +158,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         () => Boolean((window as any).CoreReplayTimerRuntime?.computeReplayResumeState)
       );
       const hasCoreReplayFlowRuntime = await page.evaluate(
-        () => Boolean((window as any).CoreReplayFlowRuntime?.planReplaySeekRewind)
+        () => Boolean(
+          (window as any).CoreReplayFlowRuntime?.planReplaySeekRewind &&
+          (window as any).CoreReplayFlowRuntime?.planReplaySeekRestart
+        )
       );
       const hasCoreReplayLoopRuntime = await page.evaluate(
         () => Boolean((window as any).CoreReplayLoopRuntime?.planReplayStepExecution)

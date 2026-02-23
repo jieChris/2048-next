@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   computeReplayEndState,
+  planReplaySeekRestart,
   planReplaySeekRewind
 } from "../../src/core/replay-flow";
 
@@ -54,6 +55,53 @@ describe("core replay flow: planReplaySeekRewind", () => {
       shouldRewind: true,
       strategy: "seed",
       replayIndexAfterRewind: 0
+    });
+  });
+});
+
+describe("core replay flow: planReplaySeekRestart", () => {
+  it("returns no restart actions when rewind is not required", () => {
+    expect(
+      planReplaySeekRestart({
+        shouldRewind: false,
+        strategy: "none",
+        replayIndexAfterRewind: 5
+      })
+    ).toEqual({
+      shouldRestartWithBoard: false,
+      shouldRestartWithSeed: false,
+      shouldApplyReplayIndex: false,
+      replayIndex: 5
+    });
+  });
+
+  it("plans board restart for board strategy rewind", () => {
+    expect(
+      planReplaySeekRestart({
+        shouldRewind: true,
+        strategy: "board",
+        replayIndexAfterRewind: 0
+      })
+    ).toEqual({
+      shouldRestartWithBoard: true,
+      shouldRestartWithSeed: false,
+      shouldApplyReplayIndex: true,
+      replayIndex: 0
+    });
+  });
+
+  it("plans seed restart for seed strategy rewind", () => {
+    expect(
+      planReplaySeekRestart({
+        shouldRewind: true,
+        strategy: "seed",
+        replayIndexAfterRewind: 0
+      })
+    ).toEqual({
+      shouldRestartWithBoard: false,
+      shouldRestartWithSeed: true,
+      shouldApplyReplayIndex: true,
+      replayIndex: 0
     });
   });
 });
