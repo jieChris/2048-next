@@ -8,7 +8,8 @@
     pageSize: 30,
     modeKey: "",
     keyword: "",
-    sortBy: "ended_desc"
+    sortBy: "ended_desc",
+    adapterParityFilter: "all"
   };
 
   function setStatus(text, isError) {
@@ -103,6 +104,38 @@
       .replace(/'/g, "&#39;");
   }
 
+  function hasAdapterDiagnostics(item) {
+    if (!item || typeof item !== "object") return false;
+    return isPlainObject(item.adapter_parity_report_v1) || isPlainObject(item.adapter_parity_ab_diff_v1);
+  }
+
+  function getAdapterParityStatus(item) {
+    if (window.LocalHistoryStore && typeof window.LocalHistoryStore.getAdapterParityStatus === "function") {
+      return window.LocalHistoryStore.getAdapterParityStatus(item);
+    }
+    return "incomplete";
+  }
+
+  function getAdapterBadgeText(status) {
+    if (status === "mismatch") return "A/B 不一致";
+    if (status === "match") return "A/B 一致";
+    return "A/B 样本不足";
+  }
+
+  function getAdapterBadgeClass(status) {
+    if (status === "mismatch") return "history-adapter-badge-mismatch";
+    if (status === "match") return "history-adapter-badge-match";
+    return "history-adapter-badge-incomplete";
+  }
+
+  function buildAdapterBadgeHtml(item) {
+    if (!hasAdapterDiagnostics(item)) return "";
+    var status = getAdapterParityStatus(item);
+    return "<span class='history-adapter-badge " + getAdapterBadgeClass(status) + "'>" +
+      escapeHtml(getAdapterBadgeText(status)) +
+      "</span>";
+  }
+
   function buildAdapterDiagnosticsHtml(item) {
     var report = isPlainObject(item && item.adapter_parity_report_v1) ? item.adapter_parity_report_v1 : null;
     var diff = isPlainObject(item && item.adapter_parity_ab_diff_v1) ? item.adapter_parity_ab_diff_v1 : null;
@@ -140,9 +173,16 @@
     var summary = el("history-summary");
     if (!summary) return;
     var total = result && Number.isFinite(result.total) ? result.total : 0;
+    var filterMap = {
+      all: "全部",
+      mismatch: "仅不一致",
+      match: "仅一致",
+      incomplete: "样本不足"
+    };
     summary.textContent = "共 " + total + " 条记录" +
       " · 当前第 " + state.page + " 页" +
-      " · 每页 " + state.pageSize + " 条";
+      " · 每页 " + state.pageSize + " 条" +
+      " · 诊断筛选: " + (filterMap[state.adapterParityFilter] || "全部");
   }
 
   function downloadSingleRecord(item) {
@@ -151,6 +191,31 @@
     var safeMode = (item.mode_key || "mode").replace(/[^a-zA-Z0-9_-]/g, "_");
     var file = "history_" + safeMode + "_" + item.id + ".json";
     window.LocalHistoryStore.download(file, payload);
+  }
+
+  function collectRecordIdsForExport(queryOptions) {
+    if (!window.LocalHistoryStore || typeof window.LocalHistoryStore.listRecords !== "function") return [];
+
+    var ids = [];
+    var page = 1;
+    while (page <= 100) {
+      var result = window.LocalHistoryStore.listRecords({
+        mode_key: queryOptions.mode_key || "",
+        keyword: queryOptions.keyword || "",
+        sort_by: queryOptions.sort_by || "ended_desc",
+        adapter_parity_filter: queryOptions.adapter_parity_filter || "all",
+        page: page,
+        page_size: 500
+      });
+      var items = result && Array.isArray(result.items) ? result.items : [];
+      if (!items.length) break;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i] && items[i].id) ids.push(items[i].id);
+      }
+      if (ids.length >= (result.total || 0)) break;
+      page += 1;
+    }
+    return ids;
   }
 
   function renderHistory(result) {
@@ -178,6 +243,7 @@
         node.innerHTML =
           "<div class='history-item-head'>" +
             "<strong>" + modeText(item) + "</strong>" +
+            buildAdapterBadgeHtml(item) +
             "<span>分数: " + score + "</span>" +
             "<span>最大块: " + best + "</span>" +
             "<span>时长: " + duration + "</span>" +
@@ -228,6 +294,8 @@
     state.modeKey = (el("history-mode").value || "").trim();
     state.keyword = (el("history-keyword").value || "").trim();
     state.sortBy = (el("history-sort").value || "ended_desc").trim();
+    var adapterFilterInput = el("history-adapter-filter");
+    state.adapterParityFilter = ((adapterFilterInput && adapterFilterInput.value) || "all").trim();
   }
 
   function loadHistory(resetPage) {
@@ -239,6 +307,7 @@
       mode_key: state.modeKey,
       keyword: state.keyword,
       sort_by: state.sortBy,
+      adapter_parity_filter: state.adapterParityFilter,
       page: state.page,
       page_size: state.pageSize
     });
@@ -286,6 +355,28 @@
         var dateTag = new Date().toISOString().slice(0, 10);
         window.LocalHistoryStore.download("2048_local_history_" + dateTag + ".json", payload);
         setStatus("已导出全部历史记录", false);
+      });
+    }
+
+    var exportMismatchBtn = el("history-export-mismatch-btn");
+    if (exportMismatchBtn) {
+      exportMismatchBtn.addEventListener("click", function () {
+        if (!window.LocalHistoryStore) return;
+        readFilters();
+        var ids = collectRecordIdsForExport({
+          mode_key: state.modeKey,
+          keyword: state.keyword,
+          sort_by: state.sortBy,
+          adapter_parity_filter: "mismatch"
+        });
+        if (!ids.length) {
+          setStatus("没有可导出的 A/B 不一致记录", false);
+          return;
+        }
+        var payload = window.LocalHistoryStore.exportRecords(ids);
+        var dateTag = new Date().toISOString().slice(0, 10);
+        window.LocalHistoryStore.download("2048_local_history_mismatch_" + dateTag + ".json", payload);
+        setStatus("已导出 A/B 不一致记录 " + ids.length + " 条", false);
       });
     }
 
@@ -364,6 +455,13 @@
     var sort = el("history-sort");
     if (sort) {
       sort.addEventListener("change", function () {
+        loadHistory(true);
+      });
+    }
+
+    var adapterFilter = el("history-adapter-filter");
+    if (adapterFilter) {
+      adapterFilter.addEventListener("change", function () {
         loadHistory(true);
       });
     }

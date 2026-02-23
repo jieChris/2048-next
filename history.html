@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>2048 本地历史记录</title>
-  <link href="style/main.css?v=1771935000000" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=1771941002000" rel="stylesheet" type="text/css">
   <link rel="shortcut icon" href="favicon.ico?v=42">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
@@ -36,11 +36,20 @@
           <option value="score_desc">按分数（高到低）</option>
         </select>
 
+        <label>Adapter诊断</label>
+        <select id="history-adapter-filter" class="settings-select portal-inline-select">
+          <option value="all">全部</option>
+          <option value="mismatch">仅不一致</option>
+          <option value="match">仅一致</option>
+          <option value="incomplete">样本不足</option>
+        </select>
+
         <button class="replay-button" id="history-load-btn">刷新</button>
       </div>
 
       <div class="portal-actions-inline" style="margin-top:8px;">
         <button class="replay-button" id="history-export-all-btn">导出全部</button>
+        <button class="replay-button" id="history-export-mismatch-btn">导出不一致</button>
         <button class="replay-button" id="history-import-btn">导入合并</button>
         <button class="replay-button" id="history-import-replace-btn">导入并替换</button>
         <button class="replay-button" id="history-clear-all-btn">清空全部</button>
@@ -61,7 +70,7 @@
 
   <script src="js/theme_manager.js?v=1771600400000"></script>
   <script src="js/mode_catalog.js?v=1771905000000"></script>
-  <script src="js/local_history_store.js?v=1771935000000"></script>
-  <script src="js/history_page.js?v=1771935000000"></script>
+  <script src="js/local_history_store.js?v=1771941000000"></script>
+  <script src="js/history_page.js?v=1771941001000"></script>
 </body>
 </html>

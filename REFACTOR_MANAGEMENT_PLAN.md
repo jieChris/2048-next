@@ -130,6 +130,8 @@ Deliverables:
   - `history.html` now renders adapter diagnostics summary lines (session parity + A/B diff deltas) per history item for QA visibility
   - Smoke suite now validates history-page diagnostics rendering from persisted local records
   - Unified `local_history_store.js` cache-busting version across all gameplay/history/replay pages to avoid stale diagnostics serialization in browser cache
+  - History page now exposes triage aids: A/B status badge (`一致/不一致/样本不足`), quick diagnosis filter, and one-click mismatch export flow for QA escalation
+  - `LocalHistoryStore.listRecords` now supports `adapter_parity_filter` and shared `getAdapterParityStatus` classification for stable filtering/export behavior
 
 Acceptance:
 - Session-level parity on key metrics (score, win/lose state, tile cap behavior).
@@ -168,4 +170,4 @@ Rollback:
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
 2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-dispatch/replay-lifecycle/replay-timer/replay-flow/replay-control/replay-loop`).
-3. Continue M4 by adding history QA triage aids (A/B mismatch badge + quick filter/export by mismatch state) so cutover regressions can be isolated faster.
+3. Start M5 prep: add controlled default-adapter cutover strategy (`legacy-bridge` -> `core-adapter`) with explicit rollback switch and burn-in checklist.

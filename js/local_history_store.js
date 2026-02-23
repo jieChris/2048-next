@@ -46,6 +46,46 @@
     }
   }
 
+  function toFiniteNumberOrNull(value) {
+    var num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  }
+
+  function normalizeAdapterParityFilter(value) {
+    if (value === "mismatch" || value === "match" || value === "incomplete") return value;
+    return "all";
+  }
+
+  function getAdapterParityStatus(record) {
+    var item = isPlainObject(record) ? record : {};
+    var diff = isPlainObject(item.adapter_parity_ab_diff_v1) ? item.adapter_parity_ab_diff_v1 : null;
+    if (!diff) return "incomplete";
+    if (diff.comparable !== true) return "incomplete";
+
+    var deltas = [
+      toFiniteNumberOrNull(diff.scoreDelta),
+      toFiniteNumberOrNull(diff.undoUsedDelta),
+      toFiniteNumberOrNull(diff.undoEventsDelta),
+      toFiniteNumberOrNull(diff.wonEventsDelta),
+      toFiniteNumberOrNull(diff.overEventsDelta)
+    ];
+    var hasNonZeroDelta = false;
+    for (var i = 0; i < deltas.length; i++) {
+      if (deltas[i] !== null && deltas[i] !== 0) {
+        hasNonZeroDelta = true;
+        break;
+      }
+    }
+
+    if (diff.isScoreMatch === false || diff.bothScoreAligned === false || hasNonZeroDelta) {
+      return "mismatch";
+    }
+    if (diff.isScoreMatch === true) {
+      return "match";
+    }
+    return "incomplete";
+  }
+
   function normalizeRecord(raw) {
     raw = raw || {};
     var modeKey = typeof raw.mode_key === "string" && raw.mode_key ? raw.mode_key : "unknown";
@@ -138,6 +178,7 @@
     var modeKey = options.mode_key || "";
     var keyword = (options.keyword || "").toLowerCase();
     var sortBy = options.sort_by || "ended_desc";
+    var adapterParityFilter = normalizeAdapterParityFilter(options.adapter_parity_filter);
     var page = Number.isInteger(options.page) && options.page > 0 ? options.page : 1;
     var pageSize = Number.isInteger(options.page_size) && options.page_size > 0
       ? Math.min(options.page_size, 500)
@@ -161,6 +202,7 @@
         ].join(" ").toLowerCase();
         if (haystack.indexOf(keyword) === -1) continue;
       }
+      if (adapterParityFilter !== "all" && getAdapterParityStatus(item) !== adapterParityFilter) continue;
       filtered.push(item);
     }
 
@@ -288,6 +330,7 @@
     exportRecords: exportRecords,
     importRecords: importRecords,
     download: download,
-    getAll: readAll
+    getAll: readAll,
+    getAdapterParityStatus: getAdapterParityStatus
   };
 })();

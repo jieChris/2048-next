@@ -2025,6 +2025,35 @@ input[type=range]::-webkit-slider-runnable-track {
   font-size: 14px;
 }
 
+.history-adapter-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: bold;
+  border: 1px solid transparent;
+}
+
+.history-adapter-badge-mismatch {
+  background: #fbe9e8;
+  color: #9f2f2b;
+  border-color: #efc4c1;
+}
+
+.history-adapter-badge-match {
+  background: #e9f7ee;
+  color: #2f7d4b;
+  border-color: #c5e6d1;
+}
+
+.history-adapter-badge-incomplete {
+  background: #f1eee8;
+  color: #7f776d;
+  border-color: #ddd7ce;
+}
+
 .history-item-actions {
   display: flex;
   flex-wrap: wrap;

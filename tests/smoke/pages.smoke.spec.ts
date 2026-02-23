@@ -577,8 +577,46 @@ test.describe("Legacy Multi-Page Smoke", () => {
         replay_string: "",
         adapter_parity_report_v1: {
           adapterMode: "core-adapter",
-          lastScoreFromSnapshot: 256,
+          lastScoreFromSnapshot: 260,
           undoUsedFromSnapshot: 1,
+          scoreDelta: 4,
+          isScoreAligned: false
+        },
+        adapter_parity_ab_diff_v1: {
+          comparable: true,
+          scoreDelta: 4,
+          undoUsedDelta: 1,
+          overEventsDelta: 1,
+          undoEventsDelta: 1,
+          wonEventsDelta: 0,
+          isScoreMatch: false,
+          bothScoreAligned: false
+        }
+      });
+
+      store.saveRecord({
+        mode: "local",
+        mode_key: "standard_4x4_pow2_no_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        undo_enabled: false,
+        rank_policy: "ranked",
+        score: 512,
+        best_tile: 64,
+        duration_ms: 18000,
+        final_board: [
+          [4, 8, 16, 32],
+          [64, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        ended_at: new Date().toISOString(),
+        replay_string: "",
+        adapter_parity_report_v1: {
+          adapterMode: "core-adapter",
+          lastScoreFromSnapshot: 512,
+          undoUsedFromSnapshot: 2,
           scoreDelta: 0,
           isScoreAligned: true
         },
@@ -586,15 +624,25 @@ test.describe("Legacy Multi-Page Smoke", () => {
           comparable: true,
           scoreDelta: 0,
           undoUsedDelta: 0,
-          overEventsDelta: 0
+          overEventsDelta: 0,
+          undoEventsDelta: 0,
+          wonEventsDelta: 0,
+          isScoreMatch: true,
+          bothScoreAligned: true
         }
       });
     });
 
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.locator(".history-adapter-diagnostics")).toHaveCount(1);
-    await expect(page.locator(".history-adapter-title")).toHaveText("Adapter 诊断");
-    await expect(page.locator(".history-adapter-diagnostics")).toContainText("A/B comparable 是");
-    await expect(page.locator(".history-adapter-diagnostics")).toContainText("scoreΔ 0");
+    await expect(page.locator(".history-adapter-diagnostics")).toHaveCount(2);
+    await expect(page.locator(".history-adapter-badge-mismatch")).toHaveCount(1);
+    await expect(page.locator(".history-adapter-badge-match")).toHaveCount(1);
+    await expect(page.locator("#history-export-mismatch-btn")).toBeVisible();
+
+    await page.selectOption("#history-adapter-filter", "mismatch");
+    await expect(page.locator(".history-item")).toHaveCount(1);
+    await expect(page.locator(".history-adapter-badge-mismatch")).toHaveCount(1);
+    await expect(page.locator("#history-summary")).toContainText("共 1 条记录");
+    await expect(page.locator("#history-summary")).toContainText("诊断筛选: 仅不一致");
   });
 });
