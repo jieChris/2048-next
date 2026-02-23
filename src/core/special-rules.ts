@@ -25,15 +25,17 @@ export function computeSpecialRulesState(
   const blockedCellsList: CellPoint[] = [];
   for (let i = 0; i < blockedRaw.length; i++) {
     const item = blockedRaw[i];
-    let x: number | null = null;
-    let y: number | null = null;
+    let rawX: unknown;
+    let rawY: unknown;
     if (Array.isArray(item) && item.length >= 2) {
-      x = Number(item[0]);
-      y = Number(item[1]);
+      rawX = item[0];
+      rawY = item[1];
     } else if (item && typeof item === "object") {
-      x = Number((item as { x?: unknown }).x);
-      y = Number((item as { y?: unknown }).y);
+      rawX = (item as { x?: unknown }).x;
+      rawY = (item as { y?: unknown }).y;
     }
+    const x = Number(rawX);
+    const y = Number(rawY);
     if (!Number.isInteger(x) || !Number.isInteger(y)) continue;
     if (x < 0 || x >= width || y < 0 || y >= height) continue;
     blockedCellSet[`${x}:${y}`] = true;
