@@ -137,6 +137,9 @@ Deliverables:
   - Added history burn-in panel with rolling window stats (`50/100/200/500/all`) and gating projection (`可比较样本` + `不一致率`) for cutover readiness
   - `LocalHistoryStore` now exposes `getAdapterParityBurnInSummary` so QA can consistently read mismatch-rate gates from persisted local sessions
   - Burn-in panel now provides one-click “仅看不一致” shortcut to jump from gate view to actionable mismatch records
+  - Added canary policy control panel on `history.html` with one-click actions for “默认 core canary / 强制 legacy 回滚 / 解除回滚 / 重置基线” and visible policy-source diagnostics
+  - `LegacyAdapterRuntime` now exposes `resolveAdapterModePolicy` plus storage policy mutators (`setStoredAdapterDefaultMode` / `setStoredForceLegacy`), enabling reproducible cutover operations without touching gameplay code
+  - Smoke suite now validates canary policy panel behavior end-to-end (policy writes, effective-mode source transitions, and storage-key reset)
 
 Acceptance:
 - Session-level parity on key metrics (score, win/lose state, tile cap behavior).

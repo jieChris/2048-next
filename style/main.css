@@ -2163,6 +2163,57 @@ input[type=range]::-webkit-slider-runnable-track {
   color: #8a8178;
 }
 
+.history-canary-card {
+  margin-top: 10px;
+  border: 1px solid #d8d4d0;
+  border-radius: 8px;
+  background: #f6f9ff;
+  padding: 10px 12px;
+}
+
+.history-canary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.history-canary-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: #4b5a73;
+}
+
+.history-canary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 12px;
+  color: #5f6d84;
+  line-height: 1.5;
+}
+
+.history-canary-note {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6f7d94;
+  line-height: 1.45;
+}
+
+.history-canary-actions {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-canary-actions .replay-button {
+  height: 30px;
+  line-height: 30px;
+  font-size: 13px;
+}
+
 .final-board-grid {
   display: grid;
   grid-template-columns: repeat(4, 52px);

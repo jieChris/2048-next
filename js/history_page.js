@@ -14,6 +14,9 @@
   };
   var BURN_IN_MIN_COMPARABLE = 50;
   var BURN_IN_MAX_MISMATCH_RATE = 1;
+  var ADAPTER_MODE_STORAGE_KEY = "engine_adapter_mode";
+  var ADAPTER_DEFAULT_STORAGE_KEY = "engine_adapter_default_mode";
+  var ADAPTER_FORCE_LEGACY_STORAGE_KEY = "engine_adapter_force_legacy";
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -95,6 +98,52 @@
     if (mode === "core-adapter") return "core-adapter";
     if (mode === "legacy-bridge") return "legacy-bridge";
     return "-";
+  }
+
+  function normalizeAdapterMode(raw) {
+    if (raw === "core" || raw === "core-adapter") return "core-adapter";
+    if (raw === "legacy" || raw === "legacy-bridge") return "legacy-bridge";
+    return null;
+  }
+
+  function normalizeForceLegacyFlag(raw) {
+    if (raw === true || raw === 1) return true;
+    if (typeof raw !== "string") return false;
+    var normalized = raw.trim().toLowerCase();
+    if (!normalized) return false;
+    return (
+      normalized === "1" ||
+      normalized === "true" ||
+      normalized === "yes" ||
+      normalized === "on" ||
+      normalized === "legacy" ||
+      normalized === "legacy-bridge"
+    );
+  }
+
+  function getStorageValue(key) {
+    try {
+      if (!window.localStorage || typeof window.localStorage.getItem !== "function") return null;
+      return window.localStorage.getItem(key);
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function setStorageValue(key, value) {
+    try {
+      if (!window.localStorage) return false;
+      if (value === null || value === undefined || value === "") {
+        if (typeof window.localStorage.removeItem !== "function") return false;
+        window.localStorage.removeItem(key);
+        return true;
+      }
+      if (typeof window.localStorage.setItem !== "function") return false;
+      window.localStorage.setItem(key, String(value));
+      return true;
+    } catch (_err) {
+      return false;
+    }
   }
 
   function escapeHtml(value) {
@@ -255,6 +304,186 @@
     }
   }
 
+  function formatModeSource(source) {
+    if (source === "explicit") return "显式参数";
+    if (source === "force-legacy") return "强制回滚";
+    if (source === "global") return "全局变量";
+    if (source === "query") return "URL 参数";
+    if (source === "storage") return "本地存储";
+    if (source === "default") return "默认策略";
+    return "默认回退";
+  }
+
+  function formatForceSource(source) {
+    if (source === "input") return "输入参数";
+    if (source === "global") return "全局变量";
+    if (source === "query") return "URL 参数";
+    if (source === "storage") return "本地存储";
+    return "-";
+  }
+
+  function readCanaryPolicySnapshot() {
+    var runtime = window.LegacyAdapterRuntime;
+    if (runtime && typeof runtime.resolveAdapterModePolicy === "function") {
+      var policy = runtime.resolveAdapterModePolicy({});
+      if (isPlainObject(policy)) return policy;
+    }
+
+    var defaultMode = normalizeAdapterMode(getStorageValue(ADAPTER_DEFAULT_STORAGE_KEY));
+    var forceLegacy = normalizeForceLegacyFlag(getStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY));
+    if (forceLegacy) {
+      return {
+        effectiveMode: "legacy-bridge",
+        modeSource: "force-legacy",
+        forceLegacyEnabled: true,
+        forceLegacySource: "storage",
+        explicitMode: null,
+        globalMode: null,
+        queryMode: null,
+        storageMode: null,
+        defaultMode: defaultMode
+      };
+    }
+    if (defaultMode) {
+      return {
+        effectiveMode: defaultMode,
+        modeSource: "default",
+        forceLegacyEnabled: false,
+        forceLegacySource: null,
+        explicitMode: null,
+        globalMode: null,
+        queryMode: null,
+        storageMode: null,
+        defaultMode: defaultMode
+      };
+    }
+    return {
+      effectiveMode: "legacy-bridge",
+      modeSource: "fallback",
+      forceLegacyEnabled: false,
+      forceLegacySource: null,
+      explicitMode: null,
+      globalMode: null,
+      queryMode: null,
+      storageMode: null,
+      defaultMode: null
+    };
+  }
+
+  function readStoredPolicyKeys() {
+    var runtime = window.LegacyAdapterRuntime;
+    if (runtime && typeof runtime.readStoredAdapterPolicyKeys === "function") {
+      var result = runtime.readStoredAdapterPolicyKeys();
+      if (isPlainObject(result)) return result;
+    }
+    return {
+      adapterMode: getStorageValue(ADAPTER_MODE_STORAGE_KEY),
+      defaultMode: getStorageValue(ADAPTER_DEFAULT_STORAGE_KEY),
+      forceLegacy: getStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY)
+    };
+  }
+
+  function writeStoredDefaultMode(mode) {
+    var runtime = window.LegacyAdapterRuntime;
+    if (runtime && typeof runtime.setStoredAdapterDefaultMode === "function") {
+      return runtime.setStoredAdapterDefaultMode(mode);
+    }
+    var normalized = normalizeAdapterMode(mode);
+    return setStorageValue(ADAPTER_DEFAULT_STORAGE_KEY, normalized || null);
+  }
+
+  function clearStoredDefaultMode() {
+    var runtime = window.LegacyAdapterRuntime;
+    if (runtime && typeof runtime.clearStoredAdapterDefaultMode === "function") {
+      return runtime.clearStoredAdapterDefaultMode();
+    }
+    return setStorageValue(ADAPTER_DEFAULT_STORAGE_KEY, null);
+  }
+
+  function writeStoredForceLegacy(enabled) {
+    var runtime = window.LegacyAdapterRuntime;
+    if (runtime && typeof runtime.setStoredForceLegacy === "function") {
+      return runtime.setStoredForceLegacy(enabled);
+    }
+    return setStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY, enabled ? "1" : null);
+  }
+
+  function runCanaryPolicyAction(actionName) {
+    var success = false;
+    if (actionName === "apply_canary") {
+      success = writeStoredDefaultMode("core-adapter") && writeStoredForceLegacy(false);
+    } else if (actionName === "emergency_rollback") {
+      success = writeStoredForceLegacy(true);
+    } else if (actionName === "resume_canary") {
+      success = writeStoredForceLegacy(false);
+    } else if (actionName === "reset_policy") {
+      success = clearStoredDefaultMode() && writeStoredForceLegacy(false);
+    }
+    return success;
+  }
+
+  function renderCanaryPolicy() {
+    var panel = el("history-canary-policy");
+    if (!panel) return;
+
+    var policy = readCanaryPolicySnapshot();
+    var stored = readStoredPolicyKeys();
+    var gateClass = policy.effectiveMode === "core-adapter"
+      ? "history-burnin-gate-pass"
+      : "history-burnin-gate-warn";
+    var gateText = policy.effectiveMode === "core-adapter" ? "core-adapter 生效" : "legacy-bridge 生效";
+
+    panel.innerHTML =
+      "<div class='history-canary-head'>" +
+        "<div class='history-canary-title'>Canary 策略控制</div>" +
+        "<span class='history-burnin-gate " + gateClass + "'>" + escapeHtml(gateText) + "</span>" +
+      "</div>" +
+      "<div class='history-canary-grid'>" +
+        "<span>当前有效模式: " + escapeHtml(formatAdapterMode(policy.effectiveMode)) + "</span>" +
+        "<span>生效来源: " + escapeHtml(formatModeSource(policy.modeSource)) + "</span>" +
+        "<span>强制回滚: " + escapeHtml(policy.forceLegacyEnabled ? "开启" : "关闭") + "</span>" +
+        "<span>回滚来源: " + escapeHtml(formatForceSource(policy.forceLegacySource)) + "</span>" +
+      "</div>" +
+      "<div class='history-canary-note'>" +
+        "storage(engine_adapter_default_mode)=" + escapeHtml(String(stored.defaultMode || "-")) +
+        " · storage(engine_adapter_force_legacy)=" + escapeHtml(String(stored.forceLegacy || "-")) +
+      "</div>" +
+      "<div class='history-canary-note'>" +
+        "说明: 修改后需刷新任一对局页（index/play/undo/capped/practice/replay）以应用新策略。" +
+      "</div>" +
+      "<div class='history-canary-actions'>" +
+        "<button class='replay-button history-canary-action-btn' data-action='apply_canary'>进入 Canary（默认 core）</button>" +
+        "<button class='replay-button history-canary-action-btn' data-action='emergency_rollback'>紧急回滚（强制 legacy）</button>" +
+        "<button class='replay-button history-canary-action-btn' data-action='resume_canary'>解除回滚（恢复默认）</button>" +
+        "<button class='replay-button history-canary-action-btn' data-action='reset_policy'>重置策略（回到基线）</button>" +
+      "</div>";
+
+    var buttons = panel.querySelectorAll(".history-canary-action-btn");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener("click", function (event) {
+        var target = event.currentTarget;
+        var action = target && target.getAttribute ? target.getAttribute("data-action") : "";
+        var ok = runCanaryPolicyAction(action || "");
+        if (!ok) {
+          setStatus("策略更新失败：请检查浏览器本地存储权限", true);
+          return;
+        }
+        loadHistory(false);
+        if (action === "apply_canary") {
+          setStatus("已设置默认 core-adapter，并清除强制回滚", false);
+        } else if (action === "emergency_rollback") {
+          setStatus("已开启强制回滚：legacy-bridge", false);
+        } else if (action === "resume_canary") {
+          setStatus("已解除强制回滚，恢复默认策略", false);
+        } else if (action === "reset_policy") {
+          setStatus("已重置策略到基线（无默认 core、无强制回滚）", false);
+        } else {
+          setStatus("策略已更新", false);
+        }
+      });
+    }
+  }
+
   function downloadSingleRecord(item) {
     if (!window.LocalHistoryStore) return;
     var payload = window.LocalHistoryStore.exportRecords([item.id]);
@@ -401,6 +630,7 @@
       });
     }
     renderBurnInSummary(burnInSummary);
+    renderCanaryPolicy();
     setStatus("", false);
 
     var prevBtn = el("history-prev-page");

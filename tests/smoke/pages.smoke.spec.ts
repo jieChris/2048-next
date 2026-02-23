@@ -49,7 +49,7 @@ const PAGES: SmokePage[] = [
   { name: "play", path: "/play.html?mode_key=standard_4x4_pow2_no_undo", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectLegacyAdapterRuntime: true, expectLegacyAdapterIoRuntime: true, expectCoreAdapterShadowRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true, expectCoreMergeEffectsRuntime: true, expectCorePostMoveRuntime: true, expectCoreMoveApplyRuntime: true, expectCorePostMoveRecordRuntime: true, expectCorePostUndoRecordRuntime: true, expectCoreUndoRestoreRuntime: true, expectCoreUndoSnapshotRuntime: true, expectCoreUndoTileSnapshotRuntime: true, expectCoreUndoTileRestoreRuntime: true, expectCoreUndoRestorePayloadRuntime: true, expectCoreUndoStackEntryRuntime: true, expectCoreReplayCodecRuntime: true, expectCoreReplayV4ActionsRuntime: true, expectCoreReplayLegacyRuntime: true, expectCoreReplayImportRuntime: true, expectCoreReplayExecutionRuntime: true, expectCoreReplayDispatchRuntime: true, expectCoreReplayLifecycleRuntime: true, expectCoreReplayTimerRuntime: true, expectCoreReplayFlowRuntime: true, expectCoreReplayControlRuntime: true, expectCoreReplayLoopRuntime: true },
   { name: "replay", path: "/replay.html", expectGameManager: true, expectLegacyEngine: true, expectBootstrapRuntime: true, expectLegacyAdapterRuntime: true, expectLegacyAdapterIoRuntime: true, expectCoreAdapterShadowRuntime: true, expectCoreRulesRuntime: true, expectCoreModeRuntime: true, expectCoreSpecialRulesRuntime: true, expectCoreDirectionLockRuntime: true, expectCoreGridScanRuntime: true, expectCoreMoveScanRuntime: true, expectCoreMovePathRuntime: true, expectCoreScoringRuntime: true, expectCoreMergeEffectsRuntime: true, expectCorePostMoveRuntime: true, expectCoreMoveApplyRuntime: true, expectCorePostMoveRecordRuntime: true, expectCorePostUndoRecordRuntime: true, expectCoreUndoRestoreRuntime: true, expectCoreUndoSnapshotRuntime: true, expectCoreUndoTileSnapshotRuntime: true, expectCoreUndoTileRestoreRuntime: true, expectCoreUndoRestorePayloadRuntime: true, expectCoreUndoStackEntryRuntime: true, expectCoreReplayCodecRuntime: true, expectCoreReplayV4ActionsRuntime: true, expectCoreReplayLegacyRuntime: true, expectCoreReplayImportRuntime: true, expectCoreReplayExecutionRuntime: true, expectCoreReplayDispatchRuntime: true, expectCoreReplayLifecycleRuntime: true, expectCoreReplayTimerRuntime: true, expectCoreReplayFlowRuntime: true, expectCoreReplayControlRuntime: true, expectCoreReplayLoopRuntime: true },
   { name: "modes", path: "/modes.html", expectGameManager: false, expectLegacyEngine: false, expectBootstrapRuntime: false, expectLegacyAdapterRuntime: false, expectLegacyAdapterIoRuntime: false, expectCoreAdapterShadowRuntime: false, expectCoreRulesRuntime: false, expectCoreModeRuntime: false, expectCoreSpecialRulesRuntime: false, expectCoreDirectionLockRuntime: false, expectCoreGridScanRuntime: false, expectCoreMoveScanRuntime: false, expectCoreMovePathRuntime: false, expectCoreScoringRuntime: false, expectCoreMergeEffectsRuntime: false, expectCorePostMoveRuntime: false, expectCoreMoveApplyRuntime: false, expectCorePostMoveRecordRuntime: false, expectCorePostUndoRecordRuntime: false, expectCoreUndoRestoreRuntime: false, expectCoreUndoSnapshotRuntime: false, expectCoreUndoTileSnapshotRuntime: false, expectCoreUndoTileRestoreRuntime: false, expectCoreUndoRestorePayloadRuntime: false, expectCoreUndoStackEntryRuntime: false, expectCoreReplayCodecRuntime: false, expectCoreReplayV4ActionsRuntime: false, expectCoreReplayLegacyRuntime: false, expectCoreReplayImportRuntime: false, expectCoreReplayExecutionRuntime: false, expectCoreReplayDispatchRuntime: false, expectCoreReplayLifecycleRuntime: false, expectCoreReplayTimerRuntime: false, expectCoreReplayFlowRuntime: false, expectCoreReplayControlRuntime: false, expectCoreReplayLoopRuntime: false },
-  { name: "history", path: "/history.html", expectGameManager: false, expectLegacyEngine: false, expectBootstrapRuntime: false, expectLegacyAdapterRuntime: false, expectLegacyAdapterIoRuntime: false, expectCoreAdapterShadowRuntime: false, expectCoreRulesRuntime: false, expectCoreModeRuntime: false, expectCoreSpecialRulesRuntime: false, expectCoreDirectionLockRuntime: false, expectCoreGridScanRuntime: false, expectCoreMoveScanRuntime: false, expectCoreMovePathRuntime: false, expectCoreScoringRuntime: false, expectCoreMergeEffectsRuntime: false, expectCorePostMoveRuntime: false, expectCoreMoveApplyRuntime: false, expectCorePostMoveRecordRuntime: false, expectCorePostUndoRecordRuntime: false, expectCoreUndoRestoreRuntime: false, expectCoreUndoSnapshotRuntime: false, expectCoreUndoTileSnapshotRuntime: false, expectCoreUndoTileRestoreRuntime: false, expectCoreUndoRestorePayloadRuntime: false, expectCoreUndoStackEntryRuntime: false, expectCoreReplayCodecRuntime: false, expectCoreReplayV4ActionsRuntime: false, expectCoreReplayLegacyRuntime: false, expectCoreReplayImportRuntime: false, expectCoreReplayExecutionRuntime: false, expectCoreReplayDispatchRuntime: false, expectCoreReplayLifecycleRuntime: false, expectCoreReplayTimerRuntime: false, expectCoreReplayFlowRuntime: false, expectCoreReplayControlRuntime: false, expectCoreReplayLoopRuntime: false }
+  { name: "history", path: "/history.html", expectGameManager: false, expectLegacyEngine: false, expectBootstrapRuntime: false, expectLegacyAdapterRuntime: true, expectLegacyAdapterIoRuntime: false, expectCoreAdapterShadowRuntime: false, expectCoreRulesRuntime: false, expectCoreModeRuntime: false, expectCoreSpecialRulesRuntime: false, expectCoreDirectionLockRuntime: false, expectCoreGridScanRuntime: false, expectCoreMoveScanRuntime: false, expectCoreMovePathRuntime: false, expectCoreScoringRuntime: false, expectCoreMergeEffectsRuntime: false, expectCorePostMoveRuntime: false, expectCoreMoveApplyRuntime: false, expectCorePostMoveRecordRuntime: false, expectCorePostUndoRecordRuntime: false, expectCoreUndoRestoreRuntime: false, expectCoreUndoSnapshotRuntime: false, expectCoreUndoTileSnapshotRuntime: false, expectCoreUndoTileRestoreRuntime: false, expectCoreUndoRestorePayloadRuntime: false, expectCoreUndoStackEntryRuntime: false, expectCoreReplayCodecRuntime: false, expectCoreReplayV4ActionsRuntime: false, expectCoreReplayLegacyRuntime: false, expectCoreReplayImportRuntime: false, expectCoreReplayExecutionRuntime: false, expectCoreReplayDispatchRuntime: false, expectCoreReplayLifecycleRuntime: false, expectCoreReplayTimerRuntime: false, expectCoreReplayFlowRuntime: false, expectCoreReplayControlRuntime: false, expectCoreReplayLoopRuntime: false }
 ];
 
 function shouldIgnoreConsoleError(text: string): boolean {
@@ -587,6 +587,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
 
       store.clearAll();
+      window.localStorage.removeItem("engine_adapter_default_mode");
+      window.localStorage.removeItem("engine_adapter_force_legacy");
       store.saveRecord({
         mode: "local",
         mode_key: "standard_4x4_pow2_no_undo",
@@ -680,5 +682,47 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".history-adapter-badge-mismatch")).toHaveCount(1);
     await expect(page.locator("#history-summary")).toContainText("共 1 条记录");
     await expect(page.locator("#history-summary")).toContainText("诊断筛选: 仅不一致");
+
+    await expect(page.locator("#history-canary-policy")).toContainText("Canary 策略控制");
+    await expect(page.locator("#history-canary-policy")).toContainText("当前有效模式: legacy-bridge");
+    await expect(page.locator("#history-canary-policy")).toContainText("生效来源: 默认回退");
+
+    await page.click("[data-action='apply_canary']");
+    await expect(page.locator("#history-canary-policy")).toContainText("当前有效模式: core-adapter");
+    await expect(page.locator("#history-canary-policy")).toContainText("生效来源: 默认策略");
+    await expect(page.locator("#history-canary-policy")).toContainText(
+      "storage(engine_adapter_default_mode)=core-adapter"
+    );
+    await expect(page.locator("#history-canary-policy")).toContainText(
+      "storage(engine_adapter_force_legacy)=-"
+    );
+
+    await page.click("[data-action='emergency_rollback']");
+    await expect(page.locator("#history-canary-policy")).toContainText("当前有效模式: legacy-bridge");
+    await expect(page.locator("#history-canary-policy")).toContainText("生效来源: 强制回滚");
+    await expect(page.locator("#history-canary-policy")).toContainText(
+      "storage(engine_adapter_force_legacy)=1"
+    );
+
+    await page.click("[data-action='resume_canary']");
+    await expect(page.locator("#history-canary-policy")).toContainText("当前有效模式: core-adapter");
+    await expect(page.locator("#history-canary-policy")).toContainText("生效来源: 默认策略");
+    await expect(page.locator("#history-canary-policy")).toContainText(
+      "storage(engine_adapter_force_legacy)=-"
+    );
+
+    await page.click("[data-action='reset_policy']");
+    await expect(page.locator("#history-canary-policy")).toContainText("当前有效模式: legacy-bridge");
+    await expect(page.locator("#history-canary-policy")).toContainText("生效来源: 默认回退");
+    await expect(page.locator("#history-canary-policy")).toContainText(
+      "storage(engine_adapter_default_mode)=-"
+    );
+
+    const policyKeys = await page.evaluate(() => ({
+      defaultMode: window.localStorage.getItem("engine_adapter_default_mode"),
+      forceLegacy: window.localStorage.getItem("engine_adapter_force_legacy")
+    }));
+    expect(policyKeys.defaultMode).toBeNull();
+    expect(policyKeys.forceLegacy).toBeNull();
   });
 });

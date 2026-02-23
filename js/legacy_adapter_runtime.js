@@ -2,6 +2,9 @@
   "use strict";
 
   if (!global) return;
+  var ADAPTER_MODE_KEY = "engine_adapter_mode";
+  var ADAPTER_DEFAULT_MODE_KEY = "engine_adapter_default_mode";
+  var ADAPTER_FORCE_LEGACY_KEY = "engine_adapter_force_legacy";
   var PARITY_REPORT_KEY_PREFIX = "engine_adapter_parity_report_v1:";
 
   function normalizeAdapterMode(raw) {
@@ -58,7 +61,7 @@
   function readAdapterModeFromStorage() {
     try {
       if (!global.localStorage || typeof global.localStorage.getItem !== "function") return null;
-      return global.localStorage.getItem("engine_adapter_mode");
+      return global.localStorage.getItem(ADAPTER_MODE_KEY);
     } catch (_err) {
       return null;
     }
@@ -67,7 +70,7 @@
   function readAdapterDefaultModeFromStorage() {
     try {
       if (!global.localStorage || typeof global.localStorage.getItem !== "function") return null;
-      return global.localStorage.getItem("engine_adapter_default_mode");
+      return global.localStorage.getItem(ADAPTER_DEFAULT_MODE_KEY);
     } catch (_err) {
       return null;
     }
@@ -76,40 +79,178 @@
   function readForceLegacyFromStorage() {
     try {
       if (!global.localStorage || typeof global.localStorage.getItem !== "function") return null;
-      return global.localStorage.getItem("engine_adapter_force_legacy");
+      return global.localStorage.getItem(ADAPTER_FORCE_LEGACY_KEY);
     } catch (_err) {
       return null;
     }
   }
 
-  function resolveAdapterMode(input) {
+  function resolveAdapterModePolicy(input) {
     var opts = input || {};
     var explicit = normalizeAdapterMode(opts.adapterMode);
-    if (explicit) return explicit;
-
-    if (normalizeForceLegacyFlag(opts.forceLegacy)) return "legacy-bridge";
-    if (normalizeForceLegacyFlag(global.__engineAdapterForceLegacy)) return "legacy-bridge";
-    if (normalizeForceLegacyFlag(readForceLegacyFromQuery())) return "legacy-bridge";
-    if (normalizeForceLegacyFlag(readForceLegacyFromStorage())) return "legacy-bridge";
-
     var globalMode = normalizeAdapterMode(global.__engineAdapterMode);
-    if (globalMode) return globalMode;
-
     var queryMode = normalizeAdapterMode(readAdapterModeFromQuery());
-    if (queryMode) return queryMode;
-
     var storageMode = normalizeAdapterMode(readAdapterModeFromStorage());
-    if (storageMode) return storageMode;
-
     var defaultMode = normalizeAdapterMode(
       opts.defaultMode ||
       global.__engineAdapterDefault ||
       readAdapterDefaultModeFromQuery() ||
       readAdapterDefaultModeFromStorage()
     );
-    if (defaultMode) return defaultMode;
+    var forceLegacySource = null;
 
-    return "legacy-bridge";
+    if (normalizeForceLegacyFlag(opts.forceLegacy)) {
+      forceLegacySource = "input";
+    } else if (normalizeForceLegacyFlag(global.__engineAdapterForceLegacy)) {
+      forceLegacySource = "global";
+    } else if (normalizeForceLegacyFlag(readForceLegacyFromQuery())) {
+      forceLegacySource = "query";
+    } else if (normalizeForceLegacyFlag(readForceLegacyFromStorage())) {
+      forceLegacySource = "storage";
+    }
+    var forceLegacyEnabled = forceLegacySource !== null;
+
+    if (explicit) {
+      return {
+        effectiveMode: explicit,
+        modeSource: "explicit",
+        forceLegacyEnabled: forceLegacyEnabled,
+        forceLegacySource: forceLegacySource,
+        explicitMode: explicit,
+        globalMode: globalMode,
+        queryMode: queryMode,
+        storageMode: storageMode,
+        defaultMode: defaultMode
+      };
+    }
+
+    if (forceLegacySource) {
+      return {
+        effectiveMode: "legacy-bridge",
+        modeSource: "force-legacy",
+        forceLegacyEnabled: forceLegacyEnabled,
+        forceLegacySource: forceLegacySource,
+        explicitMode: explicit,
+        globalMode: globalMode,
+        queryMode: queryMode,
+        storageMode: storageMode,
+        defaultMode: defaultMode
+      };
+    }
+
+    if (globalMode) {
+      return {
+        effectiveMode: globalMode,
+        modeSource: "global",
+        forceLegacyEnabled: forceLegacyEnabled,
+        forceLegacySource: forceLegacySource,
+        explicitMode: explicit,
+        globalMode: globalMode,
+        queryMode: queryMode,
+        storageMode: storageMode,
+        defaultMode: defaultMode
+      };
+    }
+
+    if (queryMode) {
+      return {
+        effectiveMode: queryMode,
+        modeSource: "query",
+        forceLegacyEnabled: forceLegacyEnabled,
+        forceLegacySource: forceLegacySource,
+        explicitMode: explicit,
+        globalMode: globalMode,
+        queryMode: queryMode,
+        storageMode: storageMode,
+        defaultMode: defaultMode
+      };
+    }
+
+    if (storageMode) {
+      return {
+        effectiveMode: storageMode,
+        modeSource: "storage",
+        forceLegacyEnabled: forceLegacyEnabled,
+        forceLegacySource: forceLegacySource,
+        explicitMode: explicit,
+        globalMode: globalMode,
+        queryMode: queryMode,
+        storageMode: storageMode,
+        defaultMode: defaultMode
+      };
+    }
+
+    if (defaultMode) {
+      return {
+        effectiveMode: defaultMode,
+        modeSource: "default",
+        forceLegacyEnabled: forceLegacyEnabled,
+        forceLegacySource: forceLegacySource,
+        explicitMode: explicit,
+        globalMode: globalMode,
+        queryMode: queryMode,
+        storageMode: storageMode,
+        defaultMode: defaultMode
+      };
+    }
+
+    return {
+      effectiveMode: "legacy-bridge",
+      modeSource: "fallback",
+      forceLegacyEnabled: forceLegacyEnabled,
+      forceLegacySource: forceLegacySource,
+      explicitMode: explicit,
+      globalMode: globalMode,
+      queryMode: queryMode,
+      storageMode: storageMode,
+      defaultMode: defaultMode
+    };
+  }
+
+  function resolveAdapterMode(input) {
+    var policy = resolveAdapterModePolicy(input);
+    return policy && typeof policy.effectiveMode === "string"
+      ? policy.effectiveMode
+      : "legacy-bridge";
+  }
+
+  function writeStorageValue(key, value) {
+    try {
+      if (!global.localStorage) return false;
+      if (value === null || value === undefined || value === "") {
+        if (typeof global.localStorage.removeItem === "function") {
+          global.localStorage.removeItem(key);
+          return true;
+        }
+        return false;
+      }
+      if (typeof global.localStorage.setItem !== "function") return false;
+      global.localStorage.setItem(key, String(value));
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function setStoredAdapterDefaultMode(mode) {
+    var normalized = normalizeAdapterMode(mode);
+    return writeStorageValue(ADAPTER_DEFAULT_MODE_KEY, normalized || null);
+  }
+
+  function clearStoredAdapterDefaultMode() {
+    return writeStorageValue(ADAPTER_DEFAULT_MODE_KEY, null);
+  }
+
+  function setStoredForceLegacy(enabled) {
+    return writeStorageValue(ADAPTER_FORCE_LEGACY_KEY, enabled ? "1" : null);
+  }
+
+  function readStoredAdapterPolicyKeys() {
+    return {
+      adapterMode: readAdapterModeFromStorage(),
+      defaultMode: readAdapterDefaultModeFromStorage(),
+      forceLegacy: readForceLegacyFromStorage()
+    };
   }
 
   function normalizeModeKey(modeKey) {
@@ -278,5 +419,10 @@
 
   global.LegacyAdapterRuntime = global.LegacyAdapterRuntime || {};
   global.LegacyAdapterRuntime.resolveAdapterMode = resolveAdapterMode;
+  global.LegacyAdapterRuntime.resolveAdapterModePolicy = resolveAdapterModePolicy;
+  global.LegacyAdapterRuntime.setStoredAdapterDefaultMode = setStoredAdapterDefaultMode;
+  global.LegacyAdapterRuntime.clearStoredAdapterDefaultMode = clearStoredAdapterDefaultMode;
+  global.LegacyAdapterRuntime.setStoredForceLegacy = setStoredForceLegacy;
+  global.LegacyAdapterRuntime.readStoredAdapterPolicyKeys = readStoredAdapterPolicyKeys;
   global.LegacyAdapterRuntime.attachLegacyBridgeWithAdapter = attachLegacyBridgeWithAdapter;
 })(typeof window !== "undefined" ? window : undefined);
