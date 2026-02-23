@@ -1,4 +1,12 @@
 (function () {
+  var playQueryRuntime = window.CorePlayQueryRuntime;
+  if (
+    !playQueryRuntime ||
+    typeof playQueryRuntime.parsePlayModeKey !== "function" ||
+    typeof playQueryRuntime.parsePlayChallengeId !== "function"
+  ) {
+    throw new Error("CorePlayQueryRuntime is required");
+  }
   var customSpawnRuntime = window.CoreCustomSpawnRuntime;
   if (
     !customSpawnRuntime ||
@@ -12,21 +20,14 @@
   }
   var CUSTOM_FOUR_RATE_PARAM = "four_rate";
   var CUSTOM_FOUR_RATE_STORAGE_KEY = "custom_spawn_4x4_four_rate_v1";
+  var DEFAULT_MODE_KEY = "standard_4x4_pow2_no_undo";
 
   function parseModeKey() {
-    var params = new URLSearchParams(window.location.search);
-    var raw = params.get("mode_key");
-    var key = raw && raw.trim() ? raw.trim() : "standard_4x4_pow2_no_undo";
-    if (key.toLowerCase() === "challenge") {
-      return "capped_4x4_pow2_64_no_undo";
-    }
-    return key;
+    return playQueryRuntime.parsePlayModeKey(window.location.search, DEFAULT_MODE_KEY);
   }
 
   function parseChallengeId() {
-    var params = new URLSearchParams(window.location.search);
-    var v = params.get("challenge_id");
-    return v && v.trim() ? v.trim() : "";
+    return playQueryRuntime.parsePlayChallengeId(window.location.search);
   }
 
   function compactModeLabel(modeConfig) {
