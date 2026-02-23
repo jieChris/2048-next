@@ -253,6 +253,10 @@ GameManager.LEGACY_MODE_BY_KEY = {
 GameManager.TIMER_SLOT_IDS = [16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
 
 GameManager.prototype.getActionKind = function (action) {
+  var replayExecutionCore = this.getCoreReplayExecutionRuntime && this.getCoreReplayExecutionRuntime();
+  if (replayExecutionCore && typeof replayExecutionCore.getReplayActionKind === "function") {
+    return replayExecutionCore.getReplayActionKind(action);
+  }
   if (action === -1) return "u";
   if (action >= 0 && action <= 3) return "m";
   if (Array.isArray(action) && action.length > 0) return action[0];
@@ -556,6 +560,31 @@ GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
   }
 
   return null;
+};
+
+GameManager.prototype.resolveReplayExecution = function (action) {
+  var replayExecutionCore = this.getCoreReplayExecutionRuntime();
+  if (replayExecutionCore && typeof replayExecutionCore.resolveReplayExecution === "function") {
+    return replayExecutionCore.resolveReplayExecution(action);
+  }
+
+  var kind = this.getActionKind(action);
+  if (kind === "m") {
+    var dir = Array.isArray(action) ? action[1] : action;
+    return { kind: "m", dir: dir };
+  }
+  if (kind === "u") {
+    return { kind: "u" };
+  }
+  if (kind === "p") {
+    return {
+      kind: "p",
+      x: action[1],
+      y: action[2],
+      value: action[3]
+    };
+  }
+  throw "Unknown replay action";
 };
 
 GameManager.prototype.setBoardFromMatrix = function (board) {
@@ -1427,6 +1456,13 @@ GameManager.prototype.getCoreReplayV4ActionsRuntime = function () {
 GameManager.prototype.getCoreReplayImportRuntime = function () {
   if (typeof window === "undefined") return null;
   var core = window.CoreReplayImportRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
+GameManager.prototype.getCoreReplayExecutionRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreReplayExecutionRuntime;
   if (!core || typeof core !== "object") return null;
   return core;
 };
@@ -4282,18 +4318,17 @@ GameManager.prototype.import = function (replayString) {
 };
 
 GameManager.prototype.executeReplayAction = function (action) {
-  var kind = this.getActionKind(action);
-  if (kind === "m") {
-    var dir = Array.isArray(action) ? action[1] : action;
-    this.move(dir);
+  var resolved = this.resolveReplayExecution(action);
+  if (resolved.kind === "m") {
+    this.move(resolved.dir);
     return;
   }
-  if (kind === "u") {
+  if (resolved.kind === "u") {
     this.move(-1);
     return;
   }
-  if (kind === "p") {
-    this.insertCustomTile(action[1], action[2], action[3]);
+  if (resolved.kind === "p") {
+    this.insertCustomTile(resolved.x, resolved.y, resolved.value);
     return;
   }
   throw "Unknown replay action";
