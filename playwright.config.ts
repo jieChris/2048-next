@@ -5,7 +5,7 @@ const PORT = 4173;
 const BASE_URL = `http://${HOST}:${PORT}`;
 
 export default defineConfig({
-  testDir: "./tests",
+  testDir: "./tests/smoke",
   timeout: 30_000,
   expect: {
     timeout: 5_000
