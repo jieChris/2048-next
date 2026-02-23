@@ -1110,6 +1110,47 @@ GameManager.prototype.getCorePostMoveRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreMoveApplyRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreMoveApplyRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
+GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
+  var moveApplyCore = this.getCoreMoveApplyRuntime();
+  if (moveApplyCore && typeof moveApplyCore.planTileInteraction === "function") {
+    var computed = moveApplyCore.planTileInteraction({
+      cell: cell,
+      farthest: positions && positions.farthest ? positions.farthest : { x: 0, y: 0 },
+      next: positions && positions.next ? positions.next : { x: 0, y: 0 },
+      hasNextTile: !!next,
+      nextMergedFrom: !!(next && next.mergedFrom),
+      mergedValue: mergedValue
+    }) || {};
+    var mergeKind = computed.kind === "merge";
+    var fallbackTarget = mergeKind ? positions.next : positions.farthest;
+    var target = computed.target && Number.isInteger(computed.target.x) && Number.isInteger(computed.target.y)
+      ? computed.target
+      : fallbackTarget;
+    return {
+      kind: mergeKind ? "merge" : "move",
+      target: target,
+      moved: typeof computed.moved === "boolean"
+        ? computed.moved
+        : !this.positionsEqual(cell, target)
+    };
+  }
+
+  var shouldMerge = !!next && !next.mergedFrom && Number.isInteger(mergedValue) && mergedValue > 0;
+  var targetLegacy = shouldMerge ? positions.next : positions.farthest;
+  return {
+    kind: shouldMerge ? "merge" : "move",
+    target: targetLegacy,
+    moved: !this.positionsEqual(cell, targetLegacy)
+  };
+};
+
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
   var mergeEffectsCore = this.getCoreMergeEffectsRuntime();
   if (mergeEffectsCore && typeof mergeEffectsCore.computeMergeEffects === "function") {
@@ -2824,18 +2865,19 @@ GameManager.prototype.move = function (direction) {
         var next      = self.isBlockedCell(positions.next.x, positions.next.y) ? null : self.grid.cellContent(positions.next);
 
         var mergedValue = next ? self.getMergedValue(tile.value, next.value) : null;
-        if (next && !next.mergedFrom && mergedValue !== null) {
+        var interaction = self.planTileInteraction(cell, positions, next, mergedValue);
+        if (interaction.kind === "merge" && mergedValue !== null) {
           // We need to save tile since it will get removed
-          undo.tiles.push(tile.save(positions.next));
+          undo.tiles.push(tile.save(interaction.target));
 
-          var merged = new Tile(positions.next, mergedValue);
+          var merged = new Tile(interaction.target, mergedValue);
           merged.mergedFrom = [tile, next];
 
           self.grid.insertTile(merged);
           self.grid.removeTile(tile);
 
           // Converge the two tiles' positions
-          tile.updatePosition(positions.next);
+          tile.updatePosition(interaction.target);
 
           // Update the score
           self.score += merged.value;
@@ -2881,11 +2923,11 @@ GameManager.prototype.move = function (direction) {
 
         } else {
           // Save backup information
-          undo.tiles.push(tile.save(positions.farthest));
-          self.moveTile(tile, positions.farthest);
+          undo.tiles.push(tile.save(interaction.target));
+          self.moveTile(tile, interaction.target);
         }
 
-        if (!self.positionsEqual(cell, tile)) {
+        if (interaction.moved) {
           moved = true; // The tile moved from its original cell!
         }
       }
