@@ -45,6 +45,11 @@ window.requestAnimationFrame(function () {
 
   game_manager = new GameManager(boardWidth, KeyboardInputManager, HTMLActuator, LocalScoreManager);
   window.game_manager = game_manager;
+    window.__legacyEngine = {
+    manager: window.game_manager,
+    modeKey: modeKey
+  };
+
 });
 
 function handle_undo() {
