@@ -3526,7 +3526,15 @@ GameManager.prototype.isGameTerminated = function () {
 GameManager.prototype.setup = function (inputSeed, options) {
   options = options || {};
   var detectedMode = this.detectMode();
-  var resolvedModeConfig = options.modeConfig || this.resolveModeConfig(detectedMode);
+  var globalModeConfig = null;
+  if (typeof window !== "undefined" && window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object") {
+    try {
+      globalModeConfig = this.clonePlain(window.GAME_MODE_CONFIG);
+    } catch (_err) {
+      globalModeConfig = null;
+    }
+  }
+  var resolvedModeConfig = options.modeConfig || globalModeConfig || this.resolveModeConfig(detectedMode);
   this.applyModeConfig(resolvedModeConfig);
   if (typeof window !== "undefined") {
     window.GAME_MODE_CONFIG = this.clonePlain(this.modeConfig);

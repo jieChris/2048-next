@@ -143,6 +143,8 @@ Deliverables:
   - Burn-in gate now includes sustained-window checks (default 3 windows) so cutover readiness is judged by continuous stability, not single-window fluctuation
   - Extracted burn-in gate computation to typed module `src/bridge/burnin-gate.ts` with runtime mirror `js/core_burnin_gate_runtime.js`, and `LocalHistoryStore` now delegates window/sustained gate summary through this shared bridge helper
   - Consolidated entry startup shell by adding `LegacyBootstrapRuntime.startGameOnAnimationFrame`, and migrated `application/play/capped/replay` entry scripts to the shared startup wrapper to reduce duplicated frame/bootstrap guard logic
+  - Extracted play-page custom spawn-rate normalization/apply logic to typed module `src/bootstrap/custom-spawn.ts` with runtime mirror `js/core_custom_spawn_runtime.js`, and `play_application.js` now delegates deterministic rate handling to this shared helper
+  - `GameManager.setup` now prioritizes preloaded `window.GAME_MODE_CONFIG` before catalog fallback so bootstrap-provided custom mode payloads (e.g. custom spawn 4-rate) stay effective at first-frame initialization
 
 Acceptance:
 - Session-level parity on key metrics (score, win/lose state, tile cap behavior).

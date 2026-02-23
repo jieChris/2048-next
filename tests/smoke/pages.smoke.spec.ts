@@ -574,6 +574,36 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(forcedLegacyMode).toBe("legacy-bridge");
   });
 
+  test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {
+    const response = await page.goto("/play.html?mode_key=spawn_custom_4x4_pow2_no_undo&four_rate=25", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Custom-spawn response should exist").not.toBeNull();
+    expect(response?.ok(), "Custom-spawn response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const cfg = (window as any).GAME_MODE_CONFIG;
+      return {
+        key: cfg && typeof cfg.key === "string" ? cfg.key : null,
+        label: cfg && typeof cfg.label === "string" ? cfg.label : null,
+        spawnTable: cfg && Array.isArray(cfg.spawn_table) ? cfg.spawn_table : null,
+        storedRate: window.localStorage.getItem("custom_spawn_4x4_four_rate_v1"),
+        hasRuntime: Boolean((window as any).CoreCustomSpawnRuntime?.applyCustomFourRateToModeConfig)
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.key).toBe("spawn_custom_4x4_pow2_no_undo");
+    expect(snapshot.label).toContain("4率 25%");
+    expect(snapshot.spawnTable).toEqual([
+      { value: 2, weight: 75 },
+      { value: 4, weight: 25 }
+    ]);
+    expect(snapshot.storedRate).toBe("25");
+  });
+
   test("history page renders adapter diagnostics for local records", async ({ page }) => {
     const response = await page.goto("/history.html", {
       waitUntil: "domcontentloaded"
