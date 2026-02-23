@@ -1040,7 +1040,18 @@ GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
   return null;
 };
 
+GameManager.prototype.getCoreRulesRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreRulesRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
+  var core = this.getCoreRulesRuntime();
+  if (core && typeof core.normalizeSpawnTable === "function") {
+    return core.normalizeSpawnTable(spawnTable, ruleset);
+  }
   if (Array.isArray(spawnTable) && spawnTable.length > 0) {
     var out = [];
     for (var i = 0; i < spawnTable.length; i++) {
@@ -1058,6 +1069,10 @@ GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
 };
 
 GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) {
+  var core = this.getCoreRulesRuntime();
+  if (core && typeof core.getTheoreticalMaxTile === "function") {
+    return core.getTheoreticalMaxTile(width, height, ruleset);
+  }
   var w = Number(width);
   var h = Number(height);
   if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
@@ -1252,6 +1267,10 @@ GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
 };
 
 GameManager.prototype.pickSpawnValue = function () {
+  var core = this.getCoreRulesRuntime();
+  if (core && typeof core.pickSpawnValue === "function") {
+    return core.pickSpawnValue(this.spawnTable || [], Math.random);
+  }
   var table = this.spawnTable || [];
   if (!table.length) return 2;
   var totalWeight = 0;
@@ -1274,6 +1293,10 @@ GameManager.prototype.isFibonacciMode = function () {
 };
 
 GameManager.prototype.nextFibonacci = function (value) {
+  var core = this.getCoreRulesRuntime();
+  if (core && typeof core.nextFibonacci === "function") {
+    return core.nextFibonacci(value);
+  }
   if (value <= 0) return 1;
   if (value === 1) return 2;
   var a = 1;
@@ -1287,6 +1310,10 @@ GameManager.prototype.nextFibonacci = function (value) {
 };
 
 GameManager.prototype.getMergedValue = function (a, b) {
+  var core = this.getCoreRulesRuntime();
+  if (core && typeof core.getMergedValue === "function") {
+    return core.getMergedValue(a, b, this.isFibonacciMode() ? "fibonacci" : "pow2", this.maxTile);
+  }
   if (!Number.isInteger(a) || !Number.isInteger(b) || a <= 0 || b <= 0) return null;
   if (!this.isFibonacciMode()) {
     if (a !== b) return null;
@@ -1308,6 +1335,13 @@ GameManager.prototype.getMergedValue = function (a, b) {
 };
 
 GameManager.prototype.getTimerMilestoneValues = function () {
+  var core = this.getCoreRulesRuntime();
+  if (core && typeof core.getTimerMilestoneValues === "function") {
+    return core.getTimerMilestoneValues(
+      this.isFibonacciMode() ? "fibonacci" : "pow2",
+      GameManager.TIMER_SLOT_IDS
+    );
+  }
   if (this.isFibonacciMode()) {
     // 13 slots mapped to Fibonacci milestones.
     return [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181];

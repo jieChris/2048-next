@@ -61,6 +61,7 @@ Deliverables:
 - Current progress:
   - Extracted pure rules helpers to `src/core/rules.ts`
   - Added unit tests in `tests/unit/core-rules.spec.ts`
+  - Added browser runtime adapter `js/core_rules_runtime.js` and wired `js/game_manager.js` to delegate spawn/merge/timer rules
 
 Acceptance:
 - Same board transition and score outputs for golden test vectors.
