@@ -609,6 +609,34 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.storedRate).toBe("25");
   });
 
+  test("practice page applies fibonacci ruleset via runtime helper", async ({ page }) => {
+    const response = await page.goto("/Practice_board.html?practice_ruleset=fibonacci", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Practice-fibonacci response should exist").not.toBeNull();
+    expect(response?.ok(), "Practice-fibonacci response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const cfg = (window as any).GAME_MODE_CONFIG;
+      return {
+        key: cfg && typeof cfg.key === "string" ? cfg.key : null,
+        ruleset: cfg && typeof cfg.ruleset === "string" ? cfg.ruleset : null,
+        spawnTable: cfg && Array.isArray(cfg.spawn_table) ? cfg.spawn_table : null,
+        hasRuntime: Boolean((window as any).CorePracticeModeRuntime?.buildPracticeModeConfig)
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.key).toBe("practice_legacy");
+    expect(snapshot.ruleset).toBe("fibonacci");
+    expect(snapshot.spawnTable).toEqual([
+      { value: 1, weight: 90 },
+      { value: 2, weight: 10 }
+    ]);
+  });
+
   test("history page renders adapter diagnostics for local records", async ({ page }) => {
     const response = await page.goto("/history.html", {
       waitUntil: "domcontentloaded"
