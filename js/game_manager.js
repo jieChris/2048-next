@@ -1145,6 +1145,13 @@ GameManager.prototype.getCoreUndoSnapshotRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreUndoTileSnapshotRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreUndoTileSnapshotRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
   var moveApplyCore = this.getCoreMoveApplyRuntime();
   if (moveApplyCore && typeof moveApplyCore.planTileInteraction === "function") {
@@ -1352,6 +1359,45 @@ GameManager.prototype.createUndoSnapshotState = function () {
   }
 
   return fallback;
+};
+
+GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
+  var undoTileCore = this.getCoreUndoTileSnapshotRuntime();
+  if (undoTileCore && typeof undoTileCore.createUndoTileSnapshot === "function") {
+    var computed = undoTileCore.createUndoTileSnapshot({
+      tile: {
+        x: tile && typeof tile === "object" ? tile.x : null,
+        y: tile && typeof tile === "object" ? tile.y : null,
+        value: tile && typeof tile === "object" ? tile.value : null
+      },
+      target: {
+        x: target && typeof target === "object" ? target.x : null,
+        y: target && typeof target === "object" ? target.y : null
+      }
+    }) || {};
+    if (
+      computed &&
+      typeof computed === "object" &&
+      computed.previousPosition &&
+      typeof computed.previousPosition === "object"
+    ) {
+      return computed;
+    }
+  }
+
+  if (tile && typeof tile.save === "function") {
+    return tile.save(target);
+  }
+
+  return {
+    x: tile ? tile.x : null,
+    y: tile ? tile.y : null,
+    value: tile ? tile.value : null,
+    previousPosition: {
+      x: target ? target.x : null,
+      y: target ? target.y : null
+    }
+  };
 };
 
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
@@ -3090,7 +3136,7 @@ GameManager.prototype.move = function (direction) {
         var interaction = self.planTileInteraction(cell, positions, next, mergedValue);
         if (interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null) {
           // We need to save tile since it will get removed
-          undo.tiles.push(tile.save(interaction.target));
+          undo.tiles.push(self.createUndoTileSnapshot(tile, interaction.target));
 
           var merged = new Tile(interaction.target, mergedValue);
           merged.mergedFrom = [tile, next];
@@ -3145,7 +3191,7 @@ GameManager.prototype.move = function (direction) {
 
         } else {
           // Save backup information
-          undo.tiles.push(tile.save(interaction.target));
+          undo.tiles.push(self.createUndoTileSnapshot(tile, interaction.target));
           self.moveTile(tile, interaction.target);
         }
 
