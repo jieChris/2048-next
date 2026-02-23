@@ -67,6 +67,32 @@
 
     if (payload && typeof payload === "object") {
       payload.adapterMode = adapterMode;
+      var ioApi = global.LegacyAdapterIoRuntime;
+      var snapshotModeKey = modeKey || "";
+      if (ioApi && typeof ioApi.readAdapterSnapshot === "function") {
+        payload.adapterSnapshot = ioApi.readAdapterSnapshot({
+          storage: global.localStorage || null,
+          modeKey: snapshotModeKey
+        });
+      } else {
+        payload.adapterSnapshot = null;
+      }
+      payload.syncAdapterSnapshot = function (snapshot) {
+        if (!ioApi || typeof ioApi.writeAdapterSnapshot !== "function") return false;
+        return ioApi.writeAdapterSnapshot({
+          storage: global.localStorage || null,
+          modeKey: snapshotModeKey,
+          snapshot: snapshot
+        });
+      };
+      payload.emitMoveResult = function (detail) {
+        if (!ioApi || typeof ioApi.emitAdapterMoveResult !== "function") return false;
+        return ioApi.emitAdapterMoveResult({
+          target: global,
+          modeKey: snapshotModeKey,
+          detail: detail || {}
+        });
+      };
     }
     return payload;
   }

@@ -112,6 +112,8 @@ Deliverables:
   - `js/legacy_bootstrap_runtime.js` now routes bridge attachment through `LegacyAdapterRuntime.attachLegacyBridgeWithAdapter` when available
   - Bridge payload now carries `adapterMode` metadata and preserves existing startup behavior (`legacy-bridge` default)
   - Fixed bootstrap bridge-attach argument order so `__legacyEngine.manager` correctly binds to `window.game_manager`
+  - Added adapter IO boundary helpers in `src/bridge/adapter-io.ts` and runtime mirror `js/legacy_adapter_io_runtime.js` for snapshot read/write and move-result event emission contracts
+  - Legacy adapter payload now exposes adapter IO methods (`syncAdapterSnapshot` / `emitMoveResult`) and reads initial adapter snapshot metadata
 
 Acceptance:
 - Session-level parity on key metrics (score, win/lose state, tile cap behavior).
@@ -150,4 +152,4 @@ Rollback:
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
 2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-dispatch/replay-lifecycle/replay-timer/replay-flow/replay-control/replay-loop`).
-3. Continue M4 by extracting adapter-side actuator/storage IO boundary contracts (state snapshot read/write + move result emit) while keeping runtime on legacy execution path by default.
+3. Continue M4 by wiring adapter IO contracts into a non-invasive game-manager side hook (publish move-result metadata without changing gameplay flow), then validate parity via smoke and unit baselines.
