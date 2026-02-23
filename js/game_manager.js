@@ -1131,6 +1131,13 @@ GameManager.prototype.getCorePostUndoRecordRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreUndoRestoreRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreUndoRestoreRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
   var moveApplyCore = this.getCoreMoveApplyRuntime();
   if (moveApplyCore && typeof moveApplyCore.planTileInteraction === "function") {
@@ -1241,6 +1248,40 @@ GameManager.prototype.computePostUndoRecord = function (direction) {
     shouldAppendCompactUndo: true,
     shouldPushSessionAction: shouldPushSessionAction,
     sessionAction: shouldPushSessionAction ? ["u"] : null
+  };
+};
+
+GameManager.prototype.computeUndoRestoreState = function (prev) {
+  var undoRestoreCore = this.getCoreUndoRestoreRuntime();
+  if (undoRestoreCore && typeof undoRestoreCore.computeUndoRestoreState === "function") {
+    return undoRestoreCore.computeUndoRestoreState({
+      prev: prev || {},
+      fallbackUndoUsed: this.undoUsed,
+      timerStatus: this.timerStatus
+    }) || {};
+  }
+
+  var source = prev && typeof prev === "object" ? prev : {};
+  var fallbackUndoUsed = Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0;
+  var undoBase =
+    Number.isInteger(source.undoUsed) && source.undoUsed >= 0
+      ? source.undoUsed
+      : fallbackUndoUsed;
+  return {
+    comboStreak: Number.isInteger(source.comboStreak) && source.comboStreak >= 0 ? source.comboStreak : 0,
+    successfulMoveCount:
+      Number.isInteger(source.successfulMoveCount) && source.successfulMoveCount >= 0
+        ? source.successfulMoveCount
+        : 0,
+    lockConsumedAtMoveCount: Number.isInteger(source.lockConsumedAtMoveCount) ? source.lockConsumedAtMoveCount : -1,
+    lockedDirectionTurn: Number.isInteger(source.lockedDirectionTurn) ? source.lockedDirectionTurn : null,
+    lockedDirection: Number.isInteger(source.lockedDirection) ? source.lockedDirection : null,
+    undoUsed: undoBase + 1,
+    over: false,
+    won: false,
+    keepPlaying: false,
+    shouldClearMessage: true,
+    shouldStartTimer: this.timerStatus === 0
   };
 };
 
@@ -2884,18 +2925,36 @@ GameManager.prototype.move = function (direction) {
         };
         this.grid.cells[tile.x][tile.y] = tile;
       }
-      this.comboStreak = Number.isInteger(prev.comboStreak) ? prev.comboStreak : 0;
-      this.successfulMoveCount = Number.isInteger(prev.successfulMoveCount) ? prev.successfulMoveCount : 0;
-      this.lockConsumedAtMoveCount = Number.isInteger(prev.lockConsumedAtMoveCount) ? prev.lockConsumedAtMoveCount : -1;
-      this.lockedDirectionTurn = Number.isInteger(prev.lockedDirectionTurn) ? prev.lockedDirectionTurn : null;
-      this.lockedDirection = Number.isInteger(prev.lockedDirection) ? prev.lockedDirection : null;
-      this.undoUsed = Number.isInteger(prev.undoUsed) ? prev.undoUsed : this.undoUsed;
+      var undoRestore = this.computeUndoRestoreState(prev);
 
-      this.over = false;
-      this.won = false;
-      this.keepPlaying = false;
-      this.actuator.clearMessage(); // Clear Game Over message if present
-      this.undoUsed++;
+      this.comboStreak =
+        Number.isInteger(undoRestore.comboStreak) && undoRestore.comboStreak >= 0
+          ? undoRestore.comboStreak
+          : 0;
+      this.successfulMoveCount =
+        Number.isInteger(undoRestore.successfulMoveCount) && undoRestore.successfulMoveCount >= 0
+          ? undoRestore.successfulMoveCount
+          : 0;
+      this.lockConsumedAtMoveCount = Number.isInteger(undoRestore.lockConsumedAtMoveCount)
+        ? undoRestore.lockConsumedAtMoveCount
+        : -1;
+      this.lockedDirectionTurn = Number.isInteger(undoRestore.lockedDirectionTurn)
+        ? undoRestore.lockedDirectionTurn
+        : null;
+      this.lockedDirection = Number.isInteger(undoRestore.lockedDirection)
+        ? undoRestore.lockedDirection
+        : null;
+      this.undoUsed =
+        Number.isInteger(undoRestore.undoUsed) && undoRestore.undoUsed >= 0
+          ? undoRestore.undoUsed
+          : ((Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0) + 1);
+
+      this.over = typeof undoRestore.over === "boolean" ? undoRestore.over : false;
+      this.won = typeof undoRestore.won === "boolean" ? undoRestore.won : false;
+      this.keepPlaying = typeof undoRestore.keepPlaying === "boolean" ? undoRestore.keepPlaying : false;
+      if (undoRestore.shouldClearMessage !== false) {
+        this.actuator.clearMessage(); // Clear Game Over message if present
+      }
       
       // Record undo in history if valid
       var postUndoRecord = this.computePostUndoRecord(direction);
@@ -2915,7 +2974,11 @@ GameManager.prototype.move = function (direction) {
       this.actuate();
       
       // Resume timer if it was stopped (e.g. game over)
-      if (this.timerStatus === 0) {
+      var shouldStartTimer =
+        typeof undoRestore.shouldStartTimer === "boolean"
+          ? undoRestore.shouldStartTimer
+          : this.timerStatus === 0;
+      if (shouldStartTimer) {
           this.startTimer();
       }
     }
