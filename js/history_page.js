@@ -60,6 +60,82 @@
     return s + "s";
   }
 
+  function isPlainObject(value) {
+    return !!value && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function toFiniteNumberOrNull(value) {
+    var num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  }
+
+  function formatNullableNumber(value) {
+    var num = toFiniteNumberOrNull(value);
+    return num === null ? "-" : String(num);
+  }
+
+  function formatSignedDelta(value) {
+    var num = toFiniteNumberOrNull(value);
+    if (num === null) return "-";
+    if (num > 0) return "+" + num;
+    return String(num);
+  }
+
+  function formatNullableBoolean(value) {
+    if (value === true) return "是";
+    if (value === false) return "否";
+    return "-";
+  }
+
+  function formatAdapterMode(mode) {
+    if (mode === "core-adapter") return "core-adapter";
+    if (mode === "legacy-bridge") return "legacy-bridge";
+    return "-";
+  }
+
+  function escapeHtml(value) {
+    var text = String(value == null ? "" : value);
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function buildAdapterDiagnosticsHtml(item) {
+    var report = isPlainObject(item && item.adapter_parity_report_v1) ? item.adapter_parity_report_v1 : null;
+    var diff = isPlainObject(item && item.adapter_parity_ab_diff_v1) ? item.adapter_parity_ab_diff_v1 : null;
+    if (!report && !diff) return "";
+
+    var lines = [];
+    if (report) {
+      lines.push(
+        "当前 " + escapeHtml(formatAdapterMode(report.adapterMode)) +
+        " · 快照分数 " + escapeHtml(formatNullableNumber(report.lastScoreFromSnapshot)) +
+        " · undoUsed " + escapeHtml(formatNullableNumber(report.undoUsedFromSnapshot)) +
+        " · scoreDelta " + escapeHtml(formatSignedDelta(report.scoreDelta)) +
+        " · 对齐 " + escapeHtml(formatNullableBoolean(report.isScoreAligned))
+      );
+    }
+    if (diff) {
+      lines.push(
+        "A/B comparable " + escapeHtml(formatNullableBoolean(diff.comparable)) +
+        " · scoreΔ " + escapeHtml(formatSignedDelta(diff.scoreDelta)) +
+        " · undoΔ " + escapeHtml(formatSignedDelta(diff.undoUsedDelta)) +
+        " · overΔ " + escapeHtml(formatSignedDelta(diff.overEventsDelta))
+      );
+    }
+
+    var html = "<div class='history-adapter-diagnostics'>" +
+      "<div class='history-adapter-title'>Adapter 诊断</div>";
+    for (var i = 0; i < lines.length; i++) {
+      html += "<div class='history-adapter-line'>" + lines[i] + "</div>";
+    }
+    html += "</div>";
+    return html;
+  }
+
   function buildSummary(result) {
     var summary = el("history-summary");
     if (!summary) return;
@@ -112,6 +188,7 @@
             "<button class='replay-button history-export-btn'>导出</button>" +
             "<button class='replay-button history-delete-btn'>删除</button>" +
           "</div>" +
+          buildAdapterDiagnosticsHtml(item) +
           boardToHtml(item.final_board, item.board_width, item.board_height);
 
         var replayBtn = node.querySelector(".history-replay-btn");

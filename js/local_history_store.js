@@ -33,6 +33,19 @@
     return "lh_" + t + "_" + r;
   }
 
+  function isPlainObject(value) {
+    return !!value && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function clonePlainObject(value) {
+    if (!isPlainObject(value)) return null;
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (_err) {
+      return null;
+    }
+  }
+
   function normalizeRecord(raw) {
     raw = raw || {};
     var modeKey = typeof raw.mode_key === "string" && raw.mode_key ? raw.mode_key : "unknown";
@@ -65,7 +78,9 @@
       end_reason: raw.end_reason || "game_over",
       client_version: raw.client_version || "1.8",
       replay: raw.replay && typeof raw.replay === "object" ? raw.replay : null,
-      replay_string: replayString
+      replay_string: replayString,
+      adapter_parity_report_v1: clonePlainObject(raw.adapter_parity_report_v1),
+      adapter_parity_ab_diff_v1: clonePlainObject(raw.adapter_parity_ab_diff_v1)
     };
   }
 

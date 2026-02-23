@@ -126,6 +126,10 @@ Deliverables:
   - Added A/B parity diff summary projection (`legacy-bridge` vs `core-adapter`) via `buildAdapterParityABDiffSummary` in `src/bridge/adapter-shadow.ts` and runtime mirror
   - Bridge payload now exposes `readAdapterParityABDiff`, persists per-mode parity reports to storage, and keeps `adapterParityABDiff` synchronized during runtime updates
   - Session submit payload now carries `adapter_parity_ab_diff_v1` diagnostics, and smoke validates A/B diff contract in `core-adapter` scenarios
+  - `LocalHistoryStore.normalizeRecord` now preserves `adapter_parity_report_v1` and `adapter_parity_ab_diff_v1` diagnostics in persisted local history records
+  - `history.html` now renders adapter diagnostics summary lines (session parity + A/B diff deltas) per history item for QA visibility
+  - Smoke suite now validates history-page diagnostics rendering from persisted local records
+  - Unified `local_history_store.js` cache-busting version across all gameplay/history/replay pages to avoid stale diagnostics serialization in browser cache
 
 Acceptance:
 - Session-level parity on key metrics (score, win/lose state, tile cap behavior).
@@ -164,4 +168,4 @@ Rollback:
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
 2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move/move-apply/post-move-record/post-undo-record/undo-restore/undo-snapshot/undo-tile-snapshot/undo-tile-restore/undo-restore-payload/undo-stack-entry/replay-codec/replay-v4-actions/replay-legacy/replay-import/replay-execution/replay-dispatch/replay-lifecycle/replay-timer/replay-flow/replay-control/replay-loop`).
-3. Continue M4 by adding history-view diagnostics for `adapter_parity_report_v1` and `adapter_parity_ab_diff_v1` to surface cutover confidence directly in QA workflows.
+3. Continue M4 by adding history QA triage aids (A/B mismatch badge + quick filter/export by mismatch state) so cutover regressions can be isolated faster.

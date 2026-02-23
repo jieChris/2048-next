@@ -538,4 +538,63 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(result?.afterABDiff?.isScoreMatch).toBe(true);
     expect(result?.payloadParityABDiff?.modeKey).toBe(result?.payloadModeKey);
   });
+
+  test("history page renders adapter diagnostics for local records", async ({ page }) => {
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    await page.evaluate(() => {
+      const store = (window as any).LocalHistoryStore;
+      if (!store || typeof store.saveRecord !== "function" || typeof store.clearAll !== "function") {
+        throw new Error("LocalHistoryStore unavailable");
+      }
+
+      store.clearAll();
+      store.saveRecord({
+        mode: "local",
+        mode_key: "standard_4x4_pow2_no_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        undo_enabled: false,
+        rank_policy: "ranked",
+        score: 256,
+        best_tile: 32,
+        duration_ms: 12000,
+        final_board: [
+          [2, 4, 8, 16],
+          [32, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        ended_at: new Date().toISOString(),
+        replay_string: "",
+        adapter_parity_report_v1: {
+          adapterMode: "core-adapter",
+          lastScoreFromSnapshot: 256,
+          undoUsedFromSnapshot: 1,
+          scoreDelta: 0,
+          isScoreAligned: true
+        },
+        adapter_parity_ab_diff_v1: {
+          comparable: true,
+          scoreDelta: 0,
+          undoUsedDelta: 0,
+          overEventsDelta: 0
+        }
+      });
+    });
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.locator(".history-adapter-diagnostics")).toHaveCount(1);
+    await expect(page.locator(".history-adapter-title")).toHaveText("Adapter 诊断");
+    await expect(page.locator(".history-adapter-diagnostics")).toContainText("A/B comparable 是");
+    await expect(page.locator(".history-adapter-diagnostics")).toContainText("scoreΔ 0");
+  });
 });
