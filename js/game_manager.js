@@ -1082,6 +1082,13 @@ GameManager.prototype.getCoreMoveScanRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCoreMovePathRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreMovePathRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
   var core = this.getCoreRulesRuntime();
   if (core && typeof core.normalizeSpawnTable === "function") {
@@ -2899,6 +2906,15 @@ GameManager.prototype.getVector = function (direction) {
 
 // Build a list of positions to traverse in the right order
 GameManager.prototype.buildTraversals = function (vector) {
+  var movePathCore = this.getCoreMovePathRuntime();
+  if (movePathCore && typeof movePathCore.buildTraversals === "function") {
+    var computed = movePathCore.buildTraversals(this.width, this.height, vector) || {};
+    return {
+      x: Array.isArray(computed.x) ? computed.x : [],
+      y: Array.isArray(computed.y) ? computed.y : []
+    };
+  }
+
   var traversals = { x: [], y: [] };
 
   for (var x = 0; x < this.width; x++) {
@@ -2916,6 +2932,21 @@ GameManager.prototype.buildTraversals = function (vector) {
 };
 
 GameManager.prototype.findFarthestPosition = function (cell, vector) {
+  var movePathCore = this.getCoreMovePathRuntime();
+  if (movePathCore && typeof movePathCore.findFarthestPosition === "function") {
+    var computed = movePathCore.findFarthestPosition(
+      cell,
+      vector,
+      this.width,
+      this.height,
+      this.isBlockedCell.bind(this),
+      this.grid && typeof this.grid.cellAvailable === "function"
+        ? this.grid.cellAvailable.bind(this.grid)
+        : function () { return false; }
+    ) || {};
+    if (computed.farthest && computed.next) return computed;
+  }
+
   var previous;
 
   // Progress towards the vector direction until an obstacle is found
