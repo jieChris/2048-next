@@ -1103,6 +1103,13 @@ GameManager.prototype.getCoreMergeEffectsRuntime = function () {
   return core;
 };
 
+GameManager.prototype.getCorePostMoveRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CorePostMoveRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
   var mergeEffectsCore = this.getCoreMergeEffectsRuntime();
   if (mergeEffectsCore && typeof mergeEffectsCore.computeMergeEffects === "function") {
@@ -2920,11 +2927,29 @@ GameManager.prototype.move = function (direction) {
     }
 
     this.addRandomTile();
-    this.successfulMoveCount += 1;
-
-    if (!this.movesAvailable()) {
-      this.over = true; // Game over!
-      this.endTime(); // Stop timer on game over
+    var hasMovesAvailable = this.movesAvailable();
+    var postMoveCore = this.getCorePostMoveRuntime();
+    if (postMoveCore && typeof postMoveCore.computePostMoveLifecycle === "function") {
+      var postMoveResult = postMoveCore.computePostMoveLifecycle({
+        successfulMoveCount: this.successfulMoveCount,
+        hasMovesAvailable: hasMovesAvailable,
+        timerStatus: this.timerStatus
+      }) || {};
+      if (Number.isInteger(postMoveResult.successfulMoveCount) && postMoveResult.successfulMoveCount >= 0) {
+        this.successfulMoveCount = postMoveResult.successfulMoveCount;
+      } else {
+        this.successfulMoveCount += 1;
+      }
+      this.over = typeof postMoveResult.over === "boolean" ? postMoveResult.over : !hasMovesAvailable;
+      if (postMoveResult.shouldEndTime || this.over) {
+        this.endTime(); // Stop timer on game over
+      }
+    } else {
+      this.successfulMoveCount += 1;
+      if (!hasMovesAvailable) {
+        this.over = true; // Game over!
+        this.endTime(); // Stop timer on game over
+      }
     }
 
     // Save state
@@ -2958,7 +2983,13 @@ GameManager.prototype.move = function (direction) {
     this.actuate();
 
     // Start timer on first move
-    if (this.timerStatus === 0 && !this.over) {
+    if (postMoveCore && typeof postMoveCore.computePostMoveLifecycle === "function") {
+      var shouldStart =
+        postMoveResult && typeof postMoveResult.shouldStartTimer === "boolean"
+          ? postMoveResult.shouldStartTimer
+          : (this.timerStatus === 0 && !this.over);
+      if (shouldStart) this.startTimer();
+    } else if (this.timerStatus === 0 && !this.over) {
       this.startTimer();
     }
   }

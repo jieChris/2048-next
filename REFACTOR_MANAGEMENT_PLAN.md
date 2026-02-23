@@ -70,6 +70,7 @@ Deliverables:
   - Added `src/core/move-path.ts` and `js/core_move_path_runtime.js` to delegate traversal ordering and farthest-position scanning
   - Added `src/core/scoring.ts` and `js/core_scoring_runtime.js` to delegate post-move score/combo settlement
   - Added `src/core/merge-effects.ts` and `js/core_merge_effects_runtime.js` to delegate post-merge won/capped/32k effect decisions
+  - Added `src/core/post-move.ts` and `js/core_post_move_runtime.js` to delegate post-move lifecycle transitions (`successfulMoveCount/over/endTime/startTimer` decisions)
 
 Acceptance:
 - Same board transition and score outputs for golden test vectors.
@@ -122,5 +123,5 @@ Rollback:
 
 ## 6) Immediate Next Steps
 1. Run `npm run test:smoke` locally and fix any failing page contract.
-2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects`).
-3. Continue extracting deterministic move execution helpers (merge application + game-over state transitions) behind runtime delegation with legacy fallback.
+2. Run `npm run test:unit` and keep the core extraction baseline stable (`rules/mode/special-rules/direction-lock/grid-scan/move-scan/move-path/scoring/merge-effects/post-move`).
+3. Continue extracting deterministic move execution helpers (merge application body and tile write-path) behind runtime delegation with legacy fallback.
