@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildHomeGuideSteps,
+  isHomeGuideTargetVisible,
   isHomePagePath,
   markHomeGuideSeen,
   readHomeGuideSeenValue,
@@ -213,5 +214,60 @@ describe("bootstrap home guide", () => {
       top: 428,
       left: 758
     });
+  });
+
+  it("accepts visible guide target node", () => {
+    expect(
+      isHomeGuideTargetVisible({
+        nodeLike: {
+          getClientRects() {
+            return [{ left: 0 }];
+          }
+        },
+        getComputedStyle() {
+          return {
+            display: "block",
+            visibility: "visible",
+            opacity: "1"
+          };
+        }
+      })
+    ).toBe(true);
+  });
+
+  it("rejects hidden guide target node", () => {
+    expect(
+      isHomeGuideTargetVisible({
+        nodeLike: {
+          getClientRects() {
+            return [{ left: 0 }];
+          }
+        },
+        getComputedStyle() {
+          return {
+            display: "none",
+            visibility: "visible",
+            opacity: "1"
+          };
+        }
+      })
+    ).toBe(false);
+
+    expect(
+      isHomeGuideTargetVisible({
+        nodeLike: {
+          getClientRects() {
+            return [];
+          }
+        },
+        getComputedStyle() {
+          return {
+            display: "block",
+            visibility: "visible",
+            opacity: "1"
+          };
+        }
+      })
+    ).toBe(false);
   });
 });

@@ -149,6 +149,33 @@
     };
   }
 
+  function isHomeGuideTargetVisible(options) {
+    var opts = options || {};
+    var node = opts.nodeLike || null;
+    if (!node) return false;
+
+    if (typeof node.getClientRects === "function") {
+      var rects = node.getClientRects();
+      if (!rects || rects.length === 0) return false;
+    }
+
+    var style = null;
+    try {
+      if (typeof opts.getComputedStyle === "function") {
+        style = opts.getComputedStyle(node);
+      }
+    } catch (_err) {
+      style = null;
+    }
+    if (
+      style &&
+      (style.display === "none" || style.visibility === "hidden" || style.opacity === "0")
+    ) {
+      return false;
+    }
+    return true;
+  }
+
   global.CoreHomeGuideRuntime = global.CoreHomeGuideRuntime || {};
   global.CoreHomeGuideRuntime.isHomePagePath = isHomePagePath;
   global.CoreHomeGuideRuntime.buildHomeGuideSteps = buildHomeGuideSteps;
@@ -158,4 +185,5 @@
   global.CoreHomeGuideRuntime.resolveHomeGuideAutoStart = resolveHomeGuideAutoStart;
   global.CoreHomeGuideRuntime.resolveHomeGuideSettingsState = resolveHomeGuideSettingsState;
   global.CoreHomeGuideRuntime.resolveHomeGuidePanelLayout = resolveHomeGuidePanelLayout;
+  global.CoreHomeGuideRuntime.isHomeGuideTargetVisible = isHomeGuideTargetVisible;
 })(typeof window !== "undefined" ? window : undefined);

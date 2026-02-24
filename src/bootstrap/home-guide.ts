@@ -72,6 +72,28 @@ export interface ResolveHomeGuidePanelLayoutResult {
   left: number;
 }
 
+export interface HomeGuideComputedStyleLike {
+  display?: string | null | undefined;
+  visibility?: string | null | undefined;
+  opacity?: string | null | undefined;
+}
+
+export interface HomeGuideVisibilityNodeLike {
+  getClientRects?():
+    | ArrayLike<unknown>
+    | {
+        length: number;
+      };
+}
+
+export interface IsHomeGuideTargetVisibleOptions {
+  nodeLike?: HomeGuideVisibilityNodeLike | null | undefined;
+  getComputedStyle?:
+    | ((node: HomeGuideVisibilityNodeLike) => HomeGuideComputedStyleLike | null | undefined)
+    | null
+    | undefined;
+}
+
 const BASE_HOME_GUIDE_STEPS: HomeGuideStep[] = [
   { selector: "#home-title-link", title: "首页标题", desc: "点击 2048 标题可回到首页。" },
   { selector: "#top-announcement-btn", title: "版本公告", desc: "查看版本更新内容，红点表示有未读公告。" },
@@ -231,4 +253,31 @@ export function resolveHomeGuidePanelLayout(
     top: Math.round(top),
     left: Math.round(left)
   };
+}
+
+export function isHomeGuideTargetVisible(options: IsHomeGuideTargetVisibleOptions): boolean {
+  const opts = options || {};
+  const node = opts.nodeLike || null;
+  if (!node) return false;
+
+  if (typeof node.getClientRects === "function") {
+    const rects = node.getClientRects();
+    if (!rects || rects.length === 0) return false;
+  }
+
+  let style: HomeGuideComputedStyleLike | null | undefined = null;
+  try {
+    if (typeof opts.getComputedStyle === "function") {
+      style = opts.getComputedStyle(node);
+    }
+  } catch (_err) {
+    style = null;
+  }
+  if (
+    style &&
+    (style.display === "none" || style.visibility === "hidden" || style.opacity === "0")
+  ) {
+    return false;
+  }
+  return true;
 }

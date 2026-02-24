@@ -90,7 +90,8 @@ if (
   typeof homeGuideRuntime.shouldAutoStartHomeGuide !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideAutoStart !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideSettingsState !== "function" ||
-  typeof homeGuideRuntime.resolveHomeGuidePanelLayout !== "function"
+  typeof homeGuideRuntime.resolveHomeGuidePanelLayout !== "function" ||
+  typeof homeGuideRuntime.isHomeGuideTargetVisible !== "function"
 ) {
   throw new Error("CoreHomeGuideRuntime is required");
 }
@@ -1125,18 +1126,15 @@ function positionHomeGuidePanel() {
 }
 
 function isElementVisibleForGuide(node) {
-  if (!node) return false;
-  if (node.getClientRects && node.getClientRects().length === 0) return false;
-  var style = null;
-  try {
-    style = window.getComputedStyle ? window.getComputedStyle(node) : null;
-  } catch (_err) {
-    style = null;
-  }
-  if (style && (style.display === "none" || style.visibility === "hidden" || style.opacity === "0")) {
-    return false;
-  }
-  return true;
+  return homeGuideRuntime.isHomeGuideTargetVisible({
+    nodeLike: node || null,
+    getComputedStyle:
+      typeof window !== "undefined" && typeof window.getComputedStyle === "function"
+        ? function (el) {
+            return window.getComputedStyle(el);
+          }
+        : null
+  });
 }
 
 function showHomeGuideDoneNotice() {

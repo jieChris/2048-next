@@ -1036,7 +1036,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.shouldAutoStartHomeGuide !== "function" ||
         typeof runtime.resolveHomeGuideAutoStart !== "function" ||
         typeof runtime.resolveHomeGuideSettingsState !== "function" ||
-        typeof runtime.resolveHomeGuidePanelLayout !== "function"
+        typeof runtime.resolveHomeGuidePanelLayout !== "function" ||
+        typeof runtime.isHomeGuideTargetVisible !== "function"
       ) {
         return { hasRuntime: false };
       }
@@ -1087,6 +1088,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
         guideActive: true,
         fromSettings: true
       });
+      const visibleCheck = runtime.isHomeGuideTargetVisible({
+        nodeLike: {
+          getClientRects() {
+            return [{ left: 0 }];
+          }
+        },
+        getComputedStyle() {
+          return {
+            display: "block",
+            visibility: "visible",
+            opacity: "1"
+          };
+        }
+      });
       const mobilePanelLayout = runtime.resolveHomeGuidePanelLayout({
         targetRect: {
           left: 100,
@@ -1122,6 +1137,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           pathname: "/play.html",
           seenValue: "0"
         }),
+        visibleCheck,
         resolvedAutoStart,
         mobilePanelLayout,
         settingsOnHome,
@@ -1140,6 +1156,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.autoStart).toBe(true);
     expect(snapshot.blockedSeen).toBe(false);
     expect(snapshot.blockedPath).toBe(false);
+    expect(snapshot.visibleCheck).toBe(true);
     expect(snapshot.resolvedAutoStart).toEqual({
       seenValue: "0",
       shouldAutoStart: true
@@ -1181,7 +1198,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         !runtime ||
         typeof runtime.buildHomeGuideSteps !== "function" ||
         typeof runtime.markHomeGuideSeen !== "function" ||
-        typeof runtime.resolveHomeGuidePanelLayout !== "function"
+        typeof runtime.resolveHomeGuidePanelLayout !== "function" ||
+        typeof runtime.isHomeGuideTargetVisible !== "function"
       ) {
         return { hasRuntime: false };
       }
@@ -1192,9 +1210,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalBuild = runtime.buildHomeGuideSteps;
       const originalMark = runtime.markHomeGuideSeen;
       const originalResolvePanelLayout = runtime.resolveHomeGuidePanelLayout;
+      const originalIsTargetVisible = runtime.isHomeGuideTargetVisible;
       let callCount = 0;
       let markCallCount = 0;
       let panelLayoutCallCount = 0;
+      let targetVisibleCallCount = 0;
       runtime.buildHomeGuideSteps = function (opts: any) {
         callCount += 1;
         return originalBuild(opts);
@@ -1206,6 +1226,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.resolveHomeGuidePanelLayout = function (opts: any) {
         panelLayoutCallCount += 1;
         return originalResolvePanelLayout(opts);
+      };
+      runtime.isHomeGuideTargetVisible = function (opts: any) {
+        targetVisibleCallCount += 1;
+        return originalIsTargetVisible(opts);
       };
       try {
         openSettingsModal();
@@ -1234,6 +1258,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           callCount,
           markCallCount,
           panelLayoutCallCount,
+          targetVisibleCallCount,
           hasOverlay: Boolean(overlay),
           overlayVisibleBeforeSkip,
           overlayHiddenAfterSkip: Boolean(overlayAfterSkip && overlayAfterSkip.style.display === "none")
@@ -1242,6 +1267,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.buildHomeGuideSteps = originalBuild;
         runtime.markHomeGuideSeen = originalMark;
         runtime.resolveHomeGuidePanelLayout = originalResolvePanelLayout;
+        runtime.isHomeGuideTargetVisible = originalIsTargetVisible;
       }
     });
 
@@ -1251,6 +1277,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.callCount).toBeGreaterThan(0);
     expect(snapshot.markCallCount).toBeGreaterThan(0);
     expect(snapshot.panelLayoutCallCount).toBeGreaterThan(0);
+    expect(snapshot.targetVisibleCallCount).toBeGreaterThan(0);
     expect(snapshot.hasOverlay).toBe(true);
     expect(snapshot.overlayVisibleBeforeSkip).toBe(true);
     expect(snapshot.overlayHiddenAfterSkip).toBe(true);
