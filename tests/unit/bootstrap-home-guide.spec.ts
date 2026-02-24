@@ -8,6 +8,7 @@ import {
   readHomeGuideSeenValue,
   resolveHomeGuidePanelLayout,
   resolveHomeGuideAutoStart,
+  resolveHomeGuideDoneNotice,
   resolveHomeGuideStepUiState,
   resolveHomeGuideSettingsState,
   shouldAutoStartHomeGuide
@@ -238,6 +239,22 @@ describe("bootstrap home guide", () => {
       stepText: "步骤 10 / 10",
       prevDisabled: false,
       nextText: "完成"
+    });
+  });
+
+  it("resolves done notice defaults and custom hide delay", () => {
+    expect(resolveHomeGuideDoneNotice({})).toEqual({
+      message: "指引已完成，可在设置中重新打开新手指引。",
+      hideDelayMs: 2600
+    });
+    expect(
+      resolveHomeGuideDoneNotice({
+        message: "  完成啦  ",
+        hideDelayMs: 1800
+      })
+    ).toEqual({
+      message: "完成啦",
+      hideDelayMs: 1800
     });
   });
 

@@ -91,6 +91,7 @@ if (
   typeof homeGuideRuntime.resolveHomeGuideAutoStart !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideSettingsState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepUiState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideDoneNotice !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuidePanelLayout !== "function" ||
   typeof homeGuideRuntime.isHomeGuideTargetVisible !== "function"
 ) {
@@ -1139,6 +1140,7 @@ function isElementVisibleForGuide(node) {
 }
 
 function showHomeGuideDoneNotice() {
+  var doneNotice = homeGuideRuntime.resolveHomeGuideDoneNotice({});
   var toast = document.getElementById("home-guide-done-toast");
   if (!toast) {
     toast = document.createElement("div");
@@ -1159,12 +1161,12 @@ function showHomeGuideDoneNotice() {
     toast.style.transition = "opacity 160ms ease";
     document.body.appendChild(toast);
   }
-  toast.textContent = "指引已完成，可在设置中重新打开新手指引。";
+  toast.textContent = doneNotice.message;
   toast.style.opacity = "1";
   if (toast.__hideTimer) clearTimeout(toast.__hideTimer);
   toast.__hideTimer = setTimeout(function () {
     toast.style.opacity = "0";
-  }, 2600);
+  }, doneNotice.hideDelayMs);
 }
 
 function finishHomeGuide(markSeen, options) {

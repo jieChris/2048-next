@@ -107,6 +107,17 @@
     };
   }
 
+  function resolveHomeGuideDoneNotice(options) {
+    var opts = options || {};
+    var defaultMessage = "指引已完成，可在设置中重新打开新手指引。";
+    var rawMessage = typeof opts.message === "string" ? opts.message.trim() : "";
+    var hideDelayMs = Math.max(0, Math.floor(toFiniteNumber(opts.hideDelayMs, 2600)));
+    return {
+      message: rawMessage || defaultMessage,
+      hideDelayMs: hideDelayMs
+    };
+  }
+
   function toFiniteNumber(value, fallback) {
     return typeof value === "number" && Number.isFinite(value) ? value : fallback;
   }
@@ -198,6 +209,7 @@
   global.CoreHomeGuideRuntime.resolveHomeGuideAutoStart = resolveHomeGuideAutoStart;
   global.CoreHomeGuideRuntime.resolveHomeGuideSettingsState = resolveHomeGuideSettingsState;
   global.CoreHomeGuideRuntime.resolveHomeGuideStepUiState = resolveHomeGuideStepUiState;
+  global.CoreHomeGuideRuntime.resolveHomeGuideDoneNotice = resolveHomeGuideDoneNotice;
   global.CoreHomeGuideRuntime.resolveHomeGuidePanelLayout = resolveHomeGuidePanelLayout;
   global.CoreHomeGuideRuntime.isHomeGuideTargetVisible = isHomeGuideTargetVisible;
 })(typeof window !== "undefined" ? window : undefined);

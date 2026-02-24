@@ -1037,6 +1037,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.resolveHomeGuideAutoStart !== "function" ||
         typeof runtime.resolveHomeGuideSettingsState !== "function" ||
         typeof runtime.resolveHomeGuideStepUiState !== "function" ||
+        typeof runtime.resolveHomeGuideDoneNotice !== "function" ||
         typeof runtime.resolveHomeGuidePanelLayout !== "function" ||
         typeof runtime.isHomeGuideTargetVisible !== "function"
       ) {
@@ -1097,6 +1098,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         stepIndex: 9,
         stepCount: 10
       });
+      const doneNotice = runtime.resolveHomeGuideDoneNotice({});
       const visibleCheck = runtime.isHomeGuideTargetVisible({
         nodeLike: {
           getClientRects() {
@@ -1148,6 +1150,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         }),
         stepUiStateFirst,
         stepUiStateLast,
+        doneNotice,
         visibleCheck,
         resolvedAutoStart,
         mobilePanelLayout,
@@ -1176,6 +1179,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       stepText: "步骤 10 / 10",
       prevDisabled: false,
       nextText: "完成"
+    });
+    expect(snapshot.doneNotice).toEqual({
+      message: "指引已完成，可在设置中重新打开新手指引。",
+      hideDelayMs: 2600
     });
     expect(snapshot.visibleCheck).toBe(true);
     expect(snapshot.resolvedAutoStart).toEqual({
@@ -1220,6 +1227,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.buildHomeGuideSteps !== "function" ||
         typeof runtime.markHomeGuideSeen !== "function" ||
         typeof runtime.resolveHomeGuideStepUiState !== "function" ||
+        typeof runtime.resolveHomeGuideDoneNotice !== "function" ||
         typeof runtime.resolveHomeGuidePanelLayout !== "function" ||
         typeof runtime.isHomeGuideTargetVisible !== "function"
       ) {
@@ -1232,11 +1240,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalBuild = runtime.buildHomeGuideSteps;
       const originalMark = runtime.markHomeGuideSeen;
       const originalResolveStepUiState = runtime.resolveHomeGuideStepUiState;
+      const originalResolveDoneNotice = runtime.resolveHomeGuideDoneNotice;
       const originalResolvePanelLayout = runtime.resolveHomeGuidePanelLayout;
       const originalIsTargetVisible = runtime.isHomeGuideTargetVisible;
       let callCount = 0;
       let markCallCount = 0;
       let stepUiStateCallCount = 0;
+      let doneNoticeCallCount = 0;
       let panelLayoutCallCount = 0;
       let targetVisibleCallCount = 0;
       runtime.buildHomeGuideSteps = function (opts: any) {
@@ -1250,6 +1260,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.resolveHomeGuideStepUiState = function (opts: any) {
         stepUiStateCallCount += 1;
         return originalResolveStepUiState(opts);
+      };
+      runtime.resolveHomeGuideDoneNotice = function (opts: any) {
+        doneNoticeCallCount += 1;
+        return originalResolveDoneNotice(opts);
       };
       runtime.resolveHomeGuidePanelLayout = function (opts: any) {
         panelLayoutCallCount += 1;
@@ -1268,17 +1282,26 @@ test.describe("Legacy Multi-Page Smoke", () => {
         toggle.checked = true;
         toggle.dispatchEvent(new Event("change", { bubbles: true }));
         const overlay = document.getElementById("home-guide-overlay");
-        const overlayVisibleBeforeSkip = Boolean(overlay && overlay.style.display !== "none");
+        const overlayVisibleBeforeFinish = Boolean(overlay && overlay.style.display !== "none");
         await new Promise((resolve) => {
           window.requestAnimationFrame(() => {
             window.requestAnimationFrame(() => resolve(null));
           });
         });
-        const skipBtn = document.getElementById("home-guide-skip");
-        if (skipBtn) {
-          skipBtn.dispatchEvent(new Event("click", { bubbles: true }));
+        const nextBtn = document.getElementById("home-guide-next");
+        for (let i = 0; i < 20; i += 1) {
+          if (!nextBtn) break;
+          nextBtn.dispatchEvent(new Event("click", { bubbles: true }));
+          await new Promise((resolve) => {
+            window.requestAnimationFrame(() => resolve(null));
+          });
+          const currentOverlay = document.getElementById("home-guide-overlay");
+          if (currentOverlay && currentOverlay.style.display === "none") {
+            break;
+          }
         }
-        const overlayAfterSkip = document.getElementById("home-guide-overlay");
+        const overlayAfterFinish = document.getElementById("home-guide-overlay");
+        const doneToast = document.getElementById("home-guide-done-toast");
         return {
           hasRuntime: true,
           hasSettingsOpen: true,
@@ -1286,16 +1309,21 @@ test.describe("Legacy Multi-Page Smoke", () => {
           callCount,
           markCallCount,
           stepUiStateCallCount,
+          doneNoticeCallCount,
           panelLayoutCallCount,
           targetVisibleCallCount,
           hasOverlay: Boolean(overlay),
-          overlayVisibleBeforeSkip,
-          overlayHiddenAfterSkip: Boolean(overlayAfterSkip && overlayAfterSkip.style.display === "none")
+          overlayVisibleBeforeFinish,
+          overlayHiddenAfterFinish: Boolean(
+            overlayAfterFinish && overlayAfterFinish.style.display === "none"
+          ),
+          doneToastVisible: Boolean(doneToast && doneToast.style.opacity === "1")
         };
       } finally {
         runtime.buildHomeGuideSteps = originalBuild;
         runtime.markHomeGuideSeen = originalMark;
         runtime.resolveHomeGuideStepUiState = originalResolveStepUiState;
+        runtime.resolveHomeGuideDoneNotice = originalResolveDoneNotice;
         runtime.resolveHomeGuidePanelLayout = originalResolvePanelLayout;
         runtime.isHomeGuideTargetVisible = originalIsTargetVisible;
       }
@@ -1307,11 +1335,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.callCount).toBeGreaterThan(0);
     expect(snapshot.markCallCount).toBeGreaterThan(0);
     expect(snapshot.stepUiStateCallCount).toBeGreaterThan(0);
+    expect(snapshot.doneNoticeCallCount).toBeGreaterThan(0);
     expect(snapshot.panelLayoutCallCount).toBeGreaterThan(0);
     expect(snapshot.targetVisibleCallCount).toBeGreaterThan(0);
     expect(snapshot.hasOverlay).toBe(true);
-    expect(snapshot.overlayVisibleBeforeSkip).toBe(true);
-    expect(snapshot.overlayHiddenAfterSkip).toBe(true);
+    expect(snapshot.overlayVisibleBeforeFinish).toBe(true);
+    expect(snapshot.overlayHiddenAfterFinish).toBe(true);
+    expect(snapshot.doneToastVisible).toBe(true);
   });
 
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {

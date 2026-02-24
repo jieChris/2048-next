@@ -55,6 +55,16 @@ export interface ResolveHomeGuideStepUiStateResult {
   nextText: string;
 }
 
+export interface ResolveHomeGuideDoneNoticeOptions {
+  message?: string | null | undefined;
+  hideDelayMs?: number | null | undefined;
+}
+
+export interface ResolveHomeGuideDoneNoticeResult {
+  message: string;
+  hideDelayMs: number;
+}
+
 export interface HomeGuideRectLike {
   left?: number | null | undefined;
   top?: number | null | undefined;
@@ -224,6 +234,19 @@ export function resolveHomeGuideStepUiState(
     stepText: count > 0 ? "步骤 " + (index + 1) + " / " + count : "步骤 0 / 0",
     prevDisabled: index <= 0,
     nextText: count > 0 && index >= count - 1 ? "完成" : "下一步"
+  };
+}
+
+export function resolveHomeGuideDoneNotice(
+  options: ResolveHomeGuideDoneNoticeOptions
+): ResolveHomeGuideDoneNoticeResult {
+  const opts = options || {};
+  const defaultMessage = "指引已完成，可在设置中重新打开新手指引。";
+  const rawMessage = typeof opts.message === "string" ? opts.message.trim() : "";
+  const hideDelayMs = Math.max(0, Math.floor(toFiniteNumber(opts.hideDelayMs, 2600)));
+  return {
+    message: rawMessage || defaultMessage,
+    hideDelayMs
   };
 }
 
