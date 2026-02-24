@@ -135,6 +135,13 @@ if (
 ) {
   throw new Error("CoreMobileTimerboxRuntime is required");
 }
+var mobileUndoTopRuntime = window.CoreMobileUndoTopRuntime;
+if (
+  !mobileUndoTopRuntime ||
+  typeof mobileUndoTopRuntime.resolveMobileUndoTopButtonDisplayModel !== "function"
+) {
+  throw new Error("CoreMobileUndoTopRuntime is required");
+}
 
 function tryUndoFromUi() {
   var undoRuntime = window.CoreUndoActionRuntime;
@@ -393,21 +400,29 @@ function syncMobileUndoTopButtonAvailability() {
   var canUndoNow = undoRuntime && typeof undoRuntime.isUndoInteractionEnabled === "function"
     ? !!undoRuntime.isUndoInteractionEnabled(gm)
     : !!(gm && gm.isUndoInteractionEnabled && gm.isUndoInteractionEnabled());
-  var shouldShow = compact && modeUndoCapable;
+  var displayModel = mobileUndoTopRuntime.resolveMobileUndoTopButtonDisplayModel({
+    compactViewport: compact,
+    modeUndoCapable: modeUndoCapable,
+    canUndoNow: canUndoNow,
+    label: "撤回"
+  });
 
-  btn.style.display = shouldShow ? "inline-flex" : "none";
-  if (!shouldShow) {
-    btn.style.pointerEvents = "none";
-    btn.style.opacity = "0.45";
-    btn.setAttribute("aria-disabled", "true");
+  btn.style.display = displayModel && displayModel.buttonDisplay ? displayModel.buttonDisplay : "none";
+  btn.style.pointerEvents =
+    displayModel && typeof displayModel.pointerEvents === "string"
+      ? displayModel.pointerEvents
+      : "none";
+  btn.style.opacity = displayModel && typeof displayModel.opacity === "string" ? displayModel.opacity : "0.45";
+  btn.setAttribute(
+    "aria-disabled",
+    displayModel && displayModel.ariaDisabled ? displayModel.ariaDisabled : "true"
+  );
+  if (!displayModel || !displayModel.shouldShow) {
     return;
   }
-
-  btn.style.pointerEvents = canUndoNow ? "" : "none";
-  btn.style.opacity = canUndoNow ? "" : "0.45";
-  btn.setAttribute("aria-disabled", canUndoNow ? "false" : "true");
-  btn.setAttribute("aria-label", "撤回");
-  btn.setAttribute("title", "撤回");
+  var label = displayModel.label || "撤回";
+  btn.setAttribute("aria-label", label);
+  btn.setAttribute("title", label);
 }
 
 function ensureMobileHintModalDom() {

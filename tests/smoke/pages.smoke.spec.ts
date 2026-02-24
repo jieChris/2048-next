@@ -787,7 +787,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.openedUrl).toContain("practice_guide_seen=1");
   });
 
-  test("index ui delegates mobile hint and timerbox logic to runtime helpers", async ({ page }) => {
+  test("index ui delegates mobile hint timerbox and undo-top logic to runtime helpers", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const response = await page.goto("/play.html", {
       waitUntil: "domcontentloaded"
@@ -802,6 +802,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const uiRuntime = (window as any).CoreMobileHintUiRuntime;
       const modalRuntime = (window as any).CoreMobileHintModalRuntime;
       const timerRuntime = (window as any).CoreMobileTimerboxRuntime;
+      const undoTopRuntime = (window as any).CoreMobileUndoTopRuntime;
       if (
         !runtime ||
         typeof runtime.collectMobileHintTexts !== "function" ||
@@ -811,13 +812,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof modalRuntime.ensureMobileHintModalDom !== "function" ||
         !timerRuntime ||
         typeof timerRuntime.resolveStoredMobileTimerboxCollapsed !== "function" ||
-        typeof timerRuntime.resolveMobileTimerboxDisplayModel !== "function"
+        typeof timerRuntime.resolveMobileTimerboxDisplayModel !== "function" ||
+        !undoTopRuntime ||
+        typeof undoTopRuntime.resolveMobileUndoTopButtonDisplayModel !== "function"
       ) {
         return {
           hasRuntime: false,
           hasUiRuntime: false,
           hasModalRuntime: false,
-          hasTimerRuntime: false
+          hasTimerRuntime: false,
+          hasUndoTopRuntime: false
         };
       }
       const hintBtn = document.getElementById("top-mobile-hint-btn") as HTMLAnchorElement | null;
@@ -827,6 +831,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasUiRuntime: true,
           hasModalRuntime: true,
           hasTimerRuntime: true,
+          hasUndoTopRuntime: true,
           hasHintButton: false
         };
       }
@@ -836,11 +841,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalEnsureModal = modalRuntime.ensureMobileHintModalDom;
       const originalResolveStored = timerRuntime.resolveStoredMobileTimerboxCollapsed;
       const originalResolveDisplay = timerRuntime.resolveMobileTimerboxDisplayModel;
+      const originalUndoTopDisplay = undoTopRuntime.resolveMobileUndoTopButtonDisplayModel;
       let collectCallCount = 0;
       let syncCallCount = 0;
       let ensureModalCallCount = 0;
       let resolveStoredCallCount = 0;
       let resolveDisplayCallCount = 0;
+      let resolveUndoTopCallCount = 0;
       runtime.collectMobileHintTexts = function (opts: any) {
         collectCallCount += 1;
         const lines = originalCollect(opts);
@@ -862,6 +869,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         resolveDisplayCallCount += 1;
         return originalResolveDisplay(opts);
       };
+      undoTopRuntime.resolveMobileUndoTopButtonDisplayModel = function (opts: any) {
+        resolveUndoTopCallCount += 1;
+        return originalUndoTopDisplay(opts);
+      };
 
       try {
         const syncMobileHintUI = (window as any).syncMobileHintUI;
@@ -872,6 +883,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         if (typeof syncMobileTimerboxUI === "function") {
           syncMobileTimerboxUI();
         }
+        const syncMobileUndoTopButtonAvailability = (window as any).syncMobileUndoTopButtonAvailability;
+        if (typeof syncMobileUndoTopButtonAvailability === "function") {
+          syncMobileUndoTopButtonAvailability();
+        }
         hintBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         const overlay = document.getElementById("mobile-hint-overlay");
         const firstLine = document.querySelector("#mobile-hint-body p");
@@ -880,12 +895,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasUiRuntime: true,
           hasModalRuntime: true,
           hasTimerRuntime: true,
+          hasUndoTopRuntime: true,
           hasHintButton: true,
           collectCallCount,
           syncCallCount,
           ensureModalCallCount,
           resolveStoredCallCount,
           resolveDisplayCallCount,
+          resolveUndoTopCallCount,
           overlayVisible: Boolean(overlay && overlay.style.display === "flex"),
           firstLineText: firstLine ? (firstLine.textContent || "").trim() : ""
         };
@@ -895,6 +912,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         modalRuntime.ensureMobileHintModalDom = originalEnsureModal;
         timerRuntime.resolveStoredMobileTimerboxCollapsed = originalResolveStored;
         timerRuntime.resolveMobileTimerboxDisplayModel = originalResolveDisplay;
+        undoTopRuntime.resolveMobileUndoTopButtonDisplayModel = originalUndoTopDisplay;
       }
     });
 
@@ -902,12 +920,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasUiRuntime).toBe(true);
     expect(snapshot.hasModalRuntime).toBe(true);
     expect(snapshot.hasTimerRuntime).toBe(true);
+    expect(snapshot.hasUndoTopRuntime).toBe(true);
     expect(snapshot.hasHintButton).toBe(true);
     expect(snapshot.collectCallCount).toBeGreaterThan(0);
     expect(snapshot.syncCallCount).toBeGreaterThan(0);
     expect(snapshot.ensureModalCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveStoredCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveDisplayCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveUndoTopCallCount).toBeGreaterThan(0);
     expect(snapshot.overlayVisible).toBe(true);
     expect(snapshot.firstLineText.length).toBeGreaterThan(0);
   });
