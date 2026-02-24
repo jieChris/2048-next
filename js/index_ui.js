@@ -80,6 +80,14 @@ var COMPACT_GAME_VIEWPORT_MAX_WIDTH = 980;
 var mobileRelayoutTimer = null;
 var mobileTopActionsState = null;
 var practiceTopActionsState = null;
+var homeGuideRuntime = window.CoreHomeGuideRuntime;
+if (
+  !homeGuideRuntime ||
+  typeof homeGuideRuntime.isHomePagePath !== "function" ||
+  typeof homeGuideRuntime.shouldAutoStartHomeGuide !== "function"
+) {
+  throw new Error("CoreHomeGuideRuntime is required");
+}
 var practiceTransferRuntime = window.CorePracticeTransferRuntime;
 if (
   !practiceTransferRuntime ||
@@ -1196,9 +1204,13 @@ var HOME_GUIDE_STATE = {
 };
 
 function isHomePage() {
-  if (typeof window === "undefined" || !window.location) return false;
-  var path = String(window.location.pathname || "");
-  return path === "/" || /\/index\.html?$/.test(path) || path === "";
+  var path = "";
+  try {
+    path = typeof window !== "undefined" && window.location ? String(window.location.pathname || "") : "";
+  } catch (_err) {
+    path = "";
+  }
+  return !!homeGuideRuntime.isHomePagePath(path);
 }
 
 function getHomeGuideSteps() {
@@ -1536,14 +1548,19 @@ function initHomeGuideSettingsUI() {
 }
 
 function autoStartHomeGuideIfNeeded() {
-  if (!isHomePage()) return;
+  var path = "";
+  try {
+    path = typeof window !== "undefined" && window.location ? String(window.location.pathname || "") : "";
+  } catch (_err) {
+    path = "";
+  }
   var seen = "0";
   try {
     seen = localStorage.getItem(HOME_GUIDE_SEEN_KEY) || "0";
   } catch (_err) {
     seen = "0";
   }
-  if (seen === "1") return;
+  if (!homeGuideRuntime.shouldAutoStartHomeGuide({ pathname: path, seenValue: seen })) return;
   setTimeout(function () {
     startHomeGuide({ fromSettings: false });
   }, 260);

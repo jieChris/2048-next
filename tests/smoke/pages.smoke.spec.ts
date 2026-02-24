@@ -805,6 +805,51 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.openedUrl).toContain("practice_guide_seen=1");
   });
 
+  test("home guide runtime provides homepage auto-start gating", async ({ page }) => {
+    const response = await page.goto("/index.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(220);
+
+    const snapshot = await page.evaluate(() => {
+      const runtime = (window as any).CoreHomeGuideRuntime;
+      if (
+        !runtime ||
+        typeof runtime.isHomePagePath !== "function" ||
+        typeof runtime.shouldAutoStartHomeGuide !== "function"
+      ) {
+        return { hasRuntime: false };
+      }
+      return {
+        hasRuntime: true,
+        homePath: runtime.isHomePagePath("/index.html"),
+        playPath: runtime.isHomePagePath("/play.html"),
+        autoStart: runtime.shouldAutoStartHomeGuide({
+          pathname: "/index.html",
+          seenValue: "0"
+        }),
+        blockedSeen: runtime.shouldAutoStartHomeGuide({
+          pathname: "/index.html",
+          seenValue: "1"
+        }),
+        blockedPath: runtime.shouldAutoStartHomeGuide({
+          pathname: "/play.html",
+          seenValue: "0"
+        })
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.homePath).toBe(true);
+    expect(snapshot.playPath).toBe(false);
+    expect(snapshot.autoStart).toBe(true);
+    expect(snapshot.blockedSeen).toBe(false);
+    expect(snapshot.blockedPath).toBe(false);
+  });
+
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {
     const response = await page.goto("/play.html?mode_key=spawn_custom_4x4_pow2_no_undo&four_rate=25", {
       waitUntil: "domcontentloaded"

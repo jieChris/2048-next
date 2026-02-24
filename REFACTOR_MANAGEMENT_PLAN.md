@@ -52,6 +52,7 @@
   - 新增 `src/bootstrap/undo-action.ts` + `js/core_undo_action_runtime.js`，`application.js` 与 `index_ui.js` 共享撤回触发与可用性判定
   - 新增 `src/bootstrap/practice-transfer.ts` + `js/core_practice_transfer_runtime.js`，`index_ui.js` 委托练习板直通模式配置组装
   - `practice-transfer` 已继续承接 `practice_guide_seen` 判定与练习板 URL 组装，`index_ui.js` 保留存储与跳转编排
+  - 新增 `src/bootstrap/home-guide.ts` + `js/core_home_guide_runtime.js`，`index_ui.js` 委托首页判定与新手指引自动触发 gate
   - `legacy_bootstrap_runtime.resolveModeConfig` 现可优先委托 `CoreModeCatalogRuntime.resolveCatalogModeWithDefault`（缺失时自动回退原逻辑）
 
 验收标准：
