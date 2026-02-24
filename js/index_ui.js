@@ -793,23 +793,11 @@ function initThemeSettingsUI() {
 
   function ensureDualPreviewGrids() {
     if (previewRoot.__dualPreviewRefs) return previewRoot.__dualPreviewRefs;
-    previewRoot.className =
-      previewLayout && previewLayout.containerClassName
-        ? previewLayout.containerClassName
-        : "theme-preview-dual-wrap";
-    previewRoot.innerHTML =
-      previewLayout && previewLayout.innerHtml
-        ? previewLayout.innerHtml
-        : "";
+    previewRoot.className = previewLayout.containerClassName;
+    previewRoot.innerHTML = previewLayout.innerHtml;
     previewRoot.__dualPreviewRefs = {
-      pow2: document.getElementById(
-        previewLayout && previewLayout.pow2GridId ? previewLayout.pow2GridId : "theme-preview-grid-pow2"
-      ),
-      fib: document.getElementById(
-        previewLayout && previewLayout.fibonacciGridId
-          ? previewLayout.fibonacciGridId
-          : "theme-preview-grid-fib"
-      )
+      pow2: document.getElementById(previewLayout.pow2GridId),
+      fib: document.getElementById(previewLayout.fibonacciGridId)
     };
     return previewRoot.__dualPreviewRefs;
   }
@@ -835,12 +823,8 @@ function initThemeSettingsUI() {
           }
         : null
     });
-    var pow2Values =
-      previewValues && Array.isArray(previewValues.pow2Values) ? previewValues.pow2Values : [];
-    var fibValues =
-      previewValues && Array.isArray(previewValues.fibonacciValues)
-        ? previewValues.fibonacciValues
-        : [];
+    var pow2Values = previewValues.pow2Values;
+    var fibValues = previewValues.fibonacciValues;
     renderPreviewGrid(refs.pow2, pow2Values);
     renderPreviewGrid(refs.fib, fibValues);
   }
@@ -853,14 +837,8 @@ function initThemeSettingsUI() {
       fallbackFibonacciSelector: "#theme-preview-grid-fib"
     });
     return window.ThemeManager.getPreviewCss(themeId, {
-      pow2Selector:
-        cssSelectors && typeof cssSelectors.pow2Selector === "string"
-          ? cssSelectors.pow2Selector
-          : "#theme-preview-grid-pow2",
-      fibSelector:
-        cssSelectors && typeof cssSelectors.fibSelector === "string"
-          ? cssSelectors.fibSelector
-          : "#theme-preview-grid-fib"
+      pow2Selector: cssSelectors.pow2Selector,
+      fibSelector: cssSelectors.fibSelector
     });
   }
 
@@ -897,7 +875,7 @@ function initThemeSettingsUI() {
     var toggleState = themeSettingsRuntime.resolveThemeDropdownToggleState({
       isOpen: isOpen
     });
-    if (!(toggleState && toggleState.shouldOpen)) {
+    if (!toggleState.shouldOpen) {
       closeDropdown();
     } else {
       confirmedTheme = window.ThemeManager.getCurrentTheme();
@@ -917,33 +895,33 @@ function initThemeSettingsUI() {
   var triggerBindingState = themeSettingsRuntime.resolveThemeBindingState({
     alreadyBound: !!customTrigger.__bound
   });
-  if (triggerBindingState && triggerBindingState.shouldBind) {
+  if (triggerBindingState.shouldBind) {
     customTrigger.addEventListener("click", toggleDropdown);
-    customTrigger.__bound = !!triggerBindingState.boundValue;
+    customTrigger.__bound = triggerBindingState.boundValue;
   }
 
   var outsideBindingState = themeSettingsRuntime.resolveThemeBindingState({
     alreadyBound: !!window.__clickOutsideBound
   });
-  if (outsideBindingState && outsideBindingState.shouldBind) {
+  if (outsideBindingState.shouldBind) {
     document.addEventListener("click", function(e) {
       if (!customSelect.contains(e.target)) {
         closeDropdown();
       }
     });
-    window.__clickOutsideBound = !!outsideBindingState.boundValue;
+    window.__clickOutsideBound = outsideBindingState.boundValue;
   }
 
   var leaveBindingState = themeSettingsRuntime.resolveThemeBindingState({
     alreadyBound: !!customSelect.__mouseleaveBound
   });
-  if (leaveBindingState && leaveBindingState.shouldBind) {
+  if (leaveBindingState.shouldBind) {
     customSelect.addEventListener("mouseleave", function() {
       if (customSelect.classList.contains("open")) {
         applyPreviewTheme(confirmedTheme);
       }
     });
-    customSelect.__mouseleaveBound = !!leaveBindingState.boundValue;
+    customSelect.__mouseleaveBound = leaveBindingState.boundValue;
   }
 
   function updateCustomSelectUI() {
@@ -976,8 +954,8 @@ function initThemeSettingsUI() {
   var changeSyncBindingState = themeSettingsRuntime.resolveThemeBindingState({
     alreadyBound: !!window.__themeChangeSyncBound
   });
-  if (changeSyncBindingState && changeSyncBindingState.shouldBind) {
-    window.__themeChangeSyncBound = !!changeSyncBindingState.boundValue;
+  if (changeSyncBindingState.shouldBind) {
+    window.__themeChangeSyncBound = changeSyncBindingState.boundValue;
     window.addEventListener("themechange", function () {
       confirmedTheme = window.ThemeManager.getCurrentTheme();
       updateCustomSelectUI();
