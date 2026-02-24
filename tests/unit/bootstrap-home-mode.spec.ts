@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_HOME_MODE_KEY,
   resolveHomeModeKey,
-  resolveHomeModeSelection
+  resolveHomeModeSelection,
+  resolveHomeModeSelectionFromContext
 } from "../../src/bootstrap/home-mode";
 
 function createCatalog(items: Record<string, Record<string, unknown>>) {
@@ -83,5 +84,38 @@ describe("bootstrap home mode", () => {
       ruleset: "pow2",
       spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }]
     });
+  });
+
+  it("resolves home mode selection from body/location context safely", () => {
+    const result = resolveHomeModeSelectionFromContext({
+      bodyLike: {
+        getAttribute(name: string) {
+          return name === "data-mode-id" ? "practice_legacy" : null;
+        }
+      },
+      locationLike: {
+        search: "?practice_ruleset=fibonacci"
+      },
+      modeCatalog: createCatalog({
+        practice_legacy: {
+          key: "practice_legacy",
+          ruleset: "pow2",
+          mode_family: "pow2",
+          spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }]
+        }
+      })
+    });
+    expect(result.modeKey).toBe("practice_legacy");
+    expect(result.modeConfig?.ruleset).toBe("fibonacci");
+
+    const fallback = resolveHomeModeSelectionFromContext({
+      bodyLike: null,
+      locationLike: null,
+      modeCatalog: createCatalog({
+        [DEFAULT_HOME_MODE_KEY]: { key: DEFAULT_HOME_MODE_KEY, ruleset: "pow2" }
+      })
+    });
+    expect(fallback.modeKey).toBe(DEFAULT_HOME_MODE_KEY);
+    expect(fallback.modeConfig?.key).toBe(DEFAULT_HOME_MODE_KEY);
   });
 });

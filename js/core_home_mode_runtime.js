@@ -93,8 +93,41 @@
     };
   }
 
+  function resolveDataModeIdFromBody(bodyLike) {
+    var body = bodyLike || null;
+    if (!body || typeof body.getAttribute !== "function") return "";
+    try {
+      var value = body.getAttribute("data-mode-id");
+      return typeof value === "string" ? value : "";
+    } catch (_err) {
+      return "";
+    }
+  }
+
+  function resolveSearchFromLocation(locationLike) {
+    var location = locationLike || null;
+    if (!location) return "";
+    try {
+      return typeof location.search === "string" ? location.search : "";
+    } catch (_err) {
+      return "";
+    }
+  }
+
+  function resolveHomeModeSelectionFromContext(options) {
+    var opts = options || {};
+    return resolveHomeModeSelection({
+      dataModeId: resolveDataModeIdFromBody(opts.bodyLike),
+      defaultModeKey: opts.defaultModeKey,
+      searchLike: resolveSearchFromLocation(opts.locationLike),
+      modeCatalog: opts.modeCatalog
+    });
+  }
+
   global.CoreHomeModeRuntime = global.CoreHomeModeRuntime || {};
   global.CoreHomeModeRuntime.DEFAULT_HOME_MODE_KEY = DEFAULT_HOME_MODE_KEY;
   global.CoreHomeModeRuntime.resolveHomeModeKey = resolveHomeModeKey;
   global.CoreHomeModeRuntime.resolveHomeModeSelection = resolveHomeModeSelection;
+  global.CoreHomeModeRuntime.resolveHomeModeSelectionFromContext =
+    resolveHomeModeSelectionFromContext;
 })(typeof window !== "undefined" ? window : undefined);

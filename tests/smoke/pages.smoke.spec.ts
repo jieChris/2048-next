@@ -2332,13 +2332,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
         spawnTable: cfg && Array.isArray(cfg.spawn_table) ? cfg.spawn_table : null,
         hasRuntime: Boolean((window as any).CorePracticeModeRuntime?.buildPracticeModeConfig),
         hasModeCatalogRuntime: Boolean((window as any).CoreModeCatalogRuntime?.resolveCatalogModeWithDefault),
-        hasHomeModeRuntime: Boolean((window as any).CoreHomeModeRuntime?.resolveHomeModeSelection)
+        hasHomeModeRuntime: Boolean((window as any).CoreHomeModeRuntime?.resolveHomeModeSelection),
+        hasHomeModeContextRuntime: Boolean(
+          (window as any).CoreHomeModeRuntime?.resolveHomeModeSelectionFromContext
+        )
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.hasModeCatalogRuntime).toBe(true);
     expect(snapshot.hasHomeModeRuntime).toBe(true);
+    expect(snapshot.hasHomeModeContextRuntime).toBe(true);
     expect(snapshot.key).toBe("practice_legacy");
     expect(snapshot.ruleset).toBe("fibonacci");
     expect(snapshot.spawnTable).toEqual([

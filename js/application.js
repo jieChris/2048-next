@@ -5,7 +5,8 @@ if (!bootstrap || typeof bootstrap.startGameOnAnimationFrame !== "function") {
 var homeModeRuntime = window.CoreHomeModeRuntime;
 if (
   !homeModeRuntime ||
-  typeof homeModeRuntime.resolveHomeModeSelection !== "function"
+  typeof homeModeRuntime.resolveHomeModeSelection !== "function" ||
+  typeof homeModeRuntime.resolveHomeModeSelectionFromContext !== "function"
 ) {
   throw new Error("CoreHomeModeRuntime is required");
 }
@@ -18,13 +19,10 @@ if (
 }
 
 bootstrap.startGameOnAnimationFrame(function () {
-  var selection = homeModeRuntime.resolveHomeModeSelection({
-    dataModeId:
-      typeof document !== "undefined" && document.body
-        ? document.body.getAttribute("data-mode-id")
-        : null,
+  var selection = homeModeRuntime.resolveHomeModeSelectionFromContext({
+    bodyLike: typeof document !== "undefined" ? document.body : null,
+    locationLike: typeof window !== "undefined" ? window.location : null,
     defaultModeKey: "standard_4x4_pow2_no_undo",
-    searchLike: window.location.search || "",
     modeCatalog: window.ModeCatalog
   });
 

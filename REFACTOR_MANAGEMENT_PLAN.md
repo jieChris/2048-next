@@ -49,6 +49,7 @@
   - 新增 `src/bootstrap/practice-mode.ts` + `js/core_practice_mode_runtime.js`，`application.js` 委托 `practice_ruleset` 解析与模式投影
   - 新增 `src/bootstrap/mode-catalog.ts` + `js/core_mode_catalog_runtime.js`，`application.js` 与 `play_application.js` 共享 `ModeCatalog` 回退解析
   - 新增 `src/bootstrap/home-mode.ts` + `js/core_home_mode_runtime.js`，`application.js` 委托首页/练习页模式解析与 practice 模式装配
+  - `home-mode` 已承接 body/location 上下文读取（`resolveHomeModeSelectionFromContext`），`application.js` 不再手工读取 `data-mode-id`/`location.search`
   - 新增 `src/bootstrap/play-custom-spawn.ts` + `js/core_play_custom_spawn_runtime.js`，`play_application.js` 委托自定义 4 率解析、提示、URL 同步与配置投影
   - 新增 `src/bootstrap/undo-action.ts` + `js/core_undo_action_runtime.js`，`application.js` 与 `index_ui.js` 共享撤回触发与可用性判定
   - `undo-action` 已承接页面模式标识读取（`resolveUndoModeIdFromBody`），`index_ui.js` 不再直接读取 `body[data-mode-id]`
