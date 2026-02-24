@@ -47,6 +47,7 @@
   - 新增 `src/bootstrap/play-header.ts` + `js/core_play_header_runtime.js`，`play_application.js` 委托顶部模式简介文案拼装
   - 新增 `src/bootstrap/practice-mode.ts` + `js/core_practice_mode_runtime.js`，`application.js` 委托 `practice_ruleset` 解析与模式投影
   - 新增 `src/bootstrap/mode-catalog.ts` + `js/core_mode_catalog_runtime.js`，`application.js` 与 `play_application.js` 共享 `ModeCatalog` 回退解析
+  - 新增 `src/bootstrap/play-custom-spawn.ts` + `js/core_play_custom_spawn_runtime.js`，`play_application.js` 委托自定义 4 率解析、提示、URL 同步与配置投影
   - `legacy_bootstrap_runtime.resolveModeConfig` 现可优先委托 `CoreModeCatalogRuntime.resolveCatalogModeWithDefault`（缺失时自动回退原逻辑）
 
 验收标准：
@@ -162,6 +163,6 @@
 - Gate 3：PR 描述中明确可回滚路径。
 
 ## 6) 立即执行项
-1. 保持 `npm run test:unit` 与 `npm run test:smoke` 双绿。
+1. 优先执行一键门禁：`npm run verify:refactor`（串行执行 unit/smoke/build）。
 2. 继续削减入口脚本中的重复拼装逻辑，优先抽到 `src/bootstrap/*`。
 3. 按 M5 执行 burn-in：设置 `engine_adapter_default_mode=core-adapter`，持续监控历史页 gate，并保留 `engine_adapter_force_legacy=1` 作为紧急回滚开关。

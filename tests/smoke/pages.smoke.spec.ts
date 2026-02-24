@@ -650,12 +650,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         storedRate: window.localStorage.getItem("custom_spawn_4x4_four_rate_v1"),
         introText: introNode ? String(introNode.textContent || "") : "",
         hasRuntime: Boolean((window as any).CoreCustomSpawnRuntime?.applyCustomFourRateToModeConfig),
+        hasPlayCustomSpawnRuntime: Boolean(
+          (window as any).CorePlayCustomSpawnRuntime?.resolvePlayCustomSpawnModeConfig
+        ),
         hasHeaderRuntime: Boolean((window as any).CorePlayHeaderRuntime?.buildPlayModeIntroText),
         hasModeCatalogRuntime: Boolean((window as any).CoreModeCatalogRuntime?.resolveCatalogModeWithDefault)
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasPlayCustomSpawnRuntime).toBe(true);
     expect(snapshot.hasHeaderRuntime).toBe(true);
     expect(snapshot.hasModeCatalogRuntime).toBe(true);
     expect(snapshot.key).toBe("spawn_custom_4x4_pow2_no_undo");
