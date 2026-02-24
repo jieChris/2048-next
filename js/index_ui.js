@@ -191,7 +191,9 @@ if (
   typeof mobileTimerboxRuntime.resolveStoredMobileTimerboxCollapsed !== "function" ||
   typeof mobileTimerboxRuntime.persistMobileTimerboxCollapsed !== "function" ||
   typeof mobileTimerboxRuntime.getTimerboxToggleIconSvg !== "function" ||
-  typeof mobileTimerboxRuntime.resolveMobileTimerboxDisplayModel !== "function"
+  typeof mobileTimerboxRuntime.resolveMobileTimerboxCollapsedValue !== "function" ||
+  typeof mobileTimerboxRuntime.resolveMobileTimerboxDisplayModel !== "function" ||
+  typeof mobileTimerboxRuntime.resolveMobileTimerboxAppliedModel !== "function"
 ) {
   throw new Error("CoreMobileTimerboxRuntime is required");
 }
@@ -536,34 +538,54 @@ function syncMobileTimerboxUI(options) {
       timerModuleHidden: timerModuleHidden,
       collapsed: true
     });
+    var hiddenAppliedModel = mobileTimerboxRuntime.resolveMobileTimerboxAppliedModel({
+      displayModel: hiddenModel,
+      collapsed: true,
+      fallbackToggleDisplay: "none",
+      fallbackAriaExpanded: "false",
+      fallbackLabel: "展开计时器",
+      fallbackIconSvg: getTimerboxToggleIconSvg(true)
+    });
     toggleBtn.style.display =
-      hiddenModel && hiddenModel.toggleDisplay ? hiddenModel.toggleDisplay : "none";
+      hiddenAppliedModel && hiddenAppliedModel.toggleDisplay ? hiddenAppliedModel.toggleDisplay : "none";
     toggleBtn.setAttribute(
       "aria-expanded",
-      hiddenModel && hiddenModel.ariaExpanded ? hiddenModel.ariaExpanded : "false"
+      hiddenAppliedModel && hiddenAppliedModel.ariaExpanded ? hiddenAppliedModel.ariaExpanded : "false"
     );
     timerBox.classList.remove("is-mobile-expanded");
     return;
   }
 
-  var collapsed = (typeof options.collapsed === "boolean") ? options.collapsed : readMobileTimerboxCollapsed();
+  var collapsed = mobileTimerboxRuntime.resolveMobileTimerboxCollapsedValue({
+    collapsedOption: typeof options.collapsed === "boolean" ? options.collapsed : null,
+    storedCollapsed: readMobileTimerboxCollapsed(),
+    defaultCollapsed: true
+  });
   var displayModel = mobileTimerboxRuntime.resolveMobileTimerboxDisplayModel({
     collapsible: true,
     timerModuleHidden: false,
     collapsed: collapsed
   });
-  toggleBtn.style.display = displayModel && displayModel.toggleDisplay ? displayModel.toggleDisplay : "inline-flex";
-  timerBox.classList.toggle("is-mobile-expanded", !!(displayModel && displayModel.expanded));
-  var label = displayModel && displayModel.label ? displayModel.label : "展开计时器";
+  var appliedModel = mobileTimerboxRuntime.resolveMobileTimerboxAppliedModel({
+    displayModel: displayModel,
+    collapsed: collapsed,
+    fallbackToggleDisplay: "inline-flex",
+    fallbackAriaExpanded: collapsed ? "false" : "true",
+    fallbackLabel: collapsed ? "展开计时器" : "收起计时器",
+    fallbackIconSvg: getTimerboxToggleIconSvg(collapsed)
+  });
+  toggleBtn.style.display = appliedModel && appliedModel.toggleDisplay ? appliedModel.toggleDisplay : "inline-flex";
+  timerBox.classList.toggle("is-mobile-expanded", !!(appliedModel && appliedModel.expanded));
+  var label = appliedModel && appliedModel.label ? appliedModel.label : "展开计时器";
   toggleBtn.setAttribute(
     "aria-expanded",
-    displayModel && displayModel.ariaExpanded ? displayModel.ariaExpanded : (collapsed ? "false" : "true")
+    appliedModel && appliedModel.ariaExpanded ? appliedModel.ariaExpanded : (collapsed ? "false" : "true")
   );
   toggleBtn.setAttribute("aria-label", label);
   toggleBtn.setAttribute("title", label);
   toggleBtn.innerHTML =
-    displayModel && displayModel.iconSvg
-      ? displayModel.iconSvg
+    appliedModel && appliedModel.iconSvg
+      ? appliedModel.iconSvg
       : getTimerboxToggleIconSvg(collapsed);
   if (options.persist) {
     writeMobileTimerboxCollapsed(collapsed);

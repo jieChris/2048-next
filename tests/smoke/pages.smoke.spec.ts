@@ -829,7 +829,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof modalRuntime.ensureMobileHintModalDom !== "function" ||
         !timerRuntime ||
         typeof timerRuntime.resolveStoredMobileTimerboxCollapsed !== "function" ||
+        typeof timerRuntime.resolveMobileTimerboxCollapsedValue !== "function" ||
         typeof timerRuntime.resolveMobileTimerboxDisplayModel !== "function" ||
+        typeof timerRuntime.resolveMobileTimerboxAppliedModel !== "function" ||
         !undoTopRuntime ||
         typeof undoTopRuntime.resolveMobileUndoTopButtonDisplayModel !== "function" ||
         !topActionsRuntime ||
@@ -885,7 +887,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalResolveHintUiState = uiRuntime.resolveMobileHintUiState;
       const originalEnsureModal = modalRuntime.ensureMobileHintModalDom;
       const originalResolveStored = timerRuntime.resolveStoredMobileTimerboxCollapsed;
+      const originalResolveCollapsedValue = timerRuntime.resolveMobileTimerboxCollapsedValue;
       const originalResolveDisplay = timerRuntime.resolveMobileTimerboxDisplayModel;
+      const originalResolveAppliedModel = timerRuntime.resolveMobileTimerboxAppliedModel;
       const originalUndoTopDisplay = undoTopRuntime.resolveMobileUndoTopButtonDisplayModel;
       const originalSyncGameTop = topActionsRuntime.syncGameTopActionsPlacement;
       const originalSyncPracticeTop = topActionsRuntime.syncPracticeTopActionsPlacement;
@@ -905,7 +909,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let resolveHintUiStateCallCount = 0;
       let ensureModalCallCount = 0;
       let resolveStoredCallCount = 0;
+      let resolveCollapsedValueCallCount = 0;
       let resolveDisplayCallCount = 0;
+      let resolveAppliedModelCallCount = 0;
       let resolveUndoTopCallCount = 0;
       let syncGameTopCallCount = 0;
       let syncPracticeTopCallCount = 0;
@@ -941,9 +947,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
         resolveStoredCallCount += 1;
         return originalResolveStored(opts);
       };
+      timerRuntime.resolveMobileTimerboxCollapsedValue = function (opts: any) {
+        resolveCollapsedValueCallCount += 1;
+        return originalResolveCollapsedValue(opts);
+      };
       timerRuntime.resolveMobileTimerboxDisplayModel = function (opts: any) {
         resolveDisplayCallCount += 1;
         return originalResolveDisplay(opts);
+      };
+      timerRuntime.resolveMobileTimerboxAppliedModel = function (opts: any) {
+        resolveAppliedModelCallCount += 1;
+        return originalResolveAppliedModel(opts);
       };
       undoTopRuntime.resolveMobileUndoTopButtonDisplayModel = function (opts: any) {
         resolveUndoTopCallCount += 1;
@@ -1035,7 +1049,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
           resolveHintUiStateCallCount,
           ensureModalCallCount,
           resolveStoredCallCount,
+          resolveCollapsedValueCallCount,
           resolveDisplayCallCount,
+          resolveAppliedModelCallCount,
           resolveUndoTopCallCount,
           syncGameTopCallCount,
           syncPracticeTopCallCount,
@@ -1059,7 +1075,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         uiRuntime.resolveMobileHintUiState = originalResolveHintUiState;
         modalRuntime.ensureMobileHintModalDom = originalEnsureModal;
         timerRuntime.resolveStoredMobileTimerboxCollapsed = originalResolveStored;
+        timerRuntime.resolveMobileTimerboxCollapsedValue = originalResolveCollapsedValue;
         timerRuntime.resolveMobileTimerboxDisplayModel = originalResolveDisplay;
+        timerRuntime.resolveMobileTimerboxAppliedModel = originalResolveAppliedModel;
         undoTopRuntime.resolveMobileUndoTopButtonDisplayModel = originalUndoTopDisplay;
         topActionsRuntime.syncGameTopActionsPlacement = originalSyncGameTop;
         topActionsRuntime.syncPracticeTopActionsPlacement = originalSyncPracticeTop;
@@ -1091,7 +1109,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolveHintUiStateCallCount).toBeGreaterThan(0);
     expect(snapshot.ensureModalCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveStoredCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveCollapsedValueCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveDisplayCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveAppliedModelCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveUndoTopCallCount).toBeGreaterThan(0);
     expect(snapshot.syncGameTopCallCount).toBeGreaterThan(0);
     expect(snapshot.syncPracticeTopCallCount).toBeGreaterThanOrEqual(0);

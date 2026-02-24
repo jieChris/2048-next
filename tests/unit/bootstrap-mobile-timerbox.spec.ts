@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   getTimerboxToggleIconSvg,
   persistMobileTimerboxCollapsed,
+  resolveMobileTimerboxAppliedModel,
+  resolveMobileTimerboxCollapsedValue,
   resolveMobileTimerboxDisplayModel,
   resolveStoredMobileTimerboxCollapsed
 } from "../../src/bootstrap/mobile-timerbox";
@@ -106,6 +108,44 @@ describe("bootstrap mobile timerbox", () => {
       label: "收起计时器",
       iconSvg: getTimerboxToggleIconSvg(false),
       expanded: true
+    });
+  });
+
+  it("resolves collapsed value by option priority", () => {
+    expect(
+      resolveMobileTimerboxCollapsedValue({
+        collapsedOption: false,
+        storedCollapsed: true,
+        defaultCollapsed: true
+      })
+    ).toBe(false);
+    expect(
+      resolveMobileTimerboxCollapsedValue({
+        collapsedOption: null,
+        storedCollapsed: false,
+        defaultCollapsed: true
+      })
+    ).toBe(false);
+    expect(resolveMobileTimerboxCollapsedValue({})).toBe(true);
+  });
+
+  it("resolves applied model with display fallback", () => {
+    expect(
+      resolveMobileTimerboxAppliedModel({
+        displayModel: null,
+        collapsed: true,
+        fallbackToggleDisplay: "none",
+        fallbackAriaExpanded: "false",
+        fallbackLabel: "展开计时器",
+        fallbackIconSvg: getTimerboxToggleIconSvg(true)
+      })
+    ).toEqual({
+      showToggle: false,
+      toggleDisplay: "none",
+      ariaExpanded: "false",
+      label: "展开计时器",
+      iconSvg: getTimerboxToggleIconSvg(true),
+      expanded: false
     });
   });
 });

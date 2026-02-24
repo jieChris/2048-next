@@ -30,6 +30,30 @@ export interface ResolveMobileTimerboxDisplayModelOptions {
   collapsed?: boolean | null | undefined;
 }
 
+export interface ResolveMobileTimerboxCollapsedValueOptions {
+  collapsedOption?: boolean | null | undefined;
+  storedCollapsed?: boolean | null | undefined;
+  defaultCollapsed?: boolean | null | undefined;
+}
+
+export interface ResolveMobileTimerboxAppliedModelOptions {
+  displayModel?: MobileTimerboxDisplayModel | null | undefined;
+  collapsed?: boolean | null | undefined;
+  fallbackToggleDisplay?: "inline-flex" | "none" | null | undefined;
+  fallbackAriaExpanded?: "true" | "false" | null | undefined;
+  fallbackLabel?: string | null | undefined;
+  fallbackIconSvg?: string | null | undefined;
+}
+
+export interface MobileTimerboxAppliedModel {
+  showToggle: boolean;
+  toggleDisplay: "inline-flex" | "none";
+  ariaExpanded: "true" | "false";
+  label: string;
+  iconSvg: string;
+  expanded: boolean;
+}
+
 const DEFAULT_STORAGE_KEY = "ui_timerbox_collapsed_mobile_v1";
 const LABEL_EXPAND = "展开计时器";
 const LABEL_COLLAPSE = "收起计时器";
@@ -79,6 +103,15 @@ export function getTimerboxToggleIconSvg(collapsed: boolean): string {
   return collapsed ? ICON_COLLAPSED : ICON_EXPANDED;
 }
 
+export function resolveMobileTimerboxCollapsedValue(
+  options: ResolveMobileTimerboxCollapsedValueOptions
+): boolean {
+  const opts = options || {};
+  if (typeof opts.collapsedOption === "boolean") return opts.collapsedOption;
+  if (typeof opts.storedCollapsed === "boolean") return opts.storedCollapsed;
+  return typeof opts.defaultCollapsed === "boolean" ? opts.defaultCollapsed : true;
+}
+
 export function resolveMobileTimerboxDisplayModel(
   options: ResolveMobileTimerboxDisplayModelOptions
 ): MobileTimerboxDisplayModel {
@@ -103,6 +136,56 @@ export function resolveMobileTimerboxDisplayModel(
     ariaExpanded: expanded ? "true" : "false",
     label: expanded ? LABEL_COLLAPSE : LABEL_EXPAND,
     iconSvg: getTimerboxToggleIconSvg(collapsed),
+    expanded
+  };
+}
+
+export function resolveMobileTimerboxAppliedModel(
+  options: ResolveMobileTimerboxAppliedModelOptions
+): MobileTimerboxAppliedModel {
+  const opts = options || {};
+  const displayModel = opts.displayModel || null;
+  const collapsed = typeof opts.collapsed === "boolean" ? opts.collapsed : true;
+  const fallbackToggleDisplay = opts.fallbackToggleDisplay === "inline-flex" ? "inline-flex" : "none";
+  const fallbackAriaExpanded = opts.fallbackAriaExpanded === "true" ? "true" : "false";
+  const fallbackLabel =
+    typeof opts.fallbackLabel === "string" && opts.fallbackLabel
+      ? opts.fallbackLabel
+      : collapsed
+        ? LABEL_EXPAND
+        : LABEL_COLLAPSE;
+  const fallbackIconSvg =
+    typeof opts.fallbackIconSvg === "string" && opts.fallbackIconSvg
+      ? opts.fallbackIconSvg
+      : getTimerboxToggleIconSvg(collapsed);
+  const toggleDisplay =
+    displayModel && (displayModel.toggleDisplay === "inline-flex" || displayModel.toggleDisplay === "none")
+      ? displayModel.toggleDisplay
+      : fallbackToggleDisplay;
+  const ariaExpanded =
+    displayModel && (displayModel.ariaExpanded === "true" || displayModel.ariaExpanded === "false")
+      ? displayModel.ariaExpanded
+      : fallbackAriaExpanded;
+  const label =
+    displayModel && typeof displayModel.label === "string" && displayModel.label
+      ? displayModel.label
+      : fallbackLabel;
+  const iconSvg =
+    displayModel && typeof displayModel.iconSvg === "string" && displayModel.iconSvg
+      ? displayModel.iconSvg
+      : fallbackIconSvg;
+  const expanded =
+    displayModel && typeof displayModel.expanded === "boolean" ? displayModel.expanded : !collapsed;
+  const showToggle =
+    displayModel && typeof displayModel.showToggle === "boolean"
+      ? displayModel.showToggle
+      : toggleDisplay !== "none";
+  return {
+    showToggle,
+    toggleDisplay,
+    ariaExpanded,
+    label,
+    iconSvg,
     expanded
   };
 }

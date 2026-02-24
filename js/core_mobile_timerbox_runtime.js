@@ -48,6 +48,13 @@
     return collapsed ? ICON_COLLAPSED : ICON_EXPANDED;
   }
 
+  function resolveMobileTimerboxCollapsedValue(options) {
+    var opts = options || {};
+    if (typeof opts.collapsedOption === "boolean") return opts.collapsedOption;
+    if (typeof opts.storedCollapsed === "boolean") return opts.storedCollapsed;
+    return typeof opts.defaultCollapsed === "boolean" ? opts.defaultCollapsed : true;
+  }
+
   function resolveMobileTimerboxDisplayModel(options) {
     var opts = options || {};
     var showToggle = !!opts.collapsible && !opts.timerModuleHidden;
@@ -74,12 +81,66 @@
     };
   }
 
+  function resolveMobileTimerboxAppliedModel(options) {
+    var opts = options || {};
+    var displayModel = opts.displayModel || null;
+    var collapsed = typeof opts.collapsed === "boolean" ? opts.collapsed : true;
+    var fallbackToggleDisplay = opts.fallbackToggleDisplay === "inline-flex" ? "inline-flex" : "none";
+    var fallbackAriaExpanded = opts.fallbackAriaExpanded === "true" ? "true" : "false";
+    var fallbackLabel =
+      typeof opts.fallbackLabel === "string" && opts.fallbackLabel
+        ? opts.fallbackLabel
+        : collapsed
+          ? LABEL_EXPAND
+          : LABEL_COLLAPSE;
+    var fallbackIconSvg =
+      typeof opts.fallbackIconSvg === "string" && opts.fallbackIconSvg
+        ? opts.fallbackIconSvg
+        : getTimerboxToggleIconSvg(collapsed);
+    var toggleDisplay =
+      displayModel &&
+      (displayModel.toggleDisplay === "inline-flex" || displayModel.toggleDisplay === "none")
+        ? displayModel.toggleDisplay
+        : fallbackToggleDisplay;
+    var ariaExpanded =
+      displayModel &&
+      (displayModel.ariaExpanded === "true" || displayModel.ariaExpanded === "false")
+        ? displayModel.ariaExpanded
+        : fallbackAriaExpanded;
+    var label =
+      displayModel && typeof displayModel.label === "string" && displayModel.label
+        ? displayModel.label
+        : fallbackLabel;
+    var iconSvg =
+      displayModel && typeof displayModel.iconSvg === "string" && displayModel.iconSvg
+        ? displayModel.iconSvg
+        : fallbackIconSvg;
+    var expanded =
+      displayModel && typeof displayModel.expanded === "boolean" ? displayModel.expanded : !collapsed;
+    var showToggle =
+      displayModel && typeof displayModel.showToggle === "boolean"
+        ? displayModel.showToggle
+        : toggleDisplay !== "none";
+    return {
+      showToggle: showToggle,
+      toggleDisplay: toggleDisplay,
+      ariaExpanded: ariaExpanded,
+      label: label,
+      iconSvg: iconSvg,
+      expanded: expanded
+    };
+  }
+
   global.CoreMobileTimerboxRuntime = global.CoreMobileTimerboxRuntime || {};
   global.CoreMobileTimerboxRuntime.resolveStoredMobileTimerboxCollapsed =
     resolveStoredMobileTimerboxCollapsed;
   global.CoreMobileTimerboxRuntime.persistMobileTimerboxCollapsed =
     persistMobileTimerboxCollapsed;
   global.CoreMobileTimerboxRuntime.getTimerboxToggleIconSvg = getTimerboxToggleIconSvg;
+  global.CoreMobileTimerboxRuntime.resolveMobileTimerboxCollapsedValue =
+    resolveMobileTimerboxCollapsedValue;
   global.CoreMobileTimerboxRuntime.resolveMobileTimerboxDisplayModel =
     resolveMobileTimerboxDisplayModel;
+  global.CoreMobileTimerboxRuntime.resolveMobileTimerboxAppliedModel =
+    resolveMobileTimerboxAppliedModel;
 })(typeof window !== "undefined" ? window : undefined);
