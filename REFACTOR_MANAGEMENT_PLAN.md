@@ -89,6 +89,7 @@
   - `theme-settings` 已承接预览 CSS 选择器回退策略（`resolveThemePreviewCssSelectors`），`index_ui.js` 不再硬编码 `getPreviewCss` 的布局 fallback 分支
   - 新增 `src/bootstrap/mobile-hint-ui.ts` + `js/core_mobile_hint_ui_runtime.js`，`index_ui.js` 委托移动端提示折叠文本区可见性判定与按钮展示态
   - `mobile-hint-ui` 已承接按钮应用状态模型（`resolveMobileHintUiState`），`index_ui.js` 不再硬编码折叠 class/关闭弹窗/按钮属性分支
+  - `index_ui.js` 现直接消费 `resolveMobileHintUiState` 的安全模型，不再重复本地按钮与 class fallback 分支
   - 新增 `src/bootstrap/mobile-hint-modal.ts` + `js/core_mobile_hint_modal_runtime.js`，`index_ui.js` 委托移动端提示弹层 DOM 创建与关闭事件绑定
   - 新增 `src/bootstrap/mobile-timerbox.ts` + `js/core_mobile_timerbox_runtime.js`，`index_ui.js` 委托移动端计时器折叠态存储、图标与展示模型计算
   - `mobile-timerbox` 已承接折叠值归一化与展示态兜底（`resolveMobileTimerboxCollapsedValue`/`resolveMobileTimerboxAppliedModel`），`index_ui.js` 不再硬编码折叠判定与按钮属性 fallback

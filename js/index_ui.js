@@ -449,24 +449,22 @@ function syncMobileHintUI(options) {
     collapsedClassName: "mobile-hint-collapsed-content"
   });
 
-  if (uiState && uiState.collapsedContentEnabled) {
-    body.classList.add(uiState.collapsedClassName || "mobile-hint-collapsed-content");
+  if (uiState.collapsedContentEnabled) {
+    body.classList.add(uiState.collapsedClassName);
   } else {
-    body.classList.remove(
-      uiState && uiState.collapsedClassName ? uiState.collapsedClassName : "mobile-hint-collapsed-content"
-    );
+    body.classList.remove(uiState.collapsedClassName);
   }
-  btn.style.display = uiState && uiState.buttonDisplay ? uiState.buttonDisplay : "none";
+  btn.style.display = uiState.buttonDisplay;
 
-  if (!uiState || uiState.shouldCloseModal) {
+  if (uiState.shouldCloseModal) {
     closeMobileHintModal();
     return;
   }
 
-  var label = uiState.buttonLabel || "查看提示文本";
+  var label = uiState.buttonLabel;
   btn.setAttribute("aria-label", label);
   btn.setAttribute("title", label);
-  btn.setAttribute("aria-expanded", uiState.buttonAriaExpanded || "false");
+  btn.setAttribute("aria-expanded", uiState.buttonAriaExpanded);
 }
 
 function initMobileHintToggle() {
