@@ -6,6 +6,7 @@ import {
   resolveThemeDropdownToggleState,
   resolveThemeOptions,
   resolveThemeOptionSelectedState,
+  resolveThemePreviewCssSelectors,
   resolveThemePreviewLayout,
   resolveThemePreviewTileValues,
   resolveThemeSelectLabel
@@ -99,6 +100,34 @@ describe("bootstrap theme settings", () => {
       fibonacciGridId: "theme-preview-grid-fib",
       pow2Selector: "#theme-preview-grid-pow2",
       fibonacciSelector: "#theme-preview-grid-fib"
+    });
+  });
+
+  it("resolves preview css selectors with layout-first fallback", () => {
+    expect(
+      resolveThemePreviewCssSelectors({
+        previewLayout: resolveThemePreviewLayout()
+      })
+    ).toEqual({
+      pow2Selector: "#theme-preview-grid-pow2",
+      fibSelector: "#theme-preview-grid-fib"
+    });
+    expect(
+      resolveThemePreviewCssSelectors({
+        previewLayout: {
+          containerClassName: "x",
+          innerHtml: "",
+          pow2GridId: "a",
+          fibonacciGridId: "b",
+          pow2Selector: "",
+          fibonacciSelector: ""
+        },
+        fallbackPow2Selector: ".pow2-fallback",
+        fallbackFibonacciSelector: ".fib-fallback"
+      })
+    ).toEqual({
+      pow2Selector: ".pow2-fallback",
+      fibSelector: ".fib-fallback"
     });
   });
 

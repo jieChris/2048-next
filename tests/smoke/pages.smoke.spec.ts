@@ -1975,6 +1975,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.formatThemePreviewValue !== "function" ||
         typeof runtime.resolveThemePreviewTileValues !== "function" ||
         typeof runtime.resolveThemePreviewLayout !== "function" ||
+        typeof runtime.resolveThemePreviewCssSelectors !== "function" ||
         typeof runtime.resolveThemeOptions !== "function" ||
         typeof runtime.resolveThemeSelectLabel !== "function" ||
         typeof runtime.resolveThemeDropdownToggleState !== "function" ||
@@ -1990,6 +1991,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalFormat = runtime.formatThemePreviewValue;
       const originalResolveTileValues = runtime.resolveThemePreviewTileValues;
       const originalResolvePreviewLayout = runtime.resolveThemePreviewLayout;
+      const originalResolvePreviewCssSelectors = runtime.resolveThemePreviewCssSelectors;
       const originalResolveThemeOptions = runtime.resolveThemeOptions;
       const originalResolveLabel = runtime.resolveThemeSelectLabel;
       const originalResolveDropdown = runtime.resolveThemeDropdownToggleState;
@@ -1998,6 +2000,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let formatCallCount = 0;
       let resolveTileValuesCallCount = 0;
       let resolvePreviewLayoutCallCount = 0;
+      let resolvePreviewCssSelectorsCallCount = 0;
       let resolveThemeOptionsCallCount = 0;
       let resolveLabelCallCount = 0;
       let resolveDropdownCallCount = 0;
@@ -2014,6 +2017,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.resolveThemePreviewLayout = function () {
         resolvePreviewLayoutCallCount += 1;
         return originalResolvePreviewLayout();
+      };
+      runtime.resolveThemePreviewCssSelectors = function (opts: any) {
+        resolvePreviewCssSelectorsCallCount += 1;
+        return originalResolvePreviewCssSelectors(opts);
       };
       runtime.resolveThemeOptions = function (opts: any) {
         resolveThemeOptionsCallCount += 1;
@@ -2056,6 +2063,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           formatCallCount,
           resolveTileValuesCallCount,
           resolvePreviewLayoutCallCount,
+          resolvePreviewCssSelectorsCallCount,
           resolveThemeOptionsCallCount,
           resolveLabelCallCount,
           resolveDropdownCallCount,
@@ -2066,6 +2074,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.formatThemePreviewValue = originalFormat;
         runtime.resolveThemePreviewTileValues = originalResolveTileValues;
         runtime.resolveThemePreviewLayout = originalResolvePreviewLayout;
+        runtime.resolveThemePreviewCssSelectors = originalResolvePreviewCssSelectors;
         runtime.resolveThemeOptions = originalResolveThemeOptions;
         runtime.resolveThemeSelectLabel = originalResolveLabel;
         runtime.resolveThemeDropdownToggleState = originalResolveDropdown;
@@ -2081,6 +2090,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.formatCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveTileValuesCallCount).toBeGreaterThan(0);
     expect(snapshot.resolvePreviewLayoutCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolvePreviewCssSelectorsCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveThemeOptionsCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveLabelCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveDropdownCallCount).toBeGreaterThan(0);

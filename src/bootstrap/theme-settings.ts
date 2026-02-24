@@ -40,6 +40,17 @@ export interface ResolveThemeOptionSelectedStateOptions {
   currentThemeId?: string | null | undefined;
 }
 
+export interface ResolveThemePreviewCssSelectorsOptions {
+  previewLayout?: ResolveThemePreviewLayoutResult | null | undefined;
+  fallbackPow2Selector?: string | null | undefined;
+  fallbackFibonacciSelector?: string | null | undefined;
+}
+
+export interface ResolveThemePreviewCssSelectorsResult {
+  pow2Selector: string;
+  fibSelector: string;
+}
+
 export interface ResolveThemePreviewLayoutResult {
   containerClassName: string;
   innerHtml: string;
@@ -148,6 +159,33 @@ export function resolveThemePreviewLayout(): ResolveThemePreviewLayoutResult {
     fibonacciGridId: "theme-preview-grid-fib",
     pow2Selector: "#theme-preview-grid-pow2",
     fibonacciSelector: "#theme-preview-grid-fib"
+  };
+}
+
+export function resolveThemePreviewCssSelectors(
+  options: ResolveThemePreviewCssSelectorsOptions
+): ResolveThemePreviewCssSelectorsResult {
+  const opts = options || {};
+  const layout = opts.previewLayout;
+  const fallbackPow2 =
+    typeof opts.fallbackPow2Selector === "string" && opts.fallbackPow2Selector
+      ? opts.fallbackPow2Selector
+      : "#theme-preview-grid-pow2";
+  const fallbackFib =
+    typeof opts.fallbackFibonacciSelector === "string" && opts.fallbackFibonacciSelector
+      ? opts.fallbackFibonacciSelector
+      : "#theme-preview-grid-fib";
+  const pow2Selector =
+    layout && typeof layout.pow2Selector === "string" && layout.pow2Selector
+      ? layout.pow2Selector
+      : fallbackPow2;
+  const fibSelector =
+    layout && typeof layout.fibonacciSelector === "string" && layout.fibonacciSelector
+      ? layout.fibonacciSelector
+      : fallbackFib;
+  return {
+    pow2Selector,
+    fibSelector
   };
 }
 

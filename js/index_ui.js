@@ -129,6 +129,7 @@ if (
   typeof themeSettingsRuntime.formatThemePreviewValue !== "function" ||
   typeof themeSettingsRuntime.resolveThemePreviewTileValues !== "function" ||
   typeof themeSettingsRuntime.resolveThemePreviewLayout !== "function" ||
+  typeof themeSettingsRuntime.resolveThemePreviewCssSelectors !== "function" ||
   typeof themeSettingsRuntime.resolveThemeOptions !== "function" ||
   typeof themeSettingsRuntime.resolveThemeSelectLabel !== "function" ||
   typeof themeSettingsRuntime.resolveThemeDropdownToggleState !== "function" ||
@@ -862,14 +863,19 @@ function initThemeSettingsUI() {
 
   function getPreviewCss(themeId) {
     if (!window.ThemeManager.getPreviewCss) return "";
+    var cssSelectors = themeSettingsRuntime.resolveThemePreviewCssSelectors({
+      previewLayout: previewLayout,
+      fallbackPow2Selector: "#theme-preview-grid-pow2",
+      fallbackFibonacciSelector: "#theme-preview-grid-fib"
+    });
     return window.ThemeManager.getPreviewCss(themeId, {
       pow2Selector:
-        previewLayout && previewLayout.pow2Selector
-          ? previewLayout.pow2Selector
+        cssSelectors && typeof cssSelectors.pow2Selector === "string"
+          ? cssSelectors.pow2Selector
           : "#theme-preview-grid-pow2",
       fibSelector:
-        previewLayout && previewLayout.fibonacciSelector
-          ? previewLayout.fibonacciSelector
+        cssSelectors && typeof cssSelectors.fibSelector === "string"
+          ? cssSelectors.fibSelector
           : "#theme-preview-grid-fib"
     });
   }

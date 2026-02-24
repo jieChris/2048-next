@@ -87,6 +87,31 @@
     };
   }
 
+  function resolveThemePreviewCssSelectors(options) {
+    var opts = options || {};
+    var layout = opts.previewLayout;
+    var fallbackPow2 =
+      typeof opts.fallbackPow2Selector === "string" && opts.fallbackPow2Selector
+        ? opts.fallbackPow2Selector
+        : "#theme-preview-grid-pow2";
+    var fallbackFib =
+      typeof opts.fallbackFibonacciSelector === "string" && opts.fallbackFibonacciSelector
+        ? opts.fallbackFibonacciSelector
+        : "#theme-preview-grid-fib";
+    var pow2Selector =
+      layout && typeof layout.pow2Selector === "string" && layout.pow2Selector
+        ? layout.pow2Selector
+        : fallbackPow2;
+    var fibSelector =
+      layout && typeof layout.fibonacciSelector === "string" && layout.fibonacciSelector
+        ? layout.fibonacciSelector
+        : fallbackFib;
+    return {
+      pow2Selector: pow2Selector,
+      fibSelector: fibSelector
+    };
+  }
+
   function resolveThemeOptions(options) {
     var opts = options || {};
     var inputThemes = Array.isArray(opts.themes) ? opts.themes : [];
@@ -110,5 +135,6 @@
   global.CoreThemeSettingsRuntime.resolveThemeBindingState = resolveThemeBindingState;
   global.CoreThemeSettingsRuntime.resolveThemeOptionSelectedState = resolveThemeOptionSelectedState;
   global.CoreThemeSettingsRuntime.resolveThemePreviewLayout = resolveThemePreviewLayout;
+  global.CoreThemeSettingsRuntime.resolveThemePreviewCssSelectors = resolveThemePreviewCssSelectors;
   global.CoreThemeSettingsRuntime.resolveThemeOptions = resolveThemeOptions;
 })(typeof window !== "undefined" ? window : undefined);
