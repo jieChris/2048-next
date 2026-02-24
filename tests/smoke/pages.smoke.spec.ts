@@ -1031,6 +1031,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         !runtime ||
         typeof runtime.isHomePagePath !== "function" ||
         typeof runtime.buildHomeGuideSteps !== "function" ||
+        typeof runtime.buildHomeGuidePanelInnerHtml !== "function" ||
+        typeof runtime.buildHomeGuideSettingsRowInnerHtml !== "function" ||
         typeof runtime.readHomeGuideSeenValue !== "function" ||
         typeof runtime.markHomeGuideSeen !== "function" ||
         typeof runtime.shouldAutoStartHomeGuide !== "function" ||
@@ -1046,6 +1048,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
       const compactSteps = runtime.buildHomeGuideSteps({ isCompactViewport: true });
       const desktopSteps = runtime.buildHomeGuideSteps({ isCompactViewport: false });
+      const panelHtml = runtime.buildHomeGuidePanelInnerHtml();
+      const settingsRowHtml = runtime.buildHomeGuideSettingsRowInnerHtml();
       const compactSelectors = Array.isArray(compactSteps)
         ? compactSteps.map((item: any) => item && item.selector)
         : [];
@@ -1131,6 +1135,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       });
       return {
         hasRuntime: true,
+        panelHasStep: typeof panelHtml === "string" && panelHtml.indexOf("home-guide-step") !== -1,
+        panelHasSkip: typeof panelHtml === "string" && panelHtml.indexOf("home-guide-skip") !== -1,
+        settingsHasToggle:
+          typeof settingsRowHtml === "string" && settingsRowHtml.indexOf("home-guide-toggle") !== -1,
         homePath: runtime.isHomePagePath("/index.html"),
         playPath: runtime.isHomePagePath("/play.html"),
         hasCompactHint: compactSelectors.includes("#top-mobile-hint-btn"),
@@ -1163,6 +1171,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.panelHasStep).toBe(true);
+    expect(snapshot.panelHasSkip).toBe(true);
+    expect(snapshot.settingsHasToggle).toBe(true);
     expect(snapshot.homePath).toBe(true);
     expect(snapshot.playPath).toBe(false);
     expect(snapshot.hasCompactHint).toBe(true);
@@ -1235,6 +1246,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       if (
         !runtime ||
         typeof runtime.buildHomeGuideSteps !== "function" ||
+        typeof runtime.buildHomeGuidePanelInnerHtml !== "function" ||
+        typeof runtime.buildHomeGuideSettingsRowInnerHtml !== "function" ||
         typeof runtime.markHomeGuideSeen !== "function" ||
         typeof runtime.resolveHomeGuideStepUiState !== "function" ||
         typeof runtime.resolveHomeGuideDoneNotice !== "function" ||
@@ -1249,6 +1262,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return { hasRuntime: true, hasSettingsOpen: false };
       }
       const originalBuild = runtime.buildHomeGuideSteps;
+      const originalBuildPanelHtml = runtime.buildHomeGuidePanelInnerHtml;
+      const originalBuildSettingsRowHtml = runtime.buildHomeGuideSettingsRowInnerHtml;
       const originalMark = runtime.markHomeGuideSeen;
       const originalResolveStepUiState = runtime.resolveHomeGuideStepUiState;
       const originalResolveDoneNotice = runtime.resolveHomeGuideDoneNotice;
@@ -1256,6 +1271,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalResolvePanelLayout = runtime.resolveHomeGuidePanelLayout;
       const originalIsTargetVisible = runtime.isHomeGuideTargetVisible;
       let callCount = 0;
+      let panelHtmlCallCount = 0;
+      let settingsRowHtmlCallCount = 0;
       let markCallCount = 0;
       let stepUiStateCallCount = 0;
       let doneNoticeCallCount = 0;
@@ -1265,6 +1282,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.buildHomeGuideSteps = function (opts: any) {
         callCount += 1;
         return originalBuild(opts);
+      };
+      runtime.buildHomeGuidePanelInnerHtml = function () {
+        panelHtmlCallCount += 1;
+        return originalBuildPanelHtml();
+      };
+      runtime.buildHomeGuideSettingsRowInnerHtml = function () {
+        settingsRowHtmlCallCount += 1;
+        return originalBuildSettingsRowHtml();
       };
       runtime.markHomeGuideSeen = function (opts: any) {
         markCallCount += 1;
@@ -1291,6 +1316,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return originalIsTargetVisible(opts);
       };
       try {
+        const existingToggle = document.getElementById("home-guide-toggle");
+        if (existingToggle) {
+          const existingRow = existingToggle.closest(".settings-row");
+          if (existingRow && existingRow.parentNode) {
+            existingRow.parentNode.removeChild(existingRow);
+          }
+        }
         openSettingsModal();
         const toggle = document.getElementById("home-guide-toggle") as HTMLInputElement | null;
         if (!toggle) {
@@ -1324,6 +1356,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasSettingsOpen: true,
           hasToggle: true,
           callCount,
+          panelHtmlCallCount,
+          settingsRowHtmlCallCount,
           markCallCount,
           stepUiStateCallCount,
           doneNoticeCallCount,
@@ -1339,6 +1373,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         };
       } finally {
         runtime.buildHomeGuideSteps = originalBuild;
+        runtime.buildHomeGuidePanelInnerHtml = originalBuildPanelHtml;
+        runtime.buildHomeGuideSettingsRowInnerHtml = originalBuildSettingsRowHtml;
         runtime.markHomeGuideSeen = originalMark;
         runtime.resolveHomeGuideStepUiState = originalResolveStepUiState;
         runtime.resolveHomeGuideDoneNotice = originalResolveDoneNotice;
@@ -1352,6 +1388,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasSettingsOpen).toBe(true);
     expect(snapshot.hasToggle).toBe(true);
     expect(snapshot.callCount).toBeGreaterThan(0);
+    expect(snapshot.panelHtmlCallCount).toBeGreaterThan(0);
+    expect(snapshot.settingsRowHtmlCallCount).toBeGreaterThan(0);
     expect(snapshot.markCallCount).toBeGreaterThan(0);
     expect(snapshot.stepUiStateCallCount).toBeGreaterThan(0);
     expect(snapshot.doneNoticeCallCount).toBeGreaterThan(0);

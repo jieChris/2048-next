@@ -32,6 +32,30 @@
     return steps;
   }
 
+  function buildHomeGuidePanelInnerHtml() {
+    return (
+      "<div id='home-guide-step' class='home-guide-step'></div>" +
+      "<div id='home-guide-title' class='home-guide-title'></div>" +
+      "<div id='home-guide-desc' class='home-guide-desc'></div>" +
+      "<div class='home-guide-actions'>" +
+      "<button id='home-guide-prev' class='replay-button home-guide-btn'>上一步</button>" +
+      "<button id='home-guide-next' class='replay-button home-guide-btn'>下一步</button>" +
+      "<button id='home-guide-skip' class='replay-button home-guide-btn'>跳过</button>" +
+      "</div>"
+    );
+  }
+
+  function buildHomeGuideSettingsRowInnerHtml() {
+    return (
+      "<label for='home-guide-toggle'>新手指引</label>" +
+      "<label class='settings-switch-row'>" +
+      "<input id='home-guide-toggle' type='checkbox'>" +
+      "<span>重新播放首页功能指引</span>" +
+      "</label>" +
+      "<div id='home-guide-note' class='settings-note'></div>"
+    );
+  }
+
   function resolveSeenKey(value) {
     return typeof value === "string" && value ? value : "home_guide_seen_v1";
   }
@@ -222,6 +246,8 @@
   global.CoreHomeGuideRuntime = global.CoreHomeGuideRuntime || {};
   global.CoreHomeGuideRuntime.isHomePagePath = isHomePagePath;
   global.CoreHomeGuideRuntime.buildHomeGuideSteps = buildHomeGuideSteps;
+  global.CoreHomeGuideRuntime.buildHomeGuidePanelInnerHtml = buildHomeGuidePanelInnerHtml;
+  global.CoreHomeGuideRuntime.buildHomeGuideSettingsRowInnerHtml = buildHomeGuideSettingsRowInnerHtml;
   global.CoreHomeGuideRuntime.readHomeGuideSeenValue = readHomeGuideSeenValue;
   global.CoreHomeGuideRuntime.markHomeGuideSeen = markHomeGuideSeen;
   global.CoreHomeGuideRuntime.shouldAutoStartHomeGuide = shouldAutoStartHomeGuide;

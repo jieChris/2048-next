@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildHomeGuidePanelInnerHtml,
+  buildHomeGuideSettingsRowInnerHtml,
   buildHomeGuideSteps,
   isHomeGuideTargetVisible,
   isHomePagePath,
@@ -73,6 +75,16 @@ describe("bootstrap home guide", () => {
     expect(hintIdx).toBeGreaterThan(-1);
     expect(restartIdx).toBeGreaterThan(hintIdx);
     expect(restartIdx).toBe(hintIdx + 1);
+  });
+
+  it("builds panel and settings row html templates", () => {
+    const panelHtml = buildHomeGuidePanelInnerHtml();
+    const settingsHtml = buildHomeGuideSettingsRowInnerHtml();
+    expect(panelHtml).toContain("id='home-guide-step'");
+    expect(panelHtml).toContain("id='home-guide-next'");
+    expect(panelHtml).toContain("id='home-guide-skip'");
+    expect(settingsHtml).toContain("id='home-guide-toggle'");
+    expect(settingsHtml).toContain("id='home-guide-note'");
   });
 
   it("reads seen marker from storage safely", () => {

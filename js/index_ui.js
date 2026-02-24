@@ -85,6 +85,8 @@ if (
   !homeGuideRuntime ||
   typeof homeGuideRuntime.isHomePagePath !== "function" ||
   typeof homeGuideRuntime.buildHomeGuideSteps !== "function" ||
+  typeof homeGuideRuntime.buildHomeGuidePanelInnerHtml !== "function" ||
+  typeof homeGuideRuntime.buildHomeGuideSettingsRowInnerHtml !== "function" ||
   typeof homeGuideRuntime.readHomeGuideSeenValue !== "function" ||
   typeof homeGuideRuntime.markHomeGuideSeen !== "function" ||
   typeof homeGuideRuntime.shouldAutoStartHomeGuide !== "function" ||
@@ -1042,15 +1044,7 @@ function ensureHomeGuideDom() {
     panel.id = "home-guide-panel";
     panel.className = "home-guide-panel";
     panel.style.display = "none";
-    panel.innerHTML =
-      "<div id='home-guide-step' class='home-guide-step'></div>" +
-      "<div id='home-guide-title' class='home-guide-title'></div>" +
-      "<div id='home-guide-desc' class='home-guide-desc'></div>" +
-      "<div class='home-guide-actions'>" +
-      "<button id='home-guide-prev' class='replay-button home-guide-btn'>上一步</button>" +
-      "<button id='home-guide-next' class='replay-button home-guide-btn'>下一步</button>" +
-      "<button id='home-guide-skip' class='replay-button home-guide-btn'>跳过</button>" +
-      "</div>";
+    panel.innerHTML = homeGuideRuntime.buildHomeGuidePanelInnerHtml();
     document.body.appendChild(panel);
   }
   HOME_GUIDE_STATE.overlay = overlay;
@@ -1285,13 +1279,7 @@ function ensureHomeGuideSettingsDom() {
 
   var row = document.createElement("div");
   row.className = "settings-row";
-  row.innerHTML =
-    "<label for='home-guide-toggle'>新手指引</label>" +
-    "<label class='settings-switch-row'>" +
-    "<input id='home-guide-toggle' type='checkbox'>" +
-    "<span>重新播放首页功能指引</span>" +
-    "</label>" +
-    "<div id='home-guide-note' class='settings-note'></div>";
+  row.innerHTML = homeGuideRuntime.buildHomeGuideSettingsRowInnerHtml();
 
   var actions = content.querySelector(".replay-modal-actions");
   if (actions && actions.parentNode === content) {
