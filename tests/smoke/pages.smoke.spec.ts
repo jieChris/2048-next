@@ -2393,6 +2393,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
         hasPlayCustomSpawnRuntime: Boolean(
           (window as any).CorePlayCustomSpawnRuntime?.resolvePlayCustomSpawnModeConfig
         ),
+        hasStorageRuntime: Boolean(
+          (window as any).CoreStorageRuntime?.resolveStorageByName &&
+          (window as any).CoreStorageRuntime?.safeReadStorageItem &&
+          (window as any).CoreStorageRuntime?.safeSetStorageItem
+        ),
         hasHeaderRuntime: Boolean((window as any).CorePlayHeaderRuntime?.buildPlayModeIntroText),
         hasModeCatalogRuntime: Boolean((window as any).CoreModeCatalogRuntime?.resolveCatalogModeWithDefault)
       };
@@ -2400,6 +2405,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.hasPlayCustomSpawnRuntime).toBe(true);
+    expect(snapshot.hasStorageRuntime).toBe(true);
     expect(snapshot.hasHeaderRuntime).toBe(true);
     expect(snapshot.hasModeCatalogRuntime).toBe(true);
     expect(snapshot.key).toBe("spawn_custom_4x4_pow2_no_undo");

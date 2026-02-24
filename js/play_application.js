@@ -41,9 +41,25 @@
   ) {
     throw new Error("CorePlayCustomSpawnRuntime is required");
   }
+  var storageRuntime = window.CoreStorageRuntime;
+  if (
+    !storageRuntime ||
+    typeof storageRuntime.resolveStorageByName !== "function" ||
+    typeof storageRuntime.safeReadStorageItem !== "function" ||
+    typeof storageRuntime.safeSetStorageItem !== "function"
+  ) {
+    throw new Error("CoreStorageRuntime is required");
+  }
   var CUSTOM_FOUR_RATE_STORAGE_KEY =
     playCustomSpawnRuntime.PLAY_CUSTOM_FOUR_RATE_STORAGE_KEY || "custom_spawn_4x4_four_rate_v1";
   var DEFAULT_MODE_KEY = "standard_4x4_pow2_no_undo";
+
+  function resolveLocalStorage() {
+    return storageRuntime.resolveStorageByName({
+      windowLike: typeof window !== "undefined" ? window : null,
+      storageName: "localStorage"
+    });
+  }
 
   function resolveCustomSpawnModeConfig(modeKey, modeConfig) {
     var result = playCustomSpawnRuntime.resolvePlayCustomSpawnModeConfig({
@@ -53,16 +69,17 @@
       pathname: window.location.pathname,
       hash: window.location.hash || "",
       readStoredRate: function () {
-        try {
-          return localStorage.getItem(CUSTOM_FOUR_RATE_STORAGE_KEY);
-        } catch (_err) {
-          return null;
-        }
+        return storageRuntime.safeReadStorageItem({
+          storageLike: resolveLocalStorage(),
+          key: CUSTOM_FOUR_RATE_STORAGE_KEY
+        });
       },
       writeStoredRate: function (rateText) {
-        try {
-          localStorage.setItem(CUSTOM_FOUR_RATE_STORAGE_KEY, String(rateText));
-        } catch (_err) {}
+        storageRuntime.safeSetStorageItem({
+          storageLike: resolveLocalStorage(),
+          key: CUSTOM_FOUR_RATE_STORAGE_KEY,
+          value: String(rateText)
+        });
       },
       promptRate: function (defaultValueText) {
         return window.prompt("请输入 4 率（0-100，可输入小数）", String(defaultValueText));
