@@ -113,6 +113,16 @@ if (
 ) {
   throw new Error("CoreHomeGuideRuntime is required");
 }
+var timerModuleRuntime = window.CoreTimerModuleRuntime;
+if (
+  !timerModuleRuntime ||
+  typeof timerModuleRuntime.buildTimerModuleSettingsRowInnerHtml !== "function" ||
+  typeof timerModuleRuntime.resolveTimerModuleSettingsState !== "function" ||
+  typeof timerModuleRuntime.resolveTimerModuleBindingState !== "function" ||
+  typeof timerModuleRuntime.resolveTimerModuleViewMode !== "function"
+) {
+  throw new Error("CoreTimerModuleRuntime is required");
+}
 var practiceTransferRuntime = window.CorePracticeTransferRuntime;
 if (
   !practiceTransferRuntime ||
@@ -961,13 +971,7 @@ function ensureTimerModuleSettingsDom() {
 
   var row = document.createElement("div");
   row.className = "settings-row";
-  row.innerHTML =
-    "<label for='timer-module-view-toggle'>计时器显示</label>" +
-    "<label class='settings-switch-row'>" +
-    "<input id='timer-module-view-toggle' type='checkbox'>" +
-    "<span>显示计时器（关闭后隐藏）</span>" +
-    "</label>" +
-    "<div id='timer-module-view-note' class='settings-note'></div>";
+  row.innerHTML = timerModuleRuntime.buildTimerModuleSettingsRowInnerHtml();
 
   var actions = content.querySelector(".replay-modal-actions");
   if (actions && actions.parentNode === content) {
@@ -991,10 +995,14 @@ function initTimerModuleSettingsUI() {
     var gm = window.game_manager;
     if (!gm) return;
     var view = gm.getTimerModuleViewMode ? gm.getTimerModuleViewMode() : "timer";
-    toggle.disabled = false;
-    toggle.checked = view !== "hidden";
+    var settingsState = timerModuleRuntime.resolveTimerModuleSettingsState({
+      viewMode: view
+    });
+    toggle.disabled = !!(settingsState && settingsState.toggleDisabled);
+    toggle.checked = !!(settingsState && settingsState.toggleChecked);
     if (note) {
-      note.textContent = "关闭后仅隐藏右侧计时器栏，不影响棋盘和回放。";
+      note.textContent =
+        settingsState && settingsState.noteText ? String(settingsState.noteText) : "";
     }
     if (typeof window.syncMobileTimerboxUI === "function") {
       window.syncMobileTimerboxUI();
@@ -1002,11 +1010,19 @@ function initTimerModuleSettingsUI() {
   }
   window.syncTimerModuleSettingsUI = sync;
 
-  if (!toggle.__timerViewBound) {
-    toggle.__timerViewBound = true;
+  var timerBindingState = timerModuleRuntime.resolveTimerModuleBindingState({
+    alreadyBound: !!toggle.__timerViewBound
+  });
+  if (timerBindingState && timerBindingState.shouldBind) {
+    toggle.__timerViewBound = !!timerBindingState.boundValue;
     toggle.addEventListener("change", function () {
       if (!window.game_manager || !window.game_manager.setTimerModuleViewMode) return;
-      window.game_manager.setTimerModuleViewMode(this.checked ? "timer" : "hidden");
+      var nextViewMode = timerModuleRuntime.resolveTimerModuleViewMode({
+        checked: !!this.checked
+      });
+      window.game_manager.setTimerModuleViewMode(
+        nextViewMode && nextViewMode.viewMode ? nextViewMode.viewMode : (this.checked ? "timer" : "hidden")
+      );
       sync();
     });
   }

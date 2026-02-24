@@ -1857,6 +1857,108 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.doneToastVisible).toBe(true);
   });
 
+  test("index ui delegates timer module settings model to runtime helper", async ({ page }) => {
+    const response = await page.goto("/index.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(220);
+
+    const snapshot = await page.evaluate(async () => {
+      const runtime = (window as any).CoreTimerModuleRuntime;
+      if (
+        !runtime ||
+        typeof runtime.buildTimerModuleSettingsRowInnerHtml !== "function" ||
+        typeof runtime.resolveTimerModuleSettingsState !== "function" ||
+        typeof runtime.resolveTimerModuleBindingState !== "function" ||
+        typeof runtime.resolveTimerModuleViewMode !== "function"
+      ) {
+        return { hasRuntime: false };
+      }
+      const openSettingsModal = (window as any).openSettingsModal;
+      if (typeof openSettingsModal !== "function") {
+        return { hasRuntime: true, hasSettingsOpen: false };
+      }
+      const originalBuild = runtime.buildTimerModuleSettingsRowInnerHtml;
+      const originalResolveState = runtime.resolveTimerModuleSettingsState;
+      const originalResolveBinding = runtime.resolveTimerModuleBindingState;
+      const originalResolveViewMode = runtime.resolveTimerModuleViewMode;
+      let buildCallCount = 0;
+      let resolveStateCallCount = 0;
+      let resolveBindingCallCount = 0;
+      let resolveViewModeCallCount = 0;
+      runtime.buildTimerModuleSettingsRowInnerHtml = function () {
+        buildCallCount += 1;
+        return originalBuild();
+      };
+      runtime.resolveTimerModuleSettingsState = function (opts: any) {
+        resolveStateCallCount += 1;
+        return originalResolveState(opts);
+      };
+      runtime.resolveTimerModuleBindingState = function (opts: any) {
+        resolveBindingCallCount += 1;
+        return originalResolveBinding(opts);
+      };
+      runtime.resolveTimerModuleViewMode = function (opts: any) {
+        resolveViewModeCallCount += 1;
+        return originalResolveViewMode(opts);
+      };
+      try {
+        const existingToggle = document.getElementById("timer-module-view-toggle");
+        if (existingToggle) {
+          const existingRow = existingToggle.closest(".settings-row");
+          if (existingRow && existingRow.parentNode) {
+            existingRow.parentNode.removeChild(existingRow);
+          }
+        }
+        openSettingsModal();
+        await new Promise((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => resolve(null));
+          });
+        });
+        const toggle = document.getElementById("timer-module-view-toggle") as HTMLInputElement | null;
+        const note = document.getElementById("timer-module-view-note");
+        if (!toggle) {
+          return { hasRuntime: true, hasSettingsOpen: true, hasToggle: false };
+        }
+        toggle.checked = false;
+        toggle.dispatchEvent(new Event("change", { bubbles: true }));
+        await new Promise((resolve) => {
+          window.requestAnimationFrame(() => resolve(null));
+        });
+        return {
+          hasRuntime: true,
+          hasSettingsOpen: true,
+          hasToggle: true,
+          buildCallCount,
+          resolveStateCallCount,
+          resolveBindingCallCount,
+          resolveViewModeCallCount,
+          noteText: note ? String(note.textContent || "") : "",
+          toggleChecked: !!toggle.checked
+        };
+      } finally {
+        runtime.buildTimerModuleSettingsRowInnerHtml = originalBuild;
+        runtime.resolveTimerModuleSettingsState = originalResolveState;
+        runtime.resolveTimerModuleBindingState = originalResolveBinding;
+        runtime.resolveTimerModuleViewMode = originalResolveViewMode;
+      }
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasSettingsOpen).toBe(true);
+    expect(snapshot.hasToggle).toBe(true);
+    expect(snapshot.buildCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveStateCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveBindingCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveViewModeCallCount).toBeGreaterThan(0);
+    expect(snapshot.noteText).toContain("关闭后仅隐藏右侧计时器栏");
+    expect(snapshot.toggleChecked).toBe(false);
+  });
+
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {
     const response = await page.goto("/play.html?mode_key=spawn_custom_4x4_pow2_no_undo&four_rate=25", {
       waitUntil: "domcontentloaded"
