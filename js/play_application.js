@@ -45,14 +45,6 @@
     playCustomSpawnRuntime.PLAY_CUSTOM_FOUR_RATE_STORAGE_KEY || "custom_spawn_4x4_four_rate_v1";
   var DEFAULT_MODE_KEY = "standard_4x4_pow2_no_undo";
 
-  function parseModeKey() {
-    return playQueryRuntime.parsePlayModeKey(window.location.search, DEFAULT_MODE_KEY);
-  }
-
-  function parseChallengeId() {
-    return playQueryRuntime.parsePlayChallengeId(window.location.search);
-  }
-
   function resolveCustomSpawnModeConfig(modeKey, modeConfig) {
     var result = playCustomSpawnRuntime.resolvePlayCustomSpawnModeConfig({
       modeKey: modeKey,
@@ -167,8 +159,8 @@
   }
 
   bootstrap.startGameOnAnimationFrame(function () {
-    var modeKey = parseModeKey();
-    var challengeId = parseChallengeId();
+    var modeKey = playQueryRuntime.parsePlayModeKey(window.location.search, DEFAULT_MODE_KEY);
+    var challengeId = playQueryRuntime.parsePlayChallengeId(window.location.search);
     var modeConfig = modeCatalogRuntime.resolveCatalogModeWithDefault(
       window.ModeCatalog,
       modeKey,
