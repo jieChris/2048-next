@@ -205,6 +205,15 @@
     };
   }
 
+  function resolveHomeGuideBindingState(options) {
+    var opts = options || {};
+    var alreadyBound = !!opts.alreadyBound;
+    return {
+      shouldBind: !alreadyBound,
+      boundValue: true
+    };
+  }
+
   function resolveHomeGuideControlAction(options) {
     var opts = options || {};
     var action = typeof opts.action === "string" ? opts.action : "";
@@ -446,6 +455,7 @@
   global.CoreHomeGuideRuntime.resolveHomeGuideStepIndexState = resolveHomeGuideStepIndexState;
   global.CoreHomeGuideRuntime.resolveHomeGuideStepTargetState = resolveHomeGuideStepTargetState;
   global.CoreHomeGuideRuntime.resolveHomeGuideElevationPlan = resolveHomeGuideElevationPlan;
+  global.CoreHomeGuideRuntime.resolveHomeGuideBindingState = resolveHomeGuideBindingState;
   global.CoreHomeGuideRuntime.resolveHomeGuideControlAction = resolveHomeGuideControlAction;
   global.CoreHomeGuideRuntime.resolveHomeGuideToggleAction = resolveHomeGuideToggleAction;
   global.CoreHomeGuideRuntime.resolveHomeGuideLifecycleState = resolveHomeGuideLifecycleState;

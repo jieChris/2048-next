@@ -1043,6 +1043,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.resolveHomeGuideStepIndexState !== "function" ||
         typeof runtime.resolveHomeGuideStepTargetState !== "function" ||
         typeof runtime.resolveHomeGuideElevationPlan !== "function" ||
+        typeof runtime.resolveHomeGuideBindingState !== "function" ||
         typeof runtime.resolveHomeGuideControlAction !== "function" ||
         typeof runtime.resolveHomeGuideToggleAction !== "function" ||
         typeof runtime.resolveHomeGuideLifecycleState !== "function" ||
@@ -1153,6 +1154,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const elevationNone = runtime.resolveHomeGuideElevationPlan({
         hasTopActionButtonsAncestor: false,
         hasHeadingAncestor: false
+      });
+      const bindingStateNew = runtime.resolveHomeGuideBindingState({
+        alreadyBound: false
+      });
+      const bindingStateBound = runtime.resolveHomeGuideBindingState({
+        alreadyBound: true
       });
       const controlPrev = runtime.resolveHomeGuideControlAction({
         action: "prev",
@@ -1285,6 +1292,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         elevationTop,
         elevationHeading,
         elevationNone,
+        bindingStateNew,
+        bindingStateBound,
         controlPrev,
         controlNext,
         controlSkip,
@@ -1369,6 +1378,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.elevationNone).toEqual({
       hostSelector: "",
       shouldScopeTopActions: false
+    });
+    expect(snapshot.bindingStateNew).toEqual({
+      shouldBind: true,
+      boundValue: true
+    });
+    expect(snapshot.bindingStateBound).toEqual({
+      shouldBind: false,
+      boundValue: true
     });
     expect(snapshot.controlPrev).toEqual({
       type: "step",
@@ -1509,6 +1526,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.resolveHomeGuideStepIndexState !== "function" ||
         typeof runtime.resolveHomeGuideStepTargetState !== "function" ||
         typeof runtime.resolveHomeGuideElevationPlan !== "function" ||
+        typeof runtime.resolveHomeGuideBindingState !== "function" ||
         typeof runtime.resolveHomeGuideControlAction !== "function" ||
         typeof runtime.resolveHomeGuideToggleAction !== "function" ||
         typeof runtime.resolveHomeGuideLifecycleState !== "function" ||
@@ -1535,6 +1553,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalResolveStepIndexState = runtime.resolveHomeGuideStepIndexState;
       const originalResolveStepTargetState = runtime.resolveHomeGuideStepTargetState;
       const originalResolveElevationPlan = runtime.resolveHomeGuideElevationPlan;
+      const originalResolveBindingState = runtime.resolveHomeGuideBindingState;
       const originalResolveControlAction = runtime.resolveHomeGuideControlAction;
       const originalResolveToggleAction = runtime.resolveHomeGuideToggleAction;
       const originalResolveLifecycleState = runtime.resolveHomeGuideLifecycleState;
@@ -1554,6 +1573,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let stepIndexStateCallCount = 0;
       let stepTargetStateCallCount = 0;
       let elevationPlanCallCount = 0;
+      let bindingStateCallCount = 0;
       let controlActionCallCount = 0;
       let toggleActionCallCount = 0;
       let lifecycleStateCallCount = 0;
@@ -1599,6 +1619,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.resolveHomeGuideElevationPlan = function (opts: any) {
         elevationPlanCallCount += 1;
         return originalResolveElevationPlan(opts);
+      };
+      runtime.resolveHomeGuideBindingState = function (opts: any) {
+        bindingStateCallCount += 1;
+        return originalResolveBindingState(opts);
       };
       runtime.resolveHomeGuideControlAction = function (opts: any) {
         controlActionCallCount += 1;
@@ -1689,6 +1713,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           stepIndexStateCallCount,
           stepTargetStateCallCount,
           elevationPlanCallCount,
+          bindingStateCallCount,
           controlActionCallCount,
           toggleActionCallCount,
           lifecycleStateCallCount,
@@ -1716,6 +1741,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.resolveHomeGuideStepIndexState = originalResolveStepIndexState;
         runtime.resolveHomeGuideStepTargetState = originalResolveStepTargetState;
         runtime.resolveHomeGuideElevationPlan = originalResolveElevationPlan;
+        runtime.resolveHomeGuideBindingState = originalResolveBindingState;
         runtime.resolveHomeGuideControlAction = originalResolveControlAction;
         runtime.resolveHomeGuideToggleAction = originalResolveToggleAction;
         runtime.resolveHomeGuideLifecycleState = originalResolveLifecycleState;
@@ -1741,6 +1767,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.stepIndexStateCallCount).toBeGreaterThan(0);
     expect(snapshot.stepTargetStateCallCount).toBeGreaterThan(0);
     expect(snapshot.elevationPlanCallCount).toBeGreaterThan(0);
+    expect(snapshot.bindingStateCallCount).toBeGreaterThan(0);
     expect(snapshot.controlActionCallCount).toBeGreaterThan(0);
     expect(snapshot.toggleActionCallCount).toBeGreaterThan(0);
     expect(snapshot.lifecycleStateCallCount).toBeGreaterThan(0);

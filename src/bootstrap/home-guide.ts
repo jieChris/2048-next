@@ -126,6 +126,15 @@ export interface ResolveHomeGuideElevationPlanResult {
   shouldScopeTopActions: boolean;
 }
 
+export interface ResolveHomeGuideBindingStateOptions {
+  alreadyBound?: boolean | null | undefined;
+}
+
+export interface ResolveHomeGuideBindingStateResult {
+  shouldBind: boolean;
+  boundValue: boolean;
+}
+
 export interface ResolveHomeGuideControlActionOptions {
   action?: string | null | undefined;
   stepIndex?: number | null | undefined;
@@ -470,6 +479,17 @@ export function resolveHomeGuideElevationPlan(
   return {
     hostSelector: "",
     shouldScopeTopActions: false
+  };
+}
+
+export function resolveHomeGuideBindingState(
+  options: ResolveHomeGuideBindingStateOptions
+): ResolveHomeGuideBindingStateResult {
+  const opts = options || {};
+  const alreadyBound = !!opts.alreadyBound;
+  return {
+    shouldBind: !alreadyBound,
+    boundValue: true
   };
 }
 

@@ -97,6 +97,7 @@ if (
   typeof homeGuideRuntime.resolveHomeGuideStepIndexState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepTargetState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideElevationPlan !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideBindingState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideControlAction !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideToggleAction !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideLifecycleState !== "function" ||
@@ -1335,48 +1336,63 @@ function startHomeGuide(options) {
   var nextBtn = document.getElementById("home-guide-next");
   var skipBtn = document.getElementById("home-guide-skip");
 
-  if (prevBtn && !prevBtn.__homeGuideBound) {
-    prevBtn.__homeGuideBound = true;
-    prevBtn.addEventListener("click", function () {
-      var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
-        action: "prev",
-        stepIndex: HOME_GUIDE_STATE.index
-      });
-      showHomeGuideStep(actionState && typeof actionState.nextStepIndex === "number"
-        ? actionState.nextStepIndex
-        : HOME_GUIDE_STATE.index - 1);
+  if (prevBtn) {
+    var prevBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
+      alreadyBound: !!prevBtn.__homeGuideBound
     });
+    if (prevBindingState && prevBindingState.shouldBind) {
+      prevBtn.__homeGuideBound = !!prevBindingState.boundValue;
+      prevBtn.addEventListener("click", function () {
+        var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
+          action: "prev",
+          stepIndex: HOME_GUIDE_STATE.index
+        });
+        showHomeGuideStep(actionState && typeof actionState.nextStepIndex === "number"
+          ? actionState.nextStepIndex
+          : HOME_GUIDE_STATE.index - 1);
+      });
+    }
   }
-  if (nextBtn && !nextBtn.__homeGuideBound) {
-    nextBtn.__homeGuideBound = true;
-    nextBtn.addEventListener("click", function () {
-      var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
-        action: "next",
-        stepIndex: HOME_GUIDE_STATE.index
-      });
-      showHomeGuideStep(actionState && typeof actionState.nextStepIndex === "number"
-        ? actionState.nextStepIndex
-        : HOME_GUIDE_STATE.index + 1);
+  if (nextBtn) {
+    var nextBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
+      alreadyBound: !!nextBtn.__homeGuideBound
     });
+    if (nextBindingState && nextBindingState.shouldBind) {
+      nextBtn.__homeGuideBound = !!nextBindingState.boundValue;
+      nextBtn.addEventListener("click", function () {
+        var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
+          action: "next",
+          stepIndex: HOME_GUIDE_STATE.index
+        });
+        showHomeGuideStep(actionState && typeof actionState.nextStepIndex === "number"
+          ? actionState.nextStepIndex
+          : HOME_GUIDE_STATE.index + 1);
+      });
+    }
   }
-  if (skipBtn && !skipBtn.__homeGuideBound) {
-    skipBtn.__homeGuideBound = true;
-    skipBtn.addEventListener("click", function () {
-      var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
-        action: "skip",
-        stepIndex: HOME_GUIDE_STATE.index
-      });
-      var finishReason =
-        actionState && actionState.type === "finish" && typeof actionState.finishReason === "string"
-          ? actionState.finishReason
-          : "skipped";
-      var finishState = homeGuideRuntime.resolveHomeGuideFinishState({
-        reason: finishReason
-      });
-      finishHomeGuide(!!finishState.markSeen, {
-        showDoneNotice: !!finishState.showDoneNotice
-      });
+  if (skipBtn) {
+    var skipBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
+      alreadyBound: !!skipBtn.__homeGuideBound
     });
+    if (skipBindingState && skipBindingState.shouldBind) {
+      skipBtn.__homeGuideBound = !!skipBindingState.boundValue;
+      skipBtn.addEventListener("click", function () {
+        var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
+          action: "skip",
+          stepIndex: HOME_GUIDE_STATE.index
+        });
+        var finishReason =
+          actionState && actionState.type === "finish" && typeof actionState.finishReason === "string"
+            ? actionState.finishReason
+            : "skipped";
+        var finishState = homeGuideRuntime.resolveHomeGuideFinishState({
+          reason: finishReason
+        });
+        finishHomeGuide(!!finishState.markSeen, {
+          showDoneNotice: !!finishState.showDoneNotice
+        });
+      });
+    }
   }
 
   showHomeGuideStep(0);
@@ -1427,8 +1443,11 @@ function initHomeGuideSettingsUI() {
 
   window.syncHomeGuideSettingsUI = sync;
 
-  if (!toggle.__homeGuideBound) {
-    toggle.__homeGuideBound = true;
+  var toggleBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
+    alreadyBound: !!toggle.__homeGuideBound
+  });
+  if (toggleBindingState && toggleBindingState.shouldBind) {
+    toggle.__homeGuideBound = !!toggleBindingState.boundValue;
     toggle.addEventListener("change", function () {
       var toggleAction = homeGuideRuntime.resolveHomeGuideToggleAction({
         checked: !!this.checked,

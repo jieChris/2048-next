@@ -14,6 +14,7 @@ import {
   resolveHomeGuideDoneNoticeStyle,
   resolveHomeGuideControlAction,
   resolveHomeGuideElevationPlan,
+  resolveHomeGuideBindingState,
   resolveHomeGuideStepRenderState,
   resolveHomeGuideLayerDisplayState,
   resolveHomeGuideLifecycleState,
@@ -371,6 +372,25 @@ describe("bootstrap home guide", () => {
     ).toEqual({
       hostSelector: "",
       shouldScopeTopActions: false
+    });
+  });
+
+  it("resolves binding state for bound and unbound nodes", () => {
+    expect(
+      resolveHomeGuideBindingState({
+        alreadyBound: false
+      })
+    ).toEqual({
+      shouldBind: true,
+      boundValue: true
+    });
+    expect(
+      resolveHomeGuideBindingState({
+        alreadyBound: true
+      })
+    ).toEqual({
+      shouldBind: false,
+      boundValue: true
     });
   });
 
