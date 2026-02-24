@@ -68,6 +68,25 @@
     return String(opts.optionValue || "") === String(opts.currentThemeId || "");
   }
 
+  function resolveThemePreviewLayout() {
+    return {
+      containerClassName: "theme-preview-dual-wrap",
+      innerHtml:
+        "<div class='theme-preview-grid-block'>" +
+        "<div class='theme-preview-grid-title'>2幂</div>" +
+        "<div id='theme-preview-grid-pow2' class='theme-preview-grid'></div>" +
+        "</div>" +
+        "<div class='theme-preview-grid-block'>" +
+        "<div class='theme-preview-grid-title'>Fibonacci</div>" +
+        "<div id='theme-preview-grid-fib' class='theme-preview-grid'></div>" +
+        "</div>",
+      pow2GridId: "theme-preview-grid-pow2",
+      fibonacciGridId: "theme-preview-grid-fib",
+      pow2Selector: "#theme-preview-grid-pow2",
+      fibonacciSelector: "#theme-preview-grid-fib"
+    };
+  }
+
   global.CoreThemeSettingsRuntime = global.CoreThemeSettingsRuntime || {};
   global.CoreThemeSettingsRuntime.formatThemePreviewValue = formatThemePreviewValue;
   global.CoreThemeSettingsRuntime.resolveThemePreviewTileValues = resolveThemePreviewTileValues;
@@ -75,4 +94,5 @@
   global.CoreThemeSettingsRuntime.resolveThemeDropdownToggleState = resolveThemeDropdownToggleState;
   global.CoreThemeSettingsRuntime.resolveThemeBindingState = resolveThemeBindingState;
   global.CoreThemeSettingsRuntime.resolveThemeOptionSelectedState = resolveThemeOptionSelectedState;
+  global.CoreThemeSettingsRuntime.resolveThemePreviewLayout = resolveThemePreviewLayout;
 })(typeof window !== "undefined" ? window : undefined);

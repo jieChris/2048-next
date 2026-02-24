@@ -40,6 +40,15 @@ export interface ResolveThemeOptionSelectedStateOptions {
   currentThemeId?: string | null | undefined;
 }
 
+export interface ResolveThemePreviewLayoutResult {
+  containerClassName: string;
+  innerHtml: string;
+  pow2GridId: string;
+  fibonacciGridId: string;
+  pow2Selector: string;
+  fibonacciSelector: string;
+}
+
 const FALLBACK_POW2_VALUES = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
 const FALLBACK_FIB_VALUES = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597];
 
@@ -112,4 +121,23 @@ export function resolveThemeOptionSelectedState(
 ): boolean {
   const opts = options || {};
   return String(opts.optionValue || "") === String(opts.currentThemeId || "");
+}
+
+export function resolveThemePreviewLayout(): ResolveThemePreviewLayoutResult {
+  return {
+    containerClassName: "theme-preview-dual-wrap",
+    innerHtml:
+      "<div class='theme-preview-grid-block'>" +
+      "<div class='theme-preview-grid-title'>2幂</div>" +
+      "<div id='theme-preview-grid-pow2' class='theme-preview-grid'></div>" +
+      "</div>" +
+      "<div class='theme-preview-grid-block'>" +
+      "<div class='theme-preview-grid-title'>Fibonacci</div>" +
+      "<div id='theme-preview-grid-fib' class='theme-preview-grid'></div>" +
+      "</div>",
+    pow2GridId: "theme-preview-grid-pow2",
+    fibonacciGridId: "theme-preview-grid-fib",
+    pow2Selector: "#theme-preview-grid-pow2",
+    fibonacciSelector: "#theme-preview-grid-fib"
+  };
 }

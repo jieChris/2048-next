@@ -5,6 +5,7 @@ import {
   resolveThemeBindingState,
   resolveThemeDropdownToggleState,
   resolveThemeOptionSelectedState,
+  resolveThemePreviewLayout,
   resolveThemePreviewTileValues,
   resolveThemeSelectLabel
 } from "../../src/bootstrap/theme-settings";
@@ -79,5 +80,24 @@ describe("bootstrap theme settings", () => {
         currentThemeId: "classic"
       })
     ).toBe(false);
+  });
+
+  it("resolves preview layout contract", () => {
+    expect(resolveThemePreviewLayout()).toEqual({
+      containerClassName: "theme-preview-dual-wrap",
+      innerHtml:
+        "<div class='theme-preview-grid-block'>" +
+        "<div class='theme-preview-grid-title'>2幂</div>" +
+        "<div id='theme-preview-grid-pow2' class='theme-preview-grid'></div>" +
+        "</div>" +
+        "<div class='theme-preview-grid-block'>" +
+        "<div class='theme-preview-grid-title'>Fibonacci</div>" +
+        "<div id='theme-preview-grid-fib' class='theme-preview-grid'></div>" +
+        "</div>",
+      pow2GridId: "theme-preview-grid-pow2",
+      fibonacciGridId: "theme-preview-grid-fib",
+      pow2Selector: "#theme-preview-grid-pow2",
+      fibonacciSelector: "#theme-preview-grid-fib"
+    });
   });
 });

@@ -128,6 +128,7 @@ if (
   !themeSettingsRuntime ||
   typeof themeSettingsRuntime.formatThemePreviewValue !== "function" ||
   typeof themeSettingsRuntime.resolveThemePreviewTileValues !== "function" ||
+  typeof themeSettingsRuntime.resolveThemePreviewLayout !== "function" ||
   typeof themeSettingsRuntime.resolveThemeSelectLabel !== "function" ||
   typeof themeSettingsRuntime.resolveThemeDropdownToggleState !== "function" ||
   typeof themeSettingsRuntime.resolveThemeBindingState !== "function" ||
@@ -790,6 +791,7 @@ function initThemeSettingsUI() {
 
   var themes = window.ThemeManager.getThemes();
   var confirmedTheme = window.ThemeManager.getCurrentTheme();
+  var previewLayout = themeSettingsRuntime.resolveThemePreviewLayout();
 
   function ensurePreviewStyleTag() {
     var style = document.getElementById("theme-preview-style");
@@ -803,19 +805,23 @@ function initThemeSettingsUI() {
 
   function ensureDualPreviewGrids() {
     if (previewRoot.__dualPreviewRefs) return previewRoot.__dualPreviewRefs;
-    previewRoot.className = "theme-preview-dual-wrap";
+    previewRoot.className =
+      previewLayout && previewLayout.containerClassName
+        ? previewLayout.containerClassName
+        : "theme-preview-dual-wrap";
     previewRoot.innerHTML =
-      "<div class='theme-preview-grid-block'>" +
-      "<div class='theme-preview-grid-title'>2幂</div>" +
-      "<div id='theme-preview-grid-pow2' class='theme-preview-grid'></div>" +
-      "</div>" +
-      "<div class='theme-preview-grid-block'>" +
-      "<div class='theme-preview-grid-title'>Fibonacci</div>" +
-      "<div id='theme-preview-grid-fib' class='theme-preview-grid'></div>" +
-      "</div>";
+      previewLayout && previewLayout.innerHtml
+        ? previewLayout.innerHtml
+        : "";
     previewRoot.__dualPreviewRefs = {
-      pow2: document.getElementById("theme-preview-grid-pow2"),
-      fib: document.getElementById("theme-preview-grid-fib")
+      pow2: document.getElementById(
+        previewLayout && previewLayout.pow2GridId ? previewLayout.pow2GridId : "theme-preview-grid-pow2"
+      ),
+      fib: document.getElementById(
+        previewLayout && previewLayout.fibonacciGridId
+          ? previewLayout.fibonacciGridId
+          : "theme-preview-grid-fib"
+      )
     };
     return previewRoot.__dualPreviewRefs;
   }
@@ -854,8 +860,14 @@ function initThemeSettingsUI() {
   function getPreviewCss(themeId) {
     if (!window.ThemeManager.getPreviewCss) return "";
     return window.ThemeManager.getPreviewCss(themeId, {
-      pow2Selector: "#theme-preview-grid-pow2",
-      fibSelector: "#theme-preview-grid-fib"
+      pow2Selector:
+        previewLayout && previewLayout.pow2Selector
+          ? previewLayout.pow2Selector
+          : "#theme-preview-grid-pow2",
+      fibSelector:
+        previewLayout && previewLayout.fibonacciSelector
+          ? previewLayout.fibonacciSelector
+          : "#theme-preview-grid-fib"
     });
   }
 
