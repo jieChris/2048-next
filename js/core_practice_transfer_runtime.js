@@ -213,6 +213,33 @@
     };
   }
 
+  function resolvePracticeTransferPrecheck(options) {
+    var opts = options || {};
+    var manager = opts.manager || null;
+    if (!manager || typeof manager.getFinalBoardMatrix !== "function") {
+      return {
+        canOpen: false,
+        board: null,
+        alertMessage: "当前局面尚未就绪，稍后再试。"
+      };
+    }
+
+    var board = manager.getFinalBoardMatrix();
+    if (!Array.isArray(board) || board.length === 0) {
+      return {
+        canOpen: false,
+        board: null,
+        alertMessage: "未读取到有效盘面。"
+      };
+    }
+
+    return {
+      canOpen: true,
+      board: board,
+      alertMessage: null
+    };
+  }
+
   function buildPracticeModeConfigFromCurrent(options) {
     var opts = options || {};
     var manager = opts.manager || null;
@@ -267,6 +294,8 @@
   global.CorePracticeTransferRuntime.persistPracticeTransferPayload = persistPracticeTransferPayload;
   global.CorePracticeTransferRuntime.createPracticeTransferNavigationPlan =
     createPracticeTransferNavigationPlan;
+  global.CorePracticeTransferRuntime.resolvePracticeTransferPrecheck =
+    resolvePracticeTransferPrecheck;
   global.CorePracticeTransferRuntime.buildPracticeModeConfigFromCurrent =
     buildPracticeModeConfigFromCurrent;
 })(typeof window !== "undefined" ? window : undefined);

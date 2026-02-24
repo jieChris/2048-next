@@ -9,7 +9,8 @@ import {
   cloneJsonSafe,
   createPracticeTransferNavigationPlan,
   hasPracticeGuideSeen,
-  persistPracticeTransferPayload
+  persistPracticeTransferPayload,
+  resolvePracticeTransferPrecheck
 } from "../../src/bootstrap/practice-transfer";
 
 describe("bootstrap practice transfer", () => {
@@ -321,5 +322,43 @@ describe("bootstrap practice transfer", () => {
     expect(plan.openUrl).toContain("practice_token=p1700000000000_4fzzzx");
     expect(plan.openUrl).toContain("practice_ruleset=fibonacci");
     expect(plan.openUrl).toContain("practice_payload=");
+  });
+
+  it("resolves precheck failure when manager is unavailable", () => {
+    expect(resolvePracticeTransferPrecheck({ manager: null })).toEqual({
+      canOpen: false,
+      board: null,
+      alertMessage: "当前局面尚未就绪，稍后再试。"
+    });
+  });
+
+  it("resolves precheck board validity and success state", () => {
+    expect(
+      resolvePracticeTransferPrecheck({
+        manager: {
+          getFinalBoardMatrix() {
+            return [];
+          }
+        }
+      })
+    ).toEqual({
+      canOpen: false,
+      board: null,
+      alertMessage: "未读取到有效盘面。"
+    });
+
+    expect(
+      resolvePracticeTransferPrecheck({
+        manager: {
+          getFinalBoardMatrix() {
+            return [[2, 0], [0, 4]];
+          }
+        }
+      })
+    ).toEqual({
+      canOpen: true,
+      board: [[2, 0], [0, 4]],
+      alertMessage: null
+    });
   });
 });

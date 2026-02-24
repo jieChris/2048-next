@@ -723,7 +723,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const openPracticeBoardFromCurrent = (window as any).openPracticeBoardFromCurrent;
       if (
         !runtime ||
-        typeof runtime.createPracticeTransferNavigationPlan !== "function"
+        typeof runtime.createPracticeTransferNavigationPlan !== "function" ||
+        typeof runtime.resolvePracticeTransferPrecheck !== "function"
       ) {
         return { hasRuntime: false, hasOpenFn: typeof openPracticeBoardFromCurrent === "function" };
       }
@@ -732,14 +733,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
 
       const originalCreatePracticeTransferNavigationPlan = runtime.createPracticeTransferNavigationPlan;
+      const originalResolvePracticeTransferPrecheck = runtime.resolvePracticeTransferPrecheck;
       const originalManager = (window as any).game_manager;
       const originalOpen = window.open;
       let createPlanCallCount = 0;
+      let precheckCallCount = 0;
       let openedUrl = "";
 
       runtime.createPracticeTransferNavigationPlan = function (opts: any) {
         createPlanCallCount += 1;
         return originalCreatePracticeTransferNavigationPlan(opts);
+      };
+      runtime.resolvePracticeTransferPrecheck = function (opts: any) {
+        precheckCallCount += 1;
+        return originalResolvePracticeTransferPrecheck(opts);
       };
       (window as any).game_manager = {
         width: 4,
@@ -770,11 +777,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return {
           hasRuntime: true,
           hasOpenFn: true,
+          precheckCallCount,
           createPlanCallCount,
           openedUrl
         };
       } finally {
         runtime.createPracticeTransferNavigationPlan = originalCreatePracticeTransferNavigationPlan;
+        runtime.resolvePracticeTransferPrecheck = originalResolvePracticeTransferPrecheck;
         (window as any).game_manager = originalManager;
         window.open = originalOpen;
       }
@@ -782,6 +791,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.hasOpenFn).toBe(true);
+    expect(snapshot.precheckCallCount).toBeGreaterThan(0);
     expect(snapshot.createPlanCallCount).toBeGreaterThan(0);
     expect(snapshot.openedUrl).toContain("Practice_board.html");
     expect(snapshot.openedUrl).toContain("practice_token=");

@@ -4,6 +4,7 @@ export interface PracticeTransferManagerLike {
   width?: number | null | undefined;
   height?: number | null | undefined;
   modeConfig?: Record<string, unknown> | null | undefined;
+  getFinalBoardMatrix?: (() => unknown) | null | undefined;
 }
 
 export interface PracticeTransferOptions {
@@ -109,6 +110,16 @@ export interface PracticeTransferNavigationPlan {
   persistedTarget: "local" | "session" | "none";
   openUrl: string;
   usedPayloadInUrl: boolean;
+}
+
+export interface ResolvePracticeTransferPrecheckOptions {
+  manager?: PracticeTransferManagerLike | null | undefined;
+}
+
+export interface ResolvePracticeTransferPrecheckResult {
+  canOpen: boolean;
+  board: unknown[] | null;
+  alertMessage: string | null;
 }
 
 export function cloneJsonSafe<T extends JsonLike>(value: T): T | null {
@@ -317,6 +328,35 @@ export function createPracticeTransferNavigationPlan(
     persistedTarget: persistResult.target,
     openUrl: urlWithPayload,
     usedPayloadInUrl: true
+  };
+}
+
+export function resolvePracticeTransferPrecheck(
+  options: ResolvePracticeTransferPrecheckOptions
+): ResolvePracticeTransferPrecheckResult {
+  const opts = options || {};
+  const manager = opts.manager || null;
+  if (!manager || typeof manager.getFinalBoardMatrix !== "function") {
+    return {
+      canOpen: false,
+      board: null,
+      alertMessage: "当前局面尚未就绪，稍后再试。"
+    };
+  }
+
+  const board = manager.getFinalBoardMatrix();
+  if (!Array.isArray(board) || board.length === 0) {
+    return {
+      canOpen: false,
+      board: null,
+      alertMessage: "未读取到有效盘面。"
+    };
+  }
+
+  return {
+    canOpen: true,
+    board: board as unknown[],
+    alertMessage: null
   };
 }
 

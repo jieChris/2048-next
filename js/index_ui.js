@@ -149,7 +149,8 @@ if (
   typeof practiceTransferRuntime.buildPracticeTransferToken !== "function" ||
   typeof practiceTransferRuntime.buildPracticeTransferPayload !== "function" ||
   typeof practiceTransferRuntime.persistPracticeTransferPayload !== "function" ||
-  typeof practiceTransferRuntime.createPracticeTransferNavigationPlan !== "function"
+  typeof practiceTransferRuntime.createPracticeTransferNavigationPlan !== "function" ||
+  typeof practiceTransferRuntime.resolvePracticeTransferPrecheck !== "function"
 ) {
   throw new Error("CorePracticeTransferRuntime is required");
 }
@@ -637,15 +638,16 @@ function safeReadStorageItem(storage, key) {
 
 window.openPracticeBoardFromCurrent = function () {
   var gm = window.game_manager;
-  if (!gm || typeof gm.getFinalBoardMatrix !== "function") {
-    alert("当前局面尚未就绪，稍后再试。");
+  var precheck = practiceTransferRuntime.resolvePracticeTransferPrecheck({
+    manager: gm || null
+  });
+  if (!precheck || !precheck.canOpen || !Array.isArray(precheck.board)) {
+    if (precheck && precheck.alertMessage) {
+      alert(precheck.alertMessage);
+    }
     return;
   }
-  var board = gm.getFinalBoardMatrix();
-  if (!Array.isArray(board) || board.length === 0) {
-    alert("未读取到有效盘面。");
-    return;
-  }
+  var board = precheck.board;
 
   var localStore = getStorageByName("localStorage");
   var sessionStore = getStorageByName("sessionStorage");
