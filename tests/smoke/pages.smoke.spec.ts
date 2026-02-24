@@ -1913,7 +1913,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.buildTimerModuleSettingsRowInnerHtml !== "function" ||
         typeof runtime.resolveTimerModuleSettingsState !== "function" ||
         typeof runtime.resolveTimerModuleBindingState !== "function" ||
-        typeof runtime.resolveTimerModuleViewMode !== "function"
+        typeof runtime.resolveTimerModuleViewMode !== "function" ||
+        typeof runtime.resolveTimerModuleAppliedViewMode !== "function"
       ) {
         return { hasRuntime: false };
       }
@@ -1925,10 +1926,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalResolveState = runtime.resolveTimerModuleSettingsState;
       const originalResolveBinding = runtime.resolveTimerModuleBindingState;
       const originalResolveViewMode = runtime.resolveTimerModuleViewMode;
+      const originalResolveAppliedViewMode = runtime.resolveTimerModuleAppliedViewMode;
       let buildCallCount = 0;
       let resolveStateCallCount = 0;
       let resolveBindingCallCount = 0;
       let resolveViewModeCallCount = 0;
+      let resolveAppliedViewModeCallCount = 0;
       runtime.buildTimerModuleSettingsRowInnerHtml = function () {
         buildCallCount += 1;
         return originalBuild();
@@ -1944,6 +1947,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.resolveTimerModuleViewMode = function (opts: any) {
         resolveViewModeCallCount += 1;
         return originalResolveViewMode(opts);
+      };
+      runtime.resolveTimerModuleAppliedViewMode = function (opts: any) {
+        resolveAppliedViewModeCallCount += 1;
+        return originalResolveAppliedViewMode(opts);
       };
       try {
         const existingToggle = document.getElementById("timer-module-view-toggle");
@@ -1977,6 +1984,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           resolveStateCallCount,
           resolveBindingCallCount,
           resolveViewModeCallCount,
+          resolveAppliedViewModeCallCount,
           noteText: note ? String(note.textContent || "") : "",
           toggleChecked: !!toggle.checked
         };
@@ -1985,6 +1993,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.resolveTimerModuleSettingsState = originalResolveState;
         runtime.resolveTimerModuleBindingState = originalResolveBinding;
         runtime.resolveTimerModuleViewMode = originalResolveViewMode;
+        runtime.resolveTimerModuleAppliedViewMode = originalResolveAppliedViewMode;
       }
     });
 
@@ -1995,6 +2004,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolveStateCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveBindingCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveViewModeCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveAppliedViewModeCallCount).toBeGreaterThan(0);
     expect(snapshot.noteText).toContain("关闭后仅隐藏右侧计时器栏");
     expect(snapshot.toggleChecked).toBe(false);
   });

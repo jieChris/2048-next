@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildTimerModuleSettingsRowInnerHtml,
+  resolveTimerModuleAppliedViewMode,
   resolveTimerModuleBindingState,
   resolveTimerModuleSettingsState,
   resolveTimerModuleViewMode
@@ -70,5 +71,20 @@ describe("bootstrap timer module", () => {
     ).toEqual({
       viewMode: "hidden"
     });
+  });
+
+  it("resolves applied view mode with runtime result fallback", () => {
+    expect(
+      resolveTimerModuleAppliedViewMode({
+        nextViewMode: { viewMode: "timer" },
+        checked: false
+      })
+    ).toBe("timer");
+    expect(
+      resolveTimerModuleAppliedViewMode({
+        nextViewMode: null,
+        checked: false
+      })
+    ).toBe("hidden");
   });
 });

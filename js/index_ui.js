@@ -119,7 +119,8 @@ if (
   typeof timerModuleRuntime.buildTimerModuleSettingsRowInnerHtml !== "function" ||
   typeof timerModuleRuntime.resolveTimerModuleSettingsState !== "function" ||
   typeof timerModuleRuntime.resolveTimerModuleBindingState !== "function" ||
-  typeof timerModuleRuntime.resolveTimerModuleViewMode !== "function"
+  typeof timerModuleRuntime.resolveTimerModuleViewMode !== "function" ||
+  typeof timerModuleRuntime.resolveTimerModuleAppliedViewMode !== "function"
 ) {
   throw new Error("CoreTimerModuleRuntime is required");
 }
@@ -1080,8 +1081,12 @@ function initTimerModuleSettingsUI() {
       var nextViewMode = timerModuleRuntime.resolveTimerModuleViewMode({
         checked: !!this.checked
       });
+      var appliedViewMode = timerModuleRuntime.resolveTimerModuleAppliedViewMode({
+        nextViewMode: nextViewMode,
+        checked: !!this.checked
+      });
       window.game_manager.setTimerModuleViewMode(
-        nextViewMode && nextViewMode.viewMode ? nextViewMode.viewMode : (this.checked ? "timer" : "hidden")
+        appliedViewMode
       );
       sync();
     });

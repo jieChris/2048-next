@@ -25,6 +25,11 @@ export interface ResolveTimerModuleViewModeResult {
   viewMode: "timer" | "hidden";
 }
 
+export interface ResolveTimerModuleAppliedViewModeOptions {
+  nextViewMode?: ResolveTimerModuleViewModeResult | null | undefined;
+  checked?: boolean | null | undefined;
+}
+
 export function buildTimerModuleSettingsRowInnerHtml(): string {
   return (
     "<label for='timer-module-view-toggle'>计时器显示</label>" +
@@ -66,4 +71,18 @@ export function resolveTimerModuleViewMode(
   return {
     viewMode: opts.checked ? "timer" : "hidden"
   };
+}
+
+export function resolveTimerModuleAppliedViewMode(
+  options: ResolveTimerModuleAppliedViewModeOptions
+): "timer" | "hidden" {
+  const opts = options || {};
+  const nextViewMode = opts.nextViewMode;
+  if (
+    nextViewMode &&
+    (nextViewMode.viewMode === "timer" || nextViewMode.viewMode === "hidden")
+  ) {
+    return nextViewMode.viewMode;
+  }
+  return opts.checked ? "timer" : "hidden";
 }

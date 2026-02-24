@@ -40,10 +40,24 @@
     };
   }
 
+  function resolveTimerModuleAppliedViewMode(options) {
+    var opts = options || {};
+    var nextViewMode = opts.nextViewMode;
+    if (
+      nextViewMode &&
+      (nextViewMode.viewMode === "timer" || nextViewMode.viewMode === "hidden")
+    ) {
+      return nextViewMode.viewMode;
+    }
+    return opts.checked ? "timer" : "hidden";
+  }
+
   global.CoreTimerModuleRuntime = global.CoreTimerModuleRuntime || {};
   global.CoreTimerModuleRuntime.buildTimerModuleSettingsRowInnerHtml =
     buildTimerModuleSettingsRowInnerHtml;
   global.CoreTimerModuleRuntime.resolveTimerModuleSettingsState = resolveTimerModuleSettingsState;
   global.CoreTimerModuleRuntime.resolveTimerModuleBindingState = resolveTimerModuleBindingState;
   global.CoreTimerModuleRuntime.resolveTimerModuleViewMode = resolveTimerModuleViewMode;
+  global.CoreTimerModuleRuntime.resolveTimerModuleAppliedViewMode =
+    resolveTimerModuleAppliedViewMode;
 })(typeof window !== "undefined" ? window : undefined);
