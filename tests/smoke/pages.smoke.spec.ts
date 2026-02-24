@@ -787,7 +787,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.openedUrl).toContain("practice_guide_seen=1");
   });
 
-  test("index ui delegates mobile hint timerbox and undo-top logic to runtime helpers", async ({ page }) => {
+  test("index ui delegates mobile hint timerbox undo-top and top-actions logic to runtime helpers", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const response = await page.goto("/play.html", {
       waitUntil: "domcontentloaded"
@@ -797,12 +797,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("body")).toBeVisible();
     await page.waitForTimeout(260);
 
-    const snapshot = await page.evaluate(() => {
+    const snapshot = await page.evaluate(async () => {
       const runtime = (window as any).CoreMobileHintRuntime;
       const uiRuntime = (window as any).CoreMobileHintUiRuntime;
       const modalRuntime = (window as any).CoreMobileHintModalRuntime;
       const timerRuntime = (window as any).CoreMobileTimerboxRuntime;
       const undoTopRuntime = (window as any).CoreMobileUndoTopRuntime;
+      const topActionsRuntime = (window as any).CoreTopActionsRuntime;
       if (
         !runtime ||
         typeof runtime.collectMobileHintTexts !== "function" ||
@@ -814,14 +815,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof timerRuntime.resolveStoredMobileTimerboxCollapsed !== "function" ||
         typeof timerRuntime.resolveMobileTimerboxDisplayModel !== "function" ||
         !undoTopRuntime ||
-        typeof undoTopRuntime.resolveMobileUndoTopButtonDisplayModel !== "function"
+        typeof undoTopRuntime.resolveMobileUndoTopButtonDisplayModel !== "function" ||
+        !topActionsRuntime ||
+        typeof topActionsRuntime.createGameTopActionsPlacementState !== "function" ||
+        typeof topActionsRuntime.createPracticeTopActionsPlacementState !== "function" ||
+        typeof topActionsRuntime.syncGameTopActionsPlacement !== "function" ||
+        typeof topActionsRuntime.syncPracticeTopActionsPlacement !== "function"
       ) {
         return {
           hasRuntime: false,
           hasUiRuntime: false,
           hasModalRuntime: false,
           hasTimerRuntime: false,
-          hasUndoTopRuntime: false
+          hasUndoTopRuntime: false,
+          hasTopActionsRuntime: false
         };
       }
       const hintBtn = document.getElementById("top-mobile-hint-btn") as HTMLAnchorElement | null;
@@ -832,6 +839,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasModalRuntime: true,
           hasTimerRuntime: true,
           hasUndoTopRuntime: true,
+          hasTopActionsRuntime: true,
           hasHintButton: false
         };
       }
@@ -842,12 +850,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalResolveStored = timerRuntime.resolveStoredMobileTimerboxCollapsed;
       const originalResolveDisplay = timerRuntime.resolveMobileTimerboxDisplayModel;
       const originalUndoTopDisplay = undoTopRuntime.resolveMobileUndoTopButtonDisplayModel;
+      const originalSyncGameTop = topActionsRuntime.syncGameTopActionsPlacement;
+      const originalSyncPracticeTop = topActionsRuntime.syncPracticeTopActionsPlacement;
       let collectCallCount = 0;
       let syncCallCount = 0;
       let ensureModalCallCount = 0;
       let resolveStoredCallCount = 0;
       let resolveDisplayCallCount = 0;
       let resolveUndoTopCallCount = 0;
+      let syncGameTopCallCount = 0;
+      let syncPracticeTopCallCount = 0;
       runtime.collectMobileHintTexts = function (opts: any) {
         collectCallCount += 1;
         const lines = originalCollect(opts);
@@ -873,6 +885,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
         resolveUndoTopCallCount += 1;
         return originalUndoTopDisplay(opts);
       };
+      topActionsRuntime.syncGameTopActionsPlacement = function (opts: any) {
+        syncGameTopCallCount += 1;
+        return originalSyncGameTop(opts);
+      };
+      topActionsRuntime.syncPracticeTopActionsPlacement = function (opts: any) {
+        syncPracticeTopCallCount += 1;
+        return originalSyncPracticeTop(opts);
+      };
 
       try {
         const syncMobileHintUI = (window as any).syncMobileHintUI;
@@ -887,6 +907,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         if (typeof syncMobileUndoTopButtonAvailability === "function") {
           syncMobileUndoTopButtonAvailability();
         }
+        window.dispatchEvent(new Event("resize"));
+        await new Promise((resolve) => setTimeout(resolve, 200));
         hintBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         const overlay = document.getElementById("mobile-hint-overlay");
         const firstLine = document.querySelector("#mobile-hint-body p");
@@ -896,6 +918,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasModalRuntime: true,
           hasTimerRuntime: true,
           hasUndoTopRuntime: true,
+          hasTopActionsRuntime: true,
           hasHintButton: true,
           collectCallCount,
           syncCallCount,
@@ -903,6 +926,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
           resolveStoredCallCount,
           resolveDisplayCallCount,
           resolveUndoTopCallCount,
+          syncGameTopCallCount,
+          syncPracticeTopCallCount,
           overlayVisible: Boolean(overlay && overlay.style.display === "flex"),
           firstLineText: firstLine ? (firstLine.textContent || "").trim() : ""
         };
@@ -913,6 +938,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         timerRuntime.resolveStoredMobileTimerboxCollapsed = originalResolveStored;
         timerRuntime.resolveMobileTimerboxDisplayModel = originalResolveDisplay;
         undoTopRuntime.resolveMobileUndoTopButtonDisplayModel = originalUndoTopDisplay;
+        topActionsRuntime.syncGameTopActionsPlacement = originalSyncGameTop;
+        topActionsRuntime.syncPracticeTopActionsPlacement = originalSyncPracticeTop;
       }
     });
 
@@ -921,6 +948,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasModalRuntime).toBe(true);
     expect(snapshot.hasTimerRuntime).toBe(true);
     expect(snapshot.hasUndoTopRuntime).toBe(true);
+    expect(snapshot.hasTopActionsRuntime).toBe(true);
     expect(snapshot.hasHintButton).toBe(true);
     expect(snapshot.collectCallCount).toBeGreaterThan(0);
     expect(snapshot.syncCallCount).toBeGreaterThan(0);
@@ -928,6 +956,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolveStoredCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveDisplayCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveUndoTopCallCount).toBeGreaterThan(0);
+    expect(snapshot.syncGameTopCallCount).toBeGreaterThan(0);
+    expect(snapshot.syncPracticeTopCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.overlayVisible).toBe(true);
     expect(snapshot.firstLineText.length).toBeGreaterThan(0);
   });

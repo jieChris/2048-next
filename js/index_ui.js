@@ -142,6 +142,16 @@ if (
 ) {
   throw new Error("CoreMobileUndoTopRuntime is required");
 }
+var topActionsRuntime = window.CoreTopActionsRuntime;
+if (
+  !topActionsRuntime ||
+  typeof topActionsRuntime.createGameTopActionsPlacementState !== "function" ||
+  typeof topActionsRuntime.createPracticeTopActionsPlacementState !== "function" ||
+  typeof topActionsRuntime.syncGameTopActionsPlacement !== "function" ||
+  typeof topActionsRuntime.syncPracticeTopActionsPlacement !== "function"
+) {
+  throw new Error("CoreTopActionsRuntime is required");
+}
 
 function tryUndoFromUi() {
   var undoRuntime = window.CoreUndoActionRuntime;
@@ -215,23 +225,15 @@ function ensureMobileTopActionsState() {
   if (!isGamePageScope()) return null;
   if (mobileTopActionsState) return mobileTopActionsState;
 
-  var topActionButtons = document.querySelector(".top-action-buttons");
-  var restartBtn = document.querySelector(".above-game .restart-button");
-  var timerToggleBtn = document.getElementById("timerbox-toggle-btn");
-  if (!topActionButtons || !restartBtn || !timerToggleBtn) return null;
-
-  var restartAnchor = document.createComment("mobile-restart-anchor");
-  var timerToggleAnchor = document.createComment("mobile-timer-toggle-anchor");
-  restartBtn.parentNode.insertBefore(restartAnchor, restartBtn);
-  timerToggleBtn.parentNode.insertBefore(timerToggleAnchor, timerToggleBtn);
-
-  mobileTopActionsState = {
-    topActionButtons: topActionButtons,
-    restartBtn: restartBtn,
-    timerToggleBtn: timerToggleBtn,
-    restartAnchor: restartAnchor,
-    timerToggleAnchor: timerToggleAnchor
-  };
+  mobileTopActionsState = topActionsRuntime.createGameTopActionsPlacementState({
+    enabled: true,
+    topActionButtons: document.querySelector(".top-action-buttons"),
+    restartBtn: document.querySelector(".above-game .restart-button"),
+    timerToggleBtn: document.getElementById("timerbox-toggle-btn"),
+    createComment: function (text) {
+      return document.createComment(text);
+    }
+  });
   return mobileTopActionsState;
 }
 
@@ -239,24 +241,15 @@ function ensurePracticeTopActionsState() {
   if (!isPracticePageScope()) return null;
   if (practiceTopActionsState) return practiceTopActionsState;
 
-  var topActionButtons = document.getElementById("practice-stats-actions");
-  var restartBtn = document.querySelector(".above-game .restart-button");
-  if (!topActionButtons || !restartBtn || !restartBtn.parentNode) return null;
-
-  var restartAnchor = document.createComment("practice-restart-anchor");
-  restartBtn.parentNode.insertBefore(restartAnchor, restartBtn);
-
-  practiceTopActionsState = {
-    topActionButtons: topActionButtons,
-    restartBtn: restartBtn,
-    restartAnchor: restartAnchor
-  };
+  practiceTopActionsState = topActionsRuntime.createPracticeTopActionsPlacementState({
+    enabled: true,
+    topActionButtons: document.getElementById("practice-stats-actions"),
+    restartBtn: document.querySelector(".above-game .restart-button"),
+    createComment: function (text) {
+      return document.createComment(text);
+    }
+  });
   return practiceTopActionsState;
-}
-
-function restoreNodeAfterAnchor(node, anchor) {
-  if (!node || !anchor || !anchor.parentNode) return;
-  anchor.parentNode.insertBefore(node, anchor.nextSibling);
 }
 
 function ensureMobileUndoTopButton() {
@@ -306,35 +299,19 @@ function ensureMobileHintToggleButton() {
 function syncMobileTopActionsPlacement() {
   var state = ensureMobileTopActionsState();
   if (!state) return;
-
-  var compact = isCompactGameViewport();
-  if (compact) {
-    if (state.restartBtn.parentNode !== state.topActionButtons) {
-      state.topActionButtons.appendChild(state.restartBtn);
-    }
-    if (state.timerToggleBtn.parentNode !== state.topActionButtons) {
-      state.topActionButtons.appendChild(state.timerToggleBtn);
-    }
-    return;
-  }
-
-  restoreNodeAfterAnchor(state.restartBtn, state.restartAnchor);
-  restoreNodeAfterAnchor(state.timerToggleBtn, state.timerToggleAnchor);
+  topActionsRuntime.syncGameTopActionsPlacement({
+    state: state,
+    compactViewport: isCompactGameViewport()
+  });
 }
 
 function syncPracticeTopActionsPlacement() {
   var state = ensurePracticeTopActionsState();
   if (!state) return;
-
-  var compact = isCompactGameViewport();
-  if (compact) {
-    if (state.restartBtn.parentNode !== state.topActionButtons) {
-      state.topActionButtons.appendChild(state.restartBtn);
-    }
-    return;
-  }
-
-  restoreNodeAfterAnchor(state.restartBtn, state.restartAnchor);
+  topActionsRuntime.syncPracticeTopActionsPlacement({
+    state: state,
+    compactViewport: isCompactGameViewport()
+  });
 }
 
 function isUndoCapableMode(gm) {
