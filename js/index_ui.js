@@ -110,6 +110,14 @@ var mobileHintRuntime = window.CoreMobileHintRuntime;
 if (!mobileHintRuntime || typeof mobileHintRuntime.collectMobileHintTexts !== "function") {
   throw new Error("CoreMobileHintRuntime is required");
 }
+var mobileHintUiRuntime = window.CoreMobileHintUiRuntime;
+if (
+  !mobileHintUiRuntime ||
+  typeof mobileHintUiRuntime.syncMobileHintTextBlockVisibility !== "function" ||
+  typeof mobileHintUiRuntime.resolveMobileHintDisplayModel !== "function"
+) {
+  throw new Error("CoreMobileHintUiRuntime is required");
+}
 
 function tryUndoFromUi() {
   var undoRuntime = window.CoreUndoActionRuntime;
@@ -453,41 +461,6 @@ function closeMobileHintModal() {
   if (overlay) overlay.style.display = "none";
 }
 
-function syncMobileHintTextBlockVisibility(hidden) {
-  if (!isGamePageScope()) return;
-  var container = document.querySelector(".container");
-  if (!container) return;
-
-  var nodes = [];
-  var children = container.children || [];
-  var afterGameContainer = false;
-  for (var i = 0; i < children.length; i++) {
-    var child = children[i];
-    if (!child || child.nodeType !== 1) continue;
-    if (!afterGameContainer) {
-      if (child.classList && child.classList.contains("game-container")) {
-        afterGameContainer = true;
-      }
-      continue;
-    }
-    var tag = String(child.tagName || "").toLowerCase();
-    if (tag === "p" || tag === "hr") {
-      nodes.push(child);
-    }
-  }
-
-  for (var j = 0; j < nodes.length; j++) {
-    var node = nodes[j];
-    if (hidden) {
-      node.style.setProperty("display", "none", "important");
-      node.setAttribute("data-mobile-hint-collapsed", "1");
-    } else if (node.getAttribute("data-mobile-hint-collapsed") === "1") {
-      node.style.removeProperty("display");
-      node.removeAttribute("data-mobile-hint-collapsed");
-    }
-  }
-}
-
 function syncMobileHintUI(options) {
   options = options || {};
   if (!isGamePageScope()) return;
@@ -497,24 +470,32 @@ function syncMobileHintUI(options) {
   if (!body) return;
 
   var compact = isCompactGameViewport();
-  syncMobileHintTextBlockVisibility(compact);
+  mobileHintUiRuntime.syncMobileHintTextBlockVisibility({
+    isGamePageScope: true,
+    containerNode: document.querySelector(".container"),
+    hidden: compact
+  });
   if (intro) {
     intro.classList.toggle("mobile-hint-hidden", compact);
   }
 
   var btn = ensureMobileHintToggleButton();
   if (!btn) return;
+  var displayModel = mobileHintUiRuntime.resolveMobileHintDisplayModel(compact);
 
-  if (!compact) {
+  if (displayModel && displayModel.collapsedContentEnabled) {
+    body.classList.add("mobile-hint-collapsed-content");
+  } else {
     body.classList.remove("mobile-hint-collapsed-content");
-    btn.style.display = "none";
+  }
+  btn.style.display = displayModel && displayModel.buttonDisplay ? displayModel.buttonDisplay : "none";
+
+  if (!displayModel || !displayModel.collapsedContentEnabled) {
     closeMobileHintModal();
     return;
   }
 
-  body.classList.add("mobile-hint-collapsed-content");
-  btn.style.display = "inline-flex";
-  var label = "查看提示文本";
+  var label = displayModel.buttonLabel || "查看提示文本";
   btn.setAttribute("aria-label", label);
   btn.setAttribute("title", label);
   btn.setAttribute("aria-expanded", "false");

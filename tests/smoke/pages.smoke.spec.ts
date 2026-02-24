@@ -787,7 +787,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.openedUrl).toContain("practice_guide_seen=1");
   });
 
-  test("index ui delegates mobile hint text collection to runtime helper", async ({ page }) => {
+  test("index ui delegates mobile hint logic to runtime helpers", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const response = await page.goto("/play.html", {
       waitUntil: "domcontentloaded"
@@ -799,41 +799,62 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreMobileHintRuntime;
-      if (!runtime || typeof runtime.collectMobileHintTexts !== "function") {
-        return { hasRuntime: false };
+      const uiRuntime = (window as any).CoreMobileHintUiRuntime;
+      if (
+        !runtime ||
+        typeof runtime.collectMobileHintTexts !== "function" ||
+        !uiRuntime ||
+        typeof uiRuntime.syncMobileHintTextBlockVisibility !== "function"
+      ) {
+        return { hasRuntime: false, hasUiRuntime: false };
       }
       const hintBtn = document.getElementById("top-mobile-hint-btn") as HTMLAnchorElement | null;
       if (!hintBtn) {
-        return { hasRuntime: true, hasHintButton: false };
+        return { hasRuntime: true, hasUiRuntime: true, hasHintButton: false };
       }
 
       const originalCollect = runtime.collectMobileHintTexts;
-      let callCount = 0;
+      const originalSync = uiRuntime.syncMobileHintTextBlockVisibility;
+      let collectCallCount = 0;
+      let syncCallCount = 0;
       runtime.collectMobileHintTexts = function (opts: any) {
-        callCount += 1;
+        collectCallCount += 1;
         const lines = originalCollect(opts);
         return Array.isArray(lines) && lines.length ? lines : ["Smoke 提示"];
       };
+      uiRuntime.syncMobileHintTextBlockVisibility = function (opts: any) {
+        syncCallCount += 1;
+        return originalSync(opts);
+      };
 
       try {
+        const syncMobileHintUI = (window as any).syncMobileHintUI;
+        if (typeof syncMobileHintUI === "function") {
+          syncMobileHintUI();
+        }
         hintBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         const overlay = document.getElementById("mobile-hint-overlay");
         const firstLine = document.querySelector("#mobile-hint-body p");
         return {
           hasRuntime: true,
+          hasUiRuntime: true,
           hasHintButton: true,
-          callCount,
+          collectCallCount,
+          syncCallCount,
           overlayVisible: Boolean(overlay && overlay.style.display === "flex"),
           firstLineText: firstLine ? (firstLine.textContent || "").trim() : ""
         };
       } finally {
         runtime.collectMobileHintTexts = originalCollect;
+        uiRuntime.syncMobileHintTextBlockVisibility = originalSync;
       }
     });
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasUiRuntime).toBe(true);
     expect(snapshot.hasHintButton).toBe(true);
-    expect(snapshot.callCount).toBeGreaterThan(0);
+    expect(snapshot.collectCallCount).toBeGreaterThan(0);
+    expect(snapshot.syncCallCount).toBeGreaterThan(0);
     expect(snapshot.overlayVisible).toBe(true);
     expect(snapshot.firstLineText.length).toBeGreaterThan(0);
   });
