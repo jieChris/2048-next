@@ -1029,7 +1029,7 @@ function initTimerModuleSettingsUI() {
     retryDelayMs: 60
   });
   if (!toggle) return;
-  if (retryState && retryState.shouldRetry) {
+  if (retryState.shouldRetry) {
     setTimeout(initTimerModuleSettingsUI, retryState.retryDelayMs);
     return;
   }
@@ -1041,11 +1041,10 @@ function initTimerModuleSettingsUI() {
     var settingsState = timerModuleRuntime.resolveTimerModuleSettingsState({
       viewMode: view
     });
-    toggle.disabled = !!(settingsState && settingsState.toggleDisabled);
-    toggle.checked = !!(settingsState && settingsState.toggleChecked);
+    toggle.disabled = settingsState.toggleDisabled;
+    toggle.checked = settingsState.toggleChecked;
     if (note) {
-      note.textContent =
-        settingsState && settingsState.noteText ? String(settingsState.noteText) : "";
+      note.textContent = settingsState.noteText;
     }
     if (typeof window.syncMobileTimerboxUI === "function") {
       window.syncMobileTimerboxUI();
@@ -1056,8 +1055,8 @@ function initTimerModuleSettingsUI() {
   var timerBindingState = timerModuleRuntime.resolveTimerModuleBindingState({
     alreadyBound: !!toggle.__timerViewBound
   });
-  if (timerBindingState && timerBindingState.shouldBind) {
-    toggle.__timerViewBound = !!timerBindingState.boundValue;
+  if (timerBindingState.shouldBind) {
+    toggle.__timerViewBound = timerBindingState.boundValue;
     toggle.addEventListener("change", function () {
       if (!window.game_manager || !window.game_manager.setTimerModuleViewMode) return;
       var nextViewMode = timerModuleRuntime.resolveTimerModuleViewMode({
