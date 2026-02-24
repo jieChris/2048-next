@@ -787,7 +787,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.openedUrl).toContain("practice_guide_seen=1");
   });
 
-  test("index ui delegates mobile hint logic to runtime helpers", async ({ page }) => {
+  test("index ui delegates mobile hint and timerbox logic to runtime helpers", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const response = await page.goto("/play.html", {
       waitUntil: "domcontentloaded"
@@ -800,23 +800,47 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreMobileHintRuntime;
       const uiRuntime = (window as any).CoreMobileHintUiRuntime;
+      const modalRuntime = (window as any).CoreMobileHintModalRuntime;
+      const timerRuntime = (window as any).CoreMobileTimerboxRuntime;
       if (
         !runtime ||
         typeof runtime.collectMobileHintTexts !== "function" ||
         !uiRuntime ||
-        typeof uiRuntime.syncMobileHintTextBlockVisibility !== "function"
+        typeof uiRuntime.syncMobileHintTextBlockVisibility !== "function" ||
+        !modalRuntime ||
+        typeof modalRuntime.ensureMobileHintModalDom !== "function" ||
+        !timerRuntime ||
+        typeof timerRuntime.resolveStoredMobileTimerboxCollapsed !== "function" ||
+        typeof timerRuntime.resolveMobileTimerboxDisplayModel !== "function"
       ) {
-        return { hasRuntime: false, hasUiRuntime: false };
+        return {
+          hasRuntime: false,
+          hasUiRuntime: false,
+          hasModalRuntime: false,
+          hasTimerRuntime: false
+        };
       }
       const hintBtn = document.getElementById("top-mobile-hint-btn") as HTMLAnchorElement | null;
       if (!hintBtn) {
-        return { hasRuntime: true, hasUiRuntime: true, hasHintButton: false };
+        return {
+          hasRuntime: true,
+          hasUiRuntime: true,
+          hasModalRuntime: true,
+          hasTimerRuntime: true,
+          hasHintButton: false
+        };
       }
 
       const originalCollect = runtime.collectMobileHintTexts;
       const originalSync = uiRuntime.syncMobileHintTextBlockVisibility;
+      const originalEnsureModal = modalRuntime.ensureMobileHintModalDom;
+      const originalResolveStored = timerRuntime.resolveStoredMobileTimerboxCollapsed;
+      const originalResolveDisplay = timerRuntime.resolveMobileTimerboxDisplayModel;
       let collectCallCount = 0;
       let syncCallCount = 0;
+      let ensureModalCallCount = 0;
+      let resolveStoredCallCount = 0;
+      let resolveDisplayCallCount = 0;
       runtime.collectMobileHintTexts = function (opts: any) {
         collectCallCount += 1;
         const lines = originalCollect(opts);
@@ -826,11 +850,27 @@ test.describe("Legacy Multi-Page Smoke", () => {
         syncCallCount += 1;
         return originalSync(opts);
       };
+      modalRuntime.ensureMobileHintModalDom = function (opts: any) {
+        ensureModalCallCount += 1;
+        return originalEnsureModal(opts);
+      };
+      timerRuntime.resolveStoredMobileTimerboxCollapsed = function (opts: any) {
+        resolveStoredCallCount += 1;
+        return originalResolveStored(opts);
+      };
+      timerRuntime.resolveMobileTimerboxDisplayModel = function (opts: any) {
+        resolveDisplayCallCount += 1;
+        return originalResolveDisplay(opts);
+      };
 
       try {
         const syncMobileHintUI = (window as any).syncMobileHintUI;
         if (typeof syncMobileHintUI === "function") {
           syncMobileHintUI();
+        }
+        const syncMobileTimerboxUI = (window as any).syncMobileTimerboxUI;
+        if (typeof syncMobileTimerboxUI === "function") {
+          syncMobileTimerboxUI();
         }
         hintBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         const overlay = document.getElementById("mobile-hint-overlay");
@@ -838,23 +878,36 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return {
           hasRuntime: true,
           hasUiRuntime: true,
+          hasModalRuntime: true,
+          hasTimerRuntime: true,
           hasHintButton: true,
           collectCallCount,
           syncCallCount,
+          ensureModalCallCount,
+          resolveStoredCallCount,
+          resolveDisplayCallCount,
           overlayVisible: Boolean(overlay && overlay.style.display === "flex"),
           firstLineText: firstLine ? (firstLine.textContent || "").trim() : ""
         };
       } finally {
         runtime.collectMobileHintTexts = originalCollect;
         uiRuntime.syncMobileHintTextBlockVisibility = originalSync;
+        modalRuntime.ensureMobileHintModalDom = originalEnsureModal;
+        timerRuntime.resolveStoredMobileTimerboxCollapsed = originalResolveStored;
+        timerRuntime.resolveMobileTimerboxDisplayModel = originalResolveDisplay;
       }
     });
 
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.hasUiRuntime).toBe(true);
+    expect(snapshot.hasModalRuntime).toBe(true);
+    expect(snapshot.hasTimerRuntime).toBe(true);
     expect(snapshot.hasHintButton).toBe(true);
     expect(snapshot.collectCallCount).toBeGreaterThan(0);
     expect(snapshot.syncCallCount).toBeGreaterThan(0);
+    expect(snapshot.ensureModalCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveStoredCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveDisplayCallCount).toBeGreaterThan(0);
     expect(snapshot.overlayVisible).toBe(true);
     expect(snapshot.firstLineText.length).toBeGreaterThan(0);
   });

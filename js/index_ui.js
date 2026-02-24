@@ -118,6 +118,23 @@ if (
 ) {
   throw new Error("CoreMobileHintUiRuntime is required");
 }
+var mobileHintModalRuntime = window.CoreMobileHintModalRuntime;
+if (
+  !mobileHintModalRuntime ||
+  typeof mobileHintModalRuntime.ensureMobileHintModalDom !== "function"
+) {
+  throw new Error("CoreMobileHintModalRuntime is required");
+}
+var mobileTimerboxRuntime = window.CoreMobileTimerboxRuntime;
+if (
+  !mobileTimerboxRuntime ||
+  typeof mobileTimerboxRuntime.resolveStoredMobileTimerboxCollapsed !== "function" ||
+  typeof mobileTimerboxRuntime.persistMobileTimerboxCollapsed !== "function" ||
+  typeof mobileTimerboxRuntime.getTimerboxToggleIconSvg !== "function" ||
+  typeof mobileTimerboxRuntime.resolveMobileTimerboxDisplayModel !== "function"
+) {
+  throw new Error("CoreMobileTimerboxRuntime is required");
+}
 
 function tryUndoFromUi() {
   var undoRuntime = window.CoreUndoActionRuntime;
@@ -394,45 +411,10 @@ function syncMobileUndoTopButtonAvailability() {
 }
 
 function ensureMobileHintModalDom() {
-  if (!isGamePageScope()) return null;
-  var overlay = document.getElementById("mobile-hint-overlay");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "mobile-hint-overlay";
-    overlay.className = "replay-modal-overlay mobile-hint-overlay";
-    overlay.style.display = "none";
-    overlay.innerHTML =
-      "<div class='replay-modal-content mobile-hint-modal-content'>" +
-      "<h3>玩法提示</h3>" +
-      "<div id='mobile-hint-body' class='mobile-hint-body'></div>" +
-      "<div class='replay-modal-actions'>" +
-      "<button id='mobile-hint-close' class='replay-button'>关闭</button>" +
-      "</div>" +
-      "</div>";
-    document.body.appendChild(overlay);
-  }
-
-  if (!overlay.__mobileHintBound) {
-    overlay.__mobileHintBound = true;
-    overlay.addEventListener("click", function (e) {
-      if (e.target === overlay) {
-        overlay.style.display = "none";
-      }
-    });
-  }
-
-  var closeBtn = document.getElementById("mobile-hint-close");
-  if (closeBtn && !closeBtn.__mobileHintBound) {
-    closeBtn.__mobileHintBound = true;
-    closeBtn.addEventListener("click", function () {
-      overlay.style.display = "none";
-    });
-  }
-
-  return {
-    overlay: overlay,
-    body: document.getElementById("mobile-hint-body")
-  };
+  return mobileHintModalRuntime.ensureMobileHintModalDom({
+    isGamePageScope: isGamePageScope(),
+    documentLike: document
+  });
 }
 
 function openMobileHintModal() {
@@ -532,22 +514,24 @@ function initMobileUndoTopButton() {
 
 function readMobileTimerboxCollapsed() {
   var storage = getStorageByName("localStorage");
-  if (!storage) return true;
-  var raw = safeReadStorageItem(storage, MOBILE_TIMERBOX_COLLAPSED_KEY);
-  return raw !== "0";
+  return mobileTimerboxRuntime.resolveStoredMobileTimerboxCollapsed({
+    storageLike: storage,
+    storageKey: MOBILE_TIMERBOX_COLLAPSED_KEY,
+    defaultCollapsed: true
+  });
 }
 
 function writeMobileTimerboxCollapsed(collapsed) {
   var storage = getStorageByName("localStorage");
-  if (!storage) return;
-  safeSetStorageItem(storage, MOBILE_TIMERBOX_COLLAPSED_KEY, collapsed ? "1" : "0");
+  mobileTimerboxRuntime.persistMobileTimerboxCollapsed({
+    storageLike: storage,
+    storageKey: MOBILE_TIMERBOX_COLLAPSED_KEY,
+    collapsed: !!collapsed
+  });
 }
 
 function getTimerboxToggleIconSvg(collapsed) {
-  if (collapsed) {
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
-  }
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>';
+  return mobileTimerboxRuntime.getTimerboxToggleIconSvg(!!collapsed);
 }
 
 function syncMobileTimerboxUI(options) {
@@ -561,20 +545,40 @@ function syncMobileTimerboxUI(options) {
   var timerModuleHidden = timerBox.classList.contains("timerbox-hidden-mode");
   var collapsible = isTimerboxCollapseViewport();
   if (!collapsible || timerModuleHidden) {
-    toggleBtn.style.display = "none";
-    toggleBtn.setAttribute("aria-expanded", "false");
+    var hiddenModel = mobileTimerboxRuntime.resolveMobileTimerboxDisplayModel({
+      collapsible: false,
+      timerModuleHidden: timerModuleHidden,
+      collapsed: true
+    });
+    toggleBtn.style.display =
+      hiddenModel && hiddenModel.toggleDisplay ? hiddenModel.toggleDisplay : "none";
+    toggleBtn.setAttribute(
+      "aria-expanded",
+      hiddenModel && hiddenModel.ariaExpanded ? hiddenModel.ariaExpanded : "false"
+    );
     timerBox.classList.remove("is-mobile-expanded");
     return;
   }
 
-  toggleBtn.style.display = "inline-flex";
   var collapsed = (typeof options.collapsed === "boolean") ? options.collapsed : readMobileTimerboxCollapsed();
-  timerBox.classList.toggle("is-mobile-expanded", !collapsed);
-  var label = collapsed ? "展开计时器" : "收起计时器";
-  toggleBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  var displayModel = mobileTimerboxRuntime.resolveMobileTimerboxDisplayModel({
+    collapsible: true,
+    timerModuleHidden: false,
+    collapsed: collapsed
+  });
+  toggleBtn.style.display = displayModel && displayModel.toggleDisplay ? displayModel.toggleDisplay : "inline-flex";
+  timerBox.classList.toggle("is-mobile-expanded", !!(displayModel && displayModel.expanded));
+  var label = displayModel && displayModel.label ? displayModel.label : "展开计时器";
+  toggleBtn.setAttribute(
+    "aria-expanded",
+    displayModel && displayModel.ariaExpanded ? displayModel.ariaExpanded : (collapsed ? "false" : "true")
+  );
   toggleBtn.setAttribute("aria-label", label);
   toggleBtn.setAttribute("title", label);
-  toggleBtn.innerHTML = getTimerboxToggleIconSvg(collapsed);
+  toggleBtn.innerHTML =
+    displayModel && displayModel.iconSvg
+      ? displayModel.iconSvg
+      : getTimerboxToggleIconSvg(collapsed);
   if (options.persist) {
     writeMobileTimerboxCollapsed(collapsed);
   }

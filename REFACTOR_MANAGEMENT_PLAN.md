@@ -61,6 +61,8 @@
   - `home-guide` 已承接自动启动组合判定（`resolveHomeGuideAutoStart`）与设置态计算（`resolveHomeGuideSettingsState`），`index_ui.js` 改为消费结果渲染 UI
   - 新增 `src/bootstrap/mobile-hint.ts` + `js/core_mobile_hint_runtime.js`，`index_ui.js` 委托移动端提示文案抽取与去重逻辑
   - 新增 `src/bootstrap/mobile-hint-ui.ts` + `js/core_mobile_hint_ui_runtime.js`，`index_ui.js` 委托移动端提示折叠文本区可见性判定与按钮展示态
+  - 新增 `src/bootstrap/mobile-hint-modal.ts` + `js/core_mobile_hint_modal_runtime.js`，`index_ui.js` 委托移动端提示弹层 DOM 创建与关闭事件绑定
+  - 新增 `src/bootstrap/mobile-timerbox.ts` + `js/core_mobile_timerbox_runtime.js`，`index_ui.js` 委托移动端计时器折叠态存储、图标与展示模型计算
   - `legacy_bootstrap_runtime.resolveModeConfig` 现可优先委托 `CoreModeCatalogRuntime.resolveCatalogModeWithDefault`（缺失时自动回退原逻辑）
 
 验收标准：
