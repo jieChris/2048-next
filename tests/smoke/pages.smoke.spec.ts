@@ -2374,6 +2374,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("play application delegates entry resolution to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__playEntryPlanCallCount = 0;
+      (window as any).__playChallengeIntroCallCount = 0;
       const runtimeTarget: Record<string, unknown> = {};
       (window as any).CorePlayEntryRuntime = new Proxy(runtimeTarget, {
         set(target, prop, value) {
@@ -2381,6 +2382,21 @@ test.describe("Legacy Multi-Page Smoke", () => {
             target[prop] = function (opts: unknown) {
               (window as any).__playEntryPlanCallCount =
                 Number((window as any).__playEntryPlanCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+      const challengeIntroRuntimeTarget: Record<string, unknown> = {};
+      (window as any).CorePlayChallengeIntroRuntime = new Proxy(challengeIntroRuntimeTarget, {
+        set(target, prop, value) {
+          if (prop === "resolvePlayChallengeIntroModel" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__playChallengeIntroCallCount =
+                Number((window as any).__playChallengeIntroCallCount || 0) + 1;
               return (value as (input: unknown) => unknown)(opts);
             };
             return true;
@@ -2401,16 +2417,29 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const snapshot = await page.evaluate(() => ({
       hasRuntime: Boolean((window as any).CorePlayEntryRuntime?.resolvePlayEntryPlan),
-      callCount: Number((window as any).__playEntryPlanCallCount || 0),
+      hasChallengeIntroRuntime: Boolean(
+        (window as any).CorePlayChallengeIntroRuntime?.resolvePlayChallengeIntroModel
+      ),
+      entryCallCount: Number((window as any).__playEntryPlanCallCount || 0),
+      challengeIntroCallCount: Number((window as any).__playChallengeIntroCallCount || 0),
       modeKey:
         (window as any).GAME_MODE_CONFIG && typeof (window as any).GAME_MODE_CONFIG.key === "string"
           ? (window as any).GAME_MODE_CONFIG.key
-          : null
+          : null,
+      topIntroDisplay: (() => {
+        const node = document.getElementById("top-mode-intro-btn");
+        if (!node) return null;
+        const htmlNode = node as HTMLElement;
+        return htmlNode.style.display || "";
+      })()
     }));
 
     expect(snapshot.hasRuntime).toBe(true);
-    expect(snapshot.callCount).toBeGreaterThan(0);
+    expect(snapshot.hasChallengeIntroRuntime).toBe(true);
+    expect(snapshot.entryCallCount).toBeGreaterThan(0);
+    expect(snapshot.challengeIntroCallCount).toBeGreaterThan(0);
     expect(snapshot.modeKey).toBe("standard_4x4_pow2_no_undo");
+    expect(snapshot.topIntroDisplay).toBe("none");
   });
 
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {
@@ -2443,6 +2472,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         hasPlayEntryRuntime: Boolean(
           (window as any).CorePlayEntryRuntime?.resolvePlayEntryPlan
         ),
+        hasPlayChallengeIntroRuntime: Boolean(
+          (window as any).CorePlayChallengeIntroRuntime?.resolvePlayChallengeIntroModel
+        ),
         hasHeaderRuntime: Boolean((window as any).CorePlayHeaderRuntime?.buildPlayModeIntroText),
         hasModeCatalogRuntime: Boolean((window as any).CoreModeCatalogRuntime?.resolveCatalogModeWithDefault)
       };
@@ -2452,6 +2484,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasPlayCustomSpawnRuntime).toBe(true);
     expect(snapshot.hasStorageRuntime).toBe(true);
     expect(snapshot.hasPlayEntryRuntime).toBe(true);
+    expect(snapshot.hasPlayChallengeIntroRuntime).toBe(true);
     expect(snapshot.hasHeaderRuntime).toBe(true);
     expect(snapshot.hasModeCatalogRuntime).toBe(true);
     expect(snapshot.key).toBe("spawn_custom_4x4_pow2_no_undo");

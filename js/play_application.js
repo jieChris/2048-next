@@ -33,6 +33,13 @@
   ) {
     throw new Error("CorePlayCustomSpawnRuntime is required");
   }
+  var playChallengeIntroRuntime = window.CorePlayChallengeIntroRuntime;
+  if (
+    !playChallengeIntroRuntime ||
+    typeof playChallengeIntroRuntime.resolvePlayChallengeIntroModel !== "function"
+  ) {
+    throw new Error("CorePlayChallengeIntroRuntime is required");
+  }
   var storageRuntime = window.CoreStorageRuntime;
   if (
     !storageRuntime ||
@@ -96,28 +103,16 @@
     var desc = document.getElementById("mode-intro-desc");
     var leaderboard = document.getElementById("mode-intro-leaderboard");
     if (!introBtn || !modal || !closeBtn || !title || !desc) return;
-
-    // Temporary: hide mode intro entry for all modes.
-    introBtn.style.setProperty("display", "none", "important");
-    modal.style.display = "none";
-    return;
-
-    var is64CappedMode = !!(modeConfig && modeConfig.key === "capped_4x4_pow2_64_no_undo");
-    introBtn.style.setProperty("display", is64CappedMode ? "inline-flex" : "none", "important");
-
-    if (!is64CappedMode) {
-      modal.style.display = "none";
-      return;
-    }
-
-    title.textContent = "64封顶模式简介";
-    desc.textContent =
-      "64封顶是短局冲刺模式。\n" +
-      "目标是尽快合成 64，合成后本局结束并计入该模式榜单。\n" +
-      "建议优先保持大数在角落，减少无效横跳，提升稳定性。";
-    if (leaderboard) {
-      leaderboard.textContent = "榜单功能即将上线，这里将展示 64 封顶模式排行榜。";
-    }
+    var introModel = playChallengeIntroRuntime.resolvePlayChallengeIntroModel({
+      modeKey: modeConfig && modeConfig.key ? String(modeConfig.key) : "",
+      featureEnabled: false
+    });
+    introBtn.style.setProperty("display", introModel.entryDisplay === "inline-flex" ? "inline-flex" : "none", "important");
+    modal.style.display = introModel.modalDisplay === "flex" ? "flex" : "none";
+    title.textContent = introModel.title || "";
+    desc.textContent = introModel.description || "";
+    if (leaderboard) leaderboard.textContent = introModel.leaderboardText || "";
+    if (!introModel.bindEvents) return;
 
     if (!introBtn.__modeIntroBound) {
       introBtn.__modeIntroBound = true;
