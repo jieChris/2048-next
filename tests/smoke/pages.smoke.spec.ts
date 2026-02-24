@@ -787,6 +787,57 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.openedUrl).toContain("practice_guide_seen=1");
   });
 
+  test("index ui delegates mobile hint text collection to runtime helper", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const response = await page.goto("/play.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Play response should exist").not.toBeNull();
+    expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(260);
+
+    const snapshot = await page.evaluate(() => {
+      const runtime = (window as any).CoreMobileHintRuntime;
+      if (!runtime || typeof runtime.collectMobileHintTexts !== "function") {
+        return { hasRuntime: false };
+      }
+      const hintBtn = document.getElementById("top-mobile-hint-btn") as HTMLAnchorElement | null;
+      if (!hintBtn) {
+        return { hasRuntime: true, hasHintButton: false };
+      }
+
+      const originalCollect = runtime.collectMobileHintTexts;
+      let callCount = 0;
+      runtime.collectMobileHintTexts = function (opts: any) {
+        callCount += 1;
+        const lines = originalCollect(opts);
+        return Array.isArray(lines) && lines.length ? lines : ["Smoke 提示"];
+      };
+
+      try {
+        hintBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+        const overlay = document.getElementById("mobile-hint-overlay");
+        const firstLine = document.querySelector("#mobile-hint-body p");
+        return {
+          hasRuntime: true,
+          hasHintButton: true,
+          callCount,
+          overlayVisible: Boolean(overlay && overlay.style.display === "flex"),
+          firstLineText: firstLine ? (firstLine.textContent || "").trim() : ""
+        };
+      } finally {
+        runtime.collectMobileHintTexts = originalCollect;
+      }
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasHintButton).toBe(true);
+    expect(snapshot.callCount).toBeGreaterThan(0);
+    expect(snapshot.overlayVisible).toBe(true);
+    expect(snapshot.firstLineText.length).toBeGreaterThan(0);
+  });
+
   test("home guide runtime provides homepage auto-start gating", async ({ page }) => {
     const response = await page.goto("/index.html", {
       waitUntil: "domcontentloaded"

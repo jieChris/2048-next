@@ -106,6 +106,10 @@ if (
 ) {
   throw new Error("CorePracticeTransferRuntime is required");
 }
+var mobileHintRuntime = window.CoreMobileHintRuntime;
+if (!mobileHintRuntime || typeof mobileHintRuntime.collectMobileHintTexts !== "function") {
+  throw new Error("CoreMobileHintRuntime is required");
+}
 
 function tryUndoFromUi() {
   var undoRuntime = window.CoreUndoActionRuntime;
@@ -381,125 +385,6 @@ function syncMobileUndoTopButtonAvailability() {
   btn.setAttribute("title", "撤回");
 }
 
-function readHintTextForModal(selector) {
-  var el = document.querySelector(selector);
-  if (!el) return "";
-  var raw = typeof el.innerText === "string" ? el.innerText : el.textContent;
-  return String(raw || "")
-    .replace(/\u00a0/g, " ")
-    .replace(/[ \t]+/g, " ")
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function extractHintNodeText(node) {
-  if (!node) return "";
-  if (node.nodeType === 3) {
-    return node.textContent || "";
-  }
-  if (node.nodeType !== 1) return "";
-
-  var tag = String(node.tagName || "").toLowerCase();
-  if (tag === "br") return "\n";
-  if (tag === "a") {
-    var anchorText = "";
-    for (var i = 0; i < node.childNodes.length; i++) {
-      anchorText += extractHintNodeText(node.childNodes[i]);
-    }
-    anchorText = String(anchorText || "").replace(/\s+/g, " ").trim();
-    var href = String(node.getAttribute("href") || "").trim();
-    if (!href) return anchorText;
-    if (!anchorText) return href;
-    return anchorText + "（" + href + "）";
-  }
-
-  var out = "";
-  for (var j = 0; j < node.childNodes.length; j++) {
-    out += extractHintNodeText(node.childNodes[j]);
-  }
-  return out;
-}
-
-function normalizeHintParagraphText(text) {
-  return String(text || "")
-    .replace(/\u00a0/g, " ")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\s+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function collectHintParagraphText(node) {
-  if (!node || node.nodeType !== 1) return "";
-  return normalizeHintParagraphText(extractHintNodeText(node));
-}
-
-function collectHintTextsFromMainContainer() {
-  if (!isGamePageScope()) return [];
-  var container = document.querySelector(".container");
-  if (!container) return [];
-  var lines = [];
-  var paragraphs = container.querySelectorAll("p");
-  for (var i = 0; i < paragraphs.length; i++) {
-    var p = paragraphs[i];
-    if (!p || p.nodeType !== 1) continue;
-    if (p.closest && p.closest(".above-game")) continue;
-    if (p.closest && p.closest(".game-container")) continue;
-    var text = collectHintParagraphText(p);
-    if (text) lines.push(text);
-  }
-
-  if (!lines.length) {
-    var gameContainer = container.querySelector(".game-container");
-    if (!gameContainer || gameContainer.parentNode !== container) return [];
-    var cursor = gameContainer.nextElementSibling;
-    while (cursor) {
-      var tag = String(cursor.tagName || "").toLowerCase();
-      if (tag === "p") {
-        var fallbackText = collectHintParagraphText(cursor);
-        if (fallbackText) lines.push(fallbackText);
-      }
-      cursor = cursor.nextElementSibling;
-    }
-  }
-  return lines;
-}
-
-function dedupeHintLines(lines) {
-  var out = [];
-  var seen = {};
-  for (var i = 0; i < lines.length; i++) {
-    var line = normalizeHintParagraphText(lines[i]);
-    if (!line) continue;
-    if (Object.prototype.hasOwnProperty.call(seen, line)) continue;
-    seen[line] = 1;
-    out.push(line);
-  }
-  return out;
-}
-
-function collectMobileHintTexts() {
-  var introText = collectHintParagraphText(document.querySelector(".above-game .game-intro"));
-  if (!introText) {
-    introText = readHintTextForModal(".above-game .game-intro");
-  }
-  var mainLines = collectHintTextsFromMainContainer();
-  var lines = [];
-  if (introText) lines.push(introText);
-  for (var i = 0; i < mainLines.length; i++) {
-    lines.push(mainLines[i]);
-  }
-  if (!lines.length) {
-    var explainText = readHintTextForModal(".game-explanation");
-    if (explainText) lines.push(explainText);
-  }
-  if (!lines.length) {
-    lines.push("合并数字，合成 2048 方块。");
-  }
-  return dedupeHintLines(lines);
-}
-
 function ensureMobileHintModalDom() {
   if (!isGamePageScope()) return null;
   var overlay = document.getElementById("mobile-hint-overlay");
@@ -547,7 +432,13 @@ function openMobileHintModal() {
   var dom = ensureMobileHintModalDom();
   if (!dom || !dom.overlay || !dom.body) return;
 
-  var lines = collectMobileHintTexts();
+  var lines = mobileHintRuntime.collectMobileHintTexts({
+    isGamePageScope: isGamePageScope(),
+    introNode: document.querySelector(".above-game .game-intro"),
+    containerNode: document.querySelector(".container"),
+    explainNode: document.querySelector(".game-explanation"),
+    defaultText: "合并数字，合成 2048 方块。"
+  });
   dom.body.innerHTML = "";
   for (var i = 0; i < lines.length; i++) {
     var p = document.createElement("p");
