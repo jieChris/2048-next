@@ -28,6 +28,17 @@ export interface ResolveUndoModeIdFromBodyOptions {
   bodyLike?: BodyLike | null | undefined;
 }
 
+export interface ResolveUndoCapabilityFromContextOptions {
+  bodyLike?: BodyLike | null | undefined;
+  manager?: UndoManagerLike | null | undefined;
+  globalModeConfig?: UndoGlobalModeConfigLike | null | undefined;
+}
+
+export interface UndoCapabilityState {
+  modeId: string;
+  modeUndoCapable: boolean;
+}
+
 export function resolveUndoModeIdFromBody(
   options: ResolveUndoModeIdFromBodyOptions
 ): string {
@@ -108,6 +119,23 @@ export function isUndoCapableMode(input: UndoCapabilityInput): boolean {
   } catch (_err) {}
 
   return Boolean(manager.undoEnabled);
+}
+
+export function resolveUndoCapabilityFromContext(
+  options: ResolveUndoCapabilityFromContextOptions
+): UndoCapabilityState {
+  const opts = options || {};
+  const modeId = resolveUndoModeIdFromBody({
+    bodyLike: opts.bodyLike
+  });
+  return {
+    modeId,
+    modeUndoCapable: isUndoCapableMode({
+      modeId,
+      manager: opts.manager || null,
+      globalModeConfig: opts.globalModeConfig || null
+    })
+  };
 }
 
 export function isUndoInteractionEnabled(

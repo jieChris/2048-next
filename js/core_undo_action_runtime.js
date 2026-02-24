@@ -79,6 +79,21 @@
     return !!manager.undoEnabled;
   }
 
+  function resolveUndoCapabilityFromContext(options) {
+    var opts = options || {};
+    var modeId = resolveUndoModeIdFromBody({
+      bodyLike: opts.bodyLike
+    });
+    return {
+      modeId: modeId,
+      modeUndoCapable: isUndoCapableMode({
+        modeId: modeId,
+        manager: opts.manager || null,
+        globalModeConfig: opts.globalModeConfig || null
+      })
+    };
+  }
+
   function isUndoInteractionEnabled(manager) {
     return !!(
       manager &&
@@ -99,6 +114,7 @@
   global.CoreUndoActionRuntime.resolveUndoModeIdFromBody = resolveUndoModeIdFromBody;
   global.CoreUndoActionRuntime.resolveUndoModeId = resolveUndoModeId;
   global.CoreUndoActionRuntime.isUndoCapableMode = isUndoCapableMode;
+  global.CoreUndoActionRuntime.resolveUndoCapabilityFromContext = resolveUndoCapabilityFromContext;
   global.CoreUndoActionRuntime.isUndoInteractionEnabled = isUndoInteractionEnabled;
   global.CoreUndoActionRuntime.tryTriggerUndo = tryTriggerUndo;
 })(typeof window !== "undefined" ? window : undefined);

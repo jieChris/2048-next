@@ -4,6 +4,7 @@ import {
   canTriggerUndo,
   isUndoCapableMode,
   isUndoInteractionEnabled,
+  resolveUndoCapabilityFromContext,
   resolveUndoModeIdFromBody,
   resolveUndoModeId,
   tryTriggerUndo
@@ -85,6 +86,27 @@ describe("bootstrap undo action", () => {
       })
     ).toBe("mode_from_dom");
     expect(resolveUndoModeIdFromBody({ bodyLike: null })).toBe("");
+  });
+
+  it("resolves undo capability from context safely", () => {
+    const state = resolveUndoCapabilityFromContext({
+      bodyLike: {
+        getAttribute(name: string) {
+          return name === "data-mode-id" ? "capped_4x4_pow2_no_undo" : null;
+        }
+      },
+      manager: { mode: "standard", undoEnabled: true },
+      globalModeConfig: { key: "standard", undo_enabled: true }
+    });
+    expect(state.modeId).toBe("capped_4x4_pow2_no_undo");
+    expect(state.modeUndoCapable).toBe(false);
+
+    const fallbackState = resolveUndoCapabilityFromContext({
+      bodyLike: null,
+      manager: { mode: "standard", undoEnabled: true }
+    });
+    expect(fallbackState.modeId).toBe("");
+    expect(fallbackState.modeUndoCapable).toBe(true);
   });
 
   it("supports undo capability by mode key guard", () => {

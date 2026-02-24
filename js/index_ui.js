@@ -161,6 +161,7 @@ if (
   typeof undoActionRuntime.resolveUndoModeIdFromBody !== "function" ||
   typeof undoActionRuntime.resolveUndoModeId !== "function" ||
   typeof undoActionRuntime.isUndoCapableMode !== "function" ||
+  typeof undoActionRuntime.resolveUndoCapabilityFromContext !== "function" ||
   typeof undoActionRuntime.isUndoInteractionEnabled !== "function"
 ) {
   throw new Error("CoreUndoActionRuntime is required");
@@ -345,12 +346,9 @@ function syncPracticeTopActionsPlacement() {
   });
 }
 
-function isUndoCapableMode(gm) {
-  var modeId = undoActionRuntime.resolveUndoModeIdFromBody({
-    bodyLike: document.body
-  });
-  return !!undoActionRuntime.isUndoCapableMode({
-    modeId: modeId,
+function resolveUndoCapabilityState(gm) {
+  return undoActionRuntime.resolveUndoCapabilityFromContext({
+    bodyLike: document.body,
     manager: gm || null,
     globalModeConfig:
       typeof window !== "undefined" && window.GAME_MODE_CONFIG
@@ -366,7 +364,8 @@ function syncMobileUndoTopButtonAvailability() {
 
   var compact = isCompactGameViewport();
   var gm = window.game_manager;
-  var modeUndoCapable = isUndoCapableMode(gm);
+  var undoCapabilityState = resolveUndoCapabilityState(gm);
+  var modeUndoCapable = !!(undoCapabilityState && undoCapabilityState.modeUndoCapable);
   var canUndoNow = !!undoActionRuntime.isUndoInteractionEnabled(gm);
   var displayModel = mobileUndoTopRuntime.resolveMobileUndoTopButtonDisplayModel({
     compactViewport: compact,
