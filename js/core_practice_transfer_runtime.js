@@ -136,6 +136,83 @@
     return { persisted: false, target: "none" };
   }
 
+  function createPracticeTransferNavigationPlan(options) {
+    var opts = options || {};
+    var token = buildPracticeTransferToken({
+      nowMs: opts.nowMs,
+      randomLike: opts.randomLike,
+      prefix: opts.tokenPrefix
+    });
+    var modeConfig = buildPracticeModeConfigFromCurrent({
+      gameModeConfig: opts.gameModeConfig || null,
+      manager: opts.manager || null
+    });
+    var practiceRuleset = modeConfig.ruleset === "fibonacci" ? "fibonacci" : "pow2";
+    var payload = buildPracticeTransferPayload({
+      token: token,
+      board: opts.board,
+      modeConfig: modeConfig,
+      nowMs: opts.nowMs
+    });
+    var payloadString = JSON.stringify(payload);
+    var guideSeen = hasPracticeGuideSeen({
+      localStorageLike: opts.localStorageLike || null,
+      sessionStorageLike: opts.sessionStorageLike || null,
+      guideShownKey: opts.guideShownKey,
+      guideSeenFlag: opts.guideSeenFlag,
+      cookie: opts.cookie,
+      windowName: opts.windowName
+    });
+    var baseUrl = buildPracticeBoardUrl({
+      token: token,
+      practiceRuleset: practiceRuleset,
+      includeGuideSeen: guideSeen,
+      basePath: opts.basePath
+    });
+    var persistResult = persistPracticeTransferPayload({
+      localStorageLike: opts.localStorageLike || null,
+      sessionStorageLike: opts.sessionStorageLike || null,
+      localStorageKey: opts.localStorageKey,
+      sessionStorageKey: opts.sessionStorageKey,
+      payload: payloadString
+    });
+    if (persistResult.persisted) {
+      return {
+        token: token,
+        practiceRuleset: practiceRuleset,
+        modeConfig: modeConfig,
+        payload: payload,
+        payloadString: payloadString,
+        guideSeen: guideSeen,
+        persisted: true,
+        persistedTarget: persistResult.target,
+        openUrl: baseUrl,
+        usedPayloadInUrl: false
+      };
+    }
+
+    var urlWithPayload = buildPracticeBoardUrl({
+      token: token,
+      practiceRuleset: practiceRuleset,
+      includeGuideSeen: guideSeen,
+      includePayload: true,
+      payload: payloadString,
+      basePath: opts.basePath
+    });
+    return {
+      token: token,
+      practiceRuleset: practiceRuleset,
+      modeConfig: modeConfig,
+      payload: payload,
+      payloadString: payloadString,
+      guideSeen: guideSeen,
+      persisted: false,
+      persistedTarget: persistResult.target,
+      openUrl: urlWithPayload,
+      usedPayloadInUrl: true
+    };
+  }
+
   function buildPracticeModeConfigFromCurrent(options) {
     var opts = options || {};
     var manager = opts.manager || null;
@@ -188,6 +265,8 @@
   global.CorePracticeTransferRuntime.buildPracticeTransferToken = buildPracticeTransferToken;
   global.CorePracticeTransferRuntime.buildPracticeTransferPayload = buildPracticeTransferPayload;
   global.CorePracticeTransferRuntime.persistPracticeTransferPayload = persistPracticeTransferPayload;
+  global.CorePracticeTransferRuntime.createPracticeTransferNavigationPlan =
+    createPracticeTransferNavigationPlan;
   global.CorePracticeTransferRuntime.buildPracticeModeConfigFromCurrent =
     buildPracticeModeConfigFromCurrent;
 })(typeof window !== "undefined" ? window : undefined);

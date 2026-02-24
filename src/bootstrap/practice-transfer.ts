@@ -82,6 +82,35 @@ export interface PersistPracticeTransferPayloadResult {
   target: "local" | "session" | "none";
 }
 
+export interface CreatePracticeTransferNavigationPlanOptions extends PracticeTransferOptions {
+  board: unknown;
+  localStorageLike?: StorageLike | null | undefined;
+  sessionStorageLike?: StorageLike | null | undefined;
+  guideShownKey?: string | null | undefined;
+  guideSeenFlag?: string | null | undefined;
+  cookie?: string | null | undefined;
+  windowName?: string | null | undefined;
+  localStorageKey?: string | null | undefined;
+  sessionStorageKey?: string | null | undefined;
+  nowMs?: number | null | undefined;
+  randomLike?: (() => number) | null | undefined;
+  tokenPrefix?: string | null | undefined;
+  basePath?: string | null | undefined;
+}
+
+export interface PracticeTransferNavigationPlan {
+  token: string;
+  practiceRuleset: "pow2" | "fibonacci";
+  modeConfig: PracticeTransferModeConfig;
+  payload: PracticeTransferPayload;
+  payloadString: string;
+  guideSeen: boolean;
+  persisted: boolean;
+  persistedTarget: "local" | "session" | "none";
+  openUrl: string;
+  usedPayloadInUrl: boolean;
+}
+
 export function cloneJsonSafe<T extends JsonLike>(value: T): T | null {
   try {
     return JSON.parse(JSON.stringify(value)) as T;
@@ -210,6 +239,85 @@ export function persistPracticeTransferPayload(
     return { persisted: true, target: "session" };
   }
   return { persisted: false, target: "none" };
+}
+
+export function createPracticeTransferNavigationPlan(
+  options: CreatePracticeTransferNavigationPlanOptions
+): PracticeTransferNavigationPlan {
+  const opts = options || ({} as CreatePracticeTransferNavigationPlanOptions);
+  const token = buildPracticeTransferToken({
+    nowMs: opts.nowMs,
+    randomLike: opts.randomLike,
+    prefix: opts.tokenPrefix
+  });
+  const modeConfig = buildPracticeModeConfigFromCurrent({
+    gameModeConfig: opts.gameModeConfig || null,
+    manager: opts.manager || null
+  });
+  const practiceRuleset = modeConfig.ruleset === "fibonacci" ? "fibonacci" : "pow2";
+  const payload = buildPracticeTransferPayload({
+    token,
+    board: opts.board,
+    modeConfig,
+    nowMs: opts.nowMs
+  });
+  const payloadString = JSON.stringify(payload);
+  const guideSeen = hasPracticeGuideSeen({
+    localStorageLike: opts.localStorageLike || null,
+    sessionStorageLike: opts.sessionStorageLike || null,
+    guideShownKey: opts.guideShownKey,
+    guideSeenFlag: opts.guideSeenFlag,
+    cookie: opts.cookie,
+    windowName: opts.windowName
+  });
+  const baseUrl = buildPracticeBoardUrl({
+    token,
+    practiceRuleset,
+    includeGuideSeen: guideSeen,
+    basePath: opts.basePath
+  });
+  const persistResult = persistPracticeTransferPayload({
+    localStorageLike: opts.localStorageLike || null,
+    sessionStorageLike: opts.sessionStorageLike || null,
+    localStorageKey: opts.localStorageKey,
+    sessionStorageKey: opts.sessionStorageKey,
+    payload: payloadString
+  });
+  if (persistResult.persisted) {
+    return {
+      token,
+      practiceRuleset,
+      modeConfig,
+      payload,
+      payloadString,
+      guideSeen,
+      persisted: true,
+      persistedTarget: persistResult.target,
+      openUrl: baseUrl,
+      usedPayloadInUrl: false
+    };
+  }
+
+  const urlWithPayload = buildPracticeBoardUrl({
+    token,
+    practiceRuleset,
+    includeGuideSeen: guideSeen,
+    includePayload: true,
+    payload: payloadString,
+    basePath: opts.basePath
+  });
+  return {
+    token,
+    practiceRuleset,
+    modeConfig,
+    payload,
+    payloadString,
+    guideSeen,
+    persisted: false,
+    persistedTarget: persistResult.target,
+    openUrl: urlWithPayload,
+    usedPayloadInUrl: true
+  };
 }
 
 export function buildPracticeModeConfigFromCurrent(

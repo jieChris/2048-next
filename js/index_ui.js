@@ -99,7 +99,8 @@ if (
   typeof practiceTransferRuntime.buildPracticeBoardUrl !== "function" ||
   typeof practiceTransferRuntime.buildPracticeTransferToken !== "function" ||
   typeof practiceTransferRuntime.buildPracticeTransferPayload !== "function" ||
-  typeof practiceTransferRuntime.persistPracticeTransferPayload !== "function"
+  typeof practiceTransferRuntime.persistPracticeTransferPayload !== "function" ||
+  typeof practiceTransferRuntime.createPracticeTransferNavigationPlan !== "function"
 ) {
   throw new Error("CorePracticeTransferRuntime is required");
 }
@@ -778,7 +779,18 @@ function safeReadStorageItem(storage, key) {
   }
 }
 
-function hasPracticeGuideSeen() {
+window.openPracticeBoardFromCurrent = function () {
+  var gm = window.game_manager;
+  if (!gm || typeof gm.getFinalBoardMatrix !== "function") {
+    alert("当前局面尚未就绪，稍后再试。");
+    return;
+  }
+  var board = gm.getFinalBoardMatrix();
+  if (!Array.isArray(board) || board.length === 0) {
+    alert("未读取到有效盘面。");
+    return;
+  }
+
   var localStore = getStorageByName("localStorage");
   var sessionStore = getStorageByName("sessionStorage");
   var cookie = "";
@@ -793,79 +805,27 @@ function hasPracticeGuideSeen() {
   } catch (_err) {
     windowName = "";
   }
-  return !!practiceTransferRuntime.hasPracticeGuideSeen({
+  var plan = practiceTransferRuntime.createPracticeTransferNavigationPlan({
+    gameModeConfig:
+      window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object"
+        ? window.GAME_MODE_CONFIG
+        : null,
+    manager: gm || null,
+    board: board,
     localStorageLike: localStore,
     sessionStorageLike: sessionStore,
     guideShownKey: PRACTICE_GUIDE_SHOWN_KEY,
     guideSeenFlag: PRACTICE_GUIDE_SEEN_FLAG,
     cookie: cookie,
-    windowName: windowName
-  });
-}
-
-function buildPracticeModeConfigFromCurrent(gm) {
-  return practiceTransferRuntime.buildPracticeModeConfigFromCurrent({
-    gameModeConfig:
-      window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object"
-        ? window.GAME_MODE_CONFIG
-        : null,
-    manager: gm || null
-  });
-}
-
-window.openPracticeBoardFromCurrent = function () {
-  var gm = window.game_manager;
-  if (!gm || typeof gm.getFinalBoardMatrix !== "function") {
-    alert("当前局面尚未就绪，稍后再试。");
-    return;
-  }
-  var board = gm.getFinalBoardMatrix();
-  if (!Array.isArray(board) || board.length === 0) {
-    alert("未读取到有效盘面。");
-    return;
-  }
-
-  var token = practiceTransferRuntime.buildPracticeTransferToken({});
-  var practiceModeConfig = buildPracticeModeConfigFromCurrent(gm);
-  var practiceRuleset = practiceModeConfig.ruleset === "fibonacci" ? "fibonacci" : "pow2";
-  var payload = practiceTransferRuntime.buildPracticeTransferPayload({
-    token: token,
-    board: board,
-    modeConfig: practiceModeConfig
-  });
-
-  var payloadStr = JSON.stringify(payload);
-  var guideSeen = hasPracticeGuideSeen();
-  var baseUrl = practiceTransferRuntime.buildPracticeBoardUrl({
-    token: token,
-    practiceRuleset: practiceRuleset,
-    includeGuideSeen: guideSeen
-  });
-  var localStore = getStorageByName("localStorage");
-  var sessionStore = getStorageByName("sessionStorage");
-  var persistResult = practiceTransferRuntime.persistPracticeTransferPayload({
-    localStorageLike: localStore,
-    sessionStorageLike: sessionStore,
+    windowName: windowName,
     localStorageKey: PRACTICE_TRANSFER_KEY,
-    sessionStorageKey: PRACTICE_TRANSFER_SESSION_KEY,
-    payload: payloadStr
+    sessionStorageKey: PRACTICE_TRANSFER_SESSION_KEY
   });
-  var persisted = !!(persistResult && persistResult.persisted);
-
-  if (persisted) {
-    window.open(baseUrl, "_blank");
+  if (!plan || !plan.openUrl) {
+    alert("练习板链接生成失败。");
     return;
   }
-
-  // Final fallback: pass payload through URL when both storages are unavailable.
-  var urlWithPayload = practiceTransferRuntime.buildPracticeBoardUrl({
-    token: token,
-    practiceRuleset: practiceRuleset,
-    includeGuideSeen: guideSeen,
-    includePayload: true,
-    payload: payloadStr
-  });
-  window.open(urlWithPayload, "_blank");
+  window.open(plan.openUrl, "_blank");
 };
 
 

@@ -7,6 +7,7 @@ import {
   buildPracticeTransferToken,
   buildPracticeModeConfigFromCurrent,
   cloneJsonSafe,
+  createPracticeTransferNavigationPlan,
   hasPracticeGuideSeen,
   persistPracticeTransferPayload
 } from "../../src/bootstrap/practice-transfer";
@@ -255,5 +256,70 @@ describe("bootstrap practice transfer", () => {
     });
 
     expect(result).toEqual({ persisted: false, target: "none" });
+  });
+
+  it("builds a direct-open transfer plan when payload is persisted", () => {
+    const writes: string[] = [];
+    const plan = createPracticeTransferNavigationPlan({
+      board: [[2, 0], [0, 4]],
+      gameModeConfig: {
+        ruleset: "pow2",
+        board_width: 2,
+        board_height: 2
+      },
+      localStorageLike: {
+        getItem(key: string) {
+          return key === "practice_guide_shown_v2" ? "1" : null;
+        },
+        setItem(key: string, value: string) {
+          writes.push("local:" + key + ":" + value);
+        }
+      },
+      sessionStorageLike: {
+        getItem() {
+          return null;
+        },
+        setItem(key: string, value: string) {
+          writes.push("session:" + key + ":" + value);
+        }
+      },
+      nowMs: 1700000000000,
+      randomLike: () => 0.123456789
+    });
+
+    expect(plan.token).toBe("p1700000000000_4fzzzx");
+    expect(plan.persisted).toBe(true);
+    expect(plan.persistedTarget).toBe("local");
+    expect(plan.usedPayloadInUrl).toBe(false);
+    expect(plan.practiceRuleset).toBe("pow2");
+    expect(plan.guideSeen).toBe(true);
+    expect(plan.openUrl).toContain("Practice_board.html");
+    expect(plan.openUrl).toContain("practice_token=p1700000000000_4fzzzx");
+    expect(plan.openUrl).toContain("practice_ruleset=pow2");
+    expect(plan.openUrl).toContain("practice_guide_seen=1");
+    expect(writes).toEqual(["local:practice_board_transfer_v1:" + plan.payloadString]);
+  });
+
+  it("falls back to url payload when both storages cannot persist", () => {
+    const plan = createPracticeTransferNavigationPlan({
+      board: [[1, 1, 2, 3]],
+      gameModeConfig: {
+        ruleset: "fibonacci",
+        board_width: 4,
+        board_height: 1
+      },
+      localStorageLike: null,
+      sessionStorageLike: null,
+      nowMs: 1700000000000,
+      randomLike: () => 0.123456789
+    });
+
+    expect(plan.persisted).toBe(false);
+    expect(plan.persistedTarget).toBe("none");
+    expect(plan.usedPayloadInUrl).toBe(true);
+    expect(plan.practiceRuleset).toBe("fibonacci");
+    expect(plan.openUrl).toContain("practice_token=p1700000000000_4fzzzx");
+    expect(plan.openUrl).toContain("practice_ruleset=fibonacci");
+    expect(plan.openUrl).toContain("practice_payload=");
   });
 });
