@@ -1959,6 +1959,115 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.toggleChecked).toBe(false);
   });
 
+  test("index ui delegates theme settings model to runtime helper", async ({ page }) => {
+    const response = await page.goto("/index.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(220);
+
+    const snapshot = await page.evaluate(async () => {
+      const runtime = (window as any).CoreThemeSettingsRuntime;
+      if (
+        !runtime ||
+        typeof runtime.formatThemePreviewValue !== "function" ||
+        typeof runtime.resolveThemePreviewTileValues !== "function" ||
+        typeof runtime.resolveThemeSelectLabel !== "function" ||
+        typeof runtime.resolveThemeDropdownToggleState !== "function" ||
+        typeof runtime.resolveThemeBindingState !== "function" ||
+        typeof runtime.resolveThemeOptionSelectedState !== "function"
+      ) {
+        return { hasRuntime: false };
+      }
+      const openSettingsModal = (window as any).openSettingsModal;
+      if (typeof openSettingsModal !== "function") {
+        return { hasRuntime: true, hasSettingsOpen: false };
+      }
+      const originalFormat = runtime.formatThemePreviewValue;
+      const originalResolveTileValues = runtime.resolveThemePreviewTileValues;
+      const originalResolveLabel = runtime.resolveThemeSelectLabel;
+      const originalResolveDropdown = runtime.resolveThemeDropdownToggleState;
+      const originalResolveBinding = runtime.resolveThemeBindingState;
+      const originalResolveOptionSelected = runtime.resolveThemeOptionSelectedState;
+      let formatCallCount = 0;
+      let resolveTileValuesCallCount = 0;
+      let resolveLabelCallCount = 0;
+      let resolveDropdownCallCount = 0;
+      let resolveBindingCallCount = 0;
+      let resolveOptionSelectedCallCount = 0;
+      runtime.formatThemePreviewValue = function (value: any) {
+        formatCallCount += 1;
+        return originalFormat(value);
+      };
+      runtime.resolveThemePreviewTileValues = function (opts: any) {
+        resolveTileValuesCallCount += 1;
+        return originalResolveTileValues(opts);
+      };
+      runtime.resolveThemeSelectLabel = function (opts: any) {
+        resolveLabelCallCount += 1;
+        return originalResolveLabel(opts);
+      };
+      runtime.resolveThemeDropdownToggleState = function (opts: any) {
+        resolveDropdownCallCount += 1;
+        return originalResolveDropdown(opts);
+      };
+      runtime.resolveThemeBindingState = function (opts: any) {
+        resolveBindingCallCount += 1;
+        return originalResolveBinding(opts);
+      };
+      runtime.resolveThemeOptionSelectedState = function (opts: any) {
+        resolveOptionSelectedCallCount += 1;
+        return originalResolveOptionSelected(opts);
+      };
+      try {
+        openSettingsModal();
+        await new Promise((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => resolve(null));
+          });
+        });
+        const trigger = document.getElementById("theme-select-trigger");
+        const options = document.querySelectorAll("#theme-select-options .custom-option");
+        if (trigger) {
+          trigger.dispatchEvent(new Event("click", { bubbles: true }));
+          trigger.dispatchEvent(new Event("click", { bubbles: true }));
+        }
+        return {
+          hasRuntime: true,
+          hasSettingsOpen: true,
+          hasTrigger: Boolean(trigger),
+          optionCount: options.length,
+          formatCallCount,
+          resolveTileValuesCallCount,
+          resolveLabelCallCount,
+          resolveDropdownCallCount,
+          resolveBindingCallCount,
+          resolveOptionSelectedCallCount
+        };
+      } finally {
+        runtime.formatThemePreviewValue = originalFormat;
+        runtime.resolveThemePreviewTileValues = originalResolveTileValues;
+        runtime.resolveThemeSelectLabel = originalResolveLabel;
+        runtime.resolveThemeDropdownToggleState = originalResolveDropdown;
+        runtime.resolveThemeBindingState = originalResolveBinding;
+        runtime.resolveThemeOptionSelectedState = originalResolveOptionSelected;
+      }
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasSettingsOpen).toBe(true);
+    expect(snapshot.hasTrigger).toBe(true);
+    expect(snapshot.optionCount).toBeGreaterThan(0);
+    expect(snapshot.formatCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveTileValuesCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveLabelCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveDropdownCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveBindingCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveOptionSelectedCallCount).toBeGreaterThan(0);
+  });
+
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {
     const response = await page.goto("/play.html?mode_key=spawn_custom_4x4_pow2_no_undo&four_rate=25", {
       waitUntil: "domcontentloaded"
