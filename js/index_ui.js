@@ -101,6 +101,7 @@ if (
   typeof homeGuideRuntime.resolveHomeGuideControlAction !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideToggleAction !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideLifecycleState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideSessionState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideLayerDisplayState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideFinishState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideTargetScrollState !== "function" ||
@@ -1186,12 +1187,15 @@ function finishHomeGuide(markSeen, options) {
   var lifecycleState = homeGuideRuntime.resolveHomeGuideLifecycleState({
     action: "finish"
   });
-  HOME_GUIDE_STATE.active = !!(lifecycleState && lifecycleState.active);
+  var sessionState = homeGuideRuntime.resolveHomeGuideSessionState({
+    lifecycleState: lifecycleState || null
+  });
+  HOME_GUIDE_STATE.active = !!(sessionState && sessionState.active);
   HOME_GUIDE_STATE.steps =
-    lifecycleState && Array.isArray(lifecycleState.steps) ? lifecycleState.steps : [];
+    sessionState && Array.isArray(sessionState.steps) ? sessionState.steps : [];
   HOME_GUIDE_STATE.index =
-    lifecycleState && typeof lifecycleState.index === "number" ? lifecycleState.index : 0;
-  HOME_GUIDE_STATE.fromSettings = !!(lifecycleState && lifecycleState.fromSettings);
+    sessionState && typeof sessionState.index === "number" ? sessionState.index : 0;
+  HOME_GUIDE_STATE.fromSettings = !!(sessionState && sessionState.fromSettings);
   var layerDisplayState = homeGuideRuntime.resolveHomeGuideLayerDisplayState({
     active: HOME_GUIDE_STATE.active
   });
@@ -1313,12 +1317,15 @@ function startHomeGuide(options) {
     fromSettings: !!options.fromSettings,
     steps: getHomeGuideSteps()
   });
-  HOME_GUIDE_STATE.active = !!(lifecycleState && lifecycleState.active);
-  HOME_GUIDE_STATE.fromSettings = !!(lifecycleState && lifecycleState.fromSettings);
+  var sessionState = homeGuideRuntime.resolveHomeGuideSessionState({
+    lifecycleState: lifecycleState || null
+  });
+  HOME_GUIDE_STATE.active = !!(sessionState && sessionState.active);
+  HOME_GUIDE_STATE.fromSettings = !!(sessionState && sessionState.fromSettings);
   HOME_GUIDE_STATE.steps =
-    lifecycleState && Array.isArray(lifecycleState.steps) ? lifecycleState.steps : [];
+    sessionState && Array.isArray(sessionState.steps) ? sessionState.steps : [];
   HOME_GUIDE_STATE.index =
-    lifecycleState && typeof lifecycleState.index === "number" ? lifecycleState.index : 0;
+    sessionState && typeof sessionState.index === "number" ? sessionState.index : 0;
 
   var layerDisplayState = homeGuideRuntime.resolveHomeGuideLayerDisplayState({
     active: HOME_GUIDE_STATE.active

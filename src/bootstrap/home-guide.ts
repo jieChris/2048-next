@@ -171,6 +171,17 @@ export interface ResolveHomeGuideLifecycleStateResult {
   steps: HomeGuideStep[];
 }
 
+export interface ResolveHomeGuideSessionStateOptions {
+  lifecycleState?: ResolveHomeGuideLifecycleStateResult | null | undefined;
+}
+
+export interface ResolveHomeGuideSessionStateResult {
+  active: boolean;
+  fromSettings: boolean;
+  index: number;
+  steps: HomeGuideStep[];
+}
+
 export interface ResolveHomeGuideLayerDisplayStateOptions {
   active?: boolean | null | undefined;
 }
@@ -580,6 +591,27 @@ export function resolveHomeGuideLifecycleState(
     fromSettings: false,
     index: 0,
     steps: []
+  };
+}
+
+export function resolveHomeGuideSessionState(
+  options: ResolveHomeGuideSessionStateOptions
+): ResolveHomeGuideSessionStateResult {
+  const opts = options || {};
+  const lifecycleState = opts.lifecycleState || null;
+  const inputSteps = lifecycleState && Array.isArray(lifecycleState.steps) ? lifecycleState.steps : [];
+  const rawIndex =
+    lifecycleState && typeof lifecycleState.index === "number" ? lifecycleState.index : 0;
+  const index = Number.isFinite(rawIndex) ? Math.max(0, Math.floor(rawIndex)) : 0;
+  return {
+    active: !!(lifecycleState && lifecycleState.active),
+    fromSettings: !!(lifecycleState && lifecycleState.fromSettings),
+    index,
+    steps: inputSteps.map((step) => ({
+      selector: step && typeof step.selector === "string" ? step.selector : "",
+      title: step && typeof step.title === "string" ? step.title : "",
+      desc: step && typeof step.desc === "string" ? step.desc : ""
+    }))
   };
 }
 

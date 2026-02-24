@@ -18,6 +18,7 @@ import {
   resolveHomeGuideStepRenderState,
   resolveHomeGuideLayerDisplayState,
   resolveHomeGuideLifecycleState,
+  resolveHomeGuideSessionState,
   resolveHomeGuideFinishState,
   resolveHomeGuideStepIndexState,
   resolveHomeGuideStepTargetState,
@@ -498,6 +499,47 @@ describe("bootstrap home guide", () => {
             desc: "d"
           }
         ]
+      })
+    ).toEqual({
+      active: false,
+      fromSettings: false,
+      index: 0,
+      steps: []
+    });
+  });
+
+  it("resolves session state snapshot from lifecycle output", () => {
+    expect(
+      resolveHomeGuideSessionState({
+        lifecycleState: {
+          active: true,
+          fromSettings: true,
+          index: 2.8,
+          steps: [
+            {
+              selector: "#a",
+              title: "t",
+              desc: "d"
+            }
+          ]
+        }
+      })
+    ).toEqual({
+      active: true,
+      fromSettings: true,
+      index: 2,
+      steps: [
+        {
+          selector: "#a",
+          title: "t",
+          desc: "d"
+        }
+      ]
+    });
+
+    expect(
+      resolveHomeGuideSessionState({
+        lifecycleState: null
       })
     ).toEqual({
       active: false,
