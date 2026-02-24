@@ -7,7 +7,8 @@ import {
   buildPracticeTransferToken,
   buildPracticeModeConfigFromCurrent,
   cloneJsonSafe,
-  hasPracticeGuideSeen
+  hasPracticeGuideSeen,
+  persistPracticeTransferPayload
 } from "../../src/bootstrap/practice-transfer";
 
 describe("bootstrap practice transfer", () => {
@@ -192,5 +193,67 @@ describe("bootstrap practice transfer", () => {
       [0, 4]
     ]);
     expect(payload.mode_config).toBe(modeConfig);
+  });
+
+  it("persists payload to local storage first", () => {
+    const writes: string[] = [];
+    const result = persistPracticeTransferPayload({
+      localStorageLike: {
+        getItem() {
+          return null;
+        },
+        setItem(key: string, value: string) {
+          writes.push("local:" + key + ":" + value);
+        }
+      },
+      sessionStorageLike: {
+        getItem() {
+          return null;
+        },
+        setItem(key: string, value: string) {
+          writes.push("session:" + key + ":" + value);
+        }
+      },
+      payload: "payload-json"
+    });
+
+    expect(result).toEqual({ persisted: true, target: "local" });
+    expect(writes).toEqual(["local:practice_board_transfer_v1:payload-json"]);
+  });
+
+  it("falls back to session storage when local storage write fails", () => {
+    const writes: string[] = [];
+    const result = persistPracticeTransferPayload({
+      localStorageLike: {
+        getItem() {
+          return null;
+        },
+        setItem() {
+          throw new Error("blocked");
+        }
+      },
+      sessionStorageLike: {
+        getItem() {
+          return null;
+        },
+        setItem(key: string, value: string) {
+          writes.push("session:" + key + ":" + value);
+        }
+      },
+      payload: "payload-json"
+    });
+
+    expect(result).toEqual({ persisted: true, target: "session" });
+    expect(writes).toEqual(["session:practice_board_transfer_session_v1:payload-json"]);
+  });
+
+  it("returns none when both storages cannot persist", () => {
+    const result = persistPracticeTransferPayload({
+      localStorageLike: null,
+      sessionStorageLike: null,
+      payload: "payload-json"
+    });
+
+    expect(result).toEqual({ persisted: false, target: "none" });
   });
 });

@@ -98,7 +98,8 @@ if (
   typeof practiceTransferRuntime.hasPracticeGuideSeen !== "function" ||
   typeof practiceTransferRuntime.buildPracticeBoardUrl !== "function" ||
   typeof practiceTransferRuntime.buildPracticeTransferToken !== "function" ||
-  typeof practiceTransferRuntime.buildPracticeTransferPayload !== "function"
+  typeof practiceTransferRuntime.buildPracticeTransferPayload !== "function" ||
+  typeof practiceTransferRuntime.persistPracticeTransferPayload !== "function"
 ) {
   throw new Error("CorePracticeTransferRuntime is required");
 }
@@ -840,14 +841,16 @@ window.openPracticeBoardFromCurrent = function () {
     practiceRuleset: practiceRuleset,
     includeGuideSeen: guideSeen
   });
-  var persisted = false;
   var localStore = getStorageByName("localStorage");
   var sessionStore = getStorageByName("sessionStorage");
-
-  persisted = safeSetStorageItem(localStore, PRACTICE_TRANSFER_KEY, payloadStr);
-  if (!persisted) {
-    persisted = safeSetStorageItem(sessionStore, PRACTICE_TRANSFER_SESSION_KEY, payloadStr);
-  }
+  var persistResult = practiceTransferRuntime.persistPracticeTransferPayload({
+    localStorageLike: localStore,
+    sessionStorageLike: sessionStore,
+    localStorageKey: PRACTICE_TRANSFER_KEY,
+    sessionStorageKey: PRACTICE_TRANSFER_SESSION_KEY,
+    payload: payloadStr
+  });
+  var persisted = !!(persistResult && persistResult.persisted);
 
   if (persisted) {
     window.open(baseUrl, "_blank");

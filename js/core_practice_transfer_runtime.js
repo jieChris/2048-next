@@ -24,6 +24,16 @@
     }
   }
 
+  function safeSetStorageItem(storage, key, value) {
+    if (!storage || !key || typeof storage.setItem !== "function") return false;
+    try {
+      storage.setItem(key, value);
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
   function hasCookieFlag(cookie, key, value) {
     if (!cookie || !key) return false;
     return cookie.indexOf(key + "=" + value) !== -1;
@@ -106,6 +116,26 @@
     };
   }
 
+  function persistPracticeTransferPayload(options) {
+    var opts = options || {};
+    var localKey =
+      typeof opts.localStorageKey === "string" && opts.localStorageKey
+        ? opts.localStorageKey
+        : "practice_board_transfer_v1";
+    var sessionKey =
+      typeof opts.sessionStorageKey === "string" && opts.sessionStorageKey
+        ? opts.sessionStorageKey
+        : "practice_board_transfer_session_v1";
+
+    if (safeSetStorageItem(opts.localStorageLike || null, localKey, opts.payload)) {
+      return { persisted: true, target: "local" };
+    }
+    if (safeSetStorageItem(opts.sessionStorageLike || null, sessionKey, opts.payload)) {
+      return { persisted: true, target: "session" };
+    }
+    return { persisted: false, target: "none" };
+  }
+
   function buildPracticeModeConfigFromCurrent(options) {
     var opts = options || {};
     var manager = opts.manager || null;
@@ -157,6 +187,7 @@
   global.CorePracticeTransferRuntime.buildPracticeBoardUrl = buildPracticeBoardUrl;
   global.CorePracticeTransferRuntime.buildPracticeTransferToken = buildPracticeTransferToken;
   global.CorePracticeTransferRuntime.buildPracticeTransferPayload = buildPracticeTransferPayload;
+  global.CorePracticeTransferRuntime.persistPracticeTransferPayload = persistPracticeTransferPayload;
   global.CorePracticeTransferRuntime.buildPracticeModeConfigFromCurrent =
     buildPracticeModeConfigFromCurrent;
 })(typeof window !== "undefined" ? window : undefined);

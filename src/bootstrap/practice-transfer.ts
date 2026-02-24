@@ -28,6 +28,7 @@ export interface PracticeTransferModeConfig {
 
 export interface StorageLike {
   getItem(key: string): string | null;
+  setItem?(key: string, value: string): void;
 }
 
 export interface PracticeGuideSeenOptions {
@@ -68,6 +69,19 @@ export interface PracticeTransferPayload {
   mode_config: PracticeTransferModeConfig;
 }
 
+export interface PersistPracticeTransferPayloadOptions {
+  localStorageLike?: StorageLike | null | undefined;
+  sessionStorageLike?: StorageLike | null | undefined;
+  localStorageKey?: string | null | undefined;
+  sessionStorageKey?: string | null | undefined;
+  payload: string;
+}
+
+export interface PersistPracticeTransferPayloadResult {
+  persisted: boolean;
+  target: "local" | "session" | "none";
+}
+
 export function cloneJsonSafe<T extends JsonLike>(value: T): T | null {
   try {
     return JSON.parse(JSON.stringify(value)) as T;
@@ -86,6 +100,16 @@ function safeReadStorageItem(storage: StorageLike | null | undefined, key: strin
     return storage.getItem(key);
   } catch (_err) {
     return null;
+  }
+}
+
+function safeSetStorageItem(storage: StorageLike | null | undefined, key: string, value: string): boolean {
+  if (!storage || !key || typeof storage.setItem !== "function") return false;
+  try {
+    storage.setItem(key, value);
+    return true;
+  } catch (_err) {
+    return false;
   }
 }
 
@@ -164,6 +188,28 @@ export function buildPracticeTransferPayload(
     board: cloneJsonSafe(opts.board as JsonLike) || opts.board,
     mode_config: opts.modeConfig
   };
+}
+
+export function persistPracticeTransferPayload(
+  options: PersistPracticeTransferPayloadOptions
+): PersistPracticeTransferPayloadResult {
+  const opts = options || ({} as PersistPracticeTransferPayloadOptions);
+  const localKey =
+    typeof opts.localStorageKey === "string" && opts.localStorageKey
+      ? opts.localStorageKey
+      : "practice_board_transfer_v1";
+  const sessionKey =
+    typeof opts.sessionStorageKey === "string" && opts.sessionStorageKey
+      ? opts.sessionStorageKey
+      : "practice_board_transfer_session_v1";
+
+  if (safeSetStorageItem(opts.localStorageLike || null, localKey, opts.payload)) {
+    return { persisted: true, target: "local" };
+  }
+  if (safeSetStorageItem(opts.sessionStorageLike || null, sessionKey, opts.payload)) {
+    return { persisted: true, target: "session" };
+  }
+  return { persisted: false, target: "none" };
 }
 
 export function buildPracticeModeConfigFromCurrent(
