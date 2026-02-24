@@ -152,6 +152,14 @@ if (
 ) {
   throw new Error("CoreTopActionsRuntime is required");
 }
+var mobileTopButtonsRuntime = window.CoreMobileTopButtonsRuntime;
+if (
+  !mobileTopButtonsRuntime ||
+  typeof mobileTopButtonsRuntime.ensureMobileUndoTopButtonDom !== "function" ||
+  typeof mobileTopButtonsRuntime.ensureMobileHintToggleButtonDom !== "function"
+) {
+  throw new Error("CoreMobileTopButtonsRuntime is required");
+}
 
 function tryUndoFromUi() {
   var undoRuntime = window.CoreUndoActionRuntime;
@@ -253,47 +261,17 @@ function ensurePracticeTopActionsState() {
 }
 
 function ensureMobileUndoTopButton() {
-  if (!isGamePageScope()) return null;
-  var host = document.querySelector(".top-action-buttons");
-  if (!host) return null;
-
-  var btn = document.getElementById("top-mobile-undo-btn");
-  if (!btn) {
-    btn = document.createElement("a");
-    btn.id = "top-mobile-undo-btn";
-    btn.className = "top-action-btn mobile-undo-top-btn";
-    btn.href = "#";
-    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>';
-  }
-  if (btn.parentNode !== host || host.lastElementChild !== btn) {
-    host.appendChild(btn);
-  }
-  return btn;
+  return mobileTopButtonsRuntime.ensureMobileUndoTopButtonDom({
+    isGamePageScope: isGamePageScope(),
+    documentLike: document
+  });
 }
 
 function ensureMobileHintToggleButton() {
-  if (!isGamePageScope()) return null;
-  var host = document.querySelector(".top-action-buttons");
-  if (!host) return null;
-
-  var btn = document.getElementById("top-mobile-hint-btn");
-  if (!btn) {
-    btn = document.createElement("a");
-    btn.id = "top-mobile-hint-btn";
-    btn.className = "top-action-btn mobile-hint-toggle-btn";
-    btn.href = "#";
-    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>';
-  }
-
-  var settingsBtn = document.getElementById("top-settings-btn");
-  if (settingsBtn && settingsBtn.parentNode === host) {
-    if (btn.parentNode !== host || btn.nextSibling !== settingsBtn) {
-      host.insertBefore(btn, settingsBtn);
-    }
-  } else if (btn.parentNode !== host) {
-    host.appendChild(btn);
-  }
-  return btn;
+  return mobileTopButtonsRuntime.ensureMobileHintToggleButtonDom({
+    isGamePageScope: isGamePageScope(),
+    documentLike: document
+  });
 }
 
 function syncMobileTopActionsPlacement() {
