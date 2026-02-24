@@ -79,6 +79,15 @@ export interface ResolveHomeGuideStepUiStateResult {
   nextText: string;
 }
 
+export interface ResolveHomeGuideFinishStateOptions {
+  reason?: string | null | undefined;
+}
+
+export interface ResolveHomeGuideFinishStateResult {
+  markSeen: boolean;
+  showDoneNotice: boolean;
+}
+
 export interface ResolveHomeGuideDoneNoticeOptions {
   message?: string | null | undefined;
   hideDelayMs?: number | null | undefined;
@@ -275,6 +284,17 @@ export function resolveHomeGuideStepUiState(
     stepText: count > 0 ? "步骤 " + (index + 1) + " / " + count : "步骤 0 / 0",
     prevDisabled: index <= 0,
     nextText: count > 0 && index >= count - 1 ? "完成" : "下一步"
+  };
+}
+
+export function resolveHomeGuideFinishState(
+  options: ResolveHomeGuideFinishStateOptions
+): ResolveHomeGuideFinishStateResult {
+  const opts = options || {};
+  const reason = typeof opts.reason === "string" ? opts.reason : "";
+  return {
+    markSeen: true,
+    showDoneNotice: reason === "completed"
   };
 }
 

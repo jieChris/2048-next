@@ -12,6 +12,7 @@ import {
   resolveHomeGuideAutoStart,
   resolveHomeGuideDoneNotice,
   resolveHomeGuideDoneNoticeStyle,
+  resolveHomeGuideFinishState,
   resolveHomeGuideStepUiState,
   resolveHomeGuideSettingsState,
   shouldAutoStartHomeGuide
@@ -252,6 +253,25 @@ describe("bootstrap home guide", () => {
       stepText: "步骤 10 / 10",
       prevDisabled: false,
       nextText: "完成"
+    });
+  });
+
+  it("resolves finish state for completed and skipped flows", () => {
+    expect(
+      resolveHomeGuideFinishState({
+        reason: "completed"
+      })
+    ).toEqual({
+      markSeen: true,
+      showDoneNotice: true
+    });
+    expect(
+      resolveHomeGuideFinishState({
+        reason: "skipped"
+      })
+    ).toEqual({
+      markSeen: true,
+      showDoneNotice: false
     });
   });
 

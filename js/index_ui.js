@@ -93,6 +93,7 @@ if (
   typeof homeGuideRuntime.resolveHomeGuideAutoStart !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideSettingsState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepUiState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideFinishState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideDoneNotice !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideDoneNoticeStyle !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuidePanelLayout !== "function" ||
@@ -1182,7 +1183,12 @@ function showHomeGuideStep(index) {
   if (!HOME_GUIDE_STATE.active || !HOME_GUIDE_STATE.steps.length) return;
   if (index < 0) index = 0;
   if (index >= HOME_GUIDE_STATE.steps.length) {
-    finishHomeGuide(true, { showDoneNotice: true });
+    var finishState = homeGuideRuntime.resolveHomeGuideFinishState({
+      reason: "completed"
+    });
+    finishHomeGuide(!!finishState.markSeen, {
+      showDoneNotice: !!finishState.showDoneNotice
+    });
     return;
   }
   HOME_GUIDE_STATE.index = index;
@@ -1258,7 +1264,12 @@ function startHomeGuide(options) {
   if (skipBtn && !skipBtn.__homeGuideBound) {
     skipBtn.__homeGuideBound = true;
     skipBtn.addEventListener("click", function () {
-      finishHomeGuide(true);
+      var finishState = homeGuideRuntime.resolveHomeGuideFinishState({
+        reason: "skipped"
+      });
+      finishHomeGuide(!!finishState.markSeen, {
+        showDoneNotice: !!finishState.showDoneNotice
+      });
     });
   }
 

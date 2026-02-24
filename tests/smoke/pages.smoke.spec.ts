@@ -1039,6 +1039,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.resolveHomeGuideAutoStart !== "function" ||
         typeof runtime.resolveHomeGuideSettingsState !== "function" ||
         typeof runtime.resolveHomeGuideStepUiState !== "function" ||
+        typeof runtime.resolveHomeGuideFinishState !== "function" ||
         typeof runtime.resolveHomeGuideDoneNotice !== "function" ||
         typeof runtime.resolveHomeGuideDoneNoticeStyle !== "function" ||
         typeof runtime.resolveHomeGuidePanelLayout !== "function" ||
@@ -1103,6 +1104,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
         stepIndex: 9,
         stepCount: 10
       });
+      const finishStateCompleted = runtime.resolveHomeGuideFinishState({
+        reason: "completed"
+      });
+      const finishStateSkipped = runtime.resolveHomeGuideFinishState({
+        reason: "skipped"
+      });
       const doneNotice = runtime.resolveHomeGuideDoneNotice({});
       const doneNoticeStyle = runtime.resolveHomeGuideDoneNoticeStyle();
       const visibleCheck = runtime.isHomeGuideTargetVisible({
@@ -1160,6 +1167,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         }),
         stepUiStateFirst,
         stepUiStateLast,
+        finishStateCompleted,
+        finishStateSkipped,
         doneNotice,
         doneNoticeStyle,
         visibleCheck,
@@ -1193,6 +1202,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       stepText: "步骤 10 / 10",
       prevDisabled: false,
       nextText: "完成"
+    });
+    expect(snapshot.finishStateCompleted).toEqual({
+      markSeen: true,
+      showDoneNotice: true
+    });
+    expect(snapshot.finishStateSkipped).toEqual({
+      markSeen: true,
+      showDoneNotice: false
     });
     expect(snapshot.doneNotice).toEqual({
       message: "指引已完成，可在设置中重新打开新手指引。",
@@ -1250,6 +1267,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.buildHomeGuideSettingsRowInnerHtml !== "function" ||
         typeof runtime.markHomeGuideSeen !== "function" ||
         typeof runtime.resolveHomeGuideStepUiState !== "function" ||
+        typeof runtime.resolveHomeGuideFinishState !== "function" ||
         typeof runtime.resolveHomeGuideDoneNotice !== "function" ||
         typeof runtime.resolveHomeGuideDoneNoticeStyle !== "function" ||
         typeof runtime.resolveHomeGuidePanelLayout !== "function" ||
@@ -1266,6 +1284,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalBuildSettingsRowHtml = runtime.buildHomeGuideSettingsRowInnerHtml;
       const originalMark = runtime.markHomeGuideSeen;
       const originalResolveStepUiState = runtime.resolveHomeGuideStepUiState;
+      const originalResolveFinishState = runtime.resolveHomeGuideFinishState;
       const originalResolveDoneNotice = runtime.resolveHomeGuideDoneNotice;
       const originalResolveDoneNoticeStyle = runtime.resolveHomeGuideDoneNoticeStyle;
       const originalResolvePanelLayout = runtime.resolveHomeGuidePanelLayout;
@@ -1275,6 +1294,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let settingsRowHtmlCallCount = 0;
       let markCallCount = 0;
       let stepUiStateCallCount = 0;
+      let finishStateCallCount = 0;
       let doneNoticeCallCount = 0;
       let doneNoticeStyleCallCount = 0;
       let panelLayoutCallCount = 0;
@@ -1298,6 +1318,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.resolveHomeGuideStepUiState = function (opts: any) {
         stepUiStateCallCount += 1;
         return originalResolveStepUiState(opts);
+      };
+      runtime.resolveHomeGuideFinishState = function (opts: any) {
+        finishStateCallCount += 1;
+        return originalResolveFinishState(opts);
       };
       runtime.resolveHomeGuideDoneNotice = function (opts: any) {
         doneNoticeCallCount += 1;
@@ -1360,6 +1384,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           settingsRowHtmlCallCount,
           markCallCount,
           stepUiStateCallCount,
+          finishStateCallCount,
           doneNoticeCallCount,
           doneNoticeStyleCallCount,
           panelLayoutCallCount,
@@ -1377,6 +1402,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.buildHomeGuideSettingsRowInnerHtml = originalBuildSettingsRowHtml;
         runtime.markHomeGuideSeen = originalMark;
         runtime.resolveHomeGuideStepUiState = originalResolveStepUiState;
+        runtime.resolveHomeGuideFinishState = originalResolveFinishState;
         runtime.resolveHomeGuideDoneNotice = originalResolveDoneNotice;
         runtime.resolveHomeGuideDoneNoticeStyle = originalResolveDoneNoticeStyle;
         runtime.resolveHomeGuidePanelLayout = originalResolvePanelLayout;
@@ -1392,6 +1418,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.settingsRowHtmlCallCount).toBeGreaterThan(0);
     expect(snapshot.markCallCount).toBeGreaterThan(0);
     expect(snapshot.stepUiStateCallCount).toBeGreaterThan(0);
+    expect(snapshot.finishStateCallCount).toBeGreaterThan(0);
     expect(snapshot.doneNoticeCallCount).toBeGreaterThan(0);
     expect(snapshot.doneNoticeStyleCallCount).toBeGreaterThan(0);
     expect(snapshot.panelLayoutCallCount).toBeGreaterThan(0);
