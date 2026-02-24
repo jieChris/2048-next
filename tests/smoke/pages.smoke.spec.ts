@@ -719,7 +719,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CorePracticeTransferRuntime;
       const openPracticeBoardFromCurrent = (window as any).openPracticeBoardFromCurrent;
-      if (!runtime || typeof runtime.buildPracticeModeConfigFromCurrent !== "function") {
+      if (
+        !runtime ||
+        typeof runtime.buildPracticeModeConfigFromCurrent !== "function" ||
+        typeof runtime.hasPracticeGuideSeen !== "function" ||
+        typeof runtime.buildPracticeBoardUrl !== "function"
+      ) {
         return { hasRuntime: false, hasOpenFn: typeof openPracticeBoardFromCurrent === "function" };
       }
       if (typeof openPracticeBoardFromCurrent !== "function") {
@@ -727,14 +732,27 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
 
       const originalBuild = runtime.buildPracticeModeConfigFromCurrent;
+      const originalHasPracticeGuideSeen = runtime.hasPracticeGuideSeen;
+      const originalBuildPracticeBoardUrl = runtime.buildPracticeBoardUrl;
       const originalManager = (window as any).game_manager;
       const originalOpen = window.open;
-      let callCount = 0;
+      let buildModeCallCount = 0;
+      let hasGuideSeenCallCount = 0;
+      let buildUrlCallCount = 0;
       let openedUrl = "";
 
       runtime.buildPracticeModeConfigFromCurrent = function (opts: any) {
-        callCount += 1;
+        buildModeCallCount += 1;
         return originalBuild(opts);
+      };
+      runtime.hasPracticeGuideSeen = function (opts: any) {
+        hasGuideSeenCallCount += 1;
+        originalHasPracticeGuideSeen(opts);
+        return true;
+      };
+      runtime.buildPracticeBoardUrl = function (opts: any) {
+        buildUrlCallCount += 1;
+        return originalBuildPracticeBoardUrl(opts);
       };
       (window as any).game_manager = {
         width: 4,
@@ -762,11 +780,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return {
           hasRuntime: true,
           hasOpenFn: true,
-          callCount,
+          buildModeCallCount,
+          hasGuideSeenCallCount,
+          buildUrlCallCount,
           openedUrl
         };
       } finally {
         runtime.buildPracticeModeConfigFromCurrent = originalBuild;
+        runtime.hasPracticeGuideSeen = originalHasPracticeGuideSeen;
+        runtime.buildPracticeBoardUrl = originalBuildPracticeBoardUrl;
         (window as any).game_manager = originalManager;
         window.open = originalOpen;
       }
@@ -774,10 +796,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.hasOpenFn).toBe(true);
-    expect(snapshot.callCount).toBeGreaterThan(0);
+    expect(snapshot.buildModeCallCount).toBeGreaterThan(0);
+    expect(snapshot.hasGuideSeenCallCount).toBeGreaterThan(0);
+    expect(snapshot.buildUrlCallCount).toBeGreaterThan(0);
     expect(snapshot.openedUrl).toContain("Practice_board.html");
     expect(snapshot.openedUrl).toContain("practice_token=");
     expect(snapshot.openedUrl).toContain("practice_ruleset=pow2");
+    expect(snapshot.openedUrl).toContain("practice_guide_seen=1");
   });
 
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {

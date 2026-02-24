@@ -26,6 +26,28 @@ export interface PracticeTransferModeConfig {
   max_tile?: number;
 }
 
+export interface StorageLike {
+  getItem(key: string): string | null;
+}
+
+export interface PracticeGuideSeenOptions {
+  localStorageLike?: StorageLike | null | undefined;
+  sessionStorageLike?: StorageLike | null | undefined;
+  guideShownKey?: string | null | undefined;
+  guideSeenFlag?: string | null | undefined;
+  cookie?: string | null | undefined;
+  windowName?: string | null | undefined;
+}
+
+export interface BuildPracticeBoardUrlOptions {
+  token: string;
+  practiceRuleset?: string | null | undefined;
+  includeGuideSeen?: boolean;
+  includePayload?: boolean;
+  payload?: string | null | undefined;
+  basePath?: string | null | undefined;
+}
+
 export function cloneJsonSafe<T extends JsonLike>(value: T): T | null {
   try {
     return JSON.parse(JSON.stringify(value)) as T;
@@ -36,6 +58,63 @@ export function cloneJsonSafe<T extends JsonLike>(value: T): T | null {
 
 function toPositiveInt(value: unknown, fallback: number): number {
   return Number.isInteger(value) && Number(value) > 0 ? Number(value) : fallback;
+}
+
+function safeReadStorageItem(storage: StorageLike | null | undefined, key: string): string | null {
+  if (!storage || !key) return null;
+  try {
+    return storage.getItem(key);
+  } catch (_err) {
+    return null;
+  }
+}
+
+function hasCookieFlag(cookie: string, key: string, value: string): boolean {
+  if (!cookie || !key) return false;
+  return cookie.indexOf(key + "=" + value) !== -1;
+}
+
+function hasWindowNameFlag(windowName: string, flag: string): boolean {
+  if (!windowName || !flag) return false;
+  return windowName.indexOf(flag) !== -1;
+}
+
+export function appendQueryParam(url: string, key: string, value: string): string {
+  const sep = url.indexOf("?") === -1 ? "?" : "&";
+  return url + sep + encodeURIComponent(key) + "=" + encodeURIComponent(value);
+}
+
+export function hasPracticeGuideSeen(options: PracticeGuideSeenOptions): boolean {
+  const opts = options || {};
+  const guideShownKey =
+    typeof opts.guideShownKey === "string" && opts.guideShownKey ? opts.guideShownKey : "practice_guide_shown_v2";
+  const guideSeenFlag =
+    typeof opts.guideSeenFlag === "string" && opts.guideSeenFlag ? opts.guideSeenFlag : "practice_guide_seen_v2=1";
+  const cookie = typeof opts.cookie === "string" ? opts.cookie : "";
+  const windowName = typeof opts.windowName === "string" ? opts.windowName : "";
+
+  return (
+    safeReadStorageItem(opts.localStorageLike || null, guideShownKey) === "1" ||
+    safeReadStorageItem(opts.sessionStorageLike || null, guideShownKey) === "1" ||
+    hasCookieFlag(cookie, guideShownKey, "1") ||
+    hasWindowNameFlag(windowName, guideSeenFlag)
+  );
+}
+
+export function buildPracticeBoardUrl(options: BuildPracticeBoardUrlOptions): string {
+  const opts = options || ({} as BuildPracticeBoardUrlOptions);
+  const basePath = typeof opts.basePath === "string" && opts.basePath ? opts.basePath : "Practice_board.html";
+  const token = typeof opts.token === "string" ? opts.token : "";
+  const ruleset = opts.practiceRuleset === "fibonacci" ? "fibonacci" : "pow2";
+  let url = basePath + "?practice_token=" + encodeURIComponent(token);
+  url = appendQueryParam(url, "practice_ruleset", ruleset);
+  if (opts.includeGuideSeen) {
+    url = appendQueryParam(url, "practice_guide_seen", "1");
+  }
+  if (opts.includePayload && typeof opts.payload === "string" && opts.payload) {
+    url = appendQueryParam(url, "practice_payload", opts.payload);
+  }
+  return url;
 }
 
 export function buildPracticeModeConfigFromCurrent(

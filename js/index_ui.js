@@ -83,7 +83,9 @@ var practiceTopActionsState = null;
 var practiceTransferRuntime = window.CorePracticeTransferRuntime;
 if (
   !practiceTransferRuntime ||
-  typeof practiceTransferRuntime.buildPracticeModeConfigFromCurrent !== "function"
+  typeof practiceTransferRuntime.buildPracticeModeConfigFromCurrent !== "function" ||
+  typeof practiceTransferRuntime.hasPracticeGuideSeen !== "function" ||
+  typeof practiceTransferRuntime.buildPracticeBoardUrl !== "function"
 ) {
   throw new Error("CorePracticeTransferRuntime is required");
 }
@@ -762,37 +764,29 @@ function safeReadStorageItem(storage, key) {
   }
 }
 
-function hasCookieFlag(key, value) {
-  try {
-    var all = document.cookie || "";
-    return all.indexOf(key + "=" + value) !== -1;
-  } catch (_err) {
-    return false;
-  }
-}
-
-function hasWindowNameFlag(flag) {
-  try {
-    return typeof window.name === "string" && window.name.indexOf(flag) !== -1;
-  } catch (_err) {
-    return false;
-  }
-}
-
-function appendQueryParam(url, key, value) {
-  var sep = url.indexOf("?") === -1 ? "?" : "&";
-  return url + sep + encodeURIComponent(key) + "=" + encodeURIComponent(value);
-}
-
 function hasPracticeGuideSeen() {
   var localStore = getStorageByName("localStorage");
   var sessionStore = getStorageByName("sessionStorage");
-  return (
-    safeReadStorageItem(localStore, PRACTICE_GUIDE_SHOWN_KEY) === "1" ||
-    safeReadStorageItem(sessionStore, PRACTICE_GUIDE_SHOWN_KEY) === "1" ||
-    hasCookieFlag(PRACTICE_GUIDE_SHOWN_KEY, "1") ||
-    hasWindowNameFlag(PRACTICE_GUIDE_SEEN_FLAG)
-  );
+  var cookie = "";
+  var windowName = "";
+  try {
+    cookie = document.cookie || "";
+  } catch (_err) {
+    cookie = "";
+  }
+  try {
+    windowName = typeof window.name === "string" ? window.name : "";
+  } catch (_err) {
+    windowName = "";
+  }
+  return !!practiceTransferRuntime.hasPracticeGuideSeen({
+    localStorageLike: localStore,
+    sessionStorageLike: sessionStore,
+    guideShownKey: PRACTICE_GUIDE_SHOWN_KEY,
+    guideSeenFlag: PRACTICE_GUIDE_SEEN_FLAG,
+    cookie: cookie,
+    windowName: windowName
+  });
 }
 
 function cloneJsonSafe(value) {
@@ -836,11 +830,12 @@ window.openPracticeBoardFromCurrent = function () {
   };
 
   var payloadStr = JSON.stringify(payload);
-  var baseUrl = "Practice_board.html?practice_token=" + encodeURIComponent(token);
-  baseUrl = appendQueryParam(baseUrl, "practice_ruleset", practiceRuleset);
-  if (hasPracticeGuideSeen()) {
-    baseUrl = appendQueryParam(baseUrl, "practice_guide_seen", "1");
-  }
+  var guideSeen = hasPracticeGuideSeen();
+  var baseUrl = practiceTransferRuntime.buildPracticeBoardUrl({
+    token: token,
+    practiceRuleset: practiceRuleset,
+    includeGuideSeen: guideSeen
+  });
   var persisted = false;
   var localStore = getStorageByName("localStorage");
   var sessionStore = getStorageByName("sessionStorage");
@@ -856,7 +851,13 @@ window.openPracticeBoardFromCurrent = function () {
   }
 
   // Final fallback: pass payload through URL when both storages are unavailable.
-  var urlWithPayload = baseUrl + "&practice_payload=" + encodeURIComponent(payloadStr);
+  var urlWithPayload = practiceTransferRuntime.buildPracticeBoardUrl({
+    token: token,
+    practiceRuleset: practiceRuleset,
+    includeGuideSeen: guideSeen,
+    includePayload: true,
+    payload: payloadStr
+  });
   window.open(urlWithPayload, "_blank");
 };
 

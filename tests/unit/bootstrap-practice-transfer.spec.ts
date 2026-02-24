@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  appendQueryParam,
+  buildPracticeBoardUrl,
   buildPracticeModeConfigFromCurrent,
-  cloneJsonSafe
+  cloneJsonSafe,
+  hasPracticeGuideSeen
 } from "../../src/bootstrap/practice-transfer";
 
 describe("bootstrap practice transfer", () => {
@@ -87,5 +90,71 @@ describe("bootstrap practice transfer", () => {
 
   it("returns null for non-json values in clone helper", () => {
     expect(cloneJsonSafe(undefined as never)).toBeNull();
+  });
+
+  it("detects practice guide seen from local/session storage, cookie, and window name", () => {
+    expect(
+      hasPracticeGuideSeen({
+        localStorageLike: { getItem: () => "1" },
+        guideShownKey: "k"
+      })
+    ).toBe(true);
+    expect(
+      hasPracticeGuideSeen({
+        sessionStorageLike: { getItem: () => "1" },
+        guideShownKey: "k"
+      })
+    ).toBe(true);
+    expect(
+      hasPracticeGuideSeen({
+        guideShownKey: "k",
+        cookie: "foo=1; k=1; bar=2"
+      })
+    ).toBe(true);
+    expect(
+      hasPracticeGuideSeen({
+        guideSeenFlag: "flag=1",
+        windowName: "abc flag=1 xyz"
+      })
+    ).toBe(true);
+  });
+
+  it("returns false when no guide-seen marker exists", () => {
+    expect(
+      hasPracticeGuideSeen({
+        localStorageLike: { getItem: () => null },
+        sessionStorageLike: { getItem: () => null },
+        guideShownKey: "practice_guide_shown_v2",
+        guideSeenFlag: "practice_guide_seen_v2=1",
+        cookie: "",
+        windowName: ""
+      })
+    ).toBe(false);
+  });
+
+  it("builds practice board url with optional guide and payload", () => {
+    const noPayload = buildPracticeBoardUrl({
+      token: "abc 123",
+      practiceRuleset: "fibonacci",
+      includeGuideSeen: true
+    });
+    const withPayload = buildPracticeBoardUrl({
+      token: "abc 123",
+      practiceRuleset: "pow2",
+      includeGuideSeen: false,
+      includePayload: true,
+      payload: "{\"token\":\"x\"}"
+    });
+
+    expect(noPayload).toContain("Practice_board.html?practice_token=abc%20123");
+    expect(noPayload).toContain("practice_ruleset=fibonacci");
+    expect(noPayload).toContain("practice_guide_seen=1");
+    expect(withPayload).toContain("practice_ruleset=pow2");
+    expect(withPayload).toContain("practice_payload=%7B%22token%22%3A%22x%22%7D");
+  });
+
+  it("appends query params for urls with and without existing search", () => {
+    expect(appendQueryParam("x.html", "a", "1")).toBe("x.html?a=1");
+    expect(appendQueryParam("x.html?a=1", "b", "2")).toBe("x.html?a=1&b=2");
   });
 });
