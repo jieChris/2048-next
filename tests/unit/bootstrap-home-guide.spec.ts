@@ -8,6 +8,7 @@ import {
   readHomeGuideSeenValue,
   resolveHomeGuidePanelLayout,
   resolveHomeGuideAutoStart,
+  resolveHomeGuideStepUiState,
   resolveHomeGuideSettingsState,
   shouldAutoStartHomeGuide
 } from "../../src/bootstrap/home-guide";
@@ -213,6 +214,30 @@ describe("bootstrap home guide", () => {
       panelWidth: 430,
       top: 428,
       left: 758
+    });
+  });
+
+  it("resolves step ui state model for first and last steps", () => {
+    expect(
+      resolveHomeGuideStepUiState({
+        stepIndex: 0,
+        stepCount: 10
+      })
+    ).toEqual({
+      stepText: "步骤 1 / 10",
+      prevDisabled: true,
+      nextText: "下一步"
+    });
+
+    expect(
+      resolveHomeGuideStepUiState({
+        stepIndex: 9,
+        stepCount: 10
+      })
+    ).toEqual({
+      stepText: "步骤 10 / 10",
+      prevDisabled: false,
+      nextText: "完成"
     });
   });
 

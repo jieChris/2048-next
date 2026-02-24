@@ -90,6 +90,7 @@ if (
   typeof homeGuideRuntime.shouldAutoStartHomeGuide !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideAutoStart !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideSettingsState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideStepUiState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuidePanelLayout !== "function" ||
   typeof homeGuideRuntime.isHomeGuideTargetVisible !== "function"
 ) {
@@ -1223,12 +1224,16 @@ function showHomeGuideStep(index) {
   var descEl = document.getElementById("home-guide-desc");
   var prevBtn = document.getElementById("home-guide-prev");
   var nextBtn = document.getElementById("home-guide-next");
+  var stepUiState = homeGuideRuntime.resolveHomeGuideStepUiState({
+    stepIndex: index,
+    stepCount: HOME_GUIDE_STATE.steps.length
+  });
 
-  if (stepEl) stepEl.textContent = "步骤 " + (index + 1) + " / " + HOME_GUIDE_STATE.steps.length;
+  if (stepEl) stepEl.textContent = stepUiState.stepText;
   if (titleEl) titleEl.textContent = step.title;
   if (descEl) descEl.textContent = step.desc;
-  if (prevBtn) prevBtn.disabled = index <= 0;
-  if (nextBtn) nextBtn.textContent = index >= HOME_GUIDE_STATE.steps.length - 1 ? "完成" : "下一步";
+  if (prevBtn) prevBtn.disabled = !!stepUiState.prevDisabled;
+  if (nextBtn) nextBtn.textContent = stepUiState.nextText;
 
   window.requestAnimationFrame(positionHomeGuidePanel);
 }

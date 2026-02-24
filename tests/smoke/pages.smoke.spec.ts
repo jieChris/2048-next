@@ -1036,6 +1036,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.shouldAutoStartHomeGuide !== "function" ||
         typeof runtime.resolveHomeGuideAutoStart !== "function" ||
         typeof runtime.resolveHomeGuideSettingsState !== "function" ||
+        typeof runtime.resolveHomeGuideStepUiState !== "function" ||
         typeof runtime.resolveHomeGuidePanelLayout !== "function" ||
         typeof runtime.isHomeGuideTargetVisible !== "function"
       ) {
@@ -1088,6 +1089,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
         guideActive: true,
         fromSettings: true
       });
+      const stepUiStateFirst = runtime.resolveHomeGuideStepUiState({
+        stepIndex: 0,
+        stepCount: 10
+      });
+      const stepUiStateLast = runtime.resolveHomeGuideStepUiState({
+        stepIndex: 9,
+        stepCount: 10
+      });
       const visibleCheck = runtime.isHomeGuideTargetVisible({
         nodeLike: {
           getClientRects() {
@@ -1137,6 +1146,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
           pathname: "/play.html",
           seenValue: "0"
         }),
+        stepUiStateFirst,
+        stepUiStateLast,
         visibleCheck,
         resolvedAutoStart,
         mobilePanelLayout,
@@ -1156,6 +1167,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.autoStart).toBe(true);
     expect(snapshot.blockedSeen).toBe(false);
     expect(snapshot.blockedPath).toBe(false);
+    expect(snapshot.stepUiStateFirst).toEqual({
+      stepText: "步骤 1 / 10",
+      prevDisabled: true,
+      nextText: "下一步"
+    });
+    expect(snapshot.stepUiStateLast).toEqual({
+      stepText: "步骤 10 / 10",
+      prevDisabled: false,
+      nextText: "完成"
+    });
     expect(snapshot.visibleCheck).toBe(true);
     expect(snapshot.resolvedAutoStart).toEqual({
       seenValue: "0",
@@ -1198,6 +1219,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         !runtime ||
         typeof runtime.buildHomeGuideSteps !== "function" ||
         typeof runtime.markHomeGuideSeen !== "function" ||
+        typeof runtime.resolveHomeGuideStepUiState !== "function" ||
         typeof runtime.resolveHomeGuidePanelLayout !== "function" ||
         typeof runtime.isHomeGuideTargetVisible !== "function"
       ) {
@@ -1209,10 +1231,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
       const originalBuild = runtime.buildHomeGuideSteps;
       const originalMark = runtime.markHomeGuideSeen;
+      const originalResolveStepUiState = runtime.resolveHomeGuideStepUiState;
       const originalResolvePanelLayout = runtime.resolveHomeGuidePanelLayout;
       const originalIsTargetVisible = runtime.isHomeGuideTargetVisible;
       let callCount = 0;
       let markCallCount = 0;
+      let stepUiStateCallCount = 0;
       let panelLayoutCallCount = 0;
       let targetVisibleCallCount = 0;
       runtime.buildHomeGuideSteps = function (opts: any) {
@@ -1222,6 +1246,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.markHomeGuideSeen = function (opts: any) {
         markCallCount += 1;
         return originalMark(opts);
+      };
+      runtime.resolveHomeGuideStepUiState = function (opts: any) {
+        stepUiStateCallCount += 1;
+        return originalResolveStepUiState(opts);
       };
       runtime.resolveHomeGuidePanelLayout = function (opts: any) {
         panelLayoutCallCount += 1;
@@ -1257,6 +1285,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasToggle: true,
           callCount,
           markCallCount,
+          stepUiStateCallCount,
           panelLayoutCallCount,
           targetVisibleCallCount,
           hasOverlay: Boolean(overlay),
@@ -1266,6 +1295,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       } finally {
         runtime.buildHomeGuideSteps = originalBuild;
         runtime.markHomeGuideSeen = originalMark;
+        runtime.resolveHomeGuideStepUiState = originalResolveStepUiState;
         runtime.resolveHomeGuidePanelLayout = originalResolvePanelLayout;
         runtime.isHomeGuideTargetVisible = originalIsTargetVisible;
       }
@@ -1276,6 +1306,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasToggle).toBe(true);
     expect(snapshot.callCount).toBeGreaterThan(0);
     expect(snapshot.markCallCount).toBeGreaterThan(0);
+    expect(snapshot.stepUiStateCallCount).toBeGreaterThan(0);
     expect(snapshot.panelLayoutCallCount).toBeGreaterThan(0);
     expect(snapshot.targetVisibleCallCount).toBeGreaterThan(0);
     expect(snapshot.hasOverlay).toBe(true);

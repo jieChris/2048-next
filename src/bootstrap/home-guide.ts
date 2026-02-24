@@ -44,6 +44,17 @@ export interface ResolveHomeGuideSettingsStateResult {
   noteText: string;
 }
 
+export interface ResolveHomeGuideStepUiStateOptions {
+  stepIndex?: number | null | undefined;
+  stepCount?: number | null | undefined;
+}
+
+export interface ResolveHomeGuideStepUiStateResult {
+  stepText: string;
+  prevDisabled: boolean;
+  nextText: string;
+}
+
 export interface HomeGuideRectLike {
   left?: number | null | undefined;
   top?: number | null | undefined;
@@ -198,6 +209,21 @@ export function resolveHomeGuideSettingsState(
     noteText: isHome
       ? "打开后将立即进入首页新手引导，完成后自动关闭。"
       : "该功能仅在首页可用。"
+  };
+}
+
+export function resolveHomeGuideStepUiState(
+  options: ResolveHomeGuideStepUiStateOptions
+): ResolveHomeGuideStepUiStateResult {
+  const opts = options || {};
+  const count = Math.max(0, Math.floor(toFiniteNumber(opts.stepCount, 0)));
+  const maxIndex = count > 0 ? count - 1 : 0;
+  const rawIndex = Math.floor(toFiniteNumber(opts.stepIndex, 0));
+  const index = Math.min(Math.max(rawIndex, 0), maxIndex);
+  return {
+    stepText: count > 0 ? "步骤 " + (index + 1) + " / " + count : "步骤 0 / 0",
+    prevDisabled: index <= 0,
+    nextText: count > 0 && index >= count - 1 ? "完成" : "下一步"
   };
 }
 

@@ -59,6 +59,7 @@
   - `home-guide` 已继续承接首页指引步骤清单构建（含移动端提示步骤插入），`index_ui.js` 改为透传 viewport 信息
   - `home-guide` 已承接已读状态读写（`readHomeGuideSeenValue`/`markHomeGuideSeen`），`index_ui.js` 不再直接读写 `localStorage`
   - `home-guide` 已承接自动启动组合判定（`resolveHomeGuideAutoStart`）与设置态计算（`resolveHomeGuideSettingsState`），`index_ui.js` 改为消费结果渲染 UI
+  - `home-guide` 已承接步骤展示状态计算（`resolveHomeGuideStepUiState`），`index_ui.js` 仅消费步骤文案/按钮状态模型
   - `home-guide` 已承接指引浮层位置计算（`resolveHomeGuidePanelLayout`），`index_ui.js` 仅传入窗口/目标几何信息并应用结果
   - `home-guide` 已承接指引目标可见性判定（`isHomeGuideTargetVisible`），`index_ui.js` 不再直接读 DOM 可见性样式
   - 新增 `src/bootstrap/mobile-hint.ts` + `js/core_mobile_hint_runtime.js`，`index_ui.js` 委托移动端提示文案抽取与去重逻辑

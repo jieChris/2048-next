@@ -94,6 +94,19 @@
     };
   }
 
+  function resolveHomeGuideStepUiState(options) {
+    var opts = options || {};
+    var count = Math.max(0, Math.floor(toFiniteNumber(opts.stepCount, 0)));
+    var maxIndex = count > 0 ? count - 1 : 0;
+    var rawIndex = Math.floor(toFiniteNumber(opts.stepIndex, 0));
+    var index = Math.min(Math.max(rawIndex, 0), maxIndex);
+    return {
+      stepText: count > 0 ? "步骤 " + (index + 1) + " / " + count : "步骤 0 / 0",
+      prevDisabled: index <= 0,
+      nextText: count > 0 && index >= count - 1 ? "完成" : "下一步"
+    };
+  }
+
   function toFiniteNumber(value, fallback) {
     return typeof value === "number" && Number.isFinite(value) ? value : fallback;
   }
@@ -184,6 +197,7 @@
   global.CoreHomeGuideRuntime.shouldAutoStartHomeGuide = shouldAutoStartHomeGuide;
   global.CoreHomeGuideRuntime.resolveHomeGuideAutoStart = resolveHomeGuideAutoStart;
   global.CoreHomeGuideRuntime.resolveHomeGuideSettingsState = resolveHomeGuideSettingsState;
+  global.CoreHomeGuideRuntime.resolveHomeGuideStepUiState = resolveHomeGuideStepUiState;
   global.CoreHomeGuideRuntime.resolveHomeGuidePanelLayout = resolveHomeGuidePanelLayout;
   global.CoreHomeGuideRuntime.isHomeGuideTargetVisible = isHomeGuideTargetVisible;
 })(typeof window !== "undefined" ? window : undefined);
