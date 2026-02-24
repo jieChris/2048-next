@@ -631,6 +631,68 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot?.key).toBe("standard_4x4_pow2_no_undo");
   });
 
+  test("application handle_undo delegates to undo-action runtime", async ({ page }) => {
+    const response = await page.goto("/index.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const runtime = (window as any).CoreUndoActionRuntime;
+      const handleUndo = (window as any).handle_undo;
+      if (!runtime || typeof runtime.tryTriggerUndo !== "function") {
+        return { hasRuntime: false, hasHandler: typeof handleUndo === "function" };
+      }
+      if (typeof handleUndo !== "function") {
+        return { hasRuntime: true, hasHandler: false };
+      }
+
+      const originalManager = (window as any).game_manager;
+      const originalTryTriggerUndo = runtime.tryTriggerUndo;
+      let callCount = 0;
+      let usedDirection: number | null = null;
+      let moveDirection: number | null = null;
+      const fakeManager = {
+        isUndoInteractionEnabled() {
+          return true;
+        },
+        move(direction: number) {
+          moveDirection = direction;
+        }
+      };
+
+      runtime.tryTriggerUndo = function (manager: any, direction: number) {
+        callCount += 1;
+        usedDirection = direction;
+        return originalTryTriggerUndo(manager, direction);
+      };
+      (window as any).game_manager = fakeManager;
+
+      try {
+        handleUndo();
+        return {
+          hasRuntime: true,
+          hasHandler: true,
+          callCount,
+          usedDirection,
+          moveDirection
+        };
+      } finally {
+        runtime.tryTriggerUndo = originalTryTriggerUndo;
+        (window as any).game_manager = originalManager;
+      }
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasHandler).toBe(true);
+    expect(snapshot.callCount).toBeGreaterThan(0);
+    expect(snapshot.usedDirection).toBe(-1);
+    expect(snapshot.moveDirection).toBe(-1);
+  });
+
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {
     const response = await page.goto("/play.html?mode_key=spawn_custom_4x4_pow2_no_undo&four_rate=25", {
       waitUntil: "domcontentloaded"

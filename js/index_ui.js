@@ -81,6 +81,22 @@ var mobileRelayoutTimer = null;
 var mobileTopActionsState = null;
 var practiceTopActionsState = null;
 
+function tryUndoFromUi() {
+  var undoRuntime = window.CoreUndoActionRuntime;
+  if (undoRuntime && typeof undoRuntime.tryTriggerUndo === "function") {
+    return !!undoRuntime.tryTriggerUndo(window.game_manager, -1);
+  }
+  if (
+    window.game_manager &&
+    window.game_manager.isUndoInteractionEnabled &&
+    window.game_manager.isUndoInteractionEnabled()
+  ) {
+    window.game_manager.move(-1);
+    return true;
+  }
+  return false;
+}
+
 function isGamePageScope() {
   if (!document.body) return false;
   return document.body.getAttribute("data-page") === "game";
@@ -594,9 +610,7 @@ function initMobileUndoTopButton() {
     btn.__mobileUndoBound = true;
     btn.addEventListener("click", function (e) {
       if (e) e.preventDefault();
-      if (window.game_manager && window.game_manager.isUndoInteractionEnabled && window.game_manager.isUndoInteractionEnabled()) {
-        window.game_manager.move(-1);
-      }
+      tryUndoFromUi();
     });
   }
   syncMobileUndoTopButtonAvailability();
@@ -1543,9 +1557,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (undoLink) {
         undoLink.addEventListener('click', function(e) {
             e.preventDefault();
-            if (window.game_manager && window.game_manager.isUndoInteractionEnabled && window.game_manager.isUndoInteractionEnabled()) {
-                window.game_manager.move(-1);
-            }
+            tryUndoFromUi();
         });
     }
 
@@ -1570,9 +1582,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (practiceMobileUndoBtn) {
       practiceMobileUndoBtn.addEventListener("click", function (e) {
         e.preventDefault();
-        if (window.game_manager && window.game_manager.isUndoInteractionEnabled && window.game_manager.isUndoInteractionEnabled()) {
-          window.game_manager.move(-1);
-        }
+        tryUndoFromUi();
       });
     }
 
@@ -1619,9 +1629,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             if (!fromTouch && (Date.now() - lastUndoTouchAt) < 450) return;
             if (fromTouch) lastUndoTouchAt = Date.now();
-            if (window.game_manager && window.game_manager.isUndoInteractionEnabled && window.game_manager.isUndoInteractionEnabled()) {
-                window.game_manager.move(-1);
-            }
+            tryUndoFromUi();
         };
         undoBtnGameOver.addEventListener('click', function (e) {
             handleGameOverUndo(e, false);

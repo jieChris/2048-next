@@ -9,6 +9,13 @@ if (
 ) {
   throw new Error("CoreHomeModeRuntime is required");
 }
+var undoActionRuntime = window.CoreUndoActionRuntime;
+if (
+  !undoActionRuntime ||
+  typeof undoActionRuntime.tryTriggerUndo !== "function"
+) {
+  throw new Error("CoreUndoActionRuntime is required");
+}
 
 bootstrap.startGameOnAnimationFrame(function () {
   var selection = homeModeRuntime.resolveHomeModeSelection({
@@ -32,7 +39,5 @@ bootstrap.startGameOnAnimationFrame(function () {
 });
 
 function handle_undo() {
-  if (window.game_manager && window.game_manager.isUndoInteractionEnabled && window.game_manager.isUndoInteractionEnabled()) {
-    window.game_manager.move(-1);
-  }
+  undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
 }
