@@ -2,44 +2,29 @@ var bootstrap = window.LegacyBootstrapRuntime;
 if (!bootstrap || typeof bootstrap.startGameOnAnimationFrame !== "function") {
   throw new Error("LegacyBootstrapRuntime.startGameOnAnimationFrame is required");
 }
-var modeCatalogRuntime = window.CoreModeCatalogRuntime;
+var homeModeRuntime = window.CoreHomeModeRuntime;
 if (
-  !modeCatalogRuntime ||
-  typeof modeCatalogRuntime.resolveCatalogModeWithDefault !== "function"
+  !homeModeRuntime ||
+  typeof homeModeRuntime.resolveHomeModeSelection !== "function"
 ) {
-  throw new Error("CoreModeCatalogRuntime is required");
-}
-var practiceModeRuntime = window.CorePracticeModeRuntime;
-if (
-  !practiceModeRuntime ||
-  typeof practiceModeRuntime.parsePracticeRuleset !== "function" ||
-  typeof practiceModeRuntime.buildPracticeModeConfig !== "function"
-) {
-  throw new Error("CorePracticeModeRuntime is required");
+  throw new Error("CoreHomeModeRuntime is required");
 }
 
 bootstrap.startGameOnAnimationFrame(function () {
-  var modeKey = "standard_4x4_pow2_no_undo";
+  var selection = homeModeRuntime.resolveHomeModeSelection({
+    dataModeId:
+      typeof document !== "undefined" && document.body
+        ? document.body.getAttribute("data-mode-id")
+        : null,
+    defaultModeKey: "standard_4x4_pow2_no_undo",
+    searchLike: window.location.search || "",
+    modeCatalog: window.ModeCatalog
+  });
 
-  if (typeof document !== "undefined" && document.body) {
-    modeKey = document.body.getAttribute("data-mode-id") || modeKey;
-  }
-
-  window.GAME_MODE_CONFIG = modeCatalogRuntime.resolveCatalogModeWithDefault(
-    window.ModeCatalog,
-    modeKey,
-    "standard_4x4_pow2_no_undo"
-  );
-
-  if (modeKey === "practice_legacy" && window.GAME_MODE_CONFIG) {
-    window.GAME_MODE_CONFIG = practiceModeRuntime.buildPracticeModeConfig(
-      window.GAME_MODE_CONFIG,
-      practiceModeRuntime.parsePracticeRuleset(window.location.search || "")
-    );
-  }
+  window.GAME_MODE_CONFIG = selection.modeConfig;
 
   return {
-    modeKey: modeKey,
+    modeKey: selection.modeKey,
     modeConfig: window.GAME_MODE_CONFIG,
     inputManagerCtor: KeyboardInputManager,
     defaultBoardWidth: 4
