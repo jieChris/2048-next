@@ -1,11 +1,4 @@
 (function () {
-  var modeCatalogRuntime = window.CoreModeCatalogRuntime;
-  if (
-    !modeCatalogRuntime ||
-    typeof modeCatalogRuntime.resolveCatalogModeWithDefault !== "function"
-  ) {
-    throw new Error("CoreModeCatalogRuntime is required");
-  }
   var playHeaderRuntime = window.CorePlayHeaderRuntime;
   if (
     !playHeaderRuntime ||
@@ -15,13 +8,12 @@
   ) {
     throw new Error("CorePlayHeaderRuntime is required");
   }
-  var playQueryRuntime = window.CorePlayQueryRuntime;
+  var playEntryRuntime = window.CorePlayEntryRuntime;
   if (
-    !playQueryRuntime ||
-    typeof playQueryRuntime.parsePlayModeKey !== "function" ||
-    typeof playQueryRuntime.parsePlayChallengeId !== "function"
+    !playEntryRuntime ||
+    typeof playEntryRuntime.resolvePlayEntryPlan !== "function"
   ) {
-    throw new Error("CorePlayQueryRuntime is required");
+    throw new Error("CorePlayEntryRuntime is required");
   }
   var customSpawnRuntime = window.CoreCustomSpawnRuntime;
   if (
@@ -176,17 +168,19 @@
   }
 
   bootstrap.startGameOnAnimationFrame(function () {
-    var modeKey = playQueryRuntime.parsePlayModeKey(window.location.search, DEFAULT_MODE_KEY);
-    var challengeId = playQueryRuntime.parsePlayChallengeId(window.location.search);
-    var modeConfig = modeCatalogRuntime.resolveCatalogModeWithDefault(
-      window.ModeCatalog,
-      modeKey,
-      DEFAULT_MODE_KEY
-    );
+    var entryPlan = playEntryRuntime.resolvePlayEntryPlan({
+      searchLike: window.location.search,
+      modeCatalog: window.ModeCatalog,
+      defaultModeKey: DEFAULT_MODE_KEY,
+      invalidModeRedirectUrl: "play.html?mode_key=standard_4x4_pow2_no_undo"
+    });
+    var modeKey = entryPlan.modeKey;
+    var challengeId = entryPlan.challengeId;
+    var modeConfig = entryPlan.modeConfig;
 
     if (!modeConfig) {
       alert("无效模式，已回退到标准模式");
-      window.location.href = "play.html?mode_key=standard_4x4_pow2_no_undo";
+      window.location.href = entryPlan.redirectUrl || "play.html?mode_key=standard_4x4_pow2_no_undo";
       return null;
     }
 

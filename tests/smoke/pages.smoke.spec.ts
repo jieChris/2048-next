@@ -2371,6 +2371,48 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolveStorageByNameCallCount).toBeGreaterThan(0);
   });
 
+  test("play application delegates entry resolution to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__playEntryPlanCallCount = 0;
+      const runtimeTarget: Record<string, unknown> = {};
+      (window as any).CorePlayEntryRuntime = new Proxy(runtimeTarget, {
+        set(target, prop, value) {
+          if (prop === "resolvePlayEntryPlan" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__playEntryPlanCallCount =
+                Number((window as any).__playEntryPlanCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/play.html?mode_key=standard_4x4_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Play response should exist").not.toBeNull();
+    expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => ({
+      hasRuntime: Boolean((window as any).CorePlayEntryRuntime?.resolvePlayEntryPlan),
+      callCount: Number((window as any).__playEntryPlanCallCount || 0),
+      modeKey:
+        (window as any).GAME_MODE_CONFIG && typeof (window as any).GAME_MODE_CONFIG.key === "string"
+          ? (window as any).GAME_MODE_CONFIG.key
+          : null
+    }));
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.callCount).toBeGreaterThan(0);
+    expect(snapshot.modeKey).toBe("standard_4x4_pow2_no_undo");
+  });
+
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {
     const response = await page.goto("/play.html?mode_key=spawn_custom_4x4_pow2_no_undo&four_rate=25", {
       waitUntil: "domcontentloaded"
@@ -2398,6 +2440,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
           (window as any).CoreStorageRuntime?.safeReadStorageItem &&
           (window as any).CoreStorageRuntime?.safeSetStorageItem
         ),
+        hasPlayEntryRuntime: Boolean(
+          (window as any).CorePlayEntryRuntime?.resolvePlayEntryPlan
+        ),
         hasHeaderRuntime: Boolean((window as any).CorePlayHeaderRuntime?.buildPlayModeIntroText),
         hasModeCatalogRuntime: Boolean((window as any).CoreModeCatalogRuntime?.resolveCatalogModeWithDefault)
       };
@@ -2406,6 +2451,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.hasPlayCustomSpawnRuntime).toBe(true);
     expect(snapshot.hasStorageRuntime).toBe(true);
+    expect(snapshot.hasPlayEntryRuntime).toBe(true);
     expect(snapshot.hasHeaderRuntime).toBe(true);
     expect(snapshot.hasModeCatalogRuntime).toBe(true);
     expect(snapshot.key).toBe("spawn_custom_4x4_pow2_no_undo");
