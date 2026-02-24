@@ -1248,28 +1248,20 @@ function finishHomeGuide(markSeen, options) {
     action: "finish"
   });
   var sessionState = homeGuideRuntime.resolveHomeGuideSessionState({
-    lifecycleState: lifecycleState || null
+    lifecycleState: lifecycleState
   });
-  HOME_GUIDE_STATE.active = !!(sessionState && sessionState.active);
-  HOME_GUIDE_STATE.steps =
-    sessionState && Array.isArray(sessionState.steps) ? sessionState.steps : [];
-  HOME_GUIDE_STATE.index =
-    sessionState && typeof sessionState.index === "number" ? sessionState.index : 0;
-  HOME_GUIDE_STATE.fromSettings = !!(sessionState && sessionState.fromSettings);
+  HOME_GUIDE_STATE.active = sessionState.active;
+  HOME_GUIDE_STATE.steps = sessionState.steps;
+  HOME_GUIDE_STATE.index = sessionState.index;
+  HOME_GUIDE_STATE.fromSettings = sessionState.fromSettings;
   var layerDisplayState = homeGuideRuntime.resolveHomeGuideLayerDisplayState({
     active: HOME_GUIDE_STATE.active
   });
   if (HOME_GUIDE_STATE.overlay) {
-    HOME_GUIDE_STATE.overlay.style.display =
-      layerDisplayState && layerDisplayState.overlayDisplay
-        ? layerDisplayState.overlayDisplay
-        : "none";
+    HOME_GUIDE_STATE.overlay.style.display = layerDisplayState.overlayDisplay;
   }
   if (HOME_GUIDE_STATE.panel) {
-    HOME_GUIDE_STATE.panel.style.display =
-      layerDisplayState && layerDisplayState.panelDisplay
-        ? layerDisplayState.panelDisplay
-        : "none";
+    HOME_GUIDE_STATE.panel.style.display = layerDisplayState.panelDisplay;
   }
   if (markSeen) {
     homeGuideRuntime.markHomeGuideSeen({
@@ -1291,17 +1283,17 @@ function showHomeGuideStep(index) {
     stepCount: HOME_GUIDE_STATE.steps.length,
     stepIndex: index
   });
-  if (stepIndexState && stepIndexState.shouldAbort) return;
-  if (stepIndexState && stepIndexState.shouldFinish) {
+  if (stepIndexState.shouldAbort) return;
+  if (stepIndexState.shouldFinish) {
     var finishState = homeGuideRuntime.resolveHomeGuideFinishState({
       reason: "completed"
     });
-    finishHomeGuide(!!finishState.markSeen, {
-      showDoneNotice: !!finishState.showDoneNotice
+    finishHomeGuide(finishState.markSeen, {
+      showDoneNotice: finishState.showDoneNotice
     });
     return;
   }
-  index = stepIndexState ? stepIndexState.resolvedIndex : index;
+  index = stepIndexState.resolvedIndex;
   HOME_GUIDE_STATE.index = index;
   clearHomeGuideHighlight();
 
@@ -1313,7 +1305,7 @@ function showHomeGuideStep(index) {
     targetVisible: targetVisible,
     stepIndex: index
   });
-  if (stepTargetState && stepTargetState.shouldAdvance) {
+  if (stepTargetState.shouldAdvance) {
     showHomeGuideStep(stepTargetState.nextIndex);
     return;
   }
@@ -1329,11 +1321,11 @@ function showHomeGuideStep(index) {
     }),
     canScrollIntoView: !!target.scrollIntoView
   });
-  if (targetScrollState && targetScrollState.shouldScroll && target.scrollIntoView) {
+  if (targetScrollState.shouldScroll && target.scrollIntoView) {
     target.scrollIntoView({
-      block: targetScrollState.block || "center",
-      inline: targetScrollState.inline || "nearest",
-      behavior: targetScrollState.behavior || "smooth"
+      block: targetScrollState.block,
+      inline: targetScrollState.inline,
+      behavior: targetScrollState.behavior
     });
   }
   target.classList.add("home-guide-highlight");
@@ -1350,19 +1342,11 @@ function showHomeGuideStep(index) {
     stepCount: HOME_GUIDE_STATE.steps.length
   });
 
-  if (stepEl) stepEl.textContent = stepRenderState && stepRenderState.stepText
-    ? stepRenderState.stepText
-    : "";
-  if (titleEl) titleEl.textContent = stepRenderState && stepRenderState.titleText
-    ? stepRenderState.titleText
-    : "";
-  if (descEl) descEl.textContent = stepRenderState && stepRenderState.descText
-    ? stepRenderState.descText
-    : "";
-  if (prevBtn) prevBtn.disabled = !!(stepRenderState && stepRenderState.prevDisabled);
-  if (nextBtn) nextBtn.textContent = stepRenderState && stepRenderState.nextText
-    ? stepRenderState.nextText
-    : "";
+  if (stepEl) stepEl.textContent = stepRenderState.stepText;
+  if (titleEl) titleEl.textContent = stepRenderState.titleText;
+  if (descEl) descEl.textContent = stepRenderState.descText;
+  if (prevBtn) prevBtn.disabled = stepRenderState.prevDisabled;
+  if (nextBtn) nextBtn.textContent = stepRenderState.nextText;
 
   window.requestAnimationFrame(positionHomeGuidePanel);
 }
@@ -1378,26 +1362,18 @@ function startHomeGuide(options) {
     steps: getHomeGuideSteps()
   });
   var sessionState = homeGuideRuntime.resolveHomeGuideSessionState({
-    lifecycleState: lifecycleState || null
+    lifecycleState: lifecycleState
   });
-  HOME_GUIDE_STATE.active = !!(sessionState && sessionState.active);
-  HOME_GUIDE_STATE.fromSettings = !!(sessionState && sessionState.fromSettings);
-  HOME_GUIDE_STATE.steps =
-    sessionState && Array.isArray(sessionState.steps) ? sessionState.steps : [];
-  HOME_GUIDE_STATE.index =
-    sessionState && typeof sessionState.index === "number" ? sessionState.index : 0;
+  HOME_GUIDE_STATE.active = sessionState.active;
+  HOME_GUIDE_STATE.fromSettings = sessionState.fromSettings;
+  HOME_GUIDE_STATE.steps = sessionState.steps;
+  HOME_GUIDE_STATE.index = sessionState.index;
 
   var layerDisplayState = homeGuideRuntime.resolveHomeGuideLayerDisplayState({
     active: HOME_GUIDE_STATE.active
   });
-  dom.overlay.style.display =
-    layerDisplayState && layerDisplayState.overlayDisplay
-      ? layerDisplayState.overlayDisplay
-      : "block";
-  dom.panel.style.display =
-    layerDisplayState && layerDisplayState.panelDisplay
-      ? layerDisplayState.panelDisplay
-      : "block";
+  dom.overlay.style.display = layerDisplayState.overlayDisplay;
+  dom.panel.style.display = layerDisplayState.panelDisplay;
 
   var prevBtn = document.getElementById("home-guide-prev");
   var nextBtn = document.getElementById("home-guide-next");
@@ -1407,16 +1383,14 @@ function startHomeGuide(options) {
     var prevBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
       alreadyBound: !!prevBtn.__homeGuideBound
     });
-    if (prevBindingState && prevBindingState.shouldBind) {
-      prevBtn.__homeGuideBound = !!prevBindingState.boundValue;
+    if (prevBindingState.shouldBind) {
+      prevBtn.__homeGuideBound = prevBindingState.boundValue;
       prevBtn.addEventListener("click", function () {
         var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
           action: "prev",
           stepIndex: HOME_GUIDE_STATE.index
         });
-        showHomeGuideStep(actionState && typeof actionState.nextStepIndex === "number"
-          ? actionState.nextStepIndex
-          : HOME_GUIDE_STATE.index - 1);
+        showHomeGuideStep(actionState.nextStepIndex);
       });
     }
   }
@@ -1424,16 +1398,14 @@ function startHomeGuide(options) {
     var nextBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
       alreadyBound: !!nextBtn.__homeGuideBound
     });
-    if (nextBindingState && nextBindingState.shouldBind) {
-      nextBtn.__homeGuideBound = !!nextBindingState.boundValue;
+    if (nextBindingState.shouldBind) {
+      nextBtn.__homeGuideBound = nextBindingState.boundValue;
       nextBtn.addEventListener("click", function () {
         var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
           action: "next",
           stepIndex: HOME_GUIDE_STATE.index
         });
-        showHomeGuideStep(actionState && typeof actionState.nextStepIndex === "number"
-          ? actionState.nextStepIndex
-          : HOME_GUIDE_STATE.index + 1);
+        showHomeGuideStep(actionState.nextStepIndex);
       });
     }
   }
@@ -1441,22 +1413,19 @@ function startHomeGuide(options) {
     var skipBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
       alreadyBound: !!skipBtn.__homeGuideBound
     });
-    if (skipBindingState && skipBindingState.shouldBind) {
-      skipBtn.__homeGuideBound = !!skipBindingState.boundValue;
+    if (skipBindingState.shouldBind) {
+      skipBtn.__homeGuideBound = skipBindingState.boundValue;
       skipBtn.addEventListener("click", function () {
         var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
           action: "skip",
           stepIndex: HOME_GUIDE_STATE.index
         });
-        var finishReason =
-          actionState && actionState.type === "finish" && typeof actionState.finishReason === "string"
-            ? actionState.finishReason
-            : "skipped";
+        var finishReason = actionState.finishReason;
         var finishState = homeGuideRuntime.resolveHomeGuideFinishState({
           reason: finishReason
         });
-        finishHomeGuide(!!finishState.markSeen, {
-          showDoneNotice: !!finishState.showDoneNotice
+        finishHomeGuide(finishState.markSeen, {
+          showDoneNotice: finishState.showDoneNotice
         });
       });
     }
@@ -1545,7 +1514,7 @@ function autoStartHomeGuideIfNeeded() {
     storageLike: getStorageByName("localStorage"),
     seenKey: HOME_GUIDE_SEEN_KEY
   });
-  if (!autoStartState || !autoStartState.shouldAutoStart) return;
+  if (!autoStartState.shouldAutoStart) return;
   setTimeout(function () {
     startHomeGuide({ fromSettings: false });
   }, 260);
