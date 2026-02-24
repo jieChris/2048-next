@@ -69,6 +69,7 @@
   - `home-guide` 已承接设置开关动作决策（`resolveHomeGuideToggleAction`），`index_ui.js` 不再硬编码开关触发的 resync/关闭弹窗/启动引导分支
   - `home-guide` 已承接会话生命周期与层显示态（`resolveHomeGuideLifecycleState`/`resolveHomeGuideLayerDisplayState`），`index_ui.js` 不再硬编码 start/finish 的状态写回与层显示切换
   - `home-guide` 已承接步骤渲染模型（`resolveHomeGuideStepRenderState`），`index_ui.js` 不再直接拼装 step/title/desc/按钮文案
+  - `home-guide` 已承接高亮容器选择策略（`resolveHomeGuideElevationPlan`），`index_ui.js` 不再硬编码 `.top-action-buttons/.heading` 的优先级
   - `home-guide` 已承接引导面板/设置项模板（`buildHomeGuidePanelInnerHtml`/`buildHomeGuideSettingsRowInnerHtml`），`index_ui.js` 仅负责挂载 DOM
   - `home-guide` 已承接指引浮层位置计算（`resolveHomeGuidePanelLayout`），`index_ui.js` 仅传入窗口/目标几何信息并应用结果
   - `home-guide` 已承接指引目标可见性判定（`isHomeGuideTargetVisible`），`index_ui.js` 不再直接读 DOM 可见性样式

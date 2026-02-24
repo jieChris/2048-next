@@ -96,6 +96,7 @@ if (
   typeof homeGuideRuntime.resolveHomeGuideStepRenderState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepIndexState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepTargetState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideElevationPlan !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideControlAction !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideToggleAction !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideLifecycleState !== "function" ||
@@ -1082,14 +1083,28 @@ function clearHomeGuideHighlight() {
 function elevateHomeGuideTarget(target) {
   if (!target || !target.closest) return;
   var elevated = [];
-  var stackHost = target.closest(".top-action-buttons");
-  if (!stackHost) stackHost = target.closest(".heading");
+  var topActionButtons = target.closest(".top-action-buttons");
+  var headingHost = target.closest(".heading");
+  var elevationPlan = homeGuideRuntime.resolveHomeGuideElevationPlan({
+    hasTopActionButtonsAncestor: !!topActionButtons,
+    hasHeadingAncestor: !!headingHost
+  });
+  var stackHost = null;
+  if (elevationPlan && elevationPlan.hostSelector === ".top-action-buttons") {
+    stackHost = topActionButtons;
+  } else if (elevationPlan && elevationPlan.hostSelector === ".heading") {
+    stackHost = headingHost;
+  }
   if (stackHost && stackHost.classList) {
     stackHost.classList.add("home-guide-elevated");
     elevated.push(stackHost);
   }
-  var topActionButtons = target.closest(".top-action-buttons");
-  if (topActionButtons && topActionButtons.classList) {
+  if (
+    elevationPlan &&
+    elevationPlan.shouldScopeTopActions &&
+    topActionButtons &&
+    topActionButtons.classList
+  ) {
     topActionButtons.classList.add("home-guide-scope");
   }
   HOME_GUIDE_STATE.elevated = elevated;

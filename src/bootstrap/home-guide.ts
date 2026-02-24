@@ -116,6 +116,16 @@ export interface ResolveHomeGuideStepTargetStateResult {
   nextIndex: number;
 }
 
+export interface ResolveHomeGuideElevationPlanOptions {
+  hasTopActionButtonsAncestor?: boolean | null | undefined;
+  hasHeadingAncestor?: boolean | null | undefined;
+}
+
+export interface ResolveHomeGuideElevationPlanResult {
+  hostSelector: ".top-action-buttons" | ".heading" | "";
+  shouldScopeTopActions: boolean;
+}
+
 export interface ResolveHomeGuideControlActionOptions {
   action?: string | null | undefined;
   stepIndex?: number | null | undefined;
@@ -436,6 +446,30 @@ export function resolveHomeGuideStepTargetState(
   return {
     shouldAdvance,
     nextIndex: shouldAdvance ? index + 1 : index
+  };
+}
+
+export function resolveHomeGuideElevationPlan(
+  options: ResolveHomeGuideElevationPlanOptions
+): ResolveHomeGuideElevationPlanResult {
+  const opts = options || {};
+  const hasTop = !!opts.hasTopActionButtonsAncestor;
+  const hasHeading = !!opts.hasHeadingAncestor;
+  if (hasTop) {
+    return {
+      hostSelector: ".top-action-buttons",
+      shouldScopeTopActions: true
+    };
+  }
+  if (hasHeading) {
+    return {
+      hostSelector: ".heading",
+      shouldScopeTopActions: false
+    };
+  }
+  return {
+    hostSelector: "",
+    shouldScopeTopActions: false
   };
 }
 

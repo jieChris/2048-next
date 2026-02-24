@@ -13,6 +13,7 @@ import {
   resolveHomeGuideDoneNotice,
   resolveHomeGuideDoneNoticeStyle,
   resolveHomeGuideControlAction,
+  resolveHomeGuideElevationPlan,
   resolveHomeGuideStepRenderState,
   resolveHomeGuideLayerDisplayState,
   resolveHomeGuideLifecycleState,
@@ -340,6 +341,36 @@ describe("bootstrap home guide", () => {
     ).toEqual({
       shouldAdvance: true,
       nextIndex: 3
+    });
+  });
+
+  it("resolves elevation plan for top-actions/heading/none", () => {
+    expect(
+      resolveHomeGuideElevationPlan({
+        hasTopActionButtonsAncestor: true,
+        hasHeadingAncestor: true
+      })
+    ).toEqual({
+      hostSelector: ".top-action-buttons",
+      shouldScopeTopActions: true
+    });
+    expect(
+      resolveHomeGuideElevationPlan({
+        hasTopActionButtonsAncestor: false,
+        hasHeadingAncestor: true
+      })
+    ).toEqual({
+      hostSelector: ".heading",
+      shouldScopeTopActions: false
+    });
+    expect(
+      resolveHomeGuideElevationPlan({
+        hasTopActionButtonsAncestor: false,
+        hasHeadingAncestor: false
+      })
+    ).toEqual({
+      hostSelector: "",
+      shouldScopeTopActions: false
     });
   });
 
