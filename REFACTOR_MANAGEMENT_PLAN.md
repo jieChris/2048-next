@@ -79,6 +79,7 @@
   - 新增 `src/bootstrap/mobile-hint.ts` + `js/core_mobile_hint_runtime.js`，`index_ui.js` 委托移动端提示文案抽取与去重逻辑
   - 新增 `src/bootstrap/timer-module.ts` + `js/core_timer_module_runtime.js`，`index_ui.js` 委托计时器设置项模板、展示态、绑定去重与开关视图模式决策
   - `timer-module` 已承接计时器视图模式应用回退（`resolveTimerModuleAppliedViewMode`），`index_ui.js` 不再硬编码 `setTimerModuleViewMode` 的兜底分支
+  - `timer-module` 已承接初始化重试判定（`resolveTimerModuleInitRetryState`），`index_ui.js` 不再硬编码 `game_manager` 延迟就绪重试条件
   - 新增 `src/bootstrap/theme-settings.ts` + `js/core_theme_settings_runtime.js`，`index_ui.js` 委托主题设置预览值格式化、预览值回退、下拉开关/绑定去重与选中态判定
   - `theme-settings` 已承接双预览区布局契约（`resolveThemePreviewLayout`），`index_ui.js` 不再硬编码预览容器 class、innerHTML 与选择器常量
   - `theme-settings` 已承接主题列表标准化（`resolveThemeOptions`），`index_ui.js` 不再直接消费 `ThemeManager.getThemes()` 的原始结构

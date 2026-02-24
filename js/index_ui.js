@@ -120,7 +120,8 @@ if (
   typeof timerModuleRuntime.resolveTimerModuleSettingsState !== "function" ||
   typeof timerModuleRuntime.resolveTimerModuleBindingState !== "function" ||
   typeof timerModuleRuntime.resolveTimerModuleViewMode !== "function" ||
-  typeof timerModuleRuntime.resolveTimerModuleAppliedViewMode !== "function"
+  typeof timerModuleRuntime.resolveTimerModuleAppliedViewMode !== "function" ||
+  typeof timerModuleRuntime.resolveTimerModuleInitRetryState !== "function"
 ) {
   throw new Error("CoreTimerModuleRuntime is required");
 }
@@ -1046,9 +1047,14 @@ function ensureTimerModuleSettingsDom() {
 function initTimerModuleSettingsUI() {
   var toggle = ensureTimerModuleSettingsDom();
   var note = document.getElementById("timer-module-view-note");
+  var retryState = timerModuleRuntime.resolveTimerModuleInitRetryState({
+    hasToggle: !!toggle,
+    hasManager: !!window.game_manager,
+    retryDelayMs: 60
+  });
   if (!toggle) return;
-  if (!window.game_manager) {
-    setTimeout(initTimerModuleSettingsUI, 60);
+  if (retryState && retryState.shouldRetry) {
+    setTimeout(initTimerModuleSettingsUI, retryState.retryDelayMs);
     return;
   }
 

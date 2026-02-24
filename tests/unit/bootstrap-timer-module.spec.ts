@@ -4,6 +4,7 @@ import {
   buildTimerModuleSettingsRowInnerHtml,
   resolveTimerModuleAppliedViewMode,
   resolveTimerModuleBindingState,
+  resolveTimerModuleInitRetryState,
   resolveTimerModuleSettingsState,
   resolveTimerModuleViewMode
 } from "../../src/bootstrap/timer-module";
@@ -86,5 +87,27 @@ describe("bootstrap timer module", () => {
         checked: false
       })
     ).toBe("hidden");
+  });
+
+  it("resolves init retry state for delayed manager availability", () => {
+    expect(
+      resolveTimerModuleInitRetryState({
+        hasToggle: true,
+        hasManager: false,
+        retryDelayMs: 60
+      })
+    ).toEqual({
+      shouldRetry: true,
+      retryDelayMs: 60
+    });
+    expect(
+      resolveTimerModuleInitRetryState({
+        hasToggle: false,
+        hasManager: false
+      })
+    ).toEqual({
+      shouldRetry: false,
+      retryDelayMs: 60
+    });
   });
 });

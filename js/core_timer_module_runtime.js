@@ -52,6 +52,18 @@
     return opts.checked ? "timer" : "hidden";
   }
 
+  function resolveTimerModuleInitRetryState(options) {
+    var opts = options || {};
+    var hasToggle = !!opts.hasToggle;
+    var hasManager = !!opts.hasManager;
+    var retryDelayMs =
+      typeof opts.retryDelayMs === "number" && opts.retryDelayMs > 0 ? opts.retryDelayMs : 60;
+    return {
+      shouldRetry: hasToggle && !hasManager,
+      retryDelayMs: retryDelayMs
+    };
+  }
+
   global.CoreTimerModuleRuntime = global.CoreTimerModuleRuntime || {};
   global.CoreTimerModuleRuntime.buildTimerModuleSettingsRowInnerHtml =
     buildTimerModuleSettingsRowInnerHtml;
@@ -60,4 +72,6 @@
   global.CoreTimerModuleRuntime.resolveTimerModuleViewMode = resolveTimerModuleViewMode;
   global.CoreTimerModuleRuntime.resolveTimerModuleAppliedViewMode =
     resolveTimerModuleAppliedViewMode;
+  global.CoreTimerModuleRuntime.resolveTimerModuleInitRetryState =
+    resolveTimerModuleInitRetryState;
 })(typeof window !== "undefined" ? window : undefined);

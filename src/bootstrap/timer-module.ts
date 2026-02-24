@@ -30,6 +30,17 @@ export interface ResolveTimerModuleAppliedViewModeOptions {
   checked?: boolean | null | undefined;
 }
 
+export interface ResolveTimerModuleInitRetryStateOptions {
+  hasToggle?: boolean | null | undefined;
+  hasManager?: boolean | null | undefined;
+  retryDelayMs?: number | null | undefined;
+}
+
+export interface ResolveTimerModuleInitRetryStateResult {
+  shouldRetry: boolean;
+  retryDelayMs: number;
+}
+
 export function buildTimerModuleSettingsRowInnerHtml(): string {
   return (
     "<label for='timer-module-view-toggle'>计时器显示</label>" +
@@ -85,4 +96,17 @@ export function resolveTimerModuleAppliedViewMode(
     return nextViewMode.viewMode;
   }
   return opts.checked ? "timer" : "hidden";
+}
+
+export function resolveTimerModuleInitRetryState(
+  options: ResolveTimerModuleInitRetryStateOptions
+): ResolveTimerModuleInitRetryStateResult {
+  const opts = options || {};
+  const hasToggle = !!opts.hasToggle;
+  const hasManager = !!opts.hasManager;
+  const retryDelayMs = typeof opts.retryDelayMs === "number" && opts.retryDelayMs > 0 ? opts.retryDelayMs : 60;
+  return {
+    shouldRetry: hasToggle && !hasManager,
+    retryDelayMs
+  };
 }
