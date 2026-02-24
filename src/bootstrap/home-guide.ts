@@ -88,6 +88,18 @@ export interface ResolveHomeGuideFinishStateResult {
   showDoneNotice: boolean;
 }
 
+export interface ResolveHomeGuideTargetScrollStateOptions {
+  isCompactViewport?: boolean | null | undefined;
+  canScrollIntoView?: boolean | null | undefined;
+}
+
+export interface ResolveHomeGuideTargetScrollStateResult {
+  shouldScroll: boolean;
+  block: "start" | "center" | "end" | "nearest";
+  inline: "start" | "center" | "end" | "nearest";
+  behavior: "auto" | "instant" | "smooth";
+}
+
 export interface ResolveHomeGuideDoneNoticeOptions {
   message?: string | null | undefined;
   hideDelayMs?: number | null | undefined;
@@ -295,6 +307,18 @@ export function resolveHomeGuideFinishState(
   return {
     markSeen: true,
     showDoneNotice: reason === "completed"
+  };
+}
+
+export function resolveHomeGuideTargetScrollState(
+  options: ResolveHomeGuideTargetScrollStateOptions
+): ResolveHomeGuideTargetScrollStateResult {
+  const opts = options || {};
+  return {
+    shouldScroll: !!opts.isCompactViewport && !!opts.canScrollIntoView,
+    block: "center",
+    inline: "nearest",
+    behavior: "smooth"
   };
 }
 

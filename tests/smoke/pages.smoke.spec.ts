@@ -1040,6 +1040,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.resolveHomeGuideSettingsState !== "function" ||
         typeof runtime.resolveHomeGuideStepUiState !== "function" ||
         typeof runtime.resolveHomeGuideFinishState !== "function" ||
+        typeof runtime.resolveHomeGuideTargetScrollState !== "function" ||
         typeof runtime.resolveHomeGuideDoneNotice !== "function" ||
         typeof runtime.resolveHomeGuideDoneNoticeStyle !== "function" ||
         typeof runtime.resolveHomeGuidePanelLayout !== "function" ||
@@ -1110,6 +1111,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const finishStateSkipped = runtime.resolveHomeGuideFinishState({
         reason: "skipped"
       });
+      const targetScrollStateCompact = runtime.resolveHomeGuideTargetScrollState({
+        isCompactViewport: true,
+        canScrollIntoView: true
+      });
+      const targetScrollStateDesktop = runtime.resolveHomeGuideTargetScrollState({
+        isCompactViewport: false,
+        canScrollIntoView: true
+      });
       const doneNotice = runtime.resolveHomeGuideDoneNotice({});
       const doneNoticeStyle = runtime.resolveHomeGuideDoneNoticeStyle();
       const visibleCheck = runtime.isHomeGuideTargetVisible({
@@ -1169,6 +1178,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         stepUiStateLast,
         finishStateCompleted,
         finishStateSkipped,
+        targetScrollStateCompact,
+        targetScrollStateDesktop,
         doneNotice,
         doneNoticeStyle,
         visibleCheck,
@@ -1210,6 +1221,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.finishStateSkipped).toEqual({
       markSeen: true,
       showDoneNotice: false
+    });
+    expect(snapshot.targetScrollStateCompact).toEqual({
+      shouldScroll: true,
+      block: "center",
+      inline: "nearest",
+      behavior: "smooth"
+    });
+    expect(snapshot.targetScrollStateDesktop).toEqual({
+      shouldScroll: false,
+      block: "center",
+      inline: "nearest",
+      behavior: "smooth"
     });
     expect(snapshot.doneNotice).toEqual({
       message: "指引已完成，可在设置中重新打开新手指引。",
@@ -1268,6 +1291,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.markHomeGuideSeen !== "function" ||
         typeof runtime.resolveHomeGuideStepUiState !== "function" ||
         typeof runtime.resolveHomeGuideFinishState !== "function" ||
+        typeof runtime.resolveHomeGuideTargetScrollState !== "function" ||
         typeof runtime.resolveHomeGuideDoneNotice !== "function" ||
         typeof runtime.resolveHomeGuideDoneNoticeStyle !== "function" ||
         typeof runtime.resolveHomeGuidePanelLayout !== "function" ||
@@ -1285,6 +1309,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalMark = runtime.markHomeGuideSeen;
       const originalResolveStepUiState = runtime.resolveHomeGuideStepUiState;
       const originalResolveFinishState = runtime.resolveHomeGuideFinishState;
+      const originalResolveTargetScrollState = runtime.resolveHomeGuideTargetScrollState;
       const originalResolveDoneNotice = runtime.resolveHomeGuideDoneNotice;
       const originalResolveDoneNoticeStyle = runtime.resolveHomeGuideDoneNoticeStyle;
       const originalResolvePanelLayout = runtime.resolveHomeGuidePanelLayout;
@@ -1295,6 +1320,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let markCallCount = 0;
       let stepUiStateCallCount = 0;
       let finishStateCallCount = 0;
+      let targetScrollStateCallCount = 0;
       let doneNoticeCallCount = 0;
       let doneNoticeStyleCallCount = 0;
       let panelLayoutCallCount = 0;
@@ -1322,6 +1348,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.resolveHomeGuideFinishState = function (opts: any) {
         finishStateCallCount += 1;
         return originalResolveFinishState(opts);
+      };
+      runtime.resolveHomeGuideTargetScrollState = function (opts: any) {
+        targetScrollStateCallCount += 1;
+        return originalResolveTargetScrollState(opts);
       };
       runtime.resolveHomeGuideDoneNotice = function (opts: any) {
         doneNoticeCallCount += 1;
@@ -1385,6 +1415,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           markCallCount,
           stepUiStateCallCount,
           finishStateCallCount,
+          targetScrollStateCallCount,
           doneNoticeCallCount,
           doneNoticeStyleCallCount,
           panelLayoutCallCount,
@@ -1403,6 +1434,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.markHomeGuideSeen = originalMark;
         runtime.resolveHomeGuideStepUiState = originalResolveStepUiState;
         runtime.resolveHomeGuideFinishState = originalResolveFinishState;
+        runtime.resolveHomeGuideTargetScrollState = originalResolveTargetScrollState;
         runtime.resolveHomeGuideDoneNotice = originalResolveDoneNotice;
         runtime.resolveHomeGuideDoneNoticeStyle = originalResolveDoneNoticeStyle;
         runtime.resolveHomeGuidePanelLayout = originalResolvePanelLayout;
@@ -1419,6 +1451,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.markCallCount).toBeGreaterThan(0);
     expect(snapshot.stepUiStateCallCount).toBeGreaterThan(0);
     expect(snapshot.finishStateCallCount).toBeGreaterThan(0);
+    expect(snapshot.targetScrollStateCallCount).toBeGreaterThan(0);
     expect(snapshot.doneNoticeCallCount).toBeGreaterThan(0);
     expect(snapshot.doneNoticeStyleCallCount).toBeGreaterThan(0);
     expect(snapshot.panelLayoutCallCount).toBeGreaterThan(0);

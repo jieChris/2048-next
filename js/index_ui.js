@@ -94,6 +94,7 @@ if (
   typeof homeGuideRuntime.resolveHomeGuideSettingsState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepUiState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideFinishState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideTargetScrollState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideDoneNotice !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideDoneNoticeStyle !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuidePanelLayout !== "function" ||
@@ -1201,14 +1202,19 @@ function showHomeGuideStep(index) {
     return;
   }
   HOME_GUIDE_STATE.target = target;
-  if (
-    mobileViewportRuntime.isViewportAtMost({
+  var targetScrollState = homeGuideRuntime.resolveHomeGuideTargetScrollState({
+    isCompactViewport: mobileViewportRuntime.isViewportAtMost({
       windowLike: window,
       maxWidth: MOBILE_UI_MAX_WIDTH
-    }) &&
-    target.scrollIntoView
-  ) {
-    target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+    }),
+    canScrollIntoView: !!target.scrollIntoView
+  });
+  if (targetScrollState && targetScrollState.shouldScroll && target.scrollIntoView) {
+    target.scrollIntoView({
+      block: targetScrollState.block || "center",
+      inline: targetScrollState.inline || "nearest",
+      behavior: targetScrollState.behavior || "smooth"
+    });
   }
   target.classList.add("home-guide-highlight");
   elevateHomeGuideTarget(target);

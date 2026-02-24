@@ -140,6 +140,16 @@
     };
   }
 
+  function resolveHomeGuideTargetScrollState(options) {
+    var opts = options || {};
+    return {
+      shouldScroll: !!opts.isCompactViewport && !!opts.canScrollIntoView,
+      block: "center",
+      inline: "nearest",
+      behavior: "smooth"
+    };
+  }
+
   function resolveHomeGuideDoneNotice(options) {
     var opts = options || {};
     var defaultMessage = "指引已完成，可在设置中重新打开新手指引。";
@@ -264,6 +274,7 @@
   global.CoreHomeGuideRuntime.resolveHomeGuideSettingsState = resolveHomeGuideSettingsState;
   global.CoreHomeGuideRuntime.resolveHomeGuideStepUiState = resolveHomeGuideStepUiState;
   global.CoreHomeGuideRuntime.resolveHomeGuideFinishState = resolveHomeGuideFinishState;
+  global.CoreHomeGuideRuntime.resolveHomeGuideTargetScrollState = resolveHomeGuideTargetScrollState;
   global.CoreHomeGuideRuntime.resolveHomeGuideDoneNotice = resolveHomeGuideDoneNotice;
   global.CoreHomeGuideRuntime.resolveHomeGuideDoneNoticeStyle = resolveHomeGuideDoneNoticeStyle;
   global.CoreHomeGuideRuntime.resolveHomeGuidePanelLayout = resolveHomeGuidePanelLayout;

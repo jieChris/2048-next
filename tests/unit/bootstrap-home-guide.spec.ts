@@ -13,6 +13,7 @@ import {
   resolveHomeGuideDoneNotice,
   resolveHomeGuideDoneNoticeStyle,
   resolveHomeGuideFinishState,
+  resolveHomeGuideTargetScrollState,
   resolveHomeGuideStepUiState,
   resolveHomeGuideSettingsState,
   shouldAutoStartHomeGuide
@@ -272,6 +273,31 @@ describe("bootstrap home guide", () => {
     ).toEqual({
       markSeen: true,
       showDoneNotice: false
+    });
+  });
+
+  it("resolves target scroll state for compact and desktop viewport", () => {
+    expect(
+      resolveHomeGuideTargetScrollState({
+        isCompactViewport: true,
+        canScrollIntoView: true
+      })
+    ).toEqual({
+      shouldScroll: true,
+      block: "center",
+      inline: "nearest",
+      behavior: "smooth"
+    });
+    expect(
+      resolveHomeGuideTargetScrollState({
+        isCompactViewport: false,
+        canScrollIntoView: true
+      })
+    ).toEqual({
+      shouldScroll: false,
+      block: "center",
+      inline: "nearest",
+      behavior: "smooth"
     });
   });
 
