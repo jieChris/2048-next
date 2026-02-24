@@ -1501,10 +1501,10 @@ function initHomeGuideSettingsUI() {
       guideActive: HOME_GUIDE_STATE.active,
       fromSettings: HOME_GUIDE_STATE.fromSettings
     });
-    toggle.disabled = !!(uiState && uiState.toggleDisabled);
-    toggle.checked = !!(uiState && uiState.toggleChecked);
+    toggle.disabled = uiState.toggleDisabled;
+    toggle.checked = uiState.toggleChecked;
     if (note) {
-      note.textContent = uiState && uiState.noteText ? String(uiState.noteText) : "";
+      note.textContent = uiState.noteText;
     }
   }
 
@@ -1513,22 +1513,22 @@ function initHomeGuideSettingsUI() {
   var toggleBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
     alreadyBound: !!toggle.__homeGuideBound
   });
-  if (toggleBindingState && toggleBindingState.shouldBind) {
-    toggle.__homeGuideBound = !!toggleBindingState.boundValue;
+  if (toggleBindingState.shouldBind) {
+    toggle.__homeGuideBound = toggleBindingState.boundValue;
     toggle.addEventListener("change", function () {
       var toggleAction = homeGuideRuntime.resolveHomeGuideToggleAction({
         checked: !!this.checked,
         isHomePage: isHomePage()
       });
-      if (toggleAction && toggleAction.shouldResync) {
+      if (toggleAction.shouldResync) {
         sync();
         return;
       }
-      if (toggleAction && toggleAction.shouldStartGuide) {
+      if (toggleAction.shouldStartGuide) {
         if (toggleAction.shouldCloseSettings) {
           window.closeSettingsModal();
         }
-        startHomeGuide({ fromSettings: !!toggleAction.startFromSettings });
+        startHomeGuide({ fromSettings: toggleAction.startFromSettings });
       }
     });
   }

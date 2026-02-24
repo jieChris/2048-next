@@ -76,6 +76,7 @@
   - `home-guide` 已承接步骤渲染模型（`resolveHomeGuideStepRenderState`），`index_ui.js` 不再直接拼装 step/title/desc/按钮文案
   - `home-guide` 已承接高亮容器选择策略（`resolveHomeGuideElevationPlan`），`index_ui.js` 不再硬编码 `.top-action-buttons/.heading` 的优先级
   - `home-guide` 已承接事件绑定去重策略（`resolveHomeGuideBindingState`），`index_ui.js` 不再硬编码 `__homeGuideBound` 判定分支
+  - `index_ui.js` 现直接消费 `home-guide` 设置/绑定/开关动作模型（`resolveHomeGuideSettingsState`/`resolveHomeGuideBindingState`/`resolveHomeGuideToggleAction`），不再重复本地空值 fallback 分支
   - `home-guide` 已承接引导面板/设置项模板（`buildHomeGuidePanelInnerHtml`/`buildHomeGuideSettingsRowInnerHtml`），`index_ui.js` 仅负责挂载 DOM
   - `home-guide` 已承接指引浮层位置计算（`resolveHomeGuidePanelLayout`），`index_ui.js` 仅传入窗口/目标几何信息并应用结果
   - `home-guide` 已承接指引目标可见性判定（`isHomeGuideTargetVisible`），`index_ui.js` 不再直接读 DOM 可见性样式
