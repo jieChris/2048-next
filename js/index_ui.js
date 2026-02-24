@@ -160,6 +160,16 @@ if (
 ) {
   throw new Error("CoreMobileTopButtonsRuntime is required");
 }
+var mobileViewportRuntime = window.CoreMobileViewportRuntime;
+if (
+  !mobileViewportRuntime ||
+  typeof mobileViewportRuntime.isViewportAtMost !== "function" ||
+  typeof mobileViewportRuntime.isCompactGameViewport !== "function" ||
+  typeof mobileViewportRuntime.isTimerboxCollapseViewport !== "function" ||
+  typeof mobileViewportRuntime.isMobileGameViewport !== "function"
+) {
+  throw new Error("CoreMobileViewportRuntime is required");
+}
 
 function tryUndoFromUi() {
   var undoRuntime = window.CoreUndoActionRuntime;
@@ -194,39 +204,25 @@ function isPracticePageScope() {
 }
 
 function isMobileGameViewport() {
-  if (typeof window === "undefined") return false;
-  var narrowQuery = "(max-width: " + MOBILE_UI_MAX_WIDTH + "px)";
-  var narrow = window.matchMedia ? window.matchMedia(narrowQuery).matches : (window.innerWidth <= MOBILE_UI_MAX_WIDTH);
-  if (!narrow) return false;
-
-  var coarsePointer = false;
-  var noHover = false;
-  try {
-    coarsePointer = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
-    noHover = !!(window.matchMedia && window.matchMedia("(hover: none)").matches);
-  } catch (_err) {}
-
-  var ua = "";
-  try {
-    ua = (navigator && navigator.userAgent) ? String(navigator.userAgent) : "";
-  } catch (_err) {
-    ua = "";
-  }
-  var mobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-
-  return coarsePointer || noHover || mobileUa;
+  return mobileViewportRuntime.isMobileGameViewport({
+    windowLike: typeof window !== "undefined" ? window : null,
+    navigatorLike: typeof navigator !== "undefined" ? navigator : null,
+    maxWidth: MOBILE_UI_MAX_WIDTH
+  });
 }
 
 function isCompactGameViewport() {
-  if (typeof window === "undefined") return false;
-  var query = "(max-width: " + COMPACT_GAME_VIEWPORT_MAX_WIDTH + "px)";
-  return window.matchMedia ? window.matchMedia(query).matches : (window.innerWidth <= COMPACT_GAME_VIEWPORT_MAX_WIDTH);
+  return mobileViewportRuntime.isCompactGameViewport({
+    windowLike: typeof window !== "undefined" ? window : null,
+    maxWidth: COMPACT_GAME_VIEWPORT_MAX_WIDTH
+  });
 }
 
 function isTimerboxCollapseViewport() {
-  if (typeof window === "undefined") return false;
-  var query = "(max-width: " + TIMERBOX_COLLAPSE_MAX_WIDTH + "px)";
-  return window.matchMedia ? window.matchMedia(query).matches : (window.innerWidth <= TIMERBOX_COLLAPSE_MAX_WIDTH);
+  return mobileViewportRuntime.isTimerboxCollapseViewport({
+    windowLike: typeof window !== "undefined" ? window : null,
+    maxWidth: TIMERBOX_COLLAPSE_MAX_WIDTH
+  });
 }
 
 function ensureMobileTopActionsState() {
@@ -1098,8 +1094,12 @@ function positionHomeGuidePanel() {
 
   var rect = target.getBoundingClientRect();
   var margin = 12;
+  var mobileLayout = mobileViewportRuntime.isViewportAtMost({
+    windowLike: window,
+    maxWidth: MOBILE_UI_MAX_WIDTH
+  });
   var panelWidth;
-  if (window.innerWidth <= MOBILE_UI_MAX_WIDTH) {
+  if (mobileLayout) {
     panelWidth = Math.min(380, Math.max(240, window.innerWidth - margin * 2));
   } else {
     panelWidth = Math.min(430, Math.max(280, window.innerWidth - margin * 2));
@@ -1109,7 +1109,7 @@ function positionHomeGuidePanel() {
 
   var panelHeight = panel.offsetHeight || 160;
   var top;
-  if (window.innerWidth <= MOBILE_UI_MAX_WIDTH) {
+  if (mobileLayout) {
     top = window.innerHeight - panelHeight - margin;
   } else {
     top = rect.bottom + margin;
@@ -1213,7 +1213,13 @@ function showHomeGuideStep(index) {
     return;
   }
   HOME_GUIDE_STATE.target = target;
-  if (window.innerWidth <= MOBILE_UI_MAX_WIDTH && target.scrollIntoView) {
+  if (
+    mobileViewportRuntime.isViewportAtMost({
+      windowLike: window,
+      maxWidth: MOBILE_UI_MAX_WIDTH
+    }) &&
+    target.scrollIntoView
+  ) {
     target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
   }
   target.classList.add("home-guide-highlight");

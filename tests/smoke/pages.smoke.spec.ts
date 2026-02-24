@@ -787,7 +787,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.openedUrl).toContain("practice_guide_seen=1");
   });
 
-  test("index ui delegates mobile hint timerbox undo-top top-actions and top-button logic to runtime helpers", async ({ page }) => {
+  test("index ui delegates mobile hint timerbox undo-top top-actions top-button and viewport logic to runtime helpers", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const response = await page.goto("/play.html", {
       waitUntil: "domcontentloaded"
@@ -805,6 +805,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const undoTopRuntime = (window as any).CoreMobileUndoTopRuntime;
       const topActionsRuntime = (window as any).CoreTopActionsRuntime;
       const topButtonsRuntime = (window as any).CoreMobileTopButtonsRuntime;
+      const viewportRuntime = (window as any).CoreMobileViewportRuntime;
       if (
         !runtime ||
         typeof runtime.collectMobileHintTexts !== "function" ||
@@ -824,7 +825,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof topActionsRuntime.syncPracticeTopActionsPlacement !== "function" ||
         !topButtonsRuntime ||
         typeof topButtonsRuntime.ensureMobileUndoTopButtonDom !== "function" ||
-        typeof topButtonsRuntime.ensureMobileHintToggleButtonDom !== "function"
+        typeof topButtonsRuntime.ensureMobileHintToggleButtonDom !== "function" ||
+        !viewportRuntime ||
+        typeof viewportRuntime.isViewportAtMost !== "function" ||
+        typeof viewportRuntime.isCompactGameViewport !== "function" ||
+        typeof viewportRuntime.isTimerboxCollapseViewport !== "function" ||
+        typeof viewportRuntime.isMobileGameViewport !== "function"
       ) {
         return {
           hasRuntime: false,
@@ -833,7 +839,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasTimerRuntime: false,
           hasUndoTopRuntime: false,
           hasTopActionsRuntime: false,
-          hasTopButtonsRuntime: false
+          hasTopButtonsRuntime: false,
+          hasViewportRuntime: false
         };
       }
       const hintBtn = document.getElementById("top-mobile-hint-btn") as HTMLAnchorElement | null;
@@ -846,6 +853,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasUndoTopRuntime: true,
           hasTopActionsRuntime: true,
           hasTopButtonsRuntime: true,
+          hasViewportRuntime: true,
           hasHintButton: false
         };
       }
@@ -860,6 +868,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalSyncPracticeTop = topActionsRuntime.syncPracticeTopActionsPlacement;
       const originalEnsureUndoTopBtn = topButtonsRuntime.ensureMobileUndoTopButtonDom;
       const originalEnsureHintTopBtn = topButtonsRuntime.ensureMobileHintToggleButtonDom;
+      const originalIsCompactViewport = viewportRuntime.isCompactGameViewport;
+      const originalIsTimerboxCollapseViewport = viewportRuntime.isTimerboxCollapseViewport;
       let collectCallCount = 0;
       let syncCallCount = 0;
       let ensureModalCallCount = 0;
@@ -870,6 +880,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let syncPracticeTopCallCount = 0;
       let ensureUndoTopBtnCallCount = 0;
       let ensureHintTopBtnCallCount = 0;
+      let compactViewportCallCount = 0;
+      let timerboxCollapseViewportCallCount = 0;
       runtime.collectMobileHintTexts = function (opts: any) {
         collectCallCount += 1;
         const lines = originalCollect(opts);
@@ -911,6 +923,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
         ensureHintTopBtnCallCount += 1;
         return originalEnsureHintTopBtn(opts);
       };
+      viewportRuntime.isCompactGameViewport = function (opts: any) {
+        compactViewportCallCount += 1;
+        return originalIsCompactViewport(opts);
+      };
+      viewportRuntime.isTimerboxCollapseViewport = function (opts: any) {
+        timerboxCollapseViewportCallCount += 1;
+        return originalIsTimerboxCollapseViewport(opts);
+      };
 
       try {
         const syncMobileHintUI = (window as any).syncMobileHintUI;
@@ -938,6 +958,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasUndoTopRuntime: true,
           hasTopActionsRuntime: true,
           hasTopButtonsRuntime: true,
+          hasViewportRuntime: true,
           hasHintButton: true,
           collectCallCount,
           syncCallCount,
@@ -949,6 +970,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
           syncPracticeTopCallCount,
           ensureUndoTopBtnCallCount,
           ensureHintTopBtnCallCount,
+          compactViewportCallCount,
+          timerboxCollapseViewportCallCount,
           overlayVisible: Boolean(overlay && overlay.style.display === "flex"),
           firstLineText: firstLine ? (firstLine.textContent || "").trim() : ""
         };
@@ -963,6 +986,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         topActionsRuntime.syncPracticeTopActionsPlacement = originalSyncPracticeTop;
         topButtonsRuntime.ensureMobileUndoTopButtonDom = originalEnsureUndoTopBtn;
         topButtonsRuntime.ensureMobileHintToggleButtonDom = originalEnsureHintTopBtn;
+        viewportRuntime.isCompactGameViewport = originalIsCompactViewport;
+        viewportRuntime.isTimerboxCollapseViewport = originalIsTimerboxCollapseViewport;
       }
     });
 
@@ -973,6 +998,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasUndoTopRuntime).toBe(true);
     expect(snapshot.hasTopActionsRuntime).toBe(true);
     expect(snapshot.hasTopButtonsRuntime).toBe(true);
+    expect(snapshot.hasViewportRuntime).toBe(true);
     expect(snapshot.hasHintButton).toBe(true);
     expect(snapshot.collectCallCount).toBeGreaterThan(0);
     expect(snapshot.syncCallCount).toBeGreaterThan(0);
@@ -984,6 +1010,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.syncPracticeTopCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.ensureUndoTopBtnCallCount).toBeGreaterThan(0);
     expect(snapshot.ensureHintTopBtnCallCount).toBeGreaterThan(0);
+    expect(snapshot.compactViewportCallCount).toBeGreaterThan(0);
+    expect(snapshot.timerboxCollapseViewportCallCount).toBeGreaterThan(0);
     expect(snapshot.overlayVisible).toBe(true);
     expect(snapshot.firstLineText.length).toBeGreaterThan(0);
   });
