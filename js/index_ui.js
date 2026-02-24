@@ -92,6 +92,7 @@ if (
   typeof homeGuideRuntime.resolveHomeGuideSettingsState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepUiState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideDoneNotice !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideDoneNoticeStyle !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuidePanelLayout !== "function" ||
   typeof homeGuideRuntime.isHomeGuideTargetVisible !== "function"
 ) {
@@ -1143,22 +1144,13 @@ function showHomeGuideDoneNotice() {
   var doneNotice = homeGuideRuntime.resolveHomeGuideDoneNotice({});
   var toast = document.getElementById("home-guide-done-toast");
   if (!toast) {
+    var toastStyle = homeGuideRuntime.resolveHomeGuideDoneNoticeStyle();
     toast = document.createElement("div");
     toast.id = "home-guide-done-toast";
-    toast.style.position = "fixed";
-    toast.style.left = "50%";
-    toast.style.bottom = "26px";
-    toast.style.transform = "translateX(-50%)";
-    toast.style.background = "rgba(46, 40, 34, 0.94)";
-    toast.style.color = "#f9f6f2";
-    toast.style.padding = "10px 14px";
-    toast.style.borderRadius = "8px";
-    toast.style.fontSize = "14px";
-    toast.style.fontWeight = "bold";
-    toast.style.zIndex = "3400";
-    toast.style.boxShadow = "0 6px 20px rgba(0,0,0,0.35)";
-    toast.style.opacity = "0";
-    toast.style.transition = "opacity 160ms ease";
+    for (var key in toastStyle) {
+      if (!Object.prototype.hasOwnProperty.call(toastStyle, key)) continue;
+      toast.style[key] = toastStyle[key];
+    }
     document.body.appendChild(toast);
   }
   toast.textContent = doneNotice.message;

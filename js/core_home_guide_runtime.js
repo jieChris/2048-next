@@ -118,6 +118,25 @@
     };
   }
 
+  function resolveHomeGuideDoneNoticeStyle() {
+    return {
+      position: "fixed",
+      left: "50%",
+      bottom: "26px",
+      transform: "translateX(-50%)",
+      background: "rgba(46, 40, 34, 0.94)",
+      color: "#f9f6f2",
+      padding: "10px 14px",
+      borderRadius: "8px",
+      fontSize: "14px",
+      fontWeight: "bold",
+      zIndex: "3400",
+      boxShadow: "0 6px 20px rgba(0,0,0,0.35)",
+      opacity: "0",
+      transition: "opacity 160ms ease"
+    };
+  }
+
   function toFiniteNumber(value, fallback) {
     return typeof value === "number" && Number.isFinite(value) ? value : fallback;
   }
@@ -210,6 +229,7 @@
   global.CoreHomeGuideRuntime.resolveHomeGuideSettingsState = resolveHomeGuideSettingsState;
   global.CoreHomeGuideRuntime.resolveHomeGuideStepUiState = resolveHomeGuideStepUiState;
   global.CoreHomeGuideRuntime.resolveHomeGuideDoneNotice = resolveHomeGuideDoneNotice;
+  global.CoreHomeGuideRuntime.resolveHomeGuideDoneNoticeStyle = resolveHomeGuideDoneNoticeStyle;
   global.CoreHomeGuideRuntime.resolveHomeGuidePanelLayout = resolveHomeGuidePanelLayout;
   global.CoreHomeGuideRuntime.isHomeGuideTargetVisible = isHomeGuideTargetVisible;
 })(typeof window !== "undefined" ? window : undefined);

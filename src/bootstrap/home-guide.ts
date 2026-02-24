@@ -65,6 +65,23 @@ export interface ResolveHomeGuideDoneNoticeResult {
   hideDelayMs: number;
 }
 
+export interface HomeGuideDoneNoticeStyle {
+  position: string;
+  left: string;
+  bottom: string;
+  transform: string;
+  background: string;
+  color: string;
+  padding: string;
+  borderRadius: string;
+  fontSize: string;
+  fontWeight: string;
+  zIndex: string;
+  boxShadow: string;
+  opacity: string;
+  transition: string;
+}
+
 export interface HomeGuideRectLike {
   left?: number | null | undefined;
   top?: number | null | undefined;
@@ -247,6 +264,25 @@ export function resolveHomeGuideDoneNotice(
   return {
     message: rawMessage || defaultMessage,
     hideDelayMs
+  };
+}
+
+export function resolveHomeGuideDoneNoticeStyle(): HomeGuideDoneNoticeStyle {
+  return {
+    position: "fixed",
+    left: "50%",
+    bottom: "26px",
+    transform: "translateX(-50%)",
+    background: "rgba(46, 40, 34, 0.94)",
+    color: "#f9f6f2",
+    padding: "10px 14px",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: "bold",
+    zIndex: "3400",
+    boxShadow: "0 6px 20px rgba(0,0,0,0.35)",
+    opacity: "0",
+    transition: "opacity 160ms ease"
   };
 }
 

@@ -61,6 +61,7 @@
   - `home-guide` 已承接自动启动组合判定（`resolveHomeGuideAutoStart`）与设置态计算（`resolveHomeGuideSettingsState`），`index_ui.js` 改为消费结果渲染 UI
   - `home-guide` 已承接步骤展示状态计算（`resolveHomeGuideStepUiState`），`index_ui.js` 仅消费步骤文案/按钮状态模型
   - `home-guide` 已承接完成提示配置（`resolveHomeGuideDoneNotice`），`index_ui.js` 仅负责 toast DOM 渲染与定时器
+  - `home-guide` 已承接完成提示样式模型（`resolveHomeGuideDoneNoticeStyle`），`index_ui.js` 不再硬编码 toast 样式常量
   - `home-guide` 已承接指引浮层位置计算（`resolveHomeGuidePanelLayout`），`index_ui.js` 仅传入窗口/目标几何信息并应用结果
   - `home-guide` 已承接指引目标可见性判定（`isHomeGuideTargetVisible`），`index_ui.js` 不再直接读 DOM 可见性样式
   - 新增 `src/bootstrap/mobile-hint.ts` + `js/core_mobile_hint_runtime.js`，`index_ui.js` 委托移动端提示文案抽取与去重逻辑

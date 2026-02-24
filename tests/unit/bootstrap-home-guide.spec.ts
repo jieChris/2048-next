@@ -9,6 +9,7 @@ import {
   resolveHomeGuidePanelLayout,
   resolveHomeGuideAutoStart,
   resolveHomeGuideDoneNotice,
+  resolveHomeGuideDoneNoticeStyle,
   resolveHomeGuideStepUiState,
   resolveHomeGuideSettingsState,
   shouldAutoStartHomeGuide
@@ -255,6 +256,16 @@ describe("bootstrap home guide", () => {
     ).toEqual({
       message: "完成啦",
       hideDelayMs: 1800
+    });
+  });
+
+  it("resolves done notice style model", () => {
+    expect(resolveHomeGuideDoneNoticeStyle()).toMatchObject({
+      position: "fixed",
+      left: "50%",
+      bottom: "26px",
+      color: "#f9f6f2",
+      zIndex: "3400"
     });
   });
 
