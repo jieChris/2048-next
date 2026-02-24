@@ -95,6 +95,7 @@ if (
   typeof homeGuideRuntime.resolveHomeGuideStepUiState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepIndexState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepTargetState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideControlAction !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideFinishState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideTargetScrollState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideDoneNotice !== "function" ||
@@ -1275,20 +1276,40 @@ function startHomeGuide(options) {
   if (prevBtn && !prevBtn.__homeGuideBound) {
     prevBtn.__homeGuideBound = true;
     prevBtn.addEventListener("click", function () {
-      showHomeGuideStep(HOME_GUIDE_STATE.index - 1);
+      var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
+        action: "prev",
+        stepIndex: HOME_GUIDE_STATE.index
+      });
+      showHomeGuideStep(actionState && typeof actionState.nextStepIndex === "number"
+        ? actionState.nextStepIndex
+        : HOME_GUIDE_STATE.index - 1);
     });
   }
   if (nextBtn && !nextBtn.__homeGuideBound) {
     nextBtn.__homeGuideBound = true;
     nextBtn.addEventListener("click", function () {
-      showHomeGuideStep(HOME_GUIDE_STATE.index + 1);
+      var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
+        action: "next",
+        stepIndex: HOME_GUIDE_STATE.index
+      });
+      showHomeGuideStep(actionState && typeof actionState.nextStepIndex === "number"
+        ? actionState.nextStepIndex
+        : HOME_GUIDE_STATE.index + 1);
     });
   }
   if (skipBtn && !skipBtn.__homeGuideBound) {
     skipBtn.__homeGuideBound = true;
     skipBtn.addEventListener("click", function () {
+      var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
+        action: "skip",
+        stepIndex: HOME_GUIDE_STATE.index
+      });
+      var finishReason =
+        actionState && actionState.type === "finish" && typeof actionState.finishReason === "string"
+          ? actionState.finishReason
+          : "skipped";
       var finishState = homeGuideRuntime.resolveHomeGuideFinishState({
-        reason: "skipped"
+        reason: finishReason
       });
       finishHomeGuide(!!finishState.markSeen, {
         showDoneNotice: !!finishState.showDoneNotice

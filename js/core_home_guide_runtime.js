@@ -167,6 +167,38 @@
     };
   }
 
+  function resolveHomeGuideControlAction(options) {
+    var opts = options || {};
+    var action = typeof opts.action === "string" ? opts.action : "";
+    var index = Math.max(0, Math.floor(toFiniteNumber(opts.stepIndex, 0)));
+    if (action === "prev") {
+      return {
+        type: "step",
+        nextStepIndex: Math.max(0, index - 1),
+        finishReason: ""
+      };
+    }
+    if (action === "next") {
+      return {
+        type: "step",
+        nextStepIndex: index + 1,
+        finishReason: ""
+      };
+    }
+    if (action === "skip") {
+      return {
+        type: "finish",
+        nextStepIndex: index,
+        finishReason: "skipped"
+      };
+    }
+    return {
+      type: "step",
+      nextStepIndex: index,
+      finishReason: ""
+    };
+  }
+
   function resolveHomeGuideFinishState(options) {
     var opts = options || {};
     var reason = typeof opts.reason === "string" ? opts.reason : "";
@@ -311,6 +343,7 @@
   global.CoreHomeGuideRuntime.resolveHomeGuideStepUiState = resolveHomeGuideStepUiState;
   global.CoreHomeGuideRuntime.resolveHomeGuideStepIndexState = resolveHomeGuideStepIndexState;
   global.CoreHomeGuideRuntime.resolveHomeGuideStepTargetState = resolveHomeGuideStepTargetState;
+  global.CoreHomeGuideRuntime.resolveHomeGuideControlAction = resolveHomeGuideControlAction;
   global.CoreHomeGuideRuntime.resolveHomeGuideFinishState = resolveHomeGuideFinishState;
   global.CoreHomeGuideRuntime.resolveHomeGuideTargetScrollState = resolveHomeGuideTargetScrollState;
   global.CoreHomeGuideRuntime.resolveHomeGuideDoneNotice = resolveHomeGuideDoneNotice;

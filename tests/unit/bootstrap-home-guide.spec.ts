@@ -12,6 +12,7 @@ import {
   resolveHomeGuideAutoStart,
   resolveHomeGuideDoneNotice,
   resolveHomeGuideDoneNoticeStyle,
+  resolveHomeGuideControlAction,
   resolveHomeGuideFinishState,
   resolveHomeGuideStepIndexState,
   resolveHomeGuideStepTargetState,
@@ -315,6 +316,39 @@ describe("bootstrap home guide", () => {
     ).toEqual({
       shouldAdvance: true,
       nextIndex: 3
+    });
+  });
+
+  it("resolves control action for prev/next/skip", () => {
+    expect(
+      resolveHomeGuideControlAction({
+        action: "prev",
+        stepIndex: 3
+      })
+    ).toEqual({
+      type: "step",
+      nextStepIndex: 2,
+      finishReason: ""
+    });
+    expect(
+      resolveHomeGuideControlAction({
+        action: "next",
+        stepIndex: 3
+      })
+    ).toEqual({
+      type: "step",
+      nextStepIndex: 4,
+      finishReason: ""
+    });
+    expect(
+      resolveHomeGuideControlAction({
+        action: "skip",
+        stepIndex: 3
+      })
+    ).toEqual({
+      type: "finish",
+      nextStepIndex: 3,
+      finishReason: "skipped"
     });
   });
 

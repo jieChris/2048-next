@@ -102,6 +102,17 @@ export interface ResolveHomeGuideStepTargetStateResult {
   nextIndex: number;
 }
 
+export interface ResolveHomeGuideControlActionOptions {
+  action?: string | null | undefined;
+  stepIndex?: number | null | undefined;
+}
+
+export interface ResolveHomeGuideControlActionResult {
+  type: "step" | "finish";
+  nextStepIndex: number;
+  finishReason: string;
+}
+
 export interface ResolveHomeGuideFinishStateOptions {
   reason?: string | null | undefined;
 }
@@ -359,6 +370,40 @@ export function resolveHomeGuideStepTargetState(
   return {
     shouldAdvance,
     nextIndex: shouldAdvance ? index + 1 : index
+  };
+}
+
+export function resolveHomeGuideControlAction(
+  options: ResolveHomeGuideControlActionOptions
+): ResolveHomeGuideControlActionResult {
+  const opts = options || {};
+  const action = typeof opts.action === "string" ? opts.action : "";
+  const index = Math.max(0, Math.floor(toFiniteNumber(opts.stepIndex, 0)));
+  if (action === "prev") {
+    return {
+      type: "step",
+      nextStepIndex: Math.max(0, index - 1),
+      finishReason: ""
+    };
+  }
+  if (action === "next") {
+    return {
+      type: "step",
+      nextStepIndex: index + 1,
+      finishReason: ""
+    };
+  }
+  if (action === "skip") {
+    return {
+      type: "finish",
+      nextStepIndex: index,
+      finishReason: "skipped"
+    };
+  }
+  return {
+    type: "step",
+    nextStepIndex: index,
+    finishReason: ""
   };
 }
 
