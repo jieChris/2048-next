@@ -2008,6 +2008,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         !runtime ||
         typeof runtime.buildTimerModuleSettingsRowInnerHtml !== "function" ||
         typeof runtime.resolveTimerModuleSettingsState !== "function" ||
+        typeof runtime.resolveTimerModuleCurrentViewMode !== "function" ||
         typeof runtime.resolveTimerModuleBindingState !== "function" ||
         typeof runtime.resolveTimerModuleViewMode !== "function" ||
         typeof runtime.resolveTimerModuleAppliedViewMode !== "function" ||
@@ -2021,12 +2022,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
       const originalBuild = runtime.buildTimerModuleSettingsRowInnerHtml;
       const originalResolveState = runtime.resolveTimerModuleSettingsState;
+      const originalResolveCurrentViewMode = runtime.resolveTimerModuleCurrentViewMode;
       const originalResolveBinding = runtime.resolveTimerModuleBindingState;
       const originalResolveViewMode = runtime.resolveTimerModuleViewMode;
       const originalResolveAppliedViewMode = runtime.resolveTimerModuleAppliedViewMode;
       const originalResolveInitRetryState = runtime.resolveTimerModuleInitRetryState;
       let buildCallCount = 0;
       let resolveStateCallCount = 0;
+      let resolveCurrentViewModeCallCount = 0;
       let resolveBindingCallCount = 0;
       let resolveViewModeCallCount = 0;
       let resolveAppliedViewModeCallCount = 0;
@@ -2038,6 +2041,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.resolveTimerModuleSettingsState = function (opts: any) {
         resolveStateCallCount += 1;
         return originalResolveState(opts);
+      };
+      runtime.resolveTimerModuleCurrentViewMode = function (opts: any) {
+        resolveCurrentViewModeCallCount += 1;
+        return originalResolveCurrentViewMode(opts);
       };
       runtime.resolveTimerModuleBindingState = function (opts: any) {
         resolveBindingCallCount += 1;
@@ -2085,6 +2092,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasToggle: true,
           buildCallCount,
           resolveStateCallCount,
+          resolveCurrentViewModeCallCount,
           resolveBindingCallCount,
           resolveViewModeCallCount,
           resolveAppliedViewModeCallCount,
@@ -2095,6 +2103,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       } finally {
         runtime.buildTimerModuleSettingsRowInnerHtml = originalBuild;
         runtime.resolveTimerModuleSettingsState = originalResolveState;
+        runtime.resolveTimerModuleCurrentViewMode = originalResolveCurrentViewMode;
         runtime.resolveTimerModuleBindingState = originalResolveBinding;
         runtime.resolveTimerModuleViewMode = originalResolveViewMode;
         runtime.resolveTimerModuleAppliedViewMode = originalResolveAppliedViewMode;
@@ -2107,6 +2116,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasToggle).toBe(true);
     expect(snapshot.buildCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveStateCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveCurrentViewModeCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveBindingCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveViewModeCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveAppliedViewModeCallCount).toBeGreaterThan(0);

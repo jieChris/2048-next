@@ -4,6 +4,7 @@ import {
   buildTimerModuleSettingsRowInnerHtml,
   resolveTimerModuleAppliedViewMode,
   resolveTimerModuleBindingState,
+  resolveTimerModuleCurrentViewMode,
   resolveTimerModuleInitRetryState,
   resolveTimerModuleSettingsState,
   resolveTimerModuleViewMode
@@ -55,6 +56,34 @@ describe("bootstrap timer module", () => {
       shouldBind: false,
       boundValue: true
     });
+  });
+
+  it("resolves current view mode from manager with safe fallback", () => {
+    expect(
+      resolveTimerModuleCurrentViewMode({
+        manager: {
+          getTimerModuleViewMode() {
+            return "hidden";
+          }
+        }
+      })
+    ).toBe("hidden");
+    expect(
+      resolveTimerModuleCurrentViewMode({
+        manager: {
+          getTimerModuleViewMode() {
+            return "invalid";
+          }
+        },
+        fallbackViewMode: "timer"
+      })
+    ).toBe("timer");
+    expect(
+      resolveTimerModuleCurrentViewMode({
+        manager: null,
+        fallbackViewMode: "hidden"
+      })
+    ).toBe("hidden");
   });
 
   it("resolves next view mode from toggle checked", () => {

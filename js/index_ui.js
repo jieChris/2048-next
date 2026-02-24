@@ -118,6 +118,7 @@ if (
   !timerModuleRuntime ||
   typeof timerModuleRuntime.buildTimerModuleSettingsRowInnerHtml !== "function" ||
   typeof timerModuleRuntime.resolveTimerModuleSettingsState !== "function" ||
+  typeof timerModuleRuntime.resolveTimerModuleCurrentViewMode !== "function" ||
   typeof timerModuleRuntime.resolveTimerModuleBindingState !== "function" ||
   typeof timerModuleRuntime.resolveTimerModuleViewMode !== "function" ||
   typeof timerModuleRuntime.resolveTimerModuleAppliedViewMode !== "function" ||
@@ -1015,7 +1016,10 @@ function initTimerModuleSettingsUI() {
   function sync() {
     var gm = window.game_manager;
     if (!gm) return;
-    var view = gm.getTimerModuleViewMode ? gm.getTimerModuleViewMode() : "timer";
+    var view = timerModuleRuntime.resolveTimerModuleCurrentViewMode({
+      manager: gm,
+      fallbackViewMode: "timer"
+    });
     var settingsState = timerModuleRuntime.resolveTimerModuleSettingsState({
       viewMode: view
     });

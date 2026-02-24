@@ -2,6 +2,15 @@ export interface ResolveTimerModuleSettingsStateOptions {
   viewMode?: string | null | undefined;
 }
 
+interface TimerModuleManagerLike {
+  getTimerModuleViewMode?: (() => string | null | undefined) | null | undefined;
+}
+
+export interface ResolveTimerModuleCurrentViewModeOptions {
+  manager?: TimerModuleManagerLike | null | undefined;
+  fallbackViewMode?: "timer" | "hidden" | null | undefined;
+}
+
 export interface ResolveTimerModuleSettingsStateResult {
   toggleDisabled: boolean;
   toggleChecked: boolean;
@@ -62,6 +71,24 @@ export function resolveTimerModuleSettingsState(
     toggleChecked: viewMode !== "hidden",
     noteText: "关闭后仅隐藏右侧计时器栏，不影响棋盘和回放。"
   };
+}
+
+export function resolveTimerModuleCurrentViewMode(
+  options: ResolveTimerModuleCurrentViewModeOptions
+): "timer" | "hidden" {
+  const opts = options || {};
+  const fallbackViewMode = opts.fallbackViewMode === "hidden" ? "hidden" : "timer";
+  const manager = opts.manager || null;
+  if (!manager || typeof manager.getTimerModuleViewMode !== "function") {
+    return fallbackViewMode;
+  }
+  try {
+    const viewMode = manager.getTimerModuleViewMode();
+    if (viewMode === "timer" || viewMode === "hidden") {
+      return viewMode;
+    }
+  } catch (_err) {}
+  return fallbackViewMode;
 }
 
 export function resolveTimerModuleBindingState(

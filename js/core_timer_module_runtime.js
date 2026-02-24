@@ -24,6 +24,22 @@
     };
   }
 
+  function resolveTimerModuleCurrentViewMode(options) {
+    var opts = options || {};
+    var fallbackViewMode = opts.fallbackViewMode === "hidden" ? "hidden" : "timer";
+    var manager = opts.manager || null;
+    if (!manager || typeof manager.getTimerModuleViewMode !== "function") {
+      return fallbackViewMode;
+    }
+    try {
+      var viewMode = manager.getTimerModuleViewMode();
+      if (viewMode === "timer" || viewMode === "hidden") {
+        return viewMode;
+      }
+    } catch (_err) {}
+    return fallbackViewMode;
+  }
+
   function resolveTimerModuleBindingState(options) {
     var opts = options || {};
     var alreadyBound = !!opts.alreadyBound;
@@ -68,6 +84,8 @@
   global.CoreTimerModuleRuntime.buildTimerModuleSettingsRowInnerHtml =
     buildTimerModuleSettingsRowInnerHtml;
   global.CoreTimerModuleRuntime.resolveTimerModuleSettingsState = resolveTimerModuleSettingsState;
+  global.CoreTimerModuleRuntime.resolveTimerModuleCurrentViewMode =
+    resolveTimerModuleCurrentViewMode;
   global.CoreTimerModuleRuntime.resolveTimerModuleBindingState = resolveTimerModuleBindingState;
   global.CoreTimerModuleRuntime.resolveTimerModuleViewMode = resolveTimerModuleViewMode;
   global.CoreTimerModuleRuntime.resolveTimerModuleAppliedViewMode =
