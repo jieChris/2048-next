@@ -3,6 +3,17 @@
 
   if (!global) return;
 
+  function resolveHomeGuidePathname(options) {
+    var opts = options || {};
+    var locationLike = opts.locationLike || null;
+    try {
+      var rawPathname = locationLike ? locationLike.pathname : "";
+      return typeof rawPathname === "string" ? rawPathname : String(rawPathname || "");
+    } catch (_err) {
+      return "";
+    }
+  }
+
   function isHomePagePath(pathname) {
     var path = typeof pathname === "string" ? pathname : "";
     return path === "/" || /\/index\.html?$/.test(path) || path === "";
@@ -461,6 +472,7 @@
   }
 
   global.CoreHomeGuideRuntime = global.CoreHomeGuideRuntime || {};
+  global.CoreHomeGuideRuntime.resolveHomeGuidePathname = resolveHomeGuidePathname;
   global.CoreHomeGuideRuntime.isHomePagePath = isHomePagePath;
   global.CoreHomeGuideRuntime.buildHomeGuideSteps = buildHomeGuideSteps;
   global.CoreHomeGuideRuntime.buildHomeGuidePanelInnerHtml = buildHomeGuidePanelInnerHtml;

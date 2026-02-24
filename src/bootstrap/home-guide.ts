@@ -3,6 +3,14 @@ export interface HomeGuideAutoStartOptions {
   seenValue?: string | null | undefined;
 }
 
+export interface HomeGuideLocationLike {
+  pathname?: string | null | undefined;
+}
+
+export interface ResolveHomeGuidePathnameOptions {
+  locationLike?: HomeGuideLocationLike | null | undefined;
+}
+
 export interface HomeGuideStorageLike {
   getItem(key: string): string | null;
   setItem?(key: string, value: string): void;
@@ -307,6 +315,17 @@ const MOBILE_HINT_STEP: HomeGuideStep = {
   title: "提示文本",
   desc: "移动端可用此按钮打开提示弹窗，集中查看玩法说明与项目说明。"
 };
+
+export function resolveHomeGuidePathname(options: ResolveHomeGuidePathnameOptions): string {
+  const opts = options || {};
+  const locationLike = opts.locationLike || null;
+  try {
+    const rawPathname = locationLike ? locationLike.pathname : "";
+    return typeof rawPathname === "string" ? rawPathname : String(rawPathname || "");
+  } catch (_err) {
+    return "";
+  }
+}
 
 export function isHomePagePath(pathname: string | null | undefined): boolean {
   const path = typeof pathname === "string" ? pathname : "";

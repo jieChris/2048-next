@@ -1029,6 +1029,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const runtime = (window as any).CoreHomeGuideRuntime;
       if (
         !runtime ||
+        typeof runtime.resolveHomeGuidePathname !== "function" ||
         typeof runtime.isHomePagePath !== "function" ||
         typeof runtime.buildHomeGuideSteps !== "function" ||
         typeof runtime.buildHomeGuidePanelInnerHtml !== "function" ||
@@ -1060,6 +1061,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
       const compactSteps = runtime.buildHomeGuideSteps({ isCompactViewport: true });
       const desktopSteps = runtime.buildHomeGuideSteps({ isCompactViewport: false });
+      const resolvedPath = runtime.resolveHomeGuidePathname({
+        locationLike: { pathname: "/index.html" }
+      });
+      const resolvedPathFallback = runtime.resolveHomeGuidePathname({
+        locationLike: {
+          get pathname() {
+            throw new Error("deny");
+          }
+        }
+      });
       const panelHtml = runtime.buildHomeGuidePanelInnerHtml();
       const settingsRowHtml = runtime.buildHomeGuideSettingsRowInnerHtml();
       const compactSelectors = Array.isArray(compactSteps)
@@ -1285,6 +1296,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         playPath: runtime.isHomePagePath("/play.html"),
         hasCompactHint: compactSelectors.includes("#top-mobile-hint-btn"),
         hasDesktopHint: desktopSelectors.includes("#top-mobile-hint-btn"),
+        resolvedPath,
+        resolvedPathFallback,
         seenValue,
         markResult,
         writes,
@@ -1346,6 +1359,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.playPath).toBe(false);
     expect(snapshot.hasCompactHint).toBe(true);
     expect(snapshot.hasDesktopHint).toBe(false);
+    expect(snapshot.resolvedPath).toBe("/index.html");
+    expect(snapshot.resolvedPathFallback).toBe("");
     expect(snapshot.seenValue).toBe("1");
     expect(snapshot.markResult).toBe(true);
     expect(snapshot.writes).toEqual(["home_guide_seen_v1:1"]);
@@ -1555,6 +1570,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const runtime = (window as any).CoreHomeGuideRuntime;
       if (
         !runtime ||
+        typeof runtime.resolveHomeGuidePathname !== "function" ||
         typeof runtime.buildHomeGuideSteps !== "function" ||
         typeof runtime.buildHomeGuidePanelInnerHtml !== "function" ||
         typeof runtime.buildHomeGuideSettingsRowInnerHtml !== "function" ||
@@ -1584,6 +1600,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return { hasRuntime: true, hasSettingsOpen: false };
       }
       const originalBuild = runtime.buildHomeGuideSteps;
+      const originalResolvePathname = runtime.resolveHomeGuidePathname;
       const originalBuildPanelHtml = runtime.buildHomeGuidePanelInnerHtml;
       const originalBuildSettingsRowHtml = runtime.buildHomeGuideSettingsRowInnerHtml;
       const originalMark = runtime.markHomeGuideSeen;
@@ -1605,6 +1622,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalResolvePanelLayout = runtime.resolveHomeGuidePanelLayout;
       const originalIsTargetVisible = runtime.isHomeGuideTargetVisible;
       let callCount = 0;
+      let pathnameCallCount = 0;
       let panelHtmlCallCount = 0;
       let settingsRowHtmlCallCount = 0;
       let markCallCount = 0;
@@ -1628,6 +1646,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.buildHomeGuideSteps = function (opts: any) {
         callCount += 1;
         return originalBuild(opts);
+      };
+      runtime.resolveHomeGuidePathname = function (opts: any) {
+        pathnameCallCount += 1;
+        return originalResolvePathname(opts);
       };
       runtime.buildHomeGuidePanelInnerHtml = function () {
         panelHtmlCallCount += 1;
@@ -1750,6 +1772,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasSettingsOpen: true,
           hasToggle: true,
           callCount,
+          pathnameCallCount,
           panelHtmlCallCount,
           settingsRowHtmlCallCount,
           markCallCount,
@@ -1779,6 +1802,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         };
       } finally {
         runtime.buildHomeGuideSteps = originalBuild;
+        runtime.resolveHomeGuidePathname = originalResolvePathname;
         runtime.buildHomeGuidePanelInnerHtml = originalBuildPanelHtml;
         runtime.buildHomeGuideSettingsRowInnerHtml = originalBuildSettingsRowHtml;
         runtime.markHomeGuideSeen = originalMark;
@@ -1806,6 +1830,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasSettingsOpen).toBe(true);
     expect(snapshot.hasToggle).toBe(true);
     expect(snapshot.callCount).toBeGreaterThan(0);
+    expect(snapshot.pathnameCallCount).toBeGreaterThan(0);
     expect(snapshot.panelHtmlCallCount).toBeGreaterThan(0);
     expect(snapshot.settingsRowHtmlCallCount).toBeGreaterThan(0);
     expect(snapshot.markCallCount).toBeGreaterThan(0);

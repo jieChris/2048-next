@@ -83,6 +83,7 @@ var practiceTopActionsState = null;
 var homeGuideRuntime = window.CoreHomeGuideRuntime;
 if (
   !homeGuideRuntime ||
+  typeof homeGuideRuntime.resolveHomeGuidePathname !== "function" ||
   typeof homeGuideRuntime.isHomePagePath !== "function" ||
   typeof homeGuideRuntime.buildHomeGuideSteps !== "function" ||
   typeof homeGuideRuntime.buildHomeGuidePanelInnerHtml !== "function" ||
@@ -1026,12 +1027,9 @@ var HOME_GUIDE_STATE = {
 };
 
 function isHomePage() {
-  var path = "";
-  try {
-    path = typeof window !== "undefined" && window.location ? String(window.location.pathname || "") : "";
-  } catch (_err) {
-    path = "";
-  }
+  var path = homeGuideRuntime.resolveHomeGuidePathname({
+    locationLike: typeof window !== "undefined" ? window.location : null
+  });
   return !!homeGuideRuntime.isHomePagePath(path);
 }
 
@@ -1477,12 +1475,9 @@ function initHomeGuideSettingsUI() {
 }
 
 function autoStartHomeGuideIfNeeded() {
-  var path = "";
-  try {
-    path = typeof window !== "undefined" && window.location ? String(window.location.pathname || "") : "";
-  } catch (_err) {
-    path = "";
-  }
+  var path = homeGuideRuntime.resolveHomeGuidePathname({
+    locationLike: typeof window !== "undefined" ? window.location : null
+  });
   var autoStartState = homeGuideRuntime.resolveHomeGuideAutoStart({
     pathname: path,
     storageLike: getStorageByName("localStorage"),

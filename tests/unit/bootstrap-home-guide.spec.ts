@@ -5,6 +5,7 @@ import {
   buildHomeGuideSettingsRowInnerHtml,
   buildHomeGuideSteps,
   isHomeGuideTargetVisible,
+  resolveHomeGuidePathname,
   isHomePagePath,
   markHomeGuideSeen,
   readHomeGuideSeenValue,
@@ -30,6 +31,28 @@ import {
 } from "../../src/bootstrap/home-guide";
 
 describe("bootstrap home guide", () => {
+  it("resolves pathname safely from location-like object", () => {
+    expect(
+      resolveHomeGuidePathname({
+        locationLike: { pathname: "/index.html" }
+      })
+    ).toBe("/index.html");
+    expect(
+      resolveHomeGuidePathname({
+        locationLike: { pathname: null }
+      })
+    ).toBe("");
+    expect(
+      resolveHomeGuidePathname({
+        locationLike: {
+          get pathname() {
+            throw new Error("deny");
+          }
+        }
+      })
+    ).toBe("");
+  });
+
   it("identifies index homepage paths", () => {
     expect(isHomePagePath("/")).toBe(true);
     expect(isHomePagePath("/index.html")).toBe(true);
