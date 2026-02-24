@@ -1043,6 +1043,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.resolveHomeGuideStepTargetState !== "function" ||
         typeof runtime.resolveHomeGuideControlAction !== "function" ||
         typeof runtime.resolveHomeGuideToggleAction !== "function" ||
+        typeof runtime.resolveHomeGuideLifecycleState !== "function" ||
+        typeof runtime.resolveHomeGuideLayerDisplayState !== "function" ||
         typeof runtime.resolveHomeGuideFinishState !== "function" ||
         typeof runtime.resolveHomeGuideTargetScrollState !== "function" ||
         typeof runtime.resolveHomeGuideDoneNotice !== "function" ||
@@ -1153,6 +1155,34 @@ test.describe("Legacy Multi-Page Smoke", () => {
         checked: true,
         isHomePage: true
       });
+      const lifecycleStart = runtime.resolveHomeGuideLifecycleState({
+        action: "start",
+        fromSettings: true,
+        steps: [
+          {
+            selector: "#top-settings-btn",
+            title: "设置",
+            desc: "desc"
+          }
+        ]
+      });
+      const lifecycleFinish = runtime.resolveHomeGuideLifecycleState({
+        action: "finish",
+        fromSettings: true,
+        steps: [
+          {
+            selector: "#top-settings-btn",
+            title: "设置",
+            desc: "desc"
+          }
+        ]
+      });
+      const layerDisplayActive = runtime.resolveHomeGuideLayerDisplayState({
+        active: true
+      });
+      const layerDisplayInactive = runtime.resolveHomeGuideLayerDisplayState({
+        active: false
+      });
       const finishStateCompleted = runtime.resolveHomeGuideFinishState({
         reason: "completed"
       });
@@ -1234,6 +1264,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         toggleUnchecked,
         toggleOffHome,
         toggleOnHome,
+        lifecycleStart,
+        lifecycleFinish,
+        layerDisplayActive,
+        layerDisplayInactive,
         finishStateCompleted,
         finishStateSkipped,
         targetScrollStateCompact,
@@ -1323,6 +1357,32 @@ test.describe("Legacy Multi-Page Smoke", () => {
       shouldResync: false,
       startFromSettings: true
     });
+    expect(snapshot.lifecycleStart).toEqual({
+      active: true,
+      fromSettings: true,
+      index: 0,
+      steps: [
+        {
+          selector: "#top-settings-btn",
+          title: "设置",
+          desc: "desc"
+        }
+      ]
+    });
+    expect(snapshot.lifecycleFinish).toEqual({
+      active: false,
+      fromSettings: false,
+      index: 0,
+      steps: []
+    });
+    expect(snapshot.layerDisplayActive).toEqual({
+      overlayDisplay: "block",
+      panelDisplay: "block"
+    });
+    expect(snapshot.layerDisplayInactive).toEqual({
+      overlayDisplay: "none",
+      panelDisplay: "none"
+    });
     expect(snapshot.finishStateCompleted).toEqual({
       markSeen: true,
       showDoneNotice: true
@@ -1403,6 +1463,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.resolveHomeGuideStepTargetState !== "function" ||
         typeof runtime.resolveHomeGuideControlAction !== "function" ||
         typeof runtime.resolveHomeGuideToggleAction !== "function" ||
+        typeof runtime.resolveHomeGuideLifecycleState !== "function" ||
+        typeof runtime.resolveHomeGuideLayerDisplayState !== "function" ||
         typeof runtime.resolveHomeGuideFinishState !== "function" ||
         typeof runtime.resolveHomeGuideTargetScrollState !== "function" ||
         typeof runtime.resolveHomeGuideDoneNotice !== "function" ||
@@ -1425,6 +1487,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalResolveStepTargetState = runtime.resolveHomeGuideStepTargetState;
       const originalResolveControlAction = runtime.resolveHomeGuideControlAction;
       const originalResolveToggleAction = runtime.resolveHomeGuideToggleAction;
+      const originalResolveLifecycleState = runtime.resolveHomeGuideLifecycleState;
+      const originalResolveLayerDisplayState = runtime.resolveHomeGuideLayerDisplayState;
       const originalResolveFinishState = runtime.resolveHomeGuideFinishState;
       const originalResolveTargetScrollState = runtime.resolveHomeGuideTargetScrollState;
       const originalResolveDoneNotice = runtime.resolveHomeGuideDoneNotice;
@@ -1440,6 +1504,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let stepTargetStateCallCount = 0;
       let controlActionCallCount = 0;
       let toggleActionCallCount = 0;
+      let lifecycleStateCallCount = 0;
+      let layerDisplayStateCallCount = 0;
       let finishStateCallCount = 0;
       let targetScrollStateCallCount = 0;
       let doneNoticeCallCount = 0;
@@ -1481,6 +1547,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.resolveHomeGuideToggleAction = function (opts: any) {
         toggleActionCallCount += 1;
         return originalResolveToggleAction(opts);
+      };
+      runtime.resolveHomeGuideLifecycleState = function (opts: any) {
+        lifecycleStateCallCount += 1;
+        return originalResolveLifecycleState(opts);
+      };
+      runtime.resolveHomeGuideLayerDisplayState = function (opts: any) {
+        layerDisplayStateCallCount += 1;
+        return originalResolveLayerDisplayState(opts);
       };
       runtime.resolveHomeGuideFinishState = function (opts: any) {
         finishStateCallCount += 1;
@@ -1555,6 +1629,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
           stepTargetStateCallCount,
           controlActionCallCount,
           toggleActionCallCount,
+          lifecycleStateCallCount,
+          layerDisplayStateCallCount,
           finishStateCallCount,
           targetScrollStateCallCount,
           doneNoticeCallCount,
@@ -1578,6 +1654,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.resolveHomeGuideStepTargetState = originalResolveStepTargetState;
         runtime.resolveHomeGuideControlAction = originalResolveControlAction;
         runtime.resolveHomeGuideToggleAction = originalResolveToggleAction;
+        runtime.resolveHomeGuideLifecycleState = originalResolveLifecycleState;
+        runtime.resolveHomeGuideLayerDisplayState = originalResolveLayerDisplayState;
         runtime.resolveHomeGuideFinishState = originalResolveFinishState;
         runtime.resolveHomeGuideTargetScrollState = originalResolveTargetScrollState;
         runtime.resolveHomeGuideDoneNotice = originalResolveDoneNotice;
@@ -1599,6 +1677,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.stepTargetStateCallCount).toBeGreaterThan(0);
     expect(snapshot.controlActionCallCount).toBeGreaterThan(0);
     expect(snapshot.toggleActionCallCount).toBeGreaterThan(0);
+    expect(snapshot.lifecycleStateCallCount).toBeGreaterThan(0);
+    expect(snapshot.layerDisplayStateCallCount).toBeGreaterThan(0);
     expect(snapshot.finishStateCallCount).toBeGreaterThan(0);
     expect(snapshot.targetScrollStateCallCount).toBeGreaterThan(0);
     expect(snapshot.doneNoticeCallCount).toBeGreaterThan(0);

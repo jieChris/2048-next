@@ -227,6 +227,41 @@
     };
   }
 
+  function resolveHomeGuideLifecycleState(options) {
+    var opts = options || {};
+    var action = typeof opts.action === "string" ? opts.action : "";
+    if (action === "start") {
+      var inputSteps = Array.isArray(opts.steps) ? opts.steps : [];
+      return {
+        active: true,
+        fromSettings: !!opts.fromSettings,
+        index: 0,
+        steps: inputSteps.map(function (step) {
+          return {
+            selector: step && typeof step.selector === "string" ? step.selector : "",
+            title: step && typeof step.title === "string" ? step.title : "",
+            desc: step && typeof step.desc === "string" ? step.desc : ""
+          };
+        })
+      };
+    }
+    return {
+      active: false,
+      fromSettings: false,
+      index: 0,
+      steps: []
+    };
+  }
+
+  function resolveHomeGuideLayerDisplayState(options) {
+    var opts = options || {};
+    var active = !!opts.active;
+    return {
+      overlayDisplay: active ? "block" : "none",
+      panelDisplay: active ? "block" : "none"
+    };
+  }
+
   function resolveHomeGuideFinishState(options) {
     var opts = options || {};
     var reason = typeof opts.reason === "string" ? opts.reason : "";
@@ -373,6 +408,8 @@
   global.CoreHomeGuideRuntime.resolveHomeGuideStepTargetState = resolveHomeGuideStepTargetState;
   global.CoreHomeGuideRuntime.resolveHomeGuideControlAction = resolveHomeGuideControlAction;
   global.CoreHomeGuideRuntime.resolveHomeGuideToggleAction = resolveHomeGuideToggleAction;
+  global.CoreHomeGuideRuntime.resolveHomeGuideLifecycleState = resolveHomeGuideLifecycleState;
+  global.CoreHomeGuideRuntime.resolveHomeGuideLayerDisplayState = resolveHomeGuideLayerDisplayState;
   global.CoreHomeGuideRuntime.resolveHomeGuideFinishState = resolveHomeGuideFinishState;
   global.CoreHomeGuideRuntime.resolveHomeGuideTargetScrollState = resolveHomeGuideTargetScrollState;
   global.CoreHomeGuideRuntime.resolveHomeGuideDoneNotice = resolveHomeGuideDoneNotice;

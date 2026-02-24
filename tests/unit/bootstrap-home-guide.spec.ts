@@ -13,6 +13,8 @@ import {
   resolveHomeGuideDoneNotice,
   resolveHomeGuideDoneNoticeStyle,
   resolveHomeGuideControlAction,
+  resolveHomeGuideLayerDisplayState,
+  resolveHomeGuideLifecycleState,
   resolveHomeGuideFinishState,
   resolveHomeGuideStepIndexState,
   resolveHomeGuideStepTargetState,
@@ -386,6 +388,69 @@ describe("bootstrap home guide", () => {
       shouldCloseSettings: true,
       shouldResync: false,
       startFromSettings: true
+    });
+  });
+
+  it("resolves lifecycle state for start and finish", () => {
+    const startState = resolveHomeGuideLifecycleState({
+      action: "start",
+      fromSettings: true,
+      steps: [
+        {
+          selector: "#a",
+          title: "t",
+          desc: "d"
+        }
+      ]
+    });
+    expect(startState).toEqual({
+      active: true,
+      fromSettings: true,
+      index: 0,
+      steps: [
+        {
+          selector: "#a",
+          title: "t",
+          desc: "d"
+        }
+      ]
+    });
+    expect(
+      resolveHomeGuideLifecycleState({
+        action: "finish",
+        fromSettings: true,
+        steps: [
+          {
+            selector: "#a",
+            title: "t",
+            desc: "d"
+          }
+        ]
+      })
+    ).toEqual({
+      active: false,
+      fromSettings: false,
+      index: 0,
+      steps: []
+    });
+  });
+
+  it("resolves layer display state for active and inactive", () => {
+    expect(
+      resolveHomeGuideLayerDisplayState({
+        active: true
+      })
+    ).toEqual({
+      overlayDisplay: "block",
+      panelDisplay: "block"
+    });
+    expect(
+      resolveHomeGuideLayerDisplayState({
+        active: false
+      })
+    ).toEqual({
+      overlayDisplay: "none",
+      panelDisplay: "none"
     });
   });
 

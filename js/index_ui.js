@@ -97,6 +97,8 @@ if (
   typeof homeGuideRuntime.resolveHomeGuideStepTargetState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideControlAction !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideToggleAction !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideLifecycleState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideLayerDisplayState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideFinishState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideTargetScrollState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideDoneNotice !== "function" ||
@@ -1164,18 +1166,36 @@ function showHomeGuideDoneNotice() {
 function finishHomeGuide(markSeen, options) {
   options = options || {};
   clearHomeGuideHighlight();
-  HOME_GUIDE_STATE.active = false;
-  HOME_GUIDE_STATE.steps = [];
-  HOME_GUIDE_STATE.index = 0;
-  if (HOME_GUIDE_STATE.overlay) HOME_GUIDE_STATE.overlay.style.display = "none";
-  if (HOME_GUIDE_STATE.panel) HOME_GUIDE_STATE.panel.style.display = "none";
+  var lifecycleState = homeGuideRuntime.resolveHomeGuideLifecycleState({
+    action: "finish"
+  });
+  HOME_GUIDE_STATE.active = !!(lifecycleState && lifecycleState.active);
+  HOME_GUIDE_STATE.steps =
+    lifecycleState && Array.isArray(lifecycleState.steps) ? lifecycleState.steps : [];
+  HOME_GUIDE_STATE.index =
+    lifecycleState && typeof lifecycleState.index === "number" ? lifecycleState.index : 0;
+  HOME_GUIDE_STATE.fromSettings = !!(lifecycleState && lifecycleState.fromSettings);
+  var layerDisplayState = homeGuideRuntime.resolveHomeGuideLayerDisplayState({
+    active: HOME_GUIDE_STATE.active
+  });
+  if (HOME_GUIDE_STATE.overlay) {
+    HOME_GUIDE_STATE.overlay.style.display =
+      layerDisplayState && layerDisplayState.overlayDisplay
+        ? layerDisplayState.overlayDisplay
+        : "none";
+  }
+  if (HOME_GUIDE_STATE.panel) {
+    HOME_GUIDE_STATE.panel.style.display =
+      layerDisplayState && layerDisplayState.panelDisplay
+        ? layerDisplayState.panelDisplay
+        : "none";
+  }
   if (markSeen) {
     homeGuideRuntime.markHomeGuideSeen({
       storageLike: getStorageByName("localStorage"),
       seenKey: HOME_GUIDE_SEEN_KEY
     });
   }
-  HOME_GUIDE_STATE.fromSettings = false;
   if (typeof window.syncHomeGuideSettingsUI === "function") {
     window.syncHomeGuideSettingsUI();
   }
@@ -1262,13 +1282,29 @@ function startHomeGuide(options) {
   if (!isHomePage()) return;
 
   var dom = ensureHomeGuideDom();
-  HOME_GUIDE_STATE.active = true;
-  HOME_GUIDE_STATE.fromSettings = !!options.fromSettings;
-  HOME_GUIDE_STATE.steps = getHomeGuideSteps();
-  HOME_GUIDE_STATE.index = 0;
+  var lifecycleState = homeGuideRuntime.resolveHomeGuideLifecycleState({
+    action: "start",
+    fromSettings: !!options.fromSettings,
+    steps: getHomeGuideSteps()
+  });
+  HOME_GUIDE_STATE.active = !!(lifecycleState && lifecycleState.active);
+  HOME_GUIDE_STATE.fromSettings = !!(lifecycleState && lifecycleState.fromSettings);
+  HOME_GUIDE_STATE.steps =
+    lifecycleState && Array.isArray(lifecycleState.steps) ? lifecycleState.steps : [];
+  HOME_GUIDE_STATE.index =
+    lifecycleState && typeof lifecycleState.index === "number" ? lifecycleState.index : 0;
 
-  dom.overlay.style.display = "block";
-  dom.panel.style.display = "block";
+  var layerDisplayState = homeGuideRuntime.resolveHomeGuideLayerDisplayState({
+    active: HOME_GUIDE_STATE.active
+  });
+  dom.overlay.style.display =
+    layerDisplayState && layerDisplayState.overlayDisplay
+      ? layerDisplayState.overlayDisplay
+      : "block";
+  dom.panel.style.display =
+    layerDisplayState && layerDisplayState.panelDisplay
+      ? layerDisplayState.panelDisplay
+      : "block";
 
   var prevBtn = document.getElementById("home-guide-prev");
   var nextBtn = document.getElementById("home-guide-next");

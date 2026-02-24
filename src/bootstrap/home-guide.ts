@@ -125,6 +125,28 @@ export interface ResolveHomeGuideToggleActionResult {
   startFromSettings: boolean;
 }
 
+export interface ResolveHomeGuideLifecycleStateOptions {
+  action?: string | null | undefined;
+  fromSettings?: boolean | null | undefined;
+  steps?: Array<HomeGuideStep> | null | undefined;
+}
+
+export interface ResolveHomeGuideLifecycleStateResult {
+  active: boolean;
+  fromSettings: boolean;
+  index: number;
+  steps: HomeGuideStep[];
+}
+
+export interface ResolveHomeGuideLayerDisplayStateOptions {
+  active?: boolean | null | undefined;
+}
+
+export interface ResolveHomeGuideLayerDisplayStateResult {
+  overlayDisplay: string;
+  panelDisplay: string;
+}
+
 export interface ResolveHomeGuideFinishStateOptions {
   reason?: string | null | undefined;
 }
@@ -446,6 +468,43 @@ export function resolveHomeGuideToggleAction(
     shouldCloseSettings: true,
     shouldResync: false,
     startFromSettings: true
+  };
+}
+
+export function resolveHomeGuideLifecycleState(
+  options: ResolveHomeGuideLifecycleStateOptions
+): ResolveHomeGuideLifecycleStateResult {
+  const opts = options || {};
+  const action = typeof opts.action === "string" ? opts.action : "";
+  if (action === "start") {
+    const inputSteps = Array.isArray(opts.steps) ? opts.steps : [];
+    return {
+      active: true,
+      fromSettings: !!opts.fromSettings,
+      index: 0,
+      steps: inputSteps.map((step) => ({
+        selector: step && typeof step.selector === "string" ? step.selector : "",
+        title: step && typeof step.title === "string" ? step.title : "",
+        desc: step && typeof step.desc === "string" ? step.desc : ""
+      }))
+    };
+  }
+  return {
+    active: false,
+    fromSettings: false,
+    index: 0,
+    steps: []
+  };
+}
+
+export function resolveHomeGuideLayerDisplayState(
+  options: ResolveHomeGuideLayerDisplayStateOptions
+): ResolveHomeGuideLayerDisplayStateResult {
+  const opts = options || {};
+  const active = !!opts.active;
+  return {
+    overlayDisplay: active ? "block" : "none",
+    panelDisplay: active ? "block" : "none"
   };
 }
 
