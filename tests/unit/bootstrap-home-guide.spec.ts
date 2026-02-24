@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildHomeGuideSteps,
   isHomePagePath,
+  markHomeGuideSeen,
+  readHomeGuideSeenValue,
   shouldAutoStartHomeGuide
 } from "../../src/bootstrap/home-guide";
 
@@ -64,5 +66,45 @@ describe("bootstrap home guide", () => {
     expect(hintIdx).toBeGreaterThan(-1);
     expect(restartIdx).toBeGreaterThan(hintIdx);
     expect(restartIdx).toBe(hintIdx + 1);
+  });
+
+  it("reads seen marker from storage safely", () => {
+    expect(
+      readHomeGuideSeenValue({
+        storageLike: {
+          getItem(key: string) {
+            return key === "home_guide_seen_v1" ? "1" : null;
+          }
+        }
+      })
+    ).toBe("1");
+    expect(
+      readHomeGuideSeenValue({
+        storageLike: {
+          getItem() {
+            return "0";
+          }
+        }
+      })
+    ).toBe("0");
+    expect(readHomeGuideSeenValue({ storageLike: null })).toBe("0");
+  });
+
+  it("marks seen marker through storage safely", () => {
+    const writes: Array<{ key: string; value: string }> = [];
+    expect(
+      markHomeGuideSeen({
+        storageLike: {
+          getItem() {
+            return null;
+          },
+          setItem(key: string, value: string) {
+            writes.push({ key, value });
+          }
+        }
+      })
+    ).toBe(true);
+    expect(writes).toEqual([{ key: "home_guide_seen_v1", value: "1" }]);
+    expect(markHomeGuideSeen({ storageLike: null })).toBe(false);
   });
 });

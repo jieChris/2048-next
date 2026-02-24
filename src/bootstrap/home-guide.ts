@@ -3,6 +3,11 @@ export interface HomeGuideAutoStartOptions {
   seenValue?: string | null | undefined;
 }
 
+export interface HomeGuideStorageLike {
+  getItem(key: string): string | null;
+  setItem?(key: string, value: string): void;
+}
+
 export interface HomeGuideStep {
   selector: string;
   title: string;
@@ -11,6 +16,11 @@ export interface HomeGuideStep {
 
 export interface BuildHomeGuideStepsOptions {
   isCompactViewport?: boolean;
+}
+
+export interface HomeGuideSeenOptions {
+  storageLike?: HomeGuideStorageLike | null | undefined;
+  seenKey?: string | null | undefined;
 }
 
 const BASE_HOME_GUIDE_STEPS: HomeGuideStep[] = [
@@ -52,6 +62,35 @@ export function buildHomeGuideSteps(options: BuildHomeGuideStepsOptions): HomeGu
     });
   }
   return steps;
+}
+
+function resolveSeenKey(value: string | null | undefined): string {
+  return typeof value === "string" && value ? value : "home_guide_seen_v1";
+}
+
+export function readHomeGuideSeenValue(options: HomeGuideSeenOptions): string {
+  const opts = options || {};
+  const storage = opts.storageLike || null;
+  const seenKey = resolveSeenKey(opts.seenKey);
+  if (!storage || typeof storage.getItem !== "function") return "0";
+  try {
+    return storage.getItem(seenKey) === "1" ? "1" : "0";
+  } catch (_err) {
+    return "0";
+  }
+}
+
+export function markHomeGuideSeen(options: HomeGuideSeenOptions): boolean {
+  const opts = options || {};
+  const storage = opts.storageLike || null;
+  const seenKey = resolveSeenKey(opts.seenKey);
+  if (!storage || typeof storage.setItem !== "function") return false;
+  try {
+    storage.setItem(seenKey, "1");
+    return true;
+  } catch (_err) {
+    return false;
+  }
 }
 
 export function shouldAutoStartHomeGuide(options: HomeGuideAutoStartOptions): boolean {

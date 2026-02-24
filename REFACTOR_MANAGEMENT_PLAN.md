@@ -54,6 +54,7 @@
   - `practice-transfer` 已继续承接 `practice_guide_seen` 判定与练习板 URL 组装，`index_ui.js` 保留存储与跳转编排
   - 新增 `src/bootstrap/home-guide.ts` + `js/core_home_guide_runtime.js`，`index_ui.js` 委托首页判定与新手指引自动触发 gate
   - `home-guide` 已继续承接首页指引步骤清单构建（含移动端提示步骤插入），`index_ui.js` 改为透传 viewport 信息
+  - `home-guide` 已承接已读状态读写（`readHomeGuideSeenValue`/`markHomeGuideSeen`），`index_ui.js` 不再直接读写 `localStorage`
   - `legacy_bootstrap_runtime.resolveModeConfig` 现可优先委托 `CoreModeCatalogRuntime.resolveCatalogModeWithDefault`（缺失时自动回退原逻辑）
 
 验收标准：

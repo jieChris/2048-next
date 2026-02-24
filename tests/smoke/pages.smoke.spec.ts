@@ -820,6 +820,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         !runtime ||
         typeof runtime.isHomePagePath !== "function" ||
         typeof runtime.buildHomeGuideSteps !== "function" ||
+        typeof runtime.readHomeGuideSeenValue !== "function" ||
+        typeof runtime.markHomeGuideSeen !== "function" ||
         typeof runtime.shouldAutoStartHomeGuide !== "function"
       ) {
         return { hasRuntime: false };
@@ -832,12 +834,35 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const desktopSelectors = Array.isArray(desktopSteps)
         ? desktopSteps.map((item: any) => item && item.selector)
         : [];
+      const writes: string[] = [];
+      const seenValue = runtime.readHomeGuideSeenValue({
+        seenKey: "home_guide_seen_v1",
+        storageLike: {
+          getItem(key: string) {
+            return key === "home_guide_seen_v1" ? "1" : null;
+          }
+        }
+      });
+      const markResult = runtime.markHomeGuideSeen({
+        seenKey: "home_guide_seen_v1",
+        storageLike: {
+          getItem() {
+            return null;
+          },
+          setItem(key: string, value: string) {
+            writes.push(key + ":" + value);
+          }
+        }
+      });
       return {
         hasRuntime: true,
         homePath: runtime.isHomePagePath("/index.html"),
         playPath: runtime.isHomePagePath("/play.html"),
         hasCompactHint: compactSelectors.includes("#top-mobile-hint-btn"),
         hasDesktopHint: desktopSelectors.includes("#top-mobile-hint-btn"),
+        seenValue,
+        markResult,
+        writes,
         autoStart: runtime.shouldAutoStartHomeGuide({
           pathname: "/index.html",
           seenValue: "0"
@@ -858,6 +883,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.playPath).toBe(false);
     expect(snapshot.hasCompactHint).toBe(true);
     expect(snapshot.hasDesktopHint).toBe(false);
+    expect(snapshot.seenValue).toBe("1");
+    expect(snapshot.markResult).toBe(true);
+    expect(snapshot.writes).toEqual(["home_guide_seen_v1:1"]);
     expect(snapshot.autoStart).toBe(true);
     expect(snapshot.blockedSeen).toBe(false);
     expect(snapshot.blockedPath).toBe(false);
@@ -879,7 +907,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreHomeGuideRuntime;
-      if (!runtime || typeof runtime.buildHomeGuideSteps !== "function") {
+      if (
+        !runtime ||
+        typeof runtime.buildHomeGuideSteps !== "function" ||
+        typeof runtime.markHomeGuideSeen !== "function"
+      ) {
         return { hasRuntime: false };
       }
       const openSettingsModal = (window as any).openSettingsModal;
@@ -887,10 +919,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return { hasRuntime: true, hasSettingsOpen: false };
       }
       const originalBuild = runtime.buildHomeGuideSteps;
+      const originalMark = runtime.markHomeGuideSeen;
       let callCount = 0;
+      let markCallCount = 0;
       runtime.buildHomeGuideSteps = function (opts: any) {
         callCount += 1;
         return originalBuild(opts);
+      };
+      runtime.markHomeGuideSeen = function (opts: any) {
+        markCallCount += 1;
+        return originalMark(opts);
       };
       try {
         openSettingsModal();
@@ -901,16 +939,25 @@ test.describe("Legacy Multi-Page Smoke", () => {
         toggle.checked = true;
         toggle.dispatchEvent(new Event("change", { bubbles: true }));
         const overlay = document.getElementById("home-guide-overlay");
+        const overlayVisibleBeforeSkip = Boolean(overlay && overlay.style.display !== "none");
+        const skipBtn = document.getElementById("home-guide-skip");
+        if (skipBtn) {
+          skipBtn.dispatchEvent(new Event("click", { bubbles: true }));
+        }
+        const overlayAfterSkip = document.getElementById("home-guide-overlay");
         return {
           hasRuntime: true,
           hasSettingsOpen: true,
           hasToggle: true,
           callCount,
+          markCallCount,
           hasOverlay: Boolean(overlay),
-          overlayVisible: Boolean(overlay && overlay.style.display !== "none")
+          overlayVisibleBeforeSkip,
+          overlayHiddenAfterSkip: Boolean(overlayAfterSkip && overlayAfterSkip.style.display === "none")
         };
       } finally {
         runtime.buildHomeGuideSteps = originalBuild;
+        runtime.markHomeGuideSeen = originalMark;
       }
     });
 
@@ -918,8 +965,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasSettingsOpen).toBe(true);
     expect(snapshot.hasToggle).toBe(true);
     expect(snapshot.callCount).toBeGreaterThan(0);
+    expect(snapshot.markCallCount).toBeGreaterThan(0);
     expect(snapshot.hasOverlay).toBe(true);
-    expect(snapshot.overlayVisible).toBe(true);
+    expect(snapshot.overlayVisibleBeforeSkip).toBe(true);
+    expect(snapshot.overlayHiddenAfterSkip).toBe(true);
   });
 
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {

@@ -32,6 +32,35 @@
     return steps;
   }
 
+  function resolveSeenKey(value) {
+    return typeof value === "string" && value ? value : "home_guide_seen_v1";
+  }
+
+  function readHomeGuideSeenValue(options) {
+    var opts = options || {};
+    var storage = opts.storageLike || null;
+    var seenKey = resolveSeenKey(opts.seenKey);
+    if (!storage || typeof storage.getItem !== "function") return "0";
+    try {
+      return storage.getItem(seenKey) === "1" ? "1" : "0";
+    } catch (_err) {
+      return "0";
+    }
+  }
+
+  function markHomeGuideSeen(options) {
+    var opts = options || {};
+    var storage = opts.storageLike || null;
+    var seenKey = resolveSeenKey(opts.seenKey);
+    if (!storage || typeof storage.setItem !== "function") return false;
+    try {
+      storage.setItem(seenKey, "1");
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
   function shouldAutoStartHomeGuide(options) {
     var opts = options || {};
     if (!isHomePagePath(opts.pathname)) return false;
@@ -41,5 +70,7 @@
   global.CoreHomeGuideRuntime = global.CoreHomeGuideRuntime || {};
   global.CoreHomeGuideRuntime.isHomePagePath = isHomePagePath;
   global.CoreHomeGuideRuntime.buildHomeGuideSteps = buildHomeGuideSteps;
+  global.CoreHomeGuideRuntime.readHomeGuideSeenValue = readHomeGuideSeenValue;
+  global.CoreHomeGuideRuntime.markHomeGuideSeen = markHomeGuideSeen;
   global.CoreHomeGuideRuntime.shouldAutoStartHomeGuide = shouldAutoStartHomeGuide;
 })(typeof window !== "undefined" ? window : undefined);

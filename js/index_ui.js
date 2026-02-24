@@ -85,6 +85,8 @@ if (
   !homeGuideRuntime ||
   typeof homeGuideRuntime.isHomePagePath !== "function" ||
   typeof homeGuideRuntime.buildHomeGuideSteps !== "function" ||
+  typeof homeGuideRuntime.readHomeGuideSeenValue !== "function" ||
+  typeof homeGuideRuntime.markHomeGuideSeen !== "function" ||
   typeof homeGuideRuntime.shouldAutoStartHomeGuide !== "function"
 ) {
   throw new Error("CoreHomeGuideRuntime is required");
@@ -1376,9 +1378,10 @@ function finishHomeGuide(markSeen, options) {
   if (HOME_GUIDE_STATE.overlay) HOME_GUIDE_STATE.overlay.style.display = "none";
   if (HOME_GUIDE_STATE.panel) HOME_GUIDE_STATE.panel.style.display = "none";
   if (markSeen) {
-    try {
-      localStorage.setItem(HOME_GUIDE_SEEN_KEY, "1");
-    } catch (_err) {}
+    homeGuideRuntime.markHomeGuideSeen({
+      storageLike: getStorageByName("localStorage"),
+      seenKey: HOME_GUIDE_SEEN_KEY
+    });
   }
   HOME_GUIDE_STATE.fromSettings = false;
   if (typeof window.syncHomeGuideSettingsUI === "function") {
@@ -1538,12 +1541,10 @@ function autoStartHomeGuideIfNeeded() {
   } catch (_err) {
     path = "";
   }
-  var seen = "0";
-  try {
-    seen = localStorage.getItem(HOME_GUIDE_SEEN_KEY) || "0";
-  } catch (_err) {
-    seen = "0";
-  }
+  var seen = homeGuideRuntime.readHomeGuideSeenValue({
+    storageLike: getStorageByName("localStorage"),
+    seenKey: HOME_GUIDE_SEEN_KEY
+  });
   if (!homeGuideRuntime.shouldAutoStartHomeGuide({ pathname: path, seenValue: seen })) return;
   setTimeout(function () {
     startHomeGuide({ fromSettings: false });
