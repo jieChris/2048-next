@@ -240,6 +240,15 @@ if (
 ) {
   throw new Error("CoreMobileViewportRuntime is required");
 }
+var storageRuntime = window.CoreStorageRuntime;
+if (
+  !storageRuntime ||
+  typeof storageRuntime.resolveStorageByName !== "function" ||
+  typeof storageRuntime.safeSetStorageItem !== "function" ||
+  typeof storageRuntime.safeReadStorageItem !== "function"
+) {
+  throw new Error("CoreStorageRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -627,30 +636,10 @@ window.syncMobileHintUI = syncMobileHintUI;
 window.syncMobileUndoTopButtonAvailability = syncMobileUndoTopButtonAvailability;
 
 function getStorageByName(name) {
-  try {
-    return window && window[name] ? window[name] : null;
-  } catch (_err) {
-    return null;
-  }
-}
-
-function safeSetStorageItem(storage, key, value) {
-  if (!storage || !key) return false;
-  try {
-    storage.setItem(key, value);
-    return true;
-  } catch (_err) {
-    return false;
-  }
-}
-
-function safeReadStorageItem(storage, key) {
-  if (!storage || !key) return null;
-  try {
-    return storage.getItem(key);
-  } catch (_err) {
-    return null;
-  }
+  return storageRuntime.resolveStorageByName({
+    windowLike: typeof window !== "undefined" ? window : null,
+    storageName: name
+  });
 }
 
 window.openPracticeBoardFromCurrent = function () {

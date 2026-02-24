@@ -110,6 +110,7 @@
   - 新增 `src/bootstrap/mobile-top-buttons.ts` + `js/core_mobile_top_buttons_runtime.js`，`index_ui.js` 委托移动端撤回/提示按钮 DOM 创建与挂载顺序
   - 新增 `src/bootstrap/mobile-viewport.ts` + `js/core_mobile_viewport_runtime.js`，`index_ui.js` 委托紧凑视口/计时器折叠视口/移动端视口判定
   - `mobile-viewport` 已承接页面作用域判定（`resolvePageScopeValue`/`isGamePageScope`/`isPracticePageScope`/`isTimerboxMobileScope`），`index_ui.js` 不再直接读取 `body[data-page]`
+  - 新增 `src/bootstrap/storage.ts` + `js/core_storage_runtime.js`，`index_ui.js` 委托 `localStorage/sessionStorage` 安全获取，不再内联存储访问容错逻辑
   - `legacy_bootstrap_runtime.resolveModeConfig` 现可优先委托 `CoreModeCatalogRuntime.resolveCatalogModeWithDefault`（缺失时自动回退原逻辑）
 
 验收标准：
