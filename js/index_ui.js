@@ -211,7 +211,11 @@ if (
   typeof mobileViewportRuntime.isViewportAtMost !== "function" ||
   typeof mobileViewportRuntime.isCompactGameViewport !== "function" ||
   typeof mobileViewportRuntime.isTimerboxCollapseViewport !== "function" ||
-  typeof mobileViewportRuntime.isMobileGameViewport !== "function"
+  typeof mobileViewportRuntime.isMobileGameViewport !== "function" ||
+  typeof mobileViewportRuntime.resolvePageScopeValue !== "function" ||
+  typeof mobileViewportRuntime.isGamePageScope !== "function" ||
+  typeof mobileViewportRuntime.isPracticePageScope !== "function" ||
+  typeof mobileViewportRuntime.isTimerboxMobileScope !== "function"
 ) {
   throw new Error("CoreMobileViewportRuntime is required");
 }
@@ -233,19 +237,21 @@ function tryUndoFromUi() {
 }
 
 function isGamePageScope() {
-  if (!document.body) return false;
-  return document.body.getAttribute("data-page") === "game";
+  return mobileViewportRuntime.isGamePageScope({
+    bodyLike: document.body
+  });
 }
 
 function isTimerboxMobileScope() {
-  if (!document.body) return false;
-  var page = document.body.getAttribute("data-page");
-  return page === "game" || page === "practice";
+  return mobileViewportRuntime.isTimerboxMobileScope({
+    bodyLike: document.body
+  });
 }
 
 function isPracticePageScope() {
-  if (!document.body) return false;
-  return document.body.getAttribute("data-page") === "practice";
+  return mobileViewportRuntime.isPracticePageScope({
+    bodyLike: document.body
+  });
 }
 
 function isMobileGameViewport() {

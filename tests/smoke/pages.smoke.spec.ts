@@ -830,7 +830,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof viewportRuntime.isViewportAtMost !== "function" ||
         typeof viewportRuntime.isCompactGameViewport !== "function" ||
         typeof viewportRuntime.isTimerboxCollapseViewport !== "function" ||
-        typeof viewportRuntime.isMobileGameViewport !== "function"
+        typeof viewportRuntime.isMobileGameViewport !== "function" ||
+        typeof viewportRuntime.resolvePageScopeValue !== "function" ||
+        typeof viewportRuntime.isGamePageScope !== "function" ||
+        typeof viewportRuntime.isPracticePageScope !== "function" ||
+        typeof viewportRuntime.isTimerboxMobileScope !== "function"
       ) {
         return {
           hasRuntime: false,
@@ -870,6 +874,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalEnsureHintTopBtn = topButtonsRuntime.ensureMobileHintToggleButtonDom;
       const originalIsCompactViewport = viewportRuntime.isCompactGameViewport;
       const originalIsTimerboxCollapseViewport = viewportRuntime.isTimerboxCollapseViewport;
+      const originalResolvePageScopeValue = viewportRuntime.resolvePageScopeValue;
+      const originalIsGamePageScope = viewportRuntime.isGamePageScope;
+      const originalIsPracticePageScope = viewportRuntime.isPracticePageScope;
+      const originalIsTimerboxMobileScope = viewportRuntime.isTimerboxMobileScope;
       let collectCallCount = 0;
       let syncCallCount = 0;
       let ensureModalCallCount = 0;
@@ -882,6 +890,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let ensureHintTopBtnCallCount = 0;
       let compactViewportCallCount = 0;
       let timerboxCollapseViewportCallCount = 0;
+      let resolvePageScopeCallCount = 0;
+      let gameScopeCallCount = 0;
+      let practiceScopeCallCount = 0;
+      let timerboxScopeCallCount = 0;
       runtime.collectMobileHintTexts = function (opts: any) {
         collectCallCount += 1;
         const lines = originalCollect(opts);
@@ -931,6 +943,22 @@ test.describe("Legacy Multi-Page Smoke", () => {
         timerboxCollapseViewportCallCount += 1;
         return originalIsTimerboxCollapseViewport(opts);
       };
+      viewportRuntime.resolvePageScopeValue = function (opts: any) {
+        resolvePageScopeCallCount += 1;
+        return originalResolvePageScopeValue(opts);
+      };
+      viewportRuntime.isGamePageScope = function (opts: any) {
+        gameScopeCallCount += 1;
+        return originalIsGamePageScope(opts);
+      };
+      viewportRuntime.isPracticePageScope = function (opts: any) {
+        practiceScopeCallCount += 1;
+        return originalIsPracticePageScope(opts);
+      };
+      viewportRuntime.isTimerboxMobileScope = function (opts: any) {
+        timerboxScopeCallCount += 1;
+        return originalIsTimerboxMobileScope(opts);
+      };
 
       try {
         const syncMobileHintUI = (window as any).syncMobileHintUI;
@@ -972,6 +1000,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
           ensureHintTopBtnCallCount,
           compactViewportCallCount,
           timerboxCollapseViewportCallCount,
+          resolvePageScopeCallCount,
+          gameScopeCallCount,
+          practiceScopeCallCount,
+          timerboxScopeCallCount,
           overlayVisible: Boolean(overlay && overlay.style.display === "flex"),
           firstLineText: firstLine ? (firstLine.textContent || "").trim() : ""
         };
@@ -988,6 +1020,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         topButtonsRuntime.ensureMobileHintToggleButtonDom = originalEnsureHintTopBtn;
         viewportRuntime.isCompactGameViewport = originalIsCompactViewport;
         viewportRuntime.isTimerboxCollapseViewport = originalIsTimerboxCollapseViewport;
+        viewportRuntime.resolvePageScopeValue = originalResolvePageScopeValue;
+        viewportRuntime.isGamePageScope = originalIsGamePageScope;
+        viewportRuntime.isPracticePageScope = originalIsPracticePageScope;
+        viewportRuntime.isTimerboxMobileScope = originalIsTimerboxMobileScope;
       }
     });
 
@@ -1012,6 +1048,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.ensureHintTopBtnCallCount).toBeGreaterThan(0);
     expect(snapshot.compactViewportCallCount).toBeGreaterThan(0);
     expect(snapshot.timerboxCollapseViewportCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolvePageScopeCallCount).toBeGreaterThanOrEqual(0);
+    expect(snapshot.gameScopeCallCount).toBeGreaterThan(0);
+    expect(snapshot.practiceScopeCallCount).toBeGreaterThanOrEqual(0);
+    expect(snapshot.timerboxScopeCallCount).toBeGreaterThan(0);
     expect(snapshot.overlayVisible).toBe(true);
     expect(snapshot.firstLineText.length).toBeGreaterThan(0);
   });

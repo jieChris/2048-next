@@ -11,6 +11,10 @@ interface NavigatorLike {
   userAgent?: string;
 }
 
+interface BodyLike {
+  getAttribute?(name: string): string | null;
+}
+
 export interface ViewportWidthOptions {
   windowLike?: WindowLike | null | undefined;
   maxWidth?: number | null | undefined;
@@ -18,6 +22,10 @@ export interface ViewportWidthOptions {
 
 export interface MobileGameViewportOptions extends ViewportWidthOptions {
   navigatorLike?: NavigatorLike | null | undefined;
+}
+
+export interface PageScopeOptions {
+  bodyLike?: BodyLike | null | undefined;
 }
 
 export function isViewportAtMost(options: ViewportWidthOptions): boolean {
@@ -68,4 +76,25 @@ export function isMobileGameViewport(options: MobileGameViewportOptions): boolea
   const mobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
 
   return coarsePointer || noHover || mobileUa;
+}
+
+export function resolvePageScopeValue(options: PageScopeOptions): string {
+  const opts = options || {};
+  const body = opts.bodyLike || null;
+  if (!body || typeof body.getAttribute !== "function") return "";
+  const value = body.getAttribute("data-page");
+  return typeof value === "string" ? value : "";
+}
+
+export function isGamePageScope(options: PageScopeOptions): boolean {
+  return resolvePageScopeValue(options) === "game";
+}
+
+export function isPracticePageScope(options: PageScopeOptions): boolean {
+  return resolvePageScopeValue(options) === "practice";
+}
+
+export function isTimerboxMobileScope(options: PageScopeOptions): boolean {
+  const page = resolvePageScopeValue(options);
+  return page === "game" || page === "practice";
 }

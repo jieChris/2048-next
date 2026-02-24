@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isGamePageScope,
   isCompactGameViewport,
   isMobileGameViewport,
+  isPracticePageScope,
+  isTimerboxMobileScope,
   isTimerboxCollapseViewport,
-  isViewportAtMost
+  isViewportAtMost,
+  resolvePageScopeValue
 } from "../../src/bootstrap/mobile-viewport";
 
 describe("bootstrap mobile viewport", () => {
@@ -86,5 +90,43 @@ describe("bootstrap mobile viewport", () => {
         maxWidth: 760
       })
     ).toBe(false);
+  });
+
+  it("resolves page scope value from body dataset", () => {
+    expect(
+      resolvePageScopeValue({
+        bodyLike: {
+          getAttribute(name: string) {
+            return name === "data-page" ? "game" : null;
+          }
+        }
+      })
+    ).toBe("game");
+    expect(resolvePageScopeValue({ bodyLike: null })).toBe("");
+  });
+
+  it("detects game and practice scope flags", () => {
+    const gameBody = {
+      getAttribute(name: string) {
+        return name === "data-page" ? "game" : null;
+      }
+    };
+    const practiceBody = {
+      getAttribute(name: string) {
+        return name === "data-page" ? "practice" : null;
+      }
+    };
+    const homeBody = {
+      getAttribute(name: string) {
+        return name === "data-page" ? "home" : null;
+      }
+    };
+    expect(isGamePageScope({ bodyLike: gameBody })).toBe(true);
+    expect(isGamePageScope({ bodyLike: practiceBody })).toBe(false);
+    expect(isPracticePageScope({ bodyLike: practiceBody })).toBe(true);
+    expect(isPracticePageScope({ bodyLike: gameBody })).toBe(false);
+    expect(isTimerboxMobileScope({ bodyLike: gameBody })).toBe(true);
+    expect(isTimerboxMobileScope({ bodyLike: practiceBody })).toBe(true);
+    expect(isTimerboxMobileScope({ bodyLike: homeBody })).toBe(false);
   });
 });

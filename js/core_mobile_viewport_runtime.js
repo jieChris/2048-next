@@ -53,9 +53,34 @@
     return coarsePointer || noHover || mobileUa;
   }
 
+  function resolvePageScopeValue(options) {
+    var opts = options || {};
+    var body = opts.bodyLike || null;
+    if (!body || typeof body.getAttribute !== "function") return "";
+    var value = body.getAttribute("data-page");
+    return typeof value === "string" ? value : "";
+  }
+
+  function isGamePageScope(options) {
+    return resolvePageScopeValue(options) === "game";
+  }
+
+  function isPracticePageScope(options) {
+    return resolvePageScopeValue(options) === "practice";
+  }
+
+  function isTimerboxMobileScope(options) {
+    var page = resolvePageScopeValue(options);
+    return page === "game" || page === "practice";
+  }
+
   global.CoreMobileViewportRuntime = global.CoreMobileViewportRuntime || {};
   global.CoreMobileViewportRuntime.isViewportAtMost = isViewportAtMost;
   global.CoreMobileViewportRuntime.isCompactGameViewport = isCompactGameViewport;
   global.CoreMobileViewportRuntime.isTimerboxCollapseViewport = isTimerboxCollapseViewport;
   global.CoreMobileViewportRuntime.isMobileGameViewport = isMobileGameViewport;
+  global.CoreMobileViewportRuntime.resolvePageScopeValue = resolvePageScopeValue;
+  global.CoreMobileViewportRuntime.isGamePageScope = isGamePageScope;
+  global.CoreMobileViewportRuntime.isPracticePageScope = isPracticePageScope;
+  global.CoreMobileViewportRuntime.isTimerboxMobileScope = isTimerboxMobileScope;
 })(typeof window !== "undefined" ? window : undefined);
