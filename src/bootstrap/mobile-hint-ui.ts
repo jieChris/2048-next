@@ -11,6 +11,21 @@ export interface MobileHintDisplayModel {
   buttonLabel: string;
 }
 
+export interface ResolveMobileHintUiStateOptions {
+  displayModel?: MobileHintDisplayModel | null | undefined;
+  collapsedClassName?: string | null | undefined;
+}
+
+export interface ResolveMobileHintUiStateResult {
+  collapsedContentEnabled: boolean;
+  collapsedClassName: string;
+  buttonDisplay: "inline-flex" | "none";
+  shouldCloseModal: boolean;
+  shouldConfigureButton: boolean;
+  buttonLabel: string;
+  buttonAriaExpanded: string;
+}
+
 interface ClassListLike {
   contains?(token: string): boolean;
 }
@@ -33,6 +48,7 @@ interface ElementLike {
 
 const DEFAULT_COLLAPSED_ATTR = "data-mobile-hint-collapsed";
 const DEFAULT_BUTTON_LABEL = "查看提示文本";
+const DEFAULT_COLLAPSED_CLASS_NAME = "mobile-hint-collapsed-content";
 
 function asElement(node: unknown): ElementLike | null {
   if (!node || typeof node !== "object") return null;
@@ -182,5 +198,32 @@ export function resolveMobileHintDisplayModel(isCompactViewport: boolean): Mobil
     collapsedContentEnabled: true,
     buttonDisplay: "inline-flex",
     buttonLabel: DEFAULT_BUTTON_LABEL
+  };
+}
+
+export function resolveMobileHintUiState(
+  options: ResolveMobileHintUiStateOptions
+): ResolveMobileHintUiStateResult {
+  const opts = options || {};
+  const displayModel = opts.displayModel || null;
+  const collapsedContentEnabled = !!(displayModel && displayModel.collapsedContentEnabled);
+  const collapsedClassName =
+    typeof opts.collapsedClassName === "string" && opts.collapsedClassName
+      ? opts.collapsedClassName
+      : DEFAULT_COLLAPSED_CLASS_NAME;
+  const buttonDisplay =
+    displayModel && displayModel.buttonDisplay === "inline-flex" ? "inline-flex" : "none";
+  const buttonLabel =
+    displayModel && typeof displayModel.buttonLabel === "string" && displayModel.buttonLabel
+      ? displayModel.buttonLabel
+      : DEFAULT_BUTTON_LABEL;
+  return {
+    collapsedContentEnabled,
+    collapsedClassName,
+    buttonDisplay,
+    shouldCloseModal: !collapsedContentEnabled,
+    shouldConfigureButton: collapsedContentEnabled,
+    buttonLabel,
+    buttonAriaExpanded: "false"
   };
 }

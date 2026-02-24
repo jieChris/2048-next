@@ -173,7 +173,8 @@ var mobileHintUiRuntime = window.CoreMobileHintUiRuntime;
 if (
   !mobileHintUiRuntime ||
   typeof mobileHintUiRuntime.syncMobileHintTextBlockVisibility !== "function" ||
-  typeof mobileHintUiRuntime.resolveMobileHintDisplayModel !== "function"
+  typeof mobileHintUiRuntime.resolveMobileHintDisplayModel !== "function" ||
+  typeof mobileHintUiRuntime.resolveMobileHintUiState !== "function"
 ) {
   throw new Error("CoreMobileHintUiRuntime is required");
 }
@@ -443,23 +444,29 @@ function syncMobileHintUI(options) {
   var btn = ensureMobileHintToggleButton();
   if (!btn) return;
   var displayModel = mobileHintUiRuntime.resolveMobileHintDisplayModel(compact);
+  var uiState = mobileHintUiRuntime.resolveMobileHintUiState({
+    displayModel: displayModel,
+    collapsedClassName: "mobile-hint-collapsed-content"
+  });
 
-  if (displayModel && displayModel.collapsedContentEnabled) {
-    body.classList.add("mobile-hint-collapsed-content");
+  if (uiState && uiState.collapsedContentEnabled) {
+    body.classList.add(uiState.collapsedClassName || "mobile-hint-collapsed-content");
   } else {
-    body.classList.remove("mobile-hint-collapsed-content");
+    body.classList.remove(
+      uiState && uiState.collapsedClassName ? uiState.collapsedClassName : "mobile-hint-collapsed-content"
+    );
   }
-  btn.style.display = displayModel && displayModel.buttonDisplay ? displayModel.buttonDisplay : "none";
+  btn.style.display = uiState && uiState.buttonDisplay ? uiState.buttonDisplay : "none";
 
-  if (!displayModel || !displayModel.collapsedContentEnabled) {
+  if (!uiState || uiState.shouldCloseModal) {
     closeMobileHintModal();
     return;
   }
 
-  var label = displayModel.buttonLabel || "查看提示文本";
+  var label = uiState.buttonLabel || "查看提示文本";
   btn.setAttribute("aria-label", label);
   btn.setAttribute("title", label);
-  btn.setAttribute("aria-expanded", "false");
+  btn.setAttribute("aria-expanded", uiState.buttonAriaExpanded || "false");
 }
 
 function initMobileHintToggle() {

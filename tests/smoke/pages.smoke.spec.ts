@@ -824,6 +824,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.collectMobileHintTexts !== "function" ||
         !uiRuntime ||
         typeof uiRuntime.syncMobileHintTextBlockVisibility !== "function" ||
+        typeof uiRuntime.resolveMobileHintUiState !== "function" ||
         !modalRuntime ||
         typeof modalRuntime.ensureMobileHintModalDom !== "function" ||
         !timerRuntime ||
@@ -881,6 +882,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
       const originalCollect = runtime.collectMobileHintTexts;
       const originalSync = uiRuntime.syncMobileHintTextBlockVisibility;
+      const originalResolveHintUiState = uiRuntime.resolveMobileHintUiState;
       const originalEnsureModal = modalRuntime.ensureMobileHintModalDom;
       const originalResolveStored = timerRuntime.resolveStoredMobileTimerboxCollapsed;
       const originalResolveDisplay = timerRuntime.resolveMobileTimerboxDisplayModel;
@@ -900,6 +902,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalIsUndoInteractionEnabled = undoActionRuntime.isUndoInteractionEnabled;
       let collectCallCount = 0;
       let syncCallCount = 0;
+      let resolveHintUiStateCallCount = 0;
       let ensureModalCallCount = 0;
       let resolveStoredCallCount = 0;
       let resolveDisplayCallCount = 0;
@@ -925,6 +928,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       uiRuntime.syncMobileHintTextBlockVisibility = function (opts: any) {
         syncCallCount += 1;
         return originalSync(opts);
+      };
+      uiRuntime.resolveMobileHintUiState = function (opts: any) {
+        resolveHintUiStateCallCount += 1;
+        return originalResolveHintUiState(opts);
       };
       modalRuntime.ensureMobileHintModalDom = function (opts: any) {
         ensureModalCallCount += 1;
@@ -1025,6 +1032,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasHintButton: true,
           collectCallCount,
           syncCallCount,
+          resolveHintUiStateCallCount,
           ensureModalCallCount,
           resolveStoredCallCount,
           resolveDisplayCallCount,
@@ -1048,6 +1056,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       } finally {
         runtime.collectMobileHintTexts = originalCollect;
         uiRuntime.syncMobileHintTextBlockVisibility = originalSync;
+        uiRuntime.resolveMobileHintUiState = originalResolveHintUiState;
         modalRuntime.ensureMobileHintModalDom = originalEnsureModal;
         timerRuntime.resolveStoredMobileTimerboxCollapsed = originalResolveStored;
         timerRuntime.resolveMobileTimerboxDisplayModel = originalResolveDisplay;
@@ -1079,6 +1088,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasHintButton).toBe(true);
     expect(snapshot.collectCallCount).toBeGreaterThan(0);
     expect(snapshot.syncCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveHintUiStateCallCount).toBeGreaterThan(0);
     expect(snapshot.ensureModalCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveStoredCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveDisplayCallCount).toBeGreaterThan(0);

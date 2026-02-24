@@ -5,6 +5,7 @@
 
   var DEFAULT_COLLAPSED_ATTR = "data-mobile-hint-collapsed";
   var DEFAULT_BUTTON_LABEL = "查看提示文本";
+  var DEFAULT_COLLAPSED_CLASS_NAME = "mobile-hint-collapsed-content";
 
   function asElement(node) {
     if (!node || typeof node !== "object") return null;
@@ -155,8 +156,34 @@
     };
   }
 
+  function resolveMobileHintUiState(options) {
+    var opts = options || {};
+    var displayModel = opts.displayModel || null;
+    var collapsedContentEnabled = !!(displayModel && displayModel.collapsedContentEnabled);
+    var collapsedClassName =
+      typeof opts.collapsedClassName === "string" && opts.collapsedClassName
+        ? opts.collapsedClassName
+        : DEFAULT_COLLAPSED_CLASS_NAME;
+    var buttonDisplay =
+      displayModel && displayModel.buttonDisplay === "inline-flex" ? "inline-flex" : "none";
+    var buttonLabel =
+      displayModel && typeof displayModel.buttonLabel === "string" && displayModel.buttonLabel
+        ? displayModel.buttonLabel
+        : DEFAULT_BUTTON_LABEL;
+    return {
+      collapsedContentEnabled: collapsedContentEnabled,
+      collapsedClassName: collapsedClassName,
+      buttonDisplay: buttonDisplay,
+      shouldCloseModal: !collapsedContentEnabled,
+      shouldConfigureButton: collapsedContentEnabled,
+      buttonLabel: buttonLabel,
+      buttonAriaExpanded: "false"
+    };
+  }
+
   global.CoreMobileHintUiRuntime = global.CoreMobileHintUiRuntime || {};
   global.CoreMobileHintUiRuntime.collectMobileHintTextBlockNodes = collectMobileHintTextBlockNodes;
   global.CoreMobileHintUiRuntime.syncMobileHintTextBlockVisibility = syncMobileHintTextBlockVisibility;
   global.CoreMobileHintUiRuntime.resolveMobileHintDisplayModel = resolveMobileHintDisplayModel;
+  global.CoreMobileHintUiRuntime.resolveMobileHintUiState = resolveMobileHintUiState;
 })(typeof window !== "undefined" ? window : undefined);

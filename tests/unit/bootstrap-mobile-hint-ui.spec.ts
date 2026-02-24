@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectMobileHintTextBlockNodes,
   resolveMobileHintDisplayModel,
+  resolveMobileHintUiState,
   syncMobileHintTextBlockVisibility
 } from "../../src/bootstrap/mobile-hint-ui";
 
@@ -134,6 +135,41 @@ describe("bootstrap mobile hint ui", () => {
       collapsedContentEnabled: false,
       buttonDisplay: "none",
       buttonLabel: "查看提示文本"
+    });
+  });
+
+  it("resolves ui state from display model", () => {
+    expect(
+      resolveMobileHintUiState({
+        displayModel: {
+          collapsedContentEnabled: true,
+          buttonDisplay: "inline-flex",
+          buttonLabel: "自定义"
+        },
+        collapsedClassName: "mobile-hint-collapsed-content"
+      })
+    ).toEqual({
+      collapsedContentEnabled: true,
+      collapsedClassName: "mobile-hint-collapsed-content",
+      buttonDisplay: "inline-flex",
+      shouldCloseModal: false,
+      shouldConfigureButton: true,
+      buttonLabel: "自定义",
+      buttonAriaExpanded: "false"
+    });
+
+    expect(
+      resolveMobileHintUiState({
+        displayModel: null
+      })
+    ).toEqual({
+      collapsedContentEnabled: false,
+      collapsedClassName: "mobile-hint-collapsed-content",
+      buttonDisplay: "none",
+      shouldCloseModal: true,
+      shouldConfigureButton: false,
+      buttonLabel: "查看提示文本",
+      buttonAriaExpanded: "false"
     });
   });
 });
