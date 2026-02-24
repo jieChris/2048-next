@@ -1039,6 +1039,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.resolveHomeGuideAutoStart !== "function" ||
         typeof runtime.resolveHomeGuideSettingsState !== "function" ||
         typeof runtime.resolveHomeGuideStepUiState !== "function" ||
+        typeof runtime.resolveHomeGuideStepRenderState !== "function" ||
         typeof runtime.resolveHomeGuideStepIndexState !== "function" ||
         typeof runtime.resolveHomeGuideStepTargetState !== "function" ||
         typeof runtime.resolveHomeGuideControlAction !== "function" ||
@@ -1110,6 +1111,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const stepUiStateLast = runtime.resolveHomeGuideStepUiState({
         stepIndex: 9,
         stepCount: 10
+      });
+      const stepRenderState = runtime.resolveHomeGuideStepRenderState({
+        step: {
+          selector: "#top-settings-btn",
+          title: "设置",
+          desc: "desc"
+        },
+        stepIndex: 0,
+        stepCount: 2
       });
       const stepIndexAbort = runtime.resolveHomeGuideStepIndexState({
         isActive: false,
@@ -1254,6 +1264,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         }),
         stepUiStateFirst,
         stepUiStateLast,
+        stepRenderState,
         stepIndexAbort,
         stepIndexFinish,
         stepTargetAdvance,
@@ -1305,6 +1316,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
       stepText: "步骤 10 / 10",
       prevDisabled: false,
       nextText: "完成"
+    });
+    expect(snapshot.stepRenderState).toEqual({
+      stepText: "步骤 1 / 2",
+      titleText: "设置",
+      descText: "desc",
+      prevDisabled: true,
+      nextText: "下一步"
     });
     expect(snapshot.stepIndexAbort).toEqual({
       shouldAbort: true,
@@ -1459,6 +1477,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.buildHomeGuideSettingsRowInnerHtml !== "function" ||
         typeof runtime.markHomeGuideSeen !== "function" ||
         typeof runtime.resolveHomeGuideStepUiState !== "function" ||
+        typeof runtime.resolveHomeGuideStepRenderState !== "function" ||
         typeof runtime.resolveHomeGuideStepIndexState !== "function" ||
         typeof runtime.resolveHomeGuideStepTargetState !== "function" ||
         typeof runtime.resolveHomeGuideControlAction !== "function" ||
@@ -1483,6 +1502,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalBuildSettingsRowHtml = runtime.buildHomeGuideSettingsRowInnerHtml;
       const originalMark = runtime.markHomeGuideSeen;
       const originalResolveStepUiState = runtime.resolveHomeGuideStepUiState;
+      const originalResolveStepRenderState = runtime.resolveHomeGuideStepRenderState;
       const originalResolveStepIndexState = runtime.resolveHomeGuideStepIndexState;
       const originalResolveStepTargetState = runtime.resolveHomeGuideStepTargetState;
       const originalResolveControlAction = runtime.resolveHomeGuideControlAction;
@@ -1500,6 +1520,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let settingsRowHtmlCallCount = 0;
       let markCallCount = 0;
       let stepUiStateCallCount = 0;
+      let stepRenderStateCallCount = 0;
       let stepIndexStateCallCount = 0;
       let stepTargetStateCallCount = 0;
       let controlActionCallCount = 0;
@@ -1531,6 +1552,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.resolveHomeGuideStepUiState = function (opts: any) {
         stepUiStateCallCount += 1;
         return originalResolveStepUiState(opts);
+      };
+      runtime.resolveHomeGuideStepRenderState = function (opts: any) {
+        stepRenderStateCallCount += 1;
+        return originalResolveStepRenderState(opts);
       };
       runtime.resolveHomeGuideStepIndexState = function (opts: any) {
         stepIndexStateCallCount += 1;
@@ -1625,6 +1650,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           settingsRowHtmlCallCount,
           markCallCount,
           stepUiStateCallCount,
+          stepRenderStateCallCount,
           stepIndexStateCallCount,
           stepTargetStateCallCount,
           controlActionCallCount,
@@ -1650,6 +1676,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.buildHomeGuideSettingsRowInnerHtml = originalBuildSettingsRowHtml;
         runtime.markHomeGuideSeen = originalMark;
         runtime.resolveHomeGuideStepUiState = originalResolveStepUiState;
+        runtime.resolveHomeGuideStepRenderState = originalResolveStepRenderState;
         runtime.resolveHomeGuideStepIndexState = originalResolveStepIndexState;
         runtime.resolveHomeGuideStepTargetState = originalResolveStepTargetState;
         runtime.resolveHomeGuideControlAction = originalResolveControlAction;
@@ -1672,7 +1699,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.panelHtmlCallCount).toBeGreaterThan(0);
     expect(snapshot.settingsRowHtmlCallCount).toBeGreaterThan(0);
     expect(snapshot.markCallCount).toBeGreaterThan(0);
-    expect(snapshot.stepUiStateCallCount).toBeGreaterThan(0);
+    expect(snapshot.stepUiStateCallCount).toBeGreaterThanOrEqual(0);
+    expect(snapshot.stepRenderStateCallCount).toBeGreaterThan(0);
     expect(snapshot.stepIndexStateCallCount).toBeGreaterThan(0);
     expect(snapshot.stepTargetStateCallCount).toBeGreaterThan(0);
     expect(snapshot.controlActionCallCount).toBeGreaterThan(0);

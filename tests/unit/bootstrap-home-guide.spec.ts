@@ -13,6 +13,7 @@ import {
   resolveHomeGuideDoneNotice,
   resolveHomeGuideDoneNoticeStyle,
   resolveHomeGuideControlAction,
+  resolveHomeGuideStepRenderState,
   resolveHomeGuideLayerDisplayState,
   resolveHomeGuideLifecycleState,
   resolveHomeGuideFinishState,
@@ -260,6 +261,26 @@ describe("bootstrap home guide", () => {
       stepText: "步骤 10 / 10",
       prevDisabled: false,
       nextText: "完成"
+    });
+  });
+
+  it("resolves step render state from step and ui model", () => {
+    expect(
+      resolveHomeGuideStepRenderState({
+        step: {
+          selector: "#a",
+          title: "标题",
+          desc: "描述"
+        },
+        stepIndex: 0,
+        stepCount: 2
+      })
+    ).toEqual({
+      stepText: "步骤 1 / 2",
+      titleText: "标题",
+      descText: "描述",
+      prevDisabled: true,
+      nextText: "下一步"
     });
   });
 

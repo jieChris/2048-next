@@ -93,6 +93,7 @@ if (
   typeof homeGuideRuntime.resolveHomeGuideAutoStart !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideSettingsState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepUiState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideStepRenderState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepIndexState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepTargetState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideControlAction !== "function" ||
@@ -1263,16 +1264,25 @@ function showHomeGuideStep(index) {
   var descEl = document.getElementById("home-guide-desc");
   var prevBtn = document.getElementById("home-guide-prev");
   var nextBtn = document.getElementById("home-guide-next");
-  var stepUiState = homeGuideRuntime.resolveHomeGuideStepUiState({
+  var stepRenderState = homeGuideRuntime.resolveHomeGuideStepRenderState({
+    step: step || null,
     stepIndex: index,
     stepCount: HOME_GUIDE_STATE.steps.length
   });
 
-  if (stepEl) stepEl.textContent = stepUiState.stepText;
-  if (titleEl) titleEl.textContent = step.title;
-  if (descEl) descEl.textContent = step.desc;
-  if (prevBtn) prevBtn.disabled = !!stepUiState.prevDisabled;
-  if (nextBtn) nextBtn.textContent = stepUiState.nextText;
+  if (stepEl) stepEl.textContent = stepRenderState && stepRenderState.stepText
+    ? stepRenderState.stepText
+    : "";
+  if (titleEl) titleEl.textContent = stepRenderState && stepRenderState.titleText
+    ? stepRenderState.titleText
+    : "";
+  if (descEl) descEl.textContent = stepRenderState && stepRenderState.descText
+    ? stepRenderState.descText
+    : "";
+  if (prevBtn) prevBtn.disabled = !!(stepRenderState && stepRenderState.prevDisabled);
+  if (nextBtn) nextBtn.textContent = stepRenderState && stepRenderState.nextText
+    ? stepRenderState.nextText
+    : "";
 
   window.requestAnimationFrame(positionHomeGuidePanel);
 }

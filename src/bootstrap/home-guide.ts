@@ -79,6 +79,20 @@ export interface ResolveHomeGuideStepUiStateResult {
   nextText: string;
 }
 
+export interface ResolveHomeGuideStepRenderStateOptions {
+  step?: HomeGuideStep | null | undefined;
+  stepIndex?: number | null | undefined;
+  stepCount?: number | null | undefined;
+}
+
+export interface ResolveHomeGuideStepRenderStateResult {
+  stepText: string;
+  titleText: string;
+  descText: string;
+  prevDisabled: boolean;
+  nextText: string;
+}
+
 export interface ResolveHomeGuideStepIndexStateOptions {
   isActive?: boolean | null | undefined;
   stepCount?: number | null | undefined;
@@ -364,6 +378,24 @@ export function resolveHomeGuideStepUiState(
     stepText: count > 0 ? "步骤 " + (index + 1) + " / " + count : "步骤 0 / 0",
     prevDisabled: index <= 0,
     nextText: count > 0 && index >= count - 1 ? "完成" : "下一步"
+  };
+}
+
+export function resolveHomeGuideStepRenderState(
+  options: ResolveHomeGuideStepRenderStateOptions
+): ResolveHomeGuideStepRenderStateResult {
+  const opts = options || {};
+  const step = opts.step || null;
+  const uiState = resolveHomeGuideStepUiState({
+    stepIndex: opts.stepIndex,
+    stepCount: opts.stepCount
+  });
+  return {
+    stepText: uiState.stepText,
+    titleText: step && typeof step.title === "string" ? step.title : "",
+    descText: step && typeof step.desc === "string" ? step.desc : "",
+    prevDisabled: uiState.prevDisabled,
+    nextText: uiState.nextText
   };
 }
 
