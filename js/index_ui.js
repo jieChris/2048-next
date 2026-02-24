@@ -757,17 +757,6 @@ function formatPreviewValue(value) {
   return themeSettingsRuntime.formatThemePreviewValue(value);
 }
 
-function getCurrentRuleset() {
-  if (typeof document !== "undefined" && document.body) {
-    var ruleset = document.body.getAttribute("data-ruleset");
-    if (ruleset === "fibonacci") return "fibonacci";
-  }
-  if (window.GAME_MODE_CONFIG && window.GAME_MODE_CONFIG.ruleset === "fibonacci") {
-    return "fibonacci";
-  }
-  return "pow2";
-}
-
 function initThemeSettingsUI() {
   var originalSelect = document.getElementById("theme-select");
   var previewRoot = document.getElementById("theme-preview-grid");
