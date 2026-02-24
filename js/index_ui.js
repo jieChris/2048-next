@@ -276,6 +276,7 @@ function syncPracticeTopActionsPlacement() {
 }
 
 function isUndoCapableMode(gm) {
+  var undoRuntime = window.CoreUndoActionRuntime;
   var modeId = "";
   try {
     if (document && document.body) {
@@ -284,6 +285,18 @@ function isUndoCapableMode(gm) {
   } catch (_err) {
     modeId = "";
   }
+
+  if (undoRuntime && typeof undoRuntime.isUndoCapableMode === "function") {
+    return !!undoRuntime.isUndoCapableMode({
+      modeId: modeId,
+      manager: gm || null,
+      globalModeConfig:
+        typeof window !== "undefined" && window.GAME_MODE_CONFIG
+          ? window.GAME_MODE_CONFIG
+          : null
+    });
+  }
+
   if (!modeId && gm && gm.mode) modeId = String(gm.mode);
   if (!modeId && typeof window !== "undefined" && window.GAME_MODE_CONFIG && window.GAME_MODE_CONFIG.key) {
     modeId = String(window.GAME_MODE_CONFIG.key);
@@ -321,7 +334,10 @@ function syncMobileUndoTopButtonAvailability() {
   var compact = isCompactGameViewport();
   var gm = window.game_manager;
   var modeUndoCapable = isUndoCapableMode(gm);
-  var canUndoNow = !!(gm && gm.isUndoInteractionEnabled && gm.isUndoInteractionEnabled());
+  var undoRuntime = window.CoreUndoActionRuntime;
+  var canUndoNow = undoRuntime && typeof undoRuntime.isUndoInteractionEnabled === "function"
+    ? !!undoRuntime.isUndoInteractionEnabled(gm)
+    : !!(gm && gm.isUndoInteractionEnabled && gm.isUndoInteractionEnabled());
   var shouldShow = compact && modeUndoCapable;
 
   btn.style.display = shouldShow ? "inline-flex" : "none";

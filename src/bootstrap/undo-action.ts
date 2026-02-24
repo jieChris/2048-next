@@ -1,6 +1,23 @@
 export interface UndoManagerLike {
+  mode?: string | null | undefined;
+  modeConfig?: {
+    undo_enabled?: boolean | null | undefined;
+  } | null | undefined;
+  undoEnabled?: boolean | null | undefined;
+  isUndoAllowedByMode?: ((mode: string) => boolean) | null | undefined;
   isUndoInteractionEnabled?: (() => boolean) | null | undefined;
   move?: ((direction: number) => unknown) | null | undefined;
+}
+
+export interface UndoGlobalModeConfigLike {
+  key?: string | null | undefined;
+  undo_enabled?: boolean | null | undefined;
+}
+
+export interface UndoCapabilityInput {
+  modeId?: string | null | undefined;
+  manager?: UndoManagerLike | null | undefined;
+  globalModeConfig?: UndoGlobalModeConfigLike | null | undefined;
 }
 
 export function canTriggerUndo(
@@ -24,4 +41,59 @@ export function tryTriggerUndo(
   if (!manager.isUndoInteractionEnabled()) return false;
   manager.move(direction);
   return true;
+}
+
+export function resolveUndoModeId(input: UndoCapabilityInput): string {
+  const modeIdRaw = input.modeId;
+  if (typeof modeIdRaw === "string" && modeIdRaw.trim()) {
+    return modeIdRaw.trim().toLowerCase();
+  }
+
+  const managerMode = input.manager?.mode;
+  if (typeof managerMode === "string" && managerMode.trim()) {
+    return managerMode.trim().toLowerCase();
+  }
+
+  const configMode = input.globalModeConfig?.key;
+  if (typeof configMode === "string" && configMode.trim()) {
+    return configMode.trim().toLowerCase();
+  }
+
+  return "";
+}
+
+export function isUndoCapableMode(input: UndoCapabilityInput): boolean {
+  const modeId = resolveUndoModeId(input);
+  const manager = input.manager || null;
+
+  if (modeId) {
+    if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) return false;
+    if (modeId === "capped" || modeId.indexOf("capped") !== -1) return false;
+    if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) return true;
+  }
+
+  const managerExplicitUndo = manager?.modeConfig?.undo_enabled;
+  if (typeof managerExplicitUndo === "boolean") return managerExplicitUndo;
+
+  const globalExplicitUndo = input.globalModeConfig?.undo_enabled;
+  if (typeof globalExplicitUndo === "boolean") return globalExplicitUndo;
+
+  if (!manager) return false;
+  try {
+    if (typeof manager.isUndoAllowedByMode === "function") {
+      return Boolean(manager.isUndoAllowedByMode(modeId || String(manager.mode || "")));
+    }
+  } catch (_err) {}
+
+  return Boolean(manager.undoEnabled);
+}
+
+export function isUndoInteractionEnabled(
+  manager: UndoManagerLike | null | undefined
+): boolean {
+  return Boolean(
+    manager &&
+      typeof manager.isUndoInteractionEnabled === "function" &&
+      manager.isUndoInteractionEnabled()
+  );
 }

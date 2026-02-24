@@ -644,10 +644,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const runtime = (window as any).CoreUndoActionRuntime;
       const handleUndo = (window as any).handle_undo;
       if (!runtime || typeof runtime.tryTriggerUndo !== "function") {
-        return { hasRuntime: false, hasHandler: typeof handleUndo === "function" };
+        return { hasRuntime: false, hasCapabilityApi: false, hasHandler: typeof handleUndo === "function" };
       }
       if (typeof handleUndo !== "function") {
-        return { hasRuntime: true, hasHandler: false };
+        return {
+          hasRuntime: true,
+          hasCapabilityApi: Boolean(
+            typeof runtime.resolveUndoModeId === "function" &&
+            typeof runtime.isUndoCapableMode === "function" &&
+            typeof runtime.isUndoInteractionEnabled === "function"
+          ),
+          hasHandler: false
+        };
       }
 
       const originalManager = (window as any).game_manager;
@@ -675,6 +683,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
         handleUndo();
         return {
           hasRuntime: true,
+          hasCapabilityApi: Boolean(
+            typeof runtime.resolveUndoModeId === "function" &&
+            typeof runtime.isUndoCapableMode === "function" &&
+            typeof runtime.isUndoInteractionEnabled === "function"
+          ),
           hasHandler: true,
           callCount,
           usedDirection,
@@ -687,6 +700,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasCapabilityApi).toBe(true);
     expect(snapshot.hasHandler).toBe(true);
     expect(snapshot.callCount).toBeGreaterThan(0);
     expect(snapshot.usedDirection).toBe(-1);
