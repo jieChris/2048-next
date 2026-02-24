@@ -819,14 +819,25 @@ test.describe("Legacy Multi-Page Smoke", () => {
       if (
         !runtime ||
         typeof runtime.isHomePagePath !== "function" ||
+        typeof runtime.buildHomeGuideSteps !== "function" ||
         typeof runtime.shouldAutoStartHomeGuide !== "function"
       ) {
         return { hasRuntime: false };
       }
+      const compactSteps = runtime.buildHomeGuideSteps({ isCompactViewport: true });
+      const desktopSteps = runtime.buildHomeGuideSteps({ isCompactViewport: false });
+      const compactSelectors = Array.isArray(compactSteps)
+        ? compactSteps.map((item: any) => item && item.selector)
+        : [];
+      const desktopSelectors = Array.isArray(desktopSteps)
+        ? desktopSteps.map((item: any) => item && item.selector)
+        : [];
       return {
         hasRuntime: true,
         homePath: runtime.isHomePagePath("/index.html"),
         playPath: runtime.isHomePagePath("/play.html"),
+        hasCompactHint: compactSelectors.includes("#top-mobile-hint-btn"),
+        hasDesktopHint: desktopSelectors.includes("#top-mobile-hint-btn"),
         autoStart: runtime.shouldAutoStartHomeGuide({
           pathname: "/index.html",
           seenValue: "0"
@@ -845,9 +856,70 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.homePath).toBe(true);
     expect(snapshot.playPath).toBe(false);
+    expect(snapshot.hasCompactHint).toBe(true);
+    expect(snapshot.hasDesktopHint).toBe(false);
     expect(snapshot.autoStart).toBe(true);
     expect(snapshot.blockedSeen).toBe(false);
     expect(snapshot.blockedPath).toBe(false);
+  });
+
+  test("index ui delegates home guide step list build to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem("home_guide_seen_v1", "1");
+      } catch (_err) {}
+    });
+    const response = await page.goto("/index.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(220);
+
+    const snapshot = await page.evaluate(() => {
+      const runtime = (window as any).CoreHomeGuideRuntime;
+      if (!runtime || typeof runtime.buildHomeGuideSteps !== "function") {
+        return { hasRuntime: false };
+      }
+      const openSettingsModal = (window as any).openSettingsModal;
+      if (typeof openSettingsModal !== "function") {
+        return { hasRuntime: true, hasSettingsOpen: false };
+      }
+      const originalBuild = runtime.buildHomeGuideSteps;
+      let callCount = 0;
+      runtime.buildHomeGuideSteps = function (opts: any) {
+        callCount += 1;
+        return originalBuild(opts);
+      };
+      try {
+        openSettingsModal();
+        const toggle = document.getElementById("home-guide-toggle") as HTMLInputElement | null;
+        if (!toggle) {
+          return { hasRuntime: true, hasSettingsOpen: true, hasToggle: false };
+        }
+        toggle.checked = true;
+        toggle.dispatchEvent(new Event("change", { bubbles: true }));
+        const overlay = document.getElementById("home-guide-overlay");
+        return {
+          hasRuntime: true,
+          hasSettingsOpen: true,
+          hasToggle: true,
+          callCount,
+          hasOverlay: Boolean(overlay),
+          overlayVisible: Boolean(overlay && overlay.style.display !== "none")
+        };
+      } finally {
+        runtime.buildHomeGuideSteps = originalBuild;
+      }
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasSettingsOpen).toBe(true);
+    expect(snapshot.hasToggle).toBe(true);
+    expect(snapshot.callCount).toBeGreaterThan(0);
+    expect(snapshot.hasOverlay).toBe(true);
+    expect(snapshot.overlayVisible).toBe(true);
   });
 
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {

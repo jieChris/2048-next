@@ -3,9 +3,55 @@ export interface HomeGuideAutoStartOptions {
   seenValue?: string | null | undefined;
 }
 
+export interface HomeGuideStep {
+  selector: string;
+  title: string;
+  desc: string;
+}
+
+export interface BuildHomeGuideStepsOptions {
+  isCompactViewport?: boolean;
+}
+
+const BASE_HOME_GUIDE_STEPS: HomeGuideStep[] = [
+  { selector: "#home-title-link", title: "首页标题", desc: "点击 2048 标题可回到首页。" },
+  { selector: "#top-announcement-btn", title: "版本公告", desc: "查看版本更新内容，红点表示有未读公告。" },
+  { selector: "#stats-panel-toggle", title: "统计", desc: "打开统计汇总面板，查看步数和出数数据。" },
+  { selector: "#top-export-replay-btn", title: "导出回放", desc: "导出当前对局回放字符串，便于保存和复盘。" },
+  { selector: "#top-practice-btn", title: "直通练习板", desc: "把当前盘面复制到练习板，并在新页继续调试。" },
+  { selector: "#top-advanced-replay-btn", title: "高级回放", desc: "进入高级回放页，导入并控制回放进度。" },
+  { selector: "#top-modes-btn", title: "模式选择", desc: "进入模式页面，切换不同棋盘和玩法。" },
+  { selector: "#top-history-btn", title: "历史记录", desc: "查看本地历史记录，支持删除/导入/导出。" },
+  { selector: "#top-settings-btn", title: "设置", desc: "打开设置，调整主题、计时器显示与指引开关。" },
+  { selector: "#top-restart-btn", title: "新游戏", desc: "开始新的一局，会重置当前局面。" }
+];
+
+const MOBILE_HINT_STEP: HomeGuideStep = {
+  selector: "#top-mobile-hint-btn",
+  title: "提示文本",
+  desc: "移动端可用此按钮打开提示弹窗，集中查看玩法说明与项目说明。"
+};
+
 export function isHomePagePath(pathname: string | null | undefined): boolean {
   const path = typeof pathname === "string" ? pathname : "";
   return path === "/" || /\/index\.html?$/.test(path) || path === "";
+}
+
+export function buildHomeGuideSteps(options: BuildHomeGuideStepsOptions): HomeGuideStep[] {
+  const opts = options || {};
+  const steps = BASE_HOME_GUIDE_STEPS.map((step) => ({
+    selector: step.selector,
+    title: step.title,
+    desc: step.desc
+  }));
+  if (opts.isCompactViewport) {
+    steps.splice(9, 0, {
+      selector: MOBILE_HINT_STEP.selector,
+      title: MOBILE_HINT_STEP.title,
+      desc: MOBILE_HINT_STEP.desc
+    });
+  }
+  return steps;
 }
 
 export function shouldAutoStartHomeGuide(options: HomeGuideAutoStartOptions): boolean {
