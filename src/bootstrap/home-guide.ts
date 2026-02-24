@@ -23,6 +23,27 @@ export interface HomeGuideSeenOptions {
   seenKey?: string | null | undefined;
 }
 
+export interface ResolveHomeGuideAutoStartOptions extends HomeGuideSeenOptions {
+  pathname?: string | null | undefined;
+}
+
+export interface ResolveHomeGuideAutoStartResult {
+  seenValue: string;
+  shouldAutoStart: boolean;
+}
+
+export interface ResolveHomeGuideSettingsStateOptions {
+  isHomePage?: boolean | null | undefined;
+  guideActive?: boolean | null | undefined;
+  fromSettings?: boolean | null | undefined;
+}
+
+export interface ResolveHomeGuideSettingsStateResult {
+  toggleDisabled: boolean;
+  toggleChecked: boolean;
+  noteText: string;
+}
+
 const BASE_HOME_GUIDE_STEPS: HomeGuideStep[] = [
   { selector: "#home-title-link", title: "首页标题", desc: "点击 2048 标题可回到首页。" },
   { selector: "#top-announcement-btn", title: "版本公告", desc: "查看版本更新内容，红点表示有未读公告。" },
@@ -97,4 +118,35 @@ export function shouldAutoStartHomeGuide(options: HomeGuideAutoStartOptions): bo
   const opts = options || {};
   if (!isHomePagePath(opts.pathname)) return false;
   return String(opts.seenValue || "0") !== "1";
+}
+
+export function resolveHomeGuideAutoStart(
+  options: ResolveHomeGuideAutoStartOptions
+): ResolveHomeGuideAutoStartResult {
+  const opts = options || {};
+  const seenValue = readHomeGuideSeenValue({
+    storageLike: opts.storageLike || null,
+    seenKey: opts.seenKey
+  });
+  return {
+    seenValue,
+    shouldAutoStart: shouldAutoStartHomeGuide({
+      pathname: opts.pathname,
+      seenValue
+    })
+  };
+}
+
+export function resolveHomeGuideSettingsState(
+  options: ResolveHomeGuideSettingsStateOptions
+): ResolveHomeGuideSettingsStateResult {
+  const opts = options || {};
+  const isHome = !!opts.isHomePage;
+  return {
+    toggleDisabled: !isHome,
+    toggleChecked: Boolean(isHome && opts.guideActive && opts.fromSettings),
+    noteText: isHome
+      ? "打开后将立即进入首页新手引导，完成后自动关闭。"
+      : "该功能仅在首页可用。"
+  };
 }

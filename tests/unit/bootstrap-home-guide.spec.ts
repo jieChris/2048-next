@@ -5,6 +5,8 @@ import {
   isHomePagePath,
   markHomeGuideSeen,
   readHomeGuideSeenValue,
+  resolveHomeGuideAutoStart,
+  resolveHomeGuideSettingsState,
   shouldAutoStartHomeGuide
 } from "../../src/bootstrap/home-guide";
 
@@ -106,5 +108,63 @@ describe("bootstrap home guide", () => {
     ).toBe(true);
     expect(writes).toEqual([{ key: "home_guide_seen_v1", value: "1" }]);
     expect(markHomeGuideSeen({ storageLike: null })).toBe(false);
+  });
+
+  it("resolves auto-start state by combining seen read and pathname gate", () => {
+    expect(
+      resolveHomeGuideAutoStart({
+        pathname: "/index.html",
+        seenKey: "home_guide_seen_v1",
+        storageLike: {
+          getItem() {
+            return null;
+          }
+        }
+      })
+    ).toEqual({
+      seenValue: "0",
+      shouldAutoStart: true
+    });
+
+    expect(
+      resolveHomeGuideAutoStart({
+        pathname: "/play.html",
+        seenKey: "home_guide_seen_v1",
+        storageLike: {
+          getItem() {
+            return "1";
+          }
+        }
+      })
+    ).toEqual({
+      seenValue: "1",
+      shouldAutoStart: false
+    });
+  });
+
+  it("resolves home-guide settings ui state", () => {
+    expect(
+      resolveHomeGuideSettingsState({
+        isHomePage: true,
+        guideActive: true,
+        fromSettings: true
+      })
+    ).toEqual({
+      toggleDisabled: false,
+      toggleChecked: true,
+      noteText: "打开后将立即进入首页新手引导，完成后自动关闭。"
+    });
+
+    expect(
+      resolveHomeGuideSettingsState({
+        isHomePage: false,
+        guideActive: true,
+        fromSettings: true
+      })
+    ).toEqual({
+      toggleDisabled: true,
+      toggleChecked: false,
+      noteText: "该功能仅在首页可用。"
+    });
   });
 });

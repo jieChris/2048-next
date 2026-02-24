@@ -804,7 +804,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.buildHomeGuideSteps !== "function" ||
         typeof runtime.readHomeGuideSeenValue !== "function" ||
         typeof runtime.markHomeGuideSeen !== "function" ||
-        typeof runtime.shouldAutoStartHomeGuide !== "function"
+        typeof runtime.shouldAutoStartHomeGuide !== "function" ||
+        typeof runtime.resolveHomeGuideAutoStart !== "function" ||
+        typeof runtime.resolveHomeGuideSettingsState !== "function"
       ) {
         return { hasRuntime: false };
       }
@@ -836,6 +838,25 @@ test.describe("Legacy Multi-Page Smoke", () => {
           }
         }
       });
+      const resolvedAutoStart = runtime.resolveHomeGuideAutoStart({
+        pathname: "/index.html",
+        seenKey: "home_guide_seen_v1",
+        storageLike: {
+          getItem() {
+            return null;
+          }
+        }
+      });
+      const settingsOnHome = runtime.resolveHomeGuideSettingsState({
+        isHomePage: true,
+        guideActive: true,
+        fromSettings: true
+      });
+      const settingsOffHome = runtime.resolveHomeGuideSettingsState({
+        isHomePage: false,
+        guideActive: true,
+        fromSettings: true
+      });
       return {
         hasRuntime: true,
         homePath: runtime.isHomePagePath("/index.html"),
@@ -856,7 +877,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         blockedPath: runtime.shouldAutoStartHomeGuide({
           pathname: "/play.html",
           seenValue: "0"
-        })
+        }),
+        resolvedAutoStart,
+        settingsOnHome,
+        settingsOffHome
       };
     });
 
@@ -871,6 +895,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.autoStart).toBe(true);
     expect(snapshot.blockedSeen).toBe(false);
     expect(snapshot.blockedPath).toBe(false);
+    expect(snapshot.resolvedAutoStart).toEqual({
+      seenValue: "0",
+      shouldAutoStart: true
+    });
+    expect(snapshot.settingsOnHome).toEqual({
+      toggleDisabled: false,
+      toggleChecked: true,
+      noteText: "打开后将立即进入首页新手引导，完成后自动关闭。"
+    });
+    expect(snapshot.settingsOffHome).toEqual({
+      toggleDisabled: true,
+      toggleChecked: false,
+      noteText: "该功能仅在首页可用。"
+    });
   });
 
   test("index ui delegates home guide step list build to runtime helper", async ({ page }) => {

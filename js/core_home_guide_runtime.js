@@ -67,10 +67,39 @@
     return String(opts.seenValue || "0") !== "1";
   }
 
+  function resolveHomeGuideAutoStart(options) {
+    var opts = options || {};
+    var seenValue = readHomeGuideSeenValue({
+      storageLike: opts.storageLike || null,
+      seenKey: opts.seenKey
+    });
+    return {
+      seenValue: seenValue,
+      shouldAutoStart: shouldAutoStartHomeGuide({
+        pathname: opts.pathname,
+        seenValue: seenValue
+      })
+    };
+  }
+
+  function resolveHomeGuideSettingsState(options) {
+    var opts = options || {};
+    var isHome = !!opts.isHomePage;
+    return {
+      toggleDisabled: !isHome,
+      toggleChecked: Boolean(isHome && opts.guideActive && opts.fromSettings),
+      noteText: isHome
+        ? "打开后将立即进入首页新手引导，完成后自动关闭。"
+        : "该功能仅在首页可用。"
+    };
+  }
+
   global.CoreHomeGuideRuntime = global.CoreHomeGuideRuntime || {};
   global.CoreHomeGuideRuntime.isHomePagePath = isHomePagePath;
   global.CoreHomeGuideRuntime.buildHomeGuideSteps = buildHomeGuideSteps;
   global.CoreHomeGuideRuntime.readHomeGuideSeenValue = readHomeGuideSeenValue;
   global.CoreHomeGuideRuntime.markHomeGuideSeen = markHomeGuideSeen;
   global.CoreHomeGuideRuntime.shouldAutoStartHomeGuide = shouldAutoStartHomeGuide;
+  global.CoreHomeGuideRuntime.resolveHomeGuideAutoStart = resolveHomeGuideAutoStart;
+  global.CoreHomeGuideRuntime.resolveHomeGuideSettingsState = resolveHomeGuideSettingsState;
 })(typeof window !== "undefined" ? window : undefined);

@@ -87,7 +87,9 @@ if (
   typeof homeGuideRuntime.buildHomeGuideSteps !== "function" ||
   typeof homeGuideRuntime.readHomeGuideSeenValue !== "function" ||
   typeof homeGuideRuntime.markHomeGuideSeen !== "function" ||
-  typeof homeGuideRuntime.shouldAutoStartHomeGuide !== "function"
+  typeof homeGuideRuntime.shouldAutoStartHomeGuide !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideAutoStart !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideSettingsState !== "function"
 ) {
   throw new Error("CoreHomeGuideRuntime is required");
 }
@@ -1462,13 +1464,15 @@ function initHomeGuideSettingsUI() {
   if (!toggle) return;
 
   function sync() {
-    var home = isHomePage();
-    toggle.disabled = !home;
-    toggle.checked = !!(HOME_GUIDE_STATE.active && HOME_GUIDE_STATE.fromSettings);
+    var uiState = homeGuideRuntime.resolveHomeGuideSettingsState({
+      isHomePage: isHomePage(),
+      guideActive: HOME_GUIDE_STATE.active,
+      fromSettings: HOME_GUIDE_STATE.fromSettings
+    });
+    toggle.disabled = !!(uiState && uiState.toggleDisabled);
+    toggle.checked = !!(uiState && uiState.toggleChecked);
     if (note) {
-      note.textContent = home
-        ? "打开后将立即进入首页新手引导，完成后自动关闭。"
-        : "该功能仅在首页可用。";
+      note.textContent = uiState && uiState.noteText ? String(uiState.noteText) : "";
     }
   }
 
@@ -1497,11 +1501,12 @@ function autoStartHomeGuideIfNeeded() {
   } catch (_err) {
     path = "";
   }
-  var seen = homeGuideRuntime.readHomeGuideSeenValue({
+  var autoStartState = homeGuideRuntime.resolveHomeGuideAutoStart({
+    pathname: path,
     storageLike: getStorageByName("localStorage"),
     seenKey: HOME_GUIDE_SEEN_KEY
   });
-  if (!homeGuideRuntime.shouldAutoStartHomeGuide({ pathname: path, seenValue: seen })) return;
+  if (!autoStartState || !autoStartState.shouldAutoStart) return;
   setTimeout(function () {
     startHomeGuide({ fromSettings: false });
   }, 260);
