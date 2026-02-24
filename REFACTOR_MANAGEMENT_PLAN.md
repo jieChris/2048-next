@@ -92,6 +92,7 @@
   - 新增 `src/bootstrap/mobile-hint-modal.ts` + `js/core_mobile_hint_modal_runtime.js`，`index_ui.js` 委托移动端提示弹层 DOM 创建与关闭事件绑定
   - 新增 `src/bootstrap/mobile-timerbox.ts` + `js/core_mobile_timerbox_runtime.js`，`index_ui.js` 委托移动端计时器折叠态存储、图标与展示模型计算
   - `mobile-timerbox` 已承接折叠值归一化与展示态兜底（`resolveMobileTimerboxCollapsedValue`/`resolveMobileTimerboxAppliedModel`），`index_ui.js` 不再硬编码折叠判定与按钮属性 fallback
+  - `index_ui.js` 现直接消费 `resolveMobileTimerboxAppliedModel` 的安全模型，不再重复本地按钮样式与 icon fallback 分支
   - 新增 `src/bootstrap/mobile-undo-top.ts` + `js/core_mobile_undo_top_runtime.js`，`index_ui.js` 委托移动端顶部撤回按钮展示态计算
   - `mobile-undo-top` 已承接按钮应用态兜底（`resolveMobileUndoTopAppliedModel`），`index_ui.js` 不再硬编码按钮样式与 aria fallback 分支
   - `index_ui.js` 现直接消费 `resolveMobileUndoTopAppliedModel` 的安全模型，不再重复本地样式兜底分支
