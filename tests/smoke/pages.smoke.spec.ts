@@ -723,7 +723,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         !runtime ||
         typeof runtime.buildPracticeModeConfigFromCurrent !== "function" ||
         typeof runtime.hasPracticeGuideSeen !== "function" ||
-        typeof runtime.buildPracticeBoardUrl !== "function"
+        typeof runtime.buildPracticeBoardUrl !== "function" ||
+        typeof runtime.buildPracticeTransferToken !== "function" ||
+        typeof runtime.buildPracticeTransferPayload !== "function"
       ) {
         return { hasRuntime: false, hasOpenFn: typeof openPracticeBoardFromCurrent === "function" };
       }
@@ -734,11 +736,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalBuild = runtime.buildPracticeModeConfigFromCurrent;
       const originalHasPracticeGuideSeen = runtime.hasPracticeGuideSeen;
       const originalBuildPracticeBoardUrl = runtime.buildPracticeBoardUrl;
+      const originalBuildPracticeTransferToken = runtime.buildPracticeTransferToken;
+      const originalBuildPracticeTransferPayload = runtime.buildPracticeTransferPayload;
       const originalManager = (window as any).game_manager;
       const originalOpen = window.open;
       let buildModeCallCount = 0;
       let hasGuideSeenCallCount = 0;
       let buildUrlCallCount = 0;
+      let buildTokenCallCount = 0;
+      let buildPayloadCallCount = 0;
       let openedUrl = "";
 
       runtime.buildPracticeModeConfigFromCurrent = function (opts: any) {
@@ -753,6 +759,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.buildPracticeBoardUrl = function (opts: any) {
         buildUrlCallCount += 1;
         return originalBuildPracticeBoardUrl(opts);
+      };
+      runtime.buildPracticeTransferToken = function (opts: any) {
+        buildTokenCallCount += 1;
+        return originalBuildPracticeTransferToken(opts);
+      };
+      runtime.buildPracticeTransferPayload = function (opts: any) {
+        buildPayloadCallCount += 1;
+        return originalBuildPracticeTransferPayload(opts);
       };
       (window as any).game_manager = {
         width: 4,
@@ -783,12 +797,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
           buildModeCallCount,
           hasGuideSeenCallCount,
           buildUrlCallCount,
+          buildTokenCallCount,
+          buildPayloadCallCount,
           openedUrl
         };
       } finally {
         runtime.buildPracticeModeConfigFromCurrent = originalBuild;
         runtime.hasPracticeGuideSeen = originalHasPracticeGuideSeen;
         runtime.buildPracticeBoardUrl = originalBuildPracticeBoardUrl;
+        runtime.buildPracticeTransferToken = originalBuildPracticeTransferToken;
+        runtime.buildPracticeTransferPayload = originalBuildPracticeTransferPayload;
         (window as any).game_manager = originalManager;
         window.open = originalOpen;
       }
@@ -799,6 +817,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.buildModeCallCount).toBeGreaterThan(0);
     expect(snapshot.hasGuideSeenCallCount).toBeGreaterThan(0);
     expect(snapshot.buildUrlCallCount).toBeGreaterThan(0);
+    expect(snapshot.buildTokenCallCount).toBeGreaterThan(0);
+    expect(snapshot.buildPayloadCallCount).toBeGreaterThan(0);
     expect(snapshot.openedUrl).toContain("Practice_board.html");
     expect(snapshot.openedUrl).toContain("practice_token=");
     expect(snapshot.openedUrl).toContain("practice_ruleset=pow2");

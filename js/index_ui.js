@@ -96,7 +96,9 @@ if (
   !practiceTransferRuntime ||
   typeof practiceTransferRuntime.buildPracticeModeConfigFromCurrent !== "function" ||
   typeof practiceTransferRuntime.hasPracticeGuideSeen !== "function" ||
-  typeof practiceTransferRuntime.buildPracticeBoardUrl !== "function"
+  typeof practiceTransferRuntime.buildPracticeBoardUrl !== "function" ||
+  typeof practiceTransferRuntime.buildPracticeTransferToken !== "function" ||
+  typeof practiceTransferRuntime.buildPracticeTransferPayload !== "function"
 ) {
   throw new Error("CorePracticeTransferRuntime is required");
 }
@@ -800,14 +802,6 @@ function hasPracticeGuideSeen() {
   });
 }
 
-function cloneJsonSafe(value) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch (_err) {
-    return null;
-  }
-}
-
 function buildPracticeModeConfigFromCurrent(gm) {
   return practiceTransferRuntime.buildPracticeModeConfigFromCurrent({
     gameModeConfig:
@@ -830,15 +824,14 @@ window.openPracticeBoardFromCurrent = function () {
     return;
   }
 
-  var token = "p" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+  var token = practiceTransferRuntime.buildPracticeTransferToken({});
   var practiceModeConfig = buildPracticeModeConfigFromCurrent(gm);
   var practiceRuleset = practiceModeConfig.ruleset === "fibonacci" ? "fibonacci" : "pow2";
-  var payload = {
+  var payload = practiceTransferRuntime.buildPracticeTransferPayload({
     token: token,
-    created_at: Date.now(),
-    board: cloneJsonSafe(board) || board,
-    mode_config: practiceModeConfig
-  };
+    board: board,
+    modeConfig: practiceModeConfig
+  });
 
   var payloadStr = JSON.stringify(payload);
   var guideSeen = hasPracticeGuideSeen();

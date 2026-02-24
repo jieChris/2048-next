@@ -48,6 +48,26 @@ export interface BuildPracticeBoardUrlOptions {
   basePath?: string | null | undefined;
 }
 
+export interface BuildPracticeTransferTokenOptions {
+  nowMs?: number | null | undefined;
+  randomLike?: (() => number) | null | undefined;
+  prefix?: string | null | undefined;
+}
+
+export interface BuildPracticeTransferPayloadOptions {
+  token: string;
+  board: unknown;
+  modeConfig: PracticeTransferModeConfig;
+  nowMs?: number | null | undefined;
+}
+
+export interface PracticeTransferPayload {
+  token: string;
+  created_at: number;
+  board: unknown;
+  mode_config: PracticeTransferModeConfig;
+}
+
 export function cloneJsonSafe<T extends JsonLike>(value: T): T | null {
   try {
     return JSON.parse(JSON.stringify(value)) as T;
@@ -115,6 +135,35 @@ export function buildPracticeBoardUrl(options: BuildPracticeBoardUrlOptions): st
     url = appendQueryParam(url, "practice_payload", opts.payload);
   }
   return url;
+}
+
+export function buildPracticeTransferToken(options: BuildPracticeTransferTokenOptions): string {
+  const opts = options || {};
+  const nowMs = Number.isFinite(opts.nowMs) ? Number(opts.nowMs) : Date.now();
+  const prefix = typeof opts.prefix === "string" && opts.prefix ? opts.prefix : "p";
+  const randomSource = typeof opts.randomLike === "function" ? opts.randomLike : Math.random;
+  let randomValue = 0;
+  try {
+    randomValue = Number(randomSource());
+  } catch (_err) {
+    randomValue = 0;
+  }
+  if (!Number.isFinite(randomValue)) randomValue = 0;
+  const suffix = randomValue.toString(36).slice(2, 8);
+  return prefix + nowMs + "_" + suffix;
+}
+
+export function buildPracticeTransferPayload(
+  options: BuildPracticeTransferPayloadOptions
+): PracticeTransferPayload {
+  const opts = options;
+  const createdAt = Number.isFinite(opts.nowMs) ? Number(opts.nowMs) : Date.now();
+  return {
+    token: String(opts.token || ""),
+    created_at: createdAt,
+    board: cloneJsonSafe(opts.board as JsonLike) || opts.board,
+    mode_config: opts.modeConfig
+  };
 }
 
 export function buildPracticeModeConfigFromCurrent(

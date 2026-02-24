@@ -79,6 +79,33 @@
     return url;
   }
 
+  function buildPracticeTransferToken(options) {
+    var opts = options || {};
+    var nowMs = Number.isFinite(opts.nowMs) ? Number(opts.nowMs) : Date.now();
+    var prefix = typeof opts.prefix === "string" && opts.prefix ? opts.prefix : "p";
+    var randomSource = typeof opts.randomLike === "function" ? opts.randomLike : Math.random;
+    var randomValue = 0;
+    try {
+      randomValue = Number(randomSource());
+    } catch (_err) {
+      randomValue = 0;
+    }
+    if (!Number.isFinite(randomValue)) randomValue = 0;
+    var suffix = randomValue.toString(36).slice(2, 8);
+    return prefix + nowMs + "_" + suffix;
+  }
+
+  function buildPracticeTransferPayload(options) {
+    var opts = options || {};
+    var createdAt = Number.isFinite(opts.nowMs) ? Number(opts.nowMs) : Date.now();
+    return {
+      token: String(opts.token || ""),
+      created_at: createdAt,
+      board: cloneJsonSafe(opts.board) || opts.board,
+      mode_config: opts.modeConfig
+    };
+  }
+
   function buildPracticeModeConfigFromCurrent(options) {
     var opts = options || {};
     var manager = opts.manager || null;
@@ -128,6 +155,8 @@
   global.CorePracticeTransferRuntime.appendQueryParam = appendQueryParam;
   global.CorePracticeTransferRuntime.hasPracticeGuideSeen = hasPracticeGuideSeen;
   global.CorePracticeTransferRuntime.buildPracticeBoardUrl = buildPracticeBoardUrl;
+  global.CorePracticeTransferRuntime.buildPracticeTransferToken = buildPracticeTransferToken;
+  global.CorePracticeTransferRuntime.buildPracticeTransferPayload = buildPracticeTransferPayload;
   global.CorePracticeTransferRuntime.buildPracticeModeConfigFromCurrent =
     buildPracticeModeConfigFromCurrent;
 })(typeof window !== "undefined" ? window : undefined);

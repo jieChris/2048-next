@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   appendQueryParam,
   buildPracticeBoardUrl,
+  buildPracticeTransferPayload,
+  buildPracticeTransferToken,
   buildPracticeModeConfigFromCurrent,
   cloneJsonSafe,
   hasPracticeGuideSeen
@@ -156,5 +158,39 @@ describe("bootstrap practice transfer", () => {
   it("appends query params for urls with and without existing search", () => {
     expect(appendQueryParam("x.html", "a", "1")).toBe("x.html?a=1");
     expect(appendQueryParam("x.html?a=1", "b", "2")).toBe("x.html?a=1&b=2");
+  });
+
+  it("builds deterministic practice transfer token with provided time/random", () => {
+    const token = buildPracticeTransferToken({
+      nowMs: 1700000000000,
+      randomLike: () => 0.123456789
+    });
+    expect(token).toBe("p1700000000000_4fzzzx");
+  });
+
+  it("builds practice transfer payload with deep-cloned board and created_at", () => {
+    const board = [
+      [2, 0],
+      [0, 4]
+    ];
+    const modeConfig = buildPracticeModeConfigFromCurrent({
+      gameModeConfig: { ruleset: "pow2", board_width: 2, board_height: 2 }
+    });
+    const payload = buildPracticeTransferPayload({
+      token: "pt",
+      board,
+      modeConfig,
+      nowMs: 1700000000000
+    });
+
+    board[0][0] = 8;
+
+    expect(payload.token).toBe("pt");
+    expect(payload.created_at).toBe(1700000000000);
+    expect(payload.board).toEqual([
+      [2, 0],
+      [0, 4]
+    ]);
+    expect(payload.mode_config).toBe(modeConfig);
   });
 });
