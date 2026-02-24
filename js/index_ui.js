@@ -153,6 +153,17 @@ if (
 ) {
   throw new Error("CorePracticeTransferRuntime is required");
 }
+var undoActionRuntime = window.CoreUndoActionRuntime;
+if (
+  !undoActionRuntime ||
+  typeof undoActionRuntime.tryTriggerUndo !== "function" ||
+  typeof undoActionRuntime.resolveUndoModeIdFromBody !== "function" ||
+  typeof undoActionRuntime.resolveUndoModeId !== "function" ||
+  typeof undoActionRuntime.isUndoCapableMode !== "function" ||
+  typeof undoActionRuntime.isUndoInteractionEnabled !== "function"
+) {
+  throw new Error("CoreUndoActionRuntime is required");
+}
 var mobileHintRuntime = window.CoreMobileHintRuntime;
 if (!mobileHintRuntime || typeof mobileHintRuntime.collectMobileHintTexts !== "function") {
   throw new Error("CoreMobileHintRuntime is required");
@@ -223,19 +234,7 @@ if (
 }
 
 function tryUndoFromUi() {
-  var undoRuntime = window.CoreUndoActionRuntime;
-  if (undoRuntime && typeof undoRuntime.tryTriggerUndo === "function") {
-    return !!undoRuntime.tryTriggerUndo(window.game_manager, -1);
-  }
-  if (
-    window.game_manager &&
-    window.game_manager.isUndoInteractionEnabled &&
-    window.game_manager.isUndoInteractionEnabled()
-  ) {
-    window.game_manager.move(-1);
-    return true;
-  }
-  return false;
+  return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
 }
 
 function isGamePageScope() {
@@ -342,54 +341,17 @@ function syncPracticeTopActionsPlacement() {
 }
 
 function isUndoCapableMode(gm) {
-  var undoRuntime = window.CoreUndoActionRuntime;
-  var modeId = "";
-  try {
-    if (document && document.body) {
-      modeId = String(document.body.getAttribute("data-mode-id") || "");
-    }
-  } catch (_err) {
-    modeId = "";
-  }
-
-  if (undoRuntime && typeof undoRuntime.isUndoCapableMode === "function") {
-    return !!undoRuntime.isUndoCapableMode({
-      modeId: modeId,
-      manager: gm || null,
-      globalModeConfig:
-        typeof window !== "undefined" && window.GAME_MODE_CONFIG
-          ? window.GAME_MODE_CONFIG
-          : null
-    });
-  }
-
-  if (!modeId && gm && gm.mode) modeId = String(gm.mode);
-  if (!modeId && typeof window !== "undefined" && window.GAME_MODE_CONFIG && window.GAME_MODE_CONFIG.key) {
-    modeId = String(window.GAME_MODE_CONFIG.key);
-  }
-  modeId = modeId.toLowerCase();
-
-  if (modeId) {
-    if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) return false;
-    if (modeId === "capped" || modeId.indexOf("capped") !== -1) return false;
-    if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) return true;
-  }
-
-  var explicitUndo = null;
-  if (gm && gm.modeConfig && typeof gm.modeConfig.undo_enabled === "boolean") {
-    explicitUndo = gm.modeConfig.undo_enabled;
-  } else if (typeof window !== "undefined" && window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG.undo_enabled === "boolean") {
-    explicitUndo = window.GAME_MODE_CONFIG.undo_enabled;
-  }
-  if (explicitUndo !== null) return !!explicitUndo;
-
-  if (!gm) return false;
-  try {
-    if (typeof gm.isUndoAllowedByMode === "function") {
-      return !!gm.isUndoAllowedByMode(modeId || gm.mode);
-    }
-  } catch (_err) {}
-  return !!gm.undoEnabled;
+  var modeId = undoActionRuntime.resolveUndoModeIdFromBody({
+    bodyLike: document.body
+  });
+  return !!undoActionRuntime.isUndoCapableMode({
+    modeId: modeId,
+    manager: gm || null,
+    globalModeConfig:
+      typeof window !== "undefined" && window.GAME_MODE_CONFIG
+        ? window.GAME_MODE_CONFIG
+        : null
+  });
 }
 
 function syncMobileUndoTopButtonAvailability() {
@@ -400,10 +362,7 @@ function syncMobileUndoTopButtonAvailability() {
   var compact = isCompactGameViewport();
   var gm = window.game_manager;
   var modeUndoCapable = isUndoCapableMode(gm);
-  var undoRuntime = window.CoreUndoActionRuntime;
-  var canUndoNow = undoRuntime && typeof undoRuntime.isUndoInteractionEnabled === "function"
-    ? !!undoRuntime.isUndoInteractionEnabled(gm)
-    : !!(gm && gm.isUndoInteractionEnabled && gm.isUndoInteractionEnabled());
+  var canUndoNow = !!undoActionRuntime.isUndoInteractionEnabled(gm);
   var displayModel = mobileUndoTopRuntime.resolveMobileUndoTopButtonDisplayModel({
     compactViewport: compact,
     modeUndoCapable: modeUndoCapable,

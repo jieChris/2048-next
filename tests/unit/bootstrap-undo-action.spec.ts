@@ -4,6 +4,7 @@ import {
   canTriggerUndo,
   isUndoCapableMode,
   isUndoInteractionEnabled,
+  resolveUndoModeIdFromBody,
   resolveUndoModeId,
   tryTriggerUndo
 } from "../../src/bootstrap/undo-action";
@@ -71,6 +72,19 @@ describe("bootstrap undo action", () => {
         globalModeConfig: { key: "global_mode" }
       })
     ).toBe("global_mode");
+  });
+
+  it("resolves undo mode id from body attribute safely", () => {
+    expect(
+      resolveUndoModeIdFromBody({
+        bodyLike: {
+          getAttribute(name: string) {
+            return name === "data-mode-id" ? "mode_from_dom" : null;
+          }
+        }
+      })
+    ).toBe("mode_from_dom");
+    expect(resolveUndoModeIdFromBody({ bodyLike: null })).toBe("");
   });
 
   it("supports undo capability by mode key guard", () => {

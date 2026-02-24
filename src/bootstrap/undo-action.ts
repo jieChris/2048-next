@@ -9,6 +9,10 @@ export interface UndoManagerLike {
   move?: ((direction: number) => unknown) | null | undefined;
 }
 
+interface BodyLike {
+  getAttribute?(name: string): string | null;
+}
+
 export interface UndoGlobalModeConfigLike {
   key?: string | null | undefined;
   undo_enabled?: boolean | null | undefined;
@@ -18,6 +22,24 @@ export interface UndoCapabilityInput {
   modeId?: string | null | undefined;
   manager?: UndoManagerLike | null | undefined;
   globalModeConfig?: UndoGlobalModeConfigLike | null | undefined;
+}
+
+export interface ResolveUndoModeIdFromBodyOptions {
+  bodyLike?: BodyLike | null | undefined;
+}
+
+export function resolveUndoModeIdFromBody(
+  options: ResolveUndoModeIdFromBodyOptions
+): string {
+  const opts = options || {};
+  const body = opts.bodyLike || null;
+  if (!body || typeof body.getAttribute !== "function") return "";
+  try {
+    const value = body.getAttribute("data-mode-id");
+    return typeof value === "string" ? value : "";
+  } catch (_err) {
+    return "";
+  }
 }
 
 export function canTriggerUndo(

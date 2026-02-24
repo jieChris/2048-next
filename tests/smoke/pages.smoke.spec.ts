@@ -650,6 +650,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return {
           hasRuntime: true,
           hasCapabilityApi: Boolean(
+            typeof runtime.resolveUndoModeIdFromBody === "function" &&
             typeof runtime.resolveUndoModeId === "function" &&
             typeof runtime.isUndoCapableMode === "function" &&
             typeof runtime.isUndoInteractionEnabled === "function"
@@ -684,6 +685,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return {
           hasRuntime: true,
           hasCapabilityApi: Boolean(
+            typeof runtime.resolveUndoModeIdFromBody === "function" &&
             typeof runtime.resolveUndoModeId === "function" &&
             typeof runtime.isUndoCapableMode === "function" &&
             typeof runtime.isUndoInteractionEnabled === "function"
@@ -806,6 +808,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const topActionsRuntime = (window as any).CoreTopActionsRuntime;
       const topButtonsRuntime = (window as any).CoreMobileTopButtonsRuntime;
       const viewportRuntime = (window as any).CoreMobileViewportRuntime;
+      const undoActionRuntime = (window as any).CoreUndoActionRuntime;
       if (
         !runtime ||
         typeof runtime.collectMobileHintTexts !== "function" ||
@@ -826,6 +829,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         !topButtonsRuntime ||
         typeof topButtonsRuntime.ensureMobileUndoTopButtonDom !== "function" ||
         typeof topButtonsRuntime.ensureMobileHintToggleButtonDom !== "function" ||
+        !undoActionRuntime ||
+        typeof undoActionRuntime.resolveUndoModeIdFromBody !== "function" ||
+        typeof undoActionRuntime.isUndoCapableMode !== "function" ||
+        typeof undoActionRuntime.isUndoInteractionEnabled !== "function" ||
         !viewportRuntime ||
         typeof viewportRuntime.isViewportAtMost !== "function" ||
         typeof viewportRuntime.isCompactGameViewport !== "function" ||
@@ -878,6 +885,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalIsGamePageScope = viewportRuntime.isGamePageScope;
       const originalIsPracticePageScope = viewportRuntime.isPracticePageScope;
       const originalIsTimerboxMobileScope = viewportRuntime.isTimerboxMobileScope;
+      const originalResolveUndoModeIdFromBody = undoActionRuntime.resolveUndoModeIdFromBody;
+      const originalIsUndoCapableMode = undoActionRuntime.isUndoCapableMode;
+      const originalIsUndoInteractionEnabled = undoActionRuntime.isUndoInteractionEnabled;
       let collectCallCount = 0;
       let syncCallCount = 0;
       let ensureModalCallCount = 0;
@@ -894,6 +904,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let gameScopeCallCount = 0;
       let practiceScopeCallCount = 0;
       let timerboxScopeCallCount = 0;
+      let resolveUndoModeIdFromBodyCallCount = 0;
+      let isUndoCapableModeCallCount = 0;
+      let isUndoInteractionEnabledCallCount = 0;
       runtime.collectMobileHintTexts = function (opts: any) {
         collectCallCount += 1;
         const lines = originalCollect(opts);
@@ -959,6 +972,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
         timerboxScopeCallCount += 1;
         return originalIsTimerboxMobileScope(opts);
       };
+      undoActionRuntime.resolveUndoModeIdFromBody = function (opts: any) {
+        resolveUndoModeIdFromBodyCallCount += 1;
+        return originalResolveUndoModeIdFromBody(opts);
+      };
+      undoActionRuntime.isUndoCapableMode = function (opts: any) {
+        isUndoCapableModeCallCount += 1;
+        return originalIsUndoCapableMode(opts);
+      };
+      undoActionRuntime.isUndoInteractionEnabled = function (manager: any) {
+        isUndoInteractionEnabledCallCount += 1;
+        return originalIsUndoInteractionEnabled(manager);
+      };
 
       try {
         const syncMobileHintUI = (window as any).syncMobileHintUI;
@@ -1004,6 +1029,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
           gameScopeCallCount,
           practiceScopeCallCount,
           timerboxScopeCallCount,
+          resolveUndoModeIdFromBodyCallCount,
+          isUndoCapableModeCallCount,
+          isUndoInteractionEnabledCallCount,
           overlayVisible: Boolean(overlay && overlay.style.display === "flex"),
           firstLineText: firstLine ? (firstLine.textContent || "").trim() : ""
         };
@@ -1024,6 +1052,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         viewportRuntime.isGamePageScope = originalIsGamePageScope;
         viewportRuntime.isPracticePageScope = originalIsPracticePageScope;
         viewportRuntime.isTimerboxMobileScope = originalIsTimerboxMobileScope;
+        undoActionRuntime.resolveUndoModeIdFromBody = originalResolveUndoModeIdFromBody;
+        undoActionRuntime.isUndoCapableMode = originalIsUndoCapableMode;
+        undoActionRuntime.isUndoInteractionEnabled = originalIsUndoInteractionEnabled;
       }
     });
 
@@ -1052,6 +1083,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.gameScopeCallCount).toBeGreaterThan(0);
     expect(snapshot.practiceScopeCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.timerboxScopeCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveUndoModeIdFromBodyCallCount).toBeGreaterThan(0);
+    expect(snapshot.isUndoCapableModeCallCount).toBeGreaterThan(0);
+    expect(snapshot.isUndoInteractionEnabledCallCount).toBeGreaterThan(0);
     expect(snapshot.overlayVisible).toBe(true);
     expect(snapshot.firstLineText.length).toBeGreaterThan(0);
   });

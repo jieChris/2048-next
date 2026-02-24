@@ -12,6 +12,18 @@
     );
   }
 
+  function resolveUndoModeIdFromBody(options) {
+    var opts = options || {};
+    var body = opts.bodyLike || null;
+    if (!body || typeof body.getAttribute !== "function") return "";
+    try {
+      var value = body.getAttribute("data-mode-id");
+      return typeof value === "string" ? value : "";
+    } catch (_err) {
+      return "";
+    }
+  }
+
   function resolveUndoModeId(input) {
     var modeIdRaw = input && input.modeId;
     if (typeof modeIdRaw === "string" && modeIdRaw.trim()) {
@@ -84,6 +96,7 @@
 
   global.CoreUndoActionRuntime = global.CoreUndoActionRuntime || {};
   global.CoreUndoActionRuntime.canTriggerUndo = canTriggerUndo;
+  global.CoreUndoActionRuntime.resolveUndoModeIdFromBody = resolveUndoModeIdFromBody;
   global.CoreUndoActionRuntime.resolveUndoModeId = resolveUndoModeId;
   global.CoreUndoActionRuntime.isUndoCapableMode = isUndoCapableMode;
   global.CoreUndoActionRuntime.isUndoInteractionEnabled = isUndoInteractionEnabled;
