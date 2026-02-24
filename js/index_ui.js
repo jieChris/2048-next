@@ -378,20 +378,14 @@ function syncMobileUndoTopButtonAvailability() {
     fallbackLabel: "撤回"
   });
 
-  btn.style.display = appliedModel && appliedModel.buttonDisplay ? appliedModel.buttonDisplay : "none";
-  btn.style.pointerEvents =
-    appliedModel && typeof appliedModel.pointerEvents === "string"
-      ? appliedModel.pointerEvents
-      : "none";
-  btn.style.opacity = appliedModel && typeof appliedModel.opacity === "string" ? appliedModel.opacity : "0.45";
-  btn.setAttribute(
-    "aria-disabled",
-    appliedModel && appliedModel.ariaDisabled ? appliedModel.ariaDisabled : "true"
-  );
-  if (!appliedModel || !appliedModel.shouldApplyLabel) {
+  btn.style.display = appliedModel.buttonDisplay;
+  btn.style.pointerEvents = appliedModel.pointerEvents;
+  btn.style.opacity = appliedModel.opacity;
+  btn.setAttribute("aria-disabled", appliedModel.ariaDisabled);
+  if (!appliedModel.shouldApplyLabel) {
     return;
   }
-  var label = appliedModel.label || "撤回";
+  var label = appliedModel.label;
   btn.setAttribute("aria-label", label);
   btn.setAttribute("title", label);
 }
