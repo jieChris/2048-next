@@ -4,6 +4,7 @@ import {
   formatThemePreviewValue,
   resolveThemeBindingState,
   resolveThemeDropdownToggleState,
+  resolveThemeOptions,
   resolveThemeOptionSelectedState,
   resolveThemePreviewLayout,
   resolveThemePreviewTileValues,
@@ -99,5 +100,23 @@ describe("bootstrap theme settings", () => {
       pow2Selector: "#theme-preview-grid-pow2",
       fibonacciSelector: "#theme-preview-grid-fib"
     });
+  });
+
+  it("resolves theme options list by normalizing raw themes", () => {
+    expect(
+      resolveThemeOptions({
+        themes: [
+          { id: "classic", label: "经典" },
+          { id: "mint", label: "" },
+          { id: "", label: "空" },
+          { id: "dark" } as any,
+          null as any
+        ]
+      })
+    ).toEqual([
+      { id: "classic", label: "经典" },
+      { id: "mint", label: "mint" },
+      { id: "dark", label: "dark" }
+    ]);
   });
 });

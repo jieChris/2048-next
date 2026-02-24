@@ -49,6 +49,15 @@ export interface ResolveThemePreviewLayoutResult {
   fibonacciSelector: string;
 }
 
+export interface ResolveThemeOptionsOptions {
+  themes?: Array<ThemeLike> | null | undefined;
+}
+
+export interface ResolvedThemeOption {
+  id: string;
+  label: string;
+}
+
 const FALLBACK_POW2_VALUES = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
 const FALLBACK_FIB_VALUES = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597];
 
@@ -140,4 +149,19 @@ export function resolveThemePreviewLayout(): ResolveThemePreviewLayoutResult {
     pow2Selector: "#theme-preview-grid-pow2",
     fibonacciSelector: "#theme-preview-grid-fib"
   };
+}
+
+export function resolveThemeOptions(options: ResolveThemeOptionsOptions): ResolvedThemeOption[] {
+  const opts = options || {};
+  const inputThemes = Array.isArray(opts.themes) ? opts.themes : [];
+  const result: ResolvedThemeOption[] = [];
+  for (let i = 0; i < inputThemes.length; i += 1) {
+    const theme = inputThemes[i];
+    if (!theme) continue;
+    const id = typeof theme.id === "string" ? theme.id : "";
+    if (!id) continue;
+    const label = typeof theme.label === "string" && theme.label ? theme.label : id;
+    result.push({ id, label });
+  }
+  return result;
 }

@@ -87,6 +87,21 @@
     };
   }
 
+  function resolveThemeOptions(options) {
+    var opts = options || {};
+    var inputThemes = Array.isArray(opts.themes) ? opts.themes : [];
+    var result = [];
+    for (var i = 0; i < inputThemes.length; i++) {
+      var theme = inputThemes[i];
+      if (!theme) continue;
+      var id = typeof theme.id === "string" ? theme.id : "";
+      if (!id) continue;
+      var label = typeof theme.label === "string" && theme.label ? theme.label : id;
+      result.push({ id: id, label: label });
+    }
+    return result;
+  }
+
   global.CoreThemeSettingsRuntime = global.CoreThemeSettingsRuntime || {};
   global.CoreThemeSettingsRuntime.formatThemePreviewValue = formatThemePreviewValue;
   global.CoreThemeSettingsRuntime.resolveThemePreviewTileValues = resolveThemePreviewTileValues;
@@ -95,4 +110,5 @@
   global.CoreThemeSettingsRuntime.resolveThemeBindingState = resolveThemeBindingState;
   global.CoreThemeSettingsRuntime.resolveThemeOptionSelectedState = resolveThemeOptionSelectedState;
   global.CoreThemeSettingsRuntime.resolveThemePreviewLayout = resolveThemePreviewLayout;
+  global.CoreThemeSettingsRuntime.resolveThemeOptions = resolveThemeOptions;
 })(typeof window !== "undefined" ? window : undefined);

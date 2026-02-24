@@ -129,6 +129,7 @@ if (
   typeof themeSettingsRuntime.formatThemePreviewValue !== "function" ||
   typeof themeSettingsRuntime.resolveThemePreviewTileValues !== "function" ||
   typeof themeSettingsRuntime.resolveThemePreviewLayout !== "function" ||
+  typeof themeSettingsRuntime.resolveThemeOptions !== "function" ||
   typeof themeSettingsRuntime.resolveThemeSelectLabel !== "function" ||
   typeof themeSettingsRuntime.resolveThemeDropdownToggleState !== "function" ||
   typeof themeSettingsRuntime.resolveThemeBindingState !== "function" ||
@@ -789,7 +790,9 @@ function initThemeSettingsUI() {
 
   if (!originalSelect || !previewRoot || !window.ThemeManager || !customTrigger || !customOptionsContainer || !customSelect) return;
 
-  var themes = window.ThemeManager.getThemes();
+  var themes = themeSettingsRuntime.resolveThemeOptions({
+    themes: window.ThemeManager.getThemes()
+  });
   var confirmedTheme = window.ThemeManager.getCurrentTheme();
   var previewLayout = themeSettingsRuntime.resolveThemePreviewLayout();
 
