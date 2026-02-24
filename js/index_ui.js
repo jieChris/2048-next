@@ -89,7 +89,8 @@ if (
   typeof homeGuideRuntime.markHomeGuideSeen !== "function" ||
   typeof homeGuideRuntime.shouldAutoStartHomeGuide !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideAutoStart !== "function" ||
-  typeof homeGuideRuntime.resolveHomeGuideSettingsState !== "function"
+  typeof homeGuideRuntime.resolveHomeGuideSettingsState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuidePanelLayout !== "function"
 ) {
   throw new Error("CoreHomeGuideRuntime is required");
 }
@@ -1098,35 +1099,29 @@ function positionHomeGuidePanel() {
     windowLike: window,
     maxWidth: MOBILE_UI_MAX_WIDTH
   });
-  var panelWidth;
-  if (mobileLayout) {
-    panelWidth = Math.min(380, Math.max(240, window.innerWidth - margin * 2));
-  } else {
-    panelWidth = Math.min(430, Math.max(280, window.innerWidth - margin * 2));
-  }
-  panel.style.maxWidth = panelWidth + "px";
-  panel.style.width = panelWidth + "px";
-
+  var initialLayout = homeGuideRuntime.resolveHomeGuidePanelLayout({
+    targetRect: rect,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    panelHeight: 160,
+    margin: margin,
+    mobileLayout: mobileLayout
+  });
+  panel.style.maxWidth = initialLayout.panelWidth + "px";
+  panel.style.width = initialLayout.panelWidth + "px";
   var panelHeight = panel.offsetHeight || 160;
-  var top;
-  if (mobileLayout) {
-    top = window.innerHeight - panelHeight - margin;
-  } else {
-    top = rect.bottom + margin;
-    if (top + panelHeight > window.innerHeight - margin) {
-      top = rect.top - panelHeight - margin;
-    }
-  }
-  if (top < margin) top = margin;
-
-  var left = rect.left + rect.width / 2 - panelWidth / 2;
-  if (left < margin) left = margin;
-  if (left + panelWidth > window.innerWidth - margin) {
-    left = window.innerWidth - panelWidth - margin;
-  }
-
-  panel.style.top = Math.round(top) + "px";
-  panel.style.left = Math.round(left) + "px";
+  var layout = homeGuideRuntime.resolveHomeGuidePanelLayout({
+    targetRect: rect,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    panelHeight: panelHeight,
+    margin: margin,
+    mobileLayout: mobileLayout
+  });
+  panel.style.maxWidth = layout.panelWidth + "px";
+  panel.style.width = layout.panelWidth + "px";
+  panel.style.top = layout.top + "px";
+  panel.style.left = layout.left + "px";
 }
 
 function isElementVisibleForGuide(node) {

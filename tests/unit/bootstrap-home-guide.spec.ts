@@ -5,6 +5,7 @@ import {
   isHomePagePath,
   markHomeGuideSeen,
   readHomeGuideSeenValue,
+  resolveHomeGuidePanelLayout,
   resolveHomeGuideAutoStart,
   resolveHomeGuideSettingsState,
   shouldAutoStartHomeGuide
@@ -165,6 +166,52 @@ describe("bootstrap home guide", () => {
       toggleDisabled: true,
       toggleChecked: false,
       noteText: "该功能仅在首页可用。"
+    });
+  });
+
+  it("resolves panel layout for mobile viewport", () => {
+    expect(
+      resolveHomeGuidePanelLayout({
+        targetRect: {
+          left: 100,
+          top: 100,
+          width: 80,
+          height: 30,
+          bottom: 130
+        },
+        viewportWidth: 360,
+        viewportHeight: 640,
+        panelHeight: 180,
+        margin: 12,
+        mobileLayout: true
+      })
+    ).toEqual({
+      panelWidth: 336,
+      top: 448,
+      left: 12
+    });
+  });
+
+  it("resolves panel layout for desktop viewport with overflow fallback", () => {
+    expect(
+      resolveHomeGuidePanelLayout({
+        targetRect: {
+          left: 1000,
+          top: 600,
+          width: 100,
+          height: 40,
+          bottom: 650
+        },
+        viewportWidth: 1200,
+        viewportHeight: 700,
+        panelHeight: 160,
+        margin: 12,
+        mobileLayout: false
+      })
+    ).toEqual({
+      panelWidth: 430,
+      top: 428,
+      left: 758
     });
   });
 });

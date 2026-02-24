@@ -1035,7 +1035,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.markHomeGuideSeen !== "function" ||
         typeof runtime.shouldAutoStartHomeGuide !== "function" ||
         typeof runtime.resolveHomeGuideAutoStart !== "function" ||
-        typeof runtime.resolveHomeGuideSettingsState !== "function"
+        typeof runtime.resolveHomeGuideSettingsState !== "function" ||
+        typeof runtime.resolveHomeGuidePanelLayout !== "function"
       ) {
         return { hasRuntime: false };
       }
@@ -1086,6 +1087,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
         guideActive: true,
         fromSettings: true
       });
+      const mobilePanelLayout = runtime.resolveHomeGuidePanelLayout({
+        targetRect: {
+          left: 100,
+          top: 100,
+          width: 80,
+          height: 30,
+          bottom: 130
+        },
+        viewportWidth: 360,
+        viewportHeight: 640,
+        panelHeight: 180,
+        margin: 12,
+        mobileLayout: true
+      });
       return {
         hasRuntime: true,
         homePath: runtime.isHomePagePath("/index.html"),
@@ -1108,6 +1123,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           seenValue: "0"
         }),
         resolvedAutoStart,
+        mobilePanelLayout,
         settingsOnHome,
         settingsOffHome
       };
@@ -1127,6 +1143,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolvedAutoStart).toEqual({
       seenValue: "0",
       shouldAutoStart: true
+    });
+    expect(snapshot.mobilePanelLayout).toEqual({
+      panelWidth: 336,
+      top: 448,
+      left: 12
     });
     expect(snapshot.settingsOnHome).toEqual({
       toggleDisabled: false,
@@ -1154,12 +1175,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("body")).toBeVisible();
     await page.waitForTimeout(220);
 
-    const snapshot = await page.evaluate(() => {
+    const snapshot = await page.evaluate(async () => {
       const runtime = (window as any).CoreHomeGuideRuntime;
       if (
         !runtime ||
         typeof runtime.buildHomeGuideSteps !== "function" ||
-        typeof runtime.markHomeGuideSeen !== "function"
+        typeof runtime.markHomeGuideSeen !== "function" ||
+        typeof runtime.resolveHomeGuidePanelLayout !== "function"
       ) {
         return { hasRuntime: false };
       }
@@ -1169,8 +1191,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
       const originalBuild = runtime.buildHomeGuideSteps;
       const originalMark = runtime.markHomeGuideSeen;
+      const originalResolvePanelLayout = runtime.resolveHomeGuidePanelLayout;
       let callCount = 0;
       let markCallCount = 0;
+      let panelLayoutCallCount = 0;
       runtime.buildHomeGuideSteps = function (opts: any) {
         callCount += 1;
         return originalBuild(opts);
@@ -1178,6 +1202,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.markHomeGuideSeen = function (opts: any) {
         markCallCount += 1;
         return originalMark(opts);
+      };
+      runtime.resolveHomeGuidePanelLayout = function (opts: any) {
+        panelLayoutCallCount += 1;
+        return originalResolvePanelLayout(opts);
       };
       try {
         openSettingsModal();
@@ -1189,6 +1217,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
         toggle.dispatchEvent(new Event("change", { bubbles: true }));
         const overlay = document.getElementById("home-guide-overlay");
         const overlayVisibleBeforeSkip = Boolean(overlay && overlay.style.display !== "none");
+        await new Promise((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => resolve(null));
+          });
+        });
         const skipBtn = document.getElementById("home-guide-skip");
         if (skipBtn) {
           skipBtn.dispatchEvent(new Event("click", { bubbles: true }));
@@ -1200,6 +1233,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasToggle: true,
           callCount,
           markCallCount,
+          panelLayoutCallCount,
           hasOverlay: Boolean(overlay),
           overlayVisibleBeforeSkip,
           overlayHiddenAfterSkip: Boolean(overlayAfterSkip && overlayAfterSkip.style.display === "none")
@@ -1207,6 +1241,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       } finally {
         runtime.buildHomeGuideSteps = originalBuild;
         runtime.markHomeGuideSeen = originalMark;
+        runtime.resolveHomeGuidePanelLayout = originalResolvePanelLayout;
       }
     });
 
@@ -1215,6 +1250,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasToggle).toBe(true);
     expect(snapshot.callCount).toBeGreaterThan(0);
     expect(snapshot.markCallCount).toBeGreaterThan(0);
+    expect(snapshot.panelLayoutCallCount).toBeGreaterThan(0);
     expect(snapshot.hasOverlay).toBe(true);
     expect(snapshot.overlayVisibleBeforeSkip).toBe(true);
     expect(snapshot.overlayHiddenAfterSkip).toBe(true);

@@ -44,6 +44,34 @@ export interface ResolveHomeGuideSettingsStateResult {
   noteText: string;
 }
 
+export interface HomeGuideRectLike {
+  left?: number | null | undefined;
+  top?: number | null | undefined;
+  right?: number | null | undefined;
+  bottom?: number | null | undefined;
+  width?: number | null | undefined;
+  height?: number | null | undefined;
+}
+
+export interface ResolveHomeGuidePanelLayoutOptions {
+  targetRect?: HomeGuideRectLike | null | undefined;
+  viewportWidth?: number | null | undefined;
+  viewportHeight?: number | null | undefined;
+  panelHeight?: number | null | undefined;
+  margin?: number | null | undefined;
+  mobileLayout?: boolean | null | undefined;
+  mobilePanelMinWidth?: number | null | undefined;
+  mobilePanelMaxWidth?: number | null | undefined;
+  desktopPanelMinWidth?: number | null | undefined;
+  desktopPanelMaxWidth?: number | null | undefined;
+}
+
+export interface ResolveHomeGuidePanelLayoutResult {
+  panelWidth: number;
+  top: number;
+  left: number;
+}
+
 const BASE_HOME_GUIDE_STEPS: HomeGuideStep[] = [
   { selector: "#home-title-link", title: "首页标题", desc: "点击 2048 标题可回到首页。" },
   { selector: "#top-announcement-btn", title: "版本公告", desc: "查看版本更新内容，红点表示有未读公告。" },
@@ -148,5 +176,59 @@ export function resolveHomeGuideSettingsState(
     noteText: isHome
       ? "打开后将立即进入首页新手引导，完成后自动关闭。"
       : "该功能仅在首页可用。"
+  };
+}
+
+function toFiniteNumber(value: number | null | undefined, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+export function resolveHomeGuidePanelLayout(
+  options: ResolveHomeGuidePanelLayoutOptions
+): ResolveHomeGuidePanelLayoutResult {
+  const opts = options || {};
+  const rect = opts.targetRect || {};
+  const margin = toFiniteNumber(opts.margin, 12);
+  const viewportWidth = toFiniteNumber(opts.viewportWidth, 0);
+  const viewportHeight = toFiniteNumber(opts.viewportHeight, 0);
+  const mobileLayout = !!opts.mobileLayout;
+  const mobilePanelMinWidth = toFiniteNumber(opts.mobilePanelMinWidth, 240);
+  const mobilePanelMaxWidth = toFiniteNumber(opts.mobilePanelMaxWidth, 380);
+  const desktopPanelMinWidth = toFiniteNumber(opts.desktopPanelMinWidth, 280);
+  const desktopPanelMaxWidth = toFiniteNumber(opts.desktopPanelMaxWidth, 430);
+  const panelHeight = toFiniteNumber(opts.panelHeight, 160);
+  const rectLeft = toFiniteNumber(rect.left, 0);
+  const rectTop = toFiniteNumber(rect.top, 0);
+  const rectBottom = toFiniteNumber(rect.bottom, rectTop);
+  const rectWidth = toFiniteNumber(rect.width, 0);
+
+  let panelWidth;
+  if (mobileLayout) {
+    panelWidth = Math.min(mobilePanelMaxWidth, Math.max(mobilePanelMinWidth, viewportWidth - margin * 2));
+  } else {
+    panelWidth = Math.min(desktopPanelMaxWidth, Math.max(desktopPanelMinWidth, viewportWidth - margin * 2));
+  }
+
+  let top;
+  if (mobileLayout) {
+    top = viewportHeight - panelHeight - margin;
+  } else {
+    top = rectBottom + margin;
+    if (top + panelHeight > viewportHeight - margin) {
+      top = rectTop - panelHeight - margin;
+    }
+  }
+  if (top < margin) top = margin;
+
+  let left = rectLeft + rectWidth / 2 - panelWidth / 2;
+  if (left < margin) left = margin;
+  if (left + panelWidth > viewportWidth - margin) {
+    left = viewportWidth - panelWidth - margin;
+  }
+
+  return {
+    panelWidth: Math.round(panelWidth),
+    top: Math.round(top),
+    left: Math.round(left)
   };
 }

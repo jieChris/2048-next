@@ -94,6 +94,61 @@
     };
   }
 
+  function toFiniteNumber(value, fallback) {
+    return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  }
+
+  function resolveHomeGuidePanelLayout(options) {
+    var opts = options || {};
+    var rect = opts.targetRect || {};
+    var margin = toFiniteNumber(opts.margin, 12);
+    var viewportWidth = toFiniteNumber(opts.viewportWidth, 0);
+    var viewportHeight = toFiniteNumber(opts.viewportHeight, 0);
+    var mobileLayout = !!opts.mobileLayout;
+    var mobilePanelMinWidth = toFiniteNumber(opts.mobilePanelMinWidth, 240);
+    var mobilePanelMaxWidth = toFiniteNumber(opts.mobilePanelMaxWidth, 380);
+    var desktopPanelMinWidth = toFiniteNumber(opts.desktopPanelMinWidth, 280);
+    var desktopPanelMaxWidth = toFiniteNumber(opts.desktopPanelMaxWidth, 430);
+    var panelHeight = toFiniteNumber(opts.panelHeight, 160);
+    var rectLeft = toFiniteNumber(rect.left, 0);
+    var rectTop = toFiniteNumber(rect.top, 0);
+    var rectBottom = toFiniteNumber(rect.bottom, rectTop);
+    var rectWidth = toFiniteNumber(rect.width, 0);
+
+    var panelWidth;
+    if (mobileLayout) {
+      panelWidth = Math.min(mobilePanelMaxWidth, Math.max(mobilePanelMinWidth, viewportWidth - margin * 2));
+    } else {
+      panelWidth = Math.min(
+        desktopPanelMaxWidth,
+        Math.max(desktopPanelMinWidth, viewportWidth - margin * 2)
+      );
+    }
+
+    var top;
+    if (mobileLayout) {
+      top = viewportHeight - panelHeight - margin;
+    } else {
+      top = rectBottom + margin;
+      if (top + panelHeight > viewportHeight - margin) {
+        top = rectTop - panelHeight - margin;
+      }
+    }
+    if (top < margin) top = margin;
+
+    var left = rectLeft + rectWidth / 2 - panelWidth / 2;
+    if (left < margin) left = margin;
+    if (left + panelWidth > viewportWidth - margin) {
+      left = viewportWidth - panelWidth - margin;
+    }
+
+    return {
+      panelWidth: Math.round(panelWidth),
+      top: Math.round(top),
+      left: Math.round(left)
+    };
+  }
+
   global.CoreHomeGuideRuntime = global.CoreHomeGuideRuntime || {};
   global.CoreHomeGuideRuntime.isHomePagePath = isHomePagePath;
   global.CoreHomeGuideRuntime.buildHomeGuideSteps = buildHomeGuideSteps;
@@ -102,4 +157,5 @@
   global.CoreHomeGuideRuntime.shouldAutoStartHomeGuide = shouldAutoStartHomeGuide;
   global.CoreHomeGuideRuntime.resolveHomeGuideAutoStart = resolveHomeGuideAutoStart;
   global.CoreHomeGuideRuntime.resolveHomeGuideSettingsState = resolveHomeGuideSettingsState;
+  global.CoreHomeGuideRuntime.resolveHomeGuidePanelLayout = resolveHomeGuidePanelLayout;
 })(typeof window !== "undefined" ? window : undefined);
