@@ -16,6 +16,20 @@
     var catalog = global.ModeCatalog;
     var key = modeKey || fallbackModeKey || DEFAULT_MODE_KEY;
     var fallbackKey = fallbackModeKey || DEFAULT_MODE_KEY;
+
+    var modeCatalogRuntime = global.CoreModeCatalogRuntime;
+    if (
+      modeCatalogRuntime &&
+      typeof modeCatalogRuntime.resolveCatalogModeWithDefault === "function"
+    ) {
+      var resolved = modeCatalogRuntime.resolveCatalogModeWithDefault(
+        catalog,
+        key,
+        fallbackKey
+      );
+      if (resolved) return resolved;
+    }
+
     if (!catalog || typeof catalog.getMode !== "function") {
       return global.GAME_MODE_CONFIG || null;
     }

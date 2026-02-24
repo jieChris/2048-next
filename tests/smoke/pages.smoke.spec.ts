@@ -574,6 +574,63 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(forcedLegacyMode).toBe("legacy-bridge");
   });
 
+  test("legacy bootstrap resolveModeConfig delegates to mode-catalog runtime", async ({ page }) => {
+    const response = await page.goto("/capped_2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Capped page response should exist").not.toBeNull();
+    expect(response?.ok(), "Capped page response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    const snapshot = await page.evaluate(() => {
+      const bootstrap = (window as any).LegacyBootstrapRuntime;
+      const modeCatalogRuntime = (window as any).CoreModeCatalogRuntime;
+      if (
+        !bootstrap ||
+        typeof bootstrap.resolveModeConfig !== "function" ||
+        !modeCatalogRuntime ||
+        typeof modeCatalogRuntime.resolveCatalogModeWithDefault !== "function"
+      ) {
+        return null;
+      }
+
+      const originalCatalog = (window as any).ModeCatalog;
+      const originalResolve = modeCatalogRuntime.resolveCatalogModeWithDefault;
+      let callCount = 0;
+      modeCatalogRuntime.resolveCatalogModeWithDefault = function (
+        catalog: any,
+        modeKey: string,
+        defaultModeKey: string
+      ) {
+        callCount += 1;
+        return originalResolve(catalog, modeKey, defaultModeKey);
+      };
+
+      (window as any).ModeCatalog = {
+        getMode(key: string) {
+          if (key === "standard_4x4_pow2_no_undo") return { key };
+          return null;
+        }
+      };
+
+      try {
+        const resolved = bootstrap.resolveModeConfig("missing_mode", "standard_4x4_pow2_no_undo");
+        return {
+          callCount,
+          key: resolved && resolved.key ? String(resolved.key) : null
+        };
+      } finally {
+        modeCatalogRuntime.resolveCatalogModeWithDefault = originalResolve;
+        (window as any).ModeCatalog = originalCatalog;
+      }
+    });
+
+    expect(snapshot, "resolveModeConfig delegation snapshot should exist").not.toBeNull();
+    expect(snapshot?.callCount).toBeGreaterThan(0);
+    expect(snapshot?.key).toBe("standard_4x4_pow2_no_undo");
+  });
+
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {
     const response = await page.goto("/play.html?mode_key=spawn_custom_4x4_pow2_no_undo&four_rate=25", {
       waitUntil: "domcontentloaded"
