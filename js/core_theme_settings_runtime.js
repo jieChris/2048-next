@@ -68,6 +68,13 @@
     return String(opts.optionValue || "") === String(opts.currentThemeId || "");
   }
 
+  function resolveThemeOptionValue(options) {
+    var opts = options || {};
+    var option = opts.optionLike || null;
+    if (!option || !option.dataset) return "";
+    return typeof option.dataset.value === "string" ? option.dataset.value : "";
+  }
+
   function resolveThemePreviewLayout() {
     return {
       containerClassName: "theme-preview-dual-wrap",
@@ -134,6 +141,7 @@
   global.CoreThemeSettingsRuntime.resolveThemeDropdownToggleState = resolveThemeDropdownToggleState;
   global.CoreThemeSettingsRuntime.resolveThemeBindingState = resolveThemeBindingState;
   global.CoreThemeSettingsRuntime.resolveThemeOptionSelectedState = resolveThemeOptionSelectedState;
+  global.CoreThemeSettingsRuntime.resolveThemeOptionValue = resolveThemeOptionValue;
   global.CoreThemeSettingsRuntime.resolveThemePreviewLayout = resolveThemePreviewLayout;
   global.CoreThemeSettingsRuntime.resolveThemePreviewCssSelectors = resolveThemePreviewCssSelectors;
   global.CoreThemeSettingsRuntime.resolveThemeOptions = resolveThemeOptions;

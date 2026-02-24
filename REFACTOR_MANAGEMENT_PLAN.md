@@ -92,6 +92,7 @@
   - `theme-settings` 已承接主题列表标准化（`resolveThemeOptions`），`index_ui.js` 不再直接消费 `ThemeManager.getThemes()` 的原始结构
   - `theme-settings` 已承接预览 CSS 选择器回退策略（`resolveThemePreviewCssSelectors`），`index_ui.js` 不再硬编码 `getPreviewCss` 的布局 fallback 分支
   - `index_ui.js` 现直接消费 `theme-settings` 的布局/选择器/绑定状态模型（preview/toggle/binding），不再重复本地空值 fallback 分支
+  - `theme-settings` 已承接主题项值读取（`resolveThemeOptionValue`），`index_ui.js` 不再直接读取 `option.dataset.value` fallback
   - 新增 `src/bootstrap/mobile-hint-ui.ts` + `js/core_mobile_hint_ui_runtime.js`，`index_ui.js` 委托移动端提示折叠文本区可见性判定与按钮展示态
   - `mobile-hint-ui` 已承接按钮应用状态模型（`resolveMobileHintUiState`），`index_ui.js` 不再硬编码折叠 class/关闭弹窗/按钮属性分支
   - `index_ui.js` 现直接消费 `resolveMobileHintUiState` 的安全模型，不再重复本地按钮与 class fallback 分支

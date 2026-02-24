@@ -137,6 +137,7 @@ if (
   typeof themeSettingsRuntime.resolveThemeSelectLabel !== "function" ||
   typeof themeSettingsRuntime.resolveThemeDropdownToggleState !== "function" ||
   typeof themeSettingsRuntime.resolveThemeBindingState !== "function" ||
+  typeof themeSettingsRuntime.resolveThemeOptionValue !== "function" ||
   typeof themeSettingsRuntime.resolveThemeOptionSelectedState !== "function"
 ) {
   throw new Error("CoreThemeSettingsRuntime is required");
@@ -936,8 +937,11 @@ function initThemeSettingsUI() {
     if (triggerText) triggerText.textContent = label;
     var options = customOptionsContainer.querySelectorAll(".custom-option");
     options.forEach(function(opt) {
+      var optionValue = themeSettingsRuntime.resolveThemeOptionValue({
+        optionLike: opt
+      });
       var isSelected = themeSettingsRuntime.resolveThemeOptionSelectedState({
-        optionValue: opt.dataset ? opt.dataset.value : "",
+        optionValue: optionValue,
         currentThemeId: currentThemeId
       });
       if (isSelected) {

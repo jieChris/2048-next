@@ -40,6 +40,14 @@ export interface ResolveThemeOptionSelectedStateOptions {
   currentThemeId?: string | null | undefined;
 }
 
+export interface ResolveThemeOptionValueOptions {
+  optionLike?: {
+    dataset?: {
+      value?: string | null | undefined;
+    } | null | undefined;
+  } | null | undefined;
+}
+
 export interface ResolveThemePreviewCssSelectorsOptions {
   previewLayout?: ResolveThemePreviewLayoutResult | null | undefined;
   fallbackPow2Selector?: string | null | undefined;
@@ -141,6 +149,13 @@ export function resolveThemeOptionSelectedState(
 ): boolean {
   const opts = options || {};
   return String(opts.optionValue || "") === String(opts.currentThemeId || "");
+}
+
+export function resolveThemeOptionValue(options: ResolveThemeOptionValueOptions): string {
+  const opts = options || {};
+  const option = opts.optionLike || null;
+  if (!option || !option.dataset) return "";
+  return typeof option.dataset.value === "string" ? option.dataset.value : "";
 }
 
 export function resolveThemePreviewLayout(): ResolveThemePreviewLayoutResult {

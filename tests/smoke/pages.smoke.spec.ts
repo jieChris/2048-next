@@ -2146,6 +2146,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.resolveThemeSelectLabel !== "function" ||
         typeof runtime.resolveThemeDropdownToggleState !== "function" ||
         typeof runtime.resolveThemeBindingState !== "function" ||
+        typeof runtime.resolveThemeOptionValue !== "function" ||
         typeof runtime.resolveThemeOptionSelectedState !== "function"
       ) {
         return { hasRuntime: false };
@@ -2162,6 +2163,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalResolveLabel = runtime.resolveThemeSelectLabel;
       const originalResolveDropdown = runtime.resolveThemeDropdownToggleState;
       const originalResolveBinding = runtime.resolveThemeBindingState;
+      const originalResolveOptionValue = runtime.resolveThemeOptionValue;
       const originalResolveOptionSelected = runtime.resolveThemeOptionSelectedState;
       let formatCallCount = 0;
       let resolveTileValuesCallCount = 0;
@@ -2171,6 +2173,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let resolveLabelCallCount = 0;
       let resolveDropdownCallCount = 0;
       let resolveBindingCallCount = 0;
+      let resolveOptionValueCallCount = 0;
       let resolveOptionSelectedCallCount = 0;
       runtime.formatThemePreviewValue = function (value: any) {
         formatCallCount += 1;
@@ -2204,6 +2207,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         resolveBindingCallCount += 1;
         return originalResolveBinding(opts);
       };
+      runtime.resolveThemeOptionValue = function (opts: any) {
+        resolveOptionValueCallCount += 1;
+        return originalResolveOptionValue(opts);
+      };
       runtime.resolveThemeOptionSelectedState = function (opts: any) {
         resolveOptionSelectedCallCount += 1;
         return originalResolveOptionSelected(opts);
@@ -2234,6 +2241,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           resolveLabelCallCount,
           resolveDropdownCallCount,
           resolveBindingCallCount,
+          resolveOptionValueCallCount,
           resolveOptionSelectedCallCount
         };
       } finally {
@@ -2245,6 +2253,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.resolveThemeSelectLabel = originalResolveLabel;
         runtime.resolveThemeDropdownToggleState = originalResolveDropdown;
         runtime.resolveThemeBindingState = originalResolveBinding;
+        runtime.resolveThemeOptionValue = originalResolveOptionValue;
         runtime.resolveThemeOptionSelectedState = originalResolveOptionSelected;
       }
     });
@@ -2261,6 +2270,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolveLabelCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveDropdownCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveBindingCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveOptionValueCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveOptionSelectedCallCount).toBeGreaterThan(0);
   });
 

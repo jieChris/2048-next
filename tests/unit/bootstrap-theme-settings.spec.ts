@@ -4,6 +4,7 @@ import {
   formatThemePreviewValue,
   resolveThemeBindingState,
   resolveThemeDropdownToggleState,
+  resolveThemeOptionValue,
   resolveThemeOptions,
   resolveThemeOptionSelectedState,
   resolveThemePreviewCssSelectors,
@@ -82,6 +83,19 @@ describe("bootstrap theme settings", () => {
         currentThemeId: "classic"
       })
     ).toBe(false);
+  });
+
+  it("resolves option value from dom-like option safely", () => {
+    expect(
+      resolveThemeOptionValue({
+        optionLike: {
+          dataset: {
+            value: "classic"
+          }
+        }
+      })
+    ).toBe("classic");
+    expect(resolveThemeOptionValue({ optionLike: null })).toBe("");
   });
 
   it("resolves preview layout contract", () => {
