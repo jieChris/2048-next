@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveMobileUndoTopButtonDisplayModel } from "../../src/bootstrap/mobile-undo-top";
+import {
+  resolveMobileUndoTopAppliedModel,
+  resolveMobileUndoTopButtonDisplayModel
+} from "../../src/bootstrap/mobile-undo-top";
 
 describe("bootstrap mobile undo top", () => {
   it("hides button when viewport is not compact", () => {
@@ -86,6 +89,23 @@ describe("bootstrap mobile undo top", () => {
       opacity: "",
       ariaDisabled: "false",
       label: "Undo"
+    });
+  });
+
+  it("resolves applied model with safe fallback values", () => {
+    expect(
+      resolveMobileUndoTopAppliedModel({
+        displayModel: null,
+        fallbackLabel: "撤回"
+      })
+    ).toEqual({
+      shouldShow: false,
+      buttonDisplay: "none",
+      pointerEvents: "none",
+      opacity: "0.45",
+      ariaDisabled: "true",
+      label: "撤回",
+      shouldApplyLabel: false
     });
   });
 });

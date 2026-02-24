@@ -834,6 +834,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof timerRuntime.resolveMobileTimerboxAppliedModel !== "function" ||
         !undoTopRuntime ||
         typeof undoTopRuntime.resolveMobileUndoTopButtonDisplayModel !== "function" ||
+        typeof undoTopRuntime.resolveMobileUndoTopAppliedModel !== "function" ||
         !topActionsRuntime ||
         typeof topActionsRuntime.createGameTopActionsPlacementState !== "function" ||
         typeof topActionsRuntime.createPracticeTopActionsPlacementState !== "function" ||
@@ -891,6 +892,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalResolveDisplay = timerRuntime.resolveMobileTimerboxDisplayModel;
       const originalResolveAppliedModel = timerRuntime.resolveMobileTimerboxAppliedModel;
       const originalUndoTopDisplay = undoTopRuntime.resolveMobileUndoTopButtonDisplayModel;
+      const originalUndoTopApplied = undoTopRuntime.resolveMobileUndoTopAppliedModel;
       const originalSyncGameTop = topActionsRuntime.syncGameTopActionsPlacement;
       const originalSyncPracticeTop = topActionsRuntime.syncPracticeTopActionsPlacement;
       const originalEnsureUndoTopBtn = topButtonsRuntime.ensureMobileUndoTopButtonDom;
@@ -913,6 +915,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let resolveDisplayCallCount = 0;
       let resolveAppliedModelCallCount = 0;
       let resolveUndoTopCallCount = 0;
+      let resolveUndoTopAppliedCallCount = 0;
       let syncGameTopCallCount = 0;
       let syncPracticeTopCallCount = 0;
       let ensureUndoTopBtnCallCount = 0;
@@ -962,6 +965,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       undoTopRuntime.resolveMobileUndoTopButtonDisplayModel = function (opts: any) {
         resolveUndoTopCallCount += 1;
         return originalUndoTopDisplay(opts);
+      };
+      undoTopRuntime.resolveMobileUndoTopAppliedModel = function (opts: any) {
+        resolveUndoTopAppliedCallCount += 1;
+        return originalUndoTopApplied(opts);
       };
       topActionsRuntime.syncGameTopActionsPlacement = function (opts: any) {
         syncGameTopCallCount += 1;
@@ -1053,6 +1060,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           resolveDisplayCallCount,
           resolveAppliedModelCallCount,
           resolveUndoTopCallCount,
+          resolveUndoTopAppliedCallCount,
           syncGameTopCallCount,
           syncPracticeTopCallCount,
           ensureUndoTopBtnCallCount,
@@ -1079,6 +1087,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         timerRuntime.resolveMobileTimerboxDisplayModel = originalResolveDisplay;
         timerRuntime.resolveMobileTimerboxAppliedModel = originalResolveAppliedModel;
         undoTopRuntime.resolveMobileUndoTopButtonDisplayModel = originalUndoTopDisplay;
+        undoTopRuntime.resolveMobileUndoTopAppliedModel = originalUndoTopApplied;
         topActionsRuntime.syncGameTopActionsPlacement = originalSyncGameTop;
         topActionsRuntime.syncPracticeTopActionsPlacement = originalSyncPracticeTop;
         topButtonsRuntime.ensureMobileUndoTopButtonDom = originalEnsureUndoTopBtn;
@@ -1113,6 +1122,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolveDisplayCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveAppliedModelCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveUndoTopCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveUndoTopAppliedCallCount).toBeGreaterThan(0);
     expect(snapshot.syncGameTopCallCount).toBeGreaterThan(0);
     expect(snapshot.syncPracticeTopCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.ensureUndoTopBtnCallCount).toBeGreaterThan(0);

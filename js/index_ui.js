@@ -200,7 +200,8 @@ if (
 var mobileUndoTopRuntime = window.CoreMobileUndoTopRuntime;
 if (
   !mobileUndoTopRuntime ||
-  typeof mobileUndoTopRuntime.resolveMobileUndoTopButtonDisplayModel !== "function"
+  typeof mobileUndoTopRuntime.resolveMobileUndoTopButtonDisplayModel !== "function" ||
+  typeof mobileUndoTopRuntime.resolveMobileUndoTopAppliedModel !== "function"
 ) {
   throw new Error("CoreMobileUndoTopRuntime is required");
 }
@@ -373,21 +374,25 @@ function syncMobileUndoTopButtonAvailability() {
     canUndoNow: canUndoNow,
     label: "撤回"
   });
+  var appliedModel = mobileUndoTopRuntime.resolveMobileUndoTopAppliedModel({
+    displayModel: displayModel,
+    fallbackLabel: "撤回"
+  });
 
-  btn.style.display = displayModel && displayModel.buttonDisplay ? displayModel.buttonDisplay : "none";
+  btn.style.display = appliedModel && appliedModel.buttonDisplay ? appliedModel.buttonDisplay : "none";
   btn.style.pointerEvents =
-    displayModel && typeof displayModel.pointerEvents === "string"
-      ? displayModel.pointerEvents
+    appliedModel && typeof appliedModel.pointerEvents === "string"
+      ? appliedModel.pointerEvents
       : "none";
-  btn.style.opacity = displayModel && typeof displayModel.opacity === "string" ? displayModel.opacity : "0.45";
+  btn.style.opacity = appliedModel && typeof appliedModel.opacity === "string" ? appliedModel.opacity : "0.45";
   btn.setAttribute(
     "aria-disabled",
-    displayModel && displayModel.ariaDisabled ? displayModel.ariaDisabled : "true"
+    appliedModel && appliedModel.ariaDisabled ? appliedModel.ariaDisabled : "true"
   );
-  if (!displayModel || !displayModel.shouldShow) {
+  if (!appliedModel || !appliedModel.shouldApplyLabel) {
     return;
   }
-  var label = displayModel.label || "撤回";
+  var label = appliedModel.label || "撤回";
   btn.setAttribute("aria-label", label);
   btn.setAttribute("title", label);
 }
