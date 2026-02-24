@@ -199,6 +199,34 @@
     };
   }
 
+  function resolveHomeGuideToggleAction(options) {
+    var opts = options || {};
+    var checked = !!opts.checked;
+    var isHome = !!opts.isHomePage;
+    if (!checked) {
+      return {
+        shouldStartGuide: false,
+        shouldCloseSettings: false,
+        shouldResync: false,
+        startFromSettings: false
+      };
+    }
+    if (!isHome) {
+      return {
+        shouldStartGuide: false,
+        shouldCloseSettings: false,
+        shouldResync: true,
+        startFromSettings: false
+      };
+    }
+    return {
+      shouldStartGuide: true,
+      shouldCloseSettings: true,
+      shouldResync: false,
+      startFromSettings: true
+    };
+  }
+
   function resolveHomeGuideFinishState(options) {
     var opts = options || {};
     var reason = typeof opts.reason === "string" ? opts.reason : "";
@@ -344,6 +372,7 @@
   global.CoreHomeGuideRuntime.resolveHomeGuideStepIndexState = resolveHomeGuideStepIndexState;
   global.CoreHomeGuideRuntime.resolveHomeGuideStepTargetState = resolveHomeGuideStepTargetState;
   global.CoreHomeGuideRuntime.resolveHomeGuideControlAction = resolveHomeGuideControlAction;
+  global.CoreHomeGuideRuntime.resolveHomeGuideToggleAction = resolveHomeGuideToggleAction;
   global.CoreHomeGuideRuntime.resolveHomeGuideFinishState = resolveHomeGuideFinishState;
   global.CoreHomeGuideRuntime.resolveHomeGuideTargetScrollState = resolveHomeGuideTargetScrollState;
   global.CoreHomeGuideRuntime.resolveHomeGuideDoneNotice = resolveHomeGuideDoneNotice;

@@ -96,6 +96,7 @@ if (
   typeof homeGuideRuntime.resolveHomeGuideStepIndexState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepTargetState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideControlAction !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideToggleAction !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideFinishState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideTargetScrollState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideDoneNotice !== "function" ||
@@ -1368,13 +1369,20 @@ function initHomeGuideSettingsUI() {
   if (!toggle.__homeGuideBound) {
     toggle.__homeGuideBound = true;
     toggle.addEventListener("change", function () {
-      if (!this.checked) return;
-      if (!isHomePage()) {
+      var toggleAction = homeGuideRuntime.resolveHomeGuideToggleAction({
+        checked: !!this.checked,
+        isHomePage: isHomePage()
+      });
+      if (toggleAction && toggleAction.shouldResync) {
         sync();
         return;
       }
-      window.closeSettingsModal();
-      startHomeGuide({ fromSettings: true });
+      if (toggleAction && toggleAction.shouldStartGuide) {
+        if (toggleAction.shouldCloseSettings) {
+          window.closeSettingsModal();
+        }
+        startHomeGuide({ fromSettings: !!toggleAction.startFromSettings });
+      }
     });
   }
 

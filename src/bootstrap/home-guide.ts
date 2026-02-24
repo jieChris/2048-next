@@ -113,6 +113,18 @@ export interface ResolveHomeGuideControlActionResult {
   finishReason: string;
 }
 
+export interface ResolveHomeGuideToggleActionOptions {
+  checked?: boolean | null | undefined;
+  isHomePage?: boolean | null | undefined;
+}
+
+export interface ResolveHomeGuideToggleActionResult {
+  shouldStartGuide: boolean;
+  shouldCloseSettings: boolean;
+  shouldResync: boolean;
+  startFromSettings: boolean;
+}
+
 export interface ResolveHomeGuideFinishStateOptions {
   reason?: string | null | undefined;
 }
@@ -404,6 +416,36 @@ export function resolveHomeGuideControlAction(
     type: "step",
     nextStepIndex: index,
     finishReason: ""
+  };
+}
+
+export function resolveHomeGuideToggleAction(
+  options: ResolveHomeGuideToggleActionOptions
+): ResolveHomeGuideToggleActionResult {
+  const opts = options || {};
+  const checked = !!opts.checked;
+  const isHome = !!opts.isHomePage;
+  if (!checked) {
+    return {
+      shouldStartGuide: false,
+      shouldCloseSettings: false,
+      shouldResync: false,
+      startFromSettings: false
+    };
+  }
+  if (!isHome) {
+    return {
+      shouldStartGuide: false,
+      shouldCloseSettings: false,
+      shouldResync: true,
+      startFromSettings: false
+    };
+  }
+  return {
+    shouldStartGuide: true,
+    shouldCloseSettings: true,
+    shouldResync: false,
+    startFromSettings: true
   };
 }
 

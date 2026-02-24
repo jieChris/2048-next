@@ -16,6 +16,7 @@ import {
   resolveHomeGuideFinishState,
   resolveHomeGuideStepIndexState,
   resolveHomeGuideStepTargetState,
+  resolveHomeGuideToggleAction,
   resolveHomeGuideTargetScrollState,
   resolveHomeGuideStepUiState,
   resolveHomeGuideSettingsState,
@@ -349,6 +350,42 @@ describe("bootstrap home guide", () => {
       type: "finish",
       nextStepIndex: 3,
       finishReason: "skipped"
+    });
+  });
+
+  it("resolves toggle action for unchecked/non-home/home", () => {
+    expect(
+      resolveHomeGuideToggleAction({
+        checked: false,
+        isHomePage: true
+      })
+    ).toEqual({
+      shouldStartGuide: false,
+      shouldCloseSettings: false,
+      shouldResync: false,
+      startFromSettings: false
+    });
+    expect(
+      resolveHomeGuideToggleAction({
+        checked: true,
+        isHomePage: false
+      })
+    ).toEqual({
+      shouldStartGuide: false,
+      shouldCloseSettings: false,
+      shouldResync: true,
+      startFromSettings: false
+    });
+    expect(
+      resolveHomeGuideToggleAction({
+        checked: true,
+        isHomePage: true
+      })
+    ).toEqual({
+      shouldStartGuide: true,
+      shouldCloseSettings: true,
+      shouldResync: false,
+      startFromSettings: true
     });
   });
 
