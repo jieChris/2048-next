@@ -80,6 +80,13 @@ var COMPACT_GAME_VIEWPORT_MAX_WIDTH = 980;
 var mobileRelayoutTimer = null;
 var mobileTopActionsState = null;
 var practiceTopActionsState = null;
+var practiceTransferRuntime = window.CorePracticeTransferRuntime;
+if (
+  !practiceTransferRuntime ||
+  typeof practiceTransferRuntime.buildPracticeModeConfigFromCurrent !== "function"
+) {
+  throw new Error("CorePracticeTransferRuntime is required");
+}
 
 function tryUndoFromUi() {
   var undoRuntime = window.CoreUndoActionRuntime;
@@ -797,38 +804,13 @@ function cloneJsonSafe(value) {
 }
 
 function buildPracticeModeConfigFromCurrent(gm) {
-  var cfg = (window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object")
-    ? window.GAME_MODE_CONFIG
-    : ((gm && gm.modeConfig && typeof gm.modeConfig === "object") ? gm.modeConfig : {});
-  var ruleset = cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2";
-  var width = Number.isInteger(cfg.board_width) && cfg.board_width > 0
-    ? cfg.board_width
-    : (Number.isInteger(gm.width) && gm.width > 0 ? gm.width : 4);
-  var height = Number.isInteger(cfg.board_height) && cfg.board_height > 0
-    ? cfg.board_height
-    : (Number.isInteger(gm.height) && gm.height > 0 ? gm.height : width);
-  var spawnTable = (Array.isArray(cfg.spawn_table) && cfg.spawn_table.length > 0)
-    ? cloneJsonSafe(cfg.spawn_table)
-    : (ruleset === "fibonacci"
-      ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
-      : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }]);
-  var modeConfig = {
-    key: "practice_legacy",
-    label: "练习板（直通）",
-    board_width: width,
-    board_height: height,
-    ruleset: ruleset,
-    undo_enabled: true,
-    spawn_table: spawnTable,
-    ranked_bucket: "none",
-    mode_family: cfg.mode_family || (ruleset === "fibonacci" ? "fibonacci" : "pow2"),
-    rank_policy: "unranked",
-    special_rules: cloneJsonSafe(cfg.special_rules) || {}
-  };
-  if (Number.isInteger(cfg.max_tile) && cfg.max_tile > 0) {
-    modeConfig.max_tile = cfg.max_tile;
-  }
-  return modeConfig;
+  return practiceTransferRuntime.buildPracticeModeConfigFromCurrent({
+    gameModeConfig:
+      window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object"
+        ? window.GAME_MODE_CONFIG
+        : null,
+    manager: gm || null
+  });
 }
 
 window.openPracticeBoardFromCurrent = function () {

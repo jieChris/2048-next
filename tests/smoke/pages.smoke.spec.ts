@@ -707,6 +707,79 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.moveDirection).toBe(-1);
   });
 
+  test("practice transfer flow delegates mode-config build to runtime helper", async ({ page }) => {
+    const response = await page.goto("/index.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const runtime = (window as any).CorePracticeTransferRuntime;
+      const openPracticeBoardFromCurrent = (window as any).openPracticeBoardFromCurrent;
+      if (!runtime || typeof runtime.buildPracticeModeConfigFromCurrent !== "function") {
+        return { hasRuntime: false, hasOpenFn: typeof openPracticeBoardFromCurrent === "function" };
+      }
+      if (typeof openPracticeBoardFromCurrent !== "function") {
+        return { hasRuntime: true, hasOpenFn: false };
+      }
+
+      const originalBuild = runtime.buildPracticeModeConfigFromCurrent;
+      const originalManager = (window as any).game_manager;
+      const originalOpen = window.open;
+      let callCount = 0;
+      let openedUrl = "";
+
+      runtime.buildPracticeModeConfigFromCurrent = function (opts: any) {
+        callCount += 1;
+        return originalBuild(opts);
+      };
+      (window as any).game_manager = {
+        width: 4,
+        height: 4,
+        modeConfig: {
+          ruleset: "pow2",
+          spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }]
+        },
+        getFinalBoardMatrix() {
+          return [
+            [2, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0]
+          ];
+        }
+      };
+      window.open = function (url?: string | URL | undefined) {
+        openedUrl = String(url || "");
+        return null as any;
+      };
+
+      try {
+        openPracticeBoardFromCurrent();
+        return {
+          hasRuntime: true,
+          hasOpenFn: true,
+          callCount,
+          openedUrl
+        };
+      } finally {
+        runtime.buildPracticeModeConfigFromCurrent = originalBuild;
+        (window as any).game_manager = originalManager;
+        window.open = originalOpen;
+      }
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasOpenFn).toBe(true);
+    expect(snapshot.callCount).toBeGreaterThan(0);
+    expect(snapshot.openedUrl).toContain("Practice_board.html");
+    expect(snapshot.openedUrl).toContain("practice_token=");
+    expect(snapshot.openedUrl).toContain("practice_ruleset=pow2");
+  });
+
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {
     const response = await page.goto("/play.html?mode_key=spawn_custom_4x4_pow2_no_undo&four_rate=25", {
       waitUntil: "domcontentloaded"
