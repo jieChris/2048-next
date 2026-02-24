@@ -64,6 +64,7 @@
   - `home-guide` 已承接完成提示样式模型（`resolveHomeGuideDoneNoticeStyle`），`index_ui.js` 不再硬编码 toast 样式常量
   - `home-guide` 已承接完成态策略（`resolveHomeGuideFinishState`），`index_ui.js` 不再硬编码 completed/skip 的提示策略
   - `home-guide` 已承接目标滚动策略（`resolveHomeGuideTargetScrollState`），`index_ui.js` 不再硬编码移动端 scrollIntoView 条件与参数
+  - `home-guide` 已承接步骤游标/目标跳过判定（`resolveHomeGuideStepIndexState`/`resolveHomeGuideStepTargetState`），`index_ui.js` 不再硬编码步骤边界与缺失目标递进策略
   - `home-guide` 已承接引导面板/设置项模板（`buildHomeGuidePanelInnerHtml`/`buildHomeGuideSettingsRowInnerHtml`），`index_ui.js` 仅负责挂载 DOM
   - `home-guide` 已承接指引浮层位置计算（`resolveHomeGuidePanelLayout`），`index_ui.js` 仅传入窗口/目标几何信息并应用结果
   - `home-guide` 已承接指引目标可见性判定（`isHomeGuideTargetVisible`），`index_ui.js` 不再直接读 DOM 可见性样式

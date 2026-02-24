@@ -93,6 +93,8 @@ if (
   typeof homeGuideRuntime.resolveHomeGuideAutoStart !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideSettingsState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideStepUiState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideStepIndexState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideStepTargetState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideFinishState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideTargetScrollState !== "function" ||
   typeof homeGuideRuntime.resolveHomeGuideDoneNotice !== "function" ||
@@ -1181,9 +1183,13 @@ function finishHomeGuide(markSeen, options) {
 }
 
 function showHomeGuideStep(index) {
-  if (!HOME_GUIDE_STATE.active || !HOME_GUIDE_STATE.steps.length) return;
-  if (index < 0) index = 0;
-  if (index >= HOME_GUIDE_STATE.steps.length) {
+  var stepIndexState = homeGuideRuntime.resolveHomeGuideStepIndexState({
+    isActive: HOME_GUIDE_STATE.active,
+    stepCount: HOME_GUIDE_STATE.steps.length,
+    stepIndex: index
+  });
+  if (stepIndexState && stepIndexState.shouldAbort) return;
+  if (stepIndexState && stepIndexState.shouldFinish) {
     var finishState = homeGuideRuntime.resolveHomeGuideFinishState({
       reason: "completed"
     });
@@ -1192,12 +1198,23 @@ function showHomeGuideStep(index) {
     });
     return;
   }
+  index = stepIndexState ? stepIndexState.resolvedIndex : index;
   HOME_GUIDE_STATE.index = index;
   clearHomeGuideHighlight();
 
   var step = HOME_GUIDE_STATE.steps[index];
   var target = document.querySelector(step.selector);
-  if (!target || !isElementVisibleForGuide(target)) {
+  var targetVisible = !!(target && isElementVisibleForGuide(target));
+  var stepTargetState = homeGuideRuntime.resolveHomeGuideStepTargetState({
+    hasTarget: !!target,
+    targetVisible: targetVisible,
+    stepIndex: index
+  });
+  if (stepTargetState && stepTargetState.shouldAdvance) {
+    showHomeGuideStep(stepTargetState.nextIndex);
+    return;
+  }
+  if (!target || !targetVisible) {
     showHomeGuideStep(index + 1);
     return;
   }

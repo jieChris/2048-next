@@ -131,6 +131,42 @@
     };
   }
 
+  function resolveHomeGuideStepIndexState(options) {
+    var opts = options || {};
+    var count = Math.max(0, Math.floor(toFiniteNumber(opts.stepCount, 0)));
+    var rawIndex = Math.floor(toFiniteNumber(opts.stepIndex, 0));
+    var resolvedIndex = Math.max(0, rawIndex);
+    if (!opts.isActive || count <= 0) {
+      return {
+        shouldAbort: true,
+        shouldFinish: false,
+        resolvedIndex: 0
+      };
+    }
+    if (resolvedIndex >= count) {
+      return {
+        shouldAbort: false,
+        shouldFinish: true,
+        resolvedIndex: resolvedIndex
+      };
+    }
+    return {
+      shouldAbort: false,
+      shouldFinish: false,
+      resolvedIndex: resolvedIndex
+    };
+  }
+
+  function resolveHomeGuideStepTargetState(options) {
+    var opts = options || {};
+    var index = Math.max(0, Math.floor(toFiniteNumber(opts.stepIndex, 0)));
+    var shouldAdvance = !opts.hasTarget || !opts.targetVisible;
+    return {
+      shouldAdvance: shouldAdvance,
+      nextIndex: shouldAdvance ? index + 1 : index
+    };
+  }
+
   function resolveHomeGuideFinishState(options) {
     var opts = options || {};
     var reason = typeof opts.reason === "string" ? opts.reason : "";
@@ -273,6 +309,8 @@
   global.CoreHomeGuideRuntime.resolveHomeGuideAutoStart = resolveHomeGuideAutoStart;
   global.CoreHomeGuideRuntime.resolveHomeGuideSettingsState = resolveHomeGuideSettingsState;
   global.CoreHomeGuideRuntime.resolveHomeGuideStepUiState = resolveHomeGuideStepUiState;
+  global.CoreHomeGuideRuntime.resolveHomeGuideStepIndexState = resolveHomeGuideStepIndexState;
+  global.CoreHomeGuideRuntime.resolveHomeGuideStepTargetState = resolveHomeGuideStepTargetState;
   global.CoreHomeGuideRuntime.resolveHomeGuideFinishState = resolveHomeGuideFinishState;
   global.CoreHomeGuideRuntime.resolveHomeGuideTargetScrollState = resolveHomeGuideTargetScrollState;
   global.CoreHomeGuideRuntime.resolveHomeGuideDoneNotice = resolveHomeGuideDoneNotice;

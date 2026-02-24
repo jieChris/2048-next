@@ -79,6 +79,29 @@ export interface ResolveHomeGuideStepUiStateResult {
   nextText: string;
 }
 
+export interface ResolveHomeGuideStepIndexStateOptions {
+  isActive?: boolean | null | undefined;
+  stepCount?: number | null | undefined;
+  stepIndex?: number | null | undefined;
+}
+
+export interface ResolveHomeGuideStepIndexStateResult {
+  shouldAbort: boolean;
+  shouldFinish: boolean;
+  resolvedIndex: number;
+}
+
+export interface ResolveHomeGuideStepTargetStateOptions {
+  hasTarget?: boolean | null | undefined;
+  targetVisible?: boolean | null | undefined;
+  stepIndex?: number | null | undefined;
+}
+
+export interface ResolveHomeGuideStepTargetStateResult {
+  shouldAdvance: boolean;
+  nextIndex: number;
+}
+
 export interface ResolveHomeGuideFinishStateOptions {
   reason?: string | null | undefined;
 }
@@ -296,6 +319,46 @@ export function resolveHomeGuideStepUiState(
     stepText: count > 0 ? "步骤 " + (index + 1) + " / " + count : "步骤 0 / 0",
     prevDisabled: index <= 0,
     nextText: count > 0 && index >= count - 1 ? "完成" : "下一步"
+  };
+}
+
+export function resolveHomeGuideStepIndexState(
+  options: ResolveHomeGuideStepIndexStateOptions
+): ResolveHomeGuideStepIndexStateResult {
+  const opts = options || {};
+  const count = Math.max(0, Math.floor(toFiniteNumber(opts.stepCount, 0)));
+  const rawIndex = Math.floor(toFiniteNumber(opts.stepIndex, 0));
+  const resolvedIndex = Math.max(0, rawIndex);
+  if (!opts.isActive || count <= 0) {
+    return {
+      shouldAbort: true,
+      shouldFinish: false,
+      resolvedIndex: 0
+    };
+  }
+  if (resolvedIndex >= count) {
+    return {
+      shouldAbort: false,
+      shouldFinish: true,
+      resolvedIndex
+    };
+  }
+  return {
+    shouldAbort: false,
+    shouldFinish: false,
+    resolvedIndex
+  };
+}
+
+export function resolveHomeGuideStepTargetState(
+  options: ResolveHomeGuideStepTargetStateOptions
+): ResolveHomeGuideStepTargetStateResult {
+  const opts = options || {};
+  const index = Math.max(0, Math.floor(toFiniteNumber(opts.stepIndex, 0)));
+  const shouldAdvance = !opts.hasTarget || !opts.targetVisible;
+  return {
+    shouldAdvance,
+    nextIndex: shouldAdvance ? index + 1 : index
   };
 }
 

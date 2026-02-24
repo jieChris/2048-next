@@ -13,6 +13,8 @@ import {
   resolveHomeGuideDoneNotice,
   resolveHomeGuideDoneNoticeStyle,
   resolveHomeGuideFinishState,
+  resolveHomeGuideStepIndexState,
+  resolveHomeGuideStepTargetState,
   resolveHomeGuideTargetScrollState,
   resolveHomeGuideStepUiState,
   resolveHomeGuideSettingsState,
@@ -254,6 +256,65 @@ describe("bootstrap home guide", () => {
       stepText: "步骤 10 / 10",
       prevDisabled: false,
       nextText: "完成"
+    });
+  });
+
+  it("resolves step index state for abort, continue and finish", () => {
+    expect(
+      resolveHomeGuideStepIndexState({
+        isActive: false,
+        stepCount: 5,
+        stepIndex: 0
+      })
+    ).toEqual({
+      shouldAbort: true,
+      shouldFinish: false,
+      resolvedIndex: 0
+    });
+    expect(
+      resolveHomeGuideStepIndexState({
+        isActive: true,
+        stepCount: 5,
+        stepIndex: -2
+      })
+    ).toEqual({
+      shouldAbort: false,
+      shouldFinish: false,
+      resolvedIndex: 0
+    });
+    expect(
+      resolveHomeGuideStepIndexState({
+        isActive: true,
+        stepCount: 5,
+        stepIndex: 5
+      })
+    ).toEqual({
+      shouldAbort: false,
+      shouldFinish: true,
+      resolvedIndex: 5
+    });
+  });
+
+  it("resolves target state for visible and skipped targets", () => {
+    expect(
+      resolveHomeGuideStepTargetState({
+        hasTarget: true,
+        targetVisible: true,
+        stepIndex: 2
+      })
+    ).toEqual({
+      shouldAdvance: false,
+      nextIndex: 2
+    });
+    expect(
+      resolveHomeGuideStepTargetState({
+        hasTarget: false,
+        targetVisible: false,
+        stepIndex: 2
+      })
+    ).toEqual({
+      shouldAdvance: true,
+      nextIndex: 3
     });
   });
 
