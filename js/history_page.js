@@ -106,6 +106,14 @@
   ) {
     throw new Error("CoreHistoryRecordActionsRuntime is required");
   }
+  var historyCanaryStorageRuntime = window.CoreHistoryCanaryStorageRuntime;
+  if (
+    !historyCanaryStorageRuntime ||
+    typeof historyCanaryStorageRuntime.readHistoryStorageValue !== "function" ||
+    typeof historyCanaryStorageRuntime.writeHistoryStorageValue !== "function"
+  ) {
+    throw new Error("CoreHistoryCanaryStorageRuntime is required");
+  }
   var historyToolbarRuntime = window.CoreHistoryToolbarRuntime;
   if (
     !historyToolbarRuntime ||
@@ -161,28 +169,11 @@
   }
 
   function getStorageValue(key) {
-    try {
-      if (!window.localStorage || typeof window.localStorage.getItem !== "function") return null;
-      return window.localStorage.getItem(key);
-    } catch (_err) {
-      return null;
-    }
+    return historyCanaryStorageRuntime.readHistoryStorageValue(key);
   }
 
   function setStorageValue(key, value) {
-    try {
-      if (!window.localStorage) return false;
-      if (value === null || value === undefined || value === "") {
-        if (typeof window.localStorage.removeItem !== "function") return false;
-        window.localStorage.removeItem(key);
-        return true;
-      }
-      if (typeof window.localStorage.setItem !== "function") return false;
-      window.localStorage.setItem(key, String(value));
-      return true;
-    } catch (_err) {
-      return false;
-    }
+    return historyCanaryStorageRuntime.writeHistoryStorageValue(key, value);
   }
 
   function escapeHtml(value) {

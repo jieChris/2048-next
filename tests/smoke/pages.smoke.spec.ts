@@ -658,6 +658,43 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.policyGateText.length).toBeGreaterThan(0);
   });
 
+  test("history page delegates canary storage reads to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyCanaryStorageReadCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryCanaryStorageRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "readHistoryStorageValue" && typeof value === "function") {
+            proxyTarget[prop] = function (key: unknown) {
+              (window as any).__historyCanaryStorageReadCallCount =
+                Number((window as any).__historyCanaryStorageReadCallCount || 0) + 1;
+              return (value as (k: unknown) => unknown)(key);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => ({
+      hasRuntime: Boolean((window as any).CoreHistoryCanaryStorageRuntime?.readHistoryStorageValue),
+      readCallCount: Number((window as any).__historyCanaryStorageReadCallCount || 0)
+    }));
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.readCallCount).toBeGreaterThan(0);
+  });
+
   test("history page delegates canary view modeling to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyCanaryViewCallCount = 0;
