@@ -192,6 +192,15 @@
       ],
       "CoreHistoryRecordActionsRuntime is required"
     );
+    var historyRecordHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryRecordHostRuntime,
+      [
+        "resolveHistoryRecordReplayHref",
+        "applyHistoryRecordExportAction",
+        "applyHistoryRecordDeleteAction"
+      ],
+      "CoreHistoryRecordHostRuntime is required"
+    );
     var historyCanaryStorageRuntime = requireRuntimeFunctions(
       source.CoreHistoryCanaryStorageRuntime,
       ["readHistoryStorageValue", "writeHistoryStorageValue"],
@@ -257,6 +266,7 @@
       historyImportFileRuntime: historyImportFileRuntime,
       historyImportHostRuntime: historyImportHostRuntime,
       historyRecordActionsRuntime: historyRecordActionsRuntime,
+      historyRecordHostRuntime: historyRecordHostRuntime,
       historyCanaryStorageRuntime: historyCanaryStorageRuntime,
       historyToolbarRuntime: historyToolbarRuntime,
       historyToolbarHostRuntime: historyToolbarHostRuntime,

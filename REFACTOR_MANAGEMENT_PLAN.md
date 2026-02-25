@@ -235,6 +235,7 @@
   - 新增 `src/bootstrap/history-import-file.ts` + `js/core_history_import_file_runtime.js`，`history_page.js` 委托导入文件选择、读取编码、payload 文本归一化与 input reset 值决策
   - 新增 `src/bootstrap/history-import-host.ts` + `js/core_history_import_host_runtime.js`，`history_page.js` 委托导入入口点击、文件读取成功/失败反馈与刷新判定编排
   - 新增 `src/bootstrap/history-record-actions.ts` + `js/core_history_record_actions_runtime.js`，`history_page.js` 委托记录项动作决策（回放链接、删除确认计划、删除成功/失败提示文案）
+  - 新增 `src/bootstrap/history-record-host.ts` + `js/core_history_record_host_runtime.js`，`history_page.js` 委托记录项回放跳转、单条导出与删除执行反馈编排
   - `history-record-actions` 已继续承接记录删除执行（`executeHistoryDeleteRecord`），`history_page.js` 不再本地调用 `LocalHistoryStore.deleteById`
   - 新增 `src/bootstrap/history-toolbar.ts` + `js/core_history_toolbar_runtime.js`，`history_page.js` 委托工具栏动作决策（导出日期标签/文件名、mismatch 导出查询、清空确认计划与提示文案）
   - `history-toolbar` 已继续承接清空历史执行（`executeHistoryClearAll`），`history_page.js` 不再本地调用 `LocalHistoryStore.clearAll`

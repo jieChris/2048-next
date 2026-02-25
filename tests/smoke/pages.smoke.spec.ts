@@ -2179,6 +2179,122 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.deleteExecuteCallCount).toBeGreaterThan(0);
   });
 
+  test("history page delegates record item actions orchestration to host runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyRecordHostReplayCallCount = 0;
+      (window as any).__historyRecordHostExportCallCount = 0;
+      (window as any).__historyRecordHostDeleteCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryRecordHostRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryRecordReplayHref" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyRecordHostReplayCallCount =
+                Number((window as any).__historyRecordHostReplayCallCount || 0) + 1;
+              (value as (args: unknown) => unknown)(input);
+              return "";
+            };
+            return true;
+          }
+          if (prop === "applyHistoryRecordExportAction" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyRecordHostExportCallCount =
+                Number((window as any).__historyRecordHostExportCallCount || 0) + 1;
+              (value as (args: unknown) => unknown)(input);
+              return false;
+            };
+            return true;
+          }
+          if (prop === "applyHistoryRecordDeleteAction" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyRecordHostDeleteCallCount =
+                Number((window as any).__historyRecordHostDeleteCallCount || 0) + 1;
+              (value as (args: unknown) => unknown)(input);
+              return {
+                shouldSetStatus: false,
+                statusText: "",
+                isError: false,
+                shouldReload: false
+              };
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    await page.evaluate(() => {
+      const store = (window as any).LocalHistoryStore;
+      if (!store || typeof store.saveRecord !== "function" || typeof store.clearAll !== "function") {
+        throw new Error("LocalHistoryStore unavailable");
+      }
+      store.clearAll();
+      store.saveRecord({
+        mode: "local",
+        mode_key: "standard_4x4_pow2_no_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        undo_enabled: false,
+        rank_policy: "ranked",
+        score: 64,
+        best_tile: 8,
+        duration_ms: 3000,
+        final_board: [
+          [2, 4, 8, 16],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        ended_at: new Date().toISOString(),
+        replay_string: "[]"
+      });
+    });
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(200);
+
+    const snapshot = await page.evaluate(() => {
+      const replayBtn = document.querySelector(".history-replay-btn") as HTMLButtonElement | null;
+      if (replayBtn && typeof replayBtn.click === "function") replayBtn.click();
+
+      const exportBtn = document.querySelector(".history-export-btn") as HTMLButtonElement | null;
+      if (exportBtn && typeof exportBtn.click === "function") exportBtn.click();
+
+      const originalConfirm = window.confirm;
+      window.confirm = () => true;
+      const deleteBtn = document.querySelector(".history-delete-btn") as HTMLButtonElement | null;
+      if (deleteBtn && typeof deleteBtn.click === "function") deleteBtn.click();
+      window.confirm = originalConfirm;
+
+      return {
+        hasRuntime: Boolean(
+          (window as any).CoreHistoryRecordHostRuntime?.resolveHistoryRecordReplayHref &&
+            (window as any).CoreHistoryRecordHostRuntime?.applyHistoryRecordExportAction &&
+            (window as any).CoreHistoryRecordHostRuntime?.applyHistoryRecordDeleteAction
+        ),
+        replayCallCount: Number((window as any).__historyRecordHostReplayCallCount || 0),
+        exportCallCount: Number((window as any).__historyRecordHostExportCallCount || 0),
+        deleteCallCount: Number((window as any).__historyRecordHostDeleteCallCount || 0)
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.replayCallCount).toBeGreaterThan(0);
+    expect(snapshot.exportCallCount).toBeGreaterThan(0);
+    expect(snapshot.deleteCallCount).toBeGreaterThan(0);
+  });
+
   test("history page delegates mismatch export execution to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyExportMismatchCallCount = 0;

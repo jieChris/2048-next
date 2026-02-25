@@ -138,6 +138,16 @@ function createWindowLike() {
       resolveHistoryDeleteSuccessNotice: () => "",
       executeHistoryDeleteRecord: () => ({ deleted: false })
     },
+    CoreHistoryRecordHostRuntime: {
+      resolveHistoryRecordReplayHref: () => "",
+      applyHistoryRecordExportAction: () => false,
+      applyHistoryRecordDeleteAction: () => ({
+        shouldSetStatus: false,
+        statusText: "",
+        isError: false,
+        shouldReload: false
+      })
+    },
     CoreHistoryCanaryStorageRuntime: {
       readHistoryStorageValue: () => null,
       writeHistoryStorageValue: () => false
@@ -194,6 +204,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyQueryRuntime).toBe(source.CoreHistoryQueryRuntime);
     expect(result.historyLoadRuntime).toBe(source.CoreHistoryLoadRuntime);
     expect(result.historyImportHostRuntime).toBe(source.CoreHistoryImportHostRuntime);
+    expect(result.historyRecordHostRuntime).toBe(source.CoreHistoryRecordHostRuntime);
     expect(result.historyToolbarHostRuntime).toBe(source.CoreHistoryToolbarHostRuntime);
     expect(result.historyModeFilterRuntime).toBe(source.CoreHistoryModeFilterRuntime);
   });
@@ -246,6 +257,17 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryToolbarHostRuntime is required"
+    );
+  });
+
+  it("throws exact error when record host runtime misses required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryRecordHostRuntime = {
+      resolveHistoryRecordReplayHref: () => ""
+    };
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryRecordHostRuntime is required"
     );
   });
 });

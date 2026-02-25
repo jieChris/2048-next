@@ -45,6 +45,7 @@
   var historyImportFileRuntime = historyRuntimes.historyImportFileRuntime;
   var historyImportHostRuntime = historyRuntimes.historyImportHostRuntime;
   var historyRecordActionsRuntime = historyRuntimes.historyRecordActionsRuntime;
+  var historyRecordHostRuntime = historyRuntimes.historyRecordHostRuntime;
   var historyCanaryStorageRuntime = historyRuntimes.historyCanaryStorageRuntime;
   var historyToolbarRuntime = historyRuntimes.historyToolbarRuntime;
   var historyToolbarHostRuntime = historyRuntimes.historyToolbarHostRuntime;
@@ -193,18 +194,21 @@
         var replayBtn = node.querySelector(".history-replay-btn");
         if (replayBtn) {
           replayBtn.addEventListener("click", function () {
-            window.location.href = historyRecordActionsRuntime.resolveHistoryReplayHref(
-              item && item.id
-            );
+            var href = historyRecordHostRuntime.resolveHistoryRecordReplayHref({
+              historyRecordActionsRuntime: historyRecordActionsRuntime,
+              itemId: item && item.id
+            });
+            if (href) window.location.href = href;
           });
         }
 
         var exportBtn = node.querySelector(".history-export-btn");
         if (exportBtn) {
           exportBtn.addEventListener("click", function () {
-            historyExportRuntime.downloadHistorySingleRecord({
+            historyRecordHostRuntime.applyHistoryRecordExportAction({
               localHistoryStore: window.LocalHistoryStore,
-              item: item
+              item: item,
+              historyExportRuntime: historyExportRuntime
             });
           });
         }
@@ -212,25 +216,16 @@
         var deleteBtn = node.querySelector(".history-delete-btn");
         if (deleteBtn) {
           deleteBtn.addEventListener("click", function () {
-            var actionState = historyRecordActionsRuntime.resolveHistoryDeleteActionState(
-              item && item.id
-            );
-            if (!window.confirm(actionState.confirmMessage)) return;
-            var deleteState = historyRecordActionsRuntime.executeHistoryDeleteRecord({
+            var deleteState = historyRecordHostRuntime.applyHistoryRecordDeleteAction({
+              historyRecordActionsRuntime: historyRecordActionsRuntime,
               localHistoryStore: window.LocalHistoryStore,
-              recordId: actionState.recordId
+              itemId: item && item.id,
+              confirmAction: window.confirm
             });
-            if (!deleteState || deleteState.deleted !== true) {
-              setStatus(
-                deleteState && deleteState.notice
-                  ? deleteState.notice
-                  : historyRecordActionsRuntime.resolveHistoryDeleteFailureNotice(),
-                true
-              );
-              return;
+            if (deleteState && deleteState.shouldSetStatus) {
+              setStatus(deleteState.statusText, deleteState.isError);
             }
-            setStatus(deleteState.notice, false);
-            loadHistory();
+            if (deleteState && deleteState.shouldReload) loadHistory();
           });
         }
 
