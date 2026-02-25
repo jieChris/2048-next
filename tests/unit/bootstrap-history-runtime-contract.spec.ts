@@ -54,6 +54,19 @@ function createWindowLike() {
       resolveHistoryBurnInMismatchFocusActionState: () => ({}),
       resolveHistoryBurnInPanelHtml: () => ""
     },
+    CoreHistoryBurnInHostRuntime: {
+      resolveHistoryBurnInPanelRenderState: () => ({
+        panelHtml: "",
+        shouldBindMismatchAction: false
+      }),
+      resolveHistoryBurnInMismatchFocusClickState: () => ({
+        shouldApply: false,
+        nextAdapterParityFilter: "",
+        nextSelectValue: "",
+        shouldReload: false,
+        resetPage: false
+      })
+    },
     CoreHistoryCanaryViewRuntime: {
       resolveHistoryCanaryViewState: () => ({})
     },
@@ -211,6 +224,7 @@ describe("bootstrap history runtime contract", () => {
 
     expect(result.historyCanaryPolicyRuntime).toBe(source.CoreHistoryCanaryPolicyRuntime);
     expect(result.historyCanaryHostRuntime).toBe(source.CoreHistoryCanaryHostRuntime);
+    expect(result.historyBurnInHostRuntime).toBe(source.CoreHistoryBurnInHostRuntime);
     expect(result.historyQueryRuntime).toBe(source.CoreHistoryQueryRuntime);
     expect(result.historyLoadRuntime).toBe(source.CoreHistoryLoadRuntime);
     expect(result.historyImportHostRuntime).toBe(source.CoreHistoryImportHostRuntime);
@@ -236,6 +250,17 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryCanaryHostRuntime is required"
+    );
+  });
+
+  it("throws exact error when burn-in host runtime misses required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryBurnInHostRuntime = {
+      resolveHistoryBurnInPanelRenderState: () => ({ panelHtml: "" })
+    };
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryBurnInHostRuntime is required"
     );
   });
 

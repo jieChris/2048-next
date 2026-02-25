@@ -2816,6 +2816,77 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.adapterFilterValue).toBe("mismatch");
   });
 
+  test("history page delegates burn-in panel orchestration to host runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyBurnInHostRenderCallCount = 0;
+      (window as any).__historyBurnInHostClickCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryBurnInHostRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryBurnInPanelRenderState" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyBurnInHostRenderCallCount =
+                Number((window as any).__historyBurnInHostRenderCallCount || 0) + 1;
+              (value as (arg: unknown) => unknown)(input);
+              return {
+                panelHtml:
+                  "<div class='history-burnin-actions'>" +
+                  "<button class='replay-button history-burnin-focus-mismatch'>仅看不一致</button>" +
+                  "</div>",
+                shouldBindMismatchAction: true
+              };
+            };
+            return true;
+          }
+          if (prop === "resolveHistoryBurnInMismatchFocusClickState" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyBurnInHostClickCallCount =
+                Number((window as any).__historyBurnInHostClickCallCount || 0) + 1;
+              (value as (arg: unknown) => unknown)(input);
+              return {
+                shouldApply: true,
+                nextAdapterParityFilter: "mismatch",
+                nextSelectValue: "mismatch",
+                shouldReload: false,
+                resetPage: true
+              };
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    const snapshot = await page.evaluate(() => {
+      const actionBtn = document.querySelector(".history-burnin-focus-mismatch") as HTMLButtonElement | null;
+      if (actionBtn && typeof actionBtn.click === "function") actionBtn.click();
+      const adapterFilter = document.querySelector("#history-adapter-filter") as HTMLSelectElement | null;
+      return {
+        hasRuntime:
+          Boolean((window as any).CoreHistoryBurnInHostRuntime?.resolveHistoryBurnInPanelRenderState) &&
+          Boolean((window as any).CoreHistoryBurnInHostRuntime?.resolveHistoryBurnInMismatchFocusClickState),
+        renderCallCount: Number((window as any).__historyBurnInHostRenderCallCount || 0),
+        clickCallCount: Number((window as any).__historyBurnInHostClickCallCount || 0),
+        adapterFilterValue: adapterFilter ? adapterFilter.value : ""
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.renderCallCount).toBeGreaterThan(0);
+    expect(snapshot.clickCallCount).toBeGreaterThan(0);
+    expect(snapshot.adapterFilterValue).toBe("mismatch");
+  });
+
   test("legacy bootstrap resolveModeConfig delegates to mode-catalog runtime", async ({ page }) => {
     const response = await page.goto("/capped_2048.html", {
       waitUntil: "domcontentloaded"

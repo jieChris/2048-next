@@ -91,6 +91,11 @@
       ],
       "CoreHistoryBurnInRuntime is required"
     );
+    var historyBurnInHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryBurnInHostRuntime,
+      ["resolveHistoryBurnInPanelRenderState", "resolveHistoryBurnInMismatchFocusClickState"],
+      "CoreHistoryBurnInHostRuntime is required"
+    );
     var historyCanaryViewRuntime = requireRuntimeFunctions(
       source.CoreHistoryCanaryViewRuntime,
       ["resolveHistoryCanaryViewState"],
@@ -260,6 +265,7 @@
       historyAdapterDiagnosticsRuntime: historyAdapterDiagnosticsRuntime,
       historyBoardRuntime: historyBoardRuntime,
       historyBurnInRuntime: historyBurnInRuntime,
+      historyBurnInHostRuntime: historyBurnInHostRuntime,
       historyCanaryViewRuntime: historyCanaryViewRuntime,
       historySummaryRuntime: historySummaryRuntime,
       historyStatusRuntime: historyStatusRuntime,

@@ -34,6 +34,7 @@
   var historyAdapterDiagnosticsRuntime = historyRuntimes.historyAdapterDiagnosticsRuntime;
   var historyBoardRuntime = historyRuntimes.historyBoardRuntime;
   var historyBurnInRuntime = historyRuntimes.historyBurnInRuntime;
+  var historyBurnInHostRuntime = historyRuntimes.historyBurnInHostRuntime;
   var historyCanaryViewRuntime = historyRuntimes.historyCanaryViewRuntime;
   var historySummaryRuntime = historyRuntimes.historySummaryRuntime;
   var historyStatusRuntime = historyRuntimes.historyStatusRuntime;
@@ -96,14 +97,19 @@
   function renderBurnInSummary(summary) {
     var panel = el("history-burnin-summary");
     if (!panel) return;
-    var burnInState = historyBurnInRuntime.resolveHistoryBurnInSummaryState(summary);
-    panel.innerHTML = historyBurnInRuntime.resolveHistoryBurnInPanelHtml(summary, burnInState);
-    if (!burnInState || burnInState.hasSummary !== true) return;
+    var panelState = historyBurnInHostRuntime.resolveHistoryBurnInPanelRenderState({
+      summary: summary,
+      historyBurnInRuntime: historyBurnInRuntime
+    });
+    panel.innerHTML = panelState && panelState.panelHtml ? panelState.panelHtml : "";
+    if (!panelState || panelState.shouldBindMismatchAction !== true) return;
 
     var mismatchBtn = panel.querySelector(".history-burnin-focus-mismatch");
     if (mismatchBtn) {
       mismatchBtn.addEventListener("click", function () {
-        var actionState = historyBurnInRuntime.resolveHistoryBurnInMismatchFocusActionState();
+        var actionState = historyBurnInHostRuntime.resolveHistoryBurnInMismatchFocusClickState({
+          historyBurnInRuntime: historyBurnInRuntime
+        });
         if (!actionState || actionState.shouldApply !== true) return;
         var adapterFilter = el("history-adapter-filter");
         if (adapterFilter) adapterFilter.value = actionState.nextSelectValue;
