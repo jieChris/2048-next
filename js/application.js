@@ -1,39 +1,33 @@
-var bootstrap = window.LegacyBootstrapRuntime;
-if (!bootstrap || typeof bootstrap.startGameOnAnimationFrame !== "function") {
-  throw new Error("LegacyBootstrapRuntime.startGameOnAnimationFrame is required");
-}
-var homeModeRuntime = window.CoreHomeModeRuntime;
+var homeRuntimeContractRuntime = window.CoreHomeRuntimeContractRuntime;
 if (
-  !homeModeRuntime ||
-  typeof homeModeRuntime.resolveHomeModeSelection !== "function" ||
-  typeof homeModeRuntime.resolveHomeModeSelectionFromContext !== "function"
+  !homeRuntimeContractRuntime ||
+  typeof homeRuntimeContractRuntime.resolveHomeRuntimeContracts !== "function"
 ) {
-  throw new Error("CoreHomeModeRuntime is required");
+  throw new Error("CoreHomeRuntimeContractRuntime is required");
 }
-var undoActionRuntime = window.CoreUndoActionRuntime;
+var homeStartupHostRuntime = window.CoreHomeStartupHostRuntime;
 if (
-  !undoActionRuntime ||
-  typeof undoActionRuntime.tryTriggerUndo !== "function"
+  !homeStartupHostRuntime ||
+  typeof homeStartupHostRuntime.resolveHomeStartupFromContext !== "function"
 ) {
-  throw new Error("CoreUndoActionRuntime is required");
+  throw new Error("CoreHomeStartupHostRuntime is required");
 }
+
+var runtimeContracts = homeRuntimeContractRuntime.resolveHomeRuntimeContracts(window);
+var homeModeRuntime = runtimeContracts.homeModeRuntime;
+var undoActionRuntime = runtimeContracts.undoActionRuntime;
+var bootstrap = runtimeContracts.bootstrapRuntime;
 
 bootstrap.startGameOnAnimationFrame(function () {
-  var selection = homeModeRuntime.resolveHomeModeSelectionFromContext({
-    bodyLike: typeof document !== "undefined" ? document.body : null,
-    locationLike: typeof window !== "undefined" ? window.location : null,
+  return homeStartupHostRuntime.resolveHomeStartupFromContext({
+    windowLike: typeof window !== "undefined" ? window : null,
+    documentLike: typeof document !== "undefined" ? document : null,
     defaultModeKey: "standard_4x4_pow2_no_undo",
-    modeCatalog: window.ModeCatalog
-  });
-
-  window.GAME_MODE_CONFIG = selection.modeConfig;
-
-  return {
-    modeKey: selection.modeKey,
-    modeConfig: window.GAME_MODE_CONFIG,
+    defaultBoardWidth: 4,
     inputManagerCtor: KeyboardInputManager,
-    defaultBoardWidth: 4
-  };
+    resolveHomeModeSelectionFromContext:
+      homeModeRuntime.resolveHomeModeSelectionFromContext
+  });
 });
 
 function handle_undo() {

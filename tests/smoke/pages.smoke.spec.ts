@@ -709,6 +709,95 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.moveDirection).toBe(-1);
   });
 
+  test("application startup delegates to home startup host runtime", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__homeRuntimeContractCallCount = 0;
+      (window as any).__homeStartupHostCallCount = 0;
+      (window as any).__homeModeContextCallCount = 0;
+
+      const runtimeContractTarget: Record<string, unknown> = {};
+      (window as any).CoreHomeRuntimeContractRuntime = new Proxy(runtimeContractTarget, {
+        set(target, prop, value) {
+          if (prop === "resolveHomeRuntimeContracts" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__homeRuntimeContractCallCount =
+                Number((window as any).__homeRuntimeContractCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+      const startupHostTarget: Record<string, unknown> = {};
+      (window as any).CoreHomeStartupHostRuntime = new Proxy(startupHostTarget, {
+        set(target, prop, value) {
+          if (prop === "resolveHomeStartupFromContext" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__homeStartupHostCallCount =
+                Number((window as any).__homeStartupHostCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+      const homeModeRuntimeTarget: Record<string, unknown> = {};
+      (window as any).CoreHomeModeRuntime = new Proxy(homeModeRuntimeTarget, {
+        set(target, prop, value) {
+          if (prop === "resolveHomeModeSelectionFromContext" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__homeModeContextCallCount =
+                Number((window as any).__homeModeContextCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/index.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const cfg = (window as any).GAME_MODE_CONFIG;
+      return {
+        hasHomeRuntimeContractRuntime: Boolean(
+          (window as any).CoreHomeRuntimeContractRuntime?.resolveHomeRuntimeContracts
+        ),
+        hasHomeStartupHostRuntime: Boolean(
+          (window as any).CoreHomeStartupHostRuntime?.resolveHomeStartupFromContext
+        ),
+        hasHomeModeContextRuntime: Boolean(
+          (window as any).CoreHomeModeRuntime?.resolveHomeModeSelectionFromContext
+        ),
+        homeRuntimeContractCallCount: Number((window as any).__homeRuntimeContractCallCount || 0),
+        homeStartupHostCallCount: Number((window as any).__homeStartupHostCallCount || 0),
+        homeModeContextCallCount: Number((window as any).__homeModeContextCallCount || 0),
+        modeKey: cfg && typeof cfg.key === "string" ? cfg.key : null
+      };
+    });
+
+    expect(snapshot.hasHomeRuntimeContractRuntime).toBe(true);
+    expect(snapshot.hasHomeStartupHostRuntime).toBe(true);
+    expect(snapshot.hasHomeModeContextRuntime).toBe(true);
+    expect(snapshot.homeRuntimeContractCallCount).toBeGreaterThan(0);
+    expect(snapshot.homeStartupHostCallCount).toBeGreaterThan(0);
+    expect(snapshot.homeModeContextCallCount).toBeGreaterThan(0);
+    expect(snapshot.modeKey).toBe("standard_4x4_pow2_no_undo");
+  });
+
   test("practice transfer flow delegates transfer navigation plan to runtime helper", async ({ page }) => {
     const response = await page.goto("/index.html", {
       waitUntil: "domcontentloaded"
@@ -2886,6 +2975,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
         hasRuntime: Boolean((window as any).CorePracticeModeRuntime?.buildPracticeModeConfig),
         hasModeCatalogRuntime: Boolean((window as any).CoreModeCatalogRuntime?.resolveCatalogModeWithDefault),
         hasHomeModeRuntime: Boolean((window as any).CoreHomeModeRuntime?.resolveHomeModeSelection),
+        hasHomeRuntimeContractRuntime: Boolean(
+          (window as any).CoreHomeRuntimeContractRuntime?.resolveHomeRuntimeContracts
+        ),
+        hasHomeStartupHostRuntime: Boolean(
+          (window as any).CoreHomeStartupHostRuntime?.resolveHomeStartupFromContext
+        ),
         hasHomeModeContextRuntime: Boolean(
           (window as any).CoreHomeModeRuntime?.resolveHomeModeSelectionFromContext
         )
@@ -2895,6 +2990,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.hasModeCatalogRuntime).toBe(true);
     expect(snapshot.hasHomeModeRuntime).toBe(true);
+    expect(snapshot.hasHomeRuntimeContractRuntime).toBe(true);
+    expect(snapshot.hasHomeStartupHostRuntime).toBe(true);
     expect(snapshot.hasHomeModeContextRuntime).toBe(true);
     expect(snapshot.key).toBe("practice_legacy");
     expect(snapshot.ruleset).toBe("fibonacci");

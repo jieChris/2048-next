@@ -64,6 +64,8 @@
   - 新增 `src/bootstrap/practice-mode.ts` + `js/core_practice_mode_runtime.js`，`application.js` 委托 `practice_ruleset` 解析与模式投影
   - 新增 `src/bootstrap/mode-catalog.ts` + `js/core_mode_catalog_runtime.js`，`application.js` 与 `play_application.js` 共享 `ModeCatalog` 回退解析
   - 新增 `src/bootstrap/home-mode.ts` + `js/core_home_mode_runtime.js`，`application.js` 委托首页/练习页模式解析与 practice 模式装配
+  - 新增 `src/bootstrap/home-runtime-contract.ts` + `js/core_home_runtime_contract_runtime.js`，`application.js` 委托首页 runtime 依赖契约校验（bootstrap/home-mode/undo-action）
+  - 新增 `src/bootstrap/home-startup-host.ts` + `js/core_home_startup_host_runtime.js`，`application.js` 委托首页开局回调编排（上下文读取、`GAME_MODE_CONFIG` 注入与启动 payload 组装）
   - `home-mode` 已承接 body/location 上下文读取（`resolveHomeModeSelectionFromContext`），`application.js` 不再手工读取 `data-mode-id`/`location.search`
   - 新增 `src/bootstrap/play-custom-spawn.ts` + `js/core_play_custom_spawn_runtime.js`，`play_application.js` 委托自定义 4 率解析、提示、URL 同步与配置投影
   - `play_application.js` 的自定义 4 率存储读写已接入 `CoreStorageRuntime`，不再直接访问 `localStorage` 容错分支
