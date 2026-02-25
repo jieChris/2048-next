@@ -16,6 +16,12 @@ export interface HistoryExportQueryOptions {
   adapter_parity_filter?: unknown;
 }
 
+export interface HistorySingleRecordExportState {
+  canDownload: boolean;
+  fileName: string;
+  payload: unknown;
+}
+
 function isPlainObject(value: unknown): value is AnyRecord {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -90,4 +96,57 @@ export function collectHistoryRecordIdsForExport(input: {
   }
 
   return ids;
+}
+
+export function resolveHistoryExportListRecordsSource(
+  localHistoryStore: unknown
+): ListRecordsFn | null {
+  const store = isPlainObject(localHistoryStore) ? localHistoryStore : null;
+  const listRecords =
+    store && typeof store.listRecords === "function" ? store.listRecords : null;
+  return listRecords ? listRecords.bind(store) : null;
+}
+
+export function resolveHistoryMismatchExportRecordIds(input: {
+  localHistoryStore?: unknown;
+  queryOptions?: HistoryExportQueryOptions | null;
+  maxPages?: unknown;
+  pageSize?: unknown;
+}): string[] {
+  return collectHistoryRecordIdsForExport({
+    listRecords: resolveHistoryExportListRecordsSource(input && input.localHistoryStore),
+    queryOptions: input && input.queryOptions,
+    maxPages: input && input.maxPages,
+    pageSize: input && input.pageSize
+  });
+}
+
+export function resolveHistorySingleRecordExportState(input: {
+  localHistoryStore?: unknown;
+  item?: unknown;
+}): HistorySingleRecordExportState {
+  const store = isPlainObject(input && input.localHistoryStore)
+    ? (input && input.localHistoryStore as AnyRecord)
+    : null;
+  const item = isPlainObject(input && input.item) ? (input && input.item as AnyRecord) : null;
+  const id = item && item.id;
+  if (!store || id === null || id === undefined || id === "") {
+    return {
+      canDownload: false,
+      fileName: "",
+      payload: ""
+    };
+  }
+
+  const exportRecords = store.exportRecords as (ids: unknown[]) => unknown;
+  const payload = exportRecords.call(store, [id]);
+  const fileName = resolveHistoryRecordExportFileName({
+    modeKey: item && item.mode_key,
+    id
+  });
+  return {
+    canDownload: true,
+    fileName,
+    payload
+  };
 }

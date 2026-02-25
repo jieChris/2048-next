@@ -74,9 +74,57 @@
     return ids;
   }
 
+  function resolveHistoryExportListRecordsSource(localHistoryStore) {
+    var store = isPlainObject(localHistoryStore) ? localHistoryStore : null;
+    var listRecords = store && typeof store.listRecords === "function" ? store.listRecords : null;
+    return listRecords ? listRecords.bind(store) : null;
+  }
+
+  function resolveHistoryMismatchExportRecordIds(input) {
+    var source = isPlainObject(input) ? input : {};
+    return collectHistoryRecordIdsForExport({
+      listRecords: resolveHistoryExportListRecordsSource(source.localHistoryStore),
+      queryOptions: source.queryOptions,
+      maxPages: source.maxPages,
+      pageSize: source.pageSize
+    });
+  }
+
+  function resolveHistorySingleRecordExportState(input) {
+    var source = isPlainObject(input) ? input : {};
+    var store = isPlainObject(source.localHistoryStore) ? source.localHistoryStore : null;
+    var item = isPlainObject(source.item) ? source.item : null;
+    var id = item && item.id;
+    if (!store || id === null || id === undefined || id === "") {
+      return {
+        canDownload: false,
+        fileName: "",
+        payload: ""
+      };
+    }
+
+    var exportRecords = store.exportRecords;
+    var payload = exportRecords.call(store, [id]);
+    var fileName = resolveHistoryRecordExportFileName({
+      modeKey: item.mode_key,
+      id: id
+    });
+    return {
+      canDownload: true,
+      fileName: fileName,
+      payload: payload
+    };
+  }
+
   global.CoreHistoryExportRuntime = global.CoreHistoryExportRuntime || {};
   global.CoreHistoryExportRuntime.resolveHistoryRecordExportFileName =
     resolveHistoryRecordExportFileName;
   global.CoreHistoryExportRuntime.collectHistoryRecordIdsForExport =
     collectHistoryRecordIdsForExport;
+  global.CoreHistoryExportRuntime.resolveHistoryExportListRecordsSource =
+    resolveHistoryExportListRecordsSource;
+  global.CoreHistoryExportRuntime.resolveHistoryMismatchExportRecordIds =
+    resolveHistoryMismatchExportRecordIds;
+  global.CoreHistoryExportRuntime.resolveHistorySingleRecordExportState =
+    resolveHistorySingleRecordExportState;
 })(typeof window !== "undefined" ? window : undefined);

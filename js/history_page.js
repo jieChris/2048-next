@@ -100,7 +100,10 @@
   if (
     !historyExportRuntime ||
     typeof historyExportRuntime.resolveHistoryRecordExportFileName !== "function" ||
-    typeof historyExportRuntime.collectHistoryRecordIdsForExport !== "function"
+    typeof historyExportRuntime.collectHistoryRecordIdsForExport !== "function" ||
+    typeof historyExportRuntime.resolveHistoryExportListRecordsSource !== "function" ||
+    typeof historyExportRuntime.resolveHistoryMismatchExportRecordIds !== "function" ||
+    typeof historyExportRuntime.resolveHistorySingleRecordExportState !== "function"
   ) {
     throw new Error("CoreHistoryExportRuntime is required");
   }
@@ -320,25 +323,12 @@
   }
 
   function downloadSingleRecord(item) {
-    if (!window.LocalHistoryStore) return;
-    var payload = window.LocalHistoryStore.exportRecords([item.id]);
-    var file = historyExportRuntime.resolveHistoryRecordExportFileName({
-      modeKey: item && item.mode_key,
-      id: item && item.id
+    var exportState = historyExportRuntime.resolveHistorySingleRecordExportState({
+      localHistoryStore: window.LocalHistoryStore,
+      item: item
     });
-    window.LocalHistoryStore.download(file, payload);
-  }
-
-  function collectRecordIdsForExport(queryOptions) {
-    return historyExportRuntime.collectHistoryRecordIdsForExport({
-      listRecords:
-        window.LocalHistoryStore && typeof window.LocalHistoryStore.listRecords === "function"
-          ? window.LocalHistoryStore.listRecords.bind(window.LocalHistoryStore)
-          : null,
-      queryOptions: queryOptions,
-      maxPages: 100,
-      pageSize: 500
-    });
+    if (!exportState || exportState.canDownload !== true) return;
+    window.LocalHistoryStore.download(exportState.fileName, exportState.payload);
   }
 
   function renderHistory(result) {
@@ -535,7 +525,12 @@
           keyword: state.keyword,
           sortBy: state.sortBy
         });
-        var ids = collectRecordIdsForExport(queryOptions);
+        var ids = historyExportRuntime.resolveHistoryMismatchExportRecordIds({
+          localHistoryStore: window.LocalHistoryStore,
+          queryOptions: queryOptions,
+          maxPages: 100,
+          pageSize: 500
+        });
         if (!ids.length) {
           setStatus(historyToolbarRuntime.resolveHistoryMismatchExportEmptyNotice(), false);
           return;
