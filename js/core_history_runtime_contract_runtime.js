@@ -201,6 +201,15 @@
       ],
       "CoreHistoryToolbarRuntime is required"
     );
+    var historyToolbarHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryToolbarHostRuntime,
+      [
+        "applyHistoryExportAllAction",
+        "applyHistoryMismatchExportAction",
+        "applyHistoryClearAllAction"
+      ],
+      "CoreHistoryToolbarHostRuntime is required"
+    );
     var historyToolbarEventsRuntime = requireRuntimeFunctions(
       source.CoreHistoryToolbarEventsRuntime,
       [
@@ -238,6 +247,7 @@
       historyRecordActionsRuntime: historyRecordActionsRuntime,
       historyCanaryStorageRuntime: historyCanaryStorageRuntime,
       historyToolbarRuntime: historyToolbarRuntime,
+      historyToolbarHostRuntime: historyToolbarHostRuntime,
       historyToolbarEventsRuntime: historyToolbarEventsRuntime,
       historyModeFilterRuntime: historyModeFilterRuntime
     };

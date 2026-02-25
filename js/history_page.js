@@ -46,6 +46,7 @@
   var historyRecordActionsRuntime = historyRuntimes.historyRecordActionsRuntime;
   var historyCanaryStorageRuntime = historyRuntimes.historyCanaryStorageRuntime;
   var historyToolbarRuntime = historyRuntimes.historyToolbarRuntime;
+  var historyToolbarHostRuntime = historyRuntimes.historyToolbarHostRuntime;
   var historyToolbarEventsRuntime = historyRuntimes.historyToolbarEventsRuntime;
   var historyModeFilterRuntime = historyRuntimes.historyModeFilterRuntime;
 
@@ -308,60 +309,49 @@
     var exportAllBtn = el("history-export-all-btn");
     if (exportAllBtn) {
       exportAllBtn.addEventListener("click", function () {
-        if (!window.LocalHistoryStore) return;
-        var ok = historyExportRuntime.downloadHistoryAllRecords({
+        var actionResult = historyToolbarHostRuntime.applyHistoryExportAllAction({
           localHistoryStore: window.LocalHistoryStore,
           dateValue: new Date(),
-          resolveDateTag: historyToolbarRuntime.resolveHistoryExportDateTag,
-          resolveFileName: historyToolbarRuntime.resolveHistoryExportAllFileName
+          historyExportRuntime: historyExportRuntime,
+          historyToolbarRuntime: historyToolbarRuntime
         });
-        if (!ok) return;
-        setStatus(historyToolbarRuntime.resolveHistoryExportAllNotice(), false);
+        if (actionResult && actionResult.shouldSetStatus) {
+          setStatus(actionResult.statusText, actionResult.isError);
+        }
       });
     }
 
     var exportMismatchBtn = el("history-export-mismatch-btn");
     if (exportMismatchBtn) {
       exportMismatchBtn.addEventListener("click", function () {
-        if (!window.LocalHistoryStore) return;
         readFilters();
-        var queryOptions = historyToolbarRuntime.resolveHistoryMismatchExportQuery({
+        var actionResult = historyToolbarHostRuntime.applyHistoryMismatchExportAction({
+          localHistoryStore: window.LocalHistoryStore,
           modeKey: state.modeKey,
           keyword: state.keyword,
-          sortBy: state.sortBy
-        });
-        var exportState = historyExportRuntime.downloadHistoryMismatchRecords({
-          localHistoryStore: window.LocalHistoryStore,
-          queryOptions: queryOptions,
-          maxPages: 100,
-          pageSize: 500,
+          sortBy: state.sortBy,
           dateValue: new Date(),
-          resolveDateTag: historyToolbarRuntime.resolveHistoryExportDateTag,
-          resolveFileName: historyToolbarRuntime.resolveHistoryMismatchExportFileName
+          historyExportRuntime: historyExportRuntime,
+          historyToolbarRuntime: historyToolbarRuntime
         });
-        if (exportState && exportState.empty) {
-          setStatus(historyToolbarRuntime.resolveHistoryMismatchExportEmptyNotice(), false);
-          return;
+        if (actionResult && actionResult.shouldSetStatus) {
+          setStatus(actionResult.statusText, actionResult.isError);
         }
-        if (!exportState || exportState.downloaded !== true) return;
-        setStatus(
-          historyToolbarRuntime.resolveHistoryMismatchExportSuccessNotice(exportState.count),
-          false
-        );
       });
     }
 
     var clearAllBtn = el("history-clear-all-btn");
     if (clearAllBtn) {
       clearAllBtn.addEventListener("click", function () {
-        var actionState = historyToolbarRuntime.resolveHistoryClearAllActionState();
-        if (actionState.requiresConfirm && !window.confirm(actionState.confirmMessage)) return;
-        var clearState = historyToolbarRuntime.executeHistoryClearAll({
-          localHistoryStore: window.LocalHistoryStore
+        var actionResult = historyToolbarHostRuntime.applyHistoryClearAllAction({
+          localHistoryStore: window.LocalHistoryStore,
+          historyToolbarRuntime: historyToolbarRuntime,
+          confirmAction: window.confirm
         });
-        if (!clearState || clearState.cleared !== true) return;
-        setStatus(actionState.successNotice, false);
-        loadHistory(true);
+        if (actionResult && actionResult.shouldSetStatus) {
+          setStatus(actionResult.statusText, actionResult.isError);
+        }
+        if (actionResult && actionResult.shouldReload) loadHistory(true);
       });
     }
 

@@ -125,6 +125,26 @@ function createWindowLike() {
       resolveHistoryClearAllActionState: () => ({ requiresConfirm: false, confirmMessage: "" }),
       executeHistoryClearAll: () => ({ cleared: true })
     },
+    CoreHistoryToolbarHostRuntime: {
+      applyHistoryExportAllAction: () => ({
+        shouldSetStatus: false,
+        statusText: "",
+        isError: false,
+        shouldReload: false
+      }),
+      applyHistoryMismatchExportAction: () => ({
+        shouldSetStatus: false,
+        statusText: "",
+        isError: false,
+        shouldReload: false
+      }),
+      applyHistoryClearAllAction: () => ({
+        shouldSetStatus: false,
+        statusText: "",
+        isError: false,
+        shouldReload: false
+      })
+    },
     CoreHistoryToolbarEventsRuntime: {
       resolveHistoryPrevPageState: () => ({ canGo: false, nextPage: 1 }),
       resolveHistoryNextPageState: () => ({ canGo: false, nextPage: 1 }),
@@ -145,6 +165,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyCanaryPolicyRuntime).toBe(source.CoreHistoryCanaryPolicyRuntime);
     expect(result.historyQueryRuntime).toBe(source.CoreHistoryQueryRuntime);
     expect(result.historyLoadRuntime).toBe(source.CoreHistoryLoadRuntime);
+    expect(result.historyToolbarHostRuntime).toBe(source.CoreHistoryToolbarHostRuntime);
     expect(result.historyModeFilterRuntime).toBe(source.CoreHistoryModeFilterRuntime);
   });
 
@@ -174,6 +195,17 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryLoadRuntime is required"
+    );
+  });
+
+  it("throws exact error when toolbar host runtime is missing required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryToolbarHostRuntime = {
+      applyHistoryExportAllAction: () => ({})
+    };
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryToolbarHostRuntime is required"
     );
   });
 });

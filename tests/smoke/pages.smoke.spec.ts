@@ -1776,6 +1776,94 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.executeClearAllCallCount).toBeGreaterThan(0);
   });
 
+  test("history page delegates toolbar action execution orchestration to host runtime helper", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyToolbarHostExportAllCallCount = 0;
+      (window as any).__historyToolbarHostMismatchCallCount = 0;
+      (window as any).__historyToolbarHostClearAllCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryToolbarHostRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "applyHistoryExportAllAction" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyToolbarHostExportAllCallCount =
+                Number((window as any).__historyToolbarHostExportAllCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          if (prop === "applyHistoryMismatchExportAction" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyToolbarHostMismatchCallCount =
+                Number((window as any).__historyToolbarHostMismatchCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          if (prop === "applyHistoryClearAllAction" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyToolbarHostClearAllCallCount =
+                Number((window as any).__historyToolbarHostClearAllCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    const snapshot = await page.evaluate(() => {
+      const store = (window as any).LocalHistoryStore;
+      if (!store || typeof store.clearAll !== "function") {
+        throw new Error("LocalHistoryStore.clearAll unavailable");
+      }
+      const originalClearAll = store.clearAll;
+      store.clearAll = () => {};
+      const originalConfirm = window.confirm;
+      window.confirm = () => true;
+
+      const exportAllBtn = document.querySelector("#history-export-all-btn") as HTMLButtonElement | null;
+      if (exportAllBtn && typeof exportAllBtn.click === "function") exportAllBtn.click();
+
+      const mismatchBtn = document.querySelector("#history-export-mismatch-btn") as HTMLButtonElement | null;
+      if (mismatchBtn && typeof mismatchBtn.click === "function") mismatchBtn.click();
+
+      const clearAllBtn = document.querySelector("#history-clear-all-btn") as HTMLButtonElement | null;
+      if (clearAllBtn && typeof clearAllBtn.click === "function") clearAllBtn.click();
+
+      window.confirm = originalConfirm;
+      store.clearAll = originalClearAll;
+
+      return {
+        hasRuntime: Boolean(
+          (window as any).CoreHistoryToolbarHostRuntime?.applyHistoryExportAllAction &&
+            (window as any).CoreHistoryToolbarHostRuntime?.applyHistoryMismatchExportAction &&
+            (window as any).CoreHistoryToolbarHostRuntime?.applyHistoryClearAllAction
+        ),
+        exportAllCallCount: Number((window as any).__historyToolbarHostExportAllCallCount || 0),
+        mismatchCallCount: Number((window as any).__historyToolbarHostMismatchCallCount || 0),
+        clearAllCallCount: Number((window as any).__historyToolbarHostClearAllCallCount || 0)
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.exportAllCallCount).toBeGreaterThan(0);
+    expect(snapshot.mismatchCallCount).toBeGreaterThan(0);
+    expect(snapshot.clearAllCallCount).toBeGreaterThan(0);
+  });
+
   test("history page delegates pager and keyword trigger decisions to toolbar-events runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyToolbarPrevPageCallCount = 0;
