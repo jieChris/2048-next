@@ -44,6 +44,18 @@ export interface ApplyHistoryCanaryPolicyActionByNameWithFeedbackInput {
   failureNotice: unknown;
 }
 
+export interface ApplyHistoryCanaryPanelActionInput {
+  target: unknown;
+  resolveActionName: unknown;
+  resolveActionNotice: unknown;
+  resolveActionPlan: unknown;
+  runtime: unknown;
+  writeStorageValue: unknown;
+  defaultModeStorageKey: unknown;
+  forceLegacyStorageKey: unknown;
+  failureNotice: unknown;
+}
+
 export interface HistoryCanaryPolicyApplyFeedbackState {
   shouldReload: boolean;
   reloadResetPage: boolean;
@@ -73,6 +85,16 @@ function asStorageKey(value: unknown): string {
 function asActionPlanResolver(
   value: unknown
 ): ((actionName: string) => unknown) | null {
+  if (typeof value !== "function") return null;
+  return value as (actionName: string) => unknown;
+}
+
+function asActionNameResolver(value: unknown): ((target: unknown) => string) | null {
+  if (typeof value !== "function") return null;
+  return value as (target: unknown) => string;
+}
+
+function asActionNoticeResolver(value: unknown): ((actionName: string) => unknown) | null {
   if (typeof value !== "function") return null;
   return value as (actionName: string) => unknown;
 }
@@ -203,6 +225,25 @@ export function applyHistoryCanaryPolicyActionByNameWithFeedback(
   return resolveHistoryCanaryPolicyApplyFeedbackState({
     ok,
     successNotice: payload && payload.successNotice,
+    failureNotice: payload && payload.failureNotice
+  });
+}
+
+export function applyHistoryCanaryPanelAction(input: unknown): HistoryCanaryPolicyApplyFeedbackState {
+  const payload =
+    input && typeof input === "object" ? (input as ApplyHistoryCanaryPanelActionInput) : null;
+  const resolveActionName = asActionNameResolver(payload && payload.resolveActionName);
+  const actionName = resolveActionName ? resolveActionName(payload && payload.target) : "";
+  const resolveActionNotice = asActionNoticeResolver(payload && payload.resolveActionNotice);
+  const successNotice = resolveActionNotice ? resolveActionNotice(actionName || "") : "";
+  return applyHistoryCanaryPolicyActionByNameWithFeedback({
+    actionName: actionName || "",
+    resolveActionPlan: payload && payload.resolveActionPlan,
+    runtime: payload && payload.runtime,
+    writeStorageValue: payload && payload.writeStorageValue,
+    defaultModeStorageKey: payload && payload.defaultModeStorageKey,
+    forceLegacyStorageKey: payload && payload.forceLegacyStorageKey,
+    successNotice,
     failureNotice: payload && payload.failureNotice
   });
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyHistoryCanaryPanelAction,
   applyHistoryCanaryPolicyActionByNameWithFeedback,
   applyHistoryCanaryPolicyActionByName,
   applyHistoryCanaryPolicyAction,
@@ -173,6 +174,46 @@ describe("bootstrap history canary action", () => {
       shouldReload: true,
       reloadResetPage: false,
       statusText: "策略已更新",
+      isError: false
+    });
+  });
+
+  it("resolves action from target and applies panel action with feedback", () => {
+    const state = applyHistoryCanaryPanelAction({
+      target: {
+        getAttribute(name: string) {
+          return name === "data-action" ? "reset_policy" : null;
+        }
+      },
+      resolveActionName(target: unknown) {
+        const node = target as { getAttribute?: (name: string) => string | null };
+        if (!node || typeof node.getAttribute !== "function") return "";
+        return node.getAttribute("data-action") || "";
+      },
+      resolveActionNotice(actionName: string) {
+        return actionName === "reset_policy" ? "策略已重置" : "";
+      },
+      resolveActionPlan(actionName: string) {
+        if (actionName !== "reset_policy") return { isSupported: false };
+        return {
+          isSupported: true,
+          defaultMode: null,
+          forceLegacy: false
+        };
+      },
+      runtime: null,
+      writeStorageValue() {
+        return true;
+      },
+      defaultModeStorageKey: "engine_adapter_default_mode",
+      forceLegacyStorageKey: "engine_adapter_force_legacy",
+      failureNotice: "失败"
+    });
+
+    expect(state).toEqual({
+      shouldReload: true,
+      reloadResetPage: false,
+      statusText: "策略已重置",
       isError: false
     });
   });

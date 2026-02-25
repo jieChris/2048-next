@@ -210,6 +210,7 @@
   - 新增 `src/bootstrap/history-canary-action.ts` + `js/core_history_canary_action_runtime.js`，`history_page.js` 委托 canary 策略执行器（按 action plan 写 default/forceLegacy）与应用反馈状态（成功/失败提示文案、reload 判定）
   - `history-canary-action` 已继续承接按动作名执行策略（`applyHistoryCanaryPolicyActionByName`），`history_page.js` 不再本地拼装 canary actionPlan
   - `history-canary-action` 已继续承接“按动作名执行 + 反馈态”一体化处理（`applyHistoryCanaryPolicyActionByNameWithFeedback`），`history_page.js` 不再本地串联 apply 与 feedback 计算
+  - `history-canary-action` 已继续承接 canary 面板点击动作解析与执行反馈（`applyHistoryCanaryPanelAction`），`history_page.js` 不再本地解析 `data-action` 并拼装执行/提示入参
   - 新增 `src/bootstrap/history-canary-source.ts` + `js/core_history_canary_source_runtime.js`，`history_page.js` 委托 LegacyAdapterRuntime 的 canary policy/stored-keys 读取与对象归一化
   - `history-canary-source` 已继续承接 canary snapshot/stored 输入组装（`resolveHistoryCanaryPolicySnapshotInput`/`resolveHistoryCanaryStoredPolicyInput`），`history_page.js` 不再本地拼装 policy 输入
   - 新增 `src/bootstrap/history-canary-panel.ts` + `js/core_history_canary_panel_runtime.js`，`history_page.js` 委托 canary 面板 HTML 渲染与 action 名称解析

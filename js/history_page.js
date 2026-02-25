@@ -35,7 +35,8 @@
     typeof historyCanaryActionRuntime.applyHistoryCanaryPolicyActionByName !== "function" ||
     typeof historyCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice !== "function" ||
     typeof historyCanaryActionRuntime.resolveHistoryCanaryPolicyApplyFeedbackState !== "function" ||
-    typeof historyCanaryActionRuntime.applyHistoryCanaryPolicyActionByNameWithFeedback !== "function"
+    typeof historyCanaryActionRuntime.applyHistoryCanaryPolicyActionByNameWithFeedback !== "function" ||
+    typeof historyCanaryActionRuntime.applyHistoryCanaryPanelAction !== "function"
   ) {
     throw new Error("CoreHistoryCanaryActionRuntime is required");
   }
@@ -311,16 +312,15 @@
     var buttons = panel.querySelectorAll(".history-canary-action-btn");
     for (var i = 0; i < buttons.length; i++) {
       buttons[i].addEventListener("click", function (event) {
-        var target = event.currentTarget;
-        var action = historyCanaryPanelRuntime.resolveHistoryCanaryActionName(target);
-        var feedbackState = historyCanaryActionRuntime.applyHistoryCanaryPolicyActionByNameWithFeedback({
-          actionName: action || "",
+        var feedbackState = historyCanaryActionRuntime.applyHistoryCanaryPanelAction({
+          target: event.currentTarget,
+          resolveActionName: historyCanaryPanelRuntime.resolveHistoryCanaryActionName,
+          resolveActionNotice: historyCanaryPolicyRuntime.resolveCanaryPolicyActionNotice,
           resolveActionPlan: historyCanaryPolicyRuntime.resolveCanaryPolicyActionPlan,
           runtime: window.LegacyAdapterRuntime,
           writeStorageValue: historyCanaryStorageRuntime.writeHistoryStorageValue,
           defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
           forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY,
-          successNotice: historyCanaryPolicyRuntime.resolveCanaryPolicyActionNotice(action || ""),
           failureNotice: historyCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice()
         });
         if (feedbackState.shouldReload) loadHistory(feedbackState.reloadResetPage);

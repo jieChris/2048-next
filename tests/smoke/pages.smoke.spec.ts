@@ -767,17 +767,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("history page delegates canary policy apply action to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
-      (window as any).__historyCanaryApplyWithFeedbackCallCount = 0;
+      (window as any).__historyCanaryPanelActionCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryCanaryActionRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
-          if (
-            prop === "applyHistoryCanaryPolicyActionByNameWithFeedback" &&
-            typeof value === "function"
-          ) {
+          if (prop === "applyHistoryCanaryPanelAction" && typeof value === "function") {
             proxyTarget[prop] = function (input: unknown) {
-              (window as any).__historyCanaryApplyWithFeedbackCallCount =
-                Number((window as any).__historyCanaryApplyWithFeedbackCallCount || 0) + 1;
+              (window as any).__historyCanaryPanelActionCallCount =
+                Number((window as any).__historyCanaryPanelActionCallCount || 0) + 1;
               return (value as (arg: unknown) => unknown)(input);
             };
             return true;
@@ -803,19 +800,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
       if (actionButton && typeof actionButton.click === "function") actionButton.click();
       return {
         hasRuntime:
+          Boolean((window as any).CoreHistoryCanaryActionRuntime?.applyHistoryCanaryPanelAction) &&
           Boolean((window as any).CoreHistoryCanaryActionRuntime?.applyHistoryCanaryPolicyActionByName) &&
           Boolean(
             (window as any).CoreHistoryCanaryActionRuntime?.applyHistoryCanaryPolicyActionByNameWithFeedback
           ) &&
           Boolean((window as any).CoreHistoryCanaryActionRuntime?.resolveHistoryCanaryPolicyApplyFeedbackState),
-        applyWithFeedbackCallCount: Number(
-          (window as any).__historyCanaryApplyWithFeedbackCallCount || 0
-        )
+        panelActionCallCount: Number((window as any).__historyCanaryPanelActionCallCount || 0)
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
-    expect(snapshot.applyWithFeedbackCallCount).toBeGreaterThan(0);
+    expect(snapshot.panelActionCallCount).toBeGreaterThan(0);
   });
 
   test("history page delegates canary view modeling to runtime helper", async ({ page }) => {

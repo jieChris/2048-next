@@ -25,6 +25,14 @@
     return typeof value === "function" ? value : null;
   }
 
+  function asActionNameResolver(value) {
+    return typeof value === "function" ? value : null;
+  }
+
+  function asActionNoticeResolver(value) {
+    return typeof value === "function" ? value : null;
+  }
+
   function writeDefaultMode(runtime, storageWriter, storageKey, mode) {
     if (runtime && typeof runtime.setStoredAdapterDefaultMode === "function") {
       return runtime.setStoredAdapterDefaultMode(mode);
@@ -132,6 +140,24 @@
     });
   }
 
+  function applyHistoryCanaryPanelAction(input) {
+    var payload = input && typeof input === "object" ? input : null;
+    var resolveActionName = asActionNameResolver(payload && payload.resolveActionName);
+    var actionName = resolveActionName ? resolveActionName(payload && payload.target) : "";
+    var resolveActionNotice = asActionNoticeResolver(payload && payload.resolveActionNotice);
+    var successNotice = resolveActionNotice ? resolveActionNotice(actionName || "") : "";
+    return applyHistoryCanaryPolicyActionByNameWithFeedback({
+      actionName: actionName || "",
+      resolveActionPlan: payload && payload.resolveActionPlan,
+      runtime: payload && payload.runtime,
+      writeStorageValue: payload && payload.writeStorageValue,
+      defaultModeStorageKey: payload && payload.defaultModeStorageKey,
+      forceLegacyStorageKey: payload && payload.forceLegacyStorageKey,
+      successNotice: successNotice,
+      failureNotice: payload && payload.failureNotice
+    });
+  }
+
   global.CoreHistoryCanaryActionRuntime = global.CoreHistoryCanaryActionRuntime || {};
   global.CoreHistoryCanaryActionRuntime.applyHistoryCanaryPolicyAction = applyHistoryCanaryPolicyAction;
   global.CoreHistoryCanaryActionRuntime.applyHistoryCanaryPolicyActionByName =
@@ -142,4 +168,6 @@
     resolveHistoryCanaryPolicyApplyFeedbackState;
   global.CoreHistoryCanaryActionRuntime.applyHistoryCanaryPolicyActionByNameWithFeedback =
     applyHistoryCanaryPolicyActionByNameWithFeedback;
+  global.CoreHistoryCanaryActionRuntime.applyHistoryCanaryPanelAction =
+    applyHistoryCanaryPanelAction;
 })(typeof window !== "undefined" ? window : undefined);
