@@ -76,6 +76,11 @@
       ],
       "CoreHistoryAdapterDiagnosticsRuntime is required"
     );
+    var historyAdapterHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryAdapterHostRuntime,
+      ["resolveHistoryAdapterRecordRenderState"],
+      "CoreHistoryAdapterHostRuntime is required"
+    );
     var historyBoardRuntime = requireRuntimeFunctions(
       source.CoreHistoryBoardRuntime,
       ["resolveHistoryFinalBoardHtml"],
@@ -263,6 +268,7 @@
       historyCanaryPanelRuntime: historyCanaryPanelRuntime,
       historyCanaryHostRuntime: historyCanaryHostRuntime,
       historyAdapterDiagnosticsRuntime: historyAdapterDiagnosticsRuntime,
+      historyAdapterHostRuntime: historyAdapterHostRuntime,
       historyBoardRuntime: historyBoardRuntime,
       historyBurnInRuntime: historyBurnInRuntime,
       historyBurnInHostRuntime: historyBurnInHostRuntime,

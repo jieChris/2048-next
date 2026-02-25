@@ -32,6 +32,7 @@
   var historyCanaryPanelRuntime = historyRuntimes.historyCanaryPanelRuntime;
   var historyCanaryHostRuntime = historyRuntimes.historyCanaryHostRuntime;
   var historyAdapterDiagnosticsRuntime = historyRuntimes.historyAdapterDiagnosticsRuntime;
+  var historyAdapterHostRuntime = historyRuntimes.historyAdapterHostRuntime;
   var historyBoardRuntime = historyRuntimes.historyBoardRuntime;
   var historyBurnInRuntime = historyRuntimes.historyBurnInRuntime;
   var historyBurnInHostRuntime = historyRuntimes.historyBurnInHostRuntime;
@@ -67,20 +68,6 @@
 
   function boardToHtml(board, width, height) {
     return historyBoardRuntime.resolveHistoryFinalBoardHtml(board, width, height);
-  }
-
-  function buildAdapterBadgeHtml(item) {
-    var status = historyAdapterDiagnosticsRuntime.resolveHistoryAdapterParityStatus(
-      window.LocalHistoryStore,
-      item
-    );
-    var badgeState = historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeState(item, status);
-    return historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeHtml(badgeState);
-  }
-
-  function buildAdapterDiagnosticsHtml(item) {
-    var diagnosticsState = historyAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsState(item);
-    return historyAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsHtml(diagnosticsState);
   }
 
   function buildSummary(result) {
@@ -171,6 +158,11 @@
         var item = items[i];
         var node = document.createElement("div");
         node.className = "history-item";
+        var adapterRenderState = historyAdapterHostRuntime.resolveHistoryAdapterRecordRenderState({
+          localHistoryStore: window.LocalHistoryStore,
+          item: item,
+          historyAdapterDiagnosticsRuntime: historyAdapterDiagnosticsRuntime
+        });
 
         var headState = historyRecordViewRuntime.resolveHistoryRecordHeadState({
           modeKey: item && item.mode_key,
@@ -191,8 +183,8 @@
           bestTile: headState.bestTile,
           durationText: headState.durationText,
           endedText: headState.endedText,
-          adapterBadgeHtml: buildAdapterBadgeHtml(item),
-          adapterDiagnosticsHtml: buildAdapterDiagnosticsHtml(item),
+          adapterBadgeHtml: adapterRenderState && adapterRenderState.adapterBadgeHtml,
+          adapterDiagnosticsHtml: adapterRenderState && adapterRenderState.adapterDiagnosticsHtml,
           boardHtml: boardToHtml(item.final_board, item.board_width, item.board_height)
         });
 

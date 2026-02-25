@@ -7,6 +7,7 @@ export interface HistoryRuntimeContractWindowLike {
   CoreHistoryCanaryPanelRuntime?: unknown;
   CoreHistoryCanaryHostRuntime?: unknown;
   CoreHistoryAdapterDiagnosticsRuntime?: unknown;
+  CoreHistoryAdapterHostRuntime?: unknown;
   CoreHistoryBoardRuntime?: unknown;
   CoreHistoryBurnInRuntime?: unknown;
   CoreHistoryBurnInHostRuntime?: unknown;
@@ -37,6 +38,7 @@ export interface ResolveHistoryRuntimeContractsResult {
   historyCanaryPanelRuntime: AnyRecord;
   historyCanaryHostRuntime: AnyRecord;
   historyAdapterDiagnosticsRuntime: AnyRecord;
+  historyAdapterHostRuntime: AnyRecord;
   historyBoardRuntime: AnyRecord;
   historyBurnInRuntime: AnyRecord;
   historyBurnInHostRuntime: AnyRecord;
@@ -138,6 +140,11 @@ export function resolveHistoryRuntimeContracts(
       "resolveHistoryAdapterDiagnosticsHtml"
     ],
     "CoreHistoryAdapterDiagnosticsRuntime is required"
+  );
+  const historyAdapterHostRuntime = requireRuntimeFunctions(
+    source.CoreHistoryAdapterHostRuntime,
+    ["resolveHistoryAdapterRecordRenderState"],
+    "CoreHistoryAdapterHostRuntime is required"
   );
   const historyBoardRuntime = requireRuntimeFunctions(
     source.CoreHistoryBoardRuntime,
@@ -326,6 +333,7 @@ export function resolveHistoryRuntimeContracts(
     historyCanaryPanelRuntime,
     historyCanaryHostRuntime,
     historyAdapterDiagnosticsRuntime,
+    historyAdapterHostRuntime,
     historyBoardRuntime,
     historyBurnInRuntime,
     historyBurnInHostRuntime,
