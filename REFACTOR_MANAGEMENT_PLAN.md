@@ -206,6 +206,7 @@
   - `LocalHistoryStore` 支持 parity 过滤与 burn-in 统计
   - canary 策略面板上线（默认 core、强制 legacy、解除回滚、重置基线）
   - 新增 `src/bootstrap/history-canary-policy.ts` + `js/core_history_canary_policy_runtime.js`，`history_page.js` 委托 canary 策略快照解析、存储键归一化与动作决策/提示文案
+  - 新增 `src/bootstrap/history-adapter-diagnostics.ts` + `js/core_history_adapter_diagnostics_runtime.js`，`history_page.js` 委托 adapter 诊断徽标与文案行模型计算
   - burn-in gate 已支持 sustained window 判定
   - `src/bridge/burnin-gate.ts` + `js/core_burnin_gate_runtime.js` 抽离完成
   - play 页自定义 4 率抽离：`src/bootstrap/custom-spawn.ts` + `js/core_custom_spawn_runtime.js`

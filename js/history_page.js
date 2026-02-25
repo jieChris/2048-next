@@ -28,6 +28,14 @@
   ) {
     throw new Error("CoreHistoryCanaryPolicyRuntime is required");
   }
+  var historyAdapterDiagnosticsRuntime = window.CoreHistoryAdapterDiagnosticsRuntime;
+  if (
+    !historyAdapterDiagnosticsRuntime ||
+    typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeState !== "function" ||
+    typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsState !== "function"
+  ) {
+    throw new Error("CoreHistoryAdapterDiagnosticsRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -87,24 +95,6 @@
     return Number.isFinite(num) ? num : null;
   }
 
-  function formatNullableNumber(value) {
-    var num = toFiniteNumberOrNull(value);
-    return num === null ? "-" : String(num);
-  }
-
-  function formatSignedDelta(value) {
-    var num = toFiniteNumberOrNull(value);
-    if (num === null) return "-";
-    if (num > 0) return "+" + num;
-    return String(num);
-  }
-
-  function formatNullableBoolean(value) {
-    if (value === true) return "是";
-    if (value === false) return "否";
-    return "-";
-  }
-
   function formatAdapterMode(mode) {
     if (mode === "core-adapter") return "core-adapter";
     if (mode === "legacy-bridge") return "legacy-bridge";
@@ -146,11 +136,6 @@
       .replace(/'/g, "&#39;");
   }
 
-  function hasAdapterDiagnostics(item) {
-    if (!item || typeof item !== "object") return false;
-    return isPlainObject(item.adapter_parity_report_v1) || isPlainObject(item.adapter_parity_ab_diff_v1);
-  }
-
   function getAdapterParityStatus(item) {
     if (window.LocalHistoryStore && typeof window.LocalHistoryStore.getAdapterParityStatus === "function") {
       return window.LocalHistoryStore.getAdapterParityStatus(item);
@@ -158,54 +143,24 @@
     return "incomplete";
   }
 
-  function getAdapterBadgeText(status) {
-    if (status === "mismatch") return "A/B 不一致";
-    if (status === "match") return "A/B 一致";
-    return "A/B 样本不足";
-  }
-
-  function getAdapterBadgeClass(status) {
-    if (status === "mismatch") return "history-adapter-badge-mismatch";
-    if (status === "match") return "history-adapter-badge-match";
-    return "history-adapter-badge-incomplete";
-  }
-
   function buildAdapterBadgeHtml(item) {
-    if (!hasAdapterDiagnostics(item)) return "";
     var status = getAdapterParityStatus(item);
-    return "<span class='history-adapter-badge " + getAdapterBadgeClass(status) + "'>" +
-      escapeHtml(getAdapterBadgeText(status)) +
+    var badgeState = historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeState(item, status);
+    if (!badgeState || badgeState.hasBadge !== true) return "";
+    return "<span class='history-adapter-badge " + badgeState.className + "'>" +
+      escapeHtml(badgeState.text) +
       "</span>";
   }
 
   function buildAdapterDiagnosticsHtml(item) {
-    var report = isPlainObject(item && item.adapter_parity_report_v1) ? item.adapter_parity_report_v1 : null;
-    var diff = isPlainObject(item && item.adapter_parity_ab_diff_v1) ? item.adapter_parity_ab_diff_v1 : null;
-    if (!report && !diff) return "";
-
-    var lines = [];
-    if (report) {
-      lines.push(
-        "当前 " + escapeHtml(formatAdapterMode(report.adapterMode)) +
-        " · 快照分数 " + escapeHtml(formatNullableNumber(report.lastScoreFromSnapshot)) +
-        " · undoUsed " + escapeHtml(formatNullableNumber(report.undoUsedFromSnapshot)) +
-        " · scoreDelta " + escapeHtml(formatSignedDelta(report.scoreDelta)) +
-        " · 对齐 " + escapeHtml(formatNullableBoolean(report.isScoreAligned))
-      );
-    }
-    if (diff) {
-      lines.push(
-        "A/B comparable " + escapeHtml(formatNullableBoolean(diff.comparable)) +
-        " · scoreΔ " + escapeHtml(formatSignedDelta(diff.scoreDelta)) +
-        " · undoΔ " + escapeHtml(formatSignedDelta(diff.undoUsedDelta)) +
-        " · overΔ " + escapeHtml(formatSignedDelta(diff.overEventsDelta))
-      );
-    }
+    var diagnosticsState = historyAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsState(item);
+    if (!diagnosticsState || diagnosticsState.hasDiagnostics !== true) return "";
+    var lines = Array.isArray(diagnosticsState.lines) ? diagnosticsState.lines : [];
 
     var html = "<div class='history-adapter-diagnostics'>" +
       "<div class='history-adapter-title'>Adapter 诊断</div>";
     for (var i = 0; i < lines.length; i++) {
-      html += "<div class='history-adapter-line'>" + lines[i] + "</div>";
+      html += "<div class='history-adapter-line'>" + escapeHtml(lines[i]) + "</div>";
     }
     html += "</div>";
     return html;
