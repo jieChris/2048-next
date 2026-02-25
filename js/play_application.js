@@ -62,6 +62,13 @@
   ) {
     throw new Error("CorePlayStartGuardRuntime is required");
   }
+  var playStartupPayloadRuntime = window.CorePlayStartupPayloadRuntime;
+  if (
+    !playStartupPayloadRuntime ||
+    typeof playStartupPayloadRuntime.resolvePlayStartupPayload !== "function"
+  ) {
+    throw new Error("CorePlayStartupPayloadRuntime is required");
+  }
   var storageRuntime = window.CoreStorageRuntime;
   if (
     !storageRuntime ||
@@ -232,6 +239,12 @@
       modeConfig: modeConfig
     });
     setupHeader(modeConfig);
+    var startupPayload = playStartupPayloadRuntime.resolvePlayStartupPayload({
+      modeConfig: modeConfig,
+      inputManagerCtor: KeyboardInputManager,
+      defaultBoardWidth: 4
+    });
+    if (startupPayload) return startupPayload;
     return {
       modeKey: modeConfig.key,
       modeConfig: modeConfig,

@@ -49,6 +49,7 @@
   - 新增 `src/bootstrap/play-challenge-intro-ui.ts` + `js/core_play_challenge_intro_ui_runtime.js`，`play_application.js` 委托挑战简介弹层展示态与绑定去重决策
   - 新增 `src/bootstrap/play-challenge-context.ts` + `js/core_play_challenge_context_runtime.js`，`play_application.js` 委托 `GAME_CHALLENGE_CONTEXT` 组装
   - 新增 `src/bootstrap/play-start-guard.ts` + `js/core_play_start_guard_runtime.js`，`play_application.js` 委托无效模式与自定义模式失败分支的告警/跳转决策
+  - 新增 `src/bootstrap/play-startup-payload.ts` + `js/core_play_startup_payload_runtime.js`，`play_application.js` 委托启动返回载荷组装
   - `play_application.js` 已移除 `mode_key/challenge_id` 本地转发包装函数，入口回调直接消费 `play-query` runtime
   - 新增 `src/bootstrap/play-header.ts` + `js/core_play_header_runtime.js`，`play_application.js` 委托顶部模式简介文案拼装
   - `play-header` 已承接 play 页头渲染状态组装（`resolvePlayHeaderState`），`play_application.js` 不再本地拼装 `data-mode-id/data-ruleset/标题/简介` 字段
