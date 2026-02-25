@@ -3016,6 +3016,43 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.adapterFilterValue).toBe("mismatch");
   });
 
+  test("history page delegates startup orchestration to host runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyStartupHostCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryStartupHostRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "applyHistoryStartup" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyStartupHostCallCount =
+                Number((window as any).__historyStartupHostCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => ({
+      hasRuntime: Boolean((window as any).CoreHistoryStartupHostRuntime?.applyHistoryStartup),
+      startupHostCallCount: Number((window as any).__historyStartupHostCallCount || 0)
+    }));
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.startupHostCallCount).toBeGreaterThan(0);
+  });
+
   test("legacy bootstrap resolveModeConfig delegates to mode-catalog runtime", async ({ page }) => {
     const response = await page.goto("/capped_2048.html", {
       waitUntil: "domcontentloaded"

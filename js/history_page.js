@@ -55,6 +55,7 @@
   var historyToolbarHostRuntime = historyRuntimes.historyToolbarHostRuntime;
   var historyToolbarEventsRuntime = historyRuntimes.historyToolbarEventsRuntime;
   var historyModeFilterRuntime = historyRuntimes.historyModeFilterRuntime;
+  var historyStartupHostRuntime = historyRuntimes.historyStartupHostRuntime;
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -444,13 +445,12 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    if (!window.LocalHistoryStore) {
-      setStatus("本地历史模块未加载", true);
-      return;
-    }
-
-    initModeFilter();
-    bindToolbarActions();
-    loadHistory(true);
+    historyStartupHostRuntime.applyHistoryStartup({
+      localHistoryStore: window.LocalHistoryStore,
+      setStatus: setStatus,
+      initModeFilter: initModeFilter,
+      bindToolbarActions: bindToolbarActions,
+      loadHistory: loadHistory
+    });
   });
 })();

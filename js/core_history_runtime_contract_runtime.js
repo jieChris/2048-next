@@ -265,6 +265,11 @@
       ["resolveHistoryModeFilterOptions"],
       "CoreHistoryModeFilterRuntime is required"
     );
+    var historyStartupHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryStartupHostRuntime,
+      ["applyHistoryStartup"],
+      "CoreHistoryStartupHostRuntime is required"
+    );
 
     return {
       historyCanaryPolicyRuntime: historyCanaryPolicyRuntime,
@@ -295,7 +300,8 @@
       historyToolbarRuntime: historyToolbarRuntime,
       historyToolbarHostRuntime: historyToolbarHostRuntime,
       historyToolbarEventsRuntime: historyToolbarEventsRuntime,
-      historyModeFilterRuntime: historyModeFilterRuntime
+      historyModeFilterRuntime: historyModeFilterRuntime,
+      historyStartupHostRuntime: historyStartupHostRuntime
     };
   }
 

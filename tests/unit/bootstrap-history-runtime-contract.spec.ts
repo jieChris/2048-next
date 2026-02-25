@@ -226,6 +226,12 @@ function createWindowLike() {
     },
     CoreHistoryModeFilterRuntime: {
       resolveHistoryModeFilterOptions: () => []
+    },
+    CoreHistoryStartupHostRuntime: {
+      applyHistoryStartup: () => ({
+        started: true,
+        missingStore: false
+      })
     }
   };
 }
@@ -246,6 +252,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyRecordHostRuntime).toBe(source.CoreHistoryRecordHostRuntime);
     expect(result.historyToolbarHostRuntime).toBe(source.CoreHistoryToolbarHostRuntime);
     expect(result.historyModeFilterRuntime).toBe(source.CoreHistoryModeFilterRuntime);
+    expect(result.historyStartupHostRuntime).toBe(source.CoreHistoryStartupHostRuntime);
   });
 
   it("throws exact error when canary policy runtime is missing", () => {
@@ -347,6 +354,15 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryRecordHostRuntime is required"
+    );
+  });
+
+  it("throws exact error when startup host runtime misses required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryStartupHostRuntime = {};
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryStartupHostRuntime is required"
     );
   });
 });

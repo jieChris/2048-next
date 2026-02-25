@@ -30,6 +30,7 @@ export interface HistoryRuntimeContractWindowLike {
   CoreHistoryToolbarHostRuntime?: unknown;
   CoreHistoryToolbarEventsRuntime?: unknown;
   CoreHistoryModeFilterRuntime?: unknown;
+  CoreHistoryStartupHostRuntime?: unknown;
 }
 
 export interface ResolveHistoryRuntimeContractsResult {
@@ -62,6 +63,7 @@ export interface ResolveHistoryRuntimeContractsResult {
   historyToolbarHostRuntime: AnyRecord;
   historyToolbarEventsRuntime: AnyRecord;
   historyModeFilterRuntime: AnyRecord;
+  historyStartupHostRuntime: AnyRecord;
 }
 
 function hasFunction(target: unknown, key: string): boolean {
@@ -332,6 +334,11 @@ export function resolveHistoryRuntimeContracts(
     ["resolveHistoryModeFilterOptions"],
     "CoreHistoryModeFilterRuntime is required"
   );
+  const historyStartupHostRuntime = requireRuntimeFunctions(
+    source.CoreHistoryStartupHostRuntime,
+    ["applyHistoryStartup"],
+    "CoreHistoryStartupHostRuntime is required"
+  );
 
   return {
     historyCanaryPolicyRuntime,
@@ -362,6 +369,7 @@ export function resolveHistoryRuntimeContracts(
     historyToolbarRuntime,
     historyToolbarHostRuntime,
     historyToolbarEventsRuntime,
-    historyModeFilterRuntime
+    historyModeFilterRuntime,
+    historyStartupHostRuntime
   };
 }
