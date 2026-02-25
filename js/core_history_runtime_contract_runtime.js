@@ -1,0 +1,243 @@
+(function (global) {
+  "use strict";
+
+  if (!global) return;
+
+  function hasFunction(target, key) {
+    if (!target || typeof target !== "object") return false;
+    return typeof target[key] === "function";
+  }
+
+  function requireRuntimeFunctions(target, functionNames, errorMessage) {
+    if (!target || typeof target !== "object") {
+      throw new Error(errorMessage);
+    }
+    for (var i = 0; i < functionNames.length; i += 1) {
+      if (!hasFunction(target, functionNames[i])) {
+        throw new Error(errorMessage);
+      }
+    }
+    return target;
+  }
+
+  function resolveHistoryRuntimeContracts(windowLike) {
+    var source = windowLike || {};
+    var historyCanaryPolicyRuntime = requireRuntimeFunctions(
+      source.CoreHistoryCanaryPolicyRuntime,
+      [
+        "resolveCanaryPolicySnapshot",
+        "resolveStoredPolicyKeys",
+        "resolveCanaryPolicyActionPlan",
+        "resolveCanaryPolicyActionNotice"
+      ],
+      "CoreHistoryCanaryPolicyRuntime is required"
+    );
+    var historyCanaryActionRuntime = requireRuntimeFunctions(
+      source.CoreHistoryCanaryActionRuntime,
+      [
+        "applyHistoryCanaryPolicyAction",
+        "applyHistoryCanaryPolicyActionByName",
+        "resolveHistoryCanaryPolicyUpdateFailureNotice",
+        "resolveHistoryCanaryPolicyApplyFeedbackState",
+        "applyHistoryCanaryPolicyActionByNameWithFeedback",
+        "applyHistoryCanaryPanelAction"
+      ],
+      "CoreHistoryCanaryActionRuntime is required"
+    );
+    var historyCanarySourceRuntime = requireRuntimeFunctions(
+      source.CoreHistoryCanarySourceRuntime,
+      [
+        "resolveHistoryCanaryRuntimePolicy",
+        "resolveHistoryCanaryRuntimeStoredPolicyKeys",
+        "resolveHistoryCanaryPolicySnapshotInput",
+        "resolveHistoryCanaryStoredPolicyInput",
+        "resolveHistoryCanaryPolicyAndStoredState"
+      ],
+      "CoreHistoryCanarySourceRuntime is required"
+    );
+    var historyCanaryPanelRuntime = requireRuntimeFunctions(
+      source.CoreHistoryCanaryPanelRuntime,
+      ["resolveHistoryCanaryPanelHtml", "resolveHistoryCanaryActionName"],
+      "CoreHistoryCanaryPanelRuntime is required"
+    );
+    var historyAdapterDiagnosticsRuntime = requireRuntimeFunctions(
+      source.CoreHistoryAdapterDiagnosticsRuntime,
+      [
+        "resolveHistoryAdapterParityStatus",
+        "resolveHistoryAdapterBadgeState",
+        "resolveHistoryAdapterDiagnosticsState",
+        "resolveHistoryAdapterBadgeHtml",
+        "resolveHistoryAdapterDiagnosticsHtml"
+      ],
+      "CoreHistoryAdapterDiagnosticsRuntime is required"
+    );
+    var historyBoardRuntime = requireRuntimeFunctions(
+      source.CoreHistoryBoardRuntime,
+      ["resolveHistoryFinalBoardHtml"],
+      "CoreHistoryBoardRuntime is required"
+    );
+    var historyBurnInRuntime = requireRuntimeFunctions(
+      source.CoreHistoryBurnInRuntime,
+      [
+        "resolveHistoryBurnInSummarySource",
+        "resolveHistoryBurnInSummaryState",
+        "resolveHistoryBurnInMismatchFocusActionState",
+        "resolveHistoryBurnInPanelHtml"
+      ],
+      "CoreHistoryBurnInRuntime is required"
+    );
+    var historyCanaryViewRuntime = requireRuntimeFunctions(
+      source.CoreHistoryCanaryViewRuntime,
+      ["resolveHistoryCanaryViewState"],
+      "CoreHistoryCanaryViewRuntime is required"
+    );
+    var historySummaryRuntime = requireRuntimeFunctions(
+      source.CoreHistorySummaryRuntime,
+      ["resolveHistorySummaryText"],
+      "CoreHistorySummaryRuntime is required"
+    );
+    var historyStatusRuntime = requireRuntimeFunctions(
+      source.CoreHistoryStatusRuntime,
+      ["resolveHistoryStatusDisplayState"],
+      "CoreHistoryStatusRuntime is required"
+    );
+    var historyExportRuntime = requireRuntimeFunctions(
+      source.CoreHistoryExportRuntime,
+      [
+        "resolveHistoryRecordExportFileName",
+        "collectHistoryRecordIdsForExport",
+        "resolveHistoryExportListRecordsSource",
+        "resolveHistoryMismatchExportRecordIds",
+        "resolveHistorySingleRecordExportState",
+        "downloadHistorySingleRecord",
+        "downloadHistoryAllRecords",
+        "downloadHistoryMismatchRecords"
+      ],
+      "CoreHistoryExportRuntime is required"
+    );
+    var historyQueryRuntime = requireRuntimeFunctions(
+      source.CoreHistoryQueryRuntime,
+      [
+        "resolveHistoryFilterState",
+        "applyHistoryFilterState",
+        "resolveHistoryListQuery",
+        "resolveHistoryListResultSource",
+        "resolveHistoryBurnInQuery",
+        "resolveHistoryPagerState"
+      ],
+      "CoreHistoryQueryRuntime is required"
+    );
+    var historyRecordViewRuntime = requireRuntimeFunctions(
+      source.CoreHistoryRecordViewRuntime,
+      [
+        "resolveHistoryCatalogModeLabel",
+        "resolveHistoryModeText",
+        "resolveHistoryDurationText",
+        "resolveHistoryEndedText",
+        "resolveHistoryRecordHeadState"
+      ],
+      "CoreHistoryRecordViewRuntime is required"
+    );
+    var historyRecordItemRuntime = requireRuntimeFunctions(
+      source.CoreHistoryRecordItemRuntime,
+      ["resolveHistoryRecordItemHtml"],
+      "CoreHistoryRecordItemRuntime is required"
+    );
+    var historyImportRuntime = requireRuntimeFunctions(
+      source.CoreHistoryImportRuntime,
+      [
+        "resolveHistoryImportActionState",
+        "resolveHistoryImportMergeFlag",
+        "resolveHistoryImportSuccessNotice",
+        "resolveHistoryImportErrorNotice",
+        "resolveHistoryImportReadErrorNotice",
+        "executeHistoryImport"
+      ],
+      "CoreHistoryImportRuntime is required"
+    );
+    var historyImportFileRuntime = requireRuntimeFunctions(
+      source.CoreHistoryImportFileRuntime,
+      [
+        "resolveHistoryImportSelectedFile",
+        "resolveHistoryImportPayloadText",
+        "resolveHistoryImportReadEncoding",
+        "resolveHistoryImportInputResetValue"
+      ],
+      "CoreHistoryImportFileRuntime is required"
+    );
+    var historyRecordActionsRuntime = requireRuntimeFunctions(
+      source.CoreHistoryRecordActionsRuntime,
+      [
+        "resolveHistoryReplayHref",
+        "resolveHistoryDeleteActionState",
+        "resolveHistoryDeleteFailureNotice",
+        "resolveHistoryDeleteSuccessNotice",
+        "executeHistoryDeleteRecord"
+      ],
+      "CoreHistoryRecordActionsRuntime is required"
+    );
+    var historyCanaryStorageRuntime = requireRuntimeFunctions(
+      source.CoreHistoryCanaryStorageRuntime,
+      ["readHistoryStorageValue", "writeHistoryStorageValue"],
+      "CoreHistoryCanaryStorageRuntime is required"
+    );
+    var historyToolbarRuntime = requireRuntimeFunctions(
+      source.CoreHistoryToolbarRuntime,
+      [
+        "resolveHistoryExportDateTag",
+        "resolveHistoryExportAllFileName",
+        "resolveHistoryExportAllNotice",
+        "resolveHistoryMismatchExportQuery",
+        "resolveHistoryMismatchExportEmptyNotice",
+        "resolveHistoryMismatchExportFileName",
+        "resolveHistoryMismatchExportSuccessNotice",
+        "resolveHistoryClearAllActionState",
+        "executeHistoryClearAll"
+      ],
+      "CoreHistoryToolbarRuntime is required"
+    );
+    var historyToolbarEventsRuntime = requireRuntimeFunctions(
+      source.CoreHistoryToolbarEventsRuntime,
+      [
+        "resolveHistoryPrevPageState",
+        "resolveHistoryNextPageState",
+        "resolveHistoryFilterReloadControlIds",
+        "shouldHistoryKeywordTriggerReload"
+      ],
+      "CoreHistoryToolbarEventsRuntime is required"
+    );
+    var historyModeFilterRuntime = requireRuntimeFunctions(
+      source.CoreHistoryModeFilterRuntime,
+      ["resolveHistoryModeFilterOptions"],
+      "CoreHistoryModeFilterRuntime is required"
+    );
+
+    return {
+      historyCanaryPolicyRuntime: historyCanaryPolicyRuntime,
+      historyCanaryActionRuntime: historyCanaryActionRuntime,
+      historyCanarySourceRuntime: historyCanarySourceRuntime,
+      historyCanaryPanelRuntime: historyCanaryPanelRuntime,
+      historyAdapterDiagnosticsRuntime: historyAdapterDiagnosticsRuntime,
+      historyBoardRuntime: historyBoardRuntime,
+      historyBurnInRuntime: historyBurnInRuntime,
+      historyCanaryViewRuntime: historyCanaryViewRuntime,
+      historySummaryRuntime: historySummaryRuntime,
+      historyStatusRuntime: historyStatusRuntime,
+      historyExportRuntime: historyExportRuntime,
+      historyQueryRuntime: historyQueryRuntime,
+      historyRecordViewRuntime: historyRecordViewRuntime,
+      historyRecordItemRuntime: historyRecordItemRuntime,
+      historyImportRuntime: historyImportRuntime,
+      historyImportFileRuntime: historyImportFileRuntime,
+      historyRecordActionsRuntime: historyRecordActionsRuntime,
+      historyCanaryStorageRuntime: historyCanaryStorageRuntime,
+      historyToolbarRuntime: historyToolbarRuntime,
+      historyToolbarEventsRuntime: historyToolbarEventsRuntime,
+      historyModeFilterRuntime: historyModeFilterRuntime
+    };
+  }
+
+  global.CoreHistoryRuntimeContractRuntime = global.CoreHistoryRuntimeContractRuntime || {};
+  global.CoreHistoryRuntimeContractRuntime.resolveHistoryRuntimeContracts =
+    resolveHistoryRuntimeContracts;
+})(typeof window !== "undefined" ? window : undefined);

@@ -18,213 +18,35 @@
   var ADAPTER_MODE_STORAGE_KEY = "engine_adapter_mode";
   var ADAPTER_DEFAULT_STORAGE_KEY = "engine_adapter_default_mode";
   var ADAPTER_FORCE_LEGACY_STORAGE_KEY = "engine_adapter_force_legacy";
-  var historyCanaryPolicyRuntime = window.CoreHistoryCanaryPolicyRuntime;
+  var historyRuntimeContractRuntime = window.CoreHistoryRuntimeContractRuntime;
   if (
-    !historyCanaryPolicyRuntime ||
-    typeof historyCanaryPolicyRuntime.resolveCanaryPolicySnapshot !== "function" ||
-    typeof historyCanaryPolicyRuntime.resolveStoredPolicyKeys !== "function" ||
-    typeof historyCanaryPolicyRuntime.resolveCanaryPolicyActionPlan !== "function" ||
-    typeof historyCanaryPolicyRuntime.resolveCanaryPolicyActionNotice !== "function"
+    !historyRuntimeContractRuntime ||
+    typeof historyRuntimeContractRuntime.resolveHistoryRuntimeContracts !== "function"
   ) {
-    throw new Error("CoreHistoryCanaryPolicyRuntime is required");
+    throw new Error("CoreHistoryRuntimeContractRuntime is required");
   }
-  var historyCanaryActionRuntime = window.CoreHistoryCanaryActionRuntime;
-  if (
-    !historyCanaryActionRuntime ||
-    typeof historyCanaryActionRuntime.applyHistoryCanaryPolicyAction !== "function" ||
-    typeof historyCanaryActionRuntime.applyHistoryCanaryPolicyActionByName !== "function" ||
-    typeof historyCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice !== "function" ||
-    typeof historyCanaryActionRuntime.resolveHistoryCanaryPolicyApplyFeedbackState !== "function" ||
-    typeof historyCanaryActionRuntime.applyHistoryCanaryPolicyActionByNameWithFeedback !== "function" ||
-    typeof historyCanaryActionRuntime.applyHistoryCanaryPanelAction !== "function"
-  ) {
-    throw new Error("CoreHistoryCanaryActionRuntime is required");
-  }
-  var historyCanarySourceRuntime = window.CoreHistoryCanarySourceRuntime;
-  if (
-    !historyCanarySourceRuntime ||
-    typeof historyCanarySourceRuntime.resolveHistoryCanaryRuntimePolicy !== "function" ||
-    typeof historyCanarySourceRuntime.resolveHistoryCanaryRuntimeStoredPolicyKeys !== "function" ||
-    typeof historyCanarySourceRuntime.resolveHistoryCanaryPolicySnapshotInput !== "function" ||
-    typeof historyCanarySourceRuntime.resolveHistoryCanaryStoredPolicyInput !== "function" ||
-    typeof historyCanarySourceRuntime.resolveHistoryCanaryPolicyAndStoredState !== "function"
-  ) {
-    throw new Error("CoreHistoryCanarySourceRuntime is required");
-  }
-  var historyCanaryPanelRuntime = window.CoreHistoryCanaryPanelRuntime;
-  if (
-    !historyCanaryPanelRuntime ||
-    typeof historyCanaryPanelRuntime.resolveHistoryCanaryPanelHtml !== "function" ||
-    typeof historyCanaryPanelRuntime.resolveHistoryCanaryActionName !== "function"
-  ) {
-    throw new Error("CoreHistoryCanaryPanelRuntime is required");
-  }
-  var historyAdapterDiagnosticsRuntime = window.CoreHistoryAdapterDiagnosticsRuntime;
-  if (
-    !historyAdapterDiagnosticsRuntime ||
-    typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterParityStatus !== "function" ||
-    typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeState !== "function" ||
-    typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsState !== "function" ||
-    typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeHtml !== "function" ||
-    typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsHtml !== "function"
-  ) {
-    throw new Error("CoreHistoryAdapterDiagnosticsRuntime is required");
-  }
-  var historyBoardRuntime = window.CoreHistoryBoardRuntime;
-  if (
-    !historyBoardRuntime ||
-    typeof historyBoardRuntime.resolveHistoryFinalBoardHtml !== "function"
-  ) {
-    throw new Error("CoreHistoryBoardRuntime is required");
-  }
-  var historyBurnInRuntime = window.CoreHistoryBurnInRuntime;
-  if (
-    !historyBurnInRuntime ||
-    typeof historyBurnInRuntime.resolveHistoryBurnInSummarySource !== "function" ||
-    typeof historyBurnInRuntime.resolveHistoryBurnInSummaryState !== "function" ||
-    typeof historyBurnInRuntime.resolveHistoryBurnInMismatchFocusActionState !== "function" ||
-    typeof historyBurnInRuntime.resolveHistoryBurnInPanelHtml !== "function"
-  ) {
-    throw new Error("CoreHistoryBurnInRuntime is required");
-  }
-  var historyCanaryViewRuntime = window.CoreHistoryCanaryViewRuntime;
-  if (
-    !historyCanaryViewRuntime ||
-    typeof historyCanaryViewRuntime.resolveHistoryCanaryViewState !== "function"
-  ) {
-    throw new Error("CoreHistoryCanaryViewRuntime is required");
-  }
-  var historySummaryRuntime = window.CoreHistorySummaryRuntime;
-  if (
-    !historySummaryRuntime ||
-    typeof historySummaryRuntime.resolveHistorySummaryText !== "function"
-  ) {
-    throw new Error("CoreHistorySummaryRuntime is required");
-  }
-  var historyStatusRuntime = window.CoreHistoryStatusRuntime;
-  if (
-    !historyStatusRuntime ||
-    typeof historyStatusRuntime.resolveHistoryStatusDisplayState !== "function"
-  ) {
-    throw new Error("CoreHistoryStatusRuntime is required");
-  }
-  var historyExportRuntime = window.CoreHistoryExportRuntime;
-  if (
-    !historyExportRuntime ||
-    typeof historyExportRuntime.resolveHistoryRecordExportFileName !== "function" ||
-    typeof historyExportRuntime.collectHistoryRecordIdsForExport !== "function" ||
-    typeof historyExportRuntime.resolveHistoryExportListRecordsSource !== "function" ||
-    typeof historyExportRuntime.resolveHistoryMismatchExportRecordIds !== "function" ||
-    typeof historyExportRuntime.resolveHistorySingleRecordExportState !== "function" ||
-    typeof historyExportRuntime.downloadHistorySingleRecord !== "function" ||
-    typeof historyExportRuntime.downloadHistoryAllRecords !== "function" ||
-    typeof historyExportRuntime.downloadHistoryMismatchRecords !== "function"
-  ) {
-    throw new Error("CoreHistoryExportRuntime is required");
-  }
-  var historyQueryRuntime = window.CoreHistoryQueryRuntime;
-  if (
-    !historyQueryRuntime ||
-    typeof historyQueryRuntime.resolveHistoryFilterState !== "function" ||
-    typeof historyQueryRuntime.applyHistoryFilterState !== "function" ||
-    typeof historyQueryRuntime.resolveHistoryListQuery !== "function" ||
-    typeof historyQueryRuntime.resolveHistoryListResultSource !== "function" ||
-    typeof historyQueryRuntime.resolveHistoryBurnInQuery !== "function" ||
-    typeof historyQueryRuntime.resolveHistoryPagerState !== "function"
-  ) {
-    throw new Error("CoreHistoryQueryRuntime is required");
-  }
-  var historyRecordViewRuntime = window.CoreHistoryRecordViewRuntime;
-  if (
-    !historyRecordViewRuntime ||
-    typeof historyRecordViewRuntime.resolveHistoryCatalogModeLabel !== "function" ||
-    typeof historyRecordViewRuntime.resolveHistoryModeText !== "function" ||
-    typeof historyRecordViewRuntime.resolveHistoryDurationText !== "function" ||
-    typeof historyRecordViewRuntime.resolveHistoryEndedText !== "function" ||
-    typeof historyRecordViewRuntime.resolveHistoryRecordHeadState !== "function"
-  ) {
-    throw new Error("CoreHistoryRecordViewRuntime is required");
-  }
-  var historyRecordItemRuntime = window.CoreHistoryRecordItemRuntime;
-  if (
-    !historyRecordItemRuntime ||
-    typeof historyRecordItemRuntime.resolveHistoryRecordItemHtml !== "function"
-  ) {
-    throw new Error("CoreHistoryRecordItemRuntime is required");
-  }
-  var historyImportRuntime = window.CoreHistoryImportRuntime;
-  if (
-    !historyImportRuntime ||
-    typeof historyImportRuntime.resolveHistoryImportActionState !== "function" ||
-    typeof historyImportRuntime.resolveHistoryImportMergeFlag !== "function" ||
-    typeof historyImportRuntime.resolveHistoryImportSuccessNotice !== "function" ||
-    typeof historyImportRuntime.resolveHistoryImportErrorNotice !== "function" ||
-    typeof historyImportRuntime.resolveHistoryImportReadErrorNotice !== "function" ||
-    typeof historyImportRuntime.executeHistoryImport !== "function"
-  ) {
-    throw new Error("CoreHistoryImportRuntime is required");
-  }
-  var historyImportFileRuntime = window.CoreHistoryImportFileRuntime;
-  if (
-    !historyImportFileRuntime ||
-    typeof historyImportFileRuntime.resolveHistoryImportSelectedFile !== "function" ||
-    typeof historyImportFileRuntime.resolveHistoryImportPayloadText !== "function" ||
-    typeof historyImportFileRuntime.resolveHistoryImportReadEncoding !== "function" ||
-    typeof historyImportFileRuntime.resolveHistoryImportInputResetValue !== "function"
-  ) {
-    throw new Error("CoreHistoryImportFileRuntime is required");
-  }
-  var historyRecordActionsRuntime = window.CoreHistoryRecordActionsRuntime;
-  if (
-    !historyRecordActionsRuntime ||
-    typeof historyRecordActionsRuntime.resolveHistoryReplayHref !== "function" ||
-    typeof historyRecordActionsRuntime.resolveHistoryDeleteActionState !== "function" ||
-    typeof historyRecordActionsRuntime.resolveHistoryDeleteFailureNotice !== "function" ||
-    typeof historyRecordActionsRuntime.resolveHistoryDeleteSuccessNotice !== "function" ||
-    typeof historyRecordActionsRuntime.executeHistoryDeleteRecord !== "function"
-  ) {
-    throw new Error("CoreHistoryRecordActionsRuntime is required");
-  }
-  var historyCanaryStorageRuntime = window.CoreHistoryCanaryStorageRuntime;
-  if (
-    !historyCanaryStorageRuntime ||
-    typeof historyCanaryStorageRuntime.readHistoryStorageValue !== "function" ||
-    typeof historyCanaryStorageRuntime.writeHistoryStorageValue !== "function"
-  ) {
-    throw new Error("CoreHistoryCanaryStorageRuntime is required");
-  }
-  var historyToolbarRuntime = window.CoreHistoryToolbarRuntime;
-  if (
-    !historyToolbarRuntime ||
-    typeof historyToolbarRuntime.resolveHistoryExportDateTag !== "function" ||
-    typeof historyToolbarRuntime.resolveHistoryExportAllFileName !== "function" ||
-    typeof historyToolbarRuntime.resolveHistoryExportAllNotice !== "function" ||
-    typeof historyToolbarRuntime.resolveHistoryMismatchExportQuery !== "function" ||
-    typeof historyToolbarRuntime.resolveHistoryMismatchExportEmptyNotice !== "function" ||
-    typeof historyToolbarRuntime.resolveHistoryMismatchExportFileName !== "function" ||
-    typeof historyToolbarRuntime.resolveHistoryMismatchExportSuccessNotice !== "function" ||
-    typeof historyToolbarRuntime.resolveHistoryClearAllActionState !== "function" ||
-    typeof historyToolbarRuntime.executeHistoryClearAll !== "function"
-  ) {
-    throw new Error("CoreHistoryToolbarRuntime is required");
-  }
-  var historyToolbarEventsRuntime = window.CoreHistoryToolbarEventsRuntime;
-  if (
-    !historyToolbarEventsRuntime ||
-    typeof historyToolbarEventsRuntime.resolveHistoryPrevPageState !== "function" ||
-    typeof historyToolbarEventsRuntime.resolveHistoryNextPageState !== "function" ||
-    typeof historyToolbarEventsRuntime.resolveHistoryFilterReloadControlIds !== "function" ||
-    typeof historyToolbarEventsRuntime.shouldHistoryKeywordTriggerReload !== "function"
-  ) {
-    throw new Error("CoreHistoryToolbarEventsRuntime is required");
-  }
-  var historyModeFilterRuntime = window.CoreHistoryModeFilterRuntime;
-  if (
-    !historyModeFilterRuntime ||
-    typeof historyModeFilterRuntime.resolveHistoryModeFilterOptions !== "function"
-  ) {
-    throw new Error("CoreHistoryModeFilterRuntime is required");
-  }
+  var historyRuntimes = historyRuntimeContractRuntime.resolveHistoryRuntimeContracts(window);
+  var historyCanaryPolicyRuntime = historyRuntimes.historyCanaryPolicyRuntime;
+  var historyCanaryActionRuntime = historyRuntimes.historyCanaryActionRuntime;
+  var historyCanarySourceRuntime = historyRuntimes.historyCanarySourceRuntime;
+  var historyCanaryPanelRuntime = historyRuntimes.historyCanaryPanelRuntime;
+  var historyAdapterDiagnosticsRuntime = historyRuntimes.historyAdapterDiagnosticsRuntime;
+  var historyBoardRuntime = historyRuntimes.historyBoardRuntime;
+  var historyBurnInRuntime = historyRuntimes.historyBurnInRuntime;
+  var historyCanaryViewRuntime = historyRuntimes.historyCanaryViewRuntime;
+  var historySummaryRuntime = historyRuntimes.historySummaryRuntime;
+  var historyStatusRuntime = historyRuntimes.historyStatusRuntime;
+  var historyExportRuntime = historyRuntimes.historyExportRuntime;
+  var historyQueryRuntime = historyRuntimes.historyQueryRuntime;
+  var historyRecordViewRuntime = historyRuntimes.historyRecordViewRuntime;
+  var historyRecordItemRuntime = historyRuntimes.historyRecordItemRuntime;
+  var historyImportRuntime = historyRuntimes.historyImportRuntime;
+  var historyImportFileRuntime = historyRuntimes.historyImportFileRuntime;
+  var historyRecordActionsRuntime = historyRuntimes.historyRecordActionsRuntime;
+  var historyCanaryStorageRuntime = historyRuntimes.historyCanaryStorageRuntime;
+  var historyToolbarRuntime = historyRuntimes.historyToolbarRuntime;
+  var historyToolbarEventsRuntime = historyRuntimes.historyToolbarEventsRuntime;
+  var historyModeFilterRuntime = historyRuntimes.historyModeFilterRuntime;
 
   function setStatus(text, isError) {
     var status = el("history-status");
