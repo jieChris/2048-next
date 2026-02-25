@@ -55,6 +55,13 @@
   ) {
     throw new Error("CorePlayChallengeContextRuntime is required");
   }
+  var playStartGuardRuntime = window.CorePlayStartGuardRuntime;
+  if (
+    !playStartGuardRuntime ||
+    typeof playStartGuardRuntime.resolvePlayStartGuardState !== "function"
+  ) {
+    throw new Error("CorePlayStartGuardRuntime is required");
+  }
   var storageRuntime = window.CoreStorageRuntime;
   if (
     !storageRuntime ||
@@ -194,15 +201,28 @@
     var challengeId = entryPlan.challengeId;
     var modeConfig = entryPlan.modeConfig;
 
-    if (!modeConfig) {
-      alert("无效模式，已回退到标准模式");
-      window.location.href = entryPlan.redirectUrl || "play.html?mode_key=standard_4x4_pow2_no_undo";
+    var guardAfterEntry = playStartGuardRuntime.resolvePlayStartGuardState({
+      entryModeConfig: modeConfig,
+      resolvedModeConfig: modeConfig,
+      invalidModeRedirectUrl: "play.html?mode_key=standard_4x4_pow2_no_undo",
+      entryRedirectUrl: entryPlan.redirectUrl
+    });
+    if (guardAfterEntry.shouldAbort) {
+      if (guardAfterEntry.shouldAlert) {
+        alert(guardAfterEntry.alertMessage || "无效模式，已回退到标准模式");
+      }
+      window.location.href =
+        guardAfterEntry.redirectUrl || "play.html?mode_key=standard_4x4_pow2_no_undo";
       return null;
     }
 
     modeConfig = resolveCustomSpawnModeConfig(modeKey, modeConfig);
-    if (!modeConfig) {
-      window.location.href = "modes.html";
+    var guardAfterResolve = playStartGuardRuntime.resolvePlayStartGuardState({
+      entryModeConfig: true,
+      resolvedModeConfig: modeConfig
+    });
+    if (guardAfterResolve.shouldAbort) {
+      window.location.href = guardAfterResolve.redirectUrl || "modes.html";
       return null;
     }
 
