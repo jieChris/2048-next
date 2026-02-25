@@ -207,6 +207,7 @@
   - canary 策略面板上线（默认 core、强制 legacy、解除回滚、重置基线）
   - 新增 `src/bootstrap/history-canary-storage.ts` + `js/core_history_canary_storage_runtime.js`，`history_page.js` 委托 canary storage 读写回退（localStorage get/set/remove）逻辑
   - 新增 `src/bootstrap/history-canary-action.ts` + `js/core_history_canary_action_runtime.js`，`history_page.js` 委托 canary 策略执行器（按 action plan 写 default/forceLegacy）与应用反馈状态（成功/失败提示文案、reload 判定）
+  - `history-canary-action` 已继续承接按动作名执行策略（`applyHistoryCanaryPolicyActionByName`），`history_page.js` 不再本地拼装 canary actionPlan
   - 新增 `src/bootstrap/history-canary-source.ts` + `js/core_history_canary_source_runtime.js`，`history_page.js` 委托 LegacyAdapterRuntime 的 canary policy/stored-keys 读取与对象归一化
   - `history-canary-source` 已继续承接 canary snapshot/stored 输入组装（`resolveHistoryCanaryPolicySnapshotInput`/`resolveHistoryCanaryStoredPolicyInput`），`history_page.js` 不再本地拼装 policy 输入
   - 新增 `src/bootstrap/history-canary-panel.ts` + `js/core_history_canary_panel_runtime.js`，`history_page.js` 委托 canary 面板 HTML 渲染与 action 名称解析

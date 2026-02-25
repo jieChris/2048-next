@@ -767,15 +767,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("history page delegates canary policy apply action to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
-      (window as any).__historyCanaryApplyActionCallCount = 0;
+      (window as any).__historyCanaryApplyByNameCallCount = 0;
       (window as any).__historyCanaryApplyFeedbackCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryCanaryActionRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
-          if (prop === "applyHistoryCanaryPolicyAction" && typeof value === "function") {
+          if (prop === "applyHistoryCanaryPolicyActionByName" && typeof value === "function") {
             proxyTarget[prop] = function (input: unknown) {
-              (window as any).__historyCanaryApplyActionCallCount =
-                Number((window as any).__historyCanaryApplyActionCallCount || 0) + 1;
+              (window as any).__historyCanaryApplyByNameCallCount =
+                Number((window as any).__historyCanaryApplyByNameCallCount || 0) + 1;
               return (value as (arg: unknown) => unknown)(input);
             };
             return true;
@@ -809,15 +809,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
       if (actionButton && typeof actionButton.click === "function") actionButton.click();
       return {
         hasRuntime:
-          Boolean((window as any).CoreHistoryCanaryActionRuntime?.applyHistoryCanaryPolicyAction) &&
+          Boolean((window as any).CoreHistoryCanaryActionRuntime?.applyHistoryCanaryPolicyActionByName) &&
           Boolean((window as any).CoreHistoryCanaryActionRuntime?.resolveHistoryCanaryPolicyApplyFeedbackState),
-        applyActionCallCount: Number((window as any).__historyCanaryApplyActionCallCount || 0),
+        applyByNameCallCount: Number((window as any).__historyCanaryApplyByNameCallCount || 0),
         applyFeedbackCallCount: Number((window as any).__historyCanaryApplyFeedbackCallCount || 0)
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
-    expect(snapshot.applyActionCallCount).toBeGreaterThan(0);
+    expect(snapshot.applyByNameCallCount).toBeGreaterThan(0);
     expect(snapshot.applyFeedbackCallCount).toBeGreaterThan(0);
   });
 

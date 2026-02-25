@@ -18,6 +18,15 @@ export interface ApplyHistoryCanaryPolicyActionInput {
   forceLegacyStorageKey: unknown;
 }
 
+export interface ApplyHistoryCanaryPolicyActionByNameInput {
+  actionName: unknown;
+  resolveActionPlan: unknown;
+  runtime: unknown;
+  writeStorageValue: unknown;
+  defaultModeStorageKey: unknown;
+  forceLegacyStorageKey: unknown;
+}
+
 export interface HistoryCanaryPolicyApplyFeedbackInput {
   ok: unknown;
   successNotice: unknown;
@@ -48,6 +57,13 @@ function asStorageWriter(value: unknown): ((key: string, raw: unknown) => boolea
 
 function asStorageKey(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+function asActionPlanResolver(
+  value: unknown
+): ((actionName: string) => unknown) | null {
+  if (typeof value !== "function") return null;
+  return value as (actionName: string) => unknown;
 }
 
 function writeDefaultMode(
@@ -110,6 +126,23 @@ export function applyHistoryCanaryPolicyAction(input: unknown): boolean {
   }
 
   return success;
+}
+
+export function applyHistoryCanaryPolicyActionByName(input: unknown): boolean {
+  const payload =
+    input && typeof input === "object" ? (input as ApplyHistoryCanaryPolicyActionByNameInput) : null;
+  const resolveActionPlan = asActionPlanResolver(payload && payload.resolveActionPlan);
+  if (!resolveActionPlan) return false;
+
+  const actionName = String((payload && payload.actionName) || "");
+  const actionPlan = resolveActionPlan(actionName);
+  return applyHistoryCanaryPolicyAction({
+    actionPlan,
+    runtime: payload && payload.runtime,
+    writeStorageValue: payload && payload.writeStorageValue,
+    defaultModeStorageKey: payload && payload.defaultModeStorageKey,
+    forceLegacyStorageKey: payload && payload.forceLegacyStorageKey
+  });
 }
 
 export function resolveHistoryCanaryPolicyUpdateFailureNotice(): string {

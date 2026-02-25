@@ -32,6 +32,7 @@
   if (
     !historyCanaryActionRuntime ||
     typeof historyCanaryActionRuntime.applyHistoryCanaryPolicyAction !== "function" ||
+    typeof historyCanaryActionRuntime.applyHistoryCanaryPolicyActionByName !== "function" ||
     typeof historyCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice !== "function" ||
     typeof historyCanaryActionRuntime.resolveHistoryCanaryPolicyApplyFeedbackState !== "function"
   ) {
@@ -270,17 +271,6 @@
     }
   }
 
-  function runCanaryPolicyAction(actionName) {
-    var actionPlan = historyCanaryPolicyRuntime.resolveCanaryPolicyActionPlan(actionName || "");
-    return historyCanaryActionRuntime.applyHistoryCanaryPolicyAction({
-      actionPlan: actionPlan,
-      runtime: window.LegacyAdapterRuntime,
-      writeStorageValue: setStorageValue,
-      defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
-      forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
-    });
-  }
-
   function renderCanaryPolicy() {
     var panel = el("history-canary-policy");
     if (!panel) return;
@@ -310,7 +300,14 @@
       buttons[i].addEventListener("click", function (event) {
         var target = event.currentTarget;
         var action = historyCanaryPanelRuntime.resolveHistoryCanaryActionName(target);
-        var ok = runCanaryPolicyAction(action || "");
+        var ok = historyCanaryActionRuntime.applyHistoryCanaryPolicyActionByName({
+          actionName: action || "",
+          resolveActionPlan: historyCanaryPolicyRuntime.resolveCanaryPolicyActionPlan,
+          runtime: window.LegacyAdapterRuntime,
+          writeStorageValue: setStorageValue,
+          defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
+          forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
+        });
         var feedbackState = historyCanaryActionRuntime.resolveHistoryCanaryPolicyApplyFeedbackState({
           ok: ok,
           successNotice: historyCanaryPolicyRuntime.resolveCanaryPolicyActionNotice(action || ""),

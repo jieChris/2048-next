@@ -21,6 +21,10 @@
     return typeof value === "string" ? value : "";
   }
 
+  function asActionPlanResolver(value) {
+    return typeof value === "function" ? value : null;
+  }
+
   function writeDefaultMode(runtime, storageWriter, storageKey, mode) {
     if (runtime && typeof runtime.setStoredAdapterDefaultMode === "function") {
       return runtime.setStoredAdapterDefaultMode(mode);
@@ -69,6 +73,22 @@
     return success;
   }
 
+  function applyHistoryCanaryPolicyActionByName(input) {
+    var payload = input && typeof input === "object" ? input : null;
+    var resolveActionPlan = asActionPlanResolver(payload && payload.resolveActionPlan);
+    if (!resolveActionPlan) return false;
+
+    var actionName = String((payload && payload.actionName) || "");
+    var actionPlan = resolveActionPlan(actionName);
+    return applyHistoryCanaryPolicyAction({
+      actionPlan: actionPlan,
+      runtime: payload && payload.runtime,
+      writeStorageValue: payload && payload.writeStorageValue,
+      defaultModeStorageKey: payload && payload.defaultModeStorageKey,
+      forceLegacyStorageKey: payload && payload.forceLegacyStorageKey
+    });
+  }
+
   function resolveHistoryCanaryPolicyUpdateFailureNotice() {
     return "策略更新失败：请检查浏览器本地存储权限";
   }
@@ -97,6 +117,8 @@
 
   global.CoreHistoryCanaryActionRuntime = global.CoreHistoryCanaryActionRuntime || {};
   global.CoreHistoryCanaryActionRuntime.applyHistoryCanaryPolicyAction = applyHistoryCanaryPolicyAction;
+  global.CoreHistoryCanaryActionRuntime.applyHistoryCanaryPolicyActionByName =
+    applyHistoryCanaryPolicyActionByName;
   global.CoreHistoryCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice =
     resolveHistoryCanaryPolicyUpdateFailureNotice;
   global.CoreHistoryCanaryActionRuntime.resolveHistoryCanaryPolicyApplyFeedbackState =

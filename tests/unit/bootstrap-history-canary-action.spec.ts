@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyHistoryCanaryPolicyActionByName,
   applyHistoryCanaryPolicyAction,
   resolveHistoryCanaryPolicyApplyFeedbackState,
   resolveHistoryCanaryPolicyUpdateFailureNotice
@@ -70,6 +71,47 @@ describe("bootstrap history canary action", () => {
       { key: "engine_adapter_default_mode", value: null },
       { key: "engine_adapter_force_legacy", value: "1" }
     ]);
+  });
+
+  it("applies by action name when resolver is available", () => {
+    const calls: string[] = [];
+    const runtime = {
+      setStoredAdapterDefaultMode(mode: unknown) {
+        calls.push("set:" + String(mode));
+        return true;
+      },
+      setStoredForceLegacy(enabled: boolean) {
+        calls.push("force:" + String(enabled));
+        return true;
+      }
+    };
+    const ok = applyHistoryCanaryPolicyActionByName({
+      actionName: "force_legacy_on",
+      resolveActionPlan(name: string) {
+        if (name !== "force_legacy_on") return { isSupported: false };
+        return { isSupported: true, defaultMode: "legacy-bridge", forceLegacy: true };
+      },
+      runtime,
+      writeStorageValue: () => false,
+      defaultModeStorageKey: "engine_adapter_default_mode",
+      forceLegacyStorageKey: "engine_adapter_force_legacy"
+    });
+
+    expect(ok).toBe(true);
+    expect(calls).toEqual(["set:legacy-bridge", "force:true"]);
+  });
+
+  it("returns false when apply-by-name resolver is missing", () => {
+    expect(
+      applyHistoryCanaryPolicyActionByName({
+        actionName: "reset_policy",
+        resolveActionPlan: null,
+        runtime: {},
+        writeStorageValue: () => true,
+        defaultModeStorageKey: "engine_adapter_default_mode",
+        forceLegacyStorageKey: "engine_adapter_force_legacy"
+      })
+    ).toBe(false);
   });
 
   it("provides failure notice text", () => {
