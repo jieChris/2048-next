@@ -849,6 +849,61 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.firstItemText).toContain("分数:");
   });
 
+  test("history page delegates import action decisions to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyImportActionCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryImportRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryImportActionState" && typeof value === "function") {
+            proxyTarget[prop] = function (action: unknown) {
+              (window as any).__historyImportActionCallCount =
+                Number((window as any).__historyImportActionCallCount || 0) + 1;
+              return (value as (name: unknown) => unknown)(action);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+
+      const originalClick = HTMLInputElement.prototype.click;
+      HTMLInputElement.prototype.click = function () {
+        if (this && this.type === "file") return;
+        return originalClick.apply(this);
+      };
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    const snapshot = await page.evaluate(() => {
+      const oldConfirm = window.confirm;
+      window.confirm = () => false;
+
+      const mergeBtn = document.querySelector("#history-import-btn") as HTMLButtonElement | null;
+      if (mergeBtn && typeof mergeBtn.click === "function") mergeBtn.click();
+
+      const replaceBtn = document.querySelector("#history-import-replace-btn") as HTMLButtonElement | null;
+      if (replaceBtn && typeof replaceBtn.click === "function") replaceBtn.click();
+
+      window.confirm = oldConfirm;
+      return {
+        hasRuntime: Boolean((window as any).CoreHistoryImportRuntime?.resolveHistoryImportActionState),
+        actionCallCount: Number((window as any).__historyImportActionCallCount || 0)
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.actionCallCount).toBeGreaterThan(1);
+  });
+
   test("history page delegates mismatch export id collection to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyExportCollectCallCount = 0;

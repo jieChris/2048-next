@@ -85,6 +85,17 @@
   ) {
     throw new Error("CoreHistoryRecordViewRuntime is required");
   }
+  var historyImportRuntime = window.CoreHistoryImportRuntime;
+  if (
+    !historyImportRuntime ||
+    typeof historyImportRuntime.resolveHistoryImportActionState !== "function" ||
+    typeof historyImportRuntime.resolveHistoryImportMergeFlag !== "function" ||
+    typeof historyImportRuntime.resolveHistoryImportSuccessNotice !== "function" ||
+    typeof historyImportRuntime.resolveHistoryImportErrorNotice !== "function" ||
+    typeof historyImportRuntime.resolveHistoryImportReadErrorNotice !== "function"
+  ) {
+    throw new Error("CoreHistoryImportRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -619,13 +630,14 @@
     if (importBtn && importInput) {
       var importMode = "merge";
       importBtn.addEventListener("click", function () {
-        importMode = "merge";
+        importMode = historyImportRuntime.resolveHistoryImportActionState("merge").mode;
         importInput.click();
       });
       if (importReplaceBtn) {
         importReplaceBtn.addEventListener("click", function () {
-          if (!window.confirm("导入并替换会清空当前本地历史后再导入，是否继续？")) return;
-          importMode = "replace";
+          var actionState = historyImportRuntime.resolveHistoryImportActionState("replace");
+          if (actionState.requiresConfirm && !window.confirm(actionState.confirmMessage)) return;
+          importMode = actionState.mode;
           importInput.click();
         });
       }
@@ -635,16 +647,16 @@
         var reader = new FileReader();
         reader.onload = function () {
           try {
-            var merge = importMode !== "replace";
+            var merge = historyImportRuntime.resolveHistoryImportMergeFlag(importMode);
             var result = window.LocalHistoryStore.importRecords(String(reader.result || ""), { merge: merge });
-            setStatus("导入成功：新增 " + result.imported + " 条，覆盖 " + result.replaced + " 条。", false);
+            setStatus(historyImportRuntime.resolveHistoryImportSuccessNotice(result), false);
             loadHistory(true);
           } catch (error) {
-            setStatus("导入失败: " + (error && error.message ? error.message : "unknown"), true);
+            setStatus(historyImportRuntime.resolveHistoryImportErrorNotice(error), true);
           }
         };
         reader.onerror = function () {
-          setStatus("读取文件失败", true);
+          setStatus(historyImportRuntime.resolveHistoryImportReadErrorNotice(), true);
         };
         reader.readAsText(file, "utf-8");
         importInput.value = "";
