@@ -44,6 +44,13 @@
   ) {
     throw new Error("CoreHistoryAdapterDiagnosticsRuntime is required");
   }
+  var historyBoardRuntime = window.CoreHistoryBoardRuntime;
+  if (
+    !historyBoardRuntime ||
+    typeof historyBoardRuntime.resolveHistoryFinalBoardHtml !== "function"
+  ) {
+    throw new Error("CoreHistoryBoardRuntime is required");
+  }
   var historyBurnInRuntime = window.CoreHistoryBurnInRuntime;
   if (
     !historyBurnInRuntime ||
@@ -145,24 +152,7 @@
   }
 
   function boardToHtml(board, width, height) {
-    if (!Array.isArray(board) || !board.length) return "";
-    var h = Number.isInteger(height) && height > 0 ? height : board.length;
-    var w = Number.isInteger(width) && width > 0 ? width : (Array.isArray(board[0]) ? board[0].length : 0);
-    if (w <= 0 || h <= 0) return "";
-
-    var style = "grid-template-columns: repeat(" + w + ", 48px); grid-template-rows: repeat(" + h + ", 48px);";
-    var html = "<div class='final-board-grid' style='" + style + "'>";
-    for (var y = 0; y < h; y++) {
-      var row = Array.isArray(board[y]) ? board[y] : [];
-      for (var x = 0; x < w; x++) {
-        var v = row[x] || 0;
-        var valueClass = v === 0 ? "final-board-cell-empty" : ("final-board-cell-v-" + v);
-        var superClass = v > 2048 ? " final-board-cell-super" : "";
-        html += "<div class='final-board-cell " + valueClass + superClass + "'>" + (v === 0 ? "" : v) + "</div>";
-      }
-    }
-    html += "</div>";
-    return html;
+    return historyBoardRuntime.resolveHistoryFinalBoardHtml(board, width, height);
   }
 
   function getCatalogModeLabel(item) {
