@@ -92,6 +92,18 @@
     };
   }
 
+  function resolveHistoryBurnInMismatchFocusActionState() {
+    return {
+      shouldApply: true,
+      nextAdapterParityFilter: "mismatch",
+      nextSelectValue: "mismatch",
+      shouldReload: true,
+      resetPage: true
+    };
+  }
+
   global.CoreHistoryBurnInRuntime = global.CoreHistoryBurnInRuntime || {};
   global.CoreHistoryBurnInRuntime.resolveHistoryBurnInSummaryState = resolveHistoryBurnInSummaryState;
+  global.CoreHistoryBurnInRuntime.resolveHistoryBurnInMismatchFocusActionState =
+    resolveHistoryBurnInMismatchFocusActionState;
 })(typeof window !== "undefined" ? window : undefined);

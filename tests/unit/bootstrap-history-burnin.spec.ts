@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveHistoryBurnInSummaryState } from "../../src/bootstrap/history-burnin";
+import {
+  resolveHistoryBurnInMismatchFocusActionState,
+  resolveHistoryBurnInSummaryState
+} from "../../src/bootstrap/history-burnin";
 
 describe("bootstrap history burn-in", () => {
   it("returns empty state for invalid summary input", () => {
@@ -79,5 +82,15 @@ describe("bootstrap history burn-in", () => {
     expect(state.mismatchActionEnabled).toBe(false);
     expect(state.mismatchRateText).toBe("-");
     expect(state.maxMismatchRateText).toBe("-");
+  });
+
+  it("returns mismatch focus action state", () => {
+    expect(resolveHistoryBurnInMismatchFocusActionState()).toEqual({
+      shouldApply: true,
+      nextAdapterParityFilter: "mismatch",
+      nextSelectValue: "mismatch",
+      shouldReload: true,
+      resetPage: true
+    });
   });
 });

@@ -70,7 +70,8 @@
   var historyBurnInRuntime = window.CoreHistoryBurnInRuntime;
   if (
     !historyBurnInRuntime ||
-    typeof historyBurnInRuntime.resolveHistoryBurnInSummaryState !== "function"
+    typeof historyBurnInRuntime.resolveHistoryBurnInSummaryState !== "function" ||
+    typeof historyBurnInRuntime.resolveHistoryBurnInMismatchFocusActionState !== "function"
   ) {
     throw new Error("CoreHistoryBurnInRuntime is required");
   }
@@ -314,10 +315,12 @@
     var mismatchBtn = panel.querySelector(".history-burnin-focus-mismatch");
     if (mismatchBtn) {
       mismatchBtn.addEventListener("click", function () {
+        var actionState = historyBurnInRuntime.resolveHistoryBurnInMismatchFocusActionState();
+        if (!actionState || actionState.shouldApply !== true) return;
         var adapterFilter = el("history-adapter-filter");
-        if (adapterFilter) adapterFilter.value = "mismatch";
-        state.adapterParityFilter = "mismatch";
-        loadHistory(true);
+        if (adapterFilter) adapterFilter.value = actionState.nextSelectValue;
+        state.adapterParityFilter = actionState.nextAdapterParityFilter;
+        if (actionState.shouldReload) loadHistory(actionState.resetPage);
       });
     }
   }

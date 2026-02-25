@@ -16,6 +16,14 @@ export interface HistoryBurnInSummaryState {
   maxMismatchRateText: string;
 }
 
+export interface HistoryBurnInMismatchFocusActionState {
+  shouldApply: boolean;
+  nextAdapterParityFilter: string;
+  nextSelectValue: string;
+  shouldReload: boolean;
+  resetPage: boolean;
+}
+
 function isPlainObject(value: unknown): value is AnyRecord {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -101,5 +109,15 @@ export function resolveHistoryBurnInSummaryState(summary: unknown): HistoryBurnI
     mismatchActionEnabled: toFiniteNumberOrZero(summary.mismatch) > 0,
     mismatchRateText: formatPercent(summary.mismatchRate),
     maxMismatchRateText: formatPercent(summary.maxMismatchRate)
+  };
+}
+
+export function resolveHistoryBurnInMismatchFocusActionState(): HistoryBurnInMismatchFocusActionState {
+  return {
+    shouldApply: true,
+    nextAdapterParityFilter: "mismatch",
+    nextSelectValue: "mismatch",
+    shouldReload: true,
+    resetPage: true
   };
 }
