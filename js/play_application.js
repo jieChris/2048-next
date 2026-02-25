@@ -62,6 +62,13 @@
   ) {
     throw new Error("CorePlayChallengeIntroActionRuntime is required");
   }
+  var playChallengeIntroHostRuntime = window.CorePlayChallengeIntroHostRuntime;
+  if (
+    !playChallengeIntroHostRuntime ||
+    typeof playChallengeIntroHostRuntime.resolvePlayChallengeIntroFromContext !== "function"
+  ) {
+    throw new Error("CorePlayChallengeIntroHostRuntime is required");
+  }
   var playChallengeContextRuntime = window.CorePlayChallengeContextRuntime;
   if (
     !playChallengeContextRuntime ||
@@ -111,66 +118,14 @@
   }
 
   function setupChallengeModeIntro(modeConfig) {
-    var introBtn = document.getElementById("top-mode-intro-btn");
-    var modal = document.getElementById("mode-intro-modal");
-    var closeBtn = document.getElementById("mode-intro-close-btn");
-    var title = document.getElementById("mode-intro-title");
-    var desc = document.getElementById("mode-intro-desc");
-    var leaderboard = document.getElementById("mode-intro-leaderboard");
-    if (!introBtn || !modal || !closeBtn || !title || !desc) return;
-    var introModel = playChallengeIntroRuntime.resolvePlayChallengeIntroModel({
-      modeKey: modeConfig && modeConfig.key ? String(modeConfig.key) : "",
-      featureEnabled: false
+    playChallengeIntroHostRuntime.resolvePlayChallengeIntroFromContext({
+      modeConfig: modeConfig,
+      featureEnabled: false,
+      documentLike: document,
+      resolveIntroModel: playChallengeIntroRuntime.resolvePlayChallengeIntroModel,
+      resolveIntroUiState: playChallengeIntroUiRuntime.resolvePlayChallengeIntroUiState,
+      resolveIntroActionState: playChallengeIntroActionRuntime.resolvePlayChallengeIntroActionState
     });
-    var introUiState = playChallengeIntroUiRuntime.resolvePlayChallengeIntroUiState({
-      introModel: introModel,
-      introButtonBound: !!introBtn.__modeIntroBound,
-      closeButtonBound: !!closeBtn.__modeIntroBound,
-      modalBound: !!modal.__modeIntroBound
-    });
-    introBtn.style.setProperty("display", introUiState.entryDisplay, "important");
-    modal.style.display = introUiState.modalDisplay;
-    title.textContent = introUiState.titleText;
-    desc.textContent = introUiState.descriptionText;
-    if (leaderboard) leaderboard.textContent = introUiState.leaderboardText;
-    var openActionState = playChallengeIntroActionRuntime.resolvePlayChallengeIntroActionState({
-      action: "open"
-    });
-    var closeActionState = playChallengeIntroActionRuntime.resolvePlayChallengeIntroActionState({
-      action: "close"
-    });
-
-    if (introUiState.bindIntroClick) {
-      introBtn.__modeIntroBound = true;
-      introBtn.addEventListener("click", function (e) {
-        if (e && openActionState.shouldPreventDefault) e.preventDefault();
-        if (openActionState.shouldApplyDisplay) {
-          modal.style.display = openActionState.nextModalDisplay;
-        }
-      });
-    }
-    if (introUiState.bindCloseClick) {
-      closeBtn.__modeIntroBound = true;
-      closeBtn.addEventListener("click", function (e) {
-        if (e && closeActionState.shouldPreventDefault) e.preventDefault();
-        if (closeActionState.shouldApplyDisplay) {
-          modal.style.display = closeActionState.nextModalDisplay;
-        }
-      });
-    }
-    if (introUiState.bindOverlayClick) {
-      modal.__modeIntroBound = true;
-      modal.addEventListener("click", function (e) {
-        var overlayActionState =
-          playChallengeIntroActionRuntime.resolvePlayChallengeIntroActionState({
-            action: "overlay-click",
-            eventTargetIsModal: !!(e && e.target === modal)
-          });
-        if (overlayActionState.shouldApplyDisplay) {
-          modal.style.display = overlayActionState.nextModalDisplay;
-        }
-      });
-    }
   }
 
   function setupHeader(modeConfig) {

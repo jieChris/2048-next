@@ -49,6 +49,7 @@
   - 新增 `src/bootstrap/play-challenge-intro.ts` + `js/core_play_challenge_intro_runtime.js`，`play_application.js` 委托挑战简介显示模型（当前默认关闭，行为不变）
   - 新增 `src/bootstrap/play-challenge-intro-ui.ts` + `js/core_play_challenge_intro_ui_runtime.js`，`play_application.js` 委托挑战简介弹层展示态与绑定去重决策
   - 新增 `src/bootstrap/play-challenge-intro-action.ts` + `js/core_play_challenge_intro_action_runtime.js`，`play_application.js` 委托挑战简介弹层开关动作状态决策
+  - 新增 `src/bootstrap/play-challenge-intro-host.ts` + `js/core_play_challenge_intro_host_runtime.js`，`play_application.js` 委托挑战简介弹层 DOM 读取、展示应用与事件绑定编排
   - 新增 `src/bootstrap/play-challenge-context.ts` + `js/core_play_challenge_context_runtime.js`，`play_application.js` 委托 `GAME_CHALLENGE_CONTEXT` 组装
   - 新增 `src/bootstrap/play-start-guard.ts` + `js/core_play_start_guard_runtime.js`，`play_application.js` 委托无效模式与自定义模式失败分支的告警/跳转决策
   - 新增 `src/bootstrap/play-startup-payload.ts` + `js/core_play_startup_payload_runtime.js`，`play_application.js` 委托启动返回载荷组装
