@@ -739,6 +739,45 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.summaryText).toContain("诊断筛选:");
   });
 
+  test("history page delegates query assembly to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyListQueryCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryQueryRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryListQuery" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyListQueryCallCount =
+                Number((window as any).__historyListQueryCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => ({
+      hasRuntime: Boolean((window as any).CoreHistoryQueryRuntime?.resolveHistoryListQuery),
+      listQueryCallCount: Number((window as any).__historyListQueryCallCount || 0),
+      hasSummaryText: (document.querySelector("#history-summary")?.textContent || "").trim().length > 0
+    }));
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.listQueryCallCount).toBeGreaterThan(0);
+    expect(snapshot.hasSummaryText).toBe(true);
+  });
+
   test("history page delegates mismatch export id collection to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyExportCollectCallCount = 0;

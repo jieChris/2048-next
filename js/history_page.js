@@ -65,6 +65,16 @@
   ) {
     throw new Error("CoreHistoryExportRuntime is required");
   }
+  var historyQueryRuntime = window.CoreHistoryQueryRuntime;
+  if (
+    !historyQueryRuntime ||
+    typeof historyQueryRuntime.resolveHistoryFilterState !== "function" ||
+    typeof historyQueryRuntime.resolveHistoryListQuery !== "function" ||
+    typeof historyQueryRuntime.resolveHistoryBurnInQuery !== "function" ||
+    typeof historyQueryRuntime.resolveHistoryPagerState !== "function"
+  ) {
+    throw new Error("CoreHistoryQueryRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -467,15 +477,26 @@
   }
 
   function readFilters() {
-    state.modeKey = (el("history-mode").value || "").trim();
-    state.keyword = (el("history-keyword").value || "").trim();
-    state.sortBy = (el("history-sort").value || "ended_desc").trim();
+    var modeInput = el("history-mode");
+    var keywordInput = el("history-keyword");
+    var sortInput = el("history-sort");
     var adapterFilterInput = el("history-adapter-filter");
-    state.adapterParityFilter = ((adapterFilterInput && adapterFilterInput.value) || "all").trim();
     var burnInWindowInput = el("history-burnin-window");
-    state.burnInWindow = ((burnInWindowInput && burnInWindowInput.value) || "200").trim();
     var sustainedWindowInput = el("history-sustained-window");
-    state.sustainedWindows = ((sustainedWindowInput && sustainedWindowInput.value) || "3").trim();
+    var filterState = historyQueryRuntime.resolveHistoryFilterState({
+      modeKeyRaw: modeInput && modeInput.value,
+      keywordRaw: keywordInput && keywordInput.value,
+      sortByRaw: sortInput && sortInput.value,
+      adapterParityFilterRaw: adapterFilterInput && adapterFilterInput.value,
+      burnInWindowRaw: burnInWindowInput && burnInWindowInput.value,
+      sustainedWindowsRaw: sustainedWindowInput && sustainedWindowInput.value
+    });
+    state.modeKey = filterState.modeKey;
+    state.keyword = filterState.keyword;
+    state.sortBy = filterState.sortBy;
+    state.adapterParityFilter = filterState.adapterParityFilter;
+    state.burnInWindow = filterState.burnInWindow;
+    state.sustainedWindows = filterState.sustainedWindows;
   }
 
   function loadHistory(resetPage) {
@@ -483,14 +504,15 @@
     if (resetPage) state.page = 1;
     readFilters();
 
-    var result = window.LocalHistoryStore.listRecords({
-      mode_key: state.modeKey,
+    var listQuery = historyQueryRuntime.resolveHistoryListQuery({
+      modeKey: state.modeKey,
       keyword: state.keyword,
-      sort_by: state.sortBy,
-      adapter_parity_filter: state.adapterParityFilter,
+      sortBy: state.sortBy,
+      adapterParityFilter: state.adapterParityFilter,
       page: state.page,
-      page_size: state.pageSize
+      pageSize: state.pageSize
     });
+    var result = window.LocalHistoryStore.listRecords(listQuery);
 
     renderHistory(result);
     buildSummary(result);
@@ -499,15 +521,16 @@
       window.LocalHistoryStore &&
       typeof window.LocalHistoryStore.getAdapterParityBurnInSummary === "function"
     ) {
-      burnInSummary = window.LocalHistoryStore.getAdapterParityBurnInSummary({
-        mode_key: state.modeKey,
+      var burnInQuery = historyQueryRuntime.resolveHistoryBurnInQuery({
+        modeKey: state.modeKey,
         keyword: state.keyword,
-        sort_by: state.sortBy,
-        sample_limit: state.burnInWindow,
-        sustained_windows: state.sustainedWindows,
-        min_comparable: BURN_IN_MIN_COMPARABLE,
-        max_mismatch_rate: BURN_IN_MAX_MISMATCH_RATE
+        sortBy: state.sortBy,
+        sampleLimit: state.burnInWindow,
+        sustainedWindows: state.sustainedWindows,
+        minComparable: BURN_IN_MIN_COMPARABLE,
+        maxMismatchRate: BURN_IN_MAX_MISMATCH_RATE
       });
+      burnInSummary = window.LocalHistoryStore.getAdapterParityBurnInSummary(burnInQuery);
     }
     renderBurnInSummary(burnInSummary);
     renderCanaryPolicy();
@@ -515,11 +538,13 @@
 
     var prevBtn = el("history-prev-page");
     var nextBtn = el("history-next-page");
-    if (prevBtn) prevBtn.disabled = state.page <= 1;
-    if (nextBtn) {
-      var maxPage = Math.max(1, Math.ceil((result.total || 0) / state.pageSize));
-      nextBtn.disabled = state.page >= maxPage;
-    }
+    var pagerState = historyQueryRuntime.resolveHistoryPagerState({
+      total: result && result.total,
+      page: state.page,
+      pageSize: state.pageSize
+    });
+    if (prevBtn) prevBtn.disabled = pagerState.disablePrev;
+    if (nextBtn) nextBtn.disabled = pagerState.disableNext;
   }
 
   function initModeFilter() {

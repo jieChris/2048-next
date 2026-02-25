@@ -1,0 +1,83 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  resolveHistoryBurnInQuery,
+  resolveHistoryFilterState,
+  resolveHistoryListQuery,
+  resolveHistoryPagerState
+} from "../../src/bootstrap/history-query";
+
+describe("bootstrap history query", () => {
+  it("normalizes filter state from raw input", () => {
+    const filter = resolveHistoryFilterState({
+      modeKeyRaw: " standard_4x4_pow2_no_undo ",
+      keywordRaw: "  test  ",
+      sortByRaw: "ended_asc",
+      adapterParityFilterRaw: "mismatch",
+      burnInWindowRaw: " 300 ",
+      sustainedWindowsRaw: " 5 "
+    });
+
+    expect(filter).toEqual({
+      modeKey: "standard_4x4_pow2_no_undo",
+      keyword: "test",
+      sortBy: "ended_asc",
+      adapterParityFilter: "mismatch",
+      burnInWindow: "300",
+      sustainedWindows: "5"
+    });
+  });
+
+  it("builds list query with fallback values", () => {
+    const query = resolveHistoryListQuery({
+      modeKey: "",
+      keyword: 123,
+      sortBy: "",
+      adapterParityFilter: null,
+      page: 0,
+      pageSize: "bad"
+    });
+
+    expect(query).toEqual({
+      mode_key: "",
+      keyword: "",
+      sort_by: "ended_desc",
+      adapter_parity_filter: "all",
+      page: 1,
+      page_size: 30
+    });
+  });
+
+  it("builds burn-in query and pager state", () => {
+    const burnInQuery = resolveHistoryBurnInQuery({
+      modeKey: "standard_4x4_pow2_no_undo",
+      keyword: "core",
+      sortBy: "ended_desc",
+      sampleLimit: "250",
+      sustainedWindows: "4",
+      minComparable: 80,
+      maxMismatchRate: 2
+    });
+
+    const pager = resolveHistoryPagerState({
+      total: 61,
+      page: 3,
+      pageSize: 30
+    });
+
+    expect(burnInQuery).toEqual({
+      mode_key: "standard_4x4_pow2_no_undo",
+      keyword: "core",
+      sort_by: "ended_desc",
+      sample_limit: "250",
+      sustained_windows: "4",
+      min_comparable: 80,
+      max_mismatch_rate: 2
+    });
+    expect(pager).toEqual({
+      maxPage: 3,
+      disablePrev: false,
+      disableNext: true
+    });
+  });
+});
