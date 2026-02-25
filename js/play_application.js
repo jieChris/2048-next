@@ -48,6 +48,13 @@
   ) {
     throw new Error("CorePlayChallengeIntroUiRuntime is required");
   }
+  var playChallengeIntroActionRuntime = window.CorePlayChallengeIntroActionRuntime;
+  if (
+    !playChallengeIntroActionRuntime ||
+    typeof playChallengeIntroActionRuntime.resolvePlayChallengeIntroActionState !== "function"
+  ) {
+    throw new Error("CorePlayChallengeIntroActionRuntime is required");
+  }
   var playChallengeContextRuntime = window.CorePlayChallengeContextRuntime;
   if (
     !playChallengeContextRuntime ||
@@ -147,25 +154,42 @@
     title.textContent = introUiState.titleText;
     desc.textContent = introUiState.descriptionText;
     if (leaderboard) leaderboard.textContent = introUiState.leaderboardText;
+    var openActionState = playChallengeIntroActionRuntime.resolvePlayChallengeIntroActionState({
+      action: "open"
+    });
+    var closeActionState = playChallengeIntroActionRuntime.resolvePlayChallengeIntroActionState({
+      action: "close"
+    });
 
     if (introUiState.bindIntroClick) {
       introBtn.__modeIntroBound = true;
       introBtn.addEventListener("click", function (e) {
-        if (e) e.preventDefault();
-        modal.style.display = "flex";
+        if (e && openActionState.shouldPreventDefault) e.preventDefault();
+        if (openActionState.shouldApplyDisplay) {
+          modal.style.display = openActionState.nextModalDisplay;
+        }
       });
     }
     if (introUiState.bindCloseClick) {
       closeBtn.__modeIntroBound = true;
       closeBtn.addEventListener("click", function (e) {
-        if (e) e.preventDefault();
-        modal.style.display = "none";
+        if (e && closeActionState.shouldPreventDefault) e.preventDefault();
+        if (closeActionState.shouldApplyDisplay) {
+          modal.style.display = closeActionState.nextModalDisplay;
+        }
       });
     }
     if (introUiState.bindOverlayClick) {
       modal.__modeIntroBound = true;
       modal.addEventListener("click", function (e) {
-        if (e && e.target === modal) modal.style.display = "none";
+        var overlayActionState =
+          playChallengeIntroActionRuntime.resolvePlayChallengeIntroActionState({
+            action: "overlay-click",
+            eventTargetIsModal: !!(e && e.target === modal)
+          });
+        if (overlayActionState.shouldApplyDisplay) {
+          modal.style.display = overlayActionState.nextModalDisplay;
+        }
       });
     }
   }
