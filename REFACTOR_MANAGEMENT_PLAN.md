@@ -42,6 +42,8 @@
 - 入口脚本轻量化：仅保留组装与调用。
 - 当前进展：
   - 新增共享启动壳：`js/legacy_bootstrap_runtime.js`
+  - 新增 `src/bootstrap/simple-runtime-contract.ts` + `js/core_simple_runtime_contract_runtime.js`，`replay/capped` 入口委托通用 bootstrap 依赖契约校验
+  - 新增 `src/bootstrap/simple-startup.ts` + `js/core_simple_startup_runtime.js`，`replay/capped` 入口委托固定模式启动 payload 组装
   - `application/play/capped/replay` 统一走 `LegacyBootstrapRuntime.startGameOnAnimationFrame`
   - 新增 `src/bootstrap/play-query.ts` + `js/core_play_query_runtime.js`，`play_application.js` 委托 `mode_key/challenge_id` 解析
   - 新增 `src/bootstrap/play-custom-spawn-host.ts` + `js/core_play_custom_spawn_host_runtime.js`，`play_application.js` 委托自定义 4 率桥接上下文（storage/prompt/alert/url replace）组装

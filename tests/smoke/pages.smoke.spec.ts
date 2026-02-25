@@ -631,6 +631,72 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot?.key).toBe("standard_4x4_pow2_no_undo");
   });
 
+  test("replay application delegates startup payload to simple runtime helpers", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__simpleRuntimeContractCallCount = 0;
+      (window as any).__simpleStartupCallCount = 0;
+      const contractTarget: Record<string, unknown> = {};
+      (window as any).CoreSimpleRuntimeContractRuntime = new Proxy(contractTarget, {
+        set(target, prop, value) {
+          if (prop === "resolveSimpleBootstrapRuntime" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__simpleRuntimeContractCallCount =
+                Number((window as any).__simpleRuntimeContractCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+      const startupTarget: Record<string, unknown> = {};
+      (window as any).CoreSimpleStartupRuntime = new Proxy(startupTarget, {
+        set(target, prop, value) {
+          if (prop === "resolveSimpleStartupPayload" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__simpleStartupCallCount =
+                Number((window as any).__simpleStartupCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const cfg = (window as any).GAME_MODE_CONFIG;
+      return {
+        hasSimpleRuntimeContractRuntime: Boolean(
+          (window as any).CoreSimpleRuntimeContractRuntime?.resolveSimpleBootstrapRuntime
+        ),
+        hasSimpleStartupRuntime: Boolean(
+          (window as any).CoreSimpleStartupRuntime?.resolveSimpleStartupPayload
+        ),
+        simpleRuntimeContractCallCount: Number((window as any).__simpleRuntimeContractCallCount || 0),
+        simpleStartupCallCount: Number((window as any).__simpleStartupCallCount || 0),
+        modeKey: cfg && typeof cfg.key === "string" ? cfg.key : null
+      };
+    });
+
+    expect(snapshot.hasSimpleRuntimeContractRuntime).toBe(true);
+    expect(snapshot.hasSimpleStartupRuntime).toBe(true);
+    expect(snapshot.simpleRuntimeContractCallCount).toBeGreaterThan(0);
+    expect(snapshot.simpleStartupCallCount).toBeGreaterThan(0);
+    expect(snapshot.modeKey).toBe("standard_4x4_pow2_no_undo");
+  });
+
   test("application handle_undo delegates to undo-action runtime", async ({ page }) => {
     const response = await page.goto("/index.html", {
       waitUntil: "domcontentloaded"
