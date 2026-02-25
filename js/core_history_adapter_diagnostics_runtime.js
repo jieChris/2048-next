@@ -7,6 +7,16 @@
     return !!value && typeof value === "object" && !Array.isArray(value);
   }
 
+  function escapeHtml(value) {
+    var text = String(value == null ? "" : value);
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   function hasAdapterDiagnostics(item) {
     if (!item || typeof item !== "object") return false;
     return (
@@ -119,9 +129,40 @@
     };
   }
 
+  function resolveHistoryAdapterBadgeHtml(state) {
+    var badgeState = isPlainObject(state) ? state : null;
+    if (!badgeState || badgeState.hasBadge !== true) return "";
+    var className = String(badgeState.className || "");
+    var text = String(badgeState.text || "");
+    return (
+      "<span class='history-adapter-badge " +
+      escapeHtml(className) +
+      "'>" +
+      escapeHtml(text) +
+      "</span>"
+    );
+  }
+
+  function resolveHistoryAdapterDiagnosticsHtml(state) {
+    var diagnosticsState = isPlainObject(state) ? state : null;
+    if (!diagnosticsState || diagnosticsState.hasDiagnostics !== true) return "";
+    var lines = Array.isArray(diagnosticsState.lines) ? diagnosticsState.lines : [];
+    var html =
+      "<div class='history-adapter-diagnostics'><div class='history-adapter-title'>Adapter 诊断</div>";
+    for (var i = 0; i < lines.length; i++) {
+      html += "<div class='history-adapter-line'>" + escapeHtml(lines[i]) + "</div>";
+    }
+    html += "</div>";
+    return html;
+  }
+
   global.CoreHistoryAdapterDiagnosticsRuntime = global.CoreHistoryAdapterDiagnosticsRuntime || {};
   global.CoreHistoryAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeState =
     resolveHistoryAdapterBadgeState;
   global.CoreHistoryAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsState =
     resolveHistoryAdapterDiagnosticsState;
+  global.CoreHistoryAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeHtml =
+    resolveHistoryAdapterBadgeHtml;
+  global.CoreHistoryAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsHtml =
+    resolveHistoryAdapterDiagnosticsHtml;
 })(typeof window !== "undefined" ? window : undefined);

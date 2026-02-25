@@ -57,7 +57,9 @@
   if (
     !historyAdapterDiagnosticsRuntime ||
     typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeState !== "function" ||
-    typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsState !== "function"
+    typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsState !== "function" ||
+    typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeHtml !== "function" ||
+    typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsHtml !== "function"
   ) {
     throw new Error("CoreHistoryAdapterDiagnosticsRuntime is required");
   }
@@ -223,16 +225,6 @@
     return historyCanaryStorageRuntime.writeHistoryStorageValue(key, value);
   }
 
-  function escapeHtml(value) {
-    var text = String(value == null ? "" : value);
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
   function getAdapterParityStatus(item) {
     if (window.LocalHistoryStore && typeof window.LocalHistoryStore.getAdapterParityStatus === "function") {
       return window.LocalHistoryStore.getAdapterParityStatus(item);
@@ -243,24 +235,12 @@
   function buildAdapterBadgeHtml(item) {
     var status = getAdapterParityStatus(item);
     var badgeState = historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeState(item, status);
-    if (!badgeState || badgeState.hasBadge !== true) return "";
-    return "<span class='history-adapter-badge " + badgeState.className + "'>" +
-      escapeHtml(badgeState.text) +
-      "</span>";
+    return historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeHtml(badgeState);
   }
 
   function buildAdapterDiagnosticsHtml(item) {
     var diagnosticsState = historyAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsState(item);
-    if (!diagnosticsState || diagnosticsState.hasDiagnostics !== true) return "";
-    var lines = Array.isArray(diagnosticsState.lines) ? diagnosticsState.lines : [];
-
-    var html = "<div class='history-adapter-diagnostics'>" +
-      "<div class='history-adapter-title'>Adapter 诊断</div>";
-    for (var i = 0; i < lines.length; i++) {
-      html += "<div class='history-adapter-line'>" + escapeHtml(lines[i]) + "</div>";
-    }
-    html += "</div>";
-    return html;
+    return historyAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsHtml(diagnosticsState);
   }
 
   function buildSummary(result) {

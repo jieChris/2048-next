@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  resolveHistoryAdapterBadgeHtml,
   resolveHistoryAdapterBadgeState,
+  resolveHistoryAdapterDiagnosticsHtml,
   resolveHistoryAdapterDiagnosticsState
 } from "../../src/bootstrap/history-adapter-diagnostics";
 
@@ -69,5 +71,28 @@ describe("bootstrap history adapter diagnostics", () => {
     });
 
     expect(state.lines).toEqual(["当前 - · 快照分数 - · undoUsed 0 · scoreDelta - · 对齐 -"]);
+  });
+
+  it("builds badge html from badge state", () => {
+    expect(
+      resolveHistoryAdapterBadgeHtml({
+        hasBadge: true,
+        className: "history-adapter-badge-match",
+        text: "A/B 一致"
+      })
+    ).toBe("<span class='history-adapter-badge history-adapter-badge-match'>A/B 一致</span>");
+    expect(resolveHistoryAdapterBadgeHtml({ hasBadge: false })).toBe("");
+  });
+
+  it("builds diagnostics html from diagnostics state", () => {
+    expect(
+      resolveHistoryAdapterDiagnosticsHtml({
+        hasDiagnostics: true,
+        lines: ["scoreΔ +1", "<unsafe>"]
+      })
+    ).toBe(
+      "<div class='history-adapter-diagnostics'><div class='history-adapter-title'>Adapter 诊断</div><div class='history-adapter-line'>scoreΔ +1</div><div class='history-adapter-line'>&lt;unsafe&gt;</div></div>"
+    );
+    expect(resolveHistoryAdapterDiagnosticsHtml({ hasDiagnostics: false })).toBe("");
   });
 });

@@ -1725,6 +1725,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.addInitScript(() => {
       (window as any).__historyAdapterBadgeCallCount = 0;
       (window as any).__historyAdapterDiagnosticsCallCount = 0;
+      (window as any).__historyAdapterBadgeHtmlCallCount = 0;
+      (window as any).__historyAdapterDiagnosticsHtmlCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryAdapterDiagnosticsRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
@@ -1741,6 +1743,22 @@ test.describe("Legacy Multi-Page Smoke", () => {
               (window as any).__historyAdapterDiagnosticsCallCount =
                 Number((window as any).__historyAdapterDiagnosticsCallCount || 0) + 1;
               return (value as (entry: unknown) => unknown)(item);
+            };
+            return true;
+          }
+          if (prop === "resolveHistoryAdapterBadgeHtml" && typeof value === "function") {
+            proxyTarget[prop] = function (state: unknown) {
+              (window as any).__historyAdapterBadgeHtmlCallCount =
+                Number((window as any).__historyAdapterBadgeHtmlCallCount || 0) + 1;
+              return (value as (entry: unknown) => unknown)(state);
+            };
+            return true;
+          }
+          if (prop === "resolveHistoryAdapterDiagnosticsHtml" && typeof value === "function") {
+            proxyTarget[prop] = function (state: unknown) {
+              (window as any).__historyAdapterDiagnosticsHtmlCallCount =
+                Number((window as any).__historyAdapterDiagnosticsHtmlCallCount || 0) + 1;
+              return (value as (entry: unknown) => unknown)(state);
             };
             return true;
           }
@@ -1812,10 +1830,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
         hasRuntime: Boolean(
           (window as any).CoreHistoryAdapterDiagnosticsRuntime?.resolveHistoryAdapterBadgeState &&
             (window as any).CoreHistoryAdapterDiagnosticsRuntime
-              ?.resolveHistoryAdapterDiagnosticsState
+              ?.resolveHistoryAdapterDiagnosticsState &&
+            (window as any).CoreHistoryAdapterDiagnosticsRuntime?.resolveHistoryAdapterBadgeHtml &&
+            (window as any).CoreHistoryAdapterDiagnosticsRuntime
+              ?.resolveHistoryAdapterDiagnosticsHtml
         ),
         badgeCallCount: Number((window as any).__historyAdapterBadgeCallCount || 0),
         diagnosticsCallCount: Number((window as any).__historyAdapterDiagnosticsCallCount || 0),
+        badgeHtmlCallCount: Number((window as any).__historyAdapterBadgeHtmlCallCount || 0),
+        diagnosticsHtmlCallCount: Number((window as any).__historyAdapterDiagnosticsHtmlCallCount || 0),
         diagnosticsCount: document.querySelectorAll(".history-adapter-diagnostics").length
       };
     });
@@ -1823,6 +1846,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.badgeCallCount).toBeGreaterThan(0);
     expect(snapshot.diagnosticsCallCount).toBeGreaterThan(0);
+    expect(snapshot.badgeHtmlCallCount).toBeGreaterThan(0);
+    expect(snapshot.diagnosticsHtmlCallCount).toBeGreaterThan(0);
     expect(snapshot.diagnosticsCount).toBe(1);
   });
 

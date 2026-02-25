@@ -11,8 +11,29 @@ export interface HistoryAdapterDiagnosticsState {
   lines: string[];
 }
 
+interface MaybeBadgeState {
+  hasBadge?: unknown;
+  className?: unknown;
+  text?: unknown;
+}
+
+interface MaybeDiagnosticsState {
+  hasDiagnostics?: unknown;
+  lines?: unknown;
+}
+
 function isPlainObject(value: unknown): value is AnyRecord {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function escapeHtml(value: unknown): string {
+  const text = String(value == null ? "" : value);
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function hasAdapterDiagnostics(item: unknown): boolean {
@@ -132,4 +153,30 @@ export function resolveHistoryAdapterDiagnosticsState(item: unknown): HistoryAda
     hasDiagnostics: true,
     lines
   };
+}
+
+export function resolveHistoryAdapterBadgeHtml(state: unknown): string {
+  const badgeState = isPlainObject(state) ? (state as MaybeBadgeState) : null;
+  if (!badgeState || badgeState.hasBadge !== true) return "";
+  const className = String(badgeState.className || "");
+  const text = String(badgeState.text || "");
+  return (
+    "<span class='history-adapter-badge " +
+    escapeHtml(className) +
+    "'>" +
+    escapeHtml(text) +
+    "</span>"
+  );
+}
+
+export function resolveHistoryAdapterDiagnosticsHtml(state: unknown): string {
+  const diagnosticsState = isPlainObject(state) ? (state as MaybeDiagnosticsState) : null;
+  if (!diagnosticsState || diagnosticsState.hasDiagnostics !== true) return "";
+  const lines = Array.isArray(diagnosticsState.lines) ? diagnosticsState.lines : [];
+  let html = "<div class='history-adapter-diagnostics'><div class='history-adapter-title'>Adapter 诊断</div>";
+  for (let i = 0; i < lines.length; i++) {
+    html += "<div class='history-adapter-line'>" + escapeHtml(lines[i]) + "</div>";
+  }
+  html += "</div>";
+  return html;
 }
