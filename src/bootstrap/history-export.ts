@@ -22,6 +22,8 @@ export interface HistorySingleRecordExportState {
   payload: unknown;
 }
 
+type HistoryExportDownloadFn = (fileName: string, payload: unknown) => void;
+
 function isPlainObject(value: unknown): value is AnyRecord {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -149,4 +151,31 @@ export function resolveHistorySingleRecordExportState(input: {
     fileName,
     payload
   };
+}
+
+function resolveHistoryExportDownloadSource(localHistoryStore: unknown): HistoryExportDownloadFn | null {
+  const store = isPlainObject(localHistoryStore) ? (localHistoryStore as AnyRecord) : null;
+  if (!store || typeof store.download !== "function") return null;
+  const download = store.download as (fileName: string, payload: unknown) => void;
+  return download.bind(store);
+}
+
+export function downloadHistorySingleRecord(input: {
+  localHistoryStore?: unknown;
+  item?: unknown;
+}): boolean {
+  try {
+    const source = isPlainObject(input) ? input : {};
+    const exportState = resolveHistorySingleRecordExportState({
+      localHistoryStore: source.localHistoryStore,
+      item: source.item
+    });
+    if (!exportState || exportState.canDownload !== true) return false;
+    const download = resolveHistoryExportDownloadSource(source.localHistoryStore);
+    if (!download) return false;
+    download(exportState.fileName, exportState.payload);
+    return true;
+  } catch (_error) {
+    return false;
+  }
 }

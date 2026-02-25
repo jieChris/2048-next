@@ -116,6 +116,29 @@
     };
   }
 
+  function resolveHistoryExportDownloadSource(localHistoryStore) {
+    var store = isPlainObject(localHistoryStore) ? localHistoryStore : null;
+    if (!store || typeof store.download !== "function") return null;
+    return store.download.bind(store);
+  }
+
+  function downloadHistorySingleRecord(input) {
+    try {
+      var source = isPlainObject(input) ? input : {};
+      var exportState = resolveHistorySingleRecordExportState({
+        localHistoryStore: source.localHistoryStore,
+        item: source.item
+      });
+      if (!exportState || exportState.canDownload !== true) return false;
+      var download = resolveHistoryExportDownloadSource(source.localHistoryStore);
+      if (!download) return false;
+      download(exportState.fileName, exportState.payload);
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
   global.CoreHistoryExportRuntime = global.CoreHistoryExportRuntime || {};
   global.CoreHistoryExportRuntime.resolveHistoryRecordExportFileName =
     resolveHistoryRecordExportFileName;
@@ -127,4 +150,5 @@
     resolveHistoryMismatchExportRecordIds;
   global.CoreHistoryExportRuntime.resolveHistorySingleRecordExportState =
     resolveHistorySingleRecordExportState;
+  global.CoreHistoryExportRuntime.downloadHistorySingleRecord = downloadHistorySingleRecord;
 })(typeof window !== "undefined" ? window : undefined);

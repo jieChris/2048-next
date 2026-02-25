@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  downloadHistorySingleRecord,
   resolveHistoryMismatchExportRecordIds,
   resolveHistorySingleRecordExportState,
   collectHistoryRecordIdsForExport,
@@ -119,5 +120,45 @@ describe("bootstrap history export", () => {
       fileName: "",
       payload: ""
     });
+  });
+
+  it("downloads single-record export payload from runtime helper", () => {
+    const captures: Array<{ fileName: string; payload: unknown }> = [];
+    const ok = downloadHistorySingleRecord({
+      localHistoryStore: {
+        exportRecords(ids: unknown[]) {
+          return JSON.stringify(ids);
+        },
+        download(fileName: string, payload: unknown) {
+          captures.push({ fileName, payload });
+        }
+      },
+      item: {
+        id: "abc-2",
+        mode_key: "pow2/4x4?ranked"
+      }
+    });
+
+    expect(ok).toBe(true);
+    expect(captures).toEqual([
+      {
+        fileName: "history_pow2_4x4_ranked_abc-2.json",
+        payload: "[\"abc-2\"]"
+      }
+    ]);
+  });
+
+  it("returns false when single-record download cannot be prepared", () => {
+    expect(
+      downloadHistorySingleRecord({
+        localHistoryStore: {
+          exportRecords: () => "[]",
+          download: () => {}
+        },
+        item: {
+          id: ""
+        }
+      })
+    ).toBe(false);
   });
 });

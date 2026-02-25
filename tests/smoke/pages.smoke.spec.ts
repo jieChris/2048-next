@@ -1202,10 +1202,19 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("history page delegates single-record export state to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
+      (window as any).__historySingleExportActionCallCount = 0;
       (window as any).__historySingleExportStateCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryExportRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
+          if (prop === "downloadHistorySingleRecord" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historySingleExportActionCallCount =
+                Number((window as any).__historySingleExportActionCallCount || 0) + 1;
+              return (value as (arg: unknown) => unknown)(input);
+            };
+            return true;
+          }
           if (prop === "resolveHistorySingleRecordExportState" && typeof value === "function") {
             proxyTarget[prop] = function (input: unknown) {
               (window as any).__historySingleExportStateCallCount =
@@ -1277,14 +1286,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
       store.download = originalDownload;
       return {
-        hasRuntime: Boolean((window as any).CoreHistoryExportRuntime?.resolveHistorySingleRecordExportState),
+        hasRuntime:
+          Boolean((window as any).CoreHistoryExportRuntime?.downloadHistorySingleRecord) &&
+          Boolean((window as any).CoreHistoryExportRuntime?.resolveHistorySingleRecordExportState),
+        singleExportActionCallCount: Number((window as any).__historySingleExportActionCallCount || 0),
         singleExportStateCallCount: Number((window as any).__historySingleExportStateCallCount || 0),
         fileName: String((window as any).__historySingleExportLastFile || "")
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
-    expect(snapshot.singleExportStateCallCount).toBeGreaterThan(0);
+    expect(snapshot.singleExportActionCallCount).toBeGreaterThan(0);
     expect(snapshot.fileName).toContain("history_");
   });
 

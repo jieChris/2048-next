@@ -112,7 +112,8 @@
     typeof historyExportRuntime.collectHistoryRecordIdsForExport !== "function" ||
     typeof historyExportRuntime.resolveHistoryExportListRecordsSource !== "function" ||
     typeof historyExportRuntime.resolveHistoryMismatchExportRecordIds !== "function" ||
-    typeof historyExportRuntime.resolveHistorySingleRecordExportState !== "function"
+    typeof historyExportRuntime.resolveHistorySingleRecordExportState !== "function" ||
+    typeof historyExportRuntime.downloadHistorySingleRecord !== "function"
   ) {
     throw new Error("CoreHistoryExportRuntime is required");
   }
@@ -333,15 +334,6 @@
     }
   }
 
-  function downloadSingleRecord(item) {
-    var exportState = historyExportRuntime.resolveHistorySingleRecordExportState({
-      localHistoryStore: window.LocalHistoryStore,
-      item: item
-    });
-    if (!exportState || exportState.canDownload !== true) return;
-    window.LocalHistoryStore.download(exportState.fileName, exportState.payload);
-  }
-
   function renderHistory(result) {
     var list = el("history-list");
     if (!list) return;
@@ -395,7 +387,10 @@
         var exportBtn = node.querySelector(".history-export-btn");
         if (exportBtn) {
           exportBtn.addEventListener("click", function () {
-            downloadSingleRecord(item);
+            historyExportRuntime.downloadHistorySingleRecord({
+              localHistoryStore: window.LocalHistoryStore,
+              item: item
+            });
           });
         }
 
