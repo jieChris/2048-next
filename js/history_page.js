@@ -36,6 +36,14 @@
   ) {
     throw new Error("CoreHistoryCanaryActionRuntime is required");
   }
+  var historyCanaryPanelRuntime = window.CoreHistoryCanaryPanelRuntime;
+  if (
+    !historyCanaryPanelRuntime ||
+    typeof historyCanaryPanelRuntime.resolveHistoryCanaryPanelHtml !== "function" ||
+    typeof historyCanaryPanelRuntime.resolveHistoryCanaryActionName !== "function"
+  ) {
+    throw new Error("CoreHistoryCanaryPanelRuntime is required");
+  }
   var historyAdapterDiagnosticsRuntime = window.CoreHistoryAdapterDiagnosticsRuntime;
   if (
     !historyAdapterDiagnosticsRuntime ||
@@ -330,37 +338,13 @@
     var policy = readCanaryPolicySnapshot();
     var stored = readStoredPolicyKeys();
     var canaryView = historyCanaryViewRuntime.resolveHistoryCanaryViewState(policy, stored);
-
-    panel.innerHTML =
-      "<div class='history-canary-head'>" +
-        "<div class='history-canary-title'>Canary 策略控制</div>" +
-        "<span class='history-burnin-gate " + canaryView.gateClass + "'>" + escapeHtml(canaryView.gateText) + "</span>" +
-      "</div>" +
-      "<div class='history-canary-grid'>" +
-        "<span>当前有效模式: " + escapeHtml(canaryView.effectiveModeText) + "</span>" +
-        "<span>生效来源: " + escapeHtml(canaryView.modeSourceText) + "</span>" +
-        "<span>强制回滚: " + escapeHtml(canaryView.forceLegacyText) + "</span>" +
-        "<span>回滚来源: " + escapeHtml(canaryView.forceSourceText) + "</span>" +
-      "</div>" +
-      "<div class='history-canary-note'>" +
-        "storage(engine_adapter_default_mode)=" + escapeHtml(canaryView.storedDefaultText) +
-        " · storage(engine_adapter_force_legacy)=" + escapeHtml(canaryView.storedForceLegacyText) +
-      "</div>" +
-      "<div class='history-canary-note'>" +
-        "说明: 修改后需刷新任一对局页（index/play/undo/capped/practice/replay）以应用新策略。" +
-      "</div>" +
-      "<div class='history-canary-actions'>" +
-        "<button class='replay-button history-canary-action-btn' data-action='apply_canary'>进入 Canary（默认 core）</button>" +
-        "<button class='replay-button history-canary-action-btn' data-action='emergency_rollback'>紧急回滚（强制 legacy）</button>" +
-        "<button class='replay-button history-canary-action-btn' data-action='resume_canary'>解除回滚（恢复默认）</button>" +
-        "<button class='replay-button history-canary-action-btn' data-action='reset_policy'>重置策略（回到基线）</button>" +
-      "</div>";
+    panel.innerHTML = historyCanaryPanelRuntime.resolveHistoryCanaryPanelHtml(canaryView);
 
     var buttons = panel.querySelectorAll(".history-canary-action-btn");
     for (var i = 0; i < buttons.length; i++) {
       buttons[i].addEventListener("click", function (event) {
         var target = event.currentTarget;
-        var action = target && target.getAttribute ? target.getAttribute("data-action") : "";
+        var action = historyCanaryPanelRuntime.resolveHistoryCanaryActionName(target);
         var ok = runCanaryPolicyAction(action || "");
         if (!ok) {
           setStatus(historyCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice(), true);

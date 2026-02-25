@@ -780,6 +780,45 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.policyText).toContain("Canary 策略控制");
   });
 
+  test("history page delegates canary panel html rendering to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyCanaryPanelHtmlCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryCanaryPanelRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryCanaryPanelHtml" && typeof value === "function") {
+            proxyTarget[prop] = function (view: unknown) {
+              (window as any).__historyCanaryPanelHtmlCallCount =
+                Number((window as any).__historyCanaryPanelHtmlCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(view);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => ({
+      hasRuntime: Boolean((window as any).CoreHistoryCanaryPanelRuntime?.resolveHistoryCanaryPanelHtml),
+      panelHtmlCallCount: Number((window as any).__historyCanaryPanelHtmlCallCount || 0),
+      panelText: (document.querySelector("#history-canary-policy")?.textContent || "").trim()
+    }));
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.panelHtmlCallCount).toBeGreaterThan(0);
+    expect(snapshot.panelText).toContain("Canary 策略控制");
+  });
+
   test("history page delegates summary text modeling to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historySummaryCallCount = 0;
