@@ -13,6 +13,10 @@ function createCompleteWindowLike() {
     CorePlayHeaderHostRuntime: {
       resolvePlayHeaderFromContext: () => ({})
     },
+    CorePlayPageContextRuntime: {
+      resolvePlayCustomSpawnModeConfigFromPageContext: () => ({}),
+      applyPlayHeaderFromPageContext: () => ({})
+    },
     CorePlayEntryRuntime: {
       resolvePlayEntryPlan: () => ({})
     },
@@ -74,6 +78,7 @@ describe("bootstrap play runtime contract", () => {
 
     expect(result.playHeaderRuntime).toBe(source.CorePlayHeaderRuntime);
     expect(result.playHeaderHostRuntime).toBe(source.CorePlayHeaderHostRuntime);
+    expect(result.playPageContextRuntime).toBe(source.CorePlayPageContextRuntime);
     expect(result.playEntryRuntime).toBe(source.CorePlayEntryRuntime);
     expect(result.customSpawnRuntime).toBe(source.CoreCustomSpawnRuntime);
     expect(result.playCustomSpawnRuntime).toBe(source.CorePlayCustomSpawnRuntime);

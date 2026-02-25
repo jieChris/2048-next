@@ -6,18 +6,11 @@
   ) {
     throw new Error("CorePlayRuntimeContractRuntime is required");
   }
-  var playPageContextRuntime = window.CorePlayPageContextRuntime;
-  if (
-    !playPageContextRuntime ||
-    typeof playPageContextRuntime.resolvePlayCustomSpawnModeConfigFromPageContext !== "function" ||
-    typeof playPageContextRuntime.applyPlayHeaderFromPageContext !== "function"
-  ) {
-    throw new Error("CorePlayPageContextRuntime is required");
-  }
 
   var runtimeContracts = playRuntimeContractRuntime.resolvePlayRuntimeContracts(window);
   var playHeaderRuntime = runtimeContracts.playHeaderRuntime;
   var playHeaderHostRuntime = runtimeContracts.playHeaderHostRuntime;
+  var playPageContextRuntime = runtimeContracts.playPageContextRuntime;
   var playEntryRuntime = runtimeContracts.playEntryRuntime;
   var playCustomSpawnRuntime = runtimeContracts.playCustomSpawnRuntime;
   var playCustomSpawnHostRuntime = runtimeContracts.playCustomSpawnHostRuntime;

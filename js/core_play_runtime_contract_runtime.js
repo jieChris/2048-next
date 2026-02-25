@@ -37,6 +37,11 @@
       ["resolvePlayHeaderFromContext"],
       "CorePlayHeaderHostRuntime is required"
     );
+    var playPageContextRuntime = requireRuntimeFunctions(
+      source.CorePlayPageContextRuntime,
+      ["resolvePlayCustomSpawnModeConfigFromPageContext", "applyPlayHeaderFromPageContext"],
+      "CorePlayPageContextRuntime is required"
+    );
     var playEntryRuntime = requireRuntimeFunctions(
       source.CorePlayEntryRuntime,
       ["resolvePlayEntryPlan"],
@@ -122,6 +127,7 @@
     return {
       playHeaderRuntime: playHeaderRuntime,
       playHeaderHostRuntime: playHeaderHostRuntime,
+      playPageContextRuntime: playPageContextRuntime,
       playEntryRuntime: playEntryRuntime,
       customSpawnRuntime: customSpawnRuntime,
       playCustomSpawnRuntime: playCustomSpawnRuntime,

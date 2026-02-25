@@ -3,6 +3,7 @@ type AnyRecord = Record<string, unknown>;
 export interface PlayRuntimeContractWindowLike {
   CorePlayHeaderRuntime?: unknown;
   CorePlayHeaderHostRuntime?: unknown;
+  CorePlayPageContextRuntime?: unknown;
   CorePlayEntryRuntime?: unknown;
   CoreCustomSpawnRuntime?: unknown;
   CorePlayCustomSpawnRuntime?: unknown;
@@ -23,6 +24,7 @@ export interface PlayRuntimeContractWindowLike {
 export interface ResolvePlayRuntimeContractsResult {
   playHeaderRuntime: AnyRecord;
   playHeaderHostRuntime: AnyRecord;
+  playPageContextRuntime: AnyRecord;
   playEntryRuntime: AnyRecord;
   customSpawnRuntime: AnyRecord;
   playCustomSpawnRuntime: AnyRecord;
@@ -80,6 +82,11 @@ export function resolvePlayRuntimeContracts(
     source.CorePlayHeaderHostRuntime,
     ["resolvePlayHeaderFromContext"],
     "CorePlayHeaderHostRuntime is required"
+  );
+  const playPageContextRuntime = requireRuntimeFunctions(
+    source.CorePlayPageContextRuntime,
+    ["resolvePlayCustomSpawnModeConfigFromPageContext", "applyPlayHeaderFromPageContext"],
+    "CorePlayPageContextRuntime is required"
   );
   const playEntryRuntime = requireRuntimeFunctions(
     source.CorePlayEntryRuntime,
@@ -166,6 +173,7 @@ export function resolvePlayRuntimeContracts(
   return {
     playHeaderRuntime,
     playHeaderHostRuntime,
+    playPageContextRuntime,
     playEntryRuntime,
     customSpawnRuntime,
     playCustomSpawnRuntime,
