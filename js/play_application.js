@@ -41,6 +41,13 @@
   ) {
     throw new Error("CorePlayChallengeIntroRuntime is required");
   }
+  var playChallengeIntroUiRuntime = window.CorePlayChallengeIntroUiRuntime;
+  if (
+    !playChallengeIntroUiRuntime ||
+    typeof playChallengeIntroUiRuntime.resolvePlayChallengeIntroUiState !== "function"
+  ) {
+    throw new Error("CorePlayChallengeIntroUiRuntime is required");
+  }
   var playChallengeContextRuntime = window.CorePlayChallengeContextRuntime;
   if (
     !playChallengeContextRuntime ||
@@ -115,28 +122,33 @@
       modeKey: modeConfig && modeConfig.key ? String(modeConfig.key) : "",
       featureEnabled: false
     });
-    introBtn.style.setProperty("display", introModel.entryDisplay === "inline-flex" ? "inline-flex" : "none", "important");
-    modal.style.display = introModel.modalDisplay === "flex" ? "flex" : "none";
-    title.textContent = introModel.title || "";
-    desc.textContent = introModel.description || "";
-    if (leaderboard) leaderboard.textContent = introModel.leaderboardText || "";
-    if (!introModel.bindEvents) return;
+    var introUiState = playChallengeIntroUiRuntime.resolvePlayChallengeIntroUiState({
+      introModel: introModel,
+      introButtonBound: !!introBtn.__modeIntroBound,
+      closeButtonBound: !!closeBtn.__modeIntroBound,
+      modalBound: !!modal.__modeIntroBound
+    });
+    introBtn.style.setProperty("display", introUiState.entryDisplay, "important");
+    modal.style.display = introUiState.modalDisplay;
+    title.textContent = introUiState.titleText;
+    desc.textContent = introUiState.descriptionText;
+    if (leaderboard) leaderboard.textContent = introUiState.leaderboardText;
 
-    if (!introBtn.__modeIntroBound) {
+    if (introUiState.bindIntroClick) {
       introBtn.__modeIntroBound = true;
       introBtn.addEventListener("click", function (e) {
         if (e) e.preventDefault();
         modal.style.display = "flex";
       });
     }
-    if (!closeBtn.__modeIntroBound) {
+    if (introUiState.bindCloseClick) {
       closeBtn.__modeIntroBound = true;
       closeBtn.addEventListener("click", function (e) {
         if (e) e.preventDefault();
         modal.style.display = "none";
       });
     }
-    if (!modal.__modeIntroBound) {
+    if (introUiState.bindOverlayClick) {
       modal.__modeIntroBound = true;
       modal.addEventListener("click", function (e) {
         if (e && e.target === modal) modal.style.display = "none";

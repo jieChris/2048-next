@@ -2375,6 +2375,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.addInitScript(() => {
       (window as any).__playEntryPlanCallCount = 0;
       (window as any).__playChallengeIntroCallCount = 0;
+      (window as any).__playChallengeIntroUiCallCount = 0;
       (window as any).__playChallengeContextCallCount = 0;
       (window as any).__playHeaderStateCallCount = 0;
       const runtimeTarget: Record<string, unknown> = {};
@@ -2399,6 +2400,21 @@ test.describe("Legacy Multi-Page Smoke", () => {
             target[prop] = function (opts: unknown) {
               (window as any).__playChallengeIntroCallCount =
                 Number((window as any).__playChallengeIntroCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+      const challengeIntroUiRuntimeTarget: Record<string, unknown> = {};
+      (window as any).CorePlayChallengeIntroUiRuntime = new Proxy(challengeIntroUiRuntimeTarget, {
+        set(target, prop, value) {
+          if (prop === "resolvePlayChallengeIntroUiState" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__playChallengeIntroUiCallCount =
+                Number((window as any).__playChallengeIntroUiCallCount || 0) + 1;
               return (value as (input: unknown) => unknown)(opts);
             };
             return true;
@@ -2452,6 +2468,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       hasChallengeIntroRuntime: Boolean(
         (window as any).CorePlayChallengeIntroRuntime?.resolvePlayChallengeIntroModel
       ),
+      hasChallengeIntroUiRuntime: Boolean(
+        (window as any).CorePlayChallengeIntroUiRuntime?.resolvePlayChallengeIntroUiState
+      ),
       hasChallengeContextRuntime: Boolean(
         (window as any).CorePlayChallengeContextRuntime?.resolvePlayChallengeContext
       ),
@@ -2460,6 +2479,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       ),
       entryCallCount: Number((window as any).__playEntryPlanCallCount || 0),
       challengeIntroCallCount: Number((window as any).__playChallengeIntroCallCount || 0),
+      challengeIntroUiCallCount: Number((window as any).__playChallengeIntroUiCallCount || 0),
       challengeContextCallCount: Number((window as any).__playChallengeContextCallCount || 0),
       headerStateCallCount: Number((window as any).__playHeaderStateCallCount || 0),
       modeKey:
@@ -2477,10 +2497,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.hasChallengeIntroRuntime).toBe(true);
+    expect(snapshot.hasChallengeIntroUiRuntime).toBe(true);
     expect(snapshot.hasChallengeContextRuntime).toBe(true);
     expect(snapshot.hasHeaderStateRuntime).toBe(true);
     expect(snapshot.entryCallCount).toBeGreaterThan(0);
     expect(snapshot.challengeIntroCallCount).toBeGreaterThan(0);
+    expect(snapshot.challengeIntroUiCallCount).toBeGreaterThan(0);
     expect(snapshot.challengeContextCallCount).toBeGreaterThan(0);
     expect(snapshot.headerStateCallCount).toBeGreaterThan(0);
     expect(snapshot.modeKey).toBe("standard_4x4_pow2_no_undo");
@@ -2521,6 +2543,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         hasPlayChallengeIntroRuntime: Boolean(
           (window as any).CorePlayChallengeIntroRuntime?.resolvePlayChallengeIntroModel
         ),
+        hasPlayChallengeIntroUiRuntime: Boolean(
+          (window as any).CorePlayChallengeIntroUiRuntime?.resolvePlayChallengeIntroUiState
+        ),
         hasPlayChallengeContextRuntime: Boolean(
           (window as any).CorePlayChallengeContextRuntime?.resolvePlayChallengeContext
         ),
@@ -2537,6 +2562,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasStorageRuntime).toBe(true);
     expect(snapshot.hasPlayEntryRuntime).toBe(true);
     expect(snapshot.hasPlayChallengeIntroRuntime).toBe(true);
+    expect(snapshot.hasPlayChallengeIntroUiRuntime).toBe(true);
     expect(snapshot.hasPlayChallengeContextRuntime).toBe(true);
     expect(snapshot.hasHeaderRuntime).toBe(true);
     expect(snapshot.hasModeCatalogRuntime).toBe(true);
