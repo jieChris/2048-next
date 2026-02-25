@@ -177,7 +177,8 @@
     typeof historyRecordActionsRuntime.resolveHistoryReplayHref !== "function" ||
     typeof historyRecordActionsRuntime.resolveHistoryDeleteActionState !== "function" ||
     typeof historyRecordActionsRuntime.resolveHistoryDeleteFailureNotice !== "function" ||
-    typeof historyRecordActionsRuntime.resolveHistoryDeleteSuccessNotice !== "function"
+    typeof historyRecordActionsRuntime.resolveHistoryDeleteSuccessNotice !== "function" ||
+    typeof historyRecordActionsRuntime.executeHistoryDeleteRecord !== "function"
   ) {
     throw new Error("CoreHistoryRecordActionsRuntime is required");
   }
@@ -396,12 +397,20 @@
               item && item.id
             );
             if (!window.confirm(actionState.confirmMessage)) return;
-            var ok = window.LocalHistoryStore.deleteById(actionState.recordId);
-            if (!ok) {
-              setStatus(historyRecordActionsRuntime.resolveHistoryDeleteFailureNotice(), true);
+            var deleteState = historyRecordActionsRuntime.executeHistoryDeleteRecord({
+              localHistoryStore: window.LocalHistoryStore,
+              recordId: actionState.recordId
+            });
+            if (!deleteState || deleteState.deleted !== true) {
+              setStatus(
+                deleteState && deleteState.notice
+                  ? deleteState.notice
+                  : historyRecordActionsRuntime.resolveHistoryDeleteFailureNotice(),
+                true
+              );
               return;
             }
-            setStatus(historyRecordActionsRuntime.resolveHistoryDeleteSuccessNotice(), false);
+            setStatus(deleteState.notice, false);
             loadHistory();
           });
         }

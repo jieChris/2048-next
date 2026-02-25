@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  executeHistoryDeleteRecord,
   resolveHistoryDeleteActionState,
   resolveHistoryDeleteFailureNotice,
   resolveHistoryDeleteSuccessNotice,
@@ -24,5 +25,36 @@ describe("bootstrap history record actions", () => {
   it("returns delete notices", () => {
     expect(resolveHistoryDeleteFailureNotice()).toBe("删除失败：记录不存在或已被删除");
     expect(resolveHistoryDeleteSuccessNotice()).toBe("记录已删除");
+  });
+
+  it("executes delete action with local history store", () => {
+    const calls: string[] = [];
+    const state = executeHistoryDeleteRecord({
+      localHistoryStore: {
+        deleteById(recordId: string) {
+          calls.push(recordId);
+          return true;
+        }
+      },
+      recordId: "abc-1"
+    });
+
+    expect(calls).toEqual(["abc-1"]);
+    expect(state).toEqual({
+      deleted: true,
+      notice: "记录已删除"
+    });
+  });
+
+  it("returns failure notice when delete action cannot run", () => {
+    expect(
+      executeHistoryDeleteRecord({
+        localHistoryStore: null,
+        recordId: "abc-2"
+      })
+    ).toEqual({
+      deleted: false,
+      notice: "删除失败：记录不存在或已被删除"
+    });
   });
 });

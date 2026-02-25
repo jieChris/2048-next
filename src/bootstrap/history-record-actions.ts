@@ -24,3 +24,49 @@ export function resolveHistoryDeleteFailureNotice(): string {
 export function resolveHistoryDeleteSuccessNotice(): string {
   return "记录已删除";
 }
+
+export function executeHistoryDeleteRecord(input: {
+  localHistoryStore?: unknown;
+  recordId?: unknown;
+}): {
+  deleted: boolean;
+  notice: string;
+} {
+  try {
+    const source =
+      input && typeof input === "object" ? (input as { localHistoryStore?: unknown; recordId?: unknown }) : {};
+    const store =
+      source.localHistoryStore && typeof source.localHistoryStore === "object"
+        ? (source.localHistoryStore as { deleteById?: unknown })
+        : null;
+    if (!store || typeof store.deleteById !== "function") {
+      return {
+        deleted: false,
+        notice: resolveHistoryDeleteFailureNotice()
+      };
+    }
+    const actionState = resolveHistoryDeleteActionState(source.recordId);
+    if (!actionState.recordId) {
+      return {
+        deleted: false,
+        notice: resolveHistoryDeleteFailureNotice()
+      };
+    }
+    const ok = (store.deleteById as (recordId: string) => unknown).call(store, actionState.recordId);
+    if (ok) {
+      return {
+        deleted: true,
+        notice: resolveHistoryDeleteSuccessNotice()
+      };
+    }
+    return {
+      deleted: false,
+      notice: resolveHistoryDeleteFailureNotice()
+    };
+  } catch (_error) {
+    return {
+      deleted: false,
+      notice: resolveHistoryDeleteFailureNotice()
+    };
+  }
+}

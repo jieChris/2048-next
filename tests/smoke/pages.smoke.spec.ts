@@ -1759,6 +1759,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("history page delegates record delete action decisions to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyDeleteActionCallCount = 0;
+      (window as any).__historyDeleteExecuteCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryRecordActionsRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
@@ -1767,6 +1768,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
               (window as any).__historyDeleteActionCallCount =
                 Number((window as any).__historyDeleteActionCallCount || 0) + 1;
               return (value as (id: unknown) => unknown)(recordId);
+            };
+            return true;
+          }
+          if (prop === "executeHistoryDeleteRecord" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyDeleteExecuteCallCount =
+                Number((window as any).__historyDeleteExecuteCallCount || 0) + 1;
+              return (value as (payload: unknown) => unknown)(input);
             };
             return true;
           }
@@ -1817,21 +1826,34 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForTimeout(200);
 
     const snapshot = await page.evaluate(() => {
+      const store = (window as any).LocalHistoryStore;
+      if (!store || typeof store.deleteById !== "function") {
+        throw new Error("LocalHistoryStore.deleteById unavailable");
+      }
+      const originalDeleteById = store.deleteById;
+      store.deleteById = () => true;
+
       const oldConfirm = window.confirm;
-      window.confirm = () => false;
+      window.confirm = () => true;
 
       const deleteBtn = document.querySelector(".history-delete-btn") as HTMLButtonElement | null;
       if (deleteBtn && typeof deleteBtn.click === "function") deleteBtn.click();
 
       window.confirm = oldConfirm;
+      store.deleteById = originalDeleteById;
       return {
-        hasRuntime: Boolean((window as any).CoreHistoryRecordActionsRuntime?.resolveHistoryDeleteActionState),
-        deleteActionCallCount: Number((window as any).__historyDeleteActionCallCount || 0)
+        hasRuntime: Boolean(
+          (window as any).CoreHistoryRecordActionsRuntime?.resolveHistoryDeleteActionState &&
+            (window as any).CoreHistoryRecordActionsRuntime?.executeHistoryDeleteRecord
+        ),
+        deleteActionCallCount: Number((window as any).__historyDeleteActionCallCount || 0),
+        deleteExecuteCallCount: Number((window as any).__historyDeleteExecuteCallCount || 0)
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.deleteActionCallCount).toBeGreaterThan(0);
+    expect(snapshot.deleteExecuteCallCount).toBeGreaterThan(0);
   });
 
   test("history page delegates mismatch export execution to runtime helper", async ({ page }) => {
