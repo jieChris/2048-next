@@ -113,7 +113,9 @@
     typeof historyExportRuntime.resolveHistoryExportListRecordsSource !== "function" ||
     typeof historyExportRuntime.resolveHistoryMismatchExportRecordIds !== "function" ||
     typeof historyExportRuntime.resolveHistorySingleRecordExportState !== "function" ||
-    typeof historyExportRuntime.downloadHistorySingleRecord !== "function"
+    typeof historyExportRuntime.downloadHistorySingleRecord !== "function" ||
+    typeof historyExportRuntime.downloadHistoryAllRecords !== "function" ||
+    typeof historyExportRuntime.downloadHistoryMismatchRecords !== "function"
   ) {
     throw new Error("CoreHistoryExportRuntime is required");
   }
@@ -499,10 +501,13 @@
     if (exportAllBtn) {
       exportAllBtn.addEventListener("click", function () {
         if (!window.LocalHistoryStore) return;
-        var payload = window.LocalHistoryStore.exportRecords();
-        var dateTag = historyToolbarRuntime.resolveHistoryExportDateTag(new Date());
-        var fileName = historyToolbarRuntime.resolveHistoryExportAllFileName(dateTag);
-        window.LocalHistoryStore.download(fileName, payload);
+        var ok = historyExportRuntime.downloadHistoryAllRecords({
+          localHistoryStore: window.LocalHistoryStore,
+          dateValue: new Date(),
+          resolveDateTag: historyToolbarRuntime.resolveHistoryExportDateTag,
+          resolveFileName: historyToolbarRuntime.resolveHistoryExportAllFileName
+        });
+        if (!ok) return;
         setStatus(historyToolbarRuntime.resolveHistoryExportAllNotice(), false);
       });
     }
@@ -517,21 +522,24 @@
           keyword: state.keyword,
           sortBy: state.sortBy
         });
-        var ids = historyExportRuntime.resolveHistoryMismatchExportRecordIds({
+        var exportState = historyExportRuntime.downloadHistoryMismatchRecords({
           localHistoryStore: window.LocalHistoryStore,
           queryOptions: queryOptions,
           maxPages: 100,
-          pageSize: 500
+          pageSize: 500,
+          dateValue: new Date(),
+          resolveDateTag: historyToolbarRuntime.resolveHistoryExportDateTag,
+          resolveFileName: historyToolbarRuntime.resolveHistoryMismatchExportFileName
         });
-        if (!ids.length) {
+        if (exportState && exportState.empty) {
           setStatus(historyToolbarRuntime.resolveHistoryMismatchExportEmptyNotice(), false);
           return;
         }
-        var payload = window.LocalHistoryStore.exportRecords(ids);
-        var dateTag = historyToolbarRuntime.resolveHistoryExportDateTag(new Date());
-        var fileName = historyToolbarRuntime.resolveHistoryMismatchExportFileName(dateTag);
-        window.LocalHistoryStore.download(fileName, payload);
-        setStatus(historyToolbarRuntime.resolveHistoryMismatchExportSuccessNotice(ids.length), false);
+        if (!exportState || exportState.downloaded !== true) return;
+        setStatus(
+          historyToolbarRuntime.resolveHistoryMismatchExportSuccessNotice(exportState.count),
+          false
+        );
       });
     }
 

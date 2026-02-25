@@ -22,7 +22,15 @@ export interface HistorySingleRecordExportState {
   payload: unknown;
 }
 
+export interface HistoryMismatchDownloadResult {
+  downloaded: boolean;
+  count: number;
+  empty: boolean;
+}
+
 type HistoryExportDownloadFn = (fileName: string, payload: unknown) => void;
+type HistoryExportDateTagResolver = (value: unknown) => string;
+type HistoryExportFileNameResolver = (dateTag: unknown) => string;
 
 function isPlainObject(value: unknown): value is AnyRecord {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -160,6 +168,38 @@ function resolveHistoryExportDownloadSource(localHistoryStore: unknown): History
   return download.bind(store);
 }
 
+function resolveHistoryExportRecordsSource(localHistoryStore: unknown): ((ids?: unknown[]) => unknown) | null {
+  const store = isPlainObject(localHistoryStore) ? (localHistoryStore as AnyRecord) : null;
+  if (!store || typeof store.exportRecords !== "function") return null;
+  const exportRecords = store.exportRecords as (ids?: unknown[]) => unknown;
+  return exportRecords.bind(store);
+}
+
+function resolveHistoryExportDateTag(input: {
+  dateValue?: unknown;
+  resolveDateTag?: HistoryExportDateTagResolver | null;
+}): string {
+  const resolveDateTag = input.resolveDateTag;
+  if (typeof resolveDateTag === "function") {
+    const resolved = resolveDateTag(input.dateValue);
+    if (typeof resolved === "string" && resolved) return resolved;
+  }
+  return new Date().toISOString().slice(0, 10);
+}
+
+function resolveHistoryExportFileName(input: {
+  dateTag: string;
+  resolveFileName?: HistoryExportFileNameResolver | null;
+  fallbackPrefix: string;
+}): string {
+  const resolveFileName = input.resolveFileName;
+  if (typeof resolveFileName === "function") {
+    const resolved = resolveFileName(input.dateTag);
+    if (typeof resolved === "string" && resolved) return resolved;
+  }
+  return input.fallbackPrefix + input.dateTag + ".json";
+}
+
 export function downloadHistorySingleRecord(input: {
   localHistoryStore?: unknown;
   item?: unknown;
@@ -177,5 +217,94 @@ export function downloadHistorySingleRecord(input: {
     return true;
   } catch (_error) {
     return false;
+  }
+}
+
+export function downloadHistoryAllRecords(input: {
+  localHistoryStore?: unknown;
+  dateValue?: unknown;
+  resolveDateTag?: HistoryExportDateTagResolver | null;
+  resolveFileName?: HistoryExportFileNameResolver | null;
+}): boolean {
+  try {
+    const source = isPlainObject(input) ? input : {};
+    const exportRecords = resolveHistoryExportRecordsSource(source.localHistoryStore);
+    const download = resolveHistoryExportDownloadSource(source.localHistoryStore);
+    if (!exportRecords || !download) return false;
+
+    const dateTag = resolveHistoryExportDateTag({
+      dateValue: source.dateValue,
+      resolveDateTag: source.resolveDateTag
+    });
+    const fileName = resolveHistoryExportFileName({
+      dateTag,
+      resolveFileName: source.resolveFileName,
+      fallbackPrefix: "2048_local_history_"
+    });
+    const payload = exportRecords();
+    download(fileName, payload);
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+export function downloadHistoryMismatchRecords(input: {
+  localHistoryStore?: unknown;
+  queryOptions?: HistoryExportQueryOptions | null;
+  maxPages?: unknown;
+  pageSize?: unknown;
+  dateValue?: unknown;
+  resolveDateTag?: HistoryExportDateTagResolver | null;
+  resolveFileName?: HistoryExportFileNameResolver | null;
+}): HistoryMismatchDownloadResult {
+  try {
+    const source = isPlainObject(input) ? input : {};
+    const exportRecords = resolveHistoryExportRecordsSource(source.localHistoryStore);
+    const download = resolveHistoryExportDownloadSource(source.localHistoryStore);
+    if (!exportRecords || !download) {
+      return {
+        downloaded: false,
+        count: 0,
+        empty: false
+      };
+    }
+
+    const ids = resolveHistoryMismatchExportRecordIds({
+      localHistoryStore: source.localHistoryStore,
+      queryOptions: source.queryOptions,
+      maxPages: source.maxPages,
+      pageSize: source.pageSize
+    });
+    if (!ids.length) {
+      return {
+        downloaded: false,
+        count: 0,
+        empty: true
+      };
+    }
+
+    const dateTag = resolveHistoryExportDateTag({
+      dateValue: source.dateValue,
+      resolveDateTag: source.resolveDateTag
+    });
+    const fileName = resolveHistoryExportFileName({
+      dateTag,
+      resolveFileName: source.resolveFileName,
+      fallbackPrefix: "2048_local_history_mismatch_"
+    });
+    const payload = exportRecords(ids);
+    download(fileName, payload);
+    return {
+      downloaded: true,
+      count: ids.length,
+      empty: false
+    };
+  } catch (_error) {
+    return {
+      downloaded: false,
+      count: 0,
+      empty: false
+    };
   }
 }

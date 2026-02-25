@@ -1812,13 +1812,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.deleteActionCallCount).toBeGreaterThan(0);
   });
 
-  test("history page delegates mismatch export id collection to runtime helper", async ({ page }) => {
+  test("history page delegates mismatch export execution to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyExportMismatchCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryExportRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
-          if (prop === "resolveHistoryMismatchExportRecordIds" && typeof value === "function") {
+          if (prop === "downloadHistoryMismatchRecords" && typeof value === "function") {
             proxyTarget[prop] = function (input: unknown) {
               (window as any).__historyExportMismatchCallCount =
                 Number((window as any).__historyExportMismatchCallCount || 0) + 1;
@@ -1906,7 +1906,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
       store.download = originalDownload;
       return {
-        hasRuntime: Boolean((window as any).CoreHistoryExportRuntime?.resolveHistoryMismatchExportRecordIds),
+        hasRuntime: Boolean((window as any).CoreHistoryExportRuntime?.downloadHistoryMismatchRecords),
         mismatchCallCount: Number((window as any).__historyExportMismatchCallCount || 0),
         statusText: (document.querySelector("#history-status")?.textContent || "").trim(),
         fileName: String((window as any).__historyExportLastFile || "")

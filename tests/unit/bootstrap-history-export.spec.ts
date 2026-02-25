@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  downloadHistoryAllRecords,
+  downloadHistoryMismatchRecords,
   downloadHistorySingleRecord,
   resolveHistoryMismatchExportRecordIds,
   resolveHistorySingleRecordExportState,
@@ -160,5 +162,93 @@ describe("bootstrap history export", () => {
         }
       })
     ).toBe(false);
+  });
+
+  it("downloads all records from runtime helper", () => {
+    const captures: Array<{ fileName: string; payload: unknown }> = [];
+    const ok = downloadHistoryAllRecords({
+      localHistoryStore: {
+        exportRecords() {
+          return "{\"records\":[]}";
+        },
+        download(fileName: string, payload: unknown) {
+          captures.push({ fileName, payload });
+        }
+      },
+      dateValue: "2026-02-25T08:00:00.000Z",
+      resolveDateTag: (value) => String(value).slice(0, 10),
+      resolveFileName: (dateTag) => "all_" + String(dateTag) + ".json"
+    });
+
+    expect(ok).toBe(true);
+    expect(captures).toEqual([
+      {
+        fileName: "all_2026-02-25.json",
+        payload: "{\"records\":[]}"
+      }
+    ]);
+  });
+
+  it("returns empty state when mismatch export has no ids", () => {
+    const result = downloadHistoryMismatchRecords({
+      localHistoryStore: {
+        listRecords() {
+          return { items: [], total: 0 };
+        },
+        exportRecords(ids?: unknown[]) {
+          return JSON.stringify(ids || []);
+        },
+        download() {
+          throw new Error("should not download on empty result");
+        }
+      },
+      queryOptions: {
+        mode_key: "standard_4x4_pow2_no_undo",
+        adapter_parity_filter: "mismatch"
+      }
+    });
+
+    expect(result).toEqual({
+      downloaded: false,
+      count: 0,
+      empty: true
+    });
+  });
+
+  it("downloads mismatch records and returns count", () => {
+    const captures: Array<{ fileName: string; payload: unknown }> = [];
+    const result = downloadHistoryMismatchRecords({
+      localHistoryStore: {
+        listRecords(query: { page: number }) {
+          if (query.page === 1) return { items: [{ id: "m-1" }, { id: "m-2" }], total: 2 };
+          return { items: [], total: 2 };
+        },
+        exportRecords(ids?: unknown[]) {
+          return JSON.stringify(ids || []);
+        },
+        download(fileName: string, payload: unknown) {
+          captures.push({ fileName, payload });
+        }
+      },
+      queryOptions: {
+        mode_key: "standard_4x4_pow2_no_undo",
+        adapter_parity_filter: "mismatch"
+      },
+      dateValue: "2026-02-25T08:00:00.000Z",
+      resolveDateTag: (value) => String(value).slice(0, 10),
+      resolveFileName: (dateTag) => "mismatch_" + String(dateTag) + ".json"
+    });
+
+    expect(result).toEqual({
+      downloaded: true,
+      count: 2,
+      empty: false
+    });
+    expect(captures).toEqual([
+      {
+        fileName: "mismatch_2026-02-25.json",
+        payload: "[\"m-1\",\"m-2\"]"
+      }
+    ]);
   });
 });

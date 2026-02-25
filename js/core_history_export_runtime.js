@@ -122,6 +122,32 @@
     return store.download.bind(store);
   }
 
+  function resolveHistoryExportRecordsSource(localHistoryStore) {
+    var store = isPlainObject(localHistoryStore) ? localHistoryStore : null;
+    if (!store || typeof store.exportRecords !== "function") return null;
+    return store.exportRecords.bind(store);
+  }
+
+  function resolveHistoryExportDateTag(input) {
+    var source = isPlainObject(input) ? input : {};
+    var resolveDateTag = source.resolveDateTag;
+    if (typeof resolveDateTag === "function") {
+      var resolved = resolveDateTag(source.dateValue);
+      if (typeof resolved === "string" && resolved) return resolved;
+    }
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function resolveHistoryExportFileName(input) {
+    var source = isPlainObject(input) ? input : {};
+    var resolveFileName = source.resolveFileName;
+    if (typeof resolveFileName === "function") {
+      var resolved = resolveFileName(source.dateTag);
+      if (typeof resolved === "string" && resolved) return resolved;
+    }
+    return source.fallbackPrefix + source.dateTag + ".json";
+  }
+
   function downloadHistorySingleRecord(input) {
     try {
       var source = isPlainObject(input) ? input : {};
@@ -139,6 +165,82 @@
     }
   }
 
+  function downloadHistoryAllRecords(input) {
+    try {
+      var source = isPlainObject(input) ? input : {};
+      var exportRecords = resolveHistoryExportRecordsSource(source.localHistoryStore);
+      var download = resolveHistoryExportDownloadSource(source.localHistoryStore);
+      if (!exportRecords || !download) return false;
+
+      var dateTag = resolveHistoryExportDateTag({
+        dateValue: source.dateValue,
+        resolveDateTag: source.resolveDateTag
+      });
+      var fileName = resolveHistoryExportFileName({
+        dateTag: dateTag,
+        resolveFileName: source.resolveFileName,
+        fallbackPrefix: "2048_local_history_"
+      });
+      var payload = exportRecords();
+      download(fileName, payload);
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function downloadHistoryMismatchRecords(input) {
+    try {
+      var source = isPlainObject(input) ? input : {};
+      var exportRecords = resolveHistoryExportRecordsSource(source.localHistoryStore);
+      var download = resolveHistoryExportDownloadSource(source.localHistoryStore);
+      if (!exportRecords || !download) {
+        return {
+          downloaded: false,
+          count: 0,
+          empty: false
+        };
+      }
+
+      var ids = resolveHistoryMismatchExportRecordIds({
+        localHistoryStore: source.localHistoryStore,
+        queryOptions: source.queryOptions,
+        maxPages: source.maxPages,
+        pageSize: source.pageSize
+      });
+      if (!ids.length) {
+        return {
+          downloaded: false,
+          count: 0,
+          empty: true
+        };
+      }
+
+      var dateTag = resolveHistoryExportDateTag({
+        dateValue: source.dateValue,
+        resolveDateTag: source.resolveDateTag
+      });
+      var fileName = resolveHistoryExportFileName({
+        dateTag: dateTag,
+        resolveFileName: source.resolveFileName,
+        fallbackPrefix: "2048_local_history_mismatch_"
+      });
+      var payload = exportRecords(ids);
+      download(fileName, payload);
+      return {
+        downloaded: true,
+        count: ids.length,
+        empty: false
+      };
+    } catch (_error) {
+      return {
+        downloaded: false,
+        count: 0,
+        empty: false
+      };
+    }
+  }
+
   global.CoreHistoryExportRuntime = global.CoreHistoryExportRuntime || {};
   global.CoreHistoryExportRuntime.resolveHistoryRecordExportFileName =
     resolveHistoryRecordExportFileName;
@@ -151,4 +253,6 @@
   global.CoreHistoryExportRuntime.resolveHistorySingleRecordExportState =
     resolveHistorySingleRecordExportState;
   global.CoreHistoryExportRuntime.downloadHistorySingleRecord = downloadHistorySingleRecord;
+  global.CoreHistoryExportRuntime.downloadHistoryAllRecords = downloadHistoryAllRecords;
+  global.CoreHistoryExportRuntime.downloadHistoryMismatchRecords = downloadHistoryMismatchRecords;
 })(typeof window !== "undefined" ? window : undefined);

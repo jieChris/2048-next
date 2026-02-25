@@ -219,6 +219,7 @@
   - 新增 `src/bootstrap/history-export.ts` + `js/core_history_export_runtime.js`，`history_page.js` 委托导出文件名生成与 mismatch 全量导出分页收集循环
   - `history-export` 已继续承接单条记录导出状态与 mismatch 导出源读取（`resolveHistorySingleRecordExportState`/`resolveHistoryMismatchExportRecordIds`），`history_page.js` 不再本地拼装导出源与 payload
   - `history-export` 已继续承接单条记录导出执行（`downloadHistorySingleRecord`），`history_page.js` 不再本地判断导出状态后调用 `LocalHistoryStore.download`
+  - `history-export` 已继续承接“导出全部/导出 A/B 不一致”执行（`downloadHistoryAllRecords`/`downloadHistoryMismatchRecords`），`history_page.js` 不再本地拼接导出 payload、文件名与下载调用
   - 新增 `src/bootstrap/history-query.ts` + `js/core_history_query_runtime.js`，`history_page.js` 委托筛选状态归一化、list/burn-in 查询参数拼装与分页按钮状态计算
   - `history-query` 已继续承接筛选状态回写（`applyHistoryFilterState`），`history_page.js` 不再本地逐字段赋值 `state.modeKey/keyword/sortBy/...`
   - `history-query` 已继续承接列表结果源读取（`resolveHistoryListResultSource`），`history_page.js` 不再直接调用 `LocalHistoryStore.listRecords`
