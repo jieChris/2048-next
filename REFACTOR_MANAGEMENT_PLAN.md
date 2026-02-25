@@ -214,6 +214,7 @@
   - 新增 `src/bootstrap/history-canary-policy.ts` + `js/core_history_canary_policy_runtime.js`，`history_page.js` 委托 canary 策略快照解析、存储键归一化与动作决策/提示文案
   - 新增 `src/bootstrap/history-canary-view.ts` + `js/core_history_canary_view_runtime.js`，`history_page.js` 委托 canary 面板展示态（来源文案/模式文案/gate 样式/storage 文案）模型计算
   - 新增 `src/bootstrap/history-summary.ts` + `js/core_history_summary_runtime.js`，`history_page.js` 委托顶部汇总文案（总条数/分页/筛选标签）计算
+  - 新增 `src/bootstrap/history-status.ts` + `js/core_history_status_runtime.js`，`history_page.js` 委托状态栏文案/颜色展示态（error 与 normal）模型计算
   - 新增 `src/bootstrap/history-export.ts` + `js/core_history_export_runtime.js`，`history_page.js` 委托导出文件名生成与 mismatch 全量导出分页收集循环
   - `history-export` 已继续承接单条记录导出状态与 mismatch 导出源读取（`resolveHistorySingleRecordExportState`/`resolveHistoryMismatchExportRecordIds`），`history_page.js` 不再本地拼装导出源与 payload
   - 新增 `src/bootstrap/history-query.ts` + `js/core_history_query_runtime.js`，`history_page.js` 委托筛选状态归一化、list/burn-in 查询参数拼装与分页按钮状态计算

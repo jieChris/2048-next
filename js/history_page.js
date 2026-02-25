@@ -97,6 +97,13 @@
   ) {
     throw new Error("CoreHistorySummaryRuntime is required");
   }
+  var historyStatusRuntime = window.CoreHistoryStatusRuntime;
+  if (
+    !historyStatusRuntime ||
+    typeof historyStatusRuntime.resolveHistoryStatusDisplayState !== "function"
+  ) {
+    throw new Error("CoreHistoryStatusRuntime is required");
+  }
   var historyExportRuntime = window.CoreHistoryExportRuntime;
   if (
     !historyExportRuntime ||
@@ -210,8 +217,12 @@
   function setStatus(text, isError) {
     var status = el("history-status");
     if (!status) return;
-    status.textContent = text || "";
-    status.style.color = isError ? "#c0392b" : "#4a4a4a";
+    var statusState = historyStatusRuntime.resolveHistoryStatusDisplayState({
+      text: text,
+      isError: isError
+    });
+    status.textContent = statusState.text;
+    status.style.color = statusState.color;
   }
 
   function boardToHtml(board, width, height) {
