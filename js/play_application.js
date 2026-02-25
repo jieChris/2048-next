@@ -1,125 +1,29 @@
 (function () {
-  var playHeaderRuntime = window.CorePlayHeaderRuntime;
+  var playRuntimeContractRuntime = window.CorePlayRuntimeContractRuntime;
   if (
-    !playHeaderRuntime ||
-    typeof playHeaderRuntime.compactPlayModeLabel !== "function" ||
-    typeof playHeaderRuntime.resolvePlayRulesText !== "function" ||
-    typeof playHeaderRuntime.buildPlayModeIntroText !== "function" ||
-    typeof playHeaderRuntime.resolvePlayHeaderState !== "function"
+    !playRuntimeContractRuntime ||
+    typeof playRuntimeContractRuntime.resolvePlayRuntimeContracts !== "function"
   ) {
-    throw new Error("CorePlayHeaderRuntime is required");
+    throw new Error("CorePlayRuntimeContractRuntime is required");
   }
-  var playHeaderHostRuntime = window.CorePlayHeaderHostRuntime;
-  if (
-    !playHeaderHostRuntime ||
-    typeof playHeaderHostRuntime.resolvePlayHeaderFromContext !== "function"
-  ) {
-    throw new Error("CorePlayHeaderHostRuntime is required");
-  }
-  var playEntryRuntime = window.CorePlayEntryRuntime;
-  if (
-    !playEntryRuntime ||
-    typeof playEntryRuntime.resolvePlayEntryPlan !== "function"
-  ) {
-    throw new Error("CorePlayEntryRuntime is required");
-  }
-  var customSpawnRuntime = window.CoreCustomSpawnRuntime;
-  if (
-    !customSpawnRuntime ||
-    typeof customSpawnRuntime.isCustomSpawnModeKey !== "function" ||
-    typeof customSpawnRuntime.sanitizeCustomFourRate !== "function" ||
-    typeof customSpawnRuntime.formatRatePercent !== "function" ||
-    typeof customSpawnRuntime.inferFourRateFromSpawnTable !== "function" ||
-    typeof customSpawnRuntime.applyCustomFourRateToModeConfig !== "function"
-  ) {
-    throw new Error("CoreCustomSpawnRuntime is required");
-  }
-  var playCustomSpawnRuntime = window.CorePlayCustomSpawnRuntime;
-  if (
-    !playCustomSpawnRuntime ||
-    typeof playCustomSpawnRuntime.resolvePlayCustomSpawnModeConfig !== "function"
-  ) {
-    throw new Error("CorePlayCustomSpawnRuntime is required");
-  }
-  var playCustomSpawnHostRuntime = window.CorePlayCustomSpawnHostRuntime;
-  if (
-    !playCustomSpawnHostRuntime ||
-    typeof playCustomSpawnHostRuntime.resolvePlayCustomSpawnModeConfigFromContext !== "function"
-  ) {
-    throw new Error("CorePlayCustomSpawnHostRuntime is required");
-  }
-  var playChallengeIntroRuntime = window.CorePlayChallengeIntroRuntime;
-  if (
-    !playChallengeIntroRuntime ||
-    typeof playChallengeIntroRuntime.resolvePlayChallengeIntroModel !== "function"
-  ) {
-    throw new Error("CorePlayChallengeIntroRuntime is required");
-  }
-  var playChallengeIntroUiRuntime = window.CorePlayChallengeIntroUiRuntime;
-  if (
-    !playChallengeIntroUiRuntime ||
-    typeof playChallengeIntroUiRuntime.resolvePlayChallengeIntroUiState !== "function"
-  ) {
-    throw new Error("CorePlayChallengeIntroUiRuntime is required");
-  }
-  var playChallengeIntroActionRuntime = window.CorePlayChallengeIntroActionRuntime;
-  if (
-    !playChallengeIntroActionRuntime ||
-    typeof playChallengeIntroActionRuntime.resolvePlayChallengeIntroActionState !== "function"
-  ) {
-    throw new Error("CorePlayChallengeIntroActionRuntime is required");
-  }
-  var playChallengeIntroHostRuntime = window.CorePlayChallengeIntroHostRuntime;
-  if (
-    !playChallengeIntroHostRuntime ||
-    typeof playChallengeIntroHostRuntime.resolvePlayChallengeIntroFromContext !== "function"
-  ) {
-    throw new Error("CorePlayChallengeIntroHostRuntime is required");
-  }
-  var playChallengeContextRuntime = window.CorePlayChallengeContextRuntime;
-  if (
-    !playChallengeContextRuntime ||
-    typeof playChallengeContextRuntime.resolvePlayChallengeContext !== "function"
-  ) {
-    throw new Error("CorePlayChallengeContextRuntime is required");
-  }
-  var playStartGuardRuntime = window.CorePlayStartGuardRuntime;
-  if (
-    !playStartGuardRuntime ||
-    typeof playStartGuardRuntime.resolvePlayStartGuardState !== "function"
-  ) {
-    throw new Error("CorePlayStartGuardRuntime is required");
-  }
-  var playStartupPayloadRuntime = window.CorePlayStartupPayloadRuntime;
-  if (
-    !playStartupPayloadRuntime ||
-    typeof playStartupPayloadRuntime.resolvePlayStartupPayload !== "function"
-  ) {
-    throw new Error("CorePlayStartupPayloadRuntime is required");
-  }
-  var playStartupContextRuntime = window.CorePlayStartupContextRuntime;
-  if (
-    !playStartupContextRuntime ||
-    typeof playStartupContextRuntime.resolvePlayStartupContext !== "function"
-  ) {
-    throw new Error("CorePlayStartupContextRuntime is required");
-  }
-  var playStartupHostRuntime = window.CorePlayStartupHostRuntime;
-  if (
-    !playStartupHostRuntime ||
-    typeof playStartupHostRuntime.resolvePlayStartupFromContext !== "function"
-  ) {
-    throw new Error("CorePlayStartupHostRuntime is required");
-  }
-  var storageRuntime = window.CoreStorageRuntime;
-  if (
-    !storageRuntime ||
-    typeof storageRuntime.resolveStorageByName !== "function" ||
-    typeof storageRuntime.safeReadStorageItem !== "function" ||
-    typeof storageRuntime.safeSetStorageItem !== "function"
-  ) {
-    throw new Error("CoreStorageRuntime is required");
-  }
+
+  var runtimeContracts = playRuntimeContractRuntime.resolvePlayRuntimeContracts(window);
+  var playHeaderRuntime = runtimeContracts.playHeaderRuntime;
+  var playHeaderHostRuntime = runtimeContracts.playHeaderHostRuntime;
+  var playEntryRuntime = runtimeContracts.playEntryRuntime;
+  var playCustomSpawnRuntime = runtimeContracts.playCustomSpawnRuntime;
+  var playCustomSpawnHostRuntime = runtimeContracts.playCustomSpawnHostRuntime;
+  var playChallengeIntroRuntime = runtimeContracts.playChallengeIntroRuntime;
+  var playChallengeIntroUiRuntime = runtimeContracts.playChallengeIntroUiRuntime;
+  var playChallengeIntroActionRuntime = runtimeContracts.playChallengeIntroActionRuntime;
+  var playChallengeIntroHostRuntime = runtimeContracts.playChallengeIntroHostRuntime;
+  var playChallengeContextRuntime = runtimeContracts.playChallengeContextRuntime;
+  var playStartGuardRuntime = runtimeContracts.playStartGuardRuntime;
+  var playStartupPayloadRuntime = runtimeContracts.playStartupPayloadRuntime;
+  var playStartupContextRuntime = runtimeContracts.playStartupContextRuntime;
+  var playStartupHostRuntime = runtimeContracts.playStartupHostRuntime;
+  var storageRuntime = runtimeContracts.storageRuntime;
+  var bootstrap = runtimeContracts.bootstrapRuntime;
   var CUSTOM_FOUR_RATE_STORAGE_KEY =
     playCustomSpawnHostRuntime.PLAY_CUSTOM_FOUR_RATE_STORAGE_KEY || "custom_spawn_4x4_four_rate_v1";
   var DEFAULT_MODE_KEY = "standard_4x4_pow2_no_undo";
@@ -156,11 +60,6 @@
       resolveHeaderState: playHeaderRuntime.resolvePlayHeaderState,
       applyChallengeModeIntro: setupChallengeModeIntro
     });
-  }
-
-  var bootstrap = window.LegacyBootstrapRuntime;
-  if (!bootstrap || typeof bootstrap.startGameOnAnimationFrame !== "function") {
-    throw new Error("LegacyBootstrapRuntime.startGameOnAnimationFrame is required");
   }
 
   bootstrap.startGameOnAnimationFrame(function () {
