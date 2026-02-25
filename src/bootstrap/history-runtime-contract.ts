@@ -13,6 +13,7 @@ export interface HistoryRuntimeContractWindowLike {
   CoreHistoryStatusRuntime?: unknown;
   CoreHistoryExportRuntime?: unknown;
   CoreHistoryQueryRuntime?: unknown;
+  CoreHistoryLoadRuntime?: unknown;
   CoreHistoryRecordViewRuntime?: unknown;
   CoreHistoryRecordItemRuntime?: unknown;
   CoreHistoryImportRuntime?: unknown;
@@ -37,6 +38,7 @@ export interface ResolveHistoryRuntimeContractsResult {
   historyStatusRuntime: AnyRecord;
   historyExportRuntime: AnyRecord;
   historyQueryRuntime: AnyRecord;
+  historyLoadRuntime: AnyRecord;
   historyRecordViewRuntime: AnyRecord;
   historyRecordItemRuntime: AnyRecord;
   historyImportRuntime: AnyRecord;
@@ -178,6 +180,11 @@ export function resolveHistoryRuntimeContracts(
     ],
     "CoreHistoryQueryRuntime is required"
   );
+  const historyLoadRuntime = requireRuntimeFunctions(
+    source.CoreHistoryLoadRuntime,
+    ["resolveHistoryLoadPipeline"],
+    "CoreHistoryLoadRuntime is required"
+  );
   const historyRecordViewRuntime = requireRuntimeFunctions(
     source.CoreHistoryRecordViewRuntime,
     [
@@ -276,6 +283,7 @@ export function resolveHistoryRuntimeContracts(
     historyStatusRuntime,
     historyExportRuntime,
     historyQueryRuntime,
+    historyLoadRuntime,
     historyRecordViewRuntime,
     historyRecordItemRuntime,
     historyImportRuntime,

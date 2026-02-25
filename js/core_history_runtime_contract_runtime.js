@@ -127,6 +127,11 @@
       ],
       "CoreHistoryQueryRuntime is required"
     );
+    var historyLoadRuntime = requireRuntimeFunctions(
+      source.CoreHistoryLoadRuntime,
+      ["resolveHistoryLoadPipeline"],
+      "CoreHistoryLoadRuntime is required"
+    );
     var historyRecordViewRuntime = requireRuntimeFunctions(
       source.CoreHistoryRecordViewRuntime,
       [
@@ -225,6 +230,7 @@
       historyStatusRuntime: historyStatusRuntime,
       historyExportRuntime: historyExportRuntime,
       historyQueryRuntime: historyQueryRuntime,
+      historyLoadRuntime: historyLoadRuntime,
       historyRecordViewRuntime: historyRecordViewRuntime,
       historyRecordItemRuntime: historyRecordItemRuntime,
       historyImportRuntime: historyImportRuntime,

@@ -72,6 +72,13 @@ function createWindowLike() {
       resolveHistoryBurnInQuery: () => ({}),
       resolveHistoryPagerState: () => ({ disablePrev: true, disableNext: true })
     },
+    CoreHistoryLoadRuntime: {
+      resolveHistoryLoadPipeline: () => ({
+        listResult: { items: [], total: 0 },
+        burnInSummary: null,
+        pagerState: { disablePrev: true, disableNext: true }
+      })
+    },
     CoreHistoryRecordViewRuntime: {
       resolveHistoryCatalogModeLabel: () => "",
       resolveHistoryModeText: () => "",
@@ -137,6 +144,7 @@ describe("bootstrap history runtime contract", () => {
 
     expect(result.historyCanaryPolicyRuntime).toBe(source.CoreHistoryCanaryPolicyRuntime);
     expect(result.historyQueryRuntime).toBe(source.CoreHistoryQueryRuntime);
+    expect(result.historyLoadRuntime).toBe(source.CoreHistoryLoadRuntime);
     expect(result.historyModeFilterRuntime).toBe(source.CoreHistoryModeFilterRuntime);
   });
 
@@ -157,6 +165,15 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryQueryRuntime is required"
+    );
+  });
+
+  it("throws exact error when load runtime is missing required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryLoadRuntime = {};
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryLoadRuntime is required"
     );
   });
 });

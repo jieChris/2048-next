@@ -38,6 +38,7 @@
   var historyStatusRuntime = historyRuntimes.historyStatusRuntime;
   var historyExportRuntime = historyRuntimes.historyExportRuntime;
   var historyQueryRuntime = historyRuntimes.historyQueryRuntime;
+  var historyLoadRuntime = historyRuntimes.historyLoadRuntime;
   var historyRecordViewRuntime = historyRuntimes.historyRecordViewRuntime;
   var historyRecordItemRuntime = historyRuntimes.historyRecordItemRuntime;
   var historyImportRuntime = historyRuntimes.historyImportRuntime;
@@ -258,47 +259,28 @@
     if (resetPage) state.page = 1;
     readFilters();
 
-    var listQuery = historyQueryRuntime.resolveHistoryListQuery({
-      modeKey: state.modeKey,
-      keyword: state.keyword,
-      sortBy: state.sortBy,
-      adapterParityFilter: state.adapterParityFilter,
-      page: state.page,
-      pageSize: state.pageSize
-    });
-    var result = historyQueryRuntime.resolveHistoryListResultSource({
+    var loadPipeline = historyLoadRuntime.resolveHistoryLoadPipeline({
+      state: state,
       localHistoryStore: window.LocalHistoryStore,
-      listQuery: listQuery
+      historyQueryRuntime: historyQueryRuntime,
+      historyBurnInRuntime: historyBurnInRuntime,
+      burnInMinComparable: BURN_IN_MIN_COMPARABLE,
+      burnInMaxMismatchRate: BURN_IN_MAX_MISMATCH_RATE
     });
+    var result = loadPipeline && loadPipeline.listResult;
+    var burnInSummary = loadPipeline && loadPipeline.burnInSummary;
+    var pagerState = loadPipeline && loadPipeline.pagerState;
 
     renderHistory(result);
     buildSummary(result);
-    var burnInSummary = historyBurnInRuntime.resolveHistoryBurnInSummarySource({
-      localHistoryStore: window.LocalHistoryStore,
-      resolveBurnInQuery: historyQueryRuntime.resolveHistoryBurnInQuery,
-      queryInput: {
-        modeKey: state.modeKey,
-        keyword: state.keyword,
-        sortBy: state.sortBy,
-        sampleLimit: state.burnInWindow,
-        sustainedWindows: state.sustainedWindows,
-        minComparable: BURN_IN_MIN_COMPARABLE,
-        maxMismatchRate: BURN_IN_MAX_MISMATCH_RATE
-      }
-    });
     renderBurnInSummary(burnInSummary);
     renderCanaryPolicy();
     setStatus("", false);
 
     var prevBtn = el("history-prev-page");
     var nextBtn = el("history-next-page");
-    var pagerState = historyQueryRuntime.resolveHistoryPagerState({
-      total: result && result.total,
-      page: state.page,
-      pageSize: state.pageSize
-    });
-    if (prevBtn) prevBtn.disabled = pagerState.disablePrev;
-    if (nextBtn) nextBtn.disabled = pagerState.disableNext;
+    if (prevBtn) prevBtn.disabled = !!(pagerState && pagerState.disablePrev);
+    if (nextBtn) nextBtn.disabled = !!(pagerState && pagerState.disableNext);
   }
 
   function initModeFilter() {
