@@ -739,6 +739,113 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.summaryText).toContain("诊断筛选:");
   });
 
+  test("history page delegates mismatch export id collection to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyExportCollectCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryExportRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "collectHistoryRecordIdsForExport" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyExportCollectCallCount =
+                Number((window as any).__historyExportCollectCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    await page.evaluate(() => {
+      const store = (window as any).LocalHistoryStore;
+      if (!store || typeof store.saveRecord !== "function" || typeof store.clearAll !== "function") {
+        throw new Error("LocalHistoryStore unavailable");
+      }
+
+      store.clearAll();
+      store.saveRecord({
+        mode: "local",
+        mode_key: "standard_4x4_pow2_no_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        undo_enabled: false,
+        rank_policy: "ranked",
+        score: 256,
+        best_tile: 32,
+        duration_ms: 12000,
+        final_board: [
+          [2, 4, 8, 16],
+          [32, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        ended_at: new Date().toISOString(),
+        replay_string: "",
+        adapter_parity_report_v1: {
+          adapterMode: "core-adapter",
+          lastScoreFromSnapshot: 260,
+          undoUsedFromSnapshot: 0,
+          scoreDelta: 4,
+          isScoreAligned: false
+        },
+        adapter_parity_ab_diff_v1: {
+          comparable: true,
+          scoreDelta: 4,
+          undoUsedDelta: 0,
+          overEventsDelta: 0,
+          undoEventsDelta: 0,
+          wonEventsDelta: 0,
+          isScoreMatch: false,
+          bothScoreAligned: false
+        }
+      });
+    });
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(200);
+
+    const snapshot = await page.evaluate(() => {
+      const store = (window as any).LocalHistoryStore;
+      if (!store || typeof store.download !== "function") {
+        throw new Error("LocalHistoryStore download unavailable");
+      }
+      const originalDownload = store.download;
+      (window as any).__historyExportLastFile = "";
+      store.download = function (file: unknown, payload: unknown) {
+        (window as any).__historyExportLastFile = String(file || "");
+        (window as any).__historyExportPayloadLength = String(payload || "").length;
+      };
+
+      const button = document.querySelector("#history-export-mismatch-btn") as HTMLButtonElement | null;
+      if (button && typeof button.click === "function") button.click();
+
+      store.download = originalDownload;
+      return {
+        hasRuntime: Boolean((window as any).CoreHistoryExportRuntime?.collectHistoryRecordIdsForExport),
+        collectCallCount: Number((window as any).__historyExportCollectCallCount || 0),
+        statusText: (document.querySelector("#history-status")?.textContent || "").trim(),
+        fileName: String((window as any).__historyExportLastFile || "")
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.collectCallCount).toBeGreaterThan(0);
+    expect(snapshot.statusText).toContain("已导出 A/B 不一致记录");
+    expect(snapshot.fileName).toContain("2048_local_history_mismatch_");
+  });
+
   test("history page delegates adapter diagnostics rendering to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyAdapterBadgeCallCount = 0;

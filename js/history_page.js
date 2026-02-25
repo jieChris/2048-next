@@ -57,6 +57,14 @@
   ) {
     throw new Error("CoreHistorySummaryRuntime is required");
   }
+  var historyExportRuntime = window.CoreHistoryExportRuntime;
+  if (
+    !historyExportRuntime ||
+    typeof historyExportRuntime.resolveHistoryRecordExportFileName !== "function" ||
+    typeof historyExportRuntime.collectHistoryRecordIdsForExport !== "function"
+  ) {
+    throw new Error("CoreHistoryExportRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -367,34 +375,23 @@
   function downloadSingleRecord(item) {
     if (!window.LocalHistoryStore) return;
     var payload = window.LocalHistoryStore.exportRecords([item.id]);
-    var safeMode = (item.mode_key || "mode").replace(/[^a-zA-Z0-9_-]/g, "_");
-    var file = "history_" + safeMode + "_" + item.id + ".json";
+    var file = historyExportRuntime.resolveHistoryRecordExportFileName({
+      modeKey: item && item.mode_key,
+      id: item && item.id
+    });
     window.LocalHistoryStore.download(file, payload);
   }
 
   function collectRecordIdsForExport(queryOptions) {
-    if (!window.LocalHistoryStore || typeof window.LocalHistoryStore.listRecords !== "function") return [];
-
-    var ids = [];
-    var page = 1;
-    while (page <= 100) {
-      var result = window.LocalHistoryStore.listRecords({
-        mode_key: queryOptions.mode_key || "",
-        keyword: queryOptions.keyword || "",
-        sort_by: queryOptions.sort_by || "ended_desc",
-        adapter_parity_filter: queryOptions.adapter_parity_filter || "all",
-        page: page,
-        page_size: 500
-      });
-      var items = result && Array.isArray(result.items) ? result.items : [];
-      if (!items.length) break;
-      for (var i = 0; i < items.length; i++) {
-        if (items[i] && items[i].id) ids.push(items[i].id);
-      }
-      if (ids.length >= (result.total || 0)) break;
-      page += 1;
-    }
-    return ids;
+    return historyExportRuntime.collectHistoryRecordIdsForExport({
+      listRecords:
+        window.LocalHistoryStore && typeof window.LocalHistoryStore.listRecords === "function"
+          ? window.LocalHistoryStore.listRecords.bind(window.LocalHistoryStore)
+          : null,
+      queryOptions: queryOptions,
+      maxPages: 100,
+      pageSize: 500
+    });
   }
 
   function renderHistory(result) {
