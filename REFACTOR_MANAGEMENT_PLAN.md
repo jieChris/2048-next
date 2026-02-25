@@ -55,6 +55,7 @@
   - 新增 `src/bootstrap/play-startup-payload.ts` + `js/core_play_startup_payload_runtime.js`，`play_application.js` 委托启动返回载荷组装
   - `play_application.js` 已移除 `mode_key/challenge_id` 本地转发包装函数，入口回调直接消费 `play-query` runtime
   - 新增 `src/bootstrap/play-header.ts` + `js/core_play_header_runtime.js`，`play_application.js` 委托顶部模式简介文案拼装
+  - 新增 `src/bootstrap/play-header-host.ts` + `js/core_play_header_host_runtime.js`，`play_application.js` 委托 play 页头 DOM 写入与挑战简介入口编排
   - `play-header` 已承接 play 页头渲染状态组装（`resolvePlayHeaderState`），`play_application.js` 不再本地拼装 `data-mode-id/data-ruleset/标题/简介` 字段
   - 新增 `src/bootstrap/practice-mode.ts` + `js/core_practice_mode_runtime.js`，`application.js` 委托 `practice_ruleset` 解析与模式投影
   - 新增 `src/bootstrap/mode-catalog.ts` + `js/core_mode_catalog_runtime.js`，`application.js` 与 `play_application.js` 共享 `ModeCatalog` 回退解析

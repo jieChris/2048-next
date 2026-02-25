@@ -9,6 +9,13 @@
   ) {
     throw new Error("CorePlayHeaderRuntime is required");
   }
+  var playHeaderHostRuntime = window.CorePlayHeaderHostRuntime;
+  if (
+    !playHeaderHostRuntime ||
+    typeof playHeaderHostRuntime.resolvePlayHeaderFromContext !== "function"
+  ) {
+    throw new Error("CorePlayHeaderHostRuntime is required");
+  }
   var playEntryRuntime = window.CorePlayEntryRuntime;
   if (
     !playEntryRuntime ||
@@ -129,25 +136,12 @@
   }
 
   function setupHeader(modeConfig) {
-    var title = document.getElementById("play-mode-title");
-    var intro = document.getElementById("play-mode-intro");
-    var body = document.body;
-    var headerState = playHeaderRuntime.resolvePlayHeaderState(modeConfig);
-
-    if (body) {
-      body.setAttribute("data-mode-id", headerState.bodyModeId);
-      body.setAttribute("data-ruleset", headerState.bodyRuleset);
-    }
-
-    if (title) {
-      title.textContent = headerState.titleText;
-      title.style.display = headerState.titleDisplay;
-    }
-    if (intro) {
-      intro.textContent = headerState.introText;
-      intro.style.display = headerState.introDisplay;
-    }
-    setupChallengeModeIntro(modeConfig);
+    playHeaderHostRuntime.resolvePlayHeaderFromContext({
+      modeConfig: modeConfig,
+      documentLike: document,
+      resolveHeaderState: playHeaderRuntime.resolvePlayHeaderState,
+      applyChallengeModeIntro: setupChallengeModeIntro
+    });
   }
 
   var bootstrap = window.LegacyBootstrapRuntime;

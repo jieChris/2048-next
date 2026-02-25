@@ -2380,6 +2380,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       (window as any).__playChallengeIntroHostCallCount = 0;
       (window as any).__playChallengeContextCallCount = 0;
       (window as any).__playHeaderStateCallCount = 0;
+      (window as any).__playHeaderHostCallCount = 0;
       (window as any).__playStartGuardCallCount = 0;
       (window as any).__playStartupPayloadCallCount = 0;
       (window as any).__playCustomSpawnHostCallCount = 0;
@@ -2530,6 +2531,21 @@ test.describe("Legacy Multi-Page Smoke", () => {
           return true;
         }
       });
+      const headerHostRuntimeTarget: Record<string, unknown> = {};
+      (window as any).CorePlayHeaderHostRuntime = new Proxy(headerHostRuntimeTarget, {
+        set(target, prop, value) {
+          if (prop === "resolvePlayHeaderFromContext" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__playHeaderHostCallCount =
+                Number((window as any).__playHeaderHostCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
       const headerRuntimeTarget: Record<string, unknown> = {};
       (window as any).CorePlayHeaderRuntime = new Proxy(headerRuntimeTarget, {
         set(target, prop, value) {
@@ -2581,6 +2597,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       hasStartupPayloadRuntime: Boolean(
         (window as any).CorePlayStartupPayloadRuntime?.resolvePlayStartupPayload
       ),
+      hasHeaderHostRuntime: Boolean(
+        (window as any).CorePlayHeaderHostRuntime?.resolvePlayHeaderFromContext
+      ),
       hasHeaderStateRuntime: Boolean(
         (window as any).CorePlayHeaderRuntime?.resolvePlayHeaderState
       ),
@@ -2595,6 +2614,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       playCustomSpawnHostCallCount: Number((window as any).__playCustomSpawnHostCallCount || 0),
       startGuardCallCount: Number((window as any).__playStartGuardCallCount || 0),
       startupPayloadCallCount: Number((window as any).__playStartupPayloadCallCount || 0),
+      headerHostCallCount: Number((window as any).__playHeaderHostCallCount || 0),
       headerStateCallCount: Number((window as any).__playHeaderStateCallCount || 0),
       modeKey:
         (window as any).GAME_MODE_CONFIG && typeof (window as any).GAME_MODE_CONFIG.key === "string"
@@ -2618,6 +2638,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasPlayCustomSpawnHostRuntime).toBe(true);
     expect(snapshot.hasStartGuardRuntime).toBe(true);
     expect(snapshot.hasStartupPayloadRuntime).toBe(true);
+    expect(snapshot.hasHeaderHostRuntime).toBe(true);
     expect(snapshot.hasHeaderStateRuntime).toBe(true);
     expect(snapshot.entryCallCount).toBeGreaterThan(0);
     expect(snapshot.challengeIntroCallCount).toBeGreaterThan(0);
@@ -2628,6 +2649,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.playCustomSpawnHostCallCount).toBeGreaterThan(0);
     expect(snapshot.startGuardCallCount).toBeGreaterThan(0);
     expect(snapshot.startupPayloadCallCount).toBeGreaterThan(0);
+    expect(snapshot.headerHostCallCount).toBeGreaterThan(0);
     expect(snapshot.headerStateCallCount).toBeGreaterThan(0);
     expect(snapshot.modeKey).toBe("standard_4x4_pow2_no_undo");
     expect(snapshot.challengeContext).toBeNull();
@@ -2688,6 +2710,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         hasPlayStartupPayloadRuntime: Boolean(
           (window as any).CorePlayStartupPayloadRuntime?.resolvePlayStartupPayload
         ),
+        hasPlayHeaderHostRuntime: Boolean(
+          (window as any).CorePlayHeaderHostRuntime?.resolvePlayHeaderFromContext
+        ),
         hasHeaderRuntime: Boolean(
           (window as any).CorePlayHeaderRuntime?.buildPlayModeIntroText &&
             (window as any).CorePlayHeaderRuntime?.resolvePlayHeaderState
@@ -2708,6 +2733,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasPlayCustomSpawnHostRuntime).toBe(true);
     expect(snapshot.hasPlayStartGuardRuntime).toBe(true);
     expect(snapshot.hasPlayStartupPayloadRuntime).toBe(true);
+    expect(snapshot.hasPlayHeaderHostRuntime).toBe(true);
     expect(snapshot.hasHeaderRuntime).toBe(true);
     expect(snapshot.hasModeCatalogRuntime).toBe(true);
     expect(snapshot.key).toBe("spawn_custom_4x4_pow2_no_undo");
