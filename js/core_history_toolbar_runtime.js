@@ -64,6 +64,29 @@
     };
   }
 
+  function executeHistoryClearAll(input) {
+    try {
+      var source = input && typeof input === "object" ? input : {};
+      var store =
+        source.localHistoryStore && typeof source.localHistoryStore === "object"
+          ? source.localHistoryStore
+          : null;
+      if (!store || typeof store.clearAll !== "function") {
+        return {
+          cleared: false
+        };
+      }
+      store.clearAll.call(store);
+      return {
+        cleared: true
+      };
+    } catch (_error) {
+      return {
+        cleared: false
+      };
+    }
+  }
+
   global.CoreHistoryToolbarRuntime = global.CoreHistoryToolbarRuntime || {};
   global.CoreHistoryToolbarRuntime.resolveHistoryExportDateTag = resolveHistoryExportDateTag;
   global.CoreHistoryToolbarRuntime.resolveHistoryExportAllFileName = resolveHistoryExportAllFileName;
@@ -74,4 +97,5 @@
   global.CoreHistoryToolbarRuntime.resolveHistoryMismatchExportSuccessNotice =
     resolveHistoryMismatchExportSuccessNotice;
   global.CoreHistoryToolbarRuntime.resolveHistoryClearAllActionState = resolveHistoryClearAllActionState;
+  global.CoreHistoryToolbarRuntime.executeHistoryClearAll = executeHistoryClearAll;
 })(typeof window !== "undefined" ? window : undefined);

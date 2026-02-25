@@ -232,6 +232,7 @@
   - 新增 `src/bootstrap/history-record-actions.ts` + `js/core_history_record_actions_runtime.js`，`history_page.js` 委托记录项动作决策（回放链接、删除确认计划、删除成功/失败提示文案）
   - `history-record-actions` 已继续承接记录删除执行（`executeHistoryDeleteRecord`），`history_page.js` 不再本地调用 `LocalHistoryStore.deleteById`
   - 新增 `src/bootstrap/history-toolbar.ts` + `js/core_history_toolbar_runtime.js`，`history_page.js` 委托工具栏动作决策（导出日期标签/文件名、mismatch 导出查询、清空确认计划与提示文案）
+  - `history-toolbar` 已继续承接清空历史执行（`executeHistoryClearAll`），`history_page.js` 不再本地调用 `LocalHistoryStore.clearAll`
   - 新增 `src/bootstrap/history-toolbar-events.ts` + `js/core_history_toolbar_events_runtime.js`，`history_page.js` 委托分页步进决策、筛选控件 reload 绑定列表与关键词 Enter 触发判定
   - 新增 `src/bootstrap/history-mode-filter.ts` + `js/core_history_mode_filter_runtime.js`，`history_page.js` 委托模式筛选下拉选项模型组装
   - 新增 `src/bootstrap/history-board.ts` + `js/core_history_board_runtime.js`，`history_page.js` 委托历史记录终盘棋盘 HTML 渲染（网格尺寸推断、tile 样式类、super tile 标识）

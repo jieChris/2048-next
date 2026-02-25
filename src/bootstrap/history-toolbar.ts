@@ -11,6 +11,10 @@ export interface HistoryClearAllActionState {
   successNotice: string;
 }
 
+export interface HistoryClearAllExecutionState {
+  cleared: boolean;
+}
+
 function toDateTag(value: unknown): string {
   if (value instanceof Date && Number.isFinite(value.getTime())) {
     return value.toISOString().slice(0, 10);
@@ -70,4 +74,29 @@ export function resolveHistoryClearAllActionState(): HistoryClearAllActionState 
     confirmMessage: "确认清空全部本地历史记录？此操作不可撤销。",
     successNotice: "已清空全部历史记录"
   };
+}
+
+export function executeHistoryClearAll(input: {
+  localHistoryStore?: unknown;
+}): HistoryClearAllExecutionState {
+  try {
+    const source = input && typeof input === "object" ? (input as { localHistoryStore?: unknown }) : {};
+    const store =
+      source.localHistoryStore && typeof source.localHistoryStore === "object"
+        ? (source.localHistoryStore as { clearAll?: unknown })
+        : null;
+    if (!store || typeof store.clearAll !== "function") {
+      return {
+        cleared: false
+      };
+    }
+    (store.clearAll as () => void).call(store);
+    return {
+      cleared: true
+    };
+  } catch (_error) {
+    return {
+      cleared: false
+    };
+  }
 }

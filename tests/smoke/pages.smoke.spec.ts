@@ -1618,6 +1618,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.addInitScript(() => {
       (window as any).__historyToolbarMismatchQueryCallCount = 0;
       (window as any).__historyToolbarClearAllCallCount = 0;
+      (window as any).__historyToolbarExecuteClearAllCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryToolbarRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
@@ -1637,6 +1638,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
             };
             return true;
           }
+          if (prop === "executeHistoryClearAll" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyToolbarExecuteClearAllCallCount =
+                Number((window as any).__historyToolbarExecuteClearAllCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
           proxyTarget[prop] = value;
           return true;
         }
@@ -1652,8 +1661,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForTimeout(200);
 
     const snapshot = await page.evaluate(() => {
+      const store = (window as any).LocalHistoryStore;
+      if (!store || typeof store.clearAll !== "function") {
+        throw new Error("LocalHistoryStore.clearAll unavailable");
+      }
+      const originalClearAll = store.clearAll;
+      store.clearAll = () => {};
+
       const oldConfirm = window.confirm;
-      window.confirm = () => false;
+      window.confirm = () => true;
 
       const mismatchBtn = document.querySelector("#history-export-mismatch-btn") as HTMLButtonElement | null;
       if (mismatchBtn && typeof mismatchBtn.click === "function") mismatchBtn.click();
@@ -1662,19 +1678,23 @@ test.describe("Legacy Multi-Page Smoke", () => {
       if (clearAllBtn && typeof clearAllBtn.click === "function") clearAllBtn.click();
 
       window.confirm = oldConfirm;
+      store.clearAll = originalClearAll;
       return {
         hasRuntime: Boolean(
           (window as any).CoreHistoryToolbarRuntime?.resolveHistoryMismatchExportQuery &&
-            (window as any).CoreHistoryToolbarRuntime?.resolveHistoryClearAllActionState
+            (window as any).CoreHistoryToolbarRuntime?.resolveHistoryClearAllActionState &&
+            (window as any).CoreHistoryToolbarRuntime?.executeHistoryClearAll
         ),
         mismatchQueryCallCount: Number((window as any).__historyToolbarMismatchQueryCallCount || 0),
-        clearAllCallCount: Number((window as any).__historyToolbarClearAllCallCount || 0)
+        clearAllCallCount: Number((window as any).__historyToolbarClearAllCallCount || 0),
+        executeClearAllCallCount: Number((window as any).__historyToolbarExecuteClearAllCallCount || 0)
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.mismatchQueryCallCount).toBeGreaterThan(0);
     expect(snapshot.clearAllCallCount).toBeGreaterThan(0);
+    expect(snapshot.executeClearAllCallCount).toBeGreaterThan(0);
   });
 
   test("history page delegates pager and keyword trigger decisions to toolbar-events runtime helper", async ({ page }) => {

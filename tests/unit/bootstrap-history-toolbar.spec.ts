@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  executeHistoryClearAll,
   resolveHistoryClearAllActionState,
   resolveHistoryExportAllFileName,
   resolveHistoryExportAllNotice,
@@ -44,5 +45,23 @@ describe("bootstrap history toolbar", () => {
       confirmMessage: "确认清空全部本地历史记录？此操作不可撤销。",
       successNotice: "已清空全部历史记录"
     });
+  });
+
+  it("executes clear-all action through local history store", () => {
+    let called = 0;
+    const state = executeHistoryClearAll({
+      localHistoryStore: {
+        clearAll() {
+          called += 1;
+        }
+      }
+    });
+
+    expect(called).toBe(1);
+    expect(state).toEqual({ cleared: true });
+  });
+
+  it("returns non-cleared state when clear-all source is invalid", () => {
+    expect(executeHistoryClearAll({ localHistoryStore: null })).toEqual({ cleared: false });
   });
 });

@@ -200,7 +200,8 @@
     typeof historyToolbarRuntime.resolveHistoryMismatchExportEmptyNotice !== "function" ||
     typeof historyToolbarRuntime.resolveHistoryMismatchExportFileName !== "function" ||
     typeof historyToolbarRuntime.resolveHistoryMismatchExportSuccessNotice !== "function" ||
-    typeof historyToolbarRuntime.resolveHistoryClearAllActionState !== "function"
+    typeof historyToolbarRuntime.resolveHistoryClearAllActionState !== "function" ||
+    typeof historyToolbarRuntime.executeHistoryClearAll !== "function"
   ) {
     throw new Error("CoreHistoryToolbarRuntime is required");
   }
@@ -558,7 +559,10 @@
       clearAllBtn.addEventListener("click", function () {
         var actionState = historyToolbarRuntime.resolveHistoryClearAllActionState();
         if (actionState.requiresConfirm && !window.confirm(actionState.confirmMessage)) return;
-        window.LocalHistoryStore.clearAll();
+        var clearState = historyToolbarRuntime.executeHistoryClearAll({
+          localHistoryStore: window.LocalHistoryStore
+        });
+        if (!clearState || clearState.cleared !== true) return;
         setStatus(actionState.successNotice, false);
         loadHistory(true);
       });
