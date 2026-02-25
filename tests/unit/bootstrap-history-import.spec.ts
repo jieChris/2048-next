@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  executeHistoryImport,
   resolveHistoryImportActionState,
   resolveHistoryImportErrorNotice,
   resolveHistoryImportMergeFlag,
@@ -37,5 +38,35 @@ describe("bootstrap history import", () => {
       "导入失败: parse failed"
     );
     expect(resolveHistoryImportReadErrorNotice()).toBe("读取文件失败");
+  });
+
+  it("executes history import and returns success notice", () => {
+    const state = executeHistoryImport({
+      localHistoryStore: {
+        importRecords(payloadText: unknown, options: { merge: boolean }) {
+          expect(payloadText).toBe("{\"records\":[]}");
+          expect(options).toEqual({ merge: true });
+          return { imported: 3, replaced: 1 };
+        }
+      },
+      payloadText: "{\"records\":[]}",
+      mode: "merge"
+    });
+
+    expect(state).toEqual({
+      ok: true,
+      notice: "导入成功：新增 3 条，覆盖 1 条。"
+    });
+  });
+
+  it("returns error notice when import store is unavailable", () => {
+    const state = executeHistoryImport({
+      localHistoryStore: null,
+      payloadText: "{\"records\":[]}",
+      mode: "replace"
+    });
+
+    expect(state.ok).toBe(false);
+    expect(state.notice).toContain("导入失败:");
   });
 });

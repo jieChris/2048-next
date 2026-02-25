@@ -6,8 +6,17 @@ export interface HistoryImportActionState {
   confirmMessage: string;
 }
 
+export interface HistoryImportExecutionState {
+  ok: boolean;
+  notice: string;
+}
+
 function normalizeImportMode(mode: unknown): HistoryImportMode {
   return mode === "replace" ? "replace" : "merge";
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
 export function resolveHistoryImportActionState(action: unknown): HistoryImportActionState {
@@ -52,4 +61,33 @@ export function resolveHistoryImportErrorNotice(error: unknown): string {
 
 export function resolveHistoryImportReadErrorNotice(): string {
   return "读取文件失败";
+}
+
+export function executeHistoryImport(input: {
+  localHistoryStore?: unknown;
+  payloadText?: unknown;
+  mode?: unknown;
+}): HistoryImportExecutionState {
+  try {
+    const source = isPlainObject(input) ? input : {};
+    const store = isPlainObject(source.localHistoryStore) ? source.localHistoryStore : null;
+    if (!store || typeof store.importRecords !== "function") {
+      return {
+        ok: false,
+        notice: resolveHistoryImportErrorNotice(new Error("LocalHistoryStore.importRecords unavailable"))
+      };
+    }
+    const importRecords = store.importRecords as (payloadText: unknown, options: { merge: boolean }) => unknown;
+    const merge = resolveHistoryImportMergeFlag(source.mode);
+    const result = importRecords.call(store, source.payloadText, { merge });
+    return {
+      ok: true,
+      notice: resolveHistoryImportSuccessNotice(result)
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      notice: resolveHistoryImportErrorNotice(error)
+    };
+  }
 }

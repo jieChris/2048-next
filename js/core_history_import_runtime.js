@@ -7,6 +7,10 @@
     return mode === "replace" ? "replace" : "merge";
   }
 
+  function isPlainObject(value) {
+    return !!value && typeof value === "object" && !Array.isArray(value);
+  }
+
   function resolveHistoryImportActionState(action) {
     if (action === "replace") {
       return {
@@ -49,10 +53,37 @@
     return "读取文件失败";
   }
 
+  function executeHistoryImport(input) {
+    try {
+      var source = isPlainObject(input) ? input : {};
+      var store = isPlainObject(source.localHistoryStore) ? source.localHistoryStore : null;
+      if (!store || typeof store.importRecords !== "function") {
+        return {
+          ok: false,
+          notice: resolveHistoryImportErrorNotice(
+            new Error("LocalHistoryStore.importRecords unavailable")
+          )
+        };
+      }
+      var merge = resolveHistoryImportMergeFlag(source.mode);
+      var result = store.importRecords.call(store, source.payloadText, { merge: merge });
+      return {
+        ok: true,
+        notice: resolveHistoryImportSuccessNotice(result)
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        notice: resolveHistoryImportErrorNotice(error)
+      };
+    }
+  }
+
   global.CoreHistoryImportRuntime = global.CoreHistoryImportRuntime || {};
   global.CoreHistoryImportRuntime.resolveHistoryImportActionState = resolveHistoryImportActionState;
   global.CoreHistoryImportRuntime.resolveHistoryImportMergeFlag = resolveHistoryImportMergeFlag;
   global.CoreHistoryImportRuntime.resolveHistoryImportSuccessNotice = resolveHistoryImportSuccessNotice;
   global.CoreHistoryImportRuntime.resolveHistoryImportErrorNotice = resolveHistoryImportErrorNotice;
   global.CoreHistoryImportRuntime.resolveHistoryImportReadErrorNotice = resolveHistoryImportReadErrorNotice;
+  global.CoreHistoryImportRuntime.executeHistoryImport = executeHistoryImport;
 })(typeof window !== "undefined" ? window : undefined);

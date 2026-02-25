@@ -156,7 +156,8 @@
     typeof historyImportRuntime.resolveHistoryImportMergeFlag !== "function" ||
     typeof historyImportRuntime.resolveHistoryImportSuccessNotice !== "function" ||
     typeof historyImportRuntime.resolveHistoryImportErrorNotice !== "function" ||
-    typeof historyImportRuntime.resolveHistoryImportReadErrorNotice !== "function"
+    typeof historyImportRuntime.resolveHistoryImportReadErrorNotice !== "function" ||
+    typeof historyImportRuntime.executeHistoryImport !== "function"
   ) {
     throw new Error("CoreHistoryImportRuntime is required");
   }
@@ -577,13 +578,25 @@
         var reader = new FileReader();
         reader.onload = function () {
           try {
-            var merge = historyImportRuntime.resolveHistoryImportMergeFlag(importMode);
             var payloadText = historyImportFileRuntime.resolveHistoryImportPayloadText(reader.result);
-            var result = window.LocalHistoryStore.importRecords(payloadText, { merge: merge });
-            setStatus(historyImportRuntime.resolveHistoryImportSuccessNotice(result), false);
+            var importState = historyImportRuntime.executeHistoryImport({
+              localHistoryStore: window.LocalHistoryStore,
+              payloadText: payloadText,
+              mode: importMode
+            });
+            if (!importState || importState.ok !== true) {
+              setStatus(
+                importState && importState.notice
+                  ? importState.notice
+                  : historyImportRuntime.resolveHistoryImportErrorNotice(new Error("unknown")),
+                true
+              );
+              return;
+            }
+            setStatus(importState.notice, false);
             loadHistory(true);
-          } catch (error) {
-            setStatus(historyImportRuntime.resolveHistoryImportErrorNotice(error), true);
+          } catch (_error) {
+            setStatus(historyImportRuntime.resolveHistoryImportErrorNotice(new Error("unknown")), true);
           }
         };
         reader.onerror = function () {

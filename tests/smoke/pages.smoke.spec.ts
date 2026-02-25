@@ -1432,7 +1432,25 @@ test.describe("Legacy Multi-Page Smoke", () => {
       (window as any).__historyImportFilePayloadCallCount = 0;
       (window as any).__historyImportFileEncodingCallCount = 0;
       (window as any).__historyImportFileResetCallCount = 0;
+      (window as any).__historyImportExecuteCallCount = 0;
       (window as any).__historyImportFileSeenEncoding = null;
+      {
+        const target: Record<string, unknown> = {};
+        (window as any).CoreHistoryImportRuntime = new Proxy(target, {
+          set(proxyTarget, prop, value) {
+            if (prop === "executeHistoryImport" && typeof value === "function") {
+              proxyTarget[prop] = function (input: unknown) {
+                (window as any).__historyImportExecuteCallCount =
+                  Number((window as any).__historyImportExecuteCallCount || 0) + 1;
+                return (value as (args: unknown) => unknown)(input);
+              };
+              return true;
+            }
+            proxyTarget[prop] = value;
+            return true;
+          }
+        });
+      }
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryImportFileRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
@@ -1530,19 +1548,23 @@ test.describe("Legacy Multi-Page Smoke", () => {
       store.importRecords = originalImportRecords;
       return {
         hasRuntime: Boolean((window as any).CoreHistoryImportFileRuntime?.resolveHistoryImportSelectedFile),
+        hasImportRuntime: Boolean((window as any).CoreHistoryImportRuntime?.executeHistoryImport),
         selectedCallCount: Number((window as any).__historyImportFileSelectedCallCount || 0),
         payloadCallCount: Number((window as any).__historyImportFilePayloadCallCount || 0),
         encodingCallCount: Number((window as any).__historyImportFileEncodingCallCount || 0),
         resetCallCount: Number((window as any).__historyImportFileResetCallCount || 0),
+        executeCallCount: Number((window as any).__historyImportExecuteCallCount || 0),
         seenEncoding: (window as any).__historyImportFileSeenEncoding
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasImportRuntime).toBe(true);
     expect(snapshot.selectedCallCount).toBeGreaterThan(0);
     expect(snapshot.payloadCallCount).toBeGreaterThan(0);
     expect(snapshot.encodingCallCount).toBeGreaterThan(0);
     expect(snapshot.resetCallCount).toBeGreaterThan(0);
+    expect(snapshot.executeCallCount).toBeGreaterThan(0);
     expect(snapshot.seenEncoding).toBe("utf-8");
   });
 
