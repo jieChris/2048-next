@@ -36,6 +36,14 @@
   ) {
     throw new Error("CoreHistoryCanaryActionRuntime is required");
   }
+  var historyCanarySourceRuntime = window.CoreHistoryCanarySourceRuntime;
+  if (
+    !historyCanarySourceRuntime ||
+    typeof historyCanarySourceRuntime.resolveHistoryCanaryRuntimePolicy !== "function" ||
+    typeof historyCanarySourceRuntime.resolveHistoryCanaryRuntimeStoredPolicyKeys !== "function"
+  ) {
+    throw new Error("CoreHistoryCanarySourceRuntime is required");
+  }
   var historyCanaryPanelRuntime = window.CoreHistoryCanaryPanelRuntime;
   if (
     !historyCanaryPanelRuntime ||
@@ -197,10 +205,6 @@
     return mode && mode.label ? String(mode.label) : "";
   }
 
-  function isPlainObject(value) {
-    return !!value && typeof value === "object" && !Array.isArray(value);
-  }
-
   function getStorageValue(key) {
     return historyCanaryStorageRuntime.readHistoryStorageValue(key);
   }
@@ -319,12 +323,9 @@
   }
 
   function readCanaryPolicySnapshot() {
-    var runtime = window.LegacyAdapterRuntime;
-    var runtimePolicy = null;
-    if (runtime && typeof runtime.resolveAdapterModePolicy === "function") {
-      var policy = runtime.resolveAdapterModePolicy({});
-      if (isPlainObject(policy)) runtimePolicy = policy;
-    }
+    var runtimePolicy = historyCanarySourceRuntime.resolveHistoryCanaryRuntimePolicy(
+      window.LegacyAdapterRuntime
+    );
     return historyCanaryPolicyRuntime.resolveCanaryPolicySnapshot({
       runtimePolicy: runtimePolicy,
       defaultModeRaw: getStorageValue(ADAPTER_DEFAULT_STORAGE_KEY),
@@ -333,12 +334,9 @@
   }
 
   function readStoredPolicyKeys() {
-    var runtime = window.LegacyAdapterRuntime;
-    var runtimeStoredKeys = null;
-    if (runtime && typeof runtime.readStoredAdapterPolicyKeys === "function") {
-      var result = runtime.readStoredAdapterPolicyKeys();
-      if (isPlainObject(result)) runtimeStoredKeys = result;
-    }
+    var runtimeStoredKeys = historyCanarySourceRuntime.resolveHistoryCanaryRuntimeStoredPolicyKeys(
+      window.LegacyAdapterRuntime
+    );
     return historyCanaryPolicyRuntime.resolveStoredPolicyKeys({
       runtimeStoredKeys: runtimeStoredKeys,
       adapterModeRaw: getStorageValue(ADAPTER_MODE_STORAGE_KEY),
