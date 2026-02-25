@@ -96,6 +96,16 @@
   ) {
     throw new Error("CoreHistoryImportRuntime is required");
   }
+  var historyRecordActionsRuntime = window.CoreHistoryRecordActionsRuntime;
+  if (
+    !historyRecordActionsRuntime ||
+    typeof historyRecordActionsRuntime.resolveHistoryReplayHref !== "function" ||
+    typeof historyRecordActionsRuntime.resolveHistoryDeleteActionState !== "function" ||
+    typeof historyRecordActionsRuntime.resolveHistoryDeleteFailureNotice !== "function" ||
+    typeof historyRecordActionsRuntime.resolveHistoryDeleteSuccessNotice !== "function"
+  ) {
+    throw new Error("CoreHistoryRecordActionsRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -458,7 +468,9 @@
         var replayBtn = node.querySelector(".history-replay-btn");
         if (replayBtn) {
           replayBtn.addEventListener("click", function () {
-            window.location.href = "replay.html?local_history_id=" + encodeURIComponent(item.id);
+            window.location.href = historyRecordActionsRuntime.resolveHistoryReplayHref(
+              item && item.id
+            );
           });
         }
 
@@ -472,13 +484,16 @@
         var deleteBtn = node.querySelector(".history-delete-btn");
         if (deleteBtn) {
           deleteBtn.addEventListener("click", function () {
-            if (!window.confirm("确认删除这条历史记录？此操作不可撤销。")) return;
-            var ok = window.LocalHistoryStore.deleteById(item.id);
+            var actionState = historyRecordActionsRuntime.resolveHistoryDeleteActionState(
+              item && item.id
+            );
+            if (!window.confirm(actionState.confirmMessage)) return;
+            var ok = window.LocalHistoryStore.deleteById(actionState.recordId);
             if (!ok) {
-              setStatus("删除失败：记录不存在或已被删除", true);
+              setStatus(historyRecordActionsRuntime.resolveHistoryDeleteFailureNotice(), true);
               return;
             }
-            setStatus("记录已删除", false);
+            setStatus(historyRecordActionsRuntime.resolveHistoryDeleteSuccessNotice(), false);
             loadHistory();
           });
         }

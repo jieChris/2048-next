@@ -904,6 +904,84 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.actionCallCount).toBeGreaterThan(1);
   });
 
+  test("history page delegates record delete action decisions to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyDeleteActionCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryRecordActionsRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryDeleteActionState" && typeof value === "function") {
+            proxyTarget[prop] = function (recordId: unknown) {
+              (window as any).__historyDeleteActionCallCount =
+                Number((window as any).__historyDeleteActionCallCount || 0) + 1;
+              return (value as (id: unknown) => unknown)(recordId);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    await page.evaluate(() => {
+      const store = (window as any).LocalHistoryStore;
+      if (!store || typeof store.saveRecord !== "function" || typeof store.clearAll !== "function") {
+        throw new Error("LocalHistoryStore unavailable");
+      }
+
+      store.clearAll();
+      store.saveRecord({
+        mode: "local",
+        mode_key: "standard_4x4_pow2_no_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        undo_enabled: false,
+        rank_policy: "ranked",
+        score: 128,
+        best_tile: 16,
+        duration_ms: 8000,
+        final_board: [
+          [2, 4, 8, 16],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        ended_at: new Date().toISOString(),
+        replay_string: ""
+      });
+    });
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(200);
+
+    const snapshot = await page.evaluate(() => {
+      const oldConfirm = window.confirm;
+      window.confirm = () => false;
+
+      const deleteBtn = document.querySelector(".history-delete-btn") as HTMLButtonElement | null;
+      if (deleteBtn && typeof deleteBtn.click === "function") deleteBtn.click();
+
+      window.confirm = oldConfirm;
+      return {
+        hasRuntime: Boolean((window as any).CoreHistoryRecordActionsRuntime?.resolveHistoryDeleteActionState),
+        deleteActionCallCount: Number((window as any).__historyDeleteActionCallCount || 0)
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.deleteActionCallCount).toBeGreaterThan(0);
+  });
+
   test("history page delegates mismatch export id collection to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyExportCollectCallCount = 0;
