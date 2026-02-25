@@ -114,6 +114,7 @@
   var historyRecordViewRuntime = window.CoreHistoryRecordViewRuntime;
   if (
     !historyRecordViewRuntime ||
+    typeof historyRecordViewRuntime.resolveHistoryCatalogModeLabel !== "function" ||
     typeof historyRecordViewRuntime.resolveHistoryModeText !== "function" ||
     typeof historyRecordViewRuntime.resolveHistoryDurationText !== "function" ||
     typeof historyRecordViewRuntime.resolveHistoryEndedText !== "function" ||
@@ -208,13 +209,6 @@
 
   function boardToHtml(board, width, height) {
     return historyBoardRuntime.resolveHistoryFinalBoardHtml(board, width, height);
-  }
-
-  function getCatalogModeLabel(item) {
-    var modeKey = item && item.mode_key ? String(item.mode_key) : "";
-    if (!(window.ModeCatalog && typeof window.ModeCatalog.getMode === "function" && modeKey)) return "";
-    var mode = window.ModeCatalog.getMode(modeKey);
-    return mode && mode.label ? String(mode.label) : "";
   }
 
   function getStorageValue(key) {
@@ -376,7 +370,10 @@
         var headState = historyRecordViewRuntime.resolveHistoryRecordHeadState({
           modeKey: item && item.mode_key,
           modeFallback: item && item.mode,
-          catalogLabel: getCatalogModeLabel(item),
+          catalogLabel: historyRecordViewRuntime.resolveHistoryCatalogModeLabel(
+            window.ModeCatalog,
+            item
+          ),
           score: item && item.score,
           bestTile: item && item.best_tile,
           durationMs: item && item.duration_ms,

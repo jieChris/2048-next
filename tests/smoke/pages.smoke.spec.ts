@@ -963,9 +963,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("history page delegates record head modeling to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyRecordHeadCallCount = 0;
+      (window as any).__historyCatalogModeLabelCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryRecordViewRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryCatalogModeLabel" && typeof value === "function") {
+            proxyTarget[prop] = function (modeCatalog: unknown, item: unknown) {
+              (window as any).__historyCatalogModeLabelCallCount =
+                Number((window as any).__historyCatalogModeLabelCallCount || 0) + 1;
+              return (value as (a: unknown, b: unknown) => unknown)(modeCatalog, item);
+            };
+            return true;
+          }
           if (prop === "resolveHistoryRecordHeadState" && typeof value === "function") {
             proxyTarget[prop] = function (input: unknown) {
               (window as any).__historyRecordHeadCallCount =
@@ -1021,12 +1030,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForTimeout(200);
 
     const snapshot = await page.evaluate(() => ({
-      hasRuntime: Boolean((window as any).CoreHistoryRecordViewRuntime?.resolveHistoryRecordHeadState),
+      hasRuntime: Boolean(
+        (window as any).CoreHistoryRecordViewRuntime?.resolveHistoryCatalogModeLabel &&
+          (window as any).CoreHistoryRecordViewRuntime?.resolveHistoryRecordHeadState
+      ),
+      catalogModeLabelCallCount: Number((window as any).__historyCatalogModeLabelCallCount || 0),
       headCallCount: Number((window as any).__historyRecordHeadCallCount || 0),
       firstItemText: (document.querySelector(".history-item-head")?.textContent || "").trim()
     }));
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.catalogModeLabelCallCount).toBeGreaterThan(0);
     expect(snapshot.headCallCount).toBeGreaterThan(0);
     expect(snapshot.firstItemText).toContain("分数:");
   });

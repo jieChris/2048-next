@@ -1,9 +1,25 @@
+type AnyRecord = Record<string, unknown>;
+
 function normalizeString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
 function normalizeFiniteNumber(value: unknown, fallback: number): number {
   return Number.isFinite(value) ? Number(value) : fallback;
+}
+
+export function resolveHistoryCatalogModeLabel(modeCatalog: unknown, item: unknown): string {
+  const source = item && typeof item === "object" ? (item as AnyRecord) : null;
+  const modeKey = normalizeString(source && source.mode_key).trim();
+  if (!modeKey) return "";
+
+  const catalog = modeCatalog && typeof modeCatalog === "object" ? (modeCatalog as AnyRecord) : null;
+  const getMode = catalog && typeof catalog.getMode === "function" ? catalog.getMode : null;
+  if (!getMode) return "";
+
+  const mode = (getMode as (key: string) => unknown)(modeKey);
+  const modeObj = mode && typeof mode === "object" ? (mode as AnyRecord) : null;
+  return normalizeString(modeObj && modeObj.label).trim();
 }
 
 export function resolveHistoryModeText(input: {

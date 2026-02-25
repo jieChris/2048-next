@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  resolveHistoryCatalogModeLabel,
   resolveHistoryDurationText,
   resolveHistoryEndedText,
   resolveHistoryModeText,
@@ -16,6 +17,23 @@ describe("bootstrap history record view", () => {
         catalogLabel: "标准模式"
       })
     ).toBe("标准模式");
+  });
+
+  it("resolves catalog label from mode catalog and item mode_key", () => {
+    const modeCatalog = {
+      getMode(modeKey: string) {
+        if (modeKey === "standard_4x4_pow2_no_undo") {
+          return { label: "标准模式" };
+        }
+        return null;
+      }
+    };
+    expect(
+      resolveHistoryCatalogModeLabel(modeCatalog, {
+        mode_key: "standard_4x4_pow2_no_undo"
+      })
+    ).toBe("标准模式");
+    expect(resolveHistoryCatalogModeLabel({}, { mode_key: "standard_4x4_pow2_no_undo" })).toBe("");
   });
 
   it("formats duration text with fallback", () => {

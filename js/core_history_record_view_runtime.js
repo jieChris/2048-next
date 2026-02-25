@@ -11,6 +11,20 @@
     return Number.isFinite(value) ? Number(value) : fallback;
   }
 
+  function resolveHistoryCatalogModeLabel(modeCatalog, item) {
+    var source = item && typeof item === "object" ? item : null;
+    var modeKey = normalizeString(source && source.mode_key).trim();
+    if (!modeKey) return "";
+
+    var catalog = modeCatalog && typeof modeCatalog === "object" ? modeCatalog : null;
+    var getMode = catalog && typeof catalog.getMode === "function" ? catalog.getMode : null;
+    if (!getMode) return "";
+
+    var mode = getMode(modeKey);
+    var modeObj = mode && typeof mode === "object" ? mode : null;
+    return normalizeString(modeObj && modeObj.label).trim();
+  }
+
   function resolveHistoryModeText(input) {
     var source = input && typeof input === "object" ? input : {};
     var catalogLabel = normalizeString(source.catalogLabel).trim();
@@ -60,6 +74,7 @@
   }
 
   global.CoreHistoryRecordViewRuntime = global.CoreHistoryRecordViewRuntime || {};
+  global.CoreHistoryRecordViewRuntime.resolveHistoryCatalogModeLabel = resolveHistoryCatalogModeLabel;
   global.CoreHistoryRecordViewRuntime.resolveHistoryModeText = resolveHistoryModeText;
   global.CoreHistoryRecordViewRuntime.resolveHistoryDurationText = resolveHistoryDurationText;
   global.CoreHistoryRecordViewRuntime.resolveHistoryEndedText = resolveHistoryEndedText;
