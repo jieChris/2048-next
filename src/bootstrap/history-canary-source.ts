@@ -6,6 +6,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object";
 }
 
+function asResolver(value: unknown): ((input: unknown) => unknown) | null {
+  return typeof value === "function" ? (value as (input: unknown) => unknown) : null;
+}
+
 function readStorageValueByKey(
   readStorageValue: unknown,
   key: unknown
@@ -70,5 +74,38 @@ export function resolveHistoryCanaryStoredPolicyInput(input: {
     adapterModeRaw: readStorageValueByKey(input && input.readStorageValue, input && input.adapterModeStorageKey),
     defaultModeRaw: readStorageValueByKey(input && input.readStorageValue, input && input.defaultModeStorageKey),
     forceLegacyRaw: readStorageValueByKey(input && input.readStorageValue, input && input.forceLegacyStorageKey)
+  };
+}
+
+export function resolveHistoryCanaryPolicyAndStoredState(input: {
+  runtime?: unknown;
+  readStorageValue?: unknown;
+  adapterModeStorageKey?: unknown;
+  defaultModeStorageKey?: unknown;
+  forceLegacyStorageKey?: unknown;
+  resolvePolicySnapshot?: unknown;
+  resolveStoredPolicy?: unknown;
+}): {
+  policy: unknown;
+  stored: unknown;
+} {
+  const snapshotInput = resolveHistoryCanaryPolicySnapshotInput({
+    runtime: input && input.runtime,
+    readStorageValue: input && input.readStorageValue,
+    defaultModeStorageKey: input && input.defaultModeStorageKey,
+    forceLegacyStorageKey: input && input.forceLegacyStorageKey
+  });
+  const storedInput = resolveHistoryCanaryStoredPolicyInput({
+    runtime: input && input.runtime,
+    readStorageValue: input && input.readStorageValue,
+    adapterModeStorageKey: input && input.adapterModeStorageKey,
+    defaultModeStorageKey: input && input.defaultModeStorageKey,
+    forceLegacyStorageKey: input && input.forceLegacyStorageKey
+  });
+  const resolvePolicySnapshot = asResolver(input && input.resolvePolicySnapshot);
+  const resolveStoredPolicy = asResolver(input && input.resolveStoredPolicy);
+  return {
+    policy: resolvePolicySnapshot ? resolvePolicySnapshot(snapshotInput) : null,
+    stored: resolveStoredPolicy ? resolveStoredPolicy(storedInput) : null
   };
 }

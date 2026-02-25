@@ -701,6 +701,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       (window as any).__historyCanarySourceStoredCallCount = 0;
       (window as any).__historyCanarySourceSnapshotInputCallCount = 0;
       (window as any).__historyCanarySourceStoredInputCallCount = 0;
+      (window as any).__historyCanarySourceCombinedStateCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryCanarySourceRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
@@ -736,6 +737,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
             };
             return true;
           }
+          if (prop === "resolveHistoryCanaryPolicyAndStoredState" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyCanarySourceCombinedStateCallCount =
+                Number((window as any).__historyCanarySourceCombinedStateCallCount || 0) + 1;
+              return (value as (arg: unknown) => unknown)(input);
+            };
+            return true;
+          }
           proxyTarget[prop] = value;
           return true;
         }
@@ -755,14 +764,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
         Boolean((window as any).CoreHistoryCanarySourceRuntime?.resolveHistoryCanaryRuntimePolicy) &&
         Boolean((window as any).CoreHistoryCanarySourceRuntime?.resolveHistoryCanaryRuntimeStoredPolicyKeys) &&
         Boolean((window as any).CoreHistoryCanarySourceRuntime?.resolveHistoryCanaryPolicySnapshotInput) &&
-        Boolean((window as any).CoreHistoryCanarySourceRuntime?.resolveHistoryCanaryStoredPolicyInput),
-      snapshotInputCallCount: Number((window as any).__historyCanarySourceSnapshotInputCallCount || 0),
-      storedInputCallCount: Number((window as any).__historyCanarySourceStoredInputCallCount || 0)
+        Boolean((window as any).CoreHistoryCanarySourceRuntime?.resolveHistoryCanaryStoredPolicyInput) &&
+        Boolean((window as any).CoreHistoryCanarySourceRuntime?.resolveHistoryCanaryPolicyAndStoredState),
+      combinedStateCallCount: Number((window as any).__historyCanarySourceCombinedStateCallCount || 0)
     }));
 
     expect(snapshot.hasRuntime).toBe(true);
-    expect(snapshot.snapshotInputCallCount).toBeGreaterThan(0);
-    expect(snapshot.storedInputCallCount).toBeGreaterThan(0);
+    expect(snapshot.combinedStateCallCount).toBeGreaterThan(0);
   });
 
   test("history page delegates canary policy apply action to runtime helper", async ({ page }) => {

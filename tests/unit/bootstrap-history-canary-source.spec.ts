@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  resolveHistoryCanaryPolicyAndStoredState,
   resolveHistoryCanaryPolicySnapshotInput,
   resolveHistoryCanaryRuntimePolicy,
   resolveHistoryCanaryRuntimeStoredPolicyKeys,
@@ -91,5 +92,49 @@ describe("bootstrap history canary source", () => {
     expect(
       resolveHistoryCanaryRuntimeStoredPolicyKeys({ readStoredAdapterPolicyKeys: () => "bad" })
     ).toBeNull();
+  });
+
+  it("resolves policy and stored state via injected resolvers", () => {
+    const state = resolveHistoryCanaryPolicyAndStoredState({
+      runtime: {
+        resolveAdapterModePolicy: () => ({ effectiveMode: "core-adapter" }),
+        readStoredAdapterPolicyKeys: () => ({ adapterModeRaw: "core-adapter" })
+      },
+      readStorageValue(key: unknown) {
+        if (String(key) === "engine_adapter_default_mode") return "core-adapter";
+        if (String(key) === "engine_adapter_force_legacy") return "0";
+        if (String(key) === "engine_adapter_mode") return "core-adapter";
+        return null;
+      },
+      adapterModeStorageKey: "engine_adapter_mode",
+      defaultModeStorageKey: "engine_adapter_default_mode",
+      forceLegacyStorageKey: "engine_adapter_force_legacy",
+      resolvePolicySnapshot(input: unknown) {
+        return { kind: "policy", input };
+      },
+      resolveStoredPolicy(input: unknown) {
+        return { kind: "stored", input };
+      }
+    });
+
+    expect(state).toEqual({
+      policy: {
+        kind: "policy",
+        input: {
+          runtimePolicy: { effectiveMode: "core-adapter" },
+          defaultModeRaw: "core-adapter",
+          forceLegacyRaw: "0"
+        }
+      },
+      stored: {
+        kind: "stored",
+        input: {
+          runtimeStoredKeys: { adapterModeRaw: "core-adapter" },
+          adapterModeRaw: "core-adapter",
+          defaultModeRaw: "core-adapter",
+          forceLegacyRaw: "0"
+        }
+      }
+    });
   });
 });

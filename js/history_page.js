@@ -46,7 +46,8 @@
     typeof historyCanarySourceRuntime.resolveHistoryCanaryRuntimePolicy !== "function" ||
     typeof historyCanarySourceRuntime.resolveHistoryCanaryRuntimeStoredPolicyKeys !== "function" ||
     typeof historyCanarySourceRuntime.resolveHistoryCanaryPolicySnapshotInput !== "function" ||
-    typeof historyCanarySourceRuntime.resolveHistoryCanaryStoredPolicyInput !== "function"
+    typeof historyCanarySourceRuntime.resolveHistoryCanaryStoredPolicyInput !== "function" ||
+    typeof historyCanarySourceRuntime.resolveHistoryCanaryPolicyAndStoredState !== "function"
   ) {
     throw new Error("CoreHistoryCanarySourceRuntime is required");
   }
@@ -289,23 +290,17 @@
     var panel = el("history-canary-policy");
     if (!panel) return;
 
-    var policy = historyCanaryPolicyRuntime.resolveCanaryPolicySnapshot(
-      historyCanarySourceRuntime.resolveHistoryCanaryPolicySnapshotInput({
-        runtime: window.LegacyAdapterRuntime,
-        readStorageValue: historyCanaryStorageRuntime.readHistoryStorageValue,
-        defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
-        forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
-      })
-    );
-    var stored = historyCanaryPolicyRuntime.resolveStoredPolicyKeys(
-      historyCanarySourceRuntime.resolveHistoryCanaryStoredPolicyInput({
-        runtime: window.LegacyAdapterRuntime,
-        readStorageValue: historyCanaryStorageRuntime.readHistoryStorageValue,
-        adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
-        defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
-        forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
-      })
-    );
+    var sourceState = historyCanarySourceRuntime.resolveHistoryCanaryPolicyAndStoredState({
+      runtime: window.LegacyAdapterRuntime,
+      readStorageValue: historyCanaryStorageRuntime.readHistoryStorageValue,
+      adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
+      defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
+      forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY,
+      resolvePolicySnapshot: historyCanaryPolicyRuntime.resolveCanaryPolicySnapshot,
+      resolveStoredPolicy: historyCanaryPolicyRuntime.resolveStoredPolicyKeys
+    });
+    var policy = sourceState && sourceState.policy;
+    var stored = sourceState && sourceState.stored;
     var canaryView = historyCanaryViewRuntime.resolveHistoryCanaryViewState(policy, stored);
     panel.innerHTML = historyCanaryPanelRuntime.resolveHistoryCanaryPanelHtml(canaryView);
 

@@ -213,6 +213,7 @@
   - `history-canary-action` 已继续承接 canary 面板点击动作解析与执行反馈（`applyHistoryCanaryPanelAction`），`history_page.js` 不再本地解析 `data-action` 并拼装执行/提示入参
   - 新增 `src/bootstrap/history-canary-source.ts` + `js/core_history_canary_source_runtime.js`，`history_page.js` 委托 LegacyAdapterRuntime 的 canary policy/stored-keys 读取与对象归一化
   - `history-canary-source` 已继续承接 canary snapshot/stored 输入组装（`resolveHistoryCanaryPolicySnapshotInput`/`resolveHistoryCanaryStoredPolicyInput`），`history_page.js` 不再本地拼装 policy 输入
+  - `history-canary-source` 已新增聚合读取入口（`resolveHistoryCanaryPolicyAndStoredState`），`history_page.js` 改为一次调用完成 policy + stored 解析并下发到 view runtime
   - 新增 `src/bootstrap/history-canary-panel.ts` + `js/core_history_canary_panel_runtime.js`，`history_page.js` 委托 canary 面板 HTML 渲染与 action 名称解析
   - 新增 `src/bootstrap/history-canary-policy.ts` + `js/core_history_canary_policy_runtime.js`，`history_page.js` 委托 canary 策略快照解析、存储键归一化与动作决策/提示文案
   - 新增 `src/bootstrap/history-canary-view.ts` + `js/core_history_canary_view_runtime.js`，`history_page.js` 委托 canary 面板展示态（来源文案/模式文案/gate 样式/storage 文案）模型计算
