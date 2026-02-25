@@ -46,8 +46,10 @@
   - 新增 `src/bootstrap/play-query.ts` + `js/core_play_query_runtime.js`，`play_application.js` 委托 `mode_key/challenge_id` 解析
   - 新增 `src/bootstrap/play-entry.ts` + `js/core_play_entry_runtime.js`，`play_application.js` 委托 play 页入口解析、模式回退与 challenge 上下文决策
   - 新增 `src/bootstrap/play-challenge-intro.ts` + `js/core_play_challenge_intro_runtime.js`，`play_application.js` 委托挑战简介显示模型（当前默认关闭，行为不变）
+  - 新增 `src/bootstrap/play-challenge-context.ts` + `js/core_play_challenge_context_runtime.js`，`play_application.js` 委托 `GAME_CHALLENGE_CONTEXT` 组装
   - `play_application.js` 已移除 `mode_key/challenge_id` 本地转发包装函数，入口回调直接消费 `play-query` runtime
   - 新增 `src/bootstrap/play-header.ts` + `js/core_play_header_runtime.js`，`play_application.js` 委托顶部模式简介文案拼装
+  - `play-header` 已承接 play 页头渲染状态组装（`resolvePlayHeaderState`），`play_application.js` 不再本地拼装 `data-mode-id/data-ruleset/标题/简介` 字段
   - 新增 `src/bootstrap/practice-mode.ts` + `js/core_practice_mode_runtime.js`，`application.js` 委托 `practice_ruleset` 解析与模式投影
   - 新增 `src/bootstrap/mode-catalog.ts` + `js/core_mode_catalog_runtime.js`，`application.js` 与 `play_application.js` 共享 `ModeCatalog` 回退解析
   - 新增 `src/bootstrap/home-mode.ts` + `js/core_home_mode_runtime.js`，`application.js` 委托首页/练习页模式解析与 practice 模式装配

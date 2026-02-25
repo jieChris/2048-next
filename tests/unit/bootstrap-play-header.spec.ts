@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPlayModeIntroText,
   compactPlayModeLabel,
+  resolvePlayHeaderState,
   resolvePlayRulesText
 } from "../../src/bootstrap/play-header";
 
@@ -37,5 +38,24 @@ describe("bootstrap play header", () => {
         ruleset: "pow2"
       })
     ).toBe("4x4自定义4率（4率25%）｜4x4｜2幂");
+  });
+
+  it("resolves header state for dom rendering", () => {
+    expect(
+      resolvePlayHeaderState({
+        key: "spawn_custom_4x4_pow2_no_undo",
+        label: "4x4 自定义4率（无撤回）（4率 25%）",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2"
+      })
+    ).toEqual({
+      bodyModeId: "spawn_custom_4x4_pow2_no_undo",
+      bodyRuleset: "pow2",
+      titleText: "4x4 自定义4率（无撤回）（4率 25%）",
+      introText: "4x4自定义4率（4率25%）｜4x4｜2幂",
+      titleDisplay: "",
+      introDisplay: ""
+    });
   });
 });

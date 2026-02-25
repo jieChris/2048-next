@@ -4,7 +4,8 @@
     !playHeaderRuntime ||
     typeof playHeaderRuntime.compactPlayModeLabel !== "function" ||
     typeof playHeaderRuntime.resolvePlayRulesText !== "function" ||
-    typeof playHeaderRuntime.buildPlayModeIntroText !== "function"
+    typeof playHeaderRuntime.buildPlayModeIntroText !== "function" ||
+    typeof playHeaderRuntime.resolvePlayHeaderState !== "function"
   ) {
     throw new Error("CorePlayHeaderRuntime is required");
   }
@@ -39,6 +40,13 @@
     typeof playChallengeIntroRuntime.resolvePlayChallengeIntroModel !== "function"
   ) {
     throw new Error("CorePlayChallengeIntroRuntime is required");
+  }
+  var playChallengeContextRuntime = window.CorePlayChallengeContextRuntime;
+  if (
+    !playChallengeContextRuntime ||
+    typeof playChallengeContextRuntime.resolvePlayChallengeContext !== "function"
+  ) {
+    throw new Error("CorePlayChallengeContextRuntime is required");
   }
   var storageRuntime = window.CoreStorageRuntime;
   if (
@@ -140,19 +148,20 @@
     var title = document.getElementById("play-mode-title");
     var intro = document.getElementById("play-mode-intro");
     var body = document.body;
+    var headerState = playHeaderRuntime.resolvePlayHeaderState(modeConfig);
 
     if (body) {
-      body.setAttribute("data-mode-id", modeConfig.key);
-      body.setAttribute("data-ruleset", modeConfig.ruleset);
+      body.setAttribute("data-mode-id", headerState.bodyModeId);
+      body.setAttribute("data-ruleset", headerState.bodyRuleset);
     }
 
     if (title) {
-      title.textContent = modeConfig.label;
-      title.style.display = "";
+      title.textContent = headerState.titleText;
+      title.style.display = headerState.titleDisplay;
     }
     if (intro) {
-      intro.textContent = playHeaderRuntime.buildPlayModeIntroText(modeConfig);
-      intro.style.display = "";
+      intro.textContent = headerState.introText;
+      intro.style.display = headerState.introDisplay;
     }
     setupChallengeModeIntro(modeConfig);
   }
@@ -186,7 +195,10 @@
     }
 
     window.GAME_MODE_CONFIG = modeConfig;
-    window.GAME_CHALLENGE_CONTEXT = challengeId ? { id: challengeId, mode_key: modeConfig.key } : null;
+    window.GAME_CHALLENGE_CONTEXT = playChallengeContextRuntime.resolvePlayChallengeContext({
+      challengeId: challengeId,
+      modeConfig: modeConfig
+    });
     setupHeader(modeConfig);
     return {
       modeKey: modeConfig.key,

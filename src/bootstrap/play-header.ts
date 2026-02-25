@@ -6,6 +6,15 @@ export interface PlayHeaderModeConfigLike {
   ruleset?: string | null | undefined;
 }
 
+export interface PlayHeaderState {
+  bodyModeId: string;
+  bodyRuleset: string;
+  titleText: string;
+  introText: string;
+  titleDisplay: "" | "none";
+  introDisplay: "" | "none";
+}
+
 export function compactPlayModeLabel(modeConfig: PlayHeaderModeConfigLike | null | undefined): string {
   const raw =
     modeConfig && (modeConfig.label || modeConfig.key)
@@ -33,4 +42,17 @@ export function buildPlayModeIntroText(modeConfig: PlayHeaderModeConfigLike | nu
   );
   const rulesText = resolvePlayRulesText(modeConfig?.ruleset || "");
   return modeText + "｜" + boardText + "｜" + rulesText;
+}
+
+export function resolvePlayHeaderState(
+  modeConfig: PlayHeaderModeConfigLike | null | undefined
+): PlayHeaderState {
+  return {
+    bodyModeId: String(modeConfig?.key || ""),
+    bodyRuleset: String(modeConfig?.ruleset || ""),
+    titleText: String(modeConfig?.label || ""),
+    introText: buildPlayModeIntroText(modeConfig),
+    titleDisplay: "",
+    introDisplay: ""
+  };
 }

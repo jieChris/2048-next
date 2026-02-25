@@ -30,8 +30,20 @@
     return modeText + "｜" + boardText + "｜" + rulesText;
   }
 
+  function resolvePlayHeaderState(modeConfig) {
+    return {
+      bodyModeId: String((modeConfig && modeConfig.key) || ""),
+      bodyRuleset: String((modeConfig && modeConfig.ruleset) || ""),
+      titleText: String((modeConfig && modeConfig.label) || ""),
+      introText: buildPlayModeIntroText(modeConfig),
+      titleDisplay: "",
+      introDisplay: ""
+    };
+  }
+
   global.CorePlayHeaderRuntime = global.CorePlayHeaderRuntime || {};
   global.CorePlayHeaderRuntime.compactPlayModeLabel = compactPlayModeLabel;
   global.CorePlayHeaderRuntime.resolvePlayRulesText = resolvePlayRulesText;
   global.CorePlayHeaderRuntime.buildPlayModeIntroText = buildPlayModeIntroText;
+  global.CorePlayHeaderRuntime.resolvePlayHeaderState = resolvePlayHeaderState;
 })(typeof window !== "undefined" ? window : undefined);
