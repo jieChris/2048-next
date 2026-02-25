@@ -151,6 +151,16 @@
   ) {
     throw new Error("CoreHistoryToolbarRuntime is required");
   }
+  var historyToolbarEventsRuntime = window.CoreHistoryToolbarEventsRuntime;
+  if (
+    !historyToolbarEventsRuntime ||
+    typeof historyToolbarEventsRuntime.resolveHistoryPrevPageState !== "function" ||
+    typeof historyToolbarEventsRuntime.resolveHistoryNextPageState !== "function" ||
+    typeof historyToolbarEventsRuntime.resolveHistoryFilterReloadControlIds !== "function" ||
+    typeof historyToolbarEventsRuntime.shouldHistoryKeywordTriggerReload !== "function"
+  ) {
+    throw new Error("CoreHistoryToolbarEventsRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -641,8 +651,9 @@
     var prevBtn = el("history-prev-page");
     if (prevBtn) {
       prevBtn.addEventListener("click", function () {
-        if (state.page <= 1) return;
-        state.page -= 1;
+        var prevState = historyToolbarEventsRuntime.resolveHistoryPrevPageState(state.page);
+        if (!prevState.canGo) return;
+        state.page = prevState.nextPage;
         loadHistory(false);
       });
     }
@@ -650,42 +661,17 @@
     var nextBtn = el("history-next-page");
     if (nextBtn) {
       nextBtn.addEventListener("click", function () {
-        state.page += 1;
+        var nextState = historyToolbarEventsRuntime.resolveHistoryNextPageState(state.page);
+        state.page = nextState.nextPage;
         loadHistory(false);
       });
     }
 
-    var mode = el("history-mode");
-    if (mode) {
-      mode.addEventListener("change", function () {
-        loadHistory(true);
-      });
-    }
-
-    var sort = el("history-sort");
-    if (sort) {
-      sort.addEventListener("change", function () {
-        loadHistory(true);
-      });
-    }
-
-    var adapterFilter = el("history-adapter-filter");
-    if (adapterFilter) {
-      adapterFilter.addEventListener("change", function () {
-        loadHistory(true);
-      });
-    }
-
-    var burnInWindow = el("history-burnin-window");
-    if (burnInWindow) {
-      burnInWindow.addEventListener("change", function () {
-        loadHistory(true);
-      });
-    }
-
-    var sustainedWindow = el("history-sustained-window");
-    if (sustainedWindow) {
-      sustainedWindow.addEventListener("change", function () {
+    var reloadControlIds = historyToolbarEventsRuntime.resolveHistoryFilterReloadControlIds();
+    for (var i = 0; i < reloadControlIds.length; i++) {
+      var control = el(reloadControlIds[i]);
+      if (!control) continue;
+      control.addEventListener("change", function () {
         loadHistory(true);
       });
     }
@@ -693,7 +679,7 @@
     var keyword = el("history-keyword");
     if (keyword) {
       keyword.addEventListener("keydown", function (event) {
-        if (event.key === "Enter") {
+        if (historyToolbarEventsRuntime.shouldHistoryKeywordTriggerReload(event && event.key)) {
           event.preventDefault();
           loadHistory(true);
         }
