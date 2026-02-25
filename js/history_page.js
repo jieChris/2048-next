@@ -171,6 +171,13 @@
   ) {
     throw new Error("CoreHistoryToolbarEventsRuntime is required");
   }
+  var historyModeFilterRuntime = window.CoreHistoryModeFilterRuntime;
+  if (
+    !historyModeFilterRuntime ||
+    typeof historyModeFilterRuntime.resolveHistoryModeFilterOptions !== "function"
+  ) {
+    throw new Error("CoreHistoryModeFilterRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -556,11 +563,11 @@
     if (!select) return;
     if (!(window.ModeCatalog && typeof window.ModeCatalog.listModes === "function")) return;
 
-    var modes = window.ModeCatalog.listModes();
-    for (var i = 0; i < modes.length; i++) {
+    var options = historyModeFilterRuntime.resolveHistoryModeFilterOptions(window.ModeCatalog.listModes());
+    for (var i = 0; i < options.length; i++) {
       var option = document.createElement("option");
-      option.value = modes[i].key;
-      option.textContent = modes[i].label;
+      option.value = options[i].value;
+      option.textContent = options[i].label;
       select.appendChild(option);
     }
   }
