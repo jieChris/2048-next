@@ -1,0 +1,79 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  applyHistoryCanaryPolicyAction,
+  resolveHistoryCanaryPolicyUpdateFailureNotice
+} from "../../src/bootstrap/history-canary-action";
+
+describe("bootstrap history canary action", () => {
+  it("returns false for unsupported action plan", () => {
+    expect(
+      applyHistoryCanaryPolicyAction({
+        actionPlan: { isSupported: false },
+        runtime: {},
+        writeStorageValue: () => true,
+        defaultModeStorageKey: "engine_adapter_default_mode",
+        forceLegacyStorageKey: "engine_adapter_force_legacy"
+      })
+    ).toBe(false);
+  });
+
+  it("applies via runtime APIs when available", () => {
+    const calls: string[] = [];
+    const runtime = {
+      setStoredAdapterDefaultMode(mode: unknown) {
+        calls.push("set:" + String(mode));
+        return true;
+      },
+      setStoredForceLegacy(enabled: boolean) {
+        calls.push("force:" + String(enabled));
+        return true;
+      }
+    };
+
+    const ok = applyHistoryCanaryPolicyAction({
+      actionPlan: {
+        isSupported: true,
+        defaultMode: "core-adapter",
+        forceLegacy: false
+      },
+      runtime,
+      writeStorageValue: () => false,
+      defaultModeStorageKey: "engine_adapter_default_mode",
+      forceLegacyStorageKey: "engine_adapter_force_legacy"
+    });
+
+    expect(ok).toBe(true);
+    expect(calls).toEqual(["set:core-adapter", "force:false"]);
+  });
+
+  it("falls back to storage writer and supports clear default mode", () => {
+    const writes: Array<{ key: string; value: unknown }> = [];
+    const ok = applyHistoryCanaryPolicyAction({
+      actionPlan: {
+        isSupported: true,
+        defaultMode: null,
+        forceLegacy: true
+      },
+      runtime: null,
+      writeStorageValue(key: string, value: unknown) {
+        writes.push({ key, value });
+        return true;
+      },
+      defaultModeStorageKey: "engine_adapter_default_mode",
+      forceLegacyStorageKey: "engine_adapter_force_legacy"
+    });
+
+    expect(ok).toBe(true);
+    expect(writes).toEqual([
+      { key: "engine_adapter_default_mode", value: null },
+      { key: "engine_adapter_force_legacy", value: "1" }
+    ]);
+  });
+
+  it("provides failure notice text", () => {
+    expect(resolveHistoryCanaryPolicyUpdateFailureNotice()).toBe(
+      "策略更新失败：请检查浏览器本地存储权限"
+    );
+  });
+});

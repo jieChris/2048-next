@@ -28,6 +28,14 @@
   ) {
     throw new Error("CoreHistoryCanaryPolicyRuntime is required");
   }
+  var historyCanaryActionRuntime = window.CoreHistoryCanaryActionRuntime;
+  if (
+    !historyCanaryActionRuntime ||
+    typeof historyCanaryActionRuntime.applyHistoryCanaryPolicyAction !== "function" ||
+    typeof historyCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice !== "function"
+  ) {
+    throw new Error("CoreHistoryCanaryActionRuntime is required");
+  }
   var historyAdapterDiagnosticsRuntime = window.CoreHistoryAdapterDiagnosticsRuntime;
   if (
     !historyAdapterDiagnosticsRuntime ||
@@ -314,45 +322,15 @@
     });
   }
 
-  function writeStoredDefaultMode(mode) {
-    var runtime = window.LegacyAdapterRuntime;
-    if (runtime && typeof runtime.setStoredAdapterDefaultMode === "function") {
-      return runtime.setStoredAdapterDefaultMode(mode);
-    }
-    return setStorageValue(ADAPTER_DEFAULT_STORAGE_KEY, mode || null);
-  }
-
-  function clearStoredDefaultMode() {
-    var runtime = window.LegacyAdapterRuntime;
-    if (runtime && typeof runtime.clearStoredAdapterDefaultMode === "function") {
-      return runtime.clearStoredAdapterDefaultMode();
-    }
-    return setStorageValue(ADAPTER_DEFAULT_STORAGE_KEY, null);
-  }
-
-  function writeStoredForceLegacy(enabled) {
-    var runtime = window.LegacyAdapterRuntime;
-    if (runtime && typeof runtime.setStoredForceLegacy === "function") {
-      return runtime.setStoredForceLegacy(enabled);
-    }
-    return setStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY, enabled ? "1" : null);
-  }
-
   function runCanaryPolicyAction(actionName) {
     var actionPlan = historyCanaryPolicyRuntime.resolveCanaryPolicyActionPlan(actionName || "");
-    if (!actionPlan || actionPlan.isSupported !== true) return false;
-
-    var success = true;
-    if (actionPlan.defaultMode === null) {
-      success = clearStoredDefaultMode();
-    } else if (typeof actionPlan.defaultMode === "string") {
-      success = writeStoredDefaultMode(actionPlan.defaultMode);
-    }
-
-    if (success && typeof actionPlan.forceLegacy === "boolean") {
-      success = writeStoredForceLegacy(actionPlan.forceLegacy);
-    }
-    return success;
+    return historyCanaryActionRuntime.applyHistoryCanaryPolicyAction({
+      actionPlan: actionPlan,
+      runtime: window.LegacyAdapterRuntime,
+      writeStorageValue: setStorageValue,
+      defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
+      forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
+    });
   }
 
   function renderCanaryPolicy() {
@@ -395,7 +373,7 @@
         var action = target && target.getAttribute ? target.getAttribute("data-action") : "";
         var ok = runCanaryPolicyAction(action || "");
         if (!ok) {
-          setStatus("策略更新失败：请检查浏览器本地存储权限", true);
+          setStatus(historyCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice(), true);
           return;
         }
         loadHistory(false);
