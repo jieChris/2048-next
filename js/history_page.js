@@ -18,6 +18,16 @@
   var ADAPTER_MODE_STORAGE_KEY = "engine_adapter_mode";
   var ADAPTER_DEFAULT_STORAGE_KEY = "engine_adapter_default_mode";
   var ADAPTER_FORCE_LEGACY_STORAGE_KEY = "engine_adapter_force_legacy";
+  var historyCanaryPolicyRuntime = window.CoreHistoryCanaryPolicyRuntime;
+  if (
+    !historyCanaryPolicyRuntime ||
+    typeof historyCanaryPolicyRuntime.resolveCanaryPolicySnapshot !== "function" ||
+    typeof historyCanaryPolicyRuntime.resolveStoredPolicyKeys !== "function" ||
+    typeof historyCanaryPolicyRuntime.resolveCanaryPolicyActionPlan !== "function" ||
+    typeof historyCanaryPolicyRuntime.resolveCanaryPolicyActionNotice !== "function"
+  ) {
+    throw new Error("CoreHistoryCanaryPolicyRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -99,27 +109,6 @@
     if (mode === "core-adapter") return "core-adapter";
     if (mode === "legacy-bridge") return "legacy-bridge";
     return "-";
-  }
-
-  function normalizeAdapterMode(raw) {
-    if (raw === "core" || raw === "core-adapter") return "core-adapter";
-    if (raw === "legacy" || raw === "legacy-bridge") return "legacy-bridge";
-    return null;
-  }
-
-  function normalizeForceLegacyFlag(raw) {
-    if (raw === true || raw === 1) return true;
-    if (typeof raw !== "string") return false;
-    var normalized = raw.trim().toLowerCase();
-    if (!normalized) return false;
-    return (
-      normalized === "1" ||
-      normalized === "true" ||
-      normalized === "yes" ||
-      normalized === "on" ||
-      normalized === "legacy" ||
-      normalized === "legacy-bridge"
-    );
   }
 
   function getStorageValue(key) {
@@ -359,63 +348,31 @@
 
   function readCanaryPolicySnapshot() {
     var runtime = window.LegacyAdapterRuntime;
+    var runtimePolicy = null;
     if (runtime && typeof runtime.resolveAdapterModePolicy === "function") {
       var policy = runtime.resolveAdapterModePolicy({});
-      if (isPlainObject(policy)) return policy;
+      if (isPlainObject(policy)) runtimePolicy = policy;
     }
-
-    var defaultMode = normalizeAdapterMode(getStorageValue(ADAPTER_DEFAULT_STORAGE_KEY));
-    var forceLegacy = normalizeForceLegacyFlag(getStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY));
-    if (forceLegacy) {
-      return {
-        effectiveMode: "legacy-bridge",
-        modeSource: "force-legacy",
-        forceLegacyEnabled: true,
-        forceLegacySource: "storage",
-        explicitMode: null,
-        globalMode: null,
-        queryMode: null,
-        storageMode: null,
-        defaultMode: defaultMode
-      };
-    }
-    if (defaultMode) {
-      return {
-        effectiveMode: defaultMode,
-        modeSource: "default",
-        forceLegacyEnabled: false,
-        forceLegacySource: null,
-        explicitMode: null,
-        globalMode: null,
-        queryMode: null,
-        storageMode: null,
-        defaultMode: defaultMode
-      };
-    }
-    return {
-      effectiveMode: "legacy-bridge",
-      modeSource: "fallback",
-      forceLegacyEnabled: false,
-      forceLegacySource: null,
-      explicitMode: null,
-      globalMode: null,
-      queryMode: null,
-      storageMode: null,
-      defaultMode: null
-    };
+    return historyCanaryPolicyRuntime.resolveCanaryPolicySnapshot({
+      runtimePolicy: runtimePolicy,
+      defaultModeRaw: getStorageValue(ADAPTER_DEFAULT_STORAGE_KEY),
+      forceLegacyRaw: getStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY)
+    });
   }
 
   function readStoredPolicyKeys() {
     var runtime = window.LegacyAdapterRuntime;
+    var runtimeStoredKeys = null;
     if (runtime && typeof runtime.readStoredAdapterPolicyKeys === "function") {
       var result = runtime.readStoredAdapterPolicyKeys();
-      if (isPlainObject(result)) return result;
+      if (isPlainObject(result)) runtimeStoredKeys = result;
     }
-    return {
-      adapterMode: getStorageValue(ADAPTER_MODE_STORAGE_KEY),
-      defaultMode: getStorageValue(ADAPTER_DEFAULT_STORAGE_KEY),
-      forceLegacy: getStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY)
-    };
+    return historyCanaryPolicyRuntime.resolveStoredPolicyKeys({
+      runtimeStoredKeys: runtimeStoredKeys,
+      adapterModeRaw: getStorageValue(ADAPTER_MODE_STORAGE_KEY),
+      defaultModeRaw: getStorageValue(ADAPTER_DEFAULT_STORAGE_KEY),
+      forceLegacyRaw: getStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY)
+    });
   }
 
   function writeStoredDefaultMode(mode) {
@@ -423,8 +380,7 @@
     if (runtime && typeof runtime.setStoredAdapterDefaultMode === "function") {
       return runtime.setStoredAdapterDefaultMode(mode);
     }
-    var normalized = normalizeAdapterMode(mode);
-    return setStorageValue(ADAPTER_DEFAULT_STORAGE_KEY, normalized || null);
+    return setStorageValue(ADAPTER_DEFAULT_STORAGE_KEY, mode || null);
   }
 
   function clearStoredDefaultMode() {
@@ -444,15 +400,18 @@
   }
 
   function runCanaryPolicyAction(actionName) {
-    var success = false;
-    if (actionName === "apply_canary") {
-      success = writeStoredDefaultMode("core-adapter") && writeStoredForceLegacy(false);
-    } else if (actionName === "emergency_rollback") {
-      success = writeStoredForceLegacy(true);
-    } else if (actionName === "resume_canary") {
-      success = writeStoredForceLegacy(false);
-    } else if (actionName === "reset_policy") {
-      success = clearStoredDefaultMode() && writeStoredForceLegacy(false);
+    var actionPlan = historyCanaryPolicyRuntime.resolveCanaryPolicyActionPlan(actionName || "");
+    if (!actionPlan || actionPlan.isSupported !== true) return false;
+
+    var success = true;
+    if (actionPlan.defaultMode === null) {
+      success = clearStoredDefaultMode();
+    } else if (typeof actionPlan.defaultMode === "string") {
+      success = writeStoredDefaultMode(actionPlan.defaultMode);
+    }
+
+    if (success && typeof actionPlan.forceLegacy === "boolean") {
+      success = writeStoredForceLegacy(actionPlan.forceLegacy);
     }
     return success;
   }
@@ -504,17 +463,7 @@
           return;
         }
         loadHistory(false);
-        if (action === "apply_canary") {
-          setStatus("已设置默认 core-adapter，并清除强制回滚", false);
-        } else if (action === "emergency_rollback") {
-          setStatus("已开启强制回滚：legacy-bridge", false);
-        } else if (action === "resume_canary") {
-          setStatus("已解除强制回滚，恢复默认策略", false);
-        } else if (action === "reset_policy") {
-          setStatus("已重置策略到基线（无默认 core、无强制回滚）", false);
-        } else {
-          setStatus("策略已更新", false);
-        }
+        setStatus(historyCanaryPolicyRuntime.resolveCanaryPolicyActionNotice(action || ""), false);
       });
     }
   }

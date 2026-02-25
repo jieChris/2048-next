@@ -574,6 +574,90 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(forcedLegacyMode).toBe("legacy-bridge");
   });
 
+  test("history page delegates canary policy decisions to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyCanarySnapshotCallCount = 0;
+      (window as any).__historyCanaryStoredKeysCallCount = 0;
+      (window as any).__historyCanaryActionPlanCallCount = 0;
+      (window as any).__historyCanaryActionNoticeCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryCanaryPolicyRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "resolveCanaryPolicySnapshot" && typeof value === "function") {
+            proxyTarget[prop] = function (opts: unknown) {
+              (window as any).__historyCanarySnapshotCallCount =
+                Number((window as any).__historyCanarySnapshotCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          if (prop === "resolveStoredPolicyKeys" && typeof value === "function") {
+            proxyTarget[prop] = function (opts: unknown) {
+              (window as any).__historyCanaryStoredKeysCallCount =
+                Number((window as any).__historyCanaryStoredKeysCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          if (prop === "resolveCanaryPolicyActionPlan" && typeof value === "function") {
+            proxyTarget[prop] = function (action: unknown) {
+              (window as any).__historyCanaryActionPlanCallCount =
+                Number((window as any).__historyCanaryActionPlanCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(action);
+            };
+            return true;
+          }
+          if (prop === "resolveCanaryPolicyActionNotice" && typeof value === "function") {
+            proxyTarget[prop] = function (action: unknown) {
+              (window as any).__historyCanaryActionNoticeCallCount =
+                Number((window as any).__historyCanaryActionNoticeCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(action);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const actionButton = document.querySelector(
+        ".history-canary-action-btn[data-action='reset_policy']"
+      ) as HTMLElement | null;
+      if (actionButton && typeof actionButton.click === "function") actionButton.click();
+      const policyBanner = document.querySelector("#history-canary-policy .history-burnin-gate");
+      return {
+        hasRuntime: Boolean(
+          (window as any).CoreHistoryCanaryPolicyRuntime?.resolveCanaryPolicySnapshot &&
+            (window as any).CoreHistoryCanaryPolicyRuntime?.resolveStoredPolicyKeys &&
+            (window as any).CoreHistoryCanaryPolicyRuntime?.resolveCanaryPolicyActionPlan &&
+            (window as any).CoreHistoryCanaryPolicyRuntime?.resolveCanaryPolicyActionNotice
+        ),
+        snapshotCallCount: Number((window as any).__historyCanarySnapshotCallCount || 0),
+        storedKeysCallCount: Number((window as any).__historyCanaryStoredKeysCallCount || 0),
+        actionPlanCallCount: Number((window as any).__historyCanaryActionPlanCallCount || 0),
+        actionNoticeCallCount: Number((window as any).__historyCanaryActionNoticeCallCount || 0),
+        policyGateText: policyBanner && policyBanner.textContent ? policyBanner.textContent.trim() : ""
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.snapshotCallCount).toBeGreaterThan(0);
+    expect(snapshot.storedKeysCallCount).toBeGreaterThan(0);
+    expect(snapshot.actionPlanCallCount).toBeGreaterThan(0);
+    expect(snapshot.actionNoticeCallCount).toBeGreaterThan(0);
+    expect(snapshot.policyGateText.length).toBeGreaterThan(0);
+  });
+
   test("legacy bootstrap resolveModeConfig delegates to mode-catalog runtime", async ({ page }) => {
     const response = await page.goto("/capped_2048.html", {
       waitUntil: "domcontentloaded"
