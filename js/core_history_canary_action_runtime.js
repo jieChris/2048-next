@@ -115,6 +115,23 @@
     };
   }
 
+  function applyHistoryCanaryPolicyActionByNameWithFeedback(input) {
+    var payload = input && typeof input === "object" ? input : null;
+    var ok = applyHistoryCanaryPolicyActionByName({
+      actionName: payload && payload.actionName,
+      resolveActionPlan: payload && payload.resolveActionPlan,
+      runtime: payload && payload.runtime,
+      writeStorageValue: payload && payload.writeStorageValue,
+      defaultModeStorageKey: payload && payload.defaultModeStorageKey,
+      forceLegacyStorageKey: payload && payload.forceLegacyStorageKey
+    });
+    return resolveHistoryCanaryPolicyApplyFeedbackState({
+      ok: ok,
+      successNotice: payload && payload.successNotice,
+      failureNotice: payload && payload.failureNotice
+    });
+  }
+
   global.CoreHistoryCanaryActionRuntime = global.CoreHistoryCanaryActionRuntime || {};
   global.CoreHistoryCanaryActionRuntime.applyHistoryCanaryPolicyAction = applyHistoryCanaryPolicyAction;
   global.CoreHistoryCanaryActionRuntime.applyHistoryCanaryPolicyActionByName =
@@ -123,4 +140,6 @@
     resolveHistoryCanaryPolicyUpdateFailureNotice;
   global.CoreHistoryCanaryActionRuntime.resolveHistoryCanaryPolicyApplyFeedbackState =
     resolveHistoryCanaryPolicyApplyFeedbackState;
+  global.CoreHistoryCanaryActionRuntime.applyHistoryCanaryPolicyActionByNameWithFeedback =
+    applyHistoryCanaryPolicyActionByNameWithFeedback;
 })(typeof window !== "undefined" ? window : undefined);

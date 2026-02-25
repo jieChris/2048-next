@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyHistoryCanaryPolicyActionByNameWithFeedback,
   applyHistoryCanaryPolicyActionByName,
   applyHistoryCanaryPolicyAction,
   resolveHistoryCanaryPolicyApplyFeedbackState,
@@ -145,6 +146,34 @@ describe("bootstrap history canary action", () => {
       reloadResetPage: false,
       statusText: "失败",
       isError: true
+    });
+  });
+
+  it("applies by name and returns feedback in one step", () => {
+    const state = applyHistoryCanaryPolicyActionByNameWithFeedback({
+      actionName: "reset_policy",
+      resolveActionPlan() {
+        return {
+          isSupported: true,
+          defaultMode: null,
+          forceLegacy: false
+        };
+      },
+      runtime: null,
+      writeStorageValue() {
+        return true;
+      },
+      defaultModeStorageKey: "engine_adapter_default_mode",
+      forceLegacyStorageKey: "engine_adapter_force_legacy",
+      successNotice: "策略已更新",
+      failureNotice: "失败"
+    });
+
+    expect(state).toEqual({
+      shouldReload: true,
+      reloadResetPage: false,
+      statusText: "策略已更新",
+      isError: false
     });
   });
 });

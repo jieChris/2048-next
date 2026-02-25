@@ -767,23 +767,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("history page delegates canary policy apply action to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
-      (window as any).__historyCanaryApplyByNameCallCount = 0;
-      (window as any).__historyCanaryApplyFeedbackCallCount = 0;
+      (window as any).__historyCanaryApplyWithFeedbackCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryCanaryActionRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
-          if (prop === "applyHistoryCanaryPolicyActionByName" && typeof value === "function") {
+          if (
+            prop === "applyHistoryCanaryPolicyActionByNameWithFeedback" &&
+            typeof value === "function"
+          ) {
             proxyTarget[prop] = function (input: unknown) {
-              (window as any).__historyCanaryApplyByNameCallCount =
-                Number((window as any).__historyCanaryApplyByNameCallCount || 0) + 1;
-              return (value as (arg: unknown) => unknown)(input);
-            };
-            return true;
-          }
-          if (prop === "resolveHistoryCanaryPolicyApplyFeedbackState" && typeof value === "function") {
-            proxyTarget[prop] = function (input: unknown) {
-              (window as any).__historyCanaryApplyFeedbackCallCount =
-                Number((window as any).__historyCanaryApplyFeedbackCallCount || 0) + 1;
+              (window as any).__historyCanaryApplyWithFeedbackCallCount =
+                Number((window as any).__historyCanaryApplyWithFeedbackCallCount || 0) + 1;
               return (value as (arg: unknown) => unknown)(input);
             };
             return true;
@@ -810,15 +804,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return {
         hasRuntime:
           Boolean((window as any).CoreHistoryCanaryActionRuntime?.applyHistoryCanaryPolicyActionByName) &&
+          Boolean(
+            (window as any).CoreHistoryCanaryActionRuntime?.applyHistoryCanaryPolicyActionByNameWithFeedback
+          ) &&
           Boolean((window as any).CoreHistoryCanaryActionRuntime?.resolveHistoryCanaryPolicyApplyFeedbackState),
-        applyByNameCallCount: Number((window as any).__historyCanaryApplyByNameCallCount || 0),
-        applyFeedbackCallCount: Number((window as any).__historyCanaryApplyFeedbackCallCount || 0)
+        applyWithFeedbackCallCount: Number(
+          (window as any).__historyCanaryApplyWithFeedbackCallCount || 0
+        )
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
-    expect(snapshot.applyByNameCallCount).toBeGreaterThan(0);
-    expect(snapshot.applyFeedbackCallCount).toBeGreaterThan(0);
+    expect(snapshot.applyWithFeedbackCallCount).toBeGreaterThan(0);
   });
 
   test("history page delegates canary view modeling to runtime helper", async ({ page }) => {

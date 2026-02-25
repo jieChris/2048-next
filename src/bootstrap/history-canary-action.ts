@@ -33,6 +33,17 @@ export interface HistoryCanaryPolicyApplyFeedbackInput {
   failureNotice: unknown;
 }
 
+export interface ApplyHistoryCanaryPolicyActionByNameWithFeedbackInput {
+  actionName: unknown;
+  resolveActionPlan: unknown;
+  runtime: unknown;
+  writeStorageValue: unknown;
+  defaultModeStorageKey: unknown;
+  forceLegacyStorageKey: unknown;
+  successNotice: unknown;
+  failureNotice: unknown;
+}
+
 export interface HistoryCanaryPolicyApplyFeedbackState {
   shouldReload: boolean;
   reloadResetPage: boolean;
@@ -172,4 +183,26 @@ export function resolveHistoryCanaryPolicyApplyFeedbackState(
     ),
     isError: true
   };
+}
+
+export function applyHistoryCanaryPolicyActionByNameWithFeedback(
+  input: unknown
+): HistoryCanaryPolicyApplyFeedbackState {
+  const payload =
+    input && typeof input === "object"
+      ? (input as ApplyHistoryCanaryPolicyActionByNameWithFeedbackInput)
+      : null;
+  const ok = applyHistoryCanaryPolicyActionByName({
+    actionName: payload && payload.actionName,
+    resolveActionPlan: payload && payload.resolveActionPlan,
+    runtime: payload && payload.runtime,
+    writeStorageValue: payload && payload.writeStorageValue,
+    defaultModeStorageKey: payload && payload.defaultModeStorageKey,
+    forceLegacyStorageKey: payload && payload.forceLegacyStorageKey
+  });
+  return resolveHistoryCanaryPolicyApplyFeedbackState({
+    ok,
+    successNotice: payload && payload.successNotice,
+    failureNotice: payload && payload.failureNotice
+  });
 }
