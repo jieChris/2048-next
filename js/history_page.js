@@ -42,6 +42,7 @@
   var historyExportRuntime = historyRuntimes.historyExportRuntime;
   var historyQueryRuntime = historyRuntimes.historyQueryRuntime;
   var historyLoadRuntime = historyRuntimes.historyLoadRuntime;
+  var historyLoadHostRuntime = historyRuntimes.historyLoadHostRuntime;
   var historyRecordViewRuntime = historyRuntimes.historyRecordViewRuntime;
   var historyRecordItemRuntime = historyRuntimes.historyRecordItemRuntime;
   var historyImportRuntime = historyRuntimes.historyImportRuntime;
@@ -250,31 +251,27 @@
 
   function loadHistory(resetPage) {
     if (!window.LocalHistoryStore) return;
-    if (resetPage) state.page = 1;
     readFilters();
-
-    var loadPipeline = historyLoadRuntime.resolveHistoryLoadPipeline({
+    var loadResult = historyLoadHostRuntime.applyHistoryLoadAndRender({
+      resetPage: resetPage,
       state: state,
       localHistoryStore: window.LocalHistoryStore,
+      historyLoadRuntime: historyLoadRuntime,
       historyQueryRuntime: historyQueryRuntime,
       historyBurnInRuntime: historyBurnInRuntime,
       burnInMinComparable: BURN_IN_MIN_COMPARABLE,
-      burnInMaxMismatchRate: BURN_IN_MAX_MISMATCH_RATE
+      burnInMaxMismatchRate: BURN_IN_MAX_MISMATCH_RATE,
+      renderHistory: renderHistory,
+      renderSummary: buildSummary,
+      renderBurnInSummary: renderBurnInSummary,
+      renderCanaryPolicy: renderCanaryPolicy,
+      setStatus: setStatus
     });
-    var result = loadPipeline && loadPipeline.listResult;
-    var burnInSummary = loadPipeline && loadPipeline.burnInSummary;
-    var pagerState = loadPipeline && loadPipeline.pagerState;
-
-    renderHistory(result);
-    buildSummary(result);
-    renderBurnInSummary(burnInSummary);
-    renderCanaryPolicy();
-    setStatus("", false);
 
     var prevBtn = el("history-prev-page");
     var nextBtn = el("history-next-page");
-    if (prevBtn) prevBtn.disabled = !!(pagerState && pagerState.disablePrev);
-    if (nextBtn) nextBtn.disabled = !!(pagerState && pagerState.disableNext);
+    if (prevBtn) prevBtn.disabled = !!(loadResult && loadResult.disablePrev);
+    if (nextBtn) nextBtn.disabled = !!(loadResult && loadResult.disableNext);
   }
 
   function initModeFilter() {

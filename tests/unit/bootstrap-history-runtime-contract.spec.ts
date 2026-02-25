@@ -107,6 +107,13 @@ function createWindowLike() {
         pagerState: { disablePrev: true, disableNext: true }
       })
     },
+    CoreHistoryLoadHostRuntime: {
+      applyHistoryLoadAndRender: () => ({
+        didLoad: true,
+        disablePrev: true,
+        disableNext: true
+      })
+    },
     CoreHistoryRecordViewRuntime: {
       resolveHistoryCatalogModeLabel: () => "",
       resolveHistoryModeText: () => "",
@@ -234,6 +241,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyAdapterHostRuntime).toBe(source.CoreHistoryAdapterHostRuntime);
     expect(result.historyQueryRuntime).toBe(source.CoreHistoryQueryRuntime);
     expect(result.historyLoadRuntime).toBe(source.CoreHistoryLoadRuntime);
+    expect(result.historyLoadHostRuntime).toBe(source.CoreHistoryLoadHostRuntime);
     expect(result.historyImportHostRuntime).toBe(source.CoreHistoryImportHostRuntime);
     expect(result.historyRecordHostRuntime).toBe(source.CoreHistoryRecordHostRuntime);
     expect(result.historyToolbarHostRuntime).toBe(source.CoreHistoryToolbarHostRuntime);
@@ -297,6 +305,15 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryLoadRuntime is required"
+    );
+  });
+
+  it("throws exact error when load host runtime is missing required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryLoadHostRuntime = {};
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryLoadHostRuntime is required"
     );
   });
 
