@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   resolveHistoryBurnInMismatchFocusActionState,
   resolveHistoryBurnInPanelHtml,
+  resolveHistoryBurnInSummarySource,
   resolveHistoryBurnInSummaryState
 } from "../../src/bootstrap/history-burnin";
 
@@ -93,6 +94,35 @@ describe("bootstrap history burn-in", () => {
       shouldReload: true,
       resetPage: true
     });
+  });
+
+  it("reads burn-in summary from store using query resolver", () => {
+    const captured: unknown[] = [];
+    const summary = resolveHistoryBurnInSummarySource({
+      localHistoryStore: {
+        getAdapterParityBurnInSummary(query: unknown) {
+          captured.push(query);
+          return { comparable: 88 };
+        }
+      },
+      resolveBurnInQuery(input: unknown) {
+        return { wrapped: input };
+      },
+      queryInput: { sampleLimit: 200 }
+    });
+
+    expect(summary).toEqual({ comparable: 88 });
+    expect(captured).toEqual([{ wrapped: { sampleLimit: 200 } }]);
+  });
+
+  it("returns null when burn-in source read is unavailable", () => {
+    expect(resolveHistoryBurnInSummarySource({ localHistoryStore: null })).toBeNull();
+    expect(
+      resolveHistoryBurnInSummarySource({
+        localHistoryStore: {},
+        queryInput: { sampleLimit: 50 }
+      })
+    ).toBeNull();
   });
 
   it("builds burn-in panel html from summary state", () => {

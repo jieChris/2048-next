@@ -7,6 +7,16 @@
     return !!value && typeof value === "object" && !Array.isArray(value);
   }
 
+  function asSummaryReader(value) {
+    if (!value || typeof value !== "object") return null;
+    return value;
+  }
+
+  function asSummarySourceInput(input) {
+    if (!isPlainObject(input)) return {};
+    return input;
+  }
+
   function escapeHtml(value) {
     var text = String(value == null ? "" : value);
     return text
@@ -50,6 +60,21 @@
     if (status === "fail") return "连续未达标";
     if (status === "insufficient_window") return "窗口不足";
     return "样本不足";
+  }
+
+  function resolveHistoryBurnInSummarySource(input) {
+    var opts = asSummarySourceInput(input);
+    var store = asSummaryReader(opts.localHistoryStore);
+    if (!store || typeof store.getAdapterParityBurnInSummary !== "function") return null;
+    try {
+      var query =
+        typeof opts.resolveBurnInQuery === "function"
+          ? opts.resolveBurnInQuery(opts.queryInput)
+          : opts.queryInput;
+      return store.getAdapterParityBurnInSummary(query);
+    } catch (_error) {
+      return null;
+    }
   }
 
   function resolveHistoryBurnInSummaryState(summary) {
@@ -174,6 +199,8 @@
   }
 
   global.CoreHistoryBurnInRuntime = global.CoreHistoryBurnInRuntime || {};
+  global.CoreHistoryBurnInRuntime.resolveHistoryBurnInSummarySource =
+    resolveHistoryBurnInSummarySource;
   global.CoreHistoryBurnInRuntime.resolveHistoryBurnInSummaryState = resolveHistoryBurnInSummaryState;
   global.CoreHistoryBurnInRuntime.resolveHistoryBurnInMismatchFocusActionState =
     resolveHistoryBurnInMismatchFocusActionState;

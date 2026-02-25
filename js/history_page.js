@@ -77,6 +77,7 @@
   var historyBurnInRuntime = window.CoreHistoryBurnInRuntime;
   if (
     !historyBurnInRuntime ||
+    typeof historyBurnInRuntime.resolveHistoryBurnInSummarySource !== "function" ||
     typeof historyBurnInRuntime.resolveHistoryBurnInSummaryState !== "function" ||
     typeof historyBurnInRuntime.resolveHistoryBurnInMismatchFocusActionState !== "function" ||
     typeof historyBurnInRuntime.resolveHistoryBurnInPanelHtml !== "function"
@@ -458,12 +459,10 @@
 
     renderHistory(result);
     buildSummary(result);
-    var burnInSummary = null;
-    if (
-      window.LocalHistoryStore &&
-      typeof window.LocalHistoryStore.getAdapterParityBurnInSummary === "function"
-    ) {
-      var burnInQuery = historyQueryRuntime.resolveHistoryBurnInQuery({
+    var burnInSummary = historyBurnInRuntime.resolveHistoryBurnInSummarySource({
+      localHistoryStore: window.LocalHistoryStore,
+      resolveBurnInQuery: historyQueryRuntime.resolveHistoryBurnInQuery,
+      queryInput: {
         modeKey: state.modeKey,
         keyword: state.keyword,
         sortBy: state.sortBy,
@@ -471,9 +470,8 @@
         sustainedWindows: state.sustainedWindows,
         minComparable: BURN_IN_MIN_COMPARABLE,
         maxMismatchRate: BURN_IN_MAX_MISMATCH_RATE
-      });
-      burnInSummary = window.LocalHistoryStore.getAdapterParityBurnInSummary(burnInQuery);
-    }
+      }
+    });
     renderBurnInSummary(burnInSummary);
     renderCanaryPolicy();
     setStatus("", false);

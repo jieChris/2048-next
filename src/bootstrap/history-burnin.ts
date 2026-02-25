@@ -24,6 +24,16 @@ export interface HistoryBurnInMismatchFocusActionState {
   resetPage: boolean;
 }
 
+interface HistoryBurnInSummaryReader {
+  getAdapterParityBurnInSummary?: (query: unknown) => unknown;
+}
+
+export interface ResolveHistoryBurnInSummarySourceInput {
+  localHistoryStore?: unknown;
+  resolveBurnInQuery?: ((input: unknown) => unknown) | null;
+  queryInput?: unknown;
+}
+
 function escapeHtml(value: unknown): string {
   const text = String(value == null ? "" : value);
   return text
@@ -36,6 +46,16 @@ function escapeHtml(value: unknown): string {
 
 function isPlainObject(value: unknown): value is AnyRecord {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function asSummaryReader(value: unknown): HistoryBurnInSummaryReader | null {
+  if (!value || typeof value !== "object") return null;
+  return value as HistoryBurnInSummaryReader;
+}
+
+function asSummarySourceInput(input: unknown): ResolveHistoryBurnInSummarySourceInput {
+  if (!isPlainObject(input)) return {};
+  return input;
 }
 
 function toFiniteNumberOrNull(value: unknown): number | null {
@@ -71,6 +91,21 @@ function getSustainedGateLabel(status: unknown): string {
   if (status === "fail") return "连续未达标";
   if (status === "insufficient_window") return "窗口不足";
   return "样本不足";
+}
+
+export function resolveHistoryBurnInSummarySource(input: unknown): unknown | null {
+  const opts = asSummarySourceInput(input);
+  const store = asSummaryReader(opts.localHistoryStore);
+  if (!store || typeof store.getAdapterParityBurnInSummary !== "function") return null;
+  try {
+    const query =
+      typeof opts.resolveBurnInQuery === "function"
+        ? opts.resolveBurnInQuery(opts.queryInput)
+        : opts.queryInput;
+    return store.getAdapterParityBurnInSummary(query);
+  } catch (_error) {
+    return null;
+  }
 }
 
 export function resolveHistoryBurnInSummaryState(summary: unknown): HistoryBurnInSummaryState {

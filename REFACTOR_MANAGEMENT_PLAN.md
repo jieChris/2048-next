@@ -232,6 +232,7 @@
   - `history-adapter-diagnostics` 已继续承接 adapter 诊断徽标/诊断区 HTML 拼装（`resolveHistoryAdapterBadgeHtml`/`resolveHistoryAdapterDiagnosticsHtml`），`history_page.js` 不再本地拼接诊断 HTML
   - `history-adapter-diagnostics` 已继续承接 parity 状态读取（`resolveHistoryAdapterParityStatus`），`history_page.js` 不再本地读取 `LocalHistoryStore.getAdapterParityStatus`
   - 新增 `src/bootstrap/history-burnin.ts` + `js/core_history_burnin_runtime.js`，`history_page.js` 委托 burn-in 汇总 gate 状态、百分比文案、连续窗口统计、面板 HTML 渲染与“仅看不一致”点击动作决策
+  - `history-burnin` 已继续承接 burn-in 汇总源读取（`resolveHistoryBurnInSummarySource`），`history_page.js` 不再本地判断 store/query 再调用 `getAdapterParityBurnInSummary`
   - burn-in gate 已支持 sustained window 判定
   - `src/bridge/burnin-gate.ts` + `js/core_burnin_gate_runtime.js` 抽离完成
   - play 页自定义 4 率抽离：`src/bootstrap/custom-spawn.ts` + `js/core_custom_spawn_runtime.js`

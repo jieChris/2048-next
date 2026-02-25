@@ -2026,11 +2026,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("history page delegates burn-in summary modeling to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
+      (window as any).__historyBurnInSummarySourceCallCount = 0;
       (window as any).__historyBurnInCallCount = 0;
       (window as any).__historyBurnInPanelHtmlCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryBurnInRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryBurnInSummarySource" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyBurnInSummarySourceCallCount =
+                Number((window as any).__historyBurnInSummarySourceCallCount || 0) + 1;
+              return (value as (arg: unknown) => unknown)(input);
+            };
+            return true;
+          }
           if (prop === "resolveHistoryBurnInSummaryState" && typeof value === "function") {
             proxyTarget[prop] = function (summary: unknown) {
               (window as any).__historyBurnInCallCount =
@@ -2111,14 +2120,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const snapshot = await page.evaluate(() => ({
       hasRuntime:
+        Boolean((window as any).CoreHistoryBurnInRuntime?.resolveHistoryBurnInSummarySource) &&
         Boolean((window as any).CoreHistoryBurnInRuntime?.resolveHistoryBurnInSummaryState) &&
         Boolean((window as any).CoreHistoryBurnInRuntime?.resolveHistoryBurnInPanelHtml),
+      summarySourceCallCount: Number((window as any).__historyBurnInSummarySourceCallCount || 0),
       burnInCallCount: Number((window as any).__historyBurnInCallCount || 0),
       panelHtmlCallCount: Number((window as any).__historyBurnInPanelHtmlCallCount || 0),
       burnInText: (document.querySelector("#history-burnin-summary")?.textContent || "").trim()
     }));
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.summarySourceCallCount).toBeGreaterThan(0);
     expect(snapshot.burnInCallCount).toBeGreaterThan(0);
     expect(snapshot.panelHtmlCallCount).toBeGreaterThan(0);
     expect(snapshot.burnInText).toContain("Cutover Burn-in 统计");
