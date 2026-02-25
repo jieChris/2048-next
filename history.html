@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>2048 本地历史记录</title>
-  <link href="style/main.css?v=1771930000000" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=1772005002000" rel="stylesheet" type="text/css">
   <link rel="shortcut icon" href="favicon.ico?v=42">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
@@ -36,11 +36,37 @@
           <option value="score_desc">按分数（高到低）</option>
         </select>
 
+        <label>Adapter诊断</label>
+        <select id="history-adapter-filter" class="settings-select portal-inline-select">
+          <option value="all">全部</option>
+          <option value="mismatch">仅不一致</option>
+          <option value="match">仅一致</option>
+          <option value="incomplete">样本不足</option>
+        </select>
+
+        <label>Burn-in窗口</label>
+        <select id="history-burnin-window" class="settings-select portal-inline-select">
+          <option value="50">最近50条</option>
+          <option value="100">最近100条</option>
+          <option value="200" selected>最近200条</option>
+          <option value="500">最近500条</option>
+          <option value="all">全部</option>
+        </select>
+
+        <label>连续窗口</label>
+        <select id="history-sustained-window" class="settings-select portal-inline-select">
+          <option value="1">1个窗口</option>
+          <option value="2">2个窗口</option>
+          <option value="3" selected>3个窗口</option>
+          <option value="4">4个窗口</option>
+        </select>
+
         <button class="replay-button" id="history-load-btn">刷新</button>
       </div>
 
       <div class="portal-actions-inline" style="margin-top:8px;">
         <button class="replay-button" id="history-export-all-btn">导出全部</button>
+        <button class="replay-button" id="history-export-mismatch-btn">导出不一致</button>
         <button class="replay-button" id="history-import-btn">导入合并</button>
         <button class="replay-button" id="history-import-replace-btn">导入并替换</button>
         <button class="replay-button" id="history-clear-all-btn">清空全部</button>
@@ -49,6 +75,8 @@
 
       <div id="history-status" class="portal-status"></div>
       <div id="history-summary" class="portal-muted"></div>
+      <div id="history-burnin-summary" class="history-burnin-card"></div>
+      <div id="history-canary-policy" class="history-canary-card"></div>
     </div>
 
     <div class="portal-actions-inline" style="justify-content:flex-end; margin-bottom:10px;">
@@ -61,7 +89,10 @@
 
   <script src="js/theme_manager.js?v=1771600400000"></script>
   <script src="js/mode_catalog.js?v=1771905000000"></script>
-  <script src="js/local_history_store.js?v=1771701000000"></script>
-  <script src="js/history_page.js?v=1771701000000"></script>
+  <script src="js/legacy_adapter_runtime.js?v=1772004000000"></script>
+  <script src="js/core_history_canary_policy_runtime.js?v=1772142000000"></script>
+  <script src="js/core_burnin_gate_runtime.js?v=1772006000000"></script>
+  <script src="js/local_history_store.js?v=1772006000000"></script>
+  <script src="js/history_page.js?v=1772142001000"></script>
 </body>
 </html>

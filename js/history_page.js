@@ -8,8 +8,26 @@
     pageSize: 30,
     modeKey: "",
     keyword: "",
-    sortBy: "ended_desc"
+    sortBy: "ended_desc",
+    adapterParityFilter: "all",
+    burnInWindow: "200",
+    sustainedWindows: "3"
   };
+  var BURN_IN_MIN_COMPARABLE = 50;
+  var BURN_IN_MAX_MISMATCH_RATE = 1;
+  var ADAPTER_MODE_STORAGE_KEY = "engine_adapter_mode";
+  var ADAPTER_DEFAULT_STORAGE_KEY = "engine_adapter_default_mode";
+  var ADAPTER_FORCE_LEGACY_STORAGE_KEY = "engine_adapter_force_legacy";
+  var historyCanaryPolicyRuntime = window.CoreHistoryCanaryPolicyRuntime;
+  if (
+    !historyCanaryPolicyRuntime ||
+    typeof historyCanaryPolicyRuntime.resolveCanaryPolicySnapshot !== "function" ||
+    typeof historyCanaryPolicyRuntime.resolveStoredPolicyKeys !== "function" ||
+    typeof historyCanaryPolicyRuntime.resolveCanaryPolicyActionPlan !== "function" ||
+    typeof historyCanaryPolicyRuntime.resolveCanaryPolicyActionNotice !== "function"
+  ) {
+    throw new Error("CoreHistoryCanaryPolicyRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -60,13 +78,394 @@
     return s + "s";
   }
 
+  function isPlainObject(value) {
+    return !!value && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function toFiniteNumberOrNull(value) {
+    var num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  }
+
+  function formatNullableNumber(value) {
+    var num = toFiniteNumberOrNull(value);
+    return num === null ? "-" : String(num);
+  }
+
+  function formatSignedDelta(value) {
+    var num = toFiniteNumberOrNull(value);
+    if (num === null) return "-";
+    if (num > 0) return "+" + num;
+    return String(num);
+  }
+
+  function formatNullableBoolean(value) {
+    if (value === true) return "是";
+    if (value === false) return "否";
+    return "-";
+  }
+
+  function formatAdapterMode(mode) {
+    if (mode === "core-adapter") return "core-adapter";
+    if (mode === "legacy-bridge") return "legacy-bridge";
+    return "-";
+  }
+
+  function getStorageValue(key) {
+    try {
+      if (!window.localStorage || typeof window.localStorage.getItem !== "function") return null;
+      return window.localStorage.getItem(key);
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function setStorageValue(key, value) {
+    try {
+      if (!window.localStorage) return false;
+      if (value === null || value === undefined || value === "") {
+        if (typeof window.localStorage.removeItem !== "function") return false;
+        window.localStorage.removeItem(key);
+        return true;
+      }
+      if (typeof window.localStorage.setItem !== "function") return false;
+      window.localStorage.setItem(key, String(value));
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function escapeHtml(value) {
+    var text = String(value == null ? "" : value);
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function hasAdapterDiagnostics(item) {
+    if (!item || typeof item !== "object") return false;
+    return isPlainObject(item.adapter_parity_report_v1) || isPlainObject(item.adapter_parity_ab_diff_v1);
+  }
+
+  function getAdapterParityStatus(item) {
+    if (window.LocalHistoryStore && typeof window.LocalHistoryStore.getAdapterParityStatus === "function") {
+      return window.LocalHistoryStore.getAdapterParityStatus(item);
+    }
+    return "incomplete";
+  }
+
+  function getAdapterBadgeText(status) {
+    if (status === "mismatch") return "A/B 不一致";
+    if (status === "match") return "A/B 一致";
+    return "A/B 样本不足";
+  }
+
+  function getAdapterBadgeClass(status) {
+    if (status === "mismatch") return "history-adapter-badge-mismatch";
+    if (status === "match") return "history-adapter-badge-match";
+    return "history-adapter-badge-incomplete";
+  }
+
+  function buildAdapterBadgeHtml(item) {
+    if (!hasAdapterDiagnostics(item)) return "";
+    var status = getAdapterParityStatus(item);
+    return "<span class='history-adapter-badge " + getAdapterBadgeClass(status) + "'>" +
+      escapeHtml(getAdapterBadgeText(status)) +
+      "</span>";
+  }
+
+  function buildAdapterDiagnosticsHtml(item) {
+    var report = isPlainObject(item && item.adapter_parity_report_v1) ? item.adapter_parity_report_v1 : null;
+    var diff = isPlainObject(item && item.adapter_parity_ab_diff_v1) ? item.adapter_parity_ab_diff_v1 : null;
+    if (!report && !diff) return "";
+
+    var lines = [];
+    if (report) {
+      lines.push(
+        "当前 " + escapeHtml(formatAdapterMode(report.adapterMode)) +
+        " · 快照分数 " + escapeHtml(formatNullableNumber(report.lastScoreFromSnapshot)) +
+        " · undoUsed " + escapeHtml(formatNullableNumber(report.undoUsedFromSnapshot)) +
+        " · scoreDelta " + escapeHtml(formatSignedDelta(report.scoreDelta)) +
+        " · 对齐 " + escapeHtml(formatNullableBoolean(report.isScoreAligned))
+      );
+    }
+    if (diff) {
+      lines.push(
+        "A/B comparable " + escapeHtml(formatNullableBoolean(diff.comparable)) +
+        " · scoreΔ " + escapeHtml(formatSignedDelta(diff.scoreDelta)) +
+        " · undoΔ " + escapeHtml(formatSignedDelta(diff.undoUsedDelta)) +
+        " · overΔ " + escapeHtml(formatSignedDelta(diff.overEventsDelta))
+      );
+    }
+
+    var html = "<div class='history-adapter-diagnostics'>" +
+      "<div class='history-adapter-title'>Adapter 诊断</div>";
+    for (var i = 0; i < lines.length; i++) {
+      html += "<div class='history-adapter-line'>" + lines[i] + "</div>";
+    }
+    html += "</div>";
+    return html;
+  }
+
   function buildSummary(result) {
     var summary = el("history-summary");
     if (!summary) return;
     var total = result && Number.isFinite(result.total) ? result.total : 0;
+    var filterMap = {
+      all: "全部",
+      mismatch: "仅不一致",
+      match: "仅一致",
+      incomplete: "样本不足"
+    };
     summary.textContent = "共 " + total + " 条记录" +
       " · 当前第 " + state.page + " 页" +
-      " · 每页 " + state.pageSize + " 条";
+      " · 每页 " + state.pageSize + " 条" +
+      " · 诊断筛选: " + (filterMap[state.adapterParityFilter] || "全部");
+  }
+
+  function formatPercent(value) {
+    var num = toFiniteNumberOrNull(value);
+    if (num === null) return "-";
+    return num.toFixed(2) + "%";
+  }
+
+  function getBurnInGateLabel(status) {
+    if (status === "pass") return "达标";
+    if (status === "fail") return "未达标";
+    return "样本不足";
+  }
+
+  function getBurnInGateClass(status) {
+    if (status === "pass") return "history-burnin-gate-pass";
+    if (status === "fail") return "history-burnin-gate-fail";
+    return "history-burnin-gate-warn";
+  }
+
+  function getSustainedGateLabel(status) {
+    if (status === "pass") return "连续达标";
+    if (status === "fail") return "连续未达标";
+    if (status === "insufficient_window") return "窗口不足";
+    return "样本不足";
+  }
+
+  function renderBurnInSummary(summary) {
+    var panel = el("history-burnin-summary");
+    if (!panel) return;
+    if (!isPlainObject(summary)) {
+      panel.innerHTML = "<div class='history-burnin-empty'>暂无 burn-in 数据</div>";
+      return;
+    }
+
+    var limitText = summary.sampleLimit === null
+      ? ("全部 " + summary.evaluatedRecords + " 条")
+      : ("最近 " + summary.evaluatedRecords + " 条（窗口 " + summary.sampleLimit + "）");
+    var gateLabel = getBurnInGateLabel(summary.gateStatus);
+    var gateClass = getBurnInGateClass(summary.gateStatus);
+    var sustainedGateLabel = getSustainedGateLabel(summary.sustainedGateStatus);
+    var sustainedGateClass = getBurnInGateClass(
+      summary.sustainedGateStatus === "pass" || summary.sustainedGateStatus === "fail"
+        ? summary.sustainedGateStatus
+        : "warn"
+    );
+    var sustainedWindowSize = Number.isFinite(summary.sustainedWindowSize) ? summary.sustainedWindowSize : 0;
+    var sustainedRequired = Number.isFinite(summary.sustainedWindows) ? summary.sustainedWindows : 0;
+    var sustainedEvaluated = Number.isFinite(summary.sustainedEvaluatedWindows)
+      ? summary.sustainedEvaluatedWindows
+      : 0;
+    var sustainedConsecutive = Number.isFinite(summary.sustainedConsecutivePass)
+      ? summary.sustainedConsecutivePass
+      : 0;
+    var mismatchAction = "";
+    if ((summary.mismatch || 0) > 0) {
+      mismatchAction = "<button class='replay-button history-burnin-focus-mismatch'>仅看不一致</button>";
+    }
+
+    panel.innerHTML =
+      "<div class='history-burnin-head'>" +
+        "<div class='history-burnin-title'>Cutover Burn-in 统计</div>" +
+        "<div class='history-burnin-gates'>" +
+          "<span class='history-burnin-gate " + gateClass + "'>单窗口: " + escapeHtml(gateLabel) + "</span>" +
+          "<span class='history-burnin-gate " + sustainedGateClass + "'>连续窗口: " + escapeHtml(sustainedGateLabel) + "</span>" +
+        "</div>" +
+      "</div>" +
+      "<div class='history-burnin-grid'>" +
+        "<span>采样: " + escapeHtml(limitText) + "</span>" +
+        "<span>诊断记录 " + escapeHtml(summary.withDiagnostics) + "</span>" +
+        "<span>可比较样本 " + escapeHtml(summary.comparable) + "</span>" +
+        "<span>一致 " + escapeHtml(summary.match) + "</span>" +
+        "<span>不一致 " + escapeHtml(summary.mismatch) + "</span>" +
+        "<span>样本不足 " + escapeHtml(summary.incomplete) + "</span>" +
+        "<span>不一致率 " + escapeHtml(formatPercent(summary.mismatchRate)) + "</span>" +
+      "</div>" +
+      "<div class='history-burnin-note'>" +
+        "门槛: 可比较 >= " + escapeHtml(summary.minComparable) +
+        "，不一致率 <= " + escapeHtml(formatPercent(summary.maxMismatchRate)) +
+      "</div>" +
+      "<div class='history-burnin-note'>" +
+        "连续门槛: 最近 " + escapeHtml(sustainedRequired) +
+        " 个窗口（每窗口 " + escapeHtml(sustainedWindowSize) +
+        " 条）均需单窗口达标" +
+      "</div>" +
+      "<div class='history-burnin-note'>" +
+        "连续通过 " + escapeHtml(sustainedConsecutive) +
+        "/" + escapeHtml(sustainedRequired) +
+        "，已评估窗口 " + escapeHtml(sustainedEvaluated) +
+      "</div>" +
+      (mismatchAction ? "<div class='history-burnin-actions'>" + mismatchAction + "</div>" : "");
+
+    var mismatchBtn = panel.querySelector(".history-burnin-focus-mismatch");
+    if (mismatchBtn) {
+      mismatchBtn.addEventListener("click", function () {
+        var adapterFilter = el("history-adapter-filter");
+        if (adapterFilter) adapterFilter.value = "mismatch";
+        state.adapterParityFilter = "mismatch";
+        loadHistory(true);
+      });
+    }
+  }
+
+  function formatModeSource(source) {
+    if (source === "explicit") return "显式参数";
+    if (source === "force-legacy") return "强制回滚";
+    if (source === "global") return "全局变量";
+    if (source === "query") return "URL 参数";
+    if (source === "storage") return "本地存储";
+    if (source === "default") return "默认策略";
+    return "默认回退";
+  }
+
+  function formatForceSource(source) {
+    if (source === "input") return "输入参数";
+    if (source === "global") return "全局变量";
+    if (source === "query") return "URL 参数";
+    if (source === "storage") return "本地存储";
+    return "-";
+  }
+
+  function readCanaryPolicySnapshot() {
+    var runtime = window.LegacyAdapterRuntime;
+    var runtimePolicy = null;
+    if (runtime && typeof runtime.resolveAdapterModePolicy === "function") {
+      var policy = runtime.resolveAdapterModePolicy({});
+      if (isPlainObject(policy)) runtimePolicy = policy;
+    }
+    return historyCanaryPolicyRuntime.resolveCanaryPolicySnapshot({
+      runtimePolicy: runtimePolicy,
+      defaultModeRaw: getStorageValue(ADAPTER_DEFAULT_STORAGE_KEY),
+      forceLegacyRaw: getStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY)
+    });
+  }
+
+  function readStoredPolicyKeys() {
+    var runtime = window.LegacyAdapterRuntime;
+    var runtimeStoredKeys = null;
+    if (runtime && typeof runtime.readStoredAdapterPolicyKeys === "function") {
+      var result = runtime.readStoredAdapterPolicyKeys();
+      if (isPlainObject(result)) runtimeStoredKeys = result;
+    }
+    return historyCanaryPolicyRuntime.resolveStoredPolicyKeys({
+      runtimeStoredKeys: runtimeStoredKeys,
+      adapterModeRaw: getStorageValue(ADAPTER_MODE_STORAGE_KEY),
+      defaultModeRaw: getStorageValue(ADAPTER_DEFAULT_STORAGE_KEY),
+      forceLegacyRaw: getStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY)
+    });
+  }
+
+  function writeStoredDefaultMode(mode) {
+    var runtime = window.LegacyAdapterRuntime;
+    if (runtime && typeof runtime.setStoredAdapterDefaultMode === "function") {
+      return runtime.setStoredAdapterDefaultMode(mode);
+    }
+    return setStorageValue(ADAPTER_DEFAULT_STORAGE_KEY, mode || null);
+  }
+
+  function clearStoredDefaultMode() {
+    var runtime = window.LegacyAdapterRuntime;
+    if (runtime && typeof runtime.clearStoredAdapterDefaultMode === "function") {
+      return runtime.clearStoredAdapterDefaultMode();
+    }
+    return setStorageValue(ADAPTER_DEFAULT_STORAGE_KEY, null);
+  }
+
+  function writeStoredForceLegacy(enabled) {
+    var runtime = window.LegacyAdapterRuntime;
+    if (runtime && typeof runtime.setStoredForceLegacy === "function") {
+      return runtime.setStoredForceLegacy(enabled);
+    }
+    return setStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY, enabled ? "1" : null);
+  }
+
+  function runCanaryPolicyAction(actionName) {
+    var actionPlan = historyCanaryPolicyRuntime.resolveCanaryPolicyActionPlan(actionName || "");
+    if (!actionPlan || actionPlan.isSupported !== true) return false;
+
+    var success = true;
+    if (actionPlan.defaultMode === null) {
+      success = clearStoredDefaultMode();
+    } else if (typeof actionPlan.defaultMode === "string") {
+      success = writeStoredDefaultMode(actionPlan.defaultMode);
+    }
+
+    if (success && typeof actionPlan.forceLegacy === "boolean") {
+      success = writeStoredForceLegacy(actionPlan.forceLegacy);
+    }
+    return success;
+  }
+
+  function renderCanaryPolicy() {
+    var panel = el("history-canary-policy");
+    if (!panel) return;
+
+    var policy = readCanaryPolicySnapshot();
+    var stored = readStoredPolicyKeys();
+    var gateClass = policy.effectiveMode === "core-adapter"
+      ? "history-burnin-gate-pass"
+      : "history-burnin-gate-warn";
+    var gateText = policy.effectiveMode === "core-adapter" ? "core-adapter 生效" : "legacy-bridge 生效";
+
+    panel.innerHTML =
+      "<div class='history-canary-head'>" +
+        "<div class='history-canary-title'>Canary 策略控制</div>" +
+        "<span class='history-burnin-gate " + gateClass + "'>" + escapeHtml(gateText) + "</span>" +
+      "</div>" +
+      "<div class='history-canary-grid'>" +
+        "<span>当前有效模式: " + escapeHtml(formatAdapterMode(policy.effectiveMode)) + "</span>" +
+        "<span>生效来源: " + escapeHtml(formatModeSource(policy.modeSource)) + "</span>" +
+        "<span>强制回滚: " + escapeHtml(policy.forceLegacyEnabled ? "开启" : "关闭") + "</span>" +
+        "<span>回滚来源: " + escapeHtml(formatForceSource(policy.forceLegacySource)) + "</span>" +
+      "</div>" +
+      "<div class='history-canary-note'>" +
+        "storage(engine_adapter_default_mode)=" + escapeHtml(String(stored.defaultMode || "-")) +
+        " · storage(engine_adapter_force_legacy)=" + escapeHtml(String(stored.forceLegacy || "-")) +
+      "</div>" +
+      "<div class='history-canary-note'>" +
+        "说明: 修改后需刷新任一对局页（index/play/undo/capped/practice/replay）以应用新策略。" +
+      "</div>" +
+      "<div class='history-canary-actions'>" +
+        "<button class='replay-button history-canary-action-btn' data-action='apply_canary'>进入 Canary（默认 core）</button>" +
+        "<button class='replay-button history-canary-action-btn' data-action='emergency_rollback'>紧急回滚（强制 legacy）</button>" +
+        "<button class='replay-button history-canary-action-btn' data-action='resume_canary'>解除回滚（恢复默认）</button>" +
+        "<button class='replay-button history-canary-action-btn' data-action='reset_policy'>重置策略（回到基线）</button>" +
+      "</div>";
+
+    var buttons = panel.querySelectorAll(".history-canary-action-btn");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener("click", function (event) {
+        var target = event.currentTarget;
+        var action = target && target.getAttribute ? target.getAttribute("data-action") : "";
+        var ok = runCanaryPolicyAction(action || "");
+        if (!ok) {
+          setStatus("策略更新失败：请检查浏览器本地存储权限", true);
+          return;
+        }
+        loadHistory(false);
+        setStatus(historyCanaryPolicyRuntime.resolveCanaryPolicyActionNotice(action || ""), false);
+      });
+    }
   }
 
   function downloadSingleRecord(item) {
@@ -75,6 +474,31 @@
     var safeMode = (item.mode_key || "mode").replace(/[^a-zA-Z0-9_-]/g, "_");
     var file = "history_" + safeMode + "_" + item.id + ".json";
     window.LocalHistoryStore.download(file, payload);
+  }
+
+  function collectRecordIdsForExport(queryOptions) {
+    if (!window.LocalHistoryStore || typeof window.LocalHistoryStore.listRecords !== "function") return [];
+
+    var ids = [];
+    var page = 1;
+    while (page <= 100) {
+      var result = window.LocalHistoryStore.listRecords({
+        mode_key: queryOptions.mode_key || "",
+        keyword: queryOptions.keyword || "",
+        sort_by: queryOptions.sort_by || "ended_desc",
+        adapter_parity_filter: queryOptions.adapter_parity_filter || "all",
+        page: page,
+        page_size: 500
+      });
+      var items = result && Array.isArray(result.items) ? result.items : [];
+      if (!items.length) break;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i] && items[i].id) ids.push(items[i].id);
+      }
+      if (ids.length >= (result.total || 0)) break;
+      page += 1;
+    }
+    return ids;
   }
 
   function renderHistory(result) {
@@ -102,6 +526,7 @@
         node.innerHTML =
           "<div class='history-item-head'>" +
             "<strong>" + modeText(item) + "</strong>" +
+            buildAdapterBadgeHtml(item) +
             "<span>分数: " + score + "</span>" +
             "<span>最大块: " + best + "</span>" +
             "<span>时长: " + duration + "</span>" +
@@ -112,6 +537,7 @@
             "<button class='replay-button history-export-btn'>导出</button>" +
             "<button class='replay-button history-delete-btn'>删除</button>" +
           "</div>" +
+          buildAdapterDiagnosticsHtml(item) +
           boardToHtml(item.final_board, item.board_width, item.board_height);
 
         var replayBtn = node.querySelector(".history-replay-btn");
@@ -151,6 +577,12 @@
     state.modeKey = (el("history-mode").value || "").trim();
     state.keyword = (el("history-keyword").value || "").trim();
     state.sortBy = (el("history-sort").value || "ended_desc").trim();
+    var adapterFilterInput = el("history-adapter-filter");
+    state.adapterParityFilter = ((adapterFilterInput && adapterFilterInput.value) || "all").trim();
+    var burnInWindowInput = el("history-burnin-window");
+    state.burnInWindow = ((burnInWindowInput && burnInWindowInput.value) || "200").trim();
+    var sustainedWindowInput = el("history-sustained-window");
+    state.sustainedWindows = ((sustainedWindowInput && sustainedWindowInput.value) || "3").trim();
   }
 
   function loadHistory(resetPage) {
@@ -162,12 +594,30 @@
       mode_key: state.modeKey,
       keyword: state.keyword,
       sort_by: state.sortBy,
+      adapter_parity_filter: state.adapterParityFilter,
       page: state.page,
       page_size: state.pageSize
     });
 
     renderHistory(result);
     buildSummary(result);
+    var burnInSummary = null;
+    if (
+      window.LocalHistoryStore &&
+      typeof window.LocalHistoryStore.getAdapterParityBurnInSummary === "function"
+    ) {
+      burnInSummary = window.LocalHistoryStore.getAdapterParityBurnInSummary({
+        mode_key: state.modeKey,
+        keyword: state.keyword,
+        sort_by: state.sortBy,
+        sample_limit: state.burnInWindow,
+        sustained_windows: state.sustainedWindows,
+        min_comparable: BURN_IN_MIN_COMPARABLE,
+        max_mismatch_rate: BURN_IN_MAX_MISMATCH_RATE
+      });
+    }
+    renderBurnInSummary(burnInSummary);
+    renderCanaryPolicy();
     setStatus("", false);
 
     var prevBtn = el("history-prev-page");
@@ -209,6 +659,28 @@
         var dateTag = new Date().toISOString().slice(0, 10);
         window.LocalHistoryStore.download("2048_local_history_" + dateTag + ".json", payload);
         setStatus("已导出全部历史记录", false);
+      });
+    }
+
+    var exportMismatchBtn = el("history-export-mismatch-btn");
+    if (exportMismatchBtn) {
+      exportMismatchBtn.addEventListener("click", function () {
+        if (!window.LocalHistoryStore) return;
+        readFilters();
+        var ids = collectRecordIdsForExport({
+          mode_key: state.modeKey,
+          keyword: state.keyword,
+          sort_by: state.sortBy,
+          adapter_parity_filter: "mismatch"
+        });
+        if (!ids.length) {
+          setStatus("没有可导出的 A/B 不一致记录", false);
+          return;
+        }
+        var payload = window.LocalHistoryStore.exportRecords(ids);
+        var dateTag = new Date().toISOString().slice(0, 10);
+        window.LocalHistoryStore.download("2048_local_history_mismatch_" + dateTag + ".json", payload);
+        setStatus("已导出 A/B 不一致记录 " + ids.length + " 条", false);
       });
     }
 
@@ -287,6 +759,27 @@
     var sort = el("history-sort");
     if (sort) {
       sort.addEventListener("change", function () {
+        loadHistory(true);
+      });
+    }
+
+    var adapterFilter = el("history-adapter-filter");
+    if (adapterFilter) {
+      adapterFilter.addEventListener("change", function () {
+        loadHistory(true);
+      });
+    }
+
+    var burnInWindow = el("history-burnin-window");
+    if (burnInWindow) {
+      burnInWindow.addEventListener("change", function () {
+        loadHistory(true);
+      });
+    }
+
+    var sustainedWindow = el("history-sustained-window");
+    if (sustainedWindow) {
+      sustainedWindow.addEventListener("change", function () {
         loadHistory(true);
       });
     }

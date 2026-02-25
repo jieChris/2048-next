@@ -80,80 +80,233 @@ var COMPACT_GAME_VIEWPORT_MAX_WIDTH = 980;
 var mobileRelayoutTimer = null;
 var mobileTopActionsState = null;
 var practiceTopActionsState = null;
+var homeGuideRuntime = window.CoreHomeGuideRuntime;
+if (
+  !homeGuideRuntime ||
+  typeof homeGuideRuntime.resolveHomeGuidePathname !== "function" ||
+  typeof homeGuideRuntime.isHomePagePath !== "function" ||
+  typeof homeGuideRuntime.buildHomeGuideSteps !== "function" ||
+  typeof homeGuideRuntime.buildHomeGuidePanelInnerHtml !== "function" ||
+  typeof homeGuideRuntime.buildHomeGuideSettingsRowInnerHtml !== "function" ||
+  typeof homeGuideRuntime.readHomeGuideSeenValue !== "function" ||
+  typeof homeGuideRuntime.markHomeGuideSeen !== "function" ||
+  typeof homeGuideRuntime.shouldAutoStartHomeGuide !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideAutoStart !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideSettingsState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideStepUiState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideStepRenderState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideStepIndexState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideStepTargetState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideElevationPlan !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideBindingState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideControlAction !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideToggleAction !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideLifecycleState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideSessionState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideLayerDisplayState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideFinishState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideTargetScrollState !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideDoneNotice !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuideDoneNoticeStyle !== "function" ||
+  typeof homeGuideRuntime.resolveHomeGuidePanelLayout !== "function" ||
+  typeof homeGuideRuntime.isHomeGuideTargetVisible !== "function"
+) {
+  throw new Error("CoreHomeGuideRuntime is required");
+}
+var timerModuleRuntime = window.CoreTimerModuleRuntime;
+if (
+  !timerModuleRuntime ||
+  typeof timerModuleRuntime.buildTimerModuleSettingsRowInnerHtml !== "function" ||
+  typeof timerModuleRuntime.resolveTimerModuleSettingsState !== "function" ||
+  typeof timerModuleRuntime.resolveTimerModuleCurrentViewMode !== "function" ||
+  typeof timerModuleRuntime.resolveTimerModuleBindingState !== "function" ||
+  typeof timerModuleRuntime.resolveTimerModuleViewMode !== "function" ||
+  typeof timerModuleRuntime.resolveTimerModuleAppliedViewMode !== "function" ||
+  typeof timerModuleRuntime.resolveTimerModuleInitRetryState !== "function"
+) {
+  throw new Error("CoreTimerModuleRuntime is required");
+}
+var themeSettingsRuntime = window.CoreThemeSettingsRuntime;
+if (
+  !themeSettingsRuntime ||
+  typeof themeSettingsRuntime.formatThemePreviewValue !== "function" ||
+  typeof themeSettingsRuntime.resolveThemePreviewTileValues !== "function" ||
+  typeof themeSettingsRuntime.resolveThemePreviewLayout !== "function" ||
+  typeof themeSettingsRuntime.resolveThemePreviewCssSelectors !== "function" ||
+  typeof themeSettingsRuntime.resolveThemeOptions !== "function" ||
+  typeof themeSettingsRuntime.resolveThemeSelectLabel !== "function" ||
+  typeof themeSettingsRuntime.resolveThemeDropdownToggleState !== "function" ||
+  typeof themeSettingsRuntime.resolveThemeBindingState !== "function" ||
+  typeof themeSettingsRuntime.resolveThemeOptionValue !== "function" ||
+  typeof themeSettingsRuntime.resolveThemeOptionSelectedState !== "function"
+) {
+  throw new Error("CoreThemeSettingsRuntime is required");
+}
+var practiceTransferRuntime = window.CorePracticeTransferRuntime;
+if (
+  !practiceTransferRuntime ||
+  typeof practiceTransferRuntime.buildPracticeModeConfigFromCurrent !== "function" ||
+  typeof practiceTransferRuntime.hasPracticeGuideSeen !== "function" ||
+  typeof practiceTransferRuntime.buildPracticeBoardUrl !== "function" ||
+  typeof practiceTransferRuntime.buildPracticeTransferToken !== "function" ||
+  typeof practiceTransferRuntime.buildPracticeTransferPayload !== "function" ||
+  typeof practiceTransferRuntime.persistPracticeTransferPayload !== "function" ||
+  typeof practiceTransferRuntime.createPracticeTransferNavigationPlan !== "function" ||
+  typeof practiceTransferRuntime.resolvePracticeTransferPrecheck !== "function"
+) {
+  throw new Error("CorePracticeTransferRuntime is required");
+}
+var undoActionRuntime = window.CoreUndoActionRuntime;
+if (
+  !undoActionRuntime ||
+  typeof undoActionRuntime.tryTriggerUndo !== "function" ||
+  typeof undoActionRuntime.resolveUndoModeIdFromBody !== "function" ||
+  typeof undoActionRuntime.resolveUndoModeId !== "function" ||
+  typeof undoActionRuntime.isUndoCapableMode !== "function" ||
+  typeof undoActionRuntime.resolveUndoCapabilityFromContext !== "function" ||
+  typeof undoActionRuntime.isUndoInteractionEnabled !== "function"
+) {
+  throw new Error("CoreUndoActionRuntime is required");
+}
+var mobileHintRuntime = window.CoreMobileHintRuntime;
+if (!mobileHintRuntime || typeof mobileHintRuntime.collectMobileHintTexts !== "function") {
+  throw new Error("CoreMobileHintRuntime is required");
+}
+var mobileHintUiRuntime = window.CoreMobileHintUiRuntime;
+if (
+  !mobileHintUiRuntime ||
+  typeof mobileHintUiRuntime.syncMobileHintTextBlockVisibility !== "function" ||
+  typeof mobileHintUiRuntime.resolveMobileHintDisplayModel !== "function" ||
+  typeof mobileHintUiRuntime.resolveMobileHintUiState !== "function"
+) {
+  throw new Error("CoreMobileHintUiRuntime is required");
+}
+var mobileHintModalRuntime = window.CoreMobileHintModalRuntime;
+if (
+  !mobileHintModalRuntime ||
+  typeof mobileHintModalRuntime.ensureMobileHintModalDom !== "function"
+) {
+  throw new Error("CoreMobileHintModalRuntime is required");
+}
+var mobileTimerboxRuntime = window.CoreMobileTimerboxRuntime;
+if (
+  !mobileTimerboxRuntime ||
+  typeof mobileTimerboxRuntime.resolveStoredMobileTimerboxCollapsed !== "function" ||
+  typeof mobileTimerboxRuntime.persistMobileTimerboxCollapsed !== "function" ||
+  typeof mobileTimerboxRuntime.getTimerboxToggleIconSvg !== "function" ||
+  typeof mobileTimerboxRuntime.resolveMobileTimerboxCollapsedValue !== "function" ||
+  typeof mobileTimerboxRuntime.resolveMobileTimerboxDisplayModel !== "function" ||
+  typeof mobileTimerboxRuntime.resolveMobileTimerboxAppliedModel !== "function"
+) {
+  throw new Error("CoreMobileTimerboxRuntime is required");
+}
+var mobileUndoTopRuntime = window.CoreMobileUndoTopRuntime;
+if (
+  !mobileUndoTopRuntime ||
+  typeof mobileUndoTopRuntime.resolveMobileUndoTopButtonDisplayModel !== "function" ||
+  typeof mobileUndoTopRuntime.resolveMobileUndoTopAppliedModel !== "function"
+) {
+  throw new Error("CoreMobileUndoTopRuntime is required");
+}
+var topActionsRuntime = window.CoreTopActionsRuntime;
+if (
+  !topActionsRuntime ||
+  typeof topActionsRuntime.createGameTopActionsPlacementState !== "function" ||
+  typeof topActionsRuntime.createPracticeTopActionsPlacementState !== "function" ||
+  typeof topActionsRuntime.syncGameTopActionsPlacement !== "function" ||
+  typeof topActionsRuntime.syncPracticeTopActionsPlacement !== "function"
+) {
+  throw new Error("CoreTopActionsRuntime is required");
+}
+var mobileTopButtonsRuntime = window.CoreMobileTopButtonsRuntime;
+if (
+  !mobileTopButtonsRuntime ||
+  typeof mobileTopButtonsRuntime.ensureMobileUndoTopButtonDom !== "function" ||
+  typeof mobileTopButtonsRuntime.ensureMobileHintToggleButtonDom !== "function"
+) {
+  throw new Error("CoreMobileTopButtonsRuntime is required");
+}
+var mobileViewportRuntime = window.CoreMobileViewportRuntime;
+if (
+  !mobileViewportRuntime ||
+  typeof mobileViewportRuntime.isViewportAtMost !== "function" ||
+  typeof mobileViewportRuntime.isCompactGameViewport !== "function" ||
+  typeof mobileViewportRuntime.isTimerboxCollapseViewport !== "function" ||
+  typeof mobileViewportRuntime.isMobileGameViewport !== "function" ||
+  typeof mobileViewportRuntime.resolvePageScopeValue !== "function" ||
+  typeof mobileViewportRuntime.isGamePageScope !== "function" ||
+  typeof mobileViewportRuntime.isPracticePageScope !== "function" ||
+  typeof mobileViewportRuntime.isTimerboxMobileScope !== "function"
+) {
+  throw new Error("CoreMobileViewportRuntime is required");
+}
+var storageRuntime = window.CoreStorageRuntime;
+if (
+  !storageRuntime ||
+  typeof storageRuntime.resolveStorageByName !== "function" ||
+  typeof storageRuntime.safeSetStorageItem !== "function" ||
+  typeof storageRuntime.safeReadStorageItem !== "function"
+) {
+  throw new Error("CoreStorageRuntime is required");
+}
+
+function tryUndoFromUi() {
+  return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
+}
 
 function isGamePageScope() {
-  if (!document.body) return false;
-  return document.body.getAttribute("data-page") === "game";
+  return mobileViewportRuntime.isGamePageScope({
+    bodyLike: document.body
+  });
 }
 
 function isTimerboxMobileScope() {
-  if (!document.body) return false;
-  var page = document.body.getAttribute("data-page");
-  return page === "game" || page === "practice";
+  return mobileViewportRuntime.isTimerboxMobileScope({
+    bodyLike: document.body
+  });
 }
 
 function isPracticePageScope() {
-  if (!document.body) return false;
-  return document.body.getAttribute("data-page") === "practice";
+  return mobileViewportRuntime.isPracticePageScope({
+    bodyLike: document.body
+  });
 }
 
 function isMobileGameViewport() {
-  if (typeof window === "undefined") return false;
-  var narrowQuery = "(max-width: " + MOBILE_UI_MAX_WIDTH + "px)";
-  var narrow = window.matchMedia ? window.matchMedia(narrowQuery).matches : (window.innerWidth <= MOBILE_UI_MAX_WIDTH);
-  if (!narrow) return false;
-
-  var coarsePointer = false;
-  var noHover = false;
-  try {
-    coarsePointer = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
-    noHover = !!(window.matchMedia && window.matchMedia("(hover: none)").matches);
-  } catch (_err) {}
-
-  var ua = "";
-  try {
-    ua = (navigator && navigator.userAgent) ? String(navigator.userAgent) : "";
-  } catch (_err) {
-    ua = "";
-  }
-  var mobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-
-  return coarsePointer || noHover || mobileUa;
+  return mobileViewportRuntime.isMobileGameViewport({
+    windowLike: typeof window !== "undefined" ? window : null,
+    navigatorLike: typeof navigator !== "undefined" ? navigator : null,
+    maxWidth: MOBILE_UI_MAX_WIDTH
+  });
 }
 
 function isCompactGameViewport() {
-  if (typeof window === "undefined") return false;
-  var query = "(max-width: " + COMPACT_GAME_VIEWPORT_MAX_WIDTH + "px)";
-  return window.matchMedia ? window.matchMedia(query).matches : (window.innerWidth <= COMPACT_GAME_VIEWPORT_MAX_WIDTH);
+  return mobileViewportRuntime.isCompactGameViewport({
+    windowLike: typeof window !== "undefined" ? window : null,
+    maxWidth: COMPACT_GAME_VIEWPORT_MAX_WIDTH
+  });
 }
 
 function isTimerboxCollapseViewport() {
-  if (typeof window === "undefined") return false;
-  var query = "(max-width: " + TIMERBOX_COLLAPSE_MAX_WIDTH + "px)";
-  return window.matchMedia ? window.matchMedia(query).matches : (window.innerWidth <= TIMERBOX_COLLAPSE_MAX_WIDTH);
+  return mobileViewportRuntime.isTimerboxCollapseViewport({
+    windowLike: typeof window !== "undefined" ? window : null,
+    maxWidth: TIMERBOX_COLLAPSE_MAX_WIDTH
+  });
 }
 
 function ensureMobileTopActionsState() {
   if (!isGamePageScope()) return null;
   if (mobileTopActionsState) return mobileTopActionsState;
 
-  var topActionButtons = document.querySelector(".top-action-buttons");
-  var restartBtn = document.querySelector(".above-game .restart-button");
-  var timerToggleBtn = document.getElementById("timerbox-toggle-btn");
-  if (!topActionButtons || !restartBtn || !timerToggleBtn) return null;
-
-  var restartAnchor = document.createComment("mobile-restart-anchor");
-  var timerToggleAnchor = document.createComment("mobile-timer-toggle-anchor");
-  restartBtn.parentNode.insertBefore(restartAnchor, restartBtn);
-  timerToggleBtn.parentNode.insertBefore(timerToggleAnchor, timerToggleBtn);
-
-  mobileTopActionsState = {
-    topActionButtons: topActionButtons,
-    restartBtn: restartBtn,
-    timerToggleBtn: timerToggleBtn,
-    restartAnchor: restartAnchor,
-    timerToggleAnchor: timerToggleAnchor
-  };
+  mobileTopActionsState = topActionsRuntime.createGameTopActionsPlacementState({
+    enabled: true,
+    topActionButtons: document.querySelector(".top-action-buttons"),
+    restartBtn: document.querySelector(".above-game .restart-button"),
+    timerToggleBtn: document.getElementById("timerbox-toggle-btn"),
+    createComment: function (text) {
+      return document.createComment(text);
+    }
+  });
   return mobileTopActionsState;
 }
 
@@ -161,140 +314,58 @@ function ensurePracticeTopActionsState() {
   if (!isPracticePageScope()) return null;
   if (practiceTopActionsState) return practiceTopActionsState;
 
-  var topActionButtons = document.getElementById("practice-stats-actions");
-  var restartBtn = document.querySelector(".above-game .restart-button");
-  if (!topActionButtons || !restartBtn || !restartBtn.parentNode) return null;
-
-  var restartAnchor = document.createComment("practice-restart-anchor");
-  restartBtn.parentNode.insertBefore(restartAnchor, restartBtn);
-
-  practiceTopActionsState = {
-    topActionButtons: topActionButtons,
-    restartBtn: restartBtn,
-    restartAnchor: restartAnchor
-  };
+  practiceTopActionsState = topActionsRuntime.createPracticeTopActionsPlacementState({
+    enabled: true,
+    topActionButtons: document.getElementById("practice-stats-actions"),
+    restartBtn: document.querySelector(".above-game .restart-button"),
+    createComment: function (text) {
+      return document.createComment(text);
+    }
+  });
   return practiceTopActionsState;
 }
 
-function restoreNodeAfterAnchor(node, anchor) {
-  if (!node || !anchor || !anchor.parentNode) return;
-  anchor.parentNode.insertBefore(node, anchor.nextSibling);
-}
-
 function ensureMobileUndoTopButton() {
-  if (!isGamePageScope()) return null;
-  var host = document.querySelector(".top-action-buttons");
-  if (!host) return null;
-
-  var btn = document.getElementById("top-mobile-undo-btn");
-  if (!btn) {
-    btn = document.createElement("a");
-    btn.id = "top-mobile-undo-btn";
-    btn.className = "top-action-btn mobile-undo-top-btn";
-    btn.href = "#";
-    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>';
-  }
-  if (btn.parentNode !== host || host.lastElementChild !== btn) {
-    host.appendChild(btn);
-  }
-  return btn;
+  return mobileTopButtonsRuntime.ensureMobileUndoTopButtonDom({
+    isGamePageScope: isGamePageScope(),
+    documentLike: document
+  });
 }
 
 function ensureMobileHintToggleButton() {
-  if (!isGamePageScope()) return null;
-  var host = document.querySelector(".top-action-buttons");
-  if (!host) return null;
-
-  var btn = document.getElementById("top-mobile-hint-btn");
-  if (!btn) {
-    btn = document.createElement("a");
-    btn.id = "top-mobile-hint-btn";
-    btn.className = "top-action-btn mobile-hint-toggle-btn";
-    btn.href = "#";
-    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>';
-  }
-
-  var settingsBtn = document.getElementById("top-settings-btn");
-  if (settingsBtn && settingsBtn.parentNode === host) {
-    if (btn.parentNode !== host || btn.nextSibling !== settingsBtn) {
-      host.insertBefore(btn, settingsBtn);
-    }
-  } else if (btn.parentNode !== host) {
-    host.appendChild(btn);
-  }
-  return btn;
+  return mobileTopButtonsRuntime.ensureMobileHintToggleButtonDom({
+    isGamePageScope: isGamePageScope(),
+    documentLike: document
+  });
 }
 
 function syncMobileTopActionsPlacement() {
   var state = ensureMobileTopActionsState();
   if (!state) return;
-
-  var compact = isCompactGameViewport();
-  if (compact) {
-    if (state.restartBtn.parentNode !== state.topActionButtons) {
-      state.topActionButtons.appendChild(state.restartBtn);
-    }
-    if (state.timerToggleBtn.parentNode !== state.topActionButtons) {
-      state.topActionButtons.appendChild(state.timerToggleBtn);
-    }
-    return;
-  }
-
-  restoreNodeAfterAnchor(state.restartBtn, state.restartAnchor);
-  restoreNodeAfterAnchor(state.timerToggleBtn, state.timerToggleAnchor);
+  topActionsRuntime.syncGameTopActionsPlacement({
+    state: state,
+    compactViewport: isCompactGameViewport()
+  });
 }
 
 function syncPracticeTopActionsPlacement() {
   var state = ensurePracticeTopActionsState();
   if (!state) return;
-
-  var compact = isCompactGameViewport();
-  if (compact) {
-    if (state.restartBtn.parentNode !== state.topActionButtons) {
-      state.topActionButtons.appendChild(state.restartBtn);
-    }
-    return;
-  }
-
-  restoreNodeAfterAnchor(state.restartBtn, state.restartAnchor);
+  topActionsRuntime.syncPracticeTopActionsPlacement({
+    state: state,
+    compactViewport: isCompactGameViewport()
+  });
 }
 
-function isUndoCapableMode(gm) {
-  var modeId = "";
-  try {
-    if (document && document.body) {
-      modeId = String(document.body.getAttribute("data-mode-id") || "");
-    }
-  } catch (_err) {
-    modeId = "";
-  }
-  if (!modeId && gm && gm.mode) modeId = String(gm.mode);
-  if (!modeId && typeof window !== "undefined" && window.GAME_MODE_CONFIG && window.GAME_MODE_CONFIG.key) {
-    modeId = String(window.GAME_MODE_CONFIG.key);
-  }
-  modeId = modeId.toLowerCase();
-
-  if (modeId) {
-    if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) return false;
-    if (modeId === "capped" || modeId.indexOf("capped") !== -1) return false;
-    if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) return true;
-  }
-
-  var explicitUndo = null;
-  if (gm && gm.modeConfig && typeof gm.modeConfig.undo_enabled === "boolean") {
-    explicitUndo = gm.modeConfig.undo_enabled;
-  } else if (typeof window !== "undefined" && window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG.undo_enabled === "boolean") {
-    explicitUndo = window.GAME_MODE_CONFIG.undo_enabled;
-  }
-  if (explicitUndo !== null) return !!explicitUndo;
-
-  if (!gm) return false;
-  try {
-    if (typeof gm.isUndoAllowedByMode === "function") {
-      return !!gm.isUndoAllowedByMode(modeId || gm.mode);
-    }
-  } catch (_err) {}
-  return !!gm.undoEnabled;
+function resolveUndoCapabilityState(gm) {
+  return undoActionRuntime.resolveUndoCapabilityFromContext({
+    bodyLike: document.body,
+    manager: gm || null,
+    globalModeConfig:
+      typeof window !== "undefined" && window.GAME_MODE_CONFIG
+        ? window.GAME_MODE_CONFIG
+        : null
+  });
 }
 
 function syncMobileUndoTopButtonAvailability() {
@@ -304,184 +375,37 @@ function syncMobileUndoTopButtonAvailability() {
 
   var compact = isCompactGameViewport();
   var gm = window.game_manager;
-  var modeUndoCapable = isUndoCapableMode(gm);
-  var canUndoNow = !!(gm && gm.isUndoInteractionEnabled && gm.isUndoInteractionEnabled());
-  var shouldShow = compact && modeUndoCapable;
+  var undoCapabilityState = resolveUndoCapabilityState(gm);
+  var modeUndoCapable = !!(undoCapabilityState && undoCapabilityState.modeUndoCapable);
+  var canUndoNow = !!undoActionRuntime.isUndoInteractionEnabled(gm);
+  var displayModel = mobileUndoTopRuntime.resolveMobileUndoTopButtonDisplayModel({
+    compactViewport: compact,
+    modeUndoCapable: modeUndoCapable,
+    canUndoNow: canUndoNow,
+    label: "撤回"
+  });
+  var appliedModel = mobileUndoTopRuntime.resolveMobileUndoTopAppliedModel({
+    displayModel: displayModel,
+    fallbackLabel: "撤回"
+  });
 
-  btn.style.display = shouldShow ? "inline-flex" : "none";
-  if (!shouldShow) {
-    btn.style.pointerEvents = "none";
-    btn.style.opacity = "0.45";
-    btn.setAttribute("aria-disabled", "true");
+  btn.style.display = appliedModel.buttonDisplay;
+  btn.style.pointerEvents = appliedModel.pointerEvents;
+  btn.style.opacity = appliedModel.opacity;
+  btn.setAttribute("aria-disabled", appliedModel.ariaDisabled);
+  if (!appliedModel.shouldApplyLabel) {
     return;
   }
-
-  btn.style.pointerEvents = canUndoNow ? "" : "none";
-  btn.style.opacity = canUndoNow ? "" : "0.45";
-  btn.setAttribute("aria-disabled", canUndoNow ? "false" : "true");
-  btn.setAttribute("aria-label", "撤回");
-  btn.setAttribute("title", "撤回");
-}
-
-function readHintTextForModal(selector) {
-  var el = document.querySelector(selector);
-  if (!el) return "";
-  var raw = typeof el.innerText === "string" ? el.innerText : el.textContent;
-  return String(raw || "")
-    .replace(/\u00a0/g, " ")
-    .replace(/[ \t]+/g, " ")
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function extractHintNodeText(node) {
-  if (!node) return "";
-  if (node.nodeType === 3) {
-    return node.textContent || "";
-  }
-  if (node.nodeType !== 1) return "";
-
-  var tag = String(node.tagName || "").toLowerCase();
-  if (tag === "br") return "\n";
-  if (tag === "a") {
-    var anchorText = "";
-    for (var i = 0; i < node.childNodes.length; i++) {
-      anchorText += extractHintNodeText(node.childNodes[i]);
-    }
-    anchorText = String(anchorText || "").replace(/\s+/g, " ").trim();
-    var href = String(node.getAttribute("href") || "").trim();
-    if (!href) return anchorText;
-    if (!anchorText) return href;
-    return anchorText + "（" + href + "）";
-  }
-
-  var out = "";
-  for (var j = 0; j < node.childNodes.length; j++) {
-    out += extractHintNodeText(node.childNodes[j]);
-  }
-  return out;
-}
-
-function normalizeHintParagraphText(text) {
-  return String(text || "")
-    .replace(/\u00a0/g, " ")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\s+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function collectHintParagraphText(node) {
-  if (!node || node.nodeType !== 1) return "";
-  return normalizeHintParagraphText(extractHintNodeText(node));
-}
-
-function collectHintTextsFromMainContainer() {
-  if (!isGamePageScope()) return [];
-  var container = document.querySelector(".container");
-  if (!container) return [];
-  var lines = [];
-  var paragraphs = container.querySelectorAll("p");
-  for (var i = 0; i < paragraphs.length; i++) {
-    var p = paragraphs[i];
-    if (!p || p.nodeType !== 1) continue;
-    if (p.closest && p.closest(".above-game")) continue;
-    if (p.closest && p.closest(".game-container")) continue;
-    var text = collectHintParagraphText(p);
-    if (text) lines.push(text);
-  }
-
-  if (!lines.length) {
-    var gameContainer = container.querySelector(".game-container");
-    if (!gameContainer || gameContainer.parentNode !== container) return [];
-    var cursor = gameContainer.nextElementSibling;
-    while (cursor) {
-      var tag = String(cursor.tagName || "").toLowerCase();
-      if (tag === "p") {
-        var fallbackText = collectHintParagraphText(cursor);
-        if (fallbackText) lines.push(fallbackText);
-      }
-      cursor = cursor.nextElementSibling;
-    }
-  }
-  return lines;
-}
-
-function dedupeHintLines(lines) {
-  var out = [];
-  var seen = {};
-  for (var i = 0; i < lines.length; i++) {
-    var line = normalizeHintParagraphText(lines[i]);
-    if (!line) continue;
-    if (Object.prototype.hasOwnProperty.call(seen, line)) continue;
-    seen[line] = 1;
-    out.push(line);
-  }
-  return out;
-}
-
-function collectMobileHintTexts() {
-  var introText = collectHintParagraphText(document.querySelector(".above-game .game-intro"));
-  if (!introText) {
-    introText = readHintTextForModal(".above-game .game-intro");
-  }
-  var mainLines = collectHintTextsFromMainContainer();
-  var lines = [];
-  if (introText) lines.push(introText);
-  for (var i = 0; i < mainLines.length; i++) {
-    lines.push(mainLines[i]);
-  }
-  if (!lines.length) {
-    var explainText = readHintTextForModal(".game-explanation");
-    if (explainText) lines.push(explainText);
-  }
-  if (!lines.length) {
-    lines.push("合并数字，合成 2048 方块。");
-  }
-  return dedupeHintLines(lines);
+  var label = appliedModel.label;
+  btn.setAttribute("aria-label", label);
+  btn.setAttribute("title", label);
 }
 
 function ensureMobileHintModalDom() {
-  if (!isGamePageScope()) return null;
-  var overlay = document.getElementById("mobile-hint-overlay");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "mobile-hint-overlay";
-    overlay.className = "replay-modal-overlay mobile-hint-overlay";
-    overlay.style.display = "none";
-    overlay.innerHTML =
-      "<div class='replay-modal-content mobile-hint-modal-content'>" +
-      "<h3>玩法提示</h3>" +
-      "<div id='mobile-hint-body' class='mobile-hint-body'></div>" +
-      "<div class='replay-modal-actions'>" +
-      "<button id='mobile-hint-close' class='replay-button'>关闭</button>" +
-      "</div>" +
-      "</div>";
-    document.body.appendChild(overlay);
-  }
-
-  if (!overlay.__mobileHintBound) {
-    overlay.__mobileHintBound = true;
-    overlay.addEventListener("click", function (e) {
-      if (e.target === overlay) {
-        overlay.style.display = "none";
-      }
-    });
-  }
-
-  var closeBtn = document.getElementById("mobile-hint-close");
-  if (closeBtn && !closeBtn.__mobileHintBound) {
-    closeBtn.__mobileHintBound = true;
-    closeBtn.addEventListener("click", function () {
-      overlay.style.display = "none";
-    });
-  }
-
-  return {
-    overlay: overlay,
-    body: document.getElementById("mobile-hint-body")
-  };
+  return mobileHintModalRuntime.ensureMobileHintModalDom({
+    isGamePageScope: isGamePageScope(),
+    documentLike: document
+  });
 }
 
 function openMobileHintModal() {
@@ -489,7 +413,13 @@ function openMobileHintModal() {
   var dom = ensureMobileHintModalDom();
   if (!dom || !dom.overlay || !dom.body) return;
 
-  var lines = collectMobileHintTexts();
+  var lines = mobileHintRuntime.collectMobileHintTexts({
+    isGamePageScope: isGamePageScope(),
+    introNode: document.querySelector(".above-game .game-intro"),
+    containerNode: document.querySelector(".container"),
+    explainNode: document.querySelector(".game-explanation"),
+    defaultText: "合并数字，合成 2048 方块。"
+  });
   dom.body.innerHTML = "";
   for (var i = 0; i < lines.length; i++) {
     var p = document.createElement("p");
@@ -504,41 +434,6 @@ function closeMobileHintModal() {
   if (overlay) overlay.style.display = "none";
 }
 
-function syncMobileHintTextBlockVisibility(hidden) {
-  if (!isGamePageScope()) return;
-  var container = document.querySelector(".container");
-  if (!container) return;
-
-  var nodes = [];
-  var children = container.children || [];
-  var afterGameContainer = false;
-  for (var i = 0; i < children.length; i++) {
-    var child = children[i];
-    if (!child || child.nodeType !== 1) continue;
-    if (!afterGameContainer) {
-      if (child.classList && child.classList.contains("game-container")) {
-        afterGameContainer = true;
-      }
-      continue;
-    }
-    var tag = String(child.tagName || "").toLowerCase();
-    if (tag === "p" || tag === "hr") {
-      nodes.push(child);
-    }
-  }
-
-  for (var j = 0; j < nodes.length; j++) {
-    var node = nodes[j];
-    if (hidden) {
-      node.style.setProperty("display", "none", "important");
-      node.setAttribute("data-mobile-hint-collapsed", "1");
-    } else if (node.getAttribute("data-mobile-hint-collapsed") === "1") {
-      node.style.removeProperty("display");
-      node.removeAttribute("data-mobile-hint-collapsed");
-    }
-  }
-}
-
 function syncMobileHintUI(options) {
   options = options || {};
   if (!isGamePageScope()) return;
@@ -548,27 +443,39 @@ function syncMobileHintUI(options) {
   if (!body) return;
 
   var compact = isCompactGameViewport();
-  syncMobileHintTextBlockVisibility(compact);
+  mobileHintUiRuntime.syncMobileHintTextBlockVisibility({
+    isGamePageScope: true,
+    containerNode: document.querySelector(".container"),
+    hidden: compact
+  });
   if (intro) {
     intro.classList.toggle("mobile-hint-hidden", compact);
   }
 
   var btn = ensureMobileHintToggleButton();
   if (!btn) return;
+  var displayModel = mobileHintUiRuntime.resolveMobileHintDisplayModel(compact);
+  var uiState = mobileHintUiRuntime.resolveMobileHintUiState({
+    displayModel: displayModel,
+    collapsedClassName: "mobile-hint-collapsed-content"
+  });
 
-  if (!compact) {
-    body.classList.remove("mobile-hint-collapsed-content");
-    btn.style.display = "none";
+  if (uiState.collapsedContentEnabled) {
+    body.classList.add(uiState.collapsedClassName);
+  } else {
+    body.classList.remove(uiState.collapsedClassName);
+  }
+  btn.style.display = uiState.buttonDisplay;
+
+  if (uiState.shouldCloseModal) {
     closeMobileHintModal();
     return;
   }
 
-  body.classList.add("mobile-hint-collapsed-content");
-  btn.style.display = "inline-flex";
-  var label = "查看提示文本";
+  var label = uiState.buttonLabel;
   btn.setAttribute("aria-label", label);
   btn.setAttribute("title", label);
-  btn.setAttribute("aria-expanded", "false");
+  btn.setAttribute("aria-expanded", uiState.buttonAriaExpanded);
 }
 
 function initMobileHintToggle() {
@@ -594,9 +501,7 @@ function initMobileUndoTopButton() {
     btn.__mobileUndoBound = true;
     btn.addEventListener("click", function (e) {
       if (e) e.preventDefault();
-      if (window.game_manager && window.game_manager.isUndoInteractionEnabled && window.game_manager.isUndoInteractionEnabled()) {
-        window.game_manager.move(-1);
-      }
+      tryUndoFromUi();
     });
   }
   syncMobileUndoTopButtonAvailability();
@@ -604,22 +509,24 @@ function initMobileUndoTopButton() {
 
 function readMobileTimerboxCollapsed() {
   var storage = getStorageByName("localStorage");
-  if (!storage) return true;
-  var raw = safeReadStorageItem(storage, MOBILE_TIMERBOX_COLLAPSED_KEY);
-  return raw !== "0";
+  return mobileTimerboxRuntime.resolveStoredMobileTimerboxCollapsed({
+    storageLike: storage,
+    storageKey: MOBILE_TIMERBOX_COLLAPSED_KEY,
+    defaultCollapsed: true
+  });
 }
 
 function writeMobileTimerboxCollapsed(collapsed) {
   var storage = getStorageByName("localStorage");
-  if (!storage) return;
-  safeSetStorageItem(storage, MOBILE_TIMERBOX_COLLAPSED_KEY, collapsed ? "1" : "0");
+  mobileTimerboxRuntime.persistMobileTimerboxCollapsed({
+    storageLike: storage,
+    storageKey: MOBILE_TIMERBOX_COLLAPSED_KEY,
+    collapsed: !!collapsed
+  });
 }
 
 function getTimerboxToggleIconSvg(collapsed) {
-  if (collapsed) {
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
-  }
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>';
+  return mobileTimerboxRuntime.getTimerboxToggleIconSvg(!!collapsed);
 }
 
 function syncMobileTimerboxUI(options) {
@@ -633,20 +540,50 @@ function syncMobileTimerboxUI(options) {
   var timerModuleHidden = timerBox.classList.contains("timerbox-hidden-mode");
   var collapsible = isTimerboxCollapseViewport();
   if (!collapsible || timerModuleHidden) {
-    toggleBtn.style.display = "none";
-    toggleBtn.setAttribute("aria-expanded", "false");
+    var hiddenModel = mobileTimerboxRuntime.resolveMobileTimerboxDisplayModel({
+      collapsible: false,
+      timerModuleHidden: timerModuleHidden,
+      collapsed: true
+    });
+    var hiddenAppliedModel = mobileTimerboxRuntime.resolveMobileTimerboxAppliedModel({
+      displayModel: hiddenModel,
+      collapsed: true,
+      fallbackToggleDisplay: "none",
+      fallbackAriaExpanded: "false",
+      fallbackLabel: "展开计时器",
+      fallbackIconSvg: getTimerboxToggleIconSvg(true)
+    });
+    toggleBtn.style.display = hiddenAppliedModel.toggleDisplay;
+    toggleBtn.setAttribute("aria-expanded", hiddenAppliedModel.ariaExpanded);
     timerBox.classList.remove("is-mobile-expanded");
     return;
   }
 
-  toggleBtn.style.display = "inline-flex";
-  var collapsed = (typeof options.collapsed === "boolean") ? options.collapsed : readMobileTimerboxCollapsed();
-  timerBox.classList.toggle("is-mobile-expanded", !collapsed);
-  var label = collapsed ? "展开计时器" : "收起计时器";
-  toggleBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  var collapsed = mobileTimerboxRuntime.resolveMobileTimerboxCollapsedValue({
+    collapsedOption: typeof options.collapsed === "boolean" ? options.collapsed : null,
+    storedCollapsed: readMobileTimerboxCollapsed(),
+    defaultCollapsed: true
+  });
+  var displayModel = mobileTimerboxRuntime.resolveMobileTimerboxDisplayModel({
+    collapsible: true,
+    timerModuleHidden: false,
+    collapsed: collapsed
+  });
+  var appliedModel = mobileTimerboxRuntime.resolveMobileTimerboxAppliedModel({
+    displayModel: displayModel,
+    collapsed: collapsed,
+    fallbackToggleDisplay: "inline-flex",
+    fallbackAriaExpanded: collapsed ? "false" : "true",
+    fallbackLabel: collapsed ? "展开计时器" : "收起计时器",
+    fallbackIconSvg: getTimerboxToggleIconSvg(collapsed)
+  });
+  toggleBtn.style.display = appliedModel.toggleDisplay;
+  timerBox.classList.toggle("is-mobile-expanded", appliedModel.expanded);
+  var label = appliedModel.label;
+  toggleBtn.setAttribute("aria-expanded", appliedModel.ariaExpanded);
   toggleBtn.setAttribute("aria-label", label);
   toggleBtn.setAttribute("title", label);
-  toggleBtn.innerHTML = getTimerboxToggleIconSvg(collapsed);
+  toggleBtn.innerHTML = appliedModel.iconSvg;
   if (options.persist) {
     writeMobileTimerboxCollapsed(collapsed);
   }
@@ -699,153 +636,60 @@ window.syncMobileHintUI = syncMobileHintUI;
 window.syncMobileUndoTopButtonAvailability = syncMobileUndoTopButtonAvailability;
 
 function getStorageByName(name) {
-  try {
-    return window && window[name] ? window[name] : null;
-  } catch (_err) {
-    return null;
-  }
-}
-
-function safeSetStorageItem(storage, key, value) {
-  if (!storage || !key) return false;
-  try {
-    storage.setItem(key, value);
-    return true;
-  } catch (_err) {
-    return false;
-  }
-}
-
-function safeReadStorageItem(storage, key) {
-  if (!storage || !key) return null;
-  try {
-    return storage.getItem(key);
-  } catch (_err) {
-    return null;
-  }
-}
-
-function hasCookieFlag(key, value) {
-  try {
-    var all = document.cookie || "";
-    return all.indexOf(key + "=" + value) !== -1;
-  } catch (_err) {
-    return false;
-  }
-}
-
-function hasWindowNameFlag(flag) {
-  try {
-    return typeof window.name === "string" && window.name.indexOf(flag) !== -1;
-  } catch (_err) {
-    return false;
-  }
-}
-
-function appendQueryParam(url, key, value) {
-  var sep = url.indexOf("?") === -1 ? "?" : "&";
-  return url + sep + encodeURIComponent(key) + "=" + encodeURIComponent(value);
-}
-
-function hasPracticeGuideSeen() {
-  var localStore = getStorageByName("localStorage");
-  var sessionStore = getStorageByName("sessionStorage");
-  return (
-    safeReadStorageItem(localStore, PRACTICE_GUIDE_SHOWN_KEY) === "1" ||
-    safeReadStorageItem(sessionStore, PRACTICE_GUIDE_SHOWN_KEY) === "1" ||
-    hasCookieFlag(PRACTICE_GUIDE_SHOWN_KEY, "1") ||
-    hasWindowNameFlag(PRACTICE_GUIDE_SEEN_FLAG)
-  );
-}
-
-function cloneJsonSafe(value) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch (_err) {
-    return null;
-  }
-}
-
-function buildPracticeModeConfigFromCurrent(gm) {
-  var cfg = (window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object")
-    ? window.GAME_MODE_CONFIG
-    : ((gm && gm.modeConfig && typeof gm.modeConfig === "object") ? gm.modeConfig : {});
-  var ruleset = cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2";
-  var width = Number.isInteger(cfg.board_width) && cfg.board_width > 0
-    ? cfg.board_width
-    : (Number.isInteger(gm.width) && gm.width > 0 ? gm.width : 4);
-  var height = Number.isInteger(cfg.board_height) && cfg.board_height > 0
-    ? cfg.board_height
-    : (Number.isInteger(gm.height) && gm.height > 0 ? gm.height : width);
-  var spawnTable = (Array.isArray(cfg.spawn_table) && cfg.spawn_table.length > 0)
-    ? cloneJsonSafe(cfg.spawn_table)
-    : (ruleset === "fibonacci"
-      ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
-      : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }]);
-  var modeConfig = {
-    key: "practice_legacy",
-    label: "练习板（直通）",
-    board_width: width,
-    board_height: height,
-    ruleset: ruleset,
-    undo_enabled: true,
-    spawn_table: spawnTable,
-    ranked_bucket: "none",
-    mode_family: cfg.mode_family || (ruleset === "fibonacci" ? "fibonacci" : "pow2"),
-    rank_policy: "unranked",
-    special_rules: cloneJsonSafe(cfg.special_rules) || {}
-  };
-  if (Number.isInteger(cfg.max_tile) && cfg.max_tile > 0) {
-    modeConfig.max_tile = cfg.max_tile;
-  }
-  return modeConfig;
+  return storageRuntime.resolveStorageByName({
+    windowLike: typeof window !== "undefined" ? window : null,
+    storageName: name
+  });
 }
 
 window.openPracticeBoardFromCurrent = function () {
   var gm = window.game_manager;
-  if (!gm || typeof gm.getFinalBoardMatrix !== "function") {
-    alert("当前局面尚未就绪，稍后再试。");
+  var precheck = practiceTransferRuntime.resolvePracticeTransferPrecheck({
+    manager: gm || null
+  });
+  if (!precheck || !precheck.canOpen || !Array.isArray(precheck.board)) {
+    if (precheck && precheck.alertMessage) {
+      alert(precheck.alertMessage);
+    }
     return;
   }
-  var board = gm.getFinalBoardMatrix();
-  if (!Array.isArray(board) || board.length === 0) {
-    alert("未读取到有效盘面。");
-    return;
-  }
+  var board = precheck.board;
 
-  var token = "p" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
-  var practiceModeConfig = buildPracticeModeConfigFromCurrent(gm);
-  var practiceRuleset = practiceModeConfig.ruleset === "fibonacci" ? "fibonacci" : "pow2";
-  var payload = {
-    token: token,
-    created_at: Date.now(),
-    board: cloneJsonSafe(board) || board,
-    mode_config: practiceModeConfig
-  };
-
-  var payloadStr = JSON.stringify(payload);
-  var baseUrl = "Practice_board.html?practice_token=" + encodeURIComponent(token);
-  baseUrl = appendQueryParam(baseUrl, "practice_ruleset", practiceRuleset);
-  if (hasPracticeGuideSeen()) {
-    baseUrl = appendQueryParam(baseUrl, "practice_guide_seen", "1");
-  }
-  var persisted = false;
   var localStore = getStorageByName("localStorage");
   var sessionStore = getStorageByName("sessionStorage");
-
-  persisted = safeSetStorageItem(localStore, PRACTICE_TRANSFER_KEY, payloadStr);
-  if (!persisted) {
-    persisted = safeSetStorageItem(sessionStore, PRACTICE_TRANSFER_SESSION_KEY, payloadStr);
+  var cookie = "";
+  var windowName = "";
+  try {
+    cookie = document.cookie || "";
+  } catch (_err) {
+    cookie = "";
   }
-
-  if (persisted) {
-    window.open(baseUrl, "_blank");
+  try {
+    windowName = typeof window.name === "string" ? window.name : "";
+  } catch (_err) {
+    windowName = "";
+  }
+  var plan = practiceTransferRuntime.createPracticeTransferNavigationPlan({
+    gameModeConfig:
+      window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object"
+        ? window.GAME_MODE_CONFIG
+        : null,
+    manager: gm || null,
+    board: board,
+    localStorageLike: localStore,
+    sessionStorageLike: sessionStore,
+    guideShownKey: PRACTICE_GUIDE_SHOWN_KEY,
+    guideSeenFlag: PRACTICE_GUIDE_SEEN_FLAG,
+    cookie: cookie,
+    windowName: windowName,
+    localStorageKey: PRACTICE_TRANSFER_KEY,
+    sessionStorageKey: PRACTICE_TRANSFER_SESSION_KEY
+  });
+  if (!plan || !plan.openUrl) {
+    alert("练习板链接生成失败。");
     return;
   }
-
-  // Final fallback: pass payload through URL when both storages are unavailable.
-  var urlWithPayload = baseUrl + "&practice_payload=" + encodeURIComponent(payloadStr);
-  window.open(urlWithPayload, "_blank");
+  window.open(plan.openUrl, "_blank");
 };
 
 
@@ -899,21 +743,7 @@ window.pretty = function(time) {
 };
 
 function formatPreviewValue(value) {
-  if (value >= 1024 && value % 1024 === 0) {
-    return (value / 1024) + "K";
-  }
-  return "" + value;
-}
-
-function getCurrentRuleset() {
-  if (typeof document !== "undefined" && document.body) {
-    var ruleset = document.body.getAttribute("data-ruleset");
-    if (ruleset === "fibonacci") return "fibonacci";
-  }
-  if (window.GAME_MODE_CONFIG && window.GAME_MODE_CONFIG.ruleset === "fibonacci") {
-    return "fibonacci";
-  }
-  return "pow2";
+  return themeSettingsRuntime.formatThemePreviewValue(value);
 }
 
 function initThemeSettingsUI() {
@@ -925,8 +755,11 @@ function initThemeSettingsUI() {
 
   if (!originalSelect || !previewRoot || !window.ThemeManager || !customTrigger || !customOptionsContainer || !customSelect) return;
 
-  var themes = window.ThemeManager.getThemes();
+  var themes = themeSettingsRuntime.resolveThemeOptions({
+    themes: window.ThemeManager.getThemes()
+  });
   var confirmedTheme = window.ThemeManager.getCurrentTheme();
+  var previewLayout = themeSettingsRuntime.resolveThemePreviewLayout();
 
   function ensurePreviewStyleTag() {
     var style = document.getElementById("theme-preview-style");
@@ -940,19 +773,11 @@ function initThemeSettingsUI() {
 
   function ensureDualPreviewGrids() {
     if (previewRoot.__dualPreviewRefs) return previewRoot.__dualPreviewRefs;
-    previewRoot.className = "theme-preview-dual-wrap";
-    previewRoot.innerHTML =
-      "<div class='theme-preview-grid-block'>" +
-      "<div class='theme-preview-grid-title'>2幂</div>" +
-      "<div id='theme-preview-grid-pow2' class='theme-preview-grid'></div>" +
-      "</div>" +
-      "<div class='theme-preview-grid-block'>" +
-      "<div class='theme-preview-grid-title'>Fibonacci</div>" +
-      "<div id='theme-preview-grid-fib' class='theme-preview-grid'></div>" +
-      "</div>";
+    previewRoot.className = previewLayout.containerClassName;
+    previewRoot.innerHTML = previewLayout.innerHtml;
     previewRoot.__dualPreviewRefs = {
-      pow2: document.getElementById("theme-preview-grid-pow2"),
-      fib: document.getElementById("theme-preview-grid-fib")
+      pow2: document.getElementById(previewLayout.pow2GridId),
+      fib: document.getElementById(previewLayout.fibonacciGridId)
     };
     return previewRoot.__dualPreviewRefs;
   }
@@ -971,21 +796,29 @@ function initThemeSettingsUI() {
 
   function renderDualPreviewGrids() {
     var refs = ensureDualPreviewGrids();
-    var pow2Values = window.ThemeManager.getTileValues
-      ? window.ThemeManager.getTileValues("pow2")
-      : [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
-    var fibValues = window.ThemeManager.getTileValues
-      ? window.ThemeManager.getTileValues("fibonacci")
-      : [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597];
+    var previewValues = themeSettingsRuntime.resolveThemePreviewTileValues({
+      getTileValues: window.ThemeManager && typeof window.ThemeManager.getTileValues === "function"
+        ? function (ruleset) {
+            return window.ThemeManager.getTileValues(ruleset);
+          }
+        : null
+    });
+    var pow2Values = previewValues.pow2Values;
+    var fibValues = previewValues.fibonacciValues;
     renderPreviewGrid(refs.pow2, pow2Values);
     renderPreviewGrid(refs.fib, fibValues);
   }
 
   function getPreviewCss(themeId) {
     if (!window.ThemeManager.getPreviewCss) return "";
+    var cssSelectors = themeSettingsRuntime.resolveThemePreviewCssSelectors({
+      previewLayout: previewLayout,
+      fallbackPow2Selector: "#theme-preview-grid-pow2",
+      fallbackFibonacciSelector: "#theme-preview-grid-fib"
+    });
     return window.ThemeManager.getPreviewCss(themeId, {
-      pow2Selector: "#theme-preview-grid-pow2",
-      fibSelector: "#theme-preview-grid-fib"
+      pow2Selector: cssSelectors.pow2Selector,
+      fibSelector: cssSelectors.fibSelector
     });
   }
 
@@ -1019,7 +852,10 @@ function initThemeSettingsUI() {
   function toggleDropdown(e) {
     if (e) e.stopPropagation();
     var isOpen = customSelect.classList.contains("open");
-    if (isOpen) {
+    var toggleState = themeSettingsRuntime.resolveThemeDropdownToggleState({
+      isOpen: isOpen
+    });
+    if (!toggleState.shouldOpen) {
       closeDropdown();
     } else {
       confirmedTheme = window.ThemeManager.getCurrentTheme();
@@ -1036,43 +872,57 @@ function initThemeSettingsUI() {
     applyPreviewTheme(confirmedTheme);
   }
 
-  if (!customTrigger.__bound) {
+  var triggerBindingState = themeSettingsRuntime.resolveThemeBindingState({
+    alreadyBound: !!customTrigger.__bound
+  });
+  if (triggerBindingState.shouldBind) {
     customTrigger.addEventListener("click", toggleDropdown);
-    customTrigger.__bound = true;
+    customTrigger.__bound = triggerBindingState.boundValue;
   }
 
-  if (!window.__clickOutsideBound) {
+  var outsideBindingState = themeSettingsRuntime.resolveThemeBindingState({
+    alreadyBound: !!window.__clickOutsideBound
+  });
+  if (outsideBindingState.shouldBind) {
     document.addEventListener("click", function(e) {
       if (!customSelect.contains(e.target)) {
         closeDropdown();
       }
     });
-    window.__clickOutsideBound = true;
+    window.__clickOutsideBound = outsideBindingState.boundValue;
   }
 
-  if (!customSelect.__mouseleaveBound) {
+  var leaveBindingState = themeSettingsRuntime.resolveThemeBindingState({
+    alreadyBound: !!customSelect.__mouseleaveBound
+  });
+  if (leaveBindingState.shouldBind) {
     customSelect.addEventListener("mouseleave", function() {
       if (customSelect.classList.contains("open")) {
         applyPreviewTheme(confirmedTheme);
       }
     });
-    customSelect.__mouseleaveBound = true;
+    customSelect.__mouseleaveBound = leaveBindingState.boundValue;
   }
 
   function updateCustomSelectUI() {
     var currentThemeId = window.ThemeManager.getCurrentTheme();
-    var label = "选择主题";
-    for (var i = 0; i < themes.length; i++) {
-      if (themes[i].id === currentThemeId) {
-        label = themes[i].label;
-        break;
-      }
-    }
+    var label = themeSettingsRuntime.resolveThemeSelectLabel({
+      themes: themes,
+      currentThemeId: currentThemeId,
+      fallbackLabel: "选择主题"
+    });
     var triggerText = customTrigger.querySelector("span");
     if (triggerText) triggerText.textContent = label;
     var options = customOptionsContainer.querySelectorAll(".custom-option");
     options.forEach(function(opt) {
-      if (opt.dataset.value === currentThemeId) {
+      var optionValue = themeSettingsRuntime.resolveThemeOptionValue({
+        optionLike: opt
+      });
+      var isSelected = themeSettingsRuntime.resolveThemeOptionSelectedState({
+        optionValue: optionValue,
+        currentThemeId: currentThemeId
+      });
+      if (isSelected) {
         opt.classList.add("selected");
       } else {
         opt.classList.remove("selected");
@@ -1084,8 +934,11 @@ function initThemeSettingsUI() {
   updateCustomSelectUI();
   applyPreviewTheme(confirmedTheme);
 
-  if (!window.__themeChangeSyncBound) {
-    window.__themeChangeSyncBound = true;
+  var changeSyncBindingState = themeSettingsRuntime.resolveThemeBindingState({
+    alreadyBound: !!window.__themeChangeSyncBound
+  });
+  if (changeSyncBindingState.shouldBind) {
+    window.__themeChangeSyncBound = changeSyncBindingState.boundValue;
     window.addEventListener("themechange", function () {
       confirmedTheme = window.ThemeManager.getCurrentTheme();
       updateCustomSelectUI();
@@ -1117,13 +970,7 @@ function ensureTimerModuleSettingsDom() {
 
   var row = document.createElement("div");
   row.className = "settings-row";
-  row.innerHTML =
-    "<label for='timer-module-view-toggle'>计时器显示</label>" +
-    "<label class='settings-switch-row'>" +
-    "<input id='timer-module-view-toggle' type='checkbox'>" +
-    "<span>显示计时器（关闭后隐藏）</span>" +
-    "</label>" +
-    "<div id='timer-module-view-note' class='settings-note'></div>";
+  row.innerHTML = timerModuleRuntime.buildTimerModuleSettingsRowInnerHtml();
 
   var actions = content.querySelector(".replay-modal-actions");
   if (actions && actions.parentNode === content) {
@@ -1137,20 +984,31 @@ function ensureTimerModuleSettingsDom() {
 function initTimerModuleSettingsUI() {
   var toggle = ensureTimerModuleSettingsDom();
   var note = document.getElementById("timer-module-view-note");
+  var retryState = timerModuleRuntime.resolveTimerModuleInitRetryState({
+    hasToggle: !!toggle,
+    hasManager: !!window.game_manager,
+    retryDelayMs: 60
+  });
   if (!toggle) return;
-  if (!window.game_manager) {
-    setTimeout(initTimerModuleSettingsUI, 60);
+  if (retryState.shouldRetry) {
+    setTimeout(initTimerModuleSettingsUI, retryState.retryDelayMs);
     return;
   }
 
   function sync() {
     var gm = window.game_manager;
     if (!gm) return;
-    var view = gm.getTimerModuleViewMode ? gm.getTimerModuleViewMode() : "timer";
-    toggle.disabled = false;
-    toggle.checked = view !== "hidden";
+    var view = timerModuleRuntime.resolveTimerModuleCurrentViewMode({
+      manager: gm,
+      fallbackViewMode: "timer"
+    });
+    var settingsState = timerModuleRuntime.resolveTimerModuleSettingsState({
+      viewMode: view
+    });
+    toggle.disabled = settingsState.toggleDisabled;
+    toggle.checked = settingsState.toggleChecked;
     if (note) {
-      note.textContent = "关闭后仅隐藏右侧计时器栏，不影响棋盘和回放。";
+      note.textContent = settingsState.noteText;
     }
     if (typeof window.syncMobileTimerboxUI === "function") {
       window.syncMobileTimerboxUI();
@@ -1158,11 +1016,23 @@ function initTimerModuleSettingsUI() {
   }
   window.syncTimerModuleSettingsUI = sync;
 
-  if (!toggle.__timerViewBound) {
-    toggle.__timerViewBound = true;
+  var timerBindingState = timerModuleRuntime.resolveTimerModuleBindingState({
+    alreadyBound: !!toggle.__timerViewBound
+  });
+  if (timerBindingState.shouldBind) {
+    toggle.__timerViewBound = timerBindingState.boundValue;
     toggle.addEventListener("change", function () {
       if (!window.game_manager || !window.game_manager.setTimerModuleViewMode) return;
-      window.game_manager.setTimerModuleViewMode(this.checked ? "timer" : "hidden");
+      var nextViewMode = timerModuleRuntime.resolveTimerModuleViewMode({
+        checked: !!this.checked
+      });
+      var appliedViewMode = timerModuleRuntime.resolveTimerModuleAppliedViewMode({
+        nextViewMode: nextViewMode,
+        checked: !!this.checked
+      });
+      window.game_manager.setTimerModuleViewMode(
+        appliedViewMode
+      );
       sync();
     });
   }
@@ -1183,32 +1053,16 @@ var HOME_GUIDE_STATE = {
 };
 
 function isHomePage() {
-  if (typeof window === "undefined" || !window.location) return false;
-  var path = String(window.location.pathname || "");
-  return path === "/" || /\/index\.html?$/.test(path) || path === "";
+  var path = homeGuideRuntime.resolveHomeGuidePathname({
+    locationLike: typeof window !== "undefined" ? window.location : null
+  });
+  return !!homeGuideRuntime.isHomePagePath(path);
 }
 
 function getHomeGuideSteps() {
-  var steps = [
-    { selector: "#home-title-link", title: "首页标题", desc: "点击 2048 标题可回到首页。" },
-    { selector: "#top-announcement-btn", title: "版本公告", desc: "查看版本更新内容，红点表示有未读公告。" },
-    { selector: "#stats-panel-toggle", title: "统计", desc: "打开统计汇总面板，查看步数和出数数据。" },
-    { selector: "#top-export-replay-btn", title: "导出回放", desc: "导出当前对局回放字符串，便于保存和复盘。" },
-    { selector: "#top-practice-btn", title: "直通练习板", desc: "把当前盘面复制到练习板，并在新页继续调试。" },
-    { selector: "#top-advanced-replay-btn", title: "高级回放", desc: "进入高级回放页，导入并控制回放进度。" },
-    { selector: "#top-modes-btn", title: "模式选择", desc: "进入模式页面，切换不同棋盘和玩法。" },
-    { selector: "#top-history-btn", title: "历史记录", desc: "查看本地历史记录，支持删除/导入/导出。" },
-    { selector: "#top-settings-btn", title: "设置", desc: "打开设置，调整主题、计时器显示与指引开关。" },
-    { selector: "#top-restart-btn", title: "新游戏", desc: "开始新的一局，会重置当前局面。" }
-  ];
-  if (isCompactGameViewport()) {
-    steps.splice(9, 0, {
-      selector: "#top-mobile-hint-btn",
-      title: "提示文本",
-      desc: "移动端可用此按钮打开提示弹窗，集中查看玩法说明与项目说明。"
-    });
-  }
-  return steps;
+  return homeGuideRuntime.buildHomeGuideSteps({
+    isCompactViewport: isCompactGameViewport()
+  });
 }
 
 function ensureHomeGuideDom() {
@@ -1226,15 +1080,7 @@ function ensureHomeGuideDom() {
     panel.id = "home-guide-panel";
     panel.className = "home-guide-panel";
     panel.style.display = "none";
-    panel.innerHTML =
-      "<div id='home-guide-step' class='home-guide-step'></div>" +
-      "<div id='home-guide-title' class='home-guide-title'></div>" +
-      "<div id='home-guide-desc' class='home-guide-desc'></div>" +
-      "<div class='home-guide-actions'>" +
-      "<button id='home-guide-prev' class='replay-button home-guide-btn'>上一步</button>" +
-      "<button id='home-guide-next' class='replay-button home-guide-btn'>下一步</button>" +
-      "<button id='home-guide-skip' class='replay-button home-guide-btn'>跳过</button>" +
-      "</div>";
+    panel.innerHTML = homeGuideRuntime.buildHomeGuidePanelInnerHtml();
     document.body.appendChild(panel);
   }
   HOME_GUIDE_STATE.overlay = overlay;
@@ -1263,14 +1109,28 @@ function clearHomeGuideHighlight() {
 function elevateHomeGuideTarget(target) {
   if (!target || !target.closest) return;
   var elevated = [];
-  var stackHost = target.closest(".top-action-buttons");
-  if (!stackHost) stackHost = target.closest(".heading");
+  var topActionButtons = target.closest(".top-action-buttons");
+  var headingHost = target.closest(".heading");
+  var elevationPlan = homeGuideRuntime.resolveHomeGuideElevationPlan({
+    hasTopActionButtonsAncestor: !!topActionButtons,
+    hasHeadingAncestor: !!headingHost
+  });
+  var stackHost = null;
+  if (elevationPlan && elevationPlan.hostSelector === ".top-action-buttons") {
+    stackHost = topActionButtons;
+  } else if (elevationPlan && elevationPlan.hostSelector === ".heading") {
+    stackHost = headingHost;
+  }
   if (stackHost && stackHost.classList) {
     stackHost.classList.add("home-guide-elevated");
     elevated.push(stackHost);
   }
-  var topActionButtons = target.closest(".top-action-buttons");
-  if (topActionButtons && topActionButtons.classList) {
+  if (
+    elevationPlan &&
+    elevationPlan.shouldScopeTopActions &&
+    topActionButtons &&
+    topActionButtons.classList
+  ) {
     topActionButtons.classList.add("home-guide-scope");
   }
   HOME_GUIDE_STATE.elevated = elevated;
@@ -1283,95 +1143,96 @@ function positionHomeGuidePanel() {
 
   var rect = target.getBoundingClientRect();
   var margin = 12;
-  var panelWidth;
-  if (window.innerWidth <= MOBILE_UI_MAX_WIDTH) {
-    panelWidth = Math.min(380, Math.max(240, window.innerWidth - margin * 2));
-  } else {
-    panelWidth = Math.min(430, Math.max(280, window.innerWidth - margin * 2));
-  }
-  panel.style.maxWidth = panelWidth + "px";
-  panel.style.width = panelWidth + "px";
-
+  var mobileLayout = mobileViewportRuntime.isViewportAtMost({
+    windowLike: window,
+    maxWidth: MOBILE_UI_MAX_WIDTH
+  });
+  var initialLayout = homeGuideRuntime.resolveHomeGuidePanelLayout({
+    targetRect: rect,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    panelHeight: 160,
+    margin: margin,
+    mobileLayout: mobileLayout
+  });
+  panel.style.maxWidth = initialLayout.panelWidth + "px";
+  panel.style.width = initialLayout.panelWidth + "px";
   var panelHeight = panel.offsetHeight || 160;
-  var top;
-  if (window.innerWidth <= MOBILE_UI_MAX_WIDTH) {
-    top = window.innerHeight - panelHeight - margin;
-  } else {
-    top = rect.bottom + margin;
-    if (top + panelHeight > window.innerHeight - margin) {
-      top = rect.top - panelHeight - margin;
-    }
-  }
-  if (top < margin) top = margin;
-
-  var left = rect.left + rect.width / 2 - panelWidth / 2;
-  if (left < margin) left = margin;
-  if (left + panelWidth > window.innerWidth - margin) {
-    left = window.innerWidth - panelWidth - margin;
-  }
-
-  panel.style.top = Math.round(top) + "px";
-  panel.style.left = Math.round(left) + "px";
+  var layout = homeGuideRuntime.resolveHomeGuidePanelLayout({
+    targetRect: rect,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    panelHeight: panelHeight,
+    margin: margin,
+    mobileLayout: mobileLayout
+  });
+  panel.style.maxWidth = layout.panelWidth + "px";
+  panel.style.width = layout.panelWidth + "px";
+  panel.style.top = layout.top + "px";
+  panel.style.left = layout.left + "px";
 }
 
 function isElementVisibleForGuide(node) {
-  if (!node) return false;
-  if (node.getClientRects && node.getClientRects().length === 0) return false;
-  var style = null;
-  try {
-    style = window.getComputedStyle ? window.getComputedStyle(node) : null;
-  } catch (_err) {
-    style = null;
-  }
-  if (style && (style.display === "none" || style.visibility === "hidden" || style.opacity === "0")) {
-    return false;
-  }
-  return true;
+  return homeGuideRuntime.isHomeGuideTargetVisible({
+    nodeLike: node || null,
+    getComputedStyle:
+      typeof window !== "undefined" && typeof window.getComputedStyle === "function"
+        ? function (el) {
+            return window.getComputedStyle(el);
+          }
+        : null
+  });
 }
 
 function showHomeGuideDoneNotice() {
+  var doneNotice = homeGuideRuntime.resolveHomeGuideDoneNotice({});
   var toast = document.getElementById("home-guide-done-toast");
   if (!toast) {
+    var toastStyle = homeGuideRuntime.resolveHomeGuideDoneNoticeStyle();
     toast = document.createElement("div");
     toast.id = "home-guide-done-toast";
-    toast.style.position = "fixed";
-    toast.style.left = "50%";
-    toast.style.bottom = "26px";
-    toast.style.transform = "translateX(-50%)";
-    toast.style.background = "rgba(46, 40, 34, 0.94)";
-    toast.style.color = "#f9f6f2";
-    toast.style.padding = "10px 14px";
-    toast.style.borderRadius = "8px";
-    toast.style.fontSize = "14px";
-    toast.style.fontWeight = "bold";
-    toast.style.zIndex = "3400";
-    toast.style.boxShadow = "0 6px 20px rgba(0,0,0,0.35)";
-    toast.style.opacity = "0";
-    toast.style.transition = "opacity 160ms ease";
+    for (var key in toastStyle) {
+      if (!Object.prototype.hasOwnProperty.call(toastStyle, key)) continue;
+      toast.style[key] = toastStyle[key];
+    }
     document.body.appendChild(toast);
   }
-  toast.textContent = "指引已完成，可在设置中重新打开新手指引。";
+  toast.textContent = doneNotice.message;
   toast.style.opacity = "1";
   if (toast.__hideTimer) clearTimeout(toast.__hideTimer);
   toast.__hideTimer = setTimeout(function () {
     toast.style.opacity = "0";
-  }, 2600);
+  }, doneNotice.hideDelayMs);
 }
 
 function finishHomeGuide(markSeen, options) {
   options = options || {};
   clearHomeGuideHighlight();
-  HOME_GUIDE_STATE.active = false;
-  HOME_GUIDE_STATE.steps = [];
-  HOME_GUIDE_STATE.index = 0;
-  if (HOME_GUIDE_STATE.overlay) HOME_GUIDE_STATE.overlay.style.display = "none";
-  if (HOME_GUIDE_STATE.panel) HOME_GUIDE_STATE.panel.style.display = "none";
-  if (markSeen) {
-    try {
-      localStorage.setItem(HOME_GUIDE_SEEN_KEY, "1");
-    } catch (_err) {}
+  var lifecycleState = homeGuideRuntime.resolveHomeGuideLifecycleState({
+    action: "finish"
+  });
+  var sessionState = homeGuideRuntime.resolveHomeGuideSessionState({
+    lifecycleState: lifecycleState
+  });
+  HOME_GUIDE_STATE.active = sessionState.active;
+  HOME_GUIDE_STATE.steps = sessionState.steps;
+  HOME_GUIDE_STATE.index = sessionState.index;
+  HOME_GUIDE_STATE.fromSettings = sessionState.fromSettings;
+  var layerDisplayState = homeGuideRuntime.resolveHomeGuideLayerDisplayState({
+    active: HOME_GUIDE_STATE.active
+  });
+  if (HOME_GUIDE_STATE.overlay) {
+    HOME_GUIDE_STATE.overlay.style.display = layerDisplayState.overlayDisplay;
   }
-  HOME_GUIDE_STATE.fromSettings = false;
+  if (HOME_GUIDE_STATE.panel) {
+    HOME_GUIDE_STATE.panel.style.display = layerDisplayState.panelDisplay;
+  }
+  if (markSeen) {
+    homeGuideRuntime.markHomeGuideSeen({
+      storageLike: getStorageByName("localStorage"),
+      seenKey: HOME_GUIDE_SEEN_KEY
+    });
+  }
   if (typeof window.syncHomeGuideSettingsUI === "function") {
     window.syncHomeGuideSettingsUI();
   }
@@ -1381,24 +1242,55 @@ function finishHomeGuide(markSeen, options) {
 }
 
 function showHomeGuideStep(index) {
-  if (!HOME_GUIDE_STATE.active || !HOME_GUIDE_STATE.steps.length) return;
-  if (index < 0) index = 0;
-  if (index >= HOME_GUIDE_STATE.steps.length) {
-    finishHomeGuide(true, { showDoneNotice: true });
+  var stepIndexState = homeGuideRuntime.resolveHomeGuideStepIndexState({
+    isActive: HOME_GUIDE_STATE.active,
+    stepCount: HOME_GUIDE_STATE.steps.length,
+    stepIndex: index
+  });
+  if (stepIndexState.shouldAbort) return;
+  if (stepIndexState.shouldFinish) {
+    var finishState = homeGuideRuntime.resolveHomeGuideFinishState({
+      reason: "completed"
+    });
+    finishHomeGuide(finishState.markSeen, {
+      showDoneNotice: finishState.showDoneNotice
+    });
     return;
   }
+  index = stepIndexState.resolvedIndex;
   HOME_GUIDE_STATE.index = index;
   clearHomeGuideHighlight();
 
   var step = HOME_GUIDE_STATE.steps[index];
   var target = document.querySelector(step.selector);
-  if (!target || !isElementVisibleForGuide(target)) {
+  var targetVisible = !!(target && isElementVisibleForGuide(target));
+  var stepTargetState = homeGuideRuntime.resolveHomeGuideStepTargetState({
+    hasTarget: !!target,
+    targetVisible: targetVisible,
+    stepIndex: index
+  });
+  if (stepTargetState.shouldAdvance) {
+    showHomeGuideStep(stepTargetState.nextIndex);
+    return;
+  }
+  if (!target || !targetVisible) {
     showHomeGuideStep(index + 1);
     return;
   }
   HOME_GUIDE_STATE.target = target;
-  if (window.innerWidth <= MOBILE_UI_MAX_WIDTH && target.scrollIntoView) {
-    target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+  var targetScrollState = homeGuideRuntime.resolveHomeGuideTargetScrollState({
+    isCompactViewport: mobileViewportRuntime.isViewportAtMost({
+      windowLike: window,
+      maxWidth: MOBILE_UI_MAX_WIDTH
+    }),
+    canScrollIntoView: !!target.scrollIntoView
+  });
+  if (targetScrollState.shouldScroll && target.scrollIntoView) {
+    target.scrollIntoView({
+      block: targetScrollState.block,
+      inline: targetScrollState.inline,
+      behavior: targetScrollState.behavior
+    });
   }
   target.classList.add("home-guide-highlight");
   elevateHomeGuideTarget(target);
@@ -1408,12 +1300,17 @@ function showHomeGuideStep(index) {
   var descEl = document.getElementById("home-guide-desc");
   var prevBtn = document.getElementById("home-guide-prev");
   var nextBtn = document.getElementById("home-guide-next");
+  var stepRenderState = homeGuideRuntime.resolveHomeGuideStepRenderState({
+    step: step || null,
+    stepIndex: index,
+    stepCount: HOME_GUIDE_STATE.steps.length
+  });
 
-  if (stepEl) stepEl.textContent = "步骤 " + (index + 1) + " / " + HOME_GUIDE_STATE.steps.length;
-  if (titleEl) titleEl.textContent = step.title;
-  if (descEl) descEl.textContent = step.desc;
-  if (prevBtn) prevBtn.disabled = index <= 0;
-  if (nextBtn) nextBtn.textContent = index >= HOME_GUIDE_STATE.steps.length - 1 ? "完成" : "下一步";
+  if (stepEl) stepEl.textContent = stepRenderState.stepText;
+  if (titleEl) titleEl.textContent = stepRenderState.titleText;
+  if (descEl) descEl.textContent = stepRenderState.descText;
+  if (prevBtn) prevBtn.disabled = stepRenderState.prevDisabled;
+  if (nextBtn) nextBtn.textContent = stepRenderState.nextText;
 
   window.requestAnimationFrame(positionHomeGuidePanel);
 }
@@ -1423,35 +1320,79 @@ function startHomeGuide(options) {
   if (!isHomePage()) return;
 
   var dom = ensureHomeGuideDom();
-  HOME_GUIDE_STATE.active = true;
-  HOME_GUIDE_STATE.fromSettings = !!options.fromSettings;
-  HOME_GUIDE_STATE.steps = getHomeGuideSteps();
-  HOME_GUIDE_STATE.index = 0;
+  var lifecycleState = homeGuideRuntime.resolveHomeGuideLifecycleState({
+    action: "start",
+    fromSettings: !!options.fromSettings,
+    steps: getHomeGuideSteps()
+  });
+  var sessionState = homeGuideRuntime.resolveHomeGuideSessionState({
+    lifecycleState: lifecycleState
+  });
+  HOME_GUIDE_STATE.active = sessionState.active;
+  HOME_GUIDE_STATE.fromSettings = sessionState.fromSettings;
+  HOME_GUIDE_STATE.steps = sessionState.steps;
+  HOME_GUIDE_STATE.index = sessionState.index;
 
-  dom.overlay.style.display = "block";
-  dom.panel.style.display = "block";
+  var layerDisplayState = homeGuideRuntime.resolveHomeGuideLayerDisplayState({
+    active: HOME_GUIDE_STATE.active
+  });
+  dom.overlay.style.display = layerDisplayState.overlayDisplay;
+  dom.panel.style.display = layerDisplayState.panelDisplay;
 
   var prevBtn = document.getElementById("home-guide-prev");
   var nextBtn = document.getElementById("home-guide-next");
   var skipBtn = document.getElementById("home-guide-skip");
 
-  if (prevBtn && !prevBtn.__homeGuideBound) {
-    prevBtn.__homeGuideBound = true;
-    prevBtn.addEventListener("click", function () {
-      showHomeGuideStep(HOME_GUIDE_STATE.index - 1);
+  if (prevBtn) {
+    var prevBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
+      alreadyBound: !!prevBtn.__homeGuideBound
     });
+    if (prevBindingState.shouldBind) {
+      prevBtn.__homeGuideBound = prevBindingState.boundValue;
+      prevBtn.addEventListener("click", function () {
+        var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
+          action: "prev",
+          stepIndex: HOME_GUIDE_STATE.index
+        });
+        showHomeGuideStep(actionState.nextStepIndex);
+      });
+    }
   }
-  if (nextBtn && !nextBtn.__homeGuideBound) {
-    nextBtn.__homeGuideBound = true;
-    nextBtn.addEventListener("click", function () {
-      showHomeGuideStep(HOME_GUIDE_STATE.index + 1);
+  if (nextBtn) {
+    var nextBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
+      alreadyBound: !!nextBtn.__homeGuideBound
     });
+    if (nextBindingState.shouldBind) {
+      nextBtn.__homeGuideBound = nextBindingState.boundValue;
+      nextBtn.addEventListener("click", function () {
+        var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
+          action: "next",
+          stepIndex: HOME_GUIDE_STATE.index
+        });
+        showHomeGuideStep(actionState.nextStepIndex);
+      });
+    }
   }
-  if (skipBtn && !skipBtn.__homeGuideBound) {
-    skipBtn.__homeGuideBound = true;
-    skipBtn.addEventListener("click", function () {
-      finishHomeGuide(true);
+  if (skipBtn) {
+    var skipBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
+      alreadyBound: !!skipBtn.__homeGuideBound
     });
+    if (skipBindingState.shouldBind) {
+      skipBtn.__homeGuideBound = skipBindingState.boundValue;
+      skipBtn.addEventListener("click", function () {
+        var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
+          action: "skip",
+          stepIndex: HOME_GUIDE_STATE.index
+        });
+        var finishReason = actionState.finishReason;
+        var finishState = homeGuideRuntime.resolveHomeGuideFinishState({
+          reason: finishReason
+        });
+        finishHomeGuide(finishState.markSeen, {
+          showDoneNotice: finishState.showDoneNotice
+        });
+      });
+    }
   }
 
   showHomeGuideStep(0);
@@ -1471,13 +1412,7 @@ function ensureHomeGuideSettingsDom() {
 
   var row = document.createElement("div");
   row.className = "settings-row";
-  row.innerHTML =
-    "<label for='home-guide-toggle'>新手指引</label>" +
-    "<label class='settings-switch-row'>" +
-    "<input id='home-guide-toggle' type='checkbox'>" +
-    "<span>重新播放首页功能指引</span>" +
-    "</label>" +
-    "<div id='home-guide-note' class='settings-note'></div>";
+  row.innerHTML = homeGuideRuntime.buildHomeGuideSettingsRowInnerHtml();
 
   var actions = content.querySelector(".replay-modal-actions");
   if (actions && actions.parentNode === content) {
@@ -1494,28 +1429,40 @@ function initHomeGuideSettingsUI() {
   if (!toggle) return;
 
   function sync() {
-    var home = isHomePage();
-    toggle.disabled = !home;
-    toggle.checked = !!(HOME_GUIDE_STATE.active && HOME_GUIDE_STATE.fromSettings);
+    var uiState = homeGuideRuntime.resolveHomeGuideSettingsState({
+      isHomePage: isHomePage(),
+      guideActive: HOME_GUIDE_STATE.active,
+      fromSettings: HOME_GUIDE_STATE.fromSettings
+    });
+    toggle.disabled = uiState.toggleDisabled;
+    toggle.checked = uiState.toggleChecked;
     if (note) {
-      note.textContent = home
-        ? "打开后将立即进入首页新手引导，完成后自动关闭。"
-        : "该功能仅在首页可用。";
+      note.textContent = uiState.noteText;
     }
   }
 
   window.syncHomeGuideSettingsUI = sync;
 
-  if (!toggle.__homeGuideBound) {
-    toggle.__homeGuideBound = true;
+  var toggleBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
+    alreadyBound: !!toggle.__homeGuideBound
+  });
+  if (toggleBindingState.shouldBind) {
+    toggle.__homeGuideBound = toggleBindingState.boundValue;
     toggle.addEventListener("change", function () {
-      if (!this.checked) return;
-      if (!isHomePage()) {
+      var toggleAction = homeGuideRuntime.resolveHomeGuideToggleAction({
+        checked: !!this.checked,
+        isHomePage: isHomePage()
+      });
+      if (toggleAction.shouldResync) {
         sync();
         return;
       }
-      window.closeSettingsModal();
-      startHomeGuide({ fromSettings: true });
+      if (toggleAction.shouldStartGuide) {
+        if (toggleAction.shouldCloseSettings) {
+          window.closeSettingsModal();
+        }
+        startHomeGuide({ fromSettings: toggleAction.startFromSettings });
+      }
     });
   }
 
@@ -1523,14 +1470,15 @@ function initHomeGuideSettingsUI() {
 }
 
 function autoStartHomeGuideIfNeeded() {
-  if (!isHomePage()) return;
-  var seen = "0";
-  try {
-    seen = localStorage.getItem(HOME_GUIDE_SEEN_KEY) || "0";
-  } catch (_err) {
-    seen = "0";
-  }
-  if (seen === "1") return;
+  var path = homeGuideRuntime.resolveHomeGuidePathname({
+    locationLike: typeof window !== "undefined" ? window.location : null
+  });
+  var autoStartState = homeGuideRuntime.resolveHomeGuideAutoStart({
+    pathname: path,
+    storageLike: getStorageByName("localStorage"),
+    seenKey: HOME_GUIDE_SEEN_KEY
+  });
+  if (!autoStartState.shouldAutoStart) return;
   setTimeout(function () {
     startHomeGuide({ fromSettings: false });
   }, 260);
@@ -1543,9 +1491,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (undoLink) {
         undoLink.addEventListener('click', function(e) {
             e.preventDefault();
-            if (window.game_manager && window.game_manager.isUndoInteractionEnabled && window.game_manager.isUndoInteractionEnabled()) {
-                window.game_manager.move(-1);
-            }
+            tryUndoFromUi();
         });
     }
 
@@ -1570,9 +1516,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (practiceMobileUndoBtn) {
       practiceMobileUndoBtn.addEventListener("click", function (e) {
         e.preventDefault();
-        if (window.game_manager && window.game_manager.isUndoInteractionEnabled && window.game_manager.isUndoInteractionEnabled()) {
-          window.game_manager.move(-1);
-        }
+        tryUndoFromUi();
       });
     }
 
@@ -1619,9 +1563,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             if (!fromTouch && (Date.now() - lastUndoTouchAt) < 450) return;
             if (fromTouch) lastUndoTouchAt = Date.now();
-            if (window.game_manager && window.game_manager.isUndoInteractionEnabled && window.game_manager.isUndoInteractionEnabled()) {
-                window.game_manager.move(-1);
-            }
+            tryUndoFromUi();
         };
         undoBtnGameOver.addEventListener('click', function (e) {
             handleGameOverUndo(e, false);

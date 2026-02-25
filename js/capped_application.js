@@ -1,12 +1,24 @@
-window.requestAnimationFrame(function () {
-  if (window.ModeCatalog && typeof window.ModeCatalog.getMode === "function") {
-    window.GAME_MODE_CONFIG = window.ModeCatalog.getMode("capped_4x4_pow2_no_undo");
-  }
+var simpleRuntimeContractRuntime = window.CoreSimpleRuntimeContractRuntime;
+if (
+  !simpleRuntimeContractRuntime ||
+  typeof simpleRuntimeContractRuntime.resolveSimpleBootstrapRuntime !== "function"
+) {
+  throw new Error("CoreSimpleRuntimeContractRuntime is required");
+}
+var simpleStartupRuntime = window.CoreSimpleStartupRuntime;
+if (
+  !simpleStartupRuntime ||
+  typeof simpleStartupRuntime.resolveSimpleStartupPayload !== "function"
+) {
+  throw new Error("CoreSimpleStartupRuntime is required");
+}
 
-  var boardWidth = window.GAME_MODE_CONFIG && window.GAME_MODE_CONFIG.board_width
-    ? window.GAME_MODE_CONFIG.board_width
-    : 4;
-
-  var gm = new GameManager(boardWidth, CappedInputManager, HTMLActuator, LocalScoreManager);
-  window.game_manager = gm;
-});
+var bootstrap = simpleRuntimeContractRuntime.resolveSimpleBootstrapRuntime(window);
+bootstrap.startGameOnAnimationFrame(
+  simpleStartupRuntime.resolveSimpleStartupPayload({
+    modeKey: "capped_4x4_pow2_no_undo",
+    fallbackModeKey: "capped_4x4_pow2_no_undo",
+    inputManagerCtor: CappedInputManager,
+    defaultBoardWidth: 4
+  })
+);

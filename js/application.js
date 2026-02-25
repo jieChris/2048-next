@@ -1,54 +1,35 @@
-window.requestAnimationFrame(function () {
-  var modeKey = "standard_4x4_pow2_no_undo";
-  function readPracticeRulesetParam() {
-    try {
-      var params = new URLSearchParams(window.location.search || "");
-      var raw = params.get("practice_ruleset");
-      return raw === "fibonacci" ? "fibonacci" : "pow2";
-    } catch (_err) {
-      return "pow2";
-    }
-  }
+var homeRuntimeContractRuntime = window.CoreHomeRuntimeContractRuntime;
+if (
+  !homeRuntimeContractRuntime ||
+  typeof homeRuntimeContractRuntime.resolveHomeRuntimeContracts !== "function"
+) {
+  throw new Error("CoreHomeRuntimeContractRuntime is required");
+}
+var homeStartupHostRuntime = window.CoreHomeStartupHostRuntime;
+if (
+  !homeStartupHostRuntime ||
+  typeof homeStartupHostRuntime.resolveHomeStartupFromContext !== "function"
+) {
+  throw new Error("CoreHomeStartupHostRuntime is required");
+}
 
-  function buildPracticeModeConfig(baseConfig, ruleset) {
-    var cfg = {};
-    var key;
-    for (key in baseConfig) {
-      if (Object.prototype.hasOwnProperty.call(baseConfig, key)) {
-        cfg[key] = baseConfig[key];
-      }
-    }
-    cfg.ruleset = ruleset === "fibonacci" ? "fibonacci" : "pow2";
-    cfg.mode_family = cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2";
-    cfg.spawn_table = cfg.ruleset === "fibonacci"
-      ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
-      : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
-    return cfg;
-  }
+var runtimeContracts = homeRuntimeContractRuntime.resolveHomeRuntimeContracts(window);
+var homeModeRuntime = runtimeContracts.homeModeRuntime;
+var undoActionRuntime = runtimeContracts.undoActionRuntime;
+var bootstrap = runtimeContracts.bootstrapRuntime;
 
-  if (typeof document !== "undefined" && document.body) {
-    modeKey = document.body.getAttribute("data-mode-id") || modeKey;
-  }
-
-  if (window.ModeCatalog && typeof window.ModeCatalog.getMode === "function") {
-    window.GAME_MODE_CONFIG = window.ModeCatalog.getMode(modeKey) ||
-      window.ModeCatalog.getMode("standard_4x4_pow2_no_undo");
-
-    if (modeKey === "practice_legacy" && window.GAME_MODE_CONFIG) {
-      window.GAME_MODE_CONFIG = buildPracticeModeConfig(window.GAME_MODE_CONFIG, readPracticeRulesetParam());
-    }
-  }
-
-  var boardWidth = window.GAME_MODE_CONFIG && window.GAME_MODE_CONFIG.board_width
-    ? window.GAME_MODE_CONFIG.board_width
-    : 4;
-
-  game_manager = new GameManager(boardWidth, KeyboardInputManager, HTMLActuator, LocalScoreManager);
-  window.game_manager = game_manager;
+bootstrap.startGameOnAnimationFrame(function () {
+  return homeStartupHostRuntime.resolveHomeStartupFromContext({
+    windowLike: typeof window !== "undefined" ? window : null,
+    documentLike: typeof document !== "undefined" ? document : null,
+    defaultModeKey: "standard_4x4_pow2_no_undo",
+    defaultBoardWidth: 4,
+    inputManagerCtor: KeyboardInputManager,
+    resolveHomeModeSelectionFromContext:
+      homeModeRuntime.resolveHomeModeSelectionFromContext
+  });
 });
 
 function handle_undo() {
-  if (window.game_manager && window.game_manager.isUndoInteractionEnabled && window.game_manager.isUndoInteractionEnabled()) {
-    window.game_manager.move(-1);
-  }
+  undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
 }

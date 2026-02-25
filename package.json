@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:unit": "vitest run tests/unit",
+    "test:unit:watch": "vitest tests/unit",
+    "test:smoke": "playwright test --config=playwright.config.ts",
+    "test:smoke:headed": "playwright test --config=playwright.config.ts --headed",
+    "verify:refactor": "node scripts/refactor-gate.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
