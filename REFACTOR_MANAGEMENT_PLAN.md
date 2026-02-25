@@ -226,6 +226,7 @@
   - 新增 `src/bootstrap/history-board.ts` + `js/core_history_board_runtime.js`，`history_page.js` 委托历史记录终盘棋盘 HTML 渲染（网格尺寸推断、tile 样式类、super tile 标识）
   - 新增 `src/bootstrap/history-adapter-diagnostics.ts` + `js/core_history_adapter_diagnostics_runtime.js`，`history_page.js` 委托 adapter 诊断徽标与文案行模型计算
   - `history-adapter-diagnostics` 已继续承接 adapter 诊断徽标/诊断区 HTML 拼装（`resolveHistoryAdapterBadgeHtml`/`resolveHistoryAdapterDiagnosticsHtml`），`history_page.js` 不再本地拼接诊断 HTML
+  - `history-adapter-diagnostics` 已继续承接 parity 状态读取（`resolveHistoryAdapterParityStatus`），`history_page.js` 不再本地读取 `LocalHistoryStore.getAdapterParityStatus`
   - 新增 `src/bootstrap/history-burnin.ts` + `js/core_history_burnin_runtime.js`，`history_page.js` 委托 burn-in 汇总 gate 状态、百分比文案、连续窗口统计、面板 HTML 渲染与“仅看不一致”点击动作决策
   - burn-in gate 已支持 sustained window 判定
   - `src/bridge/burnin-gate.ts` + `js/core_burnin_gate_runtime.js` 抽离完成

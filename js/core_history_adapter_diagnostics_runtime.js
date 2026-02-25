@@ -65,6 +65,17 @@
     return "history-adapter-badge-incomplete";
   }
 
+  function resolveHistoryAdapterParityStatus(localHistoryStore, item) {
+    var store = isPlainObject(localHistoryStore) ? localHistoryStore : null;
+    var readStatus =
+      store && typeof store.getAdapterParityStatus === "function"
+        ? store.getAdapterParityStatus
+        : null;
+    if (!readStatus) return "incomplete";
+    var status = readStatus(item);
+    return typeof status === "string" && status ? status : "incomplete";
+  }
+
   function resolveHistoryAdapterBadgeState(item, parityStatus) {
     if (!hasAdapterDiagnostics(item)) {
       return {
@@ -157,6 +168,8 @@
   }
 
   global.CoreHistoryAdapterDiagnosticsRuntime = global.CoreHistoryAdapterDiagnosticsRuntime || {};
+  global.CoreHistoryAdapterDiagnosticsRuntime.resolveHistoryAdapterParityStatus =
+    resolveHistoryAdapterParityStatus;
   global.CoreHistoryAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeState =
     resolveHistoryAdapterBadgeState;
   global.CoreHistoryAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsState =

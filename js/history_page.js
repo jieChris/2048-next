@@ -56,6 +56,7 @@
   var historyAdapterDiagnosticsRuntime = window.CoreHistoryAdapterDiagnosticsRuntime;
   if (
     !historyAdapterDiagnosticsRuntime ||
+    typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterParityStatus !== "function" ||
     typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeState !== "function" ||
     typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterDiagnosticsState !== "function" ||
     typeof historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeHtml !== "function" ||
@@ -219,15 +220,11 @@
     return historyCanaryStorageRuntime.writeHistoryStorageValue(key, value);
   }
 
-  function getAdapterParityStatus(item) {
-    if (window.LocalHistoryStore && typeof window.LocalHistoryStore.getAdapterParityStatus === "function") {
-      return window.LocalHistoryStore.getAdapterParityStatus(item);
-    }
-    return "incomplete";
-  }
-
   function buildAdapterBadgeHtml(item) {
-    var status = getAdapterParityStatus(item);
+    var status = historyAdapterDiagnosticsRuntime.resolveHistoryAdapterParityStatus(
+      window.LocalHistoryStore,
+      item
+    );
     var badgeState = historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeState(item, status);
     return historyAdapterDiagnosticsRuntime.resolveHistoryAdapterBadgeHtml(badgeState);
   }

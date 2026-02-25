@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  resolveHistoryAdapterParityStatus,
   resolveHistoryAdapterBadgeHtml,
   resolveHistoryAdapterBadgeState,
   resolveHistoryAdapterDiagnosticsHtml,
@@ -15,6 +16,20 @@ describe("bootstrap history adapter diagnostics", () => {
       className: "",
       text: ""
     });
+  });
+
+  it("reads parity status from local history store with fallback", () => {
+    expect(
+      resolveHistoryAdapterParityStatus(
+        {
+          getAdapterParityStatus() {
+            return "mismatch";
+          }
+        },
+        {}
+      )
+    ).toBe("mismatch");
+    expect(resolveHistoryAdapterParityStatus({}, {})).toBe("incomplete");
   });
 
   it("maps parity status to badge class and text", () => {

@@ -85,9 +85,22 @@ function getAdapterBadgeClass(status: string): string {
   return "history-adapter-badge-incomplete";
 }
 
+export function resolveHistoryAdapterParityStatus(
+  localHistoryStore: unknown,
+  item: unknown
+): string {
+  const store = isPlainObject(localHistoryStore) ? localHistoryStore : null;
+  const readStatus = store && typeof store.getAdapterParityStatus === "function"
+    ? store.getAdapterParityStatus
+    : null;
+  if (!readStatus) return "incomplete";
+  const status = (readStatus as (entry: unknown) => unknown)(item);
+  return typeof status === "string" && status ? status : "incomplete";
+}
+
 export function resolveHistoryAdapterBadgeState(
   item: unknown,
-  parityStatus: string
+  parityStatus: unknown
 ): HistoryAdapterBadgeState {
   if (!hasAdapterDiagnostics(item)) {
     return {

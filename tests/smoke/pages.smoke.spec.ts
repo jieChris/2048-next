@@ -1737,6 +1737,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("history page delegates adapter diagnostics rendering to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
+      (window as any).__historyAdapterParityStatusCallCount = 0;
       (window as any).__historyAdapterBadgeCallCount = 0;
       (window as any).__historyAdapterDiagnosticsCallCount = 0;
       (window as any).__historyAdapterBadgeHtmlCallCount = 0;
@@ -1744,6 +1745,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryAdapterDiagnosticsRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryAdapterParityStatus" && typeof value === "function") {
+            proxyTarget[prop] = function (store: unknown, item: unknown) {
+              (window as any).__historyAdapterParityStatusCallCount =
+                Number((window as any).__historyAdapterParityStatusCallCount || 0) + 1;
+              return (value as (a: unknown, b: unknown) => unknown)(store, item);
+            };
+            return true;
+          }
           if (prop === "resolveHistoryAdapterBadgeState" && typeof value === "function") {
             proxyTarget[prop] = function (item: unknown, status: string) {
               (window as any).__historyAdapterBadgeCallCount =
@@ -1842,6 +1851,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const snapshot = await page.evaluate(() => {
       return {
         hasRuntime: Boolean(
+          (window as any).CoreHistoryAdapterDiagnosticsRuntime?.resolveHistoryAdapterParityStatus &&
           (window as any).CoreHistoryAdapterDiagnosticsRuntime?.resolveHistoryAdapterBadgeState &&
             (window as any).CoreHistoryAdapterDiagnosticsRuntime
               ?.resolveHistoryAdapterDiagnosticsState &&
@@ -1849,6 +1859,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
             (window as any).CoreHistoryAdapterDiagnosticsRuntime
               ?.resolveHistoryAdapterDiagnosticsHtml
         ),
+        parityStatusCallCount: Number((window as any).__historyAdapterParityStatusCallCount || 0),
         badgeCallCount: Number((window as any).__historyAdapterBadgeCallCount || 0),
         diagnosticsCallCount: Number((window as any).__historyAdapterDiagnosticsCallCount || 0),
         badgeHtmlCallCount: Number((window as any).__historyAdapterBadgeHtmlCallCount || 0),
@@ -1858,6 +1869,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.parityStatusCallCount).toBeGreaterThan(0);
     expect(snapshot.badgeCallCount).toBeGreaterThan(0);
     expect(snapshot.diagnosticsCallCount).toBeGreaterThan(0);
     expect(snapshot.badgeHtmlCallCount).toBeGreaterThan(0);
