@@ -2381,6 +2381,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       (window as any).__playHeaderStateCallCount = 0;
       (window as any).__playStartGuardCallCount = 0;
       (window as any).__playStartupPayloadCallCount = 0;
+      (window as any).__playCustomSpawnHostCallCount = 0;
       const runtimeTarget: Record<string, unknown> = {};
       (window as any).CorePlayEntryRuntime = new Proxy(runtimeTarget, {
         set(target, prop, value) {
@@ -2459,6 +2460,27 @@ test.describe("Legacy Multi-Page Smoke", () => {
           return true;
         }
       });
+      const playCustomSpawnHostRuntimeTarget: Record<string, unknown> = {};
+      (window as any).CorePlayCustomSpawnHostRuntime = new Proxy(
+        playCustomSpawnHostRuntimeTarget,
+        {
+          set(target, prop, value) {
+            if (
+              prop === "resolvePlayCustomSpawnModeConfigFromContext" &&
+              typeof value === "function"
+            ) {
+              target[prop] = function (opts: unknown) {
+                (window as any).__playCustomSpawnHostCallCount =
+                  Number((window as any).__playCustomSpawnHostCallCount || 0) + 1;
+                return (value as (input: unknown) => unknown)(opts);
+              };
+              return true;
+            }
+            target[prop] = value;
+            return true;
+          }
+        }
+      );
       const startGuardRuntimeTarget: Record<string, unknown> = {};
       (window as any).CorePlayStartGuardRuntime = new Proxy(startGuardRuntimeTarget, {
         set(target, prop, value) {
@@ -2528,6 +2550,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       hasChallengeContextRuntime: Boolean(
         (window as any).CorePlayChallengeContextRuntime?.resolvePlayChallengeContext
       ),
+      hasPlayCustomSpawnHostRuntime: Boolean(
+        (window as any).CorePlayCustomSpawnHostRuntime?.resolvePlayCustomSpawnModeConfigFromContext
+      ),
       hasStartGuardRuntime: Boolean(
         (window as any).CorePlayStartGuardRuntime?.resolvePlayStartGuardState
       ),
@@ -2544,6 +2569,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         (window as any).__playChallengeIntroActionCallCount || 0
       ),
       challengeContextCallCount: Number((window as any).__playChallengeContextCallCount || 0),
+      playCustomSpawnHostCallCount: Number((window as any).__playCustomSpawnHostCallCount || 0),
       startGuardCallCount: Number((window as any).__playStartGuardCallCount || 0),
       startupPayloadCallCount: Number((window as any).__playStartupPayloadCallCount || 0),
       headerStateCallCount: Number((window as any).__playHeaderStateCallCount || 0),
@@ -2565,6 +2591,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasChallengeIntroUiRuntime).toBe(true);
     expect(snapshot.hasChallengeIntroActionRuntime).toBe(true);
     expect(snapshot.hasChallengeContextRuntime).toBe(true);
+    expect(snapshot.hasPlayCustomSpawnHostRuntime).toBe(true);
     expect(snapshot.hasStartGuardRuntime).toBe(true);
     expect(snapshot.hasStartupPayloadRuntime).toBe(true);
     expect(snapshot.hasHeaderStateRuntime).toBe(true);
@@ -2573,6 +2600,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.challengeIntroUiCallCount).toBeGreaterThan(0);
     expect(snapshot.challengeIntroActionCallCount).toBeGreaterThan(0);
     expect(snapshot.challengeContextCallCount).toBeGreaterThan(0);
+    expect(snapshot.playCustomSpawnHostCallCount).toBeGreaterThan(0);
     expect(snapshot.startGuardCallCount).toBeGreaterThan(0);
     expect(snapshot.startupPayloadCallCount).toBeGreaterThan(0);
     expect(snapshot.headerStateCallCount).toBeGreaterThan(0);
@@ -2623,6 +2651,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         hasPlayChallengeContextRuntime: Boolean(
           (window as any).CorePlayChallengeContextRuntime?.resolvePlayChallengeContext
         ),
+        hasPlayCustomSpawnHostRuntime: Boolean(
+          (window as any).CorePlayCustomSpawnHostRuntime?.resolvePlayCustomSpawnModeConfigFromContext
+        ),
         hasPlayStartGuardRuntime: Boolean(
           (window as any).CorePlayStartGuardRuntime?.resolvePlayStartGuardState
         ),
@@ -2645,6 +2676,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasPlayChallengeIntroUiRuntime).toBe(true);
     expect(snapshot.hasPlayChallengeIntroActionRuntime).toBe(true);
     expect(snapshot.hasPlayChallengeContextRuntime).toBe(true);
+    expect(snapshot.hasPlayCustomSpawnHostRuntime).toBe(true);
     expect(snapshot.hasPlayStartGuardRuntime).toBe(true);
     expect(snapshot.hasPlayStartupPayloadRuntime).toBe(true);
     expect(snapshot.hasHeaderRuntime).toBe(true);

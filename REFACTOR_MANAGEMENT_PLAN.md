@@ -44,6 +44,7 @@
   - 新增共享启动壳：`js/legacy_bootstrap_runtime.js`
   - `application/play/capped/replay` 统一走 `LegacyBootstrapRuntime.startGameOnAnimationFrame`
   - 新增 `src/bootstrap/play-query.ts` + `js/core_play_query_runtime.js`，`play_application.js` 委托 `mode_key/challenge_id` 解析
+  - 新增 `src/bootstrap/play-custom-spawn-host.ts` + `js/core_play_custom_spawn_host_runtime.js`，`play_application.js` 委托自定义 4 率桥接上下文（storage/prompt/alert/url replace）组装
   - 新增 `src/bootstrap/play-entry.ts` + `js/core_play_entry_runtime.js`，`play_application.js` 委托 play 页入口解析、模式回退与 challenge 上下文决策
   - 新增 `src/bootstrap/play-challenge-intro.ts` + `js/core_play_challenge_intro_runtime.js`，`play_application.js` 委托挑战简介显示模型（当前默认关闭，行为不变）
   - 新增 `src/bootstrap/play-challenge-intro-ui.ts` + `js/core_play_challenge_intro_ui_runtime.js`，`play_application.js` 委托挑战简介弹层展示态与绑定去重决策

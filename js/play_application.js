@@ -34,6 +34,13 @@
   ) {
     throw new Error("CorePlayCustomSpawnRuntime is required");
   }
+  var playCustomSpawnHostRuntime = window.CorePlayCustomSpawnHostRuntime;
+  if (
+    !playCustomSpawnHostRuntime ||
+    typeof playCustomSpawnHostRuntime.resolvePlayCustomSpawnModeConfigFromContext !== "function"
+  ) {
+    throw new Error("CorePlayCustomSpawnHostRuntime is required");
+  }
   var playChallengeIntroRuntime = window.CorePlayChallengeIntroRuntime;
   if (
     !playChallengeIntroRuntime ||
@@ -86,49 +93,21 @@
     throw new Error("CoreStorageRuntime is required");
   }
   var CUSTOM_FOUR_RATE_STORAGE_KEY =
-    playCustomSpawnRuntime.PLAY_CUSTOM_FOUR_RATE_STORAGE_KEY || "custom_spawn_4x4_four_rate_v1";
+    playCustomSpawnHostRuntime.PLAY_CUSTOM_FOUR_RATE_STORAGE_KEY || "custom_spawn_4x4_four_rate_v1";
   var DEFAULT_MODE_KEY = "standard_4x4_pow2_no_undo";
 
-  function resolveLocalStorage() {
-    return storageRuntime.resolveStorageByName({
-      windowLike: typeof window !== "undefined" ? window : null,
-      storageName: "localStorage"
-    });
-  }
-
   function resolveCustomSpawnModeConfig(modeKey, modeConfig) {
-    var result = playCustomSpawnRuntime.resolvePlayCustomSpawnModeConfig({
+    return playCustomSpawnHostRuntime.resolvePlayCustomSpawnModeConfigFromContext({
       modeKey: modeKey,
       modeConfig: modeConfig,
       searchLike: window.location.search,
       pathname: window.location.pathname,
       hash: window.location.hash || "",
-      readStoredRate: function () {
-        return storageRuntime.safeReadStorageItem({
-          storageLike: resolveLocalStorage(),
-          key: CUSTOM_FOUR_RATE_STORAGE_KEY
-        });
-      },
-      writeStoredRate: function (rateText) {
-        storageRuntime.safeSetStorageItem({
-          storageLike: resolveLocalStorage(),
-          key: CUSTOM_FOUR_RATE_STORAGE_KEY,
-          value: String(rateText)
-        });
-      },
-      promptRate: function (defaultValueText) {
-        return window.prompt("请输入 4 率（0-100，可输入小数）", String(defaultValueText));
-      },
-      alertInvalidInput: function () {
-        window.alert("输入无效，请输入 0 到 100 的数字。");
-      },
-      replaceUrl: function (nextUrl) {
-        try {
-          window.history.replaceState(null, "", nextUrl);
-        } catch (_err) {}
-      }
+      storageKey: CUSTOM_FOUR_RATE_STORAGE_KEY,
+      windowLike: window,
+      storageRuntimeLike: storageRuntime,
+      playCustomSpawnRuntimeLike: playCustomSpawnRuntime
     });
-    return result.modeConfig || null;
   }
 
   function setupChallengeModeIntro(modeConfig) {
