@@ -97,6 +97,13 @@
   ) {
     throw new Error("CorePlayStartupPayloadRuntime is required");
   }
+  var playStartupContextRuntime = window.CorePlayStartupContextRuntime;
+  if (
+    !playStartupContextRuntime ||
+    typeof playStartupContextRuntime.resolvePlayStartupContext !== "function"
+  ) {
+    throw new Error("CorePlayStartupContextRuntime is required");
+  }
   var storageRuntime = window.CoreStorageRuntime;
   if (
     !storageRuntime ||
@@ -156,34 +163,23 @@
       defaultModeKey: DEFAULT_MODE_KEY,
       invalidModeRedirectUrl: "play.html?mode_key=standard_4x4_pow2_no_undo"
     });
-    var modeKey = entryPlan.modeKey;
-    var challengeId = entryPlan.challengeId;
-    var modeConfig = entryPlan.modeConfig;
-
-    var guardAfterEntry = playStartGuardRuntime.resolvePlayStartGuardState({
-      entryModeConfig: modeConfig,
-      resolvedModeConfig: modeConfig,
+    var startupContext = playStartupContextRuntime.resolvePlayStartupContext({
+      entryPlan: entryPlan,
       invalidModeRedirectUrl: "play.html?mode_key=standard_4x4_pow2_no_undo",
-      entryRedirectUrl: entryPlan.redirectUrl
+      invalidModeMessage: "无效模式，已回退到标准模式",
+      resolveModeConfig: resolveCustomSpawnModeConfig,
+      resolveGuardState: playStartGuardRuntime.resolvePlayStartGuardState
     });
-    if (guardAfterEntry.shouldAbort) {
-      if (guardAfterEntry.shouldAlert) {
-        alert(guardAfterEntry.alertMessage || "无效模式，已回退到标准模式");
+    if (startupContext.kind === "abort") {
+      if (startupContext.shouldAlert) {
+        alert(startupContext.alertMessage || "无效模式，已回退到标准模式");
       }
-      window.location.href =
-        guardAfterEntry.redirectUrl || "play.html?mode_key=standard_4x4_pow2_no_undo";
+      window.location.href = startupContext.redirectUrl || "play.html?mode_key=standard_4x4_pow2_no_undo";
       return null;
     }
 
-    modeConfig = resolveCustomSpawnModeConfig(modeKey, modeConfig);
-    var guardAfterResolve = playStartGuardRuntime.resolvePlayStartGuardState({
-      entryModeConfig: true,
-      resolvedModeConfig: modeConfig
-    });
-    if (guardAfterResolve.shouldAbort) {
-      window.location.href = guardAfterResolve.redirectUrl || "modes.html";
-      return null;
-    }
+    var modeConfig = startupContext.modeConfig;
+    var challengeId = startupContext.challengeId;
 
     window.GAME_MODE_CONFIG = modeConfig;
     window.GAME_CHALLENGE_CONTEXT = playChallengeContextRuntime.resolvePlayChallengeContext({

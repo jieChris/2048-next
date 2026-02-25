@@ -53,6 +53,7 @@
   - 新增 `src/bootstrap/play-challenge-context.ts` + `js/core_play_challenge_context_runtime.js`，`play_application.js` 委托 `GAME_CHALLENGE_CONTEXT` 组装
   - 新增 `src/bootstrap/play-start-guard.ts` + `js/core_play_start_guard_runtime.js`，`play_application.js` 委托无效模式与自定义模式失败分支的告警/跳转决策
   - 新增 `src/bootstrap/play-startup-payload.ts` + `js/core_play_startup_payload_runtime.js`，`play_application.js` 委托启动返回载荷组装
+  - 新增 `src/bootstrap/play-startup-context.ts` + `js/core_play_startup_context_runtime.js`，`play_application.js` 委托入口计划、guard 与自定义模式解析主流程编排
   - `play_application.js` 已移除 `mode_key/challenge_id` 本地转发包装函数，入口回调直接消费 `play-query` runtime
   - 新增 `src/bootstrap/play-header.ts` + `js/core_play_header_runtime.js`，`play_application.js` 委托顶部模式简介文案拼装
   - 新增 `src/bootstrap/play-header-host.ts` + `js/core_play_header_host_runtime.js`，`play_application.js` 委托 play 页头 DOM 写入与挑战简介入口编排
