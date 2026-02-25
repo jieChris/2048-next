@@ -43,6 +43,20 @@
   ) {
     throw new Error("CoreHistoryBurnInRuntime is required");
   }
+  var historyCanaryViewRuntime = window.CoreHistoryCanaryViewRuntime;
+  if (
+    !historyCanaryViewRuntime ||
+    typeof historyCanaryViewRuntime.resolveHistoryCanaryViewState !== "function"
+  ) {
+    throw new Error("CoreHistoryCanaryViewRuntime is required");
+  }
+  var historySummaryRuntime = window.CoreHistorySummaryRuntime;
+  if (
+    !historySummaryRuntime ||
+    typeof historySummaryRuntime.resolveHistorySummaryText !== "function"
+  ) {
+    throw new Error("CoreHistorySummaryRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -95,12 +109,6 @@
 
   function isPlainObject(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
-  }
-
-  function formatAdapterMode(mode) {
-    if (mode === "core-adapter") return "core-adapter";
-    if (mode === "legacy-bridge") return "legacy-bridge";
-    return "-";
   }
 
   function getStorageValue(key) {
@@ -171,17 +179,12 @@
   function buildSummary(result) {
     var summary = el("history-summary");
     if (!summary) return;
-    var total = result && Number.isFinite(result.total) ? result.total : 0;
-    var filterMap = {
-      all: "全部",
-      mismatch: "仅不一致",
-      match: "仅一致",
-      incomplete: "样本不足"
-    };
-    summary.textContent = "共 " + total + " 条记录" +
-      " · 当前第 " + state.page + " 页" +
-      " · 每页 " + state.pageSize + " 条" +
-      " · 诊断筛选: " + (filterMap[state.adapterParityFilter] || "全部");
+    summary.textContent = historySummaryRuntime.resolveHistorySummaryText({
+      total: result && result.total,
+      page: state.page,
+      pageSize: state.pageSize,
+      adapterParityFilter: state.adapterParityFilter
+    });
   }
 
   function renderBurnInSummary(summary) {
@@ -240,24 +243,6 @@
         loadHistory(true);
       });
     }
-  }
-
-  function formatModeSource(source) {
-    if (source === "explicit") return "显式参数";
-    if (source === "force-legacy") return "强制回滚";
-    if (source === "global") return "全局变量";
-    if (source === "query") return "URL 参数";
-    if (source === "storage") return "本地存储";
-    if (source === "default") return "默认策略";
-    return "默认回退";
-  }
-
-  function formatForceSource(source) {
-    if (source === "input") return "输入参数";
-    if (source === "global") return "全局变量";
-    if (source === "query") return "URL 参数";
-    if (source === "storage") return "本地存储";
-    return "-";
   }
 
   function readCanaryPolicySnapshot() {
@@ -336,25 +321,22 @@
 
     var policy = readCanaryPolicySnapshot();
     var stored = readStoredPolicyKeys();
-    var gateClass = policy.effectiveMode === "core-adapter"
-      ? "history-burnin-gate-pass"
-      : "history-burnin-gate-warn";
-    var gateText = policy.effectiveMode === "core-adapter" ? "core-adapter 生效" : "legacy-bridge 生效";
+    var canaryView = historyCanaryViewRuntime.resolveHistoryCanaryViewState(policy, stored);
 
     panel.innerHTML =
       "<div class='history-canary-head'>" +
         "<div class='history-canary-title'>Canary 策略控制</div>" +
-        "<span class='history-burnin-gate " + gateClass + "'>" + escapeHtml(gateText) + "</span>" +
+        "<span class='history-burnin-gate " + canaryView.gateClass + "'>" + escapeHtml(canaryView.gateText) + "</span>" +
       "</div>" +
       "<div class='history-canary-grid'>" +
-        "<span>当前有效模式: " + escapeHtml(formatAdapterMode(policy.effectiveMode)) + "</span>" +
-        "<span>生效来源: " + escapeHtml(formatModeSource(policy.modeSource)) + "</span>" +
-        "<span>强制回滚: " + escapeHtml(policy.forceLegacyEnabled ? "开启" : "关闭") + "</span>" +
-        "<span>回滚来源: " + escapeHtml(formatForceSource(policy.forceLegacySource)) + "</span>" +
+        "<span>当前有效模式: " + escapeHtml(canaryView.effectiveModeText) + "</span>" +
+        "<span>生效来源: " + escapeHtml(canaryView.modeSourceText) + "</span>" +
+        "<span>强制回滚: " + escapeHtml(canaryView.forceLegacyText) + "</span>" +
+        "<span>回滚来源: " + escapeHtml(canaryView.forceSourceText) + "</span>" +
       "</div>" +
       "<div class='history-canary-note'>" +
-        "storage(engine_adapter_default_mode)=" + escapeHtml(String(stored.defaultMode || "-")) +
-        " · storage(engine_adapter_force_legacy)=" + escapeHtml(String(stored.forceLegacy || "-")) +
+        "storage(engine_adapter_default_mode)=" + escapeHtml(canaryView.storedDefaultText) +
+        " · storage(engine_adapter_force_legacy)=" + escapeHtml(canaryView.storedForceLegacyText) +
       "</div>" +
       "<div class='history-canary-note'>" +
         "说明: 修改后需刷新任一对局页（index/play/undo/capped/practice/replay）以应用新策略。" +

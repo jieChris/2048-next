@@ -658,6 +658,87 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.policyGateText.length).toBeGreaterThan(0);
   });
 
+  test("history page delegates canary view modeling to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyCanaryViewCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryCanaryViewRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryCanaryViewState" && typeof value === "function") {
+            proxyTarget[prop] = function (policy: unknown, stored: unknown) {
+              (window as any).__historyCanaryViewCallCount =
+                Number((window as any).__historyCanaryViewCallCount || 0) + 1;
+              return (value as (p: unknown, s: unknown) => unknown)(policy, stored);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const policyBanner = document.querySelector("#history-canary-policy");
+      return {
+        hasRuntime: Boolean((window as any).CoreHistoryCanaryViewRuntime?.resolveHistoryCanaryViewState),
+        canaryViewCallCount: Number((window as any).__historyCanaryViewCallCount || 0),
+        policyText: policyBanner && policyBanner.textContent ? policyBanner.textContent.trim() : ""
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.canaryViewCallCount).toBeGreaterThan(0);
+    expect(snapshot.policyText).toContain("Canary 策略控制");
+  });
+
+  test("history page delegates summary text modeling to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historySummaryCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistorySummaryRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "resolveHistorySummaryText" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historySummaryCallCount =
+                Number((window as any).__historySummaryCallCount || 0) + 1;
+              return (value as (state: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => ({
+      hasRuntime: Boolean((window as any).CoreHistorySummaryRuntime?.resolveHistorySummaryText),
+      summaryCallCount: Number((window as any).__historySummaryCallCount || 0),
+      summaryText: (document.querySelector("#history-summary")?.textContent || "").trim()
+    }));
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.summaryCallCount).toBeGreaterThan(0);
+    expect(snapshot.summaryText).toContain("诊断筛选:");
+  });
+
   test("history page delegates adapter diagnostics rendering to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyAdapterBadgeCallCount = 0;
