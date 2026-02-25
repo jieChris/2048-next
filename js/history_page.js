@@ -119,6 +119,16 @@
   ) {
     throw new Error("CoreHistoryImportRuntime is required");
   }
+  var historyImportFileRuntime = window.CoreHistoryImportFileRuntime;
+  if (
+    !historyImportFileRuntime ||
+    typeof historyImportFileRuntime.resolveHistoryImportSelectedFile !== "function" ||
+    typeof historyImportFileRuntime.resolveHistoryImportPayloadText !== "function" ||
+    typeof historyImportFileRuntime.resolveHistoryImportReadEncoding !== "function" ||
+    typeof historyImportFileRuntime.resolveHistoryImportInputResetValue !== "function"
+  ) {
+    throw new Error("CoreHistoryImportFileRuntime is required");
+  }
   var historyRecordActionsRuntime = window.CoreHistoryRecordActionsRuntime;
   if (
     !historyRecordActionsRuntime ||
@@ -627,13 +637,14 @@
         });
       }
       importInput.addEventListener("change", function () {
-        var file = importInput.files && importInput.files[0];
+        var file = historyImportFileRuntime.resolveHistoryImportSelectedFile(importInput.files);
         if (!file) return;
         var reader = new FileReader();
         reader.onload = function () {
           try {
             var merge = historyImportRuntime.resolveHistoryImportMergeFlag(importMode);
-            var result = window.LocalHistoryStore.importRecords(String(reader.result || ""), { merge: merge });
+            var payloadText = historyImportFileRuntime.resolveHistoryImportPayloadText(reader.result);
+            var result = window.LocalHistoryStore.importRecords(payloadText, { merge: merge });
             setStatus(historyImportRuntime.resolveHistoryImportSuccessNotice(result), false);
             loadHistory(true);
           } catch (error) {
@@ -643,8 +654,8 @@
         reader.onerror = function () {
           setStatus(historyImportRuntime.resolveHistoryImportReadErrorNotice(), true);
         };
-        reader.readAsText(file, "utf-8");
-        importInput.value = "";
+        reader.readAsText(file, historyImportFileRuntime.resolveHistoryImportReadEncoding());
+        importInput.value = historyImportFileRuntime.resolveHistoryImportInputResetValue();
       });
     }
 

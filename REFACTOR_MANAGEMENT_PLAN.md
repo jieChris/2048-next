@@ -215,6 +215,7 @@
   - 新增 `src/bootstrap/history-query.ts` + `js/core_history_query_runtime.js`，`history_page.js` 委托筛选状态归一化、list/burn-in 查询参数拼装与分页按钮状态计算
   - 新增 `src/bootstrap/history-record-view.ts` + `js/core_history_record_view_runtime.js`，`history_page.js` 委托列表头展示态（mode/score/best/duration/ended）模型计算
   - 新增 `src/bootstrap/history-import.ts` + `js/core_history_import_runtime.js`，`history_page.js` 委托导入动作决策（merge/replace/confirm）与导入成功/失败提示文案
+  - 新增 `src/bootstrap/history-import-file.ts` + `js/core_history_import_file_runtime.js`，`history_page.js` 委托导入文件选择、读取编码、payload 文本归一化与 input reset 值决策
   - 新增 `src/bootstrap/history-record-actions.ts` + `js/core_history_record_actions_runtime.js`，`history_page.js` 委托记录项动作决策（回放链接、删除确认计划、删除成功/失败提示文案）
   - 新增 `src/bootstrap/history-toolbar.ts` + `js/core_history_toolbar_runtime.js`，`history_page.js` 委托工具栏动作决策（导出日期标签/文件名、mismatch 导出查询、清空确认计划与提示文案）
   - 新增 `src/bootstrap/history-toolbar-events.ts` + `js/core_history_toolbar_events_runtime.js`，`history_page.js` 委托分页步进决策、筛选控件 reload 绑定列表与关键词 Enter 触发判定
