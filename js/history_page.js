@@ -119,6 +119,13 @@
   ) {
     throw new Error("CoreHistoryRecordViewRuntime is required");
   }
+  var historyRecordItemRuntime = window.CoreHistoryRecordItemRuntime;
+  if (
+    !historyRecordItemRuntime ||
+    typeof historyRecordItemRuntime.resolveHistoryRecordItemHtml !== "function"
+  ) {
+    throw new Error("CoreHistoryRecordItemRuntime is required");
+  }
   var historyImportRuntime = window.CoreHistoryImportRuntime;
   if (
     !historyImportRuntime ||
@@ -396,22 +403,16 @@
           endedAt: item && item.ended_at
         });
 
-        node.innerHTML =
-          "<div class='history-item-head'>" +
-            "<strong>" + headState.modeText + "</strong>" +
-            buildAdapterBadgeHtml(item) +
-            "<span>分数: " + headState.score + "</span>" +
-            "<span>最大块: " + headState.bestTile + "</span>" +
-            "<span>时长: " + headState.durationText + "</span>" +
-            "<span>结束: " + headState.endedText + "</span>" +
-          "</div>" +
-          "<div class='history-item-actions'>" +
-            "<button class='replay-button history-replay-btn'>回放</button>" +
-            "<button class='replay-button history-export-btn'>导出</button>" +
-            "<button class='replay-button history-delete-btn'>删除</button>" +
-          "</div>" +
-          buildAdapterDiagnosticsHtml(item) +
-          boardToHtml(item.final_board, item.board_width, item.board_height);
+        node.innerHTML = historyRecordItemRuntime.resolveHistoryRecordItemHtml({
+          modeText: headState.modeText,
+          score: headState.score,
+          bestTile: headState.bestTile,
+          durationText: headState.durationText,
+          endedText: headState.endedText,
+          adapterBadgeHtml: buildAdapterBadgeHtml(item),
+          adapterDiagnosticsHtml: buildAdapterDiagnosticsHtml(item),
+          boardHtml: boardToHtml(item.final_board, item.board_width, item.board_height)
+        });
 
         var replayBtn = node.querySelector(".history-replay-btn");
         if (replayBtn) {
