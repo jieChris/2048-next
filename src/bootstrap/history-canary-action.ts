@@ -18,6 +18,19 @@ export interface ApplyHistoryCanaryPolicyActionInput {
   forceLegacyStorageKey: unknown;
 }
 
+export interface HistoryCanaryPolicyApplyFeedbackInput {
+  ok: unknown;
+  successNotice: unknown;
+  failureNotice: unknown;
+}
+
+export interface HistoryCanaryPolicyApplyFeedbackState {
+  shouldReload: boolean;
+  reloadResetPage: boolean;
+  statusText: string;
+  isError: boolean;
+}
+
 function asRuntime(value: unknown): LegacyAdapterRuntimeLike | null {
   if (!value || typeof value !== "object") return null;
   return value as LegacyAdapterRuntimeLike;
@@ -101,4 +114,29 @@ export function applyHistoryCanaryPolicyAction(input: unknown): boolean {
 
 export function resolveHistoryCanaryPolicyUpdateFailureNotice(): string {
   return "策略更新失败：请检查浏览器本地存储权限";
+}
+
+export function resolveHistoryCanaryPolicyApplyFeedbackState(
+  input: unknown
+): HistoryCanaryPolicyApplyFeedbackState {
+  const payload =
+    input && typeof input === "object" ? (input as HistoryCanaryPolicyApplyFeedbackInput) : null;
+  const ok = payload && payload.ok === true;
+  if (ok) {
+    return {
+      shouldReload: true,
+      reloadResetPage: false,
+      statusText: String((payload && payload.successNotice) || ""),
+      isError: false
+    };
+  }
+
+  return {
+    shouldReload: false,
+    reloadResetPage: false,
+    statusText: String(
+      (payload && payload.failureNotice) || resolveHistoryCanaryPolicyUpdateFailureNotice()
+    ),
+    isError: true
+  };
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyHistoryCanaryPolicyAction,
+  resolveHistoryCanaryPolicyApplyFeedbackState,
   resolveHistoryCanaryPolicyUpdateFailureNotice
 } from "../../src/bootstrap/history-canary-action";
 
@@ -75,5 +76,33 @@ describe("bootstrap history canary action", () => {
     expect(resolveHistoryCanaryPolicyUpdateFailureNotice()).toBe(
       "策略更新失败：请检查浏览器本地存储权限"
     );
+  });
+
+  it("resolves apply feedback state", () => {
+    expect(
+      resolveHistoryCanaryPolicyApplyFeedbackState({
+        ok: true,
+        successNotice: "策略已更新",
+        failureNotice: "失败"
+      })
+    ).toEqual({
+      shouldReload: true,
+      reloadResetPage: false,
+      statusText: "策略已更新",
+      isError: false
+    });
+
+    expect(
+      resolveHistoryCanaryPolicyApplyFeedbackState({
+        ok: false,
+        successNotice: "策略已更新",
+        failureNotice: "失败"
+      })
+    ).toEqual({
+      shouldReload: false,
+      reloadResetPage: false,
+      statusText: "失败",
+      isError: true
+    });
   });
 });

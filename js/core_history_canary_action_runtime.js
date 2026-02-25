@@ -73,8 +73,32 @@
     return "策略更新失败：请检查浏览器本地存储权限";
   }
 
+  function resolveHistoryCanaryPolicyApplyFeedbackState(input) {
+    var payload = input && typeof input === "object" ? input : null;
+    var ok = payload && payload.ok === true;
+    if (ok) {
+      return {
+        shouldReload: true,
+        reloadResetPage: false,
+        statusText: String((payload && payload.successNotice) || ""),
+        isError: false
+      };
+    }
+
+    return {
+      shouldReload: false,
+      reloadResetPage: false,
+      statusText: String(
+        (payload && payload.failureNotice) || resolveHistoryCanaryPolicyUpdateFailureNotice()
+      ),
+      isError: true
+    };
+  }
+
   global.CoreHistoryCanaryActionRuntime = global.CoreHistoryCanaryActionRuntime || {};
   global.CoreHistoryCanaryActionRuntime.applyHistoryCanaryPolicyAction = applyHistoryCanaryPolicyAction;
   global.CoreHistoryCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice =
     resolveHistoryCanaryPolicyUpdateFailureNotice;
+  global.CoreHistoryCanaryActionRuntime.resolveHistoryCanaryPolicyApplyFeedbackState =
+    resolveHistoryCanaryPolicyApplyFeedbackState;
 })(typeof window !== "undefined" ? window : undefined);

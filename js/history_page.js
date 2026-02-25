@@ -32,7 +32,8 @@
   if (
     !historyCanaryActionRuntime ||
     typeof historyCanaryActionRuntime.applyHistoryCanaryPolicyAction !== "function" ||
-    typeof historyCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice !== "function"
+    typeof historyCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice !== "function" ||
+    typeof historyCanaryActionRuntime.resolveHistoryCanaryPolicyApplyFeedbackState !== "function"
   ) {
     throw new Error("CoreHistoryCanaryActionRuntime is required");
   }
@@ -374,12 +375,13 @@
         var target = event.currentTarget;
         var action = historyCanaryPanelRuntime.resolveHistoryCanaryActionName(target);
         var ok = runCanaryPolicyAction(action || "");
-        if (!ok) {
-          setStatus(historyCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice(), true);
-          return;
-        }
-        loadHistory(false);
-        setStatus(historyCanaryPolicyRuntime.resolveCanaryPolicyActionNotice(action || ""), false);
+        var feedbackState = historyCanaryActionRuntime.resolveHistoryCanaryPolicyApplyFeedbackState({
+          ok: ok,
+          successNotice: historyCanaryPolicyRuntime.resolveCanaryPolicyActionNotice(action || ""),
+          failureNotice: historyCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice()
+        });
+        if (feedbackState.shouldReload) loadHistory(feedbackState.reloadResetPage);
+        setStatus(feedbackState.statusText, feedbackState.isError);
       });
     }
   }
