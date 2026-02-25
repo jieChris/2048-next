@@ -106,6 +106,20 @@
   ) {
     throw new Error("CoreHistoryRecordActionsRuntime is required");
   }
+  var historyToolbarRuntime = window.CoreHistoryToolbarRuntime;
+  if (
+    !historyToolbarRuntime ||
+    typeof historyToolbarRuntime.resolveHistoryExportDateTag !== "function" ||
+    typeof historyToolbarRuntime.resolveHistoryExportAllFileName !== "function" ||
+    typeof historyToolbarRuntime.resolveHistoryExportAllNotice !== "function" ||
+    typeof historyToolbarRuntime.resolveHistoryMismatchExportQuery !== "function" ||
+    typeof historyToolbarRuntime.resolveHistoryMismatchExportEmptyNotice !== "function" ||
+    typeof historyToolbarRuntime.resolveHistoryMismatchExportFileName !== "function" ||
+    typeof historyToolbarRuntime.resolveHistoryMismatchExportSuccessNotice !== "function" ||
+    typeof historyToolbarRuntime.resolveHistoryClearAllActionState !== "function"
+  ) {
+    throw new Error("CoreHistoryToolbarRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -601,9 +615,10 @@
       exportAllBtn.addEventListener("click", function () {
         if (!window.LocalHistoryStore) return;
         var payload = window.LocalHistoryStore.exportRecords();
-        var dateTag = new Date().toISOString().slice(0, 10);
-        window.LocalHistoryStore.download("2048_local_history_" + dateTag + ".json", payload);
-        setStatus("已导出全部历史记录", false);
+        var dateTag = historyToolbarRuntime.resolveHistoryExportDateTag(new Date());
+        var fileName = historyToolbarRuntime.resolveHistoryExportAllFileName(dateTag);
+        window.LocalHistoryStore.download(fileName, payload);
+        setStatus(historyToolbarRuntime.resolveHistoryExportAllNotice(), false);
       });
     }
 
@@ -612,29 +627,31 @@
       exportMismatchBtn.addEventListener("click", function () {
         if (!window.LocalHistoryStore) return;
         readFilters();
-        var ids = collectRecordIdsForExport({
-          mode_key: state.modeKey,
+        var queryOptions = historyToolbarRuntime.resolveHistoryMismatchExportQuery({
+          modeKey: state.modeKey,
           keyword: state.keyword,
-          sort_by: state.sortBy,
-          adapter_parity_filter: "mismatch"
+          sortBy: state.sortBy
         });
+        var ids = collectRecordIdsForExport(queryOptions);
         if (!ids.length) {
-          setStatus("没有可导出的 A/B 不一致记录", false);
+          setStatus(historyToolbarRuntime.resolveHistoryMismatchExportEmptyNotice(), false);
           return;
         }
         var payload = window.LocalHistoryStore.exportRecords(ids);
-        var dateTag = new Date().toISOString().slice(0, 10);
-        window.LocalHistoryStore.download("2048_local_history_mismatch_" + dateTag + ".json", payload);
-        setStatus("已导出 A/B 不一致记录 " + ids.length + " 条", false);
+        var dateTag = historyToolbarRuntime.resolveHistoryExportDateTag(new Date());
+        var fileName = historyToolbarRuntime.resolveHistoryMismatchExportFileName(dateTag);
+        window.LocalHistoryStore.download(fileName, payload);
+        setStatus(historyToolbarRuntime.resolveHistoryMismatchExportSuccessNotice(ids.length), false);
       });
     }
 
     var clearAllBtn = el("history-clear-all-btn");
     if (clearAllBtn) {
       clearAllBtn.addEventListener("click", function () {
-        if (!window.confirm("确认清空全部本地历史记录？此操作不可撤销。")) return;
+        var actionState = historyToolbarRuntime.resolveHistoryClearAllActionState();
+        if (actionState.requiresConfirm && !window.confirm(actionState.confirmMessage)) return;
         window.LocalHistoryStore.clearAll();
-        setStatus("已清空全部历史记录", false);
+        setStatus(actionState.successNotice, false);
         loadHistory(true);
       });
     }

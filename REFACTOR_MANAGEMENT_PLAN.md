@@ -213,6 +213,7 @@
   - 新增 `src/bootstrap/history-record-view.ts` + `js/core_history_record_view_runtime.js`，`history_page.js` 委托列表头展示态（mode/score/best/duration/ended）模型计算
   - 新增 `src/bootstrap/history-import.ts` + `js/core_history_import_runtime.js`，`history_page.js` 委托导入动作决策（merge/replace/confirm）与导入成功/失败提示文案
   - 新增 `src/bootstrap/history-record-actions.ts` + `js/core_history_record_actions_runtime.js`，`history_page.js` 委托记录项动作决策（回放链接、删除确认计划、删除成功/失败提示文案）
+  - 新增 `src/bootstrap/history-toolbar.ts` + `js/core_history_toolbar_runtime.js`，`history_page.js` 委托工具栏动作决策（导出日期标签/文件名、mismatch 导出查询、清空确认计划与提示文案）
   - 新增 `src/bootstrap/history-adapter-diagnostics.ts` + `js/core_history_adapter_diagnostics_runtime.js`，`history_page.js` 委托 adapter 诊断徽标与文案行模型计算
   - 新增 `src/bootstrap/history-burnin.ts` + `js/core_history_burnin_runtime.js`，`history_page.js` 委托 burn-in 汇总 gate 状态、百分比文案与连续窗口统计模型计算
   - burn-in gate 已支持 sustained window 判定

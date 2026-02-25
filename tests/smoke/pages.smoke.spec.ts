@@ -904,6 +904,69 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.actionCallCount).toBeGreaterThan(1);
   });
 
+  test("history page delegates toolbar action decisions to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyToolbarMismatchQueryCallCount = 0;
+      (window as any).__historyToolbarClearAllCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryToolbarRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryMismatchExportQuery" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyToolbarMismatchQueryCallCount =
+                Number((window as any).__historyToolbarMismatchQueryCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          if (prop === "resolveHistoryClearAllActionState" && typeof value === "function") {
+            proxyTarget[prop] = function () {
+              (window as any).__historyToolbarClearAllCallCount =
+                Number((window as any).__historyToolbarClearAllCallCount || 0) + 1;
+              return (value as () => unknown)();
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    const snapshot = await page.evaluate(() => {
+      const oldConfirm = window.confirm;
+      window.confirm = () => false;
+
+      const mismatchBtn = document.querySelector("#history-export-mismatch-btn") as HTMLButtonElement | null;
+      if (mismatchBtn && typeof mismatchBtn.click === "function") mismatchBtn.click();
+
+      const clearAllBtn = document.querySelector("#history-clear-all-btn") as HTMLButtonElement | null;
+      if (clearAllBtn && typeof clearAllBtn.click === "function") clearAllBtn.click();
+
+      window.confirm = oldConfirm;
+      return {
+        hasRuntime: Boolean(
+          (window as any).CoreHistoryToolbarRuntime?.resolveHistoryMismatchExportQuery &&
+            (window as any).CoreHistoryToolbarRuntime?.resolveHistoryClearAllActionState
+        ),
+        mismatchQueryCallCount: Number((window as any).__historyToolbarMismatchQueryCallCount || 0),
+        clearAllCallCount: Number((window as any).__historyToolbarClearAllCallCount || 0)
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.mismatchQueryCallCount).toBeGreaterThan(0);
+    expect(snapshot.clearAllCallCount).toBeGreaterThan(0);
+  });
+
   test("history page delegates record delete action decisions to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyDeleteActionCallCount = 0;
