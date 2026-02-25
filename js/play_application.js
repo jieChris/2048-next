@@ -104,6 +104,13 @@
   ) {
     throw new Error("CorePlayStartupContextRuntime is required");
   }
+  var playStartupHostRuntime = window.CorePlayStartupHostRuntime;
+  if (
+    !playStartupHostRuntime ||
+    typeof playStartupHostRuntime.resolvePlayStartupFromContext !== "function"
+  ) {
+    throw new Error("CorePlayStartupHostRuntime is required");
+  }
   var storageRuntime = window.CoreStorageRuntime;
   if (
     !storageRuntime ||
@@ -157,47 +164,20 @@
   }
 
   bootstrap.startGameOnAnimationFrame(function () {
-    var entryPlan = playEntryRuntime.resolvePlayEntryPlan({
-      searchLike: window.location.search,
-      modeCatalog: window.ModeCatalog,
+    return playStartupHostRuntime.resolvePlayStartupFromContext({
+      windowLike: window,
       defaultModeKey: DEFAULT_MODE_KEY,
-      invalidModeRedirectUrl: "play.html?mode_key=standard_4x4_pow2_no_undo"
-    });
-    var startupContext = playStartupContextRuntime.resolvePlayStartupContext({
-      entryPlan: entryPlan,
       invalidModeRedirectUrl: "play.html?mode_key=standard_4x4_pow2_no_undo",
       invalidModeMessage: "无效模式，已回退到标准模式",
+      defaultBoardWidth: 4,
+      inputManagerCtor: KeyboardInputManager,
+      resolveEntryPlan: playEntryRuntime.resolvePlayEntryPlan,
+      resolveStartupContext: playStartupContextRuntime.resolvePlayStartupContext,
       resolveModeConfig: resolveCustomSpawnModeConfig,
-      resolveGuardState: playStartGuardRuntime.resolvePlayStartGuardState
+      resolveGuardState: playStartGuardRuntime.resolvePlayStartGuardState,
+      resolveChallengeContext: playChallengeContextRuntime.resolvePlayChallengeContext,
+      applyHeader: setupHeader,
+      resolveStartupPayload: playStartupPayloadRuntime.resolvePlayStartupPayload
     });
-    if (startupContext.kind === "abort") {
-      if (startupContext.shouldAlert) {
-        alert(startupContext.alertMessage || "无效模式，已回退到标准模式");
-      }
-      window.location.href = startupContext.redirectUrl || "play.html?mode_key=standard_4x4_pow2_no_undo";
-      return null;
-    }
-
-    var modeConfig = startupContext.modeConfig;
-    var challengeId = startupContext.challengeId;
-
-    window.GAME_MODE_CONFIG = modeConfig;
-    window.GAME_CHALLENGE_CONTEXT = playChallengeContextRuntime.resolvePlayChallengeContext({
-      challengeId: challengeId,
-      modeConfig: modeConfig
-    });
-    setupHeader(modeConfig);
-    var startupPayload = playStartupPayloadRuntime.resolvePlayStartupPayload({
-      modeConfig: modeConfig,
-      inputManagerCtor: KeyboardInputManager,
-      defaultBoardWidth: 4
-    });
-    if (startupPayload) return startupPayload;
-    return {
-      modeKey: modeConfig.key,
-      modeConfig: modeConfig,
-      inputManagerCtor: KeyboardInputManager,
-      defaultBoardWidth: 4
-    };
   });
 })();
