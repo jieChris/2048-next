@@ -36,6 +36,13 @@
   ) {
     throw new Error("CoreHistoryAdapterDiagnosticsRuntime is required");
   }
+  var historyBurnInRuntime = window.CoreHistoryBurnInRuntime;
+  if (
+    !historyBurnInRuntime ||
+    typeof historyBurnInRuntime.resolveHistoryBurnInSummaryState !== "function"
+  ) {
+    throw new Error("CoreHistoryBurnInRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -88,11 +95,6 @@
 
   function isPlainObject(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
-  }
-
-  function toFiniteNumberOrNull(value) {
-    var num = Number(value);
-    return Number.isFinite(num) ? num : null;
   }
 
   function formatAdapterMode(mode) {
@@ -182,60 +184,17 @@
       " · 诊断筛选: " + (filterMap[state.adapterParityFilter] || "全部");
   }
 
-  function formatPercent(value) {
-    var num = toFiniteNumberOrNull(value);
-    if (num === null) return "-";
-    return num.toFixed(2) + "%";
-  }
-
-  function getBurnInGateLabel(status) {
-    if (status === "pass") return "达标";
-    if (status === "fail") return "未达标";
-    return "样本不足";
-  }
-
-  function getBurnInGateClass(status) {
-    if (status === "pass") return "history-burnin-gate-pass";
-    if (status === "fail") return "history-burnin-gate-fail";
-    return "history-burnin-gate-warn";
-  }
-
-  function getSustainedGateLabel(status) {
-    if (status === "pass") return "连续达标";
-    if (status === "fail") return "连续未达标";
-    if (status === "insufficient_window") return "窗口不足";
-    return "样本不足";
-  }
-
   function renderBurnInSummary(summary) {
     var panel = el("history-burnin-summary");
     if (!panel) return;
-    if (!isPlainObject(summary)) {
+    var burnInState = historyBurnInRuntime.resolveHistoryBurnInSummaryState(summary);
+    if (!burnInState || burnInState.hasSummary !== true) {
       panel.innerHTML = "<div class='history-burnin-empty'>暂无 burn-in 数据</div>";
       return;
     }
 
-    var limitText = summary.sampleLimit === null
-      ? ("全部 " + summary.evaluatedRecords + " 条")
-      : ("最近 " + summary.evaluatedRecords + " 条（窗口 " + summary.sampleLimit + "）");
-    var gateLabel = getBurnInGateLabel(summary.gateStatus);
-    var gateClass = getBurnInGateClass(summary.gateStatus);
-    var sustainedGateLabel = getSustainedGateLabel(summary.sustainedGateStatus);
-    var sustainedGateClass = getBurnInGateClass(
-      summary.sustainedGateStatus === "pass" || summary.sustainedGateStatus === "fail"
-        ? summary.sustainedGateStatus
-        : "warn"
-    );
-    var sustainedWindowSize = Number.isFinite(summary.sustainedWindowSize) ? summary.sustainedWindowSize : 0;
-    var sustainedRequired = Number.isFinite(summary.sustainedWindows) ? summary.sustainedWindows : 0;
-    var sustainedEvaluated = Number.isFinite(summary.sustainedEvaluatedWindows)
-      ? summary.sustainedEvaluatedWindows
-      : 0;
-    var sustainedConsecutive = Number.isFinite(summary.sustainedConsecutivePass)
-      ? summary.sustainedConsecutivePass
-      : 0;
     var mismatchAction = "";
-    if ((summary.mismatch || 0) > 0) {
+    if (burnInState.mismatchActionEnabled) {
       mismatchAction = "<button class='replay-button history-burnin-focus-mismatch'>仅看不一致</button>";
     }
 
@@ -243,32 +202,32 @@
       "<div class='history-burnin-head'>" +
         "<div class='history-burnin-title'>Cutover Burn-in 统计</div>" +
         "<div class='history-burnin-gates'>" +
-          "<span class='history-burnin-gate " + gateClass + "'>单窗口: " + escapeHtml(gateLabel) + "</span>" +
-          "<span class='history-burnin-gate " + sustainedGateClass + "'>连续窗口: " + escapeHtml(sustainedGateLabel) + "</span>" +
+          "<span class='history-burnin-gate " + burnInState.gateClass + "'>单窗口: " + escapeHtml(burnInState.gateLabel) + "</span>" +
+          "<span class='history-burnin-gate " + burnInState.sustainedGateClass + "'>连续窗口: " + escapeHtml(burnInState.sustainedGateLabel) + "</span>" +
         "</div>" +
       "</div>" +
       "<div class='history-burnin-grid'>" +
-        "<span>采样: " + escapeHtml(limitText) + "</span>" +
+        "<span>采样: " + escapeHtml(burnInState.limitText) + "</span>" +
         "<span>诊断记录 " + escapeHtml(summary.withDiagnostics) + "</span>" +
         "<span>可比较样本 " + escapeHtml(summary.comparable) + "</span>" +
         "<span>一致 " + escapeHtml(summary.match) + "</span>" +
         "<span>不一致 " + escapeHtml(summary.mismatch) + "</span>" +
         "<span>样本不足 " + escapeHtml(summary.incomplete) + "</span>" +
-        "<span>不一致率 " + escapeHtml(formatPercent(summary.mismatchRate)) + "</span>" +
+        "<span>不一致率 " + escapeHtml(burnInState.mismatchRateText) + "</span>" +
       "</div>" +
       "<div class='history-burnin-note'>" +
         "门槛: 可比较 >= " + escapeHtml(summary.minComparable) +
-        "，不一致率 <= " + escapeHtml(formatPercent(summary.maxMismatchRate)) +
+        "，不一致率 <= " + escapeHtml(burnInState.maxMismatchRateText) +
       "</div>" +
       "<div class='history-burnin-note'>" +
-        "连续门槛: 最近 " + escapeHtml(sustainedRequired) +
-        " 个窗口（每窗口 " + escapeHtml(sustainedWindowSize) +
+        "连续门槛: 最近 " + escapeHtml(burnInState.sustainedRequired) +
+        " 个窗口（每窗口 " + escapeHtml(burnInState.sustainedWindowSize) +
         " 条）均需单窗口达标" +
       "</div>" +
       "<div class='history-burnin-note'>" +
-        "连续通过 " + escapeHtml(sustainedConsecutive) +
-        "/" + escapeHtml(sustainedRequired) +
-        "，已评估窗口 " + escapeHtml(sustainedEvaluated) +
+        "连续通过 " + escapeHtml(burnInState.sustainedConsecutive) +
+        "/" + escapeHtml(burnInState.sustainedRequired) +
+        "，已评估窗口 " + escapeHtml(burnInState.sustainedEvaluated) +
       "</div>" +
       (mismatchAction ? "<div class='history-burnin-actions'>" + mismatchAction + "</div>" : "");
 

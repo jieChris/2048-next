@@ -763,6 +763,93 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.diagnosticsCount).toBe(1);
   });
 
+  test("history page delegates burn-in summary modeling to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyBurnInCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryBurnInRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryBurnInSummaryState" && typeof value === "function") {
+            proxyTarget[prop] = function (summary: unknown) {
+              (window as any).__historyBurnInCallCount =
+                Number((window as any).__historyBurnInCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(summary);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    await page.evaluate(() => {
+      const store = (window as any).LocalHistoryStore;
+      if (!store || typeof store.saveRecord !== "function" || typeof store.clearAll !== "function") {
+        throw new Error("LocalHistoryStore unavailable");
+      }
+      store.clearAll();
+      store.saveRecord({
+        mode: "local",
+        mode_key: "standard_4x4_pow2_no_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        undo_enabled: false,
+        rank_policy: "ranked",
+        score: 128,
+        best_tile: 16,
+        duration_ms: 8000,
+        final_board: [
+          [2, 4, 8, 16],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        ended_at: new Date().toISOString(),
+        replay_string: "",
+        adapter_parity_report_v1: {
+          adapterMode: "core-adapter",
+          lastScoreFromSnapshot: 130,
+          undoUsedFromSnapshot: 0,
+          scoreDelta: 2,
+          isScoreAligned: false
+        },
+        adapter_parity_ab_diff_v1: {
+          comparable: true,
+          scoreDelta: 2,
+          undoUsedDelta: 0,
+          overEventsDelta: 0,
+          undoEventsDelta: 0,
+          wonEventsDelta: 0,
+          isScoreMatch: false,
+          bothScoreAligned: false
+        }
+      });
+    });
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(200);
+
+    const snapshot = await page.evaluate(() => ({
+      hasRuntime: Boolean((window as any).CoreHistoryBurnInRuntime?.resolveHistoryBurnInSummaryState),
+      burnInCallCount: Number((window as any).__historyBurnInCallCount || 0),
+      burnInText: (document.querySelector("#history-burnin-summary")?.textContent || "").trim()
+    }));
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.burnInCallCount).toBeGreaterThan(0);
+    expect(snapshot.burnInText).toContain("Cutover Burn-in 统计");
+  });
+
   test("legacy bootstrap resolveModeConfig delegates to mode-catalog runtime", async ({ page }) => {
     const response = await page.goto("/capped_2048.html", {
       waitUntil: "domcontentloaded"
