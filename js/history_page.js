@@ -30,6 +30,7 @@
   var historyCanaryActionRuntime = historyRuntimes.historyCanaryActionRuntime;
   var historyCanarySourceRuntime = historyRuntimes.historyCanarySourceRuntime;
   var historyCanaryPanelRuntime = historyRuntimes.historyCanaryPanelRuntime;
+  var historyCanaryHostRuntime = historyRuntimes.historyCanaryHostRuntime;
   var historyAdapterDiagnosticsRuntime = historyRuntimes.historyAdapterDiagnosticsRuntime;
   var historyBoardRuntime = historyRuntimes.historyBoardRuntime;
   var historyBurnInRuntime = historyRuntimes.historyBurnInRuntime;
@@ -116,33 +117,31 @@
     var panel = el("history-canary-policy");
     if (!panel) return;
 
-    var sourceState = historyCanarySourceRuntime.resolveHistoryCanaryPolicyAndStoredState({
+    var panelState = historyCanaryHostRuntime.resolveHistoryCanaryPanelRenderState({
       runtime: window.LegacyAdapterRuntime,
       readStorageValue: historyCanaryStorageRuntime.readHistoryStorageValue,
       adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
       defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
       forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY,
-      resolvePolicySnapshot: historyCanaryPolicyRuntime.resolveCanaryPolicySnapshot,
-      resolveStoredPolicy: historyCanaryPolicyRuntime.resolveStoredPolicyKeys
+      historyCanarySourceRuntime: historyCanarySourceRuntime,
+      historyCanaryPolicyRuntime: historyCanaryPolicyRuntime,
+      historyCanaryViewRuntime: historyCanaryViewRuntime,
+      historyCanaryPanelRuntime: historyCanaryPanelRuntime
     });
-    var policy = sourceState && sourceState.policy;
-    var stored = sourceState && sourceState.stored;
-    var canaryView = historyCanaryViewRuntime.resolveHistoryCanaryViewState(policy, stored);
-    panel.innerHTML = historyCanaryPanelRuntime.resolveHistoryCanaryPanelHtml(canaryView);
+    panel.innerHTML = panelState && panelState.panelHtml ? panelState.panelHtml : "";
 
     var buttons = panel.querySelectorAll(".history-canary-action-btn");
     for (var i = 0; i < buttons.length; i++) {
       buttons[i].addEventListener("click", function (event) {
-        var feedbackState = historyCanaryActionRuntime.applyHistoryCanaryPanelAction({
-          target: event.currentTarget,
-          resolveActionName: historyCanaryPanelRuntime.resolveHistoryCanaryActionName,
-          resolveActionNotice: historyCanaryPolicyRuntime.resolveCanaryPolicyActionNotice,
-          resolveActionPlan: historyCanaryPolicyRuntime.resolveCanaryPolicyActionPlan,
+        var feedbackState = historyCanaryHostRuntime.applyHistoryCanaryPanelClickAction({
+          target: event && event.currentTarget,
           runtime: window.LegacyAdapterRuntime,
           writeStorageValue: historyCanaryStorageRuntime.writeHistoryStorageValue,
           defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
           forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY,
-          failureNotice: historyCanaryActionRuntime.resolveHistoryCanaryPolicyUpdateFailureNotice()
+          historyCanaryActionRuntime: historyCanaryActionRuntime,
+          historyCanaryPanelRuntime: historyCanaryPanelRuntime,
+          historyCanaryPolicyRuntime: historyCanaryPolicyRuntime
         });
         if (feedbackState.shouldReload) loadHistory(feedbackState.reloadResetPage);
         setStatus(feedbackState.statusText, feedbackState.isError);

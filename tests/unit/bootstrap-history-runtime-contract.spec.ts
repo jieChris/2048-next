@@ -29,6 +29,15 @@ function createWindowLike() {
       resolveHistoryCanaryPanelHtml: () => "",
       resolveHistoryCanaryActionName: () => ""
     },
+    CoreHistoryCanaryHostRuntime: {
+      resolveHistoryCanaryPanelRenderState: () => ({ panelHtml: "" }),
+      applyHistoryCanaryPanelClickAction: () => ({
+        shouldReload: false,
+        reloadResetPage: false,
+        statusText: "",
+        isError: false
+      })
+    },
     CoreHistoryAdapterDiagnosticsRuntime: {
       resolveHistoryAdapterParityStatus: () => "",
       resolveHistoryAdapterBadgeState: () => ({}),
@@ -201,6 +210,7 @@ describe("bootstrap history runtime contract", () => {
     const result = resolveHistoryRuntimeContracts(source);
 
     expect(result.historyCanaryPolicyRuntime).toBe(source.CoreHistoryCanaryPolicyRuntime);
+    expect(result.historyCanaryHostRuntime).toBe(source.CoreHistoryCanaryHostRuntime);
     expect(result.historyQueryRuntime).toBe(source.CoreHistoryQueryRuntime);
     expect(result.historyLoadRuntime).toBe(source.CoreHistoryLoadRuntime);
     expect(result.historyImportHostRuntime).toBe(source.CoreHistoryImportHostRuntime);
@@ -215,6 +225,17 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryCanaryPolicyRuntime is required"
+    );
+  });
+
+  it("throws exact error when canary host runtime misses required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryCanaryHostRuntime = {
+      resolveHistoryCanaryPanelRenderState: () => ({ panelHtml: "" })
+    };
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryCanaryHostRuntime is required"
     );
   });
 

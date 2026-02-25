@@ -60,6 +60,11 @@
       ["resolveHistoryCanaryPanelHtml", "resolveHistoryCanaryActionName"],
       "CoreHistoryCanaryPanelRuntime is required"
     );
+    var historyCanaryHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryCanaryHostRuntime,
+      ["resolveHistoryCanaryPanelRenderState", "applyHistoryCanaryPanelClickAction"],
+      "CoreHistoryCanaryHostRuntime is required"
+    );
     var historyAdapterDiagnosticsRuntime = requireRuntimeFunctions(
       source.CoreHistoryAdapterDiagnosticsRuntime,
       [
@@ -251,6 +256,7 @@
       historyCanaryActionRuntime: historyCanaryActionRuntime,
       historyCanarySourceRuntime: historyCanarySourceRuntime,
       historyCanaryPanelRuntime: historyCanaryPanelRuntime,
+      historyCanaryHostRuntime: historyCanaryHostRuntime,
       historyAdapterDiagnosticsRuntime: historyAdapterDiagnosticsRuntime,
       historyBoardRuntime: historyBoardRuntime,
       historyBurnInRuntime: historyBurnInRuntime,

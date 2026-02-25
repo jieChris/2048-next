@@ -863,6 +863,62 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.panelActionCallCount).toBeGreaterThan(0);
   });
 
+  test("history page delegates canary panel orchestration to host runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyCanaryHostRenderCallCount = 0;
+      (window as any).__historyCanaryHostClickCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryCanaryHostRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "resolveHistoryCanaryPanelRenderState" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyCanaryHostRenderCallCount =
+                Number((window as any).__historyCanaryHostRenderCallCount || 0) + 1;
+              return (value as (arg: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          if (prop === "applyHistoryCanaryPanelClickAction" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyCanaryHostClickCallCount =
+                Number((window as any).__historyCanaryHostClickCallCount || 0) + 1;
+              return (value as (arg: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const actionButton = document.querySelector(
+        ".history-canary-action-btn[data-action='reset_policy']"
+      ) as HTMLElement | null;
+      if (actionButton && typeof actionButton.click === "function") actionButton.click();
+      return {
+        hasRuntime:
+          Boolean((window as any).CoreHistoryCanaryHostRuntime?.resolveHistoryCanaryPanelRenderState) &&
+          Boolean((window as any).CoreHistoryCanaryHostRuntime?.applyHistoryCanaryPanelClickAction),
+        renderCallCount: Number((window as any).__historyCanaryHostRenderCallCount || 0),
+        clickCallCount: Number((window as any).__historyCanaryHostClickCallCount || 0)
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.renderCallCount).toBeGreaterThan(0);
+    expect(snapshot.clickCallCount).toBeGreaterThan(0);
+  });
+
   test("history page delegates canary view modeling to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyCanaryViewCallCount = 0;
