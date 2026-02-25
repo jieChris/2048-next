@@ -233,14 +233,6 @@
     return historyBoardRuntime.resolveHistoryFinalBoardHtml(board, width, height);
   }
 
-  function getStorageValue(key) {
-    return historyCanaryStorageRuntime.readHistoryStorageValue(key);
-  }
-
-  function setStorageValue(key, value) {
-    return historyCanaryStorageRuntime.writeHistoryStorageValue(key, value);
-  }
-
   function buildAdapterBadgeHtml(item) {
     var status = historyAdapterDiagnosticsRuntime.resolveHistoryAdapterParityStatus(
       window.LocalHistoryStore,
@@ -293,7 +285,7 @@
     var policy = historyCanaryPolicyRuntime.resolveCanaryPolicySnapshot(
       historyCanarySourceRuntime.resolveHistoryCanaryPolicySnapshotInput({
         runtime: window.LegacyAdapterRuntime,
-        readStorageValue: getStorageValue,
+        readStorageValue: historyCanaryStorageRuntime.readHistoryStorageValue,
         defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
         forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
       })
@@ -301,7 +293,7 @@
     var stored = historyCanaryPolicyRuntime.resolveStoredPolicyKeys(
       historyCanarySourceRuntime.resolveHistoryCanaryStoredPolicyInput({
         runtime: window.LegacyAdapterRuntime,
-        readStorageValue: getStorageValue,
+        readStorageValue: historyCanaryStorageRuntime.readHistoryStorageValue,
         adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
         defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
         forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
@@ -319,7 +311,7 @@
           actionName: action || "",
           resolveActionPlan: historyCanaryPolicyRuntime.resolveCanaryPolicyActionPlan,
           runtime: window.LegacyAdapterRuntime,
-          writeStorageValue: setStorageValue,
+          writeStorageValue: historyCanaryStorageRuntime.writeHistoryStorageValue,
           defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
           forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
         });

@@ -206,6 +206,7 @@
   - `LocalHistoryStore` 支持 parity 过滤与 burn-in 统计
   - canary 策略面板上线（默认 core、强制 legacy、解除回滚、重置基线）
   - 新增 `src/bootstrap/history-canary-storage.ts` + `js/core_history_canary_storage_runtime.js`，`history_page.js` 委托 canary storage 读写回退（localStorage get/set/remove）逻辑
+  - `history_page.js` 已移除本地 `getStorageValue/setStorageValue` 透传函数，直接注入 `history-canary-storage` runtime 读写方法
   - 新增 `src/bootstrap/history-canary-action.ts` + `js/core_history_canary_action_runtime.js`，`history_page.js` 委托 canary 策略执行器（按 action plan 写 default/forceLegacy）与应用反馈状态（成功/失败提示文案、reload 判定）
   - `history-canary-action` 已继续承接按动作名执行策略（`applyHistoryCanaryPolicyActionByName`），`history_page.js` 不再本地拼装 canary actionPlan
   - 新增 `src/bootstrap/history-canary-source.ts` + `js/core_history_canary_source_runtime.js`，`history_page.js` 委托 LegacyAdapterRuntime 的 canary policy/stored-keys 读取与对象归一化
