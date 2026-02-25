@@ -75,6 +75,16 @@
   ) {
     throw new Error("CoreHistoryQueryRuntime is required");
   }
+  var historyRecordViewRuntime = window.CoreHistoryRecordViewRuntime;
+  if (
+    !historyRecordViewRuntime ||
+    typeof historyRecordViewRuntime.resolveHistoryModeText !== "function" ||
+    typeof historyRecordViewRuntime.resolveHistoryDurationText !== "function" ||
+    typeof historyRecordViewRuntime.resolveHistoryEndedText !== "function" ||
+    typeof historyRecordViewRuntime.resolveHistoryRecordHeadState !== "function"
+  ) {
+    throw new Error("CoreHistoryRecordViewRuntime is required");
+  }
 
   function setStatus(text, isError) {
     var status = el("history-status");
@@ -104,25 +114,11 @@
     return html;
   }
 
-  function modeText(item) {
-    var modeKey = item.mode_key || "";
-    if (window.ModeCatalog && typeof window.ModeCatalog.getMode === "function" && modeKey) {
-      var mode = window.ModeCatalog.getMode(modeKey);
-      if (mode && mode.label) return mode.label;
-    }
-    return modeKey || item.mode || "未知";
-  }
-
-  function formatDuration(ms) {
-    var value = Number(ms);
-    if (!Number.isFinite(value) || value < 0) value = 0;
-    var totalSec = Math.floor(value / 1000);
-    var h = Math.floor(totalSec / 3600);
-    var m = Math.floor((totalSec % 3600) / 60);
-    var s = totalSec % 60;
-    if (h > 0) return h + "h " + m + "m " + s + "s";
-    if (m > 0) return m + "m " + s + "s";
-    return s + "s";
+  function getCatalogModeLabel(item) {
+    var modeKey = item && item.mode_key ? String(item.mode_key) : "";
+    if (!(window.ModeCatalog && typeof window.ModeCatalog.getMode === "function" && modeKey)) return "";
+    var mode = window.ModeCatalog.getMode(modeKey);
+    return mode && mode.label ? String(mode.label) : "";
   }
 
   function isPlainObject(value) {
@@ -421,19 +417,24 @@
         var node = document.createElement("div");
         node.className = "history-item";
 
-        var endedText = item.ended_at ? new Date(item.ended_at).toLocaleString() : "-";
-        var best = Number.isFinite(item.best_tile) ? item.best_tile : 0;
-        var score = Number.isFinite(item.score) ? item.score : 0;
-        var duration = formatDuration(item.duration_ms);
+        var headState = historyRecordViewRuntime.resolveHistoryRecordHeadState({
+          modeKey: item && item.mode_key,
+          modeFallback: item && item.mode,
+          catalogLabel: getCatalogModeLabel(item),
+          score: item && item.score,
+          bestTile: item && item.best_tile,
+          durationMs: item && item.duration_ms,
+          endedAt: item && item.ended_at
+        });
 
         node.innerHTML =
           "<div class='history-item-head'>" +
-            "<strong>" + modeText(item) + "</strong>" +
+            "<strong>" + headState.modeText + "</strong>" +
             buildAdapterBadgeHtml(item) +
-            "<span>分数: " + score + "</span>" +
-            "<span>最大块: " + best + "</span>" +
-            "<span>时长: " + duration + "</span>" +
-            "<span>结束: " + endedText + "</span>" +
+            "<span>分数: " + headState.score + "</span>" +
+            "<span>最大块: " + headState.bestTile + "</span>" +
+            "<span>时长: " + headState.durationText + "</span>" +
+            "<span>结束: " + headState.endedText + "</span>" +
           "</div>" +
           "<div class='history-item-actions'>" +
             "<button class='replay-button history-replay-btn'>回放</button>" +
