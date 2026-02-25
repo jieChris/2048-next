@@ -699,6 +699,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.addInitScript(() => {
       (window as any).__historyCanarySourcePolicyCallCount = 0;
       (window as any).__historyCanarySourceStoredCallCount = 0;
+      (window as any).__historyCanarySourceSnapshotInputCallCount = 0;
+      (window as any).__historyCanarySourceStoredInputCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryCanarySourceRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
@@ -715,6 +717,22 @@ test.describe("Legacy Multi-Page Smoke", () => {
               (window as any).__historyCanarySourceStoredCallCount =
                 Number((window as any).__historyCanarySourceStoredCallCount || 0) + 1;
               return (value as (input: unknown) => unknown)(runtime);
+            };
+            return true;
+          }
+          if (prop === "resolveHistoryCanaryPolicySnapshotInput" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyCanarySourceSnapshotInputCallCount =
+                Number((window as any).__historyCanarySourceSnapshotInputCallCount || 0) + 1;
+              return (value as (arg: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          if (prop === "resolveHistoryCanaryStoredPolicyInput" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyCanarySourceStoredInputCallCount =
+                Number((window as any).__historyCanarySourceStoredInputCallCount || 0) + 1;
+              return (value as (arg: unknown) => unknown)(input);
             };
             return true;
           }
@@ -735,14 +753,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const snapshot = await page.evaluate(() => ({
       hasRuntime:
         Boolean((window as any).CoreHistoryCanarySourceRuntime?.resolveHistoryCanaryRuntimePolicy) &&
-        Boolean((window as any).CoreHistoryCanarySourceRuntime?.resolveHistoryCanaryRuntimeStoredPolicyKeys),
-      policyCallCount: Number((window as any).__historyCanarySourcePolicyCallCount || 0),
-      storedCallCount: Number((window as any).__historyCanarySourceStoredCallCount || 0)
+        Boolean((window as any).CoreHistoryCanarySourceRuntime?.resolveHistoryCanaryRuntimeStoredPolicyKeys) &&
+        Boolean((window as any).CoreHistoryCanarySourceRuntime?.resolveHistoryCanaryPolicySnapshotInput) &&
+        Boolean((window as any).CoreHistoryCanarySourceRuntime?.resolveHistoryCanaryStoredPolicyInput),
+      snapshotInputCallCount: Number((window as any).__historyCanarySourceSnapshotInputCallCount || 0),
+      storedInputCallCount: Number((window as any).__historyCanarySourceStoredInputCallCount || 0)
     }));
 
     expect(snapshot.hasRuntime).toBe(true);
-    expect(snapshot.policyCallCount).toBeGreaterThan(0);
-    expect(snapshot.storedCallCount).toBeGreaterThan(0);
+    expect(snapshot.snapshotInputCallCount).toBeGreaterThan(0);
+    expect(snapshot.storedInputCallCount).toBeGreaterThan(0);
   });
 
   test("history page delegates canary policy apply action to runtime helper", async ({ page }) => {

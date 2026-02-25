@@ -41,7 +41,9 @@
   if (
     !historyCanarySourceRuntime ||
     typeof historyCanarySourceRuntime.resolveHistoryCanaryRuntimePolicy !== "function" ||
-    typeof historyCanarySourceRuntime.resolveHistoryCanaryRuntimeStoredPolicyKeys !== "function"
+    typeof historyCanarySourceRuntime.resolveHistoryCanaryRuntimeStoredPolicyKeys !== "function" ||
+    typeof historyCanarySourceRuntime.resolveHistoryCanaryPolicySnapshotInput !== "function" ||
+    typeof historyCanarySourceRuntime.resolveHistoryCanaryStoredPolicyInput !== "function"
   ) {
     throw new Error("CoreHistoryCanarySourceRuntime is required");
   }
@@ -265,29 +267,6 @@
     }
   }
 
-  function readCanaryPolicySnapshot() {
-    var runtimePolicy = historyCanarySourceRuntime.resolveHistoryCanaryRuntimePolicy(
-      window.LegacyAdapterRuntime
-    );
-    return historyCanaryPolicyRuntime.resolveCanaryPolicySnapshot({
-      runtimePolicy: runtimePolicy,
-      defaultModeRaw: getStorageValue(ADAPTER_DEFAULT_STORAGE_KEY),
-      forceLegacyRaw: getStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY)
-    });
-  }
-
-  function readStoredPolicyKeys() {
-    var runtimeStoredKeys = historyCanarySourceRuntime.resolveHistoryCanaryRuntimeStoredPolicyKeys(
-      window.LegacyAdapterRuntime
-    );
-    return historyCanaryPolicyRuntime.resolveStoredPolicyKeys({
-      runtimeStoredKeys: runtimeStoredKeys,
-      adapterModeRaw: getStorageValue(ADAPTER_MODE_STORAGE_KEY),
-      defaultModeRaw: getStorageValue(ADAPTER_DEFAULT_STORAGE_KEY),
-      forceLegacyRaw: getStorageValue(ADAPTER_FORCE_LEGACY_STORAGE_KEY)
-    });
-  }
-
   function runCanaryPolicyAction(actionName) {
     var actionPlan = historyCanaryPolicyRuntime.resolveCanaryPolicyActionPlan(actionName || "");
     return historyCanaryActionRuntime.applyHistoryCanaryPolicyAction({
@@ -303,8 +282,23 @@
     var panel = el("history-canary-policy");
     if (!panel) return;
 
-    var policy = readCanaryPolicySnapshot();
-    var stored = readStoredPolicyKeys();
+    var policy = historyCanaryPolicyRuntime.resolveCanaryPolicySnapshot(
+      historyCanarySourceRuntime.resolveHistoryCanaryPolicySnapshotInput({
+        runtime: window.LegacyAdapterRuntime,
+        readStorageValue: getStorageValue,
+        defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
+        forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
+      })
+    );
+    var stored = historyCanaryPolicyRuntime.resolveStoredPolicyKeys(
+      historyCanarySourceRuntime.resolveHistoryCanaryStoredPolicyInput({
+        runtime: window.LegacyAdapterRuntime,
+        readStorageValue: getStorageValue,
+        adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
+        defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
+        forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
+      })
+    );
     var canaryView = historyCanaryViewRuntime.resolveHistoryCanaryViewState(policy, stored);
     panel.innerHTML = historyCanaryPanelRuntime.resolveHistoryCanaryPanelHtml(canaryView);
 
