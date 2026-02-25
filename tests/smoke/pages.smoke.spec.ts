@@ -984,6 +984,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.addInitScript(() => {
       (window as any).__historyApplyFilterCallCount = 0;
       (window as any).__historyListQueryCallCount = 0;
+      (window as any).__historyListResultSourceCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryQueryRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
@@ -999,6 +1000,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
             proxyTarget[prop] = function (input: unknown) {
               (window as any).__historyListQueryCallCount =
                 Number((window as any).__historyListQueryCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          if (prop === "resolveHistoryListResultSource" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyListResultSourceCallCount =
+                Number((window as any).__historyListResultSourceCallCount || 0) + 1;
               return (value as (args: unknown) => unknown)(input);
             };
             return true;
@@ -1020,15 +1029,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const snapshot = await page.evaluate(() => ({
       hasRuntime:
         Boolean((window as any).CoreHistoryQueryRuntime?.applyHistoryFilterState) &&
-        Boolean((window as any).CoreHistoryQueryRuntime?.resolveHistoryListQuery),
+        Boolean((window as any).CoreHistoryQueryRuntime?.resolveHistoryListQuery) &&
+        Boolean((window as any).CoreHistoryQueryRuntime?.resolveHistoryListResultSource),
       applyFilterCallCount: Number((window as any).__historyApplyFilterCallCount || 0),
       listQueryCallCount: Number((window as any).__historyListQueryCallCount || 0),
+      listResultSourceCallCount: Number((window as any).__historyListResultSourceCallCount || 0),
       hasSummaryText: (document.querySelector("#history-summary")?.textContent || "").trim().length > 0
     }));
 
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.applyFilterCallCount).toBeGreaterThan(0);
     expect(snapshot.listQueryCallCount).toBeGreaterThan(0);
+    expect(snapshot.listResultSourceCallCount).toBeGreaterThan(0);
     expect(snapshot.hasSummaryText).toBe(true);
   });
 

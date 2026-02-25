@@ -3,6 +3,11 @@
 
   if (!global) return;
 
+  var DEFAULT_HISTORY_LIST_RESULT = {
+    items: [],
+    total: 0
+  };
+
   function normalizeString(value, fallback) {
     if (typeof value !== "string") return fallback;
     var trimmed = value.trim();
@@ -57,6 +62,25 @@
     };
   }
 
+  function asHistoryListStore(value) {
+    if (!value || typeof value !== "object") return null;
+    return value;
+  }
+
+  function resolveHistoryListResultSource(input) {
+    var source = input && typeof input === "object" ? input : {};
+    var fallback =
+      source.fallbackResult === undefined ? DEFAULT_HISTORY_LIST_RESULT : source.fallbackResult;
+    var store = asHistoryListStore(source.localHistoryStore);
+    if (!store || typeof store.listRecords !== "function") return fallback;
+    try {
+      var result = store.listRecords(source.listQuery);
+      return result === undefined || result === null ? fallback : result;
+    } catch (_error) {
+      return fallback;
+    }
+  }
+
   function resolveHistoryBurnInQuery(input) {
     var source = input && typeof input === "object" ? input : {};
     return {
@@ -88,6 +112,7 @@
   global.CoreHistoryQueryRuntime.resolveHistoryFilterState = resolveHistoryFilterState;
   global.CoreHistoryQueryRuntime.applyHistoryFilterState = applyHistoryFilterState;
   global.CoreHistoryQueryRuntime.resolveHistoryListQuery = resolveHistoryListQuery;
+  global.CoreHistoryQueryRuntime.resolveHistoryListResultSource = resolveHistoryListResultSource;
   global.CoreHistoryQueryRuntime.resolveHistoryBurnInQuery = resolveHistoryBurnInQuery;
   global.CoreHistoryQueryRuntime.resolveHistoryPagerState = resolveHistoryPagerState;
 })(typeof window !== "undefined" ? window : undefined);

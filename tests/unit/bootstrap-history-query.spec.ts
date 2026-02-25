@@ -4,6 +4,7 @@ import {
   applyHistoryFilterState,
   resolveHistoryBurnInQuery,
   resolveHistoryFilterState,
+  resolveHistoryListResultSource,
   resolveHistoryListQuery,
   resolveHistoryPagerState
 } from "../../src/bootstrap/history-query";
@@ -112,5 +113,27 @@ describe("bootstrap history query", () => {
       disablePrev: false,
       disableNext: true
     });
+  });
+
+  it("reads list result via local history store source with fallback", () => {
+    const calls: unknown[] = [];
+    const result = resolveHistoryListResultSource({
+      localHistoryStore: {
+        listRecords(query: unknown) {
+          calls.push(query);
+          return { items: [1], total: 1 };
+        }
+      },
+      listQuery: { page: 2 }
+    });
+    const fallback = resolveHistoryListResultSource({
+      localHistoryStore: null,
+      listQuery: { page: 1 },
+      fallbackResult: { items: [], total: 0 }
+    });
+
+    expect(calls).toEqual([{ page: 2 }]);
+    expect(result).toEqual({ items: [1], total: 1 });
+    expect(fallback).toEqual({ items: [], total: 0 });
   });
 });

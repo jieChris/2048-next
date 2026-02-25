@@ -219,6 +219,7 @@
   - `history-export` 已继续承接单条记录导出状态与 mismatch 导出源读取（`resolveHistorySingleRecordExportState`/`resolveHistoryMismatchExportRecordIds`），`history_page.js` 不再本地拼装导出源与 payload
   - 新增 `src/bootstrap/history-query.ts` + `js/core_history_query_runtime.js`，`history_page.js` 委托筛选状态归一化、list/burn-in 查询参数拼装与分页按钮状态计算
   - `history-query` 已继续承接筛选状态回写（`applyHistoryFilterState`），`history_page.js` 不再本地逐字段赋值 `state.modeKey/keyword/sortBy/...`
+  - `history-query` 已继续承接列表结果源读取（`resolveHistoryListResultSource`），`history_page.js` 不再直接调用 `LocalHistoryStore.listRecords`
   - 新增 `src/bootstrap/history-record-view.ts` + `js/core_history_record_view_runtime.js`，`history_page.js` 委托列表头展示态（mode/score/best/duration/ended）模型计算
   - `history-record-view` 已继续承接 `ModeCatalog` 标签解析（`resolveHistoryCatalogModeLabel`），`history_page.js` 不再本地读取 mode label
   - 新增 `src/bootstrap/history-record-item.ts` + `js/core_history_record_item_runtime.js`，`history_page.js` 委托历史记录卡片 HTML 模型拼装（头部信息/动作按钮/诊断区/终盘棋盘）

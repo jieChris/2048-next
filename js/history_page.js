@@ -122,6 +122,7 @@
     typeof historyQueryRuntime.resolveHistoryFilterState !== "function" ||
     typeof historyQueryRuntime.applyHistoryFilterState !== "function" ||
     typeof historyQueryRuntime.resolveHistoryListQuery !== "function" ||
+    typeof historyQueryRuntime.resolveHistoryListResultSource !== "function" ||
     typeof historyQueryRuntime.resolveHistoryBurnInQuery !== "function" ||
     typeof historyQueryRuntime.resolveHistoryPagerState !== "function"
   ) {
@@ -450,7 +451,10 @@
       page: state.page,
       pageSize: state.pageSize
     });
-    var result = window.LocalHistoryStore.listRecords(listQuery);
+    var result = historyQueryRuntime.resolveHistoryListResultSource({
+      localHistoryStore: window.LocalHistoryStore,
+      listQuery: listQuery
+    });
 
     renderHistory(result);
     buildSummary(result);

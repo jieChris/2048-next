@@ -20,6 +20,14 @@ export interface HistoryFilterState {
 }
 
 type MutableHistoryFilterTarget = Record<string, unknown>;
+type HistoryListStoreLike = {
+  listRecords?: (query: unknown) => unknown;
+};
+
+const DEFAULT_HISTORY_LIST_RESULT = {
+  items: [],
+  total: 0
+};
 
 export function resolveHistoryFilterState(input: {
   modeKeyRaw?: unknown;
@@ -80,6 +88,32 @@ export function resolveHistoryListQuery(input: {
     page: normalizePositiveInteger(input && input.page, 1),
     page_size: normalizePositiveInteger(input && input.pageSize, 30)
   };
+}
+
+function asHistoryListStore(value: unknown): HistoryListStoreLike | null {
+  if (!value || typeof value !== "object") return null;
+  return value as HistoryListStoreLike;
+}
+
+export function resolveHistoryListResultSource(input: {
+  localHistoryStore?: unknown;
+  listQuery?: unknown;
+  fallbackResult?: unknown;
+}): unknown {
+  const source = (input && typeof input === "object" ? input : {}) as {
+    localHistoryStore?: unknown;
+    listQuery?: unknown;
+    fallbackResult?: unknown;
+  };
+  const fallback = source.fallbackResult ?? DEFAULT_HISTORY_LIST_RESULT;
+  const store = asHistoryListStore(source.localHistoryStore);
+  if (!store || typeof store.listRecords !== "function") return fallback;
+  try {
+    const result = store.listRecords(source.listQuery);
+    return result ?? fallback;
+  } catch (_error) {
+    return fallback;
+  }
 }
 
 export function resolveHistoryBurnInQuery(input: {
