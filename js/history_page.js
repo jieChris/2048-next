@@ -43,6 +43,7 @@
   var historyRecordItemRuntime = historyRuntimes.historyRecordItemRuntime;
   var historyImportRuntime = historyRuntimes.historyImportRuntime;
   var historyImportFileRuntime = historyRuntimes.historyImportFileRuntime;
+  var historyImportHostRuntime = historyRuntimes.historyImportHostRuntime;
   var historyRecordActionsRuntime = historyRuntimes.historyRecordActionsRuntime;
   var historyCanaryStorageRuntime = historyRuntimes.historyCanaryStorageRuntime;
   var historyToolbarRuntime = historyRuntimes.historyToolbarRuntime;
@@ -361,49 +362,56 @@
     if (importBtn && importInput) {
       var importMode = "merge";
       importBtn.addEventListener("click", function () {
-        importMode = historyImportRuntime.resolveHistoryImportActionState("merge").mode;
-        importInput.click();
+        var clickState = historyImportHostRuntime.resolveHistoryImportMergeClickState({
+          currentMode: importMode,
+          historyImportRuntime: historyImportRuntime
+        });
+        importMode = clickState.nextMode;
+        if (clickState.shouldOpenFilePicker) importInput.click();
       });
       if (importReplaceBtn) {
         importReplaceBtn.addEventListener("click", function () {
-          var actionState = historyImportRuntime.resolveHistoryImportActionState("replace");
-          if (actionState.requiresConfirm && !window.confirm(actionState.confirmMessage)) return;
-          importMode = actionState.mode;
-          importInput.click();
+          var clickState = historyImportHostRuntime.resolveHistoryImportReplaceClickState({
+            currentMode: importMode,
+            historyImportRuntime: historyImportRuntime,
+            confirmAction: window.confirm
+          });
+          importMode = clickState.nextMode;
+          if (clickState.shouldOpenFilePicker) importInput.click();
         });
       }
       importInput.addEventListener("change", function () {
-        var file = historyImportFileRuntime.resolveHistoryImportSelectedFile(importInput.files);
-        if (!file) return;
+        var selectionState = historyImportHostRuntime.resolveHistoryImportFileSelectionState({
+          files: importInput.files,
+          historyImportFileRuntime: historyImportFileRuntime
+        });
+        if (!selectionState || selectionState.shouldRead !== true) return;
         var reader = new FileReader();
         reader.onload = function () {
-          try {
-            var payloadText = historyImportFileRuntime.resolveHistoryImportPayloadText(reader.result);
-            var importState = historyImportRuntime.executeHistoryImport({
-              localHistoryStore: window.LocalHistoryStore,
-              payloadText: payloadText,
-              mode: importMode
-            });
-            if (!importState || importState.ok !== true) {
-              setStatus(
-                importState && importState.notice
-                  ? importState.notice
-                  : historyImportRuntime.resolveHistoryImportErrorNotice(new Error("unknown")),
-                true
-              );
-              return;
-            }
-            setStatus(importState.notice, false);
+          var importState = historyImportHostRuntime.applyHistoryImportFromFileReadResult({
+            readerResult: reader.result,
+            importMode: importMode,
+            localHistoryStore: window.LocalHistoryStore,
+            historyImportRuntime: historyImportRuntime,
+            historyImportFileRuntime: historyImportFileRuntime
+          });
+          if (importState && importState.shouldSetStatus) {
+            setStatus(importState.statusText, importState.isError);
+          }
+          if (importState && importState.shouldReload) {
             loadHistory(true);
-          } catch (_error) {
-            setStatus(historyImportRuntime.resolveHistoryImportErrorNotice(new Error("unknown")), true);
           }
         };
         reader.onerror = function () {
-          setStatus(historyImportRuntime.resolveHistoryImportReadErrorNotice(), true);
+          var failureState = historyImportHostRuntime.resolveHistoryImportReadFailureState({
+            historyImportRuntime: historyImportRuntime
+          });
+          if (failureState && failureState.shouldSetStatus) {
+            setStatus(failureState.statusText, failureState.isError);
+          }
         };
-        reader.readAsText(file, historyImportFileRuntime.resolveHistoryImportReadEncoding());
-        importInput.value = historyImportFileRuntime.resolveHistoryImportInputResetValue();
+        reader.readAsText(selectionState.file, selectionState.encoding);
+        importInput.value = selectionState.resetValue;
       });
     }
 

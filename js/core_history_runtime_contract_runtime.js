@@ -170,6 +170,17 @@
       ],
       "CoreHistoryImportFileRuntime is required"
     );
+    var historyImportHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryImportHostRuntime,
+      [
+        "resolveHistoryImportMergeClickState",
+        "resolveHistoryImportReplaceClickState",
+        "resolveHistoryImportFileSelectionState",
+        "applyHistoryImportFromFileReadResult",
+        "resolveHistoryImportReadFailureState"
+      ],
+      "CoreHistoryImportHostRuntime is required"
+    );
     var historyRecordActionsRuntime = requireRuntimeFunctions(
       source.CoreHistoryRecordActionsRuntime,
       [
@@ -244,6 +255,7 @@
       historyRecordItemRuntime: historyRecordItemRuntime,
       historyImportRuntime: historyImportRuntime,
       historyImportFileRuntime: historyImportFileRuntime,
+      historyImportHostRuntime: historyImportHostRuntime,
       historyRecordActionsRuntime: historyRecordActionsRuntime,
       historyCanaryStorageRuntime: historyCanaryStorageRuntime,
       historyToolbarRuntime: historyToolbarRuntime,

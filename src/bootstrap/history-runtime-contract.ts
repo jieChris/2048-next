@@ -18,6 +18,7 @@ export interface HistoryRuntimeContractWindowLike {
   CoreHistoryRecordItemRuntime?: unknown;
   CoreHistoryImportRuntime?: unknown;
   CoreHistoryImportFileRuntime?: unknown;
+  CoreHistoryImportHostRuntime?: unknown;
   CoreHistoryRecordActionsRuntime?: unknown;
   CoreHistoryCanaryStorageRuntime?: unknown;
   CoreHistoryToolbarRuntime?: unknown;
@@ -44,6 +45,7 @@ export interface ResolveHistoryRuntimeContractsResult {
   historyRecordItemRuntime: AnyRecord;
   historyImportRuntime: AnyRecord;
   historyImportFileRuntime: AnyRecord;
+  historyImportHostRuntime: AnyRecord;
   historyRecordActionsRuntime: AnyRecord;
   historyCanaryStorageRuntime: AnyRecord;
   historyToolbarRuntime: AnyRecord;
@@ -225,6 +227,17 @@ export function resolveHistoryRuntimeContracts(
     ],
     "CoreHistoryImportFileRuntime is required"
   );
+  const historyImportHostRuntime = requireRuntimeFunctions(
+    source.CoreHistoryImportHostRuntime,
+    [
+      "resolveHistoryImportMergeClickState",
+      "resolveHistoryImportReplaceClickState",
+      "resolveHistoryImportFileSelectionState",
+      "applyHistoryImportFromFileReadResult",
+      "resolveHistoryImportReadFailureState"
+    ],
+    "CoreHistoryImportHostRuntime is required"
+  );
   const historyRecordActionsRuntime = requireRuntimeFunctions(
     source.CoreHistoryRecordActionsRuntime,
     [
@@ -299,6 +312,7 @@ export function resolveHistoryRuntimeContracts(
     historyRecordItemRuntime,
     historyImportRuntime,
     historyImportFileRuntime,
+    historyImportHostRuntime,
     historyRecordActionsRuntime,
     historyCanaryStorageRuntime,
     historyToolbarRuntime,

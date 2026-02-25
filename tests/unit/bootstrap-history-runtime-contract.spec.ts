@@ -103,6 +103,34 @@ function createWindowLike() {
       resolveHistoryImportReadEncoding: () => "utf-8",
       resolveHistoryImportInputResetValue: () => ""
     },
+    CoreHistoryImportHostRuntime: {
+      resolveHistoryImportMergeClickState: () => ({
+        nextMode: "merge",
+        shouldOpenFilePicker: true
+      }),
+      resolveHistoryImportReplaceClickState: () => ({
+        nextMode: "replace",
+        shouldOpenFilePicker: true
+      }),
+      resolveHistoryImportFileSelectionState: () => ({
+        file: null,
+        shouldRead: false,
+        encoding: "utf-8",
+        resetValue: ""
+      }),
+      applyHistoryImportFromFileReadResult: () => ({
+        shouldSetStatus: false,
+        statusText: "",
+        isError: false,
+        shouldReload: false
+      }),
+      resolveHistoryImportReadFailureState: () => ({
+        shouldSetStatus: true,
+        statusText: "read error",
+        isError: true,
+        shouldReload: false
+      })
+    },
     CoreHistoryRecordActionsRuntime: {
       resolveHistoryReplayHref: () => "",
       resolveHistoryDeleteActionState: () => ({ shouldDelete: false, confirmMessage: "" }),
@@ -165,6 +193,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyCanaryPolicyRuntime).toBe(source.CoreHistoryCanaryPolicyRuntime);
     expect(result.historyQueryRuntime).toBe(source.CoreHistoryQueryRuntime);
     expect(result.historyLoadRuntime).toBe(source.CoreHistoryLoadRuntime);
+    expect(result.historyImportHostRuntime).toBe(source.CoreHistoryImportHostRuntime);
     expect(result.historyToolbarHostRuntime).toBe(source.CoreHistoryToolbarHostRuntime);
     expect(result.historyModeFilterRuntime).toBe(source.CoreHistoryModeFilterRuntime);
   });
@@ -195,6 +224,17 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryLoadRuntime is required"
+    );
+  });
+
+  it("throws exact error when import host runtime misses required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryImportHostRuntime = {
+      resolveHistoryImportMergeClickState: () => ({})
+    };
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryImportHostRuntime is required"
     );
   });
 
