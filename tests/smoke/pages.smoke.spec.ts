@@ -982,10 +982,19 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("history page delegates query assembly to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
+      (window as any).__historyApplyFilterCallCount = 0;
       (window as any).__historyListQueryCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryQueryRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
+          if (prop === "applyHistoryFilterState" && typeof value === "function") {
+            proxyTarget[prop] = function (targetState: unknown, input: unknown) {
+              (window as any).__historyApplyFilterCallCount =
+                Number((window as any).__historyApplyFilterCallCount || 0) + 1;
+              return (value as (a: unknown, b: unknown) => unknown)(targetState, input);
+            };
+            return true;
+          }
           if (prop === "resolveHistoryListQuery" && typeof value === "function") {
             proxyTarget[prop] = function (input: unknown) {
               (window as any).__historyListQueryCallCount =
@@ -1009,12 +1018,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForTimeout(250);
 
     const snapshot = await page.evaluate(() => ({
-      hasRuntime: Boolean((window as any).CoreHistoryQueryRuntime?.resolveHistoryListQuery),
+      hasRuntime:
+        Boolean((window as any).CoreHistoryQueryRuntime?.applyHistoryFilterState) &&
+        Boolean((window as any).CoreHistoryQueryRuntime?.resolveHistoryListQuery),
+      applyFilterCallCount: Number((window as any).__historyApplyFilterCallCount || 0),
       listQueryCallCount: Number((window as any).__historyListQueryCallCount || 0),
       hasSummaryText: (document.querySelector("#history-summary")?.textContent || "").trim().length > 0
     }));
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.applyFilterCallCount).toBeGreaterThan(0);
     expect(snapshot.listQueryCallCount).toBeGreaterThan(0);
     expect(snapshot.hasSummaryText).toBe(true);
   });

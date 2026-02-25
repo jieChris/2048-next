@@ -120,6 +120,7 @@
   if (
     !historyQueryRuntime ||
     typeof historyQueryRuntime.resolveHistoryFilterState !== "function" ||
+    typeof historyQueryRuntime.applyHistoryFilterState !== "function" ||
     typeof historyQueryRuntime.resolveHistoryListQuery !== "function" ||
     typeof historyQueryRuntime.resolveHistoryBurnInQuery !== "function" ||
     typeof historyQueryRuntime.resolveHistoryPagerState !== "function"
@@ -426,7 +427,7 @@
     var adapterFilterInput = el("history-adapter-filter");
     var burnInWindowInput = el("history-burnin-window");
     var sustainedWindowInput = el("history-sustained-window");
-    var filterState = historyQueryRuntime.resolveHistoryFilterState({
+    historyQueryRuntime.applyHistoryFilterState(state, {
       modeKeyRaw: modeInput && modeInput.value,
       keywordRaw: keywordInput && keywordInput.value,
       sortByRaw: sortInput && sortInput.value,
@@ -434,12 +435,6 @@
       burnInWindowRaw: burnInWindowInput && burnInWindowInput.value,
       sustainedWindowsRaw: sustainedWindowInput && sustainedWindowInput.value
     });
-    state.modeKey = filterState.modeKey;
-    state.keyword = filterState.keyword;
-    state.sortBy = filterState.sortBy;
-    state.adapterParityFilter = filterState.adapterParityFilter;
-    state.burnInWindow = filterState.burnInWindow;
-    state.sustainedWindows = filterState.sustainedWindows;
   }
 
   function loadHistory(resetPage) {

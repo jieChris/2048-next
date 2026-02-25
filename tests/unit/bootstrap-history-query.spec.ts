@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyHistoryFilterState,
   resolveHistoryBurnInQuery,
   resolveHistoryFilterState,
   resolveHistoryListQuery,
@@ -46,6 +47,38 @@ describe("bootstrap history query", () => {
       page: 1,
       page_size: 30
     });
+  });
+
+  it("applies normalized filter state into target object", () => {
+    const target: Record<string, unknown> = {
+      page: 2,
+      pageSize: 30,
+      modeKey: "old"
+    };
+    const ok = applyHistoryFilterState(target, {
+      modeKeyRaw: " standard_4x4_pow2_no_undo ",
+      keywordRaw: " core ",
+      sortByRaw: "score_desc",
+      adapterParityFilterRaw: "match",
+      burnInWindowRaw: "500",
+      sustainedWindowsRaw: "2"
+    });
+
+    expect(ok).toBe(true);
+    expect(target).toMatchObject({
+      page: 2,
+      pageSize: 30,
+      modeKey: "standard_4x4_pow2_no_undo",
+      keyword: "core",
+      sortBy: "score_desc",
+      adapterParityFilter: "match",
+      burnInWindow: "500",
+      sustainedWindows: "2"
+    });
+  });
+
+  it("returns false when filter state target is invalid", () => {
+    expect(applyHistoryFilterState(null, { modeKeyRaw: "x" })).toBe(false);
   });
 
   it("builds burn-in query and pager state", () => {

@@ -19,6 +19,8 @@ export interface HistoryFilterState {
   sustainedWindows: string;
 }
 
+type MutableHistoryFilterTarget = Record<string, unknown>;
+
 export function resolveHistoryFilterState(input: {
   modeKeyRaw?: unknown;
   keywordRaw?: unknown;
@@ -35,6 +37,24 @@ export function resolveHistoryFilterState(input: {
     burnInWindow: normalizeString(input && input.burnInWindowRaw, "200"),
     sustainedWindows: normalizeString(input && input.sustainedWindowsRaw, "3")
   };
+}
+
+function asMutableHistoryFilterTarget(value: unknown): MutableHistoryFilterTarget | null {
+  if (!value || typeof value !== "object") return null;
+  return value as MutableHistoryFilterTarget;
+}
+
+export function applyHistoryFilterState(targetState: unknown, input: unknown): boolean {
+  const target = asMutableHistoryFilterTarget(targetState);
+  if (!target) return false;
+  const next = resolveHistoryFilterState(input as Record<string, unknown>);
+  target.modeKey = next.modeKey;
+  target.keyword = next.keyword;
+  target.sortBy = next.sortBy;
+  target.adapterParityFilter = next.adapterParityFilter;
+  target.burnInWindow = next.burnInWindow;
+  target.sustainedWindows = next.sustainedWindows;
+  return true;
 }
 
 export function resolveHistoryListQuery(input: {

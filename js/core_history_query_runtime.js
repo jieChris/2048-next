@@ -27,6 +27,24 @@
     };
   }
 
+  function asMutableHistoryFilterTarget(value) {
+    if (!value || typeof value !== "object") return null;
+    return value;
+  }
+
+  function applyHistoryFilterState(targetState, input) {
+    var target = asMutableHistoryFilterTarget(targetState);
+    if (!target) return false;
+    var next = resolveHistoryFilterState(input);
+    target.modeKey = next.modeKey;
+    target.keyword = next.keyword;
+    target.sortBy = next.sortBy;
+    target.adapterParityFilter = next.adapterParityFilter;
+    target.burnInWindow = next.burnInWindow;
+    target.sustainedWindows = next.sustainedWindows;
+    return true;
+  }
+
   function resolveHistoryListQuery(input) {
     var source = input && typeof input === "object" ? input : {};
     return {
@@ -68,6 +86,7 @@
 
   global.CoreHistoryQueryRuntime = global.CoreHistoryQueryRuntime || {};
   global.CoreHistoryQueryRuntime.resolveHistoryFilterState = resolveHistoryFilterState;
+  global.CoreHistoryQueryRuntime.applyHistoryFilterState = applyHistoryFilterState;
   global.CoreHistoryQueryRuntime.resolveHistoryListQuery = resolveHistoryListQuery;
   global.CoreHistoryQueryRuntime.resolveHistoryBurnInQuery = resolveHistoryBurnInQuery;
   global.CoreHistoryQueryRuntime.resolveHistoryPagerState = resolveHistoryPagerState;
