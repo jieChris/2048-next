@@ -6,6 +6,14 @@
   ) {
     throw new Error("CorePlayRuntimeContractRuntime is required");
   }
+  var playPageContextRuntime = window.CorePlayPageContextRuntime;
+  if (
+    !playPageContextRuntime ||
+    typeof playPageContextRuntime.resolvePlayCustomSpawnModeConfigFromPageContext !== "function" ||
+    typeof playPageContextRuntime.applyPlayHeaderFromPageContext !== "function"
+  ) {
+    throw new Error("CorePlayPageContextRuntime is required");
+  }
 
   var runtimeContracts = playRuntimeContractRuntime.resolvePlayRuntimeContracts(window);
   var playHeaderRuntime = runtimeContracts.playHeaderRuntime;
@@ -28,40 +36,6 @@
     playCustomSpawnHostRuntime.PLAY_CUSTOM_FOUR_RATE_STORAGE_KEY || "custom_spawn_4x4_four_rate_v1";
   var DEFAULT_MODE_KEY = "standard_4x4_pow2_no_undo";
 
-  function resolveCustomSpawnModeConfig(modeKey, modeConfig) {
-    return playCustomSpawnHostRuntime.resolvePlayCustomSpawnModeConfigFromContext({
-      modeKey: modeKey,
-      modeConfig: modeConfig,
-      searchLike: window.location.search,
-      pathname: window.location.pathname,
-      hash: window.location.hash || "",
-      storageKey: CUSTOM_FOUR_RATE_STORAGE_KEY,
-      windowLike: window,
-      storageRuntimeLike: storageRuntime,
-      playCustomSpawnRuntimeLike: playCustomSpawnRuntime
-    });
-  }
-
-  function setupChallengeModeIntro(modeConfig) {
-    playChallengeIntroHostRuntime.resolvePlayChallengeIntroFromContext({
-      modeConfig: modeConfig,
-      featureEnabled: false,
-      documentLike: document,
-      resolveIntroModel: playChallengeIntroRuntime.resolvePlayChallengeIntroModel,
-      resolveIntroUiState: playChallengeIntroUiRuntime.resolvePlayChallengeIntroUiState,
-      resolveIntroActionState: playChallengeIntroActionRuntime.resolvePlayChallengeIntroActionState
-    });
-  }
-
-  function setupHeader(modeConfig) {
-    playHeaderHostRuntime.resolvePlayHeaderFromContext({
-      modeConfig: modeConfig,
-      documentLike: document,
-      resolveHeaderState: playHeaderRuntime.resolvePlayHeaderState,
-      applyChallengeModeIntro: setupChallengeModeIntro
-    });
-  }
-
   bootstrap.startGameOnAnimationFrame(function () {
     return playStartupHostRuntime.resolvePlayStartupFromContext({
       windowLike: window,
@@ -72,10 +46,31 @@
       inputManagerCtor: KeyboardInputManager,
       resolveEntryPlan: playEntryRuntime.resolvePlayEntryPlan,
       resolveStartupContext: playStartupContextRuntime.resolvePlayStartupContext,
-      resolveModeConfig: resolveCustomSpawnModeConfig,
+      resolveModeConfig: function (modeKey, modeConfig) {
+        return playPageContextRuntime.resolvePlayCustomSpawnModeConfigFromPageContext({
+          modeKey: modeKey,
+          modeConfig: modeConfig,
+          storageKey: CUSTOM_FOUR_RATE_STORAGE_KEY,
+          windowLike: window,
+          storageRuntimeLike: storageRuntime,
+          playCustomSpawnRuntimeLike: playCustomSpawnRuntime,
+          playCustomSpawnHostRuntimeLike: playCustomSpawnHostRuntime
+        });
+      },
       resolveGuardState: playStartGuardRuntime.resolvePlayStartGuardState,
       resolveChallengeContext: playChallengeContextRuntime.resolvePlayChallengeContext,
-      applyHeader: setupHeader,
+      applyHeader: function (modeConfig) {
+        return playPageContextRuntime.applyPlayHeaderFromPageContext({
+          modeConfig: modeConfig,
+          documentLike: document,
+          playHeaderRuntimeLike: playHeaderRuntime,
+          playHeaderHostRuntimeLike: playHeaderHostRuntime,
+          playChallengeIntroRuntimeLike: playChallengeIntroRuntime,
+          playChallengeIntroUiRuntimeLike: playChallengeIntroUiRuntime,
+          playChallengeIntroActionRuntimeLike: playChallengeIntroActionRuntime,
+          playChallengeIntroHostRuntimeLike: playChallengeIntroHostRuntime
+        });
+      },
       resolveStartupPayload: playStartupPayloadRuntime.resolvePlayStartupPayload
     });
   });

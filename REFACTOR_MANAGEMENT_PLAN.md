@@ -56,6 +56,7 @@
   - 新增 `src/bootstrap/play-startup-context.ts` + `js/core_play_startup_context_runtime.js`，`play_application.js` 委托入口计划、guard 与自定义模式解析主流程编排
   - 新增 `src/bootstrap/play-startup-host.ts` + `js/core_play_startup_host_runtime.js`，`play_application.js` 委托开局回调主链编排（entry/startup/alert+redirect/window 上下文写入/header/startup payload fallback）
   - 新增 `src/bootstrap/play-runtime-contract.ts` + `js/core_play_runtime_contract_runtime.js`，`play_application.js` 委托 runtime 依赖契约校验与依赖对象收敛（保持原错误语义）
+  - 新增 `src/bootstrap/play-page-context.ts` + `js/core_play_page_context_runtime.js`，`play_application.js` 委托页面上下文编排（custom spawn 上下文桥接 + header/challenge intro host 串联）
   - `play_application.js` 已移除 `mode_key/challenge_id` 本地转发包装函数，入口回调直接消费 `play-query` runtime
   - 新增 `src/bootstrap/play-header.ts` + `js/core_play_header_runtime.js`，`play_application.js` 委托顶部模式简介文案拼装
   - 新增 `src/bootstrap/play-header-host.ts` + `js/core_play_header_host_runtime.js`，`play_application.js` 委托 play 页头 DOM 写入与挑战简介入口编排
