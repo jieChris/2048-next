@@ -24,6 +24,16 @@ export interface HistoryBurnInMismatchFocusActionState {
   resetPage: boolean;
 }
 
+function escapeHtml(value: unknown): string {
+  const text = String(value == null ? "" : value);
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function isPlainObject(value: unknown): value is AnyRecord {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -120,4 +130,68 @@ export function resolveHistoryBurnInMismatchFocusActionState(): HistoryBurnInMis
     shouldReload: true,
     resetPage: true
   };
+}
+
+export function resolveHistoryBurnInPanelHtml(
+  summary: unknown,
+  burnInState: unknown
+): string {
+  const state = burnInState as HistoryBurnInSummaryState | null;
+  if (!state || state.hasSummary !== true) {
+    return "<div class='history-burnin-empty'>暂无 burn-in 数据</div>";
+  }
+
+  const source = isPlainObject(summary) ? summary : {};
+  const mismatchAction = state.mismatchActionEnabled
+    ? "<button class='replay-button history-burnin-focus-mismatch'>仅看不一致</button>"
+    : "";
+
+  return (
+    "<div class='history-burnin-head'>" +
+      "<div class='history-burnin-title'>Cutover Burn-in 统计</div>" +
+      "<div class='history-burnin-gates'>" +
+        "<span class='history-burnin-gate " +
+          state.gateClass +
+          "'>单窗口: " +
+          escapeHtml(state.gateLabel) +
+        "</span>" +
+        "<span class='history-burnin-gate " +
+          state.sustainedGateClass +
+          "'>连续窗口: " +
+          escapeHtml(state.sustainedGateLabel) +
+        "</span>" +
+      "</div>" +
+    "</div>" +
+    "<div class='history-burnin-grid'>" +
+      "<span>采样: " + escapeHtml(state.limitText) + "</span>" +
+      "<span>诊断记录 " + escapeHtml(source.withDiagnostics) + "</span>" +
+      "<span>可比较样本 " + escapeHtml(source.comparable) + "</span>" +
+      "<span>一致 " + escapeHtml(source.match) + "</span>" +
+      "<span>不一致 " + escapeHtml(source.mismatch) + "</span>" +
+      "<span>样本不足 " + escapeHtml(source.incomplete) + "</span>" +
+      "<span>不一致率 " + escapeHtml(state.mismatchRateText) + "</span>" +
+    "</div>" +
+    "<div class='history-burnin-note'>" +
+      "门槛: 可比较 >= " +
+      escapeHtml(source.minComparable) +
+      "，不一致率 <= " +
+      escapeHtml(state.maxMismatchRateText) +
+    "</div>" +
+    "<div class='history-burnin-note'>" +
+      "连续门槛: 最近 " +
+      escapeHtml(state.sustainedRequired) +
+      " 个窗口（每窗口 " +
+      escapeHtml(state.sustainedWindowSize) +
+      " 条）均需单窗口达标" +
+    "</div>" +
+    "<div class='history-burnin-note'>" +
+      "连续通过 " +
+      escapeHtml(state.sustainedConsecutive) +
+      "/" +
+      escapeHtml(state.sustainedRequired) +
+      "，已评估窗口 " +
+      escapeHtml(state.sustainedEvaluated) +
+    "</div>" +
+    (mismatchAction ? "<div class='history-burnin-actions'>" + mismatchAction + "</div>" : "")
+  );
 }

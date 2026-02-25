@@ -72,7 +72,8 @@
   if (
     !historyBurnInRuntime ||
     typeof historyBurnInRuntime.resolveHistoryBurnInSummaryState !== "function" ||
-    typeof historyBurnInRuntime.resolveHistoryBurnInMismatchFocusActionState !== "function"
+    typeof historyBurnInRuntime.resolveHistoryBurnInMismatchFocusActionState !== "function" ||
+    typeof historyBurnInRuntime.resolveHistoryBurnInPanelHtml !== "function"
   ) {
     throw new Error("CoreHistoryBurnInRuntime is required");
   }
@@ -270,48 +271,8 @@
     var panel = el("history-burnin-summary");
     if (!panel) return;
     var burnInState = historyBurnInRuntime.resolveHistoryBurnInSummaryState(summary);
-    if (!burnInState || burnInState.hasSummary !== true) {
-      panel.innerHTML = "<div class='history-burnin-empty'>暂无 burn-in 数据</div>";
-      return;
-    }
-
-    var mismatchAction = "";
-    if (burnInState.mismatchActionEnabled) {
-      mismatchAction = "<button class='replay-button history-burnin-focus-mismatch'>仅看不一致</button>";
-    }
-
-    panel.innerHTML =
-      "<div class='history-burnin-head'>" +
-        "<div class='history-burnin-title'>Cutover Burn-in 统计</div>" +
-        "<div class='history-burnin-gates'>" +
-          "<span class='history-burnin-gate " + burnInState.gateClass + "'>单窗口: " + escapeHtml(burnInState.gateLabel) + "</span>" +
-          "<span class='history-burnin-gate " + burnInState.sustainedGateClass + "'>连续窗口: " + escapeHtml(burnInState.sustainedGateLabel) + "</span>" +
-        "</div>" +
-      "</div>" +
-      "<div class='history-burnin-grid'>" +
-        "<span>采样: " + escapeHtml(burnInState.limitText) + "</span>" +
-        "<span>诊断记录 " + escapeHtml(summary.withDiagnostics) + "</span>" +
-        "<span>可比较样本 " + escapeHtml(summary.comparable) + "</span>" +
-        "<span>一致 " + escapeHtml(summary.match) + "</span>" +
-        "<span>不一致 " + escapeHtml(summary.mismatch) + "</span>" +
-        "<span>样本不足 " + escapeHtml(summary.incomplete) + "</span>" +
-        "<span>不一致率 " + escapeHtml(burnInState.mismatchRateText) + "</span>" +
-      "</div>" +
-      "<div class='history-burnin-note'>" +
-        "门槛: 可比较 >= " + escapeHtml(summary.minComparable) +
-        "，不一致率 <= " + escapeHtml(burnInState.maxMismatchRateText) +
-      "</div>" +
-      "<div class='history-burnin-note'>" +
-        "连续门槛: 最近 " + escapeHtml(burnInState.sustainedRequired) +
-        " 个窗口（每窗口 " + escapeHtml(burnInState.sustainedWindowSize) +
-        " 条）均需单窗口达标" +
-      "</div>" +
-      "<div class='history-burnin-note'>" +
-        "连续通过 " + escapeHtml(burnInState.sustainedConsecutive) +
-        "/" + escapeHtml(burnInState.sustainedRequired) +
-        "，已评估窗口 " + escapeHtml(burnInState.sustainedEvaluated) +
-      "</div>" +
-      (mismatchAction ? "<div class='history-burnin-actions'>" + mismatchAction + "</div>" : "");
+    panel.innerHTML = historyBurnInRuntime.resolveHistoryBurnInPanelHtml(summary, burnInState);
+    if (!burnInState || burnInState.hasSummary !== true) return;
 
     var mismatchBtn = panel.querySelector(".history-burnin-focus-mismatch");
     if (mismatchBtn) {

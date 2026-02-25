@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   resolveHistoryBurnInMismatchFocusActionState,
+  resolveHistoryBurnInPanelHtml,
   resolveHistoryBurnInSummaryState
 } from "../../src/bootstrap/history-burnin";
 
@@ -92,5 +93,41 @@ describe("bootstrap history burn-in", () => {
       shouldReload: true,
       resetPage: true
     });
+  });
+
+  it("builds burn-in panel html from summary state", () => {
+    const summaryState = resolveHistoryBurnInSummaryState({
+      sampleLimit: 200,
+      evaluatedRecords: 120,
+      gateStatus: "fail",
+      sustainedGateStatus: "pass",
+      sustainedWindowSize: 200,
+      sustainedWindows: 3,
+      sustainedEvaluatedWindows: 2,
+      sustainedConsecutivePass: 1,
+      mismatch: 4,
+      mismatchRate: 2.5,
+      maxMismatchRate: 1
+    });
+    const html = resolveHistoryBurnInPanelHtml(
+      {
+        withDiagnostics: 20,
+        comparable: 18,
+        match: 14,
+        mismatch: 4,
+        incomplete: 2,
+        minComparable: 50
+      },
+      summaryState
+    );
+    expect(html).toContain("Cutover Burn-in 统计");
+    expect(html).toContain("仅看不一致");
+    expect(html).toContain("不一致率 2.50%");
+  });
+
+  it("builds empty burn-in panel html when summary state is unavailable", () => {
+    expect(resolveHistoryBurnInPanelHtml(null, null)).toBe(
+      "<div class='history-burnin-empty'>暂无 burn-in 数据</div>"
+    );
   });
 });
