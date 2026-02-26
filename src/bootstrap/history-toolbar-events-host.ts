@@ -30,7 +30,7 @@ function bindListener(
     toRecord(element).addEventListener
   );
   if (!addEventListener) return false;
-  addEventListener(eventName, handler);
+  (addEventListener as unknown as Function).call(element, eventName, handler);
   return true;
 }
 
@@ -118,7 +118,7 @@ export function bindHistoryToolbarPagerAndFilterEvents(input: {
       const keyboardEvent = toRecord(event);
       if (shouldHistoryKeywordTriggerReload(keyboardEvent.key) !== true) return;
       const preventDefault = asFunction<() => unknown>(keyboardEvent.preventDefault);
-      if (preventDefault) preventDefault();
+      if (preventDefault) (preventDefault as unknown as Function).call(keyboardEvent);
       loadHistory(true);
     })
   ) {

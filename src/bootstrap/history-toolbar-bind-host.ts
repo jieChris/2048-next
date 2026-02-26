@@ -19,7 +19,7 @@ function bindListener(
     toRecord(element).addEventListener
   );
   if (!addEventListener) return false;
-  addEventListener(eventName, handler);
+  (addEventListener as unknown as Function).call(element, eventName, handler);
   return true;
 }
 

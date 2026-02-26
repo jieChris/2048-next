@@ -4,14 +4,17 @@ import { bindHistoryImportControls } from "../../src/bootstrap/history-import-bi
 
 function createFakeElement() {
   const handlers: Record<string, (event?: unknown) => void> = {};
-  return {
+  const element = {
     handlers,
+    bindCallCount: 0,
     value: "",
     files: null as unknown,
-    addEventListener: (name: string, cb: (event?: unknown) => void) => {
+    addEventListener(name: string, cb: (event?: unknown) => void) {
+      if (this === element) element.bindCallCount += 1;
       handlers[name] = cb;
     }
   };
+  return element;
 }
 
 describe("bootstrap history import bind host", () => {
@@ -79,6 +82,9 @@ describe("bootstrap history import bind host", () => {
     });
 
     expect(result).toEqual({ didBind: true, boundControlCount: 3 });
+    expect(importBtn.bindCallCount).toBe(1);
+    expect(replaceBtn.bindCallCount).toBe(1);
+    expect(importInput.bindCallCount).toBe(1);
 
     importBtn.handlers.click();
     replaceBtn.handlers.click();

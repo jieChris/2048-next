@@ -18,7 +18,7 @@
   function bindListener(element, eventName, handler) {
     var addEventListener = asFunction(toRecord(element).addEventListener);
     if (!addEventListener) return false;
-    addEventListener(eventName, handler);
+    addEventListener.call(element, eventName, handler);
     return true;
   }
 
@@ -97,7 +97,7 @@
           importMode = clickState.nextMode;
         }
         if (clickState.shouldOpenFilePicker === true && clickInput) {
-          clickInput();
+          clickInput.call(importInput);
         }
       })
     ) {
@@ -119,7 +119,7 @@
           importMode = clickState.nextMode;
         }
         if (clickState.shouldOpenFilePicker === true && clickInput) {
-          clickInput();
+          clickInput.call(importInput);
         }
       })
     ) {

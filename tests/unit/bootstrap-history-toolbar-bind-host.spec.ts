@@ -4,12 +4,15 @@ import { bindHistoryToolbarActionButtons } from "../../src/bootstrap/history-too
 
 function createFakeElement() {
   const handlers: Record<string, (event?: unknown) => void> = {};
-  return {
+  const element = {
     handlers,
-    addEventListener: (name: string, cb: (event?: unknown) => void) => {
+    bindCallCount: 0,
+    addEventListener(name: string, cb: (event?: unknown) => void) {
+      if (this === element) element.bindCallCount += 1;
       handlers[name] = cb;
     }
   };
+  return element;
 }
 
 describe("bootstrap history toolbar bind host", () => {
@@ -67,6 +70,10 @@ describe("bootstrap history toolbar bind host", () => {
 
     expect(result.didBind).toBe(true);
     expect(result.boundControlCount).toBe(4);
+    expect(elements["history-load-btn"].bindCallCount).toBe(1);
+    expect(elements["history-export-all-btn"].bindCallCount).toBe(1);
+    expect(elements["history-export-mismatch-btn"].bindCallCount).toBe(1);
+    expect(elements["history-clear-all-btn"].bindCallCount).toBe(1);
 
     elements["history-load-btn"].handlers.click();
     expect(loadHistory).toHaveBeenLastCalledWith(true);

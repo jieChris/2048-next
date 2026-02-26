@@ -19,7 +19,7 @@ function bindListener(
     toRecord(element).addEventListener
   );
   if (!addEventListener) return false;
-  addEventListener(eventName, handler);
+  (addEventListener as unknown as Function).call(element, eventName, handler);
   return true;
 }
 
@@ -115,7 +115,7 @@ export function bindHistoryImportControls(input: {
         importMode = clickState.nextMode;
       }
       if (clickState.shouldOpenFilePicker === true && clickInput) {
-        clickInput();
+        (clickInput as unknown as Function).call(importInput);
       }
     })
   ) {
@@ -137,7 +137,7 @@ export function bindHistoryImportControls(input: {
         importMode = clickState.nextMode;
       }
       if (clickState.shouldOpenFilePicker === true && clickInput) {
-        clickInput();
+        (clickInput as unknown as Function).call(importInput);
       }
     })
   ) {

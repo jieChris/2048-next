@@ -18,7 +18,7 @@
   function bindListener(element, eventName, handler) {
     var addEventListener = asFunction(toRecord(element).addEventListener);
     if (!addEventListener) return false;
-    addEventListener(eventName, handler);
+    addEventListener.call(element, eventName, handler);
     return true;
   }
 

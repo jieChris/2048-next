@@ -238,6 +238,7 @@
   - 新增 `src/bootstrap/history-import-file.ts` + `js/core_history_import_file_runtime.js`，`history_page.js` 委托导入文件选择、读取编码、payload 文本归一化与 input reset 值决策
   - 新增 `src/bootstrap/history-import-host.ts` + `js/core_history_import_host_runtime.js`，`history_page.js` 委托导入入口点击、文件读取成功/失败反馈与刷新判定编排
   - 新增 `src/bootstrap/history-import-bind-host.ts` + `js/core_history_import_bind_host_runtime.js`，`history_page.js` 委托导入控件绑定编排（merge/replace/file-change）
+  - `history-import-bind-host` 已修复 DOM 方法 this 绑定（`addEventListener/click`），避免浏览器环境下导入按钮与文件选择事件绑定丢失
   - 新增 `src/bootstrap/history-record-actions.ts` + `js/core_history_record_actions_runtime.js`，`history_page.js` 委托记录项动作决策（回放链接、删除确认计划、删除成功/失败提示文案）
   - 新增 `src/bootstrap/history-record-host.ts` + `js/core_history_record_host_runtime.js`，`history_page.js` 委托记录项回放跳转、单条导出与删除执行反馈编排
   - `history-record-actions` 已继续承接记录删除执行（`executeHistoryDeleteRecord`），`history_page.js` 不再本地调用 `LocalHistoryStore.deleteById`
@@ -247,6 +248,7 @@
   - 新增 `src/bootstrap/history-toolbar-bind-host.ts` + `js/core_history_toolbar_bind_host_runtime.js`，`history_page.js` 委托工具栏按钮绑定编排（刷新/导出全部/导出不一致/清空）
   - 新增 `src/bootstrap/history-toolbar-events.ts` + `js/core_history_toolbar_events_runtime.js`，`history_page.js` 委托分页步进决策、筛选控件 reload 绑定列表与关键词 Enter 触发判定
   - 新增 `src/bootstrap/history-toolbar-events-host.ts` + `js/core_history_toolbar_events_host_runtime.js`，`history_page.js` 委托分页/筛选/关键词监听绑定编排
+  - `history-toolbar-bind-host/history-toolbar-events-host` 已修复 DOM 方法 this 绑定（`addEventListener/preventDefault`），并补充单测防回归
   - 新增 `src/bootstrap/history-mode-filter.ts` + `js/core_history_mode_filter_runtime.js`，`history_page.js` 委托模式筛选下拉选项模型组装
   - 新增 `src/bootstrap/history-board.ts` + `js/core_history_board_runtime.js`，`history_page.js` 委托历史记录终盘棋盘 HTML 渲染（网格尺寸推断、tile 样式类、super tile 标识）
   - 新增 `src/bootstrap/history-runtime-contract.ts` + `js/core_history_runtime_contract_runtime.js`，`history_page.js` 统一委托历史页 runtime 依赖契约校验并集中收敛依赖对象

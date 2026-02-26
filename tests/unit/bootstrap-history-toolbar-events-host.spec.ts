@@ -4,12 +4,15 @@ import { bindHistoryToolbarPagerAndFilterEvents } from "../../src/bootstrap/hist
 
 function createFakeElement() {
   const handlers: Record<string, (event?: unknown) => void> = {};
-  return {
+  const element = {
     handlers,
-    addEventListener: (name: string, cb: (event?: unknown) => void) => {
+    bindCallCount: 0,
+    addEventListener(name: string, cb: (event?: unknown) => void) {
+      if (this === element) element.bindCallCount += 1;
       handlers[name] = cb;
     }
   };
+  return element;
 }
 
 describe("bootstrap history toolbar events host", () => {
@@ -38,6 +41,11 @@ describe("bootstrap history toolbar events host", () => {
 
     expect(bindState.didBind).toBe(true);
     expect(bindState.boundControlCount).toBe(5);
+    expect(elements["history-prev-page"].bindCallCount).toBe(1);
+    expect(elements["history-next-page"].bindCallCount).toBe(1);
+    expect(elements["history-mode"].bindCallCount).toBe(1);
+    expect(elements["history-sort"].bindCallCount).toBe(1);
+    expect(elements["history-keyword"].bindCallCount).toBe(1);
 
     elements["history-prev-page"].handlers.click();
     expect(state.page).toBe(1);
