@@ -4885,6 +4885,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const snapshot = await page.evaluate(async () => {
       const runtime = (window as any).CoreHomeGuideRuntime;
+      const pageHostRuntime = (window as any).CoreHomeGuidePageHostRuntime;
       if (
         !runtime ||
         typeof runtime.resolveHomeGuidePathname !== "function" ||
@@ -4908,13 +4909,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.resolveHomeGuideDoneNotice !== "function" ||
         typeof runtime.resolveHomeGuideDoneNoticeStyle !== "function" ||
         typeof runtime.resolveHomeGuidePanelLayout !== "function" ||
-        typeof runtime.isHomeGuideTargetVisible !== "function"
+        typeof runtime.isHomeGuideTargetVisible !== "function" ||
+        !pageHostRuntime ||
+        typeof pageHostRuntime.applyHomeGuideSettingsPageInit !== "function" ||
+        typeof pageHostRuntime.applyHomeGuideAutoStartPage !== "function"
       ) {
-        return { hasRuntime: false };
+        return { hasRuntime: false, hasPageHostRuntime: false };
       }
       const openSettingsModal = (window as any).openSettingsModal;
       if (typeof openSettingsModal !== "function") {
-        return { hasRuntime: true, hasSettingsOpen: false };
+        return { hasRuntime: true, hasPageHostRuntime: true, hasSettingsOpen: false };
       }
       const originalBuild = runtime.buildHomeGuideSteps;
       const originalResolvePathname = runtime.resolveHomeGuidePathname;
@@ -4938,6 +4942,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalResolveDoneNoticeStyle = runtime.resolveHomeGuideDoneNoticeStyle;
       const originalResolvePanelLayout = runtime.resolveHomeGuidePanelLayout;
       const originalIsTargetVisible = runtime.isHomeGuideTargetVisible;
+      const originalApplySettingsPageHost = pageHostRuntime.applyHomeGuideSettingsPageInit;
+      const originalApplyAutoStartPageHost = pageHostRuntime.applyHomeGuideAutoStartPage;
       let callCount = 0;
       let pathnameCallCount = 0;
       let panelHtmlCallCount = 0;
@@ -4960,6 +4966,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let doneNoticeStyleCallCount = 0;
       let panelLayoutCallCount = 0;
       let targetVisibleCallCount = 0;
+      let applySettingsPageHostCallCount = 0;
+      let applyAutoStartPageHostCallCount = 0;
       runtime.buildHomeGuideSteps = function (opts: any) {
         callCount += 1;
         return originalBuild(opts);
@@ -5048,6 +5056,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
         targetVisibleCallCount += 1;
         return originalIsTargetVisible(opts);
       };
+      pageHostRuntime.applyHomeGuideSettingsPageInit = function (opts: any) {
+        applySettingsPageHostCallCount += 1;
+        return originalApplySettingsPageHost(opts);
+      };
+      pageHostRuntime.applyHomeGuideAutoStartPage = function (opts: any) {
+        applyAutoStartPageHostCallCount += 1;
+        return originalApplyAutoStartPageHost(opts);
+      };
       try {
         const existingToggle = document.getElementById("home-guide-toggle");
         if (existingToggle) {
@@ -5086,8 +5102,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
         const doneToast = document.getElementById("home-guide-done-toast");
         return {
           hasRuntime: true,
+          hasPageHostRuntime: true,
           hasSettingsOpen: true,
           hasToggle: true,
+          applySettingsPageHostCallCount,
+          applyAutoStartPageHostCallCount,
           callCount,
           pathnameCallCount,
           panelHtmlCallCount,
@@ -5140,12 +5159,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.resolveHomeGuideDoneNoticeStyle = originalResolveDoneNoticeStyle;
         runtime.resolveHomeGuidePanelLayout = originalResolvePanelLayout;
         runtime.isHomeGuideTargetVisible = originalIsTargetVisible;
+        pageHostRuntime.applyHomeGuideSettingsPageInit = originalApplySettingsPageHost;
+        pageHostRuntime.applyHomeGuideAutoStartPage = originalApplyAutoStartPageHost;
       }
     });
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasPageHostRuntime).toBe(true);
     expect(snapshot.hasSettingsOpen).toBe(true);
     expect(snapshot.hasToggle).toBe(true);
+    expect(snapshot.applySettingsPageHostCallCount).toBeGreaterThan(0);
+    expect(snapshot.applyAutoStartPageHostCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.callCount).toBeGreaterThan(0);
     expect(snapshot.pathnameCallCount).toBeGreaterThan(0);
     expect(snapshot.panelHtmlCallCount).toBeGreaterThan(0);

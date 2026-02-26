@@ -405,6 +405,14 @@ if (
 ) {
   throw new Error("CoreHomeGuideSettingsHostRuntime is required");
 }
+var homeGuidePageHostRuntime = window.CoreHomeGuidePageHostRuntime;
+if (
+  !homeGuidePageHostRuntime ||
+  typeof homeGuidePageHostRuntime.applyHomeGuideSettingsPageInit !== "function" ||
+  typeof homeGuidePageHostRuntime.applyHomeGuideAutoStartPage !== "function"
+) {
+  throw new Error("CoreHomeGuidePageHostRuntime is required");
+}
 var homeGuideDomHostRuntime = window.CoreHomeGuideDomHostRuntime;
 if (
   !homeGuideDomHostRuntime ||
@@ -940,7 +948,8 @@ function startHomeGuide(options) {
 }
 
 function initHomeGuideSettingsUI() {
-  homeGuideSettingsHostRuntime.applyHomeGuideSettingsUi({
+  homeGuidePageHostRuntime.applyHomeGuideSettingsPageInit({
+    homeGuideSettingsHostRuntime: homeGuideSettingsHostRuntime,
     documentLike: document,
     windowLike: window,
     homeGuideRuntime: homeGuideRuntime,
@@ -952,7 +961,8 @@ function initHomeGuideSettingsUI() {
 }
 
 function autoStartHomeGuideIfNeeded() {
-  homeGuideStartupHostRuntime.applyHomeGuideAutoStart({
+  homeGuidePageHostRuntime.applyHomeGuideAutoStartPage({
+    homeGuideStartupHostRuntime: homeGuideStartupHostRuntime,
     homeGuideRuntime: homeGuideRuntime,
     locationLike: typeof window !== "undefined" ? window.location : null,
     storageLike: getStorageByName("localStorage"),
