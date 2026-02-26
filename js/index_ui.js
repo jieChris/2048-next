@@ -328,6 +328,13 @@ if (
 ) {
   throw new Error("CoreHomeGuideStartHostRuntime is required");
 }
+var homeGuideControlsHostRuntime = window.CoreHomeGuideControlsHostRuntime;
+if (
+  !homeGuideControlsHostRuntime ||
+  typeof homeGuideControlsHostRuntime.applyHomeGuideControls !== "function"
+) {
+  throw new Error("CoreHomeGuideControlsHostRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -1286,66 +1293,17 @@ function startHomeGuide(options) {
   });
   if (!startResult.didStart) return;
 
-  var prevBtn = document.getElementById("home-guide-prev");
-  var nextBtn = document.getElementById("home-guide-next");
-  var skipBtn = document.getElementById("home-guide-skip");
-
-  if (prevBtn) {
-    var prevBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
-      alreadyBound: !!prevBtn.__homeGuideBound
-    });
-    if (prevBindingState.shouldBind) {
-      prevBtn.__homeGuideBound = prevBindingState.boundValue;
-      prevBtn.addEventListener("click", function () {
-        var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
-          action: "prev",
-          stepIndex: HOME_GUIDE_STATE.index
-        });
-        showHomeGuideStep(actionState.nextStepIndex);
-      });
-    }
-  }
-  if (nextBtn) {
-    var nextBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
-      alreadyBound: !!nextBtn.__homeGuideBound
-    });
-    if (nextBindingState.shouldBind) {
-      nextBtn.__homeGuideBound = nextBindingState.boundValue;
-      nextBtn.addEventListener("click", function () {
-        var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
-          action: "next",
-          stepIndex: HOME_GUIDE_STATE.index
-        });
-        showHomeGuideStep(actionState.nextStepIndex);
-      });
-    }
-  }
-  if (skipBtn) {
-    var skipBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
-      alreadyBound: !!skipBtn.__homeGuideBound
-    });
-    if (skipBindingState.shouldBind) {
-      skipBtn.__homeGuideBound = skipBindingState.boundValue;
-      skipBtn.addEventListener("click", function () {
-        var actionState = homeGuideRuntime.resolveHomeGuideControlAction({
-          action: "skip",
-          stepIndex: HOME_GUIDE_STATE.index
-        });
-        var finishReason = actionState.finishReason;
-        var finishState = homeGuideRuntime.resolveHomeGuideFinishState({
-          reason: finishReason
-        });
-        finishHomeGuide(finishState.markSeen, {
-          showDoneNotice: finishState.showDoneNotice
-        });
-      });
-    }
-  }
-
-  showHomeGuideStep(0);
-  if (typeof window.syncHomeGuideSettingsUI === "function") {
-    window.syncHomeGuideSettingsUI();
-  }
+  homeGuideControlsHostRuntime.applyHomeGuideControls({
+    documentLike: document,
+    homeGuideRuntime: homeGuideRuntime,
+    homeGuideState: HOME_GUIDE_STATE,
+    showHomeGuideStep: showHomeGuideStep,
+    finishHomeGuide: finishHomeGuide,
+    syncHomeGuideSettingsUI:
+      typeof window.syncHomeGuideSettingsUI === "function"
+        ? window.syncHomeGuideSettingsUI
+        : null
+  });
 }
 
 function initHomeGuideSettingsUI() {
