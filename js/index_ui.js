@@ -1,6 +1,7 @@
 // Logic extracted from index.html
 
 var replayModalRuntime = window.CoreReplayModalRuntime;
+var replayExportRuntime = window.CoreReplayExportRuntime;
 if (
   !replayModalRuntime ||
   typeof replayModalRuntime.applyReplayModalOpen !== "function" ||
@@ -9,6 +10,12 @@ if (
   typeof replayModalRuntime.applySettingsModalClose !== "function"
 ) {
   throw new Error("CoreReplayModalRuntime is required");
+}
+if (
+  !replayExportRuntime ||
+  typeof replayExportRuntime.applyReplayExport !== "function"
+) {
+  throw new Error("CoreReplayExportRuntime is required");
 }
 
 // Replay Modal Functions
@@ -46,17 +53,14 @@ window.closeSettingsModal = function () {
 };
 
 window.exportReplay = function() {
-   if (window.game_manager) {
-     var replay = window.game_manager.serialize();
-     
-     // Show Modal first so user can see it
-     showReplayModal("导出回放", replay, "再次复制", function(text) {
-       copyToClipboard(text);
-     });
-     
-     // Auto Copy
-     copyToClipboard(replay);
-   }
+  replayExportRuntime.applyReplayExport({
+    gameManager: window.game_manager,
+    showReplayModal: showReplayModal,
+    navigatorLike: navigator,
+    documentLike: document,
+    alertLike: alert,
+    consoleLike: console
+  });
 };
 
 var PRACTICE_TRANSFER_KEY = "practice_board_transfer_v1";
@@ -681,37 +685,6 @@ window.openPracticeBoardFromCurrent = function () {
   }
   window.open(plan.openUrl, "_blank");
 };
-
-
-function copyToClipboard(text) {
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(function() {
-            alert("回放代码已复制到剪贴板！");
-        }).catch(function(err) {
-            // Fallback if async failure
-            fallbackCopy(text);
-        });
-    } else {
-        fallbackCopy(text);
-    }
-}
-
-function fallbackCopy(text) {
-    try {
-      var textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "fixed";  // Avoid scrolling to bottom
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      alert("回放代码已复制到剪贴板！");
-    } catch (err) {
-      console.error('Fallback copy failed', err);
-      alert("自动复制失败，请手动从文本框复制。");
-    }
-}
 
 // Pretty print time function (Legacy support just in case)
 window.pretty = function(time) {
