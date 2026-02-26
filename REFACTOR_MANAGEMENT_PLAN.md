@@ -268,6 +268,7 @@
   - 新增 `src/bootstrap/history-panel-host.ts` + `js/core_history_panel_host_runtime.js`，`history_page.js` 委托 burn-in/canary/list 三块面板渲染入口编排
   - `history-load-host` 已继续承接分页按钮状态应用（`applyHistoryPagerButtonState`），`history_page.js` 不再本地写 `prev/next.disabled`
   - 新增 `src/bootstrap/history-startup-host.ts` + `js/core_history_startup_host_runtime.js`，`history_page.js` 委托 DOMContentLoaded 启动编排（store 校验/初始化/首屏加载）
+  - `history-startup-host` 已继续承接 controls host 直连编排（mode filter 初始化 + toolbar/import/pager 绑定），`history_page.js` 不再保留 `initModeFilter/bindToolbarActions` 页面层透传函数
   - `history-adapter-diagnostics` 已继续承接 adapter 诊断徽标/诊断区 HTML 拼装（`resolveHistoryAdapterBadgeHtml`/`resolveHistoryAdapterDiagnosticsHtml`），`history_page.js` 不再本地拼接诊断 HTML
   - `history-adapter-diagnostics` 已继续承接 parity 状态读取（`resolveHistoryAdapterParityStatus`），`history_page.js` 不再本地读取 `LocalHistoryStore.getAdapterParityStatus`
   - 新增 `src/bootstrap/history-burnin.ts` + `js/core_history_burnin_runtime.js`，`history_page.js` 委托 burn-in 汇总 gate 状态、百分比文案、连续窗口统计、面板 HTML 渲染与“仅看不一致”点击动作决策

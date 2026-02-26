@@ -164,24 +164,19 @@
     });
   }
 
-  function initModeFilter() {
-    historyControlsHostRuntime.applyHistoryModeFilterInitialization({
+  document.addEventListener("DOMContentLoaded", function () {
+    historyStartupHostRuntime.applyHistoryStartup({
+      localHistoryStore: window.LocalHistoryStore,
+      setStatus: setStatus,
+      loadHistory: loadHistory,
+      historyControlsHostRuntime: historyControlsHostRuntime,
       getElementById: el,
       modeElementId: "history-mode",
       modeCatalog: window.ModeCatalog,
       historyModeFilterRuntime: historyModeFilterRuntime,
       historyModeFilterHostRuntime: historyModeFilterHostRuntime,
-      documentLike: document
-    });
-  }
-
-  function bindToolbarActions() {
-    historyControlsHostRuntime.bindHistoryControls({
-      getElementById: el,
-      localHistoryStore: window.LocalHistoryStore,
+      documentLike: document,
       state: state,
-      setStatus: setStatus,
-      loadHistory: loadHistory,
       historyFilterHostRuntime: historyFilterHostRuntime,
       historyQueryRuntime: historyQueryRuntime,
       historyExportRuntime: historyExportRuntime,
@@ -201,16 +196,6 @@
       createFileReader: function () {
         return new FileReader();
       }
-    });
-  }
-
-  document.addEventListener("DOMContentLoaded", function () {
-    historyStartupHostRuntime.applyHistoryStartup({
-      localHistoryStore: window.LocalHistoryStore,
-      setStatus: setStatus,
-      initModeFilter: initModeFilter,
-      bindToolbarActions: bindToolbarActions,
-      loadHistory: loadHistory
     });
   });
 })();
