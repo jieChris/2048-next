@@ -82,7 +82,6 @@
         if (!Object.prototype.hasOwnProperty.call(toastStyle, key)) continue;
         inlineStyle_1[key] = toastStyle[key];
       }
-      toastRecord_1.style = inlineStyle_1;
       appendChild(documentLike.body, toast);
       created = true;
     }
@@ -92,7 +91,6 @@
     toastRecord.textContent = resolveText(doneNotice.message);
     var inlineStyle = toRecord(toastRecord.style);
     inlineStyle.opacity = "1";
-    toastRecord.style = inlineStyle;
 
     var previousTimer = toastRecord.__hideTimer;
     if (previousTimer && clearTimeoutLike) {
@@ -103,7 +101,6 @@
     var hideTimer = setTimeoutLike(function () {
       var style = toRecord(toRecord(toast).style);
       style.opacity = "0";
-      toRecord(toast).style = style;
     }, hideDelayMs);
     toastRecord.__hideTimer = hideTimer;
 

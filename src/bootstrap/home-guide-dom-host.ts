@@ -37,7 +37,6 @@ function applyOverlayShape(overlay: Record<string, unknown>): void {
   overlay.className = "home-guide-overlay";
   const style = toRecord(overlay.style);
   style.display = "none";
-  overlay.style = style;
 }
 
 function applyPanelShape(panel: Record<string, unknown>, panelInnerHtml: string): void {
@@ -45,7 +44,6 @@ function applyPanelShape(panel: Record<string, unknown>, panelInnerHtml: string)
   panel.className = "home-guide-panel";
   const style = toRecord(panel.style);
   style.display = "none";
-  panel.style = style;
   panel.innerHTML = panelInnerHtml;
 }
 

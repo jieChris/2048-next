@@ -42,7 +42,6 @@
     overlay.className = "home-guide-overlay";
     var style = toRecord(overlay.style);
     style.display = "none";
-    overlay.style = style;
   }
 
   function applyPanelShape(panel, panelInnerHtml) {
@@ -50,7 +49,6 @@
     panel.className = "home-guide-panel";
     var style = toRecord(panel.style);
     style.display = "none";
-    panel.style = style;
     panel.innerHTML = panelInnerHtml;
   }
 

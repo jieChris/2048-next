@@ -34,7 +34,6 @@ function resolveDisplayValue(value: unknown): string {
 function setDisplay(node: unknown, display: string): void {
   const style = toRecord(toRecord(node).style);
   style.display = display;
-  toRecord(node).style = style;
 }
 
 export interface HomeGuideStartHostResult {

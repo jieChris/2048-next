@@ -39,7 +39,6 @@
   function setDisplay(node, display) {
     var style = toRecord(toRecord(node).style);
     style.display = display;
-    toRecord(node).style = style;
   }
 
   function applyHomeGuideStart(input) {

@@ -94,7 +94,6 @@ export function applyHomeGuideDoneNotice(input: {
       if (!Object.prototype.hasOwnProperty.call(toastStyle, key)) continue;
       inlineStyle[key] = toastStyle[key];
     }
-    toastRecord.style = inlineStyle;
     appendChild(documentLike.body, toast);
     created = true;
   }
@@ -104,7 +103,6 @@ export function applyHomeGuideDoneNotice(input: {
   toastRecord.textContent = resolveText(doneNotice.message);
   const inlineStyle = toRecord(toastRecord.style);
   inlineStyle.opacity = "1";
-  toastRecord.style = inlineStyle;
 
   const previousTimer = toastRecord.__hideTimer;
   if (previousTimer && clearTimeoutLike) {
@@ -115,7 +113,6 @@ export function applyHomeGuideDoneNotice(input: {
   const hideTimer = setTimeoutLike(function () {
     const style = toRecord(toRecord(toast).style);
     style.opacity = "0";
-    toRecord(toast).style = style;
   }, hideDelayMs);
   toastRecord.__hideTimer = hideTimer;
 

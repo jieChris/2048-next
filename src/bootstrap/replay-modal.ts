@@ -44,49 +44,51 @@ export function applyReplayModalOpen(input: {
 }): Record<string, unknown> {
   const source = toRecord(input);
   const getElementById = resolveGetElementById(source);
-  const modal = toRecord(getElementById("replay-modal"));
-  if (!Object.keys(modal).length) {
+  const modalNode = getElementById("replay-modal");
+  if (!modalNode) {
     return {
       opened: false
     };
   }
+  const modal = toRecord(modalNode);
 
-  const titleEl = toRecord(getElementById("replay-modal-title"));
-  const textEl = toRecord(getElementById("replay-textarea"));
-  const actionBtn = toRecord(getElementById("replay-action-btn"));
+  const titleEl = getElementById("replay-modal-title");
+  const textEl = getElementById("replay-textarea");
+  const actionBtn = getElementById("replay-action-btn");
   const querySelector = asFunction<(selector: unknown) => unknown>(modal.querySelector);
-  const closeBtn = toRecord(
+  const closeBtn = (
     querySelector ? querySelector.call(modal, ".replay-button:not(#replay-action-btn)") : null
   );
 
   setDisplayStyle(modal, "flex");
-  if (Object.keys(titleEl).length) {
-    titleEl.textContent = source.title == null ? "" : String(source.title);
+  if (titleEl) {
+    toRecord(titleEl).textContent = source.title == null ? "" : String(source.title);
   }
-  if (Object.keys(textEl).length) {
-    textEl.value = source.content == null ? "" : String(source.content);
+  if (textEl) {
+    toRecord(textEl).value = source.content == null ? "" : String(source.content);
   }
 
   const actionCallback = asFunction<(text: unknown) => unknown>(source.actionCallback);
   const actionName = source.actionName == null ? "" : String(source.actionName);
-  if (Object.keys(actionBtn).length) {
+  if (actionBtn) {
+    const actionBtnRecord = toRecord(actionBtn);
     if (actionName) {
-      setDisplayStyle(actionBtn, "inline-block");
-      actionBtn.textContent = actionName;
-      actionBtn.onclick = function () {
+      setDisplayStyle(actionBtnRecord, "inline-block");
+      actionBtnRecord.textContent = actionName;
+      actionBtnRecord.onclick = function () {
         if (!actionCallback) return undefined;
-        const value = Object.keys(textEl).length ? textEl.value : "";
+        const value = textEl ? toRecord(textEl).value : "";
         return actionCallback(value);
       };
     } else {
-      setDisplayStyle(actionBtn, "none");
-      actionBtn.onclick = null;
+      setDisplayStyle(actionBtnRecord, "none");
+      actionBtnRecord.onclick = null;
     }
   }
 
   const closeCallback = asFunction<() => unknown>(source.closeCallback);
-  if (Object.keys(closeBtn).length && closeCallback) {
-    closeBtn.onclick = closeCallback;
+  if (closeBtn && closeCallback) {
+    toRecord(closeBtn).onclick = closeCallback;
   }
 
   return {
@@ -101,12 +103,13 @@ export function applyReplayModalClose(input: {
 }): Record<string, unknown> {
   const source = toRecord(input);
   const getElementById = resolveGetElementById(source);
-  const modal = toRecord(getElementById("replay-modal"));
-  if (!Object.keys(modal).length) {
+  const modalNode = getElementById("replay-modal");
+  if (!modalNode) {
     return {
       closed: false
     };
   }
+  const modal = toRecord(modalNode);
 
   setDisplayStyle(modal, "none");
   return {
@@ -120,12 +123,13 @@ export function applySettingsModalOpen(input: {
 }): Record<string, unknown> {
   const source = toRecord(input);
   const getElementById = resolveGetElementById(source);
-  const modal = toRecord(getElementById("settings-modal"));
-  if (!Object.keys(modal).length) {
+  const modalNode = getElementById("settings-modal");
+  if (!modalNode) {
     return {
       opened: false
     };
   }
+  const modal = toRecord(modalNode);
 
   setDisplayStyle(modal, "flex");
   return {
@@ -139,12 +143,13 @@ export function applySettingsModalClose(input: {
 }): Record<string, unknown> {
   const source = toRecord(input);
   const getElementById = resolveGetElementById(source);
-  const modal = toRecord(getElementById("settings-modal"));
-  if (!Object.keys(modal).length) {
+  const modalNode = getElementById("settings-modal");
+  if (!modalNode) {
     return {
       closed: false
     };
   }
+  const modal = toRecord(modalNode);
 
   setDisplayStyle(modal, "none");
   return {

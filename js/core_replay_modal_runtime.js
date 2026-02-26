@@ -38,49 +38,51 @@
   function applyReplayModalOpen(input) {
     var source = toRecord(input);
     var getElementById = resolveGetElementById(source);
-    var modal = toRecord(getElementById("replay-modal"));
-    if (!Object.keys(modal).length) {
+    var modalNode = getElementById("replay-modal");
+    if (!modalNode) {
       return {
         opened: false
       };
     }
+    var modal = toRecord(modalNode);
 
-    var titleEl = toRecord(getElementById("replay-modal-title"));
-    var textEl = toRecord(getElementById("replay-textarea"));
-    var actionBtn = toRecord(getElementById("replay-action-btn"));
+    var titleEl = getElementById("replay-modal-title");
+    var textEl = getElementById("replay-textarea");
+    var actionBtn = getElementById("replay-action-btn");
     var querySelector = asFunction(modal.querySelector);
-    var closeBtn = toRecord(
+    var closeBtn = (
       querySelector ? querySelector.call(modal, ".replay-button:not(#replay-action-btn)") : null
     );
 
     setDisplayStyle(modal, "flex");
-    if (Object.keys(titleEl).length) {
-      titleEl.textContent = source.title == null ? "" : String(source.title);
+    if (titleEl) {
+      toRecord(titleEl).textContent = source.title == null ? "" : String(source.title);
     }
-    if (Object.keys(textEl).length) {
-      textEl.value = source.content == null ? "" : String(source.content);
+    if (textEl) {
+      toRecord(textEl).value = source.content == null ? "" : String(source.content);
     }
 
     var actionCallback = asFunction(source.actionCallback);
     var actionName = source.actionName == null ? "" : String(source.actionName);
-    if (Object.keys(actionBtn).length) {
+    if (actionBtn) {
+      var actionBtnRecord = toRecord(actionBtn);
       if (actionName) {
-        setDisplayStyle(actionBtn, "inline-block");
-        actionBtn.textContent = actionName;
-        actionBtn.onclick = function () {
+        setDisplayStyle(actionBtnRecord, "inline-block");
+        actionBtnRecord.textContent = actionName;
+        actionBtnRecord.onclick = function () {
           if (!actionCallback) return undefined;
-          var value = Object.keys(textEl).length ? textEl.value : "";
+          var value = textEl ? toRecord(textEl).value : "";
           return actionCallback(value);
         };
       } else {
-        setDisplayStyle(actionBtn, "none");
-        actionBtn.onclick = null;
+        setDisplayStyle(actionBtnRecord, "none");
+        actionBtnRecord.onclick = null;
       }
     }
 
     var closeCallback = asFunction(source.closeCallback);
-    if (Object.keys(closeBtn).length && closeCallback) {
-      closeBtn.onclick = closeCallback;
+    if (closeBtn && closeCallback) {
+      toRecord(closeBtn).onclick = closeCallback;
     }
 
     return {
@@ -92,12 +94,13 @@
   function applyReplayModalClose(input) {
     var source = toRecord(input);
     var getElementById = resolveGetElementById(source);
-    var modal = toRecord(getElementById("replay-modal"));
-    if (!Object.keys(modal).length) {
+    var modalNode = getElementById("replay-modal");
+    if (!modalNode) {
       return {
         closed: false
       };
     }
+    var modal = toRecord(modalNode);
 
     setDisplayStyle(modal, "none");
     return {
@@ -108,12 +111,13 @@
   function applySettingsModalOpen(input) {
     var source = toRecord(input);
     var getElementById = resolveGetElementById(source);
-    var modal = toRecord(getElementById("settings-modal"));
-    if (!Object.keys(modal).length) {
+    var modalNode = getElementById("settings-modal");
+    if (!modalNode) {
       return {
         opened: false
       };
     }
+    var modal = toRecord(modalNode);
 
     setDisplayStyle(modal, "flex");
     return {
@@ -124,12 +128,13 @@
   function applySettingsModalClose(input) {
     var source = toRecord(input);
     var getElementById = resolveGetElementById(source);
-    var modal = toRecord(getElementById("settings-modal"));
-    if (!Object.keys(modal).length) {
+    var modalNode = getElementById("settings-modal");
+    if (!modalNode) {
       return {
         closed: false
       };
     }
+    var modal = toRecord(modalNode);
 
     setDisplayStyle(modal, "none");
     return {
