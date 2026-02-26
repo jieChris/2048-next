@@ -172,7 +172,7 @@
   - 新增 `src/bootstrap/home-guide-step-flow-host.ts` + `js/core_home_guide_step_flow_host_runtime.js`，`index_ui.js` 委托引导步骤流程决策（边界/完成/目标跳过）与目标副作用编排（滚动/高亮/层提升）
   - `index_ui.js` 的 `showHomeGuideStep` 已收敛为 `CoreHomeGuideStepFlowHostRuntime.applyHomeGuideStepFlow + CoreHomeGuideStepViewHostRuntime.applyHomeGuideStepView` 串联调用（页面层移除 completed/target/scroll 分支）
   - 新增 `src/bootstrap/home-guide-step-host.ts` + `js/core_home_guide_step_host_runtime.js`，`index_ui.js` 委托单步编排主链（flow/view 串联、递进决策与完成态短路）
-  - `index_ui.js` 的 `showHomeGuideStep` 已收敛为 `CoreHomeGuideStepHostRuntime.applyHomeGuideStep` 调用（页面层仅保留递归触发）
+  - `home-guide-step-host` 已承接步骤递进循环编排（`applyHomeGuideStepOrchestration`），`index_ui.js` 的 `showHomeGuideStep` 不再保留页面层递归触发分支
   - 新增 `src/bootstrap/home-guide-highlight-host.ts` + `js/core_home_guide_highlight_host_runtime.js`，`index_ui.js` 委托引导高亮清理与层提升样式编排（target/scoped/elevated class 管理）
   - `index_ui.js` 的 `clearHomeGuideHighlight/elevateHomeGuideTarget` 已收敛为 `CoreHomeGuideHighlightHostRuntime` 调用（页面层移除 classList 操作分支）
   - 新增 `src/bootstrap/home-guide-panel-host.ts` + `js/core_home_guide_panel_host_runtime.js`，`index_ui.js` 委托引导面板定位与目标可见性判定编排（panel layout 两阶段计算 + getComputedStyle 透传）

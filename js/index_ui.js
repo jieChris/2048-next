@@ -384,7 +384,8 @@ if (
 var homeGuideStepHostRuntime = window.CoreHomeGuideStepHostRuntime;
 if (
   !homeGuideStepHostRuntime ||
-  typeof homeGuideStepHostRuntime.applyHomeGuideStep !== "function"
+  typeof homeGuideStepHostRuntime.applyHomeGuideStep !== "function" ||
+  typeof homeGuideStepHostRuntime.applyHomeGuideStepOrchestration !== "function"
 ) {
   throw new Error("CoreHomeGuideStepHostRuntime is required");
 }
@@ -1135,8 +1136,9 @@ function finishHomeGuide(markSeen, options) {
 }
 
 function showHomeGuideStep(index) {
-  var stepResult = homeGuideStepHostRuntime.applyHomeGuideStep({
+  var stepResult = homeGuideStepHostRuntime.applyHomeGuideStepOrchestration({
     index: index,
+    maxAdvanceLoops: 32,
     stepFlowHostRuntime: homeGuideStepFlowHostRuntime,
     stepViewHostRuntime: homeGuideStepViewHostRuntime,
     documentLike: document,
@@ -1152,7 +1154,6 @@ function showHomeGuideStep(index) {
     positionHomeGuidePanel: positionHomeGuidePanel
   });
   if (stepResult.didAbort || stepResult.didFinish) return;
-  if (stepResult.didAdvance) showHomeGuideStep(stepResult.nextIndex);
 }
 
 function startHomeGuide(options) {

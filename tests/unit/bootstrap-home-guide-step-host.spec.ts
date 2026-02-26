@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { applyHomeGuideStep } from "../../src/bootstrap/home-guide-step-host";
+import {
+  applyHomeGuideStep,
+  applyHomeGuideStepOrchestration
+} from "../../src/bootstrap/home-guide-step-host";
 
 describe("bootstrap home guide step host", () => {
   it("returns abort result when step-flow runtime is missing", () => {
@@ -99,6 +102,77 @@ describe("bootstrap home guide step host", () => {
       didAdvance: false,
       nextIndex: 0,
       didRender: false
+    });
+  });
+
+  it("orchestrates repeated advance until render", () => {
+    const applyHomeGuideStepFlow = vi
+      .fn()
+      .mockReturnValueOnce({
+        shouldAbort: false,
+        didFinish: false,
+        shouldAdvance: true,
+        nextIndex: 2,
+        shouldRender: false
+      })
+      .mockReturnValueOnce({
+        shouldAbort: false,
+        didFinish: false,
+        shouldAdvance: false,
+        shouldRender: true,
+        stepIndex: 2,
+        step: { selector: "#target", title: "x", desc: "y" }
+      });
+    const applyHomeGuideStepView = vi.fn().mockReturnValue({ didRender: true });
+
+    const result = applyHomeGuideStepOrchestration({
+      index: 1,
+      maxAdvanceLoops: 8,
+      stepFlowHostRuntime: {
+        applyHomeGuideStepFlow
+      },
+      stepViewHostRuntime: {
+        applyHomeGuideStepView
+      },
+      homeGuideState: {
+        steps: [{}, {}, {}]
+      }
+    });
+
+    expect(applyHomeGuideStepFlow).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({
+      didAbort: false,
+      didFinish: false,
+      didRender: true,
+      didHitAdvanceLimit: false,
+      finalIndex: 2,
+      loopCount: 2
+    });
+  });
+
+  it("aborts when advance loop reaches safety limit", () => {
+    const result = applyHomeGuideStepOrchestration({
+      index: 0,
+      maxAdvanceLoops: 3,
+      stepFlowHostRuntime: {
+        applyHomeGuideStepFlow() {
+          return {
+            shouldAbort: false,
+            didFinish: false,
+            shouldAdvance: true,
+            shouldRender: false
+          };
+        }
+      }
+    });
+
+    expect(result).toEqual({
+      didAbort: true,
+      didFinish: false,
+      didRender: false,
+      didHitAdvanceLimit: true,
+      finalIndex: 3,
+      loopCount: 3
     });
   });
 });
