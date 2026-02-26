@@ -1197,6 +1197,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   }) => {
     await page.addInitScript(() => {
       (window as any).__historyLoadHostCallCount = 0;
+      (window as any).__historyLoadHostWithPagerCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryLoadHostRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
@@ -1204,6 +1205,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
             proxyTarget[prop] = function (input: unknown) {
               (window as any).__historyLoadHostCallCount =
                 Number((window as any).__historyLoadHostCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          if (prop === "applyHistoryLoadWithPager" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyLoadHostWithPagerCallCount =
+                Number((window as any).__historyLoadHostWithPagerCallCount || 0) + 1;
               return (value as (args: unknown) => unknown)(input);
             };
             return true;
@@ -1223,12 +1232,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForTimeout(250);
 
     const snapshot = await page.evaluate(() => ({
-      hasRuntime: Boolean((window as any).CoreHistoryLoadHostRuntime?.applyHistoryLoadAndRender),
-      loadHostCallCount: Number((window as any).__historyLoadHostCallCount || 0)
+      hasRuntime:
+        Boolean((window as any).CoreHistoryLoadHostRuntime?.applyHistoryLoadAndRender) &&
+        Boolean((window as any).CoreHistoryLoadHostRuntime?.applyHistoryPagerButtonState) &&
+        Boolean((window as any).CoreHistoryLoadHostRuntime?.applyHistoryLoadWithPager),
+      loadHostCallCount: Number((window as any).__historyLoadHostCallCount || 0),
+      loadWithPagerCallCount: Number((window as any).__historyLoadHostWithPagerCallCount || 0)
     }));
 
     expect(snapshot.hasRuntime).toBe(true);
-    expect(snapshot.loadHostCallCount).toBeGreaterThan(0);
+    expect(snapshot.loadHostCallCount).toBe(0);
+    expect(snapshot.loadWithPagerCallCount).toBeGreaterThan(0);
   });
 
   test("history page delegates record head modeling to runtime helper", async ({ page }) => {

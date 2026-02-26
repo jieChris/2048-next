@@ -16,6 +16,14 @@ export interface HistoryLoadHostResult {
   disableNext: boolean;
 }
 
+export interface HistoryPagerButtonStateApplyResult {
+  didApply: boolean;
+}
+
+export interface HistoryLoadWithPagerResult extends HistoryLoadHostResult {
+  didApplyPagerState: boolean;
+}
+
 function createNoopHistoryLoadHostResult(): HistoryLoadHostResult {
   return {
     didLoad: false,
@@ -81,5 +89,67 @@ export function applyHistoryLoadAndRender(input: {
     didLoad: true,
     disablePrev: pagerState.disablePrev === true,
     disableNext: pagerState.disableNext === true
+  };
+}
+
+export function applyHistoryPagerButtonState(input: {
+  prevButton?: unknown;
+  nextButton?: unknown;
+  loadResult?: unknown;
+}): HistoryPagerButtonStateApplyResult {
+  const source = toRecord(input);
+  const loadResult = toRecord(source.loadResult);
+
+  const prevButton = toRecord(source.prevButton);
+  if ("disabled" in prevButton) {
+    prevButton.disabled = loadResult.disablePrev === true;
+  }
+
+  const nextButton = toRecord(source.nextButton);
+  if ("disabled" in nextButton) {
+    nextButton.disabled = loadResult.disableNext === true;
+  }
+
+  return {
+    didApply: true
+  };
+}
+
+export function applyHistoryLoadWithPager(input: {
+  resetPage?: unknown;
+  state?: unknown;
+  localHistoryStore?: unknown;
+  historyLoadRuntime?: unknown;
+  historyQueryRuntime?: unknown;
+  historyBurnInRuntime?: unknown;
+  burnInMinComparable?: unknown;
+  burnInMaxMismatchRate?: unknown;
+  renderHistory?: unknown;
+  renderSummary?: unknown;
+  renderBurnInSummary?: unknown;
+  renderCanaryPolicy?: unknown;
+  setStatus?: unknown;
+  getElementById?: unknown;
+  prevButtonId?: unknown;
+  nextButtonId?: unknown;
+}): HistoryLoadWithPagerResult {
+  const source = toRecord(input);
+  const loadResult = applyHistoryLoadAndRender(source);
+  const getElementById = asFunction<(id: string) => unknown>(source.getElementById);
+  const prevButtonId = typeof source.prevButtonId === "string" ? source.prevButtonId : "history-prev-page";
+  const nextButtonId = typeof source.nextButtonId === "string" ? source.nextButtonId : "history-next-page";
+  const prevButton = getElementById ? getElementById(prevButtonId) : null;
+  const nextButton = getElementById ? getElementById(nextButtonId) : null;
+  const pagerApplyResult = applyHistoryPagerButtonState({
+    prevButton,
+    nextButton,
+    loadResult
+  });
+
+  return {
+    didLoad: loadResult.didLoad === true,
+    disablePrev: loadResult.disablePrev === true,
+    disableNext: loadResult.disableNext === true,
+    didApplyPagerState: pagerApplyResult.didApply === true
   };
 }

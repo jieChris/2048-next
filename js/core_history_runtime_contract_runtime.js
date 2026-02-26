@@ -157,7 +157,7 @@
     );
     var historyLoadHostRuntime = requireRuntimeFunctions(
       source.CoreHistoryLoadHostRuntime,
-      ["applyHistoryLoadAndRender"],
+      ["applyHistoryLoadAndRender", "applyHistoryPagerButtonState", "applyHistoryLoadWithPager"],
       "CoreHistoryLoadHostRuntime is required"
     );
     var historyRecordViewRuntime = requireRuntimeFunctions(

@@ -120,6 +120,15 @@ function createWindowLike() {
         didLoad: true,
         disablePrev: true,
         disableNext: true
+      }),
+      applyHistoryPagerButtonState: () => ({
+        didApply: true
+      }),
+      applyHistoryLoadWithPager: () => ({
+        didLoad: true,
+        disablePrev: true,
+        disableNext: true,
+        didApplyPagerState: true
       })
     },
     CoreHistoryRecordViewRuntime: {

@@ -67,6 +67,51 @@
     };
   }
 
+  function applyHistoryPagerButtonState(input) {
+    var source = toRecord(input);
+    var loadResult = toRecord(source.loadResult);
+
+    var prevButton = toRecord(source.prevButton);
+    if ("disabled" in prevButton) {
+      prevButton.disabled = loadResult.disablePrev === true;
+    }
+
+    var nextButton = toRecord(source.nextButton);
+    if ("disabled" in nextButton) {
+      nextButton.disabled = loadResult.disableNext === true;
+    }
+
+    return {
+      didApply: true
+    };
+  }
+
+  function applyHistoryLoadWithPager(input) {
+    var source = toRecord(input);
+    var loadResult = applyHistoryLoadAndRender(source);
+    var getElementById = asFunction(source.getElementById);
+    var prevButtonId =
+      typeof source.prevButtonId === "string" ? source.prevButtonId : "history-prev-page";
+    var nextButtonId =
+      typeof source.nextButtonId === "string" ? source.nextButtonId : "history-next-page";
+    var prevButton = getElementById ? getElementById(prevButtonId) : null;
+    var nextButton = getElementById ? getElementById(nextButtonId) : null;
+    var pagerApplyResult = applyHistoryPagerButtonState({
+      prevButton: prevButton,
+      nextButton: nextButton,
+      loadResult: loadResult
+    });
+
+    return {
+      didLoad: loadResult.didLoad === true,
+      disablePrev: loadResult.disablePrev === true,
+      disableNext: loadResult.disableNext === true,
+      didApplyPagerState: pagerApplyResult.didApply === true
+    };
+  }
+
   global.CoreHistoryLoadHostRuntime = global.CoreHistoryLoadHostRuntime || {};
   global.CoreHistoryLoadHostRuntime.applyHistoryLoadAndRender = applyHistoryLoadAndRender;
+  global.CoreHistoryLoadHostRuntime.applyHistoryPagerButtonState = applyHistoryPagerButtonState;
+  global.CoreHistoryLoadHostRuntime.applyHistoryLoadWithPager = applyHistoryLoadWithPager;
 })(typeof window !== "undefined" ? window : undefined);

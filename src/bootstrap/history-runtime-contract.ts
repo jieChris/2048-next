@@ -236,7 +236,7 @@ export function resolveHistoryRuntimeContracts(
   );
   const historyLoadHostRuntime = requireRuntimeFunctions(
     source.CoreHistoryLoadHostRuntime,
-    ["applyHistoryLoadAndRender"],
+    ["applyHistoryLoadAndRender", "applyHistoryPagerButtonState", "applyHistoryLoadWithPager"],
     "CoreHistoryLoadHostRuntime is required"
   );
   const historyRecordViewRuntime = requireRuntimeFunctions(

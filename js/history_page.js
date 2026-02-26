@@ -170,7 +170,7 @@
   function loadHistory(resetPage) {
     if (!window.LocalHistoryStore) return;
     readFilters();
-    var loadResult = historyLoadHostRuntime.applyHistoryLoadAndRender({
+    historyLoadHostRuntime.applyHistoryLoadWithPager({
       resetPage: resetPage,
       state: state,
       localHistoryStore: window.LocalHistoryStore,
@@ -183,13 +183,11 @@
       renderSummary: buildSummary,
       renderBurnInSummary: renderBurnInSummary,
       renderCanaryPolicy: renderCanaryPolicy,
-      setStatus: setStatus
+      setStatus: setStatus,
+      getElementById: el,
+      prevButtonId: "history-prev-page",
+      nextButtonId: "history-next-page"
     });
-
-    var prevBtn = el("history-prev-page");
-    var nextBtn = el("history-next-page");
-    if (prevBtn) prevBtn.disabled = !!(loadResult && loadResult.disablePrev);
-    if (nextBtn) nextBtn.disabled = !!(loadResult && loadResult.disableNext);
   }
 
   function initModeFilter() {

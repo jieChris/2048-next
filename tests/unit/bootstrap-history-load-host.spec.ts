@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { applyHistoryLoadAndRender } from "../../src/bootstrap/history-load-host";
+import {
+  applyHistoryLoadAndRender,
+  applyHistoryLoadWithPager,
+  applyHistoryPagerButtonState
+} from "../../src/bootstrap/history-load-host";
 
 describe("bootstrap history load host", () => {
   it("delegates load and render orchestration to runtime dependencies", () => {
@@ -62,5 +66,61 @@ describe("bootstrap history load host", () => {
       disablePrev: false,
       disableNext: false
     });
+  });
+
+  it("applies pager button disabled state from load result", () => {
+    const prevButton = { disabled: false };
+    const nextButton = { disabled: false };
+
+    const result = applyHistoryPagerButtonState({
+      prevButton,
+      nextButton,
+      loadResult: {
+        disablePrev: true,
+        disableNext: false
+      }
+    });
+
+    expect(result).toEqual({ didApply: true });
+    expect(prevButton.disabled).toBe(true);
+    expect(nextButton.disabled).toBe(false);
+  });
+
+  it("loads and applies pager state through one host entry", () => {
+    const state = { page: 2 };
+    const prevButton = { disabled: false };
+    const nextButton = { disabled: false };
+    const getElementById = vi.fn((id: string) => {
+      if (id === "history-prev-page") return prevButton;
+      if (id === "history-next-page") return nextButton;
+      return null;
+    });
+
+    const result = applyHistoryLoadWithPager({
+      state,
+      localHistoryStore: {},
+      historyLoadRuntime: {
+        resolveHistoryLoadPipeline: () => ({
+          listResult: { items: [], total: 0 },
+          burnInSummary: null,
+          pagerState: {
+            disablePrev: false,
+            disableNext: true
+          }
+        })
+      },
+      getElementById
+    });
+
+    expect(result).toEqual({
+      didLoad: true,
+      disablePrev: false,
+      disableNext: true,
+      didApplyPagerState: true
+    });
+    expect(prevButton.disabled).toBe(false);
+    expect(nextButton.disabled).toBe(true);
+    expect(getElementById).toHaveBeenCalledWith("history-prev-page");
+    expect(getElementById).toHaveBeenCalledWith("history-next-page");
   });
 });

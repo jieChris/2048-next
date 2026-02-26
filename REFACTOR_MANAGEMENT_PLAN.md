@@ -258,6 +258,8 @@
   - 新增 `src/bootstrap/history-adapter-diagnostics.ts` + `js/core_history_adapter_diagnostics_runtime.js`，`history_page.js` 委托 adapter 诊断徽标与文案行模型计算
   - 新增 `src/bootstrap/history-adapter-host.ts` + `js/core_history_adapter_host_runtime.js`，`history_page.js` 委托 adapter 诊断徽标/诊断区渲染编排
   - 新增 `src/bootstrap/history-load-host.ts` + `js/core_history_load_host_runtime.js`，`history_page.js` 委托 load 后渲染编排（列表/汇总/burn-in/canary/status/pager）
+  - `history-load-host` 已继续承接列表加载一体化入口（`applyHistoryLoadWithPager`），`history_page.js` 不再本地读取分页按钮并手工应用禁用态
+  - `history-load-host` 已继续承接分页按钮状态应用（`applyHistoryPagerButtonState`），`history_page.js` 不再本地写 `prev/next.disabled`
   - 新增 `src/bootstrap/history-startup-host.ts` + `js/core_history_startup_host_runtime.js`，`history_page.js` 委托 DOMContentLoaded 启动编排（store 校验/初始化/首屏加载）
   - `history-adapter-diagnostics` 已继续承接 adapter 诊断徽标/诊断区 HTML 拼装（`resolveHistoryAdapterBadgeHtml`/`resolveHistoryAdapterDiagnosticsHtml`），`history_page.js` 不再本地拼接诊断 HTML
   - `history-adapter-diagnostics` 已继续承接 parity 状态读取（`resolveHistoryAdapterParityStatus`），`history_page.js` 不再本地读取 `LocalHistoryStore.getAdapterParityStatus`
