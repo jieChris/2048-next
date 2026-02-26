@@ -42,6 +42,7 @@
   var historyViewHostRuntime = historyRuntimes.historyViewHostRuntime;
   var historyExportRuntime = historyRuntimes.historyExportRuntime;
   var historyQueryRuntime = historyRuntimes.historyQueryRuntime;
+  var historyFilterHostRuntime = historyRuntimes.historyFilterHostRuntime;
   var historyLoadRuntime = historyRuntimes.historyLoadRuntime;
   var historyLoadHostRuntime = historyRuntimes.historyLoadHostRuntime;
   var historyRecordViewRuntime = historyRuntimes.historyRecordViewRuntime;
@@ -150,19 +151,10 @@
   }
 
   function readFilters() {
-    var modeInput = el("history-mode");
-    var keywordInput = el("history-keyword");
-    var sortInput = el("history-sort");
-    var adapterFilterInput = el("history-adapter-filter");
-    var burnInWindowInput = el("history-burnin-window");
-    var sustainedWindowInput = el("history-sustained-window");
-    historyQueryRuntime.applyHistoryFilterState(state, {
-      modeKeyRaw: modeInput && modeInput.value,
-      keywordRaw: keywordInput && keywordInput.value,
-      sortByRaw: sortInput && sortInput.value,
-      adapterParityFilterRaw: adapterFilterInput && adapterFilterInput.value,
-      burnInWindowRaw: burnInWindowInput && burnInWindowInput.value,
-      sustainedWindowsRaw: sustainedWindowInput && sustainedWindowInput.value
+    historyFilterHostRuntime.applyHistoryFilterStateFromInputs({
+      state: state,
+      historyQueryRuntime: historyQueryRuntime,
+      getElementById: el
     });
   }
 

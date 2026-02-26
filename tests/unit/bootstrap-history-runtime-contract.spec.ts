@@ -119,6 +119,11 @@ function createWindowLike() {
       resolveHistoryBurnInQuery: () => ({}),
       resolveHistoryPagerState: () => ({ disablePrev: true, disableNext: true })
     },
+    CoreHistoryFilterHostRuntime: {
+      applyHistoryFilterStateFromInputs: () => ({
+        didApply: true
+      })
+    },
     CoreHistoryLoadRuntime: {
       resolveHistoryLoadPipeline: () => ({
         listResult: { items: [], total: 0 },
@@ -304,6 +309,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyBurnInHostRuntime).toBe(source.CoreHistoryBurnInHostRuntime);
     expect(result.historyAdapterHostRuntime).toBe(source.CoreHistoryAdapterHostRuntime);
     expect(result.historyQueryRuntime).toBe(source.CoreHistoryQueryRuntime);
+    expect(result.historyFilterHostRuntime).toBe(source.CoreHistoryFilterHostRuntime);
     expect(result.historyLoadRuntime).toBe(source.CoreHistoryLoadRuntime);
     expect(result.historyLoadHostRuntime).toBe(source.CoreHistoryLoadHostRuntime);
     expect(result.historyViewHostRuntime).toBe(source.CoreHistoryViewHostRuntime);

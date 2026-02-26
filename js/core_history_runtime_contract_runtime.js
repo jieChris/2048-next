@@ -155,6 +155,11 @@
       ],
       "CoreHistoryQueryRuntime is required"
     );
+    var historyFilterHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryFilterHostRuntime,
+      ["applyHistoryFilterStateFromInputs"],
+      "CoreHistoryFilterHostRuntime is required"
+    );
     var historyLoadRuntime = requireRuntimeFunctions(
       source.CoreHistoryLoadRuntime,
       ["resolveHistoryLoadPipeline"],
@@ -326,6 +331,7 @@
       historyViewHostRuntime: historyViewHostRuntime,
       historyExportRuntime: historyExportRuntime,
       historyQueryRuntime: historyQueryRuntime,
+      historyFilterHostRuntime: historyFilterHostRuntime,
       historyLoadRuntime: historyLoadRuntime,
       historyLoadHostRuntime: historyLoadHostRuntime,
       historyRecordViewRuntime: historyRecordViewRuntime,
