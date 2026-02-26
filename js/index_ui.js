@@ -198,6 +198,13 @@ if (
 ) {
   throw new Error("CoreMobileHintModalRuntime is required");
 }
+var mobileHintHostRuntime = window.CoreMobileHintHostRuntime;
+if (
+  !mobileHintHostRuntime ||
+  typeof mobileHintHostRuntime.applyMobileHintToggleInit !== "function"
+) {
+  throw new Error("CoreMobileHintHostRuntime is required");
+}
 var mobileTimerboxRuntime = window.CoreMobileTimerboxRuntime;
 if (
   !mobileTimerboxRuntime ||
@@ -626,18 +633,12 @@ function syncMobileHintUI(options) {
 }
 
 function initMobileHintToggle() {
-  if (!isGamePageScope()) return;
-  var btn = ensureMobileHintToggleButton();
-  if (!btn) return;
-
-  if (!btn.__mobileHintBound) {
-    btn.__mobileHintBound = true;
-    btn.addEventListener("click", function (e) {
-      if (e) e.preventDefault();
-      openMobileHintModal();
-    });
-  }
-  syncMobileHintUI();
+  mobileHintHostRuntime.applyMobileHintToggleInit({
+    isGamePageScope: isGamePageScope,
+    ensureMobileHintToggleButton: ensureMobileHintToggleButton,
+    openMobileHintModal: openMobileHintModal,
+    syncMobileHintUI: syncMobileHintUI
+  });
 }
 
 function initMobileUndoTopButton() {
