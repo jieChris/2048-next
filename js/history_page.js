@@ -45,6 +45,7 @@
   var historyFilterHostRuntime = historyRuntimes.historyFilterHostRuntime;
   var historyLoadRuntime = historyRuntimes.historyLoadRuntime;
   var historyLoadHostRuntime = historyRuntimes.historyLoadHostRuntime;
+  var historyPanelHostRuntime = historyRuntimes.historyPanelHostRuntime;
   var historyRecordViewRuntime = historyRuntimes.historyRecordViewRuntime;
   var historyRecordItemRuntime = historyRuntimes.historyRecordItemRuntime;
   var historyRecordListHostRuntime = historyRuntimes.historyRecordListHostRuntime;
@@ -74,10 +75,6 @@
     });
   }
 
-  function boardToHtml(board, width, height) {
-    return historyBoardRuntime.resolveHistoryFinalBoardHtml(board, width, height);
-  }
-
   function buildSummary(result) {
     historyViewHostRuntime.applyHistorySummary({
       getElementById: el,
@@ -89,25 +86,22 @@
   }
 
   function renderBurnInSummary(summary) {
-    var panel = el("history-burnin-summary");
-    if (!panel) return;
-    historyBurnInHostRuntime.applyHistoryBurnInSummaryRender({
-      panelElement: panel,
+    historyPanelHostRuntime.applyHistoryBurnInPanelRender({
+      getElementById: el,
+      panelElementId: "history-burnin-summary",
+      adapterFilterElementId: "history-adapter-filter",
       summary: summary,
+      state: state,
+      historyBurnInHostRuntime: historyBurnInHostRuntime,
       historyBurnInRuntime: historyBurnInRuntime,
-      adapterFilterElement: el("history-adapter-filter"),
-      setAdapterParityFilter: function (nextValue) {
-        state.adapterParityFilter = nextValue;
-      },
       loadHistory: loadHistory
     });
   }
 
   function renderCanaryPolicy() {
-    var panel = el("history-canary-policy");
-    if (!panel) return;
-    historyCanaryHostRuntime.applyHistoryCanaryPanelRender({
-      panelElement: panel,
+    historyPanelHostRuntime.applyHistoryCanaryPolicyPanelRender({
+      getElementById: el,
+      panelElementId: "history-canary-policy",
       runtime: window.LegacyAdapterRuntime,
       readStorageValue: historyCanaryStorageRuntime.readHistoryStorageValue,
       adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
@@ -118,6 +112,7 @@
       historyCanaryViewRuntime: historyCanaryViewRuntime,
       historyCanaryPanelRuntime: historyCanaryPanelRuntime,
       historyCanaryActionRuntime: historyCanaryActionRuntime,
+      historyCanaryHostRuntime: historyCanaryHostRuntime,
       writeStorageValue: historyCanaryStorageRuntime.writeHistoryStorageValue,
       loadHistory: loadHistory,
       setStatus: setStatus
@@ -125,10 +120,9 @@
   }
 
   function renderHistory(result) {
-    var list = el("history-list");
-    if (!list) return;
-    historyRecordListHostRuntime.applyHistoryRecordListRender({
-      listElement: list,
+    historyPanelHostRuntime.applyHistoryRecordListPanelRender({
+      getElementById: el,
+      listElementId: "history-list",
       result: result,
       documentLike: document,
       localHistoryStore: window.LocalHistoryStore,
@@ -140,7 +134,8 @@
       historyRecordActionsRuntime: historyRecordActionsRuntime,
       historyRecordHostRuntime: historyRecordHostRuntime,
       historyExportRuntime: historyExportRuntime,
-      boardToHtml: boardToHtml,
+      historyRecordListHostRuntime: historyRecordListHostRuntime,
+      historyBoardRuntime: historyBoardRuntime,
       confirmAction: window.confirm,
       setStatus: setStatus,
       loadHistory: loadHistory,

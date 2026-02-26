@@ -170,6 +170,15 @@
       ["applyHistoryLoadAndRender", "applyHistoryPagerButtonState", "applyHistoryLoadWithPager"],
       "CoreHistoryLoadHostRuntime is required"
     );
+    var historyPanelHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryPanelHostRuntime,
+      [
+        "applyHistoryBurnInPanelRender",
+        "applyHistoryCanaryPolicyPanelRender",
+        "applyHistoryRecordListPanelRender"
+      ],
+      "CoreHistoryPanelHostRuntime is required"
+    );
     var historyRecordViewRuntime = requireRuntimeFunctions(
       source.CoreHistoryRecordViewRuntime,
       [
@@ -334,6 +343,7 @@
       historyFilterHostRuntime: historyFilterHostRuntime,
       historyLoadRuntime: historyLoadRuntime,
       historyLoadHostRuntime: historyLoadHostRuntime,
+      historyPanelHostRuntime: historyPanelHostRuntime,
       historyRecordViewRuntime: historyRecordViewRuntime,
       historyRecordItemRuntime: historyRecordItemRuntime,
       historyRecordListHostRuntime: historyRecordListHostRuntime,

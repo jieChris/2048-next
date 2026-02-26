@@ -1334,6 +1334,70 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.callCount).toBeGreaterThan(0);
   });
 
+  test("history page delegates burn-in/canary/list panel orchestration to host runtime helper", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyPanelHostBurnInCallCount = 0;
+      (window as any).__historyPanelHostCanaryCallCount = 0;
+      (window as any).__historyPanelHostListCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryPanelHostRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "applyHistoryBurnInPanelRender" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyPanelHostBurnInCallCount =
+                Number((window as any).__historyPanelHostBurnInCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          if (prop === "applyHistoryCanaryPolicyPanelRender" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyPanelHostCanaryCallCount =
+                Number((window as any).__historyPanelHostCanaryCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          if (prop === "applyHistoryRecordListPanelRender" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyPanelHostListCallCount =
+                Number((window as any).__historyPanelHostListCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => ({
+      hasRuntime:
+        Boolean((window as any).CoreHistoryPanelHostRuntime?.applyHistoryBurnInPanelRender) &&
+        Boolean((window as any).CoreHistoryPanelHostRuntime?.applyHistoryCanaryPolicyPanelRender) &&
+        Boolean((window as any).CoreHistoryPanelHostRuntime?.applyHistoryRecordListPanelRender),
+      burnInCallCount: Number((window as any).__historyPanelHostBurnInCallCount || 0),
+      canaryCallCount: Number((window as any).__historyPanelHostCanaryCallCount || 0),
+      listCallCount: Number((window as any).__historyPanelHostListCallCount || 0)
+    }));
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.burnInCallCount).toBeGreaterThan(0);
+    expect(snapshot.canaryCallCount).toBeGreaterThan(0);
+    expect(snapshot.listCallCount).toBeGreaterThan(0);
+  });
+
   test("history page delegates record head modeling to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyRecordHeadCallCount = 0;

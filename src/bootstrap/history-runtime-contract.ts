@@ -20,6 +20,7 @@ export interface HistoryRuntimeContractWindowLike {
   CoreHistoryFilterHostRuntime?: unknown;
   CoreHistoryLoadRuntime?: unknown;
   CoreHistoryLoadHostRuntime?: unknown;
+  CoreHistoryPanelHostRuntime?: unknown;
   CoreHistoryRecordViewRuntime?: unknown;
   CoreHistoryRecordItemRuntime?: unknown;
   CoreHistoryRecordListHostRuntime?: unknown;
@@ -60,6 +61,7 @@ export interface ResolveHistoryRuntimeContractsResult {
   historyFilterHostRuntime: AnyRecord;
   historyLoadRuntime: AnyRecord;
   historyLoadHostRuntime: AnyRecord;
+  historyPanelHostRuntime: AnyRecord;
   historyRecordViewRuntime: AnyRecord;
   historyRecordItemRuntime: AnyRecord;
   historyRecordListHostRuntime: AnyRecord;
@@ -253,6 +255,15 @@ export function resolveHistoryRuntimeContracts(
     ["applyHistoryLoadAndRender", "applyHistoryPagerButtonState", "applyHistoryLoadWithPager"],
     "CoreHistoryLoadHostRuntime is required"
   );
+  const historyPanelHostRuntime = requireRuntimeFunctions(
+    source.CoreHistoryPanelHostRuntime,
+    [
+      "applyHistoryBurnInPanelRender",
+      "applyHistoryCanaryPolicyPanelRender",
+      "applyHistoryRecordListPanelRender"
+    ],
+    "CoreHistoryPanelHostRuntime is required"
+  );
   const historyRecordViewRuntime = requireRuntimeFunctions(
     source.CoreHistoryRecordViewRuntime,
     [
@@ -417,6 +428,7 @@ export function resolveHistoryRuntimeContracts(
     historyFilterHostRuntime,
     historyLoadRuntime,
     historyLoadHostRuntime,
+    historyPanelHostRuntime,
     historyRecordViewRuntime,
     historyRecordItemRuntime,
     historyRecordListHostRuntime,
