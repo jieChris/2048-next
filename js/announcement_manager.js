@@ -1,52 +1,58 @@
 (function () {
   var READ_KEY = "announcement_last_read_id_v1";
+  var announcementRuntime = resolveAnnouncementRuntime();
+
+  function resolveAnnouncementRuntime() {
+    var runtime = window.CoreAnnouncementRuntime;
+    if (!runtime || typeof runtime !== "object") {
+      throw new Error("CoreAnnouncementRuntime is required");
+    }
+    if (typeof runtime.resolveAnnouncementRecords !== "function") {
+      throw new Error("CoreAnnouncementRuntime.resolveAnnouncementRecords is required");
+    }
+    if (typeof runtime.resolveLatestAnnouncementId !== "function") {
+      throw new Error("CoreAnnouncementRuntime.resolveLatestAnnouncementId is required");
+    }
+    if (typeof runtime.hasUnreadAnnouncementFromContext !== "function") {
+      throw new Error("CoreAnnouncementRuntime.hasUnreadAnnouncementFromContext is required");
+    }
+    if (typeof runtime.markAnnouncementSeenFromContext !== "function") {
+      throw new Error("CoreAnnouncementRuntime.markAnnouncementSeenFromContext is required");
+    }
+    return runtime;
+  }
 
   function getRecords() {
-    var records = window.ANNOUNCEMENT_RECORDS;
-    if (!Array.isArray(records)) return [];
-    return records.slice().sort(function (a, b) {
-      var ad = String((a && a.date) || "");
-      var bd = String((b && b.date) || "");
-      if (ad === bd) {
-        var aid = String((a && a.id) || "");
-        var bid = String((b && b.id) || "");
-        if (aid < bid) return 1;
-        if (aid > bid) return -1;
-        return 0;
-      }
-      return ad < bd ? 1 : -1;
+    var records = announcementRuntime.resolveAnnouncementRecords({
+      records: window.ANNOUNCEMENT_RECORDS
     });
+    if (!Array.isArray(records)) return [];
+    return records;
   }
 
   function getLatestId() {
-    var records = getRecords();
-    return records.length > 0 && records[0].id ? String(records[0].id) : "";
-  }
-
-  function readStorage(key) {
-    try {
-      return window.localStorage.getItem(key) || "";
-    } catch (_err) {
-      return "";
-    }
-  }
-
-  function writeStorage(key, value) {
-    try {
-      window.localStorage.setItem(key, value);
-    } catch (_err) {}
+    return announcementRuntime.resolveLatestAnnouncementId({
+      records: window.ANNOUNCEMENT_RECORDS
+    });
   }
 
   function hasUnread() {
-    var latestId = getLatestId();
-    if (!latestId) return false;
-    return readStorage(READ_KEY) !== latestId;
+    return announcementRuntime.hasUnreadAnnouncementFromContext({
+      windowLike: window,
+      key: READ_KEY,
+      records: window.ANNOUNCEMENT_RECORDS
+    });
   }
 
   function markLatestAsRead() {
     var latestId = getLatestId();
     if (!latestId) return;
-    writeStorage(READ_KEY, latestId);
+    announcementRuntime.markAnnouncementSeenFromContext({
+      windowLike: window,
+      key: READ_KEY,
+      records: window.ANNOUNCEMENT_RECORDS,
+      latestId: latestId
+    });
   }
 
   function updateUnreadDot() {
