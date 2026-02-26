@@ -120,6 +120,14 @@ if (
 ) {
   throw new Error("CoreTimerModuleRuntime is required");
 }
+var timerModuleSettingsHostRuntime = window.CoreTimerModuleSettingsHostRuntime;
+if (
+  !timerModuleSettingsHostRuntime ||
+  typeof timerModuleSettingsHostRuntime.applyLegacyUndoSettingsCleanup !== "function" ||
+  typeof timerModuleSettingsHostRuntime.ensureTimerModuleSettingsToggle !== "function"
+) {
+  throw new Error("CoreTimerModuleSettingsHostRuntime is required");
+}
 var themeSettingsRuntime = window.CoreThemeSettingsRuntime;
 if (
   !themeSettingsRuntime ||
@@ -999,36 +1007,16 @@ function initThemeSettingsUI() {
 
 
 function removeLegacyUndoSettingsUI() {
-  var toggle = document.getElementById("undo-enabled-toggle");
-  if (!toggle) return;
-  var row = toggle.closest(".settings-row");
-  if (row && row.parentNode) {
-    row.parentNode.removeChild(row);
-  } else {
-    toggle.style.display = "none";
-  }
+  timerModuleSettingsHostRuntime.applyLegacyUndoSettingsCleanup({
+    documentLike: document
+  });
 }
 
 function ensureTimerModuleSettingsDom() {
-  var modal = document.getElementById("settings-modal");
-  if (!modal) return null;
-  if (document.getElementById("timer-module-view-toggle")) {
-    return document.getElementById("timer-module-view-toggle");
-  }
-  var content = modal.querySelector(".settings-modal-content");
-  if (!content) return null;
-
-  var row = document.createElement("div");
-  row.className = "settings-row";
-  row.innerHTML = timerModuleRuntime.buildTimerModuleSettingsRowInnerHtml();
-
-  var actions = content.querySelector(".replay-modal-actions");
-  if (actions && actions.parentNode === content) {
-    content.insertBefore(row, actions);
-  } else {
-    content.appendChild(row);
-  }
-  return document.getElementById("timer-module-view-toggle");
+  return timerModuleSettingsHostRuntime.ensureTimerModuleSettingsToggle({
+    documentLike: document,
+    timerModuleRuntime: timerModuleRuntime
+  });
 }
 
 function initTimerModuleSettingsUI() {

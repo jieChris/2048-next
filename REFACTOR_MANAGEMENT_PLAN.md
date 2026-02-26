@@ -117,6 +117,8 @@
   - `timer-module` 已承接初始化重试判定（`resolveTimerModuleInitRetryState`），`index_ui.js` 不再硬编码 `game_manager` 延迟就绪重试条件
   - `index_ui.js` 现直接消费 `timer-module` 安全状态模型（settings/binding/retry），不再重复本地空值 fallback 分支
   - `timer-module` 已承接当前视图模式读取回退（`resolveTimerModuleCurrentViewMode`），`index_ui.js` 不再直接读取 `game_manager.getTimerModuleViewMode` fallback
+  - 新增 `src/bootstrap/timer-module-settings-host.ts` + `js/core_timer_module_settings_host_runtime.js`，`index_ui.js` 委托计时器设置项容器挂载与旧撤回设置项清理（`undo-enabled-toggle`）DOM 编排
+  - `index_ui.js` 的 `removeLegacyUndoSettingsUI/ensureTimerModuleSettingsDom` 已收敛为 `CoreTimerModuleSettingsHostRuntime` 调用（页面层移除 settings-row 的插入/删除分支）
   - 新增 `src/bootstrap/theme-settings.ts` + `js/core_theme_settings_runtime.js`，`index_ui.js` 委托主题设置预览值格式化、预览值回退、下拉开关/绑定去重与选中态判定
   - 新增 `src/bootstrap/replay-modal.ts` + `js/core_replay_modal_runtime.js`，`index_ui.js` 委托回放弹窗与设置弹窗的 DOM 开关/动作绑定编排
   - `index_ui.js` 顶部弹窗逻辑已改为 `CoreReplayModalRuntime` 调用（`showReplayModal/closeReplayModal/openSettingsModal/closeSettingsModal`）
