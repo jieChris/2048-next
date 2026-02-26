@@ -300,6 +300,13 @@ if (
 ) {
   throw new Error("CoreHomeGuideSettingsHostRuntime is required");
 }
+var homeGuideDomHostRuntime = window.CoreHomeGuideDomHostRuntime;
+if (
+  !homeGuideDomHostRuntime ||
+  typeof homeGuideDomHostRuntime.applyHomeGuideDomEnsure !== "function"
+) {
+  throw new Error("CoreHomeGuideDomHostRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -1044,26 +1051,11 @@ function getHomeGuideSteps() {
 }
 
 function ensureHomeGuideDom() {
-  var overlay = document.getElementById("home-guide-overlay");
-  var panel = document.getElementById("home-guide-panel");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "home-guide-overlay";
-    overlay.className = "home-guide-overlay";
-    overlay.style.display = "none";
-    document.body.appendChild(overlay);
-  }
-  if (!panel) {
-    panel = document.createElement("div");
-    panel.id = "home-guide-panel";
-    panel.className = "home-guide-panel";
-    panel.style.display = "none";
-    panel.innerHTML = homeGuideRuntime.buildHomeGuidePanelInnerHtml();
-    document.body.appendChild(panel);
-  }
-  HOME_GUIDE_STATE.overlay = overlay;
-  HOME_GUIDE_STATE.panel = panel;
-  return { overlay: overlay, panel: panel };
+  return homeGuideDomHostRuntime.applyHomeGuideDomEnsure({
+    documentLike: document,
+    homeGuideRuntime: homeGuideRuntime,
+    homeGuideState: HOME_GUIDE_STATE
+  });
 }
 
 function clearHomeGuideHighlight() {
