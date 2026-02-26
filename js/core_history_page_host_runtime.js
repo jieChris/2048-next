@@ -19,6 +19,10 @@
     return value == null ? "" : String(value);
   }
 
+  function hasOwnKeys(value) {
+    return Object.keys(value).length > 0;
+  }
+
   function resolveHistoryPageDefaults(input) {
     var source = toRecord(input);
     return {
@@ -298,6 +302,80 @@
     });
   }
 
+  function resolveHistoryPageRuntimes(input) {
+    var source = toRecord(input);
+    var windowLike = toRecord(source.windowLike);
+    var historyRuntimeContractRuntime = toRecord(
+      source.historyRuntimeContractRuntime || windowLike.CoreHistoryRuntimeContractRuntime
+    );
+    var resolveHistoryRuntimeContracts = asFunction(
+      historyRuntimeContractRuntime.resolveHistoryRuntimeContracts
+    );
+    if (!resolveHistoryRuntimeContracts) {
+      throw new Error("CoreHistoryRuntimeContractRuntime is required");
+    }
+
+    var result = resolveHistoryRuntimeContracts(windowLike);
+    return isRecord(result) ? result : {};
+  }
+
+  function applyHistoryPageBootstrap(input) {
+    var source = toRecord(input);
+    var windowLike = toRecord(source.windowLike);
+    var documentLike = toRecord(source.documentLike || windowLike.document);
+    var sourceHistoryPageDefaults = toRecord(source.historyPageDefaults);
+    var historyPageDefaults = hasOwnKeys(sourceHistoryPageDefaults)
+      ? sourceHistoryPageDefaults
+      : resolveHistoryPageDefaults();
+    var sourceHistoryPageEnvironment = toRecord(source.historyPageEnvironment);
+    var historyPageEnvironment = hasOwnKeys(sourceHistoryPageEnvironment)
+      ? sourceHistoryPageEnvironment
+      : resolveHistoryPageEnvironment({
+          windowLike: windowLike,
+          documentLike: documentLike
+        });
+    var sourceHistoryRuntimes = toRecord(source.historyRuntimes);
+    var historyRuntimes = hasOwnKeys(sourceHistoryRuntimes)
+      ? sourceHistoryRuntimes
+      : resolveHistoryPageRuntimes({
+          windowLike: windowLike,
+          historyRuntimeContractRuntime: source.historyRuntimeContractRuntime
+        });
+
+    var getElementByIdFromDocument = asFunction(documentLike.getElementById);
+    var getElementById =
+      asFunction(source.getElementById) ||
+      function (id) {
+        return getElementByIdFromDocument ? getElementByIdFromDocument.call(documentLike, id) : null;
+      };
+
+    var applyPageApp = function () {
+      return applyHistoryPageApp({
+        historyPageDefaults: historyPageDefaults,
+        historyPageEnvironment: historyPageEnvironment,
+        historyRuntimes: historyRuntimes,
+        getElementById: getElementById
+      });
+    };
+
+    var addEventListener = asFunction(documentLike.addEventListener);
+    var readyState = typeof documentLike.readyState === "string" ? documentLike.readyState : "";
+    if (addEventListener && readyState === "loading") {
+      addEventListener.call(documentLike, "DOMContentLoaded", applyPageApp);
+      return {
+        deferred: true,
+        started: false
+      };
+    }
+
+    var result = applyPageApp();
+    return {
+      deferred: false,
+      started: true,
+      result: result
+    };
+  }
+
   function applyHistoryPageStatus(input) {
     var source = toRecord(input);
     var runtimes = toRecord(source.historyRuntimes);
@@ -368,6 +446,8 @@
   global.CoreHistoryPageHostRuntime.resolveHistoryPageLoadEntryInput = resolveHistoryPageLoadEntryInput;
   global.CoreHistoryPageHostRuntime.resolveHistoryPageStartupInput = resolveHistoryPageStartupInput;
   global.CoreHistoryPageHostRuntime.applyHistoryPageApp = applyHistoryPageApp;
+  global.CoreHistoryPageHostRuntime.resolveHistoryPageRuntimes = resolveHistoryPageRuntimes;
+  global.CoreHistoryPageHostRuntime.applyHistoryPageBootstrap = applyHistoryPageBootstrap;
   global.CoreHistoryPageHostRuntime.applyHistoryPageStatus = applyHistoryPageStatus;
   global.CoreHistoryPageHostRuntime.applyHistoryPageLoad = applyHistoryPageLoad;
   global.CoreHistoryPageHostRuntime.applyHistoryPageStartup = applyHistoryPageStartup;

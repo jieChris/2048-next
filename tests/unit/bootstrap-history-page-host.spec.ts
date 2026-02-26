@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  applyHistoryPageBootstrap,
   applyHistoryPageApp,
   applyHistoryPageLoad,
   applyHistoryPageStartup,
@@ -8,6 +9,7 @@ import {
   resolveHistoryPageDefaults,
   resolveHistoryPageEnvironment,
   resolveHistoryPageLoadEntryInput,
+  resolveHistoryPageRuntimes,
   resolveHistoryPageStartupInput,
   resolveHistoryPageStatusInput
 } from "../../src/bootstrap/history-page-host";
@@ -114,6 +116,23 @@ describe("bootstrap history page host", () => {
     expect(customNavigate).toHaveBeenCalledWith("/custom");
     expect(customCreateDate).toHaveBeenCalledTimes(1);
     expect(customCreateFileReader).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves history page runtimes via runtime contract runtime", () => {
+    const resolveHistoryRuntimeContracts = vi.fn(() => ({ historyStartupHostRuntime: {} }));
+    const windowLike = {
+      CoreHistoryRuntimeContractRuntime: {
+        resolveHistoryRuntimeContracts
+      }
+    };
+
+    const result = resolveHistoryPageRuntimes({
+      windowLike
+    });
+
+    expect(resolveHistoryRuntimeContracts).toHaveBeenCalledTimes(1);
+    expect(resolveHistoryRuntimeContracts).toHaveBeenCalledWith(windowLike);
+    expect(result).toEqual({ historyStartupHostRuntime: {} });
   });
 
   it("resolves status input with default status id", () => {
@@ -355,5 +374,86 @@ describe("bootstrap history page host", () => {
     expect(result).toEqual({ started: true, missingStore: false });
     expect(applyHistoryStartup).toHaveBeenCalledTimes(1);
     expect(applyHistoryLoadEntry).toHaveBeenCalledTimes(1);
+  });
+
+  it("defers page bootstrap until domcontentloaded when event api exists", () => {
+    const applyHistoryStartup = vi.fn(() => ({ started: true, missingStore: false }));
+    const documentLike = {
+      readyState: "loading",
+      getElementById: vi.fn(() => null),
+      addEventListener: vi.fn()
+    };
+    let domReadyHandler: (() => Record<string, unknown>) | null = null;
+    documentLike.addEventListener.mockImplementation((eventName: string, handler: () => Record<string, unknown>) => {
+      if (eventName === "DOMContentLoaded") {
+        domReadyHandler = handler;
+      }
+    });
+
+    const result = applyHistoryPageBootstrap({
+      windowLike: {
+        document: documentLike
+      },
+      documentLike,
+      historyPageDefaults: resolveHistoryPageDefaults(),
+      historyPageEnvironment: resolveHistoryPageEnvironment({
+        windowLike: {
+          LocalHistoryStore: {},
+          ModeCatalog: {},
+          LegacyAdapterRuntime: {},
+          confirm: () => true,
+          location: { href: "" },
+          document: documentLike
+        },
+        documentLike
+      }),
+      historyRuntimes: {
+        historyStartupHostRuntime: {
+          applyHistoryStartup
+        }
+      }
+    });
+
+    expect(result).toEqual({ deferred: true, started: false });
+    expect(documentLike.addEventListener).toHaveBeenCalledWith("DOMContentLoaded", expect.any(Function));
+    expect(applyHistoryStartup).not.toHaveBeenCalled();
+    expect(domReadyHandler).not.toBeNull();
+    domReadyHandler?.();
+    expect(applyHistoryStartup).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts page bootstrap immediately when dom is already ready", () => {
+    const applyHistoryStartup = vi.fn(() => ({ started: true, missingStore: false }));
+    const documentLike = {
+      readyState: "complete",
+      getElementById: () => null,
+      addEventListener: vi.fn()
+    };
+
+    const result = applyHistoryPageBootstrap({
+      documentLike,
+      historyPageDefaults: resolveHistoryPageDefaults(),
+      historyPageEnvironment: resolveHistoryPageEnvironment({
+        windowLike: {
+          LocalHistoryStore: {},
+          ModeCatalog: {},
+          LegacyAdapterRuntime: {},
+          confirm: () => true,
+          location: { href: "" },
+          document: {}
+        },
+        documentLike: {}
+      }),
+      historyRuntimes: {
+        historyStartupHostRuntime: {
+          applyHistoryStartup
+        }
+      }
+    });
+
+    expect(result.deferred).toBe(false);
+    expect(result.started).toBe(true);
+    expect(applyHistoryStartup).toHaveBeenCalledTimes(1);
+    expect(documentLike.addEventListener).not.toHaveBeenCalled();
   });
 });

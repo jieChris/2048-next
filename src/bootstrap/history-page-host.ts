@@ -14,6 +14,10 @@ function toText(value: unknown): string {
   return value == null ? "" : String(value);
 }
 
+function hasOwnKeys(value: Record<string, unknown>): boolean {
+  return Object.keys(value).length > 0;
+}
+
 export function resolveHistoryPageDefaults(input?: unknown): Record<string, unknown> {
   const source = toRecord(input);
   return {
@@ -342,6 +346,93 @@ export function applyHistoryPageApp(input: {
     createDate: historyPageEnvironment.createDate,
     createFileReader: historyPageEnvironment.createFileReader
   });
+}
+
+export function resolveHistoryPageRuntimes(input: {
+  windowLike?: unknown;
+  historyRuntimeContractRuntime?: unknown;
+}): Record<string, unknown> {
+  const source = toRecord(input);
+  const windowLike = toRecord(source.windowLike);
+  const historyRuntimeContractRuntime = toRecord(
+    source.historyRuntimeContractRuntime || windowLike.CoreHistoryRuntimeContractRuntime
+  );
+  const resolveHistoryRuntimeContracts = asFunction<(windowLike: unknown) => unknown>(
+    historyRuntimeContractRuntime.resolveHistoryRuntimeContracts
+  );
+  if (!resolveHistoryRuntimeContracts) {
+    throw new Error("CoreHistoryRuntimeContractRuntime is required");
+  }
+
+  const result = resolveHistoryRuntimeContracts(windowLike);
+  return isRecord(result) ? result : {};
+}
+
+export function applyHistoryPageBootstrap(input: {
+  windowLike?: unknown;
+  documentLike?: unknown;
+  getElementById?: unknown;
+  historyPageDefaults?: unknown;
+  historyPageEnvironment?: unknown;
+  historyRuntimes?: unknown;
+  historyRuntimeContractRuntime?: unknown;
+}): Record<string, unknown> {
+  const source = toRecord(input);
+  const windowLike = toRecord(source.windowLike);
+  const documentLike = toRecord(source.documentLike || windowLike.document);
+  const sourceHistoryPageDefaults = toRecord(source.historyPageDefaults);
+  const historyPageDefaults = hasOwnKeys(sourceHistoryPageDefaults)
+    ? sourceHistoryPageDefaults
+    : resolveHistoryPageDefaults();
+  const sourceHistoryPageEnvironment = toRecord(source.historyPageEnvironment);
+  const historyPageEnvironment = hasOwnKeys(sourceHistoryPageEnvironment)
+    ? sourceHistoryPageEnvironment
+    : resolveHistoryPageEnvironment({
+        windowLike,
+        documentLike
+      });
+  const sourceHistoryRuntimes = toRecord(source.historyRuntimes);
+  const historyRuntimes = hasOwnKeys(sourceHistoryRuntimes)
+    ? sourceHistoryRuntimes
+    : resolveHistoryPageRuntimes({
+        windowLike,
+        historyRuntimeContractRuntime: source.historyRuntimeContractRuntime
+      });
+
+  const getElementByIdFromDocument = asFunction<(id: unknown) => unknown>(documentLike.getElementById);
+  const getElementById =
+    asFunction<(id: unknown) => unknown>(source.getElementById) ||
+    function (id: unknown) {
+      return getElementByIdFromDocument ? getElementByIdFromDocument.call(documentLike, id) : null;
+    };
+
+  const applyPageApp = function () {
+    return applyHistoryPageApp({
+      historyPageDefaults,
+      historyPageEnvironment,
+      historyRuntimes,
+      getElementById
+    });
+  };
+
+  const addEventListener = asFunction<(type: unknown, listener: unknown) => unknown>(
+    documentLike.addEventListener
+  );
+  const readyState = typeof documentLike.readyState === "string" ? documentLike.readyState : "";
+  if (addEventListener && readyState === "loading") {
+    addEventListener.call(documentLike, "DOMContentLoaded", applyPageApp);
+    return {
+      deferred: true,
+      started: false
+    };
+  }
+
+  const result = applyPageApp();
+  return {
+    deferred: false,
+    started: true,
+    result
+  };
 }
 
 export function applyHistoryPageStatus(input: {
