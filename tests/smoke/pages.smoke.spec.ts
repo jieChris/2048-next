@@ -5336,6 +5336,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const snapshot = await page.evaluate(async () => {
       const runtime = (window as any).CoreThemeSettingsRuntime;
+      const pageHostRuntime = (window as any).CoreThemeSettingsPageHostRuntime;
       if (
         !runtime ||
         typeof runtime.formatThemePreviewValue !== "function" ||
@@ -5347,13 +5348,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.resolveThemeDropdownToggleState !== "function" ||
         typeof runtime.resolveThemeBindingState !== "function" ||
         typeof runtime.resolveThemeOptionValue !== "function" ||
-        typeof runtime.resolveThemeOptionSelectedState !== "function"
+        typeof runtime.resolveThemeOptionSelectedState !== "function" ||
+        !pageHostRuntime ||
+        typeof pageHostRuntime.applyThemeSettingsPageInit !== "function"
       ) {
-        return { hasRuntime: false };
+        return { hasRuntime: false, hasPageHostRuntime: false };
       }
       const openSettingsModal = (window as any).openSettingsModal;
       if (typeof openSettingsModal !== "function") {
-        return { hasRuntime: true, hasSettingsOpen: false };
+        return { hasRuntime: true, hasPageHostRuntime: true, hasSettingsOpen: false };
       }
       const originalFormat = runtime.formatThemePreviewValue;
       const originalResolveTileValues = runtime.resolveThemePreviewTileValues;
@@ -5365,6 +5368,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalResolveBinding = runtime.resolveThemeBindingState;
       const originalResolveOptionValue = runtime.resolveThemeOptionValue;
       const originalResolveOptionSelected = runtime.resolveThemeOptionSelectedState;
+      const originalApplyPageHost = pageHostRuntime.applyThemeSettingsPageInit;
       let formatCallCount = 0;
       let resolveTileValuesCallCount = 0;
       let resolvePreviewLayoutCallCount = 0;
@@ -5375,6 +5379,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let resolveBindingCallCount = 0;
       let resolveOptionValueCallCount = 0;
       let resolveOptionSelectedCallCount = 0;
+      let applyPageHostCallCount = 0;
       runtime.formatThemePreviewValue = function (value: any) {
         formatCallCount += 1;
         return originalFormat(value);
@@ -5415,6 +5420,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         resolveOptionSelectedCallCount += 1;
         return originalResolveOptionSelected(opts);
       };
+      pageHostRuntime.applyThemeSettingsPageInit = function (opts: any) {
+        applyPageHostCallCount += 1;
+        return originalApplyPageHost(opts);
+      };
       try {
         openSettingsModal();
         await new Promise((resolve) => {
@@ -5430,9 +5439,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
         }
         return {
           hasRuntime: true,
+          hasPageHostRuntime: true,
           hasSettingsOpen: true,
           hasTrigger: Boolean(trigger),
           optionCount: options.length,
+          applyPageHostCallCount,
           formatCallCount,
           resolveTileValuesCallCount,
           resolvePreviewLayoutCallCount,
@@ -5455,13 +5466,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.resolveThemeBindingState = originalResolveBinding;
         runtime.resolveThemeOptionValue = originalResolveOptionValue;
         runtime.resolveThemeOptionSelectedState = originalResolveOptionSelected;
+        pageHostRuntime.applyThemeSettingsPageInit = originalApplyPageHost;
       }
     });
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasPageHostRuntime).toBe(true);
     expect(snapshot.hasSettingsOpen).toBe(true);
     expect(snapshot.hasTrigger).toBe(true);
     expect(snapshot.optionCount).toBeGreaterThan(0);
+    expect(snapshot.applyPageHostCallCount).toBeGreaterThan(0);
     expect(snapshot.formatCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveTileValuesCallCount).toBeGreaterThan(0);
     expect(snapshot.resolvePreviewLayoutCallCount).toBeGreaterThan(0);

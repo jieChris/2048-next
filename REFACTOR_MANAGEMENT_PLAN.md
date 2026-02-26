@@ -125,6 +125,8 @@
   - `index_ui.js` 的 `initTimerModuleSettingsUI` 已收敛为 `CoreTimerModuleSettingsPageHostRuntime.applyTimerModuleSettingsPageInit` 调用，页面层移除 `ensureTimerModuleSettingsDom` 包装函数
   - 新增 `src/bootstrap/theme-settings.ts` + `js/core_theme_settings_runtime.js`，`index_ui.js` 委托主题设置预览值格式化、预览值回退、下拉开关/绑定去重与选中态判定
   - 新增 `src/bootstrap/theme-settings-host.ts` + `js/core_theme_settings_host_runtime.js`，`index_ui.js` 委托主题设置 UI 编排主链（双预览渲染、下拉交互绑定、themechange 同步）
+  - 新增 `src/bootstrap/theme-settings-page-host.ts` + `js/core_theme_settings_page_host_runtime.js`，`index_ui.js` 委托主题设置页上下文编排（window.ThemeManager 解析 + host runtime 入参组装）
+  - `index_ui.js` 的 `initThemeSettingsUI` 已收敛为 `CoreThemeSettingsPageHostRuntime.applyThemeSettingsPageInit` 调用，页面层移除 `themeManager` 直连拼装分支
   - 新增 `src/bootstrap/replay-modal.ts` + `js/core_replay_modal_runtime.js`，`index_ui.js` 委托回放弹窗与设置弹窗的 DOM 开关/动作绑定编排
   - `index_ui.js` 顶部弹窗逻辑已改为 `CoreReplayModalRuntime` 调用（`showReplayModal/closeReplayModal/openSettingsModal/closeSettingsModal`）
   - 新增 `src/bootstrap/settings-modal-host.ts` + `js/core_settings_modal_host_runtime.js`，`index_ui.js` 委托设置弹窗开关主链编排（modal 开关 + 主题/计时器/引导设置初始化）

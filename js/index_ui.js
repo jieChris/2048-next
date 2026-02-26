@@ -169,6 +169,13 @@ if (
 ) {
   throw new Error("CoreThemeSettingsHostRuntime is required");
 }
+var themeSettingsPageHostRuntime = window.CoreThemeSettingsPageHostRuntime;
+if (
+  !themeSettingsPageHostRuntime ||
+  typeof themeSettingsPageHostRuntime.applyThemeSettingsPageInit !== "function"
+) {
+  throw new Error("CoreThemeSettingsPageHostRuntime is required");
+}
 var practiceTransferRuntime = window.CorePracticeTransferRuntime;
 var practiceTransferHostRuntime = window.CorePracticeTransferHostRuntime;
 var practiceTransferPageHostRuntime = window.CorePracticeTransferPageHostRuntime;
@@ -764,11 +771,11 @@ window.pretty = function(time) {
 };
 
 function initThemeSettingsUI() {
-  themeSettingsHostRuntime.applyThemeSettingsUi({
-    documentLike: document,
-    windowLike: typeof window !== "undefined" ? window : null,
+  themeSettingsPageHostRuntime.applyThemeSettingsPageInit({
+    themeSettingsHostRuntime: themeSettingsHostRuntime,
     themeSettingsRuntime: themeSettingsRuntime,
-    themeManager: typeof window !== "undefined" ? window.ThemeManager : null
+    documentLike: document,
+    windowLike: typeof window !== "undefined" ? window : null
   });
 }
 
