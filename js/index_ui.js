@@ -232,6 +232,7 @@ var undoActionRuntime = window.CoreUndoActionRuntime;
 if (
   !undoActionRuntime ||
   typeof undoActionRuntime.tryTriggerUndo !== "function" ||
+  typeof undoActionRuntime.tryTriggerUndoFromContext !== "function" ||
   typeof undoActionRuntime.resolveUndoModeIdFromBody !== "function" ||
   typeof undoActionRuntime.resolveUndoModeId !== "function" ||
   typeof undoActionRuntime.isUndoCapableMode !== "function" ||
@@ -518,7 +519,11 @@ if (
 }
 
 function tryUndoFromUi() {
-  return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
+  var result = undoActionRuntime.tryTriggerUndoFromContext({
+    windowLike: typeof window !== "undefined" ? window : null,
+    direction: -1
+  });
+  return !!(result && result.didTrigger);
 }
 
 function isGamePageScope() {

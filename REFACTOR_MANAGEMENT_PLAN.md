@@ -80,6 +80,7 @@
   - 新增 `src/bootstrap/undo-action.ts` + `js/core_undo_action_runtime.js`，`application.js` 与 `index_ui.js` 共享撤回触发与可用性判定
   - `undo-action` 已承接页面模式标识读取（`resolveUndoModeIdFromBody`），`index_ui.js` 不再直接读取 `body[data-mode-id]`
   - `undo-action` 已承接上下文撤回能力判定（`resolveUndoCapabilityFromContext`），`index_ui.js` 不再本地拼装 `body/manager/globalMode` 输入
+  - `undo-action` 已承接撤回触发 `manager` 上下文解析（`tryTriggerUndoFromContext`），`index_ui.js` 不再页面层读取 `window.game_manager`
   - 新增 `src/bootstrap/practice-transfer.ts` + `js/core_practice_transfer_runtime.js`，`index_ui.js` 委托练习板直通模式配置组装
   - `practice-transfer` 已继续承接 `practice_guide_seen` 判定与练习板 URL 组装，`index_ui.js` 保留存储与跳转编排
   - `practice-transfer` 已承接练习板 token 与 payload 组装（含 board 深拷贝），`index_ui.js` 仅保留持久化与跳转流程

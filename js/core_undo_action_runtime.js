@@ -12,6 +12,19 @@
     );
   }
 
+  function isRecord(value) {
+    return !!value && typeof value === "object";
+  }
+
+  function toRecord(value) {
+    return isRecord(value) ? value : {};
+  }
+
+  function resolveUndoManagerFromWindow(windowLike) {
+    var windowRecord = toRecord(windowLike);
+    return windowRecord.game_manager || null;
+  }
+
   function resolveUndoModeIdFromBody(options) {
     var opts = options || {};
     var body = opts.bodyLike || null;
@@ -109,6 +122,16 @@
     return true;
   }
 
+  function tryTriggerUndoFromContext(options) {
+    var opts = options || {};
+    var manager = resolveUndoManagerFromWindow(opts.windowLike);
+    var direction = typeof opts.direction === "number" ? opts.direction : -1;
+    return {
+      didTrigger: tryTriggerUndo(manager, direction),
+      managerResolved: !!manager
+    };
+  }
+
   global.CoreUndoActionRuntime = global.CoreUndoActionRuntime || {};
   global.CoreUndoActionRuntime.canTriggerUndo = canTriggerUndo;
   global.CoreUndoActionRuntime.resolveUndoModeIdFromBody = resolveUndoModeIdFromBody;
@@ -117,4 +140,5 @@
   global.CoreUndoActionRuntime.resolveUndoCapabilityFromContext = resolveUndoCapabilityFromContext;
   global.CoreUndoActionRuntime.isUndoInteractionEnabled = isUndoInteractionEnabled;
   global.CoreUndoActionRuntime.tryTriggerUndo = tryTriggerUndo;
+  global.CoreUndoActionRuntime.tryTriggerUndoFromContext = tryTriggerUndoFromContext;
 })(typeof window !== "undefined" ? window : undefined);

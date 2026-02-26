@@ -4018,6 +4018,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof undoActionRuntime.resolveUndoModeIdFromBody !== "function" ||
         typeof undoActionRuntime.isUndoCapableMode !== "function" ||
         typeof undoActionRuntime.resolveUndoCapabilityFromContext !== "function" ||
+        typeof undoActionRuntime.tryTriggerUndoFromContext !== "function" ||
         typeof undoActionRuntime.isUndoInteractionEnabled !== "function" ||
         !viewportRuntime ||
         typeof viewportRuntime.isViewportAtMost !== "function" ||
@@ -4042,7 +4043,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         };
       }
       const hintBtn = document.getElementById("top-mobile-hint-btn") as HTMLAnchorElement | null;
-      if (!hintBtn) {
+      const undoTopBtn = document.getElementById("top-mobile-undo-btn") as HTMLAnchorElement | null;
+      if (!hintBtn || !undoTopBtn) {
         return {
           hasRuntime: true,
           hasUiRuntime: true,
@@ -4053,7 +4055,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasTopActionsHostRuntime: true,
           hasTopButtonsRuntime: true,
           hasViewportRuntime: true,
-          hasHintButton: false
+          hasHintButton: !!hintBtn,
+          hasUndoTopButton: !!undoTopBtn
         };
       }
 
@@ -4083,6 +4086,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalIsUndoCapableMode = undoActionRuntime.isUndoCapableMode;
       const originalResolveUndoCapabilityFromContext =
         undoActionRuntime.resolveUndoCapabilityFromContext;
+      const originalTryTriggerUndoFromContext = undoActionRuntime.tryTriggerUndoFromContext;
       const originalIsUndoInteractionEnabled = undoActionRuntime.isUndoInteractionEnabled;
       let collectCallCount = 0;
       let syncCallCount = 0;
@@ -4109,6 +4113,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let resolveUndoModeIdFromBodyCallCount = 0;
       let isUndoCapableModeCallCount = 0;
       let resolveUndoCapabilityFromContextCallCount = 0;
+      let tryTriggerUndoFromContextCallCount = 0;
       let isUndoInteractionEnabledCallCount = 0;
       runtime.collectMobileHintTexts = function (opts: any) {
         collectCallCount += 1;
@@ -4211,6 +4216,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         resolveUndoCapabilityFromContextCallCount += 1;
         return originalResolveUndoCapabilityFromContext(opts);
       };
+      undoActionRuntime.tryTriggerUndoFromContext = function (opts: any) {
+        tryTriggerUndoFromContextCallCount += 1;
+        return originalTryTriggerUndoFromContext(opts);
+      };
       undoActionRuntime.isUndoInteractionEnabled = function (manager: any) {
         isUndoInteractionEnabledCallCount += 1;
         return originalIsUndoInteractionEnabled(manager);
@@ -4232,6 +4241,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         window.dispatchEvent(new Event("resize"));
         await new Promise((resolve) => setTimeout(resolve, 200));
         hintBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+        undoTopBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         const overlay = document.getElementById("mobile-hint-overlay");
         const firstLine = document.querySelector("#mobile-hint-body p");
         return {
@@ -4245,6 +4255,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasTopButtonsRuntime: true,
           hasViewportRuntime: true,
           hasHintButton: true,
+          hasUndoTopButton: true,
           collectCallCount,
           syncCallCount,
           resolveHintUiStateCallCount,
@@ -4270,6 +4281,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           resolveUndoModeIdFromBodyCallCount,
           isUndoCapableModeCallCount,
           resolveUndoCapabilityFromContextCallCount,
+          tryTriggerUndoFromContextCallCount,
           isUndoInteractionEnabledCallCount,
           overlayVisible: Boolean(overlay && overlay.style.display === "flex"),
           firstLineText: firstLine ? (firstLine.textContent || "").trim() : ""
@@ -4301,6 +4313,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         undoActionRuntime.isUndoCapableMode = originalIsUndoCapableMode;
         undoActionRuntime.resolveUndoCapabilityFromContext =
           originalResolveUndoCapabilityFromContext;
+        undoActionRuntime.tryTriggerUndoFromContext = originalTryTriggerUndoFromContext;
         undoActionRuntime.isUndoInteractionEnabled = originalIsUndoInteractionEnabled;
       }
     });
@@ -4315,6 +4328,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasTopButtonsRuntime).toBe(true);
     expect(snapshot.hasViewportRuntime).toBe(true);
     expect(snapshot.hasHintButton).toBe(true);
+    expect(snapshot.hasUndoTopButton).toBe(true);
     expect(snapshot.collectCallCount).toBeGreaterThan(0);
     expect(snapshot.syncCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveHintUiStateCallCount).toBeGreaterThan(0);
@@ -4340,6 +4354,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolveUndoModeIdFromBodyCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.isUndoCapableModeCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.resolveUndoCapabilityFromContextCallCount).toBeGreaterThan(0);
+    expect(snapshot.tryTriggerUndoFromContextCallCount).toBeGreaterThan(0);
     expect(snapshot.isUndoInteractionEnabledCallCount).toBeGreaterThan(0);
     expect(snapshot.overlayVisible).toBe(true);
     expect(snapshot.firstLineText.length).toBeGreaterThan(0);

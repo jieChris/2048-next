@@ -39,6 +39,29 @@ export interface UndoCapabilityState {
   modeUndoCapable: boolean;
 }
 
+export interface TryTriggerUndoFromContextOptions {
+  windowLike?: unknown;
+  direction?: number | null | undefined;
+}
+
+export interface TryTriggerUndoFromContextResult {
+  didTrigger: boolean;
+  managerResolved: boolean;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object";
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
+function resolveUndoManagerFromWindow(windowLike: unknown): UndoManagerLike | null {
+  const windowRecord = toRecord(windowLike);
+  return (windowRecord.game_manager as UndoManagerLike | null | undefined) || null;
+}
+
 export function resolveUndoModeIdFromBody(
   options: ResolveUndoModeIdFromBodyOptions
 ): string {
@@ -74,6 +97,19 @@ export function tryTriggerUndo(
   if (!manager.isUndoInteractionEnabled()) return false;
   manager.move(direction);
   return true;
+}
+
+export function tryTriggerUndoFromContext(
+  options: TryTriggerUndoFromContextOptions
+): TryTriggerUndoFromContextResult {
+  const opts = options || {};
+  const manager = resolveUndoManagerFromWindow(opts.windowLike);
+  const direction = typeof opts.direction === "number" ? opts.direction : -1;
+  const didTrigger = tryTriggerUndo(manager, direction);
+  return {
+    didTrigger,
+    managerResolved: !!manager
+  };
 }
 
 export function resolveUndoModeId(input: UndoCapabilityInput): string {
