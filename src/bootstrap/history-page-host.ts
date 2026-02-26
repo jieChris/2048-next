@@ -275,6 +275,75 @@ export function resolveHistoryPageStartupInput(input: {
   };
 }
 
+export function applyHistoryPageApp(input: {
+  historyPageDefaults?: unknown;
+  historyPageEnvironment?: unknown;
+  historyRuntimes?: unknown;
+  getElementById?: unknown;
+}): Record<string, unknown> {
+  const source = toRecord(input);
+  const historyPageDefaults = toRecord(source.historyPageDefaults);
+  const historyPageEnvironment = toRecord(source.historyPageEnvironment);
+  const historyRuntimes = toRecord(source.historyRuntimes);
+  const state = toRecord(historyPageDefaults.state);
+  const getElementById = source.getElementById;
+
+  const setStatus = function (text: unknown, isError: unknown) {
+    applyHistoryPageStatus({
+      getElementById,
+      statusElementId: historyPageDefaults.statusElementId,
+      text,
+      isError,
+      historyRuntimes
+    });
+  };
+
+  const loadHistory = function (resetPage: unknown) {
+    applyHistoryPageLoad({
+      resetPage,
+      localHistoryStore: historyPageEnvironment.localHistoryStore,
+      state,
+      getElementById,
+      historyRuntimes,
+      burnInMinComparable: historyPageDefaults.burnInMinComparable,
+      burnInMaxMismatchRate: historyPageDefaults.burnInMaxMismatchRate,
+      statusElementId: historyPageDefaults.statusElementId,
+      summaryElementId: historyPageDefaults.summaryElementId,
+      loadHistory,
+      setStatus,
+      prevButtonId: historyPageDefaults.prevButtonId,
+      nextButtonId: historyPageDefaults.nextButtonId,
+      listElementId: historyPageDefaults.listElementId,
+      documentLike: historyPageEnvironment.documentLike,
+      modeCatalog: historyPageEnvironment.modeCatalog,
+      confirmAction: historyPageEnvironment.confirmAction,
+      navigateToHref: historyPageEnvironment.navigateToHref,
+      burnInPanelElementId: historyPageDefaults.burnInPanelElementId,
+      adapterFilterElementId: historyPageDefaults.adapterFilterElementId,
+      canaryPanelElementId: historyPageDefaults.canaryPanelElementId,
+      runtime: historyPageEnvironment.runtime,
+      adapterModeStorageKey: historyPageDefaults.adapterModeStorageKey,
+      defaultModeStorageKey: historyPageDefaults.defaultModeStorageKey,
+      forceLegacyStorageKey: historyPageDefaults.forceLegacyStorageKey
+    });
+  };
+
+  return applyHistoryPageStartup({
+    localHistoryStore: historyPageEnvironment.localHistoryStore,
+    setStatus,
+    loadHistory,
+    historyRuntimes,
+    getElementById,
+    modeElementId: historyPageDefaults.modeElementId,
+    modeCatalog: historyPageEnvironment.modeCatalog,
+    documentLike: historyPageEnvironment.documentLike,
+    state,
+    confirmAction: historyPageEnvironment.confirmAction,
+    createDate: historyPageEnvironment.createDate,
+    createFileReader: historyPageEnvironment.createFileReader
+  });
+}
+
 export function applyHistoryPageStatus(input: {
   getElementById?: unknown;
   statusElementId?: unknown;

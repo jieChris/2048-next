@@ -234,6 +234,70 @@
     };
   }
 
+  function applyHistoryPageApp(input) {
+    var source = toRecord(input);
+    var historyPageDefaults = toRecord(source.historyPageDefaults);
+    var historyPageEnvironment = toRecord(source.historyPageEnvironment);
+    var historyRuntimes = toRecord(source.historyRuntimes);
+    var state = toRecord(historyPageDefaults.state);
+    var getElementById = source.getElementById;
+
+    var setStatus = function (text, isError) {
+      applyHistoryPageStatus({
+        getElementById: getElementById,
+        statusElementId: historyPageDefaults.statusElementId,
+        text: text,
+        isError: isError,
+        historyRuntimes: historyRuntimes
+      });
+    };
+
+    var loadHistory = function (resetPage) {
+      applyHistoryPageLoad({
+        resetPage: resetPage,
+        localHistoryStore: historyPageEnvironment.localHistoryStore,
+        state: state,
+        getElementById: getElementById,
+        historyRuntimes: historyRuntimes,
+        burnInMinComparable: historyPageDefaults.burnInMinComparable,
+        burnInMaxMismatchRate: historyPageDefaults.burnInMaxMismatchRate,
+        statusElementId: historyPageDefaults.statusElementId,
+        summaryElementId: historyPageDefaults.summaryElementId,
+        loadHistory: loadHistory,
+        setStatus: setStatus,
+        prevButtonId: historyPageDefaults.prevButtonId,
+        nextButtonId: historyPageDefaults.nextButtonId,
+        listElementId: historyPageDefaults.listElementId,
+        documentLike: historyPageEnvironment.documentLike,
+        modeCatalog: historyPageEnvironment.modeCatalog,
+        confirmAction: historyPageEnvironment.confirmAction,
+        navigateToHref: historyPageEnvironment.navigateToHref,
+        burnInPanelElementId: historyPageDefaults.burnInPanelElementId,
+        adapterFilterElementId: historyPageDefaults.adapterFilterElementId,
+        canaryPanelElementId: historyPageDefaults.canaryPanelElementId,
+        runtime: historyPageEnvironment.runtime,
+        adapterModeStorageKey: historyPageDefaults.adapterModeStorageKey,
+        defaultModeStorageKey: historyPageDefaults.defaultModeStorageKey,
+        forceLegacyStorageKey: historyPageDefaults.forceLegacyStorageKey
+      });
+    };
+
+    return applyHistoryPageStartup({
+      localHistoryStore: historyPageEnvironment.localHistoryStore,
+      setStatus: setStatus,
+      loadHistory: loadHistory,
+      historyRuntimes: historyRuntimes,
+      getElementById: getElementById,
+      modeElementId: historyPageDefaults.modeElementId,
+      modeCatalog: historyPageEnvironment.modeCatalog,
+      documentLike: historyPageEnvironment.documentLike,
+      state: state,
+      confirmAction: historyPageEnvironment.confirmAction,
+      createDate: historyPageEnvironment.createDate,
+      createFileReader: historyPageEnvironment.createFileReader
+    });
+  }
+
   function applyHistoryPageStatus(input) {
     var source = toRecord(input);
     var runtimes = toRecord(source.historyRuntimes);
@@ -303,6 +367,7 @@
   global.CoreHistoryPageHostRuntime.resolveHistoryPageStatusInput = resolveHistoryPageStatusInput;
   global.CoreHistoryPageHostRuntime.resolveHistoryPageLoadEntryInput = resolveHistoryPageLoadEntryInput;
   global.CoreHistoryPageHostRuntime.resolveHistoryPageStartupInput = resolveHistoryPageStartupInput;
+  global.CoreHistoryPageHostRuntime.applyHistoryPageApp = applyHistoryPageApp;
   global.CoreHistoryPageHostRuntime.applyHistoryPageStatus = applyHistoryPageStatus;
   global.CoreHistoryPageHostRuntime.applyHistoryPageLoad = applyHistoryPageLoad;
   global.CoreHistoryPageHostRuntime.applyHistoryPageStartup = applyHistoryPageStartup;

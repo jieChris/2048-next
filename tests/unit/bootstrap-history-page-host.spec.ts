@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  applyHistoryPageApp,
   applyHistoryPageLoad,
   applyHistoryPageStartup,
   applyHistoryPageStatus,
@@ -307,5 +308,52 @@ describe("bootstrap history page host", () => {
 
     expect(result).toEqual({ started: true, missingStore: false });
     expect(applyHistoryStartup).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies page app through startup->load delegation chain", () => {
+    const applyHistoryStatus = vi.fn(() => ({ didApply: true }));
+    const applyHistoryLoadEntry = vi.fn(() => ({ didLoad: true, missingStore: false }));
+    const applyHistoryStartup = vi.fn(({ loadHistory }: { loadHistory: (resetPage: boolean) => void }) => {
+      loadHistory(true);
+      return { started: true, missingStore: false };
+    });
+
+    const result = applyHistoryPageApp({
+      historyPageDefaults: resolveHistoryPageDefaults(),
+      historyPageEnvironment: resolveHistoryPageEnvironment({
+        windowLike: {
+          LocalHistoryStore: {},
+          ModeCatalog: {},
+          LegacyAdapterRuntime: {},
+          confirm: () => true,
+          location: { href: "" },
+          document: {}
+        }
+      }),
+      historyRuntimes: {
+        historyViewHostRuntime: {
+          applyHistoryStatus
+        },
+        historyStatusRuntime: {},
+        historyLoadEntryHostRuntime: {
+          applyHistoryLoadEntry
+        },
+        historyLoadContextHostRuntime: {
+          resolveHistoryLoadPanelContext: () => ({})
+        },
+        historyCanaryStorageRuntime: {
+          readHistoryStorageValue: () => null,
+          writeHistoryStorageValue: () => true
+        },
+        historyStartupHostRuntime: {
+          applyHistoryStartup
+        }
+      },
+      getElementById: () => null
+    });
+
+    expect(result).toEqual({ started: true, missingStore: false });
+    expect(applyHistoryStartup).toHaveBeenCalledTimes(1);
+    expect(applyHistoryLoadEntry).toHaveBeenCalledTimes(1);
   });
 });
