@@ -222,7 +222,8 @@ if (
 }
 if (
   !practiceTransferPageHostRuntime ||
-  typeof practiceTransferPageHostRuntime.applyPracticeTransferPageAction !== "function"
+  typeof practiceTransferPageHostRuntime.applyPracticeTransferPageAction !== "function" ||
+  typeof practiceTransferPageHostRuntime.applyPracticeTransferPageActionFromContext !== "function"
 ) {
   throw new Error("CorePracticeTransferPageHostRuntime is required");
 }
@@ -776,15 +777,10 @@ function getStorageByName(name) {
 }
 
 window.openPracticeBoardFromCurrent = function () {
-  practiceTransferPageHostRuntime.applyPracticeTransferPageAction({
+  practiceTransferPageHostRuntime.applyPracticeTransferPageActionFromContext({
     practiceTransferHostRuntime: practiceTransferHostRuntime,
     practiceTransferRuntime: practiceTransferRuntime,
     storageRuntime: storageRuntime,
-    manager: window.game_manager || null,
-    gameModeConfig:
-      window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object"
-        ? window.GAME_MODE_CONFIG
-        : null,
     guideShownKey: PRACTICE_GUIDE_SHOWN_KEY,
     guideSeenFlag: PRACTICE_GUIDE_SEEN_FLAG,
     localStorageKey: PRACTICE_TRANSFER_KEY,

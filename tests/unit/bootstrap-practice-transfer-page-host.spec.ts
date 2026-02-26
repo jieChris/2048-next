@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { applyPracticeTransferPageAction } from "../../src/bootstrap/practice-transfer-page-host";
+import {
+  applyPracticeTransferPageAction,
+  applyPracticeTransferPageActionFromContext
+} from "../../src/bootstrap/practice-transfer-page-host";
 
 describe("bootstrap practice transfer page host", () => {
   it("returns early when host runtime contract is missing", () => {
@@ -98,5 +101,43 @@ describe("bootstrap practice transfer page host", () => {
     expect(result.didInvokeHost).toBe(true);
     expect(result.localStorageResolved).toBe(false);
     expect(result.sessionStorageResolved).toBe(false);
+  });
+
+  it("resolves manager and mode config from window context", () => {
+    const applyPracticeTransferFromCurrent = vi.fn(() => ({
+      opened: true,
+      reason: "opened"
+    }));
+
+    const result = applyPracticeTransferPageActionFromContext({
+      practiceTransferHostRuntime: {
+        applyPracticeTransferFromCurrent
+      },
+      practiceTransferRuntime: { id: "runtime" },
+      storageRuntime: {
+        resolveStorageByName(opts: { storageName?: string }) {
+          return opts.storageName === "localStorage" ? { id: "local" } : { id: "session" };
+        }
+      },
+      guideShownKey: "guide_key",
+      guideSeenFlag: "guide_seen=1",
+      localStorageKey: "local_key",
+      sessionStorageKey: "session_key",
+      windowLike: {
+        game_manager: { id: "manager" },
+        GAME_MODE_CONFIG: { ruleset: "pow2" }
+      }
+    });
+
+    expect(applyPracticeTransferFromCurrent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        manager: { id: "manager" },
+        gameModeConfig: { ruleset: "pow2" }
+      })
+    );
+    expect(result.didInvokePageAction).toBe(true);
+    expect(result.managerResolved).toBe(true);
+    expect(result.modeConfigResolved).toBe(true);
+    expect(result.actionResult.didInvokeHost).toBe(true);
   });
 });

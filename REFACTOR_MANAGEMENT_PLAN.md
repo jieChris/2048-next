@@ -89,6 +89,7 @@
   - 新增 `src/bootstrap/practice-transfer-host.ts` + `js/core_practice_transfer_host_runtime.js`，`index_ui.js` 委托练习板直通主流程编排（precheck/计划生成/失败提示/新窗口打开）
   - 新增 `src/bootstrap/practice-transfer-page-host.ts` + `js/core_practice_transfer_page_host_runtime.js`，`index_ui.js` 委托练习板直通页面侧上下文编排（storage 解析 + host runtime 入参组装）
   - `index_ui.js` 的 `openPracticeBoardFromCurrent` 已改为 `CorePracticeTransferPageHostRuntime.applyPracticeTransferPageAction` 调用，页面层不再直接拼装 transfer host 参数
+  - `practice-transfer-page-host` 已承接 `window.game_manager/GAME_MODE_CONFIG` 上下文读取（`applyPracticeTransferPageActionFromContext`），`index_ui.js` 不再页面层读取 manager/mode config
   - 新增 `src/bootstrap/home-guide.ts` + `js/core_home_guide_runtime.js`，`index_ui.js` 委托首页判定与新手指引自动触发 gate
   - `home-guide` 已继续承接首页指引步骤清单构建（含移动端提示步骤插入），`index_ui.js` 改为透传 viewport 信息
   - `home-guide` 已承接已读状态读写（`readHomeGuideSeenValue`/`markHomeGuideSeen`），`index_ui.js` 不再直接读写 `localStorage`

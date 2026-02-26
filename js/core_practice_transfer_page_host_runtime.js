@@ -26,6 +26,20 @@
     });
   }
 
+  function resolveManagerFromWindow(windowLike) {
+    var windowRecord = toRecord(windowLike);
+    return windowRecord.game_manager || null;
+  }
+
+  function resolveGameModeConfigFromWindow(windowLike) {
+    var windowRecord = toRecord(windowLike);
+    var gameModeConfig = windowRecord.GAME_MODE_CONFIG;
+    if (gameModeConfig && typeof gameModeConfig === "object") {
+      return gameModeConfig;
+    }
+    return null;
+  }
+
   function applyPracticeTransferPageAction(input) {
     var source = toRecord(input);
     var hostRuntime = toRecord(source.practiceTransferHostRuntime);
@@ -77,7 +91,36 @@
     };
   }
 
+  function applyPracticeTransferPageActionFromContext(input) {
+    var source = toRecord(input);
+    var manager = resolveManagerFromWindow(source.windowLike);
+    var gameModeConfig = resolveGameModeConfigFromWindow(source.windowLike);
+    var actionResult = applyPracticeTransferPageAction({
+      practiceTransferHostRuntime: source.practiceTransferHostRuntime,
+      practiceTransferRuntime: source.practiceTransferRuntime,
+      storageRuntime: source.storageRuntime,
+      manager: manager,
+      gameModeConfig: gameModeConfig,
+      guideShownKey: source.guideShownKey,
+      guideSeenFlag: source.guideSeenFlag,
+      localStorageKey: source.localStorageKey,
+      sessionStorageKey: source.sessionStorageKey,
+      documentLike: source.documentLike,
+      windowLike: source.windowLike,
+      alertLike: source.alertLike
+    });
+
+    return {
+      didInvokePageAction: actionResult.didInvokeHost,
+      managerResolved: !!manager,
+      modeConfigResolved: !!gameModeConfig,
+      actionResult: actionResult
+    };
+  }
+
   global.CorePracticeTransferPageHostRuntime = global.CorePracticeTransferPageHostRuntime || {};
   global.CorePracticeTransferPageHostRuntime.applyPracticeTransferPageAction =
     applyPracticeTransferPageAction;
+  global.CorePracticeTransferPageHostRuntime.applyPracticeTransferPageActionFromContext =
+    applyPracticeTransferPageActionFromContext;
 })(typeof window !== "undefined" ? window : undefined);

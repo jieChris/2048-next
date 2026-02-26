@@ -27,6 +27,20 @@ function resolveStorageByName(input: {
   });
 }
 
+function resolveManagerFromWindow(windowLike: unknown): unknown {
+  const windowRecord = toRecord(windowLike);
+  return windowRecord.game_manager || null;
+}
+
+function resolveGameModeConfigFromWindow(windowLike: unknown): unknown {
+  const windowRecord = toRecord(windowLike);
+  const gameModeConfig = windowRecord.GAME_MODE_CONFIG;
+  if (gameModeConfig && typeof gameModeConfig === "object") {
+    return gameModeConfig;
+  }
+  return null;
+}
+
 export interface ApplyPracticeTransferPageActionResult {
   didInvokeHost: boolean;
   localStorageResolved: boolean;
@@ -97,5 +111,50 @@ export function applyPracticeTransferPageAction(input: {
     localStorageResolved: !!localStorageLike,
     sessionStorageResolved: !!sessionStorageLike,
     transferResult: transferResult || null
+  };
+}
+
+export interface ApplyPracticeTransferPageActionFromContextResult {
+  didInvokePageAction: boolean;
+  managerResolved: boolean;
+  modeConfigResolved: boolean;
+  actionResult: ApplyPracticeTransferPageActionResult;
+}
+
+export function applyPracticeTransferPageActionFromContext(input: {
+  practiceTransferHostRuntime?: unknown;
+  practiceTransferRuntime?: unknown;
+  storageRuntime?: unknown;
+  guideShownKey?: unknown;
+  guideSeenFlag?: unknown;
+  localStorageKey?: unknown;
+  sessionStorageKey?: unknown;
+  documentLike?: unknown;
+  windowLike?: unknown;
+  alertLike?: unknown;
+}): ApplyPracticeTransferPageActionFromContextResult {
+  const source = toRecord(input);
+  const manager = resolveManagerFromWindow(source.windowLike);
+  const gameModeConfig = resolveGameModeConfigFromWindow(source.windowLike);
+  const actionResult = applyPracticeTransferPageAction({
+    practiceTransferHostRuntime: source.practiceTransferHostRuntime,
+    practiceTransferRuntime: source.practiceTransferRuntime,
+    storageRuntime: source.storageRuntime,
+    manager,
+    gameModeConfig,
+    guideShownKey: source.guideShownKey,
+    guideSeenFlag: source.guideSeenFlag,
+    localStorageKey: source.localStorageKey,
+    sessionStorageKey: source.sessionStorageKey,
+    documentLike: source.documentLike,
+    windowLike: source.windowLike,
+    alertLike: source.alertLike
+  });
+
+  return {
+    didInvokePageAction: actionResult.didInvokeHost,
+    managerResolved: !!manager,
+    modeConfigResolved: !!gameModeConfig,
+    actionResult
   };
 }
