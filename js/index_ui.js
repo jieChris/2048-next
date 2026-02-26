@@ -272,6 +272,13 @@ if (
 ) {
   throw new Error("CoreTopActionBindingsHostRuntime is required");
 }
+var gameOverUndoHostRuntime = window.CoreGameOverUndoHostRuntime;
+if (
+  !gameOverUndoHostRuntime ||
+  typeof gameOverUndoHostRuntime.bindGameOverUndoControl !== "function"
+) {
+  throw new Error("CoreGameOverUndoHostRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -1455,23 +1462,16 @@ document.addEventListener('DOMContentLoaded', function() {
     initHomeGuideSettingsUI();
     autoStartHomeGuideIfNeeded();
 
-    // Undo Button on Game Over Screen
-    var undoBtnGameOver = document.getElementById('undo-btn-gameover');
-    if (undoBtnGameOver) {
-        var lastUndoTouchAt = 0;
-        var handleGameOverUndo = function (e, fromTouch) {
-            e.preventDefault();
-            if (!fromTouch && (Date.now() - lastUndoTouchAt) < 450) return;
-            if (fromTouch) lastUndoTouchAt = Date.now();
-            tryUndoFromUi();
-        };
-        undoBtnGameOver.addEventListener('click', function (e) {
-            handleGameOverUndo(e, false);
-        });
-        undoBtnGameOver.addEventListener('touchend', function (e) {
-            handleGameOverUndo(e, true);
-        }, { passive: false });
-    }
+    gameOverUndoHostRuntime.bindGameOverUndoControl({
+      getElementById: function (id) {
+        return document.getElementById(id);
+      },
+      tryUndo: tryUndoFromUi,
+      nowMs: function () {
+        return Date.now();
+      },
+      touchGuardWindowMs: 450
+    });
 
     initMobileTimerboxToggle();
     requestResponsiveGameRelayout();
