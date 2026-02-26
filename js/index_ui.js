@@ -198,6 +198,13 @@ if (
 ) {
   throw new Error("CoreMobileHintModalRuntime is required");
 }
+var mobileHintOpenHostRuntime = window.CoreMobileHintOpenHostRuntime;
+if (
+  !mobileHintOpenHostRuntime ||
+  typeof mobileHintOpenHostRuntime.applyMobileHintModalOpen !== "function"
+) {
+  throw new Error("CoreMobileHintOpenHostRuntime is required");
+}
 var mobileHintHostRuntime = window.CoreMobileHintHostRuntime;
 if (
   !mobileHintHostRuntime ||
@@ -563,24 +570,14 @@ function ensureMobileHintModalDom() {
 }
 
 function openMobileHintModal() {
-  if (!isGamePageScope() || !isCompactGameViewport()) return;
-  var dom = ensureMobileHintModalDom();
-  if (!dom || !dom.overlay || !dom.body) return;
-
-  var lines = mobileHintRuntime.collectMobileHintTexts({
-    isGamePageScope: isGamePageScope(),
-    introNode: document.querySelector(".above-game .game-intro"),
-    containerNode: document.querySelector(".container"),
-    explainNode: document.querySelector(".game-explanation"),
+  mobileHintOpenHostRuntime.applyMobileHintModalOpen({
+    isGamePageScope: isGamePageScope,
+    isCompactGameViewport: isCompactGameViewport,
+    ensureMobileHintModalDom: ensureMobileHintModalDom,
+    mobileHintRuntime: mobileHintRuntime,
+    documentLike: document,
     defaultText: "合并数字，合成 2048 方块。"
   });
-  dom.body.innerHTML = "";
-  for (var i = 0; i < lines.length; i++) {
-    var p = document.createElement("p");
-    p.textContent = lines[i];
-    dom.body.appendChild(p);
-  }
-  dom.overlay.style.display = "flex";
 }
 
 function closeMobileHintModal() {
