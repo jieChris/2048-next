@@ -24,7 +24,8 @@ if (
   !replayPageHostRuntime ||
   typeof replayPageHostRuntime.applyReplayModalPageOpen !== "function" ||
   typeof replayPageHostRuntime.applyReplayModalPageClose !== "function" ||
-  typeof replayPageHostRuntime.applyReplayExportPageAction !== "function"
+  typeof replayPageHostRuntime.applyReplayExportPageAction !== "function" ||
+  typeof replayPageHostRuntime.applyReplayExportPageActionFromContext !== "function"
 ) {
   throw new Error("CoreReplayPageHostRuntime is required");
 }
@@ -84,9 +85,9 @@ window.closeSettingsModal = function () {
 };
 
 window.exportReplay = function() {
-  replayPageHostRuntime.applyReplayExportPageAction({
+  replayPageHostRuntime.applyReplayExportPageActionFromContext({
     replayExportRuntime: replayExportRuntime,
-    gameManager: window.game_manager,
+    windowLike: typeof window !== "undefined" ? window : null,
     showReplayModal: showReplayModal,
     navigatorLike: navigator,
     documentLike: document,

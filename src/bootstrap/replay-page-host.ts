@@ -10,6 +10,11 @@ function asFunction<T extends (...args: never[]) => unknown>(value: unknown): T 
   return typeof value === "function" ? (value as T) : null;
 }
 
+function resolveManagerFromWindow(windowLike: unknown): unknown {
+  const windowRecord = toRecord(windowLike);
+  return windowRecord.game_manager || null;
+}
+
 export interface ReplayModalPageOpenResult {
   hasApplyOpenApi: boolean;
   didApply: boolean;
@@ -83,6 +88,12 @@ export interface ReplayExportPageResult {
   didApply: boolean;
 }
 
+export interface ReplayExportPageFromContextResult {
+  didInvokeExport: boolean;
+  managerResolved: boolean;
+  exportResult: ReplayExportPageResult;
+}
+
 export function applyReplayExportPageAction(input: {
   replayExportRuntime?: unknown;
   gameManager?: unknown;
@@ -114,5 +125,33 @@ export function applyReplayExportPageAction(input: {
   return {
     hasApplyExportApi: true,
     didApply: true
+  };
+}
+
+export function applyReplayExportPageActionFromContext(input: {
+  replayExportRuntime?: unknown;
+  windowLike?: unknown;
+  showReplayModal?: unknown;
+  navigatorLike?: unknown;
+  documentLike?: unknown;
+  alertLike?: unknown;
+  consoleLike?: unknown;
+}): ReplayExportPageFromContextResult {
+  const source = toRecord(input);
+  const gameManager = resolveManagerFromWindow(source.windowLike);
+  const exportResult = applyReplayExportPageAction({
+    replayExportRuntime: source.replayExportRuntime,
+    gameManager,
+    showReplayModal: source.showReplayModal,
+    navigatorLike: source.navigatorLike,
+    documentLike: source.documentLike,
+    alertLike: source.alertLike,
+    consoleLike: source.consoleLike
+  });
+
+  return {
+    didInvokeExport: exportResult.didApply,
+    managerResolved: !!gameManager,
+    exportResult
   };
 }

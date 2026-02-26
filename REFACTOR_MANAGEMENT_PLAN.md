@@ -132,6 +132,7 @@
   - `index_ui.js` 顶部弹窗逻辑已改为 `CoreReplayModalRuntime` 调用（`showReplayModal/closeReplayModal/openSettingsModal/closeSettingsModal`）
   - 新增 `src/bootstrap/replay-page-host.ts` + `js/core_replay_page_host_runtime.js`，`index_ui.js` 委托回放弹窗/回放导出页面级编排（modal/export runtime 入参组装）
   - `index_ui.js` 的 `showReplayModal/closeReplayModal/exportReplay` 已收敛为 `CoreReplayPageHostRuntime` 调用，页面层移除 replay modal/export host 入参拼装分支
+  - `replay-page-host` 已承接导出链路 `manager` 上下文解析（`applyReplayExportPageActionFromContext`），`index_ui.js` 不再页面层读取 `window.game_manager`
   - 新增 `src/bootstrap/settings-modal-host.ts` + `js/core_settings_modal_host_runtime.js`，`index_ui.js` 委托设置弹窗开关主链编排（modal 开关 + 主题/计时器/引导设置初始化）
   - 新增 `src/bootstrap/settings-modal-page-host.ts` + `js/core_settings_modal_page_host_runtime.js`，`index_ui.js` 委托设置弹窗页面级编排（host runtime 入参组装）
   - `index_ui.js` 的 `openSettingsModal/closeSettingsModal` 已收敛为 `CoreSettingsModalPageHostRuntime` 调用，页面层移除 settings modal host 入参拼装分支

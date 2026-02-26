@@ -5656,6 +5656,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof pageHostRuntime.applyReplayModalPageOpen !== "function" ||
         typeof pageHostRuntime.applyReplayModalPageClose !== "function" ||
         typeof pageHostRuntime.applyReplayExportPageAction !== "function" ||
+        typeof pageHostRuntime.applyReplayExportPageActionFromContext !== "function" ||
         !modalRuntime ||
         typeof modalRuntime.applyReplayModalOpen !== "function" ||
         typeof modalRuntime.applyReplayModalClose !== "function" ||
@@ -5673,7 +5674,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
       const originalPageOpen = pageHostRuntime.applyReplayModalPageOpen;
       const originalPageClose = pageHostRuntime.applyReplayModalPageClose;
-      const originalPageExport = pageHostRuntime.applyReplayExportPageAction;
+      const originalPageExport = pageHostRuntime.applyReplayExportPageActionFromContext;
       const originalRuntimeExport = exportRuntime.applyReplayExport;
       let pageOpenCallCount = 0;
       let pageCloseCallCount = 0;
@@ -5687,7 +5688,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         pageCloseCallCount += 1;
         return originalPageClose(opts);
       };
-      pageHostRuntime.applyReplayExportPageAction = function (opts: any) {
+      pageHostRuntime.applyReplayExportPageActionFromContext = function (opts: any) {
         pageExportCallCount += 1;
         return originalPageExport(opts);
       };
@@ -5732,7 +5733,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       } finally {
         pageHostRuntime.applyReplayModalPageOpen = originalPageOpen;
         pageHostRuntime.applyReplayModalPageClose = originalPageClose;
-        pageHostRuntime.applyReplayExportPageAction = originalPageExport;
+        pageHostRuntime.applyReplayExportPageActionFromContext = originalPageExport;
         exportRuntime.applyReplayExport = originalRuntimeExport;
       }
     });

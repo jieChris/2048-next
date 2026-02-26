@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   applyReplayExportPageAction,
+  applyReplayExportPageActionFromContext,
   applyReplayModalPageClose,
   applyReplayModalPageOpen
 } from "../../src/bootstrap/replay-page-host";
@@ -100,6 +101,47 @@ describe("bootstrap replay page host", () => {
     expect(result).toEqual({
       hasApplyExportApi: true,
       didApply: true
+    });
+  });
+
+  it("resolves manager from window context and delegates replay export orchestration", () => {
+    const applyReplayExport = vi.fn();
+    const showReplayModal = vi.fn();
+    const gameManager = { id: "manager" };
+    const navigatorLike = { id: "navigator" };
+    const documentLike = { id: "document" };
+    const alertLike = vi.fn();
+    const consoleLike = { warn: vi.fn() };
+
+    const result = applyReplayExportPageActionFromContext({
+      replayExportRuntime: {
+        applyReplayExport
+      },
+      windowLike: {
+        game_manager: gameManager
+      },
+      showReplayModal,
+      navigatorLike,
+      documentLike,
+      alertLike,
+      consoleLike
+    });
+
+    expect(applyReplayExport).toHaveBeenCalledWith({
+      gameManager,
+      showReplayModal,
+      navigatorLike,
+      documentLike,
+      alertLike,
+      consoleLike
+    });
+    expect(result).toEqual({
+      didInvokeExport: true,
+      managerResolved: true,
+      exportResult: {
+        hasApplyExportApi: true,
+        didApply: true
+      }
     });
   });
 });
