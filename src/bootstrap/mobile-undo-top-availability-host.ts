@@ -33,6 +33,29 @@ function resolveStringValue(value: unknown, fallback: string): string {
   return typeof value === "string" ? value : fallback;
 }
 
+function resolveUndoCapabilityState(source: Record<string, unknown>): Record<string, unknown> {
+  const resolveUndoCapabilityStateFn = asFunction<(manager: unknown) => unknown>(
+    source.resolveUndoCapabilityState
+  );
+  if (resolveUndoCapabilityStateFn) {
+    return toRecord(resolveUndoCapabilityStateFn(source.manager || null));
+  }
+
+  const undoActionRuntime = toRecord(source.undoActionRuntime);
+  const resolveUndoCapabilityFromContext = asFunction<(payload: unknown) => unknown>(
+    undoActionRuntime.resolveUndoCapabilityFromContext
+  );
+  if (!resolveUndoCapabilityFromContext) return {};
+
+  return toRecord(
+    resolveUndoCapabilityFromContext({
+      bodyLike: source.bodyLike || null,
+      manager: source.manager || null,
+      globalModeConfig: source.globalModeConfig || null
+    })
+  );
+}
+
 export interface MobileUndoTopAvailabilitySyncResult {
   isScope: boolean;
   hasButton: boolean;
@@ -47,7 +70,9 @@ export function applyMobileUndoTopAvailabilitySync(input: {
   isGamePageScope?: unknown;
   ensureMobileUndoTopButton?: unknown;
   isCompactGameViewport?: unknown;
+  bodyLike?: unknown;
   manager?: unknown;
+  globalModeConfig?: unknown;
   resolveUndoCapabilityState?: unknown;
   undoActionRuntime?: unknown;
   mobileUndoTopRuntime?: unknown;
@@ -85,12 +110,7 @@ export function applyMobileUndoTopAvailabilitySync(input: {
   const isCompactGameViewport = asFunction<() => unknown>(source.isCompactGameViewport);
   const compactViewport = !!(isCompactGameViewport && isCompactGameViewport());
 
-  const resolveUndoCapabilityState = asFunction<(manager: unknown) => unknown>(
-    source.resolveUndoCapabilityState
-  );
-  const undoCapabilityState = toRecord(
-    resolveUndoCapabilityState ? resolveUndoCapabilityState(source.manager || null) : null
-  );
+  const undoCapabilityState = resolveUndoCapabilityState(source);
   const modeUndoCapable = !!undoCapabilityState.modeUndoCapable;
 
   const undoActionRuntime = toRecord(source.undoActionRuntime);

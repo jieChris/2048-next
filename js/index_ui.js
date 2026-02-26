@@ -567,24 +567,17 @@ function syncPracticeTopActionsPlacement() {
       : practiceTopActionsState;
 }
 
-function resolveUndoCapabilityState(gm) {
-  return undoActionRuntime.resolveUndoCapabilityFromContext({
-    bodyLike: document.body,
-    manager: gm || null,
-    globalModeConfig:
-      typeof window !== "undefined" && window.GAME_MODE_CONFIG
-        ? window.GAME_MODE_CONFIG
-        : null
-  });
-}
-
 function syncMobileUndoTopButtonAvailability() {
   mobileUndoTopAvailabilityHostRuntime.applyMobileUndoTopAvailabilitySync({
     isGamePageScope: isGamePageScope,
     ensureMobileUndoTopButton: ensureMobileUndoTopButton,
     isCompactGameViewport: isCompactGameViewport,
+    bodyLike: document.body,
     manager: window.game_manager || null,
-    resolveUndoCapabilityState: resolveUndoCapabilityState,
+    globalModeConfig:
+      typeof window !== "undefined" && window.GAME_MODE_CONFIG
+        ? window.GAME_MODE_CONFIG
+        : null,
     undoActionRuntime: undoActionRuntime,
     mobileUndoTopRuntime: mobileUndoTopRuntime,
     fallbackLabel: "撤回"

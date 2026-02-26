@@ -36,6 +36,27 @@
     return typeof value === "string" ? value : fallback;
   }
 
+  function resolveUndoCapabilityState(source) {
+    var resolveUndoCapabilityStateFn = asFunction(source.resolveUndoCapabilityState);
+    if (resolveUndoCapabilityStateFn) {
+      return toRecord(resolveUndoCapabilityStateFn(source.manager || null));
+    }
+
+    var undoActionRuntime = toRecord(source.undoActionRuntime);
+    var resolveUndoCapabilityFromContext = asFunction(
+      undoActionRuntime.resolveUndoCapabilityFromContext
+    );
+    if (!resolveUndoCapabilityFromContext) return {};
+
+    return toRecord(
+      resolveUndoCapabilityFromContext({
+        bodyLike: source.bodyLike || null,
+        manager: source.manager || null,
+        globalModeConfig: source.globalModeConfig || null
+      })
+    );
+  }
+
   function applyMobileUndoTopAvailabilitySync(input) {
     var source = toRecord(input);
     var isGamePageScope = asFunction(source.isGamePageScope);
@@ -69,10 +90,7 @@
     var isCompactGameViewport = asFunction(source.isCompactGameViewport);
     var compactViewport = !!(isCompactGameViewport && isCompactGameViewport());
 
-    var resolveUndoCapabilityState = asFunction(source.resolveUndoCapabilityState);
-    var undoCapabilityState = toRecord(
-      resolveUndoCapabilityState ? resolveUndoCapabilityState(source.manager || null) : null
-    );
+    var undoCapabilityState = resolveUndoCapabilityState(source);
     var modeUndoCapable = !!undoCapabilityState.modeUndoCapable;
 
     var undoActionRuntime = toRecord(source.undoActionRuntime);

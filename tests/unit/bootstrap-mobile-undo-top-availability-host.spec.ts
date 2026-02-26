@@ -115,6 +115,73 @@ describe("bootstrap mobile undo top availability host", () => {
     expect(result.didApplyLabel).toBe(true);
   });
 
+  it("falls back to undo runtime context resolver when callback is missing", () => {
+    const button = {
+      style: {
+        display: "",
+        pointerEvents: "",
+        opacity: ""
+      },
+      setAttribute() {}
+    };
+    const bodyLike = { tagName: "BODY" };
+    const manager = { id: "gm" };
+    const globalModeConfig = { key: "standard_4x4_pow2_no_undo" };
+    const resolveUndoCapabilityFromContext = vi.fn(() => ({ modeUndoCapable: true }));
+
+    const result = applyMobileUndoTopAvailabilitySync({
+      isGamePageScope() {
+        return true;
+      },
+      ensureMobileUndoTopButton() {
+        return button;
+      },
+      isCompactGameViewport() {
+        return false;
+      },
+      bodyLike,
+      manager,
+      globalModeConfig,
+      undoActionRuntime: {
+        resolveUndoCapabilityFromContext,
+        isUndoInteractionEnabled() {
+          return false;
+        }
+      },
+      mobileUndoTopRuntime: {
+        resolveMobileUndoTopButtonDisplayModel() {
+          return {
+            shouldShow: false,
+            buttonDisplay: "none",
+            pointerEvents: "none",
+            opacity: "0.45",
+            ariaDisabled: "true",
+            label: "撤回"
+          };
+        },
+        resolveMobileUndoTopAppliedModel() {
+          return {
+            shouldShow: false,
+            buttonDisplay: "none",
+            pointerEvents: "none",
+            opacity: "0.45",
+            ariaDisabled: "true",
+            label: "撤回",
+            shouldApplyLabel: false
+          };
+        }
+      }
+    });
+
+    expect(resolveUndoCapabilityFromContext).toHaveBeenCalledWith({
+      bodyLike,
+      manager,
+      globalModeConfig
+    });
+    expect(result.modeUndoCapable).toBe(true);
+    expect(result.canUndoNow).toBe(false);
+  });
+
   it("does not apply label when model requests hidden state", () => {
     const attrs: Record<string, string> = {};
     const button = {
