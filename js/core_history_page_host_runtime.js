@@ -15,6 +15,10 @@
     return typeof value === "function" ? value : null;
   }
 
+  function toText(value) {
+    return value == null ? "" : String(value);
+  }
+
   function resolveHistoryPageDefaults(input) {
     var source = toRecord(input);
     return {
@@ -62,6 +66,53 @@
         typeof source.canaryPanelElementId === "string"
           ? source.canaryPanelElementId
           : "history-canary-policy"
+    };
+  }
+
+  function resolveHistoryPageEnvironment(input) {
+    var source = toRecord(input);
+    var windowLike = toRecord(source.windowLike);
+    var locationLike = toRecord(windowLike.location);
+    var sourceConfirmAction = asFunction(source.confirmAction);
+    var windowConfirmAction = asFunction(windowLike.confirm);
+    var sourceNavigateToHref = asFunction(source.navigateToHref);
+    var sourceCreateDate = asFunction(source.createDate);
+    var sourceCreateFileReader = asFunction(source.createFileReader);
+    var windowFileReaderCtor = asFunction(windowLike.FileReader);
+
+    return {
+      windowLike: windowLike,
+      documentLike: source.documentLike || windowLike.document,
+      localHistoryStore: source.localHistoryStore || windowLike.LocalHistoryStore,
+      modeCatalog: source.modeCatalog || windowLike.ModeCatalog,
+      runtime: source.runtime || windowLike.LegacyAdapterRuntime,
+      confirmAction:
+        sourceConfirmAction ||
+        windowConfirmAction ||
+        function () {
+          return false;
+        },
+      navigateToHref:
+        sourceNavigateToHref ||
+        function (href) {
+          if ("href" in locationLike) {
+            locationLike.href = toText(href);
+          }
+        },
+      createDate:
+        sourceCreateDate ||
+        function () {
+          return new Date();
+        },
+      createFileReader:
+        sourceCreateFileReader ||
+        (windowFileReaderCtor
+          ? function () {
+              return new windowFileReaderCtor();
+            }
+          : function () {
+              return null;
+            })
     };
   }
 
@@ -248,6 +299,7 @@
 
   global.CoreHistoryPageHostRuntime = global.CoreHistoryPageHostRuntime || {};
   global.CoreHistoryPageHostRuntime.resolveHistoryPageDefaults = resolveHistoryPageDefaults;
+  global.CoreHistoryPageHostRuntime.resolveHistoryPageEnvironment = resolveHistoryPageEnvironment;
   global.CoreHistoryPageHostRuntime.resolveHistoryPageStatusInput = resolveHistoryPageStatusInput;
   global.CoreHistoryPageHostRuntime.resolveHistoryPageLoadEntryInput = resolveHistoryPageLoadEntryInput;
   global.CoreHistoryPageHostRuntime.resolveHistoryPageStartupInput = resolveHistoryPageStartupInput;

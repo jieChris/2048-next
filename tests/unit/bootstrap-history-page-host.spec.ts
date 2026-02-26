@@ -5,6 +5,7 @@ import {
   applyHistoryPageStartup,
   applyHistoryPageStatus,
   resolveHistoryPageDefaults,
+  resolveHistoryPageEnvironment,
   resolveHistoryPageLoadEntryInput,
   resolveHistoryPageStartupInput,
   resolveHistoryPageStatusInput
@@ -54,6 +55,64 @@ describe("bootstrap history page host", () => {
     expect(defaults.statusElementId).toBe("status");
     expect(defaults.modeElementId).toBe("mode");
     expect(defaults.adapterModeStorageKey).toBe("adapter");
+  });
+
+  it("resolves history page environment from window-like source", () => {
+    const confirmAction = vi.fn(() => true);
+    const fileReaderCtor = vi.fn(function FileReaderMock(this: Record<string, unknown>) {
+      this.ok = true;
+    });
+    const windowLike = {
+      LocalHistoryStore: { ok: true },
+      ModeCatalog: { modes: [] },
+      LegacyAdapterRuntime: { runtime: true },
+      confirm: confirmAction,
+      FileReader: fileReaderCtor,
+      location: { href: "" },
+      document: { body: {} }
+    };
+
+    const environment = resolveHistoryPageEnvironment({
+      windowLike
+    });
+    (environment.navigateToHref as (href: string) => void)("/history.html");
+
+    expect(environment.localHistoryStore).toBe(windowLike.LocalHistoryStore);
+    expect(environment.modeCatalog).toBe(windowLike.ModeCatalog);
+    expect(environment.runtime).toBe(windowLike.LegacyAdapterRuntime);
+    expect((environment.confirmAction as (message: string) => boolean)("x")).toBe(true);
+    expect(windowLike.location.href).toBe("/history.html");
+    expect((environment.createFileReader as () => Record<string, unknown>)().ok).toBe(true);
+  });
+
+  it("supports overriding history page environment values", () => {
+    const customNavigate = vi.fn();
+    const customCreateDate = vi.fn(() => new Date(0));
+    const customCreateFileReader = vi.fn(() => ({ custom: true }));
+
+    const environment = resolveHistoryPageEnvironment({
+      windowLike: {
+        location: { href: "" }
+      },
+      localHistoryStore: { store: true },
+      modeCatalog: { mode: true },
+      runtime: { adapter: true },
+      confirmAction: () => false,
+      navigateToHref: customNavigate,
+      createDate: customCreateDate,
+      createFileReader: customCreateFileReader
+    });
+
+    (environment.navigateToHref as (href: string) => void)("/custom");
+    (environment.createDate as () => Date)();
+    (environment.createFileReader as () => { custom: boolean })();
+
+    expect(environment.localHistoryStore).toEqual({ store: true });
+    expect(environment.modeCatalog).toEqual({ mode: true });
+    expect(environment.runtime).toEqual({ adapter: true });
+    expect(customNavigate).toHaveBeenCalledWith("/custom");
+    expect(customCreateDate).toHaveBeenCalledTimes(1);
+    expect(customCreateFileReader).toHaveBeenCalledTimes(1);
   });
 
   it("resolves status input with default status id", () => {

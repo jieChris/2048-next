@@ -14,6 +14,7 @@
   if (
     !historyPageHostRuntime ||
     typeof historyPageHostRuntime.resolveHistoryPageDefaults !== "function" ||
+    typeof historyPageHostRuntime.resolveHistoryPageEnvironment !== "function" ||
     typeof historyPageHostRuntime.applyHistoryPageStatus !== "function" ||
     typeof historyPageHostRuntime.applyHistoryPageLoad !== "function" ||
     typeof historyPageHostRuntime.applyHistoryPageStartup !== "function"
@@ -21,6 +22,10 @@
     throw new Error("CoreHistoryPageHostRuntime is required");
   }
   var historyPageDefaults = historyPageHostRuntime.resolveHistoryPageDefaults();
+  var historyPageEnvironment = historyPageHostRuntime.resolveHistoryPageEnvironment({
+    windowLike: window,
+    documentLike: document
+  });
   var state = historyPageDefaults.state;
   var historyRuntimes = historyRuntimeContractRuntime.resolveHistoryRuntimeContracts(window);
 
@@ -37,7 +42,7 @@
   function loadHistory(resetPage) {
     historyPageHostRuntime.applyHistoryPageLoad({
       resetPage: resetPage,
-      localHistoryStore: window.LocalHistoryStore,
+      localHistoryStore: historyPageEnvironment.localHistoryStore,
       state: state,
       getElementById: el,
       historyRuntimes: historyRuntimes,
@@ -50,16 +55,14 @@
       prevButtonId: historyPageDefaults.prevButtonId,
       nextButtonId: historyPageDefaults.nextButtonId,
       listElementId: historyPageDefaults.listElementId,
-      documentLike: document,
-      modeCatalog: window.ModeCatalog,
-      confirmAction: window.confirm,
-      navigateToHref: function (href) {
-        window.location.href = href;
-      },
+      documentLike: historyPageEnvironment.documentLike,
+      modeCatalog: historyPageEnvironment.modeCatalog,
+      confirmAction: historyPageEnvironment.confirmAction,
+      navigateToHref: historyPageEnvironment.navigateToHref,
       burnInPanelElementId: historyPageDefaults.burnInPanelElementId,
       adapterFilterElementId: historyPageDefaults.adapterFilterElementId,
       canaryPanelElementId: historyPageDefaults.canaryPanelElementId,
-      runtime: window.LegacyAdapterRuntime,
+      runtime: historyPageEnvironment.runtime,
       adapterModeStorageKey: historyPageDefaults.adapterModeStorageKey,
       defaultModeStorageKey: historyPageDefaults.defaultModeStorageKey,
       forceLegacyStorageKey: historyPageDefaults.forceLegacyStorageKey
@@ -68,22 +71,18 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     historyPageHostRuntime.applyHistoryPageStartup({
-      localHistoryStore: window.LocalHistoryStore,
+      localHistoryStore: historyPageEnvironment.localHistoryStore,
       setStatus: setStatus,
       loadHistory: loadHistory,
       historyRuntimes: historyRuntimes,
       getElementById: el,
       modeElementId: historyPageDefaults.modeElementId,
-      modeCatalog: window.ModeCatalog,
-      documentLike: document,
+      modeCatalog: historyPageEnvironment.modeCatalog,
+      documentLike: historyPageEnvironment.documentLike,
       state: state,
-      confirmAction: window.confirm,
-      createDate: function () {
-        return new Date();
-      },
-      createFileReader: function () {
-        return new FileReader();
-      }
+      confirmAction: historyPageEnvironment.confirmAction,
+      createDate: historyPageEnvironment.createDate,
+      createFileReader: historyPageEnvironment.createFileReader
     });
   });
 })();

@@ -10,6 +10,10 @@ function asFunction<T extends (...args: never[]) => unknown>(value: unknown): T 
   return typeof value === "function" ? (value as T) : null;
 }
 
+function toText(value: unknown): string {
+  return value == null ? "" : String(value);
+}
+
 export function resolveHistoryPageDefaults(input?: unknown): Record<string, unknown> {
   const source = toRecord(input);
   return {
@@ -57,6 +61,53 @@ export function resolveHistoryPageDefaults(input?: unknown): Record<string, unkn
       typeof source.canaryPanelElementId === "string"
         ? source.canaryPanelElementId
         : "history-canary-policy"
+  };
+}
+
+export function resolveHistoryPageEnvironment(input?: unknown): Record<string, unknown> {
+  const source = toRecord(input);
+  const windowLike = toRecord(source.windowLike);
+  const locationLike = toRecord(windowLike.location);
+  const sourceConfirmAction = asFunction<(message: unknown) => unknown>(source.confirmAction);
+  const windowConfirmAction = asFunction<(message: unknown) => unknown>(windowLike.confirm);
+  const sourceNavigateToHref = asFunction<(href: unknown) => unknown>(source.navigateToHref);
+  const sourceCreateDate = asFunction<() => unknown>(source.createDate);
+  const sourceCreateFileReader = asFunction<() => unknown>(source.createFileReader);
+  const windowFileReaderCtor = asFunction<() => unknown>(windowLike.FileReader);
+
+  return {
+    windowLike,
+    documentLike: source.documentLike || windowLike.document,
+    localHistoryStore: source.localHistoryStore || windowLike.LocalHistoryStore,
+    modeCatalog: source.modeCatalog || windowLike.ModeCatalog,
+    runtime: source.runtime || windowLike.LegacyAdapterRuntime,
+    confirmAction:
+      sourceConfirmAction ||
+      windowConfirmAction ||
+      function () {
+        return false;
+      },
+    navigateToHref:
+      sourceNavigateToHref ||
+      function (href: unknown) {
+        if ("href" in locationLike) {
+          locationLike.href = toText(href);
+        }
+      },
+    createDate:
+      sourceCreateDate ||
+      function () {
+        return new Date();
+      },
+    createFileReader:
+      sourceCreateFileReader ||
+      (windowFileReaderCtor
+        ? function () {
+            return new (windowFileReaderCtor as unknown as new () => unknown)();
+          }
+        : function () {
+            return null;
+          })
   };
 }
 
