@@ -155,6 +155,8 @@
   - `index_ui.js` 的 `initHomeGuideSettingsUI` 已收敛为 `CoreHomeGuideSettingsHostRuntime.applyHomeGuideSettingsUi` 调用
   - 新增 `src/bootstrap/home-guide-dom-host.ts` + `js/core_home_guide_dom_host_runtime.js`，`index_ui.js` 委托首页指引浮层 DOM 创建与状态回写编排
   - `index_ui.js` 的 `ensureHomeGuideDom` 已收敛为 `CoreHomeGuideDomHostRuntime.applyHomeGuideDomEnsure` 调用
+  - 新增 `src/bootstrap/home-guide-done-notice-host.ts` + `js/core_home_guide_done_notice_host_runtime.js`，`index_ui.js` 委托引导完成提示的 toast 渲染与计时器编排
+  - `index_ui.js` 的 `showHomeGuideDoneNotice` 已收敛为 `CoreHomeGuideDoneNoticeHostRuntime.applyHomeGuideDoneNotice` 调用
   - 新增 `src/bootstrap/home-guide-startup-host.ts` + `js/core_home_guide_startup_host_runtime.js`，`index_ui.js` 委托首页新手引导自动启动编排（路径判定/存储判定/延迟调度）
   - `index_ui.js` 的 `autoStartHomeGuideIfNeeded` 已收敛为 `CoreHomeGuideStartupHostRuntime.applyHomeGuideAutoStart` 调用
   - 新增 `src/bootstrap/storage.ts` + `js/core_storage_runtime.js`，`index_ui.js` 委托 `localStorage/sessionStorage` 安全获取，不再内联存储访问容错逻辑

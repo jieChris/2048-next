@@ -307,6 +307,13 @@ if (
 ) {
   throw new Error("CoreHomeGuideDomHostRuntime is required");
 }
+var homeGuideDoneNoticeHostRuntime = window.CoreHomeGuideDoneNoticeHostRuntime;
+if (
+  !homeGuideDoneNoticeHostRuntime ||
+  typeof homeGuideDoneNoticeHostRuntime.applyHomeGuideDoneNotice !== "function"
+) {
+  throw new Error("CoreHomeGuideDoneNoticeHostRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -1155,24 +1162,12 @@ function isElementVisibleForGuide(node) {
 }
 
 function showHomeGuideDoneNotice() {
-  var doneNotice = homeGuideRuntime.resolveHomeGuideDoneNotice({});
-  var toast = document.getElementById("home-guide-done-toast");
-  if (!toast) {
-    var toastStyle = homeGuideRuntime.resolveHomeGuideDoneNoticeStyle();
-    toast = document.createElement("div");
-    toast.id = "home-guide-done-toast";
-    for (var key in toastStyle) {
-      if (!Object.prototype.hasOwnProperty.call(toastStyle, key)) continue;
-      toast.style[key] = toastStyle[key];
-    }
-    document.body.appendChild(toast);
-  }
-  toast.textContent = doneNotice.message;
-  toast.style.opacity = "1";
-  if (toast.__hideTimer) clearTimeout(toast.__hideTimer);
-  toast.__hideTimer = setTimeout(function () {
-    toast.style.opacity = "0";
-  }, doneNotice.hideDelayMs);
+  homeGuideDoneNoticeHostRuntime.applyHomeGuideDoneNotice({
+    documentLike: document,
+    homeGuideRuntime: homeGuideRuntime,
+    setTimeoutLike: setTimeout,
+    clearTimeoutLike: clearTimeout
+  });
 }
 
 function finishHomeGuide(markSeen, options) {
