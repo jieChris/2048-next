@@ -296,7 +296,8 @@ var mobileTimerboxHostRuntime = window.CoreMobileTimerboxHostRuntime;
 if (
   !mobileTimerboxHostRuntime ||
   typeof mobileTimerboxHostRuntime.applyMobileTimerboxToggleInit !== "function" ||
-  typeof mobileTimerboxHostRuntime.applyMobileTimerboxUiSync !== "function"
+  typeof mobileTimerboxHostRuntime.applyMobileTimerboxUiSync !== "function" ||
+  typeof mobileTimerboxHostRuntime.applyMobileTimerboxUiSyncFromContext !== "function"
 ) {
   throw new Error("CoreMobileTimerboxHostRuntime is required");
 }
@@ -688,40 +689,18 @@ function initMobileUndoTopButton() {
   });
 }
 
-function readMobileTimerboxCollapsed() {
-  var storage = getStorageByName("localStorage");
-  return mobileTimerboxRuntime.resolveStoredMobileTimerboxCollapsed({
-    storageLike: storage,
-    storageKey: MOBILE_TIMERBOX_COLLAPSED_KEY,
-    defaultCollapsed: true
-  });
-}
-
-function writeMobileTimerboxCollapsed(collapsed) {
-  var storage = getStorageByName("localStorage");
-  mobileTimerboxRuntime.persistMobileTimerboxCollapsed({
-    storageLike: storage,
-    storageKey: MOBILE_TIMERBOX_COLLAPSED_KEY,
-    collapsed: !!collapsed
-  });
-}
-
-function getTimerboxToggleIconSvg(collapsed) {
-  return mobileTimerboxRuntime.getTimerboxToggleIconSvg(!!collapsed);
-}
-
 function syncMobileTimerboxUI(options) {
-  mobileTimerboxHostRuntime.applyMobileTimerboxUiSync({
+  mobileTimerboxHostRuntime.applyMobileTimerboxUiSyncFromContext({
     options: options || {},
     isTimerboxMobileScope: isTimerboxMobileScope,
     isTimerboxCollapseViewport: isTimerboxCollapseViewport,
     getElementById: function (id) {
       return document.getElementById(id);
     },
-    readMobileTimerboxCollapsed: readMobileTimerboxCollapsed,
-    writeMobileTimerboxCollapsed: writeMobileTimerboxCollapsed,
+    storageRuntime: storageRuntime,
+    windowLike: typeof window !== "undefined" ? window : null,
     mobileTimerboxRuntime: mobileTimerboxRuntime,
-    getTimerboxToggleIconSvg: getTimerboxToggleIconSvg,
+    storageKey: MOBILE_TIMERBOX_COLLAPSED_KEY,
     hiddenClassName: "timerbox-hidden-mode",
     expandedClassName: "is-mobile-expanded",
     defaultCollapsed: true,
@@ -770,13 +749,6 @@ function requestResponsiveGameRelayout() {
 window.syncMobileTimerboxUI = syncMobileTimerboxUI;
 window.syncMobileHintUI = syncMobileHintUI;
 window.syncMobileUndoTopButtonAvailability = syncMobileUndoTopButtonAvailability;
-
-function getStorageByName(name) {
-  return storageRuntime.resolveStorageByName({
-    windowLike: typeof window !== "undefined" ? window : null,
-    storageName: name
-  });
-}
 
 window.openPracticeBoardFromCurrent = function () {
   practiceTransferPageHostRuntime.applyPracticeTransferPageActionFromContext({

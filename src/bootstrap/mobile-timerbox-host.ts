@@ -119,6 +119,23 @@ function callIconResolver(resolver: unknown, collapsed: boolean): string {
   return typeof icon === "string" ? icon : "";
 }
 
+function resolveStorageByName(input: {
+  storageRuntime?: unknown;
+  windowLike?: unknown;
+  storageName?: unknown;
+}): unknown {
+  const source = toRecord(input);
+  const storageRuntime = toRecord(source.storageRuntime);
+  const resolveStorage = asFunction<(payload: unknown) => unknown>(
+    storageRuntime.resolveStorageByName
+  );
+  if (!resolveStorage) return null;
+  return resolveStorage({
+    windowLike: source.windowLike || null,
+    storageName: source.storageName
+  });
+}
+
 function toDisplayValue(value: unknown, fallback: "inline-flex" | "none"): "inline-flex" | "none" {
   return value === "inline-flex" ? "inline-flex" : fallback;
 }
@@ -248,6 +265,80 @@ export function applyMobileTimerboxToggleInit(input: {
     hasTimerbox: true,
     didBindToggle,
     didRunSync
+  };
+}
+
+export interface MobileTimerboxUiSyncFromContextResult {
+  didInvokeUiSync: boolean;
+  localStorageResolved: boolean;
+  syncResult: MobileTimerboxUiSyncResult;
+}
+
+export function applyMobileTimerboxUiSyncFromContext(input: {
+  options?: unknown;
+  isTimerboxMobileScope?: unknown;
+  isTimerboxCollapseViewport?: unknown;
+  getElementById?: unknown;
+  storageRuntime?: unknown;
+  windowLike?: unknown;
+  mobileTimerboxRuntime?: unknown;
+  storageKey?: unknown;
+  hiddenClassName?: unknown;
+  expandedClassName?: unknown;
+  defaultCollapsed?: unknown;
+  fallbackHiddenToggleDisplay?: unknown;
+  fallbackVisibleToggleDisplay?: unknown;
+  fallbackHiddenAriaExpanded?: unknown;
+  fallbackExpandLabel?: unknown;
+  fallbackCollapseLabel?: unknown;
+}): MobileTimerboxUiSyncFromContextResult {
+  const source = toRecord(input);
+  const storageLike = resolveStorageByName({
+    storageRuntime: source.storageRuntime,
+    windowLike: source.windowLike || null,
+    storageName: "localStorage"
+  });
+  const storageKey = source.storageKey;
+  const defaultCollapsed = toBooleanValue(source.defaultCollapsed, true);
+  const runtime = source.mobileTimerboxRuntime;
+  const syncResult = applyMobileTimerboxUiSync({
+    options: source.options,
+    isTimerboxMobileScope: source.isTimerboxMobileScope,
+    isTimerboxCollapseViewport: source.isTimerboxCollapseViewport,
+    getElementById: source.getElementById,
+    readMobileTimerboxCollapsed: function () {
+      const resolved = callRuntime(runtime, "resolveStoredMobileTimerboxCollapsed", {
+        storageLike,
+        storageKey,
+        defaultCollapsed
+      });
+      return toBooleanValue(resolved, defaultCollapsed);
+    },
+    writeMobileTimerboxCollapsed: function (collapsed: boolean) {
+      callRuntime(runtime, "persistMobileTimerboxCollapsed", {
+        storageLike,
+        storageKey,
+        collapsed: !!collapsed
+      });
+    },
+    mobileTimerboxRuntime: runtime,
+    getTimerboxToggleIconSvg: function (collapsed: boolean) {
+      return callRuntime(runtime, "getTimerboxToggleIconSvg", !!collapsed);
+    },
+    hiddenClassName: source.hiddenClassName,
+    expandedClassName: source.expandedClassName,
+    defaultCollapsed,
+    fallbackHiddenToggleDisplay: source.fallbackHiddenToggleDisplay,
+    fallbackVisibleToggleDisplay: source.fallbackVisibleToggleDisplay,
+    fallbackHiddenAriaExpanded: source.fallbackHiddenAriaExpanded,
+    fallbackExpandLabel: source.fallbackExpandLabel,
+    fallbackCollapseLabel: source.fallbackCollapseLabel
+  });
+
+  return {
+    didInvokeUiSync: syncResult.didApply || syncResult.didPersist,
+    localStorageResolved: !!storageLike,
+    syncResult
   };
 }
 

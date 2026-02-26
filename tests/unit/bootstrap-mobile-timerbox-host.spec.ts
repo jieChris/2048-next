@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   applyMobileTimerboxToggleInit,
-  applyMobileTimerboxUiSync
+  applyMobileTimerboxUiSync,
+  applyMobileTimerboxUiSyncFromContext
 } from "../../src/bootstrap/mobile-timerbox-host";
 
 describe("bootstrap mobile timerbox host", () => {
@@ -286,5 +287,77 @@ describe("bootstrap mobile timerbox host", () => {
     expect(attrs["title"]).toBe("收起计时器");
     expect(toggleBtn.innerHTML).toBe("<svg expanded />");
     expect(writeCollapsed).toHaveBeenCalledWith(false);
+  });
+
+  it("resolves localStorage from context and delegates timerbox ui sync", () => {
+    const attrs: Record<string, string> = {};
+    const timerBox = {
+      classList: {
+        contains() {
+          return false;
+        },
+        toggle() {}
+      }
+    };
+    const toggleBtn = {
+      style: { display: "" },
+      setAttribute(name: string, value: string) {
+        attrs[name] = value;
+      },
+      innerHTML: ""
+    };
+    const storageLike = { getItem: vi.fn(() => "0"), setItem: vi.fn() };
+    const runtime = {
+      resolveStoredMobileTimerboxCollapsed: vi.fn(() => false),
+      persistMobileTimerboxCollapsed: vi.fn(() => true),
+      getTimerboxToggleIconSvg: vi.fn(() => "<svg ctx />"),
+      resolveMobileTimerboxCollapsedValue: vi.fn(() => false),
+      resolveMobileTimerboxDisplayModel: vi.fn(() => ({
+        toggleDisplay: "inline-flex",
+        ariaExpanded: "true",
+        label: "收起计时器",
+        iconSvg: "<svg expanded />",
+        expanded: true
+      })),
+      resolveMobileTimerboxAppliedModel: vi.fn((opts: any) => opts.displayModel)
+    };
+
+    const result = applyMobileTimerboxUiSyncFromContext({
+      options: { persist: true },
+      isTimerboxMobileScope() {
+        return true;
+      },
+      isTimerboxCollapseViewport() {
+        return true;
+      },
+      getElementById(id: string) {
+        if (id === "timerbox") return timerBox;
+        if (id === "timerbox-toggle-btn") return toggleBtn;
+        return null;
+      },
+      storageRuntime: {
+        resolveStorageByName(payload: { storageName?: string }) {
+          return payload.storageName === "localStorage" ? storageLike : null;
+        }
+      },
+      windowLike: { localStorage: storageLike },
+      mobileTimerboxRuntime: runtime,
+      storageKey: "ui_timerbox_collapsed_mobile_v1"
+    });
+
+    expect(result.didInvokeUiSync).toBe(true);
+    expect(result.localStorageResolved).toBe(true);
+    expect(result.syncResult.didApply).toBe(true);
+    expect(runtime.resolveStoredMobileTimerboxCollapsed).toHaveBeenCalledWith({
+      storageLike,
+      storageKey: "ui_timerbox_collapsed_mobile_v1",
+      defaultCollapsed: true
+    });
+    expect(runtime.persistMobileTimerboxCollapsed).toHaveBeenCalledWith({
+      storageLike,
+      storageKey: "ui_timerbox_collapsed_mobile_v1",
+      collapsed: false
+    });
+    expect(attrs["aria-expanded"]).toBe("true");
   });
 });
