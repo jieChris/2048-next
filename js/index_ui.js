@@ -205,6 +205,13 @@ if (
 ) {
   throw new Error("CoreMobileHintOpenHostRuntime is required");
 }
+var mobileHintUiHostRuntime = window.CoreMobileHintUiHostRuntime;
+if (
+  !mobileHintUiHostRuntime ||
+  typeof mobileHintUiHostRuntime.applyMobileHintUiSync !== "function"
+) {
+  throw new Error("CoreMobileHintUiHostRuntime is required");
+}
 var mobileHintHostRuntime = window.CoreMobileHintHostRuntime;
 if (
   !mobileHintHostRuntime ||
@@ -573,47 +580,19 @@ function closeMobileHintModal() {
 }
 
 function syncMobileHintUI(options) {
-  options = options || {};
-  if (!isGamePageScope()) return;
-
-  var body = document.body;
-  var intro = document.querySelector(".above-game .game-intro");
-  if (!body) return;
-
-  var compact = isCompactGameViewport();
-  mobileHintUiRuntime.syncMobileHintTextBlockVisibility({
-    isGamePageScope: true,
-    containerNode: document.querySelector(".container"),
-    hidden: compact
+  mobileHintUiHostRuntime.applyMobileHintUiSync({
+    options: options || {},
+    isGamePageScope: isGamePageScope,
+    isCompactGameViewport: isCompactGameViewport,
+    ensureMobileHintToggleButton: ensureMobileHintToggleButton,
+    closeMobileHintModal: closeMobileHintModal,
+    mobileHintUiRuntime: mobileHintUiRuntime,
+    documentLike: document,
+    collapsedClassName: "mobile-hint-collapsed-content",
+    introHiddenClassName: "mobile-hint-hidden",
+    introSelector: ".above-game .game-intro",
+    containerSelector: ".container"
   });
-  if (intro) {
-    intro.classList.toggle("mobile-hint-hidden", compact);
-  }
-
-  var btn = ensureMobileHintToggleButton();
-  if (!btn) return;
-  var displayModel = mobileHintUiRuntime.resolveMobileHintDisplayModel(compact);
-  var uiState = mobileHintUiRuntime.resolveMobileHintUiState({
-    displayModel: displayModel,
-    collapsedClassName: "mobile-hint-collapsed-content"
-  });
-
-  if (uiState.collapsedContentEnabled) {
-    body.classList.add(uiState.collapsedClassName);
-  } else {
-    body.classList.remove(uiState.collapsedClassName);
-  }
-  btn.style.display = uiState.buttonDisplay;
-
-  if (uiState.shouldCloseModal) {
-    closeMobileHintModal();
-    return;
-  }
-
-  var label = uiState.buttonLabel;
-  btn.setAttribute("aria-label", label);
-  btn.setAttribute("title", label);
-  btn.setAttribute("aria-expanded", uiState.buttonAriaExpanded);
 }
 
 function initMobileHintToggle() {
