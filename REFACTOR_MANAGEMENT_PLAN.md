@@ -205,7 +205,74 @@
   - `history.html` 已支持 parity 诊断展示、筛选与导出
   - `LocalHistoryStore` 支持 parity 过滤与 burn-in 统计
   - canary 策略面板上线（默认 core、强制 legacy、解除回滚、重置基线）
+  - 新增 `src/bootstrap/history-canary-storage.ts` + `js/core_history_canary_storage_runtime.js`，`history_page.js` 委托 canary storage 读写回退（localStorage get/set/remove）逻辑
+  - `history_page.js` 已移除本地 `getStorageValue/setStorageValue` 透传函数，直接注入 `history-canary-storage` runtime 读写方法
+  - 新增 `src/bootstrap/history-canary-action.ts` + `js/core_history_canary_action_runtime.js`，`history_page.js` 委托 canary 策略执行器（按 action plan 写 default/forceLegacy）与应用反馈状态（成功/失败提示文案、reload 判定）
+  - `history-canary-action` 已继续承接按动作名执行策略（`applyHistoryCanaryPolicyActionByName`），`history_page.js` 不再本地拼装 canary actionPlan
+  - `history-canary-action` 已继续承接“按动作名执行 + 反馈态”一体化处理（`applyHistoryCanaryPolicyActionByNameWithFeedback`），`history_page.js` 不再本地串联 apply 与 feedback 计算
+  - `history-canary-action` 已继续承接 canary 面板点击动作解析与执行反馈（`applyHistoryCanaryPanelAction`），`history_page.js` 不再本地解析 `data-action` 并拼装执行/提示入参
+  - 新增 `src/bootstrap/history-canary-source.ts` + `js/core_history_canary_source_runtime.js`，`history_page.js` 委托 LegacyAdapterRuntime 的 canary policy/stored-keys 读取与对象归一化
+  - `history-canary-source` 已继续承接 canary snapshot/stored 输入组装（`resolveHistoryCanaryPolicySnapshotInput`/`resolveHistoryCanaryStoredPolicyInput`），`history_page.js` 不再本地拼装 policy 输入
+  - `history-canary-source` 已新增聚合读取入口（`resolveHistoryCanaryPolicyAndStoredState`），`history_page.js` 改为一次调用完成 policy + stored 解析并下发到 view runtime
+  - 新增 `src/bootstrap/history-canary-panel.ts` + `js/core_history_canary_panel_runtime.js`，`history_page.js` 委托 canary 面板 HTML 渲染与 action 名称解析
+  - 新增 `src/bootstrap/history-canary-host.ts` + `js/core_history_canary_host_runtime.js`，`history_page.js` 委托 canary 面板渲染编排与按钮点击执行反馈主链
+  - `history-canary-host` 已继续承接 canary 面板一体化渲染入口（`applyHistoryCanaryPanelRender`），`history_page.js` 不再本地循环绑定 canary action 按钮
   - 新增 `src/bootstrap/history-canary-policy.ts` + `js/core_history_canary_policy_runtime.js`，`history_page.js` 委托 canary 策略快照解析、存储键归一化与动作决策/提示文案
+  - 新增 `src/bootstrap/history-canary-view.ts` + `js/core_history_canary_view_runtime.js`，`history_page.js` 委托 canary 面板展示态（来源文案/模式文案/gate 样式/storage 文案）模型计算
+  - 新增 `src/bootstrap/history-summary.ts` + `js/core_history_summary_runtime.js`，`history_page.js` 委托顶部汇总文案（总条数/分页/筛选标签）计算
+  - 新增 `src/bootstrap/history-status.ts` + `js/core_history_status_runtime.js`，`history_page.js` 委托状态栏文案/颜色展示态（error 与 normal）模型计算
+  - 新增 `src/bootstrap/history-view-host.ts` + `js/core_history_view_host_runtime.js`，`history_page.js` 委托状态栏与顶部汇总文案的 DOM 应用编排
+  - 新增 `src/bootstrap/history-export.ts` + `js/core_history_export_runtime.js`，`history_page.js` 委托导出文件名生成与 mismatch 全量导出分页收集循环
+  - `history-export` 已继续承接单条记录导出状态与 mismatch 导出源读取（`resolveHistorySingleRecordExportState`/`resolveHistoryMismatchExportRecordIds`），`history_page.js` 不再本地拼装导出源与 payload
+  - `history-export` 已继续承接单条记录导出执行（`downloadHistorySingleRecord`），`history_page.js` 不再本地判断导出状态后调用 `LocalHistoryStore.download`
+  - `history-export` 已继续承接“导出全部/导出 A/B 不一致”执行（`downloadHistoryAllRecords`/`downloadHistoryMismatchRecords`），`history_page.js` 不再本地拼接导出 payload、文件名与下载调用
+  - 新增 `src/bootstrap/history-query.ts` + `js/core_history_query_runtime.js`，`history_page.js` 委托筛选状态归一化、list/burn-in 查询参数拼装与分页按钮状态计算
+  - 新增 `src/bootstrap/history-filter-host.ts` + `js/core_history_filter_host_runtime.js`，`history_page.js` 委托筛选控件值读取与 `history-query` 状态回写编排
+  - `history-query` 已继续承接筛选状态回写（`applyHistoryFilterState`），`history_page.js` 不再本地逐字段赋值 `state.modeKey/keyword/sortBy/...`
+  - `history-query` 已继续承接列表结果源读取（`resolveHistoryListResultSource`），`history_page.js` 不再直接调用 `LocalHistoryStore.listRecords`
+  - 新增 `src/bootstrap/history-load.ts` + `js/core_history_load_runtime.js`，`history_page.js` 委托列表查询、burn-in 汇总与分页状态的加载编排主链
+  - 新增 `src/bootstrap/history-record-view.ts` + `js/core_history_record_view_runtime.js`，`history_page.js` 委托列表头展示态（mode/score/best/duration/ended）模型计算
+  - `history-record-view` 已继续承接 `ModeCatalog` 标签解析（`resolveHistoryCatalogModeLabel`），`history_page.js` 不再本地读取 mode label
+  - 新增 `src/bootstrap/history-record-item.ts` + `js/core_history_record_item_runtime.js`，`history_page.js` 委托历史记录卡片 HTML 模型拼装（头部信息/动作按钮/诊断区/终盘棋盘）
+  - 新增 `src/bootstrap/history-record-list-host.ts` + `js/core_history_record_list_host_runtime.js`，`history_page.js` 委托历史记录列表渲染与单项动作绑定编排
+  - `history-record-list-host` 已继续承接 `renderHistory` 逐项渲染与 replay/export/delete 绑定主链；并修复 DOM 方法 this 绑定（`querySelector/addEventListener/appendChild`）以避免浏览器非法调用
+  - 新增 `src/bootstrap/history-import.ts` + `js/core_history_import_runtime.js`，`history_page.js` 委托导入动作决策（merge/replace/confirm）与导入成功/失败提示文案
+  - `history-import` 已继续承接导入执行（`executeHistoryImport`），`history_page.js` 不再本地拼装 `merge` 后直接调用 `LocalHistoryStore.importRecords`
+  - 新增 `src/bootstrap/history-import-file.ts` + `js/core_history_import_file_runtime.js`，`history_page.js` 委托导入文件选择、读取编码、payload 文本归一化与 input reset 值决策
+  - 新增 `src/bootstrap/history-import-host.ts` + `js/core_history_import_host_runtime.js`，`history_page.js` 委托导入入口点击、文件读取成功/失败反馈与刷新判定编排
+  - 新增 `src/bootstrap/history-import-bind-host.ts` + `js/core_history_import_bind_host_runtime.js`，`history_page.js` 委托导入控件绑定编排（merge/replace/file-change）
+  - `history-import-bind-host` 已修复 DOM 方法 this 绑定（`addEventListener/click`），避免浏览器环境下导入按钮与文件选择事件绑定丢失
+  - 新增 `src/bootstrap/history-record-actions.ts` + `js/core_history_record_actions_runtime.js`，`history_page.js` 委托记录项动作决策（回放链接、删除确认计划、删除成功/失败提示文案）
+  - 新增 `src/bootstrap/history-record-host.ts` + `js/core_history_record_host_runtime.js`，`history_page.js` 委托记录项回放跳转、单条导出与删除执行反馈编排
+  - `history-record-actions` 已继续承接记录删除执行（`executeHistoryDeleteRecord`），`history_page.js` 不再本地调用 `LocalHistoryStore.deleteById`
+  - 新增 `src/bootstrap/history-toolbar.ts` + `js/core_history_toolbar_runtime.js`，`history_page.js` 委托工具栏动作决策（导出日期标签/文件名、mismatch 导出查询、清空确认计划与提示文案）
+  - `history-toolbar` 已继续承接清空历史执行（`executeHistoryClearAll`），`history_page.js` 不再本地调用 `LocalHistoryStore.clearAll`
+  - 新增 `src/bootstrap/history-toolbar-host.ts` + `js/core_history_toolbar_host_runtime.js`，`history_page.js` 委托工具栏导出/清空执行编排主链（export-all/mismatch/clear-all）
+  - 新增 `src/bootstrap/history-toolbar-bind-host.ts` + `js/core_history_toolbar_bind_host_runtime.js`，`history_page.js` 委托工具栏按钮绑定编排（刷新/导出全部/导出不一致/清空）
+  - 新增 `src/bootstrap/history-toolbar-events.ts` + `js/core_history_toolbar_events_runtime.js`，`history_page.js` 委托分页步进决策、筛选控件 reload 绑定列表与关键词 Enter 触发判定
+  - 新增 `src/bootstrap/history-toolbar-events-host.ts` + `js/core_history_toolbar_events_host_runtime.js`，`history_page.js` 委托分页/筛选/关键词监听绑定编排
+  - `history-toolbar-bind-host/history-toolbar-events-host` 已修复 DOM 方法 this 绑定（`addEventListener/preventDefault`），并补充单测防回归
+  - 新增 `src/bootstrap/history-mode-filter.ts` + `js/core_history_mode_filter_runtime.js`，`history_page.js` 委托模式筛选下拉选项模型组装
+  - 新增 `src/bootstrap/history-mode-filter-host.ts` + `js/core_history_mode_filter_host_runtime.js`，`history_page.js` 委托模式筛选下拉渲染编排（读取 catalog -> 组装 option -> append）
+  - 新增 `src/bootstrap/history-controls-host.ts` + `js/core_history_controls_host_runtime.js`，`history_page.js` 委托模式筛选初始化与 toolbar/import/pager 绑定编排
+  - `history-controls-host/history-toolbar-bind-host` 已继续承接筛选状态回写触发链（`applyHistoryFilterStateFromInputs`），`history_page.js` 不再保留 `readFilters` 页面层透传函数
+  - 新增 `src/bootstrap/history-board.ts` + `js/core_history_board_runtime.js`，`history_page.js` 委托历史记录终盘棋盘 HTML 渲染（网格尺寸推断、tile 样式类、super tile 标识）
+  - 新增 `src/bootstrap/history-runtime-contract.ts` + `js/core_history_runtime_contract_runtime.js`，`history_page.js` 统一委托历史页 runtime 依赖契约校验并集中收敛依赖对象
+  - `history-runtime-contract` 已纳入 `CoreHistoryRecordListHostRuntime` 依赖校验，历史页列表渲染编排改走统一契约注入
+  - 新增 `src/bootstrap/history-adapter-diagnostics.ts` + `js/core_history_adapter_diagnostics_runtime.js`，`history_page.js` 委托 adapter 诊断徽标与文案行模型计算
+  - 新增 `src/bootstrap/history-adapter-host.ts` + `js/core_history_adapter_host_runtime.js`，`history_page.js` 委托 adapter 诊断徽标/诊断区渲染编排
+  - 新增 `src/bootstrap/history-load-host.ts` + `js/core_history_load_host_runtime.js`，`history_page.js` 委托 load 后渲染编排（列表/汇总/burn-in/canary/status/pager）
+  - `history-load-host` 已继续承接列表加载一体化入口（`applyHistoryLoadWithPager`），`history_page.js` 不再本地读取分页按钮并手工应用禁用态
+  - 新增 `src/bootstrap/history-load-entry-host.ts` + `js/core_history_load_entry_host_runtime.js`，`history_page.js` 委托加载入口编排（store guard + 筛选回写 + load-with-pager 调用）
+  - 新增 `src/bootstrap/history-panel-host.ts` + `js/core_history_panel_host_runtime.js`，`history_page.js` 委托 burn-in/canary/list 三块面板渲染入口编排
+  - `history-load-host` 已继续承接分页按钮状态应用（`applyHistoryPagerButtonState`），`history_page.js` 不再本地写 `prev/next.disabled`
+  - 新增 `src/bootstrap/history-startup-host.ts` + `js/core_history_startup_host_runtime.js`，`history_page.js` 委托 DOMContentLoaded 启动编排（store 校验/初始化/首屏加载）
+  - `history-adapter-diagnostics` 已继续承接 adapter 诊断徽标/诊断区 HTML 拼装（`resolveHistoryAdapterBadgeHtml`/`resolveHistoryAdapterDiagnosticsHtml`），`history_page.js` 不再本地拼接诊断 HTML
+  - `history-adapter-diagnostics` 已继续承接 parity 状态读取（`resolveHistoryAdapterParityStatus`），`history_page.js` 不再本地读取 `LocalHistoryStore.getAdapterParityStatus`
+  - 新增 `src/bootstrap/history-burnin.ts` + `js/core_history_burnin_runtime.js`，`history_page.js` 委托 burn-in 汇总 gate 状态、百分比文案、连续窗口统计、面板 HTML 渲染与“仅看不一致”点击动作决策
+  - 新增 `src/bootstrap/history-burnin-host.ts` + `js/core_history_burnin_host_runtime.js`，`history_page.js` 委托 burn-in 面板渲染与“仅看不一致”点击反馈编排
+  - `history-burnin-host` 已继续承接 burn-in 面板一体化渲染入口（`applyHistoryBurnInSummaryRender`），`history_page.js` 不再本地绑定 mismatch 按钮动作
+  - `history-burnin` 已继续承接 burn-in 汇总源读取（`resolveHistoryBurnInSummarySource`），`history_page.js` 不再本地判断 store/query 再调用 `getAdapterParityBurnInSummary`
   - burn-in gate 已支持 sustained window 判定
   - `src/bridge/burnin-gate.ts` + `js/core_burnin_gate_runtime.js` 抽离完成
   - play 页自定义 4 率抽离：`src/bootstrap/custom-spawn.ts` + `js/core_custom_spawn_runtime.js`

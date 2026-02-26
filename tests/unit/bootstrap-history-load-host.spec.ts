@@ -1,0 +1,126 @@
+import { describe, expect, it, vi } from "vitest";
+
+import {
+  applyHistoryLoadAndRender,
+  applyHistoryLoadWithPager,
+  applyHistoryPagerButtonState
+} from "../../src/bootstrap/history-load-host";
+
+describe("bootstrap history load host", () => {
+  it("delegates load and render orchestration to runtime dependencies", () => {
+    const state = { page: 3, pageSize: 30 };
+    const renderHistory = vi.fn();
+    const renderSummary = vi.fn();
+    const renderBurnInSummary = vi.fn();
+    const renderCanaryPolicy = vi.fn();
+    const setStatus = vi.fn();
+
+    const result = applyHistoryLoadAndRender({
+      resetPage: true,
+      state,
+      localHistoryStore: {},
+      historyLoadRuntime: {
+        resolveHistoryLoadPipeline: ({ state: currentState }: { state: { page: number } }) => ({
+          listResult: { items: [{ id: "id-1" }], total: 1 },
+          burnInSummary: { comparable: 1 },
+          pagerState: {
+            disablePrev: currentState.page <= 1,
+            disableNext: false
+          }
+        })
+      },
+      historyQueryRuntime: {},
+      historyBurnInRuntime: {},
+      burnInMinComparable: 50,
+      burnInMaxMismatchRate: 1,
+      renderHistory,
+      renderSummary,
+      renderBurnInSummary,
+      renderCanaryPolicy,
+      setStatus
+    });
+
+    expect(state.page).toBe(1);
+    expect(renderHistory).toHaveBeenCalledWith({ items: [{ id: "id-1" }], total: 1 });
+    expect(renderSummary).toHaveBeenCalledWith({ items: [{ id: "id-1" }], total: 1 });
+    expect(renderBurnInSummary).toHaveBeenCalledWith({ comparable: 1 });
+    expect(renderCanaryPolicy).toHaveBeenCalledTimes(1);
+    expect(setStatus).toHaveBeenCalledWith("", false);
+    expect(result).toEqual({ didLoad: true, disablePrev: true, disableNext: false });
+  });
+
+  it("returns noop result when dependencies are missing", () => {
+    expect(applyHistoryLoadAndRender({})).toEqual({
+      didLoad: false,
+      disablePrev: false,
+      disableNext: false
+    });
+    expect(
+      applyHistoryLoadAndRender({
+        state: { page: 1 },
+        localHistoryStore: {},
+        historyLoadRuntime: {}
+      })
+    ).toEqual({
+      didLoad: false,
+      disablePrev: false,
+      disableNext: false
+    });
+  });
+
+  it("applies pager button disabled state from load result", () => {
+    const prevButton = { disabled: false };
+    const nextButton = { disabled: false };
+
+    const result = applyHistoryPagerButtonState({
+      prevButton,
+      nextButton,
+      loadResult: {
+        disablePrev: true,
+        disableNext: false
+      }
+    });
+
+    expect(result).toEqual({ didApply: true });
+    expect(prevButton.disabled).toBe(true);
+    expect(nextButton.disabled).toBe(false);
+  });
+
+  it("loads and applies pager state through one host entry", () => {
+    const state = { page: 2 };
+    const prevButton = { disabled: false };
+    const nextButton = { disabled: false };
+    const getElementById = vi.fn((id: string) => {
+      if (id === "history-prev-page") return prevButton;
+      if (id === "history-next-page") return nextButton;
+      return null;
+    });
+
+    const result = applyHistoryLoadWithPager({
+      state,
+      localHistoryStore: {},
+      historyLoadRuntime: {
+        resolveHistoryLoadPipeline: () => ({
+          listResult: { items: [], total: 0 },
+          burnInSummary: null,
+          pagerState: {
+            disablePrev: false,
+            disableNext: true
+          }
+        })
+      },
+      getElementById
+    });
+
+    expect(result).toEqual({
+      didLoad: true,
+      disablePrev: false,
+      disableNext: true,
+      didApplyPagerState: true
+    });
+    expect(prevButton.disabled).toBe(false);
+    expect(nextButton.disabled).toBe(true);
+    expect(getElementById).toHaveBeenCalledWith("history-prev-page");
+    expect(getElementById).toHaveBeenCalledWith("history-next-page");
+  });
+});
