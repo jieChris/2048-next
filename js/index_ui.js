@@ -1,47 +1,38 @@
 // Logic extracted from index.html
 
+var replayModalRuntime = window.CoreReplayModalRuntime;
+if (
+  !replayModalRuntime ||
+  typeof replayModalRuntime.applyReplayModalOpen !== "function" ||
+  typeof replayModalRuntime.applyReplayModalClose !== "function" ||
+  typeof replayModalRuntime.applySettingsModalOpen !== "function" ||
+  typeof replayModalRuntime.applySettingsModalClose !== "function"
+) {
+  throw new Error("CoreReplayModalRuntime is required");
+}
+
 // Replay Modal Functions
 function showReplayModal(title, content, actionName, actionCallback) {
-  var modal = document.getElementById('replay-modal');
-  var titleEl = document.getElementById('replay-modal-title');
-  var textEl = document.getElementById('replay-textarea');
-  var actionBtn = document.getElementById('replay-action-btn');
-
-  if (!modal) return;
-
-  modal.style.display = 'flex';
-  titleEl.textContent = title;
-  textEl.value = content;
-  
-  if (actionName) {
-    actionBtn.style.display = 'inline-block';
-    actionBtn.textContent = actionName;
-    actionBtn.onclick = function() {
-      actionCallback(textEl.value);
-    };
-  } else {
-    actionBtn.style.display = 'none';
-  }
-  
-  // Bind close button here since it might not be bound if modal was hidden
-  var closeBtn = modal.querySelector('.replay-button:not(#replay-action-btn)');
-  if(closeBtn) {
-      closeBtn.onclick = window.closeReplayModal;
-  }
+  replayModalRuntime.applyReplayModalOpen({
+    documentLike: document,
+    title: title,
+    content: content,
+    actionName: actionName,
+    actionCallback: actionCallback,
+    closeCallback: window.closeReplayModal
+  });
 }
 
 window.closeReplayModal = function() {
-  var modal = document.getElementById('replay-modal');
-  if (modal) {
-    modal.style.display = 'none';
-  }
+  replayModalRuntime.applyReplayModalClose({
+    documentLike: document
+  });
 };
 
 window.openSettingsModal = function () {
-  var modal = document.getElementById("settings-modal");
-  if (modal) {
-    modal.style.display = "flex";
-  }
+  replayModalRuntime.applySettingsModalOpen({
+    documentLike: document
+  });
   removeLegacyUndoSettingsUI();
   initThemeSettingsUI();
   initTimerModuleSettingsUI();
@@ -49,10 +40,9 @@ window.openSettingsModal = function () {
 };
 
 window.closeSettingsModal = function () {
-  var modal = document.getElementById("settings-modal");
-  if (modal) {
-    modal.style.display = "none";
-  }
+  replayModalRuntime.applySettingsModalClose({
+    documentLike: document
+  });
 };
 
 window.exportReplay = function() {
