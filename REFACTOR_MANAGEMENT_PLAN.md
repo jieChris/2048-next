@@ -184,7 +184,8 @@
   - 新增 `src/bootstrap/home-guide-done-notice-host.ts` + `js/core_home_guide_done_notice_host_runtime.js`，`index_ui.js` 委托引导完成提示的 toast 渲染与计时器编排
   - `index_ui.js` 的 `showHomeGuideDoneNotice` 已收敛为 `CoreHomeGuideDoneNoticeHostRuntime.applyHomeGuideDoneNotice` 调用
   - 新增 `src/bootstrap/home-guide-finish-host.ts` + `js/core_home_guide_finish_host_runtime.js`，`index_ui.js` 委托引导结束生命周期状态回写（active/steps/index/fromSettings）与层显示编排
-  - `index_ui.js` 的 `finishHomeGuide` 已收敛为 `CoreHomeGuideFinishHostRuntime.applyHomeGuideFinish` 调用（含 seen 标记、设置同步与完成提示触发）
+  - `index_ui.js` 的 `finishHomeGuide` 已收敛为 `CoreHomeGuideFinishHostRuntime.applyHomeGuideFinishFromContext` 调用（含 seen 标记、设置同步与完成提示触发）
+  - `home-guide-finish-host` 已承接结束态 `localStorage` 上下文解析（`applyHomeGuideFinishFromContext`），`index_ui.js` 不再页面层读取 `localStorage`
   - 新增 `src/bootstrap/home-guide-start-host.ts` + `js/core_home_guide_start_host_runtime.js`，`index_ui.js` 委托引导启动生命周期状态装配（首页 gate、steps 装配、overlay/panel 展示态应用）
   - 新增 `src/bootstrap/home-guide-controls-host.ts` + `js/core_home_guide_controls_host_runtime.js`，`index_ui.js` 委托引导控制按钮绑定与动作派发（prev/next/skip）以及首步触发/设置同步编排
   - `index_ui.js` 的 `startHomeGuide` 已收敛为 `CoreHomeGuideStartHostRuntime.applyHomeGuideStart + CoreHomeGuideControlsHostRuntime.applyHomeGuideControls` 串联调用（页面层移除按钮绑定与 skip 完成态分支）

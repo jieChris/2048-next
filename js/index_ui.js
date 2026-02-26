@@ -469,7 +469,8 @@ if (
 var homeGuideFinishHostRuntime = window.CoreHomeGuideFinishHostRuntime;
 if (
   !homeGuideFinishHostRuntime ||
-  typeof homeGuideFinishHostRuntime.applyHomeGuideFinish !== "function"
+  typeof homeGuideFinishHostRuntime.applyHomeGuideFinish !== "function" ||
+  typeof homeGuideFinishHostRuntime.applyHomeGuideFinishFromContext !== "function"
 ) {
   throw new Error("CoreHomeGuideFinishHostRuntime is required");
 }
@@ -904,13 +905,14 @@ function showHomeGuideDoneNotice() {
 }
 
 function finishHomeGuide(markSeen, options) {
-  homeGuideFinishHostRuntime.applyHomeGuideFinish({
+  homeGuideFinishHostRuntime.applyHomeGuideFinishFromContext({
     homeGuideRuntime: homeGuideRuntime,
     homeGuideState: HOME_GUIDE_STATE,
     markSeen: markSeen,
     options: options || {},
     clearHomeGuideHighlight: clearHomeGuideHighlight,
-    storageLike: getStorageByName("localStorage"),
+    storageRuntime: storageRuntime,
+    windowLike: typeof window !== "undefined" ? window : null,
     seenKey: HOME_GUIDE_SEEN_KEY,
     syncHomeGuideSettingsUI:
       typeof window.syncHomeGuideSettingsUI === "function"
