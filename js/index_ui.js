@@ -164,6 +164,7 @@ if (
 }
 var practiceTransferRuntime = window.CorePracticeTransferRuntime;
 var practiceTransferHostRuntime = window.CorePracticeTransferHostRuntime;
+var practiceTransferPageHostRuntime = window.CorePracticeTransferPageHostRuntime;
 if (
   !practiceTransferRuntime ||
   typeof practiceTransferRuntime.buildPracticeModeConfigFromCurrent !== "function" ||
@@ -182,6 +183,12 @@ if (
   typeof practiceTransferHostRuntime.applyPracticeTransferFromCurrent !== "function"
 ) {
   throw new Error("CorePracticeTransferHostRuntime is required");
+}
+if (
+  !practiceTransferPageHostRuntime ||
+  typeof practiceTransferPageHostRuntime.applyPracticeTransferPageAction !== "function"
+) {
+  throw new Error("CorePracticeTransferPageHostRuntime is required");
 }
 var undoActionRuntime = window.CoreUndoActionRuntime;
 if (
@@ -729,17 +736,15 @@ function getStorageByName(name) {
 }
 
 window.openPracticeBoardFromCurrent = function () {
-  var localStore = getStorageByName("localStorage");
-  var sessionStore = getStorageByName("sessionStorage");
-  practiceTransferHostRuntime.applyPracticeTransferFromCurrent({
+  practiceTransferPageHostRuntime.applyPracticeTransferPageAction({
+    practiceTransferHostRuntime: practiceTransferHostRuntime,
+    practiceTransferRuntime: practiceTransferRuntime,
+    storageRuntime: storageRuntime,
     manager: window.game_manager || null,
     gameModeConfig:
       window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object"
         ? window.GAME_MODE_CONFIG
         : null,
-    practiceTransferRuntime: practiceTransferRuntime,
-    localStorageLike: localStore,
-    sessionStorageLike: sessionStore,
     guideShownKey: PRACTICE_GUIDE_SHOWN_KEY,
     guideSeenFlag: PRACTICE_GUIDE_SEEN_FLAG,
     localStorageKey: PRACTICE_TRANSFER_KEY,

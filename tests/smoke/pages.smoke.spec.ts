@@ -3857,24 +3857,33 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CorePracticeTransferRuntime;
+      const pageHostRuntime = (window as any).CorePracticeTransferPageHostRuntime;
       const openPracticeBoardFromCurrent = (window as any).openPracticeBoardFromCurrent;
       if (
         !runtime ||
         typeof runtime.createPracticeTransferNavigationPlan !== "function" ||
-        typeof runtime.resolvePracticeTransferPrecheck !== "function"
+        typeof runtime.resolvePracticeTransferPrecheck !== "function" ||
+        !pageHostRuntime ||
+        typeof pageHostRuntime.applyPracticeTransferPageAction !== "function"
       ) {
-        return { hasRuntime: false, hasOpenFn: typeof openPracticeBoardFromCurrent === "function" };
+        return {
+          hasRuntime: false,
+          hasPageHostRuntime: false,
+          hasOpenFn: typeof openPracticeBoardFromCurrent === "function"
+        };
       }
       if (typeof openPracticeBoardFromCurrent !== "function") {
-        return { hasRuntime: true, hasOpenFn: false };
+        return { hasRuntime: true, hasPageHostRuntime: true, hasOpenFn: false };
       }
 
       const originalCreatePracticeTransferNavigationPlan = runtime.createPracticeTransferNavigationPlan;
       const originalResolvePracticeTransferPrecheck = runtime.resolvePracticeTransferPrecheck;
+      const originalApplyPracticeTransferPageAction = pageHostRuntime.applyPracticeTransferPageAction;
       const originalManager = (window as any).game_manager;
       const originalOpen = window.open;
       let createPlanCallCount = 0;
       let precheckCallCount = 0;
+      let pageHostCallCount = 0;
       let openedUrl = "";
 
       runtime.createPracticeTransferNavigationPlan = function (opts: any) {
@@ -3884,6 +3893,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.resolvePracticeTransferPrecheck = function (opts: any) {
         precheckCallCount += 1;
         return originalResolvePracticeTransferPrecheck(opts);
+      };
+      pageHostRuntime.applyPracticeTransferPageAction = function (opts: any) {
+        pageHostCallCount += 1;
+        return originalApplyPracticeTransferPageAction(opts);
       };
       (window as any).game_manager = {
         width: 4,
@@ -3913,23 +3926,28 @@ test.describe("Legacy Multi-Page Smoke", () => {
         openPracticeBoardFromCurrent();
         return {
           hasRuntime: true,
+          hasPageHostRuntime: true,
           hasOpenFn: true,
           precheckCallCount,
           createPlanCallCount,
+          pageHostCallCount,
           openedUrl
         };
       } finally {
         runtime.createPracticeTransferNavigationPlan = originalCreatePracticeTransferNavigationPlan;
         runtime.resolvePracticeTransferPrecheck = originalResolvePracticeTransferPrecheck;
+        pageHostRuntime.applyPracticeTransferPageAction = originalApplyPracticeTransferPageAction;
         (window as any).game_manager = originalManager;
         window.open = originalOpen;
       }
     });
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasPageHostRuntime).toBe(true);
     expect(snapshot.hasOpenFn).toBe(true);
     expect(snapshot.precheckCallCount).toBeGreaterThan(0);
     expect(snapshot.createPlanCallCount).toBeGreaterThan(0);
+    expect(snapshot.pageHostCallCount).toBeGreaterThan(0);
     expect(snapshot.openedUrl).toContain("Practice_board.html");
     expect(snapshot.openedUrl).toContain("practice_token=");
     expect(snapshot.openedUrl).toContain("practice_ruleset=pow2");
