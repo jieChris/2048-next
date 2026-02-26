@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   applyHomeGuideAutoStartPage,
+  applyHomeGuideAutoStartPageFromContext,
   applyHomeGuideSettingsPageInit
 } from "../../src/bootstrap/home-guide-page-host";
 
@@ -100,5 +101,41 @@ describe("bootstrap home guide page host", () => {
       hasApplyAutoStartApi: true,
       didApply: true
     });
+  });
+
+  it("resolves localStorage from context and delegates auto-start orchestration", () => {
+    const applyHomeGuideAutoStart = vi.fn();
+    const storageLike = { getItem: vi.fn(() => null) };
+
+    const result = applyHomeGuideAutoStartPageFromContext({
+      homeGuideStartupHostRuntime: {
+        applyHomeGuideAutoStart
+      },
+      homeGuideRuntime: { id: "runtime" },
+      locationLike: { pathname: "/index.html" },
+      storageRuntime: {
+        resolveStorageByName(payload: { storageName?: string }) {
+          return payload.storageName === "localStorage" ? storageLike : null;
+        }
+      },
+      windowLike: { localStorage: storageLike },
+      seenKey: "home_guide_seen_v1",
+      startHomeGuide: vi.fn(),
+      setTimeoutLike: vi.fn(),
+      delayMs: 260
+    });
+
+    expect(result.didInvokePageAutoStart).toBe(true);
+    expect(result.localStorageResolved).toBe(true);
+    expect(result.pageResult).toEqual({
+      hasApplyAutoStartApi: true,
+      didApply: true
+    });
+    expect(applyHomeGuideAutoStart).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storageLike,
+        seenKey: "home_guide_seen_v1"
+      })
+    );
   });
 });

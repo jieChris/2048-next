@@ -432,7 +432,8 @@ var homeGuidePageHostRuntime = window.CoreHomeGuidePageHostRuntime;
 if (
   !homeGuidePageHostRuntime ||
   typeof homeGuidePageHostRuntime.applyHomeGuideSettingsPageInit !== "function" ||
-  typeof homeGuidePageHostRuntime.applyHomeGuideAutoStartPage !== "function"
+  typeof homeGuidePageHostRuntime.applyHomeGuideAutoStartPage !== "function" ||
+  typeof homeGuidePageHostRuntime.applyHomeGuideAutoStartPageFromContext !== "function"
 ) {
   throw new Error("CoreHomeGuidePageHostRuntime is required");
 }
@@ -981,11 +982,12 @@ function initHomeGuideSettingsUI() {
 }
 
 function autoStartHomeGuideIfNeeded() {
-  homeGuidePageHostRuntime.applyHomeGuideAutoStartPage({
+  homeGuidePageHostRuntime.applyHomeGuideAutoStartPageFromContext({
     homeGuideStartupHostRuntime: homeGuideStartupHostRuntime,
     homeGuideRuntime: homeGuideRuntime,
     locationLike: typeof window !== "undefined" ? window.location : null,
-    storageLike: getStorageByName("localStorage"),
+    storageRuntime: storageRuntime,
+    windowLike: typeof window !== "undefined" ? window : null,
     seenKey: HOME_GUIDE_SEEN_KEY,
     startHomeGuide: startHomeGuide,
     setTimeoutLike: setTimeout,

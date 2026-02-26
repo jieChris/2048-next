@@ -203,6 +203,7 @@
   - `index_ui.js` 的 `autoStartHomeGuideIfNeeded` 已收敛为 `CoreHomeGuideStartupHostRuntime.applyHomeGuideAutoStart` 调用
   - 新增 `src/bootstrap/home-guide-page-host.ts` + `js/core_home_guide_page_host_runtime.js`，`index_ui.js` 委托首页指引页面级编排（settings host + startup host 参数装配）
   - `index_ui.js` 的 `initHomeGuideSettingsUI/autoStartHomeGuideIfNeeded` 已收敛为 `CoreHomeGuidePageHostRuntime` 调用，页面层移除 settings/startup host 入参拼装分支
+  - `home-guide-page-host` 已承接自动启动 `localStorage` 上下文解析（`applyHomeGuideAutoStartPageFromContext`），`index_ui.js` 不再页面层读取 `localStorage`
   - 新增 `src/bootstrap/storage.ts` + `js/core_storage_runtime.js`，`index_ui.js` 委托 `localStorage/sessionStorage` 安全获取，不再内联存储访问容错逻辑
   - `legacy_bootstrap_runtime.resolveModeConfig` 现可优先委托 `CoreModeCatalogRuntime.resolveCatalogModeWithDefault`（缺失时自动回退原逻辑）
 

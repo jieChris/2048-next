@@ -4924,7 +4924,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.isHomeGuideTargetVisible !== "function" ||
         !pageHostRuntime ||
         typeof pageHostRuntime.applyHomeGuideSettingsPageInit !== "function" ||
-        typeof pageHostRuntime.applyHomeGuideAutoStartPage !== "function"
+        typeof pageHostRuntime.applyHomeGuideAutoStartPage !== "function" ||
+        typeof pageHostRuntime.applyHomeGuideAutoStartPageFromContext !== "function"
       ) {
         return { hasRuntime: false, hasPageHostRuntime: false };
       }
@@ -4956,6 +4957,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalIsTargetVisible = runtime.isHomeGuideTargetVisible;
       const originalApplySettingsPageHost = pageHostRuntime.applyHomeGuideSettingsPageInit;
       const originalApplyAutoStartPageHost = pageHostRuntime.applyHomeGuideAutoStartPage;
+      const originalApplyAutoStartPageHostFromContext =
+        pageHostRuntime.applyHomeGuideAutoStartPageFromContext;
       let callCount = 0;
       let pathnameCallCount = 0;
       let panelHtmlCallCount = 0;
@@ -4980,6 +4983,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let targetVisibleCallCount = 0;
       let applySettingsPageHostCallCount = 0;
       let applyAutoStartPageHostCallCount = 0;
+      let applyAutoStartPageHostFromContextCallCount = 0;
       runtime.buildHomeGuideSteps = function (opts: any) {
         callCount += 1;
         return originalBuild(opts);
@@ -5076,6 +5080,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         applyAutoStartPageHostCallCount += 1;
         return originalApplyAutoStartPageHost(opts);
       };
+      pageHostRuntime.applyHomeGuideAutoStartPageFromContext = function (opts: any) {
+        applyAutoStartPageHostFromContextCallCount += 1;
+        return originalApplyAutoStartPageHostFromContext(opts);
+      };
       try {
         const existingToggle = document.getElementById("home-guide-toggle");
         if (existingToggle) {
@@ -5146,7 +5154,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
           overlayHiddenAfterFinish: Boolean(
             overlayAfterFinish && overlayAfterFinish.style.display === "none"
           ),
-          doneToastVisible: Boolean(doneToast && doneToast.style.opacity === "1")
+          doneToastVisible: Boolean(doneToast && doneToast.style.opacity === "1"),
+          applyAutoStartPageHostFromContextCallCount
         };
       } finally {
         runtime.buildHomeGuideSteps = originalBuild;
@@ -5173,6 +5182,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.isHomeGuideTargetVisible = originalIsTargetVisible;
         pageHostRuntime.applyHomeGuideSettingsPageInit = originalApplySettingsPageHost;
         pageHostRuntime.applyHomeGuideAutoStartPage = originalApplyAutoStartPageHost;
+        pageHostRuntime.applyHomeGuideAutoStartPageFromContext =
+          originalApplyAutoStartPageHostFromContext;
       }
     });
 
@@ -5181,7 +5192,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasSettingsOpen).toBe(true);
     expect(snapshot.hasToggle).toBe(true);
     expect(snapshot.applySettingsPageHostCallCount).toBeGreaterThan(0);
-    expect(snapshot.applyAutoStartPageHostCallCount).toBeGreaterThanOrEqual(0);
+    expect(snapshot.applyAutoStartPageHostCallCount).toBe(0);
+    expect(snapshot.applyAutoStartPageHostFromContextCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.callCount).toBeGreaterThan(0);
     expect(snapshot.pathnameCallCount).toBeGreaterThan(0);
     expect(snapshot.panelHtmlCallCount).toBeGreaterThan(0);

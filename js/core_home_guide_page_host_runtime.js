@@ -15,6 +15,17 @@
     return typeof value === "function" ? value : null;
   }
 
+  function resolveStorageByName(input) {
+    var source = toRecord(input);
+    var storageRuntime = toRecord(source.storageRuntime);
+    var resolveStorage = asFunction(storageRuntime.resolveStorageByName);
+    if (!resolveStorage) return null;
+    return resolveStorage({
+      windowLike: source.windowLike || null,
+      storageName: source.storageName
+    });
+  }
+
   function applyHomeGuideSettingsPageInit(input) {
     var source = toRecord(input);
     var hostRuntime = toRecord(source.homeGuideSettingsHostRuntime);
@@ -69,9 +80,36 @@
     };
   }
 
+  function applyHomeGuideAutoStartPageFromContext(input) {
+    var source = toRecord(input);
+    var storageLike = resolveStorageByName({
+      storageRuntime: source.storageRuntime,
+      windowLike: source.windowLike || null,
+      storageName: "localStorage"
+    });
+    var pageResult = applyHomeGuideAutoStartPage({
+      homeGuideStartupHostRuntime: source.homeGuideStartupHostRuntime,
+      homeGuideRuntime: source.homeGuideRuntime,
+      locationLike: source.locationLike,
+      storageLike: storageLike,
+      seenKey: source.seenKey,
+      startHomeGuide: source.startHomeGuide,
+      setTimeoutLike: source.setTimeoutLike,
+      delayMs: source.delayMs
+    });
+
+    return {
+      didInvokePageAutoStart: pageResult.didApply,
+      localStorageResolved: !!storageLike,
+      pageResult: pageResult
+    };
+  }
+
   global.CoreHomeGuidePageHostRuntime = global.CoreHomeGuidePageHostRuntime || {};
   global.CoreHomeGuidePageHostRuntime.applyHomeGuideSettingsPageInit =
     applyHomeGuideSettingsPageInit;
   global.CoreHomeGuidePageHostRuntime.applyHomeGuideAutoStartPage =
     applyHomeGuideAutoStartPage;
+  global.CoreHomeGuidePageHostRuntime.applyHomeGuideAutoStartPageFromContext =
+    applyHomeGuideAutoStartPageFromContext;
 })(typeof window !== "undefined" ? window : undefined);
