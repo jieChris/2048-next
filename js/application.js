@@ -1,35 +1,20 @@
-var homeRuntimeContractRuntime = window.CoreHomeRuntimeContractRuntime;
+var homePageHostRuntime = window.CoreHomePageHostRuntime;
 if (
-  !homeRuntimeContractRuntime ||
-  typeof homeRuntimeContractRuntime.resolveHomeRuntimeContracts !== "function"
+  !homePageHostRuntime ||
+  typeof homePageHostRuntime.applyHomePageBootstrap !== "function" ||
+  typeof homePageHostRuntime.applyHomePageUndo !== "function"
 ) {
-  throw new Error("CoreHomeRuntimeContractRuntime is required");
-}
-var homeStartupHostRuntime = window.CoreHomeStartupHostRuntime;
-if (
-  !homeStartupHostRuntime ||
-  typeof homeStartupHostRuntime.resolveHomeStartupFromContext !== "function"
-) {
-  throw new Error("CoreHomeStartupHostRuntime is required");
+  throw new Error("CoreHomePageHostRuntime is required");
 }
 
-var runtimeContracts = homeRuntimeContractRuntime.resolveHomeRuntimeContracts(window);
-var homeModeRuntime = runtimeContracts.homeModeRuntime;
-var undoActionRuntime = runtimeContracts.undoActionRuntime;
-var bootstrap = runtimeContracts.bootstrapRuntime;
-
-bootstrap.startGameOnAnimationFrame(function () {
-  return homeStartupHostRuntime.resolveHomeStartupFromContext({
-    windowLike: typeof window !== "undefined" ? window : null,
-    documentLike: typeof document !== "undefined" ? document : null,
-    defaultModeKey: "standard_4x4_pow2_no_undo",
-    defaultBoardWidth: 4,
-    inputManagerCtor: KeyboardInputManager,
-    resolveHomeModeSelectionFromContext:
-      homeModeRuntime.resolveHomeModeSelectionFromContext
-  });
+homePageHostRuntime.applyHomePageBootstrap({
+  windowLike: window,
+  documentLike: document,
+  inputManagerCtor: window.KeyboardInputManager
 });
 
 function handle_undo() {
-  undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
+  homePageHostRuntime.applyHomePageUndo({
+    windowLike: window
+  });
 }

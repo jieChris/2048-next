@@ -153,6 +153,9 @@ function createWindowLike() {
         missingStore: false
       })
     },
+    CoreHistoryLoadContextHostRuntime: {
+      resolveHistoryLoadPanelContext: () => ({})
+    },
     CoreHistoryPanelHostRuntime: {
       applyHistoryBurnInPanelRender: () => ({
         didRender: true
@@ -338,6 +341,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyLoadRuntime).toBe(source.CoreHistoryLoadRuntime);
     expect(result.historyLoadHostRuntime).toBe(source.CoreHistoryLoadHostRuntime);
     expect(result.historyLoadEntryHostRuntime).toBe(source.CoreHistoryLoadEntryHostRuntime);
+    expect(result.historyLoadContextHostRuntime).toBe(source.CoreHistoryLoadContextHostRuntime);
     expect(result.historyPanelHostRuntime).toBe(source.CoreHistoryPanelHostRuntime);
     expect(result.historyViewHostRuntime).toBe(source.CoreHistoryViewHostRuntime);
     expect(result.historyImportHostRuntime).toBe(source.CoreHistoryImportHostRuntime);
@@ -419,6 +423,15 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryLoadHostRuntime is required"
+    );
+  });
+
+  it("throws exact error when load context host runtime is missing required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryLoadContextHostRuntime = {};
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryLoadContextHostRuntime is required"
     );
   });
 

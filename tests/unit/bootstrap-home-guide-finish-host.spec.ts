@@ -1,0 +1,89 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { applyHomeGuideFinish } from "../../src/bootstrap/home-guide-finish-host";
+
+describe("bootstrap home guide finish host", () => {
+  it("applies finish lifecycle, marks seen, syncs settings and shows done notice", () => {
+    const clearHomeGuideHighlight = vi.fn();
+    const markHomeGuideSeen = vi.fn();
+    const syncHomeGuideSettingsUI = vi.fn();
+    const showHomeGuideDoneNotice = vi.fn();
+
+    const homeGuideState: Record<string, unknown> = {
+      active: true,
+      fromSettings: true,
+      index: 2,
+      steps: [{ id: 1 }],
+      overlay: { style: { display: "flex" } },
+      panel: { style: { display: "block" } }
+    };
+
+    const result = applyHomeGuideFinish({
+      homeGuideRuntime: {
+        resolveHomeGuideLifecycleState() {
+          return { next: "finish" };
+        },
+        resolveHomeGuideSessionState() {
+          return {
+            active: false,
+            fromSettings: false,
+            index: 0,
+            steps: []
+          };
+        },
+        resolveHomeGuideLayerDisplayState() {
+          return {
+            overlayDisplay: "none",
+            panelDisplay: "none"
+          };
+        },
+        markHomeGuideSeen
+      },
+      homeGuideState,
+      markSeen: true,
+      options: {
+        showDoneNotice: true
+      },
+      clearHomeGuideHighlight,
+      storageLike: { getItem: vi.fn() },
+      seenKey: "home_guide_seen_v1",
+      syncHomeGuideSettingsUI,
+      showHomeGuideDoneNotice
+    });
+
+    expect(result).toEqual({
+      didFinish: true,
+      markedSeen: true,
+      syncedSettings: true,
+      showedDoneNotice: true
+    });
+
+    expect(clearHomeGuideHighlight).toHaveBeenCalledTimes(1);
+    expect(markHomeGuideSeen).toHaveBeenCalledWith({
+      storageLike: expect.any(Object),
+      seenKey: "home_guide_seen_v1"
+    });
+    expect(syncHomeGuideSettingsUI).toHaveBeenCalledTimes(1);
+    expect(showHomeGuideDoneNotice).toHaveBeenCalledTimes(1);
+
+    expect(homeGuideState.active).toBe(false);
+    expect(homeGuideState.fromSettings).toBe(false);
+    expect(homeGuideState.index).toBe(0);
+    expect(homeGuideState.steps).toEqual([]);
+    expect(
+      ((homeGuideState.overlay as Record<string, unknown>).style as Record<string, unknown>).display
+    ).toBe("none");
+    expect(
+      ((homeGuideState.panel as Record<string, unknown>).style as Record<string, unknown>).display
+    ).toBe("none");
+  });
+
+  it("returns noop when required runtime functions are missing", () => {
+    expect(applyHomeGuideFinish({})).toEqual({
+      didFinish: false,
+      markedSeen: false,
+      syncedSettings: false,
+      showedDoneNotice: false
+    });
+  });
+});

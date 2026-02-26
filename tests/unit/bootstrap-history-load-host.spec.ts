@@ -49,6 +49,105 @@ describe("bootstrap history load host", () => {
     expect(result).toEqual({ didLoad: true, disablePrev: true, disableNext: false });
   });
 
+  it("delegates summary/status apply via history view host runtime when provided", () => {
+    const state = { page: 2, pageSize: 30 };
+    const renderSummary = vi.fn();
+    const setStatus = vi.fn();
+    const applyHistorySummary = vi.fn();
+    const applyHistoryStatus = vi.fn();
+    const getElementById = vi.fn();
+
+    const result = applyHistoryLoadAndRender({
+      state,
+      localHistoryStore: {},
+      historyLoadRuntime: {
+        resolveHistoryLoadPipeline: () => ({
+          listResult: { items: [], total: 0 },
+          burnInSummary: null,
+          pagerState: {
+            disablePrev: false,
+            disableNext: true
+          }
+        })
+      },
+      historyViewHostRuntime: {
+        applyHistorySummary,
+        applyHistoryStatus
+      },
+      historySummaryRuntime: {},
+      historyStatusRuntime: {},
+      getElementById,
+      renderSummary,
+      setStatus
+    });
+
+    expect(result).toEqual({ didLoad: true, disablePrev: false, disableNext: true });
+    expect(applyHistorySummary).toHaveBeenCalledWith({
+      getElementById,
+      summaryElementId: "history-summary",
+      result: { items: [], total: 0 },
+      state,
+      historySummaryRuntime: {}
+    });
+    expect(applyHistoryStatus).toHaveBeenCalledWith({
+      getElementById,
+      statusElementId: "history-status",
+      text: "",
+      isError: false,
+      historyStatusRuntime: {}
+    });
+    expect(renderSummary).not.toHaveBeenCalled();
+    expect(setStatus).not.toHaveBeenCalled();
+  });
+
+  it("delegates list/burn-in/canary panel rendering via panel host runtime when provided", () => {
+    const applyHistoryRecordListPanelRender = vi.fn();
+    const applyHistoryBurnInPanelRender = vi.fn();
+    const applyHistoryCanaryPolicyPanelRender = vi.fn();
+    const renderHistory = vi.fn();
+    const renderBurnInSummary = vi.fn();
+    const renderCanaryPolicy = vi.fn();
+
+    const result = applyHistoryLoadAndRender({
+      state: { page: 1 },
+      localHistoryStore: {},
+      historyLoadRuntime: {
+        resolveHistoryLoadPipeline: () => ({
+          listResult: { items: [{ id: "id-1" }], total: 1 },
+          burnInSummary: { comparable: 1 },
+          pagerState: {
+            disablePrev: true,
+            disableNext: false
+          }
+        })
+      },
+      historyPanelHostRuntime: {
+        applyHistoryRecordListPanelRender,
+        applyHistoryBurnInPanelRender,
+        applyHistoryCanaryPolicyPanelRender
+      },
+      historyPanelContext: {
+        getElementById: () => null,
+        listElementId: "history-list",
+        burnInPanelElementId: "history-burnin-summary",
+        canaryPanelElementId: "history-canary-policy"
+      },
+      loadHistory: () => undefined,
+      setStatus: () => undefined,
+      renderHistory,
+      renderBurnInSummary,
+      renderCanaryPolicy
+    });
+
+    expect(result).toEqual({ didLoad: true, disablePrev: true, disableNext: false });
+    expect(applyHistoryRecordListPanelRender).toHaveBeenCalledTimes(1);
+    expect(applyHistoryBurnInPanelRender).toHaveBeenCalledTimes(1);
+    expect(applyHistoryCanaryPolicyPanelRender).toHaveBeenCalledTimes(1);
+    expect(renderHistory).not.toHaveBeenCalled();
+    expect(renderBurnInSummary).not.toHaveBeenCalled();
+    expect(renderCanaryPolicy).not.toHaveBeenCalled();
+  });
+
   it("returns noop result when dependencies are missing", () => {
     expect(applyHistoryLoadAndRender({})).toEqual({
       didLoad: false,

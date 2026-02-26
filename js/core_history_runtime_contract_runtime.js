@@ -175,6 +175,11 @@
       ["applyHistoryLoadEntry"],
       "CoreHistoryLoadEntryHostRuntime is required"
     );
+    var historyLoadContextHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryLoadContextHostRuntime,
+      ["resolveHistoryLoadPanelContext"],
+      "CoreHistoryLoadContextHostRuntime is required"
+    );
     var historyPanelHostRuntime = requireRuntimeFunctions(
       source.CoreHistoryPanelHostRuntime,
       [
@@ -354,6 +359,7 @@
       historyLoadRuntime: historyLoadRuntime,
       historyLoadHostRuntime: historyLoadHostRuntime,
       historyLoadEntryHostRuntime: historyLoadEntryHostRuntime,
+      historyLoadContextHostRuntime: historyLoadContextHostRuntime,
       historyPanelHostRuntime: historyPanelHostRuntime,
       historyRecordViewRuntime: historyRecordViewRuntime,
       historyRecordItemRuntime: historyRecordItemRuntime,
