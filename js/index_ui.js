@@ -314,6 +314,14 @@ if (
 ) {
   throw new Error("CoreHomeGuideDoneNoticeHostRuntime is required");
 }
+var homeGuideHighlightHostRuntime = window.CoreHomeGuideHighlightHostRuntime;
+if (
+  !homeGuideHighlightHostRuntime ||
+  typeof homeGuideHighlightHostRuntime.applyHomeGuideHighlightClear !== "function" ||
+  typeof homeGuideHighlightHostRuntime.applyHomeGuideTargetElevation !== "function"
+) {
+  throw new Error("CoreHomeGuideHighlightHostRuntime is required");
+}
 var homeGuideFinishHostRuntime = window.CoreHomeGuideFinishHostRuntime;
 if (
   !homeGuideFinishHostRuntime ||
@@ -1101,51 +1109,18 @@ function ensureHomeGuideDom() {
 }
 
 function clearHomeGuideHighlight() {
-  if (HOME_GUIDE_STATE.target && HOME_GUIDE_STATE.target.classList) {
-    HOME_GUIDE_STATE.target.classList.remove("home-guide-highlight");
-  }
-  var scoped = document.querySelectorAll(".home-guide-scope");
-  for (var s = 0; s < scoped.length; s++) {
-    scoped[s].classList.remove("home-guide-scope");
-  }
-  if (Array.isArray(HOME_GUIDE_STATE.elevated)) {
-    for (var i = 0; i < HOME_GUIDE_STATE.elevated.length; i++) {
-      var node = HOME_GUIDE_STATE.elevated[i];
-      if (node && node.classList) node.classList.remove("home-guide-elevated");
-    }
-  }
-  HOME_GUIDE_STATE.elevated = [];
-  HOME_GUIDE_STATE.target = null;
+  homeGuideHighlightHostRuntime.applyHomeGuideHighlightClear({
+    documentLike: document,
+    homeGuideState: HOME_GUIDE_STATE
+  });
 }
 
 function elevateHomeGuideTarget(target) {
-  if (!target || !target.closest) return;
-  var elevated = [];
-  var topActionButtons = target.closest(".top-action-buttons");
-  var headingHost = target.closest(".heading");
-  var elevationPlan = homeGuideRuntime.resolveHomeGuideElevationPlan({
-    hasTopActionButtonsAncestor: !!topActionButtons,
-    hasHeadingAncestor: !!headingHost
+  homeGuideHighlightHostRuntime.applyHomeGuideTargetElevation({
+    target: target || null,
+    homeGuideRuntime: homeGuideRuntime,
+    homeGuideState: HOME_GUIDE_STATE
   });
-  var stackHost = null;
-  if (elevationPlan && elevationPlan.hostSelector === ".top-action-buttons") {
-    stackHost = topActionButtons;
-  } else if (elevationPlan && elevationPlan.hostSelector === ".heading") {
-    stackHost = headingHost;
-  }
-  if (stackHost && stackHost.classList) {
-    stackHost.classList.add("home-guide-elevated");
-    elevated.push(stackHost);
-  }
-  if (
-    elevationPlan &&
-    elevationPlan.shouldScopeTopActions &&
-    topActionButtons &&
-    topActionButtons.classList
-  ) {
-    topActionButtons.classList.add("home-guide-scope");
-  }
-  HOME_GUIDE_STATE.elevated = elevated;
 }
 
 function positionHomeGuidePanel() {
