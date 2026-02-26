@@ -133,8 +133,74 @@
     };
   }
 
+  function applyHistoryPageStatus(input) {
+    var source = toRecord(input);
+    var runtimes = toRecord(source.historyRuntimes);
+    var historyViewHostRuntime = toRecord(source.historyViewHostRuntime || runtimes.historyViewHostRuntime);
+    var applyHistoryStatus = asFunction(historyViewHostRuntime.applyHistoryStatus);
+    if (!applyHistoryStatus) {
+      return {
+        didApply: false
+      };
+    }
+
+    var payload = resolveHistoryPageStatusInput(source);
+    var result = applyHistoryStatus(payload);
+    return {
+      didApply: true,
+      result: result
+    };
+  }
+
+  function applyHistoryPageLoad(input) {
+    var source = toRecord(input);
+    var runtimes = toRecord(source.historyRuntimes);
+    var historyLoadEntryHostRuntime = toRecord(runtimes.historyLoadEntryHostRuntime);
+    var applyHistoryLoadEntry = asFunction(historyLoadEntryHostRuntime.applyHistoryLoadEntry);
+    if (!applyHistoryLoadEntry) {
+      return {
+        didLoad: false,
+        missingRuntime: true
+      };
+    }
+
+    var payload = resolveHistoryPageLoadEntryInput(source);
+    var result = applyHistoryLoadEntry(payload);
+    return isRecord(result)
+      ? result
+      : {
+          didLoad: true,
+          missingRuntime: false
+        };
+  }
+
+  function applyHistoryPageStartup(input) {
+    var source = toRecord(input);
+    var runtimes = toRecord(source.historyRuntimes);
+    var historyStartupHostRuntime = toRecord(runtimes.historyStartupHostRuntime);
+    var applyHistoryStartup = asFunction(historyStartupHostRuntime.applyHistoryStartup);
+    if (!applyHistoryStartup) {
+      return {
+        started: false,
+        missingRuntime: true
+      };
+    }
+
+    var payload = resolveHistoryPageStartupInput(source);
+    var result = applyHistoryStartup(payload);
+    return isRecord(result)
+      ? result
+      : {
+          started: true,
+          missingRuntime: false
+        };
+  }
+
   global.CoreHistoryPageHostRuntime = global.CoreHistoryPageHostRuntime || {};
   global.CoreHistoryPageHostRuntime.resolveHistoryPageStatusInput = resolveHistoryPageStatusInput;
   global.CoreHistoryPageHostRuntime.resolveHistoryPageLoadEntryInput = resolveHistoryPageLoadEntryInput;
   global.CoreHistoryPageHostRuntime.resolveHistoryPageStartupInput = resolveHistoryPageStartupInput;
+  global.CoreHistoryPageHostRuntime.applyHistoryPageStatus = applyHistoryPageStatus;
+  global.CoreHistoryPageHostRuntime.applyHistoryPageLoad = applyHistoryPageLoad;
+  global.CoreHistoryPageHostRuntime.applyHistoryPageStartup = applyHistoryPageStartup;
 })(typeof window !== "undefined" ? window : undefined);

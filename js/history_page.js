@@ -28,80 +28,74 @@
   var historyPageHostRuntime = window.CoreHistoryPageHostRuntime;
   if (
     !historyPageHostRuntime ||
-    typeof historyPageHostRuntime.resolveHistoryPageStatusInput !== "function" ||
-    typeof historyPageHostRuntime.resolveHistoryPageLoadEntryInput !== "function" ||
-    typeof historyPageHostRuntime.resolveHistoryPageStartupInput !== "function"
+    typeof historyPageHostRuntime.applyHistoryPageStatus !== "function" ||
+    typeof historyPageHostRuntime.applyHistoryPageLoad !== "function" ||
+    typeof historyPageHostRuntime.applyHistoryPageStartup !== "function"
   ) {
     throw new Error("CoreHistoryPageHostRuntime is required");
   }
   var historyRuntimes = historyRuntimeContractRuntime.resolveHistoryRuntimeContracts(window);
 
   function setStatus(text, isError) {
-    historyRuntimes.historyViewHostRuntime.applyHistoryStatus(
-      historyPageHostRuntime.resolveHistoryPageStatusInput({
-        getElementById: el,
-        statusElementId: "history-status",
-        text: text,
-        isError: isError,
-        historyRuntimes: historyRuntimes
-      })
-    );
+    historyPageHostRuntime.applyHistoryPageStatus({
+      getElementById: el,
+      statusElementId: "history-status",
+      text: text,
+      isError: isError,
+      historyRuntimes: historyRuntimes
+    });
   }
 
   function loadHistory(resetPage) {
-    historyRuntimes.historyLoadEntryHostRuntime.applyHistoryLoadEntry(
-      historyPageHostRuntime.resolveHistoryPageLoadEntryInput({
-        resetPage: resetPage,
-        localHistoryStore: window.LocalHistoryStore,
-        state: state,
-        getElementById: el,
-        historyRuntimes: historyRuntimes,
-        burnInMinComparable: BURN_IN_MIN_COMPARABLE,
-        burnInMaxMismatchRate: BURN_IN_MAX_MISMATCH_RATE,
-        statusElementId: "history-status",
-        summaryElementId: "history-summary",
-        loadHistory: loadHistory,
-        setStatus: setStatus,
-        prevButtonId: "history-prev-page",
-        nextButtonId: "history-next-page",
-        listElementId: "history-list",
-        documentLike: document,
-        modeCatalog: window.ModeCatalog,
-        confirmAction: window.confirm,
-        navigateToHref: function (href) {
-          window.location.href = href;
-        },
-        burnInPanelElementId: "history-burnin-summary",
-        adapterFilterElementId: "history-adapter-filter",
-        canaryPanelElementId: "history-canary-policy",
-        runtime: window.LegacyAdapterRuntime,
-        adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
-        defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
-        forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
-      })
-    );
+    historyPageHostRuntime.applyHistoryPageLoad({
+      resetPage: resetPage,
+      localHistoryStore: window.LocalHistoryStore,
+      state: state,
+      getElementById: el,
+      historyRuntimes: historyRuntimes,
+      burnInMinComparable: BURN_IN_MIN_COMPARABLE,
+      burnInMaxMismatchRate: BURN_IN_MAX_MISMATCH_RATE,
+      statusElementId: "history-status",
+      summaryElementId: "history-summary",
+      loadHistory: loadHistory,
+      setStatus: setStatus,
+      prevButtonId: "history-prev-page",
+      nextButtonId: "history-next-page",
+      listElementId: "history-list",
+      documentLike: document,
+      modeCatalog: window.ModeCatalog,
+      confirmAction: window.confirm,
+      navigateToHref: function (href) {
+        window.location.href = href;
+      },
+      burnInPanelElementId: "history-burnin-summary",
+      adapterFilterElementId: "history-adapter-filter",
+      canaryPanelElementId: "history-canary-policy",
+      runtime: window.LegacyAdapterRuntime,
+      adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
+      defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
+      forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
+    });
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    historyRuntimes.historyStartupHostRuntime.applyHistoryStartup(
-      historyPageHostRuntime.resolveHistoryPageStartupInput({
-        localHistoryStore: window.LocalHistoryStore,
-        setStatus: setStatus,
-        loadHistory: loadHistory,
-        historyRuntimes: historyRuntimes,
-        getElementById: el,
-        modeElementId: "history-mode",
-        modeCatalog: window.ModeCatalog,
-        documentLike: document,
-        state: state,
-        confirmAction: window.confirm,
-        createDate: function () {
-          return new Date();
-        },
-        createFileReader: function () {
-          return new FileReader();
-        }
-      })
-    );
+    historyPageHostRuntime.applyHistoryPageStartup({
+      localHistoryStore: window.LocalHistoryStore,
+      setStatus: setStatus,
+      loadHistory: loadHistory,
+      historyRuntimes: historyRuntimes,
+      getElementById: el,
+      modeElementId: "history-mode",
+      modeCatalog: window.ModeCatalog,
+      documentLike: document,
+      state: state,
+      confirmAction: window.confirm,
+      createDate: function () {
+        return new Date();
+      },
+      createFileReader: function () {
+        return new FileReader();
+      }
+    });
   });
 })();

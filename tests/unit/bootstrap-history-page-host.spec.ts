@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  applyHistoryPageLoad,
+  applyHistoryPageStartup,
+  applyHistoryPageStatus,
   resolveHistoryPageLoadEntryInput,
   resolveHistoryPageStartupInput,
   resolveHistoryPageStatusInput
@@ -136,5 +139,68 @@ describe("bootstrap history page host", () => {
     expect(result.historyControlsHostRuntime).toBe(runtimes.historyControlsHostRuntime);
     expect(result.historyToolbarEventsHostRuntime).toBe(runtimes.historyToolbarEventsHostRuntime);
     expect(result.modeElementId).toBe("history-mode");
+  });
+
+  it("applies status via history view host runtime", () => {
+    const applyHistoryStatus = vi.fn(() => ({ didApply: true }));
+
+    const result = applyHistoryPageStatus({
+      getElementById: () => null,
+      text: "ok",
+      isError: false,
+      historyRuntimes: {
+        historyViewHostRuntime: {
+          applyHistoryStatus
+        },
+        historyStatusRuntime: {}
+      }
+    });
+
+    expect(result.didApply).toBe(true);
+    expect(applyHistoryStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies load via load-entry host runtime", () => {
+    const applyHistoryLoadEntry = vi.fn(() => ({ didLoad: true, missingStore: false }));
+    const resolveHistoryLoadPanelContext = vi.fn(() => ({}));
+
+    const result = applyHistoryPageLoad({
+      localHistoryStore: {},
+      state: { page: 1 },
+      getElementById: () => null,
+      historyRuntimes: {
+        historyLoadEntryHostRuntime: {
+          applyHistoryLoadEntry
+        },
+        historyLoadContextHostRuntime: {
+          resolveHistoryLoadPanelContext
+        },
+        historyCanaryStorageRuntime: {
+          readHistoryStorageValue: () => null,
+          writeHistoryStorageValue: () => true
+        }
+      }
+    });
+
+    expect(result).toEqual({ didLoad: true, missingStore: false });
+    expect(applyHistoryLoadEntry).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies startup via startup host runtime", () => {
+    const applyHistoryStartup = vi.fn(() => ({ started: true, missingStore: false }));
+
+    const result = applyHistoryPageStartup({
+      localHistoryStore: {},
+      setStatus: () => undefined,
+      loadHistory: () => undefined,
+      historyRuntimes: {
+        historyStartupHostRuntime: {
+          applyHistoryStartup
+        }
+      }
+    });
+
+    expect(result).toEqual({ started: true, missingStore: false });
+    expect(applyHistoryStartup).toHaveBeenCalledTimes(1);
   });
 });

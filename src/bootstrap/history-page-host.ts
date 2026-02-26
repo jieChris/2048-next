@@ -173,3 +173,119 @@ export function resolveHistoryPageStartupInput(input: {
     createFileReader: source.createFileReader
   };
 }
+
+export function applyHistoryPageStatus(input: {
+  getElementById?: unknown;
+  statusElementId?: unknown;
+  text?: unknown;
+  isError?: unknown;
+  historyStatusRuntime?: unknown;
+  historyViewHostRuntime?: unknown;
+  historyRuntimes?: unknown;
+}): Record<string, unknown> {
+  const source = toRecord(input);
+  const runtimes = toRecord(source.historyRuntimes);
+  const historyViewHostRuntime = toRecord(source.historyViewHostRuntime || runtimes.historyViewHostRuntime);
+  const applyHistoryStatus = asFunction<(payload: unknown) => unknown>(
+    historyViewHostRuntime.applyHistoryStatus
+  );
+  if (!applyHistoryStatus) {
+    return {
+      didApply: false
+    };
+  }
+
+  const payload = resolveHistoryPageStatusInput(source);
+  const result = applyHistoryStatus(payload);
+  return {
+    didApply: true,
+    result
+  };
+}
+
+export function applyHistoryPageLoad(input: {
+  resetPage?: unknown;
+  localHistoryStore?: unknown;
+  state?: unknown;
+  getElementById?: unknown;
+  historyRuntimes?: unknown;
+  burnInMinComparable?: unknown;
+  burnInMaxMismatchRate?: unknown;
+  statusElementId?: unknown;
+  summaryElementId?: unknown;
+  loadHistory?: unknown;
+  setStatus?: unknown;
+  prevButtonId?: unknown;
+  nextButtonId?: unknown;
+  listElementId?: unknown;
+  documentLike?: unknown;
+  modeCatalog?: unknown;
+  confirmAction?: unknown;
+  navigateToHref?: unknown;
+  burnInPanelElementId?: unknown;
+  adapterFilterElementId?: unknown;
+  canaryPanelElementId?: unknown;
+  runtime?: unknown;
+  adapterModeStorageKey?: unknown;
+  defaultModeStorageKey?: unknown;
+  forceLegacyStorageKey?: unknown;
+}): Record<string, unknown> {
+  const source = toRecord(input);
+  const runtimes = toRecord(source.historyRuntimes);
+  const historyLoadEntryHostRuntime = toRecord(runtimes.historyLoadEntryHostRuntime);
+  const applyHistoryLoadEntry = asFunction<(payload: unknown) => unknown>(
+    historyLoadEntryHostRuntime.applyHistoryLoadEntry
+  );
+  if (!applyHistoryLoadEntry) {
+    return {
+      didLoad: false,
+      missingRuntime: true
+    };
+  }
+
+  const payload = resolveHistoryPageLoadEntryInput(source);
+  const result = applyHistoryLoadEntry(payload);
+  return isRecord(result)
+    ? result
+    : {
+        didLoad: true,
+        missingRuntime: false
+      };
+}
+
+export function applyHistoryPageStartup(input: {
+  localHistoryStore?: unknown;
+  setStatus?: unknown;
+  loadHistory?: unknown;
+  historyRuntimes?: unknown;
+  getElementById?: unknown;
+  modeElementId?: unknown;
+  modeCatalog?: unknown;
+  documentLike?: unknown;
+  state?: unknown;
+  confirmAction?: unknown;
+  createDate?: unknown;
+  createFileReader?: unknown;
+}): Record<string, unknown> {
+  const source = toRecord(input);
+  const runtimes = toRecord(source.historyRuntimes);
+  const historyStartupHostRuntime = toRecord(runtimes.historyStartupHostRuntime);
+  const applyHistoryStartup = asFunction<(payload: unknown) => unknown>(
+    historyStartupHostRuntime.applyHistoryStartup
+  );
+  if (!applyHistoryStartup) {
+    return {
+      started: false,
+      missingRuntime: true
+    };
+  }
+
+  const payload = resolveHistoryPageStartupInput(source);
+  const result = applyHistoryStartup(payload);
+  return isRecord(result)
+    ? result
+    : {
+        started: true,
+        missingRuntime: false
+      };
+}
