@@ -265,6 +265,13 @@ if (
 ) {
   throw new Error("CoreResponsiveRelayoutRuntime is required");
 }
+var topActionBindingsHostRuntime = window.CoreTopActionBindingsHostRuntime;
+if (
+  !topActionBindingsHostRuntime ||
+  typeof topActionBindingsHostRuntime.applyTopActionBindings !== "function"
+) {
+  throw new Error("CoreTopActionBindingsHostRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -1429,66 +1436,16 @@ function autoStartHomeGuideIfNeeded() {
 
 // Initialize Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
-    // Undo Link
-    var undoLink = document.getElementById('undo-link');
-    if (undoLink) {
-        undoLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            tryUndoFromUi();
-        });
-    }
-
-    // Export Replay Button (Top Bar)
-    var exportBtn = document.getElementById('top-export-replay-btn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            window.exportReplay();
-        });
-    }
-
-    var practiceBtn = document.getElementById("top-practice-btn");
-    if (practiceBtn) {
-      practiceBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        window.openPracticeBoardFromCurrent();
-      });
-    }
-
-    var practiceMobileUndoBtn = document.getElementById("practice-mobile-undo-btn");
-    if (practiceMobileUndoBtn) {
-      practiceMobileUndoBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        tryUndoFromUi();
-      });
-    }
-
-
-    // Settings Button (Top Bar)
-    var settingsBtn = document.getElementById("top-settings-btn");
-    if (settingsBtn) {
-      settingsBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        window.openSettingsModal();
-      });
-    }
-
-    var settingsCloseBtn = document.getElementById("settings-close-btn");
-    if (settingsCloseBtn) {
-      settingsCloseBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        window.closeSettingsModal();
-      });
-    }
-
-    var settingsModal = document.getElementById("settings-modal");
-    if (settingsModal) {
-      settingsModal.addEventListener("click", function (e) {
-        if (e.target === settingsModal) {
-          window.closeSettingsModal();
-        }
-      });
-    }
+    topActionBindingsHostRuntime.applyTopActionBindings({
+      getElementById: function (id) {
+        return document.getElementById(id);
+      },
+      tryUndo: tryUndoFromUi,
+      exportReplay: window.exportReplay,
+      openPracticeBoardFromCurrent: window.openPracticeBoardFromCurrent,
+      openSettingsModal: window.openSettingsModal,
+      closeSettingsModal: window.closeSettingsModal
+    });
 
     initThemeSettingsUI();
     removeLegacyUndoSettingsUI();
