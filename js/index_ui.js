@@ -358,6 +358,13 @@ if (
 ) {
   throw new Error("CoreHomeGuideStepFlowHostRuntime is required");
 }
+var homeGuideStepHostRuntime = window.CoreHomeGuideStepHostRuntime;
+if (
+  !homeGuideStepHostRuntime ||
+  typeof homeGuideStepHostRuntime.applyHomeGuideStep !== "function"
+) {
+  throw new Error("CoreHomeGuideStepHostRuntime is required");
+}
 var homeGuideStepViewHostRuntime = window.CoreHomeGuideStepViewHostRuntime;
 if (
   !homeGuideStepViewHostRuntime ||
@@ -1178,8 +1185,10 @@ function finishHomeGuide(markSeen, options) {
 }
 
 function showHomeGuideStep(index) {
-  var flowResult = homeGuideStepFlowHostRuntime.applyHomeGuideStepFlow({
+  var stepResult = homeGuideStepHostRuntime.applyHomeGuideStep({
     index: index,
+    stepFlowHostRuntime: homeGuideStepFlowHostRuntime,
+    stepViewHostRuntime: homeGuideStepViewHostRuntime,
     documentLike: document,
     windowLike: typeof window !== "undefined" ? window : null,
     homeGuideRuntime: homeGuideRuntime,
@@ -1189,24 +1198,11 @@ function showHomeGuideStep(index) {
     isElementVisibleForGuide: isElementVisibleForGuide,
     clearHomeGuideHighlight: clearHomeGuideHighlight,
     elevateHomeGuideTarget: elevateHomeGuideTarget,
-    finishHomeGuide: finishHomeGuide
-  });
-  if (flowResult.shouldAbort || flowResult.didFinish) return;
-  if (flowResult.shouldAdvance) {
-    showHomeGuideStep(flowResult.nextIndex);
-    return;
-  }
-  if (!flowResult.shouldRender) return;
-
-  homeGuideStepViewHostRuntime.applyHomeGuideStepView({
-    documentLike: document,
-    windowLike: typeof window !== "undefined" ? window : null,
-    homeGuideRuntime: homeGuideRuntime,
-    step: flowResult.step || null,
-    stepIndex: flowResult.stepIndex,
-    stepCount: HOME_GUIDE_STATE.steps.length,
+    finishHomeGuide: finishHomeGuide,
     positionHomeGuidePanel: positionHomeGuidePanel
   });
+  if (stepResult.didAbort || stepResult.didFinish) return;
+  if (stepResult.didAdvance) showHomeGuideStep(stepResult.nextIndex);
 }
 
 function startHomeGuide(options) {
