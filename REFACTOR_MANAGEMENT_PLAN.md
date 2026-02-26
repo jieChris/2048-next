@@ -121,6 +121,7 @@
   - `index_ui.js` 的 `removeLegacyUndoSettingsUI/ensureTimerModuleSettingsDom` 已收敛为 `CoreTimerModuleSettingsHostRuntime` 调用（页面层移除 settings-row 的插入/删除分支）
   - `timer-module-settings-host` 已承接计时器设置初始化主链（`applyTimerModuleSettingsUi`），`index_ui.js` 不再内联重试调度、同步函数注入与 toggle 变更绑定分支
   - 新增 `src/bootstrap/theme-settings.ts` + `js/core_theme_settings_runtime.js`，`index_ui.js` 委托主题设置预览值格式化、预览值回退、下拉开关/绑定去重与选中态判定
+  - 新增 `src/bootstrap/theme-settings-host.ts` + `js/core_theme_settings_host_runtime.js`，`index_ui.js` 委托主题设置 UI 编排主链（双预览渲染、下拉交互绑定、themechange 同步）
   - 新增 `src/bootstrap/replay-modal.ts` + `js/core_replay_modal_runtime.js`，`index_ui.js` 委托回放弹窗与设置弹窗的 DOM 开关/动作绑定编排
   - `index_ui.js` 顶部弹窗逻辑已改为 `CoreReplayModalRuntime` 调用（`showReplayModal/closeReplayModal/openSettingsModal/closeSettingsModal`）
   - 新增 `src/bootstrap/replay-export.ts` + `js/core_replay_export_runtime.js`，`index_ui.js` 委托回放导出与剪贴板复制回退（clipboard/fallback）逻辑
@@ -142,6 +143,7 @@
   - 新增 `src/bootstrap/mobile-timerbox.ts` + `js/core_mobile_timerbox_runtime.js`，`index_ui.js` 委托移动端计时器折叠态存储、图标与展示模型计算
   - `mobile-timerbox` 已承接折叠值归一化与展示态兜底（`resolveMobileTimerboxCollapsedValue`/`resolveMobileTimerboxAppliedModel`），`index_ui.js` 不再硬编码折叠判定与按钮属性 fallback
   - 新增 `src/bootstrap/mobile-timerbox-host.ts` + `js/core_mobile_timerbox_host_runtime.js`，`index_ui.js` 委托移动端计时器按钮初始化（click 绑定去重 + 启动同步链 + 重排触发）编排
+  - `mobile-timerbox-host` 已承接移动端计时器 UI 同步主链（`applyMobileTimerboxUiSync`），`index_ui.js` 的 `syncMobileTimerboxUI` 不再内联 DOM 状态编排与持久化分支
   - `index_ui.js` 现直接消费 `resolveMobileTimerboxAppliedModel` 的安全模型，不再重复本地按钮样式与 icon fallback 分支
   - 新增 `src/bootstrap/mobile-undo-top.ts` + `js/core_mobile_undo_top_runtime.js`，`index_ui.js` 委托移动端顶部撤回按钮展示态计算
   - `mobile-undo-top` 已承接按钮应用态兜底（`resolveMobileUndoTopAppliedModel`），`index_ui.js` 不再硬编码按钮样式与 aria fallback 分支

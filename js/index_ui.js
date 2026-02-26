@@ -145,6 +145,13 @@ if (
 ) {
   throw new Error("CoreThemeSettingsRuntime is required");
 }
+var themeSettingsHostRuntime = window.CoreThemeSettingsHostRuntime;
+if (
+  !themeSettingsHostRuntime ||
+  typeof themeSettingsHostRuntime.applyThemeSettingsUi !== "function"
+) {
+  throw new Error("CoreThemeSettingsHostRuntime is required");
+}
 var practiceTransferRuntime = window.CorePracticeTransferRuntime;
 var practiceTransferHostRuntime = window.CorePracticeTransferHostRuntime;
 if (
@@ -234,7 +241,8 @@ if (
 var mobileTimerboxHostRuntime = window.CoreMobileTimerboxHostRuntime;
 if (
   !mobileTimerboxHostRuntime ||
-  typeof mobileTimerboxHostRuntime.applyMobileTimerboxToggleInit !== "function"
+  typeof mobileTimerboxHostRuntime.applyMobileTimerboxToggleInit !== "function" ||
+  typeof mobileTimerboxHostRuntime.applyMobileTimerboxUiSync !== "function"
 ) {
   throw new Error("CoreMobileTimerboxHostRuntime is required");
 }
@@ -636,63 +644,26 @@ function getTimerboxToggleIconSvg(collapsed) {
 }
 
 function syncMobileTimerboxUI(options) {
-  options = options || {};
-  if (!isTimerboxMobileScope()) return;
-
-  var timerBox = document.getElementById("timerbox");
-  var toggleBtn = document.getElementById("timerbox-toggle-btn");
-  if (!timerBox || !toggleBtn) return;
-
-  var timerModuleHidden = timerBox.classList.contains("timerbox-hidden-mode");
-  var collapsible = isTimerboxCollapseViewport();
-  if (!collapsible || timerModuleHidden) {
-    var hiddenModel = mobileTimerboxRuntime.resolveMobileTimerboxDisplayModel({
-      collapsible: false,
-      timerModuleHidden: timerModuleHidden,
-      collapsed: true
-    });
-    var hiddenAppliedModel = mobileTimerboxRuntime.resolveMobileTimerboxAppliedModel({
-      displayModel: hiddenModel,
-      collapsed: true,
-      fallbackToggleDisplay: "none",
-      fallbackAriaExpanded: "false",
-      fallbackLabel: "展开计时器",
-      fallbackIconSvg: getTimerboxToggleIconSvg(true)
-    });
-    toggleBtn.style.display = hiddenAppliedModel.toggleDisplay;
-    toggleBtn.setAttribute("aria-expanded", hiddenAppliedModel.ariaExpanded);
-    timerBox.classList.remove("is-mobile-expanded");
-    return;
-  }
-
-  var collapsed = mobileTimerboxRuntime.resolveMobileTimerboxCollapsedValue({
-    collapsedOption: typeof options.collapsed === "boolean" ? options.collapsed : null,
-    storedCollapsed: readMobileTimerboxCollapsed(),
-    defaultCollapsed: true
+  mobileTimerboxHostRuntime.applyMobileTimerboxUiSync({
+    options: options || {},
+    isTimerboxMobileScope: isTimerboxMobileScope,
+    isTimerboxCollapseViewport: isTimerboxCollapseViewport,
+    getElementById: function (id) {
+      return document.getElementById(id);
+    },
+    readMobileTimerboxCollapsed: readMobileTimerboxCollapsed,
+    writeMobileTimerboxCollapsed: writeMobileTimerboxCollapsed,
+    mobileTimerboxRuntime: mobileTimerboxRuntime,
+    getTimerboxToggleIconSvg: getTimerboxToggleIconSvg,
+    hiddenClassName: "timerbox-hidden-mode",
+    expandedClassName: "is-mobile-expanded",
+    defaultCollapsed: true,
+    fallbackHiddenToggleDisplay: "none",
+    fallbackVisibleToggleDisplay: "inline-flex",
+    fallbackHiddenAriaExpanded: "false",
+    fallbackExpandLabel: "展开计时器",
+    fallbackCollapseLabel: "收起计时器"
   });
-  var displayModel = mobileTimerboxRuntime.resolveMobileTimerboxDisplayModel({
-    collapsible: true,
-    timerModuleHidden: false,
-    collapsed: collapsed
-  });
-  var appliedModel = mobileTimerboxRuntime.resolveMobileTimerboxAppliedModel({
-    displayModel: displayModel,
-    collapsed: collapsed,
-    fallbackToggleDisplay: "inline-flex",
-    fallbackAriaExpanded: collapsed ? "false" : "true",
-    fallbackLabel: collapsed ? "展开计时器" : "收起计时器",
-    fallbackIconSvg: getTimerboxToggleIconSvg(collapsed)
-  });
-  toggleBtn.style.display = appliedModel.toggleDisplay;
-  timerBox.classList.toggle("is-mobile-expanded", appliedModel.expanded);
-  var label = appliedModel.label;
-  toggleBtn.setAttribute("aria-expanded", appliedModel.ariaExpanded);
-  toggleBtn.setAttribute("aria-label", label);
-  toggleBtn.setAttribute("title", label);
-  toggleBtn.innerHTML = appliedModel.iconSvg;
-  if (options.persist) {
-    writeMobileTimerboxCollapsed(collapsed);
-  }
 }
 
 function initMobileTimerboxToggle() {
@@ -769,209 +740,13 @@ window.pretty = function(time) {
   return prettyTimeRuntime.formatPrettyTime(time);
 };
 
-function formatPreviewValue(value) {
-  return themeSettingsRuntime.formatThemePreviewValue(value);
-}
-
 function initThemeSettingsUI() {
-  var originalSelect = document.getElementById("theme-select");
-  var previewRoot = document.getElementById("theme-preview-grid");
-  var customTrigger = document.getElementById("theme-select-trigger");
-  var customOptionsContainer = document.getElementById("theme-select-options");
-  var customSelect = document.querySelector(".custom-select");
-
-  if (!originalSelect || !previewRoot || !window.ThemeManager || !customTrigger || !customOptionsContainer || !customSelect) return;
-
-  var themes = themeSettingsRuntime.resolveThemeOptions({
-    themes: window.ThemeManager.getThemes()
+  themeSettingsHostRuntime.applyThemeSettingsUi({
+    documentLike: document,
+    windowLike: typeof window !== "undefined" ? window : null,
+    themeSettingsRuntime: themeSettingsRuntime,
+    themeManager: typeof window !== "undefined" ? window.ThemeManager : null
   });
-  var confirmedTheme = window.ThemeManager.getCurrentTheme();
-  var previewLayout = themeSettingsRuntime.resolveThemePreviewLayout();
-
-  function ensurePreviewStyleTag() {
-    var style = document.getElementById("theme-preview-style");
-    if (!style) {
-      style = document.createElement("style");
-      style.id = "theme-preview-style";
-      document.head.appendChild(style);
-    }
-    return style;
-  }
-
-  function ensureDualPreviewGrids() {
-    if (previewRoot.__dualPreviewRefs) return previewRoot.__dualPreviewRefs;
-    previewRoot.className = previewLayout.containerClassName;
-    previewRoot.innerHTML = previewLayout.innerHtml;
-    previewRoot.__dualPreviewRefs = {
-      pow2: document.getElementById(previewLayout.pow2GridId),
-      fib: document.getElementById(previewLayout.fibonacciGridId)
-    };
-    return previewRoot.__dualPreviewRefs;
-  }
-
-  function renderPreviewGrid(gridEl, values) {
-    if (!gridEl) return;
-    gridEl.innerHTML = "";
-    for (var i = 0; i < values.length; i++) {
-      var value = values[i];
-      var tile = document.createElement("div");
-      tile.className = "theme-preview-tile theme-color-" + value;
-      tile.textContent = formatPreviewValue(value);
-      gridEl.appendChild(tile);
-    }
-  }
-
-  function renderDualPreviewGrids() {
-    var refs = ensureDualPreviewGrids();
-    var previewValues = themeSettingsRuntime.resolveThemePreviewTileValues({
-      getTileValues: window.ThemeManager && typeof window.ThemeManager.getTileValues === "function"
-        ? function (ruleset) {
-            return window.ThemeManager.getTileValues(ruleset);
-          }
-        : null
-    });
-    var pow2Values = previewValues.pow2Values;
-    var fibValues = previewValues.fibonacciValues;
-    renderPreviewGrid(refs.pow2, pow2Values);
-    renderPreviewGrid(refs.fib, fibValues);
-  }
-
-  function getPreviewCss(themeId) {
-    if (!window.ThemeManager.getPreviewCss) return "";
-    var cssSelectors = themeSettingsRuntime.resolveThemePreviewCssSelectors({
-      previewLayout: previewLayout,
-      fallbackPow2Selector: "#theme-preview-grid-pow2",
-      fallbackFibonacciSelector: "#theme-preview-grid-fib"
-    });
-    return window.ThemeManager.getPreviewCss(themeId, {
-      pow2Selector: cssSelectors.pow2Selector,
-      fibSelector: cssSelectors.fibSelector
-    });
-  }
-
-  function applyPreviewTheme(themeId) {
-    var style = ensurePreviewStyleTag();
-    style.textContent = getPreviewCss(themeId);
-  }
-
-  if (customOptionsContainer.children.length === 0) {
-    customOptionsContainer.innerHTML = "";
-    themes.forEach(function(theme) {
-      var option = document.createElement("div");
-      option.className = "custom-option";
-      option.textContent = theme.label;
-      option.dataset.value = theme.id;
-      option.addEventListener("click", function(e) {
-        e.stopPropagation();
-        var value = this.dataset.value;
-        confirmedTheme = value;
-        window.ThemeManager.applyTheme(value);
-        applyPreviewTheme(value);
-        closeDropdown();
-      });
-      option.addEventListener("mouseenter", function() {
-        applyPreviewTheme(this.dataset.value);
-      });
-      customOptionsContainer.appendChild(option);
-    });
-  }
-
-  function toggleDropdown(e) {
-    if (e) e.stopPropagation();
-    var isOpen = customSelect.classList.contains("open");
-    var toggleState = themeSettingsRuntime.resolveThemeDropdownToggleState({
-      isOpen: isOpen
-    });
-    if (!toggleState.shouldOpen) {
-      closeDropdown();
-    } else {
-      confirmedTheme = window.ThemeManager.getCurrentTheme();
-      customSelect.classList.add("open");
-      var selected = customOptionsContainer.querySelector(".custom-option.selected");
-      if (selected) {
-        customOptionsContainer.scrollTop = selected.offsetTop - customOptionsContainer.offsetTop;
-      }
-    }
-  }
-
-  function closeDropdown() {
-    customSelect.classList.remove("open");
-    applyPreviewTheme(confirmedTheme);
-  }
-
-  var triggerBindingState = themeSettingsRuntime.resolveThemeBindingState({
-    alreadyBound: !!customTrigger.__bound
-  });
-  if (triggerBindingState.shouldBind) {
-    customTrigger.addEventListener("click", toggleDropdown);
-    customTrigger.__bound = triggerBindingState.boundValue;
-  }
-
-  var outsideBindingState = themeSettingsRuntime.resolveThemeBindingState({
-    alreadyBound: !!window.__clickOutsideBound
-  });
-  if (outsideBindingState.shouldBind) {
-    document.addEventListener("click", function(e) {
-      if (!customSelect.contains(e.target)) {
-        closeDropdown();
-      }
-    });
-    window.__clickOutsideBound = outsideBindingState.boundValue;
-  }
-
-  var leaveBindingState = themeSettingsRuntime.resolveThemeBindingState({
-    alreadyBound: !!customSelect.__mouseleaveBound
-  });
-  if (leaveBindingState.shouldBind) {
-    customSelect.addEventListener("mouseleave", function() {
-      if (customSelect.classList.contains("open")) {
-        applyPreviewTheme(confirmedTheme);
-      }
-    });
-    customSelect.__mouseleaveBound = leaveBindingState.boundValue;
-  }
-
-  function updateCustomSelectUI() {
-    var currentThemeId = window.ThemeManager.getCurrentTheme();
-    var label = themeSettingsRuntime.resolveThemeSelectLabel({
-      themes: themes,
-      currentThemeId: currentThemeId,
-      fallbackLabel: "选择主题"
-    });
-    var triggerText = customTrigger.querySelector("span");
-    if (triggerText) triggerText.textContent = label;
-    var options = customOptionsContainer.querySelectorAll(".custom-option");
-    options.forEach(function(opt) {
-      var optionValue = themeSettingsRuntime.resolveThemeOptionValue({
-        optionLike: opt
-      });
-      var isSelected = themeSettingsRuntime.resolveThemeOptionSelectedState({
-        optionValue: optionValue,
-        currentThemeId: currentThemeId
-      });
-      if (isSelected) {
-        opt.classList.add("selected");
-      } else {
-        opt.classList.remove("selected");
-      }
-    });
-  }
-
-  renderDualPreviewGrids();
-  updateCustomSelectUI();
-  applyPreviewTheme(confirmedTheme);
-
-  var changeSyncBindingState = themeSettingsRuntime.resolveThemeBindingState({
-    alreadyBound: !!window.__themeChangeSyncBound
-  });
-  if (changeSyncBindingState.shouldBind) {
-    window.__themeChangeSyncBound = changeSyncBindingState.boundValue;
-    window.addEventListener("themechange", function () {
-      confirmedTheme = window.ThemeManager.getCurrentTheme();
-      updateCustomSelectUI();
-      applyPreviewTheme(confirmedTheme);
-    });
-  }
 }
 
 
