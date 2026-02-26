@@ -36,6 +36,20 @@
     return typeof value === "string" ? value : fallback;
   }
 
+  function resolveManagerFromWindow(windowLike) {
+    var windowRecord = toRecord(windowLike);
+    return windowRecord.game_manager || null;
+  }
+
+  function resolveGameModeConfigFromWindow(windowLike) {
+    var windowRecord = toRecord(windowLike);
+    var gameModeConfig = windowRecord.GAME_MODE_CONFIG;
+    if (gameModeConfig && typeof gameModeConfig === "object") {
+      return gameModeConfig;
+    }
+    return null;
+  }
+
   function resolveUndoCapabilityState(source) {
     var resolveUndoCapabilityStateFn = asFunction(source.resolveUndoCapabilityState);
     if (resolveUndoCapabilityStateFn) {
@@ -152,8 +166,35 @@
     };
   }
 
+  function applyMobileUndoTopAvailabilitySyncFromContext(input) {
+    var source = toRecord(input);
+    var manager = resolveManagerFromWindow(source.windowLike);
+    var globalModeConfig = resolveGameModeConfigFromWindow(source.windowLike);
+    var syncResult = applyMobileUndoTopAvailabilitySync({
+      isGamePageScope: source.isGamePageScope,
+      ensureMobileUndoTopButton: source.ensureMobileUndoTopButton,
+      isCompactGameViewport: source.isCompactGameViewport,
+      bodyLike: source.bodyLike,
+      manager: manager,
+      globalModeConfig: globalModeConfig,
+      resolveUndoCapabilityState: source.resolveUndoCapabilityState,
+      undoActionRuntime: source.undoActionRuntime,
+      mobileUndoTopRuntime: source.mobileUndoTopRuntime,
+      fallbackLabel: source.fallbackLabel
+    });
+
+    return {
+      didInvokeSync: syncResult.didApply,
+      managerResolved: !!manager,
+      modeConfigResolved: !!globalModeConfig,
+      syncResult: syncResult
+    };
+  }
+
   global.CoreMobileUndoTopAvailabilityHostRuntime =
     global.CoreMobileUndoTopAvailabilityHostRuntime || {};
   global.CoreMobileUndoTopAvailabilityHostRuntime.applyMobileUndoTopAvailabilitySync =
     applyMobileUndoTopAvailabilitySync;
+  global.CoreMobileUndoTopAvailabilityHostRuntime.applyMobileUndoTopAvailabilitySyncFromContext =
+    applyMobileUndoTopAvailabilitySyncFromContext;
 })(typeof window !== "undefined" ? window : undefined);

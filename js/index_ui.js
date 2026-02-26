@@ -319,7 +319,9 @@ if (
 var mobileUndoTopAvailabilityHostRuntime = window.CoreMobileUndoTopAvailabilityHostRuntime;
 if (
   !mobileUndoTopAvailabilityHostRuntime ||
-  typeof mobileUndoTopAvailabilityHostRuntime.applyMobileUndoTopAvailabilitySync !== "function"
+  typeof mobileUndoTopAvailabilityHostRuntime.applyMobileUndoTopAvailabilitySync !== "function" ||
+  typeof mobileUndoTopAvailabilityHostRuntime.applyMobileUndoTopAvailabilitySyncFromContext !==
+    "function"
 ) {
   throw new Error("CoreMobileUndoTopAvailabilityHostRuntime is required");
 }
@@ -616,16 +618,12 @@ function syncPracticeTopActionsPlacement() {
 }
 
 function syncMobileUndoTopButtonAvailability() {
-  mobileUndoTopAvailabilityHostRuntime.applyMobileUndoTopAvailabilitySync({
+  mobileUndoTopAvailabilityHostRuntime.applyMobileUndoTopAvailabilitySyncFromContext({
     isGamePageScope: isGamePageScope,
     ensureMobileUndoTopButton: ensureMobileUndoTopButton,
     isCompactGameViewport: isCompactGameViewport,
     bodyLike: document.body,
-    manager: window.game_manager || null,
-    globalModeConfig:
-      typeof window !== "undefined" && window.GAME_MODE_CONFIG
-        ? window.GAME_MODE_CONFIG
-        : null,
+    windowLike: typeof window !== "undefined" ? window : null,
     undoActionRuntime: undoActionRuntime,
     mobileUndoTopRuntime: mobileUndoTopRuntime,
     fallbackLabel: "撤回"

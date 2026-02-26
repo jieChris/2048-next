@@ -162,6 +162,7 @@
   - 新增 `src/bootstrap/mobile-undo-top-host.ts` + `js/core_mobile_undo_top_host_runtime.js`，`index_ui.js` 委托移动端顶部撤回按钮初始化（scope gate + click 绑定去重 + 初始同步）编排
   - 新增 `src/bootstrap/mobile-undo-top-availability-host.ts` + `js/core_mobile_undo_top_availability_host_runtime.js`，`index_ui.js` 委托移动端顶部撤回按钮可用态同步（能力判定 + 展示模型应用 + label/aria 写回）
   - `mobile-undo-top-availability-host` 已承接页面上下文能力判定回退（`undoActionRuntime.resolveUndoCapabilityFromContext`），`index_ui.js` 移除本地 `resolveUndoCapabilityState` 包装函数
+  - `mobile-undo-top-availability-host` 已承接 `manager/GAME_MODE_CONFIG` 上下文解析（`applyMobileUndoTopAvailabilitySyncFromContext`），`index_ui.js` 不再页面层读取撤回能力输入
   - `index_ui.js` 现直接消费 `resolveMobileUndoTopAppliedModel` 的安全模型，不再重复本地样式兜底分支
   - 新增 `src/bootstrap/top-actions.ts` + `js/core_top_actions_runtime.js`，`index_ui.js` 委托移动端/练习页顶部按钮重排状态创建与同步
   - 新增 `src/bootstrap/top-actions-host.ts` + `js/core_top_actions_host_runtime.js`，`index_ui.js` 委托顶部重排状态创建与同步编排（game/practice 作用域 gate + state 复用）

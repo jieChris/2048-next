@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { applyMobileUndoTopAvailabilitySync } from "../../src/bootstrap/mobile-undo-top-availability-host";
+import {
+  applyMobileUndoTopAvailabilitySync,
+  applyMobileUndoTopAvailabilitySyncFromContext
+} from "../../src/bootstrap/mobile-undo-top-availability-host";
 
 describe("bootstrap mobile undo top availability host", () => {
   it("returns early when page scope is not game scope", () => {
@@ -245,5 +248,72 @@ describe("bootstrap mobile undo top availability host", () => {
     expect(attrs["aria-label"]).toBeUndefined();
     expect(attrs.title).toBeUndefined();
     expect(result.didApplyLabel).toBe(false);
+  });
+
+  it("resolves manager and mode config from window context", () => {
+    const button = {
+      style: {
+        display: "",
+        pointerEvents: "",
+        opacity: ""
+      },
+      setAttribute() {}
+    };
+    const resolveUndoCapabilityFromContext = vi.fn(() => ({ modeUndoCapable: true }));
+
+    const result = applyMobileUndoTopAvailabilitySyncFromContext({
+      isGamePageScope() {
+        return true;
+      },
+      ensureMobileUndoTopButton() {
+        return button;
+      },
+      isCompactGameViewport() {
+        return true;
+      },
+      bodyLike: { tagName: "BODY" },
+      windowLike: {
+        game_manager: { id: "gm" },
+        GAME_MODE_CONFIG: { key: "standard_4x4_pow2_no_undo" }
+      },
+      undoActionRuntime: {
+        resolveUndoCapabilityFromContext,
+        isUndoInteractionEnabled() {
+          return true;
+        }
+      },
+      mobileUndoTopRuntime: {
+        resolveMobileUndoTopButtonDisplayModel() {
+          return {
+            shouldShow: true,
+            buttonDisplay: "inline-flex",
+            pointerEvents: "",
+            opacity: "",
+            ariaDisabled: "false",
+            label: "撤回"
+          };
+        },
+        resolveMobileUndoTopAppliedModel() {
+          return {
+            shouldShow: true,
+            buttonDisplay: "inline-flex",
+            pointerEvents: "",
+            opacity: "",
+            ariaDisabled: "false",
+            label: "撤回",
+            shouldApplyLabel: true
+          };
+        }
+      }
+    });
+
+    expect(result.didInvokeSync).toBe(true);
+    expect(result.managerResolved).toBe(true);
+    expect(result.modeConfigResolved).toBe(true);
+    expect(resolveUndoCapabilityFromContext).toHaveBeenCalledWith({
+      bodyLike: { tagName: "BODY" },
+      manager: { id: "gm" },
+      globalModeConfig: { key: "standard_4x4_pow2_no_undo" }
+    });
   });
 });
