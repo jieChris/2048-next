@@ -225,6 +225,13 @@ if (
 ) {
   throw new Error("CoreMobileUndoTopRuntime is required");
 }
+var mobileUndoTopHostRuntime = window.CoreMobileUndoTopHostRuntime;
+if (
+  !mobileUndoTopHostRuntime ||
+  typeof mobileUndoTopHostRuntime.applyMobileUndoTopInit !== "function"
+) {
+  throw new Error("CoreMobileUndoTopHostRuntime is required");
+}
 var topActionsRuntime = window.CoreTopActionsRuntime;
 if (
   !topActionsRuntime ||
@@ -633,17 +640,12 @@ function initMobileHintToggle() {
 }
 
 function initMobileUndoTopButton() {
-  if (!isGamePageScope()) return;
-  var btn = ensureMobileUndoTopButton();
-  if (!btn) return;
-  if (!btn.__mobileUndoBound) {
-    btn.__mobileUndoBound = true;
-    btn.addEventListener("click", function (e) {
-      if (e) e.preventDefault();
-      tryUndoFromUi();
-    });
-  }
-  syncMobileUndoTopButtonAvailability();
+  mobileUndoTopHostRuntime.applyMobileUndoTopInit({
+    isGamePageScope: isGamePageScope,
+    ensureMobileUndoTopButton: ensureMobileUndoTopButton,
+    tryUndoFromUi: tryUndoFromUi,
+    syncMobileUndoTopButtonAvailability: syncMobileUndoTopButtonAvailability
+  });
 }
 
 function readMobileTimerboxCollapsed() {
