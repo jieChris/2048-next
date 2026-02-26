@@ -1855,6 +1855,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("history page delegates import action decisions to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
+      window.confirm = () => false;
       (window as any).__historyImportActionCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryImportRuntime = new Proxy(target, {
@@ -1888,16 +1889,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForTimeout(200);
 
     const snapshot = await page.evaluate(() => {
-      const oldConfirm = window.confirm;
-      window.confirm = () => false;
-
       const mergeBtn = document.querySelector("#history-import-btn") as HTMLButtonElement | null;
       if (mergeBtn && typeof mergeBtn.click === "function") mergeBtn.click();
 
       const replaceBtn = document.querySelector("#history-import-replace-btn") as HTMLButtonElement | null;
       if (replaceBtn && typeof replaceBtn.click === "function") replaceBtn.click();
 
-      window.confirm = oldConfirm;
       return {
         hasRuntime: Boolean((window as any).CoreHistoryImportRuntime?.resolveHistoryImportActionState),
         actionCallCount: Number((window as any).__historyImportActionCallCount || 0)
@@ -2052,6 +2049,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("history page delegates import orchestration to host runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
+      window.confirm = () => true;
       (window as any).__historyImportHostMergeClickCallCount = 0;
       (window as any).__historyImportHostReplaceClickCallCount = 0;
       (window as any).__historyImportHostFileSelectionCallCount = 0;
@@ -2126,9 +2124,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForTimeout(200);
 
     const snapshot = await page.evaluate(async () => {
-      const oldConfirm = window.confirm;
-      window.confirm = () => true;
-
       const mergeBtn = document.querySelector("#history-import-btn") as HTMLButtonElement | null;
       if (mergeBtn && typeof mergeBtn.click === "function") mergeBtn.click();
 
@@ -2163,7 +2158,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
       importInput.dispatchEvent(new Event("change"));
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      window.confirm = oldConfirm;
       store.importRecords = originalImportRecords;
       return {
         hasRuntime: Boolean(
@@ -2397,6 +2391,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     page
   }) => {
     await page.addInitScript(() => {
+      window.confirm = () => true;
       (window as any).__historyToolbarHostExportAllCallCount = 0;
       (window as any).__historyToolbarHostMismatchCallCount = 0;
       (window as any).__historyToolbarHostClearAllCallCount = 0;
@@ -2448,8 +2443,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
       const originalClearAll = store.clearAll;
       store.clearAll = () => {};
-      const originalConfirm = window.confirm;
-      window.confirm = () => true;
 
       const exportAllBtn = document.querySelector("#history-export-all-btn") as HTMLButtonElement | null;
       if (exportAllBtn && typeof exportAllBtn.click === "function") exportAllBtn.click();
@@ -2460,7 +2453,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const clearAllBtn = document.querySelector("#history-clear-all-btn") as HTMLButtonElement | null;
       if (clearAllBtn && typeof clearAllBtn.click === "function") clearAllBtn.click();
 
-      window.confirm = originalConfirm;
       store.clearAll = originalClearAll;
 
       return {
