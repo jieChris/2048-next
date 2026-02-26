@@ -279,6 +279,13 @@ if (
 ) {
   throw new Error("CoreGameOverUndoHostRuntime is required");
 }
+var indexUiStartupHostRuntime = window.CoreIndexUiStartupHostRuntime;
+if (
+  !indexUiStartupHostRuntime ||
+  typeof indexUiStartupHostRuntime.applyIndexUiStartup !== "function"
+) {
+  throw new Error("CoreIndexUiStartupHostRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -1443,44 +1450,30 @@ function autoStartHomeGuideIfNeeded() {
 
 // Initialize Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
-    topActionBindingsHostRuntime.applyTopActionBindings({
+    indexUiStartupHostRuntime.applyIndexUiStartup({
+      topActionBindingsHostRuntime: topActionBindingsHostRuntime,
+      gameOverUndoHostRuntime: gameOverUndoHostRuntime,
       getElementById: function (id) {
         return document.getElementById(id);
       },
+      windowLike: window,
       tryUndo: tryUndoFromUi,
       exportReplay: window.exportReplay,
       openPracticeBoardFromCurrent: window.openPracticeBoardFromCurrent,
       openSettingsModal: window.openSettingsModal,
-      closeSettingsModal: window.closeSettingsModal
-    });
-
-    initThemeSettingsUI();
-    removeLegacyUndoSettingsUI();
-    initTimerModuleSettingsUI();
-    initMobileHintToggle();
-    initMobileUndoTopButton();
-    initHomeGuideSettingsUI();
-    autoStartHomeGuideIfNeeded();
-
-    gameOverUndoHostRuntime.bindGameOverUndoControl({
-      getElementById: function (id) {
-        return document.getElementById(id);
-      },
-      tryUndo: tryUndoFromUi,
+      closeSettingsModal: window.closeSettingsModal,
+      initThemeSettingsUI: initThemeSettingsUI,
+      removeLegacyUndoSettingsUI: removeLegacyUndoSettingsUI,
+      initTimerModuleSettingsUI: initTimerModuleSettingsUI,
+      initMobileHintToggle: initMobileHintToggle,
+      initMobileUndoTopButton: initMobileUndoTopButton,
+      initHomeGuideSettingsUI: initHomeGuideSettingsUI,
+      autoStartHomeGuideIfNeeded: autoStartHomeGuideIfNeeded,
+      initMobileTimerboxToggle: initMobileTimerboxToggle,
+      requestResponsiveGameRelayout: requestResponsiveGameRelayout,
       nowMs: function () {
         return Date.now();
       },
       touchGuardWindowMs: 450
     });
-
-    initMobileTimerboxToggle();
-    requestResponsiveGameRelayout();
-
-    if (!window.__responsiveGameRelayoutBound) {
-      window.__responsiveGameRelayoutBound = true;
-      window.addEventListener("resize", requestResponsiveGameRelayout);
-      window.addEventListener("orientationchange", requestResponsiveGameRelayout);
-    }
-
-
 });
