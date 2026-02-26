@@ -2,6 +2,7 @@
 
 var replayModalRuntime = window.CoreReplayModalRuntime;
 var replayExportRuntime = window.CoreReplayExportRuntime;
+var replayPageHostRuntime = window.CoreReplayPageHostRuntime;
 var settingsModalHostRuntime = window.CoreSettingsModalHostRuntime;
 var settingsModalPageHostRuntime = window.CoreSettingsModalPageHostRuntime;
 if (
@@ -20,6 +21,14 @@ if (
   throw new Error("CoreReplayExportRuntime is required");
 }
 if (
+  !replayPageHostRuntime ||
+  typeof replayPageHostRuntime.applyReplayModalPageOpen !== "function" ||
+  typeof replayPageHostRuntime.applyReplayModalPageClose !== "function" ||
+  typeof replayPageHostRuntime.applyReplayExportPageAction !== "function"
+) {
+  throw new Error("CoreReplayPageHostRuntime is required");
+}
+if (
   !settingsModalHostRuntime ||
   typeof settingsModalHostRuntime.applySettingsModalOpenOrchestration !== "function" ||
   typeof settingsModalHostRuntime.applySettingsModalCloseOrchestration !== "function"
@@ -36,7 +45,8 @@ if (
 
 // Replay Modal Functions
 function showReplayModal(title, content, actionName, actionCallback) {
-  replayModalRuntime.applyReplayModalOpen({
+  replayPageHostRuntime.applyReplayModalPageOpen({
+    replayModalRuntime: replayModalRuntime,
     documentLike: document,
     title: title,
     content: content,
@@ -47,7 +57,8 @@ function showReplayModal(title, content, actionName, actionCallback) {
 }
 
 window.closeReplayModal = function() {
-  replayModalRuntime.applyReplayModalClose({
+  replayPageHostRuntime.applyReplayModalPageClose({
+    replayModalRuntime: replayModalRuntime,
     documentLike: document
   });
 };
@@ -73,7 +84,8 @@ window.closeSettingsModal = function () {
 };
 
 window.exportReplay = function() {
-  replayExportRuntime.applyReplayExport({
+  replayPageHostRuntime.applyReplayExportPageAction({
+    replayExportRuntime: replayExportRuntime,
     gameManager: window.game_manager,
     showReplayModal: showReplayModal,
     navigatorLike: navigator,
