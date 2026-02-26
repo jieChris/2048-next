@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  applyHistoryCanaryPanelRender,
   applyHistoryCanaryPanelClickAction,
   resolveHistoryCanaryPanelRenderState
 } from "../../src/bootstrap/history-canary-host";
@@ -89,5 +90,76 @@ describe("bootstrap history canary host", () => {
       statusText: "",
       isError: false
     });
+  });
+
+  it("applies canary panel render and binds canary action buttons", () => {
+    const clickHandlers: Array<(event?: unknown) => void> = [];
+    function createButton() {
+      return {
+        addEventListener(_name: string, cb: (event?: unknown) => void) {
+          clickHandlers.push(cb);
+        }
+      };
+    }
+    const buttonA = createButton();
+    const buttonB = createButton();
+    const panelElement = {
+      innerHTML: "",
+      querySelectorAll(selector: string) {
+        return selector === ".history-canary-action-btn" ? [buttonA, buttonB] : [];
+      }
+    };
+    const loadHistory = vi.fn();
+    const setStatus = vi.fn();
+
+    const result = applyHistoryCanaryPanelRender({
+      panelElement,
+      runtime: {},
+      readStorageValue: () => null,
+      adapterModeStorageKey: "engine_adapter_mode",
+      defaultModeStorageKey: "engine_adapter_default_mode",
+      forceLegacyStorageKey: "engine_adapter_force_legacy",
+      historyCanarySourceRuntime: {
+        resolveHistoryCanaryPolicyAndStoredState: () => ({
+          policy: {},
+          stored: {}
+        })
+      },
+      historyCanaryPolicyRuntime: {
+        resolveCanaryPolicySnapshot: () => ({}),
+        resolveStoredPolicyKeys: () => ({}),
+        resolveCanaryPolicyActionNotice: () => "",
+        resolveCanaryPolicyActionPlan: () => ({})
+      },
+      historyCanaryViewRuntime: {
+        resolveHistoryCanaryViewState: () => ({})
+      },
+      historyCanaryPanelRuntime: {
+        resolveHistoryCanaryPanelHtml: () =>
+          "<button class='history-canary-action-btn' data-action='enter_canary'></button>",
+        resolveHistoryCanaryActionName: () => "enter_canary"
+      },
+      writeStorageValue: () => true,
+      historyCanaryActionRuntime: {
+        applyHistoryCanaryPanelAction: () => ({
+          shouldReload: true,
+          reloadResetPage: false,
+          statusText: "ok",
+          isError: false
+        }),
+        resolveHistoryCanaryPolicyUpdateFailureNotice: () => "failed"
+      },
+      loadHistory,
+      setStatus
+    });
+
+    expect(result).toEqual({
+      didRender: true,
+      boundButtonCount: 2
+    });
+    expect(panelElement.innerHTML).toContain("history-canary-action-btn");
+    clickHandlers[0]({ currentTarget: buttonA });
+    expect(loadHistory).toHaveBeenCalledWith(false);
+    expect(setStatus).toHaveBeenCalledWith("ok", false);
   });
 });

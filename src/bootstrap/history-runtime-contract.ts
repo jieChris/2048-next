@@ -139,7 +139,11 @@ export function resolveHistoryRuntimeContracts(
   );
   const historyCanaryHostRuntime = requireRuntimeFunctions(
     source.CoreHistoryCanaryHostRuntime,
-    ["resolveHistoryCanaryPanelRenderState", "applyHistoryCanaryPanelClickAction"],
+    [
+      "resolveHistoryCanaryPanelRenderState",
+      "applyHistoryCanaryPanelClickAction",
+      "applyHistoryCanaryPanelRender"
+    ],
     "CoreHistoryCanaryHostRuntime is required"
   );
   const historyAdapterDiagnosticsRuntime = requireRuntimeFunctions(
@@ -175,7 +179,11 @@ export function resolveHistoryRuntimeContracts(
   );
   const historyBurnInHostRuntime = requireRuntimeFunctions(
     source.CoreHistoryBurnInHostRuntime,
-    ["resolveHistoryBurnInPanelRenderState", "resolveHistoryBurnInMismatchFocusClickState"],
+    [
+      "resolveHistoryBurnInPanelRenderState",
+      "resolveHistoryBurnInMismatchFocusClickState",
+      "applyHistoryBurnInSummaryRender"
+    ],
     "CoreHistoryBurnInHostRuntime is required"
   );
   const historyCanaryViewRuntime = requireRuntimeFunctions(

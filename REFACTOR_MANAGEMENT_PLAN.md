@@ -216,6 +216,7 @@
   - `history-canary-source` 已新增聚合读取入口（`resolveHistoryCanaryPolicyAndStoredState`），`history_page.js` 改为一次调用完成 policy + stored 解析并下发到 view runtime
   - 新增 `src/bootstrap/history-canary-panel.ts` + `js/core_history_canary_panel_runtime.js`，`history_page.js` 委托 canary 面板 HTML 渲染与 action 名称解析
   - 新增 `src/bootstrap/history-canary-host.ts` + `js/core_history_canary_host_runtime.js`，`history_page.js` 委托 canary 面板渲染编排与按钮点击执行反馈主链
+  - `history-canary-host` 已继续承接 canary 面板一体化渲染入口（`applyHistoryCanaryPanelRender`），`history_page.js` 不再本地循环绑定 canary action 按钮
   - 新增 `src/bootstrap/history-canary-policy.ts` + `js/core_history_canary_policy_runtime.js`，`history_page.js` 委托 canary 策略快照解析、存储键归一化与动作决策/提示文案
   - 新增 `src/bootstrap/history-canary-view.ts` + `js/core_history_canary_view_runtime.js`，`history_page.js` 委托 canary 面板展示态（来源文案/模式文案/gate 样式/storage 文案）模型计算
   - 新增 `src/bootstrap/history-summary.ts` + `js/core_history_summary_runtime.js`，`history_page.js` 委托顶部汇总文案（总条数/分页/筛选标签）计算
@@ -261,6 +262,7 @@
   - `history-adapter-diagnostics` 已继续承接 parity 状态读取（`resolveHistoryAdapterParityStatus`），`history_page.js` 不再本地读取 `LocalHistoryStore.getAdapterParityStatus`
   - 新增 `src/bootstrap/history-burnin.ts` + `js/core_history_burnin_runtime.js`，`history_page.js` 委托 burn-in 汇总 gate 状态、百分比文案、连续窗口统计、面板 HTML 渲染与“仅看不一致”点击动作决策
   - 新增 `src/bootstrap/history-burnin-host.ts` + `js/core_history_burnin_host_runtime.js`，`history_page.js` 委托 burn-in 面板渲染与“仅看不一致”点击反馈编排
+  - `history-burnin-host` 已继续承接 burn-in 面板一体化渲染入口（`applyHistoryBurnInSummaryRender`），`history_page.js` 不再本地绑定 mismatch 按钮动作
   - `history-burnin` 已继续承接 burn-in 汇总源读取（`resolveHistoryBurnInSummarySource`），`history_page.js` 不再本地判断 store/query 再调用 `getAdapterParityBurnInSummary`
   - burn-in gate 已支持 sustained window 判定
   - `src/bridge/burnin-gate.ts` + `js/core_burnin_gate_runtime.js` 抽离完成

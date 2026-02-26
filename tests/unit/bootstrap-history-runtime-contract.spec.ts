@@ -36,6 +36,10 @@ function createWindowLike() {
         reloadResetPage: false,
         statusText: "",
         isError: false
+      }),
+      applyHistoryCanaryPanelRender: () => ({
+        didRender: true,
+        boundButtonCount: 0
       })
     },
     CoreHistoryAdapterDiagnosticsRuntime: {
@@ -71,6 +75,10 @@ function createWindowLike() {
         nextSelectValue: "",
         shouldReload: false,
         resetPage: false
+      }),
+      applyHistoryBurnInSummaryRender: () => ({
+        didRender: true,
+        didBindMismatchAction: false
       })
     },
     CoreHistoryCanaryViewRuntime: {

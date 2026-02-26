@@ -15,6 +15,35 @@
     return isRecord(value) ? value : {};
   }
 
+  function hasField(target, key) {
+    return !!target && typeof target === "object" && key in target;
+  }
+
+  function asArrayLike(value) {
+    if (Array.isArray(value)) return value;
+    if (!value || typeof value !== "object") return [];
+    var lengthValue = Number(value.length);
+    var length = Number.isFinite(lengthValue) && lengthValue > 0 ? Math.floor(lengthValue) : 0;
+    var result = [];
+    for (var i = 0; i < length; i += 1) {
+      result.push(value[i]);
+    }
+    return result;
+  }
+
+  function bindListener(element, eventName, handler) {
+    var addEventListener = asFunction(toRecord(element).addEventListener);
+    if (!addEventListener) return false;
+    addEventListener.call(element, eventName, handler);
+    return true;
+  }
+
+  function queryAllNodes(node, selector) {
+    var querySelectorAll = asFunction(toRecord(node).querySelectorAll);
+    if (!querySelectorAll) return [];
+    return asArrayLike(querySelectorAll.call(node, selector));
+  }
+
   function toText(value) {
     return typeof value === "string" ? value : "";
   }
@@ -124,9 +153,74 @@
     };
   }
 
+  function applyHistoryCanaryPanelRender(input) {
+    var source = isRecord(input) ? input : {};
+    var panelElement = toRecord(source.panelElement);
+    if (!hasField(panelElement, "innerHTML")) {
+      return {
+        didRender: false,
+        boundButtonCount: 0
+      };
+    }
+
+    var panelState = resolveHistoryCanaryPanelRenderState({
+      runtime: source.runtime,
+      readStorageValue: source.readStorageValue,
+      adapterModeStorageKey: source.adapterModeStorageKey,
+      defaultModeStorageKey: source.defaultModeStorageKey,
+      forceLegacyStorageKey: source.forceLegacyStorageKey,
+      historyCanarySourceRuntime: source.historyCanarySourceRuntime,
+      historyCanaryPolicyRuntime: source.historyCanaryPolicyRuntime,
+      historyCanaryViewRuntime: source.historyCanaryViewRuntime,
+      historyCanaryPanelRuntime: source.historyCanaryPanelRuntime
+    });
+    panelElement.innerHTML = panelState.panelHtml;
+
+    var loadHistory = asFunction(source.loadHistory);
+    var setStatus = asFunction(source.setStatus);
+
+    var boundButtonCount = 0;
+    var buttons = queryAllNodes(panelElement, ".history-canary-action-btn");
+    for (var i = 0; i < buttons.length; i += 1) {
+      var button = buttons[i];
+      if (
+        bindListener(button, "click", function (boundButton) {
+          return function (event) {
+            var eventRecord = toRecord(event);
+            var feedbackState = applyHistoryCanaryPanelClickAction({
+              target: eventRecord.currentTarget || boundButton,
+              runtime: source.runtime,
+              writeStorageValue: source.writeStorageValue,
+              defaultModeStorageKey: source.defaultModeStorageKey,
+              forceLegacyStorageKey: source.forceLegacyStorageKey,
+              historyCanaryActionRuntime: source.historyCanaryActionRuntime,
+              historyCanaryPanelRuntime: source.historyCanaryPanelRuntime,
+              historyCanaryPolicyRuntime: source.historyCanaryPolicyRuntime
+            });
+            if (loadHistory && feedbackState.shouldReload) {
+              loadHistory(feedbackState.reloadResetPage);
+            }
+            if (setStatus) {
+              setStatus(feedbackState.statusText, feedbackState.isError);
+            }
+          };
+        }(button))
+      ) {
+        boundButtonCount += 1;
+      }
+    }
+
+    return {
+      didRender: true,
+      boundButtonCount: boundButtonCount
+    };
+  }
+
   global.CoreHistoryCanaryHostRuntime = global.CoreHistoryCanaryHostRuntime || {};
   global.CoreHistoryCanaryHostRuntime.resolveHistoryCanaryPanelRenderState =
     resolveHistoryCanaryPanelRenderState;
   global.CoreHistoryCanaryHostRuntime.applyHistoryCanaryPanelClickAction =
     applyHistoryCanaryPanelClickAction;
+  global.CoreHistoryCanaryHostRuntime.applyHistoryCanaryPanelRender =
+    applyHistoryCanaryPanelRender;
 })(typeof window !== "undefined" ? window : undefined);

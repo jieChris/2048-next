@@ -90,33 +90,23 @@
   function renderBurnInSummary(summary) {
     var panel = el("history-burnin-summary");
     if (!panel) return;
-    var panelState = historyBurnInHostRuntime.resolveHistoryBurnInPanelRenderState({
+    historyBurnInHostRuntime.applyHistoryBurnInSummaryRender({
+      panelElement: panel,
       summary: summary,
-      historyBurnInRuntime: historyBurnInRuntime
+      historyBurnInRuntime: historyBurnInRuntime,
+      adapterFilterElement: el("history-adapter-filter"),
+      setAdapterParityFilter: function (nextValue) {
+        state.adapterParityFilter = nextValue;
+      },
+      loadHistory: loadHistory
     });
-    panel.innerHTML = panelState && panelState.panelHtml ? panelState.panelHtml : "";
-    if (!panelState || panelState.shouldBindMismatchAction !== true) return;
-
-    var mismatchBtn = panel.querySelector(".history-burnin-focus-mismatch");
-    if (mismatchBtn) {
-      mismatchBtn.addEventListener("click", function () {
-        var actionState = historyBurnInHostRuntime.resolveHistoryBurnInMismatchFocusClickState({
-          historyBurnInRuntime: historyBurnInRuntime
-        });
-        if (!actionState || actionState.shouldApply !== true) return;
-        var adapterFilter = el("history-adapter-filter");
-        if (adapterFilter) adapterFilter.value = actionState.nextSelectValue;
-        state.adapterParityFilter = actionState.nextAdapterParityFilter;
-        if (actionState.shouldReload) loadHistory(actionState.resetPage);
-      });
-    }
   }
 
   function renderCanaryPolicy() {
     var panel = el("history-canary-policy");
     if (!panel) return;
-
-    var panelState = historyCanaryHostRuntime.resolveHistoryCanaryPanelRenderState({
+    historyCanaryHostRuntime.applyHistoryCanaryPanelRender({
+      panelElement: panel,
       runtime: window.LegacyAdapterRuntime,
       readStorageValue: historyCanaryStorageRuntime.readHistoryStorageValue,
       adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
@@ -125,27 +115,12 @@
       historyCanarySourceRuntime: historyCanarySourceRuntime,
       historyCanaryPolicyRuntime: historyCanaryPolicyRuntime,
       historyCanaryViewRuntime: historyCanaryViewRuntime,
-      historyCanaryPanelRuntime: historyCanaryPanelRuntime
+      historyCanaryPanelRuntime: historyCanaryPanelRuntime,
+      historyCanaryActionRuntime: historyCanaryActionRuntime,
+      writeStorageValue: historyCanaryStorageRuntime.writeHistoryStorageValue,
+      loadHistory: loadHistory,
+      setStatus: setStatus
     });
-    panel.innerHTML = panelState && panelState.panelHtml ? panelState.panelHtml : "";
-
-    var buttons = panel.querySelectorAll(".history-canary-action-btn");
-    for (var i = 0; i < buttons.length; i++) {
-      buttons[i].addEventListener("click", function (event) {
-        var feedbackState = historyCanaryHostRuntime.applyHistoryCanaryPanelClickAction({
-          target: event && event.currentTarget,
-          runtime: window.LegacyAdapterRuntime,
-          writeStorageValue: historyCanaryStorageRuntime.writeHistoryStorageValue,
-          defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
-          forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY,
-          historyCanaryActionRuntime: historyCanaryActionRuntime,
-          historyCanaryPanelRuntime: historyCanaryPanelRuntime,
-          historyCanaryPolicyRuntime: historyCanaryPolicyRuntime
-        });
-        if (feedbackState.shouldReload) loadHistory(feedbackState.reloadResetPage);
-        setStatus(feedbackState.statusText, feedbackState.isError);
-      });
-    }
   }
 
   function renderHistory(result) {

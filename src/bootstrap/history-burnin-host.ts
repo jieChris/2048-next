@@ -10,6 +10,29 @@ function toRecord(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }
 
+function hasField(target: unknown, key: string): boolean {
+  return !!target && typeof target === "object" && key in (target as Record<string, unknown>);
+}
+
+function bindListener(
+  element: unknown,
+  eventName: string,
+  handler: (...args: never[]) => unknown
+): boolean {
+  const addEventListener = asFunction<(name: string, cb: (...args: never[]) => unknown) => unknown>(
+    toRecord(element).addEventListener
+  );
+  if (!addEventListener) return false;
+  (addEventListener as unknown as Function).call(element, eventName, handler);
+  return true;
+}
+
+function queryNode(node: unknown, selector: string): unknown {
+  const querySelector = asFunction<(value: string) => unknown>(toRecord(node).querySelector);
+  if (!querySelector) return null;
+  return (querySelector as unknown as Function).call(node, selector);
+}
+
 export interface HistoryBurnInPanelRenderState {
   panelHtml: string;
   shouldBindMismatchAction: boolean;
@@ -21,6 +44,11 @@ export interface HistoryBurnInMismatchFocusClickState {
   nextSelectValue: string;
   shouldReload: boolean;
   resetPage: boolean;
+}
+
+export interface HistoryBurnInSummaryRenderApplyResult {
+  didRender: boolean;
+  didBindMismatchAction: boolean;
 }
 
 function createNoopMismatchFocusClickState(): HistoryBurnInMismatchFocusClickState {
@@ -80,5 +108,63 @@ export function resolveHistoryBurnInMismatchFocusClickState(input: {
     nextSelectValue: toText(actionState.nextSelectValue, ""),
     shouldReload: actionState.shouldReload === true,
     resetPage: actionState.resetPage === true
+  };
+}
+
+export function applyHistoryBurnInSummaryRender(input: {
+  panelElement?: unknown;
+  summary?: unknown;
+  historyBurnInRuntime?: unknown;
+  adapterFilterElement?: unknown;
+  setAdapterParityFilter?: unknown;
+  loadHistory?: unknown;
+}): HistoryBurnInSummaryRenderApplyResult {
+  const source = isRecord(input) ? input : {};
+  const panelElement = toRecord(source.panelElement);
+  if (!hasField(panelElement, "innerHTML")) {
+    return {
+      didRender: false,
+      didBindMismatchAction: false
+    };
+  }
+
+  const panelState = resolveHistoryBurnInPanelRenderState({
+    summary: source.summary,
+    historyBurnInRuntime: source.historyBurnInRuntime
+  });
+  panelElement.innerHTML = panelState.panelHtml;
+  if (panelState.shouldBindMismatchAction !== true) {
+    return {
+      didRender: true,
+      didBindMismatchAction: false
+    };
+  }
+
+  const setAdapterParityFilter = asFunction<(nextValue: unknown) => unknown>(
+    source.setAdapterParityFilter
+  );
+  const loadHistory = asFunction<(resetPage: unknown) => unknown>(source.loadHistory);
+  const adapterFilterElement = toRecord(source.adapterFilterElement);
+
+  const mismatchBtn = queryNode(panelElement, ".history-burnin-focus-mismatch");
+  const didBindMismatchAction = bindListener(mismatchBtn, "click", function () {
+    const actionState = resolveHistoryBurnInMismatchFocusClickState({
+      historyBurnInRuntime: source.historyBurnInRuntime
+    });
+    if (actionState.shouldApply !== true) return;
+    if (hasField(adapterFilterElement, "value")) {
+      adapterFilterElement.value = actionState.nextSelectValue;
+    }
+    if (setAdapterParityFilter) {
+      setAdapterParityFilter(actionState.nextAdapterParityFilter);
+    }
+    if (loadHistory && actionState.shouldReload === true) {
+      loadHistory(actionState.resetPage);
+    }
+  });
+
+  return {
+    didRender: true,
+    didBindMismatchAction
   };
 }

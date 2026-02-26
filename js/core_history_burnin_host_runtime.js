@@ -15,6 +15,23 @@
     return isRecord(value) ? value : {};
   }
 
+  function hasField(target, key) {
+    return !!target && typeof target === "object" && key in target;
+  }
+
+  function bindListener(element, eventName, handler) {
+    var addEventListener = asFunction(toRecord(element).addEventListener);
+    if (!addEventListener) return false;
+    addEventListener.call(element, eventName, handler);
+    return true;
+  }
+
+  function queryNode(node, selector) {
+    var querySelector = asFunction(toRecord(node).querySelector);
+    if (!querySelector) return null;
+    return querySelector.call(node, selector);
+  }
+
   function toText(value, fallback) {
     return typeof value === "string" ? value : fallback;
   }
@@ -66,9 +83,60 @@
     };
   }
 
+  function applyHistoryBurnInSummaryRender(input) {
+    var source = isRecord(input) ? input : {};
+    var panelElement = toRecord(source.panelElement);
+    if (!hasField(panelElement, "innerHTML")) {
+      return {
+        didRender: false,
+        didBindMismatchAction: false
+      };
+    }
+
+    var panelState = resolveHistoryBurnInPanelRenderState({
+      summary: source.summary,
+      historyBurnInRuntime: source.historyBurnInRuntime
+    });
+    panelElement.innerHTML = panelState.panelHtml;
+    if (panelState.shouldBindMismatchAction !== true) {
+      return {
+        didRender: true,
+        didBindMismatchAction: false
+      };
+    }
+
+    var setAdapterParityFilter = asFunction(source.setAdapterParityFilter);
+    var loadHistory = asFunction(source.loadHistory);
+    var adapterFilterElement = toRecord(source.adapterFilterElement);
+
+    var mismatchBtn = queryNode(panelElement, ".history-burnin-focus-mismatch");
+    var didBindMismatchAction = bindListener(mismatchBtn, "click", function () {
+      var actionState = resolveHistoryBurnInMismatchFocusClickState({
+        historyBurnInRuntime: source.historyBurnInRuntime
+      });
+      if (actionState.shouldApply !== true) return;
+      if (hasField(adapterFilterElement, "value")) {
+        adapterFilterElement.value = actionState.nextSelectValue;
+      }
+      if (setAdapterParityFilter) {
+        setAdapterParityFilter(actionState.nextAdapterParityFilter);
+      }
+      if (loadHistory && actionState.shouldReload === true) {
+        loadHistory(actionState.resetPage);
+      }
+    });
+
+    return {
+      didRender: true,
+      didBindMismatchAction: didBindMismatchAction
+    };
+  }
+
   global.CoreHistoryBurnInHostRuntime = global.CoreHistoryBurnInHostRuntime || {};
   global.CoreHistoryBurnInHostRuntime.resolveHistoryBurnInPanelRenderState =
     resolveHistoryBurnInPanelRenderState;
   global.CoreHistoryBurnInHostRuntime.resolveHistoryBurnInMismatchFocusClickState =
     resolveHistoryBurnInMismatchFocusClickState;
+  global.CoreHistoryBurnInHostRuntime.applyHistoryBurnInSummaryRender =
+    applyHistoryBurnInSummaryRender;
 })(typeof window !== "undefined" ? window : undefined);

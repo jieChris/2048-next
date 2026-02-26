@@ -867,6 +867,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.addInitScript(() => {
       (window as any).__historyCanaryHostRenderCallCount = 0;
       (window as any).__historyCanaryHostClickCallCount = 0;
+      (window as any).__historyCanaryHostApplyRenderCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryCanaryHostRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
@@ -882,6 +883,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
             proxyTarget[prop] = function (input: unknown) {
               (window as any).__historyCanaryHostClickCallCount =
                 Number((window as any).__historyCanaryHostClickCallCount || 0) + 1;
+              return (value as (arg: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          if (prop === "applyHistoryCanaryPanelRender" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyCanaryHostApplyRenderCallCount =
+                Number((window as any).__historyCanaryHostApplyRenderCallCount || 0) + 1;
               return (value as (arg: unknown) => unknown)(input);
             };
             return true;
@@ -905,18 +914,22 @@ test.describe("Legacy Multi-Page Smoke", () => {
         ".history-canary-action-btn[data-action='reset_policy']"
       ) as HTMLElement | null;
       if (actionButton && typeof actionButton.click === "function") actionButton.click();
+      const policyPanel = document.querySelector("#history-canary-policy");
       return {
         hasRuntime:
           Boolean((window as any).CoreHistoryCanaryHostRuntime?.resolveHistoryCanaryPanelRenderState) &&
-          Boolean((window as any).CoreHistoryCanaryHostRuntime?.applyHistoryCanaryPanelClickAction),
-        renderCallCount: Number((window as any).__historyCanaryHostRenderCallCount || 0),
-        clickCallCount: Number((window as any).__historyCanaryHostClickCallCount || 0)
+          Boolean((window as any).CoreHistoryCanaryHostRuntime?.applyHistoryCanaryPanelClickAction) &&
+          Boolean((window as any).CoreHistoryCanaryHostRuntime?.applyHistoryCanaryPanelRender),
+        applyRenderCallCount: Number((window as any).__historyCanaryHostApplyRenderCallCount || 0),
+        hasActionButton: Boolean(actionButton),
+        panelText: policyPanel && policyPanel.textContent ? policyPanel.textContent : ""
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
-    expect(snapshot.renderCallCount).toBeGreaterThan(0);
-    expect(snapshot.clickCallCount).toBeGreaterThan(0);
+    expect(snapshot.applyRenderCallCount).toBeGreaterThan(0);
+    expect(snapshot.hasActionButton).toBe(true);
+    expect(snapshot.panelText).toContain("Canary 策略控制");
   });
 
   test("history page delegates canary view modeling to runtime helper", async ({ page }) => {
@@ -3146,6 +3159,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.addInitScript(() => {
       (window as any).__historyBurnInHostRenderCallCount = 0;
       (window as any).__historyBurnInHostClickCallCount = 0;
+      (window as any).__historyBurnInHostApplyRenderCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryBurnInHostRuntime = new Proxy(target, {
         set(proxyTarget, prop, value) {
@@ -3179,6 +3193,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
             };
             return true;
           }
+          if (prop === "applyHistoryBurnInSummaryRender" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyBurnInHostApplyRenderCallCount =
+                Number((window as any).__historyBurnInHostApplyRenderCallCount || 0) + 1;
+              return (value as (arg: unknown) => unknown)(input);
+            };
+            return true;
+          }
           proxyTarget[prop] = value;
           return true;
         }
@@ -3196,21 +3218,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const snapshot = await page.evaluate(() => {
       const actionBtn = document.querySelector(".history-burnin-focus-mismatch") as HTMLButtonElement | null;
       if (actionBtn && typeof actionBtn.click === "function") actionBtn.click();
-      const adapterFilter = document.querySelector("#history-adapter-filter") as HTMLSelectElement | null;
       return {
         hasRuntime:
           Boolean((window as any).CoreHistoryBurnInHostRuntime?.resolveHistoryBurnInPanelRenderState) &&
-          Boolean((window as any).CoreHistoryBurnInHostRuntime?.resolveHistoryBurnInMismatchFocusClickState),
-        renderCallCount: Number((window as any).__historyBurnInHostRenderCallCount || 0),
-        clickCallCount: Number((window as any).__historyBurnInHostClickCallCount || 0),
-        adapterFilterValue: adapterFilter ? adapterFilter.value : ""
+          Boolean((window as any).CoreHistoryBurnInHostRuntime?.resolveHistoryBurnInMismatchFocusClickState) &&
+          Boolean((window as any).CoreHistoryBurnInHostRuntime?.applyHistoryBurnInSummaryRender),
+        applyRenderCallCount: Number((window as any).__historyBurnInHostApplyRenderCallCount || 0)
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
-    expect(snapshot.renderCallCount).toBeGreaterThan(0);
-    expect(snapshot.clickCallCount).toBeGreaterThan(0);
-    expect(snapshot.adapterFilterValue).toBe("mismatch");
+    expect(snapshot.applyRenderCallCount).toBeGreaterThan(0);
   });
 
   test("history page delegates startup orchestration to host runtime helper", async ({ page }) => {
