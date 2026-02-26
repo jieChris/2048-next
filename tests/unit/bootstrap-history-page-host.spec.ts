@@ -4,12 +4,58 @@ import {
   applyHistoryPageLoad,
   applyHistoryPageStartup,
   applyHistoryPageStatus,
+  resolveHistoryPageDefaults,
   resolveHistoryPageLoadEntryInput,
   resolveHistoryPageStartupInput,
   resolveHistoryPageStatusInput
 } from "../../src/bootstrap/history-page-host";
 
 describe("bootstrap history page host", () => {
+  it("resolves history page defaults with baseline values", () => {
+    const defaults = resolveHistoryPageDefaults();
+
+    expect(defaults.state).toEqual({
+      page: 1,
+      pageSize: 30,
+      modeKey: "",
+      keyword: "",
+      sortBy: "ended_desc",
+      adapterParityFilter: "all",
+      burnInWindow: "200",
+      sustainedWindows: "3"
+    });
+    expect(defaults.burnInMinComparable).toBe(50);
+    expect(defaults.burnInMaxMismatchRate).toBe(1);
+    expect(defaults.adapterModeStorageKey).toBe("engine_adapter_mode");
+    expect(defaults.defaultModeStorageKey).toBe("engine_adapter_default_mode");
+    expect(defaults.forceLegacyStorageKey).toBe("engine_adapter_force_legacy");
+    expect(defaults.statusElementId).toBe("history-status");
+    expect(defaults.summaryElementId).toBe("history-summary");
+    expect(defaults.prevButtonId).toBe("history-prev-page");
+    expect(defaults.nextButtonId).toBe("history-next-page");
+    expect(defaults.listElementId).toBe("history-list");
+    expect(defaults.modeElementId).toBe("history-mode");
+    expect(defaults.burnInPanelElementId).toBe("history-burnin-summary");
+    expect(defaults.adapterFilterElementId).toBe("history-adapter-filter");
+    expect(defaults.canaryPanelElementId).toBe("history-canary-policy");
+  });
+
+  it("supports overriding history page defaults", () => {
+    const defaults = resolveHistoryPageDefaults({
+      burnInMinComparable: 80,
+      burnInMaxMismatchRate: 0.3,
+      statusElementId: "status",
+      modeElementId: "mode",
+      adapterModeStorageKey: "adapter"
+    });
+
+    expect(defaults.burnInMinComparable).toBe(80);
+    expect(defaults.burnInMaxMismatchRate).toBe(0.3);
+    expect(defaults.statusElementId).toBe("status");
+    expect(defaults.modeElementId).toBe("mode");
+    expect(defaults.adapterModeStorageKey).toBe("adapter");
+  });
+
   it("resolves status input with default status id", () => {
     const getElementById = vi.fn();
     const historyStatusRuntime = {};

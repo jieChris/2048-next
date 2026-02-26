@@ -15,6 +15,56 @@
     return typeof value === "function" ? value : null;
   }
 
+  function resolveHistoryPageDefaults(input) {
+    var source = toRecord(input);
+    return {
+      state: {
+        page: 1,
+        pageSize: 30,
+        modeKey: "",
+        keyword: "",
+        sortBy: "ended_desc",
+        adapterParityFilter: "all",
+        burnInWindow: "200",
+        sustainedWindows: "3"
+      },
+      burnInMinComparable:
+        typeof source.burnInMinComparable === "number" ? source.burnInMinComparable : 50,
+      burnInMaxMismatchRate:
+        typeof source.burnInMaxMismatchRate === "number" ? source.burnInMaxMismatchRate : 1,
+      adapterModeStorageKey:
+        typeof source.adapterModeStorageKey === "string"
+          ? source.adapterModeStorageKey
+          : "engine_adapter_mode",
+      defaultModeStorageKey:
+        typeof source.defaultModeStorageKey === "string"
+          ? source.defaultModeStorageKey
+          : "engine_adapter_default_mode",
+      forceLegacyStorageKey:
+        typeof source.forceLegacyStorageKey === "string"
+          ? source.forceLegacyStorageKey
+          : "engine_adapter_force_legacy",
+      statusElementId: typeof source.statusElementId === "string" ? source.statusElementId : "history-status",
+      summaryElementId: typeof source.summaryElementId === "string" ? source.summaryElementId : "history-summary",
+      prevButtonId: typeof source.prevButtonId === "string" ? source.prevButtonId : "history-prev-page",
+      nextButtonId: typeof source.nextButtonId === "string" ? source.nextButtonId : "history-next-page",
+      listElementId: typeof source.listElementId === "string" ? source.listElementId : "history-list",
+      modeElementId: typeof source.modeElementId === "string" ? source.modeElementId : "history-mode",
+      burnInPanelElementId:
+        typeof source.burnInPanelElementId === "string"
+          ? source.burnInPanelElementId
+          : "history-burnin-summary",
+      adapterFilterElementId:
+        typeof source.adapterFilterElementId === "string"
+          ? source.adapterFilterElementId
+          : "history-adapter-filter",
+      canaryPanelElementId:
+        typeof source.canaryPanelElementId === "string"
+          ? source.canaryPanelElementId
+          : "history-canary-policy"
+    };
+  }
+
   function resolveHistoryPageStatusInput(input) {
     var source = toRecord(input);
     var runtimes = toRecord(source.historyRuntimes);
@@ -197,6 +247,7 @@
   }
 
   global.CoreHistoryPageHostRuntime = global.CoreHistoryPageHostRuntime || {};
+  global.CoreHistoryPageHostRuntime.resolveHistoryPageDefaults = resolveHistoryPageDefaults;
   global.CoreHistoryPageHostRuntime.resolveHistoryPageStatusInput = resolveHistoryPageStatusInput;
   global.CoreHistoryPageHostRuntime.resolveHistoryPageLoadEntryInput = resolveHistoryPageLoadEntryInput;
   global.CoreHistoryPageHostRuntime.resolveHistoryPageStartupInput = resolveHistoryPageStartupInput;

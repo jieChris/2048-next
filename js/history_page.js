@@ -3,21 +3,6 @@
     return document.getElementById(id);
   }
 
-  var state = {
-    page: 1,
-    pageSize: 30,
-    modeKey: "",
-    keyword: "",
-    sortBy: "ended_desc",
-    adapterParityFilter: "all",
-    burnInWindow: "200",
-    sustainedWindows: "3"
-  };
-  var BURN_IN_MIN_COMPARABLE = 50;
-  var BURN_IN_MAX_MISMATCH_RATE = 1;
-  var ADAPTER_MODE_STORAGE_KEY = "engine_adapter_mode";
-  var ADAPTER_DEFAULT_STORAGE_KEY = "engine_adapter_default_mode";
-  var ADAPTER_FORCE_LEGACY_STORAGE_KEY = "engine_adapter_force_legacy";
   var historyRuntimeContractRuntime = window.CoreHistoryRuntimeContractRuntime;
   if (
     !historyRuntimeContractRuntime ||
@@ -28,18 +13,21 @@
   var historyPageHostRuntime = window.CoreHistoryPageHostRuntime;
   if (
     !historyPageHostRuntime ||
+    typeof historyPageHostRuntime.resolveHistoryPageDefaults !== "function" ||
     typeof historyPageHostRuntime.applyHistoryPageStatus !== "function" ||
     typeof historyPageHostRuntime.applyHistoryPageLoad !== "function" ||
     typeof historyPageHostRuntime.applyHistoryPageStartup !== "function"
   ) {
     throw new Error("CoreHistoryPageHostRuntime is required");
   }
+  var historyPageDefaults = historyPageHostRuntime.resolveHistoryPageDefaults();
+  var state = historyPageDefaults.state;
   var historyRuntimes = historyRuntimeContractRuntime.resolveHistoryRuntimeContracts(window);
 
   function setStatus(text, isError) {
     historyPageHostRuntime.applyHistoryPageStatus({
       getElementById: el,
-      statusElementId: "history-status",
+      statusElementId: historyPageDefaults.statusElementId,
       text: text,
       isError: isError,
       historyRuntimes: historyRuntimes
@@ -53,28 +41,28 @@
       state: state,
       getElementById: el,
       historyRuntimes: historyRuntimes,
-      burnInMinComparable: BURN_IN_MIN_COMPARABLE,
-      burnInMaxMismatchRate: BURN_IN_MAX_MISMATCH_RATE,
-      statusElementId: "history-status",
-      summaryElementId: "history-summary",
+      burnInMinComparable: historyPageDefaults.burnInMinComparable,
+      burnInMaxMismatchRate: historyPageDefaults.burnInMaxMismatchRate,
+      statusElementId: historyPageDefaults.statusElementId,
+      summaryElementId: historyPageDefaults.summaryElementId,
       loadHistory: loadHistory,
       setStatus: setStatus,
-      prevButtonId: "history-prev-page",
-      nextButtonId: "history-next-page",
-      listElementId: "history-list",
+      prevButtonId: historyPageDefaults.prevButtonId,
+      nextButtonId: historyPageDefaults.nextButtonId,
+      listElementId: historyPageDefaults.listElementId,
       documentLike: document,
       modeCatalog: window.ModeCatalog,
       confirmAction: window.confirm,
       navigateToHref: function (href) {
         window.location.href = href;
       },
-      burnInPanelElementId: "history-burnin-summary",
-      adapterFilterElementId: "history-adapter-filter",
-      canaryPanelElementId: "history-canary-policy",
+      burnInPanelElementId: historyPageDefaults.burnInPanelElementId,
+      adapterFilterElementId: historyPageDefaults.adapterFilterElementId,
+      canaryPanelElementId: historyPageDefaults.canaryPanelElementId,
       runtime: window.LegacyAdapterRuntime,
-      adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
-      defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
-      forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
+      adapterModeStorageKey: historyPageDefaults.adapterModeStorageKey,
+      defaultModeStorageKey: historyPageDefaults.defaultModeStorageKey,
+      forceLegacyStorageKey: historyPageDefaults.forceLegacyStorageKey
     });
   }
 
@@ -85,7 +73,7 @@
       loadHistory: loadHistory,
       historyRuntimes: historyRuntimes,
       getElementById: el,
-      modeElementId: "history-mode",
+      modeElementId: historyPageDefaults.modeElementId,
       modeCatalog: window.ModeCatalog,
       documentLike: document,
       state: state,
