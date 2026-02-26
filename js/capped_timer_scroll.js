@@ -1,8 +1,20 @@
 (function () {
   var timerScrollOffset = 0;
   var TIMER_MAX_VISIBLE = 11;
+  var cappedTimerScrollRuntime = window.CoreCappedTimerScrollRuntime;
 
   function isTimerScrollEnabledMode() {
+    if (
+      cappedTimerScrollRuntime &&
+      typeof cappedTimerScrollRuntime.resolveTimerScrollModeFromContext === "function"
+    ) {
+      var modeState = cappedTimerScrollRuntime.resolveTimerScrollModeFromContext({
+        bodyLike: typeof document !== "undefined" ? document.body : null,
+        windowLike: typeof window !== "undefined" ? window : null
+      });
+      return !!(modeState && modeState.enabled);
+    }
+
     if (typeof document === "undefined" || !document.body) return false;
     var modeId = String(document.body.getAttribute("data-mode-id") || "");
     if (modeId.indexOf("capped") !== -1 || modeId.indexOf("practice") !== -1) return true;

@@ -6357,6 +6357,62 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.storedRate).toBe("25");
   });
 
+  test("capped timer scroll delegates mode context resolution to runtime helper", async ({
+    page
+  }) => {
+    const response = await page.goto("/capped_2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Capped response should exist").not.toBeNull();
+    expect(response?.ok(), "Capped response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(220);
+
+    const snapshot = await page.evaluate(() => {
+      const runtime = (window as any).CoreCappedTimerScrollRuntime;
+      const updateTimerScroll = (window as any).updateTimerScroll;
+      if (
+        !runtime ||
+        typeof runtime.resolveTimerScrollModeFromContext !== "function" ||
+        typeof runtime.isTimerScrollModeKey !== "function" ||
+        typeof updateTimerScroll !== "function"
+      ) {
+        return {
+          hasRuntime: false,
+          hasUpdateBinding: typeof updateTimerScroll === "function"
+        };
+      }
+
+      const originalResolve = runtime.resolveTimerScrollModeFromContext;
+      let resolveCallCount = 0;
+      runtime.resolveTimerScrollModeFromContext = function (opts: any) {
+        resolveCallCount += 1;
+        return originalResolve(opts);
+      };
+
+      try {
+        updateTimerScroll();
+        const modeState = originalResolve({
+          bodyLike: document.body,
+          windowLike: window
+        });
+        return {
+          hasRuntime: true,
+          hasUpdateBinding: true,
+          resolveCallCount,
+          modeEnabled: Boolean(modeState && modeState.enabled)
+        };
+      } finally {
+        runtime.resolveTimerScrollModeFromContext = originalResolve;
+      }
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasUpdateBinding).toBe(true);
+    expect(snapshot.resolveCallCount).toBeGreaterThan(0);
+    expect(snapshot.modeEnabled).toBe(true);
+  });
+
   test("practice page applies fibonacci ruleset via runtime helper", async ({ page }) => {
     const response = await page.goto("/Practice_board.html?practice_ruleset=fibonacci", {
       waitUntil: "domcontentloaded"
