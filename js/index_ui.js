@@ -139,6 +139,13 @@ if (
 ) {
   throw new Error("CoreTimerModuleSettingsHostRuntime is required");
 }
+var timerModuleSettingsPageHostRuntime = window.CoreTimerModuleSettingsPageHostRuntime;
+if (
+  !timerModuleSettingsPageHostRuntime ||
+  typeof timerModuleSettingsPageHostRuntime.applyTimerModuleSettingsPageInit !== "function"
+) {
+  throw new Error("CoreTimerModuleSettingsPageHostRuntime is required");
+}
 var themeSettingsRuntime = window.CoreThemeSettingsRuntime;
 if (
   !themeSettingsRuntime ||
@@ -772,25 +779,15 @@ function removeLegacyUndoSettingsUI() {
   });
 }
 
-function ensureTimerModuleSettingsDom() {
-  return timerModuleSettingsHostRuntime.ensureTimerModuleSettingsToggle({
-    documentLike: document,
-    timerModuleRuntime: timerModuleRuntime
-  });
-}
-
 function initTimerModuleSettingsUI() {
-  var toggle = ensureTimerModuleSettingsDom();
-  var note = document.getElementById("timer-module-view-note");
-  timerModuleSettingsHostRuntime.applyTimerModuleSettingsUi({
-    toggle: toggle,
-    noteElement: note,
-    windowLike: window,
+  timerModuleSettingsPageHostRuntime.applyTimerModuleSettingsPageInit({
+    timerModuleSettingsHostRuntime: timerModuleSettingsHostRuntime,
     timerModuleRuntime: timerModuleRuntime,
+    documentLike: document,
+    windowLike: window,
     retryDelayMs: 60,
-    scheduleRetry: function (delayMs) {
-      setTimeout(initTimerModuleSettingsUI, delayMs);
-    },
+    setTimeoutLike: setTimeout,
+    reinvokeInit: initTimerModuleSettingsUI,
     syncMobileTimerboxUi:
       typeof window.syncMobileTimerboxUI === "function" ? window.syncMobileTimerboxUI : null
   });

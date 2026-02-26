@@ -5185,6 +5185,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const snapshot = await page.evaluate(async () => {
       const runtime = (window as any).CoreTimerModuleRuntime;
+      const pageHostRuntime = (window as any).CoreTimerModuleSettingsPageHostRuntime;
       if (
         !runtime ||
         typeof runtime.buildTimerModuleSettingsRowInnerHtml !== "function" ||
@@ -5193,13 +5194,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.resolveTimerModuleBindingState !== "function" ||
         typeof runtime.resolveTimerModuleViewMode !== "function" ||
         typeof runtime.resolveTimerModuleAppliedViewMode !== "function" ||
-        typeof runtime.resolveTimerModuleInitRetryState !== "function"
+        typeof runtime.resolveTimerModuleInitRetryState !== "function" ||
+        !pageHostRuntime ||
+        typeof pageHostRuntime.applyTimerModuleSettingsPageInit !== "function"
       ) {
-        return { hasRuntime: false };
+        return { hasRuntime: false, hasPageHostRuntime: false };
       }
       const openSettingsModal = (window as any).openSettingsModal;
       if (typeof openSettingsModal !== "function") {
-        return { hasRuntime: true, hasSettingsOpen: false };
+        return { hasRuntime: true, hasPageHostRuntime: true, hasSettingsOpen: false };
       }
       const originalBuild = runtime.buildTimerModuleSettingsRowInnerHtml;
       const originalResolveState = runtime.resolveTimerModuleSettingsState;
@@ -5208,6 +5211,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalResolveViewMode = runtime.resolveTimerModuleViewMode;
       const originalResolveAppliedViewMode = runtime.resolveTimerModuleAppliedViewMode;
       const originalResolveInitRetryState = runtime.resolveTimerModuleInitRetryState;
+      const originalApplyPageHost = pageHostRuntime.applyTimerModuleSettingsPageInit;
       let buildCallCount = 0;
       let resolveStateCallCount = 0;
       let resolveCurrentViewModeCallCount = 0;
@@ -5215,6 +5219,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let resolveViewModeCallCount = 0;
       let resolveAppliedViewModeCallCount = 0;
       let resolveInitRetryStateCallCount = 0;
+      let applyPageHostCallCount = 0;
       runtime.buildTimerModuleSettingsRowInnerHtml = function () {
         buildCallCount += 1;
         return originalBuild();
@@ -5243,6 +5248,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         resolveInitRetryStateCallCount += 1;
         return originalResolveInitRetryState(opts);
       };
+      pageHostRuntime.applyTimerModuleSettingsPageInit = function (opts: any) {
+        applyPageHostCallCount += 1;
+        return originalApplyPageHost(opts);
+      };
       try {
         const existingToggle = document.getElementById("timer-module-view-toggle");
         if (existingToggle) {
@@ -5260,7 +5269,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
         const toggle = document.getElementById("timer-module-view-toggle") as HTMLInputElement | null;
         const note = document.getElementById("timer-module-view-note");
         if (!toggle) {
-          return { hasRuntime: true, hasSettingsOpen: true, hasToggle: false };
+          return {
+            hasRuntime: true,
+            hasPageHostRuntime: true,
+            hasSettingsOpen: true,
+            hasToggle: false
+          };
         }
         toggle.checked = false;
         toggle.dispatchEvent(new Event("change", { bubbles: true }));
@@ -5269,8 +5283,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         });
         return {
           hasRuntime: true,
+          hasPageHostRuntime: true,
           hasSettingsOpen: true,
           hasToggle: true,
+          applyPageHostCallCount,
           buildCallCount,
           resolveStateCallCount,
           resolveCurrentViewModeCallCount,
@@ -5289,12 +5305,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
         runtime.resolveTimerModuleViewMode = originalResolveViewMode;
         runtime.resolveTimerModuleAppliedViewMode = originalResolveAppliedViewMode;
         runtime.resolveTimerModuleInitRetryState = originalResolveInitRetryState;
+        pageHostRuntime.applyTimerModuleSettingsPageInit = originalApplyPageHost;
       }
     });
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasPageHostRuntime).toBe(true);
     expect(snapshot.hasSettingsOpen).toBe(true);
     expect(snapshot.hasToggle).toBe(true);
+    expect(snapshot.applyPageHostCallCount).toBeGreaterThan(0);
     expect(snapshot.buildCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveStateCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveCurrentViewModeCallCount).toBeGreaterThan(0);
