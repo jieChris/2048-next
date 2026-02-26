@@ -54,6 +54,7 @@
   var historyToolbarRuntime = historyRuntimes.historyToolbarRuntime;
   var historyToolbarHostRuntime = historyRuntimes.historyToolbarHostRuntime;
   var historyToolbarEventsRuntime = historyRuntimes.historyToolbarEventsRuntime;
+  var historyToolbarEventsHostRuntime = historyRuntimes.historyToolbarEventsHostRuntime;
   var historyModeFilterRuntime = historyRuntimes.historyModeFilterRuntime;
   var historyStartupHostRuntime = historyRuntimes.historyStartupHostRuntime;
 
@@ -405,43 +406,12 @@
       });
     }
 
-    var prevBtn = el("history-prev-page");
-    if (prevBtn) {
-      prevBtn.addEventListener("click", function () {
-        var prevState = historyToolbarEventsRuntime.resolveHistoryPrevPageState(state.page);
-        if (!prevState.canGo) return;
-        state.page = prevState.nextPage;
-        loadHistory(false);
-      });
-    }
-
-    var nextBtn = el("history-next-page");
-    if (nextBtn) {
-      nextBtn.addEventListener("click", function () {
-        var nextState = historyToolbarEventsRuntime.resolveHistoryNextPageState(state.page);
-        state.page = nextState.nextPage;
-        loadHistory(false);
-      });
-    }
-
-    var reloadControlIds = historyToolbarEventsRuntime.resolveHistoryFilterReloadControlIds();
-    for (var i = 0; i < reloadControlIds.length; i++) {
-      var control = el(reloadControlIds[i]);
-      if (!control) continue;
-      control.addEventListener("change", function () {
-        loadHistory(true);
-      });
-    }
-
-    var keyword = el("history-keyword");
-    if (keyword) {
-      keyword.addEventListener("keydown", function (event) {
-        if (historyToolbarEventsRuntime.shouldHistoryKeywordTriggerReload(event && event.key)) {
-          event.preventDefault();
-          loadHistory(true);
-        }
-      });
-    }
+    historyToolbarEventsHostRuntime.bindHistoryToolbarPagerAndFilterEvents({
+      getElementById: el,
+      state: state,
+      loadHistory: loadHistory,
+      historyToolbarEventsRuntime: historyToolbarEventsRuntime
+    });
   }
 
   document.addEventListener("DOMContentLoaded", function () {

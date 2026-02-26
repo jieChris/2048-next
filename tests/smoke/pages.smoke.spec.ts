@@ -2174,6 +2174,49 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.keywordCallCount).toBeGreaterThan(0);
   });
 
+  test(
+    "history page delegates pager/filter event binding orchestration to toolbar-events host runtime helper",
+    async ({ page }) => {
+      await page.addInitScript(() => {
+        (window as any).__historyToolbarEventsHostBindCallCount = 0;
+        const target: Record<string, unknown> = {};
+        (window as any).CoreHistoryToolbarEventsHostRuntime = new Proxy(target, {
+          set(proxyTarget, prop, value) {
+            if (prop === "bindHistoryToolbarPagerAndFilterEvents" && typeof value === "function") {
+              proxyTarget[prop] = function (input: unknown) {
+                (window as any).__historyToolbarEventsHostBindCallCount =
+                  Number((window as any).__historyToolbarEventsHostBindCallCount || 0) + 1;
+                return (value as (args: unknown) => unknown)(input);
+              };
+              return true;
+            }
+            proxyTarget[prop] = value;
+            return true;
+          }
+        });
+      });
+
+      const response = await page.goto("/history.html", {
+        waitUntil: "domcontentloaded"
+      });
+      expect(response, "History response should exist").not.toBeNull();
+      expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+      await expect(page.locator("body")).toBeVisible();
+      await page.waitForTimeout(200);
+
+      const snapshot = await page.evaluate(() => ({
+        hasRuntime: Boolean(
+          (window as any).CoreHistoryToolbarEventsHostRuntime
+            ?.bindHistoryToolbarPagerAndFilterEvents
+        ),
+        bindCallCount: Number((window as any).__historyToolbarEventsHostBindCallCount || 0)
+      }));
+
+      expect(snapshot.hasRuntime).toBe(true);
+      expect(snapshot.bindCallCount).toBeGreaterThan(0);
+    }
+  );
+
   test("history page delegates record delete action decisions to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyDeleteActionCallCount = 0;

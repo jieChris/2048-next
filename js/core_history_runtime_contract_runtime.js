@@ -260,6 +260,11 @@
       ],
       "CoreHistoryToolbarEventsRuntime is required"
     );
+    var historyToolbarEventsHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryToolbarEventsHostRuntime,
+      ["bindHistoryToolbarPagerAndFilterEvents"],
+      "CoreHistoryToolbarEventsHostRuntime is required"
+    );
     var historyModeFilterRuntime = requireRuntimeFunctions(
       source.CoreHistoryModeFilterRuntime,
       ["resolveHistoryModeFilterOptions"],
@@ -300,6 +305,7 @@
       historyToolbarRuntime: historyToolbarRuntime,
       historyToolbarHostRuntime: historyToolbarHostRuntime,
       historyToolbarEventsRuntime: historyToolbarEventsRuntime,
+      historyToolbarEventsHostRuntime: historyToolbarEventsHostRuntime,
       historyModeFilterRuntime: historyModeFilterRuntime,
       historyStartupHostRuntime: historyStartupHostRuntime
     };

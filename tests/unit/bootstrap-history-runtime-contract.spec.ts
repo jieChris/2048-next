@@ -224,6 +224,12 @@ function createWindowLike() {
       resolveHistoryFilterReloadControlIds: () => [],
       shouldHistoryKeywordTriggerReload: () => false
     },
+    CoreHistoryToolbarEventsHostRuntime: {
+      bindHistoryToolbarPagerAndFilterEvents: () => ({
+        didBind: true,
+        boundControlCount: 0
+      })
+    },
     CoreHistoryModeFilterRuntime: {
       resolveHistoryModeFilterOptions: () => []
     },
@@ -251,6 +257,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyImportHostRuntime).toBe(source.CoreHistoryImportHostRuntime);
     expect(result.historyRecordHostRuntime).toBe(source.CoreHistoryRecordHostRuntime);
     expect(result.historyToolbarHostRuntime).toBe(source.CoreHistoryToolbarHostRuntime);
+    expect(result.historyToolbarEventsHostRuntime).toBe(source.CoreHistoryToolbarEventsHostRuntime);
     expect(result.historyModeFilterRuntime).toBe(source.CoreHistoryModeFilterRuntime);
     expect(result.historyStartupHostRuntime).toBe(source.CoreHistoryStartupHostRuntime);
   });
@@ -363,6 +370,15 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryStartupHostRuntime is required"
+    );
+  });
+
+  it("throws exact error when toolbar events host runtime misses required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryToolbarEventsHostRuntime = {};
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryToolbarEventsHostRuntime is required"
     );
   });
 });
