@@ -314,6 +314,13 @@ if (
 ) {
   throw new Error("CoreHomeGuideDoneNoticeHostRuntime is required");
 }
+var homeGuideFinishHostRuntime = window.CoreHomeGuideFinishHostRuntime;
+if (
+  !homeGuideFinishHostRuntime ||
+  typeof homeGuideFinishHostRuntime.applyHomeGuideFinish !== "function"
+) {
+  throw new Error("CoreHomeGuideFinishHostRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -1171,39 +1178,20 @@ function showHomeGuideDoneNotice() {
 }
 
 function finishHomeGuide(markSeen, options) {
-  options = options || {};
-  clearHomeGuideHighlight();
-  var lifecycleState = homeGuideRuntime.resolveHomeGuideLifecycleState({
-    action: "finish"
+  homeGuideFinishHostRuntime.applyHomeGuideFinish({
+    homeGuideRuntime: homeGuideRuntime,
+    homeGuideState: HOME_GUIDE_STATE,
+    markSeen: markSeen,
+    options: options || {},
+    clearHomeGuideHighlight: clearHomeGuideHighlight,
+    storageLike: getStorageByName("localStorage"),
+    seenKey: HOME_GUIDE_SEEN_KEY,
+    syncHomeGuideSettingsUI:
+      typeof window.syncHomeGuideSettingsUI === "function"
+        ? window.syncHomeGuideSettingsUI
+        : null,
+    showHomeGuideDoneNotice: showHomeGuideDoneNotice
   });
-  var sessionState = homeGuideRuntime.resolveHomeGuideSessionState({
-    lifecycleState: lifecycleState
-  });
-  HOME_GUIDE_STATE.active = sessionState.active;
-  HOME_GUIDE_STATE.steps = sessionState.steps;
-  HOME_GUIDE_STATE.index = sessionState.index;
-  HOME_GUIDE_STATE.fromSettings = sessionState.fromSettings;
-  var layerDisplayState = homeGuideRuntime.resolveHomeGuideLayerDisplayState({
-    active: HOME_GUIDE_STATE.active
-  });
-  if (HOME_GUIDE_STATE.overlay) {
-    HOME_GUIDE_STATE.overlay.style.display = layerDisplayState.overlayDisplay;
-  }
-  if (HOME_GUIDE_STATE.panel) {
-    HOME_GUIDE_STATE.panel.style.display = layerDisplayState.panelDisplay;
-  }
-  if (markSeen) {
-    homeGuideRuntime.markHomeGuideSeen({
-      storageLike: getStorageByName("localStorage"),
-      seenKey: HOME_GUIDE_SEEN_KEY
-    });
-  }
-  if (typeof window.syncHomeGuideSettingsUI === "function") {
-    window.syncHomeGuideSettingsUI();
-  }
-  if (options.showDoneNotice) {
-    showHomeGuideDoneNotice();
-  }
 }
 
 function showHomeGuideStep(index) {
