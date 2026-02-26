@@ -324,6 +324,13 @@ if (
 ) {
   throw new Error("CoreResponsiveRelayoutRuntime is required");
 }
+var responsiveRelayoutHostRuntime = window.CoreResponsiveRelayoutHostRuntime;
+if (
+  !responsiveRelayoutHostRuntime ||
+  typeof responsiveRelayoutHostRuntime.applyResponsiveRelayoutRequest !== "function"
+) {
+  throw new Error("CoreResponsiveRelayoutHostRuntime is required");
+}
 var topActionBindingsHostRuntime = window.CoreTopActionBindingsHostRuntime;
 if (
   !topActionBindingsHostRuntime ||
@@ -681,25 +688,23 @@ function initMobileTimerboxToggle() {
 }
 
 function requestResponsiveGameRelayout() {
-  var requestState = responsiveRelayoutRuntime.resolveResponsiveRelayoutRequest({
-    isTimerboxMobileScope: isTimerboxMobileScope(),
-    hasExistingTimer: !!mobileRelayoutTimer,
-    delayMs: 120
+  var requestResult = responsiveRelayoutHostRuntime.applyResponsiveRelayoutRequest({
+    responsiveRelayoutRuntime: responsiveRelayoutRuntime,
+    isTimerboxMobileScope: isTimerboxMobileScope,
+    existingTimer: mobileRelayoutTimer,
+    delayMs: 120,
+    clearTimeoutLike: clearTimeout,
+    setTimeoutLike: setTimeout,
+    syncMobileHintUI: syncMobileHintUI,
+    syncMobileTopActionsPlacement: syncMobileTopActionsPlacement,
+    syncPracticeTopActionsPlacement: syncPracticeTopActionsPlacement,
+    syncMobileUndoTopButtonAvailability: syncMobileUndoTopButtonAvailability,
+    syncMobileTimerboxUI: syncMobileTimerboxUI,
+    manager: window.game_manager || null
   });
-  if (!requestState.shouldSchedule) return;
-  if (requestState.shouldClearExistingTimer && mobileRelayoutTimer) {
-    clearTimeout(mobileRelayoutTimer);
-  }
-  mobileRelayoutTimer = setTimeout(function () {
-    responsiveRelayoutRuntime.applyResponsiveRelayout({
-      syncMobileHintUI: syncMobileHintUI,
-      syncMobileTopActionsPlacement: syncMobileTopActionsPlacement,
-      syncPracticeTopActionsPlacement: syncPracticeTopActionsPlacement,
-      syncMobileUndoTopButtonAvailability: syncMobileUndoTopButtonAvailability,
-      syncMobileTimerboxUI: syncMobileTimerboxUI,
-      manager: window.game_manager || null
-    });
-  }, requestState.delayMs);
+  mobileRelayoutTimer = requestResult && Object.prototype.hasOwnProperty.call(requestResult, "timerRef")
+    ? requestResult.timerRef
+    : mobileRelayoutTimer;
 }
 
 window.syncMobileTimerboxUI = syncMobileTimerboxUI;

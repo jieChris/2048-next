@@ -155,7 +155,8 @@
   - 新增 `src/bootstrap/mobile-viewport.ts` + `js/core_mobile_viewport_runtime.js`，`index_ui.js` 委托紧凑视口/计时器折叠视口/移动端视口判定
   - `mobile-viewport` 已承接页面作用域判定（`resolvePageScopeValue`/`isGamePageScope`/`isPracticePageScope`/`isTimerboxMobileScope`），`index_ui.js` 不再直接读取 `body[data-page]`
   - 新增 `src/bootstrap/responsive-relayout.ts` + `js/core_responsive_relayout_runtime.js`，`index_ui.js` 委托重排调度决策与重排执行链（sync + manager 视觉刷新）
-  - `index_ui.js` 的 `requestResponsiveGameRelayout` 已改为 `CoreResponsiveRelayoutRuntime` 调用，页面层不再内联重排判定与 manager 刷新分支
+  - `index_ui.js` 的 `requestResponsiveGameRelayout` 已改为 `CoreResponsiveRelayoutHostRuntime` 调用（内部委托 `CoreResponsiveRelayoutRuntime`），页面层不再内联重排判定、timer 调度与 manager 刷新分支
+  - 新增 `src/bootstrap/responsive-relayout-host.ts` + `js/core_responsive_relayout_host_runtime.js`，`index_ui.js` 委托移动端重排请求主链（request state 解析、timer 清理与调度、回调执行）编排
   - 新增 `src/bootstrap/top-action-bindings-host.ts` + `js/core_top_action_bindings_host_runtime.js`，`index_ui.js` 委托顶部按钮与设置弹层事件绑定（undo/export/practice/settings）
   - `index_ui.js` 的 `DOMContentLoaded` 顶部动作绑定已收敛为 `CoreTopActionBindingsHostRuntime.applyTopActionBindings` 调用
   - 新增 `src/bootstrap/game-over-undo-host.ts` + `js/core_game_over_undo_host_runtime.js`，`index_ui.js` 委托 game-over 撤回按钮（click/touch 防重）绑定
