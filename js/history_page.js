@@ -39,6 +39,7 @@
   var historyCanaryViewRuntime = historyRuntimes.historyCanaryViewRuntime;
   var historySummaryRuntime = historyRuntimes.historySummaryRuntime;
   var historyStatusRuntime = historyRuntimes.historyStatusRuntime;
+  var historyViewHostRuntime = historyRuntimes.historyViewHostRuntime;
   var historyExportRuntime = historyRuntimes.historyExportRuntime;
   var historyQueryRuntime = historyRuntimes.historyQueryRuntime;
   var historyLoadRuntime = historyRuntimes.historyLoadRuntime;
@@ -63,14 +64,13 @@
   var historyStartupHostRuntime = historyRuntimes.historyStartupHostRuntime;
 
   function setStatus(text, isError) {
-    var status = el("history-status");
-    if (!status) return;
-    var statusState = historyStatusRuntime.resolveHistoryStatusDisplayState({
+    historyViewHostRuntime.applyHistoryStatus({
+      getElementById: el,
+      statusElementId: "history-status",
       text: text,
-      isError: isError
+      isError: isError,
+      historyStatusRuntime: historyStatusRuntime
     });
-    status.textContent = statusState.text;
-    status.style.color = statusState.color;
   }
 
   function boardToHtml(board, width, height) {
@@ -78,13 +78,12 @@
   }
 
   function buildSummary(result) {
-    var summary = el("history-summary");
-    if (!summary) return;
-    summary.textContent = historySummaryRuntime.resolveHistorySummaryText({
-      total: result && result.total,
-      page: state.page,
-      pageSize: state.pageSize,
-      adapterParityFilter: state.adapterParityFilter
+    historyViewHostRuntime.applyHistorySummary({
+      getElementById: el,
+      summaryElementId: "history-summary",
+      result: result,
+      state: state,
+      historySummaryRuntime: historySummaryRuntime
     });
   }
 

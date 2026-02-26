@@ -221,6 +221,7 @@
   - 新增 `src/bootstrap/history-canary-view.ts` + `js/core_history_canary_view_runtime.js`，`history_page.js` 委托 canary 面板展示态（来源文案/模式文案/gate 样式/storage 文案）模型计算
   - 新增 `src/bootstrap/history-summary.ts` + `js/core_history_summary_runtime.js`，`history_page.js` 委托顶部汇总文案（总条数/分页/筛选标签）计算
   - 新增 `src/bootstrap/history-status.ts` + `js/core_history_status_runtime.js`，`history_page.js` 委托状态栏文案/颜色展示态（error 与 normal）模型计算
+  - 新增 `src/bootstrap/history-view-host.ts` + `js/core_history_view_host_runtime.js`，`history_page.js` 委托状态栏与顶部汇总文案的 DOM 应用编排
   - 新增 `src/bootstrap/history-export.ts` + `js/core_history_export_runtime.js`，`history_page.js` 委托导出文件名生成与 mismatch 全量导出分页收集循环
   - `history-export` 已继续承接单条记录导出状态与 mismatch 导出源读取（`resolveHistorySingleRecordExportState`/`resolveHistoryMismatchExportRecordIds`），`history_page.js` 不再本地拼装导出源与 payload
   - `history-export` 已继续承接单条记录导出执行（`downloadHistorySingleRecord`），`history_page.js` 不再本地判断导出状态后调用 `LocalHistoryStore.download`

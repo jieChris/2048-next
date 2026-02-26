@@ -90,6 +90,17 @@ function createWindowLike() {
     CoreHistoryStatusRuntime: {
       resolveHistoryStatusDisplayState: () => ({ text: "", color: "" })
     },
+    CoreHistoryViewHostRuntime: {
+      applyHistoryStatus: () => ({
+        didApply: true,
+        text: "",
+        color: ""
+      }),
+      applyHistorySummary: () => ({
+        didApply: true,
+        text: ""
+      })
+    },
     CoreHistoryExportRuntime: {
       resolveHistoryRecordExportFileName: () => "",
       collectHistoryRecordIdsForExport: () => [],
@@ -295,6 +306,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyQueryRuntime).toBe(source.CoreHistoryQueryRuntime);
     expect(result.historyLoadRuntime).toBe(source.CoreHistoryLoadRuntime);
     expect(result.historyLoadHostRuntime).toBe(source.CoreHistoryLoadHostRuntime);
+    expect(result.historyViewHostRuntime).toBe(source.CoreHistoryViewHostRuntime);
     expect(result.historyImportHostRuntime).toBe(source.CoreHistoryImportHostRuntime);
     expect(result.historyImportBindHostRuntime).toBe(source.CoreHistoryImportBindHostRuntime);
     expect(result.historyRecordListHostRuntime).toBe(source.CoreHistoryRecordListHostRuntime);

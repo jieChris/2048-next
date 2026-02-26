@@ -124,6 +124,11 @@
       ["resolveHistoryStatusDisplayState"],
       "CoreHistoryStatusRuntime is required"
     );
+    var historyViewHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryViewHostRuntime,
+      ["applyHistoryStatus", "applyHistorySummary"],
+      "CoreHistoryViewHostRuntime is required"
+    );
     var historyExportRuntime = requireRuntimeFunctions(
       source.CoreHistoryExportRuntime,
       [
@@ -318,6 +323,7 @@
       historyCanaryViewRuntime: historyCanaryViewRuntime,
       historySummaryRuntime: historySummaryRuntime,
       historyStatusRuntime: historyStatusRuntime,
+      historyViewHostRuntime: historyViewHostRuntime,
       historyExportRuntime: historyExportRuntime,
       historyQueryRuntime: historyQueryRuntime,
       historyLoadRuntime: historyLoadRuntime,

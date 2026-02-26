@@ -14,6 +14,7 @@ export interface HistoryRuntimeContractWindowLike {
   CoreHistoryCanaryViewRuntime?: unknown;
   CoreHistorySummaryRuntime?: unknown;
   CoreHistoryStatusRuntime?: unknown;
+  CoreHistoryViewHostRuntime?: unknown;
   CoreHistoryExportRuntime?: unknown;
   CoreHistoryQueryRuntime?: unknown;
   CoreHistoryLoadRuntime?: unknown;
@@ -52,6 +53,7 @@ export interface ResolveHistoryRuntimeContractsResult {
   historyCanaryViewRuntime: AnyRecord;
   historySummaryRuntime: AnyRecord;
   historyStatusRuntime: AnyRecord;
+  historyViewHostRuntime: AnyRecord;
   historyExportRuntime: AnyRecord;
   historyQueryRuntime: AnyRecord;
   historyLoadRuntime: AnyRecord;
@@ -202,6 +204,11 @@ export function resolveHistoryRuntimeContracts(
     source.CoreHistoryStatusRuntime,
     ["resolveHistoryStatusDisplayState"],
     "CoreHistoryStatusRuntime is required"
+  );
+  const historyViewHostRuntime = requireRuntimeFunctions(
+    source.CoreHistoryViewHostRuntime,
+    ["applyHistoryStatus", "applyHistorySummary"],
+    "CoreHistoryViewHostRuntime is required"
   );
   const historyExportRuntime = requireRuntimeFunctions(
     source.CoreHistoryExportRuntime,
@@ -397,6 +404,7 @@ export function resolveHistoryRuntimeContracts(
     historyCanaryViewRuntime,
     historySummaryRuntime,
     historyStatusRuntime,
+    historyViewHostRuntime,
     historyExportRuntime,
     historyQueryRuntime,
     historyLoadRuntime,
