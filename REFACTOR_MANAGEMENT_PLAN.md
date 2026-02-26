@@ -124,6 +124,7 @@
   - 新增 `src/bootstrap/theme-settings-host.ts` + `js/core_theme_settings_host_runtime.js`，`index_ui.js` 委托主题设置 UI 编排主链（双预览渲染、下拉交互绑定、themechange 同步）
   - 新增 `src/bootstrap/replay-modal.ts` + `js/core_replay_modal_runtime.js`，`index_ui.js` 委托回放弹窗与设置弹窗的 DOM 开关/动作绑定编排
   - `index_ui.js` 顶部弹窗逻辑已改为 `CoreReplayModalRuntime` 调用（`showReplayModal/closeReplayModal/openSettingsModal/closeSettingsModal`）
+  - 新增 `src/bootstrap/settings-modal-host.ts` + `js/core_settings_modal_host_runtime.js`，`index_ui.js` 委托设置弹窗开关主链编排（modal 开关 + 主题/计时器/引导设置初始化）
   - 新增 `src/bootstrap/replay-export.ts` + `js/core_replay_export_runtime.js`，`index_ui.js` 委托回放导出与剪贴板复制回退（clipboard/fallback）逻辑
   - `index_ui.js` 已移除本地 `copyToClipboard/fallbackCopy`，`window.exportReplay` 收敛为 `CoreReplayExportRuntime.applyReplayExport` 调用
   - 新增 `src/bootstrap/pretty-time.ts` + `js/core_pretty_time_runtime.js`，`index_ui.js` 委托计时展示格式化（`window.pretty`）

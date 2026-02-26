@@ -5411,6 +5411,82 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolveOptionSelectedCallCount).toBeGreaterThan(0);
   });
 
+  test("index ui delegates settings modal orchestration to host runtime helper", async ({ page }) => {
+    const response = await page.goto("/index.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(220);
+
+    const snapshot = await page.evaluate(async () => {
+      const runtime = (window as any).CoreSettingsModalHostRuntime;
+      if (
+        !runtime ||
+        typeof runtime.applySettingsModalOpenOrchestration !== "function" ||
+        typeof runtime.applySettingsModalCloseOrchestration !== "function"
+      ) {
+        return { hasRuntime: false };
+      }
+      const openSettingsModal = (window as any).openSettingsModal;
+      const closeSettingsModal = (window as any).closeSettingsModal;
+      if (typeof openSettingsModal !== "function" || typeof closeSettingsModal !== "function") {
+        return { hasRuntime: true, hasBindings: false };
+      }
+
+      const originalOpen = runtime.applySettingsModalOpenOrchestration;
+      const originalClose = runtime.applySettingsModalCloseOrchestration;
+      let openCallCount = 0;
+      let closeCallCount = 0;
+      runtime.applySettingsModalOpenOrchestration = function (opts: any) {
+        openCallCount += 1;
+        return originalOpen(opts);
+      };
+      runtime.applySettingsModalCloseOrchestration = function (opts: any) {
+        closeCallCount += 1;
+        return originalClose(opts);
+      };
+
+      try {
+        openSettingsModal();
+        await new Promise((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => resolve(null));
+          });
+        });
+
+        const modal = document.getElementById("settings-modal");
+        const openDisplay = modal ? String((modal as HTMLElement).style.display || "") : "";
+
+        closeSettingsModal();
+        await new Promise((resolve) => {
+          window.requestAnimationFrame(() => resolve(null));
+        });
+        const closeDisplay = modal ? String((modal as HTMLElement).style.display || "") : "";
+
+        return {
+          hasRuntime: true,
+          hasBindings: true,
+          openCallCount,
+          closeCallCount,
+          openDisplay,
+          closeDisplay
+        };
+      } finally {
+        runtime.applySettingsModalOpenOrchestration = originalOpen;
+        runtime.applySettingsModalCloseOrchestration = originalClose;
+      }
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasBindings).toBe(true);
+    expect(snapshot.openCallCount).toBeGreaterThan(0);
+    expect(snapshot.closeCallCount).toBeGreaterThan(0);
+    expect(snapshot.openDisplay).toBe("flex");
+    expect(snapshot.closeDisplay).toBe("none");
+  });
+
   test("index ui delegates storage resolution to runtime helper", async ({ page }) => {
     const response = await page.goto("/index.html", {
       waitUntil: "domcontentloaded"

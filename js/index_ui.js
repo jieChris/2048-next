@@ -2,6 +2,7 @@
 
 var replayModalRuntime = window.CoreReplayModalRuntime;
 var replayExportRuntime = window.CoreReplayExportRuntime;
+var settingsModalHostRuntime = window.CoreSettingsModalHostRuntime;
 if (
   !replayModalRuntime ||
   typeof replayModalRuntime.applyReplayModalOpen !== "function" ||
@@ -16,6 +17,13 @@ if (
   typeof replayExportRuntime.applyReplayExport !== "function"
 ) {
   throw new Error("CoreReplayExportRuntime is required");
+}
+if (
+  !settingsModalHostRuntime ||
+  typeof settingsModalHostRuntime.applySettingsModalOpenOrchestration !== "function" ||
+  typeof settingsModalHostRuntime.applySettingsModalCloseOrchestration !== "function"
+) {
+  throw new Error("CoreSettingsModalHostRuntime is required");
 }
 
 // Replay Modal Functions
@@ -37,17 +45,19 @@ window.closeReplayModal = function() {
 };
 
 window.openSettingsModal = function () {
-  replayModalRuntime.applySettingsModalOpen({
-    documentLike: document
+  settingsModalHostRuntime.applySettingsModalOpenOrchestration({
+    replayModalRuntime: replayModalRuntime,
+    documentLike: document,
+    removeLegacyUndoSettingsUI: removeLegacyUndoSettingsUI,
+    initThemeSettingsUI: initThemeSettingsUI,
+    initTimerModuleSettingsUI: initTimerModuleSettingsUI,
+    initHomeGuideSettingsUI: initHomeGuideSettingsUI
   });
-  removeLegacyUndoSettingsUI();
-  initThemeSettingsUI();
-  initTimerModuleSettingsUI();
-  initHomeGuideSettingsUI();
 };
 
 window.closeSettingsModal = function () {
-  replayModalRuntime.applySettingsModalClose({
+  settingsModalHostRuntime.applySettingsModalCloseOrchestration({
+    replayModalRuntime: replayModalRuntime,
     documentLike: document
   });
 };
