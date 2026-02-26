@@ -293,6 +293,13 @@ if (
 ) {
   throw new Error("CoreHomeGuideStartupHostRuntime is required");
 }
+var homeGuideSettingsHostRuntime = window.CoreHomeGuideSettingsHostRuntime;
+if (
+  !homeGuideSettingsHostRuntime ||
+  typeof homeGuideSettingsHostRuntime.applyHomeGuideSettingsUi !== "function"
+) {
+  throw new Error("CoreHomeGuideSettingsHostRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -1372,72 +1379,16 @@ function startHomeGuide(options) {
   }
 }
 
-function ensureHomeGuideSettingsDom() {
-  var modal = document.getElementById("settings-modal");
-  if (!modal) return null;
-  if (document.getElementById("home-guide-toggle")) {
-    return document.getElementById("home-guide-toggle");
-  }
-  var content = modal.querySelector(".settings-modal-content");
-  if (!content) return null;
-
-  var row = document.createElement("div");
-  row.className = "settings-row";
-  row.innerHTML = homeGuideRuntime.buildHomeGuideSettingsRowInnerHtml();
-
-  var actions = content.querySelector(".replay-modal-actions");
-  if (actions && actions.parentNode === content) {
-    content.insertBefore(row, actions);
-  } else {
-    content.appendChild(row);
-  }
-  return document.getElementById("home-guide-toggle");
-}
-
 function initHomeGuideSettingsUI() {
-  var toggle = ensureHomeGuideSettingsDom();
-  var note = document.getElementById("home-guide-note");
-  if (!toggle) return;
-
-  function sync() {
-    var uiState = homeGuideRuntime.resolveHomeGuideSettingsState({
-      isHomePage: isHomePage(),
-      guideActive: HOME_GUIDE_STATE.active,
-      fromSettings: HOME_GUIDE_STATE.fromSettings
-    });
-    toggle.disabled = uiState.toggleDisabled;
-    toggle.checked = uiState.toggleChecked;
-    if (note) {
-      note.textContent = uiState.noteText;
-    }
-  }
-
-  window.syncHomeGuideSettingsUI = sync;
-
-  var toggleBindingState = homeGuideRuntime.resolveHomeGuideBindingState({
-    alreadyBound: !!toggle.__homeGuideBound
+  homeGuideSettingsHostRuntime.applyHomeGuideSettingsUi({
+    documentLike: document,
+    windowLike: window,
+    homeGuideRuntime: homeGuideRuntime,
+    homeGuideState: HOME_GUIDE_STATE,
+    isHomePage: isHomePage,
+    closeSettingsModal: window.closeSettingsModal,
+    startHomeGuide: startHomeGuide
   });
-  if (toggleBindingState.shouldBind) {
-    toggle.__homeGuideBound = toggleBindingState.boundValue;
-    toggle.addEventListener("change", function () {
-      var toggleAction = homeGuideRuntime.resolveHomeGuideToggleAction({
-        checked: !!this.checked,
-        isHomePage: isHomePage()
-      });
-      if (toggleAction.shouldResync) {
-        sync();
-        return;
-      }
-      if (toggleAction.shouldStartGuide) {
-        if (toggleAction.shouldCloseSettings) {
-          window.closeSettingsModal();
-        }
-        startHomeGuide({ fromSettings: toggleAction.startFromSettings });
-      }
-    });
-  }
-
-  sync();
 }
 
 function autoStartHomeGuideIfNeeded() {

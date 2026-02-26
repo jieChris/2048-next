@@ -151,6 +151,8 @@
   - `index_ui.js` 的 `undo-btn-gameover` 绑定已收敛为 `CoreGameOverUndoHostRuntime.bindGameOverUndoControl` 调用
   - 新增 `src/bootstrap/index-ui-startup-host.ts` + `js/core_index_ui_startup_host_runtime.js`，`index_ui.js` 委托 `DOMContentLoaded` 启动编排主链（顶部绑定/设置初始化/重排监听）
   - `index_ui.js` 的 DOMContentLoaded 主流程已收敛为 `CoreIndexUiStartupHostRuntime.applyIndexUiStartup` 调用
+  - 新增 `src/bootstrap/home-guide-settings-host.ts` + `js/core_home_guide_settings_host_runtime.js`，`index_ui.js` 委托首页指引设置项插入/同步/绑定编排
+  - `index_ui.js` 的 `initHomeGuideSettingsUI` 已收敛为 `CoreHomeGuideSettingsHostRuntime.applyHomeGuideSettingsUi` 调用
   - 新增 `src/bootstrap/home-guide-startup-host.ts` + `js/core_home_guide_startup_host_runtime.js`，`index_ui.js` 委托首页新手引导自动启动编排（路径判定/存储判定/延迟调度）
   - `index_ui.js` 的 `autoStartHomeGuideIfNeeded` 已收敛为 `CoreHomeGuideStartupHostRuntime.applyHomeGuideAutoStart` 调用
   - 新增 `src/bootstrap/storage.ts` + `js/core_storage_runtime.js`，`index_ui.js` 委托 `localStorage/sessionStorage` 安全获取，不再内联存储访问容错逻辑
