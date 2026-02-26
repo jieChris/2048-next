@@ -2095,6 +2095,45 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.clearAllCallCount).toBeGreaterThan(0);
   });
 
+  test("history page delegates toolbar button binding orchestration to bind-host runtime helper", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyToolbarBindHostCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryToolbarBindHostRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "bindHistoryToolbarActionButtons" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyToolbarBindHostCallCount =
+                Number((window as any).__historyToolbarBindHostCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    const snapshot = await page.evaluate(() => ({
+      hasRuntime: Boolean((window as any).CoreHistoryToolbarBindHostRuntime?.bindHistoryToolbarActionButtons),
+      bindCallCount: Number((window as any).__historyToolbarBindHostCallCount || 0)
+    }));
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.bindCallCount).toBeGreaterThan(0);
+  });
+
   test("history page delegates pager and keyword trigger decisions to toolbar-events runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historyToolbarPrevPageCallCount = 0;

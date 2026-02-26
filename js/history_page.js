@@ -53,6 +53,7 @@
   var historyCanaryStorageRuntime = historyRuntimes.historyCanaryStorageRuntime;
   var historyToolbarRuntime = historyRuntimes.historyToolbarRuntime;
   var historyToolbarHostRuntime = historyRuntimes.historyToolbarHostRuntime;
+  var historyToolbarBindHostRuntime = historyRuntimes.historyToolbarBindHostRuntime;
   var historyToolbarEventsRuntime = historyRuntimes.historyToolbarEventsRuntime;
   var historyToolbarEventsHostRuntime = historyRuntimes.historyToolbarEventsHostRuntime;
   var historyModeFilterRuntime = historyRuntimes.historyModeFilterRuntime;
@@ -291,61 +292,21 @@
   }
 
   function bindToolbarActions() {
-    var reloadBtn = el("history-load-btn");
-    if (reloadBtn) {
-      reloadBtn.addEventListener("click", function () {
-        loadHistory(true);
-      });
-    }
-
-    var exportAllBtn = el("history-export-all-btn");
-    if (exportAllBtn) {
-      exportAllBtn.addEventListener("click", function () {
-        var actionResult = historyToolbarHostRuntime.applyHistoryExportAllAction({
-          localHistoryStore: window.LocalHistoryStore,
-          dateValue: new Date(),
-          historyExportRuntime: historyExportRuntime,
-          historyToolbarRuntime: historyToolbarRuntime
-        });
-        if (actionResult && actionResult.shouldSetStatus) {
-          setStatus(actionResult.statusText, actionResult.isError);
-        }
-      });
-    }
-
-    var exportMismatchBtn = el("history-export-mismatch-btn");
-    if (exportMismatchBtn) {
-      exportMismatchBtn.addEventListener("click", function () {
-        readFilters();
-        var actionResult = historyToolbarHostRuntime.applyHistoryMismatchExportAction({
-          localHistoryStore: window.LocalHistoryStore,
-          modeKey: state.modeKey,
-          keyword: state.keyword,
-          sortBy: state.sortBy,
-          dateValue: new Date(),
-          historyExportRuntime: historyExportRuntime,
-          historyToolbarRuntime: historyToolbarRuntime
-        });
-        if (actionResult && actionResult.shouldSetStatus) {
-          setStatus(actionResult.statusText, actionResult.isError);
-        }
-      });
-    }
-
-    var clearAllBtn = el("history-clear-all-btn");
-    if (clearAllBtn) {
-      clearAllBtn.addEventListener("click", function () {
-        var actionResult = historyToolbarHostRuntime.applyHistoryClearAllAction({
-          localHistoryStore: window.LocalHistoryStore,
-          historyToolbarRuntime: historyToolbarRuntime,
-          confirmAction: window.confirm
-        });
-        if (actionResult && actionResult.shouldSetStatus) {
-          setStatus(actionResult.statusText, actionResult.isError);
-        }
-        if (actionResult && actionResult.shouldReload) loadHistory(true);
-      });
-    }
+    historyToolbarBindHostRuntime.bindHistoryToolbarActionButtons({
+      getElementById: el,
+      localHistoryStore: window.LocalHistoryStore,
+      state: state,
+      readFilters: readFilters,
+      setStatus: setStatus,
+      loadHistory: loadHistory,
+      historyExportRuntime: historyExportRuntime,
+      historyToolbarRuntime: historyToolbarRuntime,
+      historyToolbarHostRuntime: historyToolbarHostRuntime,
+      confirmAction: window.confirm,
+      createDate: function () {
+        return new Date();
+      }
+    });
 
     var importBtn = el("history-import-btn");
     var importReplaceBtn = el("history-import-replace-btn");

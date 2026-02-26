@@ -250,6 +250,11 @@
       ],
       "CoreHistoryToolbarHostRuntime is required"
     );
+    var historyToolbarBindHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryToolbarBindHostRuntime,
+      ["bindHistoryToolbarActionButtons"],
+      "CoreHistoryToolbarBindHostRuntime is required"
+    );
     var historyToolbarEventsRuntime = requireRuntimeFunctions(
       source.CoreHistoryToolbarEventsRuntime,
       [
@@ -304,6 +309,7 @@
       historyCanaryStorageRuntime: historyCanaryStorageRuntime,
       historyToolbarRuntime: historyToolbarRuntime,
       historyToolbarHostRuntime: historyToolbarHostRuntime,
+      historyToolbarBindHostRuntime: historyToolbarBindHostRuntime,
       historyToolbarEventsRuntime: historyToolbarEventsRuntime,
       historyToolbarEventsHostRuntime: historyToolbarEventsHostRuntime,
       historyModeFilterRuntime: historyModeFilterRuntime,

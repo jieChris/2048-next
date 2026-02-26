@@ -241,6 +241,7 @@
   - 新增 `src/bootstrap/history-toolbar.ts` + `js/core_history_toolbar_runtime.js`，`history_page.js` 委托工具栏动作决策（导出日期标签/文件名、mismatch 导出查询、清空确认计划与提示文案）
   - `history-toolbar` 已继续承接清空历史执行（`executeHistoryClearAll`），`history_page.js` 不再本地调用 `LocalHistoryStore.clearAll`
   - 新增 `src/bootstrap/history-toolbar-host.ts` + `js/core_history_toolbar_host_runtime.js`，`history_page.js` 委托工具栏导出/清空执行编排主链（export-all/mismatch/clear-all）
+  - 新增 `src/bootstrap/history-toolbar-bind-host.ts` + `js/core_history_toolbar_bind_host_runtime.js`，`history_page.js` 委托工具栏按钮绑定编排（刷新/导出全部/导出不一致/清空）
   - 新增 `src/bootstrap/history-toolbar-events.ts` + `js/core_history_toolbar_events_runtime.js`，`history_page.js` 委托分页步进决策、筛选控件 reload 绑定列表与关键词 Enter 触发判定
   - 新增 `src/bootstrap/history-toolbar-events-host.ts` + `js/core_history_toolbar_events_host_runtime.js`，`history_page.js` 委托分页/筛选/关键词监听绑定编排
   - 新增 `src/bootstrap/history-mode-filter.ts` + `js/core_history_mode_filter_runtime.js`，`history_page.js` 委托模式筛选下拉选项模型组装

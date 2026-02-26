@@ -28,6 +28,7 @@ export interface HistoryRuntimeContractWindowLike {
   CoreHistoryCanaryStorageRuntime?: unknown;
   CoreHistoryToolbarRuntime?: unknown;
   CoreHistoryToolbarHostRuntime?: unknown;
+  CoreHistoryToolbarBindHostRuntime?: unknown;
   CoreHistoryToolbarEventsRuntime?: unknown;
   CoreHistoryToolbarEventsHostRuntime?: unknown;
   CoreHistoryModeFilterRuntime?: unknown;
@@ -62,6 +63,7 @@ export interface ResolveHistoryRuntimeContractsResult {
   historyCanaryStorageRuntime: AnyRecord;
   historyToolbarRuntime: AnyRecord;
   historyToolbarHostRuntime: AnyRecord;
+  historyToolbarBindHostRuntime: AnyRecord;
   historyToolbarEventsRuntime: AnyRecord;
   historyToolbarEventsHostRuntime: AnyRecord;
   historyModeFilterRuntime: AnyRecord;
@@ -321,6 +323,11 @@ export function resolveHistoryRuntimeContracts(
     ],
     "CoreHistoryToolbarHostRuntime is required"
   );
+  const historyToolbarBindHostRuntime = requireRuntimeFunctions(
+    source.CoreHistoryToolbarBindHostRuntime,
+    ["bindHistoryToolbarActionButtons"],
+    "CoreHistoryToolbarBindHostRuntime is required"
+  );
   const historyToolbarEventsRuntime = requireRuntimeFunctions(
     source.CoreHistoryToolbarEventsRuntime,
     [
@@ -375,6 +382,7 @@ export function resolveHistoryRuntimeContracts(
     historyCanaryStorageRuntime,
     historyToolbarRuntime,
     historyToolbarHostRuntime,
+    historyToolbarBindHostRuntime,
     historyToolbarEventsRuntime,
     historyToolbarEventsHostRuntime,
     historyModeFilterRuntime,

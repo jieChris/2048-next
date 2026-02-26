@@ -218,6 +218,12 @@ function createWindowLike() {
         shouldReload: false
       })
     },
+    CoreHistoryToolbarBindHostRuntime: {
+      bindHistoryToolbarActionButtons: () => ({
+        didBind: true,
+        boundControlCount: 0
+      })
+    },
     CoreHistoryToolbarEventsRuntime: {
       resolveHistoryPrevPageState: () => ({ canGo: false, nextPage: 1 }),
       resolveHistoryNextPageState: () => ({ canGo: false, nextPage: 1 }),
@@ -257,6 +263,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyImportHostRuntime).toBe(source.CoreHistoryImportHostRuntime);
     expect(result.historyRecordHostRuntime).toBe(source.CoreHistoryRecordHostRuntime);
     expect(result.historyToolbarHostRuntime).toBe(source.CoreHistoryToolbarHostRuntime);
+    expect(result.historyToolbarBindHostRuntime).toBe(source.CoreHistoryToolbarBindHostRuntime);
     expect(result.historyToolbarEventsHostRuntime).toBe(source.CoreHistoryToolbarEventsHostRuntime);
     expect(result.historyModeFilterRuntime).toBe(source.CoreHistoryModeFilterRuntime);
     expect(result.historyStartupHostRuntime).toBe(source.CoreHistoryStartupHostRuntime);
@@ -379,6 +386,15 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryToolbarEventsHostRuntime is required"
+    );
+  });
+
+  it("throws exact error when toolbar bind host runtime misses required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryToolbarBindHostRuntime = {};
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryToolbarBindHostRuntime is required"
     );
   });
 });
