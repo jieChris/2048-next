@@ -286,6 +286,13 @@ if (
 ) {
   throw new Error("CoreIndexUiStartupHostRuntime is required");
 }
+var homeGuideStartupHostRuntime = window.CoreHomeGuideStartupHostRuntime;
+if (
+  !homeGuideStartupHostRuntime ||
+  typeof homeGuideStartupHostRuntime.applyHomeGuideAutoStart !== "function"
+) {
+  throw new Error("CoreHomeGuideStartupHostRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -1434,18 +1441,15 @@ function initHomeGuideSettingsUI() {
 }
 
 function autoStartHomeGuideIfNeeded() {
-  var path = homeGuideRuntime.resolveHomeGuidePathname({
-    locationLike: typeof window !== "undefined" ? window.location : null
-  });
-  var autoStartState = homeGuideRuntime.resolveHomeGuideAutoStart({
-    pathname: path,
+  homeGuideStartupHostRuntime.applyHomeGuideAutoStart({
+    homeGuideRuntime: homeGuideRuntime,
+    locationLike: typeof window !== "undefined" ? window.location : null,
     storageLike: getStorageByName("localStorage"),
-    seenKey: HOME_GUIDE_SEEN_KEY
+    seenKey: HOME_GUIDE_SEEN_KEY,
+    startHomeGuide: startHomeGuide,
+    setTimeoutLike: setTimeout,
+    delayMs: 260
   });
-  if (!autoStartState.shouldAutoStart) return;
-  setTimeout(function () {
-    startHomeGuide({ fromSettings: false });
-  }, 260);
 }
 
 // Initialize Event Listeners
