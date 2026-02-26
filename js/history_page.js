@@ -46,6 +46,7 @@
   var historyLoadRuntime = historyRuntimes.historyLoadRuntime;
   var historyLoadHostRuntime = historyRuntimes.historyLoadHostRuntime;
   var historyLoadEntryHostRuntime = historyRuntimes.historyLoadEntryHostRuntime;
+  var historyLoadContextHostRuntime = historyRuntimes.historyLoadContextHostRuntime;
   var historyPanelHostRuntime = historyRuntimes.historyPanelHostRuntime;
   var historyRecordViewRuntime = historyRuntimes.historyRecordViewRuntime;
   var historyRecordItemRuntime = historyRuntimes.historyRecordItemRuntime;
@@ -96,7 +97,7 @@
       historyStatusRuntime: historyStatusRuntime,
       historySummaryRuntime: historySummaryRuntime,
       historyPanelHostRuntime: historyPanelHostRuntime,
-      historyPanelContext: {
+      historyPanelContext: historyLoadContextHostRuntime.resolveHistoryLoadPanelContext({
         getElementById: el,
         listElementId: "history-list",
         documentLike: document,
@@ -132,7 +133,7 @@
         historyCanaryActionRuntime: historyCanaryActionRuntime,
         historyCanaryHostRuntime: historyCanaryHostRuntime,
         writeStorageValue: historyCanaryStorageRuntime.writeHistoryStorageValue
-      },
+      }),
       loadHistory: loadHistory,
       setStatus: setStatus,
       prevButtonId: "history-prev-page",
