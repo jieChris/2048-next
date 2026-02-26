@@ -44,6 +44,8 @@
   - 新增共享启动壳：`js/legacy_bootstrap_runtime.js`
   - 新增 `src/bootstrap/simple-runtime-contract.ts` + `js/core_simple_runtime_contract_runtime.js`，`replay/capped` 入口委托通用 bootstrap 依赖契约校验
   - 新增 `src/bootstrap/simple-startup.ts` + `js/core_simple_startup_runtime.js`，`replay/capped` 入口委托固定模式启动 payload 组装
+  - 新增 `src/bootstrap/simple-page-host.ts` + `js/core_simple_page_host_runtime.js`，`replay/capped` 入口委托 page 级 runtime 契约解析与启动编排
+  - `replay_application.js` / `capped_application.js` 已收敛为单一 `CoreSimplePageHostRuntime.applySimplePageBootstrap` 调用
   - `application/play/capped/replay` 统一走 `LegacyBootstrapRuntime.startGameOnAnimationFrame`
   - 新增 `src/bootstrap/play-query.ts` + `js/core_play_query_runtime.js`，`play_application.js` 委托 `mode_key/challenge_id` 解析
   - 新增 `src/bootstrap/play-custom-spawn-host.ts` + `js/core_play_custom_spawn_host_runtime.js`，`play_application.js` 委托自定义 4 率桥接上下文（storage/prompt/alert/url replace）组装
@@ -58,6 +60,8 @@
   - 新增 `src/bootstrap/play-startup-context.ts` + `js/core_play_startup_context_runtime.js`，`play_application.js` 委托入口计划、guard 与自定义模式解析主流程编排
   - 新增 `src/bootstrap/play-startup-host.ts` + `js/core_play_startup_host_runtime.js`，`play_application.js` 委托开局回调主链编排（entry/startup/alert+redirect/window 上下文写入/header/startup payload fallback）
   - 新增 `src/bootstrap/play-runtime-contract.ts` + `js/core_play_runtime_contract_runtime.js`，`play_application.js` 委托 runtime 依赖契约校验与依赖对象收敛（保持原错误语义，现含 page-context runtime 校验）
+  - 新增 `src/bootstrap/play-page-host.ts` + `js/core_play_page_host_runtime.js`，`play_application.js` 委托 page 级 runtime 契约解析与启动编排主链
+  - `play_application.js` 已收敛为单一 `CorePlayPageHostRuntime.applyPlayPageBootstrap` 调用
   - 新增 `src/bootstrap/play-page-context.ts` + `js/core_play_page_context_runtime.js`，`play_application.js` 委托页面上下文编排（custom spawn 上下文桥接 + header/challenge intro host 串联）
   - `play_application.js` 已移除 `mode_key/challenge_id` 本地转发包装函数，入口回调直接消费 `play-query` runtime
   - 新增 `src/bootstrap/play-header.ts` + `js/core_play_header_runtime.js`，`play_application.js` 委托顶部模式简介文案拼装
@@ -270,6 +274,8 @@
   - `history-load-host` 已继续承接分页按钮状态应用（`applyHistoryPagerButtonState`），`history_page.js` 不再本地写 `prev/next.disabled`
   - 新增 `src/bootstrap/history-startup-host.ts` + `js/core_history_startup_host_runtime.js`，`history_page.js` 委托 DOMContentLoaded 启动编排（store 校验/初始化/首屏加载）
   - `history-startup-host` 已继续承接 controls host 直连编排（mode filter 初始化 + toolbar/import/pager 绑定），`history_page.js` 不再保留 `initModeFilter/bindToolbarActions` 页面层透传函数
+  - 新增 `src/bootstrap/history-page-host.ts` + `js/core_history_page_host_runtime.js`，`history_page.js` 委托页面级 defaults/environment/runtime 解析与启动主链编排
+  - `history_page.js` 已收敛为单一 `CoreHistoryPageHostRuntime.applyHistoryPageBootstrap` 调用
   - `history-adapter-diagnostics` 已继续承接 adapter 诊断徽标/诊断区 HTML 拼装（`resolveHistoryAdapterBadgeHtml`/`resolveHistoryAdapterDiagnosticsHtml`），`history_page.js` 不再本地拼接诊断 HTML
   - `history-adapter-diagnostics` 已继续承接 parity 状态读取（`resolveHistoryAdapterParityStatus`），`history_page.js` 不再本地读取 `LocalHistoryStore.getAdapterParityStatus`
   - 新增 `src/bootstrap/history-burnin.ts` + `js/core_history_burnin_runtime.js`，`history_page.js` 委托 burn-in 汇总 gate 状态、百分比文案、连续窗口统计、面板 HTML 渲染与“仅看不一致”点击动作决策
