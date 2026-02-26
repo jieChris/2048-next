@@ -47,6 +47,9 @@ export function applyHistoryLoadAndRender(input: {
   historyViewHostRuntime?: unknown;
   historyStatusRuntime?: unknown;
   historySummaryRuntime?: unknown;
+  historyPanelHostRuntime?: unknown;
+  historyPanelContext?: unknown;
+  loadHistory?: unknown;
   renderHistory?: unknown;
   renderSummary?: unknown;
   renderBurnInSummary?: unknown;
@@ -95,8 +98,77 @@ export function applyHistoryLoadAndRender(input: {
   const applyHistorySummary = asFunction<(args: unknown) => unknown>(
     historyViewHostRuntime.applyHistorySummary
   );
+  const historyPanelHostRuntime = toRecord(source.historyPanelHostRuntime);
+  const applyHistoryRecordListPanelRender = asFunction<(args: unknown) => unknown>(
+    historyPanelHostRuntime.applyHistoryRecordListPanelRender
+  );
+  const applyHistoryBurnInPanelRender = asFunction<(args: unknown) => unknown>(
+    historyPanelHostRuntime.applyHistoryBurnInPanelRender
+  );
+  const applyHistoryCanaryPolicyPanelRender = asFunction<(args: unknown) => unknown>(
+    historyPanelHostRuntime.applyHistoryCanaryPolicyPanelRender
+  );
+  const historyPanelContext = toRecord(source.historyPanelContext);
+  const hasPanelRenderDelegates =
+    !!applyHistoryRecordListPanelRender &&
+    !!applyHistoryBurnInPanelRender &&
+    !!applyHistoryCanaryPolicyPanelRender;
 
-  if (renderHistory) renderHistory(loadPipeline.listResult);
+  if (hasPanelRenderDelegates) {
+    applyHistoryRecordListPanelRender({
+      getElementById: historyPanelContext.getElementById,
+      listElementId: historyPanelContext.listElementId,
+      result: loadPipeline.listResult,
+      documentLike: historyPanelContext.documentLike,
+      localHistoryStore: historyPanelContext.localHistoryStore,
+      modeCatalog: historyPanelContext.modeCatalog,
+      historyAdapterHostRuntime: historyPanelContext.historyAdapterHostRuntime,
+      historyAdapterDiagnosticsRuntime: historyPanelContext.historyAdapterDiagnosticsRuntime,
+      historyRecordViewRuntime: historyPanelContext.historyRecordViewRuntime,
+      historyRecordItemRuntime: historyPanelContext.historyRecordItemRuntime,
+      historyRecordActionsRuntime: historyPanelContext.historyRecordActionsRuntime,
+      historyRecordHostRuntime: historyPanelContext.historyRecordHostRuntime,
+      historyExportRuntime: historyPanelContext.historyExportRuntime,
+      historyRecordListHostRuntime: historyPanelContext.historyRecordListHostRuntime,
+      historyBoardRuntime: historyPanelContext.historyBoardRuntime,
+      confirmAction: historyPanelContext.confirmAction,
+      setStatus: source.setStatus,
+      loadHistory: source.loadHistory,
+      navigateToHref: historyPanelContext.navigateToHref
+    });
+    applyHistoryBurnInPanelRender({
+      getElementById: historyPanelContext.getElementById,
+      panelElementId: historyPanelContext.burnInPanelElementId,
+      adapterFilterElementId: historyPanelContext.adapterFilterElementId,
+      summary: loadPipeline.burnInSummary,
+      state,
+      historyBurnInHostRuntime: historyPanelContext.historyBurnInHostRuntime,
+      historyBurnInRuntime: historyPanelContext.historyBurnInRuntime,
+      loadHistory: source.loadHistory
+    });
+    applyHistoryCanaryPolicyPanelRender({
+      getElementById: historyPanelContext.getElementById,
+      panelElementId: historyPanelContext.canaryPanelElementId,
+      runtime: historyPanelContext.runtime,
+      readStorageValue: historyPanelContext.readStorageValue,
+      adapterModeStorageKey: historyPanelContext.adapterModeStorageKey,
+      defaultModeStorageKey: historyPanelContext.defaultModeStorageKey,
+      forceLegacyStorageKey: historyPanelContext.forceLegacyStorageKey,
+      historyCanarySourceRuntime: historyPanelContext.historyCanarySourceRuntime,
+      historyCanaryPolicyRuntime: historyPanelContext.historyCanaryPolicyRuntime,
+      historyCanaryViewRuntime: historyPanelContext.historyCanaryViewRuntime,
+      historyCanaryPanelRuntime: historyPanelContext.historyCanaryPanelRuntime,
+      historyCanaryActionRuntime: historyPanelContext.historyCanaryActionRuntime,
+      writeStorageValue: historyPanelContext.writeStorageValue,
+      loadHistory: source.loadHistory,
+      setStatus: source.setStatus,
+      historyCanaryHostRuntime: historyPanelContext.historyCanaryHostRuntime
+    });
+  } else {
+    if (renderHistory) renderHistory(loadPipeline.listResult);
+    if (renderBurnInSummary) renderBurnInSummary(loadPipeline.burnInSummary);
+    if (renderCanaryPolicy) renderCanaryPolicy();
+  }
   if (applyHistorySummary) {
     applyHistorySummary({
       getElementById: source.getElementById,
@@ -108,8 +180,6 @@ export function applyHistoryLoadAndRender(input: {
   } else if (renderSummary) {
     renderSummary(loadPipeline.listResult);
   }
-  if (renderBurnInSummary) renderBurnInSummary(loadPipeline.burnInSummary);
-  if (renderCanaryPolicy) renderCanaryPolicy();
   if (applyHistoryStatus) {
     applyHistoryStatus({
       getElementById: getElementById,
@@ -168,6 +238,9 @@ export function applyHistoryLoadWithPager(input: {
   historyViewHostRuntime?: unknown;
   historyStatusRuntime?: unknown;
   historySummaryRuntime?: unknown;
+  historyPanelHostRuntime?: unknown;
+  historyPanelContext?: unknown;
+  loadHistory?: unknown;
   renderHistory?: unknown;
   renderSummary?: unknown;
   renderBurnInSummary?: unknown;

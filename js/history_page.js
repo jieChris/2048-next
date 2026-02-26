@@ -77,66 +77,6 @@
     });
   }
 
-  function renderBurnInSummary(summary) {
-    historyPanelHostRuntime.applyHistoryBurnInPanelRender({
-      getElementById: el,
-      panelElementId: "history-burnin-summary",
-      adapterFilterElementId: "history-adapter-filter",
-      summary: summary,
-      state: state,
-      historyBurnInHostRuntime: historyBurnInHostRuntime,
-      historyBurnInRuntime: historyBurnInRuntime,
-      loadHistory: loadHistory
-    });
-  }
-
-  function renderCanaryPolicy() {
-    historyPanelHostRuntime.applyHistoryCanaryPolicyPanelRender({
-      getElementById: el,
-      panelElementId: "history-canary-policy",
-      runtime: window.LegacyAdapterRuntime,
-      readStorageValue: historyCanaryStorageRuntime.readHistoryStorageValue,
-      adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
-      defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
-      forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY,
-      historyCanarySourceRuntime: historyCanarySourceRuntime,
-      historyCanaryPolicyRuntime: historyCanaryPolicyRuntime,
-      historyCanaryViewRuntime: historyCanaryViewRuntime,
-      historyCanaryPanelRuntime: historyCanaryPanelRuntime,
-      historyCanaryActionRuntime: historyCanaryActionRuntime,
-      historyCanaryHostRuntime: historyCanaryHostRuntime,
-      writeStorageValue: historyCanaryStorageRuntime.writeHistoryStorageValue,
-      loadHistory: loadHistory,
-      setStatus: setStatus
-    });
-  }
-
-  function renderHistory(result) {
-    historyPanelHostRuntime.applyHistoryRecordListPanelRender({
-      getElementById: el,
-      listElementId: "history-list",
-      result: result,
-      documentLike: document,
-      localHistoryStore: window.LocalHistoryStore,
-      modeCatalog: window.ModeCatalog,
-      historyAdapterHostRuntime: historyAdapterHostRuntime,
-      historyAdapterDiagnosticsRuntime: historyAdapterDiagnosticsRuntime,
-      historyRecordViewRuntime: historyRecordViewRuntime,
-      historyRecordItemRuntime: historyRecordItemRuntime,
-      historyRecordActionsRuntime: historyRecordActionsRuntime,
-      historyRecordHostRuntime: historyRecordHostRuntime,
-      historyExportRuntime: historyExportRuntime,
-      historyRecordListHostRuntime: historyRecordListHostRuntime,
-      historyBoardRuntime: historyBoardRuntime,
-      confirmAction: window.confirm,
-      setStatus: setStatus,
-      loadHistory: loadHistory,
-      navigateToHref: function (href) {
-        window.location.href = href;
-      }
-    });
-  }
-
   function loadHistory(resetPage) {
     historyLoadEntryHostRuntime.applyHistoryLoadEntry({
       resetPage: resetPage,
@@ -155,9 +95,45 @@
       historyViewHostRuntime: historyViewHostRuntime,
       historyStatusRuntime: historyStatusRuntime,
       historySummaryRuntime: historySummaryRuntime,
-      renderHistory: renderHistory,
-      renderBurnInSummary: renderBurnInSummary,
-      renderCanaryPolicy: renderCanaryPolicy,
+      historyPanelHostRuntime: historyPanelHostRuntime,
+      historyPanelContext: {
+        getElementById: el,
+        listElementId: "history-list",
+        documentLike: document,
+        localHistoryStore: window.LocalHistoryStore,
+        modeCatalog: window.ModeCatalog,
+        historyAdapterHostRuntime: historyAdapterHostRuntime,
+        historyAdapterDiagnosticsRuntime: historyAdapterDiagnosticsRuntime,
+        historyRecordViewRuntime: historyRecordViewRuntime,
+        historyRecordItemRuntime: historyRecordItemRuntime,
+        historyRecordActionsRuntime: historyRecordActionsRuntime,
+        historyRecordHostRuntime: historyRecordHostRuntime,
+        historyExportRuntime: historyExportRuntime,
+        historyRecordListHostRuntime: historyRecordListHostRuntime,
+        historyBoardRuntime: historyBoardRuntime,
+        confirmAction: window.confirm,
+        navigateToHref: function (href) {
+          window.location.href = href;
+        },
+        burnInPanelElementId: "history-burnin-summary",
+        adapterFilterElementId: "history-adapter-filter",
+        historyBurnInHostRuntime: historyBurnInHostRuntime,
+        historyBurnInRuntime: historyBurnInRuntime,
+        canaryPanelElementId: "history-canary-policy",
+        runtime: window.LegacyAdapterRuntime,
+        readStorageValue: historyCanaryStorageRuntime.readHistoryStorageValue,
+        adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
+        defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
+        forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY,
+        historyCanarySourceRuntime: historyCanarySourceRuntime,
+        historyCanaryPolicyRuntime: historyCanaryPolicyRuntime,
+        historyCanaryViewRuntime: historyCanaryViewRuntime,
+        historyCanaryPanelRuntime: historyCanaryPanelRuntime,
+        historyCanaryActionRuntime: historyCanaryActionRuntime,
+        historyCanaryHostRuntime: historyCanaryHostRuntime,
+        writeStorageValue: historyCanaryStorageRuntime.writeHistoryStorageValue
+      },
+      loadHistory: loadHistory,
       setStatus: setStatus,
       prevButtonId: "history-prev-page",
       nextButtonId: "history-next-page"

@@ -100,6 +100,54 @@ describe("bootstrap history load host", () => {
     expect(setStatus).not.toHaveBeenCalled();
   });
 
+  it("delegates list/burn-in/canary panel rendering via panel host runtime when provided", () => {
+    const applyHistoryRecordListPanelRender = vi.fn();
+    const applyHistoryBurnInPanelRender = vi.fn();
+    const applyHistoryCanaryPolicyPanelRender = vi.fn();
+    const renderHistory = vi.fn();
+    const renderBurnInSummary = vi.fn();
+    const renderCanaryPolicy = vi.fn();
+
+    const result = applyHistoryLoadAndRender({
+      state: { page: 1 },
+      localHistoryStore: {},
+      historyLoadRuntime: {
+        resolveHistoryLoadPipeline: () => ({
+          listResult: { items: [{ id: "id-1" }], total: 1 },
+          burnInSummary: { comparable: 1 },
+          pagerState: {
+            disablePrev: true,
+            disableNext: false
+          }
+        })
+      },
+      historyPanelHostRuntime: {
+        applyHistoryRecordListPanelRender,
+        applyHistoryBurnInPanelRender,
+        applyHistoryCanaryPolicyPanelRender
+      },
+      historyPanelContext: {
+        getElementById: () => null,
+        listElementId: "history-list",
+        burnInPanelElementId: "history-burnin-summary",
+        canaryPanelElementId: "history-canary-policy"
+      },
+      loadHistory: () => undefined,
+      setStatus: () => undefined,
+      renderHistory,
+      renderBurnInSummary,
+      renderCanaryPolicy
+    });
+
+    expect(result).toEqual({ didLoad: true, disablePrev: true, disableNext: false });
+    expect(applyHistoryRecordListPanelRender).toHaveBeenCalledTimes(1);
+    expect(applyHistoryBurnInPanelRender).toHaveBeenCalledTimes(1);
+    expect(applyHistoryCanaryPolicyPanelRender).toHaveBeenCalledTimes(1);
+    expect(renderHistory).not.toHaveBeenCalled();
+    expect(renderBurnInSummary).not.toHaveBeenCalled();
+    expect(renderCanaryPolicy).not.toHaveBeenCalled();
+  });
+
   it("returns noop result when dependencies are missing", () => {
     expect(applyHistoryLoadAndRender({})).toEqual({
       didLoad: false,

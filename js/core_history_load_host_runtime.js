@@ -60,8 +60,77 @@
     var historyViewHostRuntime = toRecord(source.historyViewHostRuntime);
     var applyHistoryStatus = asFunction(historyViewHostRuntime.applyHistoryStatus);
     var applyHistorySummary = asFunction(historyViewHostRuntime.applyHistorySummary);
+    var historyPanelHostRuntime = toRecord(source.historyPanelHostRuntime);
+    var applyHistoryRecordListPanelRender = asFunction(
+      historyPanelHostRuntime.applyHistoryRecordListPanelRender
+    );
+    var applyHistoryBurnInPanelRender = asFunction(
+      historyPanelHostRuntime.applyHistoryBurnInPanelRender
+    );
+    var applyHistoryCanaryPolicyPanelRender = asFunction(
+      historyPanelHostRuntime.applyHistoryCanaryPolicyPanelRender
+    );
+    var historyPanelContext = toRecord(source.historyPanelContext);
+    var hasPanelRenderDelegates =
+      !!applyHistoryRecordListPanelRender &&
+      !!applyHistoryBurnInPanelRender &&
+      !!applyHistoryCanaryPolicyPanelRender;
 
-    if (renderHistory) renderHistory(loadPipeline.listResult);
+    if (hasPanelRenderDelegates) {
+      applyHistoryRecordListPanelRender({
+        getElementById: historyPanelContext.getElementById,
+        listElementId: historyPanelContext.listElementId,
+        result: loadPipeline.listResult,
+        documentLike: historyPanelContext.documentLike,
+        localHistoryStore: historyPanelContext.localHistoryStore,
+        modeCatalog: historyPanelContext.modeCatalog,
+        historyAdapterHostRuntime: historyPanelContext.historyAdapterHostRuntime,
+        historyAdapterDiagnosticsRuntime: historyPanelContext.historyAdapterDiagnosticsRuntime,
+        historyRecordViewRuntime: historyPanelContext.historyRecordViewRuntime,
+        historyRecordItemRuntime: historyPanelContext.historyRecordItemRuntime,
+        historyRecordActionsRuntime: historyPanelContext.historyRecordActionsRuntime,
+        historyRecordHostRuntime: historyPanelContext.historyRecordHostRuntime,
+        historyExportRuntime: historyPanelContext.historyExportRuntime,
+        historyRecordListHostRuntime: historyPanelContext.historyRecordListHostRuntime,
+        historyBoardRuntime: historyPanelContext.historyBoardRuntime,
+        confirmAction: historyPanelContext.confirmAction,
+        setStatus: source.setStatus,
+        loadHistory: source.loadHistory,
+        navigateToHref: historyPanelContext.navigateToHref
+      });
+      applyHistoryBurnInPanelRender({
+        getElementById: historyPanelContext.getElementById,
+        panelElementId: historyPanelContext.burnInPanelElementId,
+        adapterFilterElementId: historyPanelContext.adapterFilterElementId,
+        summary: loadPipeline.burnInSummary,
+        state: state,
+        historyBurnInHostRuntime: historyPanelContext.historyBurnInHostRuntime,
+        historyBurnInRuntime: historyPanelContext.historyBurnInRuntime,
+        loadHistory: source.loadHistory
+      });
+      applyHistoryCanaryPolicyPanelRender({
+        getElementById: historyPanelContext.getElementById,
+        panelElementId: historyPanelContext.canaryPanelElementId,
+        runtime: historyPanelContext.runtime,
+        readStorageValue: historyPanelContext.readStorageValue,
+        adapterModeStorageKey: historyPanelContext.adapterModeStorageKey,
+        defaultModeStorageKey: historyPanelContext.defaultModeStorageKey,
+        forceLegacyStorageKey: historyPanelContext.forceLegacyStorageKey,
+        historyCanarySourceRuntime: historyPanelContext.historyCanarySourceRuntime,
+        historyCanaryPolicyRuntime: historyPanelContext.historyCanaryPolicyRuntime,
+        historyCanaryViewRuntime: historyPanelContext.historyCanaryViewRuntime,
+        historyCanaryPanelRuntime: historyPanelContext.historyCanaryPanelRuntime,
+        historyCanaryActionRuntime: historyPanelContext.historyCanaryActionRuntime,
+        writeStorageValue: historyPanelContext.writeStorageValue,
+        loadHistory: source.loadHistory,
+        setStatus: source.setStatus,
+        historyCanaryHostRuntime: historyPanelContext.historyCanaryHostRuntime
+      });
+    } else {
+      if (renderHistory) renderHistory(loadPipeline.listResult);
+      if (renderBurnInSummary) renderBurnInSummary(loadPipeline.burnInSummary);
+      if (renderCanaryPolicy) renderCanaryPolicy();
+    }
     if (applyHistorySummary) {
       applyHistorySummary({
         getElementById: source.getElementById,
@@ -73,8 +142,6 @@
     } else if (renderSummary) {
       renderSummary(loadPipeline.listResult);
     }
-    if (renderBurnInSummary) renderBurnInSummary(loadPipeline.burnInSummary);
-    if (renderCanaryPolicy) renderCanaryPolicy();
     if (applyHistoryStatus) {
       applyHistoryStatus({
         getElementById: getElementById,

@@ -51,6 +51,9 @@ export function applyHistoryLoadEntry(input: {
   historyViewHostRuntime?: unknown;
   historyStatusRuntime?: unknown;
   historySummaryRuntime?: unknown;
+  historyPanelHostRuntime?: unknown;
+  historyPanelContext?: unknown;
+  loadHistory?: unknown;
   renderHistory?: unknown;
   renderSummary?: unknown;
   renderBurnInSummary?: unknown;
@@ -99,6 +102,9 @@ export function applyHistoryLoadEntry(input: {
     historyViewHostRuntime: source.historyViewHostRuntime,
     historyStatusRuntime: source.historyStatusRuntime,
     historySummaryRuntime: source.historySummaryRuntime,
+    historyPanelHostRuntime: source.historyPanelHostRuntime,
+    historyPanelContext: source.historyPanelContext,
+    loadHistory: source.loadHistory,
     renderHistory: source.renderHistory,
     renderSummary: source.renderSummary,
     renderBurnInSummary: source.renderBurnInSummary,
