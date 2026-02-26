@@ -46,6 +46,11 @@ export function applyHistoryLoadEntry(input: {
   historyBurnInRuntime?: unknown;
   burnInMinComparable?: unknown;
   burnInMaxMismatchRate?: unknown;
+  statusElementId?: unknown;
+  summaryElementId?: unknown;
+  historyViewHostRuntime?: unknown;
+  historyStatusRuntime?: unknown;
+  historySummaryRuntime?: unknown;
   renderHistory?: unknown;
   renderSummary?: unknown;
   renderBurnInSummary?: unknown;
@@ -89,6 +94,11 @@ export function applyHistoryLoadEntry(input: {
     historyBurnInRuntime: source.historyBurnInRuntime,
     burnInMinComparable: source.burnInMinComparable,
     burnInMaxMismatchRate: source.burnInMaxMismatchRate,
+    statusElementId: source.statusElementId,
+    summaryElementId: source.summaryElementId,
+    historyViewHostRuntime: source.historyViewHostRuntime,
+    historyStatusRuntime: source.historyStatusRuntime,
+    historySummaryRuntime: source.historySummaryRuntime,
     renderHistory: source.renderHistory,
     renderSummary: source.renderSummary,
     renderBurnInSummary: source.renderBurnInSummary,

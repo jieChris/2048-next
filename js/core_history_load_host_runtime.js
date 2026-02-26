@@ -52,12 +52,40 @@
     var renderBurnInSummary = asFunction(source.renderBurnInSummary);
     var renderCanaryPolicy = asFunction(source.renderCanaryPolicy);
     var setStatus = asFunction(source.setStatus);
+    var getElementById = asFunction(source.getElementById);
+    var statusElementId =
+      typeof source.statusElementId === "string" ? source.statusElementId : "history-status";
+    var summaryElementId =
+      typeof source.summaryElementId === "string" ? source.summaryElementId : "history-summary";
+    var historyViewHostRuntime = toRecord(source.historyViewHostRuntime);
+    var applyHistoryStatus = asFunction(historyViewHostRuntime.applyHistoryStatus);
+    var applyHistorySummary = asFunction(historyViewHostRuntime.applyHistorySummary);
 
     if (renderHistory) renderHistory(loadPipeline.listResult);
-    if (renderSummary) renderSummary(loadPipeline.listResult);
+    if (applyHistorySummary) {
+      applyHistorySummary({
+        getElementById: source.getElementById,
+        summaryElementId: summaryElementId,
+        result: loadPipeline.listResult,
+        state: state,
+        historySummaryRuntime: source.historySummaryRuntime
+      });
+    } else if (renderSummary) {
+      renderSummary(loadPipeline.listResult);
+    }
     if (renderBurnInSummary) renderBurnInSummary(loadPipeline.burnInSummary);
     if (renderCanaryPolicy) renderCanaryPolicy();
-    if (setStatus) setStatus("", false);
+    if (applyHistoryStatus) {
+      applyHistoryStatus({
+        getElementById: getElementById,
+        statusElementId: statusElementId,
+        text: "",
+        isError: false,
+        historyStatusRuntime: source.historyStatusRuntime
+      });
+    } else if (setStatus) {
+      setStatus("", false);
+    }
 
     var pagerState = toRecord(loadPipeline.pagerState);
     return {

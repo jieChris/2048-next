@@ -49,6 +49,57 @@ describe("bootstrap history load host", () => {
     expect(result).toEqual({ didLoad: true, disablePrev: true, disableNext: false });
   });
 
+  it("delegates summary/status apply via history view host runtime when provided", () => {
+    const state = { page: 2, pageSize: 30 };
+    const renderSummary = vi.fn();
+    const setStatus = vi.fn();
+    const applyHistorySummary = vi.fn();
+    const applyHistoryStatus = vi.fn();
+    const getElementById = vi.fn();
+
+    const result = applyHistoryLoadAndRender({
+      state,
+      localHistoryStore: {},
+      historyLoadRuntime: {
+        resolveHistoryLoadPipeline: () => ({
+          listResult: { items: [], total: 0 },
+          burnInSummary: null,
+          pagerState: {
+            disablePrev: false,
+            disableNext: true
+          }
+        })
+      },
+      historyViewHostRuntime: {
+        applyHistorySummary,
+        applyHistoryStatus
+      },
+      historySummaryRuntime: {},
+      historyStatusRuntime: {},
+      getElementById,
+      renderSummary,
+      setStatus
+    });
+
+    expect(result).toEqual({ didLoad: true, disablePrev: false, disableNext: true });
+    expect(applyHistorySummary).toHaveBeenCalledWith({
+      getElementById,
+      summaryElementId: "history-summary",
+      result: { items: [], total: 0 },
+      state,
+      historySummaryRuntime: {}
+    });
+    expect(applyHistoryStatus).toHaveBeenCalledWith({
+      getElementById,
+      statusElementId: "history-status",
+      text: "",
+      isError: false,
+      historyStatusRuntime: {}
+    });
+    expect(renderSummary).not.toHaveBeenCalled();
+    expect(setStatus).not.toHaveBeenCalled();
+  });
+
   it("returns noop result when dependencies are missing", () => {
     expect(applyHistoryLoadAndRender({})).toEqual({
       didLoad: false,

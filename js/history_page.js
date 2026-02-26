@@ -77,16 +77,6 @@
     });
   }
 
-  function buildSummary(result) {
-    historyViewHostRuntime.applyHistorySummary({
-      getElementById: el,
-      summaryElementId: "history-summary",
-      result: result,
-      state: state,
-      historySummaryRuntime: historySummaryRuntime
-    });
-  }
-
   function renderBurnInSummary(summary) {
     historyPanelHostRuntime.applyHistoryBurnInPanelRender({
       getElementById: el,
@@ -160,8 +150,12 @@
       historyBurnInRuntime: historyBurnInRuntime,
       burnInMinComparable: BURN_IN_MIN_COMPARABLE,
       burnInMaxMismatchRate: BURN_IN_MAX_MISMATCH_RATE,
+      statusElementId: "history-status",
+      summaryElementId: "history-summary",
+      historyViewHostRuntime: historyViewHostRuntime,
+      historyStatusRuntime: historyStatusRuntime,
+      historySummaryRuntime: historySummaryRuntime,
       renderHistory: renderHistory,
-      renderSummary: buildSummary,
       renderBurnInSummary: renderBurnInSummary,
       renderCanaryPolicy: renderCanaryPolicy,
       setStatus: setStatus,
