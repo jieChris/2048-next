@@ -46,9 +46,12 @@ describe("bootstrap history controls host", () => {
       getElementById,
       localHistoryStore: {},
       state: { page: 1 },
-      readFilters: () => undefined,
       setStatus: () => undefined,
       loadHistory: () => undefined,
+      historyFilterHostRuntime: {
+        applyHistoryFilterStateFromInputs: () => undefined
+      },
+      historyQueryRuntime: {},
       historyExportRuntime: {},
       historyToolbarRuntime: {},
       historyToolbarHostRuntime: {},
@@ -74,6 +77,14 @@ describe("bootstrap history controls host", () => {
     expect(bindHistoryToolbarActionButtons).toHaveBeenCalledTimes(1);
     expect(bindHistoryImportControls).toHaveBeenCalledTimes(1);
     expect(bindHistoryToolbarPagerAndFilterEvents).toHaveBeenCalledTimes(1);
+    expect(bindHistoryToolbarActionButtons).toHaveBeenCalledWith(
+      expect.objectContaining({
+        historyFilterHostRuntime: {
+          applyHistoryFilterStateFromInputs: expect.any(Function)
+        },
+        historyQueryRuntime: {}
+      })
+    );
   });
 
   it("returns noop when any required binder is missing", () => {

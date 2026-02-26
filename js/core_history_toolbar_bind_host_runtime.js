@@ -43,7 +43,10 @@
     }
 
     var state = toRecord(source.state);
-    var readFilters = asFunction(source.readFilters);
+    var historyFilterHostRuntime = toRecord(source.historyFilterHostRuntime);
+    var applyHistoryFilterStateFromInputs = asFunction(
+      historyFilterHostRuntime.applyHistoryFilterStateFromInputs
+    );
     var toolbarHostRuntime = toRecord(source.historyToolbarHostRuntime);
     var applyHistoryExportAllAction = asFunction(toolbarHostRuntime.applyHistoryExportAllAction);
     var applyHistoryMismatchExportAction = asFunction(
@@ -84,7 +87,13 @@
     if (
       applyHistoryMismatchExportAction &&
       bindListener(exportMismatchBtn, "click", function () {
-        if (readFilters) readFilters();
+        if (applyHistoryFilterStateFromInputs) {
+          applyHistoryFilterStateFromInputs({
+            state: state,
+            historyQueryRuntime: source.historyQueryRuntime,
+            getElementById: source.getElementById
+          });
+        }
         var actionResult = applyHistoryMismatchExportAction({
           localHistoryStore: source.localHistoryStore,
           modeKey: state.modeKey,

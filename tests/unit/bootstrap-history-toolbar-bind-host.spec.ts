@@ -24,7 +24,7 @@ describe("bootstrap history toolbar bind host", () => {
     };
     const loadHistory = vi.fn();
     const setStatus = vi.fn();
-    const readFilters = vi.fn();
+    const applyHistoryFilterStateFromInputs = vi.fn();
     const createDate = vi.fn(() => new Date("2026-02-26T00:00:00.000Z"));
 
     const elements: Record<string, ReturnType<typeof createFakeElement>> = {
@@ -38,7 +38,10 @@ describe("bootstrap history toolbar bind host", () => {
       getElementById: (id: string) => elements[id] || null,
       localHistoryStore: {},
       state,
-      readFilters,
+      historyFilterHostRuntime: {
+        applyHistoryFilterStateFromInputs
+      },
+      historyQueryRuntime: {},
       setStatus,
       loadHistory,
       historyExportRuntime: {},
@@ -83,7 +86,11 @@ describe("bootstrap history toolbar bind host", () => {
     expect(createDate).toHaveBeenCalled();
 
     elements["history-export-mismatch-btn"].handlers.click();
-    expect(readFilters).toHaveBeenCalledTimes(1);
+    expect(applyHistoryFilterStateFromInputs).toHaveBeenCalledWith({
+      state,
+      historyQueryRuntime: {},
+      getElementById: expect.any(Function)
+    });
     expect(setStatus).toHaveBeenLastCalledWith("mode-a|kw|ended_desc", false);
 
     elements["history-clear-all-btn"].handlers.click();

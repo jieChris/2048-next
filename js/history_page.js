@@ -147,14 +147,6 @@
     });
   }
 
-  function readFilters() {
-    historyFilterHostRuntime.applyHistoryFilterStateFromInputs({
-      state: state,
-      historyQueryRuntime: historyQueryRuntime,
-      getElementById: el
-    });
-  }
-
   function loadHistory(resetPage) {
     historyLoadEntryHostRuntime.applyHistoryLoadEntry({
       resetPage: resetPage,
@@ -194,9 +186,10 @@
       getElementById: el,
       localHistoryStore: window.LocalHistoryStore,
       state: state,
-      readFilters: readFilters,
       setStatus: setStatus,
       loadHistory: loadHistory,
+      historyFilterHostRuntime: historyFilterHostRuntime,
+      historyQueryRuntime: historyQueryRuntime,
       historyExportRuntime: historyExportRuntime,
       historyToolbarRuntime: historyToolbarRuntime,
       historyToolbarHostRuntime: historyToolbarHostRuntime,

@@ -43,7 +43,8 @@ export function bindHistoryToolbarActionButtons(input: {
   getElementById?: unknown;
   localHistoryStore?: unknown;
   state?: unknown;
-  readFilters?: unknown;
+  historyFilterHostRuntime?: unknown;
+  historyQueryRuntime?: unknown;
   setStatus?: unknown;
   loadHistory?: unknown;
   historyExportRuntime?: unknown;
@@ -64,7 +65,10 @@ export function bindHistoryToolbarActionButtons(input: {
   }
 
   const state = toRecord(source.state);
-  const readFilters = asFunction<() => unknown>(source.readFilters);
+  const historyFilterHostRuntime = toRecord(source.historyFilterHostRuntime);
+  const applyHistoryFilterStateFromInputs = asFunction<(args: unknown) => unknown>(
+    historyFilterHostRuntime.applyHistoryFilterStateFromInputs
+  );
   const toolbarHostRuntime = toRecord(source.historyToolbarHostRuntime);
   const applyHistoryExportAllAction = asFunction<(payload: unknown) => unknown>(
     toolbarHostRuntime.applyHistoryExportAllAction
@@ -109,7 +113,13 @@ export function bindHistoryToolbarActionButtons(input: {
   if (
     applyHistoryMismatchExportAction &&
     bindListener(exportMismatchBtn, "click", function () {
-      if (readFilters) readFilters();
+      if (applyHistoryFilterStateFromInputs) {
+        applyHistoryFilterStateFromInputs({
+          state,
+          historyQueryRuntime: source.historyQueryRuntime,
+          getElementById: source.getElementById
+        });
+      }
       const actionResult = applyHistoryMismatchExportAction({
         localHistoryStore: source.localHistoryStore,
         modeKey: state.modeKey,

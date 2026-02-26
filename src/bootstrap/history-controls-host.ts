@@ -55,9 +55,10 @@ export function bindHistoryControls(input: {
   getElementById?: unknown;
   localHistoryStore?: unknown;
   state?: unknown;
-  readFilters?: unknown;
   setStatus?: unknown;
   loadHistory?: unknown;
+  historyFilterHostRuntime?: unknown;
+  historyQueryRuntime?: unknown;
   historyExportRuntime?: unknown;
   historyToolbarRuntime?: unknown;
   historyToolbarHostRuntime?: unknown;
@@ -100,7 +101,8 @@ export function bindHistoryControls(input: {
     getElementById: source.getElementById,
     localHistoryStore: source.localHistoryStore,
     state: source.state,
-    readFilters: source.readFilters,
+    historyFilterHostRuntime: source.historyFilterHostRuntime,
+    historyQueryRuntime: source.historyQueryRuntime,
     setStatus: source.setStatus,
     loadHistory: source.loadHistory,
     historyExportRuntime: source.historyExportRuntime,
