@@ -322,6 +322,14 @@ if (
 ) {
   throw new Error("CoreHomeGuideHighlightHostRuntime is required");
 }
+var homeGuidePanelHostRuntime = window.CoreHomeGuidePanelHostRuntime;
+if (
+  !homeGuidePanelHostRuntime ||
+  typeof homeGuidePanelHostRuntime.applyHomeGuidePanelPosition !== "function" ||
+  typeof homeGuidePanelHostRuntime.resolveHomeGuideTargetVisibility !== "function"
+) {
+  throw new Error("CoreHomeGuidePanelHostRuntime is required");
+}
 var homeGuideFinishHostRuntime = window.CoreHomeGuideFinishHostRuntime;
 if (
   !homeGuideFinishHostRuntime ||
@@ -1124,50 +1132,22 @@ function elevateHomeGuideTarget(target) {
 }
 
 function positionHomeGuidePanel() {
-  var panel = HOME_GUIDE_STATE.panel;
-  var target = HOME_GUIDE_STATE.target;
-  if (!panel || !target) return;
-
-  var rect = target.getBoundingClientRect();
-  var margin = 12;
-  var mobileLayout = mobileViewportRuntime.isViewportAtMost({
-    windowLike: window,
-    maxWidth: MOBILE_UI_MAX_WIDTH
+  homeGuidePanelHostRuntime.applyHomeGuidePanelPosition({
+    homeGuideState: HOME_GUIDE_STATE,
+    homeGuideRuntime: homeGuideRuntime,
+    mobileViewportRuntime: mobileViewportRuntime,
+    windowLike: typeof window !== "undefined" ? window : null,
+    mobileUiMaxWidth: MOBILE_UI_MAX_WIDTH,
+    margin: 12,
+    defaultPanelHeight: 160
   });
-  var initialLayout = homeGuideRuntime.resolveHomeGuidePanelLayout({
-    targetRect: rect,
-    viewportWidth: window.innerWidth,
-    viewportHeight: window.innerHeight,
-    panelHeight: 160,
-    margin: margin,
-    mobileLayout: mobileLayout
-  });
-  panel.style.maxWidth = initialLayout.panelWidth + "px";
-  panel.style.width = initialLayout.panelWidth + "px";
-  var panelHeight = panel.offsetHeight || 160;
-  var layout = homeGuideRuntime.resolveHomeGuidePanelLayout({
-    targetRect: rect,
-    viewportWidth: window.innerWidth,
-    viewportHeight: window.innerHeight,
-    panelHeight: panelHeight,
-    margin: margin,
-    mobileLayout: mobileLayout
-  });
-  panel.style.maxWidth = layout.panelWidth + "px";
-  panel.style.width = layout.panelWidth + "px";
-  panel.style.top = layout.top + "px";
-  panel.style.left = layout.left + "px";
 }
 
 function isElementVisibleForGuide(node) {
-  return homeGuideRuntime.isHomeGuideTargetVisible({
-    nodeLike: node || null,
-    getComputedStyle:
-      typeof window !== "undefined" && typeof window.getComputedStyle === "function"
-        ? function (el) {
-            return window.getComputedStyle(el);
-          }
-        : null
+  return homeGuidePanelHostRuntime.resolveHomeGuideTargetVisibility({
+    homeGuideRuntime: homeGuideRuntime,
+    windowLike: typeof window !== "undefined" ? window : null,
+    node: node || null
   });
 }
 
