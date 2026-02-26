@@ -257,6 +257,14 @@ if (
 ) {
   throw new Error("CorePrettyTimeRuntime is required");
 }
+var responsiveRelayoutRuntime = window.CoreResponsiveRelayoutRuntime;
+if (
+  !responsiveRelayoutRuntime ||
+  typeof responsiveRelayoutRuntime.resolveResponsiveRelayoutRequest !== "function" ||
+  typeof responsiveRelayoutRuntime.applyResponsiveRelayout !== "function"
+) {
+  throw new Error("CoreResponsiveRelayoutRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -618,25 +626,25 @@ function initMobileTimerboxToggle() {
 }
 
 function requestResponsiveGameRelayout() {
-  if (!isTimerboxMobileScope()) return;
-  if (mobileRelayoutTimer) clearTimeout(mobileRelayoutTimer);
+  var requestState = responsiveRelayoutRuntime.resolveResponsiveRelayoutRequest({
+    isTimerboxMobileScope: isTimerboxMobileScope(),
+    hasExistingTimer: !!mobileRelayoutTimer,
+    delayMs: 120
+  });
+  if (!requestState.shouldSchedule) return;
+  if (requestState.shouldClearExistingTimer && mobileRelayoutTimer) {
+    clearTimeout(mobileRelayoutTimer);
+  }
   mobileRelayoutTimer = setTimeout(function () {
-    syncMobileHintUI();
-    syncMobileTopActionsPlacement();
-    syncPracticeTopActionsPlacement();
-    syncMobileUndoTopButtonAvailability();
-    syncMobileTimerboxUI();
-    var gm = window.game_manager;
-    if (gm && gm.actuator && typeof gm.actuator.invalidateLayoutCache === "function") {
-      gm.actuator.invalidateLayoutCache();
-    }
-    if (gm && typeof gm.clearTransientTileVisualState === "function") {
-      gm.clearTransientTileVisualState();
-    }
-    if (gm && typeof gm.actuate === "function") {
-      gm.actuate();
-    }
-  }, 120);
+    responsiveRelayoutRuntime.applyResponsiveRelayout({
+      syncMobileHintUI: syncMobileHintUI,
+      syncMobileTopActionsPlacement: syncMobileTopActionsPlacement,
+      syncPracticeTopActionsPlacement: syncPracticeTopActionsPlacement,
+      syncMobileUndoTopButtonAvailability: syncMobileUndoTopButtonAvailability,
+      syncMobileTimerboxUI: syncMobileTimerboxUI,
+      manager: window.game_manager || null
+    });
+  }, requestState.delayMs);
 }
 
 window.syncMobileTimerboxUI = syncMobileTimerboxUI;
