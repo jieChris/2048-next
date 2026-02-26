@@ -1374,6 +1374,45 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasHistoryItem).toBe(true);
   });
 
+  test("history page delegates record list render orchestration to host runtime helper", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyRecordListHostCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryRecordListHostRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "applyHistoryRecordListRender" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyRecordListHostCallCount =
+                Number((window as any).__historyRecordListHostCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    const snapshot = await page.evaluate(() => ({
+      hasRuntime: Boolean((window as any).CoreHistoryRecordListHostRuntime?.applyHistoryRecordListRender),
+      callCount: Number((window as any).__historyRecordListHostCallCount || 0)
+    }));
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.callCount).toBeGreaterThan(0);
+  });
+
   test("history page delegates single-record export state to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__historySingleExportActionCallCount = 0;
@@ -2477,17 +2516,58 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForTimeout(200);
 
     const snapshot = await page.evaluate(() => {
-      const replayBtn = document.querySelector(".history-replay-btn") as HTMLButtonElement | null;
-      if (replayBtn && typeof replayBtn.click === "function") replayBtn.click();
+      const store = (window as any).LocalHistoryStore;
+      const runtime = (window as any).CoreHistoryRecordHostRuntime;
+      if (!store || !runtime || typeof store.listRecords !== "function") {
+        throw new Error("history record host runtime prerequisites unavailable");
+      }
+      const listResult = store.listRecords({
+        mode_key: "",
+        keyword: "",
+        sort_by: "ended_desc",
+        adapter_parity_filter: "all",
+        page: 1,
+        page_size: 1
+      });
+      const item = Array.isArray(listResult?.items) ? listResult.items[0] : null;
+      const itemId = item?.id;
 
-      const exportBtn = document.querySelector(".history-export-btn") as HTMLButtonElement | null;
-      if (exportBtn && typeof exportBtn.click === "function") exportBtn.click();
-
-      const originalConfirm = window.confirm;
-      window.confirm = () => true;
-      const deleteBtn = document.querySelector(".history-delete-btn") as HTMLButtonElement | null;
-      if (deleteBtn && typeof deleteBtn.click === "function") deleteBtn.click();
-      window.confirm = originalConfirm;
+      if (typeof runtime.resolveHistoryRecordReplayHref === "function") {
+        runtime.resolveHistoryRecordReplayHref({
+          historyRecordActionsRuntime: {
+            resolveHistoryReplayHref: () => ""
+          },
+          itemId
+        });
+      }
+      if (typeof runtime.applyHistoryRecordExportAction === "function") {
+        runtime.applyHistoryRecordExportAction({
+          localHistoryStore: store,
+          item,
+          historyExportRuntime: {
+            downloadHistorySingleRecord: () => false
+          }
+        });
+      }
+      if (typeof runtime.applyHistoryRecordDeleteAction === "function") {
+        runtime.applyHistoryRecordDeleteAction({
+          historyRecordActionsRuntime: {
+            resolveHistoryDeleteActionState: (id: unknown) => ({
+              confirmMessage: "确认删除这条记录吗？",
+              recordId: id
+            }),
+            executeHistoryDeleteRecord: () => ({
+              deleted: false,
+              notice: "failed"
+            }),
+            resolveHistoryDeleteFailureNotice: () => "failed",
+            resolveHistoryDeleteSuccessNotice: () => "ok"
+          },
+          localHistoryStore: store,
+          itemId,
+          confirmAction: () => true
+        });
+      }
 
       return {
         hasRuntime: Boolean(

@@ -168,6 +168,11 @@
       ["resolveHistoryRecordItemHtml"],
       "CoreHistoryRecordItemRuntime is required"
     );
+    var historyRecordListHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryRecordListHostRuntime,
+      ["applyHistoryRecordListRender"],
+      "CoreHistoryRecordListHostRuntime is required"
+    );
     var historyImportRuntime = requireRuntimeFunctions(
       source.CoreHistoryImportRuntime,
       [
@@ -306,6 +311,7 @@
       historyLoadHostRuntime: historyLoadHostRuntime,
       historyRecordViewRuntime: historyRecordViewRuntime,
       historyRecordItemRuntime: historyRecordItemRuntime,
+      historyRecordListHostRuntime: historyRecordListHostRuntime,
       historyImportRuntime: historyImportRuntime,
       historyImportFileRuntime: historyImportFileRuntime,
       historyImportHostRuntime: historyImportHostRuntime,

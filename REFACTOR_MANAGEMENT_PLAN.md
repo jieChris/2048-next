@@ -231,6 +231,8 @@
   - 新增 `src/bootstrap/history-record-view.ts` + `js/core_history_record_view_runtime.js`，`history_page.js` 委托列表头展示态（mode/score/best/duration/ended）模型计算
   - `history-record-view` 已继续承接 `ModeCatalog` 标签解析（`resolveHistoryCatalogModeLabel`），`history_page.js` 不再本地读取 mode label
   - 新增 `src/bootstrap/history-record-item.ts` + `js/core_history_record_item_runtime.js`，`history_page.js` 委托历史记录卡片 HTML 模型拼装（头部信息/动作按钮/诊断区/终盘棋盘）
+  - 新增 `src/bootstrap/history-record-list-host.ts` + `js/core_history_record_list_host_runtime.js`，`history_page.js` 委托历史记录列表渲染与单项动作绑定编排
+  - `history-record-list-host` 已继续承接 `renderHistory` 逐项渲染与 replay/export/delete 绑定主链；并修复 DOM 方法 this 绑定（`querySelector/addEventListener/appendChild`）以避免浏览器非法调用
   - 新增 `src/bootstrap/history-import.ts` + `js/core_history_import_runtime.js`，`history_page.js` 委托导入动作决策（merge/replace/confirm）与导入成功/失败提示文案
   - `history-import` 已继续承接导入执行（`executeHistoryImport`），`history_page.js` 不再本地拼装 `merge` 后直接调用 `LocalHistoryStore.importRecords`
   - 新增 `src/bootstrap/history-import-file.ts` + `js/core_history_import_file_runtime.js`，`history_page.js` 委托导入文件选择、读取编码、payload 文本归一化与 input reset 值决策
@@ -248,6 +250,7 @@
   - 新增 `src/bootstrap/history-mode-filter.ts` + `js/core_history_mode_filter_runtime.js`，`history_page.js` 委托模式筛选下拉选项模型组装
   - 新增 `src/bootstrap/history-board.ts` + `js/core_history_board_runtime.js`，`history_page.js` 委托历史记录终盘棋盘 HTML 渲染（网格尺寸推断、tile 样式类、super tile 标识）
   - 新增 `src/bootstrap/history-runtime-contract.ts` + `js/core_history_runtime_contract_runtime.js`，`history_page.js` 统一委托历史页 runtime 依赖契约校验并集中收敛依赖对象
+  - `history-runtime-contract` 已纳入 `CoreHistoryRecordListHostRuntime` 依赖校验，历史页列表渲染编排改走统一契约注入
   - 新增 `src/bootstrap/history-adapter-diagnostics.ts` + `js/core_history_adapter_diagnostics_runtime.js`，`history_page.js` 委托 adapter 诊断徽标与文案行模型计算
   - 新增 `src/bootstrap/history-adapter-host.ts` + `js/core_history_adapter_host_runtime.js`，`history_page.js` 委托 adapter 诊断徽标/诊断区渲染编排
   - 新增 `src/bootstrap/history-load-host.ts` + `js/core_history_load_host_runtime.js`，`history_page.js` 委托 load 后渲染编排（列表/汇总/burn-in/canary/status/pager）

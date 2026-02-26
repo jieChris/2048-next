@@ -45,6 +45,7 @@
   var historyLoadHostRuntime = historyRuntimes.historyLoadHostRuntime;
   var historyRecordViewRuntime = historyRuntimes.historyRecordViewRuntime;
   var historyRecordItemRuntime = historyRuntimes.historyRecordItemRuntime;
+  var historyRecordListHostRuntime = historyRuntimes.historyRecordListHostRuntime;
   var historyImportRuntime = historyRuntimes.historyImportRuntime;
   var historyImportFileRuntime = historyRuntimes.historyImportFileRuntime;
   var historyImportHostRuntime = historyRuntimes.historyImportHostRuntime;
@@ -150,90 +151,27 @@
   function renderHistory(result) {
     var list = el("history-list");
     if (!list) return;
-    list.innerHTML = "";
-
-    var items = result && Array.isArray(result.items) ? result.items : [];
-    if (!items.length) {
-      list.innerHTML = "<div class='history-item'>暂无历史记录。你可以开始一局游戏后再回来查看。</div>";
-      return;
-    }
-
-    for (var i = 0; i < items.length; i++) {
-      (function () {
-        var item = items[i];
-        var node = document.createElement("div");
-        node.className = "history-item";
-        var adapterRenderState = historyAdapterHostRuntime.resolveHistoryAdapterRecordRenderState({
-          localHistoryStore: window.LocalHistoryStore,
-          item: item,
-          historyAdapterDiagnosticsRuntime: historyAdapterDiagnosticsRuntime
-        });
-
-        var headState = historyRecordViewRuntime.resolveHistoryRecordHeadState({
-          modeKey: item && item.mode_key,
-          modeFallback: item && item.mode,
-          catalogLabel: historyRecordViewRuntime.resolveHistoryCatalogModeLabel(
-            window.ModeCatalog,
-            item
-          ),
-          score: item && item.score,
-          bestTile: item && item.best_tile,
-          durationMs: item && item.duration_ms,
-          endedAt: item && item.ended_at
-        });
-
-        node.innerHTML = historyRecordItemRuntime.resolveHistoryRecordItemHtml({
-          modeText: headState.modeText,
-          score: headState.score,
-          bestTile: headState.bestTile,
-          durationText: headState.durationText,
-          endedText: headState.endedText,
-          adapterBadgeHtml: adapterRenderState && adapterRenderState.adapterBadgeHtml,
-          adapterDiagnosticsHtml: adapterRenderState && adapterRenderState.adapterDiagnosticsHtml,
-          boardHtml: boardToHtml(item.final_board, item.board_width, item.board_height)
-        });
-
-        var replayBtn = node.querySelector(".history-replay-btn");
-        if (replayBtn) {
-          replayBtn.addEventListener("click", function () {
-            var href = historyRecordHostRuntime.resolveHistoryRecordReplayHref({
-              historyRecordActionsRuntime: historyRecordActionsRuntime,
-              itemId: item && item.id
-            });
-            if (href) window.location.href = href;
-          });
-        }
-
-        var exportBtn = node.querySelector(".history-export-btn");
-        if (exportBtn) {
-          exportBtn.addEventListener("click", function () {
-            historyRecordHostRuntime.applyHistoryRecordExportAction({
-              localHistoryStore: window.LocalHistoryStore,
-              item: item,
-              historyExportRuntime: historyExportRuntime
-            });
-          });
-        }
-
-        var deleteBtn = node.querySelector(".history-delete-btn");
-        if (deleteBtn) {
-          deleteBtn.addEventListener("click", function () {
-            var deleteState = historyRecordHostRuntime.applyHistoryRecordDeleteAction({
-              historyRecordActionsRuntime: historyRecordActionsRuntime,
-              localHistoryStore: window.LocalHistoryStore,
-              itemId: item && item.id,
-              confirmAction: window.confirm
-            });
-            if (deleteState && deleteState.shouldSetStatus) {
-              setStatus(deleteState.statusText, deleteState.isError);
-            }
-            if (deleteState && deleteState.shouldReload) loadHistory();
-          });
-        }
-
-        list.appendChild(node);
-      })();
-    }
+    historyRecordListHostRuntime.applyHistoryRecordListRender({
+      listElement: list,
+      result: result,
+      documentLike: document,
+      localHistoryStore: window.LocalHistoryStore,
+      modeCatalog: window.ModeCatalog,
+      historyAdapterHostRuntime: historyAdapterHostRuntime,
+      historyAdapterDiagnosticsRuntime: historyAdapterDiagnosticsRuntime,
+      historyRecordViewRuntime: historyRecordViewRuntime,
+      historyRecordItemRuntime: historyRecordItemRuntime,
+      historyRecordActionsRuntime: historyRecordActionsRuntime,
+      historyRecordHostRuntime: historyRecordHostRuntime,
+      historyExportRuntime: historyExportRuntime,
+      boardToHtml: boardToHtml,
+      confirmAction: window.confirm,
+      setStatus: setStatus,
+      loadHistory: loadHistory,
+      navigateToHref: function (href) {
+        window.location.href = href;
+      }
+    });
   }
 
   function readFilters() {

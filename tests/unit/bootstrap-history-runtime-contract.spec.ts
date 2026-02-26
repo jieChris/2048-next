@@ -124,6 +124,12 @@ function createWindowLike() {
     CoreHistoryRecordItemRuntime: {
       resolveHistoryRecordItemHtml: () => ""
     },
+    CoreHistoryRecordListHostRuntime: {
+      applyHistoryRecordListRender: () => ({
+        hasItems: false,
+        renderedCount: 0
+      })
+    },
     CoreHistoryImportRuntime: {
       resolveHistoryImportActionState: () => ({ mode: "merge", requiresConfirm: false }),
       resolveHistoryImportMergeFlag: () => true,
@@ -268,6 +274,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyLoadHostRuntime).toBe(source.CoreHistoryLoadHostRuntime);
     expect(result.historyImportHostRuntime).toBe(source.CoreHistoryImportHostRuntime);
     expect(result.historyImportBindHostRuntime).toBe(source.CoreHistoryImportBindHostRuntime);
+    expect(result.historyRecordListHostRuntime).toBe(source.CoreHistoryRecordListHostRuntime);
     expect(result.historyRecordHostRuntime).toBe(source.CoreHistoryRecordHostRuntime);
     expect(result.historyToolbarHostRuntime).toBe(source.CoreHistoryToolbarHostRuntime);
     expect(result.historyToolbarBindHostRuntime).toBe(source.CoreHistoryToolbarBindHostRuntime);
@@ -384,6 +391,15 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryRecordHostRuntime is required"
+    );
+  });
+
+  it("throws exact error when record list host runtime misses required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryRecordListHostRuntime = {};
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryRecordListHostRuntime is required"
     );
   });
 
