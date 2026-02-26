@@ -295,6 +295,14 @@ if (
 ) {
   throw new Error("CoreTopActionsRuntime is required");
 }
+var topActionsHostRuntime = window.CoreTopActionsHostRuntime;
+if (
+  !topActionsHostRuntime ||
+  typeof topActionsHostRuntime.applyGameTopActionsPlacementSync !== "function" ||
+  typeof topActionsHostRuntime.applyPracticeTopActionsPlacementSync !== "function"
+) {
+  throw new Error("CoreTopActionsHostRuntime is required");
+}
 var mobileTopButtonsRuntime = window.CoreMobileTopButtonsRuntime;
 if (
   !mobileTopButtonsRuntime ||
@@ -501,37 +509,6 @@ function isTimerboxCollapseViewport() {
   });
 }
 
-function ensureMobileTopActionsState() {
-  if (!isGamePageScope()) return null;
-  if (mobileTopActionsState) return mobileTopActionsState;
-
-  mobileTopActionsState = topActionsRuntime.createGameTopActionsPlacementState({
-    enabled: true,
-    topActionButtons: document.querySelector(".top-action-buttons"),
-    restartBtn: document.querySelector(".above-game .restart-button"),
-    timerToggleBtn: document.getElementById("timerbox-toggle-btn"),
-    createComment: function (text) {
-      return document.createComment(text);
-    }
-  });
-  return mobileTopActionsState;
-}
-
-function ensurePracticeTopActionsState() {
-  if (!isPracticePageScope()) return null;
-  if (practiceTopActionsState) return practiceTopActionsState;
-
-  practiceTopActionsState = topActionsRuntime.createPracticeTopActionsPlacementState({
-    enabled: true,
-    topActionButtons: document.getElementById("practice-stats-actions"),
-    restartBtn: document.querySelector(".above-game .restart-button"),
-    createComment: function (text) {
-      return document.createComment(text);
-    }
-  });
-  return practiceTopActionsState;
-}
-
 function ensureMobileUndoTopButton() {
   return mobileTopButtonsRuntime.ensureMobileUndoTopButtonDom({
     isGamePageScope: isGamePageScope(),
@@ -547,21 +524,47 @@ function ensureMobileHintToggleButton() {
 }
 
 function syncMobileTopActionsPlacement() {
-  var state = ensureMobileTopActionsState();
-  if (!state) return;
-  topActionsRuntime.syncGameTopActionsPlacement({
-    state: state,
-    compactViewport: isCompactGameViewport()
+  var result = topActionsHostRuntime.applyGameTopActionsPlacementSync({
+    topActionsRuntime: topActionsRuntime,
+    mobileTopActionsState: mobileTopActionsState,
+    isGamePageScope: isGamePageScope(),
+    compactViewport: isCompactGameViewport(),
+    querySelector: function (selector) {
+      return document.querySelector(selector);
+    },
+    getElementById: function (id) {
+      return document.getElementById(id);
+    },
+    createComment: function (text) {
+      return document.createComment(text);
+    }
   });
+  mobileTopActionsState =
+    result && Object.prototype.hasOwnProperty.call(result, "mobileTopActionsState")
+      ? result.mobileTopActionsState
+      : mobileTopActionsState;
 }
 
 function syncPracticeTopActionsPlacement() {
-  var state = ensurePracticeTopActionsState();
-  if (!state) return;
-  topActionsRuntime.syncPracticeTopActionsPlacement({
-    state: state,
-    compactViewport: isCompactGameViewport()
+  var result = topActionsHostRuntime.applyPracticeTopActionsPlacementSync({
+    topActionsRuntime: topActionsRuntime,
+    practiceTopActionsState: practiceTopActionsState,
+    isPracticePageScope: isPracticePageScope(),
+    compactViewport: isCompactGameViewport(),
+    querySelector: function (selector) {
+      return document.querySelector(selector);
+    },
+    getElementById: function (id) {
+      return document.getElementById(id);
+    },
+    createComment: function (text) {
+      return document.createComment(text);
+    }
   });
+  practiceTopActionsState =
+    result && Object.prototype.hasOwnProperty.call(result, "practiceTopActionsState")
+      ? result.practiceTopActionsState
+      : practiceTopActionsState;
 }
 
 function resolveUndoCapabilityState(gm) {

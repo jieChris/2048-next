@@ -3971,6 +3971,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const timerRuntime = (window as any).CoreMobileTimerboxRuntime;
       const undoTopRuntime = (window as any).CoreMobileUndoTopRuntime;
       const topActionsRuntime = (window as any).CoreTopActionsRuntime;
+      const topActionsHostRuntime = (window as any).CoreTopActionsHostRuntime;
       const topButtonsRuntime = (window as any).CoreMobileTopButtonsRuntime;
       const viewportRuntime = (window as any).CoreMobileViewportRuntime;
       const undoActionRuntime = (window as any).CoreUndoActionRuntime;
@@ -3995,6 +3996,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof topActionsRuntime.createPracticeTopActionsPlacementState !== "function" ||
         typeof topActionsRuntime.syncGameTopActionsPlacement !== "function" ||
         typeof topActionsRuntime.syncPracticeTopActionsPlacement !== "function" ||
+        !topActionsHostRuntime ||
+        typeof topActionsHostRuntime.applyGameTopActionsPlacementSync !== "function" ||
+        typeof topActionsHostRuntime.applyPracticeTopActionsPlacementSync !== "function" ||
         !topButtonsRuntime ||
         typeof topButtonsRuntime.ensureMobileUndoTopButtonDom !== "function" ||
         typeof topButtonsRuntime.ensureMobileHintToggleButtonDom !== "function" ||
@@ -4020,6 +4024,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasTimerRuntime: false,
           hasUndoTopRuntime: false,
           hasTopActionsRuntime: false,
+          hasTopActionsHostRuntime: false,
           hasTopButtonsRuntime: false,
           hasViewportRuntime: false
         };
@@ -4033,6 +4038,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasTimerRuntime: true,
           hasUndoTopRuntime: true,
           hasTopActionsRuntime: true,
+          hasTopActionsHostRuntime: true,
           hasTopButtonsRuntime: true,
           hasViewportRuntime: true,
           hasHintButton: false
@@ -4051,6 +4057,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalUndoTopApplied = undoTopRuntime.resolveMobileUndoTopAppliedModel;
       const originalSyncGameTop = topActionsRuntime.syncGameTopActionsPlacement;
       const originalSyncPracticeTop = topActionsRuntime.syncPracticeTopActionsPlacement;
+      const originalApplyGameTopHost = topActionsHostRuntime.applyGameTopActionsPlacementSync;
+      const originalApplyPracticeTopHost = topActionsHostRuntime.applyPracticeTopActionsPlacementSync;
       const originalEnsureUndoTopBtn = topButtonsRuntime.ensureMobileUndoTopButtonDom;
       const originalEnsureHintTopBtn = topButtonsRuntime.ensureMobileHintToggleButtonDom;
       const originalIsCompactViewport = viewportRuntime.isCompactGameViewport;
@@ -4076,6 +4084,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let resolveUndoTopAppliedCallCount = 0;
       let syncGameTopCallCount = 0;
       let syncPracticeTopCallCount = 0;
+      let applyGameTopHostCallCount = 0;
+      let applyPracticeTopHostCallCount = 0;
       let ensureUndoTopBtnCallCount = 0;
       let ensureHintTopBtnCallCount = 0;
       let compactViewportCallCount = 0;
@@ -4136,6 +4146,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       topActionsRuntime.syncPracticeTopActionsPlacement = function (opts: any) {
         syncPracticeTopCallCount += 1;
         return originalSyncPracticeTop(opts);
+      };
+      topActionsHostRuntime.applyGameTopActionsPlacementSync = function (opts: any) {
+        applyGameTopHostCallCount += 1;
+        return originalApplyGameTopHost(opts);
+      };
+      topActionsHostRuntime.applyPracticeTopActionsPlacementSync = function (opts: any) {
+        applyPracticeTopHostCallCount += 1;
+        return originalApplyPracticeTopHost(opts);
       };
       topButtonsRuntime.ensureMobileUndoTopButtonDom = function (opts: any) {
         ensureUndoTopBtnCallCount += 1;
@@ -4211,6 +4229,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasTimerRuntime: true,
           hasUndoTopRuntime: true,
           hasTopActionsRuntime: true,
+          hasTopActionsHostRuntime: true,
           hasTopButtonsRuntime: true,
           hasViewportRuntime: true,
           hasHintButton: true,
@@ -4226,6 +4245,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
           resolveUndoTopAppliedCallCount,
           syncGameTopCallCount,
           syncPracticeTopCallCount,
+          applyGameTopHostCallCount,
+          applyPracticeTopHostCallCount,
           ensureUndoTopBtnCallCount,
           ensureHintTopBtnCallCount,
           compactViewportCallCount,
@@ -4254,6 +4275,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         undoTopRuntime.resolveMobileUndoTopAppliedModel = originalUndoTopApplied;
         topActionsRuntime.syncGameTopActionsPlacement = originalSyncGameTop;
         topActionsRuntime.syncPracticeTopActionsPlacement = originalSyncPracticeTop;
+        topActionsHostRuntime.applyGameTopActionsPlacementSync = originalApplyGameTopHost;
+        topActionsHostRuntime.applyPracticeTopActionsPlacementSync = originalApplyPracticeTopHost;
         topButtonsRuntime.ensureMobileUndoTopButtonDom = originalEnsureUndoTopBtn;
         topButtonsRuntime.ensureMobileHintToggleButtonDom = originalEnsureHintTopBtn;
         viewportRuntime.isCompactGameViewport = originalIsCompactViewport;
@@ -4276,6 +4299,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasTimerRuntime).toBe(true);
     expect(snapshot.hasUndoTopRuntime).toBe(true);
     expect(snapshot.hasTopActionsRuntime).toBe(true);
+    expect(snapshot.hasTopActionsHostRuntime).toBe(true);
     expect(snapshot.hasTopButtonsRuntime).toBe(true);
     expect(snapshot.hasViewportRuntime).toBe(true);
     expect(snapshot.hasHintButton).toBe(true);
@@ -4291,6 +4315,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolveUndoTopAppliedCallCount).toBeGreaterThan(0);
     expect(snapshot.syncGameTopCallCount).toBeGreaterThan(0);
     expect(snapshot.syncPracticeTopCallCount).toBeGreaterThanOrEqual(0);
+    expect(snapshot.applyGameTopHostCallCount).toBeGreaterThan(0);
+    expect(snapshot.applyPracticeTopHostCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.ensureUndoTopBtnCallCount).toBeGreaterThan(0);
     expect(snapshot.ensureHintTopBtnCallCount).toBeGreaterThan(0);
     expect(snapshot.compactViewportCallCount).toBeGreaterThan(0);

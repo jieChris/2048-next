@@ -153,6 +153,8 @@
   - 新增 `src/bootstrap/mobile-undo-top-availability-host.ts` + `js/core_mobile_undo_top_availability_host_runtime.js`，`index_ui.js` 委托移动端顶部撤回按钮可用态同步（能力判定 + 展示模型应用 + label/aria 写回）
   - `index_ui.js` 现直接消费 `resolveMobileUndoTopAppliedModel` 的安全模型，不再重复本地样式兜底分支
   - 新增 `src/bootstrap/top-actions.ts` + `js/core_top_actions_runtime.js`，`index_ui.js` 委托移动端/练习页顶部按钮重排状态创建与同步
+  - 新增 `src/bootstrap/top-actions-host.ts` + `js/core_top_actions_host_runtime.js`，`index_ui.js` 委托顶部重排状态创建与同步编排（game/practice 作用域 gate + state 复用）
+  - `index_ui.js` 的 `syncMobileTopActionsPlacement/syncPracticeTopActionsPlacement` 已收敛为 `CoreTopActionsHostRuntime` 调用，页面层移除重排 state 创建与 DOM 选择器编排分支
   - 新增 `src/bootstrap/mobile-top-buttons.ts` + `js/core_mobile_top_buttons_runtime.js`，`index_ui.js` 委托移动端撤回/提示按钮 DOM 创建与挂载顺序
   - 新增 `src/bootstrap/mobile-viewport.ts` + `js/core_mobile_viewport_runtime.js`，`index_ui.js` 委托紧凑视口/计时器折叠视口/移动端视口判定
   - `mobile-viewport` 已承接页面作用域判定（`resolvePageScopeValue`/`isGamePageScope`/`isPracticePageScope`/`isTimerboxMobileScope`），`index_ui.js` 不再直接读取 `body[data-page]`
