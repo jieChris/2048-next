@@ -210,6 +210,13 @@ if (
 ) {
   throw new Error("CoreMobileTimerboxRuntime is required");
 }
+var mobileTimerboxHostRuntime = window.CoreMobileTimerboxHostRuntime;
+if (
+  !mobileTimerboxHostRuntime ||
+  typeof mobileTimerboxHostRuntime.applyMobileTimerboxToggleInit !== "function"
+) {
+  throw new Error("CoreMobileTimerboxHostRuntime is required");
+}
 var mobileUndoTopRuntime = window.CoreMobileUndoTopRuntime;
 if (
   !mobileUndoTopRuntime ||
@@ -722,23 +729,17 @@ function syncMobileTimerboxUI(options) {
 }
 
 function initMobileTimerboxToggle() {
-  if (!isTimerboxMobileScope()) return;
-  var toggleBtn = document.getElementById("timerbox-toggle-btn");
-  var timerBox = document.getElementById("timerbox");
-  if (!toggleBtn || !timerBox) return;
-  if (!toggleBtn.__mobileTimerboxBound) {
-    toggleBtn.__mobileTimerboxBound = true;
-    toggleBtn.addEventListener("click", function (e) {
-      if (e) e.preventDefault();
-      var collapsed = timerBox.classList.contains("is-mobile-expanded");
-      syncMobileTimerboxUI({ collapsed: collapsed, persist: true });
-      requestResponsiveGameRelayout();
-    });
-  }
-  syncMobileTopActionsPlacement();
-  syncPracticeTopActionsPlacement();
-  syncMobileUndoTopButtonAvailability();
-  syncMobileTimerboxUI();
+  mobileTimerboxHostRuntime.applyMobileTimerboxToggleInit({
+    isTimerboxMobileScope: isTimerboxMobileScope,
+    getElementById: function (id) {
+      return document.getElementById(id);
+    },
+    syncMobileTimerboxUI: syncMobileTimerboxUI,
+    requestResponsiveGameRelayout: requestResponsiveGameRelayout,
+    syncMobileTopActionsPlacement: syncMobileTopActionsPlacement,
+    syncPracticeTopActionsPlacement: syncPracticeTopActionsPlacement,
+    syncMobileUndoTopButtonAvailability: syncMobileUndoTopButtonAvailability
+  });
 }
 
 function requestResponsiveGameRelayout() {
