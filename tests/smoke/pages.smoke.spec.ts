@@ -3679,6 +3679,95 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.modeKey).toBe("standard_4x4_pow2_no_undo");
   });
 
+  test("replay ui delegates guide storage decisions to runtime helper", async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.removeItem("replay_guide_shown_v1");
+      } catch (_err) {}
+
+      (window as any).__replayGuideShowCalls = 0;
+      (window as any).__replayGuideMarkCalls = 0;
+
+      const runtimeTarget: Record<string, unknown> = {};
+      const runtimeProxy = new Proxy(runtimeTarget, {
+        set(target, prop, value) {
+          if (prop === "shouldShowReplayGuideFromContext" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__replayGuideShowCalls =
+                Number((window as any).__replayGuideShowCalls || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          if (prop === "markReplayGuideSeenFromContext" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__replayGuideMarkCalls =
+                Number((window as any).__replayGuideMarkCalls || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+
+      Object.defineProperty(window, "CoreReplayGuideRuntime", {
+        configurable: true,
+        writable: true,
+        value: runtimeProxy
+      });
+    });
+
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(async () => {
+      const runtime = (window as any).CoreReplayGuideRuntime;
+      if (
+        !runtime ||
+        typeof runtime.readReplayGuideSeenFromContext !== "function" ||
+        typeof runtime.shouldShowReplayGuideFromContext !== "function" ||
+        typeof runtime.markReplayGuideSeenFromContext !== "function"
+      ) {
+        return {
+          hasRuntime: false
+        };
+      }
+
+      const overlay = document.getElementById("guide-overlay") as HTMLElement | null;
+      const initialDisplay = overlay ? String(overlay.style.display || "") : "";
+      if (overlay) {
+        overlay.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      }
+      await new Promise((resolve) => {
+        window.requestAnimationFrame(() => resolve(null));
+      });
+      const finalDisplay = overlay ? String(overlay.style.display || "") : "";
+
+      return {
+        hasRuntime: true,
+        hasOverlay: !!overlay,
+        showCalls: Number((window as any).__replayGuideShowCalls || 0),
+        markCalls: Number((window as any).__replayGuideMarkCalls || 0),
+        initialDisplay,
+        finalDisplay
+      };
+    });
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasOverlay).toBe(true);
+    expect(snapshot.showCalls).toBeGreaterThan(0);
+    expect(snapshot.markCalls).toBeGreaterThan(0);
+    expect(snapshot.initialDisplay).toBe("block");
+    expect(snapshot.finalDisplay).toBe("none");
+  });
+
   test("application handle_undo delegates to undo-action runtime", async ({ page }) => {
     const response = await page.goto("/index.html", {
       waitUntil: "domcontentloaded"

@@ -1,10 +1,25 @@
 // Logic extracted from replay.html
 
+var replayGuideRuntime = window.CoreReplayGuideRuntime;
+if (
+    !replayGuideRuntime ||
+    typeof replayGuideRuntime.readReplayGuideSeenFromContext !== "function" ||
+    typeof replayGuideRuntime.shouldShowReplayGuideFromContext !== "function" ||
+    typeof replayGuideRuntime.markReplayGuideSeenFromContext !== "function"
+) {
+    throw new Error("CoreReplayGuideRuntime is required");
+}
+
 // Guide Logic
 (function() {
     var guideKey = 'replay_guide_shown_v1';
     var guideResizeTimer = null;
-    if (!localStorage.getItem(guideKey)) {
+    var shouldShowGuide = replayGuideRuntime.shouldShowReplayGuideFromContext({
+        windowLike: typeof window !== "undefined" ? window : null,
+        key: guideKey,
+        seenValue: "true"
+    });
+    if (shouldShowGuide) {
         // Wait for DOMContentLoaded is handled by script load order or event, but let's be safe inside the main listener or check if body exists
         // Since replay_ui.js is loaded at end of body, elements should exist.
         var overlay = document.getElementById('guide-overlay');
@@ -38,7 +53,11 @@
             function dismiss() {
                 overlay.style.display = 'none';
                 titleLink.classList.remove('guide-highlight');
-                localStorage.setItem(guideKey, 'true');
+                replayGuideRuntime.markReplayGuideSeenFromContext({
+                    windowLike: typeof window !== "undefined" ? window : null,
+                    key: guideKey,
+                    seenValue: "true"
+                });
             }
             
             // Bind Events

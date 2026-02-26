@@ -46,6 +46,8 @@
   - 新增 `src/bootstrap/simple-startup.ts` + `js/core_simple_startup_runtime.js`，`replay/capped` 入口委托固定模式启动 payload 组装
   - 新增 `src/bootstrap/simple-page-host.ts` + `js/core_simple_page_host_runtime.js`，`replay/capped` 入口委托 page 级 runtime 契约解析与启动编排
   - `replay_application.js` / `capped_application.js` 已收敛为单一 `CoreSimplePageHostRuntime.applySimplePageBootstrap` 调用
+  - 新增 `src/bootstrap/replay-guide.ts` + `js/core_replay_guide_runtime.js`，`replay_ui.js` 委托回放页首访指引已读判定与落标记
+  - `replay_ui.js` 的回放页指引流程已改为 `CoreReplayGuideRuntime` 调用，页面层移除 `localStorage` 直接读写
   - 新增 `src/bootstrap/capped-timer-scroll.ts` + `js/core_capped_timer_scroll_runtime.js`，`capped_timer_scroll.js` 委托 capped/practice 计时滚动模式上下文判定
   - `capped_timer_scroll.js` 已通过 `resolveTimerScrollModeFromContext` 下沉 `data-mode-id/GAME_MODE_CONFIG` 读取
   - `application/play/capped/replay` 统一走 `LegacyBootstrapRuntime.startGameOnAnimationFrame`
