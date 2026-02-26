@@ -122,6 +122,7 @@
   - `index_ui.js` 顶部弹窗逻辑已改为 `CoreReplayModalRuntime` 调用（`showReplayModal/closeReplayModal/openSettingsModal/closeSettingsModal`）
   - 新增 `src/bootstrap/replay-export.ts` + `js/core_replay_export_runtime.js`，`index_ui.js` 委托回放导出与剪贴板复制回退（clipboard/fallback）逻辑
   - `index_ui.js` 已移除本地 `copyToClipboard/fallbackCopy`，`window.exportReplay` 收敛为 `CoreReplayExportRuntime.applyReplayExport` 调用
+  - 新增 `src/bootstrap/pretty-time.ts` + `js/core_pretty_time_runtime.js`，`index_ui.js` 委托计时展示格式化（`window.pretty`）
   - `theme-settings` 已承接双预览区布局契约（`resolveThemePreviewLayout`），`index_ui.js` 不再硬编码预览容器 class、innerHTML 与选择器常量
   - `theme-settings` 已承接主题列表标准化（`resolveThemeOptions`），`index_ui.js` 不再直接消费 `ThemeManager.getThemes()` 的原始结构
   - `theme-settings` 已承接预览 CSS 选择器回退策略（`resolveThemePreviewCssSelectors`），`index_ui.js` 不再硬编码 `getPreviewCss` 的布局 fallback 分支

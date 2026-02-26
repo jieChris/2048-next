@@ -250,6 +250,13 @@ if (
 ) {
   throw new Error("CoreStorageRuntime is required");
 }
+var prettyTimeRuntime = window.CorePrettyTimeRuntime;
+if (
+  !prettyTimeRuntime ||
+  typeof prettyTimeRuntime.formatPrettyTime !== "function"
+) {
+  throw new Error("CorePrettyTimeRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -667,21 +674,7 @@ window.openPracticeBoardFromCurrent = function () {
 
 // Pretty print time function (Legacy support just in case)
 window.pretty = function(time) {
-  if (time < 0) {return "DNF";}
-    var bits = time % 1000;
-    time = (time - bits) / 1000;
-    var secs = time % 60;
-    var mins = ((time - secs) / 60) % 60;
-    var hours = (time - secs - 60 * mins) / 3600;
-    var s = "" + bits;
-    if (bits < 10) {s = "0" + s;}
-    if (bits < 100) {s = "0" + s;}
-    s = secs + "." + s;
-    if (secs < 10 && (mins > 0 || hours > 0)) {s = "0" + s;}
-    if (mins > 0 || hours > 0) {s = mins + ":" + s;}
-    if (mins < 10 && hours > 0) {s = "0" + s;}
-    if (hours > 0) {s = hours + ":" + s;}
-  return s;
+  return prettyTimeRuntime.formatPrettyTime(time);
 };
 
 function formatPreviewValue(value) {
