@@ -335,6 +335,13 @@ if (
 ) {
   throw new Error("CoreHomeGuideControlsHostRuntime is required");
 }
+var homeGuideStepFlowHostRuntime = window.CoreHomeGuideStepFlowHostRuntime;
+if (
+  !homeGuideStepFlowHostRuntime ||
+  typeof homeGuideStepFlowHostRuntime.applyHomeGuideStepFlow !== "function"
+) {
+  throw new Error("CoreHomeGuideStepFlowHostRuntime is required");
+}
 var homeGuideStepViewHostRuntime = window.CoreHomeGuideStepViewHostRuntime;
 if (
   !homeGuideStepViewHostRuntime ||
@@ -1216,65 +1223,32 @@ function finishHomeGuide(markSeen, options) {
 }
 
 function showHomeGuideStep(index) {
-  var stepIndexState = homeGuideRuntime.resolveHomeGuideStepIndexState({
-    isActive: HOME_GUIDE_STATE.active,
-    stepCount: HOME_GUIDE_STATE.steps.length,
-    stepIndex: index
+  var flowResult = homeGuideStepFlowHostRuntime.applyHomeGuideStepFlow({
+    index: index,
+    documentLike: document,
+    windowLike: typeof window !== "undefined" ? window : null,
+    homeGuideRuntime: homeGuideRuntime,
+    homeGuideState: HOME_GUIDE_STATE,
+    mobileViewportRuntime: mobileViewportRuntime,
+    mobileUiMaxWidth: MOBILE_UI_MAX_WIDTH,
+    isElementVisibleForGuide: isElementVisibleForGuide,
+    clearHomeGuideHighlight: clearHomeGuideHighlight,
+    elevateHomeGuideTarget: elevateHomeGuideTarget,
+    finishHomeGuide: finishHomeGuide
   });
-  if (stepIndexState.shouldAbort) return;
-  if (stepIndexState.shouldFinish) {
-    var finishState = homeGuideRuntime.resolveHomeGuideFinishState({
-      reason: "completed"
-    });
-    finishHomeGuide(finishState.markSeen, {
-      showDoneNotice: finishState.showDoneNotice
-    });
+  if (flowResult.shouldAbort || flowResult.didFinish) return;
+  if (flowResult.shouldAdvance) {
+    showHomeGuideStep(flowResult.nextIndex);
     return;
   }
-  index = stepIndexState.resolvedIndex;
-  HOME_GUIDE_STATE.index = index;
-  clearHomeGuideHighlight();
-
-  var step = HOME_GUIDE_STATE.steps[index];
-  var target = document.querySelector(step.selector);
-  var targetVisible = !!(target && isElementVisibleForGuide(target));
-  var stepTargetState = homeGuideRuntime.resolveHomeGuideStepTargetState({
-    hasTarget: !!target,
-    targetVisible: targetVisible,
-    stepIndex: index
-  });
-  if (stepTargetState.shouldAdvance) {
-    showHomeGuideStep(stepTargetState.nextIndex);
-    return;
-  }
-  if (!target || !targetVisible) {
-    showHomeGuideStep(index + 1);
-    return;
-  }
-  HOME_GUIDE_STATE.target = target;
-  var targetScrollState = homeGuideRuntime.resolveHomeGuideTargetScrollState({
-    isCompactViewport: mobileViewportRuntime.isViewportAtMost({
-      windowLike: window,
-      maxWidth: MOBILE_UI_MAX_WIDTH
-    }),
-    canScrollIntoView: !!target.scrollIntoView
-  });
-  if (targetScrollState.shouldScroll && target.scrollIntoView) {
-    target.scrollIntoView({
-      block: targetScrollState.block,
-      inline: targetScrollState.inline,
-      behavior: targetScrollState.behavior
-    });
-  }
-  target.classList.add("home-guide-highlight");
-  elevateHomeGuideTarget(target);
+  if (!flowResult.shouldRender) return;
 
   homeGuideStepViewHostRuntime.applyHomeGuideStepView({
     documentLike: document,
     windowLike: typeof window !== "undefined" ? window : null,
     homeGuideRuntime: homeGuideRuntime,
-    step: step || null,
-    stepIndex: index,
+    step: flowResult.step || null,
+    stepIndex: flowResult.stepIndex,
     stepCount: HOME_GUIDE_STATE.steps.length,
     positionHomeGuidePanel: positionHomeGuidePanel
   });

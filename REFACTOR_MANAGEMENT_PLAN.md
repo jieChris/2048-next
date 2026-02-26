@@ -164,6 +164,8 @@
   - `index_ui.js` 的 `startHomeGuide` 已收敛为 `CoreHomeGuideStartHostRuntime.applyHomeGuideStart + CoreHomeGuideControlsHostRuntime.applyHomeGuideControls` 串联调用（页面层移除按钮绑定与 skip 完成态分支）
   - 新增 `src/bootstrap/home-guide-step-view-host.ts` + `js/core_home_guide_step_view_host_runtime.js`，`index_ui.js` 委托引导步骤文案/按钮状态渲染与面板重定位调度编排
   - `index_ui.js` 的 `showHomeGuideStep` 已移除本地 DOM 渲染分支，改为 `CoreHomeGuideStepViewHostRuntime.applyHomeGuideStepView` 调用（渲染模型仍由 `home-guide` runtime 提供）
+  - 新增 `src/bootstrap/home-guide-step-flow-host.ts` + `js/core_home_guide_step_flow_host_runtime.js`，`index_ui.js` 委托引导步骤流程决策（边界/完成/目标跳过）与目标副作用编排（滚动/高亮/层提升）
+  - `index_ui.js` 的 `showHomeGuideStep` 已收敛为 `CoreHomeGuideStepFlowHostRuntime.applyHomeGuideStepFlow + CoreHomeGuideStepViewHostRuntime.applyHomeGuideStepView` 串联调用（页面层移除 completed/target/scroll 分支）
   - 新增 `src/bootstrap/home-guide-startup-host.ts` + `js/core_home_guide_startup_host_runtime.js`，`index_ui.js` 委托首页新手引导自动启动编排（路径判定/存储判定/延迟调度）
   - `index_ui.js` 的 `autoStartHomeGuideIfNeeded` 已收敛为 `CoreHomeGuideStartupHostRuntime.applyHomeGuideAutoStart` 调用
   - 新增 `src/bootstrap/storage.ts` + `js/core_storage_runtime.js`，`index_ui.js` 委托 `localStorage/sessionStorage` 安全获取，不再内联存储访问容错逻辑
