@@ -301,6 +301,14 @@ function createWindowLike() {
         renderedOptionCount: 0
       })
     },
+    CoreHistoryControlsHostRuntime: {
+      applyHistoryModeFilterInitialization: () => ({
+        didInit: true
+      }),
+      bindHistoryControls: () => ({
+        didBind: true
+      })
+    },
     CoreHistoryStartupHostRuntime: {
       applyHistoryStartup: () => ({
         started: true,
@@ -334,6 +342,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyToolbarEventsHostRuntime).toBe(source.CoreHistoryToolbarEventsHostRuntime);
     expect(result.historyModeFilterRuntime).toBe(source.CoreHistoryModeFilterRuntime);
     expect(result.historyModeFilterHostRuntime).toBe(source.CoreHistoryModeFilterHostRuntime);
+    expect(result.historyControlsHostRuntime).toBe(source.CoreHistoryControlsHostRuntime);
     expect(result.historyStartupHostRuntime).toBe(source.CoreHistoryStartupHostRuntime);
   });
 

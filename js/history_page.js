@@ -63,6 +63,7 @@
   var historyToolbarEventsHostRuntime = historyRuntimes.historyToolbarEventsHostRuntime;
   var historyModeFilterRuntime = historyRuntimes.historyModeFilterRuntime;
   var historyModeFilterHostRuntime = historyRuntimes.historyModeFilterHostRuntime;
+  var historyControlsHostRuntime = historyRuntimes.historyControlsHostRuntime;
   var historyStartupHostRuntime = historyRuntimes.historyStartupHostRuntime;
 
   function setStatus(text, isError) {
@@ -177,16 +178,18 @@
   }
 
   function initModeFilter() {
-    historyModeFilterHostRuntime.applyHistoryModeFilterOptionsRender({
-      selectElement: el("history-mode"),
+    historyControlsHostRuntime.applyHistoryModeFilterInitialization({
+      getElementById: el,
+      modeElementId: "history-mode",
       modeCatalog: window.ModeCatalog,
       historyModeFilterRuntime: historyModeFilterRuntime,
+      historyModeFilterHostRuntime: historyModeFilterHostRuntime,
       documentLike: document
     });
   }
 
   function bindToolbarActions() {
-    historyToolbarBindHostRuntime.bindHistoryToolbarActionButtons({
+    historyControlsHostRuntime.bindHistoryControls({
       getElementById: el,
       localHistoryStore: window.LocalHistoryStore,
       state: state,
@@ -196,31 +199,20 @@
       historyExportRuntime: historyExportRuntime,
       historyToolbarRuntime: historyToolbarRuntime,
       historyToolbarHostRuntime: historyToolbarHostRuntime,
-      confirmAction: window.confirm,
-      createDate: function () {
-        return new Date();
-      }
-    });
-
-    historyImportBindHostRuntime.bindHistoryImportControls({
-      getElementById: el,
-      localHistoryStore: window.LocalHistoryStore,
+      historyToolbarBindHostRuntime: historyToolbarBindHostRuntime,
       historyImportRuntime: historyImportRuntime,
       historyImportFileRuntime: historyImportFileRuntime,
       historyImportHostRuntime: historyImportHostRuntime,
+      historyImportBindHostRuntime: historyImportBindHostRuntime,
+      historyToolbarEventsRuntime: historyToolbarEventsRuntime,
+      historyToolbarEventsHostRuntime: historyToolbarEventsHostRuntime,
       confirmAction: window.confirm,
+      createDate: function () {
+        return new Date();
+      },
       createFileReader: function () {
         return new FileReader();
-      },
-      setStatus: setStatus,
-      loadHistory: loadHistory
-    });
-
-    historyToolbarEventsHostRuntime.bindHistoryToolbarPagerAndFilterEvents({
-      getElementById: el,
-      state: state,
-      loadHistory: loadHistory,
-      historyToolbarEventsRuntime: historyToolbarEventsRuntime
+      }
     });
   }
 

@@ -317,6 +317,11 @@
       ["applyHistoryModeFilterOptionsRender"],
       "CoreHistoryModeFilterHostRuntime is required"
     );
+    var historyControlsHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryControlsHostRuntime,
+      ["applyHistoryModeFilterInitialization", "bindHistoryControls"],
+      "CoreHistoryControlsHostRuntime is required"
+    );
     var historyStartupHostRuntime = requireRuntimeFunctions(
       source.CoreHistoryStartupHostRuntime,
       ["applyHistoryStartup"],
@@ -361,6 +366,7 @@
       historyToolbarEventsHostRuntime: historyToolbarEventsHostRuntime,
       historyModeFilterRuntime: historyModeFilterRuntime,
       historyModeFilterHostRuntime: historyModeFilterHostRuntime,
+      historyControlsHostRuntime: historyControlsHostRuntime,
       historyStartupHostRuntime: historyStartupHostRuntime
     };
   }
