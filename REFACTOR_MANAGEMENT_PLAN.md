@@ -264,6 +264,8 @@
     - `src/core/replay-flow.ts` + `js/core_replay_flow_runtime.js`
     - `src/core/replay-control.ts` + `js/core_replay_control_runtime.js`
     - `src/core/replay-loop.ts` + `js/core_replay_loop_runtime.js`
+  - `src/core/game-settings-storage.ts` + `js/core_game_settings_storage_runtime.js`（本地设置存储 helper：flag/json map/payload）
+  - `game_manager.js` 已改为通过 `CoreGameSettingsStorageRuntime` 读写统计面板开关、计时器模块视图、撤回设置与会话提交结果（页面层移除 direct localStorage 访问）
 
 验收标准：
 - 黄金向量下棋盘状态、分数、胜负状态与旧版一致。

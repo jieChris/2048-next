@@ -850,6 +850,113 @@ GameManager.prototype.getWebStorageByName = function (name) {
   }
 };
 
+GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
+  var runtime = this.getCoreGameSettingsStorageRuntime();
+  if (runtime && typeof runtime.readStorageFlagFromContext === "function") {
+    return !!runtime.readStorageFlagFromContext({
+      windowLike: typeof window !== "undefined" ? window : null,
+      key: key,
+      trueValue: trueValue
+    });
+  }
+  var storage = this.getWebStorageByName("localStorage");
+  if (!storage || typeof storage.getItem !== "function") return false;
+  var matchValue = typeof trueValue === "string" ? trueValue : "1";
+  try {
+    return storage.getItem(key) === matchValue;
+  } catch (_err) {
+    return false;
+  }
+};
+
+GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue, falseValue) {
+  var runtime = this.getCoreGameSettingsStorageRuntime();
+  if (runtime && typeof runtime.writeStorageFlagFromContext === "function") {
+    return !!runtime.writeStorageFlagFromContext({
+      windowLike: typeof window !== "undefined" ? window : null,
+      key: key,
+      enabled: !!enabled,
+      trueValue: trueValue,
+      falseValue: falseValue
+    });
+  }
+  var storage = this.getWebStorageByName("localStorage");
+  if (!storage || typeof storage.setItem !== "function") return false;
+  var value = enabled ? (typeof trueValue === "string" ? trueValue : "1") : (typeof falseValue === "string" ? falseValue : "0");
+  try {
+    storage.setItem(key, value);
+    return true;
+  } catch (_err) {
+    return false;
+  }
+};
+
+GameManager.prototype.readLocalStorageJsonMap = function (key) {
+  var runtime = this.getCoreGameSettingsStorageRuntime();
+  if (runtime && typeof runtime.readStorageJsonMapFromContext === "function") {
+    var runtimeMap = runtime.readStorageJsonMapFromContext({
+      windowLike: typeof window !== "undefined" ? window : null,
+      key: key
+    });
+    if (runtimeMap && typeof runtimeMap === "object" && !Array.isArray(runtimeMap)) {
+      return runtimeMap;
+    }
+    return {};
+  }
+  var storage = this.getWebStorageByName("localStorage");
+  if (!storage || typeof storage.getItem !== "function") return {};
+  try {
+    var raw = storage.getItem(key);
+    if (!raw) return {};
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed;
+  } catch (_err) {
+    return {};
+  }
+};
+
+GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
+  var runtime = this.getCoreGameSettingsStorageRuntime();
+  if (runtime && typeof runtime.writeStorageJsonMapFromContext === "function") {
+    return !!runtime.writeStorageJsonMapFromContext({
+      windowLike: typeof window !== "undefined" ? window : null,
+      key: key,
+      map: map
+    });
+  }
+  var storage = this.getWebStorageByName("localStorage");
+  if (!storage || typeof storage.setItem !== "function") return false;
+  var safeMap = (map && typeof map === "object" && !Array.isArray(map)) ? map : {};
+  try {
+    storage.setItem(key, JSON.stringify(safeMap));
+    return true;
+  } catch (_err) {
+    return false;
+  }
+};
+
+GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
+  var runtime = this.getCoreGameSettingsStorageRuntime();
+  if (runtime && typeof runtime.writeStorageJsonPayloadFromContext === "function") {
+    return !!runtime.writeStorageJsonPayloadFromContext({
+      windowLike: typeof window !== "undefined" ? window : null,
+      key: key,
+      payload: payload
+    });
+  }
+  var storage = this.getWebStorageByName("localStorage");
+  if (!storage || typeof storage.setItem !== "function") return false;
+  try {
+    var serialized = JSON.stringify(payload);
+    if (typeof serialized !== "string") return false;
+    storage.setItem(key, serialized);
+    return true;
+  } catch (_err) {
+    return false;
+  }
+};
+
 GameManager.prototype.getSavedGameStateStorages = function () {
   var out = [];
   var localStore = this.getWebStorageByName("localStorage");
@@ -1656,6 +1763,13 @@ GameManager.prototype.getCoreUndoRestorePayloadRuntime = function () {
 GameManager.prototype.getCoreUndoStackEntryRuntime = function () {
   if (typeof window === "undefined") return null;
   var core = window.CoreUndoStackEntryRuntime;
+  if (!core || typeof core !== "object") return null;
+  return core;
+};
+
+GameManager.prototype.getCoreGameSettingsStorageRuntime = function () {
+  if (typeof window === "undefined") return null;
+  var core = window.CoreGameSettingsStorageRuntime;
   if (!core || typeof core !== "object") return null;
   return core;
 };
@@ -3069,10 +3183,7 @@ GameManager.prototype.initStatsPanelUi = function () {
     });
   }
 
-  var isOpen = false;
-  try {
-    isOpen = localStorage.getItem(GameManager.STATS_PANEL_VISIBLE_KEY) === "1";
-  } catch (_err) {}
+  var isOpen = this.readLocalStorageFlag(GameManager.STATS_PANEL_VISIBLE_KEY, "1");
   overlay.style.display = isOpen ? "flex" : "none";
 };
 
@@ -3081,18 +3192,14 @@ GameManager.prototype.openStatsPanel = function () {
   if (!overlay) return;
   overlay.style.display = "flex";
   this.updateStatsPanel();
-  try {
-    localStorage.setItem(GameManager.STATS_PANEL_VISIBLE_KEY, "1");
-  } catch (_err) {}
+  this.writeLocalStorageFlag(GameManager.STATS_PANEL_VISIBLE_KEY, true, "1", "0");
 };
 
 GameManager.prototype.closeStatsPanel = function () {
   var overlay = document.getElementById("stats-panel-overlay");
   if (!overlay) return;
   overlay.style.display = "none";
-  try {
-    localStorage.setItem(GameManager.STATS_PANEL_VISIBLE_KEY, "0");
-  } catch (_err) {}
+  this.writeLocalStorageFlag(GameManager.STATS_PANEL_VISIBLE_KEY, false, "1", "0");
 };
 
 GameManager.prototype.isTimerLeaderboardAvailableByMode = function (mode) {
@@ -3109,27 +3216,15 @@ GameManager.prototype.getTimerModuleViewMode = function () {
 };
 
 GameManager.prototype.loadTimerModuleViewForMode = function (mode) {
-  var map = {};
-  try {
-    map = JSON.parse(localStorage.getItem(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY) || "{}");
-  } catch (_err) {
-    map = {};
-  }
+  var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
   var value = map[mode];
   return value === "hidden" ? "hidden" : "timer";
 };
 
 GameManager.prototype.persistTimerModuleViewForMode = function (mode, view) {
-  var map = {};
-  try {
-    map = JSON.parse(localStorage.getItem(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY) || "{}");
-  } catch (_err) {
-    map = {};
-  }
+  var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
   map[mode] = view === "hidden" ? "hidden" : "timer";
-  try {
-    localStorage.setItem(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY, JSON.stringify(map));
-  } catch (_err2) {}
+  this.writeLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY, map);
 };
 
 GameManager.prototype.notifyTimerModuleSettingsStateChanged = function () {
@@ -3211,12 +3306,7 @@ GameManager.prototype.loadUndoSettingForMode = function (mode) {
   var forced = this.getForcedUndoSettingForMode(mode);
   if (forced !== null) return forced;
   if (!this.isUndoAllowedByMode(mode)) return false;
-  var map = {};
-  try {
-    map = JSON.parse(localStorage.getItem(GameManager.UNDO_SETTINGS_KEY) || "{}");
-  } catch (_err) {
-    map = {};
-  }
+  var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
   if (Object.prototype.hasOwnProperty.call(map, mode)) {
     return !!map[mode];
   }
@@ -3226,16 +3316,9 @@ GameManager.prototype.loadUndoSettingForMode = function (mode) {
 GameManager.prototype.persistUndoSettingForMode = function (mode, enabled) {
   if (this.isUndoSettingFixedForMode(mode)) return;
   if (!this.isUndoAllowedByMode(mode)) return;
-  var map = {};
-  try {
-    map = JSON.parse(localStorage.getItem(GameManager.UNDO_SETTINGS_KEY) || "{}");
-  } catch (_err) {
-    map = {};
-  }
+  var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
   map[mode] = !!enabled;
-  try {
-    localStorage.setItem(GameManager.UNDO_SETTINGS_KEY, JSON.stringify(map));
-  } catch (_err2) {}
+  this.writeLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY, map);
 };
 
 GameManager.prototype.setUndoEnabled = function (enabled, skipPersist, forceChange) {
@@ -4534,10 +4617,9 @@ GameManager.prototype.serializeV3 = function () {
 };
 
 GameManager.prototype.tryAutoSubmitOnGameOver = function () {
+  var self = this;
   function setResult(payload) {
-    try {
-      localStorage.setItem("last_session_submit_result_v1", JSON.stringify(payload));
-    } catch (_err) {}
+    self.writeLocalStorageJsonPayload("last_session_submit_result_v1", payload);
   }
 
   if (this.sessionSubmitDone) return;
