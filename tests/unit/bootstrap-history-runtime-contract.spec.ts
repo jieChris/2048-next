@@ -147,6 +147,12 @@ function createWindowLike() {
         didApplyPagerState: true
       })
     },
+    CoreHistoryLoadEntryHostRuntime: {
+      applyHistoryLoadEntry: () => ({
+        didLoad: true,
+        missingStore: false
+      })
+    },
     CoreHistoryPanelHostRuntime: {
       applyHistoryBurnInPanelRender: () => ({
         didRender: true
@@ -331,6 +337,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyFilterHostRuntime).toBe(source.CoreHistoryFilterHostRuntime);
     expect(result.historyLoadRuntime).toBe(source.CoreHistoryLoadRuntime);
     expect(result.historyLoadHostRuntime).toBe(source.CoreHistoryLoadHostRuntime);
+    expect(result.historyLoadEntryHostRuntime).toBe(source.CoreHistoryLoadEntryHostRuntime);
     expect(result.historyPanelHostRuntime).toBe(source.CoreHistoryPanelHostRuntime);
     expect(result.historyViewHostRuntime).toBe(source.CoreHistoryViewHostRuntime);
     expect(result.historyImportHostRuntime).toBe(source.CoreHistoryImportHostRuntime);

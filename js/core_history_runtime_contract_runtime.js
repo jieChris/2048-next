@@ -170,6 +170,11 @@
       ["applyHistoryLoadAndRender", "applyHistoryPagerButtonState", "applyHistoryLoadWithPager"],
       "CoreHistoryLoadHostRuntime is required"
     );
+    var historyLoadEntryHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryLoadEntryHostRuntime,
+      ["applyHistoryLoadEntry"],
+      "CoreHistoryLoadEntryHostRuntime is required"
+    );
     var historyPanelHostRuntime = requireRuntimeFunctions(
       source.CoreHistoryPanelHostRuntime,
       [
@@ -348,6 +353,7 @@
       historyFilterHostRuntime: historyFilterHostRuntime,
       historyLoadRuntime: historyLoadRuntime,
       historyLoadHostRuntime: historyLoadHostRuntime,
+      historyLoadEntryHostRuntime: historyLoadEntryHostRuntime,
       historyPanelHostRuntime: historyPanelHostRuntime,
       historyRecordViewRuntime: historyRecordViewRuntime,
       historyRecordItemRuntime: historyRecordItemRuntime,

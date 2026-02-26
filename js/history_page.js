@@ -45,6 +45,7 @@
   var historyFilterHostRuntime = historyRuntimes.historyFilterHostRuntime;
   var historyLoadRuntime = historyRuntimes.historyLoadRuntime;
   var historyLoadHostRuntime = historyRuntimes.historyLoadHostRuntime;
+  var historyLoadEntryHostRuntime = historyRuntimes.historyLoadEntryHostRuntime;
   var historyPanelHostRuntime = historyRuntimes.historyPanelHostRuntime;
   var historyRecordViewRuntime = historyRuntimes.historyRecordViewRuntime;
   var historyRecordItemRuntime = historyRuntimes.historyRecordItemRuntime;
@@ -155,14 +156,15 @@
   }
 
   function loadHistory(resetPage) {
-    if (!window.LocalHistoryStore) return;
-    readFilters();
-    historyLoadHostRuntime.applyHistoryLoadWithPager({
+    historyLoadEntryHostRuntime.applyHistoryLoadEntry({
       resetPage: resetPage,
-      state: state,
       localHistoryStore: window.LocalHistoryStore,
-      historyLoadRuntime: historyLoadRuntime,
+      historyFilterHostRuntime: historyFilterHostRuntime,
+      state: state,
       historyQueryRuntime: historyQueryRuntime,
+      getElementById: el,
+      historyLoadHostRuntime: historyLoadHostRuntime,
+      historyLoadRuntime: historyLoadRuntime,
       historyBurnInRuntime: historyBurnInRuntime,
       burnInMinComparable: BURN_IN_MIN_COMPARABLE,
       burnInMaxMismatchRate: BURN_IN_MAX_MISMATCH_RATE,
@@ -171,7 +173,6 @@
       renderBurnInSummary: renderBurnInSummary,
       renderCanaryPolicy: renderCanaryPolicy,
       setStatus: setStatus,
-      getElementById: el,
       prevButtonId: "history-prev-page",
       nextButtonId: "history-next-page"
     });
