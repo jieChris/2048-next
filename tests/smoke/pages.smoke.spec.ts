@@ -2315,6 +2315,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("history page delegates toolbar action decisions to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
+      window.confirm = () => true;
       (window as any).__historyToolbarMismatchQueryCallCount = 0;
       (window as any).__historyToolbarClearAllCallCount = 0;
       (window as any).__historyToolbarExecuteClearAllCallCount = 0;
@@ -2367,16 +2368,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalClearAll = store.clearAll;
       store.clearAll = () => {};
 
-      const oldConfirm = window.confirm;
-      window.confirm = () => true;
-
       const mismatchBtn = document.querySelector("#history-export-mismatch-btn") as HTMLButtonElement | null;
       if (mismatchBtn && typeof mismatchBtn.click === "function") mismatchBtn.click();
 
       const clearAllBtn = document.querySelector("#history-clear-all-btn") as HTMLButtonElement | null;
       if (clearAllBtn && typeof clearAllBtn.click === "function") clearAllBtn.click();
 
-      window.confirm = oldConfirm;
       store.clearAll = originalClearAll;
       return {
         hasRuntime: Boolean(
@@ -2647,6 +2644,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("history page delegates record delete action decisions to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
+      window.confirm = () => true;
       (window as any).__historyDeleteActionCallCount = 0;
       (window as any).__historyDeleteExecuteCallCount = 0;
       const target: Record<string, unknown> = {};
@@ -2722,13 +2720,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalDeleteById = store.deleteById;
       store.deleteById = () => true;
 
-      const oldConfirm = window.confirm;
-      window.confirm = () => true;
-
       const deleteBtn = document.querySelector(".history-delete-btn") as HTMLButtonElement | null;
       if (deleteBtn && typeof deleteBtn.click === "function") deleteBtn.click();
 
-      window.confirm = oldConfirm;
       store.deleteById = originalDeleteById;
       return {
         hasRuntime: Boolean(
