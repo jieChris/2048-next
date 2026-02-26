@@ -321,6 +321,13 @@ if (
 ) {
   throw new Error("CoreHomeGuideFinishHostRuntime is required");
 }
+var homeGuideStartHostRuntime = window.CoreHomeGuideStartHostRuntime;
+if (
+  !homeGuideStartHostRuntime ||
+  typeof homeGuideStartHostRuntime.applyHomeGuideStart !== "function"
+) {
+  throw new Error("CoreHomeGuideStartHostRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -1269,28 +1276,15 @@ function showHomeGuideStep(index) {
 }
 
 function startHomeGuide(options) {
-  options = options || {};
-  if (!isHomePage()) return;
-
-  var dom = ensureHomeGuideDom();
-  var lifecycleState = homeGuideRuntime.resolveHomeGuideLifecycleState({
-    action: "start",
-    fromSettings: !!options.fromSettings,
-    steps: getHomeGuideSteps()
+  var startResult = homeGuideStartHostRuntime.applyHomeGuideStart({
+    homeGuideRuntime: homeGuideRuntime,
+    homeGuideState: HOME_GUIDE_STATE,
+    options: options || {},
+    isHomePage: isHomePage,
+    getHomeGuideSteps: getHomeGuideSteps,
+    ensureHomeGuideDom: ensureHomeGuideDom
   });
-  var sessionState = homeGuideRuntime.resolveHomeGuideSessionState({
-    lifecycleState: lifecycleState
-  });
-  HOME_GUIDE_STATE.active = sessionState.active;
-  HOME_GUIDE_STATE.fromSettings = sessionState.fromSettings;
-  HOME_GUIDE_STATE.steps = sessionState.steps;
-  HOME_GUIDE_STATE.index = sessionState.index;
-
-  var layerDisplayState = homeGuideRuntime.resolveHomeGuideLayerDisplayState({
-    active: HOME_GUIDE_STATE.active
-  });
-  dom.overlay.style.display = layerDisplayState.overlayDisplay;
-  dom.panel.style.display = layerDisplayState.panelDisplay;
+  if (!startResult.didStart) return;
 
   var prevBtn = document.getElementById("home-guide-prev");
   var nextBtn = document.getElementById("home-guide-next");
