@@ -2,8 +2,57 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   applyLegacyUndoSettingsCleanup,
+  applyTimerModuleSettingsUi,
   ensureTimerModuleSettingsToggle
 } from "../../src/bootstrap/timer-module-settings-host";
+
+function createTimerRuntime() {
+  return {
+    resolveTimerModuleInitRetryState(payload: { hasManager?: boolean }) {
+      return {
+        shouldRetry: !payload.hasManager,
+        retryDelayMs: 60
+      };
+    },
+    resolveTimerModuleCurrentViewMode(payload: {
+      manager?: {
+        getTimerModuleViewMode?: (() => string) | null;
+      };
+    }) {
+      if (payload.manager && typeof payload.manager.getTimerModuleViewMode === "function") {
+        return payload.manager.getTimerModuleViewMode();
+      }
+      return "timer";
+    },
+    resolveTimerModuleSettingsState(payload: { viewMode?: string }) {
+      return {
+        toggleDisabled: false,
+        toggleChecked: payload.viewMode !== "hidden",
+        noteText: payload.viewMode === "hidden" ? "隐藏" : "显示"
+      };
+    },
+    resolveTimerModuleBindingState(payload: { alreadyBound?: boolean }) {
+      return {
+        shouldBind: !payload.alreadyBound,
+        boundValue: true
+      };
+    },
+    resolveTimerModuleViewMode(payload: { checked?: boolean }) {
+      return {
+        viewMode: payload.checked ? "timer" : "hidden"
+      };
+    },
+    resolveTimerModuleAppliedViewMode(payload: {
+      nextViewMode?: { viewMode?: string };
+      checked?: boolean;
+    }) {
+      if (payload.nextViewMode && payload.nextViewMode.viewMode) {
+        return payload.nextViewMode.viewMode;
+      }
+      return payload.checked ? "timer" : "hidden";
+    }
+  };
+}
 
 describe("bootstrap timer module settings host", () => {
   it("removes legacy undo settings row when toggle row exists", () => {
@@ -122,5 +171,108 @@ describe("bootstrap timer module settings host", () => {
       }
     });
     expect(result).toBe(existingToggle);
+  });
+
+  it("schedules retry when manager is not ready", () => {
+    const scheduleRetry = vi.fn();
+
+    const result = applyTimerModuleSettingsUi({
+      toggle: {},
+      noteElement: {},
+      windowLike: {},
+      timerModuleRuntime: createTimerRuntime(),
+      retryDelayMs: 80,
+      scheduleRetry
+    });
+
+    expect(result).toEqual({
+      hasToggle: true,
+      shouldRetry: true,
+      didScheduleRetry: true,
+      didAssignSync: false,
+      didBindToggle: false,
+      didSync: false
+    });
+    expect(scheduleRetry).toHaveBeenCalledWith(60);
+  });
+
+  it("binds toggle and syncs view mode with manager", () => {
+    const toggleHandlers: Record<string, () => void> = {};
+    const toggle = {
+      __timerViewBound: false,
+      checked: false,
+      disabled: true,
+      addEventListener(name: string, handler: () => void) {
+        toggleHandlers[name] = handler;
+      }
+    };
+    const note = {
+      textContent: ""
+    };
+    const syncMobileTimerboxUi = vi.fn();
+    const setTimerModuleViewMode = vi.fn();
+    const windowLike: Record<string, unknown> = {
+      game_manager: {
+        getTimerModuleViewMode() {
+          return "hidden";
+        },
+        setTimerModuleViewMode
+      }
+    };
+
+    const result = applyTimerModuleSettingsUi({
+      toggle,
+      noteElement: note,
+      windowLike,
+      timerModuleRuntime: createTimerRuntime(),
+      scheduleRetry: vi.fn(),
+      syncMobileTimerboxUi
+    });
+
+    expect(result).toEqual({
+      hasToggle: true,
+      shouldRetry: false,
+      didScheduleRetry: false,
+      didAssignSync: true,
+      didBindToggle: true,
+      didSync: true
+    });
+    expect(toggle.checked).toBe(false);
+    expect(toggle.disabled).toBe(false);
+    expect(note.textContent).toBe("隐藏");
+    expect(syncMobileTimerboxUi).toHaveBeenCalledTimes(1);
+    expect(typeof windowLike.syncTimerModuleSettingsUI).toBe("function");
+
+    toggle.checked = true;
+    toggleHandlers.change();
+    expect(setTimerModuleViewMode).toHaveBeenCalledWith("timer");
+    expect(syncMobileTimerboxUi).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips rebinding when toggle is already bound", () => {
+    const addEventListener = vi.fn();
+    const toggle = {
+      __timerViewBound: true,
+      checked: true,
+      disabled: false,
+      addEventListener
+    };
+
+    const result = applyTimerModuleSettingsUi({
+      toggle,
+      noteElement: { textContent: "" },
+      windowLike: {
+        game_manager: {
+          getTimerModuleViewMode() {
+            return "timer";
+          }
+        }
+      },
+      timerModuleRuntime: createTimerRuntime(),
+      syncMobileTimerboxUi: vi.fn()
+    });
+
+    expect(result.didBindToggle).toBe(false);
+    expect(addEventListener).not.toHaveBeenCalled();
   });
 });

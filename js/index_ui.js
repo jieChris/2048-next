@@ -124,7 +124,8 @@ var timerModuleSettingsHostRuntime = window.CoreTimerModuleSettingsHostRuntime;
 if (
   !timerModuleSettingsHostRuntime ||
   typeof timerModuleSettingsHostRuntime.applyLegacyUndoSettingsCleanup !== "function" ||
-  typeof timerModuleSettingsHostRuntime.ensureTimerModuleSettingsToggle !== "function"
+  typeof timerModuleSettingsHostRuntime.ensureTimerModuleSettingsToggle !== "function" ||
+  typeof timerModuleSettingsHostRuntime.applyTimerModuleSettingsUi !== "function"
 ) {
   throw new Error("CoreTimerModuleSettingsHostRuntime is required");
 }
@@ -1022,60 +1023,18 @@ function ensureTimerModuleSettingsDom() {
 function initTimerModuleSettingsUI() {
   var toggle = ensureTimerModuleSettingsDom();
   var note = document.getElementById("timer-module-view-note");
-  var retryState = timerModuleRuntime.resolveTimerModuleInitRetryState({
-    hasToggle: !!toggle,
-    hasManager: !!window.game_manager,
-    retryDelayMs: 60
+  timerModuleSettingsHostRuntime.applyTimerModuleSettingsUi({
+    toggle: toggle,
+    noteElement: note,
+    windowLike: window,
+    timerModuleRuntime: timerModuleRuntime,
+    retryDelayMs: 60,
+    scheduleRetry: function (delayMs) {
+      setTimeout(initTimerModuleSettingsUI, delayMs);
+    },
+    syncMobileTimerboxUi:
+      typeof window.syncMobileTimerboxUI === "function" ? window.syncMobileTimerboxUI : null
   });
-  if (!toggle) return;
-  if (retryState.shouldRetry) {
-    setTimeout(initTimerModuleSettingsUI, retryState.retryDelayMs);
-    return;
-  }
-
-  function sync() {
-    var gm = window.game_manager;
-    if (!gm) return;
-    var view = timerModuleRuntime.resolveTimerModuleCurrentViewMode({
-      manager: gm,
-      fallbackViewMode: "timer"
-    });
-    var settingsState = timerModuleRuntime.resolveTimerModuleSettingsState({
-      viewMode: view
-    });
-    toggle.disabled = settingsState.toggleDisabled;
-    toggle.checked = settingsState.toggleChecked;
-    if (note) {
-      note.textContent = settingsState.noteText;
-    }
-    if (typeof window.syncMobileTimerboxUI === "function") {
-      window.syncMobileTimerboxUI();
-    }
-  }
-  window.syncTimerModuleSettingsUI = sync;
-
-  var timerBindingState = timerModuleRuntime.resolveTimerModuleBindingState({
-    alreadyBound: !!toggle.__timerViewBound
-  });
-  if (timerBindingState.shouldBind) {
-    toggle.__timerViewBound = timerBindingState.boundValue;
-    toggle.addEventListener("change", function () {
-      if (!window.game_manager || !window.game_manager.setTimerModuleViewMode) return;
-      var nextViewMode = timerModuleRuntime.resolveTimerModuleViewMode({
-        checked: !!this.checked
-      });
-      var appliedViewMode = timerModuleRuntime.resolveTimerModuleAppliedViewMode({
-        nextViewMode: nextViewMode,
-        checked: !!this.checked
-      });
-      window.game_manager.setTimerModuleViewMode(
-        appliedViewMode
-      );
-      sync();
-    });
-  }
-
-  sync();
 }
 
 var HOME_GUIDE_SEEN_KEY = "home_guide_seen_v1";

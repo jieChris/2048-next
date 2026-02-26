@@ -52,6 +52,25 @@
     return creator.call(documentLike, tag);
   }
 
+  function bindListener(element, eventName, handler) {
+    var addEventListener = asFunction(toRecord(element).addEventListener);
+    if (!addEventListener) return false;
+    addEventListener.call(element, eventName, handler);
+    return true;
+  }
+
+  function resolveBoolean(value) {
+    return !!value;
+  }
+
+  function resolveText(value) {
+    return value == null ? "" : String(value);
+  }
+
+  function readToggleChecked(toggle) {
+    return resolveBoolean(toRecord(toggle).checked);
+  }
+
   function applyLegacyUndoSettingsCleanup(input) {
     var source = toRecord(input);
     var toggle = getElementById(source.documentLike, "undo-enabled-toggle");
@@ -110,9 +129,163 @@
     return getElementById(documentLike, "timer-module-view-toggle");
   }
 
+  function applyTimerModuleSettingsUi(input) {
+    var source = toRecord(input);
+    var toggle = source.toggle;
+    if (!toggle) {
+      return {
+        hasToggle: false,
+        shouldRetry: false,
+        didScheduleRetry: false,
+        didAssignSync: false,
+        didBindToggle: false,
+        didSync: false
+      };
+    }
+
+    var timerModuleRuntime = toRecord(source.timerModuleRuntime);
+    var resolveTimerModuleInitRetryState = asFunction(
+      timerModuleRuntime.resolveTimerModuleInitRetryState
+    );
+    var resolveTimerModuleCurrentViewMode = asFunction(
+      timerModuleRuntime.resolveTimerModuleCurrentViewMode
+    );
+    var resolveTimerModuleSettingsState = asFunction(
+      timerModuleRuntime.resolveTimerModuleSettingsState
+    );
+    var resolveTimerModuleBindingState = asFunction(
+      timerModuleRuntime.resolveTimerModuleBindingState
+    );
+    var resolveTimerModuleViewMode = asFunction(timerModuleRuntime.resolveTimerModuleViewMode);
+    var resolveTimerModuleAppliedViewMode = asFunction(
+      timerModuleRuntime.resolveTimerModuleAppliedViewMode
+    );
+    if (
+      !resolveTimerModuleInitRetryState ||
+      !resolveTimerModuleCurrentViewMode ||
+      !resolveTimerModuleSettingsState ||
+      !resolveTimerModuleBindingState ||
+      !resolveTimerModuleViewMode ||
+      !resolveTimerModuleAppliedViewMode
+    ) {
+      return {
+        hasToggle: true,
+        shouldRetry: false,
+        didScheduleRetry: false,
+        didAssignSync: false,
+        didBindToggle: false,
+        didSync: false
+      };
+    }
+
+    var windowLike = toRecord(source.windowLike);
+    var retryState = toRecord(
+      resolveTimerModuleInitRetryState({
+        hasToggle: true,
+        hasManager: !!windowLike.game_manager,
+        retryDelayMs: source.retryDelayMs
+      })
+    );
+    var shouldRetry = resolveBoolean(retryState.shouldRetry);
+
+    var didScheduleRetry = false;
+    if (shouldRetry) {
+      var scheduleRetry = asFunction(source.scheduleRetry);
+      if (scheduleRetry) {
+        scheduleRetry(
+          typeof retryState.retryDelayMs === "number" && retryState.retryDelayMs > 0
+            ? retryState.retryDelayMs
+            : 60
+        );
+        didScheduleRetry = true;
+      }
+      return {
+        hasToggle: true,
+        shouldRetry: true,
+        didScheduleRetry: didScheduleRetry,
+        didAssignSync: false,
+        didBindToggle: false,
+        didSync: false
+      };
+    }
+
+    var noteElement = source.noteElement;
+    var syncMobileTimerboxUi = asFunction(source.syncMobileTimerboxUi);
+    var didSync = false;
+
+    var sync = function () {
+      if (!windowLike.game_manager) return;
+      var manager = toRecord(windowLike.game_manager);
+      var viewMode = resolveTimerModuleCurrentViewMode({
+        manager: manager,
+        fallbackViewMode: "timer"
+      });
+      var settingsState = toRecord(
+        resolveTimerModuleSettingsState({
+          viewMode: viewMode
+        })
+      );
+      var toggleRecord = toRecord(toggle);
+      toggleRecord.disabled = resolveBoolean(settingsState.toggleDisabled);
+      toggleRecord.checked = resolveBoolean(settingsState.toggleChecked);
+      if (noteElement) {
+        toRecord(noteElement).textContent = resolveText(settingsState.noteText);
+      }
+      if (syncMobileTimerboxUi) {
+        syncMobileTimerboxUi();
+      }
+      didSync = true;
+    };
+
+    var didAssignSync = false;
+    if (isRecord(source.windowLike)) {
+      source.windowLike.syncTimerModuleSettingsUI = sync;
+      didAssignSync = true;
+    }
+
+    var toggleRecord = toRecord(toggle);
+    var toggleBindingState = toRecord(
+      resolveTimerModuleBindingState({
+        alreadyBound: resolveBoolean(toggleRecord.__timerViewBound)
+      })
+    );
+
+    var didBindToggle = false;
+    if (toggleBindingState.shouldBind) {
+      toggleRecord.__timerViewBound = toggleBindingState.boundValue;
+      didBindToggle = bindListener(toggle, "change", function () {
+        var manager = toRecord(windowLike.game_manager);
+        var setTimerModuleViewMode = asFunction(manager.setTimerModuleViewMode);
+        if (!setTimerModuleViewMode) return;
+        var nextViewMode = resolveTimerModuleViewMode({
+          checked: readToggleChecked(toggle)
+        });
+        var appliedViewMode = resolveTimerModuleAppliedViewMode({
+          nextViewMode: nextViewMode,
+          checked: readToggleChecked(toggle)
+        });
+        setTimerModuleViewMode(resolveText(appliedViewMode));
+        sync();
+      });
+    }
+
+    sync();
+
+    return {
+      hasToggle: true,
+      shouldRetry: false,
+      didScheduleRetry: false,
+      didAssignSync: didAssignSync,
+      didBindToggle: didBindToggle,
+      didSync: didSync
+    };
+  }
+
   global.CoreTimerModuleSettingsHostRuntime = global.CoreTimerModuleSettingsHostRuntime || {};
   global.CoreTimerModuleSettingsHostRuntime.applyLegacyUndoSettingsCleanup =
     applyLegacyUndoSettingsCleanup;
   global.CoreTimerModuleSettingsHostRuntime.ensureTimerModuleSettingsToggle =
     ensureTimerModuleSettingsToggle;
+  global.CoreTimerModuleSettingsHostRuntime.applyTimerModuleSettingsUi =
+    applyTimerModuleSettingsUi;
 })(typeof window !== "undefined" ? window : undefined);
