@@ -5523,23 +5523,31 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const snapshot = await page.evaluate(async () => {
       const runtime = (window as any).CoreSettingsModalHostRuntime;
+      const pageHostRuntime = (window as any).CoreSettingsModalPageHostRuntime;
       if (
         !runtime ||
         typeof runtime.applySettingsModalOpenOrchestration !== "function" ||
-        typeof runtime.applySettingsModalCloseOrchestration !== "function"
+        typeof runtime.applySettingsModalCloseOrchestration !== "function" ||
+        !pageHostRuntime ||
+        typeof pageHostRuntime.applySettingsModalPageOpen !== "function" ||
+        typeof pageHostRuntime.applySettingsModalPageClose !== "function"
       ) {
-        return { hasRuntime: false };
+        return { hasRuntime: false, hasPageHostRuntime: false };
       }
       const openSettingsModal = (window as any).openSettingsModal;
       const closeSettingsModal = (window as any).closeSettingsModal;
       if (typeof openSettingsModal !== "function" || typeof closeSettingsModal !== "function") {
-        return { hasRuntime: true, hasBindings: false };
+        return { hasRuntime: true, hasPageHostRuntime: true, hasBindings: false };
       }
 
       const originalOpen = runtime.applySettingsModalOpenOrchestration;
       const originalClose = runtime.applySettingsModalCloseOrchestration;
+      const originalPageOpen = pageHostRuntime.applySettingsModalPageOpen;
+      const originalPageClose = pageHostRuntime.applySettingsModalPageClose;
       let openCallCount = 0;
       let closeCallCount = 0;
+      let pageOpenCallCount = 0;
+      let pageCloseCallCount = 0;
       runtime.applySettingsModalOpenOrchestration = function (opts: any) {
         openCallCount += 1;
         return originalOpen(opts);
@@ -5547,6 +5555,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       runtime.applySettingsModalCloseOrchestration = function (opts: any) {
         closeCallCount += 1;
         return originalClose(opts);
+      };
+      pageHostRuntime.applySettingsModalPageOpen = function (opts: any) {
+        pageOpenCallCount += 1;
+        return originalPageOpen(opts);
+      };
+      pageHostRuntime.applySettingsModalPageClose = function (opts: any) {
+        pageCloseCallCount += 1;
+        return originalPageClose(opts);
       };
 
       try {
@@ -5568,22 +5584,30 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
         return {
           hasRuntime: true,
+          hasPageHostRuntime: true,
           hasBindings: true,
           openCallCount,
           closeCallCount,
+          pageOpenCallCount,
+          pageCloseCallCount,
           openDisplay,
           closeDisplay
         };
       } finally {
         runtime.applySettingsModalOpenOrchestration = originalOpen;
         runtime.applySettingsModalCloseOrchestration = originalClose;
+        pageHostRuntime.applySettingsModalPageOpen = originalPageOpen;
+        pageHostRuntime.applySettingsModalPageClose = originalPageClose;
       }
     });
 
     expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.hasPageHostRuntime).toBe(true);
     expect(snapshot.hasBindings).toBe(true);
     expect(snapshot.openCallCount).toBeGreaterThan(0);
     expect(snapshot.closeCallCount).toBeGreaterThan(0);
+    expect(snapshot.pageOpenCallCount).toBeGreaterThan(0);
+    expect(snapshot.pageCloseCallCount).toBeGreaterThan(0);
     expect(snapshot.openDisplay).toBe("flex");
     expect(snapshot.closeDisplay).toBe("none");
   });

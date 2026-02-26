@@ -3,6 +3,7 @@
 var replayModalRuntime = window.CoreReplayModalRuntime;
 var replayExportRuntime = window.CoreReplayExportRuntime;
 var settingsModalHostRuntime = window.CoreSettingsModalHostRuntime;
+var settingsModalPageHostRuntime = window.CoreSettingsModalPageHostRuntime;
 if (
   !replayModalRuntime ||
   typeof replayModalRuntime.applyReplayModalOpen !== "function" ||
@@ -25,6 +26,13 @@ if (
 ) {
   throw new Error("CoreSettingsModalHostRuntime is required");
 }
+if (
+  !settingsModalPageHostRuntime ||
+  typeof settingsModalPageHostRuntime.applySettingsModalPageOpen !== "function" ||
+  typeof settingsModalPageHostRuntime.applySettingsModalPageClose !== "function"
+) {
+  throw new Error("CoreSettingsModalPageHostRuntime is required");
+}
 
 // Replay Modal Functions
 function showReplayModal(title, content, actionName, actionCallback) {
@@ -45,7 +53,8 @@ window.closeReplayModal = function() {
 };
 
 window.openSettingsModal = function () {
-  settingsModalHostRuntime.applySettingsModalOpenOrchestration({
+  settingsModalPageHostRuntime.applySettingsModalPageOpen({
+    settingsModalHostRuntime: settingsModalHostRuntime,
     replayModalRuntime: replayModalRuntime,
     documentLike: document,
     removeLegacyUndoSettingsUI: removeLegacyUndoSettingsUI,
@@ -56,7 +65,8 @@ window.openSettingsModal = function () {
 };
 
 window.closeSettingsModal = function () {
-  settingsModalHostRuntime.applySettingsModalCloseOrchestration({
+  settingsModalPageHostRuntime.applySettingsModalPageClose({
+    settingsModalHostRuntime: settingsModalHostRuntime,
     replayModalRuntime: replayModalRuntime,
     documentLike: document
   });
