@@ -86,6 +86,8 @@
   - `practice-transfer` 已承接练习板跳转前置校验（`resolvePracticeTransferPrecheck`），`index_ui.js` 不再直接校验 `game_manager/getFinalBoardMatrix/board` 可用性
   - `practice-transfer` 已承接 payload 持久化回退（localStorage -> sessionStorage），`index_ui.js` 仅按结果选择直跳或 URL fallback
   - `practice-transfer` 已承接练习板直通导航计划组装（含 guide 判定、URL 构造、持久化与 fallback 决策），`index_ui.js` 仅保留盘面校验与 `window.open`
+  - 新增 `src/bootstrap/practice-transfer-host.ts` + `js/core_practice_transfer_host_runtime.js`，`index_ui.js` 委托练习板直通主流程编排（precheck/计划生成/失败提示/新窗口打开）
+  - `index_ui.js` 的 `openPracticeBoardFromCurrent` 已改为 `CorePracticeTransferHostRuntime.applyPracticeTransferFromCurrent` 调用，仅保留上下文注入
   - 新增 `src/bootstrap/home-guide.ts` + `js/core_home_guide_runtime.js`，`index_ui.js` 委托首页判定与新手指引自动触发 gate
   - `home-guide` 已继续承接首页指引步骤清单构建（含移动端提示步骤插入），`index_ui.js` 改为透传 viewport 信息
   - `home-guide` 已承接已读状态读写（`readHomeGuideSeenValue`/`markHomeGuideSeen`），`index_ui.js` 不再直接读写 `localStorage`

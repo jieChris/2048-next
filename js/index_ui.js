@@ -137,6 +137,7 @@ if (
   throw new Error("CoreThemeSettingsRuntime is required");
 }
 var practiceTransferRuntime = window.CorePracticeTransferRuntime;
+var practiceTransferHostRuntime = window.CorePracticeTransferHostRuntime;
 if (
   !practiceTransferRuntime ||
   typeof practiceTransferRuntime.buildPracticeModeConfigFromCurrent !== "function" ||
@@ -149,6 +150,12 @@ if (
   typeof practiceTransferRuntime.resolvePracticeTransferPrecheck !== "function"
 ) {
   throw new Error("CorePracticeTransferRuntime is required");
+}
+if (
+  !practiceTransferHostRuntime ||
+  typeof practiceTransferHostRuntime.applyPracticeTransferFromCurrent !== "function"
+) {
+  throw new Error("CorePracticeTransferHostRuntime is required");
 }
 var undoActionRuntime = window.CoreUndoActionRuntime;
 if (
@@ -637,53 +644,25 @@ function getStorageByName(name) {
 }
 
 window.openPracticeBoardFromCurrent = function () {
-  var gm = window.game_manager;
-  var precheck = practiceTransferRuntime.resolvePracticeTransferPrecheck({
-    manager: gm || null
-  });
-  if (!precheck || !precheck.canOpen || !Array.isArray(precheck.board)) {
-    if (precheck && precheck.alertMessage) {
-      alert(precheck.alertMessage);
-    }
-    return;
-  }
-  var board = precheck.board;
-
   var localStore = getStorageByName("localStorage");
   var sessionStore = getStorageByName("sessionStorage");
-  var cookie = "";
-  var windowName = "";
-  try {
-    cookie = document.cookie || "";
-  } catch (_err) {
-    cookie = "";
-  }
-  try {
-    windowName = typeof window.name === "string" ? window.name : "";
-  } catch (_err) {
-    windowName = "";
-  }
-  var plan = practiceTransferRuntime.createPracticeTransferNavigationPlan({
+  practiceTransferHostRuntime.applyPracticeTransferFromCurrent({
+    manager: window.game_manager || null,
     gameModeConfig:
       window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object"
         ? window.GAME_MODE_CONFIG
         : null,
-    manager: gm || null,
-    board: board,
+    practiceTransferRuntime: practiceTransferRuntime,
     localStorageLike: localStore,
     sessionStorageLike: sessionStore,
     guideShownKey: PRACTICE_GUIDE_SHOWN_KEY,
     guideSeenFlag: PRACTICE_GUIDE_SEEN_FLAG,
-    cookie: cookie,
-    windowName: windowName,
     localStorageKey: PRACTICE_TRANSFER_KEY,
-    sessionStorageKey: PRACTICE_TRANSFER_SESSION_KEY
+    sessionStorageKey: PRACTICE_TRANSFER_SESSION_KEY,
+    documentLike: document,
+    windowLike: window,
+    alertLike: alert
   });
-  if (!plan || !plan.openUrl) {
-    alert("练习板链接生成失败。");
-    return;
-  }
-  window.open(plan.openUrl, "_blank");
 };
 
 // Pretty print time function (Legacy support just in case)
