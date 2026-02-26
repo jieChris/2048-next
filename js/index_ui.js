@@ -246,6 +246,13 @@ if (
 ) {
   throw new Error("CoreMobileUndoTopHostRuntime is required");
 }
+var mobileUndoTopAvailabilityHostRuntime = window.CoreMobileUndoTopAvailabilityHostRuntime;
+if (
+  !mobileUndoTopAvailabilityHostRuntime ||
+  typeof mobileUndoTopAvailabilityHostRuntime.applyMobileUndoTopAvailabilitySync !== "function"
+) {
+  throw new Error("CoreMobileUndoTopAvailabilityHostRuntime is required");
+}
 var topActionsRuntime = window.CoreTopActionsRuntime;
 if (
   !topActionsRuntime ||
@@ -530,36 +537,16 @@ function resolveUndoCapabilityState(gm) {
 }
 
 function syncMobileUndoTopButtonAvailability() {
-  if (!isGamePageScope()) return;
-  var btn = ensureMobileUndoTopButton();
-  if (!btn) return;
-
-  var compact = isCompactGameViewport();
-  var gm = window.game_manager;
-  var undoCapabilityState = resolveUndoCapabilityState(gm);
-  var modeUndoCapable = !!(undoCapabilityState && undoCapabilityState.modeUndoCapable);
-  var canUndoNow = !!undoActionRuntime.isUndoInteractionEnabled(gm);
-  var displayModel = mobileUndoTopRuntime.resolveMobileUndoTopButtonDisplayModel({
-    compactViewport: compact,
-    modeUndoCapable: modeUndoCapable,
-    canUndoNow: canUndoNow,
-    label: "撤回"
-  });
-  var appliedModel = mobileUndoTopRuntime.resolveMobileUndoTopAppliedModel({
-    displayModel: displayModel,
+  mobileUndoTopAvailabilityHostRuntime.applyMobileUndoTopAvailabilitySync({
+    isGamePageScope: isGamePageScope,
+    ensureMobileUndoTopButton: ensureMobileUndoTopButton,
+    isCompactGameViewport: isCompactGameViewport,
+    manager: window.game_manager || null,
+    resolveUndoCapabilityState: resolveUndoCapabilityState,
+    undoActionRuntime: undoActionRuntime,
+    mobileUndoTopRuntime: mobileUndoTopRuntime,
     fallbackLabel: "撤回"
   });
-
-  btn.style.display = appliedModel.buttonDisplay;
-  btn.style.pointerEvents = appliedModel.pointerEvents;
-  btn.style.opacity = appliedModel.opacity;
-  btn.setAttribute("aria-disabled", appliedModel.ariaDisabled);
-  if (!appliedModel.shouldApplyLabel) {
-    return;
-  }
-  var label = appliedModel.label;
-  btn.setAttribute("aria-label", label);
-  btn.setAttribute("title", label);
 }
 
 function ensureMobileHintModalDom() {

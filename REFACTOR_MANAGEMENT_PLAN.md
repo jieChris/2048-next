@@ -145,6 +145,7 @@
   - 新增 `src/bootstrap/mobile-undo-top.ts` + `js/core_mobile_undo_top_runtime.js`，`index_ui.js` 委托移动端顶部撤回按钮展示态计算
   - `mobile-undo-top` 已承接按钮应用态兜底（`resolveMobileUndoTopAppliedModel`），`index_ui.js` 不再硬编码按钮样式与 aria fallback 分支
   - 新增 `src/bootstrap/mobile-undo-top-host.ts` + `js/core_mobile_undo_top_host_runtime.js`，`index_ui.js` 委托移动端顶部撤回按钮初始化（scope gate + click 绑定去重 + 初始同步）编排
+  - 新增 `src/bootstrap/mobile-undo-top-availability-host.ts` + `js/core_mobile_undo_top_availability_host_runtime.js`，`index_ui.js` 委托移动端顶部撤回按钮可用态同步（能力判定 + 展示模型应用 + label/aria 写回）
   - `index_ui.js` 现直接消费 `resolveMobileUndoTopAppliedModel` 的安全模型，不再重复本地样式兜底分支
   - 新增 `src/bootstrap/top-actions.ts` + `js/core_top_actions_runtime.js`，`index_ui.js` 委托移动端/练习页顶部按钮重排状态创建与同步
   - 新增 `src/bootstrap/mobile-top-buttons.ts` + `js/core_mobile_top_buttons_runtime.js`，`index_ui.js` 委托移动端撤回/提示按钮 DOM 创建与挂载顺序
