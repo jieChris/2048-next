@@ -335,6 +335,13 @@ if (
 ) {
   throw new Error("CoreHomeGuideControlsHostRuntime is required");
 }
+var homeGuideStepViewHostRuntime = window.CoreHomeGuideStepViewHostRuntime;
+if (
+  !homeGuideStepViewHostRuntime ||
+  typeof homeGuideStepViewHostRuntime.applyHomeGuideStepView !== "function"
+) {
+  throw new Error("CoreHomeGuideStepViewHostRuntime is required");
+}
 
 function tryUndoFromUi() {
   return !!undoActionRuntime.tryTriggerUndo(window.game_manager, -1);
@@ -1262,24 +1269,15 @@ function showHomeGuideStep(index) {
   target.classList.add("home-guide-highlight");
   elevateHomeGuideTarget(target);
 
-  var stepEl = document.getElementById("home-guide-step");
-  var titleEl = document.getElementById("home-guide-title");
-  var descEl = document.getElementById("home-guide-desc");
-  var prevBtn = document.getElementById("home-guide-prev");
-  var nextBtn = document.getElementById("home-guide-next");
-  var stepRenderState = homeGuideRuntime.resolveHomeGuideStepRenderState({
+  homeGuideStepViewHostRuntime.applyHomeGuideStepView({
+    documentLike: document,
+    windowLike: typeof window !== "undefined" ? window : null,
+    homeGuideRuntime: homeGuideRuntime,
     step: step || null,
     stepIndex: index,
-    stepCount: HOME_GUIDE_STATE.steps.length
+    stepCount: HOME_GUIDE_STATE.steps.length,
+    positionHomeGuidePanel: positionHomeGuidePanel
   });
-
-  if (stepEl) stepEl.textContent = stepRenderState.stepText;
-  if (titleEl) titleEl.textContent = stepRenderState.titleText;
-  if (descEl) descEl.textContent = stepRenderState.descText;
-  if (prevBtn) prevBtn.disabled = stepRenderState.prevDisabled;
-  if (nextBtn) nextBtn.textContent = stepRenderState.nextText;
-
-  window.requestAnimationFrame(positionHomeGuidePanel);
 }
 
 function startHomeGuide(options) {
