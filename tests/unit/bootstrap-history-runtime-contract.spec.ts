@@ -259,6 +259,12 @@ function createWindowLike() {
     CoreHistoryModeFilterRuntime: {
       resolveHistoryModeFilterOptions: () => []
     },
+    CoreHistoryModeFilterHostRuntime: {
+      applyHistoryModeFilterOptionsRender: () => ({
+        didRender: true,
+        renderedOptionCount: 0
+      })
+    },
     CoreHistoryStartupHostRuntime: {
       applyHistoryStartup: () => ({
         started: true,
@@ -288,6 +294,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyToolbarBindHostRuntime).toBe(source.CoreHistoryToolbarBindHostRuntime);
     expect(result.historyToolbarEventsHostRuntime).toBe(source.CoreHistoryToolbarEventsHostRuntime);
     expect(result.historyModeFilterRuntime).toBe(source.CoreHistoryModeFilterRuntime);
+    expect(result.historyModeFilterHostRuntime).toBe(source.CoreHistoryModeFilterHostRuntime);
     expect(result.historyStartupHostRuntime).toBe(source.CoreHistoryStartupHostRuntime);
   });
 
@@ -435,6 +442,15 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryToolbarBindHostRuntime is required"
+    );
+  });
+
+  it("throws exact error when mode filter host runtime misses required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryModeFilterHostRuntime = {};
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryModeFilterHostRuntime is required"
     );
   });
 });

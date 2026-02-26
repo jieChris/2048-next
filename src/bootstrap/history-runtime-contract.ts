@@ -34,6 +34,7 @@ export interface HistoryRuntimeContractWindowLike {
   CoreHistoryToolbarEventsRuntime?: unknown;
   CoreHistoryToolbarEventsHostRuntime?: unknown;
   CoreHistoryModeFilterRuntime?: unknown;
+  CoreHistoryModeFilterHostRuntime?: unknown;
   CoreHistoryStartupHostRuntime?: unknown;
 }
 
@@ -71,6 +72,7 @@ export interface ResolveHistoryRuntimeContractsResult {
   historyToolbarEventsRuntime: AnyRecord;
   historyToolbarEventsHostRuntime: AnyRecord;
   historyModeFilterRuntime: AnyRecord;
+  historyModeFilterHostRuntime: AnyRecord;
   historyStartupHostRuntime: AnyRecord;
 }
 
@@ -370,6 +372,11 @@ export function resolveHistoryRuntimeContracts(
     ["resolveHistoryModeFilterOptions"],
     "CoreHistoryModeFilterRuntime is required"
   );
+  const historyModeFilterHostRuntime = requireRuntimeFunctions(
+    source.CoreHistoryModeFilterHostRuntime,
+    ["applyHistoryModeFilterOptionsRender"],
+    "CoreHistoryModeFilterHostRuntime is required"
+  );
   const historyStartupHostRuntime = requireRuntimeFunctions(
     source.CoreHistoryStartupHostRuntime,
     ["applyHistoryStartup"],
@@ -410,6 +417,7 @@ export function resolveHistoryRuntimeContracts(
     historyToolbarEventsRuntime,
     historyToolbarEventsHostRuntime,
     historyModeFilterRuntime,
+    historyModeFilterHostRuntime,
     historyStartupHostRuntime
   };
 }

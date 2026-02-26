@@ -59,6 +59,7 @@
   var historyToolbarEventsRuntime = historyRuntimes.historyToolbarEventsRuntime;
   var historyToolbarEventsHostRuntime = historyRuntimes.historyToolbarEventsHostRuntime;
   var historyModeFilterRuntime = historyRuntimes.historyModeFilterRuntime;
+  var historyModeFilterHostRuntime = historyRuntimes.historyModeFilterHostRuntime;
   var historyStartupHostRuntime = historyRuntimes.historyStartupHostRuntime;
 
   function setStatus(text, isError) {
@@ -192,17 +193,12 @@
   }
 
   function initModeFilter() {
-    var select = el("history-mode");
-    if (!select) return;
-    if (!(window.ModeCatalog && typeof window.ModeCatalog.listModes === "function")) return;
-
-    var options = historyModeFilterRuntime.resolveHistoryModeFilterOptions(window.ModeCatalog.listModes());
-    for (var i = 0; i < options.length; i++) {
-      var option = document.createElement("option");
-      option.value = options[i].value;
-      option.textContent = options[i].label;
-      select.appendChild(option);
-    }
+    historyModeFilterHostRuntime.applyHistoryModeFilterOptionsRender({
+      selectElement: el("history-mode"),
+      modeCatalog: window.ModeCatalog,
+      historyModeFilterRuntime: historyModeFilterRuntime,
+      documentLike: document
+    });
   }
 
   function bindToolbarActions() {

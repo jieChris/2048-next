@@ -251,6 +251,7 @@
   - 新增 `src/bootstrap/history-toolbar-events-host.ts` + `js/core_history_toolbar_events_host_runtime.js`，`history_page.js` 委托分页/筛选/关键词监听绑定编排
   - `history-toolbar-bind-host/history-toolbar-events-host` 已修复 DOM 方法 this 绑定（`addEventListener/preventDefault`），并补充单测防回归
   - 新增 `src/bootstrap/history-mode-filter.ts` + `js/core_history_mode_filter_runtime.js`，`history_page.js` 委托模式筛选下拉选项模型组装
+  - 新增 `src/bootstrap/history-mode-filter-host.ts` + `js/core_history_mode_filter_host_runtime.js`，`history_page.js` 委托模式筛选下拉渲染编排（读取 catalog -> 组装 option -> append）
   - 新增 `src/bootstrap/history-board.ts` + `js/core_history_board_runtime.js`，`history_page.js` 委托历史记录终盘棋盘 HTML 渲染（网格尺寸推断、tile 样式类、super tile 标识）
   - 新增 `src/bootstrap/history-runtime-contract.ts` + `js/core_history_runtime_contract_runtime.js`，`history_page.js` 统一委托历史页 runtime 依赖契约校验并集中收敛依赖对象
   - `history-runtime-contract` 已纳入 `CoreHistoryRecordListHostRuntime` 依赖校验，历史页列表渲染编排改走统一契约注入
