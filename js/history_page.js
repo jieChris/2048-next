@@ -25,154 +25,83 @@
   ) {
     throw new Error("CoreHistoryRuntimeContractRuntime is required");
   }
+  var historyPageHostRuntime = window.CoreHistoryPageHostRuntime;
+  if (
+    !historyPageHostRuntime ||
+    typeof historyPageHostRuntime.resolveHistoryPageStatusInput !== "function" ||
+    typeof historyPageHostRuntime.resolveHistoryPageLoadEntryInput !== "function" ||
+    typeof historyPageHostRuntime.resolveHistoryPageStartupInput !== "function"
+  ) {
+    throw new Error("CoreHistoryPageHostRuntime is required");
+  }
   var historyRuntimes = historyRuntimeContractRuntime.resolveHistoryRuntimeContracts(window);
-  var historyCanaryPolicyRuntime = historyRuntimes.historyCanaryPolicyRuntime;
-  var historyCanaryActionRuntime = historyRuntimes.historyCanaryActionRuntime;
-  var historyCanarySourceRuntime = historyRuntimes.historyCanarySourceRuntime;
-  var historyCanaryPanelRuntime = historyRuntimes.historyCanaryPanelRuntime;
-  var historyCanaryHostRuntime = historyRuntimes.historyCanaryHostRuntime;
-  var historyAdapterDiagnosticsRuntime = historyRuntimes.historyAdapterDiagnosticsRuntime;
-  var historyAdapterHostRuntime = historyRuntimes.historyAdapterHostRuntime;
-  var historyBoardRuntime = historyRuntimes.historyBoardRuntime;
-  var historyBurnInRuntime = historyRuntimes.historyBurnInRuntime;
-  var historyBurnInHostRuntime = historyRuntimes.historyBurnInHostRuntime;
-  var historyCanaryViewRuntime = historyRuntimes.historyCanaryViewRuntime;
-  var historySummaryRuntime = historyRuntimes.historySummaryRuntime;
-  var historyStatusRuntime = historyRuntimes.historyStatusRuntime;
-  var historyViewHostRuntime = historyRuntimes.historyViewHostRuntime;
-  var historyExportRuntime = historyRuntimes.historyExportRuntime;
-  var historyQueryRuntime = historyRuntimes.historyQueryRuntime;
-  var historyFilterHostRuntime = historyRuntimes.historyFilterHostRuntime;
-  var historyLoadRuntime = historyRuntimes.historyLoadRuntime;
-  var historyLoadHostRuntime = historyRuntimes.historyLoadHostRuntime;
-  var historyLoadEntryHostRuntime = historyRuntimes.historyLoadEntryHostRuntime;
-  var historyLoadContextHostRuntime = historyRuntimes.historyLoadContextHostRuntime;
-  var historyPanelHostRuntime = historyRuntimes.historyPanelHostRuntime;
-  var historyRecordViewRuntime = historyRuntimes.historyRecordViewRuntime;
-  var historyRecordItemRuntime = historyRuntimes.historyRecordItemRuntime;
-  var historyRecordListHostRuntime = historyRuntimes.historyRecordListHostRuntime;
-  var historyImportRuntime = historyRuntimes.historyImportRuntime;
-  var historyImportFileRuntime = historyRuntimes.historyImportFileRuntime;
-  var historyImportHostRuntime = historyRuntimes.historyImportHostRuntime;
-  var historyImportBindHostRuntime = historyRuntimes.historyImportBindHostRuntime;
-  var historyRecordActionsRuntime = historyRuntimes.historyRecordActionsRuntime;
-  var historyRecordHostRuntime = historyRuntimes.historyRecordHostRuntime;
-  var historyCanaryStorageRuntime = historyRuntimes.historyCanaryStorageRuntime;
-  var historyToolbarRuntime = historyRuntimes.historyToolbarRuntime;
-  var historyToolbarHostRuntime = historyRuntimes.historyToolbarHostRuntime;
-  var historyToolbarBindHostRuntime = historyRuntimes.historyToolbarBindHostRuntime;
-  var historyToolbarEventsRuntime = historyRuntimes.historyToolbarEventsRuntime;
-  var historyToolbarEventsHostRuntime = historyRuntimes.historyToolbarEventsHostRuntime;
-  var historyModeFilterRuntime = historyRuntimes.historyModeFilterRuntime;
-  var historyModeFilterHostRuntime = historyRuntimes.historyModeFilterHostRuntime;
-  var historyControlsHostRuntime = historyRuntimes.historyControlsHostRuntime;
-  var historyStartupHostRuntime = historyRuntimes.historyStartupHostRuntime;
 
   function setStatus(text, isError) {
-    historyViewHostRuntime.applyHistoryStatus({
-      getElementById: el,
-      statusElementId: "history-status",
-      text: text,
-      isError: isError,
-      historyStatusRuntime: historyStatusRuntime
-    });
+    historyRuntimes.historyViewHostRuntime.applyHistoryStatus(
+      historyPageHostRuntime.resolveHistoryPageStatusInput({
+        getElementById: el,
+        statusElementId: "history-status",
+        text: text,
+        isError: isError,
+        historyRuntimes: historyRuntimes
+      })
+    );
   }
 
   function loadHistory(resetPage) {
-    historyLoadEntryHostRuntime.applyHistoryLoadEntry({
-      resetPage: resetPage,
-      localHistoryStore: window.LocalHistoryStore,
-      historyFilterHostRuntime: historyFilterHostRuntime,
-      state: state,
-      historyQueryRuntime: historyQueryRuntime,
-      getElementById: el,
-      historyLoadHostRuntime: historyLoadHostRuntime,
-      historyLoadRuntime: historyLoadRuntime,
-      historyBurnInRuntime: historyBurnInRuntime,
-      burnInMinComparable: BURN_IN_MIN_COMPARABLE,
-      burnInMaxMismatchRate: BURN_IN_MAX_MISMATCH_RATE,
-      statusElementId: "history-status",
-      summaryElementId: "history-summary",
-      historyViewHostRuntime: historyViewHostRuntime,
-      historyStatusRuntime: historyStatusRuntime,
-      historySummaryRuntime: historySummaryRuntime,
-      historyPanelHostRuntime: historyPanelHostRuntime,
-      historyPanelContext: historyLoadContextHostRuntime.resolveHistoryLoadPanelContext({
+    historyRuntimes.historyLoadEntryHostRuntime.applyHistoryLoadEntry(
+      historyPageHostRuntime.resolveHistoryPageLoadEntryInput({
+        resetPage: resetPage,
+        localHistoryStore: window.LocalHistoryStore,
+        state: state,
         getElementById: el,
+        historyRuntimes: historyRuntimes,
+        burnInMinComparable: BURN_IN_MIN_COMPARABLE,
+        burnInMaxMismatchRate: BURN_IN_MAX_MISMATCH_RATE,
+        statusElementId: "history-status",
+        summaryElementId: "history-summary",
+        loadHistory: loadHistory,
+        setStatus: setStatus,
+        prevButtonId: "history-prev-page",
+        nextButtonId: "history-next-page",
         listElementId: "history-list",
         documentLike: document,
-        localHistoryStore: window.LocalHistoryStore,
         modeCatalog: window.ModeCatalog,
-        historyAdapterHostRuntime: historyAdapterHostRuntime,
-        historyAdapterDiagnosticsRuntime: historyAdapterDiagnosticsRuntime,
-        historyRecordViewRuntime: historyRecordViewRuntime,
-        historyRecordItemRuntime: historyRecordItemRuntime,
-        historyRecordActionsRuntime: historyRecordActionsRuntime,
-        historyRecordHostRuntime: historyRecordHostRuntime,
-        historyExportRuntime: historyExportRuntime,
-        historyRecordListHostRuntime: historyRecordListHostRuntime,
-        historyBoardRuntime: historyBoardRuntime,
         confirmAction: window.confirm,
         navigateToHref: function (href) {
           window.location.href = href;
         },
         burnInPanelElementId: "history-burnin-summary",
         adapterFilterElementId: "history-adapter-filter",
-        historyBurnInHostRuntime: historyBurnInHostRuntime,
-        historyBurnInRuntime: historyBurnInRuntime,
         canaryPanelElementId: "history-canary-policy",
         runtime: window.LegacyAdapterRuntime,
-        readStorageValue: historyCanaryStorageRuntime.readHistoryStorageValue,
         adapterModeStorageKey: ADAPTER_MODE_STORAGE_KEY,
         defaultModeStorageKey: ADAPTER_DEFAULT_STORAGE_KEY,
-        forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY,
-        historyCanarySourceRuntime: historyCanarySourceRuntime,
-        historyCanaryPolicyRuntime: historyCanaryPolicyRuntime,
-        historyCanaryViewRuntime: historyCanaryViewRuntime,
-        historyCanaryPanelRuntime: historyCanaryPanelRuntime,
-        historyCanaryActionRuntime: historyCanaryActionRuntime,
-        historyCanaryHostRuntime: historyCanaryHostRuntime,
-        writeStorageValue: historyCanaryStorageRuntime.writeHistoryStorageValue
-      }),
-      loadHistory: loadHistory,
-      setStatus: setStatus,
-      prevButtonId: "history-prev-page",
-      nextButtonId: "history-next-page"
-    });
+        forceLegacyStorageKey: ADAPTER_FORCE_LEGACY_STORAGE_KEY
+      })
+    );
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    historyStartupHostRuntime.applyHistoryStartup({
-      localHistoryStore: window.LocalHistoryStore,
-      setStatus: setStatus,
-      loadHistory: loadHistory,
-      historyControlsHostRuntime: historyControlsHostRuntime,
-      getElementById: el,
-      modeElementId: "history-mode",
-      modeCatalog: window.ModeCatalog,
-      historyModeFilterRuntime: historyModeFilterRuntime,
-      historyModeFilterHostRuntime: historyModeFilterHostRuntime,
-      documentLike: document,
-      state: state,
-      historyFilterHostRuntime: historyFilterHostRuntime,
-      historyQueryRuntime: historyQueryRuntime,
-      historyExportRuntime: historyExportRuntime,
-      historyToolbarRuntime: historyToolbarRuntime,
-      historyToolbarHostRuntime: historyToolbarHostRuntime,
-      historyToolbarBindHostRuntime: historyToolbarBindHostRuntime,
-      historyImportRuntime: historyImportRuntime,
-      historyImportFileRuntime: historyImportFileRuntime,
-      historyImportHostRuntime: historyImportHostRuntime,
-      historyImportBindHostRuntime: historyImportBindHostRuntime,
-      historyToolbarEventsRuntime: historyToolbarEventsRuntime,
-      historyToolbarEventsHostRuntime: historyToolbarEventsHostRuntime,
-      confirmAction: window.confirm,
-      createDate: function () {
-        return new Date();
-      },
-      createFileReader: function () {
-        return new FileReader();
-      }
-    });
+    historyRuntimes.historyStartupHostRuntime.applyHistoryStartup(
+      historyPageHostRuntime.resolveHistoryPageStartupInput({
+        localHistoryStore: window.LocalHistoryStore,
+        setStatus: setStatus,
+        loadHistory: loadHistory,
+        historyRuntimes: historyRuntimes,
+        getElementById: el,
+        modeElementId: "history-mode",
+        modeCatalog: window.ModeCatalog,
+        documentLike: document,
+        state: state,
+        confirmAction: window.confirm,
+        createDate: function () {
+          return new Date();
+        },
+        createFileReader: function () {
+          return new FileReader();
+        }
+      })
+    );
   });
 })();
