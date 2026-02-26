@@ -23,6 +23,7 @@ export interface HistoryRuntimeContractWindowLike {
   CoreHistoryImportRuntime?: unknown;
   CoreHistoryImportFileRuntime?: unknown;
   CoreHistoryImportHostRuntime?: unknown;
+  CoreHistoryImportBindHostRuntime?: unknown;
   CoreHistoryRecordActionsRuntime?: unknown;
   CoreHistoryRecordHostRuntime?: unknown;
   CoreHistoryCanaryStorageRuntime?: unknown;
@@ -58,6 +59,7 @@ export interface ResolveHistoryRuntimeContractsResult {
   historyImportRuntime: AnyRecord;
   historyImportFileRuntime: AnyRecord;
   historyImportHostRuntime: AnyRecord;
+  historyImportBindHostRuntime: AnyRecord;
   historyRecordActionsRuntime: AnyRecord;
   historyRecordHostRuntime: AnyRecord;
   historyCanaryStorageRuntime: AnyRecord;
@@ -274,6 +276,11 @@ export function resolveHistoryRuntimeContracts(
     ],
     "CoreHistoryImportHostRuntime is required"
   );
+  const historyImportBindHostRuntime = requireRuntimeFunctions(
+    source.CoreHistoryImportBindHostRuntime,
+    ["bindHistoryImportControls"],
+    "CoreHistoryImportBindHostRuntime is required"
+  );
   const historyRecordActionsRuntime = requireRuntimeFunctions(
     source.CoreHistoryRecordActionsRuntime,
     [
@@ -377,6 +384,7 @@ export function resolveHistoryRuntimeContracts(
     historyImportRuntime,
     historyImportFileRuntime,
     historyImportHostRuntime,
+    historyImportBindHostRuntime,
     historyRecordActionsRuntime,
     historyRecordHostRuntime,
     historyCanaryStorageRuntime,

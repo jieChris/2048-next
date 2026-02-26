@@ -201,6 +201,11 @@
       ],
       "CoreHistoryImportHostRuntime is required"
     );
+    var historyImportBindHostRuntime = requireRuntimeFunctions(
+      source.CoreHistoryImportBindHostRuntime,
+      ["bindHistoryImportControls"],
+      "CoreHistoryImportBindHostRuntime is required"
+    );
     var historyRecordActionsRuntime = requireRuntimeFunctions(
       source.CoreHistoryRecordActionsRuntime,
       [
@@ -304,6 +309,7 @@
       historyImportRuntime: historyImportRuntime,
       historyImportFileRuntime: historyImportFileRuntime,
       historyImportHostRuntime: historyImportHostRuntime,
+      historyImportBindHostRuntime: historyImportBindHostRuntime,
       historyRecordActionsRuntime: historyRecordActionsRuntime,
       historyRecordHostRuntime: historyRecordHostRuntime,
       historyCanaryStorageRuntime: historyCanaryStorageRuntime,

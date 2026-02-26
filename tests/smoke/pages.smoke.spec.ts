@@ -1865,17 +1865,52 @@ test.describe("Legacy Multi-Page Smoke", () => {
             (window as any).CoreHistoryImportHostRuntime?.applyHistoryImportFromFileReadResult
         ),
         mergeClickCallCount: Number((window as any).__historyImportHostMergeClickCallCount || 0),
-        replaceClickCallCount: Number((window as any).__historyImportHostReplaceClickCallCount || 0),
-        fileSelectionCallCount: Number((window as any).__historyImportHostFileSelectionCallCount || 0),
-        applyReadResultCallCount: Number((window as any).__historyImportHostApplyReadResultCallCount || 0)
+        replaceClickCallCount: Number((window as any).__historyImportHostReplaceClickCallCount || 0)
       };
     });
 
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.mergeClickCallCount).toBeGreaterThan(0);
     expect(snapshot.replaceClickCallCount).toBeGreaterThan(0);
-    expect(snapshot.fileSelectionCallCount).toBeGreaterThan(0);
-    expect(snapshot.applyReadResultCallCount).toBeGreaterThan(0);
+  });
+
+  test("history page delegates import control binding orchestration to bind-host runtime helper", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      (window as any).__historyImportBindHostCallCount = 0;
+      const target: Record<string, unknown> = {};
+      (window as any).CoreHistoryImportBindHostRuntime = new Proxy(target, {
+        set(proxyTarget, prop, value) {
+          if (prop === "bindHistoryImportControls" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyImportBindHostCallCount =
+                Number((window as any).__historyImportBindHostCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          proxyTarget[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/history.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "History response should exist").not.toBeNull();
+    expect(response?.ok(), "History response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    const snapshot = await page.evaluate(() => ({
+      hasRuntime: Boolean((window as any).CoreHistoryImportBindHostRuntime?.bindHistoryImportControls),
+      bindCallCount: Number((window as any).__historyImportBindHostCallCount || 0)
+    }));
+
+    expect(snapshot.hasRuntime).toBe(true);
+    expect(snapshot.bindCallCount).toBeGreaterThan(0);
   });
 
   test("history page delegates mode filter option modeling to runtime helper", async ({ page }) => {

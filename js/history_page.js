@@ -48,6 +48,7 @@
   var historyImportRuntime = historyRuntimes.historyImportRuntime;
   var historyImportFileRuntime = historyRuntimes.historyImportFileRuntime;
   var historyImportHostRuntime = historyRuntimes.historyImportHostRuntime;
+  var historyImportBindHostRuntime = historyRuntimes.historyImportBindHostRuntime;
   var historyRecordActionsRuntime = historyRuntimes.historyRecordActionsRuntime;
   var historyRecordHostRuntime = historyRuntimes.historyRecordHostRuntime;
   var historyCanaryStorageRuntime = historyRuntimes.historyCanaryStorageRuntime;
@@ -308,64 +309,19 @@
       }
     });
 
-    var importBtn = el("history-import-btn");
-    var importReplaceBtn = el("history-import-replace-btn");
-    var importInput = el("history-import-file");
-    if (importBtn && importInput) {
-      var importMode = "merge";
-      importBtn.addEventListener("click", function () {
-        var clickState = historyImportHostRuntime.resolveHistoryImportMergeClickState({
-          currentMode: importMode,
-          historyImportRuntime: historyImportRuntime
-        });
-        importMode = clickState.nextMode;
-        if (clickState.shouldOpenFilePicker) importInput.click();
-      });
-      if (importReplaceBtn) {
-        importReplaceBtn.addEventListener("click", function () {
-          var clickState = historyImportHostRuntime.resolveHistoryImportReplaceClickState({
-            currentMode: importMode,
-            historyImportRuntime: historyImportRuntime,
-            confirmAction: window.confirm
-          });
-          importMode = clickState.nextMode;
-          if (clickState.shouldOpenFilePicker) importInput.click();
-        });
-      }
-      importInput.addEventListener("change", function () {
-        var selectionState = historyImportHostRuntime.resolveHistoryImportFileSelectionState({
-          files: importInput.files,
-          historyImportFileRuntime: historyImportFileRuntime
-        });
-        if (!selectionState || selectionState.shouldRead !== true) return;
-        var reader = new FileReader();
-        reader.onload = function () {
-          var importState = historyImportHostRuntime.applyHistoryImportFromFileReadResult({
-            readerResult: reader.result,
-            importMode: importMode,
-            localHistoryStore: window.LocalHistoryStore,
-            historyImportRuntime: historyImportRuntime,
-            historyImportFileRuntime: historyImportFileRuntime
-          });
-          if (importState && importState.shouldSetStatus) {
-            setStatus(importState.statusText, importState.isError);
-          }
-          if (importState && importState.shouldReload) {
-            loadHistory(true);
-          }
-        };
-        reader.onerror = function () {
-          var failureState = historyImportHostRuntime.resolveHistoryImportReadFailureState({
-            historyImportRuntime: historyImportRuntime
-          });
-          if (failureState && failureState.shouldSetStatus) {
-            setStatus(failureState.statusText, failureState.isError);
-          }
-        };
-        reader.readAsText(selectionState.file, selectionState.encoding);
-        importInput.value = selectionState.resetValue;
-      });
-    }
+    historyImportBindHostRuntime.bindHistoryImportControls({
+      getElementById: el,
+      localHistoryStore: window.LocalHistoryStore,
+      historyImportRuntime: historyImportRuntime,
+      historyImportFileRuntime: historyImportFileRuntime,
+      historyImportHostRuntime: historyImportHostRuntime,
+      confirmAction: window.confirm,
+      createFileReader: function () {
+        return new FileReader();
+      },
+      setStatus: setStatus,
+      loadHistory: loadHistory
+    });
 
     historyToolbarEventsHostRuntime.bindHistoryToolbarPagerAndFilterEvents({
       getElementById: el,

@@ -166,6 +166,12 @@ function createWindowLike() {
         shouldReload: false
       })
     },
+    CoreHistoryImportBindHostRuntime: {
+      bindHistoryImportControls: () => ({
+        didBind: true,
+        boundControlCount: 0
+      })
+    },
     CoreHistoryRecordActionsRuntime: {
       resolveHistoryReplayHref: () => "",
       resolveHistoryDeleteActionState: () => ({ shouldDelete: false, confirmMessage: "" }),
@@ -261,6 +267,7 @@ describe("bootstrap history runtime contract", () => {
     expect(result.historyLoadRuntime).toBe(source.CoreHistoryLoadRuntime);
     expect(result.historyLoadHostRuntime).toBe(source.CoreHistoryLoadHostRuntime);
     expect(result.historyImportHostRuntime).toBe(source.CoreHistoryImportHostRuntime);
+    expect(result.historyImportBindHostRuntime).toBe(source.CoreHistoryImportBindHostRuntime);
     expect(result.historyRecordHostRuntime).toBe(source.CoreHistoryRecordHostRuntime);
     expect(result.historyToolbarHostRuntime).toBe(source.CoreHistoryToolbarHostRuntime);
     expect(result.historyToolbarBindHostRuntime).toBe(source.CoreHistoryToolbarBindHostRuntime);
@@ -346,6 +353,15 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryImportHostRuntime is required"
+    );
+  });
+
+  it("throws exact error when import bind host runtime misses required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryImportBindHostRuntime = {};
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryImportBindHostRuntime is required"
     );
   });
 
