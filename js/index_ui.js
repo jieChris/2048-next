@@ -392,7 +392,8 @@ if (
 var responsiveRelayoutHostRuntime = window.CoreResponsiveRelayoutHostRuntime;
 if (
   !responsiveRelayoutHostRuntime ||
-  typeof responsiveRelayoutHostRuntime.applyResponsiveRelayoutRequest !== "function"
+  typeof responsiveRelayoutHostRuntime.applyResponsiveRelayoutRequest !== "function" ||
+  typeof responsiveRelayoutHostRuntime.applyResponsiveRelayoutRequestFromContext !== "function"
 ) {
   throw new Error("CoreResponsiveRelayoutHostRuntime is required");
 }
@@ -725,7 +726,7 @@ function initMobileTimerboxToggle() {
 }
 
 function requestResponsiveGameRelayout() {
-  var requestResult = responsiveRelayoutHostRuntime.applyResponsiveRelayoutRequest({
+  var requestResult = responsiveRelayoutHostRuntime.applyResponsiveRelayoutRequestFromContext({
     responsiveRelayoutRuntime: responsiveRelayoutRuntime,
     isTimerboxMobileScope: isTimerboxMobileScope,
     existingTimer: mobileRelayoutTimer,
@@ -737,7 +738,7 @@ function requestResponsiveGameRelayout() {
     syncPracticeTopActionsPlacement: syncPracticeTopActionsPlacement,
     syncMobileUndoTopButtonAvailability: syncMobileUndoTopButtonAvailability,
     syncMobileTimerboxUI: syncMobileTimerboxUI,
-    manager: window.game_manager || null
+    windowLike: typeof window !== "undefined" ? window : null
   });
   mobileRelayoutTimer = requestResult && Object.prototype.hasOwnProperty.call(requestResult, "timerRef")
     ? requestResult.timerRef

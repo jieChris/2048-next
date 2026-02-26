@@ -22,6 +22,11 @@ function resolveDelayMs(value: unknown, fallback: number): number {
   return Number.isFinite(value) && Number(value) > 0 ? Number(value) : fallback;
 }
 
+function resolveManagerFromWindow(windowLike: unknown): unknown {
+  const windowRecord = toRecord(windowLike);
+  return windowRecord.game_manager || null;
+}
+
 export interface ResponsiveRelayoutRequestHostResult {
   didRequest: boolean;
   shouldSchedule: boolean;
@@ -30,6 +35,12 @@ export interface ResponsiveRelayoutRequestHostResult {
   didSchedule: boolean;
   timerRef: unknown;
   delayMs: number;
+}
+
+export interface ResponsiveRelayoutRequestHostFromContextResult {
+  didInvokeRequest: boolean;
+  managerResolved: boolean;
+  requestResult: ResponsiveRelayoutRequestHostResult;
 }
 
 export function applyResponsiveRelayoutRequest(input: {
@@ -117,5 +128,43 @@ export function applyResponsiveRelayoutRequest(input: {
     didSchedule,
     timerRef,
     delayMs
+  };
+}
+
+export function applyResponsiveRelayoutRequestFromContext(input: {
+  responsiveRelayoutRuntime?: unknown;
+  isTimerboxMobileScope?: unknown;
+  existingTimer?: unknown;
+  delayMs?: unknown;
+  clearTimeoutLike?: unknown;
+  setTimeoutLike?: unknown;
+  syncMobileHintUI?: unknown;
+  syncMobileTopActionsPlacement?: unknown;
+  syncPracticeTopActionsPlacement?: unknown;
+  syncMobileUndoTopButtonAvailability?: unknown;
+  syncMobileTimerboxUI?: unknown;
+  windowLike?: unknown;
+}): ResponsiveRelayoutRequestHostFromContextResult {
+  const source = toRecord(input);
+  const manager = resolveManagerFromWindow(source.windowLike);
+  const requestResult = applyResponsiveRelayoutRequest({
+    responsiveRelayoutRuntime: source.responsiveRelayoutRuntime,
+    isTimerboxMobileScope: source.isTimerboxMobileScope,
+    existingTimer: source.existingTimer,
+    delayMs: source.delayMs,
+    clearTimeoutLike: source.clearTimeoutLike,
+    setTimeoutLike: source.setTimeoutLike,
+    syncMobileHintUI: source.syncMobileHintUI,
+    syncMobileTopActionsPlacement: source.syncMobileTopActionsPlacement,
+    syncPracticeTopActionsPlacement: source.syncPracticeTopActionsPlacement,
+    syncMobileUndoTopButtonAvailability: source.syncMobileUndoTopButtonAvailability,
+    syncMobileTimerboxUI: source.syncMobileTimerboxUI,
+    manager
+  });
+
+  return {
+    didInvokeRequest: requestResult.didRequest,
+    managerResolved: !!manager,
+    requestResult
   };
 }

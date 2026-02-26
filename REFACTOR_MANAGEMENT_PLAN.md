@@ -173,6 +173,7 @@
   - 新增 `src/bootstrap/responsive-relayout.ts` + `js/core_responsive_relayout_runtime.js`，`index_ui.js` 委托重排调度决策与重排执行链（sync + manager 视觉刷新）
   - `index_ui.js` 的 `requestResponsiveGameRelayout` 已改为 `CoreResponsiveRelayoutHostRuntime` 调用（内部委托 `CoreResponsiveRelayoutRuntime`），页面层不再内联重排判定、timer 调度与 manager 刷新分支
   - 新增 `src/bootstrap/responsive-relayout-host.ts` + `js/core_responsive_relayout_host_runtime.js`，`index_ui.js` 委托移动端重排请求主链（request state 解析、timer 清理与调度、回调执行）编排
+  - `responsive-relayout-host` 已承接 `manager` 上下文解析（`applyResponsiveRelayoutRequestFromContext`），`index_ui.js` 不再页面层读取 `window.game_manager`
   - 新增 `src/bootstrap/top-action-bindings-host.ts` + `js/core_top_action_bindings_host_runtime.js`，`index_ui.js` 委托顶部按钮与设置弹层事件绑定（undo/export/practice/settings）
   - `index_ui.js` 的 `DOMContentLoaded` 顶部动作绑定已收敛为 `CoreTopActionBindingsHostRuntime.applyTopActionBindings` 调用
   - 新增 `src/bootstrap/game-over-undo-host.ts` + `js/core_game_over_undo_host_runtime.js`，`index_ui.js` 委托 game-over 撤回按钮（click/touch 防重）绑定
