@@ -12,75 +12,21 @@ if (
 var indexUiModalRuntimeContracts = indexUiRuntimeContractRuntime.resolveIndexUiModalRuntimeContracts(
   typeof window !== "undefined" ? window : null
 );
-var replayModalRuntime = indexUiModalRuntimeContracts.replayModalRuntime;
-var replayExportRuntime = indexUiModalRuntimeContracts.replayExportRuntime;
-var replayPageHostRuntime = indexUiModalRuntimeContracts.replayPageHostRuntime;
-var settingsModalHostRuntime = indexUiModalRuntimeContracts.settingsModalHostRuntime;
-var settingsModalPageHostRuntime = indexUiModalRuntimeContracts.settingsModalPageHostRuntime;
+var modalContracts = indexUiModalRuntimeContracts;
 var indexUiHomeGuideRuntimeContracts =
   indexUiRuntimeContractRuntime.resolveIndexUiHomeGuideRuntimeContracts(
     typeof window !== "undefined" ? window : null
   );
-var homeGuideRuntime = indexUiHomeGuideRuntimeContracts.homeGuideRuntime;
-var homeGuideStartupHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuideStartupHostRuntime;
-var homeGuideSettingsHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuideSettingsHostRuntime;
-var homeGuidePageHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuidePageHostRuntime;
-var homeGuideDomHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuideDomHostRuntime;
-var homeGuideDoneNoticeHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuideDoneNoticeHostRuntime;
-var homeGuideHighlightHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuideHighlightHostRuntime;
-var homeGuidePanelHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuidePanelHostRuntime;
-var homeGuideFinishHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuideFinishHostRuntime;
-var homeGuideStartHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuideStartHostRuntime;
-var homeGuideControlsHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuideControlsHostRuntime;
-var homeGuideStepFlowHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuideStepFlowHostRuntime;
-var homeGuideStepHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuideStepHostRuntime;
-var homeGuideStepViewHostRuntime = indexUiHomeGuideRuntimeContracts.homeGuideStepViewHostRuntime;
+var homeGuideContracts = indexUiHomeGuideRuntimeContracts;
 var indexUiCoreRuntimeContracts = indexUiRuntimeContractRuntime.resolveIndexUiCoreRuntimeContracts(
   typeof window !== "undefined" ? window : null
 );
-var timerModuleRuntime = indexUiCoreRuntimeContracts.timerModuleRuntime;
-var timerModuleSettingsHostRuntime = indexUiCoreRuntimeContracts.timerModuleSettingsHostRuntime;
-var timerModuleSettingsPageHostRuntime = indexUiCoreRuntimeContracts.timerModuleSettingsPageHostRuntime;
-var themeSettingsRuntime = indexUiCoreRuntimeContracts.themeSettingsRuntime;
-var themeSettingsHostRuntime = indexUiCoreRuntimeContracts.themeSettingsHostRuntime;
-var themeSettingsPageHostRuntime = indexUiCoreRuntimeContracts.themeSettingsPageHostRuntime;
-var practiceTransferRuntime = indexUiCoreRuntimeContracts.practiceTransferRuntime;
-var practiceTransferHostRuntime = indexUiCoreRuntimeContracts.practiceTransferHostRuntime;
-var practiceTransferPageHostRuntime = indexUiCoreRuntimeContracts.practiceTransferPageHostRuntime;
-var undoActionRuntime = indexUiCoreRuntimeContracts.undoActionRuntime;
-var mobileHintRuntime = indexUiCoreRuntimeContracts.mobileHintRuntime;
-var mobileHintUiRuntime = indexUiCoreRuntimeContracts.mobileHintUiRuntime;
-var mobileHintModalRuntime = indexUiCoreRuntimeContracts.mobileHintModalRuntime;
-var mobileHintOpenHostRuntime = indexUiCoreRuntimeContracts.mobileHintOpenHostRuntime;
-var mobileHintUiHostRuntime = indexUiCoreRuntimeContracts.mobileHintUiHostRuntime;
-var mobileHintHostRuntime = indexUiCoreRuntimeContracts.mobileHintHostRuntime;
-var mobileHintPageHostRuntime = indexUiCoreRuntimeContracts.mobileHintPageHostRuntime;
-var mobileTimerboxRuntime = indexUiCoreRuntimeContracts.mobileTimerboxRuntime;
-var mobileTimerboxHostRuntime = indexUiCoreRuntimeContracts.mobileTimerboxHostRuntime;
-var mobileTimerboxPageHostRuntime = indexUiCoreRuntimeContracts.mobileTimerboxPageHostRuntime;
-var mobileUndoTopRuntime = indexUiCoreRuntimeContracts.mobileUndoTopRuntime;
-var mobileUndoTopHostRuntime = indexUiCoreRuntimeContracts.mobileUndoTopHostRuntime;
-var mobileUndoTopAvailabilityHostRuntime =
-  indexUiCoreRuntimeContracts.mobileUndoTopAvailabilityHostRuntime;
-var topActionsRuntime = indexUiCoreRuntimeContracts.topActionsRuntime;
-var topActionsHostRuntime = indexUiCoreRuntimeContracts.topActionsHostRuntime;
-var topActionsPageHostRuntime = indexUiCoreRuntimeContracts.topActionsPageHostRuntime;
-var mobileTopButtonsRuntime = indexUiCoreRuntimeContracts.mobileTopButtonsRuntime;
-var mobileTopButtonsPageHostRuntime = indexUiCoreRuntimeContracts.mobileTopButtonsPageHostRuntime;
-var mobileViewportRuntime = indexUiCoreRuntimeContracts.mobileViewportRuntime;
-var mobileViewportPageHostRuntime = indexUiCoreRuntimeContracts.mobileViewportPageHostRuntime;
-var storageRuntime = indexUiCoreRuntimeContracts.storageRuntime;
-var prettyTimeRuntime = indexUiCoreRuntimeContracts.prettyTimeRuntime;
-var responsiveRelayoutRuntime = indexUiCoreRuntimeContracts.responsiveRelayoutRuntime;
-var responsiveRelayoutHostRuntime = indexUiCoreRuntimeContracts.responsiveRelayoutHostRuntime;
-var topActionBindingsHostRuntime = indexUiCoreRuntimeContracts.topActionBindingsHostRuntime;
-var gameOverUndoHostRuntime = indexUiCoreRuntimeContracts.gameOverUndoHostRuntime;
-var indexUiStartupHostRuntime = indexUiCoreRuntimeContracts.indexUiStartupHostRuntime;
+var coreContracts = indexUiCoreRuntimeContracts;
 var indexUiPageHostRuntime = indexUiCoreRuntimeContracts.indexUiPageHostRuntime;
 var indexUiPageResolversHostRuntime = indexUiCoreRuntimeContracts.indexUiPageResolversHostRuntime;
 var indexUiPageActionsHostRuntime = indexUiCoreRuntimeContracts.indexUiPageActionsHostRuntime;
 var tryUndoFromUi = indexUiPageHostRuntime.createIndexUiTryUndoHandler({
-  undoActionRuntime: undoActionRuntime,
+  undoActionRuntime: coreContracts.undoActionRuntime,
   windowLike: typeof window !== "undefined" ? window : null,
   direction: -1
 });
@@ -97,34 +43,34 @@ var MOBILE_UI_MAX_WIDTH = 760;
 var TIMERBOX_COLLAPSE_MAX_WIDTH = 980;
 var COMPACT_GAME_VIEWPORT_MAX_WIDTH = 980;
 var indexUiMobileResolvers = indexUiPageResolversHostRuntime.createIndexUiMobileResolvers({
-  mobileViewportPageHostRuntime: mobileViewportPageHostRuntime,
-  mobileViewportRuntime: mobileViewportRuntime,
-  mobileTopButtonsPageHostRuntime: mobileTopButtonsPageHostRuntime,
-  mobileTopButtonsRuntime: mobileTopButtonsRuntime,
-  mobileUndoTopAvailabilityHostRuntime: mobileUndoTopAvailabilityHostRuntime,
-  mobileUndoTopHostRuntime: mobileUndoTopHostRuntime,
-  mobileUndoTopRuntime: mobileUndoTopRuntime,
-  undoActionRuntime: undoActionRuntime,
-  topActionsPageHostRuntime: topActionsPageHostRuntime,
-  topActionsRuntime: topActionsRuntime,
-  topActionsHostRuntime: topActionsHostRuntime,
-  mobileHintPageHostRuntime: mobileHintPageHostRuntime,
-  mobileHintModalRuntime: mobileHintModalRuntime,
-  mobileHintOpenHostRuntime: mobileHintOpenHostRuntime,
-  mobileHintUiHostRuntime: mobileHintUiHostRuntime,
-  mobileHintHostRuntime: mobileHintHostRuntime,
-  mobileHintRuntime: mobileHintRuntime,
-  mobileHintUiRuntime: mobileHintUiRuntime,
-  mobileTimerboxPageHostRuntime: mobileTimerboxPageHostRuntime,
-  mobileTimerboxHostRuntime: mobileTimerboxHostRuntime,
-  mobileTimerboxRuntime: mobileTimerboxRuntime,
-  responsiveRelayoutHostRuntime: responsiveRelayoutHostRuntime,
-  responsiveRelayoutRuntime: responsiveRelayoutRuntime,
+  mobileViewportPageHostRuntime: coreContracts.mobileViewportPageHostRuntime,
+  mobileViewportRuntime: coreContracts.mobileViewportRuntime,
+  mobileTopButtonsPageHostRuntime: coreContracts.mobileTopButtonsPageHostRuntime,
+  mobileTopButtonsRuntime: coreContracts.mobileTopButtonsRuntime,
+  mobileUndoTopAvailabilityHostRuntime: coreContracts.mobileUndoTopAvailabilityHostRuntime,
+  mobileUndoTopHostRuntime: coreContracts.mobileUndoTopHostRuntime,
+  mobileUndoTopRuntime: coreContracts.mobileUndoTopRuntime,
+  undoActionRuntime: coreContracts.undoActionRuntime,
+  topActionsPageHostRuntime: coreContracts.topActionsPageHostRuntime,
+  topActionsRuntime: coreContracts.topActionsRuntime,
+  topActionsHostRuntime: coreContracts.topActionsHostRuntime,
+  mobileHintPageHostRuntime: coreContracts.mobileHintPageHostRuntime,
+  mobileHintModalRuntime: coreContracts.mobileHintModalRuntime,
+  mobileHintOpenHostRuntime: coreContracts.mobileHintOpenHostRuntime,
+  mobileHintUiHostRuntime: coreContracts.mobileHintUiHostRuntime,
+  mobileHintHostRuntime: coreContracts.mobileHintHostRuntime,
+  mobileHintRuntime: coreContracts.mobileHintRuntime,
+  mobileHintUiRuntime: coreContracts.mobileHintUiRuntime,
+  mobileTimerboxPageHostRuntime: coreContracts.mobileTimerboxPageHostRuntime,
+  mobileTimerboxHostRuntime: coreContracts.mobileTimerboxHostRuntime,
+  mobileTimerboxRuntime: coreContracts.mobileTimerboxRuntime,
+  responsiveRelayoutHostRuntime: coreContracts.responsiveRelayoutHostRuntime,
+  responsiveRelayoutRuntime: coreContracts.responsiveRelayoutRuntime,
   documentLike: document,
   bodyLike: document.body,
   windowLike: typeof window !== "undefined" ? window : null,
   navigatorLike: typeof navigator !== "undefined" ? navigator : null,
-  storageRuntime: storageRuntime,
+  storageRuntime: coreContracts.storageRuntime,
   tryUndoFromUi: tryUndoFromUi,
   clearTimeoutLike: clearTimeout,
   setTimeoutLike: setTimeout,
@@ -162,36 +108,36 @@ var syncMobileTimerboxUI = indexUiMobileResolvers.syncMobileTimerboxUI;
 var initMobileTimerboxToggle = indexUiMobileResolvers.initMobileTimerboxToggle;
 var requestResponsiveGameRelayout = indexUiMobileResolvers.requestResponsiveGameRelayout;
 var indexUiPageActionResolvers = indexUiPageActionsHostRuntime.createIndexUiPageActionResolvers({
-  settingsModalPageHostRuntime: settingsModalPageHostRuntime,
-  settingsModalHostRuntime: settingsModalHostRuntime,
-  replayModalRuntime: replayModalRuntime,
-  themeSettingsPageHostRuntime: themeSettingsPageHostRuntime,
-  themeSettingsHostRuntime: themeSettingsHostRuntime,
-  themeSettingsRuntime: themeSettingsRuntime,
-  timerModuleSettingsHostRuntime: timerModuleSettingsHostRuntime,
-  timerModuleSettingsPageHostRuntime: timerModuleSettingsPageHostRuntime,
-  timerModuleRuntime: timerModuleRuntime,
-  practiceTransferPageHostRuntime: practiceTransferPageHostRuntime,
-  practiceTransferHostRuntime: practiceTransferHostRuntime,
-  practiceTransferRuntime: practiceTransferRuntime,
-  storageRuntime: storageRuntime,
-  homeGuidePageHostRuntime: homeGuidePageHostRuntime,
-  homeGuideRuntime: homeGuideRuntime,
-  homeGuideDomHostRuntime: homeGuideDomHostRuntime,
-  homeGuideHighlightHostRuntime: homeGuideHighlightHostRuntime,
-  homeGuidePanelHostRuntime: homeGuidePanelHostRuntime,
-  homeGuideDoneNoticeHostRuntime: homeGuideDoneNoticeHostRuntime,
-  homeGuideFinishHostRuntime: homeGuideFinishHostRuntime,
-  homeGuideStepHostRuntime: homeGuideStepHostRuntime,
-  homeGuideStepFlowHostRuntime: homeGuideStepFlowHostRuntime,
-  homeGuideStepViewHostRuntime: homeGuideStepViewHostRuntime,
-  homeGuideStartHostRuntime: homeGuideStartHostRuntime,
-  homeGuideControlsHostRuntime: homeGuideControlsHostRuntime,
-  homeGuideSettingsHostRuntime: homeGuideSettingsHostRuntime,
-  homeGuideStartupHostRuntime: homeGuideStartupHostRuntime,
-  mobileViewportRuntime: mobileViewportRuntime,
-  replayPageHostRuntime: replayPageHostRuntime,
-  replayExportRuntime: replayExportRuntime,
+  settingsModalPageHostRuntime: modalContracts.settingsModalPageHostRuntime,
+  settingsModalHostRuntime: modalContracts.settingsModalHostRuntime,
+  replayModalRuntime: modalContracts.replayModalRuntime,
+  themeSettingsPageHostRuntime: coreContracts.themeSettingsPageHostRuntime,
+  themeSettingsHostRuntime: coreContracts.themeSettingsHostRuntime,
+  themeSettingsRuntime: coreContracts.themeSettingsRuntime,
+  timerModuleSettingsHostRuntime: coreContracts.timerModuleSettingsHostRuntime,
+  timerModuleSettingsPageHostRuntime: coreContracts.timerModuleSettingsPageHostRuntime,
+  timerModuleRuntime: coreContracts.timerModuleRuntime,
+  practiceTransferPageHostRuntime: coreContracts.practiceTransferPageHostRuntime,
+  practiceTransferHostRuntime: coreContracts.practiceTransferHostRuntime,
+  practiceTransferRuntime: coreContracts.practiceTransferRuntime,
+  storageRuntime: coreContracts.storageRuntime,
+  homeGuidePageHostRuntime: homeGuideContracts.homeGuidePageHostRuntime,
+  homeGuideRuntime: homeGuideContracts.homeGuideRuntime,
+  homeGuideDomHostRuntime: homeGuideContracts.homeGuideDomHostRuntime,
+  homeGuideHighlightHostRuntime: homeGuideContracts.homeGuideHighlightHostRuntime,
+  homeGuidePanelHostRuntime: homeGuideContracts.homeGuidePanelHostRuntime,
+  homeGuideDoneNoticeHostRuntime: homeGuideContracts.homeGuideDoneNoticeHostRuntime,
+  homeGuideFinishHostRuntime: homeGuideContracts.homeGuideFinishHostRuntime,
+  homeGuideStepHostRuntime: homeGuideContracts.homeGuideStepHostRuntime,
+  homeGuideStepFlowHostRuntime: homeGuideContracts.homeGuideStepFlowHostRuntime,
+  homeGuideStepViewHostRuntime: homeGuideContracts.homeGuideStepViewHostRuntime,
+  homeGuideStartHostRuntime: homeGuideContracts.homeGuideStartHostRuntime,
+  homeGuideControlsHostRuntime: homeGuideContracts.homeGuideControlsHostRuntime,
+  homeGuideSettingsHostRuntime: homeGuideContracts.homeGuideSettingsHostRuntime,
+  homeGuideStartupHostRuntime: homeGuideContracts.homeGuideStartupHostRuntime,
+  mobileViewportRuntime: coreContracts.mobileViewportRuntime,
+  replayPageHostRuntime: modalContracts.replayPageHostRuntime,
+  replayExportRuntime: modalContracts.replayExportRuntime,
   isCompactGameViewport: isCompactGameViewport,
   documentLike: document,
   windowLike: typeof window !== "undefined" ? window : null,
@@ -226,9 +172,9 @@ var exportReplay = indexUiPageActionResolvers.exportReplay;
 var openSettingsModal = indexUiPageActionResolvers.openSettingsModal;
 var closeSettingsModal = indexUiPageActionResolvers.closeSettingsModal;
 indexUiPageHostRuntime.applyIndexUiPageBootstrap({
-  indexUiStartupHostRuntime: indexUiStartupHostRuntime,
-  topActionBindingsHostRuntime: topActionBindingsHostRuntime,
-  gameOverUndoHostRuntime: gameOverUndoHostRuntime,
+  indexUiStartupHostRuntime: coreContracts.indexUiStartupHostRuntime,
+  topActionBindingsHostRuntime: coreContracts.topActionBindingsHostRuntime,
+  gameOverUndoHostRuntime: coreContracts.gameOverUndoHostRuntime,
   documentLike: document,
   windowLike: typeof window !== "undefined" ? window : null,
   nowMs: function () {
@@ -253,5 +199,5 @@ indexUiPageHostRuntime.applyIndexUiPageBootstrap({
   syncMobileTimerboxUI: syncMobileTimerboxUI,
   syncMobileHintUI: syncMobileHintUI,
   syncMobileUndoTopButtonAvailability: syncMobileUndoTopButtonAvailability,
-  prettyTimeRuntime: prettyTimeRuntime
+  prettyTimeRuntime: coreContracts.prettyTimeRuntime
 });
