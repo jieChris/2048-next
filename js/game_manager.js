@@ -2027,20 +2027,19 @@ GameManager.prototype.resolveOptionObject = function (options) {
   return options && typeof options === "object" ? options : {};
 };
 
+GameManager.prototype.readOptionValue = function (options, key, fallbackValue) {
+  if (!options || typeof options !== "object") return fallbackValue;
+  return Object.prototype.hasOwnProperty.call(options, key) ? options[key] : fallbackValue;
+};
+
 GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
   var context = this.resolveModePolicyContext(mode);
   var source = this.resolveOptionObject(options);
-
-  var hasOwn = Object.prototype.hasOwnProperty;
-  var hasGameStarted = hasOwn.call(source, "hasGameStarted")
-    ? !!source.hasGameStarted
-    : !!this.hasGameStarted;
-  var replayMode = hasOwn.call(source, "replayMode")
-    ? !!source.replayMode
-    : !!this.replayMode;
-  var undoLimit = hasOwn.call(source, "undoLimit") ? source.undoLimit : this.undoLimit;
-  var undoUsed = hasOwn.call(source, "undoUsed") ? source.undoUsed : this.undoUsed;
-  var undoEnabled = hasOwn.call(source, "undoEnabled") ? source.undoEnabled : this.undoEnabled;
+  var hasGameStarted = !!this.readOptionValue(source, "hasGameStarted", !!this.hasGameStarted);
+  var replayMode = !!this.readOptionValue(source, "replayMode", !!this.replayMode);
+  var undoLimit = this.readOptionValue(source, "undoLimit", this.undoLimit);
+  var undoUsed = this.readOptionValue(source, "undoUsed", this.undoUsed);
+  var undoEnabled = this.readOptionValue(source, "undoEnabled", this.undoEnabled);
 
   var resolveUndoPolicyStateCore = this.callCoreModeRuntime("resolveUndoPolicyState", [{
       mode: context.targetMode,
@@ -2090,17 +2089,12 @@ GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
 
 GameManager.prototype.resolveActiveUndoPolicyState = function (options) {
   var source = this.resolveOptionObject(options);
-  var hasOwn = Object.prototype.hasOwnProperty;
   return this.resolveUndoPolicyStateForMode(this.mode, {
-    hasGameStarted: hasOwn.call(source, "hasGameStarted")
-      ? !!source.hasGameStarted
-      : !!this.hasGameStarted,
-    replayMode: hasOwn.call(source, "replayMode")
-      ? !!source.replayMode
-      : !!this.replayMode,
-    undoLimit: hasOwn.call(source, "undoLimit") ? source.undoLimit : this.undoLimit,
-    undoUsed: hasOwn.call(source, "undoUsed") ? source.undoUsed : this.undoUsed,
-    undoEnabled: hasOwn.call(source, "undoEnabled") ? source.undoEnabled : this.undoEnabled
+    hasGameStarted: !!this.readOptionValue(source, "hasGameStarted", !!this.hasGameStarted),
+    replayMode: !!this.readOptionValue(source, "replayMode", !!this.replayMode),
+    undoLimit: this.readOptionValue(source, "undoLimit", this.undoLimit),
+    undoUsed: this.readOptionValue(source, "undoUsed", this.undoUsed),
+    undoEnabled: this.readOptionValue(source, "undoEnabled", this.undoEnabled)
   });
 };
 
