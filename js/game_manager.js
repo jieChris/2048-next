@@ -904,12 +904,14 @@ GameManager.prototype.planReplayTickBoundaryFallback = function (shouldStopAtTic
   return this.buildReplayTickStopPlanFallback(replayEndState);
 };
 
+GameManager.prototype.resolveReplayEndStateForTickBoundary = function (shouldStopAtTick) {
+  return shouldStopAtTick ? this.computeReplayEndState() : undefined;
+};
+
 GameManager.prototype.resolveReplayTickBoundaryPlanForCurrentState = function () {
   var shouldStopAtTick = this.shouldStopReplayAtTick(this.replayIndex, this.replayMoves.length);
-  return this.planReplayTickBoundary(
-    shouldStopAtTick,
-    shouldStopAtTick ? this.computeReplayEndState() : undefined
-  );
+  var replayEndState = this.resolveReplayEndStateForTickBoundary(shouldStopAtTick);
+  return this.planReplayTickBoundary(shouldStopAtTick, replayEndState);
 };
 
 GameManager.prototype.applyReplayTickBoundaryPlan = function (tickBoundaryPlan) {
