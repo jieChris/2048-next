@@ -2381,6 +2381,10 @@ GameManager.prototype.buildLiteSavedGameStatePayloadFallback = function (payload
   return Object.assign(basePayload, progressPayload);
 };
 
+GameManager.prototype.normalizeLiteSavedGameStatePayloadByCore = function (litePayloadByCore) {
+  return this.isNonArrayObject(litePayloadByCore) ? litePayloadByCore : null;
+};
+
 GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
   var buildLiteSavedGameStatePayloadCore = this.callCoreStorageRuntime("buildLiteSavedGameStatePayload", [{
       payload: payload,
@@ -2400,8 +2404,8 @@ GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
       practiceRestartModeConfig: this.practiceRestartModeConfig
     }]);
   if (buildLiteSavedGameStatePayloadCore.available) {
-    var litePayloadByCore = buildLiteSavedGameStatePayloadCore.value;
-    if (litePayloadByCore && typeof litePayloadByCore === "object") return litePayloadByCore;
+    var normalizedByCore = this.normalizeLiteSavedGameStatePayloadByCore(buildLiteSavedGameStatePayloadCore.value);
+    if (normalizedByCore) return normalizedByCore;
   }
 
   if (!payload || typeof payload !== "object") return null;
