@@ -1762,8 +1762,28 @@ GameManager.prototype.resolveTimerSubStateSnapshot = function () {
   };
 };
 
+GameManager.prototype.resolveSavedGameStateReplaySnapshot = function () {
+  return {
+    move_history: this.moveHistory ? this.moveHistory.slice() : [],
+    ips_input_count: Number.isInteger(this.ipsInputCount) && this.ipsInputCount >= 0 ? this.ipsInputCount : 0,
+    undo_stack: this.undoStack ? this.safeClonePlain(this.undoStack, []) : [],
+    replay_compact_log: this.replayCompactLog || "",
+    session_replay_v3: this.sessionReplayV3 ? this.safeClonePlain(this.sessionReplayV3, null) : null
+  };
+};
+
+GameManager.prototype.resolveSavedGameStateTimerSnapshot = function () {
+  return {
+    timer_status: this.timerStatus === 1 ? 1 : 0,
+    duration_ms: this.getDurationMs(),
+    has_game_started: !!this.hasGameStarted
+  };
+};
+
 GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
   var timerSubState = this.resolveTimerSubStateSnapshot();
+  var replaySnapshot = this.resolveSavedGameStateReplaySnapshot();
+  var timerSnapshot = this.resolveSavedGameStateTimerSnapshot();
   return {
     v: GameManager.SAVED_GAME_STATE_VERSION,
     saved_at: savedAt,
@@ -1779,18 +1799,18 @@ GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
     keep_playing: this.keepPlaying,
     initial_seed: this.initialSeed,
     seed: this.seed,
-    move_history: this.moveHistory ? this.moveHistory.slice() : [],
-    ips_input_count: Number.isInteger(this.ipsInputCount) && this.ipsInputCount >= 0 ? this.ipsInputCount : 0,
-    undo_stack: this.undoStack ? this.safeClonePlain(this.undoStack, []) : [],
-    replay_compact_log: this.replayCompactLog || "",
-    session_replay_v3: this.sessionReplayV3 ? this.safeClonePlain(this.sessionReplayV3, null) : null,
+    move_history: replaySnapshot.move_history,
+    ips_input_count: replaySnapshot.ips_input_count,
+    undo_stack: replaySnapshot.undo_stack,
+    replay_compact_log: replaySnapshot.replay_compact_log,
+    session_replay_v3: replaySnapshot.session_replay_v3,
     spawn_value_counts: this.spawnValueCounts ? this.safeClonePlain(this.spawnValueCounts, {}) : {},
     reached_32k: !!this.reached32k,
     capped_milestone_count: Number.isInteger(this.cappedMilestoneCount) ? this.cappedMilestoneCount : 0,
     capped64_unlocked: this.capped64Unlocked ? this.safeClonePlain(this.capped64Unlocked, null) : null,
-    timer_status: this.timerStatus === 1 ? 1 : 0,
-    duration_ms: this.getDurationMs(),
-    has_game_started: !!this.hasGameStarted,
+    timer_status: timerSnapshot.timer_status,
+    duration_ms: timerSnapshot.duration_ms,
+    has_game_started: timerSnapshot.has_game_started,
     combo_streak: Number.isInteger(this.comboStreak) ? this.comboStreak : 0,
     successful_move_count: Number.isInteger(this.successfulMoveCount) ? this.successfulMoveCount : 0,
     undo_used: Number.isInteger(this.undoUsed) ? this.undoUsed : 0,
