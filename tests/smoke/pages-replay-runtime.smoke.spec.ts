@@ -58,6 +58,53 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot?.key).toBe("standard_4x4_pow2_no_undo");
   });
 
+  test("game manager delegates mode catalog config resolution to core mode runtime", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      (window as any).__modeCatalogConfigCallCount = 0;
+      const runtimeTarget: Record<string, unknown> = {};
+      (window as any).CoreModeRuntime = new Proxy(runtimeTarget, {
+        set(target, prop, value) {
+          if (prop === "resolveModeCatalogConfig" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__modeCatalogConfigCallCount =
+                Number((window as any).__modeCatalogConfigCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/play.html?mode_key=standard_4x4_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Play response should exist").not.toBeNull();
+    expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      if (!manager || typeof manager.getModeConfigFromCatalog !== "function") {
+        return null;
+      }
+      const resolved = manager.getModeConfigFromCatalog("standard_4x4_pow2_no_undo");
+      return {
+        callCount: Number((window as any).__modeCatalogConfigCallCount || 0),
+        key: resolved && typeof resolved.key === "string" ? resolved.key : null
+      };
+    });
+
+    expect(snapshot, "mode catalog config delegation snapshot should exist").not.toBeNull();
+    expect(snapshot?.callCount).toBeGreaterThan(0);
+    expect(snapshot?.key).toBe("standard_4x4_pow2_no_undo");
+  });
+
   test("replay application delegates startup payload to simple runtime helpers", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__simpleRuntimeContractCallCount = 0;
