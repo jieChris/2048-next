@@ -1218,6 +1218,11 @@ GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
   }
 };
 
+GameManager.prototype.serializeLocalStoragePayload = function (payload) {
+  var serialized = JSON.stringify(payload);
+  return typeof serialized === "string" ? serialized : null;
+};
+
 GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
   var writeStorageJsonPayloadFromContextCore = this.callCoreStorageRuntime("writeStorageJsonPayloadFromContext", [{
       windowLike: this.getWindowLike(),
@@ -1228,7 +1233,7 @@ GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
   var storage = this.getWebStorageByName("localStorage");
   if (!storage || typeof storage.setItem !== "function") return false;
   try {
-    var serialized = JSON.stringify(payload);
+    var serialized = this.serializeLocalStoragePayload(payload);
     if (typeof serialized !== "string") return false;
     storage.setItem(key, serialized);
     return true;
