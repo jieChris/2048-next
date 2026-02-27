@@ -5689,11 +5689,42 @@ GameManager.prototype.enqueuePendingMoveInput = function (direction) {
   this.scheduleMoveInputFlush();
 };
 
-GameManager.prototype.flushPendingMoveInput = function () {
-  this.moveInputFlushScheduled = false;
-  if (!this.hasPendingMoveInput()) return;
+GameManager.prototype.consumePendingMoveInputDirection = function () {
+  if (!this.hasPendingMoveInput()) return null;
   var direction = this.pendingMoveInput;
   this.pendingMoveInput = null;
+  return direction;
+};
+
+GameManager.prototype.resolveMoveInputWaitMs = function (throttleMs, now) {
+  return throttleMs - (now - this.lastMoveInputAt);
+};
+
+GameManager.prototype.executeImmediateMoveInput = function (direction, now) {
+  this.lastMoveInputAt = now;
+  this.move(direction);
+};
+
+GameManager.prototype.finalizeDelayedMoveInput = function (direction) {
+  if (this.hasPendingMoveInput()) {
+    // Newer input exists; next flush will consume latest direction.
+    this.scheduleMoveInputFlush();
+    return;
+  }
+  this.executeImmediateMoveInput(direction, Date.now());
+};
+
+GameManager.prototype.scheduleDelayedMoveInput = function (direction, wait) {
+  var self = this;
+  setTimeout(function () {
+    self.finalizeDelayedMoveInput(direction);
+  }, wait);
+};
+
+GameManager.prototype.flushPendingMoveInput = function () {
+  this.moveInputFlushScheduled = false;
+  var direction = this.consumePendingMoveInputDirection();
+  if (direction === null) return;
 
   var throttleMs = this.getMoveInputThrottleMs();
   if (throttleMs <= 0) {
@@ -5702,23 +5733,12 @@ GameManager.prototype.flushPendingMoveInput = function () {
   }
 
   var now = Date.now();
-  var wait = throttleMs - (now - this.lastMoveInputAt);
+  var wait = this.resolveMoveInputWaitMs(throttleMs, now);
   if (wait <= 0) {
-    this.lastMoveInputAt = now;
-    this.move(direction);
+    this.executeImmediateMoveInput(direction, now);
     return;
   }
-
-  var self = this;
-  setTimeout(function () {
-    if (self.hasPendingMoveInput()) {
-      // Newer input exists; next flush will consume latest direction.
-      self.scheduleMoveInputFlush();
-      return;
-    }
-    self.lastMoveInputAt = Date.now();
-    self.move(direction);
-  }, wait);
+  this.scheduleDelayedMoveInput(direction, wait);
 };
 
 GameManager.prototype.handleMoveInput = function (direction) {
@@ -5735,8 +5755,7 @@ GameManager.prototype.handleMoveInput = function (direction) {
 
   var now = Date.now();
   if (this.isImmediateMoveDispatchAllowed(now, throttleMs)) {
-    this.lastMoveInputAt = now;
-    this.move(direction);
+    this.executeImmediateMoveInput(direction, now);
     return;
   }
 
@@ -6111,18 +6130,27 @@ GameManager.prototype.applyMergeInteraction = function (tile, next, mergedValue,
   this.applyMergeMilestoneEffects(merged.value, timeStr);
 };
 
+GameManager.prototype.shouldApplyMergeInteraction = function (interaction, next, mergedValue) {
+  return interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null;
+};
+
 GameManager.prototype.resolveNextTileForMovePositions = function (positions) {
   if (this.isBlockedCell(positions.next.x, positions.next.y)) return null;
   return this.grid.cellContent(positions.next);
 };
 
 GameManager.prototype.applyPlannedTileInteraction = function (tile, next, mergedValue, interaction, undo) {
-  if (interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null) {
+  if (this.shouldApplyMergeInteraction(interaction, next, mergedValue)) {
     this.applyMergeInteraction(tile, next, mergedValue, interaction.target, undo);
     return;
   }
   this.snapshotMoveTileForUndo(undo, tile, interaction.target);
   this.moveTile(tile, interaction.target);
+};
+
+GameManager.prototype.resolveMergedValueForMoveTiles = function (tile, next) {
+  if (!next) return null;
+  return this.getMergedValue(tile.value, next.value);
 };
 
 GameManager.prototype.processMoveCell = function (cell, vector, undo) {
@@ -6134,7 +6162,7 @@ GameManager.prototype.processMoveCell = function (cell, vector, undo) {
   var positions = this.findFarthestPosition(cell, vector);
   var next = this.resolveNextTileForMovePositions(positions);
 
-  var mergedValue = next ? this.getMergedValue(tile.value, next.value) : null;
+  var mergedValue = this.resolveMergedValueForMoveTiles(tile, next);
   var interaction = this.planTileInteraction(cell, positions, next, mergedValue);
   this.applyPlannedTileInteraction(tile, next, mergedValue, interaction, undo);
   return interaction.moved === true;
@@ -7359,15 +7387,21 @@ GameManager.prototype.applyReplaySeekTarget = function (targetIndex) {
     this.fastForwardReplayToIndex(targetIndex);
 };
 
+GameManager.prototype.pauseReplayForSeek = function () {
+    this.pause();
+};
+
 GameManager.prototype.seek = function (targetIndex) {
     targetIndex = this.normalizeReplaySeekTarget(targetIndex);
-
-    this.pause(); // Pause while seeking
-
+    this.pauseReplayForSeek();
     this.applyReplaySeekTarget(targetIndex);
+};
+
+GameManager.prototype.resolveReplayStepTargetIndex = function (delta) {
+    return this.replayIndex + delta;
 };
 
 GameManager.prototype.step = function (delta) {
     if (!this.replayMoves) return;
-    this.seek(this.replayIndex + delta);
+    this.seek(this.resolveReplayStepTargetIndex(delta));
 };
