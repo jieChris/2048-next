@@ -5590,19 +5590,20 @@ GameManager.prototype.buildActuatorPayload = function () {
   };
 };
 
+GameManager.prototype.updateStatsLabelText = function (elementId, label, value) {
+  var el = document.getElementById(elementId);
+  if (!el) return;
+  el.textContent = label + value;
+};
+
 GameManager.prototype.updateStepStatsUi = function (stepStats) {
   var totalSteps = stepStats.totalSteps;
   var moveSteps = stepStats.moveSteps;
   var undoSteps = stepStats.undoSteps;
 
-  var totalEl = document.getElementById("stats-total");
-  if (totalEl) totalEl.textContent = "总步数: " + totalSteps;
-
-  var movesEl = document.getElementById("stats-moves");
-  if (movesEl) movesEl.textContent = "移动步数: " + moveSteps;
-
-  var undoEl = document.getElementById("stats-undo");
-  if (undoEl) undoEl.textContent = "撤回步数: " + undoSteps;
+  this.updateStatsLabelText("stats-total", "总步数: ", totalSteps);
+  this.updateStatsLabelText("stats-moves", "移动步数: ", moveSteps);
+  this.updateStatsLabelText("stats-undo", "撤回步数: ", undoSteps);
   this.updateStatsPanel(totalSteps, moveSteps, undoSteps);
 };
 
@@ -5610,22 +5611,36 @@ GameManager.prototype.refreshStepStatsUiFromHistory = function () {
   this.updateStepStatsUi(this.computeStepStats());
 };
 
+GameManager.prototype.resolveActuateElapsedTime = function () {
+  if (this.timerStatus === 1) {
+    return Date.now() - this.startTime.getTime();
+  }
+  return this.accumulatedTime;
+};
+
+GameManager.prototype.renderActuateTimerAndIps = function (elapsedMs) {
+  this.timerContainer.textContent = this.pretty(elapsedMs);
+  this.refreshIpsDisplay(elapsedMs);
+};
+
 GameManager.prototype.refreshActuateTimerAndIps = function () {
   if (!this.timerContainer) return;
-  var time;
-  if (this.timerStatus === 1) {
-    time = Date.now() - this.startTime.getTime();
-  } else {
-    time = this.accumulatedTime;
-  }
-  this.timerContainer.textContent = this.pretty(time);
-  this.refreshIpsDisplay(time);
+  var elapsedMs = this.resolveActuateElapsedTime();
+  this.renderActuateTimerAndIps(elapsedMs);
+};
+
+GameManager.prototype.shouldFinalizeSessionAfterActuate = function () {
+  return this.isSessionTerminated() && this.modeKey !== "practice_legacy";
+};
+
+GameManager.prototype.finalizeTerminatedSessionAfterActuate = function () {
+  this.clearSavedGameState(this.modeKey);
+  this.tryAutoSubmitOnGameOver();
 };
 
 GameManager.prototype.persistOrFinalizeSessionAfterActuate = function () {
-  if (this.isSessionTerminated() && this.modeKey !== "practice_legacy") {
-    this.clearSavedGameState(this.modeKey);
-    this.tryAutoSubmitOnGameOver();
+  if (this.shouldFinalizeSessionAfterActuate()) {
+    this.finalizeTerminatedSessionAfterActuate();
     return;
   }
   this.saveGameState();
