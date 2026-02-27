@@ -4182,8 +4182,25 @@ GameManager.prototype.getIpsInputCount = function () {
       ipsInputCount: this.ipsInputCount
     }]);
   if (resolveIpsInputCountCore.available) return Number(resolveIpsInputCountCore.value) || 0;
+  return this.getIpsInputCountFallback();
+};
+
+GameManager.prototype.getIpsInputCountFallback = function () {
   if (this.replayMode) return Number.isInteger(this.replayIndex) && this.replayIndex > 0 ? this.replayIndex : 0;
   return Number.isInteger(this.ipsInputCount) && this.ipsInputCount >= 0 ? this.ipsInputCount : 0;
+};
+
+GameManager.prototype.applyResolvedNextIpsInputCount = function (resolved) {
+  if (!resolved || !resolved.shouldRecord) return false;
+  var nextIps = Number(resolved.nextIpsInputCount);
+  this.ipsInputCount = Number.isInteger(nextIps) && nextIps >= 0 ? nextIps : 0;
+  return true;
+};
+
+GameManager.prototype.incrementIpsInputCountFallback = function () {
+  if (this.replayMode) return;
+  if (!Number.isInteger(this.ipsInputCount) || this.ipsInputCount < 0) this.ipsInputCount = 0;
+  this.ipsInputCount += 1;
 };
 
 GameManager.prototype.recordIpsInput = function () {
@@ -4193,16 +4210,10 @@ GameManager.prototype.recordIpsInput = function () {
       ipsInputCount: this.ipsInputCount
     }]);
   if (resolveNextIpsInputCountCore.available) {
-    var resolved = resolveNextIpsInputCountCore.value || {};
-    if (!resolved.shouldRecord) return;
-    var nextIps = Number(resolved.nextIpsInputCount);
-    this.ipsInputCount = Number.isInteger(nextIps) && nextIps >= 0 ? nextIps : 0;
+    if (!this.applyResolvedNextIpsInputCount(resolveNextIpsInputCountCore.value || {})) return;
     return;
   }
-
-  if (this.replayMode) return;
-  if (!Number.isInteger(this.ipsInputCount) || this.ipsInputCount < 0) this.ipsInputCount = 0;
-  this.ipsInputCount += 1;
+  this.incrementIpsInputCountFallback();
 };
 
 GameManager.prototype.refreshIpsDisplay = function (durationMs) {
