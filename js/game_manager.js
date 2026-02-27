@@ -4669,6 +4669,30 @@ GameManager.prototype.shouldAbortDirectionalMove = function (direction) {
   return Number(direction) === Number(lockedDirection);
 };
 
+GameManager.prototype.snapshotMoveTileForUndo = function (undo, tile, target) {
+  undo.tiles.push(this.createUndoTileSnapshot(tile, target));
+};
+
+GameManager.prototype.applyMergeInteraction = function (tile, next, mergedValue, target, undo) {
+  // We need to save tile since it will get removed
+  this.snapshotMoveTileForUndo(undo, tile, target);
+
+  var merged = new Tile(target, mergedValue);
+  merged.mergedFrom = [tile, next];
+
+  this.grid.insertTile(merged);
+  this.grid.removeTile(tile);
+
+  // Converge the two tiles' positions
+  tile.updatePosition(target);
+
+  // Update the score
+  this.score += merged.value;
+
+  var timeStr = this.pretty(this.time);
+  this.applyMergeMilestoneEffects(merged.value, timeStr);
+};
+
 GameManager.prototype.processMoveCell = function (cell, vector, undo) {
   if (this.isBlockedCell(cell.x, cell.y)) return false;
 
@@ -4683,31 +4707,29 @@ GameManager.prototype.processMoveCell = function (cell, vector, undo) {
   var mergedValue = next ? this.getMergedValue(tile.value, next.value) : null;
   var interaction = this.planTileInteraction(cell, positions, next, mergedValue);
   if (interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null) {
-    // We need to save tile since it will get removed
-    undo.tiles.push(this.createUndoTileSnapshot(tile, interaction.target));
-
-    var merged = new Tile(interaction.target, mergedValue);
-    merged.mergedFrom = [tile, next];
-
-    this.grid.insertTile(merged);
-    this.grid.removeTile(tile);
-
-    // Converge the two tiles' positions
-    tile.updatePosition(interaction.target);
-
-    // Update the score
-    this.score += merged.value;
-
-    var timeStr = this.pretty(this.time);
-    this.applyMergeMilestoneEffects(merged.value, timeStr);
-
+    this.applyMergeInteraction(tile, next, mergedValue, interaction.target, undo);
   } else {
     // Save backup information
-    undo.tiles.push(this.createUndoTileSnapshot(tile, interaction.target));
+    this.snapshotMoveTileForUndo(undo, tile, interaction.target);
     this.moveTile(tile, interaction.target);
   }
 
   return interaction.moved === true;
+};
+
+GameManager.prototype.scanMoveTraversals = function (traversals, vector, undo) {
+  var moved = false;
+  // Traverse the grid in the right direction and move tiles
+  for (var xIndex = 0; xIndex < traversals.x.length; xIndex++) {
+    var x = traversals.x[xIndex];
+    for (var yIndex = 0; yIndex < traversals.y.length; yIndex++) {
+      var y = traversals.y[yIndex];
+      if (this.processMoveCell({ x: x, y: y }, vector, undo)) {
+        moved = true;
+      }
+    }
+  }
+  return moved;
 };
 
 // Move tiles on the grid in the specified direction
@@ -4722,23 +4744,13 @@ GameManager.prototype.move = function (direction) {
 
   var vector     = this.getVector(direction);
   var traversals = this.buildTraversals(vector);
-  var moved      = false;
   var scoreBeforeMove = this.score;
   var undo       = this.createUndoSnapshotState();
 
   // Save the current tile positions and remove merger information
   this.prepareTiles();
 
-  // Traverse the grid in the right direction and move tiles
-  for (var xIndex = 0; xIndex < traversals.x.length; xIndex++) {
-    var x = traversals.x[xIndex];
-    for (var yIndex = 0; yIndex < traversals.y.length; yIndex++) {
-      var y = traversals.y[yIndex];
-      if (this.processMoveCell({ x: x, y: y }, vector, undo)) {
-        moved = true;
-      }
-    }
-  }
+  var moved = this.scanMoveTraversals(traversals, vector, undo);
 
   if (moved) {
     this.applySuccessfulMove(direction, scoreBeforeMove, undo);
