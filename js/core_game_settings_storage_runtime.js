@@ -90,6 +90,27 @@
     }
   }
 
+  function normalizeTimerModuleViewMode(value) {
+    return value === "hidden" ? "hidden" : "timer";
+  }
+
+  function readTimerModuleViewForModeFromMap(options) {
+    var opts = options || {};
+    var map = isObjectRecord(opts.map) ? opts.map : {};
+    var mode = typeof opts.mode === "string" ? opts.mode : "";
+    if (!mode) return "timer";
+    return normalizeTimerModuleViewMode(map[mode]);
+  }
+
+  function writeTimerModuleViewForModeToMap(options) {
+    var opts = options || {};
+    var map = isObjectRecord(opts.map) ? Object.assign({}, opts.map) : {};
+    var mode = typeof opts.mode === "string" ? opts.mode : "";
+    if (!mode) return map;
+    map[mode] = normalizeTimerModuleViewMode(opts.view);
+    return map;
+  }
+
   global.CoreGameSettingsStorageRuntime = global.CoreGameSettingsStorageRuntime || {};
   global.CoreGameSettingsStorageRuntime.readStorageFlagFromContext = readStorageFlagFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageFlagFromContext = writeStorageFlagFromContext;
@@ -97,4 +118,7 @@
   global.CoreGameSettingsStorageRuntime.writeStorageJsonMapFromContext = writeStorageJsonMapFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageJsonPayloadFromContext =
     writeStorageJsonPayloadFromContext;
+  global.CoreGameSettingsStorageRuntime.normalizeTimerModuleViewMode = normalizeTimerModuleViewMode;
+  global.CoreGameSettingsStorageRuntime.readTimerModuleViewForModeFromMap = readTimerModuleViewForModeFromMap;
+  global.CoreGameSettingsStorageRuntime.writeTimerModuleViewForModeToMap = writeTimerModuleViewForModeToMap;
 })(typeof window !== "undefined" ? window : undefined);

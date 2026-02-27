@@ -3360,18 +3360,45 @@ GameManager.prototype.isTimerLeaderboardAvailable = function () {
 };
 
 GameManager.prototype.getTimerModuleViewMode = function () {
+  var normalizeTimerModuleViewModeCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "normalizeTimerModuleViewMode"
+  );
+  if (normalizeTimerModuleViewModeCore) return normalizeTimerModuleViewModeCore(this.timerModuleView);
   return this.timerModuleView === "hidden" ? "hidden" : "timer";
 };
 
 GameManager.prototype.loadTimerModuleViewForMode = function (mode) {
   var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
+  var readTimerModuleViewForModeFromMapCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "readTimerModuleViewForModeFromMap"
+  );
+  if (readTimerModuleViewForModeFromMapCore) {
+    return readTimerModuleViewForModeFromMapCore({
+      map: map,
+      mode: mode
+    });
+  }
   var value = map[mode];
   return value === "hidden" ? "hidden" : "timer";
 };
 
 GameManager.prototype.persistTimerModuleViewForMode = function (mode, view) {
   var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
-  map[mode] = view === "hidden" ? "hidden" : "timer";
+  var writeTimerModuleViewForModeToMapCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "writeTimerModuleViewForModeToMap"
+  );
+  if (writeTimerModuleViewForModeToMapCore) {
+    map = writeTimerModuleViewForModeToMapCore({
+      map: map,
+      mode: mode,
+      view: view
+    });
+  } else {
+    map[mode] = view === "hidden" ? "hidden" : "timer";
+  }
   this.writeLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY, map);
 };
 

@@ -7,6 +7,8 @@ interface WindowLike {
   localStorage?: StorageLike | null;
 }
 
+type TimerModuleViewMode = "timer" | "hidden";
+
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -116,4 +118,36 @@ export function writeStorageJsonPayloadFromContext(options: {
   } catch (_err) {
     return false;
   }
+}
+
+function normalizeTimerModuleViewModeFromUnknown(value: unknown): TimerModuleViewMode {
+  return value === "hidden" ? "hidden" : "timer";
+}
+
+export function normalizeTimerModuleViewMode(value: unknown): TimerModuleViewMode {
+  return normalizeTimerModuleViewModeFromUnknown(value);
+}
+
+export function readTimerModuleViewForModeFromMap(options: {
+  map?: unknown;
+  mode?: unknown;
+}): TimerModuleViewMode {
+  const opts = options || {};
+  const map = isObjectRecord(opts.map) ? opts.map : {};
+  const mode = typeof opts.mode === "string" ? opts.mode : "";
+  if (!mode) return "timer";
+  return normalizeTimerModuleViewModeFromUnknown(map[mode]);
+}
+
+export function writeTimerModuleViewForModeToMap(options: {
+  map?: unknown;
+  mode?: unknown;
+  view?: unknown;
+}): Record<string, unknown> {
+  const opts = options || {};
+  const map = isObjectRecord(opts.map) ? { ...opts.map } : {};
+  const mode = typeof opts.mode === "string" ? opts.mode : "";
+  if (!mode) return map;
+  map[mode] = normalizeTimerModuleViewModeFromUnknown(opts.view);
+  return map;
 }

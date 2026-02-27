@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  normalizeTimerModuleViewMode,
+  readTimerModuleViewForModeFromMap,
   readStorageFlagFromContext,
   readStorageJsonMapFromContext,
+  writeTimerModuleViewForModeToMap,
   writeStorageFlagFromContext,
   writeStorageJsonMapFromContext,
   writeStorageJsonPayloadFromContext
@@ -94,5 +97,43 @@ describe("core game settings storage", () => {
       JSON.stringify(payload)
     );
     expect(result).toBe(true);
+  });
+
+  it("normalizes timer module view mode", () => {
+    expect(normalizeTimerModuleViewMode("hidden")).toBe("hidden");
+    expect(normalizeTimerModuleViewMode("timer")).toBe("timer");
+    expect(normalizeTimerModuleViewMode("anything")).toBe("timer");
+  });
+
+  it("reads timer module view mode by mode key from map", () => {
+    expect(
+      readTimerModuleViewForModeFromMap({
+        map: { standard: "hidden" },
+        mode: "standard"
+      })
+    ).toBe("hidden");
+    expect(
+      readTimerModuleViewForModeFromMap({
+        map: { standard: "hidden" },
+        mode: "fibonacci"
+      })
+    ).toBe("timer");
+  });
+
+  it("writes timer module view mode by mode key into next map", () => {
+    expect(
+      writeTimerModuleViewForModeToMap({
+        map: { standard: "timer" },
+        mode: "standard",
+        view: "hidden"
+      })
+    ).toEqual({ standard: "hidden" });
+    expect(
+      writeTimerModuleViewForModeToMap({
+        map: { standard: "hidden" },
+        mode: "practice",
+        view: "unknown"
+      })
+    ).toEqual({ standard: "hidden", practice: "timer" });
   });
 });
