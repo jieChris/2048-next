@@ -105,6 +105,53 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot?.key).toBe("standard_4x4_pow2_no_undo");
   });
 
+  test("game manager delegates mode config mode-key resolution to core mode runtime", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      (window as any).__modeConfigModeKeyCallCount = 0;
+      const runtimeTarget: Record<string, unknown> = {};
+      (window as any).CoreModeRuntime = new Proxy(runtimeTarget, {
+        set(target, prop, value) {
+          if (prop === "resolveModeConfigModeKey" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__modeConfigModeKeyCallCount =
+                Number((window as any).__modeConfigModeKeyCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/play.html?mode_key=classic_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Play response should exist").not.toBeNull();
+    expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      if (!manager || typeof manager.resolveModeConfig !== "function") {
+        return null;
+      }
+      const resolved = manager.resolveModeConfig("classic_no_undo");
+      return {
+        callCount: Number((window as any).__modeConfigModeKeyCallCount || 0),
+        key: resolved && typeof resolved.key === "string" ? resolved.key : null
+      };
+    });
+
+    expect(snapshot, "mode config mode-key delegation snapshot should exist").not.toBeNull();
+    expect(snapshot?.callCount).toBeGreaterThan(0);
+    expect(snapshot?.key).toBe("standard_4x4_pow2_no_undo");
+  });
+
   test("replay application delegates startup payload to simple runtime helpers", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__simpleRuntimeContractCallCount = 0;

@@ -22,6 +22,7 @@ import {
   normalizeModeConfig,
   resolveDetectedMode,
   resolveLegacyModeFromModeKey,
+  resolveModeConfigModeKey,
   resolveModeCatalogConfig,
   resolveModeCatalogAlias,
   normalizeSpecialRules
@@ -552,6 +553,49 @@ describe("core mode: legacy mapping policy", () => {
         }
       })
     ).toBe("fib_4x4_undo");
+  });
+
+  it("resolves mode config mode key by catalog availability then alias", () => {
+    expect(
+      resolveModeConfigModeKey({
+        modeId: "classic_no_undo",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        getModeConfig(modeId) {
+          if (modeId === "standard_4x4_pow2_no_undo") return { key: modeId };
+          return null;
+        },
+        legacyAliasToModeKey: {
+          classic_no_undo: "standard_4x4_pow2_no_undo"
+        }
+      })
+    ).toBe("standard_4x4_pow2_no_undo");
+
+    expect(
+      resolveModeConfigModeKey({
+        modeId: "classic_4x4_pow2_undo",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        getModeConfig(modeId) {
+          if (modeId === "classic_4x4_pow2_undo") return { key: modeId };
+          return null;
+        },
+        legacyAliasToModeKey: {
+          classic_no_undo: "standard_4x4_pow2_no_undo"
+        }
+      })
+    ).toBe("classic_4x4_pow2_undo");
+
+    expect(
+      resolveModeConfigModeKey({
+        modeId: "missing_mode",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        getModeConfig() {
+          return null;
+        },
+        legacyAliasToModeKey: {
+          classic_no_undo: "standard_4x4_pow2_no_undo"
+        }
+      })
+    ).toBe("standard_4x4_pow2_no_undo");
   });
 
   it("resolves mode config from catalog first, then falls back to local map", () => {

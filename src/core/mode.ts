@@ -99,6 +99,13 @@ export interface ModeCatalogAliasResolveInput {
   legacyAliasToModeKey?: Record<string, string> | null;
 }
 
+export interface ModeConfigModeKeyResolveInput {
+  modeId?: string | null;
+  defaultModeKey: string;
+  getModeConfig?: ((modeId: string) => unknown) | null;
+  legacyAliasToModeKey?: Record<string, string> | null;
+}
+
 export interface ModeCatalogConfigResolveInput {
   modeId?: string | null;
   catalogGetMode?: ((modeId: string) => unknown) | null;
@@ -391,6 +398,30 @@ export function resolveModeCatalogAlias(input: ModeCatalogAliasResolveInput): st
     return legacyAliasToModeKey[id];
   }
   return id;
+}
+
+function isPlainRecord(value: unknown): value is PlainRecord {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+export function resolveModeConfigModeKey(input: ModeConfigModeKeyResolveInput): string {
+  const source = input || {};
+  const defaultModeKey = source.defaultModeKey || "standard_4x4_pow2_no_undo";
+  const id = source.modeId || defaultModeKey;
+  const getModeConfig = typeof source.getModeConfig === "function" ? source.getModeConfig : null;
+
+  if (getModeConfig && isPlainRecord(getModeConfig(id))) return id;
+
+  const mapped = resolveModeCatalogAlias({
+    modeId: id,
+    defaultModeKey,
+    legacyAliasToModeKey: source.legacyAliasToModeKey || null
+  });
+  if (mapped && mapped !== id && getModeConfig && isPlainRecord(getModeConfig(mapped))) {
+    return mapped;
+  }
+
+  return defaultModeKey;
 }
 
 export function resolveModeCatalogConfig(input: ModeCatalogConfigResolveInput): PlainRecord | null {

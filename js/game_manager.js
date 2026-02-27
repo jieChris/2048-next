@@ -2676,8 +2676,25 @@ GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
 
 GameManager.prototype.resolveModeConfig = function (modeId) {
   var id = modeId || GameManager.DEFAULT_MODE_KEY;
-  var byCatalog = this.getModeConfigFromCatalog(id);
-  if (byCatalog) return this.normalizeModeConfig(id, byCatalog);
+  var resolveModeConfigModeKeyCore = this.callCoreModeRuntime("resolveModeConfigModeKey", [{
+      modeId: id,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+      getModeConfig: this.getModeConfigFromCatalog.bind(this),
+      legacyAliasToModeKey: GameManager.LEGACY_ALIAS_TO_MODE_KEY
+    }]);
+  var resolvedId = id;
+  if (resolveModeConfigModeKeyCore.available) {
+    var coreResolvedId = resolveModeConfigModeKeyCore.value;
+    if (typeof coreResolvedId === "string" && coreResolvedId) {
+      resolvedId = coreResolvedId;
+    }
+  }
+
+  var byCatalog = this.getModeConfigFromCatalog(resolvedId);
+  if (byCatalog) return this.normalizeModeConfig(resolvedId, byCatalog);
+  if (resolveModeConfigModeKeyCore.available) {
+    return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
+  }
 
   var resolveModeCatalogAliasCore = this.callCoreModeRuntime("resolveModeCatalogAlias", [{
       modeId: id,
