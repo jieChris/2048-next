@@ -1264,36 +1264,60 @@ GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
     if (payloadByCore && typeof payloadByCore === "object") return payloadByCore;
     if (payloadByCore === null) return null;
   }
+  return this.readWindowNameSavedPayloadFallback(modeKey);
+};
 
-  if (typeof window === "undefined") return null;
-  var raw = "";
+GameManager.prototype.readWindowNameRaw = function () {
+  if (typeof window === "undefined") return "";
   try {
-    raw = typeof window.name === "string" ? window.name : "";
+    return typeof window.name === "string" ? window.name : "";
   } catch (_errName) {
-    return null;
+    return "";
   }
-  if (!raw) return null;
-  var marker = GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY + "=";
+};
+
+GameManager.prototype.resolveWindowNameSavedPayloadMarker = function () {
+  return GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY + "=";
+};
+
+GameManager.prototype.resolveWindowNameSavedMap = function (raw, marker) {
+  if (!raw || typeof raw !== "string") return null;
   var parts = raw.split("&");
+  var lookupMarker = typeof marker === "string" && marker ? marker : this.resolveWindowNameSavedPayloadMarker();
   var encoded = "";
   for (var i = 0; i < parts.length; i++) {
-    if (parts[i].indexOf(marker) === 0) {
-      encoded = parts[i].substring(marker.length);
+    if (parts[i].indexOf(lookupMarker) === 0) {
+      encoded = parts[i].substring(lookupMarker.length);
       break;
     }
   }
   if (!encoded) return null;
-  var map = null;
   try {
-    map = JSON.parse(decodeURIComponent(encoded));
+    var map = JSON.parse(decodeURIComponent(encoded));
+    if (!map || typeof map !== "object") return null;
+    return map;
   } catch (_errParse) {
     return null;
   }
-  if (!map || typeof map !== "object") return null;
+};
+
+GameManager.prototype.resolveModeKeyForSavedPayload = function (modeKey) {
   var key = typeof modeKey === "string" && modeKey ? modeKey : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
-  var payload = map[key];
+  return key;
+};
+
+GameManager.prototype.resolveSavedPayloadFromWindowNameMap = function (map, modeKey) {
+  if (!map || typeof map !== "object") return null;
+  var payload = map[this.resolveModeKeyForSavedPayload(modeKey)];
   if (!payload || typeof payload !== "object") return null;
   return payload;
+};
+
+GameManager.prototype.readWindowNameSavedPayloadFallback = function (modeKey) {
+  var raw = this.readWindowNameRaw();
+  var marker = this.resolveWindowNameSavedPayloadMarker();
+  var map = this.resolveWindowNameSavedMap(raw, marker);
+  return this.resolveSavedPayloadFromWindowNameMap(map, modeKey);
 };
 
 GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) {
