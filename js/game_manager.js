@@ -1335,6 +1335,12 @@ GameManager.prototype.readSavedPayloadByKey = function (key) {
   return this.readSavedPayloadByKeyFallback(stores, key);
 };
 
+GameManager.prototype.normalizeWindowNameSavedPayloadCoreValue = function (payloadByCore) {
+  if (this.isNonArrayObject(payloadByCore)) return payloadByCore;
+  if (payloadByCore === null) return null;
+  return undefined;
+};
+
 GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
   var readSavedPayloadFromWindowNameCore = this.callCoreStorageRuntime("readSavedPayloadFromWindowName", [{
       windowLike: typeof window !== "undefined" ? window : null,
@@ -1345,9 +1351,8 @@ GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
       defaultModeKey: GameManager.DEFAULT_MODE_KEY
     }]);
   if (readSavedPayloadFromWindowNameCore.available) {
-    var payloadByCore = readSavedPayloadFromWindowNameCore.value;
-    if (payloadByCore && typeof payloadByCore === "object") return payloadByCore;
-    if (payloadByCore === null) return null;
+    var normalizedByCore = this.normalizeWindowNameSavedPayloadCoreValue(readSavedPayloadFromWindowNameCore.value);
+    if (typeof normalizedByCore !== "undefined") return normalizedByCore;
   }
   return this.readWindowNameSavedPayloadFallback(modeKey);
 };
