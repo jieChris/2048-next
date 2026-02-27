@@ -6975,21 +6975,45 @@ GameManager.prototype.resolveSessionReplayV3Source = function () {
   return this.sessionReplayV3 || this.createDefaultSessionReplayV3();
 };
 
+GameManager.prototype.resolveSerializedReplayModeKey = function (replay) {
+  return replay.mode_key || this.modeKey;
+};
+
+GameManager.prototype.resolveSerializedReplayMode = function (replay) {
+  return this.getServerMode(replay.mode_key || replay.mode || this.modeKey);
+};
+
+GameManager.prototype.resolveSerializedReplayUndoEnabled = function (replay) {
+  return typeof replay.undo_enabled === "boolean" ? replay.undo_enabled : !!this.modeConfig.undo_enabled;
+};
+
+GameManager.prototype.resolveSerializedReplaySpecialRulesSnapshot = function (replay) {
+  return this.clonePlain(replay.special_rules_snapshot || this.specialRules || {});
+};
+
+GameManager.prototype.resolveSerializedReplayChallengeId = function (replay) {
+  return replay.challenge_id || this.challengeId || null;
+};
+
+GameManager.prototype.resolveSerializedReplayActions = function (replay) {
+  return replay.actions.slice();
+};
+
 GameManager.prototype.buildSerializedReplayV3Payload = function (replay) {
   return {
     v: 3,
-    mode: this.getServerMode(replay.mode_key || replay.mode || this.modeKey),
-    mode_key: replay.mode_key || this.modeKey,
+    mode: this.resolveSerializedReplayMode(replay),
+    mode_key: this.resolveSerializedReplayModeKey(replay),
     board_width: replay.board_width || this.width,
     board_height: replay.board_height || this.height,
     ruleset: replay.ruleset || this.ruleset,
-    undo_enabled: typeof replay.undo_enabled === "boolean" ? replay.undo_enabled : !!this.modeConfig.undo_enabled,
+    undo_enabled: this.resolveSerializedReplayUndoEnabled(replay),
     mode_family: replay.mode_family || this.modeFamily,
     rank_policy: replay.rank_policy || this.rankPolicy,
-    special_rules_snapshot: this.clonePlain(replay.special_rules_snapshot || this.specialRules || {}),
-    challenge_id: replay.challenge_id || this.challengeId || null,
+    special_rules_snapshot: this.resolveSerializedReplaySpecialRulesSnapshot(replay),
+    challenge_id: this.resolveSerializedReplayChallengeId(replay),
     seed: replay.seed,
-    actions: replay.actions.slice()
+    actions: this.resolveSerializedReplayActions(replay)
   };
 };
 
