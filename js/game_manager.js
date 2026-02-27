@@ -875,6 +875,47 @@ GameManager.prototype.getWindowLike = function () {
   return typeof window !== "undefined" ? window : null;
 };
 
+GameManager.prototype.resolveWindowMethod = function (methodName) {
+  var windowLike = this.getWindowLike();
+  if (!windowLike || typeof methodName !== "string" || !methodName) return null;
+  var method = windowLike[methodName];
+  if (typeof method !== "function") return null;
+  return {
+    windowLike: windowLike,
+    method: method
+  };
+};
+
+GameManager.prototype.callWindowMethod = function (methodName, args) {
+  var resolved = this.resolveWindowMethod(methodName);
+  if (!resolved) return false;
+  resolved.method.apply(resolved.windowLike, Array.isArray(args) ? args : []);
+  return true;
+};
+
+GameManager.prototype.resolveWindowNamespaceMethod = function (namespaceName, methodName) {
+  var windowLike = this.getWindowLike();
+  if (!windowLike) return null;
+  if (typeof namespaceName !== "string" || !namespaceName) return null;
+  if (typeof methodName !== "string" || !methodName) return null;
+  var scope = windowLike[namespaceName];
+  if (!scope || (typeof scope !== "object" && typeof scope !== "function")) return null;
+  var method = scope[methodName];
+  if (typeof method !== "function") return null;
+  return {
+    windowLike: windowLike,
+    scope: scope,
+    method: method
+  };
+};
+
+GameManager.prototype.callWindowNamespaceMethod = function (namespaceName, methodName, args) {
+  var resolved = this.resolveWindowNamespaceMethod(namespaceName, methodName);
+  if (!resolved) return false;
+  resolved.method.apply(resolved.scope, Array.isArray(args) ? args : []);
+  return true;
+};
+
 GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
   var readStorageFlagFromContextCore = this.resolveCoreRuntimeMethod(
     "getCoreGameSettingsStorageRuntime",
@@ -1249,13 +1290,7 @@ GameManager.prototype.normalizeCappedRepeatLegendClasses = function () {
     legend.style.color = "#f9f6f2";
     legend.style.fontSize = fontSize;
   }
-  if (
-    typeof window !== "undefined" &&
-    window.ThemeManager &&
-    typeof window.ThemeManager.syncTimerLegendStyles === "function"
-  ) {
-    window.ThemeManager.syncTimerLegendStyles();
-  }
+  this.callWindowNamespaceMethod("ThemeManager", "syncTimerLegendStyles");
 };
 
 GameManager.prototype.restoreTimerRowsFromState = function (saved) {
@@ -1319,9 +1354,7 @@ GameManager.prototype.restoreTimerRowsFromState = function (saved) {
 
   this.normalizeCappedRepeatLegendClasses();
 
-  if (typeof window !== "undefined" && typeof window.updateTimerScroll === "function") {
-    window.updateTimerScroll();
-  }
+  this.callWindowMethod("updateTimerScroll");
 };
 
 GameManager.prototype.tryRestoreSavedGameState = function () {
@@ -1665,8 +1698,9 @@ GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
 };
 
 GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
-  if (typeof window !== "undefined" && window.ModeCatalog && typeof window.ModeCatalog.getMode === "function") {
-    return window.ModeCatalog.getMode(modeKey);
+  var modeCatalogGetMode = this.resolveWindowNamespaceMethod("ModeCatalog", "getMode");
+  if (modeCatalogGetMode) {
+    return modeCatalogGetMode.method.call(modeCatalogGetMode.scope, modeKey);
   }
   if (GameManager.FALLBACK_MODE_CONFIGS[modeKey]) {
     return this.clonePlain(GameManager.FALLBACK_MODE_CONFIGS[modeKey]);
@@ -2771,9 +2805,7 @@ GameManager.prototype.updateTimerLegendLabels = function () {
       nodes[j].textContent = label;
     }
   }
-  if (typeof window !== "undefined" && window.ThemeManager && typeof window.ThemeManager.syncTimerLegendStyles === "function") {
-    window.ThemeManager.syncTimerLegendStyles();
-  }
+  this.callWindowNamespaceMethod("ThemeManager", "syncTimerLegendStyles");
 };
 
 GameManager.prototype.recordTimerMilestone = function (value, timeStr) {
@@ -2916,7 +2948,7 @@ GameManager.prototype.resetCappedDynamicTimers = function () {
   if (overflowContainer) overflowContainer.innerHTML = "";
   this.resetCappedPlaceholderRows();
   this.getCappedOverflowContainer();
-  if (typeof window.cappedTimerReset === "function") window.cappedTimerReset();
+  this.callWindowMethod("cappedTimerReset");
 };
 
 GameManager.prototype.getCappedTimerLegendClass = function () {
@@ -3035,9 +3067,7 @@ GameManager.prototype.recordCappedMilestone = function (timeStr) {
 
   // Prefer replacing reserved hidden rows so the timer module height stays stable.
   if (this.fillCappedPlaceholderRowByRepeat(this.cappedMilestoneCount, nextLabel, timeStr)) {
-    if (typeof window.cappedTimerAutoScroll === "function") {
-      window.cappedTimerAutoScroll();
-    }
+    this.callWindowMethod("cappedTimerAutoScroll");
     return;
   }
 
@@ -3050,9 +3080,7 @@ GameManager.prototype.recordCappedMilestone = function (timeStr) {
   container.appendChild(rowDiv);
   this.normalizeCappedRepeatLegendClasses();
 
-  if (typeof window.cappedTimerAutoScroll === "function") {
-    window.cappedTimerAutoScroll();
-  }
+  this.callWindowMethod("cappedTimerAutoScroll");
 };
 
 GameManager.prototype.initCornerStats = function () {
@@ -3234,9 +3262,7 @@ GameManager.prototype.persistTimerModuleViewForMode = function (mode, view) {
 };
 
 GameManager.prototype.notifyTimerModuleSettingsStateChanged = function () {
-  if (typeof window !== "undefined" && typeof window.syncTimerModuleSettingsUI === "function") {
-    window.syncTimerModuleSettingsUI();
-  }
+  this.callWindowMethod("syncTimerModuleSettingsUI");
 };
 
 GameManager.prototype.captureTimerModuleBaseHeight = function () {
@@ -3358,9 +3384,7 @@ GameManager.prototype.canToggleUndoSetting = function (mode) {
 };
 
 GameManager.prototype.notifyUndoSettingsStateChanged = function () {
-  if (typeof window !== "undefined" && typeof window.syncUndoSettingsUI === "function") {
-    window.syncUndoSettingsUI();
-  }
+  this.callWindowMethod("syncUndoSettingsUI");
 };
 
 GameManager.prototype.loadUndoSettingForMode = function (mode) {
@@ -3423,9 +3447,7 @@ GameManager.prototype.updateUndoUiState = function () {
     practiceUndoBtn.style.opacity = canUndo ? "" : "0.45";
     practiceUndoBtn.setAttribute("aria-disabled", canUndo ? "false" : "true");
   }
-  if (typeof window !== "undefined" && typeof window.syncMobileUndoTopButtonAvailability === "function") {
-    window.syncMobileUndoTopButtonAvailability();
-  }
+  this.callWindowMethod("syncMobileUndoTopButtonAvailability");
 };
 
 GameManager.prototype.recordSpawnValue = function (value) {
@@ -4715,7 +4737,8 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
     });
     return;
   }
-  if (!window.LocalHistoryStore || typeof window.LocalHistoryStore.saveRecord !== "function") {
+  var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
+  if (!localHistorySaveRecord) {
     setResult({
       at: new Date().toISOString(),
       ok: false,
@@ -4724,6 +4747,7 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
     return;
   }
 
+  var windowLike = this.getWindowLike();
   this.sessionSubmitDone = true;
   var endedAt = new Date().toISOString();
   var payload = {
@@ -4747,12 +4771,12 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
     replay_string: this.serialize(),
     adapter_parity_report_v1: this.getAdapterSessionParityReport(),
     adapter_parity_ab_diff_v1: this.getAdapterSessionParityABDiff(),
-    client_version: (window.GAME_CLIENT_VERSION || "1.8"),
+    client_version: (windowLike && windowLike.GAME_CLIENT_VERSION) || "1.8",
     end_reason: this.over ? "game_over" : "win_stop"
   };
 
   try {
-    var saved = window.LocalHistoryStore.saveRecord(payload);
+    var saved = localHistorySaveRecord.method.call(localHistorySaveRecord.scope, payload);
     setResult({
       at: endedAt,
       ok: true,
