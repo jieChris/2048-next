@@ -7280,8 +7280,12 @@ GameManager.prototype.fastForwardReplayToIndex = function (targetIndex) {
     }
 };
 
+GameManager.prototype.resolveReplaySeekRestartPlan = function (targetIndex) {
+    return this.resolveReplaySeekRestartPlanForTarget(targetIndex);
+};
+
 GameManager.prototype.applyReplaySeekTarget = function (targetIndex) {
-    var restartPlan = this.resolveReplaySeekRestartPlanForTarget(targetIndex);
+    var restartPlan = this.resolveReplaySeekRestartPlan(targetIndex);
     this.applyReplaySeekRestartPlan(restartPlan);
     this.fastForwardReplayToIndex(targetIndex);
 };
