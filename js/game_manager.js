@@ -5566,16 +5566,21 @@ GameManager.prototype.publishUndoCompletion = function (direction, undoRestore) 
   this.publishMovedAdapterResult("undo", direction);
 };
 
+GameManager.prototype.performUndoRestoreFromEntry = function (prev) {
+  var undoPayload = this.computeUndoRestorePayload(prev);
+  this.restoreUndoPayload(undoPayload);
+  var undoRestore = this.computeUndoRestoreState(prev);
+  this.applyUndoRestoreFlags(undoRestore);
+  return undoRestore;
+};
+
 GameManager.prototype.handleUndoMove = function (direction) {
   if (!this.canProcessUndoMove()) {
     return;
   }
 
   var prev = this.normalizeUndoStackEntry(this.undoStack.pop());
-  var undoPayload = this.computeUndoRestorePayload(prev);
-  this.restoreUndoPayload(undoPayload);
-  var undoRestore = this.computeUndoRestoreState(prev);
-  this.applyUndoRestoreFlags(undoRestore);
+  var undoRestore = this.performUndoRestoreFromEntry(prev);
   this.recordPostUndoMove(direction);
   this.publishUndoCompletion(direction, undoRestore);
 };
