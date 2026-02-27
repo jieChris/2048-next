@@ -2656,16 +2656,23 @@ GameManager.prototype.syncAdapterParityAfterMoveResult = function (bridge) {
   }
 };
 
+GameManager.prototype.emitAdapterMoveResultDetail = function (emitMoveResultBridge, bridge, detail) {
+  emitMoveResultBridge.method.call(bridge, detail);
+};
+
+GameManager.prototype.finalizeAdapterMoveResultSync = function (bridge, detail, timestamp) {
+  this.syncAdapterSnapshotAfterMoveResult(bridge, detail, timestamp);
+  this.syncAdapterParityAfterMoveResult(bridge);
+};
+
 GameManager.prototype.publishAdapterMoveResult = function (meta) {
   var emitMoveResultBridge = this.resolveLegacyAdapterBridgeMethod("emitMoveResult");
   if (!emitMoveResultBridge) return false;
   var bridge = emitMoveResultBridge.bridge;
   var timestamp = Date.now();
   var detail = this.buildAdapterMoveResultDetail(meta, bridge, timestamp);
-
-  emitMoveResultBridge.method.call(bridge, detail);
-  this.syncAdapterSnapshotAfterMoveResult(bridge, detail, timestamp);
-  this.syncAdapterParityAfterMoveResult(bridge);
+  this.emitAdapterMoveResultDetail(emitMoveResultBridge, bridge, detail);
+  this.finalizeAdapterMoveResultSync(bridge, detail, timestamp);
   return true;
 };
 
