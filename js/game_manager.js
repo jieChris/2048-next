@@ -5456,6 +5456,30 @@ GameManager.prototype.recordPracticeReplayAction = function (action) {
   }
 };
 
+GameManager.prototype.ensureTimer32kTextIfNeeded = function (value) {
+  if (value !== 32768) return;
+  var timeStr = this.pretty(this.time);
+  var timer32k = document.getElementById("timer32768");
+  if (timer32k && timer32k.textContent === "") {
+    timer32k.textContent = timeStr;
+  }
+};
+
+GameManager.prototype.apply32kVisibilityStateForCustomTile = function (value) {
+  if (value < 32768) return;
+  this.reached32k = true;
+
+  var subContainer = document.getElementById("timer32k-sub-container");
+  if (subContainer) subContainer.style.display = "block";
+
+  var timerRow16 = document.getElementById("timer-row-16");
+  if (timerRow16) timerRow16.style.display = "none";
+  var timerRow32 = document.getElementById("timer-row-32");
+  if (timerRow32) timerRow32.style.display = "none";
+
+  this.ensureTimer32kTextIfNeeded(value);
+};
+
 
 
 // Insert a custom tile (Test Board)
@@ -5483,27 +5507,7 @@ GameManager.prototype.insertCustomTile = function(x, y, value) {
     this.invalidateTimers(value);
     
     // Check for 32k+ visibility
-    if (value >= 32768) {
-        this.reached32k = true;
-        
-        // Show sub-timer container
-        var subContainer = document.getElementById("timer32k-sub-container");
-        if (subContainer) subContainer.style.display = "block";
-        
-        // Hide 16 and 32 to save space
-         if (document.getElementById("timer-row-16")) document.getElementById("timer-row-16").style.display = "none";
-         if (document.getElementById("timer-row-32")) document.getElementById("timer-row-32").style.display = "none";
-        
-        
-        // Ensure 32768 timer has text if empty
-        if (value === 32768) {
-             var timeStr = this.pretty(this.time);
-             var timer32k = document.getElementById("timer32768");
-             if (timer32k && timer32k.textContent === "") {
-                 timer32k.textContent = timeStr;
-             }
-        }
-    }
+    this.apply32kVisibilityStateForCustomTile(value);
     
     // Refresh
     this.clearTransientTileVisualState();
