@@ -5707,21 +5707,34 @@ GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resol
   this.persistUndoSettingMap(map);
 };
 
+GameManager.prototype.resolveUndoEnabledFromForcedSetting = function (forcedSetting, fallbackEnabled) {
+  if (forcedSetting !== null) return forcedSetting;
+  return !!fallbackEnabled;
+};
+
+GameManager.prototype.shouldApplyUndoEnabledToggle = function (forceChange, state) {
+  return !!(forceChange || (state && state.canToggleUndoSetting));
+};
+
+GameManager.prototype.refreshUndoSettingsUiState = function () {
+  this.updateUndoUiState(this.resolveActiveUndoPolicyState({
+    undoEnabled: this.undoEnabled
+  }));
+  this.notifyUndoSettingsStateChanged();
+};
+
 GameManager.prototype.setUndoEnabled = function (enabled, skipPersist, forceChange) {
   var state = this.resolveActiveUndoPolicyState();
   var forced = state ? state.forcedUndoSetting : null;
   if (forced !== null) {
-    this.undoEnabled = forced;
-  } else if (forceChange || (state && state.canToggleUndoSetting)) {
+    this.undoEnabled = this.resolveUndoEnabledFromForcedSetting(forced, enabled);
+  } else if (this.shouldApplyUndoEnabledToggle(forceChange, state)) {
     this.undoEnabled = !!enabled;
     if (!skipPersist) {
       this.persistUndoSettingForMode(this.mode, this.undoEnabled, state);
     }
   }
-  this.updateUndoUiState(this.resolveActiveUndoPolicyState({
-    undoEnabled: this.undoEnabled
-  }));
-  this.notifyUndoSettingsStateChanged();
+  this.refreshUndoSettingsUiState();
 };
 
 GameManager.prototype.isUndoInteractionEnabled = function () {
