@@ -4660,20 +4660,24 @@ GameManager.prototype.countUndoSteps = function (actions, limit) {
   return undoSteps;
 };
 
+GameManager.prototype.buildStepStatsFallback = function (actions, limit) {
+  var totalSteps = actions ? limit : 0;
+  var moveSteps = this.calculateNetMoveSteps(actions, limit);
+  var undoSteps = this.countUndoSteps(actions, limit);
+  return {
+    totalSteps: totalSteps,
+    moveSteps: moveSteps,
+    undoSteps: undoSteps
+  };
+};
+
 GameManager.prototype.computeStepStats = function () {
   var stepStatsSource = this.resolveStepStatsSource();
   var limit = stepStatsSource.limit;
   var src = stepStatsSource.actions;
   var coreStats = this.tryResolveStepStatsFromCore(src, limit);
   if (coreStats) return coreStats;
-  var totalSteps = src ? limit : 0;
-  var moveSteps = this.calculateNetMoveSteps(src, limit);
-  var undoSteps = this.countUndoSteps(src, limit);
-  return {
-    totalSteps: totalSteps,
-    moveSteps: moveSteps,
-    undoSteps: undoSteps
-  };
+  return this.buildStepStatsFallback(src, limit);
 };
 
 GameManager.prototype.getIpsInputCount = function () {
