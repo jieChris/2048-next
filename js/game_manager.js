@@ -680,7 +680,7 @@ GameManager.prototype.resolveReplayExecutionFallback = function (action) {
   if (kind === "m") return this.buildMoveReplayExecutionFallback(action);
   if (kind === "u") return this.buildUndoReplayExecutionFallback();
   if (kind === "p") return this.buildPracticeReplayExecutionFallback(action);
-  throw "Unknown replay action";
+  this.throwUnknownReplayAction();
 };
 
 GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
@@ -714,7 +714,7 @@ GameManager.prototype.planReplayDispatchFallback = function (resolvedExecution) 
   if (resolvedExecution.kind === "m") return this.buildReplayMoveDispatchFallback(resolvedExecution);
   if (resolvedExecution.kind === "u") return this.buildReplayUndoDispatchFallback();
   if (resolvedExecution.kind === "p") return this.buildReplayPracticeDispatchFallback(resolvedExecution);
-  throw "Unknown replay action";
+  this.throwUnknownReplayAction();
 };
 
 GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
@@ -7155,6 +7155,10 @@ GameManager.prototype.resolveReplayDispatchPlanForAction = function (action) {
   return this.planReplayDispatch(resolved);
 };
 
+GameManager.prototype.throwUnknownReplayAction = function () {
+  throw "Unknown replay action";
+};
+
 GameManager.prototype.executeReplayAction = function (action) {
   var dispatchPlan = this.resolveReplayDispatchPlanForAction(action);
   this.executeReplayDispatchPlan(dispatchPlan);
@@ -7163,7 +7167,7 @@ GameManager.prototype.executeReplayAction = function (action) {
 GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
   var executorMethodName = this.resolveReplayDispatchExecutorMethodName(dispatchPlan && dispatchPlan.method);
   if (executorMethodName) return this[executorMethodName](dispatchPlan);
-  throw "Unknown replay action";
+  this.throwUnknownReplayAction();
 };
 
 GameManager.prototype.resolveReplayDispatchExecutorMethodName = function (dispatchMethod) {
