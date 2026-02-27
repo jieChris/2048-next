@@ -5531,6 +5531,13 @@ GameManager.prototype.publishMoveCompletion = function (direction, postMoveLifec
   });
 };
 
+GameManager.prototype.finalizeSuccessfulMoveLifecycle = function (direction, undo) {
+  var hasMovesAvailable = this.movesAvailable();
+  var postMoveLifecycle = this.applyPostMoveLifecycle(hasMovesAvailable);
+  this.savePostMoveState(direction, undo);
+  this.publishMoveCompletion(direction, postMoveLifecycle);
+};
+
 GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove, undo) {
   // IPS counts only effective move inputs (invalid directions are excluded).
   this.recordIpsInput();
@@ -5538,10 +5545,7 @@ GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove
   this.applyPostMoveScore(scoreBeforeMove);
 
   this.addRandomTile();
-  var hasMovesAvailable = this.movesAvailable();
-  var postMoveLifecycle = this.applyPostMoveLifecycle(hasMovesAvailable);
-  this.savePostMoveState(direction, undo);
-  this.publishMoveCompletion(direction, postMoveLifecycle);
+  this.finalizeSuccessfulMoveLifecycle(direction, undo);
 };
 
 GameManager.prototype.shouldAbortForLockedDirection = function (direction, lockedDirection) {
