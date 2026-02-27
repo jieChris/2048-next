@@ -4771,6 +4771,42 @@ GameManager.prototype.resetSetupTimerDisplays = function () {
   this.resetCappedDynamicTimers();
 };
 
+GameManager.prototype.resolveSetupSkipStartTiles = function (options) {
+  return !!(options && options.skipStartTiles);
+};
+
+GameManager.prototype.shouldRestoreStateOnSetup = function (hasInputSeed, skipStartTiles, options) {
+  return !hasInputSeed && !skipStartTiles && !(options && options.disableStateRestore);
+};
+
+GameManager.prototype.resolveSetupRestoredFromSavedState = function (hasInputSeed, skipStartTiles, options) {
+  if (!this.shouldRestoreStateOnSetup(hasInputSeed, skipStartTiles, options)) return false;
+  return this.tryRestoreSavedGameState();
+};
+
+GameManager.prototype.applySetupStartTilesState = function (skipStartTiles, restoredFromSavedState) {
+  if (!skipStartTiles && !restoredFromSavedState) {
+    this.addStartTiles();
+  }
+  if (!restoredFromSavedState) {
+    this.initialBoardMatrix = this.getFinalBoardMatrix();
+  }
+};
+
+GameManager.prototype.finalizeSetupUiState = function (preferredTimerModuleView, restoredFromSavedState) {
+  this.refreshSpawnRateDisplay();
+  this.updateUndoUiState();
+  this.notifyUndoSettingsStateChanged();
+  this.applyTimerModuleView(preferredTimerModuleView, true);
+
+  this.actuate();
+  if (restoredFromSavedState) {
+    this.updateStatsPanel();
+  } else {
+    this.updateStatsPanel(0, 0, 0);
+  }
+};
+
 // Set up the game
 GameManager.prototype.setup = function (inputSeed, options) {
   options = options || {};
@@ -4808,30 +4844,10 @@ GameManager.prototype.setup = function (inputSeed, options) {
   this.resetSetupTimerDisplays();
 
   // Add the initial tiles unless a replay imports an explicit board.
-  var skipStartTiles = !!(options && options.skipStartTiles);
-  var shouldRestoreState = !hasInputSeed && !skipStartTiles && !(options && options.disableStateRestore);
-  var restoredFromSavedState = false;
-  if (shouldRestoreState) {
-    restoredFromSavedState = this.tryRestoreSavedGameState();
-  }
-  if (!skipStartTiles && !restoredFromSavedState) {
-    this.addStartTiles();
-  }
-  if (!restoredFromSavedState) {
-    this.initialBoardMatrix = this.getFinalBoardMatrix();
-  }
-  this.refreshSpawnRateDisplay();
-  this.updateUndoUiState();
-  this.notifyUndoSettingsStateChanged();
-  this.applyTimerModuleView(preferredTimerModuleView, true);
-
-  // Update the actuator
-  this.actuate();
-  if (restoredFromSavedState) {
-    this.updateStatsPanel();
-  } else {
-    this.updateStatsPanel(0, 0, 0);
-  }
+  var skipStartTiles = this.resolveSetupSkipStartTiles(options);
+  var restoredFromSavedState = this.resolveSetupRestoredFromSavedState(hasInputSeed, skipStartTiles, options);
+  this.applySetupStartTilesState(skipStartTiles, restoredFromSavedState);
+  this.finalizeSetupUiState(preferredTimerModuleView, restoredFromSavedState);
 
   // 在线补传链路已移除，历史记录统一保存在本地。
 };
