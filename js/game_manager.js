@@ -1316,6 +1316,12 @@ GameManager.prototype.readSavedPayloadByKeyFallback = function (stores, key) {
   return best;
 };
 
+GameManager.prototype.normalizeSavedPayloadByKeyCoreValue = function (savedByCore) {
+  if (this.isNonArrayObject(savedByCore)) return savedByCore;
+  if (savedByCore === null) return null;
+  return undefined;
+};
+
 GameManager.prototype.readSavedPayloadByKey = function (key) {
   var stores = this.getSavedGameStateStorages();
   var readSavedPayloadByKeyFromStoragesCore = this.callCoreStorageRuntime("readSavedPayloadByKeyFromStorages", [{
@@ -1323,9 +1329,8 @@ GameManager.prototype.readSavedPayloadByKey = function (key) {
       key: key
     }]);
   if (readSavedPayloadByKeyFromStoragesCore.available) {
-    var savedByCore = readSavedPayloadByKeyFromStoragesCore.value;
-    if (savedByCore && typeof savedByCore === "object") return savedByCore;
-    if (savedByCore === null) return null;
+    var normalizedByCore = this.normalizeSavedPayloadByKeyCoreValue(readSavedPayloadByKeyFromStoragesCore.value);
+    if (typeof normalizedByCore !== "undefined") return normalizedByCore;
   }
   return this.readSavedPayloadByKeyFallback(stores, key);
 };
