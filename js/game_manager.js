@@ -260,8 +260,8 @@ GameManager.LEGACY_ALIAS_TO_MODE_KEY = {
 GameManager.TIMER_SLOT_IDS = [16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
 
 GameManager.prototype.getActionKind = function (action) {
-  var getReplayActionKindCore = this.resolveCoreReplayExecutionRuntimeMethod("getReplayActionKind");
-  if (getReplayActionKindCore) return getReplayActionKindCore(action);
+  var getReplayActionKindCore = this.callCoreReplayExecutionRuntime("getReplayActionKind", [action]);
+  if (getReplayActionKindCore.available) return getReplayActionKindCore.value;
   if (action === -1) return "u";
   if (action >= 0 && action <= 3) return "m";
   if (Array.isArray(action) && action.length > 0) return action[0];
@@ -269,8 +269,8 @@ GameManager.prototype.getActionKind = function (action) {
 };
 
 GameManager.prototype.encodeReplay128 = function (code) {
-  var encodeReplay128Core = this.resolveCoreReplayCodecRuntimeMethod("encodeReplay128");
-  if (encodeReplay128Core) return encodeReplay128Core(code);
+  var encodeReplay128Core = this.callCoreReplayCodecRuntime("encodeReplay128", [code]);
+  if (encodeReplay128Core.available) return encodeReplay128Core.value;
 
   if (!Number.isInteger(code) || code < 0 || code >= GameManager.REPLAY128_TOTAL) {
     throw "Invalid replay code";
@@ -284,8 +284,8 @@ GameManager.prototype.encodeReplay128 = function (code) {
 };
 
 GameManager.prototype.decodeReplay128 = function (char) {
-  var decodeReplay128Core = this.resolveCoreReplayCodecRuntimeMethod("decodeReplay128");
-  if (decodeReplay128Core) return decodeReplay128Core(char);
+  var decodeReplay128Core = this.callCoreReplayCodecRuntime("decodeReplay128", [char]);
+  if (decodeReplay128Core.available) return decodeReplay128Core.value;
 
   if (!char || char.length !== 1) throw "Invalid replay char";
   var code = char.charCodeAt(0);
@@ -301,8 +301,8 @@ GameManager.prototype.decodeReplay128 = function (char) {
 };
 
 GameManager.prototype.encodeBoardV4 = function (board) {
-  var encodeBoardV4Core = this.resolveCoreReplayCodecRuntimeMethod("encodeBoardV4");
-  if (encodeBoardV4Core) return encodeBoardV4Core(board);
+  var encodeBoardV4Core = this.callCoreReplayCodecRuntime("encodeBoardV4", [board]);
+  if (encodeBoardV4Core.available) return encodeBoardV4Core.value;
 
   if (!Array.isArray(board) || board.length !== 4) throw "Invalid initial board";
   var out = "";
@@ -325,8 +325,8 @@ GameManager.prototype.encodeBoardV4 = function (board) {
 };
 
 GameManager.prototype.decodeBoardV4 = function (encoded) {
-  var decodeBoardV4Core = this.resolveCoreReplayCodecRuntimeMethod("decodeBoardV4");
-  if (decodeBoardV4Core) return decodeBoardV4Core(encoded);
+  var decodeBoardV4Core = this.callCoreReplayCodecRuntime("decodeBoardV4", [encoded]);
+  if (decodeBoardV4Core.available) return decodeBoardV4Core.value;
 
   if (typeof encoded !== "string" || encoded.length !== 16) throw "Invalid encoded board";
   var rows = [];
@@ -343,8 +343,8 @@ GameManager.prototype.decodeBoardV4 = function (encoded) {
 };
 
 GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
-  var decodeReplayV4ActionsCore = this.resolveCoreReplayV4ActionsRuntimeMethod("decodeReplayV4Actions");
-  if (decodeReplayV4ActionsCore) return decodeReplayV4ActionsCore(actionsEncoded) || {};
+  var decodeReplayV4ActionsCore = this.callCoreReplayV4ActionsRuntime("decodeReplayV4Actions", [actionsEncoded]);
+  if (decodeReplayV4ActionsCore.available) return decodeReplayV4ActionsCore.value || {};
 
   var replayMoves = [];
   var replaySpawns = [];
@@ -399,14 +399,12 @@ GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
 };
 
 GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString) {
-  var parseReplayImportEnvelopeCore = this.resolveCoreReplayImportRuntimeMethod("parseReplayImportEnvelope");
-  if (parseReplayImportEnvelopeCore) {
-    return parseReplayImportEnvelopeCore({
+  var parseReplayImportEnvelopeCore = this.callCoreReplayImportRuntime("parseReplayImportEnvelope", [{
       trimmedReplayString: trimmedReplayString,
       fallbackModeKey: this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY,
       v4Prefix: GameManager.REPLAY_V4_PREFIX
-    });
-  }
+    }]);
+  if (parseReplayImportEnvelopeCore.available) return parseReplayImportEnvelopeCore.value;
 
   var normalizeOptionalString = function (raw) {
     return typeof raw === "string" && raw ? raw : null;
@@ -461,8 +459,8 @@ GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString)
 };
 
 GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
-  var decodeLegacyReplayCore = this.resolveCoreReplayLegacyRuntimeMethod("decodeLegacyReplay");
-  if (decodeLegacyReplayCore) return decodeLegacyReplayCore(trimmedReplayString);
+  var decodeLegacyReplayCore = this.callCoreReplayLegacyRuntime("decodeLegacyReplay", [trimmedReplayString]);
+  if (decodeLegacyReplayCore.available) return decodeLegacyReplayCore.value;
 
   if (trimmedReplayString.indexOf("REPLAY_v1_") === 0) {
     var v1Parts = trimmedReplayString.split("_");
@@ -556,8 +554,8 @@ GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
 };
 
 GameManager.prototype.resolveReplayExecution = function (action) {
-  var resolveReplayExecutionCore = this.resolveCoreReplayExecutionRuntimeMethod("resolveReplayExecution");
-  if (resolveReplayExecutionCore) return resolveReplayExecutionCore(action);
+  var resolveReplayExecutionCore = this.callCoreReplayExecutionRuntime("resolveReplayExecution", [action]);
+  if (resolveReplayExecutionCore.available) return resolveReplayExecutionCore.value;
 
   var kind = this.getActionKind(action);
   if (kind === "m") {
@@ -579,8 +577,8 @@ GameManager.prototype.resolveReplayExecution = function (action) {
 };
 
 GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
-  var planReplayDispatchCore = this.resolveCoreReplayDispatchRuntimeMethod("planReplayDispatch");
-  if (planReplayDispatchCore) return planReplayDispatchCore(resolvedExecution) || {};
+  var planReplayDispatchCore = this.callCoreReplayDispatchRuntime("planReplayDispatch", [resolvedExecution]);
+  if (planReplayDispatchCore.available) return planReplayDispatchCore.value || {};
 
   if (resolvedExecution.kind === "m") {
     return {
@@ -604,14 +602,12 @@ GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
 };
 
 GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
-  var normalizeReplaySeekTargetCore = this.resolveCoreReplayLifecycleRuntimeMethod("normalizeReplaySeekTarget");
-  if (normalizeReplaySeekTargetCore) {
-    return normalizeReplaySeekTargetCore({
+  var normalizeReplaySeekTargetCore = this.callCoreReplayLifecycleRuntime("normalizeReplaySeekTarget", [{
       targetIndex: targetIndex,
       hasReplayMoves: !!this.replayMoves,
       replayMovesLength: this.replayMoves ? this.replayMoves.length : 0
-    });
-  }
+    }]);
+  if (normalizeReplaySeekTargetCore.available) return normalizeReplaySeekTargetCore.value;
 
   if (targetIndex < 0) targetIndex = 0;
   if (this.replayMoves && targetIndex > this.replayMoves.length) targetIndex = this.replayMoves.length;
@@ -619,14 +615,12 @@ GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
 };
 
 GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
-  var planReplayStepCore = this.resolveCoreReplayLifecycleRuntimeMethod("planReplayStep");
-  if (planReplayStepCore) {
-    return planReplayStepCore({
+  var planReplayStepCore = this.callCoreReplayLifecycleRuntime("planReplayStep", [{
       action: action,
       hasReplaySpawns: !!this.replaySpawns,
       spawnAtIndex: spawnAtIndex
-    }) || {};
-  }
+    }]);
+  if (planReplayStepCore.available) return planReplayStepCore.value || {};
 
   var shouldInjectForcedSpawn = !!this.replaySpawns && !Array.isArray(action);
   return {
@@ -636,14 +630,12 @@ GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
 };
 
 GameManager.prototype.planReplayStepExecution = function () {
-  var planReplayStepExecutionCore = this.resolveCoreReplayLoopRuntimeMethod("planReplayStepExecution");
-  if (planReplayStepExecutionCore) {
-    return planReplayStepExecutionCore({
+  var planReplayStepExecutionCore = this.callCoreReplayLoopRuntime("planReplayStepExecution", [{
       replayMoves: this.replayMoves,
       replaySpawns: this.replaySpawns,
       replayIndex: this.replayIndex
-    }) || {};
-  }
+    }]);
+  if (planReplayStepExecutionCore.available) return planReplayStepExecutionCore.value || {};
 
   var action = this.replayMoves[this.replayIndex];
   var stepPlan = this.planReplayStep(
@@ -659,8 +651,8 @@ GameManager.prototype.planReplayStepExecution = function () {
 };
 
 GameManager.prototype.computeReplayPauseState = function () {
-  var computeReplayPauseStateCore = this.resolveCoreReplayTimerRuntimeMethod("computeReplayPauseState");
-  if (computeReplayPauseStateCore) return computeReplayPauseStateCore() || {};
+  var computeReplayPauseStateCore = this.callCoreReplayTimerRuntime("computeReplayPauseState");
+  if (computeReplayPauseStateCore.available) return computeReplayPauseStateCore.value || {};
   return {
     isPaused: true,
     shouldClearInterval: true
@@ -668,12 +660,10 @@ GameManager.prototype.computeReplayPauseState = function () {
 };
 
 GameManager.prototype.computeReplayResumeState = function () {
-  var computeReplayResumeStateCore = this.resolveCoreReplayTimerRuntimeMethod("computeReplayResumeState");
-  if (computeReplayResumeStateCore) {
-    return computeReplayResumeStateCore({
+  var computeReplayResumeStateCore = this.callCoreReplayTimerRuntime("computeReplayResumeState", [{
       replayDelay: this.replayDelay
-    }) || {};
-  }
+    }]);
+  if (computeReplayResumeStateCore.available) return computeReplayResumeStateCore.value || {};
   return {
     isPaused: false,
     shouldClearInterval: true,
@@ -682,14 +672,12 @@ GameManager.prototype.computeReplayResumeState = function () {
 };
 
 GameManager.prototype.computeReplaySpeedState = function (multiplier) {
-  var computeReplaySpeedStateCore = this.resolveCoreReplayTimerRuntimeMethod("computeReplaySpeedState");
-  if (computeReplaySpeedStateCore) {
-    return computeReplaySpeedStateCore({
+  var computeReplaySpeedStateCore = this.callCoreReplayTimerRuntime("computeReplaySpeedState", [{
       multiplier: multiplier,
       isPaused: !!this.isPaused,
       baseDelay: 200
-    }) || {};
-  }
+    }]);
+  if (computeReplaySpeedStateCore.available) return computeReplaySpeedStateCore.value || {};
   return {
     replayDelay: 200 / multiplier,
     shouldResume: !this.isPaused
@@ -697,19 +685,17 @@ GameManager.prototype.computeReplaySpeedState = function (multiplier) {
 };
 
 GameManager.prototype.shouldStopReplayAtTick = function (replayIndex, replayMovesLength) {
-  var shouldStopReplayAtTickCore = this.resolveCoreReplayTimerRuntimeMethod("shouldStopReplayAtTick");
-  if (shouldStopReplayAtTickCore) {
-    return !!shouldStopReplayAtTickCore({
+  var shouldStopReplayAtTickCore = this.callCoreReplayTimerRuntime("shouldStopReplayAtTick", [{
       replayIndex: replayIndex,
       replayMovesLength: replayMovesLength
-    });
-  }
+    }]);
+  if (shouldStopReplayAtTickCore.available) return !!shouldStopReplayAtTickCore.value;
   return replayIndex >= replayMovesLength;
 };
 
 GameManager.prototype.computeReplayEndState = function () {
-  var computeReplayEndStateCore = this.resolveCoreReplayFlowRuntimeMethod("computeReplayEndState");
-  if (computeReplayEndStateCore) return computeReplayEndStateCore() || {};
+  var computeReplayEndStateCore = this.callCoreReplayFlowRuntime("computeReplayEndState");
+  if (computeReplayEndStateCore.available) return computeReplayEndStateCore.value || {};
   return {
     shouldPause: true,
     replayMode: false
@@ -717,13 +703,11 @@ GameManager.prototype.computeReplayEndState = function () {
 };
 
 GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, replayEndState) {
-  var planReplayTickBoundaryCore = this.resolveCoreReplayControlRuntimeMethod("planReplayTickBoundary");
-  if (planReplayTickBoundaryCore) {
-    return planReplayTickBoundaryCore({
+  var planReplayTickBoundaryCore = this.callCoreReplayControlRuntime("planReplayTickBoundary", [{
       shouldStopAtTick: shouldStopAtTick,
       replayEndState: replayEndState
-    }) || {};
-  }
+    }]);
+  if (planReplayTickBoundaryCore.available) return planReplayTickBoundaryCore.value || {};
 
   if (!shouldStopAtTick) {
     return {
@@ -742,14 +726,12 @@ GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, repla
 };
 
 GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
-  var planReplaySeekRewindCore = this.resolveCoreReplayFlowRuntimeMethod("planReplaySeekRewind");
-  if (planReplaySeekRewindCore) {
-    return planReplaySeekRewindCore({
+  var planReplaySeekRewindCore = this.callCoreReplayFlowRuntime("planReplaySeekRewind", [{
       targetIndex: targetIndex,
       replayIndex: this.replayIndex,
       hasReplayStartBoard: !!this.replayStartBoardMatrix
-    }) || {};
-  }
+    }]);
+  if (planReplaySeekRewindCore.available) return planReplaySeekRewindCore.value || {};
   var shouldRewind = targetIndex < this.replayIndex;
   if (!shouldRewind) {
     return {
@@ -766,14 +748,12 @@ GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
 };
 
 GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
-  var planReplaySeekRestartCore = this.resolveCoreReplayFlowRuntimeMethod("planReplaySeekRestart");
-  if (planReplaySeekRestartCore) {
-    return planReplaySeekRestartCore({
+  var planReplaySeekRestartCore = this.callCoreReplayFlowRuntime("planReplaySeekRestart", [{
       shouldRewind: !!(rewindPlan && rewindPlan.shouldRewind),
       strategy: rewindPlan ? rewindPlan.strategy : "none",
       replayIndexAfterRewind: rewindPlan ? rewindPlan.replayIndexAfterRewind : this.replayIndex
-    }) || {};
-  }
+    }]);
+  if (planReplaySeekRestartCore.available) return planReplaySeekRestartCore.value || {};
 
   var shouldRewind = !!(rewindPlan && rewindPlan.shouldRewind);
   if (!shouldRewind) {
@@ -847,6 +827,160 @@ GameManager.prototype.callCoreModeRuntime = function (methodName, args) {
 
 GameManager.prototype.callCoreRulesRuntime = function (methodName, args) {
   var runtimeMethod = this.resolveCoreRulesRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
+GameManager.prototype.callCoreReplayCodecRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreReplayCodecRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
+GameManager.prototype.callCoreReplayV4ActionsRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreReplayV4ActionsRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
+GameManager.prototype.callCoreReplayImportRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreReplayImportRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
+GameManager.prototype.callCoreReplayExecutionRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreReplayExecutionRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
+GameManager.prototype.callCoreReplayDispatchRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreReplayDispatchRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
+GameManager.prototype.callCoreReplayLifecycleRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreReplayLifecycleRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
+GameManager.prototype.callCoreReplayTimerRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreReplayTimerRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
+GameManager.prototype.callCoreReplayFlowRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreReplayFlowRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
+GameManager.prototype.callCoreReplayControlRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreReplayControlRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
+GameManager.prototype.callCoreReplayLoopRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreReplayLoopRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
+GameManager.prototype.callCoreReplayLegacyRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreReplayLegacyRuntimeMethod(methodName);
   if (typeof runtimeMethod !== "function") {
     return {
       available: false,
@@ -1643,12 +1777,12 @@ GameManager.prototype.saveGameState = function (options) {
 };
 
 GameManager.prototype.appendCompactMoveCode = function (rawCode) {
-  var appendCompactMoveCodeCore = this.resolveCoreReplayCodecRuntimeMethod("appendCompactMoveCode");
-  if (appendCompactMoveCodeCore) {
-    this.replayCompactLog = appendCompactMoveCodeCore({
+  var appendCompactMoveCodeCore = this.callCoreReplayCodecRuntime("appendCompactMoveCode", [{
       log: this.replayCompactLog,
       rawCode: rawCode
-    });
+    }]);
+  if (appendCompactMoveCodeCore.available) {
+    this.replayCompactLog = appendCompactMoveCodeCore.value;
     return;
   }
 
@@ -1661,25 +1795,25 @@ GameManager.prototype.appendCompactMoveCode = function (rawCode) {
 };
 
 GameManager.prototype.appendCompactUndo = function () {
-  var appendCompactUndoCore = this.resolveCoreReplayCodecRuntimeMethod("appendCompactUndo");
-  if (appendCompactUndoCore) {
-    this.replayCompactLog = appendCompactUndoCore(this.replayCompactLog);
+  var appendCompactUndoCore = this.callCoreReplayCodecRuntime("appendCompactUndo", [this.replayCompactLog]);
+  if (appendCompactUndoCore.available) {
+    this.replayCompactLog = appendCompactUndoCore.value;
     return;
   }
   this.replayCompactLog += this.encodeReplay128(127) + this.encodeReplay128(1);
 };
 
 GameManager.prototype.appendCompactPracticeAction = function (x, y, value) {
-  var appendCompactPracticeActionCore = this.resolveCoreReplayCodecRuntimeMethod("appendCompactPracticeAction");
-  if (appendCompactPracticeActionCore) {
-    this.replayCompactLog = appendCompactPracticeActionCore({
+  var appendCompactPracticeActionCore = this.callCoreReplayCodecRuntime("appendCompactPracticeAction", [{
       log: this.replayCompactLog,
       width: this.width,
       height: this.height,
       x: x,
       y: y,
       value: value
-    });
+    }]);
+  if (appendCompactPracticeActionCore.available) {
+    this.replayCompactLog = appendCompactPracticeActionCore.value;
     return;
   }
 
@@ -3887,19 +4021,19 @@ GameManager.prototype.updateStatsPanel = function (totalSteps, moveSteps, undoSt
 };
 
 GameManager.prototype.computeStepStats = function () {
-  var computeReplayStepStatsCore = this.resolveCoreReplayExecutionRuntimeMethod("computeReplayStepStats");
   var self = this;
   var totalSteps = 0;
   var moveSteps = 0;
   var undoSteps = 0;
   var limit = this.replayMode ? this.replayIndex : this.moveHistory.length;
   var src = this.replayMode ? this.replayMoves : this.moveHistory;
+  var computeReplayStepStatsCore = this.callCoreReplayExecutionRuntime("computeReplayStepStats", [{
+    actions: src,
+    limit: limit
+  }]);
 
-  if (computeReplayStepStatsCore) {
-    var coreStats = computeReplayStepStatsCore({
-      actions: src,
-      limit: limit
-    }) || {};
+  if (computeReplayStepStatsCore.available) {
+    var coreStats = computeReplayStepStatsCore.value || {};
     var coreTotal = Number(coreStats.totalSteps);
     var coreMoves = Number(coreStats.moveSteps);
     var coreUndo = Number(coreStats.undoSteps);
@@ -3944,26 +4078,24 @@ GameManager.prototype.computeStepStats = function () {
 };
 
 GameManager.prototype.getIpsInputCount = function () {
-  var resolveIpsInputCountCore = this.resolveCoreReplayExecutionRuntimeMethod("resolveIpsInputCount");
-  if (resolveIpsInputCountCore) {
-    return Number(resolveIpsInputCountCore({
+  var resolveIpsInputCountCore = this.callCoreReplayExecutionRuntime("resolveIpsInputCount", [{
       replayMode: this.replayMode,
       replayIndex: this.replayIndex,
       ipsInputCount: this.ipsInputCount
-    })) || 0;
-  }
+    }]);
+  if (resolveIpsInputCountCore.available) return Number(resolveIpsInputCountCore.value) || 0;
   if (this.replayMode) return Number.isInteger(this.replayIndex) && this.replayIndex > 0 ? this.replayIndex : 0;
   return Number.isInteger(this.ipsInputCount) && this.ipsInputCount >= 0 ? this.ipsInputCount : 0;
 };
 
 GameManager.prototype.recordIpsInput = function () {
-  var resolveNextIpsInputCountCore = this.resolveCoreReplayExecutionRuntimeMethod("resolveNextIpsInputCount");
-  if (resolveNextIpsInputCountCore) {
-    var resolved = resolveNextIpsInputCountCore({
+  var resolveNextIpsInputCountCore = this.callCoreReplayExecutionRuntime("resolveNextIpsInputCount", [{
       replayMode: this.replayMode,
       replayIndex: this.replayIndex,
       ipsInputCount: this.ipsInputCount
-    }) || {};
+    }]);
+  if (resolveNextIpsInputCountCore.available) {
+    var resolved = resolveNextIpsInputCountCore.value || {};
     if (!resolved.shouldRecord) return;
     var nextIps = Number(resolved.nextIpsInputCount);
     this.ipsInputCount = Number.isInteger(nextIps) && nextIps >= 0 ? nextIps : 0;
@@ -3979,15 +4111,15 @@ GameManager.prototype.refreshIpsDisplay = function (durationMs) {
   var ipsEl = document.getElementById("stats-ips");
   if (!ipsEl && !this.cornerIpsEl) return;
 
-  var resolveIpsDisplayTextCore = this.resolveCoreReplayExecutionRuntimeMethod("resolveIpsDisplayText");
   var ms = Number(durationMs);
   if (!Number.isFinite(ms) || ms < 0) ms = this.getDurationMs();
+  var resolveIpsDisplayTextCore = this.callCoreReplayExecutionRuntime("resolveIpsDisplayText", [{
+    durationMs: ms,
+    ipsInputCount: this.getIpsInputCount()
+  }]);
   var ipsText = "";
-  if (resolveIpsDisplayTextCore) {
-    var coreDisplay = resolveIpsDisplayTextCore({
-      durationMs: ms,
-      ipsInputCount: this.getIpsInputCount()
-    }) || {};
+  if (resolveIpsDisplayTextCore.available) {
+    var coreDisplay = resolveIpsDisplayTextCore.value || {};
     if (typeof coreDisplay.ipsText === "string" && coreDisplay.ipsText) {
       ipsText = coreDisplay.ipsText;
     }
@@ -5232,10 +5364,8 @@ GameManager.prototype.getBestTileValue = function () {
 };
 
 GameManager.prototype.getDurationMs = function () {
-  var resolveDurationMsCore = this.resolveCoreReplayTimerRuntimeMethod("resolveDurationMs");
   var nowMs = Date.now();
-  if (resolveDurationMsCore) {
-    var coreMs = Number(resolveDurationMsCore({
+  var resolveDurationMsCore = this.callCoreReplayTimerRuntime("resolveDurationMs", [{
       timerStatus: this.timerStatus,
       startTimeMs:
         this.startTime && typeof this.startTime.getTime === "function"
@@ -5244,7 +5374,9 @@ GameManager.prototype.getDurationMs = function () {
       accumulatedTime: this.accumulatedTime,
       sessionStartedAt: this.sessionStartedAt,
       nowMs: nowMs
-    }));
+    }]);
+  if (resolveDurationMsCore.available) {
+    var coreMs = Number(resolveDurationMsCore.value);
     if (Number.isFinite(coreMs)) {
       coreMs = Math.floor(coreMs);
       return coreMs < 0 ? 0 : coreMs;
