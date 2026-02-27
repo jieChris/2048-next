@@ -5141,6 +5141,10 @@ GameManager.prototype.updateStepStatsUi = function (stepStats) {
   this.updateStatsPanel(totalSteps, moveSteps, undoSteps);
 };
 
+GameManager.prototype.refreshStepStatsUiFromHistory = function () {
+  this.updateStepStatsUi(this.computeStepStats());
+};
+
 GameManager.prototype.refreshActuateTimerAndIps = function () {
   if (!this.timerContainer) return;
   var time;
@@ -5166,7 +5170,7 @@ GameManager.prototype.persistOrFinalizeSessionAfterActuate = function () {
 GameManager.prototype.actuate = function () {
   this.syncBestScoreBeforeActuate();
   this.actuator.actuate(this.grid, this.buildActuatorPayload());
-  this.updateStepStatsUi(this.computeStepStats());
+  this.refreshStepStatsUiFromHistory();
   this.refreshActuateTimerAndIps();
   this.persistOrFinalizeSessionAfterActuate();
 };
