@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   normalizeTimerModuleViewMode,
+  readUndoEnabledForModeFromMap,
   readTimerModuleViewForModeFromMap,
   readStorageFlagFromContext,
   readStorageJsonMapFromContext,
+  writeUndoEnabledForModeToMap,
   writeTimerModuleViewForModeToMap,
   writeStorageFlagFromContext,
   writeStorageJsonMapFromContext,
@@ -135,5 +137,39 @@ describe("core game settings storage", () => {
         view: "unknown"
       })
     ).toEqual({ standard: "hidden", practice: "timer" });
+  });
+
+  it("reads undo enabled state by mode key with fallback", () => {
+    expect(
+      readUndoEnabledForModeFromMap({
+        map: { standard: false },
+        mode: "standard",
+        fallbackEnabled: true
+      })
+    ).toBe(false);
+    expect(
+      readUndoEnabledForModeFromMap({
+        map: { standard: false },
+        mode: "practice",
+        fallbackEnabled: true
+      })
+    ).toBe(true);
+  });
+
+  it("writes undo enabled state by mode key into next map", () => {
+    expect(
+      writeUndoEnabledForModeToMap({
+        map: { standard: true },
+        mode: "standard",
+        enabled: false
+      })
+    ).toEqual({ standard: false });
+    expect(
+      writeUndoEnabledForModeToMap({
+        map: { standard: true },
+        mode: "practice",
+        enabled: true
+      })
+    ).toEqual({ standard: true, practice: true });
   });
 });

@@ -3521,9 +3521,18 @@ GameManager.prototype.loadUndoSettingForMode = function (mode) {
   if (forced !== null) return forced;
   if (!this.isUndoAllowedByMode(mode)) return false;
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
-  if (Object.prototype.hasOwnProperty.call(map, mode)) {
-    return !!map[mode];
+  var readUndoEnabledForModeFromMapCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "readUndoEnabledForModeFromMap"
+  );
+  if (readUndoEnabledForModeFromMapCore) {
+    return !!readUndoEnabledForModeFromMapCore({
+      map: map,
+      mode: mode,
+      fallbackEnabled: true
+    });
   }
+  if (Object.prototype.hasOwnProperty.call(map, mode)) return !!map[mode];
   return true;
 };
 
@@ -3531,7 +3540,19 @@ GameManager.prototype.persistUndoSettingForMode = function (mode, enabled) {
   if (this.isUndoSettingFixedForMode(mode)) return;
   if (!this.isUndoAllowedByMode(mode)) return;
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
-  map[mode] = !!enabled;
+  var writeUndoEnabledForModeToMapCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "writeUndoEnabledForModeToMap"
+  );
+  if (writeUndoEnabledForModeToMapCore) {
+    map = writeUndoEnabledForModeToMapCore({
+      map: map,
+      mode: mode,
+      enabled: enabled
+    });
+  } else {
+    map[mode] = !!enabled;
+  }
   this.writeLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY, map);
 };
 

@@ -111,6 +111,25 @@
     return map;
   }
 
+  function readUndoEnabledForModeFromMap(options) {
+    var opts = options || {};
+    var map = isObjectRecord(opts.map) ? opts.map : {};
+    var mode = typeof opts.mode === "string" ? opts.mode : "";
+    var fallbackEnabled = opts.fallbackEnabled !== false;
+    if (!mode) return fallbackEnabled;
+    if (!Object.prototype.hasOwnProperty.call(map, mode)) return fallbackEnabled;
+    return !!map[mode];
+  }
+
+  function writeUndoEnabledForModeToMap(options) {
+    var opts = options || {};
+    var map = isObjectRecord(opts.map) ? Object.assign({}, opts.map) : {};
+    var mode = typeof opts.mode === "string" ? opts.mode : "";
+    if (!mode) return map;
+    map[mode] = !!opts.enabled;
+    return map;
+  }
+
   global.CoreGameSettingsStorageRuntime = global.CoreGameSettingsStorageRuntime || {};
   global.CoreGameSettingsStorageRuntime.readStorageFlagFromContext = readStorageFlagFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageFlagFromContext = writeStorageFlagFromContext;
@@ -121,4 +140,6 @@
   global.CoreGameSettingsStorageRuntime.normalizeTimerModuleViewMode = normalizeTimerModuleViewMode;
   global.CoreGameSettingsStorageRuntime.readTimerModuleViewForModeFromMap = readTimerModuleViewForModeFromMap;
   global.CoreGameSettingsStorageRuntime.writeTimerModuleViewForModeToMap = writeTimerModuleViewForModeToMap;
+  global.CoreGameSettingsStorageRuntime.readUndoEnabledForModeFromMap = readUndoEnabledForModeFromMap;
+  global.CoreGameSettingsStorageRuntime.writeUndoEnabledForModeToMap = writeUndoEnabledForModeToMap;
 })(typeof window !== "undefined" ? window : undefined);

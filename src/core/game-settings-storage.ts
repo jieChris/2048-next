@@ -151,3 +151,30 @@ export function writeTimerModuleViewForModeToMap(options: {
   map[mode] = normalizeTimerModuleViewModeFromUnknown(opts.view);
   return map;
 }
+
+export function readUndoEnabledForModeFromMap(options: {
+  map?: unknown;
+  mode?: unknown;
+  fallbackEnabled?: unknown;
+}): boolean {
+  const opts = options || {};
+  const map = isObjectRecord(opts.map) ? opts.map : {};
+  const mode = typeof opts.mode === "string" ? opts.mode : "";
+  const fallbackEnabled = opts.fallbackEnabled !== false;
+  if (!mode) return fallbackEnabled;
+  if (!Object.prototype.hasOwnProperty.call(map, mode)) return fallbackEnabled;
+  return !!map[mode];
+}
+
+export function writeUndoEnabledForModeToMap(options: {
+  map?: unknown;
+  mode?: unknown;
+  enabled?: unknown;
+}): Record<string, unknown> {
+  const opts = options || {};
+  const map = isObjectRecord(opts.map) ? { ...opts.map } : {};
+  const mode = typeof opts.mode === "string" ? opts.mode : "";
+  if (!mode) return map;
+  map[mode] = !!opts.enabled;
+  return map;
+}
