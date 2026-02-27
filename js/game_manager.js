@@ -5486,12 +5486,7 @@ GameManager.prototype.handleUndoMove = function (direction) {
   this.publishUndoCompletion(direction, undoRestore);
 };
 
-GameManager.prototype.savePostMoveState = function (direction, undo) {
-  // Save state
-  this.undoStack.push(this.normalizeUndoStackEntry(undo));
-
-  // Record move for replay
-  var postMoveRecord = this.computePostMoveRecord(direction);
+GameManager.prototype.applyPostMoveRecord = function (direction, postMoveRecord) {
   if (postMoveRecord.shouldRecordMoveHistory) {
     this.moveHistory.push(direction);
   }
@@ -5507,6 +5502,12 @@ GameManager.prototype.savePostMoveState = function (direction, undo) {
   if (postMoveRecord.shouldResetLastSpawn) {
     this.lastSpawn = null;
   }
+};
+
+GameManager.prototype.savePostMoveState = function (direction, undo) {
+  this.undoStack.push(this.normalizeUndoStackEntry(undo));
+  var postMoveRecord = this.computePostMoveRecord(direction);
+  this.applyPostMoveRecord(direction, postMoveRecord);
 };
 
 GameManager.prototype.publishMoveCompletion = function (direction, postMoveLifecycle) {
