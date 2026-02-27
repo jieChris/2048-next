@@ -2023,10 +2023,6 @@ GameManager.prototype.resolveModePolicyContext = function (mode) {
   };
 };
 
-GameManager.prototype.resolveOptionObject = function (options) {
-  return options && typeof options === "object" ? options : {};
-};
-
 GameManager.prototype.readOptionValue = function (options, key, fallbackValue) {
   if (!options || typeof options !== "object") return fallbackValue;
   return Object.prototype.hasOwnProperty.call(options, key) ? options[key] : fallbackValue;
@@ -2034,7 +2030,7 @@ GameManager.prototype.readOptionValue = function (options, key, fallbackValue) {
 
 GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
   var context = this.resolveModePolicyContext(mode);
-  var source = this.resolveOptionObject(options);
+  var source = options;
   var hasGameStarted = !!this.readOptionValue(source, "hasGameStarted", !!this.hasGameStarted);
   var replayMode = !!this.readOptionValue(source, "replayMode", !!this.replayMode);
   var undoLimit = this.readOptionValue(source, "undoLimit", this.undoLimit);
