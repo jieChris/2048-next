@@ -5536,15 +5536,18 @@ GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove
   this.publishMoveCompletion(direction, postMoveLifecycle);
 };
 
+GameManager.prototype.shouldAbortForLockedDirection = function (direction, lockedDirection) {
+  if (lockedDirection === null || typeof lockedDirection === "undefined") return false;
+  return Number(direction) === Number(lockedDirection);
+};
+
 GameManager.prototype.shouldAbortDirectionalMove = function (direction) {
   if (this.isGameTerminated()) return true; // Don't do anything if the game's over
 
   var lockedDirection = this.getLockedDirection();
-  if (lockedDirection === null) {
-    return false;
-  }
+  if (!this.shouldAbortForLockedDirection(direction, lockedDirection)) return false;
   this.consumeDirectionLock();
-  return Number(direction) === Number(lockedDirection);
+  return true;
 };
 
 GameManager.prototype.snapshotMoveTileForUndo = function (undo, tile, target) {
