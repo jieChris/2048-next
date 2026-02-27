@@ -2737,37 +2737,28 @@ GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
 
 GameManager.prototype.resolveModeConfig = function (modeId) {
   var id = modeId || GameManager.DEFAULT_MODE_KEY;
-  var resolveModeConfigModeKeyCore = this.callCoreModeRuntime("resolveModeConfigModeKey", [{
+  var resolveModeConfigFromCatalogCore = this.callCoreModeRuntime("resolveModeConfigFromCatalog", [{
       modeId: id,
       defaultModeKey: GameManager.DEFAULT_MODE_KEY,
       getModeConfig: this.getModeConfigFromCatalog.bind(this),
       legacyAliasToModeKey: GameManager.LEGACY_ALIAS_TO_MODE_KEY
     }]);
-  var resolvedId = id;
-  if (resolveModeConfigModeKeyCore.available) {
-    var coreResolvedId = resolveModeConfigModeKeyCore.value;
-    if (typeof coreResolvedId === "string" && coreResolvedId) {
-      resolvedId = coreResolvedId;
+  if (resolveModeConfigFromCatalogCore.available) {
+    var resolvedByCore = resolveModeConfigFromCatalogCore.value || {};
+    var resolvedModeId = typeof resolvedByCore.resolvedModeId === "string" && resolvedByCore.resolvedModeId
+      ? resolvedByCore.resolvedModeId
+      : GameManager.DEFAULT_MODE_KEY;
+    var rawConfig = resolvedByCore.modeConfig;
+    if (rawConfig && typeof rawConfig === "object" && !Array.isArray(rawConfig)) {
+      return this.normalizeModeConfig(resolvedModeId, rawConfig);
     }
-  }
-
-  var byCatalog = this.getModeConfigFromCatalog(resolvedId);
-  if (byCatalog) return this.normalizeModeConfig(resolvedId, byCatalog);
-  if (resolveModeConfigModeKeyCore.available) {
     return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
   }
 
-  var resolveModeCatalogAliasCore = this.callCoreModeRuntime("resolveModeCatalogAlias", [{
-      modeId: id,
-      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
-      legacyAliasToModeKey: GameManager.LEGACY_ALIAS_TO_MODE_KEY
-    }]);
-  var mapped = id;
-  if (resolveModeCatalogAliasCore.available) {
-    mapped = resolveModeCatalogAliasCore.value;
-  } else if (GameManager.LEGACY_ALIAS_TO_MODE_KEY[id]) {
-    mapped = GameManager.LEGACY_ALIAS_TO_MODE_KEY[id];
-  }
+  var byCatalog = this.getModeConfigFromCatalog(id);
+  if (byCatalog) return this.normalizeModeConfig(id, byCatalog);
+
+  var mapped = GameManager.LEGACY_ALIAS_TO_MODE_KEY[id] || id;
 
   if (mapped && mapped !== id) {
     var mappedCfg = this.getModeConfigFromCatalog(mapped);

@@ -445,6 +445,40 @@
     return null;
   }
 
+  function resolveModeConfigFromCatalog(input) {
+    var source = input || {};
+    var defaultModeKey = source.defaultModeKey || "standard_4x4_pow2_no_undo";
+    var getModeConfig = typeof source.getModeConfig === "function" ? source.getModeConfig : null;
+
+    var resolvedModeId = resolveModeConfigModeKey({
+      modeId: source.modeId || defaultModeKey,
+      defaultModeKey: defaultModeKey,
+      getModeConfig: getModeConfig,
+      legacyAliasToModeKey: source.legacyAliasToModeKey || null
+    });
+
+    var resolvedModeConfig = getModeConfig ? getModeConfig(resolvedModeId) : null;
+    if (isPlainRecord(resolvedModeConfig)) {
+      return {
+        resolvedModeId: resolvedModeId,
+        modeConfig: clonePlain(resolvedModeConfig)
+      };
+    }
+
+    var defaultModeConfig = getModeConfig ? getModeConfig(defaultModeKey) : null;
+    if (isPlainRecord(defaultModeConfig)) {
+      return {
+        resolvedModeId: defaultModeKey,
+        modeConfig: clonePlain(defaultModeConfig)
+      };
+    }
+
+    return {
+      resolvedModeId: defaultModeKey,
+      modeConfig: null
+    };
+  }
+
   function resolveDetectedMode(input) {
     var source = input || {};
     var fallbackModeKey = source.defaultModeKey || "standard_4x4_pow2_no_undo";
@@ -497,5 +531,6 @@
   global.CoreModeRuntime.resolveModeCatalogAlias = resolveModeCatalogAlias;
   global.CoreModeRuntime.resolveModeConfigModeKey = resolveModeConfigModeKey;
   global.CoreModeRuntime.resolveModeCatalogConfig = resolveModeCatalogConfig;
+  global.CoreModeRuntime.resolveModeConfigFromCatalog = resolveModeConfigFromCatalog;
   global.CoreModeRuntime.resolveDetectedMode = resolveDetectedMode;
 })(typeof window !== "undefined" ? window : undefined);

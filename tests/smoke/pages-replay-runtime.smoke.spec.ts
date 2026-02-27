@@ -105,18 +105,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot?.key).toBe("standard_4x4_pow2_no_undo");
   });
 
-  test("game manager delegates mode config mode-key resolution to core mode runtime", async ({
+  test("game manager delegates mode config catalog resolution to core mode runtime", async ({
     page
   }) => {
     await page.addInitScript(() => {
-      (window as any).__modeConfigModeKeyCallCount = 0;
+      (window as any).__modeConfigCatalogCallCount = 0;
       const runtimeTarget: Record<string, unknown> = {};
       (window as any).CoreModeRuntime = new Proxy(runtimeTarget, {
         set(target, prop, value) {
-          if (prop === "resolveModeConfigModeKey" && typeof value === "function") {
+          if (prop === "resolveModeConfigFromCatalog" && typeof value === "function") {
             target[prop] = function (opts: unknown) {
-              (window as any).__modeConfigModeKeyCallCount =
-                Number((window as any).__modeConfigModeKeyCallCount || 0) + 1;
+              (window as any).__modeConfigCatalogCallCount =
+                Number((window as any).__modeConfigCatalogCallCount || 0) + 1;
               return (value as (input: unknown) => unknown)(opts);
             };
             return true;
@@ -142,12 +142,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
       const resolved = manager.resolveModeConfig("classic_no_undo");
       return {
-        callCount: Number((window as any).__modeConfigModeKeyCallCount || 0),
+        callCount: Number((window as any).__modeConfigCatalogCallCount || 0),
         key: resolved && typeof resolved.key === "string" ? resolved.key : null
       };
     });
 
-    expect(snapshot, "mode config mode-key delegation snapshot should exist").not.toBeNull();
+    expect(snapshot, "mode config catalog delegation snapshot should exist").not.toBeNull();
     expect(snapshot?.callCount).toBeGreaterThan(0);
     expect(snapshot?.key).toBe("standard_4x4_pow2_no_undo");
   });

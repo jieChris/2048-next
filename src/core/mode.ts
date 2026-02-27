@@ -127,6 +127,18 @@ export interface ModeCatalogConfigResolveInput {
   fallbackModeConfigs?: Record<string, unknown> | null;
 }
 
+export interface ModeConfigCatalogResolveInput {
+  modeId?: string | null;
+  defaultModeKey: string;
+  getModeConfig?: ((modeId: string) => unknown) | null;
+  legacyAliasToModeKey?: Record<string, string> | null;
+}
+
+export interface ModeConfigCatalogResolveResult {
+  resolvedModeId: string;
+  modeConfig: PlainRecord | null;
+}
+
 export interface DetectModeInput {
   existingMode?: string | null;
   bodyMode?: string | null;
@@ -495,6 +507,42 @@ export function resolveModeCatalogConfig(input: ModeCatalogConfigResolveInput): 
   }
 
   return null;
+}
+
+export function resolveModeConfigFromCatalog(
+  input: ModeConfigCatalogResolveInput
+): ModeConfigCatalogResolveResult {
+  const source = input || {};
+  const defaultModeKey = source.defaultModeKey || "standard_4x4_pow2_no_undo";
+  const getModeConfig = typeof source.getModeConfig === "function" ? source.getModeConfig : null;
+
+  const resolvedModeId = resolveModeConfigModeKey({
+    modeId: source.modeId || defaultModeKey,
+    defaultModeKey,
+    getModeConfig,
+    legacyAliasToModeKey: source.legacyAliasToModeKey || null
+  });
+
+  const resolvedModeConfig = getModeConfig ? getModeConfig(resolvedModeId) : null;
+  if (isPlainRecord(resolvedModeConfig)) {
+    return {
+      resolvedModeId,
+      modeConfig: clonePlain(resolvedModeConfig as PlainRecord)
+    };
+  }
+
+  const defaultModeConfig = getModeConfig ? getModeConfig(defaultModeKey) : null;
+  if (isPlainRecord(defaultModeConfig)) {
+    return {
+      resolvedModeId: defaultModeKey,
+      modeConfig: clonePlain(defaultModeConfig as PlainRecord)
+    };
+  }
+
+  return {
+    resolvedModeId: defaultModeKey,
+    modeConfig: null
+  };
 }
 
 export function resolveDetectedMode(input: DetectModeInput): string {

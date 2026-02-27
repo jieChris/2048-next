@@ -24,6 +24,7 @@ import {
   resolveDetectedMode,
   resolveLegacyModeFromModeKey,
   resolveModeConfigModeKey,
+  resolveModeConfigFromCatalog,
   resolveModeCatalogConfig,
   resolveModeCatalogAlias,
   normalizeSpecialRules
@@ -700,6 +701,80 @@ describe("core mode: legacy mapping policy", () => {
         }
       })
     ).toBeNull();
+  });
+
+  it("resolves mode config payload from catalog by key/alias/default", () => {
+    const defaultConfig = { key: "standard_4x4_pow2_no_undo", board_width: 4 };
+    const aliasConfig = { key: "standard_4x4_pow2_no_undo", board_width: 5 };
+    const map: Record<string, unknown> = {
+      standard_4x4_pow2_no_undo: defaultConfig,
+      classic_4x4_pow2_undo: { key: "classic_4x4_pow2_undo", board_width: 4 }
+    };
+
+    const byKey = resolveModeConfigFromCatalog({
+      modeId: "classic_4x4_pow2_undo",
+      defaultModeKey: "standard_4x4_pow2_no_undo",
+      getModeConfig(modeId) {
+        return map[modeId] || null;
+      },
+      legacyAliasToModeKey: {
+        classic_no_undo: "standard_4x4_pow2_no_undo"
+      }
+    });
+    expect(byKey).toEqual({
+      resolvedModeId: "classic_4x4_pow2_undo",
+      modeConfig: { key: "classic_4x4_pow2_undo", board_width: 4 }
+    });
+    expect(byKey.modeConfig).not.toBe(map.classic_4x4_pow2_undo);
+
+    const byAlias = resolveModeConfigFromCatalog({
+      modeId: "classic_no_undo",
+      defaultModeKey: "standard_4x4_pow2_no_undo",
+      getModeConfig(modeId) {
+        if (modeId === "standard_4x4_pow2_no_undo") return aliasConfig;
+        return null;
+      },
+      legacyAliasToModeKey: {
+        classic_no_undo: "standard_4x4_pow2_no_undo"
+      }
+    });
+    expect(byAlias).toEqual({
+      resolvedModeId: "standard_4x4_pow2_no_undo",
+      modeConfig: aliasConfig
+    });
+    expect(byAlias.modeConfig).not.toBe(aliasConfig);
+
+    const byDefault = resolveModeConfigFromCatalog({
+      modeId: "missing_mode",
+      defaultModeKey: "standard_4x4_pow2_no_undo",
+      getModeConfig(modeId) {
+        return modeId === "standard_4x4_pow2_no_undo" ? defaultConfig : null;
+      },
+      legacyAliasToModeKey: {
+        classic_no_undo: "standard_4x4_pow2_no_undo"
+      }
+    });
+    expect(byDefault).toEqual({
+      resolvedModeId: "standard_4x4_pow2_no_undo",
+      modeConfig: defaultConfig
+    });
+    expect(byDefault.modeConfig).not.toBe(defaultConfig);
+
+    expect(
+      resolveModeConfigFromCatalog({
+        modeId: "missing_mode",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        getModeConfig() {
+          return null;
+        },
+        legacyAliasToModeKey: {
+          classic_no_undo: "standard_4x4_pow2_no_undo"
+        }
+      })
+    ).toEqual({
+      resolvedModeId: "standard_4x4_pow2_no_undo",
+      modeConfig: null
+    });
   });
 
   it("resolves detected mode from existing/body/path context", () => {
