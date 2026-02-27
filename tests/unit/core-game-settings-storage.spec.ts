@@ -11,6 +11,7 @@ import {
   readStorageJsonMapFromContext,
   writeUndoEnabledForModeToMap,
   writeTimerModuleViewForModeToMap,
+  writeSavedPayloadToStorages,
   writeStorageFlagFromContext,
   writeStorageJsonMapFromContext,
   writeStorageJsonPayloadFromContext
@@ -102,6 +103,46 @@ describe("core game settings storage", () => {
       JSON.stringify(payload)
     );
     expect(result).toBe(true);
+  });
+
+  it("writes saved payload to first available storage", () => {
+    const setItemFail = vi.fn(() => {
+      throw new Error("quota");
+    });
+    const setItemOk = vi.fn();
+    const payload = { score: 1024, mode_key: "classic_4x4_pow2_undo" };
+    const result = writeSavedPayloadToStorages({
+      storages: [{ setItem: setItemFail }, { setItem: setItemOk }],
+      key: "saved_game_state_v2_classic_4x4_pow2_undo",
+      payload
+    });
+
+    expect(result).toBe(true);
+    expect(setItemFail).toHaveBeenCalledTimes(1);
+    expect(setItemOk).toHaveBeenCalledWith(
+      "saved_game_state_v2_classic_4x4_pow2_undo",
+      JSON.stringify(payload)
+    );
+  });
+
+  it("returns false when saved payload cannot be persisted", () => {
+    const circular: { self?: unknown } = {};
+    circular.self = circular;
+    expect(
+      writeSavedPayloadToStorages({
+        storages: [{ setItem: vi.fn() }],
+        key: "saved_game_state_v2_standard_4x4_pow2_no_undo",
+        payload: circular
+      })
+    ).toBe(false);
+
+    expect(
+      writeSavedPayloadToStorages({
+        storages: [],
+        key: "",
+        payload: { score: 0 }
+      })
+    ).toBe(false);
   });
 
   it("resolves saved game state storage key with mode fallbacks", () => {

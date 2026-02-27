@@ -297,6 +297,38 @@ export function writeStorageJsonPayloadFromContext(options: {
   }
 }
 
+export function writeSavedPayloadToStorages(options: {
+  storages?: unknown;
+  key?: unknown;
+  payload?: unknown;
+}): boolean {
+  const opts = options || {};
+  const key = typeof opts.key === "string" ? opts.key : "";
+  if (!key) return false;
+  const storages = Array.isArray(opts.storages) ? opts.storages : [];
+  if (!storages.length) return false;
+
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(opts.payload);
+  } catch (_err) {
+    return false;
+  }
+  if (typeof serialized !== "string") return false;
+
+  for (let i = 0; i < storages.length; i++) {
+    const storage = storages[i] as StorageLike | null;
+    if (!storage || typeof storage.setItem !== "function") continue;
+    try {
+      storage.setItem(key, serialized);
+      return true;
+    } catch (_err) {
+      // Try the next available storage.
+    }
+  }
+  return false;
+}
+
 function normalizeTimerModuleViewModeFromUnknown(value: unknown): TimerModuleViewMode {
   return value === "hidden" ? "hidden" : "timer";
 }

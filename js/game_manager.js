@@ -1702,6 +1702,19 @@ GameManager.prototype.safeClonePlain = function (value, fallback) {
 };
 
 GameManager.prototype.writeSavedGameStatePayload = function (key, payloadObj) {
+  var writeSavedPayloadToStoragesCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "writeSavedPayloadToStorages"
+  );
+  if (writeSavedPayloadToStoragesCore) {
+    var persistedByCore = writeSavedPayloadToStoragesCore({
+      storages: this.getSavedGameStateStorages(),
+      key: key,
+      payload: payloadObj
+    });
+    if (typeof persistedByCore === "boolean") return persistedByCore;
+  }
+
   var stores = this.getSavedGameStateStorages();
   if (!stores || stores.length === 0) return false;
   var serialized = null;

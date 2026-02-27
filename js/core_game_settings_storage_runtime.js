@@ -237,6 +237,33 @@
     }
   }
 
+  function writeSavedPayloadToStorages(options) {
+    var opts = options || {};
+    var key = typeof opts.key === "string" ? opts.key : "";
+    if (!key) return false;
+
+    var storages = Array.isArray(opts.storages) ? opts.storages : [];
+    if (!storages.length) return false;
+
+    var serialized = null;
+    try {
+      serialized = JSON.stringify(opts.payload);
+    } catch (_err) {
+      return false;
+    }
+    if (typeof serialized !== "string") return false;
+
+    for (var i = 0; i < storages.length; i++) {
+      var storage = storages[i];
+      if (!storage || typeof storage.setItem !== "function") continue;
+      try {
+        storage.setItem(key, serialized);
+        return true;
+      } catch (_errStore) {}
+    }
+    return false;
+  }
+
   function normalizeTimerModuleViewMode(value) {
     return value === "hidden" ? "hidden" : "timer";
   }
@@ -289,6 +316,8 @@
   global.CoreGameSettingsStorageRuntime.writeStorageJsonMapFromContext = writeStorageJsonMapFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageJsonPayloadFromContext =
     writeStorageJsonPayloadFromContext;
+  global.CoreGameSettingsStorageRuntime.writeSavedPayloadToStorages =
+    writeSavedPayloadToStorages;
   global.CoreGameSettingsStorageRuntime.normalizeTimerModuleViewMode = normalizeTimerModuleViewMode;
   global.CoreGameSettingsStorageRuntime.readTimerModuleViewForModeFromMap = readTimerModuleViewForModeFromMap;
   global.CoreGameSettingsStorageRuntime.writeTimerModuleViewForModeToMap = writeTimerModuleViewForModeToMap;
