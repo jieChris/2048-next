@@ -4626,16 +4626,7 @@ GameManager.prototype.handleUndoMove = function (direction) {
   });
 };
 
-GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove, undo) {
-  // IPS counts only effective move inputs (invalid directions are excluded).
-  this.recordIpsInput();
-
-  this.applyPostMoveScore(scoreBeforeMove);
-
-  this.addRandomTile();
-  var hasMovesAvailable = this.movesAvailable();
-  var postMoveLifecycle = this.applyPostMoveLifecycle(hasMovesAvailable);
-
+GameManager.prototype.savePostMoveState = function (direction, undo) {
   // Save state
   this.undoStack.push(this.normalizeUndoStackEntry(undo));
 
@@ -4656,7 +4647,9 @@ GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove
   if (postMoveRecord.shouldResetLastSpawn) {
     this.lastSpawn = null;
   }
+};
 
+GameManager.prototype.publishMoveCompletion = function (direction, postMoveLifecycle) {
   this.actuate();
 
   // Start timer on first move
@@ -4668,6 +4661,19 @@ GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove
     direction: direction,
     moved: true
   });
+};
+
+GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove, undo) {
+  // IPS counts only effective move inputs (invalid directions are excluded).
+  this.recordIpsInput();
+
+  this.applyPostMoveScore(scoreBeforeMove);
+
+  this.addRandomTile();
+  var hasMovesAvailable = this.movesAvailable();
+  var postMoveLifecycle = this.applyPostMoveLifecycle(hasMovesAvailable);
+  this.savePostMoveState(direction, undo);
+  this.publishMoveCompletion(direction, postMoveLifecycle);
 };
 
 GameManager.prototype.shouldAbortDirectionalMove = function (direction) {
