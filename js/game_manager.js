@@ -1237,6 +1237,15 @@ GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
   }
 };
 
+GameManager.prototype.buildSavedGameStateStoragesFallback = function () {
+  var out = [];
+  var localStore = this.getWebStorageByName("localStorage");
+  var sessionStore = this.getWebStorageByName("sessionStorage");
+  if (localStore) out.push(localStore);
+  if (sessionStore && sessionStore !== localStore) out.push(sessionStore);
+  return out;
+};
+
 GameManager.prototype.getSavedGameStateStorages = function () {
   var getSavedGameStateStoragesFromContextCore = this.callCoreStorageRuntime("getSavedGameStateStoragesFromContext", [{
       windowLike: this.getWindowLike()
@@ -1245,13 +1254,7 @@ GameManager.prototype.getSavedGameStateStorages = function () {
     var storagesByCore = getSavedGameStateStoragesFromContextCore.value;
     if (Array.isArray(storagesByCore)) return storagesByCore;
   }
-
-  var out = [];
-  var localStore = this.getWebStorageByName("localStorage");
-  var sessionStore = this.getWebStorageByName("sessionStorage");
-  if (localStore) out.push(localStore);
-  if (sessionStore && sessionStore !== localStore) out.push(sessionStore);
-  return out;
+  return this.buildSavedGameStateStoragesFallback();
 };
 
 GameManager.prototype.readSavedPayloadRawFromStore = function (store, key) {
