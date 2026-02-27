@@ -37,6 +37,30 @@
     };
   }
 
+  function resolveIpsInputCount(input) {
+    var source = input || {};
+    if (source.replayMode) {
+      var replayIndex = Number(source.replayIndex);
+      return Number.isInteger(replayIndex) && replayIndex > 0 ? replayIndex : 0;
+    }
+    var ipsInputCount = Number(source.ipsInputCount);
+    return Number.isInteger(ipsInputCount) && ipsInputCount >= 0 ? ipsInputCount : 0;
+  }
+
+  function resolveNextIpsInputCount(input) {
+    var source = input || {};
+    if (source.replayMode) {
+      return {
+        shouldRecord: false,
+        nextIpsInputCount: resolveIpsInputCount(source)
+      };
+    }
+    return {
+      shouldRecord: true,
+      nextIpsInputCount: resolveIpsInputCount(source) + 1
+    };
+  }
+
   function resolveReplayExecution(action) {
     var kind = getReplayActionKind(action);
     if (kind === "m") {
@@ -60,5 +84,7 @@
   global.CoreReplayExecutionRuntime = global.CoreReplayExecutionRuntime || {};
   global.CoreReplayExecutionRuntime.getReplayActionKind = getReplayActionKind;
   global.CoreReplayExecutionRuntime.computeReplayStepStats = computeReplayStepStats;
+  global.CoreReplayExecutionRuntime.resolveIpsInputCount = resolveIpsInputCount;
+  global.CoreReplayExecutionRuntime.resolveNextIpsInputCount = resolveNextIpsInputCount;
   global.CoreReplayExecutionRuntime.resolveReplayExecution = resolveReplayExecution;
 })(typeof window !== "undefined" ? window : undefined);

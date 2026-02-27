@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   computeReplayStepStats,
   getReplayActionKind,
+  resolveIpsInputCount,
+  resolveNextIpsInputCount,
   resolveReplayExecution
 } from "../../src/core/replay-execution";
 
@@ -76,6 +78,69 @@ describe("core replay execution: computeReplayStepStats", () => {
       totalSteps: 0,
       moveSteps: 0,
       undoSteps: 0
+    });
+  });
+});
+
+describe("core replay execution: ips input count", () => {
+  it("resolves current ips input count for replay and normal modes", () => {
+    expect(
+      resolveIpsInputCount({
+        replayMode: true,
+        replayIndex: 12,
+        ipsInputCount: 3
+      })
+    ).toBe(12);
+    expect(
+      resolveIpsInputCount({
+        replayMode: true,
+        replayIndex: -1,
+        ipsInputCount: 3
+      })
+    ).toBe(0);
+    expect(
+      resolveIpsInputCount({
+        replayMode: false,
+        replayIndex: 12,
+        ipsInputCount: 7
+      })
+    ).toBe(7);
+    expect(
+      resolveIpsInputCount({
+        replayMode: false,
+        ipsInputCount: -4
+      })
+    ).toBe(0);
+  });
+
+  it("resolves next ips input count update", () => {
+    expect(
+      resolveNextIpsInputCount({
+        replayMode: true,
+        replayIndex: 10,
+        ipsInputCount: 5
+      })
+    ).toEqual({
+      shouldRecord: false,
+      nextIpsInputCount: 10
+    });
+    expect(
+      resolveNextIpsInputCount({
+        replayMode: false,
+        ipsInputCount: 5
+      })
+    ).toEqual({
+      shouldRecord: true,
+      nextIpsInputCount: 6
+    });
+    expect(
+      resolveNextIpsInputCount({
+        replayMode: false,
+        ipsInputCount: -2
+      })
+    ).toEqual({
+      shouldRecord: true,
+      nextIpsInputCount: 1
     });
   });
 });

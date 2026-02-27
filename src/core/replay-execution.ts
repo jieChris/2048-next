@@ -29,6 +29,17 @@ export interface ReplayStepStatsResult {
   undoSteps: number;
 }
 
+export interface IpsInputCountInput {
+  replayMode?: boolean | null;
+  replayIndex?: number | null;
+  ipsInputCount?: number | null;
+}
+
+export interface NextIpsInputCountResult {
+  shouldRecord: boolean;
+  nextIpsInputCount: number;
+}
+
 export function getReplayActionKind(action: unknown): ReplayActionKind {
   if (action === -1) return "u";
   if (typeof action === "number" && action >= 0 && action <= 3) return "m";
@@ -59,6 +70,28 @@ export function computeReplayStepStats(input: ReplayStepStatsInput): ReplayStepS
     totalSteps: limit,
     moveSteps,
     undoSteps
+  };
+}
+
+export function resolveIpsInputCount(input: IpsInputCountInput): number {
+  if (input.replayMode) {
+    const replayIndex = Number(input.replayIndex);
+    return Number.isInteger(replayIndex) && replayIndex > 0 ? replayIndex : 0;
+  }
+  const ipsInputCount = Number(input.ipsInputCount);
+  return Number.isInteger(ipsInputCount) && ipsInputCount >= 0 ? ipsInputCount : 0;
+}
+
+export function resolveNextIpsInputCount(input: IpsInputCountInput): NextIpsInputCountResult {
+  if (input.replayMode) {
+    return {
+      shouldRecord: false,
+      nextIpsInputCount: resolveIpsInputCount(input)
+    };
+  }
+  return {
+    shouldRecord: true,
+    nextIpsInputCount: resolveIpsInputCount(input) + 1
   };
 }
 
