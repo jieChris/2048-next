@@ -4410,6 +4410,78 @@ GameManager.prototype.moveTile = function (tile, cell) {
   tile.updatePosition(cell);
 };
 
+GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
+  var computePostMoveScoreCore = this.resolveCoreScoringRuntimeMethod("computePostMoveScore");
+  if (computePostMoveScoreCore) {
+    var scoreResult = computePostMoveScoreCore({
+      scoreBeforeMove: scoreBeforeMove,
+      scoreAfterMerge: this.score,
+      comboStreak: this.comboStreak,
+      comboMultiplier: this.comboMultiplier
+    }) || {};
+
+    if (Number.isFinite(scoreResult.score)) {
+      this.score = Number(scoreResult.score);
+    }
+    if (Number.isInteger(scoreResult.comboStreak) && scoreResult.comboStreak >= 0) {
+      this.comboStreak = scoreResult.comboStreak;
+    }
+    return;
+  }
+
+  var mergeGain = this.score - scoreBeforeMove;
+  if (mergeGain > 0) {
+    this.comboStreak += 1;
+    if (this.comboMultiplier > 1 && this.comboStreak > 1) {
+      var comboBonus = Math.floor(mergeGain * (this.comboMultiplier - 1) * (this.comboStreak - 1));
+      if (comboBonus > 0) {
+        this.score += comboBonus;
+      }
+    }
+  } else {
+    this.comboStreak = 0;
+  }
+};
+
+GameManager.prototype.applyPostMoveLifecycle = function (hasMovesAvailable) {
+  var computePostMoveLifecycleCore = this.resolveCorePostMoveRuntimeMethod("computePostMoveLifecycle");
+  var postMoveResult = null;
+
+  if (computePostMoveLifecycleCore) {
+    postMoveResult = computePostMoveLifecycleCore({
+      successfulMoveCount: this.successfulMoveCount,
+      hasMovesAvailable: hasMovesAvailable,
+      timerStatus: this.timerStatus
+    }) || {};
+    if (Number.isInteger(postMoveResult.successfulMoveCount) && postMoveResult.successfulMoveCount >= 0) {
+      this.successfulMoveCount = postMoveResult.successfulMoveCount;
+    } else {
+      this.successfulMoveCount += 1;
+    }
+    this.over = typeof postMoveResult.over === "boolean" ? postMoveResult.over : !hasMovesAvailable;
+    if (postMoveResult.shouldEndTime || this.over) {
+      this.endTime(); // Stop timer on game over
+    }
+    return {
+      postMoveResult: postMoveResult,
+      shouldStartTimer:
+        typeof postMoveResult.shouldStartTimer === "boolean"
+          ? postMoveResult.shouldStartTimer
+          : (this.timerStatus === 0 && !this.over)
+    };
+  }
+
+  this.successfulMoveCount += 1;
+  if (!hasMovesAvailable) {
+    this.over = true; // Game over!
+    this.endTime(); // Stop timer on game over
+  }
+  return {
+    postMoveResult: null,
+    shouldStartTimer: this.timerStatus === 0 && !this.over
+  };
+};
+
 // Move tiles on the grid in the specified direction
 GameManager.prototype.move = function (direction) {
   // 0: up, 1: right, 2:down, 3: left, -1: undo
@@ -4612,61 +4684,11 @@ GameManager.prototype.move = function (direction) {
     // IPS counts only effective move inputs (invalid directions are excluded).
     this.recordIpsInput();
 
-    var computePostMoveScoreCore = this.resolveCoreScoringRuntimeMethod("computePostMoveScore");
-    if (computePostMoveScoreCore) {
-      var scoreResult = computePostMoveScoreCore({
-        scoreBeforeMove: scoreBeforeMove,
-        scoreAfterMerge: this.score,
-        comboStreak: this.comboStreak,
-        comboMultiplier: this.comboMultiplier
-      }) || {};
-
-      if (Number.isFinite(scoreResult.score)) {
-        this.score = Number(scoreResult.score);
-      }
-      if (Number.isInteger(scoreResult.comboStreak) && scoreResult.comboStreak >= 0) {
-        this.comboStreak = scoreResult.comboStreak;
-      }
-    } else {
-      var mergeGain = this.score - scoreBeforeMove;
-      if (mergeGain > 0) {
-        this.comboStreak += 1;
-        if (this.comboMultiplier > 1 && this.comboStreak > 1) {
-          var comboBonus = Math.floor(mergeGain * (this.comboMultiplier - 1) * (this.comboStreak - 1));
-          if (comboBonus > 0) {
-            this.score += comboBonus;
-          }
-        }
-      } else {
-        this.comboStreak = 0;
-      }
-    }
+    this.applyPostMoveScore(scoreBeforeMove);
 
     this.addRandomTile();
     var hasMovesAvailable = this.movesAvailable();
-    var computePostMoveLifecycleCore = this.resolveCorePostMoveRuntimeMethod("computePostMoveLifecycle");
-    if (computePostMoveLifecycleCore) {
-      var postMoveResult = computePostMoveLifecycleCore({
-        successfulMoveCount: this.successfulMoveCount,
-        hasMovesAvailable: hasMovesAvailable,
-        timerStatus: this.timerStatus
-      }) || {};
-      if (Number.isInteger(postMoveResult.successfulMoveCount) && postMoveResult.successfulMoveCount >= 0) {
-        this.successfulMoveCount = postMoveResult.successfulMoveCount;
-      } else {
-        this.successfulMoveCount += 1;
-      }
-      this.over = typeof postMoveResult.over === "boolean" ? postMoveResult.over : !hasMovesAvailable;
-      if (postMoveResult.shouldEndTime || this.over) {
-        this.endTime(); // Stop timer on game over
-      }
-    } else {
-      this.successfulMoveCount += 1;
-      if (!hasMovesAvailable) {
-        this.over = true; // Game over!
-        this.endTime(); // Stop timer on game over
-      }
-    }
+    var postMoveLifecycle = this.applyPostMoveLifecycle(hasMovesAvailable);
 
     // Save state
     this.undoStack.push(this.normalizeUndoStackEntry(undo));
@@ -4692,13 +4714,7 @@ GameManager.prototype.move = function (direction) {
     this.actuate();
 
     // Start timer on first move
-    if (computePostMoveLifecycleCore) {
-      var shouldStart =
-        postMoveResult && typeof postMoveResult.shouldStartTimer === "boolean"
-          ? postMoveResult.shouldStartTimer
-          : (this.timerStatus === 0 && !this.over);
-      if (shouldStart) this.startTimer();
-    } else if (this.timerStatus === 0 && !this.over) {
+    if (postMoveLifecycle.shouldStartTimer) {
       this.startTimer();
     }
     this.publishAdapterMoveResult({
