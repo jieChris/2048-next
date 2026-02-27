@@ -1301,17 +1301,20 @@ GameManager.prototype.selectLatestSavedPayload = function (currentBest, nextPayl
   return nextSavedAt >= bestSavedAt ? next : best;
 };
 
+GameManager.prototype.readSavedPayloadCandidateFromStore = function (store, key) {
+  var raw = this.readSavedPayloadRawFromStore(store, key);
+  if (!raw) return null;
+  var parsed = this.parseSavedPayloadRaw(raw);
+  if (parsed) return parsed;
+  this.removeSavedPayloadByKeyFromStore(store, key);
+  return null;
+};
+
 GameManager.prototype.readSavedPayloadByKeyFallback = function (stores, key) {
   var best = null;
   for (var i = 0; i < stores.length; i++) {
-    var raw = this.readSavedPayloadRawFromStore(stores[i], key);
-    if (!raw) continue;
-    var parsed = this.parseSavedPayloadRaw(raw);
-    if (!parsed) {
-      this.removeSavedPayloadByKeyFromStore(stores[i], key);
-      continue;
-    }
-    best = this.selectLatestSavedPayload(best, parsed);
+    var candidate = this.readSavedPayloadCandidateFromStore(stores[i], key);
+    best = this.selectLatestSavedPayload(best, candidate);
   }
   return best;
 };
