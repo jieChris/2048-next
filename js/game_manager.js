@@ -4291,23 +4291,32 @@ GameManager.prototype.applyNormalizedModeMetadataFallback = function (cfg) {
   cfg.rank_policy = cfg.rank_policy || (cfg.ranked_bucket !== "none" ? "ranked" : "unranked");
 };
 
-GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
-  var normalizeModeConfigCore = this.callCoreModeRuntime("normalizeModeConfig", [{
-      modeKey: modeKey,
-      rawConfig: rawConfig,
-      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
-      defaultModeConfig: GameManager.DEFAULT_MODE_CONFIG,
-      normalizeSpawnTable: this.normalizeSpawnTable.bind(this),
-      getTheoreticalMaxTile: this.getTheoreticalMaxTile.bind(this),
-      normalizeSpecialRules: this.normalizeSpecialRules.bind(this)
-    }]);
-  if (normalizeModeConfigCore.available) return normalizeModeConfigCore.value;
+GameManager.prototype.buildNormalizeModeConfigCoreInput = function (modeKey, rawConfig) {
+  return {
+    modeKey: modeKey,
+    rawConfig: rawConfig,
+    defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+    defaultModeConfig: GameManager.DEFAULT_MODE_CONFIG,
+    normalizeSpawnTable: this.normalizeSpawnTable.bind(this),
+    getTheoreticalMaxTile: this.getTheoreticalMaxTile.bind(this),
+    normalizeSpecialRules: this.normalizeSpecialRules.bind(this)
+  };
+};
 
+GameManager.prototype.normalizeModeConfigFallback = function (modeKey, rawConfig) {
   var cfg = this.normalizeModeConfigBaseFallback(modeKey, rawConfig);
   this.applyNormalizedModeMaxTileFallback(cfg);
   this.applyNormalizedModeSpawnTableFallback(cfg);
   this.applyNormalizedModeMetadataFallback(cfg);
   return cfg;
+};
+
+GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
+  var normalizeModeConfigCore = this.callCoreModeRuntime("normalizeModeConfig", [
+    this.buildNormalizeModeConfigCoreInput(modeKey, rawConfig)
+  ]);
+  if (normalizeModeConfigCore.available) return normalizeModeConfigCore.value;
+  return this.normalizeModeConfigFallback(modeKey, rawConfig);
 };
 
 GameManager.prototype.resolveModeConfigCatalogFallback = function (modeId) {
