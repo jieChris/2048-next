@@ -4861,6 +4861,23 @@ GameManager.prototype.invalidateTimers = function(limit) {
 };
 
 GameManager.prototype.getFinalBoardMatrix = function () {
+  var buildBoardMatrixCore = this.resolveCoreRuntimeMethod(
+    "getCoreGridScanRuntime",
+    "buildBoardMatrix"
+  );
+  if (buildBoardMatrixCore) {
+    var self = this;
+    var board = buildBoardMatrixCore(
+      this.width,
+      this.height,
+      function (x, y) {
+        var tile = self.grid.cellContent({ x: x, y: y });
+        return tile ? tile.value : 0;
+      }
+    );
+    if (Array.isArray(board)) return board;
+  }
+
   var rows = [];
   for (var y = 0; y < this.height; y++) {
     var row = [];
@@ -4874,6 +4891,15 @@ GameManager.prototype.getFinalBoardMatrix = function () {
 };
 
 GameManager.prototype.getBestTileValue = function () {
+  var getBestTileValueCore = this.resolveCoreRuntimeMethod(
+    "getCoreGridScanRuntime",
+    "getBestTileValue"
+  );
+  if (getBestTileValueCore) {
+    var bestCore = Number(getBestTileValueCore(this.getFinalBoardMatrix()));
+    if (Number.isFinite(bestCore) && bestCore >= 0) return bestCore;
+  }
+
   var best = 0;
   this.grid.eachCell(function (_x, _y, tile) {
     if (tile && tile.value > best) best = tile.value;
