@@ -1176,14 +1176,18 @@ var GAME_MANAGER_CORE_RUNTIME_CALLERS = [
   ["callCoreTimerIntervalRuntime", "resolveCoreTimerIntervalRuntimeMethod"]
 ];
 
-for (
-  var gameManagerCoreRuntimeCallerIndex = 0;
-  gameManagerCoreRuntimeCallerIndex < GAME_MANAGER_CORE_RUNTIME_CALLERS.length;
-  gameManagerCoreRuntimeCallerIndex++
-) {
-  var gameManagerCoreRuntimeCallerDef = GAME_MANAGER_CORE_RUNTIME_CALLERS[gameManagerCoreRuntimeCallerIndex];
-  registerCoreRuntimeCaller(gameManagerCoreRuntimeCallerDef[0], gameManagerCoreRuntimeCallerDef[1]);
+function registerCoreRuntimeCallers(callerDefs) {
+  for (
+    var gameManagerCoreRuntimeCallerIndex = 0;
+    gameManagerCoreRuntimeCallerIndex < callerDefs.length;
+    gameManagerCoreRuntimeCallerIndex++
+  ) {
+    var gameManagerCoreRuntimeCallerDef = callerDefs[gameManagerCoreRuntimeCallerIndex];
+    registerCoreRuntimeCaller(gameManagerCoreRuntimeCallerDef[0], gameManagerCoreRuntimeCallerDef[1]);
+  }
 }
+
+registerCoreRuntimeCallers(GAME_MANAGER_CORE_RUNTIME_CALLERS);
 
 GameManager.prototype.resolveSavedGameStateStorageKey = function (keyPrefix, modeKey) {
   var resolveSavedGameStateStorageKeyCore = this.callCoreStorageRuntime("resolveSavedGameStateStorageKey", [{
