@@ -4813,6 +4813,52 @@ GameManager.prototype.resetCappedPlaceholderRows = function (cappedState) {
   }
 };
 
+GameManager.prototype.resolveCappedPlaceholderSlotValueFromFallback = function (repeatCount, values) {
+  var placeholderIndex = repeatCount - 2; // x2 => first placeholder row
+  if (placeholderIndex < 0 || placeholderIndex >= values.length) return null;
+  var slotValue = Number(values[placeholderIndex]);
+  if (!Number.isInteger(slotValue) || slotValue <= 0) return null;
+  return slotValue;
+};
+
+GameManager.prototype.resolveCappedPlaceholderSlotValue = function (repeatCount, values, coreSlotValue) {
+  var slotValue = Number(coreSlotValue);
+  if (Number.isInteger(slotValue) && slotValue > 0) return slotValue;
+  return this.resolveCappedPlaceholderSlotValueFromFallback(repeatCount, values);
+};
+
+GameManager.prototype.applyCappedPlaceholderLegend = function (legend, labelText, cappedTargetValue) {
+  if (!legend) return;
+  legend.className = this.getCappedTimerLegendClass(cappedTargetValue);
+  legend.style.color = "#f9f6f2";
+  legend.style.fontSize = this.getCappedTimerFontSize(cappedTargetValue);
+  legend.textContent = labelText;
+};
+
+GameManager.prototype.fillCappedPlaceholderRowSlot = function (
+  slotValue,
+  repeatCount,
+  labelText,
+  timeStr,
+  resolvedCappedState
+) {
+  var slotId = String(slotValue);
+  var row = this.getTimerRowEl(slotId);
+  var timerEl = document.getElementById("timer" + slotId);
+  if (!row || !timerEl) return false;
+
+  this.applyCappedPlaceholderLegend(
+    row.querySelector(".timertile"),
+    labelText,
+    resolvedCappedState.cappedTargetValue
+  );
+  timerEl.textContent = timeStr;
+  row.setAttribute("data-capped-repeat", String(repeatCount));
+  this.setTimerRowVisibleState(slotId, true, true);
+  this.normalizeCappedRepeatLegendClasses(resolvedCappedState);
+  return true;
+};
+
 GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, labelText, timeStr, cappedState) {
   var resolvedCappedState =
     this.resolveProvidedCappedModeState(cappedState);
@@ -4827,35 +4873,21 @@ GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, 
       placeholderRowValues: values
     }]
   );
-  var slotValue = null;
-  if (resolveCappedPlaceholderSlotByRepeatCountCore.available) {
-    slotValue = resolveCappedPlaceholderSlotByRepeatCountCore.value;
-  }
-  if (!Number.isInteger(slotValue) || slotValue <= 0) {
-    var placeholderIndex = repeatCount - 2; // x2 => first placeholder row
-    if (placeholderIndex < 0 || placeholderIndex >= values.length) return false;
-    slotValue = Number(values[placeholderIndex]);
-    if (!Number.isInteger(slotValue) || slotValue <= 0) return false;
-  }
-
-  var slotId = String(slotValue);
-  var row = this.getTimerRowEl(slotId);
-  var timerEl = document.getElementById("timer" + slotId);
-  if (!row || !timerEl) return false;
-
-  var legend = row.querySelector(".timertile");
-  if (legend) {
-    legend.className = this.getCappedTimerLegendClass(resolvedCappedState.cappedTargetValue);
-    legend.style.color = "#f9f6f2";
-    legend.style.fontSize = this.getCappedTimerFontSize(resolvedCappedState.cappedTargetValue);
-    legend.textContent = labelText;
-  }
-
-  timerEl.textContent = timeStr;
-  row.setAttribute("data-capped-repeat", String(repeatCount));
-  this.setTimerRowVisibleState(slotId, true, true);
-  this.normalizeCappedRepeatLegendClasses(resolvedCappedState);
-  return true;
+  var slotValue = this.resolveCappedPlaceholderSlotValue(
+    repeatCount,
+    values,
+    resolveCappedPlaceholderSlotByRepeatCountCore.available
+      ? resolveCappedPlaceholderSlotByRepeatCountCore.value
+      : null
+  );
+  if (!Number.isInteger(slotValue) || slotValue <= 0) return false;
+  return this.fillCappedPlaceholderRowSlot(
+    slotValue,
+    repeatCount,
+    labelText,
+    timeStr,
+    resolvedCappedState
+  );
 };
 
 GameManager.prototype.getCappedOverflowContainer = function (cappedState) {
