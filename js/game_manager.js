@@ -5028,18 +5028,25 @@ GameManager.prototype.finalizeSetupUiState = function (preferredTimerModuleView,
   }
 };
 
-// Set up the game
-GameManager.prototype.setup = function (inputSeed, options) {
-  options = options || {};
+GameManager.prototype.initializeSetupModeAndGrid = function (options) {
   var detectedMode = this.detectMode();
   var resolvedModeConfig = this.resolveSetupModeConfig(detectedMode, options);
   this.applySetupModeConfig(resolvedModeConfig);
-  this.grid        = new Grid(this.width, this.height);
+  this.grid = new Grid(this.width, this.height);
+};
 
-  this.score       = 0;
-  this.over        = false;
-  this.won         = false;
+GameManager.prototype.resetSetupOutcomeState = function () {
+  this.score = 0;
+  this.over = false;
+  this.won = false;
   this.keepPlaying = false;
+};
+
+// Set up the game
+GameManager.prototype.setup = function (inputSeed, options) {
+  options = options || {};
+  this.initializeSetupModeAndGrid(options);
+  this.resetSetupOutcomeState();
   
   // Replay logic
   var hasInputSeed = this.initializeSetupReplayState(inputSeed);
