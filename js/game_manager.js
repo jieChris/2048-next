@@ -2257,18 +2257,36 @@ GameManager.prototype.getCoreRuntimeByName = function (runtimeName) {
   return core;
 };
 
-GameManager.prototype.resolveCoreRuntimeMethod = function (runtimeGetterName, methodName) {
-  if (typeof runtimeGetterName !== "string" || !runtimeGetterName) return null;
-  if (typeof methodName !== "string" || !methodName) return null;
+GameManager.prototype.isValidCoreRuntimeMethodLookupInput = function (runtimeGetterName, methodName) {
+  return !!(
+    typeof runtimeGetterName === "string" &&
+    runtimeGetterName &&
+    typeof methodName === "string" &&
+    methodName
+  );
+};
+
+GameManager.prototype.resolveCoreRuntimeFromGetterName = function (runtimeGetterName) {
   var runtimeGetter = this[runtimeGetterName];
   if (typeof runtimeGetter !== "function") return null;
   var runtime = runtimeGetter.call(this);
+  if (!runtime || typeof runtime !== "object") return null;
+  return runtime;
+};
+
+GameManager.prototype.wrapCoreRuntimeMethod = function (runtime, methodName) {
   if (!runtime || typeof runtime !== "object") return null;
   var runtimeMethod = runtime[methodName];
   if (typeof runtimeMethod !== "function") return null;
   return function () {
     return runtimeMethod.apply(runtime, arguments);
   };
+};
+
+GameManager.prototype.resolveCoreRuntimeMethod = function (runtimeGetterName, methodName) {
+  if (!this.isValidCoreRuntimeMethodLookupInput(runtimeGetterName, methodName)) return null;
+  var runtime = this.resolveCoreRuntimeFromGetterName(runtimeGetterName);
+  return this.wrapCoreRuntimeMethod(runtime, methodName);
 };
 
 function registerCoreRuntimeMethodResolver(methodName, runtimeGetterName) {
