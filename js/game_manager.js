@@ -7133,12 +7133,20 @@ GameManager.prototype.importReplayOrThrow = function (trimmedReplayString) {
   this.throwUnknownReplayVersion();
 };
 
+GameManager.prototype.resolveReplayImportErrorMessage = function (error) {
+  return "导入回放出错: " + error;
+};
+
+GameManager.prototype.notifyReplayImportError = function (error) {
+  alert(this.resolveReplayImportErrorMessage(error));
+};
+
 GameManager.prototype.import = function (replayString) {
   try {
     var trimmed = this.normalizeReplayImportInput(replayString);
     this.importReplayOrThrow(trimmed);
   } catch (e) {
-    alert("导入回放出错: " + e);
+    this.notifyReplayImportError(e);
   }
 };
 
