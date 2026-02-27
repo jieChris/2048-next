@@ -5600,6 +5600,24 @@ GameManager.prototype.applyJsonV3ReplayEnvelopeActions = function (envelope) {
   this.replaySpawns = null;
 };
 
+GameManager.prototype.importJsonV3ReplayEnvelope = function (envelope, replayModeConfig) {
+  this.applyJsonV3ReplayEnvelopeMeta(envelope, replayModeConfig);
+  this.applyJsonV3ReplayEnvelopeActions(envelope);
+  this.restartReplayImportSession(replayModeConfig, envelope.seed, false);
+};
+
+GameManager.prototype.importV4ReplayEnvelope = function (envelope, replayModeConfig) {
+  var initialBoard = this.decodeBoardV4(envelope.initialBoardEncoded);
+  var decodedV4Actions = this.decodeReplayV4Actions(envelope.actionsEncoded);
+  this.applyV4ReplayDecodedActions(decodedV4Actions);
+  this.restartReplayImportSession(replayModeConfig, initialBoard, true);
+};
+
+GameManager.prototype.importLegacyReplayPayload = function (decodedLegacy) {
+  this.applyLegacyReplayDecodedActions(decodedLegacy);
+  this.restartLegacyReplayImportSession(decodedLegacy.seed);
+};
+
 GameManager.prototype.import = function (replayString) {
   try {
     if (typeof replayString !== "string") {
@@ -5612,24 +5630,17 @@ GameManager.prototype.import = function (replayString) {
     if (parsedEnvelope && (parsedEnvelope.kind === "json-v3" || parsedEnvelope.kind === "v4c")) {
       var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
       if (parsedEnvelope.kind === "json-v3") {
-        this.applyJsonV3ReplayEnvelopeMeta(parsedEnvelope, replayModeConfig);
-        this.applyJsonV3ReplayEnvelopeActions(parsedEnvelope);
-        this.restartReplayImportSession(replayModeConfig, parsedEnvelope.seed, false);
+        this.importJsonV3ReplayEnvelope(parsedEnvelope, replayModeConfig);
         return;
       }
 
-      var initialBoard = this.decodeBoardV4(parsedEnvelope.initialBoardEncoded);
-      var decodedV4Actions = this.decodeReplayV4Actions(parsedEnvelope.actionsEncoded);
-      this.applyV4ReplayDecodedActions(decodedV4Actions);
-
-      this.restartReplayImportSession(replayModeConfig, initialBoard, true);
+      this.importV4ReplayEnvelope(parsedEnvelope, replayModeConfig);
       return;
     }
 
     var decodedLegacy = this.decodeLegacyReplay(trimmed);
     if (decodedLegacy) {
-      this.applyLegacyReplayDecodedActions(decodedLegacy);
-      this.restartLegacyReplayImportSession(decodedLegacy.seed);
+      this.importLegacyReplayPayload(decodedLegacy);
       return;
     }
 
