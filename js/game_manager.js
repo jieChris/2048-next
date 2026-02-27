@@ -471,13 +471,7 @@ GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayStrin
   var body = trimmedReplayString.substring(GameManager.REPLAY_V4_PREFIX.length);
   if (body.length < 17) throw "Invalid v4C payload";
   var modeCode = body.charAt(0);
-  var codeToMode = {
-    S: "standard_4x4_pow2_no_undo",
-    C: "classic_4x4_pow2_undo",
-    K: "capped_4x4_pow2_no_undo",
-    P: "practice_legacy"
-  };
-  var replayModeIdV4 = codeToMode[modeCode];
+  var replayModeIdV4 = this.resolveReplayModeKeyFromV4Code(modeCode);
   if (!replayModeIdV4) throw "Invalid v4C mode";
   return {
     kind: "v4c",
@@ -485,6 +479,16 @@ GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayStrin
     initialBoardEncoded: body.substring(1, 17),
     actionsEncoded: body.substring(17)
   };
+};
+
+GameManager.prototype.resolveReplayModeKeyFromV4Code = function (modeCode) {
+  var codeToMode = {
+    S: "standard_4x4_pow2_no_undo",
+    C: "classic_4x4_pow2_undo",
+    K: "capped_4x4_pow2_no_undo",
+    P: "practice_legacy"
+  };
+  return codeToMode[modeCode] || null;
 };
 
 GameManager.prototype.decodeLegacyReplayV2Log = function (logString) {
