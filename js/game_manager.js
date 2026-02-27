@@ -1845,7 +1845,10 @@ GameManager.prototype.appendCompactMoveCode = function (rawCode) {
     this.replayCompactLog = appendCompactMoveCodeCore.value;
     return;
   }
+  this.appendCompactMoveCodeFallback(rawCode);
+};
 
+GameManager.prototype.appendCompactMoveCodeFallback = function (rawCode) {
   if (!Number.isInteger(rawCode) || rawCode < 0 || rawCode > 127) throw "Invalid move code";
   if (rawCode < 127) {
     this.replayCompactLog += this.encodeReplay128(rawCode);
@@ -1860,6 +1863,10 @@ GameManager.prototype.appendCompactUndo = function () {
     this.replayCompactLog = appendCompactUndoCore.value;
     return;
   }
+  this.appendCompactUndoFallback();
+};
+
+GameManager.prototype.appendCompactUndoFallback = function () {
   this.replayCompactLog += this.encodeReplay128(127) + this.encodeReplay128(1);
 };
 
@@ -1876,7 +1883,10 @@ GameManager.prototype.appendCompactPracticeAction = function (x, y, value) {
     this.replayCompactLog = appendCompactPracticeActionCore.value;
     return;
   }
+  this.appendCompactPracticeActionFallback(x, y, value);
+};
 
+GameManager.prototype.appendCompactPracticeActionFallback = function (x, y, value) {
   if (this.width !== 4 || this.height !== 4) throw "Compact practice replay only supports 4x4";
   if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || x > 3 || y < 0 || y > 3) {
     throw "Invalid practice coords";
