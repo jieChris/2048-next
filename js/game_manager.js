@@ -8433,39 +8433,63 @@ GameManager.prototype.resolveSessionSubmitFinalBoard = function () {
   return this.getFinalBoardMatrix();
 };
 
+GameManager.prototype.applySessionSubmitModeAndBoardPayload = function (payload) {
+  payload.mode = this.resolveSessionSubmitMode();
+  payload.mode_key = this.resolveSessionSubmitModeKey();
+  payload.board_width = this.resolveSessionSubmitBoardWidth();
+  payload.board_height = this.resolveSessionSubmitBoardHeight();
+  payload.ruleset = this.resolveSessionSubmitRuleset();
+  payload.undo_enabled = this.resolveSessionSubmitUndoEnabled();
+};
+
+GameManager.prototype.applySessionSubmitRankingPayload = function (payload) {
+  payload.ranked_bucket = this.resolveSessionSubmitRankedBucket();
+  payload.mode_family = this.resolveSessionSubmitModeFamily();
+  payload.rank_policy = this.resolveSessionSubmitRankPolicy();
+  payload.challenge_id = this.resolveSessionSubmitChallengeId();
+};
+
+GameManager.prototype.applySessionSubmitOutcomePayload = function (payload, endedAt) {
+  payload.special_rules_snapshot = this.resolveSessionSubmitSpecialRulesSnapshot();
+  payload.score = this.resolveSessionSubmitScore();
+  payload.best_tile = this.resolveSessionSubmitBestTile();
+  payload.duration_ms = this.resolveSessionSubmitDurationMs();
+  payload.final_board = this.resolveSessionSubmitFinalBoard();
+  payload.ended_at = endedAt;
+};
+
 GameManager.prototype.buildSessionSubmitBasePayload = function (endedAt) {
-  return {
-    mode: this.resolveSessionSubmitMode(),
-    mode_key: this.resolveSessionSubmitModeKey(),
-    board_width: this.resolveSessionSubmitBoardWidth(),
-    board_height: this.resolveSessionSubmitBoardHeight(),
-    ruleset: this.resolveSessionSubmitRuleset(),
-    undo_enabled: this.resolveSessionSubmitUndoEnabled(),
-    ranked_bucket: this.resolveSessionSubmitRankedBucket(),
-    mode_family: this.resolveSessionSubmitModeFamily(),
-    rank_policy: this.resolveSessionSubmitRankPolicy(),
-    special_rules_snapshot: this.resolveSessionSubmitSpecialRulesSnapshot(),
-    challenge_id: this.resolveSessionSubmitChallengeId(),
-    score: this.resolveSessionSubmitScore(),
-    best_tile: this.resolveSessionSubmitBestTile(),
-    duration_ms: this.resolveSessionSubmitDurationMs(),
-    final_board: this.resolveSessionSubmitFinalBoard(),
-    ended_at: endedAt
-  };
+  var payload = {};
+  this.applySessionSubmitModeAndBoardPayload(payload);
+  this.applySessionSubmitRankingPayload(payload);
+  this.applySessionSubmitOutcomePayload(payload, endedAt);
+  return payload;
+};
+
+GameManager.prototype.applySessionSubmitReplayPayload = function (payload, replayPayload) {
+  payload.replay = replayPayload.replay;
+  payload.replay_string = replayPayload.replay_string;
+};
+
+GameManager.prototype.applySessionSubmitAdapterParityPayload = function (payload, adapterParity) {
+  payload.adapter_parity_report_v2 = adapterParity.report;
+  payload.adapter_parity_ab_diff_v2 = adapterParity.diff;
+  payload.adapter_parity_report_v1 = adapterParity.report;
+  payload.adapter_parity_ab_diff_v1 = adapterParity.diff;
+};
+
+GameManager.prototype.applySessionSubmitMetaPayload = function (payload, windowLike) {
+  payload.client_version = this.resolveSessionSubmitClientVersion(windowLike);
+  payload.end_reason = this.resolveSessionSubmitEndReason();
 };
 
 GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike, adapterParitySnapshot) {
   var adapterParity = this.resolveSessionSubmitAdapterParityParts(adapterParitySnapshot);
   var replayPayload = this.buildSessionSubmitReplayPayload();
   var payload = this.buildSessionSubmitBasePayload(endedAt);
-  payload.replay = replayPayload.replay;
-  payload.replay_string = replayPayload.replay_string;
-  payload.adapter_parity_report_v2 = adapterParity.report;
-  payload.adapter_parity_ab_diff_v2 = adapterParity.diff;
-  payload.adapter_parity_report_v1 = adapterParity.report;
-  payload.adapter_parity_ab_diff_v1 = adapterParity.diff;
-  payload.client_version = this.resolveSessionSubmitClientVersion(windowLike);
-  payload.end_reason = this.resolveSessionSubmitEndReason();
+  this.applySessionSubmitReplayPayload(payload, replayPayload);
+  this.applySessionSubmitAdapterParityPayload(payload, adapterParity);
+  this.applySessionSubmitMetaPayload(payload, windowLike);
   return payload;
 };
 
