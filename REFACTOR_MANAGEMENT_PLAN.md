@@ -342,6 +342,7 @@
   - 修复桥接参数顺序，确保 `__legacyEngine.manager === window.game_manager`
   - `src/bridge/adapter-io.ts` + `js/legacy_adapter_io_runtime.js`，接入快照读写与 move-result 事件
   - `src/bridge/adapter-shadow.ts` + `js/core_adapter_shadow_runtime.js`，接入 shadow parity 统计
+  - parity session report / AB diff 已补充 `schemaVersion: 2`，为后续 canary 面板字段扩展与历史兼容留出版本边界
   - session parity report / A-B diff summary 可读、可持久化、可随提交上报
   - `history.html` 已支持 parity 诊断展示、筛选与导出
   - `LocalHistoryStore` 支持 parity 过滤与 burn-in 统计
