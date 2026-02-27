@@ -5369,42 +5369,55 @@ GameManager.prototype.recordSpawnValue = function (value) {
   this.refreshSpawnRateDisplay();
 };
 
-GameManager.prototype.getSpawnStatPair = function () {
-  var getSpawnStatPairCore = this.callCoreRulesRuntime("getSpawnStatPair", [this.spawnTable || []]);
-  if (getSpawnStatPairCore.available) {
-    var corePair = getSpawnStatPairCore.value || {};
-    var corePrimary = Number(corePair.primary);
-    var coreSecondary = Number(corePair.secondary);
-    if (
-      Number.isInteger(corePrimary) &&
-      corePrimary > 0 &&
-      Number.isInteger(coreSecondary) &&
-      coreSecondary > 0
-    ) {
-      return {
-        primary: corePrimary,
-        secondary: coreSecondary
-      };
-    }
-  }
-
-  var table = Array.isArray(this.spawnTable) ? this.spawnTable : [];
-  var values = [];
-  for (var i = 0; i < table.length; i++) {
-    var item = table[i];
-    if (!item || !Number.isInteger(Number(item.value)) || Number(item.value) <= 0) continue;
-    var v = Number(item.value);
-    if (values.indexOf(v) === -1) {
-      values.push(v);
-    }
-  }
-  values.sort(function (a, b) { return a - b; });
-  var primary = values.length > 0 ? values[0] : 2;
-  var secondary = values.length > 1 ? values[1] : primary;
+GameManager.prototype.buildSpawnStatPair = function (primary, secondary) {
   return {
     primary: primary,
     secondary: secondary
   };
+};
+
+GameManager.prototype.normalizeSpawnStatPairCoreValue = function (corePair) {
+  var normalizedCorePair = corePair && typeof corePair === "object" ? corePair : {};
+  var corePrimary = Number(normalizedCorePair.primary);
+  var coreSecondary = Number(normalizedCorePair.secondary);
+  if (
+    Number.isInteger(corePrimary) &&
+    corePrimary > 0 &&
+    Number.isInteger(coreSecondary) &&
+    coreSecondary > 0
+  ) {
+    return this.buildSpawnStatPair(corePrimary, coreSecondary);
+  }
+  return null;
+};
+
+GameManager.prototype.collectUniqueSpawnValuesFromTable = function (spawnTable) {
+  var table = Array.isArray(spawnTable) ? spawnTable : [];
+  var values = [];
+  for (var i = 0; i < table.length; i++) {
+    var item = table[i];
+    if (!item || !Number.isInteger(Number(item.value)) || Number(item.value) <= 0) continue;
+    var value = Number(item.value);
+    if (values.indexOf(value) === -1) values.push(value);
+  }
+  values.sort(function (a, b) { return a - b; });
+  return values;
+};
+
+GameManager.prototype.resolveSpawnStatPairFromValues = function (values) {
+  var primary = values.length > 0 ? values[0] : 2;
+  var secondary = values.length > 1 ? values[1] : primary;
+  return this.buildSpawnStatPair(primary, secondary);
+};
+
+GameManager.prototype.getSpawnStatPair = function () {
+  var getSpawnStatPairCore = this.callCoreRulesRuntime("getSpawnStatPair", [this.spawnTable || []]);
+  if (getSpawnStatPairCore.available) {
+    var normalizedCorePair = this.normalizeSpawnStatPairCoreValue(getSpawnStatPairCore.value);
+    if (normalizedCorePair) return normalizedCorePair;
+  }
+
+  return this.resolveSpawnStatPairFromValues(this.collectUniqueSpawnValuesFromTable(this.spawnTable));
 };
 
 GameManager.prototype.getSpawnCount = function (value) {
