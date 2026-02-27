@@ -544,21 +544,22 @@ GameManager.prototype.decodeLegacyReplayV2CharCode = function (logString, index)
 
 GameManager.prototype.decodeLegacyReplayV2Entry = function (code) {
   if (code === 128) {
-    return {
-      move: -1,
-      spawn: null
-    };
+    return this.buildLegacyReplayV2Entry(-1, null);
   }
   var dir = (code >> 5) & 3;
   var is4 = (code >> 4) & 1;
   var posIdx = code & 15;
+  return this.buildLegacyReplayV2Entry(dir, {
+    x: posIdx % 4,
+    y: Math.floor(posIdx / 4),
+    value: is4 ? 4 : 2
+  });
+};
+
+GameManager.prototype.buildLegacyReplayV2Entry = function (move, spawn) {
   return {
-    move: dir,
-    spawn: {
-      x: posIdx % 4,
-      y: Math.floor(posIdx / 4),
-      value: is4 ? 4 : 2
-    }
+    move: move,
+    spawn: spawn
   };
 };
 
@@ -618,12 +619,7 @@ GameManager.prototype.decodeLegacyReplayV2SPayload = function (trimmedReplayStri
   var seedS = parsedSeedLog.seed;
   var logString = parsedSeedLog.logString;
   var decodedLog = this.decodeLegacyReplayV2Log(logString);
-  return {
-    seed: seedS,
-    replayMovesV2: logString,
-    replayMoves: decodedLog.replayMoves,
-    replaySpawns: decodedLog.replaySpawns
-  };
+  return this.buildLegacyReplayV2Payload(seedS, logString, decodedLog);
 };
 
 GameManager.prototype.decodeLegacyReplayV2Payload = function (trimmedReplayString) {
@@ -631,9 +627,13 @@ GameManager.prototype.decodeLegacyReplayV2Payload = function (trimmedReplayStrin
   if (trimmedReplayString.indexOf(prefix) !== 0) return null;
   var logString = trimmedReplayString.substring(prefix.length);
   var decodedLog = this.decodeLegacyReplayV2Log(logString);
+  return this.buildLegacyReplayV2Payload(0.123, logString, decodedLog);
+};
+
+GameManager.prototype.buildLegacyReplayV2Payload = function (seed, replayMovesV2, decodedLog) {
   return {
-    seed: 0.123,
-    replayMovesV2: logString,
+    seed: seed,
+    replayMovesV2: replayMovesV2,
     replayMoves: decodedLog.replayMoves,
     replaySpawns: decodedLog.replaySpawns
   };
