@@ -9,6 +9,24 @@ interface WindowLike {
 
 type TimerModuleViewMode = "timer" | "hidden";
 
+interface BuildLiteSavedGameStatePayloadInput {
+  payload?: unknown;
+  savedStateVersion?: unknown;
+  modeKey?: unknown;
+  width?: unknown;
+  height?: unknown;
+  ruleset?: unknown;
+  score?: unknown;
+  initialSeed?: unknown;
+  seed?: unknown;
+  durationMs?: unknown;
+  finalBoardMatrix?: unknown;
+  initialBoardMatrix?: unknown;
+  replayStartBoardMatrix?: unknown;
+  practiceRestartBoardMatrix?: unknown;
+  practiceRestartModeConfig?: unknown;
+}
+
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -19,6 +37,25 @@ function resolveLocalStorage(windowLike: unknown): StorageLike | null {
   const storage = win.localStorage;
   if (!storage) return null;
   return storage;
+}
+
+function cloneBoardMatrix(value: unknown): number[][] | null {
+  if (!Array.isArray(value)) return null;
+  const out: number[][] = [];
+  for (let y = 0; y < value.length; y++) {
+    const row = value[y];
+    if (!Array.isArray(row)) return null;
+    out.push(row.slice() as number[]);
+  }
+  return out;
+}
+
+function safeClonePlain<T>(value: T, fallback: T): T {
+  try {
+    return JSON.parse(JSON.stringify(value)) as T;
+  } catch (_err) {
+    return fallback;
+  }
 }
 
 export function resolveSavedGameStateStorageKey(options: {
@@ -54,6 +91,111 @@ export function shouldUseSavedGameStateFromContext(options: {
   const path = typeof opts.pathname === "string" ? opts.pathname : "";
   if (path.indexOf("replay.html") !== -1) return false;
   return true;
+}
+
+export function buildLiteSavedGameStatePayload(
+  input: BuildLiteSavedGameStatePayloadInput
+): Record<string, unknown> | null {
+  const opts = input || {};
+  const payload = isObjectRecord(opts.payload) ? opts.payload : null;
+  if (!payload) return null;
+
+  const savedStateVersion = Number(opts.savedStateVersion);
+  if (!Number.isInteger(savedStateVersion)) return null;
+
+  const fallbackModeKey = opts.modeKey;
+  const fallbackWidth = Number(opts.width);
+  const fallbackHeight = Number(opts.height);
+  const fallbackRuleset = opts.ruleset;
+  const fallbackScore = opts.score;
+  const fallbackInitialSeed = opts.initialSeed;
+  const fallbackSeed = opts.seed;
+  const fallbackDurationMs = Number(opts.durationMs);
+
+  const fallbackFinalBoard = cloneBoardMatrix(opts.finalBoardMatrix) || [];
+  const board = cloneBoardMatrix(payload.board) || fallbackFinalBoard;
+  const initialBoardMatrix =
+    cloneBoardMatrix(payload.initial_board_matrix) ||
+    cloneBoardMatrix(opts.initialBoardMatrix) ||
+    fallbackFinalBoard;
+  const replayStartBoardMatrix =
+    cloneBoardMatrix(payload.replay_start_board_matrix) ||
+    cloneBoardMatrix(opts.replayStartBoardMatrix) ||
+    null;
+  const practiceRestartBoardMatrix =
+    cloneBoardMatrix(payload.practice_restart_board_matrix) ||
+    cloneBoardMatrix(opts.practiceRestartBoardMatrix) ||
+    null;
+
+  const hasPayloadPracticeModeConfig =
+    payload.practice_restart_mode_config !== undefined &&
+    payload.practice_restart_mode_config !== null;
+  const hasFallbackPracticeModeConfig =
+    opts.practiceRestartModeConfig !== undefined && opts.practiceRestartModeConfig !== null;
+  const practiceRestartModeConfig = hasPayloadPracticeModeConfig
+    ? safeClonePlain(payload.practice_restart_mode_config, null)
+    : hasFallbackPracticeModeConfig
+      ? safeClonePlain(opts.practiceRestartModeConfig, null)
+      : null;
+
+  return {
+    v: savedStateVersion,
+    saved_at: Number(payload.saved_at) || Date.now(),
+    terminated: false,
+    mode_key: payload.mode_key || fallbackModeKey,
+    board_width: Number(payload.board_width) || fallbackWidth,
+    board_height: Number(payload.board_height) || fallbackHeight,
+    ruleset: payload.ruleset || fallbackRuleset,
+    board,
+    score: Number.isInteger(payload.score) ? payload.score : fallbackScore,
+    over: !!payload.over,
+    won: !!payload.won,
+    keep_playing: !!payload.keep_playing,
+    initial_seed: Number.isFinite(Number(payload.initial_seed))
+      ? Number(payload.initial_seed)
+      : fallbackInitialSeed,
+    seed: Number.isFinite(Number(payload.seed)) ? Number(payload.seed) : fallbackSeed,
+    ips_input_count:
+      Number.isInteger(payload.ips_input_count) && Number(payload.ips_input_count) >= 0
+        ? Number(payload.ips_input_count)
+        : 0,
+    timer_status: payload.timer_status === 1 ? 1 : 0,
+    duration_ms: Number.isFinite(Number(payload.duration_ms))
+      ? Math.floor(Number(payload.duration_ms))
+      : Number.isFinite(fallbackDurationMs)
+        ? Math.floor(fallbackDurationMs)
+        : 0,
+    has_game_started: !!payload.has_game_started,
+    initial_board_matrix: initialBoardMatrix,
+    replay_start_board_matrix: replayStartBoardMatrix,
+    practice_restart_board_matrix: practiceRestartBoardMatrix,
+    practice_restart_mode_config: practiceRestartModeConfig,
+    move_history: [],
+    undo_stack: [],
+    replay_compact_log: "",
+    session_replay_v3: null,
+    spawn_value_counts: {},
+    reached_32k: !!payload.reached_32k,
+    capped_milestone_count: Number.isInteger(payload.capped_milestone_count)
+      ? Number(payload.capped_milestone_count)
+      : 0,
+    capped64_unlocked: null,
+    combo_streak: Number.isInteger(payload.combo_streak) ? Number(payload.combo_streak) : 0,
+    successful_move_count: Number.isInteger(payload.successful_move_count)
+      ? Number(payload.successful_move_count)
+      : 0,
+    undo_used: Number.isInteger(payload.undo_used) ? Number(payload.undo_used) : 0,
+    lock_consumed_at_move_count: Number.isInteger(payload.lock_consumed_at_move_count)
+      ? Number(payload.lock_consumed_at_move_count)
+      : -1,
+    locked_direction_turn: Number.isInteger(payload.locked_direction_turn)
+      ? Number(payload.locked_direction_turn)
+      : null,
+    locked_direction: Number.isInteger(payload.locked_direction)
+      ? Number(payload.locked_direction)
+      : null,
+    challenge_id: payload.challenge_id || null
+  };
 }
 
 export function readStorageFlagFromContext(options: {

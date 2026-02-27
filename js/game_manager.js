@@ -1720,6 +1720,31 @@ GameManager.prototype.writeSavedGameStatePayload = function (key, payloadObj) {
 };
 
 GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
+  var buildLiteSavedGameStatePayloadCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "buildLiteSavedGameStatePayload"
+  );
+  if (buildLiteSavedGameStatePayloadCore) {
+    var litePayloadByCore = buildLiteSavedGameStatePayloadCore({
+      payload: payload,
+      savedStateVersion: GameManager.SAVED_GAME_STATE_VERSION,
+      modeKey: this.modeKey,
+      width: this.width,
+      height: this.height,
+      ruleset: this.ruleset,
+      score: this.score,
+      initialSeed: this.initialSeed,
+      seed: this.seed,
+      durationMs: this.getDurationMs(),
+      finalBoardMatrix: this.getFinalBoardMatrix(),
+      initialBoardMatrix: this.initialBoardMatrix,
+      replayStartBoardMatrix: this.replayStartBoardMatrix,
+      practiceRestartBoardMatrix: this.practiceRestartBoardMatrix,
+      practiceRestartModeConfig: this.practiceRestartModeConfig
+    });
+    if (litePayloadByCore && typeof litePayloadByCore === "object") return litePayloadByCore;
+  }
+
   if (!payload || typeof payload !== "object") return null;
   return {
     v: GameManager.SAVED_GAME_STATE_VERSION,

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  buildLiteSavedGameStatePayload,
   normalizeTimerModuleViewMode,
   readUndoEnabledForModeFromMap,
   readTimerModuleViewForModeFromMap,
@@ -157,6 +158,154 @@ describe("core game settings storage", () => {
         pathname: "/play.html"
       })
     ).toBe(true);
+  });
+
+  it("builds lite saved-game payload with payload-first values", () => {
+    const payload = {
+      saved_at: 123,
+      mode_key: "practice_legacy",
+      board_width: 4,
+      board_height: 4,
+      ruleset: "pow2",
+      board: [
+        [2, 0, 0, 0],
+        [0, 4, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      score: 128,
+      over: false,
+      won: true,
+      keep_playing: false,
+      initial_seed: 11,
+      seed: 17,
+      ips_input_count: 4,
+      timer_status: 1,
+      duration_ms: 6543,
+      has_game_started: true,
+      initial_board_matrix: [
+        [2, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      replay_start_board_matrix: [
+        [0, 0, 0, 0],
+        [0, 2, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      practice_restart_board_matrix: [
+        [0, 0, 0, 0],
+        [0, 0, 4, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      practice_restart_mode_config: { key: "practice_legacy", ruleset: "pow2" },
+      reached_32k: true,
+      capped_milestone_count: 3,
+      combo_streak: 2,
+      successful_move_count: 10,
+      undo_used: 1,
+      lock_consumed_at_move_count: 7,
+      locked_direction_turn: 5,
+      locked_direction: 2,
+      challenge_id: "challenge-demo"
+    };
+    const result = buildLiteSavedGameStatePayload({
+      payload,
+      savedStateVersion: 2,
+      modeKey: "classic_4x4_pow2_undo",
+      width: 4,
+      height: 4,
+      ruleset: "pow2",
+      score: 0,
+      initialSeed: 1,
+      seed: 2,
+      durationMs: 0,
+      finalBoardMatrix: [
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ]
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.mode_key).toBe("practice_legacy");
+    expect(result?.board).toEqual(payload.board);
+    expect(result?.score).toBe(128);
+    expect(result?.move_history).toEqual([]);
+    expect(result?.undo_stack).toEqual([]);
+    expect(result?.replay_compact_log).toBe("");
+    expect(result?.spawn_value_counts).toEqual({});
+    expect(result?.capped64_unlocked).toBeNull();
+    expect(result?.practice_restart_mode_config).toEqual(payload.practice_restart_mode_config);
+    expect(result?.practice_restart_mode_config).not.toBe(payload.practice_restart_mode_config);
+  });
+
+  it("falls back to context values when lite payload fields are missing", () => {
+    const result = buildLiteSavedGameStatePayload({
+      payload: {
+        saved_at: 88
+      },
+      savedStateVersion: 2,
+      modeKey: "standard_4x4_pow2_no_undo",
+      width: 4,
+      height: 4,
+      ruleset: "pow2",
+      score: 256,
+      initialSeed: 101,
+      seed: 202,
+      durationMs: 3456,
+      finalBoardMatrix: [
+        [2, 2, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      initialBoardMatrix: [
+        [2, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ]
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.mode_key).toBe("standard_4x4_pow2_no_undo");
+    expect(result?.board_width).toBe(4);
+    expect(result?.score).toBe(256);
+    expect(result?.seed).toBe(202);
+    expect(result?.duration_ms).toBe(3456);
+    expect(result?.board).toEqual([
+      [2, 2, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0]
+    ]);
+    expect(result?.initial_board_matrix).toEqual([
+      [2, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0]
+    ]);
+  });
+
+  it("returns null when payload or saved-state version is invalid", () => {
+    expect(
+      buildLiteSavedGameStatePayload({
+        payload: null,
+        savedStateVersion: 2
+      })
+    ).toBeNull();
+
+    expect(
+      buildLiteSavedGameStatePayload({
+        payload: {},
+        savedStateVersion: "invalid"
+      })
+    ).toBeNull();
   });
 
   it("normalizes timer module view mode", () => {

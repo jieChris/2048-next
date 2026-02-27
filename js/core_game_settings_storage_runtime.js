@@ -12,6 +12,25 @@
     return windowLike.localStorage || null;
   }
 
+  function cloneBoardMatrix(value) {
+    if (!Array.isArray(value)) return null;
+    var out = [];
+    for (var y = 0; y < value.length; y++) {
+      var row = value[y];
+      if (!Array.isArray(row)) return null;
+      out.push(row.slice());
+    }
+    return out;
+  }
+
+  function safeClonePlain(value, fallback) {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (_err) {
+      return fallback;
+    }
+  }
+
   function resolveSavedGameStateStorageKey(options) {
     var opts = options || {};
     var modeKey =
@@ -35,6 +54,109 @@
     var path = typeof opts.pathname === "string" ? opts.pathname : "";
     if (path.indexOf("replay.html") !== -1) return false;
     return true;
+  }
+
+  function buildLiteSavedGameStatePayload(input) {
+    var opts = input || {};
+    var payload = isObjectRecord(opts.payload) ? opts.payload : null;
+    if (!payload) return null;
+
+    var savedStateVersion = Number(opts.savedStateVersion);
+    if (!Number.isInteger(savedStateVersion)) return null;
+
+    var fallbackModeKey = opts.modeKey;
+    var fallbackWidth = Number(opts.width);
+    var fallbackHeight = Number(opts.height);
+    var fallbackRuleset = opts.ruleset;
+    var fallbackScore = opts.score;
+    var fallbackInitialSeed = opts.initialSeed;
+    var fallbackSeed = opts.seed;
+    var fallbackDurationMs = Number(opts.durationMs);
+
+    var fallbackFinalBoard = cloneBoardMatrix(opts.finalBoardMatrix) || [];
+    var board = cloneBoardMatrix(payload.board) || fallbackFinalBoard;
+    var initialBoardMatrix =
+      cloneBoardMatrix(payload.initial_board_matrix) ||
+      cloneBoardMatrix(opts.initialBoardMatrix) ||
+      fallbackFinalBoard;
+    var replayStartBoardMatrix =
+      cloneBoardMatrix(payload.replay_start_board_matrix) ||
+      cloneBoardMatrix(opts.replayStartBoardMatrix) ||
+      null;
+    var practiceRestartBoardMatrix =
+      cloneBoardMatrix(payload.practice_restart_board_matrix) ||
+      cloneBoardMatrix(opts.practiceRestartBoardMatrix) ||
+      null;
+
+    var hasPayloadPracticeModeConfig =
+      payload.practice_restart_mode_config !== undefined &&
+      payload.practice_restart_mode_config !== null;
+    var hasFallbackPracticeModeConfig =
+      opts.practiceRestartModeConfig !== undefined && opts.practiceRestartModeConfig !== null;
+    var practiceRestartModeConfig = hasPayloadPracticeModeConfig
+      ? safeClonePlain(payload.practice_restart_mode_config, null)
+      : hasFallbackPracticeModeConfig
+        ? safeClonePlain(opts.practiceRestartModeConfig, null)
+        : null;
+
+    return {
+      v: savedStateVersion,
+      saved_at: Number(payload.saved_at) || Date.now(),
+      terminated: false,
+      mode_key: payload.mode_key || fallbackModeKey,
+      board_width: Number(payload.board_width) || fallbackWidth,
+      board_height: Number(payload.board_height) || fallbackHeight,
+      ruleset: payload.ruleset || fallbackRuleset,
+      board: board,
+      score: Number.isInteger(payload.score) ? payload.score : fallbackScore,
+      over: !!payload.over,
+      won: !!payload.won,
+      keep_playing: !!payload.keep_playing,
+      initial_seed: Number.isFinite(Number(payload.initial_seed))
+        ? Number(payload.initial_seed)
+        : fallbackInitialSeed,
+      seed: Number.isFinite(Number(payload.seed)) ? Number(payload.seed) : fallbackSeed,
+      ips_input_count:
+        Number.isInteger(payload.ips_input_count) && Number(payload.ips_input_count) >= 0
+          ? Number(payload.ips_input_count)
+          : 0,
+      timer_status: payload.timer_status === 1 ? 1 : 0,
+      duration_ms: Number.isFinite(Number(payload.duration_ms))
+        ? Math.floor(Number(payload.duration_ms))
+        : Number.isFinite(fallbackDurationMs)
+          ? Math.floor(fallbackDurationMs)
+          : 0,
+      has_game_started: !!payload.has_game_started,
+      initial_board_matrix: initialBoardMatrix,
+      replay_start_board_matrix: replayStartBoardMatrix,
+      practice_restart_board_matrix: practiceRestartBoardMatrix,
+      practice_restart_mode_config: practiceRestartModeConfig,
+      move_history: [],
+      undo_stack: [],
+      replay_compact_log: "",
+      session_replay_v3: null,
+      spawn_value_counts: {},
+      reached_32k: !!payload.reached_32k,
+      capped_milestone_count: Number.isInteger(payload.capped_milestone_count)
+        ? Number(payload.capped_milestone_count)
+        : 0,
+      capped64_unlocked: null,
+      combo_streak: Number.isInteger(payload.combo_streak) ? Number(payload.combo_streak) : 0,
+      successful_move_count: Number.isInteger(payload.successful_move_count)
+        ? Number(payload.successful_move_count)
+        : 0,
+      undo_used: Number.isInteger(payload.undo_used) ? Number(payload.undo_used) : 0,
+      lock_consumed_at_move_count: Number.isInteger(payload.lock_consumed_at_move_count)
+        ? Number(payload.lock_consumed_at_move_count)
+        : -1,
+      locked_direction_turn: Number.isInteger(payload.locked_direction_turn)
+        ? Number(payload.locked_direction_turn)
+        : null,
+      locked_direction: Number.isInteger(payload.locked_direction)
+        ? Number(payload.locked_direction)
+        : null,
+      challenge_id: payload.challenge_id || null
+    };
   }
 
   function readStorageFlagFromContext(options) {
@@ -161,6 +283,8 @@
   global.CoreGameSettingsStorageRuntime.resolveSavedGameStateStorageKey = resolveSavedGameStateStorageKey;
   global.CoreGameSettingsStorageRuntime.shouldUseSavedGameStateFromContext =
     shouldUseSavedGameStateFromContext;
+  global.CoreGameSettingsStorageRuntime.buildLiteSavedGameStatePayload =
+    buildLiteSavedGameStatePayload;
   global.CoreGameSettingsStorageRuntime.readStorageJsonMapFromContext = readStorageJsonMapFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageJsonMapFromContext = writeStorageJsonMapFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageJsonPayloadFromContext =
