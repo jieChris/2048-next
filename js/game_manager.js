@@ -931,8 +931,12 @@ GameManager.prototype.runReplayTick = function () {
   return true;
 };
 
+GameManager.prototype.resolveReplayTickBoundaryPlan = function () {
+  return this.resolveReplayTickBoundaryPlanForCurrentState();
+};
+
 GameManager.prototype.tryStopReplayAtTickBoundary = function () {
-  var tickBoundaryPlan = this.resolveReplayTickBoundaryPlanForCurrentState();
+  var tickBoundaryPlan = this.resolveReplayTickBoundaryPlan();
   return this.applyReplayTickBoundaryPlan(tickBoundaryPlan);
 };
 
