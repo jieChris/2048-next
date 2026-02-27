@@ -4895,25 +4895,28 @@ GameManager.prototype.clearTransientTileVisualState = function () {
   });
 };
 
-GameManager.prototype.isGameTerminated = function () {
+GameManager.prototype.resolveIsGameTerminatedValue = function () {
   var isGameTerminatedStateCore = this.callCoreModeRuntime("isGameTerminatedState", [{
     over: this.over,
     won: this.won,
     keepPlaying: this.keepPlaying
   }]);
-  var terminated = false;
   if (isGameTerminatedStateCore.available) {
-    terminated = !!isGameTerminatedStateCore.value;
-  } else {
-    terminated = !!this.over || (!!this.won && !this.keepPlaying);
+    return !!isGameTerminatedStateCore.value;
   }
+  return !!this.over || (!!this.won && !this.keepPlaying);
+};
 
-  if (terminated) {
-    this.stopTimer();
-    this.timerEnd = Date.now();
-    return true;
-  }
-  return false;
+GameManager.prototype.applyGameTerminationState = function () {
+  this.stopTimer();
+  this.timerEnd = Date.now();
+};
+
+GameManager.prototype.isGameTerminated = function () {
+  var terminated = this.resolveIsGameTerminatedValue();
+  if (!terminated) return false;
+  this.applyGameTerminationState();
+  return true;
 };
 
 GameManager.prototype.resolveSetupGlobalModeConfig = function () {
