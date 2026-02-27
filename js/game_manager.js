@@ -3181,43 +3181,66 @@ GameManager.prototype.buildUndoPolicyStateFallback = function (params) {
   };
 };
 
+GameManager.prototype.resolveUndoPolicyOptionSnapshot = function (options) {
+  var source = options;
+  return {
+    hasGameStarted: !!this.readOptionValue(source, "hasGameStarted", !!this.hasGameStarted),
+    replayMode: !!this.readOptionValue(source, "replayMode", !!this.replayMode),
+    undoLimit: this.readOptionValue(source, "undoLimit", this.undoLimit),
+    undoUsed: this.readOptionValue(source, "undoUsed", this.undoUsed),
+    undoEnabled: this.readOptionValue(source, "undoEnabled", this.undoEnabled)
+  };
+};
+
+GameManager.prototype.buildUndoPolicyStateCoreInput = function (context, optionsSnapshot) {
+  return {
+    mode: context.targetMode,
+    modeConfig: context.modeConfig,
+    hasGameStarted: optionsSnapshot.hasGameStarted,
+    replayMode: optionsSnapshot.replayMode,
+    undoLimit: optionsSnapshot.undoLimit,
+    undoUsed: optionsSnapshot.undoUsed,
+    undoEnabled: optionsSnapshot.undoEnabled
+  };
+};
+
+GameManager.prototype.normalizeUndoPolicyStateCoreValue = function (computed) {
+  return computed && typeof computed === "object" ? computed : null;
+};
+
+GameManager.prototype.buildUndoPolicyStateFallbackInput = function (
+  forcedUndoSetting,
+  optionsSnapshot
+) {
+  return {
+    forcedUndoSetting: forcedUndoSetting,
+    hasGameStarted: optionsSnapshot.hasGameStarted,
+    replayMode: optionsSnapshot.replayMode,
+    undoLimit: optionsSnapshot.undoLimit,
+    undoUsed: optionsSnapshot.undoUsed,
+    undoEnabled: optionsSnapshot.undoEnabled
+  };
+};
+
 GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
   var context = this.resolveModePolicyContext(mode);
-  var source = options;
-  var hasGameStarted = !!this.readOptionValue(source, "hasGameStarted", !!this.hasGameStarted);
-  var replayMode = !!this.readOptionValue(source, "replayMode", !!this.replayMode);
-  var undoLimit = this.readOptionValue(source, "undoLimit", this.undoLimit);
-  var undoUsed = this.readOptionValue(source, "undoUsed", this.undoUsed);
-  var undoEnabled = this.readOptionValue(source, "undoEnabled", this.undoEnabled);
+  var optionsSnapshot = this.resolveUndoPolicyOptionSnapshot(options);
 
-  var resolveUndoPolicyStateCore = this.callCoreModeRuntime("resolveUndoPolicyState", [{
-      mode: context.targetMode,
-      modeConfig: context.modeConfig,
-      hasGameStarted: hasGameStarted,
-      replayMode: replayMode,
-      undoLimit: undoLimit,
-      undoUsed: undoUsed,
-      undoEnabled: undoEnabled
-    }]);
+  var resolveUndoPolicyStateCore = this.callCoreModeRuntime("resolveUndoPolicyState", [
+    this.buildUndoPolicyStateCoreInput(context, optionsSnapshot)
+  ]);
   if (resolveUndoPolicyStateCore.available) {
-    var computed = resolveUndoPolicyStateCore.value;
-    if (computed && typeof computed === "object") {
-      return computed;
-    }
+    var normalizedCore = this.normalizeUndoPolicyStateCoreValue(resolveUndoPolicyStateCore.value);
+    if (normalizedCore) return normalizedCore;
   }
 
   var forcedUndoSetting = this.resolveForcedUndoSettingForModeFallback(
     context.targetMode,
     context.modeConfig
   );
-  return this.buildUndoPolicyStateFallback({
-    forcedUndoSetting: forcedUndoSetting,
-    hasGameStarted: hasGameStarted,
-    replayMode: replayMode,
-    undoLimit: undoLimit,
-    undoUsed: undoUsed,
-    undoEnabled: undoEnabled
-  });
+  return this.buildUndoPolicyStateFallback(
+    this.buildUndoPolicyStateFallbackInput(forcedUndoSetting, optionsSnapshot)
+  );
 };
 
 GameManager.prototype.resolveActiveUndoPolicyState = function (options) {
