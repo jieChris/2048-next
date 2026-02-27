@@ -4702,6 +4702,44 @@ GameManager.prototype.assignSetupChallengeId = function (options) {
   if (this.challengeId) this.sessionReplayV3.challenge_id = this.challengeId;
 };
 
+GameManager.prototype.initializeSetupRuntimeState = function () {
+  this.lastSpawn = null; // To capture spawn during play
+  this.forcedSpawn = null; // To force spawn during replay v2
+
+  this.reached32k = false; // Flag for extended timer logic
+  this.isTestMode = false; // Flag for Test Board
+  this.cappedMilestoneCount = 0; // Track how many times maxTile has been merged in capped mode
+
+  this.timerStatus = 0; // 0 = no, 1 = running (reference logic)
+  this.startTime = null;
+  this.timerID = null;
+  this.time = 0;
+  this.accumulatedTime = 0; // For pausing logic
+  this.pendingMoveInput = null;
+  this.moveInputFlushScheduled = false;
+  this.lastMoveInputAt = 0;
+  this.sessionStartedAt = Date.now();
+  this.hasGameStarted = false;
+  this.configureTimerMilestones();
+  this.comboStreak = 0;
+  this.successfulMoveCount = 0;
+  this.ipsInputCount = 0;
+  this.undoUsed = 0;
+  this.lockConsumedAtMoveCount = -1;
+  this.lockedDirectionTurn = null;
+  this.lockedDirection = null;
+};
+
+GameManager.prototype.initializeSetupSpawnAndPreferences = function () {
+  this.spawnValueCounts = {};
+  this.spawnTwos = 0;
+  this.spawnFours = 0;
+  this.undoEnabled = this.loadUndoSettingForMode(this.mode);
+  var preferredTimerModuleView = this.loadTimerModuleViewForMode(this.mode);
+  if (this.ipsInterval) clearInterval(this.ipsInterval);
+  return preferredTimerModuleView;
+};
+
 // Set up the game
 GameManager.prototype.setup = function (inputSeed, options) {
   options = options || {};
@@ -4733,39 +4771,8 @@ GameManager.prototype.setup = function (inputSeed, options) {
     actions: []
   };
   this.assignSetupChallengeId(options);
-  this.lastSpawn = null; // To capture spawn during play
-  this.forcedSpawn = null; // To force spawn during replay v2
-  
-  this.reached32k = false; // Flag for extended timer logic
-  this.isTestMode = false; // Flag for Test Board
-  this.cappedMilestoneCount = 0; // Track how many times maxTile has been merged in capped mode
-
-  this.timerStatus = 0; // 0 = no, 1 = running (reference logic)
-  this.startTime = null;
-  this.timerID = null;
-  this.time = 0;
-  this.accumulatedTime = 0; // For pausing logic
-  this.pendingMoveInput = null;
-  this.moveInputFlushScheduled = false;
-  this.lastMoveInputAt = 0;
-  this.sessionStartedAt = Date.now();
-  this.hasGameStarted = false;
-  this.configureTimerMilestones();
-  this.comboStreak = 0;
-  this.successfulMoveCount = 0;
-  this.ipsInputCount = 0;
-  this.undoUsed = 0;
-  this.lockConsumedAtMoveCount = -1;
-  this.lockedDirectionTurn = null;
-  this.lockedDirection = null;
-
-  // Stats
-  this.spawnValueCounts = {};
-  this.spawnTwos = 0;
-  this.spawnFours = 0;
-  this.undoEnabled = this.loadUndoSettingForMode(this.mode);
-  var preferredTimerModuleView = this.loadTimerModuleViewForMode(this.mode);
-  if (this.ipsInterval) clearInterval(this.ipsInterval);
+  this.initializeSetupRuntimeState();
+  var preferredTimerModuleView = this.initializeSetupSpawnAndPreferences();
 
   var legacyTotalEl = document.getElementById("stats-total");
   if (legacyTotalEl) legacyTotalEl.style.visibility = "hidden";
