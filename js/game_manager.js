@@ -5545,6 +5545,17 @@ GameManager.prototype.serialize = function () {
   return GameManager.REPLAY_V4_PREFIX + modeCode + encodedBoard + (this.replayCompactLog || "");
 };
 
+GameManager.prototype.startReplayImportPlayback = function () {
+  this.replayIndex = 0;
+  this.replayDelay = 200;
+  this.resume();
+};
+
+GameManager.prototype.finalizeReplayImportPlayback = function () {
+  this.applyUndoSettingForMode(this.modeKey, true, true);
+  this.startReplayImportPlayback();
+};
+
 GameManager.prototype.import = function (replayString) {
   try {
     var self = this;
@@ -5553,19 +5564,10 @@ GameManager.prototype.import = function (replayString) {
     }
 
     var trimmed = replayString.trim();
-    var startReplay = function () {
-      self.replayIndex = 0;
-      self.replayDelay = 200;
-      self.resume();
-    };
-    var finalizeReplayImport = function () {
-      self.applyUndoSettingForMode(self.modeKey, true, true);
-      startReplay();
-    };
     var restartReplayImportSession = function (modeConfig, payload, useBoardRestart) {
       self.disableSessionSync = true;
       self.restartReplaySession(payload, modeConfig, useBoardRestart);
-      finalizeReplayImport();
+      self.finalizeReplayImportPlayback();
     };
     var applyJsonV3ReplayEnvelopeMeta = function (envelope, modeConfig) {
       if (envelope.specialRulesSnapshot && typeof envelope.specialRulesSnapshot === "object") {
@@ -5610,7 +5612,7 @@ GameManager.prototype.import = function (replayString) {
       this.replayMoves = Array.isArray(decodedLegacy.replayMoves) ? decodedLegacy.replayMoves : [];
       this.replaySpawns = decodedLegacy.replaySpawns;
       this.restartWithSeed(decodedLegacy.seed);
-      startReplay();
+      this.startReplayImportPlayback();
       return;
     }
 
