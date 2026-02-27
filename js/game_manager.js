@@ -1964,9 +1964,35 @@ GameManager.prototype.safeClonePlain = function (value, fallback) {
   }
 };
 
+GameManager.prototype.serializeSavedGameStatePayload = function (payloadObj) {
+  try {
+    return JSON.stringify(payloadObj);
+  } catch (_errJson) {
+    return null;
+  }
+};
+
+GameManager.prototype.writeSerializedSavedPayloadToStorages = function (stores, key, serializedPayload) {
+  if (!stores || stores.length === 0) return false;
+  if (typeof serializedPayload !== "string") return false;
+  for (var i = 0; i < stores.length; i++) {
+    try {
+      stores[i].setItem(key, serializedPayload);
+      return true;
+    } catch (_errStore) {}
+  }
+  return false;
+};
+
+GameManager.prototype.writeSavedGameStatePayloadFallback = function (stores, key, payloadObj) {
+  var serialized = this.serializeSavedGameStatePayload(payloadObj);
+  return this.writeSerializedSavedPayloadToStorages(stores, key, serialized);
+};
+
 GameManager.prototype.writeSavedGameStatePayload = function (key, payloadObj) {
+  var stores = this.getSavedGameStateStorages();
   var writeSavedPayloadToStoragesCore = this.callCoreStorageRuntime("writeSavedPayloadToStorages", [{
-      storages: this.getSavedGameStateStorages(),
+      storages: stores,
       key: key,
       payload: payloadObj
     }]);
@@ -1974,22 +2000,7 @@ GameManager.prototype.writeSavedGameStatePayload = function (key, payloadObj) {
     var persistedByCore = writeSavedPayloadToStoragesCore.value;
     if (typeof persistedByCore === "boolean") return persistedByCore;
   }
-
-  var stores = this.getSavedGameStateStorages();
-  if (!stores || stores.length === 0) return false;
-  var serialized = null;
-  try {
-    serialized = JSON.stringify(payloadObj);
-  } catch (_errJson) {
-    return false;
-  }
-  for (var i = 0; i < stores.length; i++) {
-    try {
-      stores[i].setItem(key, serialized);
-      return true;
-    } catch (_errStore) {}
-  }
-  return false;
+  return this.writeSavedGameStatePayloadFallback(stores, key, payloadObj);
 };
 
 GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
