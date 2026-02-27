@@ -5701,14 +5701,17 @@ GameManager.prototype.tryImportLegacyReplayString = function (trimmedReplayStrin
   return true;
 };
 
+GameManager.prototype.importReplayOrThrow = function (trimmedReplayString) {
+  var parsedEnvelope = this.parseReplayImportEnvelope(trimmedReplayString);
+  if (this.tryImportParsedReplayEnvelope(parsedEnvelope)) return;
+  if (this.tryImportLegacyReplayString(trimmedReplayString)) return;
+  throw "Unknown replay version";
+};
+
 GameManager.prototype.import = function (replayString) {
   try {
     var trimmed = this.normalizeReplayImportInput(replayString);
-    var parsedEnvelope = this.parseReplayImportEnvelope(trimmed);
-    if (this.tryImportParsedReplayEnvelope(parsedEnvelope)) return;
-    if (this.tryImportLegacyReplayString(trimmed)) return;
-
-    throw "Unknown replay version";
+    this.importReplayOrThrow(trimmed);
   } catch (e) {
     alert("导入回放出错: " + e);
   }
