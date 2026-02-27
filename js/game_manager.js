@@ -4672,6 +4672,25 @@ GameManager.prototype.applySetupModeConfig = function (resolvedModeConfig) {
   }
 };
 
+GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
+  var hasInputSeed = typeof inputSeed !== "undefined";
+  if (hasInputSeed) {
+    this.replayIndex = 0;
+  }
+  this.initialSeed = hasInputSeed ? inputSeed : Math.random();
+  this.seed = this.initialSeed;
+  this.moveHistory = [];
+  this.replayMode = hasInputSeed; // If seed is provided externally, we might be in replay mode (or just restoring)
+  this.replayCompactLog = "";
+  this.initialBoardMatrix = null;
+  this.replayStartBoardMatrix = null;
+  if (!hasInputSeed) {
+    this.disableSessionSync = false;
+  }
+  this.sessionSubmitDone = false;
+  return hasInputSeed;
+};
+
 // Set up the game
 GameManager.prototype.setup = function (inputSeed, options) {
   options = options || {};
@@ -4686,21 +4705,7 @@ GameManager.prototype.setup = function (inputSeed, options) {
   this.keepPlaying = false;
   
   // Replay logic
-  var hasInputSeed = typeof inputSeed !== "undefined";
-  if (hasInputSeed) {
-    this.replayIndex = 0;
-  }
-  this.initialSeed = hasInputSeed ? inputSeed : Math.random();
-  this.seed        = this.initialSeed;
-  this.moveHistory = [];
-  this.replayMode  = hasInputSeed; // If seed is provided externally, we might be in replay mode (or just restoring)
-  this.replayCompactLog = "";
-  this.initialBoardMatrix = null;
-  this.replayStartBoardMatrix = null;
-  if (!hasInputSeed) {
-    this.disableSessionSync = false;
-  }
-  this.sessionSubmitDone = false;
+  var hasInputSeed = this.initializeSetupReplayState(inputSeed);
   this.sessionReplayV3 = {
     v: 3,
     mode: this.getServerMode(this.modeKey),
