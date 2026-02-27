@@ -637,7 +637,10 @@ GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
       replayMovesLength: this.replayMoves ? this.replayMoves.length : 0
     }]);
   if (normalizeReplaySeekTargetCore.available) return normalizeReplaySeekTargetCore.value;
+  return this.normalizeReplaySeekTargetFallback(targetIndex);
+};
 
+GameManager.prototype.normalizeReplaySeekTargetFallback = function (targetIndex) {
   if (targetIndex < 0) targetIndex = 0;
   if (this.replayMoves && targetIndex > this.replayMoves.length) targetIndex = this.replayMoves.length;
   return targetIndex;
@@ -650,7 +653,10 @@ GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
       spawnAtIndex: spawnAtIndex
     }]);
   if (planReplayStepCore.available) return planReplayStepCore.value || {};
+  return this.planReplayStepFallback(action, spawnAtIndex);
+};
 
+GameManager.prototype.planReplayStepFallback = function (action, spawnAtIndex) {
   var shouldInjectForcedSpawn = !!this.replaySpawns && !Array.isArray(action);
   return {
     shouldInjectForcedSpawn: shouldInjectForcedSpawn,
@@ -665,7 +671,10 @@ GameManager.prototype.planReplayStepExecution = function () {
       replayIndex: this.replayIndex
     }]);
   if (planReplayStepExecutionCore.available) return planReplayStepExecutionCore.value || {};
+  return this.planReplayStepExecutionFallback();
+};
 
+GameManager.prototype.planReplayStepExecutionFallback = function () {
   var action = this.replayMoves[this.replayIndex];
   var stepPlan = this.planReplayStep(
     action,
@@ -682,6 +691,10 @@ GameManager.prototype.planReplayStepExecution = function () {
 GameManager.prototype.computeReplayPauseState = function () {
   var computeReplayPauseStateCore = this.callCoreReplayTimerRuntime("computeReplayPauseState");
   if (computeReplayPauseStateCore.available) return computeReplayPauseStateCore.value || {};
+  return this.computeReplayPauseStateFallback();
+};
+
+GameManager.prototype.computeReplayPauseStateFallback = function () {
   return {
     isPaused: true,
     shouldClearInterval: true
@@ -693,6 +706,10 @@ GameManager.prototype.computeReplayResumeState = function () {
       replayDelay: this.replayDelay
     }]);
   if (computeReplayResumeStateCore.available) return computeReplayResumeStateCore.value || {};
+  return this.computeReplayResumeStateFallback();
+};
+
+GameManager.prototype.computeReplayResumeStateFallback = function () {
   return {
     isPaused: false,
     shouldClearInterval: true,
@@ -707,6 +724,10 @@ GameManager.prototype.computeReplaySpeedState = function (multiplier) {
       baseDelay: 200
     }]);
   if (computeReplaySpeedStateCore.available) return computeReplaySpeedStateCore.value || {};
+  return this.computeReplaySpeedStateFallback(multiplier);
+};
+
+GameManager.prototype.computeReplaySpeedStateFallback = function (multiplier) {
   return {
     replayDelay: 200 / multiplier,
     shouldResume: !this.isPaused
@@ -719,12 +740,20 @@ GameManager.prototype.shouldStopReplayAtTick = function (replayIndex, replayMove
       replayMovesLength: replayMovesLength
     }]);
   if (shouldStopReplayAtTickCore.available) return !!shouldStopReplayAtTickCore.value;
+  return this.shouldStopReplayAtTickFallback(replayIndex, replayMovesLength);
+};
+
+GameManager.prototype.shouldStopReplayAtTickFallback = function (replayIndex, replayMovesLength) {
   return replayIndex >= replayMovesLength;
 };
 
 GameManager.prototype.computeReplayEndState = function () {
   var computeReplayEndStateCore = this.callCoreReplayFlowRuntime("computeReplayEndState");
   if (computeReplayEndStateCore.available) return computeReplayEndStateCore.value || {};
+  return this.computeReplayEndStateFallback();
+};
+
+GameManager.prototype.computeReplayEndStateFallback = function () {
   return {
     shouldPause: true,
     replayMode: false
@@ -737,7 +766,10 @@ GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, repla
       replayEndState: replayEndState
     }]);
   if (planReplayTickBoundaryCore.available) return planReplayTickBoundaryCore.value || {};
+  return this.planReplayTickBoundaryFallback(shouldStopAtTick, replayEndState);
+};
 
+GameManager.prototype.planReplayTickBoundaryFallback = function (shouldStopAtTick, replayEndState) {
   if (!shouldStopAtTick) {
     return {
       shouldStop: false,
