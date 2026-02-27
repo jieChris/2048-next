@@ -575,6 +575,12 @@ GameManager.prototype.decodeLegacyReplayV2Log = function (logString) {
   };
 };
 
+GameManager.prototype.decodeLegacyReplayV1MoveChar = function (char, reverseMapping) {
+  var val = reverseMapping[char];
+  if (val === undefined) throw "Invalid move char: " + char;
+  return val;
+};
+
 GameManager.prototype.decodeLegacyReplayV1Payload = function (trimmedReplayString) {
   if (trimmedReplayString.indexOf("REPLAY_v1_") !== 0) return null;
   var v1Parts = trimmedReplayString.split("_");
@@ -582,10 +588,8 @@ GameManager.prototype.decodeLegacyReplayV1Payload = function (trimmedReplayStrin
   var movesString = v1Parts[3];
   var reverseMapping = { U: 0, R: 1, D: 2, L: 3, Z: -1 };
   var replayMovesV1 = movesString.split("").map(function (char) {
-    var val = reverseMapping[char];
-    if (val === undefined) throw "Invalid move char: " + char;
-    return val;
-  });
+    return this.decodeLegacyReplayV1MoveChar(char, reverseMapping);
+  }, this);
   return {
     seed: seed,
     replayMoves: replayMovesV1,
