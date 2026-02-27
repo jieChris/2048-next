@@ -5515,11 +5515,13 @@ GameManager.prototype.savePostMoveState = function (direction, undo) {
   this.applyPostMoveRecord(direction, postMoveRecord);
 };
 
+GameManager.prototype.shouldStartTimerAfterMove = function (postMoveLifecycle) {
+  return !!(postMoveLifecycle && postMoveLifecycle.shouldStartTimer);
+};
+
 GameManager.prototype.publishMoveCompletion = function (direction, postMoveLifecycle) {
   this.actuate();
-
-  // Start timer on first move
-  if (postMoveLifecycle.shouldStartTimer) {
+  if (this.shouldStartTimerAfterMove(postMoveLifecycle)) {
     this.startTimer();
   }
   this.publishAdapterMoveResult({
