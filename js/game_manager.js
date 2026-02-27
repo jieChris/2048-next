@@ -3839,10 +3839,18 @@ GameManager.prototype.applyUndoSettingForMode = function (mode, skipPersist, for
   return !!this.undoEnabled;
 };
 
+GameManager.prototype.resolveProvidedUndoPolicyStateForMode = function (mode, resolvedState) {
+  if (resolvedState && typeof resolvedState === "object") return resolvedState;
+  return this.resolveUndoPolicyStateForCurrentSessionMode(mode);
+};
+
+GameManager.prototype.resolveProvidedActiveUndoPolicyState = function (resolvedState) {
+  if (resolvedState && typeof resolvedState === "object") return resolvedState;
+  return this.resolveActiveUndoPolicyState();
+};
+
 GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resolvedState) {
-  var state = resolvedState && typeof resolvedState === "object"
-    ? resolvedState
-    : this.resolveUndoPolicyStateForCurrentSessionMode(mode);
+  var state = this.resolveProvidedUndoPolicyStateForMode(mode, resolvedState);
   if (state && state.isUndoSettingFixedForMode) return;
   if (!(state && state.isUndoAllowedByMode)) return;
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
@@ -3882,9 +3890,7 @@ GameManager.prototype.isUndoInteractionEnabled = function () {
 };
 
 GameManager.prototype.updateUndoUiState = function (resolvedState) {
-  var state = resolvedState && typeof resolvedState === "object"
-    ? resolvedState
-    : this.resolveActiveUndoPolicyState();
+  var state = this.resolveProvidedActiveUndoPolicyState(resolvedState);
   var canUndo = !!(state && state.isUndoInteractionEnabled);
   var modeUndoCapable = !!(state && state.isUndoAllowedByMode);
   var undoLink = document.getElementById("undo-link");
