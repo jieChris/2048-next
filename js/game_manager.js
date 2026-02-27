@@ -5054,6 +5054,17 @@ GameManager.prototype.fillCappedPlaceholderRowSlot = function (
   return true;
 };
 
+GameManager.prototype.buildCappedPlaceholderSlotByRepeatCoreArgs = function (repeatCount, values) {
+  return [{
+    repeatCount: repeatCount,
+    placeholderRowValues: values
+  }];
+};
+
+GameManager.prototype.resolveCappedPlaceholderSlotValueFromCoreResult = function (coreResult) {
+  return coreResult && coreResult.available ? coreResult.value : null;
+};
+
 GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, labelText, timeStr, cappedState) {
   var resolvedCappedState =
     this.resolveProvidedCappedModeState(cappedState);
@@ -5063,17 +5074,12 @@ GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, 
   var values = this.getCappedPlaceholderRowValues(resolvedCappedState);
   var resolveCappedPlaceholderSlotByRepeatCountCore = this.callCoreModeRuntime(
     "resolveCappedPlaceholderSlotByRepeatCount",
-    [{
-      repeatCount: repeatCount,
-      placeholderRowValues: values
-    }]
+    this.buildCappedPlaceholderSlotByRepeatCoreArgs(repeatCount, values)
   );
   var slotValue = this.resolveCappedPlaceholderSlotValue(
     repeatCount,
     values,
-    resolveCappedPlaceholderSlotByRepeatCountCore.available
-      ? resolveCappedPlaceholderSlotByRepeatCountCore.value
-      : null
+    this.resolveCappedPlaceholderSlotValueFromCoreResult(resolveCappedPlaceholderSlotByRepeatCountCore)
   );
   if (!Number.isInteger(slotValue) || slotValue <= 0) return false;
   return this.fillCappedPlaceholderRowSlot(
