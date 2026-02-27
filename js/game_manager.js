@@ -3585,15 +3585,19 @@ GameManager.prototype.updateTimerLegendLabels = function () {
   this.callWindowNamespaceMethod("ThemeManager", "syncTimerLegendStyles");
 };
 
+GameManager.prototype.writeTimerSlotValueIfEmpty = function (slotId, timeStr) {
+  var el = document.getElementById("timer" + slotId);
+  if (el && el.textContent === "") {
+    el.textContent = timeStr;
+  }
+};
+
 GameManager.prototype.recordTimerMilestone = function (value, timeStr) {
   if (!Number.isInteger(value) || value <= 0) return;
   this.unlockProgressiveCapped64Row(value);
   var slotId = this.timerMilestoneSlotByValue ? this.timerMilestoneSlotByValue[String(value)] : null;
   if (!slotId) return;
-  var el = document.getElementById("timer" + slotId);
-  if (el && el.textContent === "") {
-    el.textContent = timeStr;
-  }
+  this.writeTimerSlotValueIfEmpty(slotId, timeStr);
 };
 
 GameManager.prototype.cloneResolvedCappedModeState = function (state) {
