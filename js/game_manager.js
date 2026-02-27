@@ -5232,9 +5232,31 @@ GameManager.prototype.getMoveInputThrottleMs = function () {
   return 0;
 };
 
+GameManager.prototype.hasPendingMoveInput = function () {
+  return !(this.pendingMoveInput === null || typeof this.pendingMoveInput === "undefined");
+};
+
+GameManager.prototype.isImmediateMoveDispatchAllowed = function (now, throttleMs) {
+  return (now - this.lastMoveInputAt) >= throttleMs && !this.moveInputFlushScheduled;
+};
+
+GameManager.prototype.scheduleMoveInputFlush = function () {
+  if (this.moveInputFlushScheduled) return;
+  this.moveInputFlushScheduled = true;
+  var self = this;
+  self.requestAnimationFrame(function () {
+    self.flushPendingMoveInput();
+  });
+};
+
+GameManager.prototype.enqueuePendingMoveInput = function (direction) {
+  this.pendingMoveInput = direction;
+  this.scheduleMoveInputFlush();
+};
+
 GameManager.prototype.flushPendingMoveInput = function () {
   this.moveInputFlushScheduled = false;
-  if (this.pendingMoveInput === null || typeof this.pendingMoveInput === "undefined") return;
+  if (!this.hasPendingMoveInput()) return;
   var direction = this.pendingMoveInput;
   this.pendingMoveInput = null;
 
@@ -5254,14 +5276,9 @@ GameManager.prototype.flushPendingMoveInput = function () {
 
   var self = this;
   setTimeout(function () {
-    if (self.pendingMoveInput !== null && typeof self.pendingMoveInput !== "undefined") {
+    if (self.hasPendingMoveInput()) {
       // Newer input exists; next flush will consume latest direction.
-      if (!self.moveInputFlushScheduled) {
-        self.moveInputFlushScheduled = true;
-        self.requestAnimationFrame(function () {
-          self.flushPendingMoveInput();
-        });
-      }
+      self.scheduleMoveInputFlush();
       return;
     }
     self.lastMoveInputAt = Date.now();
@@ -5282,19 +5299,13 @@ GameManager.prototype.handleMoveInput = function (direction) {
   }
 
   var now = Date.now();
-  if ((now - this.lastMoveInputAt) >= throttleMs && !this.moveInputFlushScheduled) {
+  if (this.isImmediateMoveDispatchAllowed(now, throttleMs)) {
     this.lastMoveInputAt = now;
     this.move(direction);
     return;
   }
 
-  this.pendingMoveInput = direction;
-  if (this.moveInputFlushScheduled) return;
-  this.moveInputFlushScheduled = true;
-  var self = this;
-  self.requestAnimationFrame(function () {
-    self.flushPendingMoveInput();
-  });
+  this.enqueuePendingMoveInput(direction);
 };
 
 // Move a tile and its representation
