@@ -4980,40 +4980,80 @@ GameManager.prototype.getCappedOverflowContainer = function (cappedState) {
   return container;
 };
 
+GameManager.prototype.resolveCappedMilestoneBaseTimerElement = function (cappedState) {
+  var capLabel = String(cappedState.cappedTargetValue || 2048);
+  return document.getElementById("timer" + capLabel);
+};
+
+GameManager.prototype.tryRecordFirstCappedMilestone = function (milestoneCount, baseTimerEl, timeStr) {
+  if (milestoneCount !== 1) return false;
+  if (baseTimerEl && baseTimerEl.textContent === "") {
+    baseTimerEl.textContent = timeStr;
+  }
+  return true;
+};
+
+GameManager.prototype.tryRecordCappedPlaceholderMilestone = function (
+  milestoneCount,
+  labelText,
+  timeStr,
+  cappedState
+) {
+  return this.fillCappedPlaceholderRowByRepeat(milestoneCount, labelText, timeStr, cappedState);
+};
+
+GameManager.prototype.buildCappedMilestoneDynamicRowState = function (milestoneCount, labelText, timeStr) {
+  return {
+    repeat: String(milestoneCount),
+    label: labelText,
+    time: timeStr
+  };
+};
+
+GameManager.prototype.appendCappedMilestoneDynamicRow = function (
+  container,
+  milestoneCount,
+  labelText,
+  timeStr,
+  cappedState
+) {
+  if (!container) return false;
+  var rowDiv = this.createSavedDynamicTimerRow(
+    this.buildCappedMilestoneDynamicRowState(milestoneCount, labelText, timeStr),
+    cappedState
+  );
+  container.appendChild(rowDiv);
+  this.normalizeCappedRepeatLegendClasses(cappedState);
+  return true;
+};
+
+GameManager.prototype.finalizeCappedMilestoneRecord = function () {
+  this.callWindowMethod("cappedTimerAutoScroll");
+};
+
 GameManager.prototype.recordCappedMilestone = function (timeStr) {
   var cappedState = this.resolveCappedModeState();
   if (!cappedState.isCappedMode) return;
 
   this.cappedMilestoneCount += 1;
-  var capLabel = String(cappedState.cappedTargetValue || 2048);
-  var baseTimerEl = document.getElementById("timer" + capLabel);
+  var milestoneCount = this.cappedMilestoneCount;
+  var baseTimerEl = this.resolveCappedMilestoneBaseTimerElement(cappedState);
   var container = this.getCappedOverflowContainer(cappedState);
 
-  if (this.cappedMilestoneCount === 1) {
-    if (baseTimerEl && baseTimerEl.textContent === "") {
-      baseTimerEl.textContent = timeStr;
-    }
+  if (this.tryRecordFirstCappedMilestone(milestoneCount, baseTimerEl, timeStr)) {
     return;
   }
 
-  var nextLabel = this.getCappedRepeatLabel(this.cappedMilestoneCount);
+  var nextLabel = this.getCappedRepeatLabel(milestoneCount);
 
   // Prefer replacing reserved hidden rows so the timer module height stays stable.
-  if (this.fillCappedPlaceholderRowByRepeat(this.cappedMilestoneCount, nextLabel, timeStr, cappedState)) {
-    this.callWindowMethod("cappedTimerAutoScroll");
+  if (this.tryRecordCappedPlaceholderMilestone(milestoneCount, nextLabel, timeStr, cappedState)) {
+    this.finalizeCappedMilestoneRecord();
     return;
   }
 
-  if (!container) return;
-  var rowDiv = this.createSavedDynamicTimerRow({
-    repeat: String(this.cappedMilestoneCount),
-    label: nextLabel,
-    time: timeStr
-  }, cappedState);
-  container.appendChild(rowDiv);
-  this.normalizeCappedRepeatLegendClasses(cappedState);
-
-  this.callWindowMethod("cappedTimerAutoScroll");
+  if (!this.appendCappedMilestoneDynamicRow(container, milestoneCount, nextLabel, timeStr, cappedState)) return;
+  this.finalizeCappedMilestoneRecord();
 };
 
 GameManager.prototype.hideStatsElementForCornerMode = function (statsElement) {
