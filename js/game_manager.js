@@ -6290,21 +6290,7 @@ GameManager.prototype.resolveSetupSessionReplayV3Metadata = function () {
   };
 };
 
-GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
-  var hasInputSeed = typeof inputSeed !== "undefined";
-  if (hasInputSeed) {
-    this.replayIndex = 0;
-  }
-  this.initialSeed = hasInputSeed ? inputSeed : Math.random();
-  this.seed = this.initialSeed;
-  this.resetSetupReplayCollections();
-  this.replayMode = hasInputSeed; // If seed is provided externally, we might be in replay mode (or just restoring)
-  this.applySetupSessionSyncDefaults(hasInputSeed);
-  return hasInputSeed;
-};
-
-GameManager.prototype.createSetupSessionReplayV3Payload = function () {
-  var metadata = this.resolveSetupSessionReplayV3Metadata();
+GameManager.prototype.buildSetupSessionReplayV3PayloadFromMetadata = function (metadata) {
   return {
     v: 3,
     mode: metadata.mode,
@@ -6320,6 +6306,24 @@ GameManager.prototype.createSetupSessionReplayV3Payload = function () {
     seed: this.initialSeed,
     actions: []
   };
+};
+
+GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
+  var hasInputSeed = typeof inputSeed !== "undefined";
+  if (hasInputSeed) {
+    this.replayIndex = 0;
+  }
+  this.initialSeed = hasInputSeed ? inputSeed : Math.random();
+  this.seed = this.initialSeed;
+  this.resetSetupReplayCollections();
+  this.replayMode = hasInputSeed; // If seed is provided externally, we might be in replay mode (or just restoring)
+  this.applySetupSessionSyncDefaults(hasInputSeed);
+  return hasInputSeed;
+};
+
+GameManager.prototype.createSetupSessionReplayV3Payload = function () {
+  var metadata = this.resolveSetupSessionReplayV3Metadata();
+  return this.buildSetupSessionReplayV3PayloadFromMetadata(metadata);
 };
 
 GameManager.prototype.assignSetupChallengeId = function (options) {
