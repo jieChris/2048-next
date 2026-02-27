@@ -5673,8 +5673,8 @@ GameManager.prototype.resolveDurationMsFallback = function (nowMs) {
   return this.normalizeDurationMs(ms);
 };
 
-GameManager.prototype.serializeV3 = function () {
-  var replay = this.sessionReplayV3 || {
+GameManager.prototype.createDefaultSessionReplayV3 = function () {
+  return {
     v: 3,
     mode: this.getServerMode(this.modeKey),
     mode_key: this.modeKey,
@@ -5688,6 +5688,13 @@ GameManager.prototype.serializeV3 = function () {
     seed: this.initialSeed,
     actions: []
   };
+};
+
+GameManager.prototype.resolveSessionReplayV3Source = function () {
+  return this.sessionReplayV3 || this.createDefaultSessionReplayV3();
+};
+
+GameManager.prototype.buildSerializedReplayV3Payload = function (replay) {
   return {
     v: 3,
     mode: this.getServerMode(replay.mode_key || replay.mode || this.modeKey),
@@ -5703,6 +5710,11 @@ GameManager.prototype.serializeV3 = function () {
     seed: replay.seed,
     actions: replay.actions.slice()
   };
+};
+
+GameManager.prototype.serializeV3 = function () {
+  var replay = this.resolveSessionReplayV3Source();
+  return this.buildSerializedReplayV3Payload(replay);
 };
 
 GameManager.prototype.tryAutoSubmitOnGameOver = function () {
