@@ -885,22 +885,26 @@ GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, repla
   return this.planReplayTickBoundaryFallback(shouldStopAtTick, replayEndState);
 };
 
-GameManager.prototype.buildReplayTickContinuePlanFallback = function () {
+GameManager.prototype.buildReplayTickBoundaryPlan = function (shouldStop, shouldPause, shouldApplyReplayMode, replayMode) {
   return {
-    shouldStop: false,
-    shouldPause: false,
-    shouldApplyReplayMode: false,
-    replayMode: true
+    shouldStop: shouldStop,
+    shouldPause: shouldPause,
+    shouldApplyReplayMode: shouldApplyReplayMode,
+    replayMode: replayMode
   };
 };
 
+GameManager.prototype.buildReplayTickContinuePlanFallback = function () {
+  return this.buildReplayTickBoundaryPlan(false, false, false, true);
+};
+
 GameManager.prototype.buildReplayTickStopPlanFallback = function (replayEndState) {
-  return {
-    shouldStop: true,
-    shouldPause: replayEndState && replayEndState.shouldPause !== false,
-    shouldApplyReplayMode: true,
-    replayMode: replayEndState && replayEndState.replayMode === true
-  };
+  return this.buildReplayTickBoundaryPlan(
+    true,
+    replayEndState && replayEndState.shouldPause !== false,
+    true,
+    replayEndState && replayEndState.replayMode === true
+  );
 };
 
 GameManager.prototype.planReplayTickBoundaryFallback = function (shouldStopAtTick, replayEndState) {
@@ -970,20 +974,20 @@ GameManager.prototype.shouldReplaySeekRewindFallback = function (targetIndex) {
   return targetIndex < this.replayIndex;
 };
 
-GameManager.prototype.buildReplaySeekNoRewindPlanFallback = function () {
+GameManager.prototype.buildReplaySeekRewindPlan = function (shouldRewind, strategy, replayIndexAfterRewind) {
   return {
-    shouldRewind: false,
-    strategy: "none",
-    replayIndexAfterRewind: this.replayIndex
+    shouldRewind: shouldRewind,
+    strategy: strategy,
+    replayIndexAfterRewind: replayIndexAfterRewind
   };
 };
 
+GameManager.prototype.buildReplaySeekNoRewindPlanFallback = function () {
+  return this.buildReplaySeekRewindPlan(false, "none", this.replayIndex);
+};
+
 GameManager.prototype.buildReplaySeekRewindPlanFallback = function () {
-  return {
-    shouldRewind: true,
-    strategy: this.replayStartBoardMatrix ? "board" : "seed",
-    replayIndexAfterRewind: 0
-  };
+  return this.buildReplaySeekRewindPlan(true, this.replayStartBoardMatrix ? "board" : "seed", 0);
 };
 
 GameManager.prototype.planReplaySeekRewindFallback = function (targetIndex) {
@@ -1014,22 +1018,36 @@ GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
   return this.planReplaySeekRestartFallback(rewindPlan);
 };
 
-GameManager.prototype.buildReplaySeekNoRestartPlanFallback = function (rewindPlan) {
+GameManager.prototype.buildReplaySeekRestartPlan = function (
+  shouldRestartWithBoard,
+  shouldRestartWithSeed,
+  shouldApplyReplayIndex,
+  replayIndex
+) {
   return {
-    shouldRestartWithBoard: false,
-    shouldRestartWithSeed: false,
-    shouldApplyReplayIndex: false,
-    replayIndex: rewindPlan ? rewindPlan.replayIndexAfterRewind : this.replayIndex
+    shouldRestartWithBoard: shouldRestartWithBoard,
+    shouldRestartWithSeed: shouldRestartWithSeed,
+    shouldApplyReplayIndex: shouldApplyReplayIndex,
+    replayIndex: replayIndex
   };
 };
 
+GameManager.prototype.buildReplaySeekNoRestartPlanFallback = function (rewindPlan) {
+  return this.buildReplaySeekRestartPlan(
+    false,
+    false,
+    false,
+    rewindPlan ? rewindPlan.replayIndexAfterRewind : this.replayIndex
+  );
+};
+
 GameManager.prototype.buildReplaySeekRestartPlanFallback = function (rewindPlan) {
-  return {
-    shouldRestartWithBoard: rewindPlan.strategy === "board",
-    shouldRestartWithSeed: rewindPlan.strategy === "seed",
-    shouldApplyReplayIndex: true,
-    replayIndex: rewindPlan.replayIndexAfterRewind
-  };
+  return this.buildReplaySeekRestartPlan(
+    rewindPlan.strategy === "board",
+    rewindPlan.strategy === "seed",
+    true,
+    rewindPlan.replayIndexAfterRewind
+  );
 };
 
 GameManager.prototype.planReplaySeekRestartFallback = function (rewindPlan) {
