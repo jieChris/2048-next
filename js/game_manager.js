@@ -854,10 +854,7 @@ GameManager.prototype.cloneBoardMatrix = function (board) {
 };
 
 GameManager.prototype.getSavedGameStateKey = function (modeKey) {
-  var resolveSavedGameStateStorageKeyCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "resolveSavedGameStateStorageKey"
-  );
+  var resolveSavedGameStateStorageKeyCore = this.resolveCoreStorageRuntimeMethod("resolveSavedGameStateStorageKey");
   if (resolveSavedGameStateStorageKeyCore) {
     var resolvedKey = resolveSavedGameStateStorageKeyCore({
       modeKey: modeKey,
@@ -874,10 +871,7 @@ GameManager.prototype.getSavedGameStateKey = function (modeKey) {
 };
 
 GameManager.prototype.getSavedGameStateLiteKey = function (modeKey) {
-  var resolveSavedGameStateStorageKeyCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "resolveSavedGameStateStorageKey"
-  );
+  var resolveSavedGameStateStorageKeyCore = this.resolveCoreStorageRuntimeMethod("resolveSavedGameStateStorageKey");
   if (resolveSavedGameStateStorageKeyCore) {
     var resolvedKey = resolveSavedGameStateStorageKeyCore({
       modeKey: modeKey,
@@ -958,10 +952,7 @@ GameManager.prototype.requestAnimationFrame = function (callback) {
 };
 
 GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
-  var readStorageFlagFromContextCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "readStorageFlagFromContext"
-  );
+  var readStorageFlagFromContextCore = this.resolveCoreStorageRuntimeMethod("readStorageFlagFromContext");
   if (readStorageFlagFromContextCore) {
     return !!readStorageFlagFromContextCore({
       windowLike: this.getWindowLike(),
@@ -980,10 +971,7 @@ GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
 };
 
 GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue, falseValue) {
-  var writeStorageFlagFromContextCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "writeStorageFlagFromContext"
-  );
+  var writeStorageFlagFromContextCore = this.resolveCoreStorageRuntimeMethod("writeStorageFlagFromContext");
   if (writeStorageFlagFromContextCore) {
     return !!writeStorageFlagFromContextCore({
       windowLike: this.getWindowLike(),
@@ -1005,10 +993,7 @@ GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue,
 };
 
 GameManager.prototype.readLocalStorageJsonMap = function (key) {
-  var readStorageJsonMapFromContextCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "readStorageJsonMapFromContext"
-  );
+  var readStorageJsonMapFromContextCore = this.resolveCoreStorageRuntimeMethod("readStorageJsonMapFromContext");
   if (readStorageJsonMapFromContextCore) {
     var runtimeMap = readStorageJsonMapFromContextCore({
       windowLike: this.getWindowLike(),
@@ -1033,10 +1018,7 @@ GameManager.prototype.readLocalStorageJsonMap = function (key) {
 };
 
 GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
-  var writeStorageJsonMapFromContextCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "writeStorageJsonMapFromContext"
-  );
+  var writeStorageJsonMapFromContextCore = this.resolveCoreStorageRuntimeMethod("writeStorageJsonMapFromContext");
   if (writeStorageJsonMapFromContextCore) {
     return !!writeStorageJsonMapFromContextCore({
       windowLike: this.getWindowLike(),
@@ -1056,10 +1038,7 @@ GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
 };
 
 GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
-  var writeStorageJsonPayloadFromContextCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "writeStorageJsonPayloadFromContext"
-  );
+  var writeStorageJsonPayloadFromContextCore = this.resolveCoreStorageRuntimeMethod("writeStorageJsonPayloadFromContext");
   if (writeStorageJsonPayloadFromContextCore) {
     return !!writeStorageJsonPayloadFromContextCore({
       windowLike: this.getWindowLike(),
@@ -1080,10 +1059,7 @@ GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
 };
 
 GameManager.prototype.getSavedGameStateStorages = function () {
-  var getSavedGameStateStoragesFromContextCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "getSavedGameStateStoragesFromContext"
-  );
+  var getSavedGameStateStoragesFromContextCore = this.resolveCoreStorageRuntimeMethod("getSavedGameStateStoragesFromContext");
   if (getSavedGameStateStoragesFromContextCore) {
     var storagesByCore = getSavedGameStateStoragesFromContextCore({
       windowLike: this.getWindowLike()
@@ -1100,10 +1076,7 @@ GameManager.prototype.getSavedGameStateStorages = function () {
 };
 
 GameManager.prototype.readSavedPayloadByKey = function (key) {
-  var readSavedPayloadByKeyFromStoragesCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "readSavedPayloadByKeyFromStorages"
-  );
+  var readSavedPayloadByKeyFromStoragesCore = this.resolveCoreStorageRuntimeMethod("readSavedPayloadByKeyFromStorages");
   if (readSavedPayloadByKeyFromStoragesCore) {
     var savedByCore = readSavedPayloadByKeyFromStoragesCore({
       storages: this.getSavedGameStateStorages(),
@@ -1144,10 +1117,7 @@ GameManager.prototype.readSavedPayloadByKey = function (key) {
 };
 
 GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
-  var readSavedPayloadFromWindowNameCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "readSavedPayloadFromWindowName"
-  );
+  var readSavedPayloadFromWindowNameCore = this.resolveCoreStorageRuntimeMethod("readSavedPayloadFromWindowName");
   if (readSavedPayloadFromWindowNameCore) {
     var payloadByCore = readSavedPayloadFromWindowNameCore({
       windowLike: typeof window !== "undefined" ? window : null,
@@ -1193,10 +1163,7 @@ GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
 };
 
 GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) {
-  var writeSavedPayloadToWindowNameCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "writeSavedPayloadToWindowName"
-  );
+  var writeSavedPayloadToWindowNameCore = this.resolveCoreStorageRuntimeMethod("writeSavedPayloadToWindowName");
   if (writeSavedPayloadToWindowNameCore) {
     var writtenByCore = writeSavedPayloadToWindowNameCore({
       windowLike: typeof window !== "undefined" ? window : null,
@@ -1256,10 +1223,7 @@ GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) 
 };
 
 GameManager.prototype.shouldUseSavedGameState = function () {
-  var shouldUseSavedGameStateCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "shouldUseSavedGameStateFromContext"
-  );
+  var shouldUseSavedGameStateCore = this.resolveCoreStorageRuntimeMethod("shouldUseSavedGameStateFromContext");
   if (shouldUseSavedGameStateCore) {
     return !!shouldUseSavedGameStateCore({
       hasWindow: typeof window !== "undefined",
@@ -1300,10 +1264,7 @@ GameManager.prototype.clearSavedGameState = function (modeKey) {
     this.getSavedGameStateLiteKey(modeKey)
   ];
   var stores = this.getSavedGameStateStorages();
-  var removeKeysFromStoragesCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "removeKeysFromStorages"
-  );
+  var removeKeysFromStoragesCore = this.resolveCoreStorageRuntimeMethod("removeKeysFromStorages");
   if (removeKeysFromStoragesCore) {
     var removedByCore = removeKeysFromStoragesCore({
       storages: stores,
@@ -1805,10 +1766,7 @@ GameManager.prototype.safeClonePlain = function (value, fallback) {
 };
 
 GameManager.prototype.writeSavedGameStatePayload = function (key, payloadObj) {
-  var writeSavedPayloadToStoragesCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "writeSavedPayloadToStorages"
-  );
+  var writeSavedPayloadToStoragesCore = this.resolveCoreStorageRuntimeMethod("writeSavedPayloadToStorages");
   if (writeSavedPayloadToStoragesCore) {
     var persistedByCore = writeSavedPayloadToStoragesCore({
       storages: this.getSavedGameStateStorages(),
@@ -1836,10 +1794,7 @@ GameManager.prototype.writeSavedGameStatePayload = function (key, payloadObj) {
 };
 
 GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
-  var buildLiteSavedGameStatePayloadCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "buildLiteSavedGameStatePayload"
-  );
+  var buildLiteSavedGameStatePayloadCore = this.resolveCoreStorageRuntimeMethod("buildLiteSavedGameStatePayload");
   if (buildLiteSavedGameStatePayloadCore) {
     var litePayloadByCore = buildLiteSavedGameStatePayloadCore({
       payload: payload,
@@ -1948,6 +1903,10 @@ GameManager.prototype.resolveCoreRuntimeMethod = function (runtimeGetterName, me
 
 GameManager.prototype.resolveCoreModeRuntimeMethod = function (methodName) {
   return this.resolveCoreRuntimeMethod("getCoreModeRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreStorageRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreGameSettingsStorageRuntime", methodName);
 };
 
 function registerCoreRuntimeGetter(methodName, runtimeName) {
@@ -3579,20 +3538,14 @@ GameManager.prototype.isTimerLeaderboardAvailable = function () {
 };
 
 GameManager.prototype.getTimerModuleViewMode = function () {
-  var normalizeTimerModuleViewModeCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "normalizeTimerModuleViewMode"
-  );
+  var normalizeTimerModuleViewModeCore = this.resolveCoreStorageRuntimeMethod("normalizeTimerModuleViewMode");
   if (normalizeTimerModuleViewModeCore) return normalizeTimerModuleViewModeCore(this.timerModuleView);
   return this.timerModuleView === "hidden" ? "hidden" : "timer";
 };
 
 GameManager.prototype.loadTimerModuleViewForMode = function (mode) {
   var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
-  var readTimerModuleViewForModeFromMapCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "readTimerModuleViewForModeFromMap"
-  );
+  var readTimerModuleViewForModeFromMapCore = this.resolveCoreStorageRuntimeMethod("readTimerModuleViewForModeFromMap");
   if (readTimerModuleViewForModeFromMapCore) {
     return readTimerModuleViewForModeFromMapCore({
       map: map,
@@ -3605,10 +3558,7 @@ GameManager.prototype.loadTimerModuleViewForMode = function (mode) {
 
 GameManager.prototype.persistTimerModuleViewForMode = function (mode, view) {
   var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
-  var writeTimerModuleViewForModeToMapCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "writeTimerModuleViewForModeToMap"
-  );
+  var writeTimerModuleViewForModeToMapCore = this.resolveCoreStorageRuntimeMethod("writeTimerModuleViewForModeToMap");
   if (writeTimerModuleViewForModeToMapCore) {
     map = writeTimerModuleViewForModeToMapCore({
       map: map,
@@ -3740,10 +3690,7 @@ GameManager.prototype.loadUndoSettingForMode = function (mode) {
   if (forced !== null) return forced;
   if (!this.isUndoAllowedByMode(mode)) return false;
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
-  var readUndoEnabledForModeFromMapCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "readUndoEnabledForModeFromMap"
-  );
+  var readUndoEnabledForModeFromMapCore = this.resolveCoreStorageRuntimeMethod("readUndoEnabledForModeFromMap");
   if (readUndoEnabledForModeFromMapCore) {
     return !!readUndoEnabledForModeFromMapCore({
       map: map,
@@ -3759,10 +3706,7 @@ GameManager.prototype.persistUndoSettingForMode = function (mode, enabled) {
   if (this.isUndoSettingFixedForMode(mode)) return;
   if (!this.isUndoAllowedByMode(mode)) return;
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
-  var writeUndoEnabledForModeToMapCore = this.resolveCoreRuntimeMethod(
-    "getCoreGameSettingsStorageRuntime",
-    "writeUndoEnabledForModeToMap"
-  );
+  var writeUndoEnabledForModeToMapCore = this.resolveCoreStorageRuntimeMethod("writeUndoEnabledForModeToMap");
   if (writeUndoEnabledForModeToMapCore) {
     map = writeUndoEnabledForModeToMapCore({
       map: map,
