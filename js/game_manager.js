@@ -3567,16 +3567,20 @@ GameManager.prototype.configureTimerMilestones = function () {
   this.updateTimerLegendLabels();
 };
 
+GameManager.prototype.updateTimerLegendLabelForSlot = function (slotId, label) {
+  var nodes = document.querySelectorAll(".timer-legend-" + slotId);
+  for (var i = 0; i < nodes.length; i++) {
+    nodes[i].textContent = label;
+  }
+};
+
 GameManager.prototype.updateTimerLegendLabels = function () {
   if (typeof document === "undefined") return;
   var milestones = this.timerMilestones || this.getTimerMilestoneValues();
   for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
     var slotId = String(GameManager.TIMER_SLOT_IDS[i]);
     var label = String(milestones[i]);
-    var nodes = document.querySelectorAll(".timer-legend-" + slotId);
-    for (var j = 0; j < nodes.length; j++) {
-      nodes[j].textContent = label;
-    }
+    this.updateTimerLegendLabelForSlot(slotId, label);
   }
   this.callWindowNamespaceMethod("ThemeManager", "syncTimerLegendStyles");
 };
