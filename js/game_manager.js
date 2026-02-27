@@ -3029,6 +3029,50 @@ GameManager.prototype.computeUndoRestoreState = function (prev) {
   return this.buildUndoRestoreStateFallback(source, undoBase);
 };
 
+GameManager.prototype.buildUndoSnapshotFallbackState = function (fallbackState) {
+  return {
+    score: fallbackState.score,
+    tiles: [],
+    comboStreak: fallbackState.comboStreak,
+    successfulMoveCount: fallbackState.successfulMoveCount,
+    lockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
+    lockedDirectionTurn: fallbackState.lockedDirectionTurn,
+    lockedDirection: fallbackState.lockedDirection,
+    undoUsed: fallbackState.undoUsed
+  };
+};
+
+GameManager.prototype.normalizeUndoSnapshotCoreValue = function (computed, fallback) {
+  return {
+    score: Number.isFinite(computed.score) ? Number(computed.score) : fallback.score,
+    tiles: Array.isArray(computed.tiles) ? computed.tiles : [],
+    comboStreak:
+      Number.isInteger(computed.comboStreak) && computed.comboStreak >= 0
+        ? computed.comboStreak
+        : fallback.comboStreak,
+    successfulMoveCount:
+      Number.isInteger(computed.successfulMoveCount) && computed.successfulMoveCount >= 0
+        ? computed.successfulMoveCount
+        : fallback.successfulMoveCount,
+    lockConsumedAtMoveCount:
+      Number.isInteger(computed.lockConsumedAtMoveCount)
+        ? computed.lockConsumedAtMoveCount
+        : fallback.lockConsumedAtMoveCount,
+    lockedDirectionTurn:
+      Number.isInteger(computed.lockedDirectionTurn)
+        ? computed.lockedDirectionTurn
+        : fallback.lockedDirectionTurn,
+    lockedDirection:
+      Number.isInteger(computed.lockedDirection)
+        ? computed.lockedDirection
+        : fallback.lockedDirection,
+    undoUsed:
+      Number.isInteger(computed.undoUsed) && computed.undoUsed >= 0
+        ? computed.undoUsed
+        : fallback.undoUsed
+  };
+};
+
 GameManager.prototype.createUndoSnapshotState = function () {
   var fallbackState = this.getUndoStateFallbackValues();
   var createUndoSnapshotCore = this.callCoreUndoSnapshotRuntime("createUndoSnapshot", [{
@@ -3040,47 +3084,10 @@ GameManager.prototype.createUndoSnapshotState = function () {
     lockedDirection: this.lockedDirection,
     undoUsed: this.undoUsed
   }]);
-  var fallback = {
-    score: fallbackState.score,
-    tiles: [],
-    comboStreak: fallbackState.comboStreak,
-    successfulMoveCount: fallbackState.successfulMoveCount,
-    lockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
-    lockedDirectionTurn: fallbackState.lockedDirectionTurn,
-    lockedDirection: fallbackState.lockedDirection,
-    undoUsed: fallbackState.undoUsed
-  };
+  var fallback = this.buildUndoSnapshotFallbackState(fallbackState);
 
   if (createUndoSnapshotCore.available) {
-    var computed = createUndoSnapshotCore.value || {};
-    return {
-      score: Number.isFinite(computed.score) ? Number(computed.score) : fallback.score,
-      tiles: Array.isArray(computed.tiles) ? computed.tiles : [],
-      comboStreak:
-        Number.isInteger(computed.comboStreak) && computed.comboStreak >= 0
-          ? computed.comboStreak
-          : fallback.comboStreak,
-      successfulMoveCount:
-        Number.isInteger(computed.successfulMoveCount) && computed.successfulMoveCount >= 0
-          ? computed.successfulMoveCount
-          : fallback.successfulMoveCount,
-      lockConsumedAtMoveCount:
-        Number.isInteger(computed.lockConsumedAtMoveCount)
-          ? computed.lockConsumedAtMoveCount
-          : fallback.lockConsumedAtMoveCount,
-      lockedDirectionTurn:
-        Number.isInteger(computed.lockedDirectionTurn)
-          ? computed.lockedDirectionTurn
-          : fallback.lockedDirectionTurn,
-      lockedDirection:
-        Number.isInteger(computed.lockedDirection)
-          ? computed.lockedDirection
-          : fallback.lockedDirection,
-      undoUsed:
-        Number.isInteger(computed.undoUsed) && computed.undoUsed >= 0
-          ? computed.undoUsed
-          : fallback.undoUsed
-    };
+    return this.normalizeUndoSnapshotCoreValue(createUndoSnapshotCore.value || {}, fallback);
   }
 
   return fallback;
