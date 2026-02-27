@@ -1722,7 +1722,7 @@ GameManager.prototype.saveGameState = function (options) {
   }
 
   var now = Date.now();
-  if (!options.force && this.lastSavedGameStateAt && now - this.lastSavedGameStateAt < 150) {
+  if (this.shouldSkipSaveGameStateByThrottle(options, now)) {
     return;
   }
 
@@ -1792,6 +1792,10 @@ GameManager.prototype.saveGameState = function (options) {
     if (!persisted && !litePersisted) return;
     this.lastSavedGameStateAt = now;
   } catch (_err) {}
+};
+
+GameManager.prototype.shouldSkipSaveGameStateByThrottle = function (options, now) {
+  return !options.force && this.lastSavedGameStateAt && now - this.lastSavedGameStateAt < 150;
 };
 
 GameManager.prototype.appendCompactMoveCode = function (rawCode) {
