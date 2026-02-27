@@ -5103,56 +5103,67 @@ GameManager.prototype.addRandomTile = function () {
   }
 };
 
-// Sends the updated grid to the actuator
-GameManager.prototype.actuate = function () {
+GameManager.prototype.syncBestScoreBeforeActuate = function () {
   if (this.scoreManager.get() < this.score) {
     this.scoreManager.set(this.score);
   }
+};
 
-  this.actuator.actuate(this.grid, {
-    score:      this.score,
-    over:       this.over,
-    won:        this.won,
-    bestScore:  this.scoreManager.get(),
+GameManager.prototype.buildActuatorPayload = function () {
+  return {
+    score: this.score,
+    over: this.over,
+    won: this.won,
+    bestScore: this.scoreManager.get(),
     terminated: this.isGameTerminated(),
     blockedCells: this.blockedCellsList || []
-  });
-  
-  // Update Stats: Total Steps & Moves (Excluding Undo)
-  var stepStats = this.computeStepStats();
+  };
+};
+
+GameManager.prototype.updateStepStatsUi = function (stepStats) {
   var totalSteps = stepStats.totalSteps;
   var moveSteps = stepStats.moveSteps;
   var undoSteps = stepStats.undoSteps;
-  
+
   var totalEl = document.getElementById("stats-total");
   if (totalEl) totalEl.textContent = "总步数: " + totalSteps;
-  
+
   var movesEl = document.getElementById("stats-moves");
-  if (movesEl) movesEl.textContent = "移动步数: " + moveSteps; // "除撤回外已移动的步数"
-  
+  if (movesEl) movesEl.textContent = "移动步数: " + moveSteps;
+
   var undoEl = document.getElementById("stats-undo");
   if (undoEl) undoEl.textContent = "撤回步数: " + undoSteps;
   this.updateStatsPanel(totalSteps, moveSteps, undoSteps);
+};
 
-  if (this.timerContainer) {
-    var time;
-    if (this.timerStatus === 1) {
-        time = Date.now() - this.startTime.getTime();
-    } else {
-        time = this.accumulatedTime;
-    }
-    this.timerContainer.textContent = this.pretty(time);
-    
-    this.refreshIpsDisplay(time);
+GameManager.prototype.refreshActuateTimerAndIps = function () {
+  if (!this.timerContainer) return;
+  var time;
+  if (this.timerStatus === 1) {
+    time = Date.now() - this.startTime.getTime();
+  } else {
+    time = this.accumulatedTime;
   }
+  this.timerContainer.textContent = this.pretty(time);
+  this.refreshIpsDisplay(time);
+};
 
+GameManager.prototype.persistOrFinalizeSessionAfterActuate = function () {
   if (this.isSessionTerminated() && this.modeKey !== "practice_legacy") {
     this.clearSavedGameState(this.modeKey);
     this.tryAutoSubmitOnGameOver();
-  } else {
-    this.saveGameState();
+    return;
   }
+  this.saveGameState();
+};
 
+// Sends the updated grid to the actuator
+GameManager.prototype.actuate = function () {
+  this.syncBestScoreBeforeActuate();
+  this.actuator.actuate(this.grid, this.buildActuatorPayload());
+  this.updateStepStatsUi(this.computeStepStats());
+  this.refreshActuateTimerAndIps();
+  this.persistOrFinalizeSessionAfterActuate();
 };
 
 // Save all tile positions and remove merger info
