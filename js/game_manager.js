@@ -1730,6 +1730,15 @@ GameManager.prototype.getCorePrettyTimeRuntime = function () {
   return this.getCoreRuntimeByName("CorePrettyTimeRuntime");
 };
 
+GameManager.prototype.resolveModePolicyContext = function (mode) {
+  var targetMode = mode || this.mode;
+  return {
+    targetMode: targetMode,
+    modeConfig: this.resolveModeConfig(targetMode),
+    modeCore: this.getCoreModeRuntime()
+  };
+};
+
 GameManager.prototype.getCoreReplayCodecRuntime = function () {
   return this.getCoreRuntimeByName("CoreReplayCodecRuntime");
 };
@@ -3221,9 +3230,10 @@ GameManager.prototype.getServerMode = function (mode) {
 };
 
 GameManager.prototype.getForcedUndoSettingForMode = function (mode) {
-  var targetMode = mode || this.mode;
-  var modeCfg = this.resolveModeConfig(targetMode);
-  var modeCore = this.getCoreModeRuntime();
+  var context = this.resolveModePolicyContext(mode);
+  var targetMode = context.targetMode;
+  var modeCfg = context.modeConfig;
+  var modeCore = context.modeCore;
   if (modeCore && typeof modeCore.getForcedUndoSetting === "function") {
     var forced = modeCore.getForcedUndoSetting({
       mode: targetMode,
@@ -3246,9 +3256,10 @@ GameManager.prototype.getForcedUndoSettingForMode = function (mode) {
 };
 
 GameManager.prototype.isUndoAllowedByMode = function (mode) {
-  var targetMode = mode || this.mode;
-  var modeCfg = this.resolveModeConfig(targetMode);
-  var modeCore = this.getCoreModeRuntime();
+  var context = this.resolveModePolicyContext(mode);
+  var targetMode = context.targetMode;
+  var modeCfg = context.modeConfig;
+  var modeCore = context.modeCore;
   if (modeCore && typeof modeCore.isUndoAllowedByMode === "function") {
     return !!modeCore.isUndoAllowedByMode({
       mode: targetMode,
@@ -3259,9 +3270,10 @@ GameManager.prototype.isUndoAllowedByMode = function (mode) {
 };
 
 GameManager.prototype.isUndoSettingFixedForMode = function (mode) {
-  var targetMode = mode || this.mode;
-  var modeCfg = this.resolveModeConfig(targetMode);
-  var modeCore = this.getCoreModeRuntime();
+  var context = this.resolveModePolicyContext(mode);
+  var targetMode = context.targetMode;
+  var modeCfg = context.modeConfig;
+  var modeCore = context.modeCore;
   if (modeCore && typeof modeCore.isUndoSettingFixedForMode === "function") {
     return !!modeCore.isUndoSettingFixedForMode({
       mode: targetMode,
@@ -3272,9 +3284,10 @@ GameManager.prototype.isUndoSettingFixedForMode = function (mode) {
 };
 
 GameManager.prototype.canToggleUndoSetting = function (mode) {
-  var targetMode = mode || this.mode;
-  var modeCfg = this.resolveModeConfig(targetMode);
-  var modeCore = this.getCoreModeRuntime();
+  var context = this.resolveModePolicyContext(mode);
+  var targetMode = context.targetMode;
+  var modeCfg = context.modeConfig;
+  var modeCore = context.modeCore;
   if (modeCore && typeof modeCore.canToggleUndoSetting === "function") {
     return !!modeCore.canToggleUndoSetting({
       mode: targetMode,

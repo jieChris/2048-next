@@ -318,6 +318,7 @@
   - `src/core/game-settings-storage.ts` + `js/core_game_settings_storage_runtime.js`（本地设置存储 helper：flag/json map/payload）
   - `js/game_manager.js` 新增 `getCoreRuntimeByName` 通用解析器，`getCore*Runtime` 系列方法统一委托，减少重复 runtime 解析样板（行为不变）
   - `game_manager.js` 已改为通过 `CoreGameSettingsStorageRuntime` 读写统计面板开关、计时器模块视图、撤回设置与会话提交结果（页面层移除 direct localStorage 访问）
+  - `game_manager.js` 新增 `resolveModePolicyContext`，统一 `mode/undo` runtime 解析入参，减少后续策略函数迁移的重复样板
 
 验收标准：
 - 黄金向量下棋盘状态、分数、胜负状态与旧版一致。
