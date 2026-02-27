@@ -5764,14 +5764,22 @@ GameManager.prototype.isSessionTerminated = function () {
   return !!(this.over || (this.won && !this.keepPlaying));
 };
 
-GameManager.prototype.serialize = function () {
-  if (this.width !== 4 || this.height !== 4 || this.isFibonacciMode()) {
-    return JSON.stringify(this.serializeV3());
-  }
+GameManager.prototype.shouldSerializeReplayAsV3 = function () {
+  return this.width !== 4 || this.height !== 4 || this.isFibonacciMode();
+};
+
+GameManager.prototype.buildReplayV4SerializationPayload = function () {
   var modeCode = this.resolveReplayV4ModeCodeFromModeKey(this.modeKey);
   var initialBoard = this.initialBoardMatrix || this.getFinalBoardMatrix();
   var encodedBoard = this.encodeBoardV4(initialBoard);
   return GameManager.REPLAY_V4_PREFIX + modeCode + encodedBoard + (this.replayCompactLog || "");
+};
+
+GameManager.prototype.serialize = function () {
+  if (this.shouldSerializeReplayAsV3()) {
+    return JSON.stringify(this.serializeV3());
+  }
+  return this.buildReplayV4SerializationPayload();
 };
 
 GameManager.prototype.startReplayImportPlayback = function () {
