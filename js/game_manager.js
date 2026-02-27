@@ -597,15 +597,24 @@ GameManager.prototype.decodeLegacyReplayV1Payload = function (trimmedReplayStrin
   };
 };
 
+GameManager.prototype.parseLegacyReplaySeedAndLog = function (rest) {
+  var seedSep = rest.indexOf("_");
+  if (seedSep < 0) throw "Invalid v2S format";
+  var seed = parseFloat(rest.substring(0, seedSep));
+  if (isNaN(seed)) throw "Invalid v2S seed";
+  return {
+    seed: seed,
+    logString: rest.substring(seedSep + 1)
+  };
+};
+
 GameManager.prototype.decodeLegacyReplayV2SPayload = function (trimmedReplayString) {
   var prefixS = "REPLAY_v2S_";
   if (trimmedReplayString.indexOf(prefixS) !== 0) return null;
   var rest = trimmedReplayString.substring(prefixS.length);
-  var seedSep = rest.indexOf("_");
-  if (seedSep < 0) throw "Invalid v2S format";
-  var seedS = parseFloat(rest.substring(0, seedSep));
-  if (isNaN(seedS)) throw "Invalid v2S seed";
-  var logString = rest.substring(seedSep + 1);
+  var parsedSeedLog = this.parseLegacyReplaySeedAndLog(rest);
+  var seedS = parsedSeedLog.seed;
+  var logString = parsedSeedLog.logString;
   var decodedLog = this.decodeLegacyReplayV2Log(logString);
   return {
     seed: seedS,
