@@ -269,7 +269,7 @@ GameManager.prototype.getActionKind = function (action) {
 };
 
 GameManager.prototype.encodeReplay128 = function (code) {
-  var encodeReplay128Core = this.resolveCoreRuntimeMethod("getCoreReplayCodecRuntime", "encodeReplay128");
+  var encodeReplay128Core = this.resolveCoreReplayCodecRuntimeMethod("encodeReplay128");
   if (encodeReplay128Core) return encodeReplay128Core(code);
 
   if (!Number.isInteger(code) || code < 0 || code >= GameManager.REPLAY128_TOTAL) {
@@ -284,7 +284,7 @@ GameManager.prototype.encodeReplay128 = function (code) {
 };
 
 GameManager.prototype.decodeReplay128 = function (char) {
-  var decodeReplay128Core = this.resolveCoreRuntimeMethod("getCoreReplayCodecRuntime", "decodeReplay128");
+  var decodeReplay128Core = this.resolveCoreReplayCodecRuntimeMethod("decodeReplay128");
   if (decodeReplay128Core) return decodeReplay128Core(char);
 
   if (!char || char.length !== 1) throw "Invalid replay char";
@@ -301,7 +301,7 @@ GameManager.prototype.decodeReplay128 = function (char) {
 };
 
 GameManager.prototype.encodeBoardV4 = function (board) {
-  var encodeBoardV4Core = this.resolveCoreRuntimeMethod("getCoreReplayCodecRuntime", "encodeBoardV4");
+  var encodeBoardV4Core = this.resolveCoreReplayCodecRuntimeMethod("encodeBoardV4");
   if (encodeBoardV4Core) return encodeBoardV4Core(board);
 
   if (!Array.isArray(board) || board.length !== 4) throw "Invalid initial board";
@@ -325,7 +325,7 @@ GameManager.prototype.encodeBoardV4 = function (board) {
 };
 
 GameManager.prototype.decodeBoardV4 = function (encoded) {
-  var decodeBoardV4Core = this.resolveCoreRuntimeMethod("getCoreReplayCodecRuntime", "decodeBoardV4");
+  var decodeBoardV4Core = this.resolveCoreReplayCodecRuntimeMethod("decodeBoardV4");
   if (decodeBoardV4Core) return decodeBoardV4Core(encoded);
 
   if (typeof encoded !== "string" || encoded.length !== 16) throw "Invalid encoded board";
@@ -1654,10 +1654,7 @@ GameManager.prototype.saveGameState = function (options) {
 };
 
 GameManager.prototype.appendCompactMoveCode = function (rawCode) {
-  var appendCompactMoveCodeCore = this.resolveCoreRuntimeMethod(
-    "getCoreReplayCodecRuntime",
-    "appendCompactMoveCode"
-  );
+  var appendCompactMoveCodeCore = this.resolveCoreReplayCodecRuntimeMethod("appendCompactMoveCode");
   if (appendCompactMoveCodeCore) {
     this.replayCompactLog = appendCompactMoveCodeCore({
       log: this.replayCompactLog,
@@ -1675,7 +1672,7 @@ GameManager.prototype.appendCompactMoveCode = function (rawCode) {
 };
 
 GameManager.prototype.appendCompactUndo = function () {
-  var appendCompactUndoCore = this.resolveCoreRuntimeMethod("getCoreReplayCodecRuntime", "appendCompactUndo");
+  var appendCompactUndoCore = this.resolveCoreReplayCodecRuntimeMethod("appendCompactUndo");
   if (appendCompactUndoCore) {
     this.replayCompactLog = appendCompactUndoCore(this.replayCompactLog);
     return;
@@ -1684,10 +1681,7 @@ GameManager.prototype.appendCompactUndo = function () {
 };
 
 GameManager.prototype.appendCompactPracticeAction = function (x, y, value) {
-  var appendCompactPracticeActionCore = this.resolveCoreRuntimeMethod(
-    "getCoreReplayCodecRuntime",
-    "appendCompactPracticeAction"
-  );
+  var appendCompactPracticeActionCore = this.resolveCoreReplayCodecRuntimeMethod("appendCompactPracticeAction");
   if (appendCompactPracticeActionCore) {
     this.replayCompactLog = appendCompactPracticeActionCore({
       log: this.replayCompactLog,
@@ -1905,8 +1899,16 @@ GameManager.prototype.resolveCoreModeRuntimeMethod = function (methodName) {
   return this.resolveCoreRuntimeMethod("getCoreModeRuntime", methodName);
 };
 
+GameManager.prototype.resolveCoreRulesRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreRulesRuntime", methodName);
+};
+
 GameManager.prototype.resolveCoreStorageRuntimeMethod = function (methodName) {
   return this.resolveCoreRuntimeMethod("getCoreGameSettingsStorageRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreReplayCodecRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreReplayCodecRuntime", methodName);
 };
 
 function registerCoreRuntimeGetter(methodName, runtimeName) {
@@ -2558,10 +2560,7 @@ GameManager.prototype.computeMergeEffects = function (mergedValue) {
 };
 
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
-  var normalizeSpawnTableCore = this.resolveCoreRuntimeMethod(
-    "getCoreRulesRuntime",
-    "normalizeSpawnTable"
-  );
+  var normalizeSpawnTableCore = this.resolveCoreRulesRuntimeMethod("normalizeSpawnTable");
   if (normalizeSpawnTableCore) return normalizeSpawnTableCore(spawnTable, ruleset);
   if (Array.isArray(spawnTable) && spawnTable.length > 0) {
     var out = [];
@@ -2580,10 +2579,7 @@ GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
 };
 
 GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) {
-  var getTheoreticalMaxTileCore = this.resolveCoreRuntimeMethod(
-    "getCoreRulesRuntime",
-    "getTheoreticalMaxTile"
-  );
+  var getTheoreticalMaxTileCore = this.resolveCoreRulesRuntimeMethod("getTheoreticalMaxTile");
   if (getTheoreticalMaxTileCore) return getTheoreticalMaxTileCore(width, height, ruleset);
   var w = Number(width);
   var h = Number(height);
@@ -2876,7 +2872,7 @@ GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
 };
 
 GameManager.prototype.pickSpawnValue = function () {
-  var pickSpawnValueCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "pickSpawnValue");
+  var pickSpawnValueCore = this.resolveCoreRulesRuntimeMethod("pickSpawnValue");
   if (pickSpawnValueCore) return pickSpawnValueCore(this.spawnTable || [], Math.random);
   var table = this.spawnTable || [];
   if (!table.length) return 2;
@@ -2900,7 +2896,7 @@ GameManager.prototype.isFibonacciMode = function () {
 };
 
 GameManager.prototype.nextFibonacci = function (value) {
-  var nextFibonacciCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "nextFibonacci");
+  var nextFibonacciCore = this.resolveCoreRulesRuntimeMethod("nextFibonacci");
   if (nextFibonacciCore) return nextFibonacciCore(value);
   if (value <= 0) return 1;
   if (value === 1) return 2;
@@ -2915,7 +2911,7 @@ GameManager.prototype.nextFibonacci = function (value) {
 };
 
 GameManager.prototype.getMergedValue = function (a, b) {
-  var getMergedValueCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "getMergedValue");
+  var getMergedValueCore = this.resolveCoreRulesRuntimeMethod("getMergedValue");
   if (getMergedValueCore) {
     return getMergedValueCore(a, b, this.isFibonacciMode() ? "fibonacci" : "pow2", this.maxTile);
   }
@@ -2940,10 +2936,7 @@ GameManager.prototype.getMergedValue = function (a, b) {
 };
 
 GameManager.prototype.getTimerMilestoneValues = function () {
-  var getTimerMilestoneValuesCore = this.resolveCoreRuntimeMethod(
-    "getCoreRulesRuntime",
-    "getTimerMilestoneValues"
-  );
+  var getTimerMilestoneValuesCore = this.resolveCoreRulesRuntimeMethod("getTimerMilestoneValues");
   if (getTimerMilestoneValuesCore) {
     return getTimerMilestoneValuesCore(
       this.isFibonacciMode() ? "fibonacci" : "pow2",
@@ -2959,10 +2952,7 @@ GameManager.prototype.getTimerMilestoneValues = function () {
 
 GameManager.prototype.configureTimerMilestones = function () {
   this.timerMilestones = this.getTimerMilestoneValues();
-  var getTimerMilestoneSlotByValueCore = this.resolveCoreRuntimeMethod(
-    "getCoreRulesRuntime",
-    "getTimerMilestoneSlotByValue"
-  );
+  var getTimerMilestoneSlotByValueCore = this.resolveCoreRulesRuntimeMethod("getTimerMilestoneSlotByValue");
   if (getTimerMilestoneSlotByValueCore) {
     this.timerMilestoneSlotByValue = getTimerMilestoneSlotByValueCore(
       this.timerMilestones,
@@ -3774,7 +3764,7 @@ GameManager.prototype.updateUndoUiState = function () {
 };
 
 GameManager.prototype.recordSpawnValue = function (value) {
-  var applySpawnValueCountCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "applySpawnValueCount");
+  var applySpawnValueCountCore = this.resolveCoreRulesRuntimeMethod("applySpawnValueCount");
   if (applySpawnValueCountCore) {
     var next = applySpawnValueCountCore(this.spawnValueCounts, value) || {};
     if (next.nextSpawnValueCounts && typeof next.nextSpawnValueCounts === "object") {
@@ -3799,7 +3789,7 @@ GameManager.prototype.recordSpawnValue = function (value) {
 };
 
 GameManager.prototype.getSpawnStatPair = function () {
-  var getSpawnStatPairCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "getSpawnStatPair");
+  var getSpawnStatPairCore = this.resolveCoreRulesRuntimeMethod("getSpawnStatPair");
   if (getSpawnStatPairCore) {
     var corePair = getSpawnStatPairCore(this.spawnTable || []) || {};
     var corePrimary = Number(corePair.primary);
@@ -3837,7 +3827,7 @@ GameManager.prototype.getSpawnStatPair = function () {
 };
 
 GameManager.prototype.getSpawnCount = function (value) {
-  var getSpawnCountCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "getSpawnCount");
+  var getSpawnCountCore = this.resolveCoreRulesRuntimeMethod("getSpawnCount");
   if (getSpawnCountCore) {
     return Number(getSpawnCountCore(this.spawnValueCounts, value)) || 0;
   }
@@ -3846,7 +3836,7 @@ GameManager.prototype.getSpawnCount = function (value) {
 };
 
 GameManager.prototype.getTotalSpawnCount = function () {
-  var getTotalSpawnCountCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "getTotalSpawnCount");
+  var getTotalSpawnCountCore = this.resolveCoreRulesRuntimeMethod("getTotalSpawnCount");
   if (getTotalSpawnCountCore) {
     return Number(getTotalSpawnCountCore(this.spawnValueCounts)) || 0;
   }
@@ -3870,10 +3860,7 @@ GameManager.prototype.refreshSpawnRateDisplay = function () {
 };
 
 GameManager.prototype.getActualSecondaryRate = function () {
-  var getActualSecondaryRateTextCore = this.resolveCoreRuntimeMethod(
-    "getCoreRulesRuntime",
-    "getActualSecondaryRateText"
-  );
+  var getActualSecondaryRateTextCore = this.resolveCoreRulesRuntimeMethod("getActualSecondaryRateText");
   if (getActualSecondaryRateTextCore) {
     var rateText = getActualSecondaryRateTextCore(this.spawnValueCounts, this.spawnTable || []);
     if (typeof rateText === "string" && rateText) return rateText;
