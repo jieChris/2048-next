@@ -318,6 +318,7 @@
   - `js/game_manager.js` 新增 `getCoreRuntimeByName` 通用解析器，`getCore*Runtime` 系列方法统一委托，减少重复 runtime 解析样板（行为不变）
   - `game_manager.js` 已新增 runtime method resolver 映射注册层（`GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS`），`resolveCore*RuntimeMethod` 统一由映射生成。
   - `game_manager.js` 中 move/grid/scoring/undo/replay/timer/special-rules 相关 runtime 方法调用点已统一改为 `resolveCore*RuntimeMethod(...)` helper，移除分散的字符串式解析样板。
+  - `CoreModeRuntime` 已新增 `resolveModeConfigFromCatalog`，`game_manager.js#resolveModeConfig` 优先一次性委托 mode config 解析（resolvedModeId + modeConfig），并精简 legacy 回退分支（保留 alias + default fallback）。
   - `game_manager.js` 已改为通过 `CoreGameSettingsStorageRuntime` 读写统计面板开关、计时器模块视图、撤回设置与会话提交结果（页面层移除 direct localStorage 访问）
   - `game_manager.js` 新增 `resolveModePolicyContext`，统一 `mode/undo` runtime 解析入参，减少后续策略函数迁移的重复样板
 
