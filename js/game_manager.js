@@ -2365,31 +2365,95 @@ GameManager.prototype.resolveSavedGameStateTimerSnapshot = function () {
   };
 };
 
+GameManager.prototype.resolveSavedGameStatePayloadVersion = function () {
+  return GameManager.SAVED_GAME_STATE_VERSION;
+};
+
+GameManager.prototype.resolveSavedGameStateModeKey = function () {
+  return this.modeKey;
+};
+
+GameManager.prototype.resolveSavedGameStateBoardWidth = function () {
+  return this.width;
+};
+
+GameManager.prototype.resolveSavedGameStateBoardHeight = function () {
+  return this.height;
+};
+
+GameManager.prototype.resolveSavedGameStateRuleset = function () {
+  return this.ruleset;
+};
+
+GameManager.prototype.resolveSavedGameStateBoard = function () {
+  return this.getFinalBoardMatrix();
+};
+
+GameManager.prototype.resolveSavedGameStateScore = function () {
+  return this.score;
+};
+
+GameManager.prototype.resolveSavedGameStateOver = function () {
+  return this.over;
+};
+
+GameManager.prototype.resolveSavedGameStateWon = function () {
+  return this.won;
+};
+
+GameManager.prototype.resolveSavedGameStateKeepPlaying = function () {
+  return this.keepPlaying;
+};
+
+GameManager.prototype.resolveSavedGameStateInitialSeed = function () {
+  return this.initialSeed;
+};
+
+GameManager.prototype.resolveSavedGameStateSeed = function () {
+  return this.seed;
+};
+
+GameManager.prototype.resolveSavedGameStateSpawnValueCounts = function () {
+  return this.spawnValueCounts ? this.safeClonePlain(this.spawnValueCounts, {}) : {};
+};
+
+GameManager.prototype.resolveSavedGameStateReached32k = function () {
+  return !!this.reached32k;
+};
+
+GameManager.prototype.resolveSavedGameStateCappedMilestoneCount = function () {
+  return Number.isInteger(this.cappedMilestoneCount) ? this.cappedMilestoneCount : 0;
+};
+
+GameManager.prototype.resolveSavedGameStateCapped64Unlocked = function () {
+  return this.capped64Unlocked ? this.safeClonePlain(this.capped64Unlocked, null) : null;
+};
+
 GameManager.prototype.buildSavedGameStateBasePayload = function (savedAt, replaySnapshot, timerSnapshot) {
   return {
-    v: GameManager.SAVED_GAME_STATE_VERSION,
+    v: this.resolveSavedGameStatePayloadVersion(),
     saved_at: savedAt,
     terminated: false,
-    mode_key: this.modeKey,
-    board_width: this.width,
-    board_height: this.height,
-    ruleset: this.ruleset,
-    board: this.getFinalBoardMatrix(),
-    score: this.score,
-    over: this.over,
-    won: this.won,
-    keep_playing: this.keepPlaying,
-    initial_seed: this.initialSeed,
-    seed: this.seed,
+    mode_key: this.resolveSavedGameStateModeKey(),
+    board_width: this.resolveSavedGameStateBoardWidth(),
+    board_height: this.resolveSavedGameStateBoardHeight(),
+    ruleset: this.resolveSavedGameStateRuleset(),
+    board: this.resolveSavedGameStateBoard(),
+    score: this.resolveSavedGameStateScore(),
+    over: this.resolveSavedGameStateOver(),
+    won: this.resolveSavedGameStateWon(),
+    keep_playing: this.resolveSavedGameStateKeepPlaying(),
+    initial_seed: this.resolveSavedGameStateInitialSeed(),
+    seed: this.resolveSavedGameStateSeed(),
     move_history: replaySnapshot.move_history,
     ips_input_count: replaySnapshot.ips_input_count,
     undo_stack: replaySnapshot.undo_stack,
     replay_compact_log: replaySnapshot.replay_compact_log,
     session_replay_v3: replaySnapshot.session_replay_v3,
-    spawn_value_counts: this.spawnValueCounts ? this.safeClonePlain(this.spawnValueCounts, {}) : {},
-    reached_32k: !!this.reached32k,
-    capped_milestone_count: Number.isInteger(this.cappedMilestoneCount) ? this.cappedMilestoneCount : 0,
-    capped64_unlocked: this.capped64Unlocked ? this.safeClonePlain(this.capped64Unlocked, null) : null,
+    spawn_value_counts: this.resolveSavedGameStateSpawnValueCounts(),
+    reached_32k: this.resolveSavedGameStateReached32k(),
+    capped_milestone_count: this.resolveSavedGameStateCappedMilestoneCount(),
+    capped64_unlocked: this.resolveSavedGameStateCapped64Unlocked(),
     timer_status: timerSnapshot.timer_status,
     duration_ms: timerSnapshot.duration_ms,
     has_game_started: timerSnapshot.has_game_started
@@ -2413,22 +2477,42 @@ GameManager.prototype.resolveSavedDirectionLockSnapshot = function () {
   };
 };
 
+GameManager.prototype.resolveSavedGameStateComboStreak = function () {
+  return Number.isInteger(this.comboStreak) ? this.comboStreak : 0;
+};
+
+GameManager.prototype.resolveSavedGameStateSuccessfulMoveCount = function () {
+  return Number.isInteger(this.successfulMoveCount) ? this.successfulMoveCount : 0;
+};
+
+GameManager.prototype.resolveSavedGameStateUndoUsed = function () {
+  return Number.isInteger(this.undoUsed) ? this.undoUsed : 0;
+};
+
+GameManager.prototype.resolveSavedGameStateChallengeId = function () {
+  return this.challengeId || null;
+};
+
+GameManager.prototype.resolveSavedGameStateTimerModuleView = function () {
+  return this.getTimerModuleViewMode ? this.getTimerModuleViewMode() : "timer";
+};
+
 GameManager.prototype.buildSavedGameStateExtendedPayload = function (timerSubState) {
   var boardSnapshot = this.resolveSavedBoardRestartSnapshot();
   var directionLockSnapshot = this.resolveSavedDirectionLockSnapshot();
   return {
-    combo_streak: Number.isInteger(this.comboStreak) ? this.comboStreak : 0,
-    successful_move_count: Number.isInteger(this.successfulMoveCount) ? this.successfulMoveCount : 0,
-    undo_used: Number.isInteger(this.undoUsed) ? this.undoUsed : 0,
+    combo_streak: this.resolveSavedGameStateComboStreak(),
+    successful_move_count: this.resolveSavedGameStateSuccessfulMoveCount(),
+    undo_used: this.resolveSavedGameStateUndoUsed(),
     lock_consumed_at_move_count: directionLockSnapshot.lock_consumed_at_move_count,
     locked_direction_turn: directionLockSnapshot.locked_direction_turn,
     locked_direction: directionLockSnapshot.locked_direction,
-    challenge_id: this.challengeId || null,
+    challenge_id: this.resolveSavedGameStateChallengeId(),
     initial_board_matrix: boardSnapshot.initial_board_matrix,
     replay_start_board_matrix: boardSnapshot.replay_start_board_matrix,
     practice_restart_board_matrix: boardSnapshot.practice_restart_board_matrix,
     practice_restart_mode_config: boardSnapshot.practice_restart_mode_config,
-    timer_module_view: this.getTimerModuleViewMode ? this.getTimerModuleViewMode() : "timer",
+    timer_module_view: this.resolveSavedGameStateTimerModuleView(),
     timer_fixed_rows: this.captureTimerFixedRowsState(),
     timer_dynamic_rows_capped: this.captureTimerDynamicRowsState("capped-timer-container"),
     timer_dynamic_rows_overflow: this.captureTimerDynamicRowsState("capped-timer-overflow-container"),
