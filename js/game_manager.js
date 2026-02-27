@@ -5931,14 +5931,18 @@ GameManager.prototype.refreshStatsPanelIfNeededAtElapsed = function (elapsedMs) 
   this.lastStatsPanelUpdateAt = elapsedMs;
 };
 
+GameManager.prototype.applyTimerTickAtElapsed = function (elapsedMs) {
+  this.time = elapsedMs;
+  this.updateTimerDisplayText(elapsedMs);
+  this.refreshIpsDisplay(elapsedMs);
+  this.refreshStatsPanelIfNeededAtElapsed(elapsedMs);
+};
+
 // Update the timer
 GameManager.prototype.updateTimer = function() {
   var time = this.resolveElapsedTimerMsFromStartTime();
   if (time === null) return;
-  this.time = time;
-  this.updateTimerDisplayText(time);
-  this.refreshIpsDisplay(time);
-  this.refreshStatsPanelIfNeededAtElapsed(time);
+  this.applyTimerTickAtElapsed(time);
 };
 
 GameManager.prototype.resolveAccumulatedTimerMsFromStartTime = function () {
