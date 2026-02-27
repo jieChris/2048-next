@@ -7201,8 +7201,12 @@ GameManager.prototype.scheduleReplayInterval = function (delay) {
   this.replayInterval = setInterval(this.createReplayTickIntervalCallback(), delay);
 };
 
+GameManager.prototype.normalizeReplayControlState = function (state) {
+  return this.isNonArrayObject(state) ? state : {};
+};
+
 GameManager.prototype.applyReplayPauseState = function (pauseState) {
-  var state = pauseState && typeof pauseState === "object" ? pauseState : {};
+  var state = this.normalizeReplayControlState(pauseState);
   this.isPaused = state.isPaused !== false;
   this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
 };
@@ -7213,7 +7217,7 @@ GameManager.prototype.pause = function () {
 };
 
 GameManager.prototype.applyReplayResumeState = function (resumeState) {
-    var state = resumeState && typeof resumeState === "object" ? resumeState : {};
+    var state = this.normalizeReplayControlState(resumeState);
     this.isPaused = !!state.isPaused ? true : false;
     this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
     this.scheduleReplayInterval(state.delay);
@@ -7225,7 +7229,7 @@ GameManager.prototype.resume = function () {
 };
 
 GameManager.prototype.applyReplaySpeedState = function (speedState) {
-    var state = speedState && typeof speedState === "object" ? speedState : {};
+    var state = this.normalizeReplayControlState(speedState);
     this.replayDelay = state.replayDelay;
     if (state.shouldResume) {
         this.resume(); // Restart interval with new delay
