@@ -31,6 +31,17 @@ export interface CappedModeStateInput {
   maxTile?: number | null;
 }
 
+export interface CappedTimerPlaceholderRowsInput {
+  isCappedMode?: boolean | null;
+  cappedTargetValue?: number | null;
+  timerSlotIds?: number[] | null;
+}
+
+export interface CappedTimerPlaceholderSlotInput {
+  repeatCount?: number | null;
+  placeholderRowValues?: number[] | null;
+}
+
 export interface UndoPolicyInput {
   mode?: string | null;
   modeConfig?: PlainRecord | null;
@@ -145,6 +156,45 @@ export function getCappedTargetValue(input: CappedModeStateInput): number | null
 
 export function isProgressiveCapped64Mode(_input?: CappedModeStateInput): boolean {
   return false;
+}
+
+export function resolveCappedTimerLegendFontSize(cappedTargetValue?: number | null): string {
+  const cap = Number(cappedTargetValue);
+  const resolvedCap = Number.isFinite(cap) && cap > 0 ? cap : 2048;
+  if (resolvedCap >= 8192) return "13px";
+  if (resolvedCap >= 1024) return "14px";
+  if (resolvedCap >= 128) return "18px";
+  return "22px";
+}
+
+export function resolveCappedPlaceholderRowValues(input: CappedTimerPlaceholderRowsInput): number[] {
+  if (!input.isCappedMode) return [];
+  const cap = Number(input.cappedTargetValue);
+  if (!Number.isFinite(cap) || cap <= 0) return [];
+
+  const timerSlotIds = Array.isArray(input.timerSlotIds) ? input.timerSlotIds : [];
+  const values: number[] = [];
+  for (let i = 0; i < timerSlotIds.length; i++) {
+    const slotId = Number(timerSlotIds[i]);
+    if (!Number.isInteger(slotId) || slotId <= 0) continue;
+    if (slotId > cap) values.push(slotId);
+  }
+  return values;
+}
+
+export function resolveCappedPlaceholderSlotByRepeatCount(
+  input: CappedTimerPlaceholderSlotInput
+): number | null {
+  const repeatCount = Number(input.repeatCount);
+  if (!Number.isInteger(repeatCount) || repeatCount < 2) return null;
+
+  const values = Array.isArray(input.placeholderRowValues) ? input.placeholderRowValues : [];
+  const placeholderIndex = repeatCount - 2; // x2 => first placeholder row
+  if (placeholderIndex < 0 || placeholderIndex >= values.length) return null;
+
+  const slotId = Number(values[placeholderIndex]);
+  if (!Number.isInteger(slotId) || slotId <= 0) return null;
+  return slotId;
 }
 
 export function getForcedUndoSetting(input: UndoPolicyInput): boolean | null {

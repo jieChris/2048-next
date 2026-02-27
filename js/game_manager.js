@@ -2970,6 +2970,14 @@ GameManager.prototype.getCappedTimerLegendClass = function () {
 };
 
 GameManager.prototype.getCappedTimerFontSize = function () {
+  var resolveCappedTimerLegendFontSizeCore = this.resolveCoreRuntimeMethod(
+    "getCoreModeRuntime",
+    "resolveCappedTimerLegendFontSize"
+  );
+  if (resolveCappedTimerLegendFontSizeCore) {
+    var resolvedFontSize = resolveCappedTimerLegendFontSizeCore(this.getCappedTargetValue());
+    if (typeof resolvedFontSize === "string" && resolvedFontSize) return resolvedFontSize;
+  }
   var cap = this.getCappedTargetValue() || 2048;
   if (cap >= 8192) return "13px";
   if (cap >= 1024) return "14px";
@@ -2982,6 +2990,27 @@ GameManager.prototype.getCappedRepeatLabel = function (repeatCount) {
 };
 
 GameManager.prototype.getCappedPlaceholderRowValues = function () {
+  var resolveCappedPlaceholderRowValuesCore = this.resolveCoreRuntimeMethod(
+    "getCoreModeRuntime",
+    "resolveCappedPlaceholderRowValues"
+  );
+  if (resolveCappedPlaceholderRowValuesCore) {
+    var coreValues = resolveCappedPlaceholderRowValuesCore({
+      isCappedMode: this.isCappedMode(),
+      cappedTargetValue: this.getCappedTargetValue(),
+      timerSlotIds: GameManager.TIMER_SLOT_IDS
+    });
+    if (Array.isArray(coreValues)) {
+      var normalized = [];
+      for (var c = 0; c < coreValues.length; c++) {
+        var coreValue = Number(coreValues[c]);
+        if (!Number.isInteger(coreValue) || coreValue <= 0) continue;
+        normalized.push(coreValue);
+      }
+      return normalized;
+    }
+  }
+
   if (!this.isCappedMode()) return [];
   var cap = this.getCappedTargetValue();
   var values = [];
@@ -3016,10 +3045,25 @@ GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, 
   if (!Number.isInteger(repeatCount) || repeatCount < 2) return false;
 
   var values = this.getCappedPlaceholderRowValues();
-  var placeholderIndex = repeatCount - 2; // x2 => first placeholder row
-  if (placeholderIndex < 0 || placeholderIndex >= values.length) return false;
+  var resolveCappedPlaceholderSlotByRepeatCountCore = this.resolveCoreRuntimeMethod(
+    "getCoreModeRuntime",
+    "resolveCappedPlaceholderSlotByRepeatCount"
+  );
+  var slotValue = null;
+  if (resolveCappedPlaceholderSlotByRepeatCountCore) {
+    slotValue = resolveCappedPlaceholderSlotByRepeatCountCore({
+      repeatCount: repeatCount,
+      placeholderRowValues: values
+    });
+  }
+  if (!Number.isInteger(slotValue) || slotValue <= 0) {
+    var placeholderIndex = repeatCount - 2; // x2 => first placeholder row
+    if (placeholderIndex < 0 || placeholderIndex >= values.length) return false;
+    slotValue = Number(values[placeholderIndex]);
+    if (!Number.isInteger(slotValue) || slotValue <= 0) return false;
+  }
 
-  var slotId = String(values[placeholderIndex]);
+  var slotId = String(slotValue);
   var row = this.getTimerRowEl(slotId);
   var timerEl = document.getElementById("timer" + slotId);
   if (!row || !timerEl) return false;

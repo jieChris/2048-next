@@ -176,6 +176,45 @@
     return false;
   }
 
+  function resolveCappedTimerLegendFontSize(cappedTargetValue) {
+    var cap = Number(cappedTargetValue);
+    var resolvedCap = Number.isFinite(cap) && cap > 0 ? cap : 2048;
+    if (resolvedCap >= 8192) return "13px";
+    if (resolvedCap >= 1024) return "14px";
+    if (resolvedCap >= 128) return "18px";
+    return "22px";
+  }
+
+  function resolveCappedPlaceholderRowValues(input) {
+    var source = input || {};
+    if (!source.isCappedMode) return [];
+    var cap = Number(source.cappedTargetValue);
+    if (!Number.isFinite(cap) || cap <= 0) return [];
+
+    var timerSlotIds = Array.isArray(source.timerSlotIds) ? source.timerSlotIds : [];
+    var values = [];
+    for (var i = 0; i < timerSlotIds.length; i++) {
+      var slotId = Number(timerSlotIds[i]);
+      if (!Number.isInteger(slotId) || slotId <= 0) continue;
+      if (slotId > cap) values.push(slotId);
+    }
+    return values;
+  }
+
+  function resolveCappedPlaceholderSlotByRepeatCount(input) {
+    var source = input || {};
+    var repeatCount = Number(source.repeatCount);
+    if (!Number.isInteger(repeatCount) || repeatCount < 2) return null;
+
+    var values = Array.isArray(source.placeholderRowValues) ? source.placeholderRowValues : [];
+    var placeholderIndex = repeatCount - 2; // x2 => first placeholder row
+    if (placeholderIndex < 0 || placeholderIndex >= values.length) return null;
+
+    var slotId = Number(values[placeholderIndex]);
+    if (!Number.isInteger(slotId) || slotId <= 0) return null;
+    return slotId;
+  }
+
   function getForcedUndoSetting(input) {
     var source = input || {};
     var modeCfg = source.modeConfig || null;
@@ -243,6 +282,9 @@
   global.CoreModeRuntime.isCappedModeState = isCappedModeState;
   global.CoreModeRuntime.getCappedTargetValue = getCappedTargetValue;
   global.CoreModeRuntime.isProgressiveCapped64Mode = isProgressiveCapped64Mode;
+  global.CoreModeRuntime.resolveCappedTimerLegendFontSize = resolveCappedTimerLegendFontSize;
+  global.CoreModeRuntime.resolveCappedPlaceholderRowValues = resolveCappedPlaceholderRowValues;
+  global.CoreModeRuntime.resolveCappedPlaceholderSlotByRepeatCount = resolveCappedPlaceholderSlotByRepeatCount;
   global.CoreModeRuntime.getForcedUndoSetting = getForcedUndoSetting;
   global.CoreModeRuntime.isUndoAllowedByMode = isUndoAllowedByMode;
   global.CoreModeRuntime.isUndoSettingFixedForMode = isUndoSettingFixedForMode;

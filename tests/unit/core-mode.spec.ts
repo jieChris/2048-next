@@ -6,6 +6,9 @@ import {
   getForcedUndoSetting,
   isCappedModeState,
   isProgressiveCapped64Mode,
+  resolveCappedPlaceholderRowValues,
+  resolveCappedPlaceholderSlotByRepeatCount,
+  resolveCappedTimerLegendFontSize,
   isTimerLeaderboardAvailableByMode,
   isUndoAllowedByMode,
   isUndoSettingFixedForMode,
@@ -201,6 +204,61 @@ describe("core mode: capped policy", () => {
         maxTile: 64
       })
     ).toBe(false);
+  });
+});
+
+describe("core mode: capped timer placeholder policy", () => {
+  it("resolves capped timer legend font size by capped target value", () => {
+    expect(resolveCappedTimerLegendFontSize(64)).toBe("22px");
+    expect(resolveCappedTimerLegendFontSize(128)).toBe("18px");
+    expect(resolveCappedTimerLegendFontSize(1024)).toBe("14px");
+    expect(resolveCappedTimerLegendFontSize(8192)).toBe("13px");
+    expect(resolveCappedTimerLegendFontSize(null)).toBe("14px");
+  });
+
+  it("resolves capped placeholder rows from timer slots", () => {
+    expect(
+      resolveCappedPlaceholderRowValues({
+        isCappedMode: false,
+        cappedTargetValue: 2048,
+        timerSlotIds: [16, 32, 64]
+      })
+    ).toEqual([]);
+
+    expect(
+      resolveCappedPlaceholderRowValues({
+        isCappedMode: true,
+        cappedTargetValue: 64,
+        timerSlotIds: [16, 32, 64, 128, 256, 512]
+      })
+    ).toEqual([128, 256, 512]);
+  });
+
+  it("maps repeat count to placeholder slot deterministically", () => {
+    expect(
+      resolveCappedPlaceholderSlotByRepeatCount({
+        repeatCount: 1,
+        placeholderRowValues: [128, 256, 512]
+      })
+    ).toBeNull();
+    expect(
+      resolveCappedPlaceholderSlotByRepeatCount({
+        repeatCount: 2,
+        placeholderRowValues: [128, 256, 512]
+      })
+    ).toBe(128);
+    expect(
+      resolveCappedPlaceholderSlotByRepeatCount({
+        repeatCount: 4,
+        placeholderRowValues: [128, 256, 512]
+      })
+    ).toBe(512);
+    expect(
+      resolveCappedPlaceholderSlotByRepeatCount({
+        repeatCount: 5,
+        placeholderRowValues: [128, 256, 512]
+      })
+    ).toBeNull();
   });
 });
 
