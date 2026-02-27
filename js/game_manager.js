@@ -5845,11 +5845,12 @@ GameManager.prototype.importLegacyReplayPayload = function (decodedLegacy) {
 };
 
 GameManager.prototype.normalizeReplayImportInput = function (replayString) {
-  var normalizedReplayString = replayString;
-  if (typeof normalizedReplayString !== "string") {
-    normalizedReplayString = JSON.stringify(normalizedReplayString);
-  }
-  return normalizedReplayString.trim();
+  return this.coerceReplayImportInputToString(replayString).trim();
+};
+
+GameManager.prototype.coerceReplayImportInputToString = function (replayString) {
+  if (typeof replayString === "string") return replayString;
+  return JSON.stringify(replayString);
 };
 
 GameManager.prototype.isSupportedReplayEnvelopeKind = function (kind) {
