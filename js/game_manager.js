@@ -5717,34 +5717,32 @@ GameManager.prototype.serializeV3 = function () {
   return this.buildSerializedReplayV3Payload(replay);
 };
 
-GameManager.prototype.tryAutoSubmitOnGameOver = function () {
-  var self = this;
-  function setResult(payload) {
-    self.writeLocalStorageJsonPayload("last_session_submit_result_v1", payload);
-  }
+GameManager.prototype.writeLastSessionSubmitResult = function (payload) {
+  this.writeLocalStorageJsonPayload("last_session_submit_result_v1", payload);
+};
 
+GameManager.prototype.writeSkippedSessionSubmitResult = function (reason) {
+  this.writeLastSessionSubmitResult({
+    at: new Date().toISOString(),
+    ok: false,
+    skipped: true,
+    reason: reason
+  });
+};
+
+GameManager.prototype.tryAutoSubmitOnGameOver = function () {
   if (this.sessionSubmitDone) return;
   if (this.replayMode) {
-    setResult({
-      at: new Date().toISOString(),
-      ok: false,
-      skipped: true,
-      reason: "replay_mode"
-    });
+    this.writeSkippedSessionSubmitResult("replay_mode");
     return;
   }
   if (!this.isSessionTerminated()) {
-    setResult({
-      at: new Date().toISOString(),
-      ok: false,
-      skipped: true,
-      reason: "not_terminated"
-    });
+    this.writeSkippedSessionSubmitResult("not_terminated");
     return;
   }
   var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
   if (!localHistorySaveRecord) {
-    setResult({
+    this.writeLastSessionSubmitResult({
       at: new Date().toISOString(),
       ok: false,
       reason: "local_history_store_missing"
@@ -5784,7 +5782,7 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
 
   try {
     var saved = localHistorySaveRecord.method.call(localHistorySaveRecord.scope, payload);
-    setResult({
+    this.writeLastSessionSubmitResult({
       at: endedAt,
       ok: true,
       local_saved: true,
@@ -5793,7 +5791,7 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
       record_id: saved && saved.id ? saved.id : null
     });
   } catch (error) {
-    setResult({
+    this.writeLastSessionSubmitResult({
       at: endedAt,
       ok: false,
       mode_key: payload.mode_key,
