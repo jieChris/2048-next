@@ -434,10 +434,7 @@ GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString)
       v4Prefix: GameManager.REPLAY_V4_PREFIX
     }]);
   if (parseReplayImportEnvelopeCore.available) return parseReplayImportEnvelopeCore.value;
-
-  var jsonEnvelope = this.parseJsonReplayImportEnvelope(trimmedReplayString);
-  if (jsonEnvelope) return jsonEnvelope;
-  return this.parseV4ReplayImportEnvelope(trimmedReplayString);
+  return this.parseReplayImportEnvelopeFallback(trimmedReplayString);
 };
 
 GameManager.prototype.normalizeOptionalReplayString = function (raw) {
@@ -492,10 +489,22 @@ GameManager.prototype.resolveJsonReplayEnvelopeMeta = function (replayObj) {
   };
 };
 
-GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayString) {
+GameManager.prototype.parseReplayImportEnvelopeFallback = function (trimmedReplayString) {
+  var jsonEnvelope = this.parseJsonReplayImportEnvelope(trimmedReplayString);
+  if (jsonEnvelope) return jsonEnvelope;
+  return this.parseV4ReplayImportEnvelope(trimmedReplayString);
+};
+
+GameManager.prototype.parseReplayV4ImportBody = function (trimmedReplayString) {
   if (trimmedReplayString.indexOf(GameManager.REPLAY_V4_PREFIX) !== 0) return null;
   var body = trimmedReplayString.substring(GameManager.REPLAY_V4_PREFIX.length);
   if (body.length < 17) throw "Invalid v4C payload";
+  return body;
+};
+
+GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayString) {
+  var body = this.parseReplayV4ImportBody(trimmedReplayString);
+  if (!body) return null;
   var modeCode = body.charAt(0);
   var replayModeIdV4 = this.resolveReplayModeKeyFromV4Code(modeCode);
   if (!replayModeIdV4) throw "Invalid v4C mode";
