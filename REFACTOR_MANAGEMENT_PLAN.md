@@ -287,6 +287,10 @@
   - `src/core/timer-interval.ts` + `js/core_timer_interval_runtime.js`（计时刷新频率决策）
     - `game_manager.js#getTimerUpdateIntervalMs` 已改为优先委托 runtime（保留 fallback）
   - `game_manager.js#pretty` 已改为优先委托 `CorePrettyTimeRuntime.formatPrettyTime`（保留 fallback）
+  - `src/core/mode.ts` + `js/core_mode_runtime.js` 已扩展 capped/undo/timer-leaderboard 策略函数
+    - `game_manager.js#isCappedMode/getCappedTargetValue/isProgressiveCapped64Mode` 已改为优先委托 runtime（保留 fallback）
+    - `game_manager.js#getForcedUndoSettingForMode/isUndoAllowedByMode/isUndoSettingFixedForMode/canToggleUndoSetting` 已改为优先委托 runtime（保留 fallback）
+    - `game_manager.js#isTimerLeaderboardAvailableByMode` 已改为优先委托 runtime（保留 fallback）
   - `src/core/scoring.ts` + `js/core_scoring_runtime.js`
   - `src/core/merge-effects.ts` + `js/core_merge_effects_runtime.js`
   - `src/core/post-move.ts` + `js/core_post_move_runtime.js`

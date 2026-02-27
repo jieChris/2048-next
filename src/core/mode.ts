@@ -25,6 +25,21 @@ export interface NormalizeModeConfigInput {
   defaultModeConfig: PlainRecord;
 }
 
+export interface CappedModeStateInput {
+  modeKey?: string | null;
+  mode?: string | null;
+  maxTile?: number | null;
+}
+
+export interface UndoPolicyInput {
+  mode?: string | null;
+  modeConfig?: PlainRecord | null;
+}
+
+export interface UndoTogglePolicyInput extends UndoPolicyInput {
+  hasGameStarted?: boolean | null;
+}
+
 export function clonePlain<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -97,4 +112,56 @@ export function normalizeModeConfig(input: NormalizeModeConfigInput): ModeConfig
   cfg.mode_family = (cfg.mode_family as string) || (cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2");
   cfg.rank_policy = (cfg.rank_policy as string) || (cfg.ranked_bucket !== "none" ? "ranked" : "unranked");
   return cfg;
+}
+
+function toModeId(mode: unknown): string {
+  if (typeof mode !== "string") return "";
+  const value = mode.trim().toLowerCase();
+  return value || "";
+}
+
+export function isCappedModeState(input: CappedModeStateInput): boolean {
+  const key = String(input.modeKey || input.mode || "");
+  const maxTile = Number(input.maxTile);
+  return key.indexOf("capped") !== -1 && Number.isFinite(maxTile) && maxTile > 0;
+}
+
+export function getCappedTargetValue(input: CappedModeStateInput): number | null {
+  return isCappedModeState(input) ? Number(input.maxTile) : null;
+}
+
+export function isProgressiveCapped64Mode(_input?: CappedModeStateInput): boolean {
+  return false;
+}
+
+export function getForcedUndoSetting(input: UndoPolicyInput): boolean | null {
+  const modeCfg = input.modeConfig || null;
+  if (modeCfg && typeof modeCfg.undo_enabled === "boolean") {
+    return modeCfg.undo_enabled;
+  }
+
+  const modeId = toModeId(input.mode);
+  if (!modeId) return null;
+  if (modeId === "capped" || modeId.indexOf("capped") !== -1) return false;
+  if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) return false;
+  if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) return true;
+  return null;
+}
+
+export function isUndoAllowedByMode(input: UndoPolicyInput): boolean {
+  return getForcedUndoSetting(input) !== false;
+}
+
+export function isUndoSettingFixedForMode(input: UndoPolicyInput): boolean {
+  return getForcedUndoSetting(input) !== null;
+}
+
+export function canToggleUndoSetting(input: UndoTogglePolicyInput): boolean {
+  if (!isUndoAllowedByMode(input)) return false;
+  if (isUndoSettingFixedForMode(input)) return false;
+  return !input.hasGameStarted;
+}
+
+export function isTimerLeaderboardAvailableByMode(_mode?: string | null): boolean {
+  return true;
 }

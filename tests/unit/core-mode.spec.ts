@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeModeConfig, normalizeSpecialRules } from "../../src/core/mode";
+import {
+  canToggleUndoSetting,
+  getCappedTargetValue,
+  getForcedUndoSetting,
+  isCappedModeState,
+  isProgressiveCapped64Mode,
+  isTimerLeaderboardAvailableByMode,
+  isUndoAllowedByMode,
+  isUndoSettingFixedForMode,
+  normalizeModeConfig,
+  normalizeSpecialRules
+} from "../../src/core/mode";
 
 const DEFAULT_MODE_CONFIG = {
   key: "standard_4x4_pow2_no_undo",
@@ -144,5 +155,107 @@ describe("core mode: normalizeModeConfig", () => {
 
     expect(cfg.special_rules.custom_spawn_four_rate).toBe(100);
     expect(cfg.spawn_table).toEqual([{ value: 4, weight: 100 }]);
+  });
+});
+
+describe("core mode: capped policy", () => {
+  it("detects capped mode by key and positive max tile", () => {
+    expect(
+      isCappedModeState({
+        modeKey: "capped_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toBe(true);
+    expect(
+      isCappedModeState({
+        modeKey: "standard_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toBe(false);
+    expect(
+      isCappedModeState({
+        modeKey: "capped_4x4_pow2_no_undo",
+        maxTile: 0
+      })
+    ).toBe(false);
+  });
+
+  it("resolves capped target value and progressive mode defaults", () => {
+    expect(
+      getCappedTargetValue({
+        modeKey: "capped_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toBe(64);
+    expect(
+      getCappedTargetValue({
+        modeKey: "standard_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toBeNull();
+    expect(
+      isProgressiveCapped64Mode({
+        modeKey: "capped_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toBe(false);
+  });
+});
+
+describe("core mode: undo policy", () => {
+  it("resolves forced undo setting by explicit mode config first", () => {
+    expect(
+      getForcedUndoSetting({
+        mode: "capped_4x4_pow2_no_undo",
+        modeConfig: { undo_enabled: true }
+      })
+    ).toBe(true);
+    expect(
+      getForcedUndoSetting({
+        mode: "classic_4x4_pow2_undo",
+        modeConfig: { undo_enabled: false }
+      })
+    ).toBe(false);
+  });
+
+  it("resolves forced undo setting by mode naming convention", () => {
+    expect(getForcedUndoSetting({ mode: "capped_4x4_pow2_no_undo" })).toBe(false);
+    expect(getForcedUndoSetting({ mode: "custom_no-undo_mode" })).toBe(false);
+    expect(getForcedUndoSetting({ mode: "custom_undo_only_mode" })).toBe(true);
+    expect(getForcedUndoSetting({ mode: "standard_4x4_pow2" })).toBeNull();
+  });
+
+  it("derives undo allowed/fixed/toggle states", () => {
+    expect(isUndoAllowedByMode({ mode: "standard_4x4_pow2" })).toBe(true);
+    expect(isUndoAllowedByMode({ mode: "capped_4x4_pow2_no_undo" })).toBe(false);
+
+    expect(isUndoSettingFixedForMode({ mode: "standard_4x4_pow2" })).toBe(false);
+    expect(isUndoSettingFixedForMode({ mode: "custom_undo-only_mode" })).toBe(true);
+
+    expect(
+      canToggleUndoSetting({
+        mode: "standard_4x4_pow2",
+        hasGameStarted: false
+      })
+    ).toBe(true);
+    expect(
+      canToggleUndoSetting({
+        mode: "standard_4x4_pow2",
+        hasGameStarted: true
+      })
+    ).toBe(false);
+    expect(
+      canToggleUndoSetting({
+        mode: "capped_4x4_pow2_no_undo",
+        hasGameStarted: false
+      })
+    ).toBe(false);
+  });
+});
+
+describe("core mode: timer leaderboard policy", () => {
+  it("keeps timer leaderboard availability enabled", () => {
+    expect(isTimerLeaderboardAvailableByMode("standard_4x4_pow2_no_undo")).toBe(true);
+    expect(isTimerLeaderboardAvailableByMode("capped_4x4_pow2_no_undo")).toBe(true);
   });
 });

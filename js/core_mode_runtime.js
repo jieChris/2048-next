@@ -154,7 +154,71 @@
     return cfg;
   }
 
+  function toModeId(mode) {
+    if (typeof mode !== "string") return "";
+    var value = mode.trim().toLowerCase();
+    return value || "";
+  }
+
+  function isCappedModeState(input) {
+    var source = input || {};
+    var key = String(source.modeKey || source.mode || "");
+    var maxTile = Number(source.maxTile);
+    return key.indexOf("capped") !== -1 && Number.isFinite(maxTile) && maxTile > 0;
+  }
+
+  function getCappedTargetValue(input) {
+    if (!isCappedModeState(input)) return null;
+    return Number(input && input.maxTile);
+  }
+
+  function isProgressiveCapped64Mode(_input) {
+    return false;
+  }
+
+  function getForcedUndoSetting(input) {
+    var source = input || {};
+    var modeCfg = source.modeConfig || null;
+    if (modeCfg && typeof modeCfg.undo_enabled === "boolean") {
+      return modeCfg.undo_enabled;
+    }
+
+    var modeId = toModeId(source.mode);
+    if (!modeId) return null;
+    if (modeId === "capped" || modeId.indexOf("capped") !== -1) return false;
+    if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) return false;
+    if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) return true;
+    return null;
+  }
+
+  function isUndoAllowedByMode(input) {
+    return getForcedUndoSetting(input) !== false;
+  }
+
+  function isUndoSettingFixedForMode(input) {
+    return getForcedUndoSetting(input) !== null;
+  }
+
+  function canToggleUndoSetting(input) {
+    var source = input || {};
+    if (!isUndoAllowedByMode(source)) return false;
+    if (isUndoSettingFixedForMode(source)) return false;
+    return !source.hasGameStarted;
+  }
+
+  function isTimerLeaderboardAvailableByMode(_mode) {
+    return true;
+  }
+
   global.CoreModeRuntime = global.CoreModeRuntime || {};
   global.CoreModeRuntime.normalizeSpecialRules = normalizeSpecialRules;
   global.CoreModeRuntime.normalizeModeConfig = normalizeModeConfig;
+  global.CoreModeRuntime.isCappedModeState = isCappedModeState;
+  global.CoreModeRuntime.getCappedTargetValue = getCappedTargetValue;
+  global.CoreModeRuntime.isProgressiveCapped64Mode = isProgressiveCapped64Mode;
+  global.CoreModeRuntime.getForcedUndoSetting = getForcedUndoSetting;
+  global.CoreModeRuntime.isUndoAllowedByMode = isUndoAllowedByMode;
+  global.CoreModeRuntime.isUndoSettingFixedForMode = isUndoSettingFixedForMode;
+  global.CoreModeRuntime.canToggleUndoSetting = canToggleUndoSetting;
+  global.CoreModeRuntime.isTimerLeaderboardAvailableByMode = isTimerLeaderboardAvailableByMode;
 })(typeof window !== "undefined" ? window : undefined);
