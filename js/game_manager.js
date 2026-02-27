@@ -659,22 +659,32 @@ GameManager.prototype.resolveReplayExecution = function (action) {
   return this.resolveReplayExecutionFallback(action);
 };
 
+GameManager.prototype.buildReplayExecution = function (kind, payload) {
+  var out = { kind: kind };
+  if (!payload || typeof payload !== "object") return out;
+  for (var key in payload) {
+    if (Object.prototype.hasOwnProperty.call(payload, key)) {
+      out[key] = payload[key];
+    }
+  }
+  return out;
+};
+
 GameManager.prototype.buildMoveReplayExecutionFallback = function (action) {
   var dir = Array.isArray(action) ? action[1] : action;
-  return { kind: "m", dir: dir };
+  return this.buildReplayExecution("m", { dir: dir });
 };
 
 GameManager.prototype.buildUndoReplayExecutionFallback = function () {
-  return { kind: "u" };
+  return this.buildReplayExecution("u");
 };
 
 GameManager.prototype.buildPracticeReplayExecutionFallback = function (action) {
-  return {
-    kind: "p",
+  return this.buildReplayExecution("p", {
     x: action[1],
     y: action[2],
     value: action[3]
-  };
+  });
 };
 
 GameManager.prototype.resolveReplayExecutionFallback = function (action) {
