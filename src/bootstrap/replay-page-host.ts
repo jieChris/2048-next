@@ -15,6 +15,111 @@ function resolveManagerFromWindow(windowLike: unknown): unknown {
   return windowRecord.game_manager || null;
 }
 
+export interface ReplayPageActionResolvers {
+  showReplayModal: (
+    title?: unknown,
+    content?: unknown,
+    actionName?: unknown,
+    actionCallback?: unknown
+  ) => unknown;
+  closeReplayModal: () => unknown;
+  exportReplay: () => unknown;
+}
+
+export function createReplayPageActionResolvers(input: {
+  replayPageHostRuntime?: unknown;
+  replayModalRuntime?: unknown;
+  replayExportRuntime?: unknown;
+  documentLike?: unknown;
+  windowLike?: unknown;
+  navigatorLike?: unknown;
+  alertLike?: unknown;
+  consoleLike?: unknown;
+}): ReplayPageActionResolvers {
+  const source = toRecord(input);
+  const pageHostRuntime = toRecord(source.replayPageHostRuntime);
+  const windowLike = source.windowLike || null;
+
+  function closeReplayModal(): unknown {
+    const applyClose = asFunction<(payload: unknown) => unknown>(
+      pageHostRuntime.applyReplayModalPageClose
+    );
+    if (applyClose) {
+      return applyClose({
+        replayModalRuntime: source.replayModalRuntime,
+        documentLike: source.documentLike
+      });
+    }
+    return applyReplayModalPageClose({
+      replayModalRuntime: source.replayModalRuntime,
+      documentLike: source.documentLike
+    });
+  }
+
+  function showReplayModal(
+    title?: unknown,
+    content?: unknown,
+    actionName?: unknown,
+    actionCallback?: unknown
+  ): unknown {
+    const applyOpen = asFunction<(payload: unknown) => unknown>(
+      pageHostRuntime.applyReplayModalPageOpen
+    );
+    if (applyOpen) {
+      return applyOpen({
+        replayModalRuntime: source.replayModalRuntime,
+        documentLike: source.documentLike,
+        title,
+        content,
+        actionName,
+        actionCallback,
+        closeCallback: closeReplayModal
+      });
+    }
+    return applyReplayModalPageOpen({
+      replayModalRuntime: source.replayModalRuntime,
+      documentLike: source.documentLike,
+      title,
+      content,
+      actionName,
+      actionCallback,
+      closeCallback: closeReplayModal
+    });
+  }
+
+  function exportReplay(): unknown {
+    const applyExportFromContext = asFunction<(payload: unknown) => unknown>(
+      pageHostRuntime.applyReplayExportPageActionFromContext
+    );
+    if (applyExportFromContext) {
+      return applyExportFromContext({
+        replayExportRuntime: source.replayExportRuntime,
+        windowLike,
+        showReplayModal,
+        navigatorLike: source.navigatorLike,
+        documentLike: source.documentLike,
+        alertLike: source.alertLike,
+        consoleLike: source.consoleLike
+      });
+    }
+    return applyReplayExportPageActionFromContext({
+      replayExportRuntime: source.replayExportRuntime,
+      windowLike,
+      showReplayModal,
+      navigatorLike: source.navigatorLike,
+      documentLike: source.documentLike,
+      alertLike: source.alertLike,
+      consoleLike: source.consoleLike
+    });
+  }
+
+  return {
+    showReplayModal,
+    closeReplayModal,
+    exportReplay
+  };
+}
+
 export interface ReplayModalPageOpenResult {
   hasApplyOpenApi: boolean;
   didApply: boolean;

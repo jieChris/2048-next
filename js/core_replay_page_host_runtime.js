@@ -20,6 +20,80 @@
     return windowRecord.game_manager || null;
   }
 
+  function createReplayPageActionResolvers(input) {
+    var source = toRecord(input);
+    var pageHostRuntime = toRecord(source.replayPageHostRuntime);
+    var windowLike = source.windowLike || null;
+
+    function closeReplayModal() {
+      var applyClose = asFunction(pageHostRuntime.applyReplayModalPageClose);
+      if (applyClose) {
+        return applyClose({
+          replayModalRuntime: source.replayModalRuntime,
+          documentLike: source.documentLike
+        });
+      }
+      return applyReplayModalPageClose({
+        replayModalRuntime: source.replayModalRuntime,
+        documentLike: source.documentLike
+      });
+    }
+
+    function showReplayModal(title, content, actionName, actionCallback) {
+      var applyOpen = asFunction(pageHostRuntime.applyReplayModalPageOpen);
+      if (applyOpen) {
+        return applyOpen({
+          replayModalRuntime: source.replayModalRuntime,
+          documentLike: source.documentLike,
+          title: title,
+          content: content,
+          actionName: actionName,
+          actionCallback: actionCallback,
+          closeCallback: closeReplayModal
+        });
+      }
+      return applyReplayModalPageOpen({
+        replayModalRuntime: source.replayModalRuntime,
+        documentLike: source.documentLike,
+        title: title,
+        content: content,
+        actionName: actionName,
+        actionCallback: actionCallback,
+        closeCallback: closeReplayModal
+      });
+    }
+
+    function exportReplay() {
+      var applyExportFromContext = asFunction(pageHostRuntime.applyReplayExportPageActionFromContext);
+      if (applyExportFromContext) {
+        return applyExportFromContext({
+          replayExportRuntime: source.replayExportRuntime,
+          windowLike: windowLike,
+          showReplayModal: showReplayModal,
+          navigatorLike: source.navigatorLike,
+          documentLike: source.documentLike,
+          alertLike: source.alertLike,
+          consoleLike: source.consoleLike
+        });
+      }
+      return applyReplayExportPageActionFromContext({
+        replayExportRuntime: source.replayExportRuntime,
+        windowLike: windowLike,
+        showReplayModal: showReplayModal,
+        navigatorLike: source.navigatorLike,
+        documentLike: source.documentLike,
+        alertLike: source.alertLike,
+        consoleLike: source.consoleLike
+      });
+    }
+
+    return {
+      showReplayModal: showReplayModal,
+      closeReplayModal: closeReplayModal,
+      exportReplay: exportReplay
+    };
+  }
+
   function applyReplayModalPageOpen(input) {
     var source = toRecord(input);
     var modalRuntime = toRecord(source.replayModalRuntime);
@@ -114,6 +188,8 @@
   }
 
   global.CoreReplayPageHostRuntime = global.CoreReplayPageHostRuntime || {};
+  global.CoreReplayPageHostRuntime.createReplayPageActionResolvers =
+    createReplayPageActionResolvers;
   global.CoreReplayPageHostRuntime.applyReplayModalPageOpen = applyReplayModalPageOpen;
   global.CoreReplayPageHostRuntime.applyReplayModalPageClose = applyReplayModalPageClose;
   global.CoreReplayPageHostRuntime.applyReplayExportPageAction = applyReplayExportPageAction;

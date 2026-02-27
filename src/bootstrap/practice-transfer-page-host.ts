@@ -41,6 +41,63 @@ function resolveGameModeConfigFromWindow(windowLike: unknown): unknown {
   return null;
 }
 
+export interface PracticeTransferPageActionResolvers {
+  openPracticeBoardFromCurrent: () => unknown;
+}
+
+export function createPracticeTransferPageActionResolvers(input: {
+  practiceTransferPageHostRuntime?: unknown;
+  practiceTransferHostRuntime?: unknown;
+  practiceTransferRuntime?: unknown;
+  storageRuntime?: unknown;
+  guideShownKey?: unknown;
+  guideSeenFlag?: unknown;
+  localStorageKey?: unknown;
+  sessionStorageKey?: unknown;
+  documentLike?: unknown;
+  windowLike?: unknown;
+  alertLike?: unknown;
+}): PracticeTransferPageActionResolvers {
+  const source = toRecord(input);
+  const pageHostRuntime = toRecord(source.practiceTransferPageHostRuntime);
+
+  function openPracticeBoardFromCurrent(): unknown {
+    const applyFromContext = asFunction<(payload: unknown) => unknown>(
+      pageHostRuntime.applyPracticeTransferPageActionFromContext
+    );
+    if (applyFromContext) {
+      return applyFromContext({
+        practiceTransferHostRuntime: source.practiceTransferHostRuntime,
+        practiceTransferRuntime: source.practiceTransferRuntime,
+        storageRuntime: source.storageRuntime,
+        guideShownKey: source.guideShownKey,
+        guideSeenFlag: source.guideSeenFlag,
+        localStorageKey: source.localStorageKey,
+        sessionStorageKey: source.sessionStorageKey,
+        documentLike: source.documentLike,
+        windowLike: source.windowLike,
+        alertLike: source.alertLike
+      });
+    }
+    return applyPracticeTransferPageActionFromContext({
+      practiceTransferHostRuntime: source.practiceTransferHostRuntime,
+      practiceTransferRuntime: source.practiceTransferRuntime,
+      storageRuntime: source.storageRuntime,
+      guideShownKey: source.guideShownKey,
+      guideSeenFlag: source.guideSeenFlag,
+      localStorageKey: source.localStorageKey,
+      sessionStorageKey: source.sessionStorageKey,
+      documentLike: source.documentLike,
+      windowLike: source.windowLike,
+      alertLike: source.alertLike
+    });
+  }
+
+  return {
+    openPracticeBoardFromCurrent
+  };
+}
+
 export interface ApplyPracticeTransferPageActionResult {
   didInvokeHost: boolean;
   localStorageResolved: boolean;

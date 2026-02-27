@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  createReplayPageActionResolvers,
   applyReplayExportPageAction,
   applyReplayExportPageActionFromContext,
   applyReplayModalPageClose,
@@ -8,6 +9,85 @@ import {
 } from "../../src/bootstrap/replay-page-host";
 
 describe("bootstrap replay page host", () => {
+  it("creates replay page action resolvers with safe fallbacks", () => {
+    const resolvers = createReplayPageActionResolvers({});
+    expect(typeof resolvers.showReplayModal).toBe("function");
+    expect(typeof resolvers.closeReplayModal).toBe("function");
+    expect(typeof resolvers.exportReplay).toBe("function");
+    expect(resolvers.showReplayModal()).toEqual({
+      hasApplyOpenApi: false,
+      didApply: false
+    });
+    expect(resolvers.closeReplayModal()).toEqual({
+      hasApplyCloseApi: false,
+      didApply: false
+    });
+    expect(resolvers.exportReplay()).toEqual({
+      didInvokeExport: false,
+      managerResolved: false,
+      exportResult: {
+        hasApplyExportApi: false,
+        didApply: false
+      }
+    });
+  });
+
+  it("delegates replay page actions through page host runtime methods", () => {
+    const applyReplayModalPageOpen = vi.fn();
+    const applyReplayModalPageClose = vi.fn();
+    const applyReplayExportPageActionFromContext = vi.fn();
+    const actionCallback = vi.fn();
+    const replayModalRuntime = { id: "modal-runtime" };
+    const replayExportRuntime = { id: "export-runtime" };
+    const documentLike = { id: "document" };
+    const windowLike = { id: "window" };
+    const navigatorLike = { id: "navigator" };
+    const alertLike = vi.fn();
+    const consoleLike = { warn: vi.fn() };
+
+    const resolvers = createReplayPageActionResolvers({
+      replayPageHostRuntime: {
+        applyReplayModalPageOpen,
+        applyReplayModalPageClose,
+        applyReplayExportPageActionFromContext
+      },
+      replayModalRuntime,
+      replayExportRuntime,
+      documentLike,
+      windowLike,
+      navigatorLike,
+      alertLike,
+      consoleLike
+    });
+
+    resolvers.showReplayModal("title", "content", "action", actionCallback);
+    resolvers.closeReplayModal();
+    resolvers.exportReplay();
+
+    expect(applyReplayModalPageOpen).toHaveBeenCalledWith({
+      replayModalRuntime,
+      documentLike,
+      title: "title",
+      content: "content",
+      actionName: "action",
+      actionCallback,
+      closeCallback: expect.any(Function)
+    });
+    expect(applyReplayModalPageClose).toHaveBeenCalledWith({
+      replayModalRuntime,
+      documentLike
+    });
+    expect(applyReplayExportPageActionFromContext).toHaveBeenCalledWith({
+      replayExportRuntime,
+      windowLike,
+      showReplayModal: expect.any(Function),
+      navigatorLike,
+      documentLike,
+      alertLike,
+      consoleLike
+    });
+  });
+
   it("returns false result when replay modal open api is missing", () => {
     const result = applyReplayModalPageOpen({ replayModalRuntime: {} });
 

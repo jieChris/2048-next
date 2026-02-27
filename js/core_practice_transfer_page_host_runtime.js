@@ -40,6 +40,45 @@
     return null;
   }
 
+  function createPracticeTransferPageActionResolvers(input) {
+    var source = toRecord(input);
+    var pageHostRuntime = toRecord(source.practiceTransferPageHostRuntime);
+
+    function openPracticeBoardFromCurrent() {
+      var applyFromContext = asFunction(pageHostRuntime.applyPracticeTransferPageActionFromContext);
+      if (applyFromContext) {
+        return applyFromContext({
+          practiceTransferHostRuntime: source.practiceTransferHostRuntime,
+          practiceTransferRuntime: source.practiceTransferRuntime,
+          storageRuntime: source.storageRuntime,
+          guideShownKey: source.guideShownKey,
+          guideSeenFlag: source.guideSeenFlag,
+          localStorageKey: source.localStorageKey,
+          sessionStorageKey: source.sessionStorageKey,
+          documentLike: source.documentLike,
+          windowLike: source.windowLike,
+          alertLike: source.alertLike
+        });
+      }
+      return applyPracticeTransferPageActionFromContext({
+        practiceTransferHostRuntime: source.practiceTransferHostRuntime,
+        practiceTransferRuntime: source.practiceTransferRuntime,
+        storageRuntime: source.storageRuntime,
+        guideShownKey: source.guideShownKey,
+        guideSeenFlag: source.guideSeenFlag,
+        localStorageKey: source.localStorageKey,
+        sessionStorageKey: source.sessionStorageKey,
+        documentLike: source.documentLike,
+        windowLike: source.windowLike,
+        alertLike: source.alertLike
+      });
+    }
+
+    return {
+      openPracticeBoardFromCurrent: openPracticeBoardFromCurrent
+    };
+  }
+
   function applyPracticeTransferPageAction(input) {
     var source = toRecord(input);
     var hostRuntime = toRecord(source.practiceTransferHostRuntime);
@@ -119,6 +158,8 @@
   }
 
   global.CorePracticeTransferPageHostRuntime = global.CorePracticeTransferPageHostRuntime || {};
+  global.CorePracticeTransferPageHostRuntime.createPracticeTransferPageActionResolvers =
+    createPracticeTransferPageActionResolvers;
   global.CorePracticeTransferPageHostRuntime.applyPracticeTransferPageAction =
     applyPracticeTransferPageAction;
   global.CorePracticeTransferPageHostRuntime.applyPracticeTransferPageActionFromContext =

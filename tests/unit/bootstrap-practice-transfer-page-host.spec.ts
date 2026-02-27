@@ -1,11 +1,61 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  createPracticeTransferPageActionResolvers,
   applyPracticeTransferPageAction,
   applyPracticeTransferPageActionFromContext
 } from "../../src/bootstrap/practice-transfer-page-host";
 
 describe("bootstrap practice transfer page host", () => {
+  it("creates action resolvers with safe fallback", () => {
+    const resolvers = createPracticeTransferPageActionResolvers({});
+    expect(typeof resolvers.openPracticeBoardFromCurrent).toBe("function");
+    expect(resolvers.openPracticeBoardFromCurrent()).toEqual({
+      didInvokePageAction: false,
+      managerResolved: false,
+      modeConfigResolved: false,
+      actionResult: {
+        didInvokeHost: false,
+        localStorageResolved: false,
+        sessionStorageResolved: false,
+        transferResult: null
+      }
+    });
+  });
+
+  it("delegates action resolver through page host runtime method", () => {
+    const applyPracticeTransferPageActionFromContext = vi.fn(() => ({ marker: "delegated" }));
+    const resolvers = createPracticeTransferPageActionResolvers({
+      practiceTransferPageHostRuntime: {
+        applyPracticeTransferPageActionFromContext
+      },
+      practiceTransferHostRuntime: { id: "host" },
+      practiceTransferRuntime: { id: "runtime" },
+      storageRuntime: { id: "storage" },
+      guideShownKey: "guide-key",
+      guideSeenFlag: "guide-seen=1",
+      localStorageKey: "local-key",
+      sessionStorageKey: "session-key",
+      documentLike: { id: "doc" },
+      windowLike: { id: "window" },
+      alertLike: vi.fn()
+    });
+
+    expect(resolvers.openPracticeBoardFromCurrent()).toEqual({ marker: "delegated" });
+    expect(applyPracticeTransferPageActionFromContext).toHaveBeenCalledWith({
+      practiceTransferHostRuntime: { id: "host" },
+      practiceTransferRuntime: { id: "runtime" },
+      storageRuntime: { id: "storage" },
+      guideShownKey: "guide-key",
+      guideSeenFlag: "guide-seen=1",
+      localStorageKey: "local-key",
+      sessionStorageKey: "session-key",
+      documentLike: { id: "doc" },
+      windowLike: { id: "window" },
+      alertLike: expect.any(Function)
+    });
+  });
+
   it("returns early when host runtime contract is missing", () => {
     const result = applyPracticeTransferPageAction({});
     expect(result).toEqual({
