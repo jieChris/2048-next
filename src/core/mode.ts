@@ -66,6 +66,12 @@ export interface ProgressiveCapped64UnlockResult {
   unlockedValue: number | null;
 }
 
+export interface GameTerminationInput {
+  over?: boolean | null;
+  won?: boolean | null;
+  keepPlaying?: boolean | null;
+}
+
 export interface UndoPolicyInput {
   mode?: string | null;
   modeConfig?: PlainRecord | null;
@@ -278,6 +284,10 @@ export function resolveProgressiveCapped64Unlock(
   }
   nextUnlockedState[key] = true;
   return { nextUnlockedState, unlockedValue: value };
+}
+
+export function isGameTerminatedState(input: GameTerminationInput): boolean {
+  return !!input.over || (!!input.won && !input.keepPlaying);
 }
 
 export function getForcedUndoSetting(input: UndoPolicyInput): boolean | null {

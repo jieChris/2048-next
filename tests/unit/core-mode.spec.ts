@@ -6,6 +6,7 @@ import {
   getCappedTargetValue,
   getForcedUndoSetting,
   isCappedModeState,
+  isGameTerminatedState,
   isProgressiveCapped64Mode,
   resolveCappedPlaceholderRowValues,
   resolveCappedPlaceholderSlotByRepeatCount,
@@ -101,6 +102,37 @@ describe("core mode: normalizeSpecialRules", () => {
       nextUnlockedState: { "16": true, "32": false, "64": false },
       unlockedValue: null
     });
+  });
+
+  it("resolves game termination state", () => {
+    expect(
+      isGameTerminatedState({
+        over: false,
+        won: false,
+        keepPlaying: false
+      })
+    ).toBe(false);
+    expect(
+      isGameTerminatedState({
+        over: true,
+        won: false,
+        keepPlaying: false
+      })
+    ).toBe(true);
+    expect(
+      isGameTerminatedState({
+        over: false,
+        won: true,
+        keepPlaying: false
+      })
+    ).toBe(true);
+    expect(
+      isGameTerminatedState({
+        over: false,
+        won: true,
+        keepPlaying: true
+      })
+    ).toBe(false);
   });
 });
 

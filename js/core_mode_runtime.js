@@ -276,6 +276,11 @@
     return { nextUnlockedState: nextUnlockedState, unlockedValue: value };
   }
 
+  function isGameTerminatedState(input) {
+    var source = input || {};
+    return !!source.over || (!!source.won && !source.keepPlaying);
+  }
+
   function getForcedUndoSetting(input) {
     var source = input || {};
     var modeCfg = source.modeConfig || null;
@@ -349,6 +354,7 @@
   global.CoreModeRuntime.resolveCappedRowVisibilityPlan = resolveCappedRowVisibilityPlan;
   global.CoreModeRuntime.createProgressiveCapped64UnlockedState = createProgressiveCapped64UnlockedState;
   global.CoreModeRuntime.resolveProgressiveCapped64Unlock = resolveProgressiveCapped64Unlock;
+  global.CoreModeRuntime.isGameTerminatedState = isGameTerminatedState;
   global.CoreModeRuntime.getForcedUndoSetting = getForcedUndoSetting;
   global.CoreModeRuntime.isUndoAllowedByMode = isUndoAllowedByMode;
   global.CoreModeRuntime.isUndoSettingFixedForMode = isUndoSettingFixedForMode;

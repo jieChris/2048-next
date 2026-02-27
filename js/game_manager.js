@@ -3770,13 +3770,24 @@ GameManager.prototype.clearTransientTileVisualState = function () {
 };
 
 GameManager.prototype.isGameTerminated = function () {
-  if (this.over || (this.won && !this.keepPlaying)) {
+  var isGameTerminatedStateCore = this.resolveCoreModeRuntimeMethod("isGameTerminatedState");
+  var terminated = false;
+  if (isGameTerminatedStateCore) {
+    terminated = !!isGameTerminatedStateCore({
+      over: this.over,
+      won: this.won,
+      keepPlaying: this.keepPlaying
+    });
+  } else {
+    terminated = !!this.over || (!!this.won && !this.keepPlaying);
+  }
+
+  if (terminated) {
     this.stopTimer();
     this.timerEnd = Date.now();
     return true;
-  } else {
-    return false;
   }
+  return false;
 };
 
 // Set up the game
