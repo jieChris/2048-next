@@ -1186,6 +1186,18 @@ GameManager.prototype.getWindowLike = function () {
   return typeof window !== "undefined" ? window : null;
 };
 
+GameManager.prototype.getLocalStorage = function () {
+  return this.getWebStorageByName("localStorage");
+};
+
+GameManager.prototype.canReadFromStorage = function (storage) {
+  return !!(storage && typeof storage.getItem === "function");
+};
+
+GameManager.prototype.canWriteToStorage = function (storage) {
+  return !!(storage && typeof storage.setItem === "function");
+};
+
 GameManager.prototype.resolveWindowMethod = function (methodName) {
   var windowLike = this.getWindowLike();
   if (!windowLike || typeof methodName !== "string" || !methodName) return null;
@@ -1245,8 +1257,8 @@ GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
       trueValue: trueValue
     }]);
   if (readStorageFlagFromContextCore.available) return !!readStorageFlagFromContextCore.value;
-  var storage = this.getWebStorageByName("localStorage");
-  if (!storage || typeof storage.getItem !== "function") return false;
+  var storage = this.getLocalStorage();
+  if (!this.canReadFromStorage(storage)) return false;
   var matchValue = typeof trueValue === "string" ? trueValue : "1";
   try {
     return storage.getItem(key) === matchValue;
@@ -1264,8 +1276,8 @@ GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue,
       falseValue: falseValue
     }]);
   if (writeStorageFlagFromContextCore.available) return !!writeStorageFlagFromContextCore.value;
-  var storage = this.getWebStorageByName("localStorage");
-  if (!storage || typeof storage.setItem !== "function") return false;
+  var storage = this.getLocalStorage();
+  if (!this.canWriteToStorage(storage)) return false;
   var value = enabled ? (typeof trueValue === "string" ? trueValue : "1") : (typeof falseValue === "string" ? falseValue : "0");
   try {
     storage.setItem(key, value);
@@ -1287,8 +1299,8 @@ GameManager.prototype.readLocalStorageJsonMap = function (key) {
     }
     return {};
   }
-  var storage = this.getWebStorageByName("localStorage");
-  if (!storage || typeof storage.getItem !== "function") return {};
+  var storage = this.getLocalStorage();
+  if (!this.canReadFromStorage(storage)) return {};
   try {
     var raw = storage.getItem(key);
     if (!raw) return {};
@@ -1307,8 +1319,8 @@ GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
       map: map
     }]);
   if (writeStorageJsonMapFromContextCore.available) return !!writeStorageJsonMapFromContextCore.value;
-  var storage = this.getWebStorageByName("localStorage");
-  if (!storage || typeof storage.setItem !== "function") return false;
+  var storage = this.getLocalStorage();
+  if (!this.canWriteToStorage(storage)) return false;
   var safeMap = this.isNonArrayObject(map) ? map : {};
   try {
     storage.setItem(key, JSON.stringify(safeMap));
@@ -1330,8 +1342,8 @@ GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
       payload: payload
     }]);
   if (writeStorageJsonPayloadFromContextCore.available) return !!writeStorageJsonPayloadFromContextCore.value;
-  var storage = this.getWebStorageByName("localStorage");
-  if (!storage || typeof storage.setItem !== "function") return false;
+  var storage = this.getLocalStorage();
+  if (!this.canWriteToStorage(storage)) return false;
   try {
     var serialized = this.serializeLocalStoragePayload(payload);
     if (typeof serialized !== "string") return false;
@@ -1441,8 +1453,9 @@ GameManager.prototype.normalizeWindowNameSavedPayloadCoreValue = function (paylo
 };
 
 GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
+  var windowLike = this.getWindowLike();
   var readSavedPayloadFromWindowNameCore = this.callCoreStorageRuntime("readSavedPayloadFromWindowName", [{
-      windowLike: typeof window !== "undefined" ? window : null,
+      windowLike: windowLike,
       windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
       modeKey: modeKey,
       currentModeKey: this.modeKey,
@@ -1456,10 +1469,19 @@ GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
   return this.readWindowNameSavedPayloadFallback(modeKey);
 };
 
+GameManager.prototype.resolveWindowNameWindowLike = function () {
+  return this.getWindowLike();
+};
+
+GameManager.prototype.resolveWindowNameRawValue = function (windowLike) {
+  return windowLike && typeof windowLike.name === "string" ? windowLike.name : "";
+};
+
 GameManager.prototype.readWindowNameRaw = function () {
-  if (typeof window === "undefined") return "";
+  var windowLike = this.resolveWindowNameWindowLike();
+  if (!windowLike) return "";
   try {
-    return typeof window.name === "string" ? window.name : "";
+    return this.resolveWindowNameRawValue(windowLike);
   } catch (_errName) {
     return "";
   }
@@ -1588,9 +1610,10 @@ GameManager.prototype.buildWindowNameWithSavedMap = function (keptParts, marker,
 };
 
 GameManager.prototype.writeWindowNameRaw = function (windowNameValue) {
-  if (typeof window === "undefined") return false;
+  var windowLike = this.resolveWindowNameWindowLike();
+  if (!windowLike) return false;
   try {
-    window.name = windowNameValue;
+    windowLike.name = windowNameValue;
     return true;
   } catch (_errWrite) {
     return false;
@@ -1598,7 +1621,7 @@ GameManager.prototype.writeWindowNameRaw = function (windowNameValue) {
 };
 
 GameManager.prototype.writeWindowNameSavedPayloadFallback = function (modeKey, payload) {
-  if (typeof window === "undefined") return false;
+  if (!this.resolveWindowNameWindowLike()) return false;
   var marker = this.resolveWindowNameSavedPayloadMarker();
   var raw = this.readWindowNameRaw();
   var parts = this.resolveWindowNameParts(raw);
@@ -1611,8 +1634,9 @@ GameManager.prototype.writeWindowNameSavedPayloadFallback = function (modeKey, p
 };
 
 GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) {
+  var windowLike = this.getWindowLike();
   var writeSavedPayloadToWindowNameCore = this.callCoreStorageRuntime("writeSavedPayloadToWindowName", [{
-      windowLike: typeof window !== "undefined" ? window : null,
+      windowLike: windowLike,
       windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
       modeKey: modeKey,
       currentModeKey: this.modeKey,
@@ -1627,39 +1651,51 @@ GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) 
   return this.writeWindowNameSavedPayloadFallback(modeKey, payload);
 };
 
+GameManager.prototype.resolveWindowPathname = function () {
+  var windowLike = this.getWindowLike();
+  return (windowLike && windowLike.location && windowLike.location.pathname)
+    ? String(windowLike.location.pathname)
+    : "";
+};
+
 GameManager.prototype.shouldUseSavedGameStateFallback = function () {
-  if (typeof window === "undefined") return false;
+  if (!this.getWindowLike()) return false;
   if (this.replayMode) return false;
-  var path = (window.location && window.location.pathname) ? String(window.location.pathname) : "";
+  var path = this.resolveWindowPathname();
   if (path.indexOf("replay.html") !== -1) return false;
   return true;
 };
 
 GameManager.prototype.shouldUseSavedGameState = function () {
+  var pathname = this.resolveWindowPathname();
   var shouldUseSavedGameStateCore = this.callCoreStorageRuntime("shouldUseSavedGameStateFromContext", [{
-      hasWindow: typeof window !== "undefined",
+      hasWindow: !!this.getWindowLike(),
       replayMode: this.replayMode,
-      pathname:
-        typeof window !== "undefined" &&
-        window.location &&
-        typeof window.location.pathname === "string"
-          ? window.location.pathname
-          : ""
+      pathname: pathname
     }]);
   if (shouldUseSavedGameStateCore.available) return !!shouldUseSavedGameStateCore.value;
   return this.shouldUseSavedGameStateFallback();
 };
 
 GameManager.prototype.bindGameStatePersistenceEvents = function () {
-  if (typeof window === "undefined") return;
+  var windowLike = this.getWindowLike();
+  if (!windowLike) return;
   if (this.savedGameStateBound) return;
+  var saveHandler = this.buildGameStatePersistenceSaveHandler();
+  this.registerGameStatePersistenceEvents(windowLike, saveHandler);
+  this.savedGameStateBound = true;
+};
+
+GameManager.prototype.buildGameStatePersistenceSaveHandler = function () {
   var self = this;
-  var saveHandler = function () {
+  return function () {
     self.saveGameState({ force: true });
   };
-  window.addEventListener("beforeunload", saveHandler);
-  window.addEventListener("pagehide", saveHandler);
-  this.savedGameStateBound = true;
+};
+
+GameManager.prototype.registerGameStatePersistenceEvents = function (windowLike, saveHandler) {
+  windowLike.addEventListener("beforeunload", saveHandler);
+  windowLike.addEventListener("pagehide", saveHandler);
 };
 
 GameManager.prototype.removeKeysFromSavedStateStoragesFallback = function (stores, keys) {
@@ -1672,18 +1708,29 @@ GameManager.prototype.removeKeysFromSavedStateStoragesFallback = function (store
   }
 };
 
-GameManager.prototype.clearSavedGameState = function (modeKey) {
-  this.writeWindowNameSavedPayload(modeKey, null);
-  if (!this.shouldUseSavedGameState()) return;
-  var keys = [
+GameManager.prototype.resolveSavedGameStateStorageKeys = function (modeKey) {
+  return [
     this.getSavedGameStateKey(modeKey),
     this.getSavedGameStateLiteKey(modeKey)
   ];
+};
+
+GameManager.prototype.buildRemoveSavedGameStateKeysCoreArgs = function (stores, keys) {
+  return [{
+    storages: stores,
+    keys: keys
+  }];
+};
+
+GameManager.prototype.clearSavedGameState = function (modeKey) {
+  this.writeWindowNameSavedPayload(modeKey, null);
+  if (!this.shouldUseSavedGameState()) return;
+  var keys = this.resolveSavedGameStateStorageKeys(modeKey);
   var stores = this.getSavedGameStateStorages();
-  var removeKeysFromStoragesCore = this.callCoreStorageRuntime("removeKeysFromStorages", [{
-      storages: stores,
-      keys: keys
-    }]);
+  var removeKeysFromStoragesCore = this.callCoreStorageRuntime(
+    "removeKeysFromStorages",
+    this.buildRemoveSavedGameStateKeysCoreArgs(stores, keys)
+  );
   if (removeKeysFromStoragesCore.available) {
     var removedByCore = removeKeysFromStoragesCore.value;
     if (removedByCore === true) return;
