@@ -203,3 +203,16 @@ export function getTimerMilestoneValues(ruleset: Ruleset, timerSlotIds: number[]
   }
   return timerSlotIds.slice();
 }
+
+export function getTimerMilestoneSlotByValue(
+  timerMilestones: number[],
+  timerSlotIds: number[]
+): Record<string, string> {
+  const slotMap: Record<string, string> = {};
+  for (let i = 0; i < timerSlotIds.length; i++) {
+    const milestone = timerMilestones[i];
+    if (!Number.isInteger(milestone) || milestone <= 0) continue;
+    slotMap[String(milestone)] = String(timerSlotIds[i]);
+  }
+  return slotMap;
+}

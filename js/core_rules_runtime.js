@@ -173,6 +173,18 @@
     return Array.isArray(timerSlotIds) ? timerSlotIds.slice() : [];
   }
 
+  function getTimerMilestoneSlotByValue(timerMilestones, timerSlotIds) {
+    var milestones = Array.isArray(timerMilestones) ? timerMilestones : [];
+    var slotIds = Array.isArray(timerSlotIds) ? timerSlotIds : [];
+    var slotMap = {};
+    for (var i = 0; i < slotIds.length; i++) {
+      var milestone = Number(milestones[i]);
+      if (!Number.isInteger(milestone) || milestone <= 0) continue;
+      slotMap[String(milestone)] = String(slotIds[i]);
+    }
+    return slotMap;
+  }
+
   global.CoreRulesRuntime = global.CoreRulesRuntime || {};
   global.CoreRulesRuntime.normalizeSpawnTable = normalizeSpawnTable;
   global.CoreRulesRuntime.getTheoreticalMaxTile = getTheoreticalMaxTile;
@@ -185,4 +197,5 @@
   global.CoreRulesRuntime.nextFibonacci = nextFibonacci;
   global.CoreRulesRuntime.getMergedValue = getMergedValue;
   global.CoreRulesRuntime.getTimerMilestoneValues = getTimerMilestoneValues;
+  global.CoreRulesRuntime.getTimerMilestoneSlotByValue = getTimerMilestoneSlotByValue;
 })(typeof window !== "undefined" ? window : undefined);

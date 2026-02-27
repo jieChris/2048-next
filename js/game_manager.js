@@ -2795,12 +2795,23 @@ GameManager.prototype.getTimerMilestoneValues = function () {
 
 GameManager.prototype.configureTimerMilestones = function () {
   this.timerMilestones = this.getTimerMilestoneValues();
-  this.timerMilestoneSlotByValue = {};
-  for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
-    var slotId = String(GameManager.TIMER_SLOT_IDS[i]);
-    var milestone = this.timerMilestones[i];
-    if (Number.isInteger(milestone) && milestone > 0) {
-      this.timerMilestoneSlotByValue[String(milestone)] = slotId;
+  var getTimerMilestoneSlotByValueCore = this.resolveCoreRuntimeMethod(
+    "getCoreRulesRuntime",
+    "getTimerMilestoneSlotByValue"
+  );
+  if (getTimerMilestoneSlotByValueCore) {
+    this.timerMilestoneSlotByValue = getTimerMilestoneSlotByValueCore(
+      this.timerMilestones,
+      GameManager.TIMER_SLOT_IDS
+    );
+  } else {
+    this.timerMilestoneSlotByValue = {};
+    for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
+      var slotId = String(GameManager.TIMER_SLOT_IDS[i]);
+      var milestone = this.timerMilestones[i];
+      if (Number.isInteger(milestone) && milestone > 0) {
+        this.timerMilestoneSlotByValue[String(milestone)] = slotId;
+      }
     }
   }
   this.updateTimerLegendLabels();

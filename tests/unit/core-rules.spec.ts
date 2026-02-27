@@ -7,6 +7,7 @@ import {
   getSpawnCount,
   getSpawnStatPair,
   getTheoreticalMaxTile,
+  getTimerMilestoneSlotByValue,
   getTotalSpawnCount,
   getTimerMilestoneValues,
   nextFibonacci,
@@ -128,6 +129,23 @@ describe("core rules: getTimerMilestoneValues", () => {
 
   it("returns timer slots for pow2 mode", () => {
     expect(getTimerMilestoneValues("pow2", [16, 32, 64])).toEqual([16, 32, 64]);
+  });
+});
+
+describe("core rules: getTimerMilestoneSlotByValue", () => {
+  it("builds slot map from milestone values and timer slot ids", () => {
+    expect(getTimerMilestoneSlotByValue([13, 21, 34], [16, 32, 64])).toEqual({
+      "13": "16",
+      "21": "32",
+      "34": "64"
+    });
+  });
+
+  it("skips invalid milestone values", () => {
+    expect(getTimerMilestoneSlotByValue([16, 0, -1, 32.5, 64], [16, 32, 64, 128, 256])).toEqual({
+      "16": "16",
+      "64": "256"
+    });
   });
 });
 
