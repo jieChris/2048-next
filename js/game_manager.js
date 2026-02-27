@@ -7161,11 +7161,15 @@ GameManager.prototype.writeMissingLocalHistoryStoreResult = function () {
   });
 };
 
-GameManager.prototype.buildSessionSubmitContext = function (localHistorySaveRecord) {
-  var windowLike = this.getWindowLike();
-  var adapterParitySnapshot = this.resolveSessionSubmitAdapterParitySnapshot();
-  var endedAt = new Date().toISOString();
-  var payload = this.buildSessionSubmitPayload(endedAt, windowLike, adapterParitySnapshot);
+GameManager.prototype.resolveSessionSubmitWindowLike = function () {
+  return this.getWindowLike();
+};
+
+GameManager.prototype.resolveSessionSubmitEndedAt = function () {
+  return new Date().toISOString();
+};
+
+GameManager.prototype.createSessionSubmitContext = function (localHistorySaveRecord, endedAt, payload) {
   return {
     localHistorySaveRecord: localHistorySaveRecord,
     endedAt: endedAt,
@@ -7173,12 +7177,32 @@ GameManager.prototype.buildSessionSubmitContext = function (localHistorySaveReco
   };
 };
 
+GameManager.prototype.buildSessionSubmitContext = function (localHistorySaveRecord) {
+  var windowLike = this.resolveSessionSubmitWindowLike();
+  var adapterParitySnapshot = this.resolveSessionSubmitAdapterParitySnapshot();
+  var endedAt = this.resolveSessionSubmitEndedAt();
+  var payload = this.buildSessionSubmitPayload(endedAt, windowLike, adapterParitySnapshot);
+  return this.createSessionSubmitContext(localHistorySaveRecord, endedAt, payload);
+};
+
+GameManager.prototype.resolveSessionSubmitSavedRecord = function (submitContext) {
+  return this.persistSessionSubmitPayload(submitContext.localHistorySaveRecord, submitContext.payload);
+};
+
+GameManager.prototype.handleSessionSubmitPersistSuccess = function (submitContext, savedRecord) {
+  this.writeSessionSubmitSuccessResult(submitContext.endedAt, submitContext.payload, savedRecord);
+};
+
+GameManager.prototype.handleSessionSubmitPersistFailure = function (submitContext, error) {
+  this.writeSessionSubmitFailureResult(submitContext.endedAt, submitContext.payload, error);
+};
+
 GameManager.prototype.persistSessionSubmitContext = function (submitContext) {
   try {
-    var saved = this.persistSessionSubmitPayload(submitContext.localHistorySaveRecord, submitContext.payload);
-    this.writeSessionSubmitSuccessResult(submitContext.endedAt, submitContext.payload, saved);
+    var saved = this.resolveSessionSubmitSavedRecord(submitContext);
+    this.handleSessionSubmitPersistSuccess(submitContext, saved);
   } catch (error) {
-    this.writeSessionSubmitFailureResult(submitContext.endedAt, submitContext.payload, error);
+    this.handleSessionSubmitPersistFailure(submitContext, error);
   }
 };
 
