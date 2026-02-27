@@ -498,18 +498,26 @@ GameManager.prototype.parseReplayV4ImportBody = function (trimmedReplayString) {
   return body;
 };
 
-GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayString) {
-  var body = this.parseReplayV4ImportBody(trimmedReplayString);
-  if (!body) return null;
+GameManager.prototype.resolveReplayModeKeyFromV4Body = function (body) {
   var modeCode = body.charAt(0);
   var replayModeIdV4 = this.resolveReplayModeKeyFromV4Code(modeCode);
   if (!replayModeIdV4) throw "Invalid v4C mode";
+  return replayModeIdV4;
+};
+
+GameManager.prototype.buildV4ReplayImportEnvelope = function (modeKey, body) {
   return {
     kind: "v4c",
-    modeKey: replayModeIdV4,
+    modeKey: modeKey,
     initialBoardEncoded: body.substring(1, 17),
     actionsEncoded: body.substring(17)
   };
+};
+
+GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayString) {
+  var body = this.parseReplayV4ImportBody(trimmedReplayString);
+  if (!body) return null;
+  return this.buildV4ReplayImportEnvelope(this.resolveReplayModeKeyFromV4Body(body), body);
 };
 
 GameManager.REPLAY_V4_MODE_CODE_TO_KEY = {
