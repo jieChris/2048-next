@@ -1825,19 +1825,25 @@ GameManager.prototype.captureTimerDynamicRowsState = function (containerId) {
   if (!container) return out;
   for (var i = 0; i < container.children.length; i++) {
     var row = container.children[i];
-    if (!row || !row.classList || !row.classList.contains("timer-row-item")) continue;
-    var tiles = row.querySelectorAll(".timertile");
-    var legend = tiles.length > 0 ? tiles[0] : null;
-    var timer = tiles.length > 1 ? tiles[1] : null;
-    out.push({
-      repeat: row.getAttribute("data-capped-repeat") || "",
-      label: legend ? (legend.textContent || "") : "",
-      labelClass: legend ? (legend.className || "") : "",
-      labelFontSize: legend ? (legend.style.fontSize || "") : "",
-      time: timer ? (timer.textContent || "") : ""
-    });
+    var rowState = this.captureTimerDynamicRowState(row);
+    if (!rowState) continue;
+    out.push(rowState);
   }
   return out;
+};
+
+GameManager.prototype.captureTimerDynamicRowState = function (row) {
+  if (!row || !row.classList || !row.classList.contains("timer-row-item")) return null;
+  var tiles = row.querySelectorAll(".timertile");
+  var legend = tiles.length > 0 ? tiles[0] : null;
+  var timer = tiles.length > 1 ? tiles[1] : null;
+  return {
+    repeat: row.getAttribute("data-capped-repeat") || "",
+    label: legend ? (legend.textContent || "") : "",
+    labelClass: legend ? (legend.className || "") : "",
+    labelFontSize: legend ? (legend.style.fontSize || "") : "",
+    time: timer ? (timer.textContent || "") : ""
+  };
 };
 
 GameManager.prototype.resolveSavedDynamicTimerRowState = function (rowState) {
