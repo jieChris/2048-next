@@ -2593,21 +2593,25 @@ GameManager.prototype.resolveSavedGameStateTimerModuleView = function () {
   return this.getTimerModuleViewMode ? this.getTimerModuleViewMode() : "timer";
 };
 
-GameManager.prototype.buildSavedGameStateExtendedPayload = function (timerSubState) {
-  var boardSnapshot = this.resolveSavedBoardRestartSnapshot();
-  var directionLockSnapshot = this.resolveSavedDirectionLockSnapshot();
+GameManager.prototype.buildSavedGameStateExtendedDirectionLockPayload = function (directionLockSnapshot) {
   return {
-    combo_streak: this.resolveSavedGameStateComboStreak(),
-    successful_move_count: this.resolveSavedGameStateSuccessfulMoveCount(),
-    undo_used: this.resolveSavedGameStateUndoUsed(),
     lock_consumed_at_move_count: directionLockSnapshot.lock_consumed_at_move_count,
     locked_direction_turn: directionLockSnapshot.locked_direction_turn,
-    locked_direction: directionLockSnapshot.locked_direction,
-    challenge_id: this.resolveSavedGameStateChallengeId(),
+    locked_direction: directionLockSnapshot.locked_direction
+  };
+};
+
+GameManager.prototype.buildSavedGameStateExtendedBoardSnapshotPayload = function (boardSnapshot) {
+  return {
     initial_board_matrix: boardSnapshot.initial_board_matrix,
     replay_start_board_matrix: boardSnapshot.replay_start_board_matrix,
     practice_restart_board_matrix: boardSnapshot.practice_restart_board_matrix,
-    practice_restart_mode_config: boardSnapshot.practice_restart_mode_config,
+    practice_restart_mode_config: boardSnapshot.practice_restart_mode_config
+  };
+};
+
+GameManager.prototype.buildSavedGameStateExtendedTimerPayload = function (timerSubState) {
+  return {
     timer_module_view: this.resolveSavedGameStateTimerModuleView(),
     timer_fixed_rows: this.captureTimerFixedRowsState(),
     timer_dynamic_rows_capped: this.captureTimerDynamicRowsState("capped-timer-container"),
@@ -2616,6 +2620,20 @@ GameManager.prototype.buildSavedGameStateExtendedPayload = function (timerSubSta
     timer_sub_16384: timerSubState.timer_sub_16384,
     timer_sub_visible: timerSubState.timer_sub_visible
   };
+};
+
+GameManager.prototype.buildSavedGameStateExtendedPayload = function (timerSubState) {
+  var boardSnapshot = this.resolveSavedBoardRestartSnapshot();
+  var directionLockSnapshot = this.resolveSavedDirectionLockSnapshot();
+  return Object.assign({
+    combo_streak: this.resolveSavedGameStateComboStreak(),
+    successful_move_count: this.resolveSavedGameStateSuccessfulMoveCount(),
+    undo_used: this.resolveSavedGameStateUndoUsed(),
+    challenge_id: this.resolveSavedGameStateChallengeId()
+  },
+  this.buildSavedGameStateExtendedDirectionLockPayload(directionLockSnapshot),
+  this.buildSavedGameStateExtendedBoardSnapshotPayload(boardSnapshot),
+  this.buildSavedGameStateExtendedTimerPayload(timerSubState));
 };
 
 GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
