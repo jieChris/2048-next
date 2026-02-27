@@ -4101,28 +4101,50 @@ GameManager.prototype.applyMergeEffectsTimerStampFlags = function (result, value
   }
 };
 
+GameManager.prototype.buildComputeMergeEffectsCoreInput = function (mergedValue, cappedState) {
+  return {
+    mergedValue: mergedValue,
+    isCappedMode: !!cappedState.isCappedMode,
+    cappedTargetValue: cappedState.cappedTargetValue,
+    reached32k: !!this.reached32k
+  };
+};
+
+GameManager.prototype.resolveComputeMergeEffectsFallbackContext = function (mergedValue, cappedState) {
+  var value = Number(mergedValue);
+  var cappedTarget = Number(cappedState.cappedTargetValue);
+  return {
+    value: value,
+    cappedMode: !!cappedState.isCappedMode,
+    cappedTarget: cappedTarget,
+    hasCappedTarget: Number.isFinite(cappedTarget) && cappedTarget > 0,
+    reached32k: !!this.reached32k
+  };
+};
+
+GameManager.prototype.shouldSkipComputeMergeEffectsFallback = function (value) {
+  return !Number.isInteger(value) || value <= 0;
+};
+
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
   var cappedState = this.resolveCappedModeState();
-  var isCappedMode = !!cappedState.isCappedMode;
-  var cappedTargetValue = cappedState.cappedTargetValue;
-  var computeMergeEffectsCore = this.callCoreMergeEffectsRuntime("computeMergeEffects", [{
-      mergedValue: mergedValue,
-      isCappedMode: isCappedMode,
-      cappedTargetValue: cappedTargetValue,
-      reached32k: !!this.reached32k
-    }]);
+  var computeMergeEffectsCore = this.callCoreMergeEffectsRuntime("computeMergeEffects", [
+    this.buildComputeMergeEffectsCoreInput(mergedValue, cappedState)
+  ]);
   if (computeMergeEffectsCore.available) return computeMergeEffectsCore.value || {};
 
-  var value = Number(mergedValue);
-  var cappedMode = isCappedMode;
-  var cappedTarget = Number(cappedTargetValue);
-  var hasCappedTarget = Number.isFinite(cappedTarget) && cappedTarget > 0;
-  var reached32k = !!this.reached32k;
+  var fallbackContext = this.resolveComputeMergeEffectsFallbackContext(mergedValue, cappedState);
   var result = this.createDefaultMergeEffectsResult();
 
-  if (!Number.isInteger(value) || value <= 0) return result;
-  this.applyMergeEffectsWinAndCappedFlags(result, value, cappedMode, hasCappedTarget, cappedTarget);
-  this.applyMergeEffectsTimerStampFlags(result, value, reached32k);
+  if (this.shouldSkipComputeMergeEffectsFallback(fallbackContext.value)) return result;
+  this.applyMergeEffectsWinAndCappedFlags(
+    result,
+    fallbackContext.value,
+    fallbackContext.cappedMode,
+    fallbackContext.hasCappedTarget,
+    fallbackContext.cappedTarget
+  );
+  this.applyMergeEffectsTimerStampFlags(result, fallbackContext.value, fallbackContext.reached32k);
   return result;
 };
 
