@@ -5023,25 +5023,29 @@ GameManager.prototype.assignSetupChallengeId = function (options) {
   if (this.challengeId) this.sessionReplayV3.challenge_id = this.challengeId;
 };
 
-GameManager.prototype.initializeSetupRuntimeState = function () {
-  this.lastSpawn = null; // To capture spawn during play
-  this.forcedSpawn = null; // To force spawn during replay v2
+GameManager.prototype.resetSetupRuntimeTileFlags = function () {
+  this.lastSpawn = null;
+  this.forcedSpawn = null;
+  this.reached32k = false;
+  this.isTestMode = false;
+  this.cappedMilestoneCount = 0;
+};
 
-  this.reached32k = false; // Flag for extended timer logic
-  this.isTestMode = false; // Flag for Test Board
-  this.cappedMilestoneCount = 0; // Track how many times maxTile has been merged in capped mode
-
-  this.timerStatus = 0; // 0 = no, 1 = running (reference logic)
+GameManager.prototype.resetSetupRuntimeTimerState = function () {
+  this.timerStatus = 0;
   this.startTime = null;
   this.timerID = null;
   this.time = 0;
-  this.accumulatedTime = 0; // For pausing logic
+  this.accumulatedTime = 0;
   this.pendingMoveInput = null;
   this.moveInputFlushScheduled = false;
   this.lastMoveInputAt = 0;
   this.sessionStartedAt = Date.now();
   this.hasGameStarted = false;
   this.configureTimerMilestones();
+};
+
+GameManager.prototype.resetSetupRuntimeMoveAndUndoState = function () {
   this.comboStreak = 0;
   this.successfulMoveCount = 0;
   this.ipsInputCount = 0;
@@ -5049,6 +5053,12 @@ GameManager.prototype.initializeSetupRuntimeState = function () {
   this.lockConsumedAtMoveCount = -1;
   this.lockedDirectionTurn = null;
   this.lockedDirection = null;
+};
+
+GameManager.prototype.initializeSetupRuntimeState = function () {
+  this.resetSetupRuntimeTileFlags();
+  this.resetSetupRuntimeTimerState();
+  this.resetSetupRuntimeMoveAndUndoState();
 };
 
 GameManager.prototype.initializeSetupSpawnAndPreferences = function () {
