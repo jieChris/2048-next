@@ -6176,6 +6176,16 @@ GameManager.prototype.shouldSetPracticeRestartBaseOnBoardRestart = function (opt
   return !!(options && (options.setPracticeRestartBase || options.preservePracticeRestartBase));
 };
 
+GameManager.prototype.applyRestartWithBoardSnapshots = function () {
+  this.initialBoardMatrix = this.getFinalBoardMatrix();
+  this.replayStartBoardMatrix = this.cloneBoardMatrix(this.initialBoardMatrix);
+};
+
+GameManager.prototype.trySetPracticeRestartBaseOnBoardRestart = function (options, modeConfig) {
+  if (!this.shouldSetPracticeRestartBaseOnBoardRestart(options)) return;
+  this.setPracticeRestartBase(this.initialBoardMatrix, modeConfig || this.modeConfig);
+};
+
 GameManager.prototype.restartWithBoard = function (board, modeConfig, options) {
   options = options || {};
   this.actuator.continue();
@@ -6183,11 +6193,8 @@ GameManager.prototype.restartWithBoard = function (board, modeConfig, options) {
   var setupSeed = this.resolveRestartWithBoardSeed(options);
   this.setup(setupSeed, { skipStartTiles: true, modeConfig: modeConfig, disableStateRestore: true });
   this.setBoardFromMatrix(board);
-  this.initialBoardMatrix = this.getFinalBoardMatrix();
-  this.replayStartBoardMatrix = this.cloneBoardMatrix(this.initialBoardMatrix);
-  if (this.shouldSetPracticeRestartBaseOnBoardRestart(options)) {
-    this.setPracticeRestartBase(this.initialBoardMatrix, modeConfig || this.modeConfig);
-  }
+  this.applyRestartWithBoardSnapshots();
+  this.trySetPracticeRestartBaseOnBoardRestart(options, modeConfig);
   this.actuate();
 };
 
