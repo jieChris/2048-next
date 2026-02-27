@@ -2093,33 +2093,72 @@ GameManager.prototype.applyRestoredSavedStateCoreFields = function (saved) {
   this.resetRestoredSavedSessionSubmitState();
 };
 
-GameManager.prototype.applyRestoredSavedBoardSnapshots = function (saved) {
+GameManager.prototype.resolveRestoredInitialBoardMatrix = function (saved) {
   if (Array.isArray(saved.initial_board_matrix) && saved.initial_board_matrix.length === this.height) {
-    this.initialBoardMatrix = this.cloneBoardMatrix(saved.initial_board_matrix);
-  } else {
-    this.initialBoardMatrix = this.getFinalBoardMatrix();
+    return this.cloneBoardMatrix(saved.initial_board_matrix);
   }
-  this.replayStartBoardMatrix = Array.isArray(saved.replay_start_board_matrix) && saved.replay_start_board_matrix.length === this.height
-    ? this.cloneBoardMatrix(saved.replay_start_board_matrix)
-    : this.cloneBoardMatrix(this.initialBoardMatrix);
-  this.practiceRestartBoardMatrix = Array.isArray(saved.practice_restart_board_matrix) && saved.practice_restart_board_matrix.length === this.height
-    ? this.cloneBoardMatrix(saved.practice_restart_board_matrix)
-    : null;
-  this.practiceRestartModeConfig = saved.practice_restart_mode_config && typeof saved.practice_restart_mode_config === "object"
-    ? this.clonePlain(saved.practice_restart_mode_config)
-    : null;
+  return this.getFinalBoardMatrix();
+};
+
+GameManager.prototype.resolveRestoredReplayStartBoardMatrix = function (saved) {
+  if (Array.isArray(saved.replay_start_board_matrix) && saved.replay_start_board_matrix.length === this.height) {
+    return this.cloneBoardMatrix(saved.replay_start_board_matrix);
+  }
+  return this.cloneBoardMatrix(this.initialBoardMatrix);
+};
+
+GameManager.prototype.resolveRestoredPracticeRestartBoardMatrix = function (saved) {
+  if (Array.isArray(saved.practice_restart_board_matrix) && saved.practice_restart_board_matrix.length === this.height) {
+    return this.cloneBoardMatrix(saved.practice_restart_board_matrix);
+  }
+  return null;
+};
+
+GameManager.prototype.resolveRestoredPracticeRestartModeConfig = function (saved) {
+  if (saved.practice_restart_mode_config && typeof saved.practice_restart_mode_config === "object") {
+    return this.clonePlain(saved.practice_restart_mode_config);
+  }
+  return null;
+};
+
+GameManager.prototype.applyRestoredSavedBoardSnapshots = function (saved) {
+  this.initialBoardMatrix = this.resolveRestoredInitialBoardMatrix(saved);
+  this.replayStartBoardMatrix = this.resolveRestoredReplayStartBoardMatrix(saved);
+  this.practiceRestartBoardMatrix = this.resolveRestoredPracticeRestartBoardMatrix(saved);
+  this.practiceRestartModeConfig = this.resolveRestoredPracticeRestartModeConfig(saved);
+};
+
+GameManager.prototype.resolveRestoredTimerModuleView = function (saved) {
+  return saved.timer_module_view === "hidden" ? "hidden" : "timer";
+};
+
+GameManager.prototype.applyRestoredTimerModuleView = function (saved) {
+  this.timerModuleView = this.resolveRestoredTimerModuleView(saved);
+};
+
+GameManager.prototype.resolveMainTimerElement = function () {
+  return document.getElementById("timer");
+};
+
+GameManager.prototype.renderRestoredMainTimerText = function () {
+  var timerEl = this.resolveMainTimerElement();
+  if (timerEl) timerEl.textContent = this.pretty(this.accumulatedTime);
+};
+
+GameManager.prototype.shouldResumeTimerAfterStateRestore = function (saved) {
+  return !this.over && !this.won && saved.timer_status === 1;
+};
+
+GameManager.prototype.resumeTimerAfterStateRestoreIfNeeded = function (saved) {
+  if (!this.shouldResumeTimerAfterStateRestore(saved)) return;
+  this.startTimer();
 };
 
 GameManager.prototype.applyRestoredSavedTimerUiState = function (saved) {
   this.restoreTimerRowsFromState(saved);
-  if (saved.timer_module_view === "hidden") this.timerModuleView = "hidden";
-  else this.timerModuleView = "timer";
-
-  var timerEl = document.getElementById("timer");
-  if (timerEl) timerEl.textContent = this.pretty(this.accumulatedTime);
-  if (!this.over && !this.won && saved.timer_status === 1) {
-    this.startTimer();
-  }
+  this.applyRestoredTimerModuleView(saved);
+  this.renderRestoredMainTimerText();
+  this.resumeTimerAfterStateRestoreIfNeeded(saved);
 };
 
 GameManager.prototype.tryApplyRestoredSavedBoard = function (saved) {
