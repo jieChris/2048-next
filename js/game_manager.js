@@ -3027,6 +3027,42 @@ GameManager.prototype.computeUndoRestorePayload = function (prev) {
   };
 };
 
+GameManager.prototype.createDefaultMergeEffectsResult = function () {
+  return {
+    shouldRecordCappedMilestone: false,
+    shouldSetWon: false,
+    shouldSetReached32k: false,
+    timerIdsToStamp: [],
+    showSubTimerContainer: false,
+    hideTimerRows: []
+  };
+};
+
+GameManager.prototype.applyMergeEffectsWinAndCappedFlags = function (result, value, cappedMode, hasCappedTarget, cappedTarget) {
+  if (cappedMode && hasCappedTarget && value === cappedTarget) {
+    result.shouldRecordCappedMilestone = true;
+    return;
+  }
+  if (!cappedMode && value === 2048) {
+    result.shouldSetWon = true;
+  }
+};
+
+GameManager.prototype.applyMergeEffectsTimerStampFlags = function (result, value, reached32k) {
+  if (value === 8192) {
+    result.timerIdsToStamp.push(reached32k ? "timer8192-sub" : "timer8192");
+  }
+  if (value === 16384) {
+    result.timerIdsToStamp.push(reached32k ? "timer16384-sub" : "timer16384");
+  }
+  if (value === 32768) {
+    result.shouldSetReached32k = true;
+    result.timerIdsToStamp.push("timer32768");
+    result.showSubTimerContainer = true;
+    result.hideTimerRows = [16, 32];
+  }
+};
+
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
   var cappedState = this.resolveCappedModeState();
   var isCappedMode = !!cappedState.isCappedMode;
@@ -3044,33 +3080,11 @@ GameManager.prototype.computeMergeEffects = function (mergedValue) {
   var cappedTarget = Number(cappedTargetValue);
   var hasCappedTarget = Number.isFinite(cappedTarget) && cappedTarget > 0;
   var reached32k = !!this.reached32k;
-  var result = {
-    shouldRecordCappedMilestone: false,
-    shouldSetWon: false,
-    shouldSetReached32k: false,
-    timerIdsToStamp: [],
-    showSubTimerContainer: false,
-    hideTimerRows: []
-  };
+  var result = this.createDefaultMergeEffectsResult();
 
   if (!Number.isInteger(value) || value <= 0) return result;
-  if (cappedMode && hasCappedTarget && value === cappedTarget) {
-    result.shouldRecordCappedMilestone = true;
-  } else if (!cappedMode && value === 2048) {
-    result.shouldSetWon = true;
-  }
-  if (value === 8192) {
-    result.timerIdsToStamp.push(reached32k ? "timer8192-sub" : "timer8192");
-  }
-  if (value === 16384) {
-    result.timerIdsToStamp.push(reached32k ? "timer16384-sub" : "timer16384");
-  }
-  if (value === 32768) {
-    result.shouldSetReached32k = true;
-    result.timerIdsToStamp.push("timer32768");
-    result.showSubTimerContainer = true;
-    result.hideTimerRows = [16, 32];
-  }
+  this.applyMergeEffectsWinAndCappedFlags(result, value, cappedMode, hasCappedTarget, cappedTarget);
+  this.applyMergeEffectsTimerStampFlags(result, value, reached32k);
   return result;
 };
 
