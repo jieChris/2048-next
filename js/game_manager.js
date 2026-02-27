@@ -2756,21 +2756,13 @@ GameManager.prototype.getUndoStateFallbackValues = function () {
   };
 };
 
-GameManager.prototype.computeUndoRestoreState = function (prev) {
-  var computeUndoRestoreStateCore = this.callCoreUndoRestoreRuntime("computeUndoRestoreState", [{
-      prev: prev || {},
-      fallbackUndoUsed: this.undoUsed,
-      timerStatus: this.timerStatus
-    }]);
-  if (computeUndoRestoreStateCore.available) return computeUndoRestoreStateCore.value || {};
+GameManager.prototype.resolveUndoRestoreFallbackUndoBase = function (source, fallbackUndoUsed) {
+  return Number.isInteger(source.undoUsed) && source.undoUsed >= 0
+    ? source.undoUsed
+    : fallbackUndoUsed;
+};
 
-  var source = prev && typeof prev === "object" ? prev : {};
-  var fallbackState = this.getUndoStateFallbackValues();
-  var fallbackUndoUsed = fallbackState.undoUsed;
-  var undoBase =
-    Number.isInteger(source.undoUsed) && source.undoUsed >= 0
-      ? source.undoUsed
-      : fallbackUndoUsed;
+GameManager.prototype.buildUndoRestoreStateFallback = function (source, undoBase) {
   return {
     comboStreak: Number.isInteger(source.comboStreak) && source.comboStreak >= 0 ? source.comboStreak : 0,
     successfulMoveCount:
@@ -2787,6 +2779,20 @@ GameManager.prototype.computeUndoRestoreState = function (prev) {
     shouldClearMessage: true,
     shouldStartTimer: this.timerStatus === 0
   };
+};
+
+GameManager.prototype.computeUndoRestoreState = function (prev) {
+  var computeUndoRestoreStateCore = this.callCoreUndoRestoreRuntime("computeUndoRestoreState", [{
+      prev: prev || {},
+      fallbackUndoUsed: this.undoUsed,
+      timerStatus: this.timerStatus
+    }]);
+  if (computeUndoRestoreStateCore.available) return computeUndoRestoreStateCore.value || {};
+
+  var source = prev && typeof prev === "object" ? prev : {};
+  var fallbackState = this.getUndoStateFallbackValues();
+  var undoBase = this.resolveUndoRestoreFallbackUndoBase(source, fallbackState.undoUsed);
+  return this.buildUndoRestoreStateFallback(source, undoBase);
 };
 
 GameManager.prototype.createUndoSnapshotState = function () {
