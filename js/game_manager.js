@@ -3093,35 +3093,18 @@ GameManager.prototype.createUndoSnapshotState = function () {
   return fallback;
 };
 
-GameManager.prototype.normalizeUndoStackEntry = function (entry) {
-  var fallbackState = this.getUndoStateFallbackValues();
-
-  var source = entry && typeof entry === "object" ? entry : {};
-  var normalizeUndoStackEntryCore = this.callCoreUndoStackEntryRuntime("normalizeUndoStackEntry", [{
-      entry: source,
-      fallbackScore: fallbackState.score,
-      fallbackComboStreak: fallbackState.comboStreak,
-      fallbackSuccessfulMoveCount: fallbackState.successfulMoveCount,
-      fallbackLockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
-      fallbackLockedDirectionTurn: fallbackState.lockedDirectionTurn,
-      fallbackLockedDirection: fallbackState.lockedDirection,
-      fallbackUndoUsed: fallbackState.undoUsed
-    }]);
-  if (normalizeUndoStackEntryCore.available) {
-    var computed = normalizeUndoStackEntryCore.value || {};
-    if (computed && typeof computed === "object") {
-      source = computed;
-    }
-  }
-
+GameManager.prototype.filterUndoStackEntryTiles = function (source) {
   var rawTiles = Array.isArray(source.tiles) ? source.tiles : [];
   var tiles = [];
   for (var i = 0; i < rawTiles.length; i++) {
     var item = rawTiles[i];
-    if (!item || typeof item !== "object") continue;
+    if (!this.isNonArrayObject(item)) continue;
     tiles.push(item);
   }
+  return tiles;
+};
 
+GameManager.prototype.buildNormalizedUndoStackEntryFallback = function (source, fallbackState, tiles) {
   return {
     score:
       Number.isFinite(source.score) && typeof source.score === "number"
@@ -3153,6 +3136,30 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
         ? source.undoUsed
         : fallbackState.undoUsed
   };
+};
+
+GameManager.prototype.normalizeUndoStackEntry = function (entry) {
+  var fallbackState = this.getUndoStateFallbackValues();
+
+  var source = this.isNonArrayObject(entry) ? entry : {};
+  var normalizeUndoStackEntryCore = this.callCoreUndoStackEntryRuntime("normalizeUndoStackEntry", [{
+      entry: source,
+      fallbackScore: fallbackState.score,
+      fallbackComboStreak: fallbackState.comboStreak,
+      fallbackSuccessfulMoveCount: fallbackState.successfulMoveCount,
+      fallbackLockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
+      fallbackLockedDirectionTurn: fallbackState.lockedDirectionTurn,
+      fallbackLockedDirection: fallbackState.lockedDirection,
+      fallbackUndoUsed: fallbackState.undoUsed
+    }]);
+  if (normalizeUndoStackEntryCore.available) {
+    var computed = normalizeUndoStackEntryCore.value || {};
+    if (this.isNonArrayObject(computed)) {
+      source = computed;
+    }
+  }
+  var tiles = this.filterUndoStackEntryTiles(source);
+  return this.buildNormalizedUndoStackEntryFallback(source, fallbackState, tiles);
 };
 
 GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
