@@ -5609,28 +5609,41 @@ GameManager.prototype.updateUndoUiState = function (resolvedState) {
   this.callWindowMethod("syncMobileUndoTopButtonAvailability");
 };
 
+GameManager.prototype.ensureSpawnValueCounts = function () {
+  if (!this.spawnValueCounts) this.spawnValueCounts = {};
+};
+
+GameManager.prototype.updateLegacySpawnCountFieldsFromCounts = function () {
+  this.spawnTwos = this.spawnValueCounts["2"] || 0;
+  this.spawnFours = this.spawnValueCounts["4"] || 0;
+};
+
+GameManager.prototype.applySpawnValueCountCoreResult = function (next) {
+  if (next.nextSpawnValueCounts && typeof next.nextSpawnValueCounts === "object") {
+    this.spawnValueCounts = next.nextSpawnValueCounts;
+  } else {
+    this.ensureSpawnValueCounts();
+  }
+  this.spawnTwos = Number(next.spawnTwos) || 0;
+  this.spawnFours = Number(next.spawnFours) || 0;
+};
+
+GameManager.prototype.recordSpawnValueFallback = function (value) {
+  this.ensureSpawnValueCounts();
+  var key = String(value);
+  this.spawnValueCounts[key] = (this.spawnValueCounts[key] || 0) + 1;
+  // Keep legacy fields for compatibility with existing UI hooks.
+  this.updateLegacySpawnCountFieldsFromCounts();
+};
+
 GameManager.prototype.recordSpawnValue = function (value) {
   var applySpawnValueCountCore = this.callCoreRulesRuntime("applySpawnValueCount", [this.spawnValueCounts, value]);
   if (applySpawnValueCountCore.available) {
-    var next = applySpawnValueCountCore.value || {};
-    if (next.nextSpawnValueCounts && typeof next.nextSpawnValueCounts === "object") {
-      this.spawnValueCounts = next.nextSpawnValueCounts;
-    } else if (!this.spawnValueCounts) {
-      this.spawnValueCounts = {};
-    }
-    this.spawnTwos = Number(next.spawnTwos) || 0;
-    this.spawnFours = Number(next.spawnFours) || 0;
+    this.applySpawnValueCountCoreResult(applySpawnValueCountCore.value || {});
     this.refreshSpawnRateDisplay();
     return;
   }
-
-  if (!this.spawnValueCounts) this.spawnValueCounts = {};
-  var k = String(value);
-  this.spawnValueCounts[k] = (this.spawnValueCounts[k] || 0) + 1;
-
-  // Keep legacy fields for compatibility with existing UI hooks.
-  this.spawnTwos = this.spawnValueCounts["2"] || 0;
-  this.spawnFours = this.spawnValueCounts["4"] || 0;
+  this.recordSpawnValueFallback(value);
   this.refreshSpawnRateDisplay();
 };
 
