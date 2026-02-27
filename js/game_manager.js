@@ -356,16 +356,24 @@ GameManager.prototype.decodeReplayV4MoveSpawnFromToken = function (token) {
   };
 };
 
+GameManager.prototype.buildReplayV4DecodedToken = function (action, spawn, nextIndex) {
+  return {
+    action: action,
+    spawn: spawn,
+    nextIndex: nextIndex
+  };
+};
+
 GameManager.prototype.decodeReplayV4PracticeEscapePayload = function (actionsEncoded, payloadIndex) {
   if (payloadIndex + 1 >= actionsEncoded.length) throw "Invalid v4C practice action";
   var cell = this.decodeReplay128(actionsEncoded.charAt(payloadIndex));
   var exp = this.decodeReplay128(actionsEncoded.charAt(payloadIndex + 1));
   if (cell < 0 || cell > 15) throw "Invalid v4C practice cell";
-  return {
-    action: ["p", (cell >> 2) & 3, cell & 3, exp === 0 ? 0 : Math.pow(2, exp)],
-    spawn: null,
-    nextIndex: payloadIndex + 2
-  };
+  return this.buildReplayV4DecodedToken(
+    ["p", (cell >> 2) & 3, cell & 3, exp === 0 ? 0 : Math.pow(2, exp)],
+    null,
+    payloadIndex + 2
+  );
 };
 
 GameManager.prototype.decodeReplayV4EscapedToken = function (actionsEncoded, escapedIndex) {
@@ -373,18 +381,10 @@ GameManager.prototype.decodeReplayV4EscapedToken = function (actionsEncoded, esc
   var subtype = this.decodeReplay128(actionsEncoded.charAt(escapedIndex));
   if (subtype === 0) {
     var decoded127 = this.decodeReplayV4MoveSpawnFromToken(127);
-    return {
-      action: decoded127.action,
-      spawn: decoded127.spawn,
-      nextIndex: escapedIndex + 1
-    };
+    return this.buildReplayV4DecodedToken(decoded127.action, decoded127.spawn, escapedIndex + 1);
   }
   if (subtype === 1) {
-    return {
-      action: -1,
-      spawn: null,
-      nextIndex: escapedIndex + 1
-    };
+    return this.buildReplayV4DecodedToken(-1, null, escapedIndex + 1);
   }
   if (subtype === 2) {
     return this.decodeReplayV4PracticeEscapePayload(actionsEncoded, escapedIndex + 1);
@@ -396,11 +396,7 @@ GameManager.prototype.decodeReplayV4TokenAt = function (actionsEncoded, index) {
   var token = this.decodeReplay128(actionsEncoded.charAt(index));
   if (token < 127) {
     var decodedToken = this.decodeReplayV4MoveSpawnFromToken(token);
-    return {
-      action: decodedToken.action,
-      spawn: decodedToken.spawn,
-      nextIndex: index + 1
-    };
+    return this.buildReplayV4DecodedToken(decodedToken.action, decodedToken.spawn, index + 1);
   }
   return this.decodeReplayV4EscapedToken(actionsEncoded, index + 1);
 };
