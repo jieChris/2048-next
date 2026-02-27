@@ -916,6 +916,17 @@ GameManager.prototype.callWindowNamespaceMethod = function (namespaceName, metho
   return true;
 };
 
+GameManager.prototype.requestAnimationFrame = function (callback) {
+  if (typeof callback !== "function") return false;
+  var raf = this.resolveWindowMethod("requestAnimationFrame");
+  if (raf) {
+    raf.method.call(raf.windowLike, callback);
+    return true;
+  }
+  callback();
+  return false;
+};
+
 GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
   var readStorageFlagFromContextCore = this.resolveCoreRuntimeMethod(
     "getCoreGameSettingsStorageRuntime",
@@ -3980,7 +3991,7 @@ GameManager.prototype.flushPendingMoveInput = function () {
       // Newer input exists; next flush will consume latest direction.
       if (!self.moveInputFlushScheduled) {
         self.moveInputFlushScheduled = true;
-        window.requestAnimationFrame(function () {
+        self.requestAnimationFrame(function () {
           self.flushPendingMoveInput();
         });
       }
@@ -4014,7 +4025,7 @@ GameManager.prototype.handleMoveInput = function (direction) {
   if (this.moveInputFlushScheduled) return;
   this.moveInputFlushScheduled = true;
   var self = this;
-  window.requestAnimationFrame(function () {
+  self.requestAnimationFrame(function () {
     self.flushPendingMoveInput();
   });
 };
