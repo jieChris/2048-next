@@ -1432,19 +1432,32 @@ GameManager.prototype.resolveWindowNameParts = function (rawWindowName) {
   return rawWindowName ? rawWindowName.split("&") : [];
 };
 
+GameManager.prototype.parseWindowNameMapPart = function (part, lookupMarker) {
+  if (typeof part !== "string" || !part) {
+    return { isMapPart: false, parsedMap: null };
+  }
+  if (part.indexOf(lookupMarker) !== 0) {
+    return { isMapPart: false, parsedMap: null };
+  }
+  var encoded = part.substring(lookupMarker.length);
+  return {
+    isMapPart: true,
+    parsedMap: this.decodeWindowNameSavedMapPayload(encoded)
+  };
+};
+
 GameManager.prototype.resolveWindowNameMapAndKeptParts = function (parts, marker) {
   var kept = [];
   var map = {};
   var lookupMarker = this.resolveWindowNameLookupMarker(marker);
   for (var i = 0; i < parts.length; i++) {
     var part = parts[i];
-    if (!part) continue;
-    if (part.indexOf(lookupMarker) === 0) {
-      var encoded = part.substring(lookupMarker.length);
-      var parsed = this.decodeWindowNameSavedMapPayload(encoded);
-      if (parsed && typeof parsed === "object") map = parsed;
+    var parsedPart = this.parseWindowNameMapPart(part, lookupMarker);
+    if (parsedPart.isMapPart) {
+      if (this.isNonArrayObject(parsedPart.parsedMap)) map = parsedPart.parsedMap;
       continue;
     }
+    if (!part) continue;
     kept.push(part);
   }
   return {
