@@ -5571,6 +5571,20 @@ GameManager.prototype.applyMergeInteraction = function (tile, next, mergedValue,
   this.applyMergeMilestoneEffects(merged.value, timeStr);
 };
 
+GameManager.prototype.resolveNextTileForMovePositions = function (positions) {
+  if (this.isBlockedCell(positions.next.x, positions.next.y)) return null;
+  return this.grid.cellContent(positions.next);
+};
+
+GameManager.prototype.applyPlannedTileInteraction = function (tile, next, mergedValue, interaction, undo) {
+  if (interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null) {
+    this.applyMergeInteraction(tile, next, mergedValue, interaction.target, undo);
+    return;
+  }
+  this.snapshotMoveTileForUndo(undo, tile, interaction.target);
+  this.moveTile(tile, interaction.target);
+};
+
 GameManager.prototype.processMoveCell = function (cell, vector, undo) {
   if (this.isBlockedCell(cell.x, cell.y)) return false;
 
@@ -5578,20 +5592,11 @@ GameManager.prototype.processMoveCell = function (cell, vector, undo) {
   if (!tile) return false;
 
   var positions = this.findFarthestPosition(cell, vector);
-  var next = this.isBlockedCell(positions.next.x, positions.next.y)
-    ? null
-    : this.grid.cellContent(positions.next);
+  var next = this.resolveNextTileForMovePositions(positions);
 
   var mergedValue = next ? this.getMergedValue(tile.value, next.value) : null;
   var interaction = this.planTileInteraction(cell, positions, next, mergedValue);
-  if (interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null) {
-    this.applyMergeInteraction(tile, next, mergedValue, interaction.target, undo);
-  } else {
-    // Save backup information
-    this.snapshotMoveTileForUndo(undo, tile, interaction.target);
-    this.moveTile(tile, interaction.target);
-  }
-
+  this.applyPlannedTileInteraction(tile, next, mergedValue, interaction, undo);
   return interaction.moved === true;
 };
 
