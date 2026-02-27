@@ -5394,13 +5394,27 @@ GameManager.prototype.updateTimer = function() {
   this.refreshStatsPanelIfNeededAtElapsed(time);
 };
 
+GameManager.prototype.resolveAccumulatedTimerMsFromStartTime = function () {
+  if (!this.startTime || typeof this.startTime.getTime !== "function") {
+    return this.accumulatedTime || 0;
+  }
+  return Date.now() - this.startTime.getTime();
+};
+
+GameManager.prototype.clearTimerUpdateInterval = function () {
+  clearInterval(this.timerID);
+  this.timerID = null;
+};
+
+GameManager.prototype.applyTimerStopState = function () {
+  this.accumulatedTime = this.resolveAccumulatedTimerMsFromStartTime();
+  this.clearTimerUpdateInterval();
+  this.timerStatus = 0;
+};
+
 GameManager.prototype.stopTimer = function() {
-    if (this.timerStatus === 1) {
-        this.accumulatedTime = Date.now() - this.startTime.getTime();
-        clearInterval(this.timerID);
-        this.timerID = null;
-        this.timerStatus = 0;
-    }
+    if (this.timerStatus !== 1) return;
+    this.applyTimerStopState();
 };
 
 GameManager.prototype.pretty = function(time) {
