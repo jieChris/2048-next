@@ -1806,17 +1806,25 @@ GameManager.prototype.tryApplyRestoredSavedBoard = function (saved) {
   }
 };
 
-GameManager.prototype.tryRestoreSavedGameState = function () {
-  if (!this.shouldUseSavedGameState()) return false;
+GameManager.prototype.resolveLatestSavedStateForCurrentMode = function () {
   var savedFull = this.readSavedPayloadByKey(this.getSavedGameStateKey());
   var savedLite = this.readSavedPayloadByKey(this.getSavedGameStateLiteKey());
   var savedWindow = this.readWindowNameSavedPayload(this.modeKey);
-  var saved = this.resolveLatestSavedStateCandidate([savedFull, savedLite, savedWindow]);
+  return this.resolveLatestSavedStateCandidate([savedFull, savedLite, savedWindow]);
+};
+
+GameManager.prototype.handleSavedStateRestorePrecheckFailure = function (precheck) {
+  if (precheck && precheck.shouldClearSavedState) this.clearSavedGameState();
+  return false;
+};
+
+GameManager.prototype.tryRestoreSavedGameState = function () {
+  if (!this.shouldUseSavedGameState()) return false;
+  var saved = this.resolveLatestSavedStateForCurrentMode();
   if (!saved) return false;
   var precheck = this.resolveSavedStateRestorePrecheck(saved);
   if (!precheck.canRestore) {
-    if (precheck.shouldClearSavedState) this.clearSavedGameState();
-    return false;
+    return this.handleSavedStateRestorePrecheckFailure(precheck);
   }
   if (!this.tryApplyRestoredSavedBoard(saved)) {
     this.clearSavedGameState();
