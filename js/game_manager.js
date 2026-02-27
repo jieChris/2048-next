@@ -7430,10 +7430,14 @@ GameManager.prototype.resolveReplayEnvelopeImporterMethodName = function (kind) 
   return importerMap[kind];
 };
 
+GameManager.prototype.executeReplayEnvelopeImporterMethod = function (importerMethodName, parsedEnvelope, replayModeConfig) {
+  this[importerMethodName](parsedEnvelope, replayModeConfig);
+};
+
 GameManager.prototype.importParsedReplayEnvelopeByKind = function (parsedEnvelope, replayModeConfig) {
   var importerMethodName = this.resolveReplayEnvelopeImporterMethodName(parsedEnvelope.kind);
   if (!importerMethodName) return false;
-  this[importerMethodName](parsedEnvelope, replayModeConfig);
+  this.executeReplayEnvelopeImporterMethod(importerMethodName, parsedEnvelope, replayModeConfig);
   return true;
 };
 
@@ -7459,10 +7463,30 @@ GameManager.prototype.tryImportReplayEnvelopeString = function (trimmedReplayStr
   return this.tryImportParsedReplayEnvelope(parsedEnvelope);
 };
 
-GameManager.prototype.tryImportReplayByKnownFormats = function (trimmedReplayString) {
-  if (this.tryImportReplayEnvelopeString(trimmedReplayString)) return true;
-  if (this.tryImportLegacyReplayString(trimmedReplayString)) return true;
+GameManager.prototype.getReplayImportTryMethodNames = function () {
+  return [
+    "tryImportReplayEnvelopeString",
+    "tryImportLegacyReplayString"
+  ];
+};
+
+GameManager.prototype.tryImportReplayByMethodName = function (trimmedReplayString, methodName) {
+  if (!this.isNonEmptyStringValue(methodName)) return false;
+  var tryImportMethod = this[methodName];
+  if (typeof tryImportMethod !== "function") return false;
+  return !!tryImportMethod.call(this, trimmedReplayString);
+};
+
+GameManager.prototype.tryImportReplayByMethodNames = function (trimmedReplayString, methodNames) {
+  var names = Array.isArray(methodNames) ? methodNames : [];
+  for (var i = 0; i < names.length; i++) {
+    if (this.tryImportReplayByMethodName(trimmedReplayString, names[i])) return true;
+  }
   return false;
+};
+
+GameManager.prototype.tryImportReplayByKnownFormats = function (trimmedReplayString) {
+  return this.tryImportReplayByMethodNames(trimmedReplayString, this.getReplayImportTryMethodNames());
 };
 
 GameManager.prototype.throwUnknownReplayVersion = function () {
