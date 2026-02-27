@@ -1021,9 +1021,10 @@ GameManager.prototype.buildReplaySeekRestartPlanFallback = function (rewindPlan)
 };
 
 GameManager.prototype.planReplaySeekRestartFallback = function (rewindPlan) {
-  var shouldRewind = !!(rewindPlan && rewindPlan.shouldRewind);
-  if (!shouldRewind) return this.buildReplaySeekNoRestartPlanFallback(rewindPlan);
-  return this.buildReplaySeekRestartPlanFallback(rewindPlan);
+  var normalized = this.normalizeReplaySeekRewindPlanInput(rewindPlan);
+  var shouldRewind = !!(normalized && normalized.shouldRewind);
+  if (!shouldRewind) return this.buildReplaySeekNoRestartPlanFallback(normalized);
+  return this.buildReplaySeekRestartPlanFallback(normalized);
 };
 
 GameManager.prototype.resolveReplaySeekRestartPlanForTarget = function (targetIndex) {
