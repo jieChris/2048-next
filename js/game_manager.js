@@ -1754,7 +1754,16 @@ GameManager.prototype.persistSavedGameStatePayload = function (payload) {
   return !!(persisted || litePersisted);
 };
 
+GameManager.prototype.resolveTimerSubStateSnapshot = function () {
+  return {
+    timer_sub_8192: (document.getElementById("timer8192-sub") || {}).textContent || "",
+    timer_sub_16384: (document.getElementById("timer16384-sub") || {}).textContent || "",
+    timer_sub_visible: ((document.getElementById("timer32k-sub-container") || {}).style || {}).display === "block"
+  };
+};
+
 GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
+  var timerSubState = this.resolveTimerSubStateSnapshot();
   return {
     v: GameManager.SAVED_GAME_STATE_VERSION,
     saved_at: savedAt,
@@ -1797,9 +1806,9 @@ GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
     timer_fixed_rows: this.captureTimerFixedRowsState(),
     timer_dynamic_rows_capped: this.captureTimerDynamicRowsState("capped-timer-container"),
     timer_dynamic_rows_overflow: this.captureTimerDynamicRowsState("capped-timer-overflow-container"),
-    timer_sub_8192: (document.getElementById("timer8192-sub") || {}).textContent || "",
-    timer_sub_16384: (document.getElementById("timer16384-sub") || {}).textContent || "",
-    timer_sub_visible: ((document.getElementById("timer32k-sub-container") || {}).style || {}).display === "block"
+    timer_sub_8192: timerSubState.timer_sub_8192,
+    timer_sub_16384: timerSubState.timer_sub_16384,
+    timer_sub_visible: timerSubState.timer_sub_visible
   };
 };
 
