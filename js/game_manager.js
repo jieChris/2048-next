@@ -3965,7 +3965,15 @@ GameManager.prototype.initCornerStats = function () {
 
 GameManager.prototype.initStatsPanelUi = function () {
   if (typeof document === "undefined" || !document.body) return;
+  var btn = this.ensureStatsPanelToggleButton();
+  var topActionHost = this.resolveStatsPanelTopActionHost();
+  this.mountStatsPanelToggleButton(btn, topActionHost);
+  var overlay = this.ensureStatsPanelOverlayElement();
+  this.bindStatsPanelUiEvents(btn, overlay);
+  this.applyStatsPanelInitialVisibility(overlay);
+};
 
+GameManager.prototype.ensureStatsPanelToggleButton = function () {
   var btn = document.getElementById("stats-panel-toggle");
   if (!btn) {
     btn = document.createElement("a");
@@ -3977,54 +3985,63 @@ GameManager.prototype.initStatsPanelUi = function () {
     btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>';
   }
   btn.className = "top-action-btn stats-panel-toggle";
+  return btn;
+};
+
+GameManager.prototype.resolveStatsPanelTopActionHost = function () {
   var exportBtn = document.getElementById("top-export-replay-btn");
-  var topActionHost = null;
   var practiceStatsActions = document.getElementById("practice-stats-actions");
-  if (practiceStatsActions) {
-    topActionHost = practiceStatsActions;
-  } else if (exportBtn && exportBtn.parentNode) {
-    topActionHost = exportBtn.parentNode;
-  } else {
-    topActionHost = document.querySelector(".heading .top-action-buttons") || document.querySelector(".top-action-buttons");
-  }
+  if (practiceStatsActions) return practiceStatsActions;
+  if (exportBtn && exportBtn.parentNode) return exportBtn.parentNode;
+  return document.querySelector(".heading .top-action-buttons") || document.querySelector(".top-action-buttons");
+};
+
+GameManager.prototype.mountStatsPanelToggleButton = function (btn, topActionHost) {
+  var exportBtn = document.getElementById("top-export-replay-btn");
   if (topActionHost) {
     btn.classList.remove("is-floating");
     if (exportBtn && exportBtn.parentNode === topActionHost) {
       if (btn.parentNode !== topActionHost || btn.nextSibling !== exportBtn) {
         topActionHost.insertBefore(btn, exportBtn);
       }
-    } else if (btn.parentNode !== topActionHost) {
+      return;
+    }
+    if (btn.parentNode !== topActionHost) {
       topActionHost.insertBefore(btn, topActionHost.firstChild);
     }
-  } else {
-    if (btn.parentNode !== document.body) {
-      document.body.appendChild(btn);
-    }
-    btn.classList.add("is-floating");
+    return;
   }
+  if (btn.parentNode !== document.body) {
+    document.body.appendChild(btn);
+  }
+  btn.classList.add("is-floating");
+};
 
+GameManager.prototype.ensureStatsPanelOverlayElement = function () {
   var overlay = document.getElementById("stats-panel-overlay");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "stats-panel-overlay";
-    overlay.className = "replay-modal-overlay";
-    overlay.style.display = "none";
-    overlay.innerHTML =
-      "<div class='replay-modal-content stats-panel-content'>" +
-      "<h3>统计汇总</h3>" +
-      "<div class='stats-panel-row'><span>总步数</span><span id='stats-panel-total'>0</span></div>" +
-      "<div class='stats-panel-row'><span>移动步数</span><span id='stats-panel-moves'>0</span></div>" +
-      "<div class='stats-panel-row'><span>撤回步数</span><span id='stats-panel-undo'>0</span></div>" +
-      "<div class='stats-panel-row'><span id='stats-panel-two-label'>出2数量</span><span id='stats-panel-two'>0</span></div>" +
-      "<div class='stats-panel-row'><span id='stats-panel-four-label'>出4数量</span><span id='stats-panel-four'>0</span></div>" +
-      "<div class='stats-panel-row'><span id='stats-panel-four-rate-label'>实际出4率</span><span id='stats-panel-four-rate'>0.00</span></div>" +
-      "<div class='replay-modal-actions'>" +
-      "<button id='stats-panel-close' class='replay-button'>关闭</button>" +
-      "</div>" +
-      "</div>";
-    document.body.appendChild(overlay);
-  }
+  if (overlay) return overlay;
+  overlay = document.createElement("div");
+  overlay.id = "stats-panel-overlay";
+  overlay.className = "replay-modal-overlay";
+  overlay.style.display = "none";
+  overlay.innerHTML =
+    "<div class='replay-modal-content stats-panel-content'>" +
+    "<h3>统计汇总</h3>" +
+    "<div class='stats-panel-row'><span>总步数</span><span id='stats-panel-total'>0</span></div>" +
+    "<div class='stats-panel-row'><span>移动步数</span><span id='stats-panel-moves'>0</span></div>" +
+    "<div class='stats-panel-row'><span>撤回步数</span><span id='stats-panel-undo'>0</span></div>" +
+    "<div class='stats-panel-row'><span id='stats-panel-two-label'>出2数量</span><span id='stats-panel-two'>0</span></div>" +
+    "<div class='stats-panel-row'><span id='stats-panel-four-label'>出4数量</span><span id='stats-panel-four'>0</span></div>" +
+    "<div class='stats-panel-row'><span id='stats-panel-four-rate-label'>实际出4率</span><span id='stats-panel-four-rate'>0.00</span></div>" +
+    "<div class='replay-modal-actions'>" +
+    "<button id='stats-panel-close' class='replay-button'>关闭</button>" +
+    "</div>" +
+    "</div>";
+  document.body.appendChild(overlay);
+  return overlay;
+};
 
+GameManager.prototype.bindStatsPanelUiEvents = function (btn, overlay) {
   var self = this;
   if (!btn.__statsBound) {
     btn.__statsBound = true;
@@ -4046,7 +4063,9 @@ GameManager.prototype.initStatsPanelUi = function () {
       if (e.target === overlay) self.closeStatsPanel();
     });
   }
+};
 
+GameManager.prototype.applyStatsPanelInitialVisibility = function (overlay) {
   var isOpen = this.readLocalStorageFlag(GameManager.STATS_PANEL_VISIBLE_KEY, "1");
   overlay.style.display = isOpen ? "flex" : "none";
 };
