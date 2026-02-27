@@ -8872,11 +8872,13 @@ GameManager.prototype.isSupportedReplayEnvelopeKind = function (kind) {
   return !!this.resolveReplayEnvelopeImporterMethodName(kind);
 };
 
+var GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP = {
+  "json-v3": "importJsonV3ReplayEnvelope",
+  "v4c": "importV4ReplayEnvelope"
+};
+
 GameManager.prototype.getReplayEnvelopeImporterMethodMap = function () {
-  return {
-    "json-v3": "importJsonV3ReplayEnvelope",
-    "v4c": "importV4ReplayEnvelope"
-  };
+  return GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP;
 };
 
 GameManager.prototype.resolveReplayEnvelopeImporterMethodName = function (kind) {
@@ -9027,11 +9029,13 @@ GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
   this.throwUnknownReplayAction();
 };
 
+var GAME_MANAGER_REPLAY_DISPATCH_EXECUTOR_METHOD_MAP = {
+  move: "executeReplayMoveDispatch",
+  insertCustomTile: "executeReplayCustomTileDispatch"
+};
+
 GameManager.prototype.getReplayDispatchExecutorMethodMap = function () {
-  return {
-    move: "executeReplayMoveDispatch",
-    insertCustomTile: "executeReplayCustomTileDispatch"
-  };
+  return GAME_MANAGER_REPLAY_DISPATCH_EXECUTOR_METHOD_MAP;
 };
 
 GameManager.prototype.resolveReplayDispatchExecutorMethodName = function (dispatchMethod) {
