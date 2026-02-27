@@ -4740,6 +4740,37 @@ GameManager.prototype.initializeSetupSpawnAndPreferences = function () {
   return preferredTimerModuleView;
 };
 
+GameManager.prototype.hideLegacyStatsUi = function () {
+  var legacyTotalEl = document.getElementById("stats-total");
+  if (legacyTotalEl) legacyTotalEl.style.visibility = "hidden";
+  var legacyMovesEl = document.getElementById("stats-moves");
+  if (legacyMovesEl) legacyMovesEl.style.visibility = "hidden";
+  var legacyUndoEl = document.getElementById("stats-undo");
+  if (legacyUndoEl) legacyUndoEl.style.visibility = "hidden";
+};
+
+GameManager.prototype.resetSetupTimerDisplays = function () {
+  var timerEl = document.getElementById("timer");
+  if (timerEl) timerEl.textContent = this.pretty(0);
+
+  var timerSlots = GameManager.TIMER_SLOT_IDS;
+  timerSlots.forEach(function (slotId) {
+    var el = document.getElementById("timer" + slotId);
+    if (el) el.textContent = "";
+  });
+
+  var sub8k = document.getElementById("timer8192-sub");
+  if (sub8k) sub8k.textContent = "";
+  var sub16k = document.getElementById("timer16384-sub");
+  if (sub16k) sub16k.textContent = "";
+  var subContainer = document.getElementById("timer32k-sub-container");
+  if (subContainer) subContainer.style.display = "none";
+
+  this.repositionCappedTimerContainer();
+  this.applyCappedRowVisibility();
+  this.resetCappedDynamicTimers();
+};
+
 // Set up the game
 GameManager.prototype.setup = function (inputSeed, options) {
   options = options || {};
@@ -4773,32 +4804,8 @@ GameManager.prototype.setup = function (inputSeed, options) {
   this.assignSetupChallengeId(options);
   this.initializeSetupRuntimeState();
   var preferredTimerModuleView = this.initializeSetupSpawnAndPreferences();
-
-  var legacyTotalEl = document.getElementById("stats-total");
-  if (legacyTotalEl) legacyTotalEl.style.visibility = "hidden";
-  var legacyMovesEl = document.getElementById("stats-moves");
-  if (legacyMovesEl) legacyMovesEl.style.visibility = "hidden";
-  var legacyUndoEl = document.getElementById("stats-undo");
-  if (legacyUndoEl) legacyUndoEl.style.visibility = "hidden";
-  
-  if (document.getElementById("timer")) document.getElementById("timer").textContent = this.pretty(0);
-  
-  // Clear milestones
-  var timerSlots = GameManager.TIMER_SLOT_IDS;
-  timerSlots.forEach(function(slotId) {
-      var el = document.getElementById("timer" + slotId);
-      if (el) el.textContent = "";
-  });
-  // Clear sub timers
-  var sub8k = document.getElementById("timer8192-sub");
-  if (sub8k) sub8k.textContent = "";
-  var sub16k = document.getElementById("timer16384-sub");
-  if (sub16k) sub16k.textContent = "";
-  var subContainer = document.getElementById("timer32k-sub-container");
-  if (subContainer) subContainer.style.display = "none";
-  this.repositionCappedTimerContainer();
-  this.applyCappedRowVisibility();
-  this.resetCappedDynamicTimers();
+  this.hideLegacyStatsUi();
+  this.resetSetupTimerDisplays();
 
   // Add the initial tiles unless a replay imports an explicit board.
   var skipStartTiles = !!(options && options.skipStartTiles);
