@@ -4691,6 +4691,17 @@ GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
   return hasInputSeed;
 };
 
+GameManager.prototype.assignSetupChallengeId = function (options) {
+  this.challengeId = typeof options.challengeId === "string" && options.challengeId
+    ? options.challengeId
+    : null;
+  if (!this.challengeId && typeof window !== "undefined" && window.GAME_CHALLENGE_CONTEXT && window.GAME_CHALLENGE_CONTEXT.id) {
+    this.challengeId = window.GAME_CHALLENGE_CONTEXT.id;
+    this.sessionReplayV3.challenge_id = this.challengeId;
+  }
+  if (this.challengeId) this.sessionReplayV3.challenge_id = this.challengeId;
+};
+
 // Set up the game
 GameManager.prototype.setup = function (inputSeed, options) {
   options = options || {};
@@ -4721,14 +4732,7 @@ GameManager.prototype.setup = function (inputSeed, options) {
     seed: this.initialSeed,
     actions: []
   };
-  this.challengeId = typeof options.challengeId === "string" && options.challengeId
-    ? options.challengeId
-    : null;
-  if (!this.challengeId && typeof window !== "undefined" && window.GAME_CHALLENGE_CONTEXT && window.GAME_CHALLENGE_CONTEXT.id) {
-    this.challengeId = window.GAME_CHALLENGE_CONTEXT.id;
-    this.sessionReplayV3.challenge_id = this.challengeId;
-  }
-  if (this.challengeId) this.sessionReplayV3.challenge_id = this.challengeId;
+  this.assignSetupChallengeId(options);
   this.lastSpawn = null; // To capture spawn during play
   this.forcedSpawn = null; // To force spawn during replay v2
   
