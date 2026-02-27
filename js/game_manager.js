@@ -5438,8 +5438,7 @@ GameManager.prototype.applyUndoRestoreFlags = function (undoRestore) {
   }
 };
 
-GameManager.prototype.recordPostUndoMove = function (direction) {
-  var postUndoRecord = this.computePostUndoRecord(direction);
+GameManager.prototype.applyPostUndoRecord = function (postUndoRecord, direction) {
   if (postUndoRecord.shouldRecordMoveHistory) {
     this.moveHistory.push(direction);
   }
@@ -5452,6 +5451,11 @@ GameManager.prototype.recordPostUndoMove = function (direction) {
       : ["u"];
     this.sessionReplayV3.actions.push(undoAction);
   }
+};
+
+GameManager.prototype.recordPostUndoMove = function (direction) {
+  var postUndoRecord = this.computePostUndoRecord(direction);
+  this.applyPostUndoRecord(postUndoRecord, direction);
 };
 
 GameManager.prototype.publishUndoCompletion = function (direction, undoRestore) {
