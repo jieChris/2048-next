@@ -5556,37 +5556,36 @@ GameManager.prototype.import = function (replayString) {
     };
 
     var parsedEnvelope = this.parseReplayImportEnvelope(trimmed);
-    if (parsedEnvelope && parsedEnvelope.kind === "json-v3") {
+    if (parsedEnvelope && (parsedEnvelope.kind === "json-v3" || parsedEnvelope.kind === "v4c")) {
       var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
-      if (parsedEnvelope.specialRulesSnapshot && typeof parsedEnvelope.specialRulesSnapshot === "object") {
-        replayModeConfig.special_rules = this.clonePlain(parsedEnvelope.specialRulesSnapshot);
+      if (parsedEnvelope.kind === "json-v3") {
+        if (parsedEnvelope.specialRulesSnapshot && typeof parsedEnvelope.specialRulesSnapshot === "object") {
+          replayModeConfig.special_rules = this.clonePlain(parsedEnvelope.specialRulesSnapshot);
+        }
+        if (typeof parsedEnvelope.modeFamily === "string" && parsedEnvelope.modeFamily) {
+          replayModeConfig.mode_family = parsedEnvelope.modeFamily;
+        }
+        if (typeof parsedEnvelope.rankPolicy === "string" && parsedEnvelope.rankPolicy) {
+          replayModeConfig.rank_policy = parsedEnvelope.rankPolicy;
+        }
+        if (typeof parsedEnvelope.challengeId === "string" && parsedEnvelope.challengeId) {
+          this.challengeId = parsedEnvelope.challengeId;
+        }
+        this.replayMoves = parsedEnvelope.actions;
+        this.replaySpawns = null;
+        this.disableSessionSync = true;
+        this.restartWithSeed(parsedEnvelope.seed, replayModeConfig);
+        finalizeReplayImport();
+        return;
       }
-      if (typeof parsedEnvelope.modeFamily === "string" && parsedEnvelope.modeFamily) {
-        replayModeConfig.mode_family = parsedEnvelope.modeFamily;
-      }
-      if (typeof parsedEnvelope.rankPolicy === "string" && parsedEnvelope.rankPolicy) {
-        replayModeConfig.rank_policy = parsedEnvelope.rankPolicy;
-      }
-      if (typeof parsedEnvelope.challengeId === "string" && parsedEnvelope.challengeId) {
-        this.challengeId = parsedEnvelope.challengeId;
-      }
-      this.replayMoves = parsedEnvelope.actions;
-      this.replaySpawns = null;
-      this.disableSessionSync = true;
-      this.restartWithSeed(parsedEnvelope.seed, replayModeConfig);
-      finalizeReplayImport();
-      return;
-    }
 
-    if (parsedEnvelope && parsedEnvelope.kind === "v4c") {
-      var replayModeConfigV4 = this.resolveModeConfig(parsedEnvelope.modeKey);
       var initialBoard = this.decodeBoardV4(parsedEnvelope.initialBoardEncoded);
       var decodedV4Actions = this.decodeReplayV4Actions(parsedEnvelope.actionsEncoded);
       this.replayMoves = Array.isArray(decodedV4Actions.replayMoves) ? decodedV4Actions.replayMoves : [];
       this.replaySpawns = Array.isArray(decodedV4Actions.replaySpawns) ? decodedV4Actions.replaySpawns : [];
 
       this.disableSessionSync = true;
-      this.restartWithBoard(initialBoard, replayModeConfigV4, { asReplay: true });
+      this.restartWithBoard(initialBoard, replayModeConfig, { asReplay: true });
       finalizeReplayImport();
       return;
     }
