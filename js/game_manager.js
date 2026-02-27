@@ -5806,15 +5806,22 @@ GameManager.prototype.isSupportedReplayEnvelopeKind = function (kind) {
   return kind === "json-v3" || kind === "v4c";
 };
 
-GameManager.prototype.tryImportParsedReplayEnvelope = function (parsedEnvelope) {
-  if (!parsedEnvelope || !this.isSupportedReplayEnvelopeKind(parsedEnvelope.kind)) return false;
-  var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
+GameManager.prototype.importParsedReplayEnvelopeByKind = function (parsedEnvelope, replayModeConfig) {
   if (parsedEnvelope.kind === "json-v3") {
     this.importJsonV3ReplayEnvelope(parsedEnvelope, replayModeConfig);
     return true;
   }
-  this.importV4ReplayEnvelope(parsedEnvelope, replayModeConfig);
-  return true;
+  if (parsedEnvelope.kind === "v4c") {
+    this.importV4ReplayEnvelope(parsedEnvelope, replayModeConfig);
+    return true;
+  }
+  return false;
+};
+
+GameManager.prototype.tryImportParsedReplayEnvelope = function (parsedEnvelope) {
+  if (!parsedEnvelope || !this.isSupportedReplayEnvelopeKind(parsedEnvelope.kind)) return false;
+  var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
+  return this.importParsedReplayEnvelopeByKind(parsedEnvelope, replayModeConfig);
 };
 
 GameManager.prototype.tryImportLegacyReplayString = function (trimmedReplayString) {
