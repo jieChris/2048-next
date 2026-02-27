@@ -579,7 +579,10 @@ GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
 GameManager.prototype.resolveReplayExecution = function (action) {
   var resolveReplayExecutionCore = this.callCoreReplayExecutionRuntime("resolveReplayExecution", [action]);
   if (resolveReplayExecutionCore.available) return resolveReplayExecutionCore.value;
+  return this.resolveReplayExecutionFallback(action);
+};
 
+GameManager.prototype.resolveReplayExecutionFallback = function (action) {
   var kind = this.getActionKind(action);
   if (kind === "m") {
     var dir = Array.isArray(action) ? action[1] : action;
@@ -602,7 +605,10 @@ GameManager.prototype.resolveReplayExecution = function (action) {
 GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
   var planReplayDispatchCore = this.callCoreReplayDispatchRuntime("planReplayDispatch", [resolvedExecution]);
   if (planReplayDispatchCore.available) return planReplayDispatchCore.value || {};
+  return this.planReplayDispatchFallback(resolvedExecution);
+};
 
+GameManager.prototype.planReplayDispatchFallback = function (resolvedExecution) {
   if (resolvedExecution.kind === "m") {
     return {
       method: "move",
