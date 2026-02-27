@@ -6740,16 +6740,28 @@ GameManager.prototype.resolveUndoPayloadScore = function (undoPayload) {
     : 0;
 };
 
+GameManager.prototype.resolveUndoPayloadTiles = function (undoPayload) {
+  return Array.isArray(undoPayload.tiles) ? undoPayload.tiles : [];
+};
+
+GameManager.prototype.createUndoRestoredGridTile = function (undoTileSnapshot) {
+  var restored = this.createUndoRestoreTile(undoTileSnapshot);
+  var tile = new Tile({ x: restored.x, y: restored.y }, restored.value);
+  tile.previousPosition = {
+    x: restored.previousPosition.x,
+    y: restored.previousPosition.y
+  };
+  return tile;
+};
+
+GameManager.prototype.placeUndoRestoredGridTile = function (tile) {
+  this.grid.cells[tile.x][tile.y] = tile;
+};
+
 GameManager.prototype.restoreUndoPayloadTiles = function (undoPayload) {
-  var undoTiles = Array.isArray(undoPayload.tiles) ? undoPayload.tiles : [];
+  var undoTiles = this.resolveUndoPayloadTiles(undoPayload);
   for (var i = 0; i < undoTiles.length; i++) {
-    var t = this.createUndoRestoreTile(undoTiles[i]);
-    var tile = new Tile({ x: t.x, y: t.y }, t.value);
-    tile.previousPosition = {
-      x: t.previousPosition.x,
-      y: t.previousPosition.y
-    };
-    this.grid.cells[tile.x][tile.y] = tile;
+    this.placeUndoRestoredGridTile(this.createUndoRestoredGridTile(undoTiles[i]));
   }
 };
 
