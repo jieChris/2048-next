@@ -1882,6 +1882,58 @@ GameManager.prototype.resolveCoreUndoSnapshotRuntimeMethod = function (methodNam
   return this.resolveCoreRuntimeMethod("getCoreUndoSnapshotRuntime", methodName);
 };
 
+GameManager.prototype.resolveCorePostMoveRecordRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCorePostMoveRecordRuntime", methodName);
+};
+
+GameManager.prototype.resolveCorePostUndoRecordRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCorePostUndoRecordRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreUndoRestoreRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreUndoRestoreRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreUndoStackEntryRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreUndoStackEntryRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreUndoTileSnapshotRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreUndoTileSnapshotRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreUndoTileRestoreRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreUndoTileRestoreRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreUndoRestorePayloadRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreUndoRestorePayloadRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreMergeEffectsRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreMergeEffectsRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreSpecialRulesRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreSpecialRulesRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreDirectionLockRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreDirectionLockRuntime", methodName);
+};
+
+GameManager.prototype.resolveCorePostMoveRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCorePostMoveRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreTimerIntervalRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreTimerIntervalRuntime", methodName);
+};
+
+GameManager.prototype.resolveCorePrettyTimeRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCorePrettyTimeRuntime", methodName);
+};
+
 GameManager.prototype.resolveCoreStorageRuntimeMethod = function (methodName) {
   return this.resolveCoreRuntimeMethod("getCoreGameSettingsStorageRuntime", methodName);
 };
@@ -2151,10 +2203,7 @@ GameManager.prototype.planTileInteraction = function (cell, positions, next, mer
 };
 
 GameManager.prototype.computePostMoveRecord = function (direction) {
-  var computePostMoveRecordCore = this.resolveCoreRuntimeMethod(
-    "getCorePostMoveRecordRuntime",
-    "computePostMoveRecord"
-  );
+  var computePostMoveRecordCore = this.resolveCorePostMoveRecordRuntimeMethod("computePostMoveRecord");
   if (computePostMoveRecordCore) {
     return computePostMoveRecordCore({
       replayMode: !!this.replayMode,
@@ -2205,10 +2254,7 @@ GameManager.prototype.computePostMoveRecord = function (direction) {
 };
 
 GameManager.prototype.computePostUndoRecord = function (direction) {
-  var computePostUndoRecordCore = this.resolveCoreRuntimeMethod(
-    "getCorePostUndoRecordRuntime",
-    "computePostUndoRecord"
-  );
+  var computePostUndoRecordCore = this.resolveCorePostUndoRecordRuntimeMethod("computePostUndoRecord");
   if (computePostUndoRecordCore) {
     return computePostUndoRecordCore({
       replayMode: !!this.replayMode,
@@ -2236,10 +2282,7 @@ GameManager.prototype.computePostUndoRecord = function (direction) {
 };
 
 GameManager.prototype.computeUndoRestoreState = function (prev) {
-  var computeUndoRestoreStateCore = this.resolveCoreRuntimeMethod(
-    "getCoreUndoRestoreRuntime",
-    "computeUndoRestoreState"
-  );
+  var computeUndoRestoreStateCore = this.resolveCoreUndoRestoreRuntimeMethod("computeUndoRestoreState");
   if (computeUndoRestoreStateCore) {
     return computeUndoRestoreStateCore({
       prev: prev || {},
@@ -2353,10 +2396,7 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
   var fallbackUndoUsed = Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0;
 
   var source = entry && typeof entry === "object" ? entry : {};
-  var normalizeUndoStackEntryCore = this.resolveCoreRuntimeMethod(
-    "getCoreUndoStackEntryRuntime",
-    "normalizeUndoStackEntry"
-  );
+  var normalizeUndoStackEntryCore = this.resolveCoreUndoStackEntryRuntimeMethod("normalizeUndoStackEntry");
   if (normalizeUndoStackEntryCore) {
     var computed = normalizeUndoStackEntryCore({
       entry: source,
@@ -2415,10 +2455,7 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
 };
 
 GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
-  var createUndoTileSnapshotCore = this.resolveCoreRuntimeMethod(
-    "getCoreUndoTileSnapshotRuntime",
-    "createUndoTileSnapshot"
-  );
+  var createUndoTileSnapshotCore = this.resolveCoreUndoTileSnapshotRuntimeMethod("createUndoTileSnapshot");
   if (createUndoTileSnapshotCore) {
     var computed = createUndoTileSnapshotCore({
       tile: {
@@ -2471,10 +2508,7 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
     }
   };
 
-  var createUndoRestoreTileCore = this.resolveCoreRuntimeMethod(
-    "getCoreUndoTileRestoreRuntime",
-    "createUndoRestoreTile"
-  );
+  var createUndoRestoreTileCore = this.resolveCoreUndoTileRestoreRuntimeMethod("createUndoRestoreTile");
   if (createUndoRestoreTileCore) {
     var computed = createUndoRestoreTileCore({
       x: source.x,
@@ -2499,10 +2533,7 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
 };
 
 GameManager.prototype.computeUndoRestorePayload = function (prev) {
-  var computeUndoRestorePayloadCore = this.resolveCoreRuntimeMethod(
-    "getCoreUndoRestorePayloadRuntime",
-    "computeUndoRestorePayload"
-  );
+  var computeUndoRestorePayloadCore = this.resolveCoreUndoRestorePayloadRuntimeMethod("computeUndoRestorePayload");
   if (computeUndoRestorePayloadCore) {
     return computeUndoRestorePayloadCore({
       prev: prev || {},
@@ -2530,10 +2561,7 @@ GameManager.prototype.computeUndoRestorePayload = function (prev) {
 };
 
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
-  var computeMergeEffectsCore = this.resolveCoreRuntimeMethod(
-    "getCoreMergeEffectsRuntime",
-    "computeMergeEffects"
-  );
+  var computeMergeEffectsCore = this.resolveCoreMergeEffectsRuntimeMethod("computeMergeEffects");
   if (computeMergeEffectsCore) {
     return computeMergeEffectsCore({
       mergedValue: mergedValue,
@@ -2739,10 +2767,7 @@ GameManager.prototype.normalizeSpecialRules = function (rules) {
 };
 
 GameManager.prototype.applySpecialRulesState = function () {
-  var computeSpecialRulesStateCore = this.resolveCoreRuntimeMethod(
-    "getCoreSpecialRulesRuntime",
-    "computeSpecialRulesState"
-  );
+  var computeSpecialRulesStateCore = this.resolveCoreSpecialRulesRuntimeMethod("computeSpecialRulesState");
   if (computeSpecialRulesStateCore) {
     var computed = computeSpecialRulesStateCore(
       this.specialRules || {},
@@ -2827,10 +2852,7 @@ GameManager.prototype.getAvailableCells = function () {
 };
 
 GameManager.prototype.getLockedDirection = function () {
-  var getLockedDirectionStateCore = this.resolveCoreRuntimeMethod(
-    "getCoreDirectionLockRuntime",
-    "getLockedDirectionState"
-  );
+  var getLockedDirectionStateCore = this.resolveCoreDirectionLockRuntimeMethod("getLockedDirectionState");
   if (getLockedDirectionStateCore) {
     var computed = getLockedDirectionStateCore({
       directionLockRules: this.directionLockRules,
@@ -4388,10 +4410,7 @@ GameManager.prototype.prepareTiles = function () {
 };
 
 GameManager.prototype.getMoveInputThrottleMs = function () {
-  var resolveMoveInputThrottleMsCore = this.resolveCoreRuntimeMethod(
-    "getCoreTimerIntervalRuntime",
-    "resolveMoveInputThrottleMs"
-  );
+  var resolveMoveInputThrottleMsCore = this.resolveCoreTimerIntervalRuntimeMethod("resolveMoveInputThrottleMs");
   if (resolveMoveInputThrottleMsCore) {
     return resolveMoveInputThrottleMsCore(this.replayMode, this.width, this.height);
   }
@@ -4708,10 +4727,7 @@ GameManager.prototype.move = function (direction) {
 
     this.addRandomTile();
     var hasMovesAvailable = this.movesAvailable();
-    var computePostMoveLifecycleCore = this.resolveCoreRuntimeMethod(
-      "getCorePostMoveRuntime",
-      "computePostMoveLifecycle"
-    );
+    var computePostMoveLifecycleCore = this.resolveCorePostMoveRuntimeMethod("computePostMoveLifecycle");
     if (computePostMoveLifecycleCore) {
       var postMoveResult = computePostMoveLifecycleCore({
         successfulMoveCount: this.successfulMoveCount,
@@ -4929,10 +4945,7 @@ GameManager.prototype.startTimer = function() {
 };
 
 GameManager.prototype.getTimerUpdateIntervalMs = function () {
-  var resolveTimerUpdateIntervalMsCore = this.resolveCoreRuntimeMethod(
-    "getCoreTimerIntervalRuntime",
-    "resolveTimerUpdateIntervalMs"
-  );
+  var resolveTimerUpdateIntervalMsCore = this.resolveCoreTimerIntervalRuntimeMethod("resolveTimerUpdateIntervalMs");
   if (resolveTimerUpdateIntervalMsCore) return resolveTimerUpdateIntervalMsCore(this.width, this.height);
 
   var area = (this.width || 4) * (this.height || 4);
@@ -4980,7 +4993,7 @@ GameManager.prototype.stopTimer = function() {
 };
 
 GameManager.prototype.pretty = function(time) {
-  var formatPrettyTimeCore = this.resolveCoreRuntimeMethod("getCorePrettyTimeRuntime", "formatPrettyTime");
+  var formatPrettyTimeCore = this.resolveCorePrettyTimeRuntimeMethod("formatPrettyTime");
   if (formatPrettyTimeCore) return formatPrettyTimeCore(time);
 
   if (time < 0) {return "DNF";}
@@ -5063,10 +5076,7 @@ GameManager.prototype.insertCustomTile = function(x, y, value) {
 };
 
 GameManager.prototype.invalidateTimers = function(limit) {
-    var resolveInvalidatedTimerElementIdsCore = this.resolveCoreRuntimeMethod(
-      "getCoreTimerIntervalRuntime",
-      "resolveInvalidatedTimerElementIds"
-    );
+    var resolveInvalidatedTimerElementIdsCore = this.resolveCoreTimerIntervalRuntimeMethod("resolveInvalidatedTimerElementIds");
     if (resolveInvalidatedTimerElementIdsCore) {
         var ids = resolveInvalidatedTimerElementIdsCore({
             timerMilestones: this.timerMilestones || this.getTimerMilestoneValues(),
