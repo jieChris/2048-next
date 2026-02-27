@@ -1359,6 +1359,21 @@ GameManager.prototype.readLocalStorageJsonMapFallback = function (key) {
   }
 };
 
+GameManager.prototype.normalizeStorageJsonMapWriteInput = function (map) {
+  return this.isNonArrayObject(map) ? map : {};
+};
+
+GameManager.prototype.writeLocalStorageJsonMapFallback = function (key, map) {
+  var storage = this.getLocalStorage();
+  if (!this.canWriteToStorage(storage)) return false;
+  try {
+    storage.setItem(key, JSON.stringify(this.normalizeStorageJsonMapWriteInput(map)));
+    return true;
+  } catch (_err) {
+    return false;
+  }
+};
+
 GameManager.prototype.readLocalStorageJsonMap = function (key) {
   var readStorageJsonMapFromContextCore = this.callCoreStorageRuntime("readStorageJsonMapFromContext", [{
       windowLike: this.getWindowLike(),
@@ -1377,15 +1392,7 @@ GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
       map: map
     }]);
   if (writeStorageJsonMapFromContextCore.available) return !!writeStorageJsonMapFromContextCore.value;
-  var storage = this.getLocalStorage();
-  if (!this.canWriteToStorage(storage)) return false;
-  var safeMap = this.isNonArrayObject(map) ? map : {};
-  try {
-    storage.setItem(key, JSON.stringify(safeMap));
-    return true;
-  } catch (_err) {
-    return false;
-  }
+  return this.writeLocalStorageJsonMapFallback(key, map);
 };
 
 GameManager.prototype.serializeLocalStoragePayload = function (payload) {
