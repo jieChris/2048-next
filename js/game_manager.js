@@ -6577,10 +6577,14 @@ GameManager.prototype.resetSetupOutcomeState = function () {
   this.keepPlaying = false;
 };
 
-GameManager.prototype.initializeSetupReplayAndRuntime = function (inputSeed, options) {
-  var hasInputSeed = this.initializeSetupReplayState(inputSeed);
+GameManager.prototype.initializeSetupReplaySessionState = function (options) {
   this.sessionReplayV3 = this.createSetupSessionReplayV3Payload();
   this.assignSetupChallengeId(options);
+};
+
+GameManager.prototype.initializeSetupReplayAndRuntime = function (inputSeed, options) {
+  var hasInputSeed = this.initializeSetupReplayState(inputSeed);
+  this.initializeSetupReplaySessionState(options);
   this.initializeSetupRuntimeState();
   return hasInputSeed;
 };
