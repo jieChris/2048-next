@@ -22,6 +22,7 @@ import {
   normalizeModeConfig,
   resolveDetectedMode,
   resolveLegacyModeFromModeKey,
+  resolveModeCatalogConfig,
   resolveModeCatalogAlias,
   normalizeSpecialRules
 } from "../../src/core/mode";
@@ -551,6 +552,53 @@ describe("core mode: legacy mapping policy", () => {
         }
       })
     ).toBe("fib_4x4_undo");
+  });
+
+  it("resolves mode config from catalog first, then falls back to local map", () => {
+    const catalogConfig = {
+      key: "classic_4x4_pow2_undo",
+      board_width: 4
+    };
+    const fallbackConfig = {
+      key: "standard_4x4_pow2_no_undo",
+      board_width: 4
+    };
+
+    const byCatalog = resolveModeCatalogConfig({
+      modeId: "classic_4x4_pow2_undo",
+      catalogGetMode(modeId) {
+        return modeId === "classic_4x4_pow2_undo" ? catalogConfig : null;
+      },
+      fallbackModeConfigs: {
+        classic_4x4_pow2_undo: fallbackConfig
+      }
+    });
+    expect(byCatalog).toEqual(catalogConfig);
+    expect(byCatalog).not.toBe(catalogConfig);
+
+    const byFallback = resolveModeCatalogConfig({
+      modeId: "standard_4x4_pow2_no_undo",
+      catalogGetMode() {
+        return null;
+      },
+      fallbackModeConfigs: {
+        standard_4x4_pow2_no_undo: fallbackConfig
+      }
+    });
+    expect(byFallback).toEqual(fallbackConfig);
+    expect(byFallback).not.toBe(fallbackConfig);
+
+    expect(
+      resolveModeCatalogConfig({
+        modeId: "missing_mode",
+        catalogGetMode() {
+          return null;
+        },
+        fallbackModeConfigs: {
+          standard_4x4_pow2_no_undo: fallbackConfig
+        }
+      })
+    ).toBeNull();
   });
 
   it("resolves detected mode from existing/body/path context", () => {

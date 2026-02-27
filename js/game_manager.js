@@ -1865,8 +1865,24 @@ GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
 
 GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
   var modeCatalogGetMode = this.resolveWindowNamespaceMethod("ModeCatalog", "getMode");
+  var catalogGetMode = null;
   if (modeCatalogGetMode) {
-    return modeCatalogGetMode.method.call(modeCatalogGetMode.scope, modeKey);
+    catalogGetMode = function (requestedModeId) {
+      return modeCatalogGetMode.method.call(modeCatalogGetMode.scope, requestedModeId);
+    };
+  }
+
+  var resolveModeCatalogConfigCore = this.callCoreModeRuntime("resolveModeCatalogConfig", [{
+      modeId: modeKey,
+      catalogGetMode: catalogGetMode,
+      fallbackModeConfigs: GameManager.FALLBACK_MODE_CONFIGS
+    }]);
+  if (resolveModeCatalogConfigCore.available) {
+    return resolveModeCatalogConfigCore.value;
+  }
+
+  if (catalogGetMode) {
+    return catalogGetMode(modeKey);
   }
   if (GameManager.FALLBACK_MODE_CONFIGS[modeKey]) {
     return this.clonePlain(GameManager.FALLBACK_MODE_CONFIGS[modeKey]);

@@ -99,6 +99,12 @@ export interface ModeCatalogAliasResolveInput {
   legacyAliasToModeKey?: Record<string, string> | null;
 }
 
+export interface ModeCatalogConfigResolveInput {
+  modeId?: string | null;
+  catalogGetMode?: ((modeId: string) => unknown) | null;
+  fallbackModeConfigs?: Record<string, unknown> | null;
+}
+
 export interface DetectModeInput {
   existingMode?: string | null;
   bodyMode?: string | null;
@@ -385,6 +391,43 @@ export function resolveModeCatalogAlias(input: ModeCatalogAliasResolveInput): st
     return legacyAliasToModeKey[id];
   }
   return id;
+}
+
+export function resolveModeCatalogConfig(input: ModeCatalogConfigResolveInput): PlainRecord | null {
+  const source = input || {};
+  const modeId = typeof source.modeId === "string" ? source.modeId : "";
+  if (!modeId) return null;
+
+  const catalogGetMode = typeof source.catalogGetMode === "function" ? source.catalogGetMode : null;
+  if (catalogGetMode) {
+    const catalogConfig = catalogGetMode(modeId);
+    if (catalogConfig && typeof catalogConfig === "object" && !Array.isArray(catalogConfig)) {
+      try {
+        return clonePlain(catalogConfig as PlainRecord);
+      } catch (_err) {
+        return null;
+      }
+    }
+  }
+
+  const fallbackModeConfigs = source.fallbackModeConfigs || null;
+  if (
+    fallbackModeConfigs &&
+    typeof fallbackModeConfigs === "object" &&
+    !Array.isArray(fallbackModeConfigs) &&
+    Object.prototype.hasOwnProperty.call(fallbackModeConfigs, modeId)
+  ) {
+    const fallbackConfig = fallbackModeConfigs[modeId];
+    if (fallbackConfig && typeof fallbackConfig === "object" && !Array.isArray(fallbackConfig)) {
+      try {
+        return clonePlain(fallbackConfig as PlainRecord);
+      } catch (_err) {
+        return null;
+      }
+    }
+  }
+
+  return null;
 }
 
 export function resolveDetectedMode(input: DetectModeInput): string {
