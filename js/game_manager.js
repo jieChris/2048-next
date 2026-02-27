@@ -3881,9 +3881,8 @@ GameManager.prototype.normalizeUndoSnapshotCoreValue = function (computed, fallb
   };
 };
 
-GameManager.prototype.createUndoSnapshotState = function () {
-  var fallbackState = this.getUndoStateFallbackValues();
-  var createUndoSnapshotCore = this.callCoreUndoSnapshotRuntime("createUndoSnapshot", [{
+GameManager.prototype.buildCreateUndoSnapshotCoreInput = function () {
+  return {
     score: this.score,
     comboStreak: this.comboStreak,
     successfulMoveCount: this.successfulMoveCount,
@@ -3891,8 +3890,18 @@ GameManager.prototype.createUndoSnapshotState = function () {
     lockedDirectionTurn: this.lockedDirectionTurn,
     lockedDirection: this.lockedDirection,
     undoUsed: this.undoUsed
-  }]);
-  var fallback = this.buildUndoSnapshotFallbackState(fallbackState);
+  };
+};
+
+GameManager.prototype.resolveUndoSnapshotFallbackState = function () {
+  return this.buildUndoSnapshotFallbackState(this.getUndoStateFallbackValues());
+};
+
+GameManager.prototype.createUndoSnapshotState = function () {
+  var createUndoSnapshotCore = this.callCoreUndoSnapshotRuntime("createUndoSnapshot", [
+    this.buildCreateUndoSnapshotCoreInput()
+  ]);
+  var fallback = this.resolveUndoSnapshotFallbackState();
 
   if (createUndoSnapshotCore.available) {
     return this.normalizeUndoSnapshotCoreValue(createUndoSnapshotCore.value || {}, fallback);
