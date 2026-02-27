@@ -4830,6 +4830,27 @@ GameManager.prototype.insertCustomTile = function(x, y, value) {
 };
 
 GameManager.prototype.invalidateTimers = function(limit) {
+    var resolveInvalidatedTimerElementIdsCore = this.resolveCoreRuntimeMethod(
+      "getCoreTimerIntervalRuntime",
+      "resolveInvalidatedTimerElementIds"
+    );
+    if (resolveInvalidatedTimerElementIdsCore) {
+        var ids = resolveInvalidatedTimerElementIdsCore({
+            timerMilestones: this.timerMilestones || this.getTimerMilestoneValues(),
+            timerSlotIds: GameManager.TIMER_SLOT_IDS,
+            limit: limit,
+            reached32k: !!this.reached32k,
+            isFibonacciMode: this.isFibonacciMode()
+        }) || [];
+        for (var idx = 0; idx < ids.length; idx++) {
+            var targetId = ids[idx];
+            if (!targetId) continue;
+            var targetEl = document.getElementById(String(targetId));
+            if (targetEl) targetEl.textContent = "---------";
+        }
+        return;
+    }
+
     var milestones = this.timerMilestones || this.getTimerMilestoneValues();
     var timerSlots = GameManager.TIMER_SLOT_IDS;
     for (var i = 0; i < timerSlots.length; i++) {
