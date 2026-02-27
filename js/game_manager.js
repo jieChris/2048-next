@@ -798,45 +798,15 @@ GameManager.prototype.cloneBoardMatrix = function (board) {
 };
 
 GameManager.prototype.callCoreStorageRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreStorageRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreStorageRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreModeRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreModeRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreModeRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreRulesRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreRulesRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreRulesRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreRuntimeMethod = function (resolverMethodName, methodName, args) {
@@ -861,157 +831,47 @@ GameManager.prototype.callCoreRuntimeMethod = function (resolverMethodName, meth
 };
 
 GameManager.prototype.callCoreReplayCodecRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreReplayCodecRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreReplayCodecRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreReplayV4ActionsRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreReplayV4ActionsRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreReplayV4ActionsRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreReplayImportRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreReplayImportRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreReplayImportRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreReplayExecutionRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreReplayExecutionRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreReplayExecutionRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreReplayDispatchRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreReplayDispatchRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreReplayDispatchRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreReplayLifecycleRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreReplayLifecycleRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreReplayLifecycleRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreReplayTimerRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreReplayTimerRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreReplayTimerRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreReplayFlowRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreReplayFlowRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreReplayFlowRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreReplayControlRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreReplayControlRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreReplayControlRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreReplayLoopRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreReplayLoopRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreReplayLoopRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreReplayLegacyRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreReplayLegacyRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreReplayLegacyRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.resolveSavedGameStateStorageKey = function (keyPrefix, modeKey) {
@@ -4950,45 +4810,15 @@ GameManager.prototype.move = function (direction) {
 };
 
 GameManager.prototype.callCoreMovePathRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreMovePathRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreMovePathRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreMoveScanRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreMoveScanRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreMoveScanRuntimeMethod", methodName, args);
 };
 
 GameManager.prototype.callCoreTimerIntervalRuntime = function (methodName, args) {
-  var runtimeMethod = this.resolveCoreTimerIntervalRuntimeMethod(methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
-  return {
-    available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
-  };
+  return this.callCoreRuntimeMethod("resolveCoreTimerIntervalRuntimeMethod", methodName, args);
 };
 
 // Get the vector representing the chosen direction
