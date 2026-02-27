@@ -3826,6 +3826,12 @@ GameManager.prototype.loadUndoSettingForMode = function (mode) {
   return true;
 };
 
+GameManager.prototype.applyUndoSettingForMode = function (mode, skipPersist, forceChange) {
+  var nextEnabled = this.loadUndoSettingForMode(mode);
+  this.setUndoEnabled(nextEnabled, !!skipPersist, !!forceChange);
+  return !!this.undoEnabled;
+};
+
 GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resolvedState) {
   var state = resolvedState && typeof resolvedState === "object"
     ? resolvedState
@@ -5549,7 +5555,7 @@ GameManager.prototype.import = function (replayString) {
       this.replaySpawns = null;
       this.disableSessionSync = true;
       this.restartWithSeed(parsedEnvelope.seed, replayModeConfig);
-      this.setUndoEnabled(this.loadUndoSettingForMode(this.modeKey), true, true);
+      this.applyUndoSettingForMode(this.modeKey, true, true);
       startReplay();
       return;
     }
@@ -5563,7 +5569,7 @@ GameManager.prototype.import = function (replayString) {
 
       this.disableSessionSync = true;
       this.restartWithBoard(initialBoard, replayModeConfigV4, { asReplay: true });
-      this.setUndoEnabled(this.loadUndoSettingForMode(this.modeKey), true, true);
+      this.applyUndoSettingForMode(this.modeKey, true, true);
       startReplay();
       return;
     }
