@@ -6977,24 +6977,43 @@ GameManager.prototype.tryDispatchImmediateMoveInput = function (direction, now, 
   return true;
 };
 
-GameManager.prototype.flushPendingMoveInput = function () {
-  this.moveInputFlushScheduled = false;
-  var direction = this.consumePendingMoveInputDirection();
-  if (direction === null) return;
+GameManager.prototype.resolvePendingMoveInputThrottleState = function (throttleMs) {
+  var now = Date.now();
+  return {
+    now: now,
+    wait: this.resolveMoveInputWaitMs(throttleMs, now)
+  };
+};
 
+GameManager.prototype.dispatchPendingMoveInputWithThrottle = function (direction, throttleMs) {
+  var throttleState = this.resolvePendingMoveInputThrottleState(throttleMs);
+  if (throttleState.wait <= 0) {
+    this.executeImmediateMoveInput(direction, throttleState.now);
+    return;
+  }
+  this.scheduleDelayedMoveInput(direction, throttleState.wait);
+};
+
+GameManager.prototype.dispatchPendingMoveInput = function (direction) {
   var throttleMs = this.getMoveInputThrottleMs();
   if (throttleMs <= 0) {
     this.move(direction);
     return;
   }
+  this.dispatchPendingMoveInputWithThrottle(direction, throttleMs);
+};
 
+GameManager.prototype.flushPendingMoveInput = function () {
+  this.moveInputFlushScheduled = false;
+  var direction = this.consumePendingMoveInputDirection();
+  if (direction === null) return;
+  this.dispatchPendingMoveInput(direction);
+};
+
+GameManager.prototype.dispatchMoveInputWithThrottle = function (direction, throttleMs) {
   var now = Date.now();
-  var wait = this.resolveMoveInputWaitMs(throttleMs, now);
-  if (wait <= 0) {
-    this.executeImmediateMoveInput(direction, now);
-    return;
-  }
-  this.scheduleDelayedMoveInput(direction, wait);
+  if (this.tryDispatchImmediateMoveInput(direction, now, throttleMs)) return;
+  this.enqueuePendingMoveInput(direction);
 };
 
 GameManager.prototype.handleMoveInput = function (direction) {
@@ -7008,11 +7027,7 @@ GameManager.prototype.handleMoveInput = function (direction) {
     this.dispatchMoveInputWithoutThrottle(direction);
     return;
   }
-
-  var now = Date.now();
-  if (this.tryDispatchImmediateMoveInput(direction, now, throttleMs)) return;
-
-  this.enqueuePendingMoveInput(direction);
+  this.dispatchMoveInputWithThrottle(direction, throttleMs);
 };
 
 // Move a tile and its representation
