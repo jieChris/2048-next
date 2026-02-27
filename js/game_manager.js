@@ -1634,221 +1634,136 @@ GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
   return null;
 };
 
-GameManager.prototype.getCoreRulesRuntime = function () {
+GameManager.prototype.getCoreRuntimeByName = function (runtimeName) {
   if (typeof window === "undefined") return null;
-  var core = window.CoreRulesRuntime;
+  if (typeof runtimeName !== "string" || !runtimeName) return null;
+  var core = window[runtimeName];
   if (!core || typeof core !== "object") return null;
   return core;
+};
+
+GameManager.prototype.getCoreRulesRuntime = function () {
+  return this.getCoreRuntimeByName("CoreRulesRuntime");
 };
 
 GameManager.prototype.getCoreModeRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreModeRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreModeRuntime");
 };
 
 GameManager.prototype.getCoreSpecialRulesRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreSpecialRulesRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreSpecialRulesRuntime");
 };
 
 GameManager.prototype.getCoreDirectionLockRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreDirectionLockRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreDirectionLockRuntime");
 };
 
 GameManager.prototype.getCoreGridScanRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreGridScanRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreGridScanRuntime");
 };
 
 GameManager.prototype.getCoreMoveScanRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreMoveScanRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreMoveScanRuntime");
 };
 
 GameManager.prototype.getCoreMovePathRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreMovePathRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreMovePathRuntime");
 };
 
 GameManager.prototype.getCoreScoringRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreScoringRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreScoringRuntime");
 };
 
 GameManager.prototype.getCoreMergeEffectsRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreMergeEffectsRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreMergeEffectsRuntime");
 };
 
 GameManager.prototype.getCorePostMoveRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CorePostMoveRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CorePostMoveRuntime");
 };
 
 GameManager.prototype.getCoreMoveApplyRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreMoveApplyRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreMoveApplyRuntime");
 };
 
 GameManager.prototype.getCorePostMoveRecordRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CorePostMoveRecordRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CorePostMoveRecordRuntime");
 };
 
 GameManager.prototype.getCorePostUndoRecordRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CorePostUndoRecordRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CorePostUndoRecordRuntime");
 };
 
 GameManager.prototype.getCoreUndoRestoreRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreUndoRestoreRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreUndoRestoreRuntime");
 };
 
 GameManager.prototype.getCoreUndoSnapshotRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreUndoSnapshotRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreUndoSnapshotRuntime");
 };
 
 GameManager.prototype.getCoreUndoTileSnapshotRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreUndoTileSnapshotRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreUndoTileSnapshotRuntime");
 };
 
 GameManager.prototype.getCoreUndoTileRestoreRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreUndoTileRestoreRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreUndoTileRestoreRuntime");
 };
 
 GameManager.prototype.getCoreUndoRestorePayloadRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreUndoRestorePayloadRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreUndoRestorePayloadRuntime");
 };
 
 GameManager.prototype.getCoreUndoStackEntryRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreUndoStackEntryRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreUndoStackEntryRuntime");
 };
 
 GameManager.prototype.getCoreGameSettingsStorageRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreGameSettingsStorageRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreGameSettingsStorageRuntime");
 };
 
 GameManager.prototype.getCoreReplayCodecRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreReplayCodecRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreReplayCodecRuntime");
 };
 
 GameManager.prototype.getCoreReplayV4ActionsRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreReplayV4ActionsRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreReplayV4ActionsRuntime");
 };
 
 GameManager.prototype.getCoreReplayImportRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreReplayImportRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreReplayImportRuntime");
 };
 
 GameManager.prototype.getCoreReplayExecutionRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreReplayExecutionRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreReplayExecutionRuntime");
 };
 
 GameManager.prototype.getCoreReplayDispatchRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreReplayDispatchRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreReplayDispatchRuntime");
 };
 
 GameManager.prototype.getCoreReplayLifecycleRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreReplayLifecycleRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreReplayLifecycleRuntime");
 };
 
 GameManager.prototype.getCoreReplayTimerRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreReplayTimerRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreReplayTimerRuntime");
 };
 
 GameManager.prototype.getCoreReplayFlowRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreReplayFlowRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreReplayFlowRuntime");
 };
 
 GameManager.prototype.getCoreReplayControlRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreReplayControlRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreReplayControlRuntime");
 };
 
 GameManager.prototype.getCoreReplayLoopRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreReplayLoopRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreReplayLoopRuntime");
 };
 
 GameManager.prototype.getCoreReplayLegacyRuntime = function () {
-  if (typeof window === "undefined") return null;
-  var core = window.CoreReplayLegacyRuntime;
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.getCoreRuntimeByName("CoreReplayLegacyRuntime");
 };
 
 GameManager.prototype.getLegacyAdapterBridge = function () {

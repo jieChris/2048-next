@@ -218,7 +218,7 @@
   - `index-ui-runtime-contract` core 契约已纳入 `CoreIndexUiPageResolversHostRuntime.createIndexUiMobileResolvers` 校验，`index_ui.js` 页面层移除大段 mobile resolver 创建与方法判定样板
   - 新增 `src/bootstrap/index-ui-page-actions-host.ts` + `js/core_index_ui_page_actions_host_runtime.js`，`index_ui.js` 委托 settings/practice/home-guide/replay 页面动作 resolver 聚合装配与契约校验
   - `index-ui-runtime-contract` core 契约已纳入 `CoreIndexUiPageActionsHostRuntime.createIndexUiPageActionResolvers` 校验，避免页面层重复 action resolver 构建与校验样板
-  - `index_ui.js` 已移除 settings/practice/home-guide/replay 大段页面组装样板，当前行数从 374 继续收敛到 257（目标阶段继续压降到 <=220）
+  - `index_ui.js` 已移除 settings/practice/home-guide/replay 大段页面组装样板，当前行数从 374 继续收敛到 203（已达阶段目标 <=220）
   - `index_ui.js` 顶部 core runtime 校验已改为 `resolveIndexUiCoreRuntimeContracts` 统一解析，页面层移除大段分散方法判定分支
   - 新增 `src/bootstrap/home-guide-settings-host.ts` + `js/core_home_guide_settings_host_runtime.js`，`index_ui.js` 委托首页指引设置项插入/同步/绑定编排
   - `index_ui.js` 的 `initHomeGuideSettingsUI` 已收敛为 `CoreHomeGuideSettingsHostRuntime.applyHomeGuideSettingsUi` 调用
@@ -303,6 +303,7 @@
     - `src/core/replay-control.ts` + `js/core_replay_control_runtime.js`
     - `src/core/replay-loop.ts` + `js/core_replay_loop_runtime.js`
   - `src/core/game-settings-storage.ts` + `js/core_game_settings_storage_runtime.js`（本地设置存储 helper：flag/json map/payload）
+  - `js/game_manager.js` 新增 `getCoreRuntimeByName` 通用解析器，`getCore*Runtime` 系列方法统一委托，减少重复 runtime 解析样板（行为不变）
   - `game_manager.js` 已改为通过 `CoreGameSettingsStorageRuntime` 读写统计面板开关、计时器模块视图、撤回设置与会话提交结果（页面层移除 direct localStorage 访问）
 
 验收标准：
