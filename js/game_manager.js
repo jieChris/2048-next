@@ -5753,12 +5753,17 @@ GameManager.prototype.resume = function () {
     }, delay);
 };
 
-GameManager.prototype.setSpeed = function (multiplier) {
-    var speedState = this.computeReplaySpeedState(multiplier);
-    this.replayDelay = speedState.replayDelay;
-    if (speedState.shouldResume) {
+GameManager.prototype.applyReplaySpeedState = function (speedState) {
+    var state = speedState && typeof speedState === "object" ? speedState : {};
+    this.replayDelay = state.replayDelay;
+    if (state.shouldResume) {
         this.resume(); // Restart interval with new delay
     }
+};
+
+GameManager.prototype.setSpeed = function (multiplier) {
+    var speedState = this.computeReplaySpeedState(multiplier);
+    this.applyReplaySpeedState(speedState);
 };
 
 GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
