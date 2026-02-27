@@ -5562,6 +5562,11 @@ GameManager.prototype.restartReplayImportSession = function (modeConfig, payload
   this.finalizeReplayImportPlayback();
 };
 
+GameManager.prototype.restartLegacyReplayImportSession = function (seed) {
+  this.restartWithSeed(seed);
+  this.startReplayImportPlayback();
+};
+
 GameManager.prototype.applyJsonV3ReplayEnvelopeMeta = function (envelope, modeConfig) {
   if (envelope.specialRulesSnapshot && typeof envelope.specialRulesSnapshot === "object") {
     modeConfig.special_rules = this.clonePlain(envelope.specialRulesSnapshot);
@@ -5620,8 +5625,7 @@ GameManager.prototype.import = function (replayString) {
     var decodedLegacy = this.decodeLegacyReplay(trimmed);
     if (decodedLegacy) {
       this.applyLegacyReplayDecodedActions(decodedLegacy);
-      this.restartWithSeed(decodedLegacy.seed);
-      this.startReplayImportPlayback();
+      this.restartLegacyReplayImportSession(decodedLegacy.seed);
       return;
     }
 
