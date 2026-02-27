@@ -5808,15 +5808,18 @@ GameManager.prototype.fastForwardReplayToIndex = function (targetIndex) {
     }
 };
 
+GameManager.prototype.applyReplaySeekTarget = function (targetIndex) {
+    var restartPlan = this.resolveReplaySeekRestartPlanForTarget(targetIndex);
+    this.applyReplaySeekRestartPlan(restartPlan);
+    this.fastForwardReplayToIndex(targetIndex);
+};
+
 GameManager.prototype.seek = function (targetIndex) {
     targetIndex = this.normalizeReplaySeekTarget(targetIndex);
 
     this.pause(); // Pause while seeking
 
-    var restartPlan = this.resolveReplaySeekRestartPlanForTarget(targetIndex);
-    this.applyReplaySeekRestartPlan(restartPlan);
-
-    this.fastForwardReplayToIndex(targetIndex);
+    this.applyReplaySeekTarget(targetIndex);
 };
 
 GameManager.prototype.step = function (delta) {
