@@ -5042,6 +5042,21 @@ GameManager.prototype.resetSetupOutcomeState = function () {
   this.keepPlaying = false;
 };
 
+GameManager.prototype.initializeSetupReplayAndRuntime = function (inputSeed, options) {
+  var hasInputSeed = this.initializeSetupReplayState(inputSeed);
+  this.sessionReplayV3 = this.createSetupSessionReplayV3Payload();
+  this.assignSetupChallengeId(options);
+  this.initializeSetupRuntimeState();
+  return hasInputSeed;
+};
+
+GameManager.prototype.initializeSetupUiShell = function () {
+  var preferredTimerModuleView = this.initializeSetupSpawnAndPreferences();
+  this.hideLegacyStatsUi();
+  this.resetSetupTimerDisplays();
+  return preferredTimerModuleView;
+};
+
 // Set up the game
 GameManager.prototype.setup = function (inputSeed, options) {
   options = options || {};
@@ -5049,13 +5064,8 @@ GameManager.prototype.setup = function (inputSeed, options) {
   this.resetSetupOutcomeState();
   
   // Replay logic
-  var hasInputSeed = this.initializeSetupReplayState(inputSeed);
-  this.sessionReplayV3 = this.createSetupSessionReplayV3Payload();
-  this.assignSetupChallengeId(options);
-  this.initializeSetupRuntimeState();
-  var preferredTimerModuleView = this.initializeSetupSpawnAndPreferences();
-  this.hideLegacyStatsUi();
-  this.resetSetupTimerDisplays();
+  var hasInputSeed = this.initializeSetupReplayAndRuntime(inputSeed, options);
+  var preferredTimerModuleView = this.initializeSetupUiShell();
 
   // Add the initial tiles unless a replay imports an explicit board.
   var skipStartTiles = this.resolveSetupSkipStartTiles(options);
