@@ -1923,10 +1923,7 @@ GameManager.prototype.resolveSavedGameStateTimerSnapshot = function () {
   };
 };
 
-GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
-  var timerSubState = this.resolveTimerSubStateSnapshot();
-  var replaySnapshot = this.resolveSavedGameStateReplaySnapshot();
-  var timerSnapshot = this.resolveSavedGameStateTimerSnapshot();
+GameManager.prototype.buildSavedGameStateBasePayload = function (savedAt, replaySnapshot, timerSnapshot) {
   return {
     v: GameManager.SAVED_GAME_STATE_VERSION,
     saved_at: savedAt,
@@ -1953,7 +1950,12 @@ GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
     capped64_unlocked: this.capped64Unlocked ? this.safeClonePlain(this.capped64Unlocked, null) : null,
     timer_status: timerSnapshot.timer_status,
     duration_ms: timerSnapshot.duration_ms,
-    has_game_started: timerSnapshot.has_game_started,
+    has_game_started: timerSnapshot.has_game_started
+  };
+};
+
+GameManager.prototype.buildSavedGameStateExtendedPayload = function (timerSubState) {
+  return {
     combo_streak: Number.isInteger(this.comboStreak) ? this.comboStreak : 0,
     successful_move_count: Number.isInteger(this.successfulMoveCount) ? this.successfulMoveCount : 0,
     undo_used: Number.isInteger(this.undoUsed) ? this.undoUsed : 0,
@@ -1973,6 +1975,15 @@ GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
     timer_sub_16384: timerSubState.timer_sub_16384,
     timer_sub_visible: timerSubState.timer_sub_visible
   };
+};
+
+GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
+  var timerSubState = this.resolveTimerSubStateSnapshot();
+  var replaySnapshot = this.resolveSavedGameStateReplaySnapshot();
+  var timerSnapshot = this.resolveSavedGameStateTimerSnapshot();
+  var basePayload = this.buildSavedGameStateBasePayload(savedAt, replaySnapshot, timerSnapshot);
+  var extendedPayload = this.buildSavedGameStateExtendedPayload(timerSubState);
+  return Object.assign(basePayload, extendedPayload);
 };
 
 GameManager.prototype.shouldSkipSaveGameStateByThrottle = function (options, now) {
