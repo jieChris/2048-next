@@ -6795,12 +6795,16 @@ GameManager.prototype.invalidateTimersFallback = function (limit) {
     this.invalidateSubTimersFallback(limit);
 };
 
+GameManager.prototype.normalizeInvalidatedTimerElementIds = function (coreValue) {
+    return Array.isArray(coreValue) ? coreValue : [];
+};
+
 GameManager.prototype.invalidateTimers = function(limit) {
     var resolveInvalidatedTimerElementIdsCore = this.callCoreTimerIntervalRuntime("resolveInvalidatedTimerElementIds", [
         this.resolveInvalidateTimersCoreInput(limit)
     ]);
     if (resolveInvalidatedTimerElementIdsCore.available) {
-        this.applyInvalidatedTimerPlaceholders(resolveInvalidatedTimerElementIdsCore.value || []);
+        this.applyInvalidatedTimerPlaceholders(this.normalizeInvalidatedTimerElementIds(resolveInvalidatedTimerElementIdsCore.value));
         return;
     }
     this.invalidateTimersFallback(limit);
@@ -6827,15 +6831,23 @@ GameManager.prototype.buildFinalBoardMatrixFallback = function () {
   return rows;
 };
 
-GameManager.prototype.getFinalBoardMatrix = function () {
-  var buildBoardMatrixCore = this.callCoreGridScanRuntime("buildBoardMatrix", [
+GameManager.prototype.buildFinalBoardMatrixRuntimeArgs = function () {
+  return [
     this.width,
     this.height,
     this.createBoardMatrixTileValueReader()
-  ]);
+  ];
+};
+
+GameManager.prototype.normalizeFinalBoardMatrixFromCore = function (coreValue) {
+  return Array.isArray(coreValue) ? coreValue : null;
+};
+
+GameManager.prototype.getFinalBoardMatrix = function () {
+  var buildBoardMatrixCore = this.callCoreGridScanRuntime("buildBoardMatrix", this.buildFinalBoardMatrixRuntimeArgs());
   if (buildBoardMatrixCore.available) {
-    var board = buildBoardMatrixCore.value;
-    if (Array.isArray(board)) return board;
+    var board = this.normalizeFinalBoardMatrixFromCore(buildBoardMatrixCore.value);
+    if (board) return board;
   }
   return this.buildFinalBoardMatrixFallback();
 };
@@ -6854,10 +6866,18 @@ GameManager.prototype.getBestTileValueFallback = function () {
   return best;
 };
 
+GameManager.prototype.buildBestTileValueRuntimeArgs = function () {
+  return [this.getFinalBoardMatrix()];
+};
+
+GameManager.prototype.resolveBestTileValueFromCore = function (coreValue) {
+  return this.normalizeBestTileValue(coreValue);
+};
+
 GameManager.prototype.getBestTileValue = function () {
-  var getBestTileValueCore = this.callCoreGridScanRuntime("getBestTileValue", [this.getFinalBoardMatrix()]);
+  var getBestTileValueCore = this.callCoreGridScanRuntime("getBestTileValue", this.buildBestTileValueRuntimeArgs());
   if (getBestTileValueCore.available) {
-    var bestCore = this.normalizeBestTileValue(getBestTileValueCore.value);
+    var bestCore = this.resolveBestTileValueFromCore(getBestTileValueCore.value);
     if (bestCore !== null) return bestCore;
   }
   return this.getBestTileValueFallback();
