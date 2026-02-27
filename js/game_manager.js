@@ -1684,6 +1684,34 @@ GameManager.prototype.resolveLatestSavedStateCandidate = function (candidates) {
   return best;
 };
 
+GameManager.prototype.resolveSavedStateRestorePrecheck = function (saved) {
+  if (!saved || typeof saved !== "object") {
+    return { canRestore: false, shouldClearSavedState: true };
+  }
+  if (Number(saved.v) !== GameManager.SAVED_GAME_STATE_VERSION) {
+    return { canRestore: false, shouldClearSavedState: true };
+  }
+  if (saved.terminated) {
+    return { canRestore: false, shouldClearSavedState: true };
+  }
+  if ((saved.over || (saved.won && !saved.keep_playing)) && saved.mode_key !== "practice_legacy") {
+    return { canRestore: false, shouldClearSavedState: true };
+  }
+  if (saved.mode_key !== this.modeKey) {
+    return { canRestore: false, shouldClearSavedState: false };
+  }
+  if (Number(saved.board_width) !== this.width || Number(saved.board_height) !== this.height) {
+    return { canRestore: false, shouldClearSavedState: true };
+  }
+  if (saved.ruleset && saved.ruleset !== this.ruleset) {
+    return { canRestore: false, shouldClearSavedState: true };
+  }
+  if (!Array.isArray(saved.board) || saved.board.length !== this.height) {
+    return { canRestore: false, shouldClearSavedState: true };
+  }
+  return { canRestore: true, shouldClearSavedState: false };
+};
+
 GameManager.prototype.applyRestoredSavedStateCoreFields = function (saved) {
   this.score = Number.isInteger(saved.score) && saved.score >= 0 ? saved.score : 0;
   this.over = !!saved.over;
@@ -1761,36 +1789,9 @@ GameManager.prototype.tryRestoreSavedGameState = function () {
   var savedWindow = this.readWindowNameSavedPayload(this.modeKey);
   var saved = this.resolveLatestSavedStateCandidate([savedFull, savedLite, savedWindow]);
   if (!saved) return false;
-
-  if (!saved || typeof saved !== "object") {
-    this.clearSavedGameState();
-    return false;
-  }
-  if (Number(saved.v) !== GameManager.SAVED_GAME_STATE_VERSION) {
-    this.clearSavedGameState();
-    return false;
-  }
-  if (saved.terminated) {
-    this.clearSavedGameState();
-    return false;
-  }
-  if ((saved.over || (saved.won && !saved.keep_playing)) && saved.mode_key !== "practice_legacy") {
-    this.clearSavedGameState();
-    return false;
-  }
-  if (saved.mode_key !== this.modeKey) {
-    return false;
-  }
-  if (Number(saved.board_width) !== this.width || Number(saved.board_height) !== this.height) {
-    this.clearSavedGameState();
-    return false;
-  }
-  if (saved.ruleset && saved.ruleset !== this.ruleset) {
-    this.clearSavedGameState();
-    return false;
-  }
-  if (!Array.isArray(saved.board) || saved.board.length !== this.height) {
-    this.clearSavedGameState();
+  var precheck = this.resolveSavedStateRestorePrecheck(saved);
+  if (!precheck.canRestore) {
+    if (precheck.shouldClearSavedState) this.clearSavedGameState();
     return false;
   }
 
