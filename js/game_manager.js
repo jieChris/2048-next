@@ -1654,6 +1654,23 @@ GameManager.prototype.appendCompactPracticeAction = function (x, y, value) {
 };
 
 GameManager.prototype.detectMode = function () {
+  var resolveDetectedModeCore = this.resolveCoreModeRuntimeMethod("resolveDetectedMode");
+  if (resolveDetectedModeCore) {
+    var detectedByCore = resolveDetectedModeCore({
+      existingMode: this.mode,
+      bodyMode:
+        typeof document !== "undefined" && document.body
+          ? document.body.getAttribute("data-mode-id")
+          : "",
+      pathname:
+        typeof window !== "undefined" && window.location
+          ? window.location.pathname
+          : "",
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY
+    });
+    if (typeof detectedByCore === "string" && detectedByCore) return detectedByCore;
+  }
+
   if (this.mode) return this.mode;
   if (typeof document !== "undefined" && document.body) {
     var bodyMode = document.body.getAttribute("data-mode-id");

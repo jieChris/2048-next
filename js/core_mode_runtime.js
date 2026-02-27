@@ -364,6 +364,32 @@
     return id;
   }
 
+  function resolveDetectedMode(input) {
+    var source = input || {};
+    var fallbackModeKey = source.defaultModeKey || "standard_4x4_pow2_no_undo";
+
+    var existingMode = typeof source.existingMode === "string" ? source.existingMode : "";
+    if (existingMode) return existingMode;
+
+    var bodyMode = typeof source.bodyMode === "string" ? source.bodyMode : "";
+    if (bodyMode) return bodyMode;
+
+    var pathname = typeof source.pathname === "string" ? source.pathname : "";
+    if (!pathname) return fallbackModeKey;
+    if (pathname.indexOf("undo_2048") !== -1) return "classic_4x4_pow2_undo";
+    if (pathname.indexOf("Practice_board") !== -1) return "practice_legacy";
+    if (pathname.indexOf("capped_2048") !== -1) return "capped_4x4_pow2_no_undo";
+    if (
+      pathname === "/" ||
+      /\/$/.test(pathname) ||
+      pathname.indexOf("/index.html") !== -1 ||
+      pathname.indexOf("index.html") !== -1
+    ) {
+      return "standard_4x4_pow2_no_undo";
+    }
+    return "classic_4x4_pow2_undo";
+  }
+
   global.CoreModeRuntime = global.CoreModeRuntime || {};
   global.CoreModeRuntime.normalizeSpecialRules = normalizeSpecialRules;
   global.CoreModeRuntime.normalizeModeConfig = normalizeModeConfig;
@@ -387,4 +413,5 @@
   global.CoreModeRuntime.isTimerLeaderboardAvailableByMode = isTimerLeaderboardAvailableByMode;
   global.CoreModeRuntime.resolveLegacyModeFromModeKey = resolveLegacyModeFromModeKey;
   global.CoreModeRuntime.resolveModeCatalogAlias = resolveModeCatalogAlias;
+  global.CoreModeRuntime.resolveDetectedMode = resolveDetectedMode;
 })(typeof window !== "undefined" ? window : undefined);

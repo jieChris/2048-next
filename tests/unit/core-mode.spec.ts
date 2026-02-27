@@ -20,6 +20,7 @@ import {
   isUndoAllowedByMode,
   isUndoSettingFixedForMode,
   normalizeModeConfig,
+  resolveDetectedMode,
   resolveLegacyModeFromModeKey,
   resolveModeCatalogAlias,
   normalizeSpecialRules
@@ -550,5 +551,46 @@ describe("core mode: legacy mapping policy", () => {
         }
       })
     ).toBe("fib_4x4_undo");
+  });
+
+  it("resolves detected mode from existing/body/path context", () => {
+    expect(
+      resolveDetectedMode({
+        existingMode: "practice_legacy",
+        bodyMode: "classic_4x4_pow2_undo",
+        pathname: "/index.html",
+        defaultModeKey: "standard_4x4_pow2_no_undo"
+      })
+    ).toBe("practice_legacy");
+
+    expect(
+      resolveDetectedMode({
+        existingMode: "",
+        bodyMode: "capped_4x4_pow2_no_undo",
+        pathname: "/index.html",
+        defaultModeKey: "standard_4x4_pow2_no_undo"
+      })
+    ).toBe("capped_4x4_pow2_no_undo");
+
+    expect(
+      resolveDetectedMode({
+        pathname: "/replay/undo_2048.html",
+        defaultModeKey: "standard_4x4_pow2_no_undo"
+      })
+    ).toBe("classic_4x4_pow2_undo");
+
+    expect(
+      resolveDetectedMode({
+        pathname: "/Practice_board.html",
+        defaultModeKey: "standard_4x4_pow2_no_undo"
+      })
+    ).toBe("practice_legacy");
+
+    expect(
+      resolveDetectedMode({
+        pathname: "/",
+        defaultModeKey: "standard_4x4_pow2_no_undo"
+      })
+    ).toBe("standard_4x4_pow2_no_undo");
   });
 });

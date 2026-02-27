@@ -99,6 +99,13 @@ export interface ModeCatalogAliasResolveInput {
   legacyAliasToModeKey?: Record<string, string> | null;
 }
 
+export interface DetectModeInput {
+  existingMode?: string | null;
+  bodyMode?: string | null;
+  pathname?: string | null;
+  defaultModeKey?: string | null;
+}
+
 export function clonePlain<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -378,4 +385,30 @@ export function resolveModeCatalogAlias(input: ModeCatalogAliasResolveInput): st
     return legacyAliasToModeKey[id];
   }
   return id;
+}
+
+export function resolveDetectedMode(input: DetectModeInput): string {
+  const source = input || {};
+  const fallbackModeKey = source.defaultModeKey || "standard_4x4_pow2_no_undo";
+
+  const existingMode = typeof source.existingMode === "string" ? source.existingMode : "";
+  if (existingMode) return existingMode;
+
+  const bodyMode = typeof source.bodyMode === "string" ? source.bodyMode : "";
+  if (bodyMode) return bodyMode;
+
+  const pathname = typeof source.pathname === "string" ? source.pathname : "";
+  if (!pathname) return fallbackModeKey;
+  if (pathname.indexOf("undo_2048") !== -1) return "classic_4x4_pow2_undo";
+  if (pathname.indexOf("Practice_board") !== -1) return "practice_legacy";
+  if (pathname.indexOf("capped_2048") !== -1) return "capped_4x4_pow2_no_undo";
+  if (
+    pathname === "/" ||
+    /\/$/.test(pathname) ||
+    pathname.indexOf("/index.html") !== -1 ||
+    pathname.indexOf("index.html") !== -1
+  ) {
+    return "standard_4x4_pow2_no_undo";
+  }
+  return "classic_4x4_pow2_undo";
 }
