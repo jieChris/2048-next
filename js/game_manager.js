@@ -4322,24 +4322,37 @@ GameManager.prototype.resolveModeConfigCatalogFallback = function (modeId) {
   return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
 };
 
+GameManager.prototype.buildResolveModeConfigCoreInput = function (modeId) {
+  return {
+    modeId: modeId,
+    defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+    getModeConfig: this.getModeConfigFromCatalog.bind(this),
+    legacyAliasToModeKey: GameManager.LEGACY_ALIAS_TO_MODE_KEY
+  };
+};
+
+GameManager.prototype.normalizeResolvedModeIdFromCore = function (resolvedByCore) {
+  return typeof resolvedByCore.resolvedModeId === "string" && resolvedByCore.resolvedModeId
+    ? resolvedByCore.resolvedModeId
+    : GameManager.DEFAULT_MODE_KEY;
+};
+
+GameManager.prototype.resolveModeConfigFromCoreValue = function (resolvedByCore) {
+  var normalizedModeId = this.normalizeResolvedModeIdFromCore(resolvedByCore);
+  var rawConfig = resolvedByCore.modeConfig;
+  if (rawConfig && typeof rawConfig === "object" && !Array.isArray(rawConfig)) {
+    return this.normalizeModeConfig(normalizedModeId, rawConfig);
+  }
+  return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
+};
+
 GameManager.prototype.resolveModeConfig = function (modeId) {
   var id = modeId || GameManager.DEFAULT_MODE_KEY;
-  var resolveModeConfigFromCatalogCore = this.callCoreModeRuntime("resolveModeConfigFromCatalog", [{
-      modeId: id,
-      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
-      getModeConfig: this.getModeConfigFromCatalog.bind(this),
-      legacyAliasToModeKey: GameManager.LEGACY_ALIAS_TO_MODE_KEY
-    }]);
+  var resolveModeConfigFromCatalogCore = this.callCoreModeRuntime("resolveModeConfigFromCatalog", [
+    this.buildResolveModeConfigCoreInput(id)
+  ]);
   if (resolveModeConfigFromCatalogCore.available) {
-    var resolvedByCore = resolveModeConfigFromCatalogCore.value || {};
-    var resolvedModeId = typeof resolvedByCore.resolvedModeId === "string" && resolvedByCore.resolvedModeId
-      ? resolvedByCore.resolvedModeId
-      : GameManager.DEFAULT_MODE_KEY;
-    var rawConfig = resolvedByCore.modeConfig;
-    if (rawConfig && typeof rawConfig === "object" && !Array.isArray(rawConfig)) {
-      return this.normalizeModeConfig(resolvedModeId, rawConfig);
-    }
-    return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
+    return this.resolveModeConfigFromCoreValue(resolveModeConfigFromCatalogCore.value || {});
   }
   return this.resolveModeConfigCatalogFallback(id);
 };
