@@ -4951,6 +4951,20 @@ GameManager.prototype.applySetupModeConfig = function (resolvedModeConfig) {
   }
 };
 
+GameManager.prototype.resetSetupReplayCollections = function () {
+  this.moveHistory = [];
+  this.replayCompactLog = "";
+  this.initialBoardMatrix = null;
+  this.replayStartBoardMatrix = null;
+};
+
+GameManager.prototype.applySetupSessionSyncDefaults = function (hasInputSeed) {
+  if (!hasInputSeed) {
+    this.disableSessionSync = false;
+  }
+  this.sessionSubmitDone = false;
+};
+
 GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
   var hasInputSeed = typeof inputSeed !== "undefined";
   if (hasInputSeed) {
@@ -4958,15 +4972,9 @@ GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
   }
   this.initialSeed = hasInputSeed ? inputSeed : Math.random();
   this.seed = this.initialSeed;
-  this.moveHistory = [];
+  this.resetSetupReplayCollections();
   this.replayMode = hasInputSeed; // If seed is provided externally, we might be in replay mode (or just restoring)
-  this.replayCompactLog = "";
-  this.initialBoardMatrix = null;
-  this.replayStartBoardMatrix = null;
-  if (!hasInputSeed) {
-    this.disableSessionSync = false;
-  }
-  this.sessionSubmitDone = false;
+  this.applySetupSessionSyncDefaults(hasInputSeed);
   return hasInputSeed;
 };
 
