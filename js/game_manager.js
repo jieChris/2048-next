@@ -2604,18 +2604,23 @@ GameManager.prototype.appendCompactPracticeActionFallback = function (x, y, valu
 };
 
 GameManager.prototype.resolveDetectedModeCoreInput = function () {
+  var bodyMode = this.resolveDetectedModeBodyModeAttr();
+  var pathname = this.resolveDetectedModePathname();
   return {
     existingMode: this.mode,
-    bodyMode:
-      typeof document !== "undefined" && document.body
-        ? document.body.getAttribute("data-mode-id")
-        : "",
-    pathname:
-      typeof window !== "undefined" && window.location
-        ? window.location.pathname
-        : "",
+    bodyMode: bodyMode,
+    pathname: pathname,
     defaultModeKey: GameManager.DEFAULT_MODE_KEY
   };
+};
+
+GameManager.prototype.resolveDetectedModeBodyModeAttr = function () {
+  if (typeof document === "undefined" || !document.body) return "";
+  return document.body.getAttribute("data-mode-id") || "";
+};
+
+GameManager.prototype.resolveDetectedModePathname = function () {
+  return this.resolveWindowPathname();
 };
 
 GameManager.prototype.detectModeFromPathname = function (path) {
@@ -2629,16 +2634,14 @@ GameManager.prototype.detectModeFromPathname = function (path) {
 };
 
 GameManager.prototype.resolveDetectedModeFromBodyDataset = function () {
-  if (typeof document === "undefined" || !document.body) return null;
-  var bodyMode = document.body.getAttribute("data-mode-id");
+  var bodyMode = this.resolveDetectedModeBodyModeAttr();
   return bodyMode || null;
 };
 
 GameManager.prototype.resolveDetectedModeFromWindowPath = function () {
-  if (typeof window === "undefined" || !window.location || !window.location.pathname) {
-    return GameManager.DEFAULT_MODE_KEY;
-  }
-  return this.detectModeFromPathname(window.location.pathname);
+  var pathname = this.resolveDetectedModePathname();
+  if (!pathname) return GameManager.DEFAULT_MODE_KEY;
+  return this.detectModeFromPathname(pathname);
 };
 
 GameManager.prototype.detectModeFallback = function () {
