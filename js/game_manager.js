@@ -5807,6 +5807,22 @@ GameManager.prototype.buildSessionSubmitFailureResult = function (endedAt, paylo
   };
 };
 
+GameManager.prototype.persistSessionSubmitPayload = function (localHistorySaveRecord, payload) {
+  return localHistorySaveRecord.method.call(localHistorySaveRecord.scope, payload);
+};
+
+GameManager.prototype.writeSessionSubmitSuccessResult = function (endedAt, payload, savedRecord) {
+  this.writeLastSessionSubmitResult(
+    this.buildSessionSubmitSuccessResult(endedAt, payload, savedRecord)
+  );
+};
+
+GameManager.prototype.writeSessionSubmitFailureResult = function (endedAt, payload, error) {
+  this.writeLastSessionSubmitResult(
+    this.buildSessionSubmitFailureResult(endedAt, payload, error)
+  );
+};
+
 GameManager.prototype.resolveSessionSubmitSkipReason = function () {
   if (this.replayMode) return "replay_mode";
   if (!this.isSessionTerminated()) return "not_terminated";
@@ -5845,10 +5861,10 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
   var payload = this.buildSessionSubmitPayload(endedAt, windowLike, adapterParitySnapshot);
 
   try {
-    var saved = localHistorySaveRecord.method.call(localHistorySaveRecord.scope, payload);
-    this.writeLastSessionSubmitResult(this.buildSessionSubmitSuccessResult(endedAt, payload, saved));
+    var saved = this.persistSessionSubmitPayload(localHistorySaveRecord, payload);
+    this.writeSessionSubmitSuccessResult(endedAt, payload, saved);
   } catch (error) {
-    this.writeLastSessionSubmitResult(this.buildSessionSubmitFailureResult(endedAt, payload, error));
+    this.writeSessionSubmitFailureResult(endedAt, payload, error);
   }
 };
 
