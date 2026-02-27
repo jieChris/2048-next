@@ -6846,6 +6846,17 @@ GameManager.prototype.applyUndoRestoreFlags = function (undoRestore) {
   }
 };
 
+GameManager.prototype.resolvePostUndoSessionAction = function (postUndoRecord) {
+  return Array.isArray(postUndoRecord.sessionAction)
+    ? postUndoRecord.sessionAction
+    : ["u"];
+};
+
+GameManager.prototype.tryPushPostUndoSessionAction = function (postUndoRecord) {
+  if (!(postUndoRecord.shouldPushSessionAction && this.sessionReplayV3)) return;
+  this.sessionReplayV3.actions.push(this.resolvePostUndoSessionAction(postUndoRecord));
+};
+
 GameManager.prototype.applyPostUndoRecord = function (postUndoRecord, direction) {
   if (postUndoRecord.shouldRecordMoveHistory) {
     this.moveHistory.push(direction);
@@ -6853,12 +6864,7 @@ GameManager.prototype.applyPostUndoRecord = function (postUndoRecord, direction)
   if (postUndoRecord.shouldAppendCompactUndo) {
     this.appendCompactUndo();
   }
-  if (postUndoRecord.shouldPushSessionAction && this.sessionReplayV3) {
-    var undoAction = Array.isArray(postUndoRecord.sessionAction)
-      ? postUndoRecord.sessionAction
-      : ["u"];
-    this.sessionReplayV3.actions.push(undoAction);
-  }
+  this.tryPushPostUndoSessionAction(postUndoRecord);
 };
 
 GameManager.prototype.recordPostUndoMove = function (direction) {
@@ -6908,6 +6914,17 @@ GameManager.prototype.handleUndoMove = function (direction) {
   this.publishUndoCompletion(direction, undoRestore);
 };
 
+GameManager.prototype.resolvePostMoveSessionAction = function (postMoveRecord, direction) {
+  return Array.isArray(postMoveRecord.sessionAction)
+    ? postMoveRecord.sessionAction
+    : ["m", direction];
+};
+
+GameManager.prototype.tryPushPostMoveSessionAction = function (postMoveRecord, direction) {
+  if (!(postMoveRecord.shouldPushSessionAction && this.sessionReplayV3)) return;
+  this.sessionReplayV3.actions.push(this.resolvePostMoveSessionAction(postMoveRecord, direction));
+};
+
 GameManager.prototype.applyPostMoveRecord = function (direction, postMoveRecord) {
   if (postMoveRecord.shouldRecordMoveHistory) {
     this.moveHistory.push(direction);
@@ -6915,12 +6932,7 @@ GameManager.prototype.applyPostMoveRecord = function (direction, postMoveRecord)
   if (Number.isInteger(postMoveRecord.compactMoveCode)) {
     this.appendCompactMoveCode(postMoveRecord.compactMoveCode);
   }
-  if (postMoveRecord.shouldPushSessionAction && this.sessionReplayV3) {
-    var action = Array.isArray(postMoveRecord.sessionAction)
-      ? postMoveRecord.sessionAction
-      : ["m", direction];
-    this.sessionReplayV3.actions.push(action);
-  }
+  this.tryPushPostMoveSessionAction(postMoveRecord, direction);
   if (postMoveRecord.shouldResetLastSpawn) {
     this.lastSpawn = null;
   }
