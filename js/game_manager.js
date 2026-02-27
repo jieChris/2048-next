@@ -1406,6 +1406,14 @@ GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) 
   return this.writeWindowNameSavedPayloadFallback(modeKey, payload);
 };
 
+GameManager.prototype.shouldUseSavedGameStateFallback = function () {
+  if (typeof window === "undefined") return false;
+  if (this.replayMode) return false;
+  var path = (window.location && window.location.pathname) ? String(window.location.pathname) : "";
+  if (path.indexOf("replay.html") !== -1) return false;
+  return true;
+};
+
 GameManager.prototype.shouldUseSavedGameState = function () {
   var shouldUseSavedGameStateCore = this.callCoreStorageRuntime("shouldUseSavedGameStateFromContext", [{
       hasWindow: typeof window !== "undefined",
@@ -1418,12 +1426,7 @@ GameManager.prototype.shouldUseSavedGameState = function () {
           : ""
     }]);
   if (shouldUseSavedGameStateCore.available) return !!shouldUseSavedGameStateCore.value;
-
-  if (typeof window === "undefined") return false;
-  if (this.replayMode) return false;
-  var path = (window.location && window.location.pathname) ? String(window.location.pathname) : "";
-  if (path.indexOf("replay.html") !== -1) return false;
-  return true;
+  return this.shouldUseSavedGameStateFallback();
 };
 
 GameManager.prototype.bindGameStatePersistenceEvents = function () {
@@ -1436,6 +1439,16 @@ GameManager.prototype.bindGameStatePersistenceEvents = function () {
   window.addEventListener("beforeunload", saveHandler);
   window.addEventListener("pagehide", saveHandler);
   this.savedGameStateBound = true;
+};
+
+GameManager.prototype.removeKeysFromSavedStateStoragesFallback = function (stores, keys) {
+  for (var i = 0; i < stores.length; i++) {
+    for (var k = 0; k < keys.length; k++) {
+      try {
+        stores[i].removeItem(keys[k]);
+      } catch (_err) {}
+    }
+  }
 };
 
 GameManager.prototype.clearSavedGameState = function (modeKey) {
@@ -1454,14 +1467,7 @@ GameManager.prototype.clearSavedGameState = function (modeKey) {
     var removedByCore = removeKeysFromStoragesCore.value;
     if (removedByCore === true) return;
   }
-
-  for (var i = 0; i < stores.length; i++) {
-    for (var k = 0; k < keys.length; k++) {
-      try {
-        stores[i].removeItem(keys[k]);
-      } catch (_err) {}
-    }
-  }
+  this.removeKeysFromSavedStateStoragesFallback(stores, keys);
 };
 
 GameManager.prototype.captureTimerFixedRowsState = function () {
