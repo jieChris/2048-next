@@ -5577,6 +5577,19 @@ GameManager.prototype.applyJsonV3ReplayEnvelopeMeta = function (envelope, modeCo
   }
 };
 
+GameManager.prototype.applyV4ReplayDecodedActions = function (decodedV4Actions) {
+  this.replayMoves = Array.isArray(decodedV4Actions.replayMoves) ? decodedV4Actions.replayMoves : [];
+  this.replaySpawns = Array.isArray(decodedV4Actions.replaySpawns) ? decodedV4Actions.replaySpawns : [];
+};
+
+GameManager.prototype.applyLegacyReplayDecodedActions = function (decodedLegacy) {
+  if (typeof decodedLegacy.replayMovesV2 === "string") {
+    this.replayMovesV2 = decodedLegacy.replayMovesV2;
+  }
+  this.replayMoves = Array.isArray(decodedLegacy.replayMoves) ? decodedLegacy.replayMoves : [];
+  this.replaySpawns = decodedLegacy.replaySpawns;
+};
+
 GameManager.prototype.import = function (replayString) {
   try {
     if (typeof replayString !== "string") {
@@ -5598,8 +5611,7 @@ GameManager.prototype.import = function (replayString) {
 
       var initialBoard = this.decodeBoardV4(parsedEnvelope.initialBoardEncoded);
       var decodedV4Actions = this.decodeReplayV4Actions(parsedEnvelope.actionsEncoded);
-      this.replayMoves = Array.isArray(decodedV4Actions.replayMoves) ? decodedV4Actions.replayMoves : [];
-      this.replaySpawns = Array.isArray(decodedV4Actions.replaySpawns) ? decodedV4Actions.replaySpawns : [];
+      this.applyV4ReplayDecodedActions(decodedV4Actions);
 
       this.restartReplayImportSession(replayModeConfig, initialBoard, true);
       return;
@@ -5607,11 +5619,7 @@ GameManager.prototype.import = function (replayString) {
 
     var decodedLegacy = this.decodeLegacyReplay(trimmed);
     if (decodedLegacy) {
-      if (typeof decodedLegacy.replayMovesV2 === "string") {
-        this.replayMovesV2 = decodedLegacy.replayMovesV2;
-      }
-      this.replayMoves = Array.isArray(decodedLegacy.replayMoves) ? decodedLegacy.replayMoves : [];
-      this.replaySpawns = decodedLegacy.replaySpawns;
+      this.applyLegacyReplayDecodedActions(decodedLegacy);
       this.restartWithSeed(decodedLegacy.seed);
       this.startReplayImportPlayback();
       return;
