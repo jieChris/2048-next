@@ -496,13 +496,19 @@ GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayStrin
 };
 
 GameManager.prototype.resolveReplayModeKeyFromV4Code = function (modeCode) {
-  var codeToMode = {
-    S: "standard_4x4_pow2_no_undo",
-    C: "classic_4x4_pow2_undo",
-    K: "capped_4x4_pow2_no_undo",
-    P: "practice_legacy"
-  };
-  return codeToMode[modeCode] || null;
+  if (modeCode === "S") return "standard_4x4_pow2_no_undo";
+  if (modeCode === "C") return "classic_4x4_pow2_undo";
+  if (modeCode === "K") return "capped_4x4_pow2_no_undo";
+  if (modeCode === "P") return "practice_legacy";
+  return null;
+};
+
+GameManager.prototype.resolveReplayV4ModeCodeFromModeKey = function (modeKey) {
+  if (modeKey === "standard_4x4_pow2_no_undo") return "S";
+  if (modeKey === "classic_4x4_pow2_undo") return "C";
+  if (modeKey === "capped_4x4_pow2_no_undo") return "K";
+  if (modeKey === "practice_legacy") return "P";
+  return "C";
 };
 
 GameManager.prototype.decodeLegacyReplayV2Log = function (logString) {
@@ -5710,13 +5716,7 @@ GameManager.prototype.serialize = function () {
   if (this.width !== 4 || this.height !== 4 || this.isFibonacciMode()) {
     return JSON.stringify(this.serializeV3());
   }
-  var modeToCode = {
-    standard_4x4_pow2_no_undo: "S",
-    classic_4x4_pow2_undo: "C",
-    capped_4x4_pow2_no_undo: "K",
-    practice_legacy: "P"
-  };
-  var modeCode = modeToCode[this.modeKey] || "C";
+  var modeCode = this.resolveReplayV4ModeCodeFromModeKey(this.modeKey);
   var initialBoard = this.initialBoardMatrix || this.getFinalBoardMatrix();
   var encodedBoard = this.encodeBoardV4(initialBoard);
   return GameManager.REPLAY_V4_PREFIX + modeCode + encodedBoard + (this.replayCompactLog || "");
