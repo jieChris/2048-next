@@ -2401,6 +2401,43 @@ GameManager.prototype.readOptionValue = function (options, key, fallbackValue) {
   return this.hasOwnKey(options, key) ? options[key] : fallbackValue;
 };
 
+GameManager.prototype.resolveForcedUndoSettingForModeFallback = function (targetMode, modeConfig) {
+  var modeCfg = modeConfig || null;
+  if (modeCfg && typeof modeCfg.undo_enabled === "boolean") {
+    return modeCfg.undo_enabled;
+  }
+  var modeId = (targetMode || "").toLowerCase();
+  if (modeId === "capped" || modeId.indexOf("capped") !== -1) return false;
+  if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) return false;
+  if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) return true;
+  return null;
+};
+
+GameManager.prototype.buildUndoPolicyStateFallback = function (params) {
+  var input = params && typeof params === "object" ? params : {};
+  var forcedUndoSetting = input.forcedUndoSetting;
+  var hasGameStarted = !!input.hasGameStarted;
+  var replayMode = !!input.replayMode;
+  var undoLimit = input.undoLimit;
+  var undoUsed = input.undoUsed;
+  var undoEnabled = !!input.undoEnabled;
+
+  var isUndoAllowedByMode = forcedUndoSetting !== false;
+  var isUndoSettingFixedForMode = forcedUndoSetting !== null;
+  var canToggleUndoSetting = isUndoAllowedByMode && !isUndoSettingFixedForMode && !hasGameStarted;
+  var isUndoInteractionEnabled = !replayMode &&
+    !(undoLimit !== null && Number(undoUsed) >= Number(undoLimit)) &&
+    !!(undoEnabled && isUndoAllowedByMode);
+
+  return {
+    forcedUndoSetting: forcedUndoSetting,
+    isUndoAllowedByMode: isUndoAllowedByMode,
+    isUndoSettingFixedForMode: isUndoSettingFixedForMode,
+    canToggleUndoSetting: canToggleUndoSetting,
+    isUndoInteractionEnabled: isUndoInteractionEnabled
+  };
+};
+
 GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
   var context = this.resolveModePolicyContext(mode);
   var source = options;
@@ -2426,34 +2463,18 @@ GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
     }
   }
 
-  var modeCfg = context.modeConfig || null;
-  var forcedUndoSetting = null;
-  if (modeCfg && typeof modeCfg.undo_enabled === "boolean") {
-    forcedUndoSetting = modeCfg.undo_enabled;
-  } else {
-    var modeId = (context.targetMode || "").toLowerCase();
-    if (modeId === "capped" || modeId.indexOf("capped") !== -1) forcedUndoSetting = false;
-    else if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) {
-      forcedUndoSetting = false;
-    } else if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) {
-      forcedUndoSetting = true;
-    }
-  }
-
-  var isUndoAllowedByMode = forcedUndoSetting !== false;
-  var isUndoSettingFixedForMode = forcedUndoSetting !== null;
-  var canToggleUndoSetting = isUndoAllowedByMode && !isUndoSettingFixedForMode && !hasGameStarted;
-  var isUndoInteractionEnabled = !replayMode &&
-    !(undoLimit !== null && Number(undoUsed) >= Number(undoLimit)) &&
-    !!(undoEnabled && isUndoAllowedByMode);
-
-  return {
+  var forcedUndoSetting = this.resolveForcedUndoSettingForModeFallback(
+    context.targetMode,
+    context.modeConfig
+  );
+  return this.buildUndoPolicyStateFallback({
     forcedUndoSetting: forcedUndoSetting,
-    isUndoAllowedByMode: isUndoAllowedByMode,
-    isUndoSettingFixedForMode: isUndoSettingFixedForMode,
-    canToggleUndoSetting: canToggleUndoSetting,
-    isUndoInteractionEnabled: isUndoInteractionEnabled
-  };
+    hasGameStarted: hasGameStarted,
+    replayMode: replayMode,
+    undoLimit: undoLimit,
+    undoUsed: undoUsed,
+    undoEnabled: undoEnabled
+  });
 };
 
 GameManager.prototype.resolveActiveUndoPolicyState = function (options) {
