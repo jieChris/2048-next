@@ -5618,31 +5618,42 @@ GameManager.prototype.importLegacyReplayPayload = function (decodedLegacy) {
   this.restartLegacyReplayImportSession(decodedLegacy.seed);
 };
 
+GameManager.prototype.normalizeReplayImportInput = function (replayString) {
+  var normalizedReplayString = replayString;
+  if (typeof normalizedReplayString !== "string") {
+    normalizedReplayString = JSON.stringify(normalizedReplayString);
+  }
+  return normalizedReplayString.trim();
+};
+
+GameManager.prototype.isSupportedReplayEnvelopeKind = function (kind) {
+  return kind === "json-v3" || kind === "v4c";
+};
+
+GameManager.prototype.tryImportParsedReplayEnvelope = function (parsedEnvelope) {
+  if (!parsedEnvelope || !this.isSupportedReplayEnvelopeKind(parsedEnvelope.kind)) return false;
+  var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
+  if (parsedEnvelope.kind === "json-v3") {
+    this.importJsonV3ReplayEnvelope(parsedEnvelope, replayModeConfig);
+    return true;
+  }
+  this.importV4ReplayEnvelope(parsedEnvelope, replayModeConfig);
+  return true;
+};
+
+GameManager.prototype.tryImportLegacyReplayString = function (trimmedReplayString) {
+  var decodedLegacy = this.decodeLegacyReplay(trimmedReplayString);
+  if (!decodedLegacy) return false;
+  this.importLegacyReplayPayload(decodedLegacy);
+  return true;
+};
+
 GameManager.prototype.import = function (replayString) {
   try {
-    if (typeof replayString !== "string") {
-      replayString = JSON.stringify(replayString);
-    }
-
-    var trimmed = replayString.trim();
-
+    var trimmed = this.normalizeReplayImportInput(replayString);
     var parsedEnvelope = this.parseReplayImportEnvelope(trimmed);
-    if (parsedEnvelope && (parsedEnvelope.kind === "json-v3" || parsedEnvelope.kind === "v4c")) {
-      var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
-      if (parsedEnvelope.kind === "json-v3") {
-        this.importJsonV3ReplayEnvelope(parsedEnvelope, replayModeConfig);
-        return;
-      }
-
-      this.importV4ReplayEnvelope(parsedEnvelope, replayModeConfig);
-      return;
-    }
-
-    var decodedLegacy = this.decodeLegacyReplay(trimmed);
-    if (decodedLegacy) {
-      this.importLegacyReplayPayload(decodedLegacy);
-      return;
-    }
+    if (this.tryImportParsedReplayEnvelope(parsedEnvelope)) return;
+    if (this.tryImportLegacyReplayString(trimmed)) return;
 
     throw "Unknown replay version";
   } catch (e) {
