@@ -3087,6 +3087,25 @@ GameManager.prototype.recordTimerMilestone = function (value, timeStr) {
 };
 
 GameManager.prototype.resolveCappedModeState = function () {
+  var cache = this.__resolvedCappedModeStateCache;
+  if (
+    cache &&
+    cache.modeKey === this.modeKey &&
+    cache.mode === this.mode &&
+    cache.maxTile === this.maxTile &&
+    cache.state &&
+    typeof cache.state === "object"
+  ) {
+    return {
+      isCappedMode: !!cache.state.isCappedMode,
+      cappedTargetValue:
+        Number.isFinite(cache.state.cappedTargetValue) && Number(cache.state.cappedTargetValue) > 0
+          ? Number(cache.state.cappedTargetValue)
+          : null,
+      isProgressiveCapped64Mode: !!cache.state.isProgressiveCapped64Mode
+    };
+  }
+
   var payload = {
     modeKey: this.modeKey,
     mode: this.mode,
@@ -3098,21 +3117,43 @@ GameManager.prototype.resolveCappedModeState = function () {
     var isCappedMode = !!coreState.isCappedMode;
     var cappedTargetValue = Number(coreState.cappedTargetValue);
     if (!Number.isFinite(cappedTargetValue) || cappedTargetValue <= 0) cappedTargetValue = null;
-    return {
+    var resolvedCoreState = {
       isCappedMode: isCappedMode,
       cappedTargetValue: cappedTargetValue,
       isProgressiveCapped64Mode: !!coreState.isProgressiveCapped64Mode
+    };
+    this.__resolvedCappedModeStateCache = {
+      modeKey: this.modeKey,
+      mode: this.mode,
+      maxTile: this.maxTile,
+      state: resolvedCoreState
+    };
+    return {
+      isCappedMode: resolvedCoreState.isCappedMode,
+      cappedTargetValue: resolvedCoreState.cappedTargetValue,
+      isProgressiveCapped64Mode: resolvedCoreState.isProgressiveCapped64Mode
     };
   }
 
   var key = String(this.modeKey || this.mode || "");
   var maxTile = Number(this.maxTile);
   var isCappedModeFallback = key.indexOf("capped") !== -1 && Number.isFinite(maxTile) && maxTile > 0;
-  return {
+  var fallbackState = {
     isCappedMode: isCappedModeFallback,
     cappedTargetValue: isCappedModeFallback ? Number(maxTile) : null,
     // Disable progressive hidden timer rows for 64-capped mode.
     isProgressiveCapped64Mode: false
+  };
+  this.__resolvedCappedModeStateCache = {
+    modeKey: this.modeKey,
+    mode: this.mode,
+    maxTile: this.maxTile,
+    state: fallbackState
+  };
+  return {
+    isCappedMode: fallbackState.isCappedMode,
+    cappedTargetValue: fallbackState.cappedTargetValue,
+    isProgressiveCapped64Mode: fallbackState.isProgressiveCapped64Mode
   };
 };
 
