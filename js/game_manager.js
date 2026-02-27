@@ -7042,12 +7042,42 @@ GameManager.prototype.resolveSessionSubmitAdapterParitySnapshot = function () {
   };
 };
 
-GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike, adapterParitySnapshot) {
-  var parity = adapterParitySnapshot && typeof adapterParitySnapshot === "object"
+GameManager.prototype.normalizeSessionSubmitAdapterParitySnapshot = function (adapterParitySnapshot) {
+  return adapterParitySnapshot && typeof adapterParitySnapshot === "object"
     ? adapterParitySnapshot
     : {};
-  var adapterParityReport = parity.report;
-  var adapterParityDiff = parity.diff;
+};
+
+GameManager.prototype.resolveSessionSubmitAdapterParityParts = function (adapterParitySnapshot) {
+  var parity = this.normalizeSessionSubmitAdapterParitySnapshot(adapterParitySnapshot);
+  return {
+    report: parity.report,
+    diff: parity.diff
+  };
+};
+
+GameManager.prototype.resolveSessionSubmitSpecialRulesSnapshot = function () {
+  return this.clonePlain(this.specialRules || {});
+};
+
+GameManager.prototype.resolveSessionSubmitClientVersion = function (windowLike) {
+  return (windowLike && windowLike.GAME_CLIENT_VERSION) || "1.8";
+};
+
+GameManager.prototype.resolveSessionSubmitEndReason = function () {
+  return this.over ? "game_over" : "win_stop";
+};
+
+GameManager.prototype.buildSessionSubmitReplayPayload = function () {
+  return {
+    replay: this.serializeV3(),
+    replay_string: this.serialize()
+  };
+};
+
+GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike, adapterParitySnapshot) {
+  var adapterParity = this.resolveSessionSubmitAdapterParityParts(adapterParitySnapshot);
+  var replayPayload = this.buildSessionSubmitReplayPayload();
   return {
     mode: this.getServerMode(this.modeKey),
     mode_key: this.modeKey,
@@ -7058,21 +7088,21 @@ GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike,
     ranked_bucket: this.rankedBucket,
     mode_family: this.modeFamily,
     rank_policy: this.rankPolicy,
-    special_rules_snapshot: this.clonePlain(this.specialRules || {}),
+    special_rules_snapshot: this.resolveSessionSubmitSpecialRulesSnapshot(),
     challenge_id: this.challengeId || null,
     score: this.score,
     best_tile: this.getBestTileValue(),
     duration_ms: this.getDurationMs(),
     final_board: this.getFinalBoardMatrix(),
     ended_at: endedAt,
-    replay: this.serializeV3(),
-    replay_string: this.serialize(),
-    adapter_parity_report_v2: adapterParityReport,
-    adapter_parity_ab_diff_v2: adapterParityDiff,
-    adapter_parity_report_v1: adapterParityReport,
-    adapter_parity_ab_diff_v1: adapterParityDiff,
-    client_version: (windowLike && windowLike.GAME_CLIENT_VERSION) || "1.8",
-    end_reason: this.over ? "game_over" : "win_stop"
+    replay: replayPayload.replay,
+    replay_string: replayPayload.replay_string,
+    adapter_parity_report_v2: adapterParity.report,
+    adapter_parity_ab_diff_v2: adapterParity.diff,
+    adapter_parity_report_v1: adapterParity.report,
+    adapter_parity_ab_diff_v1: adapterParity.diff,
+    client_version: this.resolveSessionSubmitClientVersion(windowLike),
+    end_reason: this.resolveSessionSubmitEndReason()
   };
 };
 
@@ -7244,31 +7274,45 @@ GameManager.prototype.restartLegacyReplayImportSession = function (seed) {
   this.startReplayImportPlayback();
 };
 
+GameManager.prototype.isNonEmptyStringValue = function (value) {
+  return typeof value === "string" && !!value;
+};
+
 GameManager.prototype.applyJsonV3ReplayEnvelopeMeta = function (envelope, modeConfig) {
   this.applyJsonV3ReplayModeConfigMeta(envelope, modeConfig);
   this.applyJsonV3ReplayChallengeMeta(envelope);
 };
 
+GameManager.prototype.applyJsonV3ReplayModeFamilyMeta = function (envelope, modeConfig) {
+  if (!this.isNonEmptyStringValue(envelope.modeFamily)) return;
+  modeConfig.mode_family = envelope.modeFamily;
+};
+
+GameManager.prototype.applyJsonV3ReplayRankPolicyMeta = function (envelope, modeConfig) {
+  if (!this.isNonEmptyStringValue(envelope.rankPolicy)) return;
+  modeConfig.rank_policy = envelope.rankPolicy;
+};
+
 GameManager.prototype.applyJsonV3ReplayModeConfigMeta = function (envelope, modeConfig) {
   this.applyJsonV3ReplaySpecialRulesMeta(envelope, modeConfig);
-  if (typeof envelope.modeFamily === "string" && envelope.modeFamily) {
-    modeConfig.mode_family = envelope.modeFamily;
-  }
-  if (typeof envelope.rankPolicy === "string" && envelope.rankPolicy) {
-    modeConfig.rank_policy = envelope.rankPolicy;
-  }
+  this.applyJsonV3ReplayModeFamilyMeta(envelope, modeConfig);
+  this.applyJsonV3ReplayRankPolicyMeta(envelope, modeConfig);
+};
+
+GameManager.prototype.resolveJsonV3ReplaySpecialRulesSnapshot = function (envelope) {
+  if (!envelope.specialRulesSnapshot || typeof envelope.specialRulesSnapshot !== "object") return null;
+  return this.clonePlain(envelope.specialRulesSnapshot);
 };
 
 GameManager.prototype.applyJsonV3ReplaySpecialRulesMeta = function (envelope, modeConfig) {
-  if (envelope.specialRulesSnapshot && typeof envelope.specialRulesSnapshot === "object") {
-    modeConfig.special_rules = this.clonePlain(envelope.specialRulesSnapshot);
-  }
+  var specialRulesSnapshot = this.resolveJsonV3ReplaySpecialRulesSnapshot(envelope);
+  if (!specialRulesSnapshot) return;
+  modeConfig.special_rules = specialRulesSnapshot;
 };
 
 GameManager.prototype.applyJsonV3ReplayChallengeMeta = function (envelope) {
-  if (typeof envelope.challengeId === "string" && envelope.challengeId) {
-    this.challengeId = envelope.challengeId;
-  }
+  if (!this.isNonEmptyStringValue(envelope.challengeId)) return;
+  this.challengeId = envelope.challengeId;
 };
 
 GameManager.prototype.normalizeReplayImportActionsSource = function (payload) {
@@ -7340,9 +7384,17 @@ GameManager.prototype.importJsonV3ReplayEnvelope = function (envelope, replayMod
   this.restartReplayImportSession(replayModeConfig, envelope.seed, false);
 };
 
+GameManager.prototype.resolveV4ReplayInitialBoard = function (envelope) {
+  return this.decodeBoardV4(envelope.initialBoardEncoded);
+};
+
+GameManager.prototype.resolveV4ReplayDecodedActions = function (envelope) {
+  return this.decodeReplayV4Actions(envelope.actionsEncoded);
+};
+
 GameManager.prototype.importV4ReplayEnvelope = function (envelope, replayModeConfig) {
-  var initialBoard = this.decodeBoardV4(envelope.initialBoardEncoded);
-  var decodedV4Actions = this.decodeReplayV4Actions(envelope.actionsEncoded);
+  var initialBoard = this.resolveV4ReplayInitialBoard(envelope);
+  var decodedV4Actions = this.resolveV4ReplayDecodedActions(envelope);
   this.applyV4ReplayDecodedActions(decodedV4Actions);
   this.restartReplayImportSession(replayModeConfig, initialBoard, true);
 };
