@@ -1747,8 +1747,7 @@ GameManager.prototype.resolveModePolicyContext = function (mode) {
   var targetMode = mode || this.mode;
   return {
     targetMode: targetMode,
-    modeConfig: this.resolveModeConfig(targetMode),
-    modeCore: this.getCoreModeRuntime()
+    modeConfig: this.resolveModeConfig(targetMode)
   };
 };
 
@@ -3249,9 +3248,12 @@ GameManager.prototype.getForcedUndoSettingForMode = function (mode) {
   var context = this.resolveModePolicyContext(mode);
   var targetMode = context.targetMode;
   var modeCfg = context.modeConfig;
-  var modeCore = context.modeCore;
-  if (modeCore && typeof modeCore.getForcedUndoSetting === "function") {
-    var forced = modeCore.getForcedUndoSetting({
+  var getForcedUndoSettingCore = this.resolveCoreRuntimeMethod(
+    "getCoreModeRuntime",
+    "getForcedUndoSetting"
+  );
+  if (getForcedUndoSettingCore) {
+    var forced = getForcedUndoSettingCore({
       mode: targetMode,
       modeConfig: modeCfg
     });
@@ -3275,9 +3277,12 @@ GameManager.prototype.isUndoAllowedByMode = function (mode) {
   var context = this.resolveModePolicyContext(mode);
   var targetMode = context.targetMode;
   var modeCfg = context.modeConfig;
-  var modeCore = context.modeCore;
-  if (modeCore && typeof modeCore.isUndoAllowedByMode === "function") {
-    return !!modeCore.isUndoAllowedByMode({
+  var isUndoAllowedByModeCore = this.resolveCoreRuntimeMethod(
+    "getCoreModeRuntime",
+    "isUndoAllowedByMode"
+  );
+  if (isUndoAllowedByModeCore) {
+    return !!isUndoAllowedByModeCore({
       mode: targetMode,
       modeConfig: modeCfg
     });
@@ -3289,9 +3294,12 @@ GameManager.prototype.isUndoSettingFixedForMode = function (mode) {
   var context = this.resolveModePolicyContext(mode);
   var targetMode = context.targetMode;
   var modeCfg = context.modeConfig;
-  var modeCore = context.modeCore;
-  if (modeCore && typeof modeCore.isUndoSettingFixedForMode === "function") {
-    return !!modeCore.isUndoSettingFixedForMode({
+  var isUndoSettingFixedForModeCore = this.resolveCoreRuntimeMethod(
+    "getCoreModeRuntime",
+    "isUndoSettingFixedForMode"
+  );
+  if (isUndoSettingFixedForModeCore) {
+    return !!isUndoSettingFixedForModeCore({
       mode: targetMode,
       modeConfig: modeCfg
     });
@@ -3303,9 +3311,12 @@ GameManager.prototype.canToggleUndoSetting = function (mode) {
   var context = this.resolveModePolicyContext(mode);
   var targetMode = context.targetMode;
   var modeCfg = context.modeConfig;
-  var modeCore = context.modeCore;
-  if (modeCore && typeof modeCore.canToggleUndoSetting === "function") {
-    return !!modeCore.canToggleUndoSetting({
+  var canToggleUndoSettingCore = this.resolveCoreRuntimeMethod(
+    "getCoreModeRuntime",
+    "canToggleUndoSetting"
+  );
+  if (canToggleUndoSettingCore) {
+    return !!canToggleUndoSettingCore({
       mode: targetMode,
       modeConfig: modeCfg,
       hasGameStarted: !!this.hasGameStarted
