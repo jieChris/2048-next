@@ -7551,19 +7551,34 @@ GameManager.prototype.executeReplayCustomTileDispatch = function (dispatchPlan) 
   this.insertCustomTile(dispatchPlan.args[0], dispatchPlan.args[1], dispatchPlan.args[2]);
 };
 
+GameManager.prototype.shouldInjectReplayStepForcedSpawn = function (stepExecutionPlan) {
+  return !!stepExecutionPlan.shouldInjectForcedSpawn;
+};
+
+GameManager.prototype.resolveReplayStepForcedSpawn = function (stepExecutionPlan) {
+  return stepExecutionPlan.forcedSpawn;
+};
+
 GameManager.prototype.applyReplayStepForcedSpawn = function (stepExecutionPlan) {
-  if (stepExecutionPlan.shouldInjectForcedSpawn) {
-    this.forcedSpawn = stepExecutionPlan.forcedSpawn;
-  }
+  if (!this.shouldInjectReplayStepForcedSpawn(stepExecutionPlan)) return;
+  this.forcedSpawn = this.resolveReplayStepForcedSpawn(stepExecutionPlan);
+};
+
+GameManager.prototype.resolveReplayStepNextIndex = function (stepExecutionPlan) {
+  return stepExecutionPlan.nextReplayIndex;
 };
 
 GameManager.prototype.applyReplayStepNextIndex = function (stepExecutionPlan) {
-  this.replayIndex = stepExecutionPlan.nextReplayIndex;
+  this.replayIndex = this.resolveReplayStepNextIndex(stepExecutionPlan);
+};
+
+GameManager.prototype.resolveReplayStepAction = function (stepExecutionPlan) {
+  return stepExecutionPlan.action;
 };
 
 GameManager.prototype.applyReplayStepExecutionPlan = function (stepExecutionPlan) {
   this.applyReplayStepForcedSpawn(stepExecutionPlan);
-  this.executeReplayAction(stepExecutionPlan.action);
+  this.executeReplayAction(this.resolveReplayStepAction(stepExecutionPlan));
   this.applyReplayStepNextIndex(stepExecutionPlan);
 };
 
