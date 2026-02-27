@@ -5770,28 +5770,40 @@ GameManager.prototype.applyReplayImportActions = function (payload) {
   }
 };
 
-GameManager.prototype.applyV4ReplayDecodedActions = function (decodedV4Actions) {
-  this.applyReplayImportActions({
+GameManager.prototype.resolveV4ReplayImportActionsPayload = function (decodedV4Actions) {
+  return {
     replayMoves: decodedV4Actions ? decodedV4Actions.replayMoves : null,
     replaySpawns: Array.isArray(decodedV4Actions && decodedV4Actions.replaySpawns)
       ? decodedV4Actions.replaySpawns
       : []
-  });
+  };
 };
 
-GameManager.prototype.applyLegacyReplayDecodedActions = function (decodedLegacy) {
-  this.applyReplayImportActions({
+GameManager.prototype.applyV4ReplayDecodedActions = function (decodedV4Actions) {
+  this.applyReplayImportActions(this.resolveV4ReplayImportActionsPayload(decodedV4Actions));
+};
+
+GameManager.prototype.resolveLegacyReplayImportActionsPayload = function (decodedLegacy) {
+  return {
     replayMovesV2: decodedLegacy ? decodedLegacy.replayMovesV2 : null,
     replayMoves: decodedLegacy ? decodedLegacy.replayMoves : null,
     replaySpawns: decodedLegacy ? decodedLegacy.replaySpawns : undefined
-  });
+  };
+};
+
+GameManager.prototype.applyLegacyReplayDecodedActions = function (decodedLegacy) {
+  this.applyReplayImportActions(this.resolveLegacyReplayImportActionsPayload(decodedLegacy));
+};
+
+GameManager.prototype.resolveJsonV3ReplayImportActionsPayload = function (envelope) {
+  return {
+    replayMoves: envelope ? envelope.actions : null,
+    replaySpawns: null
+  };
 };
 
 GameManager.prototype.applyJsonV3ReplayEnvelopeActions = function (envelope) {
-  this.applyReplayImportActions({
-    replayMoves: envelope ? envelope.actions : null,
-    replaySpawns: null
-  });
+  this.applyReplayImportActions(this.resolveJsonV3ReplayImportActionsPayload(envelope));
 };
 
 GameManager.prototype.importJsonV3ReplayEnvelope = function (envelope, replayModeConfig) {
