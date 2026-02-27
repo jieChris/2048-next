@@ -996,6 +996,10 @@ GameManager.prototype.callCoreRuntimeMethod = function (resolverMethodName, meth
   };
 };
 
+GameManager.prototype.isNonArrayObject = function (value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+};
+
 function registerCoreRuntimeCaller(methodName, resolverMethodName) {
   if (typeof methodName !== "string" || !methodName) return;
   if (typeof resolverMethodName !== "string" || !resolverMethodName) return;
@@ -1182,7 +1186,7 @@ GameManager.prototype.readLocalStorageJsonMap = function (key) {
     }]);
   if (readStorageJsonMapFromContextCore.available) {
     var runtimeMap = readStorageJsonMapFromContextCore.value;
-    if (runtimeMap && typeof runtimeMap === "object" && !Array.isArray(runtimeMap)) {
+    if (this.isNonArrayObject(runtimeMap)) {
       return runtimeMap;
     }
     return {};
@@ -1193,7 +1197,7 @@ GameManager.prototype.readLocalStorageJsonMap = function (key) {
     var raw = storage.getItem(key);
     if (!raw) return {};
     var parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    if (!this.isNonArrayObject(parsed)) return {};
     return parsed;
   } catch (_err) {
     return {};
@@ -1209,7 +1213,7 @@ GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
   if (writeStorageJsonMapFromContextCore.available) return !!writeStorageJsonMapFromContextCore.value;
   var storage = this.getWebStorageByName("localStorage");
   if (!storage || typeof storage.setItem !== "function") return false;
-  var safeMap = (map && typeof map === "object" && !Array.isArray(map)) ? map : {};
+  var safeMap = this.isNonArrayObject(map) ? map : {};
   try {
     storage.setItem(key, JSON.stringify(safeMap));
     return true;
@@ -1274,7 +1278,7 @@ GameManager.prototype.parseSavedPayloadRaw = function (raw) {
   if (!raw) return null;
   try {
     var parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return null;
+    if (!this.isNonArrayObject(parsed)) return null;
     return parsed;
   } catch (_errParse) {
     return null;
