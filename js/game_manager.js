@@ -3337,23 +3337,32 @@ GameManager.prototype.getGridCellAvailableFn = function () {
   return function () { return false; };
 };
 
+GameManager.prototype.collectAvailableCellsFallback = function (width, height, isBlockedCell, cellAvailable) {
+  var out = [];
+  for (var x = 0; x < width; x++) {
+    for (var y = 0; y < height; y++) {
+      if (isBlockedCell(x, y)) continue;
+      if (cellAvailable({ x: x, y: y })) out.push({ x: x, y: y });
+    }
+  }
+  return out;
+};
+
 GameManager.prototype.getAvailableCells = function () {
+  var gridCellAvailable = this.getGridCellAvailableFn();
   var getAvailableCellsCore = this.callCoreGridScanRuntime("getAvailableCells", [
       this.width,
       this.height,
       this.isBlockedCell.bind(this),
-      this.getGridCellAvailableFn()
+      gridCellAvailable
     ]);
   if (getAvailableCellsCore.available) return getAvailableCellsCore.value;
-
-  var out = [];
-  for (var x = 0; x < this.width; x++) {
-    for (var y = 0; y < this.height; y++) {
-      if (this.isBlockedCell(x, y)) continue;
-      if (this.grid.cellAvailable({ x: x, y: y })) out.push({ x: x, y: y });
-    }
-  }
-  return out;
+  return this.collectAvailableCellsFallback(
+    this.width,
+    this.height,
+    this.isBlockedCell.bind(this),
+    gridCellAvailable
+  );
 };
 
 GameManager.prototype.applyComputedLockedDirectionState = function (computed) {
