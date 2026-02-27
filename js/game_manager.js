@@ -5380,6 +5380,31 @@ GameManager.prototype.applyPostMoveLifecycle = function (hasMovesAvailable) {
   return this.applyFallbackPostMoveLifecycle(hasMovesAvailable);
 };
 
+GameManager.prototype.applyMergeTimerStampEffects = function (timerIdsToStamp, timeStr) {
+  for (var timerIndex = 0; timerIndex < timerIdsToStamp.length; timerIndex++) {
+    var timerId = timerIdsToStamp[timerIndex];
+    var timerEl = document.getElementById(timerId);
+    if (!timerEl) continue;
+    if (timerId === "timer32768") {
+      if (timerEl.innerHTML === "") timerEl.textContent = timeStr;
+    } else {
+      if (timerEl.textContent === "") timerEl.textContent = timeStr;
+    }
+  }
+};
+
+GameManager.prototype.applyMergeTimerRowVisibilityEffects = function (mergeEffects) {
+  if (mergeEffects.showSubTimerContainer) {
+    var subContainer = document.getElementById("timer32k-sub-container");
+    if (subContainer) subContainer.style.display = "block";
+  }
+  var hideTimerRows = Array.isArray(mergeEffects.hideTimerRows) ? mergeEffects.hideTimerRows : [];
+  for (var hideIndex = 0; hideIndex < hideTimerRows.length; hideIndex++) {
+    var rowEl = document.getElementById("timer-row-" + String(hideTimerRows[hideIndex]));
+    if (rowEl) rowEl.style.display = "none";
+  }
+};
+
 GameManager.prototype.applyMergeMilestoneEffects = function (mergedValue, timeStr) {
   this.recordTimerMilestone(mergedValue, timeStr);
   var mergeEffects = this.computeMergeEffects(mergedValue);
@@ -5393,31 +5418,12 @@ GameManager.prototype.applyMergeMilestoneEffects = function (mergedValue, timeSt
   var timerIdsToStamp = Array.isArray(mergeEffects.timerIdsToStamp)
     ? mergeEffects.timerIdsToStamp
     : [];
-  for (var timerIndex = 0; timerIndex < timerIdsToStamp.length; timerIndex++) {
-    var timerId = timerIdsToStamp[timerIndex];
-    var timerEl = document.getElementById(timerId);
-    if (!timerEl) continue;
-    if (timerId === "timer32768") {
-      if (timerEl.innerHTML === "") timerEl.textContent = timeStr;
-    } else {
-      if (timerEl.textContent === "") timerEl.textContent = timeStr;
-    }
-  }
+  this.applyMergeTimerStampEffects(timerIdsToStamp, timeStr);
 
   if (mergeEffects.shouldSetReached32k) {
     this.reached32k = true; // Flag reached
   }
-  if (mergeEffects.showSubTimerContainer) {
-    // Show sub-timer container
-    var subContainer = document.getElementById("timer32k-sub-container");
-    if (subContainer) subContainer.style.display = "block";
-  }
-
-  var hideTimerRows = Array.isArray(mergeEffects.hideTimerRows) ? mergeEffects.hideTimerRows : [];
-  for (var hideIndex = 0; hideIndex < hideTimerRows.length; hideIndex++) {
-    var rowEl = document.getElementById("timer-row-" + String(hideTimerRows[hideIndex]));
-    if (rowEl) rowEl.style.display = "none";
-  }
+  this.applyMergeTimerRowVisibilityEffects(mergeEffects);
 };
 
 GameManager.prototype.canProcessUndoMove = function () {
