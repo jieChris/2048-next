@@ -6569,8 +6569,22 @@ GameManager.prototype.resolveSetupSkipStartTiles = function (options) {
   return !!(options && options.skipStartTiles);
 };
 
+GameManager.prototype.hasSetupInputSeed = function (hasInputSeed) {
+  return !!hasInputSeed;
+};
+
+GameManager.prototype.shouldSkipSetupStartTiles = function (skipStartTiles) {
+  return !!skipStartTiles;
+};
+
+GameManager.prototype.isSetupStateRestoreDisabled = function (options) {
+  return !!(options && options.disableStateRestore);
+};
+
 GameManager.prototype.shouldRestoreStateOnSetup = function (hasInputSeed, skipStartTiles, options) {
-  return !hasInputSeed && !skipStartTiles && !(options && options.disableStateRestore);
+  return !this.hasSetupInputSeed(hasInputSeed) &&
+    !this.shouldSkipSetupStartTiles(skipStartTiles) &&
+    !this.isSetupStateRestoreDisabled(options);
 };
 
 GameManager.prototype.resolveSetupRestoredFromSavedState = function (hasInputSeed, skipStartTiles, options) {
