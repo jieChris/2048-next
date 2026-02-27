@@ -1836,18 +1836,19 @@ GameManager.prototype.tryRestoreSavedGameState = function () {
   return true;
 };
 
-GameManager.prototype.saveGameState = function (options) {
-  options = options || {};
-  if (!this.shouldUseSavedGameState()) return;
+GameManager.prototype.shouldAbortSaveGameState = function (options, now) {
+  if (!this.shouldUseSavedGameState()) return true;
   if (this.isSessionTerminated() && this.modeKey !== "practice_legacy") {
     this.clearSavedGameState();
-    return;
+    return true;
   }
+  return this.shouldSkipSaveGameStateByThrottle(options, now);
+};
 
+GameManager.prototype.saveGameState = function (options) {
+  options = options || {};
   var now = Date.now();
-  if (this.shouldSkipSaveGameStateByThrottle(options, now)) {
-    return;
-  }
+  if (this.shouldAbortSaveGameState(options, now)) return;
 
   var payload = this.buildSavedGameStatePayload(now);
 
