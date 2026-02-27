@@ -4784,10 +4784,24 @@ GameManager.prototype.move = function (direction) {
   }
 };
 
+GameManager.prototype.callCoreMovePathRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreMovePathRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
 // Get the vector representing the chosen direction
 GameManager.prototype.getVector = function (direction) {
-  var getVectorCore = this.resolveCoreMovePathRuntimeMethod("getVector");
-  if (getVectorCore) return getVectorCore(direction);
+  var getVectorCore = this.callCoreMovePathRuntime("getVector", [direction]);
+  if (getVectorCore.available) return getVectorCore.value;
 
   // Vectors representing tile movement
   var map = {
@@ -4802,9 +4816,9 @@ GameManager.prototype.getVector = function (direction) {
 
 // Build a list of positions to traverse in the right order
 GameManager.prototype.buildTraversals = function (vector) {
-  var buildTraversalsCore = this.resolveCoreMovePathRuntimeMethod("buildTraversals");
-  if (buildTraversalsCore) {
-    var computed = buildTraversalsCore(this.width, this.height, vector) || {};
+  var buildTraversalsCore = this.callCoreMovePathRuntime("buildTraversals", [this.width, this.height, vector]);
+  if (buildTraversalsCore.available) {
+    var computed = buildTraversalsCore.value || {};
     return {
       x: Array.isArray(computed.x) ? computed.x : [],
       y: Array.isArray(computed.y) ? computed.y : []
@@ -4828,16 +4842,16 @@ GameManager.prototype.buildTraversals = function (vector) {
 };
 
 GameManager.prototype.findFarthestPosition = function (cell, vector) {
-  var findFarthestPositionCore = this.resolveCoreMovePathRuntimeMethod("findFarthestPosition");
-  if (findFarthestPositionCore) {
-    var computed = findFarthestPositionCore(
+  var findFarthestPositionCore = this.callCoreMovePathRuntime("findFarthestPosition", [
       cell,
       vector,
       this.width,
       this.height,
       this.isBlockedCell.bind(this),
       this.getGridCellAvailableFn()
-    ) || {};
+    ]);
+  if (findFarthestPositionCore.available) {
+    var computed = findFarthestPositionCore.value || {};
     if (computed.farthest && computed.next) return computed;
   }
 
@@ -4922,8 +4936,8 @@ GameManager.prototype.tileMatchesAvailable = function () {
 };
 
 GameManager.prototype.positionsEqual = function (first, second) {
-  var positionsEqualCore = this.resolveCoreMovePathRuntimeMethod("positionsEqual");
-  if (positionsEqualCore) return positionsEqualCore(first, second);
+  var positionsEqualCore = this.callCoreMovePathRuntime("positionsEqual", [first, second]);
+  if (positionsEqualCore.available) return positionsEqualCore.value;
   return first.x === second.x && first.y === second.y;
 };
 
