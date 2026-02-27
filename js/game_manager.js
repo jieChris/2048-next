@@ -5681,6 +5681,18 @@ GameManager.prototype.resolveProvidedActiveUndoPolicyState = function (resolvedS
   });
 };
 
+GameManager.prototype.resolvePersistedUndoSettingMap = function (map, mode, enabled, coreResult) {
+  if (coreResult && coreResult.available) {
+    return coreResult.value;
+  }
+  map[mode] = !!enabled;
+  return map;
+};
+
+GameManager.prototype.persistUndoSettingMap = function (map) {
+  this.writeLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY, map);
+};
+
 GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resolvedState) {
   var state = this.resolveProvidedUndoPolicyStateForMode(mode, resolvedState);
   if (state && state.isUndoSettingFixedForMode) return;
@@ -5691,12 +5703,8 @@ GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resol
       mode: mode,
       enabled: enabled
     }]);
-  if (writeUndoEnabledForModeToMapCore.available) {
-    map = writeUndoEnabledForModeToMapCore.value;
-  } else {
-    map[mode] = !!enabled;
-  }
-  this.writeLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY, map);
+  map = this.resolvePersistedUndoSettingMap(map, mode, enabled, writeUndoEnabledForModeToMapCore);
+  this.persistUndoSettingMap(map);
 };
 
 GameManager.prototype.setUndoEnabled = function (enabled, skipPersist, forceChange) {
