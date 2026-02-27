@@ -2761,23 +2761,16 @@ GameManager.prototype.computePostMoveRecord = function (direction) {
   return this.buildPostMoveRecordFallback(direction);
 };
 
-GameManager.prototype.computePostUndoRecord = function (direction) {
-  var computePostUndoRecordCore = this.callCorePostUndoRecordRuntime("computePostUndoRecord", [{
-      replayMode: !!this.replayMode,
-      direction: direction,
-      hasSessionReplayV3: !!this.sessionReplayV3
-    }]);
-  if (computePostUndoRecordCore.available) return computePostUndoRecordCore.value || {};
+GameManager.prototype.buildReplayPostUndoRecordFallback = function () {
+  return {
+    shouldRecordMoveHistory: false,
+    shouldAppendCompactUndo: false,
+    shouldPushSessionAction: false,
+    sessionAction: null
+  };
+};
 
-  if (this.replayMode) {
-    return {
-      shouldRecordMoveHistory: false,
-      shouldAppendCompactUndo: false,
-      shouldPushSessionAction: false,
-      sessionAction: null
-    };
-  }
-
+GameManager.prototype.buildPostUndoRecordFallback = function () {
   var shouldPushSessionAction = !!this.sessionReplayV3;
   return {
     shouldRecordMoveHistory: true,
@@ -2785,6 +2778,17 @@ GameManager.prototype.computePostUndoRecord = function (direction) {
     shouldPushSessionAction: shouldPushSessionAction,
     sessionAction: shouldPushSessionAction ? ["u"] : null
   };
+};
+
+GameManager.prototype.computePostUndoRecord = function (direction) {
+  var computePostUndoRecordCore = this.callCorePostUndoRecordRuntime("computePostUndoRecord", [{
+      replayMode: !!this.replayMode,
+      direction: direction,
+      hasSessionReplayV3: !!this.sessionReplayV3
+    }]);
+  if (computePostUndoRecordCore.available) return computePostUndoRecordCore.value || {};
+  if (this.replayMode) return this.buildReplayPostUndoRecordFallback();
+  return this.buildPostUndoRecordFallback();
 };
 
 GameManager.prototype.getUndoStateFallbackValues = function () {
