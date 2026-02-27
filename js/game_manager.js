@@ -5587,22 +5587,39 @@ GameManager.prototype.applyJsonV3ReplayEnvelopeMeta = function (envelope, modeCo
   }
 };
 
+GameManager.prototype.applyReplayImportActions = function (payload) {
+  var source = payload && typeof payload === "object" ? payload : {};
+  this.replayMoves = Array.isArray(source.replayMoves) ? source.replayMoves : [];
+  if (this.hasOwnKey(source, "replaySpawns")) {
+    this.replaySpawns = source.replaySpawns;
+  }
+  if (typeof source.replayMovesV2 === "string") {
+    this.replayMovesV2 = source.replayMovesV2;
+  }
+};
+
 GameManager.prototype.applyV4ReplayDecodedActions = function (decodedV4Actions) {
-  this.replayMoves = Array.isArray(decodedV4Actions.replayMoves) ? decodedV4Actions.replayMoves : [];
-  this.replaySpawns = Array.isArray(decodedV4Actions.replaySpawns) ? decodedV4Actions.replaySpawns : [];
+  this.applyReplayImportActions({
+    replayMoves: decodedV4Actions ? decodedV4Actions.replayMoves : null,
+    replaySpawns: Array.isArray(decodedV4Actions && decodedV4Actions.replaySpawns)
+      ? decodedV4Actions.replaySpawns
+      : []
+  });
 };
 
 GameManager.prototype.applyLegacyReplayDecodedActions = function (decodedLegacy) {
-  if (typeof decodedLegacy.replayMovesV2 === "string") {
-    this.replayMovesV2 = decodedLegacy.replayMovesV2;
-  }
-  this.replayMoves = Array.isArray(decodedLegacy.replayMoves) ? decodedLegacy.replayMoves : [];
-  this.replaySpawns = decodedLegacy.replaySpawns;
+  this.applyReplayImportActions({
+    replayMovesV2: decodedLegacy ? decodedLegacy.replayMovesV2 : null,
+    replayMoves: decodedLegacy ? decodedLegacy.replayMoves : null,
+    replaySpawns: decodedLegacy ? decodedLegacy.replaySpawns : undefined
+  });
 };
 
 GameManager.prototype.applyJsonV3ReplayEnvelopeActions = function (envelope) {
-  this.replayMoves = Array.isArray(envelope.actions) ? envelope.actions : [];
-  this.replaySpawns = null;
+  this.applyReplayImportActions({
+    replayMoves: envelope ? envelope.actions : null,
+    replaySpawns: null
+  });
 };
 
 GameManager.prototype.importJsonV3ReplayEnvelope = function (envelope, replayModeConfig) {
