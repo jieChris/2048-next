@@ -5098,25 +5098,34 @@ GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, 
   );
 };
 
+GameManager.prototype.ensureCappedOverflowContainerElement = function () {
+  var id = "capped-timer-overflow-container";
+  var container = document.getElementById(id);
+  if (container) return container;
+  container = document.createElement("div");
+  container.id = id;
+  return container;
+};
+
+GameManager.prototype.resolveCappedOverflowAnchor = function (resolvedCappedState) {
+  var values = this.getCappedPlaceholderRowValues(resolvedCappedState);
+  if (!values.length) return null;
+  return this.getTimerRowEl(values[values.length - 1]);
+};
+
+GameManager.prototype.mountCappedOverflowContainerAfterAnchor = function (container, anchor) {
+  if (!anchor || !anchor.parentNode) return;
+  if (container.parentNode !== anchor.parentNode || anchor.nextSibling !== container) {
+    anchor.parentNode.insertBefore(container, anchor.nextSibling);
+  }
+};
+
 GameManager.prototype.getCappedOverflowContainer = function (cappedState) {
   var resolvedCappedState =
     this.resolveProvidedCappedModeState(cappedState);
   if (!resolvedCappedState.isCappedMode) return null;
-  var id = "capped-timer-overflow-container";
-  var container = document.getElementById(id);
-  if (!container) {
-    container = document.createElement("div");
-    container.id = id;
-  }
-
-  var values = this.getCappedPlaceholderRowValues(resolvedCappedState);
-  if (!values.length) return container;
-  var anchor = this.getTimerRowEl(values[values.length - 1]);
-  if (!anchor || !anchor.parentNode) return container;
-
-  if (container.parentNode !== anchor.parentNode || anchor.nextSibling !== container) {
-    anchor.parentNode.insertBefore(container, anchor.nextSibling);
-  }
+  var container = this.ensureCappedOverflowContainerElement();
+  this.mountCappedOverflowContainerAfterAnchor(container, this.resolveCappedOverflowAnchor(resolvedCappedState));
   return container;
 };
 
