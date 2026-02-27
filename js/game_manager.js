@@ -2896,7 +2896,14 @@ GameManager.prototype.setCapped64RowVisible = function (value, visible) {
 };
 
 GameManager.prototype.resetProgressiveCapped64Rows = function () {
-  this.capped64Unlocked = { "16": false, "32": false, "64": false };
+  var createProgressiveCapped64UnlockedStateCore = this.resolveCoreModeRuntimeMethod(
+    "createProgressiveCapped64UnlockedState"
+  );
+  if (createProgressiveCapped64UnlockedStateCore) {
+    this.capped64Unlocked = createProgressiveCapped64UnlockedStateCore(this.capped64Unlocked);
+  } else {
+    this.capped64Unlocked = { "16": false, "32": false, "64": false };
+  }
   var values = [16, 32, 64];
   for (var i = 0; i < values.length; i++) {
     this.setCapped64RowVisible(values[i], false);
@@ -2904,6 +2911,36 @@ GameManager.prototype.resetProgressiveCapped64Rows = function () {
 };
 
 GameManager.prototype.unlockProgressiveCapped64Row = function (value) {
+  var resolveProgressiveCapped64UnlockCore = this.resolveCoreModeRuntimeMethod(
+    "resolveProgressiveCapped64Unlock"
+  );
+  if (resolveProgressiveCapped64UnlockCore) {
+    var unlockedState = this.capped64Unlocked;
+    if (!unlockedState || typeof unlockedState !== "object") {
+      var createProgressiveCapped64UnlockedStateCore = this.resolveCoreModeRuntimeMethod(
+        "createProgressiveCapped64UnlockedState"
+      );
+      unlockedState = createProgressiveCapped64UnlockedStateCore
+        ? createProgressiveCapped64UnlockedStateCore(null)
+        : { "16": false, "32": false, "64": false };
+    }
+    var resolved = resolveProgressiveCapped64UnlockCore({
+      isProgressiveCapped64Mode: this.isProgressiveCapped64Mode(),
+      value: value,
+      unlockedState: unlockedState
+    }) || {};
+    if (resolved.nextUnlockedState && typeof resolved.nextUnlockedState === "object") {
+      this.capped64Unlocked = resolved.nextUnlockedState;
+    } else {
+      this.capped64Unlocked = unlockedState;
+    }
+    var unlockedValue = Number(resolved.unlockedValue);
+    if (unlockedValue === 16 || unlockedValue === 32 || unlockedValue === 64) {
+      this.setCapped64RowVisible(unlockedValue, true);
+    }
+    return;
+  }
+
   if (!this.isProgressiveCapped64Mode()) return;
   if (value !== 16 && value !== 32 && value !== 64) return;
   if (!this.capped64Unlocked) {

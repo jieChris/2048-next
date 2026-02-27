@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canToggleUndoSetting,
+  createProgressiveCapped64UnlockedState,
   getCappedTargetValue,
   getForcedUndoSetting,
   isCappedModeState,
@@ -10,6 +11,7 @@ import {
   resolveCappedPlaceholderSlotByRepeatCount,
   resolveCappedRowVisibilityPlan,
   resolveCappedTimerLegendFontSize,
+  resolveProgressiveCapped64Unlock,
   isTimerLeaderboardAvailableByMode,
   isUndoAllowedByMode,
   isUndoSettingFixedForMode,
@@ -45,6 +47,60 @@ describe("core mode: normalizeSpecialRules", () => {
     const normalized = normalizeSpecialRules(raw);
     raw.custom_spawn_four_rate = 99;
     expect(normalized.custom_spawn_four_rate).toBe(12.5);
+  });
+
+  it("builds progressive capped64 unlocked state from raw payload", () => {
+    expect(createProgressiveCapped64UnlockedState(null)).toEqual({
+      "16": false,
+      "32": false,
+      "64": false
+    });
+    expect(
+      createProgressiveCapped64UnlockedState({
+        "16": true,
+        "32": "yes",
+        "64": true
+      })
+    ).toEqual({
+      "16": true,
+      "32": false,
+      "64": true
+    });
+  });
+
+  it("resolves progressive capped64 unlock decision and next state", () => {
+    expect(
+      resolveProgressiveCapped64Unlock({
+        isProgressiveCapped64Mode: false,
+        value: 16,
+        unlockedState: { "16": false, "32": false, "64": false }
+      })
+    ).toEqual({
+      nextUnlockedState: { "16": false, "32": false, "64": false },
+      unlockedValue: null
+    });
+
+    expect(
+      resolveProgressiveCapped64Unlock({
+        isProgressiveCapped64Mode: true,
+        value: 16,
+        unlockedState: { "16": false, "32": false, "64": false }
+      })
+    ).toEqual({
+      nextUnlockedState: { "16": true, "32": false, "64": false },
+      unlockedValue: 16
+    });
+
+    expect(
+      resolveProgressiveCapped64Unlock({
+        isProgressiveCapped64Mode: true,
+        value: 16,
+        unlockedState: { "16": true, "32": false, "64": false }
+      })
+    ).toEqual({
+      nextUnlockedState: { "16": true, "32": false, "64": false },
+      unlockedValue: null
+    });
   });
 });
 

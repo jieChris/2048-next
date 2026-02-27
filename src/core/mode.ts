@@ -55,6 +55,17 @@ export interface TimerRowVisibilityPlanItem {
   keepSpace: boolean;
 }
 
+export interface ProgressiveCapped64UnlockInput {
+  isProgressiveCapped64Mode?: boolean | null;
+  value?: number | null;
+  unlockedState?: PlainRecord | null;
+}
+
+export interface ProgressiveCapped64UnlockResult {
+  nextUnlockedState: Record<string, boolean>;
+  unlockedValue: number | null;
+}
+
 export interface UndoPolicyInput {
   mode?: string | null;
   modeConfig?: PlainRecord | null;
@@ -236,6 +247,37 @@ export function resolveCappedRowVisibilityPlan(
     visible: value <= resolvedCap,
     keepSpace: true
   }));
+}
+
+export function createProgressiveCapped64UnlockedState(
+  unlockedState?: PlainRecord | null
+): Record<string, boolean> {
+  const base: Record<string, boolean> = { "16": false, "32": false, "64": false };
+  if (!unlockedState || typeof unlockedState !== "object") return base;
+  if (unlockedState["16"] === true) base["16"] = true;
+  if (unlockedState["32"] === true) base["32"] = true;
+  if (unlockedState["64"] === true) base["64"] = true;
+  return base;
+}
+
+export function resolveProgressiveCapped64Unlock(
+  input: ProgressiveCapped64UnlockInput
+): ProgressiveCapped64UnlockResult {
+  const nextUnlockedState = createProgressiveCapped64UnlockedState(input.unlockedState);
+  if (!input.isProgressiveCapped64Mode) {
+    return { nextUnlockedState, unlockedValue: null };
+  }
+
+  const value = Number(input.value);
+  if (value !== 16 && value !== 32 && value !== 64) {
+    return { nextUnlockedState, unlockedValue: null };
+  }
+  const key = String(value);
+  if (nextUnlockedState[key]) {
+    return { nextUnlockedState, unlockedValue: null };
+  }
+  nextUnlockedState[key] = true;
+  return { nextUnlockedState, unlockedValue: value };
 }
 
 export function getForcedUndoSetting(input: UndoPolicyInput): boolean | null {

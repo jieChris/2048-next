@@ -248,6 +248,34 @@
     });
   }
 
+  function createProgressiveCapped64UnlockedState(unlockedState) {
+    var base = { "16": false, "32": false, "64": false };
+    if (!unlockedState || typeof unlockedState !== "object") return base;
+    if (unlockedState["16"] === true) base["16"] = true;
+    if (unlockedState["32"] === true) base["32"] = true;
+    if (unlockedState["64"] === true) base["64"] = true;
+    return base;
+  }
+
+  function resolveProgressiveCapped64Unlock(input) {
+    var source = input || {};
+    var nextUnlockedState = createProgressiveCapped64UnlockedState(source.unlockedState);
+    if (!source.isProgressiveCapped64Mode) {
+      return { nextUnlockedState: nextUnlockedState, unlockedValue: null };
+    }
+
+    var value = Number(source.value);
+    if (value !== 16 && value !== 32 && value !== 64) {
+      return { nextUnlockedState: nextUnlockedState, unlockedValue: null };
+    }
+    var key = String(value);
+    if (nextUnlockedState[key]) {
+      return { nextUnlockedState: nextUnlockedState, unlockedValue: null };
+    }
+    nextUnlockedState[key] = true;
+    return { nextUnlockedState: nextUnlockedState, unlockedValue: value };
+  }
+
   function getForcedUndoSetting(input) {
     var source = input || {};
     var modeCfg = source.modeConfig || null;
@@ -319,6 +347,8 @@
   global.CoreModeRuntime.resolveCappedPlaceholderRowValues = resolveCappedPlaceholderRowValues;
   global.CoreModeRuntime.resolveCappedPlaceholderSlotByRepeatCount = resolveCappedPlaceholderSlotByRepeatCount;
   global.CoreModeRuntime.resolveCappedRowVisibilityPlan = resolveCappedRowVisibilityPlan;
+  global.CoreModeRuntime.createProgressiveCapped64UnlockedState = createProgressiveCapped64UnlockedState;
+  global.CoreModeRuntime.resolveProgressiveCapped64Unlock = resolveProgressiveCapped64Unlock;
   global.CoreModeRuntime.getForcedUndoSetting = getForcedUndoSetting;
   global.CoreModeRuntime.isUndoAllowedByMode = isUndoAllowedByMode;
   global.CoreModeRuntime.isUndoSettingFixedForMode = isUndoSettingFixedForMode;
