@@ -6521,8 +6521,12 @@ GameManager.prototype.resolveElapsedTimerMsFromStartTime = function () {
   return Date.now() - this.startTime.getTime();
 };
 
+GameManager.prototype.resolveTimerDisplayElement = function () {
+  return document.getElementById("timer");
+};
+
 GameManager.prototype.updateTimerDisplayText = function (elapsedMs) {
-  var timerEl = document.getElementById("timer");
+  var timerEl = this.resolveTimerDisplayElement();
   if (timerEl) timerEl.textContent = this.pretty(elapsedMs);
 };
 
@@ -6537,11 +6541,19 @@ GameManager.prototype.refreshStatsPanelIfNeededAtElapsed = function (elapsedMs) 
   this.lastStatsPanelUpdateAt = elapsedMs;
 };
 
-GameManager.prototype.applyTimerTickAtElapsed = function (elapsedMs) {
+GameManager.prototype.applyTimerElapsedState = function (elapsedMs) {
   this.time = elapsedMs;
+};
+
+GameManager.prototype.refreshTimerVisualsAtElapsed = function (elapsedMs) {
   this.updateTimerDisplayText(elapsedMs);
   this.refreshIpsDisplay(elapsedMs);
   this.refreshStatsPanelIfNeededAtElapsed(elapsedMs);
+};
+
+GameManager.prototype.applyTimerTickAtElapsed = function (elapsedMs) {
+  this.applyTimerElapsedState(elapsedMs);
+  this.refreshTimerVisualsAtElapsed(elapsedMs);
 };
 
 // Update the timer
