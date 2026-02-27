@@ -2570,6 +2570,13 @@ GameManager.prototype.isBlockedCell = function (x, y) {
   return !!(this.blockedCellSet && this.blockedCellSet[x + ":" + y]);
 };
 
+GameManager.prototype.getGridCellAvailableFn = function () {
+  if (this.grid && typeof this.grid.cellAvailable === "function") {
+    return this.grid.cellAvailable.bind(this.grid);
+  }
+  return function () { return false; };
+};
+
 GameManager.prototype.getAvailableCells = function () {
   var getAvailableCellsCore = this.resolveCoreRuntimeMethod("getCoreGridScanRuntime", "getAvailableCells");
   if (getAvailableCellsCore) {
@@ -2577,9 +2584,7 @@ GameManager.prototype.getAvailableCells = function () {
       this.width,
       this.height,
       this.isBlockedCell.bind(this),
-      this.grid && typeof this.grid.cellAvailable === "function"
-        ? this.grid.cellAvailable.bind(this.grid)
-        : function () { return false; }
+      this.getGridCellAvailableFn()
     );
   }
 
@@ -4353,9 +4358,7 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
       this.width,
       this.height,
       this.isBlockedCell.bind(this),
-      this.grid && typeof this.grid.cellAvailable === "function"
-        ? this.grid.cellAvailable.bind(this.grid)
-        : function () { return false; }
+      this.getGridCellAvailableFn()
     ) || {};
     if (computed.farthest && computed.next) return computed;
   }
