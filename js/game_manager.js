@@ -691,25 +691,27 @@ GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
   return this.planReplayDispatchFallback(resolvedExecution);
 };
 
-GameManager.prototype.buildReplayMoveDispatchFallback = function (resolvedExecution) {
+GameManager.prototype.buildReplayDispatchPlan = function (method, args) {
   return {
-    method: "move",
-    args: [resolvedExecution.dir]
+    method: method,
+    args: args
   };
+};
+
+GameManager.prototype.buildReplayMoveDispatchFallback = function (resolvedExecution) {
+  return this.buildReplayDispatchPlan("move", [resolvedExecution.dir]);
 };
 
 GameManager.prototype.buildReplayUndoDispatchFallback = function () {
-  return {
-    method: "move",
-    args: [-1]
-  };
+  return this.buildReplayDispatchPlan("move", [-1]);
 };
 
 GameManager.prototype.buildReplayPracticeDispatchFallback = function (resolvedExecution) {
-  return {
-    method: "insertCustomTile",
-    args: [resolvedExecution.x, resolvedExecution.y, resolvedExecution.value]
-  };
+  return this.buildReplayDispatchPlan("insertCustomTile", [
+    resolvedExecution.x,
+    resolvedExecution.y,
+    resolvedExecution.value
+  ]);
 };
 
 GameManager.prototype.planReplayDispatchFallback = function (resolvedExecution) {
