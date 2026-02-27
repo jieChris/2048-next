@@ -4649,23 +4649,35 @@ GameManager.prototype.isGameTerminated = function () {
   return false;
 };
 
-// Set up the game
-GameManager.prototype.setup = function (inputSeed, options) {
-  options = options || {};
-  var detectedMode = this.detectMode();
-  var globalModeConfig = null;
-  if (typeof window !== "undefined" && window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object") {
-    try {
-      globalModeConfig = this.clonePlain(window.GAME_MODE_CONFIG);
-    } catch (_err) {
-      globalModeConfig = null;
-    }
+GameManager.prototype.resolveSetupGlobalModeConfig = function () {
+  if (typeof window === "undefined" || !window.GAME_MODE_CONFIG || typeof window.GAME_MODE_CONFIG !== "object") {
+    return null;
   }
-  var resolvedModeConfig = options.modeConfig || globalModeConfig || this.resolveModeConfig(detectedMode);
+  try {
+    return this.clonePlain(window.GAME_MODE_CONFIG);
+  } catch (_err) {
+    return null;
+  }
+};
+
+GameManager.prototype.resolveSetupModeConfig = function (detectedMode, options) {
+  var setupOptions = options && typeof options === "object" ? options : {};
+  return setupOptions.modeConfig || this.resolveSetupGlobalModeConfig() || this.resolveModeConfig(detectedMode);
+};
+
+GameManager.prototype.applySetupModeConfig = function (resolvedModeConfig) {
   this.applyModeConfig(resolvedModeConfig);
   if (typeof window !== "undefined") {
     window.GAME_MODE_CONFIG = this.clonePlain(this.modeConfig);
   }
+};
+
+// Set up the game
+GameManager.prototype.setup = function (inputSeed, options) {
+  options = options || {};
+  var detectedMode = this.detectMode();
+  var resolvedModeConfig = this.resolveSetupModeConfig(detectedMode, options);
+  this.applySetupModeConfig(resolvedModeConfig);
   this.grid        = new Grid(this.width, this.height);
 
   this.score       = 0;
