@@ -5323,28 +5323,36 @@ GameManager.prototype.isUndoInteractionEnabled = function () {
   return !!(state && state.isUndoInteractionEnabled);
 };
 
+GameManager.prototype.updateUndoLinkUiState = function (modeUndoCapable, canUndo) {
+  var undoLink = document.getElementById("undo-link");
+  if (!undoLink) return;
+  undoLink.style.display = modeUndoCapable ? "" : "none";
+  if (!modeUndoCapable) return;
+  undoLink.style.pointerEvents = canUndo ? "" : "none";
+  undoLink.style.opacity = canUndo ? "" : "0.45";
+};
+
+GameManager.prototype.updateGameoverUndoButtonUiState = function (canUndo) {
+  var undoBtn = document.getElementById("undo-btn-gameover");
+  if (!undoBtn) return;
+  undoBtn.style.display = canUndo ? "inline-block" : "none";
+};
+
+GameManager.prototype.updatePracticeUndoButtonUiState = function (canUndo) {
+  var practiceUndoBtn = document.getElementById("practice-mobile-undo-btn");
+  if (!practiceUndoBtn) return;
+  practiceUndoBtn.style.pointerEvents = canUndo ? "" : "none";
+  practiceUndoBtn.style.opacity = canUndo ? "" : "0.45";
+  practiceUndoBtn.setAttribute("aria-disabled", canUndo ? "false" : "true");
+};
+
 GameManager.prototype.updateUndoUiState = function (resolvedState) {
   var state = this.resolveProvidedActiveUndoPolicyState(resolvedState);
   var canUndo = !!(state && state.isUndoInteractionEnabled);
   var modeUndoCapable = !!(state && state.isUndoAllowedByMode);
-  var undoLink = document.getElementById("undo-link");
-  if (undoLink) {
-    undoLink.style.display = modeUndoCapable ? "" : "none";
-    if (modeUndoCapable) {
-      undoLink.style.pointerEvents = canUndo ? "" : "none";
-      undoLink.style.opacity = canUndo ? "" : "0.45";
-    }
-  }
-  var undoBtn = document.getElementById("undo-btn-gameover");
-  if (undoBtn) {
-    undoBtn.style.display = canUndo ? "inline-block" : "none";
-  }
-  var practiceUndoBtn = document.getElementById("practice-mobile-undo-btn");
-  if (practiceUndoBtn) {
-    practiceUndoBtn.style.pointerEvents = canUndo ? "" : "none";
-    practiceUndoBtn.style.opacity = canUndo ? "" : "0.45";
-    practiceUndoBtn.setAttribute("aria-disabled", canUndo ? "false" : "true");
-  }
+  this.updateUndoLinkUiState(modeUndoCapable, canUndo);
+  this.updateGameoverUndoButtonUiState(canUndo);
+  this.updatePracticeUndoButtonUiState(canUndo);
   this.callWindowMethod("syncMobileUndoTopButtonAvailability");
 };
 
