@@ -2023,9 +2023,13 @@ GameManager.prototype.resolveModePolicyContext = function (mode) {
   };
 };
 
+GameManager.prototype.resolveOptionObject = function (options) {
+  return options && typeof options === "object" ? options : {};
+};
+
 GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
   var context = this.resolveModePolicyContext(mode);
-  var source = options && typeof options === "object" ? options : {};
+  var source = this.resolveOptionObject(options);
 
   var hasOwn = Object.prototype.hasOwnProperty;
   var hasGameStarted = hasOwn.call(source, "hasGameStarted")
@@ -2085,7 +2089,7 @@ GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
 };
 
 GameManager.prototype.resolveActiveUndoPolicyState = function (options) {
-  var source = options && typeof options === "object" ? options : {};
+  var source = this.resolveOptionObject(options);
   var hasOwn = Object.prototype.hasOwnProperty;
   return this.resolveUndoPolicyStateForMode(this.mode, {
     hasGameStarted: hasOwn.call(source, "hasGameStarted")
