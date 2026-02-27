@@ -40,6 +40,16 @@ export interface NextIpsInputCountResult {
   nextIpsInputCount: number;
 }
 
+export interface IpsDisplayTextInput {
+  durationMs?: number | null;
+  ipsInputCount?: number | null;
+}
+
+export interface IpsDisplayTextResult {
+  avgIpsText: string;
+  ipsText: string;
+}
+
 export function getReplayActionKind(action: unknown): ReplayActionKind {
   if (action === -1) return "u";
   if (typeof action === "number" && action >= 0 && action <= 3) return "m";
@@ -92,6 +102,22 @@ export function resolveNextIpsInputCount(input: IpsInputCountInput): NextIpsInpu
   return {
     shouldRecord: true,
     nextIpsInputCount: resolveIpsInputCount(input) + 1
+  };
+}
+
+export function resolveIpsDisplayText(input: IpsDisplayTextInput): IpsDisplayTextResult {
+  const durationMs = Number(input.durationMs);
+  const ms = Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : 0;
+  const seconds = ms / 1000;
+  const rawCount = Number(input.ipsInputCount);
+  const inputCount = Number.isFinite(rawCount) ? rawCount : 0;
+  let avgIps: string | number = 0;
+  if (seconds > 0) {
+    avgIps = (inputCount / seconds).toFixed(2);
+  }
+  return {
+    avgIpsText: String(avgIps),
+    ipsText: "IPS: " + avgIps
   };
 }
 

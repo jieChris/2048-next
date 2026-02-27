@@ -61,6 +61,23 @@
     };
   }
 
+  function resolveIpsDisplayText(input) {
+    var source = input || {};
+    var durationMs = Number(source.durationMs);
+    var ms = Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : 0;
+    var seconds = ms / 1000;
+    var rawCount = Number(source.ipsInputCount);
+    var inputCount = Number.isFinite(rawCount) ? rawCount : 0;
+    var avgIps = 0;
+    if (seconds > 0) {
+      avgIps = (inputCount / seconds).toFixed(2);
+    }
+    return {
+      avgIpsText: String(avgIps),
+      ipsText: "IPS: " + avgIps
+    };
+  }
+
   function resolveReplayExecution(action) {
     var kind = getReplayActionKind(action);
     if (kind === "m") {
@@ -86,5 +103,6 @@
   global.CoreReplayExecutionRuntime.computeReplayStepStats = computeReplayStepStats;
   global.CoreReplayExecutionRuntime.resolveIpsInputCount = resolveIpsInputCount;
   global.CoreReplayExecutionRuntime.resolveNextIpsInputCount = resolveNextIpsInputCount;
+  global.CoreReplayExecutionRuntime.resolveIpsDisplayText = resolveIpsDisplayText;
   global.CoreReplayExecutionRuntime.resolveReplayExecution = resolveReplayExecution;
 })(typeof window !== "undefined" ? window : undefined);

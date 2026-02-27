@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeReplayStepStats,
   getReplayActionKind,
+  resolveIpsDisplayText,
   resolveIpsInputCount,
   resolveNextIpsInputCount,
   resolveReplayExecution
@@ -141,6 +142,53 @@ describe("core replay execution: ips input count", () => {
     ).toEqual({
       shouldRecord: true,
       nextIpsInputCount: 1
+    });
+  });
+});
+
+describe("core replay execution: ips display text", () => {
+  it("computes fixed-point ips text for positive duration", () => {
+    expect(
+      resolveIpsDisplayText({
+        durationMs: 2000,
+        ipsInputCount: 5
+      })
+    ).toEqual({
+      avgIpsText: "2.50",
+      ipsText: "IPS: 2.50"
+    });
+  });
+
+  it("keeps legacy zero formatting when duration is zero or invalid", () => {
+    expect(
+      resolveIpsDisplayText({
+        durationMs: 0,
+        ipsInputCount: 5
+      })
+    ).toEqual({
+      avgIpsText: "0",
+      ipsText: "IPS: 0"
+    });
+    expect(
+      resolveIpsDisplayText({
+        durationMs: -1,
+        ipsInputCount: 5
+      })
+    ).toEqual({
+      avgIpsText: "0",
+      ipsText: "IPS: 0"
+    });
+  });
+
+  it("sanitizes invalid input count", () => {
+    expect(
+      resolveIpsDisplayText({
+        durationMs: 1000,
+        ipsInputCount: Number.NaN
+      })
+    ).toEqual({
+      avgIpsText: "0.00",
+      ipsText: "IPS: 0.00"
     });
   });
 });

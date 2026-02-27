@@ -3793,14 +3793,30 @@ GameManager.prototype.refreshIpsDisplay = function (durationMs) {
   var ipsEl = document.getElementById("stats-ips");
   if (!ipsEl && !this.cornerIpsEl) return;
 
+  var resolveIpsDisplayTextCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayExecutionRuntime",
+    "resolveIpsDisplayText"
+  );
   var ms = Number(durationMs);
   if (!Number.isFinite(ms) || ms < 0) ms = this.getDurationMs();
-  var seconds = ms / 1000;
-  var avgIps = 0;
-  if (seconds > 0) {
-    avgIps = (this.getIpsInputCount() / seconds).toFixed(2);
+  var ipsText = "";
+  if (resolveIpsDisplayTextCore) {
+    var coreDisplay = resolveIpsDisplayTextCore({
+      durationMs: ms,
+      ipsInputCount: this.getIpsInputCount()
+    }) || {};
+    if (typeof coreDisplay.ipsText === "string" && coreDisplay.ipsText) {
+      ipsText = coreDisplay.ipsText;
+    }
   }
-  var ipsText = "IPS: " + avgIps;
+  if (!ipsText) {
+    var seconds = ms / 1000;
+    var avgIps = 0;
+    if (seconds > 0) {
+      avgIps = (this.getIpsInputCount() / seconds).toFixed(2);
+    }
+    ipsText = "IPS: " + avgIps;
+  }
   if (ipsEl) ipsEl.textContent = ipsText;
   if (this.cornerIpsEl) this.cornerIpsEl.textContent = ipsText;
 };
