@@ -3136,16 +3136,26 @@ GameManager.prototype.setCapped64RowVisible = function (value, visible) {
   this.setTimerRowVisibleState(value, visible, true);
 };
 
-GameManager.prototype.resetProgressiveCapped64Rows = function () {
+GameManager.prototype.resolveProgressiveCapped64UnlockedState = function (unlockedState) {
   var createProgressiveCapped64UnlockedStateCore = this.callCoreModeRuntime(
     "createProgressiveCapped64UnlockedState",
-    [this.capped64Unlocked]
+    [unlockedState]
   );
   if (createProgressiveCapped64UnlockedStateCore.available) {
-    this.capped64Unlocked = createProgressiveCapped64UnlockedStateCore.value;
-  } else {
-    this.capped64Unlocked = { "16": false, "32": false, "64": false };
+    var coreValue = createProgressiveCapped64UnlockedStateCore.value;
+    if (coreValue && typeof coreValue === "object") return coreValue;
   }
+
+  var base = { "16": false, "32": false, "64": false };
+  if (!unlockedState || typeof unlockedState !== "object") return base;
+  if (unlockedState["16"] === true) base["16"] = true;
+  if (unlockedState["32"] === true) base["32"] = true;
+  if (unlockedState["64"] === true) base["64"] = true;
+  return base;
+};
+
+GameManager.prototype.resetProgressiveCapped64Rows = function () {
+  this.capped64Unlocked = this.resolveProgressiveCapped64UnlockedState(this.capped64Unlocked);
   var values = [16, 32, 64];
   for (var i = 0; i < values.length; i++) {
     this.setCapped64RowVisible(values[i], false);
@@ -3153,16 +3163,7 @@ GameManager.prototype.resetProgressiveCapped64Rows = function () {
 };
 
 GameManager.prototype.unlockProgressiveCapped64Row = function (value) {
-  var unlockedState = this.capped64Unlocked;
-  if (!unlockedState || typeof unlockedState !== "object") {
-    var createProgressiveCapped64UnlockedStateCore = this.callCoreModeRuntime(
-      "createProgressiveCapped64UnlockedState",
-      [null]
-    );
-    unlockedState = createProgressiveCapped64UnlockedStateCore.available
-      ? createProgressiveCapped64UnlockedStateCore.value
-      : { "16": false, "32": false, "64": false };
-  }
+  var unlockedState = this.resolveProgressiveCapped64UnlockedState(this.capped64Unlocked);
   var resolveProgressiveCapped64UnlockCore = this.callCoreModeRuntime(
     "resolveProgressiveCapped64Unlock",
     [{
@@ -3187,11 +3188,9 @@ GameManager.prototype.unlockProgressiveCapped64Row = function (value) {
 
   if (!this.isProgressiveCapped64Mode()) return;
   if (value !== 16 && value !== 32 && value !== 64) return;
-  if (!this.capped64Unlocked) {
-    this.capped64Unlocked = { "16": false, "32": false, "64": false };
-  }
-  if (this.capped64Unlocked[String(value)]) return;
-  this.capped64Unlocked[String(value)] = true;
+  if (unlockedState[String(value)]) return;
+  unlockedState[String(value)] = true;
+  this.capped64Unlocked = unlockedState;
   this.setCapped64RowVisible(value, true);
 };
 

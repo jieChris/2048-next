@@ -198,6 +198,53 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot?.isCapped).toBe(true);
   });
 
+  test("game manager delegates capped64 unlocked-state normalization to core mode runtime", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      (window as any).__capped64UnlockedStateCallCount = 0;
+      const runtimeTarget: Record<string, unknown> = {};
+      (window as any).CoreModeRuntime = new Proxy(runtimeTarget, {
+        set(target, prop, value) {
+          if (prop === "createProgressiveCapped64UnlockedState" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__capped64UnlockedStateCallCount =
+                Number((window as any).__capped64UnlockedStateCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/capped_2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Capped response should exist").not.toBeNull();
+    expect(response?.ok(), "Capped response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      if (!manager || typeof manager.resolveProgressiveCapped64UnlockedState !== "function") {
+        return null;
+      }
+      const state = manager.resolveProgressiveCapped64UnlockedState({ "16": true });
+      return {
+        callCount: Number((window as any).__capped64UnlockedStateCallCount || 0),
+        state
+      };
+    });
+
+    expect(snapshot, "capped64 unlocked-state delegation snapshot should exist").not.toBeNull();
+    expect(snapshot?.callCount).toBeGreaterThan(0);
+    expect(snapshot?.state).toEqual({ "16": true, "32": false, "64": false });
+  });
+
   test("replay application delegates startup payload to simple runtime helpers", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__simpleRuntimeContractCallCount = 0;
