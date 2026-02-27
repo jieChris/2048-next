@@ -657,23 +657,29 @@ GameManager.prototype.resolveReplayExecution = function (action) {
   return this.resolveReplayExecutionFallback(action);
 };
 
+GameManager.prototype.buildMoveReplayExecutionFallback = function (action) {
+  var dir = Array.isArray(action) ? action[1] : action;
+  return { kind: "m", dir: dir };
+};
+
+GameManager.prototype.buildUndoReplayExecutionFallback = function () {
+  return { kind: "u" };
+};
+
+GameManager.prototype.buildPracticeReplayExecutionFallback = function (action) {
+  return {
+    kind: "p",
+    x: action[1],
+    y: action[2],
+    value: action[3]
+  };
+};
+
 GameManager.prototype.resolveReplayExecutionFallback = function (action) {
   var kind = this.getActionKind(action);
-  if (kind === "m") {
-    var dir = Array.isArray(action) ? action[1] : action;
-    return { kind: "m", dir: dir };
-  }
-  if (kind === "u") {
-    return { kind: "u" };
-  }
-  if (kind === "p") {
-    return {
-      kind: "p",
-      x: action[1],
-      y: action[2],
-      value: action[3]
-    };
-  }
+  if (kind === "m") return this.buildMoveReplayExecutionFallback(action);
+  if (kind === "u") return this.buildUndoReplayExecutionFallback();
+  if (kind === "p") return this.buildPracticeReplayExecutionFallback(action);
   throw "Unknown replay action";
 };
 
@@ -683,25 +689,31 @@ GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
   return this.planReplayDispatchFallback(resolvedExecution);
 };
 
+GameManager.prototype.buildReplayMoveDispatchFallback = function (resolvedExecution) {
+  return {
+    method: "move",
+    args: [resolvedExecution.dir]
+  };
+};
+
+GameManager.prototype.buildReplayUndoDispatchFallback = function () {
+  return {
+    method: "move",
+    args: [-1]
+  };
+};
+
+GameManager.prototype.buildReplayPracticeDispatchFallback = function (resolvedExecution) {
+  return {
+    method: "insertCustomTile",
+    args: [resolvedExecution.x, resolvedExecution.y, resolvedExecution.value]
+  };
+};
+
 GameManager.prototype.planReplayDispatchFallback = function (resolvedExecution) {
-  if (resolvedExecution.kind === "m") {
-    return {
-      method: "move",
-      args: [resolvedExecution.dir]
-    };
-  }
-  if (resolvedExecution.kind === "u") {
-    return {
-      method: "move",
-      args: [-1]
-    };
-  }
-  if (resolvedExecution.kind === "p") {
-    return {
-      method: "insertCustomTile",
-      args: [resolvedExecution.x, resolvedExecution.y, resolvedExecution.value]
-    };
-  }
+  if (resolvedExecution.kind === "m") return this.buildReplayMoveDispatchFallback(resolvedExecution);
+  if (resolvedExecution.kind === "u") return this.buildReplayUndoDispatchFallback();
+  if (resolvedExecution.kind === "p") return this.buildReplayPracticeDispatchFallback(resolvedExecution);
   throw "Unknown replay action";
 };
 
