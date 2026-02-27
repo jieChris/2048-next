@@ -4950,6 +4950,28 @@ GameManager.prototype.getCappedRepeatLabel = function (repeatCount) {
   return "x" + String(repeatCount);
 };
 
+GameManager.prototype.normalizeCappedPlaceholderRowValuesFromCore = function (coreValues) {
+  if (!Array.isArray(coreValues)) return null;
+  var normalized = [];
+  for (var c = 0; c < coreValues.length; c++) {
+    var coreValue = Number(coreValues[c]);
+    if (!Number.isInteger(coreValue) || coreValue <= 0) continue;
+    normalized.push(coreValue);
+  }
+  return normalized;
+};
+
+GameManager.prototype.resolveCappedPlaceholderRowValuesFallback = function (resolvedCappedState) {
+  if (!resolvedCappedState.isCappedMode) return [];
+  var cap = resolvedCappedState.cappedTargetValue;
+  var values = [];
+  for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
+    var value = GameManager.TIMER_SLOT_IDS[i];
+    if (value > cap) values.push(value);
+  }
+  return values;
+};
+
 GameManager.prototype.getCappedPlaceholderRowValues = function (cappedState) {
   var resolvedCappedState =
     this.resolveProvidedCappedModeState(cappedState);
@@ -4959,26 +4981,10 @@ GameManager.prototype.getCappedPlaceholderRowValues = function (cappedState) {
       timerSlotIds: GameManager.TIMER_SLOT_IDS
     }]);
   if (resolveCappedPlaceholderRowValuesCore.available) {
-    var coreValues = resolveCappedPlaceholderRowValuesCore.value;
-    if (Array.isArray(coreValues)) {
-      var normalized = [];
-      for (var c = 0; c < coreValues.length; c++) {
-        var coreValue = Number(coreValues[c]);
-        if (!Number.isInteger(coreValue) || coreValue <= 0) continue;
-        normalized.push(coreValue);
-      }
-      return normalized;
-    }
+    var normalizedByCore = this.normalizeCappedPlaceholderRowValuesFromCore(resolveCappedPlaceholderRowValuesCore.value);
+    if (normalizedByCore) return normalizedByCore;
   }
-
-  if (!resolvedCappedState.isCappedMode) return [];
-  var cap = resolvedCappedState.cappedTargetValue;
-  var values = [];
-  for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
-    var value = GameManager.TIMER_SLOT_IDS[i];
-    if (value > cap) values.push(value);
-  }
-  return values;
+  return this.resolveCappedPlaceholderRowValuesFallback(resolvedCappedState);
 };
 
 GameManager.prototype.resetCappedPlaceholderRows = function (cappedState) {
