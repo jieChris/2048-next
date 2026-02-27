@@ -1863,9 +1863,9 @@ GameManager.prototype.publishAdapterMoveResult = function (meta) {
 };
 
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
-  var moveApplyCore = this.getCoreMoveApplyRuntime();
-  if (moveApplyCore && typeof moveApplyCore.planTileInteraction === "function") {
-    var computed = moveApplyCore.planTileInteraction({
+  var planTileInteractionCore = this.resolveCoreRuntimeMethod("getCoreMoveApplyRuntime", "planTileInteraction");
+  if (planTileInteractionCore) {
+    var computed = planTileInteractionCore({
       cell: cell,
       farthest: positions && positions.farthest ? positions.farthest : { x: 0, y: 0 },
       next: positions && positions.next ? positions.next : { x: 0, y: 0 },
@@ -1897,9 +1897,12 @@ GameManager.prototype.planTileInteraction = function (cell, positions, next, mer
 };
 
 GameManager.prototype.computePostMoveRecord = function (direction) {
-  var postMoveRecordCore = this.getCorePostMoveRecordRuntime();
-  if (postMoveRecordCore && typeof postMoveRecordCore.computePostMoveRecord === "function") {
-    return postMoveRecordCore.computePostMoveRecord({
+  var computePostMoveRecordCore = this.resolveCoreRuntimeMethod(
+    "getCorePostMoveRecordRuntime",
+    "computePostMoveRecord"
+  );
+  if (computePostMoveRecordCore) {
+    return computePostMoveRecordCore({
       replayMode: !!this.replayMode,
       direction: direction,
       lastSpawn: this.lastSpawn ? {
@@ -1948,9 +1951,12 @@ GameManager.prototype.computePostMoveRecord = function (direction) {
 };
 
 GameManager.prototype.computePostUndoRecord = function (direction) {
-  var postUndoRecordCore = this.getCorePostUndoRecordRuntime();
-  if (postUndoRecordCore && typeof postUndoRecordCore.computePostUndoRecord === "function") {
-    return postUndoRecordCore.computePostUndoRecord({
+  var computePostUndoRecordCore = this.resolveCoreRuntimeMethod(
+    "getCorePostUndoRecordRuntime",
+    "computePostUndoRecord"
+  );
+  if (computePostUndoRecordCore) {
+    return computePostUndoRecordCore({
       replayMode: !!this.replayMode,
       direction: direction,
       hasSessionReplayV3: !!this.sessionReplayV3
@@ -1976,9 +1982,12 @@ GameManager.prototype.computePostUndoRecord = function (direction) {
 };
 
 GameManager.prototype.computeUndoRestoreState = function (prev) {
-  var undoRestoreCore = this.getCoreUndoRestoreRuntime();
-  if (undoRestoreCore && typeof undoRestoreCore.computeUndoRestoreState === "function") {
-    return undoRestoreCore.computeUndoRestoreState({
+  var computeUndoRestoreStateCore = this.resolveCoreRuntimeMethod(
+    "getCoreUndoRestoreRuntime",
+    "computeUndoRestoreState"
+  );
+  if (computeUndoRestoreStateCore) {
+    return computeUndoRestoreStateCore({
       prev: prev || {},
       fallbackUndoUsed: this.undoUsed,
       timerStatus: this.timerStatus
@@ -2010,7 +2019,7 @@ GameManager.prototype.computeUndoRestoreState = function (prev) {
 };
 
 GameManager.prototype.createUndoSnapshotState = function () {
-  var undoSnapshotCore = this.getCoreUndoSnapshotRuntime();
+  var createUndoSnapshotCore = this.resolveCoreRuntimeMethod("getCoreUndoSnapshotRuntime", "createUndoSnapshot");
   var fallback = {
     score: Number.isFinite(this.score) ? Number(this.score) : 0,
     tiles: [],
@@ -2028,8 +2037,8 @@ GameManager.prototype.createUndoSnapshotState = function () {
     undoUsed: Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0
   };
 
-  if (undoSnapshotCore && typeof undoSnapshotCore.createUndoSnapshot === "function") {
-    var computed = undoSnapshotCore.createUndoSnapshot({
+  if (createUndoSnapshotCore) {
+    var computed = createUndoSnapshotCore({
       score: this.score,
       comboStreak: this.comboStreak,
       successfulMoveCount: this.successfulMoveCount,
@@ -2090,9 +2099,12 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
   var fallbackUndoUsed = Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0;
 
   var source = entry && typeof entry === "object" ? entry : {};
-  var undoStackEntryCore = this.getCoreUndoStackEntryRuntime();
-  if (undoStackEntryCore && typeof undoStackEntryCore.normalizeUndoStackEntry === "function") {
-    var computed = undoStackEntryCore.normalizeUndoStackEntry({
+  var normalizeUndoStackEntryCore = this.resolveCoreRuntimeMethod(
+    "getCoreUndoStackEntryRuntime",
+    "normalizeUndoStackEntry"
+  );
+  if (normalizeUndoStackEntryCore) {
+    var computed = normalizeUndoStackEntryCore({
       entry: source,
       fallbackScore: fallbackScore,
       fallbackComboStreak: fallbackComboStreak,
@@ -2149,9 +2161,12 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
 };
 
 GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
-  var undoTileCore = this.getCoreUndoTileSnapshotRuntime();
-  if (undoTileCore && typeof undoTileCore.createUndoTileSnapshot === "function") {
-    var computed = undoTileCore.createUndoTileSnapshot({
+  var createUndoTileSnapshotCore = this.resolveCoreRuntimeMethod(
+    "getCoreUndoTileSnapshotRuntime",
+    "createUndoTileSnapshot"
+  );
+  if (createUndoTileSnapshotCore) {
+    var computed = createUndoTileSnapshotCore({
       tile: {
         x: tile && typeof tile === "object" ? tile.x : null,
         y: tile && typeof tile === "object" ? tile.y : null,
@@ -2202,9 +2217,12 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
     }
   };
 
-  var undoTileRestoreCore = this.getCoreUndoTileRestoreRuntime();
-  if (undoTileRestoreCore && typeof undoTileRestoreCore.createUndoRestoreTile === "function") {
-    var computed = undoTileRestoreCore.createUndoRestoreTile({
+  var createUndoRestoreTileCore = this.resolveCoreRuntimeMethod(
+    "getCoreUndoTileRestoreRuntime",
+    "createUndoRestoreTile"
+  );
+  if (createUndoRestoreTileCore) {
+    var computed = createUndoRestoreTileCore({
       x: source.x,
       y: source.y,
       value: source.value,
@@ -2227,12 +2245,12 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
 };
 
 GameManager.prototype.computeUndoRestorePayload = function (prev) {
-  var undoRestorePayloadCore = this.getCoreUndoRestorePayloadRuntime();
-  if (
-    undoRestorePayloadCore &&
-    typeof undoRestorePayloadCore.computeUndoRestorePayload === "function"
-  ) {
-    return undoRestorePayloadCore.computeUndoRestorePayload({
+  var computeUndoRestorePayloadCore = this.resolveCoreRuntimeMethod(
+    "getCoreUndoRestorePayloadRuntime",
+    "computeUndoRestorePayload"
+  );
+  if (computeUndoRestorePayloadCore) {
+    return computeUndoRestorePayloadCore({
       prev: prev || {},
       fallbackScore: this.score
     }) || {};
@@ -2258,9 +2276,12 @@ GameManager.prototype.computeUndoRestorePayload = function (prev) {
 };
 
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
-  var mergeEffectsCore = this.getCoreMergeEffectsRuntime();
-  if (mergeEffectsCore && typeof mergeEffectsCore.computeMergeEffects === "function") {
-    return mergeEffectsCore.computeMergeEffects({
+  var computeMergeEffectsCore = this.resolveCoreRuntimeMethod(
+    "getCoreMergeEffectsRuntime",
+    "computeMergeEffects"
+  );
+  if (computeMergeEffectsCore) {
+    return computeMergeEffectsCore({
       mergedValue: mergedValue,
       isCappedMode: this.isCappedMode(),
       cappedTargetValue: this.getCappedTargetValue(),
@@ -4141,9 +4162,9 @@ GameManager.prototype.move = function (direction) {
     // IPS counts only effective move inputs (invalid directions are excluded).
     this.recordIpsInput();
 
-    var scoringCore = this.getCoreScoringRuntime();
-    if (scoringCore && typeof scoringCore.computePostMoveScore === "function") {
-      var scoreResult = scoringCore.computePostMoveScore({
+    var computePostMoveScoreCore = this.resolveCoreRuntimeMethod("getCoreScoringRuntime", "computePostMoveScore");
+    if (computePostMoveScoreCore) {
+      var scoreResult = computePostMoveScoreCore({
         scoreBeforeMove: scoreBeforeMove,
         scoreAfterMerge: this.score,
         comboStreak: this.comboStreak,
@@ -4173,9 +4194,12 @@ GameManager.prototype.move = function (direction) {
 
     this.addRandomTile();
     var hasMovesAvailable = this.movesAvailable();
-    var postMoveCore = this.getCorePostMoveRuntime();
-    if (postMoveCore && typeof postMoveCore.computePostMoveLifecycle === "function") {
-      var postMoveResult = postMoveCore.computePostMoveLifecycle({
+    var computePostMoveLifecycleCore = this.resolveCoreRuntimeMethod(
+      "getCorePostMoveRuntime",
+      "computePostMoveLifecycle"
+    );
+    if (computePostMoveLifecycleCore) {
+      var postMoveResult = computePostMoveLifecycleCore({
         successfulMoveCount: this.successfulMoveCount,
         hasMovesAvailable: hasMovesAvailable,
         timerStatus: this.timerStatus
