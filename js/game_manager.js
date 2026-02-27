@@ -5586,32 +5586,38 @@ GameManager.prototype.invalidateTimers = function(limit) {
     this.invalidateTimersFallback(limit);
 };
 
+GameManager.prototype.createBoardMatrixTileValueReader = function () {
+  var self = this;
+  return function (x, y) {
+    var tile = self.grid.cellContent({ x: x, y: y });
+    return tile ? tile.value : 0;
+  };
+};
+
+GameManager.prototype.buildFinalBoardMatrixFallback = function () {
+  var readCellValue = this.createBoardMatrixTileValueReader();
+  var rows = [];
+  for (var y = 0; y < this.height; y++) {
+    var row = [];
+    for (var x = 0; x < this.width; x++) {
+      row.push(readCellValue(x, y));
+    }
+    rows.push(row);
+  }
+  return rows;
+};
+
 GameManager.prototype.getFinalBoardMatrix = function () {
   var buildBoardMatrixCore = this.callCoreGridScanRuntime("buildBoardMatrix", [
     this.width,
     this.height,
-    (function (self) {
-      return function (x, y) {
-        var tile = self.grid.cellContent({ x: x, y: y });
-        return tile ? tile.value : 0;
-      };
-    })(this)
+    this.createBoardMatrixTileValueReader()
   ]);
   if (buildBoardMatrixCore.available) {
     var board = buildBoardMatrixCore.value;
     if (Array.isArray(board)) return board;
   }
-
-  var rows = [];
-  for (var y = 0; y < this.height; y++) {
-    var row = [];
-    for (var x = 0; x < this.width; x++) {
-      var tile = this.grid.cellContent({ x: x, y: y });
-      row.push(tile ? tile.value : 0);
-    }
-    rows.push(row);
-  }
-  return rows;
+  return this.buildFinalBoardMatrixFallback();
 };
 
 GameManager.prototype.getBestTileValue = function () {
