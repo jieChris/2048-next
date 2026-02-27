@@ -5441,22 +5441,29 @@ GameManager.prototype.canProcessUndoMove = function () {
   return this.undoStack.length > 0;
 };
 
-GameManager.prototype.restoreUndoPayload = function (undoPayload) {
-  this.grid.build();
-  this.score =
-    Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
-      ? Number(undoPayload.score)
-      : 0;
+GameManager.prototype.resolveUndoPayloadScore = function (undoPayload) {
+  return Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
+    ? Number(undoPayload.score)
+    : 0;
+};
+
+GameManager.prototype.restoreUndoPayloadTiles = function (undoPayload) {
   var undoTiles = Array.isArray(undoPayload.tiles) ? undoPayload.tiles : [];
   for (var i = 0; i < undoTiles.length; i++) {
     var t = this.createUndoRestoreTile(undoTiles[i]);
-    var tile = new Tile({x: t.x, y: t.y}, t.value);
+    var tile = new Tile({ x: t.x, y: t.y }, t.value);
     tile.previousPosition = {
       x: t.previousPosition.x,
       y: t.previousPosition.y
     };
     this.grid.cells[tile.x][tile.y] = tile;
   }
+};
+
+GameManager.prototype.restoreUndoPayload = function (undoPayload) {
+  this.grid.build();
+  this.score = this.resolveUndoPayloadScore(undoPayload);
+  this.restoreUndoPayloadTiles(undoPayload);
 };
 
 GameManager.prototype.applyUndoRestoreFlags = function (undoRestore) {
