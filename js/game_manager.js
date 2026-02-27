@@ -2699,16 +2699,28 @@ GameManager.prototype.writeSavedGameStatePayloadFallback = function (stores, key
   return this.writeSerializedSavedPayloadToStorages(stores, key, serialized);
 };
 
+GameManager.prototype.buildWriteSavedPayloadToStoragesCoreArgs = function (stores, key, payloadObj) {
+  return [{
+    storages: stores,
+    key: key,
+    payload: payloadObj
+  }];
+};
+
+GameManager.prototype.normalizeWriteSavedPayloadToStoragesCoreValue = function (persistedByCore) {
+  if (typeof persistedByCore === "boolean") return persistedByCore;
+  return undefined;
+};
+
 GameManager.prototype.writeSavedGameStatePayload = function (key, payloadObj) {
   var stores = this.getSavedGameStateStorages();
-  var writeSavedPayloadToStoragesCore = this.callCoreStorageRuntime("writeSavedPayloadToStorages", [{
-      storages: stores,
-      key: key,
-      payload: payloadObj
-    }]);
+  var writeSavedPayloadToStoragesCore = this.callCoreStorageRuntime(
+    "writeSavedPayloadToStorages",
+    this.buildWriteSavedPayloadToStoragesCoreArgs(stores, key, payloadObj)
+  );
   if (writeSavedPayloadToStoragesCore.available) {
-    var persistedByCore = writeSavedPayloadToStoragesCore.value;
-    if (typeof persistedByCore === "boolean") return persistedByCore;
+    var normalizedByCore = this.normalizeWriteSavedPayloadToStoragesCoreValue(writeSavedPayloadToStoragesCore.value);
+    if (typeof normalizedByCore !== "undefined") return normalizedByCore;
   }
   return this.writeSavedGameStatePayloadFallback(stores, key, payloadObj);
 };
@@ -2800,24 +2812,31 @@ GameManager.prototype.normalizeLiteSavedGameStatePayloadByCore = function (liteP
   return this.isNonArrayObject(litePayloadByCore) ? litePayloadByCore : null;
 };
 
+GameManager.prototype.buildLiteSavedGameStatePayloadCoreArgs = function (payload) {
+  return [{
+    payload: payload,
+    savedStateVersion: GameManager.SAVED_GAME_STATE_VERSION,
+    modeKey: this.modeKey,
+    width: this.width,
+    height: this.height,
+    ruleset: this.ruleset,
+    score: this.score,
+    initialSeed: this.initialSeed,
+    seed: this.seed,
+    durationMs: this.getDurationMs(),
+    finalBoardMatrix: this.getFinalBoardMatrix(),
+    initialBoardMatrix: this.initialBoardMatrix,
+    replayStartBoardMatrix: this.replayStartBoardMatrix,
+    practiceRestartBoardMatrix: this.practiceRestartBoardMatrix,
+    practiceRestartModeConfig: this.practiceRestartModeConfig
+  }];
+};
+
 GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
-  var buildLiteSavedGameStatePayloadCore = this.callCoreStorageRuntime("buildLiteSavedGameStatePayload", [{
-      payload: payload,
-      savedStateVersion: GameManager.SAVED_GAME_STATE_VERSION,
-      modeKey: this.modeKey,
-      width: this.width,
-      height: this.height,
-      ruleset: this.ruleset,
-      score: this.score,
-      initialSeed: this.initialSeed,
-      seed: this.seed,
-      durationMs: this.getDurationMs(),
-      finalBoardMatrix: this.getFinalBoardMatrix(),
-      initialBoardMatrix: this.initialBoardMatrix,
-      replayStartBoardMatrix: this.replayStartBoardMatrix,
-      practiceRestartBoardMatrix: this.practiceRestartBoardMatrix,
-      practiceRestartModeConfig: this.practiceRestartModeConfig
-    }]);
+  var buildLiteSavedGameStatePayloadCore = this.callCoreStorageRuntime(
+    "buildLiteSavedGameStatePayload",
+    this.buildLiteSavedGameStatePayloadCoreArgs(payload)
+  );
   if (buildLiteSavedGameStatePayloadCore.available) {
     var normalizedByCore = this.normalizeLiteSavedGameStatePayloadByCore(buildLiteSavedGameStatePayloadCore.value);
     if (normalizedByCore) return normalizedByCore;
