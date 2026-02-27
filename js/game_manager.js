@@ -1785,20 +1785,38 @@ GameManager.prototype.captureTimerFixedRowsState = function () {
     var row = this.getTimerRowEl(slotId);
     var timerEl = document.getElementById("timer" + slotId);
     if (!row || !timerEl) continue;
-
-    var legend = row.querySelector(".timertile");
-    out[slotId] = {
-      display: row.style.display || "",
-      visibility: row.style.visibility || "",
-      pointerEvents: row.style.pointerEvents || "",
-      repeat: row.getAttribute("data-capped-repeat") || "",
-      timerText: timerEl.textContent || "",
-      legendText: legend ? (legend.textContent || "") : "",
-      legendClass: legend ? (legend.className || "") : "",
-      legendFontSize: legend ? (legend.style.fontSize || "") : ""
-    };
+    out[slotId] = this.captureTimerFixedRowState(row, timerEl);
   }
   return out;
+};
+
+GameManager.prototype.captureTimerLegendState = function (legend) {
+  if (!legend) {
+    return {
+      legendText: "",
+      legendClass: "",
+      legendFontSize: ""
+    };
+  }
+  return {
+    legendText: legend.textContent || "",
+    legendClass: legend.className || "",
+    legendFontSize: legend.style.fontSize || ""
+  };
+};
+
+GameManager.prototype.captureTimerFixedRowState = function (row, timerEl) {
+  var legendState = this.captureTimerLegendState(row.querySelector(".timertile"));
+  return {
+    display: row.style.display || "",
+    visibility: row.style.visibility || "",
+    pointerEvents: row.style.pointerEvents || "",
+    repeat: row.getAttribute("data-capped-repeat") || "",
+    timerText: timerEl.textContent || "",
+    legendText: legendState.legendText,
+    legendClass: legendState.legendClass,
+    legendFontSize: legendState.legendFontSize
+  };
 };
 
 GameManager.prototype.captureTimerDynamicRowsState = function (containerId) {
