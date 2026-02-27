@@ -2589,9 +2589,7 @@ GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) 
 };
 
 GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
-  var normalizeModeConfigCore = this.resolveCoreModeRuntimeMethod("normalizeModeConfig");
-  if (normalizeModeConfigCore) {
-    return normalizeModeConfigCore({
+  var normalizeModeConfigCore = this.callCoreModeRuntime("normalizeModeConfig", [{
       modeKey: modeKey,
       rawConfig: rawConfig,
       defaultModeKey: GameManager.DEFAULT_MODE_KEY,
@@ -2599,8 +2597,8 @@ GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
       normalizeSpawnTable: this.normalizeSpawnTable.bind(this),
       getTheoreticalMaxTile: this.getTheoreticalMaxTile.bind(this),
       normalizeSpecialRules: this.normalizeSpecialRules.bind(this)
-    });
-  }
+    }]);
+  if (normalizeModeConfigCore.available) return normalizeModeConfigCore.value;
 
   var cfg = rawConfig ? this.clonePlain(rawConfig) : this.clonePlain(GameManager.DEFAULT_MODE_CONFIG);
   cfg.key = cfg.key || modeKey || GameManager.DEFAULT_MODE_KEY;
@@ -2648,14 +2646,14 @@ GameManager.prototype.resolveModeConfig = function (modeId) {
   var byCatalog = this.getModeConfigFromCatalog(id);
   if (byCatalog) return this.normalizeModeConfig(id, byCatalog);
 
-  var resolveModeCatalogAliasCore = this.resolveCoreModeRuntimeMethod("resolveModeCatalogAlias");
-  var mapped = id;
-  if (resolveModeCatalogAliasCore) {
-    mapped = resolveModeCatalogAliasCore({
+  var resolveModeCatalogAliasCore = this.callCoreModeRuntime("resolveModeCatalogAlias", [{
       modeId: id,
       defaultModeKey: GameManager.DEFAULT_MODE_KEY,
       legacyAliasToModeKey: GameManager.LEGACY_ALIAS_TO_MODE_KEY
-    });
+    }]);
+  var mapped = id;
+  if (resolveModeCatalogAliasCore.available) {
+    mapped = resolveModeCatalogAliasCore.value;
   } else if (GameManager.LEGACY_ALIAS_TO_MODE_KEY[id]) {
     mapped = GameManager.LEGACY_ALIAS_TO_MODE_KEY[id];
   }
@@ -2695,8 +2693,8 @@ GameManager.prototype.applyModeConfig = function (modeConfig) {
 };
 
 GameManager.prototype.normalizeSpecialRules = function (rules) {
-  var normalizeSpecialRulesCore = this.resolveCoreModeRuntimeMethod("normalizeSpecialRules");
-  if (normalizeSpecialRulesCore) return normalizeSpecialRulesCore(rules);
+  var normalizeSpecialRulesCore = this.callCoreModeRuntime("normalizeSpecialRules", [rules]);
+  if (normalizeSpecialRulesCore.available) return normalizeSpecialRulesCore.value;
   if (!rules || typeof rules !== "object" || Array.isArray(rules)) return {};
   return this.clonePlain(rules);
 };
@@ -2830,15 +2828,13 @@ GameManager.prototype.consumeDirectionLock = function () {
 };
 
 GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
-  var resolveLegacyModeFromModeKeyCore = this.resolveCoreModeRuntimeMethod("resolveLegacyModeFromModeKey");
-  if (resolveLegacyModeFromModeKeyCore) {
-    return resolveLegacyModeFromModeKeyCore({
+  var resolveLegacyModeFromModeKeyCore = this.callCoreModeRuntime("resolveLegacyModeFromModeKey", [{
       modeKey: modeKey,
       fallbackModeKey: this.modeKey,
       mode: this.mode,
       legacyModeByKey: GameManager.LEGACY_MODE_BY_KEY
-    });
-  }
+    }]);
+  if (resolveLegacyModeFromModeKeyCore.available) return resolveLegacyModeFromModeKeyCore.value;
 
   var key = modeKey || this.modeKey || this.mode;
   if (GameManager.LEGACY_MODE_BY_KEY[key]) return GameManager.LEGACY_MODE_BY_KEY[key];
@@ -2973,40 +2969,36 @@ GameManager.prototype.recordTimerMilestone = function (value, timeStr) {
 };
 
 GameManager.prototype.isCappedMode = function () {
-  var isCappedModeStateCore = this.resolveCoreModeRuntimeMethod("isCappedModeState");
-  if (isCappedModeStateCore) {
-    return !!isCappedModeStateCore({
+  var isCappedModeStateCore = this.callCoreModeRuntime("isCappedModeState", [{
       modeKey: this.modeKey,
       mode: this.mode,
       maxTile: this.maxTile
-    });
-  }
+    }]);
+  if (isCappedModeStateCore.available) return !!isCappedModeStateCore.value;
   var key = String(this.modeKey || this.mode || "");
   return key.indexOf("capped") !== -1 && Number.isFinite(this.maxTile) && this.maxTile > 0;
 };
 
 GameManager.prototype.getCappedTargetValue = function () {
-  var getCappedTargetValueCore = this.resolveCoreModeRuntimeMethod("getCappedTargetValue");
-  if (getCappedTargetValueCore) {
-    var value = getCappedTargetValueCore({
+  var getCappedTargetValueCore = this.callCoreModeRuntime("getCappedTargetValue", [{
       modeKey: this.modeKey,
       mode: this.mode,
       maxTile: this.maxTile
-    });
+    }]);
+  if (getCappedTargetValueCore.available) {
+    var value = getCappedTargetValueCore.value;
     return Number.isFinite(value) ? Number(value) : null;
   }
   return this.isCappedMode() ? Number(this.maxTile) : null;
 };
 
 GameManager.prototype.isProgressiveCapped64Mode = function () {
-  var isProgressiveCapped64ModeCore = this.resolveCoreModeRuntimeMethod("isProgressiveCapped64Mode");
-  if (isProgressiveCapped64ModeCore) {
-    return !!isProgressiveCapped64ModeCore({
+  var isProgressiveCapped64ModeCore = this.callCoreModeRuntime("isProgressiveCapped64Mode", [{
       modeKey: this.modeKey,
       mode: this.mode,
       maxTile: this.maxTile
-    });
-  }
+    }]);
+  if (isProgressiveCapped64ModeCore.available) return !!isProgressiveCapped64ModeCore.value;
   // Disable progressive hidden timer rows for 64-capped mode.
   return false;
 };
