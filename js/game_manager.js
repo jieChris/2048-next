@@ -2962,7 +2962,7 @@ GameManager.prototype.resolveLiteSavedPracticeRestartModeConfig = function (payl
   return this.practiceRestartModeConfig ? this.safeClonePlain(this.practiceRestartModeConfig, null) : null;
 };
 
-GameManager.prototype.buildLiteSavedGameStateBaseFallback = function (payload) {
+GameManager.prototype.buildLiteSavedGameStateIdentityFallback = function (payload) {
   return {
     v: GameManager.SAVED_GAME_STATE_VERSION,
     saved_at: Number(payload.saved_at) || Date.now(),
@@ -2970,7 +2970,12 @@ GameManager.prototype.buildLiteSavedGameStateBaseFallback = function (payload) {
     mode_key: payload.mode_key || this.modeKey,
     board_width: Number(payload.board_width) || this.width,
     board_height: Number(payload.board_height) || this.height,
-    ruleset: payload.ruleset || this.ruleset,
+    ruleset: payload.ruleset || this.ruleset
+  };
+};
+
+GameManager.prototype.buildLiteSavedGameStateProgressFallback = function (payload) {
+  return {
     board: Array.isArray(payload.board) ? this.cloneBoardMatrix(payload.board) : this.getFinalBoardMatrix(),
     score: Number.isInteger(payload.score) ? payload.score : this.score,
     over: !!payload.over,
@@ -2983,17 +2988,37 @@ GameManager.prototype.buildLiteSavedGameStateBaseFallback = function (payload) {
       : 0,
     timer_status: payload.timer_status === 1 ? 1 : 0,
     duration_ms: Number.isFinite(payload.duration_ms) ? Math.floor(payload.duration_ms) : this.getDurationMs(),
-    has_game_started: !!payload.has_game_started,
+    has_game_started: !!payload.has_game_started
+  };
+};
+
+GameManager.prototype.buildLiteSavedGameStateBoardSnapshotsFallback = function (payload) {
+  return {
     initial_board_matrix: this.resolveLiteSavedInitialBoardMatrix(payload),
     replay_start_board_matrix: this.resolveLiteSavedReplayStartBoardMatrix(payload),
     practice_restart_board_matrix: this.resolveLiteSavedPracticeRestartBoardMatrix(payload),
-    practice_restart_mode_config: this.resolveLiteSavedPracticeRestartModeConfig(payload),
+    practice_restart_mode_config: this.resolveLiteSavedPracticeRestartModeConfig(payload)
+  };
+};
+
+GameManager.prototype.buildLiteSavedGameStateEmptyCollections = function () {
+  return {
     move_history: [],
     undo_stack: [],
     replay_compact_log: "",
     session_replay_v3: null,
     spawn_value_counts: {}
   };
+};
+
+GameManager.prototype.buildLiteSavedGameStateBaseFallback = function (payload) {
+  return Object.assign(
+    {},
+    this.buildLiteSavedGameStateIdentityFallback(payload),
+    this.buildLiteSavedGameStateProgressFallback(payload),
+    this.buildLiteSavedGameStateBoardSnapshotsFallback(payload),
+    this.buildLiteSavedGameStateEmptyCollections()
+  );
 };
 
 GameManager.prototype.buildLiteSavedGameStateProgressFallback = function (payload) {
