@@ -2190,16 +2190,24 @@ GameManager.prototype.detectModeFromPathname = function (path) {
   return "classic_4x4_pow2_undo";
 };
 
-GameManager.prototype.detectModeFallback = function () {
-  if (this.mode) return this.mode;
-  if (typeof document !== "undefined" && document.body) {
-    var bodyMode = document.body.getAttribute("data-mode-id");
-    if (bodyMode) return bodyMode;
-  }
+GameManager.prototype.resolveDetectedModeFromBodyDataset = function () {
+  if (typeof document === "undefined" || !document.body) return null;
+  var bodyMode = document.body.getAttribute("data-mode-id");
+  return bodyMode || null;
+};
+
+GameManager.prototype.resolveDetectedModeFromWindowPath = function () {
   if (typeof window === "undefined" || !window.location || !window.location.pathname) {
     return GameManager.DEFAULT_MODE_KEY;
   }
   return this.detectModeFromPathname(window.location.pathname);
+};
+
+GameManager.prototype.detectModeFallback = function () {
+  if (this.mode) return this.mode;
+  var bodyMode = this.resolveDetectedModeFromBodyDataset();
+  if (bodyMode) return bodyMode;
+  return this.resolveDetectedModeFromWindowPath();
 };
 
 GameManager.prototype.detectMode = function () {
