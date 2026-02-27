@@ -3830,14 +3830,24 @@ GameManager.prototype.applyUndoSettingForMode = function (mode, skipPersist, for
   return !!this.undoEnabled;
 };
 
-GameManager.prototype.resolveProvidedUndoPolicyStateForMode = function (mode, resolvedState) {
+GameManager.prototype.resolveProvidedState = function (resolvedState, fallbackResolver) {
   if (resolvedState && typeof resolvedState === "object") return resolvedState;
-  return this.resolveUndoPolicyStateForCurrentSessionMode(mode);
+  if (typeof fallbackResolver === "function") return fallbackResolver();
+  return null;
+};
+
+GameManager.prototype.resolveProvidedUndoPolicyStateForMode = function (mode, resolvedState) {
+  var self = this;
+  return this.resolveProvidedState(resolvedState, function () {
+    return self.resolveUndoPolicyStateForCurrentSessionMode(mode);
+  });
 };
 
 GameManager.prototype.resolveProvidedActiveUndoPolicyState = function (resolvedState) {
-  if (resolvedState && typeof resolvedState === "object") return resolvedState;
-  return this.resolveActiveUndoPolicyState();
+  var self = this;
+  return this.resolveProvidedState(resolvedState, function () {
+    return self.resolveActiveUndoPolicyState();
+  });
 };
 
 GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resolvedState) {
