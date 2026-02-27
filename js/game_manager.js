@@ -5468,28 +5468,37 @@ GameManager.prototype.ensureStatsPanelOverlayElement = function () {
   return overlay;
 };
 
+GameManager.prototype.bindStatsPanelToggleButtonEvent = function (btn, self) {
+  if (btn.__statsBound) return;
+  btn.__statsBound = true;
+  btn.addEventListener("click", function (event) {
+    event.preventDefault();
+    self.openStatsPanel();
+  });
+};
+
+GameManager.prototype.bindStatsPanelCloseButtonEvent = function (self) {
+  var closeBtn = document.getElementById("stats-panel-close");
+  if (!closeBtn || closeBtn.__statsBound) return;
+  closeBtn.__statsBound = true;
+  closeBtn.addEventListener("click", function () {
+    self.closeStatsPanel();
+  });
+};
+
+GameManager.prototype.bindStatsPanelOverlayDismissEvent = function (overlay, self) {
+  if (overlay.__statsBound) return;
+  overlay.__statsBound = true;
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay) self.closeStatsPanel();
+  });
+};
+
 GameManager.prototype.bindStatsPanelUiEvents = function (btn, overlay) {
   var self = this;
-  if (!btn.__statsBound) {
-    btn.__statsBound = true;
-    btn.addEventListener("click", function (event) {
-      event.preventDefault();
-      self.openStatsPanel();
-    });
-  }
-  var closeBtn = document.getElementById("stats-panel-close");
-  if (closeBtn && !closeBtn.__statsBound) {
-    closeBtn.__statsBound = true;
-    closeBtn.addEventListener("click", function () {
-      self.closeStatsPanel();
-    });
-  }
-  if (!overlay.__statsBound) {
-    overlay.__statsBound = true;
-    overlay.addEventListener("click", function (e) {
-      if (e.target === overlay) self.closeStatsPanel();
-    });
-  }
+  this.bindStatsPanelToggleButtonEvent(btn, self);
+  this.bindStatsPanelCloseButtonEvent(self);
+  this.bindStatsPanelOverlayDismissEvent(overlay, self);
 };
 
 GameManager.prototype.applyStatsPanelInitialVisibility = function (overlay) {
