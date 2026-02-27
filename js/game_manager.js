@@ -1327,7 +1327,7 @@ GameManager.prototype.captureTimerDynamicRowsState = function (containerId) {
 
 GameManager.prototype.createSavedDynamicTimerRow = function (rowState, cappedState) {
   var resolvedCappedState =
-    cappedState && typeof cappedState === "object" ? cappedState : this.resolveCappedModeState();
+    this.resolveProvidedCappedModeState(cappedState);
   var repeat = parseInt(rowState && rowState.repeat, 10);
   var labelText = rowState && typeof rowState.label === "string" ? rowState.label : "";
   var timeText = rowState && typeof rowState.time === "string" ? rowState.time : "";
@@ -1372,7 +1372,7 @@ GameManager.prototype.createSavedDynamicTimerRow = function (rowState, cappedSta
 GameManager.prototype.normalizeCappedRepeatLegendClasses = function (cappedState) {
   if (typeof document === "undefined") return;
   var resolvedCappedState =
-    cappedState && typeof cappedState === "object" ? cappedState : this.resolveCappedModeState();
+    this.resolveProvidedCappedModeState(cappedState);
   if (!resolvedCappedState.isCappedMode) return;
   var rows = document.querySelectorAll("#timerbox [data-capped-repeat]");
   var legendClass = this.getCappedTimerLegendClass(resolvedCappedState.cappedTargetValue);
@@ -3169,6 +3169,11 @@ GameManager.prototype.resolveCappedModeState = function () {
   };
 };
 
+GameManager.prototype.resolveProvidedCappedModeState = function (cappedState) {
+  if (cappedState && typeof cappedState === "object") return cappedState;
+  return this.resolveCappedModeState();
+};
+
 GameManager.prototype.isCappedMode = function () {
   return this.resolveCappedModeState().isCappedMode;
 };
@@ -3396,7 +3401,7 @@ GameManager.prototype.getCappedRepeatLabel = function (repeatCount) {
 
 GameManager.prototype.getCappedPlaceholderRowValues = function (cappedState) {
   var resolvedCappedState =
-    cappedState && typeof cappedState === "object" ? cappedState : this.resolveCappedModeState();
+    this.resolveProvidedCappedModeState(cappedState);
   var resolveCappedPlaceholderRowValuesCore = this.callCoreModeRuntime("resolveCappedPlaceholderRowValues", [{
       isCappedMode: resolvedCappedState.isCappedMode,
       cappedTargetValue: resolvedCappedState.cappedTargetValue,
@@ -3427,7 +3432,7 @@ GameManager.prototype.getCappedPlaceholderRowValues = function (cappedState) {
 
 GameManager.prototype.resetCappedPlaceholderRows = function (cappedState) {
   var resolvedCappedState =
-    cappedState && typeof cappedState === "object" ? cappedState : this.resolveCappedModeState();
+    this.resolveProvidedCappedModeState(cappedState);
   if (!resolvedCappedState.isCappedMode) return;
   var values = this.getCappedPlaceholderRowValues(resolvedCappedState);
   for (var i = 0; i < values.length; i++) {
@@ -3448,7 +3453,7 @@ GameManager.prototype.resetCappedPlaceholderRows = function (cappedState) {
 
 GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, labelText, timeStr, cappedState) {
   var resolvedCappedState =
-    cappedState && typeof cappedState === "object" ? cappedState : this.resolveCappedModeState();
+    this.resolveProvidedCappedModeState(cappedState);
   if (!resolvedCappedState.isCappedMode) return false;
   if (!Number.isInteger(repeatCount) || repeatCount < 2) return false;
 
@@ -3493,7 +3498,7 @@ GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, 
 
 GameManager.prototype.getCappedOverflowContainer = function (cappedState) {
   var resolvedCappedState =
-    cappedState && typeof cappedState === "object" ? cappedState : this.resolveCappedModeState();
+    this.resolveProvidedCappedModeState(cappedState);
   if (!resolvedCappedState.isCappedMode) return null;
   var id = "capped-timer-overflow-container";
   var container = document.getElementById(id);
