@@ -5859,9 +5859,13 @@ GameManager.prototype.positionsEqual = function (first, second) {
   return first.x === second.x && first.y === second.y;
 };
 
+GameManager.prototype.canStartTimer = function () {
+  return this.timerStatus === 0;
+};
+
 // Start the timer
 GameManager.prototype.startTimer = function() {
-  if (this.timerStatus !== 0) return;
+  if (!this.canStartTimer()) return;
   this.applyTimerStartState();
   this.scheduleTimerUpdateInterval();
 };
@@ -5970,9 +5974,13 @@ GameManager.prototype.applyTimerStopState = function () {
   this.timerStatus = 0;
 };
 
+GameManager.prototype.canStopTimer = function () {
+  return this.timerStatus === 1;
+};
+
 GameManager.prototype.stopTimer = function() {
-    if (this.timerStatus !== 1) return;
-    this.applyTimerStopState();
+  if (!this.canStopTimer()) return;
+  this.applyTimerStopState();
 };
 
 GameManager.prototype.pretty = function(time) {
