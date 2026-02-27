@@ -7108,16 +7108,8 @@ GameManager.prototype.coerceReplayImportInputToString = function (replayString) 
   return JSON.stringify(replayString);
 };
 
-GameManager.prototype.isJsonV3ReplayEnvelopeKind = function (kind) {
-  return kind === "json-v3";
-};
-
-GameManager.prototype.isV4ReplayEnvelopeKind = function (kind) {
-  return kind === "v4c";
-};
-
 GameManager.prototype.isSupportedReplayEnvelopeKind = function (kind) {
-  return this.isJsonV3ReplayEnvelopeKind(kind) || this.isV4ReplayEnvelopeKind(kind);
+  return !!this.resolveReplayEnvelopeImporterMethodName(kind);
 };
 
 GameManager.prototype.getReplayEnvelopeImporterMethodMap = function () {
