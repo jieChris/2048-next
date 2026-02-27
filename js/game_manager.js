@@ -6885,14 +6885,20 @@ GameManager.prototype.getBestTileValue = function () {
 
 GameManager.prototype.getDurationMs = function () {
   var nowMs = Date.now();
-  var resolveDurationMsCore = this.callCoreReplayTimerRuntime("resolveDurationMs", [
-    this.resolveDurationMsCoreInput(nowMs)
-  ]);
+  var resolveDurationMsCore = this.callCoreReplayTimerRuntime("resolveDurationMs", this.buildDurationMsRuntimeArgs(nowMs));
   if (resolveDurationMsCore.available) {
-    var resolvedCoreMs = this.normalizeDurationMs(resolveDurationMsCore.value);
+    var resolvedCoreMs = this.resolveDurationMsFromCore(resolveDurationMsCore.value);
     if (resolvedCoreMs !== null) return resolvedCoreMs;
   }
   return this.resolveDurationMsFallback(nowMs);
+};
+
+GameManager.prototype.buildDurationMsRuntimeArgs = function (nowMs) {
+  return [this.resolveDurationMsCoreInput(nowMs)];
+};
+
+GameManager.prototype.resolveDurationMsFromCore = function (coreValue) {
+  return this.normalizeDurationMs(coreValue);
 };
 
 GameManager.prototype.resolveDurationMsCoreInput = function (nowMs) {
@@ -6915,15 +6921,35 @@ GameManager.prototype.normalizeDurationMs = function (rawMs) {
   return ms < 0 ? 0 : ms;
 };
 
+GameManager.prototype.shouldUseRunningTimerDuration = function () {
+  return this.timerStatus === 1 && this.startTime;
+};
+
+GameManager.prototype.resolveRunningTimerDurationMs = function (nowMs) {
+  return nowMs - this.startTime.getTime();
+};
+
+GameManager.prototype.resolveStoredDurationMs = function () {
+  return this.accumulatedTime || 0;
+};
+
+GameManager.prototype.shouldFallbackDurationFromSessionStart = function (ms) {
+  return !Number.isFinite(ms) || ms < 0;
+};
+
+GameManager.prototype.resolveSessionStartedFallbackDurationMs = function (nowMs) {
+  return nowMs - (this.sessionStartedAt || nowMs);
+};
+
 GameManager.prototype.resolveDurationMsFallback = function (nowMs) {
   var ms;
-  if (this.timerStatus === 1 && this.startTime) {
-    ms = nowMs - this.startTime.getTime();
+  if (this.shouldUseRunningTimerDuration()) {
+    ms = this.resolveRunningTimerDurationMs(nowMs);
   } else {
-    ms = this.accumulatedTime || 0;
+    ms = this.resolveStoredDurationMs();
   }
-  if (!Number.isFinite(ms) || ms < 0) {
-    ms = nowMs - (this.sessionStartedAt || nowMs);
+  if (this.shouldFallbackDurationFromSessionStart(ms)) {
+    ms = this.resolveSessionStartedFallbackDurationMs(nowMs);
   }
   return this.normalizeDurationMs(ms);
 };
