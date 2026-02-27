@@ -5684,21 +5684,23 @@ GameManager.prototype.executePlannedReplayStep = function () {
   this.replayIndex = stepExecutionPlan.nextReplayIndex;
 };
 
+GameManager.prototype.clearReplayIntervalIfNeeded = function (shouldClearInterval) {
+  if (shouldClearInterval !== false) {
+    clearInterval(this.replayInterval);
+  }
+};
+
 GameManager.prototype.pause = function () {
     var pauseState = this.computeReplayPauseState();
     this.isPaused = pauseState.isPaused !== false;
-    if (pauseState.shouldClearInterval !== false) {
-      clearInterval(this.replayInterval);
-    }
+    this.clearReplayIntervalIfNeeded(pauseState.shouldClearInterval);
 };
 
 GameManager.prototype.resume = function () {
     var resumeState = this.computeReplayResumeState();
     this.isPaused = !!resumeState.isPaused ? true : false;
     var self = this;
-    if (resumeState.shouldClearInterval !== false) {
-      clearInterval(this.replayInterval);
-    }
+    this.clearReplayIntervalIfNeeded(resumeState.shouldClearInterval);
     
     var delay = resumeState.delay;
     
