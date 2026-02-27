@@ -925,9 +925,13 @@ GameManager.prototype.applyReplayTickBoundaryPlan = function (tickBoundaryPlan) 
   return true;
 };
 
+GameManager.prototype.executeReplayTickStep = function () {
+  this.executePlannedReplayStep();
+};
+
 GameManager.prototype.runReplayTick = function () {
   if (this.tryStopReplayAtTickBoundary()) return false;
-  this.executePlannedReplayStep();
+  this.executeReplayTickStep();
   return true;
 };
 
