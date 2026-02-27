@@ -1338,29 +1338,36 @@ GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue,
   }
 };
 
+GameManager.prototype.normalizeStorageJsonMapRuntimeValue = function (runtimeMap) {
+  return this.isNonArrayObject(runtimeMap) ? runtimeMap : {};
+};
+
+GameManager.prototype.parseStorageJsonMapRaw = function (raw) {
+  if (!raw) return {};
+  var parsed = JSON.parse(raw);
+  if (!this.isNonArrayObject(parsed)) return {};
+  return parsed;
+};
+
+GameManager.prototype.readLocalStorageJsonMapFallback = function (key) {
+  var storage = this.getLocalStorage();
+  if (!this.canReadFromStorage(storage)) return {};
+  try {
+    return this.parseStorageJsonMapRaw(storage.getItem(key));
+  } catch (_err) {
+    return {};
+  }
+};
+
 GameManager.prototype.readLocalStorageJsonMap = function (key) {
   var readStorageJsonMapFromContextCore = this.callCoreStorageRuntime("readStorageJsonMapFromContext", [{
       windowLike: this.getWindowLike(),
       key: key
     }]);
   if (readStorageJsonMapFromContextCore.available) {
-    var runtimeMap = readStorageJsonMapFromContextCore.value;
-    if (this.isNonArrayObject(runtimeMap)) {
-      return runtimeMap;
-    }
-    return {};
+    return this.normalizeStorageJsonMapRuntimeValue(readStorageJsonMapFromContextCore.value);
   }
-  var storage = this.getLocalStorage();
-  if (!this.canReadFromStorage(storage)) return {};
-  try {
-    var raw = storage.getItem(key);
-    if (!raw) return {};
-    var parsed = JSON.parse(raw);
-    if (!this.isNonArrayObject(parsed)) return {};
-    return parsed;
-  } catch (_err) {
-    return {};
-  }
+  return this.readLocalStorageJsonMapFallback(key);
 };
 
 GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
