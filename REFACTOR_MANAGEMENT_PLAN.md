@@ -23,10 +23,8 @@
 - push/PR 自动触发 smoke 的 CI 工作流。
 - 统一本地脚本（`npm run test:smoke`）。
 - 测试结构按页面域逐步拆分：
-  - `tests/smoke/pages-runtime-contract.smoke.spec.ts`（多页面加载与 runtime 契约）
-  - `tests/smoke/history.smoke.spec.ts`（history 页面委托链路）
-  - `tests/smoke/index-ui.smoke.spec.ts`（index_ui 页面委托链路）
-  - `tests/smoke/pages.smoke.spec.ts`（其余跨页与入口链路，已降至约 1300 行）
+  - 已完成按领域拆分（history/index-ui/pages-* 共 30+ 文件），不再依赖单个超大 smoke 文件。
+  - 当前跨页加载契约统一在 `tests/smoke/pages-runtime-contract.smoke.spec.ts`。
 
 验收标准：
 - 8 个页面加载过程无运行时 JS 错误。
@@ -318,6 +316,8 @@
     - `src/core/replay-loop.ts` + `js/core_replay_loop_runtime.js`
   - `src/core/game-settings-storage.ts` + `js/core_game_settings_storage_runtime.js`（本地设置存储 helper：flag/json map/payload）
   - `js/game_manager.js` 新增 `getCoreRuntimeByName` 通用解析器，`getCore*Runtime` 系列方法统一委托，减少重复 runtime 解析样板（行为不变）
+  - `game_manager.js` 已新增 runtime method resolver 映射注册层（`GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS`），`resolveCore*RuntimeMethod` 统一由映射生成。
+  - `game_manager.js` 中 move/grid/scoring/undo/replay/timer/special-rules 相关 runtime 方法调用点已统一改为 `resolveCore*RuntimeMethod(...)` helper，移除分散的字符串式解析样板。
   - `game_manager.js` 已改为通过 `CoreGameSettingsStorageRuntime` 读写统计面板开关、计时器模块视图、撤回设置与会话提交结果（页面层移除 direct localStorage 访问）
   - `game_manager.js` 新增 `resolveModePolicyContext`，统一 `mode/undo` runtime 解析入参，减少后续策略函数迁移的重复样板
 
