@@ -260,10 +260,8 @@ GameManager.LEGACY_ALIAS_TO_MODE_KEY = {
 GameManager.TIMER_SLOT_IDS = [16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
 
 GameManager.prototype.getActionKind = function (action) {
-  var replayExecutionCore = this.getCoreReplayExecutionRuntime && this.getCoreReplayExecutionRuntime();
-  if (replayExecutionCore && typeof replayExecutionCore.getReplayActionKind === "function") {
-    return replayExecutionCore.getReplayActionKind(action);
-  }
+  var getReplayActionKindCore = this.resolveCoreRuntimeMethod("getCoreReplayExecutionRuntime", "getReplayActionKind");
+  if (getReplayActionKindCore) return getReplayActionKindCore(action);
   if (action === -1) return "u";
   if (action >= 0 && action <= 3) return "m";
   if (Array.isArray(action) && action.length > 0) return action[0];
@@ -271,10 +269,8 @@ GameManager.prototype.getActionKind = function (action) {
 };
 
 GameManager.prototype.encodeReplay128 = function (code) {
-  var replayCodecCore = this.getCoreReplayCodecRuntime();
-  if (replayCodecCore && typeof replayCodecCore.encodeReplay128 === "function") {
-    return replayCodecCore.encodeReplay128(code);
-  }
+  var encodeReplay128Core = this.resolveCoreRuntimeMethod("getCoreReplayCodecRuntime", "encodeReplay128");
+  if (encodeReplay128Core) return encodeReplay128Core(code);
 
   if (!Number.isInteger(code) || code < 0 || code >= GameManager.REPLAY128_TOTAL) {
     throw "Invalid replay code";
@@ -288,10 +284,8 @@ GameManager.prototype.encodeReplay128 = function (code) {
 };
 
 GameManager.prototype.decodeReplay128 = function (char) {
-  var replayCodecCore = this.getCoreReplayCodecRuntime();
-  if (replayCodecCore && typeof replayCodecCore.decodeReplay128 === "function") {
-    return replayCodecCore.decodeReplay128(char);
-  }
+  var decodeReplay128Core = this.resolveCoreRuntimeMethod("getCoreReplayCodecRuntime", "decodeReplay128");
+  if (decodeReplay128Core) return decodeReplay128Core(char);
 
   if (!char || char.length !== 1) throw "Invalid replay char";
   var code = char.charCodeAt(0);
@@ -307,10 +301,8 @@ GameManager.prototype.decodeReplay128 = function (char) {
 };
 
 GameManager.prototype.encodeBoardV4 = function (board) {
-  var replayCodecCore = this.getCoreReplayCodecRuntime();
-  if (replayCodecCore && typeof replayCodecCore.encodeBoardV4 === "function") {
-    return replayCodecCore.encodeBoardV4(board);
-  }
+  var encodeBoardV4Core = this.resolveCoreRuntimeMethod("getCoreReplayCodecRuntime", "encodeBoardV4");
+  if (encodeBoardV4Core) return encodeBoardV4Core(board);
 
   if (!Array.isArray(board) || board.length !== 4) throw "Invalid initial board";
   var out = "";
@@ -333,10 +325,8 @@ GameManager.prototype.encodeBoardV4 = function (board) {
 };
 
 GameManager.prototype.decodeBoardV4 = function (encoded) {
-  var replayCodecCore = this.getCoreReplayCodecRuntime();
-  if (replayCodecCore && typeof replayCodecCore.decodeBoardV4 === "function") {
-    return replayCodecCore.decodeBoardV4(encoded);
-  }
+  var decodeBoardV4Core = this.resolveCoreRuntimeMethod("getCoreReplayCodecRuntime", "decodeBoardV4");
+  if (decodeBoardV4Core) return decodeBoardV4Core(encoded);
 
   if (typeof encoded !== "string" || encoded.length !== 16) throw "Invalid encoded board";
   var rows = [];
@@ -353,10 +343,11 @@ GameManager.prototype.decodeBoardV4 = function (encoded) {
 };
 
 GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
-  var replayV4Core = this.getCoreReplayV4ActionsRuntime();
-  if (replayV4Core && typeof replayV4Core.decodeReplayV4Actions === "function") {
-    return replayV4Core.decodeReplayV4Actions(actionsEncoded) || {};
-  }
+  var decodeReplayV4ActionsCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayV4ActionsRuntime",
+    "decodeReplayV4Actions"
+  );
+  if (decodeReplayV4ActionsCore) return decodeReplayV4ActionsCore(actionsEncoded) || {};
 
   var replayMoves = [];
   var replaySpawns = [];
@@ -411,9 +402,12 @@ GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
 };
 
 GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString) {
-  var replayImportCore = this.getCoreReplayImportRuntime();
-  if (replayImportCore && typeof replayImportCore.parseReplayImportEnvelope === "function") {
-    return replayImportCore.parseReplayImportEnvelope({
+  var parseReplayImportEnvelopeCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayImportRuntime",
+    "parseReplayImportEnvelope"
+  );
+  if (parseReplayImportEnvelopeCore) {
+    return parseReplayImportEnvelopeCore({
       trimmedReplayString: trimmedReplayString,
       fallbackModeKey: this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY,
       v4Prefix: GameManager.REPLAY_V4_PREFIX
@@ -473,10 +467,8 @@ GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString)
 };
 
 GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
-  var replayLegacyCore = this.getCoreReplayLegacyRuntime();
-  if (replayLegacyCore && typeof replayLegacyCore.decodeLegacyReplay === "function") {
-    return replayLegacyCore.decodeLegacyReplay(trimmedReplayString);
-  }
+  var decodeLegacyReplayCore = this.resolveCoreRuntimeMethod("getCoreReplayLegacyRuntime", "decodeLegacyReplay");
+  if (decodeLegacyReplayCore) return decodeLegacyReplayCore(trimmedReplayString);
 
   if (trimmedReplayString.indexOf("REPLAY_v1_") === 0) {
     var v1Parts = trimmedReplayString.split("_");
@@ -570,10 +562,11 @@ GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
 };
 
 GameManager.prototype.resolveReplayExecution = function (action) {
-  var replayExecutionCore = this.getCoreReplayExecutionRuntime();
-  if (replayExecutionCore && typeof replayExecutionCore.resolveReplayExecution === "function") {
-    return replayExecutionCore.resolveReplayExecution(action);
-  }
+  var resolveReplayExecutionCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayExecutionRuntime",
+    "resolveReplayExecution"
+  );
+  if (resolveReplayExecutionCore) return resolveReplayExecutionCore(action);
 
   var kind = this.getActionKind(action);
   if (kind === "m") {
@@ -595,10 +588,8 @@ GameManager.prototype.resolveReplayExecution = function (action) {
 };
 
 GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
-  var replayDispatchCore = this.getCoreReplayDispatchRuntime();
-  if (replayDispatchCore && typeof replayDispatchCore.planReplayDispatch === "function") {
-    return replayDispatchCore.planReplayDispatch(resolvedExecution) || {};
-  }
+  var planReplayDispatchCore = this.resolveCoreRuntimeMethod("getCoreReplayDispatchRuntime", "planReplayDispatch");
+  if (planReplayDispatchCore) return planReplayDispatchCore(resolvedExecution) || {};
 
   if (resolvedExecution.kind === "m") {
     return {
@@ -622,9 +613,12 @@ GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
 };
 
 GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
-  var replayLifecycleCore = this.getCoreReplayLifecycleRuntime();
-  if (replayLifecycleCore && typeof replayLifecycleCore.normalizeReplaySeekTarget === "function") {
-    return replayLifecycleCore.normalizeReplaySeekTarget({
+  var normalizeReplaySeekTargetCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayLifecycleRuntime",
+    "normalizeReplaySeekTarget"
+  );
+  if (normalizeReplaySeekTargetCore) {
+    return normalizeReplaySeekTargetCore({
       targetIndex: targetIndex,
       hasReplayMoves: !!this.replayMoves,
       replayMovesLength: this.replayMoves ? this.replayMoves.length : 0
@@ -637,9 +631,9 @@ GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
 };
 
 GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
-  var replayLifecycleCore = this.getCoreReplayLifecycleRuntime();
-  if (replayLifecycleCore && typeof replayLifecycleCore.planReplayStep === "function") {
-    return replayLifecycleCore.planReplayStep({
+  var planReplayStepCore = this.resolveCoreRuntimeMethod("getCoreReplayLifecycleRuntime", "planReplayStep");
+  if (planReplayStepCore) {
+    return planReplayStepCore({
       action: action,
       hasReplaySpawns: !!this.replaySpawns,
       spawnAtIndex: spawnAtIndex
@@ -654,9 +648,12 @@ GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
 };
 
 GameManager.prototype.planReplayStepExecution = function () {
-  var replayLoopCore = this.getCoreReplayLoopRuntime();
-  if (replayLoopCore && typeof replayLoopCore.planReplayStepExecution === "function") {
-    return replayLoopCore.planReplayStepExecution({
+  var planReplayStepExecutionCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayLoopRuntime",
+    "planReplayStepExecution"
+  );
+  if (planReplayStepExecutionCore) {
+    return planReplayStepExecutionCore({
       replayMoves: this.replayMoves,
       replaySpawns: this.replaySpawns,
       replayIndex: this.replayIndex
@@ -677,10 +674,11 @@ GameManager.prototype.planReplayStepExecution = function () {
 };
 
 GameManager.prototype.computeReplayPauseState = function () {
-  var replayTimerCore = this.getCoreReplayTimerRuntime();
-  if (replayTimerCore && typeof replayTimerCore.computeReplayPauseState === "function") {
-    return replayTimerCore.computeReplayPauseState() || {};
-  }
+  var computeReplayPauseStateCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayTimerRuntime",
+    "computeReplayPauseState"
+  );
+  if (computeReplayPauseStateCore) return computeReplayPauseStateCore() || {};
   return {
     isPaused: true,
     shouldClearInterval: true
@@ -688,9 +686,12 @@ GameManager.prototype.computeReplayPauseState = function () {
 };
 
 GameManager.prototype.computeReplayResumeState = function () {
-  var replayTimerCore = this.getCoreReplayTimerRuntime();
-  if (replayTimerCore && typeof replayTimerCore.computeReplayResumeState === "function") {
-    return replayTimerCore.computeReplayResumeState({
+  var computeReplayResumeStateCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayTimerRuntime",
+    "computeReplayResumeState"
+  );
+  if (computeReplayResumeStateCore) {
+    return computeReplayResumeStateCore({
       replayDelay: this.replayDelay
     }) || {};
   }
@@ -702,9 +703,12 @@ GameManager.prototype.computeReplayResumeState = function () {
 };
 
 GameManager.prototype.computeReplaySpeedState = function (multiplier) {
-  var replayTimerCore = this.getCoreReplayTimerRuntime();
-  if (replayTimerCore && typeof replayTimerCore.computeReplaySpeedState === "function") {
-    return replayTimerCore.computeReplaySpeedState({
+  var computeReplaySpeedStateCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayTimerRuntime",
+    "computeReplaySpeedState"
+  );
+  if (computeReplaySpeedStateCore) {
+    return computeReplaySpeedStateCore({
       multiplier: multiplier,
       isPaused: !!this.isPaused,
       baseDelay: 200
@@ -717,9 +721,12 @@ GameManager.prototype.computeReplaySpeedState = function (multiplier) {
 };
 
 GameManager.prototype.shouldStopReplayAtTick = function (replayIndex, replayMovesLength) {
-  var replayTimerCore = this.getCoreReplayTimerRuntime();
-  if (replayTimerCore && typeof replayTimerCore.shouldStopReplayAtTick === "function") {
-    return !!replayTimerCore.shouldStopReplayAtTick({
+  var shouldStopReplayAtTickCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayTimerRuntime",
+    "shouldStopReplayAtTick"
+  );
+  if (shouldStopReplayAtTickCore) {
+    return !!shouldStopReplayAtTickCore({
       replayIndex: replayIndex,
       replayMovesLength: replayMovesLength
     });
@@ -728,10 +735,11 @@ GameManager.prototype.shouldStopReplayAtTick = function (replayIndex, replayMove
 };
 
 GameManager.prototype.computeReplayEndState = function () {
-  var replayFlowCore = this.getCoreReplayFlowRuntime();
-  if (replayFlowCore && typeof replayFlowCore.computeReplayEndState === "function") {
-    return replayFlowCore.computeReplayEndState() || {};
-  }
+  var computeReplayEndStateCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayFlowRuntime",
+    "computeReplayEndState"
+  );
+  if (computeReplayEndStateCore) return computeReplayEndStateCore() || {};
   return {
     shouldPause: true,
     replayMode: false
@@ -739,9 +747,12 @@ GameManager.prototype.computeReplayEndState = function () {
 };
 
 GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, replayEndState) {
-  var replayControlCore = this.getCoreReplayControlRuntime();
-  if (replayControlCore && typeof replayControlCore.planReplayTickBoundary === "function") {
-    return replayControlCore.planReplayTickBoundary({
+  var planReplayTickBoundaryCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayControlRuntime",
+    "planReplayTickBoundary"
+  );
+  if (planReplayTickBoundaryCore) {
+    return planReplayTickBoundaryCore({
       shouldStopAtTick: shouldStopAtTick,
       replayEndState: replayEndState
     }) || {};
@@ -764,9 +775,9 @@ GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, repla
 };
 
 GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
-  var replayFlowCore = this.getCoreReplayFlowRuntime();
-  if (replayFlowCore && typeof replayFlowCore.planReplaySeekRewind === "function") {
-    return replayFlowCore.planReplaySeekRewind({
+  var planReplaySeekRewindCore = this.resolveCoreRuntimeMethod("getCoreReplayFlowRuntime", "planReplaySeekRewind");
+  if (planReplaySeekRewindCore) {
+    return planReplaySeekRewindCore({
       targetIndex: targetIndex,
       replayIndex: this.replayIndex,
       hasReplayStartBoard: !!this.replayStartBoardMatrix
@@ -788,9 +799,12 @@ GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
 };
 
 GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
-  var replayFlowCore = this.getCoreReplayFlowRuntime();
-  if (replayFlowCore && typeof replayFlowCore.planReplaySeekRestart === "function") {
-    return replayFlowCore.planReplaySeekRestart({
+  var planReplaySeekRestartCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayFlowRuntime",
+    "planReplaySeekRestart"
+  );
+  if (planReplaySeekRestartCore) {
+    return planReplaySeekRestartCore({
       shouldRewind: !!(rewindPlan && rewindPlan.shouldRewind),
       strategy: rewindPlan ? rewindPlan.strategy : "none",
       replayIndexAfterRewind: rewindPlan ? rewindPlan.replayIndexAfterRewind : this.replayIndex
