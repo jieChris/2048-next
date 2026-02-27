@@ -10,6 +10,10 @@
     "test:unit": "vitest run tests/unit",
     "test:unit:watch": "vitest tests/unit",
     "test:smoke": "playwright test --config=playwright.config.ts",
+    "test:smoke:history": "playwright test --config=playwright.config.ts \"tests/smoke/history-.*\\.smoke\\.spec\\.ts\"",
+    "test:smoke:index-ui": "playwright test --config=playwright.config.ts \"tests/smoke/index-ui-.*\\.smoke\\.spec\\.ts\"",
+    "test:smoke:pages": "playwright test --config=playwright.config.ts \"tests/smoke/pages-.*\\.smoke\\.spec\\.ts\"",
+    "test:smoke:runtime-contract": "playwright test --config=playwright.config.ts tests/smoke/pages-runtime-contract.smoke.spec.ts",
     "test:smoke:headed": "playwright test --config=playwright.config.ts --headed",
     "verify:refactor": "node scripts/refactor-gate.mjs"
   },
