@@ -2586,20 +2586,46 @@ GameManager.prototype.appendCompactPracticeAction = function (x, y, value) {
 };
 
 GameManager.prototype.appendCompactPracticeActionFallback = function (x, y, value) {
+  this.assertCompactPracticeBoardSupported();
+  this.assertCompactPracticeCoords(x, y);
+  var exp = this.resolveCompactPracticeValueExponent(value);
+  var cell = this.resolveCompactPracticeCellCode(x, y);
+  this.appendCompactPracticePrefix();
+  this.appendCompactPracticeEncodedCellAndExponent(cell, exp);
+};
+
+GameManager.prototype.assertCompactPracticeBoardSupported = function () {
   if (this.width !== 4 || this.height !== 4) throw "Compact practice replay only supports 4x4";
+};
+
+GameManager.prototype.assertCompactPracticeCoords = function (x, y) {
   if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || x > 3 || y < 0 || y > 3) {
     throw "Invalid practice coords";
   }
+};
+
+GameManager.prototype.assertCompactPracticeValue = function (value) {
   if (!Number.isInteger(value) || value < 0) throw "Invalid practice value";
-  var exp = 0;
-  if (value > 0) {
-    var lg = Math.log(value) / Math.log(2);
-    if (Math.floor(lg) !== lg) throw "Practice value must be power of two";
-    exp = lg;
-  }
-  if (exp < 0 || exp > 127) throw "Practice value exponent too large";
-  var cell = (x << 2) | y;
+};
+
+GameManager.prototype.resolveCompactPracticeValueExponent = function (value) {
+  this.assertCompactPracticeValue(value);
+  if (value === 0) return 0;
+  var lg = Math.log(value) / Math.log(2);
+  if (Math.floor(lg) !== lg) throw "Practice value must be power of two";
+  if (lg < 0 || lg > 127) throw "Practice value exponent too large";
+  return lg;
+};
+
+GameManager.prototype.resolveCompactPracticeCellCode = function (x, y) {
+  return (x << 2) | y;
+};
+
+GameManager.prototype.appendCompactPracticePrefix = function () {
   this.replayCompactLog += this.encodeReplay128(127) + this.encodeReplay128(2);
+};
+
+GameManager.prototype.appendCompactPracticeEncodedCellAndExponent = function (cell, exp) {
   this.replayCompactLog += this.encodeReplay128(cell) + this.encodeReplay128(exp);
 };
 
