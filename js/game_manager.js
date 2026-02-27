@@ -4608,17 +4608,11 @@ GameManager.prototype.resolveStepStatsSource = function () {
   };
 };
 
-GameManager.prototype.tryResolveStepStatsFromCore = function (actions, limit) {
-  var computeReplayStepStatsCore = this.callCoreReplayExecutionRuntime("computeReplayStepStats", [{
-    actions: actions,
-    limit: limit
-  }]);
-
-  if (!computeReplayStepStatsCore.available) return null;
-  var coreStats = computeReplayStepStatsCore.value || {};
-  var coreTotal = Number(coreStats.totalSteps);
-  var coreMoves = Number(coreStats.moveSteps);
-  var coreUndo = Number(coreStats.undoSteps);
+GameManager.prototype.normalizeCoreStepStats = function (coreStats) {
+  var raw = coreStats && typeof coreStats === "object" ? coreStats : {};
+  var coreTotal = Number(raw.totalSteps);
+  var coreMoves = Number(raw.moveSteps);
+  var coreUndo = Number(raw.undoSteps);
   if (
     Number.isFinite(coreTotal) &&
     Number.isFinite(coreMoves) &&
@@ -4631,6 +4625,16 @@ GameManager.prototype.tryResolveStepStatsFromCore = function (actions, limit) {
     };
   }
   return null;
+};
+
+GameManager.prototype.tryResolveStepStatsFromCore = function (actions, limit) {
+  var computeReplayStepStatsCore = this.callCoreReplayExecutionRuntime("computeReplayStepStats", [{
+    actions: actions,
+    limit: limit
+  }]);
+
+  if (!computeReplayStepStatsCore.available) return null;
+  return this.normalizeCoreStepStats(computeReplayStepStatsCore.value || {});
 };
 
 GameManager.prototype.calculateNetMoveSteps = function (actions, limit) {
