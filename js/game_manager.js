@@ -4753,6 +4753,14 @@ GameManager.prototype.scanMoveTraversals = function (traversals, vector, undo) {
   return moved;
 };
 
+GameManager.prototype.createDirectionalMovePlan = function (direction) {
+  return {
+    vector: this.getVector(direction),
+    scoreBeforeMove: this.score,
+    undo: this.createUndoSnapshotState()
+  };
+};
+
 // Move tiles on the grid in the specified direction
 GameManager.prototype.move = function (direction) {
   // 0: up, 1: right, 2:down, 3: left, -1: undo
@@ -4763,18 +4771,16 @@ GameManager.prototype.move = function (direction) {
 
   if (this.shouldAbortDirectionalMove(direction)) return;
 
-  var vector     = this.getVector(direction);
-  var traversals = this.buildTraversals(vector);
-  var scoreBeforeMove = this.score;
-  var undo       = this.createUndoSnapshotState();
+  var movePlan = this.createDirectionalMovePlan(direction);
+  var traversals = this.buildTraversals(movePlan.vector);
 
   // Save the current tile positions and remove merger information
   this.prepareTiles();
 
-  var moved = this.scanMoveTraversals(traversals, vector, undo);
+  var moved = this.scanMoveTraversals(traversals, movePlan.vector, movePlan.undo);
 
   if (moved) {
-    this.applySuccessfulMove(direction, scoreBeforeMove, undo);
+    this.applySuccessfulMove(direction, movePlan.scoreBeforeMove, movePlan.undo);
   }
 };
 
