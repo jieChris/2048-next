@@ -6592,13 +6592,17 @@ GameManager.prototype.initializeSetupUiShell = function () {
   return preferredTimerModuleView;
 };
 
-GameManager.prototype.resolveSetupTileInitializationState = function (hasInputSeed, options) {
-  var skipStartTiles = this.resolveSetupSkipStartTiles(options);
-  var restoredFromSavedState = this.resolveSetupRestoredFromSavedState(hasInputSeed, skipStartTiles, options);
+GameManager.prototype.buildSetupTileInitializationState = function (skipStartTiles, restoredFromSavedState) {
   return {
     skipStartTiles: skipStartTiles,
     restoredFromSavedState: restoredFromSavedState
   };
+};
+
+GameManager.prototype.resolveSetupTileInitializationState = function (hasInputSeed, options) {
+  var skipStartTiles = this.resolveSetupSkipStartTiles(options);
+  var restoredFromSavedState = this.resolveSetupRestoredFromSavedState(hasInputSeed, skipStartTiles, options);
+  return this.buildSetupTileInitializationState(skipStartTiles, restoredFromSavedState);
 };
 
 // Set up the game
