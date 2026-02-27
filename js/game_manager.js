@@ -523,28 +523,42 @@ GameManager.prototype.resolveReplayV4ModeCodeFromModeKey = function (modeKey) {
   return "C";
 };
 
+GameManager.prototype.decodeLegacyReplayV2CharCode = function (logString, index) {
+  var code = logString.charCodeAt(index) - 33;
+  if (code < 0 || code > 128) {
+    throw "Invalid replay char at index " + index;
+  }
+  return code;
+};
+
+GameManager.prototype.decodeLegacyReplayV2Entry = function (code) {
+  if (code === 128) {
+    return {
+      move: -1,
+      spawn: null
+    };
+  }
+  var dir = (code >> 5) & 3;
+  var is4 = (code >> 4) & 1;
+  var posIdx = code & 15;
+  return {
+    move: dir,
+    spawn: {
+      x: posIdx % 4,
+      y: Math.floor(posIdx / 4),
+      value: is4 ? 4 : 2
+    }
+  };
+};
+
 GameManager.prototype.decodeLegacyReplayV2Log = function (logString) {
   var replayMoves = [];
   var replaySpawns = [];
   for (var i = 0; i < logString.length; i++) {
-    var code = logString.charCodeAt(i) - 33;
-    if (code < 0 || code > 128) {
-      throw "Invalid replay char at index " + i;
-    }
-    if (code === 128) {
-      replayMoves.push(-1);
-      replaySpawns.push(null);
-      continue;
-    }
-    var dir = (code >> 5) & 3;
-    var is4 = (code >> 4) & 1;
-    var posIdx = code & 15;
-    replayMoves.push(dir);
-    replaySpawns.push({
-      x: posIdx % 4,
-      y: Math.floor(posIdx / 4),
-      value: is4 ? 4 : 2
-    });
+    var code = this.decodeLegacyReplayV2CharCode(logString, i);
+    var entry = this.decodeLegacyReplayV2Entry(code);
+    replayMoves.push(entry.move);
+    replaySpawns.push(entry.spawn);
   }
   return {
     replayMoves: replayMoves,
@@ -601,15 +615,18 @@ GameManager.prototype.decodeLegacyReplayV2Payload = function (trimmedReplayStrin
   };
 };
 
-GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
-  var decodeLegacyReplayCore = this.callCoreReplayLegacyRuntime("decodeLegacyReplay", [trimmedReplayString]);
-  if (decodeLegacyReplayCore.available) return decodeLegacyReplayCore.value;
-
+GameManager.prototype.decodeLegacyReplayFallback = function (trimmedReplayString) {
   var decodedV1 = this.decodeLegacyReplayV1Payload(trimmedReplayString);
   if (decodedV1) return decodedV1;
   var decodedV2S = this.decodeLegacyReplayV2SPayload(trimmedReplayString);
   if (decodedV2S) return decodedV2S;
   return this.decodeLegacyReplayV2Payload(trimmedReplayString);
+};
+
+GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
+  var decodeLegacyReplayCore = this.callCoreReplayLegacyRuntime("decodeLegacyReplay", [trimmedReplayString]);
+  if (decodeLegacyReplayCore.available) return decodeLegacyReplayCore.value;
+  return this.decodeLegacyReplayFallback(trimmedReplayString);
 };
 
 GameManager.prototype.resolveReplayExecution = function (action) {
