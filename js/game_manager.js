@@ -4965,6 +4965,21 @@ GameManager.prototype.applySetupSessionSyncDefaults = function (hasInputSeed) {
   this.sessionSubmitDone = false;
 };
 
+GameManager.prototype.resolveSetupSessionReplayV3Metadata = function () {
+  return {
+    mode: this.getServerMode(this.modeKey),
+    mode_key: this.modeKey,
+    board_width: this.width,
+    board_height: this.height,
+    ruleset: this.ruleset,
+    undo_enabled: !!this.modeConfig.undo_enabled,
+    mode_family: this.modeFamily,
+    rank_policy: this.rankPolicy,
+    special_rules_snapshot: this.clonePlain(this.specialRules || {}),
+    challenge_id: this.challengeId
+  };
+};
+
 GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
   var hasInputSeed = typeof inputSeed !== "undefined";
   if (hasInputSeed) {
@@ -4979,18 +4994,19 @@ GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
 };
 
 GameManager.prototype.createSetupSessionReplayV3Payload = function () {
+  var metadata = this.resolveSetupSessionReplayV3Metadata();
   return {
     v: 3,
-    mode: this.getServerMode(this.modeKey),
-    mode_key: this.modeKey,
-    board_width: this.width,
-    board_height: this.height,
-    ruleset: this.ruleset,
-    undo_enabled: !!this.modeConfig.undo_enabled,
-    mode_family: this.modeFamily,
-    rank_policy: this.rankPolicy,
-    special_rules_snapshot: this.clonePlain(this.specialRules || {}),
-    challenge_id: this.challengeId,
+    mode: metadata.mode,
+    mode_key: metadata.mode_key,
+    board_width: metadata.board_width,
+    board_height: metadata.board_height,
+    ruleset: metadata.ruleset,
+    undo_enabled: metadata.undo_enabled,
+    mode_family: metadata.mode_family,
+    rank_policy: metadata.rank_policy,
+    special_rules_snapshot: metadata.special_rules_snapshot,
+    challenge_id: metadata.challenge_id,
     seed: this.initialSeed,
     actions: []
   };
