@@ -6983,8 +6983,28 @@ GameManager.prototype.resolveSerializedReplayMode = function (replay) {
   return this.getServerMode(replay.mode_key || replay.mode || this.modeKey);
 };
 
+GameManager.prototype.resolveSerializedReplayBoardWidth = function (replay) {
+  return replay.board_width || this.width;
+};
+
+GameManager.prototype.resolveSerializedReplayBoardHeight = function (replay) {
+  return replay.board_height || this.height;
+};
+
+GameManager.prototype.resolveSerializedReplayRuleset = function (replay) {
+  return replay.ruleset || this.ruleset;
+};
+
 GameManager.prototype.resolveSerializedReplayUndoEnabled = function (replay) {
   return typeof replay.undo_enabled === "boolean" ? replay.undo_enabled : !!this.modeConfig.undo_enabled;
+};
+
+GameManager.prototype.resolveSerializedReplayModeFamily = function (replay) {
+  return replay.mode_family || this.modeFamily;
+};
+
+GameManager.prototype.resolveSerializedReplayRankPolicy = function (replay) {
+  return replay.rank_policy || this.rankPolicy;
 };
 
 GameManager.prototype.resolveSerializedReplaySpecialRulesSnapshot = function (replay) {
@@ -7004,12 +7024,12 @@ GameManager.prototype.buildSerializedReplayV3Payload = function (replay) {
     v: 3,
     mode: this.resolveSerializedReplayMode(replay),
     mode_key: this.resolveSerializedReplayModeKey(replay),
-    board_width: replay.board_width || this.width,
-    board_height: replay.board_height || this.height,
-    ruleset: replay.ruleset || this.ruleset,
+    board_width: this.resolveSerializedReplayBoardWidth(replay),
+    board_height: this.resolveSerializedReplayBoardHeight(replay),
+    ruleset: this.resolveSerializedReplayRuleset(replay),
     undo_enabled: this.resolveSerializedReplayUndoEnabled(replay),
-    mode_family: replay.mode_family || this.modeFamily,
-    rank_policy: replay.rank_policy || this.rankPolicy,
+    mode_family: this.resolveSerializedReplayModeFamily(replay),
+    rank_policy: this.resolveSerializedReplayRankPolicy(replay),
     special_rules_snapshot: this.resolveSerializedReplaySpecialRulesSnapshot(replay),
     challenge_id: this.resolveSerializedReplayChallengeId(replay),
     seed: replay.seed,
@@ -7075,35 +7095,96 @@ GameManager.prototype.buildSessionSubmitReplayPayload = function () {
   };
 };
 
+GameManager.prototype.resolveSessionSubmitMode = function () {
+  return this.getServerMode(this.modeKey);
+};
+
+GameManager.prototype.resolveSessionSubmitModeKey = function () {
+  return this.modeKey;
+};
+
+GameManager.prototype.resolveSessionSubmitBoardWidth = function () {
+  return this.width;
+};
+
+GameManager.prototype.resolveSessionSubmitBoardHeight = function () {
+  return this.height;
+};
+
+GameManager.prototype.resolveSessionSubmitRuleset = function () {
+  return this.ruleset;
+};
+
+GameManager.prototype.resolveSessionSubmitUndoEnabled = function () {
+  return !!this.modeConfig.undo_enabled;
+};
+
+GameManager.prototype.resolveSessionSubmitRankedBucket = function () {
+  return this.rankedBucket;
+};
+
+GameManager.prototype.resolveSessionSubmitModeFamily = function () {
+  return this.modeFamily;
+};
+
+GameManager.prototype.resolveSessionSubmitRankPolicy = function () {
+  return this.rankPolicy;
+};
+
+GameManager.prototype.resolveSessionSubmitChallengeId = function () {
+  return this.challengeId || null;
+};
+
+GameManager.prototype.resolveSessionSubmitScore = function () {
+  return this.score;
+};
+
+GameManager.prototype.resolveSessionSubmitBestTile = function () {
+  return this.getBestTileValue();
+};
+
+GameManager.prototype.resolveSessionSubmitDurationMs = function () {
+  return this.getDurationMs();
+};
+
+GameManager.prototype.resolveSessionSubmitFinalBoard = function () {
+  return this.getFinalBoardMatrix();
+};
+
+GameManager.prototype.buildSessionSubmitBasePayload = function (endedAt) {
+  return {
+    mode: this.resolveSessionSubmitMode(),
+    mode_key: this.resolveSessionSubmitModeKey(),
+    board_width: this.resolveSessionSubmitBoardWidth(),
+    board_height: this.resolveSessionSubmitBoardHeight(),
+    ruleset: this.resolveSessionSubmitRuleset(),
+    undo_enabled: this.resolveSessionSubmitUndoEnabled(),
+    ranked_bucket: this.resolveSessionSubmitRankedBucket(),
+    mode_family: this.resolveSessionSubmitModeFamily(),
+    rank_policy: this.resolveSessionSubmitRankPolicy(),
+    special_rules_snapshot: this.resolveSessionSubmitSpecialRulesSnapshot(),
+    challenge_id: this.resolveSessionSubmitChallengeId(),
+    score: this.resolveSessionSubmitScore(),
+    best_tile: this.resolveSessionSubmitBestTile(),
+    duration_ms: this.resolveSessionSubmitDurationMs(),
+    final_board: this.resolveSessionSubmitFinalBoard(),
+    ended_at: endedAt
+  };
+};
+
 GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike, adapterParitySnapshot) {
   var adapterParity = this.resolveSessionSubmitAdapterParityParts(adapterParitySnapshot);
   var replayPayload = this.buildSessionSubmitReplayPayload();
-  return {
-    mode: this.getServerMode(this.modeKey),
-    mode_key: this.modeKey,
-    board_width: this.width,
-    board_height: this.height,
-    ruleset: this.ruleset,
-    undo_enabled: !!this.modeConfig.undo_enabled,
-    ranked_bucket: this.rankedBucket,
-    mode_family: this.modeFamily,
-    rank_policy: this.rankPolicy,
-    special_rules_snapshot: this.resolveSessionSubmitSpecialRulesSnapshot(),
-    challenge_id: this.challengeId || null,
-    score: this.score,
-    best_tile: this.getBestTileValue(),
-    duration_ms: this.getDurationMs(),
-    final_board: this.getFinalBoardMatrix(),
-    ended_at: endedAt,
-    replay: replayPayload.replay,
-    replay_string: replayPayload.replay_string,
-    adapter_parity_report_v2: adapterParity.report,
-    adapter_parity_ab_diff_v2: adapterParity.diff,
-    adapter_parity_report_v1: adapterParity.report,
-    adapter_parity_ab_diff_v1: adapterParity.diff,
-    client_version: this.resolveSessionSubmitClientVersion(windowLike),
-    end_reason: this.resolveSessionSubmitEndReason()
-  };
+  var payload = this.buildSessionSubmitBasePayload(endedAt);
+  payload.replay = replayPayload.replay;
+  payload.replay_string = replayPayload.replay_string;
+  payload.adapter_parity_report_v2 = adapterParity.report;
+  payload.adapter_parity_ab_diff_v2 = adapterParity.diff;
+  payload.adapter_parity_report_v1 = adapterParity.report;
+  payload.adapter_parity_ab_diff_v1 = adapterParity.diff;
+  payload.client_version = this.resolveSessionSubmitClientVersion(windowLike);
+  payload.end_reason = this.resolveSessionSubmitEndReason();
+  return payload;
 };
 
 GameManager.prototype.buildSessionSubmitSuccessResult = function (endedAt, payload, savedRecord) {
