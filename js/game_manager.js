@@ -7005,22 +7005,32 @@ GameManager.prototype.persistSessionSubmitContext = function (submitContext) {
   }
 };
 
-GameManager.prototype.tryAutoSubmitOnGameOver = function () {
-  if (this.sessionSubmitDone) return;
+GameManager.prototype.handleSkippedSessionSubmitIfNeeded = function () {
   var skippedReason = this.resolveSessionSubmitSkipReason();
-  if (skippedReason) {
-    this.writeSkippedSessionSubmitResult(skippedReason);
-    return;
-  }
-  var localHistorySaveRecord = this.resolveLocalHistorySaveRecord();
-  if (!localHistorySaveRecord) {
-    this.writeMissingLocalHistoryStoreResult();
-    return;
-  }
+  if (!skippedReason) return false;
+  this.writeSkippedSessionSubmitResult(skippedReason);
+  return true;
+};
 
+GameManager.prototype.resolveSessionSubmitRecordOrWriteMissing = function () {
+  var localHistorySaveRecord = this.resolveLocalHistorySaveRecord();
+  if (localHistorySaveRecord) return localHistorySaveRecord;
+  this.writeMissingLocalHistoryStoreResult();
+  return null;
+};
+
+GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord) {
   this.sessionSubmitDone = true;
   var submitContext = this.buildSessionSubmitContext(localHistorySaveRecord);
   this.persistSessionSubmitContext(submitContext);
+};
+
+GameManager.prototype.tryAutoSubmitOnGameOver = function () {
+  if (this.sessionSubmitDone) return;
+  if (this.handleSkippedSessionSubmitIfNeeded()) return;
+  var localHistorySaveRecord = this.resolveSessionSubmitRecordOrWriteMissing();
+  if (!localHistorySaveRecord) return;
+  this.submitSessionForRecord(localHistorySaveRecord);
 };
 
 GameManager.prototype.isSessionTerminated = function () {
@@ -7031,11 +7041,23 @@ GameManager.prototype.shouldSerializeReplayAsV3 = function () {
   return this.width !== 4 || this.height !== 4 || this.isFibonacciMode();
 };
 
+GameManager.prototype.resolveReplayV4SerializationModeCode = function () {
+  return this.resolveReplayV4ModeCodeFromModeKey(this.modeKey);
+};
+
+GameManager.prototype.resolveReplayV4SerializationInitialBoard = function () {
+  return this.initialBoardMatrix || this.getFinalBoardMatrix();
+};
+
+GameManager.prototype.resolveReplayV4SerializationCompactLog = function () {
+  return this.replayCompactLog || "";
+};
+
 GameManager.prototype.buildReplayV4SerializationPayload = function () {
-  var modeCode = this.resolveReplayV4ModeCodeFromModeKey(this.modeKey);
-  var initialBoard = this.initialBoardMatrix || this.getFinalBoardMatrix();
+  var modeCode = this.resolveReplayV4SerializationModeCode();
+  var initialBoard = this.resolveReplayV4SerializationInitialBoard();
   var encodedBoard = this.encodeBoardV4(initialBoard);
-  return GameManager.REPLAY_V4_PREFIX + modeCode + encodedBoard + (this.replayCompactLog || "");
+  return GameManager.REPLAY_V4_PREFIX + modeCode + encodedBoard + this.resolveReplayV4SerializationCompactLog();
 };
 
 GameManager.prototype.serialize = function () {
