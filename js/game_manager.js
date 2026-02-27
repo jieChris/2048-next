@@ -3208,12 +3208,17 @@ GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
   return this.buildUndoTileSnapshotFallback(tile, target);
 };
 
-GameManager.prototype.createUndoRestoreTile = function (snapshot) {
-  var source = snapshot && typeof snapshot === "object" ? snapshot : {};
-  var previous = source.previousPosition && typeof source.previousPosition === "object"
-    ? source.previousPosition
-    : {};
-  var fallback = {
+GameManager.prototype.normalizeUndoRestoreTileSource = function (snapshot) {
+  var source = this.isNonArrayObject(snapshot) ? snapshot : {};
+  var previous = this.isNonArrayObject(source.previousPosition) ? source.previousPosition : {};
+  return {
+    source: source,
+    previous: previous
+  };
+};
+
+GameManager.prototype.buildUndoRestoreTileFallback = function (source, previous) {
+  return {
     x: source.x,
     y: source.y,
     value: source.value,
@@ -3222,6 +3227,24 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
       y: previous.y
     }
   };
+};
+
+GameManager.prototype.normalizeUndoRestoreTileFromCore = function (computed) {
+  if (
+    this.isNonArrayObject(computed) &&
+    computed.previousPosition &&
+    this.isNonArrayObject(computed.previousPosition)
+  ) {
+    return computed;
+  }
+  return null;
+};
+
+GameManager.prototype.createUndoRestoreTile = function (snapshot) {
+  var normalized = this.normalizeUndoRestoreTileSource(snapshot);
+  var source = normalized.source;
+  var previous = normalized.previous;
+  var fallback = this.buildUndoRestoreTileFallback(source, previous);
 
   var createUndoRestoreTileCore = this.callCoreUndoTileRestoreRuntime("createUndoRestoreTile", [{
       x: source.x,
@@ -3233,15 +3256,8 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
       }
     }]);
   if (createUndoRestoreTileCore.available) {
-    var computed = createUndoRestoreTileCore.value || {};
-    if (
-      computed &&
-      typeof computed === "object" &&
-      computed.previousPosition &&
-      typeof computed.previousPosition === "object"
-    ) {
-      return computed;
-    }
+    var normalizedByCore = this.normalizeUndoRestoreTileFromCore(createUndoRestoreTileCore.value || {});
+    if (normalizedByCore) return normalizedByCore;
   }
 
   return fallback;
