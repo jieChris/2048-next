@@ -3343,15 +3343,26 @@ GameManager.prototype.resetCappedDynamicTimers = function () {
   this.callWindowMethod("cappedTimerReset");
 };
 
-GameManager.prototype.getCappedTimerLegendClass = function (cappedTargetValue) {
+GameManager.prototype.resolveCappedTargetValueOrNull = function (cappedTargetValue) {
   var targetValue = Number(cappedTargetValue);
-  if (!Number.isFinite(targetValue) || targetValue <= 0) {
-    var cappedState = this.resolveCappedModeState();
-    targetValue = Number(cappedState.cappedTargetValue);
-    if (!Number.isFinite(targetValue) || targetValue <= 0) {
-      targetValue = null;
-    }
-  }
+  if (Number.isFinite(targetValue) && targetValue > 0) return targetValue;
+  var cappedState = this.resolveCappedModeState();
+  targetValue = Number(cappedState.cappedTargetValue);
+  if (Number.isFinite(targetValue) && targetValue > 0) return targetValue;
+  return null;
+};
+
+GameManager.prototype.resolveCappedTargetValueWithDefault = function (cappedTargetValue, fallbackValue) {
+  var resolvedValue = this.resolveCappedTargetValueOrNull(cappedTargetValue);
+  if (resolvedValue !== null) return resolvedValue;
+  var normalizedFallbackValue = Number(fallbackValue);
+  return Number.isFinite(normalizedFallbackValue) && normalizedFallbackValue > 0
+    ? normalizedFallbackValue
+    : 2048;
+};
+
+GameManager.prototype.getCappedTimerLegendClass = function (cappedTargetValue) {
+  var targetValue = this.resolveCappedTargetValueOrNull(cappedTargetValue);
   var resolveCappedTimerLegendClassCore = this.callCoreModeRuntime("resolveCappedTimerLegendClass", [{
       timerMilestoneSlotByValue: this.timerMilestoneSlotByValue,
       cappedTargetValue: targetValue
@@ -3368,14 +3379,7 @@ GameManager.prototype.getCappedTimerLegendClass = function (cappedTargetValue) {
 };
 
 GameManager.prototype.getCappedTimerFontSize = function (cappedTargetValue) {
-  var targetValue = Number(cappedTargetValue);
-  if (!Number.isFinite(targetValue) || targetValue <= 0) {
-    var cappedState = this.resolveCappedModeState();
-    targetValue = Number(cappedState.cappedTargetValue);
-    if (!Number.isFinite(targetValue) || targetValue <= 0) {
-      targetValue = 2048;
-    }
-  }
+  var targetValue = this.resolveCappedTargetValueWithDefault(cappedTargetValue, 2048);
   var resolveCappedTimerLegendFontSizeCore = this.callCoreModeRuntime("resolveCappedTimerLegendFontSize", [
     targetValue
   ]);
