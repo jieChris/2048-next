@@ -4597,18 +4597,7 @@ GameManager.prototype.recordPostUndoMove = function (direction) {
   }
 };
 
-GameManager.prototype.handleUndoMove = function (direction) {
-  if (!this.canProcessUndoMove()) {
-    return;
-  }
-
-  var prev = this.normalizeUndoStackEntry(this.undoStack.pop());
-  var undoPayload = this.computeUndoRestorePayload(prev);
-  this.restoreUndoPayload(undoPayload);
-  var undoRestore = this.computeUndoRestoreState(prev);
-  this.applyUndoRestoreFlags(undoRestore);
-  this.recordPostUndoMove(direction);
-
+GameManager.prototype.publishUndoCompletion = function (direction, undoRestore) {
   this.actuate();
 
   // Resume timer if it was stopped (e.g. game over)
@@ -4624,6 +4613,20 @@ GameManager.prototype.handleUndoMove = function (direction) {
     direction: direction,
     moved: true
   });
+};
+
+GameManager.prototype.handleUndoMove = function (direction) {
+  if (!this.canProcessUndoMove()) {
+    return;
+  }
+
+  var prev = this.normalizeUndoStackEntry(this.undoStack.pop());
+  var undoPayload = this.computeUndoRestorePayload(prev);
+  this.restoreUndoPayload(undoPayload);
+  var undoRestore = this.computeUndoRestoreState(prev);
+  this.applyUndoRestoreFlags(undoRestore);
+  this.recordPostUndoMove(direction);
+  this.publishUndoCompletion(direction, undoRestore);
 };
 
 GameManager.prototype.savePostMoveState = function (direction, undo) {
