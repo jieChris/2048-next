@@ -727,10 +727,14 @@ GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
   return this.normalizeReplaySeekTargetFallback(targetIndex);
 };
 
-GameManager.prototype.normalizeReplaySeekTargetFallback = function (targetIndex) {
+GameManager.prototype.clampReplaySeekTargetByReplayMoves = function (targetIndex) {
   if (targetIndex < 0) targetIndex = 0;
   if (this.replayMoves && targetIndex > this.replayMoves.length) targetIndex = this.replayMoves.length;
   return targetIndex;
+};
+
+GameManager.prototype.normalizeReplaySeekTargetFallback = function (targetIndex) {
+  return this.clampReplaySeekTargetByReplayMoves(targetIndex);
 };
 
 GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
@@ -743,8 +747,12 @@ GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
   return this.planReplayStepFallback(action, spawnAtIndex);
 };
 
+GameManager.prototype.shouldInjectForcedSpawnFallback = function (action) {
+  return !!this.replaySpawns && !Array.isArray(action);
+};
+
 GameManager.prototype.planReplayStepFallback = function (action, spawnAtIndex) {
-  var shouldInjectForcedSpawn = !!this.replaySpawns && !Array.isArray(action);
+  var shouldInjectForcedSpawn = this.shouldInjectForcedSpawnFallback(action);
   return {
     shouldInjectForcedSpawn: shouldInjectForcedSpawn,
     forcedSpawn: shouldInjectForcedSpawn ? spawnAtIndex : undefined
@@ -761,18 +769,23 @@ GameManager.prototype.planReplayStepExecution = function () {
   return this.planReplayStepExecutionFallback();
 };
 
-GameManager.prototype.planReplayStepExecutionFallback = function () {
-  var action = this.replayMoves[this.replayIndex];
-  var stepPlan = this.planReplayStep(
-    action,
-    this.replaySpawns ? this.replaySpawns[this.replayIndex] : undefined
-  );
+GameManager.prototype.resolveReplaySpawnAtCurrentIndex = function () {
+  return this.replaySpawns ? this.replaySpawns[this.replayIndex] : undefined;
+};
+
+GameManager.prototype.buildReplayStepExecutionFallback = function (action, stepPlan) {
   return {
     action: action,
     shouldInjectForcedSpawn: !!stepPlan.shouldInjectForcedSpawn,
     forcedSpawn: stepPlan.forcedSpawn,
     nextReplayIndex: this.replayIndex + 1
   };
+};
+
+GameManager.prototype.planReplayStepExecutionFallback = function () {
+  var action = this.replayMoves[this.replayIndex];
+  var stepPlan = this.planReplayStep(action, this.resolveReplaySpawnAtCurrentIndex());
+  return this.buildReplayStepExecutionFallback(action, stepPlan);
 };
 
 GameManager.prototype.computeReplayPauseState = function () {
