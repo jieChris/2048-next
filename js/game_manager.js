@@ -1904,24 +1904,32 @@ GameManager.prototype.appendCompactPracticeActionFallback = function (x, y, valu
   this.replayCompactLog += this.encodeReplay128(cell) + this.encodeReplay128(exp);
 };
 
-GameManager.prototype.detectMode = function () {
-  var resolveDetectedModeCore = this.callCoreModeRuntime("resolveDetectedMode", [{
-      existingMode: this.mode,
-      bodyMode:
-        typeof document !== "undefined" && document.body
-          ? document.body.getAttribute("data-mode-id")
-          : "",
-      pathname:
-        typeof window !== "undefined" && window.location
-          ? window.location.pathname
-          : "",
-      defaultModeKey: GameManager.DEFAULT_MODE_KEY
-    }]);
-  if (resolveDetectedModeCore.available) {
-    var detectedByCore = resolveDetectedModeCore.value;
-    if (typeof detectedByCore === "string" && detectedByCore) return detectedByCore;
-  }
+GameManager.prototype.resolveDetectedModeCoreInput = function () {
+  return {
+    existingMode: this.mode,
+    bodyMode:
+      typeof document !== "undefined" && document.body
+        ? document.body.getAttribute("data-mode-id")
+        : "",
+    pathname:
+      typeof window !== "undefined" && window.location
+        ? window.location.pathname
+        : "",
+    defaultModeKey: GameManager.DEFAULT_MODE_KEY
+  };
+};
 
+GameManager.prototype.detectModeFromPathname = function (path) {
+  if (path.indexOf("undo_2048") !== -1) return "classic_4x4_pow2_undo";
+  if (path.indexOf("Practice_board") !== -1) return "practice_legacy";
+  if (path.indexOf("capped_2048") !== -1) return "capped_4x4_pow2_no_undo";
+  if (path === "/" || /\/$/.test(path) || path.indexOf("/index.html") !== -1 || path.indexOf("index.html") !== -1) {
+    return "standard_4x4_pow2_no_undo";
+  }
+  return "classic_4x4_pow2_undo";
+};
+
+GameManager.prototype.detectModeFallback = function () {
   if (this.mode) return this.mode;
   if (typeof document !== "undefined" && document.body) {
     var bodyMode = document.body.getAttribute("data-mode-id");
@@ -1930,14 +1938,18 @@ GameManager.prototype.detectMode = function () {
   if (typeof window === "undefined" || !window.location || !window.location.pathname) {
     return GameManager.DEFAULT_MODE_KEY;
   }
-  var path = window.location.pathname;
-  if (path.indexOf("undo_2048") !== -1) return "classic_4x4_pow2_undo";
-  if (path.indexOf("Practice_board") !== -1) return "practice_legacy";
-  if (path.indexOf("capped_2048") !== -1) return "capped_4x4_pow2_no_undo";
-  if (path === "/" || /\/$/.test(path) || path.indexOf("/index.html") !== -1 || path.indexOf("index.html") !== -1) {
-    return "standard_4x4_pow2_no_undo";
+  return this.detectModeFromPathname(window.location.pathname);
+};
+
+GameManager.prototype.detectMode = function () {
+  var resolveDetectedModeCore = this.callCoreModeRuntime("resolveDetectedMode", [
+    this.resolveDetectedModeCoreInput()
+  ]);
+  if (resolveDetectedModeCore.available) {
+    var detectedByCore = resolveDetectedModeCore.value;
+    if (typeof detectedByCore === "string" && detectedByCore) return detectedByCore;
   }
-  return "classic_4x4_pow2_undo";
+  return this.detectModeFallback();
 };
 
 GameManager.prototype.clonePlain = function (value) {
