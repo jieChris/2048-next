@@ -7190,11 +7190,15 @@ GameManager.prototype.clearReplayIntervalIfNeeded = function (shouldClearInterva
   }
 };
 
+GameManager.prototype.createReplayTickIntervalCallback = function () {
+  var manager = this;
+  return function () {
+    manager.runReplayTick();
+  };
+};
+
 GameManager.prototype.scheduleReplayInterval = function (delay) {
-  var self = this;
-  this.replayInterval = setInterval(function () {
-    self.runReplayTick();
-  }, delay);
+  this.replayInterval = setInterval(this.createReplayTickIntervalCallback(), delay);
 };
 
 GameManager.prototype.applyReplayPauseState = function (pauseState) {
