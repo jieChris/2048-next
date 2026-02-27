@@ -4213,6 +4213,14 @@ GameManager.prototype.restartWithBoard = function (board, modeConfig, options) {
   this.actuate();
 };
 
+GameManager.prototype.restartReplaySession = function (payload, modeConfig, useBoardRestart) {
+  if (useBoardRestart) {
+    this.restartWithBoard(payload, modeConfig, { asReplay: true });
+    return;
+  }
+  this.restartWithSeed(payload, modeConfig);
+};
+
 // Keep playing after winning
 GameManager.prototype.keepPlaying = function () {
   this.keepPlaying = true;
@@ -5543,11 +5551,7 @@ GameManager.prototype.import = function (replayString) {
     };
     var restartReplayImportSession = function (modeConfig, payload, useBoardRestart) {
       self.disableSessionSync = true;
-      if (useBoardRestart) {
-        self.restartWithBoard(payload, modeConfig, { asReplay: true });
-      } else {
-        self.restartWithSeed(payload, modeConfig);
-      }
+      self.restartReplaySession(payload, modeConfig, useBoardRestart);
       finalizeReplayImport();
     };
     var applyJsonV3ReplayEnvelopeMeta = function (envelope, modeConfig) {
@@ -5680,10 +5684,10 @@ GameManager.prototype.seek = function (targetIndex) {
     var rewindPlan = this.planReplaySeekRewind(targetIndex);
     var restartPlan = this.planReplaySeekRestart(rewindPlan);
     if (restartPlan.shouldRestartWithBoard) {
-        this.restartWithBoard(this.replayStartBoardMatrix, this.modeConfig, { asReplay: true });
+        this.restartReplaySession(this.replayStartBoardMatrix, this.modeConfig, true);
     }
     if (restartPlan.shouldRestartWithSeed) {
-        this.restartWithSeed(this.initialSeed, this.modeConfig);
+        this.restartReplaySession(this.initialSeed, this.modeConfig, false);
     }
     if (restartPlan.shouldApplyReplayIndex) {
         this.replayIndex = restartPlan.replayIndex;
