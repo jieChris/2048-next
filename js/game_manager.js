@@ -3107,18 +3107,7 @@ GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) 
   return Math.pow(2, cells + 1);
 };
 
-GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
-  var normalizeModeConfigCore = this.callCoreModeRuntime("normalizeModeConfig", [{
-      modeKey: modeKey,
-      rawConfig: rawConfig,
-      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
-      defaultModeConfig: GameManager.DEFAULT_MODE_CONFIG,
-      normalizeSpawnTable: this.normalizeSpawnTable.bind(this),
-      getTheoreticalMaxTile: this.getTheoreticalMaxTile.bind(this),
-      normalizeSpecialRules: this.normalizeSpecialRules.bind(this)
-    }]);
-  if (normalizeModeConfigCore.available) return normalizeModeConfigCore.value;
-
+GameManager.prototype.normalizeModeConfigBaseFallback = function (modeKey, rawConfig) {
   var cfg = rawConfig ? this.clonePlain(rawConfig) : this.clonePlain(GameManager.DEFAULT_MODE_CONFIG);
   cfg.key = cfg.key || modeKey || GameManager.DEFAULT_MODE_KEY;
   cfg.board_width = Number.isInteger(cfg.board_width) && cfg.board_width > 0 ? cfg.board_width : 4;
@@ -3126,6 +3115,10 @@ GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
   cfg.ruleset = cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2";
   cfg.special_rules = this.normalizeSpecialRules(cfg.special_rules);
   cfg.undo_enabled = !!cfg.undo_enabled;
+  return cfg;
+};
+
+GameManager.prototype.applyNormalizedModeMaxTileFallback = function (cfg) {
   var hasNumericMaxTile = Number.isInteger(cfg.max_tile) && cfg.max_tile > 0;
   var isCappedKey = typeof cfg.key === "string" && cfg.key.indexOf("capped") !== -1;
   var forceMaxTile = !!cfg.special_rules.enforce_max_tile;
@@ -3137,7 +3130,9 @@ GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
   } else {
     cfg.max_tile = this.getTheoreticalMaxTile(cfg.board_width, cfg.board_height, cfg.ruleset);
   }
+};
 
+GameManager.prototype.applyNormalizedModeSpawnTableFallback = function (cfg) {
   var customFourRate = Number(cfg.special_rules.custom_spawn_four_rate);
   if (cfg.ruleset === "pow2" && Number.isFinite(customFourRate)) {
     if (customFourRate < 0) customFourRate = 0;
@@ -3150,13 +3145,33 @@ GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
     if (!strictTable.length) strictTable.push({ value: 2, weight: 100 });
     cfg.spawn_table = strictTable;
     cfg.special_rules.custom_spawn_four_rate = customFourRate;
-  } else {
-    cfg.spawn_table = this.normalizeSpawnTable(cfg.spawn_table, cfg.ruleset);
+    return;
   }
+  cfg.spawn_table = this.normalizeSpawnTable(cfg.spawn_table, cfg.ruleset);
+};
 
+GameManager.prototype.applyNormalizedModeMetadataFallback = function (cfg) {
   cfg.ranked_bucket = cfg.ranked_bucket || "none";
   cfg.mode_family = cfg.mode_family || (cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2");
   cfg.rank_policy = cfg.rank_policy || (cfg.ranked_bucket !== "none" ? "ranked" : "unranked");
+};
+
+GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
+  var normalizeModeConfigCore = this.callCoreModeRuntime("normalizeModeConfig", [{
+      modeKey: modeKey,
+      rawConfig: rawConfig,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+      defaultModeConfig: GameManager.DEFAULT_MODE_CONFIG,
+      normalizeSpawnTable: this.normalizeSpawnTable.bind(this),
+      getTheoreticalMaxTile: this.getTheoreticalMaxTile.bind(this),
+      normalizeSpecialRules: this.normalizeSpecialRules.bind(this)
+    }]);
+  if (normalizeModeConfigCore.available) return normalizeModeConfigCore.value;
+
+  var cfg = this.normalizeModeConfigBaseFallback(modeKey, rawConfig);
+  this.applyNormalizedModeMaxTileFallback(cfg);
+  this.applyNormalizedModeSpawnTableFallback(cfg);
+  this.applyNormalizedModeMetadataFallback(cfg);
   return cfg;
 };
 
