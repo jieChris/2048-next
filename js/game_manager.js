@@ -1782,6 +1782,15 @@ GameManager.prototype.applyRestoredSavedTimerUiState = function (saved) {
   }
 };
 
+GameManager.prototype.tryApplyRestoredSavedBoard = function (saved) {
+  try {
+    this.setBoardFromMatrix(saved.board);
+    return true;
+  } catch (_err) {
+    return false;
+  }
+};
+
 GameManager.prototype.tryRestoreSavedGameState = function () {
   if (!this.shouldUseSavedGameState()) return false;
   var savedFull = this.readSavedPayloadByKey(this.getSavedGameStateKey());
@@ -1794,10 +1803,7 @@ GameManager.prototype.tryRestoreSavedGameState = function () {
     if (precheck.shouldClearSavedState) this.clearSavedGameState();
     return false;
   }
-
-  try {
-    this.setBoardFromMatrix(saved.board);
-  } catch (_err3) {
+  if (!this.tryApplyRestoredSavedBoard(saved)) {
     this.clearSavedGameState();
     return false;
   }
