@@ -2182,27 +2182,58 @@ GameManager.prototype.handleSavedStateRestorePrecheckFailure = function (prechec
   return false;
 };
 
-GameManager.prototype.tryRestoreSavedGameState = function () {
-  if (!this.shouldUseSavedGameState()) return false;
-  var saved = this.resolveLatestSavedStateForCurrentMode();
-  if (!saved) return false;
-  var precheck = this.resolveSavedStateRestorePrecheck(saved);
+GameManager.prototype.shouldAttemptSavedGameStateRestore = function () {
+  return this.shouldUseSavedGameState();
+};
+
+GameManager.prototype.resolveSavedStateCandidateForRestore = function () {
+  return this.resolveLatestSavedStateForCurrentMode();
+};
+
+GameManager.prototype.resolveSavedStateRestoreEligibility = function (saved) {
+  return this.resolveSavedStateRestorePrecheck(saved);
+};
+
+GameManager.prototype.resolveRestorableSavedState = function () {
+  var saved = this.resolveSavedStateCandidateForRestore();
+  if (!saved) return null;
+  var precheck = this.resolveSavedStateRestoreEligibility(saved);
   if (!precheck.canRestore) {
-    return this.handleSavedStateRestorePrecheckFailure(precheck);
+    this.handleSavedStateRestorePrecheckFailure(precheck);
+    return null;
   }
-  if (!this.tryApplyRestoredSavedBoard(saved)) {
-    this.clearSavedGameState();
-    return false;
-  }
+  return saved;
+};
+
+GameManager.prototype.handleFailedSavedBoardRestore = function () {
+  this.clearSavedGameState();
+  return false;
+};
+
+GameManager.prototype.applyRestoredSavedState = function (saved) {
   this.applyRestoredSavedStateCoreFields(saved);
   this.applyRestoredSavedBoardSnapshots(saved);
   this.applyRestoredSavedTimerUiState(saved);
+};
+
+GameManager.prototype.tryRestoreSavedGameState = function () {
+  if (!this.shouldAttemptSavedGameStateRestore()) return false;
+  var saved = this.resolveRestorableSavedState();
+  if (!saved) return false;
+  if (!this.tryApplyRestoredSavedBoard(saved)) {
+    return this.handleFailedSavedBoardRestore();
+  }
+  this.applyRestoredSavedState(saved);
   return true;
+};
+
+GameManager.prototype.shouldAbortSaveGameStateForTerminatedSession = function () {
+  return this.isSessionTerminated() && this.modeKey !== "practice_legacy";
 };
 
 GameManager.prototype.shouldAbortSaveGameState = function (options, now) {
   if (!this.shouldUseSavedGameState()) return true;
-  if (this.isSessionTerminated() && this.modeKey !== "practice_legacy") {
+  if (this.shouldAbortSaveGameStateForTerminatedSession()) {
     this.clearSavedGameState();
     return true;
   }
