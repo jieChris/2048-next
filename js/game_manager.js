@@ -5813,6 +5813,18 @@ GameManager.prototype.resolveSessionSubmitSkipReason = function () {
   return null;
 };
 
+GameManager.prototype.resolveLocalHistorySaveRecord = function () {
+  return this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
+};
+
+GameManager.prototype.writeMissingLocalHistoryStoreResult = function () {
+  this.writeLastSessionSubmitResult({
+    at: new Date().toISOString(),
+    ok: false,
+    reason: "local_history_store_missing"
+  });
+};
+
 GameManager.prototype.tryAutoSubmitOnGameOver = function () {
   if (this.sessionSubmitDone) return;
   var skippedReason = this.resolveSessionSubmitSkipReason();
@@ -5820,13 +5832,9 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
     this.writeSkippedSessionSubmitResult(skippedReason);
     return;
   }
-  var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
+  var localHistorySaveRecord = this.resolveLocalHistorySaveRecord();
   if (!localHistorySaveRecord) {
-    this.writeLastSessionSubmitResult({
-      at: new Date().toISOString(),
-      ok: false,
-      reason: "local_history_store_missing"
-    });
+    this.writeMissingLocalHistoryStoreResult();
     return;
   }
 
