@@ -5593,25 +5593,38 @@ GameManager.prototype.getBestTileValue = function () {
 
 GameManager.prototype.getDurationMs = function () {
   var nowMs = Date.now();
-  var resolveDurationMsCore = this.callCoreReplayTimerRuntime("resolveDurationMs", [{
-      timerStatus: this.timerStatus,
-      startTimeMs:
-        this.startTime && typeof this.startTime.getTime === "function"
-          ? this.startTime.getTime()
-          : null,
-      accumulatedTime: this.accumulatedTime,
-      sessionStartedAt: this.sessionStartedAt,
-      nowMs: nowMs
-    }]);
+  var resolveDurationMsCore = this.callCoreReplayTimerRuntime("resolveDurationMs", [
+    this.resolveDurationMsCoreInput(nowMs)
+  ]);
   if (resolveDurationMsCore.available) {
-    var coreMs = Number(resolveDurationMsCore.value);
-    if (Number.isFinite(coreMs)) {
-      coreMs = Math.floor(coreMs);
-      return coreMs < 0 ? 0 : coreMs;
-    }
+    var resolvedCoreMs = this.normalizeDurationMs(resolveDurationMsCore.value);
+    if (resolvedCoreMs !== null) return resolvedCoreMs;
   }
+  return this.resolveDurationMsFallback(nowMs);
+};
 
-  var ms = 0;
+GameManager.prototype.resolveDurationMsCoreInput = function (nowMs) {
+  return {
+    timerStatus: this.timerStatus,
+    startTimeMs:
+      this.startTime && typeof this.startTime.getTime === "function"
+        ? this.startTime.getTime()
+        : null,
+    accumulatedTime: this.accumulatedTime,
+    sessionStartedAt: this.sessionStartedAt,
+    nowMs: nowMs
+  };
+};
+
+GameManager.prototype.normalizeDurationMs = function (rawMs) {
+  var ms = Number(rawMs);
+  if (!Number.isFinite(ms)) return null;
+  ms = Math.floor(ms);
+  return ms < 0 ? 0 : ms;
+};
+
+GameManager.prototype.resolveDurationMsFallback = function (nowMs) {
+  var ms;
   if (this.timerStatus === 1 && this.startTime) {
     ms = nowMs - this.startTime.getTime();
   } else {
@@ -5620,8 +5633,7 @@ GameManager.prototype.getDurationMs = function () {
   if (!Number.isFinite(ms) || ms < 0) {
     ms = nowMs - (this.sessionStartedAt || nowMs);
   }
-  ms = Math.floor(ms);
-  return ms < 0 ? 0 : ms;
+  return this.normalizeDurationMs(ms);
 };
 
 GameManager.prototype.serializeV3 = function () {
