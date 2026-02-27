@@ -1325,7 +1325,9 @@ GameManager.prototype.captureTimerDynamicRowsState = function (containerId) {
   return out;
 };
 
-GameManager.prototype.createSavedDynamicTimerRow = function (rowState) {
+GameManager.prototype.createSavedDynamicTimerRow = function (rowState, cappedState) {
+  var resolvedCappedState =
+    cappedState && typeof cappedState === "object" ? cappedState : this.resolveCappedModeState();
   var repeat = parseInt(rowState && rowState.repeat, 10);
   var labelText = rowState && typeof rowState.label === "string" ? rowState.label : "";
   var timeText = rowState && typeof rowState.time === "string" ? rowState.time : "";
@@ -1337,11 +1339,14 @@ GameManager.prototype.createSavedDynamicTimerRow = function (rowState) {
   }
 
   var legend = document.createElement("div");
-  legend.className = this.getCappedTimerLegendClass();
-  legend.style.cssText = "color: #f9f6f2; font-size: " + this.getCappedTimerFontSize() + ";";
+  legend.className = this.getCappedTimerLegendClass(resolvedCappedState.cappedTargetValue);
+  legend.style.cssText =
+    "color: #f9f6f2; font-size: " +
+    this.getCappedTimerFontSize(resolvedCappedState.cappedTargetValue) +
+    ";";
   legend.textContent = labelText;
   if (
-    !(Number.isFinite(repeat) && repeat >= 2 && this.isCappedMode()) &&
+    !(Number.isFinite(repeat) && repeat >= 2 && resolvedCappedState.isCappedMode) &&
     rowState &&
     typeof rowState.labelClass === "string" &&
     rowState.labelClass
@@ -1422,7 +1427,7 @@ GameManager.prototype.restoreTimerRowsFromState = function (saved) {
     capped.innerHTML = "";
     var cappedRows = Array.isArray(saved.timer_dynamic_rows_capped) ? saved.timer_dynamic_rows_capped : [];
     for (var c = 0; c < cappedRows.length; c++) {
-      capped.appendChild(this.createSavedDynamicTimerRow(cappedRows[c]));
+      capped.appendChild(this.createSavedDynamicTimerRow(cappedRows[c], cappedStateForRestore));
     }
   }
 
@@ -1431,7 +1436,7 @@ GameManager.prototype.restoreTimerRowsFromState = function (saved) {
     overflow.innerHTML = "";
     var overflowRows = Array.isArray(saved.timer_dynamic_rows_overflow) ? saved.timer_dynamic_rows_overflow : [];
     for (var o = 0; o < overflowRows.length; o++) {
-      overflow.appendChild(this.createSavedDynamicTimerRow(overflowRows[o]));
+      overflow.appendChild(this.createSavedDynamicTimerRow(overflowRows[o], cappedStateForRestore));
     }
   }
 
@@ -2613,17 +2618,20 @@ GameManager.prototype.computeUndoRestorePayload = function (prev) {
 };
 
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
+  var cappedState = this.resolveCappedModeState();
+  var isCappedMode = !!cappedState.isCappedMode;
+  var cappedTargetValue = cappedState.cappedTargetValue;
   var computeMergeEffectsCore = this.callCoreMergeEffectsRuntime("computeMergeEffects", [{
       mergedValue: mergedValue,
-      isCappedMode: this.isCappedMode(),
-      cappedTargetValue: this.getCappedTargetValue(),
+      isCappedMode: isCappedMode,
+      cappedTargetValue: cappedTargetValue,
       reached32k: !!this.reached32k
     }]);
   if (computeMergeEffectsCore.available) return computeMergeEffectsCore.value || {};
 
   var value = Number(mergedValue);
-  var cappedMode = this.isCappedMode();
-  var cappedTarget = Number(this.getCappedTargetValue());
+  var cappedMode = isCappedMode;
+  var cappedTarget = Number(cappedTargetValue);
   var hasCappedTarget = Number.isFinite(cappedTarget) && cappedTarget > 0;
   var reached32k = !!this.reached32k;
   var result = {
@@ -3534,7 +3542,7 @@ GameManager.prototype.recordCappedMilestone = function (timeStr) {
     repeat: String(this.cappedMilestoneCount),
     label: nextLabel,
     time: timeStr
-  });
+  }, cappedState);
   container.appendChild(rowDiv);
   this.normalizeCappedRepeatLegendClasses(cappedState);
 
