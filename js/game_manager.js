@@ -8672,10 +8672,18 @@ GameManager.prototype.resolveSessionSubmitRecordOrWriteMissing = function () {
   return null;
 };
 
-GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord) {
+GameManager.prototype.markSessionSubmitStarted = function () {
   this.sessionSubmitDone = true;
+};
+
+GameManager.prototype.buildAndPersistSessionSubmitContext = function (localHistorySaveRecord) {
   var submitContext = this.buildSessionSubmitContext(localHistorySaveRecord);
   this.persistSessionSubmitContext(submitContext);
+};
+
+GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord) {
+  this.markSessionSubmitStarted();
+  this.buildAndPersistSessionSubmitContext(localHistorySaveRecord);
 };
 
 GameManager.prototype.tryAutoSubmitOnGameOver = function () {
