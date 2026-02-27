@@ -857,14 +857,33 @@ GameManager.prototype.getWebStorageByName = function (name) {
   }
 };
 
-GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
+GameManager.prototype.getWindowLike = function () {
+  return typeof window !== "undefined" ? window : null;
+};
+
+GameManager.prototype.invokeGameSettingsStorageRuntime = function (methodName, payload) {
   var runtime = this.getCoreGameSettingsStorageRuntime();
-  if (runtime && typeof runtime.readStorageFlagFromContext === "function") {
-    return !!runtime.readStorageFlagFromContext({
-      windowLike: typeof window !== "undefined" ? window : null,
-      key: key,
-      trueValue: trueValue
-    });
+  if (!runtime || typeof methodName !== "string" || !methodName) {
+    return { handled: false, value: null };
+  }
+  var method = runtime[methodName];
+  if (typeof method !== "function") {
+    return { handled: false, value: null };
+  }
+  return {
+    handled: true,
+    value: method.call(runtime, payload || {})
+  };
+};
+
+GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
+  var runtimeResult = this.invokeGameSettingsStorageRuntime("readStorageFlagFromContext", {
+    windowLike: this.getWindowLike(),
+    key: key,
+    trueValue: trueValue
+  });
+  if (runtimeResult.handled) {
+    return !!runtimeResult.value;
   }
   var storage = this.getWebStorageByName("localStorage");
   if (!storage || typeof storage.getItem !== "function") return false;
@@ -877,15 +896,15 @@ GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
 };
 
 GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue, falseValue) {
-  var runtime = this.getCoreGameSettingsStorageRuntime();
-  if (runtime && typeof runtime.writeStorageFlagFromContext === "function") {
-    return !!runtime.writeStorageFlagFromContext({
-      windowLike: typeof window !== "undefined" ? window : null,
-      key: key,
-      enabled: !!enabled,
-      trueValue: trueValue,
-      falseValue: falseValue
-    });
+  var runtimeResult = this.invokeGameSettingsStorageRuntime("writeStorageFlagFromContext", {
+    windowLike: this.getWindowLike(),
+    key: key,
+    enabled: !!enabled,
+    trueValue: trueValue,
+    falseValue: falseValue
+  });
+  if (runtimeResult.handled) {
+    return !!runtimeResult.value;
   }
   var storage = this.getWebStorageByName("localStorage");
   if (!storage || typeof storage.setItem !== "function") return false;
@@ -899,12 +918,12 @@ GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue,
 };
 
 GameManager.prototype.readLocalStorageJsonMap = function (key) {
-  var runtime = this.getCoreGameSettingsStorageRuntime();
-  if (runtime && typeof runtime.readStorageJsonMapFromContext === "function") {
-    var runtimeMap = runtime.readStorageJsonMapFromContext({
-      windowLike: typeof window !== "undefined" ? window : null,
-      key: key
-    });
+  var runtimeResult = this.invokeGameSettingsStorageRuntime("readStorageJsonMapFromContext", {
+    windowLike: this.getWindowLike(),
+    key: key
+  });
+  if (runtimeResult.handled) {
+    var runtimeMap = runtimeResult.value;
     if (runtimeMap && typeof runtimeMap === "object" && !Array.isArray(runtimeMap)) {
       return runtimeMap;
     }
@@ -924,13 +943,13 @@ GameManager.prototype.readLocalStorageJsonMap = function (key) {
 };
 
 GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
-  var runtime = this.getCoreGameSettingsStorageRuntime();
-  if (runtime && typeof runtime.writeStorageJsonMapFromContext === "function") {
-    return !!runtime.writeStorageJsonMapFromContext({
-      windowLike: typeof window !== "undefined" ? window : null,
-      key: key,
-      map: map
-    });
+  var runtimeResult = this.invokeGameSettingsStorageRuntime("writeStorageJsonMapFromContext", {
+    windowLike: this.getWindowLike(),
+    key: key,
+    map: map
+  });
+  if (runtimeResult.handled) {
+    return !!runtimeResult.value;
   }
   var storage = this.getWebStorageByName("localStorage");
   if (!storage || typeof storage.setItem !== "function") return false;
@@ -944,13 +963,13 @@ GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
 };
 
 GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
-  var runtime = this.getCoreGameSettingsStorageRuntime();
-  if (runtime && typeof runtime.writeStorageJsonPayloadFromContext === "function") {
-    return !!runtime.writeStorageJsonPayloadFromContext({
-      windowLike: typeof window !== "undefined" ? window : null,
-      key: key,
-      payload: payload
-    });
+  var runtimeResult = this.invokeGameSettingsStorageRuntime("writeStorageJsonPayloadFromContext", {
+    windowLike: this.getWindowLike(),
+    key: key,
+    payload: payload
+  });
+  if (runtimeResult.handled) {
+    return !!runtimeResult.value;
   }
   var storage = this.getWebStorageByName("localStorage");
   if (!storage || typeof storage.setItem !== "function") return false;
