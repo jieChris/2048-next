@@ -1399,7 +1399,7 @@ GameManager.prototype.decodeWindowNameSavedMapPayload = function (encoded) {
 
 GameManager.prototype.resolveWindowNameSavedMap = function (raw, marker) {
   if (!raw || typeof raw !== "string") return null;
-  var parts = raw.split("&");
+  var parts = this.resolveWindowNameParts(raw);
   var lookupMarker = this.resolveWindowNameLookupMarker(marker);
   var encoded = this.extractWindowNameEncodedMapPart(parts, lookupMarker);
   return this.decodeWindowNameSavedMapPayload(encoded);
