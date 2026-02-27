@@ -12,7 +12,9 @@ import {
   resolveCappedPlaceholderRowValues,
   resolveCappedPlaceholderSlotByRepeatCount,
   resolveCappedRowVisibilityPlan,
+  resolveCappedTimerLegendClass,
   resolveCappedTimerLegendFontSize,
+  formatCappedRepeatLabel,
   resolveProgressiveCapped64Unlock,
   isTimerLeaderboardAvailableByMode,
   isUndoAllowedByMode,
@@ -298,12 +300,32 @@ describe("core mode: capped policy", () => {
 });
 
 describe("core mode: capped timer placeholder policy", () => {
+  it("resolves capped timer legend class from milestone slot map", () => {
+    expect(
+      resolveCappedTimerLegendClass({
+        timerMilestoneSlotByValue: { "64": "64", "128": "128" },
+        cappedTargetValue: 64
+      })
+    ).toBe("timertile timer-legend-64");
+    expect(
+      resolveCappedTimerLegendClass({
+        timerMilestoneSlotByValue: { "64": "64" },
+        cappedTargetValue: 128
+      })
+    ).toBe("timertile");
+  });
+
   it("resolves capped timer legend font size by capped target value", () => {
     expect(resolveCappedTimerLegendFontSize(64)).toBe("22px");
     expect(resolveCappedTimerLegendFontSize(128)).toBe("18px");
     expect(resolveCappedTimerLegendFontSize(1024)).toBe("14px");
     expect(resolveCappedTimerLegendFontSize(8192)).toBe("13px");
     expect(resolveCappedTimerLegendFontSize(null)).toBe("14px");
+  });
+
+  it("formats capped repeat label", () => {
+    expect(formatCappedRepeatLabel(2)).toBe("x2");
+    expect(formatCappedRepeatLabel(9)).toBe("x9");
   });
 
   it("resolves capped placeholder rows from timer slots", () => {

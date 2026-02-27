@@ -185,6 +185,21 @@
     return "22px";
   }
 
+  function resolveCappedTimerLegendClass(input) {
+    var source = input || {};
+    var rawSlotByValue = source.timerMilestoneSlotByValue;
+    var slotByValue =
+      rawSlotByValue && typeof rawSlotByValue === "object" ? rawSlotByValue : null;
+    var targetKey = String(source.cappedTargetValue);
+    var slotId = slotByValue ? slotByValue[targetKey] : null;
+    if (slotId === null || slotId === undefined || slotId === "") return "timertile";
+    return "timertile timer-legend-" + String(slotId);
+  }
+
+  function formatCappedRepeatLabel(repeatCount) {
+    return "x" + String(repeatCount);
+  }
+
   function resolveCappedPlaceholderRowValues(input) {
     var source = input || {};
     if (!source.isCappedMode) return [];
@@ -356,6 +371,8 @@
   global.CoreModeRuntime.getCappedTargetValue = getCappedTargetValue;
   global.CoreModeRuntime.isProgressiveCapped64Mode = isProgressiveCapped64Mode;
   global.CoreModeRuntime.resolveCappedTimerLegendFontSize = resolveCappedTimerLegendFontSize;
+  global.CoreModeRuntime.resolveCappedTimerLegendClass = resolveCappedTimerLegendClass;
+  global.CoreModeRuntime.formatCappedRepeatLabel = formatCappedRepeatLabel;
   global.CoreModeRuntime.resolveCappedPlaceholderRowValues = resolveCappedPlaceholderRowValues;
   global.CoreModeRuntime.resolveCappedPlaceholderSlotByRepeatCount = resolveCappedPlaceholderSlotByRepeatCount;
   global.CoreModeRuntime.resolveCappedRowVisibilityPlan = resolveCappedRowVisibilityPlan;

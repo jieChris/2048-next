@@ -37,6 +37,11 @@ export interface CappedTimerPlaceholderRowsInput {
   timerSlotIds?: number[] | null;
 }
 
+export interface CappedTimerLegendClassInput {
+  timerMilestoneSlotByValue?: Record<string, unknown> | null;
+  cappedTargetValue?: number | null;
+}
+
 export interface CappedTimerPlaceholderSlotInput {
   repeatCount?: number | null;
   placeholderRowValues?: number[] | null;
@@ -195,6 +200,21 @@ export function resolveCappedTimerLegendFontSize(cappedTargetValue?: number | nu
   if (resolvedCap >= 1024) return "14px";
   if (resolvedCap >= 128) return "18px";
   return "22px";
+}
+
+export function resolveCappedTimerLegendClass(input: CappedTimerLegendClassInput): string {
+  const source = input || {};
+  const rawSlotByValue = source.timerMilestoneSlotByValue;
+  const slotByValue =
+    rawSlotByValue && typeof rawSlotByValue === "object" ? rawSlotByValue : null;
+  const targetKey = String(source.cappedTargetValue);
+  const slotId = slotByValue ? slotByValue[targetKey] : null;
+  if (slotId === null || slotId === undefined || slotId === "") return "timertile";
+  return "timertile timer-legend-" + String(slotId);
+}
+
+export function formatCappedRepeatLabel(repeatCount: unknown): string {
+  return "x" + String(repeatCount);
 }
 
 export function resolveCappedPlaceholderRowValues(input: CappedTimerPlaceholderRowsInput): number[] {

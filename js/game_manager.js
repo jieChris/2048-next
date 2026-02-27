@@ -3032,6 +3032,15 @@ GameManager.prototype.resetCappedDynamicTimers = function () {
 };
 
 GameManager.prototype.getCappedTimerLegendClass = function () {
+  var resolveCappedTimerLegendClassCore = this.resolveCoreModeRuntimeMethod("resolveCappedTimerLegendClass");
+  if (resolveCappedTimerLegendClassCore) {
+    var legendClass = resolveCappedTimerLegendClassCore({
+      timerMilestoneSlotByValue: this.timerMilestoneSlotByValue,
+      cappedTargetValue: this.getCappedTargetValue()
+    });
+    if (typeof legendClass === "string" && legendClass) return legendClass;
+  }
+
   var slotId = this.timerMilestoneSlotByValue
     ? this.timerMilestoneSlotByValue[String(this.getCappedTargetValue())]
     : null;
@@ -3052,6 +3061,11 @@ GameManager.prototype.getCappedTimerFontSize = function () {
 };
 
 GameManager.prototype.getCappedRepeatLabel = function (repeatCount) {
+  var formatCappedRepeatLabelCore = this.resolveCoreModeRuntimeMethod("formatCappedRepeatLabel");
+  if (formatCappedRepeatLabelCore) {
+    var label = formatCappedRepeatLabelCore(repeatCount);
+    if (typeof label === "string") return label;
+  }
   return "x" + String(repeatCount);
 };
 
