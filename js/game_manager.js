@@ -2513,8 +2513,26 @@ GameManager.prototype.resolveSavedGameStateCapped64Unlocked = function () {
   return this.capped64Unlocked ? this.safeClonePlain(this.capped64Unlocked, null) : null;
 };
 
-GameManager.prototype.buildSavedGameStateBasePayload = function (savedAt, replaySnapshot, timerSnapshot) {
+GameManager.prototype.buildSavedGameStateBaseReplayPayload = function (replaySnapshot) {
   return {
+    move_history: replaySnapshot.move_history,
+    ips_input_count: replaySnapshot.ips_input_count,
+    undo_stack: replaySnapshot.undo_stack,
+    replay_compact_log: replaySnapshot.replay_compact_log,
+    session_replay_v3: replaySnapshot.session_replay_v3
+  };
+};
+
+GameManager.prototype.buildSavedGameStateBaseTimerPayload = function (timerSnapshot) {
+  return {
+    timer_status: timerSnapshot.timer_status,
+    duration_ms: timerSnapshot.duration_ms,
+    has_game_started: timerSnapshot.has_game_started
+  };
+};
+
+GameManager.prototype.buildSavedGameStateBasePayload = function (savedAt, replaySnapshot, timerSnapshot) {
+  return Object.assign({
     v: this.resolveSavedGameStatePayloadVersion(),
     saved_at: savedAt,
     terminated: false,
@@ -2529,19 +2547,13 @@ GameManager.prototype.buildSavedGameStateBasePayload = function (savedAt, replay
     keep_playing: this.resolveSavedGameStateKeepPlaying(),
     initial_seed: this.resolveSavedGameStateInitialSeed(),
     seed: this.resolveSavedGameStateSeed(),
-    move_history: replaySnapshot.move_history,
-    ips_input_count: replaySnapshot.ips_input_count,
-    undo_stack: replaySnapshot.undo_stack,
-    replay_compact_log: replaySnapshot.replay_compact_log,
-    session_replay_v3: replaySnapshot.session_replay_v3,
     spawn_value_counts: this.resolveSavedGameStateSpawnValueCounts(),
     reached_32k: this.resolveSavedGameStateReached32k(),
     capped_milestone_count: this.resolveSavedGameStateCappedMilestoneCount(),
-    capped64_unlocked: this.resolveSavedGameStateCapped64Unlocked(),
-    timer_status: timerSnapshot.timer_status,
-    duration_ms: timerSnapshot.duration_ms,
-    has_game_started: timerSnapshot.has_game_started
-  };
+    capped64_unlocked: this.resolveSavedGameStateCapped64Unlocked()
+  },
+  this.buildSavedGameStateBaseReplayPayload(replaySnapshot),
+  this.buildSavedGameStateBaseTimerPayload(timerSnapshot));
 };
 
 GameManager.prototype.resolveSavedBoardRestartSnapshot = function () {
