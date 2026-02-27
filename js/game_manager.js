@@ -5421,24 +5421,27 @@ GameManager.prototype.applyMergeTimerRowVisibilityEffects = function (mergeEffec
   }
 };
 
+GameManager.prototype.applyMergeOutcomeFlags = function (mergeEffects) {
+  if (mergeEffects.shouldSetWon) {
+    this.won = true;
+  }
+  if (mergeEffects.shouldSetReached32k) {
+    this.reached32k = true;
+  }
+};
+
 GameManager.prototype.applyMergeMilestoneEffects = function (mergedValue, timeStr) {
   this.recordTimerMilestone(mergedValue, timeStr);
   var mergeEffects = this.computeMergeEffects(mergedValue);
   if (mergeEffects.shouldRecordCappedMilestone) {
     this.recordCappedMilestone(timeStr);
   }
-  if (mergeEffects.shouldSetWon) {
-    this.won = true;
-  }
+  this.applyMergeOutcomeFlags(mergeEffects);
 
   var timerIdsToStamp = Array.isArray(mergeEffects.timerIdsToStamp)
     ? mergeEffects.timerIdsToStamp
     : [];
   this.applyMergeTimerStampEffects(timerIdsToStamp, timeStr);
-
-  if (mergeEffects.shouldSetReached32k) {
-    this.reached32k = true; // Flag reached
-  }
   this.applyMergeTimerRowVisibilityEffects(mergeEffects);
 };
 
