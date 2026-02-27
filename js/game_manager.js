@@ -7266,9 +7266,17 @@ GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
     this.applyReplaySeekRestartIndex(restartPlan);
 };
 
+GameManager.prototype.shouldContinueFastForwardReplay = function (targetIndex) {
+    return this.replayIndex < targetIndex;
+};
+
+GameManager.prototype.advanceReplayOneStep = function () {
+    this.executePlannedReplayStep();
+};
+
 GameManager.prototype.fastForwardReplayToIndex = function (targetIndex) {
-    while (this.replayIndex < targetIndex) {
-        this.executePlannedReplayStep();
+    while (this.shouldContinueFastForwardReplay(targetIndex)) {
+        this.advanceReplayOneStep();
     }
 };
 
