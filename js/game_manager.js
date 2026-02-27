@@ -5466,7 +5466,7 @@ GameManager.prototype.restoreUndoPayload = function (undoPayload) {
   this.restoreUndoPayloadTiles(undoPayload);
 };
 
-GameManager.prototype.applyUndoRestoreFlags = function (undoRestore) {
+GameManager.prototype.applyUndoRestoreCounterFlags = function (undoRestore) {
   this.comboStreak =
     Number.isInteger(undoRestore.comboStreak) && undoRestore.comboStreak >= 0
       ? undoRestore.comboStreak
@@ -5488,10 +5488,17 @@ GameManager.prototype.applyUndoRestoreFlags = function (undoRestore) {
     Number.isInteger(undoRestore.undoUsed) && undoRestore.undoUsed >= 0
       ? undoRestore.undoUsed
       : ((Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0) + 1);
+};
 
+GameManager.prototype.applyUndoRestoreOutcomeFlags = function (undoRestore) {
   this.over = typeof undoRestore.over === "boolean" ? undoRestore.over : false;
   this.won = typeof undoRestore.won === "boolean" ? undoRestore.won : false;
   this.keepPlaying = typeof undoRestore.keepPlaying === "boolean" ? undoRestore.keepPlaying : false;
+};
+
+GameManager.prototype.applyUndoRestoreFlags = function (undoRestore) {
+  this.applyUndoRestoreCounterFlags(undoRestore);
+  this.applyUndoRestoreOutcomeFlags(undoRestore);
   if (undoRestore.shouldClearMessage !== false) {
     this.actuator.clearMessage(); // Clear Game Over message if present
   }
