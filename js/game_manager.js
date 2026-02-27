@@ -5545,6 +5545,15 @@ GameManager.prototype.import = function (replayString) {
       self.applyUndoSettingForMode(self.modeKey, true, true);
       startReplay();
     };
+    var restartReplayImportSession = function (modeConfig, payload, useBoardRestart) {
+      self.disableSessionSync = true;
+      if (useBoardRestart) {
+        self.restartWithBoard(payload, modeConfig, { asReplay: true });
+      } else {
+        self.restartWithSeed(payload, modeConfig);
+      }
+      finalizeReplayImport();
+    };
 
     var parsedEnvelope = this.parseReplayImportEnvelope(trimmed);
     if (parsedEnvelope && (parsedEnvelope.kind === "json-v3" || parsedEnvelope.kind === "v4c")) {
@@ -5564,9 +5573,7 @@ GameManager.prototype.import = function (replayString) {
         }
         this.replayMoves = parsedEnvelope.actions;
         this.replaySpawns = null;
-        this.disableSessionSync = true;
-        this.restartWithSeed(parsedEnvelope.seed, replayModeConfig);
-        finalizeReplayImport();
+        restartReplayImportSession(replayModeConfig, parsedEnvelope.seed, false);
         return;
       }
 
@@ -5575,9 +5582,7 @@ GameManager.prototype.import = function (replayString) {
       this.replayMoves = Array.isArray(decodedV4Actions.replayMoves) ? decodedV4Actions.replayMoves : [];
       this.replaySpawns = Array.isArray(decodedV4Actions.replaySpawns) ? decodedV4Actions.replaySpawns : [];
 
-      this.disableSessionSync = true;
-      this.restartWithBoard(initialBoard, replayModeConfig, { asReplay: true });
-      finalizeReplayImport();
+      restartReplayImportSession(replayModeConfig, initialBoard, true);
       return;
     }
 
