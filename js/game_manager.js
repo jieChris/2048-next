@@ -2124,15 +2124,25 @@ GameManager.prototype.hasValidSavedStateBoardShape = function (saved) {
   return Array.isArray(saved.board) && saved.board.length === this.height;
 };
 
+GameManager.prototype.hasValidSavedStateRestoreBase = function (saved) {
+  if (!this.isSavedStateObject(saved)) return false;
+  if (!this.hasMatchingSavedStateVersion(saved)) return false;
+  if (this.isSavedStateTerminated(saved)) return false;
+  if (this.shouldRejectEndedSavedState(saved)) return false;
+  return true;
+};
+
+GameManager.prototype.hasCompatibleSavedStateRestoreContext = function (saved) {
+  if (!this.hasMatchingSavedStateBoardSize(saved)) return false;
+  if (!this.hasCompatibleSavedStateRuleset(saved)) return false;
+  if (!this.hasValidSavedStateBoardShape(saved)) return false;
+  return true;
+};
+
 GameManager.prototype.resolveSavedStateRestorePrecheck = function (saved) {
-  if (!this.isSavedStateObject(saved)) return this.resolveInvalidSavedStatePrecheckResult();
-  if (!this.hasMatchingSavedStateVersion(saved)) return this.resolveInvalidSavedStatePrecheckResult();
-  if (this.isSavedStateTerminated(saved)) return this.resolveInvalidSavedStatePrecheckResult();
-  if (this.shouldRejectEndedSavedState(saved)) return this.resolveInvalidSavedStatePrecheckResult();
+  if (!this.hasValidSavedStateRestoreBase(saved)) return this.resolveInvalidSavedStatePrecheckResult();
   if (!this.hasMatchingSavedStateMode(saved)) return this.resolveModeMismatchSavedStatePrecheckResult();
-  if (!this.hasMatchingSavedStateBoardSize(saved)) return this.resolveInvalidSavedStatePrecheckResult();
-  if (!this.hasCompatibleSavedStateRuleset(saved)) return this.resolveInvalidSavedStatePrecheckResult();
-  if (!this.hasValidSavedStateBoardShape(saved)) return this.resolveInvalidSavedStatePrecheckResult();
+  if (!this.hasCompatibleSavedStateRestoreContext(saved)) return this.resolveInvalidSavedStatePrecheckResult();
   return this.resolveRestorableSavedStatePrecheckResult();
 };
 
