@@ -406,56 +406,58 @@ GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString)
     }]);
   if (parseReplayImportEnvelopeCore.available) return parseReplayImportEnvelopeCore.value;
 
-  var normalizeOptionalString = function (raw) {
-    return typeof raw === "string" && raw ? raw : null;
+  var jsonEnvelope = this.parseJsonReplayImportEnvelope(trimmedReplayString);
+  if (jsonEnvelope) return jsonEnvelope;
+  return this.parseV4ReplayImportEnvelope(trimmedReplayString);
+};
+
+GameManager.prototype.normalizeOptionalReplayString = function (raw) {
+  return typeof raw === "string" && raw ? raw : null;
+};
+
+GameManager.prototype.parseJsonReplayImportEnvelope = function (trimmedReplayString) {
+  if (trimmedReplayString.charAt(0) !== "{") return null;
+  var replayObj = JSON.parse(trimmedReplayString);
+  if (replayObj.v !== 3) throw "Unsupported JSON replay version";
+  var actions = replayObj.actions;
+  if (!Array.isArray(actions)) throw "Invalid v3 actions";
+  return {
+    kind: "json-v3",
+    modeKey: this.normalizeOptionalReplayString(replayObj.mode_key) ||
+      this.normalizeOptionalReplayString(replayObj.mode) ||
+      this.modeKey ||
+      this.mode,
+    actions: actions,
+    seed: replayObj.seed,
+    specialRulesSnapshot:
+      replayObj.special_rules_snapshot && typeof replayObj.special_rules_snapshot === "object"
+        ? replayObj.special_rules_snapshot
+        : null,
+    modeFamily: this.normalizeOptionalReplayString(replayObj.mode_family),
+    rankPolicy: this.normalizeOptionalReplayString(replayObj.rank_policy),
+    challengeId: this.normalizeOptionalReplayString(replayObj.challenge_id)
   };
+};
 
-  if (trimmedReplayString.charAt(0) === "{") {
-    var replayObj = JSON.parse(trimmedReplayString);
-    if (replayObj.v === 3) {
-      var actions = replayObj.actions;
-      if (!Array.isArray(actions)) throw "Invalid v3 actions";
-      return {
-        kind: "json-v3",
-        modeKey: normalizeOptionalString(replayObj.mode_key) ||
-          normalizeOptionalString(replayObj.mode) ||
-          this.modeKey ||
-          this.mode,
-        actions: actions,
-        seed: replayObj.seed,
-        specialRulesSnapshot:
-          replayObj.special_rules_snapshot && typeof replayObj.special_rules_snapshot === "object"
-            ? replayObj.special_rules_snapshot
-            : null,
-        modeFamily: normalizeOptionalString(replayObj.mode_family),
-        rankPolicy: normalizeOptionalString(replayObj.rank_policy),
-        challengeId: normalizeOptionalString(replayObj.challenge_id)
-      };
-    }
-    throw "Unsupported JSON replay version";
-  }
-
-  if (trimmedReplayString.indexOf(GameManager.REPLAY_V4_PREFIX) === 0) {
-    var body = trimmedReplayString.substring(GameManager.REPLAY_V4_PREFIX.length);
-    if (body.length < 17) throw "Invalid v4C payload";
-    var modeCode = body.charAt(0);
-    var codeToMode = {
-      S: "standard_4x4_pow2_no_undo",
-      C: "classic_4x4_pow2_undo",
-      K: "capped_4x4_pow2_no_undo",
-      P: "practice_legacy"
-    };
-    var replayModeIdV4 = codeToMode[modeCode];
-    if (!replayModeIdV4) throw "Invalid v4C mode";
-    return {
-      kind: "v4c",
-      modeKey: replayModeIdV4,
-      initialBoardEncoded: body.substring(1, 17),
-      actionsEncoded: body.substring(17)
-    };
-  }
-
-  return null;
+GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayString) {
+  if (trimmedReplayString.indexOf(GameManager.REPLAY_V4_PREFIX) !== 0) return null;
+  var body = trimmedReplayString.substring(GameManager.REPLAY_V4_PREFIX.length);
+  if (body.length < 17) throw "Invalid v4C payload";
+  var modeCode = body.charAt(0);
+  var codeToMode = {
+    S: "standard_4x4_pow2_no_undo",
+    C: "classic_4x4_pow2_undo",
+    K: "capped_4x4_pow2_no_undo",
+    P: "practice_legacy"
+  };
+  var replayModeIdV4 = codeToMode[modeCode];
+  if (!replayModeIdV4) throw "Invalid v4C mode";
+  return {
+    kind: "v4c",
+    modeKey: replayModeIdV4,
+    initialBoardEncoded: body.substring(1, 17),
+    actionsEncoded: body.substring(17)
+  };
 };
 
 GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
