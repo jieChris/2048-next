@@ -1900,11 +1900,19 @@ GameManager.prototype.persistSavedGameStatePayload = function (payload) {
   return !!(persisted || litePersisted);
 };
 
+GameManager.prototype.getElementTextContentById = function (id) {
+  return (document.getElementById(id) || {}).textContent || "";
+};
+
+GameManager.prototype.isElementDisplayBlockById = function (id) {
+  return ((document.getElementById(id) || {}).style || {}).display === "block";
+};
+
 GameManager.prototype.resolveTimerSubStateSnapshot = function () {
   return {
-    timer_sub_8192: (document.getElementById("timer8192-sub") || {}).textContent || "",
-    timer_sub_16384: (document.getElementById("timer16384-sub") || {}).textContent || "",
-    timer_sub_visible: ((document.getElementById("timer32k-sub-container") || {}).style || {}).display === "block"
+    timer_sub_8192: this.getElementTextContentById("timer8192-sub"),
+    timer_sub_16384: this.getElementTextContentById("timer16384-sub"),
+    timer_sub_visible: this.isElementDisplayBlockById("timer32k-sub-container")
   };
 };
 
