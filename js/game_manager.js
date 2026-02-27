@@ -2491,9 +2491,12 @@ GameManager.prototype.normalizeSpecialRules = function (rules) {
 };
 
 GameManager.prototype.applySpecialRulesState = function () {
-  var specialCore = this.getCoreSpecialRulesRuntime();
-  if (specialCore && typeof specialCore.computeSpecialRulesState === "function") {
-    var computed = specialCore.computeSpecialRulesState(
+  var computeSpecialRulesStateCore = this.resolveCoreRuntimeMethod(
+    "getCoreSpecialRulesRuntime",
+    "computeSpecialRulesState"
+  );
+  if (computeSpecialRulesStateCore) {
+    var computed = computeSpecialRulesStateCore(
       this.specialRules || {},
       this.width,
       this.height,
@@ -2548,9 +2551,9 @@ GameManager.prototype.isBlockedCell = function (x, y) {
 };
 
 GameManager.prototype.getAvailableCells = function () {
-  var gridCore = this.getCoreGridScanRuntime();
-  if (gridCore && typeof gridCore.getAvailableCells === "function") {
-    return gridCore.getAvailableCells(
+  var getAvailableCellsCore = this.resolveCoreRuntimeMethod("getCoreGridScanRuntime", "getAvailableCells");
+  if (getAvailableCellsCore) {
+    return getAvailableCellsCore(
       this.width,
       this.height,
       this.isBlockedCell.bind(this),
@@ -2571,9 +2574,12 @@ GameManager.prototype.getAvailableCells = function () {
 };
 
 GameManager.prototype.getLockedDirection = function () {
-  var directionLockCore = this.getCoreDirectionLockRuntime();
-  if (directionLockCore && typeof directionLockCore.getLockedDirectionState === "function") {
-    var computed = directionLockCore.getLockedDirectionState({
+  var getLockedDirectionStateCore = this.resolveCoreRuntimeMethod(
+    "getCoreDirectionLockRuntime",
+    "getLockedDirectionState"
+  );
+  if (getLockedDirectionStateCore) {
+    var computed = getLockedDirectionStateCore({
       directionLockRules: this.directionLockRules,
       successfulMoveCount: this.successfulMoveCount,
       lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
@@ -3173,10 +3179,11 @@ GameManager.prototype.closeStatsPanel = function () {
 };
 
 GameManager.prototype.isTimerLeaderboardAvailableByMode = function (mode) {
-  var modeCore = this.getCoreModeRuntime();
-  if (modeCore && typeof modeCore.isTimerLeaderboardAvailableByMode === "function") {
-    return !!modeCore.isTimerLeaderboardAvailableByMode(mode);
-  }
+  var isTimerLeaderboardAvailableByModeCore = this.resolveCoreRuntimeMethod(
+    "getCoreModeRuntime",
+    "isTimerLeaderboardAvailableByMode"
+  );
+  if (isTimerLeaderboardAvailableByModeCore) return !!isTimerLeaderboardAvailableByModeCore(mode);
   void mode;
   return true;
 };
@@ -4245,7 +4252,7 @@ GameManager.prototype.move = function (direction) {
     this.actuate();
 
     // Start timer on first move
-    if (postMoveCore && typeof postMoveCore.computePostMoveLifecycle === "function") {
+    if (computePostMoveLifecycleCore) {
       var shouldStart =
         postMoveResult && typeof postMoveResult.shouldStartTimer === "boolean"
           ? postMoveResult.shouldStartTimer
@@ -4264,11 +4271,8 @@ GameManager.prototype.move = function (direction) {
 
 // Get the vector representing the chosen direction
 GameManager.prototype.getVector = function (direction) {
-  var movePathCore = this.getCoreMovePathRuntime();
-  var movePathResult = this.invokeRuntimeMethod(movePathCore, "getVector", [direction]);
-  if (movePathResult.handled) {
-    return movePathResult.value;
-  }
+  var getVectorCore = this.resolveCoreRuntimeMethod("getCoreMovePathRuntime", "getVector");
+  if (getVectorCore) return getVectorCore(direction);
 
   // Vectors representing tile movement
   var map = {
@@ -4283,14 +4287,9 @@ GameManager.prototype.getVector = function (direction) {
 
 // Build a list of positions to traverse in the right order
 GameManager.prototype.buildTraversals = function (vector) {
-  var movePathCore = this.getCoreMovePathRuntime();
-  var movePathResult = this.invokeRuntimeMethod(movePathCore, "buildTraversals", [
-    this.width,
-    this.height,
-    vector
-  ]);
-  if (movePathResult.handled) {
-    var computed = movePathResult.value || {};
+  var buildTraversalsCore = this.resolveCoreRuntimeMethod("getCoreMovePathRuntime", "buildTraversals");
+  if (buildTraversalsCore) {
+    var computed = buildTraversalsCore(this.width, this.height, vector) || {};
     return {
       x: Array.isArray(computed.x) ? computed.x : [],
       y: Array.isArray(computed.y) ? computed.y : []
@@ -4314,19 +4313,18 @@ GameManager.prototype.buildTraversals = function (vector) {
 };
 
 GameManager.prototype.findFarthestPosition = function (cell, vector) {
-  var movePathCore = this.getCoreMovePathRuntime();
-  var movePathResult = this.invokeRuntimeMethod(movePathCore, "findFarthestPosition", [
-    cell,
-    vector,
-    this.width,
-    this.height,
-    this.isBlockedCell.bind(this),
-    this.grid && typeof this.grid.cellAvailable === "function"
-      ? this.grid.cellAvailable.bind(this.grid)
-      : function () { return false; }
-  ]);
-  if (movePathResult.handled) {
-    var computed = movePathResult.value || {};
+  var findFarthestPositionCore = this.resolveCoreRuntimeMethod("getCoreMovePathRuntime", "findFarthestPosition");
+  if (findFarthestPositionCore) {
+    var computed = findFarthestPositionCore(
+      cell,
+      vector,
+      this.width,
+      this.height,
+      this.isBlockedCell.bind(this),
+      this.grid && typeof this.grid.cellAvailable === "function"
+        ? this.grid.cellAvailable.bind(this.grid)
+        : function () { return false; }
+    ) || {};
     if (computed.farthest && computed.next) return computed;
   }
 
@@ -4347,38 +4345,31 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
 };
 
 GameManager.prototype.movesAvailable = function () {
-  var moveScanCore = this.getCoreMoveScanRuntime();
-  var moveScanResult = this.invokeRuntimeMethod(moveScanCore, "movesAvailable", [
-    this.getAvailableCells().length,
-    this.tileMatchesAvailable()
-  ]);
-  if (moveScanResult.handled) {
-    return moveScanResult.value;
-  }
+  var movesAvailableCore = this.resolveCoreRuntimeMethod("getCoreMoveScanRuntime", "movesAvailable");
+  if (movesAvailableCore) return movesAvailableCore(this.getAvailableCells().length, this.tileMatchesAvailable());
   return this.getAvailableCells().length > 0 || this.tileMatchesAvailable();
 };
 
 // Check for available matches between tiles (more expensive check)
 GameManager.prototype.tileMatchesAvailable = function () {
-  var moveScanCore = this.getCoreMoveScanRuntime();
-  var moveScanResult = this.invokeRuntimeMethod(moveScanCore, "tileMatchesAvailable", [
-    this.width,
-    this.height,
-    this.isBlockedCell.bind(this),
-    (function (manager) {
-      return function (cell) {
-        var tile = manager.grid.cellContent(cell);
-        return tile ? tile.value : null;
-      };
-    })(this),
-    (function (manager) {
-      return function (a, b) {
-        return manager.getMergedValue(a, b) !== null;
-      };
-    })(this)
-  ]);
-  if (moveScanResult.handled) {
-    return moveScanResult.value;
+  var tileMatchesAvailableCore = this.resolveCoreRuntimeMethod("getCoreMoveScanRuntime", "tileMatchesAvailable");
+  if (tileMatchesAvailableCore) {
+    return tileMatchesAvailableCore(
+      this.width,
+      this.height,
+      this.isBlockedCell.bind(this),
+      (function (manager) {
+        return function (cell) {
+          var tile = manager.grid.cellContent(cell);
+          return tile ? tile.value : null;
+        };
+      })(this),
+      (function (manager) {
+        return function (a, b) {
+          return manager.getMergedValue(a, b) !== null;
+        };
+      })(this)
+    );
   }
 
   var self = this;
@@ -4410,11 +4401,8 @@ GameManager.prototype.tileMatchesAvailable = function () {
 };
 
 GameManager.prototype.positionsEqual = function (first, second) {
-  var movePathCore = this.getCoreMovePathRuntime();
-  var movePathResult = this.invokeRuntimeMethod(movePathCore, "positionsEqual", [first, second]);
-  if (movePathResult.handled) {
-    return movePathResult.value;
-  }
+  var positionsEqualCore = this.resolveCoreRuntimeMethod("getCoreMovePathRuntime", "positionsEqual");
+  if (positionsEqualCore) return positionsEqualCore(first, second);
   return first.x === second.x && first.y === second.y;
 };
 
@@ -4436,15 +4424,11 @@ GameManager.prototype.startTimer = function() {
 };
 
 GameManager.prototype.getTimerUpdateIntervalMs = function () {
-  var timerIntervalCore = this.getCoreTimerIntervalRuntime();
-  var timerIntervalResult = this.invokeRuntimeMethod(
-    timerIntervalCore,
-    "resolveTimerUpdateIntervalMs",
-    [this.width, this.height]
+  var resolveTimerUpdateIntervalMsCore = this.resolveCoreRuntimeMethod(
+    "getCoreTimerIntervalRuntime",
+    "resolveTimerUpdateIntervalMs"
   );
-  if (timerIntervalResult.handled) {
-    return timerIntervalResult.value;
-  }
+  if (resolveTimerUpdateIntervalMsCore) return resolveTimerUpdateIntervalMsCore(this.width, this.height);
 
   var area = (this.width || 4) * (this.height || 4);
   if (area >= 100) return 50;
@@ -4491,11 +4475,8 @@ GameManager.prototype.stopTimer = function() {
 };
 
 GameManager.prototype.pretty = function(time) {
-  var prettyTimeCore = this.getCorePrettyTimeRuntime();
-  var prettyTimeResult = this.invokeRuntimeMethod(prettyTimeCore, "formatPrettyTime", [time]);
-  if (prettyTimeResult.handled) {
-    return prettyTimeResult.value;
-  }
+  var formatPrettyTimeCore = this.resolveCoreRuntimeMethod("getCorePrettyTimeRuntime", "formatPrettyTime");
+  if (formatPrettyTimeCore) return formatPrettyTimeCore(time);
 
   if (time < 0) {return "DNF";}
     var bits = time % 1000;
