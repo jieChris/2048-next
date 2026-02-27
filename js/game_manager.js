@@ -5469,16 +5469,20 @@ GameManager.prototype.shouldStartTimerAfterUndoRestore = function (undoRestore) 
   return this.timerStatus === 0;
 };
 
+GameManager.prototype.publishMovedAdapterResult = function (reason, direction) {
+  this.publishAdapterMoveResult({
+    reason: reason,
+    direction: direction,
+    moved: true
+  });
+};
+
 GameManager.prototype.publishUndoCompletion = function (direction, undoRestore) {
   this.actuate();
   if (this.shouldStartTimerAfterUndoRestore(undoRestore)) {
     this.startTimer();
   }
-  this.publishAdapterMoveResult({
-    reason: "undo",
-    direction: direction,
-    moved: true
-  });
+  this.publishMovedAdapterResult("undo", direction);
 };
 
 GameManager.prototype.handleUndoMove = function (direction) {
@@ -5528,11 +5532,7 @@ GameManager.prototype.publishMoveCompletion = function (direction, postMoveLifec
   if (this.shouldStartTimerAfterMove(postMoveLifecycle)) {
     this.startTimer();
   }
-  this.publishAdapterMoveResult({
-    reason: "move",
-    direction: direction,
-    moved: true
-  });
+  this.publishMovedAdapterResult("move", direction);
 };
 
 GameManager.prototype.finalizeSuccessfulMoveLifecycle = function (direction, undo) {
