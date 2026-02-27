@@ -831,6 +831,20 @@ GameManager.prototype.callCoreStorageRuntime = function (methodName, args) {
   };
 };
 
+GameManager.prototype.callCoreModeRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreModeRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
 GameManager.prototype.resolveSavedGameStateStorageKey = function (keyPrefix, modeKey) {
   var resolveSavedGameStateStorageKeyCore = this.callCoreStorageRuntime("resolveSavedGameStateStorageKey", [{
       modeKey: modeKey,
@@ -3479,8 +3493,8 @@ GameManager.prototype.closeStatsPanel = function () {
 };
 
 GameManager.prototype.isTimerLeaderboardAvailableByMode = function (mode) {
-  var isTimerLeaderboardAvailableByModeCore = this.resolveCoreModeRuntimeMethod("isTimerLeaderboardAvailableByMode");
-  if (isTimerLeaderboardAvailableByModeCore) return !!isTimerLeaderboardAvailableByModeCore(mode);
+  var isTimerLeaderboardAvailableByModeCore = this.callCoreModeRuntime("isTimerLeaderboardAvailableByMode", [mode]);
+  if (isTimerLeaderboardAvailableByModeCore.available) return !!isTimerLeaderboardAvailableByModeCore.value;
   void mode;
   return true;
 };
@@ -3564,12 +3578,12 @@ GameManager.prototype.getForcedUndoSettingForMode = function (mode) {
   var context = this.resolveModePolicyContext(mode);
   var targetMode = context.targetMode;
   var modeCfg = context.modeConfig;
-  var getForcedUndoSettingCore = this.resolveCoreModeRuntimeMethod("getForcedUndoSetting");
-  if (getForcedUndoSettingCore) {
-    var forced = getForcedUndoSettingCore({
+  var getForcedUndoSettingCore = this.callCoreModeRuntime("getForcedUndoSetting", [{
       mode: targetMode,
       modeConfig: modeCfg
-    });
+    }]);
+  if (getForcedUndoSettingCore.available) {
+    var forced = getForcedUndoSettingCore.value;
     if (forced === true) return true;
     if (forced === false) return false;
     return null;
@@ -3590,13 +3604,11 @@ GameManager.prototype.isUndoAllowedByMode = function (mode) {
   var context = this.resolveModePolicyContext(mode);
   var targetMode = context.targetMode;
   var modeCfg = context.modeConfig;
-  var isUndoAllowedByModeCore = this.resolveCoreModeRuntimeMethod("isUndoAllowedByMode");
-  if (isUndoAllowedByModeCore) {
-    return !!isUndoAllowedByModeCore({
+  var isUndoAllowedByModeCore = this.callCoreModeRuntime("isUndoAllowedByMode", [{
       mode: targetMode,
       modeConfig: modeCfg
-    });
-  }
+    }]);
+  if (isUndoAllowedByModeCore.available) return !!isUndoAllowedByModeCore.value;
   return this.getForcedUndoSettingForMode(mode) !== false;
 };
 
@@ -3604,13 +3616,11 @@ GameManager.prototype.isUndoSettingFixedForMode = function (mode) {
   var context = this.resolveModePolicyContext(mode);
   var targetMode = context.targetMode;
   var modeCfg = context.modeConfig;
-  var isUndoSettingFixedForModeCore = this.resolveCoreModeRuntimeMethod("isUndoSettingFixedForMode");
-  if (isUndoSettingFixedForModeCore) {
-    return !!isUndoSettingFixedForModeCore({
+  var isUndoSettingFixedForModeCore = this.callCoreModeRuntime("isUndoSettingFixedForMode", [{
       mode: targetMode,
       modeConfig: modeCfg
-    });
-  }
+    }]);
+  if (isUndoSettingFixedForModeCore.available) return !!isUndoSettingFixedForModeCore.value;
   return this.getForcedUndoSettingForMode(mode) !== null;
 };
 
@@ -3618,14 +3628,12 @@ GameManager.prototype.canToggleUndoSetting = function (mode) {
   var context = this.resolveModePolicyContext(mode);
   var targetMode = context.targetMode;
   var modeCfg = context.modeConfig;
-  var canToggleUndoSettingCore = this.resolveCoreModeRuntimeMethod("canToggleUndoSetting");
-  if (canToggleUndoSettingCore) {
-    return !!canToggleUndoSettingCore({
+  var canToggleUndoSettingCore = this.callCoreModeRuntime("canToggleUndoSetting", [{
       mode: targetMode,
       modeConfig: modeCfg,
       hasGameStarted: !!this.hasGameStarted
-    });
-  }
+    }]);
+  if (canToggleUndoSettingCore.available) return !!canToggleUndoSettingCore.value;
   if (!this.isUndoAllowedByMode(targetMode)) return false;
   if (this.isUndoSettingFixedForMode(targetMode)) return false;
   return !this.hasGameStarted;
@@ -3682,16 +3690,14 @@ GameManager.prototype.setUndoEnabled = function (enabled, skipPersist, forceChan
 };
 
 GameManager.prototype.isUndoInteractionEnabled = function () {
-  var isUndoInteractionEnabledCore = this.resolveCoreModeRuntimeMethod("isUndoInteractionEnabled");
-  if (isUndoInteractionEnabledCore) {
-    return !!isUndoInteractionEnabledCore({
+  var isUndoInteractionEnabledCore = this.callCoreModeRuntime("isUndoInteractionEnabled", [{
       replayMode: this.replayMode,
       undoLimit: this.undoLimit,
       undoUsed: this.undoUsed,
       undoEnabled: this.undoEnabled,
       isUndoAllowedByMode: this.isUndoAllowedByMode(this.mode)
-    });
-  }
+    }]);
+  if (isUndoInteractionEnabledCore.available) return !!isUndoInteractionEnabledCore.value;
   if (this.replayMode) return false;
   if (this.undoLimit !== null && this.undoUsed >= this.undoLimit) return false;
   return !!(this.undoEnabled && this.isUndoAllowedByMode(this.mode));
