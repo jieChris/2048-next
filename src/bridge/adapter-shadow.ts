@@ -30,6 +30,7 @@ export interface AdapterParityState {
 }
 
 export interface AdapterSessionParityReport {
+  schemaVersion: 2;
   modeKey: string;
   adapterMode: "legacy-bridge" | "core-adapter";
   hasParityState: boolean;
@@ -57,6 +58,7 @@ export interface AdapterSessionParityReportInput {
 }
 
 export interface AdapterParityABDiffSummary {
+  schemaVersion: 2;
   modeKey: string;
   hasLegacyReport: boolean;
   hasCoreReport: boolean;
@@ -239,6 +241,7 @@ export function buildAdapterSessionParityReport(
   );
 
   return {
+    schemaVersion: 2,
     modeKey: modeKey,
     adapterMode: adapterMode,
     hasParityState: !!parity,
@@ -281,6 +284,7 @@ export function buildAdapterParityABDiffSummary(
     isScoreMatch === true;
 
   return {
+    schemaVersion: 2,
     modeKey: modeKey,
     hasLegacyReport: !!legacyReport,
     hasCoreReport: !!coreReport,

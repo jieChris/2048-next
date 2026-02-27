@@ -106,6 +106,7 @@ describe("bridge adapter shadow", () => {
     });
 
     expect(report.modeKey).toBe("standard");
+    expect(report.schemaVersion).toBe(2);
     expect(report.adapterMode).toBe("core-adapter");
     expect(report.hasParityState).toBe(true);
     expect(report.hasSnapshot).toBe(true);
@@ -130,6 +131,7 @@ describe("bridge adapter shadow", () => {
     });
 
     expect(report.modeKey).toBe("unknown");
+    expect(report.schemaVersion).toBe(2);
     expect(report.adapterMode).toBe("legacy-bridge");
     expect(report.hasParityState).toBe(false);
     expect(report.hasSnapshot).toBe(false);
@@ -195,6 +197,7 @@ describe("bridge adapter shadow", () => {
     });
 
     expect(diff.modeKey).toBe("standard");
+    expect(diff.schemaVersion).toBe(2);
     expect(diff.hasLegacyReport).toBe(true);
     expect(diff.hasCoreReport).toBe(true);
     expect(diff.comparable).toBe(true);
@@ -227,6 +230,7 @@ describe("bridge adapter shadow", () => {
     });
 
     expect(diff.modeKey).toBe("standard");
+    expect(diff.schemaVersion).toBe(2);
     expect(diff.hasLegacyReport).toBe(false);
     expect(diff.hasCoreReport).toBe(true);
     expect(diff.comparable).toBe(false);
