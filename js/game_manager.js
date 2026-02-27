@@ -5725,31 +5725,32 @@ GameManager.prototype.movesAvailable = function () {
   return this.getAvailableCells().length > 0 || this.tileMatchesAvailable();
 };
 
-GameManager.prototype.tileMatchesAvailableFallback = function () {
-  var self = this;
-  var tile;
-
-  for (var x = 0; x < this.width; x++) {
-    for (var y = 0; y < this.height; y++) {
-      if (this.isBlockedCell(x, y)) continue;
-      tile = this.grid.cellContent({ x: x, y: y });
-
-      if (tile) {
-        for (var direction = 0; direction < 4; direction++) {
-          var vector = self.getVector(direction);
-          var cell   = { x: x + vector.x, y: y + vector.y };
-
-          if (self.isBlockedCell(cell.x, cell.y)) continue;
-          var other  = self.grid.cellContent(cell);
-
-          if (other && self.getMergedValue(tile.value, other.value) !== null) {
-            return true; // These two tiles can be merged
-          }
-        }
-      }
+GameManager.prototype.canMergeTileWithAnyNeighbor = function (x, y, tile) {
+  for (var direction = 0; direction < 4; direction++) {
+    var vector = this.getVector(direction);
+    var cell = { x: x + vector.x, y: y + vector.y };
+    if (this.isBlockedCell(cell.x, cell.y)) continue;
+    var other = this.grid.cellContent(cell);
+    if (other && this.getMergedValue(tile.value, other.value) !== null) {
+      return true;
     }
   }
+  return false;
+};
 
+GameManager.prototype.hasMergeableNeighborAtCell = function (x, y) {
+  if (this.isBlockedCell(x, y)) return false;
+  var tile = this.grid.cellContent({ x: x, y: y });
+  if (!tile) return false;
+  return this.canMergeTileWithAnyNeighbor(x, y, tile);
+};
+
+GameManager.prototype.tileMatchesAvailableFallback = function () {
+  for (var x = 0; x < this.width; x++) {
+    for (var y = 0; y < this.height; y++) {
+      if (this.hasMergeableNeighborAtCell(x, y)) return true;
+    }
+  }
   return false;
 };
 
