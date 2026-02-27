@@ -4948,49 +4948,53 @@ GameManager.prototype.recordCappedMilestone = function (timeStr) {
   this.callWindowMethod("cappedTimerAutoScroll");
 };
 
+GameManager.prototype.hideStatsElementForCornerMode = function (statsElement) {
+  if (!statsElement) return false;
+  statsElement.style.visibility = "hidden"; // Preserve layout while moving display to page corner
+  return true;
+};
+
+GameManager.prototype.ensureCornerStatsElement = function (elementId) {
+  var element = document.getElementById(elementId);
+  if (element) return element;
+  element = document.createElement("div");
+  element.id = elementId;
+  document.body.appendChild(element);
+  return element;
+};
+
+GameManager.prototype.applyBaseCornerStatsElementStyle = function (element) {
+  element.style.position = "fixed";
+  element.style.top = "8px";
+  element.style.zIndex = "1000";
+  element.style.background = "transparent";
+  element.style.color = "#776e65";
+  element.style.fontWeight = "bold";
+  element.style.fontSize = "27px";
+  element.style.pointerEvents = "none";
+};
+
+GameManager.prototype.initCornerRateStatsElement = function () {
+  this.cornerRateEl = this.ensureCornerStatsElement("corner-stats-4-rate");
+  this.applyBaseCornerStatsElementStyle(this.cornerRateEl);
+  this.cornerRateEl.style.left = "10px";
+  this.cornerRateEl.textContent = "0.00";
+};
+
+GameManager.prototype.initCornerIpsStatsElement = function () {
+  this.cornerIpsEl = this.ensureCornerStatsElement("corner-stats-ips");
+  this.applyBaseCornerStatsElementStyle(this.cornerIpsEl);
+  this.cornerIpsEl.style.right = "10px";
+  this.cornerIpsEl.textContent = "IPS: 0";
+};
+
 GameManager.prototype.initCornerStats = function () {
   var rateEl = document.getElementById("stats-4-rate");
   var ipsEl = document.getElementById("stats-ips");
 
-  if (rateEl) {
-    rateEl.style.visibility = "hidden"; // Preserve layout while moving display to page corner
-    this.cornerRateEl = document.getElementById("corner-stats-4-rate");
-    if (!this.cornerRateEl) {
-      this.cornerRateEl = document.createElement("div");
-      this.cornerRateEl.id = "corner-stats-4-rate";
-      document.body.appendChild(this.cornerRateEl);
-    }
-    this.cornerRateEl.style.position = "fixed";
-    this.cornerRateEl.style.top = "8px";
-    this.cornerRateEl.style.left = "10px";
-    this.cornerRateEl.style.zIndex = "1000";
-    this.cornerRateEl.style.background = "transparent";
-    this.cornerRateEl.style.color = "#776e65";
-    this.cornerRateEl.style.fontWeight = "bold";
-    this.cornerRateEl.style.fontSize = "27px";
-    this.cornerRateEl.style.pointerEvents = "none";
-    this.cornerRateEl.textContent = "0.00";
-  }
+  if (this.hideStatsElementForCornerMode(rateEl)) this.initCornerRateStatsElement();
 
-  if (ipsEl) {
-    ipsEl.style.visibility = "hidden"; // Preserve layout while moving display to page corner
-    this.cornerIpsEl = document.getElementById("corner-stats-ips");
-    if (!this.cornerIpsEl) {
-      this.cornerIpsEl = document.createElement("div");
-      this.cornerIpsEl.id = "corner-stats-ips";
-      document.body.appendChild(this.cornerIpsEl);
-    }
-    this.cornerIpsEl.style.position = "fixed";
-    this.cornerIpsEl.style.top = "8px";
-    this.cornerIpsEl.style.right = "10px";
-    this.cornerIpsEl.style.zIndex = "1000";
-    this.cornerIpsEl.style.background = "transparent";
-    this.cornerIpsEl.style.color = "#776e65";
-    this.cornerIpsEl.style.fontWeight = "bold";
-    this.cornerIpsEl.style.fontSize = "27px";
-    this.cornerIpsEl.style.pointerEvents = "none";
-    this.cornerIpsEl.textContent = "IPS: 0";
-  }
+  if (this.hideStatsElementForCornerMode(ipsEl)) this.initCornerIpsStatsElement();
 };
 
 GameManager.prototype.initStatsPanelUi = function () {
