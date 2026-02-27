@@ -3652,24 +3652,33 @@ GameManager.prototype.buildPostMoveRecordFallback = function (direction) {
   );
 };
 
-GameManager.prototype.computePostMoveRecord = function (direction) {
-  var computePostMoveRecordCore = this.callCorePostMoveRecordRuntime("computePostMoveRecord", [{
-      replayMode: !!this.replayMode,
-      direction: direction,
-      lastSpawn: this.lastSpawn ? {
-        x: this.lastSpawn.x,
-        y: this.lastSpawn.y,
-        value: this.lastSpawn.value
-      } : null,
-      width: this.width,
-      height: this.height,
-      isFibonacciMode: this.isFibonacciMode(),
-      hasSessionReplayV3: !!this.sessionReplayV3
-    }]);
-  if (computePostMoveRecordCore.available) return computePostMoveRecordCore.value || {};
+GameManager.prototype.buildComputePostMoveRecordCoreInput = function (direction) {
+  return {
+    replayMode: !!this.replayMode,
+    direction: direction,
+    lastSpawn: this.lastSpawn ? {
+      x: this.lastSpawn.x,
+      y: this.lastSpawn.y,
+      value: this.lastSpawn.value
+    } : null,
+    width: this.width,
+    height: this.height,
+    isFibonacciMode: this.isFibonacciMode(),
+    hasSessionReplayV3: !!this.sessionReplayV3
+  };
+};
 
+GameManager.prototype.resolvePostMoveRecordFallback = function (direction) {
   if (this.replayMode) return this.buildReplayPostMoveRecordFallback();
   return this.buildPostMoveRecordFallback(direction);
+};
+
+GameManager.prototype.computePostMoveRecord = function (direction) {
+  var computePostMoveRecordCore = this.callCorePostMoveRecordRuntime("computePostMoveRecord", [
+    this.buildComputePostMoveRecordCoreInput(direction)
+  ]);
+  if (computePostMoveRecordCore.available) return computePostMoveRecordCore.value || {};
+  return this.resolvePostMoveRecordFallback(direction);
 };
 
 GameManager.prototype.buildPostUndoRecordPlan = function (
