@@ -4482,99 +4482,105 @@ GameManager.prototype.applyPostMoveLifecycle = function (hasMovesAvailable) {
   };
 };
 
+GameManager.prototype.handleUndoMove = function (direction) {
+  if (!this.replayMode && !this.isUndoInteractionEnabled()) {
+    return;
+  }
+  if (this.undoLimit !== null && this.undoUsed >= this.undoLimit) {
+    return;
+  }
+  if (this.undoStack.length <= 0) {
+    return;
+  }
+
+  var prev = this.normalizeUndoStackEntry(this.undoStack.pop());
+  var undoPayload = this.computeUndoRestorePayload(prev);
+
+  this.grid.build();
+  this.score =
+    Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
+      ? Number(undoPayload.score)
+      : 0;
+  var undoTiles = Array.isArray(undoPayload.tiles) ? undoPayload.tiles : [];
+  for (var i = 0; i < undoTiles.length; i++) {
+    var t = this.createUndoRestoreTile(undoTiles[i]);
+    var tile = new Tile({x: t.x, y: t.y}, t.value);
+    tile.previousPosition = {
+      x: t.previousPosition.x,
+      y: t.previousPosition.y
+    };
+    this.grid.cells[tile.x][tile.y] = tile;
+  }
+  var undoRestore = this.computeUndoRestoreState(prev);
+
+  this.comboStreak =
+    Number.isInteger(undoRestore.comboStreak) && undoRestore.comboStreak >= 0
+      ? undoRestore.comboStreak
+      : 0;
+  this.successfulMoveCount =
+    Number.isInteger(undoRestore.successfulMoveCount) && undoRestore.successfulMoveCount >= 0
+      ? undoRestore.successfulMoveCount
+      : 0;
+  this.lockConsumedAtMoveCount = Number.isInteger(undoRestore.lockConsumedAtMoveCount)
+    ? undoRestore.lockConsumedAtMoveCount
+    : -1;
+  this.lockedDirectionTurn = Number.isInteger(undoRestore.lockedDirectionTurn)
+    ? undoRestore.lockedDirectionTurn
+    : null;
+  this.lockedDirection = Number.isInteger(undoRestore.lockedDirection)
+    ? undoRestore.lockedDirection
+    : null;
+  this.undoUsed =
+    Number.isInteger(undoRestore.undoUsed) && undoRestore.undoUsed >= 0
+      ? undoRestore.undoUsed
+      : ((Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0) + 1);
+
+  this.over = typeof undoRestore.over === "boolean" ? undoRestore.over : false;
+  this.won = typeof undoRestore.won === "boolean" ? undoRestore.won : false;
+  this.keepPlaying = typeof undoRestore.keepPlaying === "boolean" ? undoRestore.keepPlaying : false;
+  if (undoRestore.shouldClearMessage !== false) {
+    this.actuator.clearMessage(); // Clear Game Over message if present
+  }
+
+  // Record undo in history if valid
+  var postUndoRecord = this.computePostUndoRecord(direction);
+  if (postUndoRecord.shouldRecordMoveHistory) {
+    this.moveHistory.push(direction);
+  }
+  if (postUndoRecord.shouldAppendCompactUndo) {
+    this.appendCompactUndo();
+  }
+  if (postUndoRecord.shouldPushSessionAction && this.sessionReplayV3) {
+    var undoAction = Array.isArray(postUndoRecord.sessionAction)
+      ? postUndoRecord.sessionAction
+      : ["u"];
+    this.sessionReplayV3.actions.push(undoAction);
+  }
+
+  this.actuate();
+
+  // Resume timer if it was stopped (e.g. game over)
+  var shouldStartTimer =
+    typeof undoRestore.shouldStartTimer === "boolean"
+      ? undoRestore.shouldStartTimer
+      : this.timerStatus === 0;
+  if (shouldStartTimer) {
+    this.startTimer();
+  }
+  this.publishAdapterMoveResult({
+    reason: "undo",
+    direction: direction,
+    moved: true
+  });
+};
+
 // Move tiles on the grid in the specified direction
 GameManager.prototype.move = function (direction) {
   // 0: up, 1: right, 2:down, 3: left, -1: undo
   var self = this;
 
   if (direction == -1) {
-    if (!this.replayMode && !this.isUndoInteractionEnabled()) {
-      return;
-    }
-    if (this.undoLimit !== null && this.undoUsed >= this.undoLimit) {
-      return;
-    }
-    if (this.undoStack.length > 0) {
-      var prev = this.normalizeUndoStackEntry(this.undoStack.pop());
-      var undoPayload = this.computeUndoRestorePayload(prev);
-
-      this.grid.build();
-      this.score =
-        Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
-          ? Number(undoPayload.score)
-          : 0;
-      var undoTiles = Array.isArray(undoPayload.tiles) ? undoPayload.tiles : [];
-      for (var i = 0; i < undoTiles.length; i++) {
-        var t = this.createUndoRestoreTile(undoTiles[i]);
-        var tile = new Tile({x: t.x, y: t.y}, t.value);
-        tile.previousPosition = {
-          x: t.previousPosition.x,
-          y: t.previousPosition.y
-        };
-        this.grid.cells[tile.x][tile.y] = tile;
-      }
-      var undoRestore = this.computeUndoRestoreState(prev);
-
-      this.comboStreak =
-        Number.isInteger(undoRestore.comboStreak) && undoRestore.comboStreak >= 0
-          ? undoRestore.comboStreak
-          : 0;
-      this.successfulMoveCount =
-        Number.isInteger(undoRestore.successfulMoveCount) && undoRestore.successfulMoveCount >= 0
-          ? undoRestore.successfulMoveCount
-          : 0;
-      this.lockConsumedAtMoveCount = Number.isInteger(undoRestore.lockConsumedAtMoveCount)
-        ? undoRestore.lockConsumedAtMoveCount
-        : -1;
-      this.lockedDirectionTurn = Number.isInteger(undoRestore.lockedDirectionTurn)
-        ? undoRestore.lockedDirectionTurn
-        : null;
-      this.lockedDirection = Number.isInteger(undoRestore.lockedDirection)
-        ? undoRestore.lockedDirection
-        : null;
-      this.undoUsed =
-        Number.isInteger(undoRestore.undoUsed) && undoRestore.undoUsed >= 0
-          ? undoRestore.undoUsed
-          : ((Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0) + 1);
-
-      this.over = typeof undoRestore.over === "boolean" ? undoRestore.over : false;
-      this.won = typeof undoRestore.won === "boolean" ? undoRestore.won : false;
-      this.keepPlaying = typeof undoRestore.keepPlaying === "boolean" ? undoRestore.keepPlaying : false;
-      if (undoRestore.shouldClearMessage !== false) {
-        this.actuator.clearMessage(); // Clear Game Over message if present
-      }
-      
-      // Record undo in history if valid
-      var postUndoRecord = this.computePostUndoRecord(direction);
-      if (postUndoRecord.shouldRecordMoveHistory) {
-          this.moveHistory.push(direction);
-      }
-      if (postUndoRecord.shouldAppendCompactUndo) {
-          this.appendCompactUndo();
-      }
-      if (postUndoRecord.shouldPushSessionAction && this.sessionReplayV3) {
-          var undoAction = Array.isArray(postUndoRecord.sessionAction)
-            ? postUndoRecord.sessionAction
-            : ["u"];
-          this.sessionReplayV3.actions.push(undoAction);
-      }
-      
-      this.actuate();
-      
-      // Resume timer if it was stopped (e.g. game over)
-      var shouldStartTimer =
-        typeof undoRestore.shouldStartTimer === "boolean"
-          ? undoRestore.shouldStartTimer
-          : this.timerStatus === 0;
-      if (shouldStartTimer) {
-          this.startTimer();
-      }
-      this.publishAdapterMoveResult({
-        reason: "undo",
-        direction: direction,
-        moved: true
-      });
-    }
+    this.handleUndoMove(direction);
     return;
   }
 
