@@ -4574,6 +4574,50 @@ GameManager.prototype.handleUndoMove = function (direction) {
   });
 };
 
+GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove, undo) {
+  // IPS counts only effective move inputs (invalid directions are excluded).
+  this.recordIpsInput();
+
+  this.applyPostMoveScore(scoreBeforeMove);
+
+  this.addRandomTile();
+  var hasMovesAvailable = this.movesAvailable();
+  var postMoveLifecycle = this.applyPostMoveLifecycle(hasMovesAvailable);
+
+  // Save state
+  this.undoStack.push(this.normalizeUndoStackEntry(undo));
+
+  // Record move for replay
+  var postMoveRecord = this.computePostMoveRecord(direction);
+  if (postMoveRecord.shouldRecordMoveHistory) {
+    this.moveHistory.push(direction);
+  }
+  if (Number.isInteger(postMoveRecord.compactMoveCode)) {
+    this.appendCompactMoveCode(postMoveRecord.compactMoveCode);
+  }
+  if (postMoveRecord.shouldPushSessionAction && this.sessionReplayV3) {
+    var action = Array.isArray(postMoveRecord.sessionAction)
+      ? postMoveRecord.sessionAction
+      : ["m", direction];
+    this.sessionReplayV3.actions.push(action);
+  }
+  if (postMoveRecord.shouldResetLastSpawn) {
+    this.lastSpawn = null;
+  }
+
+  this.actuate();
+
+  // Start timer on first move
+  if (postMoveLifecycle.shouldStartTimer) {
+    this.startTimer();
+  }
+  this.publishAdapterMoveResult({
+    reason: "move",
+    direction: direction,
+    moved: true
+  });
+};
+
 // Move tiles on the grid in the specified direction
 GameManager.prototype.move = function (direction) {
   // 0: up, 1: right, 2:down, 3: left, -1: undo
@@ -4687,47 +4731,7 @@ GameManager.prototype.move = function (direction) {
   });
 
   if (moved) {
-    // IPS counts only effective move inputs (invalid directions are excluded).
-    this.recordIpsInput();
-
-    this.applyPostMoveScore(scoreBeforeMove);
-
-    this.addRandomTile();
-    var hasMovesAvailable = this.movesAvailable();
-    var postMoveLifecycle = this.applyPostMoveLifecycle(hasMovesAvailable);
-
-    // Save state
-    this.undoStack.push(this.normalizeUndoStackEntry(undo));
-    
-    // Record move for replay
-    var postMoveRecord = this.computePostMoveRecord(direction);
-    if (postMoveRecord.shouldRecordMoveHistory) {
-      this.moveHistory.push(direction);
-    }
-    if (Number.isInteger(postMoveRecord.compactMoveCode)) {
-      this.appendCompactMoveCode(postMoveRecord.compactMoveCode);
-    }
-    if (postMoveRecord.shouldPushSessionAction && this.sessionReplayV3) {
-      var action = Array.isArray(postMoveRecord.sessionAction)
-        ? postMoveRecord.sessionAction
-        : ["m", direction];
-      this.sessionReplayV3.actions.push(action);
-    }
-    if (postMoveRecord.shouldResetLastSpawn) {
-      this.lastSpawn = null;
-    }
-
-    this.actuate();
-
-    // Start timer on first move
-    if (postMoveLifecycle.shouldStartTimer) {
-      this.startTimer();
-    }
-    this.publishAdapterMoveResult({
-      reason: "move",
-      direction: direction,
-      moved: true
-    });
+    this.applySuccessfulMove(direction, scoreBeforeMove, undo);
   }
 };
 
