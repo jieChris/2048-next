@@ -1140,6 +1140,16 @@ function registerCoreRuntimeCaller(methodName, resolverMethodName) {
   };
 }
 
+function registerGameManagerMethodPairs(pairDefs, pairRegistrar) {
+  if (!Array.isArray(pairDefs)) return;
+  if (typeof pairRegistrar !== "function") return;
+  for (var index = 0; index < pairDefs.length; index++) {
+    var pair = pairDefs[index];
+    if (!Array.isArray(pair) || pair.length < 2) continue;
+    pairRegistrar(pair[0], pair[1]);
+  }
+}
+
 var GAME_MANAGER_CORE_RUNTIME_CALLERS = [
   ["callCoreStorageRuntime", "resolveCoreStorageRuntimeMethod"],
   ["callCoreModeRuntime", "resolveCoreModeRuntimeMethod"],
@@ -1177,14 +1187,7 @@ var GAME_MANAGER_CORE_RUNTIME_CALLERS = [
 ];
 
 function registerCoreRuntimeCallers(callerDefs) {
-  for (
-    var gameManagerCoreRuntimeCallerIndex = 0;
-    gameManagerCoreRuntimeCallerIndex < callerDefs.length;
-    gameManagerCoreRuntimeCallerIndex++
-  ) {
-    var gameManagerCoreRuntimeCallerDef = callerDefs[gameManagerCoreRuntimeCallerIndex];
-    registerCoreRuntimeCaller(gameManagerCoreRuntimeCallerDef[0], gameManagerCoreRuntimeCallerDef[1]);
-  }
+  registerGameManagerMethodPairs(callerDefs, registerCoreRuntimeCaller);
 }
 
 registerCoreRuntimeCallers(GAME_MANAGER_CORE_RUNTIME_CALLERS);
@@ -3068,10 +3071,7 @@ var GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS = [
 ];
 
 function registerCoreRuntimeMethodResolvers(resolverDefs) {
-  for (var resolverIndex = 0; resolverIndex < resolverDefs.length; resolverIndex++) {
-    var resolverItem = resolverDefs[resolverIndex];
-    registerCoreRuntimeMethodResolver(resolverItem[0], resolverItem[1]);
-  }
+  registerGameManagerMethodPairs(resolverDefs, registerCoreRuntimeMethodResolver);
 }
 
 function registerCoreRuntimeGetter(methodName, runtimeName) {
@@ -3117,10 +3117,7 @@ var GAME_MANAGER_CORE_RUNTIME_GETTERS = [
 ];
 
 function registerCoreRuntimeGetters(runtimeGetterDefs) {
-  for (var runtimeGetterIndex = 0; runtimeGetterIndex < runtimeGetterDefs.length; runtimeGetterIndex++) {
-    var runtimeGetterDef = runtimeGetterDefs[runtimeGetterIndex];
-    registerCoreRuntimeGetter(runtimeGetterDef[0], runtimeGetterDef[1]);
-  }
+  registerGameManagerMethodPairs(runtimeGetterDefs, registerCoreRuntimeGetter);
 }
 
 registerCoreRuntimeMethodResolvers(GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS);
