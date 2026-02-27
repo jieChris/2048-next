@@ -1672,6 +1672,20 @@ GameManager.prototype.getCoreRuntimeByName = function (runtimeName) {
   return core;
 };
 
+GameManager.prototype.resolveCoreRuntimeMethod = function (runtimeGetterName, methodName) {
+  if (typeof runtimeGetterName !== "string" || !runtimeGetterName) return null;
+  if (typeof methodName !== "string" || !methodName) return null;
+  var runtimeGetter = this[runtimeGetterName];
+  if (typeof runtimeGetter !== "function") return null;
+  var runtime = runtimeGetter.call(this);
+  if (!runtime || typeof runtime !== "object") return null;
+  var runtimeMethod = runtime[methodName];
+  if (typeof runtimeMethod !== "function") return null;
+  return function () {
+    return runtimeMethod.apply(runtime, arguments);
+  };
+};
+
 function registerCoreRuntimeGetter(methodName, runtimeName) {
   GameManager.prototype[methodName] = function () {
     return this.getCoreRuntimeByName(runtimeName);
@@ -2276,10 +2290,11 @@ GameManager.prototype.computeMergeEffects = function (mergedValue) {
 };
 
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
-  var core = this.getCoreRulesRuntime();
-  if (core && typeof core.normalizeSpawnTable === "function") {
-    return core.normalizeSpawnTable(spawnTable, ruleset);
-  }
+  var normalizeSpawnTableCore = this.resolveCoreRuntimeMethod(
+    "getCoreRulesRuntime",
+    "normalizeSpawnTable"
+  );
+  if (normalizeSpawnTableCore) return normalizeSpawnTableCore(spawnTable, ruleset);
   if (Array.isArray(spawnTable) && spawnTable.length > 0) {
     var out = [];
     for (var i = 0; i < spawnTable.length; i++) {
@@ -2297,10 +2312,11 @@ GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
 };
 
 GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) {
-  var core = this.getCoreRulesRuntime();
-  if (core && typeof core.getTheoreticalMaxTile === "function") {
-    return core.getTheoreticalMaxTile(width, height, ruleset);
-  }
+  var getTheoreticalMaxTileCore = this.resolveCoreRuntimeMethod(
+    "getCoreRulesRuntime",
+    "getTheoreticalMaxTile"
+  );
+  if (getTheoreticalMaxTileCore) return getTheoreticalMaxTileCore(width, height, ruleset);
   var w = Number(width);
   var h = Number(height);
   if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
@@ -2583,10 +2599,8 @@ GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
 };
 
 GameManager.prototype.pickSpawnValue = function () {
-  var core = this.getCoreRulesRuntime();
-  if (core && typeof core.pickSpawnValue === "function") {
-    return core.pickSpawnValue(this.spawnTable || [], Math.random);
-  }
+  var pickSpawnValueCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "pickSpawnValue");
+  if (pickSpawnValueCore) return pickSpawnValueCore(this.spawnTable || [], Math.random);
   var table = this.spawnTable || [];
   if (!table.length) return 2;
   var totalWeight = 0;
@@ -2609,10 +2623,8 @@ GameManager.prototype.isFibonacciMode = function () {
 };
 
 GameManager.prototype.nextFibonacci = function (value) {
-  var core = this.getCoreRulesRuntime();
-  if (core && typeof core.nextFibonacci === "function") {
-    return core.nextFibonacci(value);
-  }
+  var nextFibonacciCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "nextFibonacci");
+  if (nextFibonacciCore) return nextFibonacciCore(value);
   if (value <= 0) return 1;
   if (value === 1) return 2;
   var a = 1;
@@ -2626,9 +2638,9 @@ GameManager.prototype.nextFibonacci = function (value) {
 };
 
 GameManager.prototype.getMergedValue = function (a, b) {
-  var core = this.getCoreRulesRuntime();
-  if (core && typeof core.getMergedValue === "function") {
-    return core.getMergedValue(a, b, this.isFibonacciMode() ? "fibonacci" : "pow2", this.maxTile);
+  var getMergedValueCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "getMergedValue");
+  if (getMergedValueCore) {
+    return getMergedValueCore(a, b, this.isFibonacciMode() ? "fibonacci" : "pow2", this.maxTile);
   }
   if (!Number.isInteger(a) || !Number.isInteger(b) || a <= 0 || b <= 0) return null;
   if (!this.isFibonacciMode()) {
@@ -2651,9 +2663,12 @@ GameManager.prototype.getMergedValue = function (a, b) {
 };
 
 GameManager.prototype.getTimerMilestoneValues = function () {
-  var core = this.getCoreRulesRuntime();
-  if (core && typeof core.getTimerMilestoneValues === "function") {
-    return core.getTimerMilestoneValues(
+  var getTimerMilestoneValuesCore = this.resolveCoreRuntimeMethod(
+    "getCoreRulesRuntime",
+    "getTimerMilestoneValues"
+  );
+  if (getTimerMilestoneValuesCore) {
+    return getTimerMilestoneValuesCore(
       this.isFibonacciMode() ? "fibonacci" : "pow2",
       GameManager.TIMER_SLOT_IDS
     );
