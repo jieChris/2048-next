@@ -4863,30 +4863,8 @@ GameManager.prototype.movesAvailable = function () {
   return this.getAvailableCells().length > 0 || this.tileMatchesAvailable();
 };
 
-// Check for available matches between tiles (more expensive check)
-GameManager.prototype.tileMatchesAvailable = function () {
-  var tileMatchesAvailableCore = this.resolveCoreMoveScanRuntimeMethod("tileMatchesAvailable");
-  if (tileMatchesAvailableCore) {
-    return tileMatchesAvailableCore(
-      this.width,
-      this.height,
-      this.isBlockedCell.bind(this),
-      (function (manager) {
-        return function (cell) {
-          var tile = manager.grid.cellContent(cell);
-          return tile ? tile.value : null;
-        };
-      })(this),
-      (function (manager) {
-        return function (a, b) {
-          return manager.getMergedValue(a, b) !== null;
-        };
-      })(this)
-    );
-  }
-
+GameManager.prototype.tileMatchesAvailableFallback = function () {
   var self = this;
-
   var tile;
 
   for (var x = 0; x < this.width; x++) {
@@ -4911,6 +4889,30 @@ GameManager.prototype.tileMatchesAvailable = function () {
   }
 
   return false;
+};
+
+// Check for available matches between tiles (more expensive check)
+GameManager.prototype.tileMatchesAvailable = function () {
+  var tileMatchesAvailableCore = this.resolveCoreMoveScanRuntimeMethod("tileMatchesAvailable");
+  if (tileMatchesAvailableCore) {
+    return tileMatchesAvailableCore(
+      this.width,
+      this.height,
+      this.isBlockedCell.bind(this),
+      (function (manager) {
+        return function (cell) {
+          var tile = manager.grid.cellContent(cell);
+          return tile ? tile.value : null;
+        };
+      })(this),
+      (function (manager) {
+        return function (a, b) {
+          return manager.getMergedValue(a, b) !== null;
+        };
+      })(this)
+    );
+  }
+  return this.tileMatchesAvailableFallback();
 };
 
 GameManager.prototype.positionsEqual = function (first, second) {
