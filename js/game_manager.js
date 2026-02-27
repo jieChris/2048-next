@@ -3797,10 +3797,14 @@ GameManager.prototype.isUndoSettingFixedForMode = function (mode) {
   return !!(state && state.isUndoSettingFixedForMode);
 };
 
-GameManager.prototype.canToggleUndoSetting = function (mode) {
-  var state = this.resolveUndoPolicyStateForMode(mode, {
+GameManager.prototype.resolveUndoPolicyStateForCurrentSessionMode = function (mode) {
+  return this.resolveUndoPolicyStateForMode(mode, {
     hasGameStarted: !!this.hasGameStarted
   });
+};
+
+GameManager.prototype.canToggleUndoSetting = function (mode) {
+  var state = this.resolveUndoPolicyStateForCurrentSessionMode(mode);
   return !!(state && state.canToggleUndoSetting);
 };
 
@@ -3809,9 +3813,7 @@ GameManager.prototype.notifyUndoSettingsStateChanged = function () {
 };
 
 GameManager.prototype.loadUndoSettingForMode = function (mode) {
-  var state = this.resolveUndoPolicyStateForMode(mode, {
-    hasGameStarted: !!this.hasGameStarted
-  });
+  var state = this.resolveUndoPolicyStateForCurrentSessionMode(mode);
   var forced = state ? state.forcedUndoSetting : null;
   if (forced !== null) return forced;
   if (!(state && state.isUndoAllowedByMode)) return false;
@@ -3835,9 +3837,7 @@ GameManager.prototype.applyUndoSettingForMode = function (mode, skipPersist, for
 GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resolvedState) {
   var state = resolvedState && typeof resolvedState === "object"
     ? resolvedState
-    : this.resolveUndoPolicyStateForMode(mode, {
-      hasGameStarted: !!this.hasGameStarted
-    });
+    : this.resolveUndoPolicyStateForCurrentSessionMode(mode);
   if (state && state.isUndoSettingFixedForMode) return;
   if (!(state && state.isUndoAllowedByMode)) return;
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
