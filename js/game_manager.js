@@ -5579,14 +5579,38 @@ GameManager.prototype.syncBestScoreBeforeActuate = function () {
   }
 };
 
+GameManager.prototype.resolveActuatorScore = function () {
+  return this.score;
+};
+
+GameManager.prototype.resolveActuatorOver = function () {
+  return this.over;
+};
+
+GameManager.prototype.resolveActuatorWon = function () {
+  return this.won;
+};
+
+GameManager.prototype.resolveActuatorBestScore = function () {
+  return this.scoreManager.get();
+};
+
+GameManager.prototype.resolveActuatorTerminated = function () {
+  return this.isGameTerminated();
+};
+
+GameManager.prototype.resolveActuatorBlockedCells = function () {
+  return this.blockedCellsList || [];
+};
+
 GameManager.prototype.buildActuatorPayload = function () {
   return {
-    score: this.score,
-    over: this.over,
-    won: this.won,
-    bestScore: this.scoreManager.get(),
-    terminated: this.isGameTerminated(),
-    blockedCells: this.blockedCellsList || []
+    score: this.resolveActuatorScore(),
+    over: this.resolveActuatorOver(),
+    won: this.resolveActuatorWon(),
+    bestScore: this.resolveActuatorBestScore(),
+    terminated: this.resolveActuatorTerminated(),
+    blockedCells: this.resolveActuatorBlockedCells()
   };
 };
 
@@ -5596,15 +5620,28 @@ GameManager.prototype.updateStatsLabelText = function (elementId, label, value) 
   el.textContent = label + value;
 };
 
-GameManager.prototype.updateStepStatsUi = function (stepStats) {
-  var totalSteps = stepStats.totalSteps;
-  var moveSteps = stepStats.moveSteps;
-  var undoSteps = stepStats.undoSteps;
+GameManager.prototype.resolveStepStatsUiValues = function (stepStats) {
+  return {
+    totalSteps: stepStats.totalSteps,
+    moveSteps: stepStats.moveSteps,
+    undoSteps: stepStats.undoSteps
+  };
+};
 
-  this.updateStatsLabelText("stats-total", "总步数: ", totalSteps);
-  this.updateStatsLabelText("stats-moves", "移动步数: ", moveSteps);
-  this.updateStatsLabelText("stats-undo", "撤回步数: ", undoSteps);
-  this.updateStatsPanel(totalSteps, moveSteps, undoSteps);
+GameManager.prototype.renderStepStatsUiLabels = function (stepStatsValues) {
+  this.updateStatsLabelText("stats-total", "总步数: ", stepStatsValues.totalSteps);
+  this.updateStatsLabelText("stats-moves", "移动步数: ", stepStatsValues.moveSteps);
+  this.updateStatsLabelText("stats-undo", "撤回步数: ", stepStatsValues.undoSteps);
+};
+
+GameManager.prototype.updateStepStatsPanel = function (stepStatsValues) {
+  this.updateStatsPanel(stepStatsValues.totalSteps, stepStatsValues.moveSteps, stepStatsValues.undoSteps);
+};
+
+GameManager.prototype.updateStepStatsUi = function (stepStats) {
+  var stepStatsValues = this.resolveStepStatsUiValues(stepStats);
+  this.renderStepStatsUiLabels(stepStatsValues);
+  this.updateStepStatsPanel(stepStatsValues);
 };
 
 GameManager.prototype.refreshStepStatsUiFromHistory = function () {
