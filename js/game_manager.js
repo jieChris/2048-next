@@ -5751,6 +5751,8 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
   }
 
   var windowLike = this.getWindowLike();
+  var adapterParityReport = this.getAdapterSessionParityReport();
+  var adapterParityDiff = this.getAdapterSessionParityABDiff();
   this.sessionSubmitDone = true;
   var endedAt = new Date().toISOString();
   var payload = {
