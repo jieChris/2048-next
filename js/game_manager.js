@@ -2669,6 +2669,31 @@ GameManager.prototype.publishAdapterMoveResult = function (meta) {
   return true;
 };
 
+GameManager.prototype.buildPlannedTileInteractionFromCore = function (computed, cell, positions) {
+  var mergeKind = computed.kind === "merge";
+  var fallbackTarget = mergeKind ? positions.next : positions.farthest;
+  var target = computed.target && Number.isInteger(computed.target.x) && Number.isInteger(computed.target.y)
+    ? computed.target
+    : fallbackTarget;
+  return {
+    kind: mergeKind ? "merge" : "move",
+    target: target,
+    moved: typeof computed.moved === "boolean"
+      ? computed.moved
+      : !this.positionsEqual(cell, target)
+  };
+};
+
+GameManager.prototype.buildPlannedTileInteractionFallback = function (cell, positions, next, mergedValue) {
+  var shouldMerge = !!next && !next.mergedFrom && Number.isInteger(mergedValue) && mergedValue > 0;
+  var targetLegacy = shouldMerge ? positions.next : positions.farthest;
+  return {
+    kind: shouldMerge ? "merge" : "move",
+    target: targetLegacy,
+    moved: !this.positionsEqual(cell, targetLegacy)
+  };
+};
+
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
   var planTileInteractionCore = this.callCoreMoveApplyRuntime("planTileInteraction", [{
       cell: cell,
@@ -2679,28 +2704,9 @@ GameManager.prototype.planTileInteraction = function (cell, positions, next, mer
       mergedValue: mergedValue
     }]);
   if (planTileInteractionCore.available) {
-    var computed = planTileInteractionCore.value || {};
-    var mergeKind = computed.kind === "merge";
-    var fallbackTarget = mergeKind ? positions.next : positions.farthest;
-    var target = computed.target && Number.isInteger(computed.target.x) && Number.isInteger(computed.target.y)
-      ? computed.target
-      : fallbackTarget;
-    return {
-      kind: mergeKind ? "merge" : "move",
-      target: target,
-      moved: typeof computed.moved === "boolean"
-        ? computed.moved
-        : !this.positionsEqual(cell, target)
-    };
+    return this.buildPlannedTileInteractionFromCore(planTileInteractionCore.value || {}, cell, positions);
   }
-
-  var shouldMerge = !!next && !next.mergedFrom && Number.isInteger(mergedValue) && mergedValue > 0;
-  var targetLegacy = shouldMerge ? positions.next : positions.farthest;
-  return {
-    kind: shouldMerge ? "merge" : "move",
-    target: targetLegacy,
-    moved: !this.positionsEqual(cell, targetLegacy)
-  };
+  return this.buildPlannedTileInteractionFallback(cell, positions, next, mergedValue);
 };
 
 GameManager.prototype.canBuildCompactMoveCodeFallback = function () {
