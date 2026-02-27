@@ -944,20 +944,31 @@ GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
   return this.planReplaySeekRewindFallback(targetIndex);
 };
 
-GameManager.prototype.planReplaySeekRewindFallback = function (targetIndex) {
-  var shouldRewind = targetIndex < this.replayIndex;
-  if (!shouldRewind) {
-    return {
-      shouldRewind: false,
-      strategy: "none",
-      replayIndexAfterRewind: this.replayIndex
-    };
-  }
+GameManager.prototype.shouldReplaySeekRewindFallback = function (targetIndex) {
+  return targetIndex < this.replayIndex;
+};
+
+GameManager.prototype.buildReplaySeekNoRewindPlanFallback = function () {
+  return {
+    shouldRewind: false,
+    strategy: "none",
+    replayIndexAfterRewind: this.replayIndex
+  };
+};
+
+GameManager.prototype.buildReplaySeekRewindPlanFallback = function () {
   return {
     shouldRewind: true,
     strategy: this.replayStartBoardMatrix ? "board" : "seed",
     replayIndexAfterRewind: 0
   };
+};
+
+GameManager.prototype.planReplaySeekRewindFallback = function (targetIndex) {
+  if (!this.shouldReplaySeekRewindFallback(targetIndex)) {
+    return this.buildReplaySeekNoRewindPlanFallback();
+  }
+  return this.buildReplaySeekRewindPlanFallback();
 };
 
 GameManager.prototype.resolveReplaySeekRestartCoreInput = function (rewindPlan) {
@@ -976,23 +987,28 @@ GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
   return this.planReplaySeekRestartFallback(rewindPlan);
 };
 
-GameManager.prototype.planReplaySeekRestartFallback = function (rewindPlan) {
-  var shouldRewind = !!(rewindPlan && rewindPlan.shouldRewind);
-  if (!shouldRewind) {
-    return {
-      shouldRestartWithBoard: false,
-      shouldRestartWithSeed: false,
-      shouldApplyReplayIndex: false,
-      replayIndex: rewindPlan ? rewindPlan.replayIndexAfterRewind : this.replayIndex
-    };
-  }
+GameManager.prototype.buildReplaySeekNoRestartPlanFallback = function (rewindPlan) {
+  return {
+    shouldRestartWithBoard: false,
+    shouldRestartWithSeed: false,
+    shouldApplyReplayIndex: false,
+    replayIndex: rewindPlan ? rewindPlan.replayIndexAfterRewind : this.replayIndex
+  };
+};
 
+GameManager.prototype.buildReplaySeekRestartPlanFallback = function (rewindPlan) {
   return {
     shouldRestartWithBoard: rewindPlan.strategy === "board",
     shouldRestartWithSeed: rewindPlan.strategy === "seed",
     shouldApplyReplayIndex: true,
     replayIndex: rewindPlan.replayIndexAfterRewind
   };
+};
+
+GameManager.prototype.planReplaySeekRestartFallback = function (rewindPlan) {
+  var shouldRewind = !!(rewindPlan && rewindPlan.shouldRewind);
+  if (!shouldRewind) return this.buildReplaySeekNoRestartPlanFallback(rewindPlan);
+  return this.buildReplaySeekRestartPlanFallback(rewindPlan);
 };
 
 GameManager.prototype.resolveReplaySeekRestartPlanForTarget = function (targetIndex) {
