@@ -1666,25 +1666,30 @@ GameManager.prototype.restoreTimerRowsFromState = function (saved) {
   this.callWindowMethod("updateTimerScroll");
 };
 
+GameManager.prototype.selectPreferredSavedStateCandidate = function (currentBest, nextCandidate) {
+  if (!nextCandidate || typeof nextCandidate !== "object") return currentBest;
+  if (!currentBest || typeof currentBest !== "object") return nextCandidate;
+  var bestAt = Number(currentBest.saved_at) || 0;
+  var nextAt = Number(nextCandidate.saved_at) || 0;
+  // Keep the first candidate when timestamps are equal (full > lite > window).
+  // This avoids downgrading to lite/window snapshots that may omit replay history.
+  return nextAt > bestAt ? nextCandidate : currentBest;
+};
+
+GameManager.prototype.resolveLatestSavedStateCandidate = function (candidates) {
+  var best = null;
+  for (var i = 0; i < candidates.length; i++) {
+    best = this.selectPreferredSavedStateCandidate(best, candidates[i]);
+  }
+  return best;
+};
+
 GameManager.prototype.tryRestoreSavedGameState = function () {
   if (!this.shouldUseSavedGameState()) return false;
   var savedFull = this.readSavedPayloadByKey(this.getSavedGameStateKey());
   var savedLite = this.readSavedPayloadByKey(this.getSavedGameStateLiteKey());
   var savedWindow = this.readWindowNameSavedPayload(this.modeKey);
-  var saved = null;
-  var candidates = [savedFull, savedLite, savedWindow];
-  var bestAt = -1;
-  for (var c = 0; c < candidates.length; c++) {
-    var item = candidates[c];
-    if (!item || typeof item !== "object") continue;
-    var at = Number(item.saved_at) || 0;
-    // Keep the first candidate when timestamps are equal (full > lite > window).
-    // This avoids downgrading to lite/window snapshots that may omit replay history.
-    if (at > bestAt) {
-      bestAt = at;
-      saved = item;
-    }
-  }
+  var saved = this.resolveLatestSavedStateCandidate([savedFull, savedLite, savedWindow]);
   if (!saved) return false;
 
   if (!saved || typeof saved !== "object") {
