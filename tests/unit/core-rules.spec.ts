@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getActualSecondaryRateText,
   getMergedValue,
+  getSpawnCount,
+  getSpawnStatPair,
   getTheoreticalMaxTile,
+  getTotalSpawnCount,
   getTimerMilestoneValues,
   nextFibonacci,
   normalizeSpawnTable,
@@ -123,5 +127,37 @@ describe("core rules: getTimerMilestoneValues", () => {
 
   it("returns timer slots for pow2 mode", () => {
     expect(getTimerMilestoneValues("pow2", [16, 32, 64])).toEqual([16, 32, 64]);
+  });
+});
+
+describe("core rules: spawn stats", () => {
+  it("resolves primary/secondary spawn values from table", () => {
+    expect(getSpawnStatPair([{ value: 4, weight: 10 }, { value: 2, weight: 90 }])).toEqual({
+      primary: 2,
+      secondary: 4
+    });
+    expect(getSpawnStatPair([{ value: 1, weight: 100 }])).toEqual({
+      primary: 1,
+      secondary: 1
+    });
+    expect(getSpawnStatPair(null)).toEqual({
+      primary: 2,
+      secondary: 2
+    });
+  });
+
+  it("computes counts and secondary rate text", () => {
+    const counts = { "1": 9, "2": 1 };
+    expect(getSpawnCount(counts, 1)).toBe(9);
+    expect(getSpawnCount(counts, 2)).toBe(1);
+    expect(getSpawnCount(counts, 4)).toBe(0);
+    expect(getTotalSpawnCount(counts)).toBe(10);
+    expect(
+      getActualSecondaryRateText(counts, [
+        { value: 1, weight: 90 },
+        { value: 2, weight: 10 }
+      ])
+    ).toBe("10.00");
+    expect(getActualSecondaryRateText(null, null)).toBe("0.00");
   });
 });

@@ -70,6 +70,46 @@
     return table[table.length - 1].value;
   }
 
+  function getSpawnStatPair(spawnTable) {
+    var table = Array.isArray(spawnTable) ? spawnTable : [];
+    var values = [];
+    for (var i = 0; i < table.length; i++) {
+      var item = table[i];
+      var value = Number(item && item.value);
+      if (!Number.isInteger(value) || value <= 0) continue;
+      if (values.indexOf(value) === -1) values.push(value);
+    }
+    values.sort(function (a, b) {
+      return a - b;
+    });
+    var primary = values.length > 0 ? values[0] : 2;
+    var secondary = values.length > 1 ? values[1] : primary;
+    return { primary: primary, secondary: secondary };
+  }
+
+  function getSpawnCount(spawnValueCounts, value) {
+    if (!spawnValueCounts || typeof spawnValueCounts !== "object") return 0;
+    return Number(spawnValueCounts[String(value)]) || 0;
+  }
+
+  function getTotalSpawnCount(spawnValueCounts) {
+    if (!spawnValueCounts || typeof spawnValueCounts !== "object") return 0;
+    var total = 0;
+    for (var key in spawnValueCounts) {
+      if (!Object.prototype.hasOwnProperty.call(spawnValueCounts, key)) continue;
+      total += Number(spawnValueCounts[key]) || 0;
+    }
+    return total;
+  }
+
+  function getActualSecondaryRateText(spawnValueCounts, spawnTable) {
+    var pair = getSpawnStatPair(spawnTable);
+    var total = getTotalSpawnCount(spawnValueCounts);
+    if (total <= 0) return "0.00";
+    var secondaryCount = getSpawnCount(spawnValueCounts, pair.secondary);
+    return ((secondaryCount / total) * 100).toFixed(2);
+  }
+
   function nextFibonacci(value) {
     if (value <= 0) return 1;
     if (value === 1) return 2;
@@ -120,6 +160,10 @@
   global.CoreRulesRuntime.normalizeSpawnTable = normalizeSpawnTable;
   global.CoreRulesRuntime.getTheoreticalMaxTile = getTheoreticalMaxTile;
   global.CoreRulesRuntime.pickSpawnValue = pickSpawnValue;
+  global.CoreRulesRuntime.getSpawnStatPair = getSpawnStatPair;
+  global.CoreRulesRuntime.getSpawnCount = getSpawnCount;
+  global.CoreRulesRuntime.getTotalSpawnCount = getTotalSpawnCount;
+  global.CoreRulesRuntime.getActualSecondaryRateText = getActualSecondaryRateText;
   global.CoreRulesRuntime.nextFibonacci = nextFibonacci;
   global.CoreRulesRuntime.getMergedValue = getMergedValue;
   global.CoreRulesRuntime.getTimerMilestoneValues = getTimerMilestoneValues;

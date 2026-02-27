@@ -5,6 +5,15 @@ export interface SpawnTableItem {
   weight: number;
 }
 
+export interface SpawnValueCountMap {
+  [key: string]: number | undefined;
+}
+
+export interface SpawnStatPair {
+  primary: number;
+  secondary: number;
+}
+
 const FIBONACCI_MILESTONES = [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181];
 
 export function normalizeSpawnTable(
@@ -70,6 +79,54 @@ export function pickSpawnValue(
     if (pick <= running) return table[i].value;
   }
   return table[table.length - 1].value;
+}
+
+export function getSpawnStatPair(
+  spawnTable: SpawnTableItem[] | null | undefined
+): SpawnStatPair {
+  const table = Array.isArray(spawnTable) ? spawnTable : [];
+  const values: number[] = [];
+  for (let i = 0; i < table.length; i++) {
+    const item = table[i];
+    const value = Number(item?.value);
+    if (!Number.isInteger(value) || value <= 0) continue;
+    if (values.indexOf(value) === -1) values.push(value);
+  }
+  values.sort((a, b) => a - b);
+  const primary = values.length > 0 ? values[0] : 2;
+  const secondary = values.length > 1 ? values[1] : primary;
+  return { primary, secondary };
+}
+
+export function getSpawnCount(
+  spawnValueCounts: SpawnValueCountMap | null | undefined,
+  value: number
+): number {
+  if (!spawnValueCounts || typeof spawnValueCounts !== "object") return 0;
+  return Number(spawnValueCounts[String(value)]) || 0;
+}
+
+export function getTotalSpawnCount(
+  spawnValueCounts: SpawnValueCountMap | null | undefined
+): number {
+  if (!spawnValueCounts || typeof spawnValueCounts !== "object") return 0;
+  let total = 0;
+  for (const key in spawnValueCounts) {
+    if (!Object.prototype.hasOwnProperty.call(spawnValueCounts, key)) continue;
+    total += Number(spawnValueCounts[key]) || 0;
+  }
+  return total;
+}
+
+export function getActualSecondaryRateText(
+  spawnValueCounts: SpawnValueCountMap | null | undefined,
+  spawnTable: SpawnTableItem[] | null | undefined
+): string {
+  const pair = getSpawnStatPair(spawnTable);
+  const total = getTotalSpawnCount(spawnValueCounts);
+  if (total <= 0) return "0.00";
+  const secondaryCount = getSpawnCount(spawnValueCounts, pair.secondary);
+  return ((secondaryCount / total) * 100).toFixed(2);
 }
 
 export function nextFibonacci(value: number): number | null {

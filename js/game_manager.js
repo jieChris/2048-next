@@ -3553,6 +3553,24 @@ GameManager.prototype.recordSpawnValue = function (value) {
 };
 
 GameManager.prototype.getSpawnStatPair = function () {
+  var getSpawnStatPairCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "getSpawnStatPair");
+  if (getSpawnStatPairCore) {
+    var corePair = getSpawnStatPairCore(this.spawnTable || []) || {};
+    var corePrimary = Number(corePair.primary);
+    var coreSecondary = Number(corePair.secondary);
+    if (
+      Number.isInteger(corePrimary) &&
+      corePrimary > 0 &&
+      Number.isInteger(coreSecondary) &&
+      coreSecondary > 0
+    ) {
+      return {
+        primary: corePrimary,
+        secondary: coreSecondary
+      };
+    }
+  }
+
   var table = Array.isArray(this.spawnTable) ? this.spawnTable : [];
   var values = [];
   for (var i = 0; i < table.length; i++) {
@@ -3573,11 +3591,19 @@ GameManager.prototype.getSpawnStatPair = function () {
 };
 
 GameManager.prototype.getSpawnCount = function (value) {
+  var getSpawnCountCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "getSpawnCount");
+  if (getSpawnCountCore) {
+    return Number(getSpawnCountCore(this.spawnValueCounts, value)) || 0;
+  }
   if (!this.spawnValueCounts) return 0;
   return this.spawnValueCounts[String(value)] || 0;
 };
 
 GameManager.prototype.getTotalSpawnCount = function () {
+  var getTotalSpawnCountCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "getTotalSpawnCount");
+  if (getTotalSpawnCountCore) {
+    return Number(getTotalSpawnCountCore(this.spawnValueCounts)) || 0;
+  }
   if (!this.spawnValueCounts) return 0;
   var total = 0;
   for (var k in this.spawnValueCounts) {
@@ -3598,6 +3624,15 @@ GameManager.prototype.refreshSpawnRateDisplay = function () {
 };
 
 GameManager.prototype.getActualSecondaryRate = function () {
+  var getActualSecondaryRateTextCore = this.resolveCoreRuntimeMethod(
+    "getCoreRulesRuntime",
+    "getActualSecondaryRateText"
+  );
+  if (getActualSecondaryRateTextCore) {
+    var rateText = getActualSecondaryRateTextCore(this.spawnValueCounts, this.spawnTable || []);
+    if (typeof rateText === "string" && rateText) return rateText;
+  }
+
   var pair = this.getSpawnStatPair();
   var total = this.getTotalSpawnCount();
   if (total <= 0) return "0.00";
