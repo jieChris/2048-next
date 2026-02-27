@@ -745,10 +745,14 @@ GameManager.prototype.applyReplayTickBoundaryPlan = function (tickBoundaryPlan) 
 };
 
 GameManager.prototype.runReplayTick = function () {
-  var tickBoundaryPlan = this.resolveReplayTickBoundaryPlanForCurrentState();
-  if (this.applyReplayTickBoundaryPlan(tickBoundaryPlan)) return false;
+  if (this.tryStopReplayAtTickBoundary()) return false;
   this.executePlannedReplayStep();
   return true;
+};
+
+GameManager.prototype.tryStopReplayAtTickBoundary = function () {
+  var tickBoundaryPlan = this.resolveReplayTickBoundaryPlanForCurrentState();
+  return this.applyReplayTickBoundaryPlan(tickBoundaryPlan);
 };
 
 GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
