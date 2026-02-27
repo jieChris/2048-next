@@ -3,6 +3,11 @@
 
   if (!global) return;
 
+  var PARITY_REPORT_V1_KEY = "adapter_parity_report_v1";
+  var PARITY_REPORT_V2_KEY = "adapter_parity_report_v2";
+  var PARITY_DIFF_V1_KEY = "adapter_parity_ab_diff_v1";
+  var PARITY_DIFF_V2_KEY = "adapter_parity_ab_diff_v2";
+
   function isPlainObject(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
   }
@@ -18,10 +23,37 @@
   }
 
   function hasAdapterDiagnostics(item) {
-    if (!item || typeof item !== "object") return false;
-    return (
-      isPlainObject(item.adapter_parity_report_v1) || isPlainObject(item.adapter_parity_ab_diff_v1)
-    );
+    var source = isPlainObject(item) ? item : null;
+    return !!(resolveParityReportPayload(source) || resolveParityDiffPayload(source));
+  }
+
+  function resolveParitySchemaVersion(payload, fallback) {
+    var num = Number(payload && payload.schemaVersion);
+    if (Number.isInteger(num) && num > 0) return Number(num);
+    return fallback;
+  }
+
+  function resolveParityPayload(source, v2Key, v1Key) {
+    if (!source) return null;
+    var fromV2 = source[v2Key];
+    if (isPlainObject(fromV2)) {
+      var schemaVersionV2 = resolveParitySchemaVersion(fromV2, 2);
+      return Object.assign({}, fromV2, { schemaVersion: schemaVersionV2 });
+    }
+    var fromV1 = source[v1Key];
+    if (isPlainObject(fromV1)) {
+      var schemaVersionV1 = resolveParitySchemaVersion(fromV1, 1);
+      return Object.assign({}, fromV1, { schemaVersion: schemaVersionV1 });
+    }
+    return null;
+  }
+
+  function resolveParityReportPayload(source) {
+    return resolveParityPayload(source, PARITY_REPORT_V2_KEY, PARITY_REPORT_V1_KEY);
+  }
+
+  function resolveParityDiffPayload(source) {
+    return resolveParityPayload(source, PARITY_DIFF_V2_KEY, PARITY_DIFF_V1_KEY);
   }
 
   function toFiniteNumberOrNull(value) {
@@ -94,10 +126,8 @@
 
   function resolveHistoryAdapterDiagnosticsState(item) {
     var source = isPlainObject(item) ? item : null;
-    var report =
-      source && isPlainObject(source.adapter_parity_report_v1) ? source.adapter_parity_report_v1 : null;
-    var diff =
-      source && isPlainObject(source.adapter_parity_ab_diff_v1) ? source.adapter_parity_ab_diff_v1 : null;
+    var report = resolveParityReportPayload(source);
+    var diff = resolveParityDiffPayload(source);
     if (!report && !diff) {
       return {
         hasDiagnostics: false,

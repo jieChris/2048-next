@@ -1540,6 +1540,8 @@ GameManager.prototype.saveGameState = function (options) {
     return;
   }
 
+  var adapterParityReport = this.getAdapterSessionParityReport();
+  var adapterParityDiff = this.getAdapterSessionParityABDiff();
   var payload = {
     v: GameManager.SAVED_GAME_STATE_VERSION,
     saved_at: now,
@@ -5202,8 +5204,10 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
     ended_at: endedAt,
     replay: this.serializeV3(),
     replay_string: this.serialize(),
-    adapter_parity_report_v1: this.getAdapterSessionParityReport(),
-    adapter_parity_ab_diff_v1: this.getAdapterSessionParityABDiff(),
+    adapter_parity_report_v2: adapterParityReport,
+    adapter_parity_ab_diff_v2: adapterParityDiff,
+    adapter_parity_report_v1: adapterParityReport,
+    adapter_parity_ab_diff_v1: adapterParityDiff,
     client_version: (windowLike && windowLike.GAME_CLIENT_VERSION) || "1.8",
     end_reason: this.over ? "game_over" : "win_stop"
   };
