@@ -981,11 +981,16 @@ GameManager.prototype.planReplaySeekRewindFallback = function (targetIndex) {
   return this.buildReplaySeekRewindPlanFallback();
 };
 
+GameManager.prototype.normalizeReplaySeekRewindPlanInput = function (rewindPlan) {
+  return this.isNonArrayObject(rewindPlan) ? rewindPlan : null;
+};
+
 GameManager.prototype.resolveReplaySeekRestartCoreInput = function (rewindPlan) {
+  var normalized = this.normalizeReplaySeekRewindPlanInput(rewindPlan);
   return {
-    shouldRewind: !!(rewindPlan && rewindPlan.shouldRewind),
-    strategy: rewindPlan ? rewindPlan.strategy : "none",
-    replayIndexAfterRewind: rewindPlan ? rewindPlan.replayIndexAfterRewind : this.replayIndex
+    shouldRewind: !!(normalized && normalized.shouldRewind),
+    strategy: normalized ? normalized.strategy : "none",
+    replayIndexAfterRewind: normalized ? normalized.replayIndexAfterRewind : this.replayIndex
   };
 };
 
