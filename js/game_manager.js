@@ -1741,6 +1741,10 @@ GameManager.prototype.resolveCoreRuntimeMethod = function (runtimeGetterName, me
   };
 };
 
+GameManager.prototype.resolveCoreModeRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreModeRuntime", methodName);
+};
+
 function registerCoreRuntimeGetter(methodName, runtimeName) {
   GameManager.prototype[methodName] = function () {
     return this.getCoreRuntimeByName(runtimeName);
@@ -2443,7 +2447,7 @@ GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) 
 };
 
 GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
-  var normalizeModeConfigCore = this.resolveCoreRuntimeMethod("getCoreModeRuntime", "normalizeModeConfig");
+  var normalizeModeConfigCore = this.resolveCoreModeRuntimeMethod("normalizeModeConfig");
   if (normalizeModeConfigCore) {
     return normalizeModeConfigCore({
       modeKey: modeKey,
@@ -2502,7 +2506,7 @@ GameManager.prototype.resolveModeConfig = function (modeId) {
   var byCatalog = this.getModeConfigFromCatalog(id);
   if (byCatalog) return this.normalizeModeConfig(id, byCatalog);
 
-  var resolveModeCatalogAliasCore = this.resolveCoreRuntimeMethod("getCoreModeRuntime", "resolveModeCatalogAlias");
+  var resolveModeCatalogAliasCore = this.resolveCoreModeRuntimeMethod("resolveModeCatalogAlias");
   var mapped = id;
   if (resolveModeCatalogAliasCore) {
     mapped = resolveModeCatalogAliasCore({
@@ -2549,7 +2553,7 @@ GameManager.prototype.applyModeConfig = function (modeConfig) {
 };
 
 GameManager.prototype.normalizeSpecialRules = function (rules) {
-  var normalizeSpecialRulesCore = this.resolveCoreRuntimeMethod("getCoreModeRuntime", "normalizeSpecialRules");
+  var normalizeSpecialRulesCore = this.resolveCoreModeRuntimeMethod("normalizeSpecialRules");
   if (normalizeSpecialRulesCore) return normalizeSpecialRulesCore(rules);
   if (!rules || typeof rules !== "object" || Array.isArray(rules)) return {};
   return this.clonePlain(rules);
@@ -2690,10 +2694,7 @@ GameManager.prototype.consumeDirectionLock = function () {
 };
 
 GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
-  var resolveLegacyModeFromModeKeyCore = this.resolveCoreRuntimeMethod(
-    "getCoreModeRuntime",
-    "resolveLegacyModeFromModeKey"
-  );
+  var resolveLegacyModeFromModeKeyCore = this.resolveCoreModeRuntimeMethod("resolveLegacyModeFromModeKey");
   if (resolveLegacyModeFromModeKeyCore) {
     return resolveLegacyModeFromModeKeyCore({
       modeKey: modeKey,
@@ -2831,7 +2832,7 @@ GameManager.prototype.recordTimerMilestone = function (value, timeStr) {
 };
 
 GameManager.prototype.isCappedMode = function () {
-  var isCappedModeStateCore = this.resolveCoreRuntimeMethod("getCoreModeRuntime", "isCappedModeState");
+  var isCappedModeStateCore = this.resolveCoreModeRuntimeMethod("isCappedModeState");
   if (isCappedModeStateCore) {
     return !!isCappedModeStateCore({
       modeKey: this.modeKey,
@@ -2844,7 +2845,7 @@ GameManager.prototype.isCappedMode = function () {
 };
 
 GameManager.prototype.getCappedTargetValue = function () {
-  var getCappedTargetValueCore = this.resolveCoreRuntimeMethod("getCoreModeRuntime", "getCappedTargetValue");
+  var getCappedTargetValueCore = this.resolveCoreModeRuntimeMethod("getCappedTargetValue");
   if (getCappedTargetValueCore) {
     var value = getCappedTargetValueCore({
       modeKey: this.modeKey,
@@ -2857,10 +2858,7 @@ GameManager.prototype.getCappedTargetValue = function () {
 };
 
 GameManager.prototype.isProgressiveCapped64Mode = function () {
-  var isProgressiveCapped64ModeCore = this.resolveCoreRuntimeMethod(
-    "getCoreModeRuntime",
-    "isProgressiveCapped64Mode"
-  );
+  var isProgressiveCapped64ModeCore = this.resolveCoreModeRuntimeMethod("isProgressiveCapped64Mode");
   if (isProgressiveCapped64ModeCore) {
     return !!isProgressiveCapped64ModeCore({
       modeKey: this.modeKey,
@@ -2930,10 +2928,7 @@ GameManager.prototype.repositionCappedTimerContainer = function () {
 };
 
 GameManager.prototype.applyCappedRowVisibility = function () {
-  var resolveCappedRowVisibilityPlanCore = this.resolveCoreRuntimeMethod(
-    "getCoreModeRuntime",
-    "resolveCappedRowVisibilityPlan"
-  );
+  var resolveCappedRowVisibilityPlanCore = this.resolveCoreModeRuntimeMethod("resolveCappedRowVisibilityPlan");
   if (resolveCappedRowVisibilityPlanCore) {
     var isCappedMode = this.isCappedMode();
     var isProgressiveCapped64Mode = this.isProgressiveCapped64Mode();
@@ -2996,10 +2991,7 @@ GameManager.prototype.getCappedTimerLegendClass = function () {
 };
 
 GameManager.prototype.getCappedTimerFontSize = function () {
-  var resolveCappedTimerLegendFontSizeCore = this.resolveCoreRuntimeMethod(
-    "getCoreModeRuntime",
-    "resolveCappedTimerLegendFontSize"
-  );
+  var resolveCappedTimerLegendFontSizeCore = this.resolveCoreModeRuntimeMethod("resolveCappedTimerLegendFontSize");
   if (resolveCappedTimerLegendFontSizeCore) {
     var resolvedFontSize = resolveCappedTimerLegendFontSizeCore(this.getCappedTargetValue());
     if (typeof resolvedFontSize === "string" && resolvedFontSize) return resolvedFontSize;
@@ -3016,10 +3008,7 @@ GameManager.prototype.getCappedRepeatLabel = function (repeatCount) {
 };
 
 GameManager.prototype.getCappedPlaceholderRowValues = function () {
-  var resolveCappedPlaceholderRowValuesCore = this.resolveCoreRuntimeMethod(
-    "getCoreModeRuntime",
-    "resolveCappedPlaceholderRowValues"
-  );
+  var resolveCappedPlaceholderRowValuesCore = this.resolveCoreModeRuntimeMethod("resolveCappedPlaceholderRowValues");
   if (resolveCappedPlaceholderRowValuesCore) {
     var coreValues = resolveCappedPlaceholderRowValuesCore({
       isCappedMode: this.isCappedMode(),
@@ -3071,8 +3060,7 @@ GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, 
   if (!Number.isInteger(repeatCount) || repeatCount < 2) return false;
 
   var values = this.getCappedPlaceholderRowValues();
-  var resolveCappedPlaceholderSlotByRepeatCountCore = this.resolveCoreRuntimeMethod(
-    "getCoreModeRuntime",
+  var resolveCappedPlaceholderSlotByRepeatCountCore = this.resolveCoreModeRuntimeMethod(
     "resolveCappedPlaceholderSlotByRepeatCount"
   );
   var slotValue = null;
@@ -3313,10 +3301,7 @@ GameManager.prototype.closeStatsPanel = function () {
 };
 
 GameManager.prototype.isTimerLeaderboardAvailableByMode = function (mode) {
-  var isTimerLeaderboardAvailableByModeCore = this.resolveCoreRuntimeMethod(
-    "getCoreModeRuntime",
-    "isTimerLeaderboardAvailableByMode"
-  );
+  var isTimerLeaderboardAvailableByModeCore = this.resolveCoreModeRuntimeMethod("isTimerLeaderboardAvailableByMode");
   if (isTimerLeaderboardAvailableByModeCore) return !!isTimerLeaderboardAvailableByModeCore(mode);
   void mode;
   return true;
@@ -3385,10 +3370,7 @@ GameManager.prototype.getForcedUndoSettingForMode = function (mode) {
   var context = this.resolveModePolicyContext(mode);
   var targetMode = context.targetMode;
   var modeCfg = context.modeConfig;
-  var getForcedUndoSettingCore = this.resolveCoreRuntimeMethod(
-    "getCoreModeRuntime",
-    "getForcedUndoSetting"
-  );
+  var getForcedUndoSettingCore = this.resolveCoreModeRuntimeMethod("getForcedUndoSetting");
   if (getForcedUndoSettingCore) {
     var forced = getForcedUndoSettingCore({
       mode: targetMode,
@@ -3414,10 +3396,7 @@ GameManager.prototype.isUndoAllowedByMode = function (mode) {
   var context = this.resolveModePolicyContext(mode);
   var targetMode = context.targetMode;
   var modeCfg = context.modeConfig;
-  var isUndoAllowedByModeCore = this.resolveCoreRuntimeMethod(
-    "getCoreModeRuntime",
-    "isUndoAllowedByMode"
-  );
+  var isUndoAllowedByModeCore = this.resolveCoreModeRuntimeMethod("isUndoAllowedByMode");
   if (isUndoAllowedByModeCore) {
     return !!isUndoAllowedByModeCore({
       mode: targetMode,
@@ -3431,10 +3410,7 @@ GameManager.prototype.isUndoSettingFixedForMode = function (mode) {
   var context = this.resolveModePolicyContext(mode);
   var targetMode = context.targetMode;
   var modeCfg = context.modeConfig;
-  var isUndoSettingFixedForModeCore = this.resolveCoreRuntimeMethod(
-    "getCoreModeRuntime",
-    "isUndoSettingFixedForMode"
-  );
+  var isUndoSettingFixedForModeCore = this.resolveCoreModeRuntimeMethod("isUndoSettingFixedForMode");
   if (isUndoSettingFixedForModeCore) {
     return !!isUndoSettingFixedForModeCore({
       mode: targetMode,
@@ -3448,10 +3424,7 @@ GameManager.prototype.canToggleUndoSetting = function (mode) {
   var context = this.resolveModePolicyContext(mode);
   var targetMode = context.targetMode;
   var modeCfg = context.modeConfig;
-  var canToggleUndoSettingCore = this.resolveCoreRuntimeMethod(
-    "getCoreModeRuntime",
-    "canToggleUndoSetting"
-  );
+  var canToggleUndoSettingCore = this.resolveCoreModeRuntimeMethod("canToggleUndoSetting");
   if (canToggleUndoSettingCore) {
     return !!canToggleUndoSettingCore({
       mode: targetMode,
