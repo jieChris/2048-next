@@ -5850,15 +5850,21 @@ GameManager.prototype.import = function (replayString) {
 GameManager.prototype.executeReplayAction = function (action) {
   var resolved = this.resolveReplayExecution(action);
   var dispatchPlan = this.planReplayDispatch(resolved);
-  if (dispatchPlan.method === "move") {
-    this.move(dispatchPlan.args[0]);
-    return;
-  }
-  if (dispatchPlan.method === "insertCustomTile") {
-    this.insertCustomTile(dispatchPlan.args[0], dispatchPlan.args[1], dispatchPlan.args[2]);
-    return;
-  }
+  this.executeReplayDispatchPlan(dispatchPlan);
+};
+
+GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
+  if (dispatchPlan.method === "move") return this.executeReplayMoveDispatch(dispatchPlan);
+  if (dispatchPlan.method === "insertCustomTile") return this.executeReplayCustomTileDispatch(dispatchPlan);
   throw "Unknown replay action";
+};
+
+GameManager.prototype.executeReplayMoveDispatch = function (dispatchPlan) {
+  this.move(dispatchPlan.args[0]);
+};
+
+GameManager.prototype.executeReplayCustomTileDispatch = function (dispatchPlan) {
+  this.insertCustomTile(dispatchPlan.args[0], dispatchPlan.args[1], dispatchPlan.args[2]);
 };
 
 GameManager.prototype.applyReplayStepForcedSpawn = function (stepExecutionPlan) {
