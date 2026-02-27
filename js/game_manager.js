@@ -2521,21 +2521,23 @@ GameManager.prototype.getAdapterSessionParityABDiff = function () {
   return null;
 };
 
-GameManager.prototype.publishAdapterMoveResult = function (meta) {
-  var emitMoveResultBridge = this.resolveLegacyAdapterBridgeMethod("emitMoveResult");
-  if (!emitMoveResultBridge) return false;
-  var bridge = emitMoveResultBridge.bridge;
-
-  var input = meta && typeof meta === "object" ? meta : {};
-  var modeKey = typeof bridge.modeKey === "string" && bridge.modeKey
+GameManager.prototype.resolveAdapterBridgeModeKey = function (bridge) {
+  return typeof bridge.modeKey === "string" && bridge.modeKey
     ? bridge.modeKey
     : (this.modeKey || this.mode || "");
-  var timestamp = Date.now();
-  var adapterMode =
-    typeof bridge.adapterMode === "string" && bridge.adapterMode
-      ? bridge.adapterMode
-      : "legacy-bridge";
-  var detail = {
+};
+
+GameManager.prototype.resolveAdapterBridgeMode = function (bridge) {
+  return typeof bridge.adapterMode === "string" && bridge.adapterMode
+    ? bridge.adapterMode
+    : "legacy-bridge";
+};
+
+GameManager.prototype.buildAdapterMoveResultDetail = function (meta, bridge, timestamp) {
+  var input = meta && typeof meta === "object" ? meta : {};
+  var modeKey = this.resolveAdapterBridgeModeKey(bridge);
+  var adapterMode = this.resolveAdapterBridgeMode(bridge);
+  return {
     reason: typeof input.reason === "string" && input.reason ? input.reason : "move",
     direction: Number.isInteger(input.direction) ? input.direction : null,
     moved: input.moved === true,
@@ -2553,21 +2555,22 @@ GameManager.prototype.publishAdapterMoveResult = function (meta) {
     undoDepth: Array.isArray(this.undoStack) ? this.undoStack.length : 0,
     at: timestamp
   };
+};
 
-  emitMoveResultBridge.method.call(bridge, detail);
-
+GameManager.prototype.syncAdapterSnapshotAfterMoveResult = function (bridge, detail, timestamp) {
   var syncAdapterSnapshotBridge = this.resolveLegacyAdapterBridgeMethod("syncAdapterSnapshot");
-  if (syncAdapterSnapshotBridge) {
-    var snapshot = {
-      adapterMode: adapterMode,
-      modeKey: modeKey || "unknown",
-      updatedAt: timestamp,
-      lastMoveResult: detail
-    };
-    syncAdapterSnapshotBridge.method.call(bridge, snapshot);
-    bridge.adapterSnapshot = snapshot;
-  }
+  if (!syncAdapterSnapshotBridge) return;
+  var snapshot = {
+    adapterMode: this.resolveAdapterBridgeMode(bridge),
+    modeKey: this.resolveAdapterBridgeModeKey(bridge) || "unknown",
+    updatedAt: timestamp,
+    lastMoveResult: detail
+  };
+  syncAdapterSnapshotBridge.method.call(bridge, snapshot);
+  bridge.adapterSnapshot = snapshot;
+};
 
+GameManager.prototype.syncAdapterParityAfterMoveResult = function (bridge) {
   var readAdapterParityReportBridge = this.resolveLegacyAdapterBridgeMethod("readAdapterParityReport");
   if (readAdapterParityReportBridge) {
     bridge.adapterParityReport = readAdapterParityReportBridge.method.call(bridge);
@@ -2588,6 +2591,18 @@ GameManager.prototype.publishAdapterMoveResult = function (meta) {
   if (readAdapterParityABDiffBridge) {
     bridge.adapterParityABDiff = readAdapterParityABDiffBridge.method.call(bridge);
   }
+};
+
+GameManager.prototype.publishAdapterMoveResult = function (meta) {
+  var emitMoveResultBridge = this.resolveLegacyAdapterBridgeMethod("emitMoveResult");
+  if (!emitMoveResultBridge) return false;
+  var bridge = emitMoveResultBridge.bridge;
+  var timestamp = Date.now();
+  var detail = this.buildAdapterMoveResultDetail(meta, bridge, timestamp);
+
+  emitMoveResultBridge.method.call(bridge, detail);
+  this.syncAdapterSnapshotAfterMoveResult(bridge, detail, timestamp);
+  this.syncAdapterParityAfterMoveResult(bridge);
   return true;
 };
 
