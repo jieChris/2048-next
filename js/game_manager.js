@@ -5613,6 +5613,15 @@ GameManager.prototype.executeReplayAction = function (action) {
   throw "Unknown replay action";
 };
 
+GameManager.prototype.executePlannedReplayStep = function () {
+  var stepExecutionPlan = this.planReplayStepExecution();
+  if (stepExecutionPlan.shouldInjectForcedSpawn) {
+    this.forcedSpawn = stepExecutionPlan.forcedSpawn;
+  }
+  this.executeReplayAction(stepExecutionPlan.action);
+  this.replayIndex = stepExecutionPlan.nextReplayIndex;
+};
+
 GameManager.prototype.pause = function () {
     var pauseState = this.computeReplayPauseState();
     this.isPaused = pauseState.isPaused !== false;
@@ -5647,13 +5656,7 @@ GameManager.prototype.resume = function () {
         return;
       }
       
-      var stepExecutionPlan = self.planReplayStepExecution();
-      if (stepExecutionPlan.shouldInjectForcedSpawn) {
-        self.forcedSpawn = stepExecutionPlan.forcedSpawn;
-      }
-      
-      self.executeReplayAction(stepExecutionPlan.action);
-      self.replayIndex = stepExecutionPlan.nextReplayIndex;
+      self.executePlannedReplayStep();
     }, delay);
 };
 
@@ -5684,12 +5687,7 @@ GameManager.prototype.seek = function (targetIndex) {
 
     // Fast forward to target
     while (this.replayIndex < targetIndex) {
-        var stepExecutionPlan = this.planReplayStepExecution();
-        if (stepExecutionPlan.shouldInjectForcedSpawn) {
-            this.forcedSpawn = stepExecutionPlan.forcedSpawn;
-        }
-        this.executeReplayAction(stepExecutionPlan.action);
-        this.replayIndex = stepExecutionPlan.nextReplayIndex;
+        this.executePlannedReplayStep();
     }
 };
 
