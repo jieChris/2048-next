@@ -1601,39 +1601,38 @@ GameManager.prototype.normalizeCappedRepeatLegendClasses = function (cappedState
   this.callWindowNamespaceMethod("ThemeManager", "syncTimerLegendStyles");
 };
 
-GameManager.prototype.restoreTimerRowsFromState = function (saved) {
-  if (!saved || typeof saved !== "object") return;
-  var cappedStateForRestore = this.resolveCappedModeState();
+GameManager.prototype.restoreFixedTimerRowsFromState = function (saved, cappedStateForRestore) {
   var fixed = saved.timer_fixed_rows;
-  if (fixed && typeof fixed === "object") {
-    for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
-      var slotId = String(GameManager.TIMER_SLOT_IDS[i]);
-      var rowState = fixed[slotId];
-      if (!rowState) continue;
-      var row = this.getTimerRowEl(slotId);
-      var timerEl = document.getElementById("timer" + slotId);
-      if (!row || !timerEl) continue;
-      var legend = row.querySelector(".timertile");
+  if (!(fixed && typeof fixed === "object")) return;
+  for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
+    var slotId = String(GameManager.TIMER_SLOT_IDS[i]);
+    var rowState = fixed[slotId];
+    if (!rowState) continue;
+    var row = this.getTimerRowEl(slotId);
+    var timerEl = document.getElementById("timer" + slotId);
+    if (!row || !timerEl) continue;
+    var legend = row.querySelector(".timertile");
 
-      row.style.display = typeof rowState.display === "string" ? rowState.display : "";
-      row.style.visibility = typeof rowState.visibility === "string" ? rowState.visibility : "";
-      row.style.pointerEvents = typeof rowState.pointerEvents === "string" ? rowState.pointerEvents : "";
-      if (typeof rowState.repeat === "string" && rowState.repeat) row.setAttribute("data-capped-repeat", rowState.repeat);
-      else row.removeAttribute("data-capped-repeat");
+    row.style.display = typeof rowState.display === "string" ? rowState.display : "";
+    row.style.visibility = typeof rowState.visibility === "string" ? rowState.visibility : "";
+    row.style.pointerEvents = typeof rowState.pointerEvents === "string" ? rowState.pointerEvents : "";
+    if (typeof rowState.repeat === "string" && rowState.repeat) row.setAttribute("data-capped-repeat", rowState.repeat);
+    else row.removeAttribute("data-capped-repeat");
 
-      timerEl.textContent = typeof rowState.timerText === "string" ? rowState.timerText : "";
-      if (legend) {
-        if (row.getAttribute("data-capped-repeat") && cappedStateForRestore.isCappedMode) {
-          legend.className = this.getCappedTimerLegendClass(cappedStateForRestore.cappedTargetValue);
-        } else if (typeof rowState.legendClass === "string" && rowState.legendClass) {
-          legend.className = rowState.legendClass;
-        }
-        if (typeof rowState.legendText === "string") legend.textContent = rowState.legendText;
-        legend.style.fontSize = typeof rowState.legendFontSize === "string" ? rowState.legendFontSize : "";
+    timerEl.textContent = typeof rowState.timerText === "string" ? rowState.timerText : "";
+    if (legend) {
+      if (row.getAttribute("data-capped-repeat") && cappedStateForRestore.isCappedMode) {
+        legend.className = this.getCappedTimerLegendClass(cappedStateForRestore.cappedTargetValue);
+      } else if (typeof rowState.legendClass === "string" && rowState.legendClass) {
+        legend.className = rowState.legendClass;
       }
+      if (typeof rowState.legendText === "string") legend.textContent = rowState.legendText;
+      legend.style.fontSize = typeof rowState.legendFontSize === "string" ? rowState.legendFontSize : "";
     }
   }
+};
 
+GameManager.prototype.restoreDynamicTimerRowsFromState = function (saved, cappedStateForRestore) {
   var capped = document.getElementById("capped-timer-container");
   if (capped) {
     capped.innerHTML = "";
@@ -1651,7 +1650,9 @@ GameManager.prototype.restoreTimerRowsFromState = function (saved) {
       overflow.appendChild(this.createSavedDynamicTimerRow(overflowRows[o], cappedStateForRestore));
     }
   }
+};
 
+GameManager.prototype.restoreTimerSubRowsFromState = function (saved) {
   var sub8k = document.getElementById("timer8192-sub");
   if (sub8k && typeof saved.timer_sub_8192 === "string") sub8k.textContent = saved.timer_sub_8192;
   var sub16k = document.getElementById("timer16384-sub");
@@ -1660,7 +1661,14 @@ GameManager.prototype.restoreTimerRowsFromState = function (saved) {
   if (subContainer && typeof saved.timer_sub_visible === "boolean") {
     subContainer.style.display = saved.timer_sub_visible ? "block" : "none";
   }
+};
 
+GameManager.prototype.restoreTimerRowsFromState = function (saved) {
+  if (!saved || typeof saved !== "object") return;
+  var cappedStateForRestore = this.resolveCappedModeState();
+  this.restoreFixedTimerRowsFromState(saved, cappedStateForRestore);
+  this.restoreDynamicTimerRowsFromState(saved, cappedStateForRestore);
+  this.restoreTimerSubRowsFromState(saved);
   this.normalizeCappedRepeatLegendClasses(cappedStateForRestore);
 
   this.callWindowMethod("updateTimerScroll");
