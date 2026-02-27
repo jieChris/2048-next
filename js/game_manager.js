@@ -5315,25 +5315,16 @@ GameManager.prototype.moveTile = function (tile, cell) {
   tile.updatePosition(cell);
 };
 
-GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
-  var computePostMoveScoreCore = this.callCoreScoringRuntime("computePostMoveScore", [{
-      scoreBeforeMove: scoreBeforeMove,
-      scoreAfterMerge: this.score,
-      comboStreak: this.comboStreak,
-      comboMultiplier: this.comboMultiplier
-    }]);
-  if (computePostMoveScoreCore.available) {
-    var scoreResult = computePostMoveScoreCore.value || {};
-
-    if (Number.isFinite(scoreResult.score)) {
-      this.score = Number(scoreResult.score);
-    }
-    if (Number.isInteger(scoreResult.comboStreak) && scoreResult.comboStreak >= 0) {
-      this.comboStreak = scoreResult.comboStreak;
-    }
-    return;
+GameManager.prototype.applyCorePostMoveScoreResult = function (scoreResult) {
+  if (Number.isFinite(scoreResult.score)) {
+    this.score = Number(scoreResult.score);
   }
+  if (Number.isInteger(scoreResult.comboStreak) && scoreResult.comboStreak >= 0) {
+    this.comboStreak = scoreResult.comboStreak;
+  }
+};
 
+GameManager.prototype.applyFallbackPostMoveScore = function (scoreBeforeMove) {
   var mergeGain = this.score - scoreBeforeMove;
   if (mergeGain > 0) {
     this.comboStreak += 1;
@@ -5343,9 +5334,23 @@ GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
         this.score += comboBonus;
       }
     }
-  } else {
-    this.comboStreak = 0;
+    return;
   }
+  this.comboStreak = 0;
+};
+
+GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
+  var computePostMoveScoreCore = this.callCoreScoringRuntime("computePostMoveScore", [{
+      scoreBeforeMove: scoreBeforeMove,
+      scoreAfterMerge: this.score,
+      comboStreak: this.comboStreak,
+      comboMultiplier: this.comboMultiplier
+    }]);
+  if (computePostMoveScoreCore.available) {
+    this.applyCorePostMoveScoreResult(computePostMoveScoreCore.value || {});
+    return;
+  }
+  this.applyFallbackPostMoveScore(scoreBeforeMove);
 };
 
 GameManager.prototype.applyCorePostMoveLifecycleResult = function (postMoveResult, hasMovesAvailable) {
