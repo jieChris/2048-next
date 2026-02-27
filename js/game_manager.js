@@ -5444,6 +5444,18 @@ GameManager.prototype.formatPrettyTimeFallback = function (time) {
   return s;
 };
 
+GameManager.prototype.shouldRecordPracticeReplayAction = function () {
+  return !this.replayMode && this.sessionReplayV3 && this.modeKey === "practice_legacy";
+};
+
+GameManager.prototype.recordPracticeReplayAction = function (action) {
+  if (!this.shouldRecordPracticeReplayAction()) return;
+  this.sessionReplayV3.actions.push(action);
+  if (Array.isArray(action) && action[0] === "p") {
+    this.appendCompactPracticeAction(action[1], action[2], action[3]);
+  }
+};
+
 
 
 // Insert a custom tile (Test Board)
@@ -5458,10 +5470,7 @@ GameManager.prototype.insertCustomTile = function(x, y, value) {
     
     // If value is 0, we just want to clear the tile.
     if (value === 0) {
-        if (!this.replayMode && this.sessionReplayV3 && this.modeKey === "practice_legacy") {
-            this.sessionReplayV3.actions.push(["p", x, y, value]);
-            this.appendCompactPracticeAction(x, y, value);
-        }
+        this.recordPracticeReplayAction(["p", x, y, value]);
         this.clearTransientTileVisualState();
         this.actuate();
         return;
@@ -5500,10 +5509,7 @@ GameManager.prototype.insertCustomTile = function(x, y, value) {
     this.clearTransientTileVisualState();
     this.actuate();
 
-    if (!this.replayMode && this.sessionReplayV3 && this.modeKey === "practice_legacy") {
-        this.sessionReplayV3.actions.push(["p", x, y, value]);
-        this.appendCompactPracticeAction(x, y, value);
-    }
+    this.recordPracticeReplayAction(["p", x, y, value]);
 };
 
 GameManager.prototype.invalidateTimers = function(limit) {
