@@ -9,6 +9,7 @@ import {
   isGameTerminatedState,
   isProgressiveCapped64Mode,
   isUndoInteractionEnabled,
+  resolveCappedModeState,
   resolveCappedPlaceholderRowValues,
   resolveCappedPlaceholderSlotByRepeatCount,
   resolveCappedRowVisibilityPlan,
@@ -301,6 +302,30 @@ describe("core mode: capped policy", () => {
         maxTile: 64
       })
     ).toBe(false);
+  });
+
+  it("resolves capped mode state snapshot for runtime delegation", () => {
+    expect(
+      resolveCappedModeState({
+        modeKey: "capped_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toEqual({
+      isCappedMode: true,
+      cappedTargetValue: 64,
+      isProgressiveCapped64Mode: false
+    });
+
+    expect(
+      resolveCappedModeState({
+        modeKey: "standard_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toEqual({
+      isCappedMode: false,
+      cappedTargetValue: null,
+      isProgressiveCapped64Mode: false
+    });
   });
 });
 

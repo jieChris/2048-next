@@ -31,6 +31,12 @@ export interface CappedModeStateInput {
   maxTile?: number | null;
 }
 
+export interface CappedModeResolveResult {
+  isCappedMode: boolean;
+  cappedTargetValue: number | null;
+  isProgressiveCapped64Mode: boolean;
+}
+
 export interface CappedTimerPlaceholderRowsInput {
   isCappedMode?: boolean | null;
   cappedTargetValue?: number | null;
@@ -227,17 +233,29 @@ function toModeId(mode: unknown): string {
 }
 
 export function isCappedModeState(input: CappedModeStateInput): boolean {
-  const key = String(input.modeKey || input.mode || "");
-  const maxTile = Number(input.maxTile);
-  return key.indexOf("capped") !== -1 && Number.isFinite(maxTile) && maxTile > 0;
+  return resolveCappedModeState(input).isCappedMode;
 }
 
 export function getCappedTargetValue(input: CappedModeStateInput): number | null {
-  return isCappedModeState(input) ? Number(input.maxTile) : null;
+  return resolveCappedModeState(input).cappedTargetValue;
 }
 
 export function isProgressiveCapped64Mode(_input?: CappedModeStateInput): boolean {
-  return false;
+  return resolveCappedModeState(_input || {}).isProgressiveCapped64Mode;
+}
+
+export function resolveCappedModeState(input: CappedModeStateInput): CappedModeResolveResult {
+  const source = input || {};
+  const key = String(source.modeKey || source.mode || "");
+  const maxTile = Number(source.maxTile);
+  const isCappedMode = key.indexOf("capped") !== -1 && Number.isFinite(maxTile) && maxTile > 0;
+
+  return {
+    isCappedMode,
+    cappedTargetValue: isCappedMode ? Number(maxTile) : null,
+    // Keep existing behavior: currently no progressive capped-64 mode is enabled.
+    isProgressiveCapped64Mode: false
+  };
 }
 
 export function resolveCappedTimerLegendFontSize(cappedTargetValue?: number | null): string {

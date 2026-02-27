@@ -3069,39 +3069,46 @@ GameManager.prototype.recordTimerMilestone = function (value, timeStr) {
   }
 };
 
-GameManager.prototype.isCappedMode = function () {
-  var isCappedModeStateCore = this.callCoreModeRuntime("isCappedModeState", [{
-      modeKey: this.modeKey,
-      mode: this.mode,
-      maxTile: this.maxTile
-    }]);
-  if (isCappedModeStateCore.available) return !!isCappedModeStateCore.value;
+GameManager.prototype.resolveCappedModeState = function () {
+  var payload = {
+    modeKey: this.modeKey,
+    mode: this.mode,
+    maxTile: this.maxTile
+  };
+  var resolveCappedModeStateCore = this.callCoreModeRuntime("resolveCappedModeState", [payload]);
+  if (resolveCappedModeStateCore.available) {
+    var coreState = resolveCappedModeStateCore.value || {};
+    var isCappedMode = !!coreState.isCappedMode;
+    var cappedTargetValue = Number(coreState.cappedTargetValue);
+    if (!Number.isFinite(cappedTargetValue) || cappedTargetValue <= 0) cappedTargetValue = null;
+    return {
+      isCappedMode: isCappedMode,
+      cappedTargetValue: cappedTargetValue,
+      isProgressiveCapped64Mode: !!coreState.isProgressiveCapped64Mode
+    };
+  }
+
   var key = String(this.modeKey || this.mode || "");
-  return key.indexOf("capped") !== -1 && Number.isFinite(this.maxTile) && this.maxTile > 0;
+  var maxTile = Number(this.maxTile);
+  var isCappedModeFallback = key.indexOf("capped") !== -1 && Number.isFinite(maxTile) && maxTile > 0;
+  return {
+    isCappedMode: isCappedModeFallback,
+    cappedTargetValue: isCappedModeFallback ? Number(maxTile) : null,
+    // Disable progressive hidden timer rows for 64-capped mode.
+    isProgressiveCapped64Mode: false
+  };
+};
+
+GameManager.prototype.isCappedMode = function () {
+  return this.resolveCappedModeState().isCappedMode;
 };
 
 GameManager.prototype.getCappedTargetValue = function () {
-  var getCappedTargetValueCore = this.callCoreModeRuntime("getCappedTargetValue", [{
-      modeKey: this.modeKey,
-      mode: this.mode,
-      maxTile: this.maxTile
-    }]);
-  if (getCappedTargetValueCore.available) {
-    var value = getCappedTargetValueCore.value;
-    return Number.isFinite(value) ? Number(value) : null;
-  }
-  return this.isCappedMode() ? Number(this.maxTile) : null;
+  return this.resolveCappedModeState().cappedTargetValue;
 };
 
 GameManager.prototype.isProgressiveCapped64Mode = function () {
-  var isProgressiveCapped64ModeCore = this.callCoreModeRuntime("isProgressiveCapped64Mode", [{
-      modeKey: this.modeKey,
-      mode: this.mode,
-      maxTile: this.maxTile
-    }]);
-  if (isProgressiveCapped64ModeCore.available) return !!isProgressiveCapped64ModeCore.value;
-  // Disable progressive hidden timer rows for 64-capped mode.
-  return false;
+  return this.resolveCappedModeState().isProgressiveCapped64Mode;
 };
 
 GameManager.prototype.getTimerRowEl = function (value) {
@@ -3202,12 +3209,13 @@ GameManager.prototype.repositionCappedTimerContainer = function () {
 };
 
 GameManager.prototype.applyCappedRowVisibility = function () {
-  var isCappedMode = this.isCappedMode();
-  var isProgressiveCapped64Mode = this.isProgressiveCapped64Mode();
+  var cappedState = this.resolveCappedModeState();
+  var isCappedMode = cappedState.isCappedMode;
+  var isProgressiveCapped64Mode = cappedState.isProgressiveCapped64Mode;
   var resolveCappedRowVisibilityPlanCore = this.callCoreModeRuntime("resolveCappedRowVisibilityPlan", [{
       isCappedMode: isCappedMode,
       isProgressiveCapped64Mode: isProgressiveCapped64Mode,
-      cappedTargetValue: this.getCappedTargetValue(),
+      cappedTargetValue: cappedState.cappedTargetValue,
       timerSlotIds: GameManager.TIMER_SLOT_IDS
     }]);
   if (resolveCappedRowVisibilityPlanCore.available) {
@@ -3226,20 +3234,20 @@ GameManager.prototype.applyCappedRowVisibility = function () {
   }
 
   var i;
-  if (!this.isCappedMode()) {
+  if (!isCappedMode) {
     for (i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
       this.setTimerRowVisibleState(GameManager.TIMER_SLOT_IDS[i], true, false);
     }
     return;
   }
-  if (this.isProgressiveCapped64Mode()) {
+  if (isProgressiveCapped64Mode) {
     for (i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
       this.setTimerRowVisibleState(GameManager.TIMER_SLOT_IDS[i], false, true);
     }
     this.resetProgressiveCapped64Rows();
     return;
   }
-  var cap = this.getCappedTargetValue();
+  var cap = cappedState.cappedTargetValue;
   for (i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
     var value = GameManager.TIMER_SLOT_IDS[i];
     this.setTimerRowVisibleState(value, value <= cap, true);
@@ -3258,9 +3266,10 @@ GameManager.prototype.resetCappedDynamicTimers = function () {
 };
 
 GameManager.prototype.getCappedTimerLegendClass = function () {
+  var cappedTargetValue = this.getCappedTargetValue();
   var resolveCappedTimerLegendClassCore = this.callCoreModeRuntime("resolveCappedTimerLegendClass", [{
       timerMilestoneSlotByValue: this.timerMilestoneSlotByValue,
-      cappedTargetValue: this.getCappedTargetValue()
+      cappedTargetValue: cappedTargetValue
     }]);
   if (resolveCappedTimerLegendClassCore.available) {
     var legendClass = resolveCappedTimerLegendClassCore.value;
@@ -3268,7 +3277,7 @@ GameManager.prototype.getCappedTimerLegendClass = function () {
   }
 
   var slotId = this.timerMilestoneSlotByValue
-    ? this.timerMilestoneSlotByValue[String(this.getCappedTargetValue())]
+    ? this.timerMilestoneSlotByValue[String(cappedTargetValue)]
     : null;
   return slotId ? ("timertile timer-legend-" + slotId) : "timertile";
 };
@@ -3298,9 +3307,10 @@ GameManager.prototype.getCappedRepeatLabel = function (repeatCount) {
 };
 
 GameManager.prototype.getCappedPlaceholderRowValues = function () {
+  var cappedState = this.resolveCappedModeState();
   var resolveCappedPlaceholderRowValuesCore = this.callCoreModeRuntime("resolveCappedPlaceholderRowValues", [{
-      isCappedMode: this.isCappedMode(),
-      cappedTargetValue: this.getCappedTargetValue(),
+      isCappedMode: cappedState.isCappedMode,
+      cappedTargetValue: cappedState.cappedTargetValue,
       timerSlotIds: GameManager.TIMER_SLOT_IDS
     }]);
   if (resolveCappedPlaceholderRowValuesCore.available) {
@@ -3316,8 +3326,8 @@ GameManager.prototype.getCappedPlaceholderRowValues = function () {
     }
   }
 
-  if (!this.isCappedMode()) return [];
-  var cap = this.getCappedTargetValue();
+  if (!cappedState.isCappedMode) return [];
+  var cap = cappedState.cappedTargetValue;
   var values = [];
   for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
     var value = GameManager.TIMER_SLOT_IDS[i];

@@ -161,19 +161,28 @@
   }
 
   function isCappedModeState(input) {
+    return resolveCappedModeState(input).isCappedMode;
+  }
+
+  function resolveCappedModeState(input) {
     var source = input || {};
     var key = String(source.modeKey || source.mode || "");
     var maxTile = Number(source.maxTile);
-    return key.indexOf("capped") !== -1 && Number.isFinite(maxTile) && maxTile > 0;
+    var isCappedMode = key.indexOf("capped") !== -1 && Number.isFinite(maxTile) && maxTile > 0;
+    return {
+      isCappedMode: isCappedMode,
+      cappedTargetValue: isCappedMode ? Number(maxTile) : null,
+      // Keep existing behavior: currently no progressive capped-64 mode is enabled.
+      isProgressiveCapped64Mode: false
+    };
   }
 
   function getCappedTargetValue(input) {
-    if (!isCappedModeState(input)) return null;
-    return Number(input && input.maxTile);
+    return resolveCappedModeState(input).cappedTargetValue;
   }
 
-  function isProgressiveCapped64Mode(_input) {
-    return false;
+  function isProgressiveCapped64Mode(input) {
+    return !!resolveCappedModeState(input).isProgressiveCapped64Mode;
   }
 
   function resolveCappedTimerLegendFontSize(cappedTargetValue) {
@@ -508,6 +517,7 @@
   global.CoreModeRuntime = global.CoreModeRuntime || {};
   global.CoreModeRuntime.normalizeSpecialRules = normalizeSpecialRules;
   global.CoreModeRuntime.normalizeModeConfig = normalizeModeConfig;
+  global.CoreModeRuntime.resolveCappedModeState = resolveCappedModeState;
   global.CoreModeRuntime.isCappedModeState = isCappedModeState;
   global.CoreModeRuntime.getCappedTargetValue = getCappedTargetValue;
   global.CoreModeRuntime.isProgressiveCapped64Mode = isProgressiveCapped64Mode;
