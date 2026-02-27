@@ -1858,6 +1858,30 @@ GameManager.prototype.resolveCoreRulesRuntimeMethod = function (methodName) {
   return this.resolveCoreRuntimeMethod("getCoreRulesRuntime", methodName);
 };
 
+GameManager.prototype.resolveCoreGridScanRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreGridScanRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreMoveScanRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreMoveScanRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreMovePathRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreMovePathRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreScoringRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreScoringRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreMoveApplyRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreMoveApplyRuntime", methodName);
+};
+
+GameManager.prototype.resolveCoreUndoSnapshotRuntimeMethod = function (methodName) {
+  return this.resolveCoreRuntimeMethod("getCoreUndoSnapshotRuntime", methodName);
+};
+
 GameManager.prototype.resolveCoreStorageRuntimeMethod = function (methodName) {
   return this.resolveCoreRuntimeMethod("getCoreGameSettingsStorageRuntime", methodName);
 };
@@ -2093,7 +2117,7 @@ GameManager.prototype.publishAdapterMoveResult = function (meta) {
 };
 
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
-  var planTileInteractionCore = this.resolveCoreRuntimeMethod("getCoreMoveApplyRuntime", "planTileInteraction");
+  var planTileInteractionCore = this.resolveCoreMoveApplyRuntimeMethod("planTileInteraction");
   if (planTileInteractionCore) {
     var computed = planTileInteractionCore({
       cell: cell,
@@ -2249,7 +2273,7 @@ GameManager.prototype.computeUndoRestoreState = function (prev) {
 };
 
 GameManager.prototype.createUndoSnapshotState = function () {
-  var createUndoSnapshotCore = this.resolveCoreRuntimeMethod("getCoreUndoSnapshotRuntime", "createUndoSnapshot");
+  var createUndoSnapshotCore = this.resolveCoreUndoSnapshotRuntimeMethod("createUndoSnapshot");
   var fallback = {
     score: Number.isFinite(this.score) ? Number(this.score) : 0,
     tiles: [],
@@ -2782,7 +2806,7 @@ GameManager.prototype.getGridCellAvailableFn = function () {
 };
 
 GameManager.prototype.getAvailableCells = function () {
-  var getAvailableCellsCore = this.resolveCoreRuntimeMethod("getCoreGridScanRuntime", "getAvailableCells");
+  var getAvailableCellsCore = this.resolveCoreGridScanRuntimeMethod("getAvailableCells");
   if (getAvailableCellsCore) {
     return getAvailableCellsCore(
       this.width,
@@ -4652,7 +4676,7 @@ GameManager.prototype.move = function (direction) {
     // IPS counts only effective move inputs (invalid directions are excluded).
     this.recordIpsInput();
 
-    var computePostMoveScoreCore = this.resolveCoreRuntimeMethod("getCoreScoringRuntime", "computePostMoveScore");
+    var computePostMoveScoreCore = this.resolveCoreScoringRuntimeMethod("computePostMoveScore");
     if (computePostMoveScoreCore) {
       var scoreResult = computePostMoveScoreCore({
         scoreBeforeMove: scoreBeforeMove,
@@ -4754,7 +4778,7 @@ GameManager.prototype.move = function (direction) {
 
 // Get the vector representing the chosen direction
 GameManager.prototype.getVector = function (direction) {
-  var getVectorCore = this.resolveCoreRuntimeMethod("getCoreMovePathRuntime", "getVector");
+  var getVectorCore = this.resolveCoreMovePathRuntimeMethod("getVector");
   if (getVectorCore) return getVectorCore(direction);
 
   // Vectors representing tile movement
@@ -4770,7 +4794,7 @@ GameManager.prototype.getVector = function (direction) {
 
 // Build a list of positions to traverse in the right order
 GameManager.prototype.buildTraversals = function (vector) {
-  var buildTraversalsCore = this.resolveCoreRuntimeMethod("getCoreMovePathRuntime", "buildTraversals");
+  var buildTraversalsCore = this.resolveCoreMovePathRuntimeMethod("buildTraversals");
   if (buildTraversalsCore) {
     var computed = buildTraversalsCore(this.width, this.height, vector) || {};
     return {
@@ -4796,7 +4820,7 @@ GameManager.prototype.buildTraversals = function (vector) {
 };
 
 GameManager.prototype.findFarthestPosition = function (cell, vector) {
-  var findFarthestPositionCore = this.resolveCoreRuntimeMethod("getCoreMovePathRuntime", "findFarthestPosition");
+  var findFarthestPositionCore = this.resolveCoreMovePathRuntimeMethod("findFarthestPosition");
   if (findFarthestPositionCore) {
     var computed = findFarthestPositionCore(
       cell,
@@ -4826,14 +4850,14 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
 };
 
 GameManager.prototype.movesAvailable = function () {
-  var movesAvailableCore = this.resolveCoreRuntimeMethod("getCoreMoveScanRuntime", "movesAvailable");
+  var movesAvailableCore = this.resolveCoreMoveScanRuntimeMethod("movesAvailable");
   if (movesAvailableCore) return movesAvailableCore(this.getAvailableCells().length, this.tileMatchesAvailable());
   return this.getAvailableCells().length > 0 || this.tileMatchesAvailable();
 };
 
 // Check for available matches between tiles (more expensive check)
 GameManager.prototype.tileMatchesAvailable = function () {
-  var tileMatchesAvailableCore = this.resolveCoreRuntimeMethod("getCoreMoveScanRuntime", "tileMatchesAvailable");
+  var tileMatchesAvailableCore = this.resolveCoreMoveScanRuntimeMethod("tileMatchesAvailable");
   if (tileMatchesAvailableCore) {
     return tileMatchesAvailableCore(
       this.width,
@@ -4882,7 +4906,7 @@ GameManager.prototype.tileMatchesAvailable = function () {
 };
 
 GameManager.prototype.positionsEqual = function (first, second) {
-  var positionsEqualCore = this.resolveCoreRuntimeMethod("getCoreMovePathRuntime", "positionsEqual");
+  var positionsEqualCore = this.resolveCoreMovePathRuntimeMethod("positionsEqual");
   if (positionsEqualCore) return positionsEqualCore(first, second);
   return first.x === second.x && first.y === second.y;
 };
@@ -5091,10 +5115,7 @@ GameManager.prototype.invalidateTimers = function(limit) {
 };
 
 GameManager.prototype.getFinalBoardMatrix = function () {
-  var buildBoardMatrixCore = this.resolveCoreRuntimeMethod(
-    "getCoreGridScanRuntime",
-    "buildBoardMatrix"
-  );
+  var buildBoardMatrixCore = this.resolveCoreGridScanRuntimeMethod("buildBoardMatrix");
   if (buildBoardMatrixCore) {
     var self = this;
     var board = buildBoardMatrixCore(
@@ -5121,10 +5142,7 @@ GameManager.prototype.getFinalBoardMatrix = function () {
 };
 
 GameManager.prototype.getBestTileValue = function () {
-  var getBestTileValueCore = this.resolveCoreRuntimeMethod(
-    "getCoreGridScanRuntime",
-    "getBestTileValue"
-  );
+  var getBestTileValueCore = this.resolveCoreGridScanRuntimeMethod("getBestTileValue");
   if (getBestTileValueCore) {
     var bestCore = Number(getBestTileValueCore(this.getFinalBoardMatrix()));
     if (Number.isFinite(bestCore) && bestCore >= 0) return bestCore;
