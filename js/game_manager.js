@@ -2343,9 +2343,9 @@ GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) 
 };
 
 GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
-  var modeCore = this.getCoreModeRuntime();
-  if (modeCore && typeof modeCore.normalizeModeConfig === "function") {
-    return modeCore.normalizeModeConfig({
+  var normalizeModeConfigCore = this.resolveCoreRuntimeMethod("getCoreModeRuntime", "normalizeModeConfig");
+  if (normalizeModeConfigCore) {
+    return normalizeModeConfigCore({
       modeKey: modeKey,
       rawConfig: rawConfig,
       defaultModeKey: GameManager.DEFAULT_MODE_KEY,
@@ -2402,10 +2402,10 @@ GameManager.prototype.resolveModeConfig = function (modeId) {
   var byCatalog = this.getModeConfigFromCatalog(id);
   if (byCatalog) return this.normalizeModeConfig(id, byCatalog);
 
-  var modeCore = this.getCoreModeRuntime();
+  var resolveModeCatalogAliasCore = this.resolveCoreRuntimeMethod("getCoreModeRuntime", "resolveModeCatalogAlias");
   var mapped = id;
-  if (modeCore && typeof modeCore.resolveModeCatalogAlias === "function") {
-    mapped = modeCore.resolveModeCatalogAlias({
+  if (resolveModeCatalogAliasCore) {
+    mapped = resolveModeCatalogAliasCore({
       modeId: id,
       defaultModeKey: GameManager.DEFAULT_MODE_KEY,
       legacyAliasToModeKey: GameManager.LEGACY_ALIAS_TO_MODE_KEY
@@ -2449,10 +2449,8 @@ GameManager.prototype.applyModeConfig = function (modeConfig) {
 };
 
 GameManager.prototype.normalizeSpecialRules = function (rules) {
-  var modeCore = this.getCoreModeRuntime();
-  if (modeCore && typeof modeCore.normalizeSpecialRules === "function") {
-    return modeCore.normalizeSpecialRules(rules);
-  }
+  var normalizeSpecialRulesCore = this.resolveCoreRuntimeMethod("getCoreModeRuntime", "normalizeSpecialRules");
+  if (normalizeSpecialRulesCore) return normalizeSpecialRulesCore(rules);
   if (!rules || typeof rules !== "object" || Array.isArray(rules)) return {};
   return this.clonePlain(rules);
 };
@@ -2581,9 +2579,12 @@ GameManager.prototype.consumeDirectionLock = function () {
 };
 
 GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
-  var modeCore = this.getCoreModeRuntime();
-  if (modeCore && typeof modeCore.resolveLegacyModeFromModeKey === "function") {
-    return modeCore.resolveLegacyModeFromModeKey({
+  var resolveLegacyModeFromModeKeyCore = this.resolveCoreRuntimeMethod(
+    "getCoreModeRuntime",
+    "resolveLegacyModeFromModeKey"
+  );
+  if (resolveLegacyModeFromModeKeyCore) {
+    return resolveLegacyModeFromModeKeyCore({
       modeKey: modeKey,
       fallbackModeKey: this.modeKey,
       mode: this.mode,
@@ -2721,9 +2722,9 @@ GameManager.prototype.recordTimerMilestone = function (value, timeStr) {
 };
 
 GameManager.prototype.isCappedMode = function () {
-  var modeCore = this.getCoreModeRuntime();
-  if (modeCore && typeof modeCore.isCappedModeState === "function") {
-    return !!modeCore.isCappedModeState({
+  var isCappedModeStateCore = this.resolveCoreRuntimeMethod("getCoreModeRuntime", "isCappedModeState");
+  if (isCappedModeStateCore) {
+    return !!isCappedModeStateCore({
       modeKey: this.modeKey,
       mode: this.mode,
       maxTile: this.maxTile
@@ -2734,9 +2735,9 @@ GameManager.prototype.isCappedMode = function () {
 };
 
 GameManager.prototype.getCappedTargetValue = function () {
-  var modeCore = this.getCoreModeRuntime();
-  if (modeCore && typeof modeCore.getCappedTargetValue === "function") {
-    var value = modeCore.getCappedTargetValue({
+  var getCappedTargetValueCore = this.resolveCoreRuntimeMethod("getCoreModeRuntime", "getCappedTargetValue");
+  if (getCappedTargetValueCore) {
+    var value = getCappedTargetValueCore({
       modeKey: this.modeKey,
       mode: this.mode,
       maxTile: this.maxTile
@@ -2747,9 +2748,12 @@ GameManager.prototype.getCappedTargetValue = function () {
 };
 
 GameManager.prototype.isProgressiveCapped64Mode = function () {
-  var modeCore = this.getCoreModeRuntime();
-  if (modeCore && typeof modeCore.isProgressiveCapped64Mode === "function") {
-    return !!modeCore.isProgressiveCapped64Mode({
+  var isProgressiveCapped64ModeCore = this.resolveCoreRuntimeMethod(
+    "getCoreModeRuntime",
+    "isProgressiveCapped64Mode"
+  );
+  if (isProgressiveCapped64ModeCore) {
+    return !!isProgressiveCapped64ModeCore({
       modeKey: this.modeKey,
       mode: this.mode,
       maxTile: this.maxTile
