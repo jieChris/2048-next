@@ -516,20 +516,26 @@ GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayStrin
   };
 };
 
+GameManager.REPLAY_V4_MODE_CODE_TO_KEY = {
+  S: "standard_4x4_pow2_no_undo",
+  C: "classic_4x4_pow2_undo",
+  K: "capped_4x4_pow2_no_undo",
+  P: "practice_legacy"
+};
+
+GameManager.REPLAY_V4_MODE_KEY_TO_CODE = {
+  standard_4x4_pow2_no_undo: "S",
+  classic_4x4_pow2_undo: "C",
+  capped_4x4_pow2_no_undo: "K",
+  practice_legacy: "P"
+};
+
 GameManager.prototype.resolveReplayModeKeyFromV4Code = function (modeCode) {
-  if (modeCode === "S") return "standard_4x4_pow2_no_undo";
-  if (modeCode === "C") return "classic_4x4_pow2_undo";
-  if (modeCode === "K") return "capped_4x4_pow2_no_undo";
-  if (modeCode === "P") return "practice_legacy";
-  return null;
+  return GameManager.REPLAY_V4_MODE_CODE_TO_KEY[modeCode] || null;
 };
 
 GameManager.prototype.resolveReplayV4ModeCodeFromModeKey = function (modeKey) {
-  if (modeKey === "standard_4x4_pow2_no_undo") return "S";
-  if (modeKey === "classic_4x4_pow2_undo") return "C";
-  if (modeKey === "capped_4x4_pow2_no_undo") return "K";
-  if (modeKey === "practice_legacy") return "P";
-  return "C";
+  return GameManager.REPLAY_V4_MODE_KEY_TO_CODE[modeKey] || "C";
 };
 
 GameManager.prototype.decodeLegacyReplayV2CharCode = function (logString, index) {
@@ -2986,9 +2992,11 @@ var GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS = [
   ["resolveCoreReplayLegacyRuntimeMethod", "getCoreReplayLegacyRuntime"]
 ];
 
-for (var resolverIndex = 0; resolverIndex < GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS.length; resolverIndex++) {
-  var resolverItem = GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS[resolverIndex];
-  registerCoreRuntimeMethodResolver(resolverItem[0], resolverItem[1]);
+function registerCoreRuntimeMethodResolvers(resolverDefs) {
+  for (var resolverIndex = 0; resolverIndex < resolverDefs.length; resolverIndex++) {
+    var resolverItem = resolverDefs[resolverIndex];
+    registerCoreRuntimeMethodResolver(resolverItem[0], resolverItem[1]);
+  }
 }
 
 function registerCoreRuntimeGetter(methodName, runtimeName) {
@@ -3033,10 +3041,15 @@ var GAME_MANAGER_CORE_RUNTIME_GETTERS = [
   ["getCoreReplayLegacyRuntime", "CoreReplayLegacyRuntime"]
 ];
 
-for (var runtimeGetterIndex = 0; runtimeGetterIndex < GAME_MANAGER_CORE_RUNTIME_GETTERS.length; runtimeGetterIndex++) {
-  var runtimeGetterDef = GAME_MANAGER_CORE_RUNTIME_GETTERS[runtimeGetterIndex];
-  registerCoreRuntimeGetter(runtimeGetterDef[0], runtimeGetterDef[1]);
+function registerCoreRuntimeGetters(runtimeGetterDefs) {
+  for (var runtimeGetterIndex = 0; runtimeGetterIndex < runtimeGetterDefs.length; runtimeGetterIndex++) {
+    var runtimeGetterDef = runtimeGetterDefs[runtimeGetterIndex];
+    registerCoreRuntimeGetter(runtimeGetterDef[0], runtimeGetterDef[1]);
+  }
 }
+
+registerCoreRuntimeMethodResolvers(GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS);
+registerCoreRuntimeGetters(GAME_MANAGER_CORE_RUNTIME_GETTERS);
 
 GameManager.prototype.resolveModePolicyContext = function (mode) {
   var targetMode = mode || this.mode;
