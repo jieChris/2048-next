@@ -5337,43 +5337,47 @@ GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
   }
 };
 
+GameManager.prototype.applyCorePostMoveLifecycleResult = function (postMoveResult, hasMovesAvailable) {
+  if (Number.isInteger(postMoveResult.successfulMoveCount) && postMoveResult.successfulMoveCount >= 0) {
+    this.successfulMoveCount = postMoveResult.successfulMoveCount;
+  } else {
+    this.successfulMoveCount += 1;
+  }
+  this.over = typeof postMoveResult.over === "boolean" ? postMoveResult.over : !hasMovesAvailable;
+  if (postMoveResult.shouldEndTime || this.over) {
+    this.endTime();
+  }
+  return {
+    postMoveResult: postMoveResult,
+    shouldStartTimer:
+      typeof postMoveResult.shouldStartTimer === "boolean"
+        ? postMoveResult.shouldStartTimer
+        : (this.timerStatus === 0 && !this.over)
+  };
+};
+
+GameManager.prototype.applyFallbackPostMoveLifecycle = function (hasMovesAvailable) {
+  this.successfulMoveCount += 1;
+  if (!hasMovesAvailable) {
+    this.over = true;
+    this.endTime();
+  }
+  return {
+    postMoveResult: null,
+    shouldStartTimer: this.timerStatus === 0 && !this.over
+  };
+};
+
 GameManager.prototype.applyPostMoveLifecycle = function (hasMovesAvailable) {
   var computePostMoveLifecycleCore = this.callCorePostMoveRuntime("computePostMoveLifecycle", [{
     successfulMoveCount: this.successfulMoveCount,
     hasMovesAvailable: hasMovesAvailable,
     timerStatus: this.timerStatus
   }]);
-  var postMoveResult = null;
-
   if (computePostMoveLifecycleCore.available) {
-    postMoveResult = computePostMoveLifecycleCore.value || {};
-    if (Number.isInteger(postMoveResult.successfulMoveCount) && postMoveResult.successfulMoveCount >= 0) {
-      this.successfulMoveCount = postMoveResult.successfulMoveCount;
-    } else {
-      this.successfulMoveCount += 1;
-    }
-    this.over = typeof postMoveResult.over === "boolean" ? postMoveResult.over : !hasMovesAvailable;
-    if (postMoveResult.shouldEndTime || this.over) {
-      this.endTime(); // Stop timer on game over
-    }
-    return {
-      postMoveResult: postMoveResult,
-      shouldStartTimer:
-        typeof postMoveResult.shouldStartTimer === "boolean"
-          ? postMoveResult.shouldStartTimer
-          : (this.timerStatus === 0 && !this.over)
-    };
+    return this.applyCorePostMoveLifecycleResult(computePostMoveLifecycleCore.value || {}, hasMovesAvailable);
   }
-
-  this.successfulMoveCount += 1;
-  if (!hasMovesAvailable) {
-    this.over = true; // Game over!
-    this.endTime(); // Stop timer on game over
-  }
-  return {
-    postMoveResult: null,
-    shouldStartTimer: this.timerStatus === 0 && !this.over
-  };
+  return this.applyFallbackPostMoveLifecycle(hasMovesAvailable);
 };
 
 GameManager.prototype.applyMergeMilestoneEffects = function (mergedValue, timeStr) {
