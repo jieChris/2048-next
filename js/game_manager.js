@@ -4327,10 +4327,12 @@ GameManager.prototype.prepareTiles = function () {
 };
 
 GameManager.prototype.getMoveInputThrottleMs = function () {
-  var resolveMoveInputThrottleMsCore = this.resolveCoreTimerIntervalRuntimeMethod("resolveMoveInputThrottleMs");
-  if (resolveMoveInputThrottleMsCore) {
-    return resolveMoveInputThrottleMsCore(this.replayMode, this.width, this.height);
-  }
+  var resolveMoveInputThrottleMsCore = this.callCoreTimerIntervalRuntime("resolveMoveInputThrottleMs", [
+    this.replayMode,
+    this.width,
+    this.height
+  ]);
+  if (resolveMoveInputThrottleMsCore.available) return resolveMoveInputThrottleMsCore.value;
   if (this.replayMode) return 0;
   var area = (this.width || 4) * (this.height || 4);
   if (area >= 100) return 65;
@@ -4812,6 +4814,20 @@ GameManager.prototype.callCoreMoveScanRuntime = function (methodName, args) {
   };
 };
 
+GameManager.prototype.callCoreTimerIntervalRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreTimerIntervalRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
 // Get the vector representing the chosen direction
 GameManager.prototype.getVector = function (direction) {
   var getVectorCore = this.callCoreMovePathRuntime("getVector", [direction]);
@@ -4974,8 +4990,11 @@ GameManager.prototype.startTimer = function() {
 };
 
 GameManager.prototype.getTimerUpdateIntervalMs = function () {
-  var resolveTimerUpdateIntervalMsCore = this.resolveCoreTimerIntervalRuntimeMethod("resolveTimerUpdateIntervalMs");
-  if (resolveTimerUpdateIntervalMsCore) return resolveTimerUpdateIntervalMsCore(this.width, this.height);
+  var resolveTimerUpdateIntervalMsCore = this.callCoreTimerIntervalRuntime("resolveTimerUpdateIntervalMs", [
+    this.width,
+    this.height
+  ]);
+  if (resolveTimerUpdateIntervalMsCore.available) return resolveTimerUpdateIntervalMsCore.value;
 
   var area = (this.width || 4) * (this.height || 4);
   if (area >= 100) return 50;
@@ -5105,15 +5124,15 @@ GameManager.prototype.insertCustomTile = function(x, y, value) {
 };
 
 GameManager.prototype.invalidateTimers = function(limit) {
-    var resolveInvalidatedTimerElementIdsCore = this.resolveCoreTimerIntervalRuntimeMethod("resolveInvalidatedTimerElementIds");
-    if (resolveInvalidatedTimerElementIdsCore) {
-        var ids = resolveInvalidatedTimerElementIdsCore({
+    var resolveInvalidatedTimerElementIdsCore = this.callCoreTimerIntervalRuntime("resolveInvalidatedTimerElementIds", [{
             timerMilestones: this.timerMilestones || this.getTimerMilestoneValues(),
             timerSlotIds: GameManager.TIMER_SLOT_IDS,
             limit: limit,
             reached32k: !!this.reached32k,
             isFibonacciMode: this.isFibonacciMode()
-        }) || [];
+        }]);
+    if (resolveInvalidatedTimerElementIdsCore.available) {
+        var ids = resolveInvalidatedTimerElementIdsCore.value || [];
         for (var idx = 0; idx < ids.length; idx++) {
             var targetId = ids[idx];
             if (!targetId) continue;
