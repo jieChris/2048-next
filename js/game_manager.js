@@ -2354,15 +2354,18 @@ GameManager.prototype.applyRestoredSavedState = function (saved) {
   this.applyRestoredSavedTimerUiState(saved);
 };
 
-GameManager.prototype.tryRestoreSavedGameState = function () {
-  if (!this.shouldAttemptSavedGameStateRestore()) return false;
-  var saved = this.resolveRestorableSavedState();
+GameManager.prototype.tryApplyRestorableSavedState = function (saved) {
   if (!saved) return false;
   if (!this.tryApplyRestoredSavedBoard(saved)) {
     return this.handleFailedSavedBoardRestore();
   }
   this.applyRestoredSavedState(saved);
   return true;
+};
+
+GameManager.prototype.tryRestoreSavedGameState = function () {
+  if (!this.shouldAttemptSavedGameStateRestore()) return false;
+  return this.tryApplyRestorableSavedState(this.resolveRestorableSavedState());
 };
 
 GameManager.prototype.shouldAbortSaveGameStateForTerminatedSession = function () {
