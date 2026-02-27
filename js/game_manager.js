@@ -7133,9 +7133,13 @@ GameManager.prototype.import = function (replayString) {
   }
 };
 
-GameManager.prototype.executeReplayAction = function (action) {
+GameManager.prototype.resolveReplayDispatchPlanForAction = function (action) {
   var resolved = this.resolveReplayExecution(action);
-  var dispatchPlan = this.planReplayDispatch(resolved);
+  return this.planReplayDispatch(resolved);
+};
+
+GameManager.prototype.executeReplayAction = function (action) {
+  var dispatchPlan = this.resolveReplayDispatchPlanForAction(action);
   this.executeReplayDispatchPlan(dispatchPlan);
 };
 
