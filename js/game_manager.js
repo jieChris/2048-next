@@ -5550,6 +5550,10 @@ GameManager.prototype.import = function (replayString) {
       self.replayDelay = 200;
       self.resume();
     };
+    var finalizeReplayImport = function () {
+      self.applyUndoSettingForMode(self.modeKey, true, true);
+      startReplay();
+    };
 
     var parsedEnvelope = this.parseReplayImportEnvelope(trimmed);
     if (parsedEnvelope && parsedEnvelope.kind === "json-v3") {
@@ -5570,8 +5574,7 @@ GameManager.prototype.import = function (replayString) {
       this.replaySpawns = null;
       this.disableSessionSync = true;
       this.restartWithSeed(parsedEnvelope.seed, replayModeConfig);
-      this.applyUndoSettingForMode(this.modeKey, true, true);
-      startReplay();
+      finalizeReplayImport();
       return;
     }
 
@@ -5584,8 +5587,7 @@ GameManager.prototype.import = function (replayString) {
 
       this.disableSessionSync = true;
       this.restartWithBoard(initialBoard, replayModeConfigV4, { asReplay: true });
-      this.applyUndoSettingForMode(this.modeKey, true, true);
-      startReplay();
+      finalizeReplayImport();
       return;
     }
 
