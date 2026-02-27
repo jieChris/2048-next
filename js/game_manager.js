@@ -5904,10 +5904,13 @@ GameManager.prototype.isStatsPanelOpen = function () {
   return !!(overlay && overlay.style.display !== "none");
 };
 
+GameManager.prototype.renderAccumulatedTimerDisplay = function () {
+  this.updateTimerDisplayText(this.accumulatedTime);
+};
+
 GameManager.prototype.endTime = function() {
   this.stopTimer();
-  var timerEl = document.getElementById("timer");
-  if (timerEl) timerEl.textContent = this.pretty(this.accumulatedTime);
+  this.renderAccumulatedTimerDisplay();
 };
 
 GameManager.prototype.resolveElapsedTimerMsFromStartTime = function () {
