@@ -5874,13 +5874,17 @@ GameManager.prototype.applyTimerStartState = function () {
   this.notifyUndoSettingsStateChanged();
 };
 
+GameManager.prototype.createTimerUpdateCallback = function () {
+  var manager = this;
+  return function () {
+    manager.updateTimer();
+  };
+};
+
 GameManager.prototype.scheduleTimerUpdateInterval = function () {
-  var self = this;
   this.timerUpdateIntervalMs = this.getTimerUpdateIntervalMs();
   this.lastStatsPanelUpdateAt = 0;
-  this.timerID = setInterval(function () {
-    self.updateTimer();
-  }, this.timerUpdateIntervalMs);
+  this.timerID = setInterval(this.createTimerUpdateCallback(), this.timerUpdateIntervalMs);
 };
 
 GameManager.prototype.getTimerUpdateIntervalMs = function () {
