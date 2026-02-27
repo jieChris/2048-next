@@ -3424,6 +3424,13 @@ GameManager.prototype.consumeDirectionLock = function () {
   this.lockConsumedAtMoveCount = this.successfulMoveCount;
 };
 
+GameManager.prototype.resolveLegacyModeFromModeKeyFallback = function (key) {
+  if (GameManager.LEGACY_MODE_BY_KEY[key]) return GameManager.LEGACY_MODE_BY_KEY[key];
+  if (key && key.indexOf("capped") !== -1) return "capped";
+  if (key && key.indexOf("practice") !== -1) return "practice";
+  return "classic";
+};
+
 GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
   var resolveLegacyModeFromModeKeyCore = this.callCoreModeRuntime("resolveLegacyModeFromModeKey", [{
       modeKey: modeKey,
@@ -3434,10 +3441,7 @@ GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
   if (resolveLegacyModeFromModeKeyCore.available) return resolveLegacyModeFromModeKeyCore.value;
 
   var key = modeKey || this.modeKey || this.mode;
-  if (GameManager.LEGACY_MODE_BY_KEY[key]) return GameManager.LEGACY_MODE_BY_KEY[key];
-  if (key && key.indexOf("capped") !== -1) return "capped";
-  if (key && key.indexOf("practice") !== -1) return "practice";
-  return "classic";
+  return this.resolveLegacyModeFromModeKeyFallback(key);
 };
 
 GameManager.prototype.getSpawnTableTotalWeight = function (table) {
