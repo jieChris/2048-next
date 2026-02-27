@@ -5745,15 +5745,27 @@ GameManager.prototype.restartLegacyReplayImportSession = function (seed) {
 };
 
 GameManager.prototype.applyJsonV3ReplayEnvelopeMeta = function (envelope, modeConfig) {
-  if (envelope.specialRulesSnapshot && typeof envelope.specialRulesSnapshot === "object") {
-    modeConfig.special_rules = this.clonePlain(envelope.specialRulesSnapshot);
-  }
+  this.applyJsonV3ReplayModeConfigMeta(envelope, modeConfig);
+  this.applyJsonV3ReplayChallengeMeta(envelope);
+};
+
+GameManager.prototype.applyJsonV3ReplayModeConfigMeta = function (envelope, modeConfig) {
+  this.applyJsonV3ReplaySpecialRulesMeta(envelope, modeConfig);
   if (typeof envelope.modeFamily === "string" && envelope.modeFamily) {
     modeConfig.mode_family = envelope.modeFamily;
   }
   if (typeof envelope.rankPolicy === "string" && envelope.rankPolicy) {
     modeConfig.rank_policy = envelope.rankPolicy;
   }
+};
+
+GameManager.prototype.applyJsonV3ReplaySpecialRulesMeta = function (envelope, modeConfig) {
+  if (envelope.specialRulesSnapshot && typeof envelope.specialRulesSnapshot === "object") {
+    modeConfig.special_rules = this.clonePlain(envelope.specialRulesSnapshot);
+  }
+};
+
+GameManager.prototype.applyJsonV3ReplayChallengeMeta = function (envelope) {
   if (typeof envelope.challengeId === "string" && envelope.challengeId) {
     this.challengeId = envelope.challengeId;
   }
