@@ -2075,6 +2075,22 @@ GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
   };
 };
 
+GameManager.prototype.resolveActiveUndoPolicyState = function (options) {
+  var source = options && typeof options === "object" ? options : {};
+  var hasOwn = Object.prototype.hasOwnProperty;
+  return this.resolveUndoPolicyStateForMode(this.mode, {
+    hasGameStarted: hasOwn.call(source, "hasGameStarted")
+      ? !!source.hasGameStarted
+      : !!this.hasGameStarted,
+    replayMode: hasOwn.call(source, "replayMode")
+      ? !!source.replayMode
+      : !!this.replayMode,
+    undoLimit: hasOwn.call(source, "undoLimit") ? source.undoLimit : this.undoLimit,
+    undoUsed: hasOwn.call(source, "undoUsed") ? source.undoUsed : this.undoUsed,
+    undoEnabled: hasOwn.call(source, "undoEnabled") ? source.undoEnabled : this.undoEnabled
+  });
+};
+
 GameManager.prototype.getLegacyAdapterBridge = function () {
   if (typeof window === "undefined") return null;
   var payload = window.__legacyEngine;
@@ -2315,6 +2331,26 @@ GameManager.prototype.computePostUndoRecord = function (direction) {
   };
 };
 
+GameManager.prototype.getUndoStateFallbackValues = function () {
+  return {
+    score:
+      Number.isFinite(this.score) && typeof this.score === "number" ? Number(this.score) : 0,
+    comboStreak:
+      Number.isInteger(this.comboStreak) && this.comboStreak >= 0 ? this.comboStreak : 0,
+    successfulMoveCount:
+      Number.isInteger(this.successfulMoveCount) && this.successfulMoveCount >= 0
+        ? this.successfulMoveCount
+        : 0,
+    lockConsumedAtMoveCount:
+      Number.isInteger(this.lockConsumedAtMoveCount) ? this.lockConsumedAtMoveCount : -1,
+    lockedDirectionTurn:
+      Number.isInteger(this.lockedDirectionTurn) ? this.lockedDirectionTurn : null,
+    lockedDirection:
+      Number.isInteger(this.lockedDirection) ? this.lockedDirection : null,
+    undoUsed: Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0
+  };
+};
+
 GameManager.prototype.computeUndoRestoreState = function (prev) {
   var computeUndoRestoreStateCore = this.callCoreUndoRestoreRuntime("computeUndoRestoreState", [{
       prev: prev || {},
@@ -2324,7 +2360,8 @@ GameManager.prototype.computeUndoRestoreState = function (prev) {
   if (computeUndoRestoreStateCore.available) return computeUndoRestoreStateCore.value || {};
 
   var source = prev && typeof prev === "object" ? prev : {};
-  var fallbackUndoUsed = Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0;
+  var fallbackState = this.getUndoStateFallbackValues();
+  var fallbackUndoUsed = fallbackState.undoUsed;
   var undoBase =
     Number.isInteger(source.undoUsed) && source.undoUsed >= 0
       ? source.undoUsed
@@ -2348,6 +2385,7 @@ GameManager.prototype.computeUndoRestoreState = function (prev) {
 };
 
 GameManager.prototype.createUndoSnapshotState = function () {
+  var fallbackState = this.getUndoStateFallbackValues();
   var createUndoSnapshotCore = this.callCoreUndoSnapshotRuntime("createUndoSnapshot", [{
     score: this.score,
     comboStreak: this.comboStreak,
@@ -2358,20 +2396,14 @@ GameManager.prototype.createUndoSnapshotState = function () {
     undoUsed: this.undoUsed
   }]);
   var fallback = {
-    score: Number.isFinite(this.score) ? Number(this.score) : 0,
+    score: fallbackState.score,
     tiles: [],
-    comboStreak: Number.isInteger(this.comboStreak) && this.comboStreak >= 0 ? this.comboStreak : 0,
-    successfulMoveCount:
-      Number.isInteger(this.successfulMoveCount) && this.successfulMoveCount >= 0
-        ? this.successfulMoveCount
-        : 0,
-    lockConsumedAtMoveCount:
-      Number.isInteger(this.lockConsumedAtMoveCount) ? this.lockConsumedAtMoveCount : -1,
-    lockedDirectionTurn:
-      Number.isInteger(this.lockedDirectionTurn) ? this.lockedDirectionTurn : null,
-    lockedDirection:
-      Number.isInteger(this.lockedDirection) ? this.lockedDirection : null,
-    undoUsed: Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0
+    comboStreak: fallbackState.comboStreak,
+    successfulMoveCount: fallbackState.successfulMoveCount,
+    lockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
+    lockedDirectionTurn: fallbackState.lockedDirectionTurn,
+    lockedDirection: fallbackState.lockedDirection,
+    undoUsed: fallbackState.undoUsed
   };
 
   if (createUndoSnapshotCore.available) {
@@ -2410,33 +2442,18 @@ GameManager.prototype.createUndoSnapshotState = function () {
 };
 
 GameManager.prototype.normalizeUndoStackEntry = function (entry) {
-  var fallbackScore = Number.isFinite(this.score) && typeof this.score === "number"
-    ? Number(this.score)
-    : 0;
-  var fallbackComboStreak =
-    Number.isInteger(this.comboStreak) && this.comboStreak >= 0 ? this.comboStreak : 0;
-  var fallbackSuccessfulMoveCount =
-    Number.isInteger(this.successfulMoveCount) && this.successfulMoveCount >= 0
-      ? this.successfulMoveCount
-      : 0;
-  var fallbackLockConsumedAtMoveCount =
-    Number.isInteger(this.lockConsumedAtMoveCount) ? this.lockConsumedAtMoveCount : -1;
-  var fallbackLockedDirectionTurn =
-    Number.isInteger(this.lockedDirectionTurn) ? this.lockedDirectionTurn : null;
-  var fallbackLockedDirection =
-    Number.isInteger(this.lockedDirection) ? this.lockedDirection : null;
-  var fallbackUndoUsed = Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0;
+  var fallbackState = this.getUndoStateFallbackValues();
 
   var source = entry && typeof entry === "object" ? entry : {};
   var normalizeUndoStackEntryCore = this.callCoreUndoStackEntryRuntime("normalizeUndoStackEntry", [{
       entry: source,
-      fallbackScore: fallbackScore,
-      fallbackComboStreak: fallbackComboStreak,
-      fallbackSuccessfulMoveCount: fallbackSuccessfulMoveCount,
-      fallbackLockConsumedAtMoveCount: fallbackLockConsumedAtMoveCount,
-      fallbackLockedDirectionTurn: fallbackLockedDirectionTurn,
-      fallbackLockedDirection: fallbackLockedDirection,
-      fallbackUndoUsed: fallbackUndoUsed
+      fallbackScore: fallbackState.score,
+      fallbackComboStreak: fallbackState.comboStreak,
+      fallbackSuccessfulMoveCount: fallbackState.successfulMoveCount,
+      fallbackLockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
+      fallbackLockedDirectionTurn: fallbackState.lockedDirectionTurn,
+      fallbackLockedDirection: fallbackState.lockedDirection,
+      fallbackUndoUsed: fallbackState.undoUsed
     }]);
   if (normalizeUndoStackEntryCore.available) {
     var computed = normalizeUndoStackEntryCore.value || {};
@@ -2457,32 +2474,32 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
     score:
       Number.isFinite(source.score) && typeof source.score === "number"
         ? Number(source.score)
-        : fallbackScore,
+        : fallbackState.score,
     tiles: tiles,
     comboStreak:
       Number.isInteger(source.comboStreak) && source.comboStreak >= 0
         ? source.comboStreak
-        : fallbackComboStreak,
+        : fallbackState.comboStreak,
     successfulMoveCount:
       Number.isInteger(source.successfulMoveCount) && source.successfulMoveCount >= 0
         ? source.successfulMoveCount
-        : fallbackSuccessfulMoveCount,
+        : fallbackState.successfulMoveCount,
     lockConsumedAtMoveCount:
       Number.isInteger(source.lockConsumedAtMoveCount)
         ? source.lockConsumedAtMoveCount
-        : fallbackLockConsumedAtMoveCount,
+        : fallbackState.lockConsumedAtMoveCount,
     lockedDirectionTurn:
       Number.isInteger(source.lockedDirectionTurn)
         ? source.lockedDirectionTurn
-        : fallbackLockedDirectionTurn,
+        : fallbackState.lockedDirectionTurn,
     lockedDirection:
       Number.isInteger(source.lockedDirection)
         ? source.lockedDirection
-        : fallbackLockedDirection,
+        : fallbackState.lockedDirection,
     undoUsed:
       Number.isInteger(source.undoUsed) && source.undoUsed >= 0
         ? source.undoUsed
-        : fallbackUndoUsed
+        : fallbackState.undoUsed
   };
 };
 
@@ -3712,9 +3729,12 @@ GameManager.prototype.notifyUndoSettingsStateChanged = function () {
 };
 
 GameManager.prototype.loadUndoSettingForMode = function (mode) {
-  var forced = this.getForcedUndoSettingForMode(mode);
+  var state = this.resolveUndoPolicyStateForMode(mode, {
+    hasGameStarted: !!this.hasGameStarted
+  });
+  var forced = state ? state.forcedUndoSetting : null;
   if (forced !== null) return forced;
-  if (!this.isUndoAllowedByMode(mode)) return false;
+  if (!(state && state.isUndoAllowedByMode)) return false;
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
   var readUndoEnabledForModeFromMapCore = this.callCoreStorageRuntime("readUndoEnabledForModeFromMap", [{
       map: map,
@@ -3726,9 +3746,14 @@ GameManager.prototype.loadUndoSettingForMode = function (mode) {
   return true;
 };
 
-GameManager.prototype.persistUndoSettingForMode = function (mode, enabled) {
-  if (this.isUndoSettingFixedForMode(mode)) return;
-  if (!this.isUndoAllowedByMode(mode)) return;
+GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resolvedState) {
+  var state = resolvedState && typeof resolvedState === "object"
+    ? resolvedState
+    : this.resolveUndoPolicyStateForMode(mode, {
+      hasGameStarted: !!this.hasGameStarted
+    });
+  if (state && state.isUndoSettingFixedForMode) return;
+  if (!(state && state.isUndoAllowedByMode)) return;
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
   var writeUndoEnabledForModeToMapCore = this.callCoreStorageRuntime("writeUndoEnabledForModeToMap", [{
       map: map,
@@ -3744,32 +3769,33 @@ GameManager.prototype.persistUndoSettingForMode = function (mode, enabled) {
 };
 
 GameManager.prototype.setUndoEnabled = function (enabled, skipPersist, forceChange) {
-  var forced = this.getForcedUndoSettingForMode(this.mode);
+  var state = this.resolveActiveUndoPolicyState();
+  var forced = state ? state.forcedUndoSetting : null;
   if (forced !== null) {
     this.undoEnabled = forced;
-  } else if (forceChange || this.canToggleUndoSetting(this.mode)) {
+  } else if (forceChange || (state && state.canToggleUndoSetting)) {
     this.undoEnabled = !!enabled;
     if (!skipPersist) {
-      this.persistUndoSettingForMode(this.mode, this.undoEnabled);
+      this.persistUndoSettingForMode(this.mode, this.undoEnabled, state);
     }
   }
-  this.updateUndoUiState();
+  this.updateUndoUiState(this.resolveActiveUndoPolicyState({
+    undoEnabled: this.undoEnabled
+  }));
   this.notifyUndoSettingsStateChanged();
 };
 
 GameManager.prototype.isUndoInteractionEnabled = function () {
-  var state = this.resolveUndoPolicyStateForMode(this.mode, {
-    replayMode: this.replayMode,
-    undoLimit: this.undoLimit,
-    undoUsed: this.undoUsed,
-    undoEnabled: this.undoEnabled
-  });
+  var state = this.resolveActiveUndoPolicyState();
   return !!(state && state.isUndoInteractionEnabled);
 };
 
-GameManager.prototype.updateUndoUiState = function () {
-  var canUndo = this.isUndoInteractionEnabled();
-  var modeUndoCapable = this.isUndoAllowedByMode(this.mode);
+GameManager.prototype.updateUndoUiState = function (resolvedState) {
+  var state = resolvedState && typeof resolvedState === "object"
+    ? resolvedState
+    : this.resolveActiveUndoPolicyState();
+  var canUndo = !!(state && state.isUndoInteractionEnabled);
+  var modeUndoCapable = !!(state && state.isUndoAllowedByMode);
   var undoLink = document.getElementById("undo-link");
   if (undoLink) {
     undoLink.style.display = modeUndoCapable ? "" : "none";
