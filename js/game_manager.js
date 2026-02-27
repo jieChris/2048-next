@@ -5519,25 +5519,27 @@ GameManager.prototype.insertCustomTile = function(x, y, value) {
     this.recordPracticeReplayAction(["p", x, y, value]);
 };
 
-GameManager.prototype.invalidateTimers = function(limit) {
-    var resolveInvalidatedTimerElementIdsCore = this.callCoreTimerIntervalRuntime("resolveInvalidatedTimerElementIds", [{
-            timerMilestones: this.timerMilestones || this.getTimerMilestoneValues(),
-            timerSlotIds: GameManager.TIMER_SLOT_IDS,
-            limit: limit,
-            reached32k: !!this.reached32k,
-            isFibonacciMode: this.isFibonacciMode()
-        }]);
-    if (resolveInvalidatedTimerElementIdsCore.available) {
-        var ids = resolveInvalidatedTimerElementIdsCore.value || [];
-        for (var idx = 0; idx < ids.length; idx++) {
-            var targetId = ids[idx];
-            if (!targetId) continue;
-            var targetEl = document.getElementById(String(targetId));
-            if (targetEl) targetEl.textContent = "---------";
-        }
-        return;
-    }
+GameManager.prototype.resolveInvalidateTimersCoreInput = function (limit) {
+    return {
+        timerMilestones: this.timerMilestones || this.getTimerMilestoneValues(),
+        timerSlotIds: GameManager.TIMER_SLOT_IDS,
+        limit: limit,
+        reached32k: !!this.reached32k,
+        isFibonacciMode: this.isFibonacciMode()
+    };
+};
 
+GameManager.prototype.applyInvalidatedTimerPlaceholders = function (elementIds) {
+    var ids = Array.isArray(elementIds) ? elementIds : [];
+    for (var idx = 0; idx < ids.length; idx++) {
+        var targetId = ids[idx];
+        if (!targetId) continue;
+        var targetEl = document.getElementById(String(targetId));
+        if (targetEl) targetEl.textContent = "---------";
+    }
+};
+
+GameManager.prototype.invalidateTimerSlotsFallback = function (limit) {
     var milestones = this.timerMilestones || this.getTimerMilestoneValues();
     var timerSlots = GameManager.TIMER_SLOT_IDS;
     for (var i = 0; i < timerSlots.length; i++) {
@@ -5553,9 +5555,9 @@ GameManager.prototype.invalidateTimers = function(limit) {
              }
         }
     }
-    
-    // 8k/16k sub-timers logic
-    // Only invalidate sub-timers if we have actually reached the 32k phase.
+};
+
+GameManager.prototype.invalidateSubTimersFallback = function (limit) {
     if (this.reached32k && !this.isFibonacciMode()) {
         if (8192 <= limit && limit !== 32768) {
             var sub8k = document.getElementById("timer8192-sub");
@@ -5566,6 +5568,22 @@ GameManager.prototype.invalidateTimers = function(limit) {
             if (sub16k) sub16k.textContent = "---------";
         }
     }
+};
+
+GameManager.prototype.invalidateTimersFallback = function (limit) {
+    this.invalidateTimerSlotsFallback(limit);
+    this.invalidateSubTimersFallback(limit);
+};
+
+GameManager.prototype.invalidateTimers = function(limit) {
+    var resolveInvalidatedTimerElementIdsCore = this.callCoreTimerIntervalRuntime("resolveInvalidatedTimerElementIds", [
+        this.resolveInvalidateTimersCoreInput(limit)
+    ]);
+    if (resolveInvalidatedTimerElementIdsCore.available) {
+        this.applyInvalidatedTimerPlaceholders(resolveInvalidatedTimerElementIdsCore.value || []);
+        return;
+    }
+    this.invalidateTimersFallback(limit);
 };
 
 GameManager.prototype.getFinalBoardMatrix = function () {
