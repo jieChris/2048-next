@@ -8328,9 +8328,13 @@ GameManager.prototype.writeLastSessionSubmitResult = function (payload) {
   this.writeLocalStorageJsonPayload("last_session_submit_result_v1", payload);
 };
 
+GameManager.prototype.resolveSessionSubmitTimestamp = function () {
+  return new Date().toISOString();
+};
+
 GameManager.prototype.writeSkippedSessionSubmitResult = function (reason) {
   this.writeLastSessionSubmitResult({
-    at: new Date().toISOString(),
+    at: this.resolveSessionSubmitTimestamp(),
     ok: false,
     skipped: true,
     reason: reason
@@ -8542,7 +8546,7 @@ GameManager.prototype.resolveLocalHistorySaveRecord = function () {
 
 GameManager.prototype.writeMissingLocalHistoryStoreResult = function () {
   this.writeLastSessionSubmitResult({
-    at: new Date().toISOString(),
+    at: this.resolveSessionSubmitTimestamp(),
     ok: false,
     reason: "local_history_store_missing"
   });
@@ -8553,7 +8557,7 @@ GameManager.prototype.resolveSessionSubmitWindowLike = function () {
 };
 
 GameManager.prototype.resolveSessionSubmitEndedAt = function () {
-  return new Date().toISOString();
+  return this.resolveSessionSubmitTimestamp();
 };
 
 GameManager.prototype.createSessionSubmitContext = function (localHistorySaveRecord, endedAt, payload) {
@@ -8564,12 +8568,22 @@ GameManager.prototype.createSessionSubmitContext = function (localHistorySaveRec
   };
 };
 
+GameManager.prototype.buildSessionSubmitPayloadInput = function () {
+  return {
+    windowLike: this.resolveSessionSubmitWindowLike(),
+    adapterParitySnapshot: this.resolveSessionSubmitAdapterParitySnapshot(),
+    endedAt: this.resolveSessionSubmitEndedAt()
+  };
+};
+
 GameManager.prototype.buildSessionSubmitContext = function (localHistorySaveRecord) {
-  var windowLike = this.resolveSessionSubmitWindowLike();
-  var adapterParitySnapshot = this.resolveSessionSubmitAdapterParitySnapshot();
-  var endedAt = this.resolveSessionSubmitEndedAt();
-  var payload = this.buildSessionSubmitPayload(endedAt, windowLike, adapterParitySnapshot);
-  return this.createSessionSubmitContext(localHistorySaveRecord, endedAt, payload);
+  var payloadInput = this.buildSessionSubmitPayloadInput();
+  var payload = this.buildSessionSubmitPayload(
+    payloadInput.endedAt,
+    payloadInput.windowLike,
+    payloadInput.adapterParitySnapshot
+  );
+  return this.createSessionSubmitContext(localHistorySaveRecord, payloadInput.endedAt, payload);
 };
 
 GameManager.prototype.resolveSessionSubmitSavedRecord = function (submitContext) {
