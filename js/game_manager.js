@@ -3466,6 +3466,27 @@ GameManager.prototype.nextFibonacci = function (value) {
   return b === value ? a + b : null;
 };
 
+GameManager.prototype.getMergedPow2ValueFallback = function (a, b) {
+  if (a !== b) return null;
+  var merged = a * 2;
+  if (merged > this.maxTile) return null;
+  return merged;
+};
+
+GameManager.prototype.getMergedFibonacciValueFallback = function (a, b) {
+  if (a === 1 && b === 1) {
+    if (2 > this.maxTile) return null;
+    return 2;
+  }
+  var low = Math.min(a, b);
+  var high = Math.max(a, b);
+  var next = this.nextFibonacci(low);
+  if (next !== high) return null;
+  var merged = low + high;
+  if (merged > this.maxTile) return null;
+  return merged;
+};
+
 GameManager.prototype.getMergedValue = function (a, b) {
   var getMergedValueCore = this.callCoreRulesRuntime("getMergedValue", [
     a,
@@ -3475,23 +3496,8 @@ GameManager.prototype.getMergedValue = function (a, b) {
   ]);
   if (getMergedValueCore.available) return getMergedValueCore.value;
   if (!Number.isInteger(a) || !Number.isInteger(b) || a <= 0 || b <= 0) return null;
-  if (!this.isFibonacciMode()) {
-    if (a !== b) return null;
-    var pow2Merged = a * 2;
-    if (pow2Merged > this.maxTile) return null;
-    return pow2Merged;
-  }
-  if (a === 1 && b === 1) {
-    if (2 > this.maxTile) return null;
-    return 2;
-  }
-  var low = Math.min(a, b);
-  var high = Math.max(a, b);
-  var next = this.nextFibonacci(low);
-  if (next !== high) return null;
-  var fibMerged = low + high;
-  if (fibMerged > this.maxTile) return null;
-  return fibMerged;
+  if (!this.isFibonacciMode()) return this.getMergedPow2ValueFallback(a, b);
+  return this.getMergedFibonacciValueFallback(a, b);
 };
 
 GameManager.prototype.getTimerMilestoneValues = function () {
