@@ -13,6 +13,20 @@ export function resolveTimerUpdateIntervalMs(width: unknown, height: unknown): n
   return 10;
 }
 
+export function resolveMoveInputThrottleMs(
+  replayMode: unknown,
+  width: unknown,
+  height: unknown
+): number {
+  if (replayMode) return 0;
+  const w = normalizeGridSize(width);
+  const h = normalizeGridSize(height);
+  const area = w * h;
+  if (area >= 100) return 65;
+  if (area >= 64) return 45;
+  return 0;
+}
+
 export interface TimerInvalidationInput {
   timerMilestones?: unknown[] | null;
   timerSlotIds?: unknown[] | null;

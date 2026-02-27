@@ -18,6 +18,16 @@
     return 10;
   }
 
+  function resolveMoveInputThrottleMs(replayMode, width, height) {
+    if (replayMode) return 0;
+    var w = normalizeGridSize(width);
+    var h = normalizeGridSize(height);
+    var area = w * h;
+    if (area >= 100) return 65;
+    if (area >= 64) return 45;
+    return 0;
+  }
+
   function resolveInvalidatedTimerElementIds(input) {
     var source = input || {};
     var milestones = Array.isArray(source.timerMilestones) ? source.timerMilestones : [];
@@ -43,5 +53,6 @@
 
   global.CoreTimerIntervalRuntime = global.CoreTimerIntervalRuntime || {};
   global.CoreTimerIntervalRuntime.resolveTimerUpdateIntervalMs = resolveTimerUpdateIntervalMs;
+  global.CoreTimerIntervalRuntime.resolveMoveInputThrottleMs = resolveMoveInputThrottleMs;
   global.CoreTimerIntervalRuntime.resolveInvalidatedTimerElementIds = resolveInvalidatedTimerElementIds;
 })(typeof window !== "undefined" ? window : undefined);

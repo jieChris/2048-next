@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  resolveMoveInputThrottleMs,
   resolveInvalidatedTimerElementIds,
   resolveTimerUpdateIntervalMs
 } from "../../src/core/timer-interval";
@@ -24,6 +25,26 @@ describe("core timer interval", () => {
   it("uses default size fallback for invalid inputs", () => {
     expect(resolveTimerUpdateIntervalMs(null, null)).toBe(10);
     expect(resolveTimerUpdateIntervalMs("x", -1)).toBe(10);
+  });
+});
+
+describe("core timer interval: resolveMoveInputThrottleMs", () => {
+  it("returns 0 for replay mode", () => {
+    expect(resolveMoveInputThrottleMs(true, 10, 10)).toBe(0);
+  });
+
+  it("returns 45ms for medium boards", () => {
+    expect(resolveMoveInputThrottleMs(false, 8, 8)).toBe(45);
+    expect(resolveMoveInputThrottleMs(false, 8, 9)).toBe(45);
+  });
+
+  it("returns 65ms for large boards", () => {
+    expect(resolveMoveInputThrottleMs(false, 10, 10)).toBe(65);
+  });
+
+  it("returns 0 for small boards and invalid size inputs", () => {
+    expect(resolveMoveInputThrottleMs(false, 4, 4)).toBe(0);
+    expect(resolveMoveInputThrottleMs(false, null, null)).toBe(0);
   });
 });
 

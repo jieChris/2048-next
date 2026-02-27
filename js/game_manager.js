@@ -4231,6 +4231,13 @@ GameManager.prototype.prepareTiles = function () {
 };
 
 GameManager.prototype.getMoveInputThrottleMs = function () {
+  var resolveMoveInputThrottleMsCore = this.resolveCoreRuntimeMethod(
+    "getCoreTimerIntervalRuntime",
+    "resolveMoveInputThrottleMs"
+  );
+  if (resolveMoveInputThrottleMsCore) {
+    return resolveMoveInputThrottleMsCore(this.replayMode, this.width, this.height);
+  }
   if (this.replayMode) return 0;
   var area = (this.width || 4) * (this.height || 4);
   if (area >= 100) return 65;
