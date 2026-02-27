@@ -3775,22 +3775,25 @@ GameManager.prototype.getServerMode = function (mode) {
   return this.getLegacyModeFromModeKey(mode || this.modeKey || this.mode);
 };
 
-GameManager.prototype.getForcedUndoSettingForMode = function (mode) {
+GameManager.prototype.readUndoPolicyFieldForMode = function (mode, fieldName, fallbackValue) {
   var state = this.resolveUndoPolicyStateForMode(mode);
-  var forced = state ? state.forcedUndoSetting : null;
+  if (!state || typeof state !== "object") return fallbackValue;
+  return Object.prototype.hasOwnProperty.call(state, fieldName) ? state[fieldName] : fallbackValue;
+};
+
+GameManager.prototype.getForcedUndoSettingForMode = function (mode) {
+  var forced = this.readUndoPolicyFieldForMode(mode, "forcedUndoSetting", null);
   if (forced === true) return true;
   if (forced === false) return false;
   return null;
 };
 
 GameManager.prototype.isUndoAllowedByMode = function (mode) {
-  var state = this.resolveUndoPolicyStateForMode(mode);
-  return !!(state && state.isUndoAllowedByMode);
+  return !!this.readUndoPolicyFieldForMode(mode, "isUndoAllowedByMode", false);
 };
 
 GameManager.prototype.isUndoSettingFixedForMode = function (mode) {
-  var state = this.resolveUndoPolicyStateForMode(mode);
-  return !!(state && state.isUndoSettingFixedForMode);
+  return !!this.readUndoPolicyFieldForMode(mode, "isUndoSettingFixedForMode", false);
 };
 
 GameManager.prototype.resolveUndoPolicyStateForCurrentSessionMode = function (mode) {
