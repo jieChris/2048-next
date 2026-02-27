@@ -5556,42 +5556,43 @@ GameManager.prototype.finalizeReplayImportPlayback = function () {
   this.startReplayImportPlayback();
 };
 
+GameManager.prototype.restartReplayImportSession = function (modeConfig, payload, useBoardRestart) {
+  this.disableSessionSync = true;
+  this.restartReplaySession(payload, modeConfig, useBoardRestart);
+  this.finalizeReplayImportPlayback();
+};
+
+GameManager.prototype.applyJsonV3ReplayEnvelopeMeta = function (envelope, modeConfig) {
+  if (envelope.specialRulesSnapshot && typeof envelope.specialRulesSnapshot === "object") {
+    modeConfig.special_rules = this.clonePlain(envelope.specialRulesSnapshot);
+  }
+  if (typeof envelope.modeFamily === "string" && envelope.modeFamily) {
+    modeConfig.mode_family = envelope.modeFamily;
+  }
+  if (typeof envelope.rankPolicy === "string" && envelope.rankPolicy) {
+    modeConfig.rank_policy = envelope.rankPolicy;
+  }
+  if (typeof envelope.challengeId === "string" && envelope.challengeId) {
+    this.challengeId = envelope.challengeId;
+  }
+};
+
 GameManager.prototype.import = function (replayString) {
   try {
-    var self = this;
     if (typeof replayString !== "string") {
       replayString = JSON.stringify(replayString);
     }
 
     var trimmed = replayString.trim();
-    var restartReplayImportSession = function (modeConfig, payload, useBoardRestart) {
-      self.disableSessionSync = true;
-      self.restartReplaySession(payload, modeConfig, useBoardRestart);
-      self.finalizeReplayImportPlayback();
-    };
-    var applyJsonV3ReplayEnvelopeMeta = function (envelope, modeConfig) {
-      if (envelope.specialRulesSnapshot && typeof envelope.specialRulesSnapshot === "object") {
-        modeConfig.special_rules = self.clonePlain(envelope.specialRulesSnapshot);
-      }
-      if (typeof envelope.modeFamily === "string" && envelope.modeFamily) {
-        modeConfig.mode_family = envelope.modeFamily;
-      }
-      if (typeof envelope.rankPolicy === "string" && envelope.rankPolicy) {
-        modeConfig.rank_policy = envelope.rankPolicy;
-      }
-      if (typeof envelope.challengeId === "string" && envelope.challengeId) {
-        self.challengeId = envelope.challengeId;
-      }
-    };
 
     var parsedEnvelope = this.parseReplayImportEnvelope(trimmed);
     if (parsedEnvelope && (parsedEnvelope.kind === "json-v3" || parsedEnvelope.kind === "v4c")) {
       var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
       if (parsedEnvelope.kind === "json-v3") {
-        applyJsonV3ReplayEnvelopeMeta(parsedEnvelope, replayModeConfig);
+        this.applyJsonV3ReplayEnvelopeMeta(parsedEnvelope, replayModeConfig);
         this.replayMoves = parsedEnvelope.actions;
         this.replaySpawns = null;
-        restartReplayImportSession(replayModeConfig, parsedEnvelope.seed, false);
+        this.restartReplayImportSession(replayModeConfig, parsedEnvelope.seed, false);
         return;
       }
 
@@ -5600,7 +5601,7 @@ GameManager.prototype.import = function (replayString) {
       this.replayMoves = Array.isArray(decodedV4Actions.replayMoves) ? decodedV4Actions.replayMoves : [];
       this.replaySpawns = Array.isArray(decodedV4Actions.replaySpawns) ? decodedV4Actions.replaySpawns : [];
 
-      restartReplayImportSession(replayModeConfig, initialBoard, true);
+      this.restartReplayImportSession(replayModeConfig, initialBoard, true);
       return;
     }
 
