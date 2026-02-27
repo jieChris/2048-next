@@ -841,6 +841,22 @@ var GAME_MANAGER_CORE_RUNTIME_CALLERS = [
   ["callCoreReplayControlRuntime", "resolveCoreReplayControlRuntimeMethod"],
   ["callCoreReplayLoopRuntime", "resolveCoreReplayLoopRuntimeMethod"],
   ["callCoreReplayLegacyRuntime", "resolveCoreReplayLegacyRuntimeMethod"],
+  ["callCoreMoveApplyRuntime", "resolveCoreMoveApplyRuntimeMethod"],
+  ["callCorePostMoveRecordRuntime", "resolveCorePostMoveRecordRuntimeMethod"],
+  ["callCorePostUndoRecordRuntime", "resolveCorePostUndoRecordRuntimeMethod"],
+  ["callCoreUndoRestoreRuntime", "resolveCoreUndoRestoreRuntimeMethod"],
+  ["callCoreUndoSnapshotRuntime", "resolveCoreUndoSnapshotRuntimeMethod"],
+  ["callCoreUndoStackEntryRuntime", "resolveCoreUndoStackEntryRuntimeMethod"],
+  ["callCoreUndoTileSnapshotRuntime", "resolveCoreUndoTileSnapshotRuntimeMethod"],
+  ["callCoreUndoTileRestoreRuntime", "resolveCoreUndoTileRestoreRuntimeMethod"],
+  ["callCoreUndoRestorePayloadRuntime", "resolveCoreUndoRestorePayloadRuntimeMethod"],
+  ["callCoreMergeEffectsRuntime", "resolveCoreMergeEffectsRuntimeMethod"],
+  ["callCoreSpecialRulesRuntime", "resolveCoreSpecialRulesRuntimeMethod"],
+  ["callCoreGridScanRuntime", "resolveCoreGridScanRuntimeMethod"],
+  ["callCoreDirectionLockRuntime", "resolveCoreDirectionLockRuntimeMethod"],
+  ["callCoreScoringRuntime", "resolveCoreScoringRuntimeMethod"],
+  ["callCorePostMoveRuntime", "resolveCorePostMoveRuntimeMethod"],
+  ["callCorePrettyTimeRuntime", "resolveCorePrettyTimeRuntimeMethod"],
   ["callCoreMovePathRuntime", "resolveCoreMovePathRuntimeMethod"],
   ["callCoreMoveScanRuntime", "resolveCoreMoveScanRuntimeMethod"],
   ["callCoreTimerIntervalRuntime", "resolveCoreTimerIntervalRuntimeMethod"]
@@ -2114,7 +2130,7 @@ GameManager.prototype.publishAdapterMoveResult = function (meta) {
 };
 
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
-  var planTileInteractionCore = this.callCoreRuntimeMethod("resolveCoreMoveApplyRuntimeMethod", "planTileInteraction", [{
+  var planTileInteractionCore = this.callCoreMoveApplyRuntime("planTileInteraction", [{
       cell: cell,
       farthest: positions && positions.farthest ? positions.farthest : { x: 0, y: 0 },
       next: positions && positions.next ? positions.next : { x: 0, y: 0 },
@@ -2148,7 +2164,7 @@ GameManager.prototype.planTileInteraction = function (cell, positions, next, mer
 };
 
 GameManager.prototype.computePostMoveRecord = function (direction) {
-  var computePostMoveRecordCore = this.callCoreRuntimeMethod("resolveCorePostMoveRecordRuntimeMethod", "computePostMoveRecord", [{
+  var computePostMoveRecordCore = this.callCorePostMoveRecordRuntime("computePostMoveRecord", [{
       replayMode: !!this.replayMode,
       direction: direction,
       lastSpawn: this.lastSpawn ? {
@@ -2197,7 +2213,7 @@ GameManager.prototype.computePostMoveRecord = function (direction) {
 };
 
 GameManager.prototype.computePostUndoRecord = function (direction) {
-  var computePostUndoRecordCore = this.callCoreRuntimeMethod("resolveCorePostUndoRecordRuntimeMethod", "computePostUndoRecord", [{
+  var computePostUndoRecordCore = this.callCorePostUndoRecordRuntime("computePostUndoRecord", [{
       replayMode: !!this.replayMode,
       direction: direction,
       hasSessionReplayV3: !!this.sessionReplayV3
@@ -2223,7 +2239,7 @@ GameManager.prototype.computePostUndoRecord = function (direction) {
 };
 
 GameManager.prototype.computeUndoRestoreState = function (prev) {
-  var computeUndoRestoreStateCore = this.callCoreRuntimeMethod("resolveCoreUndoRestoreRuntimeMethod", "computeUndoRestoreState", [{
+  var computeUndoRestoreStateCore = this.callCoreUndoRestoreRuntime("computeUndoRestoreState", [{
       prev: prev || {},
       fallbackUndoUsed: this.undoUsed,
       timerStatus: this.timerStatus
@@ -2255,7 +2271,7 @@ GameManager.prototype.computeUndoRestoreState = function (prev) {
 };
 
 GameManager.prototype.createUndoSnapshotState = function () {
-  var createUndoSnapshotCore = this.callCoreRuntimeMethod("resolveCoreUndoSnapshotRuntimeMethod", "createUndoSnapshot", [{
+  var createUndoSnapshotCore = this.callCoreUndoSnapshotRuntime("createUndoSnapshot", [{
     score: this.score,
     comboStreak: this.comboStreak,
     successfulMoveCount: this.successfulMoveCount,
@@ -2335,7 +2351,7 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
   var fallbackUndoUsed = Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0;
 
   var source = entry && typeof entry === "object" ? entry : {};
-  var normalizeUndoStackEntryCore = this.callCoreRuntimeMethod("resolveCoreUndoStackEntryRuntimeMethod", "normalizeUndoStackEntry", [{
+  var normalizeUndoStackEntryCore = this.callCoreUndoStackEntryRuntime("normalizeUndoStackEntry", [{
       entry: source,
       fallbackScore: fallbackScore,
       fallbackComboStreak: fallbackComboStreak,
@@ -2394,7 +2410,7 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
 };
 
 GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
-  var createUndoTileSnapshotCore = this.callCoreRuntimeMethod("resolveCoreUndoTileSnapshotRuntimeMethod", "createUndoTileSnapshot", [{
+  var createUndoTileSnapshotCore = this.callCoreUndoTileSnapshotRuntime("createUndoTileSnapshot", [{
       tile: {
         x: tile && typeof tile === "object" ? tile.x : null,
         y: tile && typeof tile === "object" ? tile.y : null,
@@ -2447,7 +2463,7 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
     }
   };
 
-  var createUndoRestoreTileCore = this.callCoreRuntimeMethod("resolveCoreUndoTileRestoreRuntimeMethod", "createUndoRestoreTile", [{
+  var createUndoRestoreTileCore = this.callCoreUndoTileRestoreRuntime("createUndoRestoreTile", [{
       x: source.x,
       y: source.y,
       value: source.value,
@@ -2472,10 +2488,7 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
 };
 
 GameManager.prototype.computeUndoRestorePayload = function (prev) {
-  var computeUndoRestorePayloadCore = this.callCoreRuntimeMethod(
-    "resolveCoreUndoRestorePayloadRuntimeMethod",
-    "computeUndoRestorePayload",
-    [{
+  var computeUndoRestorePayloadCore = this.callCoreUndoRestorePayloadRuntime("computeUndoRestorePayload", [{
       prev: prev || {},
       fallbackScore: this.score
     }]
@@ -2502,7 +2515,7 @@ GameManager.prototype.computeUndoRestorePayload = function (prev) {
 };
 
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
-  var computeMergeEffectsCore = this.callCoreRuntimeMethod("resolveCoreMergeEffectsRuntimeMethod", "computeMergeEffects", [{
+  var computeMergeEffectsCore = this.callCoreMergeEffectsRuntime("computeMergeEffects", [{
       mergedValue: mergedValue,
       isCappedMode: this.isCappedMode(),
       cappedTargetValue: this.getCappedTargetValue(),
@@ -2704,7 +2717,7 @@ GameManager.prototype.normalizeSpecialRules = function (rules) {
 };
 
 GameManager.prototype.applySpecialRulesState = function () {
-  var computeSpecialRulesStateCore = this.callCoreRuntimeMethod("resolveCoreSpecialRulesRuntimeMethod", "computeSpecialRulesState", [
+  var computeSpecialRulesStateCore = this.callCoreSpecialRulesRuntime("computeSpecialRulesState", [
       this.specialRules || {},
       this.width,
       this.height,
@@ -2768,7 +2781,7 @@ GameManager.prototype.getGridCellAvailableFn = function () {
 };
 
 GameManager.prototype.getAvailableCells = function () {
-  var getAvailableCellsCore = this.callCoreRuntimeMethod("resolveCoreGridScanRuntimeMethod", "getAvailableCells", [
+  var getAvailableCellsCore = this.callCoreGridScanRuntime("getAvailableCells", [
       this.width,
       this.height,
       this.isBlockedCell.bind(this),
@@ -2787,7 +2800,7 @@ GameManager.prototype.getAvailableCells = function () {
 };
 
 GameManager.prototype.getLockedDirection = function () {
-  var getLockedDirectionStateCore = this.callCoreRuntimeMethod("resolveCoreDirectionLockRuntimeMethod", "getLockedDirectionState", [{
+  var getLockedDirectionStateCore = this.callCoreDirectionLockRuntime("getLockedDirectionState", [{
       directionLockRules: this.directionLockRules,
       successfulMoveCount: this.successfulMoveCount,
       lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
@@ -4417,7 +4430,7 @@ GameManager.prototype.moveTile = function (tile, cell) {
 };
 
 GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
-  var computePostMoveScoreCore = this.callCoreRuntimeMethod("resolveCoreScoringRuntimeMethod", "computePostMoveScore", [{
+  var computePostMoveScoreCore = this.callCoreScoringRuntime("computePostMoveScore", [{
       scoreBeforeMove: scoreBeforeMove,
       scoreAfterMerge: this.score,
       comboStreak: this.comboStreak,
@@ -4450,7 +4463,7 @@ GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
 };
 
 GameManager.prototype.applyPostMoveLifecycle = function (hasMovesAvailable) {
-  var computePostMoveLifecycleCore = this.callCoreRuntimeMethod("resolveCorePostMoveRuntimeMethod", "computePostMoveLifecycle", [{
+  var computePostMoveLifecycleCore = this.callCorePostMoveRuntime("computePostMoveLifecycle", [{
     successfulMoveCount: this.successfulMoveCount,
     hasMovesAvailable: hasMovesAvailable,
     timerStatus: this.timerStatus
@@ -5003,7 +5016,7 @@ GameManager.prototype.stopTimer = function() {
 };
 
 GameManager.prototype.pretty = function(time) {
-  var formatPrettyTimeCore = this.callCoreRuntimeMethod("resolveCorePrettyTimeRuntimeMethod", "formatPrettyTime", [time]);
+  var formatPrettyTimeCore = this.callCorePrettyTimeRuntime("formatPrettyTime", [time]);
   if (formatPrettyTimeCore.available) return formatPrettyTimeCore.value;
 
   if (time < 0) {return "DNF";}
@@ -5135,7 +5148,7 @@ GameManager.prototype.invalidateTimers = function(limit) {
 };
 
 GameManager.prototype.getFinalBoardMatrix = function () {
-  var buildBoardMatrixCore = this.callCoreRuntimeMethod("resolveCoreGridScanRuntimeMethod", "buildBoardMatrix", [
+  var buildBoardMatrixCore = this.callCoreGridScanRuntime("buildBoardMatrix", [
     this.width,
     this.height,
     (function (self) {
@@ -5163,7 +5176,7 @@ GameManager.prototype.getFinalBoardMatrix = function () {
 };
 
 GameManager.prototype.getBestTileValue = function () {
-  var getBestTileValueCore = this.callCoreRuntimeMethod("resolveCoreGridScanRuntimeMethod", "getBestTileValue", [this.getFinalBoardMatrix()]);
+  var getBestTileValueCore = this.callCoreGridScanRuntime("getBestTileValue", [this.getFinalBoardMatrix()]);
   if (getBestTileValueCore.available) {
     var bestCore = Number(getBestTileValueCore.value);
     if (Number.isFinite(bestCore) && bestCore >= 0) return bestCore;
