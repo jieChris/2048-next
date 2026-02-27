@@ -1759,12 +1759,24 @@ GameManager.prototype.getLegacyAdapterBridge = function () {
   return payload;
 };
 
-GameManager.prototype.getAdapterSessionParityReport = function () {
+GameManager.prototype.resolveLegacyAdapterBridgeMethod = function (methodName) {
   var bridge = this.getLegacyAdapterBridge();
+  if (!bridge || typeof methodName !== "string" || !methodName) return null;
+  var method = bridge[methodName];
+  if (typeof method !== "function") return null;
+  return {
+    bridge: bridge,
+    method: method
+  };
+};
+
+GameManager.prototype.getAdapterSessionParityReport = function () {
+  var readAdapterParityReportBridge = this.resolveLegacyAdapterBridgeMethod("readAdapterParityReport");
+  var bridge = readAdapterParityReportBridge ? readAdapterParityReportBridge.bridge : this.getLegacyAdapterBridge();
   if (!bridge || typeof bridge !== "object") return null;
 
-  if (typeof bridge.readAdapterParityReport === "function") {
-    var report = bridge.readAdapterParityReport();
+  if (readAdapterParityReportBridge) {
+    var report = readAdapterParityReportBridge.method.call(bridge);
     if (!report || typeof report !== "object") return null;
     var clonedReport = this.safeClonePlain(report, null);
     if (clonedReport) {
@@ -1780,11 +1792,12 @@ GameManager.prototype.getAdapterSessionParityReport = function () {
 };
 
 GameManager.prototype.getAdapterSessionParityABDiff = function () {
-  var bridge = this.getLegacyAdapterBridge();
+  var readAdapterParityABDiffBridge = this.resolveLegacyAdapterBridgeMethod("readAdapterParityABDiff");
+  var bridge = readAdapterParityABDiffBridge ? readAdapterParityABDiffBridge.bridge : this.getLegacyAdapterBridge();
   if (!bridge || typeof bridge !== "object") return null;
 
-  if (typeof bridge.readAdapterParityABDiff === "function") {
-    var diff = bridge.readAdapterParityABDiff();
+  if (readAdapterParityABDiffBridge) {
+    var diff = readAdapterParityABDiffBridge.method.call(bridge);
     if (!diff || typeof diff !== "object") return null;
     var clonedDiff = this.safeClonePlain(diff, null);
     if (clonedDiff) {
@@ -1800,8 +1813,9 @@ GameManager.prototype.getAdapterSessionParityABDiff = function () {
 };
 
 GameManager.prototype.publishAdapterMoveResult = function (meta) {
-  var bridge = this.getLegacyAdapterBridge();
-  if (!bridge || typeof bridge.emitMoveResult !== "function") return false;
+  var emitMoveResultBridge = this.resolveLegacyAdapterBridgeMethod("emitMoveResult");
+  if (!emitMoveResultBridge) return false;
+  var bridge = emitMoveResultBridge.bridge;
 
   var input = meta && typeof meta === "object" ? meta : {};
   var modeKey = typeof bridge.modeKey === "string" && bridge.modeKey
@@ -1831,28 +1845,39 @@ GameManager.prototype.publishAdapterMoveResult = function (meta) {
     at: timestamp
   };
 
-  bridge.emitMoveResult(detail);
-  if (typeof bridge.syncAdapterSnapshot === "function") {
+  emitMoveResultBridge.method.call(bridge, detail);
+
+  var syncAdapterSnapshotBridge = this.resolveLegacyAdapterBridgeMethod("syncAdapterSnapshot");
+  if (syncAdapterSnapshotBridge) {
     var snapshot = {
       adapterMode: adapterMode,
       modeKey: modeKey || "unknown",
       updatedAt: timestamp,
       lastMoveResult: detail
     };
-    bridge.syncAdapterSnapshot(snapshot);
+    syncAdapterSnapshotBridge.method.call(bridge, snapshot);
     bridge.adapterSnapshot = snapshot;
   }
-  if (typeof bridge.readAdapterParityReport === "function") {
-    bridge.adapterParityReport = bridge.readAdapterParityReport();
+
+  var readAdapterParityReportBridge = this.resolveLegacyAdapterBridgeMethod("readAdapterParityReport");
+  if (readAdapterParityReportBridge) {
+    bridge.adapterParityReport = readAdapterParityReportBridge.method.call(bridge);
+    var writeStoredAdapterParityReportBridge = this.resolveLegacyAdapterBridgeMethod("writeStoredAdapterParityReport");
     if (
       bridge.adapterParityReport &&
-      typeof bridge.writeStoredAdapterParityReport === "function"
+      writeStoredAdapterParityReportBridge
     ) {
-      bridge.writeStoredAdapterParityReport(bridge.adapterParityReport, bridge.adapterMode);
+      writeStoredAdapterParityReportBridge.method.call(
+        bridge,
+        bridge.adapterParityReport,
+        bridge.adapterMode
+      );
     }
   }
-  if (typeof bridge.readAdapterParityABDiff === "function") {
-    bridge.adapterParityABDiff = bridge.readAdapterParityABDiff();
+
+  var readAdapterParityABDiffBridge = this.resolveLegacyAdapterBridgeMethod("readAdapterParityABDiff");
+  if (readAdapterParityABDiffBridge) {
+    bridge.adapterParityABDiff = readAdapterParityABDiffBridge.method.call(bridge);
   }
   return true;
 };
