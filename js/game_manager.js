@@ -5723,9 +5723,13 @@ GameManager.prototype.serialize = function () {
 };
 
 GameManager.prototype.startReplayImportPlayback = function () {
+  this.resetReplayPlaybackStateForImport();
+  this.resume();
+};
+
+GameManager.prototype.resetReplayPlaybackStateForImport = function () {
   this.replayIndex = 0;
   this.replayDelay = 200;
-  this.resume();
 };
 
 GameManager.prototype.finalizeReplayImportPlayback = function () {
@@ -5733,8 +5737,12 @@ GameManager.prototype.finalizeReplayImportPlayback = function () {
   this.startReplayImportPlayback();
 };
 
-GameManager.prototype.restartReplayImportSession = function (modeConfig, payload, useBoardRestart) {
+GameManager.prototype.prepareReplayImportSession = function () {
   this.disableSessionSync = true;
+};
+
+GameManager.prototype.restartReplayImportSession = function (modeConfig, payload, useBoardRestart) {
+  this.prepareReplayImportSession();
   this.restartReplaySession(payload, modeConfig, useBoardRestart);
   this.finalizeReplayImportPlayback();
 };
