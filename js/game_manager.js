@@ -2607,8 +2607,8 @@ GameManager.prototype.buildSavedGameStateBaseTimerPayload = function (timerSnaps
   };
 };
 
-GameManager.prototype.buildSavedGameStateBasePayload = function (savedAt, replaySnapshot, timerSnapshot) {
-  return Object.assign({
+GameManager.prototype.buildSavedGameStateBaseCorePayload = function (savedAt) {
+  return {
     v: this.resolveSavedGameStatePayloadVersion(),
     saved_at: savedAt,
     terminated: false,
@@ -2627,9 +2627,15 @@ GameManager.prototype.buildSavedGameStateBasePayload = function (savedAt, replay
     reached_32k: this.resolveSavedGameStateReached32k(),
     capped_milestone_count: this.resolveSavedGameStateCappedMilestoneCount(),
     capped64_unlocked: this.resolveSavedGameStateCapped64Unlocked()
-  },
-  this.buildSavedGameStateBaseReplayPayload(replaySnapshot),
-  this.buildSavedGameStateBaseTimerPayload(timerSnapshot));
+  };
+};
+
+GameManager.prototype.buildSavedGameStateBasePayload = function (savedAt, replaySnapshot, timerSnapshot) {
+  return Object.assign(
+    this.buildSavedGameStateBaseCorePayload(savedAt),
+    this.buildSavedGameStateBaseReplayPayload(replaySnapshot),
+    this.buildSavedGameStateBaseTimerPayload(timerSnapshot)
+  );
 };
 
 GameManager.prototype.resolveSavedBoardRestartSnapshot = function () {
