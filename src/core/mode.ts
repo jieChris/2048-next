@@ -86,6 +86,21 @@ export interface UndoTogglePolicyInput extends UndoPolicyInput {
   hasGameStarted?: boolean | null;
 }
 
+export interface UndoPolicyStateInput extends UndoTogglePolicyInput {
+  replayMode?: boolean | null;
+  undoLimit?: number | null;
+  undoUsed?: number | null;
+  undoEnabled?: boolean | null;
+}
+
+export interface UndoPolicyState {
+  forcedUndoSetting: boolean | null;
+  isUndoAllowedByMode: boolean;
+  isUndoSettingFixedForMode: boolean;
+  canToggleUndoSetting: boolean;
+  isUndoInteractionEnabled: boolean;
+}
+
 export interface LegacyModeResolveInput {
   modeKey?: string | null;
   fallbackModeKey?: string | null;
@@ -356,6 +371,27 @@ export function canToggleUndoSetting(input: UndoTogglePolicyInput): boolean {
   if (!isUndoAllowedByMode(input)) return false;
   if (isUndoSettingFixedForMode(input)) return false;
   return !input.hasGameStarted;
+}
+
+export function resolveUndoPolicyState(input: UndoPolicyStateInput): UndoPolicyState {
+  const source = input || {};
+  const forcedUndoSetting = getForcedUndoSetting(source);
+  const modeAllowed = forcedUndoSetting !== false;
+  const fixedSetting = forcedUndoSetting !== null;
+  const canToggle = modeAllowed && !fixedSetting && !source.hasGameStarted;
+
+  const replayMode = !!source.replayMode;
+  const overUndoLimit =
+    source.undoLimit !== null && Number(source.undoUsed) >= Number(source.undoLimit);
+  const interactionEnabled = !replayMode && !overUndoLimit && !!(source.undoEnabled && modeAllowed);
+
+  return {
+    forcedUndoSetting,
+    isUndoAllowedByMode: modeAllowed,
+    isUndoSettingFixedForMode: fixedSetting,
+    canToggleUndoSetting: canToggle,
+    isUndoInteractionEnabled: interactionEnabled
+  };
 }
 
 export function isUndoInteractionEnabled(input: {

@@ -17,6 +17,7 @@ import {
   formatCappedRepeatLabel,
   resolveProgressiveCapped64Unlock,
   isTimerLeaderboardAvailableByMode,
+  resolveUndoPolicyState,
   isUndoAllowedByMode,
   isUndoSettingFixedForMode,
   normalizeModeConfig,
@@ -495,6 +496,62 @@ describe("core mode: undo policy", () => {
         isUndoAllowedByMode: true
       })
     ).toBe(true);
+  });
+
+  it("resolves undo policy state snapshot", () => {
+    expect(
+      resolveUndoPolicyState({
+        mode: "capped_4x4_pow2_no_undo",
+        modeConfig: null,
+        hasGameStarted: false,
+        replayMode: false,
+        undoLimit: null,
+        undoUsed: 0,
+        undoEnabled: true
+      })
+    ).toEqual({
+      forcedUndoSetting: false,
+      isUndoAllowedByMode: false,
+      isUndoSettingFixedForMode: true,
+      canToggleUndoSetting: false,
+      isUndoInteractionEnabled: false
+    });
+
+    expect(
+      resolveUndoPolicyState({
+        mode: "standard_4x4_pow2",
+        modeConfig: null,
+        hasGameStarted: false,
+        replayMode: false,
+        undoLimit: 3,
+        undoUsed: 2,
+        undoEnabled: true
+      })
+    ).toEqual({
+      forcedUndoSetting: null,
+      isUndoAllowedByMode: true,
+      isUndoSettingFixedForMode: false,
+      canToggleUndoSetting: true,
+      isUndoInteractionEnabled: true
+    });
+
+    expect(
+      resolveUndoPolicyState({
+        mode: "standard_4x4_pow2",
+        modeConfig: null,
+        hasGameStarted: true,
+        replayMode: true,
+        undoLimit: null,
+        undoUsed: 0,
+        undoEnabled: true
+      })
+    ).toEqual({
+      forcedUndoSetting: null,
+      isUndoAllowedByMode: true,
+      isUndoSettingFixedForMode: false,
+      canToggleUndoSetting: false,
+      isUndoInteractionEnabled: false
+    });
   });
 });
 

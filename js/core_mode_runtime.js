@@ -326,6 +326,26 @@
     return !source.hasGameStarted;
   }
 
+  function resolveUndoPolicyState(input) {
+    var source = input || {};
+    var forcedUndoSetting = getForcedUndoSetting(source);
+    var modeAllowed = forcedUndoSetting !== false;
+    var fixedSetting = forcedUndoSetting !== null;
+    var canToggle = modeAllowed && !fixedSetting && !source.hasGameStarted;
+
+    var replayMode = !!source.replayMode;
+    var overUndoLimit = source.undoLimit !== null && Number(source.undoUsed) >= Number(source.undoLimit);
+    var interactionEnabled = !replayMode && !overUndoLimit && !!(source.undoEnabled && modeAllowed);
+
+    return {
+      forcedUndoSetting: forcedUndoSetting,
+      isUndoAllowedByMode: modeAllowed,
+      isUndoSettingFixedForMode: fixedSetting,
+      canToggleUndoSetting: canToggle,
+      isUndoInteractionEnabled: interactionEnabled
+    };
+  }
+
   function isUndoInteractionEnabled(input) {
     var source = input || {};
     if (source.replayMode) return false;
@@ -470,6 +490,7 @@
   global.CoreModeRuntime.isUndoAllowedByMode = isUndoAllowedByMode;
   global.CoreModeRuntime.isUndoSettingFixedForMode = isUndoSettingFixedForMode;
   global.CoreModeRuntime.canToggleUndoSetting = canToggleUndoSetting;
+  global.CoreModeRuntime.resolveUndoPolicyState = resolveUndoPolicyState;
   global.CoreModeRuntime.isUndoInteractionEnabled = isUndoInteractionEnabled;
   global.CoreModeRuntime.isTimerLeaderboardAvailableByMode = isTimerLeaderboardAvailableByMode;
   global.CoreModeRuntime.resolveLegacyModeFromModeKey = resolveLegacyModeFromModeKey;

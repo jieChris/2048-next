@@ -207,4 +207,63 @@ test.describe("Legacy Multi-Page Smoke", () => {
       { value: 2, weight: 10 }
     ]);
   });
+
+  test("game manager delegates undo policy state resolution to mode runtime", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__undoPolicyStateCallCount = 0;
+      const runtimeTarget: Record<string, unknown> = {};
+      (window as any).CoreModeRuntime = new Proxy(runtimeTarget, {
+        set(target, prop, value) {
+          if (prop === "resolveUndoPolicyState" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__undoPolicyStateCallCount =
+                Number((window as any).__undoPolicyStateCallCount || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          target[prop] = value;
+          return true;
+        }
+      });
+    });
+
+    const response = await page.goto("/play.html?mode_key=classic_4x4_pow2_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Play response should exist").not.toBeNull();
+    expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      if (!manager || typeof manager.resolveUndoPolicyStateForMode !== "function") {
+        return null;
+      }
+      const forced = manager.getForcedUndoSettingForMode("classic_4x4_pow2_undo");
+      const allowed = manager.isUndoAllowedByMode("classic_4x4_pow2_undo");
+      const fixed = manager.isUndoSettingFixedForMode("classic_4x4_pow2_undo");
+      const canToggle = manager.canToggleUndoSetting("classic_4x4_pow2_undo");
+      const interaction = manager.isUndoInteractionEnabled();
+      return {
+        callCount: Number((window as any).__undoPolicyStateCallCount || 0),
+        forced,
+        allowed,
+        fixed,
+        canToggle,
+        interaction,
+        fixedConsistent: fixed === (forced !== null),
+        allowedConsistent: allowed === (forced !== false)
+      };
+    });
+
+    expect(snapshot, "undo policy delegation snapshot should exist").not.toBeNull();
+    expect(snapshot?.callCount).toBeGreaterThan(0);
+    expect(snapshot?.fixedConsistent).toBe(true);
+    expect(snapshot?.allowedConsistent).toBe(true);
+    expect(typeof snapshot?.forced === "boolean" || snapshot?.forced === null).toBe(true);
+    expect(typeof snapshot?.canToggle).toBe("boolean");
+    expect(typeof snapshot?.interaction).toBe("boolean");
+  });
 });
