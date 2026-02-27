@@ -5439,14 +5439,8 @@ GameManager.prototype.mountStatsPanelToggleButton = function (btn, topActionHost
   btn.classList.add("is-floating");
 };
 
-GameManager.prototype.ensureStatsPanelOverlayElement = function () {
-  var overlay = document.getElementById("stats-panel-overlay");
-  if (overlay) return overlay;
-  overlay = document.createElement("div");
-  overlay.id = "stats-panel-overlay";
-  overlay.className = "replay-modal-overlay";
-  overlay.style.display = "none";
-  overlay.innerHTML =
+GameManager.prototype.buildStatsPanelOverlayMarkup = function () {
+  return (
     "<div class='replay-modal-content stats-panel-content'>" +
     "<h3>统计汇总</h3>" +
     "<div class='stats-panel-row'><span>总步数</span><span id='stats-panel-total'>0</span></div>" +
@@ -5458,7 +5452,18 @@ GameManager.prototype.ensureStatsPanelOverlayElement = function () {
     "<div class='replay-modal-actions'>" +
     "<button id='stats-panel-close' class='replay-button'>关闭</button>" +
     "</div>" +
-    "</div>";
+    "</div>"
+  );
+};
+
+GameManager.prototype.ensureStatsPanelOverlayElement = function () {
+  var overlay = document.getElementById("stats-panel-overlay");
+  if (overlay) return overlay;
+  overlay = document.createElement("div");
+  overlay.id = "stats-panel-overlay";
+  overlay.className = "replay-modal-overlay";
+  overlay.style.display = "none";
+  overlay.innerHTML = this.buildStatsPanelOverlayMarkup();
   document.body.appendChild(overlay);
   return overlay;
 };
