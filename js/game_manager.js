@@ -5595,6 +5595,11 @@ GameManager.prototype.applyLegacyReplayDecodedActions = function (decodedLegacy)
   this.replaySpawns = decodedLegacy.replaySpawns;
 };
 
+GameManager.prototype.applyJsonV3ReplayEnvelopeActions = function (envelope) {
+  this.replayMoves = Array.isArray(envelope.actions) ? envelope.actions : [];
+  this.replaySpawns = null;
+};
+
 GameManager.prototype.import = function (replayString) {
   try {
     if (typeof replayString !== "string") {
@@ -5608,8 +5613,7 @@ GameManager.prototype.import = function (replayString) {
       var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
       if (parsedEnvelope.kind === "json-v3") {
         this.applyJsonV3ReplayEnvelopeMeta(parsedEnvelope, replayModeConfig);
-        this.replayMoves = parsedEnvelope.actions;
-        this.replaySpawns = null;
+        this.applyJsonV3ReplayEnvelopeActions(parsedEnvelope);
         this.restartReplayImportSession(replayModeConfig, parsedEnvelope.seed, false);
         return;
       }
