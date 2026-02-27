@@ -72,14 +72,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         ],
         ended_at: new Date().toISOString(),
         replay_string: "",
-        adapter_parity_report_v1: {
+        adapter_parity_report_v2: {
+          schemaVersion: 2,
           adapterMode: "core-adapter",
           lastScoreFromSnapshot: 130,
           undoUsedFromSnapshot: 0,
           scoreDelta: 2,
           isScoreAligned: false
         },
-        adapter_parity_ab_diff_v1: {
+        adapter_parity_ab_diff_v2: {
+          schemaVersion: 2,
           comparable: true,
           scoreDelta: 2,
           undoUsedDelta: 0,
@@ -174,14 +176,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         ],
         ended_at: new Date().toISOString(),
         replay_string: "",
-        adapter_parity_report_v1: {
+        adapter_parity_report_v2: {
+          schemaVersion: 2,
           adapterMode: "core-adapter",
           lastScoreFromSnapshot: 130,
           undoUsedFromSnapshot: 0,
           scoreDelta: 2,
           isScoreAligned: false
         },
-        adapter_parity_ab_diff_v1: {
+        adapter_parity_ab_diff_v2: {
+          schemaVersion: 2,
           comparable: true,
           scoreDelta: 2,
           undoUsedDelta: 0,
