@@ -21,6 +21,28 @@ function resolveLocalStorage(windowLike: unknown): StorageLike | null {
   return storage;
 }
 
+export function resolveSavedGameStateStorageKey(options: {
+  modeKey?: unknown;
+  currentModeKey?: unknown;
+  currentMode?: unknown;
+  defaultModeKey?: unknown;
+  keyPrefix?: unknown;
+}): string {
+  const opts = options || {};
+  const modeKey =
+    typeof opts.modeKey === "string" && opts.modeKey
+      ? opts.modeKey
+      : typeof opts.currentModeKey === "string" && opts.currentModeKey
+        ? opts.currentModeKey
+        : typeof opts.currentMode === "string" && opts.currentMode
+          ? opts.currentMode
+          : typeof opts.defaultModeKey === "string" && opts.defaultModeKey
+            ? opts.defaultModeKey
+            : "";
+  const keyPrefix = typeof opts.keyPrefix === "string" ? opts.keyPrefix : "";
+  return keyPrefix + modeKey;
+}
+
 export function readStorageFlagFromContext(options: {
   windowLike?: unknown;
   key?: unknown;

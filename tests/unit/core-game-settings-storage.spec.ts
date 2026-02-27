@@ -4,6 +4,7 @@ import {
   normalizeTimerModuleViewMode,
   readUndoEnabledForModeFromMap,
   readTimerModuleViewForModeFromMap,
+  resolveSavedGameStateStorageKey,
   readStorageFlagFromContext,
   readStorageJsonMapFromContext,
   writeUndoEnabledForModeToMap,
@@ -99,6 +100,28 @@ describe("core game settings storage", () => {
       JSON.stringify(payload)
     );
     expect(result).toBe(true);
+  });
+
+  it("resolves saved game state storage key with mode fallbacks", () => {
+    expect(
+      resolveSavedGameStateStorageKey({
+        modeKey: "practice_legacy",
+        currentModeKey: "classic_4x4_pow2_undo",
+        currentMode: "classic_4x4_pow2_undo",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        keyPrefix: "saved_game_state_v2_"
+      })
+    ).toBe("saved_game_state_v2_practice_legacy");
+
+    expect(
+      resolveSavedGameStateStorageKey({
+        modeKey: "",
+        currentModeKey: "",
+        currentMode: "",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        keyPrefix: "saved_game_state_lite_v2_"
+      })
+    ).toBe("saved_game_state_lite_v2_standard_4x4_pow2_no_undo");
   });
 
   it("normalizes timer module view mode", () => {

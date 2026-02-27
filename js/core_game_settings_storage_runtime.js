@@ -12,6 +12,22 @@
     return windowLike.localStorage || null;
   }
 
+  function resolveSavedGameStateStorageKey(options) {
+    var opts = options || {};
+    var modeKey =
+      typeof opts.modeKey === "string" && opts.modeKey
+        ? opts.modeKey
+        : typeof opts.currentModeKey === "string" && opts.currentModeKey
+          ? opts.currentModeKey
+          : typeof opts.currentMode === "string" && opts.currentMode
+            ? opts.currentMode
+            : typeof opts.defaultModeKey === "string" && opts.defaultModeKey
+              ? opts.defaultModeKey
+              : "";
+    var keyPrefix = typeof opts.keyPrefix === "string" ? opts.keyPrefix : "";
+    return keyPrefix + modeKey;
+  }
+
   function readStorageFlagFromContext(options) {
     var opts = options || {};
     var key = typeof opts.key === "string" ? opts.key : "";
@@ -133,6 +149,7 @@
   global.CoreGameSettingsStorageRuntime = global.CoreGameSettingsStorageRuntime || {};
   global.CoreGameSettingsStorageRuntime.readStorageFlagFromContext = readStorageFlagFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageFlagFromContext = writeStorageFlagFromContext;
+  global.CoreGameSettingsStorageRuntime.resolveSavedGameStateStorageKey = resolveSavedGameStateStorageKey;
   global.CoreGameSettingsStorageRuntime.readStorageJsonMapFromContext = readStorageJsonMapFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageJsonMapFromContext = writeStorageJsonMapFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageJsonPayloadFromContext =

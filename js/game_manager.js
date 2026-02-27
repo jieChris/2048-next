@@ -854,11 +854,41 @@ GameManager.prototype.cloneBoardMatrix = function (board) {
 };
 
 GameManager.prototype.getSavedGameStateKey = function (modeKey) {
+  var resolveSavedGameStateStorageKeyCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "resolveSavedGameStateStorageKey"
+  );
+  if (resolveSavedGameStateStorageKeyCore) {
+    var resolvedKey = resolveSavedGameStateStorageKeyCore({
+      modeKey: modeKey,
+      currentModeKey: this.modeKey,
+      currentMode: this.mode,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+      keyPrefix: GameManager.SAVED_GAME_STATE_KEY_PREFIX
+    });
+    if (typeof resolvedKey === "string" && resolvedKey) return resolvedKey;
+  }
+
   var key = typeof modeKey === "string" && modeKey ? modeKey : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
   return GameManager.SAVED_GAME_STATE_KEY_PREFIX + key;
 };
 
 GameManager.prototype.getSavedGameStateLiteKey = function (modeKey) {
+  var resolveSavedGameStateStorageKeyCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "resolveSavedGameStateStorageKey"
+  );
+  if (resolveSavedGameStateStorageKeyCore) {
+    var resolvedKey = resolveSavedGameStateStorageKeyCore({
+      modeKey: modeKey,
+      currentModeKey: this.modeKey,
+      currentMode: this.mode,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+      keyPrefix: GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX
+    });
+    if (typeof resolvedKey === "string" && resolvedKey) return resolvedKey;
+  }
+
   var key = typeof modeKey === "string" && modeKey ? modeKey : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
   return GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX + key;
 };
