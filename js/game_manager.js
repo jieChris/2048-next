@@ -3344,6 +3344,38 @@ GameManager.prototype.getAvailableCells = function () {
   return out;
 };
 
+GameManager.prototype.applyComputedLockedDirectionState = function (computed) {
+  var state = computed && typeof computed === "object" ? computed : {};
+  if (Number.isInteger(state.lockedDirection)) {
+    this.lockedDirection = state.lockedDirection;
+  }
+  if (Number.isInteger(state.lockedDirectionTurn)) {
+    this.lockedDirectionTurn = state.lockedDirectionTurn;
+  }
+  return Number.isInteger(state.activeDirection) ? state.activeDirection : null;
+};
+
+GameManager.prototype.resolveDirectionLockEveryK = function (rules) {
+  if (!rules) return null;
+  var everyK = Number(rules.every_k_moves);
+  return Number.isInteger(everyK) && everyK > 0 ? everyK : null;
+};
+
+GameManager.prototype.isDirectionLockTriggeredAtCurrentMove = function (everyK) {
+  if (!Number.isInteger(everyK) || everyK <= 0) return false;
+  if (this.successfulMoveCount <= 0 || this.successfulMoveCount % everyK !== 0) return false;
+  if (this.lockConsumedAtMoveCount === this.successfulMoveCount) return false;
+  return true;
+};
+
+GameManager.prototype.ensureLockedDirectionForCurrentMove = function (everyK) {
+  if (this.lockedDirectionTurn === this.successfulMoveCount) return;
+  var phase = Math.floor(this.successfulMoveCount / everyK);
+  var rng = new Math.seedrandom(String(this.initialSeed) + ":lock:" + phase);
+  this.lockedDirection = Math.floor(rng() * 4);
+  this.lockedDirectionTurn = this.successfulMoveCount;
+};
+
 GameManager.prototype.getLockedDirection = function () {
   var getLockedDirectionStateCore = this.callCoreDirectionLockRuntime("getLockedDirectionState", [{
       directionLockRules: this.directionLockRules,
@@ -3357,29 +3389,13 @@ GameManager.prototype.getLockedDirection = function () {
       return rng();
     }]);
   if (getLockedDirectionStateCore.available) {
-    var computed = getLockedDirectionStateCore.value || {};
-
-    if (Number.isInteger(computed.lockedDirection)) {
-      this.lockedDirection = computed.lockedDirection;
-    }
-    if (Number.isInteger(computed.lockedDirectionTurn)) {
-      this.lockedDirectionTurn = computed.lockedDirectionTurn;
-    }
-    return Number.isInteger(computed.activeDirection) ? computed.activeDirection : null;
+    return this.applyComputedLockedDirectionState(getLockedDirectionStateCore.value || {});
   }
 
   var rules = this.directionLockRules;
-  if (!rules) return null;
-  var everyK = Number(rules.every_k_moves);
-  if (!Number.isInteger(everyK) || everyK <= 0) return null;
-  if (this.successfulMoveCount <= 0 || this.successfulMoveCount % everyK !== 0) return null;
-  if (this.lockConsumedAtMoveCount === this.successfulMoveCount) return null;
-  if (this.lockedDirectionTurn !== this.successfulMoveCount) {
-    var phase = Math.floor(this.successfulMoveCount / everyK);
-    var rng = new Math.seedrandom(String(this.initialSeed) + ":lock:" + phase);
-    this.lockedDirection = Math.floor(rng() * 4);
-    this.lockedDirectionTurn = this.successfulMoveCount;
-  }
+  var everyK = this.resolveDirectionLockEveryK(rules);
+  if (!this.isDirectionLockTriggeredAtCurrentMove(everyK)) return null;
+  this.ensureLockedDirectionForCurrentMove(everyK);
   return this.lockedDirection;
 };
 
