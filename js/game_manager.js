@@ -5732,13 +5732,8 @@ GameManager.prototype.setSpeed = function (multiplier) {
     }
 };
 
-GameManager.prototype.seek = function (targetIndex) {
-    targetIndex = this.normalizeReplaySeekTarget(targetIndex);
-
-    this.pause(); // Pause while seeking
-
-    var rewindPlan = this.planReplaySeekRewind(targetIndex);
-    var restartPlan = this.planReplaySeekRestart(rewindPlan);
+GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
+    if (!restartPlan || typeof restartPlan !== "object") return;
     if (restartPlan.shouldRestartWithBoard) {
         this.restartReplaySession(this.replayStartBoardMatrix, this.modeConfig, true);
     }
@@ -5748,6 +5743,16 @@ GameManager.prototype.seek = function (targetIndex) {
     if (restartPlan.shouldApplyReplayIndex) {
         this.replayIndex = restartPlan.replayIndex;
     }
+};
+
+GameManager.prototype.seek = function (targetIndex) {
+    targetIndex = this.normalizeReplaySeekTarget(targetIndex);
+
+    this.pause(); // Pause while seeking
+
+    var rewindPlan = this.planReplaySeekRewind(targetIndex);
+    var restartPlan = this.planReplaySeekRestart(rewindPlan);
+    this.applyReplaySeekRestartPlan(restartPlan);
 
     // Fast forward to target
     while (this.replayIndex < targetIndex) {
