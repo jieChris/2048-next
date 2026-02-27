@@ -5061,10 +5061,14 @@ GameManager.prototype.initializeSetupRuntimeState = function () {
   this.resetSetupRuntimeMoveAndUndoState();
 };
 
-GameManager.prototype.initializeSetupSpawnAndPreferences = function () {
+GameManager.prototype.resetSetupSpawnValueCounters = function () {
   this.spawnValueCounts = {};
   this.spawnTwos = 0;
   this.spawnFours = 0;
+};
+
+GameManager.prototype.initializeSetupSpawnAndPreferences = function () {
+  this.resetSetupSpawnValueCounters();
   this.undoEnabled = this.loadUndoSettingForMode(this.mode);
   var preferredTimerModuleView = this.loadTimerModuleViewForMode(this.mode);
   if (this.ipsInterval) clearInterval(this.ipsInterval);
