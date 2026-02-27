@@ -3275,7 +3275,7 @@ GameManager.prototype.filterUndoRestorePayloadTiles = function (source) {
   var tiles = [];
   for (var i = 0; i < rawTiles.length; i++) {
     var item = rawTiles[i];
-    if (!item || typeof item !== "object") continue;
+    if (!this.isNonArrayObject(item)) continue;
     tiles.push(item);
   }
   return tiles;
