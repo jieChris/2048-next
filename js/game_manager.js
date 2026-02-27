@@ -3571,6 +3571,16 @@ GameManager.prototype.setUndoEnabled = function (enabled, skipPersist, forceChan
 };
 
 GameManager.prototype.isUndoInteractionEnabled = function () {
+  var isUndoInteractionEnabledCore = this.resolveCoreModeRuntimeMethod("isUndoInteractionEnabled");
+  if (isUndoInteractionEnabledCore) {
+    return !!isUndoInteractionEnabledCore({
+      replayMode: this.replayMode,
+      undoLimit: this.undoLimit,
+      undoUsed: this.undoUsed,
+      undoEnabled: this.undoEnabled,
+      isUndoAllowedByMode: this.isUndoAllowedByMode(this.mode)
+    });
+  }
   if (this.replayMode) return false;
   if (this.undoLimit !== null && this.undoUsed >= this.undoLimit) return false;
   return !!(this.undoEnabled && this.isUndoAllowedByMode(this.mode));

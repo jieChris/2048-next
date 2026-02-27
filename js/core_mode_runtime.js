@@ -311,6 +311,13 @@
     return !source.hasGameStarted;
   }
 
+  function isUndoInteractionEnabled(input) {
+    var source = input || {};
+    if (source.replayMode) return false;
+    if (source.undoLimit !== null && Number(source.undoUsed) >= Number(source.undoLimit)) return false;
+    return !!(source.undoEnabled && source.isUndoAllowedByMode);
+  }
+
   function isTimerLeaderboardAvailableByMode(_mode) {
     return true;
   }
@@ -359,6 +366,7 @@
   global.CoreModeRuntime.isUndoAllowedByMode = isUndoAllowedByMode;
   global.CoreModeRuntime.isUndoSettingFixedForMode = isUndoSettingFixedForMode;
   global.CoreModeRuntime.canToggleUndoSetting = canToggleUndoSetting;
+  global.CoreModeRuntime.isUndoInteractionEnabled = isUndoInteractionEnabled;
   global.CoreModeRuntime.isTimerLeaderboardAvailableByMode = isTimerLeaderboardAvailableByMode;
   global.CoreModeRuntime.resolveLegacyModeFromModeKey = resolveLegacyModeFromModeKey;
   global.CoreModeRuntime.resolveModeCatalogAlias = resolveModeCatalogAlias;

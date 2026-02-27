@@ -318,6 +318,19 @@ export function canToggleUndoSetting(input: UndoTogglePolicyInput): boolean {
   return !input.hasGameStarted;
 }
 
+export function isUndoInteractionEnabled(input: {
+  replayMode?: boolean | null;
+  undoLimit?: number | null;
+  undoUsed?: number | null;
+  undoEnabled?: boolean | null;
+  isUndoAllowedByMode?: boolean | null;
+}): boolean {
+  const source = input || {};
+  if (source.replayMode) return false;
+  if (source.undoLimit !== null && Number(source.undoUsed) >= Number(source.undoLimit)) return false;
+  return !!(source.undoEnabled && source.isUndoAllowedByMode);
+}
+
 export function isTimerLeaderboardAvailableByMode(_mode?: string | null): boolean {
   return true;
 }

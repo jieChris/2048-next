@@ -8,6 +8,7 @@ import {
   isCappedModeState,
   isGameTerminatedState,
   isProgressiveCapped64Mode,
+  isUndoInteractionEnabled,
   resolveCappedPlaceholderRowValues,
   resolveCappedPlaceholderSlotByRepeatCount,
   resolveCappedRowVisibilityPlan,
@@ -437,6 +438,38 @@ describe("core mode: undo policy", () => {
         hasGameStarted: false
       })
     ).toBe(false);
+  });
+
+  it("derives undo interaction enabled state", () => {
+    expect(
+      isUndoInteractionEnabled({
+        replayMode: true,
+        undoLimit: null,
+        undoUsed: 0,
+        undoEnabled: true,
+        isUndoAllowedByMode: true
+      })
+    ).toBe(false);
+
+    expect(
+      isUndoInteractionEnabled({
+        replayMode: false,
+        undoLimit: 3,
+        undoUsed: 3,
+        undoEnabled: true,
+        isUndoAllowedByMode: true
+      })
+    ).toBe(false);
+
+    expect(
+      isUndoInteractionEnabled({
+        replayMode: false,
+        undoLimit: null,
+        undoUsed: 0,
+        undoEnabled: true,
+        isUndoAllowedByMode: true
+      })
+    ).toBe(true);
   });
 });
 
