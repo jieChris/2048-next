@@ -7098,8 +7098,12 @@ GameManager.prototype.importParsedReplayEnvelopeByKind = function (parsedEnvelop
 
 GameManager.prototype.tryImportParsedReplayEnvelope = function (parsedEnvelope) {
   if (!parsedEnvelope || !this.isSupportedReplayEnvelopeKind(parsedEnvelope.kind)) return false;
-  var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
+  var replayModeConfig = this.resolveReplayImportModeConfig(parsedEnvelope);
   return this.importParsedReplayEnvelopeByKind(parsedEnvelope, replayModeConfig);
+};
+
+GameManager.prototype.resolveReplayImportModeConfig = function (parsedEnvelope) {
+  return this.resolveModeConfig(parsedEnvelope.modeKey);
 };
 
 GameManager.prototype.tryImportLegacyReplayString = function (trimmedReplayString) {
