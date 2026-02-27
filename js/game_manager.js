@@ -4522,20 +4522,17 @@ GameManager.prototype.applyMergeMilestoneEffects = function (mergedValue, timeSt
   }
 };
 
-GameManager.prototype.handleUndoMove = function (direction) {
+GameManager.prototype.canProcessUndoMove = function () {
   if (!this.replayMode && !this.isUndoInteractionEnabled()) {
-    return;
+    return false;
   }
   if (this.undoLimit !== null && this.undoUsed >= this.undoLimit) {
-    return;
+    return false;
   }
-  if (this.undoStack.length <= 0) {
-    return;
-  }
+  return this.undoStack.length > 0;
+};
 
-  var prev = this.normalizeUndoStackEntry(this.undoStack.pop());
-  var undoPayload = this.computeUndoRestorePayload(prev);
-
+GameManager.prototype.restoreUndoPayload = function (undoPayload) {
   this.grid.build();
   this.score =
     Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
@@ -4551,8 +4548,9 @@ GameManager.prototype.handleUndoMove = function (direction) {
     };
     this.grid.cells[tile.x][tile.y] = tile;
   }
-  var undoRestore = this.computeUndoRestoreState(prev);
+};
 
+GameManager.prototype.applyUndoRestoreFlags = function (undoRestore) {
   this.comboStreak =
     Number.isInteger(undoRestore.comboStreak) && undoRestore.comboStreak >= 0
       ? undoRestore.comboStreak
@@ -4581,8 +4579,9 @@ GameManager.prototype.handleUndoMove = function (direction) {
   if (undoRestore.shouldClearMessage !== false) {
     this.actuator.clearMessage(); // Clear Game Over message if present
   }
+};
 
-  // Record undo in history if valid
+GameManager.prototype.recordPostUndoMove = function (direction) {
   var postUndoRecord = this.computePostUndoRecord(direction);
   if (postUndoRecord.shouldRecordMoveHistory) {
     this.moveHistory.push(direction);
@@ -4596,6 +4595,19 @@ GameManager.prototype.handleUndoMove = function (direction) {
       : ["u"];
     this.sessionReplayV3.actions.push(undoAction);
   }
+};
+
+GameManager.prototype.handleUndoMove = function (direction) {
+  if (!this.canProcessUndoMove()) {
+    return;
+  }
+
+  var prev = this.normalizeUndoStackEntry(this.undoStack.pop());
+  var undoPayload = this.computeUndoRestorePayload(prev);
+  this.restoreUndoPayload(undoPayload);
+  var undoRestore = this.computeUndoRestoreState(prev);
+  this.applyUndoRestoreFlags(undoRestore);
+  this.recordPostUndoMove(direction);
 
   this.actuate();
 
