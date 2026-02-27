@@ -4856,17 +4856,26 @@ GameManager.prototype.setPracticeRestartBase = function (board, modeConfig) {
   this.practiceRestartModeConfig = modeConfig ? this.clonePlain(modeConfig) : this.clonePlain(this.modeConfig);
 };
 
+GameManager.prototype.resolveRestartWithBoardSeed = function (options) {
+  var asReplay = !!(options && options.asReplay);
+  return asReplay ? 0 : undefined;
+};
+
+GameManager.prototype.shouldSetPracticeRestartBaseOnBoardRestart = function (options) {
+  if (this.modeKey !== "practice_legacy") return false;
+  return !!(options && (options.setPracticeRestartBase || options.preservePracticeRestartBase));
+};
+
 GameManager.prototype.restartWithBoard = function (board, modeConfig, options) {
   options = options || {};
   this.actuator.continue();
   // Non-replay board restores must keep undo enabled; replay restores keep replay mode.
-  var asReplay = !!options.asReplay;
-  var setupSeed = asReplay ? 0 : undefined;
+  var setupSeed = this.resolveRestartWithBoardSeed(options);
   this.setup(setupSeed, { skipStartTiles: true, modeConfig: modeConfig, disableStateRestore: true });
   this.setBoardFromMatrix(board);
   this.initialBoardMatrix = this.getFinalBoardMatrix();
   this.replayStartBoardMatrix = this.cloneBoardMatrix(this.initialBoardMatrix);
-  if (this.modeKey === "practice_legacy" && (options.setPracticeRestartBase || options.preservePracticeRestartBase)) {
+  if (this.shouldSetPracticeRestartBaseOnBoardRestart(options)) {
     this.setPracticeRestartBase(this.initialBoardMatrix, modeConfig || this.modeConfig);
   }
   this.actuate();
