@@ -6366,26 +6366,39 @@ GameManager.prototype.hideLegacyStatsUi = function () {
   if (legacyUndoEl) legacyUndoEl.style.visibility = "hidden";
 };
 
-GameManager.prototype.resetSetupTimerDisplays = function () {
+GameManager.prototype.resetSetupMainTimerDisplay = function () {
   var timerEl = document.getElementById("timer");
   if (timerEl) timerEl.textContent = this.pretty(0);
+};
 
+GameManager.prototype.resetSetupFixedTimerSlotDisplays = function () {
   var timerSlots = GameManager.TIMER_SLOT_IDS;
   timerSlots.forEach(function (slotId) {
     var el = document.getElementById("timer" + slotId);
     if (el) el.textContent = "";
   });
+};
 
+GameManager.prototype.resetSetupSubTimerDisplays = function () {
   var sub8k = document.getElementById("timer8192-sub");
   if (sub8k) sub8k.textContent = "";
   var sub16k = document.getElementById("timer16384-sub");
   if (sub16k) sub16k.textContent = "";
   var subContainer = document.getElementById("timer32k-sub-container");
   if (subContainer) subContainer.style.display = "none";
+};
 
+GameManager.prototype.resetSetupCappedTimerContainers = function () {
   this.repositionCappedTimerContainer();
   this.applyCappedRowVisibility();
   this.resetCappedDynamicTimers();
+};
+
+GameManager.prototype.resetSetupTimerDisplays = function () {
+  this.resetSetupMainTimerDisplay();
+  this.resetSetupFixedTimerSlotDisplays();
+  this.resetSetupSubTimerDisplays();
+  this.resetSetupCappedTimerContainers();
 };
 
 GameManager.prototype.resolveSetupSkipStartTiles = function (options) {
