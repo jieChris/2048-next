@@ -5550,23 +5550,26 @@ GameManager.prototype.import = function (replayString) {
       }
       finalizeReplayImport();
     };
+    var applyJsonV3ReplayEnvelopeMeta = function (envelope, modeConfig) {
+      if (envelope.specialRulesSnapshot && typeof envelope.specialRulesSnapshot === "object") {
+        modeConfig.special_rules = self.clonePlain(envelope.specialRulesSnapshot);
+      }
+      if (typeof envelope.modeFamily === "string" && envelope.modeFamily) {
+        modeConfig.mode_family = envelope.modeFamily;
+      }
+      if (typeof envelope.rankPolicy === "string" && envelope.rankPolicy) {
+        modeConfig.rank_policy = envelope.rankPolicy;
+      }
+      if (typeof envelope.challengeId === "string" && envelope.challengeId) {
+        self.challengeId = envelope.challengeId;
+      }
+    };
 
     var parsedEnvelope = this.parseReplayImportEnvelope(trimmed);
     if (parsedEnvelope && (parsedEnvelope.kind === "json-v3" || parsedEnvelope.kind === "v4c")) {
       var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
       if (parsedEnvelope.kind === "json-v3") {
-        if (parsedEnvelope.specialRulesSnapshot && typeof parsedEnvelope.specialRulesSnapshot === "object") {
-          replayModeConfig.special_rules = this.clonePlain(parsedEnvelope.specialRulesSnapshot);
-        }
-        if (typeof parsedEnvelope.modeFamily === "string" && parsedEnvelope.modeFamily) {
-          replayModeConfig.mode_family = parsedEnvelope.modeFamily;
-        }
-        if (typeof parsedEnvelope.rankPolicy === "string" && parsedEnvelope.rankPolicy) {
-          replayModeConfig.rank_policy = parsedEnvelope.rankPolicy;
-        }
-        if (typeof parsedEnvelope.challengeId === "string" && parsedEnvelope.challengeId) {
-          this.challengeId = parsedEnvelope.challengeId;
-        }
+        applyJsonV3ReplayEnvelopeMeta(parsedEnvelope, replayModeConfig);
         this.replayMoves = parsedEnvelope.actions;
         this.replaySpawns = null;
         restartReplayImportSession(replayModeConfig, parsedEnvelope.seed, false);
