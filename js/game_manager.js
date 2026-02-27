@@ -1684,6 +1684,76 @@ GameManager.prototype.resolveLatestSavedStateCandidate = function (candidates) {
   return best;
 };
 
+GameManager.prototype.applyRestoredSavedStateCoreFields = function (saved) {
+  this.score = Number.isInteger(saved.score) && saved.score >= 0 ? saved.score : 0;
+  this.over = !!saved.over;
+  this.won = !!saved.won;
+  this.keepPlaying = !!saved.keep_playing;
+  this.initialSeed = Number.isFinite(saved.initial_seed) ? Number(saved.initial_seed) : this.initialSeed;
+  this.seed = Number.isFinite(saved.seed) ? Number(saved.seed) : this.initialSeed;
+  this.moveHistory = Array.isArray(saved.move_history) ? saved.move_history.slice() : [];
+  this.ipsInputCount = Number.isInteger(saved.ips_input_count) && saved.ips_input_count >= 0
+    ? saved.ips_input_count
+    : this.moveHistory.length;
+  this.undoStack = Array.isArray(saved.undo_stack) ? saved.undo_stack.slice() : [];
+  this.replayCompactLog = typeof saved.replay_compact_log === "string" ? saved.replay_compact_log : "";
+  this.sessionReplayV3 = saved.session_replay_v3 && typeof saved.session_replay_v3 === "object"
+    ? this.clonePlain(saved.session_replay_v3)
+    : this.sessionReplayV3;
+  this.spawnValueCounts = saved.spawn_value_counts && typeof saved.spawn_value_counts === "object"
+    ? this.clonePlain(saved.spawn_value_counts)
+    : {};
+  this.spawnTwos = this.spawnValueCounts["2"] || 0;
+  this.spawnFours = this.spawnValueCounts["4"] || 0;
+  this.reached32k = !!saved.reached_32k;
+  this.cappedMilestoneCount = Number.isInteger(saved.capped_milestone_count) ? saved.capped_milestone_count : 0;
+  this.capped64Unlocked = saved.capped64_unlocked && typeof saved.capped64_unlocked === "object"
+    ? this.clonePlain(saved.capped64_unlocked)
+    : this.capped64Unlocked;
+  this.comboStreak = Number.isInteger(saved.combo_streak) ? saved.combo_streak : 0;
+  this.successfulMoveCount = Number.isInteger(saved.successful_move_count) ? saved.successful_move_count : 0;
+  this.undoUsed = Number.isInteger(saved.undo_used) ? saved.undo_used : 0;
+  this.lockConsumedAtMoveCount = Number.isInteger(saved.lock_consumed_at_move_count) ? saved.lock_consumed_at_move_count : -1;
+  this.lockedDirectionTurn = Number.isInteger(saved.locked_direction_turn) ? saved.locked_direction_turn : null;
+  this.lockedDirection = Number.isInteger(saved.locked_direction) ? saved.locked_direction : null;
+  this.challengeId = typeof saved.challenge_id === "string" && saved.challenge_id ? saved.challenge_id : null;
+  this.hasGameStarted = !!saved.has_game_started;
+  this.accumulatedTime = Number.isFinite(saved.duration_ms) && saved.duration_ms >= 0 ? Math.floor(saved.duration_ms) : 0;
+  this.time = this.accumulatedTime;
+  this.startTime = null;
+  this.timerStatus = 0;
+  this.sessionSubmitDone = false;
+};
+
+GameManager.prototype.applyRestoredSavedBoardSnapshots = function (saved) {
+  if (Array.isArray(saved.initial_board_matrix) && saved.initial_board_matrix.length === this.height) {
+    this.initialBoardMatrix = this.cloneBoardMatrix(saved.initial_board_matrix);
+  } else {
+    this.initialBoardMatrix = this.getFinalBoardMatrix();
+  }
+  this.replayStartBoardMatrix = Array.isArray(saved.replay_start_board_matrix) && saved.replay_start_board_matrix.length === this.height
+    ? this.cloneBoardMatrix(saved.replay_start_board_matrix)
+    : this.cloneBoardMatrix(this.initialBoardMatrix);
+  this.practiceRestartBoardMatrix = Array.isArray(saved.practice_restart_board_matrix) && saved.practice_restart_board_matrix.length === this.height
+    ? this.cloneBoardMatrix(saved.practice_restart_board_matrix)
+    : null;
+  this.practiceRestartModeConfig = saved.practice_restart_mode_config && typeof saved.practice_restart_mode_config === "object"
+    ? this.clonePlain(saved.practice_restart_mode_config)
+    : null;
+};
+
+GameManager.prototype.applyRestoredSavedTimerUiState = function (saved) {
+  this.restoreTimerRowsFromState(saved);
+  if (saved.timer_module_view === "hidden") this.timerModuleView = "hidden";
+  else this.timerModuleView = "timer";
+
+  var timerEl = document.getElementById("timer");
+  if (timerEl) timerEl.textContent = this.pretty(this.accumulatedTime);
+  if (!this.over && !this.won && saved.timer_status === 1) {
+    this.startTimer();
+  }
+};
+
 GameManager.prototype.tryRestoreSavedGameState = function () {
   if (!this.shouldUseSavedGameState()) return false;
   var savedFull = this.readSavedPayloadByKey(this.getSavedGameStateKey());
@@ -1730,70 +1800,9 @@ GameManager.prototype.tryRestoreSavedGameState = function () {
     this.clearSavedGameState();
     return false;
   }
-
-  this.score = Number.isInteger(saved.score) && saved.score >= 0 ? saved.score : 0;
-  this.over = !!saved.over;
-  this.won = !!saved.won;
-  this.keepPlaying = !!saved.keep_playing;
-  this.initialSeed = Number.isFinite(saved.initial_seed) ? Number(saved.initial_seed) : this.initialSeed;
-  this.seed = Number.isFinite(saved.seed) ? Number(saved.seed) : this.initialSeed;
-  this.moveHistory = Array.isArray(saved.move_history) ? saved.move_history.slice() : [];
-  this.ipsInputCount = Number.isInteger(saved.ips_input_count) && saved.ips_input_count >= 0
-    ? saved.ips_input_count
-    : this.moveHistory.length;
-  this.undoStack = Array.isArray(saved.undo_stack) ? saved.undo_stack.slice() : [];
-  this.replayCompactLog = typeof saved.replay_compact_log === "string" ? saved.replay_compact_log : "";
-  this.sessionReplayV3 = saved.session_replay_v3 && typeof saved.session_replay_v3 === "object"
-    ? this.clonePlain(saved.session_replay_v3)
-    : this.sessionReplayV3;
-  this.spawnValueCounts = saved.spawn_value_counts && typeof saved.spawn_value_counts === "object"
-    ? this.clonePlain(saved.spawn_value_counts)
-    : {};
-  this.spawnTwos = this.spawnValueCounts["2"] || 0;
-  this.spawnFours = this.spawnValueCounts["4"] || 0;
-  this.reached32k = !!saved.reached_32k;
-  this.cappedMilestoneCount = Number.isInteger(saved.capped_milestone_count) ? saved.capped_milestone_count : 0;
-  this.capped64Unlocked = saved.capped64_unlocked && typeof saved.capped64_unlocked === "object"
-    ? this.clonePlain(saved.capped64_unlocked)
-    : this.capped64Unlocked;
-  this.comboStreak = Number.isInteger(saved.combo_streak) ? saved.combo_streak : 0;
-  this.successfulMoveCount = Number.isInteger(saved.successful_move_count) ? saved.successful_move_count : 0;
-  this.undoUsed = Number.isInteger(saved.undo_used) ? saved.undo_used : 0;
-  this.lockConsumedAtMoveCount = Number.isInteger(saved.lock_consumed_at_move_count) ? saved.lock_consumed_at_move_count : -1;
-  this.lockedDirectionTurn = Number.isInteger(saved.locked_direction_turn) ? saved.locked_direction_turn : null;
-  this.lockedDirection = Number.isInteger(saved.locked_direction) ? saved.locked_direction : null;
-  this.challengeId = typeof saved.challenge_id === "string" && saved.challenge_id ? saved.challenge_id : null;
-  this.hasGameStarted = !!saved.has_game_started;
-  this.accumulatedTime = Number.isFinite(saved.duration_ms) && saved.duration_ms >= 0 ? Math.floor(saved.duration_ms) : 0;
-  this.time = this.accumulatedTime;
-  this.startTime = null;
-  this.timerStatus = 0;
-  this.sessionSubmitDone = false;
-
-  if (Array.isArray(saved.initial_board_matrix) && saved.initial_board_matrix.length === this.height) {
-    this.initialBoardMatrix = this.cloneBoardMatrix(saved.initial_board_matrix);
-  } else {
-    this.initialBoardMatrix = this.getFinalBoardMatrix();
-  }
-  this.replayStartBoardMatrix = Array.isArray(saved.replay_start_board_matrix) && saved.replay_start_board_matrix.length === this.height
-    ? this.cloneBoardMatrix(saved.replay_start_board_matrix)
-    : this.cloneBoardMatrix(this.initialBoardMatrix);
-  this.practiceRestartBoardMatrix = Array.isArray(saved.practice_restart_board_matrix) && saved.practice_restart_board_matrix.length === this.height
-    ? this.cloneBoardMatrix(saved.practice_restart_board_matrix)
-    : null;
-  this.practiceRestartModeConfig = saved.practice_restart_mode_config && typeof saved.practice_restart_mode_config === "object"
-    ? this.clonePlain(saved.practice_restart_mode_config)
-    : null;
-
-  this.restoreTimerRowsFromState(saved);
-  if (saved.timer_module_view === "hidden") this.timerModuleView = "hidden";
-  else this.timerModuleView = "timer";
-
-  var timerEl = document.getElementById("timer");
-  if (timerEl) timerEl.textContent = this.pretty(this.accumulatedTime);
-  if (!this.over && !this.won && saved.timer_status === 1) {
-    this.startTimer();
-  }
+  this.applyRestoredSavedStateCoreFields(saved);
+  this.applyRestoredSavedBoardSnapshots(saved);
+  this.applyRestoredSavedTimerUiState(saved);
   return true;
 };
 
