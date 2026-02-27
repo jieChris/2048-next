@@ -5356,22 +5356,35 @@ GameManager.prototype.endTime = function() {
   if (timerEl) timerEl.textContent = this.pretty(this.accumulatedTime);
 };
 
+GameManager.prototype.resolveElapsedTimerMsFromStartTime = function () {
+  if (!this.startTime) return null;
+  return Date.now() - this.startTime.getTime();
+};
+
+GameManager.prototype.updateTimerDisplayText = function (elapsedMs) {
+  var timerEl = document.getElementById("timer");
+  if (timerEl) timerEl.textContent = this.pretty(elapsedMs);
+};
+
+GameManager.prototype.shouldRefreshStatsPanelAtElapsed = function (elapsedMs) {
+  return !this.lastStatsPanelUpdateAt || (elapsedMs - this.lastStatsPanelUpdateAt) >= 100;
+};
+
+GameManager.prototype.refreshStatsPanelIfNeededAtElapsed = function (elapsedMs) {
+  if (!this.isStatsPanelOpen()) return;
+  if (!this.shouldRefreshStatsPanelAtElapsed(elapsedMs)) return;
+  this.updateStatsPanel();
+  this.lastStatsPanelUpdateAt = elapsedMs;
+};
+
 // Update the timer
 GameManager.prototype.updateTimer = function() {
-  if (!this.startTime) return;
-  var curTime = new Date();
-  var time = curTime.getTime() - this.startTime.getTime();
+  var time = this.resolveElapsedTimerMsFromStartTime();
+  if (time === null) return;
   this.time = time;
-  var timerEl = document.getElementById("timer");
-  if (timerEl) timerEl.textContent = this.pretty(time);
-  
+  this.updateTimerDisplayText(time);
   this.refreshIpsDisplay(time);
-  if (this.isStatsPanelOpen()) {
-    if (!this.lastStatsPanelUpdateAt || (time - this.lastStatsPanelUpdateAt) >= 100) {
-      this.updateStatsPanel();
-      this.lastStatsPanelUpdateAt = time;
-    }
-  }
+  this.refreshStatsPanelIfNeededAtElapsed(time);
 };
 
 GameManager.prototype.stopTimer = function() {
