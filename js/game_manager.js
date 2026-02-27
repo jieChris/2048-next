@@ -6605,9 +6605,19 @@ GameManager.prototype.resolveSetupTileInitializationState = function (hasInputSe
   return this.buildSetupTileInitializationState(skipStartTiles, restoredFromSavedState);
 };
 
+GameManager.prototype.normalizeSetupOptions = function (options) {
+  return options || {};
+};
+
+GameManager.prototype.applySetupTileInitializationState = function (hasInputSeed, options, preferredTimerModuleView) {
+  var tileInitState = this.resolveSetupTileInitializationState(hasInputSeed, options);
+  this.applySetupStartTilesState(tileInitState.skipStartTiles, tileInitState.restoredFromSavedState);
+  this.finalizeSetupUiState(preferredTimerModuleView, tileInitState.restoredFromSavedState);
+};
+
 // Set up the game
 GameManager.prototype.setup = function (inputSeed, options) {
-  options = options || {};
+  options = this.normalizeSetupOptions(options);
   this.initializeSetupModeAndGrid(options);
   this.resetSetupOutcomeState();
   
@@ -6616,9 +6626,7 @@ GameManager.prototype.setup = function (inputSeed, options) {
   var preferredTimerModuleView = this.initializeSetupUiShell();
 
   // Add the initial tiles unless a replay imports an explicit board.
-  var tileInitState = this.resolveSetupTileInitializationState(hasInputSeed, options);
-  this.applySetupStartTilesState(tileInitState.skipStartTiles, tileInitState.restoredFromSavedState);
-  this.finalizeSetupUiState(preferredTimerModuleView, tileInitState.restoredFromSavedState);
+  this.applySetupTileInitializationState(hasInputSeed, options, preferredTimerModuleView);
 
   // 在线补传链路已移除，历史记录统一保存在本地。
 };
