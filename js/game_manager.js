@@ -861,8 +861,7 @@ GameManager.prototype.getWindowLike = function () {
   return typeof window !== "undefined" ? window : null;
 };
 
-GameManager.prototype.invokeGameSettingsStorageRuntime = function (methodName, payload) {
-  var runtime = this.getCoreGameSettingsStorageRuntime();
+GameManager.prototype.invokeRuntimeMethod = function (runtime, methodName, args) {
   if (!runtime || typeof methodName !== "string" || !methodName) {
     return { handled: false, value: null };
   }
@@ -872,8 +871,13 @@ GameManager.prototype.invokeGameSettingsStorageRuntime = function (methodName, p
   }
   return {
     handled: true,
-    value: method.call(runtime, payload || {})
+    value: method.apply(runtime, Array.isArray(args) ? args : [])
   };
+};
+
+GameManager.prototype.invokeGameSettingsStorageRuntime = function (methodName, payload) {
+  var runtime = this.getCoreGameSettingsStorageRuntime();
+  return this.invokeRuntimeMethod(runtime, methodName, [payload || {}]);
 };
 
 GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
@@ -4204,8 +4208,9 @@ GameManager.prototype.move = function (direction) {
 // Get the vector representing the chosen direction
 GameManager.prototype.getVector = function (direction) {
   var movePathCore = this.getCoreMovePathRuntime();
-  if (movePathCore && typeof movePathCore.getVector === "function") {
-    return movePathCore.getVector(direction);
+  var movePathResult = this.invokeRuntimeMethod(movePathCore, "getVector", [direction]);
+  if (movePathResult.handled) {
+    return movePathResult.value;
   }
 
   // Vectors representing tile movement
@@ -4222,8 +4227,13 @@ GameManager.prototype.getVector = function (direction) {
 // Build a list of positions to traverse in the right order
 GameManager.prototype.buildTraversals = function (vector) {
   var movePathCore = this.getCoreMovePathRuntime();
-  if (movePathCore && typeof movePathCore.buildTraversals === "function") {
-    var computed = movePathCore.buildTraversals(this.width, this.height, vector) || {};
+  var movePathResult = this.invokeRuntimeMethod(movePathCore, "buildTraversals", [
+    this.width,
+    this.height,
+    vector
+  ]);
+  if (movePathResult.handled) {
+    var computed = movePathResult.value || {};
     return {
       x: Array.isArray(computed.x) ? computed.x : [],
       y: Array.isArray(computed.y) ? computed.y : []
@@ -4248,17 +4258,18 @@ GameManager.prototype.buildTraversals = function (vector) {
 
 GameManager.prototype.findFarthestPosition = function (cell, vector) {
   var movePathCore = this.getCoreMovePathRuntime();
-  if (movePathCore && typeof movePathCore.findFarthestPosition === "function") {
-    var computed = movePathCore.findFarthestPosition(
-      cell,
-      vector,
-      this.width,
-      this.height,
-      this.isBlockedCell.bind(this),
-      this.grid && typeof this.grid.cellAvailable === "function"
-        ? this.grid.cellAvailable.bind(this.grid)
-        : function () { return false; }
-    ) || {};
+  var movePathResult = this.invokeRuntimeMethod(movePathCore, "findFarthestPosition", [
+    cell,
+    vector,
+    this.width,
+    this.height,
+    this.isBlockedCell.bind(this),
+    this.grid && typeof this.grid.cellAvailable === "function"
+      ? this.grid.cellAvailable.bind(this.grid)
+      : function () { return false; }
+  ]);
+  if (movePathResult.handled) {
+    var computed = movePathResult.value || {};
     if (computed.farthest && computed.next) return computed;
   }
 
@@ -4280,11 +4291,12 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
 
 GameManager.prototype.movesAvailable = function () {
   var moveScanCore = this.getCoreMoveScanRuntime();
-  if (moveScanCore && typeof moveScanCore.movesAvailable === "function") {
-    return moveScanCore.movesAvailable(
-      this.getAvailableCells().length,
-      this.tileMatchesAvailable()
-    );
+  var moveScanResult = this.invokeRuntimeMethod(moveScanCore, "movesAvailable", [
+    this.getAvailableCells().length,
+    this.tileMatchesAvailable()
+  ]);
+  if (moveScanResult.handled) {
+    return moveScanResult.value;
   }
   return this.getAvailableCells().length > 0 || this.tileMatchesAvailable();
 };
@@ -4292,20 +4304,24 @@ GameManager.prototype.movesAvailable = function () {
 // Check for available matches between tiles (more expensive check)
 GameManager.prototype.tileMatchesAvailable = function () {
   var moveScanCore = this.getCoreMoveScanRuntime();
-  if (moveScanCore && typeof moveScanCore.tileMatchesAvailable === "function") {
-    var selfCore = this;
-    return moveScanCore.tileMatchesAvailable(
-      this.width,
-      this.height,
-      this.isBlockedCell.bind(this),
-      function (cell) {
-        var tile = selfCore.grid.cellContent(cell);
+  var moveScanResult = this.invokeRuntimeMethod(moveScanCore, "tileMatchesAvailable", [
+    this.width,
+    this.height,
+    this.isBlockedCell.bind(this),
+    (function (manager) {
+      return function (cell) {
+        var tile = manager.grid.cellContent(cell);
         return tile ? tile.value : null;
-      },
-      function (a, b) {
-        return selfCore.getMergedValue(a, b) !== null;
-      }
-    );
+      };
+    })(this),
+    (function (manager) {
+      return function (a, b) {
+        return manager.getMergedValue(a, b) !== null;
+      };
+    })(this)
+  ]);
+  if (moveScanResult.handled) {
+    return moveScanResult.value;
   }
 
   var self = this;
@@ -4338,8 +4354,9 @@ GameManager.prototype.tileMatchesAvailable = function () {
 
 GameManager.prototype.positionsEqual = function (first, second) {
   var movePathCore = this.getCoreMovePathRuntime();
-  if (movePathCore && typeof movePathCore.positionsEqual === "function") {
-    return movePathCore.positionsEqual(first, second);
+  var movePathResult = this.invokeRuntimeMethod(movePathCore, "positionsEqual", [first, second]);
+  if (movePathResult.handled) {
+    return movePathResult.value;
   }
   return first.x === second.x && first.y === second.y;
 };
@@ -4363,11 +4380,13 @@ GameManager.prototype.startTimer = function() {
 
 GameManager.prototype.getTimerUpdateIntervalMs = function () {
   var timerIntervalCore = this.getCoreTimerIntervalRuntime();
-  if (
-    timerIntervalCore &&
-    typeof timerIntervalCore.resolveTimerUpdateIntervalMs === "function"
-  ) {
-    return timerIntervalCore.resolveTimerUpdateIntervalMs(this.width, this.height);
+  var timerIntervalResult = this.invokeRuntimeMethod(
+    timerIntervalCore,
+    "resolveTimerUpdateIntervalMs",
+    [this.width, this.height]
+  );
+  if (timerIntervalResult.handled) {
+    return timerIntervalResult.value;
   }
 
   var area = (this.width || 4) * (this.height || 4);
@@ -4416,8 +4435,9 @@ GameManager.prototype.stopTimer = function() {
 
 GameManager.prototype.pretty = function(time) {
   var prettyTimeCore = this.getCorePrettyTimeRuntime();
-  if (prettyTimeCore && typeof prettyTimeCore.formatPrettyTime === "function") {
-    return prettyTimeCore.formatPrettyTime(time);
+  var prettyTimeResult = this.invokeRuntimeMethod(prettyTimeCore, "formatPrettyTime", [time]);
+  if (prettyTimeResult.handled) {
+    return prettyTimeResult.value;
   }
 
   if (time < 0) {return "DNF";}
