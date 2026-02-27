@@ -4798,6 +4798,20 @@ GameManager.prototype.callCoreMovePathRuntime = function (methodName, args) {
   };
 };
 
+GameManager.prototype.callCoreMoveScanRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreMoveScanRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
 // Get the vector representing the chosen direction
 GameManager.prototype.getVector = function (direction) {
   var getVectorCore = this.callCoreMovePathRuntime("getVector", [direction]);
@@ -4872,8 +4886,11 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
 };
 
 GameManager.prototype.movesAvailable = function () {
-  var movesAvailableCore = this.resolveCoreMoveScanRuntimeMethod("movesAvailable");
-  if (movesAvailableCore) return movesAvailableCore(this.getAvailableCells().length, this.tileMatchesAvailable());
+  var movesAvailableCore = this.callCoreMoveScanRuntime("movesAvailable", [
+    this.getAvailableCells().length,
+    this.tileMatchesAvailable()
+  ]);
+  if (movesAvailableCore.available) return movesAvailableCore.value;
   return this.getAvailableCells().length > 0 || this.tileMatchesAvailable();
 };
 
@@ -4922,16 +4939,14 @@ GameManager.prototype.createMergeValueChecker = function () {
 
 // Check for available matches between tiles (more expensive check)
 GameManager.prototype.tileMatchesAvailable = function () {
-  var tileMatchesAvailableCore = this.resolveCoreMoveScanRuntimeMethod("tileMatchesAvailable");
-  if (tileMatchesAvailableCore) {
-    return tileMatchesAvailableCore(
+  var tileMatchesAvailableCore = this.callCoreMoveScanRuntime("tileMatchesAvailable", [
       this.width,
       this.height,
       this.isBlockedCell.bind(this),
       this.createTileValueReader(),
       this.createMergeValueChecker()
-    );
-  }
+    ]);
+  if (tileMatchesAvailableCore.available) return tileMatchesAvailableCore.value;
   return this.tileMatchesAvailableFallback();
 };
 
