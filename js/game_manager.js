@@ -5804,15 +5804,22 @@ GameManager.prototype.createMergeValueChecker = function () {
   };
 };
 
+GameManager.prototype.buildTileMatchesRuntimeArgs = function () {
+  return [
+    this.width,
+    this.height,
+    this.isBlockedCell.bind(this),
+    this.createTileValueReader(),
+    this.createMergeValueChecker()
+  ];
+};
+
 // Check for available matches between tiles (more expensive check)
 GameManager.prototype.tileMatchesAvailable = function () {
-  var tileMatchesAvailableCore = this.callCoreMoveScanRuntime("tileMatchesAvailable", [
-      this.width,
-      this.height,
-      this.isBlockedCell.bind(this),
-      this.createTileValueReader(),
-      this.createMergeValueChecker()
-    ]);
+  var tileMatchesAvailableCore = this.callCoreMoveScanRuntime(
+    "tileMatchesAvailable",
+    this.buildTileMatchesRuntimeArgs()
+  );
   if (tileMatchesAvailableCore.available) return tileMatchesAvailableCore.value;
   return this.tileMatchesAvailableFallback();
 };
