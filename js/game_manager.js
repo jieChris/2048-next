@@ -1292,8 +1292,8 @@ GameManager.prototype.removeSavedPayloadByKeyFromStore = function (store, key) {
 };
 
 GameManager.prototype.selectLatestSavedPayload = function (currentBest, nextPayload) {
-  var best = currentBest && typeof currentBest === "object" ? currentBest : null;
-  var next = nextPayload && typeof nextPayload === "object" ? nextPayload : null;
+  var best = this.isNonArrayObject(currentBest) ? currentBest : null;
+  var next = this.isNonArrayObject(nextPayload) ? nextPayload : null;
   if (!next) return best;
   if (!best) return next;
   var bestSavedAt = Number(best.saved_at) || 0;
