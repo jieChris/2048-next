@@ -460,99 +460,93 @@ GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayStrin
   };
 };
 
+GameManager.prototype.decodeLegacyReplayV2Log = function (logString) {
+  var replayMoves = [];
+  var replaySpawns = [];
+  for (var i = 0; i < logString.length; i++) {
+    var code = logString.charCodeAt(i) - 33;
+    if (code < 0 || code > 128) {
+      throw "Invalid replay char at index " + i;
+    }
+    if (code === 128) {
+      replayMoves.push(-1);
+      replaySpawns.push(null);
+      continue;
+    }
+    var dir = (code >> 5) & 3;
+    var is4 = (code >> 4) & 1;
+    var posIdx = code & 15;
+    replayMoves.push(dir);
+    replaySpawns.push({
+      x: posIdx % 4,
+      y: Math.floor(posIdx / 4),
+      value: is4 ? 4 : 2
+    });
+  }
+  return {
+    replayMoves: replayMoves,
+    replaySpawns: replaySpawns
+  };
+};
+
+GameManager.prototype.decodeLegacyReplayV1Payload = function (trimmedReplayString) {
+  if (trimmedReplayString.indexOf("REPLAY_v1_") !== 0) return null;
+  var v1Parts = trimmedReplayString.split("_");
+  var seed = parseFloat(v1Parts[2]);
+  var movesString = v1Parts[3];
+  var reverseMapping = { U: 0, R: 1, D: 2, L: 3, Z: -1 };
+  var replayMovesV1 = movesString.split("").map(function (char) {
+    var val = reverseMapping[char];
+    if (val === undefined) throw "Invalid move char: " + char;
+    return val;
+  });
+  return {
+    seed: seed,
+    replayMoves: replayMovesV1,
+    replaySpawns: null
+  };
+};
+
+GameManager.prototype.decodeLegacyReplayV2SPayload = function (trimmedReplayString) {
+  var prefixS = "REPLAY_v2S_";
+  if (trimmedReplayString.indexOf(prefixS) !== 0) return null;
+  var rest = trimmedReplayString.substring(prefixS.length);
+  var seedSep = rest.indexOf("_");
+  if (seedSep < 0) throw "Invalid v2S format";
+  var seedS = parseFloat(rest.substring(0, seedSep));
+  if (isNaN(seedS)) throw "Invalid v2S seed";
+  var logString = rest.substring(seedSep + 1);
+  var decodedLog = this.decodeLegacyReplayV2Log(logString);
+  return {
+    seed: seedS,
+    replayMovesV2: logString,
+    replayMoves: decodedLog.replayMoves,
+    replaySpawns: decodedLog.replaySpawns
+  };
+};
+
+GameManager.prototype.decodeLegacyReplayV2Payload = function (trimmedReplayString) {
+  var prefix = "REPLAY_v2_";
+  if (trimmedReplayString.indexOf(prefix) !== 0) return null;
+  var logString = trimmedReplayString.substring(prefix.length);
+  var decodedLog = this.decodeLegacyReplayV2Log(logString);
+  return {
+    seed: 0.123,
+    replayMovesV2: logString,
+    replayMoves: decodedLog.replayMoves,
+    replaySpawns: decodedLog.replaySpawns
+  };
+};
+
 GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
   var decodeLegacyReplayCore = this.callCoreReplayLegacyRuntime("decodeLegacyReplay", [trimmedReplayString]);
   if (decodeLegacyReplayCore.available) return decodeLegacyReplayCore.value;
 
-  if (trimmedReplayString.indexOf("REPLAY_v1_") === 0) {
-    var v1Parts = trimmedReplayString.split("_");
-    var seed = parseFloat(v1Parts[2]);
-    var movesString = v1Parts[3];
-    var reverseMapping = { U: 0, R: 1, D: 2, L: 3, Z: -1 };
-    var replayMovesV1 = movesString.split("").map(function (char) {
-      var val = reverseMapping[char];
-      if (val === undefined) throw "Invalid move char: " + char;
-      return val;
-    });
-    return {
-      seed: seed,
-      replayMoves: replayMovesV1,
-      replaySpawns: null
-    };
-  }
-
-  if (trimmedReplayString.indexOf("REPLAY_v2S_") === 0) {
-    var prefixS = "REPLAY_v2S_";
-    var rest = trimmedReplayString.substring(prefixS.length);
-    var seedSep = rest.indexOf("_");
-    if (seedSep < 0) throw "Invalid v2S format";
-    var seedS = parseFloat(rest.substring(0, seedSep));
-    if (isNaN(seedS)) throw "Invalid v2S seed";
-    var logString = rest.substring(seedSep + 1);
-
-    var replayMovesS = [];
-    var replaySpawnsS = [];
-    for (var i2 = 0; i2 < logString.length; i2++) {
-      var code2 = logString.charCodeAt(i2) - 33;
-      if (code2 < 0 || code2 > 128) {
-        throw "Invalid replay char at index " + i2;
-      }
-      if (code2 === 128) {
-        replayMovesS.push(-1);
-        replaySpawnsS.push(null);
-      } else {
-        var dir2 = (code2 >> 5) & 3;
-        var is42 = (code2 >> 4) & 1;
-        var posIdx2 = code2 & 15;
-        var x2 = posIdx2 % 4;
-        var y2 = Math.floor(posIdx2 / 4);
-        replayMovesS.push(dir2);
-        replaySpawnsS.push({ x: x2, y: y2, value: is42 ? 4 : 2 });
-      }
-    }
-
-    return {
-      seed: seedS,
-      replayMovesV2: logString,
-      replayMoves: replayMovesS,
-      replaySpawns: replaySpawnsS
-    };
-  }
-
-  if (trimmedReplayString.indexOf("REPLAY_v2_") === 0) {
-    var prefix = "REPLAY_v2_";
-    var logString2 = trimmedReplayString.substring(prefix.length);
-
-    var replayMoves2 = [];
-    var replaySpawns2 = [];
-    for (var i3 = 0; i3 < logString2.length; i3++) {
-      var code = logString2.charCodeAt(i3) - 33;
-      if (code < 0 || code > 128) {
-        throw "Invalid replay char at index " + i3;
-      }
-      if (code === 128) {
-        replayMoves2.push(-1);
-        replaySpawns2.push(null);
-      } else {
-        var dir = (code >> 5) & 3;
-        var is4 = (code >> 4) & 1;
-        var posIdx = code & 15;
-        var x = posIdx % 4;
-        var y = Math.floor(posIdx / 4);
-        replayMoves2.push(dir);
-        replaySpawns2.push({ x: x, y: y, value: is4 ? 4 : 2 });
-      }
-    }
-
-    return {
-      seed: 0.123,
-      replayMovesV2: logString2,
-      replayMoves: replayMoves2,
-      replaySpawns: replaySpawns2
-    };
-  }
-
-  return null;
+  var decodedV1 = this.decodeLegacyReplayV1Payload(trimmedReplayString);
+  if (decodedV1) return decodedV1;
+  var decodedV2S = this.decodeLegacyReplayV2SPayload(trimmedReplayString);
+  if (decodedV2S) return decodedV2S;
+  return this.decodeLegacyReplayV2Payload(trimmedReplayString);
 };
 
 GameManager.prototype.resolveReplayExecution = function (action) {
