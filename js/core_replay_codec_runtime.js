@@ -76,9 +76,59 @@
     return rows;
   }
 
+  function appendCompactMoveCode(input) {
+    var source = input || {};
+    var rawCode = Number(source.rawCode);
+    if (!Number.isInteger(rawCode) || rawCode < 0 || rawCode > 127) throw "Invalid move code";
+    var baseLog = typeof source.log === "string" ? source.log : "";
+    if (rawCode < 127) return baseLog + encodeReplay128(rawCode);
+    return baseLog + encodeReplay128(127) + encodeReplay128(0);
+  }
+
+  function appendCompactUndo(log) {
+    var baseLog = typeof log === "string" ? log : "";
+    return baseLog + encodeReplay128(127) + encodeReplay128(1);
+  }
+
+  function appendCompactPracticeAction(input) {
+    var source = input || {};
+    var width = Number(source.width);
+    var height = Number(source.height);
+    if (width !== 4 || height !== 4) throw "Compact practice replay only supports 4x4";
+
+    var x = Number(source.x);
+    var y = Number(source.y);
+    if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || x > 3 || y < 0 || y > 3) {
+      throw "Invalid practice coords";
+    }
+
+    var value = Number(source.value);
+    if (!Number.isInteger(value) || value < 0) throw "Invalid practice value";
+    var exp = 0;
+    if (value > 0) {
+      var lg = Math.log(value) / Math.log(2);
+      if (Math.floor(lg) !== lg) throw "Practice value must be power of two";
+      exp = lg;
+    }
+    if (exp < 0 || exp > 127) throw "Practice value exponent too large";
+
+    var baseLog = typeof source.log === "string" ? source.log : "";
+    var cell = (x << 2) | y;
+    return (
+      baseLog +
+      encodeReplay128(127) +
+      encodeReplay128(2) +
+      encodeReplay128(cell) +
+      encodeReplay128(exp)
+    );
+  }
+
   global.CoreReplayCodecRuntime = global.CoreReplayCodecRuntime || {};
   global.CoreReplayCodecRuntime.encodeReplay128 = encodeReplay128;
   global.CoreReplayCodecRuntime.decodeReplay128 = decodeReplay128;
   global.CoreReplayCodecRuntime.encodeBoardV4 = encodeBoardV4;
   global.CoreReplayCodecRuntime.decodeBoardV4 = decodeBoardV4;
+  global.CoreReplayCodecRuntime.appendCompactMoveCode = appendCompactMoveCode;
+  global.CoreReplayCodecRuntime.appendCompactUndo = appendCompactUndo;
+  global.CoreReplayCodecRuntime.appendCompactPracticeAction = appendCompactPracticeAction;
 })(typeof window !== "undefined" ? window : undefined);

@@ -1623,6 +1623,18 @@ GameManager.prototype.saveGameState = function (options) {
 };
 
 GameManager.prototype.appendCompactMoveCode = function (rawCode) {
+  var appendCompactMoveCodeCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayCodecRuntime",
+    "appendCompactMoveCode"
+  );
+  if (appendCompactMoveCodeCore) {
+    this.replayCompactLog = appendCompactMoveCodeCore({
+      log: this.replayCompactLog,
+      rawCode: rawCode
+    });
+    return;
+  }
+
   if (!Number.isInteger(rawCode) || rawCode < 0 || rawCode > 127) throw "Invalid move code";
   if (rawCode < 127) {
     this.replayCompactLog += this.encodeReplay128(rawCode);
@@ -1632,10 +1644,31 @@ GameManager.prototype.appendCompactMoveCode = function (rawCode) {
 };
 
 GameManager.prototype.appendCompactUndo = function () {
+  var appendCompactUndoCore = this.resolveCoreRuntimeMethod("getCoreReplayCodecRuntime", "appendCompactUndo");
+  if (appendCompactUndoCore) {
+    this.replayCompactLog = appendCompactUndoCore(this.replayCompactLog);
+    return;
+  }
   this.replayCompactLog += this.encodeReplay128(127) + this.encodeReplay128(1);
 };
 
 GameManager.prototype.appendCompactPracticeAction = function (x, y, value) {
+  var appendCompactPracticeActionCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayCodecRuntime",
+    "appendCompactPracticeAction"
+  );
+  if (appendCompactPracticeActionCore) {
+    this.replayCompactLog = appendCompactPracticeActionCore({
+      log: this.replayCompactLog,
+      width: this.width,
+      height: this.height,
+      x: x,
+      y: y,
+      value: value
+    });
+    return;
+  }
+
   if (this.width !== 4 || this.height !== 4) throw "Compact practice replay only supports 4x4";
   if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || x > 3 || y < 0 || y > 3) {
     throw "Invalid practice coords";

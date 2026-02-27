@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  appendCompactMoveCode,
+  appendCompactPracticeAction,
+  appendCompactUndo,
   decodeBoardV4,
   decodeReplay128,
   encodeBoardV4,
@@ -46,5 +49,70 @@ describe("core replay codec", () => {
       ])
     ).toThrow();
     expect(() => decodeBoardV4("too-short")).toThrow();
+  });
+
+  it("appends compact replay move and undo sequences", () => {
+    const moveLog = appendCompactMoveCode({ log: "", rawCode: 12 });
+    expect(moveLog.length).toBe(1);
+    expect(decodeReplay128(moveLog)).toBe(12);
+
+    const escapedMoveLog = appendCompactMoveCode({ log: moveLog, rawCode: 127 });
+    expect(escapedMoveLog.length).toBe(3);
+    expect(decodeReplay128(escapedMoveLog.charAt(1))).toBe(127);
+    expect(decodeReplay128(escapedMoveLog.charAt(2))).toBe(0);
+
+    const undoLog = appendCompactUndo(escapedMoveLog);
+    expect(undoLog.length).toBe(5);
+    expect(decodeReplay128(undoLog.charAt(3))).toBe(127);
+    expect(decodeReplay128(undoLog.charAt(4))).toBe(1);
+  });
+
+  it("appends compact practice action sequence", () => {
+    const log = appendCompactPracticeAction({
+      log: "",
+      width: 4,
+      height: 4,
+      x: 2,
+      y: 1,
+      value: 8
+    });
+    expect(log.length).toBe(4);
+    expect(decodeReplay128(log.charAt(0))).toBe(127);
+    expect(decodeReplay128(log.charAt(1))).toBe(2);
+    expect(decodeReplay128(log.charAt(2))).toBe((2 << 2) | 1);
+    expect(decodeReplay128(log.charAt(3))).toBe(3);
+  });
+
+  it("rejects invalid compact practice payload", () => {
+    expect(() =>
+      appendCompactPracticeAction({
+        log: "",
+        width: 5,
+        height: 4,
+        x: 0,
+        y: 0,
+        value: 2
+      })
+    ).toThrow();
+    expect(() =>
+      appendCompactPracticeAction({
+        log: "",
+        width: 4,
+        height: 4,
+        x: -1,
+        y: 0,
+        value: 2
+      })
+    ).toThrow();
+    expect(() =>
+      appendCompactPracticeAction({
+        log: "",
+        width: 4,
+        height: 4,
+        x: 0,
+        y: 0,
+        value: 3
+      })
+    ).toThrow();
   });
 });
