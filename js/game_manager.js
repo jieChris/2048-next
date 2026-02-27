@@ -2242,10 +2242,18 @@ GameManager.prototype.shouldAbortSaveGameState = function (options, now) {
 
 GameManager.prototype.tryPersistAndMarkSavedGameState = function (payload, now) {
   try {
-    var persisted = this.persistSavedGameStatePayload(payload);
-    if (!persisted) return;
-    this.lastSavedGameStateAt = now;
+    var persistResult = this.persistSavedGameStatePayload(payload);
+    if (!this.didPersistAnySavedGameStateWrites(persistResult)) return;
+    this.markSavedGameStatePersistedAt(now);
   } catch (_err) {}
+};
+
+GameManager.prototype.markSavedGameStatePersistedAt = function (now) {
+  this.lastSavedGameStateAt = now;
+};
+
+GameManager.prototype.didPersistAnySavedGameStateWrites = function (persistResult) {
+  return !!persistResult;
 };
 
 GameManager.prototype.saveGameState = function (options) {
@@ -2263,36 +2271,56 @@ GameManager.prototype.persistSavedGameStatePrimaryWrites = function (key, liteKe
     persisted = this.writeSavedGameStatePayload(key, litePayload);
   }
   var litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
-  return {
-    persisted: !!persisted,
-    litePersisted: !!litePersisted
-  };
+  return this.createSavedGameStatePersistWritesResult(persisted, litePersisted);
 };
 
 GameManager.prototype.persistSavedGameStateQuotaFallback = function (key, liteKey, litePayload) {
   this.clearSavedGameState(this.modeKey);
   var persisted = this.writeSavedGameStatePayload(key, litePayload);
   var litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
+  return this.createSavedGameStatePersistWritesResult(persisted, litePersisted);
+};
+
+GameManager.prototype.createSavedGameStatePersistWritesResult = function (persisted, litePersisted) {
   return {
     persisted: !!persisted,
     litePersisted: !!litePersisted
   };
 };
 
+GameManager.prototype.resolveSavedGameStatePersistKeys = function () {
+  return {
+    key: this.getSavedGameStateKey(),
+    liteKey: this.getSavedGameStateLiteKey()
+  };
+};
+
+GameManager.prototype.shouldUseSavedGameStateQuotaFallback = function (persistWritesResult) {
+  return !persistWritesResult.persisted && !persistWritesResult.litePersisted;
+};
+
+GameManager.prototype.resolveSavedGameStatePersistedFromWrites = function (persistWritesResult) {
+  return !!(persistWritesResult.persisted || persistWritesResult.litePersisted);
+};
+
 GameManager.prototype.persistSavedGameStatePayload = function (payload) {
-  var key = this.getSavedGameStateKey();
-  var liteKey = this.getSavedGameStateLiteKey();
+  var persistKeys = this.resolveSavedGameStatePersistKeys();
   var litePayload = this.buildLiteSavedGameStatePayload(payload);
   this.writeWindowNameSavedPayload(this.modeKey, litePayload);
-  var primaryWrites = this.persistSavedGameStatePrimaryWrites(key, liteKey, payload, litePayload);
-  var persisted = primaryWrites.persisted;
-  var litePersisted = primaryWrites.litePersisted;
-  if (!persisted && !litePersisted) {
-    var fallbackWrites = this.persistSavedGameStateQuotaFallback(key, liteKey, litePayload);
-    persisted = fallbackWrites.persisted;
-    litePersisted = fallbackWrites.litePersisted;
+  var persistWrites = this.persistSavedGameStatePrimaryWrites(
+    persistKeys.key,
+    persistKeys.liteKey,
+    payload,
+    litePayload
+  );
+  if (this.shouldUseSavedGameStateQuotaFallback(persistWrites)) {
+    persistWrites = this.persistSavedGameStateQuotaFallback(
+      persistKeys.key,
+      persistKeys.liteKey,
+      litePayload
+    );
   }
-  return !!(persisted || litePersisted);
+  return this.resolveSavedGameStatePersistedFromWrites(persistWrites);
 };
 
 GameManager.prototype.getElementTextContentById = function (id) {
