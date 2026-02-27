@@ -6220,32 +6220,48 @@ GameManager.prototype.executeDirectionalMove = function (direction) {
   this.finalizeDirectionalMoveIfNeeded(direction, movePlan, moved);
 };
 
+GameManager.prototype.isUndoMoveDirection = function (direction) {
+  return direction == -1;
+};
+
+GameManager.prototype.executeUndoMoveDirection = function (direction) {
+  this.handleUndoMove(direction);
+};
+
+GameManager.prototype.executeDirectionalMoveIfAllowed = function (direction) {
+  if (this.shouldAbortDirectionalMove(direction)) return false;
+  this.executeDirectionalMove(direction);
+  return true;
+};
+
 // Move tiles on the grid in the specified direction
 GameManager.prototype.move = function (direction) {
   // 0: up, 1: right, 2:down, 3: left, -1: undo
-  if (direction == -1) {
-    this.handleUndoMove(direction);
+  if (this.isUndoMoveDirection(direction)) {
+    this.executeUndoMoveDirection(direction);
     return;
   }
+  this.executeDirectionalMoveIfAllowed(direction);
+};
 
-  if (this.shouldAbortDirectionalMove(direction)) return;
-  this.executeDirectionalMove(direction);
+GameManager.prototype.getVectorFallbackMap = function () {
+  return {
+    0: { x: 0,  y: -1 }, // up
+    1: { x: 1,  y: 0 },  // right
+    2: { x: 0,  y: 1 },  // down
+    3: { x: -1, y: 0 }   // left
+  };
+};
+
+GameManager.prototype.getVectorFallback = function (direction) {
+  return this.getVectorFallbackMap()[direction];
 };
 
 // Get the vector representing the chosen direction
 GameManager.prototype.getVector = function (direction) {
   var getVectorCore = this.callCoreMovePathRuntime("getVector", [direction]);
   if (getVectorCore.available) return getVectorCore.value;
-
-  // Vectors representing tile movement
-  var map = {
-    0: { x: 0,  y: -1 }, // up
-    1: { x: 1,  y: 0 },  // right
-    2: { x: 0,  y: 1 },  // down
-    3: { x: -1, y: 0 }   // left
-  };
-
-  return map[direction];
+  return this.getVectorFallback(direction);
 };
 
 GameManager.prototype.createTraversalAxis = function (size) {
@@ -7245,13 +7261,23 @@ GameManager.prototype.notifyReplayImportError = function (error) {
   alert(this.resolveReplayImportErrorMessage(error));
 };
 
-GameManager.prototype.import = function (replayString) {
+GameManager.prototype.performReplayImport = function (replayString) {
+  var trimmed = this.normalizeReplayImportInput(replayString);
+  this.importReplayOrThrow(trimmed);
+};
+
+GameManager.prototype.tryImportWithErrorBoundary = function (replayString) {
   try {
-    var trimmed = this.normalizeReplayImportInput(replayString);
-    this.importReplayOrThrow(trimmed);
+    this.performReplayImport(replayString);
+    return true;
   } catch (e) {
     this.notifyReplayImportError(e);
+    return false;
   }
+};
+
+GameManager.prototype.import = function (replayString) {
+  this.tryImportWithErrorBoundary(replayString);
 };
 
 GameManager.prototype.resolveReplayDispatchPlanForAction = function (action) {
