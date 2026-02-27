@@ -6022,8 +6022,12 @@ GameManager.prototype.countUndoSteps = function (actions, limit) {
   return undoSteps;
 };
 
+GameManager.prototype.resolveStepStatsTotalStepsFallback = function (actions, limit) {
+  return actions ? limit : 0;
+};
+
 GameManager.prototype.buildStepStatsFallback = function (actions, limit) {
-  var totalSteps = actions ? limit : 0;
+  var totalSteps = this.resolveStepStatsTotalStepsFallback(actions, limit);
   var moveSteps = this.calculateNetMoveSteps(actions, limit);
   var undoSteps = this.countUndoSteps(actions, limit);
   return {
