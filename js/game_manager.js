@@ -3252,6 +3252,34 @@ GameManager.prototype.resolveForcedUndoSettingForModeFallback = function (target
   return null;
 };
 
+GameManager.prototype.resolveIsUndoAllowedByMode = function (forcedUndoSetting) {
+  return forcedUndoSetting !== false;
+};
+
+GameManager.prototype.resolveIsUndoSettingFixedForMode = function (forcedUndoSetting) {
+  return forcedUndoSetting !== null;
+};
+
+GameManager.prototype.resolveCanToggleUndoSetting = function (
+  isUndoAllowedByMode,
+  isUndoSettingFixedForMode,
+  hasGameStarted
+) {
+  return isUndoAllowedByMode && !isUndoSettingFixedForMode && !hasGameStarted;
+};
+
+GameManager.prototype.resolveIsUndoInteractionEnabled = function (
+  replayMode,
+  undoLimit,
+  undoUsed,
+  undoEnabled,
+  isUndoAllowedByMode
+) {
+  return !replayMode &&
+    !(undoLimit !== null && Number(undoUsed) >= Number(undoLimit)) &&
+    !!(undoEnabled && isUndoAllowedByMode);
+};
+
 GameManager.prototype.buildUndoPolicyStateFallback = function (params) {
   var input = params && typeof params === "object" ? params : {};
   var forcedUndoSetting = input.forcedUndoSetting;
@@ -3261,12 +3289,20 @@ GameManager.prototype.buildUndoPolicyStateFallback = function (params) {
   var undoUsed = input.undoUsed;
   var undoEnabled = !!input.undoEnabled;
 
-  var isUndoAllowedByMode = forcedUndoSetting !== false;
-  var isUndoSettingFixedForMode = forcedUndoSetting !== null;
-  var canToggleUndoSetting = isUndoAllowedByMode && !isUndoSettingFixedForMode && !hasGameStarted;
-  var isUndoInteractionEnabled = !replayMode &&
-    !(undoLimit !== null && Number(undoUsed) >= Number(undoLimit)) &&
-    !!(undoEnabled && isUndoAllowedByMode);
+  var isUndoAllowedByMode = this.resolveIsUndoAllowedByMode(forcedUndoSetting);
+  var isUndoSettingFixedForMode = this.resolveIsUndoSettingFixedForMode(forcedUndoSetting);
+  var canToggleUndoSetting = this.resolveCanToggleUndoSetting(
+    isUndoAllowedByMode,
+    isUndoSettingFixedForMode,
+    hasGameStarted
+  );
+  var isUndoInteractionEnabled = this.resolveIsUndoInteractionEnabled(
+    replayMode,
+    undoLimit,
+    undoUsed,
+    undoEnabled,
+    isUndoAllowedByMode
+  );
 
   return {
     forcedUndoSetting: forcedUndoSetting,
