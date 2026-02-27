@@ -448,14 +448,28 @@ GameManager.prototype.parseJsonReplayImportEnvelope = function (trimmedReplayStr
   if (replayObj.v !== 3) throw "Unsupported JSON replay version";
   var actions = replayObj.actions;
   if (!Array.isArray(actions)) throw "Invalid v3 actions";
+  var meta = this.resolveJsonReplayEnvelopeMeta(replayObj);
   return {
     kind: "json-v3",
-    modeKey: this.normalizeOptionalReplayString(replayObj.mode_key) ||
-      this.normalizeOptionalReplayString(replayObj.mode) ||
-      this.modeKey ||
-      this.mode,
+    modeKey: this.resolveJsonReplayEnvelopeModeKey(replayObj),
     actions: actions,
     seed: replayObj.seed,
+    specialRulesSnapshot: meta.specialRulesSnapshot,
+    modeFamily: meta.modeFamily,
+    rankPolicy: meta.rankPolicy,
+    challengeId: meta.challengeId
+  };
+};
+
+GameManager.prototype.resolveJsonReplayEnvelopeModeKey = function (replayObj) {
+  return this.normalizeOptionalReplayString(replayObj.mode_key) ||
+    this.normalizeOptionalReplayString(replayObj.mode) ||
+    this.modeKey ||
+    this.mode;
+};
+
+GameManager.prototype.resolveJsonReplayEnvelopeMeta = function (replayObj) {
+  return {
     specialRulesSnapshot:
       replayObj.special_rules_snapshot && typeof replayObj.special_rules_snapshot === "object"
         ? replayObj.special_rules_snapshot
