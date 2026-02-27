@@ -2023,9 +2023,14 @@ GameManager.prototype.resolveModePolicyContext = function (mode) {
   };
 };
 
+GameManager.prototype.hasOwnKey = function (target, key) {
+  if (!target || (typeof target !== "object" && typeof target !== "function")) return false;
+  return Object.prototype.hasOwnProperty.call(target, key);
+};
+
 GameManager.prototype.readOptionValue = function (options, key, fallbackValue) {
   if (!options || typeof options !== "object") return fallbackValue;
-  return Object.prototype.hasOwnProperty.call(options, key) ? options[key] : fallbackValue;
+  return this.hasOwnKey(options, key) ? options[key] : fallbackValue;
 };
 
 GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
@@ -3778,7 +3783,7 @@ GameManager.prototype.getServerMode = function (mode) {
 GameManager.prototype.readUndoPolicyFieldForMode = function (mode, fieldName, fallbackValue) {
   var state = this.resolveUndoPolicyStateForMode(mode);
   if (!state || typeof state !== "object") return fallbackValue;
-  return Object.prototype.hasOwnProperty.call(state, fieldName) ? state[fieldName] : fallbackValue;
+  return this.hasOwnKey(state, fieldName) ? state[fieldName] : fallbackValue;
 };
 
 GameManager.prototype.getForcedUndoSettingForMode = function (mode) {
@@ -3823,7 +3828,7 @@ GameManager.prototype.loadUndoSettingForMode = function (mode) {
       fallbackEnabled: true
     }]);
   if (readUndoEnabledForModeFromMapCore.available) return !!readUndoEnabledForModeFromMapCore.value;
-  if (Object.prototype.hasOwnProperty.call(map, mode)) return !!map[mode];
+  if (this.hasOwnKey(map, mode)) return !!map[mode];
   return true;
 };
 
@@ -3994,7 +3999,7 @@ GameManager.prototype.getTotalSpawnCount = function () {
   if (!this.spawnValueCounts) return 0;
   var total = 0;
   for (var k in this.spawnValueCounts) {
-    if (Object.prototype.hasOwnProperty.call(this.spawnValueCounts, k)) {
+    if (this.hasOwnKey(this.spawnValueCounts, k)) {
       total += this.spawnValueCounts[k] || 0;
     }
   }
