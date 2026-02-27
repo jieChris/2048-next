@@ -1726,9 +1726,33 @@ GameManager.prototype.saveGameState = function (options) {
     return;
   }
 
-  var payload = {
+  var payload = this.buildSavedGameStatePayload(now);
+
+  try {
+    var key = this.getSavedGameStateKey();
+    var liteKey = this.getSavedGameStateLiteKey();
+    var litePayload = this.buildLiteSavedGameStatePayload(payload);
+    this.writeWindowNameSavedPayload(this.modeKey, litePayload);
+    var persisted = this.writeSavedGameStatePayload(key, payload);
+    if (!persisted) {
+      persisted = this.writeSavedGameStatePayload(key, litePayload);
+    }
+    var litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
+    if (!persisted && !litePersisted) {
+      // Quota fallback: remove old snapshots for this mode, then retry a tiny snapshot.
+      this.clearSavedGameState(this.modeKey);
+      persisted = this.writeSavedGameStatePayload(key, litePayload);
+      litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
+    }
+    if (!persisted && !litePersisted) return;
+    this.lastSavedGameStateAt = now;
+  } catch (_err) {}
+};
+
+GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
+  return {
     v: GameManager.SAVED_GAME_STATE_VERSION,
-    saved_at: now,
+    saved_at: savedAt,
     terminated: false,
     mode_key: this.modeKey,
     board_width: this.width,
@@ -1772,26 +1796,6 @@ GameManager.prototype.saveGameState = function (options) {
     timer_sub_16384: (document.getElementById("timer16384-sub") || {}).textContent || "",
     timer_sub_visible: ((document.getElementById("timer32k-sub-container") || {}).style || {}).display === "block"
   };
-
-  try {
-    var key = this.getSavedGameStateKey();
-    var liteKey = this.getSavedGameStateLiteKey();
-    var litePayload = this.buildLiteSavedGameStatePayload(payload);
-    this.writeWindowNameSavedPayload(this.modeKey, litePayload);
-    var persisted = this.writeSavedGameStatePayload(key, payload);
-    if (!persisted) {
-      persisted = this.writeSavedGameStatePayload(key, litePayload);
-    }
-    var litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
-    if (!persisted && !litePersisted) {
-      // Quota fallback: remove old snapshots for this mode, then retry a tiny snapshot.
-      this.clearSavedGameState(this.modeKey);
-      persisted = this.writeSavedGameStatePayload(key, litePayload);
-      litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
-    }
-    if (!persisted && !litePersisted) return;
-    this.lastSavedGameStateAt = now;
-  } catch (_err) {}
 };
 
 GameManager.prototype.shouldSkipSaveGameStateByThrottle = function (options, now) {
