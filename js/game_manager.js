@@ -2280,7 +2280,7 @@ GameManager.prototype.resolveLiteSavedPracticeRestartModeConfig = function (payl
   return this.practiceRestartModeConfig ? this.safeClonePlain(this.practiceRestartModeConfig, null) : null;
 };
 
-GameManager.prototype.buildLiteSavedGameStatePayloadFallback = function (payload) {
+GameManager.prototype.buildLiteSavedGameStateBaseFallback = function (payload) {
   return {
     v: GameManager.SAVED_GAME_STATE_VERSION,
     saved_at: Number(payload.saved_at) || Date.now(),
@@ -2310,7 +2310,12 @@ GameManager.prototype.buildLiteSavedGameStatePayloadFallback = function (payload
     undo_stack: [],
     replay_compact_log: "",
     session_replay_v3: null,
-    spawn_value_counts: {},
+    spawn_value_counts: {}
+  };
+};
+
+GameManager.prototype.buildLiteSavedGameStateProgressFallback = function (payload) {
+  return {
     reached_32k: !!payload.reached_32k,
     capped_milestone_count: Number.isInteger(payload.capped_milestone_count) ? payload.capped_milestone_count : 0,
     capped64_unlocked: null,
@@ -2322,6 +2327,12 @@ GameManager.prototype.buildLiteSavedGameStatePayloadFallback = function (payload
     locked_direction: Number.isInteger(payload.locked_direction) ? payload.locked_direction : null,
     challenge_id: payload.challenge_id || null
   };
+};
+
+GameManager.prototype.buildLiteSavedGameStatePayloadFallback = function (payload) {
+  var basePayload = this.buildLiteSavedGameStateBaseFallback(payload);
+  var progressPayload = this.buildLiteSavedGameStateProgressFallback(payload);
+  return Object.assign(basePayload, progressPayload);
 };
 
 GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
