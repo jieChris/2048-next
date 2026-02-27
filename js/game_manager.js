@@ -5659,6 +5659,18 @@ GameManager.prototype.getVector = function (direction) {
   return map[direction];
 };
 
+GameManager.prototype.createTraversalAxis = function (size) {
+  var values = [];
+  for (var i = 0; i < size; i++) {
+    values.push(i);
+  }
+  return values;
+};
+
+GameManager.prototype.applyTraversalDirection = function (axis, component) {
+  return component === 1 ? axis.reverse() : axis;
+};
+
 // Build a list of positions to traverse in the right order
 GameManager.prototype.buildTraversals = function (vector) {
   var buildTraversalsCore = this.callCoreMovePathRuntime("buildTraversals", [this.width, this.height, vector]);
@@ -5670,20 +5682,10 @@ GameManager.prototype.buildTraversals = function (vector) {
     };
   }
 
-  var traversals = { x: [], y: [] };
-
-  for (var x = 0; x < this.width; x++) {
-    traversals.x.push(x);
-  }
-  for (var y = 0; y < this.height; y++) {
-    traversals.y.push(y);
-  }
-
-  // Always traverse from the farthest cell in the chosen direction
-  if (vector.x === 1) traversals.x = traversals.x.reverse();
-  if (vector.y === 1) traversals.y = traversals.y.reverse();
-
-  return traversals;
+  return {
+    x: this.applyTraversalDirection(this.createTraversalAxis(this.width), vector.x),
+    y: this.applyTraversalDirection(this.createTraversalAxis(this.height), vector.y)
+  };
 };
 
 GameManager.prototype.findFarthestPosition = function (cell, vector) {
