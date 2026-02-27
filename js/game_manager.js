@@ -744,6 +744,13 @@ GameManager.prototype.applyReplayTickBoundaryPlan = function (tickBoundaryPlan) 
   return true;
 };
 
+GameManager.prototype.runReplayTick = function () {
+  var tickBoundaryPlan = this.resolveReplayTickBoundaryPlanForCurrentState();
+  if (this.applyReplayTickBoundaryPlan(tickBoundaryPlan)) return false;
+  this.executePlannedReplayStep();
+  return true;
+};
+
 GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
   var planReplaySeekRewindCore = this.callCoreReplayFlowRuntime("planReplaySeekRewind", [{
       targetIndex: targetIndex,
@@ -5746,10 +5753,7 @@ GameManager.prototype.resume = function () {
     var delay = resumeState.delay;
     
     this.replayInterval = setInterval(function() {
-      var tickBoundaryPlan = self.resolveReplayTickBoundaryPlanForCurrentState();
-      if (self.applyReplayTickBoundaryPlan(tickBoundaryPlan)) return;
-      
-      self.executePlannedReplayStep();
+      self.runReplayTick();
     }, delay);
 };
 
