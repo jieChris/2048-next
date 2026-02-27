@@ -5066,41 +5066,46 @@ GameManager.prototype.addStartTiles = function () {
   }
 };
 
+GameManager.prototype.tryConsumeForcedSpawnTile = function () {
+  if (!this.replayMode || !this.forcedSpawn) return false;
+  var forcedSpawn = this.forcedSpawn;
+  if (this.grid.cellAvailable(forcedSpawn) && !this.isBlockedCell(forcedSpawn.x, forcedSpawn.y)) {
+    var forcedTile = new Tile(forcedSpawn, forcedSpawn.value);
+    this.grid.insertTile(forcedTile);
+    this.recordSpawnValue(forcedSpawn.value);
+    this.forcedSpawn = null;
+  }
+  return true;
+};
+
+GameManager.prototype.getSeededSpawnSteps = function () {
+  return this.replayMode ? this.replayIndex : this.moveHistory.length;
+};
+
+GameManager.prototype.seedRandomForSpawn = function (steps) {
+  Math.seedrandom(this.seed);
+  for (var i = 0; i < steps; i++) {
+    Math.random();
+  }
+};
+
+GameManager.prototype.spawnRandomTileAtAvailableCell = function (available) {
+  var value = this.pickSpawnValue();
+  var cell = available[Math.floor(Math.random() * available.length)];
+  var tile = new Tile(cell, value);
+  this.grid.insertTile(tile);
+  this.lastSpawn = { x: cell.x, y: cell.y, value: value };
+  this.recordSpawnValue(value);
+};
+
 // Adds a tile in a random position
 GameManager.prototype.addRandomTile = function () {
-  // Replay v2 Logic: Use forced spawn if available
-  if (this.replayMode && this.forcedSpawn) {
-      if (this.grid.cellAvailable(this.forcedSpawn) && !this.isBlockedCell(this.forcedSpawn.x, this.forcedSpawn.y)) {
-          var tile = new Tile(this.forcedSpawn, this.forcedSpawn.value);
-          this.grid.insertTile(tile);
-          this.recordSpawnValue(this.forcedSpawn.value);
-          this.forcedSpawn = null; // Consumed
-      }
-      return;
-  }
-  // Normal Logic
-  var available = this.getAvailableCells();
-  if (available.length > 0) {
-    Math.seedrandom(this.seed);
-    
-    // Fix: Use move history length (or replay index) instead of score to determine RNG state.
-    // This ensures that Undo -> Move results in a DIFFERENT random tile (because history length increased),
-    // while maintaining determinism for Replay.
-    var steps = this.replayMode ? this.replayIndex : this.moveHistory.length;
-    for (var i=0; i<steps; i++) {
-      Math.random();
-    }
-    
-    var value = this.pickSpawnValue();
-    var cell = available[Math.floor(Math.random() * available.length)];
-    var tile = new Tile(cell, value);
+  if (this.tryConsumeForcedSpawnTile()) return;
 
-    this.grid.insertTile(tile);
-    
-    // Record spawn for v2 logging
-    this.lastSpawn = { x: cell.x, y: cell.y, value: value };
-    this.recordSpawnValue(value);
-  }
+  var available = this.getAvailableCells();
+  if (!available.length) return;
+  this.seedRandomForSpawn(this.getSeededSpawnSteps());
+  this.spawnRandomTileAtAvailableCell(available);
 };
 
 GameManager.prototype.syncBestScoreBeforeActuate = function () {
