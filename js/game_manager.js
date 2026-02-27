@@ -3207,8 +3207,7 @@ GameManager.prototype.resolveModeConfig = function (modeId) {
   return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
 };
 
-GameManager.prototype.applyModeConfig = function (modeConfig) {
-  var cfg = this.normalizeModeConfig(modeConfig && modeConfig.key, modeConfig);
+GameManager.prototype.applyModeCoreStateFromConfig = function (cfg) {
   this.modeConfig = cfg;
   this.mode = cfg.key;
   this.modeKey = cfg.key;
@@ -3223,15 +3222,26 @@ GameManager.prototype.applyModeConfig = function (modeConfig) {
   this.specialRules = this.normalizeSpecialRules(cfg.special_rules);
   this.rankPolicy = cfg.rank_policy || (this.rankedBucket !== "none" ? "ranked" : "unranked");
   this.applySpecialRulesState();
-  if (this.scoreManager && typeof this.scoreManager.setModeKey === "function") {
-    this.scoreManager.setModeKey(cfg.key);
-  }
-  if (typeof document !== "undefined" && document.body) {
-    document.body.setAttribute("data-mode-id", cfg.key);
-    document.body.setAttribute("data-ruleset", cfg.ruleset);
-    document.body.setAttribute("data-mode-family", this.modeFamily);
-    document.body.setAttribute("data-rank-policy", this.rankPolicy);
-  }
+};
+
+GameManager.prototype.syncModeKeyToScoreManager = function (modeKey) {
+  if (!this.scoreManager || typeof this.scoreManager.setModeKey !== "function") return;
+  this.scoreManager.setModeKey(modeKey);
+};
+
+GameManager.prototype.applyModeDocumentAttributes = function (cfg) {
+  if (typeof document === "undefined" || !document.body) return;
+  document.body.setAttribute("data-mode-id", cfg.key);
+  document.body.setAttribute("data-ruleset", cfg.ruleset);
+  document.body.setAttribute("data-mode-family", this.modeFamily);
+  document.body.setAttribute("data-rank-policy", this.rankPolicy);
+};
+
+GameManager.prototype.applyModeConfig = function (modeConfig) {
+  var cfg = this.normalizeModeConfig(modeConfig && modeConfig.key, modeConfig);
+  this.applyModeCoreStateFromConfig(cfg);
+  this.syncModeKeyToScoreManager(cfg.key);
+  this.applyModeDocumentAttributes(cfg);
 };
 
 GameManager.prototype.normalizeSpecialRules = function (rules) {
