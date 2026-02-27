@@ -215,6 +215,39 @@
     return slotId;
   }
 
+  function resolveCappedRowVisibilityPlan(input) {
+    var source = input || {};
+    var timerSlotIds = Array.isArray(source.timerSlotIds) ? source.timerSlotIds : [];
+    var values = [];
+    for (var i = 0; i < timerSlotIds.length; i++) {
+      var slotId = Number(timerSlotIds[i]);
+      if (!Number.isInteger(slotId) || slotId <= 0) continue;
+      values.push(slotId);
+    }
+
+    if (!source.isCappedMode) {
+      return values.map(function (value) {
+        return { value: value, visible: true, keepSpace: false };
+      });
+    }
+
+    if (source.isProgressiveCapped64Mode) {
+      return values.map(function (value) {
+        return { value: value, visible: false, keepSpace: true };
+      });
+    }
+
+    var cap = Number(source.cappedTargetValue);
+    var resolvedCap = Number.isFinite(cap) ? cap : 0;
+    return values.map(function (value) {
+      return {
+        value: value,
+        visible: value <= resolvedCap,
+        keepSpace: true
+      };
+    });
+  }
+
   function getForcedUndoSetting(input) {
     var source = input || {};
     var modeCfg = source.modeConfig || null;
@@ -285,6 +318,7 @@
   global.CoreModeRuntime.resolveCappedTimerLegendFontSize = resolveCappedTimerLegendFontSize;
   global.CoreModeRuntime.resolveCappedPlaceholderRowValues = resolveCappedPlaceholderRowValues;
   global.CoreModeRuntime.resolveCappedPlaceholderSlotByRepeatCount = resolveCappedPlaceholderSlotByRepeatCount;
+  global.CoreModeRuntime.resolveCappedRowVisibilityPlan = resolveCappedRowVisibilityPlan;
   global.CoreModeRuntime.getForcedUndoSetting = getForcedUndoSetting;
   global.CoreModeRuntime.isUndoAllowedByMode = isUndoAllowedByMode;
   global.CoreModeRuntime.isUndoSettingFixedForMode = isUndoSettingFixedForMode;

@@ -8,6 +8,7 @@ import {
   isProgressiveCapped64Mode,
   resolveCappedPlaceholderRowValues,
   resolveCappedPlaceholderSlotByRepeatCount,
+  resolveCappedRowVisibilityPlan,
   resolveCappedTimerLegendFontSize,
   isTimerLeaderboardAvailableByMode,
   isUndoAllowedByMode,
@@ -259,6 +260,44 @@ describe("core mode: capped timer placeholder policy", () => {
         placeholderRowValues: [128, 256, 512]
       })
     ).toBeNull();
+  });
+
+  it("resolves capped row visibility plan", () => {
+    expect(
+      resolveCappedRowVisibilityPlan({
+        isCappedMode: false,
+        timerSlotIds: [16, 32]
+      })
+    ).toEqual([
+      { value: 16, visible: true, keepSpace: false },
+      { value: 32, visible: true, keepSpace: false }
+    ]);
+
+    expect(
+      resolveCappedRowVisibilityPlan({
+        isCappedMode: true,
+        isProgressiveCapped64Mode: true,
+        cappedTargetValue: 64,
+        timerSlotIds: [16, 32]
+      })
+    ).toEqual([
+      { value: 16, visible: false, keepSpace: true },
+      { value: 32, visible: false, keepSpace: true }
+    ]);
+
+    expect(
+      resolveCappedRowVisibilityPlan({
+        isCappedMode: true,
+        isProgressiveCapped64Mode: false,
+        cappedTargetValue: 64,
+        timerSlotIds: [16, 32, 64, 128]
+      })
+    ).toEqual([
+      { value: 16, visible: true, keepSpace: true },
+      { value: 32, visible: true, keepSpace: true },
+      { value: 64, visible: true, keepSpace: true },
+      { value: 128, visible: false, keepSpace: true }
+    ]);
   });
 });
 

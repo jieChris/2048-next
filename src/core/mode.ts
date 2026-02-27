@@ -42,6 +42,19 @@ export interface CappedTimerPlaceholderSlotInput {
   placeholderRowValues?: number[] | null;
 }
 
+export interface CappedRowVisibilityPlanInput {
+  isCappedMode?: boolean | null;
+  isProgressiveCapped64Mode?: boolean | null;
+  cappedTargetValue?: number | null;
+  timerSlotIds?: number[] | null;
+}
+
+export interface TimerRowVisibilityPlanItem {
+  value: number;
+  visible: boolean;
+  keepSpace: boolean;
+}
+
 export interface UndoPolicyInput {
   mode?: string | null;
   modeConfig?: PlainRecord | null;
@@ -195,6 +208,34 @@ export function resolveCappedPlaceholderSlotByRepeatCount(
   const slotId = Number(values[placeholderIndex]);
   if (!Number.isInteger(slotId) || slotId <= 0) return null;
   return slotId;
+}
+
+export function resolveCappedRowVisibilityPlan(
+  input: CappedRowVisibilityPlanInput
+): TimerRowVisibilityPlanItem[] {
+  const timerSlotIds = Array.isArray(input.timerSlotIds) ? input.timerSlotIds : [];
+  const values: number[] = [];
+  for (let i = 0; i < timerSlotIds.length; i++) {
+    const slotId = Number(timerSlotIds[i]);
+    if (!Number.isInteger(slotId) || slotId <= 0) continue;
+    values.push(slotId);
+  }
+
+  if (!input.isCappedMode) {
+    return values.map((value) => ({ value, visible: true, keepSpace: false }));
+  }
+
+  if (input.isProgressiveCapped64Mode) {
+    return values.map((value) => ({ value, visible: false, keepSpace: true }));
+  }
+
+  const cap = Number(input.cappedTargetValue);
+  const resolvedCap = Number.isFinite(cap) ? cap : 0;
+  return values.map((value) => ({
+    value,
+    visible: value <= resolvedCap,
+    keepSpace: true
+  }));
 }
 
 export function getForcedUndoSetting(input: UndoPolicyInput): boolean | null {

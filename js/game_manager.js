@@ -2930,6 +2930,32 @@ GameManager.prototype.repositionCappedTimerContainer = function () {
 };
 
 GameManager.prototype.applyCappedRowVisibility = function () {
+  var resolveCappedRowVisibilityPlanCore = this.resolveCoreRuntimeMethod(
+    "getCoreModeRuntime",
+    "resolveCappedRowVisibilityPlan"
+  );
+  if (resolveCappedRowVisibilityPlanCore) {
+    var isCappedMode = this.isCappedMode();
+    var isProgressiveCapped64Mode = this.isProgressiveCapped64Mode();
+    var plan = resolveCappedRowVisibilityPlanCore({
+      isCappedMode: isCappedMode,
+      isProgressiveCapped64Mode: isProgressiveCapped64Mode,
+      cappedTargetValue: this.getCappedTargetValue(),
+      timerSlotIds: GameManager.TIMER_SLOT_IDS
+    });
+    if (Array.isArray(plan) && plan.length > 0) {
+      for (var p = 0; p < plan.length; p++) {
+        var item = plan[p];
+        if (!item || !Number.isInteger(item.value) || item.value <= 0) continue;
+        this.setTimerRowVisibleState(item.value, !!item.visible, !!item.keepSpace);
+      }
+      if (isCappedMode && isProgressiveCapped64Mode) {
+        this.resetProgressiveCapped64Rows();
+      }
+      return;
+    }
+  }
+
   var i;
   if (!this.isCappedMode()) {
     for (i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
