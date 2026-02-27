@@ -1859,21 +1859,40 @@ GameManager.prototype.saveGameState = function (options) {
   } catch (_err) {}
 };
 
-GameManager.prototype.persistSavedGameStatePayload = function (payload) {
-  var key = this.getSavedGameStateKey();
-  var liteKey = this.getSavedGameStateLiteKey();
-  var litePayload = this.buildLiteSavedGameStatePayload(payload);
-  this.writeWindowNameSavedPayload(this.modeKey, litePayload);
+GameManager.prototype.persistSavedGameStatePrimaryWrites = function (key, liteKey, payload, litePayload) {
   var persisted = this.writeSavedGameStatePayload(key, payload);
   if (!persisted) {
     persisted = this.writeSavedGameStatePayload(key, litePayload);
   }
   var litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
+  return {
+    persisted: !!persisted,
+    litePersisted: !!litePersisted
+  };
+};
+
+GameManager.prototype.persistSavedGameStateQuotaFallback = function (key, liteKey, litePayload) {
+  this.clearSavedGameState(this.modeKey);
+  var persisted = this.writeSavedGameStatePayload(key, litePayload);
+  var litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
+  return {
+    persisted: !!persisted,
+    litePersisted: !!litePersisted
+  };
+};
+
+GameManager.prototype.persistSavedGameStatePayload = function (payload) {
+  var key = this.getSavedGameStateKey();
+  var liteKey = this.getSavedGameStateLiteKey();
+  var litePayload = this.buildLiteSavedGameStatePayload(payload);
+  this.writeWindowNameSavedPayload(this.modeKey, litePayload);
+  var primaryWrites = this.persistSavedGameStatePrimaryWrites(key, liteKey, payload, litePayload);
+  var persisted = primaryWrites.persisted;
+  var litePersisted = primaryWrites.litePersisted;
   if (!persisted && !litePersisted) {
-    // Quota fallback: remove old snapshots for this mode, then retry a tiny snapshot.
-    this.clearSavedGameState(this.modeKey);
-    persisted = this.writeSavedGameStatePayload(key, litePayload);
-    litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
+    var fallbackWrites = this.persistSavedGameStateQuotaFallback(key, liteKey, litePayload);
+    persisted = fallbackWrites.persisted;
+    litePersisted = fallbackWrites.litePersisted;
   }
   return !!(persisted || litePersisted);
 };
