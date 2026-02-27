@@ -4882,14 +4882,36 @@ GameManager.prototype.getBestTileValue = function () {
 };
 
 GameManager.prototype.getDurationMs = function () {
+  var resolveDurationMsCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayTimerRuntime",
+    "resolveDurationMs"
+  );
+  var nowMs = Date.now();
+  if (resolveDurationMsCore) {
+    var coreMs = Number(resolveDurationMsCore({
+      timerStatus: this.timerStatus,
+      startTimeMs:
+        this.startTime && typeof this.startTime.getTime === "function"
+          ? this.startTime.getTime()
+          : null,
+      accumulatedTime: this.accumulatedTime,
+      sessionStartedAt: this.sessionStartedAt,
+      nowMs: nowMs
+    }));
+    if (Number.isFinite(coreMs)) {
+      coreMs = Math.floor(coreMs);
+      return coreMs < 0 ? 0 : coreMs;
+    }
+  }
+
   var ms = 0;
   if (this.timerStatus === 1 && this.startTime) {
-    ms = Date.now() - this.startTime.getTime();
+    ms = nowMs - this.startTime.getTime();
   } else {
     ms = this.accumulatedTime || 0;
   }
   if (!Number.isFinite(ms) || ms < 0) {
-    ms = Date.now() - (this.sessionStartedAt || Date.now());
+    ms = nowMs - (this.sessionStartedAt || nowMs);
   }
   ms = Math.floor(ms);
   return ms < 0 ? 0 : ms;
