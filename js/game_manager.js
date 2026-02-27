@@ -7120,16 +7120,24 @@ GameManager.prototype.isSupportedReplayEnvelopeKind = function (kind) {
   return this.isJsonV3ReplayEnvelopeKind(kind) || this.isV4ReplayEnvelopeKind(kind);
 };
 
+GameManager.prototype.getReplayEnvelopeImporterMethodMap = function () {
+  return {
+    "json-v3": "importJsonV3ReplayEnvelope",
+    "v4c": "importV4ReplayEnvelope"
+  };
+};
+
+GameManager.prototype.resolveReplayEnvelopeImporterMethodName = function (kind) {
+  var importerMap = this.getReplayEnvelopeImporterMethodMap();
+  if (!this.hasOwnKey(importerMap, kind)) return null;
+  return importerMap[kind];
+};
+
 GameManager.prototype.importParsedReplayEnvelopeByKind = function (parsedEnvelope, replayModeConfig) {
-  if (this.isJsonV3ReplayEnvelopeKind(parsedEnvelope.kind)) {
-    this.importJsonV3ReplayEnvelope(parsedEnvelope, replayModeConfig);
-    return true;
-  }
-  if (this.isV4ReplayEnvelopeKind(parsedEnvelope.kind)) {
-    this.importV4ReplayEnvelope(parsedEnvelope, replayModeConfig);
-    return true;
-  }
-  return false;
+  var importerMethodName = this.resolveReplayEnvelopeImporterMethodName(parsedEnvelope.kind);
+  if (!importerMethodName) return false;
+  this[importerMethodName](parsedEnvelope, replayModeConfig);
+  return true;
 };
 
 GameManager.prototype.tryImportParsedReplayEnvelope = function (parsedEnvelope) {
@@ -7206,10 +7214,17 @@ GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
   this.throwUnknownReplayAction();
 };
 
+GameManager.prototype.getReplayDispatchExecutorMethodMap = function () {
+  return {
+    move: "executeReplayMoveDispatch",
+    insertCustomTile: "executeReplayCustomTileDispatch"
+  };
+};
+
 GameManager.prototype.resolveReplayDispatchExecutorMethodName = function (dispatchMethod) {
-  if (dispatchMethod === "move") return "executeReplayMoveDispatch";
-  if (dispatchMethod === "insertCustomTile") return "executeReplayCustomTileDispatch";
-  return null;
+  var executorMap = this.getReplayDispatchExecutorMethodMap();
+  if (!this.hasOwnKey(executorMap, dispatchMethod)) return null;
+  return executorMap[dispatchMethod];
 };
 
 GameManager.prototype.executeReplayMoveDispatch = function (dispatchPlan) {
