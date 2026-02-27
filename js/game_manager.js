@@ -4104,56 +4104,70 @@ GameManager.prototype.updateStatsPanel = function (totalSteps, moveSteps, undoSt
   if (rateEl) rateEl.textContent = this.getActualSecondaryRate();
 };
 
-GameManager.prototype.computeStepStats = function () {
-  var self = this;
-  var totalSteps = 0;
-  var moveSteps = 0;
-  var undoSteps = 0;
-  var limit = this.replayMode ? this.replayIndex : this.moveHistory.length;
-  var src = this.replayMode ? this.replayMoves : this.moveHistory;
+GameManager.prototype.resolveStepStatsSource = function () {
+  return {
+    limit: this.replayMode ? this.replayIndex : this.moveHistory.length,
+    actions: this.replayMode ? this.replayMoves : this.moveHistory
+  };
+};
+
+GameManager.prototype.tryResolveStepStatsFromCore = function (actions, limit) {
   var computeReplayStepStatsCore = this.callCoreReplayExecutionRuntime("computeReplayStepStats", [{
-    actions: src,
+    actions: actions,
     limit: limit
   }]);
 
-  if (computeReplayStepStatsCore.available) {
-    var coreStats = computeReplayStepStatsCore.value || {};
-    var coreTotal = Number(coreStats.totalSteps);
-    var coreMoves = Number(coreStats.moveSteps);
-    var coreUndo = Number(coreStats.undoSteps);
-    if (
-      Number.isFinite(coreTotal) &&
-      Number.isFinite(coreMoves) &&
-      Number.isFinite(coreUndo)
-    ) {
-      return {
-        totalSteps: coreTotal,
-        moveSteps: coreMoves,
-        undoSteps: coreUndo
-      };
+  if (!computeReplayStepStatsCore.available) return null;
+  var coreStats = computeReplayStepStatsCore.value || {};
+  var coreTotal = Number(coreStats.totalSteps);
+  var coreMoves = Number(coreStats.moveSteps);
+  var coreUndo = Number(coreStats.undoSteps);
+  if (
+    Number.isFinite(coreTotal) &&
+    Number.isFinite(coreMoves) &&
+    Number.isFinite(coreUndo)
+  ) {
+    return {
+      totalSteps: coreTotal,
+      moveSteps: coreMoves,
+      undoSteps: coreUndo
+    };
+  }
+  return null;
+};
+
+GameManager.prototype.calculateNetMoveSteps = function (actions, limit) {
+  if (!actions) return 0;
+  var count = 0;
+  for (var i = 0; i < limit; i++) {
+    var kind = this.getActionKind(actions[i]);
+    if (kind === "u") {
+      if (count > 0) count--;
+    } else if (kind === "m") {
+      count++;
     }
   }
+  return count;
+};
 
-  var calculateNetMoves = function (moves, max) {
-    var count = 0;
-    for (var i = 0; i < max; i++) {
-      var kind = self.getActionKind(moves[i]);
-      if (kind === "u") {
-        if (count > 0) count--;
-      } else if (kind === "m") {
-        count++;
-      }
-    }
-    return count;
-  };
-
-  if (src) {
-    totalSteps = limit;
-    moveSteps = calculateNetMoves(src, limit);
-    for (var j = 0; j < limit; j++) {
-      if (self.getActionKind(src[j]) === "u") undoSteps++;
-    }
+GameManager.prototype.countUndoSteps = function (actions, limit) {
+  if (!actions) return 0;
+  var undoSteps = 0;
+  for (var i = 0; i < limit; i++) {
+    if (this.getActionKind(actions[i]) === "u") undoSteps++;
   }
+  return undoSteps;
+};
+
+GameManager.prototype.computeStepStats = function () {
+  var stepStatsSource = this.resolveStepStatsSource();
+  var limit = stepStatsSource.limit;
+  var src = stepStatsSource.actions;
+  var coreStats = this.tryResolveStepStatsFromCore(src, limit);
+  if (coreStats) return coreStats;
+  var totalSteps = src ? limit : 0;
+  var moveSteps = this.calculateNetMoveSteps(src, limit);
+  var undoSteps = this.countUndoSteps(src, limit);
   return {
     totalSteps: totalSteps,
     moveSteps: moveSteps,
