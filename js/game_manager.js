@@ -4891,6 +4891,21 @@ GameManager.prototype.tileMatchesAvailableFallback = function () {
   return false;
 };
 
+GameManager.prototype.createTileValueReader = function () {
+  var manager = this;
+  return function (cell) {
+    var tile = manager.grid.cellContent(cell);
+    return tile ? tile.value : null;
+  };
+};
+
+GameManager.prototype.createMergeValueChecker = function () {
+  var manager = this;
+  return function (a, b) {
+    return manager.getMergedValue(a, b) !== null;
+  };
+};
+
 // Check for available matches between tiles (more expensive check)
 GameManager.prototype.tileMatchesAvailable = function () {
   var tileMatchesAvailableCore = this.resolveCoreMoveScanRuntimeMethod("tileMatchesAvailable");
@@ -4899,17 +4914,8 @@ GameManager.prototype.tileMatchesAvailable = function () {
       this.width,
       this.height,
       this.isBlockedCell.bind(this),
-      (function (manager) {
-        return function (cell) {
-          var tile = manager.grid.cellContent(cell);
-          return tile ? tile.value : null;
-        };
-      })(this),
-      (function (manager) {
-        return function (a, b) {
-          return manager.getMergedValue(a, b) !== null;
-        };
-      })(this)
+      this.createTileValueReader(),
+      this.createMergeValueChecker()
     );
   }
   return this.tileMatchesAvailableFallback();
