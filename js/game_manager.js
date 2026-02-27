@@ -405,10 +405,7 @@ GameManager.prototype.decodeReplayV4TokenAt = function (actionsEncoded, index) {
   return this.decodeReplayV4EscapedToken(actionsEncoded, index + 1);
 };
 
-GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
-  var decodeReplayV4ActionsCore = this.callCoreReplayV4ActionsRuntime("decodeReplayV4Actions", [actionsEncoded]);
-  if (decodeReplayV4ActionsCore.available) return decodeReplayV4ActionsCore.value || {};
-
+GameManager.prototype.decodeReplayV4ActionsFallback = function (actionsEncoded) {
   var replayMoves = [];
   var replaySpawns = [];
   var i = 0;
@@ -418,11 +415,16 @@ GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
     replaySpawns.push(decodedAction.spawn);
     i = decodedAction.nextIndex;
   }
-
   return {
     replayMoves: replayMoves,
     replaySpawns: replaySpawns
   };
+};
+
+GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
+  var decodeReplayV4ActionsCore = this.callCoreReplayV4ActionsRuntime("decodeReplayV4Actions", [actionsEncoded]);
+  if (decodeReplayV4ActionsCore.available) return decodeReplayV4ActionsCore.value || {};
+  return this.decodeReplayV4ActionsFallback(actionsEncoded);
 };
 
 GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString) {
@@ -442,12 +444,22 @@ GameManager.prototype.normalizeOptionalReplayString = function (raw) {
   return typeof raw === "string" && raw ? raw : null;
 };
 
-GameManager.prototype.parseJsonReplayImportEnvelope = function (trimmedReplayString) {
+GameManager.prototype.parseJsonReplayImportObject = function (trimmedReplayString) {
   if (trimmedReplayString.charAt(0) !== "{") return null;
-  var replayObj = JSON.parse(trimmedReplayString);
+  return JSON.parse(trimmedReplayString);
+};
+
+GameManager.prototype.resolveValidatedJsonReplayActions = function (replayObj) {
   if (replayObj.v !== 3) throw "Unsupported JSON replay version";
   var actions = replayObj.actions;
   if (!Array.isArray(actions)) throw "Invalid v3 actions";
+  return actions;
+};
+
+GameManager.prototype.parseJsonReplayImportEnvelope = function (trimmedReplayString) {
+  var replayObj = this.parseJsonReplayImportObject(trimmedReplayString);
+  if (!replayObj) return null;
+  var actions = this.resolveValidatedJsonReplayActions(replayObj);
   var meta = this.resolveJsonReplayEnvelopeMeta(replayObj);
   return {
     kind: "json-v3",
