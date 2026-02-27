@@ -3175,6 +3175,18 @@ GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
   return cfg;
 };
 
+GameManager.prototype.resolveModeConfigCatalogFallback = function (modeId) {
+  var id = modeId || GameManager.DEFAULT_MODE_KEY;
+  var byCatalog = this.getModeConfigFromCatalog(id);
+  if (byCatalog) return this.normalizeModeConfig(id, byCatalog);
+  var mapped = GameManager.LEGACY_ALIAS_TO_MODE_KEY[id] || id;
+  if (mapped && mapped !== id) {
+    var mappedCfg = this.getModeConfigFromCatalog(mapped);
+    if (mappedCfg) return this.normalizeModeConfig(mapped, mappedCfg);
+  }
+  return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
+};
+
 GameManager.prototype.resolveModeConfig = function (modeId) {
   var id = modeId || GameManager.DEFAULT_MODE_KEY;
   var resolveModeConfigFromCatalogCore = this.callCoreModeRuntime("resolveModeConfigFromCatalog", [{
@@ -3194,17 +3206,7 @@ GameManager.prototype.resolveModeConfig = function (modeId) {
     }
     return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
   }
-
-  var byCatalog = this.getModeConfigFromCatalog(id);
-  if (byCatalog) return this.normalizeModeConfig(id, byCatalog);
-
-  var mapped = GameManager.LEGACY_ALIAS_TO_MODE_KEY[id] || id;
-
-  if (mapped && mapped !== id) {
-    var mappedCfg = this.getModeConfigFromCatalog(mapped);
-    if (mappedCfg) return this.normalizeModeConfig(mapped, mappedCfg);
-  }
-  return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
+  return this.resolveModeConfigCatalogFallback(id);
 };
 
 GameManager.prototype.applyModeCoreStateFromConfig = function (cfg) {
