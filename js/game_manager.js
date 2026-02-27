@@ -4173,23 +4173,35 @@ GameManager.prototype.computeMergeEffects = function (mergedValue) {
   return result;
 };
 
-GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
-  var normalizeSpawnTableCore = this.callCoreRulesRuntime("normalizeSpawnTable", [spawnTable, ruleset]);
-  if (normalizeSpawnTableCore.available) return normalizeSpawnTableCore.value;
-  if (Array.isArray(spawnTable) && spawnTable.length > 0) {
-    var out = [];
-    for (var i = 0; i < spawnTable.length; i++) {
-      var item = spawnTable[i];
-      if (!item || !Number.isInteger(item.value) || item.value <= 0) continue;
-      if (!Number.isFinite(item.weight) || item.weight <= 0) continue;
-      out.push({ value: item.value, weight: Number(item.weight) });
-    }
-    if (out.length > 0) return out;
+GameManager.prototype.isValidSpawnTableItem = function (item) {
+  if (!item || !Number.isInteger(item.value) || item.value <= 0) return false;
+  return Number.isFinite(item.weight) && item.weight > 0;
+};
+
+GameManager.prototype.normalizeSpawnTableFallbackItems = function (spawnTable) {
+  if (!Array.isArray(spawnTable) || spawnTable.length <= 0) return [];
+  var out = [];
+  for (var i = 0; i < spawnTable.length; i++) {
+    var item = spawnTable[i];
+    if (!this.isValidSpawnTableItem(item)) continue;
+    out.push({ value: item.value, weight: Number(item.weight) });
   }
+  return out;
+};
+
+GameManager.prototype.resolveDefaultSpawnTableByRuleset = function (ruleset) {
   if (ruleset === "fibonacci") {
     return [{ value: 1, weight: 90 }, { value: 2, weight: 10 }];
   }
   return [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
+};
+
+GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
+  var normalizeSpawnTableCore = this.callCoreRulesRuntime("normalizeSpawnTable", [spawnTable, ruleset]);
+  if (normalizeSpawnTableCore.available) return normalizeSpawnTableCore.value;
+  var normalizedFallbackItems = this.normalizeSpawnTableFallbackItems(spawnTable);
+  if (normalizedFallbackItems.length > 0) return normalizedFallbackItems;
+  return this.resolveDefaultSpawnTableByRuleset(ruleset);
 };
 
 GameManager.prototype.resolveTheoreticalMaxTileCellCount = function (width, height) {
