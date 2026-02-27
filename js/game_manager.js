@@ -5317,19 +5317,26 @@ GameManager.prototype.positionsEqual = function (first, second) {
 
 // Start the timer
 GameManager.prototype.startTimer = function() {
-  if (this.timerStatus === 0) {
-      this.timerStatus = 1;
-      this.hasGameStarted = true;
-      // Convert accumulated time back to a start timestamp relative to now
-      this.startTime = new Date(Date.now() - (this.accumulatedTime || 0));
-      this.notifyUndoSettingsStateChanged();
-      var self = this;
-      this.timerUpdateIntervalMs = this.getTimerUpdateIntervalMs();
-      this.lastStatsPanelUpdateAt = 0;
-      this.timerID = setInterval(function() {
-          self.updateTimer();
-      }, this.timerUpdateIntervalMs);
-  }
+  if (this.timerStatus !== 0) return;
+  this.applyTimerStartState();
+  this.scheduleTimerUpdateInterval();
+};
+
+GameManager.prototype.applyTimerStartState = function () {
+  this.timerStatus = 1;
+  this.hasGameStarted = true;
+  // Convert accumulated time back to a start timestamp relative to now
+  this.startTime = new Date(Date.now() - (this.accumulatedTime || 0));
+  this.notifyUndoSettingsStateChanged();
+};
+
+GameManager.prototype.scheduleTimerUpdateInterval = function () {
+  var self = this;
+  this.timerUpdateIntervalMs = this.getTimerUpdateIntervalMs();
+  this.lastStatsPanelUpdateAt = 0;
+  this.timerID = setInterval(function () {
+    self.updateTimer();
+  }, this.timerUpdateIntervalMs);
 };
 
 GameManager.prototype.getTimerUpdateIntervalMs = function () {
