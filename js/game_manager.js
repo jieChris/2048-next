@@ -4658,6 +4658,17 @@ GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove
   });
 };
 
+GameManager.prototype.shouldAbortDirectionalMove = function (direction) {
+  if (this.isGameTerminated()) return true; // Don't do anything if the game's over
+
+  var lockedDirection = this.getLockedDirection();
+  if (lockedDirection === null) {
+    return false;
+  }
+  this.consumeDirectionLock();
+  return Number(direction) === Number(lockedDirection);
+};
+
 // Move tiles on the grid in the specified direction
 GameManager.prototype.move = function (direction) {
   // 0: up, 1: right, 2:down, 3: left, -1: undo
@@ -4668,15 +4679,7 @@ GameManager.prototype.move = function (direction) {
     return;
   }
 
-  if (this.isGameTerminated()) return; // Don't do anything if the game's over
-
-  var lockedDirection = this.getLockedDirection();
-  if (lockedDirection !== null) {
-    this.consumeDirectionLock();
-    if (Number(direction) === Number(lockedDirection)) {
-      return;
-    }
-  }
+  if (this.shouldAbortDirectionalMove(direction)) return;
 
   var cell, tile;
 
