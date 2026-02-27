@@ -6326,15 +6326,28 @@ GameManager.prototype.createSetupSessionReplayV3Payload = function () {
   return this.buildSetupSessionReplayV3PayloadFromMetadata(metadata);
 };
 
-GameManager.prototype.assignSetupChallengeId = function (options) {
-  this.challengeId = typeof options.challengeId === "string" && options.challengeId
+GameManager.prototype.resolveSetupChallengeIdFromOptions = function (options) {
+  return typeof options.challengeId === "string" && options.challengeId
     ? options.challengeId
     : null;
-  if (!this.challengeId && typeof window !== "undefined" && window.GAME_CHALLENGE_CONTEXT && window.GAME_CHALLENGE_CONTEXT.id) {
-    this.challengeId = window.GAME_CHALLENGE_CONTEXT.id;
-    this.sessionReplayV3.challenge_id = this.challengeId;
-  }
+};
+
+GameManager.prototype.resolveSetupChallengeIdFromGlobalContext = function () {
+  if (typeof window === "undefined") return null;
+  if (!window.GAME_CHALLENGE_CONTEXT || !window.GAME_CHALLENGE_CONTEXT.id) return null;
+  return window.GAME_CHALLENGE_CONTEXT.id;
+};
+
+GameManager.prototype.syncSetupSessionReplayChallengeId = function () {
   if (this.challengeId) this.sessionReplayV3.challenge_id = this.challengeId;
+};
+
+GameManager.prototype.assignSetupChallengeId = function (options) {
+  this.challengeId = this.resolveSetupChallengeIdFromOptions(options);
+  if (!this.challengeId) {
+    this.challengeId = this.resolveSetupChallengeIdFromGlobalContext();
+  }
+  this.syncSetupSessionReplayChallengeId();
 };
 
 GameManager.prototype.resetSetupRuntimeTileFlags = function () {
