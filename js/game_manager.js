@@ -823,6 +823,10 @@ GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
       hasReplayStartBoard: !!this.replayStartBoardMatrix
     }]);
   if (planReplaySeekRewindCore.available) return planReplaySeekRewindCore.value || {};
+  return this.planReplaySeekRewindFallback(targetIndex);
+};
+
+GameManager.prototype.planReplaySeekRewindFallback = function (targetIndex) {
   var shouldRewind = targetIndex < this.replayIndex;
   if (!shouldRewind) {
     return {
@@ -838,14 +842,23 @@ GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
   };
 };
 
-GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
-  var planReplaySeekRestartCore = this.callCoreReplayFlowRuntime("planReplaySeekRestart", [{
-      shouldRewind: !!(rewindPlan && rewindPlan.shouldRewind),
-      strategy: rewindPlan ? rewindPlan.strategy : "none",
-      replayIndexAfterRewind: rewindPlan ? rewindPlan.replayIndexAfterRewind : this.replayIndex
-    }]);
-  if (planReplaySeekRestartCore.available) return planReplaySeekRestartCore.value || {};
+GameManager.prototype.resolveReplaySeekRestartCoreInput = function (rewindPlan) {
+  return {
+    shouldRewind: !!(rewindPlan && rewindPlan.shouldRewind),
+    strategy: rewindPlan ? rewindPlan.strategy : "none",
+    replayIndexAfterRewind: rewindPlan ? rewindPlan.replayIndexAfterRewind : this.replayIndex
+  };
+};
 
+GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
+  var planReplaySeekRestartCore = this.callCoreReplayFlowRuntime("planReplaySeekRestart", [
+    this.resolveReplaySeekRestartCoreInput(rewindPlan)
+  ]);
+  if (planReplaySeekRestartCore.available) return planReplaySeekRestartCore.value || {};
+  return this.planReplaySeekRestartFallback(rewindPlan);
+};
+
+GameManager.prototype.planReplaySeekRestartFallback = function (rewindPlan) {
   var shouldRewind = !!(rewindPlan && rewindPlan.shouldRewind);
   if (!shouldRewind) {
     return {
