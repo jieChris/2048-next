@@ -4357,20 +4357,32 @@ GameManager.prototype.resolveModeConfig = function (modeId) {
   return this.resolveModeConfigCatalogFallback(id);
 };
 
-GameManager.prototype.applyModeCoreStateFromConfig = function (cfg) {
+GameManager.prototype.applyModeBoardStateFromConfig = function (cfg) {
   this.modeConfig = cfg;
   this.mode = cfg.key;
   this.modeKey = cfg.key;
   this.width = cfg.board_width;
   this.height = cfg.board_height;
   this.size = this.width;
+};
+
+GameManager.prototype.applyModeRulesStateFromConfig = function (cfg) {
   this.ruleset = cfg.ruleset;
   this.maxTile = cfg.max_tile || Infinity;
   this.spawnTable = this.normalizeSpawnTable(cfg.spawn_table, cfg.ruleset);
+  this.specialRules = this.normalizeSpecialRules(cfg.special_rules);
+};
+
+GameManager.prototype.applyModeRankStateFromConfig = function (cfg) {
   this.rankedBucket = cfg.ranked_bucket || "none";
   this.modeFamily = cfg.mode_family || (cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2");
-  this.specialRules = this.normalizeSpecialRules(cfg.special_rules);
   this.rankPolicy = cfg.rank_policy || (this.rankedBucket !== "none" ? "ranked" : "unranked");
+};
+
+GameManager.prototype.applyModeCoreStateFromConfig = function (cfg) {
+  this.applyModeBoardStateFromConfig(cfg);
+  this.applyModeRulesStateFromConfig(cfg);
+  this.applyModeRankStateFromConfig(cfg);
   this.applySpecialRulesState();
 };
 
