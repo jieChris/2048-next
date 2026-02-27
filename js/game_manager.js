@@ -840,7 +840,10 @@ var GAME_MANAGER_CORE_RUNTIME_CALLERS = [
   ["callCoreReplayFlowRuntime", "resolveCoreReplayFlowRuntimeMethod"],
   ["callCoreReplayControlRuntime", "resolveCoreReplayControlRuntimeMethod"],
   ["callCoreReplayLoopRuntime", "resolveCoreReplayLoopRuntimeMethod"],
-  ["callCoreReplayLegacyRuntime", "resolveCoreReplayLegacyRuntimeMethod"]
+  ["callCoreReplayLegacyRuntime", "resolveCoreReplayLegacyRuntimeMethod"],
+  ["callCoreMovePathRuntime", "resolveCoreMovePathRuntimeMethod"],
+  ["callCoreMoveScanRuntime", "resolveCoreMoveScanRuntimeMethod"],
+  ["callCoreTimerIntervalRuntime", "resolveCoreTimerIntervalRuntimeMethod"]
 ];
 
 for (
@@ -4785,18 +4788,6 @@ GameManager.prototype.move = function (direction) {
   if (moved) {
     this.applySuccessfulMove(direction, movePlan.scoreBeforeMove, movePlan.undo);
   }
-};
-
-GameManager.prototype.callCoreMovePathRuntime = function (methodName, args) {
-  return this.callCoreRuntimeMethod("resolveCoreMovePathRuntimeMethod", methodName, args);
-};
-
-GameManager.prototype.callCoreMoveScanRuntime = function (methodName, args) {
-  return this.callCoreRuntimeMethod("resolveCoreMoveScanRuntimeMethod", methodName, args);
-};
-
-GameManager.prototype.callCoreTimerIntervalRuntime = function (methodName, args) {
-  return this.callCoreRuntimeMethod("resolveCoreTimerIntervalRuntimeMethod", methodName, args);
 };
 
 // Get the vector representing the chosen direction
