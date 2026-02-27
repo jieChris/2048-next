@@ -4598,6 +4598,38 @@ GameManager.prototype.repositionCappedTimerContainer = function () {
   }
 };
 
+GameManager.prototype.applyCappedRowVisibilityPlan = function (plan) {
+  if (!Array.isArray(plan) || plan.length <= 0) return false;
+  for (var p = 0; p < plan.length; p++) {
+    var item = plan[p];
+    if (!item || !Number.isInteger(item.value) || item.value <= 0) continue;
+    this.setTimerRowVisibleState(item.value, !!item.visible, !!item.keepSpace);
+  }
+  return true;
+};
+
+GameManager.prototype.setAllTimerRowsVisibleState = function (visible, keepSpace) {
+  for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
+    this.setTimerRowVisibleState(GameManager.TIMER_SLOT_IDS[i], visible, keepSpace);
+  }
+};
+
+GameManager.prototype.applyNonCappedRowVisibilityFallback = function () {
+  this.setAllTimerRowsVisibleState(true, false);
+};
+
+GameManager.prototype.applyProgressiveCappedRowVisibilityFallback = function () {
+  this.setAllTimerRowsVisibleState(false, true);
+  this.resetProgressiveCapped64Rows();
+};
+
+GameManager.prototype.applyTargetCappedRowVisibilityFallback = function (cap) {
+  for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
+    var value = GameManager.TIMER_SLOT_IDS[i];
+    this.setTimerRowVisibleState(value, value <= cap, true);
+  }
+};
+
 GameManager.prototype.applyCappedRowVisibility = function () {
   var cappedState = this.resolveCappedModeState();
   var isCappedMode = cappedState.isCappedMode;
@@ -4610,12 +4642,7 @@ GameManager.prototype.applyCappedRowVisibility = function () {
     }]);
   if (resolveCappedRowVisibilityPlanCore.available) {
     var plan = resolveCappedRowVisibilityPlanCore.value;
-    if (Array.isArray(plan) && plan.length > 0) {
-      for (var p = 0; p < plan.length; p++) {
-        var item = plan[p];
-        if (!item || !Number.isInteger(item.value) || item.value <= 0) continue;
-        this.setTimerRowVisibleState(item.value, !!item.visible, !!item.keepSpace);
-      }
+    if (this.applyCappedRowVisibilityPlan(plan)) {
       if (isCappedMode && isProgressiveCapped64Mode) {
         this.resetProgressiveCapped64Rows();
       }
@@ -4623,25 +4650,15 @@ GameManager.prototype.applyCappedRowVisibility = function () {
     }
   }
 
-  var i;
   if (!isCappedMode) {
-    for (i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
-      this.setTimerRowVisibleState(GameManager.TIMER_SLOT_IDS[i], true, false);
-    }
+    this.applyNonCappedRowVisibilityFallback();
     return;
   }
   if (isProgressiveCapped64Mode) {
-    for (i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
-      this.setTimerRowVisibleState(GameManager.TIMER_SLOT_IDS[i], false, true);
-    }
-    this.resetProgressiveCapped64Rows();
+    this.applyProgressiveCappedRowVisibilityFallback();
     return;
   }
-  var cap = cappedState.cappedTargetValue;
-  for (i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
-    var value = GameManager.TIMER_SLOT_IDS[i];
-    this.setTimerRowVisibleState(value, value <= cap, true);
-  }
+  this.applyTargetCappedRowVisibilityFallback(cappedState.cappedTargetValue);
 };
 
 GameManager.prototype.resetCappedDynamicTimers = function () {
