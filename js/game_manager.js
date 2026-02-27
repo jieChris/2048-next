@@ -930,24 +930,31 @@ GameManager.prototype.cloneBoardMatrix = function (board) {
   return out;
 };
 
-GameManager.prototype.callCoreRuntimeMethod = function (resolverMethodName, methodName, args) {
+GameManager.prototype.buildUnavailableCoreRuntimeCallResult = function () {
+  return {
+    available: false,
+    value: null
+  };
+};
+
+GameManager.prototype.normalizeCoreRuntimeCallArgs = function (args) {
+  return Array.isArray(args) ? args : [];
+};
+
+GameManager.prototype.resolveCoreRuntimeCallerFromResolver = function (resolverMethodName, methodName) {
   var resolver = this[resolverMethodName];
-  if (typeof resolver !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
+  if (typeof resolver !== "function") return null;
   var runtimeMethod = resolver.call(this, methodName);
-  if (typeof runtimeMethod !== "function") {
-    return {
-      available: false,
-      value: null
-    };
-  }
+  if (typeof runtimeMethod !== "function") return null;
+  return runtimeMethod;
+};
+
+GameManager.prototype.callCoreRuntimeMethod = function (resolverMethodName, methodName, args) {
+  var runtimeMethod = this.resolveCoreRuntimeCallerFromResolver(resolverMethodName, methodName);
+  if (typeof runtimeMethod !== "function") return this.buildUnavailableCoreRuntimeCallResult();
   return {
     available: true,
-    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+    value: runtimeMethod.apply(null, this.normalizeCoreRuntimeCallArgs(args))
   };
 };
 
