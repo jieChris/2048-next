@@ -853,7 +853,7 @@ GameManager.prototype.cloneBoardMatrix = function (board) {
   return out;
 };
 
-GameManager.prototype.getSavedGameStateKey = function (modeKey) {
+GameManager.prototype.resolveSavedGameStateStorageKey = function (keyPrefix, modeKey) {
   var resolveSavedGameStateStorageKeyCore = this.resolveCoreStorageRuntimeMethod("resolveSavedGameStateStorageKey");
   if (resolveSavedGameStateStorageKeyCore) {
     var resolvedKey = resolveSavedGameStateStorageKeyCore({
@@ -861,30 +861,21 @@ GameManager.prototype.getSavedGameStateKey = function (modeKey) {
       currentModeKey: this.modeKey,
       currentMode: this.mode,
       defaultModeKey: GameManager.DEFAULT_MODE_KEY,
-      keyPrefix: GameManager.SAVED_GAME_STATE_KEY_PREFIX
+      keyPrefix: typeof keyPrefix === "string" ? keyPrefix : ""
     });
     if (typeof resolvedKey === "string" && resolvedKey) return resolvedKey;
   }
 
   var key = typeof modeKey === "string" && modeKey ? modeKey : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
-  return GameManager.SAVED_GAME_STATE_KEY_PREFIX + key;
+  return (typeof keyPrefix === "string" ? keyPrefix : "") + key;
+};
+
+GameManager.prototype.getSavedGameStateKey = function (modeKey) {
+  return this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_KEY_PREFIX, modeKey);
 };
 
 GameManager.prototype.getSavedGameStateLiteKey = function (modeKey) {
-  var resolveSavedGameStateStorageKeyCore = this.resolveCoreStorageRuntimeMethod("resolveSavedGameStateStorageKey");
-  if (resolveSavedGameStateStorageKeyCore) {
-    var resolvedKey = resolveSavedGameStateStorageKeyCore({
-      modeKey: modeKey,
-      currentModeKey: this.modeKey,
-      currentMode: this.mode,
-      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
-      keyPrefix: GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX
-    });
-    if (typeof resolvedKey === "string" && resolvedKey) return resolvedKey;
-  }
-
-  var key = typeof modeKey === "string" && modeKey ? modeKey : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
-  return GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX + key;
+  return this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX, modeKey);
 };
 
 GameManager.prototype.getWebStorageByName = function (name) {
