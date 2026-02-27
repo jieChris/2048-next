@@ -4167,32 +4167,42 @@ GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
   return [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
 };
 
-GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) {
-  var getTheoreticalMaxTileCore = this.callCoreRulesRuntime("getTheoreticalMaxTile", [width, height, ruleset]);
-  if (getTheoreticalMaxTileCore.available) return getTheoreticalMaxTileCore.value;
+GameManager.prototype.resolveTheoreticalMaxTileCellCount = function (width, height) {
   var w = Number(width);
   var h = Number(height);
   if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
   var cells = Math.floor(w) * Math.floor(h);
-  if (!Number.isInteger(cells) || cells <= 0) return null;
+  return Number.isInteger(cells) && cells > 0 ? cells : null;
+};
 
-  if (ruleset === "fibonacci") {
-    // Fibonacci 4x4 theoretical max: 4181.
-    var targetIndex = cells + 2;
-    var a = 1;
-    var b = 2;
-    if (targetIndex <= 1) return 1;
-    if (targetIndex === 2) return 2;
-    for (var i = 3; i <= targetIndex; i++) {
-      var next = a + b;
-      a = b;
-      b = next;
-    }
-    return b;
+GameManager.prototype.computeFibonacciTheoreticalMaxTile = function (cells) {
+  // Fibonacci 4x4 theoretical max: 4181.
+  var targetIndex = cells + 2;
+  var a = 1;
+  var b = 2;
+  if (targetIndex <= 1) return 1;
+  if (targetIndex === 2) return 2;
+  for (var i = 3; i <= targetIndex; i++) {
+    var next = a + b;
+    a = b;
+    b = next;
   }
+  return b;
+};
 
+GameManager.prototype.computePow2TheoreticalMaxTile = function (cells) {
   // Pow2 4x4 theoretical max: 131072.
   return Math.pow(2, cells + 1);
+};
+
+GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) {
+  var getTheoreticalMaxTileCore = this.callCoreRulesRuntime("getTheoreticalMaxTile", [width, height, ruleset]);
+  if (getTheoreticalMaxTileCore.available) return getTheoreticalMaxTileCore.value;
+  var cells = this.resolveTheoreticalMaxTileCellCount(width, height);
+  if (cells === null) return null;
+  return ruleset === "fibonacci"
+    ? this.computeFibonacciTheoreticalMaxTile(cells)
+    : this.computePow2TheoreticalMaxTile(cells);
 };
 
 GameManager.prototype.normalizeModeConfigBaseFallback = function (modeKey, rawConfig) {
