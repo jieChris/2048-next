@@ -6555,11 +6555,19 @@ GameManager.prototype.finalizeSetupUiState = function (preferredTimerModuleView,
   this.updateSetupStatsPanelForRestoreState(restoredFromSavedState);
 };
 
+GameManager.prototype.resolveSetupDetectedMode = function () {
+  return this.detectMode();
+};
+
+GameManager.prototype.initializeSetupGrid = function () {
+  this.grid = new Grid(this.width, this.height);
+};
+
 GameManager.prototype.initializeSetupModeAndGrid = function (options) {
-  var detectedMode = this.detectMode();
+  var detectedMode = this.resolveSetupDetectedMode();
   var resolvedModeConfig = this.resolveSetupModeConfig(detectedMode, options);
   this.applySetupModeConfig(resolvedModeConfig);
-  this.grid = new Grid(this.width, this.height);
+  this.initializeSetupGrid();
 };
 
 GameManager.prototype.resetSetupOutcomeState = function () {
