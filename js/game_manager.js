@@ -1722,6 +1722,14 @@ GameManager.prototype.getCoreGameSettingsStorageRuntime = function () {
   return this.getCoreRuntimeByName("CoreGameSettingsStorageRuntime");
 };
 
+GameManager.prototype.getCoreTimerIntervalRuntime = function () {
+  return this.getCoreRuntimeByName("CoreTimerIntervalRuntime");
+};
+
+GameManager.prototype.getCorePrettyTimeRuntime = function () {
+  return this.getCoreRuntimeByName("CorePrettyTimeRuntime");
+};
+
 GameManager.prototype.getCoreReplayCodecRuntime = function () {
   return this.getCoreRuntimeByName("CoreReplayCodecRuntime");
 };
@@ -4318,6 +4326,14 @@ GameManager.prototype.startTimer = function() {
 };
 
 GameManager.prototype.getTimerUpdateIntervalMs = function () {
+  var timerIntervalCore = this.getCoreTimerIntervalRuntime();
+  if (
+    timerIntervalCore &&
+    typeof timerIntervalCore.resolveTimerUpdateIntervalMs === "function"
+  ) {
+    return timerIntervalCore.resolveTimerUpdateIntervalMs(this.width, this.height);
+  }
+
   var area = (this.width || 4) * (this.height || 4);
   if (area >= 100) return 50;
   if (area >= 64) return 33;
@@ -4363,6 +4379,11 @@ GameManager.prototype.stopTimer = function() {
 };
 
 GameManager.prototype.pretty = function(time) {
+  var prettyTimeCore = this.getCorePrettyTimeRuntime();
+  if (prettyTimeCore && typeof prettyTimeCore.formatPrettyTime === "function") {
+    return prettyTimeCore.formatPrettyTime(time);
+  }
+
   if (time < 0) {return "DNF";}
     var bits = time % 1000;
     time = (time - bits) / 1000;
