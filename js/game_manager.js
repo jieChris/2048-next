@@ -5426,13 +5426,18 @@ GameManager.prototype.applyMergeMilestoneEffects = function (mergedValue, timeSt
   this.applyMergeTimerRowVisibilityEffects(mergeEffects);
 };
 
+GameManager.prototype.isUndoOperationAllowed = function () {
+  return this.replayMode || this.isUndoInteractionEnabled();
+};
+
+GameManager.prototype.hasRemainingUndoBudget = function () {
+  if (this.undoLimit === null) return true;
+  return this.undoUsed < this.undoLimit;
+};
+
 GameManager.prototype.canProcessUndoMove = function () {
-  if (!this.replayMode && !this.isUndoInteractionEnabled()) {
-    return false;
-  }
-  if (this.undoLimit !== null && this.undoUsed >= this.undoLimit) {
-    return false;
-  }
+  if (!this.isUndoOperationAllowed()) return false;
+  if (!this.hasRemainingUndoBudget()) return false;
   return this.undoStack.length > 0;
 };
 
