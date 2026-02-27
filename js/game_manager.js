@@ -817,16 +817,30 @@ GameManager.prototype.cloneBoardMatrix = function (board) {
   return out;
 };
 
+GameManager.prototype.callCoreStorageRuntime = function (methodName, args) {
+  var runtimeMethod = this.resolveCoreStorageRuntimeMethod(methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
 GameManager.prototype.resolveSavedGameStateStorageKey = function (keyPrefix, modeKey) {
-  var resolveSavedGameStateStorageKeyCore = this.resolveCoreStorageRuntimeMethod("resolveSavedGameStateStorageKey");
-  if (resolveSavedGameStateStorageKeyCore) {
-    var resolvedKey = resolveSavedGameStateStorageKeyCore({
+  var resolveSavedGameStateStorageKeyCore = this.callCoreStorageRuntime("resolveSavedGameStateStorageKey", [{
       modeKey: modeKey,
       currentModeKey: this.modeKey,
       currentMode: this.mode,
       defaultModeKey: GameManager.DEFAULT_MODE_KEY,
       keyPrefix: typeof keyPrefix === "string" ? keyPrefix : ""
-    });
+    }]);
+  if (resolveSavedGameStateStorageKeyCore.available) {
+    var resolvedKey = resolveSavedGameStateStorageKeyCore.value;
     if (typeof resolvedKey === "string" && resolvedKey) return resolvedKey;
   }
 
@@ -907,14 +921,12 @@ GameManager.prototype.requestAnimationFrame = function (callback) {
 };
 
 GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
-  var readStorageFlagFromContextCore = this.resolveCoreStorageRuntimeMethod("readStorageFlagFromContext");
-  if (readStorageFlagFromContextCore) {
-    return !!readStorageFlagFromContextCore({
+  var readStorageFlagFromContextCore = this.callCoreStorageRuntime("readStorageFlagFromContext", [{
       windowLike: this.getWindowLike(),
       key: key,
       trueValue: trueValue
-    });
-  }
+    }]);
+  if (readStorageFlagFromContextCore.available) return !!readStorageFlagFromContextCore.value;
   var storage = this.getWebStorageByName("localStorage");
   if (!storage || typeof storage.getItem !== "function") return false;
   var matchValue = typeof trueValue === "string" ? trueValue : "1";
@@ -926,16 +938,14 @@ GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
 };
 
 GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue, falseValue) {
-  var writeStorageFlagFromContextCore = this.resolveCoreStorageRuntimeMethod("writeStorageFlagFromContext");
-  if (writeStorageFlagFromContextCore) {
-    return !!writeStorageFlagFromContextCore({
+  var writeStorageFlagFromContextCore = this.callCoreStorageRuntime("writeStorageFlagFromContext", [{
       windowLike: this.getWindowLike(),
       key: key,
       enabled: !!enabled,
       trueValue: trueValue,
       falseValue: falseValue
-    });
-  }
+    }]);
+  if (writeStorageFlagFromContextCore.available) return !!writeStorageFlagFromContextCore.value;
   var storage = this.getWebStorageByName("localStorage");
   if (!storage || typeof storage.setItem !== "function") return false;
   var value = enabled ? (typeof trueValue === "string" ? trueValue : "1") : (typeof falseValue === "string" ? falseValue : "0");
@@ -948,12 +958,12 @@ GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue,
 };
 
 GameManager.prototype.readLocalStorageJsonMap = function (key) {
-  var readStorageJsonMapFromContextCore = this.resolveCoreStorageRuntimeMethod("readStorageJsonMapFromContext");
-  if (readStorageJsonMapFromContextCore) {
-    var runtimeMap = readStorageJsonMapFromContextCore({
+  var readStorageJsonMapFromContextCore = this.callCoreStorageRuntime("readStorageJsonMapFromContext", [{
       windowLike: this.getWindowLike(),
       key: key
-    });
+    }]);
+  if (readStorageJsonMapFromContextCore.available) {
+    var runtimeMap = readStorageJsonMapFromContextCore.value;
     if (runtimeMap && typeof runtimeMap === "object" && !Array.isArray(runtimeMap)) {
       return runtimeMap;
     }
@@ -973,14 +983,12 @@ GameManager.prototype.readLocalStorageJsonMap = function (key) {
 };
 
 GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
-  var writeStorageJsonMapFromContextCore = this.resolveCoreStorageRuntimeMethod("writeStorageJsonMapFromContext");
-  if (writeStorageJsonMapFromContextCore) {
-    return !!writeStorageJsonMapFromContextCore({
+  var writeStorageJsonMapFromContextCore = this.callCoreStorageRuntime("writeStorageJsonMapFromContext", [{
       windowLike: this.getWindowLike(),
       key: key,
       map: map
-    });
-  }
+    }]);
+  if (writeStorageJsonMapFromContextCore.available) return !!writeStorageJsonMapFromContextCore.value;
   var storage = this.getWebStorageByName("localStorage");
   if (!storage || typeof storage.setItem !== "function") return false;
   var safeMap = (map && typeof map === "object" && !Array.isArray(map)) ? map : {};
@@ -993,14 +1001,12 @@ GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
 };
 
 GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
-  var writeStorageJsonPayloadFromContextCore = this.resolveCoreStorageRuntimeMethod("writeStorageJsonPayloadFromContext");
-  if (writeStorageJsonPayloadFromContextCore) {
-    return !!writeStorageJsonPayloadFromContextCore({
+  var writeStorageJsonPayloadFromContextCore = this.callCoreStorageRuntime("writeStorageJsonPayloadFromContext", [{
       windowLike: this.getWindowLike(),
       key: key,
       payload: payload
-    });
-  }
+    }]);
+  if (writeStorageJsonPayloadFromContextCore.available) return !!writeStorageJsonPayloadFromContextCore.value;
   var storage = this.getWebStorageByName("localStorage");
   if (!storage || typeof storage.setItem !== "function") return false;
   try {
@@ -1014,11 +1020,11 @@ GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
 };
 
 GameManager.prototype.getSavedGameStateStorages = function () {
-  var getSavedGameStateStoragesFromContextCore = this.resolveCoreStorageRuntimeMethod("getSavedGameStateStoragesFromContext");
-  if (getSavedGameStateStoragesFromContextCore) {
-    var storagesByCore = getSavedGameStateStoragesFromContextCore({
+  var getSavedGameStateStoragesFromContextCore = this.callCoreStorageRuntime("getSavedGameStateStoragesFromContext", [{
       windowLike: this.getWindowLike()
-    });
+    }]);
+  if (getSavedGameStateStoragesFromContextCore.available) {
+    var storagesByCore = getSavedGameStateStoragesFromContextCore.value;
     if (Array.isArray(storagesByCore)) return storagesByCore;
   }
 
