@@ -4669,19 +4669,56 @@ GameManager.prototype.shouldAbortDirectionalMove = function (direction) {
   return Number(direction) === Number(lockedDirection);
 };
 
+GameManager.prototype.processMoveCell = function (cell, vector, undo) {
+  if (this.isBlockedCell(cell.x, cell.y)) return false;
+
+  var tile = this.grid.cellContent(cell);
+  if (!tile) return false;
+
+  var positions = this.findFarthestPosition(cell, vector);
+  var next = this.isBlockedCell(positions.next.x, positions.next.y)
+    ? null
+    : this.grid.cellContent(positions.next);
+
+  var mergedValue = next ? this.getMergedValue(tile.value, next.value) : null;
+  var interaction = this.planTileInteraction(cell, positions, next, mergedValue);
+  if (interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null) {
+    // We need to save tile since it will get removed
+    undo.tiles.push(this.createUndoTileSnapshot(tile, interaction.target));
+
+    var merged = new Tile(interaction.target, mergedValue);
+    merged.mergedFrom = [tile, next];
+
+    this.grid.insertTile(merged);
+    this.grid.removeTile(tile);
+
+    // Converge the two tiles' positions
+    tile.updatePosition(interaction.target);
+
+    // Update the score
+    this.score += merged.value;
+
+    var timeStr = this.pretty(this.time);
+    this.applyMergeMilestoneEffects(merged.value, timeStr);
+
+  } else {
+    // Save backup information
+    undo.tiles.push(this.createUndoTileSnapshot(tile, interaction.target));
+    this.moveTile(tile, interaction.target);
+  }
+
+  return interaction.moved === true;
+};
+
 // Move tiles on the grid in the specified direction
 GameManager.prototype.move = function (direction) {
   // 0: up, 1: right, 2:down, 3: left, -1: undo
-  var self = this;
-
   if (direction == -1) {
     this.handleUndoMove(direction);
     return;
   }
 
   if (this.shouldAbortDirectionalMove(direction)) return;
-
-  var cell, tile;
 
   var vector     = this.getVector(direction);
   var traversals = this.buildTraversals(vector);
@@ -4693,49 +4730,15 @@ GameManager.prototype.move = function (direction) {
   this.prepareTiles();
 
   // Traverse the grid in the right direction and move tiles
-  traversals.x.forEach(function (x) {
-    traversals.y.forEach(function (y) {
-      if (self.isBlockedCell(x, y)) return;
-      cell = { x: x, y: y };
-      tile = self.grid.cellContent(cell);
-
-      if (tile) {
-        var positions = self.findFarthestPosition(cell, vector);
-        var next      = self.isBlockedCell(positions.next.x, positions.next.y) ? null : self.grid.cellContent(positions.next);
-
-        var mergedValue = next ? self.getMergedValue(tile.value, next.value) : null;
-        var interaction = self.planTileInteraction(cell, positions, next, mergedValue);
-        if (interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null) {
-          // We need to save tile since it will get removed
-          undo.tiles.push(self.createUndoTileSnapshot(tile, interaction.target));
-
-          var merged = new Tile(interaction.target, mergedValue);
-          merged.mergedFrom = [tile, next];
-
-          self.grid.insertTile(merged);
-          self.grid.removeTile(tile);
-
-          // Converge the two tiles' positions
-          tile.updatePosition(interaction.target);
-
-          // Update the score
-          self.score += merged.value;
-
-          var timeStr = self.pretty(self.time);
-          self.applyMergeMilestoneEffects(merged.value, timeStr);
-
-        } else {
-          // Save backup information
-          undo.tiles.push(self.createUndoTileSnapshot(tile, interaction.target));
-          self.moveTile(tile, interaction.target);
-        }
-
-        if (interaction.moved) {
-          moved = true; // The tile moved from its original cell!
-        }
+  for (var xIndex = 0; xIndex < traversals.x.length; xIndex++) {
+    var x = traversals.x[xIndex];
+    for (var yIndex = 0; yIndex < traversals.y.length; yIndex++) {
+      var y = traversals.y[yIndex];
+      if (this.processMoveCell({ x: x, y: y }, vector, undo)) {
+        moved = true;
       }
-    });
-  });
+    }
+  }
 
   if (moved) {
     this.applySuccessfulMove(direction, scoreBeforeMove, undo);
