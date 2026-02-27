@@ -5893,6 +5893,13 @@ GameManager.prototype.refreshSpawnRateDisplay = function () {
   if (this.cornerRateEl) this.cornerRateEl.textContent = text;
 };
 
+GameManager.prototype.resolveActualSecondaryRateFallback = function () {
+  var pair = this.getSpawnStatPair();
+  var total = this.getTotalSpawnCount();
+  if (total <= 0) return "0.00";
+  return ((this.getSpawnCount(pair.secondary) / total) * 100).toFixed(2);
+};
+
 GameManager.prototype.getActualSecondaryRate = function () {
   var getActualSecondaryRateTextCore = this.callCoreRulesRuntime("getActualSecondaryRateText", [
     this.spawnValueCounts,
@@ -5902,11 +5909,7 @@ GameManager.prototype.getActualSecondaryRate = function () {
     var rateText = getActualSecondaryRateTextCore.value;
     if (typeof rateText === "string" && rateText) return rateText;
   }
-
-  var pair = this.getSpawnStatPair();
-  var total = this.getTotalSpawnCount();
-  if (total <= 0) return "0.00";
-  return ((this.getSpawnCount(pair.secondary) / total) * 100).toFixed(2);
+  return this.resolveActualSecondaryRateFallback();
 };
 
 GameManager.prototype.getActualFourRate = function () {
