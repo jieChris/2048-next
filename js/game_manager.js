@@ -5807,14 +5807,17 @@ GameManager.prototype.buildSessionSubmitFailureResult = function (endedAt, paylo
   };
 };
 
+GameManager.prototype.resolveSessionSubmitSkipReason = function () {
+  if (this.replayMode) return "replay_mode";
+  if (!this.isSessionTerminated()) return "not_terminated";
+  return null;
+};
+
 GameManager.prototype.tryAutoSubmitOnGameOver = function () {
   if (this.sessionSubmitDone) return;
-  if (this.replayMode) {
-    this.writeSkippedSessionSubmitResult("replay_mode");
-    return;
-  }
-  if (!this.isSessionTerminated()) {
-    this.writeSkippedSessionSubmitResult("not_terminated");
+  var skippedReason = this.resolveSessionSubmitSkipReason();
+  if (skippedReason) {
+    this.writeSkippedSessionSubmitResult(skippedReason);
     return;
   }
   var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
