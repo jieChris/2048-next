@@ -2992,6 +2992,24 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
   return fallback;
 };
 
+GameManager.prototype.resolveUndoRestorePayloadFallbackScore = function (source) {
+  if (Number.isFinite(source.score) && typeof source.score === "number") {
+    return Number(source.score);
+  }
+  return Number.isFinite(this.score) && typeof this.score === "number" ? Number(this.score) : 0;
+};
+
+GameManager.prototype.filterUndoRestorePayloadTiles = function (source) {
+  var rawTiles = Array.isArray(source.tiles) ? source.tiles : [];
+  var tiles = [];
+  for (var i = 0; i < rawTiles.length; i++) {
+    var item = rawTiles[i];
+    if (!item || typeof item !== "object") continue;
+    tiles.push(item);
+  }
+  return tiles;
+};
+
 GameManager.prototype.computeUndoRestorePayload = function (prev) {
   var computeUndoRestorePayloadCore = this.callCoreUndoRestorePayloadRuntime("computeUndoRestorePayload", [{
       prev: prev || {},
@@ -3001,18 +3019,8 @@ GameManager.prototype.computeUndoRestorePayload = function (prev) {
   if (computeUndoRestorePayloadCore.available) return computeUndoRestorePayloadCore.value || {};
 
   var source = prev && typeof prev === "object" ? prev : {};
-  var score =
-    Number.isFinite(source.score) && typeof source.score === "number"
-      ? Number(source.score)
-      : (Number.isFinite(this.score) && typeof this.score === "number" ? Number(this.score) : 0);
-  var rawTiles = Array.isArray(source.tiles) ? source.tiles : [];
-  var tiles = [];
-  for (var i = 0; i < rawTiles.length; i++) {
-    var item = rawTiles[i];
-    if (!item || typeof item !== "object") continue;
-    tiles.push(item);
-  }
-
+  var score = this.resolveUndoRestorePayloadFallbackScore(source);
+  var tiles = this.filterUndoRestorePayloadTiles(source);
   return {
     score: score,
     tiles: tiles
