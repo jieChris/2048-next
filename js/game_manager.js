@@ -3513,6 +3513,18 @@ GameManager.prototype.getTimerMilestoneValues = function () {
   return GameManager.TIMER_SLOT_IDS.slice();
 };
 
+GameManager.prototype.buildTimerMilestoneSlotMapFallback = function (milestones, slotIds) {
+  var map = {};
+  for (var i = 0; i < slotIds.length; i++) {
+    var slotId = String(slotIds[i]);
+    var milestone = milestones[i];
+    if (Number.isInteger(milestone) && milestone > 0) {
+      map[String(milestone)] = slotId;
+    }
+  }
+  return map;
+};
+
 GameManager.prototype.configureTimerMilestones = function () {
   this.timerMilestones = this.getTimerMilestoneValues();
   var getTimerMilestoneSlotByValueCore = this.callCoreRulesRuntime("getTimerMilestoneSlotByValue", [
@@ -3522,14 +3534,10 @@ GameManager.prototype.configureTimerMilestones = function () {
   if (getTimerMilestoneSlotByValueCore.available) {
     this.timerMilestoneSlotByValue = getTimerMilestoneSlotByValueCore.value;
   } else {
-    this.timerMilestoneSlotByValue = {};
-    for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
-      var slotId = String(GameManager.TIMER_SLOT_IDS[i]);
-      var milestone = this.timerMilestones[i];
-      if (Number.isInteger(milestone) && milestone > 0) {
-        this.timerMilestoneSlotByValue[String(milestone)] = slotId;
-      }
-    }
+    this.timerMilestoneSlotByValue = this.buildTimerMilestoneSlotMapFallback(
+      this.timerMilestones,
+      GameManager.TIMER_SLOT_IDS
+    );
   }
   this.updateTimerLegendLabels();
 };
