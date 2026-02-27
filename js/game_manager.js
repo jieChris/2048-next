@@ -5913,9 +5913,15 @@ GameManager.prototype.executeReplayAction = function (action) {
 };
 
 GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
-  if (dispatchPlan.method === "move") return this.executeReplayMoveDispatch(dispatchPlan);
-  if (dispatchPlan.method === "insertCustomTile") return this.executeReplayCustomTileDispatch(dispatchPlan);
+  var executorMethodName = this.resolveReplayDispatchExecutorMethodName(dispatchPlan && dispatchPlan.method);
+  if (executorMethodName) return this[executorMethodName](dispatchPlan);
   throw "Unknown replay action";
+};
+
+GameManager.prototype.resolveReplayDispatchExecutorMethodName = function (dispatchMethod) {
+  if (dispatchMethod === "move") return "executeReplayMoveDispatch";
+  if (dispatchMethod === "insertCustomTile") return "executeReplayCustomTileDispatch";
+  return null;
 };
 
 GameManager.prototype.executeReplayMoveDispatch = function (dispatchPlan) {
