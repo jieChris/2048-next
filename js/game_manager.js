@@ -5458,15 +5458,16 @@ GameManager.prototype.recordPostUndoMove = function (direction) {
   this.applyPostUndoRecord(postUndoRecord, direction);
 };
 
+GameManager.prototype.shouldStartTimerAfterUndoRestore = function (undoRestore) {
+  if (typeof undoRestore.shouldStartTimer === "boolean") {
+    return undoRestore.shouldStartTimer;
+  }
+  return this.timerStatus === 0;
+};
+
 GameManager.prototype.publishUndoCompletion = function (direction, undoRestore) {
   this.actuate();
-
-  // Resume timer if it was stopped (e.g. game over)
-  var shouldStartTimer =
-    typeof undoRestore.shouldStartTimer === "boolean"
-      ? undoRestore.shouldStartTimer
-      : this.timerStatus === 0;
-  if (shouldStartTimer) {
+  if (this.shouldStartTimerAfterUndoRestore(undoRestore)) {
     this.startTimer();
   }
   this.publishAdapterMoveResult({
