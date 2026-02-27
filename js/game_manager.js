@@ -3709,15 +3709,25 @@ GameManager.prototype.buildPostUndoRecordFallback = function () {
   );
 };
 
-GameManager.prototype.computePostUndoRecord = function (direction) {
-  var computePostUndoRecordCore = this.callCorePostUndoRecordRuntime("computePostUndoRecord", [{
-      replayMode: !!this.replayMode,
-      direction: direction,
-      hasSessionReplayV3: !!this.sessionReplayV3
-    }]);
-  if (computePostUndoRecordCore.available) return computePostUndoRecordCore.value || {};
+GameManager.prototype.buildComputePostUndoRecordCoreInput = function (direction) {
+  return {
+    replayMode: !!this.replayMode,
+    direction: direction,
+    hasSessionReplayV3: !!this.sessionReplayV3
+  };
+};
+
+GameManager.prototype.resolvePostUndoRecordFallback = function () {
   if (this.replayMode) return this.buildReplayPostUndoRecordFallback();
   return this.buildPostUndoRecordFallback();
+};
+
+GameManager.prototype.computePostUndoRecord = function (direction) {
+  var computePostUndoRecordCore = this.callCorePostUndoRecordRuntime("computePostUndoRecord", [
+    this.buildComputePostUndoRecordCoreInput(direction)
+  ]);
+  if (computePostUndoRecordCore.available) return computePostUndoRecordCore.value || {};
+  return this.resolvePostUndoRecordFallback();
 };
 
 GameManager.prototype.getUndoStateFallbackValues = function () {
