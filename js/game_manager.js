@@ -839,6 +839,27 @@ GameManager.prototype.callCoreRulesRuntime = function (methodName, args) {
   };
 };
 
+GameManager.prototype.callCoreRuntimeMethod = function (resolverMethodName, methodName, args) {
+  var resolver = this[resolverMethodName];
+  if (typeof resolver !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  var runtimeMethod = resolver.call(this, methodName);
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  return {
+    available: true,
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
+  };
+};
+
 GameManager.prototype.callCoreReplayCodecRuntime = function (methodName, args) {
   var runtimeMethod = this.resolveCoreReplayCodecRuntimeMethod(methodName);
   if (typeof runtimeMethod !== "function") {
@@ -2252,16 +2273,16 @@ GameManager.prototype.publishAdapterMoveResult = function (meta) {
 };
 
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
-  var planTileInteractionCore = this.resolveCoreMoveApplyRuntimeMethod("planTileInteraction");
-  if (planTileInteractionCore) {
-    var computed = planTileInteractionCore({
+  var planTileInteractionCore = this.callCoreRuntimeMethod("resolveCoreMoveApplyRuntimeMethod", "planTileInteraction", [{
       cell: cell,
       farthest: positions && positions.farthest ? positions.farthest : { x: 0, y: 0 },
       next: positions && positions.next ? positions.next : { x: 0, y: 0 },
       hasNextTile: !!next,
       nextMergedFrom: !!(next && next.mergedFrom),
       mergedValue: mergedValue
-    }) || {};
+    }]);
+  if (planTileInteractionCore.available) {
+    var computed = planTileInteractionCore.value || {};
     var mergeKind = computed.kind === "merge";
     var fallbackTarget = mergeKind ? positions.next : positions.farthest;
     var target = computed.target && Number.isInteger(computed.target.x) && Number.isInteger(computed.target.y)
@@ -2286,9 +2307,7 @@ GameManager.prototype.planTileInteraction = function (cell, positions, next, mer
 };
 
 GameManager.prototype.computePostMoveRecord = function (direction) {
-  var computePostMoveRecordCore = this.resolveCorePostMoveRecordRuntimeMethod("computePostMoveRecord");
-  if (computePostMoveRecordCore) {
-    return computePostMoveRecordCore({
+  var computePostMoveRecordCore = this.callCoreRuntimeMethod("resolveCorePostMoveRecordRuntimeMethod", "computePostMoveRecord", [{
       replayMode: !!this.replayMode,
       direction: direction,
       lastSpawn: this.lastSpawn ? {
@@ -2300,8 +2319,8 @@ GameManager.prototype.computePostMoveRecord = function (direction) {
       height: this.height,
       isFibonacciMode: this.isFibonacciMode(),
       hasSessionReplayV3: !!this.sessionReplayV3
-    }) || {};
-  }
+    }]);
+  if (computePostMoveRecordCore.available) return computePostMoveRecordCore.value || {};
 
   if (this.replayMode) {
     return {
@@ -2337,14 +2356,12 @@ GameManager.prototype.computePostMoveRecord = function (direction) {
 };
 
 GameManager.prototype.computePostUndoRecord = function (direction) {
-  var computePostUndoRecordCore = this.resolveCorePostUndoRecordRuntimeMethod("computePostUndoRecord");
-  if (computePostUndoRecordCore) {
-    return computePostUndoRecordCore({
+  var computePostUndoRecordCore = this.callCoreRuntimeMethod("resolveCorePostUndoRecordRuntimeMethod", "computePostUndoRecord", [{
       replayMode: !!this.replayMode,
       direction: direction,
       hasSessionReplayV3: !!this.sessionReplayV3
-    }) || {};
-  }
+    }]);
+  if (computePostUndoRecordCore.available) return computePostUndoRecordCore.value || {};
 
   if (this.replayMode) {
     return {
@@ -2365,14 +2382,12 @@ GameManager.prototype.computePostUndoRecord = function (direction) {
 };
 
 GameManager.prototype.computeUndoRestoreState = function (prev) {
-  var computeUndoRestoreStateCore = this.resolveCoreUndoRestoreRuntimeMethod("computeUndoRestoreState");
-  if (computeUndoRestoreStateCore) {
-    return computeUndoRestoreStateCore({
+  var computeUndoRestoreStateCore = this.callCoreRuntimeMethod("resolveCoreUndoRestoreRuntimeMethod", "computeUndoRestoreState", [{
       prev: prev || {},
       fallbackUndoUsed: this.undoUsed,
       timerStatus: this.timerStatus
-    }) || {};
-  }
+    }]);
+  if (computeUndoRestoreStateCore.available) return computeUndoRestoreStateCore.value || {};
 
   var source = prev && typeof prev === "object" ? prev : {};
   var fallbackUndoUsed = Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0;
@@ -2399,7 +2414,15 @@ GameManager.prototype.computeUndoRestoreState = function (prev) {
 };
 
 GameManager.prototype.createUndoSnapshotState = function () {
-  var createUndoSnapshotCore = this.resolveCoreUndoSnapshotRuntimeMethod("createUndoSnapshot");
+  var createUndoSnapshotCore = this.callCoreRuntimeMethod("resolveCoreUndoSnapshotRuntimeMethod", "createUndoSnapshot", [{
+    score: this.score,
+    comboStreak: this.comboStreak,
+    successfulMoveCount: this.successfulMoveCount,
+    lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
+    lockedDirectionTurn: this.lockedDirectionTurn,
+    lockedDirection: this.lockedDirection,
+    undoUsed: this.undoUsed
+  }]);
   var fallback = {
     score: Number.isFinite(this.score) ? Number(this.score) : 0,
     tiles: [],
@@ -2417,16 +2440,8 @@ GameManager.prototype.createUndoSnapshotState = function () {
     undoUsed: Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0
   };
 
-  if (createUndoSnapshotCore) {
-    var computed = createUndoSnapshotCore({
-      score: this.score,
-      comboStreak: this.comboStreak,
-      successfulMoveCount: this.successfulMoveCount,
-      lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
-      lockedDirectionTurn: this.lockedDirectionTurn,
-      lockedDirection: this.lockedDirection,
-      undoUsed: this.undoUsed
-    }) || {};
+  if (createUndoSnapshotCore.available) {
+    var computed = createUndoSnapshotCore.value || {};
     return {
       score: Number.isFinite(computed.score) ? Number(computed.score) : fallback.score,
       tiles: Array.isArray(computed.tiles) ? computed.tiles : [],
@@ -2479,9 +2494,7 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
   var fallbackUndoUsed = Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0;
 
   var source = entry && typeof entry === "object" ? entry : {};
-  var normalizeUndoStackEntryCore = this.resolveCoreUndoStackEntryRuntimeMethod("normalizeUndoStackEntry");
-  if (normalizeUndoStackEntryCore) {
-    var computed = normalizeUndoStackEntryCore({
+  var normalizeUndoStackEntryCore = this.callCoreRuntimeMethod("resolveCoreUndoStackEntryRuntimeMethod", "normalizeUndoStackEntry", [{
       entry: source,
       fallbackScore: fallbackScore,
       fallbackComboStreak: fallbackComboStreak,
@@ -2490,7 +2503,9 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
       fallbackLockedDirectionTurn: fallbackLockedDirectionTurn,
       fallbackLockedDirection: fallbackLockedDirection,
       fallbackUndoUsed: fallbackUndoUsed
-    }) || {};
+    }]);
+  if (normalizeUndoStackEntryCore.available) {
+    var computed = normalizeUndoStackEntryCore.value || {};
     if (computed && typeof computed === "object") {
       source = computed;
     }
@@ -2538,9 +2553,7 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
 };
 
 GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
-  var createUndoTileSnapshotCore = this.resolveCoreUndoTileSnapshotRuntimeMethod("createUndoTileSnapshot");
-  if (createUndoTileSnapshotCore) {
-    var computed = createUndoTileSnapshotCore({
+  var createUndoTileSnapshotCore = this.callCoreRuntimeMethod("resolveCoreUndoTileSnapshotRuntimeMethod", "createUndoTileSnapshot", [{
       tile: {
         x: tile && typeof tile === "object" ? tile.x : null,
         y: tile && typeof tile === "object" ? tile.y : null,
@@ -2550,7 +2563,9 @@ GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
         x: target && typeof target === "object" ? target.x : null,
         y: target && typeof target === "object" ? target.y : null
       }
-    }) || {};
+    }]);
+  if (createUndoTileSnapshotCore.available) {
+    var computed = createUndoTileSnapshotCore.value || {};
     if (
       computed &&
       typeof computed === "object" &&
@@ -2591,9 +2606,7 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
     }
   };
 
-  var createUndoRestoreTileCore = this.resolveCoreUndoTileRestoreRuntimeMethod("createUndoRestoreTile");
-  if (createUndoRestoreTileCore) {
-    var computed = createUndoRestoreTileCore({
+  var createUndoRestoreTileCore = this.callCoreRuntimeMethod("resolveCoreUndoTileRestoreRuntimeMethod", "createUndoRestoreTile", [{
       x: source.x,
       y: source.y,
       value: source.value,
@@ -2601,7 +2614,9 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
         x: previous.x,
         y: previous.y
       }
-    }) || {};
+    }]);
+  if (createUndoRestoreTileCore.available) {
+    var computed = createUndoRestoreTileCore.value || {};
     if (
       computed &&
       typeof computed === "object" &&
@@ -2616,13 +2631,15 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
 };
 
 GameManager.prototype.computeUndoRestorePayload = function (prev) {
-  var computeUndoRestorePayloadCore = this.resolveCoreUndoRestorePayloadRuntimeMethod("computeUndoRestorePayload");
-  if (computeUndoRestorePayloadCore) {
-    return computeUndoRestorePayloadCore({
+  var computeUndoRestorePayloadCore = this.callCoreRuntimeMethod(
+    "resolveCoreUndoRestorePayloadRuntimeMethod",
+    "computeUndoRestorePayload",
+    [{
       prev: prev || {},
       fallbackScore: this.score
-    }) || {};
-  }
+    }]
+  );
+  if (computeUndoRestorePayloadCore.available) return computeUndoRestorePayloadCore.value || {};
 
   var source = prev && typeof prev === "object" ? prev : {};
   var score =
@@ -2644,15 +2661,13 @@ GameManager.prototype.computeUndoRestorePayload = function (prev) {
 };
 
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
-  var computeMergeEffectsCore = this.resolveCoreMergeEffectsRuntimeMethod("computeMergeEffects");
-  if (computeMergeEffectsCore) {
-    return computeMergeEffectsCore({
+  var computeMergeEffectsCore = this.callCoreRuntimeMethod("resolveCoreMergeEffectsRuntimeMethod", "computeMergeEffects", [{
       mergedValue: mergedValue,
       isCappedMode: this.isCappedMode(),
       cappedTargetValue: this.getCappedTargetValue(),
       reached32k: !!this.reached32k
-    }) || {};
-  }
+    }]);
+  if (computeMergeEffectsCore.available) return computeMergeEffectsCore.value || {};
 
   var value = Number(mergedValue);
   var cappedMode = this.isCappedMode();
@@ -2848,14 +2863,14 @@ GameManager.prototype.normalizeSpecialRules = function (rules) {
 };
 
 GameManager.prototype.applySpecialRulesState = function () {
-  var computeSpecialRulesStateCore = this.resolveCoreSpecialRulesRuntimeMethod("computeSpecialRulesState");
-  if (computeSpecialRulesStateCore) {
-    var computed = computeSpecialRulesStateCore(
+  var computeSpecialRulesStateCore = this.callCoreRuntimeMethod("resolveCoreSpecialRulesRuntimeMethod", "computeSpecialRulesState", [
       this.specialRules || {},
       this.width,
       this.height,
       this.clonePlain.bind(this)
-    ) || {};
+    ]);
+  if (computeSpecialRulesStateCore.available) {
+    var computed = computeSpecialRulesStateCore.value || {};
     this.blockedCellSet = computed.blockedCellSet && typeof computed.blockedCellSet === "object"
       ? computed.blockedCellSet
       : {};
@@ -2912,15 +2927,13 @@ GameManager.prototype.getGridCellAvailableFn = function () {
 };
 
 GameManager.prototype.getAvailableCells = function () {
-  var getAvailableCellsCore = this.resolveCoreGridScanRuntimeMethod("getAvailableCells");
-  if (getAvailableCellsCore) {
-    return getAvailableCellsCore(
+  var getAvailableCellsCore = this.callCoreRuntimeMethod("resolveCoreGridScanRuntimeMethod", "getAvailableCells", [
       this.width,
       this.height,
       this.isBlockedCell.bind(this),
       this.getGridCellAvailableFn()
-    );
-  }
+    ]);
+  if (getAvailableCellsCore.available) return getAvailableCellsCore.value;
 
   var out = [];
   for (var x = 0; x < this.width; x++) {
@@ -2933,9 +2946,7 @@ GameManager.prototype.getAvailableCells = function () {
 };
 
 GameManager.prototype.getLockedDirection = function () {
-  var getLockedDirectionStateCore = this.resolveCoreDirectionLockRuntimeMethod("getLockedDirectionState");
-  if (getLockedDirectionStateCore) {
-    var computed = getLockedDirectionStateCore({
+  var getLockedDirectionStateCore = this.callCoreRuntimeMethod("resolveCoreDirectionLockRuntimeMethod", "getLockedDirectionState", [{
       directionLockRules: this.directionLockRules,
       successfulMoveCount: this.successfulMoveCount,
       lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
@@ -2945,7 +2956,9 @@ GameManager.prototype.getLockedDirection = function () {
     }, function (seed) {
       var rng = new Math.seedrandom(seed);
       return rng();
-    }) || {};
+    }]);
+  if (getLockedDirectionStateCore.available) {
+    var computed = getLockedDirectionStateCore.value || {};
 
     if (Number.isInteger(computed.lockedDirection)) {
       this.lockedDirection = computed.lockedDirection;
@@ -4563,14 +4576,14 @@ GameManager.prototype.moveTile = function (tile, cell) {
 };
 
 GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
-  var computePostMoveScoreCore = this.resolveCoreScoringRuntimeMethod("computePostMoveScore");
-  if (computePostMoveScoreCore) {
-    var scoreResult = computePostMoveScoreCore({
+  var computePostMoveScoreCore = this.callCoreRuntimeMethod("resolveCoreScoringRuntimeMethod", "computePostMoveScore", [{
       scoreBeforeMove: scoreBeforeMove,
       scoreAfterMerge: this.score,
       comboStreak: this.comboStreak,
       comboMultiplier: this.comboMultiplier
-    }) || {};
+    }]);
+  if (computePostMoveScoreCore.available) {
+    var scoreResult = computePostMoveScoreCore.value || {};
 
     if (Number.isFinite(scoreResult.score)) {
       this.score = Number(scoreResult.score);
@@ -4596,15 +4609,15 @@ GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
 };
 
 GameManager.prototype.applyPostMoveLifecycle = function (hasMovesAvailable) {
-  var computePostMoveLifecycleCore = this.resolveCorePostMoveRuntimeMethod("computePostMoveLifecycle");
+  var computePostMoveLifecycleCore = this.callCoreRuntimeMethod("resolveCorePostMoveRuntimeMethod", "computePostMoveLifecycle", [{
+    successfulMoveCount: this.successfulMoveCount,
+    hasMovesAvailable: hasMovesAvailable,
+    timerStatus: this.timerStatus
+  }]);
   var postMoveResult = null;
 
-  if (computePostMoveLifecycleCore) {
-    postMoveResult = computePostMoveLifecycleCore({
-      successfulMoveCount: this.successfulMoveCount,
-      hasMovesAvailable: hasMovesAvailable,
-      timerStatus: this.timerStatus
-    }) || {};
+  if (computePostMoveLifecycleCore.available) {
+    postMoveResult = computePostMoveLifecycleCore.value || {};
     if (Number.isInteger(postMoveResult.successfulMoveCount) && postMoveResult.successfulMoveCount >= 0) {
       this.successfulMoveCount = postMoveResult.successfulMoveCount;
     } else {
@@ -5191,8 +5204,8 @@ GameManager.prototype.stopTimer = function() {
 };
 
 GameManager.prototype.pretty = function(time) {
-  var formatPrettyTimeCore = this.resolveCorePrettyTimeRuntimeMethod("formatPrettyTime");
-  if (formatPrettyTimeCore) return formatPrettyTimeCore(time);
+  var formatPrettyTimeCore = this.callCoreRuntimeMethod("resolveCorePrettyTimeRuntimeMethod", "formatPrettyTime", [time]);
+  if (formatPrettyTimeCore.available) return formatPrettyTimeCore.value;
 
   if (time < 0) {return "DNF";}
     var bits = time % 1000;
@@ -5323,17 +5336,18 @@ GameManager.prototype.invalidateTimers = function(limit) {
 };
 
 GameManager.prototype.getFinalBoardMatrix = function () {
-  var buildBoardMatrixCore = this.resolveCoreGridScanRuntimeMethod("buildBoardMatrix");
-  if (buildBoardMatrixCore) {
-    var self = this;
-    var board = buildBoardMatrixCore(
-      this.width,
-      this.height,
-      function (x, y) {
+  var buildBoardMatrixCore = this.callCoreRuntimeMethod("resolveCoreGridScanRuntimeMethod", "buildBoardMatrix", [
+    this.width,
+    this.height,
+    (function (self) {
+      return function (x, y) {
         var tile = self.grid.cellContent({ x: x, y: y });
         return tile ? tile.value : 0;
-      }
-    );
+      };
+    })(this)
+  ]);
+  if (buildBoardMatrixCore.available) {
+    var board = buildBoardMatrixCore.value;
     if (Array.isArray(board)) return board;
   }
 
@@ -5350,9 +5364,9 @@ GameManager.prototype.getFinalBoardMatrix = function () {
 };
 
 GameManager.prototype.getBestTileValue = function () {
-  var getBestTileValueCore = this.resolveCoreGridScanRuntimeMethod("getBestTileValue");
-  if (getBestTileValueCore) {
-    var bestCore = Number(getBestTileValueCore(this.getFinalBoardMatrix()));
+  var getBestTileValueCore = this.callCoreRuntimeMethod("resolveCoreGridScanRuntimeMethod", "getBestTileValue", [this.getFinalBoardMatrix()]);
+  if (getBestTileValueCore.available) {
+    var bestCore = Number(getBestTileValueCore.value);
     if (Number.isFinite(bestCore) && bestCore >= 0) return bestCore;
   }
 
