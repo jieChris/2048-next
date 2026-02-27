@@ -6900,6 +6900,27 @@ GameManager.prototype.writeMissingLocalHistoryStoreResult = function () {
   });
 };
 
+GameManager.prototype.buildSessionSubmitContext = function (localHistorySaveRecord) {
+  var windowLike = this.getWindowLike();
+  var adapterParitySnapshot = this.resolveSessionSubmitAdapterParitySnapshot();
+  var endedAt = new Date().toISOString();
+  var payload = this.buildSessionSubmitPayload(endedAt, windowLike, adapterParitySnapshot);
+  return {
+    localHistorySaveRecord: localHistorySaveRecord,
+    endedAt: endedAt,
+    payload: payload
+  };
+};
+
+GameManager.prototype.persistSessionSubmitContext = function (submitContext) {
+  try {
+    var saved = this.persistSessionSubmitPayload(submitContext.localHistorySaveRecord, submitContext.payload);
+    this.writeSessionSubmitSuccessResult(submitContext.endedAt, submitContext.payload, saved);
+  } catch (error) {
+    this.writeSessionSubmitFailureResult(submitContext.endedAt, submitContext.payload, error);
+  }
+};
+
 GameManager.prototype.tryAutoSubmitOnGameOver = function () {
   if (this.sessionSubmitDone) return;
   var skippedReason = this.resolveSessionSubmitSkipReason();
@@ -6913,18 +6934,9 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
     return;
   }
 
-  var windowLike = this.getWindowLike();
-  var adapterParitySnapshot = this.resolveSessionSubmitAdapterParitySnapshot();
   this.sessionSubmitDone = true;
-  var endedAt = new Date().toISOString();
-  var payload = this.buildSessionSubmitPayload(endedAt, windowLike, adapterParitySnapshot);
-
-  try {
-    var saved = this.persistSessionSubmitPayload(localHistorySaveRecord, payload);
-    this.writeSessionSubmitSuccessResult(endedAt, payload, saved);
-  } catch (error) {
-    this.writeSessionSubmitFailureResult(endedAt, payload, error);
-  }
+  var submitContext = this.buildSessionSubmitContext(localHistorySaveRecord);
+  this.persistSessionSubmitContext(submitContext);
 };
 
 GameManager.prototype.isSessionTerminated = function () {
@@ -7006,15 +7018,31 @@ GameManager.prototype.applyJsonV3ReplayChallengeMeta = function (envelope) {
   }
 };
 
-GameManager.prototype.applyReplayImportActions = function (payload) {
-  var source = payload && typeof payload === "object" ? payload : {};
+GameManager.prototype.normalizeReplayImportActionsSource = function (payload) {
+  return payload && typeof payload === "object" ? payload : {};
+};
+
+GameManager.prototype.applyReplayImportMoves = function (source) {
   this.replayMoves = Array.isArray(source.replayMoves) ? source.replayMoves : [];
+};
+
+GameManager.prototype.applyReplayImportSpawns = function (source) {
   if (this.hasOwnKey(source, "replaySpawns")) {
     this.replaySpawns = source.replaySpawns;
   }
+};
+
+GameManager.prototype.applyReplayImportCompactLog = function (source) {
   if (typeof source.replayMovesV2 === "string") {
     this.replayMovesV2 = source.replayMovesV2;
   }
+};
+
+GameManager.prototype.applyReplayImportActions = function (payload) {
+  var source = this.normalizeReplayImportActionsSource(payload);
+  this.applyReplayImportMoves(source);
+  this.applyReplayImportSpawns(source);
+  this.applyReplayImportCompactLog(source);
 };
 
 GameManager.prototype.resolveV4ReplayImportActionsPayload = function (decodedV4Actions) {
@@ -7080,16 +7108,24 @@ GameManager.prototype.coerceReplayImportInputToString = function (replayString) 
   return JSON.stringify(replayString);
 };
 
+GameManager.prototype.isJsonV3ReplayEnvelopeKind = function (kind) {
+  return kind === "json-v3";
+};
+
+GameManager.prototype.isV4ReplayEnvelopeKind = function (kind) {
+  return kind === "v4c";
+};
+
 GameManager.prototype.isSupportedReplayEnvelopeKind = function (kind) {
-  return kind === "json-v3" || kind === "v4c";
+  return this.isJsonV3ReplayEnvelopeKind(kind) || this.isV4ReplayEnvelopeKind(kind);
 };
 
 GameManager.prototype.importParsedReplayEnvelopeByKind = function (parsedEnvelope, replayModeConfig) {
-  if (parsedEnvelope.kind === "json-v3") {
+  if (this.isJsonV3ReplayEnvelopeKind(parsedEnvelope.kind)) {
     this.importJsonV3ReplayEnvelope(parsedEnvelope, replayModeConfig);
     return true;
   }
-  if (parsedEnvelope.kind === "v4c") {
+  if (this.isV4ReplayEnvelopeKind(parsedEnvelope.kind)) {
     this.importV4ReplayEnvelope(parsedEnvelope, replayModeConfig);
     return true;
   }
