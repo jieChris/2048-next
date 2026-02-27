@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   buildLiteSavedGameStatePayload,
+  getSavedGameStateStoragesFromContext,
   normalizeTimerModuleViewMode,
   readSavedPayloadByKeyFromStorages,
   readSavedPayloadFromWindowName,
+  removeKeysFromStorages,
   readUndoEnabledForModeFromMap,
   readTimerModuleViewForModeFromMap,
   resolveSavedGameStateStorageKey,
@@ -146,6 +148,47 @@ describe("core game settings storage", () => {
         payload: { score: 0 }
       })
     ).toBe(false);
+  });
+
+  it("resolves saved-state storages from window context without duplicates", () => {
+    const localStorage = { setItem: vi.fn() };
+    const sessionStorage = { setItem: vi.fn() };
+
+    expect(
+      getSavedGameStateStoragesFromContext({
+        windowLike: {
+          localStorage,
+          sessionStorage
+        }
+      })
+    ).toEqual([localStorage, sessionStorage]);
+
+    expect(
+      getSavedGameStateStoragesFromContext({
+        windowLike: {
+          localStorage,
+          sessionStorage: localStorage
+        }
+      })
+    ).toEqual([localStorage]);
+  });
+
+  it("removes multiple keys from available storages safely", () => {
+    const removeA = vi.fn();
+    const removeB = vi.fn(() => {
+      throw new Error("denied");
+    });
+
+    const result = removeKeysFromStorages({
+      storages: [{ removeItem: removeA }, { removeItem: removeB }, {}],
+      keys: ["saved_game_state_v2_standard_4x4_pow2_no_undo", "", "saved_game_state_lite_v2_standard_4x4_pow2_no_undo"]
+    });
+
+    expect(result).toBe(true);
+    expect(removeA).toHaveBeenCalledTimes(2);
+    expect(removeA).toHaveBeenCalledWith("saved_game_state_v2_standard_4x4_pow2_no_undo");
+    expect(removeA).toHaveBeenCalledWith("saved_game_state_lite_v2_standard_4x4_pow2_no_undo");
+    expect(removeB).toHaveBeenCalledTimes(2);
   });
 
   it("reads most recent saved payload from storages and removes invalid entries", () => {

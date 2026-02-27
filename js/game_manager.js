@@ -1080,6 +1080,17 @@ GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
 };
 
 GameManager.prototype.getSavedGameStateStorages = function () {
+  var getSavedGameStateStoragesFromContextCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "getSavedGameStateStoragesFromContext"
+  );
+  if (getSavedGameStateStoragesFromContextCore) {
+    var storagesByCore = getSavedGameStateStoragesFromContextCore({
+      windowLike: this.getWindowLike()
+    });
+    if (Array.isArray(storagesByCore)) return storagesByCore;
+  }
+
   var out = [];
   var localStore = this.getWebStorageByName("localStorage");
   var sessionStore = this.getWebStorageByName("sessionStorage");
@@ -1289,6 +1300,18 @@ GameManager.prototype.clearSavedGameState = function (modeKey) {
     this.getSavedGameStateLiteKey(modeKey)
   ];
   var stores = this.getSavedGameStateStorages();
+  var removeKeysFromStoragesCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "removeKeysFromStorages"
+  );
+  if (removeKeysFromStoragesCore) {
+    var removedByCore = removeKeysFromStoragesCore({
+      storages: stores,
+      keys: keys
+    });
+    if (removedByCore === true) return;
+  }
+
   for (var i = 0; i < stores.length; i++) {
     for (var k = 0; k < keys.length; k++) {
       try {

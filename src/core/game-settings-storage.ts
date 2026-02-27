@@ -6,6 +6,7 @@ interface StorageLike {
 
 interface WindowLike {
   localStorage?: StorageLike | null;
+  sessionStorage?: StorageLike | null;
   name?: string;
 }
 
@@ -334,6 +335,46 @@ export function writeSavedPayloadToStorages(options: {
     }
   }
   return false;
+}
+
+export function getSavedGameStateStoragesFromContext(options: {
+  windowLike?: unknown;
+}): StorageLike[] {
+  const opts = options || {};
+  const win = opts.windowLike as WindowLike | null | undefined;
+  if (!win) return [];
+
+  const storages: StorageLike[] = [];
+  const localStorage = win.localStorage || null;
+  const sessionStorage = win.sessionStorage || null;
+  if (localStorage) storages.push(localStorage);
+  if (sessionStorage && sessionStorage !== localStorage) storages.push(sessionStorage);
+  return storages;
+}
+
+export function removeKeysFromStorages(options: {
+  storages?: unknown;
+  keys?: unknown;
+}): boolean {
+  const opts = options || {};
+  const storages = Array.isArray(opts.storages) ? opts.storages : [];
+  const keys = Array.isArray(opts.keys)
+    ? opts.keys.filter((key): key is string => typeof key === "string" && key.length > 0)
+    : [];
+  if (!storages.length || !keys.length) return false;
+
+  let removed = false;
+  for (let i = 0; i < storages.length; i++) {
+    const storage = storages[i] as StorageLike | null;
+    if (!storage || typeof storage.removeItem !== "function") continue;
+    for (let k = 0; k < keys.length; k++) {
+      try {
+        storage.removeItem(keys[k]);
+        removed = true;
+      } catch (_err) {}
+    }
+  }
+  return removed;
 }
 
 export function readSavedPayloadByKeyFromStorages(options: {

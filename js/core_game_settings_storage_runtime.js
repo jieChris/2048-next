@@ -264,6 +264,43 @@
     return false;
   }
 
+  function getSavedGameStateStoragesFromContext(options) {
+    var opts = options || {};
+    var win = opts.windowLike;
+    if (!win) return [];
+
+    var storages = [];
+    var localStorage = win.localStorage || null;
+    var sessionStorage = win.sessionStorage || null;
+    if (localStorage) storages.push(localStorage);
+    if (sessionStorage && sessionStorage !== localStorage) storages.push(sessionStorage);
+    return storages;
+  }
+
+  function removeKeysFromStorages(options) {
+    var opts = options || {};
+    var storages = Array.isArray(opts.storages) ? opts.storages : [];
+    var keys = Array.isArray(opts.keys) ? opts.keys : [];
+    var filteredKeys = [];
+    for (var i = 0; i < keys.length; i++) {
+      if (typeof keys[i] === "string" && keys[i]) filteredKeys.push(keys[i]);
+    }
+    if (!storages.length || !filteredKeys.length) return false;
+
+    var removed = false;
+    for (var s = 0; s < storages.length; s++) {
+      var storage = storages[s];
+      if (!storage || typeof storage.removeItem !== "function") continue;
+      for (var k = 0; k < filteredKeys.length; k++) {
+        try {
+          storage.removeItem(filteredKeys[k]);
+          removed = true;
+        } catch (_err) {}
+      }
+    }
+    return removed;
+  }
+
   function readSavedPayloadByKeyFromStorages(options) {
     var opts = options || {};
     var key = typeof opts.key === "string" ? opts.key : "";
@@ -461,6 +498,9 @@
     writeStorageJsonPayloadFromContext;
   global.CoreGameSettingsStorageRuntime.writeSavedPayloadToStorages =
     writeSavedPayloadToStorages;
+  global.CoreGameSettingsStorageRuntime.getSavedGameStateStoragesFromContext =
+    getSavedGameStateStoragesFromContext;
+  global.CoreGameSettingsStorageRuntime.removeKeysFromStorages = removeKeysFromStorages;
   global.CoreGameSettingsStorageRuntime.readSavedPayloadByKeyFromStorages =
     readSavedPayloadByKeyFromStorages;
   global.CoreGameSettingsStorageRuntime.readSavedPayloadFromWindowName =
