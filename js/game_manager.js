@@ -1973,19 +1973,38 @@ GameManager.prototype.buildSavedGameStateBasePayload = function (savedAt, replay
   };
 };
 
+GameManager.prototype.resolveSavedBoardRestartSnapshot = function () {
+  return {
+    initial_board_matrix: this.initialBoardMatrix ? this.cloneBoardMatrix(this.initialBoardMatrix) : this.getFinalBoardMatrix(),
+    replay_start_board_matrix: this.replayStartBoardMatrix ? this.cloneBoardMatrix(this.replayStartBoardMatrix) : null,
+    practice_restart_board_matrix: this.practiceRestartBoardMatrix ? this.cloneBoardMatrix(this.practiceRestartBoardMatrix) : null,
+    practice_restart_mode_config: this.practiceRestartModeConfig ? this.safeClonePlain(this.practiceRestartModeConfig, null) : null
+  };
+};
+
+GameManager.prototype.resolveSavedDirectionLockSnapshot = function () {
+  return {
+    lock_consumed_at_move_count: Number.isInteger(this.lockConsumedAtMoveCount) ? this.lockConsumedAtMoveCount : -1,
+    locked_direction_turn: Number.isInteger(this.lockedDirectionTurn) ? this.lockedDirectionTurn : null,
+    locked_direction: Number.isInteger(this.lockedDirection) ? this.lockedDirection : null
+  };
+};
+
 GameManager.prototype.buildSavedGameStateExtendedPayload = function (timerSubState) {
+  var boardSnapshot = this.resolveSavedBoardRestartSnapshot();
+  var directionLockSnapshot = this.resolveSavedDirectionLockSnapshot();
   return {
     combo_streak: Number.isInteger(this.comboStreak) ? this.comboStreak : 0,
     successful_move_count: Number.isInteger(this.successfulMoveCount) ? this.successfulMoveCount : 0,
     undo_used: Number.isInteger(this.undoUsed) ? this.undoUsed : 0,
-    lock_consumed_at_move_count: Number.isInteger(this.lockConsumedAtMoveCount) ? this.lockConsumedAtMoveCount : -1,
-    locked_direction_turn: Number.isInteger(this.lockedDirectionTurn) ? this.lockedDirectionTurn : null,
-    locked_direction: Number.isInteger(this.lockedDirection) ? this.lockedDirection : null,
+    lock_consumed_at_move_count: directionLockSnapshot.lock_consumed_at_move_count,
+    locked_direction_turn: directionLockSnapshot.locked_direction_turn,
+    locked_direction: directionLockSnapshot.locked_direction,
     challenge_id: this.challengeId || null,
-    initial_board_matrix: this.initialBoardMatrix ? this.cloneBoardMatrix(this.initialBoardMatrix) : this.getFinalBoardMatrix(),
-    replay_start_board_matrix: this.replayStartBoardMatrix ? this.cloneBoardMatrix(this.replayStartBoardMatrix) : null,
-    practice_restart_board_matrix: this.practiceRestartBoardMatrix ? this.cloneBoardMatrix(this.practiceRestartBoardMatrix) : null,
-    practice_restart_mode_config: this.practiceRestartModeConfig ? this.safeClonePlain(this.practiceRestartModeConfig, null) : null,
+    initial_board_matrix: boardSnapshot.initial_board_matrix,
+    replay_start_board_matrix: boardSnapshot.replay_start_board_matrix,
+    practice_restart_board_matrix: boardSnapshot.practice_restart_board_matrix,
+    practice_restart_mode_config: boardSnapshot.practice_restart_mode_config,
     timer_module_view: this.getTimerModuleViewMode ? this.getTimerModuleViewMode() : "timer",
     timer_fixed_rows: this.captureTimerFixedRowsState(),
     timer_dynamic_rows_capped: this.captureTimerDynamicRowsState("capped-timer-container"),
