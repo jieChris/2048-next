@@ -5345,7 +5345,10 @@ GameManager.prototype.getTimerUpdateIntervalMs = function () {
     this.height
   ]);
   if (resolveTimerUpdateIntervalMsCore.available) return resolveTimerUpdateIntervalMsCore.value;
+  return this.resolveTimerUpdateIntervalMsFallback();
+};
 
+GameManager.prototype.resolveTimerUpdateIntervalMsFallback = function () {
   var area = (this.width || 4) * (this.height || 4);
   if (area >= 100) return 50;
   if (area >= 64) return 33;
