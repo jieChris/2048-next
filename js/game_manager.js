@@ -1354,11 +1354,15 @@ GameManager.prototype.resolveSavedPayloadFromWindowNameMap = function (map, mode
   return payload;
 };
 
-GameManager.prototype.readWindowNameSavedPayloadFallback = function (modeKey) {
+GameManager.prototype.resolveWindowNameSavedPayloadMapForMode = function (modeKey) {
   var raw = this.readWindowNameRaw();
   var marker = this.resolveWindowNameSavedPayloadMarker();
   var map = this.resolveWindowNameSavedMap(raw, marker);
   return this.resolveSavedPayloadFromWindowNameMap(map, modeKey);
+};
+
+GameManager.prototype.readWindowNameSavedPayloadFallback = function (modeKey) {
+  return this.resolveWindowNameSavedPayloadMapForMode(modeKey);
 };
 
 GameManager.prototype.resolveWindowNameParts = function (rawWindowName) {
@@ -1405,6 +1409,12 @@ GameManager.prototype.encodeWindowNameSavedMap = function (map) {
   }
 };
 
+GameManager.prototype.buildWindowNameWithSavedMap = function (keptParts, marker, encodedMap) {
+  var nextParts = Array.isArray(keptParts) ? keptParts.slice() : [];
+  nextParts.push(marker + encodedMap);
+  return nextParts.join("&");
+};
+
 GameManager.prototype.writeWindowNameRaw = function (windowNameValue) {
   if (typeof window === "undefined") return false;
   try {
@@ -1424,8 +1434,8 @@ GameManager.prototype.writeWindowNameSavedPayloadFallback = function (modeKey, p
   var nextMap = this.applySavedPayloadToWindowNameMap(splitState.map, modeKey, payload);
   var encodedMap = this.encodeWindowNameSavedMap(nextMap);
   if (typeof encodedMap !== "string") return false;
-  splitState.kept.push(marker + encodedMap);
-  return this.writeWindowNameRaw(splitState.kept.join("&"));
+  var nextWindowName = this.buildWindowNameWithSavedMap(splitState.kept, marker, encodedMap);
+  return this.writeWindowNameRaw(nextWindowName);
 };
 
 GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) {
