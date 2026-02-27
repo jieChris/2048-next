@@ -526,6 +526,11 @@ GameManager.REPLAY_V4_MODE_KEY_TO_CODE = {
   practice_legacy: "P"
 };
 
+GameManager.LEGACY_REPLAY_V1_PREFIX = "REPLAY_v1_";
+GameManager.LEGACY_REPLAY_V2_PREFIX = "REPLAY_v2_";
+GameManager.LEGACY_REPLAY_V2S_PREFIX = "REPLAY_v2S_";
+GameManager.LEGACY_REPLAY_V1_REVERSE_MAPPING = { U: 0, R: 1, D: 2, L: 3, Z: -1 };
+
 GameManager.prototype.resolveReplayModeKeyFromV4Code = function (modeCode) {
   return GameManager.REPLAY_V4_MODE_CODE_TO_KEY[modeCode] || null;
 };
@@ -585,13 +590,12 @@ GameManager.prototype.decodeLegacyReplayV1MoveChar = function (char, reverseMapp
 };
 
 GameManager.prototype.decodeLegacyReplayV1Payload = function (trimmedReplayString) {
-  if (trimmedReplayString.indexOf("REPLAY_v1_") !== 0) return null;
+  if (trimmedReplayString.indexOf(GameManager.LEGACY_REPLAY_V1_PREFIX) !== 0) return null;
   var v1Parts = trimmedReplayString.split("_");
   var seed = parseFloat(v1Parts[2]);
   var movesString = v1Parts[3];
-  var reverseMapping = { U: 0, R: 1, D: 2, L: 3, Z: -1 };
   var replayMovesV1 = movesString.split("").map(function (char) {
-    return this.decodeLegacyReplayV1MoveChar(char, reverseMapping);
+    return this.decodeLegacyReplayV1MoveChar(char, GameManager.LEGACY_REPLAY_V1_REVERSE_MAPPING);
   }, this);
   return {
     seed: seed,
@@ -612,7 +616,7 @@ GameManager.prototype.parseLegacyReplaySeedAndLog = function (rest) {
 };
 
 GameManager.prototype.decodeLegacyReplayV2SPayload = function (trimmedReplayString) {
-  var prefixS = "REPLAY_v2S_";
+  var prefixS = GameManager.LEGACY_REPLAY_V2S_PREFIX;
   if (trimmedReplayString.indexOf(prefixS) !== 0) return null;
   var rest = trimmedReplayString.substring(prefixS.length);
   var parsedSeedLog = this.parseLegacyReplaySeedAndLog(rest);
@@ -623,7 +627,7 @@ GameManager.prototype.decodeLegacyReplayV2SPayload = function (trimmedReplayStri
 };
 
 GameManager.prototype.decodeLegacyReplayV2Payload = function (trimmedReplayString) {
-  var prefix = "REPLAY_v2_";
+  var prefix = GameManager.LEGACY_REPLAY_V2_PREFIX;
   if (trimmedReplayString.indexOf(prefix) !== 0) return null;
   var logString = trimmedReplayString.substring(prefix.length);
   var decodedLog = this.decodeLegacyReplayV2Log(logString);
