@@ -25,7 +25,8 @@
 - 测试结构按页面域逐步拆分：
   - `tests/smoke/pages-runtime-contract.smoke.spec.ts`（多页面加载与 runtime 契约）
   - `tests/smoke/history.smoke.spec.ts`（history 页面委托链路）
-  - `tests/smoke/pages.smoke.spec.ts`（其余跨页与入口链路）
+  - `tests/smoke/index-ui.smoke.spec.ts`（index_ui 页面委托链路）
+  - `tests/smoke/pages.smoke.spec.ts`（其余跨页与入口链路，已降至约 1300 行）
 
 验收标准：
 - 8 个页面加载过程无运行时 JS 错误。
