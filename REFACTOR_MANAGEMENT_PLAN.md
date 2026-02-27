@@ -22,6 +22,10 @@
 - 覆盖 8 个页面的 Playwright smoke 测试。
 - push/PR 自动触发 smoke 的 CI 工作流。
 - 统一本地脚本（`npm run test:smoke`）。
+- 测试结构按页面域逐步拆分：
+  - `tests/smoke/pages-runtime-contract.smoke.spec.ts`（多页面加载与 runtime 契约）
+  - `tests/smoke/history.smoke.spec.ts`（history 页面委托链路）
+  - `tests/smoke/pages.smoke.spec.ts`（其余跨页与入口链路）
 
 验收标准：
 - 8 个页面加载过程无运行时 JS 错误。
