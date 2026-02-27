@@ -1726,8 +1726,6 @@ GameManager.prototype.saveGameState = function (options) {
     return;
   }
 
-  var adapterParityReport = this.getAdapterSessionParityReport();
-  var adapterParityDiff = this.getAdapterSessionParityABDiff();
   var payload = {
     v: GameManager.SAVED_GAME_STATE_VERSION,
     saved_at: now,
