@@ -6260,21 +6260,28 @@ GameManager.prototype.applyTraversalDirection = function (axis, component) {
   return component === 1 ? axis.reverse() : axis;
 };
 
-// Build a list of positions to traverse in the right order
-GameManager.prototype.buildTraversals = function (vector) {
-  var buildTraversalsCore = this.callCoreMovePathRuntime("buildTraversals", [this.width, this.height, vector]);
-  if (buildTraversalsCore.available) {
-    var computed = buildTraversalsCore.value || {};
-    return {
-      x: Array.isArray(computed.x) ? computed.x : [],
-      y: Array.isArray(computed.y) ? computed.y : []
-    };
-  }
+GameManager.prototype.normalizeBuildTraversalsRuntimeValue = function (runtimeValue) {
+  var computed = runtimeValue || {};
+  return {
+    x: Array.isArray(computed.x) ? computed.x : [],
+    y: Array.isArray(computed.y) ? computed.y : []
+  };
+};
 
+GameManager.prototype.buildTraversalsFallback = function (vector) {
   return {
     x: this.applyTraversalDirection(this.createTraversalAxis(this.width), vector.x),
     y: this.applyTraversalDirection(this.createTraversalAxis(this.height), vector.y)
   };
+};
+
+// Build a list of positions to traverse in the right order
+GameManager.prototype.buildTraversals = function (vector) {
+  var buildTraversalsCore = this.callCoreMovePathRuntime("buildTraversals", [this.width, this.height, vector]);
+  if (buildTraversalsCore.available) {
+    return this.normalizeBuildTraversalsRuntimeValue(buildTraversalsCore.value);
+  }
+  return this.buildTraversalsFallback(vector);
 };
 
 GameManager.prototype.stepCellByVector = function (cell, vector) {
@@ -6287,20 +6294,13 @@ GameManager.prototype.canTraverseThroughCell = function (cell) {
     this.grid.cellAvailable(cell);
 };
 
-GameManager.prototype.findFarthestPosition = function (cell, vector) {
-  var findFarthestPositionCore = this.callCoreMovePathRuntime("findFarthestPosition", [
-      cell,
-      vector,
-      this.width,
-      this.height,
-      this.isBlockedCell.bind(this),
-      this.getGridCellAvailableFn()
-    ]);
-  if (findFarthestPositionCore.available) {
-    var computed = findFarthestPositionCore.value || {};
-    if (computed.farthest && computed.next) return computed;
-  }
+GameManager.prototype.resolveFarthestPositionFromRuntime = function (runtimeValue) {
+  var computed = runtimeValue || {};
+  if (computed.farthest && computed.next) return computed;
+  return null;
+};
 
+GameManager.prototype.computeFarthestPositionFallback = function (cell, vector) {
   var previous;
 
   // Progress towards the vector direction until an obstacle is found
@@ -6315,6 +6315,22 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
   };
 };
 
+GameManager.prototype.findFarthestPosition = function (cell, vector) {
+  var findFarthestPositionCore = this.callCoreMovePathRuntime("findFarthestPosition", [
+      cell,
+      vector,
+      this.width,
+      this.height,
+      this.isBlockedCell.bind(this),
+      this.getGridCellAvailableFn()
+    ]);
+  if (findFarthestPositionCore.available) {
+    var resolvedByCore = this.resolveFarthestPositionFromRuntime(findFarthestPositionCore.value);
+    if (resolvedByCore) return resolvedByCore;
+  }
+  return this.computeFarthestPositionFallback(cell, vector);
+};
+
 GameManager.prototype.movesAvailable = function () {
   var movesAvailableCore = this.callCoreMoveScanRuntime("movesAvailable", [
     this.getAvailableCells().length,
@@ -6326,15 +6342,23 @@ GameManager.prototype.movesAvailable = function () {
 
 GameManager.prototype.canMergeTileWithAnyNeighbor = function (x, y, tile) {
   for (var direction = 0; direction < 4; direction++) {
-    var vector = this.getVector(direction);
-    var cell = { x: x + vector.x, y: y + vector.y };
+    var cell = this.resolveNeighborCellForMergeCheck(x, y, direction);
     if (this.isBlockedCell(cell.x, cell.y)) continue;
-    var other = this.grid.cellContent(cell);
-    if (other && this.getMergedValue(tile.value, other.value) !== null) {
+    if (this.canMergeWithNeighborTile(tile, cell)) {
       return true;
     }
   }
   return false;
+};
+
+GameManager.prototype.resolveNeighborCellForMergeCheck = function (x, y, direction) {
+  var vector = this.getVector(direction);
+  return { x: x + vector.x, y: y + vector.y };
+};
+
+GameManager.prototype.canMergeWithNeighborTile = function (tile, cell) {
+  var other = this.grid.cellContent(cell);
+  return !!(other && this.getMergedValue(tile.value, other.value) !== null);
 };
 
 GameManager.prototype.hasMergeableNeighborAtCell = function (x, y) {
@@ -6346,9 +6370,14 @@ GameManager.prototype.hasMergeableNeighborAtCell = function (x, y) {
 
 GameManager.prototype.tileMatchesAvailableFallback = function () {
   for (var x = 0; x < this.width; x++) {
-    for (var y = 0; y < this.height; y++) {
-      if (this.hasMergeableNeighborAtCell(x, y)) return true;
-    }
+    if (this.tileMatchesAvailableInColumn(x)) return true;
+  }
+  return false;
+};
+
+GameManager.prototype.tileMatchesAvailableInColumn = function (x) {
+  for (var y = 0; y < this.height; y++) {
+    if (this.hasMergeableNeighborAtCell(x, y)) return true;
   }
   return false;
 };
