@@ -1850,137 +1850,52 @@ GameManager.prototype.resolveCoreRuntimeMethod = function (runtimeGetterName, me
   };
 };
 
-GameManager.prototype.resolveCoreModeRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreModeRuntime", methodName);
-};
+function registerCoreRuntimeMethodResolver(methodName, runtimeGetterName) {
+  GameManager.prototype[methodName] = function (coreMethodName) {
+    return this.resolveCoreRuntimeMethod(runtimeGetterName, coreMethodName);
+  };
+}
 
-GameManager.prototype.resolveCoreRulesRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreRulesRuntime", methodName);
-};
+var GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS = [
+  ["resolveCoreModeRuntimeMethod", "getCoreModeRuntime"],
+  ["resolveCoreRulesRuntimeMethod", "getCoreRulesRuntime"],
+  ["resolveCoreGridScanRuntimeMethod", "getCoreGridScanRuntime"],
+  ["resolveCoreMoveScanRuntimeMethod", "getCoreMoveScanRuntime"],
+  ["resolveCoreMovePathRuntimeMethod", "getCoreMovePathRuntime"],
+  ["resolveCoreScoringRuntimeMethod", "getCoreScoringRuntime"],
+  ["resolveCoreMoveApplyRuntimeMethod", "getCoreMoveApplyRuntime"],
+  ["resolveCoreUndoSnapshotRuntimeMethod", "getCoreUndoSnapshotRuntime"],
+  ["resolveCorePostMoveRecordRuntimeMethod", "getCorePostMoveRecordRuntime"],
+  ["resolveCorePostUndoRecordRuntimeMethod", "getCorePostUndoRecordRuntime"],
+  ["resolveCoreUndoRestoreRuntimeMethod", "getCoreUndoRestoreRuntime"],
+  ["resolveCoreUndoStackEntryRuntimeMethod", "getCoreUndoStackEntryRuntime"],
+  ["resolveCoreUndoTileSnapshotRuntimeMethod", "getCoreUndoTileSnapshotRuntime"],
+  ["resolveCoreUndoTileRestoreRuntimeMethod", "getCoreUndoTileRestoreRuntime"],
+  ["resolveCoreUndoRestorePayloadRuntimeMethod", "getCoreUndoRestorePayloadRuntime"],
+  ["resolveCoreMergeEffectsRuntimeMethod", "getCoreMergeEffectsRuntime"],
+  ["resolveCoreSpecialRulesRuntimeMethod", "getCoreSpecialRulesRuntime"],
+  ["resolveCoreDirectionLockRuntimeMethod", "getCoreDirectionLockRuntime"],
+  ["resolveCorePostMoveRuntimeMethod", "getCorePostMoveRuntime"],
+  ["resolveCoreTimerIntervalRuntimeMethod", "getCoreTimerIntervalRuntime"],
+  ["resolveCorePrettyTimeRuntimeMethod", "getCorePrettyTimeRuntime"],
+  ["resolveCoreStorageRuntimeMethod", "getCoreGameSettingsStorageRuntime"],
+  ["resolveCoreReplayCodecRuntimeMethod", "getCoreReplayCodecRuntime"],
+  ["resolveCoreReplayV4ActionsRuntimeMethod", "getCoreReplayV4ActionsRuntime"],
+  ["resolveCoreReplayImportRuntimeMethod", "getCoreReplayImportRuntime"],
+  ["resolveCoreReplayExecutionRuntimeMethod", "getCoreReplayExecutionRuntime"],
+  ["resolveCoreReplayDispatchRuntimeMethod", "getCoreReplayDispatchRuntime"],
+  ["resolveCoreReplayLifecycleRuntimeMethod", "getCoreReplayLifecycleRuntime"],
+  ["resolveCoreReplayTimerRuntimeMethod", "getCoreReplayTimerRuntime"],
+  ["resolveCoreReplayFlowRuntimeMethod", "getCoreReplayFlowRuntime"],
+  ["resolveCoreReplayControlRuntimeMethod", "getCoreReplayControlRuntime"],
+  ["resolveCoreReplayLoopRuntimeMethod", "getCoreReplayLoopRuntime"],
+  ["resolveCoreReplayLegacyRuntimeMethod", "getCoreReplayLegacyRuntime"]
+];
 
-GameManager.prototype.resolveCoreGridScanRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreGridScanRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreMoveScanRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreMoveScanRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreMovePathRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreMovePathRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreScoringRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreScoringRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreMoveApplyRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreMoveApplyRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreUndoSnapshotRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreUndoSnapshotRuntime", methodName);
-};
-
-GameManager.prototype.resolveCorePostMoveRecordRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCorePostMoveRecordRuntime", methodName);
-};
-
-GameManager.prototype.resolveCorePostUndoRecordRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCorePostUndoRecordRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreUndoRestoreRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreUndoRestoreRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreUndoStackEntryRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreUndoStackEntryRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreUndoTileSnapshotRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreUndoTileSnapshotRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreUndoTileRestoreRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreUndoTileRestoreRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreUndoRestorePayloadRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreUndoRestorePayloadRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreMergeEffectsRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreMergeEffectsRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreSpecialRulesRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreSpecialRulesRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreDirectionLockRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreDirectionLockRuntime", methodName);
-};
-
-GameManager.prototype.resolveCorePostMoveRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCorePostMoveRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreTimerIntervalRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreTimerIntervalRuntime", methodName);
-};
-
-GameManager.prototype.resolveCorePrettyTimeRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCorePrettyTimeRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreStorageRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreGameSettingsStorageRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreReplayCodecRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreReplayCodecRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreReplayV4ActionsRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreReplayV4ActionsRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreReplayImportRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreReplayImportRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreReplayExecutionRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreReplayExecutionRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreReplayDispatchRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreReplayDispatchRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreReplayLifecycleRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreReplayLifecycleRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreReplayTimerRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreReplayTimerRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreReplayFlowRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreReplayFlowRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreReplayControlRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreReplayControlRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreReplayLoopRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreReplayLoopRuntime", methodName);
-};
-
-GameManager.prototype.resolveCoreReplayLegacyRuntimeMethod = function (methodName) {
-  return this.resolveCoreRuntimeMethod("getCoreReplayLegacyRuntime", methodName);
-};
+for (var resolverIndex = 0; resolverIndex < GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS.length; resolverIndex++) {
+  var resolverItem = GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS[resolverIndex];
+  registerCoreRuntimeMethodResolver(resolverItem[0], resolverItem[1]);
+}
 
 function registerCoreRuntimeGetter(methodName, runtimeName) {
   GameManager.prototype[methodName] = function () {
