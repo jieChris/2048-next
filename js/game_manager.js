@@ -5730,32 +5730,20 @@ GameManager.prototype.writeSkippedSessionSubmitResult = function (reason) {
   });
 };
 
-GameManager.prototype.tryAutoSubmitOnGameOver = function () {
-  if (this.sessionSubmitDone) return;
-  if (this.replayMode) {
-    this.writeSkippedSessionSubmitResult("replay_mode");
-    return;
-  }
-  if (!this.isSessionTerminated()) {
-    this.writeSkippedSessionSubmitResult("not_terminated");
-    return;
-  }
-  var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
-  if (!localHistorySaveRecord) {
-    this.writeLastSessionSubmitResult({
-      at: new Date().toISOString(),
-      ok: false,
-      reason: "local_history_store_missing"
-    });
-    return;
-  }
+GameManager.prototype.resolveSessionSubmitAdapterParitySnapshot = function () {
+  return {
+    report: this.getAdapterSessionParityReport(),
+    diff: this.getAdapterSessionParityABDiff()
+  };
+};
 
-  var windowLike = this.getWindowLike();
-  var adapterParityReport = this.getAdapterSessionParityReport();
-  var adapterParityDiff = this.getAdapterSessionParityABDiff();
-  this.sessionSubmitDone = true;
-  var endedAt = new Date().toISOString();
-  var payload = {
+GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike, adapterParitySnapshot) {
+  var parity = adapterParitySnapshot && typeof adapterParitySnapshot === "object"
+    ? adapterParitySnapshot
+    : {};
+  var adapterParityReport = parity.report;
+  var adapterParityDiff = parity.diff;
+  return {
     mode: this.getServerMode(this.modeKey),
     mode_key: this.modeKey,
     board_width: this.width,
@@ -5781,6 +5769,33 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
     client_version: (windowLike && windowLike.GAME_CLIENT_VERSION) || "1.8",
     end_reason: this.over ? "game_over" : "win_stop"
   };
+};
+
+GameManager.prototype.tryAutoSubmitOnGameOver = function () {
+  if (this.sessionSubmitDone) return;
+  if (this.replayMode) {
+    this.writeSkippedSessionSubmitResult("replay_mode");
+    return;
+  }
+  if (!this.isSessionTerminated()) {
+    this.writeSkippedSessionSubmitResult("not_terminated");
+    return;
+  }
+  var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
+  if (!localHistorySaveRecord) {
+    this.writeLastSessionSubmitResult({
+      at: new Date().toISOString(),
+      ok: false,
+      reason: "local_history_store_missing"
+    });
+    return;
+  }
+
+  var windowLike = this.getWindowLike();
+  var adapterParitySnapshot = this.resolveSessionSubmitAdapterParitySnapshot();
+  this.sessionSubmitDone = true;
+  var endedAt = new Date().toISOString();
+  var payload = this.buildSessionSubmitPayload(endedAt, windowLike, adapterParitySnapshot);
 
   try {
     var saved = localHistorySaveRecord.method.call(localHistorySaveRecord.scope, payload);
