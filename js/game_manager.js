@@ -1200,21 +1200,37 @@ function registerCoreRuntimeCallers(callerDefs) {
 
 registerCoreRuntimeCallers(GAME_MANAGER_CORE_RUNTIME_CALLERS);
 
-GameManager.prototype.resolveSavedGameStateStorageKey = function (keyPrefix, modeKey) {
-  var resolveSavedGameStateStorageKeyCore = this.callCoreStorageRuntime("resolveSavedGameStateStorageKey", [{
-      modeKey: modeKey,
-      currentModeKey: this.modeKey,
-      currentMode: this.mode,
-      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
-      keyPrefix: typeof keyPrefix === "string" ? keyPrefix : ""
-    }]);
-  if (resolveSavedGameStateStorageKeyCore.available) {
-    var resolvedKey = resolveSavedGameStateStorageKeyCore.value;
-    if (typeof resolvedKey === "string" && resolvedKey) return resolvedKey;
-  }
+GameManager.prototype.buildResolveSavedGameStateStorageKeyCoreArgs = function (keyPrefix, modeKey) {
+  return [{
+    modeKey: modeKey,
+    currentModeKey: this.modeKey,
+    currentMode: this.mode,
+    defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+    keyPrefix: typeof keyPrefix === "string" ? keyPrefix : ""
+  }];
+};
 
-  var key = typeof modeKey === "string" && modeKey ? modeKey : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
+GameManager.prototype.resolveSavedGameStateStorageKeyFromCoreCall = function (coreCallResult) {
+  if (!coreCallResult.available) return null;
+  var resolvedKey = coreCallResult.value;
+  return typeof resolvedKey === "string" && resolvedKey ? resolvedKey : null;
+};
+
+GameManager.prototype.resolveSavedGameStateStorageKeyFallback = function (keyPrefix, modeKey) {
+  var key = typeof modeKey === "string" && modeKey
+    ? modeKey
+    : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
   return (typeof keyPrefix === "string" ? keyPrefix : "") + key;
+};
+
+GameManager.prototype.resolveSavedGameStateStorageKey = function (keyPrefix, modeKey) {
+  var resolveSavedGameStateStorageKeyCore = this.callCoreStorageRuntime(
+    "resolveSavedGameStateStorageKey",
+    this.buildResolveSavedGameStateStorageKeyCoreArgs(keyPrefix, modeKey)
+  );
+  var resolvedFromCore = this.resolveSavedGameStateStorageKeyFromCoreCall(resolveSavedGameStateStorageKeyCore);
+  if (resolvedFromCore) return resolvedFromCore;
+  return this.resolveSavedGameStateStorageKeyFallback(keyPrefix, modeKey);
 };
 
 GameManager.prototype.getSavedGameStateKey = function (modeKey) {
