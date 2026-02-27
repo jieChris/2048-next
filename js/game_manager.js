@@ -5767,6 +5767,12 @@ GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
     }
 };
 
+GameManager.prototype.fastForwardReplayToIndex = function (targetIndex) {
+    while (this.replayIndex < targetIndex) {
+        this.executePlannedReplayStep();
+    }
+};
+
 GameManager.prototype.seek = function (targetIndex) {
     targetIndex = this.normalizeReplaySeekTarget(targetIndex);
 
@@ -5776,10 +5782,7 @@ GameManager.prototype.seek = function (targetIndex) {
     var restartPlan = this.planReplaySeekRestart(rewindPlan);
     this.applyReplaySeekRestartPlan(restartPlan);
 
-    // Fast forward to target
-    while (this.replayIndex < targetIndex) {
-        this.executePlannedReplayStep();
-    }
+    this.fastForwardReplayToIndex(targetIndex);
 };
 
 GameManager.prototype.step = function (delta) {
