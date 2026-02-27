@@ -7,6 +7,23 @@
     return cell.x >= 0 && cell.x < width && cell.y >= 0 && cell.y < height;
   }
 
+  var DIRECTION_VECTORS = {
+    0: { x: 0, y: -1 },
+    1: { x: 1, y: 0 },
+    2: { x: 0, y: 1 },
+    3: { x: -1, y: 0 }
+  };
+
+  function getVector(direction) {
+    var key = Number(direction);
+    if (!Number.isInteger(key)) return undefined;
+    return DIRECTION_VECTORS[key];
+  }
+
+  function positionsEqual(first, second) {
+    return first.x === second.x && first.y === second.y;
+  }
+
   function buildTraversals(width, height, vector) {
     var w = Number(width);
     var h = Number(height);
@@ -53,6 +70,8 @@
   }
 
   global.CoreMovePathRuntime = global.CoreMovePathRuntime || {};
+  global.CoreMovePathRuntime.getVector = getVector;
+  global.CoreMovePathRuntime.positionsEqual = positionsEqual;
   global.CoreMovePathRuntime.buildTraversals = buildTraversals;
   global.CoreMovePathRuntime.findFarthestPosition = findFarthestPosition;
 })(typeof window !== "undefined" ? window : undefined);

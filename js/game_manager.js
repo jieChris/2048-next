@@ -4159,6 +4159,11 @@ GameManager.prototype.move = function (direction) {
 
 // Get the vector representing the chosen direction
 GameManager.prototype.getVector = function (direction) {
+  var movePathCore = this.getCoreMovePathRuntime();
+  if (movePathCore && typeof movePathCore.getVector === "function") {
+    return movePathCore.getVector(direction);
+  }
+
   // Vectors representing tile movement
   var map = {
     0: { x: 0,  y: -1 }, // up
@@ -4288,6 +4293,10 @@ GameManager.prototype.tileMatchesAvailable = function () {
 };
 
 GameManager.prototype.positionsEqual = function (first, second) {
+  var movePathCore = this.getCoreMovePathRuntime();
+  if (movePathCore && typeof movePathCore.positionsEqual === "function") {
+    return movePathCore.positionsEqual(first, second);
+  }
   return first.x === second.x && first.y === second.y;
 };
 

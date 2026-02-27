@@ -1,6 +1,33 @@
 import { describe, expect, it } from "vitest";
 
-import { buildTraversals, findFarthestPosition } from "../../src/core/move-path";
+import {
+  buildTraversals,
+  findFarthestPosition,
+  getVector,
+  positionsEqual
+} from "../../src/core/move-path";
+
+describe("core move path: getVector", () => {
+  it("returns vectors for valid directions", () => {
+    expect(getVector(0)).toEqual({ x: 0, y: -1 });
+    expect(getVector(1)).toEqual({ x: 1, y: 0 });
+    expect(getVector(2)).toEqual({ x: 0, y: 1 });
+    expect(getVector(3)).toEqual({ x: -1, y: 0 });
+  });
+
+  it("returns undefined for invalid directions", () => {
+    expect(getVector(-1)).toBeUndefined();
+    expect(getVector(4)).toBeUndefined();
+    expect(getVector(Number.NaN)).toBeUndefined();
+  });
+});
+
+describe("core move path: positionsEqual", () => {
+  it("compares two cell positions", () => {
+    expect(positionsEqual({ x: 2, y: 3 }, { x: 2, y: 3 })).toBe(true);
+    expect(positionsEqual({ x: 2, y: 3 }, { x: 3, y: 2 })).toBe(false);
+  });
+});
 
 describe("core move path: buildTraversals", () => {
   it("reverses x traversal when moving right", () => {

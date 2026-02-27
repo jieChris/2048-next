@@ -278,6 +278,7 @@
   - `src/core/grid-scan.ts` + `js/core_grid_scan_runtime.js`
   - `src/core/move-scan.ts` + `js/core_move_scan_runtime.js`
   - `src/core/move-path.ts` + `js/core_move_path_runtime.js`
+    - 已扩展 `getVector/positionsEqual`，`game_manager.js` 对应方法改为优先委托 runtime（保留 fallback）
   - `src/core/scoring.ts` + `js/core_scoring_runtime.js`
   - `src/core/merge-effects.ts` + `js/core_merge_effects_runtime.js`
   - `src/core/post-move.ts` + `js/core_post_move_runtime.js`
