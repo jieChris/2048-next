@@ -1845,18 +1845,21 @@ GameManager.prototype.shouldAbortSaveGameState = function (options, now) {
   return this.shouldSkipSaveGameStateByThrottle(options, now);
 };
 
+GameManager.prototype.tryPersistAndMarkSavedGameState = function (payload, now) {
+  try {
+    var persisted = this.persistSavedGameStatePayload(payload);
+    if (!persisted) return;
+    this.lastSavedGameStateAt = now;
+  } catch (_err) {}
+};
+
 GameManager.prototype.saveGameState = function (options) {
   options = options || {};
   var now = Date.now();
   if (this.shouldAbortSaveGameState(options, now)) return;
 
   var payload = this.buildSavedGameStatePayload(now);
-
-  try {
-    var persisted = this.persistSavedGameStatePayload(payload);
-    if (!persisted) return;
-    this.lastSavedGameStateAt = now;
-  } catch (_err) {}
+  this.tryPersistAndMarkSavedGameState(payload, now);
 };
 
 GameManager.prototype.persistSavedGameStatePrimaryWrites = function (key, liteKey, payload, litePayload) {
