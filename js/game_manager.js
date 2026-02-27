@@ -5693,6 +5693,16 @@ GameManager.prototype.buildTraversals = function (vector) {
   };
 };
 
+GameManager.prototype.stepCellByVector = function (cell, vector) {
+  return { x: cell.x + vector.x, y: cell.y + vector.y };
+};
+
+GameManager.prototype.canTraverseThroughCell = function (cell) {
+  return this.grid.withinBounds(cell) &&
+    !this.isBlockedCell(cell.x, cell.y) &&
+    this.grid.cellAvailable(cell);
+};
+
 GameManager.prototype.findFarthestPosition = function (cell, vector) {
   var findFarthestPositionCore = this.callCoreMovePathRuntime("findFarthestPosition", [
       cell,
@@ -5712,10 +5722,8 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
   // Progress towards the vector direction until an obstacle is found
   do {
     previous = cell;
-    cell     = { x: previous.x + vector.x, y: previous.y + vector.y };
-  } while (this.grid.withinBounds(cell) &&
-           !this.isBlockedCell(cell.x, cell.y) &&
-           this.grid.cellAvailable(cell));
+    cell = this.stepCellByVector(previous, vector);
+  } while (this.canTraverseThroughCell(cell));
 
   return {
     farthest: previous,
