@@ -1922,11 +1922,15 @@ GameManager.prototype.restoreTimerRowsFromState = function (saved) {
 GameManager.prototype.selectPreferredSavedStateCandidate = function (currentBest, nextCandidate) {
   if (!nextCandidate || typeof nextCandidate !== "object") return currentBest;
   if (!currentBest || typeof currentBest !== "object") return nextCandidate;
-  var bestAt = Number(currentBest.saved_at) || 0;
-  var nextAt = Number(nextCandidate.saved_at) || 0;
+  var bestAt = this.resolveSavedStateSavedAt(currentBest);
+  var nextAt = this.resolveSavedStateSavedAt(nextCandidate);
   // Keep the first candidate when timestamps are equal (full > lite > window).
   // This avoids downgrading to lite/window snapshots that may omit replay history.
   return nextAt > bestAt ? nextCandidate : currentBest;
+};
+
+GameManager.prototype.resolveSavedStateSavedAt = function (savedStateCandidate) {
+  return Number(savedStateCandidate.saved_at) || 0;
 };
 
 GameManager.prototype.resolveLatestSavedStateCandidate = function (candidates) {
@@ -1937,73 +1941,156 @@ GameManager.prototype.resolveLatestSavedStateCandidate = function (candidates) {
   return best;
 };
 
-GameManager.prototype.resolveSavedStateRestorePrecheck = function (saved) {
-  if (!saved || typeof saved !== "object") {
-    return { canRestore: false, shouldClearSavedState: true };
-  }
-  if (Number(saved.v) !== GameManager.SAVED_GAME_STATE_VERSION) {
-    return { canRestore: false, shouldClearSavedState: true };
-  }
-  if (saved.terminated) {
-    return { canRestore: false, shouldClearSavedState: true };
-  }
-  if ((saved.over || (saved.won && !saved.keep_playing)) && saved.mode_key !== "practice_legacy") {
-    return { canRestore: false, shouldClearSavedState: true };
-  }
-  if (saved.mode_key !== this.modeKey) {
-    return { canRestore: false, shouldClearSavedState: false };
-  }
-  if (Number(saved.board_width) !== this.width || Number(saved.board_height) !== this.height) {
-    return { canRestore: false, shouldClearSavedState: true };
-  }
-  if (saved.ruleset && saved.ruleset !== this.ruleset) {
-    return { canRestore: false, shouldClearSavedState: true };
-  }
-  if (!Array.isArray(saved.board) || saved.board.length !== this.height) {
-    return { canRestore: false, shouldClearSavedState: true };
-  }
-  return { canRestore: true, shouldClearSavedState: false };
+GameManager.prototype.createSavedStateRestorePrecheckResult = function (canRestore, shouldClearSavedState) {
+  return {
+    canRestore: !!canRestore,
+    shouldClearSavedState: !!shouldClearSavedState
+  };
 };
 
-GameManager.prototype.applyRestoredSavedStateCoreFields = function (saved) {
+GameManager.prototype.resolveInvalidSavedStatePrecheckResult = function () {
+  return this.createSavedStateRestorePrecheckResult(false, true);
+};
+
+GameManager.prototype.resolveModeMismatchSavedStatePrecheckResult = function () {
+  return this.createSavedStateRestorePrecheckResult(false, false);
+};
+
+GameManager.prototype.resolveRestorableSavedStatePrecheckResult = function () {
+  return this.createSavedStateRestorePrecheckResult(true, false);
+};
+
+GameManager.prototype.isSavedStateObject = function (saved) {
+  return !!saved && typeof saved === "object";
+};
+
+GameManager.prototype.hasMatchingSavedStateVersion = function (saved) {
+  return Number(saved.v) === GameManager.SAVED_GAME_STATE_VERSION;
+};
+
+GameManager.prototype.isSavedStateTerminated = function (saved) {
+  return !!saved.terminated;
+};
+
+GameManager.prototype.isSavedStateEndedSession = function (saved) {
+  return !!(saved.over || (saved.won && !saved.keep_playing));
+};
+
+GameManager.prototype.shouldRejectEndedSavedState = function (saved) {
+  return this.isSavedStateEndedSession(saved) && saved.mode_key !== "practice_legacy";
+};
+
+GameManager.prototype.hasMatchingSavedStateMode = function (saved) {
+  return saved.mode_key === this.modeKey;
+};
+
+GameManager.prototype.hasMatchingSavedStateBoardSize = function (saved) {
+  return Number(saved.board_width) === this.width && Number(saved.board_height) === this.height;
+};
+
+GameManager.prototype.hasCompatibleSavedStateRuleset = function (saved) {
+  return !saved.ruleset || saved.ruleset === this.ruleset;
+};
+
+GameManager.prototype.hasValidSavedStateBoardShape = function (saved) {
+  return Array.isArray(saved.board) && saved.board.length === this.height;
+};
+
+GameManager.prototype.resolveSavedStateRestorePrecheck = function (saved) {
+  if (!this.isSavedStateObject(saved)) return this.resolveInvalidSavedStatePrecheckResult();
+  if (!this.hasMatchingSavedStateVersion(saved)) return this.resolveInvalidSavedStatePrecheckResult();
+  if (this.isSavedStateTerminated(saved)) return this.resolveInvalidSavedStatePrecheckResult();
+  if (this.shouldRejectEndedSavedState(saved)) return this.resolveInvalidSavedStatePrecheckResult();
+  if (!this.hasMatchingSavedStateMode(saved)) return this.resolveModeMismatchSavedStatePrecheckResult();
+  if (!this.hasMatchingSavedStateBoardSize(saved)) return this.resolveInvalidSavedStatePrecheckResult();
+  if (!this.hasCompatibleSavedStateRuleset(saved)) return this.resolveInvalidSavedStatePrecheckResult();
+  if (!this.hasValidSavedStateBoardShape(saved)) return this.resolveInvalidSavedStatePrecheckResult();
+  return this.resolveRestorableSavedStatePrecheckResult();
+};
+
+GameManager.prototype.applyRestoredSavedOutcomeFields = function (saved) {
   this.score = Number.isInteger(saved.score) && saved.score >= 0 ? saved.score : 0;
   this.over = !!saved.over;
   this.won = !!saved.won;
   this.keepPlaying = !!saved.keep_playing;
+};
+
+GameManager.prototype.applyRestoredSavedSeedFields = function (saved) {
   this.initialSeed = Number.isFinite(saved.initial_seed) ? Number(saved.initial_seed) : this.initialSeed;
   this.seed = Number.isFinite(saved.seed) ? Number(saved.seed) : this.initialSeed;
+};
+
+GameManager.prototype.applyRestoredSavedHistoryFields = function (saved) {
   this.moveHistory = Array.isArray(saved.move_history) ? saved.move_history.slice() : [];
   this.ipsInputCount = Number.isInteger(saved.ips_input_count) && saved.ips_input_count >= 0
     ? saved.ips_input_count
     : this.moveHistory.length;
   this.undoStack = Array.isArray(saved.undo_stack) ? saved.undo_stack.slice() : [];
+};
+
+GameManager.prototype.applyRestoredSavedReplayFields = function (saved) {
   this.replayCompactLog = typeof saved.replay_compact_log === "string" ? saved.replay_compact_log : "";
   this.sessionReplayV3 = saved.session_replay_v3 && typeof saved.session_replay_v3 === "object"
     ? this.clonePlain(saved.session_replay_v3)
     : this.sessionReplayV3;
+};
+
+GameManager.prototype.applyRestoredSavedSpawnFields = function (saved) {
   this.spawnValueCounts = saved.spawn_value_counts && typeof saved.spawn_value_counts === "object"
     ? this.clonePlain(saved.spawn_value_counts)
     : {};
   this.spawnTwos = this.spawnValueCounts["2"] || 0;
   this.spawnFours = this.spawnValueCounts["4"] || 0;
+};
+
+GameManager.prototype.applyRestoredSavedCappedFields = function (saved) {
   this.reached32k = !!saved.reached_32k;
   this.cappedMilestoneCount = Number.isInteger(saved.capped_milestone_count) ? saved.capped_milestone_count : 0;
   this.capped64Unlocked = saved.capped64_unlocked && typeof saved.capped64_unlocked === "object"
     ? this.clonePlain(saved.capped64_unlocked)
     : this.capped64Unlocked;
+};
+
+GameManager.prototype.applyRestoredSavedCounterFields = function (saved) {
   this.comboStreak = Number.isInteger(saved.combo_streak) ? saved.combo_streak : 0;
   this.successfulMoveCount = Number.isInteger(saved.successful_move_count) ? saved.successful_move_count : 0;
   this.undoUsed = Number.isInteger(saved.undo_used) ? saved.undo_used : 0;
+};
+
+GameManager.prototype.applyRestoredSavedDirectionLockFields = function (saved) {
   this.lockConsumedAtMoveCount = Number.isInteger(saved.lock_consumed_at_move_count) ? saved.lock_consumed_at_move_count : -1;
   this.lockedDirectionTurn = Number.isInteger(saved.locked_direction_turn) ? saved.locked_direction_turn : null;
   this.lockedDirection = Number.isInteger(saved.locked_direction) ? saved.locked_direction : null;
+};
+
+GameManager.prototype.applyRestoredSavedChallengeField = function (saved) {
   this.challengeId = typeof saved.challenge_id === "string" && saved.challenge_id ? saved.challenge_id : null;
+};
+
+GameManager.prototype.applyRestoredSavedTimerFields = function (saved) {
   this.hasGameStarted = !!saved.has_game_started;
   this.accumulatedTime = Number.isFinite(saved.duration_ms) && saved.duration_ms >= 0 ? Math.floor(saved.duration_ms) : 0;
   this.time = this.accumulatedTime;
   this.startTime = null;
   this.timerStatus = 0;
+};
+
+GameManager.prototype.resetRestoredSavedSessionSubmitState = function () {
   this.sessionSubmitDone = false;
+};
+
+GameManager.prototype.applyRestoredSavedStateCoreFields = function (saved) {
+  this.applyRestoredSavedOutcomeFields(saved);
+  this.applyRestoredSavedSeedFields(saved);
+  this.applyRestoredSavedHistoryFields(saved);
+  this.applyRestoredSavedReplayFields(saved);
+  this.applyRestoredSavedSpawnFields(saved);
+  this.applyRestoredSavedCappedFields(saved);
+  this.applyRestoredSavedCounterFields(saved);
+  this.applyRestoredSavedDirectionLockFields(saved);
+  this.applyRestoredSavedChallengeField(saved);
+  this.applyRestoredSavedTimerFields(saved);
+  this.resetRestoredSavedSessionSubmitState();
 };
 
 GameManager.prototype.applyRestoredSavedBoardSnapshots = function (saved) {
