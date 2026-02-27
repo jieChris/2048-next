@@ -6308,15 +6308,28 @@ GameManager.prototype.buildSetupSessionReplayV3PayloadFromMetadata = function (m
   };
 };
 
+GameManager.prototype.resolveSetupHasInputSeed = function (inputSeed) {
+  return typeof inputSeed !== "undefined";
+};
+
+GameManager.prototype.assignSetupInitialSeed = function (hasInputSeed, inputSeed) {
+  this.initialSeed = hasInputSeed ? inputSeed : Math.random();
+  this.seed = this.initialSeed;
+};
+
+GameManager.prototype.applySetupReplayModeFromInputSeed = function (hasInputSeed) {
+  // If seed is provided externally, we might be in replay mode (or just restoring)
+  this.replayMode = hasInputSeed;
+};
+
 GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
-  var hasInputSeed = typeof inputSeed !== "undefined";
+  var hasInputSeed = this.resolveSetupHasInputSeed(inputSeed);
   if (hasInputSeed) {
     this.replayIndex = 0;
   }
-  this.initialSeed = hasInputSeed ? inputSeed : Math.random();
-  this.seed = this.initialSeed;
+  this.assignSetupInitialSeed(hasInputSeed, inputSeed);
   this.resetSetupReplayCollections();
-  this.replayMode = hasInputSeed; // If seed is provided externally, we might be in replay mode (or just restoring)
+  this.applySetupReplayModeFromInputSeed(hasInputSeed);
   this.applySetupSessionSyncDefaults(hasInputSeed);
   return hasInputSeed;
 };
