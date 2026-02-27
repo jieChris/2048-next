@@ -6522,6 +6522,14 @@ GameManager.prototype.applySetupStartTilesState = function (skipStartTiles, rest
   }
 };
 
+GameManager.prototype.updateSetupStatsPanelForRestoreState = function (restoredFromSavedState) {
+  if (restoredFromSavedState) {
+    this.updateStatsPanel();
+  } else {
+    this.updateStatsPanel(0, 0, 0);
+  }
+};
+
 GameManager.prototype.finalizeSetupUiState = function (preferredTimerModuleView, restoredFromSavedState) {
   this.refreshSpawnRateDisplay();
   this.updateUndoUiState();
@@ -6529,11 +6537,7 @@ GameManager.prototype.finalizeSetupUiState = function (preferredTimerModuleView,
   this.applyTimerModuleView(preferredTimerModuleView, true);
 
   this.actuate();
-  if (restoredFromSavedState) {
-    this.updateStatsPanel();
-  } else {
-    this.updateStatsPanel(0, 0, 0);
-  }
+  this.updateSetupStatsPanelForRestoreState(restoredFromSavedState);
 };
 
 GameManager.prototype.initializeSetupModeAndGrid = function (options) {
