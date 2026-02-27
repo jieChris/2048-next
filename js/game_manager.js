@@ -3419,24 +3419,32 @@ GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
   return "classic";
 };
 
+GameManager.prototype.getSpawnTableTotalWeight = function (table) {
+  var totalWeight = 0;
+  for (var i = 0; i < table.length; i++) {
+    totalWeight += table[i].weight;
+  }
+  return totalWeight;
+};
+
+GameManager.prototype.pickSpawnValueFromWeightedTable = function (table, totalWeight, randomSource) {
+  var pick = randomSource() * totalWeight;
+  var running = 0;
+  for (var i = 0; i < table.length; i++) {
+    running += table[i].weight;
+    if (pick <= running) return table[i].value;
+  }
+  return table[table.length - 1].value;
+};
+
 GameManager.prototype.pickSpawnValue = function () {
   var pickSpawnValueCore = this.callCoreRulesRuntime("pickSpawnValue", [this.spawnTable || [], Math.random]);
   if (pickSpawnValueCore.available) return pickSpawnValueCore.value;
   var table = this.spawnTable || [];
   if (!table.length) return 2;
-  var totalWeight = 0;
-  var i;
-  for (i = 0; i < table.length; i++) {
-    totalWeight += table[i].weight;
-  }
+  var totalWeight = this.getSpawnTableTotalWeight(table);
   if (totalWeight <= 0) return table[0].value;
-  var pick = Math.random() * totalWeight;
-  var running = 0;
-  for (i = 0; i < table.length; i++) {
-    running += table[i].weight;
-    if (pick <= running) return table[i].value;
-  }
-  return table[table.length - 1].value;
+  return this.pickSpawnValueFromWeightedTable(table, totalWeight, Math.random);
 };
 
 GameManager.prototype.isFibonacciMode = function () {
