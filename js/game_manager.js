@@ -5480,6 +5480,11 @@ GameManager.prototype.apply32kVisibilityStateForCustomTile = function (value) {
   this.ensureTimer32kTextIfNeeded(value);
 };
 
+GameManager.prototype.refreshAfterCustomTileEdit = function () {
+  this.clearTransientTileVisualState();
+  this.actuate();
+};
+
 
 
 // Insert a custom tile (Test Board)
@@ -5495,8 +5500,7 @@ GameManager.prototype.insertCustomTile = function(x, y, value) {
     // If value is 0, we just want to clear the tile.
     if (value === 0) {
         this.recordPracticeReplayAction(["p", x, y, value]);
-        this.clearTransientTileVisualState();
-        this.actuate();
+        this.refreshAfterCustomTileEdit();
         return;
     }
     
@@ -5510,8 +5514,7 @@ GameManager.prototype.insertCustomTile = function(x, y, value) {
     this.apply32kVisibilityStateForCustomTile(value);
     
     // Refresh
-    this.clearTransientTileVisualState();
-    this.actuate();
+    this.refreshAfterCustomTileEdit();
 
     this.recordPracticeReplayAction(["p", x, y, value]);
 };
