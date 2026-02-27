@@ -7169,10 +7169,14 @@ GameManager.prototype.applyReplayStepForcedSpawn = function (stepExecutionPlan) 
   }
 };
 
+GameManager.prototype.applyReplayStepNextIndex = function (stepExecutionPlan) {
+  this.replayIndex = stepExecutionPlan.nextReplayIndex;
+};
+
 GameManager.prototype.applyReplayStepExecutionPlan = function (stepExecutionPlan) {
   this.applyReplayStepForcedSpawn(stepExecutionPlan);
   this.executeReplayAction(stepExecutionPlan.action);
-  this.replayIndex = stepExecutionPlan.nextReplayIndex;
+  this.applyReplayStepNextIndex(stepExecutionPlan);
 };
 
 GameManager.prototype.executePlannedReplayStep = function () {
