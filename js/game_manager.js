@@ -3678,12 +3678,37 @@ GameManager.prototype.updateStatsPanel = function (totalSteps, moveSteps, undoSt
 };
 
 GameManager.prototype.computeStepStats = function () {
+  var computeReplayStepStatsCore = this.resolveCoreRuntimeMethod(
+    "getCoreReplayExecutionRuntime",
+    "computeReplayStepStats"
+  );
   var self = this;
   var totalSteps = 0;
   var moveSteps = 0;
   var undoSteps = 0;
   var limit = this.replayMode ? this.replayIndex : this.moveHistory.length;
   var src = this.replayMode ? this.replayMoves : this.moveHistory;
+
+  if (computeReplayStepStatsCore) {
+    var coreStats = computeReplayStepStatsCore({
+      actions: src,
+      limit: limit
+    }) || {};
+    var coreTotal = Number(coreStats.totalSteps);
+    var coreMoves = Number(coreStats.moveSteps);
+    var coreUndo = Number(coreStats.undoSteps);
+    if (
+      Number.isFinite(coreTotal) &&
+      Number.isFinite(coreMoves) &&
+      Number.isFinite(coreUndo)
+    ) {
+      return {
+        totalSteps: coreTotal,
+        moveSteps: coreMoves,
+        undoSteps: coreUndo
+      };
+    }
+  }
 
   var calculateNetMoves = function (moves, max) {
     var count = 0;

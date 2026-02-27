@@ -18,11 +18,48 @@ export interface ReplayPracticeExecution {
 
 export type ReplayExecution = ReplayMoveExecution | ReplayUndoExecution | ReplayPracticeExecution;
 
+export interface ReplayStepStatsInput {
+  actions?: unknown[] | null;
+  limit?: number | null;
+}
+
+export interface ReplayStepStatsResult {
+  totalSteps: number;
+  moveSteps: number;
+  undoSteps: number;
+}
+
 export function getReplayActionKind(action: unknown): ReplayActionKind {
   if (action === -1) return "u";
   if (typeof action === "number" && action >= 0 && action <= 3) return "m";
   if (Array.isArray(action) && action.length > 0) return String(action[0]);
   return "x";
+}
+
+export function computeReplayStepStats(input: ReplayStepStatsInput): ReplayStepStatsResult {
+  const actions = Array.isArray(input.actions) ? input.actions : [];
+  const rawLimit = Number(input.limit);
+  let limit = Number.isFinite(rawLimit) ? Math.floor(rawLimit) : actions.length;
+  if (limit < 0) limit = 0;
+  if (limit > actions.length) limit = actions.length;
+
+  let moveSteps = 0;
+  let undoSteps = 0;
+  for (let i = 0; i < limit; i++) {
+    const kind = getReplayActionKind(actions[i]);
+    if (kind === "u") {
+      undoSteps += 1;
+      if (moveSteps > 0) moveSteps -= 1;
+    } else if (kind === "m") {
+      moveSteps += 1;
+    }
+  }
+
+  return {
+    totalSteps: limit,
+    moveSteps,
+    undoSteps
+  };
 }
 
 export function resolveReplayExecution(action: unknown): ReplayExecution {

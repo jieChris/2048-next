@@ -10,6 +10,33 @@
     return "x";
   }
 
+  function computeReplayStepStats(input) {
+    var source = input || {};
+    var actions = Array.isArray(source.actions) ? source.actions : [];
+    var rawLimit = Number(source.limit);
+    var limit = Number.isFinite(rawLimit) ? Math.floor(rawLimit) : actions.length;
+    if (limit < 0) limit = 0;
+    if (limit > actions.length) limit = actions.length;
+
+    var moveSteps = 0;
+    var undoSteps = 0;
+    for (var i = 0; i < limit; i++) {
+      var kind = getReplayActionKind(actions[i]);
+      if (kind === "u") {
+        undoSteps += 1;
+        if (moveSteps > 0) moveSteps -= 1;
+      } else if (kind === "m") {
+        moveSteps += 1;
+      }
+    }
+
+    return {
+      totalSteps: limit,
+      moveSteps: moveSteps,
+      undoSteps: undoSteps
+    };
+  }
+
   function resolveReplayExecution(action) {
     var kind = getReplayActionKind(action);
     if (kind === "m") {
@@ -32,5 +59,6 @@
 
   global.CoreReplayExecutionRuntime = global.CoreReplayExecutionRuntime || {};
   global.CoreReplayExecutionRuntime.getReplayActionKind = getReplayActionKind;
+  global.CoreReplayExecutionRuntime.computeReplayStepStats = computeReplayStepStats;
   global.CoreReplayExecutionRuntime.resolveReplayExecution = resolveReplayExecution;
 })(typeof window !== "undefined" ? window : undefined);

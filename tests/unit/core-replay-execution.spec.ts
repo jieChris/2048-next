@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  computeReplayStepStats,
   getReplayActionKind,
   resolveReplayExecution
 } from "../../src/core/replay-execution";
@@ -38,5 +39,43 @@ describe("core replay execution: resolveReplayExecution", () => {
 
   it("throws on unknown action", () => {
     expect(() => resolveReplayExecution(["q"])).toThrow("Unknown replay action");
+  });
+});
+
+describe("core replay execution: computeReplayStepStats", () => {
+  it("computes step stats with undo rollback semantics", () => {
+    expect(
+      computeReplayStepStats({
+        actions: [0, 1, -1, ["p", 0, 0, 2], 2, -1, -1],
+        limit: 7
+      })
+    ).toEqual({
+      totalSteps: 7,
+      moveSteps: 0,
+      undoSteps: 3
+    });
+  });
+
+  it("clamps limit and handles invalid input", () => {
+    expect(
+      computeReplayStepStats({
+        actions: [0, -1, 2],
+        limit: 99
+      })
+    ).toEqual({
+      totalSteps: 3,
+      moveSteps: 1,
+      undoSteps: 1
+    });
+    expect(
+      computeReplayStepStats({
+        actions: null,
+        limit: 5
+      })
+    ).toEqual({
+      totalSteps: 0,
+      moveSteps: 0,
+      undoSteps: 0
+    });
   });
 });
