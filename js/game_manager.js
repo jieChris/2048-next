@@ -1198,6 +1198,23 @@ GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) 
 };
 
 GameManager.prototype.shouldUseSavedGameState = function () {
+  var shouldUseSavedGameStateCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "shouldUseSavedGameStateFromContext"
+  );
+  if (shouldUseSavedGameStateCore) {
+    return !!shouldUseSavedGameStateCore({
+      hasWindow: typeof window !== "undefined",
+      replayMode: this.replayMode,
+      pathname:
+        typeof window !== "undefined" &&
+        window.location &&
+        typeof window.location.pathname === "string"
+          ? window.location.pathname
+          : ""
+    });
+  }
+
   if (typeof window === "undefined") return false;
   if (this.replayMode) return false;
   var path = (window.location && window.location.pathname) ? String(window.location.pathname) : "";

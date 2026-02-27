@@ -5,6 +5,7 @@ import {
   readUndoEnabledForModeFromMap,
   readTimerModuleViewForModeFromMap,
   resolveSavedGameStateStorageKey,
+  shouldUseSavedGameStateFromContext,
   readStorageFlagFromContext,
   readStorageJsonMapFromContext,
   writeUndoEnabledForModeToMap,
@@ -122,6 +123,40 @@ describe("core game settings storage", () => {
         keyPrefix: "saved_game_state_lite_v2_"
       })
     ).toBe("saved_game_state_lite_v2_standard_4x4_pow2_no_undo");
+  });
+
+  it("resolves whether saved game state should be used by context", () => {
+    expect(
+      shouldUseSavedGameStateFromContext({
+        hasWindow: false,
+        replayMode: false,
+        pathname: "/index.html"
+      })
+    ).toBe(false);
+
+    expect(
+      shouldUseSavedGameStateFromContext({
+        hasWindow: true,
+        replayMode: true,
+        pathname: "/index.html"
+      })
+    ).toBe(false);
+
+    expect(
+      shouldUseSavedGameStateFromContext({
+        hasWindow: true,
+        replayMode: false,
+        pathname: "/replay.html"
+      })
+    ).toBe(false);
+
+    expect(
+      shouldUseSavedGameStateFromContext({
+        hasWindow: true,
+        replayMode: false,
+        pathname: "/play.html"
+      })
+    ).toBe(true);
   });
 
   it("normalizes timer module view mode", () => {

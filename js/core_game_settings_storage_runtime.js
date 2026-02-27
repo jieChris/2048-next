@@ -28,6 +28,15 @@
     return keyPrefix + modeKey;
   }
 
+  function shouldUseSavedGameStateFromContext(options) {
+    var opts = options || {};
+    if (opts.hasWindow === false) return false;
+    if (opts.replayMode) return false;
+    var path = typeof opts.pathname === "string" ? opts.pathname : "";
+    if (path.indexOf("replay.html") !== -1) return false;
+    return true;
+  }
+
   function readStorageFlagFromContext(options) {
     var opts = options || {};
     var key = typeof opts.key === "string" ? opts.key : "";
@@ -150,6 +159,8 @@
   global.CoreGameSettingsStorageRuntime.readStorageFlagFromContext = readStorageFlagFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageFlagFromContext = writeStorageFlagFromContext;
   global.CoreGameSettingsStorageRuntime.resolveSavedGameStateStorageKey = resolveSavedGameStateStorageKey;
+  global.CoreGameSettingsStorageRuntime.shouldUseSavedGameStateFromContext =
+    shouldUseSavedGameStateFromContext;
   global.CoreGameSettingsStorageRuntime.readStorageJsonMapFromContext = readStorageJsonMapFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageJsonMapFromContext = writeStorageJsonMapFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageJsonPayloadFromContext =

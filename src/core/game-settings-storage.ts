@@ -43,6 +43,19 @@ export function resolveSavedGameStateStorageKey(options: {
   return keyPrefix + modeKey;
 }
 
+export function shouldUseSavedGameStateFromContext(options: {
+  hasWindow?: unknown;
+  replayMode?: unknown;
+  pathname?: unknown;
+}): boolean {
+  const opts = options || {};
+  if (opts.hasWindow === false) return false;
+  if (opts.replayMode) return false;
+  const path = typeof opts.pathname === "string" ? opts.pathname : "";
+  if (path.indexOf("replay.html") !== -1) return false;
+  return true;
+}
+
 export function readStorageFlagFromContext(options: {
   windowLike?: unknown;
   key?: unknown;
