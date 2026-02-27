@@ -799,6 +799,11 @@ GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
   };
 };
 
+GameManager.prototype.resolveReplaySeekRestartPlanForTarget = function (targetIndex) {
+  var rewindPlan = this.planReplaySeekRewind(targetIndex);
+  return this.planReplaySeekRestart(rewindPlan);
+};
+
 GameManager.prototype.setBoardFromMatrix = function (board) {
   if (!Array.isArray(board) || board.length !== this.height) throw "Invalid board matrix";
   this.grid = new Grid(this.width, this.height);
@@ -5794,8 +5799,7 @@ GameManager.prototype.seek = function (targetIndex) {
 
     this.pause(); // Pause while seeking
 
-    var rewindPlan = this.planReplaySeekRewind(targetIndex);
-    var restartPlan = this.planReplaySeekRestart(rewindPlan);
+    var restartPlan = this.resolveReplaySeekRestartPlanForTarget(targetIndex);
     this.applyReplaySeekRestartPlan(restartPlan);
 
     this.fastForwardReplayToIndex(targetIndex);
