@@ -4216,33 +4216,53 @@ GameManager.prototype.recordIpsInput = function () {
   this.incrementIpsInputCountFallback();
 };
 
-GameManager.prototype.refreshIpsDisplay = function (durationMs) {
-  var ipsEl = document.getElementById("stats-ips");
-  if (!ipsEl && !this.cornerIpsEl) return;
+GameManager.prototype.getIpsDisplayTargets = function () {
+  return {
+    statsIpsEl: document.getElementById("stats-ips"),
+    cornerIpsEl: this.cornerIpsEl
+  };
+};
 
+GameManager.prototype.resolveIpsDisplayDurationMs = function (durationMs) {
   var ms = Number(durationMs);
   if (!Number.isFinite(ms) || ms < 0) ms = this.getDurationMs();
+  return ms;
+};
+
+GameManager.prototype.tryResolveIpsDisplayTextFromCore = function (durationMs, ipsInputCount) {
   var resolveIpsDisplayTextCore = this.callCoreReplayExecutionRuntime("resolveIpsDisplayText", [{
-    durationMs: ms,
-    ipsInputCount: this.getIpsInputCount()
+    durationMs: durationMs,
+    ipsInputCount: ipsInputCount
   }]);
-  var ipsText = "";
-  if (resolveIpsDisplayTextCore.available) {
-    var coreDisplay = resolveIpsDisplayTextCore.value || {};
-    if (typeof coreDisplay.ipsText === "string" && coreDisplay.ipsText) {
-      ipsText = coreDisplay.ipsText;
-    }
+  if (!resolveIpsDisplayTextCore.available) return "";
+  var coreDisplay = resolveIpsDisplayTextCore.value || {};
+  return typeof coreDisplay.ipsText === "string" && coreDisplay.ipsText ? coreDisplay.ipsText : "";
+};
+
+GameManager.prototype.buildFallbackIpsDisplayText = function (durationMs, ipsInputCount) {
+  var seconds = durationMs / 1000;
+  var avgIps = 0;
+  if (seconds > 0) {
+    avgIps = (ipsInputCount / seconds).toFixed(2);
   }
+  return "IPS: " + avgIps;
+};
+
+GameManager.prototype.applyIpsDisplayText = function (ipsText, displayTargets) {
+  if (displayTargets.statsIpsEl) displayTargets.statsIpsEl.textContent = ipsText;
+  if (displayTargets.cornerIpsEl) displayTargets.cornerIpsEl.textContent = ipsText;
+};
+
+GameManager.prototype.refreshIpsDisplay = function (durationMs) {
+  var displayTargets = this.getIpsDisplayTargets();
+  if (!displayTargets.statsIpsEl && !displayTargets.cornerIpsEl) return;
+  var ms = this.resolveIpsDisplayDurationMs(durationMs);
+  var ipsInputCount = this.getIpsInputCount();
+  var ipsText = this.tryResolveIpsDisplayTextFromCore(ms, ipsInputCount);
   if (!ipsText) {
-    var seconds = ms / 1000;
-    var avgIps = 0;
-    if (seconds > 0) {
-      avgIps = (this.getIpsInputCount() / seconds).toFixed(2);
-    }
-    ipsText = "IPS: " + avgIps;
+    ipsText = this.buildFallbackIpsDisplayText(ms, ipsInputCount);
   }
-  if (ipsEl) ipsEl.textContent = ipsText;
-  if (this.cornerIpsEl) this.cornerIpsEl.textContent = ipsText;
+  this.applyIpsDisplayText(ipsText, displayTargets);
 };
 
 // Restart the game
