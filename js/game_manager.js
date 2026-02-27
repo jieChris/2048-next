@@ -5423,21 +5423,24 @@ GameManager.prototype.stopTimer = function() {
 GameManager.prototype.pretty = function(time) {
   var formatPrettyTimeCore = this.callCorePrettyTimeRuntime("formatPrettyTime", [time]);
   if (formatPrettyTimeCore.available) return formatPrettyTimeCore.value;
+  return this.formatPrettyTimeFallback(time);
+};
 
+GameManager.prototype.formatPrettyTimeFallback = function (time) {
   if (time < 0) {return "DNF";}
-    var bits = time % 1000;
-    time = (time - bits) / 1000;
-    var secs = time % 60;
-    var mins = ((time - secs) / 60) % 60;
-    var hours = (time - secs - 60 * mins) / 3600;
-    var s = "" + bits;
-    if (bits < 10) {s = "0" + s;}
-    if (bits < 100) {s = "0" + s;}
-    s = secs + "." + s;
-    if (secs < 10 && (mins > 0 || hours > 0)) {s = "0" + s;}
-    if (mins > 0 || hours > 0) {s = mins + ":" + s;}
-    if (mins < 10 && hours > 0) {s = "0" + s;}
-    if (hours > 0) {s = hours + ":" + s;}
+  var bits = time % 1000;
+  time = (time - bits) / 1000;
+  var secs = time % 60;
+  var mins = ((time - secs) / 60) % 60;
+  var hours = (time - secs - 60 * mins) / 3600;
+  var s = "" + bits;
+  if (bits < 10) {s = "0" + s;}
+  if (bits < 100) {s = "0" + s;}
+  s = secs + "." + s;
+  if (secs < 10 && (mins > 0 || hours > 0)) {s = "0" + s;}
+  if (mins > 0 || hours > 0) {s = mins + ":" + s;}
+  if (mins < 10 && hours > 0) {s = "0" + s;}
+  if (hours > 0) {s = hours + ":" + s;}
   return s;
 };
 
