@@ -914,14 +914,22 @@ GameManager.prototype.resolveReplayTickBoundaryPlanForCurrentState = function ()
   return this.planReplayTickBoundary(shouldStopAtTick, replayEndState);
 };
 
-GameManager.prototype.applyReplayTickBoundaryPlan = function (tickBoundaryPlan) {
-  if (!tickBoundaryPlan || tickBoundaryPlan.shouldStop !== true) return false;
+GameManager.prototype.applyReplayTickBoundaryPause = function (tickBoundaryPlan) {
   if (tickBoundaryPlan.shouldPause) {
     this.pause();
   }
+};
+
+GameManager.prototype.applyReplayTickBoundaryReplayMode = function (tickBoundaryPlan) {
   if (tickBoundaryPlan.shouldApplyReplayMode) {
     this.replayMode = tickBoundaryPlan.replayMode;
   }
+};
+
+GameManager.prototype.applyReplayTickBoundaryPlan = function (tickBoundaryPlan) {
+  if (!tickBoundaryPlan || tickBoundaryPlan.shouldStop !== true) return false;
+  this.applyReplayTickBoundaryPause(tickBoundaryPlan);
+  this.applyReplayTickBoundaryReplayMode(tickBoundaryPlan);
   return true;
 };
 
