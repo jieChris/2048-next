@@ -1687,9 +1687,7 @@ GameManager.prototype.appendCompactPracticeAction = function (x, y, value) {
 };
 
 GameManager.prototype.detectMode = function () {
-  var resolveDetectedModeCore = this.resolveCoreModeRuntimeMethod("resolveDetectedMode");
-  if (resolveDetectedModeCore) {
-    var detectedByCore = resolveDetectedModeCore({
+  var resolveDetectedModeCore = this.callCoreModeRuntime("resolveDetectedMode", [{
       existingMode: this.mode,
       bodyMode:
         typeof document !== "undefined" && document.body
@@ -1700,7 +1698,9 @@ GameManager.prototype.detectMode = function () {
           ? window.location.pathname
           : "",
       defaultModeKey: GameManager.DEFAULT_MODE_KEY
-    });
+    }]);
+  if (resolveDetectedModeCore.available) {
+    var detectedByCore = resolveDetectedModeCore.value;
     if (typeof detectedByCore === "string" && detectedByCore) return detectedByCore;
   }
 
@@ -3029,11 +3029,12 @@ GameManager.prototype.setCapped64RowVisible = function (value, visible) {
 };
 
 GameManager.prototype.resetProgressiveCapped64Rows = function () {
-  var createProgressiveCapped64UnlockedStateCore = this.resolveCoreModeRuntimeMethod(
-    "createProgressiveCapped64UnlockedState"
+  var createProgressiveCapped64UnlockedStateCore = this.callCoreModeRuntime(
+    "createProgressiveCapped64UnlockedState",
+    [this.capped64Unlocked]
   );
-  if (createProgressiveCapped64UnlockedStateCore) {
-    this.capped64Unlocked = createProgressiveCapped64UnlockedStateCore(this.capped64Unlocked);
+  if (createProgressiveCapped64UnlockedStateCore.available) {
+    this.capped64Unlocked = createProgressiveCapped64UnlockedStateCore.value;
   } else {
     this.capped64Unlocked = { "16": false, "32": false, "64": false };
   }
@@ -3044,24 +3045,26 @@ GameManager.prototype.resetProgressiveCapped64Rows = function () {
 };
 
 GameManager.prototype.unlockProgressiveCapped64Row = function (value) {
-  var resolveProgressiveCapped64UnlockCore = this.resolveCoreModeRuntimeMethod(
-    "resolveProgressiveCapped64Unlock"
-  );
-  if (resolveProgressiveCapped64UnlockCore) {
-    var unlockedState = this.capped64Unlocked;
-    if (!unlockedState || typeof unlockedState !== "object") {
-      var createProgressiveCapped64UnlockedStateCore = this.resolveCoreModeRuntimeMethod(
-        "createProgressiveCapped64UnlockedState"
-      );
-      unlockedState = createProgressiveCapped64UnlockedStateCore
-        ? createProgressiveCapped64UnlockedStateCore(null)
-        : { "16": false, "32": false, "64": false };
-    }
-    var resolved = resolveProgressiveCapped64UnlockCore({
+  var unlockedState = this.capped64Unlocked;
+  if (!unlockedState || typeof unlockedState !== "object") {
+    var createProgressiveCapped64UnlockedStateCore = this.callCoreModeRuntime(
+      "createProgressiveCapped64UnlockedState",
+      [null]
+    );
+    unlockedState = createProgressiveCapped64UnlockedStateCore.available
+      ? createProgressiveCapped64UnlockedStateCore.value
+      : { "16": false, "32": false, "64": false };
+  }
+  var resolveProgressiveCapped64UnlockCore = this.callCoreModeRuntime(
+    "resolveProgressiveCapped64Unlock",
+    [{
       isProgressiveCapped64Mode: this.isProgressiveCapped64Mode(),
       value: value,
       unlockedState: unlockedState
-    }) || {};
+    }]
+  );
+  if (resolveProgressiveCapped64UnlockCore.available) {
+    var resolved = resolveProgressiveCapped64UnlockCore.value || {};
     if (resolved.nextUnlockedState && typeof resolved.nextUnlockedState === "object") {
       this.capped64Unlocked = resolved.nextUnlockedState;
     } else {
@@ -3098,16 +3101,16 @@ GameManager.prototype.repositionCappedTimerContainer = function () {
 };
 
 GameManager.prototype.applyCappedRowVisibility = function () {
-  var resolveCappedRowVisibilityPlanCore = this.resolveCoreModeRuntimeMethod("resolveCappedRowVisibilityPlan");
-  if (resolveCappedRowVisibilityPlanCore) {
-    var isCappedMode = this.isCappedMode();
-    var isProgressiveCapped64Mode = this.isProgressiveCapped64Mode();
-    var plan = resolveCappedRowVisibilityPlanCore({
+  var isCappedMode = this.isCappedMode();
+  var isProgressiveCapped64Mode = this.isProgressiveCapped64Mode();
+  var resolveCappedRowVisibilityPlanCore = this.callCoreModeRuntime("resolveCappedRowVisibilityPlan", [{
       isCappedMode: isCappedMode,
       isProgressiveCapped64Mode: isProgressiveCapped64Mode,
       cappedTargetValue: this.getCappedTargetValue(),
       timerSlotIds: GameManager.TIMER_SLOT_IDS
-    });
+    }]);
+  if (resolveCappedRowVisibilityPlanCore.available) {
+    var plan = resolveCappedRowVisibilityPlanCore.value;
     if (Array.isArray(plan) && plan.length > 0) {
       for (var p = 0; p < plan.length; p++) {
         var item = plan[p];
@@ -3154,12 +3157,12 @@ GameManager.prototype.resetCappedDynamicTimers = function () {
 };
 
 GameManager.prototype.getCappedTimerLegendClass = function () {
-  var resolveCappedTimerLegendClassCore = this.resolveCoreModeRuntimeMethod("resolveCappedTimerLegendClass");
-  if (resolveCappedTimerLegendClassCore) {
-    var legendClass = resolveCappedTimerLegendClassCore({
+  var resolveCappedTimerLegendClassCore = this.callCoreModeRuntime("resolveCappedTimerLegendClass", [{
       timerMilestoneSlotByValue: this.timerMilestoneSlotByValue,
       cappedTargetValue: this.getCappedTargetValue()
-    });
+    }]);
+  if (resolveCappedTimerLegendClassCore.available) {
+    var legendClass = resolveCappedTimerLegendClassCore.value;
     if (typeof legendClass === "string" && legendClass) return legendClass;
   }
 
@@ -3170,9 +3173,11 @@ GameManager.prototype.getCappedTimerLegendClass = function () {
 };
 
 GameManager.prototype.getCappedTimerFontSize = function () {
-  var resolveCappedTimerLegendFontSizeCore = this.resolveCoreModeRuntimeMethod("resolveCappedTimerLegendFontSize");
-  if (resolveCappedTimerLegendFontSizeCore) {
-    var resolvedFontSize = resolveCappedTimerLegendFontSizeCore(this.getCappedTargetValue());
+  var resolveCappedTimerLegendFontSizeCore = this.callCoreModeRuntime("resolveCappedTimerLegendFontSize", [
+    this.getCappedTargetValue()
+  ]);
+  if (resolveCappedTimerLegendFontSizeCore.available) {
+    var resolvedFontSize = resolveCappedTimerLegendFontSizeCore.value;
     if (typeof resolvedFontSize === "string" && resolvedFontSize) return resolvedFontSize;
   }
   var cap = this.getCappedTargetValue() || 2048;
@@ -3183,22 +3188,22 @@ GameManager.prototype.getCappedTimerFontSize = function () {
 };
 
 GameManager.prototype.getCappedRepeatLabel = function (repeatCount) {
-  var formatCappedRepeatLabelCore = this.resolveCoreModeRuntimeMethod("formatCappedRepeatLabel");
-  if (formatCappedRepeatLabelCore) {
-    var label = formatCappedRepeatLabelCore(repeatCount);
+  var formatCappedRepeatLabelCore = this.callCoreModeRuntime("formatCappedRepeatLabel", [repeatCount]);
+  if (formatCappedRepeatLabelCore.available) {
+    var label = formatCappedRepeatLabelCore.value;
     if (typeof label === "string") return label;
   }
   return "x" + String(repeatCount);
 };
 
 GameManager.prototype.getCappedPlaceholderRowValues = function () {
-  var resolveCappedPlaceholderRowValuesCore = this.resolveCoreModeRuntimeMethod("resolveCappedPlaceholderRowValues");
-  if (resolveCappedPlaceholderRowValuesCore) {
-    var coreValues = resolveCappedPlaceholderRowValuesCore({
+  var resolveCappedPlaceholderRowValuesCore = this.callCoreModeRuntime("resolveCappedPlaceholderRowValues", [{
       isCappedMode: this.isCappedMode(),
       cappedTargetValue: this.getCappedTargetValue(),
       timerSlotIds: GameManager.TIMER_SLOT_IDS
-    });
+    }]);
+  if (resolveCappedPlaceholderRowValuesCore.available) {
+    var coreValues = resolveCappedPlaceholderRowValuesCore.value;
     if (Array.isArray(coreValues)) {
       var normalized = [];
       for (var c = 0; c < coreValues.length; c++) {
@@ -3244,15 +3249,16 @@ GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, 
   if (!Number.isInteger(repeatCount) || repeatCount < 2) return false;
 
   var values = this.getCappedPlaceholderRowValues();
-  var resolveCappedPlaceholderSlotByRepeatCountCore = this.resolveCoreModeRuntimeMethod(
-    "resolveCappedPlaceholderSlotByRepeatCount"
-  );
-  var slotValue = null;
-  if (resolveCappedPlaceholderSlotByRepeatCountCore) {
-    slotValue = resolveCappedPlaceholderSlotByRepeatCountCore({
+  var resolveCappedPlaceholderSlotByRepeatCountCore = this.callCoreModeRuntime(
+    "resolveCappedPlaceholderSlotByRepeatCount",
+    [{
       repeatCount: repeatCount,
       placeholderRowValues: values
-    });
+    }]
+  );
+  var slotValue = null;
+  if (resolveCappedPlaceholderSlotByRepeatCountCore.available) {
+    slotValue = resolveCappedPlaceholderSlotByRepeatCountCore.value;
   }
   if (!Number.isInteger(slotValue) || slotValue <= 0) {
     var placeholderIndex = repeatCount - 2; // x2 => first placeholder row
@@ -4046,14 +4052,14 @@ GameManager.prototype.clearTransientTileVisualState = function () {
 };
 
 GameManager.prototype.isGameTerminated = function () {
-  var isGameTerminatedStateCore = this.resolveCoreModeRuntimeMethod("isGameTerminatedState");
+  var isGameTerminatedStateCore = this.callCoreModeRuntime("isGameTerminatedState", [{
+    over: this.over,
+    won: this.won,
+    keepPlaying: this.keepPlaying
+  }]);
   var terminated = false;
-  if (isGameTerminatedStateCore) {
-    terminated = !!isGameTerminatedStateCore({
-      over: this.over,
-      won: this.won,
-      keepPlaying: this.keepPlaying
-    });
+  if (isGameTerminatedStateCore.available) {
+    terminated = !!isGameTerminatedStateCore.value;
   } else {
     terminated = !!this.over || (!!this.won && !this.keepPlaying);
   }
