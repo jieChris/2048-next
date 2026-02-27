@@ -3334,36 +3334,50 @@ GameManager.prototype.resolveIsUndoInteractionEnabled = function (
     !!(undoEnabled && isUndoAllowedByMode);
 };
 
-GameManager.prototype.buildUndoPolicyStateFallback = function (params) {
+GameManager.prototype.normalizeUndoPolicyStateFallbackInput = function (params) {
   var input = params && typeof params === "object" ? params : {};
-  var forcedUndoSetting = input.forcedUndoSetting;
-  var hasGameStarted = !!input.hasGameStarted;
-  var replayMode = !!input.replayMode;
-  var undoLimit = input.undoLimit;
-  var undoUsed = input.undoUsed;
-  var undoEnabled = !!input.undoEnabled;
+  return {
+    forcedUndoSetting: input.forcedUndoSetting,
+    hasGameStarted: !!input.hasGameStarted,
+    replayMode: !!input.replayMode,
+    undoLimit: input.undoLimit,
+    undoUsed: input.undoUsed,
+    undoEnabled: !!input.undoEnabled
+  };
+};
 
-  var isUndoAllowedByMode = this.resolveIsUndoAllowedByMode(forcedUndoSetting);
-  var isUndoSettingFixedForMode = this.resolveIsUndoSettingFixedForMode(forcedUndoSetting);
+GameManager.prototype.resolveUndoPolicyStateFallbackComputedState = function (input) {
+  var isUndoAllowedByMode = this.resolveIsUndoAllowedByMode(input.forcedUndoSetting);
+  var isUndoSettingFixedForMode = this.resolveIsUndoSettingFixedForMode(input.forcedUndoSetting);
   var canToggleUndoSetting = this.resolveCanToggleUndoSetting(
     isUndoAllowedByMode,
     isUndoSettingFixedForMode,
-    hasGameStarted
+    input.hasGameStarted
   );
   var isUndoInteractionEnabled = this.resolveIsUndoInteractionEnabled(
-    replayMode,
-    undoLimit,
-    undoUsed,
-    undoEnabled,
+    input.replayMode,
+    input.undoLimit,
+    input.undoUsed,
+    input.undoEnabled,
     isUndoAllowedByMode
   );
-
   return {
-    forcedUndoSetting: forcedUndoSetting,
     isUndoAllowedByMode: isUndoAllowedByMode,
     isUndoSettingFixedForMode: isUndoSettingFixedForMode,
     canToggleUndoSetting: canToggleUndoSetting,
     isUndoInteractionEnabled: isUndoInteractionEnabled
+  };
+};
+
+GameManager.prototype.buildUndoPolicyStateFallback = function (params) {
+  var input = this.normalizeUndoPolicyStateFallbackInput(params);
+  var state = this.resolveUndoPolicyStateFallbackComputedState(input);
+  return {
+    forcedUndoSetting: input.forcedUndoSetting,
+    isUndoAllowedByMode: state.isUndoAllowedByMode,
+    isUndoSettingFixedForMode: state.isUndoSettingFixedForMode,
+    canToggleUndoSetting: state.canToggleUndoSetting,
+    isUndoInteractionEnabled: state.isUndoInteractionEnabled
   };
 };
 
