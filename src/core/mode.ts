@@ -40,6 +40,19 @@ export interface UndoTogglePolicyInput extends UndoPolicyInput {
   hasGameStarted?: boolean | null;
 }
 
+export interface LegacyModeResolveInput {
+  modeKey?: string | null;
+  fallbackModeKey?: string | null;
+  mode?: string | null;
+  legacyModeByKey?: Record<string, string> | null;
+}
+
+export interface ModeCatalogAliasResolveInput {
+  modeId?: string | null;
+  defaultModeKey: string;
+  legacyAliasToModeKey?: Record<string, string> | null;
+}
+
 export function clonePlain<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -164,4 +177,29 @@ export function canToggleUndoSetting(input: UndoTogglePolicyInput): boolean {
 
 export function isTimerLeaderboardAvailableByMode(_mode?: string | null): boolean {
   return true;
+}
+
+export function resolveLegacyModeFromModeKey(input: LegacyModeResolveInput): string {
+  const key = input.modeKey || input.fallbackModeKey || input.mode || "";
+  const legacyModeByKey = input.legacyModeByKey || null;
+  if (legacyModeByKey && typeof legacyModeByKey[key] === "string") {
+    return legacyModeByKey[key] || "classic";
+  }
+  if (key && key.indexOf("capped") !== -1) return "capped";
+  if (key && key.indexOf("practice") !== -1) return "practice";
+  return "classic";
+}
+
+export function resolveModeCatalogAlias(input: ModeCatalogAliasResolveInput): string {
+  const id = input.modeId || input.defaultModeKey;
+  const legacyAliasToModeKey = input.legacyAliasToModeKey || null;
+  if (
+    legacyAliasToModeKey &&
+    Object.prototype.hasOwnProperty.call(legacyAliasToModeKey, id) &&
+    typeof legacyAliasToModeKey[id] === "string" &&
+    legacyAliasToModeKey[id]
+  ) {
+    return legacyAliasToModeKey[id];
+  }
+  return id;
 }

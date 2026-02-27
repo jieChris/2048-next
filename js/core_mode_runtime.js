@@ -210,6 +210,33 @@
     return true;
   }
 
+  function resolveLegacyModeFromModeKey(input) {
+    var source = input || {};
+    var key = source.modeKey || source.fallbackModeKey || source.mode || "";
+    var legacyModeByKey = source.legacyModeByKey || null;
+    if (legacyModeByKey && typeof legacyModeByKey[key] === "string") {
+      return legacyModeByKey[key] || "classic";
+    }
+    if (key && key.indexOf("capped") !== -1) return "capped";
+    if (key && key.indexOf("practice") !== -1) return "practice";
+    return "classic";
+  }
+
+  function resolveModeCatalogAlias(input) {
+    var source = input || {};
+    var id = source.modeId || source.defaultModeKey;
+    var legacyAliasToModeKey = source.legacyAliasToModeKey || null;
+    if (
+      legacyAliasToModeKey &&
+      Object.prototype.hasOwnProperty.call(legacyAliasToModeKey, id) &&
+      typeof legacyAliasToModeKey[id] === "string" &&
+      legacyAliasToModeKey[id]
+    ) {
+      return legacyAliasToModeKey[id];
+    }
+    return id;
+  }
+
   global.CoreModeRuntime = global.CoreModeRuntime || {};
   global.CoreModeRuntime.normalizeSpecialRules = normalizeSpecialRules;
   global.CoreModeRuntime.normalizeModeConfig = normalizeModeConfig;
@@ -221,4 +248,6 @@
   global.CoreModeRuntime.isUndoSettingFixedForMode = isUndoSettingFixedForMode;
   global.CoreModeRuntime.canToggleUndoSetting = canToggleUndoSetting;
   global.CoreModeRuntime.isTimerLeaderboardAvailableByMode = isTimerLeaderboardAvailableByMode;
+  global.CoreModeRuntime.resolveLegacyModeFromModeKey = resolveLegacyModeFromModeKey;
+  global.CoreModeRuntime.resolveModeCatalogAlias = resolveModeCatalogAlias;
 })(typeof window !== "undefined" ? window : undefined);

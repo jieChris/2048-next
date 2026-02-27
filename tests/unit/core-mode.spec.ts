@@ -10,6 +10,8 @@ import {
   isUndoAllowedByMode,
   isUndoSettingFixedForMode,
   normalizeModeConfig,
+  resolveLegacyModeFromModeKey,
+  resolveModeCatalogAlias,
   normalizeSpecialRules
 } from "../../src/core/mode";
 
@@ -257,5 +259,56 @@ describe("core mode: timer leaderboard policy", () => {
   it("keeps timer leaderboard availability enabled", () => {
     expect(isTimerLeaderboardAvailableByMode("standard_4x4_pow2_no_undo")).toBe(true);
     expect(isTimerLeaderboardAvailableByMode("capped_4x4_pow2_no_undo")).toBe(true);
+  });
+});
+
+describe("core mode: legacy mapping policy", () => {
+  it("resolves legacy server mode from explicit map first", () => {
+    expect(
+      resolveLegacyModeFromModeKey({
+        modeKey: "standard_4x4_pow2_no_undo",
+        legacyModeByKey: { standard_4x4_pow2_no_undo: "classic" }
+      })
+    ).toBe("classic");
+  });
+
+  it("falls back to capped/practice/classic inference", () => {
+    expect(
+      resolveLegacyModeFromModeKey({
+        modeKey: "capped_4x4_pow2_no_undo"
+      })
+    ).toBe("capped");
+    expect(
+      resolveLegacyModeFromModeKey({
+        fallbackModeKey: "practice_legacy"
+      })
+    ).toBe("practice");
+    expect(
+      resolveLegacyModeFromModeKey({
+        mode: "unknown_mode"
+      })
+    ).toBe("classic");
+  });
+
+  it("resolves catalog alias mapping and keeps passthrough values", () => {
+    expect(
+      resolveModeCatalogAlias({
+        modeId: "classic_no_undo",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        legacyAliasToModeKey: {
+          classic_no_undo: "standard_4x4_pow2_no_undo"
+        }
+      })
+    ).toBe("standard_4x4_pow2_no_undo");
+
+    expect(
+      resolveModeCatalogAlias({
+        modeId: "fib_4x4_undo",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        legacyAliasToModeKey: {
+          classic_no_undo: "standard_4x4_pow2_no_undo"
+        }
+      })
+    ).toBe("fib_4x4_undo");
   });
 });

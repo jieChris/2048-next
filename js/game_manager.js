@@ -250,6 +250,13 @@ GameManager.LEGACY_MODE_BY_KEY = {
   capped_4x4_pow2_no_undo: "capped",
   practice_legacy: "practice"
 };
+GameManager.LEGACY_ALIAS_TO_MODE_KEY = {
+  classic: "classic_4x4_pow2_undo",
+  capped: "capped_4x4_pow2_no_undo",
+  practice: "practice_legacy",
+  classic_no_undo: "standard_4x4_pow2_no_undo",
+  classic_undo_only: "classic_4x4_pow2_undo"
+};
 GameManager.TIMER_SLOT_IDS = [16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
 
 GameManager.prototype.getActionKind = function (action) {
@@ -2441,15 +2448,19 @@ GameManager.prototype.resolveModeConfig = function (modeId) {
   var byCatalog = this.getModeConfigFromCatalog(id);
   if (byCatalog) return this.normalizeModeConfig(id, byCatalog);
 
-  var legacyMap = {
-    classic: "classic_4x4_pow2_undo",
-    capped: "capped_4x4_pow2_no_undo",
-    practice: "practice_legacy",
-    classic_no_undo: "standard_4x4_pow2_no_undo",
-    classic_undo_only: "classic_4x4_pow2_undo"
-  };
-  var mapped = legacyMap[id];
-  if (mapped) {
+  var modeCore = this.getCoreModeRuntime();
+  var mapped = id;
+  if (modeCore && typeof modeCore.resolveModeCatalogAlias === "function") {
+    mapped = modeCore.resolveModeCatalogAlias({
+      modeId: id,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+      legacyAliasToModeKey: GameManager.LEGACY_ALIAS_TO_MODE_KEY
+    });
+  } else if (GameManager.LEGACY_ALIAS_TO_MODE_KEY[id]) {
+    mapped = GameManager.LEGACY_ALIAS_TO_MODE_KEY[id];
+  }
+
+  if (mapped && mapped !== id) {
     var mappedCfg = this.getModeConfigFromCatalog(mapped);
     if (mappedCfg) return this.normalizeModeConfig(mapped, mappedCfg);
   }
@@ -2616,6 +2627,16 @@ GameManager.prototype.consumeDirectionLock = function () {
 };
 
 GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
+  var modeCore = this.getCoreModeRuntime();
+  if (modeCore && typeof modeCore.resolveLegacyModeFromModeKey === "function") {
+    return modeCore.resolveLegacyModeFromModeKey({
+      modeKey: modeKey,
+      fallbackModeKey: this.modeKey,
+      mode: this.mode,
+      legacyModeByKey: GameManager.LEGACY_MODE_BY_KEY
+    });
+  }
+
   var key = modeKey || this.modeKey || this.mode;
   if (GameManager.LEGACY_MODE_BY_KEY[key]) return GameManager.LEGACY_MODE_BY_KEY[key];
   if (key && key.indexOf("capped") !== -1) return "capped";
