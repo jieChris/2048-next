@@ -3162,6 +3162,29 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
   return this.buildNormalizedUndoStackEntryFallback(source, fallbackState, tiles);
 };
 
+GameManager.prototype.normalizeUndoTileSnapshotFromCore = function (computed) {
+  if (
+    this.isNonArrayObject(computed) &&
+    computed.previousPosition &&
+    this.isNonArrayObject(computed.previousPosition)
+  ) {
+    return computed;
+  }
+  return null;
+};
+
+GameManager.prototype.buildUndoTileSnapshotFallback = function (tile, target) {
+  return {
+    x: tile ? tile.x : null,
+    y: tile ? tile.y : null,
+    value: tile ? tile.value : null,
+    previousPosition: {
+      x: target ? target.x : null,
+      y: target ? target.y : null
+    }
+  };
+};
+
 GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
   var createUndoTileSnapshotCore = this.callCoreUndoTileSnapshotRuntime("createUndoTileSnapshot", [{
       tile: {
@@ -3175,30 +3198,14 @@ GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
       }
     }]);
   if (createUndoTileSnapshotCore.available) {
-    var computed = createUndoTileSnapshotCore.value || {};
-    if (
-      computed &&
-      typeof computed === "object" &&
-      computed.previousPosition &&
-      typeof computed.previousPosition === "object"
-    ) {
-      return computed;
-    }
+    var normalizedByCore = this.normalizeUndoTileSnapshotFromCore(createUndoTileSnapshotCore.value || {});
+    if (normalizedByCore) return normalizedByCore;
   }
 
   if (tile && typeof tile.save === "function") {
     return tile.save(target);
   }
-
-  return {
-    x: tile ? tile.x : null,
-    y: tile ? tile.y : null,
-    value: tile ? tile.value : null,
-    previousPosition: {
-      x: target ? target.x : null,
-      y: target ? target.y : null
-    }
-  };
+  return this.buildUndoTileSnapshotFallback(tile, target);
 };
 
 GameManager.prototype.createUndoRestoreTile = function (snapshot) {
