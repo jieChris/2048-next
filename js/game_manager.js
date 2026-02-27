@@ -7241,17 +7241,29 @@ GameManager.prototype.setSpeed = function (multiplier) {
     this.applyReplaySpeedState(speedState);
 };
 
-GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
-    if (!restartPlan || typeof restartPlan !== "object") return;
+GameManager.prototype.applyReplaySeekRestartBoard = function (restartPlan) {
     if (restartPlan.shouldRestartWithBoard) {
         this.restartReplaySession(this.replayStartBoardMatrix, this.modeConfig, true);
     }
+};
+
+GameManager.prototype.applyReplaySeekRestartSeed = function (restartPlan) {
     if (restartPlan.shouldRestartWithSeed) {
         this.restartReplaySession(this.initialSeed, this.modeConfig, false);
     }
+};
+
+GameManager.prototype.applyReplaySeekRestartIndex = function (restartPlan) {
     if (restartPlan.shouldApplyReplayIndex) {
         this.replayIndex = restartPlan.replayIndex;
     }
+};
+
+GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
+    if (!restartPlan || typeof restartPlan !== "object") return;
+    this.applyReplaySeekRestartBoard(restartPlan);
+    this.applyReplaySeekRestartSeed(restartPlan);
+    this.applyReplaySeekRestartIndex(restartPlan);
 };
 
 GameManager.prototype.fastForwardReplayToIndex = function (targetIndex) {
