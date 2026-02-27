@@ -1729,24 +1729,29 @@ GameManager.prototype.saveGameState = function (options) {
   var payload = this.buildSavedGameStatePayload(now);
 
   try {
-    var key = this.getSavedGameStateKey();
-    var liteKey = this.getSavedGameStateLiteKey();
-    var litePayload = this.buildLiteSavedGameStatePayload(payload);
-    this.writeWindowNameSavedPayload(this.modeKey, litePayload);
-    var persisted = this.writeSavedGameStatePayload(key, payload);
-    if (!persisted) {
-      persisted = this.writeSavedGameStatePayload(key, litePayload);
-    }
-    var litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
-    if (!persisted && !litePersisted) {
-      // Quota fallback: remove old snapshots for this mode, then retry a tiny snapshot.
-      this.clearSavedGameState(this.modeKey);
-      persisted = this.writeSavedGameStatePayload(key, litePayload);
-      litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
-    }
-    if (!persisted && !litePersisted) return;
+    var persisted = this.persistSavedGameStatePayload(payload);
+    if (!persisted) return;
     this.lastSavedGameStateAt = now;
   } catch (_err) {}
+};
+
+GameManager.prototype.persistSavedGameStatePayload = function (payload) {
+  var key = this.getSavedGameStateKey();
+  var liteKey = this.getSavedGameStateLiteKey();
+  var litePayload = this.buildLiteSavedGameStatePayload(payload);
+  this.writeWindowNameSavedPayload(this.modeKey, litePayload);
+  var persisted = this.writeSavedGameStatePayload(key, payload);
+  if (!persisted) {
+    persisted = this.writeSavedGameStatePayload(key, litePayload);
+  }
+  var litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
+  if (!persisted && !litePersisted) {
+    // Quota fallback: remove old snapshots for this mode, then retry a tiny snapshot.
+    this.clearSavedGameState(this.modeKey);
+    persisted = this.writeSavedGameStatePayload(key, litePayload);
+    litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
+  }
+  return !!(persisted || litePersisted);
 };
 
 GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
