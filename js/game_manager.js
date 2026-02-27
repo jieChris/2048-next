@@ -794,11 +794,15 @@ GameManager.prototype.computeReplayPauseState = function () {
   return this.computeReplayPauseStateFallback();
 };
 
-GameManager.prototype.computeReplayPauseStateFallback = function () {
+GameManager.prototype.getReplayPauseDefaults = function () {
   return {
     isPaused: true,
     shouldClearInterval: true
   };
+};
+
+GameManager.prototype.computeReplayPauseStateFallback = function () {
+  return this.getReplayPauseDefaults();
 };
 
 GameManager.prototype.computeReplayResumeState = function () {
@@ -809,11 +813,15 @@ GameManager.prototype.computeReplayResumeState = function () {
   return this.computeReplayResumeStateFallback();
 };
 
+GameManager.prototype.resolveReplayResumeDelayFallback = function () {
+  return this.replayDelay || 200;
+};
+
 GameManager.prototype.computeReplayResumeStateFallback = function () {
   return {
     isPaused: false,
     shouldClearInterval: true,
-    delay: this.replayDelay || 200
+    delay: this.resolveReplayResumeDelayFallback()
   };
 };
 
@@ -827,9 +835,13 @@ GameManager.prototype.computeReplaySpeedState = function (multiplier) {
   return this.computeReplaySpeedStateFallback(multiplier);
 };
 
+GameManager.prototype.resolveReplaySpeedDelayFallback = function (multiplier) {
+  return 200 / multiplier;
+};
+
 GameManager.prototype.computeReplaySpeedStateFallback = function (multiplier) {
   return {
-    replayDelay: 200 / multiplier,
+    replayDelay: this.resolveReplaySpeedDelayFallback(multiplier),
     shouldResume: !this.isPaused
   };
 };
@@ -869,21 +881,27 @@ GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, repla
   return this.planReplayTickBoundaryFallback(shouldStopAtTick, replayEndState);
 };
 
-GameManager.prototype.planReplayTickBoundaryFallback = function (shouldStopAtTick, replayEndState) {
-  if (!shouldStopAtTick) {
-    return {
-      shouldStop: false,
-      shouldPause: false,
-      shouldApplyReplayMode: false,
-      replayMode: true
-    };
-  }
+GameManager.prototype.buildReplayTickContinuePlanFallback = function () {
+  return {
+    shouldStop: false,
+    shouldPause: false,
+    shouldApplyReplayMode: false,
+    replayMode: true
+  };
+};
+
+GameManager.prototype.buildReplayTickStopPlanFallback = function (replayEndState) {
   return {
     shouldStop: true,
     shouldPause: replayEndState && replayEndState.shouldPause !== false,
     shouldApplyReplayMode: true,
     replayMode: replayEndState && replayEndState.replayMode === true
   };
+};
+
+GameManager.prototype.planReplayTickBoundaryFallback = function (shouldStopAtTick, replayEndState) {
+  if (!shouldStopAtTick) return this.buildReplayTickContinuePlanFallback();
+  return this.buildReplayTickStopPlanFallback(replayEndState);
 };
 
 GameManager.prototype.resolveReplayTickBoundaryPlanForCurrentState = function () {
