@@ -3542,6 +3542,20 @@ GameManager.prototype.updateUndoUiState = function () {
 };
 
 GameManager.prototype.recordSpawnValue = function (value) {
+  var applySpawnValueCountCore = this.resolveCoreRuntimeMethod("getCoreRulesRuntime", "applySpawnValueCount");
+  if (applySpawnValueCountCore) {
+    var next = applySpawnValueCountCore(this.spawnValueCounts, value) || {};
+    if (next.nextSpawnValueCounts && typeof next.nextSpawnValueCounts === "object") {
+      this.spawnValueCounts = next.nextSpawnValueCounts;
+    } else if (!this.spawnValueCounts) {
+      this.spawnValueCounts = {};
+    }
+    this.spawnTwos = Number(next.spawnTwos) || 0;
+    this.spawnFours = Number(next.spawnFours) || 0;
+    this.refreshSpawnRateDisplay();
+    return;
+  }
+
   if (!this.spawnValueCounts) this.spawnValueCounts = {};
   var k = String(value);
   this.spawnValueCounts[k] = (this.spawnValueCounts[k] || 0) + 1;

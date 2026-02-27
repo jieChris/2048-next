@@ -110,6 +110,23 @@
     return ((secondaryCount / total) * 100).toFixed(2);
   }
 
+  function applySpawnValueCount(spawnValueCounts, value) {
+    var nextSpawnValueCounts = {};
+    if (spawnValueCounts && typeof spawnValueCounts === "object") {
+      for (var key in spawnValueCounts) {
+        if (!Object.prototype.hasOwnProperty.call(spawnValueCounts, key)) continue;
+        nextSpawnValueCounts[key] = Number(spawnValueCounts[key]) || 0;
+      }
+    }
+    var k = String(value);
+    nextSpawnValueCounts[k] = (nextSpawnValueCounts[k] || 0) + 1;
+    return {
+      nextSpawnValueCounts: nextSpawnValueCounts,
+      spawnTwos: nextSpawnValueCounts["2"] || 0,
+      spawnFours: nextSpawnValueCounts["4"] || 0
+    };
+  }
+
   function nextFibonacci(value) {
     if (value <= 0) return 1;
     if (value === 1) return 2;
@@ -164,6 +181,7 @@
   global.CoreRulesRuntime.getSpawnCount = getSpawnCount;
   global.CoreRulesRuntime.getTotalSpawnCount = getTotalSpawnCount;
   global.CoreRulesRuntime.getActualSecondaryRateText = getActualSecondaryRateText;
+  global.CoreRulesRuntime.applySpawnValueCount = applySpawnValueCount;
   global.CoreRulesRuntime.nextFibonacci = nextFibonacci;
   global.CoreRulesRuntime.getMergedValue = getMergedValue;
   global.CoreRulesRuntime.getTimerMilestoneValues = getTimerMilestoneValues;

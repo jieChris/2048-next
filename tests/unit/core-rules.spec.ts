@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applySpawnValueCount,
   getActualSecondaryRateText,
   getMergedValue,
   getSpawnCount,
@@ -159,5 +160,18 @@ describe("core rules: spawn stats", () => {
       ])
     ).toBe("10.00");
     expect(getActualSecondaryRateText(null, null)).toBe("0.00");
+  });
+
+  it("applies spawn value count updates with compatibility counters", () => {
+    expect(applySpawnValueCount(null, 2)).toEqual({
+      nextSpawnValueCounts: { "2": 1 },
+      spawnTwos: 1,
+      spawnFours: 0
+    });
+    expect(applySpawnValueCount({ "2": 1, "4": 2 }, 4)).toEqual({
+      nextSpawnValueCounts: { "2": 1, "4": 3 },
+      spawnTwos: 1,
+      spawnFours: 3
+    });
   });
 });

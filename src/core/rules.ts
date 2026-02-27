@@ -14,6 +14,12 @@ export interface SpawnStatPair {
   secondary: number;
 }
 
+export interface SpawnValueUpdateResult {
+  nextSpawnValueCounts: Record<string, number>;
+  spawnTwos: number;
+  spawnFours: number;
+}
+
 const FIBONACCI_MILESTONES = [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181];
 
 export function normalizeSpawnTable(
@@ -127,6 +133,26 @@ export function getActualSecondaryRateText(
   if (total <= 0) return "0.00";
   const secondaryCount = getSpawnCount(spawnValueCounts, pair.secondary);
   return ((secondaryCount / total) * 100).toFixed(2);
+}
+
+export function applySpawnValueCount(
+  spawnValueCounts: SpawnValueCountMap | null | undefined,
+  value: number
+): SpawnValueUpdateResult {
+  const nextSpawnValueCounts: Record<string, number> = {};
+  if (spawnValueCounts && typeof spawnValueCounts === "object") {
+    for (const key in spawnValueCounts) {
+      if (!Object.prototype.hasOwnProperty.call(spawnValueCounts, key)) continue;
+      nextSpawnValueCounts[key] = Number(spawnValueCounts[key]) || 0;
+    }
+  }
+  const k = String(value);
+  nextSpawnValueCounts[k] = (nextSpawnValueCounts[k] || 0) + 1;
+  return {
+    nextSpawnValueCounts,
+    spawnTwos: nextSpawnValueCounts["2"] || 0,
+    spawnFours: nextSpawnValueCounts["4"] || 0
+  };
 }
 
 export function nextFibonacci(value: number): number | null {
