@@ -1089,6 +1089,19 @@ GameManager.prototype.getSavedGameStateStorages = function () {
 };
 
 GameManager.prototype.readSavedPayloadByKey = function (key) {
+  var readSavedPayloadByKeyFromStoragesCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "readSavedPayloadByKeyFromStorages"
+  );
+  if (readSavedPayloadByKeyFromStoragesCore) {
+    var savedByCore = readSavedPayloadByKeyFromStoragesCore({
+      storages: this.getSavedGameStateStorages(),
+      key: key
+    });
+    if (savedByCore && typeof savedByCore === "object") return savedByCore;
+    if (savedByCore === null) return null;
+  }
+
   var stores = this.getSavedGameStateStorages();
   var best = null;
   var bestSavedAt = -1;
@@ -1120,6 +1133,23 @@ GameManager.prototype.readSavedPayloadByKey = function (key) {
 };
 
 GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
+  var readSavedPayloadFromWindowNameCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "readSavedPayloadFromWindowName"
+  );
+  if (readSavedPayloadFromWindowNameCore) {
+    var payloadByCore = readSavedPayloadFromWindowNameCore({
+      windowLike: typeof window !== "undefined" ? window : null,
+      windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
+      modeKey: modeKey,
+      currentModeKey: this.modeKey,
+      currentMode: this.mode,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY
+    });
+    if (payloadByCore && typeof payloadByCore === "object") return payloadByCore;
+    if (payloadByCore === null) return null;
+  }
+
   if (typeof window === "undefined") return null;
   var raw = "";
   try {
@@ -1152,6 +1182,23 @@ GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
 };
 
 GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) {
+  var writeSavedPayloadToWindowNameCore = this.resolveCoreRuntimeMethod(
+    "getCoreGameSettingsStorageRuntime",
+    "writeSavedPayloadToWindowName"
+  );
+  if (writeSavedPayloadToWindowNameCore) {
+    var writtenByCore = writeSavedPayloadToWindowNameCore({
+      windowLike: typeof window !== "undefined" ? window : null,
+      windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
+      modeKey: modeKey,
+      currentModeKey: this.modeKey,
+      currentMode: this.mode,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+      payload: payload
+    });
+    if (typeof writtenByCore === "boolean") return writtenByCore;
+  }
+
   if (typeof window === "undefined") return false;
   var key = typeof modeKey === "string" && modeKey ? modeKey : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
   var raw = "";

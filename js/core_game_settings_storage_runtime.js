@@ -12,6 +12,15 @@
     return windowLike.localStorage || null;
   }
 
+  function resolveModeKey(options) {
+    var opts = options || {};
+    if (typeof opts.modeKey === "string" && opts.modeKey) return opts.modeKey;
+    if (typeof opts.currentModeKey === "string" && opts.currentModeKey) return opts.currentModeKey;
+    if (typeof opts.currentMode === "string" && opts.currentMode) return opts.currentMode;
+    if (typeof opts.defaultModeKey === "string" && opts.defaultModeKey) return opts.defaultModeKey;
+    return "";
+  }
+
   function cloneBoardMatrix(value) {
     if (!Array.isArray(value)) return null;
     var out = [];
@@ -33,16 +42,7 @@
 
   function resolveSavedGameStateStorageKey(options) {
     var opts = options || {};
-    var modeKey =
-      typeof opts.modeKey === "string" && opts.modeKey
-        ? opts.modeKey
-        : typeof opts.currentModeKey === "string" && opts.currentModeKey
-          ? opts.currentModeKey
-          : typeof opts.currentMode === "string" && opts.currentMode
-            ? opts.currentMode
-            : typeof opts.defaultModeKey === "string" && opts.defaultModeKey
-              ? opts.defaultModeKey
-              : "";
+    var modeKey = resolveModeKey(opts);
     var keyPrefix = typeof opts.keyPrefix === "string" ? opts.keyPrefix : "";
     return keyPrefix + modeKey;
   }
@@ -264,6 +264,149 @@
     return false;
   }
 
+  function readSavedPayloadByKeyFromStorages(options) {
+    var opts = options || {};
+    var key = typeof opts.key === "string" ? opts.key : "";
+    if (!key) return null;
+
+    var storages = Array.isArray(opts.storages) ? opts.storages : [];
+    if (!storages.length) return null;
+
+    var best = null;
+    var bestSavedAt = -1;
+    for (var i = 0; i < storages.length; i++) {
+      var storage = storages[i];
+      if (!storage || typeof storage.getItem !== "function") continue;
+      var raw = null;
+      try {
+        raw = storage.getItem(key);
+      } catch (_errRead) {
+        raw = null;
+      }
+      if (!raw) continue;
+
+      var parsed = null;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (_errParse) {
+        if (typeof storage.removeItem === "function") {
+          try {
+            storage.removeItem(key);
+          } catch (_errRemove) {}
+        }
+        continue;
+      }
+      if (!isObjectRecord(parsed)) continue;
+
+      var savedAt = Number(parsed.saved_at) || 0;
+      if (savedAt >= bestSavedAt) {
+        bestSavedAt = savedAt;
+        best = parsed;
+      }
+    }
+    return best;
+  }
+
+  function readSavedPayloadFromWindowName(options) {
+    var opts = options || {};
+    var win = opts.windowLike;
+    if (!win) return null;
+
+    var raw = "";
+    try {
+      raw = typeof win.name === "string" ? win.name : "";
+    } catch (_errName) {
+      return null;
+    }
+    if (!raw) return null;
+
+    var windowNameKey = typeof opts.windowNameKey === "string" ? opts.windowNameKey : "";
+    if (!windowNameKey) return null;
+    var marker = windowNameKey + "=";
+
+    var parts = raw.split("&");
+    var encoded = "";
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].indexOf(marker) === 0) {
+        encoded = parts[i].substring(marker.length);
+        break;
+      }
+    }
+    if (!encoded) return null;
+
+    var map = null;
+    try {
+      map = JSON.parse(decodeURIComponent(encoded));
+    } catch (_errParse) {
+      return null;
+    }
+    if (!isObjectRecord(map)) return null;
+
+    var modeKey = resolveModeKey(opts);
+    if (!modeKey) return null;
+    var payload = map[modeKey];
+    if (!isObjectRecord(payload)) return null;
+    return payload;
+  }
+
+  function writeSavedPayloadToWindowName(options) {
+    var opts = options || {};
+    var win = opts.windowLike;
+    if (!win) return false;
+
+    var modeKey = resolveModeKey(opts);
+    if (!modeKey) return false;
+
+    var windowNameKey = typeof opts.windowNameKey === "string" ? opts.windowNameKey : "";
+    if (!windowNameKey) return false;
+    var marker = windowNameKey + "=";
+
+    var raw = "";
+    try {
+      raw = typeof win.name === "string" ? win.name : "";
+    } catch (_errNameRead) {
+      raw = "";
+    }
+
+    var parts = raw ? raw.split("&") : [];
+    var kept = [];
+    var map = {};
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i];
+      if (!part) continue;
+      if (part.indexOf(marker) === 0) {
+        var encoded = part.substring(marker.length);
+        try {
+          var parsed = JSON.parse(decodeURIComponent(encoded));
+          if (isObjectRecord(parsed)) map = parsed;
+        } catch (_errParse) {}
+        continue;
+      }
+      kept.push(part);
+    }
+
+    if (!isObjectRecord(opts.payload)) {
+      delete map[modeKey];
+    } else {
+      map[modeKey] = opts.payload;
+    }
+
+    var encodedMap = "";
+    try {
+      encodedMap = encodeURIComponent(JSON.stringify(map));
+    } catch (_errEncode) {
+      return false;
+    }
+
+    kept.push(marker + encodedMap);
+    try {
+      win.name = kept.join("&");
+      return true;
+    } catch (_errWrite) {
+      return false;
+    }
+  }
+
   function normalizeTimerModuleViewMode(value) {
     return value === "hidden" ? "hidden" : "timer";
   }
@@ -318,6 +461,12 @@
     writeStorageJsonPayloadFromContext;
   global.CoreGameSettingsStorageRuntime.writeSavedPayloadToStorages =
     writeSavedPayloadToStorages;
+  global.CoreGameSettingsStorageRuntime.readSavedPayloadByKeyFromStorages =
+    readSavedPayloadByKeyFromStorages;
+  global.CoreGameSettingsStorageRuntime.readSavedPayloadFromWindowName =
+    readSavedPayloadFromWindowName;
+  global.CoreGameSettingsStorageRuntime.writeSavedPayloadToWindowName =
+    writeSavedPayloadToWindowName;
   global.CoreGameSettingsStorageRuntime.normalizeTimerModuleViewMode = normalizeTimerModuleViewMode;
   global.CoreGameSettingsStorageRuntime.readTimerModuleViewForModeFromMap = readTimerModuleViewForModeFromMap;
   global.CoreGameSettingsStorageRuntime.writeTimerModuleViewForModeToMap = writeTimerModuleViewForModeToMap;

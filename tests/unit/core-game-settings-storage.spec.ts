@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildLiteSavedGameStatePayload,
   normalizeTimerModuleViewMode,
+  readSavedPayloadByKeyFromStorages,
+  readSavedPayloadFromWindowName,
   readUndoEnabledForModeFromMap,
   readTimerModuleViewForModeFromMap,
   resolveSavedGameStateStorageKey,
@@ -10,6 +12,7 @@ import {
   readStorageFlagFromContext,
   readStorageJsonMapFromContext,
   writeUndoEnabledForModeToMap,
+  writeSavedPayloadToWindowName,
   writeTimerModuleViewForModeToMap,
   writeSavedPayloadToStorages,
   writeStorageFlagFromContext,
@@ -143,6 +146,104 @@ describe("core game settings storage", () => {
         payload: { score: 0 }
       })
     ).toBe(false);
+  });
+
+  it("reads most recent saved payload from storages and removes invalid entries", () => {
+    const removeItem = vi.fn();
+    const getItemInvalid = vi.fn(() => "{invalid");
+    const getItemOld = vi.fn(() => JSON.stringify({ saved_at: 10, score: 128 }));
+    const getItemNew = vi.fn(() => JSON.stringify({ saved_at: 20, score: 256 }));
+
+    const result = readSavedPayloadByKeyFromStorages({
+      storages: [
+        { getItem: getItemInvalid, removeItem },
+        { getItem: getItemOld },
+        { getItem: getItemNew }
+      ],
+      key: "saved_game_state_v2_standard_4x4_pow2_no_undo"
+    });
+
+    expect(removeItem).toHaveBeenCalledWith("saved_game_state_v2_standard_4x4_pow2_no_undo");
+    expect(result).toEqual({ saved_at: 20, score: 256 });
+  });
+
+  it("reads saved payload from window.name map by resolved mode key", () => {
+    const map = {
+      practice_legacy: { saved_at: 1, score: 64 },
+      classic_4x4_pow2_undo: { saved_at: 2, score: 128 }
+    };
+    const windowLike = {
+      name:
+        "foo=1&saved_game_state_window_name_v2=" +
+        encodeURIComponent(JSON.stringify(map)) +
+        "&bar=2"
+    };
+
+    const result = readSavedPayloadFromWindowName({
+      windowLike,
+      windowNameKey: "saved_game_state_window_name_v2",
+      modeKey: "",
+      currentModeKey: "classic_4x4_pow2_undo",
+      currentMode: "practice_legacy",
+      defaultModeKey: "standard_4x4_pow2_no_undo"
+    });
+
+    expect(result).toEqual({ saved_at: 2, score: 128 });
+  });
+
+  it("writes saved payload into window.name map and supports deletion", () => {
+    const existingMap = {
+      standard_4x4_pow2_no_undo: { saved_at: 5, score: 32 },
+      practice_legacy: { saved_at: 7, score: 64 }
+    };
+    const windowLike = {
+      name:
+        "x=1&saved_game_state_window_name_v2=" +
+        encodeURIComponent(JSON.stringify(existingMap)) +
+        "&y=2"
+    };
+
+    const writeResult = writeSavedPayloadToWindowName({
+      windowLike,
+      windowNameKey: "saved_game_state_window_name_v2",
+      modeKey: "classic_4x4_pow2_undo",
+      currentModeKey: "standard_4x4_pow2_no_undo",
+      currentMode: "standard_4x4_pow2_no_undo",
+      defaultModeKey: "standard_4x4_pow2_no_undo",
+      payload: { saved_at: 9, score: 512 }
+    });
+    expect(writeResult).toBe(true);
+    expect(windowLike.name).toContain("saved_game_state_window_name_v2=");
+
+    const afterWrite = readSavedPayloadFromWindowName({
+      windowLike,
+      windowNameKey: "saved_game_state_window_name_v2",
+      modeKey: "classic_4x4_pow2_undo",
+      currentModeKey: "",
+      currentMode: "",
+      defaultModeKey: "standard_4x4_pow2_no_undo"
+    });
+    expect(afterWrite).toEqual({ saved_at: 9, score: 512 });
+
+    const deleteResult = writeSavedPayloadToWindowName({
+      windowLike,
+      windowNameKey: "saved_game_state_window_name_v2",
+      modeKey: "practice_legacy",
+      currentModeKey: "",
+      currentMode: "",
+      defaultModeKey: "standard_4x4_pow2_no_undo",
+      payload: null
+    });
+    expect(deleteResult).toBe(true);
+    const deletedPayload = readSavedPayloadFromWindowName({
+      windowLike,
+      windowNameKey: "saved_game_state_window_name_v2",
+      modeKey: "practice_legacy",
+      currentModeKey: "",
+      currentMode: "",
+      defaultModeKey: "standard_4x4_pow2_no_undo"
+    });
+    expect(deletedPayload).toBeNull();
   });
 
   it("resolves saved game state storage key with mode fallbacks", () => {

@@ -1,10 +1,12 @@
 interface StorageLike {
   getItem?(key: string): string | null;
   setItem?(key: string, value: string): unknown;
+  removeItem?(key: string): unknown;
 }
 
 interface WindowLike {
   localStorage?: StorageLike | null;
+  name?: string;
 }
 
 type TimerModuleViewMode = "timer" | "hidden";
@@ -39,6 +41,20 @@ function resolveLocalStorage(windowLike: unknown): StorageLike | null {
   return storage;
 }
 
+function resolveModeKey(options: {
+  modeKey?: unknown;
+  currentModeKey?: unknown;
+  currentMode?: unknown;
+  defaultModeKey?: unknown;
+}): string {
+  const opts = options || {};
+  if (typeof opts.modeKey === "string" && opts.modeKey) return opts.modeKey;
+  if (typeof opts.currentModeKey === "string" && opts.currentModeKey) return opts.currentModeKey;
+  if (typeof opts.currentMode === "string" && opts.currentMode) return opts.currentMode;
+  if (typeof opts.defaultModeKey === "string" && opts.defaultModeKey) return opts.defaultModeKey;
+  return "";
+}
+
 function cloneBoardMatrix(value: unknown): number[][] | null {
   if (!Array.isArray(value)) return null;
   const out: number[][] = [];
@@ -66,16 +82,7 @@ export function resolveSavedGameStateStorageKey(options: {
   keyPrefix?: unknown;
 }): string {
   const opts = options || {};
-  const modeKey =
-    typeof opts.modeKey === "string" && opts.modeKey
-      ? opts.modeKey
-      : typeof opts.currentModeKey === "string" && opts.currentModeKey
-        ? opts.currentModeKey
-        : typeof opts.currentMode === "string" && opts.currentMode
-          ? opts.currentMode
-          : typeof opts.defaultModeKey === "string" && opts.defaultModeKey
-            ? opts.defaultModeKey
-            : "";
+  const modeKey = resolveModeKey(opts);
   const keyPrefix = typeof opts.keyPrefix === "string" ? opts.keyPrefix : "";
   return keyPrefix + modeKey;
 }
@@ -327,6 +334,166 @@ export function writeSavedPayloadToStorages(options: {
     }
   }
   return false;
+}
+
+export function readSavedPayloadByKeyFromStorages(options: {
+  storages?: unknown;
+  key?: unknown;
+}): Record<string, unknown> | null {
+  const opts = options || {};
+  const key = typeof opts.key === "string" ? opts.key : "";
+  if (!key) return null;
+  const storages = Array.isArray(opts.storages) ? opts.storages : [];
+  if (!storages.length) return null;
+
+  let best: Record<string, unknown> | null = null;
+  let bestSavedAt = -1;
+  for (let i = 0; i < storages.length; i++) {
+    const storage = storages[i] as StorageLike | null;
+    if (!storage || typeof storage.getItem !== "function") continue;
+    let raw: string | null = null;
+    try {
+      raw = storage.getItem(key);
+    } catch (_errRead) {
+      raw = null;
+    }
+    if (!raw) continue;
+
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (_errParse) {
+      if (typeof storage.removeItem === "function") {
+        try {
+          storage.removeItem(key);
+        } catch (_errRemove) {}
+      }
+      continue;
+    }
+    if (!isObjectRecord(parsed)) continue;
+
+    const savedAt = Number(parsed.saved_at) || 0;
+    if (savedAt >= bestSavedAt) {
+      bestSavedAt = savedAt;
+      best = parsed;
+    }
+  }
+  return best;
+}
+
+export function readSavedPayloadFromWindowName(options: {
+  windowLike?: unknown;
+  windowNameKey?: unknown;
+  modeKey?: unknown;
+  currentModeKey?: unknown;
+  currentMode?: unknown;
+  defaultModeKey?: unknown;
+}): Record<string, unknown> | null {
+  const opts = options || {};
+  const win = opts.windowLike as WindowLike | null | undefined;
+  if (!win) return null;
+
+  let raw = "";
+  try {
+    raw = typeof win.name === "string" ? win.name : "";
+  } catch (_errName) {
+    return null;
+  }
+  if (!raw) return null;
+
+  const windowNameKey = typeof opts.windowNameKey === "string" ? opts.windowNameKey : "";
+  if (!windowNameKey) return null;
+  const marker = windowNameKey + "=";
+
+  const parts = raw.split("&");
+  let encoded = "";
+  for (let i = 0; i < parts.length; i++) {
+    if (parts[i].indexOf(marker) === 0) {
+      encoded = parts[i].substring(marker.length);
+      break;
+    }
+  }
+  if (!encoded) return null;
+
+  let map: unknown = null;
+  try {
+    map = JSON.parse(decodeURIComponent(encoded));
+  } catch (_errParse) {
+    return null;
+  }
+  if (!isObjectRecord(map)) return null;
+
+  const modeKey = resolveModeKey(opts);
+  if (!modeKey) return null;
+  const payload = map[modeKey];
+  if (!isObjectRecord(payload)) return null;
+  return payload;
+}
+
+export function writeSavedPayloadToWindowName(options: {
+  windowLike?: unknown;
+  windowNameKey?: unknown;
+  modeKey?: unknown;
+  currentModeKey?: unknown;
+  currentMode?: unknown;
+  defaultModeKey?: unknown;
+  payload?: unknown;
+}): boolean {
+  const opts = options || {};
+  const win = opts.windowLike as WindowLike | null | undefined;
+  if (!win) return false;
+
+  const modeKey = resolveModeKey(opts);
+  if (!modeKey) return false;
+
+  const windowNameKey = typeof opts.windowNameKey === "string" ? opts.windowNameKey : "";
+  if (!windowNameKey) return false;
+  const marker = windowNameKey + "=";
+
+  let raw = "";
+  try {
+    raw = typeof win.name === "string" ? win.name : "";
+  } catch (_errNameRead) {
+    raw = "";
+  }
+
+  const parts = raw ? raw.split("&") : [];
+  const kept: string[] = [];
+  let map: Record<string, unknown> = {};
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (!part) continue;
+    if (part.indexOf(marker) === 0) {
+      const encoded = part.substring(marker.length);
+      try {
+        const parsed = JSON.parse(decodeURIComponent(encoded));
+        if (isObjectRecord(parsed)) map = parsed;
+      } catch (_errParse) {}
+      continue;
+    }
+    kept.push(part);
+  }
+
+  if (!isObjectRecord(opts.payload)) {
+    delete map[modeKey];
+  } else {
+    map[modeKey] = opts.payload;
+  }
+
+  let encodedMap = "";
+  try {
+    encodedMap = encodeURIComponent(JSON.stringify(map));
+  } catch (_errEncode) {
+    return false;
+  }
+
+  kept.push(marker + encodedMap);
+  try {
+    win.name = kept.join("&");
+    return true;
+  } catch (_errWrite) {
+    return false;
+  }
 }
 
 function normalizeTimerModuleViewModeFromUnknown(value: unknown): TimerModuleViewMode {
