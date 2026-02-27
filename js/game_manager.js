@@ -5452,25 +5452,33 @@ GameManager.prototype.resolveStatsPanelTopActionHost = function () {
   return document.querySelector(".heading .top-action-buttons") || document.querySelector(".top-action-buttons");
 };
 
-GameManager.prototype.mountStatsPanelToggleButton = function (btn, topActionHost) {
+GameManager.prototype.mountStatsPanelButtonIntoTopActionHost = function (btn, topActionHost) {
   var exportBtn = document.getElementById("top-export-replay-btn");
-  if (topActionHost) {
-    btn.classList.remove("is-floating");
-    if (exportBtn && exportBtn.parentNode === topActionHost) {
-      if (btn.parentNode !== topActionHost || btn.nextSibling !== exportBtn) {
-        topActionHost.insertBefore(btn, exportBtn);
-      }
-      return;
-    }
-    if (btn.parentNode !== topActionHost) {
-      topActionHost.insertBefore(btn, topActionHost.firstChild);
+  btn.classList.remove("is-floating");
+  if (exportBtn && exportBtn.parentNode === topActionHost) {
+    if (btn.parentNode !== topActionHost || btn.nextSibling !== exportBtn) {
+      topActionHost.insertBefore(btn, exportBtn);
     }
     return;
   }
+  if (btn.parentNode !== topActionHost) {
+    topActionHost.insertBefore(btn, topActionHost.firstChild);
+  }
+};
+
+GameManager.prototype.mountStatsPanelButtonAsFloating = function (btn) {
   if (btn.parentNode !== document.body) {
     document.body.appendChild(btn);
   }
   btn.classList.add("is-floating");
+};
+
+GameManager.prototype.mountStatsPanelToggleButton = function (btn, topActionHost) {
+  if (topActionHost) {
+    this.mountStatsPanelButtonIntoTopActionHost(btn, topActionHost);
+    return;
+  }
+  this.mountStatsPanelButtonAsFloating(btn);
 };
 
 GameManager.prototype.buildStatsPanelOverlayMarkup = function () {
