@@ -7391,13 +7391,29 @@ GameManager.prototype.startReplayImportPlayback = function () {
   this.resume();
 };
 
+GameManager.prototype.resolveReplayImportStartIndex = function () {
+  return 0;
+};
+
+GameManager.prototype.resolveReplayImportDefaultDelay = function () {
+  return 200;
+};
+
+GameManager.prototype.applyReplayImportPlaybackDefaults = function () {
+  this.replayIndex = this.resolveReplayImportStartIndex();
+  this.replayDelay = this.resolveReplayImportDefaultDelay();
+};
+
 GameManager.prototype.resetReplayPlaybackStateForImport = function () {
-  this.replayIndex = 0;
-  this.replayDelay = 200;
+  this.applyReplayImportPlaybackDefaults();
+};
+
+GameManager.prototype.applyReplayImportUndoSetting = function () {
+  this.applyUndoSettingForMode(this.modeKey, true, true);
 };
 
 GameManager.prototype.finalizeReplayImportPlayback = function () {
-  this.applyUndoSettingForMode(this.modeKey, true, true);
+  this.applyReplayImportUndoSetting();
   this.startReplayImportPlayback();
 };
 
@@ -7405,14 +7421,22 @@ GameManager.prototype.prepareReplayImportSession = function () {
   this.disableSessionSync = true;
 };
 
+GameManager.prototype.executeReplayImportSessionRestart = function (modeConfig, payload, useBoardRestart) {
+  this.restartReplaySession(payload, modeConfig, useBoardRestart);
+};
+
 GameManager.prototype.restartReplayImportSession = function (modeConfig, payload, useBoardRestart) {
   this.prepareReplayImportSession();
-  this.restartReplaySession(payload, modeConfig, useBoardRestart);
+  this.executeReplayImportSessionRestart(modeConfig, payload, useBoardRestart);
   this.finalizeReplayImportPlayback();
 };
 
-GameManager.prototype.restartLegacyReplayImportSession = function (seed) {
+GameManager.prototype.applyLegacyReplayImportSeed = function (seed) {
   this.restartWithSeed(seed);
+};
+
+GameManager.prototype.restartLegacyReplayImportSession = function (seed) {
+  this.applyLegacyReplayImportSeed(seed);
   this.startReplayImportPlayback();
 };
 
