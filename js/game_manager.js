@@ -1209,9 +1209,60 @@ GameManager.prototype.getSavedGameStateStorages = function () {
   return out;
 };
 
+GameManager.prototype.readSavedPayloadRawFromStore = function (store, key) {
+  try {
+    return store.getItem(key);
+  } catch (_errRead) {
+    return null;
+  }
+};
+
+GameManager.prototype.parseSavedPayloadRaw = function (raw) {
+  if (!raw) return null;
+  try {
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch (_errParse) {
+    return null;
+  }
+};
+
+GameManager.prototype.removeSavedPayloadByKeyFromStore = function (store, key) {
+  try {
+    store.removeItem(key);
+  } catch (_errRemove) {}
+};
+
+GameManager.prototype.selectLatestSavedPayload = function (currentBest, nextPayload) {
+  var best = currentBest && typeof currentBest === "object" ? currentBest : null;
+  var next = nextPayload && typeof nextPayload === "object" ? nextPayload : null;
+  if (!next) return best;
+  if (!best) return next;
+  var bestSavedAt = Number(best.saved_at) || 0;
+  var nextSavedAt = Number(next.saved_at) || 0;
+  return nextSavedAt >= bestSavedAt ? next : best;
+};
+
+GameManager.prototype.readSavedPayloadByKeyFallback = function (stores, key) {
+  var best = null;
+  for (var i = 0; i < stores.length; i++) {
+    var raw = this.readSavedPayloadRawFromStore(stores[i], key);
+    if (!raw) continue;
+    var parsed = this.parseSavedPayloadRaw(raw);
+    if (!parsed) {
+      this.removeSavedPayloadByKeyFromStore(stores[i], key);
+      continue;
+    }
+    best = this.selectLatestSavedPayload(best, parsed);
+  }
+  return best;
+};
+
 GameManager.prototype.readSavedPayloadByKey = function (key) {
+  var stores = this.getSavedGameStateStorages();
   var readSavedPayloadByKeyFromStoragesCore = this.callCoreStorageRuntime("readSavedPayloadByKeyFromStorages", [{
-      storages: this.getSavedGameStateStorages(),
+      storages: stores,
       key: key
     }]);
   if (readSavedPayloadByKeyFromStoragesCore.available) {
@@ -1219,35 +1270,7 @@ GameManager.prototype.readSavedPayloadByKey = function (key) {
     if (savedByCore && typeof savedByCore === "object") return savedByCore;
     if (savedByCore === null) return null;
   }
-
-  var stores = this.getSavedGameStateStorages();
-  var best = null;
-  var bestSavedAt = -1;
-  for (var i = 0; i < stores.length; i++) {
-    var raw = null;
-    try {
-      raw = stores[i].getItem(key);
-    } catch (_errRead) {
-      raw = null;
-    }
-    if (!raw) continue;
-    var parsed = null;
-    try {
-      parsed = JSON.parse(raw);
-    } catch (_errParse) {
-      try {
-        stores[i].removeItem(key);
-      } catch (_errRemove) {}
-      continue;
-    }
-    if (!parsed || typeof parsed !== "object") continue;
-    var savedAt = Number(parsed.saved_at) || 0;
-    if (savedAt >= bestSavedAt) {
-      bestSavedAt = savedAt;
-      best = parsed;
-    }
-  }
-  return best;
+  return this.readSavedPayloadByKeyFallback(stores, key);
 };
 
 GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
