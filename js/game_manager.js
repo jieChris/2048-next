@@ -1822,47 +1822,64 @@ GameManager.prototype.captureTimerDynamicRowsState = function (containerId) {
   return out;
 };
 
-GameManager.prototype.createSavedDynamicTimerRow = function (rowState, cappedState) {
-  var resolvedCappedState =
-    this.resolveProvidedCappedModeState(cappedState);
-  var repeat = parseInt(rowState && rowState.repeat, 10);
-  var labelText = rowState && typeof rowState.label === "string" ? rowState.label : "";
-  var timeText = rowState && typeof rowState.time === "string" ? rowState.time : "";
+GameManager.prototype.resolveSavedDynamicTimerRowState = function (rowState) {
+  return {
+    repeat: parseInt(rowState && rowState.repeat, 10),
+    labelText: rowState && typeof rowState.label === "string" ? rowState.label : "",
+    timeText: rowState && typeof rowState.time === "string" ? rowState.time : "",
+    labelClass: rowState && typeof rowState.labelClass === "string" ? rowState.labelClass : "",
+    labelFontSize: rowState && typeof rowState.labelFontSize === "string" ? rowState.labelFontSize : ""
+  };
+};
 
-  var rowDiv = document.createElement("div");
-  rowDiv.className = "timer-row-item";
-  if (Number.isFinite(repeat) && repeat >= 2) {
-    rowDiv.setAttribute("data-capped-repeat", String(repeat));
-  }
+GameManager.prototype.shouldUseSavedDynamicTimerRepeatStyle = function (repeat, resolvedCappedState) {
+  return Number.isFinite(repeat) && repeat >= 2 && resolvedCappedState.isCappedMode;
+};
 
+GameManager.prototype.createSavedDynamicTimerLegend = function (rowInfo, resolvedCappedState) {
   var legend = document.createElement("div");
   legend.className = this.getCappedTimerLegendClass(resolvedCappedState.cappedTargetValue);
   legend.style.cssText =
     "color: #f9f6f2; font-size: " +
     this.getCappedTimerFontSize(resolvedCappedState.cappedTargetValue) +
     ";";
-  legend.textContent = labelText;
-  if (
-    !(Number.isFinite(repeat) && repeat >= 2 && resolvedCappedState.isCappedMode) &&
-    rowState &&
-    typeof rowState.labelClass === "string" &&
-    rowState.labelClass
-  ) {
-    legend.className = rowState.labelClass;
+  legend.textContent = rowInfo.labelText;
+  if (!this.shouldUseSavedDynamicTimerRepeatStyle(rowInfo.repeat, resolvedCappedState) && rowInfo.labelClass) {
+    legend.className = rowInfo.labelClass;
   }
-  if (rowState && typeof rowState.labelFontSize === "string" && rowState.labelFontSize) {
-    legend.style.fontSize = rowState.labelFontSize;
-  }
+  if (rowInfo.labelFontSize) legend.style.fontSize = rowInfo.labelFontSize;
+  return legend;
+};
 
-  var val = document.createElement("div");
-  val.className = "timertile";
-  val.style.cssText = "margin-left:6px; width:187px;";
-  val.textContent = timeText;
+GameManager.prototype.createSavedDynamicTimerValue = function (timeText) {
+  var valueEl = document.createElement("div");
+  valueEl.className = "timertile";
+  valueEl.style.cssText = "margin-left:6px; width:187px;";
+  valueEl.textContent = timeText;
+  return valueEl;
+};
+
+GameManager.prototype.appendSavedDynamicTimerRowSpacing = function (rowDiv) {
+  rowDiv.appendChild(document.createElement("br"));
+  rowDiv.appendChild(document.createElement("br"));
+};
+
+GameManager.prototype.createSavedDynamicTimerRow = function (rowState, cappedState) {
+  var resolvedCappedState =
+    this.resolveProvidedCappedModeState(cappedState);
+  var rowInfo = this.resolveSavedDynamicTimerRowState(rowState);
+
+  var rowDiv = document.createElement("div");
+  rowDiv.className = "timer-row-item";
+  if (Number.isFinite(rowInfo.repeat) && rowInfo.repeat >= 2) {
+    rowDiv.setAttribute("data-capped-repeat", String(rowInfo.repeat));
+  }
+  var legend = this.createSavedDynamicTimerLegend(rowInfo, resolvedCappedState);
+  var val = this.createSavedDynamicTimerValue(rowInfo.timeText);
 
   rowDiv.appendChild(legend);
   rowDiv.appendChild(val);
-  rowDiv.appendChild(document.createElement("br"));
-  rowDiv.appendChild(document.createElement("br"));
+  this.appendSavedDynamicTimerRowSpacing(rowDiv);
   return rowDiv;
 };
 
