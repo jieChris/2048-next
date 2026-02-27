@@ -4705,6 +4705,24 @@ GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
   return hasInputSeed;
 };
 
+GameManager.prototype.createSetupSessionReplayV3Payload = function () {
+  return {
+    v: 3,
+    mode: this.getServerMode(this.modeKey),
+    mode_key: this.modeKey,
+    board_width: this.width,
+    board_height: this.height,
+    ruleset: this.ruleset,
+    undo_enabled: !!this.modeConfig.undo_enabled,
+    mode_family: this.modeFamily,
+    rank_policy: this.rankPolicy,
+    special_rules_snapshot: this.clonePlain(this.specialRules || {}),
+    challenge_id: this.challengeId,
+    seed: this.initialSeed,
+    actions: []
+  };
+};
+
 GameManager.prototype.assignSetupChallengeId = function (options) {
   this.challengeId = typeof options.challengeId === "string" && options.challengeId
     ? options.challengeId
@@ -4836,21 +4854,7 @@ GameManager.prototype.setup = function (inputSeed, options) {
   
   // Replay logic
   var hasInputSeed = this.initializeSetupReplayState(inputSeed);
-  this.sessionReplayV3 = {
-    v: 3,
-    mode: this.getServerMode(this.modeKey),
-    mode_key: this.modeKey,
-    board_width: this.width,
-    board_height: this.height,
-    ruleset: this.ruleset,
-    undo_enabled: !!this.modeConfig.undo_enabled,
-    mode_family: this.modeFamily,
-    rank_policy: this.rankPolicy,
-    special_rules_snapshot: this.clonePlain(this.specialRules || {}),
-    challenge_id: this.challengeId,
-    seed: this.initialSeed,
-    actions: []
-  };
+  this.sessionReplayV3 = this.createSetupSessionReplayV3Payload();
   this.assignSetupChallengeId(options);
   this.initializeSetupRuntimeState();
   var preferredTimerModuleView = this.initializeSetupSpawnAndPreferences();
