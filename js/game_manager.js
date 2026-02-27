@@ -3744,59 +3744,91 @@ GameManager.prototype.filterUndoStackEntryTiles = function (source) {
   return tiles;
 };
 
+GameManager.prototype.resolveUndoStackEntryScore = function (source, fallbackState) {
+  return Number.isFinite(source.score) && typeof source.score === "number"
+    ? Number(source.score)
+    : fallbackState.score;
+};
+
+GameManager.prototype.resolveUndoStackEntryComboStreak = function (source, fallbackState) {
+  return Number.isInteger(source.comboStreak) && source.comboStreak >= 0
+    ? source.comboStreak
+    : fallbackState.comboStreak;
+};
+
+GameManager.prototype.resolveUndoStackEntrySuccessfulMoveCount = function (source, fallbackState) {
+  return Number.isInteger(source.successfulMoveCount) && source.successfulMoveCount >= 0
+    ? source.successfulMoveCount
+    : fallbackState.successfulMoveCount;
+};
+
+GameManager.prototype.resolveUndoStackEntryLockConsumedAtMoveCount = function (source, fallbackState) {
+  return Number.isInteger(source.lockConsumedAtMoveCount)
+    ? source.lockConsumedAtMoveCount
+    : fallbackState.lockConsumedAtMoveCount;
+};
+
+GameManager.prototype.resolveUndoStackEntryLockedDirectionTurn = function (source, fallbackState) {
+  return Number.isInteger(source.lockedDirectionTurn)
+    ? source.lockedDirectionTurn
+    : fallbackState.lockedDirectionTurn;
+};
+
+GameManager.prototype.resolveUndoStackEntryLockedDirection = function (source, fallbackState) {
+  return Number.isInteger(source.lockedDirection)
+    ? source.lockedDirection
+    : fallbackState.lockedDirection;
+};
+
+GameManager.prototype.resolveUndoStackEntryUndoUsed = function (source, fallbackState) {
+  return Number.isInteger(source.undoUsed) && source.undoUsed >= 0
+    ? source.undoUsed
+    : fallbackState.undoUsed;
+};
+
 GameManager.prototype.buildNormalizedUndoStackEntryFallback = function (source, fallbackState, tiles) {
   return {
-    score:
-      Number.isFinite(source.score) && typeof source.score === "number"
-        ? Number(source.score)
-        : fallbackState.score,
+    score: this.resolveUndoStackEntryScore(source, fallbackState),
     tiles: tiles,
-    comboStreak:
-      Number.isInteger(source.comboStreak) && source.comboStreak >= 0
-        ? source.comboStreak
-        : fallbackState.comboStreak,
-    successfulMoveCount:
-      Number.isInteger(source.successfulMoveCount) && source.successfulMoveCount >= 0
-        ? source.successfulMoveCount
-        : fallbackState.successfulMoveCount,
-    lockConsumedAtMoveCount:
-      Number.isInteger(source.lockConsumedAtMoveCount)
-        ? source.lockConsumedAtMoveCount
-        : fallbackState.lockConsumedAtMoveCount,
-    lockedDirectionTurn:
-      Number.isInteger(source.lockedDirectionTurn)
-        ? source.lockedDirectionTurn
-        : fallbackState.lockedDirectionTurn,
-    lockedDirection:
-      Number.isInteger(source.lockedDirection)
-        ? source.lockedDirection
-        : fallbackState.lockedDirection,
-    undoUsed:
-      Number.isInteger(source.undoUsed) && source.undoUsed >= 0
-        ? source.undoUsed
-        : fallbackState.undoUsed
+    comboStreak: this.resolveUndoStackEntryComboStreak(source, fallbackState),
+    successfulMoveCount: this.resolveUndoStackEntrySuccessfulMoveCount(source, fallbackState),
+    lockConsumedAtMoveCount: this.resolveUndoStackEntryLockConsumedAtMoveCount(source, fallbackState),
+    lockedDirectionTurn: this.resolveUndoStackEntryLockedDirectionTurn(source, fallbackState),
+    lockedDirection: this.resolveUndoStackEntryLockedDirection(source, fallbackState),
+    undoUsed: this.resolveUndoStackEntryUndoUsed(source, fallbackState)
   };
+};
+
+GameManager.prototype.resolveUndoStackEntrySource = function (entry) {
+  return this.isNonArrayObject(entry) ? entry : {};
+};
+
+GameManager.prototype.buildNormalizeUndoStackEntryCoreInput = function (source, fallbackState) {
+  return {
+    entry: source,
+    fallbackScore: fallbackState.score,
+    fallbackComboStreak: fallbackState.comboStreak,
+    fallbackSuccessfulMoveCount: fallbackState.successfulMoveCount,
+    fallbackLockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
+    fallbackLockedDirectionTurn: fallbackState.lockedDirectionTurn,
+    fallbackLockedDirection: fallbackState.lockedDirection,
+    fallbackUndoUsed: fallbackState.undoUsed
+  };
+};
+
+GameManager.prototype.resolveUndoStackEntrySourceFromCore = function (computed, fallbackSource) {
+  return this.isNonArrayObject(computed) ? computed : fallbackSource;
 };
 
 GameManager.prototype.normalizeUndoStackEntry = function (entry) {
   var fallbackState = this.getUndoStateFallbackValues();
 
-  var source = this.isNonArrayObject(entry) ? entry : {};
-  var normalizeUndoStackEntryCore = this.callCoreUndoStackEntryRuntime("normalizeUndoStackEntry", [{
-      entry: source,
-      fallbackScore: fallbackState.score,
-      fallbackComboStreak: fallbackState.comboStreak,
-      fallbackSuccessfulMoveCount: fallbackState.successfulMoveCount,
-      fallbackLockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
-      fallbackLockedDirectionTurn: fallbackState.lockedDirectionTurn,
-      fallbackLockedDirection: fallbackState.lockedDirection,
-      fallbackUndoUsed: fallbackState.undoUsed
-    }]);
+  var source = this.resolveUndoStackEntrySource(entry);
+  var normalizeUndoStackEntryCore = this.callCoreUndoStackEntryRuntime("normalizeUndoStackEntry", [
+    this.buildNormalizeUndoStackEntryCoreInput(source, fallbackState)
+  ]);
   if (normalizeUndoStackEntryCore.available) {
-    var computed = normalizeUndoStackEntryCore.value || {};
-    if (this.isNonArrayObject(computed)) {
-      source = computed;
-    }
+    source = this.resolveUndoStackEntrySourceFromCore(normalizeUndoStackEntryCore.value || {}, source);
   }
   var tiles = this.filterUndoStackEntryTiles(source);
   return this.buildNormalizedUndoStackEntryFallback(source, fallbackState, tiles);
