@@ -6666,38 +6666,52 @@ GameManager.prototype.refreshAfterCustomTileEdit = function () {
   this.actuate();
 };
 
+GameManager.prototype.ensureCustomTileCellEditable = function (x, y) {
+    if (this.isBlockedCell(x, y)) {
+        throw "Blocked cell cannot be edited";
+    }
+};
+
+GameManager.prototype.removeExistingCustomTileAt = function (x, y) {
+    var cell = { x: x, y: y };
+    var existingTile = this.grid.cellContent(cell);
+    if (!existingTile) return;
+    this.grid.removeTile(existingTile);
+};
+
+GameManager.prototype.buildPracticeCustomTileReplayAction = function (x, y, value) {
+    return ["p", x, y, value];
+};
+
+GameManager.prototype.insertCustomTileValue = function (x, y, value) {
+    var tile = new Tile({ x: x, y: y }, value);
+    this.grid.insertTile(tile);
+};
+
+GameManager.prototype.applyCustomTileClear = function (x, y, value) {
+    this.recordPracticeReplayAction(this.buildPracticeCustomTileReplayAction(x, y, value));
+    this.refreshAfterCustomTileEdit();
+};
+
+GameManager.prototype.applyCustomTileInsert = function (x, y, value) {
+    this.insertCustomTileValue(x, y, value);
+    this.invalidateTimers(value);
+    this.apply32kVisibilityStateForCustomTile(value);
+    this.refreshAfterCustomTileEdit();
+    this.recordPracticeReplayAction(this.buildPracticeCustomTileReplayAction(x, y, value));
+};
+
 
 
 // Insert a custom tile (Test Board)
 GameManager.prototype.insertCustomTile = function(x, y, value) {
-    if (this.isBlockedCell(x, y)) {
-        throw "Blocked cell cannot be edited";
-    }
-    if (this.grid.cellContent({ x: x, y: y })) {
-        // Remove existing if needed? Or just overwrite?
-        this.grid.removeTile(this.grid.cellContent({ x: x, y: y }));
-    }
-    
-    // If value is 0, we just want to clear the tile.
+    this.ensureCustomTileCellEditable(x, y);
+    this.removeExistingCustomTileAt(x, y);
     if (value === 0) {
-        this.recordPracticeReplayAction(["p", x, y, value]);
-        this.refreshAfterCustomTileEdit();
+        this.applyCustomTileClear(x, y, value);
         return;
     }
-    
-    var tile = new Tile({ x: x, y: y }, value);
-    this.grid.insertTile(tile);
-    
-    // Invalidate timers below this value
-    this.invalidateTimers(value);
-    
-    // Check for 32k+ visibility
-    this.apply32kVisibilityStateForCustomTile(value);
-    
-    // Refresh
-    this.refreshAfterCustomTileEdit();
-
-    this.recordPracticeReplayAction(["p", x, y, value]);
+    this.applyCustomTileInsert(x, y, value);
 };
 
 GameManager.prototype.resolveInvalidateTimersCoreInput = function (limit) {
@@ -6720,34 +6734,59 @@ GameManager.prototype.applyInvalidatedTimerPlaceholders = function (elementIds) 
     }
 };
 
-GameManager.prototype.invalidateTimerSlotsFallback = function (limit) {
-    var milestones = this.timerMilestones || this.getTimerMilestoneValues();
-    var timerSlots = GameManager.TIMER_SLOT_IDS;
+GameManager.prototype.resolveTimerMilestones = function () {
+    return this.timerMilestones || this.getTimerMilestoneValues();
+};
+
+GameManager.prototype.resolveTimerSlotIds = function () {
+    return GameManager.TIMER_SLOT_IDS;
+};
+
+GameManager.prototype.resolveTimerSlotElementId = function (slotId) {
+    return "timer" + slotId;
+};
+
+GameManager.prototype.shouldInvalidateTimerSlotAtLimit = function (milestoneValue, limit) {
+    return Number.isInteger(milestoneValue) && milestoneValue <= limit;
+};
+
+GameManager.prototype.resolveInvalidatedTimerSlotElementIds = function (limit) {
+    var milestones = this.resolveTimerMilestones();
+    var timerSlots = this.resolveTimerSlotIds();
+    var elementIds = [];
     for (var i = 0; i < timerSlots.length; i++) {
         var milestoneValue = milestones[i];
         var slotId = timerSlots[i];
-        if (Number.isInteger(milestoneValue) && milestoneValue <= limit) {
-             var el = document.getElementById("timer" + slotId);
-             if (el) {
-                 el.textContent = "---------";
-                 // Also ensure it doesn't get overwritten later? 
-                 // The move logic checks 'if (el.innerHTML === "")'. 
-                 // Now it is "---------", so it won't be overwritten. Correct.
-             }
-        }
+        if (!this.shouldInvalidateTimerSlotAtLimit(milestoneValue, limit)) continue;
+        elementIds.push(this.resolveTimerSlotElementId(slotId));
     }
+    return elementIds;
+};
+
+GameManager.prototype.invalidateTimerSlotsFallback = function (limit) {
+    this.applyInvalidatedTimerPlaceholders(this.resolveInvalidatedTimerSlotElementIds(limit));
+};
+
+GameManager.prototype.shouldInvalidateSubTimers = function () {
+    return this.reached32k && !this.isFibonacciMode();
+};
+
+GameManager.prototype.shouldInvalidateSubTimerAtLimit = function (milestone, limit) {
+    return milestone <= limit && limit !== 32768;
+};
+
+GameManager.prototype.applyInvalidatedSubTimerPlaceholder = function (elementId) {
+    var subTimerEl = document.getElementById(elementId);
+    if (subTimerEl) subTimerEl.textContent = "---------";
 };
 
 GameManager.prototype.invalidateSubTimersFallback = function (limit) {
-    if (this.reached32k && !this.isFibonacciMode()) {
-        if (8192 <= limit && limit !== 32768) {
-            var sub8k = document.getElementById("timer8192-sub");
-            if (sub8k) sub8k.textContent = "---------";
-        }
-        if (16384 <= limit && limit !== 32768) {
-            var sub16k = document.getElementById("timer16384-sub");
-            if (sub16k) sub16k.textContent = "---------";
-        }
+    if (!this.shouldInvalidateSubTimers()) return;
+    if (this.shouldInvalidateSubTimerAtLimit(8192, limit)) {
+        this.applyInvalidatedSubTimerPlaceholder("timer8192-sub");
+    }
+    if (this.shouldInvalidateSubTimerAtLimit(16384, limit)) {
+        this.applyInvalidatedSubTimerPlaceholder("timer16384-sub");
     }
 };
 
