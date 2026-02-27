@@ -1310,17 +1310,20 @@ GameManager.prototype.resolveWindowNameSavedPayloadMarker = function () {
   return GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY + "=";
 };
 
-GameManager.prototype.resolveWindowNameSavedMap = function (raw, marker) {
-  if (!raw || typeof raw !== "string") return null;
-  var parts = raw.split("&");
-  var lookupMarker = typeof marker === "string" && marker ? marker : this.resolveWindowNameSavedPayloadMarker();
-  var encoded = "";
+GameManager.prototype.resolveWindowNameLookupMarker = function (marker) {
+  return typeof marker === "string" && marker ? marker : this.resolveWindowNameSavedPayloadMarker();
+};
+
+GameManager.prototype.extractWindowNameEncodedMapPart = function (parts, lookupMarker) {
   for (var i = 0; i < parts.length; i++) {
     if (parts[i].indexOf(lookupMarker) === 0) {
-      encoded = parts[i].substring(lookupMarker.length);
-      break;
+      return parts[i].substring(lookupMarker.length);
     }
   }
+  return "";
+};
+
+GameManager.prototype.decodeWindowNameSavedMapPayload = function (encoded) {
   if (!encoded) return null;
   try {
     var map = JSON.parse(decodeURIComponent(encoded));
@@ -1329,6 +1332,14 @@ GameManager.prototype.resolveWindowNameSavedMap = function (raw, marker) {
   } catch (_errParse) {
     return null;
   }
+};
+
+GameManager.prototype.resolveWindowNameSavedMap = function (raw, marker) {
+  if (!raw || typeof raw !== "string") return null;
+  var parts = raw.split("&");
+  var lookupMarker = this.resolveWindowNameLookupMarker(marker);
+  var encoded = this.extractWindowNameEncodedMapPart(parts, lookupMarker);
+  return this.decodeWindowNameSavedMapPayload(encoded);
 };
 
 GameManager.prototype.resolveModeKeyForSavedPayload = function (modeKey) {
@@ -1357,16 +1368,14 @@ GameManager.prototype.resolveWindowNameParts = function (rawWindowName) {
 GameManager.prototype.resolveWindowNameMapAndKeptParts = function (parts, marker) {
   var kept = [];
   var map = {};
-  var lookupMarker = typeof marker === "string" && marker ? marker : this.resolveWindowNameSavedPayloadMarker();
+  var lookupMarker = this.resolveWindowNameLookupMarker(marker);
   for (var i = 0; i < parts.length; i++) {
     var part = parts[i];
     if (!part) continue;
     if (part.indexOf(lookupMarker) === 0) {
       var encoded = part.substring(lookupMarker.length);
-      try {
-        var parsed = JSON.parse(decodeURIComponent(encoded));
-        if (parsed && typeof parsed === "object") map = parsed;
-      } catch (_errParse) {}
+      var parsed = this.decodeWindowNameSavedMapPayload(encoded);
+      if (parsed && typeof parsed === "object") map = parsed;
       continue;
     }
     kept.push(part);
