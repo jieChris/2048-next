@@ -2088,14 +2088,7 @@ GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
 };
 
 GameManager.prototype.resolveActiveUndoPolicyState = function (options) {
-  var source = this.resolveOptionObject(options);
-  return this.resolveUndoPolicyStateForMode(this.mode, {
-    hasGameStarted: !!this.readOptionValue(source, "hasGameStarted", !!this.hasGameStarted),
-    replayMode: !!this.readOptionValue(source, "replayMode", !!this.replayMode),
-    undoLimit: this.readOptionValue(source, "undoLimit", this.undoLimit),
-    undoUsed: this.readOptionValue(source, "undoUsed", this.undoUsed),
-    undoEnabled: this.readOptionValue(source, "undoEnabled", this.undoEnabled)
-  });
+  return this.resolveUndoPolicyStateForMode(this.mode, options);
 };
 
 GameManager.prototype.getLegacyAdapterBridge = function () {
