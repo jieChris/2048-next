@@ -3028,26 +3028,13 @@ GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
   return this.buildLiteSavedGameStatePayloadFallback(payload);
 };
 
-GameManager.prototype.resolveCatalogGetMode = function () {
-  var modeCatalogGetMode = this.resolveWindowNamespaceMethod("ModeCatalog", "getMode");
-  if (!modeCatalogGetMode) return null;
-  return function (requestedModeId) {
-    return modeCatalogGetMode.method.call(modeCatalogGetMode.scope, requestedModeId);
-  };
-};
-
-GameManager.prototype.resolveModeConfigFromCatalogFallback = function (modeKey, catalogGetMode) {
-  if (catalogGetMode) {
-    return catalogGetMode(modeKey);
-  }
-  if (GameManager.FALLBACK_MODE_CONFIGS[modeKey]) {
-    return this.clonePlain(GameManager.FALLBACK_MODE_CONFIGS[modeKey]);
-  }
-  return null;
-};
-
 GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
-  var catalogGetMode = this.resolveCatalogGetMode();
+  var modeCatalogGetMode = this.resolveWindowNamespaceMethod("ModeCatalog", "getMode");
+  var catalogGetMode = modeCatalogGetMode
+    ? function (requestedModeId) {
+        return modeCatalogGetMode.method.call(modeCatalogGetMode.scope, requestedModeId);
+      }
+    : null;
 
   var resolveModeCatalogConfigCore = this.callCoreModeRuntime(
     "resolveModeCatalogConfig",
@@ -3061,7 +3048,13 @@ GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
     if (coreValue === null) return null;
     return this.isNonArrayObject(coreValue) ? coreValue : undefined;
   }, function () {
-    return this.resolveModeConfigFromCatalogFallback(modeKey, catalogGetMode);
+    if (catalogGetMode) {
+      return catalogGetMode(modeKey);
+    }
+    if (GameManager.FALLBACK_MODE_CONFIGS[modeKey]) {
+      return this.clonePlain(GameManager.FALLBACK_MODE_CONFIGS[modeKey]);
+    }
+    return null;
   });
 };
 
