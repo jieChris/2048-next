@@ -9166,19 +9166,11 @@ GameManager.prototype.pause = function () {
     this.applyReplayPauseState(pauseState);
 };
 
-GameManager.prototype.applyReplayResumePausedState = function (state) {
-    this.isPaused = !!state.isPaused ? true : false;
-};
-
-GameManager.prototype.applyReplayResumeIntervalState = function (state) {
-    this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
-    this.scheduleReplayInterval(state.delay);
-};
-
 GameManager.prototype.applyReplayResumeState = function (resumeState) {
     var state = this.normalizeReplayControlState(resumeState);
-    this.applyReplayResumePausedState(state);
-    this.applyReplayResumeIntervalState(state);
+    this.isPaused = !!state.isPaused ? true : false;
+    this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
+    this.scheduleReplayInterval(state.delay);
 };
 
 GameManager.prototype.resume = function () {
@@ -9186,19 +9178,11 @@ GameManager.prototype.resume = function () {
     this.applyReplayResumeState(resumeState);
 };
 
-GameManager.prototype.applyReplayDelayState = function (state) {
-    this.replayDelay = state.replayDelay;
-};
-
-GameManager.prototype.applyReplaySpeedResumeState = function (state) {
-    if (!state.shouldResume) return;
-    this.resume(); // Restart interval with new delay
-};
-
 GameManager.prototype.applyReplaySpeedState = function (speedState) {
     var state = this.normalizeReplayControlState(speedState);
-    this.applyReplayDelayState(state);
-    this.applyReplaySpeedResumeState(state);
+    this.replayDelay = state.replayDelay;
+    if (!state.shouldResume) return;
+    this.resume(); // Restart interval with new delay
 };
 
 GameManager.prototype.setSpeed = function (multiplier) {
@@ -9206,43 +9190,26 @@ GameManager.prototype.setSpeed = function (multiplier) {
     this.applyReplaySpeedState(speedState);
 };
 
-GameManager.prototype.shouldApplyReplaySeekRestartBoard = function (restartPlan) {
-    return !!restartPlan.shouldRestartWithBoard;
-};
-
 GameManager.prototype.applyReplaySeekRestartBoard = function (restartPlan) {
-    if (!this.shouldApplyReplaySeekRestartBoard(restartPlan)) return;
+    if (!restartPlan || !restartPlan.shouldRestartWithBoard) return;
     this.restartReplaySession(this.replayStartBoardMatrix, this.modeConfig, true);
 };
 
-GameManager.prototype.shouldApplyReplaySeekRestartSeed = function (restartPlan) {
-    return !!restartPlan.shouldRestartWithSeed;
-};
-
 GameManager.prototype.applyReplaySeekRestartSeed = function (restartPlan) {
-    if (!this.shouldApplyReplaySeekRestartSeed(restartPlan)) return;
+    if (!restartPlan || !restartPlan.shouldRestartWithSeed) return;
     this.restartReplaySession(this.initialSeed, this.modeConfig, false);
 };
 
-GameManager.prototype.shouldApplyReplaySeekRestartIndex = function (restartPlan) {
-    return !!restartPlan.shouldApplyReplayIndex;
-};
-
 GameManager.prototype.applyReplaySeekRestartIndex = function (restartPlan) {
-    if (!this.shouldApplyReplaySeekRestartIndex(restartPlan)) return;
+    if (!restartPlan || !restartPlan.shouldApplyReplayIndex) return;
     this.replayIndex = restartPlan.replayIndex;
 };
 
-GameManager.prototype.normalizeReplaySeekRestartPlan = function (restartPlan) {
-    return this.isNonArrayObject(restartPlan) ? restartPlan : null;
-};
-
 GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
-    var normalized = this.normalizeReplaySeekRestartPlan(restartPlan);
-    if (!normalized) return;
-    this.applyReplaySeekRestartBoard(normalized);
-    this.applyReplaySeekRestartSeed(normalized);
-    this.applyReplaySeekRestartIndex(normalized);
+    if (!this.isNonArrayObject(restartPlan)) return;
+    this.applyReplaySeekRestartBoard(restartPlan);
+    this.applyReplaySeekRestartSeed(restartPlan);
+    this.applyReplaySeekRestartIndex(restartPlan);
 };
 
 GameManager.prototype.seek = function (targetIndex) {
