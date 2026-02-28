@@ -3264,18 +3264,10 @@ GameManager.prototype.buildNormalizedUndoStackEntryFallback = function (source, 
   };
 };
 
-GameManager.prototype.resolveUndoStackEntrySource = function (entry) {
-  return this.isNonArrayObject(entry) ? entry : {};
-};
-
-GameManager.prototype.resolveUndoStackEntrySourceFromCore = function (computed, fallbackSource) {
-  return this.isNonArrayObject(computed) ? computed : fallbackSource;
-};
-
 GameManager.prototype.normalizeUndoStackEntry = function (entry) {
   var fallbackState = this.getUndoStateFallbackValues();
 
-  var source = this.resolveUndoStackEntrySource(entry);
+  var source = this.isNonArrayObject(entry) ? entry : {};
   var normalizeUndoStackEntryCore = this.callCoreUndoStackEntryRuntime(
     "normalizeUndoStackEntry",
     [{
@@ -3292,7 +3284,7 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
   var sourceByCore = this.resolveNormalizedCoreValueOrUndefined(
     normalizeUndoStackEntryCore,
     function (coreValue) {
-      return this.resolveUndoStackEntrySourceFromCore(coreValue || {}, source);
+      return this.isNonArrayObject(coreValue) ? coreValue : source;
     }
   );
   if (typeof sourceByCore !== "undefined") {
@@ -6115,10 +6107,6 @@ GameManager.prototype.tryConsumeForcedSpawnTile = function () {
   return true;
 };
 
-GameManager.prototype.getSeededSpawnSteps = function () {
-  return this.replayMode ? this.replayIndex : this.moveHistory.length;
-};
-
 GameManager.prototype.seedRandomForSpawn = function (steps) {
   Math.seedrandom(this.seed);
   for (var i = 0; i < steps; i++) {
@@ -6141,7 +6129,7 @@ GameManager.prototype.addRandomTile = function () {
 
   var available = this.getAvailableCells();
   if (!available.length) return;
-  this.seedRandomForSpawn(this.getSeededSpawnSteps());
+  this.seedRandomForSpawn(this.replayMode ? this.replayIndex : this.moveHistory.length);
   this.spawnRandomTileAtAvailableCell(available);
 };
 
@@ -6214,17 +6202,13 @@ GameManager.prototype.refreshActuateTimerAndIps = function () {
   this.renderActuateTimerAndIps(elapsedMs);
 };
 
-GameManager.prototype.shouldFinalizeSessionAfterActuate = function () {
-  return this.isSessionTerminated() && this.modeKey !== "practice_legacy";
-};
-
 GameManager.prototype.finalizeTerminatedSessionAfterActuate = function () {
   this.clearSavedGameState(this.modeKey);
   this.tryAutoSubmitOnGameOver();
 };
 
 GameManager.prototype.persistOrFinalizeSessionAfterActuate = function () {
-  if (this.shouldFinalizeSessionAfterActuate()) {
+  if (this.isSessionTerminated() && this.modeKey !== "practice_legacy") {
     this.finalizeTerminatedSessionAfterActuate();
     return;
   }
@@ -6537,17 +6521,13 @@ GameManager.prototype.applyMergeMilestoneEffects = function (mergedValue, timeSt
   this.applyMergeTimerRowVisibilityEffects(mergeEffects);
 };
 
-GameManager.prototype.isUndoOperationAllowed = function () {
-  return this.replayMode || this.isUndoInteractionEnabled();
-};
-
 GameManager.prototype.hasRemainingUndoBudget = function () {
   if (this.undoLimit === null) return true;
   return this.undoUsed < this.undoLimit;
 };
 
 GameManager.prototype.canProcessUndoMove = function () {
-  if (!this.isUndoOperationAllowed()) return false;
+  if (!(this.replayMode || this.isUndoInteractionEnabled())) return false;
   if (!this.hasRemainingUndoBudget()) return false;
   return this.undoStack.length > 0;
 };
@@ -6944,10 +6924,6 @@ GameManager.prototype.getVectorFallbackMap = function () {
   };
 };
 
-GameManager.prototype.getVectorFallback = function (direction) {
-  return this.getVectorFallbackMap()[direction];
-};
-
 // Get the vector representing the chosen direction
 GameManager.prototype.getVector = function (direction) {
   var getVectorCore = this.callCoreMovePathRuntime(
@@ -6961,7 +6937,7 @@ GameManager.prototype.getVector = function (direction) {
     if (!Number.isInteger(x) || !Number.isInteger(y)) return undefined;
     return { x: x, y: y };
   }, function () {
-    return this.getVectorFallback(direction);
+    return this.getVectorFallbackMap()[direction];
   });
 };
 
@@ -7011,12 +6987,6 @@ GameManager.prototype.stepCellByVector = function (cell, vector) {
   return { x: cell.x + vector.x, y: cell.y + vector.y };
 };
 
-GameManager.prototype.canTraverseThroughCell = function (cell) {
-  return this.grid.withinBounds(cell) &&
-    !this.isBlockedCell(cell.x, cell.y) &&
-    this.grid.cellAvailable(cell);
-};
-
 GameManager.prototype.resolveFarthestPositionFromRuntime = function (runtimeValue) {
   var computed = runtimeValue || {};
   if (computed.farthest && computed.next) return computed;
@@ -7030,7 +7000,11 @@ GameManager.prototype.computeFarthestPositionFallback = function (cell, vector) 
   do {
     previous = cell;
     cell = this.stepCellByVector(previous, vector);
-  } while (this.canTraverseThroughCell(cell));
+  } while (
+    this.grid.withinBounds(cell) &&
+    !this.isBlockedCell(cell.x, cell.y) &&
+    this.grid.cellAvailable(cell)
+  );
 
   return {
     farthest: previous,
@@ -7132,13 +7106,9 @@ GameManager.prototype.positionsEqual = function (first, second) {
   });
 };
 
-GameManager.prototype.canStartTimer = function () {
-  return this.timerStatus === 0;
-};
-
 // Start the timer
 GameManager.prototype.startTimer = function() {
-  if (!this.canStartTimer()) return;
+  if (this.timerStatus !== 0) return;
   this.applyTimerStartState();
   this.scheduleTimerUpdateInterval();
 };
@@ -7263,12 +7233,8 @@ GameManager.prototype.applyTimerStopState = function () {
   this.timerStatus = 0;
 };
 
-GameManager.prototype.canStopTimer = function () {
-  return this.timerStatus === 1;
-};
-
 GameManager.prototype.stopTimer = function() {
-  if (!this.canStopTimer()) return;
+  if (this.timerStatus !== 1) return;
   this.applyTimerStopState();
 };
 
@@ -7409,10 +7375,6 @@ GameManager.prototype.applyInvalidatedTimerPlaceholders = function (elementIds) 
     }
 };
 
-GameManager.prototype.resolveTimerMilestones = function () {
-    return this.timerMilestones || this.getTimerMilestoneValues();
-};
-
 GameManager.prototype.resolveTimerSlotIds = function () {
     return GameManager.TIMER_SLOT_IDS;
 };
@@ -7426,7 +7388,7 @@ GameManager.prototype.shouldInvalidateTimerSlotAtLimit = function (milestoneValu
 };
 
 GameManager.prototype.resolveInvalidatedTimerSlotElementIds = function (limit) {
-    var milestones = this.resolveTimerMilestones();
+    var milestones = this.timerMilestones || this.getTimerMilestoneValues();
     var timerSlots = this.resolveTimerSlotIds();
     var elementIds = [];
     for (var i = 0; i < timerSlots.length; i++) {
@@ -7442,10 +7404,6 @@ GameManager.prototype.invalidateTimerSlotsFallback = function (limit) {
     this.applyInvalidatedTimerPlaceholders(this.resolveInvalidatedTimerSlotElementIds(limit));
 };
 
-GameManager.prototype.shouldInvalidateSubTimers = function () {
-    return this.reached32k && !this.isFibonacciMode();
-};
-
 GameManager.prototype.shouldInvalidateSubTimerAtLimit = function (milestone, limit) {
     return milestone <= limit && limit !== 32768;
 };
@@ -7456,7 +7414,7 @@ GameManager.prototype.applyInvalidatedSubTimerPlaceholder = function (elementId)
 };
 
 GameManager.prototype.invalidateSubTimersFallback = function (limit) {
-    if (!this.shouldInvalidateSubTimers()) return;
+    if (!(this.reached32k && !this.isFibonacciMode())) return;
     if (this.shouldInvalidateSubTimerAtLimit(8192, limit)) {
         this.applyInvalidatedSubTimerPlaceholder("timer8192-sub");
     }
