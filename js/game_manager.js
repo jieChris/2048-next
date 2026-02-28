@@ -1710,33 +1710,14 @@ GameManager.prototype.applyRestoredSavedBoardSnapshots = function (saved) {
   this.practiceRestartModeConfig = this.resolveRestoredPracticeRestartModeConfig(saved);
 };
 
-GameManager.prototype.resolveRestoredTimerModuleView = function (saved) {
-  return saved.timer_module_view === "hidden" ? "hidden" : "timer";
-};
-
-GameManager.prototype.applyRestoredTimerModuleView = function (saved) {
-  this.timerModuleView = this.resolveRestoredTimerModuleView(saved);
-};
-
-GameManager.prototype.renderRestoredMainTimerText = function () {
-  var timerEl = document.getElementById("timer");
-  if (timerEl) timerEl.textContent = this.pretty(this.accumulatedTime);
-};
-
-GameManager.prototype.shouldResumeTimerAfterStateRestore = function (saved) {
-  return !this.over && !this.won && saved.timer_status === 1;
-};
-
-GameManager.prototype.resumeTimerAfterStateRestoreIfNeeded = function (saved) {
-  if (!this.shouldResumeTimerAfterStateRestore(saved)) return;
-  this.startTimer();
-};
-
 GameManager.prototype.applyRestoredSavedTimerUiState = function (saved) {
   this.restoreTimerRowsFromState(saved);
-  this.applyRestoredTimerModuleView(saved);
-  this.renderRestoredMainTimerText();
-  this.resumeTimerAfterStateRestoreIfNeeded(saved);
+  this.timerModuleView = saved.timer_module_view === "hidden" ? "hidden" : "timer";
+  var timerEl = document.getElementById("timer");
+  if (timerEl) timerEl.textContent = this.pretty(this.accumulatedTime);
+  if (!this.over && !this.won && saved.timer_status === 1) {
+    this.startTimer();
+  }
 };
 
 GameManager.prototype.tryApplyRestoredSavedBoard = function (saved) {
@@ -1777,23 +1758,15 @@ GameManager.prototype.resolveRestorableSavedState = function () {
   return saved;
 };
 
-GameManager.prototype.handleFailedSavedBoardRestore = function () {
-  this.clearSavedGameState();
-  return false;
-};
-
-GameManager.prototype.applyRestoredSavedState = function (saved) {
-  this.applyRestoredSavedStateCoreFields(saved);
-  this.applyRestoredSavedBoardSnapshots(saved);
-  this.applyRestoredSavedTimerUiState(saved);
-};
-
 GameManager.prototype.tryApplyRestorableSavedState = function (saved) {
   if (!saved) return false;
   if (!this.tryApplyRestoredSavedBoard(saved)) {
-    return this.handleFailedSavedBoardRestore();
+    this.clearSavedGameState();
+    return false;
   }
-  this.applyRestoredSavedState(saved);
+  this.applyRestoredSavedStateCoreFields(saved);
+  this.applyRestoredSavedBoardSnapshots(saved);
+  this.applyRestoredSavedTimerUiState(saved);
   return true;
 };
 
