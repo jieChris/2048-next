@@ -645,28 +645,24 @@ GameManager.prototype.resolveReplayExecution = function (action) {
   return this.resolveNormalizedCoreValueOrFallback(resolveReplayExecutionCore, function (coreValue) {
     return this.isNonArrayObject(coreValue) ? coreValue : undefined;
   }, function () {
-    return this.resolveReplayExecutionFallback(action);
+    var kind = this.getActionKind(action);
+    if (kind === "m") {
+      return {
+        kind: "m",
+        dir: Array.isArray(action) ? action[1] : action
+      };
+    }
+    if (kind === "u") return { kind: "u" };
+    if (kind === "p") {
+      return {
+        kind: "p",
+        x: action[1],
+        y: action[2],
+        value: action[3]
+      };
+    }
+    throw "Unknown replay action";
   });
-};
-
-GameManager.prototype.resolveReplayExecutionFallback = function (action) {
-  var kind = this.getActionKind(action);
-  if (kind === "m") {
-    return {
-      kind: "m",
-      dir: Array.isArray(action) ? action[1] : action
-    };
-  }
-  if (kind === "u") return { kind: "u" };
-  if (kind === "p") {
-    return {
-      kind: "p",
-      x: action[1],
-      y: action[2],
-      value: action[3]
-    };
-  }
-  throw "Unknown replay action";
 };
 
 GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
@@ -675,20 +671,16 @@ GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
     [resolvedExecution]
   );
   return this.resolveCoreObjectCallOrFallback(planReplayDispatchCore, function () {
-    return this.planReplayDispatchFallback(resolvedExecution);
+    if (resolvedExecution.kind === "m") return { method: "move", args: [resolvedExecution.dir] };
+    if (resolvedExecution.kind === "u") return { method: "move", args: [-1] };
+    if (resolvedExecution.kind === "p") {
+      return {
+        method: "insertCustomTile",
+        args: [resolvedExecution.x, resolvedExecution.y, resolvedExecution.value]
+      };
+    }
+    throw "Unknown replay action";
   });
-};
-
-GameManager.prototype.planReplayDispatchFallback = function (resolvedExecution) {
-  if (resolvedExecution.kind === "m") return { method: "move", args: [resolvedExecution.dir] };
-  if (resolvedExecution.kind === "u") return { method: "move", args: [-1] };
-  if (resolvedExecution.kind === "p") {
-    return {
-      method: "insertCustomTile",
-      args: [resolvedExecution.x, resolvedExecution.y, resolvedExecution.value]
-    };
-  }
-  throw "Unknown replay action";
 };
 
 GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
