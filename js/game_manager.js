@@ -6345,17 +6345,13 @@ GameManager.prototype.normalizeCoreStepStats = function (coreStats) {
   return null;
 };
 
-GameManager.prototype.buildComputeReplayStepStatsCoreArgs = function (actions, limit) {
-  return [{
-    actions: actions,
-    limit: limit
-  }];
-};
-
 GameManager.prototype.tryResolveStepStatsFromCore = function (actions, limit) {
   var computeReplayStepStatsCore = this.callCoreReplayExecutionRuntime(
     "computeReplayStepStats",
-    this.buildComputeReplayStepStatsCoreArgs(actions, limit)
+    [{
+      actions: actions,
+      limit: limit
+    }]
   );
   return this.resolveNormalizedCoreValueOrFallback(
     computeReplayStepStatsCore,
@@ -6415,18 +6411,14 @@ GameManager.prototype.computeStepStats = function () {
   return this.buildStepStatsFallback(src, limit);
 };
 
-GameManager.prototype.buildResolveIpsInputCountCoreArgs = function () {
-  return [{
-    replayMode: this.replayMode,
-    replayIndex: this.replayIndex,
-    ipsInputCount: this.ipsInputCount
-  }];
-};
-
 GameManager.prototype.getIpsInputCount = function () {
   var resolveIpsInputCountCore = this.callCoreReplayExecutionRuntime(
     "resolveIpsInputCount",
-    this.buildResolveIpsInputCountCoreArgs()
+    [{
+      replayMode: this.replayMode,
+      replayIndex: this.replayIndex,
+      ipsInputCount: this.ipsInputCount
+    }]
   );
   return this.resolveCoreNumericCallOrFallback(resolveIpsInputCountCore, function () {
     return this.getIpsInputCountFallback();
@@ -6451,18 +6443,14 @@ GameManager.prototype.incrementIpsInputCountFallback = function () {
   this.ipsInputCount += 1;
 };
 
-GameManager.prototype.buildResolveNextIpsInputCountCoreArgs = function () {
-  return [{
-    replayMode: this.replayMode,
-    replayIndex: this.replayIndex,
-    ipsInputCount: this.ipsInputCount
-  }];
-};
-
 GameManager.prototype.recordIpsInput = function () {
   var resolveNextIpsInputCountCore = this.callCoreReplayExecutionRuntime(
     "resolveNextIpsInputCount",
-    this.buildResolveNextIpsInputCountCoreArgs()
+    [{
+      replayMode: this.replayMode,
+      replayIndex: this.replayIndex,
+      ipsInputCount: this.ipsInputCount
+    }]
   );
   if (this.tryHandleCoreRawValue(resolveNextIpsInputCountCore, function (coreValue) {
     this.applyResolvedNextIpsInputCount(coreValue || {});
@@ -6485,17 +6473,13 @@ GameManager.prototype.resolveIpsDisplayDurationMs = function (durationMs) {
   return ms;
 };
 
-GameManager.prototype.buildResolveIpsDisplayTextCoreArgs = function (durationMs, ipsInputCount) {
-  return [{
-    durationMs: durationMs,
-    ipsInputCount: ipsInputCount
-  }];
-};
-
 GameManager.prototype.tryResolveIpsDisplayTextFromCore = function (durationMs, ipsInputCount) {
   var resolveIpsDisplayTextCore = this.callCoreReplayExecutionRuntime(
     "resolveIpsDisplayText",
-    this.buildResolveIpsDisplayTextCoreArgs(durationMs, ipsInputCount)
+    [{
+      durationMs: durationMs,
+      ipsInputCount: ipsInputCount
+    }]
   );
   return this.resolveNormalizedCoreValueOrFallback(
     resolveIpsDisplayTextCore,
@@ -6620,18 +6604,14 @@ GameManager.prototype.clearTransientTileVisualState = function () {
   });
 };
 
-GameManager.prototype.buildIsGameTerminatedStateCoreArgs = function () {
-  return [{
-    over: this.over,
-    won: this.won,
-    keepPlaying: this.keepPlaying
-  }];
-};
-
 GameManager.prototype.resolveIsGameTerminatedValue = function () {
   var isGameTerminatedStateCore = this.callCoreModeRuntime(
     "isGameTerminatedState",
-    this.buildIsGameTerminatedStateCoreArgs()
+    [{
+      over: this.over,
+      won: this.won,
+      keepPlaying: this.keepPlaying
+    }]
   );
   return this.resolveCoreBooleanCallOrFallback(isGameTerminatedStateCore, function () {
     return !!this.over || (!!this.won && !this.keepPlaying);
@@ -7158,18 +7138,14 @@ GameManager.prototype.prepareTiles = function () {
   });
 };
 
-GameManager.prototype.buildResolveMoveInputThrottleMsCoreArgs = function () {
-  return [
-    this.replayMode,
-    this.width,
-    this.height
-  ];
-};
-
 GameManager.prototype.getMoveInputThrottleMs = function () {
   var resolveMoveInputThrottleMsCore = this.callCoreTimerIntervalRuntime(
     "resolveMoveInputThrottleMs",
-    this.buildResolveMoveInputThrottleMsCoreArgs()
+    [
+      this.replayMode,
+      this.width,
+      this.height
+    ]
   );
   return this.resolveCoreNumericCallOrFallback(resolveMoveInputThrottleMsCore, function () {
     if (this.replayMode) return 0;
@@ -7328,19 +7304,15 @@ GameManager.prototype.applyFallbackPostMoveScore = function (scoreBeforeMove) {
   this.comboStreak = 0;
 };
 
-GameManager.prototype.buildComputePostMoveScoreCoreArgs = function (scoreBeforeMove) {
-  return [{
-    scoreBeforeMove: scoreBeforeMove,
-    scoreAfterMerge: this.score,
-    comboStreak: this.comboStreak,
-    comboMultiplier: this.comboMultiplier
-  }];
-};
-
 GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
   var computePostMoveScoreCore = this.callCoreScoringRuntime(
     "computePostMoveScore",
-    this.buildComputePostMoveScoreCoreArgs(scoreBeforeMove)
+    [{
+      scoreBeforeMove: scoreBeforeMove,
+      scoreAfterMerge: this.score,
+      comboStreak: this.comboStreak,
+      comboMultiplier: this.comboMultiplier
+    }]
   );
   if (this.tryHandleCoreRawValue(computePostMoveScoreCore, function (coreValue) {
     this.applyCorePostMoveScoreResult(coreValue || {});
@@ -7381,18 +7353,14 @@ GameManager.prototype.applyFallbackPostMoveLifecycle = function (hasMovesAvailab
   };
 };
 
-GameManager.prototype.buildComputePostMoveLifecycleCoreArgs = function (hasMovesAvailable) {
-  return [{
-    successfulMoveCount: this.successfulMoveCount,
-    hasMovesAvailable: hasMovesAvailable,
-    timerStatus: this.timerStatus
-  }];
-};
-
 GameManager.prototype.applyPostMoveLifecycle = function (hasMovesAvailable) {
   var computePostMoveLifecycleCore = this.callCorePostMoveRuntime(
     "computePostMoveLifecycle",
-    this.buildComputePostMoveLifecycleCoreArgs(hasMovesAvailable)
+    [{
+      successfulMoveCount: this.successfulMoveCount,
+      hasMovesAvailable: hasMovesAvailable,
+      timerStatus: this.timerStatus
+    }]
   );
   return this.resolveNormalizedCoreValueOrFallback(
     computePostMoveLifecycleCore,
