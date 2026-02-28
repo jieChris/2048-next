@@ -8485,26 +8485,6 @@ GameManager.prototype.tryImportReplayEnvelopeString = function (trimmedReplayStr
   return this.tryImportParsedReplayEnvelope(parsedEnvelope);
 };
 
-var GAME_MANAGER_REPLAY_IMPORT_TRY_METHOD_NAMES = [
-  "tryImportReplayEnvelopeString",
-  "tryImportLegacyReplayString"
-];
-
-GameManager.prototype.tryImportReplayByMethodName = function (trimmedReplayString, methodName) {
-  if (!this.isNonEmptyStringValue(methodName)) return false;
-  var tryImportMethod = this[methodName];
-  if (typeof tryImportMethod !== "function") return false;
-  return !!tryImportMethod.call(this, trimmedReplayString);
-};
-
-GameManager.prototype.tryImportReplayByMethodNames = function (trimmedReplayString, methodNames) {
-  var names = Array.isArray(methodNames) ? methodNames : [];
-  for (var i = 0; i < names.length; i++) {
-    if (this.tryImportReplayByMethodName(trimmedReplayString, names[i])) return true;
-  }
-  return false;
-};
-
 GameManager.prototype.throwUnknownReplayVersion = function () {
   throw "Unknown replay version";
 };
@@ -8520,7 +8500,7 @@ GameManager.prototype.notifyReplayImportError = function (error) {
 GameManager.prototype.import = function (replayString) {
   try {
     var trimmed = this.coerceReplayImportInputToString(replayString).trim();
-    if (!this.tryImportReplayByMethodNames(trimmed, GAME_MANAGER_REPLAY_IMPORT_TRY_METHOD_NAMES)) {
+    if (!this.tryImportReplayEnvelopeString(trimmed) && !this.tryImportLegacyReplayString(trimmed)) {
       this.throwUnknownReplayVersion();
     }
     return true;
