@@ -7648,16 +7648,12 @@ GameManager.prototype.finalizeSetupUiState = function (preferredTimerModuleView,
   this.updateSetupStatsPanelForRestoreState(restoredFromSavedState);
 };
 
-GameManager.prototype.resolveSetupDetectedMode = function () {
-  return this.detectMode();
-};
-
 GameManager.prototype.initializeSetupGrid = function () {
   this.grid = new Grid(this.width, this.height);
 };
 
 GameManager.prototype.initializeSetupModeAndGrid = function (options) {
-  var detectedMode = this.resolveSetupDetectedMode();
+  var detectedMode = this.detectMode();
   var resolvedModeConfig = this.resolveSetupModeConfig(detectedMode, options);
   this.applySetupModeConfig(resolvedModeConfig);
   this.initializeSetupGrid();
@@ -7799,10 +7795,6 @@ GameManager.prototype.resolveActuatorBestScore = function () {
   return this.scoreManager.get();
 };
 
-GameManager.prototype.resolveActuatorTerminated = function () {
-  return this.isGameTerminated();
-};
-
 GameManager.prototype.resolveActuatorBlockedCells = function () {
   return this.blockedCellsList || [];
 };
@@ -7813,7 +7805,7 @@ GameManager.prototype.buildActuatorPayload = function () {
     over: this.resolveActuatorOver(),
     won: this.resolveActuatorWon(),
     bestScore: this.resolveActuatorBestScore(),
-    terminated: this.resolveActuatorTerminated(),
+    terminated: this.isGameTerminated(),
     blockedCells: this.resolveActuatorBlockedCells()
   };
 };
@@ -7985,10 +7977,6 @@ GameManager.prototype.scheduleDelayedMoveInput = function (direction, wait) {
   }, wait);
 };
 
-GameManager.prototype.shouldBypassMoveInputThrottle = function (direction) {
-  return this.isUndoMoveDirection(direction);
-};
-
 GameManager.prototype.dispatchMoveInputWithoutThrottle = function (direction) {
   this.move(direction);
 };
@@ -8039,7 +8027,7 @@ GameManager.prototype.dispatchMoveInputWithThrottle = function (direction, throt
 };
 
 GameManager.prototype.handleMoveInput = function (direction) {
-  if (this.shouldBypassMoveInputThrottle(direction)) {
+  if (this.isUndoMoveDirection(direction)) {
     this.dispatchMoveInputWithoutThrottle(direction);
     return;
   }
