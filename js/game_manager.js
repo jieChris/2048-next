@@ -8374,52 +8374,6 @@ GameManager.prototype.applyReplayImportActions = function (payload) {
   }
 };
 
-GameManager.prototype.importJsonV3ReplayEnvelope = function (envelope, replayModeConfig) {
-  var specialRulesSnapshot =
-    !envelope.specialRulesSnapshot || typeof envelope.specialRulesSnapshot !== "object"
-      ? null
-      : this.clonePlain(envelope.specialRulesSnapshot);
-  if (specialRulesSnapshot) {
-    replayModeConfig.special_rules = specialRulesSnapshot;
-  }
-  if (typeof envelope.modeFamily === "string" && envelope.modeFamily) {
-    replayModeConfig.mode_family = envelope.modeFamily;
-  }
-  if (typeof envelope.rankPolicy === "string" && envelope.rankPolicy) {
-    replayModeConfig.rank_policy = envelope.rankPolicy;
-  }
-  if (typeof envelope.challengeId === "string" && envelope.challengeId) {
-    this.challengeId = envelope.challengeId;
-  }
-  this.applyReplayImportActions({
-    replayMoves: envelope ? envelope.actions : null,
-    replaySpawns: null
-  });
-  this.disableSessionSync = true;
-  this.restartReplaySession(envelope.seed, replayModeConfig, false);
-  this.applyUndoSettingForMode(this.modeKey, true, true);
-  this.replayIndex = 0;
-  this.replayDelay = 200;
-  this.resume();
-};
-
-GameManager.prototype.importV4ReplayEnvelope = function (envelope, replayModeConfig) {
-  var initialBoard = this.decodeBoardV4(envelope.initialBoardEncoded);
-  var decodedV4Actions = this.decodeReplayV4Actions(envelope.actionsEncoded);
-  this.applyReplayImportActions({
-    replayMoves: decodedV4Actions ? decodedV4Actions.replayMoves : null,
-    replaySpawns: Array.isArray(decodedV4Actions && decodedV4Actions.replaySpawns)
-      ? decodedV4Actions.replaySpawns
-      : []
-  });
-  this.disableSessionSync = true;
-  this.restartReplaySession(initialBoard, replayModeConfig, true);
-  this.applyUndoSettingForMode(this.modeKey, true, true);
-  this.replayIndex = 0;
-  this.replayDelay = 200;
-  this.resume();
-};
-
 GameManager.prototype.import = function (replayString) {
   try {
     var trimmed = (typeof replayString === "string" ? replayString : JSON.stringify(replayString)).trim();
@@ -8428,10 +8382,44 @@ GameManager.prototype.import = function (replayString) {
     if (parsedEnvelope && (parsedEnvelope.kind === "json-v3" || parsedEnvelope.kind === "v4c")) {
       var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
       if (parsedEnvelope.kind === "json-v3") {
-        this.importJsonV3ReplayEnvelope(parsedEnvelope, replayModeConfig);
+        var specialRulesSnapshot =
+          !parsedEnvelope.specialRulesSnapshot || typeof parsedEnvelope.specialRulesSnapshot !== "object"
+            ? null
+            : this.clonePlain(parsedEnvelope.specialRulesSnapshot);
+        if (specialRulesSnapshot) {
+          replayModeConfig.special_rules = specialRulesSnapshot;
+        }
+        if (typeof parsedEnvelope.modeFamily === "string" && parsedEnvelope.modeFamily) {
+          replayModeConfig.mode_family = parsedEnvelope.modeFamily;
+        }
+        if (typeof parsedEnvelope.rankPolicy === "string" && parsedEnvelope.rankPolicy) {
+          replayModeConfig.rank_policy = parsedEnvelope.rankPolicy;
+        }
+        if (typeof parsedEnvelope.challengeId === "string" && parsedEnvelope.challengeId) {
+          this.challengeId = parsedEnvelope.challengeId;
+        }
+        this.applyReplayImportActions({
+          replayMoves: parsedEnvelope.actions,
+          replaySpawns: null
+        });
+        this.disableSessionSync = true;
+        this.restartReplaySession(parsedEnvelope.seed, replayModeConfig, false);
       } else {
-        this.importV4ReplayEnvelope(parsedEnvelope, replayModeConfig);
+        var initialBoard = this.decodeBoardV4(parsedEnvelope.initialBoardEncoded);
+        var decodedV4Actions = this.decodeReplayV4Actions(parsedEnvelope.actionsEncoded);
+        this.applyReplayImportActions({
+          replayMoves: decodedV4Actions ? decodedV4Actions.replayMoves : null,
+          replaySpawns: Array.isArray(decodedV4Actions && decodedV4Actions.replaySpawns)
+            ? decodedV4Actions.replaySpawns
+            : []
+        });
+        this.disableSessionSync = true;
+        this.restartReplaySession(initialBoard, replayModeConfig, true);
       }
+      this.applyUndoSettingForMode(this.modeKey, true, true);
+      this.replayIndex = 0;
+      this.replayDelay = 200;
+      this.resume();
       importedEnvelope = true;
     }
     if (!importedEnvelope) {
