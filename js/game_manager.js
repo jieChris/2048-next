@@ -1823,43 +1823,22 @@ GameManager.prototype.tryRestoreSavedGameState = function () {
   return this.tryApplyRestorableSavedState(this.resolveRestorableSavedState());
 };
 
-GameManager.prototype.shouldAbortSaveGameState = function (options, now) {
-  if (!this.shouldUseSavedGameState()) return true;
-  if (this.isSessionTerminated() && this.modeKey !== "practice_legacy") {
-    this.clearSavedGameState();
-    return true;
-  }
-  return this.shouldSkipSaveGameStateByThrottle(options, now);
-};
-
-GameManager.prototype.tryPersistAndMarkSavedGameState = function (payload, now) {
-  try {
-    var persistResult = this.persistSavedGameStatePayload(payload);
-    if (!persistResult) return;
-    this.markSavedGameStatePersistedAt(now);
-  } catch (_err) {}
-};
-
-GameManager.prototype.markSavedGameStatePersistedAt = function (now) {
-  this.lastSavedGameStateAt = now;
-};
-
 GameManager.prototype.saveGameState = function (options) {
   options = options || {};
   var now = Date.now();
-  if (this.shouldAbortSaveGameState(options, now)) return;
+  if (!this.shouldUseSavedGameState()) return;
+  if (this.isSessionTerminated() && this.modeKey !== "practice_legacy") {
+    this.clearSavedGameState();
+    return;
+  }
+  if (this.shouldSkipSaveGameStateByThrottle(options, now)) return;
 
   var payload = this.buildSavedGameStatePayload(now);
-  this.tryPersistAndMarkSavedGameState(payload, now);
-};
-
-GameManager.prototype.persistSavedGameStatePrimaryWrites = function (key, liteKey, payload, litePayload) {
-  var persisted = this.writeSavedGameStatePayload(key, payload);
-  if (!persisted) {
-    persisted = this.writeSavedGameStatePayload(key, litePayload);
-  }
-  var litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
-  return this.createSavedGameStatePersistWritesResult(persisted, litePersisted);
+  try {
+    var persistResult = this.persistSavedGameStatePayload(payload);
+    if (!persistResult) return;
+    this.lastSavedGameStateAt = now;
+  } catch (_err) {}
 };
 
 GameManager.prototype.createSavedGameStatePersistWritesResult = function (persisted, litePersisted) {
@@ -1869,27 +1848,21 @@ GameManager.prototype.createSavedGameStatePersistWritesResult = function (persis
   };
 };
 
-GameManager.prototype.resolveSavedGameStatePersistKeys = function () {
-  return {
-    key: this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_KEY_PREFIX),
-    liteKey: this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX)
-  };
-};
-
 GameManager.prototype.persistSavedGameStatePayload = function (payload) {
-  var persistKeys = this.resolveSavedGameStatePersistKeys();
+  var key = this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_KEY_PREFIX);
+  var liteKey = this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX);
   var litePayload = this.buildLiteSavedGameStatePayload(payload);
   this.writeWindowNameSavedPayload(this.modeKey, litePayload);
-  var persistWrites = this.persistSavedGameStatePrimaryWrites(
-    persistKeys.key,
-    persistKeys.liteKey,
-    payload,
-    litePayload
-  );
+  var persisted = this.writeSavedGameStatePayload(key, payload);
+  if (!persisted) {
+    persisted = this.writeSavedGameStatePayload(key, litePayload);
+  }
+  var litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
+  var persistWrites = this.createSavedGameStatePersistWritesResult(persisted, litePersisted);
   if (!persistWrites.persisted && !persistWrites.litePersisted) {
     this.clearSavedGameState(this.modeKey);
-    var persistedAfterQuotaFallback = this.writeSavedGameStatePayload(persistKeys.key, litePayload);
-    var litePersistedAfterQuotaFallback = this.writeSavedGameStatePayload(persistKeys.liteKey, litePayload);
+    var persistedAfterQuotaFallback = this.writeSavedGameStatePayload(key, litePayload);
+    var litePersistedAfterQuotaFallback = this.writeSavedGameStatePayload(liteKey, litePayload);
     persistWrites = this.createSavedGameStatePersistWritesResult(
       persistedAfterQuotaFallback,
       litePersistedAfterQuotaFallback
