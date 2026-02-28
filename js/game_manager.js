@@ -1027,19 +1027,6 @@ GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
   });
 };
 
-GameManager.prototype.buildSavedGameStateStoragesFallback = function () {
-  var out = [];
-  var localStore = this.getWebStorageByName("localStorage");
-  var sessionStore = this.getWebStorageByName("sessionStorage");
-  if (localStore) out.push(localStore);
-  if (sessionStore && sessionStore !== localStore) out.push(sessionStore);
-  return out;
-};
-
-GameManager.prototype.normalizeSavedGameStateStoragesCoreValue = function (storagesByCore) {
-  return Array.isArray(storagesByCore) ? storagesByCore : null;
-};
-
 GameManager.prototype.getSavedGameStateStorages = function () {
   var getSavedGameStateStoragesFromContextCore = this.callCoreStorageRuntime(
     "getSavedGameStateStoragesFromContext",
@@ -1049,74 +1036,17 @@ GameManager.prototype.getSavedGameStateStorages = function () {
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     getSavedGameStateStoragesFromContextCore,
-    this.normalizeSavedGameStateStoragesCoreValue
+    function (storagesByCore) {
+      return Array.isArray(storagesByCore) ? storagesByCore : null;
+    }
   );
   if (normalizedByCore) return normalizedByCore;
-  return this.buildSavedGameStateStoragesFallback();
-};
-
-GameManager.prototype.readSavedPayloadRawFromStore = function (store, key) {
-  try {
-    return store.getItem(key);
-  } catch (_errRead) {
-    return null;
-  }
-};
-
-GameManager.prototype.parseSavedPayloadRaw = function (raw) {
-  if (!raw) return null;
-  try {
-    var parsed = JSON.parse(raw);
-    if (!this.isNonArrayObject(parsed)) return null;
-    return parsed;
-  } catch (_errParse) {
-    return null;
-  }
-};
-
-GameManager.prototype.removeSavedPayloadByKeyFromStore = function (store, key) {
-  try {
-    store.removeItem(key);
-  } catch (_errRemove) {}
-};
-
-GameManager.prototype.selectLatestSavedPayload = function (currentBest, nextPayload) {
-  var best = this.isNonArrayObject(currentBest) ? currentBest : null;
-  var next = this.isNonArrayObject(nextPayload) ? nextPayload : null;
-  if (!next) return best;
-  if (!best) return next;
-  var bestSavedAt = Number(best.saved_at) || 0;
-  var nextSavedAt = Number(next.saved_at) || 0;
-  return nextSavedAt >= bestSavedAt ? next : best;
-};
-
-GameManager.prototype.readSavedPayloadCandidateFromStore = function (store, key) {
-  var raw = this.readSavedPayloadRawFromStore(store, key);
-  if (!raw) return null;
-  var parsed = this.parseSavedPayloadRaw(raw);
-  if (parsed) return parsed;
-  this.removeSavedPayloadByKeyFromStore(store, key);
-  return null;
-};
-
-GameManager.prototype.normalizeSavedPayloadStores = function (stores) {
-  return Array.isArray(stores) ? stores : [];
-};
-
-GameManager.prototype.readSavedPayloadByKeyFallback = function (stores, key) {
-  var targetStores = this.normalizeSavedPayloadStores(stores);
-  var best = null;
-  for (var i = 0; i < targetStores.length; i++) {
-    var candidate = this.readSavedPayloadCandidateFromStore(targetStores[i], key);
-    best = this.selectLatestSavedPayload(best, candidate);
-  }
-  return best;
-};
-
-GameManager.prototype.normalizeSavedPayloadByKeyCoreValue = function (savedByCore) {
-  if (this.isNonArrayObject(savedByCore)) return savedByCore;
-  if (savedByCore === null) return null;
-  return undefined;
+  var out = [];
+  var localStore = this.getWebStorageByName("localStorage");
+  var sessionStore = this.getWebStorageByName("sessionStorage");
+  if (localStore) out.push(localStore);
+  if (sessionStore && sessionStore !== localStore) out.push(sessionStore);
+  return out;
 };
 
 GameManager.prototype.readSavedPayloadByKey = function (key) {
@@ -1124,16 +1054,51 @@ GameManager.prototype.readSavedPayloadByKey = function (key) {
   var readSavedPayloadByKeyFromStoragesCore = this.callCoreStorageRuntime(
     "readSavedPayloadByKeyFromStorages",
     [{
-      storages: this.normalizeSavedPayloadStores(stores),
+      storages: Array.isArray(stores) ? stores : [],
       key: key
     }]
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     readSavedPayloadByKeyFromStoragesCore,
-    this.normalizeSavedPayloadByKeyCoreValue
+    function (savedByCore) {
+      if (this.isNonArrayObject(savedByCore)) return savedByCore;
+      if (savedByCore === null) return null;
+      return undefined;
+    }
   );
   if (typeof normalizedByCore !== "undefined") return normalizedByCore;
-  return this.readSavedPayloadByKeyFallback(stores, key);
+  var targetStores = Array.isArray(stores) ? stores : [];
+  var best = null;
+  for (var i = 0; i < targetStores.length; i++) {
+    var raw = null;
+    try {
+      raw = targetStores[i].getItem(key);
+    } catch (_errRead) {
+      raw = null;
+    }
+    if (!raw) continue;
+    var parsed = null;
+    try {
+      var parsedRaw = JSON.parse(raw);
+      parsed = this.isNonArrayObject(parsedRaw) ? parsedRaw : null;
+    } catch (_errParse) {
+      parsed = null;
+    }
+    if (!parsed) {
+      try {
+        targetStores[i].removeItem(key);
+      } catch (_errRemove) {}
+      continue;
+    }
+    if (!best) {
+      best = parsed;
+      continue;
+    }
+    var bestSavedAt = Number(best.saved_at) || 0;
+    var nextSavedAt = Number(parsed.saved_at) || 0;
+    best = nextSavedAt >= bestSavedAt ? parsed : best;
+  }
+  return best;
 };
 
 GameManager.prototype.normalizeWindowNameSavedPayloadCoreValue = function (payloadByCore) {
