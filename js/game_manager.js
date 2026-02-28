@@ -5499,12 +5499,19 @@ GameManager.prototype.resolveCappedTargetValueWithDefault = function (cappedTarg
     : 2048;
 };
 
+GameManager.prototype.buildResolveCappedTimerLegendClassCoreArgs = function (targetValue) {
+  return [{
+    timerMilestoneSlotByValue: this.timerMilestoneSlotByValue,
+    cappedTargetValue: targetValue
+  }];
+};
+
 GameManager.prototype.getCappedTimerLegendClass = function (cappedTargetValue) {
   var targetValue = this.resolveCappedTargetValueOrNull(cappedTargetValue);
-  var resolveCappedTimerLegendClassCore = this.callCoreModeRuntime("resolveCappedTimerLegendClass", [{
-      timerMilestoneSlotByValue: this.timerMilestoneSlotByValue,
-      cappedTargetValue: targetValue
-    }]);
+  var resolveCappedTimerLegendClassCore = this.callCoreModeRuntime(
+    "resolveCappedTimerLegendClass",
+    this.buildResolveCappedTimerLegendClassCoreArgs(targetValue)
+  );
   if (resolveCappedTimerLegendClassCore.available) {
     var legendClass = resolveCappedTimerLegendClassCore.value;
     if (typeof legendClass === "string" && legendClass) return legendClass;
@@ -5563,14 +5570,21 @@ GameManager.prototype.resolveCappedPlaceholderRowValuesFallback = function (reso
   return values;
 };
 
+GameManager.prototype.buildResolveCappedPlaceholderRowValuesCoreArgs = function (resolvedCappedState) {
+  return [{
+    isCappedMode: resolvedCappedState.isCappedMode,
+    cappedTargetValue: resolvedCappedState.cappedTargetValue,
+    timerSlotIds: GameManager.TIMER_SLOT_IDS
+  }];
+};
+
 GameManager.prototype.getCappedPlaceholderRowValues = function (cappedState) {
   var resolvedCappedState =
     this.resolveProvidedCappedModeState(cappedState);
-  var resolveCappedPlaceholderRowValuesCore = this.callCoreModeRuntime("resolveCappedPlaceholderRowValues", [{
-      isCappedMode: resolvedCappedState.isCappedMode,
-      cappedTargetValue: resolvedCappedState.cappedTargetValue,
-      timerSlotIds: GameManager.TIMER_SLOT_IDS
-    }]);
+  var resolveCappedPlaceholderRowValuesCore = this.callCoreModeRuntime(
+    "resolveCappedPlaceholderRowValues",
+    this.buildResolveCappedPlaceholderRowValuesCoreArgs(resolvedCappedState)
+  );
   if (resolveCappedPlaceholderRowValuesCore.available) {
     var normalizedByCore = this.normalizeCappedPlaceholderRowValuesFromCore(resolveCappedPlaceholderRowValuesCore.value);
     if (normalizedByCore) return normalizedByCore;
