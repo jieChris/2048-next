@@ -9279,9 +9279,13 @@ GameManager.prototype.resolveReplayStepAction = function (stepExecutionPlan) {
   return stepExecutionPlan.action;
 };
 
+GameManager.prototype.applyReplayStepAction = function (stepExecutionPlan) {
+  this.executeReplayAction(this.resolveReplayStepAction(stepExecutionPlan));
+};
+
 GameManager.prototype.applyReplayStepExecutionPlan = function (stepExecutionPlan) {
   this.applyReplayStepForcedSpawn(stepExecutionPlan);
-  this.executeReplayAction(this.resolveReplayStepAction(stepExecutionPlan));
+  this.applyReplayStepAction(stepExecutionPlan);
   this.applyReplayStepNextIndex(stepExecutionPlan);
 };
 
