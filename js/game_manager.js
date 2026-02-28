@@ -709,35 +709,23 @@ GameManager.prototype.resolveReplayExecution = function (action) {
   });
 };
 
-GameManager.prototype.buildReplayExecution = function (kind, payload) {
-  var out = { kind: kind };
-  if (!payload || typeof payload !== "object") return out;
-  for (var key in payload) {
-    if (Object.prototype.hasOwnProperty.call(payload, key)) {
-      out[key] = payload[key];
-    }
-  }
-  return out;
-};
-
-GameManager.prototype.buildMoveReplayExecutionFallback = function (action) {
-  var dir = Array.isArray(action) ? action[1] : action;
-  return this.buildReplayExecution("m", { dir: dir });
-};
-
-GameManager.prototype.buildPracticeReplayExecutionFallback = function (action) {
-  return this.buildReplayExecution("p", {
-    x: action[1],
-    y: action[2],
-    value: action[3]
-  });
-};
-
 GameManager.prototype.resolveReplayExecutionFallback = function (action) {
   var kind = this.getActionKind(action);
-  if (kind === "m") return this.buildMoveReplayExecutionFallback(action);
-  if (kind === "u") return this.buildReplayExecution("u");
-  if (kind === "p") return this.buildPracticeReplayExecutionFallback(action);
+  if (kind === "m") {
+    return {
+      kind: "m",
+      dir: Array.isArray(action) ? action[1] : action
+    };
+  }
+  if (kind === "u") return { kind: "u" };
+  if (kind === "p") {
+    return {
+      kind: "p",
+      x: action[1],
+      y: action[2],
+      value: action[3]
+    };
+  }
   this.throwUnknownReplayAction();
 };
 
@@ -751,25 +739,15 @@ GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
   });
 };
 
-GameManager.prototype.buildReplayDispatchPlan = function (method, args) {
-  return {
-    method: method,
-    args: args
-  };
-};
-
-GameManager.prototype.buildReplayPracticeDispatchFallback = function (resolvedExecution) {
-  return this.buildReplayDispatchPlan("insertCustomTile", [
-    resolvedExecution.x,
-    resolvedExecution.y,
-    resolvedExecution.value
-  ]);
-};
-
 GameManager.prototype.planReplayDispatchFallback = function (resolvedExecution) {
-  if (resolvedExecution.kind === "m") return this.buildReplayDispatchPlan("move", [resolvedExecution.dir]);
-  if (resolvedExecution.kind === "u") return this.buildReplayDispatchPlan("move", [-1]);
-  if (resolvedExecution.kind === "p") return this.buildReplayPracticeDispatchFallback(resolvedExecution);
+  if (resolvedExecution.kind === "m") return { method: "move", args: [resolvedExecution.dir] };
+  if (resolvedExecution.kind === "u") return { method: "move", args: [-1] };
+  if (resolvedExecution.kind === "p") {
+    return {
+      method: "insertCustomTile",
+      args: [resolvedExecution.x, resolvedExecution.y, resolvedExecution.value]
+    };
+  }
   this.throwUnknownReplayAction();
 };
 
@@ -836,11 +814,12 @@ GameManager.prototype.planReplayStepExecution = function () {
   });
 };
 
-GameManager.prototype.resolveReplaySpawnAtCurrentIndex = function () {
-  return this.replaySpawns ? this.replaySpawns[this.replayIndex] : undefined;
-};
-
-GameManager.prototype.buildReplayStepExecutionFallback = function (action, stepPlan) {
+GameManager.prototype.planReplayStepExecutionFallback = function () {
+  var action = this.replayMoves[this.replayIndex];
+  var stepPlan = this.planReplayStep(
+    action,
+    this.replaySpawns ? this.replaySpawns[this.replayIndex] : undefined
+  );
   return {
     action: action,
     shouldInjectForcedSpawn: !!stepPlan.shouldInjectForcedSpawn,
@@ -849,27 +828,17 @@ GameManager.prototype.buildReplayStepExecutionFallback = function (action, stepP
   };
 };
 
-GameManager.prototype.planReplayStepExecutionFallback = function () {
-  var action = this.replayMoves[this.replayIndex];
-  var stepPlan = this.planReplayStep(action, this.resolveReplaySpawnAtCurrentIndex());
-  return this.buildReplayStepExecutionFallback(action, stepPlan);
-};
-
 GameManager.prototype.computeReplayPauseState = function () {
   var computeReplayPauseStateCore = this.callCoreReplayTimerRuntime(
     "computeReplayPauseState",
     []
   );
   return this.resolveCoreObjectCallOrFallback(computeReplayPauseStateCore, function () {
-    return this.getReplayPauseDefaults();
+    return {
+      isPaused: true,
+      shouldClearInterval: true
+    };
   });
-};
-
-GameManager.prototype.getReplayPauseDefaults = function () {
-  return {
-    isPaused: true,
-    shouldClearInterval: true
-  };
 };
 
 GameManager.prototype.computeReplayResumeState = function () {
@@ -880,16 +849,12 @@ GameManager.prototype.computeReplayResumeState = function () {
     }]
   );
   return this.resolveCoreObjectCallOrFallback(computeReplayResumeStateCore, function () {
-    return this.computeReplayResumeStateFallback();
+    return {
+      isPaused: false,
+      shouldClearInterval: true,
+      delay: this.replayDelay || 200
+    };
   });
-};
-
-GameManager.prototype.computeReplayResumeStateFallback = function () {
-  return {
-    isPaused: false,
-    shouldClearInterval: true,
-    delay: this.replayDelay || 200
-  };
 };
 
 GameManager.prototype.computeReplaySpeedState = function (multiplier) {
@@ -902,15 +867,11 @@ GameManager.prototype.computeReplaySpeedState = function (multiplier) {
     }]
   );
   return this.resolveCoreObjectCallOrFallback(computeReplaySpeedStateCore, function () {
-    return this.computeReplaySpeedStateFallback(multiplier);
+    return {
+      replayDelay: 200 / multiplier,
+      shouldResume: !this.isPaused
+    };
   });
-};
-
-GameManager.prototype.computeReplaySpeedStateFallback = function (multiplier) {
-  return {
-    replayDelay: 200 / multiplier,
-    shouldResume: !this.isPaused
-  };
 };
 
 GameManager.prototype.shouldStopReplayAtTick = function (replayIndex, replayMovesLength) {
