@@ -259,8 +259,15 @@ GameManager.LEGACY_ALIAS_TO_MODE_KEY = {
 };
 GameManager.TIMER_SLOT_IDS = [16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
 
+GameManager.prototype.buildGetReplayActionKindCoreArgs = function (action) {
+  return [action];
+};
+
 GameManager.prototype.getActionKind = function (action) {
-  var getReplayActionKindCore = this.callCoreReplayExecutionRuntime("getReplayActionKind", [action]);
+  var getReplayActionKindCore = this.callCoreReplayExecutionRuntime(
+    "getReplayActionKind",
+    this.buildGetReplayActionKindCoreArgs(action)
+  );
   if (getReplayActionKindCore.available) return getReplayActionKindCore.value;
   if (action === -1) return "u";
   if (action >= 0 && action <= 3) return "m";
@@ -268,8 +275,15 @@ GameManager.prototype.getActionKind = function (action) {
   return "x";
 };
 
+GameManager.prototype.buildEncodeReplay128CoreArgs = function (code) {
+  return [code];
+};
+
 GameManager.prototype.encodeReplay128 = function (code) {
-  var encodeReplay128Core = this.callCoreReplayCodecRuntime("encodeReplay128", [code]);
+  var encodeReplay128Core = this.callCoreReplayCodecRuntime(
+    "encodeReplay128",
+    this.buildEncodeReplay128CoreArgs(code)
+  );
   if (encodeReplay128Core.available) return encodeReplay128Core.value;
 
   if (!Number.isInteger(code) || code < 0 || code >= GameManager.REPLAY128_TOTAL) {
@@ -283,8 +297,15 @@ GameManager.prototype.encodeReplay128 = function (code) {
   );
 };
 
+GameManager.prototype.buildDecodeReplay128CoreArgs = function (char) {
+  return [char];
+};
+
 GameManager.prototype.decodeReplay128 = function (char) {
-  var decodeReplay128Core = this.callCoreReplayCodecRuntime("decodeReplay128", [char]);
+  var decodeReplay128Core = this.callCoreReplayCodecRuntime(
+    "decodeReplay128",
+    this.buildDecodeReplay128CoreArgs(char)
+  );
   if (decodeReplay128Core.available) return decodeReplay128Core.value;
 
   if (!char || char.length !== 1) throw "Invalid replay char";
@@ -300,8 +321,15 @@ GameManager.prototype.decodeReplay128 = function (char) {
   throw "Invalid replay char";
 };
 
+GameManager.prototype.buildEncodeBoardV4CoreArgs = function (board) {
+  return [board];
+};
+
 GameManager.prototype.encodeBoardV4 = function (board) {
-  var encodeBoardV4Core = this.callCoreReplayCodecRuntime("encodeBoardV4", [board]);
+  var encodeBoardV4Core = this.callCoreReplayCodecRuntime(
+    "encodeBoardV4",
+    this.buildEncodeBoardV4CoreArgs(board)
+  );
   if (encodeBoardV4Core.available) return encodeBoardV4Core.value;
 
   if (!Array.isArray(board) || board.length !== 4) throw "Invalid initial board";
@@ -324,8 +352,15 @@ GameManager.prototype.encodeBoardV4 = function (board) {
   return out;
 };
 
+GameManager.prototype.buildDecodeBoardV4CoreArgs = function (encoded) {
+  return [encoded];
+};
+
 GameManager.prototype.decodeBoardV4 = function (encoded) {
-  var decodeBoardV4Core = this.callCoreReplayCodecRuntime("decodeBoardV4", [encoded]);
+  var decodeBoardV4Core = this.callCoreReplayCodecRuntime(
+    "decodeBoardV4",
+    this.buildDecodeBoardV4CoreArgs(encoded)
+  );
   if (decodeBoardV4Core.available) return decodeBoardV4Core.value;
 
   if (typeof encoded !== "string" || encoded.length !== 16) throw "Invalid encoded board";
@@ -417,8 +452,15 @@ GameManager.prototype.decodeReplayV4ActionsFallback = function (actionsEncoded) 
   };
 };
 
+GameManager.prototype.buildDecodeReplayV4ActionsCoreArgs = function (actionsEncoded) {
+  return [actionsEncoded];
+};
+
 GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
-  var decodeReplayV4ActionsCore = this.callCoreReplayV4ActionsRuntime("decodeReplayV4Actions", [actionsEncoded]);
+  var decodeReplayV4ActionsCore = this.callCoreReplayV4ActionsRuntime(
+    "decodeReplayV4Actions",
+    this.buildDecodeReplayV4ActionsCoreArgs(actionsEncoded)
+  );
   if (decodeReplayV4ActionsCore.available) return decodeReplayV4ActionsCore.value || {};
   return this.decodeReplayV4ActionsFallback(actionsEncoded);
 };
@@ -674,14 +716,28 @@ GameManager.prototype.decodeLegacyReplayFallback = function (trimmedReplayString
   return this.decodeLegacyReplayV2Payload(trimmedReplayString);
 };
 
+GameManager.prototype.buildDecodeLegacyReplayCoreArgs = function (trimmedReplayString) {
+  return [trimmedReplayString];
+};
+
 GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
-  var decodeLegacyReplayCore = this.callCoreReplayLegacyRuntime("decodeLegacyReplay", [trimmedReplayString]);
+  var decodeLegacyReplayCore = this.callCoreReplayLegacyRuntime(
+    "decodeLegacyReplay",
+    this.buildDecodeLegacyReplayCoreArgs(trimmedReplayString)
+  );
   if (decodeLegacyReplayCore.available) return decodeLegacyReplayCore.value;
   return this.decodeLegacyReplayFallback(trimmedReplayString);
 };
 
+GameManager.prototype.buildResolveReplayExecutionCoreArgs = function (action) {
+  return [action];
+};
+
 GameManager.prototype.resolveReplayExecution = function (action) {
-  var resolveReplayExecutionCore = this.callCoreReplayExecutionRuntime("resolveReplayExecution", [action]);
+  var resolveReplayExecutionCore = this.callCoreReplayExecutionRuntime(
+    "resolveReplayExecution",
+    this.buildResolveReplayExecutionCoreArgs(action)
+  );
   if (resolveReplayExecutionCore.available) return resolveReplayExecutionCore.value;
   return this.resolveReplayExecutionFallback(action);
 };
@@ -722,8 +778,15 @@ GameManager.prototype.resolveReplayExecutionFallback = function (action) {
   this.throwUnknownReplayAction();
 };
 
+GameManager.prototype.buildPlanReplayDispatchCoreArgs = function (resolvedExecution) {
+  return [resolvedExecution];
+};
+
 GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
-  var planReplayDispatchCore = this.callCoreReplayDispatchRuntime("planReplayDispatch", [resolvedExecution]);
+  var planReplayDispatchCore = this.callCoreReplayDispatchRuntime(
+    "planReplayDispatch",
+    this.buildPlanReplayDispatchCoreArgs(resolvedExecution)
+  );
   if (planReplayDispatchCore.available) return planReplayDispatchCore.value || {};
   return this.planReplayDispatchFallback(resolvedExecution);
 };
