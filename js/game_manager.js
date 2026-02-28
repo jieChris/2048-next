@@ -7961,23 +7961,15 @@ GameManager.prototype.movesAvailable = function () {
 
 GameManager.prototype.canMergeTileWithAnyNeighbor = function (x, y, tile) {
   for (var direction = 0; direction < 4; direction++) {
-    var cell = this.resolveNeighborCellForMergeCheck(x, y, direction);
+    var vector = this.getVector(direction);
+    var cell = { x: x + vector.x, y: y + vector.y };
     if (this.isBlockedCell(cell.x, cell.y)) continue;
-    if (this.canMergeWithNeighborTile(tile, cell)) {
+    var other = this.grid.cellContent(cell);
+    if (other && this.getMergedValue(tile.value, other.value) !== null) {
       return true;
     }
   }
   return false;
-};
-
-GameManager.prototype.resolveNeighborCellForMergeCheck = function (x, y, direction) {
-  var vector = this.getVector(direction);
-  return { x: x + vector.x, y: y + vector.y };
-};
-
-GameManager.prototype.canMergeWithNeighborTile = function (tile, cell) {
-  var other = this.grid.cellContent(cell);
-  return !!(other && this.getMergedValue(tile.value, other.value) !== null);
 };
 
 GameManager.prototype.hasMergeableNeighborAtCell = function (x, y) {
