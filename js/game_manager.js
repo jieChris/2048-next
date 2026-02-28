@@ -4522,40 +4522,28 @@ GameManager.prototype.updateStatsPanelLabels = function () {
   if (rateLabel) rateLabel.textContent = "实际出" + pair.secondary + "率";
 };
 
-GameManager.prototype.resolveStatsPanelStepValues = function (totalSteps, moveSteps, undoSteps) {
-  var fallback = this.computeStepStats();
-  return {
-    totalSteps: typeof totalSteps === "undefined" ? fallback.totalSteps : totalSteps,
-    moveSteps: typeof moveSteps === "undefined" ? fallback.moveSteps : moveSteps,
-    undoSteps: typeof undoSteps === "undefined" ? fallback.undoSteps : undoSteps
-  };
-};
-
 GameManager.prototype.setStatsPanelFieldText = function (fieldId, value) {
   var element = document.getElementById(fieldId);
   if (element) element.textContent = String(value);
 };
 
-GameManager.prototype.updateStatsPanelStepTexts = function (stepValues) {
+GameManager.prototype.updateStatsPanel = function (totalSteps, moveSteps, undoSteps) {
+  var fallback = this.computeStepStats();
+  var stepValues = {
+    totalSteps: typeof totalSteps === "undefined" ? fallback.totalSteps : totalSteps,
+    moveSteps: typeof moveSteps === "undefined" ? fallback.moveSteps : moveSteps,
+    undoSteps: typeof undoSteps === "undefined" ? fallback.undoSteps : undoSteps
+  };
+  this.updateStatsPanelLabels();
+
+  var pair = this.getSpawnStatPair();
   this.setStatsPanelFieldText("stats-panel-total", stepValues.totalSteps);
   this.setStatsPanelFieldText("stats-panel-moves", stepValues.moveSteps);
   this.setStatsPanelFieldText("stats-panel-undo", stepValues.undoSteps);
-};
-
-GameManager.prototype.updateStatsPanelSpawnTexts = function (pair) {
   this.setStatsPanelFieldText("stats-panel-two", this.getSpawnCount(pair.primary));
   this.setStatsPanelFieldText("stats-panel-four", this.getSpawnCount(pair.secondary));
   var rateEl = document.getElementById("stats-panel-four-rate");
   if (rateEl) rateEl.textContent = this.getActualSecondaryRate();
-};
-
-GameManager.prototype.updateStatsPanel = function (totalSteps, moveSteps, undoSteps) {
-  var stepValues = this.resolveStatsPanelStepValues(totalSteps, moveSteps, undoSteps);
-  this.updateStatsPanelLabels();
-
-  var pair = this.getSpawnStatPair();
-  this.updateStatsPanelStepTexts(stepValues);
-  this.updateStatsPanelSpawnTexts(pair);
 };
 
 GameManager.prototype.resolveStepStatsSource = function () {
