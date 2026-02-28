@@ -7189,15 +7189,6 @@ GameManager.prototype.recordPracticeReplayAction = function (action) {
   }
 };
 
-GameManager.prototype.ensureTimer32kTextIfNeeded = function (value) {
-  if (value !== 32768) return;
-  var timeStr = this.pretty(this.time);
-  var timer32k = document.getElementById("timer32768");
-  if (timer32k && timer32k.textContent === "") {
-    timer32k.textContent = timeStr;
-  }
-};
-
 GameManager.prototype.apply32kVisibilityStateForCustomTile = function (value) {
   if (value < 32768) return;
   this.reached32k = true;
@@ -7210,60 +7201,38 @@ GameManager.prototype.apply32kVisibilityStateForCustomTile = function (value) {
   var timerRow32 = document.getElementById("timer-row-32");
   if (timerRow32) timerRow32.style.display = "none";
 
-  this.ensureTimer32kTextIfNeeded(value);
-};
-
-GameManager.prototype.refreshAfterCustomTileEdit = function () {
-  this.clearTransientTileVisualState();
-  this.actuate();
-};
-
-GameManager.prototype.ensureCustomTileCellEditable = function (x, y) {
-    if (this.isBlockedCell(x, y)) {
-        throw "Blocked cell cannot be edited";
+  if (value === 32768) {
+    var timeStr = this.pretty(this.time);
+    var timer32k = document.getElementById("timer32768");
+    if (timer32k && timer32k.textContent === "") {
+      timer32k.textContent = timeStr;
     }
+  }
 };
-
-GameManager.prototype.removeExistingCustomTileAt = function (x, y) {
-    var cell = { x: x, y: y };
-    var existingTile = this.grid.cellContent(cell);
-    if (!existingTile) return;
-    this.grid.removeTile(existingTile);
-};
-
-GameManager.prototype.buildPracticeCustomTileReplayAction = function (x, y, value) {
-    return ["p", x, y, value];
-};
-
-GameManager.prototype.insertCustomTileValue = function (x, y, value) {
-    var tile = new Tile({ x: x, y: y }, value);
-    this.grid.insertTile(tile);
-};
-
-GameManager.prototype.applyCustomTileClear = function (x, y, value) {
-    this.recordPracticeReplayAction(this.buildPracticeCustomTileReplayAction(x, y, value));
-    this.refreshAfterCustomTileEdit();
-};
-
-GameManager.prototype.applyCustomTileInsert = function (x, y, value) {
-    this.insertCustomTileValue(x, y, value);
-    this.invalidateTimers(value);
-    this.apply32kVisibilityStateForCustomTile(value);
-    this.refreshAfterCustomTileEdit();
-    this.recordPracticeReplayAction(this.buildPracticeCustomTileReplayAction(x, y, value));
-};
-
-
 
 // Insert a custom tile (Test Board)
 GameManager.prototype.insertCustomTile = function(x, y, value) {
-    this.ensureCustomTileCellEditable(x, y);
-    this.removeExistingCustomTileAt(x, y);
+    if (this.isBlockedCell(x, y)) {
+        throw "Blocked cell cannot be edited";
+    }
+    var cell = { x: x, y: y };
+    var existingTile = this.grid.cellContent(cell);
+    if (existingTile) {
+        this.grid.removeTile(existingTile);
+    }
     if (value === 0) {
-        this.applyCustomTileClear(x, y, value);
+        this.recordPracticeReplayAction(["p", x, y, value]);
+        this.clearTransientTileVisualState();
+        this.actuate();
         return;
     }
-    this.applyCustomTileInsert(x, y, value);
+    var tile = new Tile({ x: x, y: y }, value);
+    this.grid.insertTile(tile);
+    this.invalidateTimers(value);
+    this.apply32kVisibilityStateForCustomTile(value);
+    this.clearTransientTileVisualState();
+    this.actuate();
+    this.recordPracticeReplayAction(["p", x, y, value]);
 };
 
 GameManager.prototype.resolveInvalidateTimersCoreInput = function (limit) {
