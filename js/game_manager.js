@@ -719,52 +719,6 @@ GameManager.prototype.planReplayStepExecution = function () {
   });
 };
 
-GameManager.prototype.computeReplayPauseState = function () {
-  var computeReplayPauseStateCore = this.callCoreReplayTimerRuntime(
-    "computeReplayPauseState",
-    []
-  );
-  return this.resolveCoreObjectCallOrFallback(computeReplayPauseStateCore, function () {
-    return {
-      isPaused: true,
-      shouldClearInterval: true
-    };
-  });
-};
-
-GameManager.prototype.computeReplayResumeState = function () {
-  var computeReplayResumeStateCore = this.callCoreReplayTimerRuntime(
-    "computeReplayResumeState",
-    [{
-      replayDelay: this.replayDelay
-    }]
-  );
-  return this.resolveCoreObjectCallOrFallback(computeReplayResumeStateCore, function () {
-    return {
-      isPaused: false,
-      shouldClearInterval: true,
-      delay: this.replayDelay || 200
-    };
-  });
-};
-
-GameManager.prototype.computeReplaySpeedState = function (multiplier) {
-  var computeReplaySpeedStateCore = this.callCoreReplayTimerRuntime(
-    "computeReplaySpeedState",
-    [{
-      multiplier: multiplier,
-      isPaused: !!this.isPaused,
-      baseDelay: 200
-    }]
-  );
-  return this.resolveCoreObjectCallOrFallback(computeReplaySpeedStateCore, function () {
-    return {
-      replayDelay: 200 / multiplier,
-      shouldResume: !this.isPaused
-    };
-  });
-};
-
 GameManager.prototype.shouldStopReplayAtTick = function (replayIndex, replayMovesLength) {
   var shouldStopReplayAtTickCore = this.callCoreReplayTimerRuntime(
     "shouldStopReplayAtTick",
@@ -8430,7 +8384,16 @@ GameManager.prototype.executePlannedReplayStep = function () {
 };
 
 GameManager.prototype.pause = function () {
-    var state = this.computeReplayPauseState();
+    var computeReplayPauseStateCore = this.callCoreReplayTimerRuntime(
+      "computeReplayPauseState",
+      []
+    );
+    var state = this.resolveCoreObjectCallOrFallback(computeReplayPauseStateCore, function () {
+      return {
+        isPaused: true,
+        shouldClearInterval: true
+      };
+    });
     state = this.isNonArrayObject(state) ? state : {};
     this.isPaused = state.isPaused !== false;
     if (state.shouldClearInterval !== false) {
@@ -8439,7 +8402,19 @@ GameManager.prototype.pause = function () {
 };
 
 GameManager.prototype.resume = function () {
-    var state = this.computeReplayResumeState();
+    var computeReplayResumeStateCore = this.callCoreReplayTimerRuntime(
+      "computeReplayResumeState",
+      [{
+        replayDelay: this.replayDelay
+      }]
+    );
+    var state = this.resolveCoreObjectCallOrFallback(computeReplayResumeStateCore, function () {
+      return {
+        isPaused: false,
+        shouldClearInterval: true,
+        delay: this.replayDelay || 200
+      };
+    });
     state = this.isNonArrayObject(state) ? state : {};
     this.isPaused = !!state.isPaused ? true : false;
     if (state.shouldClearInterval !== false) {
@@ -8452,7 +8427,20 @@ GameManager.prototype.resume = function () {
 };
 
 GameManager.prototype.setSpeed = function (multiplier) {
-    var state = this.computeReplaySpeedState(multiplier);
+    var computeReplaySpeedStateCore = this.callCoreReplayTimerRuntime(
+      "computeReplaySpeedState",
+      [{
+        multiplier: multiplier,
+        isPaused: !!this.isPaused,
+        baseDelay: 200
+      }]
+    );
+    var state = this.resolveCoreObjectCallOrFallback(computeReplaySpeedStateCore, function () {
+      return {
+        replayDelay: 200 / multiplier,
+        shouldResume: !this.isPaused
+      };
+    });
     state = this.isNonArrayObject(state) ? state : {};
     this.replayDelay = state.replayDelay;
     if (!state.shouldResume) return;
