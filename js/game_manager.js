@@ -677,14 +677,6 @@ GameManager.prototype.buildLegacyReplayV2Payload = function (seed, replayMovesV2
   };
 };
 
-GameManager.prototype.decodeLegacyReplayFallback = function (trimmedReplayString) {
-  var decodedV1 = this.decodeLegacyReplayV1Payload(trimmedReplayString);
-  if (decodedV1) return decodedV1;
-  var decodedV2S = this.decodeLegacyReplayV2SPayload(trimmedReplayString);
-  if (decodedV2S) return decodedV2S;
-  return this.decodeLegacyReplayV2Payload(trimmedReplayString);
-};
-
 GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
   var decodeLegacyReplayCore = this.callCoreReplayLegacyRuntime(
     "decodeLegacyReplay",
@@ -693,7 +685,11 @@ GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
   return this.resolveNormalizedCoreValueOrFallback(decodeLegacyReplayCore, function (coreValue) {
     return this.isNonArrayObject(coreValue) ? coreValue : undefined;
   }, function () {
-    return this.decodeLegacyReplayFallback(trimmedReplayString);
+    var decodedV1 = this.decodeLegacyReplayV1Payload(trimmedReplayString);
+    if (decodedV1) return decodedV1;
+    var decodedV2S = this.decodeLegacyReplayV2SPayload(trimmedReplayString);
+    if (decodedV2S) return decodedV2S;
+    return this.decodeLegacyReplayV2Payload(trimmedReplayString);
   });
 };
 
@@ -893,25 +889,21 @@ GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, repla
     }]
   );
   return this.resolveCoreObjectCallOrFallback(planReplayTickBoundaryCore, function () {
-    return this.planReplayTickBoundaryFallback(shouldStopAtTick, replayEndState);
-  });
-};
-
-GameManager.prototype.planReplayTickBoundaryFallback = function (shouldStopAtTick, replayEndState) {
-  if (!shouldStopAtTick) {
+    if (!shouldStopAtTick) {
+      return {
+        shouldStop: false,
+        shouldPause: false,
+        shouldApplyReplayMode: false,
+        replayMode: true
+      };
+    }
     return {
-      shouldStop: false,
-      shouldPause: false,
-      shouldApplyReplayMode: false,
-      replayMode: true
+      shouldStop: true,
+      shouldPause: replayEndState && replayEndState.shouldPause !== false,
+      shouldApplyReplayMode: true,
+      replayMode: replayEndState && replayEndState.replayMode === true
     };
-  }
-  return {
-    shouldStop: true,
-    shouldPause: replayEndState && replayEndState.shouldPause !== false,
-    shouldApplyReplayMode: true,
-    replayMode: replayEndState && replayEndState.replayMode === true
-  };
+  });
 };
 
 GameManager.prototype.applyReplayTickBoundaryPlan = function (tickBoundaryPlan) {
@@ -944,23 +936,19 @@ GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
     }]
   );
   return this.resolveCoreObjectCallOrFallback(planReplaySeekRewindCore, function () {
-    return this.planReplaySeekRewindFallback(targetIndex);
-  });
-};
-
-GameManager.prototype.planReplaySeekRewindFallback = function (targetIndex) {
-  if (!(targetIndex < this.replayIndex)) {
+    if (!(targetIndex < this.replayIndex)) {
+      return {
+        shouldRewind: false,
+        strategy: "none",
+        replayIndexAfterRewind: this.replayIndex
+      };
+    }
     return {
-      shouldRewind: false,
-      strategy: "none",
-      replayIndexAfterRewind: this.replayIndex
+      shouldRewind: true,
+      strategy: this.replayStartBoardMatrix ? "board" : "seed",
+      replayIndexAfterRewind: 0
     };
-  }
-  return {
-    shouldRewind: true,
-    strategy: this.replayStartBoardMatrix ? "board" : "seed",
-    replayIndexAfterRewind: 0
-  };
+  });
 };
 
 GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
@@ -974,27 +962,22 @@ GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
     }]
   );
   return this.resolveCoreObjectCallOrFallback(planReplaySeekRestartCore, function () {
-    return this.planReplaySeekRestartFallback(rewindPlan);
-  });
-};
-
-GameManager.prototype.planReplaySeekRestartFallback = function (rewindPlan) {
-  var normalized = this.isNonArrayObject(rewindPlan) ? rewindPlan : null;
-  var shouldRewind = !!(normalized && normalized.shouldRewind);
-  if (!shouldRewind) {
+    var shouldRewind = !!(normalized && normalized.shouldRewind);
+    if (!shouldRewind) {
+      return {
+        shouldRestartWithBoard: false,
+        shouldRestartWithSeed: false,
+        shouldApplyReplayIndex: false,
+        replayIndex: normalized ? normalized.replayIndexAfterRewind : this.replayIndex
+      };
+    }
     return {
-      shouldRestartWithBoard: false,
-      shouldRestartWithSeed: false,
-      shouldApplyReplayIndex: false,
-      replayIndex: normalized ? normalized.replayIndexAfterRewind : this.replayIndex
+      shouldRestartWithBoard: normalized.strategy === "board",
+      shouldRestartWithSeed: normalized.strategy === "seed",
+      shouldApplyReplayIndex: true,
+      replayIndex: normalized.replayIndexAfterRewind
     };
-  }
-  return {
-    shouldRestartWithBoard: normalized.strategy === "board",
-    shouldRestartWithSeed: normalized.strategy === "seed",
-    shouldApplyReplayIndex: true,
-    replayIndex: normalized.replayIndexAfterRewind
-  };
+  });
 };
 
 GameManager.prototype.setBoardFromMatrix = function (board) {
