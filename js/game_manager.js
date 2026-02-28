@@ -1333,6 +1333,13 @@ GameManager.prototype.resolveCoreNumericCallValueOrNull = function (coreCallResu
   return Number(coreCallResult.value) || 0;
 };
 
+GameManager.prototype.resolveCoreNumericCallOrFallback = function (coreCallResult, fallbackResolver) {
+  var coreValue = this.resolveCoreNumericCallValueOrNull(coreCallResult);
+  if (coreValue !== null) return coreValue;
+  if (typeof fallbackResolver === "function") return Number(fallbackResolver.call(this)) || 0;
+  return null;
+};
+
 GameManager.prototype.resolveCoreStringCallValueOrNull = function (coreCallResult, allowEmpty) {
   if (!this.isCoreCallAvailable(coreCallResult)) return null;
   var coreValue = coreCallResult.value;
@@ -6868,10 +6875,10 @@ GameManager.prototype.getSpawnCount = function (value) {
     "getSpawnCount",
     this.buildGetSpawnCountCoreArgs(value)
   );
-  var spawnCountByCore = this.resolveCoreNumericCallValueOrNull(getSpawnCountCore);
-  if (spawnCountByCore !== null) return spawnCountByCore;
-  if (!this.spawnValueCounts) return 0;
-  return this.spawnValueCounts[String(value)] || 0;
+  return this.resolveCoreNumericCallOrFallback(getSpawnCountCore, function () {
+    if (!this.spawnValueCounts) return 0;
+    return this.spawnValueCounts[String(value)] || 0;
+  });
 };
 
 GameManager.prototype.buildGetTotalSpawnCountCoreArgs = function () {
@@ -6883,16 +6890,16 @@ GameManager.prototype.getTotalSpawnCount = function () {
     "getTotalSpawnCount",
     this.buildGetTotalSpawnCountCoreArgs()
   );
-  var totalSpawnCountByCore = this.resolveCoreNumericCallValueOrNull(getTotalSpawnCountCore);
-  if (totalSpawnCountByCore !== null) return totalSpawnCountByCore;
-  if (!this.spawnValueCounts) return 0;
-  var total = 0;
-  for (var k in this.spawnValueCounts) {
-    if (this.hasOwnKey(this.spawnValueCounts, k)) {
-      total += this.spawnValueCounts[k] || 0;
+  return this.resolveCoreNumericCallOrFallback(getTotalSpawnCountCore, function () {
+    if (!this.spawnValueCounts) return 0;
+    var total = 0;
+    for (var k in this.spawnValueCounts) {
+      if (this.hasOwnKey(this.spawnValueCounts, k)) {
+        total += this.spawnValueCounts[k] || 0;
+      }
     }
-  }
-  return total;
+    return total;
+  });
 };
 
 GameManager.prototype.refreshSpawnRateDisplay = function () {
@@ -7088,9 +7095,9 @@ GameManager.prototype.getIpsInputCount = function () {
     "resolveIpsInputCount",
     this.buildResolveIpsInputCountCoreArgs()
   );
-  var ipsInputCountByCore = this.resolveCoreNumericCallValueOrNull(resolveIpsInputCountCore);
-  if (ipsInputCountByCore !== null) return ipsInputCountByCore;
-  return this.getIpsInputCountFallback();
+  return this.resolveCoreNumericCallOrFallback(resolveIpsInputCountCore, function () {
+    return this.getIpsInputCountFallback();
+  });
 };
 
 GameManager.prototype.getIpsInputCountFallback = function () {
