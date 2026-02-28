@@ -2325,44 +2325,12 @@ GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
   });
 };
 
-GameManager.prototype.resolveCoreRuntimeGlobalContext = function () {
+GameManager.prototype.getCoreRuntimeByName = function (runtimeName) {
   var windowLike = this.getWindowLike();
-  return windowLike && typeof windowLike === "object" ? windowLike : null;
-};
-
-GameManager.prototype.isValidCoreRuntimeName = function (runtimeName) {
-  return typeof runtimeName === "string" && !!runtimeName;
-};
-
-GameManager.prototype.resolveCoreRuntimeObjectFromWindow = function (windowLike, runtimeName) {
   if (!windowLike || typeof windowLike !== "object") return null;
-  if (!this.isValidCoreRuntimeName(runtimeName)) return null;
+  if (!(typeof runtimeName === "string" && runtimeName)) return null;
   var core = windowLike[runtimeName];
   return core && typeof core === "object" ? core : null;
-};
-
-GameManager.prototype.getCoreRuntimeByName = function (runtimeName) {
-  return this.resolveCoreRuntimeObjectFromWindow(
-    this.resolveCoreRuntimeGlobalContext(),
-    runtimeName
-  );
-};
-
-GameManager.prototype.isValidCoreRuntimeMethodLookupInput = function (runtimeGetterName, methodName) {
-  return !!(
-    typeof runtimeGetterName === "string" &&
-    runtimeGetterName &&
-    typeof methodName === "string" &&
-    methodName
-  );
-};
-
-GameManager.prototype.resolveCoreRuntimeFromGetterName = function (runtimeGetterName) {
-  var runtimeGetter = this[runtimeGetterName];
-  if (typeof runtimeGetter !== "function") return null;
-  var runtime = runtimeGetter.call(this);
-  if (!runtime || typeof runtime !== "object") return null;
-  return runtime;
 };
 
 GameManager.prototype.wrapCoreRuntimeMethod = function (runtime, methodName) {
@@ -2374,18 +2342,13 @@ GameManager.prototype.wrapCoreRuntimeMethod = function (runtime, methodName) {
   };
 };
 
-GameManager.prototype.resolveCoreRuntimeMethodLookupInput = function (runtimeGetterName, methodName) {
-  if (!this.isValidCoreRuntimeMethodLookupInput(runtimeGetterName, methodName)) return null;
-  return {
-    runtime: this.resolveCoreRuntimeFromGetterName(runtimeGetterName),
-    methodName: methodName
-  };
-};
-
 GameManager.prototype.resolveCoreRuntimeMethod = function (runtimeGetterName, methodName) {
-  var lookupInput = this.resolveCoreRuntimeMethodLookupInput(runtimeGetterName, methodName);
-  if (!lookupInput) return null;
-  return this.wrapCoreRuntimeMethod(lookupInput.runtime, lookupInput.methodName);
+  if (!(typeof runtimeGetterName === "string" && runtimeGetterName)) return null;
+  if (!(typeof methodName === "string" && methodName)) return null;
+  var runtimeGetter = this[runtimeGetterName];
+  if (typeof runtimeGetter !== "function") return null;
+  var runtime = runtimeGetter.call(this);
+  return this.wrapCoreRuntimeMethod(runtime, methodName);
 };
 
 function registerCoreRuntimeMethodResolver(methodName, runtimeGetterName) {
