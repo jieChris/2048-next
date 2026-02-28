@@ -8369,23 +8369,10 @@ GameManager.prototype.startReplayImportPlayback = function () {
   this.resume();
 };
 
-GameManager.prototype.applyReplayImportUndoSetting = function () {
-  this.applyUndoSettingForMode(this.modeKey, true, true);
-};
-
-GameManager.prototype.finalizeReplayImportPlayback = function () {
-  this.applyReplayImportUndoSetting();
-  this.startReplayImportPlayback();
-};
-
 GameManager.prototype.restartReplayImportSession = function (modeConfig, payload, useBoardRestart) {
   this.disableSessionSync = true;
   this.restartReplaySession(payload, modeConfig, useBoardRestart);
-  this.finalizeReplayImportPlayback();
-};
-
-GameManager.prototype.restartLegacyReplayImportSession = function (seed) {
-  this.restartWithSeed(seed);
+  this.applyUndoSettingForMode(this.modeKey, true, true);
   this.startReplayImportPlayback();
 };
 
@@ -8450,7 +8437,8 @@ GameManager.prototype.importLegacyReplayPayload = function (decodedLegacy) {
     replayMoves: decodedLegacy ? decodedLegacy.replayMoves : null,
     replaySpawns: decodedLegacy ? decodedLegacy.replaySpawns : undefined
   });
-  this.restartLegacyReplayImportSession(decodedLegacy.seed);
+  this.restartWithSeed(decodedLegacy.seed);
+  this.startReplayImportPlayback();
 };
 
 GameManager.prototype.coerceReplayImportInputToString = function (replayString) {
