@@ -9127,15 +9127,11 @@ GameManager.prototype.applyReplayStepForcedSpawn = function (stepExecutionPlan) 
   this.forcedSpawn = this.resolveReplayStepForcedSpawn(stepExecutionPlan);
 };
 
-GameManager.prototype.applyReplayStepExecutionPlan = function (stepExecutionPlan) {
+GameManager.prototype.executePlannedReplayStep = function () {
+  var stepExecutionPlan = this.planReplayStepExecution();
   this.applyReplayStepForcedSpawn(stepExecutionPlan);
   this.executeReplayAction(stepExecutionPlan.action);
   this.replayIndex = stepExecutionPlan.nextReplayIndex;
-};
-
-GameManager.prototype.executePlannedReplayStep = function () {
-  var stepExecutionPlan = this.planReplayStepExecution();
-  this.applyReplayStepExecutionPlan(stepExecutionPlan);
 };
 
 GameManager.prototype.clearReplayIntervalIfNeeded = function (shouldClearInterval) {
@@ -9190,26 +9186,17 @@ GameManager.prototype.setSpeed = function (multiplier) {
     this.applyReplaySpeedState(speedState);
 };
 
-GameManager.prototype.applyReplaySeekRestartBoard = function (restartPlan) {
-    if (!restartPlan || !restartPlan.shouldRestartWithBoard) return;
-    this.restartReplaySession(this.replayStartBoardMatrix, this.modeConfig, true);
-};
-
-GameManager.prototype.applyReplaySeekRestartSeed = function (restartPlan) {
-    if (!restartPlan || !restartPlan.shouldRestartWithSeed) return;
-    this.restartReplaySession(this.initialSeed, this.modeConfig, false);
-};
-
-GameManager.prototype.applyReplaySeekRestartIndex = function (restartPlan) {
-    if (!restartPlan || !restartPlan.shouldApplyReplayIndex) return;
-    this.replayIndex = restartPlan.replayIndex;
-};
-
 GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
     if (!this.isNonArrayObject(restartPlan)) return;
-    this.applyReplaySeekRestartBoard(restartPlan);
-    this.applyReplaySeekRestartSeed(restartPlan);
-    this.applyReplaySeekRestartIndex(restartPlan);
+    if (restartPlan.shouldRestartWithBoard) {
+        this.restartReplaySession(this.replayStartBoardMatrix, this.modeConfig, true);
+    }
+    if (restartPlan.shouldRestartWithSeed) {
+        this.restartReplaySession(this.initialSeed, this.modeConfig, false);
+    }
+    if (restartPlan.shouldApplyReplayIndex) {
+        this.replayIndex = restartPlan.replayIndex;
+    }
 };
 
 GameManager.prototype.seek = function (targetIndex) {
@@ -9221,11 +9208,7 @@ GameManager.prototype.seek = function (targetIndex) {
     }
 };
 
-GameManager.prototype.canStepReplay = function () {
-    return !!this.replayMoves;
-};
-
 GameManager.prototype.step = function (delta) {
-    if (!this.canStepReplay()) return;
+    if (!this.replayMoves) return;
     this.seek(this.replayIndex + delta);
 };
