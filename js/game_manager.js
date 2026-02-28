@@ -6127,16 +6127,23 @@ GameManager.prototype.persistUndoSettingMap = function (map) {
   this.writeLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY, map);
 };
 
+GameManager.prototype.buildWriteUndoEnabledForModeCoreArgs = function (map, mode, enabled) {
+  return [{
+    map: map,
+    mode: mode,
+    enabled: enabled
+  }];
+};
+
 GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resolvedState) {
   var state = this.resolveProvidedUndoPolicyStateForMode(mode, resolvedState);
   if (state && state.isUndoSettingFixedForMode) return;
   if (!(state && state.isUndoAllowedByMode)) return;
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
-  var writeUndoEnabledForModeToMapCore = this.callCoreStorageRuntime("writeUndoEnabledForModeToMap", [{
-      map: map,
-      mode: mode,
-      enabled: enabled
-    }]);
+  var writeUndoEnabledForModeToMapCore = this.callCoreStorageRuntime(
+    "writeUndoEnabledForModeToMap",
+    this.buildWriteUndoEnabledForModeCoreArgs(map, mode, enabled)
+  );
   map = this.resolvePersistedUndoSettingMap(map, mode, enabled, writeUndoEnabledForModeToMapCore);
   this.persistUndoSettingMap(map);
 };
