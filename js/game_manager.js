@@ -8465,12 +8465,6 @@ GameManager.prototype.throwUnknownReplayAction = function () {
   throw "Unknown replay action";
 };
 
-GameManager.prototype.executeReplayAction = function (action) {
-  var resolved = this.resolveReplayExecution(action);
-  var dispatchPlan = this.planReplayDispatch(resolved);
-  this.executeReplayDispatchPlan(dispatchPlan);
-};
-
 GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
   var dispatchMethod = dispatchPlan && dispatchPlan.method;
   var args = dispatchPlan && Array.isArray(dispatchPlan.args) ? dispatchPlan.args : [];
@@ -8488,7 +8482,9 @@ GameManager.prototype.executePlannedReplayStep = function () {
   if (stepExecutionPlan.shouldInjectForcedSpawn) {
     this.forcedSpawn = stepExecutionPlan.forcedSpawn;
   }
-  this.executeReplayAction(stepExecutionPlan.action);
+  var resolved = this.resolveReplayExecution(stepExecutionPlan.action);
+  var dispatchPlan = this.planReplayDispatch(resolved);
+  this.executeReplayDispatchPlan(dispatchPlan);
   this.replayIndex = stepExecutionPlan.nextReplayIndex;
 };
 
