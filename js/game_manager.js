@@ -268,11 +268,12 @@ GameManager.prototype.getActionKind = function (action) {
     "getReplayActionKind",
     this.buildGetReplayActionKindCoreArgs(action)
   );
-  if (this.isCoreCallAvailable(getReplayActionKindCore)) return getReplayActionKindCore.value;
-  if (action === -1) return "u";
-  if (action >= 0 && action <= 3) return "m";
-  if (Array.isArray(action) && action.length > 0) return action[0];
-  return "x";
+  return this.resolveCoreRawCallOrFallback(getReplayActionKindCore, function () {
+    if (action === -1) return "u";
+    if (action >= 0 && action <= 3) return "m";
+    if (Array.isArray(action) && action.length > 0) return action[0];
+    return "x";
+  });
 };
 
 GameManager.prototype.buildEncodeReplay128CoreArgs = function (code) {
@@ -284,17 +285,17 @@ GameManager.prototype.encodeReplay128 = function (code) {
     "encodeReplay128",
     this.buildEncodeReplay128CoreArgs(code)
   );
-  if (this.isCoreCallAvailable(encodeReplay128Core)) return encodeReplay128Core.value;
-
-  if (!Number.isInteger(code) || code < 0 || code >= GameManager.REPLAY128_TOTAL) {
-    throw "Invalid replay code";
-  }
-  if (code < GameManager.REPLAY128_ASCII_COUNT) {
-    return String.fromCharCode(GameManager.REPLAY128_ASCII_START + code);
-  }
-  return String.fromCharCode(
-    GameManager.REPLAY128_EXTRA_CODES[code - GameManager.REPLAY128_ASCII_COUNT]
-  );
+  return this.resolveCoreRawCallOrFallback(encodeReplay128Core, function () {
+    if (!Number.isInteger(code) || code < 0 || code >= GameManager.REPLAY128_TOTAL) {
+      throw "Invalid replay code";
+    }
+    if (code < GameManager.REPLAY128_ASCII_COUNT) {
+      return String.fromCharCode(GameManager.REPLAY128_ASCII_START + code);
+    }
+    return String.fromCharCode(
+      GameManager.REPLAY128_EXTRA_CODES[code - GameManager.REPLAY128_ASCII_COUNT]
+    );
+  });
 };
 
 GameManager.prototype.buildDecodeReplay128CoreArgs = function (char) {
@@ -306,19 +307,19 @@ GameManager.prototype.decodeReplay128 = function (char) {
     "decodeReplay128",
     this.buildDecodeReplay128CoreArgs(char)
   );
-  if (this.isCoreCallAvailable(decodeReplay128Core)) return decodeReplay128Core.value;
-
-  if (!char || char.length !== 1) throw "Invalid replay char";
-  var code = char.charCodeAt(0);
-  if (
-    code >= GameManager.REPLAY128_ASCII_START &&
-    code < GameManager.REPLAY128_ASCII_START + GameManager.REPLAY128_ASCII_COUNT
-  ) {
-    return code - GameManager.REPLAY128_ASCII_START;
-  }
-  var extraIndex = GameManager.REPLAY128_EXTRA_CODES.indexOf(code);
-  if (extraIndex >= 0) return GameManager.REPLAY128_ASCII_COUNT + extraIndex;
-  throw "Invalid replay char";
+  return this.resolveCoreRawCallOrFallback(decodeReplay128Core, function () {
+    if (!char || char.length !== 1) throw "Invalid replay char";
+    var code = char.charCodeAt(0);
+    if (
+      code >= GameManager.REPLAY128_ASCII_START &&
+      code < GameManager.REPLAY128_ASCII_START + GameManager.REPLAY128_ASCII_COUNT
+    ) {
+      return code - GameManager.REPLAY128_ASCII_START;
+    }
+    var extraIndex = GameManager.REPLAY128_EXTRA_CODES.indexOf(code);
+    if (extraIndex >= 0) return GameManager.REPLAY128_ASCII_COUNT + extraIndex;
+    throw "Invalid replay char";
+  });
 };
 
 GameManager.prototype.buildEncodeBoardV4CoreArgs = function (board) {
@@ -330,26 +331,26 @@ GameManager.prototype.encodeBoardV4 = function (board) {
     "encodeBoardV4",
     this.buildEncodeBoardV4CoreArgs(board)
   );
-  if (this.isCoreCallAvailable(encodeBoardV4Core)) return encodeBoardV4Core.value;
-
-  if (!Array.isArray(board) || board.length !== 4) throw "Invalid initial board";
-  var out = "";
-  for (var y = 0; y < 4; y++) {
-    if (!Array.isArray(board[y]) || board[y].length !== 4) throw "Invalid initial board row";
-    for (var x = 0; x < 4; x++) {
-      var value = board[y][x];
-      if (!Number.isInteger(value) || value < 0) throw "Invalid board tile value";
-      var exp = 0;
-      if (value > 0) {
-        var lg = Math.log(value) / Math.log(2);
-        if (Math.floor(lg) !== lg) throw "Board tile is not power of two";
-        exp = lg;
+  return this.resolveCoreRawCallOrFallback(encodeBoardV4Core, function () {
+    if (!Array.isArray(board) || board.length !== 4) throw "Invalid initial board";
+    var out = "";
+    for (var y = 0; y < 4; y++) {
+      if (!Array.isArray(board[y]) || board[y].length !== 4) throw "Invalid initial board row";
+      for (var x = 0; x < 4; x++) {
+        var value = board[y][x];
+        if (!Number.isInteger(value) || value < 0) throw "Invalid board tile value";
+        var exp = 0;
+        if (value > 0) {
+          var lg = Math.log(value) / Math.log(2);
+          if (Math.floor(lg) !== lg) throw "Board tile is not power of two";
+          exp = lg;
+        }
+        if (exp < 0 || exp >= GameManager.REPLAY128_TOTAL) throw "Board tile exponent too large";
+        out += this.encodeReplay128(exp);
       }
-      if (exp < 0 || exp >= GameManager.REPLAY128_TOTAL) throw "Board tile exponent too large";
-      out += this.encodeReplay128(exp);
     }
-  }
-  return out;
+    return out;
+  });
 };
 
 GameManager.prototype.buildDecodeBoardV4CoreArgs = function (encoded) {
@@ -361,20 +362,20 @@ GameManager.prototype.decodeBoardV4 = function (encoded) {
     "decodeBoardV4",
     this.buildDecodeBoardV4CoreArgs(encoded)
   );
-  if (this.isCoreCallAvailable(decodeBoardV4Core)) return decodeBoardV4Core.value;
-
-  if (typeof encoded !== "string" || encoded.length !== 16) throw "Invalid encoded board";
-  var rows = [];
-  var idx = 0;
-  for (var y = 0; y < 4; y++) {
-    var row = [];
-    for (var x = 0; x < 4; x++) {
-      var exp = this.decodeReplay128(encoded.charAt(idx++));
-      row.push(exp === 0 ? 0 : Math.pow(2, exp));
+  return this.resolveCoreRawCallOrFallback(decodeBoardV4Core, function () {
+    if (typeof encoded !== "string" || encoded.length !== 16) throw "Invalid encoded board";
+    var rows = [];
+    var idx = 0;
+    for (var y = 0; y < 4; y++) {
+      var row = [];
+      for (var x = 0; x < 4; x++) {
+        var exp = this.decodeReplay128(encoded.charAt(idx++));
+        row.push(exp === 0 ? 0 : Math.pow(2, exp));
+      }
+      rows.push(row);
     }
-    rows.push(row);
-  }
-  return rows;
+    return rows;
+  });
 };
 
 GameManager.prototype.decodeReplayV4MoveSpawnFromToken = function (token) {
@@ -487,8 +488,9 @@ GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString)
     "parseReplayImportEnvelope",
     this.buildParseReplayImportEnvelopeCoreArgs(trimmedReplayString)
   );
-  if (this.isCoreCallAvailable(parseReplayImportEnvelopeCore)) return parseReplayImportEnvelopeCore.value;
-  return this.parseReplayImportEnvelopeFallback(trimmedReplayString);
+  return this.resolveCoreRawCallOrFallback(parseReplayImportEnvelopeCore, function () {
+    return this.parseReplayImportEnvelopeFallback(trimmedReplayString);
+  });
 };
 
 GameManager.prototype.normalizeOptionalReplayString = function (raw) {
@@ -726,8 +728,9 @@ GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
     "decodeLegacyReplay",
     this.buildDecodeLegacyReplayCoreArgs(trimmedReplayString)
   );
-  if (this.isCoreCallAvailable(decodeLegacyReplayCore)) return decodeLegacyReplayCore.value;
-  return this.decodeLegacyReplayFallback(trimmedReplayString);
+  return this.resolveCoreRawCallOrFallback(decodeLegacyReplayCore, function () {
+    return this.decodeLegacyReplayFallback(trimmedReplayString);
+  });
 };
 
 GameManager.prototype.buildResolveReplayExecutionCoreArgs = function (action) {
@@ -739,8 +742,9 @@ GameManager.prototype.resolveReplayExecution = function (action) {
     "resolveReplayExecution",
     this.buildResolveReplayExecutionCoreArgs(action)
   );
-  if (this.isCoreCallAvailable(resolveReplayExecutionCore)) return resolveReplayExecutionCore.value;
-  return this.resolveReplayExecutionFallback(action);
+  return this.resolveCoreRawCallOrFallback(resolveReplayExecutionCore, function () {
+    return this.resolveReplayExecutionFallback(action);
+  });
 };
 
 GameManager.prototype.buildReplayExecution = function (kind, payload) {
@@ -836,8 +840,9 @@ GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
     "normalizeReplaySeekTarget",
     this.buildNormalizeReplaySeekTargetCoreArgs(targetIndex)
   );
-  if (this.isCoreCallAvailable(normalizeReplaySeekTargetCore)) return normalizeReplaySeekTargetCore.value;
-  return this.normalizeReplaySeekTargetFallback(targetIndex);
+  return this.resolveCoreRawCallOrFallback(normalizeReplaySeekTargetCore, function () {
+    return this.normalizeReplaySeekTargetFallback(targetIndex);
+  });
 };
 
 GameManager.prototype.clampReplaySeekTargetByReplayMoves = function (targetIndex) {
@@ -1331,6 +1336,13 @@ GameManager.prototype.resolveNormalizedCoreValueOrUndefined = function (coreCall
 GameManager.prototype.resolveCoreRawCallValueOrUndefined = function (coreCallResult) {
   if (!this.isCoreCallAvailable(coreCallResult)) return undefined;
   return coreCallResult.value;
+};
+
+GameManager.prototype.resolveCoreRawCallOrFallback = function (coreCallResult, fallbackResolver) {
+  var coreValue = this.resolveCoreRawCallValueOrUndefined(coreCallResult);
+  if (typeof coreValue !== "undefined") return coreValue;
+  if (typeof fallbackResolver === "function") return fallbackResolver.call(this);
+  return undefined;
 };
 
 GameManager.prototype.resolveCoreRuntimeCallerFromResolver = function (resolverMethodName, methodName) {
