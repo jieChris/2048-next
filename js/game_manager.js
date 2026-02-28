@@ -3351,63 +3351,6 @@ GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) 
   });
 };
 
-GameManager.prototype.normalizeModeConfigBaseFallback = function (modeKey, rawConfig) {
-  var cfg = rawConfig ? this.clonePlain(rawConfig) : this.clonePlain(GameManager.DEFAULT_MODE_CONFIG);
-  cfg.key = cfg.key || modeKey || GameManager.DEFAULT_MODE_KEY;
-  cfg.board_width = Number.isInteger(cfg.board_width) && cfg.board_width > 0 ? cfg.board_width : 4;
-  cfg.board_height = Number.isInteger(cfg.board_height) && cfg.board_height > 0 ? cfg.board_height : cfg.board_width;
-  cfg.ruleset = cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2";
-  cfg.special_rules = this.normalizeSpecialRules(cfg.special_rules);
-  cfg.undo_enabled = !!cfg.undo_enabled;
-  return cfg;
-};
-
-GameManager.prototype.applyNormalizedModeMaxTileFallback = function (cfg) {
-  var hasNumericMaxTile = Number.isInteger(cfg.max_tile) && cfg.max_tile > 0;
-  var isCappedKey = typeof cfg.key === "string" && cfg.key.indexOf("capped") !== -1;
-  var forceMaxTile = !!cfg.special_rules.enforce_max_tile;
-  if (cfg.ruleset === "fibonacci") {
-    // Fibonacci modes are uncapped by default; only explicit capped modes should enforce max_tile.
-    cfg.max_tile = (hasNumericMaxTile && (isCappedKey || forceMaxTile)) ? cfg.max_tile : null;
-  } else if (hasNumericMaxTile) {
-    cfg.max_tile = cfg.max_tile;
-  } else {
-    cfg.max_tile = this.getTheoreticalMaxTile(cfg.board_width, cfg.board_height, cfg.ruleset);
-  }
-};
-
-GameManager.prototype.applyNormalizedModeSpawnTableFallback = function (cfg) {
-  var customFourRate = Number(cfg.special_rules.custom_spawn_four_rate);
-  if (cfg.ruleset === "pow2" && Number.isFinite(customFourRate)) {
-    if (customFourRate < 0) customFourRate = 0;
-    if (customFourRate > 100) customFourRate = 100;
-    customFourRate = Math.round(customFourRate * 100) / 100;
-    var twoRate = Math.round((100 - customFourRate) * 100) / 100;
-    var strictTable = [];
-    if (twoRate > 0) strictTable.push({ value: 2, weight: twoRate });
-    if (customFourRate > 0) strictTable.push({ value: 4, weight: customFourRate });
-    if (!strictTable.length) strictTable.push({ value: 2, weight: 100 });
-    cfg.spawn_table = strictTable;
-    cfg.special_rules.custom_spawn_four_rate = customFourRate;
-    return;
-  }
-  cfg.spawn_table = this.normalizeSpawnTable(cfg.spawn_table, cfg.ruleset);
-};
-
-GameManager.prototype.applyNormalizedModeMetadataFallback = function (cfg) {
-  cfg.ranked_bucket = cfg.ranked_bucket || "none";
-  cfg.mode_family = cfg.mode_family || (cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2");
-  cfg.rank_policy = cfg.rank_policy || (cfg.ranked_bucket !== "none" ? "ranked" : "unranked");
-};
-
-GameManager.prototype.normalizeModeConfigFallback = function (modeKey, rawConfig) {
-  var cfg = this.normalizeModeConfigBaseFallback(modeKey, rawConfig);
-  this.applyNormalizedModeMaxTileFallback(cfg);
-  this.applyNormalizedModeSpawnTableFallback(cfg);
-  this.applyNormalizedModeMetadataFallback(cfg);
-  return cfg;
-};
-
 GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
   var normalizeModeConfigCore = this.callCoreModeRuntime(
     "normalizeModeConfig",
@@ -3424,7 +3367,46 @@ GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
   return this.resolveNormalizedCoreValueOrFallback(normalizeModeConfigCore, function (coreValue) {
     return this.isNonArrayObject(coreValue) ? coreValue : undefined;
   }, function () {
-    return this.normalizeModeConfigFallback(modeKey, rawConfig);
+    var cfg = rawConfig ? this.clonePlain(rawConfig) : this.clonePlain(GameManager.DEFAULT_MODE_CONFIG);
+    cfg.key = cfg.key || modeKey || GameManager.DEFAULT_MODE_KEY;
+    cfg.board_width = Number.isInteger(cfg.board_width) && cfg.board_width > 0 ? cfg.board_width : 4;
+    cfg.board_height = Number.isInteger(cfg.board_height) && cfg.board_height > 0 ? cfg.board_height : cfg.board_width;
+    cfg.ruleset = cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2";
+    cfg.special_rules = this.normalizeSpecialRules(cfg.special_rules);
+    cfg.undo_enabled = !!cfg.undo_enabled;
+
+    var hasNumericMaxTile = Number.isInteger(cfg.max_tile) && cfg.max_tile > 0;
+    var isCappedKey = typeof cfg.key === "string" && cfg.key.indexOf("capped") !== -1;
+    var forceMaxTile = !!cfg.special_rules.enforce_max_tile;
+    if (cfg.ruleset === "fibonacci") {
+      // Fibonacci modes are uncapped by default; only explicit capped modes should enforce max_tile.
+      cfg.max_tile = (hasNumericMaxTile && (isCappedKey || forceMaxTile)) ? cfg.max_tile : null;
+    } else if (hasNumericMaxTile) {
+      cfg.max_tile = cfg.max_tile;
+    } else {
+      cfg.max_tile = this.getTheoreticalMaxTile(cfg.board_width, cfg.board_height, cfg.ruleset);
+    }
+
+    var customFourRate = Number(cfg.special_rules.custom_spawn_four_rate);
+    if (cfg.ruleset === "pow2" && Number.isFinite(customFourRate)) {
+      if (customFourRate < 0) customFourRate = 0;
+      if (customFourRate > 100) customFourRate = 100;
+      customFourRate = Math.round(customFourRate * 100) / 100;
+      var twoRate = Math.round((100 - customFourRate) * 100) / 100;
+      var strictTable = [];
+      if (twoRate > 0) strictTable.push({ value: 2, weight: twoRate });
+      if (customFourRate > 0) strictTable.push({ value: 4, weight: customFourRate });
+      if (!strictTable.length) strictTable.push({ value: 2, weight: 100 });
+      cfg.spawn_table = strictTable;
+      cfg.special_rules.custom_spawn_four_rate = customFourRate;
+    } else {
+      cfg.spawn_table = this.normalizeSpawnTable(cfg.spawn_table, cfg.ruleset);
+    }
+
+    cfg.ranked_bucket = cfg.ranked_bucket || "none";
+    cfg.mode_family = cfg.mode_family || (cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2");
+    cfg.rank_policy = cfg.rank_policy || (cfg.ranked_bucket !== "none" ? "ranked" : "unranked");
+    return cfg;
   });
 };
 
