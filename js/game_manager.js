@@ -1002,10 +1002,21 @@ GameManager.prototype.resolveReplayEndStateForTickBoundary = function (shouldSto
   return shouldStopAtTick ? this.computeReplayEndState() : undefined;
 };
 
+GameManager.prototype.resolveReplayTickBoundaryShouldStopAtTick = function () {
+  return this.shouldStopReplayAtTick(this.replayIndex, this.replayMoves.length);
+};
+
+GameManager.prototype.buildReplayTickBoundaryPlanInput = function () {
+  var shouldStopAtTick = this.resolveReplayTickBoundaryShouldStopAtTick();
+  return {
+    shouldStopAtTick: shouldStopAtTick,
+    replayEndState: this.resolveReplayEndStateForTickBoundary(shouldStopAtTick)
+  };
+};
+
 GameManager.prototype.resolveReplayTickBoundaryPlanForCurrentState = function () {
-  var shouldStopAtTick = this.shouldStopReplayAtTick(this.replayIndex, this.replayMoves.length);
-  var replayEndState = this.resolveReplayEndStateForTickBoundary(shouldStopAtTick);
-  return this.planReplayTickBoundary(shouldStopAtTick, replayEndState);
+  var planInput = this.buildReplayTickBoundaryPlanInput();
+  return this.planReplayTickBoundary(planInput.shouldStopAtTick, planInput.replayEndState);
 };
 
 GameManager.prototype.applyReplayTickBoundaryPause = function (tickBoundaryPlan) {
