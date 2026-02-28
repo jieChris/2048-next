@@ -6225,14 +6225,10 @@ GameManager.prototype.recordSpawnValueFallback = function (value) {
   this.updateLegacySpawnCountFieldsFromCounts();
 };
 
-GameManager.prototype.buildApplySpawnValueCountCoreArgs = function (value) {
-  return [this.spawnValueCounts, value];
-};
-
 GameManager.prototype.recordSpawnValue = function (value) {
   var applySpawnValueCountCore = this.callCoreRulesRuntime(
     "applySpawnValueCount",
-    this.buildApplySpawnValueCountCoreArgs(value)
+    [this.spawnValueCounts, value]
   );
   if (this.tryHandleCoreRawValue(applySpawnValueCountCore, function (coreValue) {
     this.applySpawnValueCountCoreResult(coreValue || {});
@@ -6285,14 +6281,10 @@ GameManager.prototype.resolveSpawnStatPairFromValues = function (values) {
   return this.buildSpawnStatPair(primary, secondary);
 };
 
-GameManager.prototype.buildGetSpawnStatPairCoreArgs = function () {
-  return [this.spawnTable || []];
-};
-
 GameManager.prototype.getSpawnStatPair = function () {
   var getSpawnStatPairCore = this.callCoreRulesRuntime(
     "getSpawnStatPair",
-    this.buildGetSpawnStatPairCoreArgs()
+    [this.spawnTable || []]
   );
   return this.resolveNormalizedCoreValueOrFallback(
     getSpawnStatPairCore,
@@ -6303,14 +6295,10 @@ GameManager.prototype.getSpawnStatPair = function () {
   );
 };
 
-GameManager.prototype.buildGetSpawnCountCoreArgs = function (value) {
-  return [this.spawnValueCounts, value];
-};
-
 GameManager.prototype.getSpawnCount = function (value) {
   var getSpawnCountCore = this.callCoreRulesRuntime(
     "getSpawnCount",
-    this.buildGetSpawnCountCoreArgs(value)
+    [this.spawnValueCounts, value]
   );
   return this.resolveCoreNumericCallOrFallback(getSpawnCountCore, function () {
     if (!this.spawnValueCounts) return 0;
@@ -6318,14 +6306,10 @@ GameManager.prototype.getSpawnCount = function (value) {
   });
 };
 
-GameManager.prototype.buildGetTotalSpawnCountCoreArgs = function () {
-  return [this.spawnValueCounts];
-};
-
 GameManager.prototype.getTotalSpawnCount = function () {
   var getTotalSpawnCountCore = this.callCoreRulesRuntime(
     "getTotalSpawnCount",
-    this.buildGetTotalSpawnCountCoreArgs()
+    [this.spawnValueCounts]
   );
   return this.resolveCoreNumericCallOrFallback(getTotalSpawnCountCore, function () {
     if (!this.spawnValueCounts) return 0;
@@ -6355,17 +6339,13 @@ GameManager.prototype.resolveActualSecondaryRateFallback = function () {
   return ((this.getSpawnCount(pair.secondary) / total) * 100).toFixed(2);
 };
 
-GameManager.prototype.buildGetActualSecondaryRateTextCoreArgs = function () {
-  return [
-    this.spawnValueCounts,
-    this.spawnTable || []
-  ];
-};
-
 GameManager.prototype.getActualSecondaryRate = function () {
   var getActualSecondaryRateTextCore = this.callCoreRulesRuntime(
     "getActualSecondaryRateText",
-    this.buildGetActualSecondaryRateTextCoreArgs()
+    [
+      this.spawnValueCounts,
+      this.spawnTable || []
+    ]
   );
   return this.resolveCoreStringCallOrFallback(getActualSecondaryRateTextCore, function () {
     return this.resolveActualSecondaryRateFallback();
