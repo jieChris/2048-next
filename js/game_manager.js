@@ -8605,16 +8605,6 @@ GameManager.prototype.throwUnknownReplayVersion = function () {
   throw "Unknown replay version";
 };
 
-GameManager.prototype.tryImportReplayByKnownFormatsOrThrow = function (trimmedReplayString) {
-  if (this.tryImportReplayByMethodNames(trimmedReplayString, this.getReplayImportTryMethodNames())) return true;
-  this.throwUnknownReplayVersion();
-  return false;
-};
-
-GameManager.prototype.importReplayOrThrow = function (trimmedReplayString) {
-  this.tryImportReplayByKnownFormatsOrThrow(trimmedReplayString);
-};
-
 GameManager.prototype.resolveReplayImportErrorMessage = function (error) {
   return "导入回放出错: " + error;
 };
@@ -8626,7 +8616,9 @@ GameManager.prototype.notifyReplayImportError = function (error) {
 GameManager.prototype.import = function (replayString) {
   try {
     var trimmed = this.coerceReplayImportInputToString(replayString).trim();
-    this.importReplayOrThrow(trimmed);
+    if (!this.tryImportReplayByMethodNames(trimmed, this.getReplayImportTryMethodNames())) {
+      this.throwUnknownReplayVersion();
+    }
     return true;
   } catch (e) {
     this.notifyReplayImportError(e);
