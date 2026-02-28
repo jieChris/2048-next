@@ -1007,86 +1007,53 @@ GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
   });
 };
 
-GameManager.prototype.buildReplaySeekRewindPlan = function (shouldRewind, strategy, replayIndexAfterRewind) {
-  return {
-    shouldRewind: shouldRewind,
-    strategy: strategy,
-    replayIndexAfterRewind: replayIndexAfterRewind
-  };
-};
-
 GameManager.prototype.planReplaySeekRewindFallback = function (targetIndex) {
   if (!(targetIndex < this.replayIndex)) {
-    return this.buildReplaySeekRewindPlan(false, "none", this.replayIndex);
+    return {
+      shouldRewind: false,
+      strategy: "none",
+      replayIndexAfterRewind: this.replayIndex
+    };
   }
-  return this.buildReplaySeekRewindPlan(true, this.replayStartBoardMatrix ? "board" : "seed", 0);
-};
-
-GameManager.prototype.normalizeReplaySeekRewindPlanInput = function (rewindPlan) {
-  return this.isNonArrayObject(rewindPlan) ? rewindPlan : null;
-};
-
-GameManager.prototype.resolveReplaySeekRestartCoreInput = function (rewindPlan) {
-  var normalized = this.normalizeReplaySeekRewindPlanInput(rewindPlan);
   return {
-    shouldRewind: !!(normalized && normalized.shouldRewind),
-    strategy: normalized ? normalized.strategy : "none",
-    replayIndexAfterRewind: normalized ? normalized.replayIndexAfterRewind : this.replayIndex
+    shouldRewind: true,
+    strategy: this.replayStartBoardMatrix ? "board" : "seed",
+    replayIndexAfterRewind: 0
   };
 };
 
 GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
+  var normalized = this.isNonArrayObject(rewindPlan) ? rewindPlan : null;
   var planReplaySeekRestartCore = this.callCoreReplayFlowRuntime(
     "planReplaySeekRestart",
-    [this.resolveReplaySeekRestartCoreInput(rewindPlan)]
+    [{
+      shouldRewind: !!(normalized && normalized.shouldRewind),
+      strategy: normalized ? normalized.strategy : "none",
+      replayIndexAfterRewind: normalized ? normalized.replayIndexAfterRewind : this.replayIndex
+    }]
   );
   return this.resolveCoreObjectCallOrFallback(planReplaySeekRestartCore, function () {
     return this.planReplaySeekRestartFallback(rewindPlan);
   });
 };
 
-GameManager.prototype.buildReplaySeekRestartPlan = function (
-  shouldRestartWithBoard,
-  shouldRestartWithSeed,
-  shouldApplyReplayIndex,
-  replayIndex
-) {
-  return {
-    shouldRestartWithBoard: shouldRestartWithBoard,
-    shouldRestartWithSeed: shouldRestartWithSeed,
-    shouldApplyReplayIndex: shouldApplyReplayIndex,
-    replayIndex: replayIndex
-  };
-};
-
-GameManager.prototype.buildReplaySeekNoRestartPlanFallback = function (rewindPlan) {
-  return this.buildReplaySeekRestartPlan(
-    false,
-    false,
-    false,
-    rewindPlan ? rewindPlan.replayIndexAfterRewind : this.replayIndex
-  );
-};
-
-GameManager.prototype.buildReplaySeekRestartPlanFallback = function (rewindPlan) {
-  return this.buildReplaySeekRestartPlan(
-    rewindPlan.strategy === "board",
-    rewindPlan.strategy === "seed",
-    true,
-    rewindPlan.replayIndexAfterRewind
-  );
-};
-
 GameManager.prototype.planReplaySeekRestartFallback = function (rewindPlan) {
-  var normalized = this.normalizeReplaySeekRewindPlanInput(rewindPlan);
+  var normalized = this.isNonArrayObject(rewindPlan) ? rewindPlan : null;
   var shouldRewind = !!(normalized && normalized.shouldRewind);
-  if (!shouldRewind) return this.buildReplaySeekNoRestartPlanFallback(normalized);
-  return this.buildReplaySeekRestartPlanFallback(normalized);
-};
-
-GameManager.prototype.resolveReplaySeekRestartPlanForTarget = function (targetIndex) {
-  var rewindPlan = this.planReplaySeekRewind(targetIndex);
-  return this.planReplaySeekRestart(rewindPlan);
+  if (!shouldRewind) {
+    return {
+      shouldRestartWithBoard: false,
+      shouldRestartWithSeed: false,
+      shouldApplyReplayIndex: false,
+      replayIndex: normalized ? normalized.replayIndexAfterRewind : this.replayIndex
+    };
+  }
+  return {
+    shouldRestartWithBoard: normalized.strategy === "board",
+    shouldRestartWithSeed: normalized.strategy === "seed",
+    shouldApplyReplayIndex: true,
+    replayIndex: normalized.replayIndexAfterRewind
+  };
 };
 
 GameManager.prototype.setBoardFromMatrix = function (board) {
@@ -9128,7 +9095,7 @@ GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
 GameManager.prototype.seek = function (targetIndex) {
     targetIndex = this.normalizeReplaySeekTarget(targetIndex);
     this.pause();
-    this.applyReplaySeekRestartPlan(this.resolveReplaySeekRestartPlanForTarget(targetIndex));
+    this.applyReplaySeekRestartPlan(this.planReplaySeekRestart(this.planReplaySeekRewind(targetIndex)));
     while (this.replayIndex < targetIndex) {
         this.executePlannedReplayStep();
     }
