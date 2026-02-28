@@ -6130,9 +6130,7 @@ GameManager.prototype.buildCappedPlaceholderSlotByRepeatCoreArgs = function (rep
 };
 
 GameManager.prototype.resolveCappedPlaceholderSlotValueFromCoreResult = function (coreResult) {
-  var slotValueByCore = this.resolveCoreRawCallOrFallback(coreResult, function () {
-    return null;
-  });
+  var slotValueByCore = this.resolveCoreRawCallValueOrUndefined(coreResult);
   return typeof slotValueByCore === "undefined" ? null : slotValueByCore;
 };
 
@@ -6664,7 +6662,9 @@ GameManager.prototype.resolveProvidedActiveUndoPolicyState = function (resolvedS
 };
 
 GameManager.prototype.resolvePersistedUndoSettingMap = function (map, mode, enabled, coreResult) {
-  return this.resolveCoreRawCallOrFallback(coreResult, function () {
+  return this.resolveNormalizedCoreValueOrFallback(coreResult, function (coreValue) {
+    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
+  }, function () {
     map[mode] = !!enabled;
     return map;
   });
