@@ -2098,10 +2098,6 @@ GameManager.prototype.appendCompactMoveCode = function (rawCode) {
   })) {
     return;
   }
-  this.appendCompactMoveCodeFallback(rawCode);
-};
-
-GameManager.prototype.appendCompactMoveCodeFallback = function (rawCode) {
   if (!Number.isInteger(rawCode) || rawCode < 0 || rawCode > 127) throw "Invalid move code";
   if (rawCode < 127) {
     this.replayCompactLog += this.encodeReplay128(rawCode);
@@ -2120,10 +2116,6 @@ GameManager.prototype.appendCompactUndo = function () {
   })) {
     return;
   }
-  this.appendCompactUndoFallback();
-};
-
-GameManager.prototype.appendCompactUndoFallback = function () {
   this.replayCompactLog += this.encodeReplay128(127) + this.encodeReplay128(1);
 };
 
@@ -2144,10 +2136,6 @@ GameManager.prototype.appendCompactPracticeAction = function (x, y, value) {
   })) {
     return;
   }
-  this.appendCompactPracticeActionFallback(x, y, value);
-};
-
-GameManager.prototype.appendCompactPracticeActionFallback = function (x, y, value) {
   this.assertCompactPracticeBoardSupported();
   this.assertCompactPracticeCoords(x, y);
   var exp = this.resolveCompactPracticeValueExponent(value);
@@ -2213,22 +2201,18 @@ GameManager.prototype.detectModeFromPathname = function (path) {
   return "classic_4x4_pow2_undo";
 };
 
-GameManager.prototype.detectModeFallback = function () {
-  if (this.mode) return this.mode;
-  var bodyMode = this.resolveDetectedModeBodyModeAttr() || null;
-  if (bodyMode) return bodyMode;
-  var pathname = this.resolveWindowPathname();
-  if (!pathname) return GameManager.DEFAULT_MODE_KEY;
-  return this.detectModeFromPathname(pathname);
-};
-
 GameManager.prototype.detectMode = function () {
   var resolveDetectedModeCore = this.callCoreModeRuntime(
     "resolveDetectedMode",
     [this.resolveDetectedModeCoreInput()]
   );
   return this.resolveCoreStringCallOrFallback(resolveDetectedModeCore, function () {
-    return this.detectModeFallback();
+    if (this.mode) return this.mode;
+    var bodyMode = this.resolveDetectedModeBodyModeAttr() || null;
+    if (bodyMode) return bodyMode;
+    var pathname = this.resolveWindowPathname();
+    if (!pathname) return GameManager.DEFAULT_MODE_KEY;
+    return this.detectModeFromPathname(pathname);
   });
 };
 
@@ -5125,28 +5109,17 @@ GameManager.prototype.countUndoSteps = function (actions, limit) {
   return undoSteps;
 };
 
-GameManager.prototype.resolveStepStatsTotalStepsFallback = function (actions, limit) {
-  return actions ? limit : 0;
-};
-
-GameManager.prototype.buildStepStatsFallback = function (actions, limit) {
-  var totalSteps = this.resolveStepStatsTotalStepsFallback(actions, limit);
-  var moveSteps = this.calculateNetMoveSteps(actions, limit);
-  var undoSteps = this.countUndoSteps(actions, limit);
-  return {
-    totalSteps: totalSteps,
-    moveSteps: moveSteps,
-    undoSteps: undoSteps
-  };
-};
-
 GameManager.prototype.computeStepStats = function () {
   var stepStatsSource = this.resolveStepStatsSource();
   var limit = stepStatsSource.limit;
   var src = stepStatsSource.actions;
   var coreStats = this.tryResolveStepStatsFromCore(src, limit);
   if (coreStats) return coreStats;
-  return this.buildStepStatsFallback(src, limit);
+  return {
+    totalSteps: src ? limit : 0,
+    moveSteps: this.calculateNetMoveSteps(src, limit),
+    undoSteps: this.countUndoSteps(src, limit)
+  };
 };
 
 GameManager.prototype.getIpsInputCount = function () {
@@ -5159,13 +5132,9 @@ GameManager.prototype.getIpsInputCount = function () {
     }]
   );
   return this.resolveCoreNumericCallOrFallback(resolveIpsInputCountCore, function () {
-    return this.getIpsInputCountFallback();
+    if (this.replayMode) return Number.isInteger(this.replayIndex) && this.replayIndex > 0 ? this.replayIndex : 0;
+    return Number.isInteger(this.ipsInputCount) && this.ipsInputCount >= 0 ? this.ipsInputCount : 0;
   });
-};
-
-GameManager.prototype.getIpsInputCountFallback = function () {
-  if (this.replayMode) return Number.isInteger(this.replayIndex) && this.replayIndex > 0 ? this.replayIndex : 0;
-  return Number.isInteger(this.ipsInputCount) && this.ipsInputCount >= 0 ? this.ipsInputCount : 0;
 };
 
 GameManager.prototype.applyResolvedNextIpsInputCount = function (resolved) {
@@ -5173,12 +5142,6 @@ GameManager.prototype.applyResolvedNextIpsInputCount = function (resolved) {
   var nextIps = Number(resolved.nextIpsInputCount);
   this.ipsInputCount = Number.isInteger(nextIps) && nextIps >= 0 ? nextIps : 0;
   return true;
-};
-
-GameManager.prototype.incrementIpsInputCountFallback = function () {
-  if (this.replayMode) return;
-  if (!Number.isInteger(this.ipsInputCount) || this.ipsInputCount < 0) this.ipsInputCount = 0;
-  this.ipsInputCount += 1;
 };
 
 GameManager.prototype.recordIpsInput = function () {
@@ -5195,7 +5158,9 @@ GameManager.prototype.recordIpsInput = function () {
   })) {
     return;
   }
-  this.incrementIpsInputCountFallback();
+  if (this.replayMode) return;
+  if (!Number.isInteger(this.ipsInputCount) || this.ipsInputCount < 0) this.ipsInputCount = 0;
+  this.ipsInputCount += 1;
 };
 
 GameManager.prototype.getIpsDisplayTargets = function () {
