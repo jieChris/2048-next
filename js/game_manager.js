@@ -4482,10 +4482,6 @@ GameManager.prototype.buildNormalizeModeConfigCoreInput = function (modeKey, raw
   };
 };
 
-GameManager.prototype.buildNormalizeModeConfigCoreArgs = function (modeKey, rawConfig) {
-  return [this.buildNormalizeModeConfigCoreInput(modeKey, rawConfig)];
-};
-
 GameManager.prototype.normalizeModeConfigFallback = function (modeKey, rawConfig) {
   var cfg = this.normalizeModeConfigBaseFallback(modeKey, rawConfig);
   this.applyNormalizedModeMaxTileFallback(cfg);
@@ -4497,7 +4493,7 @@ GameManager.prototype.normalizeModeConfigFallback = function (modeKey, rawConfig
 GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
   var normalizeModeConfigCore = this.callCoreModeRuntime(
     "normalizeModeConfig",
-    this.buildNormalizeModeConfigCoreArgs(modeKey, rawConfig)
+    [this.buildNormalizeModeConfigCoreInput(modeKey, rawConfig)]
   );
   return this.resolveNormalizedCoreValueOrFallback(normalizeModeConfigCore, function (coreValue) {
     return this.isNonArrayObject(coreValue) ? coreValue : undefined;
@@ -4536,10 +4532,6 @@ GameManager.prototype.buildResolveModeConfigCoreInput = function (modeId) {
   };
 };
 
-GameManager.prototype.buildResolveModeConfigFromCatalogCoreArgs = function (modeId) {
-  return [this.buildResolveModeConfigCoreInput(modeId)];
-};
-
 GameManager.prototype.normalizeResolvedModeIdFromCore = function (resolvedByCore) {
   return typeof resolvedByCore.resolvedModeId === "string" && resolvedByCore.resolvedModeId
     ? resolvedByCore.resolvedModeId
@@ -4559,7 +4551,7 @@ GameManager.prototype.resolveModeConfig = function (modeId) {
   var id = modeId || GameManager.DEFAULT_MODE_KEY;
   var resolveModeConfigFromCatalogCore = this.callCoreModeRuntime(
     "resolveModeConfigFromCatalog",
-    this.buildResolveModeConfigFromCatalogCoreArgs(id)
+    [this.buildResolveModeConfigCoreInput(id)]
   );
   return this.resolveNormalizedCoreValueOrFallback(
     resolveModeConfigFromCatalogCore,
@@ -4621,14 +4613,10 @@ GameManager.prototype.applyModeConfig = function (modeConfig) {
   this.applyModeDocumentAttributes(cfg);
 };
 
-GameManager.prototype.buildNormalizeSpecialRulesCoreArgs = function (rules) {
-  return [rules];
-};
-
 GameManager.prototype.normalizeSpecialRules = function (rules) {
   var normalizeSpecialRulesCore = this.callCoreModeRuntime(
     "normalizeSpecialRules",
-    this.buildNormalizeSpecialRulesCoreArgs(rules)
+    [rules]
   );
   return this.resolveNormalizedCoreValueOrFallback(normalizeSpecialRulesCore, function (coreValue) {
     return this.isNonArrayObject(coreValue) ? coreValue : undefined;
@@ -4692,19 +4680,15 @@ GameManager.prototype.applySpecialRulesDirectionLockFallback = function (rules) 
     : null;
 };
 
-GameManager.prototype.buildComputeSpecialRulesStateCoreArgs = function () {
-  return [
-    this.specialRules || {},
-    this.width,
-    this.height,
-    this.clonePlain.bind(this)
-  ];
-};
-
 GameManager.prototype.applySpecialRulesState = function () {
   var computeSpecialRulesStateCore = this.callCoreSpecialRulesRuntime(
     "computeSpecialRulesState",
-    this.buildComputeSpecialRulesStateCoreArgs()
+    [
+      this.specialRules || {},
+      this.width,
+      this.height,
+      this.clonePlain.bind(this)
+    ]
   );
   if (this.tryHandleCoreRawValue(computeSpecialRulesStateCore, function (coreValue) {
     this.applyComputedSpecialRulesState(coreValue || {});
@@ -4741,20 +4725,16 @@ GameManager.prototype.collectAvailableCellsFallback = function (width, height, i
   return out;
 };
 
-GameManager.prototype.buildGetAvailableCellsCoreArgs = function (gridCellAvailable) {
-  return [
-    this.width,
-    this.height,
-    this.isBlockedCell.bind(this),
-    gridCellAvailable
-  ];
-};
-
 GameManager.prototype.getAvailableCells = function () {
   var gridCellAvailable = this.getGridCellAvailableFn();
   var getAvailableCellsCore = this.callCoreGridScanRuntime(
     "getAvailableCells",
-    this.buildGetAvailableCellsCoreArgs(gridCellAvailable)
+    [
+      this.width,
+      this.height,
+      this.isBlockedCell.bind(this),
+      gridCellAvailable
+    ]
   );
   return this.resolveNormalizedCoreValueOrFallback(getAvailableCellsCore, function (coreValue) {
     return Array.isArray(coreValue) ? coreValue : undefined;
@@ -4800,24 +4780,20 @@ GameManager.prototype.ensureLockedDirectionForCurrentMove = function (everyK) {
   this.lockedDirectionTurn = this.successfulMoveCount;
 };
 
-GameManager.prototype.buildGetLockedDirectionStateCoreArgs = function () {
-  return [{
-    directionLockRules: this.directionLockRules,
-    successfulMoveCount: this.successfulMoveCount,
-    lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
-    lockedDirectionTurn: this.lockedDirectionTurn,
-    lockedDirection: this.lockedDirection,
-    initialSeed: this.initialSeed
-  }, function (seed) {
-    var rng = new Math.seedrandom(seed);
-    return rng();
-  }];
-};
-
 GameManager.prototype.getLockedDirection = function () {
   var getLockedDirectionStateCore = this.callCoreDirectionLockRuntime(
     "getLockedDirectionState",
-    this.buildGetLockedDirectionStateCoreArgs()
+    [{
+      directionLockRules: this.directionLockRules,
+      successfulMoveCount: this.successfulMoveCount,
+      lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
+      lockedDirectionTurn: this.lockedDirectionTurn,
+      lockedDirection: this.lockedDirection,
+      initialSeed: this.initialSeed
+    }, function (seed) {
+      var rng = new Math.seedrandom(seed);
+      return rng();
+    }]
   );
   var lockedDirectionStateByCore = this.resolveCoreRawCallValueOrUndefined(getLockedDirectionStateCore);
   if (typeof lockedDirectionStateByCore !== "undefined") {
@@ -4841,19 +4817,15 @@ GameManager.prototype.resolveLegacyModeFromModeKeyFallback = function (key) {
   return "classic";
 };
 
-GameManager.prototype.buildResolveLegacyModeFromModeKeyCoreArgs = function (modeKey) {
-  return [{
-    modeKey: modeKey,
-    fallbackModeKey: this.modeKey,
-    mode: this.mode,
-    legacyModeByKey: GameManager.LEGACY_MODE_BY_KEY
-  }];
-};
-
 GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
   var resolveLegacyModeFromModeKeyCore = this.callCoreModeRuntime(
     "resolveLegacyModeFromModeKey",
-    this.buildResolveLegacyModeFromModeKeyCoreArgs(modeKey)
+    [{
+      modeKey: modeKey,
+      fallbackModeKey: this.modeKey,
+      mode: this.mode,
+      legacyModeByKey: GameManager.LEGACY_MODE_BY_KEY
+    }]
   );
   return this.resolveCoreStringCallOrFallback(resolveLegacyModeFromModeKeyCore, function () {
     var key = modeKey || this.modeKey || this.mode;
