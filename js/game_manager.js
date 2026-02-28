@@ -1601,16 +1601,23 @@ GameManager.prototype.normalizeWindowNameSavedPayloadCoreValue = function (paylo
   return undefined;
 };
 
+GameManager.prototype.buildReadWindowNameSavedPayloadCoreArgs = function (windowLike, modeKey) {
+  return [{
+    windowLike: windowLike,
+    windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
+    modeKey: modeKey,
+    currentModeKey: this.modeKey,
+    currentMode: this.mode,
+    defaultModeKey: GameManager.DEFAULT_MODE_KEY
+  }];
+};
+
 GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
   var windowLike = this.getWindowLike();
-  var readSavedPayloadFromWindowNameCore = this.callCoreStorageRuntime("readSavedPayloadFromWindowName", [{
-      windowLike: windowLike,
-      windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
-      modeKey: modeKey,
-      currentModeKey: this.modeKey,
-      currentMode: this.mode,
-      defaultModeKey: GameManager.DEFAULT_MODE_KEY
-    }]);
+  var readSavedPayloadFromWindowNameCore = this.callCoreStorageRuntime(
+    "readSavedPayloadFromWindowName",
+    this.buildReadWindowNameSavedPayloadCoreArgs(windowLike, modeKey)
+  );
   if (readSavedPayloadFromWindowNameCore.available) {
     var normalizedByCore = this.normalizeWindowNameSavedPayloadCoreValue(readSavedPayloadFromWindowNameCore.value);
     if (typeof normalizedByCore !== "undefined") return normalizedByCore;
@@ -1782,20 +1789,33 @@ GameManager.prototype.writeWindowNameSavedPayloadFallback = function (modeKey, p
   return this.writeWindowNameRaw(nextWindowName);
 };
 
+GameManager.prototype.buildWriteWindowNameSavedPayloadCoreArgs = function (windowLike, modeKey, payload) {
+  return [{
+    windowLike: windowLike,
+    windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
+    modeKey: modeKey,
+    currentModeKey: this.modeKey,
+    currentMode: this.mode,
+    defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+    payload: payload
+  }];
+};
+
+GameManager.prototype.normalizeWriteWindowNameSavedPayloadCoreValue = function (writtenByCore) {
+  return typeof writtenByCore === "boolean" ? writtenByCore : undefined;
+};
+
 GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) {
   var windowLike = this.getWindowLike();
-  var writeSavedPayloadToWindowNameCore = this.callCoreStorageRuntime("writeSavedPayloadToWindowName", [{
-      windowLike: windowLike,
-      windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
-      modeKey: modeKey,
-      currentModeKey: this.modeKey,
-      currentMode: this.mode,
-      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
-      payload: payload
-    }]);
+  var writeSavedPayloadToWindowNameCore = this.callCoreStorageRuntime(
+    "writeSavedPayloadToWindowName",
+    this.buildWriteWindowNameSavedPayloadCoreArgs(windowLike, modeKey, payload)
+  );
   if (writeSavedPayloadToWindowNameCore.available) {
-    var writtenByCore = writeSavedPayloadToWindowNameCore.value;
-    if (typeof writtenByCore === "boolean") return writtenByCore;
+    var normalizedByCore = this.normalizeWriteWindowNameSavedPayloadCoreValue(
+      writeSavedPayloadToWindowNameCore.value
+    );
+    if (typeof normalizedByCore !== "undefined") return normalizedByCore;
   }
   return this.writeWindowNameSavedPayloadFallback(modeKey, payload);
 };
