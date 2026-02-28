@@ -8001,31 +8001,22 @@ GameManager.prototype.tileMatchesAvailableInColumn = function (x) {
   return false;
 };
 
-GameManager.prototype.createTileValueReader = function () {
-  var manager = this;
-  return function (cell) {
-    var tile = manager.grid.cellContent(cell);
-    return tile ? tile.value : null;
-  };
-};
-
-GameManager.prototype.createMergeValueChecker = function () {
-  var manager = this;
-  return function (a, b) {
-    return manager.getMergedValue(a, b) !== null;
-  };
-};
-
 // Check for available matches between tiles (more expensive check)
 GameManager.prototype.tileMatchesAvailable = function () {
+  var manager = this;
   var tileMatchesAvailableCore = this.callCoreMoveScanRuntime(
     "tileMatchesAvailable",
     [
       this.width,
       this.height,
       this.isBlockedCell.bind(this),
-      this.createTileValueReader(),
-      this.createMergeValueChecker()
+      function (cell) {
+        var tile = manager.grid.cellContent(cell);
+        return tile ? tile.value : null;
+      },
+      function (a, b) {
+        return manager.getMergedValue(a, b) !== null;
+      }
     ]
   );
   return this.resolveCoreBooleanCallOrFallback(tileMatchesAvailableCore, function () {
@@ -8401,21 +8392,13 @@ GameManager.prototype.invalidateTimers = function(limit) {
     this.invalidateTimersFallback(limit);
 };
 
-GameManager.prototype.createBoardMatrixTileValueReader = function () {
-  var self = this;
-  return function (x, y) {
-    var tile = self.grid.cellContent({ x: x, y: y });
-    return tile ? tile.value : 0;
-  };
-};
-
 GameManager.prototype.buildFinalBoardMatrixFallback = function () {
-  var readCellValue = this.createBoardMatrixTileValueReader();
   var rows = [];
   for (var y = 0; y < this.height; y++) {
     var row = [];
     for (var x = 0; x < this.width; x++) {
-      row.push(readCellValue(x, y));
+      var tile = this.grid.cellContent({ x: x, y: y });
+      row.push(tile ? tile.value : 0);
     }
     rows.push(row);
   }
@@ -8427,9 +8410,17 @@ GameManager.prototype.normalizeFinalBoardMatrixFromCore = function (coreValue) {
 };
 
 GameManager.prototype.getFinalBoardMatrix = function () {
+  var manager = this;
   var buildBoardMatrixCore = this.callCoreGridScanRuntime(
     "buildBoardMatrix",
-    [this.width, this.height, this.createBoardMatrixTileValueReader()]
+    [
+      this.width,
+      this.height,
+      function (x, y) {
+        var tile = manager.grid.cellContent({ x: x, y: y });
+        return tile ? tile.value : 0;
+      }
+    ]
   );
   return this.resolveNormalizedCoreValueOrFallback(
     buildBoardMatrixCore,
