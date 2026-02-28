@@ -3672,45 +3672,18 @@ GameManager.prototype.computePostUndoRecord = function (direction) {
   });
 };
 
-GameManager.prototype.resolveUndoFallbackScore = function () {
-  return Number.isFinite(this.score) && typeof this.score === "number" ? Number(this.score) : 0;
-};
-
-GameManager.prototype.resolveUndoFallbackComboStreak = function () {
-  return Number.isInteger(this.comboStreak) && this.comboStreak >= 0 ? this.comboStreak : 0;
-};
-
-GameManager.prototype.resolveUndoFallbackSuccessfulMoveCount = function () {
-  return Number.isInteger(this.successfulMoveCount) && this.successfulMoveCount >= 0
-    ? this.successfulMoveCount
-    : 0;
-};
-
-GameManager.prototype.resolveUndoFallbackLockConsumedAtMoveCount = function () {
-  return Number.isInteger(this.lockConsumedAtMoveCount) ? this.lockConsumedAtMoveCount : -1;
-};
-
-GameManager.prototype.resolveUndoFallbackLockedDirectionTurn = function () {
-  return Number.isInteger(this.lockedDirectionTurn) ? this.lockedDirectionTurn : null;
-};
-
-GameManager.prototype.resolveUndoFallbackLockedDirection = function () {
-  return Number.isInteger(this.lockedDirection) ? this.lockedDirection : null;
-};
-
-GameManager.prototype.resolveUndoFallbackUndoUsed = function () {
-  return Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0;
-};
-
 GameManager.prototype.getUndoStateFallbackValues = function () {
   return {
-    score: this.resolveUndoFallbackScore(),
-    comboStreak: this.resolveUndoFallbackComboStreak(),
-    successfulMoveCount: this.resolveUndoFallbackSuccessfulMoveCount(),
-    lockConsumedAtMoveCount: this.resolveUndoFallbackLockConsumedAtMoveCount(),
-    lockedDirectionTurn: this.resolveUndoFallbackLockedDirectionTurn(),
-    lockedDirection: this.resolveUndoFallbackLockedDirection(),
-    undoUsed: this.resolveUndoFallbackUndoUsed()
+    score: Number.isFinite(this.score) && typeof this.score === "number" ? Number(this.score) : 0,
+    comboStreak: Number.isInteger(this.comboStreak) && this.comboStreak >= 0 ? this.comboStreak : 0,
+    successfulMoveCount:
+      Number.isInteger(this.successfulMoveCount) && this.successfulMoveCount >= 0
+        ? this.successfulMoveCount
+        : 0,
+    lockConsumedAtMoveCount: Number.isInteger(this.lockConsumedAtMoveCount) ? this.lockConsumedAtMoveCount : -1,
+    lockedDirectionTurn: Number.isInteger(this.lockedDirectionTurn) ? this.lockedDirectionTurn : null,
+    lockedDirection: Number.isInteger(this.lockedDirection) ? this.lockedDirection : null,
+    undoUsed: Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0
   };
 };
 
