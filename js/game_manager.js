@@ -9233,12 +9233,25 @@ GameManager.prototype.resolveReplayDispatchExecutorMethodName = function (dispat
   return executorMap[dispatchMethod];
 };
 
+GameManager.prototype.resolveReplayDispatchArgs = function (dispatchPlan) {
+  return dispatchPlan && Array.isArray(dispatchPlan.args) ? dispatchPlan.args : [];
+};
+
+GameManager.prototype.resolveReplayDispatchArgAt = function (dispatchPlan, index) {
+  var args = this.resolveReplayDispatchArgs(dispatchPlan);
+  return args[index];
+};
+
 GameManager.prototype.executeReplayMoveDispatch = function (dispatchPlan) {
-  this.move(dispatchPlan.args[0]);
+  this.move(this.resolveReplayDispatchArgAt(dispatchPlan, 0));
 };
 
 GameManager.prototype.executeReplayCustomTileDispatch = function (dispatchPlan) {
-  this.insertCustomTile(dispatchPlan.args[0], dispatchPlan.args[1], dispatchPlan.args[2]);
+  this.insertCustomTile(
+    this.resolveReplayDispatchArgAt(dispatchPlan, 0),
+    this.resolveReplayDispatchArgAt(dispatchPlan, 1),
+    this.resolveReplayDispatchArgAt(dispatchPlan, 2)
+  );
 };
 
 GameManager.prototype.shouldInjectReplayStepForcedSpawn = function (stepExecutionPlan) {
