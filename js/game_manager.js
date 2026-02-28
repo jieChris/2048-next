@@ -10328,12 +10328,8 @@ GameManager.prototype.applyReplayPauseState = function (pauseState) {
   this.clearReplayIntervalIfNeeded(this.resolveReplayControlShouldClearInterval(state));
 };
 
-GameManager.prototype.resolvePauseState = function () {
-    return this.computeReplayPauseState();
-};
-
 GameManager.prototype.pause = function () {
-    var pauseState = this.resolvePauseState();
+    var pauseState = this.computeReplayPauseState();
     this.applyReplayPauseState(pauseState);
 };
 
@@ -10360,12 +10356,8 @@ GameManager.prototype.applyReplayResumeState = function (resumeState) {
     this.applyReplayResumeIntervalState(state);
 };
 
-GameManager.prototype.resolveResumeState = function () {
-    return this.computeReplayResumeState();
-};
-
 GameManager.prototype.resume = function () {
-    var resumeState = this.resolveResumeState();
+    var resumeState = this.computeReplayResumeState();
     this.applyReplayResumeState(resumeState);
 };
 
@@ -10388,12 +10380,8 @@ GameManager.prototype.applyReplaySpeedState = function (speedState) {
     this.applyReplaySpeedResumeState(state);
 };
 
-GameManager.prototype.resolveSpeedState = function (multiplier) {
-    return this.computeReplaySpeedState(multiplier);
-};
-
 GameManager.prototype.setSpeed = function (multiplier) {
-    var speedState = this.resolveSpeedState(multiplier);
+    var speedState = this.computeReplaySpeedState(multiplier);
     this.applyReplaySpeedState(speedState);
 };
 
@@ -10458,14 +10446,10 @@ GameManager.prototype.fastForwardReplayToIndex = function (targetIndex) {
     this.runReplayFastForwardLoop(targetIndex);
 };
 
-GameManager.prototype.resolveReplaySeekRestartPlan = function (targetIndex) {
-    return this.resolveReplaySeekRestartPlanForTarget(targetIndex);
-};
-
 GameManager.prototype.buildReplaySeekApplyContext = function (targetIndex) {
     return {
         targetIndex: targetIndex,
-        restartPlan: this.resolveReplaySeekRestartPlan(targetIndex)
+        restartPlan: this.resolveReplaySeekRestartPlanForTarget(targetIndex)
     };
 };
 
@@ -10491,12 +10475,8 @@ GameManager.prototype.pauseReplayForSeek = function () {
     this.pause();
 };
 
-GameManager.prototype.resolveNormalizedReplaySeekTarget = function (targetIndex) {
-    return this.normalizeReplaySeekTarget(targetIndex);
-};
-
 GameManager.prototype.seek = function (targetIndex) {
-    targetIndex = this.resolveNormalizedReplaySeekTarget(targetIndex);
+    targetIndex = this.normalizeReplaySeekTarget(targetIndex);
     this.pauseReplayForSeek();
     this.applyReplaySeekTarget(targetIndex);
 };
