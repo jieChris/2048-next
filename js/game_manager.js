@@ -788,12 +788,8 @@ GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
   });
 };
 
-GameManager.prototype.shouldInjectForcedSpawnFallback = function (action) {
-  return !!this.replaySpawns && !Array.isArray(action);
-};
-
 GameManager.prototype.planReplayStepFallback = function (action, spawnAtIndex) {
-  var shouldInjectForcedSpawn = this.shouldInjectForcedSpawnFallback(action);
+  var shouldInjectForcedSpawn = !!this.replaySpawns && !Array.isArray(action);
   return {
     shouldInjectForcedSpawn: shouldInjectForcedSpawn,
     forcedSpawn: shouldInjectForcedSpawn ? spawnAtIndex : undefined
@@ -893,15 +889,11 @@ GameManager.prototype.computeReplayEndState = function () {
     []
   );
   return this.resolveCoreObjectCallOrFallback(computeReplayEndStateCore, function () {
-    return this.computeReplayEndStateFallback();
+    return {
+      shouldPause: true,
+      replayMode: false
+    };
   });
-};
-
-GameManager.prototype.computeReplayEndStateFallback = function () {
-  return {
-    shouldPause: true,
-    replayMode: false
-  };
 };
 
 GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, replayEndState) {
