@@ -7720,43 +7720,6 @@ GameManager.prototype.buildSessionSubmitFailureResult = function (endedAt, paylo
   return result;
 };
 
-GameManager.prototype.buildSessionSubmitContext = function (localHistorySaveRecord) {
-  var endedAt = new Date().toISOString();
-  var payloadInput = {
-    windowLike: this.getWindowLike(),
-    adapterParitySnapshot: {
-      report: this.getAdapterSessionParitySnapshot("readAdapterParityReport", "adapterParityReport"),
-      diff: this.getAdapterSessionParitySnapshot("readAdapterParityABDiff", "adapterParityABDiff")
-    }
-  };
-  var payload = this.buildSessionSubmitPayload(
-    endedAt,
-    payloadInput.windowLike,
-    payloadInput.adapterParitySnapshot
-  );
-  return {
-    localHistorySaveRecord: localHistorySaveRecord,
-    endedAt: endedAt,
-    payload: payload
-  };
-};
-
-GameManager.prototype.persistSessionSubmitContext = function (submitContext) {
-  try {
-    var saved = submitContext.localHistorySaveRecord.method.call(
-      submitContext.localHistorySaveRecord.scope,
-      submitContext.payload
-    );
-    this.writeLastSessionSubmitResult(
-      this.buildSessionSubmitSuccessResult(submitContext.endedAt, submitContext.payload, saved)
-    );
-  } catch (error) {
-    this.writeLastSessionSubmitResult(
-      this.buildSessionSubmitFailureResult(submitContext.endedAt, submitContext.payload, error)
-    );
-  }
-};
-
 GameManager.prototype.handleSkippedSessionSubmitIfNeeded = function () {
   var skippedReason = null;
   if (this.replayMode) skippedReason = "replay_mode";
@@ -7773,8 +7736,25 @@ GameManager.prototype.handleSkippedSessionSubmitIfNeeded = function () {
 
 GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord) {
   this.sessionSubmitDone = true;
-  var submitContext = this.buildSessionSubmitContext(localHistorySaveRecord);
-  this.persistSessionSubmitContext(submitContext);
+  var endedAt = new Date().toISOString();
+  var payload = this.buildSessionSubmitPayload(
+    endedAt,
+    this.getWindowLike(),
+    {
+      report: this.getAdapterSessionParitySnapshot("readAdapterParityReport", "adapterParityReport"),
+      diff: this.getAdapterSessionParitySnapshot("readAdapterParityABDiff", "adapterParityABDiff")
+    }
+  );
+  try {
+    var saved = localHistorySaveRecord.method.call(localHistorySaveRecord.scope, payload);
+    this.writeLastSessionSubmitResult(
+      this.buildSessionSubmitSuccessResult(endedAt, payload, saved)
+    );
+  } catch (error) {
+    this.writeLastSessionSubmitResult(
+      this.buildSessionSubmitFailureResult(endedAt, payload, error)
+    );
+  }
 };
 
 GameManager.prototype.tryAutoSubmitOnGameOver = function () {
