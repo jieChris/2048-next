@@ -6157,15 +6157,6 @@ GameManager.prototype.getMoveInputThrottleMs = function () {
   });
 };
 
-GameManager.prototype.scheduleMoveInputFlush = function () {
-  if (this.moveInputFlushScheduled) return;
-  this.moveInputFlushScheduled = true;
-  var self = this;
-  self.requestAnimationFrame(function () {
-    self.flushPendingMoveInput();
-  });
-};
-
 GameManager.prototype.executeImmediateMoveInput = function (direction, now) {
   this.lastMoveInputAt = now;
   this.move(direction);
@@ -6192,7 +6183,11 @@ GameManager.prototype.flushPendingMoveInput = function () {
     var hasPending = !(self.pendingMoveInput === null || typeof self.pendingMoveInput === "undefined");
     if (hasPending) {
       // Newer input exists; next flush will consume latest direction.
-      self.scheduleMoveInputFlush();
+      if (self.moveInputFlushScheduled) return;
+      self.moveInputFlushScheduled = true;
+      self.requestAnimationFrame(function () {
+        self.flushPendingMoveInput();
+      });
       return;
     }
     self.executeImmediateMoveInput(direction, Date.now());
@@ -6206,7 +6201,12 @@ GameManager.prototype.dispatchMoveInputWithThrottle = function (direction, throt
     return;
   }
   this.pendingMoveInput = direction;
-  this.scheduleMoveInputFlush();
+  if (this.moveInputFlushScheduled) return;
+  this.moveInputFlushScheduled = true;
+  var self = this;
+  self.requestAnimationFrame(function () {
+    self.flushPendingMoveInput();
+  });
 };
 
 GameManager.prototype.handleMoveInput = function (direction) {
