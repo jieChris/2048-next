@@ -8024,9 +8024,16 @@ GameManager.prototype.getVectorFallback = function (direction) {
   return this.getVectorFallbackMap()[direction];
 };
 
+GameManager.prototype.buildGetVectorCoreArgs = function (direction) {
+  return [direction];
+};
+
 // Get the vector representing the chosen direction
 GameManager.prototype.getVector = function (direction) {
-  var getVectorCore = this.callCoreMovePathRuntime("getVector", [direction]);
+  var getVectorCore = this.callCoreMovePathRuntime(
+    "getVector",
+    this.buildGetVectorCoreArgs(direction)
+  );
   if (getVectorCore.available) return getVectorCore.value;
   return this.getVectorFallback(direction);
 };
@@ -8058,9 +8065,16 @@ GameManager.prototype.buildTraversalsFallback = function (vector) {
   };
 };
 
+GameManager.prototype.buildBuildTraversalsCoreArgs = function (vector) {
+  return [this.width, this.height, vector];
+};
+
 // Build a list of positions to traverse in the right order
 GameManager.prototype.buildTraversals = function (vector) {
-  var buildTraversalsCore = this.callCoreMovePathRuntime("buildTraversals", [this.width, this.height, vector]);
+  var buildTraversalsCore = this.callCoreMovePathRuntime(
+    "buildTraversals",
+    this.buildBuildTraversalsCoreArgs(vector)
+  );
   if (buildTraversalsCore.available) {
     return this.normalizeBuildTraversalsRuntimeValue(buildTraversalsCore.value);
   }
@@ -8098,15 +8112,22 @@ GameManager.prototype.computeFarthestPositionFallback = function (cell, vector) 
   };
 };
 
+GameManager.prototype.buildFindFarthestPositionCoreArgs = function (cell, vector) {
+  return [
+    cell,
+    vector,
+    this.width,
+    this.height,
+    this.isBlockedCell.bind(this),
+    this.getGridCellAvailableFn()
+  ];
+};
+
 GameManager.prototype.findFarthestPosition = function (cell, vector) {
-  var findFarthestPositionCore = this.callCoreMovePathRuntime("findFarthestPosition", [
-      cell,
-      vector,
-      this.width,
-      this.height,
-      this.isBlockedCell.bind(this),
-      this.getGridCellAvailableFn()
-    ]);
+  var findFarthestPositionCore = this.callCoreMovePathRuntime(
+    "findFarthestPosition",
+    this.buildFindFarthestPositionCoreArgs(cell, vector)
+  );
   if (findFarthestPositionCore.available) {
     var resolvedByCore = this.resolveFarthestPositionFromRuntime(findFarthestPositionCore.value);
     if (resolvedByCore) return resolvedByCore;
