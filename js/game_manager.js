@@ -1340,6 +1340,17 @@ GameManager.prototype.resolveNormalizedCoreValueOrUndefined = function (coreCall
   return normalizer.call(this, coreCallResult.value);
 };
 
+GameManager.prototype.resolveNormalizedCoreValueOrFallback = function (
+  coreCallResult,
+  normalizer,
+  fallbackResolver
+) {
+  var normalized = this.resolveNormalizedCoreValueOrUndefined(coreCallResult, normalizer);
+  if (typeof normalized !== "undefined" && normalized !== null) return normalized;
+  if (typeof fallbackResolver === "function") return fallbackResolver.call(this);
+  return normalized;
+};
+
 GameManager.prototype.resolveCoreRawCallValueOrUndefined = function (coreCallResult) {
   if (!this.isCoreCallAvailable(coreCallResult)) return undefined;
   return coreCallResult.value;
@@ -1794,10 +1805,13 @@ GameManager.prototype.readLocalStorageJsonMap = function (key) {
     "readStorageJsonMapFromContext",
     this.buildReadLocalStorageJsonMapCoreArgs(key)
   );
-  if (this.isCoreCallAvailable(readStorageJsonMapFromContextCore)) {
-    return this.normalizeStorageJsonMapRuntimeValue(readStorageJsonMapFromContextCore.value);
-  }
-  return this.readLocalStorageJsonMapFallback(key);
+  return this.resolveNormalizedCoreValueOrFallback(
+    readStorageJsonMapFromContextCore,
+    this.normalizeStorageJsonMapRuntimeValue,
+    function () {
+      return this.readLocalStorageJsonMapFallback(key);
+    }
+  );
 };
 
 GameManager.prototype.buildWriteLocalStorageJsonMapCoreArgs = function (key, map) {
@@ -3241,8 +3255,9 @@ GameManager.prototype.appendCompactMoveCode = function (rawCode) {
     "appendCompactMoveCode",
     this.buildAppendCompactMoveCodeCoreArgs(rawCode)
   );
-  if (this.isCoreCallAvailable(appendCompactMoveCodeCore)) {
-    this.replayCompactLog = appendCompactMoveCodeCore.value;
+  var compactMoveCodeByCore = this.resolveCoreRawCallValueOrUndefined(appendCompactMoveCodeCore);
+  if (typeof compactMoveCodeByCore !== "undefined") {
+    this.replayCompactLog = compactMoveCodeByCore;
     return;
   }
   this.appendCompactMoveCodeFallback(rawCode);
@@ -3266,8 +3281,9 @@ GameManager.prototype.appendCompactUndo = function () {
     "appendCompactUndo",
     this.buildAppendCompactUndoCoreArgs()
   );
-  if (this.isCoreCallAvailable(appendCompactUndoCore)) {
-    this.replayCompactLog = appendCompactUndoCore.value;
+  var compactUndoByCore = this.resolveCoreRawCallValueOrUndefined(appendCompactUndoCore);
+  if (typeof compactUndoByCore !== "undefined") {
+    this.replayCompactLog = compactUndoByCore;
     return;
   }
   this.appendCompactUndoFallback();
@@ -3293,8 +3309,9 @@ GameManager.prototype.appendCompactPracticeAction = function (x, y, value) {
     "appendCompactPracticeAction",
     this.buildAppendCompactPracticeActionCoreArgs(x, y, value)
   );
-  if (this.isCoreCallAvailable(appendCompactPracticeActionCore)) {
-    this.replayCompactLog = appendCompactPracticeActionCore.value;
+  var compactPracticeActionByCore = this.resolveCoreRawCallValueOrUndefined(appendCompactPracticeActionCore);
+  if (typeof compactPracticeActionByCore !== "undefined") {
+    this.replayCompactLog = compactPracticeActionByCore;
     return;
   }
   this.appendCompactPracticeActionFallback(x, y, value);
@@ -3650,10 +3667,9 @@ GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
     "resolveModeCatalogConfig",
     this.buildResolveModeCatalogConfigCoreArgs(modeKey, catalogGetMode)
   );
-  if (this.isCoreCallAvailable(resolveModeCatalogConfigCore)) {
-    return resolveModeCatalogConfigCore.value;
-  }
-  return this.resolveModeConfigFromCatalogFallback(modeKey, catalogGetMode);
+  return this.resolveCoreRawCallOrFallback(resolveModeCatalogConfigCore, function () {
+    return this.resolveModeConfigFromCatalogFallback(modeKey, catalogGetMode);
+  });
 };
 
 GameManager.prototype.resolveCoreRuntimeGlobalContext = function () {
@@ -3910,8 +3926,12 @@ GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
     "resolveUndoPolicyState",
     this.buildResolveUndoPolicyStateCoreArgs(context, optionsSnapshot)
   );
-  if (this.isCoreCallAvailable(resolveUndoPolicyStateCore)) {
-    var normalizedCore = this.normalizeUndoPolicyStateCoreValue(resolveUndoPolicyStateCore.value);
+  var undoPolicyStateByCore = this.resolveNormalizedCoreValueOrUndefined(
+    resolveUndoPolicyStateCore,
+    this.normalizeUndoPolicyStateCoreValue
+  );
+  if (typeof undoPolicyStateByCore !== "undefined") {
+    var normalizedCore = undoPolicyStateByCore;
     if (normalizedCore) return normalizedCore;
   }
 
@@ -4130,8 +4150,9 @@ GameManager.prototype.planTileInteraction = function (cell, positions, next, mer
     "planTileInteraction",
     this.buildPlanTileInteractionCoreArgs(cell, positions, next, mergedValue)
   );
-  if (this.isCoreCallAvailable(planTileInteractionCore)) {
-    return this.buildPlannedTileInteractionFromCore(planTileInteractionCore.value || {}, cell, positions);
+  var tileInteractionByCore = this.resolveCoreRawCallValueOrUndefined(planTileInteractionCore);
+  if (typeof tileInteractionByCore !== "undefined") {
+    return this.buildPlannedTileInteractionFromCore(tileInteractionByCore || {}, cell, positions);
   }
   return this.buildPlannedTileInteractionFallback(cell, positions, next, mergedValue);
 };
@@ -4458,12 +4479,15 @@ GameManager.prototype.createUndoSnapshotState = function () {
     this.buildCreateUndoSnapshotCoreArgs()
   );
   var fallback = this.resolveUndoSnapshotFallbackState();
-
-  if (this.isCoreCallAvailable(createUndoSnapshotCore)) {
-    return this.normalizeUndoSnapshotCoreValue(createUndoSnapshotCore.value || {}, fallback);
-  }
-
-  return fallback;
+  return this.resolveNormalizedCoreValueOrFallback(
+    createUndoSnapshotCore,
+    function (coreValue) {
+      return this.normalizeUndoSnapshotCoreValue(coreValue || {}, fallback);
+    },
+    function () {
+      return fallback;
+    }
+  );
 };
 
 GameManager.prototype.filterUndoStackEntryTiles = function (source) {
@@ -4565,8 +4589,14 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
     "normalizeUndoStackEntry",
     this.buildNormalizeUndoStackEntryCoreArgs(source, fallbackState)
   );
-  if (this.isCoreCallAvailable(normalizeUndoStackEntryCore)) {
-    source = this.resolveUndoStackEntrySourceFromCore(normalizeUndoStackEntryCore.value || {}, source);
+  var sourceByCore = this.resolveNormalizedCoreValueOrUndefined(
+    normalizeUndoStackEntryCore,
+    function (coreValue) {
+      return this.resolveUndoStackEntrySourceFromCore(coreValue || {}, source);
+    }
+  );
+  if (typeof sourceByCore !== "undefined") {
+    source = sourceByCore;
   }
   var tiles = this.filterUndoStackEntryTiles(source);
   return this.buildNormalizedUndoStackEntryFallback(source, fallbackState, tiles);
@@ -5041,8 +5071,9 @@ GameManager.prototype.resolveModeConfig = function (modeId) {
     "resolveModeConfigFromCatalog",
     this.buildResolveModeConfigFromCatalogCoreArgs(id)
   );
-  if (this.isCoreCallAvailable(resolveModeConfigFromCatalogCore)) {
-    return this.resolveModeConfigFromCoreValue(resolveModeConfigFromCatalogCore.value || {});
+  var modeConfigByCore = this.resolveCoreRawCallValueOrUndefined(resolveModeConfigFromCatalogCore);
+  if (typeof modeConfigByCore !== "undefined") {
+    return this.resolveModeConfigFromCoreValue(modeConfigByCore || {});
   }
   return this.resolveModeConfigCatalogFallback(id);
 };
@@ -5179,8 +5210,9 @@ GameManager.prototype.applySpecialRulesState = function () {
     "computeSpecialRulesState",
     this.buildComputeSpecialRulesStateCoreArgs()
   );
-  if (this.isCoreCallAvailable(computeSpecialRulesStateCore)) {
-    this.applyComputedSpecialRulesState(computeSpecialRulesStateCore.value || {});
+  var computedSpecialRulesStateByCore = this.resolveCoreRawCallValueOrUndefined(computeSpecialRulesStateCore);
+  if (typeof computedSpecialRulesStateByCore !== "undefined") {
+    this.applyComputedSpecialRulesState(computedSpecialRulesStateByCore || {});
     return;
   }
 
@@ -5289,8 +5321,9 @@ GameManager.prototype.getLockedDirection = function () {
     "getLockedDirectionState",
     this.buildGetLockedDirectionStateCoreArgs()
   );
-  if (this.isCoreCallAvailable(getLockedDirectionStateCore)) {
-    return this.applyComputedLockedDirectionState(getLockedDirectionStateCore.value || {});
+  var lockedDirectionStateByCore = this.resolveCoreRawCallValueOrUndefined(getLockedDirectionStateCore);
+  if (typeof lockedDirectionStateByCore !== "undefined") {
+    return this.applyComputedLockedDirectionState(lockedDirectionStateByCore || {});
   }
 
   var rules = this.directionLockRules;
@@ -5479,14 +5512,12 @@ GameManager.prototype.configureTimerMilestones = function () {
     "getTimerMilestoneSlotByValue",
     this.buildGetTimerMilestoneSlotByValueCoreArgs()
   );
-  if (this.isCoreCallAvailable(getTimerMilestoneSlotByValueCore)) {
-    this.timerMilestoneSlotByValue = getTimerMilestoneSlotByValueCore.value;
-  } else {
-    this.timerMilestoneSlotByValue = this.buildTimerMilestoneSlotMapFallback(
+  this.timerMilestoneSlotByValue = this.resolveCoreRawCallOrFallback(getTimerMilestoneSlotByValueCore, function () {
+    return this.buildTimerMilestoneSlotMapFallback(
       this.timerMilestones,
       GameManager.TIMER_SLOT_IDS
     );
-  }
+  });
   this.updateTimerLegendLabels();
 };
 
@@ -5591,8 +5622,9 @@ GameManager.prototype.resolveCappedModeState = function () {
     "resolveCappedModeState",
     this.buildResolveCappedModeStateCoreArgs()
   );
-  if (this.isCoreCallAvailable(resolveCappedModeStateCore)) {
-    var normalizedCoreState = this.cloneResolvedCappedModeState(resolveCappedModeStateCore.value || {});
+  var cappedModeStateByCore = this.resolveCoreRawCallValueOrUndefined(resolveCappedModeStateCore);
+  if (typeof cappedModeStateByCore !== "undefined") {
+    var normalizedCoreState = this.cloneResolvedCappedModeState(cappedModeStateByCore || {});
     this.writeCachedCappedModeState(normalizedCoreState);
     return this.cloneResolvedCappedModeState(normalizedCoreState);
   }
@@ -5653,8 +5685,9 @@ GameManager.prototype.resolveProgressiveCapped64UnlockedState = function (unlock
     "createProgressiveCapped64UnlockedState",
     this.buildCreateProgressiveCapped64UnlockedStateCoreArgs(unlockedState)
   );
-  if (this.isCoreCallAvailable(createProgressiveCapped64UnlockedStateCore)) {
-    var coreValue = createProgressiveCapped64UnlockedStateCore.value;
+  var capped64UnlockedStateByCore = this.resolveCoreRawCallValueOrUndefined(createProgressiveCapped64UnlockedStateCore);
+  if (typeof capped64UnlockedStateByCore !== "undefined") {
+    var coreValue = capped64UnlockedStateByCore;
     if (coreValue && typeof coreValue === "object") return coreValue;
   }
 
@@ -5734,8 +5767,9 @@ GameManager.prototype.unlockProgressiveCapped64Row = function (value) {
     "resolveProgressiveCapped64Unlock",
     this.buildResolveProgressiveCapped64UnlockCoreArgs(isProgressiveCapped64Mode, value, unlockedState)
   );
-  if (this.isCoreCallAvailable(resolveProgressiveCapped64UnlockCore)) {
-    var resolved = resolveProgressiveCapped64UnlockCore.value || {};
+  var progressiveCapped64UnlockByCore = this.resolveCoreRawCallValueOrUndefined(resolveProgressiveCapped64UnlockCore);
+  if (typeof progressiveCapped64UnlockByCore !== "undefined") {
+    var resolved = progressiveCapped64UnlockByCore || {};
     this.applyProgressiveCapped64UnlockCoreResult(resolved, unlockedState);
     return;
   }
@@ -5834,8 +5868,9 @@ GameManager.prototype.applyCappedRowVisibility = function () {
     "resolveCappedRowVisibilityPlan",
     this.buildResolveCappedRowVisibilityPlanCoreArgs(cappedState)
   );
-  if (this.isCoreCallAvailable(resolveCappedRowVisibilityPlanCore)) {
-    var plan = resolveCappedRowVisibilityPlanCore.value;
+  var cappedRowVisibilityPlanByCore = this.resolveCoreRawCallValueOrUndefined(resolveCappedRowVisibilityPlanCore);
+  if (typeof cappedRowVisibilityPlanByCore !== "undefined") {
+    var plan = cappedRowVisibilityPlanByCore;
     if (this.applyCappedRowVisibilityPlan(plan)) {
       if (this.shouldResetProgressiveRowsAfterPlan(cappedState)) {
         this.resetProgressiveCapped64Rows();
@@ -6448,8 +6483,9 @@ GameManager.prototype.persistTimerModuleViewForMode = function (mode, view) {
     "writeTimerModuleViewForModeToMap",
     this.buildWriteTimerModuleViewForModeCoreArgs(map, mode, view)
   );
-  if (this.isCoreCallAvailable(writeTimerModuleViewForModeToMapCore)) {
-    map = writeTimerModuleViewForModeToMapCore.value;
+  var timerModuleViewMapByCore = this.resolveCoreRawCallValueOrUndefined(writeTimerModuleViewForModeToMapCore);
+  if (typeof timerModuleViewMapByCore !== "undefined") {
+    map = timerModuleViewMapByCore;
   } else {
     map[mode] = view === "hidden" ? "hidden" : "timer";
   }
@@ -6717,8 +6753,9 @@ GameManager.prototype.recordSpawnValue = function (value) {
     "applySpawnValueCount",
     this.buildApplySpawnValueCountCoreArgs(value)
   );
-  if (this.isCoreCallAvailable(applySpawnValueCountCore)) {
-    this.applySpawnValueCountCoreResult(applySpawnValueCountCore.value || {});
+  var spawnValueCountByCore = this.resolveCoreRawCallValueOrUndefined(applySpawnValueCountCore);
+  if (typeof spawnValueCountByCore !== "undefined") {
+    this.applySpawnValueCountCoreResult(spawnValueCountByCore || {});
     this.refreshSpawnRateDisplay();
     return;
   }
@@ -6776,8 +6813,12 @@ GameManager.prototype.getSpawnStatPair = function () {
     "getSpawnStatPair",
     this.buildGetSpawnStatPairCoreArgs()
   );
-  if (this.isCoreCallAvailable(getSpawnStatPairCore)) {
-    var normalizedCorePair = this.normalizeSpawnStatPairCoreValue(getSpawnStatPairCore.value);
+  var spawnStatPairByCore = this.resolveNormalizedCoreValueOrUndefined(
+    getSpawnStatPairCore,
+    this.normalizeSpawnStatPairCoreValue
+  );
+  if (typeof spawnStatPairByCore !== "undefined") {
+    var normalizedCorePair = spawnStatPairByCore;
     if (normalizedCorePair) return normalizedCorePair;
   }
 
@@ -6942,9 +6983,13 @@ GameManager.prototype.tryResolveStepStatsFromCore = function (actions, limit) {
     "computeReplayStepStats",
     this.buildComputeReplayStepStatsCoreArgs(actions, limit)
   );
-
-  if (!this.isCoreCallAvailable(computeReplayStepStatsCore)) return null;
-  return this.normalizeCoreStepStats(computeReplayStepStatsCore.value || {});
+  var stepStatsByCore = this.resolveNormalizedCoreValueOrUndefined(
+    computeReplayStepStatsCore,
+    function (coreValue) {
+      return this.normalizeCoreStepStats(coreValue || {});
+    }
+  );
+  return typeof stepStatsByCore !== "undefined" ? stepStatsByCore : null;
 };
 
 GameManager.prototype.calculateNetMoveSteps = function (actions, limit) {
@@ -7043,8 +7088,9 @@ GameManager.prototype.recordIpsInput = function () {
     "resolveNextIpsInputCount",
     this.buildResolveNextIpsInputCountCoreArgs()
   );
-  if (this.isCoreCallAvailable(resolveNextIpsInputCountCore)) {
-    if (!this.applyResolvedNextIpsInputCount(resolveNextIpsInputCountCore.value || {})) return;
+  var nextIpsInputCountByCore = this.resolveCoreRawCallValueOrUndefined(resolveNextIpsInputCountCore);
+  if (typeof nextIpsInputCountByCore !== "undefined") {
+    if (!this.applyResolvedNextIpsInputCount(nextIpsInputCountByCore || {})) return;
     return;
   }
   this.incrementIpsInputCountFallback();
@@ -7075,8 +7121,9 @@ GameManager.prototype.tryResolveIpsDisplayTextFromCore = function (durationMs, i
     "resolveIpsDisplayText",
     this.buildResolveIpsDisplayTextCoreArgs(durationMs, ipsInputCount)
   );
-  if (!this.isCoreCallAvailable(resolveIpsDisplayTextCore)) return "";
-  var coreDisplay = resolveIpsDisplayTextCore.value || {};
+  var ipsDisplayByCore = this.resolveCoreRawCallValueOrUndefined(resolveIpsDisplayTextCore);
+  if (typeof ipsDisplayByCore === "undefined") return "";
+  var coreDisplay = ipsDisplayByCore || {};
   return typeof coreDisplay.ipsText === "string" && coreDisplay.ipsText ? coreDisplay.ipsText : "";
 };
 
@@ -7204,9 +7251,8 @@ GameManager.prototype.resolveIsGameTerminatedValue = function () {
     "isGameTerminatedState",
     this.buildIsGameTerminatedStateCoreArgs()
   );
-  if (this.isCoreCallAvailable(isGameTerminatedStateCore)) {
-    return !!isGameTerminatedStateCore.value;
-  }
+  var terminatedByCore = this.resolveCoreRawCallValueOrUndefined(isGameTerminatedStateCore);
+  if (typeof terminatedByCore !== "undefined") return !!terminatedByCore;
   return !!this.over || (!!this.won && !this.keepPlaying);
 };
 
@@ -7946,8 +7992,9 @@ GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
     "computePostMoveScore",
     this.buildComputePostMoveScoreCoreArgs(scoreBeforeMove)
   );
-  if (this.isCoreCallAvailable(computePostMoveScoreCore)) {
-    this.applyCorePostMoveScoreResult(computePostMoveScoreCore.value || {});
+  var postMoveScoreByCore = this.resolveCoreRawCallValueOrUndefined(computePostMoveScoreCore);
+  if (typeof postMoveScoreByCore !== "undefined") {
+    this.applyCorePostMoveScoreResult(postMoveScoreByCore || {});
     return;
   }
   this.applyFallbackPostMoveScore(scoreBeforeMove);
@@ -7997,8 +8044,9 @@ GameManager.prototype.applyPostMoveLifecycle = function (hasMovesAvailable) {
     "computePostMoveLifecycle",
     this.buildComputePostMoveLifecycleCoreArgs(hasMovesAvailable)
   );
-  if (this.isCoreCallAvailable(computePostMoveLifecycleCore)) {
-    return this.applyCorePostMoveLifecycleResult(computePostMoveLifecycleCore.value || {}, hasMovesAvailable);
+  var postMoveLifecycleByCore = this.resolveCoreRawCallValueOrUndefined(computePostMoveLifecycleCore);
+  if (typeof postMoveLifecycleByCore !== "undefined") {
+    return this.applyCorePostMoveLifecycleResult(postMoveLifecycleByCore || {}, hasMovesAvailable);
   }
   return this.applyFallbackPostMoveLifecycle(hasMovesAvailable);
 };
@@ -8523,10 +8571,13 @@ GameManager.prototype.buildTraversals = function (vector) {
     "buildTraversals",
     this.buildBuildTraversalsCoreArgs(vector)
   );
-  if (this.isCoreCallAvailable(buildTraversalsCore)) {
-    return this.normalizeBuildTraversalsRuntimeValue(buildTraversalsCore.value);
-  }
-  return this.buildTraversalsFallback(vector);
+  return this.resolveNormalizedCoreValueOrFallback(
+    buildTraversalsCore,
+    this.normalizeBuildTraversalsRuntimeValue,
+    function () {
+      return this.buildTraversalsFallback(vector);
+    }
+  );
 };
 
 GameManager.prototype.stepCellByVector = function (cell, vector) {
@@ -8576,8 +8627,12 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
     "findFarthestPosition",
     this.buildFindFarthestPositionCoreArgs(cell, vector)
   );
-  if (this.isCoreCallAvailable(findFarthestPositionCore)) {
-    var resolvedByCore = this.resolveFarthestPositionFromRuntime(findFarthestPositionCore.value);
+  var farthestPositionByCore = this.resolveNormalizedCoreValueOrUndefined(
+    findFarthestPositionCore,
+    this.resolveFarthestPositionFromRuntime
+  );
+  if (typeof farthestPositionByCore !== "undefined") {
+    var resolvedByCore = farthestPositionByCore;
     if (resolvedByCore) return resolvedByCore;
   }
   return this.computeFarthestPositionFallback(cell, vector);
@@ -9051,8 +9106,12 @@ GameManager.prototype.invalidateTimers = function(limit) {
         "resolveInvalidatedTimerElementIds",
         this.buildResolveInvalidatedTimerElementIdsCoreArgs(limit)
     );
-    if (this.isCoreCallAvailable(resolveInvalidatedTimerElementIdsCore)) {
-        this.applyInvalidatedTimerPlaceholders(this.normalizeInvalidatedTimerElementIds(resolveInvalidatedTimerElementIdsCore.value));
+    var invalidatedTimerElementIdsByCore = this.resolveNormalizedCoreValueOrUndefined(
+        resolveInvalidatedTimerElementIdsCore,
+        this.normalizeInvalidatedTimerElementIds
+    );
+    if (typeof invalidatedTimerElementIdsByCore !== "undefined") {
+        this.applyInvalidatedTimerPlaceholders(invalidatedTimerElementIdsByCore);
         return;
     }
     this.invalidateTimersFallback(limit);
@@ -9093,8 +9152,12 @@ GameManager.prototype.normalizeFinalBoardMatrixFromCore = function (coreValue) {
 
 GameManager.prototype.getFinalBoardMatrix = function () {
   var buildBoardMatrixCore = this.callCoreGridScanRuntime("buildBoardMatrix", this.buildFinalBoardMatrixRuntimeArgs());
-  if (this.isCoreCallAvailable(buildBoardMatrixCore)) {
-    var board = this.normalizeFinalBoardMatrixFromCore(buildBoardMatrixCore.value);
+  var finalBoardMatrixByCore = this.resolveNormalizedCoreValueOrUndefined(
+    buildBoardMatrixCore,
+    this.normalizeFinalBoardMatrixFromCore
+  );
+  if (typeof finalBoardMatrixByCore !== "undefined") {
+    var board = finalBoardMatrixByCore;
     if (board) return board;
   }
   return this.buildFinalBoardMatrixFallback();
@@ -9124,8 +9187,12 @@ GameManager.prototype.resolveBestTileValueFromCore = function (coreValue) {
 
 GameManager.prototype.getBestTileValue = function () {
   var getBestTileValueCore = this.callCoreGridScanRuntime("getBestTileValue", this.buildBestTileValueRuntimeArgs());
-  if (this.isCoreCallAvailable(getBestTileValueCore)) {
-    var bestCore = this.resolveBestTileValueFromCore(getBestTileValueCore.value);
+  var bestTileValueByCore = this.resolveNormalizedCoreValueOrUndefined(
+    getBestTileValueCore,
+    this.resolveBestTileValueFromCore
+  );
+  if (typeof bestTileValueByCore !== "undefined") {
+    var bestCore = bestTileValueByCore;
     if (bestCore !== null) return bestCore;
   }
   return this.getBestTileValueFallback();
@@ -9134,8 +9201,12 @@ GameManager.prototype.getBestTileValue = function () {
 GameManager.prototype.getDurationMs = function () {
   var nowMs = Date.now();
   var resolveDurationMsCore = this.callCoreReplayTimerRuntime("resolveDurationMs", this.buildDurationMsRuntimeArgs(nowMs));
-  if (this.isCoreCallAvailable(resolveDurationMsCore)) {
-    var resolvedCoreMs = this.resolveDurationMsFromCore(resolveDurationMsCore.value);
+  var durationMsByCore = this.resolveNormalizedCoreValueOrUndefined(
+    resolveDurationMsCore,
+    this.resolveDurationMsFromCore
+  );
+  if (typeof durationMsByCore !== "undefined") {
+    var resolvedCoreMs = durationMsByCore;
     if (resolvedCoreMs !== null) return resolvedCoreMs;
   }
   return this.resolveDurationMsFallback(nowMs);
