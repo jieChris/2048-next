@@ -9315,10 +9315,18 @@ GameManager.prototype.normalizeReplayControlState = function (state) {
   return this.isNonArrayObject(state) ? state : {};
 };
 
+GameManager.prototype.resolveReplayControlShouldClearInterval = function (state) {
+  return state.shouldClearInterval;
+};
+
+GameManager.prototype.resolveReplayPauseAppliedValue = function (state) {
+  return state.isPaused !== false;
+};
+
 GameManager.prototype.applyReplayPauseState = function (pauseState) {
   var state = this.normalizeReplayControlState(pauseState);
-  this.isPaused = state.isPaused !== false;
-  this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
+  this.isPaused = this.resolveReplayPauseAppliedValue(state);
+  this.clearReplayIntervalIfNeeded(this.resolveReplayControlShouldClearInterval(state));
 };
 
 GameManager.prototype.resolvePauseState = function () {
@@ -9334,9 +9342,13 @@ GameManager.prototype.applyReplayResumePausedState = function (state) {
     this.isPaused = !!state.isPaused ? true : false;
 };
 
+GameManager.prototype.resolveReplayResumeDelay = function (state) {
+    return state.delay;
+};
+
 GameManager.prototype.applyReplayResumeIntervalState = function (state) {
-    this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
-    this.scheduleReplayInterval(state.delay);
+    this.clearReplayIntervalIfNeeded(this.resolveReplayControlShouldClearInterval(state));
+    this.scheduleReplayInterval(this.resolveReplayResumeDelay(state));
 };
 
 GameManager.prototype.applyReplayResumeState = function (resumeState) {
