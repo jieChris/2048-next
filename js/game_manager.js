@@ -1405,12 +1405,6 @@ GameManager.prototype.resolveCoreRawCallValueOrUndefined = function (coreCallRes
   return coreCallResult.value;
 };
 
-GameManager.prototype.resolveCoreRawCallOrFallback = function (coreCallResult, fallbackResolver) {
-  if (this.isCoreCallAvailable(coreCallResult)) return coreCallResult.value;
-  if (typeof fallbackResolver === "function") return fallbackResolver.call(this);
-  return undefined;
-};
-
 GameManager.prototype.tryHandleCoreRawValue = function (coreCallResult, handler) {
   var coreValue = this.resolveCoreRawCallValueOrUndefined(coreCallResult);
   if (typeof coreValue === "undefined") return false;
