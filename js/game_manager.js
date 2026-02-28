@@ -3333,14 +3333,21 @@ GameManager.prototype.resolveModeConfigFromCatalogFallback = function (modeKey, 
   return null;
 };
 
+GameManager.prototype.buildResolveModeCatalogConfigCoreArgs = function (modeKey, catalogGetMode) {
+  return [{
+    modeId: modeKey,
+    catalogGetMode: catalogGetMode,
+    fallbackModeConfigs: GameManager.FALLBACK_MODE_CONFIGS
+  }];
+};
+
 GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
   var catalogGetMode = this.resolveCatalogGetMode();
 
-  var resolveModeCatalogConfigCore = this.callCoreModeRuntime("resolveModeCatalogConfig", [{
-      modeId: modeKey,
-      catalogGetMode: catalogGetMode,
-      fallbackModeConfigs: GameManager.FALLBACK_MODE_CONFIGS
-    }]);
+  var resolveModeCatalogConfigCore = this.callCoreModeRuntime(
+    "resolveModeCatalogConfig",
+    this.buildResolveModeCatalogConfigCoreArgs(modeKey, catalogGetMode)
+  );
   if (resolveModeCatalogConfigCore.available) {
     return resolveModeCatalogConfigCore.value;
   }
