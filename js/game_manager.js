@@ -6496,41 +6496,21 @@ GameManager.prototype.canProcessUndoMove = function () {
   return this.undoStack.length > 0;
 };
 
-GameManager.prototype.resolveUndoPayloadScore = function (undoPayload) {
-  return Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
-    ? Number(undoPayload.score)
-    : 0;
-};
-
-GameManager.prototype.resolveUndoPayloadTiles = function (undoPayload) {
-  return Array.isArray(undoPayload.tiles) ? undoPayload.tiles : [];
-};
-
-GameManager.prototype.createUndoRestoredGridTile = function (undoTileSnapshot) {
-  var restored = this.createUndoRestoreTile(undoTileSnapshot);
-  var tile = new Tile({ x: restored.x, y: restored.y }, restored.value);
-  tile.previousPosition = {
-    x: restored.previousPosition.x,
-    y: restored.previousPosition.y
-  };
-  return tile;
-};
-
-GameManager.prototype.placeUndoRestoredGridTile = function (tile) {
-  this.grid.cells[tile.x][tile.y] = tile;
-};
-
-GameManager.prototype.restoreUndoPayloadTiles = function (undoPayload) {
-  var undoTiles = this.resolveUndoPayloadTiles(undoPayload);
-  for (var i = 0; i < undoTiles.length; i++) {
-    this.placeUndoRestoredGridTile(this.createUndoRestoredGridTile(undoTiles[i]));
-  }
-};
-
 GameManager.prototype.restoreUndoPayload = function (undoPayload) {
   this.grid.build();
-  this.score = this.resolveUndoPayloadScore(undoPayload);
-  this.restoreUndoPayloadTiles(undoPayload);
+  this.score = Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
+    ? Number(undoPayload.score)
+    : 0;
+  var undoTiles = Array.isArray(undoPayload.tiles) ? undoPayload.tiles : [];
+  for (var i = 0; i < undoTiles.length; i++) {
+    var restored = this.createUndoRestoreTile(undoTiles[i]);
+    var tile = new Tile({ x: restored.x, y: restored.y }, restored.value);
+    tile.previousPosition = {
+      x: restored.previousPosition.x,
+      y: restored.previousPosition.y
+    };
+    this.grid.cells[tile.x][tile.y] = tile;
+  }
 };
 
 GameManager.prototype.resolveUndoRestoreComboStreak = function (undoRestore) {
