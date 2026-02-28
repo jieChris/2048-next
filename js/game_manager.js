@@ -423,10 +423,18 @@ GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
   return this.decodeReplayV4ActionsFallback(actionsEncoded);
 };
 
+GameManager.prototype.resolveCurrentOrDefaultModeKey = function () {
+  return this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY;
+};
+
+GameManager.prototype.resolveModeKeyOrDefault = function (modeKey) {
+  return typeof modeKey === "string" && modeKey ? modeKey : this.resolveCurrentOrDefaultModeKey();
+};
+
 GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString) {
   var parseReplayImportEnvelopeCore = this.callCoreReplayImportRuntime("parseReplayImportEnvelope", [{
       trimmedReplayString: trimmedReplayString,
-      fallbackModeKey: this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY,
+      fallbackModeKey: this.resolveCurrentOrDefaultModeKey(),
       v4Prefix: GameManager.REPLAY_V4_PREFIX
     }]);
   if (parseReplayImportEnvelopeCore.available) return parseReplayImportEnvelopeCore.value;
@@ -1217,9 +1225,7 @@ GameManager.prototype.resolveSavedGameStateStorageKeyFromCoreCall = function (co
 };
 
 GameManager.prototype.resolveSavedGameStateStorageKeyFallback = function (keyPrefix, modeKey) {
-  var key = typeof modeKey === "string" && modeKey
-    ? modeKey
-    : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
+  var key = this.resolveModeKeyOrDefault(modeKey);
   return (typeof keyPrefix === "string" ? keyPrefix : "") + key;
 };
 
@@ -1680,8 +1686,7 @@ GameManager.prototype.resolveWindowNameSavedMap = function (raw, marker) {
 };
 
 GameManager.prototype.resolveModeKeyForSavedPayload = function (modeKey) {
-  var key = typeof modeKey === "string" && modeKey ? modeKey : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
-  return key;
+  return this.resolveModeKeyOrDefault(modeKey);
 };
 
 GameManager.prototype.resolveSavedPayloadFromWindowNameMap = function (map, modeKey) {
