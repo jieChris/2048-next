@@ -6112,7 +6112,9 @@ GameManager.prototype.buildCappedPlaceholderSlotByRepeatCoreArgs = function (rep
 };
 
 GameManager.prototype.resolveCappedPlaceholderSlotValueFromCoreResult = function (coreResult) {
-  var slotValueByCore = this.resolveCoreRawCallValueOrUndefined(coreResult);
+  var slotValueByCore = this.resolveCoreRawCallOrFallback(coreResult, function () {
+    return null;
+  });
   return typeof slotValueByCore === "undefined" ? null : slotValueByCore;
 };
 
