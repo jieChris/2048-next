@@ -450,20 +450,12 @@ GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
   });
 };
 
-GameManager.prototype.resolveCurrentOrDefaultModeKey = function () {
-  return this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY;
-};
-
-GameManager.prototype.resolveModeKeyOrDefault = function (modeKey) {
-  return typeof modeKey === "string" && modeKey ? modeKey : this.resolveCurrentOrDefaultModeKey();
-};
-
 GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString) {
   var parseReplayImportEnvelopeCore = this.callCoreReplayImportRuntime(
     "parseReplayImportEnvelope",
     [{
       trimmedReplayString: trimmedReplayString,
-      fallbackModeKey: this.resolveCurrentOrDefaultModeKey(),
+      fallbackModeKey: this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY,
       v4Prefix: GameManager.REPLAY_V4_PREFIX
     }]
   );
@@ -1482,28 +1474,22 @@ var GAME_MANAGER_CORE_RUNTIME_ACCESSOR_DEFS = [
   ]
 ];
 
-GameManager.prototype.buildResolveSavedGameStateStorageKeyCoreArgs = function (keyPrefix, modeKey) {
-  return [{
-    modeKey: modeKey,
-    currentModeKey: this.modeKey,
-    currentMode: this.mode,
-    defaultModeKey: GameManager.DEFAULT_MODE_KEY,
-    keyPrefix: typeof keyPrefix === "string" ? keyPrefix : ""
-  }];
-};
-
-GameManager.prototype.resolveSavedGameStateStorageKeyFallback = function (keyPrefix, modeKey) {
-  var key = this.resolveModeKeyOrDefault(modeKey);
-  return (typeof keyPrefix === "string" ? keyPrefix : "") + key;
-};
-
 GameManager.prototype.resolveSavedGameStateStorageKey = function (keyPrefix, modeKey) {
   var resolveSavedGameStateStorageKeyCore = this.callCoreStorageRuntime(
     "resolveSavedGameStateStorageKey",
-    this.buildResolveSavedGameStateStorageKeyCoreArgs(keyPrefix, modeKey)
+    [{
+      modeKey: modeKey,
+      currentModeKey: this.modeKey,
+      currentMode: this.mode,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+      keyPrefix: typeof keyPrefix === "string" ? keyPrefix : ""
+    }]
   );
   return this.resolveCoreStringCallOrFallback(resolveSavedGameStateStorageKeyCore, function () {
-    return this.resolveSavedGameStateStorageKeyFallback(keyPrefix, modeKey);
+    var key = (typeof modeKey === "string" && modeKey)
+      ? modeKey
+      : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
+    return (typeof keyPrefix === "string" ? keyPrefix : "") + key;
   });
 };
 
@@ -1920,7 +1906,10 @@ GameManager.prototype.resolveWindowNameSavedMap = function (raw, marker) {
 
 GameManager.prototype.resolveSavedPayloadFromWindowNameMap = function (map, modeKey) {
   if (!map || typeof map !== "object") return null;
-  var payload = map[this.resolveModeKeyOrDefault(modeKey)];
+  var key = (typeof modeKey === "string" && modeKey)
+    ? modeKey
+    : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
+  var payload = map[key];
   if (!payload || typeof payload !== "object") return null;
   return payload;
 };
@@ -1972,7 +1961,9 @@ GameManager.prototype.resolveWindowNameMapAndKeptParts = function (parts, marker
 
 GameManager.prototype.applySavedPayloadToWindowNameMap = function (map, modeKey, payload) {
   var targetMap = map && typeof map === "object" ? map : {};
-  var key = this.resolveModeKeyOrDefault(modeKey);
+  var key = (typeof modeKey === "string" && modeKey)
+    ? modeKey
+    : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
   if (!payload || typeof payload !== "object") {
     delete targetMap[key];
   } else {
