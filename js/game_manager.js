@@ -2828,20 +2828,26 @@ GameManager.prototype.buildAdapterMoveResultDetail = function (meta, bridge, tim
   };
 };
 
-GameManager.prototype.syncAdapterSnapshotAfterMoveResult = function (bridge, detail, timestamp) {
-  var syncAdapterSnapshotBridge = this.resolveLegacyAdapterBridgeMethod("syncAdapterSnapshot");
-  if (!syncAdapterSnapshotBridge) return;
-  var snapshot = {
-    adapterMode: this.resolveAdapterBridgeMode(bridge),
-    modeKey: this.resolveAdapterBridgeModeKey(bridge) || "unknown",
-    updatedAt: timestamp,
-    lastMoveResult: detail
-  };
-  syncAdapterSnapshotBridge.method.call(bridge, snapshot);
-  bridge.adapterSnapshot = snapshot;
-};
+GameManager.prototype.publishAdapterMoveResult = function (meta) {
+  var emitMoveResultBridge = this.resolveLegacyAdapterBridgeMethod("emitMoveResult");
+  if (!emitMoveResultBridge) return false;
+  var bridge = emitMoveResultBridge.bridge;
+  var timestamp = Date.now();
+  var detail = this.buildAdapterMoveResultDetail(meta, bridge, timestamp);
+  emitMoveResultBridge.method.call(bridge, detail);
 
-GameManager.prototype.syncAdapterParityAfterMoveResult = function (bridge) {
+  var syncAdapterSnapshotBridge = this.resolveLegacyAdapterBridgeMethod("syncAdapterSnapshot");
+  if (syncAdapterSnapshotBridge) {
+    var snapshot = {
+      adapterMode: this.resolveAdapterBridgeMode(bridge),
+      modeKey: this.resolveAdapterBridgeModeKey(bridge) || "unknown",
+      updatedAt: timestamp,
+      lastMoveResult: detail
+    };
+    syncAdapterSnapshotBridge.method.call(bridge, snapshot);
+    bridge.adapterSnapshot = snapshot;
+  }
+
   var readAdapterParityReportBridge = this.resolveLegacyAdapterBridgeMethod("readAdapterParityReport");
   if (readAdapterParityReportBridge) {
     bridge.adapterParityReport = readAdapterParityReportBridge.method.call(bridge);
@@ -2862,25 +2868,6 @@ GameManager.prototype.syncAdapterParityAfterMoveResult = function (bridge) {
   if (readAdapterParityABDiffBridge) {
     bridge.adapterParityABDiff = readAdapterParityABDiffBridge.method.call(bridge);
   }
-};
-
-GameManager.prototype.emitAdapterMoveResultDetail = function (emitMoveResultBridge, bridge, detail) {
-  emitMoveResultBridge.method.call(bridge, detail);
-};
-
-GameManager.prototype.finalizeAdapterMoveResultSync = function (bridge, detail, timestamp) {
-  this.syncAdapterSnapshotAfterMoveResult(bridge, detail, timestamp);
-  this.syncAdapterParityAfterMoveResult(bridge);
-};
-
-GameManager.prototype.publishAdapterMoveResult = function (meta) {
-  var emitMoveResultBridge = this.resolveLegacyAdapterBridgeMethod("emitMoveResult");
-  if (!emitMoveResultBridge) return false;
-  var bridge = emitMoveResultBridge.bridge;
-  var timestamp = Date.now();
-  var detail = this.buildAdapterMoveResultDetail(meta, bridge, timestamp);
-  this.emitAdapterMoveResultDetail(emitMoveResultBridge, bridge, detail);
-  this.finalizeAdapterMoveResultSync(bridge, detail, timestamp);
   return true;
 };
 
