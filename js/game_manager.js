@@ -9125,39 +9125,24 @@ GameManager.prototype.normalizeReplayControlState = function (state) {
   return this.isNonArrayObject(state) ? state : {};
 };
 
-GameManager.prototype.applyReplayPauseState = function (pauseState) {
-  var state = this.normalizeReplayControlState(pauseState);
-  this.isPaused = state.isPaused !== false;
-  this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
-};
-
 GameManager.prototype.pause = function () {
-    var pauseState = this.computeReplayPauseState();
-    this.applyReplayPauseState(pauseState);
+    var state = this.normalizeReplayControlState(this.computeReplayPauseState());
+    this.isPaused = state.isPaused !== false;
+    this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
 };
 
-GameManager.prototype.applyReplayResumeState = function (resumeState) {
-    var state = this.normalizeReplayControlState(resumeState);
+GameManager.prototype.resume = function () {
+    var state = this.normalizeReplayControlState(this.computeReplayResumeState());
     this.isPaused = !!state.isPaused ? true : false;
     this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
     this.scheduleReplayInterval(state.delay);
 };
 
-GameManager.prototype.resume = function () {
-    var resumeState = this.computeReplayResumeState();
-    this.applyReplayResumeState(resumeState);
-};
-
-GameManager.prototype.applyReplaySpeedState = function (speedState) {
-    var state = this.normalizeReplayControlState(speedState);
+GameManager.prototype.setSpeed = function (multiplier) {
+    var state = this.normalizeReplayControlState(this.computeReplaySpeedState(multiplier));
     this.replayDelay = state.replayDelay;
     if (!state.shouldResume) return;
     this.resume(); // Restart interval with new delay
-};
-
-GameManager.prototype.setSpeed = function (multiplier) {
-    var speedState = this.computeReplaySpeedState(multiplier);
-    this.applyReplaySpeedState(speedState);
 };
 
 GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
