@@ -1101,12 +1101,6 @@ GameManager.prototype.readSavedPayloadByKey = function (key) {
   return best;
 };
 
-GameManager.prototype.normalizeWindowNameSavedPayloadCoreValue = function (payloadByCore) {
-  if (this.isNonArrayObject(payloadByCore)) return payloadByCore;
-  if (payloadByCore === null) return null;
-  return undefined;
-};
-
 GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
   var windowLike = this.getWindowLike();
   var readSavedPayloadFromWindowNameCore = this.callCoreStorageRuntime(
@@ -1122,7 +1116,11 @@ GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     readSavedPayloadFromWindowNameCore,
-    this.normalizeWindowNameSavedPayloadCoreValue
+    function (payloadByCore) {
+      if (this.isNonArrayObject(payloadByCore)) return payloadByCore;
+      if (payloadByCore === null) return null;
+      return undefined;
+    }
   );
   if (typeof normalizedByCore !== "undefined") return normalizedByCore;
   var raw = this.readWindowNameRaw();
@@ -1176,27 +1174,31 @@ GameManager.prototype.decodeWindowNameSavedMapPayload = function (encoded) {
   }
 };
 
-GameManager.prototype.encodeWindowNameSavedMap = function (map) {
-  try {
-    return encodeURIComponent(JSON.stringify(map));
-  } catch (_errEncode) {
-    return null;
-  }
-};
-
-GameManager.prototype.writeWindowNameRaw = function (windowNameValue) {
+GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) {
   var windowLike = this.getWindowLike();
+  var writeSavedPayloadToWindowNameCore = this.callCoreStorageRuntime(
+    "writeSavedPayloadToWindowName",
+    [Object.assign(
+      {},
+      {
+        windowLike: windowLike,
+        windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
+        modeKey: modeKey,
+        currentModeKey: this.modeKey,
+        currentMode: this.mode,
+        defaultModeKey: GameManager.DEFAULT_MODE_KEY
+      },
+      { payload: payload }
+    )]
+  );
+  var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
+    writeSavedPayloadToWindowNameCore,
+    function (writtenByCore) {
+      return typeof writtenByCore === "boolean" ? writtenByCore : undefined;
+    }
+  );
+  if (typeof normalizedByCore !== "undefined") return normalizedByCore;
   if (!windowLike) return false;
-  try {
-    windowLike.name = windowNameValue;
-    return true;
-  } catch (_errWrite) {
-    return false;
-  }
-};
-
-GameManager.prototype.writeWindowNameSavedPayloadFallback = function (modeKey, payload) {
-  if (!this.getWindowLike()) return false;
   var marker = this.resolveWindowNameSavedPayloadMarker();
   var raw = this.readWindowNameRaw();
   var parts = raw ? raw.split("&") : [];
@@ -1224,43 +1226,23 @@ GameManager.prototype.writeWindowNameSavedPayloadFallback = function (modeKey, p
   } else {
     map[key] = payload;
   }
-  var nextMap = map;
-  var encodedMap = this.encodeWindowNameSavedMap(nextMap);
+  var encodedMap = null;
+  try {
+    encodedMap = encodeURIComponent(JSON.stringify(map));
+  } catch (_errEncode) {
+    return false;
+  }
   if (typeof encodedMap !== "string") return false;
   var nextParts = kept.slice();
   nextParts.push(marker + encodedMap);
   var nextWindowName = nextParts.join("&");
   if (typeof nextWindowName !== "string") return false;
-  return this.writeWindowNameRaw(nextWindowName);
-};
-
-GameManager.prototype.normalizeWriteWindowNameSavedPayloadCoreValue = function (writtenByCore) {
-  return typeof writtenByCore === "boolean" ? writtenByCore : undefined;
-};
-
-GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) {
-  var windowLike = this.getWindowLike();
-  var writeSavedPayloadToWindowNameCore = this.callCoreStorageRuntime(
-    "writeSavedPayloadToWindowName",
-    [Object.assign(
-      {},
-      {
-        windowLike: windowLike,
-        windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
-        modeKey: modeKey,
-        currentModeKey: this.modeKey,
-        currentMode: this.mode,
-        defaultModeKey: GameManager.DEFAULT_MODE_KEY
-      },
-      { payload: payload }
-    )]
-  );
-  var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
-    writeSavedPayloadToWindowNameCore,
-    this.normalizeWriteWindowNameSavedPayloadCoreValue
-  );
-  if (typeof normalizedByCore !== "undefined") return normalizedByCore;
-  return this.writeWindowNameSavedPayloadFallback(modeKey, payload);
+  try {
+    windowLike.name = nextWindowName;
+    return true;
+  } catch (_errWrite) {
+    return false;
+  }
 };
 
 GameManager.prototype.resolveWindowPathname = function () {
