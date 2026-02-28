@@ -3964,22 +3964,6 @@ GameManager.prototype.applyProgressiveCapped64UnlockCoreResult = function (resol
   }
 };
 
-GameManager.prototype.canApplyProgressiveCapped64UnlockFallback = function (
-  isProgressiveCapped64Mode,
-  value,
-  unlockedState
-) {
-  if (!isProgressiveCapped64Mode) return false;
-  if (!this.isProgressiveCapped64UnlockValue(value)) return false;
-  return !unlockedState[String(value)];
-};
-
-GameManager.prototype.applyProgressiveCapped64UnlockFallback = function (value, unlockedState) {
-  unlockedState[String(value)] = true;
-  this.capped64Unlocked = unlockedState;
-  this.setCapped64RowVisible(value, true);
-};
-
 GameManager.prototype.unlockProgressiveCapped64Row = function (value) {
   var unlockedState = this.resolveProgressiveCapped64UnlockedState(this.capped64Unlocked);
   var cappedState = this.resolveCappedModeState();
@@ -3995,8 +3979,12 @@ GameManager.prototype.unlockProgressiveCapped64Row = function (value) {
     return;
   }
 
-  if (!this.canApplyProgressiveCapped64UnlockFallback(isProgressiveCapped64Mode, value, unlockedState)) return;
-  this.applyProgressiveCapped64UnlockFallback(value, unlockedState);
+  if (!isProgressiveCapped64Mode) return;
+  if (!this.isProgressiveCapped64UnlockValue(value)) return;
+  if (unlockedState[String(value)]) return;
+  unlockedState[String(value)] = true;
+  this.capped64Unlocked = unlockedState;
+  this.setCapped64RowVisible(value, true);
 };
 
 GameManager.prototype.repositionCappedTimerContainer = function () {
@@ -4038,36 +4026,24 @@ GameManager.prototype.setAllTimerRowsVisibleState = function (visible, keepSpace
   }
 };
 
-GameManager.prototype.applyNonCappedRowVisibilityFallback = function () {
-  this.setAllTimerRowsVisibleState(true, false);
-};
-
-GameManager.prototype.applyProgressiveCappedRowVisibilityFallback = function () {
-  this.setAllTimerRowsVisibleState(false, true);
-  this.resetProgressiveCapped64Rows();
-};
-
-GameManager.prototype.applyTargetCappedRowVisibilityFallback = function (cap) {
-  for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
-    var value = GameManager.TIMER_SLOT_IDS[i];
-    this.setTimerRowVisibleState(value, value <= cap, true);
-  }
-};
-
 GameManager.prototype.shouldResetProgressiveRowsAfterPlan = function (cappedState) {
   return !!(cappedState.isCappedMode && cappedState.isProgressiveCapped64Mode);
 };
 
 GameManager.prototype.applyCappedRowVisibilityFallbackByState = function (cappedState) {
   if (!cappedState.isCappedMode) {
-    this.applyNonCappedRowVisibilityFallback();
+    this.setAllTimerRowsVisibleState(true, false);
     return;
   }
   if (cappedState.isProgressiveCapped64Mode) {
-    this.applyProgressiveCappedRowVisibilityFallback();
+    this.setAllTimerRowsVisibleState(false, true);
+    this.resetProgressiveCapped64Rows();
     return;
   }
-  this.applyTargetCappedRowVisibilityFallback(cappedState.cappedTargetValue);
+  for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
+    var value = GameManager.TIMER_SLOT_IDS[i];
+    this.setTimerRowVisibleState(value, value <= cappedState.cappedTargetValue, true);
+  }
 };
 
 GameManager.prototype.applyCappedRowVisibility = function () {
@@ -4234,18 +4210,14 @@ GameManager.prototype.resetCappedPlaceholderRows = function (cappedState) {
   }
 };
 
-GameManager.prototype.resolveCappedPlaceholderSlotValueFromFallback = function (repeatCount, values) {
-  var placeholderIndex = repeatCount - 2; // x2 => first placeholder row
-  if (placeholderIndex < 0 || placeholderIndex >= values.length) return null;
-  var slotValue = Number(values[placeholderIndex]);
-  if (!Number.isInteger(slotValue) || slotValue <= 0) return null;
-  return slotValue;
-};
-
 GameManager.prototype.resolveCappedPlaceholderSlotValue = function (repeatCount, values, coreSlotValue) {
   var slotValue = Number(coreSlotValue);
   if (Number.isInteger(slotValue) && slotValue > 0) return slotValue;
-  return this.resolveCappedPlaceholderSlotValueFromFallback(repeatCount, values);
+  var placeholderIndex = repeatCount - 2; // x2 => first placeholder row
+  if (placeholderIndex < 0 || placeholderIndex >= values.length) return null;
+  slotValue = Number(values[placeholderIndex]);
+  if (!Number.isInteger(slotValue) || slotValue <= 0) return null;
+  return slotValue;
 };
 
 GameManager.prototype.applyCappedPlaceholderLegend = function (legend, labelText, cappedTargetValue) {
