@@ -1146,17 +1146,6 @@ GameManager.prototype.cloneBoardMatrix = function (board) {
   return out;
 };
 
-GameManager.prototype.buildUnavailableCoreRuntimeCallResult = function () {
-  return {
-    available: false,
-    value: null
-  };
-};
-
-GameManager.prototype.normalizeCoreRuntimeCallArgs = function (args) {
-  return Array.isArray(args) ? args : [];
-};
-
 GameManager.prototype.resolveCoreObjectCallValueOrNull = function (coreCallResult) {
   if (!this.isCoreCallAvailable(coreCallResult)) return null;
   return coreCallResult.value || {};
@@ -1264,10 +1253,15 @@ GameManager.prototype.resolveCoreRuntimeCallerFromResolver = function (resolverM
 
 GameManager.prototype.callCoreRuntimeMethod = function (resolverMethodName, methodName, args) {
   var runtimeMethod = this.resolveCoreRuntimeCallerFromResolver(resolverMethodName, methodName);
-  if (typeof runtimeMethod !== "function") return this.buildUnavailableCoreRuntimeCallResult();
+  if (typeof runtimeMethod !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
   return {
     available: true,
-    value: runtimeMethod.apply(null, this.normalizeCoreRuntimeCallArgs(args))
+    value: runtimeMethod.apply(null, Array.isArray(args) ? args : [])
   };
 };
 
