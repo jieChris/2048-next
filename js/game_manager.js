@@ -4083,10 +4083,6 @@ GameManager.prototype.buildNormalizeUndoStackEntryCoreInput = function (source, 
   };
 };
 
-GameManager.prototype.buildNormalizeUndoStackEntryCoreArgs = function (source, fallbackState) {
-  return [this.buildNormalizeUndoStackEntryCoreInput(source, fallbackState)];
-};
-
 GameManager.prototype.resolveUndoStackEntrySourceFromCore = function (computed, fallbackSource) {
   return this.isNonArrayObject(computed) ? computed : fallbackSource;
 };
@@ -4097,7 +4093,7 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
   var source = this.resolveUndoStackEntrySource(entry);
   var normalizeUndoStackEntryCore = this.callCoreUndoStackEntryRuntime(
     "normalizeUndoStackEntry",
-    this.buildNormalizeUndoStackEntryCoreArgs(source, fallbackState)
+    [this.buildNormalizeUndoStackEntryCoreInput(source, fallbackState)]
   );
   var sourceByCore = this.resolveNormalizedCoreValueOrUndefined(
     normalizeUndoStackEntryCore,
@@ -4135,24 +4131,20 @@ GameManager.prototype.buildUndoTileSnapshotFallback = function (tile, target) {
   };
 };
 
-GameManager.prototype.buildCreateUndoTileSnapshotCoreArgs = function (tile, target) {
-  return [{
-    tile: {
-      x: tile && typeof tile === "object" ? tile.x : null,
-      y: tile && typeof tile === "object" ? tile.y : null,
-      value: tile && typeof tile === "object" ? tile.value : null
-    },
-    target: {
-      x: target && typeof target === "object" ? target.x : null,
-      y: target && typeof target === "object" ? target.y : null
-    }
-  }];
-};
-
 GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
   var createUndoTileSnapshotCore = this.callCoreUndoTileSnapshotRuntime(
     "createUndoTileSnapshot",
-    this.buildCreateUndoTileSnapshotCoreArgs(tile, target)
+    [{
+      tile: {
+        x: tile && typeof tile === "object" ? tile.x : null,
+        y: tile && typeof tile === "object" ? tile.y : null,
+        value: tile && typeof tile === "object" ? tile.value : null
+      },
+      target: {
+        x: target && typeof target === "object" ? target.x : null,
+        y: target && typeof target === "object" ? target.y : null
+      }
+    }]
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     createUndoTileSnapshotCore,
@@ -4198,18 +4190,6 @@ GameManager.prototype.normalizeUndoRestoreTileFromCore = function (computed) {
   return null;
 };
 
-GameManager.prototype.buildCreateUndoRestoreTileCoreArgs = function (source, previous) {
-  return [{
-    x: source.x,
-    y: source.y,
-    value: source.value,
-    previousPosition: {
-      x: previous.x,
-      y: previous.y
-    }
-  }];
-};
-
 GameManager.prototype.createUndoRestoreTile = function (snapshot) {
   var normalized = this.normalizeUndoRestoreTileSource(snapshot);
   var source = normalized.source;
@@ -4218,7 +4198,15 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
 
   var createUndoRestoreTileCore = this.callCoreUndoTileRestoreRuntime(
     "createUndoRestoreTile",
-    this.buildCreateUndoRestoreTileCoreArgs(source, previous)
+    [{
+      x: source.x,
+      y: source.y,
+      value: source.value,
+      previousPosition: {
+        x: previous.x,
+        y: previous.y
+      }
+    }]
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     createUndoRestoreTileCore,
@@ -4247,17 +4235,13 @@ GameManager.prototype.filterUndoRestorePayloadTiles = function (source) {
   return tiles;
 };
 
-GameManager.prototype.buildComputeUndoRestorePayloadCoreArgs = function (prev) {
-  return [{
-    prev: prev || {},
-    fallbackScore: this.score
-  }];
-};
-
 GameManager.prototype.computeUndoRestorePayload = function (prev) {
   var computeUndoRestorePayloadCore = this.callCoreUndoRestorePayloadRuntime(
     "computeUndoRestorePayload",
-    this.buildComputeUndoRestorePayloadCoreArgs(prev)
+    [{
+      prev: prev || {},
+      fallbackScore: this.score
+    }]
   );
   return this.resolveCoreObjectCallOrFallback(computeUndoRestorePayloadCore, function () {
     var source = prev && typeof prev === "object" ? prev : {};
@@ -4315,10 +4299,6 @@ GameManager.prototype.buildComputeMergeEffectsCoreInput = function (mergedValue,
   };
 };
 
-GameManager.prototype.buildComputeMergeEffectsCoreArgs = function (mergedValue, cappedState) {
-  return [this.buildComputeMergeEffectsCoreInput(mergedValue, cappedState)];
-};
-
 GameManager.prototype.resolveComputeMergeEffectsFallbackContext = function (mergedValue, cappedState) {
   var value = Number(mergedValue);
   var cappedTarget = Number(cappedState.cappedTargetValue);
@@ -4339,7 +4319,7 @@ GameManager.prototype.computeMergeEffects = function (mergedValue) {
   var cappedState = this.resolveCappedModeState();
   var computeMergeEffectsCore = this.callCoreMergeEffectsRuntime(
     "computeMergeEffects",
-    this.buildComputeMergeEffectsCoreArgs(mergedValue, cappedState)
+    [this.buildComputeMergeEffectsCoreInput(mergedValue, cappedState)]
   );
   return this.resolveCoreObjectCallOrFallback(computeMergeEffectsCore, function () {
     var fallbackContext = this.resolveComputeMergeEffectsFallbackContext(mergedValue, cappedState);
@@ -4381,14 +4361,10 @@ GameManager.prototype.resolveDefaultSpawnTableByRuleset = function (ruleset) {
   return [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
 };
 
-GameManager.prototype.buildNormalizeSpawnTableCoreArgs = function (spawnTable, ruleset) {
-  return [spawnTable, ruleset];
-};
-
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
   var normalizeSpawnTableCore = this.callCoreRulesRuntime(
     "normalizeSpawnTable",
-    this.buildNormalizeSpawnTableCoreArgs(spawnTable, ruleset)
+    [spawnTable, ruleset]
   );
   return this.resolveNormalizedCoreValueOrFallback(normalizeSpawnTableCore, function (coreValue) {
     return Array.isArray(coreValue) ? coreValue : undefined;
@@ -4427,14 +4403,10 @@ GameManager.prototype.computePow2TheoreticalMaxTile = function (cells) {
   return Math.pow(2, cells + 1);
 };
 
-GameManager.prototype.buildGetTheoreticalMaxTileCoreArgs = function (width, height, ruleset) {
-  return [width, height, ruleset];
-};
-
 GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) {
   var getTheoreticalMaxTileCore = this.callCoreRulesRuntime(
     "getTheoreticalMaxTile",
-    this.buildGetTheoreticalMaxTileCoreArgs(width, height, ruleset)
+    [width, height, ruleset]
   );
   return this.resolveNormalizedCoreValueOrFallbackAllowNull(getTheoreticalMaxTileCore, function (coreValue) {
     if (coreValue === null) return null;
