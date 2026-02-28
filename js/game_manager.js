@@ -462,9 +462,9 @@ GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
     "decodeReplayV4Actions",
     this.buildDecodeReplayV4ActionsCoreArgs(actionsEncoded)
   );
-  var decodeReplayV4ActionsByCore = this.resolveCoreObjectCallValueOrNull(decodeReplayV4ActionsCore);
-  if (decodeReplayV4ActionsByCore) return decodeReplayV4ActionsByCore;
-  return this.decodeReplayV4ActionsFallback(actionsEncoded);
+  return this.resolveCoreObjectCallOrFallback(decodeReplayV4ActionsCore, function () {
+    return this.decodeReplayV4ActionsFallback(actionsEncoded);
+  });
 };
 
 GameManager.prototype.resolveCurrentOrDefaultModeKey = function () {
@@ -792,9 +792,9 @@ GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
     "planReplayDispatch",
     this.buildPlanReplayDispatchCoreArgs(resolvedExecution)
   );
-  var planReplayDispatchByCore = this.resolveCoreObjectCallValueOrNull(planReplayDispatchCore);
-  if (planReplayDispatchByCore) return planReplayDispatchByCore;
-  return this.planReplayDispatchFallback(resolvedExecution);
+  return this.resolveCoreObjectCallOrFallback(planReplayDispatchCore, function () {
+    return this.planReplayDispatchFallback(resolvedExecution);
+  });
 };
 
 GameManager.prototype.buildReplayDispatchPlan = function (method, args) {
@@ -868,9 +868,9 @@ GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
     "planReplayStep",
     this.buildPlanReplayStepCoreArgs(action, spawnAtIndex)
   );
-  var planReplayStepByCore = this.resolveCoreObjectCallValueOrNull(planReplayStepCore);
-  if (planReplayStepByCore) return planReplayStepByCore;
-  return this.planReplayStepFallback(action, spawnAtIndex);
+  return this.resolveCoreObjectCallOrFallback(planReplayStepCore, function () {
+    return this.planReplayStepFallback(action, spawnAtIndex);
+  });
 };
 
 GameManager.prototype.shouldInjectForcedSpawnFallback = function (action) {
@@ -898,9 +898,9 @@ GameManager.prototype.planReplayStepExecution = function () {
     "planReplayStepExecution",
     this.buildPlanReplayStepExecutionCoreArgs()
   );
-  var planReplayStepExecutionByCore = this.resolveCoreObjectCallValueOrNull(planReplayStepExecutionCore);
-  if (planReplayStepExecutionByCore) return planReplayStepExecutionByCore;
-  return this.planReplayStepExecutionFallback();
+  return this.resolveCoreObjectCallOrFallback(planReplayStepExecutionCore, function () {
+    return this.planReplayStepExecutionFallback();
+  });
 };
 
 GameManager.prototype.resolveReplaySpawnAtCurrentIndex = function () {
@@ -931,9 +931,9 @@ GameManager.prototype.computeReplayPauseState = function () {
     "computeReplayPauseState",
     this.buildComputeReplayPauseStateCoreArgs()
   );
-  var computeReplayPauseStateByCore = this.resolveCoreObjectCallValueOrNull(computeReplayPauseStateCore);
-  if (computeReplayPauseStateByCore) return computeReplayPauseStateByCore;
-  return this.computeReplayPauseStateFallback();
+  return this.resolveCoreObjectCallOrFallback(computeReplayPauseStateCore, function () {
+    return this.computeReplayPauseStateFallback();
+  });
 };
 
 GameManager.prototype.getReplayPauseDefaults = function () {
@@ -958,9 +958,9 @@ GameManager.prototype.computeReplayResumeState = function () {
     "computeReplayResumeState",
     this.buildComputeReplayResumeStateCoreArgs()
   );
-  var computeReplayResumeStateByCore = this.resolveCoreObjectCallValueOrNull(computeReplayResumeStateCore);
-  if (computeReplayResumeStateByCore) return computeReplayResumeStateByCore;
-  return this.computeReplayResumeStateFallback();
+  return this.resolveCoreObjectCallOrFallback(computeReplayResumeStateCore, function () {
+    return this.computeReplayResumeStateFallback();
+  });
 };
 
 GameManager.prototype.resolveReplayResumeDelayFallback = function () {
@@ -988,9 +988,9 @@ GameManager.prototype.computeReplaySpeedState = function (multiplier) {
     "computeReplaySpeedState",
     this.buildComputeReplaySpeedStateCoreArgs(multiplier)
   );
-  var computeReplaySpeedStateByCore = this.resolveCoreObjectCallValueOrNull(computeReplaySpeedStateCore);
-  if (computeReplaySpeedStateByCore) return computeReplaySpeedStateByCore;
-  return this.computeReplaySpeedStateFallback(multiplier);
+  return this.resolveCoreObjectCallOrFallback(computeReplaySpeedStateCore, function () {
+    return this.computeReplaySpeedStateFallback(multiplier);
+  });
 };
 
 GameManager.prototype.resolveReplaySpeedDelayFallback = function (multiplier) {
@@ -1034,9 +1034,9 @@ GameManager.prototype.computeReplayEndState = function () {
     "computeReplayEndState",
     this.buildComputeReplayEndStateCoreArgs()
   );
-  var computeReplayEndStateByCore = this.resolveCoreObjectCallValueOrNull(computeReplayEndStateCore);
-  if (computeReplayEndStateByCore) return computeReplayEndStateByCore;
-  return this.computeReplayEndStateFallback();
+  return this.resolveCoreObjectCallOrFallback(computeReplayEndStateCore, function () {
+    return this.computeReplayEndStateFallback();
+  });
 };
 
 GameManager.prototype.computeReplayEndStateFallback = function () {
@@ -1058,9 +1058,9 @@ GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, repla
     "planReplayTickBoundary",
     this.buildPlanReplayTickBoundaryCoreArgs(shouldStopAtTick, replayEndState)
   );
-  var planReplayTickBoundaryByCore = this.resolveCoreObjectCallValueOrNull(planReplayTickBoundaryCore);
-  if (planReplayTickBoundaryByCore) return planReplayTickBoundaryByCore;
-  return this.planReplayTickBoundaryFallback(shouldStopAtTick, replayEndState);
+  return this.resolveCoreObjectCallOrFallback(planReplayTickBoundaryCore, function () {
+    return this.planReplayTickBoundaryFallback(shouldStopAtTick, replayEndState);
+  });
 };
 
 GameManager.prototype.buildReplayTickBoundaryPlan = function (shouldStop, shouldPause, shouldApplyReplayMode, replayMode) {
@@ -1162,9 +1162,9 @@ GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
     "planReplaySeekRewind",
     this.buildPlanReplaySeekRewindCoreArgs(targetIndex)
   );
-  var planReplaySeekRewindByCore = this.resolveCoreObjectCallValueOrNull(planReplaySeekRewindCore);
-  if (planReplaySeekRewindByCore) return planReplaySeekRewindByCore;
-  return this.planReplaySeekRewindFallback(targetIndex);
+  return this.resolveCoreObjectCallOrFallback(planReplaySeekRewindCore, function () {
+    return this.planReplaySeekRewindFallback(targetIndex);
+  });
 };
 
 GameManager.prototype.shouldReplaySeekRewindFallback = function (targetIndex) {
@@ -1216,9 +1216,9 @@ GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
     "planReplaySeekRestart",
     this.buildPlanReplaySeekRestartCoreArgs(rewindPlan)
   );
-  var planReplaySeekRestartByCore = this.resolveCoreObjectCallValueOrNull(planReplaySeekRestartCore);
-  if (planReplaySeekRestartByCore) return planReplaySeekRestartByCore;
-  return this.planReplaySeekRestartFallback(rewindPlan);
+  return this.resolveCoreObjectCallOrFallback(planReplaySeekRestartCore, function () {
+    return this.planReplaySeekRestartFallback(rewindPlan);
+  });
 };
 
 GameManager.prototype.buildReplaySeekRestartPlan = function (
@@ -1305,6 +1305,13 @@ GameManager.prototype.resolveCoreObjectCallValueOrNull = function (coreCallResul
   return coreCallResult.value || {};
 };
 
+GameManager.prototype.resolveCoreObjectCallOrFallback = function (coreCallResult, fallbackResolver) {
+  var coreValue = this.resolveCoreObjectCallValueOrNull(coreCallResult);
+  if (coreValue) return coreValue;
+  if (typeof fallbackResolver === "function") return fallbackResolver.call(this);
+  return null;
+};
+
 GameManager.prototype.isCoreCallAvailable = function (coreCallResult) {
   return !!(coreCallResult && coreCallResult.available === true);
 };
@@ -1339,8 +1346,7 @@ GameManager.prototype.resolveCoreRawCallValueOrUndefined = function (coreCallRes
 };
 
 GameManager.prototype.resolveCoreRawCallOrFallback = function (coreCallResult, fallbackResolver) {
-  var coreValue = this.resolveCoreRawCallValueOrUndefined(coreCallResult);
-  if (typeof coreValue !== "undefined") return coreValue;
+  if (this.isCoreCallAvailable(coreCallResult)) return coreCallResult.value;
   if (typeof fallbackResolver === "function") return fallbackResolver.call(this);
   return undefined;
 };
@@ -4208,9 +4214,9 @@ GameManager.prototype.computePostMoveRecord = function (direction) {
     "computePostMoveRecord",
     this.buildComputePostMoveRecordCoreArgs(direction)
   );
-  var computePostMoveRecordByCore = this.resolveCoreObjectCallValueOrNull(computePostMoveRecordCore);
-  if (computePostMoveRecordByCore) return computePostMoveRecordByCore;
-  return this.resolvePostMoveRecordFallback(direction);
+  return this.resolveCoreObjectCallOrFallback(computePostMoveRecordCore, function () {
+    return this.resolvePostMoveRecordFallback(direction);
+  });
 };
 
 GameManager.prototype.buildPostUndoRecordPlan = function (
@@ -4263,9 +4269,9 @@ GameManager.prototype.computePostUndoRecord = function (direction) {
     "computePostUndoRecord",
     this.buildComputePostUndoRecordCoreArgs(direction)
   );
-  var computePostUndoRecordByCore = this.resolveCoreObjectCallValueOrNull(computePostUndoRecordCore);
-  if (computePostUndoRecordByCore) return computePostUndoRecordByCore;
-  return this.resolvePostUndoRecordFallback();
+  return this.resolveCoreObjectCallOrFallback(computePostUndoRecordCore, function () {
+    return this.resolvePostUndoRecordFallback();
+  });
 };
 
 GameManager.prototype.resolveUndoFallbackScore = function () {
@@ -4348,13 +4354,12 @@ GameManager.prototype.computeUndoRestoreState = function (prev) {
     "computeUndoRestoreState",
     this.buildComputeUndoRestoreStateCoreArgs(prev)
   );
-  var computeUndoRestoreStateByCore = this.resolveCoreObjectCallValueOrNull(computeUndoRestoreStateCore);
-  if (computeUndoRestoreStateByCore) return computeUndoRestoreStateByCore;
-
-  var source = prev && typeof prev === "object" ? prev : {};
-  var fallbackState = this.getUndoStateFallbackValues();
-  var undoBase = this.resolveUndoRestoreFallbackUndoBase(source, fallbackState.undoUsed);
-  return this.buildUndoRestoreStateFallback(source, undoBase);
+  return this.resolveCoreObjectCallOrFallback(computeUndoRestoreStateCore, function () {
+    var source = prev && typeof prev === "object" ? prev : {};
+    var fallbackState = this.getUndoStateFallbackValues();
+    var undoBase = this.resolveUndoRestoreFallbackUndoBase(source, fallbackState.undoUsed);
+    return this.buildUndoRestoreStateFallback(source, undoBase);
+  });
 };
 
 GameManager.prototype.buildUndoSnapshotFallbackState = function (fallbackState) {
@@ -4714,16 +4719,15 @@ GameManager.prototype.computeUndoRestorePayload = function (prev) {
     "computeUndoRestorePayload",
     this.buildComputeUndoRestorePayloadCoreArgs(prev)
   );
-  var computeUndoRestorePayloadByCore = this.resolveCoreObjectCallValueOrNull(computeUndoRestorePayloadCore);
-  if (computeUndoRestorePayloadByCore) return computeUndoRestorePayloadByCore;
-
-  var source = prev && typeof prev === "object" ? prev : {};
-  var score = this.resolveUndoRestorePayloadFallbackScore(source);
-  var tiles = this.filterUndoRestorePayloadTiles(source);
-  return {
-    score: score,
-    tiles: tiles
-  };
+  return this.resolveCoreObjectCallOrFallback(computeUndoRestorePayloadCore, function () {
+    var source = prev && typeof prev === "object" ? prev : {};
+    var score = this.resolveUndoRestorePayloadFallbackScore(source);
+    var tiles = this.filterUndoRestorePayloadTiles(source);
+    return {
+      score: score,
+      tiles: tiles
+    };
+  });
 };
 
 GameManager.prototype.createDefaultMergeEffectsResult = function () {
@@ -4797,22 +4801,21 @@ GameManager.prototype.computeMergeEffects = function (mergedValue) {
     "computeMergeEffects",
     this.buildComputeMergeEffectsCoreArgs(mergedValue, cappedState)
   );
-  var computeMergeEffectsByCore = this.resolveCoreObjectCallValueOrNull(computeMergeEffectsCore);
-  if (computeMergeEffectsByCore) return computeMergeEffectsByCore;
+  return this.resolveCoreObjectCallOrFallback(computeMergeEffectsCore, function () {
+    var fallbackContext = this.resolveComputeMergeEffectsFallbackContext(mergedValue, cappedState);
+    var result = this.createDefaultMergeEffectsResult();
 
-  var fallbackContext = this.resolveComputeMergeEffectsFallbackContext(mergedValue, cappedState);
-  var result = this.createDefaultMergeEffectsResult();
-
-  if (this.shouldSkipComputeMergeEffectsFallback(fallbackContext.value)) return result;
-  this.applyMergeEffectsWinAndCappedFlags(
-    result,
-    fallbackContext.value,
-    fallbackContext.cappedMode,
-    fallbackContext.hasCappedTarget,
-    fallbackContext.cappedTarget
-  );
-  this.applyMergeEffectsTimerStampFlags(result, fallbackContext.value, fallbackContext.reached32k);
-  return result;
+    if (this.shouldSkipComputeMergeEffectsFallback(fallbackContext.value)) return result;
+    this.applyMergeEffectsWinAndCappedFlags(
+      result,
+      fallbackContext.value,
+      fallbackContext.cappedMode,
+      fallbackContext.hasCappedTarget,
+      fallbackContext.cappedTarget
+    );
+    this.applyMergeEffectsTimerStampFlags(result, fallbackContext.value, fallbackContext.reached32k);
+    return result;
+  });
 };
 
 GameManager.prototype.isValidSpawnTableItem = function (item) {
@@ -4847,10 +4850,11 @@ GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
     "normalizeSpawnTable",
     this.buildNormalizeSpawnTableCoreArgs(spawnTable, ruleset)
   );
-  if (this.isCoreCallAvailable(normalizeSpawnTableCore)) return normalizeSpawnTableCore.value;
-  var normalizedFallbackItems = this.normalizeSpawnTableFallbackItems(spawnTable);
-  if (normalizedFallbackItems.length > 0) return normalizedFallbackItems;
-  return this.resolveDefaultSpawnTableByRuleset(ruleset);
+  return this.resolveCoreRawCallOrFallback(normalizeSpawnTableCore, function () {
+    var normalizedFallbackItems = this.normalizeSpawnTableFallbackItems(spawnTable);
+    if (normalizedFallbackItems.length > 0) return normalizedFallbackItems;
+    return this.resolveDefaultSpawnTableByRuleset(ruleset);
+  });
 };
 
 GameManager.prototype.resolveTheoreticalMaxTileCellCount = function (width, height) {
@@ -4890,12 +4894,13 @@ GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) 
     "getTheoreticalMaxTile",
     this.buildGetTheoreticalMaxTileCoreArgs(width, height, ruleset)
   );
-  if (this.isCoreCallAvailable(getTheoreticalMaxTileCore)) return getTheoreticalMaxTileCore.value;
-  var cells = this.resolveTheoreticalMaxTileCellCount(width, height);
-  if (cells === null) return null;
-  return ruleset === "fibonacci"
-    ? this.computeFibonacciTheoreticalMaxTile(cells)
-    : this.computePow2TheoreticalMaxTile(cells);
+  return this.resolveCoreRawCallOrFallback(getTheoreticalMaxTileCore, function () {
+    var cells = this.resolveTheoreticalMaxTileCellCount(width, height);
+    if (cells === null) return null;
+    return ruleset === "fibonacci"
+      ? this.computeFibonacciTheoreticalMaxTile(cells)
+      : this.computePow2TheoreticalMaxTile(cells);
+  });
 };
 
 GameManager.prototype.normalizeModeConfigBaseFallback = function (modeKey, rawConfig) {
@@ -4976,8 +4981,9 @@ GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
     "normalizeModeConfig",
     this.buildNormalizeModeConfigCoreArgs(modeKey, rawConfig)
   );
-  if (this.isCoreCallAvailable(normalizeModeConfigCore)) return normalizeModeConfigCore.value;
-  return this.normalizeModeConfigFallback(modeKey, rawConfig);
+  return this.resolveCoreRawCallOrFallback(normalizeModeConfigCore, function () {
+    return this.normalizeModeConfigFallback(modeKey, rawConfig);
+  });
 };
 
 GameManager.prototype.resolveModeConfigByCatalogId = function (modeId) {
@@ -5099,9 +5105,10 @@ GameManager.prototype.normalizeSpecialRules = function (rules) {
     "normalizeSpecialRules",
     this.buildNormalizeSpecialRulesCoreArgs(rules)
   );
-  if (this.isCoreCallAvailable(normalizeSpecialRulesCore)) return normalizeSpecialRulesCore.value;
-  if (!rules || typeof rules !== "object" || Array.isArray(rules)) return {};
-  return this.clonePlain(rules);
+  return this.resolveCoreRawCallOrFallback(normalizeSpecialRulesCore, function () {
+    if (!rules || typeof rules !== "object" || Array.isArray(rules)) return {};
+    return this.clonePlain(rules);
+  });
 };
 
 GameManager.prototype.applyComputedSpecialRulesState = function (computed) {
@@ -5221,13 +5228,14 @@ GameManager.prototype.getAvailableCells = function () {
     "getAvailableCells",
     this.buildGetAvailableCellsCoreArgs(gridCellAvailable)
   );
-  if (this.isCoreCallAvailable(getAvailableCellsCore)) return getAvailableCellsCore.value;
-  return this.collectAvailableCellsFallback(
-    this.width,
-    this.height,
-    this.isBlockedCell.bind(this),
-    gridCellAvailable
-  );
+  return this.resolveCoreRawCallOrFallback(getAvailableCellsCore, function () {
+    return this.collectAvailableCellsFallback(
+      this.width,
+      this.height,
+      this.isBlockedCell.bind(this),
+      gridCellAvailable
+    );
+  });
 };
 
 GameManager.prototype.applyComputedLockedDirectionState = function (computed) {
@@ -5317,10 +5325,10 @@ GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
     "resolveLegacyModeFromModeKey",
     this.buildResolveLegacyModeFromModeKeyCoreArgs(modeKey)
   );
-  if (this.isCoreCallAvailable(resolveLegacyModeFromModeKeyCore)) return resolveLegacyModeFromModeKeyCore.value;
-
-  var key = modeKey || this.modeKey || this.mode;
-  return this.resolveLegacyModeFromModeKeyFallback(key);
+  return this.resolveCoreRawCallOrFallback(resolveLegacyModeFromModeKeyCore, function () {
+    var key = modeKey || this.modeKey || this.mode;
+    return this.resolveLegacyModeFromModeKeyFallback(key);
+  });
 };
 
 GameManager.prototype.getSpawnTableTotalWeight = function (table) {
@@ -5350,12 +5358,13 @@ GameManager.prototype.pickSpawnValue = function () {
     "pickSpawnValue",
     this.buildPickSpawnValueCoreArgs()
   );
-  if (this.isCoreCallAvailable(pickSpawnValueCore)) return pickSpawnValueCore.value;
-  var table = this.spawnTable || [];
-  if (!table.length) return 2;
-  var totalWeight = this.getSpawnTableTotalWeight(table);
-  if (totalWeight <= 0) return table[0].value;
-  return this.pickSpawnValueFromWeightedTable(table, totalWeight, Math.random);
+  return this.resolveCoreRawCallOrFallback(pickSpawnValueCore, function () {
+    var table = this.spawnTable || [];
+    if (!table.length) return 2;
+    var totalWeight = this.getSpawnTableTotalWeight(table);
+    if (totalWeight <= 0) return table[0].value;
+    return this.pickSpawnValueFromWeightedTable(table, totalWeight, Math.random);
+  });
 };
 
 GameManager.prototype.isFibonacciMode = function () {
@@ -5368,17 +5377,18 @@ GameManager.prototype.buildNextFibonacciCoreArgs = function (value) {
 
 GameManager.prototype.nextFibonacci = function (value) {
   var nextFibonacciCore = this.callCoreRulesRuntime("nextFibonacci", this.buildNextFibonacciCoreArgs(value));
-  if (this.isCoreCallAvailable(nextFibonacciCore)) return nextFibonacciCore.value;
-  if (value <= 0) return 1;
-  if (value === 1) return 2;
-  var a = 1;
-  var b = 2;
-  while (b < value) {
-    var n = a + b;
-    a = b;
-    b = n;
-  }
-  return b === value ? a + b : null;
+  return this.resolveCoreRawCallOrFallback(nextFibonacciCore, function () {
+    if (value <= 0) return 1;
+    if (value === 1) return 2;
+    var a = 1;
+    var b = 2;
+    while (b < value) {
+      var n = a + b;
+      a = b;
+      b = n;
+    }
+    return b === value ? a + b : null;
+  });
 };
 
 GameManager.prototype.getMergedPow2ValueFallback = function (a, b) {
@@ -5416,10 +5426,11 @@ GameManager.prototype.getMergedValue = function (a, b) {
     "getMergedValue",
     this.buildGetMergedValueCoreArgs(a, b)
   );
-  if (this.isCoreCallAvailable(getMergedValueCore)) return getMergedValueCore.value;
-  if (!Number.isInteger(a) || !Number.isInteger(b) || a <= 0 || b <= 0) return null;
-  if (!this.isFibonacciMode()) return this.getMergedPow2ValueFallback(a, b);
-  return this.getMergedFibonacciValueFallback(a, b);
+  return this.resolveCoreRawCallOrFallback(getMergedValueCore, function () {
+    if (!Number.isInteger(a) || !Number.isInteger(b) || a <= 0 || b <= 0) return null;
+    if (!this.isFibonacciMode()) return this.getMergedPow2ValueFallback(a, b);
+    return this.getMergedFibonacciValueFallback(a, b);
+  });
 };
 
 GameManager.prototype.buildGetTimerMilestoneValuesCoreArgs = function () {
@@ -5434,12 +5445,13 @@ GameManager.prototype.getTimerMilestoneValues = function () {
     "getTimerMilestoneValues",
     this.buildGetTimerMilestoneValuesCoreArgs()
   );
-  if (this.isCoreCallAvailable(getTimerMilestoneValuesCore)) return getTimerMilestoneValuesCore.value;
-  if (this.isFibonacciMode()) {
-    // 13 slots mapped to Fibonacci milestones.
-    return [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181];
-  }
-  return GameManager.TIMER_SLOT_IDS.slice();
+  return this.resolveCoreRawCallOrFallback(getTimerMilestoneValuesCore, function () {
+    if (this.isFibonacciMode()) {
+      // 13 slots mapped to Fibonacci milestones.
+      return [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181];
+    }
+    return GameManager.TIMER_SLOT_IDS.slice();
+  });
 };
 
 GameManager.prototype.buildTimerMilestoneSlotMapFallback = function (milestones, slotIds) {
