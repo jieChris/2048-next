@@ -683,25 +683,6 @@ GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
   });
 };
 
-GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
-  var normalizeReplaySeekTargetCore = this.callCoreReplayLifecycleRuntime(
-    "normalizeReplaySeekTarget",
-    [{
-      targetIndex: targetIndex,
-      hasReplayMoves: !!this.replayMoves,
-      replayMovesLength: this.replayMoves ? this.replayMoves.length : 0
-    }]
-  );
-  return this.resolveNormalizedCoreValueOrFallback(normalizeReplaySeekTargetCore, function (coreValue) {
-    var resolved = Number(coreValue);
-    return Number.isFinite(resolved) ? resolved : undefined;
-  }, function () {
-    if (targetIndex < 0) targetIndex = 0;
-    if (this.replayMoves && targetIndex > this.replayMoves.length) targetIndex = this.replayMoves.length;
-    return targetIndex;
-  });
-};
-
 GameManager.prototype.planReplayStepExecution = function () {
   var planReplayStepExecutionCore = this.callCoreReplayLoopRuntime(
     "planReplayStepExecution",
@@ -8479,7 +8460,22 @@ GameManager.prototype.setSpeed = function (multiplier) {
 };
 
 GameManager.prototype.seek = function (targetIndex) {
-    targetIndex = this.normalizeReplaySeekTarget(targetIndex);
+    var normalizeReplaySeekTargetCore = this.callCoreReplayLifecycleRuntime(
+      "normalizeReplaySeekTarget",
+      [{
+        targetIndex: targetIndex,
+        hasReplayMoves: !!this.replayMoves,
+        replayMovesLength: this.replayMoves ? this.replayMoves.length : 0
+      }]
+    );
+    targetIndex = this.resolveNormalizedCoreValueOrFallback(normalizeReplaySeekTargetCore, function (coreValue) {
+      var resolved = Number(coreValue);
+      return Number.isFinite(resolved) ? resolved : undefined;
+    }, function () {
+      if (targetIndex < 0) targetIndex = 0;
+      if (this.replayMoves && targetIndex > this.replayMoves.length) targetIndex = this.replayMoves.length;
+      return targetIndex;
+    });
     this.pause();
     var planReplaySeekRewindCore = this.callCoreReplayFlowRuntime(
       "planReplaySeekRewind",
