@@ -384,42 +384,6 @@ GameManager.LEGACY_REPLAY_V2_PREFIX = "REPLAY_v2_";
 GameManager.LEGACY_REPLAY_V2S_PREFIX = "REPLAY_v2S_";
 GameManager.LEGACY_REPLAY_V1_REVERSE_MAPPING = { U: 0, R: 1, D: 2, L: 3, Z: -1 };
 
-GameManager.prototype.decodeLegacyReplayV2Log = function (logString) {
-  var replayMoves = [];
-  var replaySpawns = [];
-  for (var i = 0; i < logString.length; i++) {
-    var code = logString.charCodeAt(i) - 33;
-    if (code < 0 || code > 128) {
-      throw "Invalid replay char at index " + i;
-    }
-    var entry;
-    if (code === 128) {
-      entry = {
-        move: -1,
-        spawn: null
-      };
-    } else {
-      var dir = (code >> 5) & 3;
-      var is4 = (code >> 4) & 1;
-      var posIdx = code & 15;
-      entry = {
-        move: dir,
-        spawn: {
-          x: posIdx % 4,
-          y: Math.floor(posIdx / 4),
-          value: is4 ? 4 : 2
-        }
-      };
-    }
-    replayMoves.push(entry.move);
-    replaySpawns.push(entry.spawn);
-  }
-  return {
-    replayMoves: replayMoves,
-    replaySpawns: replaySpawns
-  };
-};
-
 GameManager.prototype.runReplayTick = function () {
   var shouldStopReplayAtTickCore = this.callCoreReplayTimerRuntime(
     "shouldStopReplayAtTick",
@@ -8167,6 +8131,41 @@ GameManager.prototype.import = function (replayString) {
       var decodedLegacy = this.resolveNormalizedCoreValueOrFallback(decodeLegacyReplayCore, function (coreValue) {
         return this.isNonArrayObject(coreValue) ? coreValue : undefined;
       }, function () {
+        var decodeLegacyReplayV2Log = function (logString) {
+          var replayMoves = [];
+          var replaySpawns = [];
+          for (var i = 0; i < logString.length; i++) {
+            var code = logString.charCodeAt(i) - 33;
+            if (code < 0 || code > 128) {
+              throw "Invalid replay char at index " + i;
+            }
+            var entry;
+            if (code === 128) {
+              entry = {
+                move: -1,
+                spawn: null
+              };
+            } else {
+              var dir = (code >> 5) & 3;
+              var is4 = (code >> 4) & 1;
+              var posIdx = code & 15;
+              entry = {
+                move: dir,
+                spawn: {
+                  x: posIdx % 4,
+                  y: Math.floor(posIdx / 4),
+                  value: is4 ? 4 : 2
+                }
+              };
+            }
+            replayMoves.push(entry.move);
+            replaySpawns.push(entry.spawn);
+          }
+          return {
+            replayMoves: replayMoves,
+            replaySpawns: replaySpawns
+          };
+        };
         if (trimmed.indexOf(GameManager.LEGACY_REPLAY_V1_PREFIX) === 0) {
           var v1Parts = trimmed.split("_");
           var seed = parseFloat(v1Parts[2]);
@@ -8189,7 +8188,7 @@ GameManager.prototype.import = function (replayString) {
           var seedS = parseFloat(rest.substring(0, seedSep));
           if (isNaN(seedS)) throw "Invalid v2S seed";
           var logStringS = rest.substring(seedSep + 1);
-          var decodedLogS = this.decodeLegacyReplayV2Log(logStringS);
+          var decodedLogS = decodeLegacyReplayV2Log(logStringS);
           return {
             seed: seedS,
             replayMovesV2: logStringS,
@@ -8199,7 +8198,7 @@ GameManager.prototype.import = function (replayString) {
         }
         if (trimmed.indexOf(GameManager.LEGACY_REPLAY_V2_PREFIX) !== 0) return null;
         var logString = trimmed.substring(GameManager.LEGACY_REPLAY_V2_PREFIX.length);
-        var decodedLog = this.decodeLegacyReplayV2Log(logString);
+        var decodedLog = decodeLegacyReplayV2Log(logString);
         return {
           seed: 0.123,
           replayMovesV2: logString,
