@@ -8549,25 +8549,24 @@ GameManager.prototype.scheduleReplayInterval = function (delay) {
   }, delay);
 };
 
-GameManager.prototype.normalizeReplayControlState = function (state) {
-  return this.isNonArrayObject(state) ? state : {};
-};
-
 GameManager.prototype.pause = function () {
-    var state = this.normalizeReplayControlState(this.computeReplayPauseState());
+    var state = this.computeReplayPauseState();
+    state = this.isNonArrayObject(state) ? state : {};
     this.isPaused = state.isPaused !== false;
     this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
 };
 
 GameManager.prototype.resume = function () {
-    var state = this.normalizeReplayControlState(this.computeReplayResumeState());
+    var state = this.computeReplayResumeState();
+    state = this.isNonArrayObject(state) ? state : {};
     this.isPaused = !!state.isPaused ? true : false;
     this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
     this.scheduleReplayInterval(state.delay);
 };
 
 GameManager.prototype.setSpeed = function (multiplier) {
-    var state = this.normalizeReplayControlState(this.computeReplaySpeedState(multiplier));
+    var state = this.computeReplaySpeedState(multiplier);
+    state = this.isNonArrayObject(state) ? state : {};
     this.replayDelay = state.replayDelay;
     if (!state.shouldResume) return;
     this.resume(); // Restart interval with new delay
