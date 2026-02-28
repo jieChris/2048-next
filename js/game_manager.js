@@ -7319,12 +7319,19 @@ GameManager.prototype.prepareTiles = function () {
   });
 };
 
-GameManager.prototype.getMoveInputThrottleMs = function () {
-  var resolveMoveInputThrottleMsCore = this.callCoreTimerIntervalRuntime("resolveMoveInputThrottleMs", [
+GameManager.prototype.buildResolveMoveInputThrottleMsCoreArgs = function () {
+  return [
     this.replayMode,
     this.width,
     this.height
-  ]);
+  ];
+};
+
+GameManager.prototype.getMoveInputThrottleMs = function () {
+  var resolveMoveInputThrottleMsCore = this.callCoreTimerIntervalRuntime(
+    "resolveMoveInputThrottleMs",
+    this.buildResolveMoveInputThrottleMsCoreArgs()
+  );
   if (resolveMoveInputThrottleMsCore.available) return resolveMoveInputThrottleMsCore.value;
   if (this.replayMode) return 0;
   var area = (this.width || 4) * (this.height || 4);
@@ -8273,11 +8280,18 @@ GameManager.prototype.scheduleTimerUpdateInterval = function () {
   this.timerID = setInterval(this.createTimerUpdateCallback(), this.timerUpdateIntervalMs);
 };
 
-GameManager.prototype.getTimerUpdateIntervalMs = function () {
-  var resolveTimerUpdateIntervalMsCore = this.callCoreTimerIntervalRuntime("resolveTimerUpdateIntervalMs", [
+GameManager.prototype.buildResolveTimerUpdateIntervalMsCoreArgs = function () {
+  return [
     this.width,
     this.height
-  ]);
+  ];
+};
+
+GameManager.prototype.getTimerUpdateIntervalMs = function () {
+  var resolveTimerUpdateIntervalMsCore = this.callCoreTimerIntervalRuntime(
+    "resolveTimerUpdateIntervalMs",
+    this.buildResolveTimerUpdateIntervalMsCoreArgs()
+  );
   if (resolveTimerUpdateIntervalMsCore.available) return resolveTimerUpdateIntervalMsCore.value;
   return this.resolveTimerUpdateIntervalMsFallback();
 };
@@ -8377,8 +8391,15 @@ GameManager.prototype.stopTimer = function() {
   this.applyTimerStopState();
 };
 
+GameManager.prototype.buildFormatPrettyTimeCoreArgs = function (time) {
+  return [time];
+};
+
 GameManager.prototype.pretty = function(time) {
-  var formatPrettyTimeCore = this.callCorePrettyTimeRuntime("formatPrettyTime", [time]);
+  var formatPrettyTimeCore = this.callCorePrettyTimeRuntime(
+    "formatPrettyTime",
+    this.buildFormatPrettyTimeCoreArgs(time)
+  );
   if (formatPrettyTimeCore.available) return formatPrettyTimeCore.value;
   return this.formatPrettyTimeFallback(time);
 };
