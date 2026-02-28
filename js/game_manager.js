@@ -3243,17 +3243,6 @@ GameManager.prototype.computeUndoRestorePayload = function (prev) {
   });
 };
 
-GameManager.prototype.createDefaultMergeEffectsResult = function () {
-  return {
-    shouldRecordCappedMilestone: false,
-    shouldSetWon: false,
-    shouldSetReached32k: false,
-    timerIdsToStamp: [],
-    showSubTimerContainer: false,
-    hideTimerRows: []
-  };
-};
-
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
   var cappedState = this.resolveCappedModeState();
   var computeMergeEffectsCore = this.callCoreMergeEffectsRuntime(
@@ -3271,7 +3260,14 @@ GameManager.prototype.computeMergeEffects = function (mergedValue) {
     var cappedMode = !!cappedState.isCappedMode;
     var hasCappedTarget = Number.isFinite(cappedTarget) && cappedTarget > 0;
     var reached32k = !!this.reached32k;
-    var result = this.createDefaultMergeEffectsResult();
+    var result = {
+      shouldRecordCappedMilestone: false,
+      shouldSetWon: false,
+      shouldSetReached32k: false,
+      timerIdsToStamp: [],
+      showSubTimerContainer: false,
+      hideTimerRows: []
+    };
 
     if (!Number.isInteger(value) || value <= 0) return result;
     if (cappedMode && hasCappedTarget && value === cappedTarget) {
@@ -3295,29 +3291,6 @@ GameManager.prototype.computeMergeEffects = function (mergedValue) {
   });
 };
 
-GameManager.prototype.isValidSpawnTableItem = function (item) {
-  if (!item || !Number.isInteger(item.value) || item.value <= 0) return false;
-  return Number.isFinite(item.weight) && item.weight > 0;
-};
-
-GameManager.prototype.normalizeSpawnTableFallbackItems = function (spawnTable) {
-  if (!Array.isArray(spawnTable) || spawnTable.length <= 0) return [];
-  var out = [];
-  for (var i = 0; i < spawnTable.length; i++) {
-    var item = spawnTable[i];
-    if (!this.isValidSpawnTableItem(item)) continue;
-    out.push({ value: item.value, weight: Number(item.weight) });
-  }
-  return out;
-};
-
-GameManager.prototype.resolveDefaultSpawnTableByRuleset = function (ruleset) {
-  if (ruleset === "fibonacci") {
-    return [{ value: 1, weight: 90 }, { value: 2, weight: 10 }];
-  }
-  return [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
-};
-
 GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
   var normalizeSpawnTableCore = this.callCoreRulesRuntime(
     "normalizeSpawnTable",
@@ -3326,9 +3299,20 @@ GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
   return this.resolveNormalizedCoreValueOrFallback(normalizeSpawnTableCore, function (coreValue) {
     return Array.isArray(coreValue) ? coreValue : undefined;
   }, function () {
-    var normalizedFallbackItems = this.normalizeSpawnTableFallbackItems(spawnTable);
+    var normalizedFallbackItems = [];
+    if (Array.isArray(spawnTable) && spawnTable.length > 0) {
+      for (var i = 0; i < spawnTable.length; i++) {
+        var item = spawnTable[i];
+        if (!item || !Number.isInteger(item.value) || item.value <= 0) continue;
+        if (!(Number.isFinite(item.weight) && item.weight > 0)) continue;
+        normalizedFallbackItems.push({ value: item.value, weight: Number(item.weight) });
+      }
+    }
     if (normalizedFallbackItems.length > 0) return normalizedFallbackItems;
-    return this.resolveDefaultSpawnTableByRuleset(ruleset);
+    if (ruleset === "fibonacci") {
+      return [{ value: 1, weight: 90 }, { value: 2, weight: 10 }];
+    }
+    return [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
   });
 };
 
