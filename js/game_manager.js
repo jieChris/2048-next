@@ -5899,14 +5899,10 @@ GameManager.prototype.closeStatsPanel = function () {
   this.writeLocalStorageFlag(GameManager.STATS_PANEL_VISIBLE_KEY, false, "1", "0");
 };
 
-GameManager.prototype.buildIsTimerLeaderboardAvailableByModeCoreArgs = function (mode) {
-  return [mode];
-};
-
 GameManager.prototype.isTimerLeaderboardAvailableByMode = function (mode) {
   var isTimerLeaderboardAvailableByModeCore = this.callCoreModeRuntime(
     "isTimerLeaderboardAvailableByMode",
-    this.buildIsTimerLeaderboardAvailableByModeCoreArgs(mode)
+    [mode]
   );
   return this.resolveCoreBooleanCallOrFallback(isTimerLeaderboardAvailableByModeCore, function () {
     void mode;
@@ -5918,32 +5914,24 @@ GameManager.prototype.isTimerLeaderboardAvailable = function () {
   return true;
 };
 
-GameManager.prototype.buildNormalizeTimerModuleViewModeCoreArgs = function () {
-  return [this.timerModuleView];
-};
-
 GameManager.prototype.getTimerModuleViewMode = function () {
   var normalizeTimerModuleViewModeCore = this.callCoreStorageRuntime(
     "normalizeTimerModuleViewMode",
-    this.buildNormalizeTimerModuleViewModeCoreArgs()
+    [this.timerModuleView]
   );
   return this.resolveCoreStringCallOrFallback(normalizeTimerModuleViewModeCore, function () {
     return this.timerModuleView === "hidden" ? "hidden" : "timer";
   });
 };
 
-GameManager.prototype.buildReadTimerModuleViewForModeCoreArgs = function (map, mode) {
-  return [{
-    map: map,
-    mode: mode
-  }];
-};
-
 GameManager.prototype.loadTimerModuleViewForMode = function (mode) {
   var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
   var readTimerModuleViewForModeFromMapCore = this.callCoreStorageRuntime(
     "readTimerModuleViewForModeFromMap",
-    this.buildReadTimerModuleViewForModeCoreArgs(map, mode)
+    [{
+      map: map,
+      mode: mode
+    }]
   );
   return this.resolveCoreStringCallOrFallback(readTimerModuleViewForModeFromMapCore, function () {
     var value = map[mode];
@@ -5951,19 +5939,15 @@ GameManager.prototype.loadTimerModuleViewForMode = function (mode) {
   });
 };
 
-GameManager.prototype.buildWriteTimerModuleViewForModeCoreArgs = function (map, mode, view) {
-  return [{
-    map: map,
-    mode: mode,
-    view: view
-  }];
-};
-
 GameManager.prototype.persistTimerModuleViewForMode = function (mode, view) {
   var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
   var writeTimerModuleViewForModeToMapCore = this.callCoreStorageRuntime(
     "writeTimerModuleViewForModeToMap",
-    this.buildWriteTimerModuleViewForModeCoreArgs(map, mode, view)
+    [{
+      map: map,
+      mode: mode,
+      view: view
+    }]
   );
   if (this.tryHandleCoreRawValue(writeTimerModuleViewForModeToMapCore, function (coreValue) {
     map = coreValue;
@@ -6046,14 +6030,6 @@ GameManager.prototype.notifyUndoSettingsStateChanged = function () {
   this.callWindowMethod("syncUndoSettingsUI");
 };
 
-GameManager.prototype.buildReadUndoEnabledForModeCoreArgs = function (map, mode) {
-  return [{
-    map: map,
-    mode: mode,
-    fallbackEnabled: true
-  }];
-};
-
 GameManager.prototype.loadUndoSettingForMode = function (mode) {
   var state = this.resolveUndoPolicyStateForCurrentSessionMode(mode);
   var forced = state ? state.forcedUndoSetting : null;
@@ -6062,7 +6038,11 @@ GameManager.prototype.loadUndoSettingForMode = function (mode) {
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
   var readUndoEnabledForModeFromMapCore = this.callCoreStorageRuntime(
     "readUndoEnabledForModeFromMap",
-    this.buildReadUndoEnabledForModeCoreArgs(map, mode)
+    [{
+      map: map,
+      mode: mode,
+      fallbackEnabled: true
+    }]
   );
   return this.resolveCoreBooleanCallOrFallback(readUndoEnabledForModeFromMapCore, function () {
     if (this.hasOwnKey(map, mode)) return !!map[mode];
@@ -6109,14 +6089,6 @@ GameManager.prototype.persistUndoSettingMap = function (map) {
   this.writeLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY, map);
 };
 
-GameManager.prototype.buildWriteUndoEnabledForModeCoreArgs = function (map, mode, enabled) {
-  return [{
-    map: map,
-    mode: mode,
-    enabled: enabled
-  }];
-};
-
 GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resolvedState) {
   var state = this.resolveProvidedUndoPolicyStateForMode(mode, resolvedState);
   if (state && state.isUndoSettingFixedForMode) return;
@@ -6124,7 +6096,11 @@ GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resol
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
   var writeUndoEnabledForModeToMapCore = this.callCoreStorageRuntime(
     "writeUndoEnabledForModeToMap",
-    this.buildWriteUndoEnabledForModeCoreArgs(map, mode, enabled)
+    [{
+      map: map,
+      mode: mode,
+      enabled: enabled
+    }]
   );
   map = this.resolvePersistedUndoSettingMap(map, mode, enabled, writeUndoEnabledForModeToMapCore);
   this.persistUndoSettingMap(map);
@@ -8215,17 +8191,13 @@ GameManager.prototype.scheduleTimerUpdateInterval = function () {
   this.timerID = setInterval(this.createTimerUpdateCallback(), this.timerUpdateIntervalMs);
 };
 
-GameManager.prototype.buildResolveTimerUpdateIntervalMsCoreArgs = function () {
-  return [
-    this.width,
-    this.height
-  ];
-};
-
 GameManager.prototype.getTimerUpdateIntervalMs = function () {
   var resolveTimerUpdateIntervalMsCore = this.callCoreTimerIntervalRuntime(
     "resolveTimerUpdateIntervalMs",
-    this.buildResolveTimerUpdateIntervalMsCoreArgs()
+    [
+      this.width,
+      this.height
+    ]
   );
   return this.resolveCoreNumericCallOrFallback(resolveTimerUpdateIntervalMsCore, function () {
     return this.resolveTimerUpdateIntervalMsFallback();
@@ -8327,14 +8299,10 @@ GameManager.prototype.stopTimer = function() {
   this.applyTimerStopState();
 };
 
-GameManager.prototype.buildFormatPrettyTimeCoreArgs = function (time) {
-  return [time];
-};
-
 GameManager.prototype.pretty = function(time) {
   var formatPrettyTimeCore = this.callCorePrettyTimeRuntime(
     "formatPrettyTime",
-    this.buildFormatPrettyTimeCoreArgs(time)
+    [time]
   );
   return this.resolveCoreStringCallOrFallback(formatPrettyTimeCore, function () {
     return this.formatPrettyTimeFallback(time);
@@ -8533,14 +8501,10 @@ GameManager.prototype.normalizeInvalidatedTimerElementIds = function (coreValue)
     return Array.isArray(coreValue) ? coreValue : [];
 };
 
-GameManager.prototype.buildResolveInvalidatedTimerElementIdsCoreArgs = function (limit) {
-    return [this.resolveInvalidateTimersCoreInput(limit)];
-};
-
 GameManager.prototype.invalidateTimers = function(limit) {
     var resolveInvalidatedTimerElementIdsCore = this.callCoreTimerIntervalRuntime(
         "resolveInvalidatedTimerElementIds",
-        this.buildResolveInvalidatedTimerElementIdsCoreArgs(limit)
+        [this.resolveInvalidateTimersCoreInput(limit)]
     );
     var invalidatedTimerElementIdsByCore = this.resolveNormalizedCoreValueOrUndefined(
         resolveInvalidatedTimerElementIdsCore,
