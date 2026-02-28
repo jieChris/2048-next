@@ -3000,58 +3000,6 @@ GameManager.prototype.resolveSavedGameStateTimerSnapshot = function () {
   };
 };
 
-GameManager.prototype.resolveSavedGameStatePayloadVersion = function () {
-  return GameManager.SAVED_GAME_STATE_VERSION;
-};
-
-GameManager.prototype.resolveSavedGameStateModeKey = function () {
-  return this.modeKey;
-};
-
-GameManager.prototype.resolveSavedGameStateRuleset = function () {
-  return this.ruleset;
-};
-
-GameManager.prototype.resolveSavedGameStateScore = function () {
-  return this.score;
-};
-
-GameManager.prototype.resolveSavedGameStateOver = function () {
-  return this.over;
-};
-
-GameManager.prototype.resolveSavedGameStateWon = function () {
-  return this.won;
-};
-
-GameManager.prototype.resolveSavedGameStateKeepPlaying = function () {
-  return this.keepPlaying;
-};
-
-GameManager.prototype.resolveSavedGameStateInitialSeed = function () {
-  return this.initialSeed;
-};
-
-GameManager.prototype.resolveSavedGameStateSeed = function () {
-  return this.seed;
-};
-
-GameManager.prototype.resolveSavedGameStateSpawnValueCounts = function () {
-  return this.spawnValueCounts ? this.safeClonePlain(this.spawnValueCounts, {}) : {};
-};
-
-GameManager.prototype.resolveSavedGameStateReached32k = function () {
-  return !!this.reached32k;
-};
-
-GameManager.prototype.resolveSavedGameStateCappedMilestoneCount = function () {
-  return Number.isInteger(this.cappedMilestoneCount) ? this.cappedMilestoneCount : 0;
-};
-
-GameManager.prototype.resolveSavedGameStateCapped64Unlocked = function () {
-  return this.capped64Unlocked ? this.safeClonePlain(this.capped64Unlocked, null) : null;
-};
-
 GameManager.prototype.buildSavedGameStateBaseReplayPayload = function (replaySnapshot) {
   return {
     move_history: replaySnapshot.move_history,
@@ -3072,24 +3020,24 @@ GameManager.prototype.buildSavedGameStateBaseTimerPayload = function (timerSnaps
 
 GameManager.prototype.buildSavedGameStateBaseCorePayload = function (savedAt) {
   return {
-    v: this.resolveSavedGameStatePayloadVersion(),
+    v: GameManager.SAVED_GAME_STATE_VERSION,
     saved_at: savedAt,
     terminated: false,
-    mode_key: this.resolveSavedGameStateModeKey(),
+    mode_key: this.modeKey,
     board_width: this.width,
     board_height: this.height,
-    ruleset: this.resolveSavedGameStateRuleset(),
+    ruleset: this.ruleset,
     board: this.getFinalBoardMatrix(),
-    score: this.resolveSavedGameStateScore(),
-    over: this.resolveSavedGameStateOver(),
-    won: this.resolveSavedGameStateWon(),
-    keep_playing: this.resolveSavedGameStateKeepPlaying(),
-    initial_seed: this.resolveSavedGameStateInitialSeed(),
-    seed: this.resolveSavedGameStateSeed(),
-    spawn_value_counts: this.resolveSavedGameStateSpawnValueCounts(),
-    reached_32k: this.resolveSavedGameStateReached32k(),
-    capped_milestone_count: this.resolveSavedGameStateCappedMilestoneCount(),
-    capped64_unlocked: this.resolveSavedGameStateCapped64Unlocked()
+    score: this.score,
+    over: this.over,
+    won: this.won,
+    keep_playing: this.keepPlaying,
+    initial_seed: this.initialSeed,
+    seed: this.seed,
+    spawn_value_counts: this.spawnValueCounts ? this.safeClonePlain(this.spawnValueCounts, {}) : {},
+    reached_32k: !!this.reached32k,
+    capped_milestone_count: Number.isInteger(this.cappedMilestoneCount) ? this.cappedMilestoneCount : 0,
+    capped64_unlocked: this.capped64Unlocked ? this.safeClonePlain(this.capped64Unlocked, null) : null
   };
 };
 
@@ -3118,26 +3066,6 @@ GameManager.prototype.resolveSavedDirectionLockSnapshot = function () {
   };
 };
 
-GameManager.prototype.resolveSavedGameStateComboStreak = function () {
-  return Number.isInteger(this.comboStreak) ? this.comboStreak : 0;
-};
-
-GameManager.prototype.resolveSavedGameStateSuccessfulMoveCount = function () {
-  return Number.isInteger(this.successfulMoveCount) ? this.successfulMoveCount : 0;
-};
-
-GameManager.prototype.resolveSavedGameStateUndoUsed = function () {
-  return Number.isInteger(this.undoUsed) ? this.undoUsed : 0;
-};
-
-GameManager.prototype.resolveSavedGameStateChallengeId = function () {
-  return this.challengeId || null;
-};
-
-GameManager.prototype.resolveSavedGameStateTimerModuleView = function () {
-  return this.getTimerModuleViewMode ? this.getTimerModuleViewMode() : "timer";
-};
-
 GameManager.prototype.buildSavedGameStateExtendedDirectionLockPayload = function (directionLockSnapshot) {
   return {
     lock_consumed_at_move_count: directionLockSnapshot.lock_consumed_at_move_count,
@@ -3157,7 +3085,7 @@ GameManager.prototype.buildSavedGameStateExtendedBoardSnapshotPayload = function
 
 GameManager.prototype.buildSavedGameStateExtendedTimerPayload = function (timerSubState) {
   return {
-    timer_module_view: this.resolveSavedGameStateTimerModuleView(),
+    timer_module_view: this.getTimerModuleViewMode ? this.getTimerModuleViewMode() : "timer",
     timer_fixed_rows: this.captureTimerFixedRowsState(),
     timer_dynamic_rows_capped: this.captureTimerDynamicRowsState("capped-timer-container"),
     timer_dynamic_rows_overflow: this.captureTimerDynamicRowsState("capped-timer-overflow-container"),
@@ -3171,10 +3099,10 @@ GameManager.prototype.buildSavedGameStateExtendedPayload = function (timerSubSta
   var boardSnapshot = this.resolveSavedBoardRestartSnapshot();
   var directionLockSnapshot = this.resolveSavedDirectionLockSnapshot();
   return Object.assign({
-    combo_streak: this.resolveSavedGameStateComboStreak(),
-    successful_move_count: this.resolveSavedGameStateSuccessfulMoveCount(),
-    undo_used: this.resolveSavedGameStateUndoUsed(),
-    challenge_id: this.resolveSavedGameStateChallengeId()
+    combo_streak: Number.isInteger(this.comboStreak) ? this.comboStreak : 0,
+    successful_move_count: Number.isInteger(this.successfulMoveCount) ? this.successfulMoveCount : 0,
+    undo_used: Number.isInteger(this.undoUsed) ? this.undoUsed : 0,
+    challenge_id: this.challengeId || null
   },
   this.buildSavedGameStateExtendedDirectionLockPayload(directionLockSnapshot),
   this.buildSavedGameStateExtendedBoardSnapshotPayload(boardSnapshot),
@@ -7636,34 +7564,14 @@ GameManager.prototype.syncBestScoreBeforeActuate = function () {
   }
 };
 
-GameManager.prototype.resolveActuatorScore = function () {
-  return this.score;
-};
-
-GameManager.prototype.resolveActuatorOver = function () {
-  return this.over;
-};
-
-GameManager.prototype.resolveActuatorWon = function () {
-  return this.won;
-};
-
-GameManager.prototype.resolveActuatorBestScore = function () {
-  return this.scoreManager.get();
-};
-
-GameManager.prototype.resolveActuatorBlockedCells = function () {
-  return this.blockedCellsList || [];
-};
-
 GameManager.prototype.buildActuatorPayload = function () {
   return {
-    score: this.resolveActuatorScore(),
-    over: this.resolveActuatorOver(),
-    won: this.resolveActuatorWon(),
-    bestScore: this.resolveActuatorBestScore(),
+    score: this.score,
+    over: this.over,
+    won: this.won,
+    bestScore: this.scoreManager.get(),
     terminated: this.isGameTerminated(),
-    blockedCells: this.resolveActuatorBlockedCells()
+    blockedCells: this.blockedCellsList || []
   };
 };
 
@@ -9295,13 +9203,9 @@ GameManager.prototype.writeLastSessionSubmitResult = function (payload) {
   this.writeLocalStorageJsonPayload("last_session_submit_result_v1", payload);
 };
 
-GameManager.prototype.resolveSessionSubmitTimestamp = function () {
-  return new Date().toISOString();
-};
-
 GameManager.prototype.buildSkippedSessionSubmitResult = function (reason) {
   return {
-    at: this.resolveSessionSubmitTimestamp(),
+    at: new Date().toISOString(),
     ok: false,
     skipped: true,
     reason: reason
@@ -9312,33 +9216,10 @@ GameManager.prototype.writeSkippedSessionSubmitResult = function (reason) {
   this.writeLastSessionSubmitResult(this.buildSkippedSessionSubmitResult(reason));
 };
 
-GameManager.prototype.resolveSessionSubmitAdapterParitySnapshot = function () {
-  return {
-    report: this.getAdapterSessionParitySnapshot("readAdapterParityReport", "adapterParityReport"),
-    diff: this.getAdapterSessionParitySnapshot("readAdapterParityABDiff", "adapterParityABDiff")
-  };
-};
-
 GameManager.prototype.normalizeSessionSubmitAdapterParitySnapshot = function (adapterParitySnapshot) {
   return adapterParitySnapshot && typeof adapterParitySnapshot === "object"
     ? adapterParitySnapshot
     : {};
-};
-
-GameManager.prototype.resolveSessionSubmitAdapterParityParts = function (adapterParitySnapshot) {
-  var parity = this.normalizeSessionSubmitAdapterParitySnapshot(adapterParitySnapshot);
-  return {
-    report: parity.report,
-    diff: parity.diff
-  };
-};
-
-GameManager.prototype.resolveSessionSubmitClientVersion = function (windowLike) {
-  return (windowLike && windowLike.GAME_CLIENT_VERSION) || "1.8";
-};
-
-GameManager.prototype.resolveSessionSubmitEndReason = function () {
-  return this.over ? "game_over" : "win_stop";
 };
 
 GameManager.prototype.buildSessionSubmitReplayPayload = function () {
@@ -9348,65 +9229,25 @@ GameManager.prototype.buildSessionSubmitReplayPayload = function () {
   };
 };
 
-GameManager.prototype.resolveSessionSubmitModeKey = function () {
-  return this.modeKey;
-};
-
-GameManager.prototype.resolveSessionSubmitBoardWidth = function () {
-  return this.width;
-};
-
-GameManager.prototype.resolveSessionSubmitBoardHeight = function () {
-  return this.height;
-};
-
-GameManager.prototype.resolveSessionSubmitRuleset = function () {
-  return this.ruleset;
-};
-
-GameManager.prototype.resolveSessionSubmitUndoEnabled = function () {
-  return !!this.modeConfig.undo_enabled;
-};
-
-GameManager.prototype.resolveSessionSubmitRankedBucket = function () {
-  return this.rankedBucket;
-};
-
-GameManager.prototype.resolveSessionSubmitModeFamily = function () {
-  return this.modeFamily;
-};
-
-GameManager.prototype.resolveSessionSubmitRankPolicy = function () {
-  return this.rankPolicy;
-};
-
-GameManager.prototype.resolveSessionSubmitChallengeId = function () {
-  return this.challengeId || null;
-};
-
-GameManager.prototype.resolveSessionSubmitScore = function () {
-  return this.score;
-};
-
 GameManager.prototype.applySessionSubmitModeAndBoardPayload = function (payload) {
   payload.mode = this.getLegacyModeFromModeKey(this.modeKey || this.mode);
-  payload.mode_key = this.resolveSessionSubmitModeKey();
-  payload.board_width = this.resolveSessionSubmitBoardWidth();
-  payload.board_height = this.resolveSessionSubmitBoardHeight();
-  payload.ruleset = this.resolveSessionSubmitRuleset();
-  payload.undo_enabled = this.resolveSessionSubmitUndoEnabled();
+  payload.mode_key = this.modeKey;
+  payload.board_width = this.width;
+  payload.board_height = this.height;
+  payload.ruleset = this.ruleset;
+  payload.undo_enabled = !!this.modeConfig.undo_enabled;
 };
 
 GameManager.prototype.applySessionSubmitRankingPayload = function (payload) {
-  payload.ranked_bucket = this.resolveSessionSubmitRankedBucket();
-  payload.mode_family = this.resolveSessionSubmitModeFamily();
-  payload.rank_policy = this.resolveSessionSubmitRankPolicy();
-  payload.challenge_id = this.resolveSessionSubmitChallengeId();
+  payload.ranked_bucket = this.rankedBucket;
+  payload.mode_family = this.modeFamily;
+  payload.rank_policy = this.rankPolicy;
+  payload.challenge_id = this.challengeId || null;
 };
 
 GameManager.prototype.applySessionSubmitOutcomePayload = function (payload, endedAt) {
   payload.special_rules_snapshot = this.clonePlain(this.specialRules || {});
-  payload.score = this.resolveSessionSubmitScore();
+  payload.score = this.score;
   payload.best_tile = this.getBestTileValue();
   payload.duration_ms = this.getDurationMs();
   payload.final_board = this.getFinalBoardMatrix();
@@ -9434,12 +9275,16 @@ GameManager.prototype.applySessionSubmitAdapterParityPayload = function (payload
 };
 
 GameManager.prototype.applySessionSubmitMetaPayload = function (payload, windowLike) {
-  payload.client_version = this.resolveSessionSubmitClientVersion(windowLike);
-  payload.end_reason = this.resolveSessionSubmitEndReason();
+  payload.client_version = (windowLike && windowLike.GAME_CLIENT_VERSION) || "1.8";
+  payload.end_reason = this.over ? "game_over" : "win_stop";
 };
 
 GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike, adapterParitySnapshot) {
-  var adapterParity = this.resolveSessionSubmitAdapterParityParts(adapterParitySnapshot);
+  var parity = this.normalizeSessionSubmitAdapterParitySnapshot(adapterParitySnapshot);
+  var adapterParity = {
+    report: parity.report,
+    diff: parity.diff
+  };
   var replayPayload = this.buildSessionSubmitReplayPayload();
   var payload = this.buildSessionSubmitBasePayload(endedAt);
   this.applySessionSubmitReplayPayload(payload, replayPayload);
@@ -9457,24 +9302,16 @@ GameManager.prototype.buildSessionSubmitResultBase = function (endedAt, payload,
   };
 };
 
-GameManager.prototype.resolveSessionSubmitSavedRecordId = function (savedRecord) {
-  return savedRecord && savedRecord.id ? savedRecord.id : null;
-};
-
 GameManager.prototype.buildSessionSubmitSuccessResult = function (endedAt, payload, savedRecord) {
   var result = this.buildSessionSubmitResultBase(endedAt, payload, true);
   result.local_saved = true;
-  result.record_id = this.resolveSessionSubmitSavedRecordId(savedRecord);
+  result.record_id = savedRecord && savedRecord.id ? savedRecord.id : null;
   return result;
-};
-
-GameManager.prototype.resolveSessionSubmitPersistErrorMessage = function (error) {
-  return error && error.message ? error.message : "local_save_failed";
 };
 
 GameManager.prototype.buildSessionSubmitFailureResult = function (endedAt, payload, error) {
   var result = this.buildSessionSubmitResultBase(endedAt, payload, false);
-  result.error = this.resolveSessionSubmitPersistErrorMessage(error);
+  result.error = error && error.message ? error.message : "local_save_failed";
   return result;
 };
 
@@ -9494,15 +9331,9 @@ GameManager.prototype.writeSessionSubmitFailureResult = function (endedAt, paylo
   );
 };
 
-GameManager.prototype.resolveSessionSubmitSkipReason = function () {
-  if (this.replayMode) return "replay_mode";
-  if (!this.isSessionTerminated()) return "not_terminated";
-  return null;
-};
-
 GameManager.prototype.buildMissingLocalHistoryStoreResult = function () {
   return {
-    at: this.resolveSessionSubmitTimestamp(),
+    at: new Date().toISOString(),
     ok: false,
     reason: "local_history_store_missing"
   };
@@ -9523,8 +9354,11 @@ GameManager.prototype.createSessionSubmitContext = function (localHistorySaveRec
 GameManager.prototype.buildSessionSubmitPayloadInput = function () {
   return {
     windowLike: this.getWindowLike(),
-    adapterParitySnapshot: this.resolveSessionSubmitAdapterParitySnapshot(),
-    endedAt: this.resolveSessionSubmitTimestamp()
+    adapterParitySnapshot: {
+      report: this.getAdapterSessionParitySnapshot("readAdapterParityReport", "adapterParityReport"),
+      diff: this.getAdapterSessionParitySnapshot("readAdapterParityABDiff", "adapterParityABDiff")
+    },
+    endedAt: new Date().toISOString()
   };
 };
 
@@ -9556,17 +9390,12 @@ GameManager.prototype.persistSessionSubmitContext = function (submitContext) {
 };
 
 GameManager.prototype.handleSkippedSessionSubmitIfNeeded = function () {
-  var skippedReason = this.resolveSessionSubmitSkipReason();
+  var skippedReason = null;
+  if (this.replayMode) skippedReason = "replay_mode";
+  else if (!this.isSessionTerminated()) skippedReason = "not_terminated";
   if (!skippedReason) return false;
   this.writeSkippedSessionSubmitResult(skippedReason);
   return true;
-};
-
-GameManager.prototype.resolveSessionSubmitRecordOrWriteMissing = function () {
-  var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
-  if (localHistorySaveRecord) return localHistorySaveRecord;
-  this.writeMissingLocalHistoryStoreResult();
-  return null;
 };
 
 GameManager.prototype.markSessionSubmitStarted = function () {
@@ -9595,8 +9424,11 @@ GameManager.prototype.shouldAbortAutoSubmitByState = function () {
 
 GameManager.prototype.tryAutoSubmitOnGameOver = function () {
   if (this.shouldAbortAutoSubmitByState()) return;
-  var localHistorySaveRecord = this.resolveSessionSubmitRecordOrWriteMissing();
-  if (!localHistorySaveRecord) return;
+  var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
+  if (!localHistorySaveRecord) {
+    this.writeMissingLocalHistoryStoreResult();
+    return;
+  }
   this.submitSessionForRecord(localHistorySaveRecord);
 };
 
