@@ -6087,46 +6087,25 @@ GameManager.prototype.addRandomTile = function () {
   this.spawnRandomTileAtAvailableCell(available);
 };
 
-GameManager.prototype.syncBestScoreBeforeActuate = function () {
-  if (this.scoreManager.get() < this.score) {
-    this.scoreManager.set(this.score);
-  }
-};
-
-GameManager.prototype.buildActuatorPayload = function () {
-  return {
-    score: this.score,
-    over: this.over,
-    won: this.won,
-    bestScore: this.scoreManager.get(),
-    terminated: this.isGameTerminated(),
-    blockedCells: this.blockedCellsList || []
-  };
-};
-
 GameManager.prototype.updateStatsLabelText = function (elementId, label, value) {
   var el = document.getElementById(elementId);
   if (!el) return;
   el.textContent = label + value;
 };
 
-GameManager.prototype.finalizeTerminatedSessionAfterActuate = function () {
-  this.clearSavedGameState(this.modeKey);
-  this.tryAutoSubmitOnGameOver();
-};
-
-GameManager.prototype.persistOrFinalizeSessionAfterActuate = function () {
-  if (this.isSessionTerminated() && this.modeKey !== "practice_legacy") {
-    this.finalizeTerminatedSessionAfterActuate();
-    return;
-  }
-  this.saveGameState();
-};
-
 // Sends the updated grid to the actuator
 GameManager.prototype.actuate = function () {
-  this.syncBestScoreBeforeActuate();
-  this.actuator.actuate(this.grid, this.buildActuatorPayload());
+  if (this.scoreManager.get() < this.score) {
+    this.scoreManager.set(this.score);
+  }
+  this.actuator.actuate(this.grid, {
+    score: this.score,
+    over: this.over,
+    won: this.won,
+    bestScore: this.scoreManager.get(),
+    terminated: this.isGameTerminated(),
+    blockedCells: this.blockedCellsList || []
+  });
   var stepStats = this.computeStepStats();
   this.updateStatsLabelText("stats-total", "总步数: ", stepStats.totalSteps);
   this.updateStatsLabelText("stats-moves", "移动步数: ", stepStats.moveSteps);
@@ -6139,7 +6118,12 @@ GameManager.prototype.actuate = function () {
     this.timerContainer.textContent = this.pretty(elapsedMs);
     this.refreshIpsDisplay(elapsedMs);
   }
-  this.persistOrFinalizeSessionAfterActuate();
+  if (this.isSessionTerminated() && this.modeKey !== "practice_legacy") {
+    this.clearSavedGameState(this.modeKey);
+    this.tryAutoSubmitOnGameOver();
+    return;
+  }
+  this.saveGameState();
 };
 
 // Save all tile positions and remove merger info
