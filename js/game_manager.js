@@ -5157,15 +5157,28 @@ GameManager.prototype.unlockProgressiveCapped64Row = function (value) {
 GameManager.prototype.repositionCappedTimerContainer = function () {
   var container = document.getElementById("capped-timer-container");
   if (!container) return;
-  var cappedState = this.resolveCappedModeState();
-  var target = cappedState.cappedTargetValue;
-  if (!target) target = 2048;
-  var anchorRow = this.getTimerRowEl(target);
+  var anchorRow = this.resolveCappedTimerContainerAnchorRow();
   if (!anchorRow || !anchorRow.parentNode) return;
+  this.repositionCappedTimerContainerAfterAnchor(container, anchorRow);
+};
+
+GameManager.prototype.resolveCappedTimerContainerAnchorTarget = function () {
+  var cappedState = this.resolveCappedModeState();
+  return cappedState.cappedTargetValue || 2048;
+};
+
+GameManager.prototype.resolveCappedTimerContainerAnchorRow = function () {
+  return this.getTimerRowEl(this.resolveCappedTimerContainerAnchorTarget());
+};
+
+GameManager.prototype.shouldRepositionCappedTimerContainer = function (container, parent, anchorRow) {
+  return container.parentNode !== parent || anchorRow.nextSibling !== container;
+};
+
+GameManager.prototype.repositionCappedTimerContainerAfterAnchor = function (container, anchorRow) {
   var parent = anchorRow.parentNode;
-  if (container.parentNode !== parent || anchorRow.nextSibling !== container) {
-    parent.insertBefore(container, anchorRow.nextSibling);
-  }
+  if (!this.shouldRepositionCappedTimerContainer(container, parent, anchorRow)) return;
+  parent.insertBefore(container, anchorRow.nextSibling);
 };
 
 GameManager.prototype.applyCappedRowVisibilityPlan = function (plan) {
