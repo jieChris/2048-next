@@ -7658,10 +7658,6 @@ GameManager.prototype.serializeV3 = function () {
   };
 };
 
-GameManager.prototype.writeLastSessionSubmitResult = function (payload) {
-  this.writeLocalStorageJsonPayload("last_session_submit_result_v1", payload);
-};
-
 GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord) {
   this.sessionSubmitDone = true;
   var endedAt = new Date().toISOString();
@@ -7701,7 +7697,7 @@ GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord)
   };
   try {
     var saved = localHistorySaveRecord.method.call(localHistorySaveRecord.scope, payload);
-    this.writeLastSessionSubmitResult(
+    this.writeLocalStorageJsonPayload("last_session_submit_result_v1",
       {
         at: endedAt,
         ok: true,
@@ -7712,7 +7708,7 @@ GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord)
       }
     );
   } catch (error) {
-    this.writeLastSessionSubmitResult(
+    this.writeLocalStorageJsonPayload("last_session_submit_result_v1",
       {
         at: endedAt,
         ok: false,
@@ -7730,7 +7726,7 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
   if (this.replayMode) skippedReason = "replay_mode";
   else if (!this.isSessionTerminated()) skippedReason = "not_terminated";
   if (skippedReason) {
-    this.writeLastSessionSubmitResult({
+    this.writeLocalStorageJsonPayload("last_session_submit_result_v1", {
       at: new Date().toISOString(),
       ok: false,
       skipped: true,
@@ -7740,7 +7736,7 @@ GameManager.prototype.tryAutoSubmitOnGameOver = function () {
   }
   var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
   if (!localHistorySaveRecord) {
-    this.writeLastSessionSubmitResult({
+    this.writeLocalStorageJsonPayload("last_session_submit_result_v1", {
       at: new Date().toISOString(),
       ok: false,
       reason: "local_history_store_missing"
