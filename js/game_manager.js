@@ -1932,13 +1932,20 @@ GameManager.prototype.shouldUseSavedGameStateFallback = function () {
   return true;
 };
 
+GameManager.prototype.buildShouldUseSavedGameStateCoreArgs = function (pathname) {
+  return [{
+    hasWindow: !!this.getWindowLike(),
+    replayMode: this.replayMode,
+    pathname: pathname
+  }];
+};
+
 GameManager.prototype.shouldUseSavedGameState = function () {
   var pathname = this.resolveWindowPathname();
-  var shouldUseSavedGameStateCore = this.callCoreStorageRuntime("shouldUseSavedGameStateFromContext", [{
-      hasWindow: !!this.getWindowLike(),
-      replayMode: this.replayMode,
-      pathname: pathname
-    }]);
+  var shouldUseSavedGameStateCore = this.callCoreStorageRuntime(
+    "shouldUseSavedGameStateFromContext",
+    this.buildShouldUseSavedGameStateCoreArgs(pathname)
+  );
   if (shouldUseSavedGameStateCore.available) return !!shouldUseSavedGameStateCore.value;
   return this.shouldUseSavedGameStateFallback();
 };
