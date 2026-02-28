@@ -1252,14 +1252,6 @@ GameManager.prototype.resolveWindowPathname = function () {
     : "";
 };
 
-GameManager.prototype.shouldUseSavedGameStateFallback = function () {
-  if (!this.getWindowLike()) return false;
-  if (this.replayMode) return false;
-  var path = this.resolveWindowPathname();
-  if (path.indexOf("replay.html") !== -1) return false;
-  return true;
-};
-
 GameManager.prototype.shouldUseSavedGameState = function () {
   var pathname = this.resolveWindowPathname();
   var shouldUseSavedGameStateCore = this.callCoreStorageRuntime(
@@ -1271,7 +1263,9 @@ GameManager.prototype.shouldUseSavedGameState = function () {
     }]
   );
   return this.resolveCoreBooleanCallOrFallback(shouldUseSavedGameStateCore, function () {
-    return this.shouldUseSavedGameStateFallback();
+    if (!this.getWindowLike()) return false;
+    if (this.replayMode) return false;
+    return pathname.indexOf("replay.html") === -1;
   });
 };
 
@@ -3560,13 +3554,6 @@ GameManager.prototype.getLockedDirection = function () {
   return this.lockedDirection;
 };
 
-GameManager.prototype.resolveLegacyModeFromModeKeyFallback = function (key) {
-  if (GameManager.LEGACY_MODE_BY_KEY[key]) return GameManager.LEGACY_MODE_BY_KEY[key];
-  if (key && key.indexOf("capped") !== -1) return "capped";
-  if (key && key.indexOf("practice") !== -1) return "practice";
-  return "classic";
-};
-
 GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
   var resolveLegacyModeFromModeKeyCore = this.callCoreModeRuntime(
     "resolveLegacyModeFromModeKey",
@@ -3579,7 +3566,10 @@ GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
   );
   return this.resolveCoreStringCallOrFallback(resolveLegacyModeFromModeKeyCore, function () {
     var key = modeKey || this.modeKey || this.mode;
-    return this.resolveLegacyModeFromModeKeyFallback(key);
+    if (GameManager.LEGACY_MODE_BY_KEY[key]) return GameManager.LEGACY_MODE_BY_KEY[key];
+    if (key && key.indexOf("capped") !== -1) return "capped";
+    if (key && key.indexOf("practice") !== -1) return "practice";
+    return "classic";
   });
 };
 
@@ -4855,14 +4845,6 @@ GameManager.prototype.applySpawnValueCountCoreResult = function (next) {
   this.spawnFours = Number(next.spawnFours) || 0;
 };
 
-GameManager.prototype.recordSpawnValueFallback = function (value) {
-  this.ensureSpawnValueCounts();
-  var key = String(value);
-  this.spawnValueCounts[key] = (this.spawnValueCounts[key] || 0) + 1;
-  // Keep legacy fields for compatibility with existing UI hooks.
-  this.updateLegacySpawnCountFieldsFromCounts();
-};
-
 GameManager.prototype.recordSpawnValue = function (value) {
   var applySpawnValueCountCore = this.callCoreRulesRuntime(
     "applySpawnValueCount",
@@ -4874,7 +4856,11 @@ GameManager.prototype.recordSpawnValue = function (value) {
     this.refreshSpawnRateDisplay();
     return;
   }
-  this.recordSpawnValueFallback(value);
+  this.ensureSpawnValueCounts();
+  var key = String(value);
+  this.spawnValueCounts[key] = (this.spawnValueCounts[key] || 0) + 1;
+  // Keep legacy fields for compatibility with existing UI hooks.
+  this.updateLegacySpawnCountFieldsFromCounts();
   this.refreshSpawnRateDisplay();
 };
 
@@ -4970,13 +4956,6 @@ GameManager.prototype.refreshSpawnRateDisplay = function () {
   if (this.cornerRateEl) this.cornerRateEl.textContent = text;
 };
 
-GameManager.prototype.resolveActualSecondaryRateFallback = function () {
-  var pair = this.getSpawnStatPair();
-  var total = this.getTotalSpawnCount();
-  if (total <= 0) return "0.00";
-  return ((this.getSpawnCount(pair.secondary) / total) * 100).toFixed(2);
-};
-
 GameManager.prototype.getActualSecondaryRate = function () {
   var getActualSecondaryRateTextCore = this.callCoreRulesRuntime(
     "getActualSecondaryRateText",
@@ -4986,7 +4965,10 @@ GameManager.prototype.getActualSecondaryRate = function () {
     ]
   );
   return this.resolveCoreStringCallOrFallback(getActualSecondaryRateTextCore, function () {
-    return this.resolveActualSecondaryRateFallback();
+    var pair = this.getSpawnStatPair();
+    var total = this.getTotalSpawnCount();
+    if (total <= 0) return "0.00";
+    return ((this.getSpawnCount(pair.secondary) / total) * 100).toFixed(2);
   });
 };
 
@@ -6283,26 +6265,6 @@ GameManager.prototype.movesAvailable = function () {
   });
 };
 
-GameManager.prototype.tileMatchesAvailableFallback = function () {
-  for (var x = 0; x < this.width; x++) {
-    for (var y = 0; y < this.height; y++) {
-      if (this.isBlockedCell(x, y)) continue;
-      var tile = this.grid.cellContent({ x: x, y: y });
-      if (!tile) continue;
-      for (var direction = 0; direction < 4; direction++) {
-        var vector = this.getVector(direction);
-        var cell = { x: x + vector.x, y: y + vector.y };
-        if (this.isBlockedCell(cell.x, cell.y)) continue;
-        var other = this.grid.cellContent(cell);
-        if (other && this.getMergedValue(tile.value, other.value) !== null) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-};
-
 // Check for available matches between tiles (more expensive check)
 GameManager.prototype.tileMatchesAvailable = function () {
   var manager = this;
@@ -6322,7 +6284,23 @@ GameManager.prototype.tileMatchesAvailable = function () {
     ]
   );
   return this.resolveCoreBooleanCallOrFallback(tileMatchesAvailableCore, function () {
-    return this.tileMatchesAvailableFallback();
+    for (var x = 0; x < this.width; x++) {
+      for (var y = 0; y < this.height; y++) {
+        if (this.isBlockedCell(x, y)) continue;
+        var tile = this.grid.cellContent({ x: x, y: y });
+        if (!tile) continue;
+        for (var direction = 0; direction < 4; direction++) {
+          var vector = this.getVector(direction);
+          var cell = { x: x + vector.x, y: y + vector.y };
+          if (this.isBlockedCell(cell.x, cell.y)) continue;
+          var other = this.grid.cellContent(cell);
+          if (other && this.getMergedValue(tile.value, other.value) !== null) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   });
 };
 
