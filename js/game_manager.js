@@ -6323,7 +6323,7 @@ GameManager.prototype.dispatchMoveInputWithThrottle = function (direction, throt
 };
 
 GameManager.prototype.handleMoveInput = function (direction) {
-  if (this.isUndoMoveDirection(direction)) {
+  if (direction == -1) {
     this.dispatchMoveInputWithoutThrottle(direction);
     return;
   }
@@ -6485,17 +6485,6 @@ GameManager.prototype.applyMergeMilestoneEffects = function (mergedValue, timeSt
   this.applyMergeTimerRowVisibilityEffects(mergeEffects);
 };
 
-GameManager.prototype.hasRemainingUndoBudget = function () {
-  if (this.undoLimit === null) return true;
-  return this.undoUsed < this.undoLimit;
-};
-
-GameManager.prototype.canProcessUndoMove = function () {
-  if (!(this.replayMode || this.isUndoInteractionEnabled())) return false;
-  if (!this.hasRemainingUndoBudget()) return false;
-  return this.undoStack.length > 0;
-};
-
 GameManager.prototype.restoreUndoPayload = function (undoPayload) {
   this.grid.build();
   this.score = Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
@@ -6513,16 +6502,10 @@ GameManager.prototype.restoreUndoPayload = function (undoPayload) {
   }
 };
 
-GameManager.prototype.publishMovedAdapterResult = function (reason, direction) {
-  this.publishAdapterMoveResult({
-    reason: reason,
-    direction: direction,
-    moved: true
-  });
-};
-
 GameManager.prototype.handleUndoMove = function (direction) {
-  if (!this.canProcessUndoMove()) {
+  var canUndoOperation = this.replayMode || this.isUndoInteractionEnabled();
+  var hasRemainingUndoBudget = this.undoLimit === null || this.undoUsed < this.undoLimit;
+  if (!(canUndoOperation && hasRemainingUndoBudget && this.undoStack.length > 0)) {
     return;
   }
 
@@ -6574,7 +6557,11 @@ GameManager.prototype.handleUndoMove = function (direction) {
   if (shouldStartTimerAfterUndo) {
     this.startTimer();
   }
-  this.publishMovedAdapterResult("undo", direction);
+  this.publishAdapterMoveResult({
+    reason: "undo",
+    direction: direction,
+    moved: true
+  });
 };
 
 GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove, undo) {
@@ -6608,7 +6595,11 @@ GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove
   if (postMoveLifecycle && postMoveLifecycle.shouldStartTimer) {
     this.startTimer();
   }
-  this.publishMovedAdapterResult("move", direction);
+  this.publishAdapterMoveResult({
+    reason: "move",
+    direction: direction,
+    moved: true
+  });
 };
 
 GameManager.prototype.shouldAbortDirectionalMove = function (direction) {
@@ -6703,14 +6694,10 @@ GameManager.prototype.executeDirectionalMove = function (direction) {
   this.applySuccessfulMove(direction, movePlan.scoreBeforeMove, movePlan.undo);
 };
 
-GameManager.prototype.isUndoMoveDirection = function (direction) {
-  return direction == -1;
-};
-
 // Move tiles on the grid in the specified direction
 GameManager.prototype.move = function (direction) {
   // 0: up, 1: right, 2:down, 3: left, -1: undo
-  if (this.isUndoMoveDirection(direction)) {
+  if (direction == -1) {
     this.handleUndoMove(direction);
     return;
   }
@@ -6744,33 +6731,6 @@ GameManager.prototype.getVector = function (direction) {
   });
 };
 
-GameManager.prototype.createTraversalAxis = function (size) {
-  var values = [];
-  for (var i = 0; i < size; i++) {
-    values.push(i);
-  }
-  return values;
-};
-
-GameManager.prototype.applyTraversalDirection = function (axis, component) {
-  return component === 1 ? axis.reverse() : axis;
-};
-
-GameManager.prototype.normalizeBuildTraversalsRuntimeValue = function (runtimeValue) {
-  var computed = runtimeValue || {};
-  return {
-    x: Array.isArray(computed.x) ? computed.x : [],
-    y: Array.isArray(computed.y) ? computed.y : []
-  };
-};
-
-GameManager.prototype.buildTraversalsFallback = function (vector) {
-  return {
-    x: this.applyTraversalDirection(this.createTraversalAxis(this.width), vector.x),
-    y: this.applyTraversalDirection(this.createTraversalAxis(this.height), vector.y)
-  };
-};
-
 // Build a list of positions to traverse in the right order
 GameManager.prototype.buildTraversals = function (vector) {
   var buildTraversalsCore = this.callCoreMovePathRuntime(
@@ -6779,9 +6739,26 @@ GameManager.prototype.buildTraversals = function (vector) {
   );
   return this.resolveNormalizedCoreValueOrFallback(
     buildTraversalsCore,
-    this.normalizeBuildTraversalsRuntimeValue,
+    function (runtimeValue) {
+      var computed = runtimeValue || {};
+      return {
+        x: Array.isArray(computed.x) ? computed.x : [],
+        y: Array.isArray(computed.y) ? computed.y : []
+      };
+    },
     function () {
-      return this.buildTraversalsFallback(vector);
+      var axisX = [];
+      for (var x = 0; x < this.width; x++) {
+        axisX.push(x);
+      }
+      var axisY = [];
+      for (var y = 0; y < this.height; y++) {
+        axisY.push(y);
+      }
+      return {
+        x: vector.x === 1 ? axisX.reverse() : axisX,
+        y: vector.y === 1 ? axisY.reverse() : axisY
+      };
     }
   );
 };
