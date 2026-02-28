@@ -1296,7 +1296,7 @@ GameManager.prototype.normalizeCoreRuntimeCallArgs = function (args) {
 };
 
 GameManager.prototype.resolveCoreObjectCallValueOrNull = function (coreCallResult) {
-  if (!coreCallResult || coreCallResult.available !== true) return null;
+  if (!this.isCoreCallAvailable(coreCallResult)) return null;
   return coreCallResult.value || {};
 };
 
@@ -1305,7 +1305,7 @@ GameManager.prototype.isCoreCallAvailable = function (coreCallResult) {
 };
 
 GameManager.prototype.resolveCoreBooleanCallValueOrNull = function (coreCallResult) {
-  if (!coreCallResult || coreCallResult.available !== true) return null;
+  if (!this.isCoreCallAvailable(coreCallResult)) return null;
   return !!coreCallResult.value;
 };
 
