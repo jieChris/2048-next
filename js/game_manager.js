@@ -8799,9 +8799,18 @@ GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord)
   this.buildAndPersistSessionSubmitContext(localHistorySaveRecord);
 };
 
+GameManager.prototype.isSessionSubmitAlreadyDone = function () {
+  return !!this.sessionSubmitDone;
+};
+
+GameManager.prototype.shouldAbortAutoSubmitByState = function () {
+  if (this.isSessionSubmitAlreadyDone()) return true;
+  if (this.handleSkippedSessionSubmitIfNeeded()) return true;
+  return false;
+};
+
 GameManager.prototype.tryAutoSubmitOnGameOver = function () {
-  if (this.sessionSubmitDone) return;
-  if (this.handleSkippedSessionSubmitIfNeeded()) return;
+  if (this.shouldAbortAutoSubmitByState()) return;
   var localHistorySaveRecord = this.resolveSessionSubmitRecordOrWriteMissing();
   if (!localHistorySaveRecord) return;
   this.submitSessionForRecord(localHistorySaveRecord);
