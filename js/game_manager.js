@@ -5075,24 +5075,38 @@ GameManager.prototype.getMergedFibonacciValueFallback = function (a, b) {
   return merged;
 };
 
-GameManager.prototype.getMergedValue = function (a, b) {
-  var getMergedValueCore = this.callCoreRulesRuntime("getMergedValue", [
+GameManager.prototype.buildGetMergedValueCoreArgs = function (a, b) {
+  return [
     a,
     b,
     this.isFibonacciMode() ? "fibonacci" : "pow2",
     this.maxTile
-  ]);
+  ];
+};
+
+GameManager.prototype.getMergedValue = function (a, b) {
+  var getMergedValueCore = this.callCoreRulesRuntime(
+    "getMergedValue",
+    this.buildGetMergedValueCoreArgs(a, b)
+  );
   if (getMergedValueCore.available) return getMergedValueCore.value;
   if (!Number.isInteger(a) || !Number.isInteger(b) || a <= 0 || b <= 0) return null;
   if (!this.isFibonacciMode()) return this.getMergedPow2ValueFallback(a, b);
   return this.getMergedFibonacciValueFallback(a, b);
 };
 
+GameManager.prototype.buildGetTimerMilestoneValuesCoreArgs = function () {
+  return [
+    this.isFibonacciMode() ? "fibonacci" : "pow2",
+    GameManager.TIMER_SLOT_IDS
+  ];
+};
+
 GameManager.prototype.getTimerMilestoneValues = function () {
-  var getTimerMilestoneValuesCore = this.callCoreRulesRuntime("getTimerMilestoneValues", [
-      this.isFibonacciMode() ? "fibonacci" : "pow2",
-      GameManager.TIMER_SLOT_IDS
-    ]);
+  var getTimerMilestoneValuesCore = this.callCoreRulesRuntime(
+    "getTimerMilestoneValues",
+    this.buildGetTimerMilestoneValuesCoreArgs()
+  );
   if (getTimerMilestoneValuesCore.available) return getTimerMilestoneValuesCore.value;
   if (this.isFibonacciMode()) {
     // 13 slots mapped to Fibonacci milestones.
@@ -5113,12 +5127,19 @@ GameManager.prototype.buildTimerMilestoneSlotMapFallback = function (milestones,
   return map;
 };
 
+GameManager.prototype.buildGetTimerMilestoneSlotByValueCoreArgs = function () {
+  return [
+    this.timerMilestones,
+    GameManager.TIMER_SLOT_IDS
+  ];
+};
+
 GameManager.prototype.configureTimerMilestones = function () {
   this.timerMilestones = this.getTimerMilestoneValues();
-  var getTimerMilestoneSlotByValueCore = this.callCoreRulesRuntime("getTimerMilestoneSlotByValue", [
-      this.timerMilestones,
-      GameManager.TIMER_SLOT_IDS
-    ]);
+  var getTimerMilestoneSlotByValueCore = this.callCoreRulesRuntime(
+    "getTimerMilestoneSlotByValue",
+    this.buildGetTimerMilestoneSlotByValueCoreArgs()
+  );
   if (getTimerMilestoneSlotByValueCore.available) {
     this.timerMilestoneSlotByValue = getTimerMilestoneSlotByValueCore.value;
   } else {
