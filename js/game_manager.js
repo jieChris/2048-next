@@ -7529,27 +7529,21 @@ GameManager.prototype.getFinalBoardMatrix = function () {
   );
 };
 
-GameManager.prototype.normalizeBestTileValue = function (rawBestTileValue) {
-  var bestValue = Number(rawBestTileValue);
-  if (!Number.isFinite(bestValue) || bestValue < 0) return null;
-  return bestValue;
-};
-
-GameManager.prototype.getBestTileValueFallback = function () {
-  var best = 0;
-  this.grid.eachCell(function (_x, _y, tile) {
-    if (tile && tile.value > best) best = tile.value;
-  });
-  return best;
-};
-
 GameManager.prototype.getBestTileValue = function () {
   var getBestTileValueCore = this.callCoreGridScanRuntime("getBestTileValue", [this.getFinalBoardMatrix()]);
   return this.resolveNormalizedCoreValueOrFallback(
     getBestTileValueCore,
-    this.normalizeBestTileValue,
+    function (rawBestTileValue) {
+      var bestValue = Number(rawBestTileValue);
+      if (!Number.isFinite(bestValue) || bestValue < 0) return null;
+      return bestValue;
+    },
     function () {
-      return this.getBestTileValueFallback();
+      var best = 0;
+      this.grid.eachCell(function (_x, _y, tile) {
+        if (tile && tile.value > best) best = tile.value;
+      });
+      return best;
     }
   );
 };
