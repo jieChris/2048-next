@@ -956,74 +956,41 @@ GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, repla
   });
 };
 
-GameManager.prototype.buildReplayTickBoundaryPlan = function (shouldStop, shouldPause, shouldApplyReplayMode, replayMode) {
-  return {
-    shouldStop: shouldStop,
-    shouldPause: shouldPause,
-    shouldApplyReplayMode: shouldApplyReplayMode,
-    replayMode: replayMode
-  };
-};
-
-GameManager.prototype.buildReplayTickStopPlanFallback = function (replayEndState) {
-  return this.buildReplayTickBoundaryPlan(
-    true,
-    replayEndState && replayEndState.shouldPause !== false,
-    true,
-    replayEndState && replayEndState.replayMode === true
-  );
-};
-
 GameManager.prototype.planReplayTickBoundaryFallback = function (shouldStopAtTick, replayEndState) {
-  if (!shouldStopAtTick) return this.buildReplayTickBoundaryPlan(false, false, false, true);
-  return this.buildReplayTickStopPlanFallback(replayEndState);
-};
-
-GameManager.prototype.buildReplayTickBoundaryPlanInput = function () {
-  var shouldStopAtTick = this.shouldStopReplayAtTick(this.replayIndex, this.replayMoves.length);
+  if (!shouldStopAtTick) {
+    return {
+      shouldStop: false,
+      shouldPause: false,
+      shouldApplyReplayMode: false,
+      replayMode: true
+    };
+  }
   return {
-    shouldStopAtTick: shouldStopAtTick,
-    replayEndState: shouldStopAtTick ? this.computeReplayEndState() : undefined
+    shouldStop: true,
+    shouldPause: replayEndState && replayEndState.shouldPause !== false,
+    shouldApplyReplayMode: true,
+    replayMode: replayEndState && replayEndState.replayMode === true
   };
-};
-
-GameManager.prototype.resolveReplayTickBoundaryPlanForCurrentState = function () {
-  var planInput = this.buildReplayTickBoundaryPlanInput();
-  return this.planReplayTickBoundary(planInput.shouldStopAtTick, planInput.replayEndState);
-};
-
-GameManager.prototype.applyReplayTickBoundaryPause = function (tickBoundaryPlan) {
-  if (tickBoundaryPlan.shouldPause) {
-    this.pause();
-  }
-};
-
-GameManager.prototype.applyReplayTickBoundaryReplayMode = function (tickBoundaryPlan) {
-  if (tickBoundaryPlan.shouldApplyReplayMode) {
-    this.replayMode = tickBoundaryPlan.replayMode;
-  }
 };
 
 GameManager.prototype.applyReplayTickBoundaryPlan = function (tickBoundaryPlan) {
   if (!tickBoundaryPlan || tickBoundaryPlan.shouldStop !== true) return false;
-  this.applyReplayTickBoundaryPause(tickBoundaryPlan);
-  this.applyReplayTickBoundaryReplayMode(tickBoundaryPlan);
+  if (tickBoundaryPlan.shouldPause) {
+    this.pause();
+  }
+  if (tickBoundaryPlan.shouldApplyReplayMode) {
+    this.replayMode = tickBoundaryPlan.replayMode;
+  }
   return true;
-};
-
-GameManager.prototype.executeReplayTickStep = function () {
-  this.executePlannedReplayStep();
 };
 
 GameManager.prototype.runReplayTick = function () {
-  if (this.tryStopReplayAtTickBoundary()) return false;
-  this.executeReplayTickStep();
+  var shouldStopAtTick = this.shouldStopReplayAtTick(this.replayIndex, this.replayMoves.length);
+  var replayEndState = shouldStopAtTick ? this.computeReplayEndState() : undefined;
+  var tickBoundaryPlan = this.planReplayTickBoundary(shouldStopAtTick, replayEndState);
+  if (this.applyReplayTickBoundaryPlan(tickBoundaryPlan)) return false;
+  this.executePlannedReplayStep();
   return true;
-};
-
-GameManager.prototype.tryStopReplayAtTickBoundary = function () {
-  var tickBoundaryPlan = this.resolveReplayTickBoundaryPlanForCurrentState();
-  return this.applyReplayTickBoundaryPlan(tickBoundaryPlan);
 };
 
 GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
