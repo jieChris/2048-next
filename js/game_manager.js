@@ -6683,12 +6683,19 @@ GameManager.prototype.clearTransientTileVisualState = function () {
   });
 };
 
-GameManager.prototype.resolveIsGameTerminatedValue = function () {
-  var isGameTerminatedStateCore = this.callCoreModeRuntime("isGameTerminatedState", [{
+GameManager.prototype.buildIsGameTerminatedStateCoreArgs = function () {
+  return [{
     over: this.over,
     won: this.won,
     keepPlaying: this.keepPlaying
-  }]);
+  }];
+};
+
+GameManager.prototype.resolveIsGameTerminatedValue = function () {
+  var isGameTerminatedStateCore = this.callCoreModeRuntime(
+    "isGameTerminatedState",
+    this.buildIsGameTerminatedStateCoreArgs()
+  );
   if (isGameTerminatedStateCore.available) {
     return !!isGameTerminatedStateCore.value;
   }
