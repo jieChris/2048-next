@@ -6513,53 +6513,12 @@ GameManager.prototype.restoreUndoPayload = function (undoPayload) {
   }
 };
 
-GameManager.prototype.resolvePostUndoSessionAction = function (postUndoRecord) {
-  return Array.isArray(postUndoRecord.sessionAction)
-    ? postUndoRecord.sessionAction
-    : ["u"];
-};
-
-GameManager.prototype.tryPushPostUndoSessionAction = function (postUndoRecord) {
-  if (!(postUndoRecord.shouldPushSessionAction && this.sessionReplayV3)) return;
-  this.sessionReplayV3.actions.push(this.resolvePostUndoSessionAction(postUndoRecord));
-};
-
-GameManager.prototype.applyPostUndoRecord = function (postUndoRecord, direction) {
-  if (postUndoRecord.shouldRecordMoveHistory) {
-    this.moveHistory.push(direction);
-  }
-  if (postUndoRecord.shouldAppendCompactUndo) {
-    this.appendCompactUndo();
-  }
-  this.tryPushPostUndoSessionAction(postUndoRecord);
-};
-
-GameManager.prototype.recordPostUndoMove = function (direction) {
-  var postUndoRecord = this.computePostUndoRecord(direction);
-  this.applyPostUndoRecord(postUndoRecord, direction);
-};
-
-GameManager.prototype.shouldStartTimerAfterUndoRestore = function (undoRestore) {
-  if (typeof undoRestore.shouldStartTimer === "boolean") {
-    return undoRestore.shouldStartTimer;
-  }
-  return this.timerStatus === 0;
-};
-
 GameManager.prototype.publishMovedAdapterResult = function (reason, direction) {
   this.publishAdapterMoveResult({
     reason: reason,
     direction: direction,
     moved: true
   });
-};
-
-GameManager.prototype.publishUndoCompletion = function (direction, undoRestore) {
-  this.actuate();
-  if (this.shouldStartTimerAfterUndoRestore(undoRestore)) {
-    this.startTimer();
-  }
-  this.publishMovedAdapterResult("undo", direction);
 };
 
 GameManager.prototype.performUndoRestoreFromEntry = function (prev) {
@@ -6601,8 +6560,26 @@ GameManager.prototype.handleUndoMove = function (direction) {
 
   var prev = this.normalizeUndoStackEntry(this.undoStack.pop());
   var undoRestore = this.performUndoRestoreFromEntry(prev);
-  this.recordPostUndoMove(direction);
-  this.publishUndoCompletion(direction, undoRestore);
+  var postUndoRecord = this.computePostUndoRecord(direction);
+  if (postUndoRecord.shouldRecordMoveHistory) {
+    this.moveHistory.push(direction);
+  }
+  if (postUndoRecord.shouldAppendCompactUndo) {
+    this.appendCompactUndo();
+  }
+  if (postUndoRecord.shouldPushSessionAction && this.sessionReplayV3) {
+    this.sessionReplayV3.actions.push(
+      Array.isArray(postUndoRecord.sessionAction) ? postUndoRecord.sessionAction : ["u"]
+    );
+  }
+  this.actuate();
+  var shouldStartTimerAfterUndo = typeof undoRestore.shouldStartTimer === "boolean"
+    ? undoRestore.shouldStartTimer
+    : this.timerStatus === 0;
+  if (shouldStartTimerAfterUndo) {
+    this.startTimer();
+  }
+  this.publishMovedAdapterResult("undo", direction);
 };
 
 GameManager.prototype.resolvePostMoveSessionAction = function (postMoveRecord, direction) {
