@@ -1781,12 +1781,6 @@ GameManager.prototype.buildSavedGameStateStoragesFallback = function () {
   return out;
 };
 
-GameManager.prototype.buildGetSavedGameStateStoragesCoreArgs = function () {
-  return [{
-    windowLike: this.getWindowLike()
-  }];
-};
-
 GameManager.prototype.normalizeSavedGameStateStoragesCoreValue = function (storagesByCore) {
   return Array.isArray(storagesByCore) ? storagesByCore : null;
 };
@@ -1794,7 +1788,9 @@ GameManager.prototype.normalizeSavedGameStateStoragesCoreValue = function (stora
 GameManager.prototype.getSavedGameStateStorages = function () {
   var getSavedGameStateStoragesFromContextCore = this.callCoreStorageRuntime(
     "getSavedGameStateStoragesFromContext",
-    this.buildGetSavedGameStateStoragesCoreArgs()
+    [{
+      windowLike: this.getWindowLike()
+    }]
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     getSavedGameStateStoragesFromContextCore,
@@ -1868,18 +1864,14 @@ GameManager.prototype.normalizeSavedPayloadByKeyCoreValue = function (savedByCor
   return undefined;
 };
 
-GameManager.prototype.buildReadSavedPayloadByKeyCoreArgs = function (stores, key) {
-  return [{
-    storages: this.normalizeSavedPayloadStores(stores),
-    key: key
-  }];
-};
-
 GameManager.prototype.readSavedPayloadByKey = function (key) {
   var stores = this.getSavedGameStateStorages();
   var readSavedPayloadByKeyFromStoragesCore = this.callCoreStorageRuntime(
     "readSavedPayloadByKeyFromStorages",
-    this.buildReadSavedPayloadByKeyCoreArgs(stores, key)
+    [{
+      storages: this.normalizeSavedPayloadStores(stores),
+      key: key
+    }]
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     readSavedPayloadByKeyFromStoragesCore,
@@ -1906,15 +1898,11 @@ GameManager.prototype.buildWindowNameSavedPayloadCoreBaseArgs = function (window
   };
 };
 
-GameManager.prototype.buildReadWindowNameSavedPayloadCoreArgs = function (windowLike, modeKey) {
-  return [this.buildWindowNameSavedPayloadCoreBaseArgs(windowLike, modeKey)];
-};
-
 GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
   var windowLike = this.getWindowLike();
   var readSavedPayloadFromWindowNameCore = this.callCoreStorageRuntime(
     "readSavedPayloadFromWindowName",
-    this.buildReadWindowNameSavedPayloadCoreArgs(windowLike, modeKey)
+    [this.buildWindowNameSavedPayloadCoreBaseArgs(windowLike, modeKey)]
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     readSavedPayloadFromWindowNameCore,
@@ -1924,15 +1912,11 @@ GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
   return this.resolveWindowNameSavedPayloadMapForMode(modeKey);
 };
 
-GameManager.prototype.resolveWindowNameRawValue = function (windowLike) {
-  return windowLike && typeof windowLike.name === "string" ? windowLike.name : "";
-};
-
 GameManager.prototype.readWindowNameRaw = function () {
   var windowLike = this.getWindowLike();
   if (!windowLike) return "";
   try {
-    return this.resolveWindowNameRawValue(windowLike);
+    return windowLike && typeof windowLike.name === "string" ? windowLike.name : "";
   } catch (_errName) {
     return "";
   }
@@ -2062,38 +2046,17 @@ GameManager.prototype.writeWindowNameRaw = function (windowNameValue) {
   }
 };
 
-GameManager.prototype.resolveWindowNameSavedPayloadSplitState = function (rawWindowName, marker) {
-  var parts = this.resolveWindowNameParts(rawWindowName);
-  return this.resolveWindowNameMapAndKeptParts(parts, marker);
-};
-
-GameManager.prototype.resolveWindowNameSavedPayloadEncodedMap = function (splitState, modeKey, payload) {
-  var nextMap = this.applySavedPayloadToWindowNameMap(splitState.map, modeKey, payload);
-  return this.encodeWindowNameSavedMap(nextMap);
-};
-
-GameManager.prototype.resolveWindowNameSavedPayloadNextWindowName = function (modeKey, payload) {
-  var marker = this.resolveWindowNameSavedPayloadMarker();
-  var raw = this.readWindowNameRaw();
-  var splitState = this.resolveWindowNameSavedPayloadSplitState(raw, marker);
-  var encodedMap = this.resolveWindowNameSavedPayloadEncodedMap(splitState, modeKey, payload);
-  if (typeof encodedMap !== "string") return null;
-  return this.buildWindowNameWithSavedMap(splitState.kept, marker, encodedMap);
-};
-
 GameManager.prototype.writeWindowNameSavedPayloadFallback = function (modeKey, payload) {
   if (!this.getWindowLike()) return false;
-  var nextWindowName = this.resolveWindowNameSavedPayloadNextWindowName(modeKey, payload);
+  var marker = this.resolveWindowNameSavedPayloadMarker();
+  var raw = this.readWindowNameRaw();
+  var splitState = this.resolveWindowNameMapAndKeptParts(this.resolveWindowNameParts(raw), marker);
+  var nextMap = this.applySavedPayloadToWindowNameMap(splitState.map, modeKey, payload);
+  var encodedMap = this.encodeWindowNameSavedMap(nextMap);
+  if (typeof encodedMap !== "string") return false;
+  var nextWindowName = this.buildWindowNameWithSavedMap(splitState.kept, marker, encodedMap);
   if (typeof nextWindowName !== "string") return false;
   return this.writeWindowNameRaw(nextWindowName);
-};
-
-GameManager.prototype.buildWriteWindowNameSavedPayloadCoreArgs = function (windowLike, modeKey, payload) {
-  return [Object.assign(
-    {},
-    this.buildWindowNameSavedPayloadCoreBaseArgs(windowLike, modeKey),
-    { payload: payload }
-  )];
 };
 
 GameManager.prototype.normalizeWriteWindowNameSavedPayloadCoreValue = function (writtenByCore) {
@@ -2104,7 +2067,11 @@ GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) 
   var windowLike = this.getWindowLike();
   var writeSavedPayloadToWindowNameCore = this.callCoreStorageRuntime(
     "writeSavedPayloadToWindowName",
-    this.buildWriteWindowNameSavedPayloadCoreArgs(windowLike, modeKey, payload)
+    [Object.assign(
+      {},
+      this.buildWindowNameSavedPayloadCoreBaseArgs(windowLike, modeKey),
+      { payload: payload }
+    )]
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     writeSavedPayloadToWindowNameCore,
@@ -2129,19 +2096,15 @@ GameManager.prototype.shouldUseSavedGameStateFallback = function () {
   return true;
 };
 
-GameManager.prototype.buildShouldUseSavedGameStateCoreArgs = function (pathname) {
-  return [{
-    hasWindow: !!this.getWindowLike(),
-    replayMode: this.replayMode,
-    pathname: pathname
-  }];
-};
-
 GameManager.prototype.shouldUseSavedGameState = function () {
   var pathname = this.resolveWindowPathname();
   var shouldUseSavedGameStateCore = this.callCoreStorageRuntime(
     "shouldUseSavedGameStateFromContext",
-    this.buildShouldUseSavedGameStateCoreArgs(pathname)
+    [{
+      hasWindow: !!this.getWindowLike(),
+      replayMode: this.replayMode,
+      pathname: pathname
+    }]
   );
   return this.resolveCoreBooleanCallOrFallback(shouldUseSavedGameStateCore, function () {
     return this.shouldUseSavedGameStateFallback();
@@ -2186,13 +2149,6 @@ GameManager.prototype.resolveSavedGameStateStorageKeys = function (modeKey) {
   ];
 };
 
-GameManager.prototype.buildRemoveSavedGameStateKeysCoreArgs = function (stores, keys) {
-  return [{
-    storages: stores,
-    keys: keys
-  }];
-};
-
 GameManager.prototype.clearSavedGameState = function (modeKey) {
   this.writeWindowNameSavedPayload(modeKey, null);
   if (!this.shouldUseSavedGameState()) return;
@@ -2200,7 +2156,10 @@ GameManager.prototype.clearSavedGameState = function (modeKey) {
   var stores = this.getSavedGameStateStorages();
   var removeKeysFromStoragesCore = this.callCoreStorageRuntime(
     "removeKeysFromStorages",
-    this.buildRemoveSavedGameStateKeysCoreArgs(stores, keys)
+    [{
+      storages: stores,
+      keys: keys
+    }]
   );
   if (this.resolveCoreBooleanCallOrFallback(removeKeysFromStoragesCore, function () {
     return false;
@@ -3298,30 +3257,26 @@ GameManager.prototype.buildLiteSavedGameStatePayloadFallback = function (payload
   return Object.assign(basePayload, progressPayload);
 };
 
-GameManager.prototype.buildLiteSavedGameStatePayloadCoreArgs = function (payload) {
-  return [{
-    payload: payload,
-    savedStateVersion: GameManager.SAVED_GAME_STATE_VERSION,
-    modeKey: this.modeKey,
-    width: this.width,
-    height: this.height,
-    ruleset: this.ruleset,
-    score: this.score,
-    initialSeed: this.initialSeed,
-    seed: this.seed,
-    durationMs: this.getDurationMs(),
-    finalBoardMatrix: this.getFinalBoardMatrix(),
-    initialBoardMatrix: this.initialBoardMatrix,
-    replayStartBoardMatrix: this.replayStartBoardMatrix,
-    practiceRestartBoardMatrix: this.practiceRestartBoardMatrix,
-    practiceRestartModeConfig: this.practiceRestartModeConfig
-  }];
-};
-
 GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
   var buildLiteSavedGameStatePayloadCore = this.callCoreStorageRuntime(
     "buildLiteSavedGameStatePayload",
-    this.buildLiteSavedGameStatePayloadCoreArgs(payload)
+    [{
+      payload: payload,
+      savedStateVersion: GameManager.SAVED_GAME_STATE_VERSION,
+      modeKey: this.modeKey,
+      width: this.width,
+      height: this.height,
+      ruleset: this.ruleset,
+      score: this.score,
+      initialSeed: this.initialSeed,
+      seed: this.seed,
+      durationMs: this.getDurationMs(),
+      finalBoardMatrix: this.getFinalBoardMatrix(),
+      initialBoardMatrix: this.initialBoardMatrix,
+      replayStartBoardMatrix: this.replayStartBoardMatrix,
+      practiceRestartBoardMatrix: this.practiceRestartBoardMatrix,
+      practiceRestartModeConfig: this.practiceRestartModeConfig
+    }]
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     buildLiteSavedGameStatePayloadCore,
@@ -3353,20 +3308,16 @@ GameManager.prototype.resolveModeConfigFromCatalogFallback = function (modeKey, 
   return null;
 };
 
-GameManager.prototype.buildResolveModeCatalogConfigCoreArgs = function (modeKey, catalogGetMode) {
-  return [{
-    modeId: modeKey,
-    catalogGetMode: catalogGetMode,
-    fallbackModeConfigs: GameManager.FALLBACK_MODE_CONFIGS
-  }];
-};
-
 GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
   var catalogGetMode = this.resolveCatalogGetMode();
 
   var resolveModeCatalogConfigCore = this.callCoreModeRuntime(
     "resolveModeCatalogConfig",
-    this.buildResolveModeCatalogConfigCoreArgs(modeKey, catalogGetMode)
+    [{
+      modeId: modeKey,
+      catalogGetMode: catalogGetMode,
+      fallbackModeConfigs: GameManager.FALLBACK_MODE_CONFIGS
+    }]
   );
   return this.resolveNormalizedCoreValueOrFallbackAllowNull(resolveModeCatalogConfigCore, function (coreValue) {
     if (coreValue === null) return null;
