@@ -268,7 +268,7 @@ GameManager.prototype.getActionKind = function (action) {
     "getReplayActionKind",
     this.buildGetReplayActionKindCoreArgs(action)
   );
-  return this.resolveCoreRawCallOrFallback(getReplayActionKindCore, function () {
+  return this.resolveCoreStringCallOrFallback(getReplayActionKindCore, function () {
     if (action === -1) return "u";
     if (action >= 0 && action <= 3) return "m";
     if (Array.isArray(action) && action.length > 0) return action[0];
@@ -285,7 +285,7 @@ GameManager.prototype.encodeReplay128 = function (code) {
     "encodeReplay128",
     this.buildEncodeReplay128CoreArgs(code)
   );
-  return this.resolveCoreRawCallOrFallback(encodeReplay128Core, function () {
+  return this.resolveCoreStringCallOrFallback(encodeReplay128Core, function () {
     if (!Number.isInteger(code) || code < 0 || code >= GameManager.REPLAY128_TOTAL) {
       throw "Invalid replay code";
     }
@@ -331,7 +331,7 @@ GameManager.prototype.encodeBoardV4 = function (board) {
     "encodeBoardV4",
     this.buildEncodeBoardV4CoreArgs(board)
   );
-  return this.resolveCoreRawCallOrFallback(encodeBoardV4Core, function () {
+  return this.resolveCoreStringCallOrFallback(encodeBoardV4Core, function () {
     if (!Array.isArray(board) || board.length !== 4) throw "Invalid initial board";
     var out = "";
     for (var y = 0; y < 4; y++) {
