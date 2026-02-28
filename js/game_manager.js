@@ -4112,47 +4112,6 @@ GameManager.prototype.createDefaultMergeEffectsResult = function () {
   };
 };
 
-GameManager.prototype.applyMergeEffectsWinAndCappedFlags = function (result, value, cappedMode, hasCappedTarget, cappedTarget) {
-  if (cappedMode && hasCappedTarget && value === cappedTarget) {
-    result.shouldRecordCappedMilestone = true;
-    return;
-  }
-  if (!cappedMode && value === 2048) {
-    result.shouldSetWon = true;
-  }
-};
-
-GameManager.prototype.applyMergeEffectsTimerStampFlags = function (result, value, reached32k) {
-  if (value === 8192) {
-    result.timerIdsToStamp.push(reached32k ? "timer8192-sub" : "timer8192");
-  }
-  if (value === 16384) {
-    result.timerIdsToStamp.push(reached32k ? "timer16384-sub" : "timer16384");
-  }
-  if (value === 32768) {
-    result.shouldSetReached32k = true;
-    result.timerIdsToStamp.push("timer32768");
-    result.showSubTimerContainer = true;
-    result.hideTimerRows = [16, 32];
-  }
-};
-
-GameManager.prototype.resolveComputeMergeEffectsFallbackContext = function (mergedValue, cappedState) {
-  var value = Number(mergedValue);
-  var cappedTarget = Number(cappedState.cappedTargetValue);
-  return {
-    value: value,
-    cappedMode: !!cappedState.isCappedMode,
-    cappedTarget: cappedTarget,
-    hasCappedTarget: Number.isFinite(cappedTarget) && cappedTarget > 0,
-    reached32k: !!this.reached32k
-  };
-};
-
-GameManager.prototype.shouldSkipComputeMergeEffectsFallback = function (value) {
-  return !Number.isInteger(value) || value <= 0;
-};
-
 GameManager.prototype.computeMergeEffects = function (mergedValue) {
   var cappedState = this.resolveCappedModeState();
   var computeMergeEffectsCore = this.callCoreMergeEffectsRuntime(
@@ -4165,18 +4124,31 @@ GameManager.prototype.computeMergeEffects = function (mergedValue) {
     }]
   );
   return this.resolveCoreObjectCallOrFallback(computeMergeEffectsCore, function () {
-    var fallbackContext = this.resolveComputeMergeEffectsFallbackContext(mergedValue, cappedState);
+    var value = Number(mergedValue);
+    var cappedTarget = Number(cappedState.cappedTargetValue);
+    var cappedMode = !!cappedState.isCappedMode;
+    var hasCappedTarget = Number.isFinite(cappedTarget) && cappedTarget > 0;
+    var reached32k = !!this.reached32k;
     var result = this.createDefaultMergeEffectsResult();
 
-    if (this.shouldSkipComputeMergeEffectsFallback(fallbackContext.value)) return result;
-    this.applyMergeEffectsWinAndCappedFlags(
-      result,
-      fallbackContext.value,
-      fallbackContext.cappedMode,
-      fallbackContext.hasCappedTarget,
-      fallbackContext.cappedTarget
-    );
-    this.applyMergeEffectsTimerStampFlags(result, fallbackContext.value, fallbackContext.reached32k);
+    if (!Number.isInteger(value) || value <= 0) return result;
+    if (cappedMode && hasCappedTarget && value === cappedTarget) {
+      result.shouldRecordCappedMilestone = true;
+    } else if (!cappedMode && value === 2048) {
+      result.shouldSetWon = true;
+    }
+    if (value === 8192) {
+      result.timerIdsToStamp.push(reached32k ? "timer8192-sub" : "timer8192");
+    }
+    if (value === 16384) {
+      result.timerIdsToStamp.push(reached32k ? "timer16384-sub" : "timer16384");
+    }
+    if (value === 32768) {
+      result.shouldSetReached32k = true;
+      result.timerIdsToStamp.push("timer32768");
+      result.showSubTimerContainer = true;
+      result.hideTimerRows = [16, 32];
+    }
     return result;
   });
 };
