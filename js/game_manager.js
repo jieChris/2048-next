@@ -3449,25 +3449,21 @@ GameManager.prototype.resolveUndoPolicyOptionSnapshot = function (options) {
   };
 };
 
-GameManager.prototype.buildUndoPolicyStateCoreInput = function (context, optionsSnapshot) {
-  return {
-    mode: context.targetMode,
-    modeConfig: context.modeConfig,
-    hasGameStarted: optionsSnapshot.hasGameStarted,
-    replayMode: optionsSnapshot.replayMode,
-    undoLimit: optionsSnapshot.undoLimit,
-    undoUsed: optionsSnapshot.undoUsed,
-    undoEnabled: optionsSnapshot.undoEnabled
-  };
-};
-
 GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
   var context = this.resolveModePolicyContext(mode);
   var optionsSnapshot = this.resolveUndoPolicyOptionSnapshot(options);
 
   var resolveUndoPolicyStateCore = this.callCoreModeRuntime(
     "resolveUndoPolicyState",
-    [this.buildUndoPolicyStateCoreInput(context, optionsSnapshot)]
+    [{
+      mode: context.targetMode,
+      modeConfig: context.modeConfig,
+      hasGameStarted: optionsSnapshot.hasGameStarted,
+      replayMode: optionsSnapshot.replayMode,
+      undoLimit: optionsSnapshot.undoLimit,
+      undoUsed: optionsSnapshot.undoUsed,
+      undoEnabled: optionsSnapshot.undoEnabled
+    }]
   );
   var undoPolicyStateByCore = this.resolveNormalizedCoreValueOrUndefined(
     resolveUndoPolicyStateCore,
@@ -3963,22 +3959,18 @@ GameManager.prototype.normalizeUndoSnapshotCoreValue = function (computed, fallb
   };
 };
 
-GameManager.prototype.buildCreateUndoSnapshotCoreInput = function () {
-  return {
-    score: this.score,
-    comboStreak: this.comboStreak,
-    successfulMoveCount: this.successfulMoveCount,
-    lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
-    lockedDirectionTurn: this.lockedDirectionTurn,
-    lockedDirection: this.lockedDirection,
-    undoUsed: this.undoUsed
-  };
-};
-
 GameManager.prototype.createUndoSnapshotState = function () {
   var createUndoSnapshotCore = this.callCoreUndoSnapshotRuntime(
     "createUndoSnapshot",
-    [this.buildCreateUndoSnapshotCoreInput()]
+    [{
+      score: this.score,
+      comboStreak: this.comboStreak,
+      successfulMoveCount: this.successfulMoveCount,
+      lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
+      lockedDirectionTurn: this.lockedDirectionTurn,
+      lockedDirection: this.lockedDirection,
+      undoUsed: this.undoUsed
+    }]
   );
   var fallback = this.buildUndoSnapshotFallbackState(this.getUndoStateFallbackValues());
   return this.resolveNormalizedCoreValueOrFallback(
@@ -4062,19 +4054,6 @@ GameManager.prototype.resolveUndoStackEntrySource = function (entry) {
   return this.isNonArrayObject(entry) ? entry : {};
 };
 
-GameManager.prototype.buildNormalizeUndoStackEntryCoreInput = function (source, fallbackState) {
-  return {
-    entry: source,
-    fallbackScore: fallbackState.score,
-    fallbackComboStreak: fallbackState.comboStreak,
-    fallbackSuccessfulMoveCount: fallbackState.successfulMoveCount,
-    fallbackLockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
-    fallbackLockedDirectionTurn: fallbackState.lockedDirectionTurn,
-    fallbackLockedDirection: fallbackState.lockedDirection,
-    fallbackUndoUsed: fallbackState.undoUsed
-  };
-};
-
 GameManager.prototype.resolveUndoStackEntrySourceFromCore = function (computed, fallbackSource) {
   return this.isNonArrayObject(computed) ? computed : fallbackSource;
 };
@@ -4085,7 +4064,16 @@ GameManager.prototype.normalizeUndoStackEntry = function (entry) {
   var source = this.resolveUndoStackEntrySource(entry);
   var normalizeUndoStackEntryCore = this.callCoreUndoStackEntryRuntime(
     "normalizeUndoStackEntry",
-    [this.buildNormalizeUndoStackEntryCoreInput(source, fallbackState)]
+    [{
+      entry: source,
+      fallbackScore: fallbackState.score,
+      fallbackComboStreak: fallbackState.comboStreak,
+      fallbackSuccessfulMoveCount: fallbackState.successfulMoveCount,
+      fallbackLockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
+      fallbackLockedDirectionTurn: fallbackState.lockedDirectionTurn,
+      fallbackLockedDirection: fallbackState.lockedDirection,
+      fallbackUndoUsed: fallbackState.undoUsed
+    }]
   );
   var sourceByCore = this.resolveNormalizedCoreValueOrUndefined(
     normalizeUndoStackEntryCore,
@@ -4282,15 +4270,6 @@ GameManager.prototype.applyMergeEffectsTimerStampFlags = function (result, value
   }
 };
 
-GameManager.prototype.buildComputeMergeEffectsCoreInput = function (mergedValue, cappedState) {
-  return {
-    mergedValue: mergedValue,
-    isCappedMode: !!cappedState.isCappedMode,
-    cappedTargetValue: cappedState.cappedTargetValue,
-    reached32k: !!this.reached32k
-  };
-};
-
 GameManager.prototype.resolveComputeMergeEffectsFallbackContext = function (mergedValue, cappedState) {
   var value = Number(mergedValue);
   var cappedTarget = Number(cappedState.cappedTargetValue);
@@ -4311,7 +4290,12 @@ GameManager.prototype.computeMergeEffects = function (mergedValue) {
   var cappedState = this.resolveCappedModeState();
   var computeMergeEffectsCore = this.callCoreMergeEffectsRuntime(
     "computeMergeEffects",
-    [this.buildComputeMergeEffectsCoreInput(mergedValue, cappedState)]
+    [{
+      mergedValue: mergedValue,
+      isCappedMode: !!cappedState.isCappedMode,
+      cappedTargetValue: cappedState.cappedTargetValue,
+      reached32k: !!this.reached32k
+    }]
   );
   return this.resolveCoreObjectCallOrFallback(computeMergeEffectsCore, function () {
     var fallbackContext = this.resolveComputeMergeEffectsFallbackContext(mergedValue, cappedState);
@@ -4462,18 +4446,6 @@ GameManager.prototype.applyNormalizedModeMetadataFallback = function (cfg) {
   cfg.rank_policy = cfg.rank_policy || (cfg.ranked_bucket !== "none" ? "ranked" : "unranked");
 };
 
-GameManager.prototype.buildNormalizeModeConfigCoreInput = function (modeKey, rawConfig) {
-  return {
-    modeKey: modeKey,
-    rawConfig: rawConfig,
-    defaultModeKey: GameManager.DEFAULT_MODE_KEY,
-    defaultModeConfig: GameManager.DEFAULT_MODE_CONFIG,
-    normalizeSpawnTable: this.normalizeSpawnTable.bind(this),
-    getTheoreticalMaxTile: this.getTheoreticalMaxTile.bind(this),
-    normalizeSpecialRules: this.normalizeSpecialRules.bind(this)
-  };
-};
-
 GameManager.prototype.normalizeModeConfigFallback = function (modeKey, rawConfig) {
   var cfg = this.normalizeModeConfigBaseFallback(modeKey, rawConfig);
   this.applyNormalizedModeMaxTileFallback(cfg);
@@ -4485,7 +4457,15 @@ GameManager.prototype.normalizeModeConfigFallback = function (modeKey, rawConfig
 GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
   var normalizeModeConfigCore = this.callCoreModeRuntime(
     "normalizeModeConfig",
-    [this.buildNormalizeModeConfigCoreInput(modeKey, rawConfig)]
+    [{
+      modeKey: modeKey,
+      rawConfig: rawConfig,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+      defaultModeConfig: GameManager.DEFAULT_MODE_CONFIG,
+      normalizeSpawnTable: this.normalizeSpawnTable.bind(this),
+      getTheoreticalMaxTile: this.getTheoreticalMaxTile.bind(this),
+      normalizeSpecialRules: this.normalizeSpecialRules.bind(this)
+    }]
   );
   return this.resolveNormalizedCoreValueOrFallback(normalizeModeConfigCore, function (coreValue) {
     return this.isNonArrayObject(coreValue) ? coreValue : undefined;
@@ -4515,15 +4495,6 @@ GameManager.prototype.resolveModeConfigCatalogFallback = function (modeId) {
   return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
 };
 
-GameManager.prototype.buildResolveModeConfigCoreInput = function (modeId) {
-  return {
-    modeId: modeId,
-    defaultModeKey: GameManager.DEFAULT_MODE_KEY,
-    getModeConfig: this.getModeConfigFromCatalog.bind(this),
-    legacyAliasToModeKey: GameManager.LEGACY_ALIAS_TO_MODE_KEY
-  };
-};
-
 GameManager.prototype.normalizeResolvedModeIdFromCore = function (resolvedByCore) {
   return typeof resolvedByCore.resolvedModeId === "string" && resolvedByCore.resolvedModeId
     ? resolvedByCore.resolvedModeId
@@ -4543,7 +4514,12 @@ GameManager.prototype.resolveModeConfig = function (modeId) {
   var id = modeId || GameManager.DEFAULT_MODE_KEY;
   var resolveModeConfigFromCatalogCore = this.callCoreModeRuntime(
     "resolveModeConfigFromCatalog",
-    [this.buildResolveModeConfigCoreInput(id)]
+    [{
+      modeId: id,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY,
+      getModeConfig: this.getModeConfigFromCatalog.bind(this),
+      legacyAliasToModeKey: GameManager.LEGACY_ALIAS_TO_MODE_KEY
+    }]
   );
   return this.resolveNormalizedCoreValueOrFallback(
     resolveModeConfigFromCatalogCore,
