@@ -1791,39 +1791,6 @@ GameManager.prototype.persistSavedGameStatePayload = function (payload) {
   return !!(persistWrites.persisted || persistWrites.litePersisted);
 };
 
-GameManager.prototype.buildSavedGameStateExtendedTimerPayload = function (timerSubState) {
-  return {
-    timer_module_view: this.getTimerModuleViewMode ? this.getTimerModuleViewMode() : "timer",
-    timer_fixed_rows: this.captureTimerFixedRowsState(),
-    timer_dynamic_rows_capped: this.captureTimerDynamicRowsState("capped-timer-container"),
-    timer_dynamic_rows_overflow: this.captureTimerDynamicRowsState("capped-timer-overflow-container"),
-    timer_sub_8192: timerSubState.timer_sub_8192,
-    timer_sub_16384: timerSubState.timer_sub_16384,
-    timer_sub_visible: timerSubState.timer_sub_visible
-  };
-};
-
-GameManager.prototype.buildSavedGameStateExtendedPayload = function (timerSubState) {
-  return Object.assign({
-    combo_streak: Number.isInteger(this.comboStreak) ? this.comboStreak : 0,
-    successful_move_count: Number.isInteger(this.successfulMoveCount) ? this.successfulMoveCount : 0,
-    undo_used: Number.isInteger(this.undoUsed) ? this.undoUsed : 0,
-    challenge_id: this.challengeId || null
-  },
-  {
-    lock_consumed_at_move_count: Number.isInteger(this.lockConsumedAtMoveCount) ? this.lockConsumedAtMoveCount : -1,
-    locked_direction_turn: Number.isInteger(this.lockedDirectionTurn) ? this.lockedDirectionTurn : null,
-    locked_direction: Number.isInteger(this.lockedDirection) ? this.lockedDirection : null
-  },
-  {
-    initial_board_matrix: this.initialBoardMatrix ? this.cloneBoardMatrix(this.initialBoardMatrix) : this.getFinalBoardMatrix(),
-    replay_start_board_matrix: this.replayStartBoardMatrix ? this.cloneBoardMatrix(this.replayStartBoardMatrix) : null,
-    practice_restart_board_matrix: this.practiceRestartBoardMatrix ? this.cloneBoardMatrix(this.practiceRestartBoardMatrix) : null,
-    practice_restart_mode_config: this.practiceRestartModeConfig ? this.safeClonePlain(this.practiceRestartModeConfig, null) : null
-  },
-  this.buildSavedGameStateExtendedTimerPayload(timerSubState));
-};
-
 GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
   var timerSubState = {
     timer_sub_8192: (document.getElementById("timer8192-sub") || {}).textContent || "",
@@ -1858,7 +1825,32 @@ GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
     duration_ms: this.getDurationMs(),
     has_game_started: !!this.hasGameStarted
   };
-  var extendedPayload = this.buildSavedGameStateExtendedPayload(timerSubState);
+  var extendedPayload = Object.assign({
+    combo_streak: Number.isInteger(this.comboStreak) ? this.comboStreak : 0,
+    successful_move_count: Number.isInteger(this.successfulMoveCount) ? this.successfulMoveCount : 0,
+    undo_used: Number.isInteger(this.undoUsed) ? this.undoUsed : 0,
+    challenge_id: this.challengeId || null
+  },
+  {
+    lock_consumed_at_move_count: Number.isInteger(this.lockConsumedAtMoveCount) ? this.lockConsumedAtMoveCount : -1,
+    locked_direction_turn: Number.isInteger(this.lockedDirectionTurn) ? this.lockedDirectionTurn : null,
+    locked_direction: Number.isInteger(this.lockedDirection) ? this.lockedDirection : null
+  },
+  {
+    initial_board_matrix: this.initialBoardMatrix ? this.cloneBoardMatrix(this.initialBoardMatrix) : this.getFinalBoardMatrix(),
+    replay_start_board_matrix: this.replayStartBoardMatrix ? this.cloneBoardMatrix(this.replayStartBoardMatrix) : null,
+    practice_restart_board_matrix: this.practiceRestartBoardMatrix ? this.cloneBoardMatrix(this.practiceRestartBoardMatrix) : null,
+    practice_restart_mode_config: this.practiceRestartModeConfig ? this.safeClonePlain(this.practiceRestartModeConfig, null) : null
+  },
+  {
+    timer_module_view: this.getTimerModuleViewMode ? this.getTimerModuleViewMode() : "timer",
+    timer_fixed_rows: this.captureTimerFixedRowsState(),
+    timer_dynamic_rows_capped: this.captureTimerDynamicRowsState("capped-timer-container"),
+    timer_dynamic_rows_overflow: this.captureTimerDynamicRowsState("capped-timer-overflow-container"),
+    timer_sub_8192: timerSubState.timer_sub_8192,
+    timer_sub_16384: timerSubState.timer_sub_16384,
+    timer_sub_visible: timerSubState.timer_sub_visible
+  });
   return Object.assign(basePayload, extendedPayload);
 };
 
