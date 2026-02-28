@@ -5084,29 +5084,6 @@ GameManager.prototype.isGameTerminated = function () {
   return true;
 };
 
-GameManager.prototype.resolveSetupGlobalModeConfig = function () {
-  if (typeof window === "undefined" || !window.GAME_MODE_CONFIG || typeof window.GAME_MODE_CONFIG !== "object") {
-    return null;
-  }
-  try {
-    return this.clonePlain(window.GAME_MODE_CONFIG);
-  } catch (_err) {
-    return null;
-  }
-};
-
-GameManager.prototype.resolveSetupModeConfig = function (detectedMode, options) {
-  var setupOptions = options && typeof options === "object" ? options : {};
-  return setupOptions.modeConfig || this.resolveSetupGlobalModeConfig() || this.resolveModeConfig(detectedMode);
-};
-
-GameManager.prototype.applySetupModeConfig = function (resolvedModeConfig) {
-  this.applyModeConfig(resolvedModeConfig);
-  if (typeof window !== "undefined") {
-    window.GAME_MODE_CONFIG = this.clonePlain(this.modeConfig);
-  }
-};
-
 GameManager.prototype.resetSetupReplayCollections = function () {
   this.moveHistory = [];
   this.replayCompactLog = "";
@@ -5119,39 +5096,6 @@ GameManager.prototype.applySetupSessionSyncDefaults = function (hasInputSeed) {
     this.disableSessionSync = false;
   }
   this.sessionSubmitDone = false;
-};
-
-GameManager.prototype.resolveSetupSessionReplayV3Metadata = function () {
-  return {
-    mode: this.getLegacyModeFromModeKey(this.modeKey || this.mode),
-    mode_key: this.modeKey,
-    board_width: this.width,
-    board_height: this.height,
-    ruleset: this.ruleset,
-    undo_enabled: !!this.modeConfig.undo_enabled,
-    mode_family: this.modeFamily,
-    rank_policy: this.rankPolicy,
-    special_rules_snapshot: this.clonePlain(this.specialRules || {}),
-    challenge_id: this.challengeId
-  };
-};
-
-GameManager.prototype.buildSetupSessionReplayV3PayloadFromMetadata = function (metadata) {
-  return {
-    v: 3,
-    mode: metadata.mode,
-    mode_key: metadata.mode_key,
-    board_width: metadata.board_width,
-    board_height: metadata.board_height,
-    ruleset: metadata.ruleset,
-    undo_enabled: metadata.undo_enabled,
-    mode_family: metadata.mode_family,
-    rank_policy: metadata.rank_policy,
-    special_rules_snapshot: metadata.special_rules_snapshot,
-    challenge_id: metadata.challenge_id,
-    seed: this.initialSeed,
-    actions: []
-  };
 };
 
 GameManager.prototype.assignSetupInitialSeed = function (hasInputSeed, inputSeed) {
@@ -5174,35 +5118,6 @@ GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
   this.applySetupReplayModeFromInputSeed(hasInputSeed);
   this.applySetupSessionSyncDefaults(hasInputSeed);
   return hasInputSeed;
-};
-
-GameManager.prototype.createSetupSessionReplayV3Payload = function () {
-  var metadata = this.resolveSetupSessionReplayV3Metadata();
-  return this.buildSetupSessionReplayV3PayloadFromMetadata(metadata);
-};
-
-GameManager.prototype.resolveSetupChallengeIdFromOptions = function (options) {
-  return typeof options.challengeId === "string" && options.challengeId
-    ? options.challengeId
-    : null;
-};
-
-GameManager.prototype.resolveSetupChallengeIdFromGlobalContext = function () {
-  if (typeof window === "undefined") return null;
-  if (!window.GAME_CHALLENGE_CONTEXT || !window.GAME_CHALLENGE_CONTEXT.id) return null;
-  return window.GAME_CHALLENGE_CONTEXT.id;
-};
-
-GameManager.prototype.syncSetupSessionReplayChallengeId = function () {
-  if (this.challengeId) this.sessionReplayV3.challenge_id = this.challengeId;
-};
-
-GameManager.prototype.assignSetupChallengeId = function (options) {
-  this.challengeId = this.resolveSetupChallengeIdFromOptions(options);
-  if (!this.challengeId) {
-    this.challengeId = this.resolveSetupChallengeIdFromGlobalContext();
-  }
-  this.syncSetupSessionReplayChallengeId();
 };
 
 GameManager.prototype.resetSetupRuntimeTileFlags = function () {
@@ -5343,15 +5258,23 @@ GameManager.prototype.finalizeSetupUiState = function (preferredTimerModuleView,
   this.updateSetupStatsPanelForRestoreState(restoredFromSavedState);
 };
 
-GameManager.prototype.initializeSetupGrid = function () {
-  this.grid = new Grid(this.width, this.height);
-};
-
 GameManager.prototype.initializeSetupModeAndGrid = function (options) {
   var detectedMode = this.detectMode();
-  var resolvedModeConfig = this.resolveSetupModeConfig(detectedMode, options);
-  this.applySetupModeConfig(resolvedModeConfig);
-  this.initializeSetupGrid();
+  var setupOptions = options && typeof options === "object" ? options : {};
+  var globalModeConfig = null;
+  if (typeof window !== "undefined" && window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object") {
+    try {
+      globalModeConfig = this.clonePlain(window.GAME_MODE_CONFIG);
+    } catch (_err) {
+      globalModeConfig = null;
+    }
+  }
+  var resolvedModeConfig = setupOptions.modeConfig || globalModeConfig || this.resolveModeConfig(detectedMode);
+  this.applyModeConfig(resolvedModeConfig);
+  if (typeof window !== "undefined") {
+    window.GAME_MODE_CONFIG = this.clonePlain(this.modeConfig);
+  }
+  this.grid = new Grid(this.width, this.height);
 };
 
 GameManager.prototype.resetSetupOutcomeState = function () {
@@ -5361,14 +5284,30 @@ GameManager.prototype.resetSetupOutcomeState = function () {
   this.keepPlaying = false;
 };
 
-GameManager.prototype.initializeSetupReplaySessionState = function (options) {
-  this.sessionReplayV3 = this.createSetupSessionReplayV3Payload();
-  this.assignSetupChallengeId(options);
-};
-
 GameManager.prototype.initializeSetupReplayAndRuntime = function (inputSeed, options) {
   var hasInputSeed = this.initializeSetupReplayState(inputSeed);
-  this.initializeSetupReplaySessionState(options);
+  this.challengeId =
+    (typeof options.challengeId === "string" && options.challengeId)
+      ? options.challengeId
+      : null;
+  if (!this.challengeId && typeof window !== "undefined" && window.GAME_CHALLENGE_CONTEXT && window.GAME_CHALLENGE_CONTEXT.id) {
+    this.challengeId = window.GAME_CHALLENGE_CONTEXT.id;
+  }
+  this.sessionReplayV3 = {
+    v: 3,
+    mode: this.getLegacyModeFromModeKey(this.modeKey || this.mode),
+    mode_key: this.modeKey,
+    board_width: this.width,
+    board_height: this.height,
+    ruleset: this.ruleset,
+    undo_enabled: !!this.modeConfig.undo_enabled,
+    mode_family: this.modeFamily,
+    rank_policy: this.rankPolicy,
+    special_rules_snapshot: this.clonePlain(this.specialRules || {}),
+    challenge_id: this.challengeId,
+    seed: this.initialSeed,
+    actions: []
+  };
   this.initializeSetupRuntimeState();
   return hasInputSeed;
 };
