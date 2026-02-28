@@ -307,7 +307,12 @@ GameManager.prototype.decodeReplay128 = function (char) {
     "decodeReplay128",
     this.buildDecodeReplay128CoreArgs(char)
   );
-  return this.resolveCoreRawCallOrFallback(decodeReplay128Core, function () {
+  return this.resolveNormalizedCoreValueOrFallback(decodeReplay128Core, function (coreValue) {
+    var token = Number(coreValue);
+    return Number.isInteger(token) && token >= 0 && token < GameManager.REPLAY128_TOTAL
+      ? token
+      : undefined;
+  }, function () {
     if (!char || char.length !== 1) throw "Invalid replay char";
     var code = char.charCodeAt(0);
     if (
@@ -490,7 +495,10 @@ GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString)
     "parseReplayImportEnvelope",
     this.buildParseReplayImportEnvelopeCoreArgs(trimmedReplayString)
   );
-  return this.resolveCoreRawCallOrFallback(parseReplayImportEnvelopeCore, function () {
+  return this.resolveNormalizedCoreValueOrFallbackAllowNull(parseReplayImportEnvelopeCore, function (coreValue) {
+    if (coreValue === null) return null;
+    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
+  }, function () {
     return this.parseReplayImportEnvelopeFallback(trimmedReplayString);
   });
 };
@@ -1377,6 +1385,17 @@ GameManager.prototype.resolveNormalizedCoreValueOrFallback = function (
 ) {
   var normalized = this.resolveNormalizedCoreValueOrUndefined(coreCallResult, normalizer);
   if (typeof normalized !== "undefined" && normalized !== null) return normalized;
+  if (typeof fallbackResolver === "function") return fallbackResolver.call(this);
+  return normalized;
+};
+
+GameManager.prototype.resolveNormalizedCoreValueOrFallbackAllowNull = function (
+  coreCallResult,
+  normalizer,
+  fallbackResolver
+) {
+  var normalized = this.resolveNormalizedCoreValueOrUndefined(coreCallResult, normalizer);
+  if (typeof normalized !== "undefined") return normalized;
   if (typeof fallbackResolver === "function") return fallbackResolver.call(this);
   return normalized;
 };
@@ -3703,7 +3722,10 @@ GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
     "resolveModeCatalogConfig",
     this.buildResolveModeCatalogConfigCoreArgs(modeKey, catalogGetMode)
   );
-  return this.resolveCoreRawCallOrFallback(resolveModeCatalogConfigCore, function () {
+  return this.resolveNormalizedCoreValueOrFallbackAllowNull(resolveModeCatalogConfigCore, function (coreValue) {
+    if (coreValue === null) return null;
+    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
+  }, function () {
     return this.resolveModeConfigFromCatalogFallback(modeKey, catalogGetMode);
   });
 };
@@ -4966,7 +4988,11 @@ GameManager.prototype.getTheoreticalMaxTile = function (width, height, ruleset) 
     "getTheoreticalMaxTile",
     this.buildGetTheoreticalMaxTileCoreArgs(width, height, ruleset)
   );
-  return this.resolveCoreRawCallOrFallback(getTheoreticalMaxTileCore, function () {
+  return this.resolveNormalizedCoreValueOrFallbackAllowNull(getTheoreticalMaxTileCore, function (coreValue) {
+    if (coreValue === null) return null;
+    var tileValue = Number(coreValue);
+    return Number.isInteger(tileValue) && tileValue > 0 ? tileValue : undefined;
+  }, function () {
     var cells = this.resolveTheoreticalMaxTileCellCount(width, height);
     if (cells === null) return null;
     return ruleset === "fibonacci"
@@ -5373,9 +5399,7 @@ GameManager.prototype.getLockedDirection = function () {
     "getLockedDirectionState",
     this.buildGetLockedDirectionStateCoreArgs()
   );
-  var lockedDirectionStateByCore = this.resolveCoreRawCallOrFallback(getLockedDirectionStateCore, function () {
-    return undefined;
-  });
+  var lockedDirectionStateByCore = this.resolveCoreRawCallValueOrUndefined(getLockedDirectionStateCore);
   if (typeof lockedDirectionStateByCore !== "undefined") {
     return this.applyComputedLockedDirectionState(lockedDirectionStateByCore || {});
   }
@@ -5466,7 +5490,11 @@ GameManager.prototype.buildNextFibonacciCoreArgs = function (value) {
 
 GameManager.prototype.nextFibonacci = function (value) {
   var nextFibonacciCore = this.callCoreRulesRuntime("nextFibonacci", this.buildNextFibonacciCoreArgs(value));
-  return this.resolveCoreRawCallOrFallback(nextFibonacciCore, function () {
+  return this.resolveNormalizedCoreValueOrFallbackAllowNull(nextFibonacciCore, function (coreValue) {
+    if (coreValue === null) return null;
+    var nextValue = Number(coreValue);
+    return Number.isInteger(nextValue) && nextValue > 0 ? nextValue : undefined;
+  }, function () {
     if (value <= 0) return 1;
     if (value === 1) return 2;
     var a = 1;
@@ -5515,7 +5543,11 @@ GameManager.prototype.getMergedValue = function (a, b) {
     "getMergedValue",
     this.buildGetMergedValueCoreArgs(a, b)
   );
-  return this.resolveCoreRawCallOrFallback(getMergedValueCore, function () {
+  return this.resolveNormalizedCoreValueOrFallbackAllowNull(getMergedValueCore, function (coreValue) {
+    if (coreValue === null) return null;
+    var mergedValue = Number(coreValue);
+    return Number.isInteger(mergedValue) && mergedValue > 0 ? mergedValue : undefined;
+  }, function () {
     if (!Number.isInteger(a) || !Number.isInteger(b) || a <= 0 || b <= 0) return null;
     if (!this.isFibonacciMode()) return this.getMergedPow2ValueFallback(a, b);
     return this.getMergedFibonacciValueFallback(a, b);
