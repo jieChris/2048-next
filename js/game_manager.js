@@ -3037,22 +3037,13 @@ GameManager.prototype.detectModeFromPathname = function (path) {
   return "classic_4x4_pow2_undo";
 };
 
-GameManager.prototype.resolveDetectedModeFromBodyDataset = function () {
-  var bodyMode = this.resolveDetectedModeBodyModeAttr();
-  return bodyMode || null;
-};
-
-GameManager.prototype.resolveDetectedModeFromWindowPath = function () {
+GameManager.prototype.detectModeFallback = function () {
+  if (this.mode) return this.mode;
+  var bodyMode = this.resolveDetectedModeBodyModeAttr() || null;
+  if (bodyMode) return bodyMode;
   var pathname = this.resolveWindowPathname();
   if (!pathname) return GameManager.DEFAULT_MODE_KEY;
   return this.detectModeFromPathname(pathname);
-};
-
-GameManager.prototype.detectModeFallback = function () {
-  if (this.mode) return this.mode;
-  var bodyMode = this.resolveDetectedModeFromBodyDataset();
-  if (bodyMode) return bodyMode;
-  return this.resolveDetectedModeFromWindowPath();
 };
 
 GameManager.prototype.detectMode = function () {
