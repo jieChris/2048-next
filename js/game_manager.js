@@ -461,7 +461,8 @@ GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
     "decodeReplayV4Actions",
     this.buildDecodeReplayV4ActionsCoreArgs(actionsEncoded)
   );
-  if (decodeReplayV4ActionsCore.available) return decodeReplayV4ActionsCore.value || {};
+  var decodeReplayV4ActionsByCore = this.resolveCoreObjectCallValueOrNull(decodeReplayV4ActionsCore);
+  if (decodeReplayV4ActionsByCore) return decodeReplayV4ActionsByCore;
   return this.decodeReplayV4ActionsFallback(actionsEncoded);
 };
 
@@ -787,7 +788,8 @@ GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
     "planReplayDispatch",
     this.buildPlanReplayDispatchCoreArgs(resolvedExecution)
   );
-  if (planReplayDispatchCore.available) return planReplayDispatchCore.value || {};
+  var planReplayDispatchByCore = this.resolveCoreObjectCallValueOrNull(planReplayDispatchCore);
+  if (planReplayDispatchByCore) return planReplayDispatchByCore;
   return this.planReplayDispatchFallback(resolvedExecution);
 };
 
@@ -4159,7 +4161,8 @@ GameManager.prototype.computePostMoveRecord = function (direction) {
     "computePostMoveRecord",
     this.buildComputePostMoveRecordCoreArgs(direction)
   );
-  if (computePostMoveRecordCore.available) return computePostMoveRecordCore.value || {};
+  var computePostMoveRecordByCore = this.resolveCoreObjectCallValueOrNull(computePostMoveRecordCore);
+  if (computePostMoveRecordByCore) return computePostMoveRecordByCore;
   return this.resolvePostMoveRecordFallback(direction);
 };
 
@@ -4213,7 +4216,8 @@ GameManager.prototype.computePostUndoRecord = function (direction) {
     "computePostUndoRecord",
     this.buildComputePostUndoRecordCoreArgs(direction)
   );
-  if (computePostUndoRecordCore.available) return computePostUndoRecordCore.value || {};
+  var computePostUndoRecordByCore = this.resolveCoreObjectCallValueOrNull(computePostUndoRecordCore);
+  if (computePostUndoRecordByCore) return computePostUndoRecordByCore;
   return this.resolvePostUndoRecordFallback();
 };
 
@@ -4297,7 +4301,8 @@ GameManager.prototype.computeUndoRestoreState = function (prev) {
     "computeUndoRestoreState",
     this.buildComputeUndoRestoreStateCoreArgs(prev)
   );
-  if (computeUndoRestoreStateCore.available) return computeUndoRestoreStateCore.value || {};
+  var computeUndoRestoreStateByCore = this.resolveCoreObjectCallValueOrNull(computeUndoRestoreStateCore);
+  if (computeUndoRestoreStateByCore) return computeUndoRestoreStateByCore;
 
   var source = prev && typeof prev === "object" ? prev : {};
   var fallbackState = this.getUndoStateFallbackValues();
@@ -4660,7 +4665,8 @@ GameManager.prototype.computeUndoRestorePayload = function (prev) {
     "computeUndoRestorePayload",
     this.buildComputeUndoRestorePayloadCoreArgs(prev)
   );
-  if (computeUndoRestorePayloadCore.available) return computeUndoRestorePayloadCore.value || {};
+  var computeUndoRestorePayloadByCore = this.resolveCoreObjectCallValueOrNull(computeUndoRestorePayloadCore);
+  if (computeUndoRestorePayloadByCore) return computeUndoRestorePayloadByCore;
 
   var source = prev && typeof prev === "object" ? prev : {};
   var score = this.resolveUndoRestorePayloadFallbackScore(source);
@@ -4742,7 +4748,8 @@ GameManager.prototype.computeMergeEffects = function (mergedValue) {
     "computeMergeEffects",
     this.buildComputeMergeEffectsCoreArgs(mergedValue, cappedState)
   );
-  if (computeMergeEffectsCore.available) return computeMergeEffectsCore.value || {};
+  var computeMergeEffectsByCore = this.resolveCoreObjectCallValueOrNull(computeMergeEffectsCore);
+  if (computeMergeEffectsByCore) return computeMergeEffectsByCore;
 
   var fallbackContext = this.resolveComputeMergeEffectsFallbackContext(mergedValue, cappedState);
   var result = this.createDefaultMergeEffectsResult();
