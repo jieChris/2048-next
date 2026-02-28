@@ -6636,28 +6636,6 @@ GameManager.prototype.applyMergeInteraction = function (tile, next, mergedValue,
   this.applyMergeMilestoneEffects(merged.value, timeStr);
 };
 
-GameManager.prototype.processMoveCell = function (cell, vector, undo) {
-  if (this.isBlockedCell(cell.x, cell.y)) return false;
-
-  var tile = this.grid.cellContent(cell);
-  if (!tile) return false;
-
-  var positions = this.findFarthestPosition(cell, vector);
-  var next = this.isBlockedCell(positions.next.x, positions.next.y)
-    ? null
-    : this.grid.cellContent(positions.next);
-
-  var mergedValue = next ? this.getMergedValue(tile.value, next.value) : null;
-  var interaction = this.planTileInteraction(cell, positions, next, mergedValue);
-  if (interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null) {
-    this.applyMergeInteraction(tile, next, mergedValue, interaction.target, undo);
-    return interaction.moved === true;
-  }
-  this.snapshotMoveTileForUndo(undo, tile, interaction.target);
-  this.moveTile(tile, interaction.target);
-  return interaction.moved === true;
-};
-
 GameManager.prototype.executeDirectionalMove = function (direction) {
   var movePlan = {
     vector: this.getVector(direction),
@@ -6674,9 +6652,27 @@ GameManager.prototype.executeDirectionalMove = function (direction) {
     var x = traversals.x[xIndex];
     for (var yIndex = 0; yIndex < traversals.y.length; yIndex++) {
       var y = traversals.y[yIndex];
-      if (this.processMoveCell({ x: x, y: y }, movePlan.vector, movePlan.undo)) {
-        moved = true;
+      var cell = { x: x, y: y };
+      if (this.isBlockedCell(cell.x, cell.y)) continue;
+
+      var tile = this.grid.cellContent(cell);
+      if (!tile) continue;
+
+      var positions = this.findFarthestPosition(cell, movePlan.vector);
+      var next = this.isBlockedCell(positions.next.x, positions.next.y)
+        ? null
+        : this.grid.cellContent(positions.next);
+
+      var mergedValue = next ? this.getMergedValue(tile.value, next.value) : null;
+      var interaction = this.planTileInteraction(cell, positions, next, mergedValue);
+      if (interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null) {
+        this.applyMergeInteraction(tile, next, mergedValue, interaction.target, movePlan.undo);
+        moved = interaction.moved === true || moved;
+        continue;
       }
+      this.snapshotMoveTileForUndo(movePlan.undo, tile, interaction.target);
+      this.moveTile(tile, interaction.target);
+      moved = interaction.moved === true || moved;
     }
   }
   if (!moved) return;
