@@ -2778,23 +2778,19 @@ GameManager.prototype.getAdapterSessionParitySnapshot = function (readerMethodNa
   return null;
 };
 
-GameManager.prototype.resolveAdapterBridgeModeKey = function (bridge) {
-  return typeof bridge.modeKey === "string" && bridge.modeKey
+GameManager.prototype.publishAdapterMoveResult = function (meta) {
+  var emitMoveResultBridge = this.resolveLegacyAdapterBridgeMethod("emitMoveResult");
+  if (!emitMoveResultBridge) return false;
+  var bridge = emitMoveResultBridge.bridge;
+  var timestamp = Date.now();
+  var input = meta && typeof meta === "object" ? meta : {};
+  var modeKey = typeof bridge.modeKey === "string" && bridge.modeKey
     ? bridge.modeKey
     : (this.modeKey || this.mode || "");
-};
-
-GameManager.prototype.resolveAdapterBridgeMode = function (bridge) {
-  return typeof bridge.adapterMode === "string" && bridge.adapterMode
+  var adapterMode = typeof bridge.adapterMode === "string" && bridge.adapterMode
     ? bridge.adapterMode
     : "legacy-bridge";
-};
-
-GameManager.prototype.buildAdapterMoveResultDetail = function (meta, bridge, timestamp) {
-  var input = meta && typeof meta === "object" ? meta : {};
-  var modeKey = this.resolveAdapterBridgeModeKey(bridge);
-  var adapterMode = this.resolveAdapterBridgeMode(bridge);
-  return {
+  var detail = {
     reason: typeof input.reason === "string" && input.reason ? input.reason : "move",
     direction: Number.isInteger(input.direction) ? input.direction : null,
     moved: input.moved === true,
@@ -2812,21 +2808,13 @@ GameManager.prototype.buildAdapterMoveResultDetail = function (meta, bridge, tim
     undoDepth: Array.isArray(this.undoStack) ? this.undoStack.length : 0,
     at: timestamp
   };
-};
-
-GameManager.prototype.publishAdapterMoveResult = function (meta) {
-  var emitMoveResultBridge = this.resolveLegacyAdapterBridgeMethod("emitMoveResult");
-  if (!emitMoveResultBridge) return false;
-  var bridge = emitMoveResultBridge.bridge;
-  var timestamp = Date.now();
-  var detail = this.buildAdapterMoveResultDetail(meta, bridge, timestamp);
   emitMoveResultBridge.method.call(bridge, detail);
 
   var syncAdapterSnapshotBridge = this.resolveLegacyAdapterBridgeMethod("syncAdapterSnapshot");
   if (syncAdapterSnapshotBridge) {
     var snapshot = {
-      adapterMode: this.resolveAdapterBridgeMode(bridge),
-      modeKey: this.resolveAdapterBridgeModeKey(bridge) || "unknown",
+      adapterMode: adapterMode,
+      modeKey: modeKey || "unknown",
       updatedAt: timestamp,
       lastMoveResult: detail
     };
