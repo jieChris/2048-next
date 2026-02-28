@@ -1833,22 +1833,18 @@ GameManager.prototype.normalizeWindowNameSavedPayloadCoreValue = function (paylo
   return undefined;
 };
 
-GameManager.prototype.buildWindowNameSavedPayloadCoreBaseArgs = function (windowLike, modeKey) {
-  return {
-    windowLike: windowLike,
-    windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
-    modeKey: modeKey,
-    currentModeKey: this.modeKey,
-    currentMode: this.mode,
-    defaultModeKey: GameManager.DEFAULT_MODE_KEY
-  };
-};
-
 GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
   var windowLike = this.getWindowLike();
   var readSavedPayloadFromWindowNameCore = this.callCoreStorageRuntime(
     "readSavedPayloadFromWindowName",
-    [this.buildWindowNameSavedPayloadCoreBaseArgs(windowLike, modeKey)]
+    [{
+      windowLike: windowLike,
+      windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
+      modeKey: modeKey,
+      currentModeKey: this.modeKey,
+      currentMode: this.mode,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY
+    }]
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     readSavedPayloadFromWindowNameCore,
@@ -2020,7 +2016,14 @@ GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) 
     "writeSavedPayloadToWindowName",
     [Object.assign(
       {},
-      this.buildWindowNameSavedPayloadCoreBaseArgs(windowLike, modeKey),
+      {
+        windowLike: windowLike,
+        windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
+        modeKey: modeKey,
+        currentModeKey: this.modeKey,
+        currentMode: this.mode,
+        defaultModeKey: GameManager.DEFAULT_MODE_KEY
+      },
       { payload: payload }
     )]
   );
@@ -9076,22 +9079,10 @@ GameManager.prototype.executeReplayAction = function (action) {
   this.executeReplayDispatchPlan(dispatchPlan);
 };
 
-GameManager.prototype.resolveReplayDispatchMethodFromPlan = function (dispatchPlan) {
-  return dispatchPlan && dispatchPlan.method;
-};
-
-GameManager.prototype.executeReplayDispatchByMethod = function (executorMethodName, dispatchPlan) {
-  return this[executorMethodName](dispatchPlan);
-};
-
-GameManager.prototype.resolveReplayDispatchExecutorMethodFromPlan = function (dispatchPlan) {
-  var dispatchMethod = this.resolveReplayDispatchMethodFromPlan(dispatchPlan);
-  return this.resolveReplayDispatchExecutorMethodName(dispatchMethod);
-};
-
 GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
-  var executorMethodName = this.resolveReplayDispatchExecutorMethodFromPlan(dispatchPlan);
-  if (executorMethodName) return this.executeReplayDispatchByMethod(executorMethodName, dispatchPlan);
+  var dispatchMethod = dispatchPlan && dispatchPlan.method;
+  var executorMethodName = this.resolveReplayDispatchExecutorMethodName(dispatchMethod);
+  if (executorMethodName) return this[executorMethodName](dispatchPlan);
   this.throwUnknownReplayAction();
 };
 
@@ -9100,22 +9091,14 @@ var GAME_MANAGER_REPLAY_DISPATCH_EXECUTOR_METHOD_MAP = {
   insertCustomTile: "executeReplayCustomTileDispatch"
 };
 
-GameManager.prototype.getReplayDispatchExecutorMethodMap = function () {
-  return GAME_MANAGER_REPLAY_DISPATCH_EXECUTOR_METHOD_MAP;
-};
-
 GameManager.prototype.resolveReplayDispatchExecutorMethodName = function (dispatchMethod) {
-  var executorMap = this.getReplayDispatchExecutorMethodMap();
+  var executorMap = GAME_MANAGER_REPLAY_DISPATCH_EXECUTOR_METHOD_MAP;
   if (!this.hasOwnKey(executorMap, dispatchMethod)) return null;
   return executorMap[dispatchMethod];
 };
 
-GameManager.prototype.resolveReplayDispatchArgs = function (dispatchPlan) {
-  return dispatchPlan && Array.isArray(dispatchPlan.args) ? dispatchPlan.args : [];
-};
-
 GameManager.prototype.resolveReplayDispatchArgAt = function (dispatchPlan, index) {
-  var args = this.resolveReplayDispatchArgs(dispatchPlan);
+  var args = dispatchPlan && Array.isArray(dispatchPlan.args) ? dispatchPlan.args : [];
   return args[index];
 };
 
