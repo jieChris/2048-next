@@ -8623,27 +8623,15 @@ GameManager.prototype.notifyReplayImportError = function (error) {
   alert(this.resolveReplayImportErrorMessage(error));
 };
 
-GameManager.prototype.performReplayImport = function (replayString) {
-  var trimmed = this.coerceReplayImportInputToString(replayString).trim();
-  this.importReplayOrThrow(trimmed);
-};
-
-GameManager.prototype.handleReplayImportError = function (error) {
-  this.notifyReplayImportError(error);
-  return false;
-};
-
-GameManager.prototype.tryImportWithErrorBoundary = function (replayString) {
+GameManager.prototype.import = function (replayString) {
   try {
-    this.performReplayImport(replayString);
+    var trimmed = this.coerceReplayImportInputToString(replayString).trim();
+    this.importReplayOrThrow(trimmed);
     return true;
   } catch (e) {
-    return this.handleReplayImportError(e);
+    this.notifyReplayImportError(e);
+    return false;
   }
-};
-
-GameManager.prototype.import = function (replayString) {
-  this.tryImportWithErrorBoundary(replayString);
 };
 
 GameManager.prototype.throwUnknownReplayAction = function () {
