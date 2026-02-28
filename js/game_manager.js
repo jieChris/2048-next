@@ -2555,54 +2555,18 @@ GameManager.prototype.createSavedStateRestorePrecheckResult = function (canResto
   };
 };
 
-GameManager.prototype.isSavedStateObject = function (saved) {
-  return !!saved && typeof saved === "object";
-};
-
-GameManager.prototype.hasMatchingSavedStateVersion = function (saved) {
-  return Number(saved.v) === GameManager.SAVED_GAME_STATE_VERSION;
-};
-
-GameManager.prototype.isSavedStateTerminated = function (saved) {
-  return !!saved.terminated;
-};
-
-GameManager.prototype.isSavedStateEndedSession = function (saved) {
-  return !!(saved.over || (saved.won && !saved.keep_playing));
-};
-
-GameManager.prototype.shouldRejectEndedSavedState = function (saved) {
-  return this.isSavedStateEndedSession(saved) && saved.mode_key !== "practice_legacy";
-};
-
-GameManager.prototype.hasMatchingSavedStateMode = function (saved) {
-  return saved.mode_key === this.modeKey;
-};
-
-GameManager.prototype.hasMatchingSavedStateBoardSize = function (saved) {
-  return Number(saved.board_width) === this.width && Number(saved.board_height) === this.height;
-};
-
-GameManager.prototype.hasCompatibleSavedStateRuleset = function (saved) {
-  return !saved.ruleset || saved.ruleset === this.ruleset;
-};
-
-GameManager.prototype.hasValidSavedStateBoardShape = function (saved) {
-  return Array.isArray(saved.board) && saved.board.length === this.height;
-};
-
 GameManager.prototype.hasValidSavedStateRestoreBase = function (saved) {
-  if (!this.isSavedStateObject(saved)) return false;
-  if (!this.hasMatchingSavedStateVersion(saved)) return false;
-  if (this.isSavedStateTerminated(saved)) return false;
-  if (this.shouldRejectEndedSavedState(saved)) return false;
+  if (!saved || typeof saved !== "object") return false;
+  if (Number(saved.v) !== GameManager.SAVED_GAME_STATE_VERSION) return false;
+  if (!!saved.terminated) return false;
+  if (!!(saved.over || (saved.won && !saved.keep_playing)) && saved.mode_key !== "practice_legacy") return false;
   return true;
 };
 
 GameManager.prototype.hasCompatibleSavedStateRestoreContext = function (saved) {
-  if (!this.hasMatchingSavedStateBoardSize(saved)) return false;
-  if (!this.hasCompatibleSavedStateRuleset(saved)) return false;
-  if (!this.hasValidSavedStateBoardShape(saved)) return false;
+  if (Number(saved.board_width) !== this.width || Number(saved.board_height) !== this.height) return false;
+  if (!!saved.ruleset && saved.ruleset !== this.ruleset) return false;
+  if (!Array.isArray(saved.board) || saved.board.length !== this.height) return false;
   return true;
 };
 
@@ -2610,7 +2574,7 @@ GameManager.prototype.resolveSavedStateRestorePrecheck = function (saved) {
   if (!this.hasValidSavedStateRestoreBase(saved)) {
     return this.createSavedStateRestorePrecheckResult(false, true);
   }
-  if (!this.hasMatchingSavedStateMode(saved)) {
+  if (saved.mode_key !== this.modeKey) {
     return this.createSavedStateRestorePrecheckResult(false, false);
   }
   if (!this.hasCompatibleSavedStateRestoreContext(saved)) {
