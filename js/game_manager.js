@@ -1317,16 +1317,27 @@ GameManager.prototype.requestAnimationFrame = function (callback) {
   return false;
 };
 
+GameManager.prototype.buildReadLocalStorageFlagCoreArgs = function (key, trueValue) {
+  return [{
+    windowLike: this.getWindowLike(),
+    key: key,
+    trueValue: trueValue
+  }];
+};
+
+GameManager.prototype.resolveStorageFlagMatchValue = function (trueValue) {
+  return typeof trueValue === "string" ? trueValue : "1";
+};
+
 GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
-  var readStorageFlagFromContextCore = this.callCoreStorageRuntime("readStorageFlagFromContext", [{
-      windowLike: this.getWindowLike(),
-      key: key,
-      trueValue: trueValue
-    }]);
+  var readStorageFlagFromContextCore = this.callCoreStorageRuntime(
+    "readStorageFlagFromContext",
+    this.buildReadLocalStorageFlagCoreArgs(key, trueValue)
+  );
   if (readStorageFlagFromContextCore.available) return !!readStorageFlagFromContextCore.value;
   var storage = this.getLocalStorage();
   if (!this.canReadFromStorage(storage)) return false;
-  var matchValue = typeof trueValue === "string" ? trueValue : "1";
+  var matchValue = this.resolveStorageFlagMatchValue(trueValue);
   try {
     return storage.getItem(key) === matchValue;
   } catch (_err) {
@@ -1334,18 +1345,30 @@ GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
   }
 };
 
+GameManager.prototype.buildWriteLocalStorageFlagCoreArgs = function (key, enabled, trueValue, falseValue) {
+  return [{
+    windowLike: this.getWindowLike(),
+    key: key,
+    enabled: !!enabled,
+    trueValue: trueValue,
+    falseValue: falseValue
+  }];
+};
+
+GameManager.prototype.resolveStorageFlagPersistValue = function (enabled, trueValue, falseValue) {
+  if (enabled) return this.resolveStorageFlagMatchValue(trueValue);
+  return typeof falseValue === "string" ? falseValue : "0";
+};
+
 GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue, falseValue) {
-  var writeStorageFlagFromContextCore = this.callCoreStorageRuntime("writeStorageFlagFromContext", [{
-      windowLike: this.getWindowLike(),
-      key: key,
-      enabled: !!enabled,
-      trueValue: trueValue,
-      falseValue: falseValue
-    }]);
+  var writeStorageFlagFromContextCore = this.callCoreStorageRuntime(
+    "writeStorageFlagFromContext",
+    this.buildWriteLocalStorageFlagCoreArgs(key, enabled, trueValue, falseValue)
+  );
   if (writeStorageFlagFromContextCore.available) return !!writeStorageFlagFromContextCore.value;
   var storage = this.getLocalStorage();
   if (!this.canWriteToStorage(storage)) return false;
-  var value = enabled ? (typeof trueValue === "string" ? trueValue : "1") : (typeof falseValue === "string" ? falseValue : "0");
+  var value = this.resolveStorageFlagPersistValue(enabled, trueValue, falseValue);
   try {
     storage.setItem(key, value);
     return true;
