@@ -3869,15 +3869,22 @@ GameManager.prototype.buildPlannedTileInteractionFallback = function (cell, posi
   };
 };
 
+GameManager.prototype.buildPlanTileInteractionCoreArgs = function (cell, positions, next, mergedValue) {
+  return [{
+    cell: cell,
+    farthest: positions && positions.farthest ? positions.farthest : { x: 0, y: 0 },
+    next: positions && positions.next ? positions.next : { x: 0, y: 0 },
+    hasNextTile: !!next,
+    nextMergedFrom: !!(next && next.mergedFrom),
+    mergedValue: mergedValue
+  }];
+};
+
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
-  var planTileInteractionCore = this.callCoreMoveApplyRuntime("planTileInteraction", [{
-      cell: cell,
-      farthest: positions && positions.farthest ? positions.farthest : { x: 0, y: 0 },
-      next: positions && positions.next ? positions.next : { x: 0, y: 0 },
-      hasNextTile: !!next,
-      nextMergedFrom: !!(next && next.mergedFrom),
-      mergedValue: mergedValue
-    }]);
+  var planTileInteractionCore = this.callCoreMoveApplyRuntime(
+    "planTileInteraction",
+    this.buildPlanTileInteractionCoreArgs(cell, positions, next, mergedValue)
+  );
   if (planTileInteractionCore.available) {
     return this.buildPlannedTileInteractionFromCore(planTileInteractionCore.value || {}, cell, positions);
   }
@@ -4077,12 +4084,19 @@ GameManager.prototype.buildUndoRestoreStateFallback = function (source, undoBase
   };
 };
 
+GameManager.prototype.buildComputeUndoRestoreStateCoreArgs = function (prev) {
+  return [{
+    prev: prev || {},
+    fallbackUndoUsed: this.undoUsed,
+    timerStatus: this.timerStatus
+  }];
+};
+
 GameManager.prototype.computeUndoRestoreState = function (prev) {
-  var computeUndoRestoreStateCore = this.callCoreUndoRestoreRuntime("computeUndoRestoreState", [{
-      prev: prev || {},
-      fallbackUndoUsed: this.undoUsed,
-      timerStatus: this.timerStatus
-    }]);
+  var computeUndoRestoreStateCore = this.callCoreUndoRestoreRuntime(
+    "computeUndoRestoreState",
+    this.buildComputeUndoRestoreStateCoreArgs(prev)
+  );
   if (computeUndoRestoreStateCore.available) return computeUndoRestoreStateCore.value || {};
 
   var source = prev && typeof prev === "object" ? prev : {};
@@ -4410,11 +4424,17 @@ GameManager.prototype.filterUndoRestorePayloadTiles = function (source) {
   return tiles;
 };
 
+GameManager.prototype.buildComputeUndoRestorePayloadCoreArgs = function (prev) {
+  return [{
+    prev: prev || {},
+    fallbackScore: this.score
+  }];
+};
+
 GameManager.prototype.computeUndoRestorePayload = function (prev) {
-  var computeUndoRestorePayloadCore = this.callCoreUndoRestorePayloadRuntime("computeUndoRestorePayload", [{
-      prev: prev || {},
-      fallbackScore: this.score
-    }]
+  var computeUndoRestorePayloadCore = this.callCoreUndoRestorePayloadRuntime(
+    "computeUndoRestorePayload",
+    this.buildComputeUndoRestorePayloadCoreArgs(prev)
   );
   if (computeUndoRestorePayloadCore.available) return computeUndoRestorePayloadCore.value || {};
 
