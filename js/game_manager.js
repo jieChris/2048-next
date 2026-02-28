@@ -4851,14 +4851,10 @@ GameManager.prototype.pickSpawnValueFromWeightedTable = function (table, totalWe
   return table[table.length - 1].value;
 };
 
-GameManager.prototype.buildPickSpawnValueCoreArgs = function () {
-  return [this.spawnTable || [], Math.random];
-};
-
 GameManager.prototype.pickSpawnValue = function () {
   var pickSpawnValueCore = this.callCoreRulesRuntime(
     "pickSpawnValue",
-    this.buildPickSpawnValueCoreArgs()
+    [this.spawnTable || [], Math.random]
   );
   return this.resolveNormalizedCoreValueOrFallback(pickSpawnValueCore, function (coreValue) {
     var value = Number(coreValue);
@@ -4876,12 +4872,8 @@ GameManager.prototype.isFibonacciMode = function () {
   return this.ruleset === "fibonacci";
 };
 
-GameManager.prototype.buildNextFibonacciCoreArgs = function (value) {
-  return [value];
-};
-
 GameManager.prototype.nextFibonacci = function (value) {
-  var nextFibonacciCore = this.callCoreRulesRuntime("nextFibonacci", this.buildNextFibonacciCoreArgs(value));
+  var nextFibonacciCore = this.callCoreRulesRuntime("nextFibonacci", [value]);
   return this.resolveNormalizedCoreValueOrFallbackAllowNull(nextFibonacciCore, function (coreValue) {
     if (coreValue === null) return null;
     var nextValue = Number(coreValue);
@@ -4921,19 +4913,15 @@ GameManager.prototype.getMergedFibonacciValueFallback = function (a, b) {
   return merged;
 };
 
-GameManager.prototype.buildGetMergedValueCoreArgs = function (a, b) {
-  return [
-    a,
-    b,
-    this.isFibonacciMode() ? "fibonacci" : "pow2",
-    this.maxTile
-  ];
-};
-
 GameManager.prototype.getMergedValue = function (a, b) {
   var getMergedValueCore = this.callCoreRulesRuntime(
     "getMergedValue",
-    this.buildGetMergedValueCoreArgs(a, b)
+    [
+      a,
+      b,
+      this.isFibonacciMode() ? "fibonacci" : "pow2",
+      this.maxTile
+    ]
   );
   return this.resolveNormalizedCoreValueOrFallbackAllowNull(getMergedValueCore, function (coreValue) {
     if (coreValue === null) return null;
@@ -4946,17 +4934,13 @@ GameManager.prototype.getMergedValue = function (a, b) {
   });
 };
 
-GameManager.prototype.buildGetTimerMilestoneValuesCoreArgs = function () {
-  return [
-    this.isFibonacciMode() ? "fibonacci" : "pow2",
-    GameManager.TIMER_SLOT_IDS
-  ];
-};
-
 GameManager.prototype.getTimerMilestoneValues = function () {
   var getTimerMilestoneValuesCore = this.callCoreRulesRuntime(
     "getTimerMilestoneValues",
-    this.buildGetTimerMilestoneValuesCoreArgs()
+    [
+      this.isFibonacciMode() ? "fibonacci" : "pow2",
+      GameManager.TIMER_SLOT_IDS
+    ]
   );
   return this.resolveNormalizedCoreValueOrFallback(getTimerMilestoneValuesCore, function (coreValue) {
     return Array.isArray(coreValue) ? coreValue : undefined;
@@ -4981,18 +4965,14 @@ GameManager.prototype.buildTimerMilestoneSlotMapFallback = function (milestones,
   return map;
 };
 
-GameManager.prototype.buildGetTimerMilestoneSlotByValueCoreArgs = function () {
-  return [
-    this.timerMilestones,
-    GameManager.TIMER_SLOT_IDS
-  ];
-};
-
 GameManager.prototype.configureTimerMilestones = function () {
   this.timerMilestones = this.getTimerMilestoneValues();
   var getTimerMilestoneSlotByValueCore = this.callCoreRulesRuntime(
     "getTimerMilestoneSlotByValue",
-    this.buildGetTimerMilestoneSlotByValueCoreArgs()
+    [
+      this.timerMilestones,
+      GameManager.TIMER_SLOT_IDS
+    ]
   );
   this.timerMilestoneSlotByValue = this.resolveNormalizedCoreValueOrFallback(
     getTimerMilestoneSlotByValueCore,
@@ -5086,10 +5066,6 @@ GameManager.prototype.resolveCappedModeStateCorePayload = function () {
   };
 };
 
-GameManager.prototype.buildResolveCappedModeStateCoreArgs = function () {
-  return [this.resolveCappedModeStateCorePayload()];
-};
-
 GameManager.prototype.resolveCappedModeStateFallback = function () {
   var key = String(this.modeKey || this.mode || "");
   var maxTile = Number(this.maxTile);
@@ -5108,7 +5084,7 @@ GameManager.prototype.resolveCappedModeState = function () {
 
   var resolveCappedModeStateCore = this.callCoreModeRuntime(
     "resolveCappedModeState",
-    this.buildResolveCappedModeStateCoreArgs()
+    [this.resolveCappedModeStateCorePayload()]
   );
   var resolvedState = this.resolveNormalizedCoreValueOrFallback(
     resolveCappedModeStateCore,
@@ -5165,14 +5141,10 @@ GameManager.prototype.setCapped64RowVisible = function (value, visible) {
   this.setTimerRowVisibleState(value, visible, true);
 };
 
-GameManager.prototype.buildCreateProgressiveCapped64UnlockedStateCoreArgs = function (unlockedState) {
-  return [unlockedState];
-};
-
 GameManager.prototype.resolveProgressiveCapped64UnlockedState = function (unlockedState) {
   var createProgressiveCapped64UnlockedStateCore = this.callCoreModeRuntime(
     "createProgressiveCapped64UnlockedState",
-    this.buildCreateProgressiveCapped64UnlockedStateCoreArgs(unlockedState)
+    [unlockedState]
   );
   return this.resolveNormalizedCoreValueOrFallback(
     createProgressiveCapped64UnlockedStateCore,
@@ -5208,14 +5180,6 @@ GameManager.prototype.resolveProgressiveCapped64UnlockCoreInput = function (
     value: value,
     unlockedState: unlockedState
   };
-};
-
-GameManager.prototype.buildResolveProgressiveCapped64UnlockCoreArgs = function (
-  isProgressiveCapped64Mode,
-  value,
-  unlockedState
-) {
-  return [this.resolveProgressiveCapped64UnlockCoreInput(isProgressiveCapped64Mode, value, unlockedState)];
 };
 
 GameManager.prototype.isProgressiveCapped64UnlockValue = function (value) {
@@ -5256,7 +5220,7 @@ GameManager.prototype.unlockProgressiveCapped64Row = function (value) {
   var isProgressiveCapped64Mode = !!cappedState.isProgressiveCapped64Mode;
   var resolveProgressiveCapped64UnlockCore = this.callCoreModeRuntime(
     "resolveProgressiveCapped64Unlock",
-    this.buildResolveProgressiveCapped64UnlockCoreArgs(isProgressiveCapped64Mode, value, unlockedState)
+    [this.resolveProgressiveCapped64UnlockCoreInput(isProgressiveCapped64Mode, value, unlockedState)]
   );
   if (this.tryHandleCoreRawValue(resolveProgressiveCapped64UnlockCore, function (coreValue) {
     var resolved = coreValue || {};
@@ -5324,15 +5288,6 @@ GameManager.prototype.applyTargetCappedRowVisibilityFallback = function (cap) {
   }
 };
 
-GameManager.prototype.buildResolveCappedRowVisibilityPlanCoreArgs = function (cappedState) {
-  return [{
-    isCappedMode: cappedState.isCappedMode,
-    isProgressiveCapped64Mode: cappedState.isProgressiveCapped64Mode,
-    cappedTargetValue: cappedState.cappedTargetValue,
-    timerSlotIds: GameManager.TIMER_SLOT_IDS
-  }];
-};
-
 GameManager.prototype.shouldResetProgressiveRowsAfterPlan = function (cappedState) {
   return !!(cappedState.isCappedMode && cappedState.isProgressiveCapped64Mode);
 };
@@ -5353,7 +5308,12 @@ GameManager.prototype.applyCappedRowVisibility = function () {
   var cappedState = this.resolveCappedModeState();
   var resolveCappedRowVisibilityPlanCore = this.callCoreModeRuntime(
     "resolveCappedRowVisibilityPlan",
-    this.buildResolveCappedRowVisibilityPlanCoreArgs(cappedState)
+    [{
+      isCappedMode: cappedState.isCappedMode,
+      isProgressiveCapped64Mode: cappedState.isProgressiveCapped64Mode,
+      cappedTargetValue: cappedState.cappedTargetValue,
+      timerSlotIds: GameManager.TIMER_SLOT_IDS
+    }]
   );
   var appliedByCore = this.resolveNormalizedCoreValueOrFallback(
     resolveCappedRowVisibilityPlanCore,
@@ -5404,18 +5364,14 @@ GameManager.prototype.resolveCappedTargetValueWithDefault = function (cappedTarg
     : 2048;
 };
 
-GameManager.prototype.buildResolveCappedTimerLegendClassCoreArgs = function (targetValue) {
-  return [{
-    timerMilestoneSlotByValue: this.timerMilestoneSlotByValue,
-    cappedTargetValue: targetValue
-  }];
-};
-
 GameManager.prototype.getCappedTimerLegendClass = function (cappedTargetValue) {
   var targetValue = this.resolveCappedTargetValueOrNull(cappedTargetValue);
   var resolveCappedTimerLegendClassCore = this.callCoreModeRuntime(
     "resolveCappedTimerLegendClass",
-    this.buildResolveCappedTimerLegendClassCoreArgs(targetValue)
+    [{
+      timerMilestoneSlotByValue: this.timerMilestoneSlotByValue,
+      cappedTargetValue: targetValue
+    }]
   );
   return this.resolveCoreStringCallOrFallback(resolveCappedTimerLegendClassCore, function () {
     var slotId = this.timerMilestoneSlotByValue
@@ -5429,7 +5385,7 @@ GameManager.prototype.getCappedTimerFontSize = function (cappedTargetValue) {
   var targetValue = this.resolveCappedTargetValueWithDefault(cappedTargetValue, 2048);
   var resolveCappedTimerLegendFontSizeCore = this.callCoreModeRuntime(
     "resolveCappedTimerLegendFontSize",
-    this.buildResolveCappedTimerLegendFontSizeCoreArgs(targetValue)
+    [targetValue]
   );
   return this.resolveCoreStringCallOrFallback(resolveCappedTimerLegendFontSizeCore, function () {
     var cap = targetValue;
@@ -5440,18 +5396,10 @@ GameManager.prototype.getCappedTimerFontSize = function (cappedTargetValue) {
   });
 };
 
-GameManager.prototype.buildResolveCappedTimerLegendFontSizeCoreArgs = function (targetValue) {
-  return [targetValue];
-};
-
-GameManager.prototype.buildFormatCappedRepeatLabelCoreArgs = function (repeatCount) {
-  return [repeatCount];
-};
-
 GameManager.prototype.getCappedRepeatLabel = function (repeatCount) {
   var formatCappedRepeatLabelCore = this.callCoreModeRuntime(
     "formatCappedRepeatLabel",
-    this.buildFormatCappedRepeatLabelCoreArgs(repeatCount)
+    [repeatCount]
   );
   return this.resolveCoreStringCallOrFallback(formatCappedRepeatLabelCore, function () {
     return "x" + String(repeatCount);
@@ -5480,20 +5428,16 @@ GameManager.prototype.resolveCappedPlaceholderRowValuesFallback = function (reso
   return values;
 };
 
-GameManager.prototype.buildResolveCappedPlaceholderRowValuesCoreArgs = function (resolvedCappedState) {
-  return [{
-    isCappedMode: resolvedCappedState.isCappedMode,
-    cappedTargetValue: resolvedCappedState.cappedTargetValue,
-    timerSlotIds: GameManager.TIMER_SLOT_IDS
-  }];
-};
-
 GameManager.prototype.getCappedPlaceholderRowValues = function (cappedState) {
   var resolvedCappedState =
     this.resolveProvidedCappedModeState(cappedState);
   var resolveCappedPlaceholderRowValuesCore = this.callCoreModeRuntime(
     "resolveCappedPlaceholderRowValues",
-    this.buildResolveCappedPlaceholderRowValuesCoreArgs(resolvedCappedState)
+    [{
+      isCappedMode: resolvedCappedState.isCappedMode,
+      cappedTargetValue: resolvedCappedState.cappedTargetValue,
+      timerSlotIds: GameManager.TIMER_SLOT_IDS
+    }]
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     resolveCappedPlaceholderRowValuesCore,
@@ -5570,13 +5514,6 @@ GameManager.prototype.fillCappedPlaceholderRowSlot = function (
   return true;
 };
 
-GameManager.prototype.buildCappedPlaceholderSlotByRepeatCoreArgs = function (repeatCount, values) {
-  return [{
-    repeatCount: repeatCount,
-    placeholderRowValues: values
-  }];
-};
-
 GameManager.prototype.resolveCappedPlaceholderSlotValueFromCoreResult = function (coreResult) {
   var slotValueByCore = this.resolveCoreRawCallValueOrUndefined(coreResult);
   return typeof slotValueByCore === "undefined" ? null : slotValueByCore;
@@ -5591,7 +5528,10 @@ GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, 
   var values = this.getCappedPlaceholderRowValues(resolvedCappedState);
   var resolveCappedPlaceholderSlotByRepeatCountCore = this.callCoreModeRuntime(
     "resolveCappedPlaceholderSlotByRepeatCount",
-    this.buildCappedPlaceholderSlotByRepeatCoreArgs(repeatCount, values)
+    [{
+      repeatCount: repeatCount,
+      placeholderRowValues: values
+    }]
   );
   var slotValue = this.resolveCappedPlaceholderSlotValue(
     repeatCount,
