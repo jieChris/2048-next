@@ -6410,8 +6410,9 @@ GameManager.prototype.getTimerModuleViewMode = function () {
     "normalizeTimerModuleViewMode",
     this.buildNormalizeTimerModuleViewModeCoreArgs()
   );
-  if (this.isCoreCallAvailable(normalizeTimerModuleViewModeCore)) return normalizeTimerModuleViewModeCore.value;
-  return this.timerModuleView === "hidden" ? "hidden" : "timer";
+  return this.resolveCoreRawCallOrFallback(normalizeTimerModuleViewModeCore, function () {
+    return this.timerModuleView === "hidden" ? "hidden" : "timer";
+  });
 };
 
 GameManager.prototype.buildReadTimerModuleViewForModeCoreArgs = function (map, mode) {
@@ -6427,9 +6428,10 @@ GameManager.prototype.loadTimerModuleViewForMode = function (mode) {
     "readTimerModuleViewForModeFromMap",
     this.buildReadTimerModuleViewForModeCoreArgs(map, mode)
   );
-  if (this.isCoreCallAvailable(readTimerModuleViewForModeFromMapCore)) return readTimerModuleViewForModeFromMapCore.value;
-  var value = map[mode];
-  return value === "hidden" ? "hidden" : "timer";
+  return this.resolveCoreRawCallOrFallback(readTimerModuleViewForModeFromMapCore, function () {
+    var value = map[mode];
+    return value === "hidden" ? "hidden" : "timer";
+  });
 };
 
 GameManager.prototype.buildWriteTimerModuleViewForModeCoreArgs = function (map, mode, view) {
@@ -7769,12 +7771,13 @@ GameManager.prototype.getMoveInputThrottleMs = function () {
     "resolveMoveInputThrottleMs",
     this.buildResolveMoveInputThrottleMsCoreArgs()
   );
-  if (this.isCoreCallAvailable(resolveMoveInputThrottleMsCore)) return resolveMoveInputThrottleMsCore.value;
-  if (this.replayMode) return 0;
-  var area = (this.width || 4) * (this.height || 4);
-  if (area >= 100) return 65;
-  if (area >= 64) return 45;
-  return 0;
+  return this.resolveCoreRawCallOrFallback(resolveMoveInputThrottleMsCore, function () {
+    if (this.replayMode) return 0;
+    var area = (this.width || 4) * (this.height || 4);
+    if (area >= 100) return 65;
+    if (area >= 64) return 45;
+    return 0;
+  });
 };
 
 GameManager.prototype.hasPendingMoveInput = function () {
@@ -8478,8 +8481,9 @@ GameManager.prototype.getVector = function (direction) {
     "getVector",
     this.buildGetVectorCoreArgs(direction)
   );
-  if (this.isCoreCallAvailable(getVectorCore)) return getVectorCore.value;
-  return this.getVectorFallback(direction);
+  return this.resolveCoreRawCallOrFallback(getVectorCore, function () {
+    return this.getVectorFallback(direction);
+  });
 };
 
 GameManager.prototype.createTraversalAxis = function (size) {
@@ -8591,8 +8595,9 @@ GameManager.prototype.movesAvailable = function () {
     "movesAvailable",
     this.buildMovesAvailableCoreArgs()
   );
-  if (this.isCoreCallAvailable(movesAvailableCore)) return movesAvailableCore.value;
-  return this.getAvailableCells().length > 0 || this.tileMatchesAvailable();
+  return this.resolveCoreRawCallOrFallback(movesAvailableCore, function () {
+    return this.getAvailableCells().length > 0 || this.tileMatchesAvailable();
+  });
 };
 
 GameManager.prototype.canMergeTileWithAnyNeighbor = function (x, y, tile) {
@@ -8668,8 +8673,9 @@ GameManager.prototype.tileMatchesAvailable = function () {
     "tileMatchesAvailable",
     this.buildTileMatchesRuntimeArgs()
   );
-  if (this.isCoreCallAvailable(tileMatchesAvailableCore)) return tileMatchesAvailableCore.value;
-  return this.tileMatchesAvailableFallback();
+  return this.resolveCoreRawCallOrFallback(tileMatchesAvailableCore, function () {
+    return this.tileMatchesAvailableFallback();
+  });
 };
 
 GameManager.prototype.buildPositionsEqualCoreArgs = function (first, second) {
@@ -8681,8 +8687,9 @@ GameManager.prototype.positionsEqual = function (first, second) {
     "positionsEqual",
     this.buildPositionsEqualCoreArgs(first, second)
   );
-  if (this.isCoreCallAvailable(positionsEqualCore)) return positionsEqualCore.value;
-  return first.x === second.x && first.y === second.y;
+  return this.resolveCoreRawCallOrFallback(positionsEqualCore, function () {
+    return first.x === second.x && first.y === second.y;
+  });
 };
 
 GameManager.prototype.canStartTimer = function () {
@@ -8729,8 +8736,9 @@ GameManager.prototype.getTimerUpdateIntervalMs = function () {
     "resolveTimerUpdateIntervalMs",
     this.buildResolveTimerUpdateIntervalMsCoreArgs()
   );
-  if (this.isCoreCallAvailable(resolveTimerUpdateIntervalMsCore)) return resolveTimerUpdateIntervalMsCore.value;
-  return this.resolveTimerUpdateIntervalMsFallback();
+  return this.resolveCoreRawCallOrFallback(resolveTimerUpdateIntervalMsCore, function () {
+    return this.resolveTimerUpdateIntervalMsFallback();
+  });
 };
 
 GameManager.prototype.resolveTimerUpdateIntervalMsFallback = function () {
@@ -8837,8 +8845,9 @@ GameManager.prototype.pretty = function(time) {
     "formatPrettyTime",
     this.buildFormatPrettyTimeCoreArgs(time)
   );
-  if (this.isCoreCallAvailable(formatPrettyTimeCore)) return formatPrettyTimeCore.value;
-  return this.formatPrettyTimeFallback(time);
+  return this.resolveCoreRawCallOrFallback(formatPrettyTimeCore, function () {
+    return this.formatPrettyTimeFallback(time);
+  });
 };
 
 GameManager.prototype.formatPrettyTimeFallback = function (time) {
