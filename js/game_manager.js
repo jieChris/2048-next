@@ -8422,44 +8422,37 @@ GameManager.prototype.importV4ReplayEnvelope = function (envelope, replayModeCon
   this.startReplayImportPlayback();
 };
 
-GameManager.prototype.importLegacyReplayPayload = function (decodedLegacy) {
-  this.applyReplayImportActions({
-    replayMovesV2: decodedLegacy ? decodedLegacy.replayMovesV2 : null,
-    replayMoves: decodedLegacy ? decodedLegacy.replayMoves : null,
-    replaySpawns: decodedLegacy ? decodedLegacy.replaySpawns : undefined
-  });
-  this.restartWithSeed(decodedLegacy.seed);
-  this.startReplayImportPlayback();
-};
-
 var GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP = {
   "json-v3": "importJsonV3ReplayEnvelope",
   "v4c": "importV4ReplayEnvelope"
 };
 
-GameManager.prototype.tryImportLegacyReplayString = function (trimmedReplayString) {
-  var decodedLegacy = this.decodeLegacyReplay(trimmedReplayString);
-  if (!decodedLegacy) return false;
-  this.importLegacyReplayPayload(decodedLegacy);
-  return true;
-};
-
-GameManager.prototype.tryImportReplayEnvelopeString = function (trimmedReplayString) {
-  var parsedEnvelope = this.parseReplayImportEnvelope(trimmedReplayString);
-  if (!parsedEnvelope) return false;
-  if (!this.hasOwnKey(GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP, parsedEnvelope.kind)) return false;
-  var importerMethodName = GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP[parsedEnvelope.kind];
-  if (!importerMethodName) return false;
-  var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
-  this[importerMethodName](parsedEnvelope, replayModeConfig);
-  return true;
-};
-
 GameManager.prototype.import = function (replayString) {
   try {
     var trimmed = (typeof replayString === "string" ? replayString : JSON.stringify(replayString)).trim();
-    if (!this.tryImportReplayEnvelopeString(trimmed) && !this.tryImportLegacyReplayString(trimmed)) {
-      throw "Unknown replay version";
+    var parsedEnvelope = this.parseReplayImportEnvelope(trimmed);
+    var importedEnvelope = false;
+    if (parsedEnvelope && this.hasOwnKey(GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP, parsedEnvelope.kind)) {
+      var importerMethodName = GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP[parsedEnvelope.kind];
+      if (importerMethodName) {
+        var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
+        this[importerMethodName](parsedEnvelope, replayModeConfig);
+        importedEnvelope = true;
+      }
+    }
+    if (!importedEnvelope) {
+      var decodedLegacy = this.decodeLegacyReplay(trimmed);
+      if (decodedLegacy) {
+        this.applyReplayImportActions({
+          replayMovesV2: decodedLegacy.replayMovesV2,
+          replayMoves: decodedLegacy.replayMoves,
+          replaySpawns: decodedLegacy.replaySpawns
+        });
+        this.restartWithSeed(decodedLegacy.seed);
+        this.startReplayImportPlayback();
+      } else {
+        throw "Unknown replay version";
+      }
     }
     return true;
   } catch (e) {
