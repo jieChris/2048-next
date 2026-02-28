@@ -1599,14 +1599,6 @@ GameManager.prototype.requestAnimationFrame = function (callback) {
   return false;
 };
 
-GameManager.prototype.buildReadLocalStorageFlagCoreArgs = function (key, trueValue) {
-  return [{
-    windowLike: this.getWindowLike(),
-    key: key,
-    trueValue: trueValue
-  }];
-};
-
 GameManager.prototype.resolveStorageFlagMatchValue = function (trueValue) {
   return typeof trueValue === "string" ? trueValue : "1";
 };
@@ -1614,7 +1606,11 @@ GameManager.prototype.resolveStorageFlagMatchValue = function (trueValue) {
 GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
   var readStorageFlagFromContextCore = this.callCoreStorageRuntime(
     "readStorageFlagFromContext",
-    this.buildReadLocalStorageFlagCoreArgs(key, trueValue)
+    [{
+      windowLike: this.getWindowLike(),
+      key: key,
+      trueValue: trueValue
+    }]
   );
   return this.resolveCoreBooleanCallOrFallback(readStorageFlagFromContextCore, function () {
     var storage = this.getWebStorageByName("localStorage");
@@ -1628,16 +1624,6 @@ GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
   });
 };
 
-GameManager.prototype.buildWriteLocalStorageFlagCoreArgs = function (key, enabled, trueValue, falseValue) {
-  return [{
-    windowLike: this.getWindowLike(),
-    key: key,
-    enabled: !!enabled,
-    trueValue: trueValue,
-    falseValue: falseValue
-  }];
-};
-
 GameManager.prototype.resolveStorageFlagPersistValue = function (enabled, trueValue, falseValue) {
   if (enabled) return this.resolveStorageFlagMatchValue(trueValue);
   return typeof falseValue === "string" ? falseValue : "0";
@@ -1646,7 +1632,13 @@ GameManager.prototype.resolveStorageFlagPersistValue = function (enabled, trueVa
 GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue, falseValue) {
   var writeStorageFlagFromContextCore = this.callCoreStorageRuntime(
     "writeStorageFlagFromContext",
-    this.buildWriteLocalStorageFlagCoreArgs(key, enabled, trueValue, falseValue)
+    [{
+      windowLike: this.getWindowLike(),
+      key: key,
+      enabled: !!enabled,
+      trueValue: trueValue,
+      falseValue: falseValue
+    }]
   );
   return this.resolveCoreBooleanCallOrFallback(writeStorageFlagFromContextCore, function () {
     var storage = this.getWebStorageByName("localStorage");
@@ -1697,17 +1689,13 @@ GameManager.prototype.writeLocalStorageJsonMapFallback = function (key, map) {
   }
 };
 
-GameManager.prototype.buildReadLocalStorageJsonMapCoreArgs = function (key) {
-  return [{
-    windowLike: this.getWindowLike(),
-    key: key
-  }];
-};
-
 GameManager.prototype.readLocalStorageJsonMap = function (key) {
   var readStorageJsonMapFromContextCore = this.callCoreStorageRuntime(
     "readStorageJsonMapFromContext",
-    this.buildReadLocalStorageJsonMapCoreArgs(key)
+    [{
+      windowLike: this.getWindowLike(),
+      key: key
+    }]
   );
   return this.resolveNormalizedCoreValueOrFallback(
     readStorageJsonMapFromContextCore,
@@ -1718,18 +1706,14 @@ GameManager.prototype.readLocalStorageJsonMap = function (key) {
   );
 };
 
-GameManager.prototype.buildWriteLocalStorageJsonMapCoreArgs = function (key, map) {
-  return [{
-    windowLike: this.getWindowLike(),
-    key: key,
-    map: map
-  }];
-};
-
 GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
   var writeStorageJsonMapFromContextCore = this.callCoreStorageRuntime(
     "writeStorageJsonMapFromContext",
-    this.buildWriteLocalStorageJsonMapCoreArgs(key, map)
+    [{
+      windowLike: this.getWindowLike(),
+      key: key,
+      map: map
+    }]
   );
   return this.resolveCoreBooleanCallOrFallback(writeStorageJsonMapFromContextCore, function () {
     return this.writeLocalStorageJsonMapFallback(key, map);
@@ -1739,14 +1723,6 @@ GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
 GameManager.prototype.serializeLocalStoragePayload = function (payload) {
   var serialized = JSON.stringify(payload);
   return typeof serialized === "string" ? serialized : null;
-};
-
-GameManager.prototype.buildWriteLocalStorageJsonPayloadCoreArgs = function (key, payload) {
-  return [{
-    windowLike: this.getWindowLike(),
-    key: key,
-    payload: payload
-  }];
 };
 
 GameManager.prototype.writeLocalStorageJsonPayloadFallback = function (key, payload) {
@@ -1765,7 +1741,11 @@ GameManager.prototype.writeLocalStorageJsonPayloadFallback = function (key, payl
 GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
   var writeStorageJsonPayloadFromContextCore = this.callCoreStorageRuntime(
     "writeStorageJsonPayloadFromContext",
-    this.buildWriteLocalStorageJsonPayloadCoreArgs(key, payload)
+    [{
+      windowLike: this.getWindowLike(),
+      key: key,
+      payload: payload
+    }]
   );
   return this.resolveCoreBooleanCallOrFallback(writeStorageJsonPayloadFromContextCore, function () {
     return this.writeLocalStorageJsonPayloadFallback(key, payload);
