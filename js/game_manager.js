@@ -6280,43 +6280,6 @@ GameManager.prototype.handleMoveInput = function (direction) {
   this.dispatchMoveInputWithThrottle(direction, throttleMs);
 };
 
-GameManager.prototype.applyMergeMilestoneEffects = function (mergedValue, timeStr) {
-  this.recordTimerMilestone(mergedValue, timeStr);
-  var mergeEffects = this.computeMergeEffects(mergedValue);
-  if (mergeEffects.shouldRecordCappedMilestone) {
-    this.recordCappedMilestone(timeStr);
-  }
-  if (mergeEffects.shouldSetWon) {
-    this.won = true;
-  }
-  if (mergeEffects.shouldSetReached32k) {
-    this.reached32k = true;
-  }
-
-  var timerIdsToStamp = Array.isArray(mergeEffects.timerIdsToStamp)
-    ? mergeEffects.timerIdsToStamp
-    : [];
-  for (var timerIndex = 0; timerIndex < timerIdsToStamp.length; timerIndex++) {
-    var timerId = timerIdsToStamp[timerIndex];
-    var timerEl = document.getElementById(timerId);
-    if (!timerEl) continue;
-    if (timerId === "timer32768") {
-      if (timerEl.innerHTML === "") timerEl.textContent = timeStr;
-    } else {
-      if (timerEl.textContent === "") timerEl.textContent = timeStr;
-    }
-  }
-  if (mergeEffects.showSubTimerContainer) {
-    var subContainer = document.getElementById("timer32k-sub-container");
-    if (subContainer) subContainer.style.display = "block";
-  }
-  var hideTimerRows = Array.isArray(mergeEffects.hideTimerRows) ? mergeEffects.hideTimerRows : [];
-  for (var hideIndex = 0; hideIndex < hideTimerRows.length; hideIndex++) {
-    var rowEl = document.getElementById("timer-row-" + String(hideTimerRows[hideIndex]));
-    if (rowEl) rowEl.style.display = "none";
-  }
-};
-
 GameManager.prototype.restoreUndoPayload = function (undoPayload) {
   this.grid.build();
   this.score = Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
@@ -6566,7 +6529,39 @@ GameManager.prototype.executeDirectionalMove = function (direction) {
         this.score += merged.value;
 
         var timeStr = this.pretty(this.time);
-        this.applyMergeMilestoneEffects(merged.value, timeStr);
+        this.recordTimerMilestone(merged.value, timeStr);
+        var mergeEffects = this.computeMergeEffects(merged.value);
+        if (mergeEffects.shouldRecordCappedMilestone) {
+          this.recordCappedMilestone(timeStr);
+        }
+        if (mergeEffects.shouldSetWon) {
+          this.won = true;
+        }
+        if (mergeEffects.shouldSetReached32k) {
+          this.reached32k = true;
+        }
+        var timerIdsToStamp = Array.isArray(mergeEffects.timerIdsToStamp)
+          ? mergeEffects.timerIdsToStamp
+          : [];
+        for (var timerIndex = 0; timerIndex < timerIdsToStamp.length; timerIndex++) {
+          var timerId = timerIdsToStamp[timerIndex];
+          var timerEl = document.getElementById(timerId);
+          if (!timerEl) continue;
+          if (timerId === "timer32768") {
+            if (timerEl.innerHTML === "") timerEl.textContent = timeStr;
+          } else {
+            if (timerEl.textContent === "") timerEl.textContent = timeStr;
+          }
+        }
+        if (mergeEffects.showSubTimerContainer) {
+          var subContainer = document.getElementById("timer32k-sub-container");
+          if (subContainer) subContainer.style.display = "block";
+        }
+        var hideTimerRows = Array.isArray(mergeEffects.hideTimerRows) ? mergeEffects.hideTimerRows : [];
+        for (var hideIndex = 0; hideIndex < hideTimerRows.length; hideIndex++) {
+          var rowEl = document.getElementById("timer-row-" + String(hideTimerRows[hideIndex]));
+          if (rowEl) rowEl.style.display = "none";
+        }
         moved = interaction.moved === true || moved;
         continue;
       }
