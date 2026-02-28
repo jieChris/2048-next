@@ -7654,7 +7654,29 @@ GameManager.prototype.serializeV3 = function () {
   };
 };
 
-GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord) {
+GameManager.prototype.tryAutoSubmitOnGameOver = function () {
+  if (this.sessionSubmitDone) return;
+  var skippedReason = null;
+  if (this.replayMode) skippedReason = "replay_mode";
+  else if (!this.isSessionTerminated()) skippedReason = "not_terminated";
+  if (skippedReason) {
+    this.writeLocalStorageJsonPayload("last_session_submit_result_v1", {
+      at: new Date().toISOString(),
+      ok: false,
+      skipped: true,
+      reason: skippedReason
+    });
+    return;
+  }
+  var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
+  if (!localHistorySaveRecord) {
+    this.writeLocalStorageJsonPayload("last_session_submit_result_v1", {
+      at: new Date().toISOString(),
+      ok: false,
+      reason: "local_history_store_missing"
+    });
+    return;
+  }
   this.sessionSubmitDone = true;
   var endedAt = new Date().toISOString();
   var windowLike = this.getWindowLike();
@@ -7714,32 +7736,6 @@ GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord)
       }
     );
   }
-};
-
-GameManager.prototype.tryAutoSubmitOnGameOver = function () {
-  if (this.sessionSubmitDone) return;
-  var skippedReason = null;
-  if (this.replayMode) skippedReason = "replay_mode";
-  else if (!this.isSessionTerminated()) skippedReason = "not_terminated";
-  if (skippedReason) {
-    this.writeLocalStorageJsonPayload("last_session_submit_result_v1", {
-      at: new Date().toISOString(),
-      ok: false,
-      skipped: true,
-      reason: skippedReason
-    });
-    return;
-  }
-  var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
-  if (!localHistorySaveRecord) {
-    this.writeLocalStorageJsonPayload("last_session_submit_result_v1", {
-      at: new Date().toISOString(),
-      ok: false,
-      reason: "local_history_store_missing"
-    });
-    return;
-  }
-  this.submitSessionForRecord(localHistorySaveRecord);
 };
 
 GameManager.prototype.isSessionTerminated = function () {
