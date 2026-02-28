@@ -8497,29 +8497,14 @@ GameManager.prototype.executeReplayAction = function (action) {
 
 GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
   var dispatchMethod = dispatchPlan && dispatchPlan.method;
-  var executorMap = GAME_MANAGER_REPLAY_DISPATCH_EXECUTOR_METHOD_MAP;
-  var executorMethodName = this.hasOwnKey(executorMap, dispatchMethod) ? executorMap[dispatchMethod] : null;
-  if (executorMethodName) return this[executorMethodName](dispatchPlan);
+  var args = dispatchPlan && Array.isArray(dispatchPlan.args) ? dispatchPlan.args : [];
+  if (dispatchMethod === "move") {
+    return this.move(args[0]);
+  }
+  if (dispatchMethod === "insertCustomTile") {
+    return this.insertCustomTile(args[0], args[1], args[2]);
+  }
   this.throwUnknownReplayAction();
-};
-
-var GAME_MANAGER_REPLAY_DISPATCH_EXECUTOR_METHOD_MAP = {
-  move: "executeReplayMoveDispatch",
-  insertCustomTile: "executeReplayCustomTileDispatch"
-};
-
-GameManager.prototype.executeReplayMoveDispatch = function (dispatchPlan) {
-  var args = dispatchPlan && Array.isArray(dispatchPlan.args) ? dispatchPlan.args : [];
-  this.move(args[0]);
-};
-
-GameManager.prototype.executeReplayCustomTileDispatch = function (dispatchPlan) {
-  var args = dispatchPlan && Array.isArray(dispatchPlan.args) ? dispatchPlan.args : [];
-  this.insertCustomTile(
-    args[0],
-    args[1],
-    args[2]
-  );
 };
 
 GameManager.prototype.executePlannedReplayStep = function () {
