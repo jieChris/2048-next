@@ -1622,10 +1622,6 @@ GameManager.prototype.buildResolveSavedGameStateStorageKeyCoreArgs = function (k
   }];
 };
 
-GameManager.prototype.resolveSavedGameStateStorageKeyFromCoreCall = function (coreCallResult) {
-  return this.resolveCoreStringCallValueOrNull(coreCallResult);
-};
-
 GameManager.prototype.resolveSavedGameStateStorageKeyFallback = function (keyPrefix, modeKey) {
   var key = this.resolveModeKeyOrDefault(modeKey);
   return (typeof keyPrefix === "string" ? keyPrefix : "") + key;
@@ -1636,9 +1632,9 @@ GameManager.prototype.resolveSavedGameStateStorageKey = function (keyPrefix, mod
     "resolveSavedGameStateStorageKey",
     this.buildResolveSavedGameStateStorageKeyCoreArgs(keyPrefix, modeKey)
   );
-  var resolvedFromCore = this.resolveSavedGameStateStorageKeyFromCoreCall(resolveSavedGameStateStorageKeyCore);
-  if (resolvedFromCore) return resolvedFromCore;
-  return this.resolveSavedGameStateStorageKeyFallback(keyPrefix, modeKey);
+  return this.resolveCoreStringCallOrFallback(resolveSavedGameStateStorageKeyCore, function () {
+    return this.resolveSavedGameStateStorageKeyFallback(keyPrefix, modeKey);
+  });
 };
 
 GameManager.prototype.getSavedGameStateKey = function (modeKey) {
@@ -2340,9 +2336,9 @@ GameManager.prototype.clearSavedGameState = function (modeKey) {
     "removeKeysFromStorages",
     this.buildRemoveSavedGameStateKeysCoreArgs(stores, keys)
   );
-  if (this.resolveCoreRawCallOrFallback(removeKeysFromStoragesCore, function () {
+  if (this.resolveCoreBooleanCallOrFallback(removeKeysFromStoragesCore, function () {
     return false;
-  }) === true) return;
+  })) return;
   this.removeKeysFromSavedStateStoragesFallback(stores, keys);
 };
 
@@ -7306,7 +7302,7 @@ GameManager.prototype.resolveIsGameTerminatedValue = function () {
     "isGameTerminatedState",
     this.buildIsGameTerminatedStateCoreArgs()
   );
-  return !!this.resolveCoreRawCallOrFallback(isGameTerminatedStateCore, function () {
+  return this.resolveCoreBooleanCallOrFallback(isGameTerminatedStateCore, function () {
     return !!this.over || (!!this.won && !this.keepPlaying);
   });
 };
@@ -7872,7 +7868,7 @@ GameManager.prototype.getMoveInputThrottleMs = function () {
     "resolveMoveInputThrottleMs",
     this.buildResolveMoveInputThrottleMsCoreArgs()
   );
-  return this.resolveCoreRawCallOrFallback(resolveMoveInputThrottleMsCore, function () {
+  return this.resolveCoreNumericCallOrFallback(resolveMoveInputThrottleMsCore, function () {
     if (this.replayMode) return 0;
     var area = (this.width || 4) * (this.height || 4);
     if (area >= 100) return 65;
@@ -8709,7 +8705,7 @@ GameManager.prototype.movesAvailable = function () {
     "movesAvailable",
     this.buildMovesAvailableCoreArgs()
   );
-  return this.resolveCoreRawCallOrFallback(movesAvailableCore, function () {
+  return this.resolveCoreBooleanCallOrFallback(movesAvailableCore, function () {
     return this.getAvailableCells().length > 0 || this.tileMatchesAvailable();
   });
 };
@@ -8787,7 +8783,7 @@ GameManager.prototype.tileMatchesAvailable = function () {
     "tileMatchesAvailable",
     this.buildTileMatchesRuntimeArgs()
   );
-  return this.resolveCoreRawCallOrFallback(tileMatchesAvailableCore, function () {
+  return this.resolveCoreBooleanCallOrFallback(tileMatchesAvailableCore, function () {
     return this.tileMatchesAvailableFallback();
   });
 };
@@ -8801,7 +8797,7 @@ GameManager.prototype.positionsEqual = function (first, second) {
     "positionsEqual",
     this.buildPositionsEqualCoreArgs(first, second)
   );
-  return this.resolveCoreRawCallOrFallback(positionsEqualCore, function () {
+  return this.resolveCoreBooleanCallOrFallback(positionsEqualCore, function () {
     return first.x === second.x && first.y === second.y;
   });
 };
@@ -8850,7 +8846,7 @@ GameManager.prototype.getTimerUpdateIntervalMs = function () {
     "resolveTimerUpdateIntervalMs",
     this.buildResolveTimerUpdateIntervalMsCoreArgs()
   );
-  return this.resolveCoreRawCallOrFallback(resolveTimerUpdateIntervalMsCore, function () {
+  return this.resolveCoreNumericCallOrFallback(resolveTimerUpdateIntervalMsCore, function () {
     return this.resolveTimerUpdateIntervalMsFallback();
   });
 };
