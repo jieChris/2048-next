@@ -8487,13 +8487,17 @@ GameManager.prototype.resolveSessionSubmitTimestamp = function () {
   return new Date().toISOString();
 };
 
-GameManager.prototype.writeSkippedSessionSubmitResult = function (reason) {
-  this.writeLastSessionSubmitResult({
+GameManager.prototype.buildSkippedSessionSubmitResult = function (reason) {
+  return {
     at: this.resolveSessionSubmitTimestamp(),
     ok: false,
     skipped: true,
     reason: reason
-  });
+  };
+};
+
+GameManager.prototype.writeSkippedSessionSubmitResult = function (reason) {
+  this.writeLastSessionSubmitResult(this.buildSkippedSessionSubmitResult(reason));
 };
 
 GameManager.prototype.resolveSessionSubmitAdapterParitySnapshot = function () {
@@ -8708,12 +8712,16 @@ GameManager.prototype.resolveLocalHistorySaveRecord = function () {
   return this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
 };
 
-GameManager.prototype.writeMissingLocalHistoryStoreResult = function () {
-  this.writeLastSessionSubmitResult({
+GameManager.prototype.buildMissingLocalHistoryStoreResult = function () {
+  return {
     at: this.resolveSessionSubmitTimestamp(),
     ok: false,
     reason: "local_history_store_missing"
-  });
+  };
+};
+
+GameManager.prototype.writeMissingLocalHistoryStoreResult = function () {
+  this.writeLastSessionSubmitResult(this.buildMissingLocalHistoryStoreResult());
 };
 
 GameManager.prototype.resolveSessionSubmitWindowLike = function () {
