@@ -8420,23 +8420,19 @@ GameManager.prototype.importV4ReplayEnvelope = function (envelope, replayModeCon
   this.resume();
 };
 
-var GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP = {
-  "json-v3": "importJsonV3ReplayEnvelope",
-  "v4c": "importV4ReplayEnvelope"
-};
-
 GameManager.prototype.import = function (replayString) {
   try {
     var trimmed = (typeof replayString === "string" ? replayString : JSON.stringify(replayString)).trim();
     var parsedEnvelope = this.parseReplayImportEnvelope(trimmed);
     var importedEnvelope = false;
-    if (parsedEnvelope && this.hasOwnKey(GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP, parsedEnvelope.kind)) {
-      var importerMethodName = GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP[parsedEnvelope.kind];
-      if (importerMethodName) {
-        var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
-        this[importerMethodName](parsedEnvelope, replayModeConfig);
-        importedEnvelope = true;
+    if (parsedEnvelope && (parsedEnvelope.kind === "json-v3" || parsedEnvelope.kind === "v4c")) {
+      var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
+      if (parsedEnvelope.kind === "json-v3") {
+        this.importJsonV3ReplayEnvelope(parsedEnvelope, replayModeConfig);
+      } else {
+        this.importV4ReplayEnvelope(parsedEnvelope, replayModeConfig);
       }
+      importedEnvelope = true;
     }
     if (!importedEnvelope) {
       var decodedLegacy = this.decodeLegacyReplay(trimmed);
