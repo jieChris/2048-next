@@ -5200,35 +5200,47 @@ GameManager.prototype.applyTargetCappedRowVisibilityFallback = function (cap) {
   }
 };
 
+GameManager.prototype.buildResolveCappedRowVisibilityPlanCoreArgs = function (cappedState) {
+  return [{
+    isCappedMode: cappedState.isCappedMode,
+    isProgressiveCapped64Mode: cappedState.isProgressiveCapped64Mode,
+    cappedTargetValue: cappedState.cappedTargetValue,
+    timerSlotIds: GameManager.TIMER_SLOT_IDS
+  }];
+};
+
+GameManager.prototype.shouldResetProgressiveRowsAfterPlan = function (cappedState) {
+  return !!(cappedState.isCappedMode && cappedState.isProgressiveCapped64Mode);
+};
+
+GameManager.prototype.applyCappedRowVisibilityFallbackByState = function (cappedState) {
+  if (!cappedState.isCappedMode) {
+    this.applyNonCappedRowVisibilityFallback();
+    return;
+  }
+  if (cappedState.isProgressiveCapped64Mode) {
+    this.applyProgressiveCappedRowVisibilityFallback();
+    return;
+  }
+  this.applyTargetCappedRowVisibilityFallback(cappedState.cappedTargetValue);
+};
+
 GameManager.prototype.applyCappedRowVisibility = function () {
   var cappedState = this.resolveCappedModeState();
-  var isCappedMode = cappedState.isCappedMode;
-  var isProgressiveCapped64Mode = cappedState.isProgressiveCapped64Mode;
-  var resolveCappedRowVisibilityPlanCore = this.callCoreModeRuntime("resolveCappedRowVisibilityPlan", [{
-      isCappedMode: isCappedMode,
-      isProgressiveCapped64Mode: isProgressiveCapped64Mode,
-      cappedTargetValue: cappedState.cappedTargetValue,
-      timerSlotIds: GameManager.TIMER_SLOT_IDS
-    }]);
+  var resolveCappedRowVisibilityPlanCore = this.callCoreModeRuntime(
+    "resolveCappedRowVisibilityPlan",
+    this.buildResolveCappedRowVisibilityPlanCoreArgs(cappedState)
+  );
   if (resolveCappedRowVisibilityPlanCore.available) {
     var plan = resolveCappedRowVisibilityPlanCore.value;
     if (this.applyCappedRowVisibilityPlan(plan)) {
-      if (isCappedMode && isProgressiveCapped64Mode) {
+      if (this.shouldResetProgressiveRowsAfterPlan(cappedState)) {
         this.resetProgressiveCapped64Rows();
       }
       return;
     }
   }
-
-  if (!isCappedMode) {
-    this.applyNonCappedRowVisibilityFallback();
-    return;
-  }
-  if (isProgressiveCapped64Mode) {
-    this.applyProgressiveCappedRowVisibilityFallback();
-    return;
-  }
-  this.applyTargetCappedRowVisibilityFallback(cappedState.cappedTargetValue);
+  this.applyCappedRowVisibilityFallbackByState(cappedState);
 };
 
 GameManager.prototype.resetCappedDynamicTimers = function () {
