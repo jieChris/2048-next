@@ -458,18 +458,14 @@ GameManager.prototype.resolveModeKeyOrDefault = function (modeKey) {
   return typeof modeKey === "string" && modeKey ? modeKey : this.resolveCurrentOrDefaultModeKey();
 };
 
-GameManager.prototype.buildParseReplayImportEnvelopeCoreArgs = function (trimmedReplayString) {
-  return [{
-    trimmedReplayString: trimmedReplayString,
-    fallbackModeKey: this.resolveCurrentOrDefaultModeKey(),
-    v4Prefix: GameManager.REPLAY_V4_PREFIX
-  }];
-};
-
 GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString) {
   var parseReplayImportEnvelopeCore = this.callCoreReplayImportRuntime(
     "parseReplayImportEnvelope",
-    this.buildParseReplayImportEnvelopeCoreArgs(trimmedReplayString)
+    [{
+      trimmedReplayString: trimmedReplayString,
+      fallbackModeKey: this.resolveCurrentOrDefaultModeKey(),
+      v4Prefix: GameManager.REPLAY_V4_PREFIX
+    }]
   );
   return this.resolveNormalizedCoreValueOrFallbackAllowNull(parseReplayImportEnvelopeCore, function (coreValue) {
     if (coreValue === null) return null;
@@ -546,7 +542,7 @@ GameManager.prototype.parseReplayV4ImportBody = function (trimmedReplayString) {
 
 GameManager.prototype.resolveReplayModeKeyFromV4Body = function (body) {
   var modeCode = body.charAt(0);
-  var replayModeIdV4 = this.resolveReplayModeKeyFromV4Code(modeCode);
+  var replayModeIdV4 = GameManager.REPLAY_V4_MODE_CODE_TO_KEY[modeCode] || null;
   if (!replayModeIdV4) throw "Invalid v4C mode";
   return replayModeIdV4;
 };
@@ -584,14 +580,6 @@ GameManager.LEGACY_REPLAY_V1_PREFIX = "REPLAY_v1_";
 GameManager.LEGACY_REPLAY_V2_PREFIX = "REPLAY_v2_";
 GameManager.LEGACY_REPLAY_V2S_PREFIX = "REPLAY_v2S_";
 GameManager.LEGACY_REPLAY_V1_REVERSE_MAPPING = { U: 0, R: 1, D: 2, L: 3, Z: -1 };
-
-GameManager.prototype.resolveReplayModeKeyFromV4Code = function (modeCode) {
-  return GameManager.REPLAY_V4_MODE_CODE_TO_KEY[modeCode] || null;
-};
-
-GameManager.prototype.resolveReplayV4ModeCodeFromModeKey = function (modeKey) {
-  return GameManager.REPLAY_V4_MODE_KEY_TO_CODE[modeKey] || "C";
-};
 
 GameManager.prototype.decodeLegacyReplayV2CharCode = function (logString, index) {
   var code = logString.charCodeAt(index) - 33;
@@ -904,16 +892,12 @@ GameManager.prototype.getReplayPauseDefaults = function () {
   };
 };
 
-GameManager.prototype.buildComputeReplayResumeStateCoreArgs = function () {
-  return [{
-    replayDelay: this.replayDelay
-  }];
-};
-
 GameManager.prototype.computeReplayResumeState = function () {
   var computeReplayResumeStateCore = this.callCoreReplayTimerRuntime(
     "computeReplayResumeState",
-    this.buildComputeReplayResumeStateCoreArgs()
+    [{
+      replayDelay: this.replayDelay
+    }]
   );
   return this.resolveCoreObjectCallOrFallback(computeReplayResumeStateCore, function () {
     return this.computeReplayResumeStateFallback();
@@ -928,18 +912,14 @@ GameManager.prototype.computeReplayResumeStateFallback = function () {
   };
 };
 
-GameManager.prototype.buildComputeReplaySpeedStateCoreArgs = function (multiplier) {
-  return [{
-    multiplier: multiplier,
-    isPaused: !!this.isPaused,
-    baseDelay: 200
-  }];
-};
-
 GameManager.prototype.computeReplaySpeedState = function (multiplier) {
   var computeReplaySpeedStateCore = this.callCoreReplayTimerRuntime(
     "computeReplaySpeedState",
-    this.buildComputeReplaySpeedStateCoreArgs(multiplier)
+    [{
+      multiplier: multiplier,
+      isPaused: !!this.isPaused,
+      baseDelay: 200
+    }]
   );
   return this.resolveCoreObjectCallOrFallback(computeReplaySpeedStateCore, function () {
     return this.computeReplaySpeedStateFallback(multiplier);
@@ -953,17 +933,13 @@ GameManager.prototype.computeReplaySpeedStateFallback = function (multiplier) {
   };
 };
 
-GameManager.prototype.buildShouldStopReplayAtTickCoreArgs = function (replayIndex, replayMovesLength) {
-  return [{
-    replayIndex: replayIndex,
-    replayMovesLength: replayMovesLength
-  }];
-};
-
 GameManager.prototype.shouldStopReplayAtTick = function (replayIndex, replayMovesLength) {
   var shouldStopReplayAtTickCore = this.callCoreReplayTimerRuntime(
     "shouldStopReplayAtTick",
-    this.buildShouldStopReplayAtTickCoreArgs(replayIndex, replayMovesLength)
+    [{
+      replayIndex: replayIndex,
+      replayMovesLength: replayMovesLength
+    }]
   );
   return this.resolveCoreBooleanCallOrFallback(shouldStopReplayAtTickCore, function () {
     return replayIndex >= replayMovesLength;
@@ -9258,7 +9234,7 @@ GameManager.prototype.resolveReplayV4SerializationCompactLog = function () {
 };
 
 GameManager.prototype.buildReplayV4SerializationPayload = function () {
-  var modeCode = this.resolveReplayV4ModeCodeFromModeKey(this.modeKey);
+  var modeCode = GameManager.REPLAY_V4_MODE_KEY_TO_CODE[this.modeKey] || "C";
   var initialBoard = this.resolveReplayV4SerializationInitialBoard();
   var encodedBoard = this.encodeBoardV4(initialBoard);
   return GameManager.REPLAY_V4_PREFIX + modeCode + encodedBoard + this.resolveReplayV4SerializationCompactLog();
