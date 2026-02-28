@@ -365,69 +365,6 @@ GameManager.prototype.decodeBoardV4 = function (encoded) {
   });
 };
 
-GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString) {
-  var parseReplayImportEnvelopeCore = this.callCoreReplayImportRuntime(
-    "parseReplayImportEnvelope",
-    [{
-      trimmedReplayString: trimmedReplayString,
-      fallbackModeKey: this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY,
-      v4Prefix: GameManager.REPLAY_V4_PREFIX
-    }]
-  );
-  return this.resolveNormalizedCoreValueOrFallbackAllowNull(parseReplayImportEnvelopeCore, function (coreValue) {
-    if (coreValue === null) return null;
-    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
-  }, function () {
-    var jsonEnvelope = null;
-    if (trimmedReplayString.charAt(0) === "{") {
-      var replayObj = JSON.parse(trimmedReplayString);
-      if (replayObj) {
-        if (replayObj.v !== 3) throw "Unsupported JSON replay version";
-        var actions = replayObj.actions;
-        if (!Array.isArray(actions)) throw "Invalid v3 actions";
-        var specialRulesSnapshot =
-          replayObj.special_rules_snapshot && typeof replayObj.special_rules_snapshot === "object"
-            ? replayObj.special_rules_snapshot
-            : null;
-        var normalizeOptional = function (raw) {
-          return typeof raw === "string" && raw ? raw : null;
-        };
-        var modeFamily = normalizeOptional(replayObj.mode_family);
-        var rankPolicy = normalizeOptional(replayObj.rank_policy);
-        var challengeId = normalizeOptional(replayObj.challenge_id);
-        var modeKey =
-          normalizeOptional(replayObj.mode_key) ||
-          normalizeOptional(replayObj.mode) ||
-          this.modeKey ||
-          this.mode;
-        jsonEnvelope = {
-          kind: "json-v3",
-          modeKey: modeKey,
-          actions: actions,
-          seed: replayObj.seed,
-          specialRulesSnapshot: specialRulesSnapshot,
-          modeFamily: modeFamily,
-          rankPolicy: rankPolicy,
-          challengeId: challengeId
-        };
-      }
-    }
-    if (jsonEnvelope) return jsonEnvelope;
-    if (trimmedReplayString.indexOf(GameManager.REPLAY_V4_PREFIX) !== 0) return null;
-    var body = trimmedReplayString.substring(GameManager.REPLAY_V4_PREFIX.length);
-    if (body.length < 17) throw "Invalid v4C payload";
-    var modeCode = body.charAt(0);
-    var replayModeIdV4 = GameManager.REPLAY_V4_MODE_CODE_TO_KEY[modeCode] || null;
-    if (!replayModeIdV4) throw "Invalid v4C mode";
-    return {
-      kind: "v4c",
-      modeKey: replayModeIdV4,
-      initialBoardEncoded: body.substring(1, 17),
-      actionsEncoded: body.substring(17)
-    };
-  });
-};
-
 GameManager.REPLAY_V4_MODE_CODE_TO_KEY = {
   S: "standard_4x4_pow2_no_undo",
   C: "classic_4x4_pow2_undo",
@@ -8167,7 +8104,66 @@ GameManager.prototype.applyReplayImportActions = function (payload) {
 GameManager.prototype.import = function (replayString) {
   try {
     var trimmed = (typeof replayString === "string" ? replayString : JSON.stringify(replayString)).trim();
-    var parsedEnvelope = this.parseReplayImportEnvelope(trimmed);
+    var parseReplayImportEnvelopeCore = this.callCoreReplayImportRuntime(
+      "parseReplayImportEnvelope",
+      [{
+        trimmedReplayString: trimmed,
+        fallbackModeKey: this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY,
+        v4Prefix: GameManager.REPLAY_V4_PREFIX
+      }]
+    );
+    var parsedEnvelope = this.resolveNormalizedCoreValueOrFallbackAllowNull(parseReplayImportEnvelopeCore, function (coreValue) {
+      if (coreValue === null) return null;
+      return this.isNonArrayObject(coreValue) ? coreValue : undefined;
+    }, function () {
+      var jsonEnvelope = null;
+      if (trimmed.charAt(0) === "{") {
+        var replayObj = JSON.parse(trimmed);
+        if (replayObj) {
+          if (replayObj.v !== 3) throw "Unsupported JSON replay version";
+          var actions = replayObj.actions;
+          if (!Array.isArray(actions)) throw "Invalid v3 actions";
+          var specialRulesSnapshot =
+            replayObj.special_rules_snapshot && typeof replayObj.special_rules_snapshot === "object"
+              ? replayObj.special_rules_snapshot
+              : null;
+          var normalizeOptional = function (raw) {
+            return typeof raw === "string" && raw ? raw : null;
+          };
+          var modeFamily = normalizeOptional(replayObj.mode_family);
+          var rankPolicy = normalizeOptional(replayObj.rank_policy);
+          var challengeId = normalizeOptional(replayObj.challenge_id);
+          var modeKey =
+            normalizeOptional(replayObj.mode_key) ||
+            normalizeOptional(replayObj.mode) ||
+            this.modeKey ||
+            this.mode;
+          jsonEnvelope = {
+            kind: "json-v3",
+            modeKey: modeKey,
+            actions: actions,
+            seed: replayObj.seed,
+            specialRulesSnapshot: specialRulesSnapshot,
+            modeFamily: modeFamily,
+            rankPolicy: rankPolicy,
+            challengeId: challengeId
+          };
+        }
+      }
+      if (jsonEnvelope) return jsonEnvelope;
+      if (trimmed.indexOf(GameManager.REPLAY_V4_PREFIX) !== 0) return null;
+      var body = trimmed.substring(GameManager.REPLAY_V4_PREFIX.length);
+      if (body.length < 17) throw "Invalid v4C payload";
+      var modeCode = body.charAt(0);
+      var replayModeIdV4 = GameManager.REPLAY_V4_MODE_CODE_TO_KEY[modeCode] || null;
+      if (!replayModeIdV4) throw "Invalid v4C mode";
+      return {
+        kind: "v4c",
+        modeKey: replayModeIdV4,
+        initialBoardEncoded: body.substring(1, 17),
+        actionsEncoded: body.substring(17)
+      };
+    });
     var startReplayPlayback = function (manager) {
       manager.replayIndex = 0;
       manager.replayDelay = 200;
