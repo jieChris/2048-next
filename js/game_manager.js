@@ -10001,17 +10001,9 @@ GameManager.prototype.importJsonV3ReplayEnvelope = function (envelope, replayMod
   this.restartReplayImportSession(replayModeConfig, envelope.seed, false);
 };
 
-GameManager.prototype.resolveV4ReplayInitialBoard = function (envelope) {
-  return this.decodeBoardV4(envelope.initialBoardEncoded);
-};
-
-GameManager.prototype.resolveV4ReplayDecodedActions = function (envelope) {
-  return this.decodeReplayV4Actions(envelope.actionsEncoded);
-};
-
 GameManager.prototype.importV4ReplayEnvelope = function (envelope, replayModeConfig) {
-  var initialBoard = this.resolveV4ReplayInitialBoard(envelope);
-  var decodedV4Actions = this.resolveV4ReplayDecodedActions(envelope);
+  var initialBoard = this.decodeBoardV4(envelope.initialBoardEncoded);
+  var decodedV4Actions = this.decodeReplayV4Actions(envelope.actionsEncoded);
   this.applyV4ReplayDecodedActions(decodedV4Actions);
   this.restartReplayImportSession(replayModeConfig, initialBoard, true);
 };
@@ -10019,10 +10011,6 @@ GameManager.prototype.importV4ReplayEnvelope = function (envelope, replayModeCon
 GameManager.prototype.importLegacyReplayPayload = function (decodedLegacy) {
   this.applyLegacyReplayDecodedActions(decodedLegacy);
   this.restartLegacyReplayImportSession(decodedLegacy.seed);
-};
-
-GameManager.prototype.normalizeReplayImportInput = function (replayString) {
-  return this.coerceReplayImportInputToString(replayString).trim();
 };
 
 GameManager.prototype.coerceReplayImportInputToString = function (replayString) {
@@ -10069,18 +10057,10 @@ GameManager.prototype.isReplayImportEnvelopeSupported = function (parsedEnvelope
     && this.isSupportedReplayEnvelopeKind(parsedEnvelope.kind);
 };
 
-GameManager.prototype.resolveReplayModeConfigForParsedEnvelope = function (parsedEnvelope) {
-  return this.resolveReplayImportModeConfig(parsedEnvelope);
-};
-
 GameManager.prototype.tryImportParsedReplayEnvelope = function (parsedEnvelope) {
   if (!this.isReplayImportEnvelopeSupported(parsedEnvelope)) return false;
-  var replayModeConfig = this.resolveReplayModeConfigForParsedEnvelope(parsedEnvelope);
+  var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
   return this.importParsedReplayEnvelopeByKind(parsedEnvelope, replayModeConfig);
-};
-
-GameManager.prototype.resolveReplayImportModeConfig = function (parsedEnvelope) {
-  return this.resolveModeConfig(parsedEnvelope.modeKey);
 };
 
 GameManager.prototype.tryImportLegacyReplayString = function (trimmedReplayString) {
@@ -10123,16 +10103,12 @@ GameManager.prototype.tryImportReplayByMethodNames = function (trimmedReplayStri
   return false;
 };
 
-GameManager.prototype.tryImportReplayByKnownFormats = function (trimmedReplayString) {
-  return this.tryImportReplayByMethodNames(trimmedReplayString, this.getReplayImportTryMethodNames());
-};
-
 GameManager.prototype.throwUnknownReplayVersion = function () {
   throw "Unknown replay version";
 };
 
 GameManager.prototype.tryImportReplayByKnownFormatsOrThrow = function (trimmedReplayString) {
-  if (this.tryImportReplayByKnownFormats(trimmedReplayString)) return true;
+  if (this.tryImportReplayByMethodNames(trimmedReplayString, this.getReplayImportTryMethodNames())) return true;
   this.throwUnknownReplayVersion();
   return false;
 };
@@ -10150,7 +10126,7 @@ GameManager.prototype.notifyReplayImportError = function (error) {
 };
 
 GameManager.prototype.performReplayImport = function (replayString) {
-  var trimmed = this.normalizeReplayImportInput(replayString);
+  var trimmed = this.coerceReplayImportInputToString(replayString).trim();
   this.importReplayOrThrow(trimmed);
 };
 
