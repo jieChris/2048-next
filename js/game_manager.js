@@ -6156,52 +6156,6 @@ GameManager.prototype.updateStatsLabelText = function (elementId, label, value) 
   el.textContent = label + value;
 };
 
-GameManager.prototype.resolveStepStatsUiValues = function (stepStats) {
-  return {
-    totalSteps: stepStats.totalSteps,
-    moveSteps: stepStats.moveSteps,
-    undoSteps: stepStats.undoSteps
-  };
-};
-
-GameManager.prototype.renderStepStatsUiLabels = function (stepStatsValues) {
-  this.updateStatsLabelText("stats-total", "总步数: ", stepStatsValues.totalSteps);
-  this.updateStatsLabelText("stats-moves", "移动步数: ", stepStatsValues.moveSteps);
-  this.updateStatsLabelText("stats-undo", "撤回步数: ", stepStatsValues.undoSteps);
-};
-
-GameManager.prototype.updateStepStatsPanel = function (stepStatsValues) {
-  this.updateStatsPanel(stepStatsValues.totalSteps, stepStatsValues.moveSteps, stepStatsValues.undoSteps);
-};
-
-GameManager.prototype.updateStepStatsUi = function (stepStats) {
-  var stepStatsValues = this.resolveStepStatsUiValues(stepStats);
-  this.renderStepStatsUiLabels(stepStatsValues);
-  this.updateStepStatsPanel(stepStatsValues);
-};
-
-GameManager.prototype.refreshStepStatsUiFromHistory = function () {
-  this.updateStepStatsUi(this.computeStepStats());
-};
-
-GameManager.prototype.resolveActuateElapsedTime = function () {
-  if (this.timerStatus === 1) {
-    return Date.now() - this.startTime.getTime();
-  }
-  return this.accumulatedTime;
-};
-
-GameManager.prototype.renderActuateTimerAndIps = function (elapsedMs) {
-  this.timerContainer.textContent = this.pretty(elapsedMs);
-  this.refreshIpsDisplay(elapsedMs);
-};
-
-GameManager.prototype.refreshActuateTimerAndIps = function () {
-  if (!this.timerContainer) return;
-  var elapsedMs = this.resolveActuateElapsedTime();
-  this.renderActuateTimerAndIps(elapsedMs);
-};
-
 GameManager.prototype.finalizeTerminatedSessionAfterActuate = function () {
   this.clearSavedGameState(this.modeKey);
   this.tryAutoSubmitOnGameOver();
@@ -6219,8 +6173,18 @@ GameManager.prototype.persistOrFinalizeSessionAfterActuate = function () {
 GameManager.prototype.actuate = function () {
   this.syncBestScoreBeforeActuate();
   this.actuator.actuate(this.grid, this.buildActuatorPayload());
-  this.refreshStepStatsUiFromHistory();
-  this.refreshActuateTimerAndIps();
+  var stepStats = this.computeStepStats();
+  this.updateStatsLabelText("stats-total", "总步数: ", stepStats.totalSteps);
+  this.updateStatsLabelText("stats-moves", "移动步数: ", stepStats.moveSteps);
+  this.updateStatsLabelText("stats-undo", "撤回步数: ", stepStats.undoSteps);
+  this.updateStatsPanel(stepStats.totalSteps, stepStats.moveSteps, stepStats.undoSteps);
+  if (this.timerContainer) {
+    var elapsedMs = this.timerStatus === 1
+      ? Date.now() - this.startTime.getTime()
+      : this.accumulatedTime;
+    this.timerContainer.textContent = this.pretty(elapsedMs);
+    this.refreshIpsDisplay(elapsedMs);
+  }
   this.persistOrFinalizeSessionAfterActuate();
 };
 
