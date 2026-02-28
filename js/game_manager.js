@@ -2958,35 +2958,19 @@ GameManager.prototype.persistSavedGameStatePayload = function (payload) {
   return this.resolveSavedGameStatePersistedFromWrites(persistWrites);
 };
 
-GameManager.prototype.getElementTextContentById = function (id) {
-  return (document.getElementById(id) || {}).textContent || "";
-};
-
-GameManager.prototype.isElementDisplayBlockById = function (id) {
-  return ((document.getElementById(id) || {}).style || {}).display === "block";
-};
-
 GameManager.prototype.resolveTimerSubStateSnapshot = function () {
   return {
-    timer_sub_8192: this.getElementTextContentById("timer8192-sub"),
-    timer_sub_16384: this.getElementTextContentById("timer16384-sub"),
-    timer_sub_visible: this.isElementDisplayBlockById("timer32k-sub-container")
+    timer_sub_8192: (document.getElementById("timer8192-sub") || {}).textContent || "",
+    timer_sub_16384: (document.getElementById("timer16384-sub") || {}).textContent || "",
+    timer_sub_visible: (((document.getElementById("timer32k-sub-container") || {}).style) || {}).display === "block"
   };
-};
-
-GameManager.prototype.resolveSavedReplayIpsInputCount = function () {
-  return Number.isInteger(this.ipsInputCount) && this.ipsInputCount >= 0 ? this.ipsInputCount : 0;
-};
-
-GameManager.prototype.resolveSavedReplayUndoStackSnapshot = function () {
-  return this.undoStack ? this.safeClonePlain(this.undoStack, []) : [];
 };
 
 GameManager.prototype.resolveSavedGameStateReplaySnapshot = function () {
   return {
     move_history: this.moveHistory ? this.moveHistory.slice() : [],
-    ips_input_count: this.resolveSavedReplayIpsInputCount(),
-    undo_stack: this.resolveSavedReplayUndoStackSnapshot(),
+    ips_input_count: Number.isInteger(this.ipsInputCount) && this.ipsInputCount >= 0 ? this.ipsInputCount : 0,
+    undo_stack: this.undoStack ? this.safeClonePlain(this.undoStack, []) : [],
     replay_compact_log: this.replayCompactLog || "",
     session_replay_v3: this.sessionReplayV3 ? this.safeClonePlain(this.sessionReplayV3, null) : null
   };
