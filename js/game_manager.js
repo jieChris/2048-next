@@ -2871,31 +2871,6 @@ GameManager.prototype.publishAdapterMoveResult = function (meta) {
   return true;
 };
 
-GameManager.prototype.buildPlannedTileInteractionFromCore = function (computed, cell, positions) {
-  var mergeKind = computed.kind === "merge";
-  var fallbackTarget = mergeKind ? positions.next : positions.farthest;
-  var target = computed.target && Number.isInteger(computed.target.x) && Number.isInteger(computed.target.y)
-    ? computed.target
-    : fallbackTarget;
-  return {
-    kind: mergeKind ? "merge" : "move",
-    target: target,
-    moved: typeof computed.moved === "boolean"
-      ? computed.moved
-      : !this.positionsEqual(cell, target)
-  };
-};
-
-GameManager.prototype.buildPlannedTileInteractionFallback = function (cell, positions, next, mergedValue) {
-  var shouldMerge = !!next && !next.mergedFrom && Number.isInteger(mergedValue) && mergedValue > 0;
-  var targetLegacy = shouldMerge ? positions.next : positions.farthest;
-  return {
-    kind: shouldMerge ? "merge" : "move",
-    target: targetLegacy,
-    moved: !this.positionsEqual(cell, targetLegacy)
-  };
-};
-
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
   var planTileInteractionCore = this.callCoreMoveApplyRuntime(
     "planTileInteraction",
@@ -2911,10 +2886,28 @@ GameManager.prototype.planTileInteraction = function (cell, positions, next, mer
   return this.resolveNormalizedCoreValueOrFallback(
     planTileInteractionCore,
     function (coreValue) {
-      return this.buildPlannedTileInteractionFromCore(coreValue || {}, cell, positions);
+      var computed = coreValue || {};
+      var mergeKind = computed.kind === "merge";
+      var fallbackTarget = mergeKind ? positions.next : positions.farthest;
+      var target = computed.target && Number.isInteger(computed.target.x) && Number.isInteger(computed.target.y)
+        ? computed.target
+        : fallbackTarget;
+      return {
+        kind: mergeKind ? "merge" : "move",
+        target: target,
+        moved: typeof computed.moved === "boolean"
+          ? computed.moved
+          : !this.positionsEqual(cell, target)
+      };
     },
     function () {
-      return this.buildPlannedTileInteractionFallback(cell, positions, next, mergedValue);
+      var shouldMerge = !!next && !next.mergedFrom && Number.isInteger(mergedValue) && mergedValue > 0;
+      var targetLegacy = shouldMerge ? positions.next : positions.farthest;
+      return {
+        kind: shouldMerge ? "merge" : "move",
+        target: targetLegacy,
+        moved: !this.positionsEqual(cell, targetLegacy)
+      };
     }
   );
 };
@@ -6894,16 +6887,6 @@ GameManager.prototype.insertCustomTile = function(x, y, value) {
     this.recordPracticeReplayAction(["p", x, y, value]);
 };
 
-GameManager.prototype.resolveInvalidateTimersCoreInput = function (limit) {
-    return {
-        timerMilestones: this.timerMilestones || this.getTimerMilestoneValues(),
-        timerSlotIds: GameManager.TIMER_SLOT_IDS,
-        limit: limit,
-        reached32k: !!this.reached32k,
-        isFibonacciMode: this.isFibonacciMode()
-    };
-};
-
 GameManager.prototype.applyInvalidatedTimerPlaceholders = function (elementIds) {
     var ids = Array.isArray(elementIds) ? elementIds : [];
     for (var idx = 0; idx < ids.length; idx++) {
@@ -6914,7 +6897,27 @@ GameManager.prototype.applyInvalidatedTimerPlaceholders = function (elementIds) 
     }
 };
 
-GameManager.prototype.resolveInvalidatedTimerSlotElementIds = function (limit) {
+GameManager.prototype.invalidateTimers = function(limit) {
+    var resolveInvalidatedTimerElementIdsCore = this.callCoreTimerIntervalRuntime(
+        "resolveInvalidatedTimerElementIds",
+        [{
+            timerMilestones: this.timerMilestones || this.getTimerMilestoneValues(),
+            timerSlotIds: GameManager.TIMER_SLOT_IDS,
+            limit: limit,
+            reached32k: !!this.reached32k,
+            isFibonacciMode: this.isFibonacciMode()
+        }]
+    );
+    var invalidatedTimerElementIdsByCore = this.resolveNormalizedCoreValueOrUndefined(
+        resolveInvalidatedTimerElementIdsCore,
+        function (coreValue) {
+            return Array.isArray(coreValue) ? coreValue : [];
+        }
+    );
+    if (typeof invalidatedTimerElementIdsByCore !== "undefined") {
+        this.applyInvalidatedTimerPlaceholders(invalidatedTimerElementIdsByCore);
+        return;
+    }
     var milestones = this.timerMilestones || this.getTimerMilestoneValues();
     var timerSlots = GameManager.TIMER_SLOT_IDS;
     var elementIds = [];
@@ -6924,48 +6927,17 @@ GameManager.prototype.resolveInvalidatedTimerSlotElementIds = function (limit) {
         if (!(Number.isInteger(milestoneValue) && milestoneValue <= limit)) continue;
         elementIds.push("timer" + slotId);
     }
-    return elementIds;
-};
-
-GameManager.prototype.invalidateTimerSlotsFallback = function (limit) {
-    this.applyInvalidatedTimerPlaceholders(this.resolveInvalidatedTimerSlotElementIds(limit));
-};
-
-GameManager.prototype.invalidateSubTimersFallback = function (limit) {
-    if (!(this.reached32k && !this.isFibonacciMode())) return;
-    if (8192 <= limit && limit !== 32768) {
-        var subTimer8192El = document.getElementById("timer8192-sub");
-        if (subTimer8192El) subTimer8192El.textContent = "---------";
+    this.applyInvalidatedTimerPlaceholders(elementIds);
+    if (this.reached32k && !this.isFibonacciMode()) {
+        if (8192 <= limit && limit !== 32768) {
+            var subTimer8192El = document.getElementById("timer8192-sub");
+            if (subTimer8192El) subTimer8192El.textContent = "---------";
+        }
+        if (16384 <= limit && limit !== 32768) {
+            var subTimer16384El = document.getElementById("timer16384-sub");
+            if (subTimer16384El) subTimer16384El.textContent = "---------";
+        }
     }
-    if (16384 <= limit && limit !== 32768) {
-        var subTimer16384El = document.getElementById("timer16384-sub");
-        if (subTimer16384El) subTimer16384El.textContent = "---------";
-    }
-};
-
-GameManager.prototype.invalidateTimersFallback = function (limit) {
-    this.invalidateTimerSlotsFallback(limit);
-    this.invalidateSubTimersFallback(limit);
-};
-
-GameManager.prototype.normalizeInvalidatedTimerElementIds = function (coreValue) {
-    return Array.isArray(coreValue) ? coreValue : [];
-};
-
-GameManager.prototype.invalidateTimers = function(limit) {
-    var resolveInvalidatedTimerElementIdsCore = this.callCoreTimerIntervalRuntime(
-        "resolveInvalidatedTimerElementIds",
-        [this.resolveInvalidateTimersCoreInput(limit)]
-    );
-    var invalidatedTimerElementIdsByCore = this.resolveNormalizedCoreValueOrUndefined(
-        resolveInvalidatedTimerElementIdsCore,
-        this.normalizeInvalidatedTimerElementIds
-    );
-    if (typeof invalidatedTimerElementIdsByCore !== "undefined") {
-        this.applyInvalidatedTimerPlaceholders(invalidatedTimerElementIdsByCore);
-        return;
-    }
-    this.invalidateTimersFallback(limit);
 };
 
 GameManager.prototype.buildFinalBoardMatrixFallback = function () {
