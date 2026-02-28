@@ -2979,31 +2979,6 @@ GameManager.prototype.getUndoStateFallbackValues = function () {
   };
 };
 
-GameManager.prototype.resolveUndoRestoreFallbackUndoBase = function (source, fallbackUndoUsed) {
-  return Number.isInteger(source.undoUsed) && source.undoUsed >= 0
-    ? source.undoUsed
-    : fallbackUndoUsed;
-};
-
-GameManager.prototype.buildUndoRestoreStateFallback = function (source, undoBase) {
-  return {
-    comboStreak: Number.isInteger(source.comboStreak) && source.comboStreak >= 0 ? source.comboStreak : 0,
-    successfulMoveCount:
-      Number.isInteger(source.successfulMoveCount) && source.successfulMoveCount >= 0
-        ? source.successfulMoveCount
-        : 0,
-    lockConsumedAtMoveCount: Number.isInteger(source.lockConsumedAtMoveCount) ? source.lockConsumedAtMoveCount : -1,
-    lockedDirectionTurn: Number.isInteger(source.lockedDirectionTurn) ? source.lockedDirectionTurn : null,
-    lockedDirection: Number.isInteger(source.lockedDirection) ? source.lockedDirection : null,
-    undoUsed: undoBase + 1,
-    over: false,
-    won: false,
-    keepPlaying: false,
-    shouldClearMessage: true,
-    shouldStartTimer: this.timerStatus === 0
-  };
-};
-
 GameManager.prototype.computeUndoRestoreState = function (prev) {
   var computeUndoRestoreStateCore = this.callCoreUndoRestoreRuntime(
     "computeUndoRestoreState",
@@ -3016,79 +2991,26 @@ GameManager.prototype.computeUndoRestoreState = function (prev) {
   return this.resolveCoreObjectCallOrFallback(computeUndoRestoreStateCore, function () {
     var source = prev && typeof prev === "object" ? prev : {};
     var fallbackState = this.getUndoStateFallbackValues();
-    var undoBase = this.resolveUndoRestoreFallbackUndoBase(source, fallbackState.undoUsed);
-    return this.buildUndoRestoreStateFallback(source, undoBase);
+    var undoBase = Number.isInteger(source.undoUsed) && source.undoUsed >= 0
+      ? source.undoUsed
+      : fallbackState.undoUsed;
+    return {
+      comboStreak: Number.isInteger(source.comboStreak) && source.comboStreak >= 0 ? source.comboStreak : 0,
+      successfulMoveCount:
+        Number.isInteger(source.successfulMoveCount) && source.successfulMoveCount >= 0
+          ? source.successfulMoveCount
+          : 0,
+      lockConsumedAtMoveCount: Number.isInteger(source.lockConsumedAtMoveCount) ? source.lockConsumedAtMoveCount : -1,
+      lockedDirectionTurn: Number.isInteger(source.lockedDirectionTurn) ? source.lockedDirectionTurn : null,
+      lockedDirection: Number.isInteger(source.lockedDirection) ? source.lockedDirection : null,
+      undoUsed: undoBase + 1,
+      over: false,
+      won: false,
+      keepPlaying: false,
+      shouldClearMessage: true,
+      shouldStartTimer: this.timerStatus === 0
+    };
   });
-};
-
-GameManager.prototype.buildUndoSnapshotFallbackState = function (fallbackState) {
-  return {
-    score: fallbackState.score,
-    tiles: [],
-    comboStreak: fallbackState.comboStreak,
-    successfulMoveCount: fallbackState.successfulMoveCount,
-    lockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
-    lockedDirectionTurn: fallbackState.lockedDirectionTurn,
-    lockedDirection: fallbackState.lockedDirection,
-    undoUsed: fallbackState.undoUsed
-  };
-};
-
-GameManager.prototype.resolveUndoSnapshotScore = function (computed, fallback) {
-  return Number.isFinite(computed.score) ? Number(computed.score) : fallback.score;
-};
-
-GameManager.prototype.resolveUndoSnapshotTiles = function (computed) {
-  return Array.isArray(computed.tiles) ? computed.tiles : [];
-};
-
-GameManager.prototype.resolveUndoSnapshotComboStreak = function (computed, fallback) {
-  return Number.isInteger(computed.comboStreak) && computed.comboStreak >= 0
-    ? computed.comboStreak
-    : fallback.comboStreak;
-};
-
-GameManager.prototype.resolveUndoSnapshotSuccessfulMoveCount = function (computed, fallback) {
-  return Number.isInteger(computed.successfulMoveCount) && computed.successfulMoveCount >= 0
-    ? computed.successfulMoveCount
-    : fallback.successfulMoveCount;
-};
-
-GameManager.prototype.resolveUndoSnapshotLockConsumedAtMoveCount = function (computed, fallback) {
-  return Number.isInteger(computed.lockConsumedAtMoveCount)
-    ? computed.lockConsumedAtMoveCount
-    : fallback.lockConsumedAtMoveCount;
-};
-
-GameManager.prototype.resolveUndoSnapshotLockedDirectionTurn = function (computed, fallback) {
-  return Number.isInteger(computed.lockedDirectionTurn)
-    ? computed.lockedDirectionTurn
-    : fallback.lockedDirectionTurn;
-};
-
-GameManager.prototype.resolveUndoSnapshotLockedDirection = function (computed, fallback) {
-  return Number.isInteger(computed.lockedDirection)
-    ? computed.lockedDirection
-    : fallback.lockedDirection;
-};
-
-GameManager.prototype.resolveUndoSnapshotUndoUsed = function (computed, fallback) {
-  return Number.isInteger(computed.undoUsed) && computed.undoUsed >= 0
-    ? computed.undoUsed
-    : fallback.undoUsed;
-};
-
-GameManager.prototype.normalizeUndoSnapshotCoreValue = function (computed, fallback) {
-  return {
-    score: this.resolveUndoSnapshotScore(computed, fallback),
-    tiles: this.resolveUndoSnapshotTiles(computed),
-    comboStreak: this.resolveUndoSnapshotComboStreak(computed, fallback),
-    successfulMoveCount: this.resolveUndoSnapshotSuccessfulMoveCount(computed, fallback),
-    lockConsumedAtMoveCount: this.resolveUndoSnapshotLockConsumedAtMoveCount(computed, fallback),
-    lockedDirectionTurn: this.resolveUndoSnapshotLockedDirectionTurn(computed, fallback),
-    lockedDirection: this.resolveUndoSnapshotLockedDirection(computed, fallback),
-    undoUsed: this.resolveUndoSnapshotUndoUsed(computed, fallback)
-  };
 };
 
 GameManager.prototype.createUndoSnapshotState = function () {
@@ -3104,11 +3026,43 @@ GameManager.prototype.createUndoSnapshotState = function () {
       undoUsed: this.undoUsed
     }]
   );
-  var fallback = this.buildUndoSnapshotFallbackState(this.getUndoStateFallbackValues());
+  var fallbackState = this.getUndoStateFallbackValues();
+  var fallback = {
+    score: fallbackState.score,
+    tiles: [],
+    comboStreak: fallbackState.comboStreak,
+    successfulMoveCount: fallbackState.successfulMoveCount,
+    lockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
+    lockedDirectionTurn: fallbackState.lockedDirectionTurn,
+    lockedDirection: fallbackState.lockedDirection,
+    undoUsed: fallbackState.undoUsed
+  };
   return this.resolveNormalizedCoreValueOrFallback(
     createUndoSnapshotCore,
     function (coreValue) {
-      return this.normalizeUndoSnapshotCoreValue(coreValue || {}, fallback);
+      var computed = coreValue || {};
+      return {
+        score: Number.isFinite(computed.score) ? Number(computed.score) : fallback.score,
+        tiles: Array.isArray(computed.tiles) ? computed.tiles : [],
+        comboStreak: Number.isInteger(computed.comboStreak) && computed.comboStreak >= 0
+          ? computed.comboStreak
+          : fallback.comboStreak,
+        successfulMoveCount: Number.isInteger(computed.successfulMoveCount) && computed.successfulMoveCount >= 0
+          ? computed.successfulMoveCount
+          : fallback.successfulMoveCount,
+        lockConsumedAtMoveCount: Number.isInteger(computed.lockConsumedAtMoveCount)
+          ? computed.lockConsumedAtMoveCount
+          : fallback.lockConsumedAtMoveCount,
+        lockedDirectionTurn: Number.isInteger(computed.lockedDirectionTurn)
+          ? computed.lockedDirectionTurn
+          : fallback.lockedDirectionTurn,
+        lockedDirection: Number.isInteger(computed.lockedDirection)
+          ? computed.lockedDirection
+          : fallback.lockedDirection,
+        undoUsed: Number.isInteger(computed.undoUsed) && computed.undoUsed >= 0
+          ? computed.undoUsed
+          : fallback.undoUsed
+      };
     },
     function () {
       return fallback;
@@ -3262,17 +3216,10 @@ GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
   return this.buildUndoTileSnapshotFallback(tile, target);
 };
 
-GameManager.prototype.normalizeUndoRestoreTileSource = function (snapshot) {
+GameManager.prototype.createUndoRestoreTile = function (snapshot) {
   var source = this.isNonArrayObject(snapshot) ? snapshot : {};
   var previous = this.isNonArrayObject(source.previousPosition) ? source.previousPosition : {};
-  return {
-    source: source,
-    previous: previous
-  };
-};
-
-GameManager.prototype.buildUndoRestoreTileFallback = function (source, previous) {
-  return {
+  var fallback = {
     x: source.x,
     y: source.y,
     value: source.value,
@@ -3281,24 +3228,6 @@ GameManager.prototype.buildUndoRestoreTileFallback = function (source, previous)
       y: previous.y
     }
   };
-};
-
-GameManager.prototype.normalizeUndoRestoreTileFromCore = function (computed) {
-  if (
-    this.isNonArrayObject(computed) &&
-    computed.previousPosition &&
-    this.isNonArrayObject(computed.previousPosition)
-  ) {
-    return computed;
-  }
-  return null;
-};
-
-GameManager.prototype.createUndoRestoreTile = function (snapshot) {
-  var normalized = this.normalizeUndoRestoreTileSource(snapshot);
-  var source = normalized.source;
-  var previous = normalized.previous;
-  var fallback = this.buildUndoRestoreTileFallback(source, previous);
 
   var createUndoRestoreTileCore = this.callCoreUndoTileRestoreRuntime(
     "createUndoRestoreTile",
@@ -3314,7 +3243,16 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     createUndoRestoreTileCore,
-    this.normalizeUndoRestoreTileFromCore
+    function (computed) {
+      if (
+        this.isNonArrayObject(computed) &&
+        computed.previousPosition &&
+        this.isNonArrayObject(computed.previousPosition)
+      ) {
+        return computed;
+      }
+      return null;
+    }
   );
   if (normalizedByCore) return normalizedByCore;
 
