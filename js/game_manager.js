@@ -387,18 +387,6 @@ GameManager.prototype.buildReplayV4DecodedToken = function (action, spawn, nextI
   };
 };
 
-GameManager.prototype.decodeReplayV4PracticeEscapePayload = function (actionsEncoded, payloadIndex) {
-  if (payloadIndex + 1 >= actionsEncoded.length) throw "Invalid v4C practice action";
-  var cell = this.decodeReplay128(actionsEncoded.charAt(payloadIndex));
-  var exp = this.decodeReplay128(actionsEncoded.charAt(payloadIndex + 1));
-  if (cell < 0 || cell > 15) throw "Invalid v4C practice cell";
-  return this.buildReplayV4DecodedToken(
-    ["p", (cell >> 2) & 3, cell & 3, exp === 0 ? 0 : Math.pow(2, exp)],
-    null,
-    payloadIndex + 2
-  );
-};
-
 GameManager.prototype.decodeReplayV4EscapedToken = function (actionsEncoded, escapedIndex) {
   if (escapedIndex >= actionsEncoded.length) throw "Invalid v4C escape";
   var subtype = this.decodeReplay128(actionsEncoded.charAt(escapedIndex));
@@ -410,7 +398,16 @@ GameManager.prototype.decodeReplayV4EscapedToken = function (actionsEncoded, esc
     return this.buildReplayV4DecodedToken(-1, null, escapedIndex + 1);
   }
   if (subtype === 2) {
-    return this.decodeReplayV4PracticeEscapePayload(actionsEncoded, escapedIndex + 1);
+    var payloadIndex = escapedIndex + 1;
+    if (payloadIndex + 1 >= actionsEncoded.length) throw "Invalid v4C practice action";
+    var cell = this.decodeReplay128(actionsEncoded.charAt(payloadIndex));
+    var exp = this.decodeReplay128(actionsEncoded.charAt(payloadIndex + 1));
+    if (cell < 0 || cell > 15) throw "Invalid v4C practice cell";
+    return this.buildReplayV4DecodedToken(
+      ["p", (cell >> 2) & 3, cell & 3, exp === 0 ? 0 : Math.pow(2, exp)],
+      null,
+      payloadIndex + 2
+    );
   }
   throw "Unknown v4C escape subtype";
 };
