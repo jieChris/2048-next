@@ -6381,26 +6381,22 @@ GameManager.prototype.pretty = function(time) {
     [time]
   );
   return this.resolveCoreStringCallOrFallback(formatPrettyTimeCore, function () {
-    return this.formatPrettyTimeFallback(time);
+    if (time < 0) {return "DNF";}
+    var bits = time % 1000;
+    time = (time - bits) / 1000;
+    var secs = time % 60;
+    var mins = ((time - secs) / 60) % 60;
+    var hours = (time - secs - 60 * mins) / 3600;
+    var s = "" + bits;
+    if (bits < 10) {s = "0" + s;}
+    if (bits < 100) {s = "0" + s;}
+    s = secs + "." + s;
+    if (secs < 10 && (mins > 0 || hours > 0)) {s = "0" + s;}
+    if (mins > 0 || hours > 0) {s = mins + ":" + s;}
+    if (mins < 10 && hours > 0) {s = "0" + s;}
+    if (hours > 0) {s = hours + ":" + s;}
+    return s;
   });
-};
-
-GameManager.prototype.formatPrettyTimeFallback = function (time) {
-  if (time < 0) {return "DNF";}
-  var bits = time % 1000;
-  time = (time - bits) / 1000;
-  var secs = time % 60;
-  var mins = ((time - secs) / 60) % 60;
-  var hours = (time - secs - 60 * mins) / 3600;
-  var s = "" + bits;
-  if (bits < 10) {s = "0" + s;}
-  if (bits < 100) {s = "0" + s;}
-  s = secs + "." + s;
-  if (secs < 10 && (mins > 0 || hours > 0)) {s = "0" + s;}
-  if (mins > 0 || hours > 0) {s = mins + ":" + s;}
-  if (mins < 10 && hours > 0) {s = "0" + s;}
-  if (hours > 0) {s = hours + ":" + s;}
-  return s;
 };
 
 GameManager.prototype.recordPracticeReplayAction = function (action) {
@@ -6510,19 +6506,6 @@ GameManager.prototype.invalidateTimers = function(limit) {
     }
 };
 
-GameManager.prototype.buildFinalBoardMatrixFallback = function () {
-  var rows = [];
-  for (var y = 0; y < this.height; y++) {
-    var row = [];
-    for (var x = 0; x < this.width; x++) {
-      var tile = this.grid.cellContent({ x: x, y: y });
-      row.push(tile ? tile.value : 0);
-    }
-    rows.push(row);
-  }
-  return rows;
-};
-
 GameManager.prototype.normalizeFinalBoardMatrixFromCore = function (coreValue) {
   return Array.isArray(coreValue) ? coreValue : null;
 };
@@ -6544,7 +6527,16 @@ GameManager.prototype.getFinalBoardMatrix = function () {
     buildBoardMatrixCore,
     this.normalizeFinalBoardMatrixFromCore,
     function () {
-      return this.buildFinalBoardMatrixFallback();
+      var rows = [];
+      for (var y = 0; y < this.height; y++) {
+        var row = [];
+        for (var x = 0; x < this.width; x++) {
+          var tile = this.grid.cellContent({ x: x, y: y });
+          row.push(tile ? tile.value : 0);
+        }
+        rows.push(row);
+      }
+      return rows;
     }
   );
 };
