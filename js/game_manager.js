@@ -4179,8 +4179,27 @@ GameManager.prototype.initCornerStats = function () {
 GameManager.prototype.initStatsPanelUi = function () {
   if (typeof document === "undefined" || !document.body) return;
   var btn = this.ensureStatsPanelToggleButton();
-  var topActionHost = this.resolveStatsPanelTopActionHost();
-  this.mountStatsPanelToggleButton(btn, topActionHost);
+  var exportBtn = document.getElementById("top-export-replay-btn");
+  var practiceStatsActions = document.getElementById("practice-stats-actions");
+  var topActionHost = practiceStatsActions ||
+    (exportBtn && exportBtn.parentNode) ||
+    document.querySelector(".heading .top-action-buttons") ||
+    document.querySelector(".top-action-buttons");
+  if (topActionHost) {
+    btn.classList.remove("is-floating");
+    if (exportBtn && exportBtn.parentNode === topActionHost) {
+      if (btn.parentNode !== topActionHost || btn.nextSibling !== exportBtn) {
+        topActionHost.insertBefore(btn, exportBtn);
+      }
+    } else if (btn.parentNode !== topActionHost) {
+      topActionHost.insertBefore(btn, topActionHost.firstChild);
+    }
+  } else {
+    if (btn.parentNode !== document.body) {
+      document.body.appendChild(btn);
+    }
+    btn.classList.add("is-floating");
+  }
   var overlay = this.ensureStatsPanelOverlayElement();
   this.bindStatsPanelUiEvents(btn, overlay);
   this.applyStatsPanelInitialVisibility(overlay);
@@ -4199,43 +4218,6 @@ GameManager.prototype.ensureStatsPanelToggleButton = function () {
   }
   btn.className = "top-action-btn stats-panel-toggle";
   return btn;
-};
-
-GameManager.prototype.resolveStatsPanelTopActionHost = function () {
-  var exportBtn = document.getElementById("top-export-replay-btn");
-  var practiceStatsActions = document.getElementById("practice-stats-actions");
-  if (practiceStatsActions) return practiceStatsActions;
-  if (exportBtn && exportBtn.parentNode) return exportBtn.parentNode;
-  return document.querySelector(".heading .top-action-buttons") || document.querySelector(".top-action-buttons");
-};
-
-GameManager.prototype.mountStatsPanelButtonIntoTopActionHost = function (btn, topActionHost) {
-  var exportBtn = document.getElementById("top-export-replay-btn");
-  btn.classList.remove("is-floating");
-  if (exportBtn && exportBtn.parentNode === topActionHost) {
-    if (btn.parentNode !== topActionHost || btn.nextSibling !== exportBtn) {
-      topActionHost.insertBefore(btn, exportBtn);
-    }
-    return;
-  }
-  if (btn.parentNode !== topActionHost) {
-    topActionHost.insertBefore(btn, topActionHost.firstChild);
-  }
-};
-
-GameManager.prototype.mountStatsPanelButtonAsFloating = function (btn) {
-  if (btn.parentNode !== document.body) {
-    document.body.appendChild(btn);
-  }
-  btn.classList.add("is-floating");
-};
-
-GameManager.prototype.mountStatsPanelToggleButton = function (btn, topActionHost) {
-  if (topActionHost) {
-    this.mountStatsPanelButtonIntoTopActionHost(btn, topActionHost);
-    return;
-  }
-  this.mountStatsPanelButtonAsFloating(btn);
 };
 
 GameManager.prototype.buildStatsPanelOverlayMarkup = function () {
