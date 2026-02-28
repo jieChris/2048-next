@@ -6513,81 +6513,6 @@ GameManager.prototype.restoreUndoPayload = function (undoPayload) {
   }
 };
 
-GameManager.prototype.resolveUndoRestoreComboStreak = function (undoRestore) {
-  return Number.isInteger(undoRestore.comboStreak) && undoRestore.comboStreak >= 0
-    ? undoRestore.comboStreak
-    : 0;
-};
-
-GameManager.prototype.resolveUndoRestoreSuccessfulMoveCount = function (undoRestore) {
-  return Number.isInteger(undoRestore.successfulMoveCount) && undoRestore.successfulMoveCount >= 0
-    ? undoRestore.successfulMoveCount
-    : 0;
-};
-
-GameManager.prototype.resolveUndoRestoreLockConsumedAtMoveCount = function (undoRestore) {
-  return Number.isInteger(undoRestore.lockConsumedAtMoveCount)
-    ? undoRestore.lockConsumedAtMoveCount
-    : -1;
-};
-
-GameManager.prototype.resolveUndoRestoreLockedDirectionTurn = function (undoRestore) {
-  return Number.isInteger(undoRestore.lockedDirectionTurn)
-    ? undoRestore.lockedDirectionTurn
-    : null;
-};
-
-GameManager.prototype.resolveUndoRestoreLockedDirection = function (undoRestore) {
-  return Number.isInteger(undoRestore.lockedDirection)
-    ? undoRestore.lockedDirection
-    : null;
-};
-
-GameManager.prototype.resolveUndoRestoreDefaultUndoUsed = function () {
-  return Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0;
-};
-
-GameManager.prototype.resolveUndoRestoreUndoUsed = function (undoRestore) {
-  return Number.isInteger(undoRestore.undoUsed) && undoRestore.undoUsed >= 0
-    ? undoRestore.undoUsed
-    : (this.resolveUndoRestoreDefaultUndoUsed() + 1);
-};
-
-GameManager.prototype.applyUndoRestoreCounterFlags = function (undoRestore) {
-  this.comboStreak = this.resolveUndoRestoreComboStreak(undoRestore);
-  this.successfulMoveCount = this.resolveUndoRestoreSuccessfulMoveCount(undoRestore);
-  this.lockConsumedAtMoveCount = this.resolveUndoRestoreLockConsumedAtMoveCount(undoRestore);
-  this.lockedDirectionTurn = this.resolveUndoRestoreLockedDirectionTurn(undoRestore);
-  this.lockedDirection = this.resolveUndoRestoreLockedDirection(undoRestore);
-  this.undoUsed = this.resolveUndoRestoreUndoUsed(undoRestore);
-};
-
-GameManager.prototype.resolveUndoRestoreOver = function (undoRestore) {
-  return typeof undoRestore.over === "boolean" ? undoRestore.over : false;
-};
-
-GameManager.prototype.resolveUndoRestoreWon = function (undoRestore) {
-  return typeof undoRestore.won === "boolean" ? undoRestore.won : false;
-};
-
-GameManager.prototype.resolveUndoRestoreKeepPlaying = function (undoRestore) {
-  return typeof undoRestore.keepPlaying === "boolean" ? undoRestore.keepPlaying : false;
-};
-
-GameManager.prototype.applyUndoRestoreOutcomeFlags = function (undoRestore) {
-  this.over = this.resolveUndoRestoreOver(undoRestore);
-  this.won = this.resolveUndoRestoreWon(undoRestore);
-  this.keepPlaying = this.resolveUndoRestoreKeepPlaying(undoRestore);
-};
-
-GameManager.prototype.applyUndoRestoreFlags = function (undoRestore) {
-  this.applyUndoRestoreCounterFlags(undoRestore);
-  this.applyUndoRestoreOutcomeFlags(undoRestore);
-  if (undoRestore.shouldClearMessage !== false) {
-    this.actuator.clearMessage(); // Clear Game Over message if present
-  }
-};
-
 GameManager.prototype.resolvePostUndoSessionAction = function (postUndoRecord) {
   return Array.isArray(postUndoRecord.sessionAction)
     ? postUndoRecord.sessionAction
@@ -6641,7 +6566,31 @@ GameManager.prototype.performUndoRestoreFromEntry = function (prev) {
   var undoPayload = this.computeUndoRestorePayload(prev);
   this.restoreUndoPayload(undoPayload);
   var undoRestore = this.computeUndoRestoreState(prev);
-  this.applyUndoRestoreFlags(undoRestore);
+  this.comboStreak = Number.isInteger(undoRestore.comboStreak) && undoRestore.comboStreak >= 0
+    ? undoRestore.comboStreak
+    : 0;
+  this.successfulMoveCount = Number.isInteger(undoRestore.successfulMoveCount) && undoRestore.successfulMoveCount >= 0
+    ? undoRestore.successfulMoveCount
+    : 0;
+  this.lockConsumedAtMoveCount = Number.isInteger(undoRestore.lockConsumedAtMoveCount)
+    ? undoRestore.lockConsumedAtMoveCount
+    : -1;
+  this.lockedDirectionTurn = Number.isInteger(undoRestore.lockedDirectionTurn)
+    ? undoRestore.lockedDirectionTurn
+    : null;
+  this.lockedDirection = Number.isInteger(undoRestore.lockedDirection)
+    ? undoRestore.lockedDirection
+    : null;
+  var defaultUndoUsed = Number.isInteger(this.undoUsed) && this.undoUsed >= 0 ? this.undoUsed : 0;
+  this.undoUsed = Number.isInteger(undoRestore.undoUsed) && undoRestore.undoUsed >= 0
+    ? undoRestore.undoUsed
+    : (defaultUndoUsed + 1);
+  this.over = typeof undoRestore.over === "boolean" ? undoRestore.over : false;
+  this.won = typeof undoRestore.won === "boolean" ? undoRestore.won : false;
+  this.keepPlaying = typeof undoRestore.keepPlaying === "boolean" ? undoRestore.keepPlaying : false;
+  if (undoRestore.shouldClearMessage !== false) {
+    this.actuator.clearMessage(); // Clear Game Over message if present
+  }
   return undoRestore;
 };
 
