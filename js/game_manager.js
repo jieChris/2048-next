@@ -2273,16 +2273,6 @@ GameManager.prototype.resolveLiteSavedPracticeRestartModeConfig = function (payl
   return this.practiceRestartModeConfig ? this.safeClonePlain(this.practiceRestartModeConfig, null) : null;
 };
 
-GameManager.prototype.buildLiteSavedGameStateEmptyCollections = function () {
-  return {
-    move_history: [],
-    undo_stack: [],
-    replay_compact_log: "",
-    session_replay_v3: null,
-    spawn_value_counts: {}
-  };
-};
-
 GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
   var buildLiteSavedGameStatePayloadCore = this.callCoreStorageRuntime(
     "buildLiteSavedGameStatePayload",
@@ -2342,7 +2332,13 @@ GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
       practice_restart_board_matrix: this.resolveLiteSavedPracticeRestartBoardMatrix(payload),
       practice_restart_mode_config: this.resolveLiteSavedPracticeRestartModeConfig(payload)
     },
-    this.buildLiteSavedGameStateEmptyCollections()
+    {
+      move_history: [],
+      undo_stack: [],
+      replay_compact_log: "",
+      session_replay_v3: null,
+      spawn_value_counts: {}
+    }
   );
 };
 
@@ -2490,49 +2486,6 @@ GameManager.prototype.readOptionValue = function (options, key, fallbackValue) {
   return this.hasOwnKey(options, key) ? options[key] : fallbackValue;
 };
 
-GameManager.prototype.resolveIsUndoInteractionEnabled = function (
-  replayMode,
-  undoLimit,
-  undoUsed,
-  undoEnabled,
-  isUndoAllowedByMode
-) {
-  return !replayMode &&
-    !(undoLimit !== null && Number(undoUsed) >= Number(undoLimit)) &&
-    !!(undoEnabled && isUndoAllowedByMode);
-};
-
-GameManager.prototype.normalizeUndoPolicyStateFallbackInput = function (params) {
-  var input = params && typeof params === "object" ? params : {};
-  return {
-    forcedUndoSetting: input.forcedUndoSetting,
-    hasGameStarted: !!input.hasGameStarted,
-    replayMode: !!input.replayMode,
-    undoLimit: input.undoLimit,
-    undoUsed: input.undoUsed,
-    undoEnabled: !!input.undoEnabled
-  };
-};
-
-GameManager.prototype.resolveUndoPolicyStateFallbackComputedState = function (input) {
-  var isUndoAllowedByMode = input.forcedUndoSetting !== false;
-  var isUndoSettingFixedForMode = input.forcedUndoSetting !== null;
-  var canToggleUndoSetting = isUndoAllowedByMode && !isUndoSettingFixedForMode && !input.hasGameStarted;
-  var isUndoInteractionEnabled = this.resolveIsUndoInteractionEnabled(
-    input.replayMode,
-    input.undoLimit,
-    input.undoUsed,
-    input.undoEnabled,
-    isUndoAllowedByMode
-  );
-  return {
-    isUndoAllowedByMode: isUndoAllowedByMode,
-    isUndoSettingFixedForMode: isUndoSettingFixedForMode,
-    canToggleUndoSetting: canToggleUndoSetting,
-    isUndoInteractionEnabled: isUndoInteractionEnabled
-  };
-};
-
 GameManager.prototype.resolveUndoPolicyOptionSnapshot = function (options) {
   var source = options;
   return {
@@ -2581,21 +2534,38 @@ GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
     else if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) forcedUndoSetting = false;
     else if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) forcedUndoSetting = true;
   }
-  var fallbackInput = this.normalizeUndoPolicyStateFallbackInput({
+  var rawFallbackInput = {
     forcedUndoSetting: forcedUndoSetting,
     hasGameStarted: optionsSnapshot.hasGameStarted,
     replayMode: optionsSnapshot.replayMode,
     undoLimit: optionsSnapshot.undoLimit,
     undoUsed: optionsSnapshot.undoUsed,
     undoEnabled: optionsSnapshot.undoEnabled
-  });
-  var fallbackState = this.resolveUndoPolicyStateFallbackComputedState(fallbackInput);
+  };
+  var fallbackInput = {
+    forcedUndoSetting: rawFallbackInput.forcedUndoSetting,
+    hasGameStarted: !!rawFallbackInput.hasGameStarted,
+    replayMode: !!rawFallbackInput.replayMode,
+    undoLimit: rawFallbackInput.undoLimit,
+    undoUsed: rawFallbackInput.undoUsed,
+    undoEnabled: !!rawFallbackInput.undoEnabled
+  };
+  var isUndoAllowedByMode = fallbackInput.forcedUndoSetting !== false;
+  var isUndoSettingFixedForMode = fallbackInput.forcedUndoSetting !== null;
+  var canToggleUndoSetting =
+    isUndoAllowedByMode &&
+    !isUndoSettingFixedForMode &&
+    !fallbackInput.hasGameStarted;
+  var isUndoInteractionEnabled =
+    !fallbackInput.replayMode &&
+    !(fallbackInput.undoLimit !== null && Number(fallbackInput.undoUsed) >= Number(fallbackInput.undoLimit)) &&
+    !!(fallbackInput.undoEnabled && isUndoAllowedByMode);
   return {
     forcedUndoSetting: fallbackInput.forcedUndoSetting,
-    isUndoAllowedByMode: fallbackState.isUndoAllowedByMode,
-    isUndoSettingFixedForMode: fallbackState.isUndoSettingFixedForMode,
-    canToggleUndoSetting: fallbackState.canToggleUndoSetting,
-    isUndoInteractionEnabled: fallbackState.isUndoInteractionEnabled
+    isUndoAllowedByMode: isUndoAllowedByMode,
+    isUndoSettingFixedForMode: isUndoSettingFixedForMode,
+    canToggleUndoSetting: canToggleUndoSetting,
+    isUndoInteractionEnabled: isUndoInteractionEnabled
   };
 };
 
