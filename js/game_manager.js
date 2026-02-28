@@ -764,14 +764,10 @@ GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
     var resolved = Number(coreValue);
     return Number.isFinite(resolved) ? resolved : undefined;
   }, function () {
-    return this.clampReplaySeekTargetByReplayMoves(targetIndex);
+    if (targetIndex < 0) targetIndex = 0;
+    if (this.replayMoves && targetIndex > this.replayMoves.length) targetIndex = this.replayMoves.length;
+    return targetIndex;
   });
-};
-
-GameManager.prototype.clampReplaySeekTargetByReplayMoves = function (targetIndex) {
-  if (targetIndex < 0) targetIndex = 0;
-  if (this.replayMoves && targetIndex > this.replayMoves.length) targetIndex = this.replayMoves.length;
-  return targetIndex;
 };
 
 GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
@@ -784,16 +780,12 @@ GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
     }]
   );
   return this.resolveCoreObjectCallOrFallback(planReplayStepCore, function () {
-    return this.planReplayStepFallback(action, spawnAtIndex);
+    var shouldInjectForcedSpawn = !!this.replaySpawns && !Array.isArray(action);
+    return {
+      shouldInjectForcedSpawn: shouldInjectForcedSpawn,
+      forcedSpawn: shouldInjectForcedSpawn ? spawnAtIndex : undefined
+    };
   });
-};
-
-GameManager.prototype.planReplayStepFallback = function (action, spawnAtIndex) {
-  var shouldInjectForcedSpawn = !!this.replaySpawns && !Array.isArray(action);
-  return {
-    shouldInjectForcedSpawn: shouldInjectForcedSpawn,
-    forcedSpawn: shouldInjectForcedSpawn ? spawnAtIndex : undefined
-  };
 };
 
 GameManager.prototype.planReplayStepExecution = function () {
@@ -806,22 +798,18 @@ GameManager.prototype.planReplayStepExecution = function () {
     }]
   );
   return this.resolveCoreObjectCallOrFallback(planReplayStepExecutionCore, function () {
-    return this.planReplayStepExecutionFallback();
+    var action = this.replayMoves[this.replayIndex];
+    var stepPlan = this.planReplayStep(
+      action,
+      this.replaySpawns ? this.replaySpawns[this.replayIndex] : undefined
+    );
+    return {
+      action: action,
+      shouldInjectForcedSpawn: !!stepPlan.shouldInjectForcedSpawn,
+      forcedSpawn: stepPlan.forcedSpawn,
+      nextReplayIndex: this.replayIndex + 1
+    };
   });
-};
-
-GameManager.prototype.planReplayStepExecutionFallback = function () {
-  var action = this.replayMoves[this.replayIndex];
-  var stepPlan = this.planReplayStep(
-    action,
-    this.replaySpawns ? this.replaySpawns[this.replayIndex] : undefined
-  );
-  return {
-    action: action,
-    shouldInjectForcedSpawn: !!stepPlan.shouldInjectForcedSpawn,
-    forcedSpawn: stepPlan.forcedSpawn,
-    nextReplayIndex: this.replayIndex + 1
-  };
 };
 
 GameManager.prototype.computeReplayPauseState = function () {
