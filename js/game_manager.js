@@ -4946,18 +4946,25 @@ GameManager.prototype.ensureLockedDirectionForCurrentMove = function (everyK) {
   this.lockedDirectionTurn = this.successfulMoveCount;
 };
 
+GameManager.prototype.buildGetLockedDirectionStateCoreArgs = function () {
+  return [{
+    directionLockRules: this.directionLockRules,
+    successfulMoveCount: this.successfulMoveCount,
+    lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
+    lockedDirectionTurn: this.lockedDirectionTurn,
+    lockedDirection: this.lockedDirection,
+    initialSeed: this.initialSeed
+  }, function (seed) {
+    var rng = new Math.seedrandom(seed);
+    return rng();
+  }];
+};
+
 GameManager.prototype.getLockedDirection = function () {
-  var getLockedDirectionStateCore = this.callCoreDirectionLockRuntime("getLockedDirectionState", [{
-      directionLockRules: this.directionLockRules,
-      successfulMoveCount: this.successfulMoveCount,
-      lockConsumedAtMoveCount: this.lockConsumedAtMoveCount,
-      lockedDirectionTurn: this.lockedDirectionTurn,
-      lockedDirection: this.lockedDirection,
-      initialSeed: this.initialSeed
-    }, function (seed) {
-      var rng = new Math.seedrandom(seed);
-      return rng();
-    }]);
+  var getLockedDirectionStateCore = this.callCoreDirectionLockRuntime(
+    "getLockedDirectionState",
+    this.buildGetLockedDirectionStateCoreArgs()
+  );
   if (getLockedDirectionStateCore.available) {
     return this.applyComputedLockedDirectionState(getLockedDirectionStateCore.value || {});
   }
@@ -4980,13 +4987,20 @@ GameManager.prototype.resolveLegacyModeFromModeKeyFallback = function (key) {
   return "classic";
 };
 
+GameManager.prototype.buildResolveLegacyModeFromModeKeyCoreArgs = function (modeKey) {
+  return [{
+    modeKey: modeKey,
+    fallbackModeKey: this.modeKey,
+    mode: this.mode,
+    legacyModeByKey: GameManager.LEGACY_MODE_BY_KEY
+  }];
+};
+
 GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
-  var resolveLegacyModeFromModeKeyCore = this.callCoreModeRuntime("resolveLegacyModeFromModeKey", [{
-      modeKey: modeKey,
-      fallbackModeKey: this.modeKey,
-      mode: this.mode,
-      legacyModeByKey: GameManager.LEGACY_MODE_BY_KEY
-    }]);
+  var resolveLegacyModeFromModeKeyCore = this.callCoreModeRuntime(
+    "resolveLegacyModeFromModeKey",
+    this.buildResolveLegacyModeFromModeKeyCoreArgs(modeKey)
+  );
   if (resolveLegacyModeFromModeKeyCore.available) return resolveLegacyModeFromModeKeyCore.value;
 
   var key = modeKey || this.modeKey || this.mode;
