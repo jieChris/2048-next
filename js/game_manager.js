@@ -2611,18 +2611,6 @@ GameManager.prototype.createSavedStateRestorePrecheckResult = function (canResto
   };
 };
 
-GameManager.prototype.resolveInvalidSavedStatePrecheckResult = function () {
-  return this.createSavedStateRestorePrecheckResult(false, true);
-};
-
-GameManager.prototype.resolveModeMismatchSavedStatePrecheckResult = function () {
-  return this.createSavedStateRestorePrecheckResult(false, false);
-};
-
-GameManager.prototype.resolveRestorableSavedStatePrecheckResult = function () {
-  return this.createSavedStateRestorePrecheckResult(true, false);
-};
-
 GameManager.prototype.isSavedStateObject = function (saved) {
   return !!saved && typeof saved === "object";
 };
@@ -2675,10 +2663,16 @@ GameManager.prototype.hasCompatibleSavedStateRestoreContext = function (saved) {
 };
 
 GameManager.prototype.resolveSavedStateRestorePrecheck = function (saved) {
-  if (!this.hasValidSavedStateRestoreBase(saved)) return this.resolveInvalidSavedStatePrecheckResult();
-  if (!this.hasMatchingSavedStateMode(saved)) return this.resolveModeMismatchSavedStatePrecheckResult();
-  if (!this.hasCompatibleSavedStateRestoreContext(saved)) return this.resolveInvalidSavedStatePrecheckResult();
-  return this.resolveRestorableSavedStatePrecheckResult();
+  if (!this.hasValidSavedStateRestoreBase(saved)) {
+    return this.createSavedStateRestorePrecheckResult(false, true);
+  }
+  if (!this.hasMatchingSavedStateMode(saved)) {
+    return this.createSavedStateRestorePrecheckResult(false, false);
+  }
+  if (!this.hasCompatibleSavedStateRestoreContext(saved)) {
+    return this.createSavedStateRestorePrecheckResult(false, true);
+  }
+  return this.createSavedStateRestorePrecheckResult(true, false);
 };
 
 GameManager.prototype.applyRestoredSavedOutcomeFields = function (saved) {
@@ -2851,31 +2845,15 @@ GameManager.prototype.resolveSavedStateCandidatesForCurrentMode = function () {
   ];
 };
 
-GameManager.prototype.resolveLatestSavedStateForCurrentMode = function () {
-  return this.resolveLatestSavedStateCandidate(this.resolveSavedStateCandidatesForCurrentMode());
-};
-
 GameManager.prototype.handleSavedStateRestorePrecheckFailure = function (precheck) {
   if (precheck && precheck.shouldClearSavedState) this.clearSavedGameState();
   return false;
 };
 
-GameManager.prototype.shouldAttemptSavedGameStateRestore = function () {
-  return this.shouldUseSavedGameState();
-};
-
-GameManager.prototype.resolveSavedStateCandidateForRestore = function () {
-  return this.resolveLatestSavedStateForCurrentMode();
-};
-
-GameManager.prototype.resolveSavedStateRestoreEligibility = function (saved) {
-  return this.resolveSavedStateRestorePrecheck(saved);
-};
-
 GameManager.prototype.resolveRestorableSavedState = function () {
-  var saved = this.resolveSavedStateCandidateForRestore();
+  var saved = this.resolveLatestSavedStateCandidate(this.resolveSavedStateCandidatesForCurrentMode());
   if (!saved) return null;
-  var precheck = this.resolveSavedStateRestoreEligibility(saved);
+  var precheck = this.resolveSavedStateRestorePrecheck(saved);
   if (!precheck.canRestore) {
     this.handleSavedStateRestorePrecheckFailure(precheck);
     return null;
@@ -2904,7 +2882,7 @@ GameManager.prototype.tryApplyRestorableSavedState = function (saved) {
 };
 
 GameManager.prototype.tryRestoreSavedGameState = function () {
-  if (!this.shouldAttemptSavedGameStateRestore()) return false;
+  if (!this.shouldUseSavedGameState()) return false;
   return this.tryApplyRestorableSavedState(this.resolveRestorableSavedState());
 };
 
@@ -3054,20 +3032,8 @@ GameManager.prototype.resolveSavedGameStateModeKey = function () {
   return this.modeKey;
 };
 
-GameManager.prototype.resolveSavedGameStateBoardWidth = function () {
-  return this.width;
-};
-
-GameManager.prototype.resolveSavedGameStateBoardHeight = function () {
-  return this.height;
-};
-
 GameManager.prototype.resolveSavedGameStateRuleset = function () {
   return this.ruleset;
-};
-
-GameManager.prototype.resolveSavedGameStateBoard = function () {
-  return this.getFinalBoardMatrix();
 };
 
 GameManager.prototype.resolveSavedGameStateScore = function () {
@@ -3134,10 +3100,10 @@ GameManager.prototype.buildSavedGameStateBaseCorePayload = function (savedAt) {
     saved_at: savedAt,
     terminated: false,
     mode_key: this.resolveSavedGameStateModeKey(),
-    board_width: this.resolveSavedGameStateBoardWidth(),
-    board_height: this.resolveSavedGameStateBoardHeight(),
+    board_width: this.width,
+    board_height: this.height,
     ruleset: this.resolveSavedGameStateRuleset(),
-    board: this.resolveSavedGameStateBoard(),
+    board: this.getFinalBoardMatrix(),
     score: this.resolveSavedGameStateScore(),
     over: this.resolveSavedGameStateOver(),
     won: this.resolveSavedGameStateWon(),
