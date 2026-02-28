@@ -1740,12 +1740,8 @@ GameManager.prototype.applyRestoredTimerModuleView = function (saved) {
   this.timerModuleView = this.resolveRestoredTimerModuleView(saved);
 };
 
-GameManager.prototype.resolveMainTimerElement = function () {
-  return document.getElementById("timer");
-};
-
 GameManager.prototype.renderRestoredMainTimerText = function () {
-  var timerEl = this.resolveMainTimerElement();
+  var timerEl = document.getElementById("timer");
   if (timerEl) timerEl.textContent = this.pretty(this.accumulatedTime);
 };
 
@@ -2109,17 +2105,6 @@ GameManager.prototype.appendCompactPracticeEncodedCellAndExponent = function (ce
   this.replayCompactLog += this.encodeReplay128(cell) + this.encodeReplay128(exp);
 };
 
-GameManager.prototype.resolveDetectedModeCoreInput = function () {
-  var bodyMode = this.resolveDetectedModeBodyModeAttr();
-  var pathname = this.resolveWindowPathname();
-  return {
-    existingMode: this.mode,
-    bodyMode: bodyMode,
-    pathname: pathname,
-    defaultModeKey: GameManager.DEFAULT_MODE_KEY
-  };
-};
-
 GameManager.prototype.resolveDetectedModeBodyModeAttr = function () {
   if (typeof document === "undefined" || !document.body) return "";
   return document.body.getAttribute("data-mode-id") || "";
@@ -2136,9 +2121,16 @@ GameManager.prototype.detectModeFromPathname = function (path) {
 };
 
 GameManager.prototype.detectMode = function () {
+  var bodyMode = this.resolveDetectedModeBodyModeAttr();
+  var pathname = this.resolveWindowPathname();
   var resolveDetectedModeCore = this.callCoreModeRuntime(
     "resolveDetectedMode",
-    [this.resolveDetectedModeCoreInput()]
+    [{
+      existingMode: this.mode,
+      bodyMode: bodyMode,
+      pathname: pathname,
+      defaultModeKey: GameManager.DEFAULT_MODE_KEY
+    }]
   );
   return this.resolveCoreStringCallOrFallback(resolveDetectedModeCore, function () {
     if (this.mode) return this.mode;
@@ -3917,15 +3909,6 @@ GameManager.prototype.resolveCappedTargetValueOrNull = function (cappedTargetVal
   return null;
 };
 
-GameManager.prototype.resolveCappedTargetValueWithDefault = function (cappedTargetValue, fallbackValue) {
-  var resolvedValue = this.resolveCappedTargetValueOrNull(cappedTargetValue);
-  if (resolvedValue !== null) return resolvedValue;
-  var normalizedFallbackValue = Number(fallbackValue);
-  return Number.isFinite(normalizedFallbackValue) && normalizedFallbackValue > 0
-    ? normalizedFallbackValue
-    : 2048;
-};
-
 GameManager.prototype.getCappedTimerLegendClass = function (cappedTargetValue) {
   var targetValue = this.resolveCappedTargetValueOrNull(cappedTargetValue);
   var resolveCappedTimerLegendClassCore = this.callCoreModeRuntime(
@@ -3944,7 +3927,10 @@ GameManager.prototype.getCappedTimerLegendClass = function (cappedTargetValue) {
 };
 
 GameManager.prototype.getCappedTimerFontSize = function (cappedTargetValue) {
-  var targetValue = this.resolveCappedTargetValueWithDefault(cappedTargetValue, 2048);
+  var targetValue = this.resolveCappedTargetValueOrNull(cappedTargetValue);
+  if (targetValue === null) {
+    targetValue = 2048;
+  }
   var resolveCappedTimerLegendFontSizeCore = this.callCoreModeRuntime(
     "resolveCappedTimerLegendFontSize",
     [targetValue]
@@ -5222,10 +5208,6 @@ GameManager.prototype.buildSetupSessionReplayV3PayloadFromMetadata = function (m
   };
 };
 
-GameManager.prototype.resolveSetupHasInputSeed = function (inputSeed) {
-  return typeof inputSeed !== "undefined";
-};
-
 GameManager.prototype.assignSetupInitialSeed = function (hasInputSeed, inputSeed) {
   this.initialSeed = hasInputSeed ? inputSeed : Math.random();
   this.seed = this.initialSeed;
@@ -5237,7 +5219,7 @@ GameManager.prototype.applySetupReplayModeFromInputSeed = function (hasInputSeed
 };
 
 GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
-  var hasInputSeed = this.resolveSetupHasInputSeed(inputSeed);
+  var hasInputSeed = typeof inputSeed !== "undefined";
   if (hasInputSeed) {
     this.replayIndex = 0;
   }
@@ -5373,25 +5355,13 @@ GameManager.prototype.resetSetupTimerDisplays = function () {
   this.resetSetupCappedTimerContainers();
 };
 
-GameManager.prototype.resolveSetupSkipStartTiles = function (options) {
-  return !!(options && options.skipStartTiles);
-};
-
-GameManager.prototype.hasSetupInputSeed = function (hasInputSeed) {
-  return !!hasInputSeed;
-};
-
-GameManager.prototype.shouldSkipSetupStartTiles = function (skipStartTiles) {
-  return !!skipStartTiles;
-};
-
 GameManager.prototype.isSetupStateRestoreDisabled = function (options) {
   return !!(options && options.disableStateRestore);
 };
 
 GameManager.prototype.shouldRestoreStateOnSetup = function (hasInputSeed, skipStartTiles, options) {
-  return !this.hasSetupInputSeed(hasInputSeed) &&
-    !this.shouldSkipSetupStartTiles(skipStartTiles) &&
+  return !hasInputSeed &&
+    !skipStartTiles &&
     !this.isSetupStateRestoreDisabled(options);
 };
 
@@ -5472,7 +5442,7 @@ GameManager.prototype.buildSetupTileInitializationState = function (skipStartTil
 };
 
 GameManager.prototype.resolveSetupTileInitializationState = function (hasInputSeed, options) {
-  var skipStartTiles = this.resolveSetupSkipStartTiles(options);
+  var skipStartTiles = !!(options && options.skipStartTiles);
   var restoredFromSavedState = this.resolveSetupRestoredFromSavedState(hasInputSeed, skipStartTiles, options);
   return this.buildSetupTileInitializationState(skipStartTiles, restoredFromSavedState);
 };
