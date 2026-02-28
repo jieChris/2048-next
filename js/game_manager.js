@@ -7662,14 +7662,10 @@ GameManager.prototype.writeLastSessionSubmitResult = function (payload) {
   this.writeLocalStorageJsonPayload("last_session_submit_result_v1", payload);
 };
 
-GameManager.prototype.normalizeSessionSubmitAdapterParitySnapshot = function (adapterParitySnapshot) {
-  return adapterParitySnapshot && typeof adapterParitySnapshot === "object"
+GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike, adapterParitySnapshot) {
+  var parity = adapterParitySnapshot && typeof adapterParitySnapshot === "object"
     ? adapterParitySnapshot
     : {};
-};
-
-GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike, adapterParitySnapshot) {
-  var parity = this.normalizeSessionSubmitAdapterParitySnapshot(adapterParitySnapshot);
   return {
     mode: this.getLegacyModeFromModeKey(this.modeKey || this.mode),
     mode_key: this.modeKey,
