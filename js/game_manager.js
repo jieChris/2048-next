@@ -4399,53 +4399,34 @@ GameManager.prototype.resolveModeConfig = function (modeId) {
   );
 };
 
-GameManager.prototype.applyModeBoardStateFromConfig = function (cfg) {
+GameManager.prototype.syncModeKeyToScoreManager = function (modeKey) {
+  if (!this.scoreManager || typeof this.scoreManager.setModeKey !== "function") return;
+  this.scoreManager.setModeKey(modeKey);
+};
+
+GameManager.prototype.applyModeConfig = function (modeConfig) {
+  var cfg = this.normalizeModeConfig(modeConfig && modeConfig.key, modeConfig);
   this.modeConfig = cfg;
   this.mode = cfg.key;
   this.modeKey = cfg.key;
   this.width = cfg.board_width;
   this.height = cfg.board_height;
   this.size = this.width;
-};
-
-GameManager.prototype.applyModeRulesStateFromConfig = function (cfg) {
   this.ruleset = cfg.ruleset;
   this.maxTile = cfg.max_tile || Infinity;
   this.spawnTable = this.normalizeSpawnTable(cfg.spawn_table, cfg.ruleset);
   this.specialRules = this.normalizeSpecialRules(cfg.special_rules);
-};
-
-GameManager.prototype.applyModeRankStateFromConfig = function (cfg) {
   this.rankedBucket = cfg.ranked_bucket || "none";
   this.modeFamily = cfg.mode_family || (cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2");
   this.rankPolicy = cfg.rank_policy || (this.rankedBucket !== "none" ? "ranked" : "unranked");
-};
-
-GameManager.prototype.applyModeCoreStateFromConfig = function (cfg) {
-  this.applyModeBoardStateFromConfig(cfg);
-  this.applyModeRulesStateFromConfig(cfg);
-  this.applyModeRankStateFromConfig(cfg);
   this.applySpecialRulesState();
-};
-
-GameManager.prototype.syncModeKeyToScoreManager = function (modeKey) {
-  if (!this.scoreManager || typeof this.scoreManager.setModeKey !== "function") return;
-  this.scoreManager.setModeKey(modeKey);
-};
-
-GameManager.prototype.applyModeDocumentAttributes = function (cfg) {
-  if (typeof document === "undefined" || !document.body) return;
-  document.body.setAttribute("data-mode-id", cfg.key);
-  document.body.setAttribute("data-ruleset", cfg.ruleset);
-  document.body.setAttribute("data-mode-family", this.modeFamily);
-  document.body.setAttribute("data-rank-policy", this.rankPolicy);
-};
-
-GameManager.prototype.applyModeConfig = function (modeConfig) {
-  var cfg = this.normalizeModeConfig(modeConfig && modeConfig.key, modeConfig);
-  this.applyModeCoreStateFromConfig(cfg);
   this.syncModeKeyToScoreManager(cfg.key);
-  this.applyModeDocumentAttributes(cfg);
+  if (typeof document !== "undefined" && document.body) {
+    document.body.setAttribute("data-mode-id", cfg.key);
+    document.body.setAttribute("data-ruleset", cfg.ruleset);
+    document.body.setAttribute("data-mode-family", this.modeFamily);
+    document.body.setAttribute("data-rank-policy", this.rankPolicy);
+  }
 };
 
 GameManager.prototype.normalizeSpecialRules = function (rules) {
