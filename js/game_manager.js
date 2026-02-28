@@ -5394,7 +5394,7 @@ GameManager.prototype.getLegacyModeFromModeKey = function (modeKey) {
     "resolveLegacyModeFromModeKey",
     this.buildResolveLegacyModeFromModeKeyCoreArgs(modeKey)
   );
-  return this.resolveCoreRawCallOrFallback(resolveLegacyModeFromModeKeyCore, function () {
+  return this.resolveCoreStringCallOrFallback(resolveLegacyModeFromModeKeyCore, function () {
     var key = modeKey || this.modeKey || this.mode;
     return this.resolveLegacyModeFromModeKeyFallback(key);
   });
@@ -6490,7 +6490,7 @@ GameManager.prototype.getTimerModuleViewMode = function () {
     "normalizeTimerModuleViewMode",
     this.buildNormalizeTimerModuleViewModeCoreArgs()
   );
-  return this.resolveCoreRawCallOrFallback(normalizeTimerModuleViewModeCore, function () {
+  return this.resolveCoreStringCallOrFallback(normalizeTimerModuleViewModeCore, function () {
     return this.timerModuleView === "hidden" ? "hidden" : "timer";
   });
 };
@@ -6508,7 +6508,7 @@ GameManager.prototype.loadTimerModuleViewForMode = function (mode) {
     "readTimerModuleViewForModeFromMap",
     this.buildReadTimerModuleViewForModeCoreArgs(map, mode)
   );
-  return this.resolveCoreRawCallOrFallback(readTimerModuleViewForModeFromMapCore, function () {
+  return this.resolveCoreStringCallOrFallback(readTimerModuleViewForModeFromMapCore, function () {
     var value = map[mode];
     return value === "hidden" ? "hidden" : "timer";
   });
@@ -8955,7 +8955,7 @@ GameManager.prototype.pretty = function(time) {
     "formatPrettyTime",
     this.buildFormatPrettyTimeCoreArgs(time)
   );
-  return this.resolveCoreRawCallOrFallback(formatPrettyTimeCore, function () {
+  return this.resolveCoreStringCallOrFallback(formatPrettyTimeCore, function () {
     return this.formatPrettyTimeFallback(time);
   });
 };
