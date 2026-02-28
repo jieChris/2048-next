@@ -6611,16 +6611,12 @@ GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove
   this.publishMovedAdapterResult("move", direction);
 };
 
-GameManager.prototype.shouldAbortForLockedDirection = function (direction, lockedDirection) {
-  if (lockedDirection === null || typeof lockedDirection === "undefined") return false;
-  return Number(direction) === Number(lockedDirection);
-};
-
 GameManager.prototype.shouldAbortDirectionalMove = function (direction) {
   if (this.isGameTerminated()) return true; // Don't do anything if the game's over
 
   var lockedDirection = this.getLockedDirection();
-  if (!this.shouldAbortForLockedDirection(direction, lockedDirection)) return false;
+  if (lockedDirection === null || typeof lockedDirection === "undefined") return false;
+  if (Number(direction) !== Number(lockedDirection)) return false;
   this.consumeDirectionLock();
   return true;
 };
@@ -6649,29 +6645,6 @@ GameManager.prototype.applyMergeInteraction = function (tile, next, mergedValue,
   this.applyMergeMilestoneEffects(merged.value, timeStr);
 };
 
-GameManager.prototype.shouldApplyMergeInteraction = function (interaction, next, mergedValue) {
-  return interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null;
-};
-
-GameManager.prototype.resolveNextTileForMovePositions = function (positions) {
-  if (this.isBlockedCell(positions.next.x, positions.next.y)) return null;
-  return this.grid.cellContent(positions.next);
-};
-
-GameManager.prototype.applyPlannedTileInteraction = function (tile, next, mergedValue, interaction, undo) {
-  if (this.shouldApplyMergeInteraction(interaction, next, mergedValue)) {
-    this.applyMergeInteraction(tile, next, mergedValue, interaction.target, undo);
-    return;
-  }
-  this.snapshotMoveTileForUndo(undo, tile, interaction.target);
-  this.moveTile(tile, interaction.target);
-};
-
-GameManager.prototype.resolveMergedValueForMoveTiles = function (tile, next) {
-  if (!next) return null;
-  return this.getMergedValue(tile.value, next.value);
-};
-
 GameManager.prototype.processMoveCell = function (cell, vector, undo) {
   if (this.isBlockedCell(cell.x, cell.y)) return false;
 
@@ -6679,11 +6652,18 @@ GameManager.prototype.processMoveCell = function (cell, vector, undo) {
   if (!tile) return false;
 
   var positions = this.findFarthestPosition(cell, vector);
-  var next = this.resolveNextTileForMovePositions(positions);
+  var next = this.isBlockedCell(positions.next.x, positions.next.y)
+    ? null
+    : this.grid.cellContent(positions.next);
 
-  var mergedValue = this.resolveMergedValueForMoveTiles(tile, next);
+  var mergedValue = next ? this.getMergedValue(tile.value, next.value) : null;
   var interaction = this.planTileInteraction(cell, positions, next, mergedValue);
-  this.applyPlannedTileInteraction(tile, next, mergedValue, interaction, undo);
+  if (interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null) {
+    this.applyMergeInteraction(tile, next, mergedValue, interaction.target, undo);
+    return interaction.moved === true;
+  }
+  this.snapshotMoveTileForUndo(undo, tile, interaction.target);
+  this.moveTile(tile, interaction.target);
   return interaction.moved === true;
 };
 
