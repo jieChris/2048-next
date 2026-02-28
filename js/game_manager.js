@@ -8135,11 +8135,18 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
   return this.computeFarthestPositionFallback(cell, vector);
 };
 
-GameManager.prototype.movesAvailable = function () {
-  var movesAvailableCore = this.callCoreMoveScanRuntime("movesAvailable", [
+GameManager.prototype.buildMovesAvailableCoreArgs = function () {
+  return [
     this.getAvailableCells().length,
     this.tileMatchesAvailable()
-  ]);
+  ];
+};
+
+GameManager.prototype.movesAvailable = function () {
+  var movesAvailableCore = this.callCoreMoveScanRuntime(
+    "movesAvailable",
+    this.buildMovesAvailableCoreArgs()
+  );
   if (movesAvailableCore.available) return movesAvailableCore.value;
   return this.getAvailableCells().length > 0 || this.tileMatchesAvailable();
 };
@@ -8221,8 +8228,15 @@ GameManager.prototype.tileMatchesAvailable = function () {
   return this.tileMatchesAvailableFallback();
 };
 
+GameManager.prototype.buildPositionsEqualCoreArgs = function (first, second) {
+  return [first, second];
+};
+
 GameManager.prototype.positionsEqual = function (first, second) {
-  var positionsEqualCore = this.callCoreMovePathRuntime("positionsEqual", [first, second]);
+  var positionsEqualCore = this.callCoreMovePathRuntime(
+    "positionsEqual",
+    this.buildPositionsEqualCoreArgs(first, second)
+  );
   if (positionsEqualCore.available) return positionsEqualCore.value;
   return first.x === second.x && first.y === second.y;
 };
