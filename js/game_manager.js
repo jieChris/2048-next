@@ -7972,23 +7972,14 @@ GameManager.prototype.canMergeTileWithAnyNeighbor = function (x, y, tile) {
   return false;
 };
 
-GameManager.prototype.hasMergeableNeighborAtCell = function (x, y) {
-  if (this.isBlockedCell(x, y)) return false;
-  var tile = this.grid.cellContent({ x: x, y: y });
-  if (!tile) return false;
-  return this.canMergeTileWithAnyNeighbor(x, y, tile);
-};
-
 GameManager.prototype.tileMatchesAvailableFallback = function () {
   for (var x = 0; x < this.width; x++) {
-    if (this.tileMatchesAvailableInColumn(x)) return true;
-  }
-  return false;
-};
-
-GameManager.prototype.tileMatchesAvailableInColumn = function (x) {
-  for (var y = 0; y < this.height; y++) {
-    if (this.hasMergeableNeighborAtCell(x, y)) return true;
+    for (var y = 0; y < this.height; y++) {
+      if (this.isBlockedCell(x, y)) continue;
+      var tile = this.grid.cellContent({ x: x, y: y });
+      if (!tile) continue;
+      if (this.canMergeTileWithAnyNeighbor(x, y, tile)) return true;
+    }
   }
   return false;
 };
