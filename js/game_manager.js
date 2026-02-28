@@ -8752,19 +8752,6 @@ GameManager.prototype.setSpeed = function (multiplier) {
     this.resume(); // Restart interval with new delay
 };
 
-GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
-    if (!this.isNonArrayObject(restartPlan)) return;
-    if (restartPlan.shouldRestartWithBoard) {
-        this.restartReplaySession(this.replayStartBoardMatrix, this.modeConfig, true);
-    }
-    if (restartPlan.shouldRestartWithSeed) {
-        this.restartReplaySession(this.initialSeed, this.modeConfig, false);
-    }
-    if (restartPlan.shouldApplyReplayIndex) {
-        this.replayIndex = restartPlan.replayIndex;
-    }
-};
-
 GameManager.prototype.seek = function (targetIndex) {
     targetIndex = this.normalizeReplaySeekTarget(targetIndex);
     this.pause();
@@ -8816,7 +8803,17 @@ GameManager.prototype.seek = function (targetIndex) {
         replayIndex: normalized.replayIndexAfterRewind
       };
     });
-    this.applyReplaySeekRestartPlan(restartPlan);
+    if (this.isNonArrayObject(restartPlan)) {
+      if (restartPlan.shouldRestartWithBoard) {
+        this.restartReplaySession(this.replayStartBoardMatrix, this.modeConfig, true);
+      }
+      if (restartPlan.shouldRestartWithSeed) {
+        this.restartReplaySession(this.initialSeed, this.modeConfig, false);
+      }
+      if (restartPlan.shouldApplyReplayIndex) {
+        this.replayIndex = restartPlan.replayIndex;
+      }
+    }
     while (this.replayIndex < targetIndex) {
         this.executePlannedReplayStep();
     }
