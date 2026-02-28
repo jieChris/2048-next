@@ -6416,11 +6416,18 @@ GameManager.prototype.normalizeCoreStepStats = function (coreStats) {
   return null;
 };
 
-GameManager.prototype.tryResolveStepStatsFromCore = function (actions, limit) {
-  var computeReplayStepStatsCore = this.callCoreReplayExecutionRuntime("computeReplayStepStats", [{
+GameManager.prototype.buildComputeReplayStepStatsCoreArgs = function (actions, limit) {
+  return [{
     actions: actions,
     limit: limit
-  }]);
+  }];
+};
+
+GameManager.prototype.tryResolveStepStatsFromCore = function (actions, limit) {
+  var computeReplayStepStatsCore = this.callCoreReplayExecutionRuntime(
+    "computeReplayStepStats",
+    this.buildComputeReplayStepStatsCoreArgs(actions, limit)
+  );
 
   if (!computeReplayStepStatsCore.available) return null;
   return this.normalizeCoreStepStats(computeReplayStepStatsCore.value || {});
@@ -6473,12 +6480,19 @@ GameManager.prototype.computeStepStats = function () {
   return this.buildStepStatsFallback(src, limit);
 };
 
+GameManager.prototype.buildResolveIpsInputCountCoreArgs = function () {
+  return [{
+    replayMode: this.replayMode,
+    replayIndex: this.replayIndex,
+    ipsInputCount: this.ipsInputCount
+  }];
+};
+
 GameManager.prototype.getIpsInputCount = function () {
-  var resolveIpsInputCountCore = this.callCoreReplayExecutionRuntime("resolveIpsInputCount", [{
-      replayMode: this.replayMode,
-      replayIndex: this.replayIndex,
-      ipsInputCount: this.ipsInputCount
-    }]);
+  var resolveIpsInputCountCore = this.callCoreReplayExecutionRuntime(
+    "resolveIpsInputCount",
+    this.buildResolveIpsInputCountCoreArgs()
+  );
   if (resolveIpsInputCountCore.available) return Number(resolveIpsInputCountCore.value) || 0;
   return this.getIpsInputCountFallback();
 };
@@ -6501,12 +6515,19 @@ GameManager.prototype.incrementIpsInputCountFallback = function () {
   this.ipsInputCount += 1;
 };
 
+GameManager.prototype.buildResolveNextIpsInputCountCoreArgs = function () {
+  return [{
+    replayMode: this.replayMode,
+    replayIndex: this.replayIndex,
+    ipsInputCount: this.ipsInputCount
+  }];
+};
+
 GameManager.prototype.recordIpsInput = function () {
-  var resolveNextIpsInputCountCore = this.callCoreReplayExecutionRuntime("resolveNextIpsInputCount", [{
-      replayMode: this.replayMode,
-      replayIndex: this.replayIndex,
-      ipsInputCount: this.ipsInputCount
-    }]);
+  var resolveNextIpsInputCountCore = this.callCoreReplayExecutionRuntime(
+    "resolveNextIpsInputCount",
+    this.buildResolveNextIpsInputCountCoreArgs()
+  );
   if (resolveNextIpsInputCountCore.available) {
     if (!this.applyResolvedNextIpsInputCount(resolveNextIpsInputCountCore.value || {})) return;
     return;
@@ -6527,11 +6548,18 @@ GameManager.prototype.resolveIpsDisplayDurationMs = function (durationMs) {
   return ms;
 };
 
-GameManager.prototype.tryResolveIpsDisplayTextFromCore = function (durationMs, ipsInputCount) {
-  var resolveIpsDisplayTextCore = this.callCoreReplayExecutionRuntime("resolveIpsDisplayText", [{
+GameManager.prototype.buildResolveIpsDisplayTextCoreArgs = function (durationMs, ipsInputCount) {
+  return [{
     durationMs: durationMs,
     ipsInputCount: ipsInputCount
-  }]);
+  }];
+};
+
+GameManager.prototype.tryResolveIpsDisplayTextFromCore = function (durationMs, ipsInputCount) {
+  var resolveIpsDisplayTextCore = this.callCoreReplayExecutionRuntime(
+    "resolveIpsDisplayText",
+    this.buildResolveIpsDisplayTextCoreArgs(durationMs, ipsInputCount)
+  );
   if (!resolveIpsDisplayTextCore.available) return "";
   var coreDisplay = resolveIpsDisplayTextCore.value || {};
   return typeof coreDisplay.ipsText === "string" && coreDisplay.ipsText ? coreDisplay.ipsText : "";
