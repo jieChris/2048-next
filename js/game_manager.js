@@ -2512,18 +2512,6 @@ GameManager.prototype.readOptionValue = function (options, key, fallbackValue) {
   return this.hasOwnKey(options, key) ? options[key] : fallbackValue;
 };
 
-GameManager.prototype.resolveForcedUndoSettingForModeFallback = function (targetMode, modeConfig) {
-  var modeCfg = modeConfig || null;
-  if (modeCfg && typeof modeCfg.undo_enabled === "boolean") {
-    return modeCfg.undo_enabled;
-  }
-  var modeId = (targetMode || "").toLowerCase();
-  if (modeId === "capped" || modeId.indexOf("capped") !== -1) return false;
-  if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) return false;
-  if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) return true;
-  return null;
-};
-
 GameManager.prototype.resolveIsUndoInteractionEnabled = function (
   replayMode,
   undoLimit,
@@ -2617,10 +2605,16 @@ GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
     if (normalizedCore) return normalizedCore;
   }
 
-  var forcedUndoSetting = this.resolveForcedUndoSettingForModeFallback(
-    context.targetMode,
-    context.modeConfig
-  );
+  var modeCfg = context.modeConfig || null;
+  var forcedUndoSetting = null;
+  if (modeCfg && typeof modeCfg.undo_enabled === "boolean") {
+    forcedUndoSetting = modeCfg.undo_enabled;
+  } else {
+    var modeId = (context.targetMode || "").toLowerCase();
+    if (modeId === "capped" || modeId.indexOf("capped") !== -1) forcedUndoSetting = false;
+    else if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) forcedUndoSetting = false;
+    else if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) forcedUndoSetting = true;
+  }
   return this.buildUndoPolicyStateFallback({
     forcedUndoSetting: forcedUndoSetting,
     hasGameStarted: optionsSnapshot.hasGameStarted,
@@ -3607,27 +3601,6 @@ GameManager.prototype.nextFibonacci = function (value) {
   });
 };
 
-GameManager.prototype.getMergedPow2ValueFallback = function (a, b) {
-  if (a !== b) return null;
-  var merged = a * 2;
-  if (merged > this.maxTile) return null;
-  return merged;
-};
-
-GameManager.prototype.getMergedFibonacciValueFallback = function (a, b) {
-  if (a === 1 && b === 1) {
-    if (2 > this.maxTile) return null;
-    return 2;
-  }
-  var low = Math.min(a, b);
-  var high = Math.max(a, b);
-  var next = this.nextFibonacci(low);
-  if (next !== high) return null;
-  var merged = low + high;
-  if (merged > this.maxTile) return null;
-  return merged;
-};
-
 GameManager.prototype.getMergedValue = function (a, b) {
   var getMergedValueCore = this.callCoreRulesRuntime(
     "getMergedValue",
@@ -3644,8 +3617,23 @@ GameManager.prototype.getMergedValue = function (a, b) {
     return Number.isInteger(mergedValue) && mergedValue > 0 ? mergedValue : undefined;
   }, function () {
     if (!Number.isInteger(a) || !Number.isInteger(b) || a <= 0 || b <= 0) return null;
-    if (!this.isFibonacciMode()) return this.getMergedPow2ValueFallback(a, b);
-    return this.getMergedFibonacciValueFallback(a, b);
+    if (!this.isFibonacciMode()) {
+      if (a !== b) return null;
+      var mergedPow2 = a * 2;
+      if (mergedPow2 > this.maxTile) return null;
+      return mergedPow2;
+    }
+    if (a === 1 && b === 1) {
+      if (2 > this.maxTile) return null;
+      return 2;
+    }
+    var low = Math.min(a, b);
+    var high = Math.max(a, b);
+    var next = this.nextFibonacci(low);
+    if (next !== high) return null;
+    var mergedFibonacci = low + high;
+    if (mergedFibonacci > this.maxTile) return null;
+    return mergedFibonacci;
   });
 };
 
@@ -3668,18 +3656,6 @@ GameManager.prototype.getTimerMilestoneValues = function () {
   });
 };
 
-GameManager.prototype.buildTimerMilestoneSlotMapFallback = function (milestones, slotIds) {
-  var map = {};
-  for (var i = 0; i < slotIds.length; i++) {
-    var slotId = String(slotIds[i]);
-    var milestone = milestones[i];
-    if (Number.isInteger(milestone) && milestone > 0) {
-      map[String(milestone)] = slotId;
-    }
-  }
-  return map;
-};
-
 GameManager.prototype.configureTimerMilestones = function () {
   this.timerMilestones = this.getTimerMilestoneValues();
   var getTimerMilestoneSlotByValueCore = this.callCoreRulesRuntime(
@@ -3695,10 +3671,15 @@ GameManager.prototype.configureTimerMilestones = function () {
       return this.isNonArrayObject(coreValue) ? coreValue : undefined;
     },
     function () {
-      return this.buildTimerMilestoneSlotMapFallback(
-        this.timerMilestones,
-        GameManager.TIMER_SLOT_IDS
-      );
+      var map = {};
+      for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
+        var slotId = String(GameManager.TIMER_SLOT_IDS[i]);
+        var milestone = this.timerMilestones[i];
+        if (Number.isInteger(milestone) && milestone > 0) {
+          map[String(milestone)] = slotId;
+        }
+      }
+      return map;
     }
   );
   this.updateTimerLegendLabels();
@@ -3781,18 +3762,6 @@ GameManager.prototype.resolveCappedModeStateCorePayload = function () {
   };
 };
 
-GameManager.prototype.resolveCappedModeStateFallback = function () {
-  var key = String(this.modeKey || this.mode || "");
-  var maxTile = Number(this.maxTile);
-  var isCappedModeFallback = key.indexOf("capped") !== -1 && Number.isFinite(maxTile) && maxTile > 0;
-  return {
-    isCappedMode: isCappedModeFallback,
-    cappedTargetValue: isCappedModeFallback ? Number(maxTile) : null,
-    // Disable progressive hidden timer rows for 64-capped mode.
-    isProgressiveCapped64Mode: false
-  };
-};
-
 GameManager.prototype.resolveCappedModeState = function () {
   var cachedState = this.readCachedCappedModeState();
   if (cachedState) return cachedState;
@@ -3807,7 +3776,15 @@ GameManager.prototype.resolveCappedModeState = function () {
       return this.cloneResolvedCappedModeState(coreValue || {});
     },
     function () {
-      return this.resolveCappedModeStateFallback();
+      var key = String(this.modeKey || this.mode || "");
+      var maxTile = Number(this.maxTile);
+      var isCappedModeFallback = key.indexOf("capped") !== -1 && Number.isFinite(maxTile) && maxTile > 0;
+      return {
+        isCappedMode: isCappedModeFallback,
+        cappedTargetValue: isCappedModeFallback ? Number(maxTile) : null,
+        // Disable progressive hidden timer rows for 64-capped mode.
+        isProgressiveCapped64Mode: false
+      };
     }
   );
   this.writeCachedCappedModeState(resolvedState);
@@ -4108,17 +4085,6 @@ GameManager.prototype.normalizeCappedPlaceholderRowValuesFromCore = function (co
   return normalized;
 };
 
-GameManager.prototype.resolveCappedPlaceholderRowValuesFallback = function (resolvedCappedState) {
-  if (!resolvedCappedState.isCappedMode) return [];
-  var cap = resolvedCappedState.cappedTargetValue;
-  var values = [];
-  for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
-    var value = GameManager.TIMER_SLOT_IDS[i];
-    if (value > cap) values.push(value);
-  }
-  return values;
-};
-
 GameManager.prototype.getCappedPlaceholderRowValues = function (cappedState) {
   var resolvedCappedState =
     this.resolveProvidedCappedModeState(cappedState);
@@ -4135,7 +4101,14 @@ GameManager.prototype.getCappedPlaceholderRowValues = function (cappedState) {
     this.normalizeCappedPlaceholderRowValuesFromCore
   );
   if (normalizedByCore) return normalizedByCore;
-  return this.resolveCappedPlaceholderRowValuesFallback(resolvedCappedState);
+  if (!resolvedCappedState.isCappedMode) return [];
+  var cap = resolvedCappedState.cappedTargetValue;
+  var values = [];
+  for (var i = 0; i < GameManager.TIMER_SLOT_IDS.length; i++) {
+    var value = GameManager.TIMER_SLOT_IDS[i];
+    if (value > cap) values.push(value);
+  }
+  return values;
 };
 
 GameManager.prototype.resetCappedPlaceholderRows = function (cappedState) {
