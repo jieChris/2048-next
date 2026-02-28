@@ -3848,23 +3848,12 @@ GameManager.prototype.unlockProgressiveCapped64Row = function (value) {
 GameManager.prototype.repositionCappedTimerContainer = function () {
   var container = document.getElementById("capped-timer-container");
   if (!container) return;
-  var anchorRow = this.getTimerRowEl(this.resolveCappedTimerContainerAnchorTarget());
-  if (!anchorRow || !anchorRow.parentNode) return;
-  this.repositionCappedTimerContainerAfterAnchor(container, anchorRow);
-};
-
-GameManager.prototype.resolveCappedTimerContainerAnchorTarget = function () {
   var cappedState = this.resolveCappedModeState();
-  return cappedState.cappedTargetValue || 2048;
-};
-
-GameManager.prototype.shouldRepositionCappedTimerContainer = function (container, parent, anchorRow) {
-  return container.parentNode !== parent || anchorRow.nextSibling !== container;
-};
-
-GameManager.prototype.repositionCappedTimerContainerAfterAnchor = function (container, anchorRow) {
+  var anchorTarget = cappedState.cappedTargetValue || 2048;
+  var anchorRow = this.getTimerRowEl(anchorTarget);
+  if (!anchorRow || !anchorRow.parentNode) return;
   var parent = anchorRow.parentNode;
-  if (!this.shouldRepositionCappedTimerContainer(container, parent, anchorRow)) return;
+  if (container.parentNode === parent && anchorRow.nextSibling === container) return;
   parent.insertBefore(container, anchorRow.nextSibling);
 };
 
@@ -4106,11 +4095,6 @@ GameManager.prototype.fillCappedPlaceholderRowSlot = function (
   return true;
 };
 
-GameManager.prototype.resolveCappedPlaceholderSlotValueFromCoreResult = function (coreResult) {
-  var slotValueByCore = this.resolveCoreRawCallValueOrUndefined(coreResult);
-  return typeof slotValueByCore === "undefined" ? null : slotValueByCore;
-};
-
 GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, labelText, timeStr, cappedState) {
   var resolvedCappedState =
     this.resolveProvidedCappedModeState(cappedState);
@@ -4128,7 +4112,7 @@ GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, 
   var slotValue = this.resolveCappedPlaceholderSlotValue(
     repeatCount,
     values,
-    this.resolveCappedPlaceholderSlotValueFromCoreResult(resolveCappedPlaceholderSlotByRepeatCountCore)
+    this.resolveCoreRawCallValueOrUndefined(resolveCappedPlaceholderSlotByRepeatCountCore)
   );
   if (!Number.isInteger(slotValue) || slotValue <= 0) return false;
   return this.fillCappedPlaceholderRowSlot(
