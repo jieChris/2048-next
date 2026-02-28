@@ -7833,15 +7833,11 @@ GameManager.prototype.getVectorFallback = function (direction) {
   return this.getVectorFallbackMap()[direction];
 };
 
-GameManager.prototype.buildGetVectorCoreArgs = function (direction) {
-  return [direction];
-};
-
 // Get the vector representing the chosen direction
 GameManager.prototype.getVector = function (direction) {
   var getVectorCore = this.callCoreMovePathRuntime(
     "getVector",
-    this.buildGetVectorCoreArgs(direction)
+    [direction]
   );
   return this.resolveNormalizedCoreValueOrFallback(getVectorCore, function (coreValue) {
     if (!this.isNonArrayObject(coreValue)) return undefined;
@@ -7881,15 +7877,11 @@ GameManager.prototype.buildTraversalsFallback = function (vector) {
   };
 };
 
-GameManager.prototype.buildBuildTraversalsCoreArgs = function (vector) {
-  return [this.width, this.height, vector];
-};
-
 // Build a list of positions to traverse in the right order
 GameManager.prototype.buildTraversals = function (vector) {
   var buildTraversalsCore = this.callCoreMovePathRuntime(
     "buildTraversals",
-    this.buildBuildTraversalsCoreArgs(vector)
+    [this.width, this.height, vector]
   );
   return this.resolveNormalizedCoreValueOrFallback(
     buildTraversalsCore,
@@ -7931,21 +7923,17 @@ GameManager.prototype.computeFarthestPositionFallback = function (cell, vector) 
   };
 };
 
-GameManager.prototype.buildFindFarthestPositionCoreArgs = function (cell, vector) {
-  return [
-    cell,
-    vector,
-    this.width,
-    this.height,
-    this.isBlockedCell.bind(this),
-    this.getGridCellAvailableFn()
-  ];
-};
-
 GameManager.prototype.findFarthestPosition = function (cell, vector) {
   var findFarthestPositionCore = this.callCoreMovePathRuntime(
     "findFarthestPosition",
-    this.buildFindFarthestPositionCoreArgs(cell, vector)
+    [
+      cell,
+      vector,
+      this.width,
+      this.height,
+      this.isBlockedCell.bind(this),
+      this.getGridCellAvailableFn()
+    ]
   );
   var farthestPositionByCore = this.resolveNormalizedCoreValueOrUndefined(
     findFarthestPositionCore,
@@ -7958,17 +7946,13 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
   return this.computeFarthestPositionFallback(cell, vector);
 };
 
-GameManager.prototype.buildMovesAvailableCoreArgs = function () {
-  return [
-    this.getAvailableCells().length,
-    this.tileMatchesAvailable()
-  ];
-};
-
 GameManager.prototype.movesAvailable = function () {
   var movesAvailableCore = this.callCoreMoveScanRuntime(
     "movesAvailable",
-    this.buildMovesAvailableCoreArgs()
+    [
+      this.getAvailableCells().length,
+      this.tileMatchesAvailable()
+    ]
   );
   return this.resolveCoreBooleanCallOrFallback(movesAvailableCore, function () {
     return this.getAvailableCells().length > 0 || this.tileMatchesAvailable();
@@ -8032,35 +8016,27 @@ GameManager.prototype.createMergeValueChecker = function () {
   };
 };
 
-GameManager.prototype.buildTileMatchesRuntimeArgs = function () {
-  return [
-    this.width,
-    this.height,
-    this.isBlockedCell.bind(this),
-    this.createTileValueReader(),
-    this.createMergeValueChecker()
-  ];
-};
-
 // Check for available matches between tiles (more expensive check)
 GameManager.prototype.tileMatchesAvailable = function () {
   var tileMatchesAvailableCore = this.callCoreMoveScanRuntime(
     "tileMatchesAvailable",
-    this.buildTileMatchesRuntimeArgs()
+    [
+      this.width,
+      this.height,
+      this.isBlockedCell.bind(this),
+      this.createTileValueReader(),
+      this.createMergeValueChecker()
+    ]
   );
   return this.resolveCoreBooleanCallOrFallback(tileMatchesAvailableCore, function () {
     return this.tileMatchesAvailableFallback();
   });
 };
 
-GameManager.prototype.buildPositionsEqualCoreArgs = function (first, second) {
-  return [first, second];
-};
-
 GameManager.prototype.positionsEqual = function (first, second) {
   var positionsEqualCore = this.callCoreMovePathRuntime(
     "positionsEqual",
-    this.buildPositionsEqualCoreArgs(first, second)
+    [first, second]
   );
   return this.resolveCoreBooleanCallOrFallback(positionsEqualCore, function () {
     return first.x === second.x && first.y === second.y;
@@ -8446,20 +8422,15 @@ GameManager.prototype.buildFinalBoardMatrixFallback = function () {
   return rows;
 };
 
-GameManager.prototype.buildFinalBoardMatrixRuntimeArgs = function () {
-  return [
-    this.width,
-    this.height,
-    this.createBoardMatrixTileValueReader()
-  ];
-};
-
 GameManager.prototype.normalizeFinalBoardMatrixFromCore = function (coreValue) {
   return Array.isArray(coreValue) ? coreValue : null;
 };
 
 GameManager.prototype.getFinalBoardMatrix = function () {
-  var buildBoardMatrixCore = this.callCoreGridScanRuntime("buildBoardMatrix", this.buildFinalBoardMatrixRuntimeArgs());
+  var buildBoardMatrixCore = this.callCoreGridScanRuntime(
+    "buildBoardMatrix",
+    [this.width, this.height, this.createBoardMatrixTileValueReader()]
+  );
   return this.resolveNormalizedCoreValueOrFallback(
     buildBoardMatrixCore,
     this.normalizeFinalBoardMatrixFromCore,
@@ -8483,12 +8454,8 @@ GameManager.prototype.getBestTileValueFallback = function () {
   return best;
 };
 
-GameManager.prototype.buildBestTileValueRuntimeArgs = function () {
-  return [this.getFinalBoardMatrix()];
-};
-
 GameManager.prototype.getBestTileValue = function () {
-  var getBestTileValueCore = this.callCoreGridScanRuntime("getBestTileValue", this.buildBestTileValueRuntimeArgs());
+  var getBestTileValueCore = this.callCoreGridScanRuntime("getBestTileValue", [this.getFinalBoardMatrix()]);
   return this.resolveNormalizedCoreValueOrFallback(
     getBestTileValueCore,
     this.normalizeBestTileValue,
@@ -8500,7 +8467,10 @@ GameManager.prototype.getBestTileValue = function () {
 
 GameManager.prototype.getDurationMs = function () {
   var nowMs = Date.now();
-  var resolveDurationMsCore = this.callCoreReplayTimerRuntime("resolveDurationMs", this.buildDurationMsRuntimeArgs(nowMs));
+  var resolveDurationMsCore = this.callCoreReplayTimerRuntime(
+    "resolveDurationMs",
+    [this.resolveDurationMsCoreInput(nowMs)]
+  );
   return this.resolveNormalizedCoreValueOrFallback(
     resolveDurationMsCore,
     this.normalizeDurationMs,
@@ -8508,10 +8478,6 @@ GameManager.prototype.getDurationMs = function () {
       return this.resolveDurationMsFallback(nowMs);
     }
   );
-};
-
-GameManager.prototype.buildDurationMsRuntimeArgs = function (nowMs) {
-  return [this.resolveDurationMsCoreInput(nowMs)];
 };
 
 GameManager.prototype.resolveDurationMsCoreInput = function (nowMs) {
