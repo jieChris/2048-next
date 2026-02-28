@@ -1016,9 +1016,9 @@ GameManager.prototype.shouldStopReplayAtTick = function (replayIndex, replayMove
     "shouldStopReplayAtTick",
     this.buildShouldStopReplayAtTickCoreArgs(replayIndex, replayMovesLength)
   );
-  var shouldStopReplayAtTickByCore = this.resolveCoreBooleanCallValueOrNull(shouldStopReplayAtTickCore);
-  if (shouldStopReplayAtTickByCore !== null) return shouldStopReplayAtTickByCore;
-  return this.shouldStopReplayAtTickFallback(replayIndex, replayMovesLength);
+  return this.resolveCoreBooleanCallOrFallback(shouldStopReplayAtTickCore, function () {
+    return this.shouldStopReplayAtTickFallback(replayIndex, replayMovesLength);
+  });
 };
 
 GameManager.prototype.shouldStopReplayAtTickFallback = function (replayIndex, replayMovesLength) {
@@ -1319,6 +1319,13 @@ GameManager.prototype.isCoreCallAvailable = function (coreCallResult) {
 GameManager.prototype.resolveCoreBooleanCallValueOrNull = function (coreCallResult) {
   if (!this.isCoreCallAvailable(coreCallResult)) return null;
   return !!coreCallResult.value;
+};
+
+GameManager.prototype.resolveCoreBooleanCallOrFallback = function (coreCallResult, fallbackResolver) {
+  var coreValue = this.resolveCoreBooleanCallValueOrNull(coreCallResult);
+  if (coreValue !== null) return coreValue;
+  if (typeof fallbackResolver === "function") return !!fallbackResolver.call(this);
+  return null;
 };
 
 GameManager.prototype.resolveCoreNumericCallValueOrNull = function (coreCallResult) {
@@ -1721,16 +1728,16 @@ GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
     "readStorageFlagFromContext",
     this.buildReadLocalStorageFlagCoreArgs(key, trueValue)
   );
-  var readStorageFlagByCore = this.resolveCoreBooleanCallValueOrNull(readStorageFlagFromContextCore);
-  if (readStorageFlagByCore !== null) return readStorageFlagByCore;
-  var storage = this.getLocalStorage();
-  if (!this.canReadFromStorage(storage)) return false;
-  var matchValue = this.resolveStorageFlagMatchValue(trueValue);
-  try {
-    return storage.getItem(key) === matchValue;
-  } catch (_err) {
-    return false;
-  }
+  return this.resolveCoreBooleanCallOrFallback(readStorageFlagFromContextCore, function () {
+    var storage = this.getLocalStorage();
+    if (!this.canReadFromStorage(storage)) return false;
+    var matchValue = this.resolveStorageFlagMatchValue(trueValue);
+    try {
+      return storage.getItem(key) === matchValue;
+    } catch (_err) {
+      return false;
+    }
+  });
 };
 
 GameManager.prototype.buildWriteLocalStorageFlagCoreArgs = function (key, enabled, trueValue, falseValue) {
@@ -1753,17 +1760,17 @@ GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue,
     "writeStorageFlagFromContext",
     this.buildWriteLocalStorageFlagCoreArgs(key, enabled, trueValue, falseValue)
   );
-  var writeStorageFlagByCore = this.resolveCoreBooleanCallValueOrNull(writeStorageFlagFromContextCore);
-  if (writeStorageFlagByCore !== null) return writeStorageFlagByCore;
-  var storage = this.getLocalStorage();
-  if (!this.canWriteToStorage(storage)) return false;
-  var value = this.resolveStorageFlagPersistValue(enabled, trueValue, falseValue);
-  try {
-    storage.setItem(key, value);
-    return true;
-  } catch (_err) {
-    return false;
-  }
+  return this.resolveCoreBooleanCallOrFallback(writeStorageFlagFromContextCore, function () {
+    var storage = this.getLocalStorage();
+    if (!this.canWriteToStorage(storage)) return false;
+    var value = this.resolveStorageFlagPersistValue(enabled, trueValue, falseValue);
+    try {
+      storage.setItem(key, value);
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  });
 };
 
 GameManager.prototype.normalizeStorageJsonMapRuntimeValue = function (runtimeMap) {
@@ -1836,9 +1843,9 @@ GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
     "writeStorageJsonMapFromContext",
     this.buildWriteLocalStorageJsonMapCoreArgs(key, map)
   );
-  var writeStorageJsonMapByCore = this.resolveCoreBooleanCallValueOrNull(writeStorageJsonMapFromContextCore);
-  if (writeStorageJsonMapByCore !== null) return writeStorageJsonMapByCore;
-  return this.writeLocalStorageJsonMapFallback(key, map);
+  return this.resolveCoreBooleanCallOrFallback(writeStorageJsonMapFromContextCore, function () {
+    return this.writeLocalStorageJsonMapFallback(key, map);
+  });
 };
 
 GameManager.prototype.serializeLocalStoragePayload = function (payload) {
@@ -1872,9 +1879,9 @@ GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
     "writeStorageJsonPayloadFromContext",
     this.buildWriteLocalStorageJsonPayloadCoreArgs(key, payload)
   );
-  var writeStorageJsonPayloadByCore = this.resolveCoreBooleanCallValueOrNull(writeStorageJsonPayloadFromContextCore);
-  if (writeStorageJsonPayloadByCore !== null) return writeStorageJsonPayloadByCore;
-  return this.writeLocalStorageJsonPayloadFallback(key, payload);
+  return this.resolveCoreBooleanCallOrFallback(writeStorageJsonPayloadFromContextCore, function () {
+    return this.writeLocalStorageJsonPayloadFallback(key, payload);
+  });
 };
 
 GameManager.prototype.buildSavedGameStateStoragesFallback = function () {
@@ -2260,9 +2267,9 @@ GameManager.prototype.shouldUseSavedGameState = function () {
     "shouldUseSavedGameStateFromContext",
     this.buildShouldUseSavedGameStateCoreArgs(pathname)
   );
-  var shouldUseSavedGameStateByCore = this.resolveCoreBooleanCallValueOrNull(shouldUseSavedGameStateCore);
-  if (shouldUseSavedGameStateByCore !== null) return shouldUseSavedGameStateByCore;
-  return this.shouldUseSavedGameStateFallback();
+  return this.resolveCoreBooleanCallOrFallback(shouldUseSavedGameStateCore, function () {
+    return this.shouldUseSavedGameStateFallback();
+  });
 };
 
 GameManager.prototype.bindGameStatePersistenceEvents = function () {
@@ -6455,11 +6462,10 @@ GameManager.prototype.isTimerLeaderboardAvailableByMode = function (mode) {
     "isTimerLeaderboardAvailableByMode",
     this.buildIsTimerLeaderboardAvailableByModeCoreArgs(mode)
   );
-  var isTimerLeaderboardAvailableByModeByCore =
-    this.resolveCoreBooleanCallValueOrNull(isTimerLeaderboardAvailableByModeCore);
-  if (isTimerLeaderboardAvailableByModeByCore !== null) return isTimerLeaderboardAvailableByModeByCore;
-  void mode;
-  return true;
+  return this.resolveCoreBooleanCallOrFallback(isTimerLeaderboardAvailableByModeCore, function () {
+    void mode;
+    return true;
+  });
 };
 
 GameManager.prototype.isTimerLeaderboardAvailable = function () {
@@ -6616,10 +6622,10 @@ GameManager.prototype.loadUndoSettingForMode = function (mode) {
     "readUndoEnabledForModeFromMap",
     this.buildReadUndoEnabledForModeCoreArgs(map, mode)
   );
-  var readUndoEnabledForModeByCore = this.resolveCoreBooleanCallValueOrNull(readUndoEnabledForModeFromMapCore);
-  if (readUndoEnabledForModeByCore !== null) return readUndoEnabledForModeByCore;
-  if (this.hasOwnKey(map, mode)) return !!map[mode];
-  return true;
+  return this.resolveCoreBooleanCallOrFallback(readUndoEnabledForModeFromMapCore, function () {
+    if (this.hasOwnKey(map, mode)) return !!map[mode];
+    return true;
+  });
 };
 
 GameManager.prototype.applyUndoSettingForMode = function (mode, skipPersist, forceChange) {
