@@ -3505,17 +3505,6 @@ GameManager.prototype.getGridCellAvailableFn = function () {
   return function () { return false; };
 };
 
-GameManager.prototype.collectAvailableCellsFallback = function (width, height, isBlockedCell, cellAvailable) {
-  var out = [];
-  for (var x = 0; x < width; x++) {
-    for (var y = 0; y < height; y++) {
-      if (isBlockedCell(x, y)) continue;
-      if (cellAvailable({ x: x, y: y })) out.push({ x: x, y: y });
-    }
-  }
-  return out;
-};
-
 GameManager.prototype.getAvailableCells = function () {
   var gridCellAvailable = this.getGridCellAvailableFn();
   var getAvailableCellsCore = this.callCoreGridScanRuntime(
@@ -3530,12 +3519,14 @@ GameManager.prototype.getAvailableCells = function () {
   return this.resolveNormalizedCoreValueOrFallback(getAvailableCellsCore, function (coreValue) {
     return Array.isArray(coreValue) ? coreValue : undefined;
   }, function () {
-    return this.collectAvailableCellsFallback(
-      this.width,
-      this.height,
-      this.isBlockedCell.bind(this),
-      gridCellAvailable
-    );
+    var out = [];
+    for (var x = 0; x < this.width; x++) {
+      for (var y = 0; y < this.height; y++) {
+        if (this.isBlockedCell(x, y)) continue;
+        if (gridCellAvailable({ x: x, y: y })) out.push({ x: x, y: y });
+      }
+    }
+    return out;
   });
 };
 
