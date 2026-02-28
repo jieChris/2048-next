@@ -1575,12 +1575,19 @@ GameManager.prototype.normalizeSavedPayloadByKeyCoreValue = function (savedByCor
   return undefined;
 };
 
+GameManager.prototype.buildReadSavedPayloadByKeyCoreArgs = function (stores, key) {
+  return [{
+    storages: stores,
+    key: key
+  }];
+};
+
 GameManager.prototype.readSavedPayloadByKey = function (key) {
   var stores = this.getSavedGameStateStorages();
-  var readSavedPayloadByKeyFromStoragesCore = this.callCoreStorageRuntime("readSavedPayloadByKeyFromStorages", [{
-      storages: stores,
-      key: key
-    }]);
+  var readSavedPayloadByKeyFromStoragesCore = this.callCoreStorageRuntime(
+    "readSavedPayloadByKeyFromStorages",
+    this.buildReadSavedPayloadByKeyCoreArgs(stores, key)
+  );
   if (readSavedPayloadByKeyFromStoragesCore.available) {
     var normalizedByCore = this.normalizeSavedPayloadByKeyCoreValue(readSavedPayloadByKeyFromStoragesCore.value);
     if (typeof normalizedByCore !== "undefined") return normalizedByCore;
