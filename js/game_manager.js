@@ -6758,26 +6758,21 @@ GameManager.prototype.movesAvailable = function () {
   });
 };
 
-GameManager.prototype.canMergeTileWithAnyNeighbor = function (x, y, tile) {
-  for (var direction = 0; direction < 4; direction++) {
-    var vector = this.getVector(direction);
-    var cell = { x: x + vector.x, y: y + vector.y };
-    if (this.isBlockedCell(cell.x, cell.y)) continue;
-    var other = this.grid.cellContent(cell);
-    if (other && this.getMergedValue(tile.value, other.value) !== null) {
-      return true;
-    }
-  }
-  return false;
-};
-
 GameManager.prototype.tileMatchesAvailableFallback = function () {
   for (var x = 0; x < this.width; x++) {
     for (var y = 0; y < this.height; y++) {
       if (this.isBlockedCell(x, y)) continue;
       var tile = this.grid.cellContent({ x: x, y: y });
       if (!tile) continue;
-      if (this.canMergeTileWithAnyNeighbor(x, y, tile)) return true;
+      for (var direction = 0; direction < 4; direction++) {
+        var vector = this.getVector(direction);
+        var cell = { x: x + vector.x, y: y + vector.y };
+        if (this.isBlockedCell(cell.x, cell.y)) continue;
+        var other = this.grid.cellContent(cell);
+        if (other && this.getMergedValue(tile.value, other.value) !== null) {
+          return true;
+        }
+      }
     }
   }
   return false;
