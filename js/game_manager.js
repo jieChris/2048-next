@@ -4300,45 +4300,6 @@ GameManager.prototype.getTimerModuleViewMode = function () {
   });
 };
 
-GameManager.prototype.loadTimerModuleViewForMode = function (mode) {
-  var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
-  var readTimerModuleViewForModeFromMapCore = this.callCoreStorageRuntime(
-    "readTimerModuleViewForModeFromMap",
-    [{
-      map: map,
-      mode: mode
-    }]
-  );
-  return this.resolveCoreStringCallOrFallback(readTimerModuleViewForModeFromMapCore, function () {
-    var value = map[mode];
-    return value === "hidden" ? "hidden" : "timer";
-  });
-};
-
-GameManager.prototype.persistTimerModuleViewForMode = function (mode, view) {
-  var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
-  var writeTimerModuleViewForModeToMapCore = this.callCoreStorageRuntime(
-    "writeTimerModuleViewForModeToMap",
-    [{
-      map: map,
-      mode: mode,
-      view: view
-    }]
-  );
-  if (this.tryHandleCoreRawValue(writeTimerModuleViewForModeToMapCore, function (coreValue) {
-    map = coreValue;
-  })) {
-    // map is assigned in handler
-  } else {
-    map[mode] = view === "hidden" ? "hidden" : "timer";
-  }
-  this.writeLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY, map);
-};
-
-GameManager.prototype.notifyTimerModuleSettingsStateChanged = function () {
-  this.callWindowMethod("syncTimerModuleSettingsUI");
-};
-
 GameManager.prototype.captureTimerModuleBaseHeight = function () {
   var timerBox = document.getElementById("timerbox");
   if (!timerBox) return;
@@ -4361,9 +4322,25 @@ GameManager.prototype.applyTimerModuleView = function (view, skipPersist) {
   }
 
   if (!skipPersist) {
-    this.persistTimerModuleViewForMode(this.mode, next);
+    var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
+    var writeTimerModuleViewForModeToMapCore = this.callCoreStorageRuntime(
+      "writeTimerModuleViewForModeToMap",
+      [{
+        map: map,
+        mode: this.mode,
+        view: next
+      }]
+    );
+    if (this.tryHandleCoreRawValue(writeTimerModuleViewForModeToMapCore, function (coreValue) {
+      map = coreValue;
+    })) {
+      // map is assigned in handler
+    } else {
+      map[this.mode] = next === "hidden" ? "hidden" : "timer";
+    }
+    this.writeLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY, map);
   }
-  this.notifyTimerModuleSettingsStateChanged();
+  this.callWindowMethod("syncTimerModuleSettingsUI");
 };
 
 GameManager.prototype.setTimerModuleViewMode = function (view, skipPersist) {
@@ -5084,7 +5061,18 @@ GameManager.prototype.resetSetupSpawnValueCounters = function () {
 GameManager.prototype.initializeSetupSpawnAndPreferences = function () {
   this.resetSetupSpawnValueCounters();
   this.undoEnabled = this.loadUndoSettingForMode(this.mode);
-  var preferredTimerModuleView = this.loadTimerModuleViewForMode(this.mode);
+  var timerModuleViewMap = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
+  var readTimerModuleViewForModeFromMapCore = this.callCoreStorageRuntime(
+    "readTimerModuleViewForModeFromMap",
+    [{
+      map: timerModuleViewMap,
+      mode: this.mode
+    }]
+  );
+  var preferredTimerModuleView = this.resolveCoreStringCallOrFallback(readTimerModuleViewForModeFromMapCore, function () {
+    var value = timerModuleViewMap[this.mode];
+    return value === "hidden" ? "hidden" : "timer";
+  });
   if (this.ipsInterval) clearInterval(this.ipsInterval);
   return preferredTimerModuleView;
 };
