@@ -8489,14 +8489,6 @@ GameManager.prototype.throwUnknownReplayVersion = function () {
   throw "Unknown replay version";
 };
 
-GameManager.prototype.resolveReplayImportErrorMessage = function (error) {
-  return "导入回放出错: " + error;
-};
-
-GameManager.prototype.notifyReplayImportError = function (error) {
-  alert(this.resolveReplayImportErrorMessage(error));
-};
-
 GameManager.prototype.import = function (replayString) {
   try {
     var trimmed = this.coerceReplayImportInputToString(replayString).trim();
@@ -8505,7 +8497,7 @@ GameManager.prototype.import = function (replayString) {
     }
     return true;
   } catch (e) {
-    this.notifyReplayImportError(e);
+    alert("导入回放出错: " + e);
     return false;
   }
 };
@@ -8547,14 +8539,11 @@ GameManager.prototype.executeReplayCustomTileDispatch = function (dispatchPlan) 
   );
 };
 
-GameManager.prototype.applyReplayStepForcedSpawn = function (stepExecutionPlan) {
-  if (!stepExecutionPlan.shouldInjectForcedSpawn) return;
-  this.forcedSpawn = stepExecutionPlan.forcedSpawn;
-};
-
 GameManager.prototype.executePlannedReplayStep = function () {
   var stepExecutionPlan = this.planReplayStepExecution();
-  this.applyReplayStepForcedSpawn(stepExecutionPlan);
+  if (stepExecutionPlan.shouldInjectForcedSpawn) {
+    this.forcedSpawn = stepExecutionPlan.forcedSpawn;
+  }
   this.executeReplayAction(stepExecutionPlan.action);
   this.replayIndex = stepExecutionPlan.nextReplayIndex;
 };
