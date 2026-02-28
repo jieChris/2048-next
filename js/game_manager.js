@@ -468,22 +468,6 @@ GameManager.prototype.decodeLegacyReplayV2Payload = function (trimmedReplayStrin
   };
 };
 
-GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
-  var decodeLegacyReplayCore = this.callCoreReplayLegacyRuntime(
-    "decodeLegacyReplay",
-    [trimmedReplayString]
-  );
-  return this.resolveNormalizedCoreValueOrFallback(decodeLegacyReplayCore, function (coreValue) {
-    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
-  }, function () {
-    var decodedV1 = this.decodeLegacyReplayV1Payload(trimmedReplayString);
-    if (decodedV1) return decodedV1;
-    var decodedV2S = this.decodeLegacyReplayV2SPayload(trimmedReplayString);
-    if (decodedV2S) return decodedV2S;
-    return this.decodeLegacyReplayV2Payload(trimmedReplayString);
-  });
-};
-
 GameManager.prototype.resolveReplayExecution = function (action) {
   var resolveReplayExecutionCore = this.callCoreReplayExecutionRuntime(
     "resolveReplayExecution",
@@ -8273,7 +8257,19 @@ GameManager.prototype.import = function (replayString) {
       this.applyUndoSettingForMode(this.modeKey, true, true);
       startReplayPlayback(this);
     } else {
-      var decodedLegacy = this.decodeLegacyReplay(trimmed);
+      var decodeLegacyReplayCore = this.callCoreReplayLegacyRuntime(
+        "decodeLegacyReplay",
+        [trimmed]
+      );
+      var decodedLegacy = this.resolveNormalizedCoreValueOrFallback(decodeLegacyReplayCore, function (coreValue) {
+        return this.isNonArrayObject(coreValue) ? coreValue : undefined;
+      }, function () {
+        var decodedV1 = this.decodeLegacyReplayV1Payload(trimmed);
+        if (decodedV1) return decodedV1;
+        var decodedV2S = this.decodeLegacyReplayV2SPayload(trimmed);
+        if (decodedV2S) return decodedV2S;
+        return this.decodeLegacyReplayV2Payload(trimmed);
+      });
       if (decodedLegacy) {
         this.applyReplayImportActions({
           replayMovesV2: decodedLegacy.replayMovesV2,
