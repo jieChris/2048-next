@@ -431,12 +431,19 @@ GameManager.prototype.resolveModeKeyOrDefault = function (modeKey) {
   return typeof modeKey === "string" && modeKey ? modeKey : this.resolveCurrentOrDefaultModeKey();
 };
 
+GameManager.prototype.buildParseReplayImportEnvelopeCoreArgs = function (trimmedReplayString) {
+  return [{
+    trimmedReplayString: trimmedReplayString,
+    fallbackModeKey: this.resolveCurrentOrDefaultModeKey(),
+    v4Prefix: GameManager.REPLAY_V4_PREFIX
+  }];
+};
+
 GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString) {
-  var parseReplayImportEnvelopeCore = this.callCoreReplayImportRuntime("parseReplayImportEnvelope", [{
-      trimmedReplayString: trimmedReplayString,
-      fallbackModeKey: this.resolveCurrentOrDefaultModeKey(),
-      v4Prefix: GameManager.REPLAY_V4_PREFIX
-    }]);
+  var parseReplayImportEnvelopeCore = this.callCoreReplayImportRuntime(
+    "parseReplayImportEnvelope",
+    this.buildParseReplayImportEnvelopeCoreArgs(trimmedReplayString)
+  );
   if (parseReplayImportEnvelopeCore.available) return parseReplayImportEnvelopeCore.value;
   return this.parseReplayImportEnvelopeFallback(trimmedReplayString);
 };
