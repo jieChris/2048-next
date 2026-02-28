@@ -4477,41 +4477,10 @@ GameManager.prototype.applyUndoSettingForMode = function (mode, skipPersist, for
   return !!this.undoEnabled;
 };
 
-GameManager.prototype.resolveProvidedState = function (resolvedState, fallbackResolver) {
-  if (resolvedState && typeof resolvedState === "object") return resolvedState;
-  if (typeof fallbackResolver === "function") return fallbackResolver();
-  return null;
-};
-
-GameManager.prototype.resolveProvidedUndoPolicyStateForMode = function (mode, resolvedState) {
-  var self = this;
-  return this.resolveProvidedState(resolvedState, function () {
-    return self.resolveUndoPolicyStateForCurrentSessionMode(mode);
-  });
-};
-
-GameManager.prototype.resolveProvidedActiveUndoPolicyState = function (resolvedState) {
-  var self = this;
-  return this.resolveProvidedState(resolvedState, function () {
-    return self.resolveUndoPolicyStateForMode(self.mode);
-  });
-};
-
-GameManager.prototype.resolvePersistedUndoSettingMap = function (map, mode, enabled, coreResult) {
-  return this.resolveNormalizedCoreValueOrFallback(coreResult, function (coreValue) {
-    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
-  }, function () {
-    map[mode] = !!enabled;
-    return map;
-  });
-};
-
-GameManager.prototype.persistUndoSettingMap = function (map) {
-  this.writeLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY, map);
-};
-
 GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resolvedState) {
-  var state = this.resolveProvidedUndoPolicyStateForMode(mode, resolvedState);
+  var state = (resolvedState && typeof resolvedState === "object")
+    ? resolvedState
+    : this.resolveUndoPolicyStateForCurrentSessionMode(mode);
   if (state && state.isUndoSettingFixedForMode) return;
   if (!(state && state.isUndoAllowedByMode)) return;
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
@@ -4523,8 +4492,13 @@ GameManager.prototype.persistUndoSettingForMode = function (mode, enabled, resol
       enabled: enabled
     }]
   );
-  map = this.resolvePersistedUndoSettingMap(map, mode, enabled, writeUndoEnabledForModeToMapCore);
-  this.persistUndoSettingMap(map);
+  map = this.resolveNormalizedCoreValueOrFallback(writeUndoEnabledForModeToMapCore, function (coreValue) {
+    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
+  }, function () {
+    map[mode] = !!enabled;
+    return map;
+  });
+  this.writeLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY, map);
 };
 
 GameManager.prototype.resolveUndoEnabledFromForcedSetting = function (forcedSetting, fallbackEnabled) {
@@ -4534,13 +4508,6 @@ GameManager.prototype.resolveUndoEnabledFromForcedSetting = function (forcedSett
 
 GameManager.prototype.shouldApplyUndoEnabledToggle = function (forceChange, state) {
   return !!(forceChange || (state && state.canToggleUndoSetting));
-};
-
-GameManager.prototype.refreshUndoSettingsUiState = function () {
-  this.updateUndoUiState(this.resolveUndoPolicyStateForMode(this.mode, {
-    undoEnabled: this.undoEnabled
-  }));
-  this.notifyUndoSettingsStateChanged();
 };
 
 GameManager.prototype.setUndoEnabled = function (enabled, skipPersist, forceChange) {
@@ -4554,7 +4521,10 @@ GameManager.prototype.setUndoEnabled = function (enabled, skipPersist, forceChan
       this.persistUndoSettingForMode(this.mode, this.undoEnabled, state);
     }
   }
-  this.refreshUndoSettingsUiState();
+  this.updateUndoUiState(this.resolveUndoPolicyStateForMode(this.mode, {
+    undoEnabled: this.undoEnabled
+  }));
+  this.notifyUndoSettingsStateChanged();
 };
 
 GameManager.prototype.isUndoInteractionEnabled = function () {
@@ -4562,36 +4532,28 @@ GameManager.prototype.isUndoInteractionEnabled = function () {
   return !!(state && state.isUndoInteractionEnabled);
 };
 
-GameManager.prototype.updateUndoLinkUiState = function (modeUndoCapable, canUndo) {
-  var undoLink = document.getElementById("undo-link");
-  if (!undoLink) return;
-  undoLink.style.display = modeUndoCapable ? "" : "none";
-  if (!modeUndoCapable) return;
-  undoLink.style.pointerEvents = canUndo ? "" : "none";
-  undoLink.style.opacity = canUndo ? "" : "0.45";
-};
-
-GameManager.prototype.updateGameoverUndoButtonUiState = function (canUndo) {
-  var undoBtn = document.getElementById("undo-btn-gameover");
-  if (!undoBtn) return;
-  undoBtn.style.display = canUndo ? "inline-block" : "none";
-};
-
-GameManager.prototype.updatePracticeUndoButtonUiState = function (canUndo) {
-  var practiceUndoBtn = document.getElementById("practice-mobile-undo-btn");
-  if (!practiceUndoBtn) return;
-  practiceUndoBtn.style.pointerEvents = canUndo ? "" : "none";
-  practiceUndoBtn.style.opacity = canUndo ? "" : "0.45";
-  practiceUndoBtn.setAttribute("aria-disabled", canUndo ? "false" : "true");
-};
-
 GameManager.prototype.updateUndoUiState = function (resolvedState) {
-  var state = this.resolveProvidedActiveUndoPolicyState(resolvedState);
+  var state = (resolvedState && typeof resolvedState === "object")
+    ? resolvedState
+    : this.resolveUndoPolicyStateForMode(this.mode);
   var canUndo = !!(state && state.isUndoInteractionEnabled);
   var modeUndoCapable = !!(state && state.isUndoAllowedByMode);
-  this.updateUndoLinkUiState(modeUndoCapable, canUndo);
-  this.updateGameoverUndoButtonUiState(canUndo);
-  this.updatePracticeUndoButtonUiState(canUndo);
+  var undoLink = document.getElementById("undo-link");
+  if (undoLink) {
+    undoLink.style.display = modeUndoCapable ? "" : "none";
+    if (modeUndoCapable) {
+      undoLink.style.pointerEvents = canUndo ? "" : "none";
+      undoLink.style.opacity = canUndo ? "" : "0.45";
+    }
+  }
+  var undoBtn = document.getElementById("undo-btn-gameover");
+  if (undoBtn) undoBtn.style.display = canUndo ? "inline-block" : "none";
+  var practiceUndoBtn = document.getElementById("practice-mobile-undo-btn");
+  if (practiceUndoBtn) {
+    practiceUndoBtn.style.pointerEvents = canUndo ? "" : "none";
+    practiceUndoBtn.style.opacity = canUndo ? "" : "0.45";
+    practiceUndoBtn.setAttribute("aria-disabled", canUndo ? "false" : "true");
+  }
   this.callWindowMethod("syncMobileUndoTopButtonAvailability");
 };
 
