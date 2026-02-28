@@ -387,7 +387,13 @@ GameManager.prototype.buildReplayV4DecodedToken = function (action, spawn, nextI
   };
 };
 
-GameManager.prototype.decodeReplayV4EscapedToken = function (actionsEncoded, escapedIndex) {
+GameManager.prototype.decodeReplayV4TokenAt = function (actionsEncoded, index) {
+  var token = this.decodeReplay128(actionsEncoded.charAt(index));
+  if (token < 127) {
+    var decodedToken = this.decodeReplayV4MoveSpawnFromToken(token);
+    return this.buildReplayV4DecodedToken(decodedToken.action, decodedToken.spawn, index + 1);
+  }
+  var escapedIndex = index + 1;
   if (escapedIndex >= actionsEncoded.length) throw "Invalid v4C escape";
   var subtype = this.decodeReplay128(actionsEncoded.charAt(escapedIndex));
   if (subtype === 0) {
@@ -410,15 +416,6 @@ GameManager.prototype.decodeReplayV4EscapedToken = function (actionsEncoded, esc
     );
   }
   throw "Unknown v4C escape subtype";
-};
-
-GameManager.prototype.decodeReplayV4TokenAt = function (actionsEncoded, index) {
-  var token = this.decodeReplay128(actionsEncoded.charAt(index));
-  if (token < 127) {
-    var decodedToken = this.decodeReplayV4MoveSpawnFromToken(token);
-    return this.buildReplayV4DecodedToken(decodedToken.action, decodedToken.spawn, index + 1);
-  }
-  return this.decodeReplayV4EscapedToken(actionsEncoded, index + 1);
 };
 
 GameManager.prototype.decodeReplayV4Actions = function (actionsEncoded) {
