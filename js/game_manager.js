@@ -4597,10 +4597,11 @@ GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
     "createUndoTileSnapshot",
     this.buildCreateUndoTileSnapshotCoreArgs(tile, target)
   );
-  if (this.isCoreCallAvailable(createUndoTileSnapshotCore)) {
-    var normalizedByCore = this.normalizeUndoTileSnapshotFromCore(createUndoTileSnapshotCore.value || {});
-    if (normalizedByCore) return normalizedByCore;
-  }
+  var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
+    createUndoTileSnapshotCore,
+    this.normalizeUndoTileSnapshotFromCore
+  );
+  if (normalizedByCore) return normalizedByCore;
 
   if (tile && typeof tile.save === "function") {
     return tile.save(target);
@@ -4662,10 +4663,11 @@ GameManager.prototype.createUndoRestoreTile = function (snapshot) {
     "createUndoRestoreTile",
     this.buildCreateUndoRestoreTileCoreArgs(source, previous)
   );
-  if (this.isCoreCallAvailable(createUndoRestoreTileCore)) {
-    var normalizedByCore = this.normalizeUndoRestoreTileFromCore(createUndoRestoreTileCore.value || {});
-    if (normalizedByCore) return normalizedByCore;
-  }
+  var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
+    createUndoRestoreTileCore,
+    this.normalizeUndoRestoreTileFromCore
+  );
+  if (normalizedByCore) return normalizedByCore;
 
   return fallback;
 };
@@ -5942,10 +5944,11 @@ GameManager.prototype.getCappedPlaceholderRowValues = function (cappedState) {
     "resolveCappedPlaceholderRowValues",
     this.buildResolveCappedPlaceholderRowValuesCoreArgs(resolvedCappedState)
   );
-  if (this.isCoreCallAvailable(resolveCappedPlaceholderRowValuesCore)) {
-    var normalizedByCore = this.normalizeCappedPlaceholderRowValuesFromCore(resolveCappedPlaceholderRowValuesCore.value);
-    if (normalizedByCore) return normalizedByCore;
-  }
+  var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
+    resolveCappedPlaceholderRowValuesCore,
+    this.normalizeCappedPlaceholderRowValuesFromCore
+  );
+  if (normalizedByCore) return normalizedByCore;
   return this.resolveCappedPlaceholderRowValuesFallback(resolvedCappedState);
 };
 
