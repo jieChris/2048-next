@@ -939,29 +939,8 @@ GameManager.prototype.parseStorageJsonMapRaw = function (raw) {
   return parsed;
 };
 
-GameManager.prototype.readLocalStorageJsonMapFallback = function (key) {
-  var storage = this.getWebStorageByName("localStorage");
-  if (!this.canReadFromStorage(storage)) return {};
-  try {
-    return this.parseStorageJsonMapRaw(storage.getItem(key));
-  } catch (_err) {
-    return {};
-  }
-};
-
 GameManager.prototype.normalizeStorageJsonMapWriteInput = function (map) {
   return this.isNonArrayObject(map) ? map : {};
-};
-
-GameManager.prototype.writeLocalStorageJsonMapFallback = function (key, map) {
-  var storage = this.getWebStorageByName("localStorage");
-  if (!this.canWriteToStorage(storage)) return false;
-  try {
-    storage.setItem(key, JSON.stringify(this.normalizeStorageJsonMapWriteInput(map)));
-    return true;
-  } catch (_err) {
-    return false;
-  }
 };
 
 GameManager.prototype.readLocalStorageJsonMap = function (key) {
@@ -976,7 +955,13 @@ GameManager.prototype.readLocalStorageJsonMap = function (key) {
     readStorageJsonMapFromContextCore,
     this.normalizeStorageJsonMapRuntimeValue,
     function () {
-      return this.readLocalStorageJsonMapFallback(key);
+      var storage = this.getWebStorageByName("localStorage");
+      if (!this.canReadFromStorage(storage)) return {};
+      try {
+        return this.parseStorageJsonMapRaw(storage.getItem(key));
+      } catch (_err) {
+        return {};
+      }
     }
   );
 };
@@ -991,26 +976,20 @@ GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
     }]
   );
   return this.resolveCoreBooleanCallOrFallback(writeStorageJsonMapFromContextCore, function () {
-    return this.writeLocalStorageJsonMapFallback(key, map);
+    var storage = this.getWebStorageByName("localStorage");
+    if (!this.canWriteToStorage(storage)) return false;
+    try {
+      storage.setItem(key, JSON.stringify(this.normalizeStorageJsonMapWriteInput(map)));
+      return true;
+    } catch (_err) {
+      return false;
+    }
   });
 };
 
 GameManager.prototype.serializeLocalStoragePayload = function (payload) {
   var serialized = JSON.stringify(payload);
   return typeof serialized === "string" ? serialized : null;
-};
-
-GameManager.prototype.writeLocalStorageJsonPayloadFallback = function (key, payload) {
-  var storage = this.getWebStorageByName("localStorage");
-  if (!this.canWriteToStorage(storage)) return false;
-  var serialized = this.serializeLocalStoragePayload(payload);
-  if (typeof serialized !== "string") return false;
-  try {
-    storage.setItem(key, serialized);
-    return true;
-  } catch (_err) {
-    return false;
-  }
 };
 
 GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
@@ -1023,7 +1002,16 @@ GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
     }]
   );
   return this.resolveCoreBooleanCallOrFallback(writeStorageJsonPayloadFromContextCore, function () {
-    return this.writeLocalStorageJsonPayloadFallback(key, payload);
+    var storage = this.getWebStorageByName("localStorage");
+    if (!this.canWriteToStorage(storage)) return false;
+    var serialized = this.serializeLocalStoragePayload(payload);
+    if (typeof serialized !== "string") return false;
+    try {
+      storage.setItem(key, serialized);
+      return true;
+    } catch (_err) {
+      return false;
+    }
   });
 };
 
@@ -1290,16 +1278,6 @@ GameManager.prototype.registerGameStatePersistenceEvents = function (windowLike,
   windowLike.addEventListener("pagehide", saveHandler);
 };
 
-GameManager.prototype.removeKeysFromSavedStateStoragesFallback = function (stores, keys) {
-  for (var i = 0; i < stores.length; i++) {
-    for (var k = 0; k < keys.length; k++) {
-      try {
-        stores[i].removeItem(keys[k]);
-      } catch (_err) {}
-    }
-  }
-};
-
 GameManager.prototype.resolveSavedGameStateStorageKeys = function (modeKey) {
   return [
     this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_KEY_PREFIX, modeKey),
@@ -1322,7 +1300,13 @@ GameManager.prototype.clearSavedGameState = function (modeKey) {
   if (this.resolveCoreBooleanCallOrFallback(removeKeysFromStoragesCore, function () {
     return false;
   })) return;
-  this.removeKeysFromSavedStateStoragesFallback(stores, keys);
+  for (var i = 0; i < stores.length; i++) {
+    for (var k = 0; k < keys.length; k++) {
+      try {
+        stores[i].removeItem(keys[k]);
+      } catch (_err) {}
+    }
+  }
 };
 
 GameManager.prototype.captureTimerFixedRowsState = function () {
@@ -1890,13 +1874,6 @@ GameManager.prototype.persistSavedGameStatePrimaryWrites = function (key, liteKe
   return this.createSavedGameStatePersistWritesResult(persisted, litePersisted);
 };
 
-GameManager.prototype.persistSavedGameStateQuotaFallback = function (key, liteKey, litePayload) {
-  this.clearSavedGameState(this.modeKey);
-  var persisted = this.writeSavedGameStatePayload(key, litePayload);
-  var litePersisted = this.writeSavedGameStatePayload(liteKey, litePayload);
-  return this.createSavedGameStatePersistWritesResult(persisted, litePersisted);
-};
-
 GameManager.prototype.createSavedGameStatePersistWritesResult = function (persisted, litePersisted) {
   return {
     persisted: !!persisted,
@@ -1922,10 +1899,12 @@ GameManager.prototype.persistSavedGameStatePayload = function (payload) {
     litePayload
   );
   if (!persistWrites.persisted && !persistWrites.litePersisted) {
-    persistWrites = this.persistSavedGameStateQuotaFallback(
-      persistKeys.key,
-      persistKeys.liteKey,
-      litePayload
+    this.clearSavedGameState(this.modeKey);
+    var persistedAfterQuotaFallback = this.writeSavedGameStatePayload(persistKeys.key, litePayload);
+    var litePersistedAfterQuotaFallback = this.writeSavedGameStatePayload(persistKeys.liteKey, litePayload);
+    persistWrites = this.createSavedGameStatePersistWritesResult(
+      persistedAfterQuotaFallback,
+      litePersistedAfterQuotaFallback
     );
   }
   return !!(persistWrites.persisted || persistWrites.litePersisted);
@@ -2242,11 +2221,6 @@ GameManager.prototype.writeSerializedSavedPayloadToStorages = function (stores, 
   return false;
 };
 
-GameManager.prototype.writeSavedGameStatePayloadFallback = function (stores, key, payloadObj) {
-  var serialized = this.serializeSavedGameStatePayload(payloadObj);
-  return this.writeSerializedSavedPayloadToStorages(stores, key, serialized);
-};
-
 GameManager.prototype.normalizeWriteSavedPayloadToStoragesCoreValue = function (persistedByCore) {
   if (typeof persistedByCore === "boolean") return persistedByCore;
   return undefined;
@@ -2267,7 +2241,8 @@ GameManager.prototype.writeSavedGameStatePayload = function (key, payloadObj) {
     this.normalizeWriteSavedPayloadToStoragesCoreValue
   );
   if (typeof normalizedByCore !== "undefined") return normalizedByCore;
-  return this.writeSavedGameStatePayloadFallback(stores, key, payloadObj);
+  var serialized = this.serializeSavedGameStatePayload(payloadObj);
+  return this.writeSerializedSavedPayloadToStorages(stores, key, serialized);
 };
 
 GameManager.prototype.resolveLiteSavedInitialBoardMatrix = function (payload) {
