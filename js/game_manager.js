@@ -1413,23 +1413,37 @@ GameManager.prototype.writeLocalStorageJsonMapFallback = function (key, map) {
   }
 };
 
+GameManager.prototype.buildReadLocalStorageJsonMapCoreArgs = function (key) {
+  return [{
+    windowLike: this.getWindowLike(),
+    key: key
+  }];
+};
+
 GameManager.prototype.readLocalStorageJsonMap = function (key) {
-  var readStorageJsonMapFromContextCore = this.callCoreStorageRuntime("readStorageJsonMapFromContext", [{
-      windowLike: this.getWindowLike(),
-      key: key
-    }]);
+  var readStorageJsonMapFromContextCore = this.callCoreStorageRuntime(
+    "readStorageJsonMapFromContext",
+    this.buildReadLocalStorageJsonMapCoreArgs(key)
+  );
   if (readStorageJsonMapFromContextCore.available) {
     return this.normalizeStorageJsonMapRuntimeValue(readStorageJsonMapFromContextCore.value);
   }
   return this.readLocalStorageJsonMapFallback(key);
 };
 
+GameManager.prototype.buildWriteLocalStorageJsonMapCoreArgs = function (key, map) {
+  return [{
+    windowLike: this.getWindowLike(),
+    key: key,
+    map: map
+  }];
+};
+
 GameManager.prototype.writeLocalStorageJsonMap = function (key, map) {
-  var writeStorageJsonMapFromContextCore = this.callCoreStorageRuntime("writeStorageJsonMapFromContext", [{
-      windowLike: this.getWindowLike(),
-      key: key,
-      map: map
-    }]);
+  var writeStorageJsonMapFromContextCore = this.callCoreStorageRuntime(
+    "writeStorageJsonMapFromContext",
+    this.buildWriteLocalStorageJsonMapCoreArgs(key, map)
+  );
   if (writeStorageJsonMapFromContextCore.available) return !!writeStorageJsonMapFromContextCore.value;
   return this.writeLocalStorageJsonMapFallback(key, map);
 };
@@ -1439,23 +1453,34 @@ GameManager.prototype.serializeLocalStoragePayload = function (payload) {
   return typeof serialized === "string" ? serialized : null;
 };
 
-GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
-  var writeStorageJsonPayloadFromContextCore = this.callCoreStorageRuntime("writeStorageJsonPayloadFromContext", [{
-      windowLike: this.getWindowLike(),
-      key: key,
-      payload: payload
-    }]);
-  if (writeStorageJsonPayloadFromContextCore.available) return !!writeStorageJsonPayloadFromContextCore.value;
+GameManager.prototype.buildWriteLocalStorageJsonPayloadCoreArgs = function (key, payload) {
+  return [{
+    windowLike: this.getWindowLike(),
+    key: key,
+    payload: payload
+  }];
+};
+
+GameManager.prototype.writeLocalStorageJsonPayloadFallback = function (key, payload) {
   var storage = this.getLocalStorage();
   if (!this.canWriteToStorage(storage)) return false;
+  var serialized = this.serializeLocalStoragePayload(payload);
+  if (typeof serialized !== "string") return false;
   try {
-    var serialized = this.serializeLocalStoragePayload(payload);
-    if (typeof serialized !== "string") return false;
     storage.setItem(key, serialized);
     return true;
   } catch (_err) {
     return false;
   }
+};
+
+GameManager.prototype.writeLocalStorageJsonPayload = function (key, payload) {
+  var writeStorageJsonPayloadFromContextCore = this.callCoreStorageRuntime(
+    "writeStorageJsonPayloadFromContext",
+    this.buildWriteLocalStorageJsonPayloadCoreArgs(key, payload)
+  );
+  if (writeStorageJsonPayloadFromContextCore.available) return !!writeStorageJsonPayloadFromContextCore.value;
+  return this.writeLocalStorageJsonPayloadFallback(key, payload);
 };
 
 GameManager.prototype.buildSavedGameStateStoragesFallback = function () {
