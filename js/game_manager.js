@@ -6280,7 +6280,22 @@ GameManager.prototype.handleMoveInput = function (direction) {
   this.dispatchMoveInputWithThrottle(direction, throttleMs);
 };
 
-GameManager.prototype.applyMergeTimerStampEffects = function (timerIdsToStamp, timeStr) {
+GameManager.prototype.applyMergeMilestoneEffects = function (mergedValue, timeStr) {
+  this.recordTimerMilestone(mergedValue, timeStr);
+  var mergeEffects = this.computeMergeEffects(mergedValue);
+  if (mergeEffects.shouldRecordCappedMilestone) {
+    this.recordCappedMilestone(timeStr);
+  }
+  if (mergeEffects.shouldSetWon) {
+    this.won = true;
+  }
+  if (mergeEffects.shouldSetReached32k) {
+    this.reached32k = true;
+  }
+
+  var timerIdsToStamp = Array.isArray(mergeEffects.timerIdsToStamp)
+    ? mergeEffects.timerIdsToStamp
+    : [];
   for (var timerIndex = 0; timerIndex < timerIdsToStamp.length; timerIndex++) {
     var timerId = timerIdsToStamp[timerIndex];
     var timerEl = document.getElementById(timerId);
@@ -6291,9 +6306,6 @@ GameManager.prototype.applyMergeTimerStampEffects = function (timerIdsToStamp, t
       if (timerEl.textContent === "") timerEl.textContent = timeStr;
     }
   }
-};
-
-GameManager.prototype.applyMergeTimerRowVisibilityEffects = function (mergeEffects) {
   if (mergeEffects.showSubTimerContainer) {
     var subContainer = document.getElementById("timer32k-sub-container");
     if (subContainer) subContainer.style.display = "block";
@@ -6303,30 +6315,6 @@ GameManager.prototype.applyMergeTimerRowVisibilityEffects = function (mergeEffec
     var rowEl = document.getElementById("timer-row-" + String(hideTimerRows[hideIndex]));
     if (rowEl) rowEl.style.display = "none";
   }
-};
-
-GameManager.prototype.applyMergeOutcomeFlags = function (mergeEffects) {
-  if (mergeEffects.shouldSetWon) {
-    this.won = true;
-  }
-  if (mergeEffects.shouldSetReached32k) {
-    this.reached32k = true;
-  }
-};
-
-GameManager.prototype.applyMergeMilestoneEffects = function (mergedValue, timeStr) {
-  this.recordTimerMilestone(mergedValue, timeStr);
-  var mergeEffects = this.computeMergeEffects(mergedValue);
-  if (mergeEffects.shouldRecordCappedMilestone) {
-    this.recordCappedMilestone(timeStr);
-  }
-  this.applyMergeOutcomeFlags(mergeEffects);
-
-  var timerIdsToStamp = Array.isArray(mergeEffects.timerIdsToStamp)
-    ? mergeEffects.timerIdsToStamp
-    : [];
-  this.applyMergeTimerStampEffects(timerIdsToStamp, timeStr);
-  this.applyMergeTimerRowVisibilityEffects(mergeEffects);
 };
 
 GameManager.prototype.restoreUndoPayload = function (undoPayload) {
