@@ -8536,32 +8536,26 @@ GameManager.prototype.executePlannedReplayStep = function () {
   this.replayIndex = stepExecutionPlan.nextReplayIndex;
 };
 
-GameManager.prototype.clearReplayIntervalIfNeeded = function (shouldClearInterval) {
-  if (shouldClearInterval !== false) {
-    clearInterval(this.replayInterval);
-  }
-};
-
-GameManager.prototype.scheduleReplayInterval = function (delay) {
-  var manager = this;
-  this.replayInterval = setInterval(function () {
-    manager.runReplayTick();
-  }, delay);
-};
-
 GameManager.prototype.pause = function () {
     var state = this.computeReplayPauseState();
     state = this.isNonArrayObject(state) ? state : {};
     this.isPaused = state.isPaused !== false;
-    this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
+    if (state.shouldClearInterval !== false) {
+      clearInterval(this.replayInterval);
+    }
 };
 
 GameManager.prototype.resume = function () {
     var state = this.computeReplayResumeState();
     state = this.isNonArrayObject(state) ? state : {};
     this.isPaused = !!state.isPaused ? true : false;
-    this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
-    this.scheduleReplayInterval(state.delay);
+    if (state.shouldClearInterval !== false) {
+      clearInterval(this.replayInterval);
+    }
+    var manager = this;
+    this.replayInterval = setInterval(function () {
+      manager.runReplayTick();
+    }, state.delay);
 };
 
 GameManager.prototype.setSpeed = function (multiplier) {
