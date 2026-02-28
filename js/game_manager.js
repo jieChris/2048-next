@@ -923,14 +923,10 @@ GameManager.prototype.planReplayStepExecutionFallback = function () {
   return this.buildReplayStepExecutionFallback(action, stepPlan);
 };
 
-GameManager.prototype.buildComputeReplayPauseStateCoreArgs = function () {
-  return [];
-};
-
 GameManager.prototype.computeReplayPauseState = function () {
   var computeReplayPauseStateCore = this.callCoreReplayTimerRuntime(
     "computeReplayPauseState",
-    this.buildComputeReplayPauseStateCoreArgs()
+    []
   );
   return this.resolveCoreObjectCallOrFallback(computeReplayPauseStateCore, function () {
     return this.getReplayPauseDefaults();
@@ -960,15 +956,11 @@ GameManager.prototype.computeReplayResumeState = function () {
   });
 };
 
-GameManager.prototype.resolveReplayResumeDelayFallback = function () {
-  return this.replayDelay || 200;
-};
-
 GameManager.prototype.computeReplayResumeStateFallback = function () {
   return {
     isPaused: false,
     shouldClearInterval: true,
-    delay: this.resolveReplayResumeDelayFallback()
+    delay: this.replayDelay || 200
   };
 };
 
@@ -990,13 +982,9 @@ GameManager.prototype.computeReplaySpeedState = function (multiplier) {
   });
 };
 
-GameManager.prototype.resolveReplaySpeedDelayFallback = function (multiplier) {
-  return 200 / multiplier;
-};
-
 GameManager.prototype.computeReplaySpeedStateFallback = function (multiplier) {
   return {
-    replayDelay: this.resolveReplaySpeedDelayFallback(multiplier),
+    replayDelay: 200 / multiplier,
     shouldResume: !this.isPaused
   };
 };
@@ -1014,22 +1002,14 @@ GameManager.prototype.shouldStopReplayAtTick = function (replayIndex, replayMove
     this.buildShouldStopReplayAtTickCoreArgs(replayIndex, replayMovesLength)
   );
   return this.resolveCoreBooleanCallOrFallback(shouldStopReplayAtTickCore, function () {
-    return this.shouldStopReplayAtTickFallback(replayIndex, replayMovesLength);
+    return replayIndex >= replayMovesLength;
   });
-};
-
-GameManager.prototype.shouldStopReplayAtTickFallback = function (replayIndex, replayMovesLength) {
-  return replayIndex >= replayMovesLength;
-};
-
-GameManager.prototype.buildComputeReplayEndStateCoreArgs = function () {
-  return [];
 };
 
 GameManager.prototype.computeReplayEndState = function () {
   var computeReplayEndStateCore = this.callCoreReplayFlowRuntime(
     "computeReplayEndState",
-    this.buildComputeReplayEndStateCoreArgs()
+    []
   );
   return this.resolveCoreObjectCallOrFallback(computeReplayEndStateCore, function () {
     return this.computeReplayEndStateFallback();
@@ -1083,15 +1063,11 @@ GameManager.prototype.planReplayTickBoundaryFallback = function (shouldStopAtTic
   return this.buildReplayTickStopPlanFallback(replayEndState);
 };
 
-GameManager.prototype.resolveReplayEndStateForTickBoundary = function (shouldStopAtTick) {
-  return shouldStopAtTick ? this.computeReplayEndState() : undefined;
-};
-
 GameManager.prototype.buildReplayTickBoundaryPlanInput = function () {
   var shouldStopAtTick = this.shouldStopReplayAtTick(this.replayIndex, this.replayMoves.length);
   return {
     shouldStopAtTick: shouldStopAtTick,
-    replayEndState: this.resolveReplayEndStateForTickBoundary(shouldStopAtTick)
+    replayEndState: shouldStopAtTick ? this.computeReplayEndState() : undefined
   };
 };
 
@@ -1152,10 +1128,6 @@ GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
   });
 };
 
-GameManager.prototype.shouldReplaySeekRewindFallback = function (targetIndex) {
-  return targetIndex < this.replayIndex;
-};
-
 GameManager.prototype.buildReplaySeekRewindPlan = function (shouldRewind, strategy, replayIndexAfterRewind) {
   return {
     shouldRewind: shouldRewind,
@@ -1165,7 +1137,7 @@ GameManager.prototype.buildReplaySeekRewindPlan = function (shouldRewind, strate
 };
 
 GameManager.prototype.planReplaySeekRewindFallback = function (targetIndex) {
-  if (!this.shouldReplaySeekRewindFallback(targetIndex)) {
+  if (!(targetIndex < this.replayIndex)) {
     return this.buildReplaySeekRewindPlan(false, "none", this.replayIndex);
   }
   return this.buildReplaySeekRewindPlan(true, this.replayStartBoardMatrix ? "board" : "seed", 0);
@@ -1184,14 +1156,10 @@ GameManager.prototype.resolveReplaySeekRestartCoreInput = function (rewindPlan) 
   };
 };
 
-GameManager.prototype.buildPlanReplaySeekRestartCoreArgs = function (rewindPlan) {
-  return [this.resolveReplaySeekRestartCoreInput(rewindPlan)];
-};
-
 GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
   var planReplaySeekRestartCore = this.callCoreReplayFlowRuntime(
     "planReplaySeekRestart",
-    this.buildPlanReplaySeekRestartCoreArgs(rewindPlan)
+    [this.resolveReplaySeekRestartCoreInput(rewindPlan)]
   );
   return this.resolveCoreObjectCallOrFallback(planReplaySeekRestartCore, function () {
     return this.planReplaySeekRestartFallback(rewindPlan);
