@@ -9395,10 +9395,6 @@ GameManager.prototype.resolveSerializedReplayModeKey = function (replay) {
   return replay.mode_key || this.modeKey;
 };
 
-GameManager.prototype.resolveSerializedReplayMode = function (replay) {
-  return this.getServerMode(replay.mode_key || replay.mode || this.modeKey);
-};
-
 GameManager.prototype.resolveSerializedReplayBoardWidth = function (replay) {
   return replay.board_width || this.width;
 };
@@ -9423,10 +9419,6 @@ GameManager.prototype.resolveSerializedReplayRankPolicy = function (replay) {
   return replay.rank_policy || this.rankPolicy;
 };
 
-GameManager.prototype.resolveSerializedReplaySpecialRulesSnapshot = function (replay) {
-  return this.clonePlain(replay.special_rules_snapshot || this.specialRules || {});
-};
-
 GameManager.prototype.resolveSerializedReplayChallengeId = function (replay) {
   return replay.challenge_id || this.challengeId || null;
 };
@@ -9438,7 +9430,7 @@ GameManager.prototype.resolveSerializedReplayActions = function (replay) {
 GameManager.prototype.buildSerializedReplayV3Payload = function (replay) {
   return {
     v: 3,
-    mode: this.resolveSerializedReplayMode(replay),
+    mode: this.getServerMode(replay.mode_key || replay.mode || this.modeKey),
     mode_key: this.resolveSerializedReplayModeKey(replay),
     board_width: this.resolveSerializedReplayBoardWidth(replay),
     board_height: this.resolveSerializedReplayBoardHeight(replay),
@@ -9446,7 +9438,7 @@ GameManager.prototype.buildSerializedReplayV3Payload = function (replay) {
     undo_enabled: this.resolveSerializedReplayUndoEnabled(replay),
     mode_family: this.resolveSerializedReplayModeFamily(replay),
     rank_policy: this.resolveSerializedReplayRankPolicy(replay),
-    special_rules_snapshot: this.resolveSerializedReplaySpecialRulesSnapshot(replay),
+    special_rules_snapshot: this.clonePlain(replay.special_rules_snapshot || this.specialRules || {}),
     challenge_id: this.resolveSerializedReplayChallengeId(replay),
     seed: replay.seed,
     actions: this.resolveSerializedReplayActions(replay)
@@ -9500,10 +9492,6 @@ GameManager.prototype.resolveSessionSubmitAdapterParityParts = function (adapter
   };
 };
 
-GameManager.prototype.resolveSessionSubmitSpecialRulesSnapshot = function () {
-  return this.clonePlain(this.specialRules || {});
-};
-
 GameManager.prototype.resolveSessionSubmitClientVersion = function (windowLike) {
   return (windowLike && windowLike.GAME_CLIENT_VERSION) || "1.8";
 };
@@ -9517,10 +9505,6 @@ GameManager.prototype.buildSessionSubmitReplayPayload = function () {
     replay: this.serializeV3(),
     replay_string: this.serialize()
   };
-};
-
-GameManager.prototype.resolveSessionSubmitMode = function () {
-  return this.getServerMode(this.modeKey);
 };
 
 GameManager.prototype.resolveSessionSubmitModeKey = function () {
@@ -9563,20 +9547,8 @@ GameManager.prototype.resolveSessionSubmitScore = function () {
   return this.score;
 };
 
-GameManager.prototype.resolveSessionSubmitBestTile = function () {
-  return this.getBestTileValue();
-};
-
-GameManager.prototype.resolveSessionSubmitDurationMs = function () {
-  return this.getDurationMs();
-};
-
-GameManager.prototype.resolveSessionSubmitFinalBoard = function () {
-  return this.getFinalBoardMatrix();
-};
-
 GameManager.prototype.applySessionSubmitModeAndBoardPayload = function (payload) {
-  payload.mode = this.resolveSessionSubmitMode();
+  payload.mode = this.getServerMode(this.modeKey);
   payload.mode_key = this.resolveSessionSubmitModeKey();
   payload.board_width = this.resolveSessionSubmitBoardWidth();
   payload.board_height = this.resolveSessionSubmitBoardHeight();
@@ -9592,11 +9564,11 @@ GameManager.prototype.applySessionSubmitRankingPayload = function (payload) {
 };
 
 GameManager.prototype.applySessionSubmitOutcomePayload = function (payload, endedAt) {
-  payload.special_rules_snapshot = this.resolveSessionSubmitSpecialRulesSnapshot();
+  payload.special_rules_snapshot = this.clonePlain(this.specialRules || {});
   payload.score = this.resolveSessionSubmitScore();
-  payload.best_tile = this.resolveSessionSubmitBestTile();
-  payload.duration_ms = this.resolveSessionSubmitDurationMs();
-  payload.final_board = this.resolveSessionSubmitFinalBoard();
+  payload.best_tile = this.getBestTileValue();
+  payload.duration_ms = this.getDurationMs();
+  payload.final_board = this.getFinalBoardMatrix();
   payload.ended_at = endedAt;
 };
 
@@ -9687,10 +9659,6 @@ GameManager.prototype.resolveSessionSubmitSkipReason = function () {
   return null;
 };
 
-GameManager.prototype.resolveLocalHistorySaveRecord = function () {
-  return this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
-};
-
 GameManager.prototype.buildMissingLocalHistoryStoreResult = function () {
   return {
     at: this.resolveSessionSubmitTimestamp(),
@@ -9703,14 +9671,6 @@ GameManager.prototype.writeMissingLocalHistoryStoreResult = function () {
   this.writeLastSessionSubmitResult(this.buildMissingLocalHistoryStoreResult());
 };
 
-GameManager.prototype.resolveSessionSubmitWindowLike = function () {
-  return this.getWindowLike();
-};
-
-GameManager.prototype.resolveSessionSubmitEndedAt = function () {
-  return this.resolveSessionSubmitTimestamp();
-};
-
 GameManager.prototype.createSessionSubmitContext = function (localHistorySaveRecord, endedAt, payload) {
   return {
     localHistorySaveRecord: localHistorySaveRecord,
@@ -9721,9 +9681,9 @@ GameManager.prototype.createSessionSubmitContext = function (localHistorySaveRec
 
 GameManager.prototype.buildSessionSubmitPayloadInput = function () {
   return {
-    windowLike: this.resolveSessionSubmitWindowLike(),
+    windowLike: this.getWindowLike(),
     adapterParitySnapshot: this.resolveSessionSubmitAdapterParitySnapshot(),
-    endedAt: this.resolveSessionSubmitEndedAt()
+    endedAt: this.resolveSessionSubmitTimestamp()
   };
 };
 
@@ -9737,10 +9697,6 @@ GameManager.prototype.buildSessionSubmitContext = function (localHistorySaveReco
   return this.createSessionSubmitContext(localHistorySaveRecord, payloadInput.endedAt, payload);
 };
 
-GameManager.prototype.resolveSessionSubmitSavedRecord = function (submitContext) {
-  return this.persistSessionSubmitPayload(submitContext.localHistorySaveRecord, submitContext.payload);
-};
-
 GameManager.prototype.handleSessionSubmitPersistSuccess = function (submitContext, savedRecord) {
   this.writeSessionSubmitSuccessResult(submitContext.endedAt, submitContext.payload, savedRecord);
 };
@@ -9751,7 +9707,7 @@ GameManager.prototype.handleSessionSubmitPersistFailure = function (submitContex
 
 GameManager.prototype.persistSessionSubmitContext = function (submitContext) {
   try {
-    var saved = this.resolveSessionSubmitSavedRecord(submitContext);
+    var saved = this.persistSessionSubmitPayload(submitContext.localHistorySaveRecord, submitContext.payload);
     this.handleSessionSubmitPersistSuccess(submitContext, saved);
   } catch (error) {
     this.handleSessionSubmitPersistFailure(submitContext, error);
@@ -9766,7 +9722,7 @@ GameManager.prototype.handleSkippedSessionSubmitIfNeeded = function () {
 };
 
 GameManager.prototype.resolveSessionSubmitRecordOrWriteMissing = function () {
-  var localHistorySaveRecord = this.resolveLocalHistorySaveRecord();
+  var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
   if (localHistorySaveRecord) return localHistorySaveRecord;
   this.writeMissingLocalHistoryStoreResult();
   return null;
@@ -9811,10 +9767,6 @@ GameManager.prototype.shouldSerializeReplayAsV3 = function () {
   return this.width !== 4 || this.height !== 4 || this.isFibonacciMode();
 };
 
-GameManager.prototype.resolveReplayV4SerializationModeCode = function () {
-  return this.resolveReplayV4ModeCodeFromModeKey(this.modeKey);
-};
-
 GameManager.prototype.resolveReplayV4SerializationInitialBoard = function () {
   return this.initialBoardMatrix || this.getFinalBoardMatrix();
 };
@@ -9824,7 +9776,7 @@ GameManager.prototype.resolveReplayV4SerializationCompactLog = function () {
 };
 
 GameManager.prototype.buildReplayV4SerializationPayload = function () {
-  var modeCode = this.resolveReplayV4SerializationModeCode();
+  var modeCode = this.resolveReplayV4ModeCodeFromModeKey(this.modeKey);
   var initialBoard = this.resolveReplayV4SerializationInitialBoard();
   var encodedBoard = this.encodeBoardV4(initialBoard);
   return GameManager.REPLAY_V4_PREFIX + modeCode + encodedBoard + this.resolveReplayV4SerializationCompactLog();
