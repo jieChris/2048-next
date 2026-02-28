@@ -861,7 +861,8 @@ GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
     "planReplayStep",
     this.buildPlanReplayStepCoreArgs(action, spawnAtIndex)
   );
-  if (planReplayStepCore.available) return planReplayStepCore.value || {};
+  var planReplayStepByCore = this.resolveCoreObjectCallValueOrNull(planReplayStepCore);
+  if (planReplayStepByCore) return planReplayStepByCore;
   return this.planReplayStepFallback(action, spawnAtIndex);
 };
 
@@ -890,7 +891,8 @@ GameManager.prototype.planReplayStepExecution = function () {
     "planReplayStepExecution",
     this.buildPlanReplayStepExecutionCoreArgs()
   );
-  if (planReplayStepExecutionCore.available) return planReplayStepExecutionCore.value || {};
+  var planReplayStepExecutionByCore = this.resolveCoreObjectCallValueOrNull(planReplayStepExecutionCore);
+  if (planReplayStepExecutionByCore) return planReplayStepExecutionByCore;
   return this.planReplayStepExecutionFallback();
 };
 
@@ -922,7 +924,8 @@ GameManager.prototype.computeReplayPauseState = function () {
     "computeReplayPauseState",
     this.buildComputeReplayPauseStateCoreArgs()
   );
-  if (computeReplayPauseStateCore.available) return computeReplayPauseStateCore.value || {};
+  var computeReplayPauseStateByCore = this.resolveCoreObjectCallValueOrNull(computeReplayPauseStateCore);
+  if (computeReplayPauseStateByCore) return computeReplayPauseStateByCore;
   return this.computeReplayPauseStateFallback();
 };
 
@@ -948,7 +951,8 @@ GameManager.prototype.computeReplayResumeState = function () {
     "computeReplayResumeState",
     this.buildComputeReplayResumeStateCoreArgs()
   );
-  if (computeReplayResumeStateCore.available) return computeReplayResumeStateCore.value || {};
+  var computeReplayResumeStateByCore = this.resolveCoreObjectCallValueOrNull(computeReplayResumeStateCore);
+  if (computeReplayResumeStateByCore) return computeReplayResumeStateByCore;
   return this.computeReplayResumeStateFallback();
 };
 
@@ -977,7 +981,8 @@ GameManager.prototype.computeReplaySpeedState = function (multiplier) {
     "computeReplaySpeedState",
     this.buildComputeReplaySpeedStateCoreArgs(multiplier)
   );
-  if (computeReplaySpeedStateCore.available) return computeReplaySpeedStateCore.value || {};
+  var computeReplaySpeedStateByCore = this.resolveCoreObjectCallValueOrNull(computeReplaySpeedStateCore);
+  if (computeReplaySpeedStateByCore) return computeReplaySpeedStateByCore;
   return this.computeReplaySpeedStateFallback(multiplier);
 };
 
@@ -1021,7 +1026,8 @@ GameManager.prototype.computeReplayEndState = function () {
     "computeReplayEndState",
     this.buildComputeReplayEndStateCoreArgs()
   );
-  if (computeReplayEndStateCore.available) return computeReplayEndStateCore.value || {};
+  var computeReplayEndStateByCore = this.resolveCoreObjectCallValueOrNull(computeReplayEndStateCore);
+  if (computeReplayEndStateByCore) return computeReplayEndStateByCore;
   return this.computeReplayEndStateFallback();
 };
 
@@ -1044,7 +1050,8 @@ GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, repla
     "planReplayTickBoundary",
     this.buildPlanReplayTickBoundaryCoreArgs(shouldStopAtTick, replayEndState)
   );
-  if (planReplayTickBoundaryCore.available) return planReplayTickBoundaryCore.value || {};
+  var planReplayTickBoundaryByCore = this.resolveCoreObjectCallValueOrNull(planReplayTickBoundaryCore);
+  if (planReplayTickBoundaryByCore) return planReplayTickBoundaryByCore;
   return this.planReplayTickBoundaryFallback(shouldStopAtTick, replayEndState);
 };
 
@@ -1147,7 +1154,8 @@ GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
     "planReplaySeekRewind",
     this.buildPlanReplaySeekRewindCoreArgs(targetIndex)
   );
-  if (planReplaySeekRewindCore.available) return planReplaySeekRewindCore.value || {};
+  var planReplaySeekRewindByCore = this.resolveCoreObjectCallValueOrNull(planReplaySeekRewindCore);
+  if (planReplaySeekRewindByCore) return planReplaySeekRewindByCore;
   return this.planReplaySeekRewindFallback(targetIndex);
 };
 
@@ -1200,7 +1208,8 @@ GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
     "planReplaySeekRestart",
     this.buildPlanReplaySeekRestartCoreArgs(rewindPlan)
   );
-  if (planReplaySeekRestartCore.available) return planReplaySeekRestartCore.value || {};
+  var planReplaySeekRestartByCore = this.resolveCoreObjectCallValueOrNull(planReplaySeekRestartCore);
+  if (planReplaySeekRestartByCore) return planReplaySeekRestartByCore;
   return this.planReplaySeekRestartFallback(rewindPlan);
 };
 
@@ -1281,6 +1290,11 @@ GameManager.prototype.buildUnavailableCoreRuntimeCallResult = function () {
 
 GameManager.prototype.normalizeCoreRuntimeCallArgs = function (args) {
   return Array.isArray(args) ? args : [];
+};
+
+GameManager.prototype.resolveCoreObjectCallValueOrNull = function (coreCallResult) {
+  if (!coreCallResult || coreCallResult.available !== true) return null;
+  return coreCallResult.value || {};
 };
 
 GameManager.prototype.resolveCoreRuntimeCallerFromResolver = function (resolverMethodName, methodName) {
