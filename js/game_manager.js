@@ -1566,10 +1566,15 @@ GameManager.prototype.readSavedPayloadCandidateFromStore = function (store, key)
   return null;
 };
 
+GameManager.prototype.normalizeSavedPayloadStores = function (stores) {
+  return Array.isArray(stores) ? stores : [];
+};
+
 GameManager.prototype.readSavedPayloadByKeyFallback = function (stores, key) {
+  var targetStores = this.normalizeSavedPayloadStores(stores);
   var best = null;
-  for (var i = 0; i < stores.length; i++) {
-    var candidate = this.readSavedPayloadCandidateFromStore(stores[i], key);
+  for (var i = 0; i < targetStores.length; i++) {
+    var candidate = this.readSavedPayloadCandidateFromStore(targetStores[i], key);
     best = this.selectLatestSavedPayload(best, candidate);
   }
   return best;
@@ -1583,7 +1588,7 @@ GameManager.prototype.normalizeSavedPayloadByKeyCoreValue = function (savedByCor
 
 GameManager.prototype.buildReadSavedPayloadByKeyCoreArgs = function (stores, key) {
   return [{
-    storages: stores,
+    storages: this.normalizeSavedPayloadStores(stores),
     key: key
   }];
 };
