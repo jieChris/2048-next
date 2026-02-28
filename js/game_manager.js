@@ -1607,15 +1607,19 @@ GameManager.prototype.normalizeWindowNameSavedPayloadCoreValue = function (paylo
   return undefined;
 };
 
-GameManager.prototype.buildReadWindowNameSavedPayloadCoreArgs = function (windowLike, modeKey) {
-  return [{
+GameManager.prototype.buildWindowNameSavedPayloadCoreBaseArgs = function (windowLike, modeKey) {
+  return {
     windowLike: windowLike,
     windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
     modeKey: modeKey,
     currentModeKey: this.modeKey,
     currentMode: this.mode,
     defaultModeKey: GameManager.DEFAULT_MODE_KEY
-  }];
+  };
+};
+
+GameManager.prototype.buildReadWindowNameSavedPayloadCoreArgs = function (windowLike, modeKey) {
+  return [this.buildWindowNameSavedPayloadCoreBaseArgs(windowLike, modeKey)];
 };
 
 GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
@@ -1795,15 +1799,11 @@ GameManager.prototype.writeWindowNameSavedPayloadFallback = function (modeKey, p
 };
 
 GameManager.prototype.buildWriteWindowNameSavedPayloadCoreArgs = function (windowLike, modeKey, payload) {
-  return [{
-    windowLike: windowLike,
-    windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
-    modeKey: modeKey,
-    currentModeKey: this.modeKey,
-    currentMode: this.mode,
-    defaultModeKey: GameManager.DEFAULT_MODE_KEY,
-    payload: payload
-  }];
+  return [Object.assign(
+    {},
+    this.buildWindowNameSavedPayloadCoreBaseArgs(windowLike, modeKey),
+    { payload: payload }
+  )];
 };
 
 GameManager.prototype.normalizeWriteWindowNameSavedPayloadCoreValue = function (writtenByCore) {
