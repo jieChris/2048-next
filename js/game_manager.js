@@ -8441,11 +8441,6 @@ GameManager.prototype.importLegacyReplayPayload = function (decodedLegacy) {
   this.startReplayImportPlayback();
 };
 
-GameManager.prototype.coerceReplayImportInputToString = function (replayString) {
-  if (typeof replayString === "string") return replayString;
-  return JSON.stringify(replayString);
-};
-
 var GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP = {
   "json-v3": "importJsonV3ReplayEnvelope",
   "v4c": "importV4ReplayEnvelope"
@@ -8479,7 +8474,7 @@ GameManager.prototype.throwUnknownReplayVersion = function () {
 
 GameManager.prototype.import = function (replayString) {
   try {
-    var trimmed = this.coerceReplayImportInputToString(replayString).trim();
+    var trimmed = (typeof replayString === "string" ? replayString : JSON.stringify(replayString)).trim();
     if (!this.tryImportReplayEnvelopeString(trimmed) && !this.tryImportLegacyReplayString(trimmed)) {
       this.throwUnknownReplayVersion();
     }
