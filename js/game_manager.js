@@ -4911,7 +4911,9 @@ GameManager.prototype.normalizeSpawnTable = function (spawnTable, ruleset) {
     "normalizeSpawnTable",
     this.buildNormalizeSpawnTableCoreArgs(spawnTable, ruleset)
   );
-  return this.resolveCoreRawCallOrFallback(normalizeSpawnTableCore, function () {
+  return this.resolveNormalizedCoreValueOrFallback(normalizeSpawnTableCore, function (coreValue) {
+    return Array.isArray(coreValue) ? coreValue : undefined;
+  }, function () {
     var normalizedFallbackItems = this.normalizeSpawnTableFallbackItems(spawnTable);
     if (normalizedFallbackItems.length > 0) return normalizedFallbackItems;
     return this.resolveDefaultSpawnTableByRuleset(ruleset);
@@ -5042,7 +5044,9 @@ GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
     "normalizeModeConfig",
     this.buildNormalizeModeConfigCoreArgs(modeKey, rawConfig)
   );
-  return this.resolveCoreRawCallOrFallback(normalizeModeConfigCore, function () {
+  return this.resolveNormalizedCoreValueOrFallback(normalizeModeConfigCore, function (coreValue) {
+    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
+  }, function () {
     return this.normalizeModeConfigFallback(modeKey, rawConfig);
   });
 };
@@ -5171,7 +5175,9 @@ GameManager.prototype.normalizeSpecialRules = function (rules) {
     "normalizeSpecialRules",
     this.buildNormalizeSpecialRulesCoreArgs(rules)
   );
-  return this.resolveCoreRawCallOrFallback(normalizeSpecialRulesCore, function () {
+  return this.resolveNormalizedCoreValueOrFallback(normalizeSpecialRulesCore, function (coreValue) {
+    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
+  }, function () {
     if (!rules || typeof rules !== "object" || Array.isArray(rules)) return {};
     return this.clonePlain(rules);
   });
@@ -5295,7 +5301,9 @@ GameManager.prototype.getAvailableCells = function () {
     "getAvailableCells",
     this.buildGetAvailableCellsCoreArgs(gridCellAvailable)
   );
-  return this.resolveCoreRawCallOrFallback(getAvailableCellsCore, function () {
+  return this.resolveNormalizedCoreValueOrFallback(getAvailableCellsCore, function (coreValue) {
+    return Array.isArray(coreValue) ? coreValue : undefined;
+  }, function () {
     return this.collectAvailableCellsFallback(
       this.width,
       this.height,
