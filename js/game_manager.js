@@ -2862,13 +2862,9 @@ GameManager.prototype.tryRestoreSavedGameState = function () {
   return this.tryApplyRestorableSavedState(this.resolveRestorableSavedState());
 };
 
-GameManager.prototype.shouldAbortSaveGameStateForTerminatedSession = function () {
-  return this.isSessionTerminated() && this.modeKey !== "practice_legacy";
-};
-
 GameManager.prototype.shouldAbortSaveGameState = function (options, now) {
   if (!this.shouldUseSavedGameState()) return true;
-  if (this.shouldAbortSaveGameStateForTerminatedSession()) {
+  if (this.isSessionTerminated() && this.modeKey !== "practice_legacy") {
     this.clearSavedGameState();
     return true;
   }
@@ -2878,17 +2874,13 @@ GameManager.prototype.shouldAbortSaveGameState = function (options, now) {
 GameManager.prototype.tryPersistAndMarkSavedGameState = function (payload, now) {
   try {
     var persistResult = this.persistSavedGameStatePayload(payload);
-    if (!this.didPersistAnySavedGameStateWrites(persistResult)) return;
+    if (!persistResult) return;
     this.markSavedGameStatePersistedAt(now);
   } catch (_err) {}
 };
 
 GameManager.prototype.markSavedGameStatePersistedAt = function (now) {
   this.lastSavedGameStateAt = now;
-};
-
-GameManager.prototype.didPersistAnySavedGameStateWrites = function (persistResult) {
-  return !!persistResult;
 };
 
 GameManager.prototype.saveGameState = function (options) {
@@ -2930,14 +2922,6 @@ GameManager.prototype.resolveSavedGameStatePersistKeys = function () {
   };
 };
 
-GameManager.prototype.shouldUseSavedGameStateQuotaFallback = function (persistWritesResult) {
-  return !persistWritesResult.persisted && !persistWritesResult.litePersisted;
-};
-
-GameManager.prototype.resolveSavedGameStatePersistedFromWrites = function (persistWritesResult) {
-  return !!(persistWritesResult.persisted || persistWritesResult.litePersisted);
-};
-
 GameManager.prototype.persistSavedGameStatePayload = function (payload) {
   var persistKeys = this.resolveSavedGameStatePersistKeys();
   var litePayload = this.buildLiteSavedGameStatePayload(payload);
@@ -2948,14 +2932,14 @@ GameManager.prototype.persistSavedGameStatePayload = function (payload) {
     payload,
     litePayload
   );
-  if (this.shouldUseSavedGameStateQuotaFallback(persistWrites)) {
+  if (!persistWrites.persisted && !persistWrites.litePersisted) {
     persistWrites = this.persistSavedGameStateQuotaFallback(
       persistKeys.key,
       persistKeys.liteKey,
       litePayload
     );
   }
-  return this.resolveSavedGameStatePersistedFromWrites(persistWrites);
+  return !!(persistWrites.persisted || persistWrites.litePersisted);
 };
 
 GameManager.prototype.resolveTimerSubStateSnapshot = function () {
@@ -3135,14 +3119,10 @@ GameManager.prototype.appendCompactMoveCodeFallback = function (rawCode) {
   this.replayCompactLog += this.encodeReplay128(127) + this.encodeReplay128(0);
 };
 
-GameManager.prototype.buildAppendCompactUndoCoreArgs = function () {
-  return [this.replayCompactLog];
-};
-
 GameManager.prototype.appendCompactUndo = function () {
   var appendCompactUndoCore = this.callCoreReplayCodecRuntime(
     "appendCompactUndo",
-    this.buildAppendCompactUndoCoreArgs()
+    [this.replayCompactLog]
   );
   if (this.tryHandleCoreRawValue(appendCompactUndoCore, function (coreValue) {
     this.replayCompactLog = coreValue;
@@ -3184,7 +3164,7 @@ GameManager.prototype.appendCompactPracticeActionFallback = function (x, y, valu
   this.assertCompactPracticeBoardSupported();
   this.assertCompactPracticeCoords(x, y);
   var exp = this.resolveCompactPracticeValueExponent(value);
-  var cell = this.resolveCompactPracticeCellCode(x, y);
+  var cell = (x << 2) | y;
   this.appendCompactPracticePrefix();
   this.appendCompactPracticeEncodedCellAndExponent(cell, exp);
 };
@@ -3212,10 +3192,6 @@ GameManager.prototype.resolveCompactPracticeValueExponent = function (value) {
   return lg;
 };
 
-GameManager.prototype.resolveCompactPracticeCellCode = function (x, y) {
-  return (x << 2) | y;
-};
-
 GameManager.prototype.appendCompactPracticePrefix = function () {
   this.replayCompactLog += this.encodeReplay128(127) + this.encodeReplay128(2);
 };
@@ -3233,10 +3209,6 @@ GameManager.prototype.resolveDetectedModeCoreInput = function () {
     pathname: pathname,
     defaultModeKey: GameManager.DEFAULT_MODE_KEY
   };
-};
-
-GameManager.prototype.buildResolveDetectedModeCoreArgs = function () {
-  return [this.resolveDetectedModeCoreInput()];
 };
 
 GameManager.prototype.resolveDetectedModeBodyModeAttr = function () {
@@ -3275,7 +3247,7 @@ GameManager.prototype.detectModeFallback = function () {
 GameManager.prototype.detectMode = function () {
   var resolveDetectedModeCore = this.callCoreModeRuntime(
     "resolveDetectedMode",
-    this.buildResolveDetectedModeCoreArgs()
+    [this.resolveDetectedModeCoreInput()]
   );
   return this.resolveCoreStringCallOrFallback(resolveDetectedModeCore, function () {
     return this.detectModeFallback();
@@ -3454,10 +3426,6 @@ GameManager.prototype.buildLiteSavedGameStatePayloadFallback = function (payload
   return Object.assign(basePayload, progressPayload);
 };
 
-GameManager.prototype.normalizeLiteSavedGameStatePayloadByCore = function (litePayloadByCore) {
-  return this.isNonArrayObject(litePayloadByCore) ? litePayloadByCore : null;
-};
-
 GameManager.prototype.buildLiteSavedGameStatePayloadCoreArgs = function (payload) {
   return [{
     payload: payload,
@@ -3485,7 +3453,9 @@ GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     buildLiteSavedGameStatePayloadCore,
-    this.normalizeLiteSavedGameStatePayloadByCore
+    function (litePayloadByCore) {
+      return this.isNonArrayObject(litePayloadByCore) ? litePayloadByCore : null;
+    }
   );
   if (normalizedByCore) return normalizedByCore;
 
@@ -3660,22 +3630,6 @@ GameManager.prototype.resolveForcedUndoSettingForModeFallback = function (target
   return null;
 };
 
-GameManager.prototype.resolveIsUndoAllowedByMode = function (forcedUndoSetting) {
-  return forcedUndoSetting !== false;
-};
-
-GameManager.prototype.resolveIsUndoSettingFixedForMode = function (forcedUndoSetting) {
-  return forcedUndoSetting !== null;
-};
-
-GameManager.prototype.resolveCanToggleUndoSetting = function (
-  isUndoAllowedByMode,
-  isUndoSettingFixedForMode,
-  hasGameStarted
-) {
-  return isUndoAllowedByMode && !isUndoSettingFixedForMode && !hasGameStarted;
-};
-
 GameManager.prototype.resolveIsUndoInteractionEnabled = function (
   replayMode,
   undoLimit,
@@ -3701,13 +3655,9 @@ GameManager.prototype.normalizeUndoPolicyStateFallbackInput = function (params) 
 };
 
 GameManager.prototype.resolveUndoPolicyStateFallbackComputedState = function (input) {
-  var isUndoAllowedByMode = this.resolveIsUndoAllowedByMode(input.forcedUndoSetting);
-  var isUndoSettingFixedForMode = this.resolveIsUndoSettingFixedForMode(input.forcedUndoSetting);
-  var canToggleUndoSetting = this.resolveCanToggleUndoSetting(
-    isUndoAllowedByMode,
-    isUndoSettingFixedForMode,
-    input.hasGameStarted
-  );
+  var isUndoAllowedByMode = input.forcedUndoSetting !== false;
+  var isUndoSettingFixedForMode = input.forcedUndoSetting !== null;
+  var canToggleUndoSetting = isUndoAllowedByMode && !isUndoSettingFixedForMode && !input.hasGameStarted;
   var isUndoInteractionEnabled = this.resolveIsUndoInteractionEnabled(
     input.replayMode,
     input.undoLimit,
