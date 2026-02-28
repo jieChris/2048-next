@@ -473,51 +473,34 @@ GameManager.prototype.normalizeOptionalReplayString = function (raw) {
   return typeof raw === "string" && raw ? raw : null;
 };
 
-GameManager.prototype.parseJsonReplayImportObject = function (trimmedReplayString) {
+GameManager.prototype.parseJsonReplayImportEnvelope = function (trimmedReplayString) {
   if (trimmedReplayString.charAt(0) !== "{") return null;
-  return JSON.parse(trimmedReplayString);
-};
-
-GameManager.prototype.resolveValidatedJsonReplayActions = function (replayObj) {
+  var replayObj = JSON.parse(trimmedReplayString);
+  if (!replayObj) return null;
   if (replayObj.v !== 3) throw "Unsupported JSON replay version";
   var actions = replayObj.actions;
   if (!Array.isArray(actions)) throw "Invalid v3 actions";
-  return actions;
-};
-
-GameManager.prototype.parseJsonReplayImportEnvelope = function (trimmedReplayString) {
-  var replayObj = this.parseJsonReplayImportObject(trimmedReplayString);
-  if (!replayObj) return null;
-  var actions = this.resolveValidatedJsonReplayActions(replayObj);
-  var meta = this.resolveJsonReplayEnvelopeMeta(replayObj);
-  return {
-    kind: "json-v3",
-    modeKey: this.resolveJsonReplayEnvelopeModeKey(replayObj),
-    actions: actions,
-    seed: replayObj.seed,
-    specialRulesSnapshot: meta.specialRulesSnapshot,
-    modeFamily: meta.modeFamily,
-    rankPolicy: meta.rankPolicy,
-    challengeId: meta.challengeId
-  };
-};
-
-GameManager.prototype.resolveJsonReplayEnvelopeModeKey = function (replayObj) {
-  return this.normalizeOptionalReplayString(replayObj.mode_key) ||
+  var specialRulesSnapshot =
+    replayObj.special_rules_snapshot && typeof replayObj.special_rules_snapshot === "object"
+      ? replayObj.special_rules_snapshot
+      : null;
+  var modeFamily = this.normalizeOptionalReplayString(replayObj.mode_family);
+  var rankPolicy = this.normalizeOptionalReplayString(replayObj.rank_policy);
+  var challengeId = this.normalizeOptionalReplayString(replayObj.challenge_id);
+  var modeKey =
+    this.normalizeOptionalReplayString(replayObj.mode_key) ||
     this.normalizeOptionalReplayString(replayObj.mode) ||
     this.modeKey ||
     this.mode;
-};
-
-GameManager.prototype.resolveJsonReplayEnvelopeMeta = function (replayObj) {
   return {
-    specialRulesSnapshot:
-      replayObj.special_rules_snapshot && typeof replayObj.special_rules_snapshot === "object"
-        ? replayObj.special_rules_snapshot
-        : null,
-    modeFamily: this.normalizeOptionalReplayString(replayObj.mode_family),
-    rankPolicy: this.normalizeOptionalReplayString(replayObj.rank_policy),
-    challengeId: this.normalizeOptionalReplayString(replayObj.challenge_id)
+    kind: "json-v3",
+    modeKey: modeKey,
+    actions: actions,
+    seed: replayObj.seed,
+    specialRulesSnapshot: specialRulesSnapshot,
+    modeFamily: modeFamily,
+    rankPolicy: rankPolicy,
+    challengeId: challengeId
   };
 };
 
@@ -620,24 +603,15 @@ GameManager.prototype.decodeLegacyReplayV1Payload = function (trimmedReplayStrin
   };
 };
 
-GameManager.prototype.parseLegacyReplaySeedAndLog = function (rest) {
-  var seedSep = rest.indexOf("_");
-  if (seedSep < 0) throw "Invalid v2S format";
-  var seed = parseFloat(rest.substring(0, seedSep));
-  if (isNaN(seed)) throw "Invalid v2S seed";
-  return {
-    seed: seed,
-    logString: rest.substring(seedSep + 1)
-  };
-};
-
 GameManager.prototype.decodeLegacyReplayV2SPayload = function (trimmedReplayString) {
   var prefixS = GameManager.LEGACY_REPLAY_V2S_PREFIX;
   if (trimmedReplayString.indexOf(prefixS) !== 0) return null;
   var rest = trimmedReplayString.substring(prefixS.length);
-  var parsedSeedLog = this.parseLegacyReplaySeedAndLog(rest);
-  var seedS = parsedSeedLog.seed;
-  var logString = parsedSeedLog.logString;
+  var seedSep = rest.indexOf("_");
+  if (seedSep < 0) throw "Invalid v2S format";
+  var seedS = parseFloat(rest.substring(0, seedSep));
+  if (isNaN(seedS)) throw "Invalid v2S seed";
+  var logString = rest.substring(seedSep + 1);
   var decodedLog = this.decodeLegacyReplayV2Log(logString);
   return {
     seed: seedS,
