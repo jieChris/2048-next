@@ -468,52 +468,6 @@ GameManager.prototype.decodeLegacyReplayV2Payload = function (trimmedReplayStrin
   };
 };
 
-GameManager.prototype.resolveReplayExecution = function (action) {
-  var resolveReplayExecutionCore = this.callCoreReplayExecutionRuntime(
-    "resolveReplayExecution",
-    [action]
-  );
-  return this.resolveNormalizedCoreValueOrFallback(resolveReplayExecutionCore, function (coreValue) {
-    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
-  }, function () {
-    var kind = this.getActionKind(action);
-    if (kind === "m") {
-      return {
-        kind: "m",
-        dir: Array.isArray(action) ? action[1] : action
-      };
-    }
-    if (kind === "u") return { kind: "u" };
-    if (kind === "p") {
-      return {
-        kind: "p",
-        x: action[1],
-        y: action[2],
-        value: action[3]
-      };
-    }
-    throw "Unknown replay action";
-  });
-};
-
-GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
-  var planReplayDispatchCore = this.callCoreReplayDispatchRuntime(
-    "planReplayDispatch",
-    [resolvedExecution]
-  );
-  return this.resolveCoreObjectCallOrFallback(planReplayDispatchCore, function () {
-    if (resolvedExecution.kind === "m") return { method: "move", args: [resolvedExecution.dir] };
-    if (resolvedExecution.kind === "u") return { method: "move", args: [-1] };
-    if (resolvedExecution.kind === "p") {
-      return {
-        method: "insertCustomTile",
-        args: [resolvedExecution.x, resolvedExecution.y, resolvedExecution.value]
-      };
-    }
-    throw "Unknown replay action";
-  });
-};
-
 GameManager.prototype.runReplayTick = function () {
   var shouldStopReplayAtTickCore = this.callCoreReplayTimerRuntime(
     "shouldStopReplayAtTick",
@@ -8326,8 +8280,47 @@ GameManager.prototype.executePlannedReplayStep = function () {
   if (stepExecutionPlan.shouldInjectForcedSpawn) {
     this.forcedSpawn = stepExecutionPlan.forcedSpawn;
   }
-  var resolved = this.resolveReplayExecution(stepExecutionPlan.action);
-  var dispatchPlan = this.planReplayDispatch(resolved);
+  var action = stepExecutionPlan.action;
+  var resolveReplayExecutionCore = this.callCoreReplayExecutionRuntime(
+    "resolveReplayExecution",
+    [action]
+  );
+  var resolved = this.resolveNormalizedCoreValueOrFallback(resolveReplayExecutionCore, function (coreValue) {
+    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
+  }, function () {
+    var kind = this.getActionKind(action);
+    if (kind === "m") {
+      return {
+        kind: "m",
+        dir: Array.isArray(action) ? action[1] : action
+      };
+    }
+    if (kind === "u") return { kind: "u" };
+    if (kind === "p") {
+      return {
+        kind: "p",
+        x: action[1],
+        y: action[2],
+        value: action[3]
+      };
+    }
+    throw "Unknown replay action";
+  });
+  var planReplayDispatchCore = this.callCoreReplayDispatchRuntime(
+    "planReplayDispatch",
+    [resolved]
+  );
+  var dispatchPlan = this.resolveCoreObjectCallOrFallback(planReplayDispatchCore, function () {
+    if (resolved.kind === "m") return { method: "move", args: [resolved.dir] };
+    if (resolved.kind === "u") return { method: "move", args: [-1] };
+    if (resolved.kind === "p") {
+      return {
+        method: "insertCustomTile",
+        args: [resolved.x, resolved.y, resolved.value]
+      };
+    }
+    throw "Unknown replay action";
+  });
   var dispatchMethod = dispatchPlan && dispatchPlan.method;
   var args = dispatchPlan && Array.isArray(dispatchPlan.args) ? dispatchPlan.args : [];
   if (dispatchMethod === "move") {
