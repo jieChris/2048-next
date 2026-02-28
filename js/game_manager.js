@@ -1314,6 +1314,14 @@ GameManager.prototype.resolveCoreNumericCallValueOrNull = function (coreCallResu
   return Number(coreCallResult.value) || 0;
 };
 
+GameManager.prototype.resolveCoreStringCallValueOrNull = function (coreCallResult, allowEmpty) {
+  if (!this.isCoreCallAvailable(coreCallResult)) return null;
+  var coreValue = coreCallResult.value;
+  if (typeof coreValue !== "string") return null;
+  if (allowEmpty === true) return coreValue;
+  return coreValue ? coreValue : null;
+};
+
 GameManager.prototype.resolveCoreRuntimeCallerFromResolver = function (resolverMethodName, methodName) {
   var resolver = this[resolverMethodName];
   if (typeof resolver !== "function") return null;
@@ -1545,9 +1553,7 @@ GameManager.prototype.buildResolveSavedGameStateStorageKeyCoreArgs = function (k
 };
 
 GameManager.prototype.resolveSavedGameStateStorageKeyFromCoreCall = function (coreCallResult) {
-  if (!this.isCoreCallAvailable(coreCallResult)) return null;
-  var resolvedKey = coreCallResult.value;
-  return typeof resolvedKey === "string" && resolvedKey ? resolvedKey : null;
+  return this.resolveCoreStringCallValueOrNull(coreCallResult);
 };
 
 GameManager.prototype.resolveSavedGameStateStorageKeyFallback = function (keyPrefix, modeKey) {
@@ -3368,10 +3374,8 @@ GameManager.prototype.detectMode = function () {
     "resolveDetectedMode",
     this.buildResolveDetectedModeCoreArgs()
   );
-  if (this.isCoreCallAvailable(resolveDetectedModeCore)) {
-    var detectedByCore = resolveDetectedModeCore.value;
-    if (typeof detectedByCore === "string" && detectedByCore) return detectedByCore;
-  }
+  var detectedByCore = this.resolveCoreStringCallValueOrNull(resolveDetectedModeCore);
+  if (detectedByCore !== null) return detectedByCore;
   return this.detectModeFallback();
 };
 
@@ -5848,10 +5852,8 @@ GameManager.prototype.getCappedTimerLegendClass = function (cappedTargetValue) {
     "resolveCappedTimerLegendClass",
     this.buildResolveCappedTimerLegendClassCoreArgs(targetValue)
   );
-  if (this.isCoreCallAvailable(resolveCappedTimerLegendClassCore)) {
-    var legendClass = resolveCappedTimerLegendClassCore.value;
-    if (typeof legendClass === "string" && legendClass) return legendClass;
-  }
+  var legendClass = this.resolveCoreStringCallValueOrNull(resolveCappedTimerLegendClassCore);
+  if (legendClass !== null) return legendClass;
 
   var slotId = this.timerMilestoneSlotByValue
     ? this.timerMilestoneSlotByValue[String(targetValue)]
@@ -5865,10 +5867,8 @@ GameManager.prototype.getCappedTimerFontSize = function (cappedTargetValue) {
     "resolveCappedTimerLegendFontSize",
     this.buildResolveCappedTimerLegendFontSizeCoreArgs(targetValue)
   );
-  if (this.isCoreCallAvailable(resolveCappedTimerLegendFontSizeCore)) {
-    var resolvedFontSize = resolveCappedTimerLegendFontSizeCore.value;
-    if (typeof resolvedFontSize === "string" && resolvedFontSize) return resolvedFontSize;
-  }
+  var resolvedFontSize = this.resolveCoreStringCallValueOrNull(resolveCappedTimerLegendFontSizeCore);
+  if (resolvedFontSize !== null) return resolvedFontSize;
   var cap = targetValue;
   if (cap >= 8192) return "13px";
   if (cap >= 1024) return "14px";
@@ -5889,10 +5889,8 @@ GameManager.prototype.getCappedRepeatLabel = function (repeatCount) {
     "formatCappedRepeatLabel",
     this.buildFormatCappedRepeatLabelCoreArgs(repeatCount)
   );
-  if (this.isCoreCallAvailable(formatCappedRepeatLabelCore)) {
-    var label = formatCappedRepeatLabelCore.value;
-    if (typeof label === "string") return label;
-  }
+  var label = this.resolveCoreStringCallValueOrNull(formatCappedRepeatLabelCore, true);
+  if (label !== null) return label;
   return "x" + String(repeatCount);
 };
 
@@ -6810,10 +6808,8 @@ GameManager.prototype.getActualSecondaryRate = function () {
     "getActualSecondaryRateText",
     this.buildGetActualSecondaryRateTextCoreArgs()
   );
-  if (this.isCoreCallAvailable(getActualSecondaryRateTextCore)) {
-    var rateText = getActualSecondaryRateTextCore.value;
-    if (typeof rateText === "string" && rateText) return rateText;
-  }
+  var rateText = this.resolveCoreStringCallValueOrNull(getActualSecondaryRateTextCore);
+  if (rateText !== null) return rateText;
   return this.resolveActualSecondaryRateFallback();
 };
 
