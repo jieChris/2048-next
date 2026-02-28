@@ -4328,18 +4328,25 @@ GameManager.prototype.buildUndoTileSnapshotFallback = function (tile, target) {
   };
 };
 
+GameManager.prototype.buildCreateUndoTileSnapshotCoreArgs = function (tile, target) {
+  return [{
+    tile: {
+      x: tile && typeof tile === "object" ? tile.x : null,
+      y: tile && typeof tile === "object" ? tile.y : null,
+      value: tile && typeof tile === "object" ? tile.value : null
+    },
+    target: {
+      x: target && typeof target === "object" ? target.x : null,
+      y: target && typeof target === "object" ? target.y : null
+    }
+  }];
+};
+
 GameManager.prototype.createUndoTileSnapshot = function (tile, target) {
-  var createUndoTileSnapshotCore = this.callCoreUndoTileSnapshotRuntime("createUndoTileSnapshot", [{
-      tile: {
-        x: tile && typeof tile === "object" ? tile.x : null,
-        y: tile && typeof tile === "object" ? tile.y : null,
-        value: tile && typeof tile === "object" ? tile.value : null
-      },
-      target: {
-        x: target && typeof target === "object" ? target.x : null,
-        y: target && typeof target === "object" ? target.y : null
-      }
-    }]);
+  var createUndoTileSnapshotCore = this.callCoreUndoTileSnapshotRuntime(
+    "createUndoTileSnapshot",
+    this.buildCreateUndoTileSnapshotCoreArgs(tile, target)
+  );
   if (createUndoTileSnapshotCore.available) {
     var normalizedByCore = this.normalizeUndoTileSnapshotFromCore(createUndoTileSnapshotCore.value || {});
     if (normalizedByCore) return normalizedByCore;
@@ -4383,21 +4390,28 @@ GameManager.prototype.normalizeUndoRestoreTileFromCore = function (computed) {
   return null;
 };
 
+GameManager.prototype.buildCreateUndoRestoreTileCoreArgs = function (source, previous) {
+  return [{
+    x: source.x,
+    y: source.y,
+    value: source.value,
+    previousPosition: {
+      x: previous.x,
+      y: previous.y
+    }
+  }];
+};
+
 GameManager.prototype.createUndoRestoreTile = function (snapshot) {
   var normalized = this.normalizeUndoRestoreTileSource(snapshot);
   var source = normalized.source;
   var previous = normalized.previous;
   var fallback = this.buildUndoRestoreTileFallback(source, previous);
 
-  var createUndoRestoreTileCore = this.callCoreUndoTileRestoreRuntime("createUndoRestoreTile", [{
-      x: source.x,
-      y: source.y,
-      value: source.value,
-      previousPosition: {
-        x: previous.x,
-        y: previous.y
-      }
-    }]);
+  var createUndoRestoreTileCore = this.callCoreUndoTileRestoreRuntime(
+    "createUndoRestoreTile",
+    this.buildCreateUndoRestoreTileCoreArgs(source, previous)
+  );
   if (createUndoRestoreTileCore.available) {
     var normalizedByCore = this.normalizeUndoRestoreTileFromCore(createUndoRestoreTileCore.value || {});
     if (normalizedByCore) return normalizedByCore;
