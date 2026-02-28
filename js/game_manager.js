@@ -9346,8 +9346,12 @@ GameManager.prototype.pause = function () {
     this.applyReplayPauseState(pauseState);
 };
 
+GameManager.prototype.resolveReplayResumePausedValue = function (state) {
+    return !!state.isPaused ? true : false;
+};
+
 GameManager.prototype.applyReplayResumePausedState = function (state) {
-    this.isPaused = !!state.isPaused ? true : false;
+    this.isPaused = this.resolveReplayResumePausedValue(state);
 };
 
 GameManager.prototype.resolveReplayResumeDelay = function (state) {
@@ -9374,8 +9378,12 @@ GameManager.prototype.resume = function () {
     this.applyReplayResumeState(resumeState);
 };
 
+GameManager.prototype.resolveReplayDelayValue = function (state) {
+    return state.replayDelay;
+};
+
 GameManager.prototype.applyReplayDelayState = function (state) {
-    this.replayDelay = state.replayDelay;
+    this.replayDelay = this.resolveReplayDelayValue(state);
 };
 
 GameManager.prototype.applyReplaySpeedResumeState = function (state) {
