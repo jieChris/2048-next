@@ -6658,26 +6658,6 @@ GameManager.prototype.processMoveCell = function (cell, vector, undo) {
   return interaction.moved === true;
 };
 
-GameManager.prototype.scanMoveTraversalColumn = function (x, traversalY, vector, undo) {
-  var moved = false;
-  for (var yIndex = 0; yIndex < traversalY.length; yIndex++) {
-    var y = traversalY[yIndex];
-    if (this.processMoveCell({ x: x, y: y }, vector, undo)) {
-      moved = true;
-    }
-  }
-  return moved;
-};
-
-GameManager.prototype.scanMoveTraversals = function (traversals, vector, undo) {
-  var moved = false;
-  for (var xIndex = 0; xIndex < traversals.x.length; xIndex++) {
-    var x = traversals.x[xIndex];
-    moved = this.scanMoveTraversalColumn(x, traversals.y, vector, undo) || moved;
-  }
-  return moved;
-};
-
 GameManager.prototype.executeDirectionalMove = function (direction) {
   var movePlan = {
     vector: this.getVector(direction),
@@ -6689,7 +6669,16 @@ GameManager.prototype.executeDirectionalMove = function (direction) {
   // Save the current tile positions and remove merger information
   this.prepareTiles();
 
-  var moved = this.scanMoveTraversals(traversals, movePlan.vector, movePlan.undo);
+  var moved = false;
+  for (var xIndex = 0; xIndex < traversals.x.length; xIndex++) {
+    var x = traversals.x[xIndex];
+    for (var yIndex = 0; yIndex < traversals.y.length; yIndex++) {
+      var y = traversals.y[yIndex];
+      if (this.processMoveCell({ x: x, y: y }, movePlan.vector, movePlan.undo)) {
+        moved = true;
+      }
+    }
+  }
   if (!moved) return;
   this.applySuccessfulMove(direction, movePlan.scoreBeforeMove, movePlan.undo);
 };
