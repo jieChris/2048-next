@@ -8394,40 +8394,22 @@ GameManager.prototype.isNonEmptyStringValue = function (value) {
 };
 
 GameManager.prototype.applyJsonV3ReplayEnvelopeMeta = function (envelope, modeConfig) {
-  this.applyJsonV3ReplayModeConfigMeta(envelope, modeConfig);
-  this.applyJsonV3ReplayChallengeMeta(envelope);
-};
-
-GameManager.prototype.applyJsonV3ReplayModeFamilyMeta = function (envelope, modeConfig) {
-  if (!this.isNonEmptyStringValue(envelope.modeFamily)) return;
-  modeConfig.mode_family = envelope.modeFamily;
-};
-
-GameManager.prototype.applyJsonV3ReplayRankPolicyMeta = function (envelope, modeConfig) {
-  if (!this.isNonEmptyStringValue(envelope.rankPolicy)) return;
-  modeConfig.rank_policy = envelope.rankPolicy;
-};
-
-GameManager.prototype.applyJsonV3ReplayModeConfigMeta = function (envelope, modeConfig) {
-  this.applyJsonV3ReplaySpecialRulesMeta(envelope, modeConfig);
-  this.applyJsonV3ReplayModeFamilyMeta(envelope, modeConfig);
-  this.applyJsonV3ReplayRankPolicyMeta(envelope, modeConfig);
-};
-
-GameManager.prototype.resolveJsonV3ReplaySpecialRulesSnapshot = function (envelope) {
-  if (!envelope.specialRulesSnapshot || typeof envelope.specialRulesSnapshot !== "object") return null;
-  return this.clonePlain(envelope.specialRulesSnapshot);
-};
-
-GameManager.prototype.applyJsonV3ReplaySpecialRulesMeta = function (envelope, modeConfig) {
-  var specialRulesSnapshot = this.resolveJsonV3ReplaySpecialRulesSnapshot(envelope);
-  if (!specialRulesSnapshot) return;
-  modeConfig.special_rules = specialRulesSnapshot;
-};
-
-GameManager.prototype.applyJsonV3ReplayChallengeMeta = function (envelope) {
-  if (!this.isNonEmptyStringValue(envelope.challengeId)) return;
-  this.challengeId = envelope.challengeId;
+  var specialRulesSnapshot =
+    !envelope.specialRulesSnapshot || typeof envelope.specialRulesSnapshot !== "object"
+      ? null
+      : this.clonePlain(envelope.specialRulesSnapshot);
+  if (specialRulesSnapshot) {
+    modeConfig.special_rules = specialRulesSnapshot;
+  }
+  if (this.isNonEmptyStringValue(envelope.modeFamily)) {
+    modeConfig.mode_family = envelope.modeFamily;
+  }
+  if (this.isNonEmptyStringValue(envelope.rankPolicy)) {
+    modeConfig.rank_policy = envelope.rankPolicy;
+  }
+  if (this.isNonEmptyStringValue(envelope.challengeId)) {
+    this.challengeId = envelope.challengeId;
+  }
 };
 
 GameManager.prototype.applyReplayImportActions = function (payload) {
