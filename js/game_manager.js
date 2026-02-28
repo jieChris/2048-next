@@ -6293,99 +6293,6 @@ GameManager.prototype.handleMoveInput = function (direction) {
   this.dispatchMoveInputWithThrottle(direction, throttleMs);
 };
 
-GameManager.prototype.applyCorePostMoveScoreResult = function (scoreResult) {
-  if (Number.isFinite(scoreResult.score)) {
-    this.score = Number(scoreResult.score);
-  }
-  if (Number.isInteger(scoreResult.comboStreak) && scoreResult.comboStreak >= 0) {
-    this.comboStreak = scoreResult.comboStreak;
-  }
-};
-
-GameManager.prototype.applyFallbackPostMoveScore = function (scoreBeforeMove) {
-  var mergeGain = this.score - scoreBeforeMove;
-  if (mergeGain > 0) {
-    this.comboStreak += 1;
-    if (this.comboMultiplier > 1 && this.comboStreak > 1) {
-      var comboBonus = Math.floor(mergeGain * (this.comboMultiplier - 1) * (this.comboStreak - 1));
-      if (comboBonus > 0) {
-        this.score += comboBonus;
-      }
-    }
-    return;
-  }
-  this.comboStreak = 0;
-};
-
-GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
-  var computePostMoveScoreCore = this.callCoreScoringRuntime(
-    "computePostMoveScore",
-    [{
-      scoreBeforeMove: scoreBeforeMove,
-      scoreAfterMerge: this.score,
-      comboStreak: this.comboStreak,
-      comboMultiplier: this.comboMultiplier
-    }]
-  );
-  if (this.tryHandleCoreRawValue(computePostMoveScoreCore, function (coreValue) {
-    this.applyCorePostMoveScoreResult(coreValue || {});
-  })) {
-    return;
-  }
-  this.applyFallbackPostMoveScore(scoreBeforeMove);
-};
-
-GameManager.prototype.applyCorePostMoveLifecycleResult = function (postMoveResult, hasMovesAvailable) {
-  if (Number.isInteger(postMoveResult.successfulMoveCount) && postMoveResult.successfulMoveCount >= 0) {
-    this.successfulMoveCount = postMoveResult.successfulMoveCount;
-  } else {
-    this.successfulMoveCount += 1;
-  }
-  this.over = typeof postMoveResult.over === "boolean" ? postMoveResult.over : !hasMovesAvailable;
-  if (postMoveResult.shouldEndTime || this.over) {
-    this.endTime();
-  }
-  return {
-    postMoveResult: postMoveResult,
-    shouldStartTimer:
-      typeof postMoveResult.shouldStartTimer === "boolean"
-        ? postMoveResult.shouldStartTimer
-        : (this.timerStatus === 0 && !this.over)
-  };
-};
-
-GameManager.prototype.applyFallbackPostMoveLifecycle = function (hasMovesAvailable) {
-  this.successfulMoveCount += 1;
-  if (!hasMovesAvailable) {
-    this.over = true;
-    this.endTime();
-  }
-  return {
-    postMoveResult: null,
-    shouldStartTimer: this.timerStatus === 0 && !this.over
-  };
-};
-
-GameManager.prototype.applyPostMoveLifecycle = function (hasMovesAvailable) {
-  var computePostMoveLifecycleCore = this.callCorePostMoveRuntime(
-    "computePostMoveLifecycle",
-    [{
-      successfulMoveCount: this.successfulMoveCount,
-      hasMovesAvailable: hasMovesAvailable,
-      timerStatus: this.timerStatus
-    }]
-  );
-  return this.resolveNormalizedCoreValueOrFallback(
-    computePostMoveLifecycleCore,
-    function (coreValue) {
-      return this.applyCorePostMoveLifecycleResult(coreValue || {}, hasMovesAvailable);
-    },
-    function () {
-      return this.applyFallbackPostMoveLifecycle(hasMovesAvailable);
-    }
-  );
-};
-
 GameManager.prototype.applyMergeTimerStampEffects = function (timerIdsToStamp, timeStr) {
   for (var timerIndex = 0; timerIndex < timerIdsToStamp.length; timerIndex++) {
     var timerId = timerIdsToStamp[timerIndex];
@@ -6518,11 +6425,83 @@ GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove
   // IPS counts only effective move inputs (invalid directions are excluded).
   this.recordIpsInput();
 
-  this.applyPostMoveScore(scoreBeforeMove);
+  var computePostMoveScoreCore = this.callCoreScoringRuntime(
+    "computePostMoveScore",
+    [{
+      scoreBeforeMove: scoreBeforeMove,
+      scoreAfterMerge: this.score,
+      comboStreak: this.comboStreak,
+      comboMultiplier: this.comboMultiplier
+    }]
+  );
+  if (this.tryHandleCoreRawValue(computePostMoveScoreCore, function (coreValue) {
+    var scoreResult = coreValue || {};
+    if (Number.isFinite(scoreResult.score)) {
+      this.score = Number(scoreResult.score);
+    }
+    if (Number.isInteger(scoreResult.comboStreak) && scoreResult.comboStreak >= 0) {
+      this.comboStreak = scoreResult.comboStreak;
+    }
+  })) {
+    // handled by core
+  } else {
+    var mergeGain = this.score - scoreBeforeMove;
+    if (mergeGain > 0) {
+      this.comboStreak += 1;
+      if (this.comboMultiplier > 1 && this.comboStreak > 1) {
+        var comboBonus = Math.floor(mergeGain * (this.comboMultiplier - 1) * (this.comboStreak - 1));
+        if (comboBonus > 0) {
+          this.score += comboBonus;
+        }
+      }
+    } else {
+      this.comboStreak = 0;
+    }
+  }
 
   this.addRandomTile();
   var hasMovesAvailable = this.movesAvailable();
-  var postMoveLifecycle = this.applyPostMoveLifecycle(hasMovesAvailable);
+  var computePostMoveLifecycleCore = this.callCorePostMoveRuntime(
+    "computePostMoveLifecycle",
+    [{
+      successfulMoveCount: this.successfulMoveCount,
+      hasMovesAvailable: hasMovesAvailable,
+      timerStatus: this.timerStatus
+    }]
+  );
+  var postMoveLifecycle = this.resolveNormalizedCoreValueOrFallback(
+    computePostMoveLifecycleCore,
+    function (coreValue) {
+      var postMoveResult = coreValue || {};
+      if (Number.isInteger(postMoveResult.successfulMoveCount) && postMoveResult.successfulMoveCount >= 0) {
+        this.successfulMoveCount = postMoveResult.successfulMoveCount;
+      } else {
+        this.successfulMoveCount += 1;
+      }
+      this.over = typeof postMoveResult.over === "boolean" ? postMoveResult.over : !hasMovesAvailable;
+      if (postMoveResult.shouldEndTime || this.over) {
+        this.endTime();
+      }
+      return {
+        postMoveResult: postMoveResult,
+        shouldStartTimer:
+          typeof postMoveResult.shouldStartTimer === "boolean"
+            ? postMoveResult.shouldStartTimer
+            : (this.timerStatus === 0 && !this.over)
+      };
+    },
+    function () {
+      this.successfulMoveCount += 1;
+      if (!hasMovesAvailable) {
+        this.over = true;
+        this.endTime();
+      }
+      return {
+        postMoveResult: null,
+        shouldStartTimer: this.timerStatus === 0 && !this.over
+      };
+    }
+  );
   this.undoStack.push(this.normalizeUndoStackEntry(undo));
   var postMoveRecord = this.computePostMoveRecord(direction);
   if (postMoveRecord.shouldRecordMoveHistory) {
