@@ -1249,34 +1249,22 @@ GameManager.prototype.bindGameStatePersistenceEvents = function () {
   var windowLike = this.getWindowLike();
   if (!windowLike) return;
   if (this.savedGameStateBound) return;
-  var saveHandler = this.buildGameStatePersistenceSaveHandler();
-  this.registerGameStatePersistenceEvents(windowLike, saveHandler);
-  this.savedGameStateBound = true;
-};
-
-GameManager.prototype.buildGameStatePersistenceSaveHandler = function () {
   var self = this;
-  return function () {
+  var saveHandler = function () {
     self.saveGameState({ force: true });
   };
-};
-
-GameManager.prototype.registerGameStatePersistenceEvents = function (windowLike, saveHandler) {
   windowLike.addEventListener("beforeunload", saveHandler);
   windowLike.addEventListener("pagehide", saveHandler);
-};
-
-GameManager.prototype.resolveSavedGameStateStorageKeys = function (modeKey) {
-  return [
-    this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_KEY_PREFIX, modeKey),
-    this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX, modeKey)
-  ];
+  this.savedGameStateBound = true;
 };
 
 GameManager.prototype.clearSavedGameState = function (modeKey) {
   this.writeWindowNameSavedPayload(modeKey, null);
   if (!this.shouldUseSavedGameState()) return;
-  var keys = this.resolveSavedGameStateStorageKeys(modeKey);
+  var keys = [
+    this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_KEY_PREFIX, modeKey),
+    this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX, modeKey)
+  ];
   var stores = this.getSavedGameStateStorages();
   var removeKeysFromStoragesCore = this.callCoreStorageRuntime(
     "removeKeysFromStorages",
