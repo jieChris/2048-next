@@ -7110,34 +7110,14 @@ GameManager.prototype.resolveTimerUpdateIntervalMsFallback = function () {
   return 10;
 };
 
-GameManager.prototype.isStatsPanelOpen = function () {
-  var overlay = document.getElementById("stats-panel-overlay");
-  return !!(overlay && overlay.style.display !== "none");
-};
-
 GameManager.prototype.endTime = function() {
   this.stopTimer();
   this.updateTimerDisplayText(this.accumulatedTime);
 };
 
-GameManager.prototype.resolveTimerDisplayElement = function () {
-  return document.getElementById("timer");
-};
-
 GameManager.prototype.updateTimerDisplayText = function (elapsedMs) {
-  var timerEl = this.resolveTimerDisplayElement();
+  var timerEl = document.getElementById("timer");
   if (timerEl) timerEl.textContent = this.pretty(elapsedMs);
-};
-
-GameManager.prototype.shouldRefreshStatsPanelAtElapsed = function (elapsedMs) {
-  return !this.lastStatsPanelUpdateAt || (elapsedMs - this.lastStatsPanelUpdateAt) >= 100;
-};
-
-GameManager.prototype.refreshStatsPanelIfNeededAtElapsed = function (elapsedMs) {
-  if (!this.isStatsPanelOpen()) return;
-  if (!this.shouldRefreshStatsPanelAtElapsed(elapsedMs)) return;
-  this.updateStatsPanel();
-  this.lastStatsPanelUpdateAt = elapsedMs;
 };
 
 // Update the timer
@@ -7147,7 +7127,14 @@ GameManager.prototype.updateTimer = function() {
   this.time = time;
   this.updateTimerDisplayText(time);
   this.refreshIpsDisplay(time);
-  this.refreshStatsPanelIfNeededAtElapsed(time);
+  var overlay = document.getElementById("stats-panel-overlay");
+  if (overlay && overlay.style.display !== "none") {
+    var shouldRefreshStatsPanel = !this.lastStatsPanelUpdateAt || (time - this.lastStatsPanelUpdateAt) >= 100;
+    if (shouldRefreshStatsPanel) {
+      this.updateStatsPanel();
+      this.lastStatsPanelUpdateAt = time;
+    }
+  }
 };
 
 GameManager.prototype.stopTimer = function() {
