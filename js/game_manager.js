@@ -9113,9 +9113,13 @@ GameManager.prototype.executeReplayDispatchByMethod = function (executorMethodNa
   return this[executorMethodName](dispatchPlan);
 };
 
-GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
+GameManager.prototype.resolveReplayDispatchExecutorMethodFromPlan = function (dispatchPlan) {
   var dispatchMethod = this.resolveReplayDispatchMethodFromPlan(dispatchPlan);
-  var executorMethodName = this.resolveReplayDispatchExecutorMethodName(dispatchMethod);
+  return this.resolveReplayDispatchExecutorMethodName(dispatchMethod);
+};
+
+GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
+  var executorMethodName = this.resolveReplayDispatchExecutorMethodFromPlan(dispatchPlan);
   if (executorMethodName) return this.executeReplayDispatchByMethod(executorMethodName, dispatchPlan);
   this.throwUnknownReplayAction();
 };
