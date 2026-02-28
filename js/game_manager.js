@@ -362,7 +362,9 @@ GameManager.prototype.decodeBoardV4 = function (encoded) {
     "decodeBoardV4",
     this.buildDecodeBoardV4CoreArgs(encoded)
   );
-  return this.resolveCoreRawCallOrFallback(decodeBoardV4Core, function () {
+  return this.resolveNormalizedCoreValueOrFallback(decodeBoardV4Core, function (coreValue) {
+    return Array.isArray(coreValue) ? coreValue : undefined;
+  }, function () {
     if (typeof encoded !== "string" || encoded.length !== 16) throw "Invalid encoded board";
     var rows = [];
     var idx = 0;
@@ -728,7 +730,9 @@ GameManager.prototype.decodeLegacyReplay = function (trimmedReplayString) {
     "decodeLegacyReplay",
     this.buildDecodeLegacyReplayCoreArgs(trimmedReplayString)
   );
-  return this.resolveCoreRawCallOrFallback(decodeLegacyReplayCore, function () {
+  return this.resolveNormalizedCoreValueOrFallback(decodeLegacyReplayCore, function (coreValue) {
+    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
+  }, function () {
     return this.decodeLegacyReplayFallback(trimmedReplayString);
   });
 };
@@ -742,7 +746,9 @@ GameManager.prototype.resolveReplayExecution = function (action) {
     "resolveReplayExecution",
     this.buildResolveReplayExecutionCoreArgs(action)
   );
-  return this.resolveCoreRawCallOrFallback(resolveReplayExecutionCore, function () {
+  return this.resolveNormalizedCoreValueOrFallback(resolveReplayExecutionCore, function (coreValue) {
+    return this.isNonArrayObject(coreValue) ? coreValue : undefined;
+  }, function () {
     return this.resolveReplayExecutionFallback(action);
   });
 };
@@ -840,7 +846,10 @@ GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
     "normalizeReplaySeekTarget",
     this.buildNormalizeReplaySeekTargetCoreArgs(targetIndex)
   );
-  return this.resolveCoreRawCallOrFallback(normalizeReplaySeekTargetCore, function () {
+  return this.resolveNormalizedCoreValueOrFallback(normalizeReplaySeekTargetCore, function (coreValue) {
+    var resolved = Number(coreValue);
+    return Number.isFinite(resolved) ? resolved : undefined;
+  }, function () {
     return this.normalizeReplaySeekTargetFallback(targetIndex);
   });
 };
@@ -5435,7 +5444,10 @@ GameManager.prototype.pickSpawnValue = function () {
     "pickSpawnValue",
     this.buildPickSpawnValueCoreArgs()
   );
-  return this.resolveCoreRawCallOrFallback(pickSpawnValueCore, function () {
+  return this.resolveNormalizedCoreValueOrFallback(pickSpawnValueCore, function (coreValue) {
+    var value = Number(coreValue);
+    return Number.isInteger(value) && value > 0 ? value : undefined;
+  }, function () {
     var table = this.spawnTable || [];
     if (!table.length) return 2;
     var totalWeight = this.getSpawnTableTotalWeight(table);
@@ -5522,7 +5534,9 @@ GameManager.prototype.getTimerMilestoneValues = function () {
     "getTimerMilestoneValues",
     this.buildGetTimerMilestoneValuesCoreArgs()
   );
-  return this.resolveCoreRawCallOrFallback(getTimerMilestoneValuesCore, function () {
+  return this.resolveNormalizedCoreValueOrFallback(getTimerMilestoneValuesCore, function (coreValue) {
+    return Array.isArray(coreValue) ? coreValue : undefined;
+  }, function () {
     if (this.isFibonacciMode()) {
       // 13 slots mapped to Fibonacci milestones.
       return [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181];
@@ -5556,12 +5570,18 @@ GameManager.prototype.configureTimerMilestones = function () {
     "getTimerMilestoneSlotByValue",
     this.buildGetTimerMilestoneSlotByValueCoreArgs()
   );
-  this.timerMilestoneSlotByValue = this.resolveCoreRawCallOrFallback(getTimerMilestoneSlotByValueCore, function () {
-    return this.buildTimerMilestoneSlotMapFallback(
-      this.timerMilestones,
-      GameManager.TIMER_SLOT_IDS
-    );
-  });
+  this.timerMilestoneSlotByValue = this.resolveNormalizedCoreValueOrFallback(
+    getTimerMilestoneSlotByValueCore,
+    function (coreValue) {
+      return this.isNonArrayObject(coreValue) ? coreValue : undefined;
+    },
+    function () {
+      return this.buildTimerMilestoneSlotMapFallback(
+        this.timerMilestones,
+        GameManager.TIMER_SLOT_IDS
+      );
+    }
+  );
   this.updateTimerLegendLabels();
 };
 
@@ -8592,7 +8612,13 @@ GameManager.prototype.getVector = function (direction) {
     "getVector",
     this.buildGetVectorCoreArgs(direction)
   );
-  return this.resolveCoreRawCallOrFallback(getVectorCore, function () {
+  return this.resolveNormalizedCoreValueOrFallback(getVectorCore, function (coreValue) {
+    if (!this.isNonArrayObject(coreValue)) return undefined;
+    var x = Number(coreValue.x);
+    var y = Number(coreValue.y);
+    if (!Number.isInteger(x) || !Number.isInteger(y)) return undefined;
+    return { x: x, y: y };
+  }, function () {
     return this.getVectorFallback(direction);
   });
 };
