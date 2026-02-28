@@ -8430,84 +8430,44 @@ GameManager.prototype.applyJsonV3ReplayChallengeMeta = function (envelope) {
   this.challengeId = envelope.challengeId;
 };
 
-GameManager.prototype.normalizeReplayImportActionsSource = function (payload) {
-  return payload && typeof payload === "object" ? payload : {};
-};
-
-GameManager.prototype.applyReplayImportMoves = function (source) {
+GameManager.prototype.applyReplayImportActions = function (payload) {
+  var source = payload && typeof payload === "object" ? payload : {};
   this.replayMoves = Array.isArray(source.replayMoves) ? source.replayMoves : [];
-};
-
-GameManager.prototype.applyReplayImportSpawns = function (source) {
   if (this.hasOwnKey(source, "replaySpawns")) {
     this.replaySpawns = source.replaySpawns;
   }
-};
-
-GameManager.prototype.applyReplayImportCompactLog = function (source) {
   if (typeof source.replayMovesV2 === "string") {
     this.replayMovesV2 = source.replayMovesV2;
   }
 };
 
-GameManager.prototype.applyReplayImportActions = function (payload) {
-  var source = this.normalizeReplayImportActionsSource(payload);
-  this.applyReplayImportMoves(source);
-  this.applyReplayImportSpawns(source);
-  this.applyReplayImportCompactLog(source);
-};
-
-GameManager.prototype.resolveV4ReplayImportActionsPayload = function (decodedV4Actions) {
-  return {
-    replayMoves: decodedV4Actions ? decodedV4Actions.replayMoves : null,
-    replaySpawns: Array.isArray(decodedV4Actions && decodedV4Actions.replaySpawns)
-      ? decodedV4Actions.replaySpawns
-      : []
-  };
-};
-
-GameManager.prototype.applyV4ReplayDecodedActions = function (decodedV4Actions) {
-  this.applyReplayImportActions(this.resolveV4ReplayImportActionsPayload(decodedV4Actions));
-};
-
-GameManager.prototype.resolveLegacyReplayImportActionsPayload = function (decodedLegacy) {
-  return {
-    replayMovesV2: decodedLegacy ? decodedLegacy.replayMovesV2 : null,
-    replayMoves: decodedLegacy ? decodedLegacy.replayMoves : null,
-    replaySpawns: decodedLegacy ? decodedLegacy.replaySpawns : undefined
-  };
-};
-
-GameManager.prototype.applyLegacyReplayDecodedActions = function (decodedLegacy) {
-  this.applyReplayImportActions(this.resolveLegacyReplayImportActionsPayload(decodedLegacy));
-};
-
-GameManager.prototype.resolveJsonV3ReplayImportActionsPayload = function (envelope) {
-  return {
-    replayMoves: envelope ? envelope.actions : null,
-    replaySpawns: null
-  };
-};
-
-GameManager.prototype.applyJsonV3ReplayEnvelopeActions = function (envelope) {
-  this.applyReplayImportActions(this.resolveJsonV3ReplayImportActionsPayload(envelope));
-};
-
 GameManager.prototype.importJsonV3ReplayEnvelope = function (envelope, replayModeConfig) {
   this.applyJsonV3ReplayEnvelopeMeta(envelope, replayModeConfig);
-  this.applyJsonV3ReplayEnvelopeActions(envelope);
+  this.applyReplayImportActions({
+    replayMoves: envelope ? envelope.actions : null,
+    replaySpawns: null
+  });
   this.restartReplayImportSession(replayModeConfig, envelope.seed, false);
 };
 
 GameManager.prototype.importV4ReplayEnvelope = function (envelope, replayModeConfig) {
   var initialBoard = this.decodeBoardV4(envelope.initialBoardEncoded);
   var decodedV4Actions = this.decodeReplayV4Actions(envelope.actionsEncoded);
-  this.applyV4ReplayDecodedActions(decodedV4Actions);
+  this.applyReplayImportActions({
+    replayMoves: decodedV4Actions ? decodedV4Actions.replayMoves : null,
+    replaySpawns: Array.isArray(decodedV4Actions && decodedV4Actions.replaySpawns)
+      ? decodedV4Actions.replaySpawns
+      : []
+  });
   this.restartReplayImportSession(replayModeConfig, initialBoard, true);
 };
 
 GameManager.prototype.importLegacyReplayPayload = function (decodedLegacy) {
-  this.applyLegacyReplayDecodedActions(decodedLegacy);
+  this.applyReplayImportActions({
+    replayMovesV2: decodedLegacy ? decodedLegacy.replayMovesV2 : null,
+    replayMoves: decodedLegacy ? decodedLegacy.replayMoves : null,
+    replaySpawns: decodedLegacy ? decodedLegacy.replaySpawns : undefined
+  });
   this.restartLegacyReplayImportSession(decodedLegacy.seed);
 };
 
