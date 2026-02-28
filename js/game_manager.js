@@ -666,7 +666,7 @@ GameManager.prototype.resolveReplayExecutionFallback = function (action) {
       value: action[3]
     };
   }
-  this.throwUnknownReplayAction();
+  throw "Unknown replay action";
 };
 
 GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
@@ -688,7 +688,7 @@ GameManager.prototype.planReplayDispatchFallback = function (resolvedExecution) 
       args: [resolvedExecution.x, resolvedExecution.y, resolvedExecution.value]
     };
   }
-  this.throwUnknownReplayAction();
+  throw "Unknown replay action";
 };
 
 GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
@@ -8461,10 +8461,6 @@ GameManager.prototype.import = function (replayString) {
   }
 };
 
-GameManager.prototype.throwUnknownReplayAction = function () {
-  throw "Unknown replay action";
-};
-
 GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
   var dispatchMethod = dispatchPlan && dispatchPlan.method;
   var args = dispatchPlan && Array.isArray(dispatchPlan.args) ? dispatchPlan.args : [];
@@ -8474,7 +8470,7 @@ GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
   if (dispatchMethod === "insertCustomTile") {
     return this.insertCustomTile(args[0], args[1], args[2]);
   }
-  this.throwUnknownReplayAction();
+  throw "Unknown replay action";
 };
 
 GameManager.prototype.executePlannedReplayStep = function () {
