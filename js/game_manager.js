@@ -1177,10 +1177,15 @@ GameManager.prototype.resolveReplaySeekRestartCoreInput = function (rewindPlan) 
   };
 };
 
+GameManager.prototype.buildPlanReplaySeekRestartCoreArgs = function (rewindPlan) {
+  return [this.resolveReplaySeekRestartCoreInput(rewindPlan)];
+};
+
 GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
-  var planReplaySeekRestartCore = this.callCoreReplayFlowRuntime("planReplaySeekRestart", [
-    this.resolveReplaySeekRestartCoreInput(rewindPlan)
-  ]);
+  var planReplaySeekRestartCore = this.callCoreReplayFlowRuntime(
+    "planReplaySeekRestart",
+    this.buildPlanReplaySeekRestartCoreArgs(rewindPlan)
+  );
   if (planReplaySeekRestartCore.available) return planReplaySeekRestartCore.value || {};
   return this.planReplaySeekRestartFallback(rewindPlan);
 };
@@ -3030,8 +3035,15 @@ GameManager.prototype.appendCompactMoveCodeFallback = function (rawCode) {
   this.replayCompactLog += this.encodeReplay128(127) + this.encodeReplay128(0);
 };
 
+GameManager.prototype.buildAppendCompactUndoCoreArgs = function () {
+  return [this.replayCompactLog];
+};
+
 GameManager.prototype.appendCompactUndo = function () {
-  var appendCompactUndoCore = this.callCoreReplayCodecRuntime("appendCompactUndo", [this.replayCompactLog]);
+  var appendCompactUndoCore = this.callCoreReplayCodecRuntime(
+    "appendCompactUndo",
+    this.buildAppendCompactUndoCoreArgs()
+  );
   if (appendCompactUndoCore.available) {
     this.replayCompactLog = appendCompactUndoCore.value;
     return;
@@ -3121,6 +3133,10 @@ GameManager.prototype.resolveDetectedModeCoreInput = function () {
   };
 };
 
+GameManager.prototype.buildResolveDetectedModeCoreArgs = function () {
+  return [this.resolveDetectedModeCoreInput()];
+};
+
 GameManager.prototype.resolveDetectedModeBodyModeAttr = function () {
   if (typeof document === "undefined" || !document.body) return "";
   return document.body.getAttribute("data-mode-id") || "";
@@ -3159,9 +3175,10 @@ GameManager.prototype.detectModeFallback = function () {
 };
 
 GameManager.prototype.detectMode = function () {
-  var resolveDetectedModeCore = this.callCoreModeRuntime("resolveDetectedMode", [
-    this.resolveDetectedModeCoreInput()
-  ]);
+  var resolveDetectedModeCore = this.callCoreModeRuntime(
+    "resolveDetectedMode",
+    this.buildResolveDetectedModeCoreArgs()
+  );
   if (resolveDetectedModeCore.available) {
     var detectedByCore = resolveDetectedModeCore.value;
     if (typeof detectedByCore === "string" && detectedByCore) return detectedByCore;
