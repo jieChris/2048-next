@@ -3438,60 +3438,6 @@ GameManager.prototype.normalizeSpecialRules = function (rules) {
   });
 };
 
-GameManager.prototype.applyComputedSpecialRulesState = function (computed) {
-  var state = computed && typeof computed === "object" ? computed : {};
-  this.blockedCellSet = state.blockedCellSet && typeof state.blockedCellSet === "object"
-    ? state.blockedCellSet
-    : {};
-  this.blockedCellsList = Array.isArray(state.blockedCellsList) ? state.blockedCellsList : [];
-  this.undoLimit = (Number.isInteger(state.undoLimit) && state.undoLimit >= 0)
-    ? state.undoLimit
-    : null;
-  this.comboMultiplier = (Number.isFinite(state.comboMultiplier) && state.comboMultiplier > 1)
-    ? Number(state.comboMultiplier)
-    : 1;
-  this.directionLockRules = state.directionLockRules || null;
-};
-
-GameManager.prototype.parseSpecialRulesBlockedCellPoint = function (item) {
-  var x = null;
-  var y = null;
-  if (Array.isArray(item) && item.length >= 2) {
-    x = Number(item[0]);
-    y = Number(item[1]);
-  } else if (item && typeof item === "object") {
-    x = Number(item.x);
-    y = Number(item.y);
-  }
-  if (!Number.isInteger(x) || !Number.isInteger(y)) return null;
-  if (x < 0 || x >= this.width || y < 0 || y >= this.height) return null;
-  return { x: x, y: y };
-};
-
-GameManager.prototype.applySpecialRulesBlockedCellsFallback = function (blockedRaw) {
-  this.blockedCellSet = {};
-  this.blockedCellsList = [];
-  for (var i = 0; i < blockedRaw.length; i++) {
-    var point = this.parseSpecialRulesBlockedCellPoint(blockedRaw[i]);
-    if (!point) continue;
-    this.blockedCellSet[point.x + ":" + point.y] = true;
-    this.blockedCellsList.push(point);
-  }
-};
-
-GameManager.prototype.applySpecialRulesNumericFallback = function (rules) {
-  this.undoLimit = Number.isInteger(rules.undo_limit) && rules.undo_limit >= 0 ? rules.undo_limit : null;
-  this.comboMultiplier = Number.isFinite(rules.combo_multiplier) && rules.combo_multiplier > 1
-    ? Number(rules.combo_multiplier)
-    : 1;
-};
-
-GameManager.prototype.applySpecialRulesDirectionLockFallback = function (rules) {
-  this.directionLockRules = rules.direction_lock && typeof rules.direction_lock === "object"
-    ? this.clonePlain(rules.direction_lock)
-    : null;
-};
-
 GameManager.prototype.applySpecialRulesState = function () {
   var computeSpecialRulesStateCore = this.callCoreSpecialRulesRuntime(
     "computeSpecialRulesState",
@@ -3503,16 +3449,49 @@ GameManager.prototype.applySpecialRulesState = function () {
     ]
   );
   if (this.tryHandleCoreRawValue(computeSpecialRulesStateCore, function (coreValue) {
-    this.applyComputedSpecialRulesState(coreValue || {});
+    var state = coreValue && typeof coreValue === "object" ? coreValue : {};
+    this.blockedCellSet = state.blockedCellSet && typeof state.blockedCellSet === "object"
+      ? state.blockedCellSet
+      : {};
+    this.blockedCellsList = Array.isArray(state.blockedCellsList) ? state.blockedCellsList : [];
+    this.undoLimit = (Number.isInteger(state.undoLimit) && state.undoLimit >= 0)
+      ? state.undoLimit
+      : null;
+    this.comboMultiplier = (Number.isFinite(state.comboMultiplier) && state.comboMultiplier > 1)
+      ? Number(state.comboMultiplier)
+      : 1;
+    this.directionLockRules = state.directionLockRules || null;
   })) {
     return;
   }
 
   var rules = this.specialRules || {};
   var blockedRaw = Array.isArray(rules.blocked_cells) ? rules.blocked_cells : [];
-  this.applySpecialRulesBlockedCellsFallback(blockedRaw);
-  this.applySpecialRulesNumericFallback(rules);
-  this.applySpecialRulesDirectionLockFallback(rules);
+  this.blockedCellSet = {};
+  this.blockedCellsList = [];
+  for (var i = 0; i < blockedRaw.length; i++) {
+    var item = blockedRaw[i];
+    var x = null;
+    var y = null;
+    if (Array.isArray(item) && item.length >= 2) {
+      x = Number(item[0]);
+      y = Number(item[1]);
+    } else if (item && typeof item === "object") {
+      x = Number(item.x);
+      y = Number(item.y);
+    }
+    if (!Number.isInteger(x) || !Number.isInteger(y)) continue;
+    if (x < 0 || x >= this.width || y < 0 || y >= this.height) continue;
+    this.blockedCellSet[x + ":" + y] = true;
+    this.blockedCellsList.push({ x: x, y: y });
+  }
+  this.undoLimit = Number.isInteger(rules.undo_limit) && rules.undo_limit >= 0 ? rules.undo_limit : null;
+  this.comboMultiplier = Number.isFinite(rules.combo_multiplier) && rules.combo_multiplier > 1
+    ? Number(rules.combo_multiplier)
+    : 1;
+  this.directionLockRules = rules.direction_lock && typeof rules.direction_lock === "object"
+    ? this.clonePlain(rules.direction_lock)
+    : null;
 };
 
 GameManager.prototype.isBlockedCell = function (x, y) {
