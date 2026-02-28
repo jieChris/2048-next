@@ -683,42 +683,6 @@ GameManager.prototype.planReplayDispatch = function (resolvedExecution) {
   });
 };
 
-GameManager.prototype.planReplayStepExecution = function () {
-  var planReplayStepExecutionCore = this.callCoreReplayLoopRuntime(
-    "planReplayStepExecution",
-    [{
-      replayMoves: this.replayMoves,
-      replaySpawns: this.replaySpawns,
-      replayIndex: this.replayIndex
-    }]
-  );
-  return this.resolveCoreObjectCallOrFallback(planReplayStepExecutionCore, function () {
-    var action = this.replayMoves[this.replayIndex];
-    var spawnAtIndex = this.replaySpawns ? this.replaySpawns[this.replayIndex] : undefined;
-    var planReplayStepCore = this.callCoreReplayLifecycleRuntime(
-      "planReplayStep",
-      [{
-        action: action,
-        hasReplaySpawns: !!this.replaySpawns,
-        spawnAtIndex: spawnAtIndex
-      }]
-    );
-    var stepPlan = this.resolveCoreObjectCallOrFallback(planReplayStepCore, function () {
-      var shouldInjectForcedSpawn = !!this.replaySpawns && !Array.isArray(action);
-      return {
-        shouldInjectForcedSpawn: shouldInjectForcedSpawn,
-        forcedSpawn: shouldInjectForcedSpawn ? spawnAtIndex : undefined
-      };
-    });
-    return {
-      action: action,
-      shouldInjectForcedSpawn: !!stepPlan.shouldInjectForcedSpawn,
-      forcedSpawn: stepPlan.forcedSpawn,
-      nextReplayIndex: this.replayIndex + 1
-    };
-  });
-};
-
 GameManager.prototype.runReplayTick = function () {
   var shouldStopReplayAtTickCore = this.callCoreReplayTimerRuntime(
     "shouldStopReplayAtTick",
@@ -8360,7 +8324,39 @@ GameManager.prototype.import = function (replayString) {
 };
 
 GameManager.prototype.executePlannedReplayStep = function () {
-  var stepExecutionPlan = this.planReplayStepExecution();
+  var planReplayStepExecutionCore = this.callCoreReplayLoopRuntime(
+    "planReplayStepExecution",
+    [{
+      replayMoves: this.replayMoves,
+      replaySpawns: this.replaySpawns,
+      replayIndex: this.replayIndex
+    }]
+  );
+  var stepExecutionPlan = this.resolveCoreObjectCallOrFallback(planReplayStepExecutionCore, function () {
+    var action = this.replayMoves[this.replayIndex];
+    var spawnAtIndex = this.replaySpawns ? this.replaySpawns[this.replayIndex] : undefined;
+    var planReplayStepCore = this.callCoreReplayLifecycleRuntime(
+      "planReplayStep",
+      [{
+        action: action,
+        hasReplaySpawns: !!this.replaySpawns,
+        spawnAtIndex: spawnAtIndex
+      }]
+    );
+    var stepPlan = this.resolveCoreObjectCallOrFallback(planReplayStepCore, function () {
+      var shouldInjectForcedSpawn = !!this.replaySpawns && !Array.isArray(action);
+      return {
+        shouldInjectForcedSpawn: shouldInjectForcedSpawn,
+        forcedSpawn: shouldInjectForcedSpawn ? spawnAtIndex : undefined
+      };
+    });
+    return {
+      action: action,
+      shouldInjectForcedSpawn: !!stepPlan.shouldInjectForcedSpawn,
+      forcedSpawn: stepPlan.forcedSpawn,
+      nextReplayIndex: this.replayIndex + 1
+    };
+  });
   if (stepExecutionPlan.shouldInjectForcedSpawn) {
     this.forcedSpawn = stepExecutionPlan.forcedSpawn;
   }
