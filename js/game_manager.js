@@ -7339,27 +7339,15 @@ GameManager.prototype.applyInvalidatedTimerPlaceholders = function (elementIds) 
     }
 };
 
-GameManager.prototype.resolveTimerSlotIds = function () {
-    return GameManager.TIMER_SLOT_IDS;
-};
-
-GameManager.prototype.resolveTimerSlotElementId = function (slotId) {
-    return "timer" + slotId;
-};
-
-GameManager.prototype.shouldInvalidateTimerSlotAtLimit = function (milestoneValue, limit) {
-    return Number.isInteger(milestoneValue) && milestoneValue <= limit;
-};
-
 GameManager.prototype.resolveInvalidatedTimerSlotElementIds = function (limit) {
     var milestones = this.timerMilestones || this.getTimerMilestoneValues();
-    var timerSlots = this.resolveTimerSlotIds();
+    var timerSlots = GameManager.TIMER_SLOT_IDS;
     var elementIds = [];
     for (var i = 0; i < timerSlots.length; i++) {
         var milestoneValue = milestones[i];
         var slotId = timerSlots[i];
-        if (!this.shouldInvalidateTimerSlotAtLimit(milestoneValue, limit)) continue;
-        elementIds.push(this.resolveTimerSlotElementId(slotId));
+        if (!(Number.isInteger(milestoneValue) && milestoneValue <= limit)) continue;
+        elementIds.push("timer" + slotId);
     }
     return elementIds;
 };
