@@ -1555,28 +1555,6 @@ GameManager.prototype.restoreTimerRowsFromState = function (saved) {
   this.callWindowMethod("updateTimerScroll");
 };
 
-GameManager.prototype.selectPreferredSavedStateCandidate = function (currentBest, nextCandidate) {
-  if (!nextCandidate || typeof nextCandidate !== "object") return currentBest;
-  if (!currentBest || typeof currentBest !== "object") return nextCandidate;
-  var bestAt = this.resolveSavedStateSavedAt(currentBest);
-  var nextAt = this.resolveSavedStateSavedAt(nextCandidate);
-  // Keep the first candidate when timestamps are equal (full > lite > window).
-  // This avoids downgrading to lite/window snapshots that may omit replay history.
-  return nextAt > bestAt ? nextCandidate : currentBest;
-};
-
-GameManager.prototype.resolveSavedStateSavedAt = function (savedStateCandidate) {
-  return Number(savedStateCandidate.saved_at) || 0;
-};
-
-GameManager.prototype.resolveLatestSavedStateCandidate = function (candidates) {
-  var best = null;
-  for (var i = 0; i < candidates.length; i++) {
-    best = this.selectPreferredSavedStateCandidate(best, candidates[i]);
-  }
-  return best;
-};
-
 GameManager.prototype.createSavedStateRestorePrecheckResult = function (canRestore, shouldClearSavedState) {
   return {
     canRestore: !!canRestore,
@@ -1584,29 +1562,29 @@ GameManager.prototype.createSavedStateRestorePrecheckResult = function (canResto
   };
 };
 
-GameManager.prototype.hasValidSavedStateRestoreBase = function (saved) {
-  if (!saved || typeof saved !== "object") return false;
-  if (Number(saved.v) !== GameManager.SAVED_GAME_STATE_VERSION) return false;
-  if (!!saved.terminated) return false;
-  if (!!(saved.over || (saved.won && !saved.keep_playing)) && saved.mode_key !== "practice_legacy") return false;
-  return true;
-};
-
-GameManager.prototype.hasCompatibleSavedStateRestoreContext = function (saved) {
-  if (Number(saved.board_width) !== this.width || Number(saved.board_height) !== this.height) return false;
-  if (!!saved.ruleset && saved.ruleset !== this.ruleset) return false;
-  if (!Array.isArray(saved.board) || saved.board.length !== this.height) return false;
-  return true;
-};
-
 GameManager.prototype.resolveSavedStateRestorePrecheck = function (saved) {
-  if (!this.hasValidSavedStateRestoreBase(saved)) {
+  if (!saved || typeof saved !== "object") {
+    return this.createSavedStateRestorePrecheckResult(false, true);
+  }
+  if (Number(saved.v) !== GameManager.SAVED_GAME_STATE_VERSION) {
+    return this.createSavedStateRestorePrecheckResult(false, true);
+  }
+  if (!!saved.terminated) {
+    return this.createSavedStateRestorePrecheckResult(false, true);
+  }
+  if (!!(saved.over || (saved.won && !saved.keep_playing)) && saved.mode_key !== "practice_legacy") {
     return this.createSavedStateRestorePrecheckResult(false, true);
   }
   if (saved.mode_key !== this.modeKey) {
     return this.createSavedStateRestorePrecheckResult(false, false);
   }
-  if (!this.hasCompatibleSavedStateRestoreContext(saved)) {
+  if (Number(saved.board_width) !== this.width || Number(saved.board_height) !== this.height) {
+    return this.createSavedStateRestorePrecheckResult(false, true);
+  }
+  if (!!saved.ruleset && saved.ruleset !== this.ruleset) {
+    return this.createSavedStateRestorePrecheckResult(false, true);
+  }
+  if (!Array.isArray(saved.board) || saved.board.length !== this.height) {
     return this.createSavedStateRestorePrecheckResult(false, true);
   }
   return this.createSavedStateRestorePrecheckResult(true, false);
@@ -1770,25 +1748,30 @@ GameManager.prototype.tryApplyRestoredSavedBoard = function (saved) {
   }
 };
 
-GameManager.prototype.resolveSavedStateCandidatesForCurrentMode = function () {
-  return [
+GameManager.prototype.resolveRestorableSavedState = function () {
+  var candidates = [
     this.readSavedPayloadByKey(this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_KEY_PREFIX)),
     this.readSavedPayloadByKey(this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX)),
     this.readWindowNameSavedPayload(this.modeKey)
   ];
-};
-
-GameManager.prototype.handleSavedStateRestorePrecheckFailure = function (precheck) {
-  if (precheck && precheck.shouldClearSavedState) this.clearSavedGameState();
-  return false;
-};
-
-GameManager.prototype.resolveRestorableSavedState = function () {
-  var saved = this.resolveLatestSavedStateCandidate(this.resolveSavedStateCandidatesForCurrentMode());
+  var saved = null;
+  for (var i = 0; i < candidates.length; i++) {
+    var nextCandidate = candidates[i];
+    if (!nextCandidate || typeof nextCandidate !== "object") continue;
+    if (!saved || typeof saved !== "object") {
+      saved = nextCandidate;
+      continue;
+    }
+    var bestAt = Number(saved.saved_at) || 0;
+    var nextAt = Number(nextCandidate.saved_at) || 0;
+    // Keep the first candidate when timestamps are equal (full > lite > window).
+    // This avoids downgrading to lite/window snapshots that may omit replay history.
+    if (nextAt > bestAt) saved = nextCandidate;
+  }
   if (!saved) return null;
   var precheck = this.resolveSavedStateRestorePrecheck(saved);
   if (!precheck.canRestore) {
-    this.handleSavedStateRestorePrecheckFailure(precheck);
+    if (precheck.shouldClearSavedState) this.clearSavedGameState();
     return null;
   }
   return saved;
