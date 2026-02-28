@@ -9106,8 +9106,12 @@ GameManager.prototype.tryImportReplayByMethodName = function (trimmedReplayStrin
   return !!tryImportMethod.call(this, trimmedReplayString);
 };
 
+GameManager.prototype.normalizeReplayImportMethodNames = function (methodNames) {
+  return Array.isArray(methodNames) ? methodNames : [];
+};
+
 GameManager.prototype.tryImportReplayByMethodNames = function (trimmedReplayString, methodNames) {
-  var names = Array.isArray(methodNames) ? methodNames : [];
+  var names = this.normalizeReplayImportMethodNames(methodNames);
   for (var i = 0; i < names.length; i++) {
     if (this.tryImportReplayByMethodName(trimmedReplayString, names[i])) return true;
   }
