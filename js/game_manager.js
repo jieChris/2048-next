@@ -6577,55 +6577,6 @@ GameManager.prototype.handleUndoMove = function (direction) {
   this.publishMovedAdapterResult("undo", direction);
 };
 
-GameManager.prototype.resolvePostMoveSessionAction = function (postMoveRecord, direction) {
-  return Array.isArray(postMoveRecord.sessionAction)
-    ? postMoveRecord.sessionAction
-    : ["m", direction];
-};
-
-GameManager.prototype.tryPushPostMoveSessionAction = function (postMoveRecord, direction) {
-  if (!(postMoveRecord.shouldPushSessionAction && this.sessionReplayV3)) return;
-  this.sessionReplayV3.actions.push(this.resolvePostMoveSessionAction(postMoveRecord, direction));
-};
-
-GameManager.prototype.applyPostMoveRecord = function (direction, postMoveRecord) {
-  if (postMoveRecord.shouldRecordMoveHistory) {
-    this.moveHistory.push(direction);
-  }
-  if (Number.isInteger(postMoveRecord.compactMoveCode)) {
-    this.appendCompactMoveCode(postMoveRecord.compactMoveCode);
-  }
-  this.tryPushPostMoveSessionAction(postMoveRecord, direction);
-  if (postMoveRecord.shouldResetLastSpawn) {
-    this.lastSpawn = null;
-  }
-};
-
-GameManager.prototype.savePostMoveState = function (direction, undo) {
-  this.undoStack.push(this.normalizeUndoStackEntry(undo));
-  var postMoveRecord = this.computePostMoveRecord(direction);
-  this.applyPostMoveRecord(direction, postMoveRecord);
-};
-
-GameManager.prototype.shouldStartTimerAfterMove = function (postMoveLifecycle) {
-  return !!(postMoveLifecycle && postMoveLifecycle.shouldStartTimer);
-};
-
-GameManager.prototype.publishMoveCompletion = function (direction, postMoveLifecycle) {
-  this.actuate();
-  if (this.shouldStartTimerAfterMove(postMoveLifecycle)) {
-    this.startTimer();
-  }
-  this.publishMovedAdapterResult("move", direction);
-};
-
-GameManager.prototype.finalizeSuccessfulMoveLifecycle = function (direction, undo) {
-  var hasMovesAvailable = this.movesAvailable();
-  var postMoveLifecycle = this.applyPostMoveLifecycle(hasMovesAvailable);
-  this.savePostMoveState(direction, undo);
-  this.publishMoveCompletion(direction, postMoveLifecycle);
-};
-
 GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove, undo) {
   // IPS counts only effective move inputs (invalid directions are excluded).
   this.recordIpsInput();
@@ -6633,7 +6584,31 @@ GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove
   this.applyPostMoveScore(scoreBeforeMove);
 
   this.addRandomTile();
-  this.finalizeSuccessfulMoveLifecycle(direction, undo);
+  var hasMovesAvailable = this.movesAvailable();
+  var postMoveLifecycle = this.applyPostMoveLifecycle(hasMovesAvailable);
+  this.undoStack.push(this.normalizeUndoStackEntry(undo));
+  var postMoveRecord = this.computePostMoveRecord(direction);
+  if (postMoveRecord.shouldRecordMoveHistory) {
+    this.moveHistory.push(direction);
+  }
+  if (Number.isInteger(postMoveRecord.compactMoveCode)) {
+    this.appendCompactMoveCode(postMoveRecord.compactMoveCode);
+  }
+  if (postMoveRecord.shouldPushSessionAction && this.sessionReplayV3) {
+    this.sessionReplayV3.actions.push(
+      Array.isArray(postMoveRecord.sessionAction)
+        ? postMoveRecord.sessionAction
+        : ["m", direction]
+    );
+  }
+  if (postMoveRecord.shouldResetLastSpawn) {
+    this.lastSpawn = null;
+  }
+  this.actuate();
+  if (postMoveLifecycle && postMoveLifecycle.shouldStartTimer) {
+    this.startTimer();
+  }
+  this.publishMovedAdapterResult("move", direction);
 };
 
 GameManager.prototype.shouldAbortForLockedDirection = function (direction, lockedDirection) {
