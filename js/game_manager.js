@@ -2932,11 +2932,18 @@ GameManager.prototype.shouldSkipSaveGameStateByThrottle = function (options, now
   return !options.force && this.lastSavedGameStateAt && now - this.lastSavedGameStateAt < 150;
 };
 
+GameManager.prototype.buildAppendCompactMoveCodeCoreArgs = function (rawCode) {
+  return [{
+    log: this.replayCompactLog,
+    rawCode: rawCode
+  }];
+};
+
 GameManager.prototype.appendCompactMoveCode = function (rawCode) {
-  var appendCompactMoveCodeCore = this.callCoreReplayCodecRuntime("appendCompactMoveCode", [{
-      log: this.replayCompactLog,
-      rawCode: rawCode
-    }]);
+  var appendCompactMoveCodeCore = this.callCoreReplayCodecRuntime(
+    "appendCompactMoveCode",
+    this.buildAppendCompactMoveCodeCoreArgs(rawCode)
+  );
   if (appendCompactMoveCodeCore.available) {
     this.replayCompactLog = appendCompactMoveCodeCore.value;
     return;
@@ -2966,15 +2973,22 @@ GameManager.prototype.appendCompactUndoFallback = function () {
   this.replayCompactLog += this.encodeReplay128(127) + this.encodeReplay128(1);
 };
 
+GameManager.prototype.buildAppendCompactPracticeActionCoreArgs = function (x, y, value) {
+  return [{
+    log: this.replayCompactLog,
+    width: this.width,
+    height: this.height,
+    x: x,
+    y: y,
+    value: value
+  }];
+};
+
 GameManager.prototype.appendCompactPracticeAction = function (x, y, value) {
-  var appendCompactPracticeActionCore = this.callCoreReplayCodecRuntime("appendCompactPracticeAction", [{
-      log: this.replayCompactLog,
-      width: this.width,
-      height: this.height,
-      x: x,
-      y: y,
-      value: value
-    }]);
+  var appendCompactPracticeActionCore = this.callCoreReplayCodecRuntime(
+    "appendCompactPracticeAction",
+    this.buildAppendCompactPracticeActionCoreArgs(x, y, value)
+  );
   if (appendCompactPracticeActionCore.available) {
     this.replayCompactLog = appendCompactPracticeActionCore.value;
     return;
