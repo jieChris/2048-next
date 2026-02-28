@@ -1312,57 +1312,196 @@ function registerCoreRuntimeCaller(methodName, resolverMethodName) {
   };
 }
 
-function registerGameManagerMethodPairs(pairDefs, pairRegistrar) {
-  if (!Array.isArray(pairDefs)) return;
-  if (typeof pairRegistrar !== "function") return;
-  for (var index = 0; index < pairDefs.length; index++) {
-    var pair = pairDefs[index];
-    if (!Array.isArray(pair) || pair.length < 2) continue;
-    pairRegistrar(pair[0], pair[1]);
-  }
-}
-
-var GAME_MANAGER_CORE_RUNTIME_CALLERS = [
-  ["callCoreStorageRuntime", "resolveCoreStorageRuntimeMethod"],
-  ["callCoreModeRuntime", "resolveCoreModeRuntimeMethod"],
-  ["callCoreRulesRuntime", "resolveCoreRulesRuntimeMethod"],
-  ["callCoreReplayCodecRuntime", "resolveCoreReplayCodecRuntimeMethod"],
-  ["callCoreReplayV4ActionsRuntime", "resolveCoreReplayV4ActionsRuntimeMethod"],
-  ["callCoreReplayImportRuntime", "resolveCoreReplayImportRuntimeMethod"],
-  ["callCoreReplayExecutionRuntime", "resolveCoreReplayExecutionRuntimeMethod"],
-  ["callCoreReplayDispatchRuntime", "resolveCoreReplayDispatchRuntimeMethod"],
-  ["callCoreReplayLifecycleRuntime", "resolveCoreReplayLifecycleRuntimeMethod"],
-  ["callCoreReplayTimerRuntime", "resolveCoreReplayTimerRuntimeMethod"],
-  ["callCoreReplayFlowRuntime", "resolveCoreReplayFlowRuntimeMethod"],
-  ["callCoreReplayControlRuntime", "resolveCoreReplayControlRuntimeMethod"],
-  ["callCoreReplayLoopRuntime", "resolveCoreReplayLoopRuntimeMethod"],
-  ["callCoreReplayLegacyRuntime", "resolveCoreReplayLegacyRuntimeMethod"],
-  ["callCoreMoveApplyRuntime", "resolveCoreMoveApplyRuntimeMethod"],
-  ["callCorePostMoveRecordRuntime", "resolveCorePostMoveRecordRuntimeMethod"],
-  ["callCorePostUndoRecordRuntime", "resolveCorePostUndoRecordRuntimeMethod"],
-  ["callCoreUndoRestoreRuntime", "resolveCoreUndoRestoreRuntimeMethod"],
-  ["callCoreUndoSnapshotRuntime", "resolveCoreUndoSnapshotRuntimeMethod"],
-  ["callCoreUndoStackEntryRuntime", "resolveCoreUndoStackEntryRuntimeMethod"],
-  ["callCoreUndoTileSnapshotRuntime", "resolveCoreUndoTileSnapshotRuntimeMethod"],
-  ["callCoreUndoTileRestoreRuntime", "resolveCoreUndoTileRestoreRuntimeMethod"],
-  ["callCoreUndoRestorePayloadRuntime", "resolveCoreUndoRestorePayloadRuntimeMethod"],
-  ["callCoreMergeEffectsRuntime", "resolveCoreMergeEffectsRuntimeMethod"],
-  ["callCoreSpecialRulesRuntime", "resolveCoreSpecialRulesRuntimeMethod"],
-  ["callCoreGridScanRuntime", "resolveCoreGridScanRuntimeMethod"],
-  ["callCoreDirectionLockRuntime", "resolveCoreDirectionLockRuntimeMethod"],
-  ["callCoreScoringRuntime", "resolveCoreScoringRuntimeMethod"],
-  ["callCorePostMoveRuntime", "resolveCorePostMoveRuntimeMethod"],
-  ["callCorePrettyTimeRuntime", "resolveCorePrettyTimeRuntimeMethod"],
-  ["callCoreMovePathRuntime", "resolveCoreMovePathRuntimeMethod"],
-  ["callCoreMoveScanRuntime", "resolveCoreMoveScanRuntimeMethod"],
-  ["callCoreTimerIntervalRuntime", "resolveCoreTimerIntervalRuntimeMethod"]
+var GAME_MANAGER_CORE_RUNTIME_ACCESSOR_DEFS = [
+  [
+    "callCoreStorageRuntime",
+    "resolveCoreStorageRuntimeMethod",
+    "getCoreGameSettingsStorageRuntime",
+    "CoreGameSettingsStorageRuntime"
+  ],
+  ["callCoreModeRuntime", "resolveCoreModeRuntimeMethod", "getCoreModeRuntime", "CoreModeRuntime"],
+  ["callCoreRulesRuntime", "resolveCoreRulesRuntimeMethod", "getCoreRulesRuntime", "CoreRulesRuntime"],
+  [
+    "callCoreReplayCodecRuntime",
+    "resolveCoreReplayCodecRuntimeMethod",
+    "getCoreReplayCodecRuntime",
+    "CoreReplayCodecRuntime"
+  ],
+  [
+    "callCoreReplayV4ActionsRuntime",
+    "resolveCoreReplayV4ActionsRuntimeMethod",
+    "getCoreReplayV4ActionsRuntime",
+    "CoreReplayV4ActionsRuntime"
+  ],
+  [
+    "callCoreReplayImportRuntime",
+    "resolveCoreReplayImportRuntimeMethod",
+    "getCoreReplayImportRuntime",
+    "CoreReplayImportRuntime"
+  ],
+  [
+    "callCoreReplayExecutionRuntime",
+    "resolveCoreReplayExecutionRuntimeMethod",
+    "getCoreReplayExecutionRuntime",
+    "CoreReplayExecutionRuntime"
+  ],
+  [
+    "callCoreReplayDispatchRuntime",
+    "resolveCoreReplayDispatchRuntimeMethod",
+    "getCoreReplayDispatchRuntime",
+    "CoreReplayDispatchRuntime"
+  ],
+  [
+    "callCoreReplayLifecycleRuntime",
+    "resolveCoreReplayLifecycleRuntimeMethod",
+    "getCoreReplayLifecycleRuntime",
+    "CoreReplayLifecycleRuntime"
+  ],
+  [
+    "callCoreReplayTimerRuntime",
+    "resolveCoreReplayTimerRuntimeMethod",
+    "getCoreReplayTimerRuntime",
+    "CoreReplayTimerRuntime"
+  ],
+  [
+    "callCoreReplayFlowRuntime",
+    "resolveCoreReplayFlowRuntimeMethod",
+    "getCoreReplayFlowRuntime",
+    "CoreReplayFlowRuntime"
+  ],
+  [
+    "callCoreReplayControlRuntime",
+    "resolveCoreReplayControlRuntimeMethod",
+    "getCoreReplayControlRuntime",
+    "CoreReplayControlRuntime"
+  ],
+  [
+    "callCoreReplayLoopRuntime",
+    "resolveCoreReplayLoopRuntimeMethod",
+    "getCoreReplayLoopRuntime",
+    "CoreReplayLoopRuntime"
+  ],
+  [
+    "callCoreReplayLegacyRuntime",
+    "resolveCoreReplayLegacyRuntimeMethod",
+    "getCoreReplayLegacyRuntime",
+    "CoreReplayLegacyRuntime"
+  ],
+  [
+    "callCoreMoveApplyRuntime",
+    "resolveCoreMoveApplyRuntimeMethod",
+    "getCoreMoveApplyRuntime",
+    "CoreMoveApplyRuntime"
+  ],
+  [
+    "callCorePostMoveRecordRuntime",
+    "resolveCorePostMoveRecordRuntimeMethod",
+    "getCorePostMoveRecordRuntime",
+    "CorePostMoveRecordRuntime"
+  ],
+  [
+    "callCorePostUndoRecordRuntime",
+    "resolveCorePostUndoRecordRuntimeMethod",
+    "getCorePostUndoRecordRuntime",
+    "CorePostUndoRecordRuntime"
+  ],
+  [
+    "callCoreUndoRestoreRuntime",
+    "resolveCoreUndoRestoreRuntimeMethod",
+    "getCoreUndoRestoreRuntime",
+    "CoreUndoRestoreRuntime"
+  ],
+  [
+    "callCoreUndoSnapshotRuntime",
+    "resolveCoreUndoSnapshotRuntimeMethod",
+    "getCoreUndoSnapshotRuntime",
+    "CoreUndoSnapshotRuntime"
+  ],
+  [
+    "callCoreUndoStackEntryRuntime",
+    "resolveCoreUndoStackEntryRuntimeMethod",
+    "getCoreUndoStackEntryRuntime",
+    "CoreUndoStackEntryRuntime"
+  ],
+  [
+    "callCoreUndoTileSnapshotRuntime",
+    "resolveCoreUndoTileSnapshotRuntimeMethod",
+    "getCoreUndoTileSnapshotRuntime",
+    "CoreUndoTileSnapshotRuntime"
+  ],
+  [
+    "callCoreUndoTileRestoreRuntime",
+    "resolveCoreUndoTileRestoreRuntimeMethod",
+    "getCoreUndoTileRestoreRuntime",
+    "CoreUndoTileRestoreRuntime"
+  ],
+  [
+    "callCoreUndoRestorePayloadRuntime",
+    "resolveCoreUndoRestorePayloadRuntimeMethod",
+    "getCoreUndoRestorePayloadRuntime",
+    "CoreUndoRestorePayloadRuntime"
+  ],
+  [
+    "callCoreMergeEffectsRuntime",
+    "resolveCoreMergeEffectsRuntimeMethod",
+    "getCoreMergeEffectsRuntime",
+    "CoreMergeEffectsRuntime"
+  ],
+  [
+    "callCoreSpecialRulesRuntime",
+    "resolveCoreSpecialRulesRuntimeMethod",
+    "getCoreSpecialRulesRuntime",
+    "CoreSpecialRulesRuntime"
+  ],
+  [
+    "callCoreGridScanRuntime",
+    "resolveCoreGridScanRuntimeMethod",
+    "getCoreGridScanRuntime",
+    "CoreGridScanRuntime"
+  ],
+  [
+    "callCoreDirectionLockRuntime",
+    "resolveCoreDirectionLockRuntimeMethod",
+    "getCoreDirectionLockRuntime",
+    "CoreDirectionLockRuntime"
+  ],
+  [
+    "callCoreScoringRuntime",
+    "resolveCoreScoringRuntimeMethod",
+    "getCoreScoringRuntime",
+    "CoreScoringRuntime"
+  ],
+  [
+    "callCorePostMoveRuntime",
+    "resolveCorePostMoveRuntimeMethod",
+    "getCorePostMoveRuntime",
+    "CorePostMoveRuntime"
+  ],
+  [
+    "callCorePrettyTimeRuntime",
+    "resolveCorePrettyTimeRuntimeMethod",
+    "getCorePrettyTimeRuntime",
+    "CorePrettyTimeRuntime"
+  ],
+  [
+    "callCoreMovePathRuntime",
+    "resolveCoreMovePathRuntimeMethod",
+    "getCoreMovePathRuntime",
+    "CoreMovePathRuntime"
+  ],
+  [
+    "callCoreMoveScanRuntime",
+    "resolveCoreMoveScanRuntimeMethod",
+    "getCoreMoveScanRuntime",
+    "CoreMoveScanRuntime"
+  ],
+  [
+    "callCoreTimerIntervalRuntime",
+    "resolveCoreTimerIntervalRuntimeMethod",
+    "getCoreTimerIntervalRuntime",
+    "CoreTimerIntervalRuntime"
+  ]
 ];
-
-function registerCoreRuntimeCallers(callerDefs) {
-  registerGameManagerMethodPairs(callerDefs, registerCoreRuntimeCaller);
-}
-
-registerCoreRuntimeCallers(GAME_MANAGER_CORE_RUNTIME_CALLERS);
 
 GameManager.prototype.buildResolveSavedGameStateStorageKeyCoreArgs = function (keyPrefix, modeKey) {
   return [{
@@ -3517,94 +3656,32 @@ function registerCoreRuntimeMethodResolver(methodName, runtimeGetterName) {
   };
 }
 
-var GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS = [
-  ["resolveCoreModeRuntimeMethod", "getCoreModeRuntime"],
-  ["resolveCoreRulesRuntimeMethod", "getCoreRulesRuntime"],
-  ["resolveCoreGridScanRuntimeMethod", "getCoreGridScanRuntime"],
-  ["resolveCoreMoveScanRuntimeMethod", "getCoreMoveScanRuntime"],
-  ["resolveCoreMovePathRuntimeMethod", "getCoreMovePathRuntime"],
-  ["resolveCoreScoringRuntimeMethod", "getCoreScoringRuntime"],
-  ["resolveCoreMoveApplyRuntimeMethod", "getCoreMoveApplyRuntime"],
-  ["resolveCoreUndoSnapshotRuntimeMethod", "getCoreUndoSnapshotRuntime"],
-  ["resolveCorePostMoveRecordRuntimeMethod", "getCorePostMoveRecordRuntime"],
-  ["resolveCorePostUndoRecordRuntimeMethod", "getCorePostUndoRecordRuntime"],
-  ["resolveCoreUndoRestoreRuntimeMethod", "getCoreUndoRestoreRuntime"],
-  ["resolveCoreUndoStackEntryRuntimeMethod", "getCoreUndoStackEntryRuntime"],
-  ["resolveCoreUndoTileSnapshotRuntimeMethod", "getCoreUndoTileSnapshotRuntime"],
-  ["resolveCoreUndoTileRestoreRuntimeMethod", "getCoreUndoTileRestoreRuntime"],
-  ["resolveCoreUndoRestorePayloadRuntimeMethod", "getCoreUndoRestorePayloadRuntime"],
-  ["resolveCoreMergeEffectsRuntimeMethod", "getCoreMergeEffectsRuntime"],
-  ["resolveCoreSpecialRulesRuntimeMethod", "getCoreSpecialRulesRuntime"],
-  ["resolveCoreDirectionLockRuntimeMethod", "getCoreDirectionLockRuntime"],
-  ["resolveCorePostMoveRuntimeMethod", "getCorePostMoveRuntime"],
-  ["resolveCoreTimerIntervalRuntimeMethod", "getCoreTimerIntervalRuntime"],
-  ["resolveCorePrettyTimeRuntimeMethod", "getCorePrettyTimeRuntime"],
-  ["resolveCoreStorageRuntimeMethod", "getCoreGameSettingsStorageRuntime"],
-  ["resolveCoreReplayCodecRuntimeMethod", "getCoreReplayCodecRuntime"],
-  ["resolveCoreReplayV4ActionsRuntimeMethod", "getCoreReplayV4ActionsRuntime"],
-  ["resolveCoreReplayImportRuntimeMethod", "getCoreReplayImportRuntime"],
-  ["resolveCoreReplayExecutionRuntimeMethod", "getCoreReplayExecutionRuntime"],
-  ["resolveCoreReplayDispatchRuntimeMethod", "getCoreReplayDispatchRuntime"],
-  ["resolveCoreReplayLifecycleRuntimeMethod", "getCoreReplayLifecycleRuntime"],
-  ["resolveCoreReplayTimerRuntimeMethod", "getCoreReplayTimerRuntime"],
-  ["resolveCoreReplayFlowRuntimeMethod", "getCoreReplayFlowRuntime"],
-  ["resolveCoreReplayControlRuntimeMethod", "getCoreReplayControlRuntime"],
-  ["resolveCoreReplayLoopRuntimeMethod", "getCoreReplayLoopRuntime"],
-  ["resolveCoreReplayLegacyRuntimeMethod", "getCoreReplayLegacyRuntime"]
-];
-
-function registerCoreRuntimeMethodResolvers(resolverDefs) {
-  registerGameManagerMethodPairs(resolverDefs, registerCoreRuntimeMethodResolver);
-}
-
 function registerCoreRuntimeGetter(methodName, runtimeName) {
   GameManager.prototype[methodName] = function () {
     return this.getCoreRuntimeByName(runtimeName);
   };
 }
 
-var GAME_MANAGER_CORE_RUNTIME_GETTERS = [
-  ["getCoreRulesRuntime", "CoreRulesRuntime"],
-  ["getCoreModeRuntime", "CoreModeRuntime"],
-  ["getCoreSpecialRulesRuntime", "CoreSpecialRulesRuntime"],
-  ["getCoreDirectionLockRuntime", "CoreDirectionLockRuntime"],
-  ["getCoreGridScanRuntime", "CoreGridScanRuntime"],
-  ["getCoreMoveScanRuntime", "CoreMoveScanRuntime"],
-  ["getCoreMovePathRuntime", "CoreMovePathRuntime"],
-  ["getCoreScoringRuntime", "CoreScoringRuntime"],
-  ["getCoreMergeEffectsRuntime", "CoreMergeEffectsRuntime"],
-  ["getCorePostMoveRuntime", "CorePostMoveRuntime"],
-  ["getCoreMoveApplyRuntime", "CoreMoveApplyRuntime"],
-  ["getCorePostMoveRecordRuntime", "CorePostMoveRecordRuntime"],
-  ["getCorePostUndoRecordRuntime", "CorePostUndoRecordRuntime"],
-  ["getCoreUndoRestoreRuntime", "CoreUndoRestoreRuntime"],
-  ["getCoreUndoSnapshotRuntime", "CoreUndoSnapshotRuntime"],
-  ["getCoreUndoTileSnapshotRuntime", "CoreUndoTileSnapshotRuntime"],
-  ["getCoreUndoTileRestoreRuntime", "CoreUndoTileRestoreRuntime"],
-  ["getCoreUndoRestorePayloadRuntime", "CoreUndoRestorePayloadRuntime"],
-  ["getCoreUndoStackEntryRuntime", "CoreUndoStackEntryRuntime"],
-  ["getCoreGameSettingsStorageRuntime", "CoreGameSettingsStorageRuntime"],
-  ["getCoreTimerIntervalRuntime", "CoreTimerIntervalRuntime"],
-  ["getCorePrettyTimeRuntime", "CorePrettyTimeRuntime"],
-  ["getCoreReplayCodecRuntime", "CoreReplayCodecRuntime"],
-  ["getCoreReplayV4ActionsRuntime", "CoreReplayV4ActionsRuntime"],
-  ["getCoreReplayImportRuntime", "CoreReplayImportRuntime"],
-  ["getCoreReplayExecutionRuntime", "CoreReplayExecutionRuntime"],
-  ["getCoreReplayDispatchRuntime", "CoreReplayDispatchRuntime"],
-  ["getCoreReplayLifecycleRuntime", "CoreReplayLifecycleRuntime"],
-  ["getCoreReplayTimerRuntime", "CoreReplayTimerRuntime"],
-  ["getCoreReplayFlowRuntime", "CoreReplayFlowRuntime"],
-  ["getCoreReplayControlRuntime", "CoreReplayControlRuntime"],
-  ["getCoreReplayLoopRuntime", "CoreReplayLoopRuntime"],
-  ["getCoreReplayLegacyRuntime", "CoreReplayLegacyRuntime"]
-];
-
-function registerCoreRuntimeGetters(runtimeGetterDefs) {
-  registerGameManagerMethodPairs(runtimeGetterDefs, registerCoreRuntimeGetter);
+function isValidCoreRuntimeAccessorDef(accessorDef) {
+  return !!(Array.isArray(accessorDef) && accessorDef.length >= 4);
 }
 
-registerCoreRuntimeMethodResolvers(GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS);
-registerCoreRuntimeGetters(GAME_MANAGER_CORE_RUNTIME_GETTERS);
+function registerCoreRuntimeAccessors(accessorDefs) {
+  if (!Array.isArray(accessorDefs)) return;
+  for (var index = 0; index < accessorDefs.length; index++) {
+    var accessorDef = accessorDefs[index];
+    if (!isValidCoreRuntimeAccessorDef(accessorDef)) continue;
+    var callerMethodName = accessorDef[0];
+    var resolverMethodName = accessorDef[1];
+    var getterMethodName = accessorDef[2];
+    var runtimeName = accessorDef[3];
+    registerCoreRuntimeGetter(getterMethodName, runtimeName);
+    registerCoreRuntimeMethodResolver(resolverMethodName, getterMethodName);
+    registerCoreRuntimeCaller(callerMethodName, resolverMethodName);
+  }
+}
+
+registerCoreRuntimeAccessors(GAME_MANAGER_CORE_RUNTIME_ACCESSOR_DEFS);
 
 GameManager.prototype.resolveModePolicyContext = function (mode) {
   var targetMode = mode || this.mode;
