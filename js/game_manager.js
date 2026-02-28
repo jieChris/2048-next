@@ -9500,8 +9500,12 @@ GameManager.prototype.pauseReplayForSeek = function () {
     this.pause();
 };
 
+GameManager.prototype.resolveNormalizedReplaySeekTarget = function (targetIndex) {
+    return this.normalizeReplaySeekTarget(targetIndex);
+};
+
 GameManager.prototype.seek = function (targetIndex) {
-    targetIndex = this.normalizeReplaySeekTarget(targetIndex);
+    targetIndex = this.resolveNormalizedReplaySeekTarget(targetIndex);
     this.pauseReplayForSeek();
     this.applyReplaySeekTarget(targetIndex);
 };
@@ -9510,7 +9514,11 @@ GameManager.prototype.resolveReplayStepTargetIndex = function (delta) {
     return this.replayIndex + delta;
 };
 
+GameManager.prototype.canStepReplay = function () {
+    return !!this.replayMoves;
+};
+
 GameManager.prototype.step = function (delta) {
-    if (!this.replayMoves) return;
+    if (!this.canStepReplay()) return;
     this.seek(this.resolveReplayStepTargetIndex(delta));
 };
