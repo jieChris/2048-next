@@ -7353,13 +7353,20 @@ GameManager.prototype.applyFallbackPostMoveScore = function (scoreBeforeMove) {
   this.comboStreak = 0;
 };
 
+GameManager.prototype.buildComputePostMoveScoreCoreArgs = function (scoreBeforeMove) {
+  return [{
+    scoreBeforeMove: scoreBeforeMove,
+    scoreAfterMerge: this.score,
+    comboStreak: this.comboStreak,
+    comboMultiplier: this.comboMultiplier
+  }];
+};
+
 GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
-  var computePostMoveScoreCore = this.callCoreScoringRuntime("computePostMoveScore", [{
-      scoreBeforeMove: scoreBeforeMove,
-      scoreAfterMerge: this.score,
-      comboStreak: this.comboStreak,
-      comboMultiplier: this.comboMultiplier
-    }]);
+  var computePostMoveScoreCore = this.callCoreScoringRuntime(
+    "computePostMoveScore",
+    this.buildComputePostMoveScoreCoreArgs(scoreBeforeMove)
+  );
   if (computePostMoveScoreCore.available) {
     this.applyCorePostMoveScoreResult(computePostMoveScoreCore.value || {});
     return;
@@ -7398,12 +7405,19 @@ GameManager.prototype.applyFallbackPostMoveLifecycle = function (hasMovesAvailab
   };
 };
 
-GameManager.prototype.applyPostMoveLifecycle = function (hasMovesAvailable) {
-  var computePostMoveLifecycleCore = this.callCorePostMoveRuntime("computePostMoveLifecycle", [{
+GameManager.prototype.buildComputePostMoveLifecycleCoreArgs = function (hasMovesAvailable) {
+  return [{
     successfulMoveCount: this.successfulMoveCount,
     hasMovesAvailable: hasMovesAvailable,
     timerStatus: this.timerStatus
-  }]);
+  }];
+};
+
+GameManager.prototype.applyPostMoveLifecycle = function (hasMovesAvailable) {
+  var computePostMoveLifecycleCore = this.callCorePostMoveRuntime(
+    "computePostMoveLifecycle",
+    this.buildComputePostMoveLifecycleCoreArgs(hasMovesAvailable)
+  );
   if (computePostMoveLifecycleCore.available) {
     return this.applyCorePostMoveLifecycleResult(computePostMoveLifecycleCore.value || {}, hasMovesAvailable);
   }
