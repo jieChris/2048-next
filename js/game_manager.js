@@ -463,7 +463,9 @@ GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString)
     if (coreValue === null) return null;
     return this.isNonArrayObject(coreValue) ? coreValue : undefined;
   }, function () {
-    return this.parseReplayImportEnvelopeFallback(trimmedReplayString);
+    var jsonEnvelope = this.parseJsonReplayImportEnvelope(trimmedReplayString);
+    if (jsonEnvelope) return jsonEnvelope;
+    return this.parseV4ReplayImportEnvelope(trimmedReplayString);
   });
 };
 
@@ -519,39 +521,20 @@ GameManager.prototype.resolveJsonReplayEnvelopeMeta = function (replayObj) {
   };
 };
 
-GameManager.prototype.parseReplayImportEnvelopeFallback = function (trimmedReplayString) {
-  var jsonEnvelope = this.parseJsonReplayImportEnvelope(trimmedReplayString);
-  if (jsonEnvelope) return jsonEnvelope;
-  return this.parseV4ReplayImportEnvelope(trimmedReplayString);
-};
-
-GameManager.prototype.parseReplayV4ImportBody = function (trimmedReplayString) {
+GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayString) {
   if (trimmedReplayString.indexOf(GameManager.REPLAY_V4_PREFIX) !== 0) return null;
   var body = trimmedReplayString.substring(GameManager.REPLAY_V4_PREFIX.length);
   if (body.length < 17) throw "Invalid v4C payload";
-  return body;
-};
-
-GameManager.prototype.resolveReplayModeKeyFromV4Body = function (body) {
   var modeCode = body.charAt(0);
   var replayModeIdV4 = GameManager.REPLAY_V4_MODE_CODE_TO_KEY[modeCode] || null;
   if (!replayModeIdV4) throw "Invalid v4C mode";
-  return replayModeIdV4;
-};
-
-GameManager.prototype.buildV4ReplayImportEnvelope = function (modeKey, body) {
+  if (!body) return null;
   return {
     kind: "v4c",
-    modeKey: modeKey,
+    modeKey: replayModeIdV4,
     initialBoardEncoded: body.substring(1, 17),
     actionsEncoded: body.substring(17)
   };
-};
-
-GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayString) {
-  var body = this.parseReplayV4ImportBody(trimmedReplayString);
-  if (!body) return null;
-  return this.buildV4ReplayImportEnvelope(this.resolveReplayModeKeyFromV4Body(body), body);
 };
 
 GameManager.REPLAY_V4_MODE_CODE_TO_KEY = {
@@ -583,22 +566,21 @@ GameManager.prototype.decodeLegacyReplayV2CharCode = function (logString, index)
 
 GameManager.prototype.decodeLegacyReplayV2Entry = function (code) {
   if (code === 128) {
-    return this.buildLegacyReplayV2Entry(-1, null);
+    return {
+      move: -1,
+      spawn: null
+    };
   }
   var dir = (code >> 5) & 3;
   var is4 = (code >> 4) & 1;
   var posIdx = code & 15;
-  return this.buildLegacyReplayV2Entry(dir, {
-    x: posIdx % 4,
-    y: Math.floor(posIdx / 4),
-    value: is4 ? 4 : 2
-  });
-};
-
-GameManager.prototype.buildLegacyReplayV2Entry = function (move, spawn) {
   return {
-    move: move,
-    spawn: spawn
+    move: dir,
+    spawn: {
+      x: posIdx % 4,
+      y: Math.floor(posIdx / 4),
+      value: is4 ? 4 : 2
+    }
   };
 };
 
@@ -657,7 +639,12 @@ GameManager.prototype.decodeLegacyReplayV2SPayload = function (trimmedReplayStri
   var seedS = parsedSeedLog.seed;
   var logString = parsedSeedLog.logString;
   var decodedLog = this.decodeLegacyReplayV2Log(logString);
-  return this.buildLegacyReplayV2Payload(seedS, logString, decodedLog);
+  return {
+    seed: seedS,
+    replayMovesV2: logString,
+    replayMoves: decodedLog.replayMoves,
+    replaySpawns: decodedLog.replaySpawns
+  };
 };
 
 GameManager.prototype.decodeLegacyReplayV2Payload = function (trimmedReplayString) {
@@ -665,13 +652,9 @@ GameManager.prototype.decodeLegacyReplayV2Payload = function (trimmedReplayStrin
   if (trimmedReplayString.indexOf(prefix) !== 0) return null;
   var logString = trimmedReplayString.substring(prefix.length);
   var decodedLog = this.decodeLegacyReplayV2Log(logString);
-  return this.buildLegacyReplayV2Payload(0.123, logString, decodedLog);
-};
-
-GameManager.prototype.buildLegacyReplayV2Payload = function (seed, replayMovesV2, decodedLog) {
   return {
-    seed: seed,
-    replayMovesV2: replayMovesV2,
+    seed: 0.123,
+    replayMovesV2: logString,
     replayMoves: decodedLog.replayMoves,
     replaySpawns: decodedLog.replaySpawns
   };
