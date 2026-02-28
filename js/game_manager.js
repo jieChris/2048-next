@@ -9018,11 +9018,13 @@ GameManager.prototype.tryImportReplayEnvelopeString = function (trimmedReplayStr
   return this.tryImportParsedReplayEnvelope(parsedEnvelope);
 };
 
+var GAME_MANAGER_REPLAY_IMPORT_TRY_METHOD_NAMES = [
+  "tryImportReplayEnvelopeString",
+  "tryImportLegacyReplayString"
+];
+
 GameManager.prototype.getReplayImportTryMethodNames = function () {
-  return [
-    "tryImportReplayEnvelopeString",
-    "tryImportLegacyReplayString"
-  ];
+  return GAME_MANAGER_REPLAY_IMPORT_TRY_METHOD_NAMES.slice(0);
 };
 
 GameManager.prototype.tryImportReplayByMethodName = function (trimmedReplayString, methodName) {
@@ -9071,13 +9073,17 @@ GameManager.prototype.performReplayImport = function (replayString) {
   this.importReplayOrThrow(trimmed);
 };
 
+GameManager.prototype.handleReplayImportError = function (error) {
+  this.notifyReplayImportError(error);
+  return false;
+};
+
 GameManager.prototype.tryImportWithErrorBoundary = function (replayString) {
   try {
     this.performReplayImport(replayString);
     return true;
   } catch (e) {
-    this.notifyReplayImportError(e);
-    return false;
+    return this.handleReplayImportError(e);
   }
 };
 
