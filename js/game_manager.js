@@ -420,54 +420,6 @@ GameManager.prototype.decodeLegacyReplayV2Log = function (logString) {
   };
 };
 
-GameManager.prototype.decodeLegacyReplayV1Payload = function (trimmedReplayString) {
-  if (trimmedReplayString.indexOf(GameManager.LEGACY_REPLAY_V1_PREFIX) !== 0) return null;
-  var v1Parts = trimmedReplayString.split("_");
-  var seed = parseFloat(v1Parts[2]);
-  var movesString = v1Parts[3];
-  var replayMovesV1 = movesString.split("").map(function (char) {
-    var val = GameManager.LEGACY_REPLAY_V1_REVERSE_MAPPING[char];
-    if (val === undefined) throw "Invalid move char: " + char;
-    return val;
-  }, this);
-  return {
-    seed: seed,
-    replayMoves: replayMovesV1,
-    replaySpawns: null
-  };
-};
-
-GameManager.prototype.decodeLegacyReplayV2SPayload = function (trimmedReplayString) {
-  var prefixS = GameManager.LEGACY_REPLAY_V2S_PREFIX;
-  if (trimmedReplayString.indexOf(prefixS) !== 0) return null;
-  var rest = trimmedReplayString.substring(prefixS.length);
-  var seedSep = rest.indexOf("_");
-  if (seedSep < 0) throw "Invalid v2S format";
-  var seedS = parseFloat(rest.substring(0, seedSep));
-  if (isNaN(seedS)) throw "Invalid v2S seed";
-  var logString = rest.substring(seedSep + 1);
-  var decodedLog = this.decodeLegacyReplayV2Log(logString);
-  return {
-    seed: seedS,
-    replayMovesV2: logString,
-    replayMoves: decodedLog.replayMoves,
-    replaySpawns: decodedLog.replaySpawns
-  };
-};
-
-GameManager.prototype.decodeLegacyReplayV2Payload = function (trimmedReplayString) {
-  var prefix = GameManager.LEGACY_REPLAY_V2_PREFIX;
-  if (trimmedReplayString.indexOf(prefix) !== 0) return null;
-  var logString = trimmedReplayString.substring(prefix.length);
-  var decodedLog = this.decodeLegacyReplayV2Log(logString);
-  return {
-    seed: 0.123,
-    replayMovesV2: logString,
-    replayMoves: decodedLog.replayMoves,
-    replaySpawns: decodedLog.replaySpawns
-  };
-};
-
 GameManager.prototype.runReplayTick = function () {
   var shouldStopReplayAtTickCore = this.callCoreReplayTimerRuntime(
     "shouldStopReplayAtTick",
@@ -8215,11 +8167,45 @@ GameManager.prototype.import = function (replayString) {
       var decodedLegacy = this.resolveNormalizedCoreValueOrFallback(decodeLegacyReplayCore, function (coreValue) {
         return this.isNonArrayObject(coreValue) ? coreValue : undefined;
       }, function () {
-        var decodedV1 = this.decodeLegacyReplayV1Payload(trimmed);
-        if (decodedV1) return decodedV1;
-        var decodedV2S = this.decodeLegacyReplayV2SPayload(trimmed);
-        if (decodedV2S) return decodedV2S;
-        return this.decodeLegacyReplayV2Payload(trimmed);
+        if (trimmed.indexOf(GameManager.LEGACY_REPLAY_V1_PREFIX) === 0) {
+          var v1Parts = trimmed.split("_");
+          var seed = parseFloat(v1Parts[2]);
+          var movesString = v1Parts[3];
+          var replayMovesV1 = movesString.split("").map(function (char) {
+            var val = GameManager.LEGACY_REPLAY_V1_REVERSE_MAPPING[char];
+            if (val === undefined) throw "Invalid move char: " + char;
+            return val;
+          }, this);
+          return {
+            seed: seed,
+            replayMoves: replayMovesV1,
+            replaySpawns: null
+          };
+        }
+        if (trimmed.indexOf(GameManager.LEGACY_REPLAY_V2S_PREFIX) === 0) {
+          var rest = trimmed.substring(GameManager.LEGACY_REPLAY_V2S_PREFIX.length);
+          var seedSep = rest.indexOf("_");
+          if (seedSep < 0) throw "Invalid v2S format";
+          var seedS = parseFloat(rest.substring(0, seedSep));
+          if (isNaN(seedS)) throw "Invalid v2S seed";
+          var logStringS = rest.substring(seedSep + 1);
+          var decodedLogS = this.decodeLegacyReplayV2Log(logStringS);
+          return {
+            seed: seedS,
+            replayMovesV2: logStringS,
+            replayMoves: decodedLogS.replayMoves,
+            replaySpawns: decodedLogS.replaySpawns
+          };
+        }
+        if (trimmed.indexOf(GameManager.LEGACY_REPLAY_V2_PREFIX) !== 0) return null;
+        var logString = trimmed.substring(GameManager.LEGACY_REPLAY_V2_PREFIX.length);
+        var decodedLog = this.decodeLegacyReplayV2Log(logString);
+        return {
+          seed: 0.123,
+          replayMovesV2: logString,
+          replayMoves: decodedLog.replayMoves,
+          replaySpawns: decodedLog.replaySpawns
+        };
       });
       if (decodedLegacy) {
         this.applyReplayImportActions({
