@@ -6828,15 +6828,6 @@ GameManager.prototype.startTimer = function() {
 };
 
 GameManager.prototype.scheduleTimerUpdateInterval = function () {
-  this.timerUpdateIntervalMs = this.getTimerUpdateIntervalMs();
-  this.lastStatsPanelUpdateAt = 0;
-  var manager = this;
-  this.timerID = setInterval(function () {
-    manager.updateTimer();
-  }, this.timerUpdateIntervalMs);
-};
-
-GameManager.prototype.getTimerUpdateIntervalMs = function () {
   var resolveTimerUpdateIntervalMsCore = this.callCoreTimerIntervalRuntime(
     "resolveTimerUpdateIntervalMs",
     [
@@ -6844,16 +6835,20 @@ GameManager.prototype.getTimerUpdateIntervalMs = function () {
       this.height
     ]
   );
-  return this.resolveCoreNumericCallOrFallback(resolveTimerUpdateIntervalMsCore, function () {
-    return this.resolveTimerUpdateIntervalMsFallback();
-  });
-};
-
-GameManager.prototype.resolveTimerUpdateIntervalMsFallback = function () {
-  var area = (this.width || 4) * (this.height || 4);
-  if (area >= 100) return 50;
-  if (area >= 64) return 33;
-  return 10;
+  this.timerUpdateIntervalMs = this.resolveCoreNumericCallOrFallback(
+    resolveTimerUpdateIntervalMsCore,
+    function () {
+      var area = (this.width || 4) * (this.height || 4);
+      if (area >= 100) return 50;
+      if (area >= 64) return 33;
+      return 10;
+    }
+  );
+  this.lastStatsPanelUpdateAt = 0;
+  var manager = this;
+  this.timerID = setInterval(function () {
+    manager.updateTimer();
+  }, this.timerUpdateIntervalMs);
 };
 
 GameManager.prototype.endTime = function() {
