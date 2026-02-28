@@ -4213,42 +4213,6 @@ GameManager.prototype.normalizeModeConfig = function (modeKey, rawConfig) {
   });
 };
 
-GameManager.prototype.resolveModeConfigByCatalogId = function (modeId) {
-  var byCatalog = this.getModeConfigFromCatalog(modeId);
-  if (!byCatalog) return null;
-  return this.normalizeModeConfig(modeId, byCatalog);
-};
-
-GameManager.prototype.resolveMappedModeConfigFromCatalog = function (modeId) {
-  var mapped = GameManager.LEGACY_ALIAS_TO_MODE_KEY[modeId] || modeId;
-  if (!mapped || mapped === modeId) return null;
-  return this.resolveModeConfigByCatalogId(mapped);
-};
-
-GameManager.prototype.resolveModeConfigCatalogFallback = function (modeId) {
-  var id = modeId || GameManager.DEFAULT_MODE_KEY;
-  var byCatalog = this.resolveModeConfigByCatalogId(id);
-  if (byCatalog) return byCatalog;
-  var mappedConfig = this.resolveMappedModeConfigFromCatalog(id);
-  if (mappedConfig) return mappedConfig;
-  return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
-};
-
-GameManager.prototype.normalizeResolvedModeIdFromCore = function (resolvedByCore) {
-  return typeof resolvedByCore.resolvedModeId === "string" && resolvedByCore.resolvedModeId
-    ? resolvedByCore.resolvedModeId
-    : GameManager.DEFAULT_MODE_KEY;
-};
-
-GameManager.prototype.resolveModeConfigFromCoreValue = function (resolvedByCore) {
-  var normalizedModeId = this.normalizeResolvedModeIdFromCore(resolvedByCore);
-  var rawConfig = resolvedByCore.modeConfig;
-  if (rawConfig && typeof rawConfig === "object" && !Array.isArray(rawConfig)) {
-    return this.normalizeModeConfig(normalizedModeId, rawConfig);
-  }
-  return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
-};
-
 GameManager.prototype.resolveModeConfig = function (modeId) {
   var id = modeId || GameManager.DEFAULT_MODE_KEY;
   var resolveModeConfigFromCatalogCore = this.callCoreModeRuntime(
@@ -4263,10 +4227,26 @@ GameManager.prototype.resolveModeConfig = function (modeId) {
   return this.resolveNormalizedCoreValueOrFallback(
     resolveModeConfigFromCatalogCore,
     function (coreValue) {
-      return this.resolveModeConfigFromCoreValue(coreValue || {});
+      var resolvedByCore = coreValue || {};
+      var normalizedModeId =
+        typeof resolvedByCore.resolvedModeId === "string" && resolvedByCore.resolvedModeId
+          ? resolvedByCore.resolvedModeId
+          : GameManager.DEFAULT_MODE_KEY;
+      var rawConfig = resolvedByCore.modeConfig;
+      if (rawConfig && typeof rawConfig === "object" && !Array.isArray(rawConfig)) {
+        return this.normalizeModeConfig(normalizedModeId, rawConfig);
+      }
+      return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
     },
     function () {
-      return this.resolveModeConfigCatalogFallback(id);
+      var byCatalogRaw = this.getModeConfigFromCatalog(id);
+      if (byCatalogRaw) return this.normalizeModeConfig(id, byCatalogRaw);
+      var mapped = GameManager.LEGACY_ALIAS_TO_MODE_KEY[id] || id;
+      if (mapped && mapped !== id) {
+        var mappedRaw = this.getModeConfigFromCatalog(mapped);
+        if (mappedRaw) return this.normalizeModeConfig(mapped, mappedRaw);
+      }
+      return this.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
     }
   );
 };
