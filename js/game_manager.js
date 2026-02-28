@@ -913,8 +913,15 @@ GameManager.prototype.planReplayStepExecutionFallback = function () {
   return this.buildReplayStepExecutionFallback(action, stepPlan);
 };
 
+GameManager.prototype.buildComputeReplayPauseStateCoreArgs = function () {
+  return [];
+};
+
 GameManager.prototype.computeReplayPauseState = function () {
-  var computeReplayPauseStateCore = this.callCoreReplayTimerRuntime("computeReplayPauseState");
+  var computeReplayPauseStateCore = this.callCoreReplayTimerRuntime(
+    "computeReplayPauseState",
+    this.buildComputeReplayPauseStateCoreArgs()
+  );
   if (computeReplayPauseStateCore.available) return computeReplayPauseStateCore.value || {};
   return this.computeReplayPauseStateFallback();
 };
@@ -1005,8 +1012,15 @@ GameManager.prototype.shouldStopReplayAtTickFallback = function (replayIndex, re
   return replayIndex >= replayMovesLength;
 };
 
+GameManager.prototype.buildComputeReplayEndStateCoreArgs = function () {
+  return [];
+};
+
 GameManager.prototype.computeReplayEndState = function () {
-  var computeReplayEndStateCore = this.callCoreReplayFlowRuntime("computeReplayEndState");
+  var computeReplayEndStateCore = this.callCoreReplayFlowRuntime(
+    "computeReplayEndState",
+    this.buildComputeReplayEndStateCoreArgs()
+  );
   if (computeReplayEndStateCore.available) return computeReplayEndStateCore.value || {};
   return this.computeReplayEndStateFallback();
 };
