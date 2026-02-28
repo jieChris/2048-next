@@ -6819,10 +6819,6 @@ GameManager.prototype.startTimer = function() {
   // Convert accumulated time back to a start timestamp relative to now
   this.startTime = new Date(Date.now() - (this.accumulatedTime || 0));
   this.notifyUndoSettingsStateChanged();
-  this.scheduleTimerUpdateInterval();
-};
-
-GameManager.prototype.scheduleTimerUpdateInterval = function () {
   var resolveTimerUpdateIntervalMsCore = this.callCoreTimerIntervalRuntime(
     "resolveTimerUpdateIntervalMs",
     [
@@ -6913,12 +6909,8 @@ GameManager.prototype.formatPrettyTimeFallback = function (time) {
   return s;
 };
 
-GameManager.prototype.shouldRecordPracticeReplayAction = function () {
-  return !this.replayMode && this.sessionReplayV3 && this.modeKey === "practice_legacy";
-};
-
 GameManager.prototype.recordPracticeReplayAction = function (action) {
-  if (!this.shouldRecordPracticeReplayAction()) return;
+  if (this.replayMode || !this.sessionReplayV3 || this.modeKey !== "practice_legacy") return;
   this.sessionReplayV3.actions.push(action);
   if (Array.isArray(action) && action[0] === "p") {
     this.appendCompactPracticeAction(action[1], action[2], action[3]);
