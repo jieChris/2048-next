@@ -1322,6 +1322,12 @@ GameManager.prototype.resolveCoreStringCallValueOrNull = function (coreCallResul
   return coreValue ? coreValue : null;
 };
 
+GameManager.prototype.resolveNormalizedCoreValueOrUndefined = function (coreCallResult, normalizer) {
+  if (!this.isCoreCallAvailable(coreCallResult)) return undefined;
+  if (typeof normalizer !== "function") return coreCallResult.value;
+  return normalizer.call(this, coreCallResult.value);
+};
+
 GameManager.prototype.resolveCoreRuntimeCallerFromResolver = function (resolverMethodName, methodName) {
   var resolver = this[resolverMethodName];
   if (typeof resolver !== "function") return null;
@@ -1849,12 +1855,11 @@ GameManager.prototype.getSavedGameStateStorages = function () {
     "getSavedGameStateStoragesFromContext",
     this.buildGetSavedGameStateStoragesCoreArgs()
   );
-  if (this.isCoreCallAvailable(getSavedGameStateStoragesFromContextCore)) {
-    var normalizedByCore = this.normalizeSavedGameStateStoragesCoreValue(
-      getSavedGameStateStoragesFromContextCore.value
-    );
-    if (normalizedByCore) return normalizedByCore;
-  }
+  var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
+    getSavedGameStateStoragesFromContextCore,
+    this.normalizeSavedGameStateStoragesCoreValue
+  );
+  if (normalizedByCore) return normalizedByCore;
   return this.buildSavedGameStateStoragesFallback();
 };
 
@@ -1935,10 +1940,11 @@ GameManager.prototype.readSavedPayloadByKey = function (key) {
     "readSavedPayloadByKeyFromStorages",
     this.buildReadSavedPayloadByKeyCoreArgs(stores, key)
   );
-  if (this.isCoreCallAvailable(readSavedPayloadByKeyFromStoragesCore)) {
-    var normalizedByCore = this.normalizeSavedPayloadByKeyCoreValue(readSavedPayloadByKeyFromStoragesCore.value);
-    if (typeof normalizedByCore !== "undefined") return normalizedByCore;
-  }
+  var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
+    readSavedPayloadByKeyFromStoragesCore,
+    this.normalizeSavedPayloadByKeyCoreValue
+  );
+  if (typeof normalizedByCore !== "undefined") return normalizedByCore;
   return this.readSavedPayloadByKeyFallback(stores, key);
 };
 
@@ -1969,10 +1975,11 @@ GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
     "readSavedPayloadFromWindowName",
     this.buildReadWindowNameSavedPayloadCoreArgs(windowLike, modeKey)
   );
-  if (this.isCoreCallAvailable(readSavedPayloadFromWindowNameCore)) {
-    var normalizedByCore = this.normalizeWindowNameSavedPayloadCoreValue(readSavedPayloadFromWindowNameCore.value);
-    if (typeof normalizedByCore !== "undefined") return normalizedByCore;
-  }
+  var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
+    readSavedPayloadFromWindowNameCore,
+    this.normalizeWindowNameSavedPayloadCoreValue
+  );
+  if (typeof normalizedByCore !== "undefined") return normalizedByCore;
   return this.readWindowNameSavedPayloadFallback(modeKey);
 };
 
@@ -2170,12 +2177,11 @@ GameManager.prototype.writeWindowNameSavedPayload = function (modeKey, payload) 
     "writeSavedPayloadToWindowName",
     this.buildWriteWindowNameSavedPayloadCoreArgs(windowLike, modeKey, payload)
   );
-  if (this.isCoreCallAvailable(writeSavedPayloadToWindowNameCore)) {
-    var normalizedByCore = this.normalizeWriteWindowNameSavedPayloadCoreValue(
-      writeSavedPayloadToWindowNameCore.value
-    );
-    if (typeof normalizedByCore !== "undefined") return normalizedByCore;
-  }
+  var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
+    writeSavedPayloadToWindowNameCore,
+    this.normalizeWriteWindowNameSavedPayloadCoreValue
+  );
+  if (typeof normalizedByCore !== "undefined") return normalizedByCore;
   return this.writeWindowNameSavedPayloadFallback(modeKey, payload);
 };
 
@@ -3435,10 +3441,11 @@ GameManager.prototype.writeSavedGameStatePayload = function (key, payloadObj) {
     "writeSavedPayloadToStorages",
     this.buildWriteSavedPayloadToStoragesCoreArgs(stores, key, payloadObj)
   );
-  if (this.isCoreCallAvailable(writeSavedPayloadToStoragesCore)) {
-    var normalizedByCore = this.normalizeWriteSavedPayloadToStoragesCoreValue(writeSavedPayloadToStoragesCore.value);
-    if (typeof normalizedByCore !== "undefined") return normalizedByCore;
-  }
+  var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
+    writeSavedPayloadToStoragesCore,
+    this.normalizeWriteSavedPayloadToStoragesCoreValue
+  );
+  if (typeof normalizedByCore !== "undefined") return normalizedByCore;
   return this.writeSavedGameStatePayloadFallback(stores, key, payloadObj);
 };
 
@@ -3579,10 +3586,11 @@ GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
     "buildLiteSavedGameStatePayload",
     this.buildLiteSavedGameStatePayloadCoreArgs(payload)
   );
-  if (this.isCoreCallAvailable(buildLiteSavedGameStatePayloadCore)) {
-    var normalizedByCore = this.normalizeLiteSavedGameStatePayloadByCore(buildLiteSavedGameStatePayloadCore.value);
-    if (normalizedByCore) return normalizedByCore;
-  }
+  var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
+    buildLiteSavedGameStatePayloadCore,
+    this.normalizeLiteSavedGameStatePayloadByCore
+  );
+  if (normalizedByCore) return normalizedByCore;
 
   if (!payload || typeof payload !== "object") return null;
   return this.buildLiteSavedGameStatePayloadFallback(payload);
