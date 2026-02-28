@@ -8646,17 +8646,13 @@ GameManager.prototype.import = function (replayString) {
   this.tryImportWithErrorBoundary(replayString);
 };
 
-GameManager.prototype.resolveReplayDispatchPlanForAction = function (action) {
-  var resolved = this.resolveReplayExecution(action);
-  return this.planReplayDispatch(resolved);
-};
-
 GameManager.prototype.throwUnknownReplayAction = function () {
   throw "Unknown replay action";
 };
 
 GameManager.prototype.executeReplayAction = function (action) {
-  var dispatchPlan = this.resolveReplayDispatchPlanForAction(action);
+  var resolved = this.resolveReplayExecution(action);
+  var dispatchPlan = this.planReplayDispatch(resolved);
   this.executeReplayDispatchPlan(dispatchPlan);
 };
 
