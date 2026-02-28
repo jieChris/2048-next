@@ -6823,16 +6823,13 @@ GameManager.prototype.getSpawnStatPair = function () {
     "getSpawnStatPair",
     this.buildGetSpawnStatPairCoreArgs()
   );
-  var spawnStatPairByCore = this.resolveNormalizedCoreValueOrUndefined(
+  return this.resolveNormalizedCoreValueOrFallback(
     getSpawnStatPairCore,
-    this.normalizeSpawnStatPairCoreValue
+    this.normalizeSpawnStatPairCoreValue,
+    function () {
+      return this.resolveSpawnStatPairFromValues(this.collectUniqueSpawnValuesFromTable(this.spawnTable));
+    }
   );
-  if (typeof spawnStatPairByCore !== "undefined") {
-    var normalizedCorePair = spawnStatPairByCore;
-    if (normalizedCorePair) return normalizedCorePair;
-  }
-
-  return this.resolveSpawnStatPairFromValues(this.collectUniqueSpawnValuesFromTable(this.spawnTable));
 };
 
 GameManager.prototype.buildGetSpawnCountCoreArgs = function (value) {
@@ -6993,13 +6990,15 @@ GameManager.prototype.tryResolveStepStatsFromCore = function (actions, limit) {
     "computeReplayStepStats",
     this.buildComputeReplayStepStatsCoreArgs(actions, limit)
   );
-  var stepStatsByCore = this.resolveNormalizedCoreValueOrUndefined(
+  return this.resolveNormalizedCoreValueOrFallback(
     computeReplayStepStatsCore,
     function (coreValue) {
       return this.normalizeCoreStepStats(coreValue || {});
+    },
+    function () {
+      return null;
     }
   );
-  return typeof stepStatsByCore !== "undefined" ? stepStatsByCore : null;
 };
 
 GameManager.prototype.calculateNetMoveSteps = function (actions, limit) {
@@ -7131,10 +7130,16 @@ GameManager.prototype.tryResolveIpsDisplayTextFromCore = function (durationMs, i
     "resolveIpsDisplayText",
     this.buildResolveIpsDisplayTextCoreArgs(durationMs, ipsInputCount)
   );
-  var ipsDisplayByCore = this.resolveCoreRawCallValueOrUndefined(resolveIpsDisplayTextCore);
-  if (typeof ipsDisplayByCore === "undefined") return "";
-  var coreDisplay = ipsDisplayByCore || {};
-  return typeof coreDisplay.ipsText === "string" && coreDisplay.ipsText ? coreDisplay.ipsText : "";
+  return this.resolveNormalizedCoreValueOrFallback(
+    resolveIpsDisplayTextCore,
+    function (coreValue) {
+      var coreDisplay = coreValue || {};
+      return typeof coreDisplay.ipsText === "string" && coreDisplay.ipsText ? coreDisplay.ipsText : "";
+    },
+    function () {
+      return "";
+    }
+  );
 };
 
 GameManager.prototype.buildFallbackIpsDisplayText = function (durationMs, ipsInputCount) {
@@ -9162,15 +9167,13 @@ GameManager.prototype.normalizeFinalBoardMatrixFromCore = function (coreValue) {
 
 GameManager.prototype.getFinalBoardMatrix = function () {
   var buildBoardMatrixCore = this.callCoreGridScanRuntime("buildBoardMatrix", this.buildFinalBoardMatrixRuntimeArgs());
-  var finalBoardMatrixByCore = this.resolveNormalizedCoreValueOrUndefined(
+  return this.resolveNormalizedCoreValueOrFallback(
     buildBoardMatrixCore,
-    this.normalizeFinalBoardMatrixFromCore
+    this.normalizeFinalBoardMatrixFromCore,
+    function () {
+      return this.buildFinalBoardMatrixFallback();
+    }
   );
-  if (typeof finalBoardMatrixByCore !== "undefined") {
-    var board = finalBoardMatrixByCore;
-    if (board) return board;
-  }
-  return this.buildFinalBoardMatrixFallback();
 };
 
 GameManager.prototype.normalizeBestTileValue = function (rawBestTileValue) {
@@ -9197,29 +9200,25 @@ GameManager.prototype.resolveBestTileValueFromCore = function (coreValue) {
 
 GameManager.prototype.getBestTileValue = function () {
   var getBestTileValueCore = this.callCoreGridScanRuntime("getBestTileValue", this.buildBestTileValueRuntimeArgs());
-  var bestTileValueByCore = this.resolveNormalizedCoreValueOrUndefined(
+  return this.resolveNormalizedCoreValueOrFallback(
     getBestTileValueCore,
-    this.resolveBestTileValueFromCore
+    this.resolveBestTileValueFromCore,
+    function () {
+      return this.getBestTileValueFallback();
+    }
   );
-  if (typeof bestTileValueByCore !== "undefined") {
-    var bestCore = bestTileValueByCore;
-    if (bestCore !== null) return bestCore;
-  }
-  return this.getBestTileValueFallback();
 };
 
 GameManager.prototype.getDurationMs = function () {
   var nowMs = Date.now();
   var resolveDurationMsCore = this.callCoreReplayTimerRuntime("resolveDurationMs", this.buildDurationMsRuntimeArgs(nowMs));
-  var durationMsByCore = this.resolveNormalizedCoreValueOrUndefined(
+  return this.resolveNormalizedCoreValueOrFallback(
     resolveDurationMsCore,
-    this.resolveDurationMsFromCore
+    this.resolveDurationMsFromCore,
+    function () {
+      return this.resolveDurationMsFallback(nowMs);
+    }
   );
-  if (typeof durationMsByCore !== "undefined") {
-    var resolvedCoreMs = durationMsByCore;
-    if (resolvedCoreMs !== null) return resolvedCoreMs;
-  }
-  return this.resolveDurationMsFallback(nowMs);
 };
 
 GameManager.prototype.buildDurationMsRuntimeArgs = function (nowMs) {
