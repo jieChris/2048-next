@@ -5800,7 +5800,7 @@ GameManager.prototype.unlockProgressiveCapped64Row = function (value) {
 GameManager.prototype.repositionCappedTimerContainer = function () {
   var container = document.getElementById("capped-timer-container");
   if (!container) return;
-  var anchorRow = this.resolveCappedTimerContainerAnchorRow();
+  var anchorRow = this.getTimerRowEl(this.resolveCappedTimerContainerAnchorTarget());
   if (!anchorRow || !anchorRow.parentNode) return;
   this.repositionCappedTimerContainerAfterAnchor(container, anchorRow);
 };
@@ -5808,10 +5808,6 @@ GameManager.prototype.repositionCappedTimerContainer = function () {
 GameManager.prototype.resolveCappedTimerContainerAnchorTarget = function () {
   var cappedState = this.resolveCappedModeState();
   return cappedState.cappedTargetValue || 2048;
-};
-
-GameManager.prototype.resolveCappedTimerContainerAnchorRow = function () {
-  return this.getTimerRowEl(this.resolveCappedTimerContainerAnchorTarget());
 };
 
 GameManager.prototype.shouldRepositionCappedTimerContainer = function (container, parent, anchorRow) {
@@ -6184,15 +6180,6 @@ GameManager.prototype.tryRecordFirstCappedMilestone = function (milestoneCount, 
   return true;
 };
 
-GameManager.prototype.tryRecordCappedPlaceholderMilestone = function (
-  milestoneCount,
-  labelText,
-  timeStr,
-  cappedState
-) {
-  return this.fillCappedPlaceholderRowByRepeat(milestoneCount, labelText, timeStr, cappedState);
-};
-
 GameManager.prototype.buildCappedMilestoneDynamicRowState = function (milestoneCount, labelText, timeStr) {
   return {
     repeat: String(milestoneCount),
@@ -6238,7 +6225,7 @@ GameManager.prototype.recordCappedMilestone = function (timeStr) {
   var nextLabel = this.getCappedRepeatLabel(milestoneCount);
 
   // Prefer replacing reserved hidden rows so the timer module height stays stable.
-  if (this.tryRecordCappedPlaceholderMilestone(milestoneCount, nextLabel, timeStr, cappedState)) {
+  if (this.fillCappedPlaceholderRowByRepeat(milestoneCount, nextLabel, timeStr, cappedState)) {
     this.finalizeCappedMilestoneRecord();
     return;
   }
@@ -8481,14 +8468,6 @@ GameManager.prototype.createDirectionalMovePlan = function (direction) {
   };
 };
 
-GameManager.prototype.buildDirectionalMoveTraversals = function (movePlan) {
-  return this.buildTraversals(movePlan.vector);
-};
-
-GameManager.prototype.scanDirectionalMove = function (movePlan, traversals) {
-  return this.scanMoveTraversals(traversals, movePlan.vector, movePlan.undo);
-};
-
 GameManager.prototype.finalizeDirectionalMoveIfNeeded = function (direction, movePlan, moved) {
   if (!moved) return;
   this.applySuccessfulMove(direction, movePlan.scoreBeforeMove, movePlan.undo);
@@ -8496,12 +8475,12 @@ GameManager.prototype.finalizeDirectionalMoveIfNeeded = function (direction, mov
 
 GameManager.prototype.executeDirectionalMove = function (direction) {
   var movePlan = this.createDirectionalMovePlan(direction);
-  var traversals = this.buildDirectionalMoveTraversals(movePlan);
+  var traversals = this.buildTraversals(movePlan.vector);
 
   // Save the current tile positions and remove merger information
   this.prepareTiles();
 
-  var moved = this.scanDirectionalMove(movePlan, traversals);
+  var moved = this.scanMoveTraversals(traversals, movePlan.vector, movePlan.undo);
   this.finalizeDirectionalMoveIfNeeded(direction, movePlan, moved);
 };
 
@@ -9208,15 +9187,11 @@ GameManager.prototype.buildBestTileValueRuntimeArgs = function () {
   return [this.getFinalBoardMatrix()];
 };
 
-GameManager.prototype.resolveBestTileValueFromCore = function (coreValue) {
-  return this.normalizeBestTileValue(coreValue);
-};
-
 GameManager.prototype.getBestTileValue = function () {
   var getBestTileValueCore = this.callCoreGridScanRuntime("getBestTileValue", this.buildBestTileValueRuntimeArgs());
   return this.resolveNormalizedCoreValueOrFallback(
     getBestTileValueCore,
-    this.resolveBestTileValueFromCore,
+    this.normalizeBestTileValue,
     function () {
       return this.getBestTileValueFallback();
     }
@@ -9228,7 +9203,7 @@ GameManager.prototype.getDurationMs = function () {
   var resolveDurationMsCore = this.callCoreReplayTimerRuntime("resolveDurationMs", this.buildDurationMsRuntimeArgs(nowMs));
   return this.resolveNormalizedCoreValueOrFallback(
     resolveDurationMsCore,
-    this.resolveDurationMsFromCore,
+    this.normalizeDurationMs,
     function () {
       return this.resolveDurationMsFallback(nowMs);
     }
@@ -9237,10 +9212,6 @@ GameManager.prototype.getDurationMs = function () {
 
 GameManager.prototype.buildDurationMsRuntimeArgs = function (nowMs) {
   return [this.resolveDurationMsCoreInput(nowMs)];
-};
-
-GameManager.prototype.resolveDurationMsFromCore = function (coreValue) {
-  return this.normalizeDurationMs(coreValue);
 };
 
 GameManager.prototype.resolveDurationMsCoreInput = function (nowMs) {
