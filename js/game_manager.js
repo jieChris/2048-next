@@ -8652,25 +8652,34 @@ GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike,
   return payload;
 };
 
-GameManager.prototype.buildSessionSubmitSuccessResult = function (endedAt, payload, savedRecord) {
+GameManager.prototype.buildSessionSubmitResultBase = function (endedAt, payload, ok) {
   return {
     at: endedAt,
-    ok: true,
-    local_saved: true,
+    ok: ok === true,
     mode_key: payload.mode_key,
-    score: payload.score,
-    record_id: savedRecord && savedRecord.id ? savedRecord.id : null
+    score: payload.score
   };
 };
 
+GameManager.prototype.resolveSessionSubmitSavedRecordId = function (savedRecord) {
+  return savedRecord && savedRecord.id ? savedRecord.id : null;
+};
+
+GameManager.prototype.buildSessionSubmitSuccessResult = function (endedAt, payload, savedRecord) {
+  var result = this.buildSessionSubmitResultBase(endedAt, payload, true);
+  result.local_saved = true;
+  result.record_id = this.resolveSessionSubmitSavedRecordId(savedRecord);
+  return result;
+};
+
+GameManager.prototype.resolveSessionSubmitPersistErrorMessage = function (error) {
+  return error && error.message ? error.message : "local_save_failed";
+};
+
 GameManager.prototype.buildSessionSubmitFailureResult = function (endedAt, payload, error) {
-  return {
-    at: endedAt,
-    ok: false,
-    mode_key: payload.mode_key,
-    score: payload.score,
-    error: error && error.message ? error.message : "local_save_failed"
-  };
+  var result = this.buildSessionSubmitResultBase(endedAt, payload, false);
+  result.error = this.resolveSessionSubmitPersistErrorMessage(error);
+  return result;
 };
 
 GameManager.prototype.persistSessionSubmitPayload = function (localHistorySaveRecord, payload) {
