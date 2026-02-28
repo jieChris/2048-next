@@ -2273,27 +2273,6 @@ GameManager.prototype.resolveLiteSavedPracticeRestartModeConfig = function (payl
   return this.practiceRestartModeConfig ? this.safeClonePlain(this.practiceRestartModeConfig, null) : null;
 };
 
-GameManager.prototype.buildLiteSavedGameStateIdentityFallback = function (payload) {
-  return {
-    v: GameManager.SAVED_GAME_STATE_VERSION,
-    saved_at: Number(payload.saved_at) || Date.now(),
-    terminated: false,
-    mode_key: payload.mode_key || this.modeKey,
-    board_width: Number(payload.board_width) || this.width,
-    board_height: Number(payload.board_height) || this.height,
-    ruleset: payload.ruleset || this.ruleset
-  };
-};
-
-GameManager.prototype.buildLiteSavedGameStateBoardSnapshotsFallback = function (payload) {
-  return {
-    initial_board_matrix: this.resolveLiteSavedInitialBoardMatrix(payload),
-    replay_start_board_matrix: this.resolveLiteSavedReplayStartBoardMatrix(payload),
-    practice_restart_board_matrix: this.resolveLiteSavedPracticeRestartBoardMatrix(payload),
-    practice_restart_mode_config: this.resolveLiteSavedPracticeRestartModeConfig(payload)
-  };
-};
-
 GameManager.prototype.buildLiteSavedGameStateEmptyCollections = function () {
   return {
     move_history: [],
@@ -2302,37 +2281,6 @@ GameManager.prototype.buildLiteSavedGameStateEmptyCollections = function () {
     session_replay_v3: null,
     spawn_value_counts: {}
   };
-};
-
-GameManager.prototype.buildLiteSavedGameStateBaseFallback = function (payload) {
-  return Object.assign(
-    {},
-    this.buildLiteSavedGameStateIdentityFallback(payload),
-    this.buildLiteSavedGameStateProgressFallback(payload),
-    this.buildLiteSavedGameStateBoardSnapshotsFallback(payload),
-    this.buildLiteSavedGameStateEmptyCollections()
-  );
-};
-
-GameManager.prototype.buildLiteSavedGameStateProgressFallback = function (payload) {
-  return {
-    reached_32k: !!payload.reached_32k,
-    capped_milestone_count: Number.isInteger(payload.capped_milestone_count) ? payload.capped_milestone_count : 0,
-    capped64_unlocked: null,
-    combo_streak: Number.isInteger(payload.combo_streak) ? payload.combo_streak : 0,
-    successful_move_count: Number.isInteger(payload.successful_move_count) ? payload.successful_move_count : 0,
-    undo_used: Number.isInteger(payload.undo_used) ? payload.undo_used : 0,
-    lock_consumed_at_move_count: Number.isInteger(payload.lock_consumed_at_move_count) ? payload.lock_consumed_at_move_count : -1,
-    locked_direction_turn: Number.isInteger(payload.locked_direction_turn) ? payload.locked_direction_turn : null,
-    locked_direction: Number.isInteger(payload.locked_direction) ? payload.locked_direction : null,
-    challenge_id: payload.challenge_id || null
-  };
-};
-
-GameManager.prototype.buildLiteSavedGameStatePayloadFallback = function (payload) {
-  var basePayload = this.buildLiteSavedGameStateBaseFallback(payload);
-  var progressPayload = this.buildLiteSavedGameStateProgressFallback(payload);
-  return Object.assign(basePayload, progressPayload);
 };
 
 GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
@@ -2365,7 +2313,37 @@ GameManager.prototype.buildLiteSavedGameStatePayload = function (payload) {
   if (normalizedByCore) return normalizedByCore;
 
   if (!payload || typeof payload !== "object") return null;
-  return this.buildLiteSavedGameStatePayloadFallback(payload);
+  return Object.assign(
+    {},
+    {
+      v: GameManager.SAVED_GAME_STATE_VERSION,
+      saved_at: Number(payload.saved_at) || Date.now(),
+      terminated: false,
+      mode_key: payload.mode_key || this.modeKey,
+      board_width: Number(payload.board_width) || this.width,
+      board_height: Number(payload.board_height) || this.height,
+      ruleset: payload.ruleset || this.ruleset
+    },
+    {
+      reached_32k: !!payload.reached_32k,
+      capped_milestone_count: Number.isInteger(payload.capped_milestone_count) ? payload.capped_milestone_count : 0,
+      capped64_unlocked: null,
+      combo_streak: Number.isInteger(payload.combo_streak) ? payload.combo_streak : 0,
+      successful_move_count: Number.isInteger(payload.successful_move_count) ? payload.successful_move_count : 0,
+      undo_used: Number.isInteger(payload.undo_used) ? payload.undo_used : 0,
+      lock_consumed_at_move_count: Number.isInteger(payload.lock_consumed_at_move_count) ? payload.lock_consumed_at_move_count : -1,
+      locked_direction_turn: Number.isInteger(payload.locked_direction_turn) ? payload.locked_direction_turn : null,
+      locked_direction: Number.isInteger(payload.locked_direction) ? payload.locked_direction : null,
+      challenge_id: payload.challenge_id || null
+    },
+    {
+      initial_board_matrix: this.resolveLiteSavedInitialBoardMatrix(payload),
+      replay_start_board_matrix: this.resolveLiteSavedReplayStartBoardMatrix(payload),
+      practice_restart_board_matrix: this.resolveLiteSavedPracticeRestartBoardMatrix(payload),
+      practice_restart_mode_config: this.resolveLiteSavedPracticeRestartModeConfig(payload)
+    },
+    this.buildLiteSavedGameStateEmptyCollections()
+  );
 };
 
 GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
@@ -2555,18 +2533,6 @@ GameManager.prototype.resolveUndoPolicyStateFallbackComputedState = function (in
   };
 };
 
-GameManager.prototype.buildUndoPolicyStateFallback = function (params) {
-  var input = this.normalizeUndoPolicyStateFallbackInput(params);
-  var state = this.resolveUndoPolicyStateFallbackComputedState(input);
-  return {
-    forcedUndoSetting: input.forcedUndoSetting,
-    isUndoAllowedByMode: state.isUndoAllowedByMode,
-    isUndoSettingFixedForMode: state.isUndoSettingFixedForMode,
-    canToggleUndoSetting: state.canToggleUndoSetting,
-    isUndoInteractionEnabled: state.isUndoInteractionEnabled
-  };
-};
-
 GameManager.prototype.resolveUndoPolicyOptionSnapshot = function (options) {
   var source = options;
   return {
@@ -2615,7 +2581,7 @@ GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
     else if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) forcedUndoSetting = false;
     else if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) forcedUndoSetting = true;
   }
-  return this.buildUndoPolicyStateFallback({
+  var fallbackInput = this.normalizeUndoPolicyStateFallbackInput({
     forcedUndoSetting: forcedUndoSetting,
     hasGameStarted: optionsSnapshot.hasGameStarted,
     replayMode: optionsSnapshot.replayMode,
@@ -2623,6 +2589,14 @@ GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
     undoUsed: optionsSnapshot.undoUsed,
     undoEnabled: optionsSnapshot.undoEnabled
   });
+  var fallbackState = this.resolveUndoPolicyStateFallbackComputedState(fallbackInput);
+  return {
+    forcedUndoSetting: fallbackInput.forcedUndoSetting,
+    isUndoAllowedByMode: fallbackState.isUndoAllowedByMode,
+    isUndoSettingFixedForMode: fallbackState.isUndoSettingFixedForMode,
+    canToggleUndoSetting: fallbackState.canToggleUndoSetting,
+    isUndoInteractionEnabled: fallbackState.isUndoInteractionEnabled
+  };
 };
 
 GameManager.prototype.resolveLegacyAdapterBridgePayloadFromWindow = function () {
