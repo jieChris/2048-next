@@ -7564,7 +7564,16 @@ GameManager.prototype.getDurationMs = function () {
     resolveDurationMsCore,
     this.normalizeDurationMs,
     function () {
-      return this.resolveDurationMsFallback(nowMs);
+      var ms;
+      if (this.timerStatus === 1 && this.startTime) {
+        ms = nowMs - this.startTime.getTime();
+      } else {
+        ms = this.accumulatedTime || 0;
+      }
+      if (!Number.isFinite(ms) || ms < 0) {
+        ms = nowMs - (this.sessionStartedAt || nowMs);
+      }
+      return this.normalizeDurationMs(ms);
     }
   );
 };
@@ -7587,39 +7596,6 @@ GameManager.prototype.normalizeDurationMs = function (rawMs) {
   if (!Number.isFinite(ms)) return null;
   ms = Math.floor(ms);
   return ms < 0 ? 0 : ms;
-};
-
-GameManager.prototype.shouldUseRunningTimerDuration = function () {
-  return this.timerStatus === 1 && this.startTime;
-};
-
-GameManager.prototype.resolveRunningTimerDurationMs = function (nowMs) {
-  return nowMs - this.startTime.getTime();
-};
-
-GameManager.prototype.resolveStoredDurationMs = function () {
-  return this.accumulatedTime || 0;
-};
-
-GameManager.prototype.shouldFallbackDurationFromSessionStart = function (ms) {
-  return !Number.isFinite(ms) || ms < 0;
-};
-
-GameManager.prototype.resolveSessionStartedFallbackDurationMs = function (nowMs) {
-  return nowMs - (this.sessionStartedAt || nowMs);
-};
-
-GameManager.prototype.resolveDurationMsFallback = function (nowMs) {
-  var ms;
-  if (this.shouldUseRunningTimerDuration()) {
-    ms = this.resolveRunningTimerDurationMs(nowMs);
-  } else {
-    ms = this.resolveStoredDurationMs();
-  }
-  if (this.shouldFallbackDurationFromSessionStart(ms)) {
-    ms = this.resolveSessionStartedFallbackDurationMs(nowMs);
-  }
-  return this.normalizeDurationMs(ms);
 };
 
 GameManager.prototype.serializeV3 = function () {
