@@ -6521,7 +6521,12 @@ GameManager.prototype.publishMovedAdapterResult = function (reason, direction) {
   });
 };
 
-GameManager.prototype.performUndoRestoreFromEntry = function (prev) {
+GameManager.prototype.handleUndoMove = function (direction) {
+  if (!this.canProcessUndoMove()) {
+    return;
+  }
+
+  var prev = this.normalizeUndoStackEntry(this.undoStack.pop());
   var undoPayload = this.computeUndoRestorePayload(prev);
   this.restoreUndoPayload(undoPayload);
   var undoRestore = this.computeUndoRestoreState(prev);
@@ -6550,16 +6555,6 @@ GameManager.prototype.performUndoRestoreFromEntry = function (prev) {
   if (undoRestore.shouldClearMessage !== false) {
     this.actuator.clearMessage(); // Clear Game Over message if present
   }
-  return undoRestore;
-};
-
-GameManager.prototype.handleUndoMove = function (direction) {
-  if (!this.canProcessUndoMove()) {
-    return;
-  }
-
-  var prev = this.normalizeUndoStackEntry(this.undoStack.pop());
-  var undoRestore = this.performUndoRestoreFromEntry(prev);
   var postUndoRecord = this.computePostUndoRecord(direction);
   if (postUndoRecord.shouldRecordMoveHistory) {
     this.moveHistory.push(direction);
