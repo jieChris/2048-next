@@ -3498,46 +3498,45 @@ GameManager.prototype.resolveLegacyAdapterBridgeMethod = function (methodName) {
   };
 };
 
-GameManager.prototype.getAdapterSessionParityReport = function () {
-  var readAdapterParityReportBridge = this.resolveLegacyAdapterBridgeMethod("readAdapterParityReport");
-  var bridge = readAdapterParityReportBridge ? readAdapterParityReportBridge.bridge : this.getLegacyAdapterBridge();
+GameManager.prototype.resolveAdapterParitySnapshotBridge = function (readerBridgeEntry) {
+  var bridge = readerBridgeEntry ? readerBridgeEntry.bridge : this.getLegacyAdapterBridge();
   if (!bridge || typeof bridge !== "object") return null;
+  return bridge;
+};
 
-  if (readAdapterParityReportBridge) {
-    var report = readAdapterParityReportBridge.method.call(bridge);
-    if (!report || typeof report !== "object") return null;
-    var clonedReport = this.safeClonePlain(report, null);
-    if (clonedReport) {
-      bridge.adapterParityReport = clonedReport;
-    }
-    return clonedReport;
+GameManager.prototype.resolveAdapterParitySnapshotFromReaderBridge = function (readerBridgeEntry, cacheFieldName) {
+  var snapshot = readerBridgeEntry.method.call(readerBridgeEntry.bridge);
+  if (!snapshot || typeof snapshot !== "object") return null;
+  var clonedSnapshot = this.safeClonePlain(snapshot, null);
+  if (clonedSnapshot) {
+    readerBridgeEntry.bridge[cacheFieldName] = clonedSnapshot;
   }
+  return clonedSnapshot;
+};
 
-  if (bridge.adapterParityReport && typeof bridge.adapterParityReport === "object") {
-    return this.safeClonePlain(bridge.adapterParityReport, null);
+GameManager.prototype.resolveAdapterParitySnapshotFromCache = function (bridge, cacheFieldName) {
+  if (bridge[cacheFieldName] && typeof bridge[cacheFieldName] === "object") {
+    return this.safeClonePlain(bridge[cacheFieldName], null);
   }
   return null;
 };
 
+GameManager.prototype.getAdapterSessionParitySnapshot = function (readerMethodName, cacheFieldName) {
+  var readerBridgeEntry = this.resolveLegacyAdapterBridgeMethod(readerMethodName);
+  var bridge = this.resolveAdapterParitySnapshotBridge(readerBridgeEntry);
+  if (!bridge) return null;
+  if (readerBridgeEntry) {
+    return this.resolveAdapterParitySnapshotFromReaderBridge(readerBridgeEntry, cacheFieldName);
+  }
+  return this.resolveAdapterParitySnapshotFromCache(bridge, cacheFieldName);
+};
+
+GameManager.prototype.getAdapterSessionParityReport = function () {
+  return this.getAdapterSessionParitySnapshot("readAdapterParityReport", "adapterParityReport");
+};
+
 GameManager.prototype.getAdapterSessionParityABDiff = function () {
-  var readAdapterParityABDiffBridge = this.resolveLegacyAdapterBridgeMethod("readAdapterParityABDiff");
-  var bridge = readAdapterParityABDiffBridge ? readAdapterParityABDiffBridge.bridge : this.getLegacyAdapterBridge();
-  if (!bridge || typeof bridge !== "object") return null;
-
-  if (readAdapterParityABDiffBridge) {
-    var diff = readAdapterParityABDiffBridge.method.call(bridge);
-    if (!diff || typeof diff !== "object") return null;
-    var clonedDiff = this.safeClonePlain(diff, null);
-    if (clonedDiff) {
-      bridge.adapterParityABDiff = clonedDiff;
-    }
-    return clonedDiff;
-  }
-
-  if (bridge.adapterParityABDiff && typeof bridge.adapterParityABDiff === "object") {
-    return this.safeClonePlain(bridge.adapterParityABDiff, null);
-  }
-  return null;
+  return this.getAdapterSessionParitySnapshot("readAdapterParityABDiff", "adapterParityABDiff");
 };
 
 GameManager.prototype.resolveAdapterBridgeModeKey = function (bridge) {
