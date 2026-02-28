@@ -2759,37 +2759,23 @@ GameManager.prototype.resolveLegacyAdapterBridgeMethod = function (methodName) {
   };
 };
 
-GameManager.prototype.resolveAdapterParitySnapshotBridge = function (readerBridgeEntry) {
+GameManager.prototype.getAdapterSessionParitySnapshot = function (readerMethodName, cacheFieldName) {
+  var readerBridgeEntry = this.resolveLegacyAdapterBridgeMethod(readerMethodName);
   var bridge = readerBridgeEntry ? readerBridgeEntry.bridge : this.getLegacyAdapterBridge();
-  if (!bridge || typeof bridge !== "object") return null;
-  return bridge;
-};
-
-GameManager.prototype.resolveAdapterParitySnapshotFromReaderBridge = function (readerBridgeEntry, cacheFieldName) {
-  var snapshot = readerBridgeEntry.method.call(readerBridgeEntry.bridge);
-  if (!snapshot || typeof snapshot !== "object") return null;
-  var clonedSnapshot = this.safeClonePlain(snapshot, null);
-  if (clonedSnapshot) {
-    readerBridgeEntry.bridge[cacheFieldName] = clonedSnapshot;
+  if (!bridge) return null;
+  if (readerBridgeEntry) {
+    var snapshot = readerBridgeEntry.method.call(readerBridgeEntry.bridge);
+    if (!snapshot || typeof snapshot !== "object") return null;
+    var clonedSnapshot = this.safeClonePlain(snapshot, null);
+    if (clonedSnapshot) {
+      readerBridgeEntry.bridge[cacheFieldName] = clonedSnapshot;
+    }
+    return clonedSnapshot;
   }
-  return clonedSnapshot;
-};
-
-GameManager.prototype.resolveAdapterParitySnapshotFromCache = function (bridge, cacheFieldName) {
   if (bridge[cacheFieldName] && typeof bridge[cacheFieldName] === "object") {
     return this.safeClonePlain(bridge[cacheFieldName], null);
   }
   return null;
-};
-
-GameManager.prototype.getAdapterSessionParitySnapshot = function (readerMethodName, cacheFieldName) {
-  var readerBridgeEntry = this.resolveLegacyAdapterBridgeMethod(readerMethodName);
-  var bridge = this.resolveAdapterParitySnapshotBridge(readerBridgeEntry);
-  if (!bridge) return null;
-  if (readerBridgeEntry) {
-    return this.resolveAdapterParitySnapshotFromReaderBridge(readerBridgeEntry, cacheFieldName);
-  }
-  return this.resolveAdapterParitySnapshotFromCache(bridge, cacheFieldName);
 };
 
 GameManager.prototype.resolveAdapterBridgeModeKey = function (bridge) {
