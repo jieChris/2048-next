@@ -3119,24 +3119,6 @@ GameManager.prototype.buildLiteSavedGameStateIdentityFallback = function (payloa
   };
 };
 
-GameManager.prototype.buildLiteSavedGameStateProgressFallback = function (payload) {
-  return {
-    board: Array.isArray(payload.board) ? this.cloneBoardMatrix(payload.board) : this.getFinalBoardMatrix(),
-    score: Number.isInteger(payload.score) ? payload.score : this.score,
-    over: !!payload.over,
-    won: !!payload.won,
-    keep_playing: !!payload.keep_playing,
-    initial_seed: Number.isFinite(payload.initial_seed) ? Number(payload.initial_seed) : this.initialSeed,
-    seed: Number.isFinite(payload.seed) ? Number(payload.seed) : this.seed,
-    ips_input_count: Number.isInteger(payload.ips_input_count) && payload.ips_input_count >= 0
-      ? payload.ips_input_count
-      : 0,
-    timer_status: payload.timer_status === 1 ? 1 : 0,
-    duration_ms: Number.isFinite(payload.duration_ms) ? Math.floor(payload.duration_ms) : this.getDurationMs(),
-    has_game_started: !!payload.has_game_started
-  };
-};
-
 GameManager.prototype.buildLiteSavedGameStateBoardSnapshotsFallback = function (payload) {
   return {
     initial_board_matrix: this.resolveLiteSavedInitialBoardMatrix(payload),
