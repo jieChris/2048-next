@@ -1619,14 +1619,6 @@ GameManager.prototype.resolveSavedGameStateStorageKey = function (keyPrefix, mod
   });
 };
 
-GameManager.prototype.getSavedGameStateKey = function (modeKey) {
-  return this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_KEY_PREFIX, modeKey);
-};
-
-GameManager.prototype.getSavedGameStateLiteKey = function (modeKey) {
-  return this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX, modeKey);
-};
-
 GameManager.prototype.getWebStorageByName = function (name) {
   try {
     return (typeof window !== "undefined" && window[name]) ? window[name] : null;
@@ -1637,10 +1629,6 @@ GameManager.prototype.getWebStorageByName = function (name) {
 
 GameManager.prototype.getWindowLike = function () {
   return typeof window !== "undefined" ? window : null;
-};
-
-GameManager.prototype.getLocalStorage = function () {
-  return this.getWebStorageByName("localStorage");
 };
 
 GameManager.prototype.canReadFromStorage = function (storage) {
@@ -1721,7 +1709,7 @@ GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
     this.buildReadLocalStorageFlagCoreArgs(key, trueValue)
   );
   return this.resolveCoreBooleanCallOrFallback(readStorageFlagFromContextCore, function () {
-    var storage = this.getLocalStorage();
+    var storage = this.getWebStorageByName("localStorage");
     if (!this.canReadFromStorage(storage)) return false;
     var matchValue = this.resolveStorageFlagMatchValue(trueValue);
     try {
@@ -1753,7 +1741,7 @@ GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue,
     this.buildWriteLocalStorageFlagCoreArgs(key, enabled, trueValue, falseValue)
   );
   return this.resolveCoreBooleanCallOrFallback(writeStorageFlagFromContextCore, function () {
-    var storage = this.getLocalStorage();
+    var storage = this.getWebStorageByName("localStorage");
     if (!this.canWriteToStorage(storage)) return false;
     var value = this.resolveStorageFlagPersistValue(enabled, trueValue, falseValue);
     try {
@@ -1777,7 +1765,7 @@ GameManager.prototype.parseStorageJsonMapRaw = function (raw) {
 };
 
 GameManager.prototype.readLocalStorageJsonMapFallback = function (key) {
-  var storage = this.getLocalStorage();
+  var storage = this.getWebStorageByName("localStorage");
   if (!this.canReadFromStorage(storage)) return {};
   try {
     return this.parseStorageJsonMapRaw(storage.getItem(key));
@@ -1791,7 +1779,7 @@ GameManager.prototype.normalizeStorageJsonMapWriteInput = function (map) {
 };
 
 GameManager.prototype.writeLocalStorageJsonMapFallback = function (key, map) {
-  var storage = this.getLocalStorage();
+  var storage = this.getWebStorageByName("localStorage");
   if (!this.canWriteToStorage(storage)) return false;
   try {
     storage.setItem(key, JSON.stringify(this.normalizeStorageJsonMapWriteInput(map)));
@@ -1854,7 +1842,7 @@ GameManager.prototype.buildWriteLocalStorageJsonPayloadCoreArgs = function (key,
 };
 
 GameManager.prototype.writeLocalStorageJsonPayloadFallback = function (key, payload) {
-  var storage = this.getLocalStorage();
+  var storage = this.getWebStorageByName("localStorage");
   if (!this.canWriteToStorage(storage)) return false;
   var serialized = this.serializeLocalStoragePayload(payload);
   if (typeof serialized !== "string") return false;
@@ -2025,11 +2013,7 @@ GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
     this.normalizeWindowNameSavedPayloadCoreValue
   );
   if (typeof normalizedByCore !== "undefined") return normalizedByCore;
-  return this.readWindowNameSavedPayloadFallback(modeKey);
-};
-
-GameManager.prototype.resolveWindowNameWindowLike = function () {
-  return this.getWindowLike();
+  return this.resolveWindowNameSavedPayloadMapForMode(modeKey);
 };
 
 GameManager.prototype.resolveWindowNameRawValue = function (windowLike) {
@@ -2037,7 +2021,7 @@ GameManager.prototype.resolveWindowNameRawValue = function (windowLike) {
 };
 
 GameManager.prototype.readWindowNameRaw = function () {
-  var windowLike = this.resolveWindowNameWindowLike();
+  var windowLike = this.getWindowLike();
   if (!windowLike) return "";
   try {
     return this.resolveWindowNameRawValue(windowLike);
@@ -2082,13 +2066,9 @@ GameManager.prototype.resolveWindowNameSavedMap = function (raw, marker) {
   return this.decodeWindowNameSavedMapPayload(encoded);
 };
 
-GameManager.prototype.resolveModeKeyForSavedPayload = function (modeKey) {
-  return this.resolveModeKeyOrDefault(modeKey);
-};
-
 GameManager.prototype.resolveSavedPayloadFromWindowNameMap = function (map, modeKey) {
   if (!map || typeof map !== "object") return null;
-  var payload = map[this.resolveModeKeyForSavedPayload(modeKey)];
+  var payload = map[this.resolveModeKeyOrDefault(modeKey)];
   if (!payload || typeof payload !== "object") return null;
   return payload;
 };
@@ -2098,10 +2078,6 @@ GameManager.prototype.resolveWindowNameSavedPayloadMapForMode = function (modeKe
   var marker = this.resolveWindowNameSavedPayloadMarker();
   var map = this.resolveWindowNameSavedMap(raw, marker);
   return this.resolveSavedPayloadFromWindowNameMap(map, modeKey);
-};
-
-GameManager.prototype.readWindowNameSavedPayloadFallback = function (modeKey) {
-  return this.resolveWindowNameSavedPayloadMapForMode(modeKey);
 };
 
 GameManager.prototype.resolveWindowNameParts = function (rawWindowName) {
@@ -2144,7 +2120,7 @@ GameManager.prototype.resolveWindowNameMapAndKeptParts = function (parts, marker
 
 GameManager.prototype.applySavedPayloadToWindowNameMap = function (map, modeKey, payload) {
   var targetMap = map && typeof map === "object" ? map : {};
-  var key = this.resolveModeKeyForSavedPayload(modeKey);
+  var key = this.resolveModeKeyOrDefault(modeKey);
   if (!payload || typeof payload !== "object") {
     delete targetMap[key];
   } else {
@@ -2168,7 +2144,7 @@ GameManager.prototype.buildWindowNameWithSavedMap = function (keptParts, marker,
 };
 
 GameManager.prototype.writeWindowNameRaw = function (windowNameValue) {
-  var windowLike = this.resolveWindowNameWindowLike();
+  var windowLike = this.getWindowLike();
   if (!windowLike) return false;
   try {
     windowLike.name = windowNameValue;
@@ -2198,7 +2174,7 @@ GameManager.prototype.resolveWindowNameSavedPayloadNextWindowName = function (mo
 };
 
 GameManager.prototype.writeWindowNameSavedPayloadFallback = function (modeKey, payload) {
-  if (!this.resolveWindowNameWindowLike()) return false;
+  if (!this.getWindowLike()) return false;
   var nextWindowName = this.resolveWindowNameSavedPayloadNextWindowName(modeKey, payload);
   if (typeof nextWindowName !== "string") return false;
   return this.writeWindowNameRaw(nextWindowName);
@@ -2297,8 +2273,8 @@ GameManager.prototype.removeKeysFromSavedStateStoragesFallback = function (store
 
 GameManager.prototype.resolveSavedGameStateStorageKeys = function (modeKey) {
   return [
-    this.getSavedGameStateKey(modeKey),
-    this.getSavedGameStateLiteKey(modeKey)
+    this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_KEY_PREFIX, modeKey),
+    this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX, modeKey)
   ];
 };
 
@@ -2839,8 +2815,8 @@ GameManager.prototype.tryApplyRestoredSavedBoard = function (saved) {
 
 GameManager.prototype.resolveSavedStateCandidatesForCurrentMode = function () {
   return [
-    this.readSavedPayloadByKey(this.getSavedGameStateKey()),
-    this.readSavedPayloadByKey(this.getSavedGameStateLiteKey()),
+    this.readSavedPayloadByKey(this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_KEY_PREFIX)),
+    this.readSavedPayloadByKey(this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX)),
     this.readWindowNameSavedPayload(this.modeKey)
   ];
 };
@@ -2949,8 +2925,8 @@ GameManager.prototype.createSavedGameStatePersistWritesResult = function (persis
 
 GameManager.prototype.resolveSavedGameStatePersistKeys = function () {
   return {
-    key: this.getSavedGameStateKey(),
-    liteKey: this.getSavedGameStateLiteKey()
+    key: this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_KEY_PREFIX),
+    liteKey: this.resolveSavedGameStateStorageKey(GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX)
   };
 };
 
@@ -3338,7 +3314,7 @@ GameManager.prototype.appendCompactPracticeEncodedCellAndExponent = function (ce
 
 GameManager.prototype.resolveDetectedModeCoreInput = function () {
   var bodyMode = this.resolveDetectedModeBodyModeAttr();
-  var pathname = this.resolveDetectedModePathname();
+  var pathname = this.resolveWindowPathname();
   return {
     existingMode: this.mode,
     bodyMode: bodyMode,
@@ -3354,10 +3330,6 @@ GameManager.prototype.buildResolveDetectedModeCoreArgs = function () {
 GameManager.prototype.resolveDetectedModeBodyModeAttr = function () {
   if (typeof document === "undefined" || !document.body) return "";
   return document.body.getAttribute("data-mode-id") || "";
-};
-
-GameManager.prototype.resolveDetectedModePathname = function () {
-  return this.resolveWindowPathname();
 };
 
 GameManager.prototype.detectModeFromPathname = function (path) {
@@ -3376,7 +3348,7 @@ GameManager.prototype.resolveDetectedModeFromBodyDataset = function () {
 };
 
 GameManager.prototype.resolveDetectedModeFromWindowPath = function () {
-  var pathname = this.resolveDetectedModePathname();
+  var pathname = this.resolveWindowPathname();
   if (!pathname) return GameManager.DEFAULT_MODE_KEY;
   return this.detectModeFromPathname(pathname);
 };
@@ -3922,10 +3894,6 @@ GameManager.prototype.resolveUndoPolicyStateForMode = function (mode, options) {
   );
 };
 
-GameManager.prototype.resolveActiveUndoPolicyState = function (options) {
-  return this.resolveUndoPolicyStateForMode(this.mode, options);
-};
-
 GameManager.prototype.resolveLegacyAdapterBridgePayloadFromWindow = function () {
   var windowLike = this.getWindowLike();
   if (!windowLike || typeof windowLike !== "object") return null;
@@ -3985,14 +3953,6 @@ GameManager.prototype.getAdapterSessionParitySnapshot = function (readerMethodNa
     return this.resolveAdapterParitySnapshotFromReaderBridge(readerBridgeEntry, cacheFieldName);
   }
   return this.resolveAdapterParitySnapshotFromCache(bridge, cacheFieldName);
-};
-
-GameManager.prototype.getAdapterSessionParityReport = function () {
-  return this.getAdapterSessionParitySnapshot("readAdapterParityReport", "adapterParityReport");
-};
-
-GameManager.prototype.getAdapterSessionParityABDiff = function () {
-  return this.getAdapterSessionParitySnapshot("readAdapterParityABDiff", "adapterParityABDiff");
 };
 
 GameManager.prototype.resolveAdapterBridgeModeKey = function (bridge) {
@@ -6526,10 +6486,6 @@ GameManager.prototype.setTimerModuleViewMode = function (view, skipPersist) {
   this.applyTimerModuleView(view, !!skipPersist);
 };
 
-GameManager.prototype.getServerMode = function (mode) {
-  return this.getLegacyModeFromModeKey(mode || this.modeKey || this.mode);
-};
-
 GameManager.prototype.readUndoPolicyFieldForMode = function (mode, fieldName, fallbackValue) {
   var state = this.resolveUndoPolicyStateForMode(mode);
   if (!state || typeof state !== "object") return fallbackValue;
@@ -6612,7 +6568,7 @@ GameManager.prototype.resolveProvidedUndoPolicyStateForMode = function (mode, re
 GameManager.prototype.resolveProvidedActiveUndoPolicyState = function (resolvedState) {
   var self = this;
   return this.resolveProvidedState(resolvedState, function () {
-    return self.resolveActiveUndoPolicyState();
+    return self.resolveUndoPolicyStateForMode(self.mode);
   });
 };
 
@@ -6660,14 +6616,14 @@ GameManager.prototype.shouldApplyUndoEnabledToggle = function (forceChange, stat
 };
 
 GameManager.prototype.refreshUndoSettingsUiState = function () {
-  this.updateUndoUiState(this.resolveActiveUndoPolicyState({
+  this.updateUndoUiState(this.resolveUndoPolicyStateForMode(this.mode, {
     undoEnabled: this.undoEnabled
   }));
   this.notifyUndoSettingsStateChanged();
 };
 
 GameManager.prototype.setUndoEnabled = function (enabled, skipPersist, forceChange) {
-  var state = this.resolveActiveUndoPolicyState();
+  var state = this.resolveUndoPolicyStateForMode(this.mode);
   var forced = state ? state.forcedUndoSetting : null;
   if (forced !== null) {
     this.undoEnabled = this.resolveUndoEnabledFromForcedSetting(forced, enabled);
@@ -6681,7 +6637,7 @@ GameManager.prototype.setUndoEnabled = function (enabled, skipPersist, forceChan
 };
 
 GameManager.prototype.isUndoInteractionEnabled = function () {
-  var state = this.resolveActiveUndoPolicyState();
+  var state = this.resolveUndoPolicyStateForMode(this.mode);
   return !!(state && state.isUndoInteractionEnabled);
 };
 
@@ -7313,7 +7269,7 @@ GameManager.prototype.applySetupSessionSyncDefaults = function (hasInputSeed) {
 
 GameManager.prototype.resolveSetupSessionReplayV3Metadata = function () {
   return {
-    mode: this.getServerMode(this.modeKey),
+    mode: this.getLegacyModeFromModeKey(this.modeKey || this.mode),
     mode_key: this.modeKey,
     board_width: this.width,
     board_height: this.height,
@@ -9258,7 +9214,7 @@ GameManager.prototype.resolveDurationMsFallback = function (nowMs) {
 GameManager.prototype.createDefaultSessionReplayV3 = function () {
   return {
     v: 3,
-    mode: this.getServerMode(this.modeKey),
+    mode: this.getLegacyModeFromModeKey(this.modeKey || this.mode),
     mode_key: this.modeKey,
     board_width: this.width,
     board_height: this.height,
@@ -9315,7 +9271,7 @@ GameManager.prototype.resolveSerializedReplayActions = function (replay) {
 GameManager.prototype.buildSerializedReplayV3Payload = function (replay) {
   return {
     v: 3,
-    mode: this.getServerMode(replay.mode_key || replay.mode || this.modeKey),
+    mode: this.getLegacyModeFromModeKey(replay.mode_key || replay.mode || this.modeKey || this.mode),
     mode_key: this.resolveSerializedReplayModeKey(replay),
     board_width: this.resolveSerializedReplayBoardWidth(replay),
     board_height: this.resolveSerializedReplayBoardHeight(replay),
@@ -9358,8 +9314,8 @@ GameManager.prototype.writeSkippedSessionSubmitResult = function (reason) {
 
 GameManager.prototype.resolveSessionSubmitAdapterParitySnapshot = function () {
   return {
-    report: this.getAdapterSessionParityReport(),
-    diff: this.getAdapterSessionParityABDiff()
+    report: this.getAdapterSessionParitySnapshot("readAdapterParityReport", "adapterParityReport"),
+    diff: this.getAdapterSessionParitySnapshot("readAdapterParityABDiff", "adapterParityABDiff")
   };
 };
 
@@ -9433,7 +9389,7 @@ GameManager.prototype.resolveSessionSubmitScore = function () {
 };
 
 GameManager.prototype.applySessionSubmitModeAndBoardPayload = function (payload) {
-  payload.mode = this.getServerMode(this.modeKey);
+  payload.mode = this.getLegacyModeFromModeKey(this.modeKey || this.mode);
   payload.mode_key = this.resolveSessionSubmitModeKey();
   payload.board_width = this.resolveSessionSubmitBoardWidth();
   payload.board_height = this.resolveSessionSubmitBoardHeight();
