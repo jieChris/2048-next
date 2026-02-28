@@ -4970,32 +4970,20 @@ GameManager.prototype.resetSetupReplayCollections = function () {
   this.replayStartBoardMatrix = null;
 };
 
-GameManager.prototype.applySetupSessionSyncDefaults = function (hasInputSeed) {
-  if (!hasInputSeed) {
-    this.disableSessionSync = false;
-  }
-  this.sessionSubmitDone = false;
-};
-
-GameManager.prototype.assignSetupInitialSeed = function (hasInputSeed, inputSeed) {
-  this.initialSeed = hasInputSeed ? inputSeed : Math.random();
-  this.seed = this.initialSeed;
-};
-
-GameManager.prototype.applySetupReplayModeFromInputSeed = function (hasInputSeed) {
-  // If seed is provided externally, we might be in replay mode (or just restoring)
-  this.replayMode = hasInputSeed;
-};
-
 GameManager.prototype.initializeSetupReplayState = function (inputSeed) {
   var hasInputSeed = typeof inputSeed !== "undefined";
   if (hasInputSeed) {
     this.replayIndex = 0;
   }
-  this.assignSetupInitialSeed(hasInputSeed, inputSeed);
+  this.initialSeed = hasInputSeed ? inputSeed : Math.random();
+  this.seed = this.initialSeed;
   this.resetSetupReplayCollections();
-  this.applySetupReplayModeFromInputSeed(hasInputSeed);
-  this.applySetupSessionSyncDefaults(hasInputSeed);
+  // If seed is provided externally, we might be in replay mode (or just restoring)
+  this.replayMode = hasInputSeed;
+  if (!hasInputSeed) {
+    this.disableSessionSync = false;
+  }
+  this.sessionSubmitDone = false;
   return hasInputSeed;
 };
 
@@ -5110,17 +5098,6 @@ GameManager.prototype.isSetupStateRestoreDisabled = function (options) {
   return !!(options && options.disableStateRestore);
 };
 
-GameManager.prototype.shouldRestoreStateOnSetup = function (hasInputSeed, skipStartTiles, options) {
-  return !hasInputSeed &&
-    !skipStartTiles &&
-    !this.isSetupStateRestoreDisabled(options);
-};
-
-GameManager.prototype.resolveSetupRestoredFromSavedState = function (hasInputSeed, skipStartTiles, options) {
-  if (!this.shouldRestoreStateOnSetup(hasInputSeed, skipStartTiles, options)) return false;
-  return this.tryRestoreSavedGameState();
-};
-
 GameManager.prototype.applySetupStartTilesState = function (skipStartTiles, restoredFromSavedState) {
   if (!skipStartTiles && !restoredFromSavedState) {
     this.addStartTiles();
@@ -5209,27 +5186,8 @@ GameManager.prototype.initializeSetupUiShell = function () {
   return preferredTimerModuleView;
 };
 
-GameManager.prototype.buildSetupTileInitializationState = function (skipStartTiles, restoredFromSavedState) {
-  return {
-    skipStartTiles: skipStartTiles,
-    restoredFromSavedState: restoredFromSavedState
-  };
-};
-
-GameManager.prototype.resolveSetupTileInitializationState = function (hasInputSeed, options) {
-  var skipStartTiles = !!(options && options.skipStartTiles);
-  var restoredFromSavedState = this.resolveSetupRestoredFromSavedState(hasInputSeed, skipStartTiles, options);
-  return this.buildSetupTileInitializationState(skipStartTiles, restoredFromSavedState);
-};
-
 GameManager.prototype.normalizeSetupOptions = function (options) {
   return options || {};
-};
-
-GameManager.prototype.applySetupTileInitializationState = function (hasInputSeed, options, preferredTimerModuleView) {
-  var tileInitState = this.resolveSetupTileInitializationState(hasInputSeed, options);
-  this.applySetupStartTilesState(tileInitState.skipStartTiles, tileInitState.restoredFromSavedState);
-  this.finalizeSetupUiState(preferredTimerModuleView, tileInitState.restoredFromSavedState);
 };
 
 // Set up the game
@@ -5243,7 +5201,13 @@ GameManager.prototype.setup = function (inputSeed, options) {
   var preferredTimerModuleView = this.initializeSetupUiShell();
 
   // Add the initial tiles unless a replay imports an explicit board.
-  this.applySetupTileInitializationState(hasInputSeed, options, preferredTimerModuleView);
+  var skipStartTiles = !!(options && options.skipStartTiles);
+  var restoredFromSavedState = false;
+  if (!hasInputSeed && !skipStartTiles && !this.isSetupStateRestoreDisabled(options)) {
+    restoredFromSavedState = this.tryRestoreSavedGameState();
+  }
+  this.applySetupStartTilesState(skipStartTiles, restoredFromSavedState);
+  this.finalizeSetupUiState(preferredTimerModuleView, restoredFromSavedState);
 
   // 在线补传链路已移除，历史记录统一保存在本地。
 };
