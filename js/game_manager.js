@@ -8102,11 +8102,6 @@ GameManager.prototype.import = function (replayString) {
         actionsEncoded: body.substring(17)
       };
     });
-    var startReplayPlayback = function (manager) {
-      manager.replayIndex = 0;
-      manager.replayDelay = 200;
-      manager.resume();
-    };
     if (parsedEnvelope && (parsedEnvelope.kind === "json-v3" || parsedEnvelope.kind === "v4c")) {
       var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
       if (parsedEnvelope.kind === "json-v3") {
@@ -8209,7 +8204,9 @@ GameManager.prototype.import = function (replayString) {
         this.restartReplaySession(initialBoard, replayModeConfig, true);
       }
       this.applyUndoSettingForMode(this.modeKey, true, true);
-      startReplayPlayback(this);
+      this.replayIndex = 0;
+      this.replayDelay = 200;
+      this.resume();
     } else {
       var decodeLegacyReplayCore = this.callCoreReplayLegacyRuntime(
         "decodeLegacyReplay",
@@ -8231,7 +8228,9 @@ GameManager.prototype.import = function (replayString) {
           replaySpawns: decodedLegacy.replaySpawns
         });
         this.restartWithSeed(decodedLegacy.seed);
-        startReplayPlayback(this);
+        this.replayIndex = 0;
+        this.replayDelay = 200;
+        this.resume();
       } else {
         throw "Unknown replay version";
       }
