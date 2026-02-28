@@ -3739,22 +3739,6 @@ GameManager.prototype.buildPostMoveRecordFallback = function (direction) {
   );
 };
 
-GameManager.prototype.buildComputePostMoveRecordCoreInput = function (direction) {
-  return {
-    replayMode: !!this.replayMode,
-    direction: direction,
-    lastSpawn: this.lastSpawn ? {
-      x: this.lastSpawn.x,
-      y: this.lastSpawn.y,
-      value: this.lastSpawn.value
-    } : null,
-    width: this.width,
-    height: this.height,
-    isFibonacciMode: this.isFibonacciMode(),
-    hasSessionReplayV3: !!this.sessionReplayV3
-  };
-};
-
 GameManager.prototype.resolvePostMoveRecordFallback = function (direction) {
   if (this.replayMode) return this.buildPostMoveRecordPlan(false, null, false, null, false);
   return this.buildPostMoveRecordFallback(direction);
@@ -3763,7 +3747,19 @@ GameManager.prototype.resolvePostMoveRecordFallback = function (direction) {
 GameManager.prototype.computePostMoveRecord = function (direction) {
   var computePostMoveRecordCore = this.callCorePostMoveRecordRuntime(
     "computePostMoveRecord",
-    [this.buildComputePostMoveRecordCoreInput(direction)]
+    [{
+      replayMode: !!this.replayMode,
+      direction: direction,
+      lastSpawn: this.lastSpawn ? {
+        x: this.lastSpawn.x,
+        y: this.lastSpawn.y,
+        value: this.lastSpawn.value
+      } : null,
+      width: this.width,
+      height: this.height,
+      isFibonacciMode: this.isFibonacciMode(),
+      hasSessionReplayV3: !!this.sessionReplayV3
+    }]
   );
   return this.resolveCoreObjectCallOrFallback(computePostMoveRecordCore, function () {
     return this.resolvePostMoveRecordFallback(direction);
@@ -3794,14 +3790,6 @@ GameManager.prototype.buildPostUndoRecordFallback = function () {
   );
 };
 
-GameManager.prototype.buildComputePostUndoRecordCoreInput = function (direction) {
-  return {
-    replayMode: !!this.replayMode,
-    direction: direction,
-    hasSessionReplayV3: !!this.sessionReplayV3
-  };
-};
-
 GameManager.prototype.resolvePostUndoRecordFallback = function () {
   if (this.replayMode) return this.buildPostUndoRecordPlan(false, false, false, null);
   return this.buildPostUndoRecordFallback();
@@ -3810,7 +3798,11 @@ GameManager.prototype.resolvePostUndoRecordFallback = function () {
 GameManager.prototype.computePostUndoRecord = function (direction) {
   var computePostUndoRecordCore = this.callCorePostUndoRecordRuntime(
     "computePostUndoRecord",
-    [this.buildComputePostUndoRecordCoreInput(direction)]
+    [{
+      replayMode: !!this.replayMode,
+      direction: direction,
+      hasSessionReplayV3: !!this.sessionReplayV3
+    }]
   );
   return this.resolveCoreObjectCallOrFallback(computePostUndoRecordCore, function () {
     return this.resolvePostUndoRecordFallback();
