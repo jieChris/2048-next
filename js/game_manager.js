@@ -702,24 +702,6 @@ GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
   });
 };
 
-GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
-  var planReplayStepCore = this.callCoreReplayLifecycleRuntime(
-    "planReplayStep",
-    [{
-      action: action,
-      hasReplaySpawns: !!this.replaySpawns,
-      spawnAtIndex: spawnAtIndex
-    }]
-  );
-  return this.resolveCoreObjectCallOrFallback(planReplayStepCore, function () {
-    var shouldInjectForcedSpawn = !!this.replaySpawns && !Array.isArray(action);
-    return {
-      shouldInjectForcedSpawn: shouldInjectForcedSpawn,
-      forcedSpawn: shouldInjectForcedSpawn ? spawnAtIndex : undefined
-    };
-  });
-};
-
 GameManager.prototype.planReplayStepExecution = function () {
   var planReplayStepExecutionCore = this.callCoreReplayLoopRuntime(
     "planReplayStepExecution",
@@ -731,10 +713,22 @@ GameManager.prototype.planReplayStepExecution = function () {
   );
   return this.resolveCoreObjectCallOrFallback(planReplayStepExecutionCore, function () {
     var action = this.replayMoves[this.replayIndex];
-    var stepPlan = this.planReplayStep(
-      action,
-      this.replaySpawns ? this.replaySpawns[this.replayIndex] : undefined
+    var spawnAtIndex = this.replaySpawns ? this.replaySpawns[this.replayIndex] : undefined;
+    var planReplayStepCore = this.callCoreReplayLifecycleRuntime(
+      "planReplayStep",
+      [{
+        action: action,
+        hasReplaySpawns: !!this.replaySpawns,
+        spawnAtIndex: spawnAtIndex
+      }]
     );
+    var stepPlan = this.resolveCoreObjectCallOrFallback(planReplayStepCore, function () {
+      var shouldInjectForcedSpawn = !!this.replaySpawns && !Array.isArray(action);
+      return {
+        shouldInjectForcedSpawn: shouldInjectForcedSpawn,
+        forcedSpawn: shouldInjectForcedSpawn ? spawnAtIndex : undefined
+      };
+    });
     return {
       action: action,
       shouldInjectForcedSpawn: !!stepPlan.shouldInjectForcedSpawn,
