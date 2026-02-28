@@ -5655,7 +5655,17 @@ GameManager.prototype.flushPendingMoveInput = function () {
   }, wait);
 };
 
-GameManager.prototype.dispatchMoveInputWithThrottle = function (direction, throttleMs) {
+GameManager.prototype.handleMoveInput = function (direction) {
+  if (direction == -1) {
+    this.move(direction);
+    return;
+  }
+
+  var throttleMs = this.getMoveInputThrottleMs();
+  if (throttleMs <= 0) {
+    this.move(direction);
+    return;
+  }
   var now = Date.now();
   if ((now - this.lastMoveInputAt) >= throttleMs && !this.moveInputFlushScheduled) {
     this.executeImmediateMoveInput(direction, now);
@@ -5668,20 +5678,6 @@ GameManager.prototype.dispatchMoveInputWithThrottle = function (direction, throt
   self.requestAnimationFrame(function () {
     self.flushPendingMoveInput();
   });
-};
-
-GameManager.prototype.handleMoveInput = function (direction) {
-  if (direction == -1) {
-    this.move(direction);
-    return;
-  }
-
-  var throttleMs = this.getMoveInputThrottleMs();
-  if (throttleMs <= 0) {
-    this.move(direction);
-    return;
-  }
-  this.dispatchMoveInputWithThrottle(direction, throttleMs);
 };
 
 GameManager.prototype.restoreUndoPayload = function (undoPayload) {
@@ -5877,16 +5873,6 @@ GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove
   });
 };
 
-GameManager.prototype.shouldAbortDirectionalMove = function (direction) {
-  if (this.isGameTerminated()) return true; // Don't do anything if the game's over
-
-  var lockedDirection = this.getLockedDirection();
-  if (lockedDirection === null || typeof lockedDirection === "undefined") return false;
-  if (Number(direction) !== Number(lockedDirection)) return false;
-  this.lockConsumedAtMoveCount = this.successfulMoveCount;
-  return true;
-};
-
 GameManager.prototype.executeDirectionalMove = function (direction) {
   var movePlan = {
     vector: this.getVector(direction),
@@ -5987,7 +5973,16 @@ GameManager.prototype.move = function (direction) {
     this.handleUndoMove(direction);
     return;
   }
-  if (this.shouldAbortDirectionalMove(direction)) return;
+  if (this.isGameTerminated()) return; // Don't do anything if the game's over
+  var lockedDirection = this.getLockedDirection();
+  if (
+    lockedDirection !== null &&
+    typeof lockedDirection !== "undefined" &&
+    Number(direction) === Number(lockedDirection)
+  ) {
+    this.lockConsumedAtMoveCount = this.successfulMoveCount;
+    return;
+  }
   this.executeDirectionalMove(direction);
 };
 
