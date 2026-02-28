@@ -1868,19 +1868,6 @@ GameManager.prototype.resolveWindowNameSavedPayloadMarker = function () {
   return GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY + "=";
 };
 
-GameManager.prototype.resolveWindowNameLookupMarker = function (marker) {
-  return typeof marker === "string" && marker ? marker : this.resolveWindowNameSavedPayloadMarker();
-};
-
-GameManager.prototype.extractWindowNameEncodedMapPart = function (parts, lookupMarker) {
-  for (var i = 0; i < parts.length; i++) {
-    if (parts[i].indexOf(lookupMarker) === 0) {
-      return parts[i].substring(lookupMarker.length);
-    }
-  }
-  return "";
-};
-
 GameManager.prototype.decodeWindowNameSavedMapPayload = function (encoded) {
   if (!encoded) return null;
   try {
@@ -1894,9 +1881,17 @@ GameManager.prototype.decodeWindowNameSavedMapPayload = function (encoded) {
 
 GameManager.prototype.resolveWindowNameSavedMap = function (raw, marker) {
   if (!raw || typeof raw !== "string") return null;
-  var parts = this.resolveWindowNameParts(raw);
-  var lookupMarker = this.resolveWindowNameLookupMarker(marker);
-  var encoded = this.extractWindowNameEncodedMapPart(parts, lookupMarker);
+  var parts = raw.split("&");
+  var lookupMarker = typeof marker === "string" && marker
+    ? marker
+    : this.resolveWindowNameSavedPayloadMarker();
+  var encoded = "";
+  for (var i = 0; i < parts.length; i++) {
+    if (parts[i].indexOf(lookupMarker) === 0) {
+      encoded = parts[i].substring(lookupMarker.length);
+      break;
+    }
+  }
   return this.decodeWindowNameSavedMapPayload(encoded);
 };
 
@@ -1917,33 +1912,18 @@ GameManager.prototype.resolveWindowNameSavedPayloadMapForMode = function (modeKe
   return this.resolveSavedPayloadFromWindowNameMap(map, modeKey);
 };
 
-GameManager.prototype.resolveWindowNameParts = function (rawWindowName) {
-  return rawWindowName ? rawWindowName.split("&") : [];
-};
-
-GameManager.prototype.parseWindowNameMapPart = function (part, lookupMarker) {
-  if (typeof part !== "string" || !part) {
-    return { isMapPart: false, parsedMap: null };
-  }
-  if (part.indexOf(lookupMarker) !== 0) {
-    return { isMapPart: false, parsedMap: null };
-  }
-  var encoded = part.substring(lookupMarker.length);
-  return {
-    isMapPart: true,
-    parsedMap: this.decodeWindowNameSavedMapPayload(encoded)
-  };
-};
-
 GameManager.prototype.resolveWindowNameMapAndKeptParts = function (parts, marker) {
   var kept = [];
   var map = {};
-  var lookupMarker = this.resolveWindowNameLookupMarker(marker);
+  var lookupMarker = typeof marker === "string" && marker
+    ? marker
+    : this.resolveWindowNameSavedPayloadMarker();
   for (var i = 0; i < parts.length; i++) {
     var part = parts[i];
-    var parsedPart = this.parseWindowNameMapPart(part, lookupMarker);
-    if (parsedPart.isMapPart) {
-      if (this.isNonArrayObject(parsedPart.parsedMap)) map = parsedPart.parsedMap;
+    if (typeof part === "string" && part && part.indexOf(lookupMarker) === 0) {
+      var encoded = part.substring(lookupMarker.length);
+      var parsedMap = this.decodeWindowNameSavedMapPayload(encoded);
+      if (this.isNonArrayObject(parsedMap)) map = parsedMap;
       continue;
     }
     if (!part) continue;
@@ -1997,7 +1977,7 @@ GameManager.prototype.writeWindowNameSavedPayloadFallback = function (modeKey, p
   if (!this.getWindowLike()) return false;
   var marker = this.resolveWindowNameSavedPayloadMarker();
   var raw = this.readWindowNameRaw();
-  var splitState = this.resolveWindowNameMapAndKeptParts(this.resolveWindowNameParts(raw), marker);
+  var splitState = this.resolveWindowNameMapAndKeptParts(raw ? raw.split("&") : [], marker);
   var nextMap = this.applySavedPayloadToWindowNameMap(splitState.map, modeKey, payload);
   var encodedMap = this.encodeWindowNameSavedMap(nextMap);
   if (typeof encodedMap !== "string") return false;
