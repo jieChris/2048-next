@@ -1362,6 +1362,15 @@ GameManager.prototype.resolveCoreRawCallOrFallback = function (coreCallResult, f
   return undefined;
 };
 
+GameManager.prototype.tryHandleCoreRawValue = function (coreCallResult, handler) {
+  var coreValue = this.resolveCoreRawCallValueOrUndefined(coreCallResult);
+  if (typeof coreValue === "undefined") return false;
+  if (typeof handler === "function") {
+    handler.call(this, coreValue);
+  }
+  return true;
+};
+
 GameManager.prototype.resolveCoreRuntimeCallerFromResolver = function (resolverMethodName, methodName) {
   var resolver = this[resolverMethodName];
   if (typeof resolver !== "function") return null;
@@ -3255,9 +3264,9 @@ GameManager.prototype.appendCompactMoveCode = function (rawCode) {
     "appendCompactMoveCode",
     this.buildAppendCompactMoveCodeCoreArgs(rawCode)
   );
-  var compactMoveCodeByCore = this.resolveCoreRawCallValueOrUndefined(appendCompactMoveCodeCore);
-  if (typeof compactMoveCodeByCore !== "undefined") {
-    this.replayCompactLog = compactMoveCodeByCore;
+  if (this.tryHandleCoreRawValue(appendCompactMoveCodeCore, function (coreValue) {
+    this.replayCompactLog = coreValue;
+  })) {
     return;
   }
   this.appendCompactMoveCodeFallback(rawCode);
@@ -3281,9 +3290,9 @@ GameManager.prototype.appendCompactUndo = function () {
     "appendCompactUndo",
     this.buildAppendCompactUndoCoreArgs()
   );
-  var compactUndoByCore = this.resolveCoreRawCallValueOrUndefined(appendCompactUndoCore);
-  if (typeof compactUndoByCore !== "undefined") {
-    this.replayCompactLog = compactUndoByCore;
+  if (this.tryHandleCoreRawValue(appendCompactUndoCore, function (coreValue) {
+    this.replayCompactLog = coreValue;
+  })) {
     return;
   }
   this.appendCompactUndoFallback();
@@ -3309,9 +3318,9 @@ GameManager.prototype.appendCompactPracticeAction = function (x, y, value) {
     "appendCompactPracticeAction",
     this.buildAppendCompactPracticeActionCoreArgs(x, y, value)
   );
-  var compactPracticeActionByCore = this.resolveCoreRawCallValueOrUndefined(appendCompactPracticeActionCore);
-  if (typeof compactPracticeActionByCore !== "undefined") {
-    this.replayCompactLog = compactPracticeActionByCore;
+  if (this.tryHandleCoreRawValue(appendCompactPracticeActionCore, function (coreValue) {
+    this.replayCompactLog = coreValue;
+  })) {
     return;
   }
   this.appendCompactPracticeActionFallback(x, y, value);
@@ -5210,9 +5219,9 @@ GameManager.prototype.applySpecialRulesState = function () {
     "computeSpecialRulesState",
     this.buildComputeSpecialRulesStateCoreArgs()
   );
-  var computedSpecialRulesStateByCore = this.resolveCoreRawCallValueOrUndefined(computeSpecialRulesStateCore);
-  if (typeof computedSpecialRulesStateByCore !== "undefined") {
-    this.applyComputedSpecialRulesState(computedSpecialRulesStateByCore || {});
+  if (this.tryHandleCoreRawValue(computeSpecialRulesStateCore, function (coreValue) {
+    this.applyComputedSpecialRulesState(coreValue || {});
+  })) {
     return;
   }
 
@@ -6483,9 +6492,10 @@ GameManager.prototype.persistTimerModuleViewForMode = function (mode, view) {
     "writeTimerModuleViewForModeToMap",
     this.buildWriteTimerModuleViewForModeCoreArgs(map, mode, view)
   );
-  var timerModuleViewMapByCore = this.resolveCoreRawCallValueOrUndefined(writeTimerModuleViewForModeToMapCore);
-  if (typeof timerModuleViewMapByCore !== "undefined") {
-    map = timerModuleViewMapByCore;
+  if (this.tryHandleCoreRawValue(writeTimerModuleViewForModeToMapCore, function (coreValue) {
+    map = coreValue;
+  })) {
+    // map is assigned in handler
   } else {
     map[mode] = view === "hidden" ? "hidden" : "timer";
   }
@@ -6753,9 +6763,9 @@ GameManager.prototype.recordSpawnValue = function (value) {
     "applySpawnValueCount",
     this.buildApplySpawnValueCountCoreArgs(value)
   );
-  var spawnValueCountByCore = this.resolveCoreRawCallValueOrUndefined(applySpawnValueCountCore);
-  if (typeof spawnValueCountByCore !== "undefined") {
-    this.applySpawnValueCountCoreResult(spawnValueCountByCore || {});
+  if (this.tryHandleCoreRawValue(applySpawnValueCountCore, function (coreValue) {
+    this.applySpawnValueCountCoreResult(coreValue || {});
+  })) {
     this.refreshSpawnRateDisplay();
     return;
   }
@@ -7088,9 +7098,9 @@ GameManager.prototype.recordIpsInput = function () {
     "resolveNextIpsInputCount",
     this.buildResolveNextIpsInputCountCoreArgs()
   );
-  var nextIpsInputCountByCore = this.resolveCoreRawCallValueOrUndefined(resolveNextIpsInputCountCore);
-  if (typeof nextIpsInputCountByCore !== "undefined") {
-    if (!this.applyResolvedNextIpsInputCount(nextIpsInputCountByCore || {})) return;
+  if (this.tryHandleCoreRawValue(resolveNextIpsInputCountCore, function (coreValue) {
+    this.applyResolvedNextIpsInputCount(coreValue || {});
+  })) {
     return;
   }
   this.incrementIpsInputCountFallback();
@@ -7992,9 +8002,9 @@ GameManager.prototype.applyPostMoveScore = function (scoreBeforeMove) {
     "computePostMoveScore",
     this.buildComputePostMoveScoreCoreArgs(scoreBeforeMove)
   );
-  var postMoveScoreByCore = this.resolveCoreRawCallValueOrUndefined(computePostMoveScoreCore);
-  if (typeof postMoveScoreByCore !== "undefined") {
-    this.applyCorePostMoveScoreResult(postMoveScoreByCore || {});
+  if (this.tryHandleCoreRawValue(computePostMoveScoreCore, function (coreValue) {
+    this.applyCorePostMoveScoreResult(coreValue || {});
+  })) {
     return;
   }
   this.applyFallbackPostMoveScore(scoreBeforeMove);
