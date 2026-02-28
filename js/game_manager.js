@@ -4174,8 +4174,31 @@ GameManager.prototype.initStatsPanelUi = function () {
     btn.classList.add("is-floating");
   }
   var overlay = this.ensureStatsPanelOverlayElement();
-  this.bindStatsPanelUiEvents(btn, overlay);
-  this.applyStatsPanelInitialVisibility(overlay);
+  if (!btn.__statsBound) {
+    btn.__statsBound = true;
+    var self = this;
+    btn.addEventListener("click", function (event) {
+      event.preventDefault();
+      self.openStatsPanel();
+    });
+  }
+  var closeBtn = document.getElementById("stats-panel-close");
+  if (closeBtn && !closeBtn.__statsBound) {
+    closeBtn.__statsBound = true;
+    var selfForClose = this;
+    closeBtn.addEventListener("click", function () {
+      selfForClose.closeStatsPanel();
+    });
+  }
+  if (!overlay.__statsBound) {
+    overlay.__statsBound = true;
+    var selfForOverlay = this;
+    overlay.addEventListener("click", function (e) {
+      if (e.target === overlay) selfForOverlay.closeStatsPanel();
+    });
+  }
+  var isOpen = this.readLocalStorageFlag(GameManager.STATS_PANEL_VISIBLE_KEY, "1");
+  overlay.style.display = isOpen ? "flex" : "none";
 };
 
 GameManager.prototype.ensureStatsPanelToggleButton = function () {
@@ -4220,44 +4243,6 @@ GameManager.prototype.ensureStatsPanelOverlayElement = function () {
   overlay.innerHTML = this.buildStatsPanelOverlayMarkup();
   document.body.appendChild(overlay);
   return overlay;
-};
-
-GameManager.prototype.bindStatsPanelToggleButtonEvent = function (btn, self) {
-  if (btn.__statsBound) return;
-  btn.__statsBound = true;
-  btn.addEventListener("click", function (event) {
-    event.preventDefault();
-    self.openStatsPanel();
-  });
-};
-
-GameManager.prototype.bindStatsPanelCloseButtonEvent = function (self) {
-  var closeBtn = document.getElementById("stats-panel-close");
-  if (!closeBtn || closeBtn.__statsBound) return;
-  closeBtn.__statsBound = true;
-  closeBtn.addEventListener("click", function () {
-    self.closeStatsPanel();
-  });
-};
-
-GameManager.prototype.bindStatsPanelOverlayDismissEvent = function (overlay, self) {
-  if (overlay.__statsBound) return;
-  overlay.__statsBound = true;
-  overlay.addEventListener("click", function (e) {
-    if (e.target === overlay) self.closeStatsPanel();
-  });
-};
-
-GameManager.prototype.bindStatsPanelUiEvents = function (btn, overlay) {
-  var self = this;
-  this.bindStatsPanelToggleButtonEvent(btn, self);
-  this.bindStatsPanelCloseButtonEvent(self);
-  this.bindStatsPanelOverlayDismissEvent(overlay, self);
-};
-
-GameManager.prototype.applyStatsPanelInitialVisibility = function (overlay) {
-  var isOpen = this.readLocalStorageFlag(GameManager.STATS_PANEL_VISIBLE_KEY, "1");
-  overlay.style.display = isOpen ? "flex" : "none";
 };
 
 GameManager.prototype.openStatsPanel = function () {
