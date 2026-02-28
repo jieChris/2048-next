@@ -5471,10 +5471,14 @@ GameManager.prototype.setCapped64RowVisible = function (value, visible) {
   this.setTimerRowVisibleState(value, visible, true);
 };
 
+GameManager.prototype.buildCreateProgressiveCapped64UnlockedStateCoreArgs = function (unlockedState) {
+  return [unlockedState];
+};
+
 GameManager.prototype.resolveProgressiveCapped64UnlockedState = function (unlockedState) {
   var createProgressiveCapped64UnlockedStateCore = this.callCoreModeRuntime(
     "createProgressiveCapped64UnlockedState",
-    [unlockedState]
+    this.buildCreateProgressiveCapped64UnlockedStateCoreArgs(unlockedState)
   );
   if (createProgressiveCapped64UnlockedStateCore.available) {
     var coreValue = createProgressiveCapped64UnlockedStateCore.value;
@@ -5507,6 +5511,14 @@ GameManager.prototype.resolveProgressiveCapped64UnlockCoreInput = function (
     value: value,
     unlockedState: unlockedState
   };
+};
+
+GameManager.prototype.buildResolveProgressiveCapped64UnlockCoreArgs = function (
+  isProgressiveCapped64Mode,
+  value,
+  unlockedState
+) {
+  return [this.resolveProgressiveCapped64UnlockCoreInput(isProgressiveCapped64Mode, value, unlockedState)];
 };
 
 GameManager.prototype.isProgressiveCapped64UnlockValue = function (value) {
@@ -5547,7 +5559,7 @@ GameManager.prototype.unlockProgressiveCapped64Row = function (value) {
   var isProgressiveCapped64Mode = !!cappedState.isProgressiveCapped64Mode;
   var resolveProgressiveCapped64UnlockCore = this.callCoreModeRuntime(
     "resolveProgressiveCapped64Unlock",
-    [this.resolveProgressiveCapped64UnlockCoreInput(isProgressiveCapped64Mode, value, unlockedState)]
+    this.buildResolveProgressiveCapped64UnlockCoreArgs(isProgressiveCapped64Mode, value, unlockedState)
   );
   if (resolveProgressiveCapped64UnlockCore.available) {
     var resolved = resolveProgressiveCapped64UnlockCore.value || {};
