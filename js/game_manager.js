@@ -1779,7 +1779,30 @@ GameManager.prototype.readWindowNameSavedPayload = function (modeKey) {
     this.normalizeWindowNameSavedPayloadCoreValue
   );
   if (typeof normalizedByCore !== "undefined") return normalizedByCore;
-  return this.resolveWindowNameSavedPayloadMapForMode(modeKey);
+  var raw = this.readWindowNameRaw();
+  var marker = this.resolveWindowNameSavedPayloadMarker();
+  var map = null;
+  if (raw && typeof raw === "string") {
+    var parts = raw.split("&");
+    var lookupMarker = typeof marker === "string" && marker
+      ? marker
+      : this.resolveWindowNameSavedPayloadMarker();
+    var encoded = "";
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].indexOf(lookupMarker) === 0) {
+        encoded = parts[i].substring(lookupMarker.length);
+        break;
+      }
+    }
+    map = this.decodeWindowNameSavedMapPayload(encoded);
+  }
+  if (!map || typeof map !== "object") return null;
+  var key = (typeof modeKey === "string" && modeKey)
+    ? modeKey
+    : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
+  var payload = map[key];
+  if (!payload || typeof payload !== "object") return null;
+  return payload;
 };
 
 GameManager.prototype.readWindowNameRaw = function () {
@@ -1805,39 +1828,6 @@ GameManager.prototype.decodeWindowNameSavedMapPayload = function (encoded) {
   } catch (_errParse) {
     return null;
   }
-};
-
-GameManager.prototype.resolveWindowNameSavedMap = function (raw, marker) {
-  if (!raw || typeof raw !== "string") return null;
-  var parts = raw.split("&");
-  var lookupMarker = typeof marker === "string" && marker
-    ? marker
-    : this.resolveWindowNameSavedPayloadMarker();
-  var encoded = "";
-  for (var i = 0; i < parts.length; i++) {
-    if (parts[i].indexOf(lookupMarker) === 0) {
-      encoded = parts[i].substring(lookupMarker.length);
-      break;
-    }
-  }
-  return this.decodeWindowNameSavedMapPayload(encoded);
-};
-
-GameManager.prototype.resolveSavedPayloadFromWindowNameMap = function (map, modeKey) {
-  if (!map || typeof map !== "object") return null;
-  var key = (typeof modeKey === "string" && modeKey)
-    ? modeKey
-    : (this.modeKey || this.mode || GameManager.DEFAULT_MODE_KEY);
-  var payload = map[key];
-  if (!payload || typeof payload !== "object") return null;
-  return payload;
-};
-
-GameManager.prototype.resolveWindowNameSavedPayloadMapForMode = function (modeKey) {
-  var raw = this.readWindowNameRaw();
-  var marker = this.resolveWindowNameSavedPayloadMarker();
-  var map = this.resolveWindowNameSavedMap(raw, marker);
-  return this.resolveSavedPayloadFromWindowNameMap(map, modeKey);
 };
 
 GameManager.prototype.resolveWindowNameMapAndKeptParts = function (parts, marker) {
