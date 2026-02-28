@@ -1328,6 +1328,11 @@ GameManager.prototype.resolveNormalizedCoreValueOrUndefined = function (coreCall
   return normalizer.call(this, coreCallResult.value);
 };
 
+GameManager.prototype.resolveCoreRawCallValueOrUndefined = function (coreCallResult) {
+  if (!this.isCoreCallAvailable(coreCallResult)) return undefined;
+  return coreCallResult.value;
+};
+
 GameManager.prototype.resolveCoreRuntimeCallerFromResolver = function (resolverMethodName, methodName) {
   var resolver = this[resolverMethodName];
   if (typeof resolver !== "function") return null;
@@ -2273,10 +2278,8 @@ GameManager.prototype.clearSavedGameState = function (modeKey) {
     "removeKeysFromStorages",
     this.buildRemoveSavedGameStateKeysCoreArgs(stores, keys)
   );
-  if (this.isCoreCallAvailable(removeKeysFromStoragesCore)) {
-    var removedByCore = removeKeysFromStoragesCore.value;
-    if (removedByCore === true) return;
-  }
+  var removedByCore = this.resolveCoreRawCallValueOrUndefined(removeKeysFromStoragesCore);
+  if (removedByCore === true) return;
   this.removeKeysFromSavedStateStoragesFallback(stores, keys);
 };
 
@@ -6021,7 +6024,8 @@ GameManager.prototype.buildCappedPlaceholderSlotByRepeatCoreArgs = function (rep
 };
 
 GameManager.prototype.resolveCappedPlaceholderSlotValueFromCoreResult = function (coreResult) {
-  return this.isCoreCallAvailable(coreResult) ? coreResult.value : null;
+  var slotValueByCore = this.resolveCoreRawCallValueOrUndefined(coreResult);
+  return typeof slotValueByCore === "undefined" ? null : slotValueByCore;
 };
 
 GameManager.prototype.fillCappedPlaceholderRowByRepeat = function (repeatCount, labelText, timeStr, cappedState) {
@@ -6549,9 +6553,8 @@ GameManager.prototype.resolveProvidedActiveUndoPolicyState = function (resolvedS
 };
 
 GameManager.prototype.resolvePersistedUndoSettingMap = function (map, mode, enabled, coreResult) {
-  if (this.isCoreCallAvailable(coreResult)) {
-    return coreResult.value;
-  }
+  var persistedMapByCore = this.resolveCoreRawCallValueOrUndefined(coreResult);
+  if (typeof persistedMapByCore !== "undefined") return persistedMapByCore;
   map[mode] = !!enabled;
   return map;
 };
