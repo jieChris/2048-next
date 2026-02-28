@@ -781,18 +781,14 @@ GameManager.prototype.planReplayDispatchFallback = function (resolvedExecution) 
   this.throwUnknownReplayAction();
 };
 
-GameManager.prototype.buildNormalizeReplaySeekTargetCoreArgs = function (targetIndex) {
-  return [{
-    targetIndex: targetIndex,
-    hasReplayMoves: !!this.replayMoves,
-    replayMovesLength: this.replayMoves ? this.replayMoves.length : 0
-  }];
-};
-
 GameManager.prototype.normalizeReplaySeekTarget = function (targetIndex) {
   var normalizeReplaySeekTargetCore = this.callCoreReplayLifecycleRuntime(
     "normalizeReplaySeekTarget",
-    this.buildNormalizeReplaySeekTargetCoreArgs(targetIndex)
+    [{
+      targetIndex: targetIndex,
+      hasReplayMoves: !!this.replayMoves,
+      replayMovesLength: this.replayMoves ? this.replayMoves.length : 0
+    }]
   );
   return this.resolveNormalizedCoreValueOrFallback(normalizeReplaySeekTargetCore, function (coreValue) {
     var resolved = Number(coreValue);
@@ -808,18 +804,14 @@ GameManager.prototype.clampReplaySeekTargetByReplayMoves = function (targetIndex
   return targetIndex;
 };
 
-GameManager.prototype.buildPlanReplayStepCoreArgs = function (action, spawnAtIndex) {
-  return [{
-    action: action,
-    hasReplaySpawns: !!this.replaySpawns,
-    spawnAtIndex: spawnAtIndex
-  }];
-};
-
 GameManager.prototype.planReplayStep = function (action, spawnAtIndex) {
   var planReplayStepCore = this.callCoreReplayLifecycleRuntime(
     "planReplayStep",
-    this.buildPlanReplayStepCoreArgs(action, spawnAtIndex)
+    [{
+      action: action,
+      hasReplaySpawns: !!this.replaySpawns,
+      spawnAtIndex: spawnAtIndex
+    }]
   );
   return this.resolveCoreObjectCallOrFallback(planReplayStepCore, function () {
     return this.planReplayStepFallback(action, spawnAtIndex);
@@ -838,18 +830,14 @@ GameManager.prototype.planReplayStepFallback = function (action, spawnAtIndex) {
   };
 };
 
-GameManager.prototype.buildPlanReplayStepExecutionCoreArgs = function () {
-  return [{
-    replayMoves: this.replayMoves,
-    replaySpawns: this.replaySpawns,
-    replayIndex: this.replayIndex
-  }];
-};
-
 GameManager.prototype.planReplayStepExecution = function () {
   var planReplayStepExecutionCore = this.callCoreReplayLoopRuntime(
     "planReplayStepExecution",
-    this.buildPlanReplayStepExecutionCoreArgs()
+    [{
+      replayMoves: this.replayMoves,
+      replaySpawns: this.replaySpawns,
+      replayIndex: this.replayIndex
+    }]
   );
   return this.resolveCoreObjectCallOrFallback(planReplayStepExecutionCore, function () {
     return this.planReplayStepExecutionFallback();
@@ -963,17 +951,13 @@ GameManager.prototype.computeReplayEndStateFallback = function () {
   };
 };
 
-GameManager.prototype.buildPlanReplayTickBoundaryCoreArgs = function (shouldStopAtTick, replayEndState) {
-  return [{
-    shouldStopAtTick: shouldStopAtTick,
-    replayEndState: replayEndState
-  }];
-};
-
 GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, replayEndState) {
   var planReplayTickBoundaryCore = this.callCoreReplayControlRuntime(
     "planReplayTickBoundary",
-    this.buildPlanReplayTickBoundaryCoreArgs(shouldStopAtTick, replayEndState)
+    [{
+      shouldStopAtTick: shouldStopAtTick,
+      replayEndState: replayEndState
+    }]
   );
   return this.resolveCoreObjectCallOrFallback(planReplayTickBoundaryCore, function () {
     return this.planReplayTickBoundaryFallback(shouldStopAtTick, replayEndState);
@@ -1050,18 +1034,14 @@ GameManager.prototype.tryStopReplayAtTickBoundary = function () {
   return this.applyReplayTickBoundaryPlan(tickBoundaryPlan);
 };
 
-GameManager.prototype.buildPlanReplaySeekRewindCoreArgs = function (targetIndex) {
-  return [{
-    targetIndex: targetIndex,
-    replayIndex: this.replayIndex,
-    hasReplayStartBoard: !!this.replayStartBoardMatrix
-  }];
-};
-
 GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
   var planReplaySeekRewindCore = this.callCoreReplayFlowRuntime(
     "planReplaySeekRewind",
-    this.buildPlanReplaySeekRewindCoreArgs(targetIndex)
+    [{
+      targetIndex: targetIndex,
+      replayIndex: this.replayIndex,
+      hasReplayStartBoard: !!this.replayStartBoardMatrix
+    }]
   );
   return this.resolveCoreObjectCallOrFallback(planReplaySeekRewindCore, function () {
     return this.planReplaySeekRewindFallback(targetIndex);
@@ -2901,17 +2881,13 @@ GameManager.prototype.shouldSkipSaveGameStateByThrottle = function (options, now
   return !options.force && this.lastSavedGameStateAt && now - this.lastSavedGameStateAt < 150;
 };
 
-GameManager.prototype.buildAppendCompactMoveCodeCoreArgs = function (rawCode) {
-  return [{
-    log: this.replayCompactLog,
-    rawCode: rawCode
-  }];
-};
-
 GameManager.prototype.appendCompactMoveCode = function (rawCode) {
   var appendCompactMoveCodeCore = this.callCoreReplayCodecRuntime(
     "appendCompactMoveCode",
-    this.buildAppendCompactMoveCodeCoreArgs(rawCode)
+    [{
+      log: this.replayCompactLog,
+      rawCode: rawCode
+    }]
   );
   if (this.tryHandleCoreRawValue(appendCompactMoveCodeCore, function (coreValue) {
     this.replayCompactLog = coreValue;
@@ -2947,21 +2923,17 @@ GameManager.prototype.appendCompactUndoFallback = function () {
   this.replayCompactLog += this.encodeReplay128(127) + this.encodeReplay128(1);
 };
 
-GameManager.prototype.buildAppendCompactPracticeActionCoreArgs = function (x, y, value) {
-  return [{
-    log: this.replayCompactLog,
-    width: this.width,
-    height: this.height,
-    x: x,
-    y: y,
-    value: value
-  }];
-};
-
 GameManager.prototype.appendCompactPracticeAction = function (x, y, value) {
   var appendCompactPracticeActionCore = this.callCoreReplayCodecRuntime(
     "appendCompactPracticeAction",
-    this.buildAppendCompactPracticeActionCoreArgs(x, y, value)
+    [{
+      log: this.replayCompactLog,
+      width: this.width,
+      height: this.height,
+      x: x,
+      y: y,
+      value: value
+    }]
   );
   if (this.tryHandleCoreRawValue(appendCompactPracticeActionCore, function (coreValue) {
     this.replayCompactLog = coreValue;
@@ -3093,14 +3065,6 @@ GameManager.prototype.writeSavedGameStatePayloadFallback = function (stores, key
   return this.writeSerializedSavedPayloadToStorages(stores, key, serialized);
 };
 
-GameManager.prototype.buildWriteSavedPayloadToStoragesCoreArgs = function (stores, key, payloadObj) {
-  return [{
-    storages: stores,
-    key: key,
-    payload: payloadObj
-  }];
-};
-
 GameManager.prototype.normalizeWriteSavedPayloadToStoragesCoreValue = function (persistedByCore) {
   if (typeof persistedByCore === "boolean") return persistedByCore;
   return undefined;
@@ -3110,7 +3074,11 @@ GameManager.prototype.writeSavedGameStatePayload = function (key, payloadObj) {
   var stores = this.getSavedGameStateStorages();
   var writeSavedPayloadToStoragesCore = this.callCoreStorageRuntime(
     "writeSavedPayloadToStorages",
-    this.buildWriteSavedPayloadToStoragesCoreArgs(stores, key, payloadObj)
+    [{
+      storages: stores,
+      key: key,
+      payload: payloadObj
+    }]
   );
   var normalizedByCore = this.resolveNormalizedCoreValueOrUndefined(
     writeSavedPayloadToStoragesCore,
