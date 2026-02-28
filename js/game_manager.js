@@ -7662,11 +7662,18 @@ GameManager.prototype.writeLastSessionSubmitResult = function (payload) {
   this.writeLocalStorageJsonPayload("last_session_submit_result_v1", payload);
 };
 
-GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike, adapterParitySnapshot) {
+GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord) {
+  this.sessionSubmitDone = true;
+  var endedAt = new Date().toISOString();
+  var windowLike = this.getWindowLike();
+  var adapterParitySnapshot = {
+    report: this.getAdapterSessionParitySnapshot("readAdapterParityReport", "adapterParityReport"),
+    diff: this.getAdapterSessionParitySnapshot("readAdapterParityABDiff", "adapterParityABDiff")
+  };
   var parity = adapterParitySnapshot && typeof adapterParitySnapshot === "object"
     ? adapterParitySnapshot
     : {};
-  return {
+  var payload = {
     mode: this.getLegacyModeFromModeKey(this.modeKey || this.mode),
     mode_key: this.modeKey,
     board_width: this.width,
@@ -7692,33 +7699,6 @@ GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike,
     client_version: (windowLike && windowLike.GAME_CLIENT_VERSION) || "1.8",
     end_reason: this.over ? "game_over" : "win_stop"
   };
-};
-
-GameManager.prototype.handleSkippedSessionSubmitIfNeeded = function () {
-  var skippedReason = null;
-  if (this.replayMode) skippedReason = "replay_mode";
-  else if (!this.isSessionTerminated()) skippedReason = "not_terminated";
-  if (!skippedReason) return false;
-  this.writeLastSessionSubmitResult({
-    at: new Date().toISOString(),
-    ok: false,
-    skipped: true,
-    reason: skippedReason
-  });
-  return true;
-};
-
-GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord) {
-  this.sessionSubmitDone = true;
-  var endedAt = new Date().toISOString();
-  var payload = this.buildSessionSubmitPayload(
-    endedAt,
-    this.getWindowLike(),
-    {
-      report: this.getAdapterSessionParitySnapshot("readAdapterParityReport", "adapterParityReport"),
-      diff: this.getAdapterSessionParitySnapshot("readAdapterParityABDiff", "adapterParityABDiff")
-    }
-  );
   try {
     var saved = localHistorySaveRecord.method.call(localHistorySaveRecord.scope, payload);
     this.writeLastSessionSubmitResult(
@@ -7746,7 +7726,18 @@ GameManager.prototype.submitSessionForRecord = function (localHistorySaveRecord)
 
 GameManager.prototype.tryAutoSubmitOnGameOver = function () {
   if (this.sessionSubmitDone) return;
-  if (this.handleSkippedSessionSubmitIfNeeded()) return;
+  var skippedReason = null;
+  if (this.replayMode) skippedReason = "replay_mode";
+  else if (!this.isSessionTerminated()) skippedReason = "not_terminated";
+  if (skippedReason) {
+    this.writeLastSessionSubmitResult({
+      at: new Date().toISOString(),
+      ok: false,
+      skipped: true,
+      reason: skippedReason
+    });
+    return;
+  }
   var localHistorySaveRecord = this.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
   if (!localHistorySaveRecord) {
     this.writeLastSessionSubmitResult({
