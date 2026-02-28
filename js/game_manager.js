@@ -4172,10 +4172,6 @@ GameManager.prototype.buildPostMoveRecordPlan = function (
   };
 };
 
-GameManager.prototype.buildReplayPostMoveRecordFallback = function () {
-  return this.buildPostMoveRecordPlan(false, null, false, null, false);
-};
-
 GameManager.prototype.buildPostMoveRecordFallback = function (direction) {
   var shouldPushSessionAction = !!this.sessionReplayV3;
   return this.buildPostMoveRecordPlan(
@@ -4208,7 +4204,7 @@ GameManager.prototype.buildComputePostMoveRecordCoreArgs = function (direction) 
 };
 
 GameManager.prototype.resolvePostMoveRecordFallback = function (direction) {
-  if (this.replayMode) return this.buildReplayPostMoveRecordFallback();
+  if (this.replayMode) return this.buildPostMoveRecordPlan(false, null, false, null, false);
   return this.buildPostMoveRecordFallback(direction);
 };
 
@@ -4236,10 +4232,6 @@ GameManager.prototype.buildPostUndoRecordPlan = function (
   };
 };
 
-GameManager.prototype.buildReplayPostUndoRecordFallback = function () {
-  return this.buildPostUndoRecordPlan(false, false, false, null);
-};
-
 GameManager.prototype.buildPostUndoRecordFallback = function () {
   var shouldPushSessionAction = !!this.sessionReplayV3;
   return this.buildPostUndoRecordPlan(
@@ -4263,7 +4255,7 @@ GameManager.prototype.buildComputePostUndoRecordCoreArgs = function (direction) 
 };
 
 GameManager.prototype.resolvePostUndoRecordFallback = function () {
-  if (this.replayMode) return this.buildReplayPostUndoRecordFallback();
+  if (this.replayMode) return this.buildPostUndoRecordPlan(false, false, false, null);
   return this.buildPostUndoRecordFallback();
 };
 
@@ -4451,16 +4443,12 @@ GameManager.prototype.buildCreateUndoSnapshotCoreArgs = function () {
   return [this.buildCreateUndoSnapshotCoreInput()];
 };
 
-GameManager.prototype.resolveUndoSnapshotFallbackState = function () {
-  return this.buildUndoSnapshotFallbackState(this.getUndoStateFallbackValues());
-};
-
 GameManager.prototype.createUndoSnapshotState = function () {
   var createUndoSnapshotCore = this.callCoreUndoSnapshotRuntime(
     "createUndoSnapshot",
     this.buildCreateUndoSnapshotCoreArgs()
   );
-  var fallback = this.resolveUndoSnapshotFallbackState();
+  var fallback = this.buildUndoSnapshotFallbackState(this.getUndoStateFallbackValues());
   return this.resolveNormalizedCoreValueOrFallback(
     createUndoSnapshotCore,
     function (coreValue) {
