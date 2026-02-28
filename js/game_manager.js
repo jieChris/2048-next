@@ -468,13 +468,10 @@ GameManager.prototype.cloneBoardMatrix = function (board) {
   return out;
 };
 
-GameManager.prototype.resolveCoreObjectCallValueOrNull = function (coreCallResult) {
-  if (!this.isCoreCallAvailable(coreCallResult)) return null;
-  return coreCallResult.value || {};
-};
-
 GameManager.prototype.resolveCoreObjectCallOrFallback = function (coreCallResult, fallbackResolver) {
-  var coreValue = this.resolveCoreObjectCallValueOrNull(coreCallResult);
+  var coreValue = this.isCoreCallAvailable(coreCallResult)
+    ? (coreCallResult.value || {})
+    : null;
   if (coreValue) return coreValue;
   if (typeof fallbackResolver === "function") return fallbackResolver.call(this);
   return null;
@@ -484,40 +481,32 @@ GameManager.prototype.isCoreCallAvailable = function (coreCallResult) {
   return !!(coreCallResult && coreCallResult.available === true);
 };
 
-GameManager.prototype.resolveCoreBooleanCallValueOrNull = function (coreCallResult) {
-  if (!this.isCoreCallAvailable(coreCallResult)) return null;
-  return !!coreCallResult.value;
-};
-
 GameManager.prototype.resolveCoreBooleanCallOrFallback = function (coreCallResult, fallbackResolver) {
-  var coreValue = this.resolveCoreBooleanCallValueOrNull(coreCallResult);
+  var coreValue = this.isCoreCallAvailable(coreCallResult)
+    ? !!coreCallResult.value
+    : null;
   if (coreValue !== null) return coreValue;
   if (typeof fallbackResolver === "function") return !!fallbackResolver.call(this);
   return null;
 };
 
-GameManager.prototype.resolveCoreNumericCallValueOrNull = function (coreCallResult) {
-  if (!this.isCoreCallAvailable(coreCallResult)) return null;
-  return Number(coreCallResult.value) || 0;
-};
-
 GameManager.prototype.resolveCoreNumericCallOrFallback = function (coreCallResult, fallbackResolver) {
-  var coreValue = this.resolveCoreNumericCallValueOrNull(coreCallResult);
+  var coreValue = this.isCoreCallAvailable(coreCallResult)
+    ? (Number(coreCallResult.value) || 0)
+    : null;
   if (coreValue !== null) return coreValue;
   if (typeof fallbackResolver === "function") return Number(fallbackResolver.call(this)) || 0;
   return null;
 };
 
-GameManager.prototype.resolveCoreStringCallValueOrNull = function (coreCallResult, allowEmpty) {
-  if (!this.isCoreCallAvailable(coreCallResult)) return null;
-  var coreValue = coreCallResult.value;
-  if (typeof coreValue !== "string") return null;
-  if (allowEmpty === true) return coreValue;
-  return coreValue ? coreValue : null;
-};
-
 GameManager.prototype.resolveCoreStringCallOrFallback = function (coreCallResult, fallbackResolver, allowEmpty) {
-  var coreValue = this.resolveCoreStringCallValueOrNull(coreCallResult, allowEmpty);
+  var coreValue = null;
+  if (this.isCoreCallAvailable(coreCallResult)) {
+    var rawCoreString = coreCallResult.value;
+    if (typeof rawCoreString === "string") {
+      coreValue = allowEmpty === true ? rawCoreString : (rawCoreString || null);
+    }
+  }
   if (coreValue !== null) return coreValue;
   if (typeof fallbackResolver === "function") return String(fallbackResolver.call(this));
   return null;
@@ -565,16 +554,15 @@ GameManager.prototype.tryHandleCoreRawValue = function (coreCallResult, handler)
   return true;
 };
 
-GameManager.prototype.resolveCoreRuntimeCallerFromResolver = function (resolverMethodName, methodName) {
-  var resolver = this[resolverMethodName];
-  if (typeof resolver !== "function") return null;
-  var runtimeMethod = resolver.call(this, methodName);
-  if (typeof runtimeMethod !== "function") return null;
-  return runtimeMethod;
-};
-
 GameManager.prototype.callCoreRuntimeMethod = function (resolverMethodName, methodName, args) {
-  var runtimeMethod = this.resolveCoreRuntimeCallerFromResolver(resolverMethodName, methodName);
+  var resolver = this[resolverMethodName];
+  if (typeof resolver !== "function") {
+    return {
+      available: false,
+      value: null
+    };
+  }
+  var runtimeMethod = resolver.call(this, methodName);
   if (typeof runtimeMethod !== "function") {
     return {
       available: false,
