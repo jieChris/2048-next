@@ -1663,41 +1663,6 @@ GameManager.prototype.applyRestoredSavedStateCoreFields = function (saved) {
   this.resetRestoredSavedSessionSubmitState();
 };
 
-GameManager.prototype.resolveRestoredInitialBoardMatrix = function (saved) {
-  if (Array.isArray(saved.initial_board_matrix) && saved.initial_board_matrix.length === this.height) {
-    return this.cloneBoardMatrix(saved.initial_board_matrix);
-  }
-  return this.getFinalBoardMatrix();
-};
-
-GameManager.prototype.resolveRestoredReplayStartBoardMatrix = function (saved) {
-  if (Array.isArray(saved.replay_start_board_matrix) && saved.replay_start_board_matrix.length === this.height) {
-    return this.cloneBoardMatrix(saved.replay_start_board_matrix);
-  }
-  return this.cloneBoardMatrix(this.initialBoardMatrix);
-};
-
-GameManager.prototype.resolveRestoredPracticeRestartBoardMatrix = function (saved) {
-  if (Array.isArray(saved.practice_restart_board_matrix) && saved.practice_restart_board_matrix.length === this.height) {
-    return this.cloneBoardMatrix(saved.practice_restart_board_matrix);
-  }
-  return null;
-};
-
-GameManager.prototype.resolveRestoredPracticeRestartModeConfig = function (saved) {
-  if (saved.practice_restart_mode_config && typeof saved.practice_restart_mode_config === "object") {
-    return this.clonePlain(saved.practice_restart_mode_config);
-  }
-  return null;
-};
-
-GameManager.prototype.applyRestoredSavedBoardSnapshots = function (saved) {
-  this.initialBoardMatrix = this.resolveRestoredInitialBoardMatrix(saved);
-  this.replayStartBoardMatrix = this.resolveRestoredReplayStartBoardMatrix(saved);
-  this.practiceRestartBoardMatrix = this.resolveRestoredPracticeRestartBoardMatrix(saved);
-  this.practiceRestartModeConfig = this.resolveRestoredPracticeRestartModeConfig(saved);
-};
-
 GameManager.prototype.applyRestoredSavedTimerUiState = function (saved) {
   this.restoreTimerRowsFromState(saved);
   this.timerModuleView = saved.timer_module_view === "hidden" ? "hidden" : "timer";
@@ -1753,7 +1718,22 @@ GameManager.prototype.tryApplyRestorableSavedState = function (saved) {
     return false;
   }
   this.applyRestoredSavedStateCoreFields(saved);
-  this.applyRestoredSavedBoardSnapshots(saved);
+  this.initialBoardMatrix =
+    (Array.isArray(saved.initial_board_matrix) && saved.initial_board_matrix.length === this.height)
+      ? this.cloneBoardMatrix(saved.initial_board_matrix)
+      : this.getFinalBoardMatrix();
+  this.replayStartBoardMatrix =
+    (Array.isArray(saved.replay_start_board_matrix) && saved.replay_start_board_matrix.length === this.height)
+      ? this.cloneBoardMatrix(saved.replay_start_board_matrix)
+      : this.cloneBoardMatrix(this.initialBoardMatrix);
+  this.practiceRestartBoardMatrix =
+    (Array.isArray(saved.practice_restart_board_matrix) && saved.practice_restart_board_matrix.length === this.height)
+      ? this.cloneBoardMatrix(saved.practice_restart_board_matrix)
+      : null;
+  this.practiceRestartModeConfig =
+    (saved.practice_restart_mode_config && typeof saved.practice_restart_mode_config === "object")
+      ? this.clonePlain(saved.practice_restart_mode_config)
+      : null;
   this.applyRestoredSavedTimerUiState(saved);
   return true;
 };
@@ -1886,40 +1866,6 @@ GameManager.prototype.buildSavedGameStateBasePayload = function (savedAt, replay
   );
 };
 
-GameManager.prototype.resolveSavedBoardRestartSnapshot = function () {
-  return {
-    initial_board_matrix: this.initialBoardMatrix ? this.cloneBoardMatrix(this.initialBoardMatrix) : this.getFinalBoardMatrix(),
-    replay_start_board_matrix: this.replayStartBoardMatrix ? this.cloneBoardMatrix(this.replayStartBoardMatrix) : null,
-    practice_restart_board_matrix: this.practiceRestartBoardMatrix ? this.cloneBoardMatrix(this.practiceRestartBoardMatrix) : null,
-    practice_restart_mode_config: this.practiceRestartModeConfig ? this.safeClonePlain(this.practiceRestartModeConfig, null) : null
-  };
-};
-
-GameManager.prototype.resolveSavedDirectionLockSnapshot = function () {
-  return {
-    lock_consumed_at_move_count: Number.isInteger(this.lockConsumedAtMoveCount) ? this.lockConsumedAtMoveCount : -1,
-    locked_direction_turn: Number.isInteger(this.lockedDirectionTurn) ? this.lockedDirectionTurn : null,
-    locked_direction: Number.isInteger(this.lockedDirection) ? this.lockedDirection : null
-  };
-};
-
-GameManager.prototype.buildSavedGameStateExtendedDirectionLockPayload = function (directionLockSnapshot) {
-  return {
-    lock_consumed_at_move_count: directionLockSnapshot.lock_consumed_at_move_count,
-    locked_direction_turn: directionLockSnapshot.locked_direction_turn,
-    locked_direction: directionLockSnapshot.locked_direction
-  };
-};
-
-GameManager.prototype.buildSavedGameStateExtendedBoardSnapshotPayload = function (boardSnapshot) {
-  return {
-    initial_board_matrix: boardSnapshot.initial_board_matrix,
-    replay_start_board_matrix: boardSnapshot.replay_start_board_matrix,
-    practice_restart_board_matrix: boardSnapshot.practice_restart_board_matrix,
-    practice_restart_mode_config: boardSnapshot.practice_restart_mode_config
-  };
-};
-
 GameManager.prototype.buildSavedGameStateExtendedTimerPayload = function (timerSubState) {
   return {
     timer_module_view: this.getTimerModuleViewMode ? this.getTimerModuleViewMode() : "timer",
@@ -1933,16 +1879,23 @@ GameManager.prototype.buildSavedGameStateExtendedTimerPayload = function (timerS
 };
 
 GameManager.prototype.buildSavedGameStateExtendedPayload = function (timerSubState) {
-  var boardSnapshot = this.resolveSavedBoardRestartSnapshot();
-  var directionLockSnapshot = this.resolveSavedDirectionLockSnapshot();
   return Object.assign({
     combo_streak: Number.isInteger(this.comboStreak) ? this.comboStreak : 0,
     successful_move_count: Number.isInteger(this.successfulMoveCount) ? this.successfulMoveCount : 0,
     undo_used: Number.isInteger(this.undoUsed) ? this.undoUsed : 0,
     challenge_id: this.challengeId || null
   },
-  this.buildSavedGameStateExtendedDirectionLockPayload(directionLockSnapshot),
-  this.buildSavedGameStateExtendedBoardSnapshotPayload(boardSnapshot),
+  {
+    lock_consumed_at_move_count: Number.isInteger(this.lockConsumedAtMoveCount) ? this.lockConsumedAtMoveCount : -1,
+    locked_direction_turn: Number.isInteger(this.lockedDirectionTurn) ? this.lockedDirectionTurn : null,
+    locked_direction: Number.isInteger(this.lockedDirection) ? this.lockedDirection : null
+  },
+  {
+    initial_board_matrix: this.initialBoardMatrix ? this.cloneBoardMatrix(this.initialBoardMatrix) : this.getFinalBoardMatrix(),
+    replay_start_board_matrix: this.replayStartBoardMatrix ? this.cloneBoardMatrix(this.replayStartBoardMatrix) : null,
+    practice_restart_board_matrix: this.practiceRestartBoardMatrix ? this.cloneBoardMatrix(this.practiceRestartBoardMatrix) : null,
+    practice_restart_mode_config: this.practiceRestartModeConfig ? this.safeClonePlain(this.practiceRestartModeConfig, null) : null
+  },
   this.buildSavedGameStateExtendedTimerPayload(timerSubState));
 };
 
@@ -4870,35 +4823,18 @@ GameManager.prototype.setPracticeRestartBase = function (board, modeConfig) {
   this.practiceRestartModeConfig = modeConfig ? this.clonePlain(modeConfig) : this.clonePlain(this.modeConfig);
 };
 
-GameManager.prototype.resolveRestartWithBoardSeed = function (options) {
-  var asReplay = !!(options && options.asReplay);
-  return asReplay ? 0 : undefined;
-};
-
-GameManager.prototype.shouldSetPracticeRestartBaseOnBoardRestart = function (options) {
-  if (this.modeKey !== "practice_legacy") return false;
-  return !!(options && (options.setPracticeRestartBase || options.preservePracticeRestartBase));
-};
-
-GameManager.prototype.applyRestartWithBoardSnapshots = function () {
-  this.initialBoardMatrix = this.getFinalBoardMatrix();
-  this.replayStartBoardMatrix = this.cloneBoardMatrix(this.initialBoardMatrix);
-};
-
-GameManager.prototype.trySetPracticeRestartBaseOnBoardRestart = function (options, modeConfig) {
-  if (!this.shouldSetPracticeRestartBaseOnBoardRestart(options)) return;
-  this.setPracticeRestartBase(this.initialBoardMatrix, modeConfig || this.modeConfig);
-};
-
 GameManager.prototype.restartWithBoard = function (board, modeConfig, options) {
   options = options || {};
   this.actuator.continue();
   // Non-replay board restores must keep undo enabled; replay restores keep replay mode.
-  var setupSeed = this.resolveRestartWithBoardSeed(options);
+  var setupSeed = options.asReplay ? 0 : undefined;
   this.setup(setupSeed, { skipStartTiles: true, modeConfig: modeConfig, disableStateRestore: true });
   this.setBoardFromMatrix(board);
-  this.applyRestartWithBoardSnapshots();
-  this.trySetPracticeRestartBaseOnBoardRestart(options, modeConfig);
+  this.initialBoardMatrix = this.getFinalBoardMatrix();
+  this.replayStartBoardMatrix = this.cloneBoardMatrix(this.initialBoardMatrix);
+  if (this.modeKey === "practice_legacy" && (options.setPracticeRestartBase || options.preservePracticeRestartBase)) {
+    this.setPracticeRestartBase(this.initialBoardMatrix, modeConfig || this.modeConfig);
+  }
   this.actuate();
 };
 
