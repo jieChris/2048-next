@@ -7556,9 +7556,19 @@ GameManager.prototype.getBestTileValue = function () {
 
 GameManager.prototype.getDurationMs = function () {
   var nowMs = Date.now();
+  var durationCoreInput = {
+    timerStatus: this.timerStatus,
+    startTimeMs:
+      this.startTime && typeof this.startTime.getTime === "function"
+        ? this.startTime.getTime()
+        : null,
+    accumulatedTime: this.accumulatedTime,
+    sessionStartedAt: this.sessionStartedAt,
+    nowMs: nowMs
+  };
   var resolveDurationMsCore = this.callCoreReplayTimerRuntime(
     "resolveDurationMs",
-    [this.resolveDurationMsCoreInput(nowMs)]
+    [durationCoreInput]
   );
   return this.resolveNormalizedCoreValueOrFallback(
     resolveDurationMsCore,
@@ -7576,19 +7586,6 @@ GameManager.prototype.getDurationMs = function () {
       return this.normalizeDurationMs(ms);
     }
   );
-};
-
-GameManager.prototype.resolveDurationMsCoreInput = function (nowMs) {
-  return {
-    timerStatus: this.timerStatus,
-    startTimeMs:
-      this.startTime && typeof this.startTime.getTime === "function"
-        ? this.startTime.getTime()
-        : null,
-    accumulatedTime: this.accumulatedTime,
-    sessionStartedAt: this.sessionStartedAt,
-    nowMs: nowMs
-  };
 };
 
 GameManager.prototype.normalizeDurationMs = function (rawMs) {
