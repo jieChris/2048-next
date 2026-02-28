@@ -8378,7 +8378,11 @@ GameManager.prototype.import = function (replayString) {
   try {
     var trimmed = (typeof replayString === "string" ? replayString : JSON.stringify(replayString)).trim();
     var parsedEnvelope = this.parseReplayImportEnvelope(trimmed);
-    var importedEnvelope = false;
+    var startReplayPlayback = function (manager) {
+      manager.replayIndex = 0;
+      manager.replayDelay = 200;
+      manager.resume();
+    };
     if (parsedEnvelope && (parsedEnvelope.kind === "json-v3" || parsedEnvelope.kind === "v4c")) {
       var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
       if (parsedEnvelope.kind === "json-v3") {
@@ -8417,12 +8421,8 @@ GameManager.prototype.import = function (replayString) {
         this.restartReplaySession(initialBoard, replayModeConfig, true);
       }
       this.applyUndoSettingForMode(this.modeKey, true, true);
-      this.replayIndex = 0;
-      this.replayDelay = 200;
-      this.resume();
-      importedEnvelope = true;
-    }
-    if (!importedEnvelope) {
+      startReplayPlayback(this);
+    } else {
       var decodedLegacy = this.decodeLegacyReplay(trimmed);
       if (decodedLegacy) {
         this.applyReplayImportActions({
@@ -8431,9 +8431,7 @@ GameManager.prototype.import = function (replayString) {
           replaySpawns: decodedLegacy.replaySpawns
         });
         this.restartWithSeed(decodedLegacy.seed);
-        this.replayIndex = 0;
-        this.replayDelay = 200;
-        this.resume();
+        startReplayPlayback(this);
       } else {
         throw "Unknown replay version";
       }
