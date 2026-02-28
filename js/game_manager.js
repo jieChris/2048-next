@@ -1046,12 +1046,19 @@ GameManager.prototype.tryStopReplayAtTickBoundary = function () {
   return this.applyReplayTickBoundaryPlan(tickBoundaryPlan);
 };
 
+GameManager.prototype.buildPlanReplaySeekRewindCoreArgs = function (targetIndex) {
+  return [{
+    targetIndex: targetIndex,
+    replayIndex: this.replayIndex,
+    hasReplayStartBoard: !!this.replayStartBoardMatrix
+  }];
+};
+
 GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
-  var planReplaySeekRewindCore = this.callCoreReplayFlowRuntime("planReplaySeekRewind", [{
-      targetIndex: targetIndex,
-      replayIndex: this.replayIndex,
-      hasReplayStartBoard: !!this.replayStartBoardMatrix
-    }]);
+  var planReplaySeekRewindCore = this.callCoreReplayFlowRuntime(
+    "planReplaySeekRewind",
+    this.buildPlanReplaySeekRewindCoreArgs(targetIndex)
+  );
   if (planReplaySeekRewindCore.available) return planReplaySeekRewindCore.value || {};
   return this.planReplaySeekRewindFallback(targetIndex);
 };
