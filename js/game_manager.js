@@ -863,60 +863,6 @@ GameManager.prototype.runReplayTick = function () {
   return true;
 };
 
-GameManager.prototype.planReplaySeekRewind = function (targetIndex) {
-  var planReplaySeekRewindCore = this.callCoreReplayFlowRuntime(
-    "planReplaySeekRewind",
-    [{
-      targetIndex: targetIndex,
-      replayIndex: this.replayIndex,
-      hasReplayStartBoard: !!this.replayStartBoardMatrix
-    }]
-  );
-  return this.resolveCoreObjectCallOrFallback(planReplaySeekRewindCore, function () {
-    if (!(targetIndex < this.replayIndex)) {
-      return {
-        shouldRewind: false,
-        strategy: "none",
-        replayIndexAfterRewind: this.replayIndex
-      };
-    }
-    return {
-      shouldRewind: true,
-      strategy: this.replayStartBoardMatrix ? "board" : "seed",
-      replayIndexAfterRewind: 0
-    };
-  });
-};
-
-GameManager.prototype.planReplaySeekRestart = function (rewindPlan) {
-  var normalized = this.isNonArrayObject(rewindPlan) ? rewindPlan : null;
-  var planReplaySeekRestartCore = this.callCoreReplayFlowRuntime(
-    "planReplaySeekRestart",
-    [{
-      shouldRewind: !!(normalized && normalized.shouldRewind),
-      strategy: normalized ? normalized.strategy : "none",
-      replayIndexAfterRewind: normalized ? normalized.replayIndexAfterRewind : this.replayIndex
-    }]
-  );
-  return this.resolveCoreObjectCallOrFallback(planReplaySeekRestartCore, function () {
-    var shouldRewind = !!(normalized && normalized.shouldRewind);
-    if (!shouldRewind) {
-      return {
-        shouldRestartWithBoard: false,
-        shouldRestartWithSeed: false,
-        shouldApplyReplayIndex: false,
-        replayIndex: normalized ? normalized.replayIndexAfterRewind : this.replayIndex
-      };
-    }
-    return {
-      shouldRestartWithBoard: normalized.strategy === "board",
-      shouldRestartWithSeed: normalized.strategy === "seed",
-      shouldApplyReplayIndex: true,
-      replayIndex: normalized.replayIndexAfterRewind
-    };
-  });
-};
-
 GameManager.prototype.setBoardFromMatrix = function (board) {
   if (!Array.isArray(board) || board.length !== this.height) throw "Invalid board matrix";
   this.grid = new Grid(this.width, this.height);
@@ -8822,7 +8768,55 @@ GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
 GameManager.prototype.seek = function (targetIndex) {
     targetIndex = this.normalizeReplaySeekTarget(targetIndex);
     this.pause();
-    this.applyReplaySeekRestartPlan(this.planReplaySeekRestart(this.planReplaySeekRewind(targetIndex)));
+    var planReplaySeekRewindCore = this.callCoreReplayFlowRuntime(
+      "planReplaySeekRewind",
+      [{
+        targetIndex: targetIndex,
+        replayIndex: this.replayIndex,
+        hasReplayStartBoard: !!this.replayStartBoardMatrix
+      }]
+    );
+    var rewindPlan = this.resolveCoreObjectCallOrFallback(planReplaySeekRewindCore, function () {
+      if (!(targetIndex < this.replayIndex)) {
+        return {
+          shouldRewind: false,
+          strategy: "none",
+          replayIndexAfterRewind: this.replayIndex
+        };
+      }
+      return {
+        shouldRewind: true,
+        strategy: this.replayStartBoardMatrix ? "board" : "seed",
+        replayIndexAfterRewind: 0
+      };
+    });
+    var normalized = this.isNonArrayObject(rewindPlan) ? rewindPlan : null;
+    var planReplaySeekRestartCore = this.callCoreReplayFlowRuntime(
+      "planReplaySeekRestart",
+      [{
+        shouldRewind: !!(normalized && normalized.shouldRewind),
+        strategy: normalized ? normalized.strategy : "none",
+        replayIndexAfterRewind: normalized ? normalized.replayIndexAfterRewind : this.replayIndex
+      }]
+    );
+    var restartPlan = this.resolveCoreObjectCallOrFallback(planReplaySeekRestartCore, function () {
+      var shouldRewind = !!(normalized && normalized.shouldRewind);
+      if (!shouldRewind) {
+        return {
+          shouldRestartWithBoard: false,
+          shouldRestartWithSeed: false,
+          shouldApplyReplayIndex: false,
+          replayIndex: normalized ? normalized.replayIndexAfterRewind : this.replayIndex
+        };
+      }
+      return {
+        shouldRestartWithBoard: normalized.strategy === "board",
+        shouldRestartWithSeed: normalized.strategy === "seed",
+        shouldApplyReplayIndex: true,
+        replayIndex: normalized.replayIndexAfterRewind
+      };
+    });
+    this.applyReplaySeekRestartPlan(restartPlan);
     while (this.replayIndex < targetIndex) {
         this.executePlannedReplayStep();
     }
