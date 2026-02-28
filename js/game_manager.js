@@ -6748,35 +6748,6 @@ GameManager.prototype.buildTraversals = function (vector) {
   );
 };
 
-GameManager.prototype.stepCellByVector = function (cell, vector) {
-  return { x: cell.x + vector.x, y: cell.y + vector.y };
-};
-
-GameManager.prototype.resolveFarthestPositionFromRuntime = function (runtimeValue) {
-  var computed = runtimeValue || {};
-  if (computed.farthest && computed.next) return computed;
-  return null;
-};
-
-GameManager.prototype.computeFarthestPositionFallback = function (cell, vector) {
-  var previous;
-
-  // Progress towards the vector direction until an obstacle is found
-  do {
-    previous = cell;
-    cell = this.stepCellByVector(previous, vector);
-  } while (
-    this.grid.withinBounds(cell) &&
-    !this.isBlockedCell(cell.x, cell.y) &&
-    this.grid.cellAvailable(cell)
-  );
-
-  return {
-    farthest: previous,
-    next: cell // Used to check if a merge is required
-  };
-};
-
 GameManager.prototype.findFarthestPosition = function (cell, vector) {
   var findFarthestPositionCore = this.callCoreMovePathRuntime(
     "findFarthestPosition",
@@ -6791,13 +6762,30 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
   );
   var farthestPositionByCore = this.resolveNormalizedCoreValueOrUndefined(
     findFarthestPositionCore,
-    this.resolveFarthestPositionFromRuntime
+    function (runtimeValue) {
+      var computed = runtimeValue || {};
+      if (computed.farthest && computed.next) return computed;
+      return null;
+    }
   );
   if (typeof farthestPositionByCore !== "undefined") {
     var resolvedByCore = farthestPositionByCore;
     if (resolvedByCore) return resolvedByCore;
   }
-  return this.computeFarthestPositionFallback(cell, vector);
+  var previous;
+  // Progress towards the vector direction until an obstacle is found
+  do {
+    previous = cell;
+    cell = { x: previous.x + vector.x, y: previous.y + vector.y };
+  } while (
+    this.grid.withinBounds(cell) &&
+    !this.isBlockedCell(cell.x, cell.y) &&
+    this.grid.cellAvailable(cell)
+  );
+  return {
+    farthest: previous,
+    next: cell // Used to check if a merge is required
+  };
 };
 
 GameManager.prototype.movesAvailable = function () {
