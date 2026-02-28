@@ -8363,12 +8363,6 @@ GameManager.prototype.serialize = function () {
   return this.buildReplayV4SerializationPayload();
 };
 
-GameManager.prototype.startReplayImportPlayback = function () {
-  this.replayIndex = 0;
-  this.replayDelay = 200;
-  this.resume();
-};
-
 GameManager.prototype.applyReplayImportActions = function (payload) {
   var source = payload && typeof payload === "object" ? payload : {};
   this.replayMoves = Array.isArray(source.replayMoves) ? source.replayMoves : [];
@@ -8404,7 +8398,9 @@ GameManager.prototype.importJsonV3ReplayEnvelope = function (envelope, replayMod
   this.disableSessionSync = true;
   this.restartReplaySession(envelope.seed, replayModeConfig, false);
   this.applyUndoSettingForMode(this.modeKey, true, true);
-  this.startReplayImportPlayback();
+  this.replayIndex = 0;
+  this.replayDelay = 200;
+  this.resume();
 };
 
 GameManager.prototype.importV4ReplayEnvelope = function (envelope, replayModeConfig) {
@@ -8419,7 +8415,9 @@ GameManager.prototype.importV4ReplayEnvelope = function (envelope, replayModeCon
   this.disableSessionSync = true;
   this.restartReplaySession(initialBoard, replayModeConfig, true);
   this.applyUndoSettingForMode(this.modeKey, true, true);
-  this.startReplayImportPlayback();
+  this.replayIndex = 0;
+  this.replayDelay = 200;
+  this.resume();
 };
 
 var GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP = {
@@ -8449,7 +8447,9 @@ GameManager.prototype.import = function (replayString) {
           replaySpawns: decodedLegacy.replaySpawns
         });
         this.restartWithSeed(decodedLegacy.seed);
-        this.startReplayImportPlayback();
+        this.replayIndex = 0;
+        this.replayDelay = 200;
+        this.resume();
       } else {
         throw "Unknown replay version";
       }
