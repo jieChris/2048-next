@@ -9470,9 +9470,17 @@ GameManager.prototype.buildReplaySeekApplyContext = function (targetIndex) {
     };
 };
 
-GameManager.prototype.applyReplaySeekContext = function (seekContext) {
+GameManager.prototype.applyReplaySeekContextRestartPlan = function (seekContext) {
     this.applyReplaySeekRestartPlan(seekContext.restartPlan);
+};
+
+GameManager.prototype.applyReplaySeekContextFastForward = function (seekContext) {
     this.fastForwardReplayToIndex(seekContext.targetIndex);
+};
+
+GameManager.prototype.applyReplaySeekContext = function (seekContext) {
+    this.applyReplaySeekContextRestartPlan(seekContext);
+    this.applyReplaySeekContextFastForward(seekContext);
 };
 
 GameManager.prototype.applyReplaySeekTarget = function (targetIndex) {
