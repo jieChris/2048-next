@@ -6480,7 +6480,9 @@ GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove
       }
       this.over = typeof postMoveResult.over === "boolean" ? postMoveResult.over : !hasMovesAvailable;
       if (postMoveResult.shouldEndTime || this.over) {
-        this.endTime();
+        this.stopTimer();
+        var endTimerElByCore = document.getElementById("timer");
+        if (endTimerElByCore) endTimerElByCore.textContent = this.pretty(this.accumulatedTime);
       }
       return {
         postMoveResult: postMoveResult,
@@ -6494,7 +6496,9 @@ GameManager.prototype.applySuccessfulMove = function (direction, scoreBeforeMove
       this.successfulMoveCount += 1;
       if (!hasMovesAvailable) {
         this.over = true;
-        this.endTime();
+        this.stopTimer();
+        var endTimerElFallback = document.getElementById("timer");
+        if (endTimerElFallback) endTimerElFallback.textContent = this.pretty(this.accumulatedTime);
       }
       return {
         postMoveResult: null,
@@ -6808,22 +6812,13 @@ GameManager.prototype.startTimer = function() {
   }, this.timerUpdateIntervalMs);
 };
 
-GameManager.prototype.endTime = function() {
-  this.stopTimer();
-  this.updateTimerDisplayText(this.accumulatedTime);
-};
-
-GameManager.prototype.updateTimerDisplayText = function (elapsedMs) {
-  var timerEl = document.getElementById("timer");
-  if (timerEl) timerEl.textContent = this.pretty(elapsedMs);
-};
-
 // Update the timer
 GameManager.prototype.updateTimer = function() {
   var time = this.startTime ? (Date.now() - this.startTime.getTime()) : null;
   if (time === null) return;
   this.time = time;
-  this.updateTimerDisplayText(time);
+  var timerEl = document.getElementById("timer");
+  if (timerEl) timerEl.textContent = this.pretty(time);
   this.refreshIpsDisplay(time);
   var overlay = document.getElementById("stats-panel-overlay");
   if (overlay && overlay.style.display !== "none") {
