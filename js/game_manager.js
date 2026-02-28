@@ -469,10 +469,6 @@ GameManager.prototype.parseReplayImportEnvelope = function (trimmedReplayString)
   });
 };
 
-GameManager.prototype.normalizeOptionalReplayString = function (raw) {
-  return typeof raw === "string" && raw ? raw : null;
-};
-
 GameManager.prototype.parseJsonReplayImportEnvelope = function (trimmedReplayString) {
   if (trimmedReplayString.charAt(0) !== "{") return null;
   var replayObj = JSON.parse(trimmedReplayString);
@@ -484,12 +480,15 @@ GameManager.prototype.parseJsonReplayImportEnvelope = function (trimmedReplayStr
     replayObj.special_rules_snapshot && typeof replayObj.special_rules_snapshot === "object"
       ? replayObj.special_rules_snapshot
       : null;
-  var modeFamily = this.normalizeOptionalReplayString(replayObj.mode_family);
-  var rankPolicy = this.normalizeOptionalReplayString(replayObj.rank_policy);
-  var challengeId = this.normalizeOptionalReplayString(replayObj.challenge_id);
+  var normalizeOptional = function (raw) {
+    return typeof raw === "string" && raw ? raw : null;
+  };
+  var modeFamily = normalizeOptional(replayObj.mode_family);
+  var rankPolicy = normalizeOptional(replayObj.rank_policy);
+  var challengeId = normalizeOptional(replayObj.challenge_id);
   var modeKey =
-    this.normalizeOptionalReplayString(replayObj.mode_key) ||
-    this.normalizeOptionalReplayString(replayObj.mode) ||
+    normalizeOptional(replayObj.mode_key) ||
+    normalizeOptional(replayObj.mode) ||
     this.modeKey ||
     this.mode;
   return {
