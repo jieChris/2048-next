@@ -3141,12 +3141,27 @@ GameManager.prototype.getModeConfigFromCatalog = function (modeKey) {
   return this.resolveModeConfigFromCatalogFallback(modeKey, catalogGetMode);
 };
 
+GameManager.prototype.resolveCoreRuntimeGlobalContext = function () {
+  var windowLike = this.getWindowLike();
+  return windowLike && typeof windowLike === "object" ? windowLike : null;
+};
+
+GameManager.prototype.isValidCoreRuntimeName = function (runtimeName) {
+  return typeof runtimeName === "string" && !!runtimeName;
+};
+
+GameManager.prototype.resolveCoreRuntimeObjectFromWindow = function (windowLike, runtimeName) {
+  if (!windowLike || typeof windowLike !== "object") return null;
+  if (!this.isValidCoreRuntimeName(runtimeName)) return null;
+  var core = windowLike[runtimeName];
+  return core && typeof core === "object" ? core : null;
+};
+
 GameManager.prototype.getCoreRuntimeByName = function (runtimeName) {
-  if (typeof window === "undefined") return null;
-  if (typeof runtimeName !== "string" || !runtimeName) return null;
-  var core = window[runtimeName];
-  if (!core || typeof core !== "object") return null;
-  return core;
+  return this.resolveCoreRuntimeObjectFromWindow(
+    this.resolveCoreRuntimeGlobalContext(),
+    runtimeName
+  );
 };
 
 GameManager.prototype.isValidCoreRuntimeMethodLookupInput = function (runtimeGetterName, methodName) {
@@ -3175,10 +3190,18 @@ GameManager.prototype.wrapCoreRuntimeMethod = function (runtime, methodName) {
   };
 };
 
-GameManager.prototype.resolveCoreRuntimeMethod = function (runtimeGetterName, methodName) {
+GameManager.prototype.resolveCoreRuntimeMethodLookupInput = function (runtimeGetterName, methodName) {
   if (!this.isValidCoreRuntimeMethodLookupInput(runtimeGetterName, methodName)) return null;
-  var runtime = this.resolveCoreRuntimeFromGetterName(runtimeGetterName);
-  return this.wrapCoreRuntimeMethod(runtime, methodName);
+  return {
+    runtime: this.resolveCoreRuntimeFromGetterName(runtimeGetterName),
+    methodName: methodName
+  };
+};
+
+GameManager.prototype.resolveCoreRuntimeMethod = function (runtimeGetterName, methodName) {
+  var lookupInput = this.resolveCoreRuntimeMethodLookupInput(runtimeGetterName, methodName);
+  if (!lookupInput) return null;
+  return this.wrapCoreRuntimeMethod(lookupInput.runtime, lookupInput.methodName);
 };
 
 function registerCoreRuntimeMethodResolver(methodName, runtimeGetterName) {
