@@ -8542,7 +8542,8 @@ GameManager.prototype.executeReplayAction = function (action) {
 
 GameManager.prototype.executeReplayDispatchPlan = function (dispatchPlan) {
   var dispatchMethod = dispatchPlan && dispatchPlan.method;
-  var executorMethodName = this.resolveReplayDispatchExecutorMethodName(dispatchMethod);
+  var executorMap = GAME_MANAGER_REPLAY_DISPATCH_EXECUTOR_METHOD_MAP;
+  var executorMethodName = this.hasOwnKey(executorMap, dispatchMethod) ? executorMap[dispatchMethod] : null;
   if (executorMethodName) return this[executorMethodName](dispatchPlan);
   this.throwUnknownReplayAction();
 };
@@ -8552,40 +8553,23 @@ var GAME_MANAGER_REPLAY_DISPATCH_EXECUTOR_METHOD_MAP = {
   insertCustomTile: "executeReplayCustomTileDispatch"
 };
 
-GameManager.prototype.resolveReplayDispatchExecutorMethodName = function (dispatchMethod) {
-  var executorMap = GAME_MANAGER_REPLAY_DISPATCH_EXECUTOR_METHOD_MAP;
-  if (!this.hasOwnKey(executorMap, dispatchMethod)) return null;
-  return executorMap[dispatchMethod];
-};
-
-GameManager.prototype.resolveReplayDispatchArgAt = function (dispatchPlan, index) {
-  var args = dispatchPlan && Array.isArray(dispatchPlan.args) ? dispatchPlan.args : [];
-  return args[index];
-};
-
 GameManager.prototype.executeReplayMoveDispatch = function (dispatchPlan) {
-  this.move(this.resolveReplayDispatchArgAt(dispatchPlan, 0));
+  var args = dispatchPlan && Array.isArray(dispatchPlan.args) ? dispatchPlan.args : [];
+  this.move(args[0]);
 };
 
 GameManager.prototype.executeReplayCustomTileDispatch = function (dispatchPlan) {
+  var args = dispatchPlan && Array.isArray(dispatchPlan.args) ? dispatchPlan.args : [];
   this.insertCustomTile(
-    this.resolveReplayDispatchArgAt(dispatchPlan, 0),
-    this.resolveReplayDispatchArgAt(dispatchPlan, 1),
-    this.resolveReplayDispatchArgAt(dispatchPlan, 2)
+    args[0],
+    args[1],
+    args[2]
   );
 };
 
-GameManager.prototype.shouldInjectReplayStepForcedSpawn = function (stepExecutionPlan) {
-  return !!stepExecutionPlan.shouldInjectForcedSpawn;
-};
-
-GameManager.prototype.resolveReplayStepForcedSpawn = function (stepExecutionPlan) {
-  return stepExecutionPlan.forcedSpawn;
-};
-
 GameManager.prototype.applyReplayStepForcedSpawn = function (stepExecutionPlan) {
-  if (!this.shouldInjectReplayStepForcedSpawn(stepExecutionPlan)) return;
-  this.forcedSpawn = this.resolveReplayStepForcedSpawn(stepExecutionPlan);
+  if (!stepExecutionPlan.shouldInjectForcedSpawn) return;
+  this.forcedSpawn = stepExecutionPlan.forcedSpawn;
 };
 
 GameManager.prototype.executePlannedReplayStep = function () {
