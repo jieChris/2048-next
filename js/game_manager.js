@@ -824,7 +824,9 @@ GameManager.prototype.computeReplayEndState = function () {
   });
 };
 
-GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, replayEndState) {
+GameManager.prototype.runReplayTick = function () {
+  var shouldStopAtTick = this.shouldStopReplayAtTick(this.replayIndex, this.replayMoves.length);
+  var replayEndState = shouldStopAtTick ? this.computeReplayEndState() : undefined;
   var planReplayTickBoundaryCore = this.callCoreReplayControlRuntime(
     "planReplayTickBoundary",
     [{
@@ -832,7 +834,7 @@ GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, repla
       replayEndState: replayEndState
     }]
   );
-  return this.resolveCoreObjectCallOrFallback(planReplayTickBoundaryCore, function () {
+  var tickBoundaryPlan = this.resolveCoreObjectCallOrFallback(planReplayTickBoundaryCore, function () {
     if (!shouldStopAtTick) {
       return {
         shouldStop: false,
@@ -848,24 +850,15 @@ GameManager.prototype.planReplayTickBoundary = function (shouldStopAtTick, repla
       replayMode: replayEndState && replayEndState.replayMode === true
     };
   });
-};
-
-GameManager.prototype.applyReplayTickBoundaryPlan = function (tickBoundaryPlan) {
-  if (!tickBoundaryPlan || tickBoundaryPlan.shouldStop !== true) return false;
-  if (tickBoundaryPlan.shouldPause) {
-    this.pause();
+  if (tickBoundaryPlan && tickBoundaryPlan.shouldStop === true) {
+    if (tickBoundaryPlan.shouldPause) {
+      this.pause();
+    }
+    if (tickBoundaryPlan.shouldApplyReplayMode) {
+      this.replayMode = tickBoundaryPlan.replayMode;
+    }
+    return false;
   }
-  if (tickBoundaryPlan.shouldApplyReplayMode) {
-    this.replayMode = tickBoundaryPlan.replayMode;
-  }
-  return true;
-};
-
-GameManager.prototype.runReplayTick = function () {
-  var shouldStopAtTick = this.shouldStopReplayAtTick(this.replayIndex, this.replayMoves.length);
-  var replayEndState = shouldStopAtTick ? this.computeReplayEndState() : undefined;
-  var tickBoundaryPlan = this.planReplayTickBoundary(shouldStopAtTick, replayEndState);
-  if (this.applyReplayTickBoundaryPlan(tickBoundaryPlan)) return false;
   this.executePlannedReplayStep();
   return true;
 };
