@@ -6831,52 +6831,35 @@ GameManager.prototype.scanMoveTraversals = function (traversals, vector, undo) {
   return moved;
 };
 
-GameManager.prototype.createDirectionalMovePlan = function (direction) {
-  return {
+GameManager.prototype.executeDirectionalMove = function (direction) {
+  var movePlan = {
     vector: this.getVector(direction),
     scoreBeforeMove: this.score,
     undo: this.createUndoSnapshotState()
   };
-};
-
-GameManager.prototype.finalizeDirectionalMoveIfNeeded = function (direction, movePlan, moved) {
-  if (!moved) return;
-  this.applySuccessfulMove(direction, movePlan.scoreBeforeMove, movePlan.undo);
-};
-
-GameManager.prototype.executeDirectionalMove = function (direction) {
-  var movePlan = this.createDirectionalMovePlan(direction);
   var traversals = this.buildTraversals(movePlan.vector);
 
   // Save the current tile positions and remove merger information
   this.prepareTiles();
 
   var moved = this.scanMoveTraversals(traversals, movePlan.vector, movePlan.undo);
-  this.finalizeDirectionalMoveIfNeeded(direction, movePlan, moved);
+  if (!moved) return;
+  this.applySuccessfulMove(direction, movePlan.scoreBeforeMove, movePlan.undo);
 };
 
 GameManager.prototype.isUndoMoveDirection = function (direction) {
   return direction == -1;
 };
 
-GameManager.prototype.executeUndoMoveDirection = function (direction) {
-  this.handleUndoMove(direction);
-};
-
-GameManager.prototype.executeDirectionalMoveIfAllowed = function (direction) {
-  if (this.shouldAbortDirectionalMove(direction)) return false;
-  this.executeDirectionalMove(direction);
-  return true;
-};
-
 // Move tiles on the grid in the specified direction
 GameManager.prototype.move = function (direction) {
   // 0: up, 1: right, 2:down, 3: left, -1: undo
   if (this.isUndoMoveDirection(direction)) {
-    this.executeUndoMoveDirection(direction);
+    this.handleUndoMove(direction);
     return;
   }
-  this.executeDirectionalMoveIfAllowed(direction);
+  if (this.shouldAbortDirectionalMove(direction)) return;
+  this.executeDirectionalMove(direction);
 };
 
 GameManager.prototype.getVectorFallbackMap = function () {
