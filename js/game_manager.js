@@ -7668,75 +7668,34 @@ GameManager.prototype.normalizeSessionSubmitAdapterParitySnapshot = function (ad
     : {};
 };
 
-GameManager.prototype.buildSessionSubmitReplayPayload = function () {
-  return {
-    replay: this.serializeV3(),
-    replay_string: this.serialize()
-  };
-};
-
-GameManager.prototype.applySessionSubmitModeAndBoardPayload = function (payload) {
-  payload.mode = this.getLegacyModeFromModeKey(this.modeKey || this.mode);
-  payload.mode_key = this.modeKey;
-  payload.board_width = this.width;
-  payload.board_height = this.height;
-  payload.ruleset = this.ruleset;
-  payload.undo_enabled = !!this.modeConfig.undo_enabled;
-};
-
-GameManager.prototype.applySessionSubmitRankingPayload = function (payload) {
-  payload.ranked_bucket = this.rankedBucket;
-  payload.mode_family = this.modeFamily;
-  payload.rank_policy = this.rankPolicy;
-  payload.challenge_id = this.challengeId || null;
-};
-
-GameManager.prototype.applySessionSubmitOutcomePayload = function (payload, endedAt) {
-  payload.special_rules_snapshot = this.clonePlain(this.specialRules || {});
-  payload.score = this.score;
-  payload.best_tile = this.getBestTileValue();
-  payload.duration_ms = this.getDurationMs();
-  payload.final_board = this.getFinalBoardMatrix();
-  payload.ended_at = endedAt;
-};
-
-GameManager.prototype.buildSessionSubmitBasePayload = function (endedAt) {
-  var payload = {};
-  this.applySessionSubmitModeAndBoardPayload(payload);
-  this.applySessionSubmitRankingPayload(payload);
-  this.applySessionSubmitOutcomePayload(payload, endedAt);
-  return payload;
-};
-
-GameManager.prototype.applySessionSubmitReplayPayload = function (payload, replayPayload) {
-  payload.replay = replayPayload.replay;
-  payload.replay_string = replayPayload.replay_string;
-};
-
-GameManager.prototype.applySessionSubmitAdapterParityPayload = function (payload, adapterParity) {
-  payload.adapter_parity_report_v2 = adapterParity.report;
-  payload.adapter_parity_ab_diff_v2 = adapterParity.diff;
-  payload.adapter_parity_report_v1 = adapterParity.report;
-  payload.adapter_parity_ab_diff_v1 = adapterParity.diff;
-};
-
-GameManager.prototype.applySessionSubmitMetaPayload = function (payload, windowLike) {
-  payload.client_version = (windowLike && windowLike.GAME_CLIENT_VERSION) || "1.8";
-  payload.end_reason = this.over ? "game_over" : "win_stop";
-};
-
 GameManager.prototype.buildSessionSubmitPayload = function (endedAt, windowLike, adapterParitySnapshot) {
   var parity = this.normalizeSessionSubmitAdapterParitySnapshot(adapterParitySnapshot);
-  var adapterParity = {
-    report: parity.report,
-    diff: parity.diff
+  return {
+    mode: this.getLegacyModeFromModeKey(this.modeKey || this.mode),
+    mode_key: this.modeKey,
+    board_width: this.width,
+    board_height: this.height,
+    ruleset: this.ruleset,
+    undo_enabled: !!this.modeConfig.undo_enabled,
+    ranked_bucket: this.rankedBucket,
+    mode_family: this.modeFamily,
+    rank_policy: this.rankPolicy,
+    challenge_id: this.challengeId || null,
+    special_rules_snapshot: this.clonePlain(this.specialRules || {}),
+    score: this.score,
+    best_tile: this.getBestTileValue(),
+    duration_ms: this.getDurationMs(),
+    final_board: this.getFinalBoardMatrix(),
+    ended_at: endedAt,
+    replay: this.serializeV3(),
+    replay_string: this.serialize(),
+    adapter_parity_report_v2: parity.report,
+    adapter_parity_ab_diff_v2: parity.diff,
+    adapter_parity_report_v1: parity.report,
+    adapter_parity_ab_diff_v1: parity.diff,
+    client_version: (windowLike && windowLike.GAME_CLIENT_VERSION) || "1.8",
+    end_reason: this.over ? "game_over" : "win_stop"
   };
-  var replayPayload = this.buildSessionSubmitReplayPayload();
-  var payload = this.buildSessionSubmitBasePayload(endedAt);
-  this.applySessionSubmitReplayPayload(payload, replayPayload);
-  this.applySessionSubmitAdapterParityPayload(payload, adapterParity);
-  this.applySessionSubmitMetaPayload(payload, windowLike);
-  return payload;
 };
 
 GameManager.prototype.buildSessionSubmitResultBase = function (endedAt, payload, ok) {
