@@ -7622,8 +7622,8 @@ GameManager.prototype.resolveDurationMsFallback = function (nowMs) {
   return this.normalizeDurationMs(ms);
 };
 
-GameManager.prototype.createDefaultSessionReplayV3 = function () {
-  return {
+GameManager.prototype.serializeV3 = function () {
+  var replay = this.sessionReplayV3 || {
     v: 3,
     mode: this.getLegacyModeFromModeKey(this.modeKey || this.mode),
     mode_key: this.modeKey,
@@ -7637,10 +7637,6 @@ GameManager.prototype.createDefaultSessionReplayV3 = function () {
     seed: this.initialSeed,
     actions: []
   };
-};
-
-GameManager.prototype.serializeV3 = function () {
-  var replay = this.sessionReplayV3 || this.createDefaultSessionReplayV3();
   return {
     v: 3,
     mode: this.getLegacyModeFromModeKey(replay.mode_key || replay.mode || this.modeKey || this.mode),
@@ -7750,12 +7746,8 @@ GameManager.prototype.isSessionTerminated = function () {
   return !!(this.over || (this.won && !this.keepPlaying));
 };
 
-GameManager.prototype.shouldSerializeReplayAsV3 = function () {
-  return this.width !== 4 || this.height !== 4 || this.isFibonacciMode();
-};
-
 GameManager.prototype.serialize = function () {
-  if (this.shouldSerializeReplayAsV3()) {
+  if (this.width !== 4 || this.height !== 4 || this.isFibonacciMode()) {
     return JSON.stringify(this.serializeV3());
   }
   var modeCode = GameManager.REPLAY_V4_MODE_KEY_TO_CODE[this.modeKey] || "C";
