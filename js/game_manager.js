@@ -3470,12 +3470,21 @@ GameManager.prototype.resolveActiveUndoPolicyState = function (options) {
   return this.resolveUndoPolicyStateForMode(this.mode, options);
 };
 
+GameManager.prototype.resolveLegacyAdapterBridgePayloadFromWindow = function () {
+  var windowLike = this.getWindowLike();
+  if (!windowLike || typeof windowLike !== "object") return null;
+  var payload = windowLike.__legacyEngine;
+  return payload && typeof payload === "object" ? payload : null;
+};
+
+GameManager.prototype.isValidLegacyAdapterBridgePayload = function (payload) {
+  if (!payload || typeof payload !== "object") return false;
+  return payload.manager === this;
+};
+
 GameManager.prototype.getLegacyAdapterBridge = function () {
-  if (typeof window === "undefined") return null;
-  var payload = window.__legacyEngine;
-  if (!payload || typeof payload !== "object") return null;
-  if (payload.manager !== this) return null;
-  return payload;
+  var payload = this.resolveLegacyAdapterBridgePayloadFromWindow();
+  return this.isValidLegacyAdapterBridgePayload(payload) ? payload : null;
 };
 
 GameManager.prototype.resolveLegacyAdapterBridgeMethod = function (methodName) {
