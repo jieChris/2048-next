@@ -6293,13 +6293,6 @@ GameManager.prototype.handleMoveInput = function (direction) {
   this.dispatchMoveInputWithThrottle(direction, throttleMs);
 };
 
-// Move a tile and its representation
-GameManager.prototype.moveTile = function (tile, cell) {
-  this.grid.cells[tile.x][tile.y] = null;
-  this.grid.cells[cell.x][cell.y] = tile;
-  tile.updatePosition(cell);
-};
-
 GameManager.prototype.applyCorePostMoveScoreResult = function (scoreResult) {
   if (Number.isFinite(scoreResult.score)) {
     this.score = Number(scoreResult.score);
@@ -6569,30 +6562,6 @@ GameManager.prototype.shouldAbortDirectionalMove = function (direction) {
   return true;
 };
 
-GameManager.prototype.snapshotMoveTileForUndo = function (undo, tile, target) {
-  undo.tiles.push(this.createUndoTileSnapshot(tile, target));
-};
-
-GameManager.prototype.applyMergeInteraction = function (tile, next, mergedValue, target, undo) {
-  // We need to save tile since it will get removed
-  this.snapshotMoveTileForUndo(undo, tile, target);
-
-  var merged = new Tile(target, mergedValue);
-  merged.mergedFrom = [tile, next];
-
-  this.grid.insertTile(merged);
-  this.grid.removeTile(tile);
-
-  // Converge the two tiles' positions
-  tile.updatePosition(target);
-
-  // Update the score
-  this.score += merged.value;
-
-  var timeStr = this.pretty(this.time);
-  this.applyMergeMilestoneEffects(merged.value, timeStr);
-};
-
 GameManager.prototype.executeDirectionalMove = function (direction) {
   var movePlan = {
     vector: this.getVector(direction),
@@ -6623,12 +6592,30 @@ GameManager.prototype.executeDirectionalMove = function (direction) {
       var mergedValue = next ? this.getMergedValue(tile.value, next.value) : null;
       var interaction = this.planTileInteraction(cell, positions, next, mergedValue);
       if (interaction.kind === "merge" && next && !next.mergedFrom && mergedValue !== null) {
-        this.applyMergeInteraction(tile, next, mergedValue, interaction.target, movePlan.undo);
+        // We need to save tile since it will get removed
+        movePlan.undo.tiles.push(this.createUndoTileSnapshot(tile, interaction.target));
+
+        var merged = new Tile(interaction.target, mergedValue);
+        merged.mergedFrom = [tile, next];
+
+        this.grid.insertTile(merged);
+        this.grid.removeTile(tile);
+
+        // Converge the two tiles' positions
+        tile.updatePosition(interaction.target);
+
+        // Update the score
+        this.score += merged.value;
+
+        var timeStr = this.pretty(this.time);
+        this.applyMergeMilestoneEffects(merged.value, timeStr);
         moved = interaction.moved === true || moved;
         continue;
       }
-      this.snapshotMoveTileForUndo(movePlan.undo, tile, interaction.target);
-      this.moveTile(tile, interaction.target);
+      movePlan.undo.tiles.push(this.createUndoTileSnapshot(tile, interaction.target));
+      this.grid.cells[tile.x][tile.y] = null;
+      this.grid.cells[interaction.target.x][interaction.target.y] = tile;
+      tile.updatePosition(interaction.target);
       moved = interaction.moved === true || moved;
     }
   }
