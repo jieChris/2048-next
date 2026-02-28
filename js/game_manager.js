@@ -5339,7 +5339,9 @@ GameManager.prototype.getLockedDirection = function () {
     "getLockedDirectionState",
     this.buildGetLockedDirectionStateCoreArgs()
   );
-  var lockedDirectionStateByCore = this.resolveCoreRawCallValueOrUndefined(getLockedDirectionStateCore);
+  var lockedDirectionStateByCore = this.resolveCoreRawCallOrFallback(getLockedDirectionStateCore, function () {
+    return undefined;
+  });
   if (typeof lockedDirectionStateByCore !== "undefined") {
     return this.applyComputedLockedDirectionState(lockedDirectionStateByCore || {});
   }
