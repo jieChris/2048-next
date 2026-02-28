@@ -1348,6 +1348,13 @@ GameManager.prototype.resolveCoreStringCallValueOrNull = function (coreCallResul
   return coreValue ? coreValue : null;
 };
 
+GameManager.prototype.resolveCoreStringCallOrFallback = function (coreCallResult, fallbackResolver, allowEmpty) {
+  var coreValue = this.resolveCoreStringCallValueOrNull(coreCallResult, allowEmpty);
+  if (coreValue !== null) return coreValue;
+  if (typeof fallbackResolver === "function") return String(fallbackResolver.call(this));
+  return null;
+};
+
 GameManager.prototype.resolveNormalizedCoreValueOrUndefined = function (coreCallResult, normalizer) {
   if (!this.isCoreCallAvailable(coreCallResult)) return undefined;
   if (typeof normalizer !== "function") return coreCallResult.value;
@@ -3442,9 +3449,9 @@ GameManager.prototype.detectMode = function () {
     "resolveDetectedMode",
     this.buildResolveDetectedModeCoreArgs()
   );
-  var detectedByCore = this.resolveCoreStringCallValueOrNull(resolveDetectedModeCore);
-  if (detectedByCore !== null) return detectedByCore;
-  return this.detectModeFallback();
+  return this.resolveCoreStringCallOrFallback(resolveDetectedModeCore, function () {
+    return this.detectModeFallback();
+  });
 };
 
 GameManager.prototype.clonePlain = function (value) {
@@ -5966,13 +5973,12 @@ GameManager.prototype.getCappedTimerLegendClass = function (cappedTargetValue) {
     "resolveCappedTimerLegendClass",
     this.buildResolveCappedTimerLegendClassCoreArgs(targetValue)
   );
-  var legendClass = this.resolveCoreStringCallValueOrNull(resolveCappedTimerLegendClassCore);
-  if (legendClass !== null) return legendClass;
-
-  var slotId = this.timerMilestoneSlotByValue
-    ? this.timerMilestoneSlotByValue[String(targetValue)]
-    : null;
-  return slotId ? ("timertile timer-legend-" + slotId) : "timertile";
+  return this.resolveCoreStringCallOrFallback(resolveCappedTimerLegendClassCore, function () {
+    var slotId = this.timerMilestoneSlotByValue
+      ? this.timerMilestoneSlotByValue[String(targetValue)]
+      : null;
+    return slotId ? ("timertile timer-legend-" + slotId) : "timertile";
+  });
 };
 
 GameManager.prototype.getCappedTimerFontSize = function (cappedTargetValue) {
@@ -5981,13 +5987,13 @@ GameManager.prototype.getCappedTimerFontSize = function (cappedTargetValue) {
     "resolveCappedTimerLegendFontSize",
     this.buildResolveCappedTimerLegendFontSizeCoreArgs(targetValue)
   );
-  var resolvedFontSize = this.resolveCoreStringCallValueOrNull(resolveCappedTimerLegendFontSizeCore);
-  if (resolvedFontSize !== null) return resolvedFontSize;
-  var cap = targetValue;
-  if (cap >= 8192) return "13px";
-  if (cap >= 1024) return "14px";
-  if (cap >= 128) return "18px";
-  return "22px";
+  return this.resolveCoreStringCallOrFallback(resolveCappedTimerLegendFontSizeCore, function () {
+    var cap = targetValue;
+    if (cap >= 8192) return "13px";
+    if (cap >= 1024) return "14px";
+    if (cap >= 128) return "18px";
+    return "22px";
+  });
 };
 
 GameManager.prototype.buildResolveCappedTimerLegendFontSizeCoreArgs = function (targetValue) {
@@ -6003,9 +6009,9 @@ GameManager.prototype.getCappedRepeatLabel = function (repeatCount) {
     "formatCappedRepeatLabel",
     this.buildFormatCappedRepeatLabelCoreArgs(repeatCount)
   );
-  var label = this.resolveCoreStringCallValueOrNull(formatCappedRepeatLabelCore, true);
-  if (label !== null) return label;
-  return "x" + String(repeatCount);
+  return this.resolveCoreStringCallOrFallback(formatCappedRepeatLabelCore, function () {
+    return "x" + String(repeatCount);
+  }, true);
 };
 
 GameManager.prototype.normalizeCappedPlaceholderRowValuesFromCore = function (coreValues) {
@@ -6930,9 +6936,9 @@ GameManager.prototype.getActualSecondaryRate = function () {
     "getActualSecondaryRateText",
     this.buildGetActualSecondaryRateTextCoreArgs()
   );
-  var rateText = this.resolveCoreStringCallValueOrNull(getActualSecondaryRateTextCore);
-  if (rateText !== null) return rateText;
-  return this.resolveActualSecondaryRateFallback();
+  return this.resolveCoreStringCallOrFallback(getActualSecondaryRateTextCore, function () {
+    return this.resolveActualSecondaryRateFallback();
+  });
 };
 
 GameManager.prototype.getActualFourRate = function () {
