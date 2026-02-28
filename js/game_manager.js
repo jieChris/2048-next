@@ -1791,81 +1791,6 @@ GameManager.prototype.persistSavedGameStatePayload = function (payload) {
   return !!(persistWrites.persisted || persistWrites.litePersisted);
 };
 
-GameManager.prototype.resolveTimerSubStateSnapshot = function () {
-  return {
-    timer_sub_8192: (document.getElementById("timer8192-sub") || {}).textContent || "",
-    timer_sub_16384: (document.getElementById("timer16384-sub") || {}).textContent || "",
-    timer_sub_visible: (((document.getElementById("timer32k-sub-container") || {}).style) || {}).display === "block"
-  };
-};
-
-GameManager.prototype.resolveSavedGameStateReplaySnapshot = function () {
-  return {
-    move_history: this.moveHistory ? this.moveHistory.slice() : [],
-    ips_input_count: Number.isInteger(this.ipsInputCount) && this.ipsInputCount >= 0 ? this.ipsInputCount : 0,
-    undo_stack: this.undoStack ? this.safeClonePlain(this.undoStack, []) : [],
-    replay_compact_log: this.replayCompactLog || "",
-    session_replay_v3: this.sessionReplayV3 ? this.safeClonePlain(this.sessionReplayV3, null) : null
-  };
-};
-
-GameManager.prototype.resolveSavedGameStateTimerSnapshot = function () {
-  return {
-    timer_status: this.timerStatus === 1 ? 1 : 0,
-    duration_ms: this.getDurationMs(),
-    has_game_started: !!this.hasGameStarted
-  };
-};
-
-GameManager.prototype.buildSavedGameStateBaseReplayPayload = function (replaySnapshot) {
-  return {
-    move_history: replaySnapshot.move_history,
-    ips_input_count: replaySnapshot.ips_input_count,
-    undo_stack: replaySnapshot.undo_stack,
-    replay_compact_log: replaySnapshot.replay_compact_log,
-    session_replay_v3: replaySnapshot.session_replay_v3
-  };
-};
-
-GameManager.prototype.buildSavedGameStateBaseTimerPayload = function (timerSnapshot) {
-  return {
-    timer_status: timerSnapshot.timer_status,
-    duration_ms: timerSnapshot.duration_ms,
-    has_game_started: timerSnapshot.has_game_started
-  };
-};
-
-GameManager.prototype.buildSavedGameStateBaseCorePayload = function (savedAt) {
-  return {
-    v: GameManager.SAVED_GAME_STATE_VERSION,
-    saved_at: savedAt,
-    terminated: false,
-    mode_key: this.modeKey,
-    board_width: this.width,
-    board_height: this.height,
-    ruleset: this.ruleset,
-    board: this.getFinalBoardMatrix(),
-    score: this.score,
-    over: this.over,
-    won: this.won,
-    keep_playing: this.keepPlaying,
-    initial_seed: this.initialSeed,
-    seed: this.seed,
-    spawn_value_counts: this.spawnValueCounts ? this.safeClonePlain(this.spawnValueCounts, {}) : {},
-    reached_32k: !!this.reached32k,
-    capped_milestone_count: Number.isInteger(this.cappedMilestoneCount) ? this.cappedMilestoneCount : 0,
-    capped64_unlocked: this.capped64Unlocked ? this.safeClonePlain(this.capped64Unlocked, null) : null
-  };
-};
-
-GameManager.prototype.buildSavedGameStateBasePayload = function (savedAt, replaySnapshot, timerSnapshot) {
-  return Object.assign(
-    this.buildSavedGameStateBaseCorePayload(savedAt),
-    this.buildSavedGameStateBaseReplayPayload(replaySnapshot),
-    this.buildSavedGameStateBaseTimerPayload(timerSnapshot)
-  );
-};
-
 GameManager.prototype.buildSavedGameStateExtendedTimerPayload = function (timerSubState) {
   return {
     timer_module_view: this.getTimerModuleViewMode ? this.getTimerModuleViewMode() : "timer",
@@ -1900,10 +1825,39 @@ GameManager.prototype.buildSavedGameStateExtendedPayload = function (timerSubSta
 };
 
 GameManager.prototype.buildSavedGameStatePayload = function (savedAt) {
-  var timerSubState = this.resolveTimerSubStateSnapshot();
-  var replaySnapshot = this.resolveSavedGameStateReplaySnapshot();
-  var timerSnapshot = this.resolveSavedGameStateTimerSnapshot();
-  var basePayload = this.buildSavedGameStateBasePayload(savedAt, replaySnapshot, timerSnapshot);
+  var timerSubState = {
+    timer_sub_8192: (document.getElementById("timer8192-sub") || {}).textContent || "",
+    timer_sub_16384: (document.getElementById("timer16384-sub") || {}).textContent || "",
+    timer_sub_visible: (((document.getElementById("timer32k-sub-container") || {}).style) || {}).display === "block"
+  };
+  var basePayload = {
+    v: GameManager.SAVED_GAME_STATE_VERSION,
+    saved_at: savedAt,
+    terminated: false,
+    mode_key: this.modeKey,
+    board_width: this.width,
+    board_height: this.height,
+    ruleset: this.ruleset,
+    board: this.getFinalBoardMatrix(),
+    score: this.score,
+    over: this.over,
+    won: this.won,
+    keep_playing: this.keepPlaying,
+    initial_seed: this.initialSeed,
+    seed: this.seed,
+    spawn_value_counts: this.spawnValueCounts ? this.safeClonePlain(this.spawnValueCounts, {}) : {},
+    reached_32k: !!this.reached32k,
+    capped_milestone_count: Number.isInteger(this.cappedMilestoneCount) ? this.cappedMilestoneCount : 0,
+    capped64_unlocked: this.capped64Unlocked ? this.safeClonePlain(this.capped64Unlocked, null) : null,
+    move_history: this.moveHistory ? this.moveHistory.slice() : [],
+    ips_input_count: Number.isInteger(this.ipsInputCount) && this.ipsInputCount >= 0 ? this.ipsInputCount : 0,
+    undo_stack: this.undoStack ? this.safeClonePlain(this.undoStack, []) : [],
+    replay_compact_log: this.replayCompactLog || "",
+    session_replay_v3: this.sessionReplayV3 ? this.safeClonePlain(this.sessionReplayV3, null) : null,
+    timer_status: this.timerStatus === 1 ? 1 : 0,
+    duration_ms: this.getDurationMs(),
+    has_game_started: !!this.hasGameStarted
+  };
   var extendedPayload = this.buildSavedGameStateExtendedPayload(timerSubState);
   return Object.assign(basePayload, extendedPayload);
 };
