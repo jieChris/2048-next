@@ -8446,16 +8446,6 @@ var GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP = {
   "v4c": "importV4ReplayEnvelope"
 };
 
-GameManager.prototype.tryImportParsedReplayEnvelope = function (parsedEnvelope) {
-  if (!parsedEnvelope) return false;
-  if (!this.hasOwnKey(GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP, parsedEnvelope.kind)) return false;
-  var importerMethodName = GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP[parsedEnvelope.kind];
-  if (!importerMethodName) return false;
-  var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
-  this[importerMethodName](parsedEnvelope, replayModeConfig);
-  return true;
-};
-
 GameManager.prototype.tryImportLegacyReplayString = function (trimmedReplayString) {
   var decodedLegacy = this.decodeLegacyReplay(trimmedReplayString);
   if (!decodedLegacy) return false;
@@ -8465,7 +8455,13 @@ GameManager.prototype.tryImportLegacyReplayString = function (trimmedReplayStrin
 
 GameManager.prototype.tryImportReplayEnvelopeString = function (trimmedReplayString) {
   var parsedEnvelope = this.parseReplayImportEnvelope(trimmedReplayString);
-  return this.tryImportParsedReplayEnvelope(parsedEnvelope);
+  if (!parsedEnvelope) return false;
+  if (!this.hasOwnKey(GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP, parsedEnvelope.kind)) return false;
+  var importerMethodName = GAME_MANAGER_REPLAY_ENVELOPE_IMPORTER_METHOD_MAP[parsedEnvelope.kind];
+  if (!importerMethodName) return false;
+  var replayModeConfig = this.resolveModeConfig(parsedEnvelope.modeKey);
+  this[importerMethodName](parsedEnvelope, replayModeConfig);
+  return true;
 };
 
 GameManager.prototype.throwUnknownReplayVersion = function () {
