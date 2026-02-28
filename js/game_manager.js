@@ -7073,29 +7073,21 @@ GameManager.prototype.positionsEqual = function (first, second) {
 // Start the timer
 GameManager.prototype.startTimer = function() {
   if (this.timerStatus !== 0) return;
-  this.applyTimerStartState();
-  this.scheduleTimerUpdateInterval();
-};
-
-GameManager.prototype.applyTimerStartState = function () {
   this.timerStatus = 1;
   this.hasGameStarted = true;
   // Convert accumulated time back to a start timestamp relative to now
   this.startTime = new Date(Date.now() - (this.accumulatedTime || 0));
   this.notifyUndoSettingsStateChanged();
-};
-
-GameManager.prototype.createTimerUpdateCallback = function () {
-  var manager = this;
-  return function () {
-    manager.updateTimer();
-  };
+  this.scheduleTimerUpdateInterval();
 };
 
 GameManager.prototype.scheduleTimerUpdateInterval = function () {
   this.timerUpdateIntervalMs = this.getTimerUpdateIntervalMs();
   this.lastStatsPanelUpdateAt = 0;
-  this.timerID = setInterval(this.createTimerUpdateCallback(), this.timerUpdateIntervalMs);
+  var manager = this;
+  this.timerID = setInterval(function () {
+    manager.updateTimer();
+  }, this.timerUpdateIntervalMs);
 };
 
 GameManager.prototype.getTimerUpdateIntervalMs = function () {
@@ -7123,18 +7115,9 @@ GameManager.prototype.isStatsPanelOpen = function () {
   return !!(overlay && overlay.style.display !== "none");
 };
 
-GameManager.prototype.renderAccumulatedTimerDisplay = function () {
-  this.updateTimerDisplayText(this.accumulatedTime);
-};
-
 GameManager.prototype.endTime = function() {
   this.stopTimer();
-  this.renderAccumulatedTimerDisplay();
-};
-
-GameManager.prototype.resolveElapsedTimerMsFromStartTime = function () {
-  if (!this.startTime) return null;
-  return Date.now() - this.startTime.getTime();
+  this.updateTimerDisplayText(this.accumulatedTime);
 };
 
 GameManager.prototype.resolveTimerDisplayElement = function () {
@@ -7157,49 +7140,26 @@ GameManager.prototype.refreshStatsPanelIfNeededAtElapsed = function (elapsedMs) 
   this.lastStatsPanelUpdateAt = elapsedMs;
 };
 
-GameManager.prototype.applyTimerElapsedState = function (elapsedMs) {
-  this.time = elapsedMs;
-};
-
-GameManager.prototype.refreshTimerVisualsAtElapsed = function (elapsedMs) {
-  this.updateTimerDisplayText(elapsedMs);
-  this.refreshIpsDisplay(elapsedMs);
-  this.refreshStatsPanelIfNeededAtElapsed(elapsedMs);
-};
-
-GameManager.prototype.applyTimerTickAtElapsed = function (elapsedMs) {
-  this.applyTimerElapsedState(elapsedMs);
-  this.refreshTimerVisualsAtElapsed(elapsedMs);
-};
-
 // Update the timer
 GameManager.prototype.updateTimer = function() {
-  var time = this.resolveElapsedTimerMsFromStartTime();
+  var time = this.startTime ? (Date.now() - this.startTime.getTime()) : null;
   if (time === null) return;
-  this.applyTimerTickAtElapsed(time);
-};
-
-GameManager.prototype.resolveAccumulatedTimerMsFromStartTime = function () {
-  if (!this.startTime || typeof this.startTime.getTime !== "function") {
-    return this.accumulatedTime || 0;
-  }
-  return Date.now() - this.startTime.getTime();
-};
-
-GameManager.prototype.clearTimerUpdateInterval = function () {
-  clearInterval(this.timerID);
-  this.timerID = null;
-};
-
-GameManager.prototype.applyTimerStopState = function () {
-  this.accumulatedTime = this.resolveAccumulatedTimerMsFromStartTime();
-  this.clearTimerUpdateInterval();
-  this.timerStatus = 0;
+  this.time = time;
+  this.updateTimerDisplayText(time);
+  this.refreshIpsDisplay(time);
+  this.refreshStatsPanelIfNeededAtElapsed(time);
 };
 
 GameManager.prototype.stopTimer = function() {
   if (this.timerStatus !== 1) return;
-  this.applyTimerStopState();
+  if (!this.startTime || typeof this.startTime.getTime !== "function") {
+    this.accumulatedTime = this.accumulatedTime || 0;
+  } else {
+    this.accumulatedTime = Date.now() - this.startTime.getTime();
+  }
+  clearInterval(this.timerID);
+  this.timerID = null;
+  this.timerStatus = 0;
 };
 
 GameManager.prototype.pretty = function(time) {
