@@ -1434,10 +1434,6 @@ GameManager.prototype.requestAnimationFrame = function (callback) {
   return false;
 };
 
-GameManager.prototype.resolveStorageFlagMatchValue = function (trueValue) {
-  return typeof trueValue === "string" ? trueValue : "1";
-};
-
 GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
   var readStorageFlagFromContextCore = this.callCoreStorageRuntime(
     "readStorageFlagFromContext",
@@ -1450,18 +1446,13 @@ GameManager.prototype.readLocalStorageFlag = function (key, trueValue) {
   return this.resolveCoreBooleanCallOrFallback(readStorageFlagFromContextCore, function () {
     var storage = this.getWebStorageByName("localStorage");
     if (!this.canReadFromStorage(storage)) return false;
-    var matchValue = this.resolveStorageFlagMatchValue(trueValue);
+    var matchValue = typeof trueValue === "string" ? trueValue : "1";
     try {
       return storage.getItem(key) === matchValue;
     } catch (_err) {
       return false;
     }
   });
-};
-
-GameManager.prototype.resolveStorageFlagPersistValue = function (enabled, trueValue, falseValue) {
-  if (enabled) return this.resolveStorageFlagMatchValue(trueValue);
-  return typeof falseValue === "string" ? falseValue : "0";
 };
 
 GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue, falseValue) {
@@ -1478,7 +1469,9 @@ GameManager.prototype.writeLocalStorageFlag = function (key, enabled, trueValue,
   return this.resolveCoreBooleanCallOrFallback(writeStorageFlagFromContextCore, function () {
     var storage = this.getWebStorageByName("localStorage");
     if (!this.canWriteToStorage(storage)) return false;
-    var value = this.resolveStorageFlagPersistValue(enabled, trueValue, falseValue);
+    var value = enabled
+      ? (typeof trueValue === "string" ? trueValue : "1")
+      : (typeof falseValue === "string" ? falseValue : "0");
     try {
       storage.setItem(key, value);
       return true;
