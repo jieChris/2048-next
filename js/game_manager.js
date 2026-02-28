@@ -7356,22 +7356,15 @@ GameManager.prototype.invalidateTimerSlotsFallback = function (limit) {
     this.applyInvalidatedTimerPlaceholders(this.resolveInvalidatedTimerSlotElementIds(limit));
 };
 
-GameManager.prototype.shouldInvalidateSubTimerAtLimit = function (milestone, limit) {
-    return milestone <= limit && limit !== 32768;
-};
-
-GameManager.prototype.applyInvalidatedSubTimerPlaceholder = function (elementId) {
-    var subTimerEl = document.getElementById(elementId);
-    if (subTimerEl) subTimerEl.textContent = "---------";
-};
-
 GameManager.prototype.invalidateSubTimersFallback = function (limit) {
     if (!(this.reached32k && !this.isFibonacciMode())) return;
-    if (this.shouldInvalidateSubTimerAtLimit(8192, limit)) {
-        this.applyInvalidatedSubTimerPlaceholder("timer8192-sub");
+    if (8192 <= limit && limit !== 32768) {
+        var subTimer8192El = document.getElementById("timer8192-sub");
+        if (subTimer8192El) subTimer8192El.textContent = "---------";
     }
-    if (this.shouldInvalidateSubTimerAtLimit(16384, limit)) {
-        this.applyInvalidatedSubTimerPlaceholder("timer16384-sub");
+    if (16384 <= limit && limit !== 32768) {
+        var subTimer16384El = document.getElementById("timer16384-sub");
+        if (subTimer16384El) subTimer16384El.textContent = "---------";
     }
 };
 
