@@ -3672,21 +3672,17 @@ GameManager.prototype.buildPlannedTileInteractionFallback = function (cell, posi
   };
 };
 
-GameManager.prototype.buildPlanTileInteractionCoreArgs = function (cell, positions, next, mergedValue) {
-  return [{
-    cell: cell,
-    farthest: positions && positions.farthest ? positions.farthest : { x: 0, y: 0 },
-    next: positions && positions.next ? positions.next : { x: 0, y: 0 },
-    hasNextTile: !!next,
-    nextMergedFrom: !!(next && next.mergedFrom),
-    mergedValue: mergedValue
-  }];
-};
-
 GameManager.prototype.planTileInteraction = function (cell, positions, next, mergedValue) {
   var planTileInteractionCore = this.callCoreMoveApplyRuntime(
     "planTileInteraction",
-    this.buildPlanTileInteractionCoreArgs(cell, positions, next, mergedValue)
+    [{
+      cell: cell,
+      farthest: positions && positions.farthest ? positions.farthest : { x: 0, y: 0 },
+      next: positions && positions.next ? positions.next : { x: 0, y: 0 },
+      hasNextTile: !!next,
+      nextMergedFrom: !!(next && next.mergedFrom),
+      mergedValue: mergedValue
+    }]
   );
   return this.resolveNormalizedCoreValueOrFallback(
     planTileInteractionCore,
@@ -3759,10 +3755,6 @@ GameManager.prototype.buildComputePostMoveRecordCoreInput = function (direction)
   };
 };
 
-GameManager.prototype.buildComputePostMoveRecordCoreArgs = function (direction) {
-  return [this.buildComputePostMoveRecordCoreInput(direction)];
-};
-
 GameManager.prototype.resolvePostMoveRecordFallback = function (direction) {
   if (this.replayMode) return this.buildPostMoveRecordPlan(false, null, false, null, false);
   return this.buildPostMoveRecordFallback(direction);
@@ -3771,7 +3763,7 @@ GameManager.prototype.resolvePostMoveRecordFallback = function (direction) {
 GameManager.prototype.computePostMoveRecord = function (direction) {
   var computePostMoveRecordCore = this.callCorePostMoveRecordRuntime(
     "computePostMoveRecord",
-    this.buildComputePostMoveRecordCoreArgs(direction)
+    [this.buildComputePostMoveRecordCoreInput(direction)]
   );
   return this.resolveCoreObjectCallOrFallback(computePostMoveRecordCore, function () {
     return this.resolvePostMoveRecordFallback(direction);
@@ -3810,10 +3802,6 @@ GameManager.prototype.buildComputePostUndoRecordCoreInput = function (direction)
   };
 };
 
-GameManager.prototype.buildComputePostUndoRecordCoreArgs = function (direction) {
-  return [this.buildComputePostUndoRecordCoreInput(direction)];
-};
-
 GameManager.prototype.resolvePostUndoRecordFallback = function () {
   if (this.replayMode) return this.buildPostUndoRecordPlan(false, false, false, null);
   return this.buildPostUndoRecordFallback();
@@ -3822,7 +3810,7 @@ GameManager.prototype.resolvePostUndoRecordFallback = function () {
 GameManager.prototype.computePostUndoRecord = function (direction) {
   var computePostUndoRecordCore = this.callCorePostUndoRecordRuntime(
     "computePostUndoRecord",
-    this.buildComputePostUndoRecordCoreArgs(direction)
+    [this.buildComputePostUndoRecordCoreInput(direction)]
   );
   return this.resolveCoreObjectCallOrFallback(computePostUndoRecordCore, function () {
     return this.resolvePostUndoRecordFallback();
@@ -3896,18 +3884,14 @@ GameManager.prototype.buildUndoRestoreStateFallback = function (source, undoBase
   };
 };
 
-GameManager.prototype.buildComputeUndoRestoreStateCoreArgs = function (prev) {
-  return [{
-    prev: prev || {},
-    fallbackUndoUsed: this.undoUsed,
-    timerStatus: this.timerStatus
-  }];
-};
-
 GameManager.prototype.computeUndoRestoreState = function (prev) {
   var computeUndoRestoreStateCore = this.callCoreUndoRestoreRuntime(
     "computeUndoRestoreState",
-    this.buildComputeUndoRestoreStateCoreArgs(prev)
+    [{
+      prev: prev || {},
+      fallbackUndoUsed: this.undoUsed,
+      timerStatus: this.timerStatus
+    }]
   );
   return this.resolveCoreObjectCallOrFallback(computeUndoRestoreStateCore, function () {
     var source = prev && typeof prev === "object" ? prev : {};
@@ -3999,14 +3983,10 @@ GameManager.prototype.buildCreateUndoSnapshotCoreInput = function () {
   };
 };
 
-GameManager.prototype.buildCreateUndoSnapshotCoreArgs = function () {
-  return [this.buildCreateUndoSnapshotCoreInput()];
-};
-
 GameManager.prototype.createUndoSnapshotState = function () {
   var createUndoSnapshotCore = this.callCoreUndoSnapshotRuntime(
     "createUndoSnapshot",
-    this.buildCreateUndoSnapshotCoreArgs()
+    [this.buildCreateUndoSnapshotCoreInput()]
   );
   var fallback = this.buildUndoSnapshotFallbackState(this.getUndoStateFallbackValues());
   return this.resolveNormalizedCoreValueOrFallback(
