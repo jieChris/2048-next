@@ -9127,26 +9127,10 @@ GameManager.prototype.applyReplayStepForcedSpawn = function (stepExecutionPlan) 
   this.forcedSpawn = this.resolveReplayStepForcedSpawn(stepExecutionPlan);
 };
 
-GameManager.prototype.resolveReplayStepNextIndex = function (stepExecutionPlan) {
-  return stepExecutionPlan.nextReplayIndex;
-};
-
-GameManager.prototype.applyReplayStepNextIndex = function (stepExecutionPlan) {
-  this.replayIndex = this.resolveReplayStepNextIndex(stepExecutionPlan);
-};
-
-GameManager.prototype.resolveReplayStepAction = function (stepExecutionPlan) {
-  return stepExecutionPlan.action;
-};
-
-GameManager.prototype.applyReplayStepAction = function (stepExecutionPlan) {
-  this.executeReplayAction(this.resolveReplayStepAction(stepExecutionPlan));
-};
-
 GameManager.prototype.applyReplayStepExecutionPlan = function (stepExecutionPlan) {
   this.applyReplayStepForcedSpawn(stepExecutionPlan);
-  this.applyReplayStepAction(stepExecutionPlan);
-  this.applyReplayStepNextIndex(stepExecutionPlan);
+  this.executeReplayAction(stepExecutionPlan.action);
+  this.replayIndex = stepExecutionPlan.nextReplayIndex;
 };
 
 GameManager.prototype.executePlannedReplayStep = function () {
@@ -9160,33 +9144,21 @@ GameManager.prototype.clearReplayIntervalIfNeeded = function (shouldClearInterva
   }
 };
 
-GameManager.prototype.createReplayTickIntervalCallback = function () {
-  var manager = this;
-  return function () {
-    manager.runReplayTick();
-  };
-};
-
 GameManager.prototype.scheduleReplayInterval = function (delay) {
-  this.replayInterval = setInterval(this.createReplayTickIntervalCallback(), delay);
+  var manager = this;
+  this.replayInterval = setInterval(function () {
+    manager.runReplayTick();
+  }, delay);
 };
 
 GameManager.prototype.normalizeReplayControlState = function (state) {
   return this.isNonArrayObject(state) ? state : {};
 };
 
-GameManager.prototype.resolveReplayControlShouldClearInterval = function (state) {
-  return state.shouldClearInterval;
-};
-
-GameManager.prototype.resolveReplayPauseAppliedValue = function (state) {
-  return state.isPaused !== false;
-};
-
 GameManager.prototype.applyReplayPauseState = function (pauseState) {
   var state = this.normalizeReplayControlState(pauseState);
-  this.isPaused = this.resolveReplayPauseAppliedValue(state);
-  this.clearReplayIntervalIfNeeded(this.resolveReplayControlShouldClearInterval(state));
+  this.isPaused = state.isPaused !== false;
+  this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
 };
 
 GameManager.prototype.pause = function () {
@@ -9194,21 +9166,13 @@ GameManager.prototype.pause = function () {
     this.applyReplayPauseState(pauseState);
 };
 
-GameManager.prototype.resolveReplayResumePausedValue = function (state) {
-    return !!state.isPaused ? true : false;
-};
-
 GameManager.prototype.applyReplayResumePausedState = function (state) {
-    this.isPaused = this.resolveReplayResumePausedValue(state);
-};
-
-GameManager.prototype.resolveReplayResumeDelay = function (state) {
-    return state.delay;
+    this.isPaused = !!state.isPaused ? true : false;
 };
 
 GameManager.prototype.applyReplayResumeIntervalState = function (state) {
-    this.clearReplayIntervalIfNeeded(this.resolveReplayControlShouldClearInterval(state));
-    this.scheduleReplayInterval(this.resolveReplayResumeDelay(state));
+    this.clearReplayIntervalIfNeeded(state.shouldClearInterval);
+    this.scheduleReplayInterval(state.delay);
 };
 
 GameManager.prototype.applyReplayResumeState = function (resumeState) {
@@ -9222,12 +9186,8 @@ GameManager.prototype.resume = function () {
     this.applyReplayResumeState(resumeState);
 };
 
-GameManager.prototype.resolveReplayDelayValue = function (state) {
-    return state.replayDelay;
-};
-
 GameManager.prototype.applyReplayDelayState = function (state) {
-    this.replayDelay = this.resolveReplayDelayValue(state);
+    this.replayDelay = state.replayDelay;
 };
 
 GameManager.prototype.applyReplaySpeedResumeState = function (state) {
@@ -9277,73 +9237,21 @@ GameManager.prototype.normalizeReplaySeekRestartPlan = function (restartPlan) {
     return this.isNonArrayObject(restartPlan) ? restartPlan : null;
 };
 
-GameManager.prototype.applyNormalizedReplaySeekRestartPlan = function (normalizedRestartPlan) {
-    this.applyReplaySeekRestartBoard(normalizedRestartPlan);
-    this.applyReplaySeekRestartSeed(normalizedRestartPlan);
-    this.applyReplaySeekRestartIndex(normalizedRestartPlan);
-};
-
 GameManager.prototype.applyReplaySeekRestartPlan = function (restartPlan) {
     var normalized = this.normalizeReplaySeekRestartPlan(restartPlan);
     if (!normalized) return;
-    this.applyNormalizedReplaySeekRestartPlan(normalized);
-};
-
-GameManager.prototype.shouldContinueFastForwardReplay = function (targetIndex) {
-    return this.replayIndex < targetIndex;
-};
-
-GameManager.prototype.advanceReplayOneStep = function () {
-    this.executePlannedReplayStep();
-};
-
-GameManager.prototype.runReplayFastForwardLoop = function (targetIndex) {
-    while (this.shouldContinueFastForwardReplay(targetIndex)) {
-        this.advanceReplayOneStep();
-    }
-};
-
-GameManager.prototype.fastForwardReplayToIndex = function (targetIndex) {
-    this.runReplayFastForwardLoop(targetIndex);
-};
-
-GameManager.prototype.buildReplaySeekApplyContext = function (targetIndex) {
-    return {
-        targetIndex: targetIndex,
-        restartPlan: this.resolveReplaySeekRestartPlanForTarget(targetIndex)
-    };
-};
-
-GameManager.prototype.applyReplaySeekContextRestartPlan = function (seekContext) {
-    this.applyReplaySeekRestartPlan(seekContext.restartPlan);
-};
-
-GameManager.prototype.applyReplaySeekContextFastForward = function (seekContext) {
-    this.fastForwardReplayToIndex(seekContext.targetIndex);
-};
-
-GameManager.prototype.applyReplaySeekContext = function (seekContext) {
-    this.applyReplaySeekContextRestartPlan(seekContext);
-    this.applyReplaySeekContextFastForward(seekContext);
-};
-
-GameManager.prototype.applyReplaySeekTarget = function (targetIndex) {
-    var seekContext = this.buildReplaySeekApplyContext(targetIndex);
-    this.applyReplaySeekContext(seekContext);
-};
-
-GameManager.prototype.pauseReplayForSeek = function () {
-    this.pause();
+    this.applyReplaySeekRestartBoard(normalized);
+    this.applyReplaySeekRestartSeed(normalized);
+    this.applyReplaySeekRestartIndex(normalized);
 };
 
 GameManager.prototype.seek = function (targetIndex) {
     targetIndex = this.normalizeReplaySeekTarget(targetIndex);
-    this.pauseReplayForSeek();
-    this.applyReplaySeekTarget(targetIndex);
-};
-
-GameManager.prototype.resolveReplayStepTargetIndex = function (delta) {
-    return this.replayIndex + delta;
+    this.pause();
+    this.applyReplaySeekRestartPlan(this.resolveReplaySeekRestartPlanForTarget(targetIndex));
+    while (this.replayIndex < targetIndex) {
+        this.executePlannedReplayStep();
+    }
 };
 
 GameManager.prototype.canStepReplay = function () {
@@ -9352,5 +9260,5 @@ GameManager.prototype.canStepReplay = function () {
 
 GameManager.prototype.step = function (delta) {
     if (!this.canStepReplay()) return;
-    this.seek(this.resolveReplayStepTargetIndex(delta));
+    this.seek(this.replayIndex + delta);
 };
