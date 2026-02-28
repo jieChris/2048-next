@@ -6219,10 +6219,6 @@ GameManager.prototype.getMoveInputThrottleMs = function () {
   });
 };
 
-GameManager.prototype.hasPendingMoveInput = function () {
-  return !(this.pendingMoveInput === null || typeof this.pendingMoveInput === "undefined");
-};
-
 GameManager.prototype.isImmediateMoveDispatchAllowed = function (now, throttleMs) {
   return (now - this.lastMoveInputAt) >= throttleMs && !this.moveInputFlushScheduled;
 };
@@ -6241,38 +6237,16 @@ GameManager.prototype.enqueuePendingMoveInput = function (direction) {
   this.scheduleMoveInputFlush();
 };
 
-GameManager.prototype.consumePendingMoveInputDirection = function () {
-  if (!this.hasPendingMoveInput()) return null;
-  var direction = this.pendingMoveInput;
-  this.pendingMoveInput = null;
-  return direction;
-};
-
 GameManager.prototype.executeImmediateMoveInput = function (direction, now) {
   this.lastMoveInputAt = now;
   this.move(direction);
 };
 
-GameManager.prototype.finalizeDelayedMoveInput = function (direction) {
-  if (this.hasPendingMoveInput()) {
-    // Newer input exists; next flush will consume latest direction.
-    this.scheduleMoveInputFlush();
-    return;
-  }
-  this.executeImmediateMoveInput(direction, Date.now());
-};
-
-GameManager.prototype.scheduleDelayedMoveInput = function (direction, wait) {
-  var self = this;
-  setTimeout(function () {
-    self.finalizeDelayedMoveInput(direction);
-  }, wait);
-};
-
 GameManager.prototype.flushPendingMoveInput = function () {
   this.moveInputFlushScheduled = false;
-  var direction = this.consumePendingMoveInputDirection();
-  if (direction === null) return;
+  var direction = this.pendingMoveInput;
+  this.pendingMoveInput = null;
+  if (direction === null || typeof direction === "undefined") return;
   var throttleMs = this.getMoveInputThrottleMs();
   if (throttleMs <= 0) {
     this.move(direction);
@@ -6284,7 +6258,16 @@ GameManager.prototype.flushPendingMoveInput = function () {
     this.executeImmediateMoveInput(direction, now);
     return;
   }
-  this.scheduleDelayedMoveInput(direction, wait);
+  var self = this;
+  setTimeout(function () {
+    var hasPending = !(self.pendingMoveInput === null || typeof self.pendingMoveInput === "undefined");
+    if (hasPending) {
+      // Newer input exists; next flush will consume latest direction.
+      self.scheduleMoveInputFlush();
+      return;
+    }
+    self.executeImmediateMoveInput(direction, Date.now());
+  }, wait);
 };
 
 GameManager.prototype.dispatchMoveInputWithThrottle = function (direction, throttleMs) {
