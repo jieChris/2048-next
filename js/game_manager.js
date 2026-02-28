@@ -2886,55 +2886,6 @@ GameManager.prototype.planTileInteraction = function (cell, positions, next, mer
   );
 };
 
-GameManager.prototype.canBuildCompactMoveCodeFallback = function () {
-  return !!(
-    this.lastSpawn &&
-    this.width === 4 &&
-    this.height === 4 &&
-    !this.isFibonacciMode() &&
-    (this.lastSpawn.value === 2 || this.lastSpawn.value === 4)
-  );
-};
-
-GameManager.prototype.resolveCompactMoveCodeFallback = function (direction) {
-  if (!this.canBuildCompactMoveCodeFallback()) return null;
-  var valBit = this.lastSpawn.value === 4 ? 1 : 0;
-  var posIdx = this.lastSpawn.x + this.lastSpawn.y * 4;
-  return (direction << 5) | (valBit << 4) | posIdx;
-};
-
-GameManager.prototype.buildPostMoveRecordPlan = function (
-  shouldRecordMoveHistory,
-  compactMoveCode,
-  shouldPushSessionAction,
-  sessionAction,
-  shouldResetLastSpawn
-) {
-  return {
-    shouldRecordMoveHistory: shouldRecordMoveHistory,
-    compactMoveCode: compactMoveCode,
-    shouldPushSessionAction: shouldPushSessionAction,
-    sessionAction: sessionAction,
-    shouldResetLastSpawn: shouldResetLastSpawn
-  };
-};
-
-GameManager.prototype.buildPostMoveRecordFallback = function (direction) {
-  var shouldPushSessionAction = !!this.sessionReplayV3;
-  return this.buildPostMoveRecordPlan(
-    true,
-    this.resolveCompactMoveCodeFallback(direction),
-    shouldPushSessionAction,
-    shouldPushSessionAction ? ["m", direction] : null,
-    true
-  );
-};
-
-GameManager.prototype.resolvePostMoveRecordFallback = function (direction) {
-  if (this.replayMode) return this.buildPostMoveRecordPlan(false, null, false, null, false);
-  return this.buildPostMoveRecordFallback(direction);
-};
-
 GameManager.prototype.computePostMoveRecord = function (direction) {
   var computePostMoveRecordCore = this.callCorePostMoveRecordRuntime(
     "computePostMoveRecord",
@@ -2953,37 +2904,36 @@ GameManager.prototype.computePostMoveRecord = function (direction) {
     }]
   );
   return this.resolveCoreObjectCallOrFallback(computePostMoveRecordCore, function () {
-    return this.resolvePostMoveRecordFallback(direction);
+    if (this.replayMode) {
+      return {
+        shouldRecordMoveHistory: false,
+        compactMoveCode: null,
+        shouldPushSessionAction: false,
+        sessionAction: null,
+        shouldResetLastSpawn: false
+      };
+    }
+    var compactMoveCode = null;
+    if (
+      this.lastSpawn &&
+      this.width === 4 &&
+      this.height === 4 &&
+      !this.isFibonacciMode() &&
+      (this.lastSpawn.value === 2 || this.lastSpawn.value === 4)
+    ) {
+      var valBit = this.lastSpawn.value === 4 ? 1 : 0;
+      var posIdx = this.lastSpawn.x + this.lastSpawn.y * 4;
+      compactMoveCode = (direction << 5) | (valBit << 4) | posIdx;
+    }
+    var shouldPushSessionAction = !!this.sessionReplayV3;
+    return {
+      shouldRecordMoveHistory: true,
+      compactMoveCode: compactMoveCode,
+      shouldPushSessionAction: shouldPushSessionAction,
+      sessionAction: shouldPushSessionAction ? ["m", direction] : null,
+      shouldResetLastSpawn: true
+    };
   });
-};
-
-GameManager.prototype.buildPostUndoRecordPlan = function (
-  shouldRecordMoveHistory,
-  shouldAppendCompactUndo,
-  shouldPushSessionAction,
-  sessionAction
-) {
-  return {
-    shouldRecordMoveHistory: shouldRecordMoveHistory,
-    shouldAppendCompactUndo: shouldAppendCompactUndo,
-    shouldPushSessionAction: shouldPushSessionAction,
-    sessionAction: sessionAction
-  };
-};
-
-GameManager.prototype.buildPostUndoRecordFallback = function () {
-  var shouldPushSessionAction = !!this.sessionReplayV3;
-  return this.buildPostUndoRecordPlan(
-    true,
-    true,
-    shouldPushSessionAction,
-    shouldPushSessionAction ? ["u"] : null
-  );
-};
-
-GameManager.prototype.resolvePostUndoRecordFallback = function () {
-  if (this.replayMode) return this.buildPostUndoRecordPlan(false, false, false, null);
-  return this.buildPostUndoRecordFallback();
 };
 
 GameManager.prototype.computePostUndoRecord = function (direction) {
@@ -2996,7 +2946,21 @@ GameManager.prototype.computePostUndoRecord = function (direction) {
     }]
   );
   return this.resolveCoreObjectCallOrFallback(computePostUndoRecordCore, function () {
-    return this.resolvePostUndoRecordFallback();
+    if (this.replayMode) {
+      return {
+        shouldRecordMoveHistory: false,
+        shouldAppendCompactUndo: false,
+        shouldPushSessionAction: false,
+        sessionAction: null
+      };
+    }
+    var shouldPushSessionAction = !!this.sessionReplayV3;
+    return {
+      shouldRecordMoveHistory: true,
+      shouldAppendCompactUndo: true,
+      shouldPushSessionAction: shouldPushSessionAction,
+      sessionAction: shouldPushSessionAction ? ["u"] : null
+    };
   });
 };
 
