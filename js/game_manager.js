@@ -511,7 +511,6 @@ GameManager.prototype.parseV4ReplayImportEnvelope = function (trimmedReplayStrin
   var modeCode = body.charAt(0);
   var replayModeIdV4 = GameManager.REPLAY_V4_MODE_CODE_TO_KEY[modeCode] || null;
   if (!replayModeIdV4) throw "Invalid v4C mode";
-  if (!body) return null;
   return {
     kind: "v4c",
     modeKey: replayModeIdV4,
@@ -539,40 +538,33 @@ GameManager.LEGACY_REPLAY_V2_PREFIX = "REPLAY_v2_";
 GameManager.LEGACY_REPLAY_V2S_PREFIX = "REPLAY_v2S_";
 GameManager.LEGACY_REPLAY_V1_REVERSE_MAPPING = { U: 0, R: 1, D: 2, L: 3, Z: -1 };
 
-GameManager.prototype.decodeLegacyReplayV2CharCode = function (logString, index) {
-  var code = logString.charCodeAt(index) - 33;
-  if (code < 0 || code > 128) {
-    throw "Invalid replay char at index " + index;
-  }
-  return code;
-};
-
-GameManager.prototype.decodeLegacyReplayV2Entry = function (code) {
-  if (code === 128) {
-    return {
-      move: -1,
-      spawn: null
-    };
-  }
-  var dir = (code >> 5) & 3;
-  var is4 = (code >> 4) & 1;
-  var posIdx = code & 15;
-  return {
-    move: dir,
-    spawn: {
-      x: posIdx % 4,
-      y: Math.floor(posIdx / 4),
-      value: is4 ? 4 : 2
-    }
-  };
-};
-
 GameManager.prototype.decodeLegacyReplayV2Log = function (logString) {
   var replayMoves = [];
   var replaySpawns = [];
   for (var i = 0; i < logString.length; i++) {
-    var code = this.decodeLegacyReplayV2CharCode(logString, i);
-    var entry = this.decodeLegacyReplayV2Entry(code);
+    var code = logString.charCodeAt(i) - 33;
+    if (code < 0 || code > 128) {
+      throw "Invalid replay char at index " + i;
+    }
+    var entry;
+    if (code === 128) {
+      entry = {
+        move: -1,
+        spawn: null
+      };
+    } else {
+      var dir = (code >> 5) & 3;
+      var is4 = (code >> 4) & 1;
+      var posIdx = code & 15;
+      entry = {
+        move: dir,
+        spawn: {
+          x: posIdx % 4,
+          y: Math.floor(posIdx / 4),
+          value: is4 ? 4 : 2
+        }
+      };
+    }
     replayMoves.push(entry.move);
     replaySpawns.push(entry.spawn);
   }
@@ -582,19 +574,15 @@ GameManager.prototype.decodeLegacyReplayV2Log = function (logString) {
   };
 };
 
-GameManager.prototype.decodeLegacyReplayV1MoveChar = function (char, reverseMapping) {
-  var val = reverseMapping[char];
-  if (val === undefined) throw "Invalid move char: " + char;
-  return val;
-};
-
 GameManager.prototype.decodeLegacyReplayV1Payload = function (trimmedReplayString) {
   if (trimmedReplayString.indexOf(GameManager.LEGACY_REPLAY_V1_PREFIX) !== 0) return null;
   var v1Parts = trimmedReplayString.split("_");
   var seed = parseFloat(v1Parts[2]);
   var movesString = v1Parts[3];
   var replayMovesV1 = movesString.split("").map(function (char) {
-    return this.decodeLegacyReplayV1MoveChar(char, GameManager.LEGACY_REPLAY_V1_REVERSE_MAPPING);
+    var val = GameManager.LEGACY_REPLAY_V1_REVERSE_MAPPING[char];
+    if (val === undefined) throw "Invalid move char: " + char;
+    return val;
   }, this);
   return {
     seed: seed,
