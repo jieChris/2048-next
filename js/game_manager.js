@@ -5923,24 +5923,38 @@ GameManager.prototype.getTimerModuleViewMode = function () {
   return this.timerModuleView === "hidden" ? "hidden" : "timer";
 };
 
+GameManager.prototype.buildReadTimerModuleViewForModeCoreArgs = function (map, mode) {
+  return [{
+    map: map,
+    mode: mode
+  }];
+};
+
 GameManager.prototype.loadTimerModuleViewForMode = function (mode) {
   var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
-  var readTimerModuleViewForModeFromMapCore = this.callCoreStorageRuntime("readTimerModuleViewForModeFromMap", [{
-      map: map,
-      mode: mode
-    }]);
+  var readTimerModuleViewForModeFromMapCore = this.callCoreStorageRuntime(
+    "readTimerModuleViewForModeFromMap",
+    this.buildReadTimerModuleViewForModeCoreArgs(map, mode)
+  );
   if (readTimerModuleViewForModeFromMapCore.available) return readTimerModuleViewForModeFromMapCore.value;
   var value = map[mode];
   return value === "hidden" ? "hidden" : "timer";
 };
 
+GameManager.prototype.buildWriteTimerModuleViewForModeCoreArgs = function (map, mode, view) {
+  return [{
+    map: map,
+    mode: mode,
+    view: view
+  }];
+};
+
 GameManager.prototype.persistTimerModuleViewForMode = function (mode, view) {
   var map = this.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
-  var writeTimerModuleViewForModeToMapCore = this.callCoreStorageRuntime("writeTimerModuleViewForModeToMap", [{
-      map: map,
-      mode: mode,
-      view: view
-    }]);
+  var writeTimerModuleViewForModeToMapCore = this.callCoreStorageRuntime(
+    "writeTimerModuleViewForModeToMap",
+    this.buildWriteTimerModuleViewForModeCoreArgs(map, mode, view)
+  );
   if (writeTimerModuleViewForModeToMapCore.available) {
     map = writeTimerModuleViewForModeToMapCore.value;
   } else {
@@ -6024,17 +6038,24 @@ GameManager.prototype.notifyUndoSettingsStateChanged = function () {
   this.callWindowMethod("syncUndoSettingsUI");
 };
 
+GameManager.prototype.buildReadUndoEnabledForModeCoreArgs = function (map, mode) {
+  return [{
+    map: map,
+    mode: mode,
+    fallbackEnabled: true
+  }];
+};
+
 GameManager.prototype.loadUndoSettingForMode = function (mode) {
   var state = this.resolveUndoPolicyStateForCurrentSessionMode(mode);
   var forced = state ? state.forcedUndoSetting : null;
   if (forced !== null) return forced;
   if (!(state && state.isUndoAllowedByMode)) return false;
   var map = this.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
-  var readUndoEnabledForModeFromMapCore = this.callCoreStorageRuntime("readUndoEnabledForModeFromMap", [{
-      map: map,
-      mode: mode,
-      fallbackEnabled: true
-    }]);
+  var readUndoEnabledForModeFromMapCore = this.callCoreStorageRuntime(
+    "readUndoEnabledForModeFromMap",
+    this.buildReadUndoEnabledForModeCoreArgs(map, mode)
+  );
   if (readUndoEnabledForModeFromMapCore.available) return !!readUndoEnabledForModeFromMapCore.value;
   if (this.hasOwnKey(map, mode)) return !!map[mode];
   return true;
