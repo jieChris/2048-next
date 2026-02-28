@@ -1492,13 +1492,26 @@ GameManager.prototype.buildSavedGameStateStoragesFallback = function () {
   return out;
 };
 
+GameManager.prototype.buildGetSavedGameStateStoragesCoreArgs = function () {
+  return [{
+    windowLike: this.getWindowLike()
+  }];
+};
+
+GameManager.prototype.normalizeSavedGameStateStoragesCoreValue = function (storagesByCore) {
+  return Array.isArray(storagesByCore) ? storagesByCore : null;
+};
+
 GameManager.prototype.getSavedGameStateStorages = function () {
-  var getSavedGameStateStoragesFromContextCore = this.callCoreStorageRuntime("getSavedGameStateStoragesFromContext", [{
-      windowLike: this.getWindowLike()
-    }]);
+  var getSavedGameStateStoragesFromContextCore = this.callCoreStorageRuntime(
+    "getSavedGameStateStoragesFromContext",
+    this.buildGetSavedGameStateStoragesCoreArgs()
+  );
   if (getSavedGameStateStoragesFromContextCore.available) {
-    var storagesByCore = getSavedGameStateStoragesFromContextCore.value;
-    if (Array.isArray(storagesByCore)) return storagesByCore;
+    var normalizedByCore = this.normalizeSavedGameStateStoragesCoreValue(
+      getSavedGameStateStoragesFromContextCore.value
+    );
+    if (normalizedByCore) return normalizedByCore;
   }
   return this.buildSavedGameStateStoragesFallback();
 };
