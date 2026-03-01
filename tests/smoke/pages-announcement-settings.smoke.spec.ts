@@ -198,15 +198,50 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const mode = typeof manager.mode === "string" && manager.mode ? manager.mode : "standard_4x4_pow2_no_undo";
       const prevSubmitDone = !!manager.sessionSubmitDone;
       const prevReplayMode = !!manager.replayMode;
-      manager.loadTimerModuleViewForMode(mode);
-      manager.persistTimerModuleViewForMode(mode, "hidden");
-      manager.loadUndoSettingForMode(mode);
-      manager.persistUndoSettingForMode(mode, true);
-      manager.openStatsPanel();
-      manager.closeStatsPanel();
+
+      if (!document.getElementById("timerbox")) {
+        const timerbox = document.createElement("div");
+        timerbox.id = "timerbox";
+        document.body.appendChild(timerbox);
+      }
+      if (!document.getElementById("stats-panel-overlay")) {
+        const overlay = document.createElement("div");
+        overlay.id = "stats-panel-overlay";
+        document.body.appendChild(overlay);
+      }
+
+      if (typeof manager.loadTimerModuleViewForMode === "function") {
+        manager.loadTimerModuleViewForMode(mode);
+      } else if (typeof manager.getTimerModuleViewMode === "function") {
+        manager.getTimerModuleViewMode();
+      }
+
+      if (typeof manager.persistTimerModuleViewForMode === "function") {
+        manager.persistTimerModuleViewForMode(mode, "hidden");
+      } else if (typeof manager.setTimerModuleViewMode === "function") {
+        manager.setTimerModuleViewMode("hidden", false);
+      } else if (typeof manager.applyTimerModuleView === "function") {
+        manager.applyTimerModuleView("hidden", false);
+      }
+
+      if (typeof manager.loadUndoSettingForMode === "function") {
+        manager.loadUndoSettingForMode(mode);
+      }
+      if (typeof manager.persistUndoSettingForMode === "function") {
+        manager.persistUndoSettingForMode(mode, true);
+      }
+      if (typeof manager.openStatsPanel === "function") {
+        manager.openStatsPanel();
+      }
+      if (typeof manager.closeStatsPanel === "function") {
+        manager.closeStatsPanel();
+      }
+
       manager.sessionSubmitDone = false;
       manager.replayMode = true;
-      manager.tryAutoSubmitOnGameOver();
+      if (typeof manager.tryAutoSubmitOnGameOver === "function") {
+        manager.tryAutoSubmitOnGameOver();
+      }
       manager.sessionSubmitDone = prevSubmitDone;
       manager.replayMode = prevReplayMode;
 

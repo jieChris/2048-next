@@ -144,6 +144,43 @@
     return out;
   }
 
+  function summarizeTopMismatchModes(records, limit) {
+    var list = Array.isArray(records) ? records : [];
+    var topLimit = toPositiveIntegerOrNull(limit) || 3;
+    var counters = Object.create(null);
+    for (var i = 0; i < list.length; i++) {
+      var item = list[i] || {};
+      var modeKey = typeof item.mode_key === "string" && item.mode_key ? item.mode_key : "unknown";
+      var status = getAdapterParityStatus(item);
+      var cell = counters[modeKey];
+      if (!cell) {
+        cell = { modeKey: modeKey, comparableCount: 0, mismatchCount: 0 };
+        counters[modeKey] = cell;
+      }
+      if (status === "match" || status === "mismatch") {
+        cell.comparableCount += 1;
+      }
+      if (status === "mismatch") {
+        cell.mismatchCount += 1;
+      }
+    }
+
+    var rows = [];
+    for (var key in counters) {
+      if (!Object.prototype.hasOwnProperty.call(counters, key)) continue;
+      var row = counters[key];
+      if (!row || row.mismatchCount <= 0) continue;
+      row.mismatchRate = row.comparableCount > 0 ? (row.mismatchCount * 100) / row.comparableCount : null;
+      rows.push(row);
+    }
+    rows.sort(function (a, b) {
+      if (b.mismatchCount !== a.mismatchCount) return b.mismatchCount - a.mismatchCount;
+      if (b.comparableCount !== a.comparableCount) return b.comparableCount - a.comparableCount;
+      return a.modeKey < b.modeKey ? -1 : a.modeKey > b.modeKey ? 1 : 0;
+    });
+    return rows.slice(0, topLimit);
+  }
+
   function getBurnInRuntime() {
     try {
       var runtime = window && window.CoreBurnInGateRuntime;
@@ -307,9 +344,11 @@
     }
 
     var matchedBurnInRecords = toBurnInRecords(matched);
+    var sourceRecords = sampleLimit === null ? matched : matched.slice(0, sampleLimit);
     var sourceBurnInRecords = sampleLimit === null
       ? matchedBurnInRecords
       : matchedBurnInRecords.slice(0, sampleLimit);
+    var topMismatchModes = summarizeTopMismatchModes(sourceRecords, 3);
     var burnInRuntime = getBurnInRuntime();
     var primary = null;
     if (burnInRuntime) {
@@ -376,6 +415,7 @@
       mismatch: primary.mismatch,
       incomplete: primary.incomplete,
       mismatchRate: primary.mismatchRate,
+      topMismatchModes: topMismatchModes,
       gateStatus: primary.gateStatus,
       passGate: primary.passGate
     };

@@ -196,7 +196,7 @@
     }
 
     return {
-      effectiveMode: "legacy-bridge",
+      effectiveMode: "core-adapter",
       modeSource: "fallback",
       forceLegacyEnabled: forceLegacyEnabled,
       forceLegacySource: forceLegacySource,
@@ -212,7 +212,7 @@
     var policy = resolveAdapterModePolicy(input);
     return policy && typeof policy.effectiveMode === "string"
       ? policy.effectiveMode
-      : "legacy-bridge";
+      : "core-adapter";
   }
 
   function writeStorageValue(key, value) {

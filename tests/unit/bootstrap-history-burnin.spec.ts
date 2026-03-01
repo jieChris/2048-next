@@ -23,6 +23,9 @@ describe("bootstrap history burn-in", () => {
       sustainedConsecutive: 0,
       mismatchActionEnabled: false,
       mismatchRateText: "-",
+      comparableMatchRateText: "-",
+      sustainedPassRateText: "-",
+      topMismatchModesText: "-",
       maxMismatchRateText: "-"
     });
   });
@@ -37,8 +40,14 @@ describe("bootstrap history burn-in", () => {
       sustainedWindows: 3,
       sustainedEvaluatedWindows: 2,
       sustainedConsecutivePass: 1,
+      comparable: 20,
+      match: 16,
       mismatch: 4,
       mismatchRate: 2.5,
+      topMismatchModes: [
+        { modeKey: "standard_4x4_pow2_no_undo", mismatchCount: 3, comparableCount: 10 },
+        { mode_key: "practice_legacy", mismatchCount: 1, comparableCount: 10 }
+      ],
       maxMismatchRate: 1
     });
 
@@ -54,6 +63,11 @@ describe("bootstrap history burn-in", () => {
     expect(state.sustainedConsecutive).toBe(1);
     expect(state.mismatchActionEnabled).toBe(true);
     expect(state.mismatchRateText).toBe("2.50%");
+    expect(state.comparableMatchRateText).toBe("80.00%");
+    expect(state.sustainedPassRateText).toBe("33.33%");
+    expect(state.topMismatchModesText).toBe(
+      "standard_4x4_pow2_no_undo(3/10)，practice_legacy(1/10)"
+    );
     expect(state.maxMismatchRateText).toBe("1.00%");
   });
 
@@ -83,6 +97,9 @@ describe("bootstrap history burn-in", () => {
     expect(state.sustainedConsecutive).toBe(0);
     expect(state.mismatchActionEnabled).toBe(false);
     expect(state.mismatchRateText).toBe("-");
+    expect(state.comparableMatchRateText).toBe("-");
+    expect(state.sustainedPassRateText).toBe("-");
+    expect(state.topMismatchModesText).toBe("-");
     expect(state.maxMismatchRateText).toBe("-");
   });
 
@@ -135,8 +152,11 @@ describe("bootstrap history burn-in", () => {
       sustainedWindows: 3,
       sustainedEvaluatedWindows: 2,
       sustainedConsecutivePass: 1,
+      comparable: 18,
+      match: 14,
       mismatch: 4,
       mismatchRate: 2.5,
+      topMismatchModes: [{ modeKey: "standard_4x4_pow2_no_undo", mismatchCount: 4, comparableCount: 18 }],
       maxMismatchRate: 1
     });
     const html = resolveHistoryBurnInPanelHtml(
@@ -152,7 +172,9 @@ describe("bootstrap history burn-in", () => {
     );
     expect(html).toContain("Cutover Burn-in 统计");
     expect(html).toContain("仅看不一致");
+    expect(html).toContain("一致率 77.78%");
     expect(html).toContain("不一致率 2.50%");
+    expect(html).toContain("模式不一致 Top: standard_4x4_pow2_no_undo(4/18)");
   });
 
   it("builds empty burn-in panel html when summary state is unavailable", () => {

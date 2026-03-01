@@ -119,7 +119,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#history-summary")).toContainText("诊断筛选: 仅不一致");
 
     await expect(page.locator("#history-canary-policy")).toContainText("Canary 策略控制");
-    await expect(page.locator("#history-canary-policy")).toContainText("当前有效模式: legacy-bridge");
+    await expect(page.locator("#history-canary-policy")).toContainText("当前有效模式: core-adapter");
     await expect(page.locator("#history-canary-policy")).toContainText("生效来源: 默认回退");
 
     await page.click("[data-action='apply_canary']");
@@ -147,7 +147,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     );
 
     await page.click("[data-action='reset_policy']");
-    await expect(page.locator("#history-canary-policy")).toContainText("当前有效模式: legacy-bridge");
+    await expect(page.locator("#history-canary-policy")).toContainText("当前有效模式: core-adapter");
     await expect(page.locator("#history-canary-policy")).toContainText("生效来源: 默认回退");
     await expect(page.locator("#history-canary-policy")).toContainText(
       "storage(engine_adapter_default_mode)=-"

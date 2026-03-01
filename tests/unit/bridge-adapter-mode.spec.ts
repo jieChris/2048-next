@@ -47,10 +47,10 @@ describe("bridge adapter mode: resolveEngineAdapterMode", () => {
     ).toBe("legacy-bridge");
   });
 
-  it("defaults to legacy mode when inputs are missing or invalid", () => {
-    expect(resolveEngineAdapterMode({})).toBe("legacy-bridge");
-    expect(resolveEngineAdapterMode({ explicitMode: "invalid" })).toBe("legacy-bridge");
-    expect(resolveEngineAdapterMode({ defaultMode: "invalid" })).toBe("legacy-bridge");
+  it("defaults to core-adapter mode when inputs are missing or invalid", () => {
+    expect(resolveEngineAdapterMode({})).toBe("core-adapter");
+    expect(resolveEngineAdapterMode({ explicitMode: "invalid" })).toBe("core-adapter");
+    expect(resolveEngineAdapterMode({ defaultMode: "invalid" })).toBe("core-adapter");
   });
 });
 

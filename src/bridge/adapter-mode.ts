@@ -161,7 +161,7 @@ export function resolveEngineAdapterModePolicy(
   }
 
   return {
-    effectiveMode: "legacy-bridge",
+    effectiveMode: "core-adapter",
     modeSource: "fallback",
     forceLegacyEnabled,
     forceLegacySource,

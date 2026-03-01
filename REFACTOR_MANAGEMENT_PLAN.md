@@ -453,11 +453,13 @@
 回滚策略：
 - 通过 adapter 策略开关快速切回 legacy。
 
-### M5 - 切换与收口（待完成）
+### M5 - 切换与收口（进行中）
 目标：
 - 默认启用新核心路径，清理重复代码，形成稳定发布。
 
 交付物：
+- 默认 adapter fallback 已切到 `core-adapter`（保留 `engine_adapter_force_legacy=1` 强制回滚优先级）。
+- burn-in 面板新增观测指标：可比较一致率、连续窗口达标率、模式不一致 Top（按 mode_key）。
 - 死代码清理。
 - 文档与运行手册更新。
 - burn-in 结束后打稳定 tag。
@@ -482,7 +484,15 @@
 - Gate 2：无未计划的玩法规则变更。
 - Gate 3：PR 描述中明确可回滚路径。
 
+## 5.1) 检查节奏（提效约定）
+- 批次内快速检查（每完成 2-4 个小改动）：
+  - `npm run test:unit`
+  - `npm run test:smoke:adapter`（仅 adapter/burn-in 关键链路）
+- 提交前全量检查（push 前必须）：
+  - `npm run verify:refactor`
+
 ## 6) 立即执行项
 1. 优先执行一键门禁：`npm run verify:refactor`（串行执行 game-manager-audit/unit/smoke/build）。
-2. 继续削减入口脚本中的重复拼装逻辑，优先抽到 `src/bootstrap/*`。
-3. 按 M5 执行 burn-in：设置 `engine_adapter_default_mode=core-adapter`，持续监控历史页 gate，并保留 `engine_adapter_force_legacy=1` 作为紧急回滚开关。
+2. 快速回归可先跑：`npm run test:smoke:adapter`（adapter rollout + history burn-in 相关用例）。
+3. 继续削减入口脚本中的重复拼装逻辑，优先抽到 `src/bootstrap/*`。
+4. 按 M5 执行 burn-in：保持默认 fallback 为 `core-adapter`，持续监控历史页 gate，并保留 `engine_adapter_force_legacy=1` 作为紧急回滚开关。

@@ -108,6 +108,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("adapter rollout default and rollback switch are respected", async ({ page }) => {
+    const defaultFallbackResponse = await page.goto("/index.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(defaultFallbackResponse, "Default-fallback response should exist").not.toBeNull();
+    expect(defaultFallbackResponse?.ok(), "Default-fallback response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const defaultFallbackMode = await page.evaluate(() => {
+      const payload = (window as any).__legacyEngine;
+      return payload && typeof payload.adapterMode === "string" ? payload.adapterMode : null;
+    });
+    expect(defaultFallbackMode).toBe("core-adapter");
+
     const defaultCoreResponse = await page.goto("/index.html?engine_adapter_default=core-adapter", {
       waitUntil: "domcontentloaded"
     });

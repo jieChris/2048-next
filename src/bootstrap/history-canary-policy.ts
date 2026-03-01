@@ -70,7 +70,7 @@ function normalizeForceLegacyFlag(raw: unknown): boolean {
 
 function sanitizePolicySnapshot(policy: AnyRecord): CanaryPolicySnapshot {
   return {
-    effectiveMode: normalizeAdapterMode(policy.effectiveMode) || "legacy-bridge",
+    effectiveMode: normalizeAdapterMode(policy.effectiveMode) || "core-adapter",
     modeSource: typeof policy.modeSource === "string" ? policy.modeSource : "fallback",
     forceLegacyEnabled: Boolean(policy.forceLegacyEnabled),
     forceLegacySource: typeof policy.forceLegacySource === "string" ? policy.forceLegacySource : null,
@@ -119,7 +119,7 @@ export function resolveCanaryPolicySnapshot(
     };
   }
   return {
-    effectiveMode: "legacy-bridge",
+    effectiveMode: "core-adapter",
     modeSource: "fallback",
     forceLegacyEnabled: false,
     forceLegacySource: null,
