@@ -12,6 +12,22 @@
   - `baseline-legacy-import`（已存在）
   - 里程碑标签：`refactor-m1`、`refactor-m2`、...
 
+## 2.1) 当前收敛快照（2026-02）
+- `js/game_manager.js` 已收敛为 12 行壳文件，仅保留构造器与两条初始化调用：
+  - `applyGameManagerStaticConfiguration()`
+  - `bindGameManagerPrototypeRuntime()`
+- `game_manager` 逻辑分层已落地：
+  - `js/core_game_manager_common_runtime.js`：纯逻辑函数（禁止 `GameManager.prototype` 绑定）
+  - `js/core_game_manager_static_runtime.js`：`GameManager` 静态常量/模式配置装配
+  - `js/core_game_manager_bindings_runtime.js`：`GameManager.prototype` 绑定与 runtime accessor 注册
+- 页面脚本加载顺序已统一为：
+  - `core_game_manager_common_runtime.js` → `core_game_manager_static_runtime.js` → `core_game_manager_bindings_runtime.js` → `game_manager.js`
+- 门禁脚本 `scripts/game-manager-audit.mjs` 已升级，新增以下强约束：
+  - 壳文件行数与结构检查（constructor-only）
+  - common/bindings 职责边界检查
+  - bindings 重复原型绑定检查
+  - 六个页面脚本顺序检查
+
 ## 3) 里程碑
 
 ### M1 - 基线与防护栏（进行中）
@@ -323,6 +339,8 @@
   - `game_manager.js` 新增 `resolveProgressiveCapped64UnlockedState`，`resetProgressiveCapped64Rows/unlockProgressiveCapped64Row` 统一复用 capped64 状态归一化入口；新增 smoke 覆盖 `createProgressiveCapped64UnlockedState` runtime 委托。
   - `game_manager.js` 已改为通过 `CoreGameSettingsStorageRuntime` 读写统计面板开关、计时器模块视图、撤回设置与会话提交结果（页面层移除 direct localStorage 访问）
   - `game_manager.js` 新增 `resolveModePolicyContext`，统一 `mode/undo` runtime 解析入参，减少后续策略函数迁移的重复样板
+  - 新增 `js/core_game_manager_common_runtime.js`（逻辑层）、`js/core_game_manager_static_runtime.js`（静态配置层）、`js/core_game_manager_bindings_runtime.js`（绑定层），并在 `index/play/undo/capped/practice/replay` 六页按 `common -> static -> bindings -> game_manager` 顺序加载
+  - `game_manager.js` 已删除大部分内联逻辑，当前收敛为 12 行壳文件（构造器 + 两条初始化调用，行为保持不变）
 
 验收标准：
 - 黄金向量下棋盘状态、分数、胜负状态与旧版一致。
@@ -459,11 +477,12 @@
   - 缓解：M2 持续收敛 + smoke 契约化。
 
 ## 5) 每个 PR 的质量门禁
+- Gate 0：`node scripts/game-manager-audit.mjs` 通过（防止 `GameManager.prototype` 回流为长方法体）。
 - Gate 1：`npm run test:smoke` 通过。
 - Gate 2：无未计划的玩法规则变更。
 - Gate 3：PR 描述中明确可回滚路径。
 
 ## 6) 立即执行项
-1. 优先执行一键门禁：`npm run verify:refactor`（串行执行 unit/smoke/build）。
+1. 优先执行一键门禁：`npm run verify:refactor`（串行执行 game-manager-audit/unit/smoke/build）。
 2. 继续削减入口脚本中的重复拼装逻辑，优先抽到 `src/bootstrap/*`。
 3. 按 M5 执行 burn-in：设置 `engine_adapter_default_mode=core-adapter`，持续监控历史页 gate，并保留 `engine_adapter_force_legacy=1` 作为紧急回滚开关。

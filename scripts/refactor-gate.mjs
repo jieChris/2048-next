@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { performance } from "node:perf_hooks";
 
 const STEPS = [
+  { name: "game-manager-audit", cmd: "node", args: ["scripts/game-manager-audit.mjs"] },
   { name: "unit", cmd: "npm", args: ["run", "test:unit"] },
   { name: "smoke", cmd: "npm", args: ["run", "test:smoke"] },
   { name: "build", cmd: "npm", args: ["run", "build"] }
