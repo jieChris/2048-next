@@ -43,6 +43,32 @@
     return num.toFixed(2) + "%";
   }
 
+  function formatPercentByParts(numerator, denominator) {
+    var left = toFiniteNumberOrNull(numerator);
+    var right = toFiniteNumberOrNull(denominator);
+    if (left === null || right === null || right <= 0) return "-";
+    return ((left * 100) / right).toFixed(2) + "%";
+  }
+
+  function formatTopMismatchModes(value) {
+    var list = Array.isArray(value) ? value : [];
+    var rows = [];
+    for (var i = 0; i < list.length && rows.length < 3; i++) {
+      var item = isPlainObject(list[i]) ? list[i] : {};
+      var modeKey =
+        typeof item.modeKey === "string" && item.modeKey
+          ? item.modeKey
+          : typeof item.mode_key === "string" && item.mode_key
+            ? item.mode_key
+            : "";
+      if (!modeKey) continue;
+      var mismatch = toFiniteNumberOrZero(item.mismatchCount);
+      var comparable = toFiniteNumberOrZero(item.comparableCount);
+      rows.push(modeKey + "(" + mismatch + "/" + comparable + ")");
+    }
+    return rows.length ? rows.join("，") : "-";
+  }
+
   function getBurnInGateLabel(status) {
     if (status === "pass") return "达标";
     if (status === "fail") return "未达标";
@@ -92,6 +118,9 @@
         sustainedConsecutive: 0,
         mismatchActionEnabled: false,
         mismatchRateText: "-",
+        comparableMatchRateText: "-",
+        sustainedPassRateText: "-",
+        topMismatchModesText: "-",
         maxMismatchRateText: "-"
       };
     }
@@ -123,6 +152,12 @@
       sustainedConsecutive: toFiniteNumberOrZero(summary.sustainedConsecutivePass),
       mismatchActionEnabled: toFiniteNumberOrZero(summary.mismatch) > 0,
       mismatchRateText: formatPercent(summary.mismatchRate),
+      comparableMatchRateText: formatPercentByParts(summary.match, summary.comparable),
+      sustainedPassRateText: formatPercentByParts(
+        summary.sustainedConsecutivePass,
+        summary.sustainedWindows
+      ),
+      topMismatchModesText: formatTopMismatchModes(summary.topMismatchModes),
       maxMismatchRateText: formatPercent(summary.maxMismatchRate)
     };
   }
@@ -171,6 +206,7 @@
         "<span>一致 " + escapeHtml(source.match) + "</span>" +
         "<span>不一致 " + escapeHtml(source.mismatch) + "</span>" +
         "<span>样本不足 " + escapeHtml(source.incomplete) + "</span>" +
+        "<span>一致率 " + escapeHtml(state.comparableMatchRateText) + "</span>" +
         "<span>不一致率 " + escapeHtml(state.mismatchRateText) + "</span>" +
       "</div>" +
       "<div class='history-burnin-note'>" +
@@ -191,8 +227,15 @@
         escapeHtml(state.sustainedConsecutive) +
         "/" +
         escapeHtml(state.sustainedRequired) +
+        "（达标率 " +
+        escapeHtml(state.sustainedPassRateText) +
+        "）" +
         "，已评估窗口 " +
         escapeHtml(state.sustainedEvaluated) +
+      "</div>" +
+      "<div class='history-burnin-note'>" +
+        "模式不一致 Top: " +
+        escapeHtml(state.topMismatchModesText) +
       "</div>" +
       (mismatchAction ? "<div class='history-burnin-actions'>" + mismatchAction + "</div>" : "")
     );

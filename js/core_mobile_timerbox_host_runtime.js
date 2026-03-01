@@ -114,6 +114,17 @@
     return typeof icon === "string" ? icon : "";
   }
 
+  function resolveStorageByName(input) {
+    var source = toRecord(input);
+    var storageRuntime = toRecord(source.storageRuntime);
+    var resolveStorage = asFunction(storageRuntime.resolveStorageByName);
+    if (!resolveStorage) return null;
+    return resolveStorage({
+      windowLike: source.windowLike || null,
+      storageName: source.storageName
+    });
+  }
+
   function toDisplayValue(value, fallback) {
     return value === "inline-flex" ? "inline-flex" : fallback;
   }
@@ -345,9 +356,62 @@
     };
   }
 
+  function applyMobileTimerboxUiSyncFromContext(input) {
+    var source = toRecord(input);
+    var storageLike = resolveStorageByName({
+      storageRuntime: source.storageRuntime,
+      windowLike: source.windowLike || null,
+      storageName: "localStorage"
+    });
+    var storageKey = source.storageKey;
+    var defaultCollapsed = toBooleanValue(source.defaultCollapsed, true);
+    var runtime = source.mobileTimerboxRuntime;
+    var syncResult = applyMobileTimerboxUiSync({
+      options: source.options,
+      isTimerboxMobileScope: source.isTimerboxMobileScope,
+      isTimerboxCollapseViewport: source.isTimerboxCollapseViewport,
+      getElementById: source.getElementById,
+      readMobileTimerboxCollapsed: function () {
+        var resolved = callRuntime(runtime, "resolveStoredMobileTimerboxCollapsed", {
+          storageLike: storageLike,
+          storageKey: storageKey,
+          defaultCollapsed: defaultCollapsed
+        });
+        return toBooleanValue(resolved, defaultCollapsed);
+      },
+      writeMobileTimerboxCollapsed: function (collapsed) {
+        callRuntime(runtime, "persistMobileTimerboxCollapsed", {
+          storageLike: storageLike,
+          storageKey: storageKey,
+          collapsed: !!collapsed
+        });
+      },
+      mobileTimerboxRuntime: runtime,
+      getTimerboxToggleIconSvg: function (collapsed) {
+        return callRuntime(runtime, "getTimerboxToggleIconSvg", !!collapsed);
+      },
+      hiddenClassName: source.hiddenClassName,
+      expandedClassName: source.expandedClassName,
+      defaultCollapsed: defaultCollapsed,
+      fallbackHiddenToggleDisplay: source.fallbackHiddenToggleDisplay,
+      fallbackVisibleToggleDisplay: source.fallbackVisibleToggleDisplay,
+      fallbackHiddenAriaExpanded: source.fallbackHiddenAriaExpanded,
+      fallbackExpandLabel: source.fallbackExpandLabel,
+      fallbackCollapseLabel: source.fallbackCollapseLabel
+    });
+
+    return {
+      didInvokeUiSync: syncResult.didApply || syncResult.didPersist,
+      localStorageResolved: !!storageLike,
+      syncResult: syncResult
+    };
+  }
+
   global.CoreMobileTimerboxHostRuntime = global.CoreMobileTimerboxHostRuntime || {};
   global.CoreMobileTimerboxHostRuntime.applyMobileTimerboxToggleInit =
     applyMobileTimerboxToggleInit;
   global.CoreMobileTimerboxHostRuntime.applyMobileTimerboxUiSync =
     applyMobileTimerboxUiSync;
+  global.CoreMobileTimerboxHostRuntime.applyMobileTimerboxUiSyncFromContext =
+    applyMobileTimerboxUiSyncFromContext;
 })(typeof window !== "undefined" ? window : undefined);

@@ -1,4 +1,8 @@
 type AnyRecord = Record<string, unknown>;
+const PARITY_REPORT_V1_KEY = "adapter_parity_report_v1";
+const PARITY_REPORT_V2_KEY = "adapter_parity_report_v2";
+const PARITY_DIFF_V1_KEY = "adapter_parity_ab_diff_v1";
+const PARITY_DIFF_V2_KEY = "adapter_parity_ab_diff_v2";
 
 export interface HistoryAdapterBadgeState {
   hasBadge: boolean;
@@ -37,11 +41,47 @@ function escapeHtml(value: unknown): string {
 }
 
 function hasAdapterDiagnostics(item: unknown): boolean {
-  if (!item || typeof item !== "object") return false;
-  const source = item as AnyRecord;
-  return (
-    isPlainObject(source.adapter_parity_report_v1) || isPlainObject(source.adapter_parity_ab_diff_v1)
-  );
+  const source = isPlainObject(item) ? item : null;
+  return !!(resolveParityReportPayload(source) || resolveParityDiffPayload(source));
+}
+
+function resolveParitySchemaVersion(payload: AnyRecord | null, fallback: number): number {
+  const num = Number(payload && payload.schemaVersion);
+  if (Number.isInteger(num) && num > 0) return Number(num);
+  return fallback;
+}
+
+function resolveParityPayload(
+  source: AnyRecord | null,
+  v2Key: string,
+  v1Key: string
+): AnyRecord | null {
+  if (!source) return null;
+  const fromV2 = source[v2Key];
+  if (isPlainObject(fromV2)) {
+    const schemaVersion = resolveParitySchemaVersion(fromV2, 2);
+    return {
+      ...fromV2,
+      schemaVersion
+    };
+  }
+  const fromV1 = source[v1Key];
+  if (isPlainObject(fromV1)) {
+    const schemaVersion = resolveParitySchemaVersion(fromV1, 1);
+    return {
+      ...fromV1,
+      schemaVersion
+    };
+  }
+  return null;
+}
+
+function resolveParityReportPayload(source: AnyRecord | null): AnyRecord | null {
+  return resolveParityPayload(source, PARITY_REPORT_V2_KEY, PARITY_REPORT_V1_KEY);
+}
+
+function resolveParityDiffPayload(source: AnyRecord | null): AnyRecord | null {
+  return resolveParityPayload(source, PARITY_DIFF_V2_KEY, PARITY_DIFF_V1_KEY);
 }
 
 function toFiniteNumberOrNull(value: unknown): number | null {
@@ -119,12 +159,8 @@ export function resolveHistoryAdapterBadgeState(
 
 export function resolveHistoryAdapterDiagnosticsState(item: unknown): HistoryAdapterDiagnosticsState {
   const source = isPlainObject(item) ? item : null;
-  const report = source && isPlainObject(source.adapter_parity_report_v1)
-    ? source.adapter_parity_report_v1
-    : null;
-  const diff = source && isPlainObject(source.adapter_parity_ab_diff_v1)
-    ? source.adapter_parity_ab_diff_v1
-    : null;
+  const report = resolveParityReportPayload(source);
+  const diff = resolveParityDiffPayload(source);
 
   if (!report && !diff) {
     return {

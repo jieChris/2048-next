@@ -1,6 +1,35 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeModeConfig, normalizeSpecialRules } from "../../src/core/mode";
+import {
+  canToggleUndoSetting,
+  createProgressiveCapped64UnlockedState,
+  getCappedTargetValue,
+  getForcedUndoSetting,
+  isCappedModeState,
+  isGameTerminatedState,
+  isProgressiveCapped64Mode,
+  isUndoInteractionEnabled,
+  resolveCappedModeState,
+  resolveCappedPlaceholderRowValues,
+  resolveCappedPlaceholderSlotByRepeatCount,
+  resolveCappedRowVisibilityPlan,
+  resolveCappedTimerLegendClass,
+  resolveCappedTimerLegendFontSize,
+  formatCappedRepeatLabel,
+  resolveProgressiveCapped64Unlock,
+  isTimerLeaderboardAvailableByMode,
+  resolveUndoPolicyState,
+  isUndoAllowedByMode,
+  isUndoSettingFixedForMode,
+  normalizeModeConfig,
+  resolveDetectedMode,
+  resolveLegacyModeFromModeKey,
+  resolveModeConfigModeKey,
+  resolveModeConfigFromCatalog,
+  resolveModeCatalogConfig,
+  resolveModeCatalogAlias,
+  normalizeSpecialRules
+} from "../../src/core/mode";
 
 const DEFAULT_MODE_CONFIG = {
   key: "standard_4x4_pow2_no_undo",
@@ -28,6 +57,91 @@ describe("core mode: normalizeSpecialRules", () => {
     const normalized = normalizeSpecialRules(raw);
     raw.custom_spawn_four_rate = 99;
     expect(normalized.custom_spawn_four_rate).toBe(12.5);
+  });
+
+  it("builds progressive capped64 unlocked state from raw payload", () => {
+    expect(createProgressiveCapped64UnlockedState(null)).toEqual({
+      "16": false,
+      "32": false,
+      "64": false
+    });
+    expect(
+      createProgressiveCapped64UnlockedState({
+        "16": true,
+        "32": "yes",
+        "64": true
+      })
+    ).toEqual({
+      "16": true,
+      "32": false,
+      "64": true
+    });
+  });
+
+  it("resolves progressive capped64 unlock decision and next state", () => {
+    expect(
+      resolveProgressiveCapped64Unlock({
+        isProgressiveCapped64Mode: false,
+        value: 16,
+        unlockedState: { "16": false, "32": false, "64": false }
+      })
+    ).toEqual({
+      nextUnlockedState: { "16": false, "32": false, "64": false },
+      unlockedValue: null
+    });
+
+    expect(
+      resolveProgressiveCapped64Unlock({
+        isProgressiveCapped64Mode: true,
+        value: 16,
+        unlockedState: { "16": false, "32": false, "64": false }
+      })
+    ).toEqual({
+      nextUnlockedState: { "16": true, "32": false, "64": false },
+      unlockedValue: 16
+    });
+
+    expect(
+      resolveProgressiveCapped64Unlock({
+        isProgressiveCapped64Mode: true,
+        value: 16,
+        unlockedState: { "16": true, "32": false, "64": false }
+      })
+    ).toEqual({
+      nextUnlockedState: { "16": true, "32": false, "64": false },
+      unlockedValue: null
+    });
+  });
+
+  it("resolves game termination state", () => {
+    expect(
+      isGameTerminatedState({
+        over: false,
+        won: false,
+        keepPlaying: false
+      })
+    ).toBe(false);
+    expect(
+      isGameTerminatedState({
+        over: true,
+        won: false,
+        keepPlaying: false
+      })
+    ).toBe(true);
+    expect(
+      isGameTerminatedState({
+        over: false,
+        won: true,
+        keepPlaying: false
+      })
+    ).toBe(true);
+    expect(
+      isGameTerminatedState({
+        over: false,
+        won: true,
+        keepPlaying: true
+      })
+    ).toBe(false);
   });
 });
 
@@ -144,5 +258,588 @@ describe("core mode: normalizeModeConfig", () => {
 
     expect(cfg.special_rules.custom_spawn_four_rate).toBe(100);
     expect(cfg.spawn_table).toEqual([{ value: 4, weight: 100 }]);
+  });
+});
+
+describe("core mode: capped policy", () => {
+  it("detects capped mode by key and positive max tile", () => {
+    expect(
+      isCappedModeState({
+        modeKey: "capped_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toBe(true);
+    expect(
+      isCappedModeState({
+        modeKey: "standard_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toBe(false);
+    expect(
+      isCappedModeState({
+        modeKey: "capped_4x4_pow2_no_undo",
+        maxTile: 0
+      })
+    ).toBe(false);
+  });
+
+  it("resolves capped target value and progressive mode defaults", () => {
+    expect(
+      getCappedTargetValue({
+        modeKey: "capped_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toBe(64);
+    expect(
+      getCappedTargetValue({
+        modeKey: "standard_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toBeNull();
+    expect(
+      isProgressiveCapped64Mode({
+        modeKey: "capped_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toBe(false);
+  });
+
+  it("resolves capped mode state snapshot for runtime delegation", () => {
+    expect(
+      resolveCappedModeState({
+        modeKey: "capped_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toEqual({
+      isCappedMode: true,
+      cappedTargetValue: 64,
+      isProgressiveCapped64Mode: false
+    });
+
+    expect(
+      resolveCappedModeState({
+        modeKey: "standard_4x4_pow2_no_undo",
+        maxTile: 64
+      })
+    ).toEqual({
+      isCappedMode: false,
+      cappedTargetValue: null,
+      isProgressiveCapped64Mode: false
+    });
+  });
+});
+
+describe("core mode: capped timer placeholder policy", () => {
+  it("resolves capped timer legend class from milestone slot map", () => {
+    expect(
+      resolveCappedTimerLegendClass({
+        timerMilestoneSlotByValue: { "64": "64", "128": "128" },
+        cappedTargetValue: 64
+      })
+    ).toBe("timertile timer-legend-64");
+    expect(
+      resolveCappedTimerLegendClass({
+        timerMilestoneSlotByValue: { "64": "64" },
+        cappedTargetValue: 128
+      })
+    ).toBe("timertile");
+  });
+
+  it("resolves capped timer legend font size by capped target value", () => {
+    expect(resolveCappedTimerLegendFontSize(64)).toBe("22px");
+    expect(resolveCappedTimerLegendFontSize(128)).toBe("18px");
+    expect(resolveCappedTimerLegendFontSize(1024)).toBe("14px");
+    expect(resolveCappedTimerLegendFontSize(8192)).toBe("13px");
+    expect(resolveCappedTimerLegendFontSize(null)).toBe("14px");
+  });
+
+  it("formats capped repeat label", () => {
+    expect(formatCappedRepeatLabel(2)).toBe("x2");
+    expect(formatCappedRepeatLabel(9)).toBe("x9");
+  });
+
+  it("resolves capped placeholder rows from timer slots", () => {
+    expect(
+      resolveCappedPlaceholderRowValues({
+        isCappedMode: false,
+        cappedTargetValue: 2048,
+        timerSlotIds: [16, 32, 64]
+      })
+    ).toEqual([]);
+
+    expect(
+      resolveCappedPlaceholderRowValues({
+        isCappedMode: true,
+        cappedTargetValue: 64,
+        timerSlotIds: [16, 32, 64, 128, 256, 512]
+      })
+    ).toEqual([128, 256, 512]);
+  });
+
+  it("maps repeat count to placeholder slot deterministically", () => {
+    expect(
+      resolveCappedPlaceholderSlotByRepeatCount({
+        repeatCount: 1,
+        placeholderRowValues: [128, 256, 512]
+      })
+    ).toBeNull();
+    expect(
+      resolveCappedPlaceholderSlotByRepeatCount({
+        repeatCount: 2,
+        placeholderRowValues: [128, 256, 512]
+      })
+    ).toBe(128);
+    expect(
+      resolveCappedPlaceholderSlotByRepeatCount({
+        repeatCount: 4,
+        placeholderRowValues: [128, 256, 512]
+      })
+    ).toBe(512);
+    expect(
+      resolveCappedPlaceholderSlotByRepeatCount({
+        repeatCount: 5,
+        placeholderRowValues: [128, 256, 512]
+      })
+    ).toBeNull();
+  });
+
+  it("resolves capped row visibility plan", () => {
+    expect(
+      resolveCappedRowVisibilityPlan({
+        isCappedMode: false,
+        timerSlotIds: [16, 32]
+      })
+    ).toEqual([
+      { value: 16, visible: true, keepSpace: false },
+      { value: 32, visible: true, keepSpace: false }
+    ]);
+
+    expect(
+      resolveCappedRowVisibilityPlan({
+        isCappedMode: true,
+        isProgressiveCapped64Mode: true,
+        cappedTargetValue: 64,
+        timerSlotIds: [16, 32]
+      })
+    ).toEqual([
+      { value: 16, visible: false, keepSpace: true },
+      { value: 32, visible: false, keepSpace: true }
+    ]);
+
+    expect(
+      resolveCappedRowVisibilityPlan({
+        isCappedMode: true,
+        isProgressiveCapped64Mode: false,
+        cappedTargetValue: 64,
+        timerSlotIds: [16, 32, 64, 128]
+      })
+    ).toEqual([
+      { value: 16, visible: true, keepSpace: true },
+      { value: 32, visible: true, keepSpace: true },
+      { value: 64, visible: true, keepSpace: true },
+      { value: 128, visible: false, keepSpace: true }
+    ]);
+  });
+});
+
+describe("core mode: undo policy", () => {
+  it("resolves forced undo setting by explicit mode config first", () => {
+    expect(
+      getForcedUndoSetting({
+        mode: "capped_4x4_pow2_no_undo",
+        modeConfig: { undo_enabled: true }
+      })
+    ).toBe(true);
+    expect(
+      getForcedUndoSetting({
+        mode: "classic_4x4_pow2_undo",
+        modeConfig: { undo_enabled: false }
+      })
+    ).toBe(false);
+  });
+
+  it("resolves forced undo setting by mode naming convention", () => {
+    expect(getForcedUndoSetting({ mode: "capped_4x4_pow2_no_undo" })).toBe(false);
+    expect(getForcedUndoSetting({ mode: "custom_no-undo_mode" })).toBe(false);
+    expect(getForcedUndoSetting({ mode: "custom_undo_only_mode" })).toBe(true);
+    expect(getForcedUndoSetting({ mode: "standard_4x4_pow2" })).toBeNull();
+  });
+
+  it("derives undo allowed/fixed/toggle states", () => {
+    expect(isUndoAllowedByMode({ mode: "standard_4x4_pow2" })).toBe(true);
+    expect(isUndoAllowedByMode({ mode: "capped_4x4_pow2_no_undo" })).toBe(false);
+
+    expect(isUndoSettingFixedForMode({ mode: "standard_4x4_pow2" })).toBe(false);
+    expect(isUndoSettingFixedForMode({ mode: "custom_undo-only_mode" })).toBe(true);
+
+    expect(
+      canToggleUndoSetting({
+        mode: "standard_4x4_pow2",
+        hasGameStarted: false
+      })
+    ).toBe(true);
+    expect(
+      canToggleUndoSetting({
+        mode: "standard_4x4_pow2",
+        hasGameStarted: true
+      })
+    ).toBe(false);
+    expect(
+      canToggleUndoSetting({
+        mode: "capped_4x4_pow2_no_undo",
+        hasGameStarted: false
+      })
+    ).toBe(false);
+  });
+
+  it("derives undo interaction enabled state", () => {
+    expect(
+      isUndoInteractionEnabled({
+        replayMode: true,
+        undoLimit: null,
+        undoUsed: 0,
+        undoEnabled: true,
+        isUndoAllowedByMode: true
+      })
+    ).toBe(false);
+
+    expect(
+      isUndoInteractionEnabled({
+        replayMode: false,
+        undoLimit: 3,
+        undoUsed: 3,
+        undoEnabled: true,
+        isUndoAllowedByMode: true
+      })
+    ).toBe(false);
+
+    expect(
+      isUndoInteractionEnabled({
+        replayMode: false,
+        undoLimit: null,
+        undoUsed: 0,
+        undoEnabled: true,
+        isUndoAllowedByMode: true
+      })
+    ).toBe(true);
+  });
+
+  it("resolves undo policy state snapshot", () => {
+    expect(
+      resolveUndoPolicyState({
+        mode: "capped_4x4_pow2_no_undo",
+        modeConfig: null,
+        hasGameStarted: false,
+        replayMode: false,
+        undoLimit: null,
+        undoUsed: 0,
+        undoEnabled: true
+      })
+    ).toEqual({
+      forcedUndoSetting: false,
+      isUndoAllowedByMode: false,
+      isUndoSettingFixedForMode: true,
+      canToggleUndoSetting: false,
+      isUndoInteractionEnabled: false
+    });
+
+    expect(
+      resolveUndoPolicyState({
+        mode: "standard_4x4_pow2",
+        modeConfig: null,
+        hasGameStarted: false,
+        replayMode: false,
+        undoLimit: 3,
+        undoUsed: 2,
+        undoEnabled: true
+      })
+    ).toEqual({
+      forcedUndoSetting: null,
+      isUndoAllowedByMode: true,
+      isUndoSettingFixedForMode: false,
+      canToggleUndoSetting: true,
+      isUndoInteractionEnabled: true
+    });
+
+    expect(
+      resolveUndoPolicyState({
+        mode: "standard_4x4_pow2",
+        modeConfig: null,
+        hasGameStarted: true,
+        replayMode: true,
+        undoLimit: null,
+        undoUsed: 0,
+        undoEnabled: true
+      })
+    ).toEqual({
+      forcedUndoSetting: null,
+      isUndoAllowedByMode: true,
+      isUndoSettingFixedForMode: false,
+      canToggleUndoSetting: false,
+      isUndoInteractionEnabled: false
+    });
+  });
+});
+
+describe("core mode: timer leaderboard policy", () => {
+  it("keeps timer leaderboard availability enabled", () => {
+    expect(isTimerLeaderboardAvailableByMode("standard_4x4_pow2_no_undo")).toBe(true);
+    expect(isTimerLeaderboardAvailableByMode("capped_4x4_pow2_no_undo")).toBe(true);
+  });
+});
+
+describe("core mode: legacy mapping policy", () => {
+  it("resolves legacy server mode from explicit map first", () => {
+    expect(
+      resolveLegacyModeFromModeKey({
+        modeKey: "standard_4x4_pow2_no_undo",
+        legacyModeByKey: { standard_4x4_pow2_no_undo: "classic" }
+      })
+    ).toBe("classic");
+  });
+
+  it("falls back to capped/practice/classic inference", () => {
+    expect(
+      resolveLegacyModeFromModeKey({
+        modeKey: "capped_4x4_pow2_no_undo"
+      })
+    ).toBe("capped");
+    expect(
+      resolveLegacyModeFromModeKey({
+        fallbackModeKey: "practice_legacy"
+      })
+    ).toBe("practice");
+    expect(
+      resolveLegacyModeFromModeKey({
+        mode: "unknown_mode"
+      })
+    ).toBe("classic");
+  });
+
+  it("resolves catalog alias mapping and keeps passthrough values", () => {
+    expect(
+      resolveModeCatalogAlias({
+        modeId: "classic_no_undo",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        legacyAliasToModeKey: {
+          classic_no_undo: "standard_4x4_pow2_no_undo"
+        }
+      })
+    ).toBe("standard_4x4_pow2_no_undo");
+
+    expect(
+      resolveModeCatalogAlias({
+        modeId: "fib_4x4_undo",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        legacyAliasToModeKey: {
+          classic_no_undo: "standard_4x4_pow2_no_undo"
+        }
+      })
+    ).toBe("fib_4x4_undo");
+  });
+
+  it("resolves mode config mode key by catalog availability then alias", () => {
+    expect(
+      resolveModeConfigModeKey({
+        modeId: "classic_no_undo",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        getModeConfig(modeId) {
+          if (modeId === "standard_4x4_pow2_no_undo") return { key: modeId };
+          return null;
+        },
+        legacyAliasToModeKey: {
+          classic_no_undo: "standard_4x4_pow2_no_undo"
+        }
+      })
+    ).toBe("standard_4x4_pow2_no_undo");
+
+    expect(
+      resolveModeConfigModeKey({
+        modeId: "classic_4x4_pow2_undo",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        getModeConfig(modeId) {
+          if (modeId === "classic_4x4_pow2_undo") return { key: modeId };
+          return null;
+        },
+        legacyAliasToModeKey: {
+          classic_no_undo: "standard_4x4_pow2_no_undo"
+        }
+      })
+    ).toBe("classic_4x4_pow2_undo");
+
+    expect(
+      resolveModeConfigModeKey({
+        modeId: "missing_mode",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        getModeConfig() {
+          return null;
+        },
+        legacyAliasToModeKey: {
+          classic_no_undo: "standard_4x4_pow2_no_undo"
+        }
+      })
+    ).toBe("standard_4x4_pow2_no_undo");
+  });
+
+  it("resolves mode config from catalog first, then falls back to local map", () => {
+    const catalogConfig = {
+      key: "classic_4x4_pow2_undo",
+      board_width: 4
+    };
+    const fallbackConfig = {
+      key: "standard_4x4_pow2_no_undo",
+      board_width: 4
+    };
+
+    const byCatalog = resolveModeCatalogConfig({
+      modeId: "classic_4x4_pow2_undo",
+      catalogGetMode(modeId) {
+        return modeId === "classic_4x4_pow2_undo" ? catalogConfig : null;
+      },
+      fallbackModeConfigs: {
+        classic_4x4_pow2_undo: fallbackConfig
+      }
+    });
+    expect(byCatalog).toEqual(catalogConfig);
+    expect(byCatalog).not.toBe(catalogConfig);
+
+    const byFallback = resolveModeCatalogConfig({
+      modeId: "standard_4x4_pow2_no_undo",
+      catalogGetMode() {
+        return null;
+      },
+      fallbackModeConfigs: {
+        standard_4x4_pow2_no_undo: fallbackConfig
+      }
+    });
+    expect(byFallback).toEqual(fallbackConfig);
+    expect(byFallback).not.toBe(fallbackConfig);
+
+    expect(
+      resolveModeCatalogConfig({
+        modeId: "missing_mode",
+        catalogGetMode() {
+          return null;
+        },
+        fallbackModeConfigs: {
+          standard_4x4_pow2_no_undo: fallbackConfig
+        }
+      })
+    ).toBeNull();
+  });
+
+  it("resolves mode config payload from catalog by key/alias/default", () => {
+    const defaultConfig = { key: "standard_4x4_pow2_no_undo", board_width: 4 };
+    const aliasConfig = { key: "standard_4x4_pow2_no_undo", board_width: 5 };
+    const map: Record<string, unknown> = {
+      standard_4x4_pow2_no_undo: defaultConfig,
+      classic_4x4_pow2_undo: { key: "classic_4x4_pow2_undo", board_width: 4 }
+    };
+
+    const byKey = resolveModeConfigFromCatalog({
+      modeId: "classic_4x4_pow2_undo",
+      defaultModeKey: "standard_4x4_pow2_no_undo",
+      getModeConfig(modeId) {
+        return map[modeId] || null;
+      },
+      legacyAliasToModeKey: {
+        classic_no_undo: "standard_4x4_pow2_no_undo"
+      }
+    });
+    expect(byKey).toEqual({
+      resolvedModeId: "classic_4x4_pow2_undo",
+      modeConfig: { key: "classic_4x4_pow2_undo", board_width: 4 }
+    });
+    expect(byKey.modeConfig).not.toBe(map.classic_4x4_pow2_undo);
+
+    const byAlias = resolveModeConfigFromCatalog({
+      modeId: "classic_no_undo",
+      defaultModeKey: "standard_4x4_pow2_no_undo",
+      getModeConfig(modeId) {
+        if (modeId === "standard_4x4_pow2_no_undo") return aliasConfig;
+        return null;
+      },
+      legacyAliasToModeKey: {
+        classic_no_undo: "standard_4x4_pow2_no_undo"
+      }
+    });
+    expect(byAlias).toEqual({
+      resolvedModeId: "standard_4x4_pow2_no_undo",
+      modeConfig: aliasConfig
+    });
+    expect(byAlias.modeConfig).not.toBe(aliasConfig);
+
+    const byDefault = resolveModeConfigFromCatalog({
+      modeId: "missing_mode",
+      defaultModeKey: "standard_4x4_pow2_no_undo",
+      getModeConfig(modeId) {
+        return modeId === "standard_4x4_pow2_no_undo" ? defaultConfig : null;
+      },
+      legacyAliasToModeKey: {
+        classic_no_undo: "standard_4x4_pow2_no_undo"
+      }
+    });
+    expect(byDefault).toEqual({
+      resolvedModeId: "standard_4x4_pow2_no_undo",
+      modeConfig: defaultConfig
+    });
+    expect(byDefault.modeConfig).not.toBe(defaultConfig);
+
+    expect(
+      resolveModeConfigFromCatalog({
+        modeId: "missing_mode",
+        defaultModeKey: "standard_4x4_pow2_no_undo",
+        getModeConfig() {
+          return null;
+        },
+        legacyAliasToModeKey: {
+          classic_no_undo: "standard_4x4_pow2_no_undo"
+        }
+      })
+    ).toEqual({
+      resolvedModeId: "standard_4x4_pow2_no_undo",
+      modeConfig: null
+    });
+  });
+
+  it("resolves detected mode from existing/body/path context", () => {
+    expect(
+      resolveDetectedMode({
+        existingMode: "practice_legacy",
+        bodyMode: "classic_4x4_pow2_undo",
+        pathname: "/index.html",
+        defaultModeKey: "standard_4x4_pow2_no_undo"
+      })
+    ).toBe("practice_legacy");
+
+    expect(
+      resolveDetectedMode({
+        existingMode: "",
+        bodyMode: "capped_4x4_pow2_no_undo",
+        pathname: "/index.html",
+        defaultModeKey: "standard_4x4_pow2_no_undo"
+      })
+    ).toBe("capped_4x4_pow2_no_undo");
+
+    expect(
+      resolveDetectedMode({
+        pathname: "/replay/undo_2048.html",
+        defaultModeKey: "standard_4x4_pow2_no_undo"
+      })
+    ).toBe("classic_4x4_pow2_undo");
+
+    expect(
+      resolveDetectedMode({
+        pathname: "/Practice_board.html",
+        defaultModeKey: "standard_4x4_pow2_no_undo"
+      })
+    ).toBe("practice_legacy");
+
+    expect(
+      resolveDetectedMode({
+        pathname: "/",
+        defaultModeKey: "standard_4x4_pow2_no_undo"
+      })
+    ).toBe("standard_4x4_pow2_no_undo");
   });
 });

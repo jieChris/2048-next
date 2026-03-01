@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { applyResponsiveRelayoutRequest } from "../../src/bootstrap/responsive-relayout-host";
+import {
+  applyResponsiveRelayoutRequest,
+  applyResponsiveRelayoutRequestFromContext
+} from "../../src/bootstrap/responsive-relayout-host";
 
 describe("bootstrap responsive relayout host", () => {
   it("returns fallback result when runtime contract is missing", () => {
@@ -125,5 +128,45 @@ describe("bootstrap responsive relayout host", () => {
       syncMobileTimerboxUI,
       manager
     });
+  });
+
+  it("resolves manager from window context and delegates request", () => {
+    const oldTimer = { id: "old-context" };
+    const newTimer = { id: "new-context" };
+    let scheduledCallback: (() => void) | null = null;
+    const setTimeoutLike = vi.fn((callback: () => void) => {
+      scheduledCallback = callback;
+      return newTimer;
+    });
+    const resolveResponsiveRelayoutRequest = vi.fn(() => ({
+      shouldSchedule: true,
+      shouldClearExistingTimer: false,
+      delayMs: 120
+    }));
+    const applyResponsiveRelayout = vi.fn();
+
+    const result = applyResponsiveRelayoutRequestFromContext({
+      responsiveRelayoutRuntime: {
+        resolveResponsiveRelayoutRequest,
+        applyResponsiveRelayout
+      },
+      isTimerboxMobileScope: true,
+      existingTimer: oldTimer,
+      setTimeoutLike,
+      windowLike: {
+        game_manager: { id: "gm-context" }
+      }
+    });
+
+    expect(result.didInvokeRequest).toBe(true);
+    expect(result.managerResolved).toBe(true);
+    expect(result.requestResult.didSchedule).toBe(true);
+    expect(scheduledCallback).not.toBeNull();
+    if (scheduledCallback) scheduledCallback();
+    expect(applyResponsiveRelayout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        manager: { id: "gm-context" }
+      })
+    );
   });
 });

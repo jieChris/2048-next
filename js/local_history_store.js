@@ -1,6 +1,10 @@
 (function () {
   var STORAGE_KEY = "local_game_history_v1";
   var MAX_RECORDS = 5000;
+  var PARITY_REPORT_V1_KEY = "adapter_parity_report_v1";
+  var PARITY_REPORT_V2_KEY = "adapter_parity_report_v2";
+  var PARITY_DIFF_V1_KEY = "adapter_parity_ab_diff_v1";
+  var PARITY_DIFF_V2_KEY = "adapter_parity_ab_diff_v2";
 
   function safeParse(raw, fallback) {
     try {
@@ -51,6 +55,28 @@
     return Number.isFinite(num) ? num : null;
   }
 
+  function resolveParitySchemaVersion(payload, fallback) {
+    var num = Number(payload && payload.schemaVersion);
+    if (Number.isFinite(num) && num > 0) return Math.floor(num);
+    return fallback;
+  }
+
+  function resolveParityPayload(source, preferredKey, fallbackKey, preferredSchemaVersion, fallbackSchemaVersion) {
+    var item = isPlainObject(source) ? source : {};
+    var preferred = clonePlainObject(item[preferredKey]);
+    if (preferred) {
+      preferred.schemaVersion = resolveParitySchemaVersion(preferred, preferredSchemaVersion);
+      return preferred;
+    }
+
+    var fallback = clonePlainObject(item[fallbackKey]);
+    if (fallback) {
+      fallback.schemaVersion = resolveParitySchemaVersion(fallback, fallbackSchemaVersion);
+      return fallback;
+    }
+    return null;
+  }
+
   function normalizeAdapterParityFilter(value) {
     if (value === "mismatch" || value === "match" || value === "incomplete") return value;
     return "all";
@@ -58,7 +84,7 @@
 
   function getAdapterParityStatus(record) {
     var item = isPlainObject(record) ? record : {};
-    var diff = isPlainObject(item.adapter_parity_ab_diff_v1) ? item.adapter_parity_ab_diff_v1 : null;
+    var diff = resolveParityPayload(item, PARITY_DIFF_V2_KEY, PARITY_DIFF_V1_KEY, 2, 1);
     if (!diff) return "incomplete";
     if (diff.comparable !== true) return "incomplete";
 
@@ -88,7 +114,9 @@
 
   function hasAdapterParityDiagnostics(record) {
     if (!isPlainObject(record)) return false;
-    return isPlainObject(record.adapter_parity_report_v1) || isPlainObject(record.adapter_parity_ab_diff_v1);
+    var report = resolveParityPayload(record, PARITY_REPORT_V2_KEY, PARITY_REPORT_V1_KEY, 2, 1);
+    var diff = resolveParityPayload(record, PARITY_DIFF_V2_KEY, PARITY_DIFF_V1_KEY, 2, 1);
+    return !!report || !!diff;
   }
 
   function toPositiveIntegerOrNull(value) {
@@ -114,6 +142,43 @@
       });
     }
     return out;
+  }
+
+  function summarizeTopMismatchModes(records, limit) {
+    var list = Array.isArray(records) ? records : [];
+    var topLimit = toPositiveIntegerOrNull(limit) || 3;
+    var counters = Object.create(null);
+    for (var i = 0; i < list.length; i++) {
+      var item = list[i] || {};
+      var modeKey = typeof item.mode_key === "string" && item.mode_key ? item.mode_key : "unknown";
+      var status = getAdapterParityStatus(item);
+      var cell = counters[modeKey];
+      if (!cell) {
+        cell = { modeKey: modeKey, comparableCount: 0, mismatchCount: 0 };
+        counters[modeKey] = cell;
+      }
+      if (status === "match" || status === "mismatch") {
+        cell.comparableCount += 1;
+      }
+      if (status === "mismatch") {
+        cell.mismatchCount += 1;
+      }
+    }
+
+    var rows = [];
+    for (var key in counters) {
+      if (!Object.prototype.hasOwnProperty.call(counters, key)) continue;
+      var row = counters[key];
+      if (!row || row.mismatchCount <= 0) continue;
+      row.mismatchRate = row.comparableCount > 0 ? (row.mismatchCount * 100) / row.comparableCount : null;
+      rows.push(row);
+    }
+    rows.sort(function (a, b) {
+      if (b.mismatchCount !== a.mismatchCount) return b.mismatchCount - a.mismatchCount;
+      if (b.comparableCount !== a.comparableCount) return b.comparableCount - a.comparableCount;
+      return a.modeKey < b.modeKey ? -1 : a.modeKey > b.modeKey ? 1 : 0;
+    });
+    return rows.slice(0, topLimit);
   }
 
   function getBurnInRuntime() {
@@ -279,9 +344,11 @@
     }
 
     var matchedBurnInRecords = toBurnInRecords(matched);
+    var sourceRecords = sampleLimit === null ? matched : matched.slice(0, sampleLimit);
     var sourceBurnInRecords = sampleLimit === null
       ? matchedBurnInRecords
       : matchedBurnInRecords.slice(0, sampleLimit);
+    var topMismatchModes = summarizeTopMismatchModes(sourceRecords, 3);
     var burnInRuntime = getBurnInRuntime();
     var primary = null;
     if (burnInRuntime) {
@@ -348,6 +415,7 @@
       mismatch: primary.mismatch,
       incomplete: primary.incomplete,
       mismatchRate: primary.mismatchRate,
+      topMismatchModes: topMismatchModes,
       gateStatus: primary.gateStatus,
       passGate: primary.passGate
     };
@@ -360,6 +428,11 @@
     var replayString = typeof raw.replay_string === "string"
       ? raw.replay_string
       : (raw.replay ? JSON.stringify(raw.replay) : "");
+
+    var parityReportV2 = resolveParityPayload(raw, PARITY_REPORT_V2_KEY, PARITY_REPORT_V1_KEY, 2, 1);
+    var parityDiffV2 = resolveParityPayload(raw, PARITY_DIFF_V2_KEY, PARITY_DIFF_V1_KEY, 2, 1);
+    var parityReportV1 = resolveParityPayload(raw, PARITY_REPORT_V1_KEY, PARITY_REPORT_V2_KEY, 1, 2);
+    var parityDiffV1 = resolveParityPayload(raw, PARITY_DIFF_V1_KEY, PARITY_DIFF_V2_KEY, 1, 2);
 
     return {
       id: typeof raw.id === "string" && raw.id ? raw.id : makeId(),
@@ -386,8 +459,10 @@
       client_version: raw.client_version || "1.8",
       replay: raw.replay && typeof raw.replay === "object" ? raw.replay : null,
       replay_string: replayString,
-      adapter_parity_report_v1: clonePlainObject(raw.adapter_parity_report_v1),
-      adapter_parity_ab_diff_v1: clonePlainObject(raw.adapter_parity_ab_diff_v1)
+      adapter_parity_report_v2: parityReportV2,
+      adapter_parity_ab_diff_v2: parityDiffV2,
+      adapter_parity_report_v1: parityReportV1,
+      adapter_parity_ab_diff_v1: parityDiffV1
     };
   }
 

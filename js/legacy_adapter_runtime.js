@@ -5,7 +5,8 @@
   var ADAPTER_MODE_KEY = "engine_adapter_mode";
   var ADAPTER_DEFAULT_MODE_KEY = "engine_adapter_default_mode";
   var ADAPTER_FORCE_LEGACY_KEY = "engine_adapter_force_legacy";
-  var PARITY_REPORT_KEY_PREFIX = "engine_adapter_parity_report_v1:";
+  var PARITY_REPORT_KEY_PREFIX_V1 = "engine_adapter_parity_report_v1:";
+  var PARITY_REPORT_KEY_PREFIX_V2 = "engine_adapter_parity_report_v2:";
 
   function normalizeAdapterMode(raw) {
     if (raw === "core" || raw === "core-adapter") return "core-adapter";
@@ -195,7 +196,7 @@
     }
 
     return {
-      effectiveMode: "legacy-bridge",
+      effectiveMode: "core-adapter",
       modeSource: "fallback",
       forceLegacyEnabled: forceLegacyEnabled,
       forceLegacySource: forceLegacySource,
@@ -211,7 +212,7 @@
     var policy = resolveAdapterModePolicy(input);
     return policy && typeof policy.effectiveMode === "string"
       ? policy.effectiveMode
-      : "legacy-bridge";
+      : "core-adapter";
   }
 
   function writeStorageValue(key, value) {
@@ -261,16 +262,16 @@
     return !!value && typeof value === "object" && !Array.isArray(value);
   }
 
-  function buildAdapterParityReportStorageKey(modeKey, adapterMode) {
+  function buildAdapterParityReportStorageKey(modeKey, adapterMode, schemaVersion) {
     var normalizedAdapterMode = normalizeAdapterMode(adapterMode) || "legacy-bridge";
-    return PARITY_REPORT_KEY_PREFIX + normalizeModeKey(modeKey) + ":" + normalizedAdapterMode;
+    var normalizedSchemaVersion = Number(schemaVersion) === 1 ? 1 : 2;
+    var prefix = normalizedSchemaVersion === 1 ? PARITY_REPORT_KEY_PREFIX_V1 : PARITY_REPORT_KEY_PREFIX_V2;
+    return prefix + normalizeModeKey(modeKey) + ":" + normalizedAdapterMode;
   }
 
-  function readAdapterParityReportFromStorage(storage, modeKey, adapterMode) {
-    if (!storage || typeof storage.getItem !== "function") return null;
+  function parseAdapterParityReport(raw) {
+    if (!raw) return null;
     try {
-      var raw = storage.getItem(buildAdapterParityReportStorageKey(modeKey, adapterMode));
-      if (!raw) return null;
       var parsed = JSON.parse(raw);
       return isPlainObject(parsed) ? parsed : null;
     } catch (_err) {
@@ -278,17 +279,50 @@
     }
   }
 
+  function normalizeAdapterParityReportSchemaVersion(report, fallbackVersion) {
+    if (!isPlainObject(report)) return null;
+    var out = Object.assign({}, report);
+    var schemaVersion = Number(out.schemaVersion);
+    if (!Number.isFinite(schemaVersion) || schemaVersion <= 0) {
+      out.schemaVersion = Number(fallbackVersion) === 1 ? 1 : 2;
+    } else {
+      out.schemaVersion = Math.floor(schemaVersion);
+    }
+    return out;
+  }
+
+  function readAdapterParityReportFromStorage(storage, modeKey, adapterMode) {
+    if (!storage || typeof storage.getItem !== "function") return null;
+    var rawV2 = null;
+    var rawV1 = null;
+    try {
+      rawV2 = storage.getItem(buildAdapterParityReportStorageKey(modeKey, adapterMode, 2));
+      rawV1 = storage.getItem(buildAdapterParityReportStorageKey(modeKey, adapterMode, 1));
+    } catch (_err) {
+      return null;
+    }
+    var parsedV2 = normalizeAdapterParityReportSchemaVersion(parseAdapterParityReport(rawV2), 2);
+    if (parsedV2) return parsedV2;
+    return normalizeAdapterParityReportSchemaVersion(parseAdapterParityReport(rawV1), 1);
+  }
+
   function writeAdapterParityReportToStorage(storage, modeKey, adapterMode, report) {
     if (!storage || typeof storage.setItem !== "function") return false;
     if (!isPlainObject(report)) return false;
+    var normalized = normalizeAdapterParityReportSchemaVersion(report, 2);
+    if (!normalized) return false;
+    var serialized = null;
     try {
-      storage.setItem(
-        buildAdapterParityReportStorageKey(modeKey, adapterMode),
-        JSON.stringify(report)
-      );
-      return true;
+      serialized = JSON.stringify(normalized);
+      storage.setItem(buildAdapterParityReportStorageKey(modeKey, adapterMode, 2), serialized);
     } catch (_err) {
       return false;
+    }
+    try {
+      storage.setItem(buildAdapterParityReportStorageKey(modeKey, adapterMode, 1), serialized);
+      return true;
+    } catch (_err) {
+      return true;
     }
   }
 

@@ -34,7 +34,7 @@
 
   function sanitizePolicySnapshot(policy) {
     return {
-      effectiveMode: normalizeAdapterMode(policy.effectiveMode) || "legacy-bridge",
+      effectiveMode: normalizeAdapterMode(policy.effectiveMode) || "core-adapter",
       modeSource: typeof policy.modeSource === "string" ? policy.modeSource : "fallback",
       forceLegacyEnabled: Boolean(policy.forceLegacyEnabled),
       forceLegacySource: typeof policy.forceLegacySource === "string" ? policy.forceLegacySource : null,
@@ -81,7 +81,7 @@
       };
     }
     return {
-      effectiveMode: "legacy-bridge",
+      effectiveMode: "core-adapter",
       modeSource: "fallback",
       forceLegacyEnabled: false,
       forceLegacySource: null,

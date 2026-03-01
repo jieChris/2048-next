@@ -25,6 +25,133 @@ export interface NormalizeModeConfigInput {
   defaultModeConfig: PlainRecord;
 }
 
+export interface CappedModeStateInput {
+  modeKey?: string | null;
+  mode?: string | null;
+  maxTile?: number | null;
+}
+
+export interface CappedModeResolveResult {
+  isCappedMode: boolean;
+  cappedTargetValue: number | null;
+  isProgressiveCapped64Mode: boolean;
+}
+
+export interface CappedTimerPlaceholderRowsInput {
+  isCappedMode?: boolean | null;
+  cappedTargetValue?: number | null;
+  timerSlotIds?: number[] | null;
+}
+
+export interface CappedTimerLegendClassInput {
+  timerMilestoneSlotByValue?: Record<string, unknown> | null;
+  cappedTargetValue?: number | null;
+}
+
+export interface CappedTimerPlaceholderSlotInput {
+  repeatCount?: number | null;
+  placeholderRowValues?: number[] | null;
+}
+
+export interface CappedRowVisibilityPlanInput {
+  isCappedMode?: boolean | null;
+  isProgressiveCapped64Mode?: boolean | null;
+  cappedTargetValue?: number | null;
+  timerSlotIds?: number[] | null;
+}
+
+export interface TimerRowVisibilityPlanItem {
+  value: number;
+  visible: boolean;
+  keepSpace: boolean;
+}
+
+export interface ProgressiveCapped64UnlockInput {
+  isProgressiveCapped64Mode?: boolean | null;
+  value?: number | null;
+  unlockedState?: PlainRecord | null;
+}
+
+export interface ProgressiveCapped64UnlockResult {
+  nextUnlockedState: Record<string, boolean>;
+  unlockedValue: number | null;
+}
+
+export interface GameTerminationInput {
+  over?: boolean | null;
+  won?: boolean | null;
+  keepPlaying?: boolean | null;
+}
+
+export interface UndoPolicyInput {
+  mode?: string | null;
+  modeConfig?: PlainRecord | null;
+}
+
+export interface UndoTogglePolicyInput extends UndoPolicyInput {
+  hasGameStarted?: boolean | null;
+}
+
+export interface UndoPolicyStateInput extends UndoTogglePolicyInput {
+  replayMode?: boolean | null;
+  undoLimit?: number | null;
+  undoUsed?: number | null;
+  undoEnabled?: boolean | null;
+}
+
+export interface UndoPolicyState {
+  forcedUndoSetting: boolean | null;
+  isUndoAllowedByMode: boolean;
+  isUndoSettingFixedForMode: boolean;
+  canToggleUndoSetting: boolean;
+  isUndoInteractionEnabled: boolean;
+}
+
+export interface LegacyModeResolveInput {
+  modeKey?: string | null;
+  fallbackModeKey?: string | null;
+  mode?: string | null;
+  legacyModeByKey?: Record<string, string> | null;
+}
+
+export interface ModeCatalogAliasResolveInput {
+  modeId?: string | null;
+  defaultModeKey: string;
+  legacyAliasToModeKey?: Record<string, string> | null;
+}
+
+export interface ModeConfigModeKeyResolveInput {
+  modeId?: string | null;
+  defaultModeKey: string;
+  getModeConfig?: ((modeId: string) => unknown) | null;
+  legacyAliasToModeKey?: Record<string, string> | null;
+}
+
+export interface ModeCatalogConfigResolveInput {
+  modeId?: string | null;
+  catalogGetMode?: ((modeId: string) => unknown) | null;
+  fallbackModeConfigs?: Record<string, unknown> | null;
+}
+
+export interface ModeConfigCatalogResolveInput {
+  modeId?: string | null;
+  defaultModeKey: string;
+  getModeConfig?: ((modeId: string) => unknown) | null;
+  legacyAliasToModeKey?: Record<string, string> | null;
+}
+
+export interface ModeConfigCatalogResolveResult {
+  resolvedModeId: string;
+  modeConfig: PlainRecord | null;
+}
+
+export interface DetectModeInput {
+  existingMode?: string | null;
+  bodyMode?: string | null;
+  pathname?: string | null;
+  defaultModeKey?: string | null;
+}
+
 export function clonePlain<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -97,4 +224,367 @@ export function normalizeModeConfig(input: NormalizeModeConfigInput): ModeConfig
   cfg.mode_family = (cfg.mode_family as string) || (cfg.ruleset === "fibonacci" ? "fibonacci" : "pow2");
   cfg.rank_policy = (cfg.rank_policy as string) || (cfg.ranked_bucket !== "none" ? "ranked" : "unranked");
   return cfg;
+}
+
+function toModeId(mode: unknown): string {
+  if (typeof mode !== "string") return "";
+  const value = mode.trim().toLowerCase();
+  return value || "";
+}
+
+export function isCappedModeState(input: CappedModeStateInput): boolean {
+  return resolveCappedModeState(input).isCappedMode;
+}
+
+export function getCappedTargetValue(input: CappedModeStateInput): number | null {
+  return resolveCappedModeState(input).cappedTargetValue;
+}
+
+export function isProgressiveCapped64Mode(_input?: CappedModeStateInput): boolean {
+  return resolveCappedModeState(_input || {}).isProgressiveCapped64Mode;
+}
+
+export function resolveCappedModeState(input: CappedModeStateInput): CappedModeResolveResult {
+  const source = input || {};
+  const key = String(source.modeKey || source.mode || "");
+  const maxTile = Number(source.maxTile);
+  const isCappedMode = key.indexOf("capped") !== -1 && Number.isFinite(maxTile) && maxTile > 0;
+
+  return {
+    isCappedMode,
+    cappedTargetValue: isCappedMode ? Number(maxTile) : null,
+    // Keep existing behavior: currently no progressive capped-64 mode is enabled.
+    isProgressiveCapped64Mode: false
+  };
+}
+
+export function resolveCappedTimerLegendFontSize(cappedTargetValue?: number | null): string {
+  const cap = Number(cappedTargetValue);
+  const resolvedCap = Number.isFinite(cap) && cap > 0 ? cap : 2048;
+  if (resolvedCap >= 8192) return "13px";
+  if (resolvedCap >= 1024) return "14px";
+  if (resolvedCap >= 128) return "18px";
+  return "22px";
+}
+
+export function resolveCappedTimerLegendClass(input: CappedTimerLegendClassInput): string {
+  const source = input || {};
+  const rawSlotByValue = source.timerMilestoneSlotByValue;
+  const slotByValue =
+    rawSlotByValue && typeof rawSlotByValue === "object" ? rawSlotByValue : null;
+  const targetKey = String(source.cappedTargetValue);
+  const slotId = slotByValue ? slotByValue[targetKey] : null;
+  if (slotId === null || slotId === undefined || slotId === "") return "timertile";
+  return "timertile timer-legend-" + String(slotId);
+}
+
+export function formatCappedRepeatLabel(repeatCount: unknown): string {
+  return "x" + String(repeatCount);
+}
+
+export function resolveCappedPlaceholderRowValues(input: CappedTimerPlaceholderRowsInput): number[] {
+  if (!input.isCappedMode) return [];
+  const cap = Number(input.cappedTargetValue);
+  if (!Number.isFinite(cap) || cap <= 0) return [];
+
+  const timerSlotIds = Array.isArray(input.timerSlotIds) ? input.timerSlotIds : [];
+  const values: number[] = [];
+  for (let i = 0; i < timerSlotIds.length; i++) {
+    const slotId = Number(timerSlotIds[i]);
+    if (!Number.isInteger(slotId) || slotId <= 0) continue;
+    if (slotId > cap) values.push(slotId);
+  }
+  return values;
+}
+
+export function resolveCappedPlaceholderSlotByRepeatCount(
+  input: CappedTimerPlaceholderSlotInput
+): number | null {
+  const repeatCount = Number(input.repeatCount);
+  if (!Number.isInteger(repeatCount) || repeatCount < 2) return null;
+
+  const values = Array.isArray(input.placeholderRowValues) ? input.placeholderRowValues : [];
+  const placeholderIndex = repeatCount - 2; // x2 => first placeholder row
+  if (placeholderIndex < 0 || placeholderIndex >= values.length) return null;
+
+  const slotId = Number(values[placeholderIndex]);
+  if (!Number.isInteger(slotId) || slotId <= 0) return null;
+  return slotId;
+}
+
+export function resolveCappedRowVisibilityPlan(
+  input: CappedRowVisibilityPlanInput
+): TimerRowVisibilityPlanItem[] {
+  const timerSlotIds = Array.isArray(input.timerSlotIds) ? input.timerSlotIds : [];
+  const values: number[] = [];
+  for (let i = 0; i < timerSlotIds.length; i++) {
+    const slotId = Number(timerSlotIds[i]);
+    if (!Number.isInteger(slotId) || slotId <= 0) continue;
+    values.push(slotId);
+  }
+
+  if (!input.isCappedMode) {
+    return values.map((value) => ({ value, visible: true, keepSpace: false }));
+  }
+
+  if (input.isProgressiveCapped64Mode) {
+    return values.map((value) => ({ value, visible: false, keepSpace: true }));
+  }
+
+  const cap = Number(input.cappedTargetValue);
+  const resolvedCap = Number.isFinite(cap) ? cap : 0;
+  return values.map((value) => ({
+    value,
+    visible: value <= resolvedCap,
+    keepSpace: true
+  }));
+}
+
+export function createProgressiveCapped64UnlockedState(
+  unlockedState?: PlainRecord | null
+): Record<string, boolean> {
+  const base: Record<string, boolean> = { "16": false, "32": false, "64": false };
+  if (!unlockedState || typeof unlockedState !== "object") return base;
+  if (unlockedState["16"] === true) base["16"] = true;
+  if (unlockedState["32"] === true) base["32"] = true;
+  if (unlockedState["64"] === true) base["64"] = true;
+  return base;
+}
+
+export function resolveProgressiveCapped64Unlock(
+  input: ProgressiveCapped64UnlockInput
+): ProgressiveCapped64UnlockResult {
+  const nextUnlockedState = createProgressiveCapped64UnlockedState(input.unlockedState);
+  if (!input.isProgressiveCapped64Mode) {
+    return { nextUnlockedState, unlockedValue: null };
+  }
+
+  const value = Number(input.value);
+  if (value !== 16 && value !== 32 && value !== 64) {
+    return { nextUnlockedState, unlockedValue: null };
+  }
+  const key = String(value);
+  if (nextUnlockedState[key]) {
+    return { nextUnlockedState, unlockedValue: null };
+  }
+  nextUnlockedState[key] = true;
+  return { nextUnlockedState, unlockedValue: value };
+}
+
+export function isGameTerminatedState(input: GameTerminationInput): boolean {
+  return !!input.over || (!!input.won && !input.keepPlaying);
+}
+
+export function getForcedUndoSetting(input: UndoPolicyInput): boolean | null {
+  const modeCfg = input.modeConfig || null;
+  if (modeCfg && typeof modeCfg.undo_enabled === "boolean") {
+    return modeCfg.undo_enabled;
+  }
+
+  const modeId = toModeId(input.mode);
+  if (!modeId) return null;
+  if (modeId === "capped" || modeId.indexOf("capped") !== -1) return false;
+  if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) return false;
+  if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) return true;
+  return null;
+}
+
+export function isUndoAllowedByMode(input: UndoPolicyInput): boolean {
+  return getForcedUndoSetting(input) !== false;
+}
+
+export function isUndoSettingFixedForMode(input: UndoPolicyInput): boolean {
+  return getForcedUndoSetting(input) !== null;
+}
+
+export function canToggleUndoSetting(input: UndoTogglePolicyInput): boolean {
+  if (!isUndoAllowedByMode(input)) return false;
+  if (isUndoSettingFixedForMode(input)) return false;
+  return !input.hasGameStarted;
+}
+
+export function resolveUndoPolicyState(input: UndoPolicyStateInput): UndoPolicyState {
+  const source = input || {};
+  const forcedUndoSetting = getForcedUndoSetting(source);
+  const modeAllowed = forcedUndoSetting !== false;
+  const fixedSetting = forcedUndoSetting !== null;
+  const canToggle = modeAllowed && !fixedSetting && !source.hasGameStarted;
+
+  const replayMode = !!source.replayMode;
+  const overUndoLimit =
+    source.undoLimit !== null && Number(source.undoUsed) >= Number(source.undoLimit);
+  const interactionEnabled = !replayMode && !overUndoLimit && !!(source.undoEnabled && modeAllowed);
+
+  return {
+    forcedUndoSetting,
+    isUndoAllowedByMode: modeAllowed,
+    isUndoSettingFixedForMode: fixedSetting,
+    canToggleUndoSetting: canToggle,
+    isUndoInteractionEnabled: interactionEnabled
+  };
+}
+
+export function isUndoInteractionEnabled(input: {
+  replayMode?: boolean | null;
+  undoLimit?: number | null;
+  undoUsed?: number | null;
+  undoEnabled?: boolean | null;
+  isUndoAllowedByMode?: boolean | null;
+}): boolean {
+  const source = input || {};
+  if (source.replayMode) return false;
+  if (source.undoLimit !== null && Number(source.undoUsed) >= Number(source.undoLimit)) return false;
+  return !!(source.undoEnabled && source.isUndoAllowedByMode);
+}
+
+export function isTimerLeaderboardAvailableByMode(_mode?: string | null): boolean {
+  return true;
+}
+
+export function resolveLegacyModeFromModeKey(input: LegacyModeResolveInput): string {
+  const key = input.modeKey || input.fallbackModeKey || input.mode || "";
+  const legacyModeByKey = input.legacyModeByKey || null;
+  if (legacyModeByKey && typeof legacyModeByKey[key] === "string") {
+    return legacyModeByKey[key] || "classic";
+  }
+  if (key && key.indexOf("capped") !== -1) return "capped";
+  if (key && key.indexOf("practice") !== -1) return "practice";
+  return "classic";
+}
+
+export function resolveModeCatalogAlias(input: ModeCatalogAliasResolveInput): string {
+  const id = input.modeId || input.defaultModeKey;
+  const legacyAliasToModeKey = input.legacyAliasToModeKey || null;
+  if (
+    legacyAliasToModeKey &&
+    Object.prototype.hasOwnProperty.call(legacyAliasToModeKey, id) &&
+    typeof legacyAliasToModeKey[id] === "string" &&
+    legacyAliasToModeKey[id]
+  ) {
+    return legacyAliasToModeKey[id];
+  }
+  return id;
+}
+
+function isPlainRecord(value: unknown): value is PlainRecord {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+export function resolveModeConfigModeKey(input: ModeConfigModeKeyResolveInput): string {
+  const source = input || {};
+  const defaultModeKey = source.defaultModeKey || "standard_4x4_pow2_no_undo";
+  const id = source.modeId || defaultModeKey;
+  const getModeConfig = typeof source.getModeConfig === "function" ? source.getModeConfig : null;
+
+  if (getModeConfig && isPlainRecord(getModeConfig(id))) return id;
+
+  const mapped = resolveModeCatalogAlias({
+    modeId: id,
+    defaultModeKey,
+    legacyAliasToModeKey: source.legacyAliasToModeKey || null
+  });
+  if (mapped && mapped !== id && getModeConfig && isPlainRecord(getModeConfig(mapped))) {
+    return mapped;
+  }
+
+  return defaultModeKey;
+}
+
+export function resolveModeCatalogConfig(input: ModeCatalogConfigResolveInput): PlainRecord | null {
+  const source = input || {};
+  const modeId = typeof source.modeId === "string" ? source.modeId : "";
+  if (!modeId) return null;
+
+  const catalogGetMode = typeof source.catalogGetMode === "function" ? source.catalogGetMode : null;
+  if (catalogGetMode) {
+    const catalogConfig = catalogGetMode(modeId);
+    if (catalogConfig && typeof catalogConfig === "object" && !Array.isArray(catalogConfig)) {
+      try {
+        return clonePlain(catalogConfig as PlainRecord);
+      } catch (_err) {
+        return null;
+      }
+    }
+  }
+
+  const fallbackModeConfigs = source.fallbackModeConfigs || null;
+  if (
+    fallbackModeConfigs &&
+    typeof fallbackModeConfigs === "object" &&
+    !Array.isArray(fallbackModeConfigs) &&
+    Object.prototype.hasOwnProperty.call(fallbackModeConfigs, modeId)
+  ) {
+    const fallbackConfig = fallbackModeConfigs[modeId];
+    if (fallbackConfig && typeof fallbackConfig === "object" && !Array.isArray(fallbackConfig)) {
+      try {
+        return clonePlain(fallbackConfig as PlainRecord);
+      } catch (_err) {
+        return null;
+      }
+    }
+  }
+
+  return null;
+}
+
+export function resolveModeConfigFromCatalog(
+  input: ModeConfigCatalogResolveInput
+): ModeConfigCatalogResolveResult {
+  const source = input || {};
+  const defaultModeKey = source.defaultModeKey || "standard_4x4_pow2_no_undo";
+  const getModeConfig = typeof source.getModeConfig === "function" ? source.getModeConfig : null;
+
+  const resolvedModeId = resolveModeConfigModeKey({
+    modeId: source.modeId || defaultModeKey,
+    defaultModeKey,
+    getModeConfig,
+    legacyAliasToModeKey: source.legacyAliasToModeKey || null
+  });
+
+  const resolvedModeConfig = getModeConfig ? getModeConfig(resolvedModeId) : null;
+  if (isPlainRecord(resolvedModeConfig)) {
+    return {
+      resolvedModeId,
+      modeConfig: clonePlain(resolvedModeConfig as PlainRecord)
+    };
+  }
+
+  const defaultModeConfig = getModeConfig ? getModeConfig(defaultModeKey) : null;
+  if (isPlainRecord(defaultModeConfig)) {
+    return {
+      resolvedModeId: defaultModeKey,
+      modeConfig: clonePlain(defaultModeConfig as PlainRecord)
+    };
+  }
+
+  return {
+    resolvedModeId: defaultModeKey,
+    modeConfig: null
+  };
+}
+
+export function resolveDetectedMode(input: DetectModeInput): string {
+  const source = input || {};
+  const fallbackModeKey = source.defaultModeKey || "standard_4x4_pow2_no_undo";
+
+  const existingMode = typeof source.existingMode === "string" ? source.existingMode : "";
+  if (existingMode) return existingMode;
+
+  const bodyMode = typeof source.bodyMode === "string" ? source.bodyMode : "";
+  if (bodyMode) return bodyMode;
+
+  const pathname = typeof source.pathname === "string" ? source.pathname : "";
+  if (!pathname) return fallbackModeKey;
+  if (pathname.indexOf("undo_2048") !== -1) return "classic_4x4_pow2_undo";
+  if (pathname.indexOf("Practice_board") !== -1) return "practice_legacy";
+  if (pathname.indexOf("capped_2048") !== -1) return "capped_4x4_pow2_no_undo";
+  if (
+    pathname === "/" ||
+    /\/$/.test(pathname) ||
+    pathname.indexOf("/index.html") !== -1 ||
+    pathname.indexOf("index.html") !== -1
+  ) {
+    return "standard_4x4_pow2_no_undo";
+  }
+  return "classic_4x4_pow2_undo";
 }

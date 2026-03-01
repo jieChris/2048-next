@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  computeReplayStepStats,
   getReplayActionKind,
+  resolveIpsDisplayText,
+  resolveIpsInputCount,
+  resolveNextIpsInputCount,
   resolveReplayExecution
 } from "../../src/core/replay-execution";
 
@@ -38,5 +42,153 @@ describe("core replay execution: resolveReplayExecution", () => {
 
   it("throws on unknown action", () => {
     expect(() => resolveReplayExecution(["q"])).toThrow("Unknown replay action");
+  });
+});
+
+describe("core replay execution: computeReplayStepStats", () => {
+  it("computes step stats with undo rollback semantics", () => {
+    expect(
+      computeReplayStepStats({
+        actions: [0, 1, -1, ["p", 0, 0, 2], 2, -1, -1],
+        limit: 7
+      })
+    ).toEqual({
+      totalSteps: 7,
+      moveSteps: 0,
+      undoSteps: 3
+    });
+  });
+
+  it("clamps limit and handles invalid input", () => {
+    expect(
+      computeReplayStepStats({
+        actions: [0, -1, 2],
+        limit: 99
+      })
+    ).toEqual({
+      totalSteps: 3,
+      moveSteps: 1,
+      undoSteps: 1
+    });
+    expect(
+      computeReplayStepStats({
+        actions: null,
+        limit: 5
+      })
+    ).toEqual({
+      totalSteps: 0,
+      moveSteps: 0,
+      undoSteps: 0
+    });
+  });
+});
+
+describe("core replay execution: ips input count", () => {
+  it("resolves current ips input count for replay and normal modes", () => {
+    expect(
+      resolveIpsInputCount({
+        replayMode: true,
+        replayIndex: 12,
+        ipsInputCount: 3
+      })
+    ).toBe(12);
+    expect(
+      resolveIpsInputCount({
+        replayMode: true,
+        replayIndex: -1,
+        ipsInputCount: 3
+      })
+    ).toBe(0);
+    expect(
+      resolveIpsInputCount({
+        replayMode: false,
+        replayIndex: 12,
+        ipsInputCount: 7
+      })
+    ).toBe(7);
+    expect(
+      resolveIpsInputCount({
+        replayMode: false,
+        ipsInputCount: -4
+      })
+    ).toBe(0);
+  });
+
+  it("resolves next ips input count update", () => {
+    expect(
+      resolveNextIpsInputCount({
+        replayMode: true,
+        replayIndex: 10,
+        ipsInputCount: 5
+      })
+    ).toEqual({
+      shouldRecord: false,
+      nextIpsInputCount: 10
+    });
+    expect(
+      resolveNextIpsInputCount({
+        replayMode: false,
+        ipsInputCount: 5
+      })
+    ).toEqual({
+      shouldRecord: true,
+      nextIpsInputCount: 6
+    });
+    expect(
+      resolveNextIpsInputCount({
+        replayMode: false,
+        ipsInputCount: -2
+      })
+    ).toEqual({
+      shouldRecord: true,
+      nextIpsInputCount: 1
+    });
+  });
+});
+
+describe("core replay execution: ips display text", () => {
+  it("computes fixed-point ips text for positive duration", () => {
+    expect(
+      resolveIpsDisplayText({
+        durationMs: 2000,
+        ipsInputCount: 5
+      })
+    ).toEqual({
+      avgIpsText: "2.50",
+      ipsText: "IPS: 2.50"
+    });
+  });
+
+  it("keeps legacy zero formatting when duration is zero or invalid", () => {
+    expect(
+      resolveIpsDisplayText({
+        durationMs: 0,
+        ipsInputCount: 5
+      })
+    ).toEqual({
+      avgIpsText: "0",
+      ipsText: "IPS: 0"
+    });
+    expect(
+      resolveIpsDisplayText({
+        durationMs: -1,
+        ipsInputCount: 5
+      })
+    ).toEqual({
+      avgIpsText: "0",
+      ipsText: "IPS: 0"
+    });
+  });
+
+  it("sanitizes invalid input count", () => {
+    expect(
+      resolveIpsDisplayText({
+        durationMs: 1000,
+        ipsInputCount: Number.NaN
+      })
+    ).toEqual({
+      avgIpsText: "0.00",
+      ipsText: "IPS: 0.00"
+    });
   });
 });

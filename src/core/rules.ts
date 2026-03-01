@@ -5,6 +5,21 @@ export interface SpawnTableItem {
   weight: number;
 }
 
+export interface SpawnValueCountMap {
+  [key: string]: number | undefined;
+}
+
+export interface SpawnStatPair {
+  primary: number;
+  secondary: number;
+}
+
+export interface SpawnValueUpdateResult {
+  nextSpawnValueCounts: Record<string, number>;
+  spawnTwos: number;
+  spawnFours: number;
+}
+
 const FIBONACCI_MILESTONES = [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181];
 
 export function normalizeSpawnTable(
@@ -72,6 +87,74 @@ export function pickSpawnValue(
   return table[table.length - 1].value;
 }
 
+export function getSpawnStatPair(
+  spawnTable: SpawnTableItem[] | null | undefined
+): SpawnStatPair {
+  const table = Array.isArray(spawnTable) ? spawnTable : [];
+  const values: number[] = [];
+  for (let i = 0; i < table.length; i++) {
+    const item = table[i];
+    const value = Number(item?.value);
+    if (!Number.isInteger(value) || value <= 0) continue;
+    if (values.indexOf(value) === -1) values.push(value);
+  }
+  values.sort((a, b) => a - b);
+  const primary = values.length > 0 ? values[0] : 2;
+  const secondary = values.length > 1 ? values[1] : primary;
+  return { primary, secondary };
+}
+
+export function getSpawnCount(
+  spawnValueCounts: SpawnValueCountMap | null | undefined,
+  value: number
+): number {
+  if (!spawnValueCounts || typeof spawnValueCounts !== "object") return 0;
+  return Number(spawnValueCounts[String(value)]) || 0;
+}
+
+export function getTotalSpawnCount(
+  spawnValueCounts: SpawnValueCountMap | null | undefined
+): number {
+  if (!spawnValueCounts || typeof spawnValueCounts !== "object") return 0;
+  let total = 0;
+  for (const key in spawnValueCounts) {
+    if (!Object.prototype.hasOwnProperty.call(spawnValueCounts, key)) continue;
+    total += Number(spawnValueCounts[key]) || 0;
+  }
+  return total;
+}
+
+export function getActualSecondaryRateText(
+  spawnValueCounts: SpawnValueCountMap | null | undefined,
+  spawnTable: SpawnTableItem[] | null | undefined
+): string {
+  const pair = getSpawnStatPair(spawnTable);
+  const total = getTotalSpawnCount(spawnValueCounts);
+  if (total <= 0) return "0.00";
+  const secondaryCount = getSpawnCount(spawnValueCounts, pair.secondary);
+  return ((secondaryCount / total) * 100).toFixed(2);
+}
+
+export function applySpawnValueCount(
+  spawnValueCounts: SpawnValueCountMap | null | undefined,
+  value: number
+): SpawnValueUpdateResult {
+  const nextSpawnValueCounts: Record<string, number> = {};
+  if (spawnValueCounts && typeof spawnValueCounts === "object") {
+    for (const key in spawnValueCounts) {
+      if (!Object.prototype.hasOwnProperty.call(spawnValueCounts, key)) continue;
+      nextSpawnValueCounts[key] = Number(spawnValueCounts[key]) || 0;
+    }
+  }
+  const k = String(value);
+  nextSpawnValueCounts[k] = (nextSpawnValueCounts[k] || 0) + 1;
+  return {
+    nextSpawnValueCounts,
+    spawnTwos: nextSpawnValueCounts["2"] || 0,
+    spawnFours: nextSpawnValueCounts["4"] || 0
+  };
+}
+
 export function nextFibonacci(value: number): number | null {
   if (value <= 0) return 1;
   if (value === 1) return 2;
@@ -119,4 +202,17 @@ export function getTimerMilestoneValues(ruleset: Ruleset, timerSlotIds: number[]
     return FIBONACCI_MILESTONES.slice();
   }
   return timerSlotIds.slice();
+}
+
+export function getTimerMilestoneSlotByValue(
+  timerMilestones: number[],
+  timerSlotIds: number[]
+): Record<string, string> {
+  const slotMap: Record<string, string> = {};
+  for (let i = 0; i < timerSlotIds.length; i++) {
+    const milestone = timerMilestones[i];
+    if (!Number.isInteger(milestone) || milestone <= 0) continue;
+    slotMap[String(milestone)] = String(timerSlotIds[i]);
+  }
+  return slotMap;
 }

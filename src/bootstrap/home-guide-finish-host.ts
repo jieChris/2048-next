@@ -10,6 +10,23 @@ function asFunction<T extends (...args: never[]) => unknown>(value: unknown): T 
   return typeof value === "function" ? (value as T) : null;
 }
 
+function resolveStorageByName(input: {
+  storageRuntime?: unknown;
+  windowLike?: unknown;
+  storageName?: unknown;
+}): unknown {
+  const source = toRecord(input);
+  const storageRuntime = toRecord(source.storageRuntime);
+  const resolveStorage = asFunction<(payload: unknown) => unknown>(
+    storageRuntime.resolveStorageByName
+  );
+  if (!resolveStorage) return null;
+  return resolveStorage({
+    windowLike: source.windowLike || null,
+    storageName: source.storageName
+  });
+}
+
 function resolveBoolean(value: unknown): boolean {
   return !!value;
 }
@@ -37,6 +54,12 @@ export interface HomeGuideFinishHostResult {
   markedSeen: boolean;
   syncedSettings: boolean;
   showedDoneNotice: boolean;
+}
+
+export interface HomeGuideFinishHostContextResult {
+  didInvokeFinish: boolean;
+  localStorageResolved: boolean;
+  finishResult: HomeGuideFinishHostResult;
 }
 
 export function applyHomeGuideFinish(input: {
@@ -140,5 +163,42 @@ export function applyHomeGuideFinish(input: {
     markedSeen,
     syncedSettings,
     showedDoneNotice
+  };
+}
+
+export function applyHomeGuideFinishFromContext(input: {
+  homeGuideRuntime?: unknown;
+  homeGuideState?: unknown;
+  markSeen?: unknown;
+  options?: unknown;
+  clearHomeGuideHighlight?: unknown;
+  storageRuntime?: unknown;
+  windowLike?: unknown;
+  seenKey?: unknown;
+  syncHomeGuideSettingsUI?: unknown;
+  showHomeGuideDoneNotice?: unknown;
+}): HomeGuideFinishHostContextResult {
+  const source = toRecord(input);
+  const storageLike = resolveStorageByName({
+    storageRuntime: source.storageRuntime,
+    windowLike: source.windowLike || null,
+    storageName: "localStorage"
+  });
+  const finishResult = applyHomeGuideFinish({
+    homeGuideRuntime: source.homeGuideRuntime,
+    homeGuideState: source.homeGuideState,
+    markSeen: source.markSeen,
+    options: source.options,
+    clearHomeGuideHighlight: source.clearHomeGuideHighlight,
+    storageLike,
+    seenKey: source.seenKey,
+    syncHomeGuideSettingsUI: source.syncHomeGuideSettingsUI,
+    showHomeGuideDoneNotice: source.showHomeGuideDoneNotice
+  });
+
+  return {
+    didInvokeFinish: finishResult.didFinish,
+    localStorageResolved: !!storageLike,
+    finishResult
   };
 }

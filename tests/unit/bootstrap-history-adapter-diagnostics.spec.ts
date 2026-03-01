@@ -34,7 +34,7 @@ describe("bootstrap history adapter diagnostics", () => {
 
   it("maps parity status to badge class and text", () => {
     const item = {
-      adapter_parity_report_v1: {
+      adapter_parity_report_v2: {
         adapterMode: "core-adapter"
       }
     };
@@ -86,6 +86,45 @@ describe("bootstrap history adapter diagnostics", () => {
     });
 
     expect(state.lines).toEqual(["当前 - · 快照分数 - · undoUsed 0 · scoreDelta - · 对齐 -"]);
+  });
+
+  it("prefers v2 payloads over v1 when both exist", () => {
+    const state = resolveHistoryAdapterDiagnosticsState({
+      adapter_parity_report_v1: {
+        adapterMode: "legacy-bridge",
+        lastScoreFromSnapshot: 100,
+        undoUsedFromSnapshot: 9,
+        scoreDelta: -9,
+        isScoreAligned: false
+      },
+      adapter_parity_report_v2: {
+        schemaVersion: 2,
+        adapterMode: "core-adapter",
+        lastScoreFromSnapshot: 300,
+        undoUsedFromSnapshot: 2,
+        scoreDelta: 1,
+        isScoreAligned: true
+      },
+      adapter_parity_ab_diff_v1: {
+        comparable: true,
+        scoreDelta: -8,
+        undoUsedDelta: -1,
+        overEventsDelta: -1
+      },
+      adapter_parity_ab_diff_v2: {
+        schemaVersion: 2,
+        comparable: true,
+        scoreDelta: 0,
+        undoUsedDelta: 0,
+        overEventsDelta: 0
+      }
+    });
+
+    expect(state.hasDiagnostics).toBe(true);
+    expect(state.lines).toEqual([
+      "当前 core-adapter · 快照分数 300 · undoUsed 2 · scoreDelta +1 · 对齐 是",
+      "A/B comparable 是 · scoreΔ 0 · undoΔ 0 · overΔ 0"
+    ]);
   });
 
   it("builds badge html from badge state", () => {

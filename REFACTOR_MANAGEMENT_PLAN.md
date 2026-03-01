@@ -12,6 +12,22 @@
   - `baseline-legacy-import`（已存在）
   - 里程碑标签：`refactor-m1`、`refactor-m2`、...
 
+## 2.1) 当前收敛快照（2026-02）
+- `js/game_manager.js` 已收敛为 12 行壳文件，仅保留构造器与两条初始化调用：
+  - `applyGameManagerStaticConfiguration()`
+  - `bindGameManagerPrototypeRuntime()`
+- `game_manager` 逻辑分层已落地：
+  - `js/core_game_manager_common_runtime.js`：纯逻辑函数（禁止 `GameManager.prototype` 绑定）
+  - `js/core_game_manager_static_runtime.js`：`GameManager` 静态常量/模式配置装配
+  - `js/core_game_manager_bindings_runtime.js`：`GameManager.prototype` 绑定与 runtime accessor 注册
+- 页面脚本加载顺序已统一为：
+  - `core_game_manager_common_runtime.js` → `core_game_manager_static_runtime.js` → `core_game_manager_bindings_runtime.js` → `game_manager.js`
+- 门禁脚本 `scripts/game-manager-audit.mjs` 已升级，新增以下强约束：
+  - 壳文件行数与结构检查（constructor-only）
+  - common/bindings 职责边界检查
+  - bindings 重复原型绑定检查
+  - 六个页面脚本顺序检查
+
 ## 3) 里程碑
 
 ### M1 - 基线与防护栏（进行中）
@@ -22,6 +38,9 @@
 - 覆盖 8 个页面的 Playwright smoke 测试。
 - push/PR 自动触发 smoke 的 CI 工作流。
 - 统一本地脚本（`npm run test:smoke`）。
+- 测试结构按页面域逐步拆分：
+  - 已完成按领域拆分（history/index-ui/pages-* 共 30+ 文件），不再依赖单个超大 smoke 文件。
+  - 当前跨页加载契约统一在 `tests/smoke/pages-runtime-contract.smoke.spec.ts`。
 
 验收标准：
 - 8 个页面加载过程无运行时 JS 错误。
@@ -46,6 +65,12 @@
   - 新增 `src/bootstrap/simple-startup.ts` + `js/core_simple_startup_runtime.js`，`replay/capped` 入口委托固定模式启动 payload 组装
   - 新增 `src/bootstrap/simple-page-host.ts` + `js/core_simple_page_host_runtime.js`，`replay/capped` 入口委托 page 级 runtime 契约解析与启动编排
   - `replay_application.js` / `capped_application.js` 已收敛为单一 `CoreSimplePageHostRuntime.applySimplePageBootstrap` 调用
+  - 新增 `src/bootstrap/replay-guide.ts` + `js/core_replay_guide_runtime.js`，`replay_ui.js` 委托回放页首访指引已读判定与落标记
+  - `replay_ui.js` 的回放页指引流程已改为 `CoreReplayGuideRuntime` 调用，页面层移除 `localStorage` 直接读写
+  - 新增 `src/bootstrap/announcement.ts` + `js/core_announcement_runtime.js`，`announcement_manager.js` 委托公告未读判定与已读落标记
+  - `announcement_manager.js` 的公告未读流程已改为 `CoreAnnouncementRuntime` 调用，页面层移除 `localStorage` 直接读写
+  - 新增 `src/bootstrap/capped-timer-scroll.ts` + `js/core_capped_timer_scroll_runtime.js`，`capped_timer_scroll.js` 委托 capped/practice 计时滚动模式上下文判定
+  - `capped_timer_scroll.js` 已通过 `resolveTimerScrollModeFromContext` 下沉 `data-mode-id/GAME_MODE_CONFIG` 读取
   - `application/play/capped/replay` 统一走 `LegacyBootstrapRuntime.startGameOnAnimationFrame`
   - 新增 `src/bootstrap/play-query.ts` + `js/core_play_query_runtime.js`，`play_application.js` 委托 `mode_key/challenge_id` 解析
   - 新增 `src/bootstrap/play-custom-spawn-host.ts` + `js/core_play_custom_spawn_host_runtime.js`，`play_application.js` 委托自定义 4 率桥接上下文（storage/prompt/alert/url replace）组装
@@ -80,6 +105,7 @@
   - 新增 `src/bootstrap/undo-action.ts` + `js/core_undo_action_runtime.js`，`application.js` 与 `index_ui.js` 共享撤回触发与可用性判定
   - `undo-action` 已承接页面模式标识读取（`resolveUndoModeIdFromBody`），`index_ui.js` 不再直接读取 `body[data-mode-id]`
   - `undo-action` 已承接上下文撤回能力判定（`resolveUndoCapabilityFromContext`），`index_ui.js` 不再本地拼装 `body/manager/globalMode` 输入
+  - `undo-action` 已承接撤回触发 `manager` 上下文解析（`tryTriggerUndoFromContext`），`index_ui.js` 不再页面层读取 `window.game_manager`
   - 新增 `src/bootstrap/practice-transfer.ts` + `js/core_practice_transfer_runtime.js`，`index_ui.js` 委托练习板直通模式配置组装
   - `practice-transfer` 已继续承接 `practice_guide_seen` 判定与练习板 URL 组装，`index_ui.js` 保留存储与跳转编排
   - `practice-transfer` 已承接练习板 token 与 payload 组装（含 board 深拷贝），`index_ui.js` 仅保留持久化与跳转流程
@@ -87,7 +113,10 @@
   - `practice-transfer` 已承接 payload 持久化回退（localStorage -> sessionStorage），`index_ui.js` 仅按结果选择直跳或 URL fallback
   - `practice-transfer` 已承接练习板直通导航计划组装（含 guide 判定、URL 构造、持久化与 fallback 决策），`index_ui.js` 仅保留盘面校验与 `window.open`
   - 新增 `src/bootstrap/practice-transfer-host.ts` + `js/core_practice_transfer_host_runtime.js`，`index_ui.js` 委托练习板直通主流程编排（precheck/计划生成/失败提示/新窗口打开）
-  - `index_ui.js` 的 `openPracticeBoardFromCurrent` 已改为 `CorePracticeTransferHostRuntime.applyPracticeTransferFromCurrent` 调用，仅保留上下文注入
+  - 新增 `src/bootstrap/practice-transfer-page-host.ts` + `js/core_practice_transfer_page_host_runtime.js`，`index_ui.js` 委托练习板直通页面侧上下文编排（storage 解析 + host runtime 入参组装）
+  - `practice-transfer-page-host` 已扩展 action resolver（`createPracticeTransferPageActionResolvers`），`index_ui.js` 的 `openPracticeBoardFromCurrent` 改为消费 resolver 返回函数
+  - `index_ui.js` 的 `openPracticeBoardFromCurrent` 已改为 `CorePracticeTransferPageHostRuntime.applyPracticeTransferPageAction` 调用，页面层不再直接拼装 transfer host 参数
+  - `practice-transfer-page-host` 已承接 `window.game_manager/GAME_MODE_CONFIG` 上下文读取（`applyPracticeTransferPageActionFromContext`），`index_ui.js` 不再页面层读取 manager/mode config
   - 新增 `src/bootstrap/home-guide.ts` + `js/core_home_guide_runtime.js`，`index_ui.js` 委托首页判定与新手指引自动触发 gate
   - `home-guide` 已继续承接首页指引步骤清单构建（含移动端提示步骤插入），`index_ui.js` 改为透传 viewport 信息
   - `home-guide` 已承接已读状态读写（`readHomeGuideSeenValue`/`markHomeGuideSeen`），`index_ui.js` 不再直接读写 `localStorage`
@@ -120,11 +149,23 @@
   - 新增 `src/bootstrap/timer-module-settings-host.ts` + `js/core_timer_module_settings_host_runtime.js`，`index_ui.js` 委托计时器设置项容器挂载与旧撤回设置项清理（`undo-enabled-toggle`）DOM 编排
   - `index_ui.js` 的 `removeLegacyUndoSettingsUI/ensureTimerModuleSettingsDom` 已收敛为 `CoreTimerModuleSettingsHostRuntime` 调用（页面层移除 settings-row 的插入/删除分支）
   - `timer-module-settings-host` 已承接计时器设置初始化主链（`applyTimerModuleSettingsUi`），`index_ui.js` 不再内联重试调度、同步函数注入与 toggle 变更绑定分支
+  - 新增 `src/bootstrap/timer-module-settings-page-host.ts` + `js/core_timer_module_settings_page_host_runtime.js`，`index_ui.js` 委托计时器设置页上下文编排（toggle/note 查询 + retry 调度回调注入）
+  - `index_ui.js` 的 `initTimerModuleSettingsUI` 已收敛为 `CoreTimerModuleSettingsPageHostRuntime.applyTimerModuleSettingsPageInit` 调用，页面层移除 `ensureTimerModuleSettingsDom` 包装函数
   - 新增 `src/bootstrap/theme-settings.ts` + `js/core_theme_settings_runtime.js`，`index_ui.js` 委托主题设置预览值格式化、预览值回退、下拉开关/绑定去重与选中态判定
   - 新增 `src/bootstrap/theme-settings-host.ts` + `js/core_theme_settings_host_runtime.js`，`index_ui.js` 委托主题设置 UI 编排主链（双预览渲染、下拉交互绑定、themechange 同步）
+  - 新增 `src/bootstrap/theme-settings-page-host.ts` + `js/core_theme_settings_page_host_runtime.js`，`index_ui.js` 委托主题设置页上下文编排（window.ThemeManager 解析 + host runtime 入参组装）
+  - `index_ui.js` 的 `initThemeSettingsUI` 已收敛为 `CoreThemeSettingsPageHostRuntime.applyThemeSettingsPageInit` 调用，页面层移除 `themeManager` 直连拼装分支
   - 新增 `src/bootstrap/replay-modal.ts` + `js/core_replay_modal_runtime.js`，`index_ui.js` 委托回放弹窗与设置弹窗的 DOM 开关/动作绑定编排
   - `index_ui.js` 顶部弹窗逻辑已改为 `CoreReplayModalRuntime` 调用（`showReplayModal/closeReplayModal/openSettingsModal/closeSettingsModal`）
+  - 新增 `src/bootstrap/replay-page-host.ts` + `js/core_replay_page_host_runtime.js`，`index_ui.js` 委托回放弹窗/回放导出页面级编排（modal/export runtime 入参组装）
+  - `index_ui.js` 的 `showReplayModal/closeReplayModal/exportReplay` 已收敛为 `CoreReplayPageHostRuntime` 调用，页面层移除 replay modal/export host 入参拼装分支
+  - `replay-page-host` 已承接导出链路 `manager` 上下文解析（`applyReplayExportPageActionFromContext`），`index_ui.js` 不再页面层读取 `window.game_manager`
+  - `replay-page-host` 已扩展 action resolver（`createReplayPageActionResolvers`），`index_ui.js` 不再本地声明 replay modal/export 包装函数
   - 新增 `src/bootstrap/settings-modal-host.ts` + `js/core_settings_modal_host_runtime.js`，`index_ui.js` 委托设置弹窗开关主链编排（modal 开关 + 主题/计时器/引导设置初始化）
+  - 新增 `src/bootstrap/settings-modal-page-host.ts` + `js/core_settings_modal_page_host_runtime.js`，`index_ui.js` 委托设置弹窗页面级编排（host runtime 入参组装）
+  - `settings-modal-page-host` 已扩展初始化 resolver（`initThemeSettingsUI/removeLegacyUndoSettingsUI/initTimerModuleSettingsUI`），`index_ui.js` 不再本地声明这三个 settings 初始化包装函数
+  - `settings-modal-page-host` 已扩展 action resolver（`createSettingsModalActionResolvers`），`index_ui.js` 的 `openSettingsModal/closeSettingsModal` 已改为消费 resolver 返回函数
+  - `index_ui.js` 的 `openSettingsModal/closeSettingsModal` 已收敛为 `CoreSettingsModalPageHostRuntime` 调用，页面层移除 settings modal host 入参拼装分支
   - 新增 `src/bootstrap/replay-export.ts` + `js/core_replay_export_runtime.js`，`index_ui.js` 委托回放导出与剪贴板复制回退（clipboard/fallback）逻辑
   - `index_ui.js` 已移除本地 `copyToClipboard/fallbackCopy`，`window.exportReplay` 收敛为 `CoreReplayExportRuntime.applyReplayExport` 调用
   - 新增 `src/bootstrap/pretty-time.ts` + `js/core_pretty_time_runtime.js`，`index_ui.js` 委托计时展示格式化（`window.pretty`）
@@ -141,29 +182,63 @@
   - 新增 `src/bootstrap/mobile-hint-host.ts` + `js/core_mobile_hint_host_runtime.js`，`index_ui.js` 委托移动端提示按钮初始化（scope gate + click 绑定去重 + 初始同步）编排
   - 新增 `src/bootstrap/mobile-hint-open-host.ts` + `js/core_mobile_hint_open_host_runtime.js`，`index_ui.js` 委托移动端提示弹层打开编排（scope/viewport gate + 文案收集 + DOM 渲染 + overlay 展示）
   - 新增 `src/bootstrap/mobile-hint-ui-host.ts` + `js/core_mobile_hint_ui_host_runtime.js`，`index_ui.js` 委托移动端提示 UI 同步编排（文本折叠同步 + intro 显隐 + 按钮态应用 + 关闭弹层）
+  - 新增 `src/bootstrap/mobile-hint-page-host.ts` + `js/core_mobile_hint_page_host_runtime.js`，`index_ui.js` 委托移动端提示页面级 resolver 创建（ensure/open/close）
+  - `mobile-hint-page-host` 已扩展页面级 resolver（`syncMobileHintUI/initMobileHintToggle`），`index_ui.js` 不再本地声明移动端提示同步与初始化包装函数
   - 新增 `src/bootstrap/mobile-timerbox.ts` + `js/core_mobile_timerbox_runtime.js`，`index_ui.js` 委托移动端计时器折叠态存储、图标与展示模型计算
   - `mobile-timerbox` 已承接折叠值归一化与展示态兜底（`resolveMobileTimerboxCollapsedValue`/`resolveMobileTimerboxAppliedModel`），`index_ui.js` 不再硬编码折叠判定与按钮属性 fallback
   - 新增 `src/bootstrap/mobile-timerbox-host.ts` + `js/core_mobile_timerbox_host_runtime.js`，`index_ui.js` 委托移动端计时器按钮初始化（click 绑定去重 + 启动同步链 + 重排触发）编排
   - `mobile-timerbox-host` 已承接移动端计时器 UI 同步主链（`applyMobileTimerboxUiSync`），`index_ui.js` 的 `syncMobileTimerboxUI` 不再内联 DOM 状态编排与持久化分支
+  - `mobile-timerbox-host` 已承接折叠态 `localStorage` 上下文解析（`applyMobileTimerboxUiSyncFromContext`），`index_ui.js` 不再页面层读取/写入 `localStorage`
+  - 新增 `src/bootstrap/mobile-timerbox-page-host.ts` + `js/core_mobile_timerbox_page_host_runtime.js`，`index_ui.js` 委托移动端计时器页面级 resolver 创建（sync/init）
+  - `mobile-timerbox-page-host` 已扩展页面级 resolver（`requestResponsiveGameRelayout`），`index_ui.js` 不再本地声明重排请求包装函数
+  - `index_ui.js` 的 `syncMobileTimerboxUI/initMobileTimerboxToggle` 已收敛为 `CoreMobileTimerboxPageHostRuntime` 调用，页面层移除 `document.getElementById` 与 host 入参拼装分支
   - `index_ui.js` 现直接消费 `resolveMobileTimerboxAppliedModel` 的安全模型，不再重复本地按钮样式与 icon fallback 分支
   - 新增 `src/bootstrap/mobile-undo-top.ts` + `js/core_mobile_undo_top_runtime.js`，`index_ui.js` 委托移动端顶部撤回按钮展示态计算
   - `mobile-undo-top` 已承接按钮应用态兜底（`resolveMobileUndoTopAppliedModel`），`index_ui.js` 不再硬编码按钮样式与 aria fallback 分支
   - 新增 `src/bootstrap/mobile-undo-top-host.ts` + `js/core_mobile_undo_top_host_runtime.js`，`index_ui.js` 委托移动端顶部撤回按钮初始化（scope gate + click 绑定去重 + 初始同步）编排
   - 新增 `src/bootstrap/mobile-undo-top-availability-host.ts` + `js/core_mobile_undo_top_availability_host_runtime.js`，`index_ui.js` 委托移动端顶部撤回按钮可用态同步（能力判定 + 展示模型应用 + label/aria 写回）
+  - `mobile-undo-top-availability-host` 已承接页面上下文能力判定回退（`undoActionRuntime.resolveUndoCapabilityFromContext`），`index_ui.js` 移除本地 `resolveUndoCapabilityState` 包装函数
+  - `mobile-undo-top-availability-host` 已承接 `manager/GAME_MODE_CONFIG` 上下文解析（`applyMobileUndoTopAvailabilitySyncFromContext`），`index_ui.js` 不再页面层读取撤回能力输入
   - `index_ui.js` 现直接消费 `resolveMobileUndoTopAppliedModel` 的安全模型，不再重复本地样式兜底分支
   - 新增 `src/bootstrap/top-actions.ts` + `js/core_top_actions_runtime.js`，`index_ui.js` 委托移动端/练习页顶部按钮重排状态创建与同步
+  - 新增 `src/bootstrap/top-actions-host.ts` + `js/core_top_actions_host_runtime.js`，`index_ui.js` 委托顶部重排状态创建与同步编排（game/practice 作用域 gate + state 复用）
+  - 新增 `src/bootstrap/top-actions-page-host.ts` + `js/core_top_actions_page_host_runtime.js`，`index_ui.js` 委托顶部重排页面级 resolver 创建（内部持有 mobile/practice placement state）
+  - `index_ui.js` 的 `syncMobileTopActionsPlacement/syncPracticeTopActionsPlacement` 已收敛为 `CoreTopActionsHostRuntime` 调用，页面层移除重排 state 创建与 DOM 选择器编排分支
   - 新增 `src/bootstrap/mobile-top-buttons.ts` + `js/core_mobile_top_buttons_runtime.js`，`index_ui.js` 委托移动端撤回/提示按钮 DOM 创建与挂载顺序
+  - 新增 `src/bootstrap/mobile-top-buttons-page-host.ts` + `js/core_mobile_top_buttons_page_host_runtime.js`，`index_ui.js` 委托移动端顶部按钮页面级 resolver 创建（基于 page scope 的 ensure-undo/ensure-hint）
+  - `mobile-top-buttons-page-host` 已扩展页面级 resolver（`syncMobileUndoTopButtonAvailability/initMobileUndoTopButton`），`index_ui.js` 不再本地声明顶部撤回按钮同步与初始化包装函数
   - 新增 `src/bootstrap/mobile-viewport.ts` + `js/core_mobile_viewport_runtime.js`，`index_ui.js` 委托紧凑视口/计时器折叠视口/移动端视口判定
   - `mobile-viewport` 已承接页面作用域判定（`resolvePageScopeValue`/`isGamePageScope`/`isPracticePageScope`/`isTimerboxMobileScope`），`index_ui.js` 不再直接读取 `body[data-page]`
+  - 新增 `src/bootstrap/mobile-viewport-page-host.ts` + `js/core_mobile_viewport_page_host_runtime.js`，`index_ui.js` 委托页面级 scope/viewport resolver 创建（game/practice/timerbox/mobile/compact 判定函数）
   - 新增 `src/bootstrap/responsive-relayout.ts` + `js/core_responsive_relayout_runtime.js`，`index_ui.js` 委托重排调度决策与重排执行链（sync + manager 视觉刷新）
   - `index_ui.js` 的 `requestResponsiveGameRelayout` 已改为 `CoreResponsiveRelayoutHostRuntime` 调用（内部委托 `CoreResponsiveRelayoutRuntime`），页面层不再内联重排判定、timer 调度与 manager 刷新分支
   - 新增 `src/bootstrap/responsive-relayout-host.ts` + `js/core_responsive_relayout_host_runtime.js`，`index_ui.js` 委托移动端重排请求主链（request state 解析、timer 清理与调度、回调执行）编排
+  - `responsive-relayout-host` 已承接 `manager` 上下文解析（`applyResponsiveRelayoutRequestFromContext`），`index_ui.js` 不再页面层读取 `window.game_manager`
   - 新增 `src/bootstrap/top-action-bindings-host.ts` + `js/core_top_action_bindings_host_runtime.js`，`index_ui.js` 委托顶部按钮与设置弹层事件绑定（undo/export/practice/settings）
   - `index_ui.js` 的 `DOMContentLoaded` 顶部动作绑定已收敛为 `CoreTopActionBindingsHostRuntime.applyTopActionBindings` 调用
   - 新增 `src/bootstrap/game-over-undo-host.ts` + `js/core_game_over_undo_host_runtime.js`，`index_ui.js` 委托 game-over 撤回按钮（click/touch 防重）绑定
   - `index_ui.js` 的 `undo-btn-gameover` 绑定已收敛为 `CoreGameOverUndoHostRuntime.bindGameOverUndoControl` 调用
   - 新增 `src/bootstrap/index-ui-startup-host.ts` + `js/core_index_ui_startup_host_runtime.js`，`index_ui.js` 委托 `DOMContentLoaded` 启动编排主链（顶部绑定/设置初始化/重排监听）
   - `index_ui.js` 的 DOMContentLoaded 主流程已收敛为 `CoreIndexUiStartupHostRuntime.applyIndexUiStartup` 调用
+  - 新增 `src/bootstrap/index-ui-runtime-contract.ts` + `js/core_index_ui_runtime_contract_runtime.js`，`index_ui.js` 委托 replay/settings 弹层 runtime 依赖契约校验
+  - `index_ui.js` 顶部 replay/settings runtime 校验已改为 `resolveIndexUiModalRuntimeContracts` 统一解析，页面层移除重复方法判定分支
+  - `index-ui-runtime-contract` 已扩展 home-guide 依赖契约解析（`CoreHomeGuideRuntime` + startup/settings/page/dom/done-notice/highlight/panel/finish/start/controls/step-flow/step/step-view host runtimes）
+  - `index-ui-runtime-contract` home-guide 契约已纳入 `CoreHomeGuidePageHostRuntime.createHomeGuidePageResolvers` 校验
+  - `index_ui.js` 顶部 home-guide runtime 校验已改为 `resolveIndexUiHomeGuideRuntimeContracts` 统一解析，页面层移除分散的 host 方法判定分支
+  - `index-ui-runtime-contract` 已扩展 core 依赖契约解析（timer/theme/practice-transfer/undo/mobile/top-actions/storage/relayout/startup）
+  - `index-ui-runtime-contract` core 契约已纳入 `CoreMobileHintPageHostRuntime.createMobileHintPageResolvers` 校验
+  - `index-ui-runtime-contract` core 契约已纳入 `CoreMobileTimerboxPageHostRuntime.createMobileTimerboxPageResolvers` 校验
+  - `index-ui-runtime-contract` core 契约已纳入 `CoreTopActionsPageHostRuntime.createTopActionsPageResolvers` 校验
+  - `index-ui-runtime-contract` core 契约已纳入 `CoreMobileViewportPageHostRuntime.createMobileViewportPageResolvers` 校验，`index_ui.js` 顶部不再本地声明 6 个 mobile-viewport 包装函数
+  - `index-ui-runtime-contract` core 契约已纳入 `CoreMobileTopButtonsPageHostRuntime.createMobileTopButtonsPageResolvers` 校验，`index_ui.js` 顶部不再本地声明 mobile top button 的 `ensure*` 包装函数
+  - 新增 `src/bootstrap/index-ui-page-host.ts` + `js/core_index_ui_page_host_runtime.js`，`index_ui.js` 委托页面级全局函数导出绑定与 `DOMContentLoaded` 启动入口编排
+  - `index_ui.js` 已移除页面层 `tryUndoFromUi`、`window.*` 绑定与 `DOMContentLoaded` 内联主流程，统一走 `CoreIndexUiPageHostRuntime.createIndexUiTryUndoHandler/applyIndexUiPageBootstrap` 调用
+  - 新增 `src/bootstrap/index-ui-page-resolvers-host.ts` + `js/core_index_ui_page_resolvers_host_runtime.js`，`index_ui.js` 委托 mobile resolver 聚合装配（viewport/top-buttons/top-actions/hint/timerbox）与契约校验
+  - `index-ui-runtime-contract` core 契约已纳入 `CoreIndexUiPageResolversHostRuntime.createIndexUiMobileResolvers` 校验，`index_ui.js` 页面层移除大段 mobile resolver 创建与方法判定样板
+  - 新增 `src/bootstrap/index-ui-page-actions-host.ts` + `js/core_index_ui_page_actions_host_runtime.js`，`index_ui.js` 委托 settings/practice/home-guide/replay 页面动作 resolver 聚合装配与契约校验
+  - `index-ui-runtime-contract` core 契约已纳入 `CoreIndexUiPageActionsHostRuntime.createIndexUiPageActionResolvers` 校验，避免页面层重复 action resolver 构建与校验样板
+  - `index_ui.js` 已移除 settings/practice/home-guide/replay 大段页面组装样板，当前行数从 374 继续收敛到 203（已达阶段目标 <=220）
+  - `index_ui.js` 顶部 core runtime 校验已改为 `resolveIndexUiCoreRuntimeContracts` 统一解析，页面层移除大段分散方法判定分支
   - 新增 `src/bootstrap/home-guide-settings-host.ts` + `js/core_home_guide_settings_host_runtime.js`，`index_ui.js` 委托首页指引设置项插入/同步/绑定编排
   - `index_ui.js` 的 `initHomeGuideSettingsUI` 已收敛为 `CoreHomeGuideSettingsHostRuntime.applyHomeGuideSettingsUi` 调用
   - 新增 `src/bootstrap/home-guide-dom-host.ts` + `js/core_home_guide_dom_host_runtime.js`，`index_ui.js` 委托首页指引浮层 DOM 创建与状态回写编排
@@ -171,7 +246,8 @@
   - 新增 `src/bootstrap/home-guide-done-notice-host.ts` + `js/core_home_guide_done_notice_host_runtime.js`，`index_ui.js` 委托引导完成提示的 toast 渲染与计时器编排
   - `index_ui.js` 的 `showHomeGuideDoneNotice` 已收敛为 `CoreHomeGuideDoneNoticeHostRuntime.applyHomeGuideDoneNotice` 调用
   - 新增 `src/bootstrap/home-guide-finish-host.ts` + `js/core_home_guide_finish_host_runtime.js`，`index_ui.js` 委托引导结束生命周期状态回写（active/steps/index/fromSettings）与层显示编排
-  - `index_ui.js` 的 `finishHomeGuide` 已收敛为 `CoreHomeGuideFinishHostRuntime.applyHomeGuideFinish` 调用（含 seen 标记、设置同步与完成提示触发）
+  - `index_ui.js` 的 `finishHomeGuide` 已收敛为 `CoreHomeGuideFinishHostRuntime.applyHomeGuideFinishFromContext` 调用（含 seen 标记、设置同步与完成提示触发）
+  - `home-guide-finish-host` 已承接结束态 `localStorage` 上下文解析（`applyHomeGuideFinishFromContext`），`index_ui.js` 不再页面层读取 `localStorage`
   - 新增 `src/bootstrap/home-guide-start-host.ts` + `js/core_home_guide_start_host_runtime.js`，`index_ui.js` 委托引导启动生命周期状态装配（首页 gate、steps 装配、overlay/panel 展示态应用）
   - 新增 `src/bootstrap/home-guide-controls-host.ts` + `js/core_home_guide_controls_host_runtime.js`，`index_ui.js` 委托引导控制按钮绑定与动作派发（prev/next/skip）以及首步触发/设置同步编排
   - `index_ui.js` 的 `startHomeGuide` 已收敛为 `CoreHomeGuideStartHostRuntime.applyHomeGuideStart + CoreHomeGuideControlsHostRuntime.applyHomeGuideControls` 串联调用（页面层移除按钮绑定与 skip 完成态分支）
@@ -187,6 +263,15 @@
   - `index_ui.js` 的 `positionHomeGuidePanel/isElementVisibleForGuide` 已收敛为 `CoreHomeGuidePanelHostRuntime` 调用（页面层移除 panel/viewport/layout 细节分支）
   - 新增 `src/bootstrap/home-guide-startup-host.ts` + `js/core_home_guide_startup_host_runtime.js`，`index_ui.js` 委托首页新手引导自动启动编排（路径判定/存储判定/延迟调度）
   - `index_ui.js` 的 `autoStartHomeGuideIfNeeded` 已收敛为 `CoreHomeGuideStartupHostRuntime.applyHomeGuideAutoStart` 调用
+  - 新增 `src/bootstrap/home-guide-page-host.ts` + `js/core_home_guide_page_host_runtime.js`，`index_ui.js` 委托首页指引页面级编排（settings host + startup host 参数装配）
+  - `home-guide-page-host` 已新增页面级 resolver 创建（`createHomeGuidePageResolvers`），`index_ui.js` 不再本地声明 `isHomePage/getHomeGuideSteps` 包装函数
+  - `home-guide-page-host` 已扩展页面级 resolver（`ensureHomeGuideDom/clearHomeGuideHighlight/elevateHomeGuideTarget/positionHomeGuidePanel/isElementVisibleForGuide/showHomeGuideDoneNotice`），`index_ui.js` 不再本地声明对应包装函数
+  - `home-guide-page-host` 已扩展页面级编排 resolver（`finishHomeGuide/showHomeGuideStep/startHomeGuide`），`index_ui.js` 不再本地声明这三个链路包装函数
+  - `home-guide-page-host` 已扩展生命周期 resolver（`createHomeGuideLifecycleResolvers`），统一承接 `initHomeGuideSettingsUI/autoStartHomeGuideIfNeeded` 页面级上下文装配
+  - `index_ui.js` 的 `initHomeGuideSettingsUI/autoStartHomeGuideIfNeeded` 已改为消费 `createHomeGuideLifecycleResolvers` 返回函数，页面层移除 settings/startup host 入参拼装分支
+  - `home-guide-page-host` 生命周期 resolver 已支持从 `window.closeSettingsModal` 动态解析关闭动作；`index_ui.js` 移除 `closeSettingsModal` 页面层透传包装
+  - `settings-modal-page-host` 与 `home-guide-page-host` 已统一从 window 上下文解析 `syncMobileTimerboxUI/syncHomeGuideSettingsUI`；`index_ui.js` 不再注入这两个 resolver 包装函数
+  - `home-guide-page-host` 已承接自动启动 `localStorage` 上下文解析（`applyHomeGuideAutoStartPageFromContext`），`index_ui.js` 不再页面层读取 `localStorage`
   - 新增 `src/bootstrap/storage.ts` + `js/core_storage_runtime.js`，`index_ui.js` 委托 `localStorage/sessionStorage` 安全获取，不再内联存储访问容错逻辑
   - `legacy_bootstrap_runtime.resolveModeConfig` 现可优先委托 `CoreModeCatalogRuntime.resolveCatalogModeWithDefault`（缺失时自动回退原逻辑）
 
@@ -212,6 +297,15 @@
   - `src/core/grid-scan.ts` + `js/core_grid_scan_runtime.js`
   - `src/core/move-scan.ts` + `js/core_move_scan_runtime.js`
   - `src/core/move-path.ts` + `js/core_move_path_runtime.js`
+    - 已扩展 `getVector/positionsEqual`，`game_manager.js` 对应方法改为优先委托 runtime（保留 fallback）
+  - `src/core/timer-interval.ts` + `js/core_timer_interval_runtime.js`（计时刷新频率决策）
+    - `game_manager.js#getTimerUpdateIntervalMs` 已改为优先委托 runtime（保留 fallback）
+  - `game_manager.js#pretty` 已改为优先委托 `CorePrettyTimeRuntime.formatPrettyTime`（保留 fallback）
+  - `src/core/mode.ts` + `js/core_mode_runtime.js` 已扩展 capped/undo/timer-leaderboard 策略函数
+    - `game_manager.js#isCappedMode/getCappedTargetValue/isProgressiveCapped64Mode` 已改为优先委托 runtime（保留 fallback）
+    - `game_manager.js#getForcedUndoSettingForMode/isUndoAllowedByMode/isUndoSettingFixedForMode/canToggleUndoSetting` 已改为优先委托 runtime（保留 fallback）
+  - `game_manager.js#isTimerLeaderboardAvailableByMode` 已改为优先委托 runtime（保留 fallback）
+  - `game_manager.js#getLegacyModeFromModeKey/resolveModeConfig` 已改为优先委托 `CoreModeRuntime` 的 legacy 映射函数（保留 fallback）
   - `src/core/scoring.ts` + `js/core_scoring_runtime.js`
   - `src/core/merge-effects.ts` + `js/core_merge_effects_runtime.js`
   - `src/core/post-move.ts` + `js/core_post_move_runtime.js`
@@ -236,6 +330,17 @@
     - `src/core/replay-flow.ts` + `js/core_replay_flow_runtime.js`
     - `src/core/replay-control.ts` + `js/core_replay_control_runtime.js`
     - `src/core/replay-loop.ts` + `js/core_replay_loop_runtime.js`
+  - `src/core/game-settings-storage.ts` + `js/core_game_settings_storage_runtime.js`（本地设置存储 helper：flag/json map/payload）
+  - `js/game_manager.js` 新增 `getCoreRuntimeByName` 通用解析器，`getCore*Runtime` 系列方法统一委托，减少重复 runtime 解析样板（行为不变）
+  - `game_manager.js` 已新增 runtime method resolver 映射注册层（`GAME_MANAGER_CORE_RUNTIME_METHOD_RESOLVERS`），`resolveCore*RuntimeMethod` 统一由映射生成。
+  - `game_manager.js` 中 move/grid/scoring/undo/replay/timer/special-rules 相关 runtime 方法调用点已统一改为 `resolveCore*RuntimeMethod(...)` helper，移除分散的字符串式解析样板。
+  - `CoreModeRuntime` 已新增 `resolveModeConfigFromCatalog`，`game_manager.js#resolveModeConfig` 优先一次性委托 mode config 解析（resolvedModeId + modeConfig），并精简 legacy 回退分支（保留 alias + default fallback）。
+  - `CoreModeRuntime` 已新增 `resolveCappedModeState`，`game_manager.js` 的 capped 判定主链（`isCappedMode/getCappedTargetValue/isProgressiveCapped64Mode/applyCappedRowVisibility/getCappedPlaceholderRowValues`）改为统一消费状态快照，减少重复 runtime 入参与回退样板。
+  - `game_manager.js` 新增 `resolveProgressiveCapped64UnlockedState`，`resetProgressiveCapped64Rows/unlockProgressiveCapped64Row` 统一复用 capped64 状态归一化入口；新增 smoke 覆盖 `createProgressiveCapped64UnlockedState` runtime 委托。
+  - `game_manager.js` 已改为通过 `CoreGameSettingsStorageRuntime` 读写统计面板开关、计时器模块视图、撤回设置与会话提交结果（页面层移除 direct localStorage 访问）
+  - `game_manager.js` 新增 `resolveModePolicyContext`，统一 `mode/undo` runtime 解析入参，减少后续策略函数迁移的重复样板
+  - 新增 `js/core_game_manager_common_runtime.js`（逻辑层）、`js/core_game_manager_static_runtime.js`（静态配置层）、`js/core_game_manager_bindings_runtime.js`（绑定层），并在 `index/play/undo/capped/practice/replay` 六页按 `common -> static -> bindings -> game_manager` 顺序加载
+  - `game_manager.js` 已删除大部分内联逻辑，当前收敛为 12 行壳文件（构造器 + 两条初始化调用，行为保持不变）
 
 验收标准：
 - 黄金向量下棋盘状态、分数、胜负状态与旧版一致。
@@ -258,6 +363,7 @@
   - 修复桥接参数顺序，确保 `__legacyEngine.manager === window.game_manager`
   - `src/bridge/adapter-io.ts` + `js/legacy_adapter_io_runtime.js`，接入快照读写与 move-result 事件
   - `src/bridge/adapter-shadow.ts` + `js/core_adapter_shadow_runtime.js`，接入 shadow parity 统计
+  - parity session report / AB diff 已补充 `schemaVersion: 2`，为后续 canary 面板字段扩展与历史兼容留出版本边界
   - session parity report / A-B diff summary 可读、可持久化、可随提交上报
   - `history.html` 已支持 parity 诊断展示、筛选与导出
   - `LocalHistoryStore` 支持 parity 过滤与 burn-in 统计
@@ -347,11 +453,13 @@
 回滚策略：
 - 通过 adapter 策略开关快速切回 legacy。
 
-### M5 - 切换与收口（待完成）
+### M5 - 切换与收口（进行中）
 目标：
 - 默认启用新核心路径，清理重复代码，形成稳定发布。
 
 交付物：
+- 默认 adapter fallback 已切到 `core-adapter`（保留 `engine_adapter_force_legacy=1` 强制回滚优先级）。
+- burn-in 面板新增观测指标：可比较一致率、连续窗口达标率、模式不一致 Top（按 mode_key）。
 - 死代码清理。
 - 文档与运行手册更新。
 - burn-in 结束后打稳定 tag。
@@ -371,11 +479,20 @@
   - 缓解：M2 持续收敛 + smoke 契约化。
 
 ## 5) 每个 PR 的质量门禁
+- Gate 0：`node scripts/game-manager-audit.mjs` 通过（防止 `GameManager.prototype` 回流为长方法体）。
 - Gate 1：`npm run test:smoke` 通过。
 - Gate 2：无未计划的玩法规则变更。
 - Gate 3：PR 描述中明确可回滚路径。
 
+## 5.1) 检查节奏（提效约定）
+- 批次内快速检查（每完成 2-4 个小改动）：
+  - `npm run test:unit`
+  - `npm run test:smoke:adapter`（仅 adapter/burn-in 关键链路）
+- 提交前全量检查（push 前必须）：
+  - `npm run verify:refactor`
+
 ## 6) 立即执行项
-1. 优先执行一键门禁：`npm run verify:refactor`（串行执行 unit/smoke/build）。
-2. 继续削减入口脚本中的重复拼装逻辑，优先抽到 `src/bootstrap/*`。
-3. 按 M5 执行 burn-in：设置 `engine_adapter_default_mode=core-adapter`，持续监控历史页 gate，并保留 `engine_adapter_force_legacy=1` 作为紧急回滚开关。
+1. 优先执行一键门禁：`npm run verify:refactor`（串行执行 game-manager-audit/unit/smoke/build）。
+2. 快速回归可先跑：`npm run test:smoke:adapter`（adapter rollout + history burn-in 相关用例）。
+3. 继续削减入口脚本中的重复拼装逻辑，优先抽到 `src/bootstrap/*`。
+4. 按 M5 执行 burn-in：保持默认 fallback 为 `core-adapter`，持续监控历史页 gate，并保留 `engine_adapter_force_legacy=1` 作为紧急回滚开关。

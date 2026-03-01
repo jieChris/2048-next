@@ -8,8 +8,25 @@ export interface Traversals {
   y: number[];
 }
 
+const DIRECTION_VECTORS: Record<number, CellPoint> = {
+  0: { x: 0, y: -1 },
+  1: { x: 1, y: 0 },
+  2: { x: 0, y: 1 },
+  3: { x: -1, y: 0 }
+};
+
 function isWithinBounds(cell: CellPoint, width: number, height: number): boolean {
   return cell.x >= 0 && cell.x < width && cell.y >= 0 && cell.y < height;
+}
+
+export function getVector(direction: number): CellPoint | undefined {
+  const key = Number(direction);
+  if (!Number.isInteger(key)) return undefined;
+  return DIRECTION_VECTORS[key];
+}
+
+export function positionsEqual(first: CellPoint, second: CellPoint): boolean {
+  return first.x === second.x && first.y === second.y;
 }
 
 export function buildTraversals(width: number, height: number, vector: CellPoint): Traversals {

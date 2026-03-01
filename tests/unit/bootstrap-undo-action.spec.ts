@@ -7,7 +7,8 @@ import {
   resolveUndoCapabilityFromContext,
   resolveUndoModeIdFromBody,
   resolveUndoModeId,
-  tryTriggerUndo
+  tryTriggerUndo,
+  tryTriggerUndoFromContext
 } from "../../src/bootstrap/undo-action";
 
 describe("bootstrap undo action", () => {
@@ -47,6 +48,36 @@ describe("bootstrap undo action", () => {
 
     expect(tryTriggerUndo(manager, -2)).toBe(true);
     expect(manager.move).toHaveBeenCalledWith(-2);
+  });
+
+  it("resolves manager from window context when triggering undo", () => {
+    const manager = {
+      isUndoInteractionEnabled: vi.fn(() => true),
+      move: vi.fn()
+    };
+    const result = tryTriggerUndoFromContext({
+      windowLike: {
+        game_manager: manager
+      },
+      direction: -3
+    });
+
+    expect(manager.move).toHaveBeenCalledWith(-3);
+    expect(result).toEqual({
+      didTrigger: true,
+      managerResolved: true
+    });
+  });
+
+  it("returns safe result when undo manager is missing in context", () => {
+    const result = tryTriggerUndoFromContext({
+      windowLike: null,
+      direction: -1
+    });
+    expect(result).toEqual({
+      didTrigger: false,
+      managerResolved: false
+    });
   });
 
   it("resolves undo mode id by priority", () => {

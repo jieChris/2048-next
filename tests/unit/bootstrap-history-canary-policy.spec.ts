@@ -49,6 +49,13 @@ describe("bootstrap history canary policy", () => {
     expect(snapshot.defaultMode).toBe("core-adapter");
   });
 
+  it("falls back to core-adapter when storage policy is empty", () => {
+    const snapshot = resolveCanaryPolicySnapshot({});
+    expect(snapshot.effectiveMode).toBe("core-adapter");
+    expect(snapshot.modeSource).toBe("fallback");
+    expect(snapshot.forceLegacyEnabled).toBe(false);
+  });
+
   it("reads stored policy keys from runtime output with string-only contract", () => {
     const keys = resolveStoredPolicyKeys({
       runtimeStoredKeys: {

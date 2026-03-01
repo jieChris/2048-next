@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applySpawnValueCount,
+  getActualSecondaryRateText,
   getMergedValue,
+  getSpawnCount,
+  getSpawnStatPair,
   getTheoreticalMaxTile,
+  getTimerMilestoneSlotByValue,
+  getTotalSpawnCount,
   getTimerMilestoneValues,
   nextFibonacci,
   normalizeSpawnTable,
@@ -123,5 +129,67 @@ describe("core rules: getTimerMilestoneValues", () => {
 
   it("returns timer slots for pow2 mode", () => {
     expect(getTimerMilestoneValues("pow2", [16, 32, 64])).toEqual([16, 32, 64]);
+  });
+});
+
+describe("core rules: getTimerMilestoneSlotByValue", () => {
+  it("builds slot map from milestone values and timer slot ids", () => {
+    expect(getTimerMilestoneSlotByValue([13, 21, 34], [16, 32, 64])).toEqual({
+      "13": "16",
+      "21": "32",
+      "34": "64"
+    });
+  });
+
+  it("skips invalid milestone values", () => {
+    expect(getTimerMilestoneSlotByValue([16, 0, -1, 32.5, 64], [16, 32, 64, 128, 256])).toEqual({
+      "16": "16",
+      "64": "256"
+    });
+  });
+});
+
+describe("core rules: spawn stats", () => {
+  it("resolves primary/secondary spawn values from table", () => {
+    expect(getSpawnStatPair([{ value: 4, weight: 10 }, { value: 2, weight: 90 }])).toEqual({
+      primary: 2,
+      secondary: 4
+    });
+    expect(getSpawnStatPair([{ value: 1, weight: 100 }])).toEqual({
+      primary: 1,
+      secondary: 1
+    });
+    expect(getSpawnStatPair(null)).toEqual({
+      primary: 2,
+      secondary: 2
+    });
+  });
+
+  it("computes counts and secondary rate text", () => {
+    const counts = { "1": 9, "2": 1 };
+    expect(getSpawnCount(counts, 1)).toBe(9);
+    expect(getSpawnCount(counts, 2)).toBe(1);
+    expect(getSpawnCount(counts, 4)).toBe(0);
+    expect(getTotalSpawnCount(counts)).toBe(10);
+    expect(
+      getActualSecondaryRateText(counts, [
+        { value: 1, weight: 90 },
+        { value: 2, weight: 10 }
+      ])
+    ).toBe("10.00");
+    expect(getActualSecondaryRateText(null, null)).toBe("0.00");
+  });
+
+  it("applies spawn value count updates with compatibility counters", () => {
+    expect(applySpawnValueCount(null, 2)).toEqual({
+      nextSpawnValueCounts: { "2": 1 },
+      spawnTwos: 1,
+      spawnFours: 0
+    });
+    expect(applySpawnValueCount({ "2": 1, "4": 2 }, 4)).toEqual({
+      nextSpawnValueCounts: { "2": 1, "4": 3 },
+      spawnTwos: 1,
+      spawnFours: 3
+    });
   });
 });

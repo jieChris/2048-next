@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getAvailableCells } from "../../src/core/grid-scan";
+import { buildBoardMatrix, getAvailableCells, getBestTileValue } from "../../src/core/grid-scan";
 
 describe("core grid scan: getAvailableCells", () => {
   it("collects available cells in x-major order", () => {
@@ -48,5 +48,36 @@ describe("core grid scan: getAvailableCells", () => {
   it("returns empty list for invalid dimensions", () => {
     expect(getAvailableCells(0, 4, () => false, () => true)).toEqual([]);
     expect(getAvailableCells(4, -1, () => false, () => true)).toEqual([]);
+  });
+});
+
+describe("core grid scan: buildBoardMatrix", () => {
+  it("builds board rows in y-major order", () => {
+    const board = buildBoardMatrix(3, 2, (x, y) => x + y * 10);
+    expect(board).toEqual([
+      [0, 1, 2],
+      [10, 11, 12]
+    ]);
+  });
+
+  it("sanitizes invalid cell values and invalid sizes", () => {
+    const board = buildBoardMatrix(2, 2, (x, y) => (x === 1 && y === 0 ? Number.NaN : 4));
+    expect(board).toEqual([
+      [4, 0],
+      [4, 4]
+    ]);
+    expect(buildBoardMatrix(0, 2, () => 1)).toEqual([]);
+  });
+});
+
+describe("core grid scan: getBestTileValue", () => {
+  it("returns the best numeric value from matrix", () => {
+    expect(getBestTileValue([[2, 4], [16, 8]])).toBe(16);
+    expect(getBestTileValue([[2, Number.NaN], [0, 8]])).toBe(8);
+  });
+
+  it("returns zero for invalid matrix", () => {
+    expect(getBestTileValue(null)).toBe(0);
+    expect(getBestTileValue([["x"], [null]])).toBe(0);
   });
 });

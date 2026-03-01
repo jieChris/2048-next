@@ -15,6 +15,17 @@
     return typeof value === "function" ? value : null;
   }
 
+  function resolveStorageByName(input) {
+    var source = toRecord(input);
+    var storageRuntime = toRecord(source.storageRuntime);
+    var resolveStorage = asFunction(storageRuntime.resolveStorageByName);
+    if (!resolveStorage) return null;
+    return resolveStorage({
+      windowLike: source.windowLike || null,
+      storageName: source.storageName
+    });
+  }
+
   function resolveBoolean(value) {
     return !!value;
   }
@@ -119,6 +130,34 @@
     };
   }
 
+  function applyHomeGuideFinishFromContext(input) {
+    var source = toRecord(input);
+    var storageLike = resolveStorageByName({
+      storageRuntime: source.storageRuntime,
+      windowLike: source.windowLike || null,
+      storageName: "localStorage"
+    });
+    var finishResult = applyHomeGuideFinish({
+      homeGuideRuntime: source.homeGuideRuntime,
+      homeGuideState: source.homeGuideState,
+      markSeen: source.markSeen,
+      options: source.options,
+      clearHomeGuideHighlight: source.clearHomeGuideHighlight,
+      storageLike: storageLike,
+      seenKey: source.seenKey,
+      syncHomeGuideSettingsUI: source.syncHomeGuideSettingsUI,
+      showHomeGuideDoneNotice: source.showHomeGuideDoneNotice
+    });
+
+    return {
+      didInvokeFinish: finishResult.didFinish,
+      localStorageResolved: !!storageLike,
+      finishResult: finishResult
+    };
+  }
+
   global.CoreHomeGuideFinishHostRuntime = global.CoreHomeGuideFinishHostRuntime || {};
   global.CoreHomeGuideFinishHostRuntime.applyHomeGuideFinish = applyHomeGuideFinish;
+  global.CoreHomeGuideFinishHostRuntime.applyHomeGuideFinishFromContext =
+    applyHomeGuideFinishFromContext;
 })(typeof window !== "undefined" ? window : undefined);

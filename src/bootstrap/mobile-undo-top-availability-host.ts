@@ -33,6 +33,43 @@ function resolveStringValue(value: unknown, fallback: string): string {
   return typeof value === "string" ? value : fallback;
 }
 
+function resolveManagerFromWindow(windowLike: unknown): unknown {
+  const windowRecord = toRecord(windowLike);
+  return windowRecord.game_manager || null;
+}
+
+function resolveGameModeConfigFromWindow(windowLike: unknown): unknown {
+  const windowRecord = toRecord(windowLike);
+  const gameModeConfig = windowRecord.GAME_MODE_CONFIG;
+  if (gameModeConfig && typeof gameModeConfig === "object") {
+    return gameModeConfig;
+  }
+  return null;
+}
+
+function resolveUndoCapabilityState(source: Record<string, unknown>): Record<string, unknown> {
+  const resolveUndoCapabilityStateFn = asFunction<(manager: unknown) => unknown>(
+    source.resolveUndoCapabilityState
+  );
+  if (resolveUndoCapabilityStateFn) {
+    return toRecord(resolveUndoCapabilityStateFn(source.manager || null));
+  }
+
+  const undoActionRuntime = toRecord(source.undoActionRuntime);
+  const resolveUndoCapabilityFromContext = asFunction<(payload: unknown) => unknown>(
+    undoActionRuntime.resolveUndoCapabilityFromContext
+  );
+  if (!resolveUndoCapabilityFromContext) return {};
+
+  return toRecord(
+    resolveUndoCapabilityFromContext({
+      bodyLike: source.bodyLike || null,
+      manager: source.manager || null,
+      globalModeConfig: source.globalModeConfig || null
+    })
+  );
+}
+
 export interface MobileUndoTopAvailabilitySyncResult {
   isScope: boolean;
   hasButton: boolean;
@@ -43,11 +80,20 @@ export interface MobileUndoTopAvailabilitySyncResult {
   didApplyLabel: boolean;
 }
 
+export interface MobileUndoTopAvailabilityFromContextResult {
+  didInvokeSync: boolean;
+  managerResolved: boolean;
+  modeConfigResolved: boolean;
+  syncResult: MobileUndoTopAvailabilitySyncResult;
+}
+
 export function applyMobileUndoTopAvailabilitySync(input: {
   isGamePageScope?: unknown;
   ensureMobileUndoTopButton?: unknown;
   isCompactGameViewport?: unknown;
+  bodyLike?: unknown;
   manager?: unknown;
+  globalModeConfig?: unknown;
   resolveUndoCapabilityState?: unknown;
   undoActionRuntime?: unknown;
   mobileUndoTopRuntime?: unknown;
@@ -85,12 +131,7 @@ export function applyMobileUndoTopAvailabilitySync(input: {
   const isCompactGameViewport = asFunction<() => unknown>(source.isCompactGameViewport);
   const compactViewport = !!(isCompactGameViewport && isCompactGameViewport());
 
-  const resolveUndoCapabilityState = asFunction<(manager: unknown) => unknown>(
-    source.resolveUndoCapabilityState
-  );
-  const undoCapabilityState = toRecord(
-    resolveUndoCapabilityState ? resolveUndoCapabilityState(source.manager || null) : null
-  );
+  const undoCapabilityState = resolveUndoCapabilityState(source);
   const modeUndoCapable = !!undoCapabilityState.modeUndoCapable;
 
   const undoActionRuntime = toRecord(source.undoActionRuntime);
@@ -155,5 +196,40 @@ export function applyMobileUndoTopAvailabilitySync(input: {
     canUndoNow,
     didApply: true,
     didApplyLabel
+  };
+}
+
+export function applyMobileUndoTopAvailabilitySyncFromContext(input: {
+  isGamePageScope?: unknown;
+  ensureMobileUndoTopButton?: unknown;
+  isCompactGameViewport?: unknown;
+  bodyLike?: unknown;
+  windowLike?: unknown;
+  resolveUndoCapabilityState?: unknown;
+  undoActionRuntime?: unknown;
+  mobileUndoTopRuntime?: unknown;
+  fallbackLabel?: unknown;
+}): MobileUndoTopAvailabilityFromContextResult {
+  const source = toRecord(input);
+  const manager = resolveManagerFromWindow(source.windowLike);
+  const globalModeConfig = resolveGameModeConfigFromWindow(source.windowLike);
+  const syncResult = applyMobileUndoTopAvailabilitySync({
+    isGamePageScope: source.isGamePageScope,
+    ensureMobileUndoTopButton: source.ensureMobileUndoTopButton,
+    isCompactGameViewport: source.isCompactGameViewport,
+    bodyLike: source.bodyLike,
+    manager,
+    globalModeConfig,
+    resolveUndoCapabilityState: source.resolveUndoCapabilityState,
+    undoActionRuntime: source.undoActionRuntime,
+    mobileUndoTopRuntime: source.mobileUndoTopRuntime,
+    fallbackLabel: source.fallbackLabel
+  });
+
+  return {
+    didInvokeSync: syncResult.didApply,
+    managerResolved: !!manager,
+    modeConfigResolved: !!globalModeConfig,
+    syncResult
   };
 }

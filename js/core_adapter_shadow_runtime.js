@@ -232,6 +232,7 @@
     );
 
     return {
+      schemaVersion: 2,
       modeKey: modeKey,
       adapterMode: adapterMode,
       hasParityState: !!parity,
@@ -279,6 +280,7 @@
       isScoreMatch === true;
 
     return {
+      schemaVersion: 2,
       modeKey: modeKey,
       hasLegacyReport: !!legacyReport,
       hasCoreReport: !!coreReport,

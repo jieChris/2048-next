@@ -26,6 +26,11 @@
     return Number.isFinite(value) && Number(value) > 0 ? Number(value) : fallback;
   }
 
+  function resolveManagerFromWindow(windowLike) {
+    var windowRecord = toRecord(windowLike);
+    return windowRecord.game_manager || null;
+  }
+
   function applyResponsiveRelayoutRequest(input) {
     var source = toRecord(input);
     var runtime = toRecord(source.responsiveRelayoutRuntime);
@@ -95,7 +100,34 @@
     };
   }
 
+  function applyResponsiveRelayoutRequestFromContext(input) {
+    var source = toRecord(input);
+    var manager = resolveManagerFromWindow(source.windowLike);
+    var requestResult = applyResponsiveRelayoutRequest({
+      responsiveRelayoutRuntime: source.responsiveRelayoutRuntime,
+      isTimerboxMobileScope: source.isTimerboxMobileScope,
+      existingTimer: source.existingTimer,
+      delayMs: source.delayMs,
+      clearTimeoutLike: source.clearTimeoutLike,
+      setTimeoutLike: source.setTimeoutLike,
+      syncMobileHintUI: source.syncMobileHintUI,
+      syncMobileTopActionsPlacement: source.syncMobileTopActionsPlacement,
+      syncPracticeTopActionsPlacement: source.syncPracticeTopActionsPlacement,
+      syncMobileUndoTopButtonAvailability: source.syncMobileUndoTopButtonAvailability,
+      syncMobileTimerboxUI: source.syncMobileTimerboxUI,
+      manager: manager
+    });
+
+    return {
+      didInvokeRequest: requestResult.didRequest,
+      managerResolved: !!manager,
+      requestResult: requestResult
+    };
+  }
+
   global.CoreResponsiveRelayoutHostRuntime = global.CoreResponsiveRelayoutHostRuntime || {};
   global.CoreResponsiveRelayoutHostRuntime.applyResponsiveRelayoutRequest =
     applyResponsiveRelayoutRequest;
+  global.CoreResponsiveRelayoutHostRuntime.applyResponsiveRelayoutRequestFromContext =
+    applyResponsiveRelayoutRequestFromContext;
 })(typeof window !== "undefined" ? window : undefined);

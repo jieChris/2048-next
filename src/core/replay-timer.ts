@@ -29,6 +29,14 @@ export interface ReplayTickStopInput {
   replayMovesLength: number;
 }
 
+export interface DurationMsInput {
+  timerStatus?: number | null;
+  startTimeMs?: number | null;
+  accumulatedTime?: number | null;
+  sessionStartedAt?: number | null;
+  nowMs?: number | null;
+}
+
 export function computeReplayPauseState(): ReplayPauseState {
   return {
     isPaused: true,
@@ -54,4 +62,22 @@ export function computeReplaySpeedState(input: ReplaySpeedStateInput): ReplaySpe
 
 export function shouldStopReplayAtTick(input: ReplayTickStopInput): boolean {
   return input.replayIndex >= input.replayMovesLength;
+}
+
+export function resolveDurationMs(input: DurationMsInput): number {
+  const nowRaw = Number(input.nowMs);
+  const nowMs = Number.isFinite(nowRaw) ? nowRaw : Date.now();
+  let ms = 0;
+  if (input.timerStatus === 1 && Number.isFinite(Number(input.startTimeMs))) {
+    ms = nowMs - Number(input.startTimeMs);
+  } else {
+    ms = Number(input.accumulatedTime) || 0;
+  }
+  if (!Number.isFinite(ms) || ms < 0) {
+    const startedRaw = Number(input.sessionStartedAt);
+    const startedAt = Number.isFinite(startedRaw) && startedRaw > 0 ? startedRaw : nowMs;
+    ms = nowMs - startedAt;
+  }
+  ms = Math.floor(ms);
+  return ms < 0 ? 0 : ms;
 }
