@@ -21,6 +21,7 @@ describe("bootstrap history startup host", () => {
       started: true,
       missingStore: false,
       didInitModeFilter: true,
+      didInitBurnInThresholds: false,
       didBindControls: true
     });
     expect(initModeFilter).toHaveBeenCalledTimes(1);
@@ -33,6 +34,7 @@ describe("bootstrap history startup host", () => {
     const setStatus = vi.fn();
     const loadHistory = vi.fn();
     const applyHistoryModeFilterInitialization = vi.fn();
+    const applyHistoryBurnInThresholdInitialization = vi.fn();
     const bindHistoryControls = vi.fn();
     const getElementById = vi.fn();
 
@@ -42,6 +44,7 @@ describe("bootstrap history startup host", () => {
       loadHistory,
       historyControlsHostRuntime: {
         applyHistoryModeFilterInitialization,
+        applyHistoryBurnInThresholdInitialization,
         bindHistoryControls
       },
       getElementById,
@@ -72,9 +75,11 @@ describe("bootstrap history startup host", () => {
       started: true,
       missingStore: false,
       didInitModeFilter: true,
+      didInitBurnInThresholds: true,
       didBindControls: true
     });
     expect(applyHistoryModeFilterInitialization).toHaveBeenCalledTimes(1);
+    expect(applyHistoryBurnInThresholdInitialization).toHaveBeenCalledTimes(1);
     expect(bindHistoryControls).toHaveBeenCalledTimes(1);
     expect(loadHistory).toHaveBeenCalledWith(true);
     expect(setStatus).not.toHaveBeenCalled();
@@ -97,6 +102,7 @@ describe("bootstrap history startup host", () => {
       started: false,
       missingStore: true,
       didInitModeFilter: false,
+      didInitBurnInThresholds: false,
       didBindControls: false
     });
     expect(setStatus).toHaveBeenCalledWith("本地历史模块未加载", true);

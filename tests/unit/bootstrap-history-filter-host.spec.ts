@@ -10,7 +10,9 @@ describe("bootstrap history filter host", () => {
       sortBy: "ended_desc",
       adapterParityFilter: "all",
       burnInWindow: "200",
-      sustainedWindows: "3"
+      sustainedWindows: "3",
+      burnInMinComparable: "50",
+      burnInMaxMismatchRate: "1"
     };
     const applyHistoryFilterState = vi.fn();
 
@@ -21,7 +23,9 @@ describe("bootstrap history filter host", () => {
         "history-sort": { value: "ended_asc" },
         "history-adapter-filter": { value: "mismatch" },
         "history-burnin-window": { value: "300" },
-        "history-sustained-window": { value: "5" }
+        "history-sustained-window": { value: "5" },
+        "history-burnin-min-comparable": { value: "40" },
+        "history-burnin-max-mismatch-rate": { value: "0.5" }
       };
       return values[id] || null;
     });
@@ -43,7 +47,9 @@ describe("bootstrap history filter host", () => {
       sortByRaw: "ended_asc",
       adapterParityFilterRaw: "mismatch",
       burnInWindowRaw: "300",
-      sustainedWindowsRaw: "5"
+      sustainedWindowsRaw: "5",
+      minComparableRaw: "40",
+      maxMismatchRateRaw: "0.5"
     });
   });
 
@@ -62,7 +68,9 @@ describe("bootstrap history filter host", () => {
         sort: { value: "ended_desc" },
         adapter: { value: "all" },
         burnin: { value: "100" },
-        sustained: { value: "2" }
+        sustained: { value: "2" },
+        minComparable: { value: "20" },
+        maxMismatchRate: { value: "0.3" }
       };
       return values[id] || null;
     });
@@ -78,7 +86,9 @@ describe("bootstrap history filter host", () => {
       sortElementId: "sort",
       adapterFilterElementId: "adapter",
       burnInWindowElementId: "burnin",
-      sustainedWindowElementId: "sustained"
+      sustainedWindowElementId: "sustained",
+      minComparableElementId: "minComparable",
+      maxMismatchRateElementId: "maxMismatchRate"
     });
 
     expect(applyHistoryFilterState).toHaveBeenCalledWith({}, {
@@ -87,7 +97,9 @@ describe("bootstrap history filter host", () => {
       sortByRaw: "ended_desc",
       adapterParityFilterRaw: "all",
       burnInWindowRaw: "100",
-      sustainedWindowsRaw: "2"
+      sustainedWindowsRaw: "2",
+      minComparableRaw: "20",
+      maxMismatchRateRaw: "0.3"
     });
   });
 });

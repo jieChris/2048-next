@@ -314,6 +314,11 @@ function createWindowLike() {
       applyHistoryModeFilterInitialization: () => ({
         didInit: true
       }),
+      applyHistoryBurnInThresholdInitialization: () => ({
+        didInit: true,
+        didApplyMinComparable: true,
+        didApplyMaxMismatchRate: true
+      }),
       bindHistoryControls: () => ({
         didBind: true
       })
@@ -519,6 +524,22 @@ describe("bootstrap history runtime contract", () => {
 
     expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
       "CoreHistoryModeFilterHostRuntime is required"
+    );
+  });
+
+  it("throws exact error when controls host runtime misses required function", () => {
+    const source = createWindowLike();
+    source.CoreHistoryControlsHostRuntime = {
+      applyHistoryModeFilterInitialization: () => ({
+        didInit: true
+      }),
+      bindHistoryControls: () => ({
+        didBind: true
+      })
+    };
+
+    expect(() => resolveHistoryRuntimeContracts(source)).toThrowError(
+      "CoreHistoryControlsHostRuntime is required"
     );
   });
 });

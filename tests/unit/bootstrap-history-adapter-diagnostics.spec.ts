@@ -69,8 +69,8 @@ describe("bootstrap history adapter diagnostics", () => {
 
     expect(state.hasDiagnostics).toBe(true);
     expect(state.lines).toEqual([
-      "当前 core-adapter · 快照分数 260 · undoUsed 1 · scoreDelta +4 · 对齐 否",
-      "A/B comparable 是 · scoreΔ -2 · undoΔ 0 · overΔ +1"
+      "Report(v1) 当前 core-adapter · 快照分数 260 · undoUsed 1 · scoreDelta +4 · 对齐 否",
+      "Diff(v1) A/B comparable 是 · scoreΔ -2 · undoΔ 0 · overΔ +1 · undoEvtΔ - · wonEvtΔ - · scoreMatch - · 双侧对齐 - · 原因 -"
     ]);
   });
 
@@ -85,7 +85,7 @@ describe("bootstrap history adapter diagnostics", () => {
       }
     });
 
-    expect(state.lines).toEqual(["当前 - · 快照分数 - · undoUsed 0 · scoreDelta - · 对齐 -"]);
+    expect(state.lines).toEqual(["Report(v1) 当前 - · 快照分数 - · undoUsed 0 · scoreDelta - · 对齐 -"]);
   });
 
   it("prefers v2 payloads over v1 when both exist", () => {
@@ -116,14 +116,67 @@ describe("bootstrap history adapter diagnostics", () => {
         comparable: true,
         scoreDelta: 0,
         undoUsedDelta: 0,
-        overEventsDelta: 0
+        overEventsDelta: 0,
+        undoEventsDelta: 1,
+        wonEventsDelta: 0,
+        isScoreMatch: true,
+        bothScoreAligned: true,
+        hasLegacyReport: true,
+        hasCoreReport: true
       }
     });
 
     expect(state.hasDiagnostics).toBe(true);
     expect(state.lines).toEqual([
-      "当前 core-adapter · 快照分数 300 · undoUsed 2 · scoreDelta +1 · 对齐 是",
-      "A/B comparable 是 · scoreΔ 0 · undoΔ 0 · overΔ 0"
+      "Report(v2) 当前 core-adapter · 快照分数 300 · undoUsed 2 · scoreDelta +1 · 对齐 是",
+      "Diff(v2) A/B comparable 是 · scoreΔ 0 · undoΔ 0 · overΔ 0 · undoEvtΔ +1 · wonEvtΔ 0 · scoreMatch 是 · 双侧对齐 是 · 原因 -"
+    ]);
+  });
+
+  it("falls back schema tag to default when payload schemaVersion is invalid", () => {
+    const state = resolveHistoryAdapterDiagnosticsState({
+      adapter_parity_report_v2: {
+        schemaVersion: 0,
+        adapterMode: "core-adapter",
+        lastScoreFromSnapshot: 128,
+        undoUsedFromSnapshot: 0,
+        scoreDelta: 0,
+        isScoreAligned: true
+      },
+      adapter_parity_ab_diff_v2: {
+        schemaVersion: "bad",
+        comparable: true,
+        scoreDelta: 0,
+        undoUsedDelta: 0,
+        overEventsDelta: 0
+      }
+    });
+
+    expect(state.lines).toEqual([
+      "Report(v2) 当前 core-adapter · 快照分数 128 · undoUsed 0 · scoreDelta 0 · 对齐 是",
+      "Diff(v2) A/B comparable 是 · scoreΔ 0 · undoΔ 0 · overΔ 0 · undoEvtΔ - · wonEvtΔ - · scoreMatch - · 双侧对齐 - · 原因 -"
+    ]);
+  });
+
+  it("formats non-comparable reason from diff availability flags", () => {
+    const state = resolveHistoryAdapterDiagnosticsState({
+      adapter_parity_ab_diff_v2: {
+        schemaVersion: 2,
+        comparable: false,
+        hasLegacyReport: false,
+        hasCoreReport: true,
+        scoreDelta: null,
+        undoUsedDelta: null,
+        overEventsDelta: null,
+        undoEventsDelta: null,
+        wonEventsDelta: null,
+        isScoreMatch: null,
+        bothScoreAligned: null
+      }
+    });
+
+    expect(state.lines).toEqual([
+      "Diff(v2) A/B comparable 否 · scoreΔ 0 · undoΔ 0 · overΔ 0 · undoEvtΔ 0 · wonEvtΔ 0 · scoreMatch - · 双侧对齐 - · 原因 缺少 legacy 报告"
     ]);
   });
 

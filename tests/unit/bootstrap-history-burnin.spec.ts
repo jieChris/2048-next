@@ -25,7 +25,10 @@ describe("bootstrap history burn-in", () => {
       mismatchRateText: "-",
       comparableMatchRateText: "-",
       sustainedPassRateText: "-",
+      sustainedTrendText: "-",
       topMismatchModesText: "-",
+      cutoverReadinessText: "观察中：样本仍不足，继续 burn-in",
+      cutoverReadinessClass: "history-burnin-gate-warn",
       maxMismatchRateText: "-"
     });
   });
@@ -44,6 +47,11 @@ describe("bootstrap history burn-in", () => {
       match: 16,
       mismatch: 4,
       mismatchRate: 2.5,
+      sustainedWindowDetails: [
+        { mismatchRate: 0.8, gateStatus: "pass" },
+        { mismatchRate: 1.2, gateStatus: "fail" },
+        { mismatchRate: null, gateStatus: "insufficient_sample" }
+      ],
       topMismatchModes: [
         { modeKey: "standard_4x4_pow2_no_undo", mismatchCount: 3, comparableCount: 10 },
         { mode_key: "practice_legacy", mismatchCount: 1, comparableCount: 10 }
@@ -65,9 +73,12 @@ describe("bootstrap history burn-in", () => {
     expect(state.mismatchRateText).toBe("2.50%");
     expect(state.comparableMatchRateText).toBe("80.00%");
     expect(state.sustainedPassRateText).toBe("33.33%");
+    expect(state.sustainedTrendText).toBe("W1 0.80%(达标) | W2 1.20%(未达标) | W3 0.00%(样本不足)");
     expect(state.topMismatchModesText).toBe(
       "standard_4x4_pow2_no_undo(3/10)，practice_legacy(1/10)"
     );
+    expect(state.cutoverReadinessText).toBe("阻塞：存在不一致风险，暂不放量");
+    expect(state.cutoverReadinessClass).toBe("history-burnin-gate-fail");
     expect(state.maxMismatchRateText).toBe("1.00%");
   });
 
@@ -99,8 +110,42 @@ describe("bootstrap history burn-in", () => {
     expect(state.mismatchRateText).toBe("-");
     expect(state.comparableMatchRateText).toBe("-");
     expect(state.sustainedPassRateText).toBe("-");
+    expect(state.sustainedTrendText).toBe("-");
     expect(state.topMismatchModesText).toBe("-");
+    expect(state.cutoverReadinessText).toBe("观察中：样本仍不足，继续 burn-in");
+    expect(state.cutoverReadinessClass).toBe("history-burnin-gate-warn");
     expect(state.maxMismatchRateText).toBe("-");
+  });
+
+  it("marks cutover as ready when both single-window and sustained gates pass", () => {
+    const state = resolveHistoryBurnInSummaryState({
+      gateStatus: "pass",
+      sustainedGateStatus: "pass",
+      comparable: 100,
+      match: 100,
+      mismatch: 0,
+      sustainedConsecutivePass: 3,
+      sustainedWindows: 3,
+      mismatchRate: 0
+    });
+    expect(state.cutoverReadinessText).toBe("可切换：当前 burn-in 指标达标");
+    expect(state.cutoverReadinessClass).toBe("history-burnin-gate-pass");
+  });
+
+  it("formats decimal mismatch threshold text", () => {
+    const state = resolveHistoryBurnInSummaryState({
+      gateStatus: "pass",
+      sustainedGateStatus: "pass",
+      comparable: 200,
+      match: 199,
+      mismatch: 1,
+      mismatchRate: 0.5,
+      maxMismatchRate: 0.5,
+      sustainedConsecutivePass: 2,
+      sustainedWindows: 2
+    });
+    expect(state.mismatchRateText).toBe("0.50%");
+    expect(state.maxMismatchRateText).toBe("0.50%");
   });
 
   it("returns mismatch focus action state", () => {
@@ -156,6 +201,11 @@ describe("bootstrap history burn-in", () => {
       match: 14,
       mismatch: 4,
       mismatchRate: 2.5,
+      sustainedWindowDetails: [
+        { mismatchRate: 0.8, gateStatus: "pass" },
+        { mismatchRate: 1.2, gateStatus: "fail" },
+        { mismatchRate: null, gateStatus: "insufficient_sample" }
+      ],
       topMismatchModes: [{ modeKey: "standard_4x4_pow2_no_undo", mismatchCount: 4, comparableCount: 18 }],
       maxMismatchRate: 1
     });
@@ -174,7 +224,9 @@ describe("bootstrap history burn-in", () => {
     expect(html).toContain("仅看不一致");
     expect(html).toContain("一致率 77.78%");
     expect(html).toContain("不一致率 2.50%");
+    expect(html).toContain("窗口趋势: W1 0.80%(达标) | W2 1.20%(未达标) | W3 0.00%(样本不足)");
     expect(html).toContain("模式不一致 Top: standard_4x4_pow2_no_undo(4/18)");
+    expect(html).toContain("阻塞：存在不一致风险，暂不放量");
   });
 
   it("builds empty burn-in panel html when summary state is unavailable", () => {

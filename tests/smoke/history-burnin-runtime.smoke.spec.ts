@@ -113,6 +113,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.burnInCallCount).toBeGreaterThan(0);
     expect(snapshot.panelHtmlCallCount).toBeGreaterThan(0);
     expect(snapshot.burnInText).toContain("Cutover Burn-in 统计");
+    expect(snapshot.burnInText).toContain("观察中：样本仍不足，继续 burn-in");
+    expect(snapshot.burnInText).toContain("模式不一致 Top:");
   });
 
   test("history page delegates burn-in mismatch focus action to runtime helper", async ({ page }) => {

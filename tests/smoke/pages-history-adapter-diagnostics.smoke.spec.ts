@@ -101,14 +101,27 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.locator(".history-adapter-diagnostics")).toHaveCount(2);
+    await expect(page.locator("#history-list")).toContainText("Report(v2)");
+    await expect(page.locator("#history-list")).toContainText("Diff(v2)");
+    await expect(page.locator("#history-list")).toContainText("Report(v1)");
+    await expect(page.locator("#history-list")).toContainText("Diff(v1)");
+    await expect(page.locator("#history-list")).toContainText("双侧对齐");
+    await expect(page.locator("#history-list")).toContainText("scoreMatch");
+    await expect(page.locator("#history-list")).toContainText("原因");
     await expect(page.locator(".history-adapter-badge-mismatch")).toHaveCount(1);
     await expect(page.locator(".history-adapter-badge-match")).toHaveCount(1);
     await expect(page.locator("#history-export-mismatch-btn")).toBeVisible();
     await expect(page.locator("#history-burnin-summary")).toContainText("可比较样本 2");
     await expect(page.locator("#history-burnin-summary")).toContainText("不一致 1");
+    await expect(page.locator("#history-burnin-summary")).toContainText("一致率 50.00%");
     await expect(page.locator("#history-burnin-summary")).toContainText("单窗口: 样本不足");
     await expect(page.locator("#history-burnin-summary")).toContainText("连续窗口: 窗口不足");
+    await expect(page.locator("#history-burnin-summary")).toContainText("观察中：样本仍不足，继续 burn-in");
     await expect(page.locator("#history-burnin-summary")).toContainText("连续门槛: 最近 3 个窗口");
+    await expect(page.locator("#history-burnin-summary")).toContainText("连续通过 0/3（达标率 0.00%）");
+    await expect(page.locator("#history-burnin-summary")).toContainText(
+      "模式不一致 Top: standard_4x4_pow2_no_undo(1/2)"
+    );
     await expect(page.locator(".history-burnin-focus-mismatch")).toHaveCount(1);
 
     await page.click(".history-burnin-focus-mismatch");
@@ -120,7 +133,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await expect(page.locator("#history-canary-policy")).toContainText("Canary 策略控制");
     await expect(page.locator("#history-canary-policy")).toContainText("当前有效模式: core-adapter");
-    await expect(page.locator("#history-canary-policy")).toContainText("生效来源: 默认回退");
+    await expect(page.locator("#history-canary-policy")).toContainText(
+      "生效来源: 默认回退（core-adapter）"
+    );
 
     await page.click("[data-action='apply_canary']");
     await expect(page.locator("#history-canary-policy")).toContainText("当前有效模式: core-adapter");
@@ -148,7 +163,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.click("[data-action='reset_policy']");
     await expect(page.locator("#history-canary-policy")).toContainText("当前有效模式: core-adapter");
-    await expect(page.locator("#history-canary-policy")).toContainText("生效来源: 默认回退");
+    await expect(page.locator("#history-canary-policy")).toContainText(
+      "生效来源: 默认回退（core-adapter）"
+    );
+    await expect(page.locator("#history-status")).toContainText(
+      "已重置策略到基线（默认回退 core-adapter、无强制回滚）"
+    );
     await expect(page.locator("#history-canary-policy")).toContainText(
       "storage(engine_adapter_default_mode)=-"
     );

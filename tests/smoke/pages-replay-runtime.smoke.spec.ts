@@ -87,6 +87,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
     await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.getModeConfigFromCatalog === "function";
+    });
 
     const snapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -227,6 +231,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok(), "Capped response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
     await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.resolveProgressiveCapped64UnlockedState === "function";
+    });
 
     const snapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;

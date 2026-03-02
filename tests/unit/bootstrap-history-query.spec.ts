@@ -17,7 +17,9 @@ describe("bootstrap history query", () => {
       sortByRaw: "ended_asc",
       adapterParityFilterRaw: "mismatch",
       burnInWindowRaw: " 300 ",
-      sustainedWindowsRaw: " 5 "
+      sustainedWindowsRaw: " 5 ",
+      minComparableRaw: " 40 ",
+      maxMismatchRateRaw: " 0.5 "
     });
 
     expect(filter).toEqual({
@@ -26,7 +28,9 @@ describe("bootstrap history query", () => {
       sortBy: "ended_asc",
       adapterParityFilter: "mismatch",
       burnInWindow: "300",
-      sustainedWindows: "5"
+      sustainedWindows: "5",
+      burnInMinComparable: "40",
+      burnInMaxMismatchRate: "0.5"
     });
   });
 
@@ -62,7 +66,9 @@ describe("bootstrap history query", () => {
       sortByRaw: "score_desc",
       adapterParityFilterRaw: "match",
       burnInWindowRaw: "500",
-      sustainedWindowsRaw: "2"
+      sustainedWindowsRaw: "2",
+      minComparableRaw: "20",
+      maxMismatchRateRaw: "0.3"
     });
 
     expect(ok).toBe(true);
@@ -74,7 +80,9 @@ describe("bootstrap history query", () => {
       sortBy: "score_desc",
       adapterParityFilter: "match",
       burnInWindow: "500",
-      sustainedWindows: "2"
+      sustainedWindows: "2",
+      burnInMinComparable: "20",
+      burnInMaxMismatchRate: "0.3"
     });
   });
 
@@ -113,6 +121,20 @@ describe("bootstrap history query", () => {
       disablePrev: false,
       disableNext: true
     });
+  });
+
+  it("supports decimal burn-in mismatch threshold and falls back for invalid input", () => {
+    const decimal = resolveHistoryBurnInQuery({
+      maxMismatchRate: "0.5",
+      minComparable: "40"
+    });
+    const fallback = resolveHistoryBurnInQuery({
+      maxMismatchRate: "-1"
+    });
+
+    expect(decimal.max_mismatch_rate).toBe(0.5);
+    expect(decimal.min_comparable).toBe(40);
+    expect(fallback.max_mismatch_rate).toBe(1);
   });
 
   it("reads list result via local history store source with fallback", () => {
