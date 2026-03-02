@@ -11,8 +11,16 @@
     return typeof value === "function" ? value : null;
   }
 
-  function asNumber(value, fallback) {
-    return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  function asPositiveInteger(value, fallback) {
+    var parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+    return Math.floor(parsed);
+  }
+
+  function asPositiveNumber(value, fallback) {
+    var parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+    return parsed;
   }
 
   function resolveHistoryLoadPipeline(input) {
@@ -58,8 +66,18 @@
             sortBy: state.sortBy,
             sampleLimit: state.burnInWindow,
             sustainedWindows: state.sustainedWindows,
-            minComparable: asNumber(source.burnInMinComparable, 50),
-            maxMismatchRate: asNumber(source.burnInMaxMismatchRate, 1)
+            minComparable: asPositiveInteger(
+              state.burnInMinComparable !== undefined
+                ? state.burnInMinComparable
+                : source.burnInMinComparable,
+              50
+            ),
+            maxMismatchRate: asPositiveNumber(
+              state.burnInMaxMismatchRate !== undefined
+                ? state.burnInMaxMismatchRate
+                : source.burnInMaxMismatchRate,
+              1
+            )
           }
         })
       : null;

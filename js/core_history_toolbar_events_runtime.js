@@ -37,7 +37,9 @@
       "history-sort",
       "history-adapter-filter",
       "history-burnin-window",
-      "history-sustained-window"
+      "history-sustained-window",
+      "history-burnin-min-comparable",
+      "history-burnin-max-mismatch-rate"
     ];
   }
 

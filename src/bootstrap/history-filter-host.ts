@@ -29,6 +29,8 @@ export function applyHistoryFilterStateFromInputs(input: {
   adapterFilterElementId?: unknown;
   burnInWindowElementId?: unknown;
   sustainedWindowElementId?: unknown;
+  minComparableElementId?: unknown;
+  maxMismatchRateElementId?: unknown;
 }): HistoryFilterHostApplyResult {
   const source = toRecord(input);
   const runtime = toRecord(source.historyQueryRuntime);
@@ -58,6 +60,14 @@ export function applyHistoryFilterStateFromInputs(input: {
     typeof source.sustainedWindowElementId === "string"
       ? source.sustainedWindowElementId
       : "history-sustained-window";
+  const minComparableElementId =
+    typeof source.minComparableElementId === "string"
+      ? source.minComparableElementId
+      : "history-burnin-min-comparable";
+  const maxMismatchRateElementId =
+    typeof source.maxMismatchRateElementId === "string"
+      ? source.maxMismatchRateElementId
+      : "history-burnin-max-mismatch-rate";
 
   applyHistoryFilterState(source.state, {
     modeKeyRaw: readElementValue(getElementById, modeElementId),
@@ -65,7 +75,9 @@ export function applyHistoryFilterStateFromInputs(input: {
     sortByRaw: readElementValue(getElementById, sortElementId),
     adapterParityFilterRaw: readElementValue(getElementById, adapterFilterElementId),
     burnInWindowRaw: readElementValue(getElementById, burnInWindowElementId),
-    sustainedWindowsRaw: readElementValue(getElementById, sustainedWindowElementId)
+    sustainedWindowsRaw: readElementValue(getElementById, sustainedWindowElementId),
+    minComparableRaw: readElementValue(getElementById, minComparableElementId),
+    maxMismatchRateRaw: readElementValue(getElementById, maxMismatchRateElementId)
   });
 
   return {

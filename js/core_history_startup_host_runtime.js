@@ -25,6 +25,9 @@
     var applyHistoryModeFilterInitialization = asFunction(
       historyControlsHostRuntime.applyHistoryModeFilterInitialization
     );
+    var applyHistoryBurnInThresholdInitialization = asFunction(
+      historyControlsHostRuntime.applyHistoryBurnInThresholdInitialization
+    );
     var bindHistoryControls = asFunction(historyControlsHostRuntime.bindHistoryControls);
 
     if (!source.localHistoryStore) {
@@ -33,6 +36,7 @@
         started: false,
         missingStore: true,
         didInitModeFilter: false,
+        didInitBurnInThresholds: false,
         didBindControls: false
       };
     }
@@ -51,6 +55,15 @@
     } else if (initModeFilter) {
       initModeFilter();
       didInitModeFilter = true;
+    }
+
+    var didInitBurnInThresholds = false;
+    if (applyHistoryBurnInThresholdInitialization) {
+      applyHistoryBurnInThresholdInitialization({
+        getElementById: source.getElementById,
+        state: source.state
+      });
+      didInitBurnInThresholds = true;
     }
 
     var didBindControls = false;
@@ -88,6 +101,7 @@
       started: true,
       missingStore: false,
       didInitModeFilter: didInitModeFilter,
+      didInitBurnInThresholds: didInitBurnInThresholds,
       didBindControls: didBindControls
     };
   }

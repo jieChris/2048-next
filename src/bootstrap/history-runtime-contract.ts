@@ -420,7 +420,11 @@ export function resolveHistoryRuntimeContracts(
   );
   const historyControlsHostRuntime = requireRuntimeFunctions(
     source.CoreHistoryControlsHostRuntime,
-    ["applyHistoryModeFilterInitialization", "bindHistoryControls"],
+    [
+      "applyHistoryModeFilterInitialization",
+      "applyHistoryBurnInThresholdInitialization",
+      "bindHistoryControls"
+    ],
     "CoreHistoryControlsHostRuntime is required"
   );
   const historyStartupHostRuntime = requireRuntimeFunctions(

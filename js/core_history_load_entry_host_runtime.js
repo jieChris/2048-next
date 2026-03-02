@@ -44,6 +44,8 @@
       historyQueryRuntime: source.historyQueryRuntime,
       getElementById: source.getElementById
     });
+    var persistHistoryFilterState = asFunction(source.persistHistoryFilterState);
+    if (persistHistoryFilterState) persistHistoryFilterState();
 
     var historyLoadHostRuntime = toRecord(source.historyLoadHostRuntime);
     var applyHistoryLoadWithPager = asFunction(historyLoadHostRuntime.applyHistoryLoadWithPager);

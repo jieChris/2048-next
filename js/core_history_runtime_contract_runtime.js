@@ -327,9 +327,13 @@
       ["applyHistoryModeFilterOptionsRender"],
       "CoreHistoryModeFilterHostRuntime is required"
     );
-    var historyControlsHostRuntime = requireRuntimeFunctions(
+  var historyControlsHostRuntime = requireRuntimeFunctions(
       source.CoreHistoryControlsHostRuntime,
-      ["applyHistoryModeFilterInitialization", "bindHistoryControls"],
+      [
+        "applyHistoryModeFilterInitialization",
+        "applyHistoryBurnInThresholdInitialization",
+        "bindHistoryControls"
+      ],
       "CoreHistoryControlsHostRuntime is required"
     );
     var historyStartupHostRuntime = requireRuntimeFunctions(

@@ -14,6 +14,12 @@ export interface HistoryControlsModeFilterInitResult {
   didInit: boolean;
 }
 
+export interface HistoryControlsBurnInThresholdInitResult {
+  didInit: boolean;
+  didApplyMinComparable: boolean;
+  didApplyMaxMismatchRate: boolean;
+}
+
 export interface HistoryControlsBindResult {
   didBind: boolean;
 }
@@ -48,6 +54,56 @@ export function applyHistoryModeFilterInitialization(input: {
 
   return {
     didInit: true
+  };
+}
+
+function applyInputValue(element: unknown, value: unknown): boolean {
+  const target = toRecord(element);
+  if (!("value" in target)) return false;
+  if (typeof value !== "string" && typeof value !== "number") return false;
+  target.value = String(value);
+  return true;
+}
+
+export function applyHistoryBurnInThresholdInitialization(input: {
+  getElementById?: unknown;
+  state?: unknown;
+  minComparableElementId?: unknown;
+  maxMismatchRateElementId?: unknown;
+}): HistoryControlsBurnInThresholdInitResult {
+  const source = toRecord(input);
+  const state = toRecord(source.state);
+  const getElementById = asFunction<(id: string) => unknown>(source.getElementById);
+  if (!getElementById) {
+    return {
+      didInit: false,
+      didApplyMinComparable: false,
+      didApplyMaxMismatchRate: false
+    };
+  }
+
+  const minComparableElementId =
+    typeof source.minComparableElementId === "string"
+      ? source.minComparableElementId
+      : "history-burnin-min-comparable";
+  const maxMismatchRateElementId =
+    typeof source.maxMismatchRateElementId === "string"
+      ? source.maxMismatchRateElementId
+      : "history-burnin-max-mismatch-rate";
+
+  const didApplyMinComparable = applyInputValue(
+    getElementById(minComparableElementId),
+    state.burnInMinComparable
+  );
+  const didApplyMaxMismatchRate = applyInputValue(
+    getElementById(maxMismatchRateElementId),
+    state.burnInMaxMismatchRate
+  );
+
+  return {
+    didInit: didApplyMinComparable || didApplyMaxMismatchRate,
+    didApplyMinComparable,
+    didApplyMaxMismatchRate
   };
 }
 

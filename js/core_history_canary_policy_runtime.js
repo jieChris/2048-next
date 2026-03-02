@@ -151,7 +151,7 @@
     if (action === "apply_canary") return "已设置默认 core-adapter，并清除强制回滚";
     if (action === "emergency_rollback") return "已开启强制回滚：legacy-bridge";
     if (action === "resume_canary") return "已解除强制回滚，恢复默认策略";
-    if (action === "reset_policy") return "已重置策略到基线（无默认 core、无强制回滚）";
+    if (action === "reset_policy") return "已重置策略到基线（默认回退 core-adapter、无强制回滚）";
     return "策略已更新";
   }
 

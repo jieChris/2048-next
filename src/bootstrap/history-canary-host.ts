@@ -254,7 +254,7 @@ export function applyHistoryCanaryPanelRender(input: {
         if (loadHistory && feedbackState.shouldReload) {
           loadHistory(feedbackState.reloadResetPage);
         }
-        if (setStatus) {
+        if (setStatus && (feedbackState.statusText || feedbackState.isError)) {
           setStatus(feedbackState.statusText, feedbackState.isError);
         }
       })

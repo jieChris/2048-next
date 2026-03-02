@@ -18,8 +18,136 @@ function hasOwnKeys(value: Record<string, unknown>): boolean {
   return Object.keys(value).length > 0;
 }
 
+const HISTORY_FILTER_STATE_SCHEMA_VERSION = 1;
+
+function resolveHistoryPersistedFilterPayload(state: unknown): Record<string, unknown> {
+  const source = toRecord(state);
+  return {
+    modeKey: toText(source.modeKey),
+    keyword: toText(source.keyword),
+    sortBy: toText(source.sortBy),
+    adapterParityFilter: toText(source.adapterParityFilter),
+    burnInWindow: toText(source.burnInWindow),
+    sustainedWindows: toText(source.sustainedWindows),
+    burnInMinComparable: toText(source.burnInMinComparable),
+    burnInMaxMismatchRate: toText(source.burnInMaxMismatchRate)
+  };
+}
+
+function resolveHistoryPersistedFilterDelta(
+  state: unknown,
+  defaultFilterState: unknown
+): Record<string, unknown> {
+  const current = resolveHistoryPersistedFilterPayload(state);
+  const baseline = resolveHistoryPersistedFilterPayload(defaultFilterState);
+  const delta: Record<string, unknown> = {};
+  const keys = [
+    "modeKey",
+    "keyword",
+    "sortBy",
+    "adapterParityFilter",
+    "burnInWindow",
+    "sustainedWindows",
+    "burnInMinComparable",
+    "burnInMaxMismatchRate"
+  ];
+
+  for (let i = 0; i < keys.length; i += 1) {
+    const key = keys[i];
+    if (current[key] !== baseline[key]) {
+      delta[key] = current[key];
+    }
+  }
+
+  return delta;
+}
+
+function resolveHistoryPersistedFilterSource(persistedRaw: unknown): Record<string, unknown> | null {
+  const source = toRecord(persistedRaw);
+  const schemaVersion = source.schemaVersion;
+
+  if (typeof schemaVersion === "number") {
+    if (schemaVersion !== HISTORY_FILTER_STATE_SCHEMA_VERSION) return null;
+    const filter = toRecord(source.filter);
+    return hasOwnKeys(filter) ? filter : null;
+  }
+
+  return hasOwnKeys(source) ? source : null;
+}
+
+function applyHistoryPersistedFilterState(input: {
+  state?: unknown;
+  historyQueryRuntime?: unknown;
+  persistedRaw?: unknown;
+}): boolean {
+  const source = toRecord(input);
+  const state = source.state;
+  const persisted = resolveHistoryPersistedFilterSource(source.persistedRaw);
+  const runtime = toRecord(source.historyQueryRuntime);
+  const applyHistoryFilterState = asFunction<(targetState: unknown, filterInput: unknown) => unknown>(
+    runtime.applyHistoryFilterState
+  );
+  if (!persisted) return false;
+  if (!applyHistoryFilterState) return false;
+
+  applyHistoryFilterState(state, {
+    modeKeyRaw: persisted.modeKey,
+    keywordRaw: persisted.keyword,
+    sortByRaw: persisted.sortBy,
+    adapterParityFilterRaw: persisted.adapterParityFilter,
+    burnInWindowRaw: persisted.burnInWindow,
+    sustainedWindowsRaw: persisted.sustainedWindows,
+    minComparableRaw: persisted.burnInMinComparable,
+    maxMismatchRateRaw: persisted.burnInMaxMismatchRate
+  });
+  return true;
+}
+
+function applyHistoryFilterStateToInputElements(input: {
+  state?: unknown;
+  getElementById?: unknown;
+  modeElementId?: unknown;
+  keywordElementId?: unknown;
+  sortElementId?: unknown;
+  adapterFilterElementId?: unknown;
+  burnInWindowElementId?: unknown;
+  sustainedWindowElementId?: unknown;
+  minComparableElementId?: unknown;
+  maxMismatchRateElementId?: unknown;
+}): void {
+  const source = toRecord(input);
+  const state = toRecord(source.state);
+  const getElementById = asFunction<(id: unknown) => unknown>(source.getElementById);
+  if (!getElementById) return;
+
+  const assignValue = function (elementId: unknown, value: unknown): void {
+    const id = toText(elementId);
+    if (!id) return;
+    const element = toRecord(getElementById(id));
+    if (!("value" in element)) return;
+    element.value = toText(value);
+  };
+
+  assignValue(source.modeElementId || "history-mode", state.modeKey);
+  assignValue(source.keywordElementId || "history-keyword", state.keyword);
+  assignValue(source.sortElementId || "history-sort", state.sortBy);
+  assignValue(source.adapterFilterElementId || "history-adapter-filter", state.adapterParityFilter);
+  assignValue(source.burnInWindowElementId || "history-burnin-window", state.burnInWindow);
+  assignValue(source.sustainedWindowElementId || "history-sustained-window", state.sustainedWindows);
+  assignValue(source.minComparableElementId || "history-burnin-min-comparable", state.burnInMinComparable);
+  assignValue(source.maxMismatchRateElementId || "history-burnin-max-mismatch-rate", state.burnInMaxMismatchRate);
+}
+
 export function resolveHistoryPageDefaults(input?: unknown): Record<string, unknown> {
   const source = toRecord(input);
+  const burnInMinComparable =
+    typeof source.burnInMinComparable === "number" && Number.isFinite(source.burnInMinComparable)
+      ? source.burnInMinComparable
+      : 50;
+  const burnInMaxMismatchRate =
+    typeof source.burnInMaxMismatchRate === "number" && Number.isFinite(source.burnInMaxMismatchRate)
+      ? source.burnInMaxMismatchRate
+      : 1;
   return {
     state: {
       page: 1,
@@ -29,12 +157,12 @@ export function resolveHistoryPageDefaults(input?: unknown): Record<string, unkn
       sortBy: "ended_desc",
       adapterParityFilter: "all",
       burnInWindow: "200",
-      sustainedWindows: "3"
+      sustainedWindows: "3",
+      burnInMinComparable: String(burnInMinComparable),
+      burnInMaxMismatchRate: String(burnInMaxMismatchRate)
     },
-    burnInMinComparable:
-      typeof source.burnInMinComparable === "number" ? source.burnInMinComparable : 50,
-    burnInMaxMismatchRate:
-      typeof source.burnInMaxMismatchRate === "number" ? source.burnInMaxMismatchRate : 1,
+    burnInMinComparable,
+    burnInMaxMismatchRate,
     adapterModeStorageKey:
       typeof source.adapterModeStorageKey === "string"
         ? source.adapterModeStorageKey
@@ -47,6 +175,10 @@ export function resolveHistoryPageDefaults(input?: unknown): Record<string, unkn
       typeof source.forceLegacyStorageKey === "string"
         ? source.forceLegacyStorageKey
         : "engine_adapter_force_legacy",
+    historyFilterStateStorageKey:
+      typeof source.historyFilterStateStorageKey === "string"
+        ? source.historyFilterStateStorageKey
+        : "history_filter_state_v1",
     statusElementId: typeof source.statusElementId === "string" ? source.statusElementId : "history-status",
     summaryElementId: typeof source.summaryElementId === "string" ? source.summaryElementId : "history-summary",
     prevButtonId: typeof source.prevButtonId === "string" ? source.prevButtonId : "history-prev-page",
@@ -82,6 +214,7 @@ export function resolveHistoryPageEnvironment(input?: unknown): Record<string, u
   return {
     windowLike,
     documentLike: source.documentLike || windowLike.document,
+    localStorage: source.localStorage || windowLike.localStorage,
     localHistoryStore: source.localHistoryStore || windowLike.LocalHistoryStore,
     modeCatalog: source.modeCatalog || windowLike.ModeCatalog,
     runtime: source.runtime || windowLike.LegacyAdapterRuntime,
@@ -160,6 +293,7 @@ export function resolveHistoryPageLoadEntryInput(input: {
   adapterModeStorageKey?: unknown;
   defaultModeStorageKey?: unknown;
   forceLegacyStorageKey?: unknown;
+  persistHistoryFilterState?: unknown;
 }): Record<string, unknown> {
   const source = toRecord(input);
   const runtimes = toRecord(source.historyRuntimes);
@@ -226,6 +360,7 @@ export function resolveHistoryPageLoadEntryInput(input: {
     historySummaryRuntime: runtimes.historySummaryRuntime,
     historyPanelHostRuntime: runtimes.historyPanelHostRuntime,
     historyPanelContext,
+    persistHistoryFilterState: source.persistHistoryFilterState,
     loadHistory: source.loadHistory,
     setStatus: source.setStatus,
     prevButtonId: typeof source.prevButtonId === "string" ? source.prevButtonId : "history-prev-page",
@@ -290,7 +425,42 @@ export function applyHistoryPageApp(input: {
   const historyPageEnvironment = toRecord(source.historyPageEnvironment);
   const historyRuntimes = toRecord(source.historyRuntimes);
   const state = toRecord(historyPageDefaults.state);
+  const defaultFilterState = resolveHistoryPersistedFilterPayload(historyPageDefaults.state);
   const getElementById = source.getElementById;
+  const historyCanaryStorageRuntime = toRecord(historyRuntimes.historyCanaryStorageRuntime);
+  const readHistoryStorageValue = asFunction<(storage: unknown, key: unknown) => unknown>(
+    historyCanaryStorageRuntime.readHistoryStorageValue
+  );
+  const writeHistoryStorageValue = asFunction<(
+    storage: unknown,
+    key: unknown,
+    value: unknown
+  ) => unknown>(historyCanaryStorageRuntime.writeHistoryStorageValue);
+  const historyFilterStateStorageKey = toText(historyPageDefaults.historyFilterStateStorageKey);
+  const storageLike = historyPageEnvironment.localStorage;
+  const historyQueryRuntime = historyRuntimes.historyQueryRuntime;
+
+  if (readHistoryStorageValue && historyFilterStateStorageKey) {
+    const persistedValue = readHistoryStorageValue(storageLike, historyFilterStateStorageKey);
+    if (typeof persistedValue === "string" && persistedValue) {
+      try {
+        applyHistoryPersistedFilterState({
+          state,
+          historyQueryRuntime,
+          persistedRaw: JSON.parse(persistedValue)
+        });
+      } catch (_error) {
+        // ignore malformed persisted filter state
+      }
+    }
+  }
+
+  applyHistoryFilterStateToInputElements({
+    state,
+    getElementById,
+    modeElementId: historyPageDefaults.modeElementId,
+    adapterFilterElementId: historyPageDefaults.adapterFilterElementId
+  });
 
   const setStatus = function (text: unknown, isError: unknown) {
     applyHistoryPageStatus({
@@ -328,7 +498,24 @@ export function applyHistoryPageApp(input: {
       runtime: historyPageEnvironment.runtime,
       adapterModeStorageKey: historyPageDefaults.adapterModeStorageKey,
       defaultModeStorageKey: historyPageDefaults.defaultModeStorageKey,
-      forceLegacyStorageKey: historyPageDefaults.forceLegacyStorageKey
+      forceLegacyStorageKey: historyPageDefaults.forceLegacyStorageKey,
+      persistHistoryFilterState: function () {
+        if (!writeHistoryStorageValue || !historyFilterStateStorageKey) return false;
+        const payload = resolveHistoryPersistedFilterDelta(state, defaultFilterState);
+        if (!hasOwnKeys(payload)) {
+          return writeHistoryStorageValue(storageLike, historyFilterStateStorageKey, "") === true;
+        }
+        return (
+          writeHistoryStorageValue(
+            storageLike,
+            historyFilterStateStorageKey,
+            JSON.stringify({
+              schemaVersion: HISTORY_FILTER_STATE_SCHEMA_VERSION,
+              filter: payload
+            })
+          ) === true
+        );
+      }
     });
   };
 
@@ -490,6 +677,7 @@ export function applyHistoryPageLoad(input: {
   adapterModeStorageKey?: unknown;
   defaultModeStorageKey?: unknown;
   forceLegacyStorageKey?: unknown;
+  persistHistoryFilterState?: unknown;
 }): Record<string, unknown> {
   const source = toRecord(input);
   const runtimes = toRecord(source.historyRuntimes);

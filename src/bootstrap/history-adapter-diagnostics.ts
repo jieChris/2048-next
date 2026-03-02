@@ -113,10 +113,27 @@ function formatAdapterMode(mode: unknown): string {
   return "-";
 }
 
+function formatSchemaTag(payload: AnyRecord | null): string {
+  if (!payload) return "-";
+  const schemaVersion = resolveParitySchemaVersion(payload, 0);
+  if (schemaVersion <= 0) return "-";
+  return "v" + String(schemaVersion);
+}
+
 function getAdapterBadgeText(status: string): string {
   if (status === "mismatch") return "A/B 不一致";
   if (status === "match") return "A/B 一致";
   return "A/B 样本不足";
+}
+
+function formatComparableReason(diff: AnyRecord | null): string {
+  if (!diff) return "-";
+  if (diff.comparable === true) return "-";
+  if (diff.hasLegacyReport === false && diff.hasCoreReport === true) return "缺少 legacy 报告";
+  if (diff.hasLegacyReport === true && diff.hasCoreReport === false) return "缺少 core 报告";
+  if (diff.hasLegacyReport === false && diff.hasCoreReport === false) return "双侧报告缺失";
+  if (diff.hasLegacyReport === true && diff.hasCoreReport === true) return "mode 不可比";
+  return "-";
 }
 
 function getAdapterBadgeClass(status: string): string {
@@ -172,7 +189,9 @@ export function resolveHistoryAdapterDiagnosticsState(item: unknown): HistoryAda
   const lines: string[] = [];
   if (report) {
     lines.push(
-      "当前 " +
+      "Report(" +
+        formatSchemaTag(report) +
+        ") 当前 " +
         formatAdapterMode(report.adapterMode) +
         " · 快照分数 " +
         formatNullableNumber(report.lastScoreFromSnapshot) +
@@ -187,14 +206,26 @@ export function resolveHistoryAdapterDiagnosticsState(item: unknown): HistoryAda
 
   if (diff) {
     lines.push(
-      "A/B comparable " +
+      "Diff(" +
+        formatSchemaTag(diff) +
+        ") A/B comparable " +
         formatNullableBoolean(diff.comparable) +
         " · scoreΔ " +
         formatSignedDelta(diff.scoreDelta) +
         " · undoΔ " +
         formatSignedDelta(diff.undoUsedDelta) +
         " · overΔ " +
-        formatSignedDelta(diff.overEventsDelta)
+        formatSignedDelta(diff.overEventsDelta) +
+        " · undoEvtΔ " +
+        formatSignedDelta(diff.undoEventsDelta) +
+        " · wonEvtΔ " +
+        formatSignedDelta(diff.wonEventsDelta) +
+        " · scoreMatch " +
+        formatNullableBoolean(diff.isScoreMatch) +
+        " · 双侧对齐 " +
+        formatNullableBoolean(diff.bothScoreAligned) +
+        " · 原因 " +
+        formatComparableReason(diff)
     );
   }
 
