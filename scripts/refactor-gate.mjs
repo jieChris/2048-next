@@ -1,10 +1,23 @@
 import { spawn } from "node:child_process";
 import { performance } from "node:perf_hooks";
 
+function parseSmokeScriptArg(argv) {
+  for (const arg of argv) {
+    if (typeof arg !== "string") continue;
+    if (!arg.startsWith("--smoke-script=")) continue;
+    const value = arg.slice("--smoke-script=".length).trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+const smokeScriptArg = parseSmokeScriptArg(process.argv.slice(2));
+const smokeScript = smokeScriptArg || "test:smoke";
+
 const STEPS = [
   { name: "game-manager-audit", cmd: "node", args: ["scripts/game-manager-audit.mjs"] },
   { name: "unit", cmd: "npm", args: ["run", "test:unit"] },
-  { name: "smoke", cmd: "npm", args: ["run", "test:smoke"] },
+  { name: "smoke", cmd: "npm", args: ["run", smokeScript] },
   { name: "build", cmd: "npm", args: ["run", "build"] }
 ];
 
@@ -39,6 +52,7 @@ async function main() {
   const results = [];
 
   console.log("[verify:refactor] start");
+  console.log(`[verify:refactor] smoke script: ${smokeScript}`);
   for (const step of STEPS) {
     console.log(`[verify:refactor] running ${step.name}...`);
     const result = await runStep(step);

@@ -12,21 +12,359 @@
   - `baseline-legacy-import`（已存在）
   - 里程碑标签：`refactor-m1`、`refactor-m2`、...
 
-## 2.1) 当前收敛快照（2026-02）
+## 2.1) 当前收敛快照（2026-03）
+- 本轮增量（2026-03-01）：
+  - `core_game_manager_saved_state_helpers_runtime.js` 已完成恢复链路稳健性收敛（无行为变更）：
+    - 新增 `isSavedStateRecordObject`，统一 saved-state 对象判定样板
+    - `restoreSavedDynamicTimerRowsIntoContainer` 增加空节点保护，避免 `appendChild(null)` 异常
+    - `validate/apply/restore/finalize` 相关函数统一复用对象判定 helper
+  - `core_game_manager_saved_state_helpers_runtime.js` 已完成第二轮判定样板收敛（无行为变更）：
+    - 新增 `normalizeSavedStateRecordObject`，统一“对象或回退值”归一化
+    - `timer ui payload / lite payload / windowName map / replay&seed restore / invalid-candidate` 分支已改为统一 helper
+    - 保持原语义：仍按“`typeof === object`”宽松判定，不收紧数组兼容行为
+  - `core_game_manager_runtime_accessor_helpers_runtime.js` 已完成对象判定样板收敛（无行为变更）：
+    - 新增 `isRuntimeAccessorObject`，统一 window/runtime/bridge/snapshot/meta 判定分支
+    - accessor 获取、bridge 解析、cache 快照读取路径统一改用 helper
+    - 已完成定向回归：`audit:game-manager` + `bridge-adapter-io/shadow` unit 全绿
+  - `core_game_manager_mode_rules_helpers_runtime.js` / `core_game_manager_replay_helpers_runtime.js` 已完成对象判定样板收敛（无行为变更）：
+    - 新增 `isModeRulesRecordObject/normalizeModeRulesRecordObject` 与 `isReplayRecordObject/normalizeReplayRecordObject`
+    - `mode_rules` 追加 `isModeRulesNonArrayObject`，统一需要排除数组的分支判定
+    - `special-rules` 状态解析、`replay` 暂停恢复/提交 payload/import 解析等链路统一复用 helper
+    - 保持原语义：仍采用宽松对象判定（不收紧到 non-array object）
+    - 已完成定向回归：`audit:game-manager`、`core-rules+core-special-rules+core-direction-lock+core-replay*` unit、`pages-replay-runtime + pages-play-modes` smoke 全绿
+  - `core_game_manager_panel_timer_helpers_runtime.js` 已完成对象判定样板收敛（无行为变更）：
+    - 新增 `isPanelTimerRecordObject/normalizePanelTimerRecordObject`
+    - `stepStats`、`cappedState`、`cache.state`、`progressive capped64` 恢复链路统一复用 helper
+    - 保持原语义：沿用宽松对象判定（不改变数组处理语义）
+    - 已完成回归：`audit:game-manager`、`test:unit`、`pages-play-modes` smoke 全绿
+  - `core_game_manager_runtime_call_helpers_runtime.js` 已完成 storage normalized 调用模板收敛（无行为变更）：
+    - 新增内部 helper：`resolveCoreStorageNormalizedCallWith`，合并三处重复分支（window-context / payload / allow-null）
+    - 保持对外 API 不变：`resolveCoreStorageNormalizedCallOrFallback` / `resolveCoreStoragePayloadNormalizedCallOrFallback` / `resolveCoreStoragePayloadNormalizedCallOrFallbackAllowNull`
+    - 已处理审计体积护栏：压缩 helper 排版后文件重新低于 `MAX_RUNTIME_CALL_HELPERS_LINES`
+    - 已完成回归：`audit:game-manager`、`test:unit`、`pages-runtime-contract` smoke 全绿
+  - `core_game_manager_runtime_call_helpers_runtime.js` 已完成 storage boolean 调用模板收敛（无行为变更）：
+    - 新增内部 helper：`resolveCoreStorageBooleanCallWith`，合并 `window-context` 与 `payload` 两条 boolean 分支
+    - 保持对外 API 不变：`resolveCoreStorageBooleanCallOrFallback` / `resolveCoreStoragePayloadBooleanCallOrFallback`
+    - 已处理审计行数边界差异（Windows 换行计数）：进一步压缩空白行后稳定通过护栏
+    - 已完成回归：`audit:game-manager`、`test:unit`、`pages-runtime-contract` smoke 全绿
+  - `core_game_manager_move_input_helpers_runtime.js` 已完成对象判定样板收敛（无行为变更）：
+    - 新增 `isMoveInputRecordObject/normalizeMoveInputRecordObject`
+    - progressive capped64 unlock 结果与 direction-lock 状态解析统一复用 helper
+    - 保持原语义：沿用宽松对象判定，不改变移动/锁方向算法
+    - 已完成回归：`audit:game-manager`、`core-direction-lock+core-replay*+core-rules` unit、`pages-play-modes + pages-replay-runtime` smoke 全绿
+  - `core_game_manager_undo_stats_helpers_runtime.js` 已完成对象判定样板收敛（无行为变更）：
+    - 新增 `isUndoStatsRecordObject/normalizeUndoStatsRecordObject`
+    - `undo policy/runtime input/ui snapshot/spawn pair/step stats/undo restore` 等分支统一复用 helper
+    - `createUndoTileSnapshot` 已抽出 `sourceTile/sourceTarget`，保持 `null` 回退语义不变
+    - 已完成回归：`audit:game-manager`、`core-undo*+core-post-undo-record+core-replay*+core-direction-lock+core-rules` unit、`pages-play-modes + pages-replay-runtime` smoke 全绿
+  - `core_game_manager_base_helpers_runtime.js` 已完成基础对象判定样板收敛（无行为变更）：
+    - 新增 `isCoreHelperRecordObject`
+    - `createCoreModeDefaultsPayload/createCoreModeContextPayload/readOptionValue` 统一复用 helper
+    - 保持 `hasOwnKey` 的 object/function 语义不变，仅替换重复 object 判定样板
+    - 已完成回归：`audit:game-manager`、`test:unit`（170/170）与 `pages-runtime-contract` smoke 全绿
+  - `core_game_manager_restart_setup_helpers_runtime.js` 已完成 setup 选项判定样板收敛（无行为变更）：
+    - 新增 `isRestartSetupRecordObject/normalizeRestartSetupOptions`
+    - `syncPracticeRestartBase/resolveRestartWithBoardSetupSeed/setupGame` 已统一复用 options 归一化 helper
+    - `resolveGlobalModeConfigOverride` 改为先规范化 `GAME_MODE_CONFIG` 引用，再执行 clone
+    - `restartWithBoard` 已同步切换为同一 options 归一化入口，消除 `options || {}` 分支样板
+    - 已完成回归：`audit:game-manager`、`test:unit`（170/170）与 `pages-play-entry` smoke 全绿
+  - `core_game_manager_session_init_helpers_runtime.js` 已完成 session 选项判定样板收敛（无行为变更）：
+    - 新增 `isSessionInitRecordObject/normalizeSessionInitOptions`
+    - `addInitialTilesWhenNeeded/resolveSessionChallengeId` 已统一复用 options 归一化 helper
+    - 保持 challengeId 与 `skipStartTiles` 判定语义不变，仅移除重复样板
+    - 已完成回归：`audit:game-manager`、`test:unit`（170/170）与 `pages-play-entry` smoke 全绿
+  - `core_game_manager_runtime_accessor_helpers_runtime.js` / `core_game_manager_replay_helpers_runtime.js` 已完成对象判定样板收敛（无行为变更）：
+    - `runtime_accessor` 的 resolver runtime 对象判定统一复用 `isRuntimeAccessorObject`
+    - `replay` 的 JSON 导入 `specialRulesSnapshot` 解析改为复用 `normalizeReplayRecordObject`
+    - 保持 replay 导入与 adapter accessor 语义不变，仅移除内联对象判定样板
+    - 已完成回归：`audit:game-manager`、`core-replay-import+core-replay-legacy+core-replay-codec+bridge-adapter-io+bridge-adapter-shadow` unit、`pages-replay-runtime` smoke 全绿
+  - `core_game_manager_runtime_accessor_helpers_runtime.js` 已完成 bridge 访问归一化收敛（无行为变更）：
+    - 新增 `normalizeRuntimeAccessorObject`
+    - `resolveLegacyAdapterBridgeForManager` 与 `resolveAdapterMoveMetaInput` 改为统一复用对象归一化 helper
+    - 保持 adapter bridge 解析和 move meta 兜底语义不变（仍返回 `null/{}` 回退）
+    - 已完成回归：`audit:game-manager`、`bridge-adapter-io+bridge-adapter-shadow+bridge-adapter-mode` unit、`pages-runtime-contract` smoke 全绿
+  - `core_game_manager_replay_helpers_runtime.js` 已完成 structured replay envelope 守卫收敛（无行为变更）：
+    - 新增 `normalizeStructuredReplayEnvelope/resolveStructuredReplayImportEnvelope`
+    - `json-v3/v4c` 导入链路（config 覆盖、challengeId、actions、session start、kind 分发）统一复用 envelope 归一化
+    - 保持导入行为不变：`kind` 判定、mode 配置解析、import 后 undo 策略同步与自动回放启动语义不变
+    - 已完成回归：`audit:game-manager`、`core-replay-import+core-replay-legacy+core-replay-codec+core-replay-control+core-replay-lifecycle` unit、`pages-replay-runtime + pages-runtime-contract` smoke 全绿
+  - 当前批次已完成一次全门禁回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build，100 smoke / 893 unit 通过）。
+    - 备注：`vite build` 仍会输出 legacy 非 module 脚本告警（历史基线行为），但不影响门禁结果为 PASS。
+  - 门禁流程已新增“迭代快速回归”脚本（用于日常重构小步验证）：
+    - `npm run test:unit:core`：仅执行 `core-*` 与 `bridge-adapter-*` 单测集合
+    - `npm run test:smoke:play-replay`：执行 play/replay 关键 smoke 组合
+    - `npm run verify:iterate`：`audit -> unit:core -> smoke:runtime-contract -> smoke:play-replay`
+    - 已完成回归：`npm run verify:iterate` 全绿（35 test files / 248 tests + 19 smoke）。
+  - `verify:refactor` 已支持 smoke 脚本参数化：
+    - 默认：`npm run verify:refactor`（内置 `test:smoke`）
+    - 分片串行：`npm run verify:refactor:ci`（等价 `--smoke-script=test:smoke:ci`）
+  - CI smoke 已切换为三路分片并行（`history` / `index-ui` / `pages`）：
+    - `.github/workflows/smoke.yml` 改为 matrix 并行执行 `npm run test:smoke:${suite}`
+    - 产物按分片上传：`playwright-report-${suite}`（含 `playwright-report` 与 `test-results`）
+    - 本地新增 `npm run test:smoke:ci` 以串行复现 CI 分片顺序
+  - `core_game_manager_bindings_runtime.js` 已继续模板化原型绑定（无行为变更）：
+    - 新增 `bindGameManagerPrototypeCappedStateFieldGetter`，统一 `isCappedMode/getCappedTargetValue/isProgressiveCapped64Mode` 三个 capped-state 读取方法
+    - 新增 `bindGameManagerPrototypeElementByIdResolver`，`getTimerRowEl` 改为模板绑定
+    - 新增 `createStandardCoreRuntimeAccessorDef`，`createGameManagerCoreRuntimeAccessorDefs` 改为 key 列表驱动生成 accessor 定义（顺序保持不变）
+    - 已完成回归：`audit:game-manager`、`test:unit:core`、`test:smoke:play-replay` 全绿
+  - `core_game_manager_saved_state_helpers_runtime.js` 已完成 window-name payload 判定样板收敛（无行为变更）：
+    - `decodeWindowNameSavedMapPayload` 与 `writeWindowNameSavedPayloadFallback` 已统一复用 `isSavedStateRecordObject`
+    - 保持 window.name 持久化语义不变：非对象 payload 仍走删除分支，对象 payload 仍写入 map
+    - 已完成回归：`audit:game-manager`、`bootstrap-play-startup-context+bootstrap-play-startup-host+bootstrap-play-startup-payload+core-game-settings-storage` unit、`pages-play-modes` smoke 全绿
+  - `core_game_manager_saved_state_helpers_runtime.js` 已完成保存 options 与动态行状态归一化收敛（无行为变更）：
+    - 新增 `normalizeSavedStateOptions`，`saveGameStateImpl` 改为统一 options 归一化入口
+    - `resolveSavedDynamicTimerRowInfo` 改为先归一化 `rowState` 再读取字段，移除重复内联判定
+    - 保持保存节流、动态行文本/样式恢复语义不变，仅消除样板逻辑
+    - 已完成回归：`audit:game-manager`、`bootstrap-play-startup-context+bootstrap-play-startup-host+bootstrap-play-startup-payload+core-game-settings-storage` unit、`pages-play-entry + pages-play-modes` smoke 全绿
+  - 已完成定向回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-play-entry` smoke 全绿
+  - `core_game_manager_runtime_call_helpers_runtime.js` 已完成第三轮模板收敛（无行为变更）：
+    - 新增通用 call-result resolver：`resolveCoreObject/Boolean/Numeric/String/Normalized/Raw*`
+    - 新增 storage 通用入口：`resolveCoreStoragePayloadCallWith` / `resolveCoreStorageWindowContextCallWith`
+    - `resolveCoreStorage*` 系列函数统一改用通用入口，减少重复 `if (!manager) + call + resolve` 样板
+  - `core_game_manager_replay_helpers_runtime.js` 已完成 replay typed wrapper 样板收敛（无行为变更）：
+    - 新增 replay 前缀 resolver：`resolveCoreReplayObject/Boolean/Numeric/String/Normalized*` 与 `tryHandleCoreReplayRawCallResult`
+    - `resolveCoreReplayPayload*`、`resolveCoreReplayArgs*` 顶层包装已统一复用上述 resolver，避免重复回调模板
+  - `core_game_manager_mode_rules_helpers_runtime.js` 已完成 helper 命名隔离：
+    - 顶层共享函数改为 `resolveCoreModeRules*` 前缀，避免多 runtime helper 文件间的全局函数名覆盖风险
+    - 保持 mode/rules 访问与 fallback 语义不变
+  - 已完成定向回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-replay-runtime` 与 `pages-play-modes` smoke 全绿
+  - `core_game_manager_mode_rules_helpers_runtime.js` 已完成 mode/rules runtime 访问样板收敛：
+    - `resolveCoreModePayloadCallWith/resolveCoreModeArgsCallWith/resolveCoreRulesArgsCallWith` 已统一复用 `resolveCorePayloadCallWith/resolveCoreArgsCallWith` 通用壳
+    - 已移除仅文件内使用且已冗余的 `callCoreModeRuntimeByArgs/ByPayload`、`callCoreRulesRuntimeByArgs` 包装
+    - 保持 `resolveCore*` 调用语义不变，仅减少重复包装层
+  - `core_game_manager_replay_helpers_runtime.js` 已完成 replay runtime 访问样板收敛：
+    - 移除按域复制的 `callCoreReplay*RuntimeWithPayload/WithArgs` 包装
+    - 新增统一入口 `callCoreReplayRuntimeByPayload/ByArgs`，由 resolver 通过 runtime method 名字参数化调用
+    - 涵盖 timer/flow/control/lifecycle/loop/execution/dispatch/codec/import/legacy/v4-actions 11 组 runtime
+  - `core_game_manager_stats_ui_helpers_runtime.js` 的 `corner stats / stats panel` DOM 查询已统一到 `resolveManagerElementById`（移除文件内 `documentLike.getElementById` 调用）。
+  - `core_game_manager_saved_state_helpers_runtime.js` 的 `timer fixed/dynamic/sub rows` 保存恢复链路已统一到 `resolveManagerElementById`（保留 `resolveSavedStateDocumentLike` 仅用于 `querySelector/createElement` 类操作）。
+  - `core_game_manager_session_init_helpers_runtime.js` 初始化 `timerContainer` 回退路径改为 `resolveManagerElementById(manager, "timer")`。
+  - `scripts/game-manager-audit.mjs` 已提升护栏：除 `env_helpers` 外，所有 `core_game_manager*_runtime.js` 禁止出现 `documentLike.getElementById(...)`。
+  - 已完成全门禁回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build，100 smoke/893 unit 通过）。
 - `js/game_manager.js` 已收敛为 12 行壳文件，仅保留构造器与两条初始化调用：
   - `applyGameManagerStaticConfiguration()`
   - `bindGameManagerPrototypeRuntime()`
+- `js/core_game_manager_common_runtime.js` 已收敛为 2 行兼容壳文件（无业务函数实现，仅保留脚本链占位）。
+- `js/core_game_manager_bindings_runtime.js` 已完成第二轮去重：
+  - 新增统一绑定 helper：`bindGameManagerPrototypeMethod` / `bindGameManagerPrototypeManagerForward` / `bindGameManagerPrototypeForward`
+  - 大量 `GameManager.prototype.xxx = function (...) { return yyy(this, ...); }` 样板已替换为批量绑定数组
+  - 保留 `isCappedMode/getCappedTargetValue/isProgressiveCapped64Mode/getTimerRowEl/updateStatsPanel` 等自定义方法体不变
+  - 文件行数已从 `733` 收敛到 `410`
+- `js/core_game_manager_runtime_call_helpers_runtime.js` 已完成死代码层清理：
+  - 删除 12 个仅定义未引用的 `call/resolve` 包装函数
+  - 文件行数已从 `602` 收敛到 `491`
+  - 已完成全门禁回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build）
+- `js/core_game_manager_runtime_call_helpers_runtime.js` 已完成第二轮模板收敛（无行为变更）：
+  - 新增通用 payload resolver：`resolveCorePayloadCallWith`，统一 object/normalized/raw payload 调用模板
+  - 新增通用 args typed resolver：`resolveCoreArgsBoolean/Numeric/String/Normalized/Raw*`，覆盖 `movePath/moveScan/gridScan/timerInterval/directionLock/prettyTime` 调用链路
+  - 已完成回归：`npm run test:unit`（170/170，893 tests）与 `pages-replay-runtime + pages-runtime-contract` smoke（15/15）全绿
+- `js/core_game_manager_replay_helpers_runtime.js` 已完成 replay 域薄包装收敛（无行为变更）：
+  - 将 timer/flow/control/lifecycle/loop/execution/dispatch/codec/import/legacy/v4-actions 的调用点改为直接使用通用 `resolveCoreReplayPayload* / resolveCoreReplayArgs*` helper
+  - 删除仅内部使用的域级 wrapper，保留跨文件依赖的兼容 wrapper（`resolveCoreReplayTimerNormalizedCallOrFallback`、`resolveCoreReplayExecutionNumericCallOrFallback`、`resolveCoreReplayExecutionNormalizedCallOrFallback`、`tryHandleCoreReplayExecutionRawValue`）
+  - 文件行数已从 `2226` 收敛到 `1961`
+  - 已完成回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-replay-runtime + pages-runtime-contract` smoke 全绿
+- `undo/panel/setup_timer_ui` 三个 helper 文件已完成 storage 调用模板收敛：
+  - `core_game_manager_undo_stats_helpers_runtime.js` / `core_game_manager_panel_timer_helpers_runtime.js` / `core_game_manager_setup_timer_ui_helpers_runtime.js`
+  - 已移除 direct `callCoreStorageRuntimeWithPayload(...)`，统一改用 `resolveCoreStoragePayload*CallOrFallback` helper
+  - 已完成回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-play-modes + index-ui-settings-models` smoke 全绿
+- `js/core_game_manager_panel_timer_helpers_runtime.js` 已完成 DOM 上下文解耦：
+  - `openStatsPanel/closeStatsPanel/applyTimerModuleView/syncTimerTickPrimaryDisplay/shouldRefreshStatsPanelDuringTimerTick`
+    统一改用 `resolvePanelTimerDocumentLike`（`windowLike.document` 优先，缺失时回退全局 `document`）
+  - `ensureCappedOverflowContainerElement` 已改为接收 `manager` 并使用 `documentLike.createElement`
+  - 已完成回归：`npm run test:unit`、`pages-play-modes` smoke、`index-ui-settings-models` smoke 全绿
+- `js/core_game_manager_move_input_helpers_runtime.js` 已完成 move 链路 DOM 上下文解耦：
+  - 新增 `resolveMoveInputDocumentLike`，并覆盖 timer 文本同步、里程碑计时器写入、capped placeholder/base 行写入、merge outcome UI 更新链路
+  - `stampMergeEffectTimers/applyMergeSubTimerVisibility/applyMergeHiddenTimerRows` 已改为显式接收 `manager`，移除隐式全局 `document` 依赖
+  - 已完成回归：`npm run test:unit`、`pages-play-modes` smoke、`pages-runtime-contract` smoke 全绿
+- `js/core_game_manager_session_init_helpers_runtime.js` 已完成初始化链路 DOM 上下文解耦：
+  - 新增 `resolveSessionInitDocumentLike`，并覆盖 `syncTimerMilestonesUi/syncTimerMilestoneLegendLabels/initializeGameManagerCoreFields`
+  - 计时器图例初始化与 `timerContainer` 获取改为优先 `windowLike.document`，缺失时回退全局 `document`
+  - 已完成回归：`npm run test:unit`、`pages-runtime-contract` smoke 全绿
+- `js/core_game_manager_restart_setup_helpers_runtime.js` 已完成一轮薄包装清理：
+  - 移除仅内部单点转发的中间函数（`runSetupActuate`、`syncSetupStatsPanelAfterActuate`、`createSetupInitializationContext`、`resolveSetupRestoreStateFromContext`）
+  - `runSetupStateInitialization` 与 `finalizeSetupState` 直接承接对应流程，行为不变
+  - `resolveGlobalModeConfigOverride` 已改为从 `manager.getWindowLike()` 读取全局模式配置，避免直接依赖全局 `window`
+  - 已完成回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-play-entry + pages-runtime-contract` smoke 全绿
+- `js/core_game_manager_mode_rules_helpers_runtime.js` 已完成 setup 模式配置写入上下文解耦：
+  - `syncSetupModeWindowConfig` 改为优先使用 `manager.getWindowLike()`，仅在缺失时回退 `window`
+  - `syncSetupModeDocumentAttributes` 改为优先使用 `windowLike.document`，仅在缺失时回退全局 `document`
+  - 保持 `GAME_MODE_CONFIG` 写入语义不变，降低 helper 对浏览器全局对象的硬依赖
+  - 已完成回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-play-modes` smoke、`npm run verify:refactor` 全绿
+- `js/core_game_manager_replay_helpers_runtime.js` 已完成模式检测上下文解耦：
+  - `detectMode` 新增 `resolveReplayDocumentLike`，优先从 `manager.getWindowLike().document` 读取 `data-mode-id`
+  - `refreshSpawnRateDisplay`、`applyCustomTileSubTimerInvalidationFallback`、`applyCustomTile32kUiVisibility`、`stampCustomTile32kTimerValue` 已统一改用 `resolveReplayDocumentLike` 读取 DOM
+  - 缺失 `windowLike` 时回退全局 `document`，保持原有 fallback 判定链路不变
+  - 已完成回归：`npm run test:unit`、`pages-replay-runtime/pages-play-modes` smoke 全绿
+- `js/core_game_manager_stats_display_helpers_runtime.js` 已完成显示层 DOM 上下文解耦：
+  - 新增 `resolveStatsDisplayDocumentLike`，`updateStatsLabelText/applyInvalidatedTimerPlaceholders/refreshIpsDisplay/setStatsPanelFieldText/applyStatsPanelSpawn*` 改为优先 `windowLike.document`
+  - `panel_timer/replay` 调用点已同步透传 `manager`，避免隐式全局 `document` 依赖
+  - 已完成回归：`npm run test:unit`、`pages-play-modes/pages-replay-runtime` smoke 全绿
+- `js/core_game_manager_undo_stats_helpers_runtime.js` 已完成 undo UI DOM 上下文解耦：
+  - 新增 `resolveUndoStatsElementById`，`undo-link/gameover/practice` 三处按钮状态写入统一改用 `resolveManagerElementById`
+  - `applyResolvedUndoUiState` 已改为显式接收 `manager` 并下沉到三处 UI 写入 helper
+  - 已完成回归：`npm run test:unit` 全绿
+- `js/core_game_manager_stats_ui_helpers_runtime.js` 已完成 stats panel/corner stats DOM 上下文解耦：
+  - 新增 `resolveStatsUiDocumentLike`，`ensureCornerStatsElement/ensureStatsPanelToggleButtonElement/resolveStatsPanelToggleHostElements/mountStatsPanelToggleButton/ensureStatsPanelOverlayElement/bindStatsPanelCloseButton` 统一改用 `windowLike.document`
+  - `initCornerStatsUi/initStatsPanelUi` 入口保持不变，内部已移除直接全局 `document` 读写
+  - 已完成回归：`npm run test:unit`、`pages-announcement-settings` smoke 全绿
+- `js/core_game_manager_bindings_runtime.js` 已完成 `getTimerRowEl` 访问链路解耦：
+  - `GameManager.prototype.getTimerRowEl` 改为优先 `this.getWindowLike().document`，缺失时回退全局 `document`
+  - 已完成回归：`npm run test:unit` 全绿
+- `js/core_game_manager_setup_timer_ui_helpers_runtime.js` 已完成 setup 计时 UI DOM 上下文解耦：
+  - 新增 `resolveSetupTimerUiElementById`，`hideLegacyStepStatsLabels/clearTimerSlotTexts/resetTimerSubRowTexts/resetTimerBaseUiForSetup/resetCappedPlaceholderTimerRows/resetCappedTimerContainersForSetup/resetTimerUiForSetup` 统一改用 `resolveManagerElementById`
+  - setup 阶段 `timer/capped` 容器与 placeholder 行清理不再依赖全局 `document`
+  - 已完成回归：`npm run test:unit`、`pages-play-modes` smoke 全绿
+- `js/core_game_manager_saved_state_helpers_runtime.js` 已完成 saved-state 计时 UI DOM 上下文解耦：
+  - 新增 `resolveSavedStateDocumentLike`，`create/capture/restore/sync` 全链路统一改用 `windowLike.document`
+  - `timer_fixed_rows/timer_dynamic_rows/timer_sub_*` 的保存与恢复流程不再直接访问全局 `document`
+  - 已完成回归：`npm run test:unit`、`pages-play-modes + pages-replay-runtime + pages-runtime-contract` smoke 全绿
+  - 当前 `core_game_manager*_runtime + bindings` 已无直接 `document.getElementById/querySelector/createElement/querySelectorAll` 调用（仅保留 documentLike resolver 的全局回退）
+  - 已完成完整门禁回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build）
+- `js/core_game_manager_env_helpers_runtime.js` 已新增统一 DOM 解析 helper：
+  - 新增 `resolveManagerDocumentLike` / `resolveManagerElementById`
+  - `panel_timer/stats_display/stats_ui/move_input/replay/saved_state/session_init/setup_timer_ui/undo_stats` 的 `resolve*DocumentLike` 已统一委托到 `resolveManagerDocumentLike`
+  - 目标：减少重复 window/document 回退样板，统一 DOM 上下文解析入口（行为不变）
+  - 已完成回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build）
+- `js/core_game_manager_panel_timer_helpers_runtime.js` 已继续收敛 DOM 查询样板：
+  - 新增 `resolvePanelTimerElementById`，`openStatsPanel/closeStatsPanel/applyTimerModuleView/syncTimerTickPrimaryDisplay/shouldRefreshStatsPanelDuringTimerTick/ensureCappedOverflowContainerElement` 改为统一调用
+  - `ensureCappedOverflowContainerElement` 增补 `createElement` 可用性保护，不改变原有流程语义
+- `js/core_game_manager_mode_rules_helpers_runtime.js` 与 `js/core_game_manager_bindings_runtime.js` 已补齐统一 DOM resolver 接入：
+  - `syncSetupModeDocumentAttributes` 改为 `resolveManagerDocumentLike(manager)`
+  - `GameManager.prototype.getTimerRowEl` 改为 `resolveManagerElementById(this, ...)`
+- `scripts/game-manager-audit.mjs` 已新增 DOM fallback 护栏：
+  - 新增 `verifyNoInlineWindowDocumentFallback`
+  - 除 `core_game_manager_env_helpers_runtime.js` 外，禁止继续出现 `windowLike && windowLike.document` 内联回退样板
+  - 已完成回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build）
+- `common_runtime` 剩余函数已按职责迁移完成：
+  - replay/编码/compact log/post-move/post-undo：`js/core_game_manager_replay_helpers_runtime.js`
+  - mode/rules/move-path/move-scan/grid-scan：`js/core_game_manager_mode_rules_helpers_runtime.js`
+  - undo restore/payload/tile restore：`js/core_game_manager_undo_stats_helpers_runtime.js`
+  - capped mode 提供态与行显示 helper：`js/core_game_manager_panel_timer_helpers_runtime.js`
+- 审计护栏已升级：`scripts/game-manager-audit.mjs` 新增 common 壳文件约束：
+  - 行数上限 `MAX_COMMON_RUNTIME_LINES = 40`
+  - 禁止 `function` 声明（发现即失败）
+  - 新增 helper 文件体积护栏：
+    - `MAX_RUNTIME_CALL_HELPERS_LINES = 550`
+    - `MAX_RUNTIME_ACCESSOR_HELPERS_LINES = 320`
 - `game_manager` 逻辑分层已落地：
+  - `js/core_game_manager_base_helpers_runtime.js`：通用 call/resolve/normalize 基础 helper（与业务逻辑解耦）
+  - `js/core_game_manager_env_helpers_runtime.js`：window/storage/requestAnimationFrame 环境 helper（从 common runtime 拆出）
+  - `js/core_game_manager_runtime_call_helpers_runtime.js`：跨域 runtime 调用包装 helper（从 common runtime 拆出）
+  - `js/core_game_manager_saved_state_helpers_runtime.js`：saved-state/storage 持久化 helper（从 common runtime 拆出）
+  - `js/core_game_manager_runtime_accessor_helpers_runtime.js`：core runtime accessor 注册 helper（从 common runtime 拆出）
+  - `js/core_game_manager_stats_ui_helpers_runtime.js`：stats panel / corner stats UI helper（从 common runtime 拆出）
+  - `js/core_game_manager_move_input_helpers_runtime.js`：move input 节流/排队/flush helper（从 common runtime 拆出）
+  - `js/core_game_manager_stats_display_helpers_runtime.js`：IPS/统计显示与 invalidated placeholder helper（从 common runtime 拆出）
+  - `js/core_game_manager_panel_timer_helpers_runtime.js`：stats panel 打开/关闭与 timer module 视图持久化 helper（从 common runtime 拆出）
+  - `js/core_game_manager_undo_stats_helpers_runtime.js`：undo 策略/UI 状态与 step stats helper（从 common runtime 拆出）
+  - `js/core_game_manager_restart_setup_helpers_runtime.js`：restart/replay restart/setup mode-config 解析 helper（从 common runtime 拆出）
+  - `js/core_game_manager_setup_timer_ui_helpers_runtime.js`：setup 阶段 timer UI reset/capped row visibility helper（从 common runtime 拆出）
+  - `js/core_game_manager_session_init_helpers_runtime.js`：session 初始化/恢复、timer milestone、round reset、构造器初始化绑定 helper（从 common runtime 拆出）
+  - `js/core_game_manager_saved_state_helpers_runtime.js`：已进一步承接 saved-state restore 候选读取/校验、timer UI 恢复与恢复流水线 helper（从 common runtime 继续拆出）
+  - `js/core_game_manager_replay_helpers_runtime.js`：replay 域 call/resolve helper（从 common runtime 拆出）
+  - `js/core_game_manager_mode_rules_helpers_runtime.js`：mode/rules 域 call/resolve helper（从 common runtime 拆出）
   - `js/core_game_manager_common_runtime.js`：纯逻辑函数（禁止 `GameManager.prototype` 绑定）
   - `js/core_game_manager_static_runtime.js`：`GameManager` 静态常量/模式配置装配
   - `js/core_game_manager_bindings_runtime.js`：`GameManager.prototype` 绑定与 runtime accessor 注册
 - 页面脚本加载顺序已统一为：
-  - `core_game_manager_common_runtime.js` → `core_game_manager_static_runtime.js` → `core_game_manager_bindings_runtime.js` → `game_manager.js`
+  - `core_game_manager_base_helpers_runtime.js` → `core_game_manager_env_helpers_runtime.js` → `core_game_manager_runtime_call_helpers_runtime.js` → `core_game_manager_saved_state_helpers_runtime.js` → `core_game_manager_runtime_accessor_helpers_runtime.js` → `core_game_manager_stats_ui_helpers_runtime.js` → `core_game_manager_move_input_helpers_runtime.js` → `core_game_manager_stats_display_helpers_runtime.js` → `core_game_manager_panel_timer_helpers_runtime.js` → `core_game_manager_undo_stats_helpers_runtime.js` → `core_game_manager_restart_setup_helpers_runtime.js` → `core_game_manager_setup_timer_ui_helpers_runtime.js` → `core_game_manager_session_init_helpers_runtime.js` → `core_game_manager_common_runtime.js` → `core_game_manager_replay_helpers_runtime.js` → `core_game_manager_mode_rules_helpers_runtime.js` → `core_game_manager_static_runtime.js` → `core_game_manager_bindings_runtime.js` → `game_manager.js`
 - 门禁脚本 `scripts/game-manager-audit.mjs` 已升级，新增以下强约束：
   - 壳文件行数与结构检查（constructor-only）
   - common/bindings 职责边界检查
   - bindings 重复原型绑定检查
   - 六个页面脚本顺序检查
+  - common runtime `manager.callCore*Runtime(...)` 调用边界检查：
+    - 仅允许出现在 helper 函数（`callCore* / resolveCore* / tryHandleCore*`）内
+    - 业务函数如出现直连 runtime 调用，审计直接失败并输出函数名+行号
+- `core_game_manager_common_runtime` 已继续收敛 storage runtime 调用模板：
+  - 新增 payload 级布尔/归一化 helper（`resolveCoreStoragePayloadBooleanCallOrFallback` / `resolveCoreStoragePayloadNormalizedCallOrFallback`）
+  - 新增允许 `null` 透传的 helper（`resolveCoreStoragePayloadNormalizedCallOrFallbackAllowNull`），用于“空结果即合法语义”的读取链路
+  - 已将 `saved-game-state` 相关读写链路切换到统一 helper（storage key、storages 列表、payload 读写、window.name 持久化、清理 keys）
+  - `core_game_manager_common_runtime` 文件内已移除分散的 `callCoreStorageRuntime(...)` 直接调用，统一收敛到 storage helper 层
+  - 目标是减少样板分支并统一 fallback 语义，不改变原有行为
+- `core_game_manager_common_runtime` 已继续收敛 replay runtime 调用模板：
+  - 新增 replay timer/flow/control/lifecycle 的 payload helper（call + resolve）
+  - `getDurationMs/pause/resume/speed/seek/tick-boundary` 等回放主链已切换为统一 helper 入口
+  - 新增 replay execution/dispatch/loop helper（call + resolve + raw handler）
+  - `IPS 统计 / replay step lifecycle / replay dispatch / action kind` 已切换为统一 helper 入口
+  - 新增 replay codec helper（`call/resolve/tryHandle`），`encode/decode replay128`、compact log 写入（move/undo/practice）、`encode/decode board v4` 已切换到统一 helper 入口
+  - 保持原有 fallback 逻辑不变，降低回放分支的样板重复与后续维护成本
+  - 已完成一轮门禁回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build）
+- `core_game_manager_common_runtime` 已继续收敛 mode runtime 调用模板：
+  - 新增 `callCoreModeRuntimeWithArgs`，统一支持“对象 payload”与“原始参数数组”两类调用
+  - 新增 typed helper：`resolveCoreModeBooleanCallOrFallback` / `resolveCoreModeRawCallValueOrUndefined` / `tryHandleCoreModeRawValue` / `resolveCoreModeNormalizedCallOrFallbackAllowNull`
+  - `isGameTerminatedState / resolveCappedRowVisibilityPlan / resolveProgressiveCapped64Unlock / resolveCappedPlaceholderSlotByRepeatCount / formatCappedRepeatLabel` 已切换到 helper 入口
+  - `resolveModeCatalogConfig / resolveUndoPolicyState / resolveCappedModeState / createProgressiveCapped64UnlockedState / resolveCappedTimerLegendClass / resolveCappedTimerLegendFontSize / resolveCappedPlaceholderRowValues` 已切换到 typed helper
+  - `core_game_manager_common_runtime` 文件内 `callCoreModeRuntime(...)` 直连已收敛为 helper 内部单点调用
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` 已开始收敛 rules runtime 调用模板：
+  - 新增 typed helper：`callCoreRulesRuntimeWithArgs` / `resolveCoreRulesNumericCallOrFallback` / `resolveCoreRulesStringCallOrFallback` / `resolveCoreRulesNormalizedCallOrFallback` / `resolveCoreRulesNormalizedCallOrFallbackAllowNull` / `tryHandleCoreRulesRawValue`
+  - `getSpawnCount / getTheoreticalMaxTile / pickSpawnValue / nextFibonacci / getMergedValue / applySpawnValueCount / normalizeSpawnTable / getTimerMilestoneValues / getSpawnStatPair / getActualSecondaryRateText / getTotalSpawnCount / getTimerMilestoneSlotByValue` 已切换到 helper 入口
+  - `core_game_manager_common_runtime` 文件内 `callCoreRulesRuntime(...)` 直连已收敛为 helper 内部单点调用
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` 已开始收敛 move-path runtime 调用模板：
+  - 新增 typed helper：`callCoreMovePathRuntimeWithArgs` / `resolveCoreMovePathBooleanCallOrFallback` / `resolveCoreMovePathNormalizedCallOrFallback`
+  - `buildTraversals / findFarthestPosition / getVector / positionsEqual` 已切换到 helper 入口
+  - `core_game_manager_common_runtime` 文件内 `callCoreMovePathRuntime(...)` 直连已收敛为 helper 内部单点调用
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` 已完成 move-scan / grid-scan / timer-interval runtime 调用模板收敛：
+  - 新增 typed helper：`callCoreMoveScanRuntimeWithArgs` / `resolveCoreMoveScanBooleanCallOrFallback` / `resolveCoreMoveScanNormalizedCallOrFallback`
+  - 新增 typed helper：`callCoreGridScanRuntimeWithArgs` / `resolveCoreGridScanNormalizedCallOrFallback`
+  - 新增 typed helper：`callCoreTimerIntervalRuntimeWithArgs` / `resolveCoreTimerIntervalNumericCallOrFallback` / `resolveCoreTimerIntervalNormalizedCallOrUndefined`
+  - `movesAvailable / tileMatchesAvailable / getAvailableCells / resolveMoveInputThrottleMs / resolveTimerUpdateIntervalMs / applyCustomTileInvalidatedTimerPlaceholders / getFinalBoardMatrix / resolveBestTileValueForSubmit` 已切换到 helper 入口
+  - 该三组 runtime 在 common runtime 业务链路中的直连已收敛为 helper 内部单点调用
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` 已继续收敛 post-move/undo runtime 调用模板：
+  - 新增 payload helper：`postMoveRecord / postUndoRecord / undoRestore / undoTileRestore / undoRestorePayload / mergeEffects`（call + resolve）
+  - `computePostMoveRecord / computePostUndoRecord / computeUndoRestoreState / createUndoRestoreTile / computeUndoRestorePayload / computeMergeEffects` 已切换到 helper 入口
+  - 该六组 runtime 在 common runtime 业务链路中的直连已收敛为 helper 内部单点调用
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` 已继续收敛 move-apply/undo-snapshot runtime 调用模板：
+  - 新增 payload helper：`moveApply / undoStackEntry / undoTileSnapshot`（call + resolve）
+  - `planTileInteraction / normalizeUndoStackEntry / createUndoTileSnapshot` 已切换到 helper 入口
+  - 该三组 runtime 在 common runtime 业务链路中的直连已收敛为 helper 内部单点调用
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` 已继续收敛剩余 runtime 调用模板（special/direction/scoring/post-move/undo-snapshot/pretty/import）：
+  - 新增 typed/payload helper：`specialRules / directionLock / scoring / postMove / undoSnapshot / prettyTime / replayImport / replayLegacy`
+  - `applySpecialRulesState / resolveLockedDirectionFromCore / applyPostMoveScore / resolvePostMoveLifecycle / buildMovePlan / formatPrettyTime / parseReplayImportEnvelope / decodeLegacyReplay` 已切换到 helper 入口
+  - 当前 `core_game_manager_common_runtime` 文件中的 `callCore*Runtime(...)` 已全部收敛到 helper 区域单点调用，业务链路不再直接调用 runtime
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` helper 区已完成“调用基座”收敛：
+  - 新增通用 helper：`callCoreRuntimeWithArgs` / `callCoreRuntimeWithPayload`
+  - 各域 `callCore*RuntimeWithArgs/WithPayload` 统一委托到调用基座，减少重复样板并统一入参兜底（`runtime method` 存在性、参数数组归一化）
+  - `decodeReplayV4Actions` 也已接入 helper 层，避免业务函数出现新增直连
+  - 已完成定向回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-play-modes/pages-replay-runtime` smoke 全绿
+  - replay helper 已完成独立文件拆分：`core_game_manager_replay_helpers_runtime.js`，`common runtime` 移除对应 replay call/resolve 函数块，进一步降低单文件复杂度
+  - mode/rules helper 已完成独立文件拆分：`core_game_manager_mode_rules_helpers_runtime.js`，`common runtime` 移除对应 mode/rules call/resolve 函数块
+  - setup timer UI helper 已完成独立文件拆分：`core_game_manager_setup_timer_ui_helpers_runtime.js`，`common runtime` 移除 setup 阶段 timer UI reset/capped row visibility 函数块
+  - saved-state restore helper 已完成回收至 `core_game_manager_saved_state_helpers_runtime.js`：`resolveWindowNameSavedCandidate`、`pickLatestSavedStateCandidate`、`validateSavedStateCandidate`、`applySavedStateRestorePipeline`、`tryRestoreLatestSavedState` 等恢复链路函数已从 `common runtime` 迁出
+  - session init helper 已完成独立文件拆分：`core_game_manager_session_init_helpers_runtime.js`，`common runtime` 移除 `restoreOrInitBoardState`、`initializeSessionState`、`initializeTimerMilestones`、`resetRoundStatsState`、`initializeGameManager*` 等初始化函数块
+  - runtime accessor helper 已承接 `registerCoreRuntimeCaller`；saved-state helper 已承接 `saveGameStateImpl`；replay helper 已承接 `getActionKind`
+  - stats display helper 已承接 stats panel 字段/标签/上下文组装函数（`getActualFourRate`、`setStatsPanelFieldText`、`buildStatsPanelUpdateContext` 等）
+  - panel timer helper 已继续承接计时/actuate 相关函数：`startTimer/stopTimer/formatPrettyTime/handleTimerTick/updateActuateStats` 等，`common runtime` 移除对应实现
+  - replay helper 已继续承接 replay 控制流函数：`pause/resume/tick/speed/seek` 全链路，`common runtime` 移除对应实现
+  - stats display helper 已继续承接二级生成率函数：`getActualSecondaryRate` 及其 fallback 计算，`common runtime` 移除对应实现
+  - replay helper 已继续承接会话尾部辅助函数：`keepPlaying/clearTransientTileVisualState`
+  - `core_game_manager_common_runtime.js` 行数本轮由 `5561` 进一步降至 `4214`
+- history 诊断收敛补充（2026-03）：
+  - `history.html` 新增 burn-in 阈值筛选控件（最少可比样本、最大不一致率）
+  - `history-filter/query/load` 已打通阈值输入到查询参数链路（支持小数不一致率）
+  - `history-controls/startup` 已新增阈值输入初始化，启动时由 state 回填输入框，避免默认值与运行态配置漂移
+  - `history-page/load-entry` 已新增过滤条件持久化：
+    - 启动时从 `history_filter_state_v1` 恢复筛选条件到 state/UI
+    - 刷新加载后将当前筛选条件落盘回 `history_filter_state_v1`
+    - 持久化结构升级为带 `schemaVersion` 的对象，并兼容读取旧版平铺字段；异常/损坏 JSON 自动忽略并回退默认筛选
+    - 仅持久化“与默认筛选不同”的字段；当筛选回到默认值时删除 `history_filter_state_v1`，减少无效落盘与历史格式噪音
+    - smoke 已覆盖新旧两种恢复格式（`schemaVersion+filter` 与旧版平铺字段）
+    - 已修复启动恢复覆盖问题：持久化筛选恢复到 `state` 后会先同步回 DOM 控件，再执行首轮加载，避免首轮 `loadHistory(true)` 读取默认控件值覆盖恢复结果
+  - `history-burnin` 已新增“窗口趋势”文案（最近最多 3 个窗口的不一致率与门槛状态），辅助判断趋势改善/恶化
+  - `history-adapter-diagnostics` 已在诊断文案中显示 `Report(vN)/Diff(vN)` schema 标签，便于排查 v1/v2 混合数据来源
+  - `history-adapter-diagnostics` 已补充 diff 扩展字段展示（`undoEvtΔ` / `wonEvtΔ` / `scoreMatch` / `双侧对齐` / `原因`）
+  - `history-canary-host` 已收敛状态栏写入时机：仅在有反馈文案或错误态时更新，避免空反馈覆盖现有状态提示
+  - `pages-replay-runtime` smoke 已补齐 manager 方法就绪等待（`getModeConfigFromCatalog`、`resolveProgressiveCapped64UnlockedState`），降低慢机启动时的空快照假阴性
+  - `pages-announcement-settings` smoke 已增强 game manager settings-storage 委托链路稳定性：
+    - 增加 runtime+manager 就绪等待，降低慢机启动抖动导致的假阴性
+    - 显式触发一次 `writeLocalStorageJsonPayload` 委托，避免仅依赖 auto-submit 分支路径
 
 ## 3) 里程碑
 
@@ -339,7 +677,7 @@
   - `game_manager.js` 新增 `resolveProgressiveCapped64UnlockedState`，`resetProgressiveCapped64Rows/unlockProgressiveCapped64Row` 统一复用 capped64 状态归一化入口；新增 smoke 覆盖 `createProgressiveCapped64UnlockedState` runtime 委托。
   - `game_manager.js` 已改为通过 `CoreGameSettingsStorageRuntime` 读写统计面板开关、计时器模块视图、撤回设置与会话提交结果（页面层移除 direct localStorage 访问）
   - `game_manager.js` 新增 `resolveModePolicyContext`，统一 `mode/undo` runtime 解析入参，减少后续策略函数迁移的重复样板
-  - 新增 `js/core_game_manager_common_runtime.js`（逻辑层）、`js/core_game_manager_static_runtime.js`（静态配置层）、`js/core_game_manager_bindings_runtime.js`（绑定层），并在 `index/play/undo/capped/practice/replay` 六页按 `common -> static -> bindings -> game_manager` 顺序加载
+  - 新增 `js/core_game_manager_base_helpers_runtime.js`（基础 helper 层）、`js/core_game_manager_env_helpers_runtime.js`（环境 helper 层）、`js/core_game_manager_runtime_call_helpers_runtime.js`（runtime call helper 层）、`js/core_game_manager_saved_state_helpers_runtime.js`（saved-state helper 层）、`js/core_game_manager_runtime_accessor_helpers_runtime.js`（accessor helper 层）、`js/core_game_manager_stats_ui_helpers_runtime.js`（stats UI helper 层）、`js/core_game_manager_move_input_helpers_runtime.js`（move input helper 层）、`js/core_game_manager_stats_display_helpers_runtime.js`（stats display helper 层）、`js/core_game_manager_panel_timer_helpers_runtime.js`（panel/timer helper 层）、`js/core_game_manager_undo_stats_helpers_runtime.js`（undo/stats helper 层）、`js/core_game_manager_restart_setup_helpers_runtime.js`（restart/setup helper 层）、`js/core_game_manager_setup_timer_ui_helpers_runtime.js`（setup/timer-ui helper 层）、`js/core_game_manager_common_runtime.js`（逻辑层）、`js/core_game_manager_replay_helpers_runtime.js`（replay helper 层）、`js/core_game_manager_mode_rules_helpers_runtime.js`（mode/rules helper 层）、`js/core_game_manager_static_runtime.js`（静态配置层）、`js/core_game_manager_bindings_runtime.js`（绑定层），并在 `index/play/undo/capped/practice/replay` 六页按 `base_helpers -> env_helpers -> runtime_call_helpers -> saved_state_helpers -> runtime_accessor_helpers -> stats_ui_helpers -> move_input_helpers -> stats_display_helpers -> panel_timer_helpers -> undo_stats_helpers -> restart_setup_helpers -> setup_timer_ui_helpers -> common -> replay_helpers -> mode_rules_helpers -> static -> bindings -> game_manager` 顺序加载
   - `game_manager.js` 已删除大部分内联逻辑，当前收敛为 12 行壳文件（构造器 + 两条初始化调用，行为保持不变）
 
 验收标准：
@@ -458,8 +796,62 @@
 - 默认启用新核心路径，清理重复代码，形成稳定发布。
 
 交付物：
+- `core_game_manager_replay_helpers_runtime` 已新增 payload/args 统一解析助手，收敛重复的 runtime 调用 + fallback 判定样板（保持行为不变）。
+- `core_game_manager_mode_rules_helpers_runtime` 已新增 mode/rules 统一解析助手，收敛重复的 runtime 调用 + fallback 判定样板（保持行为不变）。
+- `core_game_manager_bindings_runtime` 已新增批量绑定助手（manager/plain 两类），替换重复 for-loop 绑定代码并修正局部排版。
+- `core_game_manager_bindings_runtime` 已新增 `capped-state getter` 与 `element-by-id resolver` 的 batch 绑定助手，统一声明式注册（行为不变）。
+- `core_game_manager_bindings_runtime` 已把散点单条绑定（`hasOwnKey/cloneResolvedCappedModeState/isProgressiveCapped64UnlockValue/setStatsPanelFieldText/computeStepStats`）并入批量绑定数组，减少绑定入口分散。
+- `core_game_manager_bindings_runtime` 已将标准 runtime key 清单提升为文件级常量（`STANDARD_GAME_MANAGER_CORE_RUNTIME_KEYS`），`createGameManagerCoreRuntimeAccessorDefs` 仅负责组装，降低函数复杂度。
+- `core_game_manager_bindings_runtime` 已新增通用 `forEachPrototypeBindingDef`，统一 manager/plain/capped/element 四类 batch 绑定循环，减少重复样板。
+- `core_game_manager_mode_rules_helpers_runtime` 顶部 call+resolve 样板已改为复用 `core_game_manager_runtime_call_helpers_runtime` 的通用调用壳（接口不变，行为不变）。
+- `core_game_manager_mode_rules_helpers_runtime` 已删除冗余包装函数 `callCoreModeRuntimeByArgs/ByPayload`、`callCoreRulesRuntimeByArgs`（仓内无引用，已由通用壳覆盖）。
+- `core_game_manager_mode_rules_helpers_runtime` 已继续删除本地重复 resolver wrapper（string/boolean/normalized/raw/try-handle），统一复用 `resolveCore*CallResult` / `tryHandleCoreRawCallResult` 通用实现。
+- `game-manager-audit` 已收紧 bindings 行数护栏：`MAX_BINDINGS_RUNTIME_LINES` 从 `900` 降至 `400`，防止 bindings 再次膨胀。
+- `game-manager-audit` 的 runtime 脚本顺序校验已改为“脚本链列表驱动生成正则”，替换超长硬编码正则，降低后续维护风险（校验语义不变）。
+- `game-manager-audit` 已继续收紧大 helper 防膨胀阈值：`mode_rules <= 1200`、`replay <= 2050`、`saved_state <= 1350`、`move_input <= 1000`，用于在不破坏行为前提下倒逼后续继续拆分。
+- `core_game_manager_move_input_helpers_runtime` 已收敛重复的 flush 调度样板：新增 `requestMoveInputFlush` 统一承接两处 `requestAnimationFrame -> flushPendingMoveInput` 链路（行为不变）。
+- `core_game_manager_saved_state_helpers_runtime` 已新增模块内 storage 调用薄代理（normalized/payload-normalized/payload-normalized-allow-null/payload-boolean），并替换高频调用点，减少重复调用样板（行为不变）。
+- `core_game_manager_saved_state_helpers_runtime` 已进一步收敛重复闭包：`allow-null payload normalizer` 与 `return false/undefined` 回调改为共享 helper（行为不变）。
+- `core_game_manager_saved_state_helpers_runtime` 已新增共享 normalizer（`boolean/object/array -> undefined`），并替换 window-name 持久化、lite payload 构建、storage 持久化与 storages 读取等高频闭包（行为不变）。
+- `core_game_manager_saved_state_helpers_runtime` 已压缩共享 helper 写法并回收行数余量（`1336 -> 1323`），降低触发 `saved_state <= 1350` 行数门禁的风险。
+- `core_game_manager_replay_helpers_runtime` 已压缩纯转调 wrapper（execution/timer/codec 与通用 args/payload 包装），在不改语义前提下回收行数余量（`1971 -> 1912`）。
+- `core_game_manager_replay_helpers_runtime` 已删除本地重复 resolver wrapper（object/boolean/numeric/string/normalized/raw/try-handle），统一复用 `resolveCore*CallResult` 与 `tryHandleCoreRawCallResult` 通用实现。
+- `core_game_manager_replay_helpers_runtime` 的 `resolveCoreReplayPayloadCallWith/resolveCoreReplayArgsCallWith` 已复用 `resolveCorePayloadCallWith/resolveCoreArgsCallWith`，并移除冗余 `callCoreReplayRuntimeByPayload/ByArgs` 包装。
+- `core_game_manager_replay_helpers_runtime` 顶部 wrapper 已进一步收敛为“薄代理”：统一复用 `resolveCorePayloadCallWith/resolveCoreArgsCallWith` 与 `resolveCore*CallResult`，在不改调用签名前提下减少重复样板（行为不变）。
+- `core_game_manager_mode_rules_helpers_runtime` 顶部 wrapper 已进一步收敛为“薄代理”：mode/rules 的 payload/args 解析统一复用通用调用壳，`rules numeric` 也统一走 `resolveCoreArgsNumericCallOrFallback`（行为不变）。
+- `core_game_manager_runtime_call_helpers_runtime` 行数已控制回审计阈值内：`544` 行（阈值 `550`），避免“通用层膨胀”成为新的维护风险。
+- `game-manager-audit` 已新增 bindings 硬约束：禁止直接 `GameManager.prototype.xxx = function` 赋值，并基于 `bindGameManagerPrototype*`/batch 绑定定义做重复方法名检测，防止回退到旧式写法。
+- 本轮门禁已验证通过：`npm run verify:refactor`（`audit + unit + smoke + build` 全绿）。
+- 本轮增量门禁已验证通过：`npm run verify:iterate`（`audit + test:unit:core + smoke:runtime-contract + smoke:play-replay` 全绿）。
 - 默认 adapter fallback 已切到 `core-adapter`（保留 `engine_adapter_force_legacy=1` 强制回滚优先级）。
 - burn-in 面板新增观测指标：可比较一致率、连续窗口达标率、模式不一致 Top（按 mode_key）。
+- burn-in 面板新增 cutover readiness 标识（可切换/观察中/阻塞），直接对应 M5 放量决策。
+- smoke 已补齐 burn-in 文案契约断言（`pages-history-adapter-diagnostics` 覆盖 readiness/一致率/连续达标率/Top 模式）。
+- smoke 已补齐 runtime 契约断言（`history-burnin-runtime` 覆盖 readiness/Top 文案由 runtime 产出）。
+- smoke 已补齐 cutover-ready 断言（`history-burnin-readiness` 覆盖达标场景：单窗口/连续窗口均通过时显示“可切换”）。
+- smoke 已补齐 `LocalHistoryStore` burn-in 聚合断言（`history-burnin-readiness` 覆盖 `topMismatchModes` 统计排序与计数）。
+- smoke 已补齐 cutover-blocked 断言（`history-burnin-readiness` 覆盖高不一致率场景显示“阻塞”）。
+- canary 面板文案已明确默认来源语义：`默认回退（core-adapter）`。
+- canary `reset_policy` 提示文案已与默认策略对齐：`默认回退 core-adapter`。
+- smoke 已补齐 canary 状态栏文案断言（`pages-history-adapter-diagnostics` 覆盖 `reset_policy` 成功提示）。
+- history burn-in 查询参数已支持小数阈值（`max_mismatch_rate` 支持如 `0.5`）。
+- 已新增 M5 执行文档与记录模板：
+  - `docs/BURNIN_CUTOVER_RUNBOOK.zh-CN.md`
+  - `docs/BURNIN_EXECUTION_LOG_TEMPLATE.zh-CN.md`
+  - `docs/COMMIT_SPLIT_PLAN.zh-CN.md`（按批次拆分提交的执行清单）
+- 门禁脚本已补充 `verify:burnin`，并统一 `verify:prepush` 为：
+  - `npm run verify:burnin && npm run verify:refactor:ci`
+  - 已完成实测回归：`verify:burnin` 与 `verify:prepush` 全绿
+- 已新增发布收口脚本与清单：
+  - `verify:release-ready`（`scripts/release-readiness-check.mjs`）
+  - `verify:release`（`verify:prepush + verify:rollback-drill + verify:release-ready`）
+  - `verify:rollback-drill`（仅校验紧急回滚与恢复链路）
+  - `report:refactor-progress`（输出关键收口指标快照）
+  - `docs/RELEASE_CUTOVER_CHECKLIST.zh-CN.md`
+  - 已完成实测回归：`npm run verify:rollback-drill` / `npm run verify:release-ready` 全绿
+- CI 已新增 `Release Ready` 作业，固定执行：
+  - `npm run verify:release-ready`
+  - `npm run report:refactor-progress`
 - 死代码清理。
 - 文档与运行手册更新。
 - burn-in 结束后打稳定 tag。
@@ -487,12 +879,27 @@
 ## 5.1) 检查节奏（提效约定）
 - 批次内快速检查（每完成 2-4 个小改动）：
   - `npm run test:unit`
+  - `npm run test:smoke:burnin`（仅 history burn-in/readiness 相关）
+  - `npm run test:smoke:canary`（仅 canary 策略面板相关）
   - `npm run test:smoke:adapter`（仅 adapter/burn-in 关键链路）
+  - `npm run test:smoke:rollback-drill`（仅回滚演练关键链路）
+  - 注意：多个 Playwright smoke 命令需串行执行，避免本地 `4173` 端口冲突。
+  - 若必须并行，可临时指定 `PW_WEB_PORT`（例如 `PW_WEB_PORT=4174 npm run test:smoke:canary`）。
 - 提交前全量检查（push 前必须）：
   - `npm run verify:refactor`
+  - 可选一键命令：`npm run verify:prepush`（串行执行 `verify:burnin` + `verify:refactor:ci`）
+  - 发布前一键命令：`npm run verify:release`（在 `verify:prepush` 基础上追加 `verify:rollback-drill` + `verify:release-ready`）
 
 ## 6) 立即执行项
 1. 优先执行一键门禁：`npm run verify:refactor`（串行执行 game-manager-audit/unit/smoke/build）。
-2. 快速回归可先跑：`npm run test:smoke:adapter`（adapter rollout + history burn-in 相关用例）。
+   - 若需与 CI 分片一致，使用：`npm run verify:refactor:ci`。
+2. 快速回归可先跑：`npm run test:smoke:burnin` / `npm run test:smoke:canary` / `npm run test:smoke:adapter`（adapter rollout + history burn-in/canary 相关用例）。
+   - 回滚链路可单独跑：`npm run test:smoke:rollback-drill`。
+   - 如果你希望只在提交前统一执行，也可直接跑：`npm run verify:prepush`。
 3. 继续削减入口脚本中的重复拼装逻辑，优先抽到 `src/bootstrap/*`。
 4. 按 M5 执行 burn-in：保持默认 fallback 为 `core-adapter`，持续监控历史页 gate，并保留 `engine_adapter_force_legacy=1` 作为紧急回滚开关。
+5. 进度快照可直接执行：`npm run report:refactor-progress`（输出 `index_ui.js` / `game_manager.js` / smoke 拆分状态）。
+6. 提交拆分覆盖检查：`npm run report:commit-split-check`（检查当前改动是否全部归入 4 批提交）。
+7. 提交前总校验：`npm run verify:submit-ready`（先检查分批覆盖，再执行发布门禁）。
+8. 批次预览/暂存：`npm run report:commit-batch -- --batch=<1|2|3|4> [--stage]`。
+9. 批次规则已抽到共享定义：`scripts/commit-batch-defs.mjs`（避免 `commit-split-check` 与 `stage-commit-batch` 规则漂移）。

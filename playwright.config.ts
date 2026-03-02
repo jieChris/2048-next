@@ -1,7 +1,9 @@
 import { defineConfig } from "@playwright/test";
 
 const HOST = "127.0.0.1";
-const PORT = 4173;
+const DEFAULT_PORT = 4173;
+const parsedPort = Number.parseInt(process.env.PW_WEB_PORT || "", 10);
+const PORT = Number.isFinite(parsedPort) ? parsedPort : DEFAULT_PORT;
 const BASE_URL = `http://${HOST}:${PORT}`;
 
 export default defineConfig({
