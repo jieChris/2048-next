@@ -5,6 +5,62 @@
 - 每个提交只覆盖一个主题，降低回归排查成本。
 - 不执行 `git push -u origin feature/core-shell`。
 
+## 当前工作区（2026-03，本轮建议 2 批）
+
+### 提交 A：core runtime 收口（batch-1）
+
+执行：
+```bash
+npm run report:commit-batch -- --batch=1 --stage
+git diff --cached --name-only
+git commit -m "refactor(core): finalize runtime helper closure without behavior change"
+```
+
+建议门禁：
+```bash
+npm run verify:iterate
+```
+
+### 提交 B：工具链与文档收口（batch-4）
+
+执行：
+```bash
+npm run report:commit-batch -- --batch=4 --stage
+git diff --cached --name-only
+git commit -m "chore(tooling): add refactor closure audit and update commit split plan"
+```
+
+建议门禁：
+```bash
+npm run verify:refactor
+```
+
+### 最终执行（可直接复制）
+1. 先做一次快速确认：
+```bash
+npm run report:commit-split-check
+```
+2. 提交 A（core runtime 收口）：
+```bash
+npm run report:commit-batch -- --batch=1 --stage
+git diff --cached --name-only
+git commit -m "refactor(core): finalize runtime helper closure without behavior change"
+```
+3. 提交 B（工具链与文档收口）：
+```bash
+npm run report:commit-batch -- --batch=4 --stage
+git diff --cached --name-only
+git commit -m "chore(tooling): archive progress log and finalize closure audit gates"
+```
+4. 提交前全量门禁（仅在准备提交时执行一次）：
+```bash
+npm run verify:submit-ready
+```
+
+说明：
+- 不执行 `git push -u origin feature/core-shell`。
+- 若 VS Code Git 提交仍受 pipe 问题影响，统一使用命令行 `git commit -m "..."`。
+
 ## 提交顺序（建议 4 批）
 
 ### 批次 1：`game_manager` 壳化与 helper 拆分
@@ -199,4 +255,34 @@ git restore --staged <file>
 - 如需并行开第二组 smoke，可改端口执行（bash）：
 ```bash
 PW_WEB_PORT=4174 npm run test:smoke:canary
+```
+
+## PR 描述模板（可直接粘贴）
+
+```md
+## 变更摘要
+- 完成 core runtime helper 收口（仅结构重排与样板压缩，不改玩法/行为语义）。
+- 新增收口审计脚本 `audit:refactor-closure`，固化提交前检查。
+- 更新拆分提交规则与重构管理文档（中文）。
+
+## 主要改动
+- Runtime helpers:
+  - `js/core_game_manager_*_runtime.js`
+  - `js/core_game_manager_bindings_runtime.js`
+- Tooling:
+  - `scripts/refactor-closure-audit.mjs`
+  - `scripts/commit-batch-defs.mjs`
+  - `package.json`
+- Docs:
+  - `REFACTOR_MANAGEMENT_PLAN.md`
+  - `docs/COMMIT_SPLIT_PLAN.zh-CN.md`
+
+## 验证结果
+- `npm run verify:iterate` 通过
+- `npm run verify:refactor` 通过
+- `npm run audit:refactor-closure` 通过
+
+## 风险与回滚
+- 风险级别：低（无规则变更、无接口破坏，主要为等价重构）。
+- 回滚方式：按 commit 粒度回滚本 PR；`engine_adapter_force_legacy=1` 回滚开关保持可用。
 ```

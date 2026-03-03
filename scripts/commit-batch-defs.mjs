@@ -41,6 +41,7 @@ export const BATCH_DEFS = {
         "scripts/refactor-gate.mjs",
         "scripts/release-readiness-check.mjs",
         "scripts/refactor-progress-report.mjs",
+        "scripts/refactor-closure-audit.mjs",
         "scripts/commit-split-check.mjs",
         "scripts/stage-commit-batch.mjs",
         "scripts/commit-batch-defs.mjs",
@@ -48,7 +49,8 @@ export const BATCH_DEFS = {
         "docs/BURNIN_CUTOVER_RUNBOOK.zh-CN.md",
         "docs/BURNIN_EXECUTION_LOG_TEMPLATE.zh-CN.md",
         "docs/RELEASE_CUTOVER_CHECKLIST.zh-CN.md",
-        "docs/COMMIT_SPLIT_PLAN.zh-CN.md"
+        "docs/COMMIT_SPLIT_PLAN.zh-CN.md",
+        "docs/REFACTOR_PROGRESS_LOG.zh-CN.md"
       ].includes(file)
   }
 };

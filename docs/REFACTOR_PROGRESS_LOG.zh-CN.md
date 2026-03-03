@@ -1,0 +1,134 @@
+# 重构推进明细归档（历史流水）
+
+- 来源：`REFACTOR_MANAGEMENT_PLAN.md` 的 `## 7) 最新推进记录（2026-03-03）` 历史长记录。
+- 目的：主计划保留里程碑摘要，本文件保留详细推进流水，便于检索与追溯。
+
+## 7) 最新推进记录（2026-03-03）
+- 提交前一体化门禁回归已通过：`npm run verify:submit-ready` 全绿（commit-split-check + burn-in/canary/adapter + verify:refactor + rollback-drill + release-ready）。
+- 发布就绪检查已通过：`npm run verify:release-ready` PASS（docs/scripts/smoke sharding/gate parameterization）。
+- 进度口径已前置到 `2.1 当前收敛快照`，后续优先更新摘要状态，再补充详细技术拆分记录。
+- `replay_helpers` 去壳继续推进：已新增 `createReplaySeekRewindPayload/createReplaySeekRewindFallback`，并将 `resolveReplaySeekRewindPlan` 收敛为“payload 组装 + core 调用 + fallback 组装”组合（不改 rewind 触发条件与 `board/seed` 策略语义）。
+- `replay_helpers` 去壳继续推进：已新增 `buildAutoSubmitPayloadBase/buildAutoSubmitPayloadParityFields/buildAutoSubmitPayloadClientFields/assignAutoSubmitPayloadFields`，并将 `buildAutoSubmitPayload` 收敛为“基础载荷 + parity 字段 + client 字段”组合（不改提交字段集合与默认 `client_version/end_reason` 语义）。
+- `move_input` 去壳继续推进：已新增 `createPostMoveLifecycleDefaultState/createPostMoveLifecyclePayload`，并将 `resolvePostMoveLifecycle` 收敛为“默认态 + payload 组装 + core/fallback 解析”组合（不改 `postMoveResult/shouldStartTimer` 语义）。
+- `move_input` 去壳继续推进：已新增 `createIpsInputCountPayload/applyIpsInputCountFromCoreResult/applyIpsInputCountFallback`，并将 `updateIpsInputCountAfterMove` 收敛为“payload 组装 + core 回写 + fallback 累加”组合（不改 replay 模式不计入 IPS 的语义）。
+- `mode_rules` 去壳继续推进：已新增 `normalizeVectorFromCore/resolveVectorFallback`，并将 `getVector` 收敛为“core 归一化 + fallback 映射”组合（不改方向到向量映射规则）。
+- `undo_stats` 去壳继续推进：已新增 `resolveUndoRestoreDefaultUndoUsed/resolveUndoRestoreStateCounterFields/resolveUndoRestoreStateStatusFields`，并将 `normalizeUndoRestoreStateInput` 收敛为“默认值解析 + 计数字段归一化 + 状态字段归一化”组合（不改 `undoUsed` 的 `default+1` 回退语义）。
+- 复杂度快照更新：本轮已清零 30 行函数峰值，当前各模块最长函数峰值降至 29 行。
+- 说明：当前 bash `PATH` 下无 `node` 命令，已改用 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate` 执行门禁并通过。
+- `replay_helpers` 去壳继续推进：已新增 `resolveLocalHistorySaveRecord/writeLocalHistoryStoreMissingResult/createAutoSubmitExecutionContext/executeAutoSubmitWithLocalHistory`，并将 `tryAutoSubmitOnGameOver` 收敛为“跳过判定 -> store 能力检查 -> 执行上下文 -> 本地保存执行”组合（不改缺失 `LocalHistoryStore` 时写入失败记录与异常落盘语义）。
+- `restart_setup` 去壳继续推进：已新增 `createRestartWithBoardSetupArgs/shouldPersistPracticeRestartBase/applyPracticeRestartBaseFromCurrentBoard`，并将 `restartWithBoard` 收敛为“setup 参数组装 -> board 恢复 -> practice base 条件持久化”组合（不改 replay 模式 `setupSeed=0` 与 practice restart base 触发条件语义）。
+- `stats_ui` / `stats_display` / `panel_timer` 去壳继续推进：已新增 `createStatsPanelOverlayHtml/appendStatsPanelOverlayToDocumentBody/createActuatorPayloadState/updateActuateStatsAndPanel/refreshActuateTimerAndIps/resolvePrettyTimeFallbackString`，并将 `resolveOrCreateStatsPanelOverlay/actuate/formatPrettyTime` 收敛为组合式编排（不改 overlay 结构、actuate 提交流程与 pretty-time 字符串格式语义）。
+- `mode_rules` 去壳继续推进：已新增 `createTimerMilestoneResolveArgs/normalizeTimerMilestoneValuesFromCore/resolveTimerMilestoneValuesFallback`，并将 `getTimerMilestoneValues` 收敛为“args 组装 + core 归一化 + fallback”组合（不改 fibonacci 13 槽里程碑语义）。
+- 审计收口：`core_game_manager_mode_rules_helpers_runtime.js` 因拆分新增辅助函数触发行数阈值后，已做无行为变更的空行压缩（`1208 -> 1117` 行）并恢复 `game-manager-audit` 通过。
+- 门禁结果：`"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate` 已再次全绿（audit + unit + smoke）。
+- `move_input` 去壳继续推进：已新增 `applyMergedTileMutation/applyMergedTileEffects`，并将 `applyMergedMoveTraversalContext` 收敛为“合并落子 + 合并副作用应用”组合（不改 merge 写分、`won/reached32k` 标记与 timer 打点语义）。
+- 复杂度快照更新：当前模块峰值已由 29 行进一步降至 28 行，热点集中在 `resolveUndoStackEntrySourceByCore` 与 `applyProgressiveCapped64UnlockByCore`。
+- 门禁结果：完成上述拆分后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `undo_stats` 去壳继续推进：已新增 `createUndoStackEntryNormalizePayload/normalizeUndoStackEntrySourceByCore`，并将 `resolveUndoStackEntrySourceByCore` 收敛为“payload 组装 + core 值归一化”组合（不改 entry fallback 语义）。
+- `move_input` 去壳继续推进：已新增 `createProgressiveCapped64UnlockPayload/applyProgressiveCapped64UnlockFromCoreResult`，并将 `applyProgressiveCapped64UnlockByCore` 收敛为“payload 组装 + core 结果应用”组合（不改 `nextUnlockedState` 回退与解锁行显示语义）。
+- 复杂度快照更新：当前峰值已进一步降至 27 行（热点切换到 `addRandomTile` / `setReplaySpeed` / `resolveModeConfig`）。
+- 门禁结果：完成本轮拆分后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `bindings_runtime` 去壳继续推进：已新增 `createPostAccessorPlainForwardBindings/createPostAccessorManagerForwardBindings`，并将 `bindRuntimeForwardsAfterAccessorRegistration` 收敛为“plain forward + manager forward”两段绑定（不改 accessor 注册后 forward 映射语义）。
+- `undo_stats` 去壳继续推进：已新增 `createCoreStepStatsPayload/resolveCoreStepStatsFromResult`，并将 `resolveCoreStepStats` 收敛为“payload 组装 + core 结果归一化”组合（不改 replay step stats 的 core 优先与 fallback 到 `null` 语义）。
+- `stats_ui` 去壳继续推进：已新增 `createStatsPanelVisibilityPayload/writeStatsPanelVisibilityFlagFallback`，并将 `writeStatsPanelVisibilityFlag` 收敛为“payload + core 调用 + storage fallback”组合（不改 `1/0` 持久化值与写失败回退语义）。
+- `move_input` 去壳继续推进：已新增 `tryHandleMoveInputImmediately/queueMoveInputDirection`，并将 `handleMoveInput` 收敛为“即时执行判定 + 排队刷新”组合（不改 `direction=-1` 直通、throttle 判定与 RAF flush 语义）。
+- `stats_display` / `saved_state` / `panel_timer` / `mode_rules` 去壳继续推进：分别新增 `createIpsInputCountResolvePayload+resolveIpsInputCountFallback`、`createReadSavedPayloadByKeyCorePayload+normalizeSavedPayloadByKeyFromCore`、`createWriteTimerModuleViewMapPayload+writeTimerModuleViewMapFallback`、`createLegacyModeResolvePayload+resolveLegacyModeFallback`，并将对应入口函数收敛为“payload + core + fallback”统一形态（不改 IPS 计数、存档读取优先级、timer view 持久化、legacy mode 判定语义）。
+- 复杂度快照更新：`npm run report:refactor-progress` 仍全部达标（`index_ui.js` 107 行、`game_manager.js` 10 行、smoke 已拆分 36 文件）；本轮继续压缩 20+ 行热点函数数量。
+- 门禁结果：本轮两次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果均全绿（audit + unit + smoke）。
+- `replay_helpers` 去壳继续推进：已新增 `createReplayImportEnvelopePayload/normalizeReplayImportEnvelopeFromCore/parseReplayImportEnvelopeFallback`，并将 `parseReplayImportEnvelope` 收敛为“payload + core 归一化 + fallback 解析”组合（不改 JSON v3 / v4C 的解析优先级与异常语义）。
+- `replay_helpers` 去壳继续推进：已新增 `createAppendCompactMoveCodePayload/tryAppendCompactMoveCodeByCore/appendCompactMoveCodeFallback`，并将 `appendCompactMoveCode` 收敛为“core 直写优先 + fallback 编码”组合（不改 `rawCode` 校验与 `127 + 0` 扩展编码语义）。
+- `bindings_runtime` 去壳继续推进：已新增 `createPreAccessorManagerForwardBindings/createPreAccessorPlainForwardBindings`，并将 `bindRuntimeForwardsBeforeAccessorRegistration` 收敛为“pre-accessor forward 批量绑定”组合（不改 core accessor 注册前 forward 映射语义）。
+- 复杂度快照更新：通过 runtime helper 函数行数扫描，本轮后峰值已由 29 行降至 24 行（当前前排函数均为 24 行）。
+- 门禁结果：完成本轮拆分后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `bindings_runtime` 去壳继续推进：已新增 `createCappedModeManagerForwardBindings`，并将 `bindCappedModeBindings` 收敛为“capped-mode forward 清单 + 原有 getter 绑定”组合（不改 `isCappedMode/getCappedTargetValue/isProgressiveCapped64Mode` 语义）。
+- `panel_timer` 去壳继续推进：已新增 `createTimerModuleViewNextMapPayload/resolveTimerModuleViewNextMapFromCore`，并将 `resolveTimerModuleViewNextMap` 收敛为“payload 组装 + core map 归一化”组合（不改 `baseMap` 回退与 mode 维度写入语义）。
+- 复杂度快照更新：再次扫描 runtime helper 后，峰值维持 24 行，24 行函数数量继续减少（热点主要集中在 `panel_timer/replay_helpers/saved_state` 的少数函数）。
+- 门禁结果：完成本轮后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `mode_rules/saved_state/undo_stats` 去壳继续推进：对 `normalizeModeConfig/scanWindowNamePartsByMarker/resolveSavedStateRestoreDecision/shouldUseSavedGameState/computeFallbackStepStats/createUndoRestoreStateFallback` 完成结构压缩（不改 restore 判定、saved-state 读取与 undo fallback 语义）。
+- 热点扫描更新：当前 21 行热点已从 `runtime_accessor/saved_state/undo_stats` 缩减为更少节点，剩余主要集中在 `saved_state` 的窗口名扫描链路和少量 fallback 计算函数。
+- 门禁结果：完成本轮后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `saved_state/undo_stats/mode_rules` 去壳继续推进：对 `readSavedPayloadByKey/writeWindowNameSavedPayload/saveGameState/buildLiteSavedGameStateCoreCallPayload/persistSavedGameStatePayload/resolveUndoPolicyOptionsSnapshot/resolveUndoPolicyFallbackState/normalizeSpawnTableByCore` 完成结构压缩（不改 storage core/fallback 路径与 undo 策略计算语义）。
+- 热点收敛结果：`saved_state` 高频包装函数长度继续下降，当前 20 行级热点主要剩在 `normalizeCappedRepeatLegendClasses` 与 lite-payload 辅助链路。
+- 门禁结果：完成本轮后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `session_init/setup_timer_ui/stats_display/move_input/replay_helpers` 去壳继续推进：对 `resolveTimerMilestoneSlotByValue/applyCappedRowVisibilityPlanFallback/resolveIpsDisplayTextByCore/tryWriteCappedPlaceholderMilestoneRow/normalizeReplaySeekTargetIndex/resolveAutoSubmitBestTileValue` 完成结构压缩（不改 timer slot 映射、capped 行显示、IPS 文案与 replay seek/auto-submit 语义）。
+- `saved_state/undo_stats` 去壳继续推进：本轮继续压缩 `readSavedPayloadByKey/writeWindowNameSavedPayload/saveGameState/buildLiteSavedGameStateCoreCallPayload/persistSavedGameStatePayload/resolveUndoPolicyOptionsSnapshot/resolveUndoPolicyFallbackState` 的包装层（无行为变更）。
+- 门禁结果：完成本轮后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `bindings/restart_setup/saved_state` 去壳继续推进：对 `createGameplayLifecycleBindings/initializeSetupSeedAndReplayState/normalizeCappedRepeatLegendClasses` 完成结构压缩（不改 gameplay 绑定集合与 setup seed/replay 初始化语义）。
+- 迭代收口补充：继续压缩 `session_init/setup_timer_ui/stats_display/move_input/replay_helpers` 的 20 行级包装函数，保持 core/fallback 路径与旧行为一致。
+- 门禁结果：完成补充压缩后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `replay_helpers` 去壳继续推进：对 `resolveReplayShouldStopAtTick/resolveReplayEndStateAtTick` 完成结构压缩（不改 tick 终止判定与 replay 结束态 fallback 语义）。
+- 门禁结果：完成补充压缩后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `bindings/mode_rules/restart_setup/setup_timer_ui/undo_stats/replay_helpers` 去壳继续推进：对 `createGameManagerCoreRuntimeAccessorDefs/resolveTheoreticalMaxTile/resolveSetupRestoreAndInitialBoardState/applyCappedRowVisibilityPlanFromCore/getSpawnStatPair/resolveCoreStepStats/pauseReplay` 完成结构压缩（不改 core/fallback 路径语义）。
+- `stats_ui` 修复：`resolveStatsPanelInitialOpenState` 补回返回值 `isOpen`，恢复“读取到已持久化开启状态时启动即展开统计面板”的预期行为。
+- 门禁结果：完成本轮后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `replay_helpers` / `panel_timer` 去壳继续推进：对 `resolveReplayResumeState/insertCustomTile/getFinalBoardMatrix/resolveTimerUpdateIntervalMs/resolveProgressiveCapped64UnlockedState` 完成结构压缩（不改 replay 恢复、practice 自定义落子、棋盘快照、timer 刷新间隔与 progressive64 解锁语义）。
+- 体积快照更新：`core_game_manager_replay_helpers_runtime.js` 当前 1942 行（仍在审计上限 2050 内），`core_game_manager_panel_timer_helpers_runtime.js` 当前 608 行。
+- 门禁结果：完成本轮后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `mode_rules` 去壳继续推进：对 `normalizeSpecialRules/getModeConfigFromCatalog/resolveModeConfig/getTimerMilestoneValues/buildTraversals/resolveFindFarthestPositionByCore/pickSpawnValue/planTileInteraction/nextFibonacci/getVector/getMergedValue/getAvailableCells` 完成结构压缩（不改 core/fallback 路径与原有规则语义）。
+- 体积收口：`core_game_manager_mode_rules_helpers_runtime.js` 行数已从上一轮的 1117 行进一步压缩到 1017 行，继续保持在审计上限（<=1200）内。
+- 复杂度快照更新：本轮后 `mode_rules` 中的 22 行热点已全部消化，当前热点主集中已转移到 `move_input/undo_stats` 的少量函数。
+- 门禁结果：完成本轮压缩后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `move_input` / `undo_stats` 去壳继续推进：对 `resolvePostMoveLifecycle/normalizeMoveUndoCountFields/resolveMoveUndoSnapshot/resolveUndoPolicyStateForMode` 完成结构压缩（不改 post-move 生命周期、undo snapshot 归一化与 undo policy 解析语义）。
+- 体积快照更新：`core_game_manager_move_input_helpers_runtime.js` 已压到 943 行（上轮 999 行），`core_game_manager_undo_stats_helpers_runtime.js` 当前 836 行，均稳定在审计上限内。
+- 门禁结果：完成本轮后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `move_input` 去壳继续推进：已新增 `resolveForcedReplaySpawn/tryInsertForcedReplaySpawn/resolveSpawnStepCount/primeSeededRandomByStepCount/insertSeededRandomSpawnTile`，并将 `addRandomTile` 收敛为“forcedSpawn 优先 + seeded 随机补砖”组合（不改 replay 强制 spawn 与 seeded 随机序列语义）。
+- `replay_helpers` 去壳继续推进：已新增 `createReplaySpeedPayload/createReplaySpeedFallback/resolveReplaySpeedState`，并将 `setReplaySpeed` 收敛为“speed state 解析 + delay 应用 + resume 判定”组合（不改 `replayDelay=200/multiplier` 与 `isPaused` 逻辑语义）。
+- `mode_rules` 去壳继续推进：已新增 `createResolveModeConfigPayload/normalizeResolvedModeConfigFromCore/resolveModeConfigFallback`，并将 `resolveModeConfig` 收敛为“payload 组装 + core 归一化 + fallback”组合（不改 alias 映射与默认 mode 回退语义）。
+- 复杂度快照更新：当前峰值已继续降至 26 行，热点切换到 `resolveAutoSubmitBestTileValue/resolveProgressiveCapped64UnlockedState/resolveCappedPlaceholderSlotValue`。
+- 门禁结果：完成本轮拆分后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `replay_helpers` 去壳继续推进：已新增 `createAutoSubmitBestTileResolveArgs/normalizeAutoSubmitBestTileFromCore/resolveAutoSubmitBestTileFallback`，并将 `resolveAutoSubmitBestTileValue` 收敛为“args 组装 + core 归一化 + fallback 扫描”组合（不改 best tile 计算与非法值回退语义）。
+- `panel_timer` 去壳继续推进：已新增 `resolveProgressiveCapped64UnlockedStateFallback`，并将 `resolveProgressiveCapped64UnlockedState` 收敛为“core 归一化 + fallback 状态合成”组合（不改 `16/32/64` 三槽布尔归一化语义）。
+- `move_input` 去壳继续推进：已新增 `createCappedPlaceholderSlotResolvePayload/resolveCappedPlaceholderSlotByCore/resolveCappedPlaceholderSlotFallback/normalizeCappedPlaceholderSlotValue`，并将 `resolveCappedPlaceholderSlotValue` 收敛为“payload + core + fallback + normalize”组合（不改 `x2` 对应首占位行与 slot 正数约束语义）。
+- 复杂度快照更新：当前峰值维持 26 行，但热点已前移为 `applyInvalidatedTimerPlaceholdersForCustomTile/applyCorePostMoveLifecycleResult` 等，长函数分布更均匀。
+- 门禁结果：完成本轮拆分后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `replay_helpers` 去壳继续推进：已新增 `createInvalidatedTimerElementIdsPayload/normalizeInvalidatedTimerElementIdsFromCore/resolveInvalidatedTimerElementIdsByCore`，并将 `applyInvalidatedTimerPlaceholdersForCustomTile` 收敛为“core 解析 + fallback 占位写回”组合（不改 core 返回 `[]` 时仍视为已处理的语义）。
+- `move_input` 去壳继续推进：已新增 `applyCorePostMoveSuccessfulMoveCount/resolveCorePostMoveOverState/shouldCorePostMoveEndTimer/resolveCorePostMoveShouldStartTimer`，并将 `applyCorePostMoveLifecycleResult` 收敛为“计数更新 + over 判定 + timer 终止 + shouldStartTimer 计算”组合（不改 `successfulMoveCount` 回退与 timer 停止条件语义）。
+- `panel_timer` 去壳继续推进：已新增 `resolveCappedTimerTargetValue/resolveCappedTimerFontSizeFallback`，并将 `getCappedTimerFontSize` 收敛为“target 归一化 + core/fallback 字号计算”组合（不改 `2048` 默认值与阈值字号语义）。
+- 复杂度快照更新：当前峰值已进一步降至 25 行，热点分布在 `updateUndoUiState/bindStatsPanelUiEvents/setupGame/normalizeMoveUndoSnapshot`。
+- 门禁结果：完成本轮拆分后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `undo_stats` 去壳继续推进：已新增 `applyUndoLinkUiState/applyUndoGameOverButtonUiState/applyPracticeUndoButtonUiState`，并将 `updateUndoUiState` 收敛为“状态快照 + 三类按钮应用 + 顶部可用性同步”组合（不改 `canUndo/modeUndoCapable` 控制语义）。
+- `stats_ui` 去壳继续推进：已新增 `bindStatsPanelToggleButtonEvent/bindStatsPanelCloseButtonEvent/bindStatsPanelOverlayClickEvent`，并将 `bindStatsPanelUiEvents` 收敛为“toggle/close/overlay 三段绑定”组合（不改 `__statsBound` 防重复绑定语义）。
+- `restart_setup` 去壳继续推进：已新增 `resolveGlobalSetupModeConfig/resolveSetupModeConfig`，并将 `setupGame` 收敛为“配置解析 -> normalize -> setup 初始化”组合（不改 `optionConfig > GAME_MODE_CONFIG > detectMode` 优先级语义）。
+- `move_input` 去壳继续推进：已新增 `normalizeMoveUndoScore/normalizeMoveUndoTiles/normalizeMoveUndoCountFields`，并将 `normalizeMoveUndoSnapshot` 收敛为“score/tiles/counters 分段归一化”组合（不改 `undoFallback` 回退语义）。
+- 复杂度快照更新：当前峰值维持 25 行，热点切换为 `resolveUndoPolicyStateForMode/resolvePreferredTimerModuleViewForSetup/buildMoveUndoFallback` 等。
+- 门禁结果：完成本轮拆分后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `replay_helpers` 去壳继续推进：已新增 `normalizeDecodedLegacyReplayFromCore/decodeLegacyReplayEnvelopeFallback`，并将 `decodeLegacyReplayEnvelope` 收敛为“core 归一化 + v1/v2S/v2 fallback 解码”组合（不改 legacy replay 格式优先级和错误语义）。
+- `replay_helpers` 去壳继续推进：已新增 `applyJsonV3ReplayModeConfigFields/applyJsonV3ReplayChallengeId`，并将 `applyJsonV3StructuredReplayEnvelope` 收敛为“mode config 字段应用 + challengeId 应用 + action/restart 执行”组合（不改 `special_rules_snapshot/mode_family/rank_policy/challenge_id` 回填语义）。
+- `panel_timer` 去壳继续推进：已新增 `createCappedModeStateResolvePayload/resolveCappedModeStateFromCore/createCappedPlaceholderRowValuesPayload/resolveCappedPlaceholderRowValuesFromCore`，并将 `resolveCappedModeState/resolveCappedPlaceholderRowValuesByCore` 收敛为“payload + core 归一化”组合（不改 cache 命中与 placeholder fallback 语义）。
+- `saved_state` 去壳继续推进：已新增 `resolveSavedDynamicTimerDocumentLike/resolveSavedDynamicTimerResolvedState`，并将 `createSavedDynamicTimerRow` 收敛为“document-like 解析 + capped-state 解析 + row 构建”组合（不改动态行 DOM 结构与 repeat 样式语义）。
+- 复杂度快照更新：再次扫描 runtime helper 后，单函数峰值已从 24 行降到 23 行；当前热点主要集中在 `move_input/panel_timer/replay_helpers` 的少量函数。
+- 门禁结果：完成本轮拆分后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `move_input` 去壳继续推进：已新增 `createMoveInputThrottleResolveArgs/resolveMoveInputThrottleMsFallback`，并将 `resolveMoveInputThrottleMs` 收敛为“args 组装 + core 解析 + fallback”组合（不改 `replay=0ms`、`8x8=45ms`、`10x10=65ms` 阈值语义）。
+- `replay_helpers` 去壳继续推进：已新增 `resolveReplayPauseStateFallback/normalizeReplayPauseState`，并将 `pauseReplay` 收敛为“core pause-state 解析 + 统一状态归一化”组合（不改 `isPaused` 与 interval 清理逻辑语义）。
+- `panel_timer` 去壳继续推进：已新增 `shouldUpdateStatsPanelAtTimerTick/executeTimerTick`，并将 `startTimer` 收敛为“定时器初始化 + tick 执行”组合（不改 timer 文本刷新、IPS 刷新、stats panel 100ms 节流语义）。
+- `session_init` / `saved_state` / `replay_codec` 去壳继续推进：分别新增 `createTimerMilestoneSlotResolveArgs+normalizeTimerMilestoneSlotMapFromCore`、`normalizeSavedGameStateStoragesFromCore+getSavedGameStateStoragesFallback`、`encodeReplay128Fallback`，并将对应入口函数收敛为“payload/normalize/fallback”组合（不改 slot 映射、storage 优先级、replay128 编码与异常语义）。
+- 复杂度快照更新：当前单函数峰值维持 23 行，热点继续向少数核心函数集中。
+- 门禁结果：完成本轮拆分后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `mode_rules` 去壳继续推进：已新增 `normalizeSpawnTableByCore`，并将 `normalizeSpawnTable` 收敛为“无 manager 默认表 + manager 场景委托 core 解析”组合（不改 spawn_table 归一化与 fallback 过滤语义）。
+- `undo_stats` 去壳继续推进：已新增 `createNormalizedUndoStackEntry`，并将 `normalizeUndoStackEntry` 收敛为“fallback/source/tiles 解析 + 统一对象构造”组合（不改 `score/combo/undoUsed/lock` 字段回退语义）。
+- 复杂度快照更新：当前峰值仍为 23 行，但 23 行函数已进一步集中到少量核心节点（主要是 move/replay/setup 路径）。
+- 门禁结果：完成本轮拆分后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- 进度快照更新：`npm run report:refactor-progress` 仍全部达标（`index_ui.js` 107 行，`game_manager.js` 10 行，smoke 规格文件 36）。
+- `move_input` 去壳继续推进：已新增 `createGameTerminatedResolvePayload/resolveGameTerminatedFallback`，并将 `isGameTerminated` 收敛为“payload + core 判定 + fallback 判定 + 终止副作用”组合（不改 game over / won+!keepPlaying 的判定语义）。
+- `restart_setup` 去壳继续推进：已新增 `resetSetupReplayAndSpawnState/resetSetupTimerAndInputState`，并将 `resetSetupRuntimeState` 收敛为“回放与出生状态重置 + 计时与输入状态重置 + 会话字段收尾”组合（不改 `sessionStartedAt/hasGameStarted` 语义）。
+- 审计收口：`core_game_manager_move_input_helpers_runtime.js` 触发 `max=1000` 行阈值后，已做无行为变更的空行压缩（`1001 -> 999` 行）并恢复 `game-manager-audit` 通过。
+- 复杂度快照更新：当前峰值维持 23 行，热点已收敛到更少文件；`bindings/mode_rules` 已出现 22 行级函数。
+- 门禁结果：完成本轮修正后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `replay_helpers` 去壳继续推进：已新增 `decodeReplayV4ActionAtIndex/appendReplayV4DecodedAction/createReplayStepLifecyclePayload/resolveReplayStepLifecycleFallback/createReplayDispatchPlanFallback`，并将 `decodeReplayV4ActionsFallback/resolveReplayStepLifecyclePlan/resolveReplayDispatchPlan` 收敛为“token 解析 + lifecycle payload + dispatch fallback”组合（不改 v4C token/escape 语义与 replay dispatch 语义）。
+- `move_input` 去壳继续推进：已对 `applyPostMoveScore/resolveLockedDirectionStateByCore` 做结构压缩式收敛（不改 scoring payload、seeded direction lock 计算语义）。
+- `session_init` / `static_runtime` / `undo_stats` 去壳继续推进：已对 `initializeGameManagerRuntimeState/createFallbackModeConfigEntry/createUndoRestoreStateFallback` 做行内归并与 fallback 结构收敛（不改默认模式字段、fallback mode entry 字段映射与 undo 恢复字段语义）。
+- `panel_timer` 去壳继续推进：已新增 `resolveOrCreateCappedOverflowContainer/mountCappedOverflowContainerAfterAnchor`，并将 `getCappedOverflowContainer` 收敛为“容器解析 + 锚点挂载”组合（不改 capped overflow 容器插入位置语义）。
+- 复杂度快照更新：runtime helper 峰值已由 23 行降至 22 行。
+- 门禁结果：完成本轮后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- 进度快照更新：`npm run report:refactor-progress` 仍全部达标（`index_ui.js` 107 行，`game_manager.js` 10 行，smoke 规格文件 36）。
+- `bindings_runtime` 去壳继续推进：已将 `bindRuntimeForwardsBeforeAccessorWiring` 收敛为“直接批量绑定调用”形式（不改 manager/plain forward 绑定集合语义）。
+- `replay_helpers` 去壳继续推进：已对 `buildAutoSubmitPayloadBase/parseReplayImportEnvelope` 做结构压缩（不改 auto-submit 载荷字段集合与 replay import core/fallback 语义）。
+- `panel_timer` 去壳继续推进：已对 `getCappedTimerLegendClass` 做结构压缩（不改 slot 映射与 `timertile timer-legend-*` 语义）。
+- `restart_setup` / `saved_state` / `undo_stats` 去壳继续推进：已对 `resolvePreferredTimerModuleViewForSetup/collectSavedTimerFixedRowsState/loadUndoSettingForMode` 做结构压缩（不改 timer view 读取、fixed row 快照与 undo 设置读取语义）。
+- 复杂度快照更新：当前峰值保持在 22 行，22 行热点主要集中在 `mode_rules`（5 个）和 `move_input/undo_stats`（少量）。
+- 门禁结果：完成本轮后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。
+- `runtime_accessor` 去壳继续推进：已新增 `resolveRuntimeAccessorNonNegativeInteger`，并将 `buildAdapterMoveResultDetail/publishAdapterMoveResult` 收敛为更紧凑的字段归一化与 bridge 调用路径（不改 adapter move report 字段语义）。
+- `saved_state` 去壳继续推进：已对 `readLocalStorageJsonMap/resolveSavedGameStateStorageKey/getSavedGameStateStorages/clearSavedGameState/createSavedDynamicTimerRow/normalizeCappedRepeatLegendClasses` 做结构压缩（不改 storage 读写优先级、key 生成与 timer row 恢复语义）。
+- `stats_ui` 行为修复确认：`resolveStatsPanelInitialOpenState` 已补回 `return isOpen`，保证读取到开启标记时页面初始化可正确展开统计面板。
+- 体积快照更新：`core_game_manager_runtime_accessor_helpers_runtime.js` 当前 264 行，`core_game_manager_saved_state_helpers_runtime.js` 当前 1251 行（均在审计阈值内）。
+- 门禁结果：完成本轮后再次执行 `"/mnt/c/Program Files/nodejs/npm" run -s verify:iterate`，结果全绿（audit + unit + smoke）。

@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "audit:game-manager": "node scripts/game-manager-audit.mjs",
+    "audit:refactor-closure": "node scripts/refactor-closure-audit.mjs",
     "test:unit": "vitest run tests/unit",
     "test:unit:core": "vitest run tests/unit/core- tests/unit/bridge-adapter-",
     "test:unit:watch": "vitest tests/unit",
