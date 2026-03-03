@@ -14,6 +14,12 @@ function normalizeUndoStatsRecordObject(value, fallbackValue) {
   return typeof fallbackValue === "undefined" ? {} : fallbackValue;
 }
 
+function resolveUndoPolicyStateSnapshot(manager, resolvedState, mode) {
+  if (!manager) return null;
+  if (isUndoStatsRecordObject(resolvedState)) return resolvedState;
+  return manager.resolveUndoPolicyStateForMode(mode || manager.mode);
+}
+
 function getForcedUndoSettingForMode(manager, mode) {
   if (!manager) return null;
   var forced = manager.readUndoPolicyFieldForMode(mode, "forcedUndoSetting", null);
@@ -50,48 +56,8 @@ function notifyUndoSettingsStateChanged(manager) {
   manager.callWindowMethod("syncUndoSettingsUI");
 }
 
-function resolveForcedUndoSettingForMode(modeConfig, targetMode) {
-  var modeCfg = modeConfig || null;
-  if (modeCfg && typeof modeCfg.undo_enabled === "boolean") {
-    return modeCfg.undo_enabled;
-  }
-  var modeId = (targetMode || "").toLowerCase();
-  if (modeId === "capped" || modeId.indexOf("capped") !== -1) return false;
-  if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) return false;
-  if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) return true;
-  return null;
-}
-
-function buildUndoPolicyStateFallback(rawFallbackInput) {
-  var fallbackInput = {
-    forcedUndoSetting: rawFallbackInput.forcedUndoSetting,
-    hasGameStarted: !!rawFallbackInput.hasGameStarted,
-    replayMode: !!rawFallbackInput.replayMode,
-    undoLimit: rawFallbackInput.undoLimit,
-    undoUsed: rawFallbackInput.undoUsed,
-    undoEnabled: !!rawFallbackInput.undoEnabled
-  };
-  var isUndoAllowedByMode = fallbackInput.forcedUndoSetting !== false;
-  var isUndoSettingFixedForMode = fallbackInput.forcedUndoSetting !== null;
-  var canToggleUndoSetting =
-    isUndoAllowedByMode &&
-    !isUndoSettingFixedForMode &&
-    !fallbackInput.hasGameStarted;
-  var isUndoInteractionEnabled =
-    !fallbackInput.replayMode &&
-    !(fallbackInput.undoLimit !== null && Number(fallbackInput.undoUsed) >= Number(fallbackInput.undoLimit)) &&
-    !!(fallbackInput.undoEnabled && isUndoAllowedByMode);
-  return {
-    forcedUndoSetting: fallbackInput.forcedUndoSetting,
-    isUndoAllowedByMode: isUndoAllowedByMode,
-    isUndoSettingFixedForMode: isUndoSettingFixedForMode,
-    canToggleUndoSetting: canToggleUndoSetting,
-    isUndoInteractionEnabled: isUndoInteractionEnabled
-  };
-}
-
-function buildUndoPolicyOptionsSnapshot(manager, options) {
-  if (!manager) return null;
+function resolveUndoPolicyOptionsSnapshot(manager, options) {
+  if (!manager) return { hasGameStarted: false, replayMode: false, undoLimit: null, undoUsed: 0, undoEnabled: false };
   var source = options;
   return {
     hasGameStarted: !!manager.readOptionValue(source, "hasGameStarted", !!manager.hasGameStarted),
@@ -102,60 +68,83 @@ function buildUndoPolicyOptionsSnapshot(manager, options) {
   };
 }
 
-function buildUndoPolicyRuntimeInput(targetMode, modeConfig, optionsSnapshot) {
-  var snapshot = normalizeUndoStatsRecordObject(optionsSnapshot, {});
+function resolveForcedUndoSettingFallbackByMode(modeConfig, targetMode) {
+  if (modeConfig && typeof modeConfig.undo_enabled === "boolean") {
+    return modeConfig.undo_enabled;
+  }
+  var modeId = (targetMode || "").toLowerCase();
+  if (modeId === "capped" || modeId.indexOf("capped") !== -1) return false;
+  if (modeId.indexOf("no_undo") !== -1 || modeId.indexOf("no-undo") !== -1) return false;
+  if (modeId.indexOf("undo_only") !== -1 || modeId.indexOf("undo-only") !== -1) return true;
+  return null;
+}
+
+function buildUndoPolicyFallbackInput(forcedUndoSetting, optionsSnapshot) {
+  return {
+    forcedUndoSetting: forcedUndoSetting,
+    hasGameStarted: optionsSnapshot.hasGameStarted,
+    replayMode: optionsSnapshot.replayMode,
+    undoLimit: optionsSnapshot.undoLimit,
+    undoUsed: optionsSnapshot.undoUsed,
+    undoEnabled: optionsSnapshot.undoEnabled
+  };
+}
+
+function resolveUndoPolicyFallbackState(fallbackInput) {
+  var isUndoAllowedByMode = fallbackInput.forcedUndoSetting !== false;
+  var isUndoSettingFixedForMode = fallbackInput.forcedUndoSetting !== null;
+  var canToggleUndoSetting = isUndoAllowedByMode && !isUndoSettingFixedForMode && !fallbackInput.hasGameStarted;
+  var isUndoInteractionEnabled = !fallbackInput.replayMode && !(fallbackInput.undoLimit !== null && Number(fallbackInput.undoUsed) >= Number(fallbackInput.undoLimit)) && !!(fallbackInput.undoEnabled && isUndoAllowedByMode);
+  return {
+    forcedUndoSetting: fallbackInput.forcedUndoSetting,
+    isUndoAllowedByMode: isUndoAllowedByMode,
+    isUndoSettingFixedForMode: isUndoSettingFixedForMode,
+    canToggleUndoSetting: canToggleUndoSetting,
+    isUndoInteractionEnabled: isUndoInteractionEnabled
+  };
+}
+
+function createUndoPolicyResolvePayload(targetMode, modeConfig, optionsSnapshot) {
   return {
     mode: targetMode,
     modeConfig: modeConfig,
-    hasGameStarted: snapshot.hasGameStarted,
-    replayMode: snapshot.replayMode,
-    undoLimit: snapshot.undoLimit,
-    undoUsed: snapshot.undoUsed,
-    undoEnabled: snapshot.undoEnabled
+    hasGameStarted: optionsSnapshot.hasGameStarted,
+    replayMode: optionsSnapshot.replayMode,
+    undoLimit: optionsSnapshot.undoLimit,
+    undoUsed: optionsSnapshot.undoUsed,
+    undoEnabled: optionsSnapshot.undoEnabled
   };
+}
+
+function resolveUndoPolicyStateFallback(modeConfig, targetMode, optionsSnapshot) {
+  var forcedUndoSetting = resolveForcedUndoSettingFallbackByMode(modeConfig || null, targetMode);
+  var fallbackInput = buildUndoPolicyFallbackInput(forcedUndoSetting, optionsSnapshot);
+  return resolveUndoPolicyFallbackState(fallbackInput);
+}
+
+function createUndoPolicyResolveContext(manager, mode, options) {
+  var targetMode = mode || manager.mode;
+  return {
+    targetMode: targetMode,
+    modeConfig: manager.resolveModeConfig(targetMode),
+    optionsSnapshot: resolveUndoPolicyOptionsSnapshot(manager, options)
+  };
+}
+
+function normalizeUndoPolicyStateFromCore(computed) {
+  return isUndoStatsRecordObject(computed) ? computed : undefined;
 }
 
 function resolveUndoPolicyStateForMode(manager, mode, options) {
   if (!manager) return null;
-  var targetMode = mode || manager.mode;
-  var modeConfig = manager.resolveModeConfig(targetMode);
-  var optionsSnapshot = buildUndoPolicyOptionsSnapshot(manager, options);
-
-  return resolveCoreModeNormalizedCallOrFallback(
-    manager,
-    "resolveUndoPolicyState",
-    buildUndoPolicyRuntimeInput(targetMode, modeConfig, optionsSnapshot),
-    function (computed) {
-      return isUndoStatsRecordObject(computed) ? computed : undefined;
-    },
-    function () {
-      return buildUndoPolicyStateFallback({
-        forcedUndoSetting: resolveForcedUndoSettingForMode(modeConfig, targetMode),
-        hasGameStarted: optionsSnapshot.hasGameStarted,
-        replayMode: optionsSnapshot.replayMode,
-        undoLimit: optionsSnapshot.undoLimit,
-        undoUsed: optionsSnapshot.undoUsed,
-        undoEnabled: optionsSnapshot.undoEnabled
-      });
-    }
-  );
-}
-
-function resolveUndoEnabledFromModeMap(manager, map, mode) {
-  if (!manager) return true;
-  return resolveCoreStoragePayloadBooleanCallOrFallback(
-    manager,
-    "readUndoEnabledForModeFromMap",
-    {
-      map: map,
-      mode: mode,
-      fallbackEnabled: true
-    },
-    function () {
-      if (manager.hasOwnKey(map, mode)) return !!map[mode];
-      return true;
-    }
-  );
+  var context = createUndoPolicyResolveContext(manager, mode, options);
+  return resolveCorePayloadCallWith(manager, "callCoreModeRuntime", "resolveUndoPolicyState", createUndoPolicyResolvePayload(context.targetMode, context.modeConfig, context.optionsSnapshot), undefined, function (currentManager, coreCallResult) {
+    return currentManager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (computed) {
+      return normalizeUndoPolicyStateFromCore(computed);
+    }, function () {
+      return resolveUndoPolicyStateFallback(context.modeConfig, context.targetMode, context.optionsSnapshot);
+    });
+  });
 }
 
 function loadUndoSettingForMode(manager, mode) {
@@ -165,21 +154,24 @@ function loadUndoSettingForMode(manager, mode) {
   if (forced !== null) return forced;
   if (!(state && state.isUndoAllowedByMode)) return false;
   var map = manager.readLocalStorageJsonMap(GameManager.UNDO_SETTINGS_KEY);
-  return resolveUndoEnabledFromModeMap(manager, map, mode);
+  var coreCallResult = callCoreStorageRuntime(manager, "readUndoEnabledForModeFromMap", {
+    map: map,
+    mode: mode,
+    fallbackEnabled: true
+  }, false);
+  return manager.resolveCoreBooleanCallOrFallback(coreCallResult, function () {
+    if (manager.hasOwnKey(map, mode)) return !!map[mode];
+    return true;
+  });
 }
 
 function isUndoInteractionEnabled(manager) {
   if (!manager) return false;
-  var state = manager.resolveUndoPolicyStateForMode(manager.mode);
+  var state = resolveUndoPolicyStateSnapshot(manager, null, manager.mode);
   return !!(state && state.isUndoInteractionEnabled);
 }
 
-function resolveUndoStatsElementById(manager, elementId) {
-  return resolveManagerElementById(manager, elementId);
-}
-
-function applyUndoLinkUiState(manager, canUndo, modeUndoCapable) {
-  var undoLink = resolveUndoStatsElementById(manager, "undo-link");
+function applyUndoLinkUiState(undoLink, canUndo, modeUndoCapable) {
   if (!undoLink) return;
   undoLink.style.display = modeUndoCapable ? "" : "none";
   if (!modeUndoCapable) return;
@@ -187,48 +179,30 @@ function applyUndoLinkUiState(manager, canUndo, modeUndoCapable) {
   undoLink.style.opacity = canUndo ? "" : "0.45";
 }
 
-function applyGameOverUndoButtonUiState(manager, canUndo) {
-  var undoBtn = resolveUndoStatsElementById(manager, "undo-btn-gameover");
+function applyUndoGameOverButtonUiState(undoBtn, canUndo) {
   if (!undoBtn) return;
   undoBtn.style.display = canUndo ? "inline-block" : "none";
 }
 
-function applyPracticeUndoButtonUiState(manager, canUndo) {
-  var practiceUndoBtn = resolveUndoStatsElementById(manager, "practice-mobile-undo-btn");
+function applyPracticeUndoButtonUiState(practiceUndoBtn, canUndo) {
   if (!practiceUndoBtn) return;
   practiceUndoBtn.style.pointerEvents = canUndo ? "" : "none";
   practiceUndoBtn.style.opacity = canUndo ? "" : "0.45";
   practiceUndoBtn.setAttribute("aria-disabled", canUndo ? "false" : "true");
 }
 
-function resolveUndoUiStateSnapshot(manager, resolvedState) {
-  if (!manager) return null;
-  var state = isUndoStatsRecordObject(resolvedState)
-    ? resolvedState
-    : manager.resolveUndoPolicyStateForMode(manager.mode);
-  return {
-    canUndo: !!(state && state.isUndoInteractionEnabled),
-    modeUndoCapable: !!(state && state.isUndoAllowedByMode)
-  };
-}
-
-function applyResolvedUndoUiState(manager, stateSnapshot) {
-  var snapshot = normalizeUndoStatsRecordObject(stateSnapshot, {});
-  var canUndo = !!snapshot.canUndo;
-  var modeUndoCapable = !!snapshot.modeUndoCapable;
-  applyUndoLinkUiState(manager, canUndo, modeUndoCapable);
-  applyGameOverUndoButtonUiState(manager, canUndo);
-  applyPracticeUndoButtonUiState(manager, canUndo);
-}
-
 function updateUndoUiState(manager, resolvedState) {
   if (!manager) return;
-  var stateSnapshot = resolveUndoUiStateSnapshot(manager, resolvedState);
-  applyResolvedUndoUiState(manager, stateSnapshot);
+  var state = resolveUndoPolicyStateSnapshot(manager, resolvedState, manager.mode);
+  var canUndo = !!(state && state.isUndoInteractionEnabled);
+  var modeUndoCapable = !!(state && state.isUndoAllowedByMode);
+  applyUndoLinkUiState(resolveManagerElementById(manager, "undo-link"), canUndo, modeUndoCapable);
+  applyUndoGameOverButtonUiState(resolveManagerElementById(manager, "undo-btn-gameover"), canUndo);
+  applyPracticeUndoButtonUiState(resolveManagerElementById(manager, "practice-mobile-undo-btn"), canUndo);
   manager.callWindowMethod("syncMobileUndoTopButtonAvailability");
 }
 
-function normalizeSpawnStatPairCore(corePair) {
+function normalizeSpawnStatPairFromCore(corePair) {
   var normalizedCorePair = normalizeUndoStatsRecordObject(corePair, {});
   var corePrimary = Number(normalizedCorePair.primary);
   var coreSecondary = Number(normalizedCorePair.secondary);
@@ -243,7 +217,7 @@ function normalizeSpawnStatPairCore(corePair) {
   return null;
 }
 
-function resolveSpawnStatPairFallbackFromTable(spawnTable) {
+function collectSortedSpawnValuesFromTable(spawnTable) {
   var table = Array.isArray(spawnTable) ? spawnTable : [];
   var values = [];
   for (var i = 0; i < table.length; i++) {
@@ -253,6 +227,11 @@ function resolveSpawnStatPairFallbackFromTable(spawnTable) {
     if (values.indexOf(value) === -1) values.push(value);
   }
   values.sort(function (a, b) { return a - b; });
+  return values;
+}
+
+function resolveSpawnStatPairFallbackFromTable(spawnTable) {
+  var values = collectSortedSpawnValuesFromTable(spawnTable);
   var primary = values.length > 0 ? values[0] : 2;
   var secondary = values.length > 1 ? values[1] : primary;
   return { primary: primary, secondary: secondary };
@@ -260,39 +239,65 @@ function resolveSpawnStatPairFallbackFromTable(spawnTable) {
 
 function getSpawnStatPair(manager) {
   if (!manager) return { primary: 2, secondary: 2 };
-  return resolveCoreRulesNormalizedCallOrFallback(
-    manager,
-    "getSpawnStatPair",
-    [manager.spawnTable || []],
-    function (corePair) {
-      return normalizeSpawnStatPairCore(corePair);
-    },
-    function () {
-      return resolveSpawnStatPairFallbackFromTable(manager.spawnTable);
-    }
-  );
+  return resolveCoreArgsCallWith(manager, "callCoreRulesRuntime", "getSpawnStatPair", [manager.spawnTable || []], undefined, function (currentManager, coreCallResult) {
+    return currentManager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (corePair) {
+      return normalizeSpawnStatPairFromCore(corePair);
+    }, function () {
+      return resolveSpawnStatPairFallbackFromTable(currentManager.spawnTable);
+    });
+  });
 }
 
-function normalizeComputeStepStatsCoreValue(coreValue) {
+function resolveStepStatsSourceAndLimit(manager) {
+  if (!manager) return { src: null, limit: 0 };
+  return {
+    src: manager.replayMode ? manager.replayMoves : manager.moveHistory,
+    limit: manager.replayMode ? manager.replayIndex : manager.moveHistory.length
+  };
+}
+
+function normalizeCoreStepStatsRecord(coreValue) {
   var raw = normalizeUndoStatsRecordObject(coreValue, {});
   var coreTotal = Number(raw.totalSteps);
   var coreMoves = Number(raw.moveSteps);
   var coreUndo = Number(raw.undoSteps);
-  if (
-    Number.isFinite(coreTotal) &&
-    Number.isFinite(coreMoves) &&
-    Number.isFinite(coreUndo)
-  ) {
-    return {
-      totalSteps: coreTotal,
-      moveSteps: coreMoves,
-      undoSteps: coreUndo
-    };
+  if (!Number.isFinite(coreTotal) || !Number.isFinite(coreMoves) || !Number.isFinite(coreUndo)) {
+    return null;
   }
-  return null;
+  return {
+    totalSteps: coreTotal,
+    moveSteps: coreMoves,
+    undoSteps: coreUndo
+  };
 }
 
-function computeStepStatsFallback(manager, src, limit) {
+function createCoreStepStatsPayload(src, limit) {
+  return {
+    actions: src,
+    limit: limit
+  };
+}
+
+function resolveCoreStepStatsFromResult(currentManager, coreCallResult) {
+  return currentManager.resolveNormalizedCoreValueOrFallback(
+    coreCallResult,
+    function (coreValue) {
+      return normalizeCoreStepStatsRecord(coreValue);
+    },
+    function () {
+      return null;
+    }
+  );
+}
+
+function resolveCoreStepStats(manager, src, limit) {
+  if (!manager) return null;
+  return resolveCorePayloadCallWith(manager, "callCoreReplayExecutionRuntime", "computeReplayStepStats", createCoreStepStatsPayload(src, limit), undefined, function (currentManager, coreCallResult) {
+    return resolveCoreStepStatsFromResult(currentManager, coreCallResult);
+  });
+}
+
+function computeFallbackStepStats(manager, src, limit) {
   if (!manager) return { totalSteps: 0, moveSteps: 0, undoSteps: 0 };
   var moveSteps = 0;
   var undoSteps = 0;
@@ -307,42 +312,17 @@ function computeStepStatsFallback(manager, src, limit) {
       }
     }
   }
-  return {
-    totalSteps: src ? limit : 0,
-    moveSteps: moveSteps,
-    undoSteps: undoSteps
-  };
-}
-
-function resolveComputeStepStatsInput(manager) {
-  if (!manager) return { limit: 0, src: null };
-  return {
-    limit: manager.replayMode ? manager.replayIndex : manager.moveHistory.length,
-    src: manager.replayMode ? manager.replayMoves : manager.moveHistory
-  };
+  return { totalSteps: src ? limit : 0, moveSteps: moveSteps, undoSteps: undoSteps };
 }
 
 function computeStepStats(manager) {
   if (!manager) return { totalSteps: 0, moveSteps: 0, undoSteps: 0 };
-  var stepStatsInput = resolveComputeStepStatsInput(manager);
-  var limit = stepStatsInput.limit;
-  var src = stepStatsInput.src;
-  var coreStats = resolveCoreReplayExecutionNormalizedCallOrFallback(
-    manager,
-    "computeReplayStepStats",
-    {
-      actions: src,
-      limit: limit
-    },
-    function (coreValue) {
-      return normalizeComputeStepStatsCoreValue(coreValue);
-    },
-    function () {
-      return null;
-    }
-  );
+  var sourceAndLimit = resolveStepStatsSourceAndLimit(manager);
+  var src = sourceAndLimit.src;
+  var limit = sourceAndLimit.limit;
+  var coreStats = resolveCoreStepStats(manager, src, limit);
   if (coreStats) return coreStats;
-  return computeStepStatsFallback(manager, src, limit);
+  return computeFallbackStepStats(manager, src, limit);
 }
 
 function getUndoStateFallbackValues(manager) {
@@ -361,30 +341,42 @@ function getUndoStateFallbackValues(manager) {
   };
 }
 
-function normalizeUndoStackEntry(manager, entry) {
-  if (!manager) return null;
-  var fallbackState = manager.getUndoStateFallbackValues();
-  var source = manager.isNonArrayObject(entry) ? entry : {};
-  var sourceByCore = resolveCoreUndoStackEntryNormalizedCallOrUndefined(
+function createUndoStackEntryNormalizePayload(source, fallbackState) {
+  return {
+    entry: source,
+    fallbackScore: fallbackState.score,
+    fallbackComboStreak: fallbackState.comboStreak,
+    fallbackSuccessfulMoveCount: fallbackState.successfulMoveCount,
+    fallbackLockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
+    fallbackLockedDirectionTurn: fallbackState.lockedDirectionTurn,
+    fallbackLockedDirection: fallbackState.lockedDirection,
+    fallbackUndoUsed: fallbackState.undoUsed
+  };
+}
+
+function normalizeUndoStackEntrySourceByCore(currentManager, coreValue, source) {
+  return currentManager.isNonArrayObject(coreValue) ? coreValue : source;
+}
+
+function resolveUndoStackEntrySourceByCore(manager, source, fallbackState) {
+  if (!manager) return source;
+  var sourceByCore = resolveCorePayloadCallWith(
     manager,
+    "callCoreUndoStackEntryRuntime",
     "normalizeUndoStackEntry",
-    {
-      entry: source,
-      fallbackScore: fallbackState.score,
-      fallbackComboStreak: fallbackState.comboStreak,
-      fallbackSuccessfulMoveCount: fallbackState.successfulMoveCount,
-      fallbackLockConsumedAtMoveCount: fallbackState.lockConsumedAtMoveCount,
-      fallbackLockedDirectionTurn: fallbackState.lockedDirectionTurn,
-      fallbackLockedDirection: fallbackState.lockedDirection,
-      fallbackUndoUsed: fallbackState.undoUsed
-    },
-    function (coreValue) {
-      return manager.isNonArrayObject(coreValue) ? coreValue : source;
+    createUndoStackEntryNormalizePayload(source, fallbackState),
+    undefined,
+    function (currentManager, coreCallResult) {
+      return currentManager.resolveNormalizedCoreValueOrUndefined(coreCallResult, function (coreValue) {
+        return normalizeUndoStackEntrySourceByCore(currentManager, coreValue, source);
+      });
     }
   );
-  if (typeof sourceByCore !== "undefined") {
-    source = sourceByCore;
-  }
+  return typeof sourceByCore !== "undefined" ? sourceByCore : source;
+}
+
+function collectUndoStackTiles(manager, source) {
+  if (!manager) return [];
   var rawTiles = Array.isArray(source.tiles) ? source.tiles : [];
   var tiles = [];
   for (var i = 0; i < rawTiles.length; i++) {
@@ -392,63 +384,101 @@ function normalizeUndoStackEntry(manager, entry) {
     if (!manager.isNonArrayObject(item)) continue;
     tiles.push(item);
   }
+  return tiles;
+}
+
+function normalizeUndoScoreOrFallback(source, fallbackValue) {
+  if (Number.isFinite(source.score) && typeof source.score === "number") {
+    return Number(source.score);
+  }
+  return fallbackValue;
+}
+
+function normalizeUndoNonNegativeIntegerOrFallback(value, fallbackValue) {
+  if (Number.isInteger(value) && value >= 0) {
+    return value;
+  }
+  return fallbackValue;
+}
+
+function normalizeUndoIntegerOrFallback(value, fallbackValue) {
+  if (Number.isInteger(value)) {
+    return value;
+  }
+  return fallbackValue;
+}
+
+function createNormalizedUndoStackEntry(manager, source, fallbackState, tiles) {
   return {
-    score: Number.isFinite(source.score) && typeof source.score === "number"
-      ? Number(source.score)
-      : fallbackState.score,
+    score: normalizeUndoScoreOrFallback(source, fallbackState.score),
     tiles: tiles,
-    comboStreak: Number.isInteger(source.comboStreak) && source.comboStreak >= 0
-      ? source.comboStreak
-      : fallbackState.comboStreak,
-    successfulMoveCount: Number.isInteger(source.successfulMoveCount) && source.successfulMoveCount >= 0
-      ? source.successfulMoveCount
-      : fallbackState.successfulMoveCount,
-    lockConsumedAtMoveCount: Number.isInteger(source.lockConsumedAtMoveCount)
-      ? source.lockConsumedAtMoveCount
-      : fallbackState.lockConsumedAtMoveCount,
-    lockedDirectionTurn: Number.isInteger(source.lockedDirectionTurn)
-      ? source.lockedDirectionTurn
-      : fallbackState.lockedDirectionTurn,
-    lockedDirection: Number.isInteger(source.lockedDirection)
-      ? source.lockedDirection
-      : fallbackState.lockedDirection,
-    undoUsed: Number.isInteger(source.undoUsed) && source.undoUsed >= 0
-      ? source.undoUsed
-      : fallbackState.undoUsed
+    comboStreak: normalizeUndoNonNegativeIntegerOrFallback(source.comboStreak, fallbackState.comboStreak),
+    successfulMoveCount: normalizeUndoNonNegativeIntegerOrFallback(
+      source.successfulMoveCount,
+      fallbackState.successfulMoveCount
+    ),
+    lockConsumedAtMoveCount: normalizeUndoIntegerOrFallback(
+      source.lockConsumedAtMoveCount,
+      fallbackState.lockConsumedAtMoveCount
+    ),
+    lockedDirectionTurn: normalizeUndoIntegerOrFallback(source.lockedDirectionTurn, fallbackState.lockedDirectionTurn),
+    lockedDirection: normalizeUndoIntegerOrFallback(source.lockedDirection, fallbackState.lockedDirection),
+    undoUsed: normalizeUndoNonNegativeIntegerOrFallback(source.undoUsed, fallbackState.undoUsed)
   };
 }
 
-function createUndoTileSnapshot(manager, tile, target) {
+function normalizeUndoStackEntry(manager, entry) {
   if (!manager) return null;
-  var sourceTile = isUndoStatsRecordObject(tile) ? tile : null;
-  var sourceTarget = isUndoStatsRecordObject(target) ? target : null;
-  var normalizedByCore = resolveCoreUndoTileSnapshotNormalizedCallOrUndefined(
-    manager,
-    "createUndoTileSnapshot",
-    {
-      tile: {
-        x: sourceTile ? sourceTile.x : null,
-        y: sourceTile ? sourceTile.y : null,
-        value: sourceTile ? sourceTile.value : null
-      },
-      target: {
-        x: sourceTarget ? sourceTarget.x : null,
-        y: sourceTarget ? sourceTarget.y : null
-      }
+  var fallbackState = manager.getUndoStateFallbackValues();
+  var source = manager.isNonArrayObject(entry) ? entry : {};
+  source = resolveUndoStackEntrySourceByCore(manager, source, fallbackState);
+  var tiles = collectUndoStackTiles(manager, source);
+  return createNormalizedUndoStackEntry(manager, source, fallbackState, tiles);
+}
+
+function isValidUndoTileRecord(manager, value) {
+  return !!(
+    manager &&
+    manager.isNonArrayObject(value) &&
+    value.previousPosition &&
+    manager.isNonArrayObject(value.previousPosition)
+  );
+}
+
+function buildUndoTileSnapshotCorePayload(sourceTile, sourceTarget) {
+  return {
+    tile: {
+      x: sourceTile ? sourceTile.x : null,
+      y: sourceTile ? sourceTile.y : null,
+      value: sourceTile ? sourceTile.value : null
     },
-    function (computed) {
-      if (
-        manager.isNonArrayObject(computed) &&
-        computed.previousPosition &&
-        manager.isNonArrayObject(computed.previousPosition)
-      ) {
-        return computed;
-      }
-      return null;
+    target: {
+      x: sourceTarget ? sourceTarget.x : null,
+      y: sourceTarget ? sourceTarget.y : null
+    }
+  };
+}
+
+function resolveUndoTileSnapshotByCore(manager, sourceTile, sourceTarget) {
+  if (!manager) return null;
+  return resolveCorePayloadCallWith(
+    manager,
+    "callCoreUndoTileSnapshotRuntime",
+    "createUndoTileSnapshot",
+    buildUndoTileSnapshotCorePayload(sourceTile, sourceTarget),
+    undefined,
+    function (currentManager, coreCallResult) {
+      return currentManager.resolveNormalizedCoreValueOrUndefined(coreCallResult, function (computed) {
+        if (isValidUndoTileRecord(currentManager, computed)) {
+          return computed;
+        }
+        return null;
+      });
     }
   );
-  if (normalizedByCore) return normalizedByCore;
+}
 
+function buildUndoTileSnapshotFallback(tile, target) {
   if (tile && typeof tile.save === "function") {
     return tile.save(target);
   }
@@ -461,6 +491,15 @@ function createUndoTileSnapshot(manager, tile, target) {
       y: target ? target.y : null
     }
   };
+}
+
+function createUndoTileSnapshot(manager, tile, target) {
+  if (!manager) return null;
+  var sourceTile = isUndoStatsRecordObject(tile) ? tile : null;
+  var sourceTarget = isUndoStatsRecordObject(target) ? target : null;
+  var normalizedByCore = resolveUndoTileSnapshotByCore(manager, sourceTile, sourceTarget);
+  if (normalizedByCore) return normalizedByCore;
+  return buildUndoTileSnapshotFallback(tile, target);
 }
 
 function applyUndoRestoredTiles(manager, undoPayload) {
@@ -481,10 +520,51 @@ function applyUndoRestoredTiles(manager, undoPayload) {
   }
 }
 
-function applyUndoRestoreState(manager, undoRestore) {
-  if (!manager) return;
+function resolveUndoRestoreDefaultUndoUsed(manager) {
+  if (!manager) return 0;
+  return Number.isInteger(manager.undoUsed) && manager.undoUsed >= 0 ? manager.undoUsed : 0;
+}
+
+function resolveUndoRestoreStateCounterFields(safeRestore, defaultUndoUsed) {
+  return {
+    comboStreak: normalizeUndoNonNegativeIntegerOrFallback(safeRestore.comboStreak, 0),
+    successfulMoveCount: normalizeUndoNonNegativeIntegerOrFallback(safeRestore.successfulMoveCount, 0),
+    lockConsumedAtMoveCount: normalizeUndoIntegerOrFallback(safeRestore.lockConsumedAtMoveCount, -1),
+    lockedDirectionTurn: Number.isInteger(safeRestore.lockedDirectionTurn) ? safeRestore.lockedDirectionTurn : null,
+    lockedDirection: Number.isInteger(safeRestore.lockedDirection) ? safeRestore.lockedDirection : null,
+    undoUsed: normalizeUndoNonNegativeIntegerOrFallback(safeRestore.undoUsed, defaultUndoUsed + 1)
+  };
+}
+
+function resolveUndoRestoreStateStatusFields(safeRestore) {
+  return {
+    over: typeof safeRestore.over === "boolean" ? safeRestore.over : false,
+    won: typeof safeRestore.won === "boolean" ? safeRestore.won : false,
+    keepPlaying: typeof safeRestore.keepPlaying === "boolean" ? safeRestore.keepPlaying : false,
+    shouldClearMessage: safeRestore.shouldClearMessage !== false
+  };
+}
+
+function normalizeUndoRestoreStateInput(manager, undoRestore) {
   var safeRestore = normalizeUndoStatsRecordObject(undoRestore, {});
-  var normalized = normalizeUndoRestoreState(manager, undoRestore);
+  var defaultUndoUsed = resolveUndoRestoreDefaultUndoUsed(manager);
+  var counterFields = resolveUndoRestoreStateCounterFields(safeRestore, defaultUndoUsed);
+  var statusFields = resolveUndoRestoreStateStatusFields(safeRestore);
+  return {
+    comboStreak: counterFields.comboStreak,
+    successfulMoveCount: counterFields.successfulMoveCount,
+    lockConsumedAtMoveCount: counterFields.lockConsumedAtMoveCount,
+    lockedDirectionTurn: counterFields.lockedDirectionTurn,
+    lockedDirection: counterFields.lockedDirection,
+    undoUsed: counterFields.undoUsed,
+    over: statusFields.over,
+    won: statusFields.won,
+    keepPlaying: statusFields.keepPlaying,
+    shouldClearMessage: statusFields.shouldClearMessage
+  };
+}
+
+function applyUndoRestoreStateFields(manager, normalized) {
   manager.comboStreak = normalized.comboStreak;
   manager.successfulMoveCount = normalized.successfulMoveCount;
   manager.lockConsumedAtMoveCount = normalized.lockConsumedAtMoveCount;
@@ -494,54 +574,15 @@ function applyUndoRestoreState(manager, undoRestore) {
   manager.over = normalized.over;
   manager.won = normalized.won;
   manager.keepPlaying = normalized.keepPlaying;
-  if (safeRestore.shouldClearMessage !== false) {
+}
+
+function applyUndoRestoreState(manager, undoRestore) {
+  if (!manager) return;
+  var normalized = normalizeUndoRestoreStateInput(manager, undoRestore);
+  applyUndoRestoreStateFields(manager, normalized);
+  if (normalized.shouldClearMessage) {
     manager.actuator.clearMessage(); // Clear Game Over message if present
   }
-}
-
-function normalizeUndoRestoreState(manager, undoRestore) {
-  var safeRestore = normalizeUndoStatsRecordObject(undoRestore, {});
-  var defaultUndoUsed = Number.isInteger(manager.undoUsed) && manager.undoUsed >= 0 ? manager.undoUsed : 0;
-  return {
-    comboStreak: Number.isInteger(safeRestore.comboStreak) && safeRestore.comboStreak >= 0
-      ? safeRestore.comboStreak
-      : 0,
-    successfulMoveCount:
-      Number.isInteger(safeRestore.successfulMoveCount) && safeRestore.successfulMoveCount >= 0
-        ? safeRestore.successfulMoveCount
-        : 0,
-    lockConsumedAtMoveCount: Number.isInteger(safeRestore.lockConsumedAtMoveCount)
-      ? safeRestore.lockConsumedAtMoveCount
-      : -1,
-    lockedDirectionTurn: Number.isInteger(safeRestore.lockedDirectionTurn)
-      ? safeRestore.lockedDirectionTurn
-      : null,
-    lockedDirection: Number.isInteger(safeRestore.lockedDirection)
-      ? safeRestore.lockedDirection
-      : null,
-    undoUsed: Number.isInteger(safeRestore.undoUsed) && safeRestore.undoUsed >= 0
-      ? safeRestore.undoUsed
-      : (defaultUndoUsed + 1),
-    over: typeof safeRestore.over === "boolean" ? safeRestore.over : false,
-    won: typeof safeRestore.won === "boolean" ? safeRestore.won : false,
-    keepPlaying: typeof safeRestore.keepPlaying === "boolean" ? safeRestore.keepPlaying : false
-  };
-}
-
-function canApplyUndoMove(manager) {
-  if (!manager) return false;
-  var canUndoOperation = manager.replayMode || manager.isUndoInteractionEnabled();
-  var hasRemainingUndoBudget = manager.undoLimit === null || manager.undoUsed < manager.undoLimit;
-  return !!(canUndoOperation && hasRemainingUndoBudget && manager.undoStack.length > 0);
-}
-
-function restoreUndoStateFromStackEntry(manager, prev) {
-  if (!manager) return null;
-  var undoPayload = computeUndoRestorePayload(manager, prev);
-  applyUndoRestoredTiles(manager, undoPayload);
-  var undoRestore = computeUndoRestoreState(manager, prev);
-  applyUndoRestoreState(manager, undoRestore);
-  return undoRestore;
 }
 
 function applyPostUndoRecordArtifacts(manager, postUndoRecord, direction) {
@@ -559,15 +600,31 @@ function applyPostUndoRecordArtifacts(manager, postUndoRecord, direction) {
   }
 }
 
-function finalizeUndoMove(manager, undoRestore, direction) {
-  if (!manager) return;
-  actuate(manager);
-  var shouldStartTimerAfterUndo = typeof undoRestore.shouldStartTimer === "boolean"
+function canExecuteUndoMove(manager) {
+  if (!manager) return false;
+  var canUndoOperation = manager.replayMode || manager.isUndoInteractionEnabled();
+  var hasRemainingUndoBudget = manager.undoLimit === null || manager.undoUsed < manager.undoLimit;
+  return canUndoOperation && hasRemainingUndoBudget && manager.undoStack.length > 0;
+}
+
+function executeUndoRestorePipeline(manager, direction) {
+  var prev = manager.normalizeUndoStackEntry(manager.undoStack.pop());
+  var undoPayload = computeUndoRestorePayload(manager, prev);
+  applyUndoRestoredTiles(manager, undoPayload);
+  var undoRestore = computeUndoRestoreState(manager, prev);
+  applyUndoRestoreState(manager, undoRestore);
+  var postUndoRecord = computePostUndoRecord(manager, direction);
+  applyPostUndoRecordArtifacts(manager, postUndoRecord, direction);
+  return undoRestore || {};
+}
+
+function shouldStartTimerAfterUndoRestore(manager, undoRestore) {
+  return typeof undoRestore.shouldStartTimer === "boolean"
     ? undoRestore.shouldStartTimer
     : manager.timerStatus === 0;
-  if (shouldStartTimerAfterUndo) {
-    manager.startTimer();
-  }
+}
+
+function publishUndoAdapterMoveResult(manager, direction) {
   manager.publishAdapterMoveResult({
     reason: "undo",
     direction: direction,
@@ -577,59 +634,54 @@ function finalizeUndoMove(manager, undoRestore, direction) {
 
 function handleUndoMove(manager, direction) {
   if (!manager || direction != -1) return false;
-  if (!canApplyUndoMove(manager)) {
+  if (!canExecuteUndoMove(manager)) {
     return true;
   }
-
-  var prev = manager.normalizeUndoStackEntry(manager.undoStack.pop());
-  var undoRestore = restoreUndoStateFromStackEntry(manager, prev) || {};
-  var postUndoRecord = computePostUndoRecord(manager, direction);
-  applyPostUndoRecordArtifacts(manager, postUndoRecord, direction);
-  finalizeUndoMove(manager, undoRestore, direction);
+  var undoRestore = executeUndoRestorePipeline(manager, direction);
+  actuate(manager);
+  if (shouldStartTimerAfterUndoRestore(manager, undoRestore)) {
+    manager.startTimer();
+  }
+  publishUndoAdapterMoveResult(manager, direction);
   return true;
+}
+
+function buildUndoRestoreStatePayload(manager, prev) {
+  return {
+    prev: prev || {},
+    fallbackUndoUsed: manager.undoUsed,
+    timerStatus: manager.timerStatus
+  };
+}
+
+function createUndoRestoreStateFallback(currentManager, prev) {
+  var source = normalizeUndoStatsRecordObject(prev, {});
+  var fallbackState = currentManager.getUndoStateFallbackValues();
+  var undoBase = Number.isInteger(source.undoUsed) && source.undoUsed >= 0 ? source.undoUsed : fallbackState.undoUsed;
+  var successfulMoveCount = Number.isInteger(source.successfulMoveCount) && source.successfulMoveCount >= 0
+    ? source.successfulMoveCount
+    : 0;
+  return { comboStreak: Number.isInteger(source.comboStreak) && source.comboStreak >= 0 ? source.comboStreak : 0, successfulMoveCount: successfulMoveCount, lockConsumedAtMoveCount: Number.isInteger(source.lockConsumedAtMoveCount) ? source.lockConsumedAtMoveCount : -1, lockedDirectionTurn: Number.isInteger(source.lockedDirectionTurn) ? source.lockedDirectionTurn : null, lockedDirection: Number.isInteger(source.lockedDirection) ? source.lockedDirection : null, undoUsed: undoBase + 1, over: false, won: false, keepPlaying: false, shouldClearMessage: true, shouldStartTimer: currentManager.timerStatus === 0 };
 }
 
 function computeUndoRestoreState(manager, prev) {
   if (!manager) return null;
-  return resolveCoreUndoRestoreObjectCallOrFallback(
+  return resolveCorePayloadCallWith(
     manager,
+    "callCoreUndoRestoreRuntime",
     "computeUndoRestoreState",
-    {
-      prev: prev || {},
-      fallbackUndoUsed: manager.undoUsed,
-      timerStatus: manager.timerStatus
-    },
-    function () {
-      var source = normalizeUndoStatsRecordObject(prev, {});
-      var fallbackState = manager.getUndoStateFallbackValues();
-      var undoBase = Number.isInteger(source.undoUsed) && source.undoUsed >= 0
-        ? source.undoUsed
-        : fallbackState.undoUsed;
-      return {
-        comboStreak: Number.isInteger(source.comboStreak) && source.comboStreak >= 0 ? source.comboStreak : 0,
-        successfulMoveCount:
-          Number.isInteger(source.successfulMoveCount) && source.successfulMoveCount >= 0
-            ? source.successfulMoveCount
-            : 0,
-        lockConsumedAtMoveCount: Number.isInteger(source.lockConsumedAtMoveCount) ? source.lockConsumedAtMoveCount : -1,
-        lockedDirectionTurn: Number.isInteger(source.lockedDirectionTurn) ? source.lockedDirectionTurn : null,
-        lockedDirection: Number.isInteger(source.lockedDirection) ? source.lockedDirection : null,
-        undoUsed: undoBase + 1,
-        over: false,
-        won: false,
-        keepPlaying: false,
-        shouldClearMessage: true,
-        shouldStartTimer: manager.timerStatus === 0
-      };
+    buildUndoRestoreStatePayload(manager, prev),
+    {},
+    function (currentManager, coreCallResult) {
+      return currentManager.resolveCoreObjectCallOrFallback(coreCallResult, function () {
+        return createUndoRestoreStateFallback(currentManager, prev);
+      });
     }
   );
 }
 
-function createUndoRestoreTile(manager, snapshot) {
-  if (!manager) return null;
-  var source = manager.isNonArrayObject(snapshot) ? snapshot : {};
-  var previous = manager.isNonArrayObject(source.previousPosition) ? source.previousPosition : {};
-  var fallback = {
+function buildUndoRestoreTileFallback(source, previous) {
+  return {
     x: source.x,
     y: source.y,
     value: source.value,
@@ -638,60 +690,93 @@ function createUndoRestoreTile(manager, snapshot) {
       y: previous.y
     }
   };
+}
 
-  var normalizedByCore = resolveCoreUndoTileRestoreNormalizedCallOrUndefined(
+function buildUndoRestoreTileCorePayload(source, previous) {
+  return {
+    x: source.x,
+    y: source.y,
+    value: source.value,
+    previousPosition: {
+      x: previous.x,
+      y: previous.y
+    }
+  };
+}
+
+function resolveUndoRestoreTileByCore(manager, source, previous, fallback) {
+  if (!manager) return null;
+  var normalizedByCore = resolveCorePayloadCallWith(
     manager,
+    "callCoreUndoTileRestoreRuntime",
     "createUndoRestoreTile",
-    {
-      x: source.x,
-      y: source.y,
-      value: source.value,
-      previousPosition: {
-        x: previous.x,
-        y: previous.y
-      }
-    },
-    function (computed) {
-      if (
-        manager.isNonArrayObject(computed) &&
-        computed.previousPosition &&
-        manager.isNonArrayObject(computed.previousPosition)
-      ) {
-        return computed;
-      }
-      return null;
+    buildUndoRestoreTileCorePayload(source, previous),
+    undefined,
+    function (currentManager, coreCallResult) {
+      return currentManager.resolveNormalizedCoreValueOrUndefined(coreCallResult, function (computed) {
+        return isValidUndoTileRecord(currentManager, computed) ? computed : null;
+      });
     }
   );
-  if (normalizedByCore) return normalizedByCore;
+  return normalizedByCore || fallback;
+}
 
-  return fallback;
+function createUndoRestoreTile(manager, snapshot) {
+  if (!manager) return null;
+  var source = manager.isNonArrayObject(snapshot) ? snapshot : {};
+  var previous = manager.isNonArrayObject(source.previousPosition) ? source.previousPosition : {};
+  var fallback = buildUndoRestoreTileFallback(source, previous);
+  return resolveUndoRestoreTileByCore(manager, source, previous, fallback);
+}
+
+function createUndoRestorePayloadResolvePayload(prev, fallbackScore) {
+  return {
+    prev: prev || {},
+    fallbackScore: fallbackScore
+  };
+}
+
+function resolveUndoRestorePayloadFallbackScore(manager, source) {
+  if (Number.isFinite(source.score) && typeof source.score === "number") {
+    return Number(source.score);
+  }
+  if (Number.isFinite(manager.score) && typeof manager.score === "number") {
+    return Number(manager.score);
+  }
+  return 0;
+}
+
+function resolveUndoRestorePayloadFallbackTiles(manager, source) {
+  var rawTiles = Array.isArray(source.tiles) ? source.tiles : [];
+  var tiles = [];
+  for (var index = 0; index < rawTiles.length; index++) {
+    var item = rawTiles[index];
+    if (!manager.isNonArrayObject(item)) continue;
+    tiles.push(item);
+  }
+  return tiles;
+}
+
+function resolveUndoRestorePayloadFallback(manager, prev) {
+  var source = normalizeUndoStatsRecordObject(prev, {});
+  return {
+    score: resolveUndoRestorePayloadFallbackScore(manager, source),
+    tiles: resolveUndoRestorePayloadFallbackTiles(manager, source)
+  };
 }
 
 function computeUndoRestorePayload(manager, prev) {
   if (!manager) return null;
-  return resolveCoreUndoRestorePayloadObjectCallOrFallback(
+  return resolveCorePayloadCallWith(
     manager,
+    "callCoreUndoRestorePayloadRuntime",
     "computeUndoRestorePayload",
-    {
-      prev: prev || {},
-      fallbackScore: manager.score
-    },
-    function () {
-      var source = normalizeUndoStatsRecordObject(prev, {});
-      var score = Number.isFinite(source.score) && typeof source.score === "number"
-        ? Number(source.score)
-        : (Number.isFinite(manager.score) && typeof manager.score === "number" ? Number(manager.score) : 0);
-      var rawTiles = Array.isArray(source.tiles) ? source.tiles : [];
-      var tiles = [];
-      for (var i = 0; i < rawTiles.length; i++) {
-        var item = rawTiles[i];
-        if (!manager.isNonArrayObject(item)) continue;
-        tiles.push(item);
-      }
-      return {
-        score: score,
-        tiles: tiles
-      };
+    createUndoRestorePayloadResolvePayload(prev, manager.score),
+    {},
+    function (currentManager, coreCallResult) {
+      return currentManager.resolveCoreObjectCallOrFallback(coreCallResult, function () {
+        return resolveUndoRestorePayloadFallback(currentManager, prev);
+      });
     }
   );
 }

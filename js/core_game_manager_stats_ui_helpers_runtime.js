@@ -1,155 +1,148 @@
+function createStatsPanelVisibilityPayload(isOpen) {
+  return {
+    key: GameManager.STATS_PANEL_VISIBLE_KEY,
+    enabled: !!isOpen,
+    trueValue: "1",
+    falseValue: "0"
+  };
+}
+
+function writeStatsPanelVisibilityFlagFallback(manager, isOpen) {
+  var storage = manager.getWebStorageByName("localStorage");
+  if (!canWriteToStorage(storage)) return false;
+  try {
+    storage.setItem(GameManager.STATS_PANEL_VISIBLE_KEY, isOpen ? "1" : "0");
+    return true;
+  } catch (_err) {
+    return false;
+  }
+}
+
 function writeStatsPanelVisibilityFlag(manager, isOpen) {
   if (!manager) return false;
-  return resolveCoreStorageBooleanCallOrFallback(
+  var coreCallResult = callCoreStorageRuntime(
     manager,
     "writeStorageFlagFromContext",
-    {
-      key: GameManager.STATS_PANEL_VISIBLE_KEY,
-      enabled: !!isOpen,
-      trueValue: "1",
-      falseValue: "0"
-    },
-    function () {
-    var storage = manager.getWebStorageByName("localStorage");
-    if (!canWriteToStorage(storage)) return false;
-    try {
-      storage.setItem(GameManager.STATS_PANEL_VISIBLE_KEY, isOpen ? "1" : "0");
-      return true;
-    } catch (_err) {
-      return false;
-    }
+    createStatsPanelVisibilityPayload(isOpen),
+    true
+  );
+  return manager.resolveCoreBooleanCallOrFallback(coreCallResult, function () {
+    return writeStatsPanelVisibilityFlagFallback(manager, isOpen);
   });
 }
 
-function resolveStatsUiDocumentLike(manager) {
-  return resolveManagerDocumentLike(manager);
+function hideLegacyStatsSourceElement(el) {
+  if (!el) return;
+  // Preserve layout while moving display to page corner
+  el.style.visibility = "hidden";
 }
 
-function resolveStatsUiElementById(manager, elementId) {
-  return resolveManagerElementById(manager, elementId);
-}
-
-function ensureCornerStatsElement(manager, elementId) {
-  var documentLike = resolveStatsUiDocumentLike(manager);
-  if (!documentLike) return null;
-  var element = resolveStatsUiElementById(manager, elementId);
-  if (element) return element;
+function resolveOrCreateCornerStatElement(manager, documentLike, elementId) {
+  if (!manager || !documentLike || !(typeof elementId === "string" && elementId)) return null;
+  var cornerEl = resolveManagerElementById(manager, elementId);
+  if (cornerEl) return cornerEl;
   if (typeof documentLike.createElement !== "function") return null;
-  element = documentLike.createElement("div");
-  element.id = elementId;
+  cornerEl = documentLike.createElement("div");
+  cornerEl.id = elementId;
   if (documentLike.body && typeof documentLike.body.appendChild === "function") {
-    documentLike.body.appendChild(element);
+    documentLike.body.appendChild(cornerEl);
   }
-  return element;
+  return cornerEl;
 }
 
-function applyBaseCornerStatsElementStyle(element) {
-  if (!element) return;
-  element.style.position = "fixed";
-  element.style.top = "8px";
-  element.style.zIndex = "1000";
-  element.style.background = "transparent";
-  element.style.color = "#776e65";
-  element.style.fontWeight = "bold";
-  element.style.fontSize = "27px";
-  element.style.pointerEvents = "none";
+function applyCornerStatBaseStyle(cornerEl) {
+  if (!cornerEl) return;
+  cornerEl.style.position = "fixed";
+  cornerEl.style.top = "8px";
+  cornerEl.style.zIndex = "1000";
+  cornerEl.style.background = "transparent";
+  cornerEl.style.color = "#776e65";
+  cornerEl.style.fontWeight = "bold";
+  cornerEl.style.fontSize = "27px";
+  cornerEl.style.pointerEvents = "none";
+}
+
+function initCornerRateDisplay(manager, documentLike, rateEl) {
+  if (!manager || !rateEl) return;
+  hideLegacyStatsSourceElement(rateEl);
+  var cornerRateEl = resolveOrCreateCornerStatElement(manager, documentLike, "corner-stats-4-rate");
+  manager.cornerRateEl = cornerRateEl;
+  if (!manager.cornerRateEl) return;
+  applyCornerStatBaseStyle(manager.cornerRateEl);
+  manager.cornerRateEl.style.left = "10px";
+  manager.cornerRateEl.textContent = "0.00";
+}
+
+function initCornerIpsDisplay(manager, documentLike, ipsEl) {
+  if (!manager || !ipsEl) return;
+  hideLegacyStatsSourceElement(ipsEl);
+  var cornerIpsEl = resolveOrCreateCornerStatElement(manager, documentLike, "corner-stats-ips");
+  manager.cornerIpsEl = cornerIpsEl;
+  if (!manager.cornerIpsEl) return;
+  applyCornerStatBaseStyle(manager.cornerIpsEl);
+  manager.cornerIpsEl.style.right = "10px";
+  manager.cornerIpsEl.textContent = "IPS: 0";
 }
 
 function initCornerStatsUi(manager) {
   if (!manager) return;
-  var rateEl = resolveStatsUiElementById(manager, "stats-4-rate");
-  var ipsEl = resolveStatsUiElementById(manager, "stats-ips");
-
-  if (rateEl) {
-    rateEl.style.visibility = "hidden"; // Preserve layout while moving display to page corner
-    manager.cornerRateEl = ensureCornerStatsElement(manager, "corner-stats-4-rate");
-    applyBaseCornerStatsElementStyle(manager.cornerRateEl);
-    manager.cornerRateEl.style.left = "10px";
-    manager.cornerRateEl.textContent = "0.00";
-  }
-  if (ipsEl) {
-    ipsEl.style.visibility = "hidden"; // Preserve layout while moving display to page corner
-    manager.cornerIpsEl = ensureCornerStatsElement(manager, "corner-stats-ips");
-    applyBaseCornerStatsElementStyle(manager.cornerIpsEl);
-    manager.cornerIpsEl.style.right = "10px";
-    manager.cornerIpsEl.textContent = "IPS: 0";
-  }
+  var rateEl = resolveManagerElementById(manager, "stats-4-rate");
+  var ipsEl = resolveManagerElementById(manager, "stats-ips");
+  var documentLike = resolveManagerDocumentLike(manager);
+  initCornerRateDisplay(manager, documentLike, rateEl);
+  initCornerIpsDisplay(manager, documentLike, ipsEl);
 }
 
-function ensureStatsPanelToggleButtonElement(manager) {
-  var documentLike = resolveStatsUiDocumentLike(manager);
-  if (!documentLike) return null;
-  var btn = resolveStatsUiElementById(manager, "stats-panel-toggle");
-  if (!btn) {
-    if (typeof documentLike.createElement !== "function") return null;
-    btn = documentLike.createElement("a");
-    btn.id = "stats-panel-toggle";
-  }
+function resolveOrCreateStatsPanelToggleButton(manager, documentLike) {
+  if (!manager || !documentLike) return null;
+  var btn = resolveManagerElementById(manager, "stats-panel-toggle");
+  if (btn) return btn;
+  if (typeof documentLike.createElement !== "function") return null;
+  btn = documentLike.createElement("a");
+  btn.id = "stats-panel-toggle";
+  return btn;
+}
+
+function configureStatsPanelToggleButton(btn) {
+  if (!btn) return;
   btn.title = "统计";
   btn.setAttribute("aria-label", "统计");
   if (!btn.querySelector("svg")) {
     btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>';
   }
   btn.className = "top-action-btn stats-panel-toggle";
-  return btn;
 }
 
-function resolveStatsPanelToggleHostElements(manager) {
-  var documentLike = resolveStatsUiDocumentLike(manager);
-  if (!documentLike) {
-    return {
-      exportBtn: null,
-      topActionHost: null
-    };
+function resolveStatsPanelTopActionHost(documentLike, exportBtn, practiceStatsActions) {
+  if (practiceStatsActions) return practiceStatsActions;
+  if (exportBtn && exportBtn.parentNode) return exportBtn.parentNode;
+  if (documentLike && typeof documentLike.querySelector === "function") {
+    return documentLike.querySelector(".heading .top-action-buttons") ||
+      documentLike.querySelector(".top-action-buttons");
   }
-  var exportBtn = resolveStatsUiElementById(manager, "top-export-replay-btn");
-  var practiceStatsActions = resolveStatsUiElementById(manager, "practice-stats-actions");
-  var topActionHost = practiceStatsActions ||
-    (exportBtn && exportBtn.parentNode) ||
-    (typeof documentLike.querySelector === "function" && documentLike.querySelector(".heading .top-action-buttons")) ||
-    (typeof documentLike.querySelector === "function" && documentLike.querySelector(".top-action-buttons"));
-  return {
-    exportBtn: exportBtn,
-    topActionHost: topActionHost
-  };
+  return null;
 }
 
-function mountStatsPanelToggleButton(manager, btn, hostElements) {
-  if (!btn) return;
-  var documentLike = resolveStatsUiDocumentLike(manager);
-  var body = documentLike && documentLike.body ? documentLike.body : null;
-  var hostState = hostElements && typeof hostElements === "object" ? hostElements : {};
-  var topActionHost = hostState.topActionHost || null;
-  var exportBtn = hostState.exportBtn || null;
+function mountStatsPanelToggleButton(documentLike, btn, topActionHost, exportBtn) {
+  if (!documentLike || !btn) return;
+  var body = documentLike.body;
   if (topActionHost) {
     btn.classList.remove("is-floating");
     if (exportBtn && exportBtn.parentNode === topActionHost) {
-      if (btn.parentNode !== topActionHost || btn.nextSibling !== exportBtn) {
-        topActionHost.insertBefore(btn, exportBtn);
-      }
+      if (btn.parentNode !== topActionHost || btn.nextSibling !== exportBtn) topActionHost.insertBefore(btn, exportBtn);
     } else if (btn.parentNode !== topActionHost) {
       topActionHost.insertBefore(btn, topActionHost.firstChild);
     }
     return;
   }
-  if (!body || typeof body.appendChild !== "function") return;
-  if (btn.parentNode !== body) {
-    body.appendChild(btn);
+  if (body && typeof body.appendChild === "function") {
+    if (btn.parentNode !== body) body.appendChild(btn);
+    btn.classList.add("is-floating");
   }
-  btn.classList.add("is-floating");
 }
 
-function ensureStatsPanelOverlayElement(manager) {
-  var documentLike = resolveStatsUiDocumentLike(manager);
-  if (!documentLike) return null;
-  var overlay = resolveStatsUiElementById(manager, "stats-panel-overlay");
-  if (overlay) return overlay;
-  if (typeof documentLike.createElement !== "function") return null;
-  overlay = documentLike.createElement("div");
-  overlay.id = "stats-panel-overlay";
-  overlay.className = "replay-modal-overlay";
-  overlay.style.display = "none";
-  overlay.innerHTML =
+function createStatsPanelOverlayHtml() {
+  return (
     "<div class='replay-modal-content stats-panel-content'>" +
     "<h3>统计汇总</h3>" +
     "<div class='stats-panel-row'><span>总步数</span><span id='stats-panel-total'>0</span></div>" +
@@ -161,16 +154,31 @@ function ensureStatsPanelOverlayElement(manager) {
     "<div class='replay-modal-actions'>" +
     "<button id='stats-panel-close' class='replay-button'>关闭</button>" +
     "</div>" +
-    "</div>";
-  if (documentLike.body && typeof documentLike.body.appendChild === "function") {
-    documentLike.body.appendChild(overlay);
-  }
+    "</div>"
+  );
+}
+
+function appendStatsPanelOverlayToDocumentBody(documentLike, overlay) {
+  if (!(documentLike && documentLike.body && typeof documentLike.body.appendChild === "function")) return;
+  documentLike.body.appendChild(overlay);
+}
+
+function resolveOrCreateStatsPanelOverlay(manager, documentLike) {
+  if (!manager || !documentLike) return null;
+  var overlay = resolveManagerElementById(manager, "stats-panel-overlay");
+  if (overlay) return overlay;
+  if (typeof documentLike.createElement !== "function") return null;
+  overlay = documentLike.createElement("div");
+  overlay.id = "stats-panel-overlay";
+  overlay.className = "replay-modal-overlay";
+  overlay.style.display = "none";
+  overlay.innerHTML = createStatsPanelOverlayHtml();
+  appendStatsPanelOverlayToDocumentBody(documentLike, overlay);
   return overlay;
 }
 
-function bindStatsPanelToggleButton(btn, manager) {
-  if (!btn || !manager) return;
-  if (btn.__statsBound) return;
+function bindStatsPanelToggleButtonEvent(manager, btn) {
+  if (!(manager && btn) || btn.__statsBound) return;
   btn.__statsBound = true;
   btn.addEventListener("click", function (event) {
     event.preventDefault();
@@ -178,35 +186,34 @@ function bindStatsPanelToggleButton(btn, manager) {
   });
 }
 
-function bindStatsPanelCloseButton(manager) {
-  if (!manager) return;
-  var closeBtn = resolveStatsUiElementById(manager, "stats-panel-close");
-  if (!closeBtn || closeBtn.__statsBound) return;
+function bindStatsPanelCloseButtonEvent(manager, closeBtn) {
+  if (!(manager && closeBtn) || closeBtn.__statsBound) return;
   closeBtn.__statsBound = true;
   closeBtn.addEventListener("click", function () {
     manager.closeStatsPanel();
   });
 }
 
-function bindStatsPanelOverlayDismiss(overlay, manager) {
-  if (!overlay || !manager) return;
-  if (overlay.__statsBound) return;
+function bindStatsPanelOverlayClickEvent(manager, overlay) {
+  if (!(manager && overlay) || overlay.__statsBound) return;
   overlay.__statsBound = true;
   overlay.addEventListener("click", function (event) {
     if (event.target === overlay) manager.closeStatsPanel();
   });
 }
 
-function resolveStatsPanelInitialOpenFlag(manager) {
+function bindStatsPanelUiEvents(manager, btn, overlay) {
+  if (!manager) return;
+  bindStatsPanelToggleButtonEvent(manager, btn);
+  var closeBtn = resolveManagerElementById(manager, "stats-panel-close");
+  bindStatsPanelCloseButtonEvent(manager, closeBtn);
+  bindStatsPanelOverlayClickEvent(manager, overlay);
+}
+
+function resolveStatsPanelInitialOpenState(manager) {
   if (!manager) return false;
-  return resolveCoreStorageBooleanCallOrFallback(
-    manager,
-    "readStorageFlagFromContext",
-    {
-      key: GameManager.STATS_PANEL_VISIBLE_KEY,
-      trueValue: "1"
-    },
-    function () {
+  var coreCallResult = callCoreStorageRuntime(manager, "readStorageFlagFromContext", { key: GameManager.STATS_PANEL_VISIBLE_KEY, trueValue: "1" }, true);
+  var isOpen = manager.resolveCoreBooleanCallOrFallback(coreCallResult, function () {
     var storage = manager.getWebStorageByName("localStorage");
     if (!canReadFromStorage(storage)) return false;
     try {
@@ -215,24 +222,26 @@ function resolveStatsPanelInitialOpenFlag(manager) {
       return false;
     }
   });
+  return isOpen;
 }
 
-function applyStatsPanelInitialVisibility(overlay, isOpen) {
+function applyStatsPanelOverlayDisplay(overlay, isOpen) {
   if (!overlay) return;
   overlay.style.display = isOpen ? "flex" : "none";
 }
 
 function initStatsPanelUi(manager) {
   if (!manager) return;
-  var documentLike = resolveStatsUiDocumentLike(manager);
+  var documentLike = resolveManagerDocumentLike(manager);
   if (!documentLike || !documentLike.body) return;
-  var btn = ensureStatsPanelToggleButtonElement(manager);
-  var hostElements = resolveStatsPanelToggleHostElements(manager);
-  mountStatsPanelToggleButton(manager, btn, hostElements);
-  var overlay = ensureStatsPanelOverlayElement(manager);
-  bindStatsPanelToggleButton(btn, manager);
-  bindStatsPanelCloseButton(manager);
-  bindStatsPanelOverlayDismiss(overlay, manager);
-  var isOpen = resolveStatsPanelInitialOpenFlag(manager);
-  applyStatsPanelInitialVisibility(overlay, isOpen);
+  var btn = resolveOrCreateStatsPanelToggleButton(manager, documentLike);
+  configureStatsPanelToggleButton(btn);
+  var exportBtn = resolveManagerElementById(manager, "top-export-replay-btn");
+  var practiceStatsActions = resolveManagerElementById(manager, "practice-stats-actions");
+  var topActionHost = resolveStatsPanelTopActionHost(documentLike, exportBtn, practiceStatsActions);
+  mountStatsPanelToggleButton(documentLike, btn, topActionHost, exportBtn);
+  var overlay = resolveOrCreateStatsPanelOverlay(manager, documentLike);
+  bindStatsPanelUiEvents(manager, btn, overlay);
+  var isOpen = resolveStatsPanelInitialOpenState(manager);
+  applyStatsPanelOverlayDisplay(overlay, isOpen);
 }

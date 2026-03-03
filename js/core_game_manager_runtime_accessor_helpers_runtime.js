@@ -18,14 +18,6 @@ function isRuntimeAccessorObject(value) {
   return !!(value && typeof value === "object");
 }
 
-function normalizeRuntimeAccessorObject(value, fallbackValue) {
-  return isRuntimeAccessorObject(value) ? value : fallbackValue;
-}
-
-function isNonEmptyString(value) {
-  return typeof value === "string" && value.length > 0;
-}
-
 function registerCoreRuntimeGetter(methodName, runtimeName) {
   GameManager.prototype[methodName] = function () {
     var windowLike = this.getWindowLike();
@@ -55,15 +47,11 @@ function registerCoreRuntimeCaller(methodName, resolverMethodName) {
   };
 }
 
-function isValidCoreRuntimeAccessorDef(accessorDef) {
-  return !!(Array.isArray(accessorDef) && accessorDef.length >= 4);
-}
-
 function registerCoreRuntimeAccessors(accessorDefs) {
   if (!Array.isArray(accessorDefs)) return;
   for (var index = 0; index < accessorDefs.length; index++) {
     var accessorDef = accessorDefs[index];
-    if (!isValidCoreRuntimeAccessorDef(accessorDef)) continue;
+    if (!(Array.isArray(accessorDef) && accessorDef.length >= 4)) continue;
     var callerMethodName = accessorDef[0];
     var resolverMethodName = accessorDef[1];
     var getterMethodName = accessorDef[2];
@@ -76,9 +64,10 @@ function registerCoreRuntimeAccessors(accessorDefs) {
 
 function resolveLegacyAdapterBridgeMethod(manager, methodName) {
   if (!manager) return null;
-  var windowLike = manager.getWindowLike();
-  var bridge = resolveLegacyAdapterBridgeForManager(manager, windowLike);
-  var method = resolveLegacyAdapterBridgeMethodOnBridge(manager, bridge, methodName);
+  var bridge = resolveLegacyAdapterBridgeForManager(manager);
+  if (!bridge || bridge.manager !== manager) return null;
+  if (!(typeof methodName === "string" && methodName.length > 0)) return null;
+  var method = bridge[methodName];
   if (typeof method !== "function") return null;
   return {
     bridge: bridge,
@@ -86,12 +75,9 @@ function resolveLegacyAdapterBridgeMethod(manager, methodName) {
   };
 }
 
-function resolveLegacyAdapterBridgeForManager(manager, windowLike) {
+function resolveLegacyAdapterBridgeForManager(manager) {
   if (!manager) return null;
-  var hostWindow = normalizeRuntimeAccessorObject(windowLike, null);
-  if (!hostWindow) {
-    hostWindow = typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
-  }
+  var hostWindow = typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
   var bridge = isRuntimeAccessorObject(hostWindow) ? hostWindow.__legacyEngine : null;
   if (!(isRuntimeAccessorObject(bridge) && bridge.manager === manager)) {
     bridge = null;
@@ -99,15 +85,14 @@ function resolveLegacyAdapterBridgeForManager(manager, windowLike) {
   return bridge;
 }
 
-function resolveLegacyAdapterBridgeMethodOnBridge(manager, bridge, methodName) {
-  if (!manager || !bridge || bridge.manager !== manager) return null;
-  if (!isNonEmptyString(methodName)) return null;
-  var method = bridge[methodName];
-  return typeof method === "function" ? method : null;
-}
-
 function callLegacyAdapterBridgeMethodOnBridge(manager, bridge, methodName, args) {
-  var method = resolveLegacyAdapterBridgeMethodOnBridge(manager, bridge, methodName);
+  if (!manager || !bridge || bridge.manager !== manager) {
+    return createUnavailableCoreCallResult();
+  }
+  if (!(typeof methodName === "string" && methodName.length > 0)) {
+    return createUnavailableCoreCallResult();
+  }
+  var method = bridge[methodName];
   if (typeof method !== "function") return createUnavailableCoreCallResult();
   return {
     available: true,
@@ -115,53 +100,48 @@ function callLegacyAdapterBridgeMethodOnBridge(manager, bridge, methodName, args
   };
 }
 
-function cacheAdapterSessionParitySnapshot(manager, bridge, cacheFieldName, snapshot) {
-  if (!manager || !bridge) return null;
-  if (!isRuntimeAccessorObject(snapshot)) return null;
-  var clonedSnapshot = manager.safeClonePlain(snapshot, null);
-  if (clonedSnapshot) {
-    bridge[cacheFieldName] = clonedSnapshot;
-  }
+function resolveAdapterSessionParityBridgeState(manager, readerMethodName) {
+  var readerBridgeEntry = manager.resolveLegacyAdapterBridgeMethod(readerMethodName);
+  return {
+    readerBridgeEntry: readerBridgeEntry,
+    bridge: readerBridgeEntry ? readerBridgeEntry.bridge : resolveLegacyAdapterBridgeForManager(manager)
+  };
+}
+
+function cloneAdapterSessionParitySnapshot(manager, value) {
+  if (!isRuntimeAccessorObject(value)) return null;
+  return manager.safeClonePlain(value, null);
+}
+
+function readAdapterSessionParitySnapshotFromBridge(
+  manager,
+  bridge,
+  readerMethodName,
+  cacheFieldName
+) {
+  var snapshotResult = callLegacyAdapterBridgeMethodOnBridge(manager, bridge, readerMethodName, []);
+  if (!snapshotResult.available) return null;
+  var clonedSnapshot = cloneAdapterSessionParitySnapshot(manager, snapshotResult.value);
+  if (clonedSnapshot) bridge[cacheFieldName] = clonedSnapshot;
   return clonedSnapshot;
+}
+
+function readAdapterSessionParitySnapshotFromCache(manager, bridge, cacheFieldName) {
+  if (!isRuntimeAccessorObject(bridge[cacheFieldName])) return null;
+  return manager.safeClonePlain(bridge[cacheFieldName], null);
 }
 
 function getAdapterSessionParitySnapshot(manager, readerMethodName, cacheFieldName) {
   if (!manager) return null;
-  var readerBridgeEntry = manager.resolveLegacyAdapterBridgeMethod(readerMethodName);
-  var bridge = readerBridgeEntry ? readerBridgeEntry.bridge : resolveLegacyAdapterBridgeForManager(manager);
+  var parityBridgeState = resolveAdapterSessionParityBridgeState(manager, readerMethodName);
+  var readerBridgeEntry = parityBridgeState.readerBridgeEntry, bridge = parityBridgeState.bridge;
   if (!bridge) return null;
-  if (readerBridgeEntry) {
-    var snapshotResult = callLegacyAdapterBridgeMethodOnBridge(
-      manager,
-      readerBridgeEntry.bridge,
-      readerMethodName,
-      []
-    );
-    if (!snapshotResult.available) return null;
-    return cacheAdapterSessionParitySnapshot(manager, readerBridgeEntry.bridge, cacheFieldName, snapshotResult.value);
-  }
-  if (isRuntimeAccessorObject(bridge[cacheFieldName])) {
-    return manager.safeClonePlain(bridge[cacheFieldName], null);
-  }
-  return null;
+  if (readerBridgeEntry) return readAdapterSessionParitySnapshotFromBridge(manager, readerBridgeEntry.bridge, readerMethodName, cacheFieldName);
+  return readAdapterSessionParitySnapshotFromCache(manager, bridge, cacheFieldName);
 }
 
-function resolveAdapterMoveMetaInput(meta) {
-  return normalizeRuntimeAccessorObject(meta, {});
-}
-
-function resolveAdapterBridgeModeKey(manager, bridge) {
-  if (bridge && typeof bridge.modeKey === "string" && bridge.modeKey) {
-    return bridge.modeKey;
-  }
-  return manager ? (manager.modeKey || manager.mode || "") : "";
-}
-
-function resolveAdapterBridgeMode(manager, bridge) {
-  if (bridge && typeof bridge.adapterMode === "string" && bridge.adapterMode) {
-    return bridge.adapterMode;
-  }
-  return "legacy-bridge";
+function resolveRuntimeAccessorNonNegativeInteger(value, fallbackValue) {
+  return Number.isInteger(value) && value >= 0 ? value : fallbackValue;
 }
 
 function buildAdapterMoveResultDetail(manager, input, modeKey, adapterMode, timestamp) {
@@ -176,48 +156,55 @@ function buildAdapterMoveResultDetail(manager, input, modeKey, adapterMode, time
     over: !!manager.over,
     won: !!manager.won,
     replayMode: !!manager.replayMode,
-    successfulMoveCount:
-      Number.isInteger(manager.successfulMoveCount) && manager.successfulMoveCount >= 0
-        ? manager.successfulMoveCount
-        : 0,
-    undoUsed: Number.isInteger(manager.undoUsed) && manager.undoUsed >= 0 ? manager.undoUsed : 0,
+    successfulMoveCount: resolveRuntimeAccessorNonNegativeInteger(manager.successfulMoveCount, 0),
+    undoUsed: resolveRuntimeAccessorNonNegativeInteger(manager.undoUsed, 0),
     undoDepth: Array.isArray(manager.undoStack) ? manager.undoStack.length : 0,
     at: timestamp
   };
 }
 
-function syncAdapterSnapshotFromMoveResult(manager, bridge, detail, modeKey, adapterMode, timestamp) {
-  if (!manager || !bridge || !detail) return;
-  var snapshot = {
+function resolveAdapterMoveResultModeKey(manager, bridge) {
+  if (bridge && typeof bridge.modeKey === "string" && bridge.modeKey) return bridge.modeKey;
+  if (!manager) return "";
+  return manager.modeKey || manager.mode || "";
+}
+
+function resolveAdapterMoveResultAdapterMode(bridge) {
+  if (bridge && typeof bridge.adapterMode === "string" && bridge.adapterMode) return bridge.adapterMode;
+  return "legacy-bridge";
+}
+
+function buildAdapterSnapshot(adapterMode, modeKey, timestamp, detail) {
+  return {
     adapterMode: adapterMode,
     modeKey: modeKey || "unknown",
     updatedAt: timestamp,
     lastMoveResult: detail
   };
+}
+
+function syncAdapterSnapshotOnBridge(manager, bridge, snapshot) {
   var syncResult = callLegacyAdapterBridgeMethodOnBridge(
     manager,
     bridge,
     "syncAdapterSnapshot",
     [snapshot]
   );
-  if (!syncResult.available) return;
-  bridge.adapterSnapshot = snapshot;
+  if (syncResult.available) {
+    bridge.adapterSnapshot = snapshot;
+  }
 }
 
-function refreshAdapterParityReportSnapshot(manager, bridge) {
-  if (!manager || !bridge) return;
-  var readResult = callLegacyAdapterBridgeMethodOnBridge(
+function refreshAdapterParityReportCacheOnBridge(manager, bridge) {
+  var reportResult = callLegacyAdapterBridgeMethodOnBridge(
     manager,
     bridge,
     "readAdapterParityReport",
     []
   );
-  if (!readResult.available) return;
-  bridge.adapterParityReport = readResult.value;
-  if (
-    bridge.adapterParityReport &&
-    resolveLegacyAdapterBridgeMethodOnBridge(manager, bridge, "writeStoredAdapterParityReport")
-  ) {
+  if (!reportResult.available) return;
+  bridge.adapterParityReport = reportResult.value;
+  if (bridge.adapterParityReport) {
     callLegacyAdapterBridgeMethodOnBridge(
       manager,
       bridge,
@@ -227,16 +214,21 @@ function refreshAdapterParityReportSnapshot(manager, bridge) {
   }
 }
 
-function refreshAdapterParityAbDiffSnapshot(manager, bridge) {
-  if (!manager || !bridge) return;
-  var readResult = callLegacyAdapterBridgeMethodOnBridge(
+function refreshAdapterParityABDiffCacheOnBridge(manager, bridge) {
+  var abDiffResult = callLegacyAdapterBridgeMethodOnBridge(
     manager,
     bridge,
     "readAdapterParityABDiff",
     []
   );
-  if (!readResult.available) return;
-  bridge.adapterParityABDiff = readResult.value;
+  if (abDiffResult.available) {
+    bridge.adapterParityABDiff = abDiffResult.value;
+  }
+}
+
+function refreshAdapterParityCachesOnBridge(manager, bridge) {
+  refreshAdapterParityReportCacheOnBridge(manager, bridge);
+  refreshAdapterParityABDiffCacheOnBridge(manager, bridge);
 }
 
 function publishAdapterMoveResult(manager, meta) {
@@ -244,19 +236,14 @@ function publishAdapterMoveResult(manager, meta) {
   var bridge = resolveLegacyAdapterBridgeForManager(manager);
   if (!bridge) return false;
   var timestamp = Date.now();
-  var input = resolveAdapterMoveMetaInput(meta);
-  var modeKey = resolveAdapterBridgeModeKey(manager, bridge);
-  var adapterMode = resolveAdapterBridgeMode(manager, bridge);
+  var input = isRuntimeAccessorObject(meta) ? meta : {};
+  var modeKey = resolveAdapterMoveResultModeKey(manager, bridge);
+  var adapterMode = resolveAdapterMoveResultAdapterMode(bridge);
   var detail = buildAdapterMoveResultDetail(manager, input, modeKey, adapterMode, timestamp);
-  var emitResult = callLegacyAdapterBridgeMethodOnBridge(
-    manager,
-    bridge,
-    "emitMoveResult",
-    [detail]
-  );
+  var emitResult = callLegacyAdapterBridgeMethodOnBridge(manager, bridge, "emitMoveResult", [detail]);
   if (!emitResult.available) return false;
-  syncAdapterSnapshotFromMoveResult(manager, bridge, detail, modeKey, adapterMode, timestamp);
-  refreshAdapterParityReportSnapshot(manager, bridge);
-  refreshAdapterParityAbDiffSnapshot(manager, bridge);
+  var snapshot = buildAdapterSnapshot(adapterMode, modeKey, timestamp, detail);
+  syncAdapterSnapshotOnBridge(manager, bridge, snapshot);
+  refreshAdapterParityCachesOnBridge(manager, bridge);
   return true;
 }

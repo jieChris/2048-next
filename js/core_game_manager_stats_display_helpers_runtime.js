@@ -1,13 +1,9 @@
-function resolveStatsDisplayDocumentLike(manager) {
-  return resolveManagerDocumentLike(manager);
-}
-
-function resolveStatsDisplayElementById(manager, elementId) {
-  return resolveManagerElementById(manager, elementId);
+function normalizeStatsDisplayRecordObject(value, fallbackValue) {
+  return isNonArrayObject(value) ? value : fallbackValue;
 }
 
 function updateStatsLabelText(manager, elementId, label, value) {
-  var el = resolveStatsDisplayElementById(manager, elementId);
+  var el = resolveManagerElementById(manager, elementId);
   if (!el) return;
   el.textContent = label + value;
 }
@@ -17,57 +13,72 @@ function applyInvalidatedTimerPlaceholders(manager, elementIds) {
   for (var idx = 0; idx < ids.length; idx++) {
     var targetId = ids[idx];
     if (!targetId) continue;
-    var targetEl = resolveStatsDisplayElementById(manager, String(targetId));
+    var targetEl = resolveManagerElementById(manager, String(targetId));
     if (targetEl) targetEl.textContent = "---------";
   }
 }
 
 function refreshIpsDisplay(manager, durationMs) {
   if (!manager) return;
-  var statsIpsEl = resolveStatsDisplayElementById(manager, "stats-ips");
+  var statsIpsEl = resolveManagerElementById(manager, "stats-ips");
   var cornerIpsEl = manager.cornerIpsEl;
   if (!statsIpsEl && !cornerIpsEl) return;
-  var ms = resolveIpsDurationMs(manager, durationMs);
-  var ipsInputCount = resolveIpsInputCount(manager);
-  var ipsText = resolveIpsDisplayText(manager, ms, ipsInputCount);
-  applyIpsTextToTargets(statsIpsEl, cornerIpsEl, ipsText);
-}
-
-function resolveIpsDurationMs(manager, durationMs) {
-  if (!manager) return 0;
   var ms = Number(durationMs);
   if (!Number.isFinite(ms) || ms < 0) {
-    return manager.getDurationMs();
+    ms = manager.getDurationMs();
   }
-  return ms;
+  var ipsInputCount = resolveIpsInputCount(manager);
+  var ipsText = resolveIpsDisplayText(manager, ms, ipsInputCount);
+  if (statsIpsEl) statsIpsEl.textContent = ipsText;
+  if (cornerIpsEl) cornerIpsEl.textContent = ipsText;
+}
+
+function createIpsInputCountResolvePayload(manager) {
+  return {
+    replayMode: manager.replayMode,
+    replayIndex: manager.replayIndex,
+    ipsInputCount: manager.ipsInputCount
+  };
 }
 
 function resolveIpsInputCountFallback(manager) {
-  if (!manager) return 0;
   if (manager.replayMode) {
     return Number.isInteger(manager.replayIndex) && manager.replayIndex > 0 ? manager.replayIndex : 0;
   }
-  return Number.isInteger(manager.ipsInputCount) && manager.ipsInputCount >= 0 ? manager.ipsInputCount : 0;
+  return Number.isInteger(manager.ipsInputCount) && manager.ipsInputCount >= 0
+    ? manager.ipsInputCount
+    : 0;
+}
+
+function resolveIpsInputCountFromCoreResult(currentManager, coreCallResult) {
+  return currentManager.resolveCoreNumericCallOrFallback(coreCallResult, function () {
+    return resolveIpsInputCountFallback(currentManager);
+  });
 }
 
 function resolveIpsInputCount(manager) {
   if (!manager) return 0;
-  return resolveCoreReplayExecutionNumericCallOrFallback(
+  return resolveCorePayloadCallWith(
     manager,
+    "callCoreReplayExecutionRuntime",
     "resolveIpsInputCount",
-    {
-      replayMode: manager.replayMode,
-      replayIndex: manager.replayIndex,
-      ipsInputCount: manager.ipsInputCount
-    },
-    function () {
-      return resolveIpsInputCountFallback(manager);
+    createIpsInputCountResolvePayload(manager),
+    0,
+    function (currentManager, coreCallResult) {
+      return resolveIpsInputCountFromCoreResult(currentManager, coreCallResult);
     }
   );
 }
 
-function normalizeIpsTextFromCoreValue(coreValue) {
-  var coreDisplay = coreValue || {};
+function createIpsDisplayResolvePayload(ms, ipsInputCount) {
+  return {
+    durationMs: ms,
+    ipsInputCount: ipsInputCount
+  };
+}
+
+function normalizeIpsDisplayTextFromCore(coreValue) {
+  var coreDisplay = normalizeStatsDisplayRecordObject(coreValue, {});
   return typeof coreDisplay.ipsText === "string" && coreDisplay.ipsText ? coreDisplay.ipsText : "";
 }
 
@@ -80,29 +91,21 @@ function resolveIpsDisplayTextFallback(ms, ipsInputCount) {
   return "IPS: " + avgIps;
 }
 
-function resolveIpsDisplayText(manager, ms, ipsInputCount) {
-  if (!manager) return "IPS: 0";
-  var ipsText = resolveCoreReplayExecutionNormalizedCallOrFallback(
-    manager,
-    "resolveIpsDisplayText",
-    {
-      durationMs: ms,
-      ipsInputCount: ipsInputCount
-    },
-    function (coreValue) {
-      return normalizeIpsTextFromCoreValue(coreValue);
-    },
-    function () {
+function resolveIpsDisplayTextByCore(manager, ms, ipsInputCount) {
+  return resolveCorePayloadCallWith(manager, "callCoreReplayExecutionRuntime", "resolveIpsDisplayText", createIpsDisplayResolvePayload(ms, ipsInputCount), undefined, function (currentManager, coreCallResult) {
+    return currentManager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (coreValue) {
+      return normalizeIpsDisplayTextFromCore(coreValue);
+    }, function () {
       return "";
-    }
-  );
-  if (ipsText) return ipsText;
-  return resolveIpsDisplayTextFallback(ms, ipsInputCount);
+    });
+  });
 }
 
-function applyIpsTextToTargets(statsIpsEl, cornerIpsEl, ipsText) {
-  if (statsIpsEl) statsIpsEl.textContent = ipsText;
-  if (cornerIpsEl) cornerIpsEl.textContent = ipsText;
+function resolveIpsDisplayText(manager, ms, ipsInputCount) {
+  if (!manager) return "IPS: 0";
+  var ipsText = resolveIpsDisplayTextByCore(manager, ms, ipsInputCount);
+  if (ipsText) return ipsText;
+  return resolveIpsDisplayTextFallback(ms, ipsInputCount);
 }
 
 function getActualFourRate(manager) {
@@ -113,58 +116,16 @@ function getActualFourRate(manager) {
 
 function setStatsPanelFieldText(fieldId, value) {
   var manager = this && typeof this === "object" ? this : null;
-  var element = resolveStatsDisplayElementById(manager, fieldId);
+  var element = resolveManagerElementById(manager, fieldId);
   if (element) element.textContent = String(value);
 }
 
-function resolveStatsPanelStepValues(manager, totalSteps, moveSteps, undoSteps) {
-  var fallback = manager.computeStepStats();
-  return {
-    totalSteps: typeof totalSteps === "undefined" ? fallback.totalSteps : totalSteps,
-    moveSteps: typeof moveSteps === "undefined" ? fallback.moveSteps : moveSteps,
-    undoSteps: typeof undoSteps === "undefined" ? fallback.undoSteps : undoSteps
-  };
-}
-
-function applyStatsPanelSpawnLabels(manager, pair) {
-  var twoLabel = resolveStatsDisplayElementById(manager, "stats-panel-two-label");
-  if (twoLabel) twoLabel.textContent = "出" + pair.primary + "数量";
-  var fourLabel = resolveStatsDisplayElementById(manager, "stats-panel-four-label");
-  if (fourLabel) fourLabel.textContent = "出" + pair.secondary + "数量";
-  var rateLabel = resolveStatsDisplayElementById(manager, "stats-panel-four-rate-label");
-  if (rateLabel) rateLabel.textContent = "实际出" + pair.secondary + "率";
-}
-
-function applyStatsPanelStepFields(manager, stepValues) {
-  manager.setStatsPanelFieldText("stats-panel-total", stepValues.totalSteps);
-  manager.setStatsPanelFieldText("stats-panel-moves", stepValues.moveSteps);
-  manager.setStatsPanelFieldText("stats-panel-undo", stepValues.undoSteps);
-}
-
-function applyStatsPanelSpawnFields(manager, pair) {
-  manager.setStatsPanelFieldText("stats-panel-two", resolveSpawnCount(manager, pair.primary));
-  manager.setStatsPanelFieldText("stats-panel-four", resolveSpawnCount(manager, pair.secondary));
-  var rateEl = resolveStatsDisplayElementById(manager, "stats-panel-four-rate");
-  if (rateEl) rateEl.textContent = manager.getActualSecondaryRate();
-}
-
-function buildStatsPanelUpdateContext(manager, totalSteps, moveSteps, undoSteps) {
-  if (!manager) return null;
-  return {
-    stepValues: resolveStatsPanelStepValues(manager, totalSteps, moveSteps, undoSteps),
-    pair: manager.getSpawnStatPair()
-  };
-}
-
-function applyStatsPanelUpdateContext(manager, context) {
-  if (!manager || !context) return;
-  applyStatsPanelSpawnLabels(manager, context.pair);
-  applyStatsPanelStepFields(manager, context.stepValues);
-  applyStatsPanelSpawnFields(manager, context.pair);
+function createActualSecondaryRateResolveArgs(manager) {
+  return [manager.spawnValueCounts, manager.spawnTable || []];
 }
 
 function resolveTotalSpawnCountFallback(manager) {
-  if (!manager || !manager.spawnValueCounts) return 0;
+  if (!manager.spawnValueCounts) return 0;
   var fallbackTotal = 0;
   for (var k in manager.spawnValueCounts) {
     if (manager.hasOwnKey(manager.spawnValueCounts, k)) {
@@ -174,52 +135,50 @@ function resolveTotalSpawnCountFallback(manager) {
   return fallbackTotal;
 }
 
-function resolveActualSecondaryRateText(manager, pair, total) {
-  if (!manager) return "0.00";
+function resolveTotalSpawnCountForSecondaryRate(manager) {
+  return resolveCoreArgsCallWith(
+    manager,
+    "callCoreRulesRuntime",
+    "getTotalSpawnCount",
+    [manager.spawnValueCounts],
+    0,
+    function (currentManager, totalCallResult) {
+      return currentManager.resolveCoreNumericCallOrFallback(totalCallResult, function () {
+        return resolveTotalSpawnCountFallback(currentManager);
+      });
+    }
+  );
+}
+
+function resolveActualSecondaryRateFallbackText(manager) {
+  var pair = manager.getSpawnStatPair();
+  var total = resolveTotalSpawnCountForSecondaryRate(manager);
   if (total <= 0) return "0.00";
   return ((resolveSpawnCount(manager, pair.secondary) / total) * 100).toFixed(2);
 }
 
 function getActualSecondaryRate(manager) {
   if (!manager) return "0.00";
-  return resolveCoreRulesStringCallOrFallback(
+  return resolveCoreArgsCallWith(
     manager,
+    "callCoreRulesRuntime",
     "getActualSecondaryRateText",
-    [
-      manager.spawnValueCounts,
-      manager.spawnTable || []
-    ],
-    function () {
-      var pair = manager.getSpawnStatPair();
-      var total = resolveCoreRulesNumericCallOrFallback(
-        manager,
-        "getTotalSpawnCount",
-        [manager.spawnValueCounts],
-        function () {
-          return resolveTotalSpawnCountFallback(manager);
-        }
-      );
-      return resolveActualSecondaryRateText(manager, pair, total);
+    createActualSecondaryRateResolveArgs(manager),
+    "",
+    function (currentManager, coreCallResult) {
+      return currentManager.resolveCoreStringCallOrFallback(coreCallResult, function () {
+        return resolveActualSecondaryRateFallbackText(currentManager);
+      });
     }
   );
 }
 
-function shouldFinalizeActuateAsTerminatedSession(manager) {
-  if (!manager) return false;
-  if (manager.modeKey === "practice_legacy") return false;
-  return isSessionTerminated(manager);
-}
-
-function handleTerminatedSessionActuatePersistence(manager) {
-  if (!manager) return;
-  manager.clearSavedGameState(manager.modeKey);
-  manager.tryAutoSubmitOnGameOver();
-}
-
 function finalizeActuatePersistence(manager) {
   if (!manager) return;
-  if (shouldFinalizeActuateAsTerminatedSession(manager)) {
-    handleTerminatedSessionActuatePersistence(manager);
+  var shouldFinalizeAsTerminated = manager.modeKey !== "practice_legacy" && isSessionTerminated(manager);
+  if (shouldFinalizeAsTerminated) {
+    manager.clearSavedGameState(manager.modeKey);
+    manager.tryAutoSubmitOnGameOver();
     return;
   }
   saveGameState(manager);
@@ -232,8 +191,7 @@ function syncBestScoreBeforeActuate(manager) {
   }
 }
 
-function buildActuatePayload(manager) {
-  if (!manager) return {};
+function createActuatorPayloadState(manager) {
   return {
     score: manager.score,
     over: manager.over,
@@ -244,11 +202,36 @@ function buildActuatePayload(manager) {
   };
 }
 
+function updateActuateStatsAndPanel(manager) {
+  if (!manager) return;
+  var stepStats = manager.computeStepStats();
+  var stats = normalizeStatsDisplayRecordObject(stepStats, {});
+  updateStatsLabelText(manager, "stats-total", "总步数: ", stats.totalSteps);
+  updateStatsLabelText(manager, "stats-moves", "移动步数: ", stats.moveSteps);
+  updateStatsLabelText(manager, "stats-undo", "撤回步数: ", stats.undoSteps);
+  manager.updateStatsPanel(stats.totalSteps, stats.moveSteps, stats.undoSteps);
+}
+
+function resolveActuateElapsedMs(manager) {
+  if (!manager) return 0;
+  if (manager.timerStatus === 1 && manager.startTime && typeof manager.startTime.getTime === "function") {
+    return Date.now() - manager.startTime.getTime();
+  }
+  return manager.accumulatedTime;
+}
+
+function refreshActuateTimerAndIps(manager) {
+  if (!(manager && manager.timerContainer)) return;
+  var elapsedMs = resolveActuateElapsedMs(manager);
+  manager.timerContainer.textContent = manager.pretty(elapsedMs);
+  refreshIpsDisplay(manager, elapsedMs);
+}
+
 function actuate(manager) {
   if (!manager) return;
   syncBestScoreBeforeActuate(manager);
-  manager.actuator.actuate(manager.grid, buildActuatePayload(manager));
-  updateActuateStats(manager);
-  syncActuateTimerView(manager);
+  manager.actuator.actuate(manager.grid, createActuatorPayloadState(manager));
+  updateActuateStatsAndPanel(manager);
+  refreshActuateTimerAndIps(manager);
   finalizeActuatePersistence(manager);
 }
