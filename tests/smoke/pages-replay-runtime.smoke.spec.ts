@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
-  test("legacy bootstrap resolveModeConfig delegates to mode-catalog runtime", async ({ page }) => {
+  test("core bootstrap resolveModeConfig delegates to mode-catalog runtime", async ({ page }) => {
     const response = await page.goto("/capped_2048.html", {
       waitUntil: "domcontentloaded"
     });
@@ -11,7 +11,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForTimeout(200);
 
     const snapshot = await page.evaluate(() => {
-      const bootstrap = (window as any).LegacyBootstrapRuntime;
+      const bootstrap = (window as any).CoreBootstrapRuntime;
       const modeCatalogRuntime = (window as any).CoreModeCatalogRuntime;
       if (
         !bootstrap ||

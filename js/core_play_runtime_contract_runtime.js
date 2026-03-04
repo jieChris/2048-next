@@ -119,9 +119,9 @@
       "CoreStorageRuntime is required"
     );
     var bootstrapRuntime = requireRuntimeFunctions(
-      source.LegacyBootstrapRuntime,
+      source.CoreBootstrapRuntime || source.LegacyBootstrapRuntime,
       ["startGameOnAnimationFrame"],
-      "LegacyBootstrapRuntime.startGameOnAnimationFrame is required"
+      "CoreBootstrapRuntime.startGameOnAnimationFrame is required"
     );
 
     return {

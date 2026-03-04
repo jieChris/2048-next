@@ -36,30 +36,6 @@
     return catalog.getMode(key) || catalog.getMode(fallbackKey) || null;
   }
 
-  function attachLegacyBridge(manager, modeKey, modeConfig) {
-    var adapterApi = global.LegacyAdapterRuntime;
-    if (adapterApi && typeof adapterApi.attachLegacyBridgeWithAdapter === "function") {
-      return adapterApi.attachLegacyBridgeWithAdapter({
-        manager: manager || null,
-        modeKey: modeKey || "",
-        modeConfig: modeConfig || null,
-        bridgeApi: global.LegacyBridge || null
-      });
-    }
-
-    var bridgeApi = global.LegacyBridge;
-    if (bridgeApi && typeof bridgeApi.attachLegacyEngineToWindow === "function") {
-      return bridgeApi.attachLegacyEngineToWindow(manager, modeKey, modeConfig);
-    }
-    var payload = {
-      manager: manager || null,
-      modeKey: modeKey || "",
-      modeConfig: modeConfig || null
-    };
-    global.__legacyEngine = payload;
-    return payload;
-  }
-
   function startGame(options) {
     var opts = options || {};
     var modeConfig = opts.modeConfig || resolveModeConfig(opts.modeKey, opts.fallbackModeKey);
@@ -91,11 +67,6 @@
     }
 
     global.game_manager = manager;
-    attachLegacyBridge(
-      manager,
-      opts.modeKey || (global.GAME_MODE_CONFIG && global.GAME_MODE_CONFIG.key) || "",
-      global.GAME_MODE_CONFIG || null
-    );
     return manager;
   }
 
@@ -127,9 +98,11 @@
     return result;
   }
 
-  global.LegacyBootstrapRuntime = global.LegacyBootstrapRuntime || {};
-  global.LegacyBootstrapRuntime.resolveModeConfig = resolveModeConfig;
-  global.LegacyBootstrapRuntime.attachLegacyBridge = attachLegacyBridge;
-  global.LegacyBootstrapRuntime.startGame = startGame;
-  global.LegacyBootstrapRuntime.startGameOnAnimationFrame = startGameOnAnimationFrame;
+  global.CoreBootstrapRuntime = global.CoreBootstrapRuntime || {};
+  global.CoreBootstrapRuntime.resolveModeConfig = resolveModeConfig;
+  global.CoreBootstrapRuntime.startGame = startGame;
+  global.CoreBootstrapRuntime.startGameOnAnimationFrame = startGameOnAnimationFrame;
+
+  // Keep legacy alias for existing runtime-contract call sites.
+  global.LegacyBootstrapRuntime = global.CoreBootstrapRuntime;
 })(typeof window !== "undefined" ? window : undefined);

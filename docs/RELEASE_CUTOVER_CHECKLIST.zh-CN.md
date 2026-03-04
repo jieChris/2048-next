@@ -25,6 +25,8 @@
 - [ ] 写入本次发布说明（含风险与回滚条件）
 - [ ] 打稳定 tag
 - [ ] 记录发布时间与负责人
+- [ ] `deploy-self-hosted` 工作流执行成功（目标分支：`main`）
+- [ ] 线上域名验证通过（`/index.html`、`/play.html`、`/history.html`、`/replay.html`）
 
 ## 5. 回滚预案（必须可执行）
 - [ ] 可立即设置 `engine_adapter_force_legacy=1`

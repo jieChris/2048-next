@@ -3,6 +3,7 @@ type AnyRecord = Record<string, unknown>;
 export interface HomeRuntimeContractWindowLike {
   CoreHomeModeRuntime?: unknown;
   CoreUndoActionRuntime?: unknown;
+  CoreBootstrapRuntime?: unknown;
   LegacyBootstrapRuntime?: unknown;
 }
 
@@ -48,9 +49,9 @@ export function resolveHomeRuntimeContracts(
     "CoreUndoActionRuntime is required"
   );
   const bootstrapRuntime = requireRuntimeFunctions(
-    source.LegacyBootstrapRuntime,
+    source.CoreBootstrapRuntime || source.LegacyBootstrapRuntime,
     ["startGameOnAnimationFrame"],
-    "LegacyBootstrapRuntime.startGameOnAnimationFrame is required"
+    "CoreBootstrapRuntime.startGameOnAnimationFrame is required"
   );
 
   return {

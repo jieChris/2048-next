@@ -1,0 +1,126 @@
+name: Deploy Self Hosted
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-self-hosted-main
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  build:
+    name: Build Release Package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      release_id: ${{ steps.meta.outputs.release_id }}
+      artifact_name: ${{ steps.meta.outputs.artifact_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release readiness
+        run: npm run verify:release-ready
+
+      - name: Build dist
+        run: npm run build
+
+      - name: Prepare release metadata
+        id: meta
+        run: |
+          ts="$(date -u +%Y%m%d%H%M%S)"
+          short_sha="${GITHUB_SHA::7}"
+          release_id="${ts}-${short_sha}"
+          artifact_name="dist-${release_id}.tar.gz"
+          echo "release_id=${release_id}" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=${artifact_name}" >> "$GITHUB_OUTPUT"
+
+      - name: Archive dist
+        run: tar -czf "${{ steps.meta.outputs.artifact_name }}" -C dist .
+
+      - name: Upload release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.artifact_name }}
+          path: ${{ steps.meta.outputs.artifact_name }}
+          retention-days: 14
+
+  deploy:
+    name: Deploy To Server
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_ROOT: ${{ secrets.DEPLOY_ROOT }}
+      DEPLOY_KEEP_RELEASES: ${{ vars.DEPLOY_KEEP_RELEASES || '5' }}
+      ARTIFACT_NAME: ${{ needs.build.outputs.artifact_name }}
+      RELEASE_ID: ${{ needs.build.outputs.release_id }}
+    steps:
+      - name: Download release package
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: artifact
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+
+      - name: Add server host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Upload package
+        run: |
+          scp -P "${DEPLOY_PORT}" \
+            "artifact/${ARTIFACT_NAME}" \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/${ARTIFACT_NAME}"
+
+      - name: Activate release (atomic symlink)
+        run: |
+          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "bash -s -- '${DEPLOY_ROOT}' '${ARTIFACT_NAME}' '${RELEASE_ID}' '${DEPLOY_KEEP_RELEASES}'" <<'REMOTE'
+          set -euo pipefail
+          deploy_root="$1"
+          artifact_name="$2"
+          release_id="$3"
+          keep_releases="$4"
+
+          releases_dir="${deploy_root}/releases"
+          release_dir="${releases_dir}/${release_id}"
+
+          mkdir -p "${releases_dir}" "${deploy_root}/shared"
+          rm -rf "${release_dir}"
+          mkdir -p "${release_dir}"
+
+          tar -xzf "/tmp/${artifact_name}" -C "${release_dir}"
+          ln -sfn "${release_dir}" "${deploy_root}/current"
+          rm -f "/tmp/${artifact_name}"
+
+          cd "${releases_dir}"
+          ls -1dt */ 2>/dev/null | tail -n "+$((keep_releases + 1))" | xargs -r rm -rf
+          REMOTE
+
+      - name: Output deployed release
+        run: echo "Deployed release ${RELEASE_ID} to ${DEPLOY_HOST}:${DEPLOY_ROOT}/current"

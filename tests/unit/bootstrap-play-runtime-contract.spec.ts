@@ -65,7 +65,7 @@ function createCompleteWindowLike() {
       safeReadStorageItem: () => null,
       safeSetStorageItem: () => {}
     },
-    LegacyBootstrapRuntime: {
+    CoreBootstrapRuntime: {
       startGameOnAnimationFrame: () => {}
     }
   };
@@ -93,7 +93,7 @@ describe("bootstrap play runtime contract", () => {
     expect(result.playStartupContextRuntime).toBe(source.CorePlayStartupContextRuntime);
     expect(result.playStartupHostRuntime).toBe(source.CorePlayStartupHostRuntime);
     expect(result.storageRuntime).toBe(source.CoreStorageRuntime);
-    expect(result.bootstrapRuntime).toBe(source.LegacyBootstrapRuntime);
+    expect(result.bootstrapRuntime).toBe(source.CoreBootstrapRuntime);
   });
 
   it("throws exact error when a required runtime is missing", () => {

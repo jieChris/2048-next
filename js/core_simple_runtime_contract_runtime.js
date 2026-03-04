@@ -10,9 +10,9 @@
 
   function resolveSimpleBootstrapRuntime(windowLike) {
     var source = windowLike || {};
-    var runtime = source.LegacyBootstrapRuntime;
+    var runtime = source.CoreBootstrapRuntime || source.LegacyBootstrapRuntime;
     if (!runtime || typeof runtime !== "object" || !hasFunction(runtime, "startGameOnAnimationFrame")) {
-      throw new Error("LegacyBootstrapRuntime.startGameOnAnimationFrame is required");
+      throw new Error("CoreBootstrapRuntime.startGameOnAnimationFrame is required");
     }
     return runtime;
   }

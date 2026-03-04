@@ -65,3 +65,9 @@
   - 最近 7 天连续记录
   - 至少一次成功回滚演练记录
   - 最后一轮 `verify:prepush` 通过记录
+
+## 9. 服务器上线执行
+1. 确认 `main` 分支已包含切换提交。
+2. 确认 GitHub Actions 的 `deploy-self-hosted` 任务成功。
+3. 访问线上 `index/play/history/replay` 页面做最小冒烟。
+4. 若出现线上异常，按回滚章节执行并记录时间线。

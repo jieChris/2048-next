@@ -29,7 +29,6 @@ export const BATCH_DEFS = {
         "js/html_actuator.js",
         "js/index_ui.js",
         "js/local_score_manager.js",
-        "js/core_adapter_shadow_runtime.js",
         "js/replay_ui.js",
         "js/test_ui.js",
         "style/main.css",
