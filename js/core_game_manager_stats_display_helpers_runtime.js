@@ -18,6 +18,43 @@ function applyInvalidatedTimerPlaceholders(manager, elementIds) {
   }
 }
 
+var IPS_WINDOW_MS = 1000;
+
+function resolveStatsIpsNowMs(rawNowMs) {
+  var nowMs = Number(rawNowMs);
+  if (Number.isFinite(nowMs) && nowMs >= 0) return Math.floor(nowMs);
+  return Date.now();
+}
+
+function normalizeStatsIpsInputTime(raw) {
+  var value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) return null;
+  return Math.floor(value);
+}
+
+function pruneStatsIpsInputTimes(rawTimes, nowMs) {
+  var minMs = nowMs - IPS_WINDOW_MS;
+  var list = Array.isArray(rawTimes) ? rawTimes : [];
+  var next = [];
+  for (var i = 0; i < list.length; i++) {
+    var time = normalizeStatsIpsInputTime(list[i]);
+    if (time === null) continue;
+    if (time < minMs || time > nowMs + IPS_WINDOW_MS) continue;
+    next.push(time);
+  }
+  return next;
+}
+
+function resolveIpsInputTimesForDisplay(manager, nowMs) {
+  if (!manager) return [];
+  var next = pruneStatsIpsInputTimes(manager.ipsInputTimes, nowMs);
+  if (!manager.replayMode) {
+    manager.ipsInputTimes = next;
+    manager.ipsInputCount = next.length;
+  }
+  return next;
+}
+
 function refreshIpsDisplay(manager, durationMs) {
   if (!manager) return;
   var statsIpsEl = resolveManagerElementById(manager, "stats-ips");
@@ -27,53 +64,73 @@ function refreshIpsDisplay(manager, durationMs) {
   if (!Number.isFinite(ms) || ms < 0) {
     ms = manager.getDurationMs();
   }
-  var ipsInputCount = resolveIpsInputCount(manager);
+  var nowMs = resolveStatsIpsNowMs();
+  var ipsInputCount = resolveIpsInputCount(manager, nowMs);
   var ipsText = resolveIpsDisplayText(manager, ms, ipsInputCount);
   if (statsIpsEl) statsIpsEl.textContent = ipsText;
   if (cornerIpsEl) cornerIpsEl.textContent = ipsText;
 }
 
-function createIpsInputCountResolvePayload(manager) {
+function createIpsInputCountResolvePayload(manager, nowMs, ipsInputTimes) {
   return {
     replayMode: manager.replayMode,
     replayIndex: manager.replayIndex,
-    ipsInputCount: manager.ipsInputCount
+    ipsInputCount: manager.ipsInputCount,
+    ipsInputTimes: Array.isArray(ipsInputTimes) ? ipsInputTimes.slice() : [],
+    nowMs: nowMs
   };
 }
 
-function resolveIpsInputCountFallback(manager) {
+function resolveIpsInputCountFallback(manager, nowMs, ipsInputTimes) {
   if (manager.replayMode) {
     return Number.isInteger(manager.replayIndex) && manager.replayIndex > 0 ? manager.replayIndex : 0;
   }
-  return Number.isInteger(manager.ipsInputCount) && manager.ipsInputCount >= 0
-    ? manager.ipsInputCount
-    : 0;
+  if (Array.isArray(ipsInputTimes)) {
+    return ipsInputTimes.length;
+  }
+  var next = pruneStatsIpsInputTimes(manager.ipsInputTimes, nowMs);
+  manager.ipsInputTimes = next;
+  manager.ipsInputCount = next.length;
+  return next.length;
 }
 
-function resolveIpsInputCountFromCoreResult(currentManager, coreCallResult) {
+function resolveIpsInputCountFromCoreResult(currentManager, coreCallResult, fallbackValue) {
   return currentManager.resolveCoreNumericCallOrFallback(coreCallResult, function () {
-    return resolveIpsInputCountFallback(currentManager);
+    return fallbackValue;
   });
 }
 
-function resolveIpsInputCount(manager) {
+function applyResolvedIpsInputCount(manager, resolvedByCore) {
+  if (!manager || manager.replayMode) return;
+  if (Number.isInteger(resolvedByCore) && resolvedByCore >= 0) {
+    manager.ipsInputCount = resolvedByCore;
+  }
+}
+
+function resolveIpsInputCount(manager, nowMs) {
   if (!manager) return 0;
-  return resolveCorePayloadCallWith(
+  var resolvedNowMs = resolveStatsIpsNowMs(nowMs);
+  var ipsInputTimes = resolveIpsInputTimesForDisplay(manager, resolvedNowMs);
+  var fallbackValue = resolveIpsInputCountFallback(manager, resolvedNowMs, ipsInputTimes);
+  var resolvedByCore = resolveCorePayloadCallWith(
     manager,
     "callCoreReplayExecutionRuntime",
     "resolveIpsInputCount",
-    createIpsInputCountResolvePayload(manager),
+    createIpsInputCountResolvePayload(manager, resolvedNowMs, ipsInputTimes),
     0,
     function (currentManager, coreCallResult) {
-      return resolveIpsInputCountFromCoreResult(currentManager, coreCallResult);
+      return resolveIpsInputCountFromCoreResult(currentManager, coreCallResult, fallbackValue);
     }
   );
+  applyResolvedIpsInputCount(manager, resolvedByCore);
+  return resolvedByCore;
 }
 
 function createIpsDisplayResolvePayload(ms, ipsInputCount) {
+  var count = Number(ipsInputCount);
   return {
     durationMs: ms,
-    ipsInputCount: ipsInputCount
+    ipsInputCount: Number.isFinite(count) && count >= 0 ? count : 0
   };
 }
 
@@ -83,11 +140,8 @@ function normalizeIpsDisplayTextFromCore(coreValue) {
 }
 
 function resolveIpsDisplayTextFallback(ms, ipsInputCount) {
-  var seconds = ms / 1000;
-  var avgIps = 0;
-  if (seconds > 0) {
-    avgIps = (ipsInputCount / seconds).toFixed(2);
-  }
+  var count = Number(ipsInputCount);
+  var avgIps = Number.isFinite(count) && count >= 0 ? String(Math.floor(count)) : "0";
   return "IPS: " + avgIps;
 }
 
@@ -186,6 +240,12 @@ function finalizeActuatePersistence(manager) {
 
 function syncBestScoreBeforeActuate(manager) {
   if (!manager || !manager.scoreManager) return;
+  if (manager.replayMode) return;
+  var documentLike = resolveManagerDocumentLike(manager);
+  var body = documentLike && documentLike.body ? documentLike.body : null;
+  if (body && typeof body.getAttribute === "function" && body.getAttribute("data-page") === "replay") {
+    return;
+  }
   if (manager.scoreManager.get() < manager.score) {
     manager.scoreManager.set(manager.score);
   }

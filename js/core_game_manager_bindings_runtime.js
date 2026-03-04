@@ -277,28 +277,14 @@ function bindUpdateStatsPanelBinding() {
   });
 }
 
-function createGameplayLifecycleBindings() {
-  return [["restart", restartGame], ["restartWithSeed", restartWithSeed], ["restartWithBoard", restartWithBoard], ["keepPlaying", keepPlaying], ["clearTransientTileVisualState", clearTransientTileVisualState], ["isGameTerminated", isGameTerminated], ["setup", setupGame], ["addRandomTile", addRandomTile], ["actuate", actuate], ["move", move], ["startTimer", startTimer], ["stopTimer", stopTimer], ["pretty", formatPrettyTime], ["insertCustomTile", insertCustomTile], ["getFinalBoardMatrix", getFinalBoardMatrix], ["getDurationMs", getDurationMs]];
-}
+var GAMEPLAY_LIFECYCLE_BINDINGS = [["restart", restartGame], ["restartWithSeed", restartWithSeed], ["restartWithBoard", restartWithBoard], ["keepPlaying", keepPlaying], ["clearTransientTileVisualState", clearTransientTileVisualState], ["isGameTerminated", isGameTerminated], ["setup", setupGame], ["addRandomTile", addRandomTile], ["actuate", actuate], ["move", move], ["startTimer", startTimer], ["stopTimer", stopTimer], ["pretty", formatPrettyTime], ["insertCustomTile", insertCustomTile], ["getFinalBoardMatrix", getFinalBoardMatrix], ["getDurationMs", getDurationMs]];
 
-function createGameplayReplayBindings() {
-  return [
-    ["serializeV3", serializeReplayV3],
-    ["tryAutoSubmitOnGameOver", tryAutoSubmitOnGameOver],
-    ["isSessionTerminated", isSessionTerminated],
-    ["serialize", serializeReplay],
-    ["applyReplayImportActions", applyReplayImportActions],
-    ["import", importReplay],
-    ["pause", pauseReplay],
-    ["resume", resumeReplay],
-    ["setSpeed", setReplaySpeed],
-    ["seek", seekReplay],
-    ["step", stepReplay]
-  ];
-}
+var GAMEPLAY_REPLAY_BINDINGS = [["serializeV3", serializeReplayV3], ["serializeV9Verse", serializeReplayAsV9Verse], ["exportV9VerseBlob", exportReplayAsV9VerseBlob], ["serializeV9RplBase64", serializeReplayAsV9RplBase64], ["exportV9RplBlob", exportReplayAsV9RplBlob], ["tryAutoSubmitOnGameOver", tryAutoSubmitOnGameOver], ["isSessionTerminated", isSessionTerminated], ["serialize", serializeReplay], ["applyReplayImportActions", applyReplayImportActions], ["import", importReplay], ["importV9RplBuffer", importV9RplBuffer], ["pause", pauseReplay], ["resume", resumeReplay], ["setSpeed", setReplaySpeed], ["seek", seekReplay], ["step", stepReplay]];
 
 function bindGameplayBindings() {
-  var managerForwardBindings = createGameplayLifecycleBindings().concat(createGameplayReplayBindings());
+  var managerForwardBindings = GAMEPLAY_LIFECYCLE_BINDINGS
+    .slice()
+    .concat(GAMEPLAY_REPLAY_BINDINGS.slice());
   bindGameManagerPrototypeManagerForwardBatch(managerForwardBindings);
 }
 

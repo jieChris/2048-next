@@ -718,6 +718,7 @@ function applySavedManagerBaseState(manager, saved) {
 
 function applySavedManagerReplayState(manager, saved) {
   manager.moveHistory = Array.isArray(saved.move_history) ? saved.move_history.slice() : [];
+  manager.ipsInputTimes = [];
   manager.ipsInputCount = Number.isInteger(saved.ips_input_count) && saved.ips_input_count >= 0
     ? saved.ips_input_count
     : manager.moveHistory.length;

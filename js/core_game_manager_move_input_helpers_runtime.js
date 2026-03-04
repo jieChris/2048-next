@@ -537,27 +537,76 @@ function buildMovePlan(manager, direction) {
   };
 }
 
+var IPS_WINDOW_MS = 1000;
+
+function resolveIpsNowMs(rawNowMs) {
+  var nowMs = Number(rawNowMs);
+  if (Number.isFinite(nowMs) && nowMs >= 0) {
+    return Math.floor(nowMs);
+  }
+  return Date.now();
+}
+
+function normalizeIpsInputTime(raw) {
+  var value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) return null;
+  return Math.floor(value);
+}
+
+function pruneIpsInputTimes(rawTimes, nowMs) {
+  var minMs = nowMs - IPS_WINDOW_MS;
+  var list = Array.isArray(rawTimes) ? rawTimes : [];
+  var next = [];
+  for (var i = 0; i < list.length; i++) {
+    var time = normalizeIpsInputTime(list[i]);
+    if (time === null) continue;
+    if (time < minMs || time > nowMs + IPS_WINDOW_MS) continue;
+    next.push(time);
+  }
+  return next;
+}
+
+function ensureManagerIpsInputTimes(manager, nowMs) {
+  if (!manager) return [];
+  var next = pruneIpsInputTimes(manager.ipsInputTimes, nowMs);
+  manager.ipsInputTimes = next;
+  return next;
+}
+
 function createIpsInputCountPayload(manager) {
+  var nowMs = resolveIpsNowMs();
+  var ipsInputTimes = ensureManagerIpsInputTimes(manager, nowMs);
   return {
     replayMode: manager.replayMode,
     replayIndex: manager.replayIndex,
-    ipsInputCount: manager.ipsInputCount
+    ipsInputCount: manager.ipsInputCount,
+    ipsInputTimes: ipsInputTimes.slice(),
+    nowMs: nowMs
   };
 }
 
 function applyIpsInputCountFromCoreResult(manager, coreValue) {
   var resolved = normalizeMoveInputRecordObject(coreValue, {});
   if (!resolved.shouldRecord) return;
+  var nowMs = resolveIpsNowMs(resolved.nowMs);
+  if (Array.isArray(resolved.nextIpsInputTimes)) {
+    var nextTimes = pruneIpsInputTimes(resolved.nextIpsInputTimes, nowMs);
+    manager.ipsInputTimes = nextTimes;
+    manager.ipsInputCount = nextTimes.length;
+    return;
+  }
+  ensureManagerIpsInputTimes(manager, nowMs);
   var nextIps = Number(resolved.nextIpsInputCount);
   manager.ipsInputCount = Number.isInteger(nextIps) && nextIps >= 0 ? nextIps : 0;
 }
 
 function applyIpsInputCountFallback(manager) {
   if (manager.replayMode) return;
-  if (!Number.isInteger(manager.ipsInputCount) || manager.ipsInputCount < 0) {
-    manager.ipsInputCount = 0;
-  }
-  manager.ipsInputCount += 1;
+  var nowMs = resolveIpsNowMs();
+  var nextTimes = ensureManagerIpsInputTimes(manager, nowMs);
+  nextTimes.push(nowMs);
+  manager.ipsInputTimes = pruneIpsInputTimes(nextTimes, nowMs);
+  manager.ipsInputCount = manager.ipsInputTimes.length;
 }
 
 function updateIpsInputCountAfterMove(manager) {
@@ -783,6 +832,13 @@ function resolveGameTerminatedFallback(manager) {
 
 function isGameTerminated(manager) {
   if (!manager) return false;
+  // Replay must follow the recorded action stream; hitting 2048 should not block replay moves.
+  if (manager.replayMode) {
+    if (!manager.over) return false;
+    manager.stopTimer();
+    manager.timerEnd = Date.now();
+    return true;
+  }
   var terminated = resolveCorePayloadCallWith(manager, "callCoreModeRuntime", "isGameTerminatedState", createGameTerminatedResolvePayload(manager), false, function (currentManager, coreCallResult) {
     return currentManager.resolveCoreBooleanCallOrFallback(coreCallResult, function () { return resolveGameTerminatedFallback(currentManager); });
   });
@@ -811,7 +867,27 @@ function tryInsertForcedReplaySpawn(manager, forcedSpawn) {
 
 function resolveSpawnStepCount(manager) {
   if (!manager) return 0;
-  return manager.replayMode ? manager.replayIndex : manager.moveHistory.length;
+  if (manager.replayMode) return manager.replayIndex;
+  var moveCount = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+  var spawnCount = resolveRecordedSpawnCount(manager);
+  // 新局起手两块需要使用不同随机步进，避免第二块复用第一块同一随机序列位置。
+  if (spawnCount < 2) {
+    return moveCount + spawnCount;
+  }
+  return moveCount;
+}
+
+function resolveRecordedSpawnCount(manager) {
+  if (!(manager && manager.spawnValueCounts)) return 0;
+  var counts = manager.spawnValueCounts;
+  var total = 0;
+  for (var key in counts) {
+    if (!manager.hasOwnKey(counts, key)) continue;
+    var count = Number(counts[key]);
+    if (!Number.isFinite(count) || count <= 0) continue;
+    total += Math.floor(count);
+  }
+  return total;
 }
 
 function primeSeededRandomByStepCount(manager, stepCount) {
@@ -833,12 +909,100 @@ function insertSeededRandomSpawnTile(manager, available) {
   recordSpawnValue(manager, value);
 }
 
+function shouldUseReplaySeededSpawn(manager) {
+  return !!(manager && manager.replayMode);
+}
+
+function resolveMasterSpawnValueByDefault() {
+  return Math.random() < 0.9 ? 2 : 4;
+}
+
+function applySpawnTableWeightSummaryItem(summary, item) {
+  if (!(summary && item)) return;
+  var value = Number(item.value);
+  var weight = Number(item.weight);
+  if (!Number.isInteger(value) || value <= 0) return;
+  if (!(Number.isFinite(weight) && weight > 0)) return;
+  summary.totalWeight += weight;
+  if (value === 2) summary.twoWeight += weight;
+  else if (value === 4) summary.fourWeight += weight;
+  else summary.hasNonPow2Value = true;
+}
+
+function buildSpawnTableWeightSummary(table) {
+  var summary = {
+    totalWeight: 0,
+    twoWeight: 0,
+    fourWeight: 0,
+    hasNonPow2Value: false
+  };
+  var list = Array.isArray(table) ? table : [];
+  for (var i = 0; i < list.length; i++) {
+    applySpawnTableWeightSummaryItem(summary, list[i]);
+  }
+  return summary;
+}
+
+function isClassicPow2SpawnDistribution(summary) {
+  if (!summary || !(summary.totalWeight > 0)) return true;
+  if (summary.hasNonPow2Value) return false;
+  var fourRate = summary.fourWeight / summary.totalWeight;
+  return Math.abs(fourRate - 0.1) < 0.0000001;
+}
+
+function shouldUseModeSpawnValue(manager) {
+  if (!manager) return false;
+  if (typeof manager.isFibonacciMode === "function" && manager.isFibonacciMode()) return true;
+  var summary = buildSpawnTableWeightSummary(manager.spawnTable);
+  return !isClassicPow2SpawnDistribution(summary);
+}
+
+function resolveSpawnValueByCoreRule(manager) {
+  if (shouldUseModeSpawnValue(manager)) {
+    return pickSpawnValue(manager);
+  }
+  return resolveMasterSpawnValueByDefault();
+}
+
+function shouldUseFilteredModeCellsForSpawn(manager) {
+  return !!(manager && Array.isArray(manager.blockedCellsList) && manager.blockedCellsList.length > 0);
+}
+
+function pickRandomCellFromAvailableList(available) {
+  if (!Array.isArray(available) || !available.length) return null;
+  return available[Math.floor(Math.random() * available.length)];
+}
+
+function resolveMasterSpawnCell(manager) {
+  if (!(manager && manager.grid)) return null;
+  if (!shouldUseFilteredModeCellsForSpawn(manager) && typeof manager.grid.randomAvailableCell === "function") {
+    return manager.grid.randomAvailableCell();
+  }
+  return pickRandomCellFromAvailableList(getAvailableCells(manager));
+}
+
+function insertMasterRandomSpawnTile(manager) {
+  if (!(manager && manager.grid && typeof manager.grid.cellsAvailable === "function")) return;
+  if (!manager.grid.cellsAvailable()) return;
+  var cell = resolveMasterSpawnCell(manager);
+  if (!cell) return;
+  var value = resolveSpawnValueByCoreRule(manager);
+  var tile = new Tile(cell, value);
+  manager.grid.insertTile(tile);
+  manager.lastSpawn = { x: cell.x, y: cell.y, value: value };
+  recordSpawnValue(manager, value);
+}
+
 function addRandomTile(manager) {
   if (!manager) return;
   if (tryInsertForcedReplaySpawn(manager, resolveForcedReplaySpawn(manager))) return;
-  var available = getAvailableCells(manager);
-  if (!available.length) return;
-  insertSeededRandomSpawnTile(manager, available);
+  if (shouldUseReplaySeededSpawn(manager)) {
+    var available = getAvailableCells(manager);
+    if (!available.length) return;
+    insertSeededRandomSpawnTile(manager, available);
+    return;
+  }
+  insertMasterRandomSpawnTile(manager);
 }
 
 function resolveLockedDirectionStateByCore(manager) {

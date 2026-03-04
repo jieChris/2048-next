@@ -480,7 +480,13 @@ function applySpecialRulesStateFallback(manager) {
 }
 function syncScoreManagerModeKeyForSetup(manager, modeKey) {
   if (!manager || !manager.scoreManager || typeof manager.scoreManager.setModeKey !== "function") return;
-  manager.scoreManager.setModeKey(modeKey);
+  var documentLike = resolveManagerDocumentLike(manager);
+  var body = documentLike ? documentLike.body : null;
+  var isReplayPage = !!(body && body.getAttribute && body.getAttribute("data-page") === "replay");
+  if (!isReplayPage && documentLike && documentLike.location && typeof documentLike.location.pathname === "string") {
+    isReplayPage = documentLike.location.pathname.indexOf("replay.html") !== -1;
+  }
+  manager.scoreManager.setModeKey(isReplayPage ? "replay_view" : modeKey);
 }
 function syncModeAttributesToDocumentBody(manager, cfg) {
   if (!manager || !cfg) return;

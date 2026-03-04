@@ -63,6 +63,7 @@ function resetRoundStatsState(manager) {
   manager.comboStreak = 0;
   manager.successfulMoveCount = 0;
   manager.ipsInputCount = 0;
+  manager.ipsInputTimes = [];
   manager.undoUsed = 0;
   manager.lockConsumedAtMoveCount = -1;
   manager.lockedDirectionTurn = null;

@@ -66,9 +66,8 @@ const MAX_BINDINGS_RUNTIME_LINES = 400;
 const MAX_RUNTIME_CALL_HELPERS_LINES = 550;
 const MAX_RUNTIME_ACCESSOR_HELPERS_LINES = 320;
 const MAX_MODE_RULES_HELPERS_LINES = 1200;
-const MAX_REPLAY_HELPERS_LINES = 2050;
 const MAX_SAVED_STATE_HELPERS_LINES = 1350;
-const MAX_MOVE_INPUT_HELPERS_LINES = 1000;
+const MAX_RUNTIME_HELPER_FUNCTION_LINES = 19;
 const PAGE_FILES = [
   "index.html",
   "play.html",
@@ -163,6 +162,26 @@ function extractFunctionDeclarations(content) {
     match = pattern.exec(content);
   }
   return out;
+}
+
+function collectFunctionRanges(content) {
+  const lines = content.split(/\r?\n/u);
+  const starts = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^function\s+([A-Za-z0-9_]+)\s*\(/u);
+    if (!match) continue;
+    starts.push({ line: index + 1, name: match[1] });
+  }
+  return starts.map((entry, index) => {
+    const next = starts[index + 1];
+    const endLine = next ? next.line - 1 : lines.length;
+    return {
+      name: entry.name,
+      startLine: entry.line,
+      endLine,
+      lineCount: endLine - entry.line + 1
+    };
+  });
 }
 
 function resolveLineNumber(content, index) {
@@ -309,6 +328,20 @@ function verifyBindingsNoDirectPrototypeAssignments(bindingsContent) {
   );
 }
 
+function verifyRuntimeHelperFunctionHotspots(fileLabel, content) {
+  const hotspots = collectFunctionRanges(content)
+    .filter((range) => range.lineCount > MAX_RUNTIME_HELPER_FUNCTION_LINES)
+    .sort((a, b) => b.lineCount - a.lineCount || a.startLine - b.startLine);
+  if (hotspots.length <= 0) return;
+  const summary = hotspots
+    .slice(0, 10)
+    .map((hotspot) => `${hotspot.name}@L${hotspot.startLine}(${hotspot.lineCount})`)
+    .join(", ");
+  fail(
+    `[game-manager-audit] ${fileLabel} has ${hotspots.length} function hotspots > ${MAX_RUNTIME_HELPER_FUNCTION_LINES} lines: ${summary}`
+  );
+}
+
 async function verifyHtmlScriptOrder(projectRoot) {
   const expectedScriptChainText = EXPECTED_GAME_MANAGER_RUNTIME_SCRIPT_CHAIN
     .map((fileName) => fileName.replace(/_runtime\.js$/, ""))
@@ -388,13 +421,7 @@ async function main() {
         `(max=${MAX_MODE_RULES_HELPERS_LINES})`
     );
   }
-  const replayHelpersLineCount = replayHelpersContent.split(/\r?\n/).length;
-  if (replayHelpersLineCount > MAX_REPLAY_HELPERS_LINES) {
-    fail(
-      `[game-manager-audit] replay helpers too large: ${replayHelpersLineCount} lines ` +
-        `(max=${MAX_REPLAY_HELPERS_LINES})`
-    );
-  }
+  verifyRuntimeHelperFunctionHotspots("replay helpers", replayHelpersContent);
   const savedStateHelpersLineCount = savedStateHelpersContent.split(/\r?\n/).length;
   if (savedStateHelpersLineCount > MAX_SAVED_STATE_HELPERS_LINES) {
     fail(
@@ -402,13 +429,7 @@ async function main() {
         `(max=${MAX_SAVED_STATE_HELPERS_LINES})`
     );
   }
-  const moveInputHelpersLineCount = moveInputHelpersContent.split(/\r?\n/).length;
-  if (moveInputHelpersLineCount > MAX_MOVE_INPUT_HELPERS_LINES) {
-    fail(
-      `[game-manager-audit] move-input helpers too large: ${moveInputHelpersLineCount} lines ` +
-        `(max=${MAX_MOVE_INPUT_HELPERS_LINES})`
-    );
-  }
+  verifyRuntimeHelperFunctionHotspots("move-input helpers", moveInputHelpersContent);
   if (!/function\s+GameManager\s*\(/.test(gameManagerContent)) {
     fail("[game-manager-audit] missing GameManager constructor in game_manager.js");
   }

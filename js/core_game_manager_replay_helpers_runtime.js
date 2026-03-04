@@ -6,6 +6,20 @@ function normalizeReplayRecordObject(value, fallback) {
   return isReplayRecordObject(value) ? value : fallback;
 }
 
+var V9_VERSE_PNG_CHARSET = [
+  " ", "!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/",
+  "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ";", "<", "=", ">", "?",
+  "@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O",
+  "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_",
+  "`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o",
+  "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~",
+  "Ç", "ü", "é", "â", "ä", "à", "å", "ç", "ê", "ë", "è", "ï", "î", "ì",
+  "Ä", "Å", "É", "æ", "Æ", "ô", "ö", "ò", "û", "ù",
+  "ÿ", "Ö", "Ü", "ø", "£", "Ø", "×", "ƒ", "á"
+];
+
+var v9VersePngMapDictCache = null;
+
 function resolveReplayPauseStateFallback() {
   return {
     isPaused: true,
@@ -17,6 +31,24 @@ function normalizeReplayPauseState(manager, state) {
   return manager.isNonArrayObject(state) ? state : {};
 }
 
+function normalizeReplayTickToken(value) {
+  var token = Number(value);
+  if (!Number.isFinite(token) || token < 0) return 0;
+  return Math.floor(token);
+}
+
+function bumpReplayTickToken(manager) {
+  if (!manager) return 0;
+  var nextToken = normalizeReplayTickToken(manager.replayTickToken) + 1;
+  manager.replayTickToken = nextToken;
+  return nextToken;
+}
+
+function isReplayTickTokenActive(manager, token) {
+  if (!manager) return false;
+  return normalizeReplayTickToken(manager.replayTickToken) === normalizeReplayTickToken(token);
+}
+
 function pauseReplay(manager) {
   if (!manager) return;
   var state = resolveCorePayloadCallWith(manager, "callCoreReplayTimerRuntime", "computeReplayPauseState", {}, {}, function (currentManager, coreCallResult) {
@@ -26,6 +58,7 @@ function pauseReplay(manager) {
   });
   var pauseState = normalizeReplayPauseState(manager, state);
   manager.isPaused = pauseState.isPaused !== false;
+  bumpReplayTickToken(manager);
   if (pauseState.shouldClearInterval !== false) {
     clearInterval(manager.replayInterval);
   }
@@ -110,7 +143,11 @@ function applyReplayTickBoundaryPlan(manager, tickBoundaryPlan) {
   return true;
 }
 
-function executeReplayIntervalTick(manager) {
+function executeReplayIntervalTick(manager, replayTickToken) {
+  if (!manager) return;
+  if (manager.isPaused) return;
+  if (manager.replayMode === false) return;
+  if (typeof replayTickToken !== "undefined" && !isReplayTickTokenActive(manager, replayTickToken)) return;
   var shouldStopAtTick = resolveReplayShouldStopAtTick(manager);
   var replayEndState = resolveReplayEndStateAtTick(manager, shouldStopAtTick);
   var tickBoundaryPlan = resolveReplayTickBoundaryPlan(manager, shouldStopAtTick, replayEndState);
@@ -125,8 +162,9 @@ function resumeReplay(manager) {
   if (resumeState.shouldClearInterval !== false) {
     clearInterval(manager.replayInterval);
   }
+  var replayTickToken = bumpReplayTickToken(manager);
   manager.replayInterval = setInterval(function () {
-    executeReplayIntervalTick(manager);
+    executeReplayIntervalTick(manager, replayTickToken);
   }, resumeState.delay);
 }
 
@@ -173,6 +211,7 @@ function setReplaySpeed(manager, multiplier) {
 function createReplaySeekTargetNormalizePayload(manager, targetIndex) {
   return {
     targetIndex: targetIndex,
+    replayIndex: manager.replayIndex,
     hasReplayMoves: !!manager.replayMoves,
     replayMovesLength: manager.replayMoves ? manager.replayMoves.length : 0
   };
@@ -184,7 +223,14 @@ function normalizeReplaySeekTargetIndexFromCore(coreValue) {
 }
 
 function normalizeReplaySeekTargetIndexFallback(manager, targetIndex) {
-  var nextTargetIndex = targetIndex;
+  var nextTargetIndex = Number(targetIndex);
+  if (!Number.isFinite(nextTargetIndex)) {
+    nextTargetIndex = Number(manager.replayIndex);
+  }
+  if (!Number.isFinite(nextTargetIndex)) {
+    nextTargetIndex = 0;
+  }
+  nextTargetIndex = Math.floor(nextTargetIndex);
   if (nextTargetIndex < 0) nextTargetIndex = 0;
   if (manager.replayMoves && nextTargetIndex > manager.replayMoves.length) {
     nextTargetIndex = manager.replayMoves.length;
@@ -301,19 +347,67 @@ function executeReplaySeekSteps(manager, normalizedTargetIndex) {
   }
 }
 
+function createReplaySeekActuationGuard(manager) {
+  var actuator = manager ? manager.actuator : null;
+  return {
+    originalActuate: manager && typeof manager.actuate === "function" ? manager.actuate : null,
+    actuator: actuator,
+    hadForceSyncActuate: !!(actuator && actuator.forceSyncActuate === true)
+  };
+}
+
+function beginReplaySeekActuationGuard(manager, guard) {
+  if (!(manager && guard)) return;
+  if (guard.actuator && typeof guard.actuator.cancelPendingActuation === "function") {
+    guard.actuator.cancelPendingActuation();
+  }
+  if (guard.originalActuate) manager.actuate = function () {};
+}
+
+function restoreReplaySeekActuationGuard(manager, guard) {
+  if (!(manager && guard && guard.originalActuate)) return;
+  manager.actuate = guard.originalActuate;
+  if (guard.actuator) guard.actuator.forceSyncActuate = true;
+  if (manager.actuator && typeof manager.actuator.invalidateLayoutCache === "function") {
+    manager.actuator.invalidateLayoutCache();
+  }
+  if (typeof manager.clearTransientTileVisualState === "function") {
+    manager.clearTransientTileVisualState();
+  }
+  manager.actuate();
+  if (guard.actuator) guard.actuator.forceSyncActuate = guard.hadForceSyncActuate;
+}
+
+function executeReplaySeekWithoutIntermediateActuation(manager, callback) {
+  if (!manager || typeof callback !== "function") return;
+  var guard = createReplaySeekActuationGuard(manager);
+  beginReplaySeekActuationGuard(manager, guard);
+  try {
+    callback();
+  } finally {
+    restoreReplaySeekActuationGuard(manager, guard);
+  }
+}
+
 function seekReplay(manager, targetIndex) {
   if (!manager) return;
   var normalizedTargetIndex = normalizeReplaySeekTargetIndex(manager, targetIndex);
-  pauseReplay(manager);
-  var normalizedRewindPlan = resolveReplaySeekRewindPlan(manager, normalizedTargetIndex);
-  var restartPlan = resolveReplaySeekRestartPlan(manager, normalizedRewindPlan);
-  applyReplaySeekRestartPlan(manager, restartPlan);
-  executeReplaySeekSteps(manager, normalizedTargetIndex);
+  executeReplaySeekWithoutIntermediateActuation(manager, function () {
+    pauseReplay(manager);
+    var normalizedRewindPlan = resolveReplaySeekRewindPlan(manager, normalizedTargetIndex);
+    var restartPlan = resolveReplaySeekRestartPlan(manager, normalizedRewindPlan);
+    applyReplaySeekRestartPlan(manager, restartPlan);
+    executeReplaySeekSteps(manager, normalizedTargetIndex);
+  });
 }
 
 function stepReplay(manager, delta) {
   if (!manager || !manager.replayMoves) return;
-  seekReplay(manager, manager.replayIndex + delta);
+  var normalizedDelta = Number(delta);
+  if (!Number.isFinite(normalizedDelta)) return;
+  normalizedDelta = normalizedDelta > 0 ? Math.floor(normalizedDelta) : Math.ceil(normalizedDelta);
+  if (normalizedDelta === 0) return;
+  manager.seek(manager.replayIndex + normalizedDelta);
 }
 
 function keepPlaying(manager) {
@@ -708,6 +802,830 @@ function isSessionTerminated(manager) {
   return !!(manager.over || (manager.won && !manager.keepPlaying));
 }
 
+function v9RplCloneBoardMatrix(board) {
+  if (!Array.isArray(board)) return [];
+  var cloned = [];
+  for (var y = 0; y < board.length; y++) {
+    cloned.push(Array.isArray(board[y]) ? board[y].slice() : []);
+  }
+  return cloned;
+}
+
+function isV9RplBoardMatrix(board) {
+  if (!Array.isArray(board) || board.length !== 4) return false;
+  for (var y = 0; y < 4; y++) {
+    if (!Array.isArray(board[y]) || board[y].length !== 4) return false;
+    for (var x = 0; x < 4; x++) {
+      var value = Number(board[y][x]);
+      if (!Number.isInteger(value) || value < 0) return false;
+    }
+  }
+  return true;
+}
+
+function isV9RplPowerOfTwo(value) {
+  if (!Number.isInteger(value) || value <= 0) return false;
+  return (value & (value - 1)) === 0;
+}
+
+function resolveV9RplTileExponent(value) {
+  if (!Number.isInteger(value) || value < 0) throw "Invalid v9 .rpl tile value";
+  if (value === 0) return 0;
+  if (!isV9RplPowerOfTwo(value)) throw "v9 .rpl tile must be a power of two";
+  var exponent = 0;
+  var current = value;
+  while (current > 1) {
+    current = current / 2;
+    exponent += 1;
+  }
+  if (exponent > 15) throw "v9 .rpl tile exponent too large";
+  return exponent;
+}
+
+function encodeV9RplBoardMatrix(board) {
+  if (!isV9RplBoardMatrix(board)) throw "Invalid v9 .rpl board matrix";
+  var encoded = 0n;
+  var positionIndex = 0;
+  for (var y = 0; y < 4; y++) {
+    for (var x = 0; x < 4; x++) {
+      var exponent = resolveV9RplTileExponent(Number(board[y][x]));
+      encoded |= BigInt(exponent & 15) << BigInt(positionIndex * 4);
+      positionIndex += 1;
+    }
+  }
+  return encoded;
+}
+
+function decodeV9RplBoardEncoded(boardEncoded) {
+  var encoded = BigInt.asUintN(64, typeof boardEncoded === "bigint" ? boardEncoded : BigInt(boardEncoded || 0));
+  var board = [];
+  var positionIndex = 0;
+  for (var y = 0; y < 4; y++) {
+    var row = [];
+    for (var x = 0; x < 4; x++) {
+      var exponent = Number((encoded >> BigInt(positionIndex * 4)) & 15n);
+      row.push(exponent === 0 ? 0 : Math.pow(2, exponent));
+      positionIndex += 1;
+    }
+    board.push(row);
+  }
+  return board;
+}
+
+function convertInternalDirectionToV9RplMove(direction) {
+  if (direction === 3) return 0; // left
+  if (direction === 1) return 1; // right
+  if (direction === 0) return 2; // up
+  if (direction === 2) return 3; // down
+  return null;
+}
+
+function convertV9RplMoveToInternalDirection(v9Move) {
+  if (v9Move === 0) return 3; // left
+  if (v9Move === 1) return 1; // right
+  if (v9Move === 2) return 0; // up
+  if (v9Move === 3) return 2; // down
+  return null;
+}
+
+function encodeV9RplActionByte(v9Move, spawnPos, spawnValue) {
+  if (!Number.isInteger(v9Move) || v9Move < 0 || v9Move > 3) {
+    throw "Invalid v9 .rpl move";
+  }
+  if (!Number.isInteger(spawnPos) || spawnPos < 0 || spawnPos > 15) {
+    throw "Invalid v9 .rpl spawn position";
+  }
+  var spawnBit = spawnValue === 4 ? 1 : (spawnValue === 2 ? 0 : null);
+  if (spawnBit === null) throw "Invalid v9 .rpl spawn value";
+  return ((v9Move << 5) | (spawnPos << 1) | spawnBit) & 255;
+}
+
+function decodeV9RplActionByte(actionByte) {
+  var token = Number(actionByte) & 255;
+  return {
+    v9Move: (token >> 5) & 3,
+    spawnPos: (token >> 1) & 15,
+    spawnBit: token & 1
+  };
+}
+
+function collectV9RplCompactLine(line) {
+  var compact = [];
+  for (var index = 0; index < line.length; index++) {
+    if (line[index] > 0) compact.push(line[index]);
+  }
+  return compact;
+}
+
+function mergeV9RplCompactedLine(compact) {
+  var merged = [];
+  for (var compactIndex = 0; compactIndex < compact.length; compactIndex++) {
+    var current = compact[compactIndex];
+    var next = compactIndex + 1 < compact.length ? compact[compactIndex + 1] : null;
+    if (next !== null && current === next) {
+      merged.push(current * 2);
+      compactIndex += 1;
+    } else {
+      merged.push(current);
+    }
+  }
+  return merged;
+}
+
+function mergeV9RplLineToLeft(line) {
+  var merged = mergeV9RplCompactedLine(collectV9RplCompactLine(line));
+  while (merged.length < 4) merged.push(0);
+  return merged;
+}
+
+function applyV9RplHorizontalMove(board, nextBoard, v9Move) {
+  var moved = false;
+  for (var y = 0; y < 4; y++) {
+    var sourceRow = v9Move === 0 ? board[y].slice() : board[y].slice().reverse();
+    var mergedRow = mergeV9RplLineToLeft(sourceRow);
+    var targetRow = v9Move === 0 ? mergedRow : mergedRow.reverse();
+    for (var x = 0; x < 4; x++) {
+      if (nextBoard[y][x] !== targetRow[x]) moved = true;
+      nextBoard[y][x] = targetRow[x];
+    }
+  }
+  return moved;
+}
+
+function applyV9RplVerticalMove(board, nextBoard, v9Move) {
+  var moved = false;
+  for (var x = 0; x < 4; x++) {
+    var sourceColumn = [board[0][x], board[1][x], board[2][x], board[3][x]];
+    if (v9Move === 3) sourceColumn.reverse();
+    var mergedColumn = mergeV9RplLineToLeft(sourceColumn);
+    if (v9Move === 3) mergedColumn.reverse();
+    for (var y = 0; y < 4; y++) {
+      if (nextBoard[y][x] !== mergedColumn[y]) moved = true;
+      nextBoard[y][x] = mergedColumn[y];
+    }
+  }
+  return moved;
+}
+
+function applyV9RplMoveOnBoard(board, v9Move) {
+  if (!isV9RplBoardMatrix(board)) throw "Invalid v9 .rpl board matrix";
+  var nextBoard = v9RplCloneBoardMatrix(board);
+  if (v9Move === 0 || v9Move === 1) {
+    return {
+      board: nextBoard,
+      moved: applyV9RplHorizontalMove(board, nextBoard, v9Move)
+    };
+  }
+  return {
+    board: nextBoard,
+    moved: applyV9RplVerticalMove(board, nextBoard, v9Move)
+  };
+}
+
+function applyV9RplSpawnOnBoard(board, spawn) {
+  if (!isV9RplBoardMatrix(board)) throw "Invalid v9 .rpl board matrix";
+  if (!(spawn && Number.isInteger(spawn.x) && Number.isInteger(spawn.y))) {
+    throw "Invalid v9 .rpl spawn coordinates";
+  }
+  if (spawn.x < 0 || spawn.x > 3 || spawn.y < 0 || spawn.y > 3) {
+    throw "Invalid v9 .rpl spawn coordinates";
+  }
+  if (spawn.value !== 2 && spawn.value !== 4) {
+    throw "Invalid v9 .rpl spawn value";
+  }
+  if (board[spawn.y][spawn.x] !== 0) {
+    throw "Invalid v9 .rpl spawn collision";
+  }
+  board[spawn.y][spawn.x] = spawn.value;
+}
+
+function resolveV9RplInitialBoardForExport(manager) {
+  if (!manager) throw "Missing manager";
+  if (isV9RplBoardMatrix(manager.initialBoardMatrix)) {
+    return v9RplCloneBoardMatrix(manager.initialBoardMatrix);
+  }
+  if (isV9RplBoardMatrix(manager.replayStartBoardMatrix)) {
+    return v9RplCloneBoardMatrix(manager.replayStartBoardMatrix);
+  }
+  var fallbackBoard = getFinalBoardMatrix(manager);
+  if (isV9RplBoardMatrix(fallbackBoard)) {
+    return v9RplCloneBoardMatrix(fallbackBoard);
+  }
+  throw "Unable to resolve v9 .rpl initial board";
+}
+
+function resolveDecodedReplayActionsFromReplayState(manager) {
+  if (!(manager && manager.replayMode && Array.isArray(manager.replayMoves) && Array.isArray(manager.replaySpawns))) {
+    return null;
+  }
+  return {
+    replayMoves: manager.replayMoves.slice(),
+    replaySpawns: manager.replaySpawns.slice()
+  };
+}
+
+function resolveDecodedReplayActionsFromCompactLog(manager) {
+  if (!(manager && typeof manager.replayCompactLog === "string")) return null;
+  var decoded = decodeReplayV4ActionsFromEnvelope(manager, {
+    actionsEncoded: manager.replayCompactLog
+  });
+  return {
+    replayMoves: Array.isArray(decoded && decoded.replayMoves) ? decoded.replayMoves : [],
+    replaySpawns: Array.isArray(decoded && decoded.replaySpawns) ? decoded.replaySpawns : []
+  };
+}
+
+function decodeV9RplReplayActionsForExport(manager) {
+  return resolveDecodedReplayActionsFromReplayState(manager) ||
+    resolveDecodedReplayActionsFromCompactLog(manager) ||
+    { replayMoves: [], replaySpawns: [] };
+}
+
+function resolveV9RplBoardAfterUndoStep(steps, initialBoard) {
+  if (steps.length > 0) steps.pop();
+  if (steps.length > 0) {
+    return v9RplCloneBoardMatrix(steps[steps.length - 1].boardAfter);
+  }
+  return v9RplCloneBoardMatrix(initialBoard);
+}
+
+function resolveV9RplExportStepSpawn(spawns, index) {
+  var spawn = spawns[index];
+  if (!(spawn && Number.isInteger(spawn.x) && Number.isInteger(spawn.y))) {
+    throw "Missing v9 .rpl spawn data";
+  }
+  if (spawn.value !== 2 && spawn.value !== 4) {
+    throw "Unsupported v9 .rpl spawn value";
+  }
+  return spawn;
+}
+
+function resolveV9RplForwardExportMove(action) {
+  if (Array.isArray(action)) throw "v9 .rpl does not support practice actions";
+  var v9Move = convertInternalDirectionToV9RplMove(action);
+  if (v9Move === null) throw "v9 .rpl does not support this replay action";
+  return v9Move;
+}
+
+function createV9RplForwardExportStepRecord(boardBefore, boardAfter, v9Move, spawn) {
+  return {
+    boardBefore: boardBefore,
+    boardAfter: v9RplCloneBoardMatrix(boardAfter),
+    v9Move: v9Move,
+    spawnPos: spawn.x + spawn.y * 4,
+    spawnValue: spawn.value
+  };
+}
+
+function buildV9RplForwardExportStep(currentBoard, action, spawn) {
+  var v9Move = resolveV9RplForwardExportMove(action);
+  var boardBefore = v9RplCloneBoardMatrix(currentBoard);
+  var moveResult = applyV9RplMoveOnBoard(currentBoard, v9Move);
+  if (!moveResult.moved) throw "Invalid v9 .rpl move sequence";
+  var boardAfter = moveResult.board;
+  applyV9RplSpawnOnBoard(boardAfter, spawn);
+  return {
+    step: createV9RplForwardExportStepRecord(boardBefore, boardAfter, v9Move, spawn),
+    boardAfter: boardAfter
+  };
+}
+
+function buildV9RplExportSteps(initialBoard, replayMoves, replaySpawns) {
+  var moves = Array.isArray(replayMoves) ? replayMoves : [];
+  var spawns = Array.isArray(replaySpawns) ? replaySpawns : [];
+  var currentBoard = v9RplCloneBoardMatrix(initialBoard);
+  var steps = [];
+  for (var index = 0; index < moves.length; index++) {
+    var action = moves[index];
+    if (action === -1) {
+      currentBoard = resolveV9RplBoardAfterUndoStep(steps, initialBoard);
+      continue;
+    }
+    var spawn = resolveV9RplExportStepSpawn(spawns, index);
+    var builtStep = buildV9RplForwardExportStep(currentBoard, action, spawn);
+    currentBoard = builtStep.boardAfter;
+    steps.push(builtStep.step);
+  }
+  return steps;
+}
+
+function writeV9RplUint64LE(view, byteOffset, value) {
+  var encoded = BigInt.asUintN(64, typeof value === "bigint" ? value : BigInt(value || 0));
+  for (var byteIndex = 0; byteIndex < 8; byteIndex++) {
+    view.setUint8(byteOffset + byteIndex, Number((encoded >> BigInt(byteIndex * 8)) & 255n));
+  }
+}
+
+function readV9RplUint64LE(view, byteOffset) {
+  var encoded = 0n;
+  for (var byteIndex = 0; byteIndex < 8; byteIndex++) {
+    encoded |= BigInt(view.getUint8(byteOffset + byteIndex)) << BigInt(byteIndex * 8);
+  }
+  return encoded;
+}
+
+function createV9RplPlaceholderRates(v9Move) {
+  var rates = [0, 0, 0, 0];
+  if (Number.isInteger(v9Move) && v9Move >= 0 && v9Move < 4) {
+    rates[v9Move] = 4000000000;
+  }
+  return rates;
+}
+
+function resolveV9RplSentinelValues() {
+  return Array.isArray(GameManager.REPLAY_V9_RPL_SENTINEL)
+    ? GameManager.REPLAY_V9_RPL_SENTINEL
+    : [0, 88, 666666666, 233333333, 314159265, 987654321];
+}
+
+function createV9RplSentinelRow() {
+  var sentinel = resolveV9RplSentinelValues();
+  return {
+    boardEncoded: BigInt(Number(sentinel[0]) || 0),
+    actionByte: Number(sentinel[1]) & 255,
+    rates: [
+      Number(sentinel[2]) >>> 0,
+      Number(sentinel[3]) >>> 0,
+      Number(sentinel[4]) >>> 0,
+      Number(sentinel[5]) >>> 0
+    ]
+  };
+}
+
+function writeV9RplRecordRow(view, rowIndex, row) {
+  var recordBytes = Number(GameManager.REPLAY_V9_RPL_RECORD_BYTES) || 25;
+  var byteOffset = rowIndex * recordBytes;
+  writeV9RplUint64LE(view, byteOffset, row.boardEncoded);
+  byteOffset += 8;
+  view.setUint8(byteOffset, Number(row.actionByte) & 255);
+  byteOffset += 1;
+  var rates = Array.isArray(row.rates) ? row.rates : [0, 0, 0, 0];
+  view.setUint32(byteOffset, Number(rates[0]) >>> 0, true);
+  byteOffset += 4;
+  view.setUint32(byteOffset, Number(rates[1]) >>> 0, true);
+  byteOffset += 4;
+  view.setUint32(byteOffset, Number(rates[2]) >>> 0, true);
+  byteOffset += 4;
+  view.setUint32(byteOffset, Number(rates[3]) >>> 0, true);
+}
+
+function readV9RplRecordRow(view, rowIndex) {
+  var recordBytes = Number(GameManager.REPLAY_V9_RPL_RECORD_BYTES) || 25;
+  var byteOffset = rowIndex * recordBytes;
+  return {
+    boardEncoded: readV9RplUint64LE(view, byteOffset),
+    actionByte: view.getUint8(byteOffset + 8),
+    rates: [
+      view.getUint32(byteOffset + 9, true),
+      view.getUint32(byteOffset + 13, true),
+      view.getUint32(byteOffset + 17, true),
+      view.getUint32(byteOffset + 21, true)
+    ]
+  };
+}
+
+function isV9RplSentinelRow(row) {
+  var sentinelRow = createV9RplSentinelRow();
+  return row.boardEncoded === sentinelRow.boardEncoded &&
+    row.actionByte === sentinelRow.actionByte &&
+    row.rates[0] === sentinelRow.rates[0] &&
+    row.rates[1] === sentinelRow.rates[1] &&
+    row.rates[2] === sentinelRow.rates[2] &&
+    row.rates[3] === sentinelRow.rates[3];
+}
+
+function buildV9RplBytesFromSteps(steps) {
+  var rows = Array.isArray(steps) ? steps : [];
+  var recordBytes = Number(GameManager.REPLAY_V9_RPL_RECORD_BYTES) || 25;
+  var rowCount = rows.length + 1;
+  var buffer = new ArrayBuffer(recordBytes * rowCount);
+  var view = new DataView(buffer);
+  for (var index = 0; index < rows.length; index++) {
+    var step = rows[index];
+    writeV9RplRecordRow(view, index, {
+      boardEncoded: encodeV9RplBoardMatrix(step.boardBefore),
+      actionByte: encodeV9RplActionByte(step.v9Move, step.spawnPos, step.spawnValue),
+      rates: createV9RplPlaceholderRates(step.v9Move)
+    });
+  }
+  writeV9RplRecordRow(view, rows.length, createV9RplSentinelRow());
+  return new Uint8Array(buffer);
+}
+
+function normalizeV9RplBufferLike(sourceBuffer) {
+  if (sourceBuffer instanceof ArrayBuffer) {
+    return new Uint8Array(sourceBuffer);
+  }
+  if (typeof ArrayBuffer !== "undefined" && ArrayBuffer.isView && ArrayBuffer.isView(sourceBuffer)) {
+    return new Uint8Array(sourceBuffer.buffer, sourceBuffer.byteOffset, sourceBuffer.byteLength);
+  }
+  return null;
+}
+
+function assertValidV9RplBytesLength(bytes, recordBytes) {
+  if (!(bytes && Number.isInteger(bytes.byteLength))) throw "Invalid .rpl payload";
+  if (bytes.byteLength < recordBytes * 2 || bytes.byteLength % recordBytes !== 0) {
+    throw "Invalid .rpl payload length";
+  }
+}
+
+function readV9RplRowsFromBytes(bytes, rowCount) {
+  var view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  var rows = [];
+  for (var rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+    rows.push(readV9RplRecordRow(view, rowIndex));
+  }
+  return rows;
+}
+
+function decodeV9RplReplayActionsFromRows(stepRows) {
+  var replayMoves = [];
+  var replaySpawns = [];
+  for (var index = 0; index < stepRows.length; index++) {
+    var decodedAction = decodeV9RplActionByte(stepRows[index].actionByte);
+    var direction = convertV9RplMoveToInternalDirection(decodedAction.v9Move);
+    if (direction === null) throw "Invalid .rpl move";
+    replayMoves.push(direction);
+    replaySpawns.push({
+      x: decodedAction.spawnPos % 4,
+      y: Math.floor(decodedAction.spawnPos / 4),
+      value: decodedAction.spawnBit === 1 ? 4 : 2
+    });
+  }
+  return { replayMoves: replayMoves, replaySpawns: replaySpawns };
+}
+
+function parseV9RplBytes(bytes) {
+  var recordBytes = Number(GameManager.REPLAY_V9_RPL_RECORD_BYTES) || 25;
+  assertValidV9RplBytesLength(bytes, recordBytes);
+  var rowCount = bytes.byteLength / recordBytes;
+  var rows = readV9RplRowsFromBytes(bytes, rowCount);
+  if (!isV9RplSentinelRow(rows[rowCount - 1])) throw "Invalid .rpl sentinel";
+  var stepRows = rows.slice(0, rowCount - 1);
+  if (!stepRows.length) throw "Empty .rpl replay";
+  var decodedActions = decodeV9RplReplayActionsFromRows(stepRows);
+  return {
+    initialBoard: decodeV9RplBoardEncoded(stepRows[0].boardEncoded),
+    replayMoves: decodedActions.replayMoves,
+    replaySpawns: decodedActions.replaySpawns
+  };
+}
+
+function encodeV9RplBytesToBase64(manager, bytes) {
+  var windowLike = manager ? manager.getWindowLike() : null;
+  var btoaFn = windowLike && typeof windowLike.btoa === "function"
+    ? windowLike.btoa
+    : (typeof btoa === "function" ? btoa : null);
+  if (typeof btoaFn !== "function") throw "Base64 encoder is unavailable";
+  var binary = "";
+  var chunkSize = 32768;
+  for (var offset = 0; offset < bytes.length; offset += chunkSize) {
+    var chunk = bytes.subarray(offset, offset + chunkSize);
+    binary += String.fromCharCode.apply(null, chunk);
+  }
+  return btoaFn(binary);
+}
+
+function decodeV9RplBase64ToBytes(manager, encodedBase64) {
+  var windowLike = manager ? manager.getWindowLike() : null;
+  var atobFn = windowLike && typeof windowLike.atob === "function"
+    ? windowLike.atob
+    : (typeof atob === "function" ? atob : null);
+  if (typeof atobFn !== "function") throw "Base64 decoder is unavailable";
+  var binary = atobFn(encodedBase64);
+  var bytes = new Uint8Array(binary.length);
+  for (var index = 0; index < binary.length; index++) {
+    bytes[index] = binary.charCodeAt(index) & 255;
+  }
+  return bytes;
+}
+
+function assertV9RplExportModeSupported(manager) {
+  if (!manager) throw "Missing manager";
+  if (manager.width !== 4 || manager.height !== 4 || manager.isFibonacciMode()) {
+    throw "v9 .rpl export only supports 4x4 power-of-two modes";
+  }
+}
+
+function resolveV9RplExportStepsFromManager(manager, initialBoard) {
+  var replayActions = decodeV9RplReplayActionsForExport(manager);
+  return buildV9RplExportSteps(
+    initialBoard,
+    replayActions.replayMoves,
+    replayActions.replaySpawns
+  );
+}
+
+function resolveV9RplReplayPayloadForExport(manager) {
+  assertV9RplExportModeSupported(manager);
+  var initialBoard = resolveV9RplInitialBoardForExport(manager);
+  var steps = resolveV9RplExportStepsFromManager(manager, initialBoard);
+  if (!steps.length) throw "No v9-compatible replay steps";
+  return {
+    initialBoard: initialBoard,
+    steps: steps,
+    bytes: buildV9RplBytesFromSteps(steps)
+  };
+}
+
+function buildV9RplExportFilename(manager, stepCount) {
+  var now = new Date();
+  var year = String(now.getFullYear());
+  var month = String(now.getMonth() + 1).padStart(2, "0");
+  var day = String(now.getDate()).padStart(2, "0");
+  var hour = String(now.getHours()).padStart(2, "0");
+  var minute = String(now.getMinutes()).padStart(2, "0");
+  var second = String(now.getSeconds()).padStart(2, "0");
+  var modeKey = String((manager && manager.modeKey) || "standard_4x4_pow2_no_undo").replace(/[^a-zA-Z0-9_-]/g, "_");
+  return "replay_" + modeKey + "_" + year + month + day + "_" + hour + minute + second + "_" + String(stepCount) + ".rpl";
+}
+
+function serializeReplayAsV9RplBase64(manager) {
+  var payload = resolveV9RplReplayPayloadForExport(manager);
+  return String(GameManager.REPLAY_V9_RPL_BASE64_PREFIX || "REPLAY_v9RPL_B64_") +
+    encodeV9RplBytesToBase64(manager, payload.bytes);
+}
+
+function exportReplayAsV9RplBlob(manager) {
+  var payload = resolveV9RplReplayPayloadForExport(manager);
+  var windowLike = manager ? manager.getWindowLike() : null;
+  var BlobCtor = windowLike && typeof windowLike.Blob === "function"
+    ? windowLike.Blob
+    : (typeof Blob === "function" ? Blob : null);
+  if (typeof BlobCtor !== "function") throw "Blob API is unavailable";
+  return {
+    blob: new BlobCtor([payload.bytes], { type: "application/octet-stream" }),
+    filename: buildV9RplExportFilename(manager, payload.steps.length),
+    stepCount: payload.steps.length
+  };
+}
+
+function resolveV9VerseMoveChunkFromV9Move(v9Move) {
+  if (v9Move === 0) return 3;
+  if (v9Move === 1) return 1;
+  if (v9Move === 2) return 0;
+  if (v9Move === 3) return 2;
+  return null;
+}
+
+function validateV9VerseTokenInput(moveChunk, spawnPos, spawnValue) {
+  if (!Number.isInteger(moveChunk) || moveChunk < 0 || moveChunk > 3) {
+    throw "Invalid v9 verse move chunk";
+  }
+  if (!Number.isInteger(spawnPos) || spawnPos < 0 || spawnPos > 15) {
+    throw "Invalid v9 verse spawn position";
+  }
+  if (spawnValue !== 2 && spawnValue !== 4) {
+    throw "Invalid v9 verse spawn value";
+  }
+}
+
+function resolveV9VerseTokenValue(moveChunk, spawnPos, spawnValue) {
+  var spawnBit = spawnValue === 4 ? 1 : 0;
+  return ((moveChunk & 3) << 5) |
+    ((spawnBit & 1) << 4) |
+    ((spawnPos & 3) << 2) |
+    ((spawnPos >> 2) & 3);
+}
+
+function encodeV9VerseToken(moveChunk, spawnPos, spawnValue) {
+  validateV9VerseTokenInput(moveChunk, spawnPos, spawnValue);
+  var token = resolveV9VerseTokenValue(moveChunk, spawnPos, spawnValue);
+  if (token < 0 || token >= V9_VERSE_PNG_CHARSET.length) {
+    throw "Invalid v9 verse token";
+  }
+  return V9_VERSE_PNG_CHARSET[token];
+}
+
+function resolveV9VerseStartupSpawns(initialBoard) {
+  if (!isV9RplBoardMatrix(initialBoard)) throw "Invalid v9 verse initial board";
+  var spawns = [];
+  for (var y = 0; y < 4; y++) {
+    for (var x = 0; x < 4; x++) {
+      var value = Number(initialBoard[y][x]);
+      if (value === 0) continue;
+      if (value !== 2 && value !== 4) {
+        throw "v9 verse startup tiles must be 2 or 4";
+      }
+      spawns.push({ x: x, y: y, value: value });
+    }
+  }
+  if (spawns.length !== 2) {
+    throw "v9 verse replay requires exactly 2 startup tiles";
+  }
+  return spawns;
+}
+
+function resolveV9VerseReplayPayloadForExport(manager) {
+  var payload = resolveV9RplReplayPayloadForExport(manager);
+  var startupSpawns = resolveV9VerseStartupSpawns(payload.initialBoard);
+  var tokens = [];
+  tokens.push(encodeV9VerseToken(0, startupSpawns[0].x + startupSpawns[0].y * 4, startupSpawns[0].value));
+  tokens.push(encodeV9VerseToken(0, startupSpawns[1].x + startupSpawns[1].y * 4, startupSpawns[1].value));
+  for (var index = 0; index < payload.steps.length; index++) {
+    var step = payload.steps[index];
+    var moveChunk = resolveV9VerseMoveChunkFromV9Move(step.v9Move);
+    if (!Number.isInteger(moveChunk)) throw "Invalid v9 verse move";
+    tokens.push(encodeV9VerseToken(moveChunk, step.spawnPos, step.spawnValue));
+  }
+  var prefix = String(GameManager.REPLAY_V9_VERSE_PREFIX || "replay_");
+  return {
+    text: prefix + tokens.join(""),
+    stepCount: payload.steps.length
+  };
+}
+
+function serializeReplayAsV9Verse(manager) {
+  return resolveV9VerseReplayPayloadForExport(manager).text;
+}
+
+function buildV9VerseExportFilename(manager, stepCount) {
+  var rplFilename = buildV9RplExportFilename(manager, stepCount);
+  if (/\.rpl$/i.test(rplFilename)) return rplFilename.replace(/\.rpl$/i, ".txt");
+  return rplFilename + ".txt";
+}
+
+function exportReplayAsV9VerseBlob(manager) {
+  var payload = resolveV9VerseReplayPayloadForExport(manager);
+  var windowLike = manager ? manager.getWindowLike() : null;
+  var BlobCtor = windowLike && typeof windowLike.Blob === "function"
+    ? windowLike.Blob
+    : (typeof Blob === "function" ? Blob : null);
+  if (typeof BlobCtor !== "function") throw "Blob API is unavailable";
+  return {
+    blob: new BlobCtor([payload.text], { type: "text/plain;charset=utf-8" }),
+    filename: buildV9VerseExportFilename(manager, payload.stepCount),
+    stepCount: payload.stepCount
+  };
+}
+
+function resolveV9RplReplayModeConfig(manager) {
+  if (!manager) return null;
+  return manager.resolveModeConfig("standard_4x4_pow2_no_undo") ||
+    manager.resolveModeConfig(manager.modeKey || manager.mode) ||
+    manager.modeConfig;
+}
+
+function applyV9RplStructuredReplayEnvelope(manager, envelope, replayModeConfig) {
+  applyReplayImportActions(manager, {
+    replayMoves: envelope.replayMoves,
+    replaySpawns: envelope.replaySpawns
+  });
+  manager.disableSessionSync = true;
+  restartWithBoard(manager, envelope.initialBoard, replayModeConfig, { asReplay: true });
+}
+
+function parseV9RplBufferLike(sourceBuffer) {
+  var bytes = normalizeV9RplBufferLike(sourceBuffer);
+  if (!bytes) throw "Invalid .rpl buffer";
+  return parseV9RplBytes(bytes);
+}
+
+function createV9RplStructuredReplayEnvelope(parsed, replayModeConfig) {
+  return {
+    kind: "v9rpl",
+    modeKey: replayModeConfig.key,
+    initialBoard: parsed.initialBoard,
+    replayMoves: parsed.replayMoves,
+    replaySpawns: parsed.replaySpawns
+  };
+}
+
+function importV9RplBuffer(manager, sourceBuffer) {
+  if (!manager) return false;
+  try {
+    var parsed = parseV9RplBufferLike(sourceBuffer);
+    var replayModeConfig = resolveV9RplReplayModeConfig(manager);
+    if (!replayModeConfig) throw "Replay mode config is unavailable";
+    var envelope = createV9RplStructuredReplayEnvelope(parsed, replayModeConfig);
+    applyV9RplStructuredReplayEnvelope(manager, envelope, replayModeConfig);
+    applyImportedReplayUndoState(manager);
+    startImportedReplayPlayback(manager);
+    return true;
+  } catch (e) {
+    alert("导入 .rpl 回放出错: " + resolveReplayImportErrorMessage(e));
+    return false;
+  }
+}
+
+function resolveV9RplBase64PayloadBody(trimmed) {
+  var prefix = String(GameManager.REPLAY_V9_RPL_BASE64_PREFIX || "REPLAY_v9RPL_B64_");
+  if (!(typeof trimmed === "string" && trimmed.indexOf(prefix) === 0)) return null;
+  return trimmed.substring(prefix.length);
+}
+
+function tryParseV9RplBase64ReplayEnvelope(manager, trimmed) {
+  var encodedBase64 = resolveV9RplBase64PayloadBody(trimmed);
+  if (encodedBase64 === null) return null;
+  if (!encodedBase64) throw "Invalid v9 .rpl payload";
+  var bytes = decodeV9RplBase64ToBytes(manager, encodedBase64);
+  var parsed = parseV9RplBytes(bytes);
+  return createV9RplStructuredReplayEnvelope(parsed, { key: "standard_4x4_pow2_no_undo" });
+}
+
+function resolveV9VersePngMapDict() {
+  if (v9VersePngMapDictCache) return v9VersePngMapDictCache;
+  var nextMap = {};
+  for (var index = 0; index < V9_VERSE_PNG_CHARSET.length; index++) {
+    nextMap[V9_VERSE_PNG_CHARSET[index]] = index;
+  }
+  v9VersePngMapDictCache = nextMap;
+  return v9VersePngMapDictCache;
+}
+
+function normalizeV9VerseReplayBody(trimmed) {
+  if (typeof trimmed !== "string") return null;
+  var prefix = String(GameManager.REPLAY_V9_VERSE_PREFIX || "replay_");
+  if (trimmed.length < prefix.length) return null;
+  if (trimmed.substring(0, prefix.length).toLowerCase() !== prefix.toLowerCase()) return null;
+  return trimmed.substring(prefix.length);
+}
+
+function decodeV9VerseTokenAt(pngMapDict, body, index) {
+  var char = body.charAt(index);
+  if (!Object.prototype.hasOwnProperty.call(pngMapDict, char)) {
+    throw "Invalid replay char at index " + String(index);
+  }
+  return Number(pngMapDict[char]);
+}
+
+function decodeV9VerseSpawnFromToken(token) {
+  var spawnPos = ((token & 3) << 2) + ((token & 15) >> 2);
+  return {
+    x: spawnPos % 4,
+    y: Math.floor(spawnPos / 4),
+    value: (((token >> 4) & 1) + 1) === 2 ? 4 : 2
+  };
+}
+
+function decodeV9VerseMoveChunkFromToken(token) {
+  return (token >> 5) & 3;
+}
+
+function createEmptyV9RplBoard() {
+  return [
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0]
+  ];
+}
+
+function createV9VerseDecodeStartupState(pngMapDict, body) {
+  var initialBoard = createEmptyV9RplBoard();
+  var firstSpawn = decodeV9VerseSpawnFromToken(decodeV9VerseTokenAt(pngMapDict, body, 0));
+  var secondSpawn = decodeV9VerseSpawnFromToken(decodeV9VerseTokenAt(pngMapDict, body, 1));
+  applyV9RplSpawnOnBoard(initialBoard, firstSpawn);
+  applyV9RplSpawnOnBoard(initialBoard, secondSpawn);
+  return {
+    initialBoard: initialBoard,
+    currentBoard: v9RplCloneBoardMatrix(initialBoard)
+  };
+}
+
+function decodeV9VerseReplayStepToken(token, index) {
+  var moveChunkToV9Move = [2, 1, 3, 0];
+  var moveChunk = decodeV9VerseMoveChunkFromToken(token);
+  var v9Move = moveChunkToV9Move[moveChunk];
+  if (!Number.isInteger(v9Move)) throw "Invalid replay move at index " + String(index);
+  return {
+    v9Move: v9Move,
+    internalDirection: convertV9RplMoveToInternalDirection(v9Move),
+    spawn: decodeV9VerseSpawnFromToken(token)
+  };
+}
+
+function decodeV9VerseReplaySteps(body, pngMapDict, currentBoard) {
+  var replayMoves = [];
+  var replaySpawns = [];
+  for (var index = 2; index < body.length; index++) {
+    var token = decodeV9VerseTokenAt(pngMapDict, body, index);
+    var decodedStep = decodeV9VerseReplayStepToken(token, index);
+    var moveResult = applyV9RplMoveOnBoard(currentBoard, decodedStep.v9Move);
+    currentBoard = moveResult.board;
+    applyV9RplSpawnOnBoard(currentBoard, decodedStep.spawn);
+    replayMoves.push(decodedStep.internalDirection);
+    replaySpawns.push(decodedStep.spawn);
+  }
+  return { replayMoves: replayMoves, replaySpawns: replaySpawns };
+}
+
+function decodeV9VerseReplayEnvelope(trimmed) {
+  var body = normalizeV9VerseReplayBody(trimmed);
+  if (!body) return null;
+  if (body.length < 2) throw "Invalid replay payload";
+  var pngMapDict = resolveV9VersePngMapDict();
+  var startupState = createV9VerseDecodeStartupState(pngMapDict, body);
+  var decodedSteps = decodeV9VerseReplaySteps(body, pngMapDict, startupState.currentBoard);
+  return {
+    kind: "v9rpl",
+    modeKey: "standard_4x4_pow2_no_undo",
+    initialBoard: startupState.initialBoard,
+    replayMoves: decodedSteps.replayMoves,
+    replaySpawns: decodedSteps.replaySpawns
+  };
+}
+
 function serializeReplay(manager) {
   if (!manager) return "{}";
   if (manager.width !== 4 || manager.height !== 4 || manager.isFibonacciMode()) {
@@ -732,7 +1650,7 @@ function applyReplayImportActions(manager, payload) {
 }
 
 function isStructuredReplayEnvelope(envelope) {
-  return !!envelope && (envelope.kind === "json-v3" || envelope.kind === "v4c");
+  return !!envelope && (envelope.kind === "json-v3" || envelope.kind === "v4c" || envelope.kind === "v9rpl");
 }
 
 function applyImportedReplayUndoState(manager) {
@@ -820,12 +1738,20 @@ function normalizeReplayImportEnvelopeFromCore(currentManager, value) {
 }
 
 function parseReplayImportEnvelopeFallback(manager, trimmed) {
+  var verseEnvelope = decodeV9VerseReplayEnvelope(trimmed);
+  if (verseEnvelope) return verseEnvelope;
+  var v9Envelope = tryParseV9RplBase64ReplayEnvelope(manager, trimmed);
+  if (v9Envelope) return v9Envelope;
   var jsonEnvelope = tryParseJsonV3ReplayEnvelope(manager, trimmed);
   if (jsonEnvelope) return jsonEnvelope;
   return tryParseV4cReplayEnvelope(trimmed);
 }
 
 function parseReplayImportEnvelope(manager, trimmed) {
+  var verseEnvelope = decodeV9VerseReplayEnvelope(trimmed);
+  if (verseEnvelope) return verseEnvelope;
+  var v9Envelope = tryParseV9RplBase64ReplayEnvelope(manager, trimmed);
+  if (v9Envelope) return v9Envelope;
   var parsedEnvelope = resolveCorePayloadCallWith(manager, "callCoreReplayImportRuntime", "parseReplayImportEnvelope", createReplayImportEnvelopePayload(manager, trimmed), undefined, function (currentManager, coreCallResult) {
     return currentManager.resolveNormalizedCoreValueOrFallbackAllowNull(coreCallResult, function (value) {
       return normalizeReplayImportEnvelopeFromCore(currentManager, value);
@@ -1109,9 +2035,14 @@ function applyV4StructuredReplayEnvelope(manager, envelope, replayModeConfig) {
 
 function applyStructuredReplayEnvelope(manager, envelope) {
   var replayModeConfig = manager.resolveModeConfig(envelope.modeKey);
+  if (!replayModeConfig && envelope.kind === "v9rpl") {
+    replayModeConfig = resolveV9RplReplayModeConfig(manager);
+  }
   if (replayModeConfig) {
     if (envelope.kind === "json-v3") {
       applyJsonV3StructuredReplayEnvelope(manager, envelope, replayModeConfig);
+    } else if (envelope.kind === "v9rpl") {
+      applyV9RplStructuredReplayEnvelope(manager, envelope, replayModeConfig);
     } else {
       applyV4StructuredReplayEnvelope(manager, envelope, replayModeConfig);
     }
