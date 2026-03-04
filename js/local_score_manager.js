@@ -22,12 +22,21 @@ function LocalScoreManager() {
   this.keyPrefix = "bestScoreByMode:";
   this.fallbackKey = "bestScore";
   this.modeKey = null;
+  this.lockedModeKey = null;
 
   var supported = this.localStorageSupported();
   this.storage = supported ? window.localStorage : window.fakeStorage;
 
   if (typeof document !== "undefined" && document.body) {
-    this.setModeKey(document.body.getAttribute("data-mode-id"));
+    var bodyModeId = document.body.getAttribute("data-mode-id");
+    if (typeof bodyModeId === "string" && bodyModeId.trim()) {
+      this.setModeKey(bodyModeId);
+    } else if (document.body.getAttribute("data-page") === "replay") {
+      this.setModeKey("replay_view");
+      this.lockedModeKey = "replay_view";
+    } else {
+      this.setModeKey(null);
+    }
   }
 }
 
@@ -53,6 +62,10 @@ LocalScoreManager.prototype.set = function (score) {
 };
 
 LocalScoreManager.prototype.setModeKey = function (modeKey) {
+  if (this.lockedModeKey) {
+    this.modeKey = this.lockedModeKey;
+    return;
+  }
   if (typeof modeKey === "string" && modeKey.trim()) {
     this.modeKey = modeKey.trim();
   } else {

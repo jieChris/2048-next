@@ -31,6 +31,7 @@ describe("bootstrap settings modal page host", () => {
     const removeLegacyUndoSettingsUI = vi.fn();
     const initThemeSettingsUI = vi.fn();
     const initTimerModuleSettingsUI = vi.fn();
+    const initWinPromptSettingsUI = vi.fn();
     const initHomeGuideSettingsUI = vi.fn();
 
     const resolvers = createSettingsModalActionResolvers({
@@ -44,6 +45,7 @@ describe("bootstrap settings modal page host", () => {
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,
+      initWinPromptSettingsUI,
       initHomeGuideSettingsUI
     });
 
@@ -57,6 +59,7 @@ describe("bootstrap settings modal page host", () => {
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,
+      initWinPromptSettingsUI,
       initHomeGuideSettingsUI
     });
     expect(applySettingsModalPageClose).toHaveBeenCalledWith({
@@ -84,6 +87,7 @@ describe("bootstrap settings modal page host", () => {
     const removeLegacyUndoSettingsUI = vi.fn();
     const initThemeSettingsUI = vi.fn();
     const initTimerModuleSettingsUI = vi.fn();
+    const initWinPromptSettingsUI = vi.fn();
     const initHomeGuideSettingsUI = vi.fn();
 
     const result = applySettingsModalPageOpen({
@@ -95,6 +99,7 @@ describe("bootstrap settings modal page host", () => {
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,
+      initWinPromptSettingsUI,
       initHomeGuideSettingsUI
     });
 
@@ -104,6 +109,7 @@ describe("bootstrap settings modal page host", () => {
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,
+      initWinPromptSettingsUI,
       initHomeGuideSettingsUI
     });
     expect(result).toEqual({
@@ -175,6 +181,11 @@ describe("bootstrap settings modal page host", () => {
     expect(resolvers.initThemeSettingsUI()).toEqual({ didApply: true });
     expect(resolvers.removeLegacyUndoSettingsUI()).toEqual({ didRemoveRow: true });
     expect(resolvers.initTimerModuleSettingsUI()).toEqual({ didBindToggle: true });
+    expect(resolvers.initWinPromptSettingsUI()).toEqual({
+      hasToggle: false,
+      didBindToggle: false,
+      didSync: false
+    });
 
     expect(applyThemeSettingsPageInit).toHaveBeenCalledWith({
       themeSettingsHostRuntime: { id: "theme-host" },
@@ -220,6 +231,93 @@ describe("bootstrap settings modal page host", () => {
     expect(syncMobileTimerboxUI.mock.contexts[0]).toBe(windowLike);
   });
 
+  it("initializes win prompt toggle state from storage and persists changes", () => {
+    const handlers: Record<string, (() => void) | undefined> = {};
+    const toggle = {
+      checked: true,
+      __winPromptBound: false,
+      addEventListener(eventName: string, handler: () => void) {
+        handlers[eventName] = handler;
+      }
+    };
+    const note = { textContent: "" };
+    let storageValue = "0";
+    const localStorage = {
+      getItem: vi.fn(() => storageValue),
+      setItem: vi.fn((key: string, value: string) => {
+        if (key === "settings_win_prompt_enabled_v1") {
+          storageValue = value;
+        }
+      })
+    };
+
+    const resolvers = createSettingsModalInitResolvers({
+      documentLike: {
+        getElementById(id: string) {
+          if (id === "win-prompt-toggle") return toggle;
+          if (id === "win-prompt-note") return note;
+          return null;
+        }
+      },
+      windowLike: { localStorage }
+    });
+
+    expect(resolvers.initWinPromptSettingsUI()).toEqual({
+      hasToggle: true,
+      didBindToggle: true,
+      didSync: true
+    });
+    expect(toggle.checked).toBe(false);
+    expect(note.textContent).toContain("不弹出胜利提示");
+
+    toggle.checked = true;
+    handlers.change && handlers.change();
+    expect(localStorage.setItem).toHaveBeenCalledWith("settings_win_prompt_enabled_v1", "1");
+    expect(note.textContent).toContain("会弹出胜利提示");
+
+    expect(resolvers.initWinPromptSettingsUI()).toEqual({
+      hasToggle: true,
+      didBindToggle: false,
+      didSync: true
+    });
+  });
+
+  it("reads legacy win prompt storage value and treats 'false' as disabled", () => {
+    const toggle = {
+      checked: true,
+      __winPromptBound: false,
+      addEventListener() {}
+    };
+    const note = { textContent: "" };
+    const localStorage = {
+      getItem: vi.fn((key: string) => {
+        if (key === "settings_win_prompt_enabled_v1") return null;
+        if (key === "settings_win_prompt_enabled") return "false";
+        return null;
+      }),
+      setItem: vi.fn()
+    };
+
+    const resolvers = createSettingsModalInitResolvers({
+      documentLike: {
+        getElementById(id: string) {
+          if (id === "win-prompt-toggle") return toggle;
+          if (id === "win-prompt-note") return note;
+          return null;
+        }
+      },
+      windowLike: { localStorage }
+    });
+
+    expect(resolvers.initWinPromptSettingsUI()).toEqual({
+      hasToggle: true,
+      didBindToggle: true,
+      didSync: true
+    });
+    expect(toggle.checked).toBe(false);
+    expect(note.textContent).toContain("不弹出胜利提示");
+  });
+
   it("creates settings init resolvers with safe fallbacks when host apis are missing", () => {
     const resolvers = createSettingsModalInitResolvers({
       themeSettingsPageHostRuntime: {},
@@ -230,5 +328,10 @@ describe("bootstrap settings modal page host", () => {
     expect(resolvers.initThemeSettingsUI()).toBeNull();
     expect(resolvers.removeLegacyUndoSettingsUI()).toBeNull();
     expect(resolvers.initTimerModuleSettingsUI()).toBeNull();
+    expect(resolvers.initWinPromptSettingsUI()).toEqual({
+      hasToggle: false,
+      didBindToggle: false,
+      didSync: false
+    });
   });
 });

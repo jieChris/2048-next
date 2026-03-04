@@ -43,11 +43,49 @@
     return true;
   }
 
+  function pickExplicitValue(source, key, fallback) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
+      return source[key];
+    }
+    return fallback;
+  }
+
+  function resolveIndexUiBootstrapEnvironment(source) {
+    var windowRecord = toRecord(source.windowLike);
+    var globalRecord = typeof globalThis !== "undefined" ? toRecord(globalThis) : {};
+
+    return {
+      locationLike: pickExplicitValue(source, "locationLike", windowRecord.location || null),
+      navigatorLike: pickExplicitValue(
+        source,
+        "navigatorLike",
+        windowRecord.navigator || globalRecord.navigator || null
+      ),
+      alertLike: pickExplicitValue(source, "alertLike", windowRecord.alert || globalRecord.alert || null),
+      consoleLike: pickExplicitValue(
+        source,
+        "consoleLike",
+        windowRecord.console || globalRecord.console || null
+      ),
+      setTimeoutLike: pickExplicitValue(
+        source,
+        "setTimeoutLike",
+        windowRecord.setTimeout || globalRecord.setTimeout || null
+      ),
+      clearTimeoutLike: pickExplicitValue(
+        source,
+        "clearTimeoutLike",
+        windowRecord.clearTimeout || globalRecord.clearTimeout || null
+      )
+    };
+  }
+
   function createIndexUiBootstrapResolvers(input) {
     var source = toRecord(input);
     var coreContracts = toRecord(source.coreContracts);
     var modalContracts = toRecord(source.modalContracts);
     var homeGuideContracts = toRecord(source.homeGuideContracts);
+    var environment = resolveIndexUiBootstrapEnvironment(source);
 
     var createIndexUiMobileResolvers = asFunction(
       toRecord(source.indexUiPageResolversHostRuntime).createIndexUiMobileResolvers
@@ -103,11 +141,11 @@
         documentLike: source.documentLike,
         bodyLike: toRecord(source.documentLike).body || null,
         windowLike: source.windowLike || null,
-        navigatorLike: source.navigatorLike || null,
+        navigatorLike: environment.navigatorLike,
         storageRuntime: coreContracts.storageRuntime,
         tryUndoFromUi: source.tryUndoFromUi,
-        clearTimeoutLike: source.clearTimeoutLike,
-        setTimeoutLike: source.setTimeoutLike,
+        clearTimeoutLike: environment.clearTimeoutLike,
+        setTimeoutLike: environment.setTimeoutLike,
         mobileUiMaxWidth: mobileUiMaxWidth,
         compactGameViewportMaxWidth: compactGameViewportMaxWidth,
         timerboxCollapseMaxWidth: timerboxCollapseMaxWidth,
@@ -211,12 +249,12 @@
         isCompactGameViewport: mobileResolvers.isCompactGameViewport,
         documentLike: source.documentLike,
         windowLike: source.windowLike || null,
-        locationLike: source.locationLike || null,
-        navigatorLike: source.navigatorLike || null,
-        alertLike: source.alertLike || null,
-        consoleLike: source.consoleLike || null,
-        setTimeoutLike: source.setTimeoutLike,
-        clearTimeoutLike: source.clearTimeoutLike,
+        locationLike: environment.locationLike,
+        navigatorLike: environment.navigatorLike,
+        alertLike: environment.alertLike,
+        consoleLike: environment.consoleLike,
+        setTimeoutLike: environment.setTimeoutLike,
+        clearTimeoutLike: environment.clearTimeoutLike,
         guideShownKey: practiceGuideShownKey,
         guideSeenFlag: practiceGuideSeenFlag,
         localStorageKey: practiceTransferKey,

@@ -114,14 +114,19 @@
             <button class="replay-control-btn" id="btn-forward-10">+10 步 ⏩</button>
             
             <select id="replay-speed" style="height: 30px; border-radius: 3px; border: 1px solid #d8d4d0; background: #faf8ef; color: #776e65; font-weight: bold; cursor: pointer; margin-left: 10px;">
+                <option value="0.25">0.25x</option>
                 <option value="0.5">0.5x</option>
                 <option value="1" selected>1x</option>
                 <option value="2">2x</option>
                 <option value="4">4x</option>
+                <option value="8">8x</option>
+                <option value="16">16x</option>
+                <option value="32">32x</option>
             </select>
         </div>
         <div style="margin-top: 15px; text-align: center;">
-            <a class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: white; padding: 10px 20px; border-radius: 3px; text-decoration: none;">导入回放</a>
+            <a id="import-replay-file-btn" class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: #f9f6f2; padding: 10px 20px; border-radius: 3px; text-decoration: none;">导入回放文件</a>
+            <a id="import-replay-text-btn" class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: #f9f6f2; padding: 10px 20px; border-radius: 3px; text-decoration: none; margin-left: 8px;">粘贴回放代码</a>
         </div>
     </div>
 

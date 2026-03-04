@@ -11,6 +11,7 @@ describe("bootstrap settings modal host", () => {
     const removeLegacyUndoSettingsUI = vi.fn();
     const initThemeSettingsUI = vi.fn();
     const initTimerModuleSettingsUI = vi.fn();
+    const initWinPromptSettingsUI = vi.fn();
     const initHomeGuideSettingsUI = vi.fn();
     const documentLike = { key: "document" };
 
@@ -22,12 +23,13 @@ describe("bootstrap settings modal host", () => {
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,
+      initWinPromptSettingsUI,
       initHomeGuideSettingsUI
     });
 
     expect(result).toEqual({
       didOpen: true,
-      initCallCount: 4
+      initCallCount: 5
     });
     expect(applySettingsModalOpen).toHaveBeenCalledTimes(1);
     expect(applySettingsModalOpen).toHaveBeenCalledWith({
@@ -36,6 +38,7 @@ describe("bootstrap settings modal host", () => {
     expect(removeLegacyUndoSettingsUI).toHaveBeenCalledTimes(1);
     expect(initThemeSettingsUI).toHaveBeenCalledTimes(1);
     expect(initTimerModuleSettingsUI).toHaveBeenCalledTimes(1);
+    expect(initWinPromptSettingsUI).toHaveBeenCalledTimes(1);
     expect(initHomeGuideSettingsUI).toHaveBeenCalledTimes(1);
   });
 

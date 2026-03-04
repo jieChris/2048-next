@@ -4,6 +4,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates modal runtime contract checks to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__indexUiModalContractCalls = 0;
+      (window as any).__indexUiAggregateContractCalls = 0;
 
       const runtimeTarget: Record<string, unknown> = {};
       const runtimeProxy = new Proxy(runtimeTarget, {
@@ -12,6 +13,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
             target[prop] = function (opts: unknown) {
               (window as any).__indexUiModalContractCalls =
                 Number((window as any).__indexUiModalContractCalls || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          if (prop === "resolveIndexUiRuntimeContracts" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__indexUiAggregateContractCalls =
+                Number((window as any).__indexUiAggregateContractCalls || 0) + 1;
               return (value as (input: unknown) => unknown)(opts);
             };
             return true;
@@ -40,8 +49,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const runtime = (window as any).CoreIndexUiRuntimeContractRuntime;
       return {
         hasRuntime:
-          !!runtime && typeof runtime.resolveIndexUiModalRuntimeContracts === "function",
-        callCount: Number((window as any).__indexUiModalContractCalls || 0),
+          !!runtime &&
+          (typeof runtime.resolveIndexUiModalRuntimeContracts === "function" ||
+            typeof runtime.resolveIndexUiRuntimeContracts === "function"),
+        callCount:
+          Number((window as any).__indexUiModalContractCalls || 0) +
+          Number((window as any).__indexUiAggregateContractCalls || 0),
         hasOpenSettingsModal: typeof (window as any).openSettingsModal === "function",
         hasCloseSettingsModal: typeof (window as any).closeSettingsModal === "function"
       };
@@ -58,6 +71,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   }) => {
     await page.addInitScript(() => {
       (window as any).__indexUiHomeGuideContractCalls = 0;
+      (window as any).__indexUiAggregateContractCalls = 0;
 
       const runtimeTarget: Record<string, unknown> = {};
       const runtimeProxy = new Proxy(runtimeTarget, {
@@ -66,6 +80,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
             target[prop] = function (opts: unknown) {
               (window as any).__indexUiHomeGuideContractCalls =
                 Number((window as any).__indexUiHomeGuideContractCalls || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          if (prop === "resolveIndexUiRuntimeContracts" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__indexUiAggregateContractCalls =
+                Number((window as any).__indexUiAggregateContractCalls || 0) + 1;
               return (value as (input: unknown) => unknown)(opts);
             };
             return true;
@@ -94,8 +116,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const runtime = (window as any).CoreIndexUiRuntimeContractRuntime;
       return {
         hasRuntime:
-          !!runtime && typeof runtime.resolveIndexUiHomeGuideRuntimeContracts === "function",
-        callCount: Number((window as any).__indexUiHomeGuideContractCalls || 0),
+          !!runtime &&
+          (typeof runtime.resolveIndexUiHomeGuideRuntimeContracts === "function" ||
+            typeof runtime.resolveIndexUiRuntimeContracts === "function"),
+        callCount:
+          Number((window as any).__indexUiHomeGuideContractCalls || 0) +
+          Number((window as any).__indexUiAggregateContractCalls || 0),
         hasHomeGuideRuntime:
           !!(window as any).CoreHomeGuideRuntime &&
           typeof (window as any).CoreHomeGuideRuntime.buildHomeGuideSteps === "function"
@@ -110,6 +136,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates core runtime contract checks to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__indexUiCoreContractCalls = 0;
+      (window as any).__indexUiAggregateContractCalls = 0;
 
       const runtimeTarget: Record<string, unknown> = {};
       const runtimeProxy = new Proxy(runtimeTarget, {
@@ -118,6 +145,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
             target[prop] = function (opts: unknown) {
               (window as any).__indexUiCoreContractCalls =
                 Number((window as any).__indexUiCoreContractCalls || 0) + 1;
+              return (value as (input: unknown) => unknown)(opts);
+            };
+            return true;
+          }
+          if (prop === "resolveIndexUiRuntimeContracts" && typeof value === "function") {
+            target[prop] = function (opts: unknown) {
+              (window as any).__indexUiAggregateContractCalls =
+                Number((window as any).__indexUiAggregateContractCalls || 0) + 1;
               return (value as (input: unknown) => unknown)(opts);
             };
             return true;
@@ -146,8 +181,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const runtime = (window as any).CoreIndexUiRuntimeContractRuntime;
       return {
         hasRuntime:
-          !!runtime && typeof runtime.resolveIndexUiCoreRuntimeContracts === "function",
-        callCount: Number((window as any).__indexUiCoreContractCalls || 0),
+          !!runtime &&
+          (typeof runtime.resolveIndexUiCoreRuntimeContracts === "function" ||
+            typeof runtime.resolveIndexUiRuntimeContracts === "function"),
+        callCount:
+          Number((window as any).__indexUiCoreContractCalls || 0) +
+          Number((window as any).__indexUiAggregateContractCalls || 0),
         hasPretty: typeof (window as any).pretty === "function",
         hasSyncMobileHintUI: typeof (window as any).syncMobileHintUI === "function"
       };

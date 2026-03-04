@@ -73,6 +73,50 @@ function bindGlobalFunction(
   return true;
 }
 
+function pickExplicitValue(source: Record<string, unknown>, key: string, fallback: unknown): unknown {
+  if (Object.prototype.hasOwnProperty.call(source, key)) {
+    return source[key];
+  }
+  return fallback;
+}
+
+function resolveIndexUiBootstrapEnvironment(source: Record<string, unknown>): {
+  locationLike: unknown;
+  navigatorLike: unknown;
+  alertLike: unknown;
+  consoleLike: unknown;
+  setTimeoutLike: unknown;
+  clearTimeoutLike: unknown;
+} {
+  const windowRecord = toRecord(source.windowLike);
+  const globalRecord = typeof globalThis !== "undefined" ? toRecord(globalThis as unknown) : {};
+
+  return {
+    locationLike: pickExplicitValue(source, "locationLike", windowRecord.location || null),
+    navigatorLike: pickExplicitValue(
+      source,
+      "navigatorLike",
+      windowRecord.navigator || globalRecord.navigator || null
+    ),
+    alertLike: pickExplicitValue(source, "alertLike", windowRecord.alert || globalRecord.alert || null),
+    consoleLike: pickExplicitValue(
+      source,
+      "consoleLike",
+      windowRecord.console || globalRecord.console || null
+    ),
+    setTimeoutLike: pickExplicitValue(
+      source,
+      "setTimeoutLike",
+      windowRecord.setTimeout || globalRecord.setTimeout || null
+    ),
+    clearTimeoutLike: pickExplicitValue(
+      source,
+      "clearTimeoutLike",
+      windowRecord.clearTimeout || globalRecord.clearTimeout || null
+    )
+  };
+}
+
 export function createIndexUiBootstrapResolvers(input: {
   indexUiPageResolversHostRuntime?: unknown;
   indexUiPageActionsHostRuntime?: unknown;
@@ -106,6 +150,7 @@ export function createIndexUiBootstrapResolvers(input: {
   const coreContracts = toRecord(source.coreContracts);
   const modalContracts = toRecord(source.modalContracts);
   const homeGuideContracts = toRecord(source.homeGuideContracts);
+  const environment = resolveIndexUiBootstrapEnvironment(source);
 
   const createIndexUiMobileResolvers = asFunction<(payload: unknown) => unknown>(
     toRecord(source.indexUiPageResolversHostRuntime).createIndexUiMobileResolvers
@@ -161,11 +206,11 @@ export function createIndexUiBootstrapResolvers(input: {
       documentLike: source.documentLike,
       bodyLike: toRecord(source.documentLike).body || null,
       windowLike: source.windowLike || null,
-      navigatorLike: source.navigatorLike || null,
+      navigatorLike: environment.navigatorLike,
       storageRuntime: coreContracts.storageRuntime,
       tryUndoFromUi: source.tryUndoFromUi,
-      clearTimeoutLike: source.clearTimeoutLike,
-      setTimeoutLike: source.setTimeoutLike,
+      clearTimeoutLike: environment.clearTimeoutLike,
+      setTimeoutLike: environment.setTimeoutLike,
       mobileUiMaxWidth: mobileUiMaxWidth,
       compactGameViewportMaxWidth: compactGameViewportMaxWidth,
       timerboxCollapseMaxWidth: timerboxCollapseMaxWidth,
@@ -271,12 +316,12 @@ export function createIndexUiBootstrapResolvers(input: {
       isCompactGameViewport: mobileResolvers.isCompactGameViewport,
       documentLike: source.documentLike,
       windowLike: source.windowLike || null,
-      locationLike: source.locationLike || null,
-      navigatorLike: source.navigatorLike || null,
-      alertLike: source.alertLike || null,
-      consoleLike: source.consoleLike || null,
-      setTimeoutLike: source.setTimeoutLike,
-      clearTimeoutLike: source.clearTimeoutLike,
+      locationLike: environment.locationLike,
+      navigatorLike: environment.navigatorLike,
+      alertLike: environment.alertLike,
+      consoleLike: environment.consoleLike,
+      setTimeoutLike: environment.setTimeoutLike,
+      clearTimeoutLike: environment.clearTimeoutLike,
       guideShownKey: practiceGuideShownKey,
       guideSeenFlag: practiceGuideSeenFlag,
       localStorageKey: practiceTransferKey,

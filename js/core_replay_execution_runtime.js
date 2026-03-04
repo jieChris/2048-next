@@ -39,6 +39,11 @@
 
   function resolveIpsInputCount(input) {
     var source = input || {};
+    var hasTimesArray = Array.isArray(source.ipsInputTimes);
+    if (hasTimesArray && !source.replayMode) {
+      var nowMs = resolveIpsWindowNowMs(source.nowMs);
+      return resolveIpsWindowTimes(source.ipsInputTimes, nowMs).length;
+    }
     if (source.replayMode) {
       var replayIndex = Number(source.replayIndex);
       return Number.isInteger(replayIndex) && replayIndex > 0 ? replayIndex : 0;
@@ -49,33 +54,71 @@
 
   function resolveNextIpsInputCount(input) {
     var source = input || {};
+    var hasTimesArray = Array.isArray(source.ipsInputTimes);
+    if (hasTimesArray && !source.replayMode) {
+      var nowMs = resolveIpsWindowNowMs(source.nowMs);
+      var nextIpsInputTimes = resolveIpsWindowTimes(source.ipsInputTimes, nowMs, true);
+      return {
+        shouldRecord: true,
+        nextIpsInputCount: nextIpsInputTimes.length,
+        nextIpsInputTimes: nextIpsInputTimes
+      };
+    }
     if (source.replayMode) {
       return {
         shouldRecord: false,
-        nextIpsInputCount: resolveIpsInputCount(source)
+        nextIpsInputCount: resolveIpsInputCount(source),
+        nextIpsInputTimes: []
       };
     }
     return {
       shouldRecord: true,
-      nextIpsInputCount: resolveIpsInputCount(source) + 1
+      nextIpsInputCount: resolveIpsInputCount(source) + 1,
+      nextIpsInputTimes: []
     };
   }
 
   function resolveIpsDisplayText(input) {
     var source = input || {};
-    var durationMs = Number(source.durationMs);
-    var ms = Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : 0;
-    var seconds = ms / 1000;
     var rawCount = Number(source.ipsInputCount);
-    var inputCount = Number.isFinite(rawCount) ? rawCount : 0;
-    var avgIps = 0;
-    if (seconds > 0) {
-      avgIps = (inputCount / seconds).toFixed(2);
-    }
+    var inputCount = Number.isFinite(rawCount) && rawCount >= 0 ? Math.floor(rawCount) : 0;
+    var avgIps = String(inputCount);
     return {
-      avgIpsText: String(avgIps),
+      avgIpsText: avgIps,
       ipsText: "IPS: " + avgIps
     };
+  }
+
+  var IPS_WINDOW_MS = 1000;
+
+  function resolveIpsWindowNowMs(rawNowMs) {
+    var nowMs = Number(rawNowMs);
+    if (Number.isFinite(nowMs) && nowMs >= 0) {
+      return Math.floor(nowMs);
+    }
+    return Date.now();
+  }
+
+  function normalizeIpsInputTime(raw) {
+    var value = Number(raw);
+    if (!Number.isFinite(value) || value < 0) return null;
+    return Math.floor(value);
+  }
+
+  function resolveIpsWindowTimes(rawTimes, nowMs, includeNow) {
+    var minMs = nowMs - IPS_WINDOW_MS;
+    var next = [];
+    var list = Array.isArray(rawTimes) ? rawTimes : [];
+    for (var i = 0; i < list.length; i++) {
+      var time = normalizeIpsInputTime(list[i]);
+      if (time === null) continue;
+      if (time < minMs || time > nowMs + IPS_WINDOW_MS) continue;
+      next.push(time);
+    }
+    if (includeNow) {
+      next.push(nowMs);
+    }
+    return next;
   }
 
   function resolveReplayExecution(action) {

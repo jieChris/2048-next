@@ -110,55 +110,207 @@ window.closeReplayModal = function() {
   }
 };
 
+function importReplayFromTextModal() {
+    showReplayModal("导入回放", "", "开始回放", function(text) {
+      if (text && window.game_manager) {
+          window.game_manager.import(text);
+          window.closeReplayModal();
+          updateReplayUI();
+      }
+    });
+}
+
+function readReplayFileAsArrayBuffer(file) {
+    return new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function() {
+            resolve(reader.result);
+        };
+        reader.onerror = function() {
+            reject(reader.error || new Error("file_read_failed"));
+        };
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+function readReplayFileAsText(file) {
+    return new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function() {
+            resolve(typeof reader.result === "string" ? reader.result : "");
+        };
+        reader.onerror = function() {
+            reject(reader.error || new Error("file_read_failed"));
+        };
+        reader.readAsText(file, "utf-8");
+    });
+}
+
+function shouldUseBinaryReplayImport(file) {
+    if (!file || typeof file.name !== "string") return false;
+    return file.name.toLowerCase().endsWith(".rpl");
+}
+
+async function importReplayFromFile(file) {
+    if (!file || !window.game_manager) return;
+    var manager = window.game_manager;
+    try {
+        if (shouldUseBinaryReplayImport(file) && typeof manager.importV9RplBuffer === "function") {
+            var buffer = await readReplayFileAsArrayBuffer(file);
+            if (!manager.importV9RplBuffer(buffer)) return;
+            updateReplayUI();
+            return;
+        }
+        var replayText = await readReplayFileAsText(file);
+        if (!replayText) throw new Error("empty_replay_file");
+        manager.import(replayText);
+        updateReplayUI();
+    } catch (error) {
+        alert("导入回放文件失败: " + (error && error.message ? error.message : "unknown"));
+    }
+}
+
 // Replay Specific Functions
 window.importReplay = function() {
-   showReplayModal("导入回放", "", "开始回放", function(text) {
-     if (text && window.game_manager) {
-         window.game_manager.import(text); 
-         window.closeReplayModal();
-         updateReplayUI();
-     }
-   });
+    var input = document.createElement("input");
+    var cleaned = false;
+    function cleanupImportInput() {
+        if (cleaned) return;
+        cleaned = true;
+        window.removeEventListener("focus", handlePickerClosed);
+        if (input.parentNode) input.parentNode.removeChild(input);
+    }
+    function handlePickerClosed() {
+        setTimeout(function() {
+            var files = input.files;
+            if (!files || files.length === 0) {
+                cleanupImportInput();
+            }
+        }, 0);
+    }
+    input.type = "file";
+    input.accept = ".rpl,.txt,.json,text/plain,application/octet-stream";
+    input.style.display = "none";
+    input.addEventListener("change", function() {
+        var files = input.files;
+        var file = files && files.length > 0 ? files[0] : null;
+        if (file) {
+            importReplayFromFile(file);
+        } else {
+            importReplayFromTextModal();
+        }
+        cleanupImportInput();
+    });
+    document.body.appendChild(input);
+    window.addEventListener("focus", handlePickerClosed);
+    input.click();
 };
 
-window.pauseReplay = function() {
-    if(window.game_manager && window.game_manager.pause) window.game_manager.pause();
-    updateReplayUI();
-};
+window.importReplayText = importReplayFromTextModal;
 
 var isScrubbing = false;
 var replayRelayoutTimer = null;
+var replaySeekRafId = 0;
+var replayPendingSeekValue = null;
+var replayUiRefreshRafId = 0;
 
-window.toggleReplayPause = function() {
+function cancelReplayPendingRelayout() {
+    if (!replayRelayoutTimer) return;
+    clearTimeout(replayRelayoutTimer);
+    replayRelayoutTimer = null;
+}
+
+function flushReplayUiRefresh() {
+    replayUiRefreshRafId = 0;
+    updateReplayUI();
+}
+
+function scheduleReplayUiRefresh() {
+    if (replayUiRefreshRafId) return;
+    replayUiRefreshRafId = window.requestAnimationFrame(flushReplayUiRefresh);
+}
+
+function replayUiPauseReplay() {
+    if(window.game_manager && window.game_manager.pause) {
+        window.game_manager.pause();
+    }
+    scheduleReplayUiRefresh();
+}
+
+function replayUiToggleReplayPause() {
     if(window.game_manager) {
         if(window.game_manager.isPaused) window.game_manager.resume();
         else window.game_manager.pause();
-        updateReplayUI();
+        scheduleReplayUiRefresh();
     }
-};
+}
 
-window.stepReplay = function(delta) {
+function replayUiStepReplay(delta) {
     if(window.game_manager) {
+        cancelReplayPendingRelayout();
         window.game_manager.step(delta);
-        updateReplayUI();
+        scheduleReplayUiRefresh();
     }
-};
+}
 
-window.setReplaySpeed = function(val) {
+function replayUiSetReplaySpeed(val) {
+    var multiplier = Number(val);
+    if (!Number.isFinite(multiplier) || multiplier <= 0) return;
     if(window.game_manager && window.game_manager.setSpeed) {
-        window.game_manager.setSpeed(parseFloat(val));
+        window.game_manager.setSpeed(multiplier);
     }
-};
+}
 
-window.seekReplay = function(val) {
-    if(window.game_manager) {
-        // Map slider value (0-100) to actual moves
-        var total = window.game_manager.replayMoves ? window.game_manager.replayMoves.length : 0;
-        var index = Math.floor((val / 100) * total);
-        window.game_manager.seek(index);
-        updateReplayUI();
+function resolveReplaySeekIndexFromPercent(value) {
+    var numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return null;
+    if (numericValue < 0) numericValue = 0;
+    if (numericValue > 100) numericValue = 100;
+    var gameManager = window.game_manager;
+    var total = gameManager && gameManager.replayMoves ? gameManager.replayMoves.length : 0;
+    return Math.floor((numericValue / 100) * total);
+}
+
+function flushReplayUiSeek() {
+    replaySeekRafId = 0;
+    var nextValue = replayPendingSeekValue;
+    replayPendingSeekValue = null;
+    if (!window.game_manager) return;
+    var index = resolveReplaySeekIndexFromPercent(nextValue);
+    if (index === null) return;
+    cancelReplayPendingRelayout();
+    window.game_manager.seek(index);
+    scheduleReplayUiRefresh();
+}
+
+function replayUiSeekReplay(value) {
+    replayPendingSeekValue = value;
+    if (replaySeekRafId) return;
+    replaySeekRafId = window.requestAnimationFrame(flushReplayUiSeek);
+}
+
+function handleReplayScrubStart() {
+    isScrubbing = true;
+    var gameManager = window.game_manager;
+    if (gameManager && !gameManager.isPaused && gameManager.pause) {
+        gameManager.pause();
     }
-};
+}
+
+function handleReplayScrubEnd() {
+    isScrubbing = false;
+    scheduleReplayUiRefresh();
+}
+
+window.toggleReplayPause = replayUiToggleReplayPause;
+window.pauseReplay = replayUiPauseReplay;
+window.stepReplay = replayUiStepReplay;
+window.setReplaySpeed = replayUiSetReplaySpeed;
+window.seekReplay = replayUiSeekReplay;
+window.replayUiPauseReplay = replayUiPauseReplay;
+window.replayUiStepReplay = replayUiStepReplay;
+window.replayUiSetReplaySpeed = replayUiSetReplaySpeed;
+window.replayUiSeekReplay = replayUiSeekReplay;
 
 function updateReplayUI() {
     var game_manager = window.game_manager;
@@ -179,8 +331,9 @@ function updateReplayUI() {
 }
 
 function requestReplayRelayout() {
-    if (replayRelayoutTimer) clearTimeout(replayRelayoutTimer);
+    cancelReplayPendingRelayout();
     replayRelayoutTimer = setTimeout(function () {
+        replayRelayoutTimer = null;
         var gm = window.game_manager;
         if (!gm) return;
         if (gm.actuator && typeof gm.actuator.invalidateLayoutCache === "function") {
@@ -243,47 +396,40 @@ document.addEventListener('DOMContentLoaded', function() {
     // Scrubbing events
     var progressEl = document.getElementById('replay-progress');
     if(progressEl) {
-        progressEl.addEventListener('mousedown', function() { isScrubbing = true; });
-        progressEl.addEventListener('mouseup', function() { isScrubbing = false; });
-        progressEl.addEventListener('touchstart', function() { isScrubbing = true; });
-        progressEl.addEventListener('touchend', function() { isScrubbing = false; });
-        progressEl.addEventListener('input', function() { window.seekReplay(this.value); });
+        progressEl.addEventListener('pointerdown', handleReplayScrubStart);
+        progressEl.addEventListener('pointerup', handleReplayScrubEnd);
+        progressEl.addEventListener('pointercancel', handleReplayScrubEnd);
+        progressEl.addEventListener('mousedown', handleReplayScrubStart);
+        progressEl.addEventListener('mouseup', handleReplayScrubEnd);
+        progressEl.addEventListener('touchstart', handleReplayScrubStart);
+        progressEl.addEventListener('touchend', handleReplayScrubEnd);
+        progressEl.addEventListener('change', handleReplayScrubEnd);
+        progressEl.addEventListener('input', function() { replayUiSeekReplay(this.value); });
     }
 
-    // Replay Buttons
-    var controlBtns = document.querySelectorAll('.replay-control-btn');
-    // We need to distinguish them. Since I can't easily add IDs to all of them right now without extensive HTML edit, 
-    // I will rely on the onclicks in HTML for a moment OR I will replace them.
-    // The plan said "Remove onclick attributes".
-    // So I MUST attach listeners here by ID or Class+Logic.
-    
-    // Let's Add IDs in the HTML step next, and then here we can bind them.
-    // For now, I will define global functions that the event listeners can call if I miss some,
-    // BUT the goal is to have NO inline JS.
-    
-    // I will assume I will add IDs:
-    // btn-rewind-10, btn-rewind-1, btn-pause, btn-forward-1, btn-forward-10
-    
     var btnRewind10 = document.getElementById('btn-rewind-10');
-    if(btnRewind10) btnRewind10.addEventListener('click', function() { stepReplay(-10); });
+    if(btnRewind10) btnRewind10.addEventListener('click', function() { replayUiStepReplay(-10); });
 
     var btnRewind1 = document.getElementById('btn-rewind-1');
-    if(btnRewind1) btnRewind1.addEventListener('click', function() { stepReplay(-1); });
+    if(btnRewind1) btnRewind1.addEventListener('click', function() { replayUiStepReplay(-1); });
 
-    var btnPause = document.getElementById('replay-pause-btn'); // This ID already exists!
-    if(btnPause) btnPause.addEventListener('click', toggleReplayPause);
+    var btnPause = document.getElementById('replay-pause-btn');
+    if(btnPause) btnPause.addEventListener('click', replayUiToggleReplayPause);
 
     var btnForward1 = document.getElementById('btn-forward-1');
-    if(btnForward1) btnForward1.addEventListener('click', function() { stepReplay(1); });
+    if(btnForward1) btnForward1.addEventListener('click', function() { replayUiStepReplay(1); });
 
     var btnForward10 = document.getElementById('btn-forward-10');
-    if(btnForward10) btnForward10.addEventListener('click', function() { stepReplay(10); });
+    if(btnForward10) btnForward10.addEventListener('click', function() { replayUiStepReplay(10); });
     
     var speedSelect = document.getElementById('replay-speed');
-    if(speedSelect) speedSelect.addEventListener('change', function() { setReplaySpeed(this.value); });
+    if(speedSelect) speedSelect.addEventListener('change', function() { replayUiSetReplaySpeed(this.value); });
     
-    var importBtn = document.querySelector('.import-replay-button');
-    if(importBtn) importBtn.addEventListener('click', importReplay);
+    var importFileBtn = document.getElementById('import-replay-file-btn') || document.querySelector('.import-replay-button');
+    if(importFileBtn) importFileBtn.addEventListener('click', importReplay);
+
+    var importTextBtn = document.getElementById('import-replay-text-btn');
+    if(importTextBtn) importTextBtn.addEventListener('click', importReplayFromTextModal);
     
     var modalActionBtn = document.getElementById('replay-action-btn');
     // This is handled in showReplayModal but we can also bind closing there.

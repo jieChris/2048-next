@@ -6,6 +6,13 @@
   function normalizeReplaySeekTarget(input) {
     var opts = input || {};
     var targetIndex = Number(opts.targetIndex);
+    if (!Number.isFinite(targetIndex)) {
+      targetIndex = Number(opts.replayIndex);
+    }
+    if (!Number.isFinite(targetIndex)) {
+      targetIndex = 0;
+    }
+    targetIndex = Math.floor(targetIndex);
     if (targetIndex < 0) targetIndex = 0;
     if (opts.hasReplayMoves && targetIndex > opts.replayMovesLength) {
       targetIndex = opts.replayMovesLength;

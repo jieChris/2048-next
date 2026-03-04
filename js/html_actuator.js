@@ -9,33 +9,56 @@ function HTMLActuator() {
   this.score = 0;
   this.gridMeta = null;
   this.lowPerfMode = false;
+  this.pendingActuateFrameId = null;
+  this.forceSyncActuate = false;
 }
+
+HTMLActuator.prototype.cancelPendingActuation = function () {
+  if (this.pendingActuateFrameId === null) return;
+  if (typeof window.cancelAnimationFrame === "function") {
+    window.cancelAnimationFrame(this.pendingActuateFrameId);
+  } else {
+    clearTimeout(this.pendingActuateFrameId);
+  }
+  this.pendingActuateFrameId = null;
+};
+
+HTMLActuator.prototype.renderActuationFrame = function (grid, metadata) {
+  this.ensureGridLayout(grid, metadata);
+  this.clearContainer(this.tileContainer);
+
+  grid.cells.forEach(function (column) {
+    column.forEach(function (cell) {
+      if (cell) {
+        this.addTile(cell);
+      }
+    }, this);
+  }, this);
+
+  this.updateScore(metadata.score);
+  this.updateBestScore(metadata.bestScore);
+
+  if (metadata.terminated) {
+    if (metadata.over) {
+      this.message(false);
+    } else if (metadata.won) {
+      this.message(true);
+    }
+  }
+};
 
 HTMLActuator.prototype.actuate = function (grid, metadata) {
   var self = this;
+  this.cancelPendingActuation();
 
-  window.requestAnimationFrame(function () {
-    self.ensureGridLayout(grid, metadata);
-    self.clearContainer(self.tileContainer);
+  if (this.forceSyncActuate === true) {
+    this.renderActuationFrame(grid, metadata);
+    return;
+  }
 
-    grid.cells.forEach(function (column) {
-      column.forEach(function (cell) {
-        if (cell) {
-          self.addTile(cell);
-        }
-      });
-    });
-
-    self.updateScore(metadata.score);
-    self.updateBestScore(metadata.bestScore);
-
-    if (metadata.terminated) {
-      if (metadata.over) {
-        self.message(false);
-      } else if (metadata.won) {
-        self.message(true);
-      }
-    }
+  this.pendingActuateFrameId = window.requestAnimationFrame(function () {
+    self.pendingActuateFrameId = null;
+    self.renderActuationFrame(grid, metadata);
   });
 };
 
@@ -305,12 +328,73 @@ HTMLActuator.prototype.updateBestScore = function (bestScore) {
   this.bestContainer.textContent = bestScore;
 };
 
+HTMLActuator.prototype.shouldShowWinPrompt = function () {
+  if (typeof window === "undefined" || !window.localStorage) return true;
+  try {
+    var normalize = function (raw) {
+      if (raw === null || raw === undefined) return true;
+      var text = String(raw).trim().toLowerCase();
+      if (!text) return true;
+      if (text === "0" || text === "false" || text === "off" || text === "no") return false;
+      if (text === "1" || text === "true" || text === "on" || text === "yes") return true;
+      return true;
+    };
+    var storage = window.localStorage;
+    var value = storage.getItem("settings_win_prompt_enabled_v1");
+    if (value !== null && value !== undefined && String(value).trim() !== "") {
+      return normalize(value);
+    }
+    var legacyKeys = ["settings_win_prompt_enabled", "win_prompt_enabled"];
+    for (var i = 0; i < legacyKeys.length; i++) {
+      var legacyValue = storage.getItem(legacyKeys[i]);
+      if (legacyValue !== null && legacyValue !== undefined && String(legacyValue).trim() !== "") {
+        return normalize(legacyValue);
+      }
+    }
+    return true;
+  } catch (_err) {
+    return true;
+  }
+};
+
 HTMLActuator.prototype.message = function (won) {
+  if (won && !this.shouldShowWinPrompt()) {
+    if (this.tryAutoContinueWithoutPrompt()) {
+      return;
+    }
+  }
+
   var type = won ? "game-won" : "game-over";
   var message = won ? "你赢了！" : "游戏结束！";
 
   this.messageContainer.classList.add(type);
   this.messageContainer.getElementsByTagName("p")[0].textContent = message;
+};
+
+HTMLActuator.prototype.tryAutoContinueWithoutPrompt = function () {
+  var manager = typeof window !== "undefined" ? window.game_manager : null;
+  if (!manager) return false;
+
+  if (typeof manager.keepPlaying === "function") {
+    try {
+      manager.keepPlaying();
+      return true;
+    } catch (_err) {}
+  }
+
+  // keepPlaying 在当前实现中通常是布尔状态字段（而不是方法）。
+  try {
+    manager.keepPlaying = true;
+  } catch (_err2) {
+    return false;
+  }
+
+  if (manager.actuator && typeof manager.actuator.continue === "function") {
+    try {
+      manager.actuator.continue();
+    } catch (_err3) {}
+  }
+  return true;
 };
 
 HTMLActuator.prototype.clearMessage = function () {

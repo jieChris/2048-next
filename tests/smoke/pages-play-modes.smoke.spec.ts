@@ -266,4 +266,117 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(typeof snapshot?.canToggle).toBe("boolean");
     expect(typeof snapshot?.interaction).toBe("boolean");
   });
+
+  test("play page suppresses 2048 win prompt when win-prompt setting is disabled", async ({ page }) => {
+    const response = await page.goto("/play.html?mode_key=classic_4x4_pow2_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Play response should exist").not.toBeNull();
+    expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(async () => {
+      window.localStorage.setItem("settings_win_prompt_enabled_v1", "0");
+      window.localStorage.setItem("settings_win_prompt_enabled", "0");
+      window.localStorage.setItem("win_prompt_enabled", "0");
+
+      const manager = (window as any).game_manager;
+      if (!manager || typeof manager.restartWithBoard !== "function" || typeof manager.move !== "function") {
+        return null;
+      }
+
+      const board = [
+        [1024, 1024, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ];
+      manager.restartWithBoard(board, null, { preserveSeed: true, preserveMode: true });
+      manager.move(3);
+      if (!manager.won) manager.move(1);
+
+      await new Promise((resolve) => window.setTimeout(resolve, 260));
+
+      const messageNode = document.querySelector(".game-message");
+      const className = messageNode ? String((messageNode as HTMLElement).className || "") : "";
+      const text = messageNode ? String((messageNode as HTMLElement).textContent || "") : "";
+      const actuator = (manager as any).actuator;
+      return {
+        storageValue: window.localStorage.getItem("settings_win_prompt_enabled_v1"),
+        shouldShowWinPrompt:
+          actuator && typeof actuator.shouldShowWinPrompt === "function"
+            ? actuator.shouldShowWinPrompt()
+            : null,
+        won: Boolean(manager.won),
+        keepPlayingState: (manager as any).keepPlaying,
+        hasWonPromptClass: className.indexOf("game-won") !== -1,
+        messageText: text
+      };
+    });
+
+    expect(snapshot, "win-prompt suppression snapshot should exist").not.toBeNull();
+    expect(snapshot?.storageValue).toBe("0");
+    expect(snapshot?.shouldShowWinPrompt).toBe(false);
+    expect(snapshot?.won).toBe(true);
+    expect(snapshot?.keepPlayingState).toBe(true);
+    expect(snapshot?.hasWonPromptClass).toBe(false);
+    expect(snapshot?.messageText).not.toContain("你赢了");
+  });
+
+  test("obstacle mode keeps grid aligned with obstacle cells sized like normal cells", async ({
+    page
+  }) => {
+    const response = await page.goto("/play.html?mode_key=obstacle_4x4_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Obstacle mode response should exist").not.toBeNull();
+    expect(response?.ok(), "Obstacle mode response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const allCells = Array.from(document.querySelectorAll(".grid-cell")) as HTMLElement[];
+      const obstacleCells = Array.from(document.querySelectorAll(".grid-cell.grid-cell-obstacle")) as HTMLElement[];
+      if (allCells.length === 0 || obstacleCells.length === 0) return null;
+
+      const points = allCells.map((cell) => {
+        const rect = cell.getBoundingClientRect();
+        return {
+          x: Math.round(rect.left),
+          y: Math.round(rect.top),
+          w: rect.width,
+          h: rect.height
+        };
+      });
+
+      const rowCounter = new Map<number, number>();
+      const colCounter = new Map<number, number>();
+      for (const point of points) {
+        rowCounter.set(point.y, (rowCounter.get(point.y) || 0) + 1);
+        colCounter.set(point.x, (colCounter.get(point.x) || 0) + 1);
+      }
+
+      const firstNormal = allCells.find((cell) => !cell.classList.contains("grid-cell-obstacle")) || allCells[0];
+      const normalRect = firstNormal.getBoundingClientRect();
+      const obstacleRect = obstacleCells[0].getBoundingClientRect();
+
+      return {
+        totalCells: allCells.length,
+        obstacleCells: obstacleCells.length,
+        rowCounts: Array.from(rowCounter.values()).sort((a, b) => a - b),
+        colCounts: Array.from(colCounter.values()).sort((a, b) => a - b),
+        widthDelta: Math.abs(normalRect.width - obstacleRect.width),
+        heightDelta: Math.abs(normalRect.height - obstacleRect.height)
+      };
+    });
+
+    expect(snapshot, "obstacle grid alignment snapshot should exist").not.toBeNull();
+    expect(snapshot?.totalCells).toBe(16);
+    expect(snapshot?.obstacleCells).toBeGreaterThan(0);
+    expect(snapshot?.rowCounts).toEqual([4, 4, 4, 4]);
+    expect(snapshot?.colCounts).toEqual([4, 4, 4, 4]);
+    expect(snapshot?.widthDelta).toBeLessThanOrEqual(0.6);
+    expect(snapshot?.heightDelta).toBeLessThanOrEqual(0.6);
+  });
 });
