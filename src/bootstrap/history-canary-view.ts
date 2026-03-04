@@ -28,7 +28,7 @@ function formatModeSource(source: unknown): string {
   if (source === "query") return "URL 参数";
   if (source === "storage") return "本地存储";
   if (source === "default") return "默认策略";
-  return "默认回退";
+  return "默认回退（core-adapter）";
 }
 
 function formatForceSource(source: unknown): string {

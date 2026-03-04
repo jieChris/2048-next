@@ -15,8 +15,83 @@
     return typeof value === "function" ? value : null;
   }
 
+  var WIN_PROMPT_STORAGE_KEY = "settings_win_prompt_enabled_v1";
+  var LEGACY_WIN_PROMPT_STORAGE_KEYS = ["settings_win_prompt_enabled", "win_prompt_enabled"];
+
   function resolvePositiveNumber(value, fallback) {
     return Number.isFinite(value) && Number(value) > 0 ? Number(value) : fallback;
+  }
+
+  function getElementById(documentLike, id) {
+    var getter = asFunction(toRecord(documentLike).getElementById);
+    if (!getter) return null;
+    return getter.call(documentLike, id);
+  }
+
+  function bindListener(element, eventName, handler) {
+    var addEventListener = asFunction(toRecord(element).addEventListener);
+    if (!addEventListener) return false;
+    addEventListener.call(element, eventName, handler);
+    return true;
+  }
+
+  function readWinPromptEnabled(windowLike) {
+    var storage = toRecord(windowLike).localStorage;
+    var getItem = asFunction(toRecord(storage).getItem);
+    if (!getItem) return true;
+    try {
+      var normalize = function (raw) {
+        if (raw === null || raw === undefined) return true;
+        var text = String(raw).trim().toLowerCase();
+        if (!text) return true;
+        if (text === "0" || text === "false" || text === "off" || text === "no") return false;
+        if (text === "1" || text === "true" || text === "on" || text === "yes") return true;
+        return true;
+      };
+
+      var currentValue = getItem.call(storage, WIN_PROMPT_STORAGE_KEY);
+      if (currentValue !== null && currentValue !== undefined && String(currentValue).trim() !== "") {
+        return normalize(currentValue);
+      }
+
+      for (var i = 0; i < LEGACY_WIN_PROMPT_STORAGE_KEYS.length; i++) {
+        var legacyValue = getItem.call(storage, LEGACY_WIN_PROMPT_STORAGE_KEYS[i]);
+        if (legacyValue !== null && legacyValue !== undefined && String(legacyValue).trim() !== "") {
+          return normalize(legacyValue);
+        }
+      }
+
+      return true;
+    } catch (_err) {
+      return true;
+    }
+  }
+
+  function writeWinPromptEnabled(windowLike, enabled) {
+    var storage = toRecord(windowLike).localStorage;
+    var setItem = asFunction(toRecord(storage).setItem);
+    if (!setItem) return false;
+    var nextValue = enabled ? "1" : "0";
+    var didWrite = false;
+    try {
+      setItem.call(storage, WIN_PROMPT_STORAGE_KEY, nextValue);
+      didWrite = true;
+    } catch (_err) {
+      didWrite = false;
+    }
+    for (var i = 0; i < LEGACY_WIN_PROMPT_STORAGE_KEYS.length; i++) {
+      try {
+        setItem.call(storage, LEGACY_WIN_PROMPT_STORAGE_KEYS[i], nextValue);
+        didWrite = true;
+      } catch (_err2) {}
+    }
+    return didWrite;
+  }
+
+  function resolveWinPromptNoteText(enabled) {
+    return enabled
+      ? "合成 2048 时会弹出胜利提示，可选择继续游戏。"
+      : "合成 2048 时不弹出胜利提示，将自动继续游戏。";
   }
 
   function resolveSyncMobileTimerboxUi(source) {
@@ -85,10 +160,50 @@
       });
     }
 
+    function initWinPromptSettingsUI() {
+      var toggle = getElementById(source.documentLike, "win-prompt-toggle");
+      if (!toggle) {
+        return {
+          hasToggle: false,
+          didBindToggle: false,
+          didSync: false
+        };
+      }
+
+      var note = getElementById(source.documentLike, "win-prompt-note");
+      var toggleRecord = toRecord(toggle);
+      var sync = function () {
+        var enabled = readWinPromptEnabled(windowLike);
+        toggleRecord.checked = enabled;
+        if (note) {
+          toRecord(note).textContent = resolveWinPromptNoteText(enabled);
+        }
+      };
+
+      var didBindToggle = false;
+      if (!toggleRecord.__winPromptBound) {
+        toggleRecord.__winPromptBound = true;
+        didBindToggle = bindListener(toggle, "change", function () {
+          var enabled = !!toRecord(toggle).checked;
+          writeWinPromptEnabled(windowLike, enabled);
+          sync();
+        });
+      }
+
+      sync();
+
+      return {
+        hasToggle: true,
+        didBindToggle: didBindToggle,
+        didSync: true
+      };
+    }
+
     return {
       initThemeSettingsUI: initThemeSettingsUI,
       removeLegacyUndoSettingsUI: removeLegacyUndoSettingsUI,
-      initTimerModuleSettingsUI: initTimerModuleSettingsUI
+      initTimerModuleSettingsUI: initTimerModuleSettingsUI,
+      initWinPromptSettingsUI: initWinPromptSettingsUI
     };
   }
 
@@ -106,6 +221,7 @@
           removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
           initThemeSettingsUI: source.initThemeSettingsUI,
           initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
+          initWinPromptSettingsUI: source.initWinPromptSettingsUI,
           initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
         });
       }
@@ -116,6 +232,7 @@
         removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
         initThemeSettingsUI: source.initThemeSettingsUI,
         initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
+        initWinPromptSettingsUI: source.initWinPromptSettingsUI,
         initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
       });
     }
@@ -159,6 +276,7 @@
       removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
       initThemeSettingsUI: source.initThemeSettingsUI,
       initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
+      initWinPromptSettingsUI: source.initWinPromptSettingsUI,
       initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
     });
 

@@ -20,6 +20,12 @@
     return Math.floor(parsed);
   }
 
+  function normalizePositiveNumber(value, fallback) {
+    var parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+    return parsed;
+  }
+
   function resolveHistoryFilterState(input) {
     var source = input && typeof input === "object" ? input : {};
     return {
@@ -28,7 +34,9 @@
       sortBy: normalizeString(source.sortByRaw, "ended_desc"),
       adapterParityFilter: normalizeString(source.adapterParityFilterRaw, "all"),
       burnInWindow: normalizeString(source.burnInWindowRaw, "200"),
-      sustainedWindows: normalizeString(source.sustainedWindowsRaw, "3")
+      sustainedWindows: normalizeString(source.sustainedWindowsRaw, "3"),
+      burnInMinComparable: normalizeString(source.minComparableRaw, "50"),
+      burnInMaxMismatchRate: normalizeString(source.maxMismatchRateRaw, "1")
     };
   }
 
@@ -47,6 +55,8 @@
     target.adapterParityFilter = next.adapterParityFilter;
     target.burnInWindow = next.burnInWindow;
     target.sustainedWindows = next.sustainedWindows;
+    target.burnInMinComparable = next.burnInMinComparable;
+    target.burnInMaxMismatchRate = next.burnInMaxMismatchRate;
     return true;
   }
 
@@ -90,7 +100,7 @@
       sample_limit: normalizeString(source.sampleLimit, "200"),
       sustained_windows: normalizeString(source.sustainedWindows, "3"),
       min_comparable: normalizePositiveInteger(source.minComparable, 50),
-      max_mismatch_rate: normalizePositiveInteger(source.maxMismatchRate, 1)
+      max_mismatch_rate: normalizePositiveNumber(source.maxMismatchRate, 1)
     };
   }
 

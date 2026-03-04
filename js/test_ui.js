@@ -69,6 +69,15 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  function shouldStartPracticeFresh() {
+    try {
+      var params = new URLSearchParams(window.location.search || "");
+      return params.get("practice_fresh") === "1";
+    } catch (_err) {
+      return false;
+    }
+  }
+
   function getPracticePayloadParam() {
     try {
       var params = new URLSearchParams(window.location.search || "");
@@ -77,6 +86,21 @@ document.addEventListener("DOMContentLoaded", function () {
     } catch (_err) {
       return "";
     }
+  }
+
+  function stripPracticeFreshFromUrl() {
+    if (!window.history || typeof window.history.replaceState !== "function") return;
+    try {
+      var params = new URLSearchParams(window.location.search || "");
+      if (params.get("practice_fresh") !== "1") return;
+      params.delete("practice_fresh");
+      var next = "Practice_board.html";
+      var query = params.toString();
+      if (query) {
+        next += "?" + query;
+      }
+      window.history.replaceState(null, "", next);
+    } catch (_err) {}
   }
 
   function getStorageByName(name) {
@@ -322,6 +346,46 @@ document.addEventListener("DOMContentLoaded", function () {
     } catch (err) {
       console.error("Practice transfer restore failed:", err);
       alert("练习板载入盘面失败，请重试。");
+    }
+  }
+
+  function buildEmptyPracticeBoard(manager) {
+    var width = Number.isInteger(manager && manager.width) && manager.width > 0 ? manager.width : 4;
+    var height = Number.isInteger(manager && manager.height) && manager.height > 0 ? manager.height : width;
+    var board = [];
+    for (var y = 0; y < height; y++) {
+      var row = [];
+      for (var x = 0; x < width; x++) {
+        row.push(0);
+      }
+      board.push(row);
+    }
+    return board;
+  }
+
+  function applyPracticeFreshStart(retriesLeft) {
+    if (!shouldStartPracticeFresh()) return;
+    if (getPracticeToken()) return;
+
+    if (!window.game_manager || typeof window.game_manager.restartWithBoard !== "function") {
+      if (retriesLeft > 0) {
+        setTimeout(function () { applyPracticeFreshStart(retriesLeft - 1); }, 60);
+      }
+      return;
+    }
+
+    var manager = window.game_manager;
+    var emptyBoard = buildEmptyPracticeBoard(manager);
+    try {
+      manager.restartWithBoard(emptyBoard, manager.modeConfig || null, {
+        setPracticeRestartBase: true,
+        asReplay: false
+      });
+      manager.isTestMode = true;
+      syncSelectionGridByRuleset();
+      stripPracticeFreshFromUrl();
+    } catch (err) {
+      console.error("Practice fresh start failed:", err);
     }
   }
 
@@ -610,6 +674,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   applyPracticeTransfer(30);
+  applyPracticeFreshStart(30);
 
   setTimeout(function () {
     if (window.game_manager) {

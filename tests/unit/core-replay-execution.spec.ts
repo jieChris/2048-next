@@ -123,7 +123,8 @@ describe("core replay execution: ips input count", () => {
       })
     ).toEqual({
       shouldRecord: false,
-      nextIpsInputCount: 10
+      nextIpsInputCount: 10,
+      nextIpsInputTimes: []
     });
     expect(
       resolveNextIpsInputCount({
@@ -132,7 +133,8 @@ describe("core replay execution: ips input count", () => {
       })
     ).toEqual({
       shouldRecord: true,
-      nextIpsInputCount: 6
+      nextIpsInputCount: 6,
+      nextIpsInputTimes: []
     });
     expect(
       resolveNextIpsInputCount({
@@ -141,29 +143,41 @@ describe("core replay execution: ips input count", () => {
       })
     ).toEqual({
       shouldRecord: true,
-      nextIpsInputCount: 1
+      nextIpsInputCount: 1,
+      nextIpsInputTimes: []
+    });
+    expect(
+      resolveNextIpsInputCount({
+        replayMode: false,
+        ipsInputTimes: [100, 500, 700],
+        nowMs: 1200
+      })
+    ).toEqual({
+      shouldRecord: true,
+      nextIpsInputCount: 3,
+      nextIpsInputTimes: [500, 700, 1200]
     });
   });
 });
 
 describe("core replay execution: ips display text", () => {
-  it("computes fixed-point ips text for positive duration", () => {
+  it("computes fixed-point ips text by one-second window count", () => {
     expect(
       resolveIpsDisplayText({
         durationMs: 2000,
         ipsInputCount: 5
       })
     ).toEqual({
-      avgIpsText: "2.50",
-      ipsText: "IPS: 2.50"
+      avgIpsText: "5",
+      ipsText: "IPS: 5"
     });
   });
 
-  it("keeps legacy zero formatting when duration is zero or invalid", () => {
+  it("keeps zero text when window count is zero", () => {
     expect(
       resolveIpsDisplayText({
         durationMs: 0,
-        ipsInputCount: 5
+        ipsInputCount: 0
       })
     ).toEqual({
       avgIpsText: "0",
@@ -172,7 +186,7 @@ describe("core replay execution: ips display text", () => {
     expect(
       resolveIpsDisplayText({
         durationMs: -1,
-        ipsInputCount: 5
+        ipsInputCount: 0
       })
     ).toEqual({
       avgIpsText: "0",
@@ -187,8 +201,19 @@ describe("core replay execution: ips display text", () => {
         ipsInputCount: Number.NaN
       })
     ).toEqual({
-      avgIpsText: "0.00",
-      ipsText: "IPS: 0.00"
+      avgIpsText: "0",
+      ipsText: "IPS: 0"
     });
+  });
+
+  it("resolves one-second window count from timestamps when provided", () => {
+    expect(
+      resolveIpsInputCount({
+        replayMode: false,
+        ipsInputCount: 20,
+        ipsInputTimes: [10, 200, 800, 1200, 1300],
+        nowMs: 1300
+      })
+    ).toBe(3);
   });
 });

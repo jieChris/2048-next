@@ -61,6 +61,7 @@ export function applyHistoryLoadEntry(input: {
   setStatus?: unknown;
   prevButtonId?: unknown;
   nextButtonId?: unknown;
+  persistHistoryFilterState?: unknown;
 }): HistoryLoadEntryApplyResult {
   const source = toRecord(input);
   if (!source.localHistoryStore) {
@@ -76,6 +77,8 @@ export function applyHistoryLoadEntry(input: {
     historyQueryRuntime: source.historyQueryRuntime,
     getElementById: source.getElementById
   });
+  const persistHistoryFilterState = asFunction<() => unknown>(source.persistHistoryFilterState);
+  if (persistHistoryFilterState) persistHistoryFilterState();
 
   const historyLoadHostRuntime = toRecord(source.historyLoadHostRuntime);
   const applyHistoryLoadWithPager = asFunction<(args: unknown) => unknown>(

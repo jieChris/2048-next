@@ -107,6 +107,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   }) => {
     await page.addInitScript(() => {
       (window as any).__historyControlsHostInitCallCount = 0;
+      (window as any).__historyControlsHostThresholdInitCallCount = 0;
       (window as any).__historyControlsHostBindCallCount = 0;
       const target: Record<string, unknown> = {};
       (window as any).CoreHistoryControlsHostRuntime = new Proxy(target, {
@@ -115,6 +116,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
             proxyTarget[prop] = function (input: unknown) {
               (window as any).__historyControlsHostInitCallCount =
                 Number((window as any).__historyControlsHostInitCallCount || 0) + 1;
+              return (value as (args: unknown) => unknown)(input);
+            };
+            return true;
+          }
+          if (prop === "applyHistoryBurnInThresholdInitialization" && typeof value === "function") {
+            proxyTarget[prop] = function (input: unknown) {
+              (window as any).__historyControlsHostThresholdInitCallCount =
+                Number((window as any).__historyControlsHostThresholdInitCallCount || 0) + 1;
               return (value as (args: unknown) => unknown)(input);
             };
             return true;
@@ -144,13 +153,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const snapshot = await page.evaluate(() => ({
       hasRuntime:
         Boolean((window as any).CoreHistoryControlsHostRuntime?.applyHistoryModeFilterInitialization) &&
+        Boolean((window as any).CoreHistoryControlsHostRuntime?.applyHistoryBurnInThresholdInitialization) &&
         Boolean((window as any).CoreHistoryControlsHostRuntime?.bindHistoryControls),
       initCallCount: Number((window as any).__historyControlsHostInitCallCount || 0),
+      thresholdInitCallCount: Number((window as any).__historyControlsHostThresholdInitCallCount || 0),
       bindCallCount: Number((window as any).__historyControlsHostBindCallCount || 0)
     }));
 
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.initCallCount).toBeGreaterThan(0);
+    expect(snapshot.thresholdInitCallCount).toBeGreaterThan(0);
     expect(snapshot.bindCallCount).toBeGreaterThan(0);
   });
 

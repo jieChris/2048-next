@@ -13,8 +13,16 @@ on:
 
 jobs:
   smoke:
+    name: Smoke (${{ matrix.suite }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - history
+          - index-ui
+          - pages
 
     steps:
       - name: Checkout
@@ -33,12 +41,37 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run smoke tests
-        run: npm run test:smoke
+        run: npm run test:smoke:${{ matrix.suite }}
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: playwright-report
+          name: playwright-report-${{ matrix.suite }}
+          path: |
+            playwright-report
+            test-results
           retention-days: 14
+
+  release-ready:
+    name: Release Ready
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release readiness
+        run: npm run verify:release-ready
+
+      - name: Report refactor progress snapshot
+        run: npm run report:refactor-progress

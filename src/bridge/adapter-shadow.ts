@@ -33,6 +33,7 @@ export interface AdapterSessionParityReport {
   schemaVersion: 2;
   modeKey: string;
   adapterMode: "legacy-bridge" | "core-adapter";
+  sessionId: string | null;
   hasParityState: boolean;
   hasSnapshot: boolean;
   counters: AdapterParityCounters;
@@ -62,6 +63,9 @@ export interface AdapterParityABDiffSummary {
   modeKey: string;
   hasLegacyReport: boolean;
   hasCoreReport: boolean;
+  legacySessionId: string | null;
+  coreSessionId: string | null;
+  isSessionMatch: boolean | null;
   comparable: boolean;
   comparedAt: number;
   legacyScore: number | null;
@@ -125,6 +129,21 @@ function normalizeReport(
   if (!report || typeof report !== "object") return null;
   if (report.adapterMode !== expectedAdapterMode) return null;
   return report;
+}
+
+function normalizeSessionId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function resolveSnapshotSessionId(snapshot: Record<string, unknown> | null): string | null {
+  if (!snapshot) return null;
+  const direct = normalizeSessionId(snapshot.sessionId);
+  if (direct) return direct;
+  const lastMoveResult = snapshot.lastMoveResult;
+  if (!isPlainObject(lastMoveResult)) return null;
+  return normalizeSessionId(lastMoveResult.sessionId);
 }
 
 function toDelta(
@@ -239,11 +258,13 @@ export function buildAdapterSessionParityReport(
     (snapshot && typeof snapshot.adapterMode === "string" ? snapshot.adapterMode : null) ||
       input.adapterMode
   );
+  const sessionId = resolveSnapshotSessionId(snapshot);
 
   return {
     schemaVersion: 2,
     modeKey: modeKey,
     adapterMode: adapterMode,
+    sessionId: sessionId,
     hasParityState: !!parity,
     hasSnapshot: !!snapshot,
     counters: counters,
@@ -268,11 +289,18 @@ export function buildAdapterParityABDiffSummary(
   const legacyReport = normalizeReport(input.legacyBridgeReport, "legacy-bridge");
   const coreReport = normalizeReport(input.coreAdapterReport, "core-adapter");
   const modeKey = normalizeModeKey(input.modeKey || coreReport?.modeKey || legacyReport?.modeKey);
-  const comparable =
+  const legacySessionId = normalizeSessionId(legacyReport?.sessionId);
+  const coreSessionId = normalizeSessionId(coreReport?.sessionId);
+  const isSessionMatch =
+    legacySessionId === null || coreSessionId === null
+      ? null
+      : legacySessionId === coreSessionId;
+  const comparableByMode =
     !!legacyReport &&
     !!coreReport &&
     normalizeModeKey(legacyReport.modeKey) === normalizeModeKey(coreReport.modeKey) &&
     normalizeModeKey(legacyReport.modeKey) === modeKey;
+  const comparable = comparableByMode && isSessionMatch === true;
   const scoreDelta = comparable
     ? toDelta(legacyReport?.lastScoreFromSnapshot, coreReport?.lastScoreFromSnapshot)
     : null;
@@ -288,6 +316,9 @@ export function buildAdapterParityABDiffSummary(
     modeKey: modeKey,
     hasLegacyReport: !!legacyReport,
     hasCoreReport: !!coreReport,
+    legacySessionId: legacySessionId,
+    coreSessionId: coreSessionId,
+    isSessionMatch: isSessionMatch,
     comparable: comparable,
     comparedAt: Date.now(),
     legacyScore: legacyReport?.lastScoreFromSnapshot ?? null,

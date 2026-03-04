@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
+  resolveIndexUiRuntimeContracts,
+  resolveIndexUiRuntimeContractsCompat,
   resolveIndexUiCoreRuntimeContracts,
   resolveIndexUiHomeGuideRuntimeContracts,
   resolveIndexUiModalRuntimeContracts
@@ -304,6 +306,65 @@ function createCoreRuntimeContext() {
 }
 
 describe("bootstrap index ui runtime contract", () => {
+  it("resolves runtime contracts from compat helper via aggregate entry", () => {
+    const resolveIndexUiRuntimeContracts = vi.fn(() => ({
+      modalContracts: { id: "modal" },
+      homeGuideContracts: { id: "guide" },
+      coreContracts: { id: "core" }
+    }));
+    const runtimeLike = { resolveIndexUiRuntimeContracts };
+    const windowLike = { id: "window-like" };
+
+    const contracts = resolveIndexUiRuntimeContractsCompat(runtimeLike, windowLike);
+
+    expect(resolveIndexUiRuntimeContracts).toHaveBeenCalledWith(windowLike);
+    expect(contracts.modalContracts).toEqual({ id: "modal" });
+    expect(contracts.homeGuideContracts).toEqual({ id: "guide" });
+    expect(contracts.coreContracts).toEqual({ id: "core" });
+  });
+
+  it("resolves runtime contracts from compat helper via legacy entries", () => {
+    const resolveIndexUiModalRuntimeContracts = vi.fn(() => ({ id: "modal" }));
+    const resolveIndexUiHomeGuideRuntimeContracts = vi.fn(() => ({ id: "guide" }));
+    const resolveIndexUiCoreRuntimeContracts = vi.fn(() => ({ id: "core" }));
+    const runtimeLike = {
+      resolveIndexUiModalRuntimeContracts,
+      resolveIndexUiHomeGuideRuntimeContracts,
+      resolveIndexUiCoreRuntimeContracts
+    };
+    const windowLike = { id: "window-like" };
+
+    const contracts = resolveIndexUiRuntimeContractsCompat(runtimeLike, windowLike);
+
+    expect(resolveIndexUiModalRuntimeContracts).toHaveBeenCalledWith(windowLike);
+    expect(resolveIndexUiHomeGuideRuntimeContracts).toHaveBeenCalledWith(windowLike);
+    expect(resolveIndexUiCoreRuntimeContracts).toHaveBeenCalledWith(windowLike);
+    expect(contracts.modalContracts).toEqual({ id: "modal" });
+    expect(contracts.homeGuideContracts).toEqual({ id: "guide" });
+    expect(contracts.coreContracts).toEqual({ id: "core" });
+  });
+
+  it("throws when compat helper runtime entries are missing", () => {
+    expect(() => resolveIndexUiRuntimeContractsCompat({}, { id: "window-like" })).toThrowError(
+      "CoreIndexUiRuntimeContractRuntime is required"
+    );
+  });
+
+  it("resolves aggregated index ui runtime contracts bundle", () => {
+    const context = {
+      ...createModalRuntimeContext(),
+      ...createHomeGuideRuntimeContext(),
+      ...createCoreRuntimeContext()
+    };
+    const contracts = resolveIndexUiRuntimeContracts(context);
+
+    expect(typeof contracts.modalContracts.replayModalRuntime.applyReplayModalOpen).toBe("function");
+    expect(typeof contracts.homeGuideContracts.homeGuideRuntime.buildHomeGuideSteps).toBe("function");
+    expect(typeof contracts.coreContracts.indexUiStartupHostRuntime.applyIndexUiStartup).toBe(
+      "function"
+    );
+  });
+
   it("resolves modal runtime contracts from window context", () => {
     const contracts = resolveIndexUiModalRuntimeContracts(createModalRuntimeContext());
     expect(typeof contracts.replayModalRuntime.applyReplayModalOpen).toBe("function");

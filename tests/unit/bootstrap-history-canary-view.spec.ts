@@ -61,7 +61,7 @@ describe("bootstrap history canary view", () => {
       gateClass: "history-burnin-gate-warn",
       gateText: "legacy-bridge 生效",
       effectiveModeText: "-",
-      modeSourceText: "默认回退",
+      modeSourceText: "默认回退（core-adapter）",
       forceLegacyText: "关闭",
       forceSourceText: "-",
       storedDefaultText: "-",

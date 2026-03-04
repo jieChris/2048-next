@@ -13,30 +13,71 @@ function asKey(value: unknown): string | null {
   return typeof value === "string" && value ? value : null;
 }
 
-export function readHistoryStorageValue(storage: unknown, key: unknown): string | null {
-  const target = asStorageLike(storage);
-  const storageKey = asKey(key);
-  if (!target || !storageKey || typeof target.getItem !== "function") return null;
+function resolveGlobalStorageLike(): StorageLike | null {
+  if (!globalThis || typeof globalThis !== "object") return null;
+  const scope = globalThis as unknown as { localStorage?: unknown };
+  return asStorageLike(scope.localStorage);
+}
+
+function resolveReadStorageInput(storageOrKey: unknown, keyMaybe?: unknown): {
+  target: StorageLike;
+  storageKey: string;
+} | null {
+  const explicitTarget = asStorageLike(storageOrKey);
+  const explicitKey = asKey(keyMaybe);
+  if (explicitTarget && explicitKey) {
+    return { target: explicitTarget, storageKey: explicitKey };
+  }
+
+  const fallbackTarget = resolveGlobalStorageLike();
+  const fallbackKey = asKey(storageOrKey);
+  if (!fallbackTarget || !fallbackKey) return null;
+  return { target: fallbackTarget, storageKey: fallbackKey };
+}
+
+function resolveWriteStorageInput(storageOrKey: unknown, keyOrValue: unknown, valueMaybe?: unknown): {
+  target: StorageLike;
+  storageKey: string;
+  value: unknown;
+} | null {
+  const explicitTarget = asStorageLike(storageOrKey);
+  const explicitKey = asKey(keyOrValue);
+  if (explicitTarget && explicitKey) {
+    return { target: explicitTarget, storageKey: explicitKey, value: valueMaybe };
+  }
+
+  const fallbackTarget = resolveGlobalStorageLike();
+  const fallbackKey = asKey(storageOrKey);
+  if (!fallbackTarget || !fallbackKey) return null;
+  return { target: fallbackTarget, storageKey: fallbackKey, value: keyOrValue };
+}
+
+export function readHistoryStorageValue(storageOrKey: unknown, keyMaybe?: unknown): string | null {
+  const resolved = resolveReadStorageInput(storageOrKey, keyMaybe);
+  if (!resolved || typeof resolved.target.getItem !== "function") return null;
   try {
-    return target.getItem(storageKey);
+    return resolved.target.getItem(resolved.storageKey);
   } catch (_error) {
     return null;
   }
 }
 
-export function writeHistoryStorageValue(storage: unknown, key: unknown, value: unknown): boolean {
-  const target = asStorageLike(storage);
-  const storageKey = asKey(key);
-  if (!target || !storageKey) return false;
+export function writeHistoryStorageValue(
+  storageOrKey: unknown,
+  keyOrValue: unknown,
+  valueMaybe?: unknown
+): boolean {
+  const resolved = resolveWriteStorageInput(storageOrKey, keyOrValue, valueMaybe);
+  if (!resolved) return false;
 
   try {
-    if (value === null || value === undefined || value === "") {
-      if (typeof target.removeItem !== "function") return false;
-      target.removeItem(storageKey);
+    if (resolved.value === null || resolved.value === undefined || resolved.value === "") {
+      if (typeof resolved.target.removeItem !== "function") return false;
+      resolved.target.removeItem(resolved.storageKey);
       return true;
     }
-    if (typeof target.setItem !== "function") return false;
-    target.setItem(storageKey, String(value));
+    if (typeof resolved.target.setItem !== "function") return false;
+    resolved.target.setItem(resolved.storageKey, String(resolved.value));
     return true;
   } catch (_error) {
     return false;

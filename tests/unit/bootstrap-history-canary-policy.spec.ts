@@ -92,6 +92,9 @@ describe("bootstrap history canary policy", () => {
     expect(resolveCanaryPolicyActionNotice("emergency_rollback")).toBe(
       "已开启强制回滚：legacy-bridge"
     );
+    expect(resolveCanaryPolicyActionNotice("reset_policy")).toBe(
+      "已重置策略到基线（默认回退 core-adapter、无强制回滚）"
+    );
     expect(resolveCanaryPolicyActionNotice("unknown")).toBe("策略已更新");
   });
 });

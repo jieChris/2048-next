@@ -520,6 +520,46 @@
     };
   }
 
+  function resolveIndexUiRuntimeContractsCompat(runtimeLike, windowLike) {
+    var runtime = toRecord(runtimeLike);
+    var resolveBundle = asFunction(runtime.resolveIndexUiRuntimeContracts);
+    if (resolveBundle) {
+      var bundle = toRecord(resolveBundle(windowLike));
+      if (
+        isRecord(bundle.modalContracts) &&
+        isRecord(bundle.homeGuideContracts) &&
+        isRecord(bundle.coreContracts)
+      ) {
+        return {
+          modalContracts: bundle.modalContracts,
+          homeGuideContracts: bundle.homeGuideContracts,
+          coreContracts: bundle.coreContracts
+        };
+      }
+    }
+
+    var resolveModalContracts = asFunction(runtime.resolveIndexUiModalRuntimeContracts);
+    var resolveHomeGuideContracts = asFunction(runtime.resolveIndexUiHomeGuideRuntimeContracts);
+    var resolveCoreContracts = asFunction(runtime.resolveIndexUiCoreRuntimeContracts);
+    if (!resolveModalContracts || !resolveHomeGuideContracts || !resolveCoreContracts) {
+      throw new Error("CoreIndexUiRuntimeContractRuntime is required");
+    }
+
+    return {
+      modalContracts: toRecord(resolveModalContracts(windowLike)),
+      homeGuideContracts: toRecord(resolveHomeGuideContracts(windowLike)),
+      coreContracts: toRecord(resolveCoreContracts(windowLike))
+    };
+  }
+
+  function resolveIndexUiRuntimeContracts(windowLike) {
+    return {
+      modalContracts: resolveIndexUiModalRuntimeContracts(windowLike),
+      homeGuideContracts: resolveIndexUiHomeGuideRuntimeContracts(windowLike),
+      coreContracts: resolveIndexUiCoreRuntimeContracts(windowLike)
+    };
+  }
+
   global.CoreIndexUiRuntimeContractRuntime = global.CoreIndexUiRuntimeContractRuntime || {};
   global.CoreIndexUiRuntimeContractRuntime.resolveIndexUiModalRuntimeContracts =
     resolveIndexUiModalRuntimeContracts;
@@ -527,4 +567,8 @@
     resolveIndexUiHomeGuideRuntimeContracts;
   global.CoreIndexUiRuntimeContractRuntime.resolveIndexUiCoreRuntimeContracts =
     resolveIndexUiCoreRuntimeContracts;
+  global.CoreIndexUiRuntimeContractRuntime.resolveIndexUiRuntimeContractsCompat =
+    resolveIndexUiRuntimeContractsCompat;
+  global.CoreIndexUiRuntimeContractRuntime.resolveIndexUiRuntimeContracts =
+    resolveIndexUiRuntimeContracts;
 })(typeof window !== "undefined" ? window : undefined);

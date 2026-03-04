@@ -12,21 +12,728 @@
   - `baseline-legacy-import`（已存在）
   - 里程碑标签：`refactor-m1`、`refactor-m2`、...
 
-## 2.1) 当前收敛快照（2026-02）
+## 2.1) 当前收敛快照（2026-03）
+- 当前状态总览（2026-03-04）：
+  - 收口目标达成：
+    - `js/index_ui.js`：`85` 行（目标 `<=220`）
+    - `js/game_manager.js`：`10` 行（目标 `<3800`）
+    - `tests/smoke/pages.smoke.spec.ts`：已移除（已拆分为多 smoke 规格）
+    - `js/core_game_manager_*_runtime.js`：已无 `>=20` 行函数热点
+  - 门禁状态：
+    - `npm run verify:iterate`：PASS
+    - `npm run verify:refactor`：PASS
+    - `npm run verify:submit-ready`：PASS（含 burn-in/canary/adapter、full smoke、build、release-ready）
+  - 当前阶段判断：
+    - 已完成 M2/M3 的主要目标与 M4 的绝大部分实现
+    - 目前处于 M5（切换与 burn-in）与 M6（发布收口优化）交界阶段
+
+- 剩余工作（按优先级）：
+  1. M5 运行期验证（高优先）：
+     - 持续采集 burn-in 窗口数据，按阈值确认 `core-adapter` 默认路径稳定
+     - 执行并留档 rollback drill（强制 legacy -> 恢复 canary）
+  2. M6 收口发布（高优先）：
+     - 清理过渡期诊断冗余分支（保留必要回滚链路）
+     - 压缩并归档超长“推进记录”，保留里程碑级摘要，降低文档维护成本
+  3. CI/提交流程优化（中优先）：
+     - 固化“迭代检查 vs 提交前全量检查”节奏（已具备脚本，待流程化执行）
+     - 继续保持 commit split 批次提交，避免混合 PR
+
+- 预计完成周期（基于当前状态）：
+  - 代码结构收口：约 `3-5` 个工作日
+  - burn-in 观察窗口：约 `7` 天（与会话量达标绑定）
+  - 完整重构闭环（含观测与发布文档）：约 `1.5-2.5` 周
+
+- 本轮增量（2026-03-01）：
+  - 补充（2026-03-03）：
+    - 提交分批规则已同步：`scripts/commit-batch-defs.mjs` 已纳入 `scripts/refactor-closure-audit.mjs`，`npm run report:commit-split-check` 恢复 PASS（当前变更已可按 batch-1 + batch-4 分批提交）。
+    - `index_ui` 壳层继续减薄（无行为变更）：
+      - 删除入口中与 host 默认值重复的常量注入（practice/mobile/home-guide 默认配置下沉到 host 默认参数）
+      - 统一 `windowLike` 解析与复用，减少重复环境判定样板
+      - 删除 `applyIndexUiPageBootstrap` 调用中的 `nowMs/touchGuardWindowMs` 重复注入，改为 host 默认值兜底
+      - 新增 `resolveIndexUiRuntimeContracts` 聚合契约解析（保留旧三函数兼容）；`index_ui.js` 优先走聚合入口，缺失时回退旧路径
+      - 当前 `js/index_ui.js` 行数稳定在 `85`（入口样板维持低位，兼容分支覆盖旧 smoke 契约）
+      - 已完成回归：`npm run test:unit` 与 `npm run test:smoke:index-ui` 全绿
+    - 新增收口审计脚本：`scripts/refactor-closure-audit.mjs`（配套命令 `npm run audit:refactor-closure`）：
+      - 检查项一：`core_game_manager_*_runtime.js` 是否存在 `>19` 行函数
+      - 检查项二：runtime helper 函数名跨文件重复定义
+      - 检查项三：`index_ui.js` / `game_manager.js` / `pages.smoke.spec.ts` 三个收口目标是否达标
+    - 当前执行结果：`npm run audit:refactor-closure` 全绿。
+    - 提交前收口检查已完成：
+      - 未使用函数快速扫描（基于 `js/tests` token 交叉计数）未发现仅定义未引用的 runtime 函数
+      - 函数名重复定义扫描（去重文件清单后）未发现重复定义
+      - 热点扫描结果：`core_game_manager_*_runtime.js` 已无 `>=20` 行函数
+    - 已完成全门禁回归：`npm run verify:refactor` 全绿（audit + 170 unit files/893 tests + 100 smoke + build）。
+    - `core_game_manager_replay_helpers_runtime.js` 已完成最后一处热点压缩（无行为变更）：
+      - `tryParseJsonV3ReplayEnvelope` 去除局部变量样板，配合上一轮改造后已降到 <20 行
+      - 全量热点扫描结果：`js/core_game_manager_*_runtime.js` 下已无 `>=20` 行函数
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + core unit + runtime-contract smoke + play-replay smoke）。
+    - `core_game_manager_replay_helpers_runtime.js` 已完成一轮集中收敛（无行为变更）：
+      - 压缩函数：`decodeLegacyReplayEnvelope`、`importReplay`、`resolveReplayStepExecutionPlan`、`resolveReplayExecutionFallbackAction`、`resolveReplayExecutionAction`、`detectMode`、`decodeReplay128`、`decodeBoardV4`
+      - 新增复用 helper：`normalizeReplayImportOptionalString`，替代 `tryParseJsonV3ReplayEnvelope` 内联闭包
+      - 当前 replay 热点扫描结果：已全部降到 <20 行
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + core unit + runtime-contract smoke + play-replay smoke）。
+    - `core_game_manager_saved_state_helpers_runtime.js` / `core_game_manager_move_input_helpers_runtime.js` / `core_game_manager_replay_helpers_runtime.js` 已完成本轮热点收敛（无行为变更）：
+      - `normalizeCappedRepeatLegendClasses`、`processMoveTraversalCell` 已压缩为短路径返回
+      - `recordSpawnValue` 改为“core 成功则不走 fallback”的单分支写法，刷新 UI 时机保持不变
+      - `createLegacyReplayV2EntryFromCode` 与 `insertCustomTile` 删除冗余块结构，语义不变
+    - 当前 >=20 行热点已全部集中于 replay 主链（导入/解码/执行），非 replay 侧已清空。
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + core unit + runtime-contract smoke + play-replay smoke）。
+    - `core_game_manager_saved_state_helpers_runtime.js` / `core_game_manager_move_input_helpers_runtime.js` / `core_game_manager_bindings_runtime.js` 已完成本轮低风险样板收敛（无行为变更）：
+      - `collectSavedTimerFixedRowsState/collectSavedDynamicTimerRowsState` 归一化为紧凑采集路径，字段输出保持不变
+      - `appendPostMoveRecordArtifacts` 收敛为单层分支，move/replay 记录语义不变
+      - `bindRuntimeForwardsBeforeAccessorWiring` 的 plain-forward 绑定列表改为紧凑声明，绑定顺序不变
+    - 当前热点（非 replay 主链）已进一步收敛到仅剩：
+      - `normalizeCappedRepeatLegendClasses`（21 行）
+      - `processMoveTraversalCell`（20 行）
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + core unit + runtime-contract smoke + play-replay smoke）。
+    - `core_game_manager_bindings_runtime.js` / `core_game_manager_runtime_accessor_helpers_runtime.js` / `core_game_manager_move_input_helpers_runtime.js` / `core_game_manager_undo_stats_helpers_runtime.js` 已完成本轮样板压缩（无行为变更）：
+      - `bindCappedUiBindings`、`bindUndoAndStatsBindings` 去除中间数组变量，改为直接 batch 绑定
+      - `getAdapterSessionParitySnapshot` 与 bridge 快照读取路径收敛为更直接的 fallback 分支
+      - `flushPendingMoveInput` / `isGameTerminated` 减少重复 return 分支，节流与终局判定语义保持不变
+      - `resolveUndoStackEntrySourceByCore` / `resolveUndoRestoreTileByCore` 收敛为单表达式回退
+      - `persistSavedPayloadToStorages` / `mountStatsPanelToggleButton` 去除局部样板（调用顺序不变）
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + core unit + runtime-contract smoke + play-replay smoke）。
+    - `core_game_manager_runtime_accessor_helpers_runtime.js` 已完成 adapter move 发布链路去壳（无行为变更）：
+      - 内联并删除 6 个单调用点函数：`resolveAdapterMoveMetaInput`、`resolveAdapterBridgeModeKey`、`resolveAdapterBridgeMode`、`syncAdapterSnapshotFromMoveResult`、`refreshAdapterParityReportSnapshot`、`refreshAdapterParityAbDiffSnapshot`
+      - `publishAdapterMoveResult` 直接承接入参归一化、snapshot 写回与 parity 报告刷新流程，保持 bridge 调用顺序与 fallback 语义不变
+      - 继续内联并删除单点字符串判定 helper：`isNonEmptyString`，`resolveLegacyAdapterBridgeMethodOnBridge` 改为直接本地判定
+    - `core_game_manager_undo_stats_helpers_runtime.js` 已完成纯转发 helper 清理（无行为变更）：
+      - 删除 `resolveUndoPrevPayloadSource`
+      - `computeUndoRestoreState/computeUndoRestorePayload` 调用点改为直接 `prev || {}`
+    - `core_game_manager_bindings_runtime.js` 已完成 capped/timer-row 绑定壳内联（无行为变更）：
+      - 删除 `bindGameManagerPrototypeCappedStateFieldGetter` / `bindGameManagerPrototypeElementByIdResolver` 及其 batch wrapper
+      - `isCappedMode/getCappedTargetValue/isProgressiveCapped64Mode/getTimerRowEl` 改为在 `bindGameManagerPrototypeRuntime` 内直接绑定
+      - 继续内联并删除 `forEachPrototypeBindingDef`，两个 batch 绑定器改为本地循环（语义不变）
+    - `core_game_manager_runtime_accessor_helpers_runtime.js` 已完成 accessor-def 校验壳内联（无行为变更）：
+      - 删除 `isValidCoreRuntimeAccessorDef`
+      - `registerCoreRuntimeAccessors` 改为直接执行 `Array.isArray + length>=4` 判定
+    - `core_game_manager_runtime_accessor_helpers_runtime.js` 已完成对象归一化壳内联（无行为变更）：
+      - 删除 `normalizeRuntimeAccessorObject`
+      - `resolveLegacyAdapterBridgeForManager` 与 `publishAdapterMoveResult` 改为直接使用 `isRuntimeAccessorObject` 判定并回退到 `null/{}`，语义保持不变
+    - `core_game_manager_bindings_runtime.js` 已完成 accessor-def 单调用 helper 内联（无行为变更）：
+      - 删除 `createStandardCoreRuntimeAccessorDef`
+      - `createGameManagerCoreRuntimeAccessorDefs` 直接构造标准 runtime accessor 定义
+    - `core_game_manager_runtime_accessor_helpers_runtime.js` 已完成 bridge method 解析壳收敛（无行为变更）：
+      - 删除 `resolveLegacyAdapterBridgeMethodOnBridge`
+      - `resolveLegacyAdapterBridgeMethod` 与 `callLegacyAdapterBridgeMethodOnBridge` 直接承接 bridge/method 判定；`writeStoredAdapterParityReport` 路径改为直接尝试调用并由 `available` 结果兜底
+    - `core_game_manager_bindings_runtime.js` 已完成 runtime accessor defs 入口内联（无行为变更）：
+      - 删除 `createGameManagerCoreRuntimeAccessorDefs`
+      - `bindGameManagerPrototypeRuntime` 内直接组装 `GAME_MANAGER_CORE_RUNTIME_ACCESSOR_DEFS`（含 storage + 标准 runtime keys）
+    - `core_game_manager_runtime_accessor_helpers_runtime.js` 已完成 bridge resolver 参数收敛（无行为变更）：
+      - `resolveLegacyAdapterBridgeForManager` 移除可选 `windowLike` 参数，统一内部读取 `manager.getWindowLike()`
+      - `resolveLegacyAdapterBridgeMethod` 同步去除中间 `windowLike` 变量，调用链更直接
+    - `core_game_manager_runtime_accessor_helpers_runtime.js` 已完成 parity snapshot 单调用 helper 内联（无行为变更）：
+      - 删除 `cacheAdapterSessionParitySnapshot`
+      - `getAdapterSessionParitySnapshot` 直接承接 `safeClonePlain + bridge cache` 写回逻辑
+    - `core_game_manager_saved_state_helpers_runtime.js` 已完成 pathname 提取样板收敛（无行为变更）：
+      - 新增 `resolveSavedStatePathname(windowLike)`
+      - `shouldUseSavedGameState` 改为统一通过 helper 解析 pathname，保持 `replay.html` 排除语义不变
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + core unit + runtime-contract smoke + play-replay smoke）
+    - `core_game_manager_runtime_call_helpers_runtime.js` 已完成 runtime 调用入口去重（无行为变更）：
+      - 新增 `resolveRuntimeCallResult`，统一 `resolveCorePayloadCallWith/resolveCoreArgsCallWith/callCoreStorageRuntime` 的 runtime 方法存在性校验与参数数组归一化样板
+      - 保持现有 fallback 语义不变：`payload===undefined` 仍回退 `{}`，`runtimeArgs` 非数组仍回退 `[]`
+    - `core_game_manager_session_init_helpers_runtime.js` 已完成里程碑槽位映射 fallback 去重（无行为变更）：
+      - 新增 `buildTimerMilestoneSlotByValueMap`，替换 `initializeTimerMilestones` 内联重复循环
+      - 保持 `TIMER_SLOT_IDS` 顺序与正整数里程碑过滤语义不变
+    - 已完成完整门禁回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build，100 smoke / 893 unit 通过）
+    - `core_game_manager_replay_helpers_runtime.js` 已完成对象守卫样板收敛（无行为变更）：
+      - 新增 `isReplayRecordObject/normalizeReplayRecordObject`
+      - `serializeReplayV3/tryAutoSubmitOnGameOver/applyReplayImportActions/importReplay/recordSpawnValue` 的对象判定改为统一 helper，保持宽松 object 语义（不收紧数组兼容）
+    - `core_game_manager_mode_rules_helpers_runtime.js` 已完成 non-array 对象判定收敛（无行为变更）：
+      - 新增 `isModeRulesNonArrayObject`
+      - `normalizeSpecialRules/resolveModeConfig` 两处 `isModeRulesRecordObject && !Array.isArray` 判定改为统一 helper
+    - `core_game_manager_move_input_helpers_runtime.js` 已完成 move-state 对象归一化收敛（无行为变更）：
+      - `applyPostMoveScore/resolvePostMoveLifecycle/buildMovePlan/updateIpsInputCountAfterMove/applyProgressiveMergeMilestones` 的 `coreValue || {}` 分支改为统一 `normalizeMoveInputRecordObject`
+      - 保持原有宽松 object 语义与 fallback 行为不变，仅减少局部样板
+    - `core_game_manager_panel_timer_helpers_runtime.js` 已完成 panel-timer 对象归一化收敛（无行为变更）：
+      - 新增 `normalizePanelTimerRecordObject`
+      - `cloneResolvedCappedModeState/resolveCappedModeState/resolveProgressiveCapped64UnlockedState` 的对象判定分支统一改为 helper
+    - `core_game_manager_saved_state_helpers_runtime.js` 已完成 saved-state 对象归一化收敛（无行为变更）：
+      - 新增 `normalizeSavedStateRecordObject`
+      - `saveGameState/createSavedDynamicTimerRow/buildSavedGameStatePayload/persistSavedGameStatePayload/tryRestoreLatestSavedState/writeWindowNameSavedPayload` 的局部对象判定样板统一改为 helper
+    - `core_game_manager_restart_setup_helpers_runtime.js` 已完成 setup options/map 对象判定收敛（无行为变更）：
+      - `runSetupStateInitialization` 的 `setupOptions` 判定改为 `isNonArrayObject`
+      - `timerModuleViewMap` 读取分支改为统一 non-array object 判定
+    - `core_game_manager_stats_display_helpers_runtime.js` 已完成 stats-display 对象归一化收敛（无行为变更）：
+      - 新增 `normalizeStatsDisplayRecordObject`
+      - `resolveIpsDisplayText/actuate` 的 `coreValue || {}` 与 `stepStats` 对象判定分支统一改为 helper
+    - `core_game_manager_stats_ui_helpers_runtime.js` 已完成 host-state 样板清理（无行为变更）：
+      - 删除 `hostElements` 的重复对象判定中间变量，直接消费构造后的 `hostElements` 字段
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + core unit + runtime-contract smoke + play-replay smoke）。
+    - `core_game_manager_stats_display_helpers_runtime.js` / `core_game_manager_session_init_helpers_runtime.js` / `core_game_manager_mode_rules_helpers_runtime.js` 已完成热点函数收敛（无行为变更）：
+      - `getActualSecondaryRate` 拆分为参数构造、总出生数解析与 fallback 文案计算三个稳定步骤，移除内联深层嵌套
+      - `initializeTimerMilestones` 拆分为“里程碑读取 / slot 映射解析 / legend DOM 写回”三段，主流程改为编排函数
+      - `getAvailableCells`、`tileMatchesAvailable` 与 `pickSpawnValue` 新增 resolve-args / core normalize / fallback helper，减少单函数复杂度
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + unit + runtime-contract smoke + play-replay smoke）。
+    - `core_game_manager_mode_rules_helpers_runtime.js` / `core_game_manager_static_runtime.js` 已完成第二轮热点收敛（无行为变更）：
+      - `normalizeModeConfig` 拆分为 payload 构造、core 值归一化、fallback 默认化三个步骤
+      - `buildTraversals` 拆分为 args 构造、core 归一化、fallback 轴构造三个步骤
+      - `applyGameManagerStaticConfiguration` 拆分为 replay/storage/mode 三段静态配置装配，移除内联大块常量赋值
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + unit + runtime-contract smoke + play-replay smoke）。
+    - `core_game_manager_setup_timer_ui_helpers_runtime.js` / `core_game_manager_move_input_helpers_runtime.js` 已完成第三轮热点收敛（无行为变更）：
+      - `applyCappedRowVisibilityPlanFromCore` 拆分为 payload 构造、plan 应用与 progressive reset 三段 helper
+      - `finalizeSuccessfulMove` 拆分为 post-move record 写入、lifecycle 执行、adapter 发布三段 helper
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + unit + runtime-contract smoke + play-replay smoke）。
+    - `core_game_manager_static_runtime.js` / `core_game_manager_undo_stats_helpers_runtime.js` / `core_game_manager_mode_rules_helpers_runtime.js` 已完成第四轮热点收敛（无行为变更）：
+      - `createGameManagerFallbackPow2BoardModeConfigs` 拆分为 3x3 / 4x3 / 4x2 子 map + merge 装配
+      - `computeUndoRestorePayload` 拆分为 payload 构造、fallback score/tiles 解析与 fallback payload 组装
+      - `nextFibonacci` 拆分为 core 值归一化 + fallback 计算 helper
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + unit + runtime-contract smoke + play-replay smoke）。
+    - 当前最长函数 Top 已更新：
+      - 35 行：`decodeReplay128`
+      - 34 行：`serializeReplayV3` / `computePostUndoRecord` / `applySpecialRulesStateFromCore`
+    - `core_game_manager_mode_rules_helpers_runtime.js` / `core_game_manager_stats_display_helpers_runtime.js` 已完成第五轮热点收敛（无行为变更）：
+      - `applySpecialRulesStateFromCore` 拆分为 args 构造 + state 快照应用 helper
+      - `resolveIpsDisplayText` 拆分为 payload 构造 + core 文案归一化 + fallback 文案计算 helper
+      - 为通过 `game-manager-audit` 体积护栏，`mode_rules_helpers` 已压回上限内（<=1200 行）
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + unit + runtime-contract smoke + play-replay smoke）。
+    - 最新最长函数 Top 已更新：
+      - 35 行：`decodeReplay128`
+      - 34 行：`serializeReplayV3` / `computePostUndoRecord`
+    - `core_game_manager_move_input_helpers_runtime.js` 已完成第六轮热点收敛（无行为变更）：
+      - `flushPendingMoveInput` 拆分为 pending 判定、flush 重新调度、延迟执行三个 helper
+      - 保持节流语义不变：有新输入时仅消费最新方向，无新输入时按 wait 窗口执行
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + unit + runtime-contract smoke + play-replay smoke）。
+    - 最新最长函数 Top 已更新：
+      - 33 行：`recordSpawnValue` / `encodeBoardV4` / `decodeReplayV4EscapedAction` / `bindGameplayBindings`
+      - `flushPendingMoveInput` 已退出 Top 列表
+    - `core_game_manager_replay_helpers_runtime.js` 已完成第七轮热点收敛（无行为变更）：
+      - `serializeReplayV3` 拆分为默认 session 构造、source 归一化、输出对象构造三个 helper
+      - `decodeReplay128` 拆分为 core 值归一化、ASCII 解码、fallback 解码三个 helper
+      - `computePostUndoRecord` 拆分为 payload 构造 + fallback record 构造 helper
+      - `resolveReplaySeekRestartPlan` 拆分为 payload 构造 + fallback 计划构造 helper
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + unit + runtime-contract smoke + play-replay smoke）。
+    - 最新最长函数 Top 已更新：
+      - 33 行：`encodeBoardV4` / `decodeReplayV4EscapedAction` / `bindGameplayBindings`
+      - 全局已无 >=34 行函数
+    - `core_game_manager_replay_helpers_runtime.js` 已完成第八轮热点收敛（无行为变更）：
+      - `recordSpawnValue` 拆分为 core args 构造、core 结果应用、fallback 计数应用三个 helper
+      - 出生计数兼容字段（`spawnTwos/spawnFours`）与 UI 刷新时机保持不变
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + unit + runtime-contract smoke + play-replay smoke）。
+    - 最新最长函数 Top 已更新：
+      - 33 行：`encodeBoardV4` / `decodeReplayV4EscapedAction` / `bindGameplayBindings`
+      - 32 行：`decodeBoardV4` / `recordCappedMergeMilestone`
+    - `core_game_manager_replay_helpers_runtime.js` 已完成第九轮热点收敛（无行为变更）：
+      - `encodeBoardV4` 拆分为 board 形状校验、单格指数解析、fallback 编码三个 helper
+      - `decodeReplayV4EscapedAction` 拆分为 escaped result 构造、practice payload 解析三个 helper
+      - `decodeBoardV4` 拆分为 encoded 校验、fallback 解码三个 helper
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + unit + runtime-contract smoke + play-replay smoke）。
+    - 最新最长函数 Top 已更新：
+      - 33 行：`bindGameplayBindings`
+      - 32 行：`recordCappedMergeMilestone`
+      - replay 侧 `encode/decode board` 与 `decode escaped action` 均已降出 Top 第一档
+    - `core_game_manager_bindings_runtime.js` 已完成第十轮热点收敛（无行为变更）：
+      - `bindGameplayBindings` 拆分为 `createGameplayLifecycleBindings` 与 `createGameplayReplayBindings` 两段绑定清单
+      - 主函数仅保留清单组装 + batch 绑定，语义与绑定顺序保持不变
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + unit + runtime-contract smoke + play-replay smoke）。
+    - 最新最长函数 Top 已更新：
+      - 32 行：`recordCappedMergeMilestone`
+      - 31 行：`resolveReplayTickBoundaryPlan` / `resolveReplaySeekRewindPlan` / `normalizeReplaySeekTargetIndex` / `buildAutoSubmitPayload`
+    - `core_game_manager_move_input_helpers_runtime.js` 已完成第十一轮热点收敛（无行为变更）：
+      - `recordCappedMergeMilestone` 拆分出 `tryRecordCappedRepeatMilestone`，统一占位行/动态行写入分支
+      - 主流程只保留 capped 判定、milestone 计数、base 里程碑快速路径与 auto-scroll 编排
+    - 已完成回归：`npm run verify:iterate` 全绿（audit + unit + runtime-contract smoke + play-replay smoke）。
+    - 最新最长函数 Top 已更新：
+      - 31 行：`resolveReplayTickBoundaryPlan` / `resolveReplaySeekRewindPlan` / `normalizeReplaySeekTargetIndex` / `buildAutoSubmitPayload` / `resolvePostMoveLifecycle` / `getVector`
+      - 全局已无 >=32 行函数
+  - 补充（2026-03-02）：
+    - `core_game_manager_undo_stats_helpers_runtime.js` 已完成 undo-ui 与 step-stats 单点壳内联（无行为变更）：
+      - 删除并内联：`resolveUndoStatsElementById`、`resolveUndoUiStateSnapshot`、`applyResolvedUndoUiState`、`resolveComputeStepStatsInput`
+      - `updateUndoUiState` 与 `computeStepStats` 直接承接核心分支逻辑，UI 与统计语义保持不变
+    - `core_game_manager_saved_state_helpers_runtime.js` 已完成 saved-state 单点工具函数内联（无行为变更）：
+      - 删除并内联：`getSavedGameStateStoragesFallback`、`resolveSavedPayloadAllowNullCoreValue`
+      - `shouldUseSavedGameState` 改为复用公共 `resolveWindowPathname`
+      - 过程中发现 `resolveWindowPathname` 被 `replay_helpers` 复用，已恢复该公共函数，避免跨文件运行时缺失
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_stats_display_helpers_runtime.js` 已完成 IPS/出率链路单点函数内联（无行为变更）：
+      - 内联并移除：`resolveIpsDurationMs`、`normalizeIpsTextFromCoreValue`、`resolveIpsDisplayTextFallback`、`applyIpsTextToTargets`、`resolveActualSecondaryRateText`
+      - `refreshIpsDisplay` 与 `getActualSecondaryRate` 直接承接 fallback 逻辑，输出文案与计算规则保持一致
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_bindings_runtime.js` / `core_game_manager_stats_display_helpers_runtime.js` 已完成 stats panel 单点中间壳收敛（无行为变更）：
+      - `updateStatsPanel` 绑定改为直接执行 `stepValues + spawnPair` 更新流程
+      - 移除 `buildStatsPanelUpdateContext` / `applyStatsPanelUpdateContext` 两个单点中间函数
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_saved_state_helpers_runtime.js` 已完成小型工具函数内联收敛（无行为变更）：
+      - 内联并移除仅低频复用的 helper：`parseSavedPayloadByRaw`、`resolveSavedStateBooleanOrUndefined`、`resolveSavedStateObjectOrUndefined`、`resolveSavedStateArrayOrUndefined`、`returnFalseValue`、`returnUndefinedValue`
+      - `tryRestoreLatestSavedState` / `tryRestoreSavedStateCandidate` 已内联候选选择与 invalid 分支处理，移除 `pickLatestSavedStateCandidate` / `handleInvalidSavedStateCandidate`
+      - 保持 saved-state 读取优先级与同时间戳优先顺序不变（full > lite > window）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_setup_timer_ui_helpers_runtime.js` 已完成 setup timer DOM 转发壳清理（无行为变更）：
+      - 删除仅转发 `resolveManagerElementById` 的本地壳：`resolveSetupTimerUiElementById`
+      - setup timer 初始化、placeholder/reset/capped overflow 等调用点已统一直接复用 env helper
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_saved_state_helpers_runtime.js` / `core_game_manager_stats_ui_helpers_runtime.js` 已完成 DOM 纯转发 helper 清理（无行为变更）：
+      - 删除 `saved_state` 中仅转发 env helper 的壳：`resolveSavedStateDocumentLike` / `resolveSavedStateElementById`
+      - 删除 `stats_ui` 中仅转发 env helper 的壳：`resolveStatsUiDocumentLike` / `resolveStatsUiElementById`
+      - 调用点统一直接使用 `resolveManagerDocumentLike` / `resolveManagerElementById`
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_move_input_helpers_runtime.js` / `core_game_manager_stats_display_helpers_runtime.js` / `core_game_manager_panel_timer_helpers_runtime.js` 已完成 DOM 纯转发 helper 清理（无行为变更）：
+      - 删除仅转发 `resolveManagerElementById/resolveManagerDocumentLike` 的本地壳：`resolveMoveInputElementById`、`resolveStatsDisplayElementById`、`resolveStatsDisplayDocumentLike`、`resolvePanelTimerElementById`、`resolvePanelTimerDocumentLike`
+      - 调用点已直接改为 env helper，减少跨层函数跳转
+      - `panel_timer` 进一步内联 `resolveActuateStepStats/syncLegacyStepStatsLabels/syncActuateStatsPanel` 到 `updateActuateStats`
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_mode_rules_helpers_runtime.js` 已完成 mode/rules normalized 中间壳精简（无行为变更）：
+      - 删除仅在本文件内使用的 3 个 wrapper：`resolveCoreModeNormalizedCallOrFallbackAllowNull`、`resolveCoreRulesNormalizedCallOrFallback`、`resolveCoreRulesNormalizedCallOrFallbackAllowNull`
+      - `getModeConfigFromCatalog / resolveTheoreticalMaxTile / normalizeSpawnTable / getTimerMilestoneValues / pickSpawnValue / nextFibonacci / getMergedValue` 改为直接使用 `resolveCorePayloadCallWith` 或 `resolveCoreArgsCallWith`
+      - `undo_stats` 与 `session_init` 的遗留跨文件调用点已同步改为直接 `resolveCoreArgsCallWith`，不再依赖 `resolveCoreRulesNormalizedCallOrFallback`
+      - `runtime_call_helpers` 当前保持 52 行；已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_runtime_call_helpers_runtime.js` 已完成 storage runtime 调用入口收敛（无行为变更）：
+      - 新增统一入口：`callCoreStorageRuntime` 与 `resolveCoreStorageCallWith`
+      - 保持对外 API 不变：`callCoreStorageRuntimeWithPayload` / `callCoreStorageRuntimeWithWindowContext` / `resolveCoreStoragePayloadCallWith` / `resolveCoreStorageWindowContextCallWith`
+      - 已通过审计护栏（`runtime_call_helpers` 行数 538，低于 550 上限）
+      - 已完成回归：`audit:game-manager`、`test:unit:core`（35 files / 248 tests）与 `test:smoke:runtime-contract` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay typed 调用模板收敛（无行为变更）：
+      - 新增 `resolveCoreReplayPayloadTypedCallOrFallback` 与 `resolveCoreReplayArgsTypedCallOrFallback`
+      - `payload boolean/numeric/string/normalized(allow-null)` 与 `args object` 路径已统一复用 typed call 模板
+      - 保持对外 API 与 runtime method 名称不变，仅减少重复调用壳
+      - 已完成回归：`audit:game-manager`、`test:unit:core`（35 files / 248 tests）与 `test:smoke:play-replay` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay args 纯转发 wrapper 清理（无行为变更）：
+      - 删除仅内部单点转发的 `resolveCoreReplayArgsStringCallOrFallback` / `resolveCoreReplayArgsNormalizedCallOrFallback` / `tryHandleCoreReplayArgsRawValue`
+      - `decodeLegacyReplay/encodeReplay128/decodeReplay128/encodeBoardV4/decodeBoardV4` 与 codec raw 入口改为直接复用通用 `resolveCoreArgs*` / `tryHandleCoreArgsRawValue`
+      - 当前文件行数 `1928`（仍低于 replay helper 护栏 2050）
+      - 已完成回归：`audit:game-manager`、`test:unit:core`（35 files / 248 tests）与 `test:smoke:play-replay` 全绿
+    - `core_game_manager_runtime_call_helpers_runtime.js` / `core_game_manager_replay_helpers_runtime.js` 已完成 replay 跨文件调用依赖下沉（无行为变更）：
+      - 将 `resolveCoreReplayTimerNormalizedCallOrFallback` / `resolveCoreReplayExecutionNumericCallOrFallback` / `resolveCoreReplayExecutionNormalizedCallOrFallback` / `tryHandleCoreReplayExecutionRawValue` 下沉到 `runtime_call_helpers`
+      - `replay_helpers` 侧移除重复定义，并将 compact codec 写入链路改为直接调用 `tryHandleCoreArgsRawValue(..., \"callCoreReplayCodecRuntime\", ...)`
+      - 目的：减少其他 helper 对 `replay_helpers` 顶部定义区的耦合，统一跨域 runtime 调用入口
+      - 当前护栏状态：`runtime_call_helpers` 行数 549（护栏 550），`replay_helpers` 行数 1887（护栏 2050）
+      - 已完成回归：`audit:game-manager`、`test:unit:core`、`test:smoke:play-replay`、`test:smoke:runtime-contract` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 payload 同签名转发 wrapper 清理（无行为变更）：
+      - 删除仅内部转发的 `resolveCoreReplayPayloadObjectCallOrFallback` / `resolveCoreReplayPayloadNormalizedCallOrFallback`
+      - 文件内调用点改为直接复用通用 `resolveCoreObjectPayloadCallOrFallback` / `resolveCoreNormalizedPayloadCallOrFallback`
+      - 目标：降低 replay helper 内部壳层深度，减少重复命名与维护面
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay 导入链路重复声明清理（无行为变更）：
+      - 移除被后置声明覆盖的重复函数：`applyStructuredReplayImport` / `applyLegacyReplayImport` / `tryApply*` / `importReplay` / `resolveReplayStepLifecyclePlan` / `finalizeReplayImportPlayback` 等
+      - 同步删除仅被重复块引用的孤立导入计划壳（`applyReplayImportPlan` 等），避免死代码继续堆积
+      - 当前文件行数降至 `1774`（较上一轮 `1887` 继续收敛，低于 2050 护栏）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 structured/legacy 导入链路单点转发内联（无行为变更）：
+      - 内联并移除仅定义一次、调用一次的导入转发函数：`applyReplayChallengeIdFromEnvelope` / `applyJsonReplayImportActions` / `startJsonReplayImportSession` / `applyV4ReplayImportActions` / `startV4ReplayImportSession` / `applyStructuredReplayImportByKind` / `finalizeStructuredReplayImport` / `applyLegacyReplayImportActions` / `startLegacyReplayImportSession`
+      - 保持导入语义不变：`json-v3/v4c` 分流、`disableSessionSync`、`restartReplaySession/restartWithSeed`、导入后 `undo policy + replay playback` 收尾顺序保持一致
+      - 当前文件行数降至 `1728`（较上一轮 `1774` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 structured import 二级分流壳内联（无行为变更）：
+      - 移除单点分流壳：`applyJsonStructuredReplayImport` / `applyV4StructuredReplayImport` / `isStructuredReplayEnvelope`
+      - `applyStructuredReplayImport` 直接完成 `kind` 判定、`json-v3/v4c` 导入与 session 启动，保持 `replayModeConfig` 缺失时“跳过导入但仍执行收尾”的既有语义
+      - 当前文件行数降至 `1711`（较上一轮 `1728` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay step 执行链最小壳内联（无行为变更）：
+      - 移除并内联单点函数：`buildReplayStepExecutionFallbackPlan` / `applyReplayStepForcedSpawn` / `executeReplayDispatchPlan` / `commitReplayStepExecution`
+      - `resolveReplayStepExecutionPlan` 与 `executePlannedReplayStep` 直接承接 fallback/dispatch/index 提交流程，保持原异常语义（未知 action 仍抛错）不变
+      - 当前文件行数降至 `1691`（较上一轮 `1711` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay 执行/调度解析壳内联（无行为变更）：
+      - 移除并内联单点函数：`resolveReplayExecutionAction` / `resolveReplayDispatchPlan`
+      - `executePlannedReplayStep` 直接承接 execution runtime 解析与 dispatch runtime 规划，fallback 分支与未知 action 抛错语义保持不变
+      - 当前文件行数降至 `1681`（较上一轮 `1691` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay 步进计划壳内联（无行为变更）：
+      - 移除并内联单点函数：`resolveReplayStepLifecyclePlan` / `resolveReplayStepExecutionPlan`
+      - `executePlannedReplayStep` 直接承接 lifecycle + loop runtime 计划解析，`forcedSpawn` 注入、dispatch 执行与 replayIndex 递增语义保持不变
+      - 当前文件行数降至 `1671`（较上一轮 `1681` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay DOM resolver 代理壳清理（无行为变更）：
+      - 移除并内联转发函数：`resolveReplayDocumentLike` / `resolveReplayElementById`
+      - replay 相关 DOM 读取统一直接复用 env 层 `resolveManagerDocumentLike/resolveManagerElementById`，减少重复代理层
+      - 当前文件行数降至 `1663`（较上一轮 `1671` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay resume 子流程壳内联（无行为变更）：
+      - 移除并内联单点函数：`clearReplayIntervalOnResumeIfNeeded` / `createReplayResumeInterval`
+      - `applyReplayResumeState` 直接承接 interval 清理与重建逻辑，`shouldClearInterval` 判定与 tick 调度语义保持不变
+      - 当前文件行数降至 `1653`（较上一轮 `1663` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay timer 状态壳内联（无行为变更）：
+      - 移除并内联单点函数：`resolveReplayPauseState` / `applyReplayPauseState` / `resolveReplayResumeState` / `applyReplayResumeState` / `resolveReplaySpeedState`
+      - `pauseReplay` / `resumeReplay` / `setReplaySpeed` 直接承接 runtime 状态解析与 fallback 分支，`isPaused`、interval 清理与恢复条件语义保持不变
+      - 当前文件行数降至 `1632`（较上一轮 `1653` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay seek 重启计划壳内联（无行为变更）：
+      - 移除并内联单点函数：`resolveReplaySeekRestartPlan` / `normalizeReplaySeekRewindPlan` / `applyReplaySeekRestartPlan`
+      - `prepareReplaySeek` 直接承接 rewind 计划归一化、restart 计划解析与应用流程，`board/seed` 重启策略与 `replayIndex` 回写语义保持不变
+      - 当前文件行数降至 `1619`（较上一轮 `1632` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 seek + import 错误处理壳内联（无行为变更）：
+      - 移除并内联单点函数：`prepareReplaySeek` / `runReplaySeekStepsToTarget` / `resolveReplayImportErrorMessage` / `notifyReplayImportError`
+      - `seekReplay` 直接承接 normalize/pause/restart/step 全流程，`importReplay` 直接承接错误消息归一化；保持原有行为与提示文案不变
+      - 当前文件行数降至 `1601`（较上一轮 `1619` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay tick 输入壳内联（无行为变更）：
+      - 移除并内联单点函数：`buildReplayTickStopRuntimeInput`
+      - `resolveReplayShouldStopAtTick` 直接构造 runtime payload，停止条件与 fallback 判定语义保持不变
+      - 当前文件行数降至 `1596`（较上一轮 `1601` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay tick 边界计划壳内联（无行为变更）：
+      - 移除并内联单点函数：`resolveReplayEndStateForTick` / `resolveReplayTickBoundaryPlan` / `applyReplayTickBoundaryPlan`
+      - `runReplayTick` 直接承接 end-state 解析、boundary 计划与应用逻辑，停止/暂停/replayMode 更新语义保持不变
+      - 当前文件行数降至 `1584`（较上一轮 `1596` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 replay seek fallback 壳内联（无行为变更）：
+      - 移除并内联单点函数：`normalizeReplaySeekTargetFallback` / `resolveReplaySeekRewindPlan` / `buildReplaySeekRestartRuntimeInput` / `buildReplaySeekRestartFallbackPlan`
+      - `normalizeReplaySeekTarget` 与 `seekReplay` 直接承接 seek fallback 逻辑，保持 `target` 夹取、rewind 策略与 restart 回写语义不变
+      - 当前文件行数降至 `1564`（较上一轮 `1584` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成 structured 导入配置覆写壳内联（无行为变更）：
+      - 移除并内联单点函数：`resolveStructuredReplayImportEnvelope` / `applyReplayModeConfigOverridesFromJsonEnvelope`
+      - `applyStructuredReplayImport` 直接承接 `special_rules/mode_family/rank_policy` 覆写逻辑，导入模式与 session 启动语义保持不变
+      - 当前文件行数降至 `1553`（较上一轮 `1564` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+    - `core_game_manager_replay_helpers_runtime.js` 已完成导入格式分派壳内联（无行为变更）：
+      - 移除并内联单点函数：`tryApplyStructuredReplayImport` / `tryApplyLegacyReplayImport` / `tryApplyAnyReplayImportFormat`
+      - `importReplay` 直接承接 structured + legacy 顺序判定与兜底报错语义，保持原有“未知版本抛错并提示”行为
+      - 当前文件行数降至 `1538`（较上一轮 `1553` 继续收敛）
+      - 已完成回归：`npm run verify:iterate` 全绿
+  - `core_game_manager_saved_state_helpers_runtime.js` 已完成恢复链路稳健性收敛（无行为变更）：
+    - 新增 `isSavedStateRecordObject`，统一 saved-state 对象判定样板
+    - `restoreSavedDynamicTimerRowsIntoContainer` 增加空节点保护，避免 `appendChild(null)` 异常
+    - `validate/apply/restore/finalize` 相关函数统一复用对象判定 helper
+  - `core_game_manager_saved_state_helpers_runtime.js` 已完成第二轮判定样板收敛（无行为变更）：
+    - 新增 `normalizeSavedStateRecordObject`，统一“对象或回退值”归一化
+    - `timer ui payload / lite payload / windowName map / replay&seed restore / invalid-candidate` 分支已改为统一 helper
+    - 保持原语义：仍按“`typeof === object`”宽松判定，不收紧数组兼容行为
+  - `core_game_manager_runtime_accessor_helpers_runtime.js` 已完成对象判定样板收敛（无行为变更）：
+    - 新增 `isRuntimeAccessorObject`，统一 window/runtime/bridge/snapshot/meta 判定分支
+    - accessor 获取、bridge 解析、cache 快照读取路径统一改用 helper
+    - 已完成定向回归：`audit:game-manager` + `bridge-adapter-io/shadow` unit 全绿
+  - `core_game_manager_mode_rules_helpers_runtime.js` / `core_game_manager_replay_helpers_runtime.js` 已完成对象判定样板收敛（无行为变更）：
+    - 新增 `isModeRulesRecordObject/normalizeModeRulesRecordObject` 与 `isReplayRecordObject/normalizeReplayRecordObject`
+    - `mode_rules` 追加 `isModeRulesNonArrayObject`，统一需要排除数组的分支判定
+    - `special-rules` 状态解析、`replay` 暂停恢复/提交 payload/import 解析等链路统一复用 helper
+    - 保持原语义：仍采用宽松对象判定（不收紧到 non-array object）
+    - 已完成定向回归：`audit:game-manager`、`core-rules+core-special-rules+core-direction-lock+core-replay*` unit、`pages-replay-runtime + pages-play-modes` smoke 全绿
+  - `core_game_manager_panel_timer_helpers_runtime.js` 已完成对象判定样板收敛（无行为变更）：
+    - 新增 `isPanelTimerRecordObject/normalizePanelTimerRecordObject`
+    - `stepStats`、`cappedState`、`cache.state`、`progressive capped64` 恢复链路统一复用 helper
+    - 保持原语义：沿用宽松对象判定（不改变数组处理语义）
+    - 已完成回归：`audit:game-manager`、`test:unit`、`pages-play-modes` smoke 全绿
+  - `core_game_manager_runtime_call_helpers_runtime.js` 已完成 storage normalized 调用模板收敛（无行为变更）：
+    - 新增内部 helper：`resolveCoreStorageNormalizedCallWith`，合并三处重复分支（window-context / payload / allow-null）
+    - 保持对外 API 不变：`resolveCoreStorageNormalizedCallOrFallback` / `resolveCoreStoragePayloadNormalizedCallOrFallback` / `resolveCoreStoragePayloadNormalizedCallOrFallbackAllowNull`
+    - 已处理审计体积护栏：压缩 helper 排版后文件重新低于 `MAX_RUNTIME_CALL_HELPERS_LINES`
+    - 已完成回归：`audit:game-manager`、`test:unit`、`pages-runtime-contract` smoke 全绿
+  - `core_game_manager_runtime_call_helpers_runtime.js` 已完成 storage boolean 调用模板收敛（无行为变更）：
+    - 新增内部 helper：`resolveCoreStorageBooleanCallWith`，合并 `window-context` 与 `payload` 两条 boolean 分支
+    - 保持对外 API 不变：`resolveCoreStorageBooleanCallOrFallback` / `resolveCoreStoragePayloadBooleanCallOrFallback`
+    - 已处理审计行数边界差异（Windows 换行计数）：进一步压缩空白行后稳定通过护栏
+    - 已完成回归：`audit:game-manager`、`test:unit`、`pages-runtime-contract` smoke 全绿
+  - `core_game_manager_move_input_helpers_runtime.js` 已完成对象判定样板收敛（无行为变更）：
+    - 新增 `isMoveInputRecordObject/normalizeMoveInputRecordObject`
+    - progressive capped64 unlock 结果与 direction-lock 状态解析统一复用 helper
+    - 保持原语义：沿用宽松对象判定，不改变移动/锁方向算法
+    - 已完成回归：`audit:game-manager`、`core-direction-lock+core-replay*+core-rules` unit、`pages-play-modes + pages-replay-runtime` smoke 全绿
+  - `core_game_manager_undo_stats_helpers_runtime.js` 已完成对象判定样板收敛（无行为变更）：
+    - 新增 `isUndoStatsRecordObject/normalizeUndoStatsRecordObject`
+    - `undo policy/runtime input/ui snapshot/spawn pair/step stats/undo restore` 等分支统一复用 helper
+    - `createUndoTileSnapshot` 已抽出 `sourceTile/sourceTarget`，保持 `null` 回退语义不变
+    - 已完成回归：`audit:game-manager`、`core-undo*+core-post-undo-record+core-replay*+core-direction-lock+core-rules` unit、`pages-play-modes + pages-replay-runtime` smoke 全绿
+  - `core_game_manager_base_helpers_runtime.js` 已完成基础对象判定样板收敛（无行为变更）：
+    - 新增 `isCoreHelperRecordObject`
+    - `createCoreModeDefaultsPayload/createCoreModeContextPayload/readOptionValue` 统一复用 helper
+    - 保持 `hasOwnKey` 的 object/function 语义不变，仅替换重复 object 判定样板
+    - 已完成回归：`audit:game-manager`、`test:unit`（170/170）与 `pages-runtime-contract` smoke 全绿
+  - `core_game_manager_restart_setup_helpers_runtime.js` 已完成 setup 选项判定样板收敛（无行为变更）：
+    - 新增 `isRestartSetupRecordObject/normalizeRestartSetupOptions`
+    - `syncPracticeRestartBase/resolveRestartWithBoardSetupSeed/setupGame` 已统一复用 options 归一化 helper
+    - `resolveGlobalModeConfigOverride` 改为先规范化 `GAME_MODE_CONFIG` 引用，再执行 clone
+    - `restartWithBoard` 已同步切换为同一 options 归一化入口，消除 `options || {}` 分支样板
+    - 已完成回归：`audit:game-manager`、`test:unit`（170/170）与 `pages-play-entry` smoke 全绿
+  - `core_game_manager_session_init_helpers_runtime.js` 已完成 session 选项判定样板收敛（无行为变更）：
+    - 新增 `isSessionInitRecordObject/normalizeSessionInitOptions`
+    - `addInitialTilesWhenNeeded/resolveSessionChallengeId` 已统一复用 options 归一化 helper
+    - 保持 challengeId 与 `skipStartTiles` 判定语义不变，仅移除重复样板
+    - 已完成回归：`audit:game-manager`、`test:unit`（170/170）与 `pages-play-entry` smoke 全绿
+  - `core_game_manager_runtime_accessor_helpers_runtime.js` / `core_game_manager_replay_helpers_runtime.js` 已完成对象判定样板收敛（无行为变更）：
+    - `runtime_accessor` 的 resolver runtime 对象判定统一复用 `isRuntimeAccessorObject`
+    - `replay` 的 JSON 导入 `specialRulesSnapshot` 解析改为复用 `normalizeReplayRecordObject`
+    - 保持 replay 导入与 adapter accessor 语义不变，仅移除内联对象判定样板
+    - 已完成回归：`audit:game-manager`、`core-replay-import+core-replay-legacy+core-replay-codec+bridge-adapter-io+bridge-adapter-shadow` unit、`pages-replay-runtime` smoke 全绿
+  - `core_game_manager_runtime_accessor_helpers_runtime.js` 已完成 bridge 访问归一化收敛（无行为变更）：
+    - 新增 `normalizeRuntimeAccessorObject`
+    - `resolveLegacyAdapterBridgeForManager` 与 `resolveAdapterMoveMetaInput` 改为统一复用对象归一化 helper
+    - 保持 adapter bridge 解析和 move meta 兜底语义不变（仍返回 `null/{}` 回退）
+    - 已完成回归：`audit:game-manager`、`bridge-adapter-io+bridge-adapter-shadow+bridge-adapter-mode` unit、`pages-runtime-contract` smoke 全绿
+  - `core_game_manager_replay_helpers_runtime.js` 已完成 structured replay envelope 守卫收敛（无行为变更）：
+    - 新增 `normalizeStructuredReplayEnvelope/resolveStructuredReplayImportEnvelope`
+    - `json-v3/v4c` 导入链路（config 覆盖、challengeId、actions、session start、kind 分发）统一复用 envelope 归一化
+    - 保持导入行为不变：`kind` 判定、mode 配置解析、import 后 undo 策略同步与自动回放启动语义不变
+    - 已完成回归：`audit:game-manager`、`core-replay-import+core-replay-legacy+core-replay-codec+core-replay-control+core-replay-lifecycle` unit、`pages-replay-runtime + pages-runtime-contract` smoke 全绿
+  - 当前批次已完成一次全门禁回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build，100 smoke / 893 unit 通过）。
+    - 备注：`vite build` 仍会输出 legacy 非 module 脚本告警（历史基线行为），但不影响门禁结果为 PASS。
+  - 门禁流程已新增“迭代快速回归”脚本（用于日常重构小步验证）：
+    - `npm run test:unit:core`：仅执行 `core-*` 与 `bridge-adapter-*` 单测集合
+    - `npm run test:smoke:play-replay`：执行 play/replay 关键 smoke 组合
+    - `npm run verify:iterate`：`audit -> unit:core -> smoke:runtime-contract -> smoke:play-replay`
+    - 已完成回归：`npm run verify:iterate` 全绿（35 test files / 248 tests + 19 smoke）。
+  - `verify:refactor` 已支持 smoke 脚本参数化：
+    - 默认：`npm run verify:refactor`（内置 `test:smoke`）
+    - 分片串行：`npm run verify:refactor:ci`（等价 `--smoke-script=test:smoke:ci`）
+  - CI smoke 已切换为三路分片并行（`history` / `index-ui` / `pages`）：
+    - `.github/workflows/smoke.yml` 改为 matrix 并行执行 `npm run test:smoke:${suite}`
+    - 产物按分片上传：`playwright-report-${suite}`（含 `playwright-report` 与 `test-results`）
+    - 本地新增 `npm run test:smoke:ci` 以串行复现 CI 分片顺序
+  - `core_game_manager_bindings_runtime.js` 已继续模板化原型绑定（无行为变更）：
+    - 新增 `bindGameManagerPrototypeCappedStateFieldGetter`，统一 `isCappedMode/getCappedTargetValue/isProgressiveCapped64Mode` 三个 capped-state 读取方法
+    - 新增 `bindGameManagerPrototypeElementByIdResolver`，`getTimerRowEl` 改为模板绑定
+    - 新增 `createStandardCoreRuntimeAccessorDef`，`createGameManagerCoreRuntimeAccessorDefs` 改为 key 列表驱动生成 accessor 定义（顺序保持不变）
+    - 已完成回归：`audit:game-manager`、`test:unit:core`、`test:smoke:play-replay` 全绿
+  - `core_game_manager_saved_state_helpers_runtime.js` 已完成 window-name payload 判定样板收敛（无行为变更）：
+    - `decodeWindowNameSavedMapPayload` 与 `writeWindowNameSavedPayloadFallback` 已统一复用 `isSavedStateRecordObject`
+    - 保持 window.name 持久化语义不变：非对象 payload 仍走删除分支，对象 payload 仍写入 map
+    - 已完成回归：`audit:game-manager`、`bootstrap-play-startup-context+bootstrap-play-startup-host+bootstrap-play-startup-payload+core-game-settings-storage` unit、`pages-play-modes` smoke 全绿
+  - `core_game_manager_saved_state_helpers_runtime.js` 已完成保存 options 与动态行状态归一化收敛（无行为变更）：
+    - 新增 `normalizeSavedStateOptions`，`saveGameStateImpl` 改为统一 options 归一化入口
+    - `resolveSavedDynamicTimerRowInfo` 改为先归一化 `rowState` 再读取字段，移除重复内联判定
+    - 保持保存节流、动态行文本/样式恢复语义不变，仅消除样板逻辑
+    - 已完成回归：`audit:game-manager`、`bootstrap-play-startup-context+bootstrap-play-startup-host+bootstrap-play-startup-payload+core-game-settings-storage` unit、`pages-play-entry + pages-play-modes` smoke 全绿
+  - 已完成定向回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-play-entry` smoke 全绿
+  - `core_game_manager_runtime_call_helpers_runtime.js` 已完成第三轮模板收敛（无行为变更）：
+    - 新增通用 call-result resolver：`resolveCoreObject/Boolean/Numeric/String/Normalized/Raw*`
+    - 新增 storage 通用入口：`resolveCoreStoragePayloadCallWith` / `resolveCoreStorageWindowContextCallWith`
+    - `resolveCoreStorage*` 系列函数统一改用通用入口，减少重复 `if (!manager) + call + resolve` 样板
+  - `core_game_manager_replay_helpers_runtime.js` 已完成 replay typed wrapper 样板收敛（无行为变更）：
+    - 新增 replay 前缀 resolver：`resolveCoreReplayObject/Boolean/Numeric/String/Normalized*` 与 `tryHandleCoreReplayRawCallResult`
+    - `resolveCoreReplayPayload*`、`resolveCoreReplayArgs*` 顶层包装已统一复用上述 resolver，避免重复回调模板
+  - `core_game_manager_mode_rules_helpers_runtime.js` 已完成 helper 命名隔离：
+    - 顶层共享函数改为 `resolveCoreModeRules*` 前缀，避免多 runtime helper 文件间的全局函数名覆盖风险
+    - 保持 mode/rules 访问与 fallback 语义不变
+  - 已完成定向回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-replay-runtime` 与 `pages-play-modes` smoke 全绿
+  - `core_game_manager_mode_rules_helpers_runtime.js` 已完成 mode/rules runtime 访问样板收敛：
+    - `resolveCoreModePayloadCallWith/resolveCoreModeArgsCallWith/resolveCoreRulesArgsCallWith` 已统一复用 `resolveCorePayloadCallWith/resolveCoreArgsCallWith` 通用壳
+    - 已移除仅文件内使用且已冗余的 `callCoreModeRuntimeByArgs/ByPayload`、`callCoreRulesRuntimeByArgs` 包装
+    - 保持 `resolveCore*` 调用语义不变，仅减少重复包装层
+  - `core_game_manager_replay_helpers_runtime.js` 已完成 replay runtime 访问样板收敛：
+    - 移除按域复制的 `callCoreReplay*RuntimeWithPayload/WithArgs` 包装
+    - 新增统一入口 `callCoreReplayRuntimeByPayload/ByArgs`，由 resolver 通过 runtime method 名字参数化调用
+    - 涵盖 timer/flow/control/lifecycle/loop/execution/dispatch/codec/import/legacy/v4-actions 11 组 runtime
+  - `core_game_manager_stats_ui_helpers_runtime.js` 的 `corner stats / stats panel` DOM 查询已统一到 `resolveManagerElementById`（移除文件内 `documentLike.getElementById` 调用）。
+  - `core_game_manager_saved_state_helpers_runtime.js` 的 `timer fixed/dynamic/sub rows` 保存恢复链路已统一到 `resolveManagerElementById`（保留 `resolveSavedStateDocumentLike` 仅用于 `querySelector/createElement` 类操作）。
+  - `core_game_manager_session_init_helpers_runtime.js` 初始化 `timerContainer` 回退路径改为 `resolveManagerElementById(manager, "timer")`。
+  - `scripts/game-manager-audit.mjs` 已提升护栏：除 `env_helpers` 外，所有 `core_game_manager*_runtime.js` 禁止出现 `documentLike.getElementById(...)`。
+  - 已完成全门禁回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build，100 smoke/893 unit 通过）。
 - `js/game_manager.js` 已收敛为 12 行壳文件，仅保留构造器与两条初始化调用：
   - `applyGameManagerStaticConfiguration()`
   - `bindGameManagerPrototypeRuntime()`
+- `js/core_game_manager_common_runtime.js` 已收敛为 2 行兼容壳文件（无业务函数实现，仅保留脚本链占位）。
+- `js/core_game_manager_bindings_runtime.js` 已完成第二轮去重：
+  - 新增统一绑定 helper：`bindGameManagerPrototypeMethod` / `bindGameManagerPrototypeManagerForward` / `bindGameManagerPrototypeForward`
+  - 大量 `GameManager.prototype.xxx = function (...) { return yyy(this, ...); }` 样板已替换为批量绑定数组
+  - 保留 `isCappedMode/getCappedTargetValue/isProgressiveCapped64Mode/getTimerRowEl/updateStatsPanel` 等自定义方法体不变
+  - 文件行数已从 `733` 收敛到 `410`
+- `js/core_game_manager_runtime_call_helpers_runtime.js` 已完成死代码层清理：
+  - 删除 12 个仅定义未引用的 `call/resolve` 包装函数
+  - 文件行数已从 `602` 收敛到 `491`
+  - 已完成全门禁回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build）
+- `js/core_game_manager_runtime_call_helpers_runtime.js` 已完成第二轮模板收敛（无行为变更）：
+  - 新增通用 payload resolver：`resolveCorePayloadCallWith`，统一 object/normalized/raw payload 调用模板
+  - 新增通用 args typed resolver：`resolveCoreArgsBoolean/Numeric/String/Normalized/Raw*`，覆盖 `movePath/moveScan/gridScan/timerInterval/directionLock/prettyTime` 调用链路
+  - 已完成回归：`npm run test:unit`（170/170，893 tests）与 `pages-replay-runtime + pages-runtime-contract` smoke（15/15）全绿
+- `js/core_game_manager_replay_helpers_runtime.js` 已完成 replay 域薄包装收敛（无行为变更）：
+  - 将 timer/flow/control/lifecycle/loop/execution/dispatch/codec/import/legacy/v4-actions 的调用点改为直接使用通用 `resolveCoreReplayPayload* / resolveCoreReplayArgs*` helper
+  - 删除仅内部使用的域级 wrapper，保留跨文件依赖的兼容 wrapper（`resolveCoreReplayTimerNormalizedCallOrFallback`、`resolveCoreReplayExecutionNumericCallOrFallback`、`resolveCoreReplayExecutionNormalizedCallOrFallback`、`tryHandleCoreReplayExecutionRawValue`）
+  - 文件行数已从 `2226` 收敛到 `1961`
+  - 已完成回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-replay-runtime + pages-runtime-contract` smoke 全绿
+- `undo/panel/setup_timer_ui` 三个 helper 文件已完成 storage 调用模板收敛：
+  - `core_game_manager_undo_stats_helpers_runtime.js` / `core_game_manager_panel_timer_helpers_runtime.js` / `core_game_manager_setup_timer_ui_helpers_runtime.js`
+  - 已移除 direct `callCoreStorageRuntimeWithPayload(...)`，统一改用 `resolveCoreStoragePayload*CallOrFallback` helper
+  - 已完成回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-play-modes + index-ui-settings-models` smoke 全绿
+- `js/core_game_manager_panel_timer_helpers_runtime.js` 已完成 DOM 上下文解耦：
+  - `openStatsPanel/closeStatsPanel/applyTimerModuleView/syncTimerTickPrimaryDisplay/shouldRefreshStatsPanelDuringTimerTick`
+    统一改用 `resolvePanelTimerDocumentLike`（`windowLike.document` 优先，缺失时回退全局 `document`）
+  - `ensureCappedOverflowContainerElement` 已改为接收 `manager` 并使用 `documentLike.createElement`
+  - 已完成回归：`npm run test:unit`、`pages-play-modes` smoke、`index-ui-settings-models` smoke 全绿
+- `js/core_game_manager_move_input_helpers_runtime.js` 已完成 move 链路 DOM 上下文解耦：
+  - 新增 `resolveMoveInputDocumentLike`，并覆盖 timer 文本同步、里程碑计时器写入、capped placeholder/base 行写入、merge outcome UI 更新链路
+  - `stampMergeEffectTimers/applyMergeSubTimerVisibility/applyMergeHiddenTimerRows` 已改为显式接收 `manager`，移除隐式全局 `document` 依赖
+  - 已完成回归：`npm run test:unit`、`pages-play-modes` smoke、`pages-runtime-contract` smoke 全绿
+- `js/core_game_manager_session_init_helpers_runtime.js` 已完成初始化链路 DOM 上下文解耦：
+  - 新增 `resolveSessionInitDocumentLike`，并覆盖 `syncTimerMilestonesUi/syncTimerMilestoneLegendLabels/initializeGameManagerCoreFields`
+  - 计时器图例初始化与 `timerContainer` 获取改为优先 `windowLike.document`，缺失时回退全局 `document`
+  - 已完成回归：`npm run test:unit`、`pages-runtime-contract` smoke 全绿
+- `js/core_game_manager_restart_setup_helpers_runtime.js` 已完成一轮薄包装清理：
+  - 移除仅内部单点转发的中间函数（`runSetupActuate`、`syncSetupStatsPanelAfterActuate`、`createSetupInitializationContext`、`resolveSetupRestoreStateFromContext`）
+  - `runSetupStateInitialization` 与 `finalizeSetupState` 直接承接对应流程，行为不变
+  - `resolveGlobalModeConfigOverride` 已改为从 `manager.getWindowLike()` 读取全局模式配置，避免直接依赖全局 `window`
+  - 已完成回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-play-entry + pages-runtime-contract` smoke 全绿
+- `js/core_game_manager_mode_rules_helpers_runtime.js` 已完成 setup 模式配置写入上下文解耦：
+  - `syncSetupModeWindowConfig` 改为优先使用 `manager.getWindowLike()`，仅在缺失时回退 `window`
+  - `syncSetupModeDocumentAttributes` 改为优先使用 `windowLike.document`，仅在缺失时回退全局 `document`
+  - 保持 `GAME_MODE_CONFIG` 写入语义不变，降低 helper 对浏览器全局对象的硬依赖
+  - 已完成回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-play-modes` smoke、`npm run verify:refactor` 全绿
+- `js/core_game_manager_replay_helpers_runtime.js` 已完成模式检测上下文解耦：
+  - `detectMode` 新增 `resolveReplayDocumentLike`，优先从 `manager.getWindowLike().document` 读取 `data-mode-id`
+  - `refreshSpawnRateDisplay`、`applyCustomTileSubTimerInvalidationFallback`、`applyCustomTile32kUiVisibility`、`stampCustomTile32kTimerValue` 已统一改用 `resolveReplayDocumentLike` 读取 DOM
+  - 缺失 `windowLike` 时回退全局 `document`，保持原有 fallback 判定链路不变
+  - 已完成回归：`npm run test:unit`、`pages-replay-runtime/pages-play-modes` smoke 全绿
+- `js/core_game_manager_stats_display_helpers_runtime.js` 已完成显示层 DOM 上下文解耦：
+  - 新增 `resolveStatsDisplayDocumentLike`，`updateStatsLabelText/applyInvalidatedTimerPlaceholders/refreshIpsDisplay/setStatsPanelFieldText/applyStatsPanelSpawn*` 改为优先 `windowLike.document`
+  - `panel_timer/replay` 调用点已同步透传 `manager`，避免隐式全局 `document` 依赖
+  - 已完成回归：`npm run test:unit`、`pages-play-modes/pages-replay-runtime` smoke 全绿
+- `js/core_game_manager_undo_stats_helpers_runtime.js` 已完成 undo UI DOM 上下文解耦：
+  - 新增 `resolveUndoStatsElementById`，`undo-link/gameover/practice` 三处按钮状态写入统一改用 `resolveManagerElementById`
+  - `applyResolvedUndoUiState` 已改为显式接收 `manager` 并下沉到三处 UI 写入 helper
+  - 已完成回归：`npm run test:unit` 全绿
+- `js/core_game_manager_stats_ui_helpers_runtime.js` 已完成 stats panel/corner stats DOM 上下文解耦：
+  - 新增 `resolveStatsUiDocumentLike`，`ensureCornerStatsElement/ensureStatsPanelToggleButtonElement/resolveStatsPanelToggleHostElements/mountStatsPanelToggleButton/ensureStatsPanelOverlayElement/bindStatsPanelCloseButton` 统一改用 `windowLike.document`
+  - `initCornerStatsUi/initStatsPanelUi` 入口保持不变，内部已移除直接全局 `document` 读写
+  - 已完成回归：`npm run test:unit`、`pages-announcement-settings` smoke 全绿
+- `js/core_game_manager_bindings_runtime.js` 已完成 `getTimerRowEl` 访问链路解耦：
+  - `GameManager.prototype.getTimerRowEl` 改为优先 `this.getWindowLike().document`，缺失时回退全局 `document`
+  - 已完成回归：`npm run test:unit` 全绿
+- `js/core_game_manager_setup_timer_ui_helpers_runtime.js` 已完成 setup 计时 UI DOM 上下文解耦：
+  - 新增 `resolveSetupTimerUiElementById`，`hideLegacyStepStatsLabels/clearTimerSlotTexts/resetTimerSubRowTexts/resetTimerBaseUiForSetup/resetCappedPlaceholderTimerRows/resetCappedTimerContainersForSetup/resetTimerUiForSetup` 统一改用 `resolveManagerElementById`
+  - setup 阶段 `timer/capped` 容器与 placeholder 行清理不再依赖全局 `document`
+  - 已完成回归：`npm run test:unit`、`pages-play-modes` smoke 全绿
+- `js/core_game_manager_saved_state_helpers_runtime.js` 已完成 saved-state 计时 UI DOM 上下文解耦：
+  - 新增 `resolveSavedStateDocumentLike`，`create/capture/restore/sync` 全链路统一改用 `windowLike.document`
+  - `timer_fixed_rows/timer_dynamic_rows/timer_sub_*` 的保存与恢复流程不再直接访问全局 `document`
+  - 已完成回归：`npm run test:unit`、`pages-play-modes + pages-replay-runtime + pages-runtime-contract` smoke 全绿
+  - 当前 `core_game_manager*_runtime + bindings` 已无直接 `document.getElementById/querySelector/createElement/querySelectorAll` 调用（仅保留 documentLike resolver 的全局回退）
+  - 已完成完整门禁回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build）
+- `js/core_game_manager_env_helpers_runtime.js` 已新增统一 DOM 解析 helper：
+  - 新增 `resolveManagerDocumentLike` / `resolveManagerElementById`
+  - `panel_timer/stats_display/stats_ui/move_input/replay/saved_state/session_init/setup_timer_ui/undo_stats` 的 `resolve*DocumentLike` 已统一委托到 `resolveManagerDocumentLike`
+  - 目标：减少重复 window/document 回退样板，统一 DOM 上下文解析入口（行为不变）
+  - 已完成回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build）
+- `js/core_game_manager_panel_timer_helpers_runtime.js` 已继续收敛 DOM 查询样板：
+  - 新增 `resolvePanelTimerElementById`，`openStatsPanel/closeStatsPanel/applyTimerModuleView/syncTimerTickPrimaryDisplay/shouldRefreshStatsPanelDuringTimerTick/ensureCappedOverflowContainerElement` 改为统一调用
+  - `ensureCappedOverflowContainerElement` 增补 `createElement` 可用性保护，不改变原有流程语义
+- `js/core_game_manager_mode_rules_helpers_runtime.js` 与 `js/core_game_manager_bindings_runtime.js` 已补齐统一 DOM resolver 接入：
+  - `syncSetupModeDocumentAttributes` 改为 `resolveManagerDocumentLike(manager)`
+  - `GameManager.prototype.getTimerRowEl` 改为 `resolveManagerElementById(this, ...)`
+- `scripts/game-manager-audit.mjs` 已新增 DOM fallback 护栏：
+  - 新增 `verifyNoInlineWindowDocumentFallback`
+  - 除 `core_game_manager_env_helpers_runtime.js` 外，禁止继续出现 `windowLike && windowLike.document` 内联回退样板
+  - 已完成回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build）
+- `common_runtime` 剩余函数已按职责迁移完成：
+  - replay/编码/compact log/post-move/post-undo：`js/core_game_manager_replay_helpers_runtime.js`
+  - mode/rules/move-path/move-scan/grid-scan：`js/core_game_manager_mode_rules_helpers_runtime.js`
+  - undo restore/payload/tile restore：`js/core_game_manager_undo_stats_helpers_runtime.js`
+  - capped mode 提供态与行显示 helper：`js/core_game_manager_panel_timer_helpers_runtime.js`
+- 审计护栏已升级：`scripts/game-manager-audit.mjs` 新增 common 壳文件约束：
+  - 行数上限 `MAX_COMMON_RUNTIME_LINES = 40`
+  - 禁止 `function` 声明（发现即失败）
+  - 新增 helper 文件体积护栏：
+    - `MAX_RUNTIME_CALL_HELPERS_LINES = 550`
+    - `MAX_RUNTIME_ACCESSOR_HELPERS_LINES = 320`
 - `game_manager` 逻辑分层已落地：
+  - `js/core_game_manager_base_helpers_runtime.js`：通用 call/resolve/normalize 基础 helper（与业务逻辑解耦）
+  - `js/core_game_manager_env_helpers_runtime.js`：window/storage/requestAnimationFrame 环境 helper（从 common runtime 拆出）
+  - `js/core_game_manager_runtime_call_helpers_runtime.js`：跨域 runtime 调用包装 helper（从 common runtime 拆出）
+  - `js/core_game_manager_saved_state_helpers_runtime.js`：saved-state/storage 持久化 helper（从 common runtime 拆出）
+  - `js/core_game_manager_runtime_accessor_helpers_runtime.js`：core runtime accessor 注册 helper（从 common runtime 拆出）
+  - `js/core_game_manager_stats_ui_helpers_runtime.js`：stats panel / corner stats UI helper（从 common runtime 拆出）
+  - `js/core_game_manager_move_input_helpers_runtime.js`：move input 节流/排队/flush helper（从 common runtime 拆出）
+  - `js/core_game_manager_stats_display_helpers_runtime.js`：IPS/统计显示与 invalidated placeholder helper（从 common runtime 拆出）
+  - `js/core_game_manager_panel_timer_helpers_runtime.js`：stats panel 打开/关闭与 timer module 视图持久化 helper（从 common runtime 拆出）
+  - `js/core_game_manager_undo_stats_helpers_runtime.js`：undo 策略/UI 状态与 step stats helper（从 common runtime 拆出）
+  - `js/core_game_manager_restart_setup_helpers_runtime.js`：restart/replay restart/setup mode-config 解析 helper（从 common runtime 拆出）
+  - `js/core_game_manager_setup_timer_ui_helpers_runtime.js`：setup 阶段 timer UI reset/capped row visibility helper（从 common runtime 拆出）
+  - `js/core_game_manager_session_init_helpers_runtime.js`：session 初始化/恢复、timer milestone、round reset、构造器初始化绑定 helper（从 common runtime 拆出）
+  - `js/core_game_manager_saved_state_helpers_runtime.js`：已进一步承接 saved-state restore 候选读取/校验、timer UI 恢复与恢复流水线 helper（从 common runtime 继续拆出）
+  - `js/core_game_manager_replay_helpers_runtime.js`：replay 域 call/resolve helper（从 common runtime 拆出）
+  - `js/core_game_manager_mode_rules_helpers_runtime.js`：mode/rules 域 call/resolve helper（从 common runtime 拆出）
   - `js/core_game_manager_common_runtime.js`：纯逻辑函数（禁止 `GameManager.prototype` 绑定）
   - `js/core_game_manager_static_runtime.js`：`GameManager` 静态常量/模式配置装配
   - `js/core_game_manager_bindings_runtime.js`：`GameManager.prototype` 绑定与 runtime accessor 注册
 - 页面脚本加载顺序已统一为：
-  - `core_game_manager_common_runtime.js` → `core_game_manager_static_runtime.js` → `core_game_manager_bindings_runtime.js` → `game_manager.js`
+  - `core_game_manager_base_helpers_runtime.js` → `core_game_manager_env_helpers_runtime.js` → `core_game_manager_runtime_call_helpers_runtime.js` → `core_game_manager_saved_state_helpers_runtime.js` → `core_game_manager_runtime_accessor_helpers_runtime.js` → `core_game_manager_stats_ui_helpers_runtime.js` → `core_game_manager_move_input_helpers_runtime.js` → `core_game_manager_stats_display_helpers_runtime.js` → `core_game_manager_panel_timer_helpers_runtime.js` → `core_game_manager_undo_stats_helpers_runtime.js` → `core_game_manager_restart_setup_helpers_runtime.js` → `core_game_manager_setup_timer_ui_helpers_runtime.js` → `core_game_manager_session_init_helpers_runtime.js` → `core_game_manager_common_runtime.js` → `core_game_manager_replay_helpers_runtime.js` → `core_game_manager_mode_rules_helpers_runtime.js` → `core_game_manager_static_runtime.js` → `core_game_manager_bindings_runtime.js` → `game_manager.js`
 - 门禁脚本 `scripts/game-manager-audit.mjs` 已升级，新增以下强约束：
   - 壳文件行数与结构检查（constructor-only）
   - common/bindings 职责边界检查
   - bindings 重复原型绑定检查
   - 六个页面脚本顺序检查
+  - common runtime `manager.callCore*Runtime(...)` 调用边界检查：
+    - 仅允许出现在 helper 函数（`callCore* / resolveCore* / tryHandleCore*`）内
+    - 业务函数如出现直连 runtime 调用，审计直接失败并输出函数名+行号
+- `core_game_manager_common_runtime` 已继续收敛 storage runtime 调用模板：
+  - 新增 payload 级布尔/归一化 helper（`resolveCoreStoragePayloadBooleanCallOrFallback` / `resolveCoreStoragePayloadNormalizedCallOrFallback`）
+  - 新增允许 `null` 透传的 helper（`resolveCoreStoragePayloadNormalizedCallOrFallbackAllowNull`），用于“空结果即合法语义”的读取链路
+  - 已将 `saved-game-state` 相关读写链路切换到统一 helper（storage key、storages 列表、payload 读写、window.name 持久化、清理 keys）
+  - `core_game_manager_common_runtime` 文件内已移除分散的 `callCoreStorageRuntime(...)` 直接调用，统一收敛到 storage helper 层
+  - 目标是减少样板分支并统一 fallback 语义，不改变原有行为
+- `core_game_manager_common_runtime` 已继续收敛 replay runtime 调用模板：
+  - 新增 replay timer/flow/control/lifecycle 的 payload helper（call + resolve）
+  - `getDurationMs/pause/resume/speed/seek/tick-boundary` 等回放主链已切换为统一 helper 入口
+  - 新增 replay execution/dispatch/loop helper（call + resolve + raw handler）
+  - `IPS 统计 / replay step lifecycle / replay dispatch / action kind` 已切换为统一 helper 入口
+  - 新增 replay codec helper（`call/resolve/tryHandle`），`encode/decode replay128`、compact log 写入（move/undo/practice）、`encode/decode board v4` 已切换到统一 helper 入口
+  - 保持原有 fallback 逻辑不变，降低回放分支的样板重复与后续维护成本
+  - 已完成一轮门禁回归：`npm run verify:refactor` 全绿（audit + unit + smoke + build）
+- `core_game_manager_common_runtime` 已继续收敛 mode runtime 调用模板：
+  - 新增 `callCoreModeRuntimeWithArgs`，统一支持“对象 payload”与“原始参数数组”两类调用
+  - 新增 typed helper：`resolveCoreModeBooleanCallOrFallback` / `resolveCoreModeRawCallValueOrUndefined` / `tryHandleCoreModeRawValue` / `resolveCoreModeNormalizedCallOrFallbackAllowNull`
+  - `isGameTerminatedState / resolveCappedRowVisibilityPlan / resolveProgressiveCapped64Unlock / resolveCappedPlaceholderSlotByRepeatCount / formatCappedRepeatLabel` 已切换到 helper 入口
+  - `resolveModeCatalogConfig / resolveUndoPolicyState / resolveCappedModeState / createProgressiveCapped64UnlockedState / resolveCappedTimerLegendClass / resolveCappedTimerLegendFontSize / resolveCappedPlaceholderRowValues` 已切换到 typed helper
+  - `core_game_manager_common_runtime` 文件内 `callCoreModeRuntime(...)` 直连已收敛为 helper 内部单点调用
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` 已开始收敛 rules runtime 调用模板：
+  - 新增 typed helper：`callCoreRulesRuntimeWithArgs` / `resolveCoreRulesNumericCallOrFallback` / `resolveCoreRulesStringCallOrFallback` / `resolveCoreRulesNormalizedCallOrFallback` / `resolveCoreRulesNormalizedCallOrFallbackAllowNull` / `tryHandleCoreRulesRawValue`
+  - `getSpawnCount / getTheoreticalMaxTile / pickSpawnValue / nextFibonacci / getMergedValue / applySpawnValueCount / normalizeSpawnTable / getTimerMilestoneValues / getSpawnStatPair / getActualSecondaryRateText / getTotalSpawnCount / getTimerMilestoneSlotByValue` 已切换到 helper 入口
+  - `core_game_manager_common_runtime` 文件内 `callCoreRulesRuntime(...)` 直连已收敛为 helper 内部单点调用
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` 已开始收敛 move-path runtime 调用模板：
+  - 新增 typed helper：`callCoreMovePathRuntimeWithArgs` / `resolveCoreMovePathBooleanCallOrFallback` / `resolveCoreMovePathNormalizedCallOrFallback`
+  - `buildTraversals / findFarthestPosition / getVector / positionsEqual` 已切换到 helper 入口
+  - `core_game_manager_common_runtime` 文件内 `callCoreMovePathRuntime(...)` 直连已收敛为 helper 内部单点调用
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` 已完成 move-scan / grid-scan / timer-interval runtime 调用模板收敛：
+  - 新增 typed helper：`callCoreMoveScanRuntimeWithArgs` / `resolveCoreMoveScanBooleanCallOrFallback` / `resolveCoreMoveScanNormalizedCallOrFallback`
+  - 新增 typed helper：`callCoreGridScanRuntimeWithArgs` / `resolveCoreGridScanNormalizedCallOrFallback`
+  - 新增 typed helper：`callCoreTimerIntervalRuntimeWithArgs` / `resolveCoreTimerIntervalNumericCallOrFallback` / `resolveCoreTimerIntervalNormalizedCallOrUndefined`
+  - `movesAvailable / tileMatchesAvailable / getAvailableCells / resolveMoveInputThrottleMs / resolveTimerUpdateIntervalMs / applyCustomTileInvalidatedTimerPlaceholders / getFinalBoardMatrix / resolveBestTileValueForSubmit` 已切换到 helper 入口
+  - 该三组 runtime 在 common runtime 业务链路中的直连已收敛为 helper 内部单点调用
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` 已继续收敛 post-move/undo runtime 调用模板：
+  - 新增 payload helper：`postMoveRecord / postUndoRecord / undoRestore / undoTileRestore / undoRestorePayload / mergeEffects`（call + resolve）
+  - `computePostMoveRecord / computePostUndoRecord / computeUndoRestoreState / createUndoRestoreTile / computeUndoRestorePayload / computeMergeEffects` 已切换到 helper 入口
+  - 该六组 runtime 在 common runtime 业务链路中的直连已收敛为 helper 内部单点调用
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` 已继续收敛 move-apply/undo-snapshot runtime 调用模板：
+  - 新增 payload helper：`moveApply / undoStackEntry / undoTileSnapshot`（call + resolve）
+  - `planTileInteraction / normalizeUndoStackEntry / createUndoTileSnapshot` 已切换到 helper 入口
+  - 该三组 runtime 在 common runtime 业务链路中的直连已收敛为 helper 内部单点调用
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` 已继续收敛剩余 runtime 调用模板（special/direction/scoring/post-move/undo-snapshot/pretty/import）：
+  - 新增 typed/payload helper：`specialRules / directionLock / scoring / postMove / undoSnapshot / prettyTime / replayImport / replayLegacy`
+  - `applySpecialRulesState / resolveLockedDirectionFromCore / applyPostMoveScore / resolvePostMoveLifecycle / buildMovePlan / formatPrettyTime / parseReplayImportEnvelope / decodeLegacyReplay` 已切换到 helper 入口
+  - 当前 `core_game_manager_common_runtime` 文件中的 `callCore*Runtime(...)` 已全部收敛到 helper 区域单点调用，业务链路不再直接调用 runtime
+  - 已完成定向回归：`npm run test:unit` 与 `pages-replay-runtime/pages-play-modes` smoke 全绿
+- `core_game_manager_common_runtime` helper 区已完成“调用基座”收敛：
+  - 新增通用 helper：`callCoreRuntimeWithArgs` / `callCoreRuntimeWithPayload`
+  - 各域 `callCore*RuntimeWithArgs/WithPayload` 统一委托到调用基座，减少重复样板并统一入参兜底（`runtime method` 存在性、参数数组归一化）
+  - `decodeReplayV4Actions` 也已接入 helper 层，避免业务函数出现新增直连
+  - 已完成定向回归：`npm run audit:game-manager`、`npm run test:unit`、`pages-play-modes/pages-replay-runtime` smoke 全绿
+  - replay helper 已完成独立文件拆分：`core_game_manager_replay_helpers_runtime.js`，`common runtime` 移除对应 replay call/resolve 函数块，进一步降低单文件复杂度
+  - mode/rules helper 已完成独立文件拆分：`core_game_manager_mode_rules_helpers_runtime.js`，`common runtime` 移除对应 mode/rules call/resolve 函数块
+  - setup timer UI helper 已完成独立文件拆分：`core_game_manager_setup_timer_ui_helpers_runtime.js`，`common runtime` 移除 setup 阶段 timer UI reset/capped row visibility 函数块
+  - saved-state restore helper 已完成回收至 `core_game_manager_saved_state_helpers_runtime.js`：`resolveWindowNameSavedCandidate`、`pickLatestSavedStateCandidate`、`validateSavedStateCandidate`、`applySavedStateRestorePipeline`、`tryRestoreLatestSavedState` 等恢复链路函数已从 `common runtime` 迁出
+  - session init helper 已完成独立文件拆分：`core_game_manager_session_init_helpers_runtime.js`，`common runtime` 移除 `restoreOrInitBoardState`、`initializeSessionState`、`initializeTimerMilestones`、`resetRoundStatsState`、`initializeGameManager*` 等初始化函数块
+  - runtime accessor helper 已承接 `registerCoreRuntimeCaller`；saved-state helper 已承接 `saveGameStateImpl`；replay helper 已承接 `getActionKind`
+  - stats display helper 已承接 stats panel 字段/标签/上下文组装函数（`getActualFourRate`、`setStatsPanelFieldText`、`buildStatsPanelUpdateContext` 等）
+  - panel timer helper 已继续承接计时/actuate 相关函数：`startTimer/stopTimer/formatPrettyTime/handleTimerTick/updateActuateStats` 等，`common runtime` 移除对应实现
+  - replay helper 已继续承接 replay 控制流函数：`pause/resume/tick/speed/seek` 全链路，`common runtime` 移除对应实现
+  - stats display helper 已继续承接二级生成率函数：`getActualSecondaryRate` 及其 fallback 计算，`common runtime` 移除对应实现
+  - replay helper 已继续承接会话尾部辅助函数：`keepPlaying/clearTransientTileVisualState`
+  - `core_game_manager_common_runtime.js` 行数本轮由 `5561` 进一步降至 `4214`
+- history 诊断收敛补充（2026-03）：
+  - `history.html` 新增 burn-in 阈值筛选控件（最少可比样本、最大不一致率）
+  - `history-filter/query/load` 已打通阈值输入到查询参数链路（支持小数不一致率）
+  - `history-controls/startup` 已新增阈值输入初始化，启动时由 state 回填输入框，避免默认值与运行态配置漂移
+  - `history-page/load-entry` 已新增过滤条件持久化：
+    - 启动时从 `history_filter_state_v1` 恢复筛选条件到 state/UI
+    - 刷新加载后将当前筛选条件落盘回 `history_filter_state_v1`
+    - 持久化结构升级为带 `schemaVersion` 的对象，并兼容读取旧版平铺字段；异常/损坏 JSON 自动忽略并回退默认筛选
+    - 仅持久化“与默认筛选不同”的字段；当筛选回到默认值时删除 `history_filter_state_v1`，减少无效落盘与历史格式噪音
+    - smoke 已覆盖新旧两种恢复格式（`schemaVersion+filter` 与旧版平铺字段）
+    - 已修复启动恢复覆盖问题：持久化筛选恢复到 `state` 后会先同步回 DOM 控件，再执行首轮加载，避免首轮 `loadHistory(true)` 读取默认控件值覆盖恢复结果
+  - `history-burnin` 已新增“窗口趋势”文案（最近最多 3 个窗口的不一致率与门槛状态），辅助判断趋势改善/恶化
+  - `history-adapter-diagnostics` 已在诊断文案中显示 `Report(vN)/Diff(vN)` schema 标签，便于排查 v1/v2 混合数据来源
+  - `history-adapter-diagnostics` 已补充 diff 扩展字段展示（`undoEvtΔ` / `wonEvtΔ` / `scoreMatch` / `双侧对齐` / `原因`）
+  - `history-canary-host` 已收敛状态栏写入时机：仅在有反馈文案或错误态时更新，避免空反馈覆盖现有状态提示
+  - `pages-replay-runtime` smoke 已补齐 manager 方法就绪等待（`getModeConfigFromCatalog`、`resolveProgressiveCapped64UnlockedState`），降低慢机启动时的空快照假阴性
+  - `pages-announcement-settings` smoke 已增强 game manager settings-storage 委托链路稳定性：
+    - 增加 runtime+manager 就绪等待，降低慢机启动抖动导致的假阴性
+    - 显式触发一次 `writeLocalStorageJsonPayload` 委托，避免仅依赖 auto-submit 分支路径
 
 ## 3) 里程碑
 
@@ -339,7 +1046,7 @@
   - `game_manager.js` 新增 `resolveProgressiveCapped64UnlockedState`，`resetProgressiveCapped64Rows/unlockProgressiveCapped64Row` 统一复用 capped64 状态归一化入口；新增 smoke 覆盖 `createProgressiveCapped64UnlockedState` runtime 委托。
   - `game_manager.js` 已改为通过 `CoreGameSettingsStorageRuntime` 读写统计面板开关、计时器模块视图、撤回设置与会话提交结果（页面层移除 direct localStorage 访问）
   - `game_manager.js` 新增 `resolveModePolicyContext`，统一 `mode/undo` runtime 解析入参，减少后续策略函数迁移的重复样板
-  - 新增 `js/core_game_manager_common_runtime.js`（逻辑层）、`js/core_game_manager_static_runtime.js`（静态配置层）、`js/core_game_manager_bindings_runtime.js`（绑定层），并在 `index/play/undo/capped/practice/replay` 六页按 `common -> static -> bindings -> game_manager` 顺序加载
+  - 新增 `js/core_game_manager_base_helpers_runtime.js`（基础 helper 层）、`js/core_game_manager_env_helpers_runtime.js`（环境 helper 层）、`js/core_game_manager_runtime_call_helpers_runtime.js`（runtime call helper 层）、`js/core_game_manager_saved_state_helpers_runtime.js`（saved-state helper 层）、`js/core_game_manager_runtime_accessor_helpers_runtime.js`（accessor helper 层）、`js/core_game_manager_stats_ui_helpers_runtime.js`（stats UI helper 层）、`js/core_game_manager_move_input_helpers_runtime.js`（move input helper 层）、`js/core_game_manager_stats_display_helpers_runtime.js`（stats display helper 层）、`js/core_game_manager_panel_timer_helpers_runtime.js`（panel/timer helper 层）、`js/core_game_manager_undo_stats_helpers_runtime.js`（undo/stats helper 层）、`js/core_game_manager_restart_setup_helpers_runtime.js`（restart/setup helper 层）、`js/core_game_manager_setup_timer_ui_helpers_runtime.js`（setup/timer-ui helper 层）、`js/core_game_manager_common_runtime.js`（逻辑层）、`js/core_game_manager_replay_helpers_runtime.js`（replay helper 层）、`js/core_game_manager_mode_rules_helpers_runtime.js`（mode/rules helper 层）、`js/core_game_manager_static_runtime.js`（静态配置层）、`js/core_game_manager_bindings_runtime.js`（绑定层），并在 `index/play/undo/capped/practice/replay` 六页按 `base_helpers -> env_helpers -> runtime_call_helpers -> saved_state_helpers -> runtime_accessor_helpers -> stats_ui_helpers -> move_input_helpers -> stats_display_helpers -> panel_timer_helpers -> undo_stats_helpers -> restart_setup_helpers -> setup_timer_ui_helpers -> common -> replay_helpers -> mode_rules_helpers -> static -> bindings -> game_manager` 顺序加载
   - `game_manager.js` 已删除大部分内联逻辑，当前收敛为 12 行壳文件（构造器 + 两条初始化调用，行为保持不变）
 
 验收标准：
@@ -458,8 +1165,359 @@
 - 默认启用新核心路径，清理重复代码，形成稳定发布。
 
 交付物：
+- `core_game_manager_replay_helpers_runtime` 已新增 payload/args 统一解析助手，收敛重复的 runtime 调用 + fallback 判定样板（保持行为不变）。
+- `core_game_manager_mode_rules_helpers_runtime` 已新增 mode/rules 统一解析助手，收敛重复的 runtime 调用 + fallback 判定样板（保持行为不变）。
+- `core_game_manager_bindings_runtime` 已新增批量绑定助手（manager/plain 两类），替换重复 for-loop 绑定代码并修正局部排版。
+- `core_game_manager_bindings_runtime` 已新增 `capped-state getter` 与 `element-by-id resolver` 的 batch 绑定助手，统一声明式注册（行为不变）。
+- `core_game_manager_bindings_runtime` 已把散点单条绑定（`hasOwnKey/cloneResolvedCappedModeState/isProgressiveCapped64UnlockValue/setStatsPanelFieldText/computeStepStats`）并入批量绑定数组，减少绑定入口分散。
+- `core_game_manager_bindings_runtime` 已将标准 runtime key 清单提升为文件级常量（`STANDARD_GAME_MANAGER_CORE_RUNTIME_KEYS`），`createGameManagerCoreRuntimeAccessorDefs` 仅负责组装，降低函数复杂度。
+- `core_game_manager_bindings_runtime` 已新增通用 `forEachPrototypeBindingDef`，统一 manager/plain/capped/element 四类 batch 绑定循环，减少重复样板。
+- `core_game_manager_mode_rules_helpers_runtime` 顶部 call+resolve 样板已改为复用 `core_game_manager_runtime_call_helpers_runtime` 的通用调用壳（接口不变，行为不变）。
+- `core_game_manager_mode_rules_helpers_runtime` 已删除冗余包装函数 `callCoreModeRuntimeByArgs/ByPayload`、`callCoreRulesRuntimeByArgs`（仓内无引用，已由通用壳覆盖）。
+- `core_game_manager_mode_rules_helpers_runtime` 已继续删除本地重复 resolver wrapper（string/boolean/normalized/raw/try-handle），统一复用 `resolveCore*CallResult` / `tryHandleCoreRawCallResult` 通用实现。
+- `game-manager-audit` 已收紧 bindings 行数护栏：`MAX_BINDINGS_RUNTIME_LINES` 从 `900` 降至 `400`，防止 bindings 再次膨胀。
+- `game-manager-audit` 的 runtime 脚本顺序校验已改为“脚本链列表驱动生成正则”，替换超长硬编码正则，降低后续维护风险（校验语义不变）。
+- `game-manager-audit` 已继续收紧大 helper 防膨胀阈值：`mode_rules <= 1200`、`replay <= 2050`、`saved_state <= 1350`、`move_input <= 1000`，用于在不破坏行为前提下倒逼后续继续拆分。
+- `core_game_manager_move_input_helpers_runtime` 已收敛重复的 flush 调度样板：新增 `requestMoveInputFlush` 统一承接两处 `requestAnimationFrame -> flushPendingMoveInput` 链路（行为不变）。
+- `core_game_manager_saved_state_helpers_runtime` 已新增模块内 storage 调用薄代理（normalized/payload-normalized/payload-normalized-allow-null/payload-boolean），并替换高频调用点，减少重复调用样板（行为不变）。
+- `core_game_manager_saved_state_helpers_runtime` 已进一步收敛重复闭包：`allow-null payload normalizer` 与 `return false/undefined` 回调改为共享 helper（行为不变）。
+- `core_game_manager_saved_state_helpers_runtime` 已新增共享 normalizer（`boolean/object/array -> undefined`），并替换 window-name 持久化、lite payload 构建、storage 持久化与 storages 读取等高频闭包（行为不变）。
+- `core_game_manager_saved_state_helpers_runtime` 已压缩共享 helper 写法并回收行数余量（`1336 -> 1323`），降低触发 `saved_state <= 1350` 行数门禁的风险。
+- `core_game_manager_replay_helpers_runtime` 已压缩纯转调 wrapper（execution/timer/codec 与通用 args/payload 包装），在不改语义前提下回收行数余量（`1971 -> 1912`）。
+- `core_game_manager_replay_helpers_runtime` 已删除本地重复 resolver wrapper（object/boolean/numeric/string/normalized/raw/try-handle），统一复用 `resolveCore*CallResult` 与 `tryHandleCoreRawCallResult` 通用实现。
+- `core_game_manager_replay_helpers_runtime` 的 `resolveCoreReplayPayloadCallWith/resolveCoreReplayArgsCallWith` 已复用 `resolveCorePayloadCallWith/resolveCoreArgsCallWith`，并移除冗余 `callCoreReplayRuntimeByPayload/ByArgs` 包装。
+- `core_game_manager_replay_helpers_runtime` 顶部 wrapper 已进一步收敛为“薄代理”：统一复用 `resolveCorePayloadCallWith/resolveCoreArgsCallWith` 与 `resolveCore*CallResult`，在不改调用签名前提下减少重复样板（行为不变）。
+- `core_game_manager_mode_rules_helpers_runtime` 顶部 wrapper 已进一步收敛为“薄代理”：mode/rules 的 payload/args 解析统一复用通用调用壳，`rules numeric` 也统一走 `resolveCoreArgsNumericCallOrFallback`（行为不变）。
+- `core_game_manager_runtime_call_helpers_runtime` 行数已控制回审计阈值内：`544` 行（阈值 `550`），避免“通用层膨胀”成为新的维护风险。
+- `game-manager-audit` 已新增 bindings 硬约束：禁止直接 `GameManager.prototype.xxx = function` 赋值，并基于 `bindGameManagerPrototype*`/batch 绑定定义做重复方法名检测，防止回退到旧式写法。
+- 本轮门禁已验证通过：`npm run verify:refactor`（`audit + unit + smoke + build` 全绿）。
+- 本轮增量门禁已验证通过：`npm run verify:iterate`（`audit + test:unit:core + smoke:runtime-contract + smoke:play-replay` 全绿）。
 - 默认 adapter fallback 已切到 `core-adapter`（保留 `engine_adapter_force_legacy=1` 强制回滚优先级）。
 - burn-in 面板新增观测指标：可比较一致率、连续窗口达标率、模式不一致 Top（按 mode_key）。
+- burn-in 面板新增 cutover readiness 标识（可切换/观察中/阻塞），直接对应 M5 放量决策。
+- smoke 已补齐 burn-in 文案契约断言（`pages-history-adapter-diagnostics` 覆盖 readiness/一致率/连续达标率/Top 模式）。
+- smoke 已补齐 runtime 契约断言（`history-burnin-runtime` 覆盖 readiness/Top 文案由 runtime 产出）。
+- smoke 已补齐 cutover-ready 断言（`history-burnin-readiness` 覆盖达标场景：单窗口/连续窗口均通过时显示“可切换”）。
+- smoke 已补齐 `LocalHistoryStore` burn-in 聚合断言（`history-burnin-readiness` 覆盖 `topMismatchModes` 统计排序与计数）。
+- smoke 已补齐 cutover-blocked 断言（`history-burnin-readiness` 覆盖高不一致率场景显示“阻塞”）。
+- canary 面板文案已明确默认来源语义：`默认回退（core-adapter）`。
+- canary `reset_policy` 提示文案已与默认策略对齐：`默认回退 core-adapter`。
+- smoke 已补齐 canary 状态栏文案断言（`pages-history-adapter-diagnostics` 覆盖 `reset_policy` 成功提示）。
+- history burn-in 查询参数已支持小数阈值（`max_mismatch_rate` 支持如 `0.5`）。
+- 已新增 M5 执行文档与记录模板：
+  - `docs/BURNIN_CUTOVER_RUNBOOK.zh-CN.md`
+  - `docs/BURNIN_EXECUTION_LOG_TEMPLATE.zh-CN.md`
+  - `docs/COMMIT_SPLIT_PLAN.zh-CN.md`（按批次拆分提交的执行清单）
+- 门禁脚本已补充 `verify:burnin`，并统一 `verify:prepush` 为：
+  - `npm run verify:burnin && npm run verify:refactor:ci`
+  - 已完成实测回归：`verify:burnin` 与 `verify:prepush` 全绿
+- 已新增发布收口脚本与清单：
+  - `verify:release-ready`（`scripts/release-readiness-check.mjs`）
+  - `verify:release`（`verify:prepush + verify:rollback-drill + verify:release-ready`）
+  - `verify:rollback-drill`（仅校验紧急回滚与恢复链路）
+  - `report:refactor-progress`（输出关键收口指标快照）
+  - `docs/RELEASE_CUTOVER_CHECKLIST.zh-CN.md`
+  - 已完成实测回归：`npm run verify:rollback-drill` / `npm run verify:release-ready` 全绿
+- CI 已新增 `Release Ready` 作业，固定执行：
+  - `npm run verify:release-ready`
+  - `npm run report:refactor-progress`
+- `replay_helpers` 去壳继续推进：已删除单次包装函数 `getActionKind`，并将其回退分支内联到 `executePlannedReplayStep`（无行为变更，降低函数跳转与样板噪音）。
+- `replay_helpers` 去壳继续推进：已删除 `resolveReplayShouldStopAtTick` 与 `normalizeReplaySeekTarget` 两个单点 helper，分别内联到 `runReplayTick` / `seekReplay`（仅结构收敛，无行为变更）。
+- `replay_helpers` 去壳继续推进：已删除 `shouldSerializeReplayAsJson` 单点 helper 并内联到 `serializeReplay`；`isSessionTerminated` 保持为共享 helper（供统计与存档链路复用）。
+- `replay_helpers` 去壳继续推进：已删除 `resolveReplayV3Source`、`resolveAutoSubmitSkipReason`、`resolveAdapterParitySnapshotForSubmit` 三个单点 helper，并内联到 `serializeReplayV3` / `tryAutoSubmitOnGameOver`。
+- `replay_helpers` 去壳继续推进：已将 `writeAutoSubmitSkippedResult` / `writeAutoSubmitMissingStoreResult` / `writeAutoSubmitSuccessResult` / `writeAutoSubmitErrorResult` 内联到 `tryAutoSubmitOnGameOver`，保留单一底层落盘入口 `writeAutoSubmitResult`。
+- `replay_helpers` 去壳继续推进：已将 `resolveBestTileValueForSubmit`、`buildAutoSubmitPayload`、`serializeReplayAsV4` 三个单点 helper 内联到调用点（`tryAutoSubmitOnGameOver` / `serializeReplay`）。
+- `replay_helpers` 去壳继续推进：已删除 `createReplayV3FallbackSnapshot`、`buildReplayV3Snapshot`，并内联到 `serializeReplayV3`（仅结构收敛，不改回放序列化语义）。
+- `replay_helpers` 去壳继续推进：已删除 `normalizeReplayImportString`、`parseJsonReplayImportEnvelopeFallback`、`parseV4ReplayImportEnvelopeFallback`，并内联到 `importReplay` / `parseReplayImportEnvelope` fallback 分支。
+- `replay_helpers` 去壳继续推进：已删除 `decodeLegacyReplayFallback`、`applyLegacyReplayImport`，并内联到 `decodeLegacyReplay` / `importReplay`（保持 legacy 回放导入链路语义不变）。
+- `replay_helpers` 去壳继续推进：已删除 `normalizeStructuredReplayEnvelope`、`decodeV4StructuredReplayImportPayload`，并内联到 `applyStructuredReplayImport`。
+- `replay_helpers` 去壳继续推进：已删除 `removeExistingTileAtCell`、`applyCustomTileZeroValue`、`applyCustomTileNonZeroValue` 并内联到 `insertCustomTile`。
+- `replay_helpers` 去壳继续推进：已删除 `parseLegacyReplayV1Envelope`、`parseLegacyReplayV2SEnvelope`、`parseLegacyReplayV2Envelope` 并内联到 `decodeLegacyReplay` fallback。
+- `replay_helpers` 去壳继续推进：已删除 `decodeReplayV4PracticeActionFromPayload`、`decodeReplayV4EscapedAction` 并内联到 `decodeReplayV4ActionsFallback`。
+- `replay_helpers` 去壳继续推进：已删除 `buildInvalidatedTimerElementIdsFallback`、`applyCustomTileSubTimerInvalidationFallback`、`applyCustomTileInvalidatedTimerPlaceholders`、`applyCustomTile32kEffects`、`applyCustomTile32kUiVisibility`、`stampCustomTile32kTimerValue`、`assertCustomTileEditable` 并内联到 `insertCustomTile`。
+- `replay_helpers` 去壳继续推进：已删除 `finalizeReplayImportPlayback`，并将回放导入后恢复播放状态逻辑内联到 `applyStructuredReplayImport` 与 `importReplay`。
+- `replay_helpers` 去壳继续推进：已删除 `applyStructuredReplayImport`、`applyImportedUndoPolicyState`，并整体内联到 `importReplay`（保留 structured import 与 undo 策略恢复语义）。
+- `replay_helpers` 去壳继续推进：已删除 `decodeReplayV4ActionsFallback` 并内联到 `decodeReplayV4Actions` fallback 分支。
+- `replay_helpers` 去壳继续推进：已删除 `createReplayModePostMoveRecord`、`resolveCompactMoveCodeFromLastSpawn`、`createReplayModePostUndoRecord` 并内联到 `buildPostMoveRecordFallback` / `buildPostUndoRecordFallback`。
+- `replay_helpers` 去壳继续推进：已删除 `buildPostMoveRecordFallback`、`buildPostUndoRecordFallback` 并分别内联到 `computePostMoveRecord` / `computePostUndoRecord` 的 fallback 闭包。
+- `replay_helpers` 去壳继续推进：已删除 `runReplayTick` 并内联到 `resumeReplay` 的 interval 回调（保持 tick 边界与暂停语义不变）。
+- `replay_helpers` 去壳继续推进：已删除 `normalizeReplayOptionalString`、`decodeReplayV4MoveSpawnFromToken`、`decodeLegacyReplayV2LogFallback`，并内联到 `parseReplayImportEnvelope` / `decodeReplayV4Actions` / `decodeLegacyReplay` fallback（仅去壳，不改导入与解码语义）。
+- `replay_helpers` 去壳继续推进：已删除文件级 `writeAutoSubmitResult`，并内联为 `tryAutoSubmitOnGameOver` 内部写入闭包（保留同一 localStorage 键与结果结构）。
+- `runtime_call_helpers` 去壳继续推进：已删除未被引用的 `callCoreStorageRuntimeWithPayload` / `callCoreStorageRuntimeWithWindowContext`；并内联 `resolveCoreRawCallResultOrUndefined` / `tryHandleCoreRawCallResult` 到对应调用点（纯转发清理）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `resolveCoreStorageCallWith` 中间层，`resolveCoreStoragePayloadCallWith` / `resolveCoreStorageWindowContextCallWith` 直接调用 storage runtime（无行为变更）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `resolveCoreStorageBooleanCallWith` / `resolveCoreStorageNormalizedCallWith`，并内联到 5 个 storage 对外 wrapper（window context / payload 两条链路保持原语义）。
+- `replay_helpers` 去壳继续推进：已删除 `isReplayRecordObject` 并改为等价对象判断内联（`normalizeReplayRecordObject`、structured replay 快照与 spawn 计数更新链路均保持原语义）。
+- `replay_helpers` 去壳继续推进：已删除 `normalizeReplayRecordObject` 与 `ensureSpawnValueCounts`，对应逻辑分别内联到状态归一化与 spawn 计数路径（不改变 replay 导入、暂停恢复、计数显示语义）。
+- `replay_helpers` 去壳继续推进：已删除 `recordPracticeReplayAction` 并内联到 `insertCustomTile` 两处写入路径（仍仅在 `practice_legacy` 且非 replay 模式下记录 v3 action 与 compact log）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `callCoreRuntimeWithPayload`，并将 payload 参数组装逻辑内联到 `resolveCorePayloadCallWith` 与 `callCoreStorageRuntime`（统一保留 `payload===undefined` 时回退 `{}` 的语义）。
+- `replay_helpers` 去壳继续推进：已删除单点函数 `decodeLegacyReplay`，将其 fallback 解码链路内联到 `importReplay`（legacy v1/v2/v2s 导入语义保持不变）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `resolveCoreStoragePayloadCallWith` / `resolveCoreStorageWindowContextCallWith`，并内联到 5 个 storage wrapper（boolean / normalized / allowNull 三类返回语义不变）。
+- `replay_helpers` 去壳继续推进：已删除 `parseReplayImportEnvelope` 并内联到 `importReplay`（JSON-v3 / v4C envelope 解析与异常语义保持不变）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `callCoreRuntimeWithArgs`，并将 runtime 方法存在性校验与参数归一化逻辑内联到 `resolveCorePayloadCallWith` / `resolveCoreArgsCallWith` / `callCoreStorageRuntime`。
+- `runtime_call_helpers` 去壳继续推进：已删除 `resolveCoreReplayTimerNormalizedCallOrFallback` / `resolveCoreReplayExecutionNumericCallOrFallback` / `resolveCoreReplayExecutionNormalizedCallOrFallback` / `tryHandleCoreReplayExecutionRawValue`，并将调用点统一收敛到通用 helper（`resolveCorePayloadCallWith` / `resolveCoreNormalizedPayloadCallOrFallback` / `tryHandleCorePayloadRawValue`）。
+- `replay_helpers` 去壳继续推进：已删除 `decodeReplayV4Actions` 顶层函数并内联到 `importReplay` 的 v4C 分支（token 解码/escape 处理/异常语义保持一致）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `resolveCoreNormalizedCallResultOrUndefined`（仅内部使用），调用点改为直接使用 `resolveNormalizedCoreValueOrUndefined`。
+- `runtime_call_helpers` 去壳继续推进：已删除 `resolveCoreObjectCallResult` / `resolveCoreBooleanCallResult` / `resolveCoreNumericCallResult` / `resolveCoreStringCallResult`，调用点改为直接使用 `manager.resolveCore*CallOrFallback`（语义不变）；并顺带修正 `mode_rules` 中对已移除 `resolveCoreRawCallResultOrUndefined` 的遗留引用。
+- `runtime_call_helpers` 去壳继续推进：已删除 13 个单调用点 runtime 前缀 wrapper（`resolveCorePostMoveRecordObjectCallOrFallback`、`resolveCorePostUndoRecordObjectCallOrFallback`、`resolveCoreUndoRestoreObjectCallOrFallback`、`resolveCoreUndoTileRestoreNormalizedCallOrUndefined`、`resolveCoreUndoRestorePayloadObjectCallOrFallback`、`resolveCoreMergeEffectsObjectCallOrFallback`、`resolveCoreMoveApplyNormalizedCallOrFallback`、`resolveCoreUndoStackEntryNormalizedCallOrUndefined`、`resolveCoreUndoTileSnapshotNormalizedCallOrUndefined`、`resolveCoreDirectionLockRawCallValueOrUndefined`、`resolveCorePostMoveNormalizedCallOrFallback`、`resolveCoreUndoSnapshotNormalizedCallOrFallback`、`resolveCorePrettyTimeStringCallOrFallback`），并将调用点统一改为通用 helper 直连 runtime（语义不变，`verify:iterate` 已通过）。
+- `mode_rules` 去壳继续推进：已删除 6 个低复用 wrapper（`resolveCoreModeStringCallOrFallbackWithArgs`、`resolveCoreModeBooleanCallOrFallback`、`resolveCoreModeRawCallValueOrUndefined`、`tryHandleCoreModeRawValue`、`resolveCoreRulesStringCallOrFallback`、`tryHandleCoreRulesRawValue`），并将调用点统一改为通用 helper 直连（涉及 `move_input`/`stats_display`/`replay_helpers`，`verify:iterate` 全绿）。
+- `runtime_call_helpers` 去壳继续推进：已再删除 8 个单点/双点 wrapper（`resolveCoreArgsNormalizedCallOrUndefined`、`resolveCoreArgsRawCallValueOrUndefined`、`resolveCoreMovePathBooleanCallOrFallback`、`resolveCoreStorageNormalizedCallOrFallback`、`resolveCoreStoragePayloadNormalizedCallOrFallbackAllowNull`、`resolveCoreTimerIntervalNormalizedCallOrUndefined`、`tryHandleCoreScoringRawValue`、`tryHandleCoreSpecialRulesRawValue`），并将调用点改为通用 helper 或局部直连 storage runtime（`verify:iterate` 全绿）。
+- `runtime_call_helpers` 去壳继续推进：已删除 5 个 runtime 前缀薄封装（`resolveCoreMovePathNormalizedCallOrFallback`、`resolveCoreMoveScanBooleanCallOrFallback`、`resolveCoreGridScanNormalizedCallOrFallback`、`resolveCoreTimerIntervalNumericCallOrFallback`、`resolveCoreStoragePayloadBooleanCallOrFallback`），对应调用点改为 `resolveCoreArgs*` 通用 helper / `callCoreStorageRuntime` 直连（涉及 `mode_rules`、`replay_helpers`、`move_input`、`panel_timer`、`undo_stats`、`saved_state`，`verify:iterate` 全绿）。
+- `runtime_call_helpers` 去壳继续推进：已删除内部中间层 `resolveCoreNormalizedCallResult`，并将 7 处调用点改为 `manager.resolveNormalizedCoreValueOrFallback` / `manager.resolveNormalizedCoreValueOrFallbackAllowNull` 直连（覆盖 `runtime_call_helpers`、`mode_rules`、`replay_helpers`；`verify:iterate` 全绿）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `resolveCoreStorageBooleanCallOrFallback` 与 `resolveCoreStoragePayloadNormalizedCallOrFallback` 两个 storage wrapper；调用点改为 `callCoreStorageRuntime` + `manager.resolveCoreBooleanCallOrFallback` / `manager.resolveNormalizedCoreValueOrFallback` 直连（覆盖 `saved_state`、`panel_timer`、`setup_timer_ui`、`stats_ui`，`verify:iterate` 全绿）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `resolveCoreArgsBooleanCallOrFallback` / `resolveCoreArgsNumericCallOrFallback` / `resolveCoreArgsStringCallOrFallback` 三个 args 薄封装；调用点统一改为 `resolveCoreArgsCallWith` + `manager.resolveCore*CallOrFallback` 直连（覆盖 `mode_rules`、`move_input`、`panel_timer`、`stats_display`、`replay_helpers`，`verify:iterate` 全绿）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `resolveCoreArgsNormalizedCallOrFallback`；调用点统一改为 `resolveCoreArgsCallWith` + `manager.resolveNormalizedCoreValueOrFallback` 直连（覆盖 `mode_rules` 与 `replay_helpers` 的 grid/move-path/replay-codec/replay-legacy 链路，`verify:iterate` 全绿）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `resolveCoreNormalizedPayloadCallOrUndefined`；调用点改为 `resolveCorePayloadCallWith` + `manager.resolveNormalizedCoreValueOrUndefined` 直连（覆盖 `undo_stats` 的 `normalizeUndoStackEntry/createUndoTileSnapshot/createUndoRestoreTile`，`verify:iterate` 全绿）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `tryHandleCorePayloadRawValue`；调用点改为 `resolveCorePayloadCallWith` + `manager.tryHandleCoreRawValue` 直连（覆盖 `move_input` 的 `computePostMoveScore/resolveNextIpsInputCount/resolveProgressiveCapped64Unlock`，`verify:iterate` 全绿）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `resolveCoreObjectPayloadCallOrFallback`；调用点改为 `resolveCorePayloadCallWith` + `manager.resolveCoreObjectCallOrFallback` 直连（覆盖 `replay_helpers` 全链路 + `mode_rules.computeMergeEffects` + `undo_stats.computeUndoRestoreState/computeUndoRestorePayload`，`verify:iterate` 全绿）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `resolveCoreNormalizedPayloadCallOrFallback`；调用点改为 `resolveCorePayloadCallWith` + `manager.resolveNormalizedCoreValueOrFallback` 直连（覆盖 `mode_rules/move_input/panel_timer/stats_display/undo_stats/replay_helpers`，`verify:iterate` 全绿；`runtime_call_helpers` 缩减至 71 行，仅保留 4 个底层入口）。
+- `runtime_call_helpers` 去壳继续推进：已删除 `tryHandleCoreArgsRawValue`；调用点改为 `resolveCoreArgsCallWith` + `manager.tryHandleCoreRawValue` 直连（覆盖 `mode_rules.applySpecialRulesState` 与 `replay_helpers` 的 spawn/compact-codec 链路，`verify:iterate` 全绿；`runtime_call_helpers` 进一步收敛至 52 行，仅保留 3 个底层入口）。
+- `mode_rules` 去壳继续推进：已删除 5 个仅 special-rules 路径内部使用的短 helper（`resolveSpecialRulesBlockedCellSetFromCoreState`、`resolveSpecialRulesBlockedCellsListFromCoreState`、`resolveSpecialRulesUndoLimitValue`、`resolveSpecialRulesComboMultiplierValue`、`resolveSpecialRulesDirectionLockRulesValue`），并将等价逻辑内联到 `applySpecialRulesCoreState/applySpecialRulesFallbackState`（不改语义，`verify:iterate` 全绿）。
+- `setup_timer_ui` 去壳继续推进：已删除 4 个单点 helper（`resolveTimerModuleViewByMode`、`showAllTimerRowsForSetup`、`applyProgressiveCappedRowVisibilityForSetup`、`applyCappedTargetRowVisibilityForSetup`），并将逻辑内联到 `resolvePreferredTimerModuleView` 与 `applyCappedRowVisibilityFallbackForSetup`（不改计时区显示语义，`verify:iterate` 全绿）。
+- `stats_ui` 去壳继续推进：已删除单点 helper `applyStatsPanelInitialVisibility`，并将初始显隐逻辑内联到 `initStatsPanelUi`（不改统计面板初始化语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 4 个单点 helper（`resolveIsGameTerminatedState`、`resolveForcedReplaySpawn`、`resolveSpawnRandomStepCount`、`resolveAvailableCellsForRandomSpawn`），并将逻辑内联到 `isGameTerminated` / `tryInsertForcedReplaySpawn` / `insertSeededRandomSpawnTile` / `addRandomTile`（不改 move/spawn 语义，`verify:iterate` 全绿）。
+- `stats_display` 去壳继续推进：已删除 5 个单点 helper（`resolveIpsInputCountFallback`、`resolveTotalSpawnCountFallback`、`shouldFinalizeActuateAsTerminatedSession`、`handleTerminatedSessionActuatePersistence`、`buildActuatePayload`），并分别内联到 `resolveIpsInputCount/getActualSecondaryRate/finalizeActuatePersistence/actuate`（不改统计与存档语义，`verify:iterate` 全绿）。
+- `session_init` 去壳继续推进：已删除 2 个本地转发 helper（`resolveSessionInitDocumentLike`、`buildTimerMilestoneSlotByValueMapFallback`），并将逻辑内联到 `resolveTimerMilestoneSlotByValueMap/syncTimerMilestonesUi/syncTimerMilestoneLegendLabels/initializeGameManagerCoreFields`（不改初始化语义，`verify:iterate` 全绿）。
+- `panel_timer` 去壳继续推进：已删除 `buildDurationCoreInput` 与 `resolveDurationMsFallback`，并将其等价逻辑内联到 `getDurationMs`（不改计时读数与 fallback 语义，`verify:iterate` 全绿）。
+- `undo_stats` 去壳继续推进：已删除 4 个单点 helper（`buildUndoPolicyStateFallback`、`resolveUndoEnabledFromModeMap`、`computeStepStatsFallback`、`normalizeUndoRestoreState`），并将逻辑分别内联到 `resolveUndoPolicyStateForMode/loadUndoSettingForMode/computeStepStats/applyUndoRestoreState`（不改撤回策略与统计语义，`verify:iterate` 全绿）。
+- `panel_timer` 去壳继续推进：已删除 4 个 tick 链路单点 helper（`resolveCurrentTimerTickTime`、`syncTimerTickPrimaryDisplay`、`shouldRefreshStatsPanelDuringTimerTick`、`syncTimerTickStatsPanel`），并将逻辑收敛到 `handleTimerTick`（不改计时刷新频率与 stats-panel 节流语义，`verify:iterate` 全绿）。
+- `session_init` 去壳继续推进：已删除单点 helper `resolveSessionChallengeId`，并将 challengeId 解析逻辑内联到 `initializeSessionReplaySnapshotState`（不改 challenge 上下文解析语义，`verify:iterate` 全绿）。
+- `panel_timer` 去壳继续推进：已删除 9 个 timer 启停链路单点 helper（`resolveActuateElapsedMs`、`resolveTimerUpdateIntervalFallback`、`restartTimerInterval`、`applyTimerStartState`、`configureAndRestartTimerInterval`、`resolveAccumulatedTimeOnStop`、`clearTimerIntervalState`、`canStopTimer`、`applyTimerStopState`），并将逻辑内联到 `syncActuateTimerView/resolveTimerUpdateIntervalMs/startTimer/stopTimer`（不改计时器状态机语义，`verify:iterate` 全绿）。
+- `stats_ui` 去壳继续推进：已删除单点 helper `resolveStatsPanelInitialOpenFlag`，并将初始开关读取逻辑内联到 `initStatsPanelUi`（不改 localStorage/core storage 回退语义，`verify:iterate` 全绿）。
+- `stats_ui` 去壳继续推进：已删除 3 个初始化阶段单点 helper（`bindStatsPanelToggleButton`、`bindStatsPanelCloseButton`、`bindStatsPanelOverlayDismiss`），并将事件绑定逻辑内联到 `initStatsPanelUi`（不改按钮/遮罩关闭交互语义，`verify:iterate` 全绿）。
+- `stats_ui` 去壳继续推进：已删除单点 helper `resolveStatsPanelToggleHostElements`，并将宿主节点解析逻辑内联到 `initStatsPanelUi`（不改 top-action 挂载策略与浮动回退语义，`verify:iterate` 全绿）。
+- `stats_ui` 去壳继续推进：已删除单点 helper `mountStatsPanelToggleButton`，并将按钮挂载逻辑内联到 `initStatsPanelUi`（不改 top-action/浮动挂载语义，`verify:iterate` 全绿）。
+- `stats_ui` 去壳继续推进：已删除 2 个 corner 视图单点 helper（`ensureCornerStatsElement`、`applyBaseCornerStatsElementStyle`），并将创建与样式逻辑内联到 `initCornerStatsUi`（不改 corner 统计显示语义，`verify:iterate` 全绿）。
+- `undo_stats` 去壳继续推进：已删除 3 个 UI 状态单点 helper（`applyUndoLinkUiState`、`applyGameOverUndoButtonUiState`、`applyPracticeUndoButtonUiState`），并将按钮/链接状态更新逻辑内联到 `updateUndoUiState`（不改撤回 UI 可用性语义，`verify:iterate` 全绿）。
+- `session_init` 去壳继续推进：已删除 `isSessionInitRecordObject` 与 `normalizeSessionInitOptions`，并将 options 归一化逻辑内联到 `addInitialTilesWhenNeeded/initializeSessionReplaySnapshotState`（不改 session 初始化语义，`verify:iterate` 全绿）。
+- `stats_ui` 去壳继续推进：已删除 `ensureStatsPanelToggleButtonElement`，并将按钮解析/创建逻辑内联到 `initStatsPanelUi`（不改统计按钮挂载与 SVG 初始化语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除输入节流队列链路 6 个单点 helper（`shouldExecuteImmediateMoveInput`、`queuePendingMoveInput`、`requestMoveInputFlush`、`hasPendingMoveInputValue`、`scheduleQueuedPendingMoveInputFlush`、`scheduleDeferredPendingMoveInput`），并将逻辑内联到 `handleMoveInput/flushPendingMoveInput`（不改输入节流与延迟 flush 语义，`verify:iterate` 全绿）。
+- `panel_timer` 去壳继续推进：已删除 `resolveCappedModeState` 链路 3 个单点 helper（`buildResolveCappedModeStateRuntimeInput`、`buildResolveCappedModeStateFallback`、`writeResolvedCappedModeStateCache`），并将逻辑内联到 `resolveCappedModeState`（不改 capped 模式状态解析与缓存语义，`verify:iterate` 全绿）。
+- `setup_timer_ui` 去壳继续推进：已删除 3 个 reset 基础链路单点 helper（`hideLegacyStepStatsLabels`、`clearTimerSlotTexts`、`resetTimerSubRowTexts`），并将逻辑内联到 `resetTimerBaseUiForSetup`（不改 setup 重置与计时子行清空语义，`verify:iterate` 全绿）。
+- `session_init` 去壳继续推进：已删除单点 helper `createSessionReplaySnapshot`，并将 session v3 快照构造逻辑内联到 `initializeSessionReplaySnapshotState`（不改 challenge/seed/actions 初始化语义，`verify:iterate` 全绿）。
+- `session_init` 去壳继续推进：已删除 3 个会话初始化单点 helper（`initializeSessionSeedState`、`resetSessionReplayState`、`resetSessionTransientState`），并将逻辑收敛到 `initializeSessionState`（不改 seed/replay/transient 状态初始化语义，`verify:iterate` 全绿）。
+- `session_init` 去壳继续推进：已删除单点 helper `initializeSessionReplaySnapshotState`，并将 challenge 上下文与 `sessionReplayV3` 构造逻辑内联到 `initializeSessionState`（不改会话回放快照初始化语义，`verify:iterate` 全绿）。
+- `setup_timer_ui` 去壳继续推进：已删除 2 个单点 helper（`repositionCappedTimerContainerForSetup`、`resetCappedPlaceholderTimerRows`），并将逻辑分别内联到 `resetTimerUiForSetup` 与 `resetCappedTimerContainersForSetup`（不改 capped 容器定位与 placeholder 重置语义，`verify:iterate` 全绿）。
+- `setup_timer_ui` 去壳继续推进：已删除 2 个单点 helper（`applyCappedRowVisibilityFallbackForSetup`、`resetCappedTimerContainersForSetup`），并将逻辑分别内联到 `applyCappedRowVisibilityForSetup` 与 `resetTimerUiForSetup`（不改 capped 行显隐与计时容器重置语义，`verify:iterate` 全绿）。
+- `panel_timer` 去壳继续推进：已删除 5 个 timer-module 视图链路单点 helper（`updateTimerModuleBaseHeightFromElement`、`applyTimerModuleViewToElement`、`resolveNextTimerModuleViewMap`、`persistTimerModuleViewForCurrentMode`、`writeStorageJsonMapWithFallback`），并将逻辑内联到 `applyTimerModuleView`（不改 timer module 显隐、存储写回与 core-storage fallback 语义，`verify:iterate` 全绿）。
+- `panel_timer` 去壳继续推进：已删除单点 helper `handleTimerTick`，并将 tick 刷新逻辑内联到 `startTimer` 的 interval 回调（不改计时主显示、IPS 刷新与 stats-panel 节流语义，`verify:iterate` 全绿）。
+- `session_init` 去壳继续推进：已删除 `initializeTimerMilestones` 链路 3 个单点 helper（`resolveTimerMilestoneSlotByValueMap`、`syncTimerMilestonesUi`、`syncTimerMilestoneLegendLabels`），并将里程碑 slot 映射与 UI 同步逻辑内联到 `initializeTimerMilestones`（不改里程碑标签同步与主题样式刷新语义，`verify:iterate` 全绿）。
+- `stats_display/panel_timer` 去壳继续推进：已删除 2 个单点 helper（`updateActuateStats`、`syncActuateTimerView`），并将统计显示与计时显示刷新逻辑内联到 `actuate`（不改 `actuate` 后统计/计时刷新语义，`verify:iterate` 全绿）。
+- `session_init/restart_setup` 去壳继续推进：已删除 2 个跨文件单点 helper（`restoreOrInitBoardState`、`syncSetupUiAfterStateRestore`），并将恢复初始化与 setup UI 同步逻辑内联到 `resolveSetupRestoreState/finalizeSetupState`（不改开局补砖、存档恢复与 setup 后 UI 同步语义，`verify:iterate` 全绿）。
+- `setup_timer_ui/restart_setup` 去壳继续推进：已删除 2 个单点 helper（`resolvePreferredTimerModuleView`、`resetTimerBaseUiForSetup`），并将逻辑分别内联到 `resolveSetupRestoreState` 与 `resetTimerUiForSetup`（不改 timer-module 初始视图解析与 setup 基础计时区重置语义，`verify:iterate` 全绿）。
+- `session_init/restart_setup` 去壳继续推进：已删除单点 helper `initializeSessionState`，并将 session 初始化逻辑内联到 `runSetupStateInitialization`（不改 seed/replay/session snapshot/transient 状态初始化语义，`verify:iterate` 全绿）。
+- `setup_timer_ui` 去壳继续推进：已删除单点 helper `applyCappedRowVisibilityForSetup`，并将 capped 行显隐 plan 解析逻辑内联到 `resetTimerUiForSetup`（不改 core/fallback 显隐语义，`verify:iterate` 全绿）。
+- `panel_timer` 去壳继续推进：已删除单点 helper `normalizePanelTimerRecordObject`，并将 record 归一化逻辑内联到 `cloneResolvedCappedModeState`（不改 capped state clone 语义，`verify:iterate` 全绿）。
+- `restart_setup` 去壳继续推进：已删除 8 个单点/中间层 helper（`prepareRestartSessionState`、`tryRestartPracticeFromSavedBase`、`restartWithFreshSetup`、`resolveRestartWithBoardSetupSeed`、`buildRestartWithBoardSetupOptions`、`resolveSetupModeConfigSource`、`initializeSetupUiState`、`createDefaultSetupRestoreState`），并将逻辑内联到 `restartGame/restartWithBoard/resolveSetupModeConfig/resolveSetupRestoreState/runSetupStateInitialization`（不改重开与 setup 主流程语义，`verify:iterate` 全绿）。
+- `panel_timer` 去壳继续推进：已删除 4 个单点 helper（`normalizeCappedPlaceholderRowValuesCore`、`getCappedPlaceholderRowValuesFallback`、`ensureCappedOverflowContainerElement`、`mountCappedOverflowContainerAtAnchor`），并将逻辑内联到 `getCappedPlaceholderRowValues/getCappedOverflowContainer`（不改 capped 占位行与 overflow 容器挂载语义，`verify:iterate` 全绿）。
+- `restart_setup` 去壳继续推进：已删除 4 个 setup 主流程单点 helper（`resolveGlobalModeConfigOverride`、`resolveSetupModeConfig`、`finalizeSetupState`、`resetSetupRoundState`），并将逻辑内联到 `setupGame/runSetupStateInitialization`（不改 modeConfig 解析、开局重置与 setup 后 UI 同步语义，`verify:iterate` 全绿）。
+- `restart_setup` 去壳继续推进：已删除单点 helper `resolveSetupRestoreState`，并将存档恢复判定、首帧补砖与 timer-module 初始视图解析逻辑内联到 `runSetupStateInitialization`（不改存档恢复与首局补砖语义，`verify:iterate` 全绿）。
+- `stats_display/bindings` 去壳继续推进：已删除 `updateStatsPanel` 专用 4 个单点 helper（`resolveStatsPanelStepValues`、`applyStatsPanelSpawnLabels`、`applyStatsPanelStepFields`、`applyStatsPanelSpawnFields`），并将逻辑内联到 `bindGameManagerPrototypeRuntime` 中的 `updateStatsPanel` 绑定函数（不改 stats panel 字段填充与二/四生成统计展示语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除动态计时行构建链路 5 个单点 helper（`resolveSavedDynamicTimerRowInfo`、`createSavedDynamicTimerRowContainer`、`createSavedDynamicTimerLegendElement`、`createSavedDynamicTimerValueElement`、`appendSavedDynamicTimerRowChildren`），并将逻辑内联到 `createSavedDynamicTimerRow`（不改动态计时行 DOM 还原语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 timer-restore 上下文链路 2 个单点 helper（`resolveSavedTimerUiRestoreContext`、`applySavedTimerRowsRestore`），并将逻辑内联到 `restoreSavedTimerUiState`（不改 fixed/dynamic/sub rows 恢复与后置 UI 同步语义，`verify:iterate` 全绿）。
+- `panel_timer` 去壳继续推进：已删除单点 helper `normalizePositiveNumericValue`，并将正数归一化逻辑内联到 `resolveCappedTargetValueOrNull`（不改 capped target 解析语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 `buildSavedGameStatePayload` 专用 4 个分段 helper（`buildSavedGameStateRoundPayload`、`buildSavedGameStateDirectionLockPayload`、`buildSavedGameStateBoardSnapshotPayload`、`buildSavedGameStateTimerUiPayload`），并将字段构造逻辑内联回 `buildSavedGameStatePayload`（不改保存快照字段结构与默认值语义，`verify:iterate` 全绿）。
+- `panel_timer` 去壳继续推进：已删除单点 helper `resolveCappedTimerFontSizeFallback`，并将字体回退逻辑内联到 `getCappedTimerFontSize`（不改 capped timer legend 字号解析语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 `buildLiteSavedGameStatePayload` 专用 4 个分段 helper（`buildLiteSavedStateBaseSection`、`buildLiteSavedStateMetaSection`、`buildLiteSavedStateBoardSection`、`buildLiteSavedStateReplayResetSection`），并将字段构造逻辑内联到 `buildLiteSavedGameStatePayload` fallback 分支（不改 lite 存档字段结构与默认值语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除持久化链路 4 个中间 helper（`buildSavedGameStatePersistContext`、`writeSavedGameStatePrimaryPersist`、`writeSavedGameStateQuotaFallbackPersist`、`hasAnySavedGameStatePersisted`），并将主写入/配额回退逻辑内联到 `persistSavedGameStatePayload`（不改 windowName 同步、主存储写入与 quota 回退语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除单点 helper `resolveSavedGameStateStorageKeys`，并将 key/liteKey 解析直接内联到 `persistSavedGameStatePayload`（不改主存档与 lite 存档 key 解析语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 restore 链路 5 个单点 helper（`applySavedTimerUiRestorePostEffects`、`syncSavedStateTimerDisplay`、`shouldResumeTimerFromSavedState`、`buildSavedStateCandidates`、`applySavedStateRestorePipeline`），并将逻辑分别内联到 `restoreSavedTimerUiState/finalizeSavedStateRestore/tryRestoreSavedStateCandidate/tryRestoreLatestSavedState`（不改存档恢复与计时恢复语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 `applySavedStateCoreFields` 专用 6 个字段分层 helper（`applySavedStateStatusFields`、`applySavedStateSeedAndSessionFields`、`applySavedStateReplayFields`、`applySavedStateRoundStateFields`、`applySavedStateTimerFields`、`applySavedStateBoardSnapshotFields`），并将字段恢复逻辑内联到 `applySavedStateCoreFields`（不改状态恢复字段赋值语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 timer fixed-row 恢复链路 2 个单点 helper（`applySavedTimerLegendState`、`applySavedTimerFixedRowState`），并将 row/legend 恢复逻辑内联到 `restoreSavedTimerFixedRows`（不改 fixed-row 计时显示与 legend 恢复语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 timer sub-row 恢复链路 3 个单点 helper（`setTextContentByIdWhenString`、`setDisplayByIdWhenBoolean`、`restoreSavedTimerSubRows`），并将子行恢复逻辑内联到 `restoreSavedTimerUiState`（不改 sub-row 文本与显隐恢复语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 dynamic-row 恢复链路单点 helper `restoreSavedDynamicTimerRowsIntoContainer`，并将 capped/overflow 容器恢复逻辑内联到 `restoreSavedTimerDynamicRows`（不改 dynamic-row 还原语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除存档候选解析链路 2 个单点 helper（`resolveWindowNameSavedMap`、`resolveSavedPayloadFromWindowNameMap`），并将 window.name map 解码与 modeKey 取值逻辑内联到 `resolveWindowNameSavedCandidate`（不改 window.name 候选回退语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除单点 helper `validateSavedStateCandidate`，并将候选合法性判定逻辑内联到 `tryRestoreSavedStateCandidate`（不改 canRestore/shouldClearSavedState 判定语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除保存节流链路 2 个单点 helper（`shouldClearSavedStateForTerminatedSession`、`isSaveGameStateThrottled`），并将终局清理与节流判定逻辑内联到 `shouldSkipSaveGameState`（不改强制保存和终局清理语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除读取与清理链路 2 个单点 helper（`readSavedPayloadByKeyFallback`、`removeSavedGameStateKeysFallback`），并将 fallback 读取与 key 删除逻辑内联到 `readSavedPayloadByKey/clearSavedGameState`（不改存档读取择优和损坏键清理语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除存档保存/恢复入口链路 2 个单点 helper（`saveGameStateImpl`、`shouldAttemptSavedStateRestore`），并将逻辑内联到 `saveGameState/shouldAttemptSavedStateRestoreForManager`（不改保存节流与恢复前置判定语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除动态计时行构建链路 3 个单点 helper（`normalizeSavedStateOptions`、`createSavedStateElement`、`shouldApplySavedDynamicTimerRepeat`），并将 options 归一化与 DOM/repeat 判定逻辑内联到 `saveGameState/createSavedDynamicTimerRow`（不改动态计时行恢复语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除单点 helper `normalizeSavedStateRecordObject`，并将 record 归一化逻辑内联到 `createSavedDynamicTimerRow/buildSavedGameStatePayload`（不改 row/subState 回退语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除存档构建/提交链路 2 个单点 helper（`buildSavedGameStateBasePayload`、`commitSavedGameStateAtTimestamp`），并将基线 payload 构建与提交更新逻辑内联到 `buildSavedGameStatePayload/saveGameState`（不改保存 payload 结构与 lastSavedGameStateAt 更新语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 fallback/map 解析链路 3 个单点 helper（`readLocalStorageJsonMapFallback`、`resolveWindowNameSavedPayloadMapAndKeptParts`、`writeWindowNameSavedPayloadFallback`），并将 localStorage 回退读取与 window.name map 组装逻辑内联到 `readLocalStorageJsonMap/writeWindowNameSavedPayload`（不改 localStorage/window.name 回退语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除布尔包装 helper `resolveSavedStateStoragePayloadBooleanCall`，并将 storage 布尔调用逻辑内联到 `shouldUseSavedGameState/clearSavedGameState`（不改存档开关判定与 key 清理语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 normalizer 包装 helper `resolveSavedStateStorageNormalizedCall`，并将 storage normalizer 调用逻辑内联到 `readLocalStorageJsonMap/getSavedGameStateStorages`（不改 storage 列表与 json-map 回退语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 allow-null 包装 helper `resolveSavedStateStoragePayloadNormalizedCallAllowNull`，并将 allow-null normalizer 调用逻辑内联到 `readSavedPayloadByKey/resolveWindowNameSavedCandidate`（不改存档读取与 window.name 候选回退语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除单点 helper `captureTimerSubStateForSave`，并将 timer sub 行快照采集逻辑内联到 `buildSavedGameStatePayload`（不改 timer_sub_8192/16384 与 sub 容器显隐快照语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除单点 helper `shouldSkipSaveGameState`，并将保存节流/终局清理判定逻辑内联到 `saveGameState`（不改 force 保存、节流窗口与终局清理语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除恢复链路 2 个单点 helper（`finalizeSavedStateRestore`、`tryRestoreSavedStateCandidate`），并将候选合法性判定与恢复收尾逻辑内联到 `tryRestoreLatestSavedState`（不改存档恢复成功/失败回退语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 normalizer 包装 helper `resolveSavedStateStoragePayloadNormalizedCall`，并将 storage normalizer 调用逻辑内联到 `resolveSavedGameStateStorageKey/writeWindowNameSavedPayload/buildLiteSavedGameStatePayload/writeSavedGameStatePayload`（不改 key 解析与持久化回退语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 timer 恢复链路 2 个单点 helper（`restoreSavedTimerFixedRows`、`restoreSavedTimerDynamicRows`），并将 fixed/dynamic rows 还原逻辑内联到 `restoreSavedTimerUiState`（不改 timer 行还原与 scroll 同步语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除单点 helper `applySavedStateCoreFields`，并将核心状态字段恢复逻辑内联到 `tryRestoreLatestSavedState`（不改 board/score/replay/undo/timer 基础字段恢复语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 timer 快照链路 2 个单点 helper（`captureTimerFixedRowsStateForSave`、`captureTimerDynamicRowsStateForSave`），并将 fixed/dynamic rows 快照采集逻辑内联到 `buildSavedGameStatePayload`（不改 timer rows 存档结构语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除单点 helper `restoreSavedTimerUiState`，并将 timer UI 还原逻辑内联到 `tryRestoreLatestSavedState`（不改 timer fixed/dynamic/sub rows 恢复与 scroll 同步语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除单点 helper `buildLiteSavedGameStatePayload`，并将 lite payload 构建逻辑内联到 `persistSavedGameStatePayload`（不改 lite 存档字段结构与 fallback 语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 3 个非公开 helper（`resolveWindowPathname`、`resolveWindowNameSavedCandidate`、`shouldAttemptSavedStateRestoreForManager`），并将 pathname/window.name 候选解析与恢复前置判定逻辑分别内联到 `shouldUseSavedGameState`、`tryRestoreLatestSavedState`、`runSetupStateInitialization/detectMode`（不改存档恢复与模式识别语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除本地对象判定 helper `isSavedStateRecordObject`，并将判定统一收敛到通用 `isNonArrayObject`（不改 record 判定与恢复/持久化分支语义，`verify:iterate` 全绿）。
+- `restart_setup` 去壳继续推进：已删除本地对象判定 helper `isRestartSetupRecordObject`，并移除 `runSetupStateInitialization` 内重复 `normalizedOptions` 声明（判定统一收敛到 `isNonArrayObject`，不改 setup/restart 语义，`verify:iterate` 全绿）。
+- `restart_setup` 去壳继续推进：已删除 4 个单用途 helper（`confirmRestartGame`、`normalizeRestartSetupOptions`、`hydrateRestartBoardState`、`syncPracticeRestartBase`），并将确认弹窗/options 归一化/棋盘回填/practice 基线同步逻辑内联到 `restartGame/restartWithBoard/setupGame`（不改 restart/replay restart 行为语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除纯常量包装 helper `resolveWindowNameSavedPayloadMarker`，并将 window.name marker 常量表达式直接内联到写入与恢复路径，同时清理其 prototype 绑定（不改 window.name 读写语义，`verify:iterate` 全绿）。
+- `restart_setup` 去壳继续推进：已删除单用途分发 helper `restartReplaySession`，并将 replay 重启分支直接改为 `restartWithBoard/restartWithSeed` 调用，同时清理其 prototype 绑定（不改 replay seek/import 重启语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已删除 2 个 window.name 解析 helper（`readWindowNameRaw`、`decodeWindowNameSavedMapPayload`），并将读取与解码逻辑内联到 `writeWindowNameSavedPayload/tryRestoreLatestSavedState`，同时清理对应 prototype 绑定（不改 window.name 候选恢复语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已将 `resolveSavedGameStateStorageKey/getSavedGameStateStorages/readSavedPayloadByKey/writeSavedGameStatePayload` 的 `manager.*` 自调用改为本地函数调用，并清理不再需要的 prototype 绑定（不改存档读写/恢复语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已将 `writeSavedGameStatePayload` 下沉为 `persistSavedGameStatePayload` 内部局部函数并删除顶层定义（不改存档主写入/lite 回退与 quota 回退语义，`verify:iterate` 全绿）。
+- `saved_state/move_input` 降耦继续推进：已将 `manager.createSavedDynamicTimerRow/manager.normalizeCappedRepeatLegendClasses` 跨模块调用改为本地函数调用（`createSavedDynamicTimerRow/normalizeCappedRepeatLegendClasses`），并清理两条 prototype 绑定（不改 capped 动态计时行追加与样式归一化语义，`verify:iterate` 全绿）。
+- `saved_state` 降耦继续推进：已将 `manager.writeWindowNameSavedPayload` 自调用改为本地 `writeWindowNameSavedPayload(manager, ...)`，并清理对应 prototype 绑定（不改 window.name 同步语义，`verify:iterate` 全绿）。
+- `saved_state` 降耦继续推进：已确认 `resolveSavedGameStateStorageKey` 不再有 `manager.*` 外部调用，清理其 prototype 绑定，仅保留模块内函数调用（不改存档 key 解析语义，`verify:iterate` 全绿）。
+- `saved_state/restart_setup` 降耦继续推进：已将 `manager.setBoardFromMatrix/manager.cloneBoardMatrix` 调用改为模块函数直调（`setBoardFromMatrix(manager, ...)`/`cloneBoardMatrix(...)`），并清理两条 prototype 绑定（不改 board 恢复与快照克隆语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除单点 helper `tryWriteCappedMilestoneToPlaceholder` 与 `appendCappedMilestoneDynamicRow`，并将占位行写入与动态行追加逻辑内联到 `recordCappedMergeMilestone`（不改 capped 里程碑写入与自动滚动语义，`verify:iterate` 全绿）。
+- `saved_state` 降耦继续推进：已将 `manager.clearSavedGameState` 的模块内自调用改为本地函数调用 `clearSavedGameState(manager, ...)`（不改失败清理与恢复失败回退语义，`verify:iterate` 全绿）。
+- `restart_setup` 降耦继续推进：已将 `restartGame` 中的 `manager.restartWithBoard(...)` 改为本地函数直调 `restartWithBoard(manager, ...)`（不改 practice 重开路径语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 `applyIpsInputCountFromCore` 与 `applyIpsInputCountFallback`，并将 IPS 计数核心分支与 fallback 分支内联到 `updateIpsInputCountAfterMove`（不改 replay/非 replay 计数语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 `applyProgressiveUnlockFallback` 与 `stampMergeMilestoneTimer`，并将 progressive unlock fallback 与里程碑 timer 打点逻辑内联到 `applyProgressiveMergeMilestones`（不改 capped64 解锁与里程碑计时语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 `applyPostMoveScoreFallback`，并将 fallback 连击计分逻辑内联到 `applyPostMoveScore`（不改 core scoring fallback 语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 `prepareMoveExecution/prepareTilesForMove/applyPostMoveRecordArtifacts/recordPostMoveArtifacts/finalizeMoveAction` 5 个单用途 helper，并将前置判定、tile 预处理、post-move 记录与收尾动作内联到 `move` 主链（不改 move 执行顺序与副作用语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 `resolvePostMoveLifecycleFromCore/resolvePostMoveLifecycleFallback` 2 个单用途 helper，并将 core/fallback 生命周期解析内联到 `resolvePostMoveLifecycle`（不改 successfulMoveCount/over/timer 恢复判定语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 `resolveLockedDirectionFromCore/resolveLockedDirectionFallback` 2 个单用途 helper，并将 core 锁方向解析与 fallback 策略合并到 `resolveLockedDirection`（不改 direction-lock 命中条件与随机种子语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 `applyGameTerminatedSideEffects/tryInsertForcedReplaySpawn/canInsertForcedReplaySpawn/applyForcedReplaySpawn/primeSpawnRandomSource/resolveRandomSpawnTilePlan/applyRandomSpawnTilePlan/insertSeededRandomSpawnTile` 8 个单用途 helper，并将终局副作用与随机出生（含 replay forcedSpawn）链路内联到 `isGameTerminated/addRandomTile`（不改 spawn 概率、forcedSpawn 优先级与计时终止语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 `executeMergeInteraction/executeSlideInteraction` 2 个单用途 helper，并将 merge/slide 分支执行逻辑内联到 `processMoveTraversalCell`（不改 merge 判定、undo 快照记录与派生效果执行顺序，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 `applyMergeTileMutation/applyMergeDerivedEffects` 2 个单用途 helper，并将 tile 合并写回与 merge 派生效果链路（progressive/capped milestone/win-reached/timer/sub-row）内联到 `processMoveTraversalCell`（不改 score 累加、UI 打点与派生状态语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 `processMoveTraversalCell` 单用途 helper，并将其 traversal cell 执行逻辑内联到 `executeMoveTraversal`（不改 blocked-cell 判定、merge/slide 分支执行顺序与 undo 快照语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 `executeMoveTraversal` 与 `shouldBlockMoveByLockedDirection` 2 个单用途 helper，并将 traversal 主循环与锁方向拦截逻辑内联到 `move` 主链，同时删除 `syncTimerTextAfterStop` 并把 timer 文本回填逻辑内联到 `resolvePostMoveLifecycle`（不改 move 判定顺序、lock-consume 语义与 over/timer 终止回填语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已删除 `resolveCappedPlaceholderSlotValue` 单用途 helper，并将占位 slot 解析逻辑（core + fallback）内联到 `recordCappedMergeMilestone`（不改 capped 占位行映射与 repeat 计时写入语义，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已删除 setup 配置链路 9 个单用途 helper（`applySetupModeConfigCoreFields/resolveSetupModeFamily/resolveSetupRankPolicy/applySetupModeDerivedPolicyFields/applySetupModeRuleNormalization/applySetupModeConfigRulesAndSpecialState/syncSetupModeScoreManager/syncSetupModeDocumentAttributes/syncSetupModeWindowConfig`），并将其逻辑按原顺序内联到 `applySetupModeConfig`（不改 mode 配置写回、special rules 应用、scoreManager 同步与 document/window 属性同步语义，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已删除 `applySpecialRulesCoreState/applySpecialRulesFallbackState/applySpecialRulesBlockedCellsFallback` 3 个单用途 helper，并将 core/fallback special-rules 状态落地逻辑内联到 `applySpecialRulesState`（不改 blocked-cell 解析、undoLimit/comboMultiplier/directionLockRules 应用语义，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已删除 `resolveBlockedCellPoint/normalizeResolvedModeConfigFromCore/resolveModeConfigFallbackFromCatalog` 3 个单用途 helper，并将 blocked cell 解析及 modeConfig core/fallback 归一化逻辑内联到 `applySpecialRulesState/resolveModeConfig`（不改 alias 映射、default fallback 与 blocked cell 越界过滤语义，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已删除 `resolveModeConfigMaxTile/normalizeCustomSpawnFourRate/buildPow2StrictSpawnTableByFourRate/applyModeConfigSpawnTableFallback/applyModeConfigRankingDefaults` 5 个 fallback 专用 helper，并将 max-tile、pow2 自定义 four-rate 出生表与 ranked 默认策略逻辑内联到 `normalizeModeConfig` fallback 分支（不改 fibonacci capped 判定、spawn table fallback 与 rank 字段默认语义，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已删除 `applySpecialRulesState` 单用途 helper，并将 special-rules core/fallback 状态应用链路内联到 `applySetupModeConfig`（不改 setup 阶段 blocked cells、undoLimit/comboMultiplier/directionLockRules 应用顺序，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已删除 `resolveGridCellAvailableFn/collectNormalizedSpawnTableFallbackItems/resolveDefaultSpawnTableByRuleset` 3 个内部 helper，并将 grid cell availability 与 spawn table fallback 逻辑内联到 `findFarthestPosition/getAvailableCells/normalizeSpawnTable`（不改 grid fallback 与 spawn 默认表语义，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已删除 `isModeRulesNonArrayObject` 并将两处调用替换为原位对象判定（不改 special rules 与 mode config 归一化语义，`verify:iterate` 全绿）。
+- `panel_timer` 去壳继续推进：已删除 `normalizeTimerModuleViewValue/normalizeDurationMsValue` 2 个本地归一化 helper，并将 view/duration 归一化逻辑内联到 `applyTimerModuleView/getDurationMs`（不改 timer module 显示模式与 duration 归一化语义，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已删除 `createModeConfigFallbackBase` 并将其有效分支逻辑内联到 `normalizeModeConfig` fallback；`!manager` 分支维持原语义（返回 `null`）（不改实际运行路径语义，`verify:iterate` 全绿）。
+- `replay_helpers` 降耦继续推进：已将同模块自调用从 `manager.*` 收敛为本地函数直调（`serializeReplay`、`decodeReplay128`、`insertCustomTile`、`encodeReplay128`），覆盖 auto-submit payload、v4 action decode、dispatch 与 compact log 追加链路（不改 replay 导入/执行与 compact 编码语义，`verify:iterate` 全绿）。
+- `panel_timer` 去壳继续推进：已删除 `isCappedModeStateCacheValid` 并将缓存命中判定内联到 `resolveCappedModeState`（不改 capped state cache 命中条件与 clone 返回语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `resolveWindowNameSavedCandidateFallback(manager, windowLike, marker)`，并将 `tryRestoreLatestSavedState` 中 `window.name` 回退解析链路下沉到该 helper（不改 windowName 候选快照解析语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `resolveLatestSavedPayloadCandidate(candidates)`，并将 full/lite/window 三路候选按 `saved_at` 选优逻辑从 `tryRestoreLatestSavedState` 抽离（同时间戳仍保持“full > lite > window”优先级，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `resolveSavedStateRestoreDecision(manager, saved)`，并将版本/终局/模式/尺寸/ruleset/board 兼容性判定链从 `tryRestoreLatestSavedState` 抽离（不改恢复准入条件与 mode mismatch 不清理策略，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `applySavedTimerFixedRowsState(manager, saved, cappedStateForRestore)`，并将恢复流程中的固定 timer 行样式/文案/legend 回填链路从 `tryRestoreLatestSavedState` 抽离（不改 capped repeat 与 legend class 回填语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `applySavedDynamicTimerRowsState(manager, container, rowsState, cappedStateForRestore)`，并将恢复流程中的动态 timer 行回填循环（capped/overflow）从 `tryRestoreLatestSavedState` 抽离（不改动态行重建与容器清空顺序语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `applySavedTimerSubState(manager, saved)`，并将恢复流程中的 `timer_sub_8192/timer_sub_16384/timer_sub_visible` 回填逻辑从 `tryRestoreLatestSavedState` 抽离（不改 sub 行文案与可见性恢复语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `applySavedManagerCoreState(manager, saved)`，并将恢复流程中的 manager 状态字段回填链路从 `tryRestoreLatestSavedState` 抽离（不改分数/seed/undo/replay/锁方向/board 快照恢复语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `applySavedTimerPostRestoreState(manager, saved, cappedStateForRestore)`，并将恢复尾段（legend 规范化、timer 文案、timer 重启判定）从 `tryRestoreLatestSavedState` 抽离（不改 over/won 条件下 timer 重启抑制语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `resolveLatestSavedPayloadForManager(manager, windowNameSavedCandidate)`，并将 full/lite/window 候选组装与选优调用从 `tryRestoreLatestSavedState` 抽离（不改 storage 优先级与候选选优语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `resolveWindowNameSavedCandidate(manager, windowLike)`，并将 windowName 候选读取（core 调用 + fallback 解析）从 `tryRestoreLatestSavedState` 抽离（不改 windowName 缺省回退语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `applySavedTimerDomState(manager, saved, cappedStateForRestore)`，并将 DOM 恢复分支（fixed/dynamic/sub）从 `tryRestoreLatestSavedState` 抽离（不改 timer DOM 恢复顺序与条件语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `persistSavedPayloadToStorages(manager, persistKey, persistPayload)`，并将 `persistSavedGameStatePayload` 内联写存储闭包提升为模块 helper（不改 core 调用优先与本地存储回退语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `buildLiteSavedGameStatePayloadFallback(manager, payload)`，并将 `persistSavedGameStatePayload` 的 lite payload fallback 构造体从主流程抽离（不改 lite payload 字段集合与默认值语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `removeSavedKeysFromStoragesFallback(stores, keys)`，并将 `clearSavedGameState` 中的本地存储删除双层循环从主流程抽离（不改 core remove 失败后的 fallback 删除语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `shouldClearSavedStateForTerminatedSession(manager)` 与 `shouldSkipSaveGameStateByThrottle(manager, options, now)`，并将 `saveGameState` 中终局清理判定与 150ms 节流判定从主流程抽离（不改 `practice_legacy` 例外与 `force` 覆盖节流语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `readWindowNameRawValue(windowLike)`、`decodeWindowNamePayloadMap(encoded)` 与 `resolveSavedStateModeKey(manager, modeKey)`，并复用于 windowName 读写与 modeKey 解析路径（不改 windowName 解码失败回退与 modeKey 默认选择语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `parseSavedPayloadRawObject(manager, raw)`，并将 `readSavedPayloadByKey` 中 JSON 解析与对象校验分支抽离（不改损坏记录自动移除与按 `saved_at` 取最新语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `resolveWindowNameLookupMarker(marker)` 与 `scanWindowNamePartsByMarker(raw, marker)`，并统一 `window.name` marker 扫描逻辑供 fallback 读取与写回路径复用（不改 marker 条目剥离、保留项顺序与 map 解析优先级语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `buildLiteSavedGameStateCoreCallPayload(manager, payload)`，并将 `persistSavedGameStatePayload` 中 `buildLiteSavedGameStatePayload` 的 core 入参对象抽离（不改 lite payload core 调用入参与 fallback 路径语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `persistSavedPayloadWithLiteFallback(manager, key, liteKey, payload, litePayload)`，并将 `persistSavedGameStatePayload` 中“主存储 + lite 回退 + 清理后重试”流程抽离（不改 fallback 顺序与失败重试语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `collectSavedTimerFixedRowsState/collectSavedDynamicTimerRowsState/collectSavedTimerSubState`，并将 `buildSavedGameStatePayload` 内 timer fixed/dynamic/sub 快照采集循环抽离为复用 helper（不改计时行快照字段与默认值语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `collectSavedTimerDomSnapshotState/buildSavedGameStateBasePayload/buildSavedGameStateProgressPayload/buildSavedGameStateDirectionLockPayload/buildSavedGameStateBoardSnapshotPayload/buildSavedGameStateTimerSnapshotPayload`，并将 `buildSavedGameStatePayload` 主流程改为“快照采集 + 分段 payload 组装”组合（不改存档字段集合、默认值与组装顺序语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `applySavedManagerBaseState/applySavedManagerReplayState/applySavedManagerProgressState/applySavedManagerTimerState/applySavedManagerBoardSnapshotState`，并将 `applySavedManagerCoreState` 改为分段恢复调用（保留原字段恢复顺序与默认值语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `writeWindowNameSavedPayloadFallback(manager, windowLike, modeKey, payload)`，并将 `writeWindowNameSavedPayload` 的 fallback 分支下沉为独立 helper（不改 core 优先、window.name 编码与 map 合并/删除语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `readSavedPayloadFromStorageByKey/resolveLatestSavedPayloadBySavedAt`，并将 `readSavedPayloadByKey` 的 fallback 路径重构为“单 store 读取 + latest 选优”流程（不改损坏记录自动清理与 `saved_at` 比较语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `serializeSavedPayloadForStorage/writeSerializedPayloadToStores/persistSavedPayloadToStoragesFallback`，并将 `persistSavedPayloadToStorages` 的 fallback 路径重构为“序列化 + 多存储写入”组合（不改 core 优先与 fallback 写入短路语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `buildLiteSavedGameStateMetaPayload/buildLiteSavedGameStateProgressPayload/buildLiteSavedGameStateBoardSnapshotPayload/buildLiteSavedGameStateReplayTrimPayload`，并将 `buildLiteSavedGameStatePayloadFallback` 重构为分段 payload 组装（不改 lite 存档字段集合与默认值语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `normalizeSavedDynamicTimerRowInfo/shouldApplySavedDynamicTimerRowRepeat/createSavedDynamicTimerRowContainer/createSavedDynamicTimerLegendElement/createSavedDynamicTimerValueElement/appendSavedDynamicTimerRowChildren`，并将 `createSavedDynamicTimerRow` 主流程收敛为组合调用（不改动态计时行 DOM 结构与样式语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `mergeWindowNameSavedPayloadMap/buildWindowNameSavedPayloadString`，并将 `writeWindowNameSavedPayloadFallback` 重构为“map 合并 + window.name 字符串构建”组合（不改 window.name 编码与 key 删除/更新语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `readSavedPayloadByKeyFallback`，并将 `readSavedPayloadByKey` 的 fallback 分支收敛为单调用（不改多存储遍历、损坏记录清理与 `saved_at` 选优语义，`verify:iterate` 全绿）。
+- `saved_state` 模块复杂度快照更新：当前最长函数已降至 31 行级别（主要为 `readSavedPayloadByKey/buildSavedGameStateBasePayload`），已从“长流程主导”转为“短函数组合”形态。
+- `saved_state` 去壳继续推进：已新增 `applySavedTimerRowVisibilityState/applySavedTimerRowRepeatState/applySavedTimerRowLegendState`，并将 `applySavedTimerFixedRowsState` 拆为“行样式 + repeat + legend”组合调用（不改 fixed rows 恢复顺序与 capped legend 覆盖语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `buildSavedGameStateMetaPayload/buildSavedGameStateCoreStatePayload/buildSavedGameStateReplayStatePayload/buildSavedGameStateTimerCorePayload`，并将 `buildSavedGameStateBasePayload` 重构为分段组装（不改基础存档字段集合与默认值语义，`verify:iterate` 全绿）。
+- `saved_state` 模块复杂度快照更新：当前最长函数已降至 28 行级别，模块已基本完成“小函数组合化”。
+- `saved_state` 去壳继续推进：已新增 `readStorageItemSafe/parseStorageJsonMap/readStorageJsonMapFallback/writeStorageItemSafe/writeStorageJsonPayloadFallback`，并将 `readLocalStorageJsonMap/writeLocalStorageJsonPayload` fallback 统一为共享存储 helper（不改 localStorage 读写容错与 JSON 非对象回退语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `buildWriteWindowNameSavedPayloadCorePayload`，并将 `writeWindowNameSavedPayload` 的 core payload 组装抽离为 helper（不改 core 调用入参与 fallback 触发语义，`verify:iterate` 全绿）。
+- `saved_state` 模块复杂度快照更新：当前最长函数已降至 26 行级别（`resolveWindowNameSavedCandidate`），主流程函数已全部进入短函数区间。
+- `saved_state` 去壳继续推进：已新增 `buildReadWindowNameSavedCandidateCorePayload/normalizeWindowNameSavedCandidateFromCore`，并将 `resolveWindowNameSavedCandidate` 的 core 调用与归一化拆分为组合调用（不改 core 优先与 undefined 触发 fallback 语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `resolveLatestSavedPayloadForRestore/handleSavedStateRestoreDecisionFailure/applySavedStateRestore`，并将 `tryRestoreLatestSavedState` 重构为“候选解析 + 判定失败处理 + 恢复执行”主链（不改恢复失败清理与异常回退语义，`verify:iterate` 全绿）。
+- `saved_state` 模块复杂度快照更新：当前最长函数已降至 25 行级别，模块收口进入尾段。
+- `saved_state` 去壳继续推进：已新增 `isSavedStateTerminalForRestore/isSavedStateSizeOrRulesetMismatch/isSavedStateBoardInvalidForRestore`，并将 `resolveSavedStateRestoreDecision` 的 restore 判定条件拆分为语义化 helper（不改判定顺序与 mode-mismatch 不清理语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `resolveSavedStateStorageKeyFallback`，并将 `resolveSavedGameStateStorageKey` 的 fallback key 拼装逻辑下沉（不改 modeKey 回退与 keyPrefix 拼接语义，`verify:iterate` 全绿）。
+- `saved_state` 去壳继续推进：已新增 `buildPersistSavedPayloadToStoragesCorePayload`，并将 `persistSavedPayloadToStorages` 的 core 入参组装下沉（不改 core 写入优先与 fallback 触发语义，`verify:iterate` 全绿）。
+- `saved_state` 模块复杂度快照更新：当前最长函数进一步降至 25 行，Top 函数全部 <= 25 行。
+- `runtime_accessor` 去壳继续推进：已新增 `resolveAdapterSessionParityBridgeState/cloneAdapterSessionParitySnapshot/readAdapterSessionParitySnapshotFromBridge/readAdapterSessionParitySnapshotFromCache`，并将 `getAdapterSessionParitySnapshot` 重构为“桥接解析 + reader 读取 + cache 读取”组合（不改 reader 命中优先与 clone+cache 回写语义，`verify:iterate` 全绿）。
+- `runtime_accessor` 去壳继续推进：已新增 `refreshAdapterParityReportCacheOnBridge/refreshAdapterParityABDiffCacheOnBridge`，并将 `refreshAdapterParityCachesOnBridge` 重构为分段刷新调用（不改 parity report 存储回写与 AB diff 缓存同步语义，`verify:iterate` 全绿）。
+- `runtime_accessor` 模块复杂度快照更新：当前最长函数已降至 21 行（Top 函数全部 <= 21 行），该模块已进入“短函数组合”稳定形态。
+- `panel_timer` 去壳继续推进：已新增 `updateTimerModuleBaseHeight/resolveNormalizedTimerModuleView/applyTimerModuleViewLayout/resolveTimerModuleViewNextMap/writeTimerModuleViewMap/persistTimerModuleView`，并将 `applyTimerModuleView` 重构为“高度采集 + 视图应用 + 持久化”组合调用（不改 timerbox 样式切换、min-height 保持与 localStorage/core 双写语义，`verify:iterate` 全绿）。
+- `panel_timer` 模块复杂度快照更新：`applyTimerModuleView` 已降至 12 行；当前该模块剩余长函数主要集中在 `resolveCappedModeState/getDurationMs/getCappedPlaceholderRowValues`，后续优先继续分段下沉。
+- `panel_timer` 去壳继续推进：已新增 `isResolvedCappedModeStateCacheHit/buildResolvedCappedModeStateFallback/resolveResolvedCappedModeStateFromCore/writeResolvedCappedModeStateCache`，并将 `resolveCappedModeState` 重构为“缓存命中判定 + core/fallback 解析 + cache 回写”组合（不改 capped 判定、fallback 规则与 cache key 语义，`verify:iterate` 全绿）。
+- `panel_timer` 模块复杂度快照更新：`resolveCappedModeState` 已由 55 行降至 24 行，后续长函数优先级已切换到 `getDurationMs/getCappedPlaceholderRowValues`。
+- `panel_timer` 去壳继续推进：已新增 `normalizeDurationMsForReplayTimer/resolveDurationMsFallbackValue/buildDurationMsResolvePayload/resolveDurationMsFromCoreResult`，并将 `getDurationMs` 重构为“payload 构造 + core 归一化 + fallback 归一化”组合（不改 timerStatus/startTime/accumulated/sessionStartedAt 的时长回退语义，`verify:iterate` 全绿）。
+- `panel_timer` 模块复杂度快照更新：`getDurationMs` 已由 46 行降至 13 行，当前该模块主要剩余长函数为 `getCappedPlaceholderRowValues`。
+- `panel_timer` 去壳继续推进：已新增 `normalizeCappedPlaceholderRowValues/resolveCappedPlaceholderRowValuesByCore/resolveCappedPlaceholderRowValuesFallback`，并将 `getCappedPlaceholderRowValues` 重构为“core 解析 + fallback 列表生成”组合（保留 `normalizedByCore` 为空数组时回退到 fallback 的原有语义，`verify:iterate` 全绿）。
+- `panel_timer` 模块复杂度快照更新：`getCappedPlaceholderRowValues` 已由 43 行降至 7 行；当前模块最长函数为 `formatPrettyTime`（29 行），整体已进入低复杂度区间。
+- `replay_helpers` 去壳继续推进：已新增 `writeAutoSubmitResultRecord/resolveAutoSubmitSkippedReason/writeAutoSubmitSkippedResult/resolveAutoSubmitParitySnapshot/resolveAutoSubmitBestTileValue/buildAutoSubmitPayload/writeAutoSubmitSuccessResult/writeAutoSubmitErrorResult`，并将 `tryAutoSubmitOnGameOver` 重构为“跳过判定 + payload 构造 + 成功/失败回写”主链（不改自动提交触发条件、local history 存储字段与错误回写语义，`verify:iterate` 全绿）。
+- `replay_helpers` 去壳继续推进：已新增 `normalizeReplaySeekTargetIndex/resolveReplaySeekRewindPlan/resolveReplaySeekRestartPlan/applyReplaySeekRestartPlan/executeReplaySeekSteps`，并将 `seekReplay` 重构为“目标归一化 + rewind/restart 计划 + replay 步进”组合（不改 replay rewind 策略、seed/board 重启分支与 replayIndex 回填语义，`verify:iterate` 全绿）。
+- `replay_helpers` 模块复杂度快照更新：`seekReplay` 已由 104 行降至 9 行，`tryAutoSubmitOnGameOver` 已降至 27 行；当前该模块复杂度主要集中在 `importReplay/resumeReplay/insertCustomTile`。
+- `replay_helpers` 去壳继续推进：已新增 `resolveReplayResumeState/resolveReplayShouldStopAtTick/resolveReplayEndStateAtTick/resolveReplayTickBoundaryPlan/applyReplayTickBoundaryPlan/executeReplayIntervalTick`，并将 `resumeReplay` 重构为“恢复状态解析 + tick 边界判定 + 停止/步进执行”组合（不改 replay 停止条件、pause 触发与 replayMode 回写语义，`verify:iterate` 全绿）。
+- `replay_helpers` 模块复杂度快照更新：`resumeReplay` 已由 98 行降至 11 行；当前该模块主要剩余高复杂函数为 `importReplay`（846 行）与 `insertCustomTile`（86 行）。
+- `replay_helpers` 去壳继续推进：已新增 `recordPracticeCustomTileActionIfNeeded/removeCustomTileExistingAtCell/resolveInvalidatedTimerElementIdsFallback/applyInvalidatedSubTimersForReached32k/applyInvalidatedTimerPlaceholdersForCustomTile/applyCustomTileReached32kState`，并将 `insertCustomTile` 重构为“cell 覆写 + timer 占位更新 + 32k 状态更新 + 结果落盘”组合（不改 practice action 记录时机、invalidated timer fallback 语义与 32k UI 显示规则，`verify:iterate` 全绿）。
+- `replay_helpers` 模块复杂度快照更新：`insertCustomTile` 已由 86 行降至 21 行；当前该模块复杂度几乎全部集中在 `importReplay`（846 行）这一条主链。
+- `replay_helpers` 去壳继续推进：已新增 `isStructuredReplayEnvelope/applyImportedReplayUndoState/startImportedReplayPlayback/normalizeReplayImportSource/resolveReplayImportErrorMessage`，并将 `importReplay` 中重复的 structured 判定、undo 恢复、播放启动与错误文本归一化抽为共享 helper（不改 structured/legacy 导入分流、undo 策略与告警文案语义，`verify:iterate` 全绿）。
+- `replay_helpers` 模块复杂度快照更新：`importReplay` 已由 846 行降至 830 行；后续仍以该函数作为主拆分目标。
+- `replay_helpers` 去壳继续推进：已新增 `parseReplayImportEnvelope` 与 `decodeLegacyReplayEnvelope`，并将 `importReplay` 的 envelope 解析与 legacy 解码分支从主流程抽离（不改 JSON-v3/v4C/legacy 解析优先级与异常文案语义，`verify:iterate` 全绿）。
+- `replay_helpers` 去壳继续推进：已新增 `applyStructuredReplayEnvelope/applyLegacyReplayEnvelope/applyJsonV3StructuredReplayEnvelope/decodeReplayV4ActionsFromEnvelope/applyV4StructuredReplayEnvelope`，并将 `importReplay` 主流程重构为“解析 -> structured/legacy 分支执行 -> 统一启动”编排（不改 replay 导入后 undo 状态恢复与 replay 启动语义，`verify:iterate` 全绿）。
+- `replay_helpers` 去壳继续推进：已新增 `decodeLegacyReplayV2Log/tryDecodeLegacyReplayV1Envelope/tryDecodeLegacyReplayV2sEnvelope/tryDecodeLegacyReplayV2Envelope`，并将 `decodeLegacyReplayEnvelope` fallback 分支拆为“按版本探测 + 对应解码”组合（不改 legacy v1/v2s/v2 的格式校验与默认 seed 语义，`verify:iterate` 全绿）。
+- `replay_helpers` 模块复杂度快照更新：`importReplay` 维持 21 行，`decodeLegacyReplayEnvelope` 已降至 25 行；当前主要复杂度集中到 `decodeReplayV4ActionsFromEnvelope`（78 行）与 `parseReplayImportEnvelope`（70 行）。
+- `replay_helpers` 去壳继续推进：已新增 `tryParseJsonV3ReplayEnvelope/tryParseV4cReplayEnvelope`，并将 `parseReplayImportEnvelope` 重构为“json-v3 解析 + v4c 解析”组合（不改 envelope 解析优先级、`Unsupported JSON replay version` / `Invalid v4C payload` 异常语义，`verify:iterate` 全绿）。
+- `replay_helpers` 模块复杂度快照更新：`parseReplayImportEnvelope` 已由 70 行降至 30 行；当前 import 路径主要剩余复杂点为 `decodeReplayV4ActionsFromEnvelope`（78 行）。
+- `replay_helpers` 去壳继续推进：已新增 `decodeReplayV4MoveSpawnFromToken/decodeReplayV4EscapedAction/decodeReplayV4ActionsFallback`，并将 `decodeReplayV4ActionsFromEnvelope` 重构为“token 基础解码 + escaped 子类型解码 + 主循环聚合”组合（不改 v4C `subtype 0/1/2` 解析规则与异常文案语义，`verify:iterate` 全绿）。
+- `replay_helpers` 模块复杂度快照更新：`decodeReplayV4ActionsFromEnvelope` 已由 78 行降至 15 行；当前 import 链路单函数已基本进入低复杂度区间。
+- `move_input` 去壳继续推进：已新增 `tryRecordBaseCappedMergeMilestone/resolveCappedRepeatMilestoneLabel/resolveCappedPlaceholderSlotValue/tryWriteCappedPlaceholderMilestoneRow/appendCappedDynamicMilestoneRow`，并将 `recordCappedMergeMilestone` 重构为“base timer -> placeholder row -> dynamic row”主链（不改 x2 占位行优先、legend 样式回填与 `cappedTimerAutoScroll` 触发语义，`verify:iterate` 全绿）。
+- `move_input` 模块复杂度快照更新：`recordCappedMergeMilestone` 已收敛到 31 行，后续继续处理 move 路径中剩余长流程（保持行为不变拆分）。
+- `move_input` 去壳继续推进：已新增 `applyProgressiveCapped64UnlockByCore/applyProgressiveCapped64UnlockFallback/stampMergeMilestoneTimer`，并将 `applyProgressiveMergeMilestones` 重构为“unlock 计算 + timer 打点”组合（不改 progressive-capped64 解锁条件、core 优先与 timer 里程碑写入语义，`verify:iterate` 全绿）。
+- `move_input` 模块复杂度快照更新：`applyProgressiveMergeMilestones` 已由 50 行降至 10 行；当前该模块长函数主要集中在 `move`（134 行）与 `buildMovePlan/resolvePostMoveLifecycle/resolveLockedDirection`。
+- `move_input` 去壳继续推进：已新增 `resolveLockedDirectionStateByCore/resolveActiveLockedDirectionFromCoreState/resolveDirectionLockEveryKMoves/shouldActivateDirectionLockFallback/refreshFallbackLockedDirection`，并将 `resolveLockedDirection` 重构为“core state 解析 + fallback 激活判定 + 锁方向刷新”组合（不改每 K 步锁向触发条件、lock consumed 抑制与 seeded 方向生成语义，`verify:iterate` 全绿）。
+- `move_input` 模块复杂度快照更新：`resolveLockedDirection` 已由 59 行降至 10 行；当前该模块主要剩余长函数为 `move`（134 行）、`buildMovePlan`（68 行）、`resolvePostMoveLifecycle`（59 行）。
+- `move_input` 去壳继续推进：已新增 `writePostMoveEndTimerText/applyCorePostMoveLifecycleResult/applyFallbackPostMoveLifecycleResult`，并将 `resolvePostMoveLifecycle` 重构为“core/fallback 生命周期结果组装”组合（不改 move 后 `successfulMoveCount`、`over`、timer 停止与 `shouldStartTimer` 判定语义，`verify:iterate` 全绿）。
+- `move_input` 模块复杂度快照更新：`resolvePostMoveLifecycle` 已由 59 行降至约 30 行；当前该模块主要剩余长函数为 `move`（134 行）和 `buildMovePlan`（68 行）。
+- `move_input` 去壳继续推进：已新增 `buildMoveUndoPayload/buildMoveUndoFallback/normalizeMoveUndoSnapshot/resolveMoveUndoSnapshot`，并将 `buildMovePlan` 重构为“undo payload 组装 + undo fallback 组装 + core/fallback 快照解析”组合（不改 undo 快照字段集合、数值归一化与 core 优先语义，`verify:iterate` 全绿）。
+- `move_input` 模块复杂度快照更新：`buildMovePlan` 已由 68 行降至 11 行；当前该模块主要剩余超长函数为 `move`（134 行）。
+- `move_input` 去壳继续推进：已新增 `shouldSkipMoveByLockedDirection/resetGridMergeStateBeforeMove/resolveMoveTraversalContext/shouldMergeMoveTraversalContext/applyMoveMergeTimerStampEffects/applyMoveMergeVisibilityEffects/applyMergedMoveTraversalContext/applyShiftedMoveTraversalContext/processMoveTraversalCell/processMoveTraversals/finalizeSuccessfulMove`，并将 `move` 主流程重构为“前置守卫 -> traversal 执行 -> 后置提交”三段（不改锁方向拦截、merge/shift 扫描顺序、undo 快照写入与 post-move 提交流程语义，`verify:iterate` 全绿）。
+- `move_input` 去壳继续推进：已新增 `applyPostMoveScoreFromCoreResult/applyPostMoveScoreFallback`，并将 `applyPostMoveScore` 重构为“core 回写 + fallback 计分”组合（不改 combo bonus 计算与 core 优先语义，`verify:iterate` 全绿）。
+- `move_input` 模块复杂度快照更新：`move` 已由 134 行降至 14 行；`applyPostMoveScore` 已收敛到 23 行；当前该模块最长函数为 `finalizeSuccessfulMove`（37 行）。
+- `restart_setup` 去壳继续推进：已新增 `initializeSetupSeedAndReplayState/resolveSetupChallengeId/initializeSetupSessionReplaySnapshot/resetSetupRuntimeState/resolvePreferredTimerModuleViewForSetup/shouldTryRestoreSavedStateInSetup/resolveSetupRestoreAndInitialBoardState/finalizeSetupUiAndStatsState`，并将 `runSetupStateInitialization` 重构为“种子与会话初始化 -> 计时/统计初始化 -> 存档恢复与起始局面 -> UI 收尾”主链（不改 `challenge_id` 解析优先级、saved-state 恢复条件、起始随机补砖与 stats panel 收尾语义，`verify:iterate` 全绿）。
+- `restart_setup` 模块复杂度快照更新：`runSetupStateInitialization` 已由 115 行降至 19 行；该模块当前最长函数为 `restartWithBoard`（29 行）。
+- `setup_timer_ui` 去壳继续推进：已新增 `hideLegacyStepStatsForSetup/resetTimerTextSlotsForSetup/repositionCappedTimerContainerForSetup/applyCappedRowVisibilityPlanFromCore/applyCappedRowVisibilityPlanFallback/applyCappedRowVisibilityPlanForSetup/resetCappedPlaceholderRowsForSetup/resetCappedContainersForSetup`，并将 `resetTimerUiForSetup` 重构为“基础计时器重置 -> capped 可见性计划 -> capped 容器与占位行清理”组合（不改 core plan 优先、fallback 可见性规则与 `cappedTimerReset` 触发语义，`verify:iterate` 全绿）。
+- `setup_timer_ui` 模块复杂度快照更新：`resetTimerUiForSetup` 已由 110 行降至 14 行；当前该模块最长函数为 `applyCappedRowVisibilityPlanFromCore`（37 行）。
+- `bindings_runtime` 去壳继续推进：已新增 `bindRuntimeForwardsBeforeAccessorRegistration/createGameManagerCoreRuntimeAccessorDefs/bindRuntimeForwardsBeforeAccessorWiring/bindRuntimeForwardsAfterAccessorRegistration/bindCappedModeBindings/bindCappedUiBindings/bindUndoAndStatsBindings/bindUpdateStatsPanelBinding/bindGameplayBindings`，并将 `bindGameManagerPrototypeRuntime` 重构为分段注册入口（保留 `registerCoreRuntimeAccessors(GAME_MANAGER_CORE_RUNTIME_ACCESSOR_DEFS)` 固定注册语句以满足审计脚本契约，`verify:iterate` 全绿）。
+- `bindings_runtime` 模块复杂度快照更新：`bindGameManagerPrototypeRuntime` 已由 204 行降至 12 行；当前该模块最长函数为 `bindGameplayBindings`（33 行）。
+- `replay_helpers` 去壳继续推进：已新增 `resolveReplayActionAtCurrentIndex/resolveReplayStepLifecyclePlan/buildReplayStepExecutionPlanFallback/resolveReplayStepExecutionPlan/applyReplayStepForcedSpawn/resolveReplayActionKindFallback/resolveReplayExecutionFallbackAction/resolveReplayExecutionAction/resolveReplayDispatchPlan/executeReplayDispatchPlan`，并将 `executePlannedReplayStep` 重构为“step-plan 解析 -> action 解析 -> dispatch 执行”主链（不改 forcedSpawn 注入时机、`Unknown replay action` 异常语义与 replayIndex 提交顺序，`verify:iterate` 全绿）。
+- `replay_helpers` 模块复杂度快照更新：`executePlannedReplayStep` 已由 131 行降至 9 行；当前该模块最长函数降至 `computePostMoveRecord`（56 行）。
+- `stats_ui` 去壳继续推进：已新增 `resolveOrCreateStatsPanelToggleButton/configureStatsPanelToggleButton/resolveStatsPanelTopActionHost/mountStatsPanelToggleButton/resolveOrCreateStatsPanelOverlay/bindStatsPanelUiEvents/resolveStatsPanelInitialOpenState/applyStatsPanelOverlayDisplay`，并将 `initStatsPanelUi` 重构为“按钮解析与挂载 -> overlay 初始化 -> 事件绑定 -> 初始可见性恢复”组合（不改 top-action host 挂载优先级、overlay DOM 结构与 localStorage/core 双路径读取语义，`verify:iterate` 全绿）。
+- `stats_ui` 模块复杂度快照更新：`initStatsPanelUi` 已由 114 行降至 15 行；当前该模块最长函数为 `initCornerStatsUi`（60 行）。
+- `mode_rules` 去壳继续推进：已新增 `createModeConfigFallbackClone/applyModeConfigBoardAndRuleDefaults/applyModeConfigMaxTileDefaults/normalizeModeConfigCustomSpawnFourRate/buildStrictPow2SpawnTableByRate/applyModeConfigSpawnTableDefaults/applyModeConfigPolicyDefaults`，并将 `normalizeModeConfig` 重构为“fallback clone -> board/rules 归一化 -> max_tile 归一化 -> spawn_table 归一化 -> rank policy 补全”组合（不改 fibonacci capped 例外、pow2 四块率 strict table 与 ranked 字段默认语义，`verify:iterate` 全绿）。
+- `mode_rules` 模块复杂度快照更新：`normalizeModeConfig` 已由 73 行降至 36 行；当前该模块主要长函数切换为 `computeMergeEffects/findFarthestPosition/planTileInteraction`。
+- `undo_stats` 去壳继续推进：已新增 `resolveStepStatsSourceAndLimit/normalizeCoreStepStatsRecord/resolveCoreStepStats/computeFallbackStepStats`，并将 `computeStepStats` 重构为“source+limit 解析 -> core 统计 -> fallback 统计”组合（不改 replay 与非 replay 统计口径、undo 对 move 回退语义，`verify:iterate` 全绿）。
+- `undo_stats` 去壳继续推进：已新增 `resolveUndoStackEntrySourceByCore/collectUndoStackTiles/normalizeUndoScoreOrFallback/normalizeUndoNonNegativeIntegerOrFallback/normalizeUndoIntegerOrFallback`，并将 `normalizeUndoStackEntry` 重构为“core source 解析 -> tiles 过滤 -> 字段归一化”组合（不改 score/undoUsed/lock 字段回退语义，`verify:iterate` 全绿）。
+- `undo_stats` 模块复杂度快照更新：`computeStepStats` 已由 61 行降至 10 行；`normalizeUndoStackEntry` 已由 61 行降至 24 行；当前该模块主要长函数切换到 `createUndoTileSnapshot/createUndoRestoreTile/getSpawnStatPair`。
+- 进度快照更新：`npm run report:refactor-progress` 全部达标（`index_ui.js` 107 行、`game_manager.js` 10 行、`tests/smoke` 已拆分为 36 个规格文件）。
+- `replay_helpers` 去壳继续推进：已新增 `createReplayModePostMoveRecord/resolveCompactMoveCodeFallback/createPostMoveRecordPayload/createPostMoveRecordFallback`，并将 `computePostMoveRecord` 重构为“payload 构造 + core 调用 + fallback 组装”组合（不改 replay 分支短路、compact move code 编码与 sessionReplayV3 action 语义，`verify:iterate` 全绿）。
+- `replay_helpers` 模块复杂度快照更新：`computePostMoveRecord` 已由 56 行降至 16 行；当前该模块主要长函数切换为 `detectMode/appendCompactPracticeAction/getFinalBoardMatrix`。
+- `undo_stats` 去壳继续推进：已新增 `isValidUndoTileRecord/buildUndoTileSnapshotCorePayload/resolveUndoTileSnapshotByCore/buildUndoTileSnapshotFallback/buildUndoRestoreTileFallback/buildUndoRestoreTileCorePayload/resolveUndoRestoreTileByCore`，并将 `createUndoTileSnapshot/createUndoRestoreTile` 重构为“core 归一化 + fallback 回退”组合（不改 `tile.save(target)` 优先与 `previousPosition` 必需结构校验语义，`verify:iterate` 全绿）。
+- `undo_stats` 模块复杂度快照更新：`createUndoTileSnapshot` 已由 49 行降至 9 行，`createUndoRestoreTile` 已由 46 行降至 8 行；当前该模块主要长函数切换为 `getSpawnStatPair/applyUndoRestoreState/computeUndoRestoreState`。
+- `replay_helpers` 去壳继续推进：已新增 `resolveDetectedModeBodyAttribute/resolveDetectedModePathname/resolveDetectedModeByPathname/resolveDetectedModeFallback`，并将 `detectMode` 重构为“body/path 提取 + core 调用 + fallback 判定”组合（不改 `data-mode-id` 优先级与 pathname 到 mode 的 legacy 映射语义，`verify:iterate` 全绿）。
+- `replay_helpers` 模块复杂度快照更新：`detectMode` 已由 52 行降至 22 行；当前该模块主要长函数收敛到 `appendCompactPracticeAction/getFinalBoardMatrix/decodeLegacyReplayV2Log`。
+- `undo_stats` 去壳继续推进：已新增 `normalizeSpawnStatPairFromCore/collectSortedSpawnValuesFromTable/resolveSpawnStatPairFallbackFromTable`，并将 `getSpawnStatPair` 重构为“core pair 归一化 + table fallback”组合（不改 spawn 值去重排序、primary/secondary 默认值语义，`verify:iterate` 全绿）。
+- `undo_stats` 模块复杂度快照更新：`getSpawnStatPair` 已由 44 行降至 22 行；当前该模块主要长函数切换为 `applyUndoRestoreState/computeUndoRestoreState/resolveUndoPolicyStateForMode`。
+- `undo_stats` 去壳继续推进：已新增 `normalizeUndoRestoreStateInput/applyUndoRestoreStateFields/buildUndoRestoreStatePayload/createUndoRestoreStateFallback`，并将 `applyUndoRestoreState/computeUndoRestoreState` 重构为“归一化输入 -> 字段写回 -> core/fallback 状态计算”组合（不改 `undoUsed` 回退、`shouldClearMessage` 与 `shouldStartTimer` 语义，`verify:iterate` 全绿）。
+- `undo_stats` 模块复杂度快照更新：`applyUndoRestoreState` 已由 42 行降至 9 行，`computeUndoRestoreState` 已由 40 行降至 16 行；当前该模块最长函数为 `resolveUndoPolicyStateForMode`（36 行）。
+- `replay_helpers` 去壳继续推进：已新增 `createCompactPracticeActionPayload/tryAppendCompactPracticeActionByCore/validateCompactPracticeActionBoardSize/validateCompactPracticeActionCoords/resolveCompactPracticeActionExponent/appendCompactPracticeActionFallback`，并将 `appendCompactPracticeAction` 重构为“payload 构造 -> core 写入 -> fallback 编码”组合（不改 compact practice 仅支持 4x4、坐标校验与 `2^exp` 编码语义，`verify:iterate` 全绿）。
+- `replay_helpers` 去壳继续推进：已新增 `readFinalBoardTileValue/createFinalBoardMatrixFallback/createFinalBoardMatrixCoreArgs`，并将 `getFinalBoardMatrix` 重构为“core 扫描参数组装 + fallback 矩阵构建”组合（不改 tile 缺省值为 `0`、按 `y/x` 顺序构建矩阵语义，`verify:iterate` 全绿）。
+- `undo_stats` 去壳继续推进：已新增 `createUndoPolicyResolvePayload/resolveUndoPolicyStateFallback`，并将 `resolveUndoPolicyStateForMode` 重构为“payload 构造 + core 解析 + fallback 状态组装”组合（不改 `forcedUndoSetting` 解析与 `isUndoInteractionEnabled` 回退判定语义，`verify:iterate` 全绿）。
+- 模块复杂度快照更新：`appendCompactPracticeAction` 已由 40 行降至 8 行，`getFinalBoardMatrix` 维持 22 行，`resolveUndoPolicyStateForMode` 已由 36 行降至 26 行；当前最长函数转移为 `decodeLegacyReplayV2Log`（36 行）和 `handleUndoMove`（31 行）。
+- `replay_helpers` 去壳继续推进：已新增 `resolveLegacyReplayV2CodeAt/createLegacyReplayV2EntryFromCode/appendLegacyReplayV2Entry`，并将 `decodeLegacyReplayV2Log` 重构为“code 解析 + entry 解码 + 结果追加”组合（不改 `Invalid replay char at index N` 异常语义与 v2 move/spawn 解码规则，`verify:iterate` 全绿）。
+- `undo_stats` 去壳继续推进：已新增 `canExecuteUndoMove/executeUndoRestorePipeline/shouldStartTimerAfterUndoRestore/publishUndoAdapterMoveResult`，并将 `handleUndoMove` 重构为“可执行判定 -> undo restore 主链 -> timer 恢复 -> adapter 发布”组合（不改 `direction=-1` 返回语义、undo budget 判定与 `publishAdapterMoveResult` 触发时机，`verify:iterate` 全绿）。
+- 模块复杂度快照更新：`decodeLegacyReplayV2Log` 已由 36 行降至 13 行，`handleUndoMove` 已由 31 行降至 14 行；当前热点主要迁移到 replay codec 相关函数（`decodeReplay128/serializeReplayV3/computePostUndoRecord`）。
+- `static_runtime` 去壳继续推进：已新增 `createFallbackPow2SpawnTableDefault/createFallbackFibSpawnTableDefault/createFallbackModeConfigEntry/createFallbackPow2ModeConfig/createFallbackFibModeConfig/createGameManagerFallbackPow2ModeConfigs/createGameManagerFallbackFibModeConfigs/mergeFallbackModeConfigMaps`，并将 `createGameManagerFallbackModeConfigs` 重构为“pow2 子集 + fib 子集 + merge”组合（不改 `standard_4x4_pow2_no_undo` 复用 `defaultModeConfig` 引用语义、各模式 key/label/spawn_table/undo/max_tile 语义，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已新增 `createDefaultMergeEffectsResult/applyCappedAndWinMergeEffects/applyTimerMilestoneMergeEffects/resolveMergeEffectsFallback/createMergeEffectsPayload`，并将 `computeMergeEffects` 重构为“payload 组装 + core 调用 + fallback 合成”组合（不改 capped 里程碑/2048 胜利/8192-32768 计时打点语义，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已新增 `resolveGridCellAvailableForMovePath/createFindFarthestPositionCoreArgs/normalizeFindFarthestPositionByCore/resolveFindFarthestPositionByCore/findFarthestPositionFallback`，并将 `findFarthestPosition` 重构为“core 解析 + fallback 扫描”组合（不改 blocked-cell 与 withinBounds 判断顺序、`farthest/next` 语义，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已新增 `createTileInteractionPayload/normalizeTileInteractionByCore/resolveTileInteractionFallback`，并将 `planTileInteraction` 重构为“payload 组装 + core 归一化 + fallback 判定”组合（不改 `merge/move` 分支、target 回退与 `moved` 判定语义，`verify:iterate` 全绿）。
+- 模块复杂度快照更新：`createGameManagerFallbackModeConfigs` 已由 171 行降至 6 行，`computeMergeEffects` 已由 54 行降至 17 行，`findFarthestPosition` 已由 53 行降至 11 行，`planTileInteraction` 已由 47 行降至 23 行；当前新热点为 `createGameManagerFallbackPow2ModeConfigs`（82 行）与 `mode_rules` 中 `getMergedValue/resolveModeConfig/normalizeSpawnTable`。
+- `static_runtime` 去壳继续推进：已新增 `createGameManagerFallbackPow2CoreModeConfigs/createGameManagerFallbackPow2BoardModeConfigs/createGameManagerFallbackPow2VariantModeConfigs`，并将 `createGameManagerFallbackPow2ModeConfigs` 重构为“core + board + variant”三段合并（不改 pow2 fallback 模式集合与各条目的字段语义，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已新增 `createMergedValueResolveArgs/normalizeMergedValueFromCore/resolvePow2MergedValueFallback/resolveFibonacciMergedValueFallback/resolveMergedValueFallback`，并将 `getMergedValue` 重构为“args 组装 + core 归一化 + pow2/fibonacci fallback”组合（不改 `maxTile` 上限、fibonacci `1+1` 特例与 `nextFibonacci` 邻接判定语义，`verify:iterate` 全绿）。
+- 模块复杂度快照更新：`createGameManagerFallbackPow2ModeConfigs` 已由 82 行降至 7 行，`getMergedValue` 已由 46 行降至 22 行；当前前排热点切换为 `resolveTheoreticalMaxTile`（45 行）、`resolveModeConfig`（43 行）、`createGameManagerFallbackPow2CoreModeConfigs`（42 行）。
+- `mode_rules` 去壳继续推进：已新增 `normalizeTheoreticalMaxTileFromCore/resolveTheoreticalCellsCount/resolveFibonacciTheoreticalMaxTile/resolveTheoreticalMaxTileFallback`，并将 `resolveTheoreticalMaxTile` 重构为“core 值归一化 + cells 计算 + fibonacci/pow2 fallback”组合（不改 invalid size 返回 `null` 与 fibonacci/pow2 理论上限语义，`verify:iterate` 全绿）。
+- `mode_rules` 去壳继续推进：已新增 `createDefaultSpawnTableByRuleset/normalizeSpawnTableFallbackItems/resolveNormalizedSpawnTableFallback`，并将 `normalizeSpawnTable` 重构为“默认表构造 + fallback 过滤归一化”组合（不改 pow2/fibonacci 默认权重与非法权重过滤语义，`verify:iterate` 全绿）。
+- 模块复杂度快照更新：`resolveTheoreticalMaxTile` 已由 45 行降至 22 行，`normalizeSpawnTable` 已由 40 行降至 24 行；当前新热点转移为 `resolveModeConfig`（43 行）、`createGameManagerFallbackPow2CoreModeConfigs`（42 行）、`getModeConfigFromCatalog`（40 行）。
+- `mode_rules` 去壳继续推进：已新增 `resolveModeCatalogGetModeAccessor/createModeCatalogResolvePayload/normalizeModeCatalogConfigFromCore/resolveModeCatalogConfigFallback/resolveModeIdFromCoreValue/resolveModeConfigFromCoreValue/resolveModeConfigFromCatalogById/resolveModeConfigFromCatalogFallback`，并将 `getModeConfigFromCatalog` 与 `resolveModeConfig` 重构为“payload 组装 + core 归一化 + catalog/alias fallback”组合（不改 `ModeCatalog.getMode` 调用顺序、legacy alias 映射与 default mode 回退语义，`verify:iterate` 全绿）。
+- `static_runtime` 去壳继续推进：已新增 `createFallbackPow2StandardCoreModeConfigs/createFallbackPow2ClassicCoreModeConfigs/createFallbackPow2CappedCoreModeConfigs/createFallbackPow2PracticeCoreModeConfigs`，并将 `createGameManagerFallbackPow2CoreModeConfigs` 重构为“4 段核心模式 map 合并”组合（不改 standard/classic/capped/practice 四类核心模式键值语义，`verify:iterate` 全绿）。
+- 模块复杂度快照更新：`createGameManagerFallbackPow2CoreModeConfigs` 已由 42 行降至 8 行，`resolveModeConfig` 已降至 27 行，`getModeConfigFromCatalog` 已降至 23 行；当前前排热点切换为 `getActualSecondaryRate`（40 行）、`initializeTimerMilestones/getAvailableCells`（38 行）和 `finalizeSuccessfulMove/buildTraversals/applyCappedRowVisibilityPlanFromCore`（37 行）。
+- 提交前全门禁已通过：`npm run verify:submit-ready` 全绿（包含 `verify:burnin`、`verify:refactor:ci`、`verify:rollback-drill`、`verify:release-ready`）。
 - 死代码清理。
 - 文档与运行手册更新。
 - burn-in 结束后打稳定 tag。
@@ -487,12 +1545,65 @@
 ## 5.1) 检查节奏（提效约定）
 - 批次内快速检查（每完成 2-4 个小改动）：
   - `npm run test:unit`
+  - `npm run test:smoke:burnin`（仅 history burn-in/readiness 相关）
+  - `npm run test:smoke:canary`（仅 canary 策略面板相关）
   - `npm run test:smoke:adapter`（仅 adapter/burn-in 关键链路）
+  - `npm run test:smoke:rollback-drill`（仅回滚演练关键链路）
+  - 注意：多个 Playwright smoke 命令需串行执行，避免本地 `4173` 端口冲突。
+  - 若必须并行，可临时指定 `PW_WEB_PORT`（例如 `PW_WEB_PORT=4174 npm run test:smoke:canary`）。
 - 提交前全量检查（push 前必须）：
   - `npm run verify:refactor`
+  - 可选一键命令：`npm run verify:prepush`（串行执行 `verify:burnin` + `verify:refactor:ci`）
+  - 发布前一键命令：`npm run verify:release`（在 `verify:prepush` 基础上追加 `verify:rollback-drill` + `verify:release-ready`）
 
 ## 6) 立即执行项
 1. 优先执行一键门禁：`npm run verify:refactor`（串行执行 game-manager-audit/unit/smoke/build）。
-2. 快速回归可先跑：`npm run test:smoke:adapter`（adapter rollout + history burn-in 相关用例）。
+   - 若需与 CI 分片一致，使用：`npm run verify:refactor:ci`。
+2. 快速回归可先跑：`npm run test:smoke:burnin` / `npm run test:smoke:canary` / `npm run test:smoke:adapter`（adapter rollout + history burn-in/canary 相关用例）。
+   - 回滚链路可单独跑：`npm run test:smoke:rollback-drill`。
+   - 如果你希望只在提交前统一执行，也可直接跑：`npm run verify:prepush`。
 3. 继续削减入口脚本中的重复拼装逻辑，优先抽到 `src/bootstrap/*`。
 4. 按 M5 执行 burn-in：保持默认 fallback 为 `core-adapter`，持续监控历史页 gate，并保留 `engine_adapter_force_legacy=1` 作为紧急回滚开关。
+5. 进度快照可直接执行：`npm run report:refactor-progress`（输出 `index_ui.js` / `game_manager.js` / smoke 拆分状态）。
+6. 提交拆分覆盖检查：`npm run report:commit-split-check`（检查当前改动是否全部归入 4 批提交）。
+7. 提交前总校验：`npm run verify:submit-ready`（先检查分批覆盖，再执行发布门禁）。
+8. 批次预览/暂存：`npm run report:commit-batch -- --batch=<1|2|3|4> [--stage]`。
+9. 批次规则已抽到共享定义：`scripts/commit-batch-defs.mjs`（避免 `commit-split-check` 与 `stage-commit-batch` 规则漂移）。
+
+## 7) 最新推进记录（2026-03-03）
+- 详细流水已归档：`docs/REFACTOR_PROGRESS_LOG.zh-CN.md`。
+- 主计划文档仅保留里程碑摘要与执行清单，避免持续膨胀。
+- 本轮状态（2026-03-03）：
+  - `verify:submit-ready`：PASS
+  - `verify:release-ready`：PASS
+  - 收口指标：`index_ui.js` 107 行、`game_manager.js` 10 行、smoke 已拆分 36 文件。
+
+### 增量更新（2026-03-04）
+- 回放链路收口：
+  - 回放页 `best score` 存储域锁定为 `replay_view`，避免污染正常模式排行榜键。
+  - `actuate` 前的最高分写入新增 replay 页短路保护（即使 `replayMode` 变化也不写常规键）。
+  - 回放 `step/seek` 前取消 pending relayout，修复手动步进/拖动时偶发双次渲染竞态。
+- 校验结果：
+  - `npm run test:unit`：PASS（170 files / 896 tests）
+  - `npm run test:smoke`：PASS（105 tests）
+  - `npm run verify:refactor`：PASS
+
+## 8) 近期执行顺序（提交前）
+1. 快速迭代检查（开发中多次执行）：
+   - `npm run verify:iterate`
+2. 提交覆盖检查（确认分批归档完整）：
+   - `npm run report:commit-split-check`
+3. 提交前全量检查（仅提交前执行）：
+   - `npm run verify:submit-ready`
+4. Burn-in 日志状态快照（发布前建议每日执行）：
+   - `npm run report:burnin-log`
+   - 如需严格阻断：`npm run verify:burnin-log`
+
+## 9) 本轮剩余收口任务（M5/M6）
+1. Burn-in 观测收口：
+   - 连续窗口 mismatch 率满足阈值并留档。
+   - rollback drill 记录更新到发布文档。
+2. 发布文档收口：
+   - 将阶段状态与风险条目同步到发布清单。
+3. 过渡诊断分支清理：
+   - 仅删除非必要迁移诊断代码，保留回滚链路（`engine_adapter_force_legacy`）。

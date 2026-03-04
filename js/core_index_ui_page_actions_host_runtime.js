@@ -65,7 +65,13 @@
     var initThemeSettingsUI = asFunction(settingsModalInitResolvers.initThemeSettingsUI);
     var removeLegacyUndoSettingsUI = asFunction(settingsModalInitResolvers.removeLegacyUndoSettingsUI);
     var initTimerModuleSettingsUI = asFunction(settingsModalInitResolvers.initTimerModuleSettingsUI);
-    if (!initThemeSettingsUI || !removeLegacyUndoSettingsUI || !initTimerModuleSettingsUI) {
+    var initWinPromptSettingsUI = asFunction(settingsModalInitResolvers.initWinPromptSettingsUI);
+    if (
+      !initThemeSettingsUI ||
+      !removeLegacyUndoSettingsUI ||
+      !initTimerModuleSettingsUI ||
+      !initWinPromptSettingsUI
+    ) {
       throw new Error("CoreSettingsModalPageHostRuntime is required");
     }
 
@@ -225,6 +231,7 @@
         removeLegacyUndoSettingsUI: removeLegacyUndoSettingsUI,
         initThemeSettingsUI: initThemeSettingsUI,
         initTimerModuleSettingsUI: initTimerModuleSettingsUI,
+        initWinPromptSettingsUI: initWinPromptSettingsUI,
         initHomeGuideSettingsUI: initHomeGuideSettingsUI
       })
     );

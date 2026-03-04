@@ -15,6 +15,33 @@ describe("bootstrap history canary storage", () => {
     expect(readHistoryStorageValue(storage, "engine_adapter_default_mode")).toBe("core-adapter");
   });
 
+  it("supports key-only storage access via global localStorage fallback", () => {
+    const originalLocalStorage = (globalThis as unknown as { localStorage?: unknown }).localStorage;
+    const records: Array<{ type: string; key: string; value?: string }> = [];
+    const storage = {
+      getItem(key: string) {
+        records.push({ type: "get", key });
+        return key === "engine_adapter_default_mode" ? "core-adapter" : null;
+      },
+      setItem(key: string, value: string) {
+        records.push({ type: "set", key, value });
+      }
+    };
+
+    (globalThis as unknown as { localStorage?: unknown }).localStorage = storage;
+    try {
+      expect(readHistoryStorageValue("engine_adapter_default_mode")).toBe("core-adapter");
+      expect(writeHistoryStorageValue("engine_adapter_default_mode", "legacy-bridge")).toBe(true);
+    } finally {
+      (globalThis as unknown as { localStorage?: unknown }).localStorage = originalLocalStorage;
+    }
+
+    expect(records).toEqual([
+      { type: "get", key: "engine_adapter_default_mode" },
+      { type: "set", key: "engine_adapter_default_mode", value: "legacy-bridge" }
+    ]);
+  });
+
   it("writes and removes storage values", () => {
     const records: Array<{ type: string; key: string; value?: string }> = [];
     const storage = {

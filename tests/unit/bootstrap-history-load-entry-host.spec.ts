@@ -6,6 +6,7 @@ describe("bootstrap history load entry host", () => {
   it("delegates filter apply and load-with-pager orchestration", () => {
     const applyHistoryFilterStateFromInputs = vi.fn();
     const applyHistoryLoadWithPager = vi.fn();
+    const persistHistoryFilterState = vi.fn();
     const state = { page: 2 };
     const getElementById = vi.fn();
     const localHistoryStore = {};
@@ -31,6 +32,7 @@ describe("bootstrap history load entry host", () => {
       renderBurnInSummary: () => undefined,
       renderCanaryPolicy: () => undefined,
       setStatus: () => undefined,
+      persistHistoryFilterState,
       prevButtonId: "history-prev-page",
       nextButtonId: "history-next-page"
     });
@@ -44,6 +46,7 @@ describe("bootstrap history load entry host", () => {
       historyQueryRuntime: {},
       getElementById
     });
+    expect(persistHistoryFilterState).toHaveBeenCalledTimes(1);
     expect(applyHistoryLoadWithPager).toHaveBeenCalledTimes(1);
   });
 

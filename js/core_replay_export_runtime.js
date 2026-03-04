@@ -5,6 +5,9 @@
 
   var COPY_SUCCESS_MESSAGE = "回放代码已复制到剪贴板！";
   var COPY_FAILURE_MESSAGE = "自动复制失败，请手动从文本框复制。";
+  var VERSE_DOWNLOAD_SUCCESS_MESSAGE = "v9 文本回放文件已导出。";
+  var RPL_DOWNLOAD_SUCCESS_MESSAGE = "v9 .rpl 回放文件已导出。";
+  var RPL_DOWNLOAD_FAILURE_MESSAGE = "v9 .rpl 导出失败，已回退为 v9 Base64 导出。";
 
   function isRecord(value) {
     return !!value && typeof value === "object";
@@ -37,6 +40,66 @@
       };
     }
     return function (_message, _reason) {};
+  }
+
+  function resolveWindowLike(input) {
+    if (isRecord(input.windowLike)) return input.windowLike;
+    return global;
+  }
+
+  function resolveUrlRuntime(windowLike) {
+    var windowRecord = toRecord(windowLike);
+    var urlRecord = toRecord(windowRecord.URL);
+    var createObjectURL = asFunction(urlRecord.createObjectURL);
+    var revokeObjectURL = asFunction(urlRecord.revokeObjectURL);
+    if (!createObjectURL || !revokeObjectURL) return null;
+    return {
+      createObjectURL: createObjectURL,
+      revokeObjectURL: revokeObjectURL,
+      scope: urlRecord
+    };
+  }
+
+  function triggerReplayFileDownload(input) {
+    var source = toRecord(input);
+    var blob = source.blob;
+    var filename = source.filename == null ? "replay.rpl" : String(source.filename);
+    var documentLike = toRecord(source.documentLike);
+    var createElement = asFunction(documentLike.createElement);
+    var body = toRecord(documentLike.body);
+    var appendChild = asFunction(body.appendChild);
+    var removeChild = asFunction(body.removeChild);
+    var urlRuntime = resolveUrlRuntime(source.windowLike);
+    if (!blob || !createElement || !appendChild || !removeChild || !urlRuntime) {
+      return { downloaded: false };
+    }
+    var anchor = null;
+    var href = null;
+    try {
+      href = urlRuntime.createObjectURL.call(urlRuntime.scope, blob);
+      anchor = createElement.call(documentLike, "a");
+      anchor.href = href;
+      anchor.download = filename;
+      anchor.style.display = "none";
+      appendChild.call(body, anchor);
+      var click = asFunction(anchor.click);
+      if (!click) throw new Error("anchor click unavailable");
+      click.call(anchor);
+      removeChild.call(body, anchor);
+      urlRuntime.revokeObjectURL.call(urlRuntime.scope, href);
+      return {
+        downloaded: true,
+        filename: filename
+      };
+    } catch (_error) {
+      if (anchor && removeChild) {
+        try { removeChild.call(body, anchor); } catch (_errRemove) {}
+      }
+      if (href) {
+        try { urlRuntime.revokeObjectURL.call(urlRuntime.scope, href); } catch (_errRevoke) {}
+      }
+      return { downloaded: false };
+    }
   }
 
   function applyFallbackCopy(input, text) {
@@ -138,6 +201,121 @@
   function applyReplayExport(input) {
     var source = toRecord(input);
     var manager = toRecord(source.gameManager);
+    var alertLike = resolveAlert(source);
+    var logError = resolveConsoleError(source);
+    var exportV9VerseBlob = asFunction(manager.exportV9VerseBlob);
+    if (exportV9VerseBlob) {
+      try {
+        var verseExportPayload = toRecord(exportV9VerseBlob.call(manager));
+        var verseFileDownloadResult = triggerReplayFileDownload({
+          windowLike: resolveWindowLike(source),
+          documentLike: source.documentLike,
+          blob: verseExportPayload.blob,
+          filename: verseExportPayload.filename
+        });
+        if (verseFileDownloadResult.downloaded) {
+          alertLike(VERSE_DOWNLOAD_SUCCESS_MESSAGE);
+          return {
+            exported: true,
+            format: "v9-verse",
+            filename: verseFileDownloadResult.filename
+          };
+        }
+      } catch (verseExportError) {
+        logError("v9 verse export failed", verseExportError);
+      }
+    }
+
+    var serializeV9Verse = asFunction(manager.serializeV9Verse);
+    if (serializeV9Verse) {
+      try {
+        var verseReplay = String(serializeV9Verse.call(manager));
+        var showReplayModalVerse = asFunction(source.showReplayModal);
+        if (showReplayModalVerse) {
+          showReplayModalVerse("导出 v9 回放", verseReplay, "再次复制", function (text) {
+            return applyReplayClipboardCopy({
+              text: text,
+              navigatorLike: source.navigatorLike,
+              documentLike: source.documentLike,
+              alertLike: source.alertLike,
+              consoleLike: source.consoleLike
+            });
+          });
+        }
+        applyReplayClipboardCopy({
+          text: verseReplay,
+          navigatorLike: source.navigatorLike,
+          documentLike: source.documentLike,
+          alertLike: source.alertLike,
+          consoleLike: source.consoleLike
+        });
+        return {
+          exported: true,
+          format: "v9-verse",
+          replay: verseReplay
+        };
+      } catch (v9VerseExportError) {
+        logError("v9 verse text export failed", v9VerseExportError);
+      }
+    }
+
+    var exportV9RplBlob = asFunction(manager.exportV9RplBlob);
+    if (exportV9RplBlob) {
+      try {
+        var exportPayload = toRecord(exportV9RplBlob.call(manager));
+        var fileDownloadResult = triggerReplayFileDownload({
+          windowLike: resolveWindowLike(source),
+          documentLike: source.documentLike,
+          blob: exportPayload.blob,
+          filename: exportPayload.filename
+        });
+        if (fileDownloadResult.downloaded) {
+          alertLike(RPL_DOWNLOAD_SUCCESS_MESSAGE);
+          return {
+            exported: true,
+            format: "v9-rpl",
+            filename: fileDownloadResult.filename
+          };
+        }
+      } catch (rplExportError) {
+        logError("v9 .rpl export failed", rplExportError);
+      }
+      alertLike(RPL_DOWNLOAD_FAILURE_MESSAGE);
+    }
+
+    var serializeV9RplBase64 = asFunction(manager.serializeV9RplBase64);
+    if (serializeV9RplBase64) {
+      try {
+        var v9ReplayBase64 = String(serializeV9RplBase64.call(manager));
+        var showReplayModalV9 = asFunction(source.showReplayModal);
+        if (showReplayModalV9) {
+          showReplayModalV9("导出 v9 回放（Base64）", v9ReplayBase64, "再次复制", function (text) {
+            return applyReplayClipboardCopy({
+              text: text,
+              navigatorLike: source.navigatorLike,
+              documentLike: source.documentLike,
+              alertLike: source.alertLike,
+              consoleLike: source.consoleLike
+            });
+          });
+        }
+        applyReplayClipboardCopy({
+          text: v9ReplayBase64,
+          navigatorLike: source.navigatorLike,
+          documentLike: source.documentLike,
+          alertLike: source.alertLike,
+          consoleLike: source.consoleLike
+        });
+        return {
+          exported: true,
+          format: "v9-rpl-base64",
+          replay: v9ReplayBase64
+        };
+      } catch (v9ReplayBase64Error) {
+        logError("v9 base64 replay export failed", v9ReplayBase64Error);
+      }
+    }
+
     var serialize = asFunction(manager.serialize);
     if (!serialize) {
       return {
@@ -169,6 +347,7 @@
 
     return {
       exported: true,
+      format: "text",
       replay: replay
     };
   }

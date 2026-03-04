@@ -87,6 +87,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
     await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.getModeConfigFromCatalog === "function";
+    });
 
     const snapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -227,6 +231,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok(), "Capped response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
     await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.resolveProgressiveCapped64UnlockedState === "function";
+    });
 
     const snapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -309,6 +317,200 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.simpleRuntimeContractCallCount).toBeGreaterThan(0);
     expect(snapshot.simpleStartupCallCount).toBeGreaterThan(0);
     expect(snapshot.modeKey).toBe("standard_4x4_pow2_no_undo");
+  });
+
+  test("replay step controls advance replay index deterministically", async ({ page }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.import === "function" && typeof manager.step === "function";
+    });
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const replayText = "replay_(!äfC";
+      const originalAlert = window.alert;
+      window.alert = function (_msg) {};
+      try {
+        const ok = manager.import(replayText);
+        manager.pause();
+        const total = Array.isArray(manager.replayMoves) ? manager.replayMoves.length : 0;
+        const before = Number(manager.replayIndex);
+        manager.step(1);
+        const afterPlusOne = Number(manager.replayIndex);
+        manager.step(10);
+        const afterPlusTen = Number(manager.replayIndex);
+        manager.step(-1);
+        const afterMinusOne = Number(manager.replayIndex);
+        return {
+          ok,
+          total,
+          before,
+          afterPlusOne,
+          afterPlusTen,
+          afterMinusOne
+        };
+      } finally {
+        window.alert = originalAlert;
+      }
+    });
+
+    expect(snapshot.ok).toBe(true);
+    expect(snapshot.total).toBeGreaterThan(0);
+    expect(snapshot.afterPlusOne).toBe(Math.min(snapshot.before + 1, snapshot.total));
+    expect(snapshot.afterPlusTen).toBe(Math.min(snapshot.afterPlusOne + 10, snapshot.total));
+    expect(snapshot.afterMinusOne).toBe(Math.max(snapshot.afterPlusTen - 1, 0));
+  });
+
+  test("replay import treats REPLAY_v4C payload as v4 instead of v9 verse", async ({ page }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.import === "function" && typeof manager.serialize === "function";
+    });
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const replayText = manager.serialize();
+      const v4Prefix = ((window as any).GameManager && (window as any).GameManager.REPLAY_V4_PREFIX) || "REPLAY_v4C_";
+      const originalAlert = window.alert;
+      const alerts: string[] = [];
+      window.alert = function (msg?: unknown) {
+        alerts.push(typeof msg === "string" ? msg : String(msg));
+      };
+      try {
+        const ok = manager.import(replayText);
+        manager.pause();
+        return {
+          hasV4Prefix: typeof replayText === "string" && replayText.indexOf(v4Prefix) === 0,
+          ok,
+          alerts,
+          replayMovesLength: Array.isArray(manager.replayMoves) ? manager.replayMoves.length : -1
+        };
+      } finally {
+        window.alert = originalAlert;
+      }
+    });
+
+    expect(snapshot.hasV4Prefix).toBe(true);
+    expect(snapshot.ok).toBe(true);
+    expect(snapshot.alerts).toEqual([]);
+    expect(snapshot.replayMovesLength).toBe(0);
+  });
+
+  test("replay ui step/seek triggers single final actuate without extra relayout flash", async ({
+    page
+  }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.import === "function" && typeof manager.step === "function";
+    });
+
+    const snapshot = await page.evaluate(async () => {
+      const manager = (window as any).game_manager;
+      const replayText = "replay_(!äfC";
+      const originalAlert = window.alert;
+      window.alert = function (_msg) {};
+      try {
+        const ok = manager.import(replayText);
+        manager.pause();
+        if (!ok) {
+          return { ok: false };
+        }
+
+        const originalActuate = manager.actuate;
+        let actuateCount = 0;
+        manager.actuate = function (...args: unknown[]) {
+          actuateCount += 1;
+          return originalActuate.apply(this, args);
+        };
+
+        window.replayUiStepReplay(1);
+        await new Promise((resolve) => window.setTimeout(resolve, 280));
+        const stepActuateCount = actuateCount;
+
+        actuateCount = 0;
+        const progress = document.getElementById("replay-progress") as HTMLInputElement | null;
+        if (progress) {
+          progress.value = "50";
+          progress.dispatchEvent(new Event("input", { bubbles: true }));
+          progress.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 280));
+        const seekActuateCount = actuateCount;
+
+        manager.actuate = originalActuate;
+        return {
+          ok: true,
+          stepActuateCount,
+          seekActuateCount
+        };
+      } finally {
+        window.alert = originalAlert;
+      }
+    });
+
+    expect(snapshot.ok).toBe(true);
+    expect(snapshot.stepActuateCount).toBe(1);
+    expect(snapshot.seekActuateCount).toBe(1);
+  });
+
+  test("replay mode does not write best score into standard mode storage key", async ({ page }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.actuate === "function";
+    });
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const standardKey = "bestScoreByMode:standard_4x4_pow2_no_undo";
+      window.localStorage.setItem(standardKey, "0");
+
+      manager.replayMode = true;
+      manager.score = 4096;
+      manager.actuate();
+
+      // Even if replay flag is off, replay page should remain isolated from standard best score key.
+      if (manager.scoreManager && typeof manager.scoreManager.setModeKey === "function") {
+        manager.scoreManager.setModeKey("standard_4x4_pow2_no_undo");
+      }
+      manager.replayMode = false;
+      manager.score = 8192;
+      manager.actuate();
+
+      return {
+        standardAfter: window.localStorage.getItem(standardKey),
+        replayScoreKey:
+          manager.scoreManager && typeof manager.scoreManager.getKey === "function"
+            ? manager.scoreManager.getKey()
+            : null
+      };
+    });
+
+    expect(snapshot.standardAfter).toBe("0");
+    expect(snapshot.replayScoreKey).toBe("bestScoreByMode:replay_view");
   });
 
   test("replay ui delegates guide storage decisions to runtime helper", async ({ page }) => {

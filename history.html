@@ -61,6 +61,24 @@
           <option value="4">4个窗口</option>
         </select>
 
+        <label>最少可比样本</label>
+        <input
+          id="history-burnin-min-comparable"
+          class="portal-inline-input"
+          type="number"
+          min="1"
+          step="1"
+          value="50">
+
+        <label>最大不一致率(%)</label>
+        <input
+          id="history-burnin-max-mismatch-rate"
+          class="portal-inline-input"
+          type="number"
+          min="0.1"
+          step="0.1"
+          value="1">
+
         <button class="replay-button" id="history-load-btn">刷新</button>
       </div>
 

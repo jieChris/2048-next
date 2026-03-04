@@ -36,6 +36,17 @@ describe("bootstrap index ui page host", () => {
     const trace: string[] = [];
     let mobilePayload: unknown = null;
     let actionPayload: unknown = null;
+    const fallbackSetTimeout = () => 1;
+    const fallbackClearTimeout = () => {};
+    const windowLike = {
+      id: "window",
+      location: { id: "location" },
+      navigator: { id: "navigator" },
+      alert: () => {},
+      console: { id: "console" },
+      setTimeout: fallbackSetTimeout,
+      clearTimeout: fallbackClearTimeout
+    };
 
     const result = createIndexUiBootstrapResolvers({
       indexUiPageResolversHostRuntime: {
@@ -168,8 +179,7 @@ describe("bootstrap index ui page host", () => {
         homeGuideStartupHostRuntime: { id: "home-guide-startup-host" }
       },
       documentLike: { body: { id: "body" } },
-      windowLike: { id: "window" },
-      navigatorLike: { id: "navigator" },
+      windowLike,
       tryUndoFromUi() {
         trace.push("undo:try");
       }
@@ -183,7 +193,16 @@ describe("bootstrap index ui page host", () => {
     const mobilePayloadRecord = (mobilePayload ?? {}) as Record<string, unknown>;
     const actionPayloadRecord = (actionPayload ?? {}) as Record<string, unknown>;
     expect(mobilePayloadRecord.timerboxStorageKey).toBe("ui_timerbox_collapsed_mobile_v1");
+    expect(mobilePayloadRecord.navigatorLike).toEqual(windowLike.navigator);
+    expect(mobilePayloadRecord.setTimeoutLike).toBe(fallbackSetTimeout);
+    expect(mobilePayloadRecord.clearTimeoutLike).toBe(fallbackClearTimeout);
     expect(typeof actionPayloadRecord.isCompactGameViewport).toBe("function");
+    expect(actionPayloadRecord.locationLike).toEqual(windowLike.location);
+    expect(actionPayloadRecord.navigatorLike).toEqual(windowLike.navigator);
+    expect(actionPayloadRecord.alertLike).toBe(windowLike.alert);
+    expect(actionPayloadRecord.consoleLike).toEqual(windowLike.console);
+    expect(actionPayloadRecord.setTimeoutLike).toBe(fallbackSetTimeout);
+    expect(actionPayloadRecord.clearTimeoutLike).toBe(fallbackClearTimeout);
   });
 
   it("binds page globals and delegates startup on dom ready", () => {

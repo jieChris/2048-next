@@ -26,13 +26,16 @@ describe("bootstrap history page host", () => {
       sortBy: "ended_desc",
       adapterParityFilter: "all",
       burnInWindow: "200",
-      sustainedWindows: "3"
+      sustainedWindows: "3",
+      burnInMinComparable: "50",
+      burnInMaxMismatchRate: "1"
     });
     expect(defaults.burnInMinComparable).toBe(50);
     expect(defaults.burnInMaxMismatchRate).toBe(1);
     expect(defaults.adapterModeStorageKey).toBe("engine_adapter_mode");
     expect(defaults.defaultModeStorageKey).toBe("engine_adapter_default_mode");
     expect(defaults.forceLegacyStorageKey).toBe("engine_adapter_force_legacy");
+    expect(defaults.historyFilterStateStorageKey).toBe("history_filter_state_v1");
     expect(defaults.statusElementId).toBe("history-status");
     expect(defaults.summaryElementId).toBe("history-summary");
     expect(defaults.prevButtonId).toBe("history-prev-page");
@@ -55,6 +58,10 @@ describe("bootstrap history page host", () => {
 
     expect(defaults.burnInMinComparable).toBe(80);
     expect(defaults.burnInMaxMismatchRate).toBe(0.3);
+    expect(defaults.state).toMatchObject({
+      burnInMinComparable: "80",
+      burnInMaxMismatchRate: "0.3"
+    });
     expect(defaults.statusElementId).toBe("status");
     expect(defaults.modeElementId).toBe("mode");
     expect(defaults.adapterModeStorageKey).toBe("adapter");
@@ -69,6 +76,7 @@ describe("bootstrap history page host", () => {
       LocalHistoryStore: { ok: true },
       ModeCatalog: { modes: [] },
       LegacyAdapterRuntime: { runtime: true },
+      localStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined },
       confirm: confirmAction,
       FileReader: fileReaderCtor,
       location: { href: "" },
@@ -83,6 +91,7 @@ describe("bootstrap history page host", () => {
     expect(environment.localHistoryStore).toBe(windowLike.LocalHistoryStore);
     expect(environment.modeCatalog).toBe(windowLike.ModeCatalog);
     expect(environment.runtime).toBe(windowLike.LegacyAdapterRuntime);
+    expect(environment.localStorage).toBe(windowLike.localStorage);
     expect((environment.confirmAction as (message: string) => boolean)("x")).toBe(true);
     expect(windowLike.location.href).toBe("/history.html");
     expect((environment.createFileReader as () => Record<string, unknown>)().ok).toBe(true);
@@ -207,6 +216,7 @@ describe("bootstrap history page host", () => {
       burnInMaxMismatchRate: 1,
       loadHistory: () => undefined,
       setStatus: () => undefined,
+      persistHistoryFilterState: () => true,
       modeCatalog: {},
       adapterModeStorageKey: "adapter_mode",
       defaultModeStorageKey: "default_mode",
@@ -217,6 +227,7 @@ describe("bootstrap history page host", () => {
     expect(result.historyLoadHostRuntime).toBe(runtimes.historyLoadHostRuntime);
     expect(result.historyStatusRuntime).toBe(runtimes.historyStatusRuntime);
     expect(result.historyPanelContext).toBe(historyPanelContext);
+    expect(typeof result.persistHistoryFilterState).toBe("function");
     expect(resolveHistoryLoadPanelContext).toHaveBeenCalledTimes(1);
     expect(resolveHistoryLoadPanelContext).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -309,6 +320,9 @@ describe("bootstrap history page host", () => {
 
     expect(result).toEqual({ didLoad: true, missingStore: false });
     expect(applyHistoryLoadEntry).toHaveBeenCalledTimes(1);
+    const loadPayload = applyHistoryLoadEntry.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(loadPayload).toBeTruthy();
+    expect(loadPayload.persistHistoryFilterState).toBeUndefined();
   });
 
   it("applies startup via startup host runtime", () => {
@@ -331,10 +345,41 @@ describe("bootstrap history page host", () => {
 
   it("applies page app through startup->load delegation chain", () => {
     const applyHistoryStatus = vi.fn(() => ({ didApply: true }));
-    const applyHistoryLoadEntry = vi.fn(() => ({ didLoad: true, missingStore: false }));
+    const applyHistoryLoadEntry = vi.fn((payload: Record<string, unknown>) => {
+      const persistHistoryFilterState = payload.persistHistoryFilterState as (() => unknown) | undefined;
+      if (persistHistoryFilterState) persistHistoryFilterState();
+      return { didLoad: true, missingStore: false };
+    });
     const applyHistoryStartup = vi.fn(({ loadHistory }: { loadHistory: (resetPage: boolean) => void }) => {
       loadHistory(true);
       return { started: true, missingStore: false };
+    });
+    const readHistoryStorageValue = vi.fn(() =>
+      JSON.stringify({
+        schemaVersion: 1,
+        filter: {
+          modeKey: "from-storage",
+          keyword: "kw",
+          sortBy: "score_desc",
+          adapterParityFilter: "mismatch",
+          burnInWindow: "500",
+          sustainedWindows: "4",
+          burnInMinComparable: "40",
+          burnInMaxMismatchRate: "0.5"
+        }
+      })
+    );
+    const writeHistoryStorageValue = vi.fn(() => true);
+    const applyHistoryFilterState = vi.fn((targetState: Record<string, unknown>, input: Record<string, unknown>) => {
+      targetState.modeKey = input.modeKeyRaw;
+      targetState.keyword = input.keywordRaw;
+      targetState.sortBy = input.sortByRaw;
+      targetState.adapterParityFilter = input.adapterParityFilterRaw;
+      targetState.burnInWindow = input.burnInWindowRaw;
+      targetState.sustainedWindows = input.sustainedWindowsRaw;
+      targetState.burnInMinComparable = input.minComparableRaw;
+      targetState.burnInMaxMismatchRate = input.maxMismatchRateRaw;
+      return true;
     });
 
     const result = applyHistoryPageApp({
@@ -342,6 +387,7 @@ describe("bootstrap history page host", () => {
       historyPageEnvironment: resolveHistoryPageEnvironment({
         windowLike: {
           LocalHistoryStore: {},
+          localStorage: {},
           ModeCatalog: {},
           LegacyAdapterRuntime: {},
           confirm: () => true,
@@ -350,6 +396,9 @@ describe("bootstrap history page host", () => {
         }
       }),
       historyRuntimes: {
+        historyQueryRuntime: {
+          applyHistoryFilterState
+        },
         historyViewHostRuntime: {
           applyHistoryStatus
         },
@@ -361,8 +410,8 @@ describe("bootstrap history page host", () => {
           resolveHistoryLoadPanelContext: () => ({})
         },
         historyCanaryStorageRuntime: {
-          readHistoryStorageValue: () => null,
-          writeHistoryStorageValue: () => true
+          readHistoryStorageValue,
+          writeHistoryStorageValue
         },
         historyStartupHostRuntime: {
           applyHistoryStartup
@@ -373,6 +422,285 @@ describe("bootstrap history page host", () => {
 
     expect(result).toEqual({ started: true, missingStore: false });
     expect(applyHistoryStartup).toHaveBeenCalledTimes(1);
+    expect(applyHistoryLoadEntry).toHaveBeenCalledTimes(1);
+    expect(readHistoryStorageValue).toHaveBeenCalledWith({}, "history_filter_state_v1");
+    expect(applyHistoryStartup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        state: expect.objectContaining({
+          modeKey: "from-storage",
+          burnInMinComparable: "40",
+          burnInMaxMismatchRate: "0.5"
+        })
+      })
+    );
+    const writePayload = writeHistoryStorageValue.mock.calls[0]?.[2];
+    expect(writeHistoryStorageValue).toHaveBeenCalledWith(
+      {},
+      "history_filter_state_v1",
+      expect.any(String)
+    );
+    expect(JSON.parse(String(writePayload))).toMatchObject({
+      schemaVersion: 1,
+      filter: {
+        modeKey: "from-storage",
+        burnInMinComparable: "40",
+        burnInMaxMismatchRate: "0.5"
+      }
+    });
+  });
+
+  it("syncs restored persisted filter state back to dom controls before first load", () => {
+    const elements: Record<string, { value: string }> = {
+      "history-mode": { value: "" },
+      "history-keyword": { value: "" },
+      "history-sort": { value: "ended_desc" },
+      "history-adapter-filter": { value: "all" },
+      "history-burnin-window": { value: "200" },
+      "history-sustained-window": { value: "3" },
+      "history-burnin-min-comparable": { value: "50" },
+      "history-burnin-max-mismatch-rate": { value: "1" }
+    };
+    const getElementById = (id: string) => elements[id] || null;
+
+    const applyHistoryLoadEntry = vi.fn(() => ({ didLoad: true, missingStore: false }));
+    const applyHistoryStartup = vi.fn(({ loadHistory }: { loadHistory: (resetPage: boolean) => void }) => {
+      loadHistory(true);
+      return { started: true, missingStore: false };
+    });
+    const readHistoryStorageValue = vi.fn(() =>
+      JSON.stringify({
+        keyword: "restored-keyword",
+        sortBy: "score_desc",
+        adapterParityFilter: "mismatch",
+        burnInWindow: "500",
+        sustainedWindows: "4",
+        burnInMinComparable: "44",
+        burnInMaxMismatchRate: "0.4"
+      })
+    );
+
+    applyHistoryPageApp({
+      historyPageDefaults: resolveHistoryPageDefaults(),
+      historyPageEnvironment: resolveHistoryPageEnvironment({
+        windowLike: {
+          LocalHistoryStore: {},
+          localStorage: {},
+          ModeCatalog: {},
+          LegacyAdapterRuntime: {},
+          confirm: () => true,
+          location: { href: "" },
+          document: {}
+        }
+      }),
+      historyRuntimes: {
+        historyQueryRuntime: {
+          applyHistoryFilterState: vi.fn(
+            (targetState: Record<string, unknown>, input: Record<string, unknown>) => {
+              targetState.modeKey = input.modeKeyRaw;
+              targetState.keyword = input.keywordRaw;
+              targetState.sortBy = input.sortByRaw;
+              targetState.adapterParityFilter = input.adapterParityFilterRaw;
+              targetState.burnInWindow = input.burnInWindowRaw;
+              targetState.sustainedWindows = input.sustainedWindowsRaw;
+              targetState.burnInMinComparable = input.minComparableRaw;
+              targetState.burnInMaxMismatchRate = input.maxMismatchRateRaw;
+              return true;
+            }
+          )
+        },
+        historyLoadEntryHostRuntime: {
+          applyHistoryLoadEntry
+        },
+        historyLoadContextHostRuntime: {
+          resolveHistoryLoadPanelContext: () => ({})
+        },
+        historyCanaryStorageRuntime: {
+          readHistoryStorageValue,
+          writeHistoryStorageValue: vi.fn(() => true)
+        },
+        historyStartupHostRuntime: {
+          applyHistoryStartup
+        }
+      },
+      getElementById
+    });
+
+    expect(elements["history-keyword"].value).toBe("restored-keyword");
+    expect(elements["history-sort"].value).toBe("score_desc");
+    expect(elements["history-adapter-filter"].value).toBe("mismatch");
+    expect(elements["history-burnin-window"].value).toBe("500");
+    expect(elements["history-sustained-window"].value).toBe("4");
+    expect(elements["history-burnin-min-comparable"].value).toBe("44");
+    expect(elements["history-burnin-max-mismatch-rate"].value).toBe("0.4");
+  });
+
+  it("clears persisted filter snapshot when filter state matches defaults", () => {
+    const applyHistoryLoadEntry = vi.fn((payload: Record<string, unknown>) => {
+      const persistHistoryFilterState = payload.persistHistoryFilterState as (() => unknown) | undefined;
+      if (persistHistoryFilterState) persistHistoryFilterState();
+      return { didLoad: true, missingStore: false };
+    });
+    const applyHistoryStartup = vi.fn(({ loadHistory }: { loadHistory: (resetPage: boolean) => void }) => {
+      loadHistory(true);
+      return { started: true, missingStore: false };
+    });
+    const writeHistoryStorageValue = vi.fn(() => true);
+
+    applyHistoryPageApp({
+      historyPageDefaults: resolveHistoryPageDefaults(),
+      historyPageEnvironment: resolveHistoryPageEnvironment({
+        windowLike: {
+          LocalHistoryStore: {},
+          localStorage: {},
+          ModeCatalog: {},
+          LegacyAdapterRuntime: {},
+          confirm: () => true,
+          location: { href: "" },
+          document: {}
+        }
+      }),
+      historyRuntimes: {
+        historyQueryRuntime: {
+          applyHistoryFilterState: vi.fn()
+        },
+        historyLoadEntryHostRuntime: {
+          applyHistoryLoadEntry
+        },
+        historyLoadContextHostRuntime: {
+          resolveHistoryLoadPanelContext: () => ({})
+        },
+        historyCanaryStorageRuntime: {
+          readHistoryStorageValue: vi.fn(() => null),
+          writeHistoryStorageValue
+        },
+        historyStartupHostRuntime: {
+          applyHistoryStartup
+        }
+      },
+      getElementById: () => null
+    });
+
+    expect(applyHistoryStartup).toHaveBeenCalledTimes(1);
+    expect(applyHistoryLoadEntry).toHaveBeenCalledTimes(1);
+    expect(writeHistoryStorageValue).toHaveBeenCalledWith({}, "history_filter_state_v1", "");
+  });
+
+  it("keeps default filter state when persisted snapshot schema is unsupported", () => {
+    const applyHistoryLoadEntry = vi.fn(() => ({ didLoad: true, missingStore: false }));
+    const applyHistoryStartup = vi.fn(({ loadHistory }: { loadHistory: (resetPage: boolean) => void }) => {
+      loadHistory(true);
+      return { started: true, missingStore: false };
+    });
+    const readHistoryStorageValue = vi.fn(() =>
+      JSON.stringify({
+        schemaVersion: 999,
+        filter: {
+          modeKey: "unsupported"
+        }
+      })
+    );
+
+    applyHistoryPageApp({
+      historyPageDefaults: resolveHistoryPageDefaults(),
+      historyPageEnvironment: resolveHistoryPageEnvironment({
+        windowLike: {
+          LocalHistoryStore: {},
+          localStorage: {},
+          ModeCatalog: {},
+          LegacyAdapterRuntime: {},
+          confirm: () => true,
+          location: { href: "" },
+          document: {}
+        }
+      }),
+      historyRuntimes: {
+        historyQueryRuntime: {
+          applyHistoryFilterState: vi.fn()
+        },
+        historyLoadEntryHostRuntime: {
+          applyHistoryLoadEntry
+        },
+        historyLoadContextHostRuntime: {
+          resolveHistoryLoadPanelContext: () => ({})
+        },
+        historyCanaryStorageRuntime: {
+          readHistoryStorageValue,
+          writeHistoryStorageValue: vi.fn(() => true)
+        },
+        historyStartupHostRuntime: {
+          applyHistoryStartup
+        }
+      },
+      getElementById: () => null
+    });
+
+    expect(applyHistoryStartup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        state: expect.objectContaining({
+          modeKey: "",
+          burnInMinComparable: "50",
+          burnInMaxMismatchRate: "1"
+        })
+      })
+    );
+    expect(applyHistoryLoadEntry).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps default filter state when persisted snapshot json is malformed", () => {
+    const applyHistoryLoadEntry = vi.fn(() => ({ didLoad: true, missingStore: false }));
+    const applyHistoryStartup = vi.fn(({ loadHistory }: { loadHistory: (resetPage: boolean) => void }) => {
+      loadHistory(true);
+      return { started: true, missingStore: false };
+    });
+    const readHistoryStorageValue = vi.fn(() => "{bad-json");
+
+    applyHistoryPageApp({
+      historyPageDefaults: resolveHistoryPageDefaults(),
+      historyPageEnvironment: resolveHistoryPageEnvironment({
+        windowLike: {
+          LocalHistoryStore: {},
+          localStorage: {},
+          ModeCatalog: {},
+          LegacyAdapterRuntime: {},
+          confirm: () => true,
+          location: { href: "" },
+          document: {}
+        }
+      }),
+      historyRuntimes: {
+        historyQueryRuntime: {
+          applyHistoryFilterState: vi.fn()
+        },
+        historyLoadEntryHostRuntime: {
+          applyHistoryLoadEntry
+        },
+        historyLoadContextHostRuntime: {
+          resolveHistoryLoadPanelContext: () => ({})
+        },
+        historyCanaryStorageRuntime: {
+          readHistoryStorageValue,
+          writeHistoryStorageValue: vi.fn(() => true)
+        },
+        historyStartupHostRuntime: {
+          applyHistoryStartup
+        }
+      },
+      getElementById: () => null
+    });
+
+    expect(applyHistoryStartup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        state: expect.objectContaining({
+          modeKey: "",
+          keyword: "",
+          sortBy: "ended_desc",
+          burnInWindow: "200",
+          sustainedWindows: "3",
+          burnInMinComparable: "50",
+          burnInMaxMismatchRate: "1"
+        })
+      })
+    );
     expect(applyHistoryLoadEntry).toHaveBeenCalledTimes(1);
   });
 

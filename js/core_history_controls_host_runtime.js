@@ -41,6 +41,51 @@
     };
   }
 
+  function applyInputValue(element, value) {
+    var target = toRecord(element);
+    if (!("value" in target)) return false;
+    if (typeof value !== "string" && typeof value !== "number") return false;
+    target.value = String(value);
+    return true;
+  }
+
+  function applyHistoryBurnInThresholdInitialization(input) {
+    var source = toRecord(input);
+    var state = toRecord(source.state);
+    var getElementById = asFunction(source.getElementById);
+    if (!getElementById) {
+      return {
+        didInit: false,
+        didApplyMinComparable: false,
+        didApplyMaxMismatchRate: false
+      };
+    }
+
+    var minComparableElementId =
+      typeof source.minComparableElementId === "string"
+        ? source.minComparableElementId
+        : "history-burnin-min-comparable";
+    var maxMismatchRateElementId =
+      typeof source.maxMismatchRateElementId === "string"
+        ? source.maxMismatchRateElementId
+        : "history-burnin-max-mismatch-rate";
+
+    var didApplyMinComparable = applyInputValue(
+      getElementById(minComparableElementId),
+      state.burnInMinComparable
+    );
+    var didApplyMaxMismatchRate = applyInputValue(
+      getElementById(maxMismatchRateElementId),
+      state.burnInMaxMismatchRate
+    );
+
+    return {
+      didInit: didApplyMinComparable || didApplyMaxMismatchRate,
+      didApplyMinComparable: didApplyMinComparable,
+      didApplyMaxMismatchRate: didApplyMaxMismatchRate
+    };
+  }
+
   function bindHistoryControls(input) {
     var source = toRecord(input);
     var historyToolbarBindHostRuntime = toRecord(source.historyToolbarBindHostRuntime);
@@ -106,5 +151,7 @@
   global.CoreHistoryControlsHostRuntime = global.CoreHistoryControlsHostRuntime || {};
   global.CoreHistoryControlsHostRuntime.applyHistoryModeFilterInitialization =
     applyHistoryModeFilterInitialization;
+  global.CoreHistoryControlsHostRuntime.applyHistoryBurnInThresholdInitialization =
+    applyHistoryBurnInThresholdInitialization;
   global.CoreHistoryControlsHostRuntime.bindHistoryControls = bindHistoryControls;
 })(typeof window !== "undefined" ? window : undefined);

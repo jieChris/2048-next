@@ -59,7 +59,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "History response should exist").not.toBeNull();
     expect(response?.ok(), "History response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(200);
+    await page.waitForFunction(
+      () => Number((window as any).__historyBurnInHostApplyRenderCallCount || 0) > 0,
+      undefined,
+      { timeout: 5000 }
+    );
 
     const snapshot = await page.evaluate(() => {
       const actionBtn = document.querySelector(".history-burnin-focus-mismatch") as HTMLButtonElement | null;
@@ -103,7 +107,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "History response should exist").not.toBeNull();
     expect(response?.ok(), "History response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(
+      () => Number((window as any).__historyStartupHostCallCount || 0) > 0,
+      undefined,
+      { timeout: 5000 }
+    );
 
     const snapshot = await page.evaluate(() => ({
       hasRuntime: Boolean((window as any).CoreHistoryStartupHostRuntime?.applyHistoryStartup),

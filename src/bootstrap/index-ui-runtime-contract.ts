@@ -10,6 +10,10 @@ function asFunction<T extends (...args: never[]) => unknown>(value: unknown): T 
   return typeof value === "function" ? (value as T) : null;
 }
 
+function asContractShape<T>(value: unknown): T {
+  return toRecord(value) as unknown as T;
+}
+
 function ensureRuntime(windowLike: Record<string, unknown>, key: string, methodNames: string[], errorText: string) {
   const runtime = toRecord(windowLike[key]);
   for (let i = 0; i < methodNames.length; i++) {
@@ -87,6 +91,61 @@ export interface IndexUiCoreRuntimeContracts {
   indexUiPageHostRuntime: Record<string, unknown>;
   indexUiPageResolversHostRuntime: Record<string, unknown>;
   indexUiPageActionsHostRuntime: Record<string, unknown>;
+}
+
+export interface IndexUiRuntimeContractsBundle {
+  modalContracts: IndexUiModalRuntimeContracts;
+  homeGuideContracts: IndexUiHomeGuideRuntimeContracts;
+  coreContracts: IndexUiCoreRuntimeContracts;
+}
+
+export function resolveIndexUiRuntimeContractsCompat(
+  runtimeLike: unknown,
+  windowLike: unknown
+): IndexUiRuntimeContractsBundle {
+  const runtime = toRecord(runtimeLike);
+
+  const resolveBundle = asFunction<(input: unknown) => unknown>(runtime.resolveIndexUiRuntimeContracts);
+  if (resolveBundle) {
+    const bundle = toRecord(resolveBundle(windowLike));
+    if (
+      isRecord(bundle.modalContracts) &&
+      isRecord(bundle.homeGuideContracts) &&
+      isRecord(bundle.coreContracts)
+    ) {
+      return {
+        modalContracts: asContractShape<IndexUiModalRuntimeContracts>(bundle.modalContracts),
+        homeGuideContracts: asContractShape<IndexUiHomeGuideRuntimeContracts>(
+          bundle.homeGuideContracts
+        ),
+        coreContracts: asContractShape<IndexUiCoreRuntimeContracts>(bundle.coreContracts)
+      };
+    }
+  }
+
+  const resolveModalContracts = asFunction<(input: unknown) => unknown>(
+    runtime.resolveIndexUiModalRuntimeContracts
+  );
+  const resolveHomeGuideContracts = asFunction<(input: unknown) => unknown>(
+    runtime.resolveIndexUiHomeGuideRuntimeContracts
+  );
+  const resolveCoreContracts = asFunction<(input: unknown) => unknown>(
+    runtime.resolveIndexUiCoreRuntimeContracts
+  );
+
+  if (!resolveModalContracts || !resolveHomeGuideContracts || !resolveCoreContracts) {
+    throw new Error("CoreIndexUiRuntimeContractRuntime is required");
+  }
+
+  return {
+    modalContracts: asContractShape<IndexUiModalRuntimeContracts>(
+      resolveModalContracts(windowLike)
+    ),
+    homeGuideContracts: asContractShape<IndexUiHomeGuideRuntimeContracts>(
+      resolveHomeGuideContracts(windowLike)
+    ),
+    coreContracts: asContractShape<IndexUiCoreRuntimeContracts>(resolveCoreContracts(windowLike))
+  };
 }
 
 export function resolveIndexUiModalRuntimeContracts(windowLike: unknown): IndexUiModalRuntimeContracts {
@@ -585,5 +644,13 @@ export function resolveIndexUiCoreRuntimeContracts(
       ["createIndexUiPageActionResolvers"],
       "CoreIndexUiPageActionsHostRuntime is required"
     )
+  };
+}
+
+export function resolveIndexUiRuntimeContracts(windowLike: unknown): IndexUiRuntimeContractsBundle {
+  return {
+    modalContracts: resolveIndexUiModalRuntimeContracts(windowLike),
+    homeGuideContracts: resolveIndexUiHomeGuideRuntimeContracts(windowLike),
+    coreContracts: resolveIndexUiCoreRuntimeContracts(windowLike)
   };
 }

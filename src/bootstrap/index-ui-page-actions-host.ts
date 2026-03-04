@@ -129,7 +129,15 @@ export function createIndexUiPageActionResolvers(input: {
   const initTimerModuleSettingsUI = asFunction<() => unknown>(
     settingsModalInitResolvers.initTimerModuleSettingsUI
   );
-  if (!initThemeSettingsUI || !removeLegacyUndoSettingsUI || !initTimerModuleSettingsUI) {
+  const initWinPromptSettingsUI = asFunction<() => unknown>(
+    settingsModalInitResolvers.initWinPromptSettingsUI
+  );
+  if (
+    !initThemeSettingsUI ||
+    !removeLegacyUndoSettingsUI ||
+    !initTimerModuleSettingsUI ||
+    !initWinPromptSettingsUI
+  ) {
     throw new Error("CoreSettingsModalPageHostRuntime is required");
   }
 
@@ -295,6 +303,7 @@ export function createIndexUiPageActionResolvers(input: {
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,
+      initWinPromptSettingsUI,
       initHomeGuideSettingsUI
     })
   );

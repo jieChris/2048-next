@@ -162,4 +162,63 @@ describe("bootstrap history canary host", () => {
     expect(loadHistory).toHaveBeenCalledWith(false);
     expect(setStatus).toHaveBeenCalledWith("ok", false);
   });
+
+  it("does not overwrite status when click feedback is empty", () => {
+    const clickHandlers: Array<(event?: unknown) => void> = [];
+    const button = {
+      addEventListener(_name: string, cb: (event?: unknown) => void) {
+        clickHandlers.push(cb);
+      }
+    };
+    const panelElement = {
+      innerHTML: "",
+      querySelectorAll(selector: string) {
+        return selector === ".history-canary-action-btn" ? [button] : [];
+      }
+    };
+    const setStatus = vi.fn();
+    const loadHistory = vi.fn();
+
+    applyHistoryCanaryPanelRender({
+      panelElement,
+      runtime: {},
+      readStorageValue: () => null,
+      adapterModeStorageKey: "engine_adapter_mode",
+      defaultModeStorageKey: "engine_adapter_default_mode",
+      forceLegacyStorageKey: "engine_adapter_force_legacy",
+      historyCanarySourceRuntime: {
+        resolveHistoryCanaryPolicyAndStoredState: () => ({ policy: {}, stored: {} })
+      },
+      historyCanaryPolicyRuntime: {
+        resolveCanaryPolicySnapshot: () => ({}),
+        resolveStoredPolicyKeys: () => ({}),
+        resolveCanaryPolicyActionNotice: () => "",
+        resolveCanaryPolicyActionPlan: () => ({ isSupported: false })
+      },
+      historyCanaryViewRuntime: {
+        resolveHistoryCanaryViewState: () => ({})
+      },
+      historyCanaryPanelRuntime: {
+        resolveHistoryCanaryPanelHtml: () =>
+          "<button class='history-canary-action-btn' data-action='unsupported'></button>",
+        resolveHistoryCanaryActionName: () => "unsupported"
+      },
+      historyCanaryActionRuntime: {
+        applyHistoryCanaryPanelAction: () => ({
+          shouldReload: false,
+          reloadResetPage: false,
+          statusText: "",
+          isError: false
+        }),
+        resolveHistoryCanaryPolicyUpdateFailureNotice: () => "failed"
+      },
+      writeStorageValue: () => true,
+      loadHistory,
+      setStatus
+    });
+
+    clickHandlers[0]({ currentTarget: button });
+    expect(loadHistory).not.toHaveBeenCalled();
+    expect(setStatus).not.toHaveBeenCalled();
+  });
 });

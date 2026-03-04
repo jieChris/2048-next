@@ -10,6 +10,12 @@ function normalizePositiveInteger(value: unknown, fallback: number): number {
   return Math.floor(parsed);
 }
 
+function normalizePositiveNumber(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return parsed;
+}
+
 export interface HistoryFilterState {
   modeKey: string;
   keyword: string;
@@ -17,6 +23,8 @@ export interface HistoryFilterState {
   adapterParityFilter: string;
   burnInWindow: string;
   sustainedWindows: string;
+  burnInMinComparable: string;
+  burnInMaxMismatchRate: string;
 }
 
 type MutableHistoryFilterTarget = Record<string, unknown>;
@@ -36,6 +44,8 @@ export function resolveHistoryFilterState(input: {
   adapterParityFilterRaw?: unknown;
   burnInWindowRaw?: unknown;
   sustainedWindowsRaw?: unknown;
+  minComparableRaw?: unknown;
+  maxMismatchRateRaw?: unknown;
 }): HistoryFilterState {
   return {
     modeKey: normalizeString(input && input.modeKeyRaw, ""),
@@ -43,7 +53,9 @@ export function resolveHistoryFilterState(input: {
     sortBy: normalizeString(input && input.sortByRaw, "ended_desc"),
     adapterParityFilter: normalizeString(input && input.adapterParityFilterRaw, "all"),
     burnInWindow: normalizeString(input && input.burnInWindowRaw, "200"),
-    sustainedWindows: normalizeString(input && input.sustainedWindowsRaw, "3")
+    sustainedWindows: normalizeString(input && input.sustainedWindowsRaw, "3"),
+    burnInMinComparable: normalizeString(input && input.minComparableRaw, "50"),
+    burnInMaxMismatchRate: normalizeString(input && input.maxMismatchRateRaw, "1")
   };
 }
 
@@ -62,6 +74,8 @@ export function applyHistoryFilterState(targetState: unknown, input: unknown): b
   target.adapterParityFilter = next.adapterParityFilter;
   target.burnInWindow = next.burnInWindow;
   target.sustainedWindows = next.sustainedWindows;
+  target.burnInMinComparable = next.burnInMinComparable;
+  target.burnInMaxMismatchRate = next.burnInMaxMismatchRate;
   return true;
 }
 
@@ -140,7 +154,7 @@ export function resolveHistoryBurnInQuery(input: {
     sample_limit: normalizeString(input && input.sampleLimit, "200"),
     sustained_windows: normalizeString(input && input.sustainedWindows, "3"),
     min_comparable: normalizePositiveInteger(input && input.minComparable, 50),
-    max_mismatch_rate: normalizePositiveInteger(input && input.maxMismatchRate, 1)
+    max_mismatch_rate: normalizePositiveNumber(input && input.maxMismatchRate, 1)
   };
 }
 

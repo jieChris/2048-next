@@ -33,11 +33,14 @@ export interface IpsInputCountInput {
   replayMode?: boolean | null;
   replayIndex?: number | null;
   ipsInputCount?: number | null;
+  ipsInputTimes?: unknown[] | null;
+  nowMs?: number | null;
 }
 
 export interface NextIpsInputCountResult {
   shouldRecord: boolean;
   nextIpsInputCount: number;
+  nextIpsInputTimes: number[];
 }
 
 export interface IpsDisplayTextInput {
@@ -84,6 +87,11 @@ export function computeReplayStepStats(input: ReplayStepStatsInput): ReplayStepS
 }
 
 export function resolveIpsInputCount(input: IpsInputCountInput): number {
+  const hasTimesArray = Array.isArray(input.ipsInputTimes);
+  if (hasTimesArray && !input.replayMode) {
+    const nowMs = resolveIpsWindowNowMs(input.nowMs);
+    return resolveIpsWindowTimes(input.ipsInputTimes, nowMs).length;
+  }
   if (input.replayMode) {
     const replayIndex = Number(input.replayIndex);
     return Number.isInteger(replayIndex) && replayIndex > 0 ? replayIndex : 0;
@@ -93,32 +101,74 @@ export function resolveIpsInputCount(input: IpsInputCountInput): number {
 }
 
 export function resolveNextIpsInputCount(input: IpsInputCountInput): NextIpsInputCountResult {
+  const hasTimesArray = Array.isArray(input.ipsInputTimes);
+  if (hasTimesArray && !input.replayMode) {
+    const nowMs = resolveIpsWindowNowMs(input.nowMs);
+    const nextIpsInputTimes = resolveIpsWindowTimes(input.ipsInputTimes, nowMs, true);
+    return {
+      shouldRecord: true,
+      nextIpsInputCount: nextIpsInputTimes.length,
+      nextIpsInputTimes
+    };
+  }
   if (input.replayMode) {
     return {
       shouldRecord: false,
-      nextIpsInputCount: resolveIpsInputCount(input)
+      nextIpsInputCount: resolveIpsInputCount(input),
+      nextIpsInputTimes: []
     };
   }
   return {
     shouldRecord: true,
-    nextIpsInputCount: resolveIpsInputCount(input) + 1
+    nextIpsInputCount: resolveIpsInputCount(input) + 1,
+    nextIpsInputTimes: []
   };
 }
 
 export function resolveIpsDisplayText(input: IpsDisplayTextInput): IpsDisplayTextResult {
-  const durationMs = Number(input.durationMs);
-  const ms = Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : 0;
-  const seconds = ms / 1000;
   const rawCount = Number(input.ipsInputCount);
-  const inputCount = Number.isFinite(rawCount) ? rawCount : 0;
-  let avgIps: string | number = 0;
-  if (seconds > 0) {
-    avgIps = (inputCount / seconds).toFixed(2);
-  }
+  const inputCount = Number.isFinite(rawCount) && rawCount >= 0 ? Math.floor(rawCount) : 0;
+  const avgIps = String(inputCount);
   return {
-    avgIpsText: String(avgIps),
+    avgIpsText: avgIps,
     ipsText: "IPS: " + avgIps
   };
+}
+
+const IPS_WINDOW_MS = 1000;
+
+function resolveIpsWindowNowMs(rawNowMs: unknown): number {
+  const nowMs = Number(rawNowMs);
+  if (Number.isFinite(nowMs) && nowMs >= 0) {
+    return Math.floor(nowMs);
+  }
+  return Date.now();
+}
+
+function normalizeIpsInputTime(raw: unknown): number | null {
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) return null;
+  return Math.floor(value);
+}
+
+function resolveIpsWindowTimes(
+  rawTimes: unknown[] | null | undefined,
+  nowMs: number,
+  includeNow = false
+): number[] {
+  const minMs = nowMs - IPS_WINDOW_MS;
+  const next: number[] = [];
+  const list = Array.isArray(rawTimes) ? rawTimes : [];
+  for (const rawTime of list) {
+    const time = normalizeIpsInputTime(rawTime);
+    if (time === null) continue;
+    if (time < minMs || time > nowMs + IPS_WINDOW_MS) continue;
+    next.push(time);
+  }
+  if (includeNow) {
+    next.push(nowMs);
+  }
+  return next;
 }
 
 export function resolveReplayExecution(action: unknown): ReplayExecution {

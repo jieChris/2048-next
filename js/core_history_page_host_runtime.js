@@ -23,8 +23,115 @@
     return Object.keys(value).length > 0;
   }
 
+  var HISTORY_FILTER_STATE_SCHEMA_VERSION = 1;
+
+  function resolveHistoryPersistedFilterPayload(state) {
+    var source = toRecord(state);
+    return {
+      modeKey: toText(source.modeKey),
+      keyword: toText(source.keyword),
+      sortBy: toText(source.sortBy),
+      adapterParityFilter: toText(source.adapterParityFilter),
+      burnInWindow: toText(source.burnInWindow),
+      sustainedWindows: toText(source.sustainedWindows),
+      burnInMinComparable: toText(source.burnInMinComparable),
+      burnInMaxMismatchRate: toText(source.burnInMaxMismatchRate)
+    };
+  }
+
+  function resolveHistoryPersistedFilterDelta(state, defaultFilterState) {
+    var current = resolveHistoryPersistedFilterPayload(state);
+    var baseline = resolveHistoryPersistedFilterPayload(defaultFilterState);
+    var delta = {};
+    var keys = [
+      "modeKey",
+      "keyword",
+      "sortBy",
+      "adapterParityFilter",
+      "burnInWindow",
+      "sustainedWindows",
+      "burnInMinComparable",
+      "burnInMaxMismatchRate"
+    ];
+
+    for (var i = 0; i < keys.length; i += 1) {
+      var key = keys[i];
+      if (current[key] !== baseline[key]) {
+        delta[key] = current[key];
+      }
+    }
+
+    return delta;
+  }
+
+  function resolveHistoryPersistedFilterSource(persistedRaw) {
+    var source = toRecord(persistedRaw);
+    var schemaVersion = source.schemaVersion;
+
+    if (typeof schemaVersion === "number") {
+      if (schemaVersion !== HISTORY_FILTER_STATE_SCHEMA_VERSION) return null;
+      var filter = toRecord(source.filter);
+      return hasOwnKeys(filter) ? filter : null;
+    }
+
+    return hasOwnKeys(source) ? source : null;
+  }
+
+  function applyHistoryPersistedFilterState(input) {
+    var source = toRecord(input);
+    var persisted = resolveHistoryPersistedFilterSource(source.persistedRaw);
+    var runtime = toRecord(source.historyQueryRuntime);
+    var applyHistoryFilterState = asFunction(runtime.applyHistoryFilterState);
+    if (!persisted) return false;
+    if (!applyHistoryFilterState) return false;
+
+    applyHistoryFilterState(source.state, {
+      modeKeyRaw: persisted.modeKey,
+      keywordRaw: persisted.keyword,
+      sortByRaw: persisted.sortBy,
+      adapterParityFilterRaw: persisted.adapterParityFilter,
+      burnInWindowRaw: persisted.burnInWindow,
+      sustainedWindowsRaw: persisted.sustainedWindows,
+      minComparableRaw: persisted.burnInMinComparable,
+      maxMismatchRateRaw: persisted.burnInMaxMismatchRate
+    });
+    return true;
+  }
+
+  function applyHistoryFilterStateToInputElements(input) {
+    var source = toRecord(input);
+    var state = toRecord(source.state);
+    var getElementById = asFunction(source.getElementById);
+    if (!getElementById) return;
+
+    var assignValue = function (elementId, value) {
+      var id = toText(elementId);
+      if (!id) return;
+      var element = toRecord(getElementById(id));
+      if (!("value" in element)) return;
+      element.value = toText(value);
+    };
+
+    assignValue(source.modeElementId || "history-mode", state.modeKey);
+    assignValue(source.keywordElementId || "history-keyword", state.keyword);
+    assignValue(source.sortElementId || "history-sort", state.sortBy);
+    assignValue(source.adapterFilterElementId || "history-adapter-filter", state.adapterParityFilter);
+    assignValue(source.burnInWindowElementId || "history-burnin-window", state.burnInWindow);
+    assignValue(source.sustainedWindowElementId || "history-sustained-window", state.sustainedWindows);
+    assignValue(source.minComparableElementId || "history-burnin-min-comparable", state.burnInMinComparable);
+    assignValue(source.maxMismatchRateElementId || "history-burnin-max-mismatch-rate", state.burnInMaxMismatchRate);
+  }
+
   function resolveHistoryPageDefaults(input) {
     var source = toRecord(input);
+    var burnInMinComparable =
+      typeof source.burnInMinComparable === "number" && Number.isFinite(source.burnInMinComparable)
+        ? source.burnInMinComparable
+        : 50;
+    var burnInMaxMismatchRate =
+      typeof source.burnInMaxMismatchRate === "number" && Number.isFinite(source.burnInMaxMismatchRate)
+        ? source.burnInMaxMismatchRate
+        : 1;
     return {
       state: {
         page: 1,
@@ -34,12 +141,12 @@
         sortBy: "ended_desc",
         adapterParityFilter: "all",
         burnInWindow: "200",
-        sustainedWindows: "3"
+        sustainedWindows: "3",
+        burnInMinComparable: String(burnInMinComparable),
+        burnInMaxMismatchRate: String(burnInMaxMismatchRate)
       },
-      burnInMinComparable:
-        typeof source.burnInMinComparable === "number" ? source.burnInMinComparable : 50,
-      burnInMaxMismatchRate:
-        typeof source.burnInMaxMismatchRate === "number" ? source.burnInMaxMismatchRate : 1,
+      burnInMinComparable: burnInMinComparable,
+      burnInMaxMismatchRate: burnInMaxMismatchRate,
       adapterModeStorageKey:
         typeof source.adapterModeStorageKey === "string"
           ? source.adapterModeStorageKey
@@ -52,6 +159,10 @@
         typeof source.forceLegacyStorageKey === "string"
           ? source.forceLegacyStorageKey
           : "engine_adapter_force_legacy",
+      historyFilterStateStorageKey:
+        typeof source.historyFilterStateStorageKey === "string"
+          ? source.historyFilterStateStorageKey
+          : "history_filter_state_v1",
       statusElementId: typeof source.statusElementId === "string" ? source.statusElementId : "history-status",
       summaryElementId: typeof source.summaryElementId === "string" ? source.summaryElementId : "history-summary",
       prevButtonId: typeof source.prevButtonId === "string" ? source.prevButtonId : "history-prev-page",
@@ -87,6 +198,7 @@
     return {
       windowLike: windowLike,
       documentLike: source.documentLike || windowLike.document,
+      localStorage: source.localStorage || windowLike.localStorage,
       localHistoryStore: source.localHistoryStore || windowLike.LocalHistoryStore,
       modeCatalog: source.modeCatalog || windowLike.ModeCatalog,
       runtime: source.runtime || windowLike.LegacyAdapterRuntime,
@@ -198,6 +310,7 @@
       historySummaryRuntime: runtimes.historySummaryRuntime,
       historyPanelHostRuntime: runtimes.historyPanelHostRuntime,
       historyPanelContext: historyPanelContext,
+      persistHistoryFilterState: source.persistHistoryFilterState,
       loadHistory: source.loadHistory,
       setStatus: source.setStatus,
       prevButtonId: typeof source.prevButtonId === "string" ? source.prevButtonId : "history-prev-page",
@@ -244,7 +357,36 @@
     var historyPageEnvironment = toRecord(source.historyPageEnvironment);
     var historyRuntimes = toRecord(source.historyRuntimes);
     var state = toRecord(historyPageDefaults.state);
+    var defaultFilterState = resolveHistoryPersistedFilterPayload(historyPageDefaults.state);
     var getElementById = source.getElementById;
+    var historyCanaryStorageRuntime = toRecord(historyRuntimes.historyCanaryStorageRuntime);
+    var readHistoryStorageValue = asFunction(historyCanaryStorageRuntime.readHistoryStorageValue);
+    var writeHistoryStorageValue = asFunction(historyCanaryStorageRuntime.writeHistoryStorageValue);
+    var historyFilterStateStorageKey = toText(historyPageDefaults.historyFilterStateStorageKey);
+    var storageLike = historyPageEnvironment.localStorage;
+    var historyQueryRuntime = historyRuntimes.historyQueryRuntime;
+
+    if (readHistoryStorageValue && historyFilterStateStorageKey) {
+      var persistedValue = readHistoryStorageValue(storageLike, historyFilterStateStorageKey);
+      if (typeof persistedValue === "string" && persistedValue) {
+        try {
+          applyHistoryPersistedFilterState({
+            state: state,
+            historyQueryRuntime: historyQueryRuntime,
+            persistedRaw: JSON.parse(persistedValue)
+          });
+        } catch (_error) {
+          // ignore malformed persisted filter state
+        }
+      }
+    }
+
+    applyHistoryFilterStateToInputElements({
+      state: state,
+      getElementById: getElementById,
+      modeElementId: historyPageDefaults.modeElementId,
+      adapterFilterElementId: historyPageDefaults.adapterFilterElementId
+    });
 
     var setStatus = function (text, isError) {
       applyHistoryPageStatus({
@@ -282,7 +424,28 @@
         runtime: historyPageEnvironment.runtime,
         adapterModeStorageKey: historyPageDefaults.adapterModeStorageKey,
         defaultModeStorageKey: historyPageDefaults.defaultModeStorageKey,
-        forceLegacyStorageKey: historyPageDefaults.forceLegacyStorageKey
+        forceLegacyStorageKey: historyPageDefaults.forceLegacyStorageKey,
+        persistHistoryFilterState: function () {
+          if (!writeHistoryStorageValue || !historyFilterStateStorageKey) return false;
+          var payload = resolveHistoryPersistedFilterDelta(state, defaultFilterState);
+          if (!hasOwnKeys(payload)) {
+            return writeHistoryStorageValue(
+              storageLike,
+              historyFilterStateStorageKey,
+              ""
+            ) === true;
+          }
+          return (
+            writeHistoryStorageValue(
+              storageLike,
+              historyFilterStateStorageKey,
+              JSON.stringify({
+                schemaVersion: HISTORY_FILTER_STATE_SCHEMA_VERSION,
+                filter: payload
+              })
+            ) === true
+          );
+        }
       });
     };
 

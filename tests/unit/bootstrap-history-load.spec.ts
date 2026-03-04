@@ -20,7 +20,9 @@ describe("bootstrap history load", () => {
         page: 3,
         pageSize: 30,
         burnInWindow: "200",
-        sustainedWindows: "3"
+        sustainedWindows: "3",
+        burnInMinComparable: "40",
+        burnInMaxMismatchRate: "0.5"
       },
       localHistoryStore: { id: "store" },
       historyQueryRuntime: {
@@ -54,8 +56,8 @@ describe("bootstrap history load", () => {
             sortBy: "ended_desc",
             sampleLimit: "200",
             sustainedWindows: "3",
-            minComparable: 50,
-            maxMismatchRate: 1
+            minComparable: 40,
+            maxMismatchRate: 0.5
           });
           return { mismatchRate: 0.25 };
         }
@@ -86,6 +88,39 @@ describe("bootstrap history load", () => {
     expect(result.pagerState).toEqual({
       disablePrev: false,
       disableNext: false
+    });
+  });
+
+  it("falls back to source burn-in thresholds when state values are absent", () => {
+    const result = resolveHistoryLoadPipeline({
+      state: {
+        modeKey: "classic",
+        burnInWindow: "200",
+        sustainedWindows: "3"
+      },
+      localHistoryStore: {},
+      historyQueryRuntime: {
+        resolveHistoryBurnInQuery(input: Record<string, unknown>) {
+          return input;
+        }
+      },
+      historyBurnInRuntime: {
+        resolveHistoryBurnInSummarySource(input: Record<string, unknown>) {
+          return input.queryInput;
+        }
+      },
+      burnInMinComparable: 60,
+      burnInMaxMismatchRate: 0.8
+    });
+
+    expect(result.burnInSummary).toEqual({
+      modeKey: "classic",
+      keyword: undefined,
+      sortBy: undefined,
+      sampleLimit: "200",
+      sustainedWindows: "3",
+      minComparable: 60,
+      maxMismatchRate: 0.8
     });
   });
 });

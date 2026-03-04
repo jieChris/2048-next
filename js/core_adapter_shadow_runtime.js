@@ -38,6 +38,21 @@
     return report;
   }
 
+  function normalizeSessionId(value) {
+    if (typeof value !== "string") return null;
+    var trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+
+  function resolveSnapshotSessionId(snapshot) {
+    if (!snapshot || typeof snapshot !== "object") return null;
+    var direct = normalizeSessionId(snapshot.sessionId);
+    if (direct) return direct;
+    var lastMoveResult = snapshot.lastMoveResult;
+    if (!lastMoveResult || typeof lastMoveResult !== "object" || Array.isArray(lastMoveResult)) return null;
+    return normalizeSessionId(lastMoveResult.sessionId);
+  }
+
   function toDelta(legacyValue, coreValue) {
     var left = toFiniteNumberOrNull(legacyValue);
     var right = toFiniteNumberOrNull(coreValue);
@@ -230,11 +245,13 @@
       (snapshot && typeof snapshot.adapterMode === "string" ? snapshot.adapterMode : null) ||
         opts.adapterMode
     );
+    var sessionId = resolveSnapshotSessionId(snapshot);
 
     return {
       schemaVersion: 2,
       modeKey: modeKey,
       adapterMode: adapterMode,
+      sessionId: sessionId,
       hasParityState: !!parity,
       hasSnapshot: !!snapshot,
       counters: cloneCounters(counters),
@@ -264,10 +281,16 @@
       (coreReport && coreReport.modeKey) ||
       (legacyReport && legacyReport.modeKey)
     );
-    var comparable = !!legacyReport &&
+    var legacySessionId = normalizeSessionId(legacyReport && legacyReport.sessionId);
+    var coreSessionId = normalizeSessionId(coreReport && coreReport.sessionId);
+    var isSessionMatch = legacySessionId === null || coreSessionId === null
+      ? null
+      : legacySessionId === coreSessionId;
+    var comparableByMode = !!legacyReport &&
       !!coreReport &&
       normalizeModeKey(legacyReport.modeKey) === normalizeModeKey(coreReport.modeKey) &&
       normalizeModeKey(legacyReport.modeKey) === modeKey;
+    var comparable = comparableByMode && isSessionMatch === true;
     var scoreDelta = comparable
       ? toDelta(legacyReport && legacyReport.lastScoreFromSnapshot, coreReport && coreReport.lastScoreFromSnapshot)
       : null;
@@ -284,6 +307,9 @@
       modeKey: modeKey,
       hasLegacyReport: !!legacyReport,
       hasCoreReport: !!coreReport,
+      legacySessionId: legacySessionId,
+      coreSessionId: coreSessionId,
+      isSessionMatch: isSessionMatch,
       comparable: comparable,
       comparedAt: Date.now(),
       legacyScore: legacyReport ? legacyReport.lastScoreFromSnapshot : null,

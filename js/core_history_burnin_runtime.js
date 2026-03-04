@@ -69,6 +69,18 @@
     return rows.length ? rows.join("，") : "-";
   }
 
+  function formatSustainedWindowTrend(value) {
+    var list = Array.isArray(value) ? value : [];
+    var rows = [];
+    for (var i = 0; i < list.length && rows.length < 3; i += 1) {
+      var item = isPlainObject(list[i]) ? list[i] : {};
+      var mismatchRateText = formatPercent(item.mismatchRate);
+      var gateLabel = getBurnInGateLabel(item.gateStatus);
+      rows.push("W" + String(i + 1) + " " + mismatchRateText + "(" + gateLabel + ")");
+    }
+    return rows.length ? rows.join(" | ") : "-";
+  }
+
   function getBurnInGateLabel(status) {
     if (status === "pass") return "达标";
     if (status === "fail") return "未达标";
@@ -86,6 +98,31 @@
     if (status === "fail") return "连续未达标";
     if (status === "insufficient_window") return "窗口不足";
     return "样本不足";
+  }
+
+  function resolveCutoverReadinessState(summary) {
+    var gateStatus = String(summary.gateStatus || "");
+    var sustainedGateStatus = String(summary.sustainedGateStatus || "");
+    if (gateStatus === "pass" && sustainedGateStatus === "pass") {
+      return {
+        text: "可切换：当前 burn-in 指标达标",
+        cssClass: "history-burnin-gate-pass"
+      };
+    }
+    if (
+      gateStatus === "insufficient_sample" ||
+      sustainedGateStatus === "insufficient_window" ||
+      sustainedGateStatus === "insufficient_sample"
+    ) {
+      return {
+        text: "观察中：样本仍不足，继续 burn-in",
+        cssClass: "history-burnin-gate-warn"
+      };
+    }
+    return {
+      text: "阻塞：存在不一致风险，暂不放量",
+      cssClass: "history-burnin-gate-fail"
+    };
   }
 
   function resolveHistoryBurnInSummarySource(input) {
@@ -120,7 +157,10 @@
         mismatchRateText: "-",
         comparableMatchRateText: "-",
         sustainedPassRateText: "-",
+        sustainedTrendText: "-",
         topMismatchModesText: "-",
+        cutoverReadinessText: "观察中：样本仍不足，继续 burn-in",
+        cutoverReadinessClass: "history-burnin-gate-warn",
         maxMismatchRateText: "-"
       };
     }
@@ -139,6 +179,7 @@
         ? summary.sustainedGateStatus
         : "warn";
 
+    var cutoverReadiness = resolveCutoverReadinessState(summary);
     return {
       hasSummary: true,
       limitText: limitText,
@@ -157,7 +198,10 @@
         summary.sustainedConsecutivePass,
         summary.sustainedWindows
       ),
+      sustainedTrendText: formatSustainedWindowTrend(summary.sustainedWindowDetails),
       topMismatchModesText: formatTopMismatchModes(summary.topMismatchModes),
+      cutoverReadinessText: cutoverReadiness.text,
+      cutoverReadinessClass: cutoverReadiness.cssClass,
       maxMismatchRateText: formatPercent(summary.maxMismatchRate)
     };
   }
@@ -197,6 +241,11 @@
             "'>连续窗口: " +
             escapeHtml(state.sustainedGateLabel) +
           "</span>" +
+          "<span class='history-burnin-gate " +
+            state.cutoverReadinessClass +
+            "'>" +
+            escapeHtml(state.cutoverReadinessText) +
+          "</span>" +
         "</div>" +
       "</div>" +
       "<div class='history-burnin-grid'>" +
@@ -232,6 +281,10 @@
         "）" +
         "，已评估窗口 " +
         escapeHtml(state.sustainedEvaluated) +
+      "</div>" +
+      "<div class='history-burnin-note'>" +
+        "窗口趋势: " +
+        escapeHtml(state.sustainedTrendText) +
       "</div>" +
       "<div class='history-burnin-note'>" +
         "模式不一致 Top: " +

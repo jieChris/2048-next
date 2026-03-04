@@ -14,6 +14,7 @@ export interface HistoryStartupHostResult {
   started: boolean;
   missingStore: boolean;
   didInitModeFilter: boolean;
+  didInitBurnInThresholds: boolean;
   didBindControls: boolean;
 }
 
@@ -56,6 +57,9 @@ export function applyHistoryStartup(input: {
   const applyHistoryModeFilterInitialization = asFunction<(args: unknown) => unknown>(
     historyControlsHostRuntime.applyHistoryModeFilterInitialization
   );
+  const applyHistoryBurnInThresholdInitialization = asFunction<(args: unknown) => unknown>(
+    historyControlsHostRuntime.applyHistoryBurnInThresholdInitialization
+  );
   const bindHistoryControls = asFunction<(args: unknown) => unknown>(
     historyControlsHostRuntime.bindHistoryControls
   );
@@ -66,6 +70,7 @@ export function applyHistoryStartup(input: {
       started: false,
       missingStore: true,
       didInitModeFilter: false,
+      didInitBurnInThresholds: false,
       didBindControls: false
     };
   }
@@ -84,6 +89,15 @@ export function applyHistoryStartup(input: {
   } else if (initModeFilter) {
     initModeFilter();
     didInitModeFilter = true;
+  }
+
+  let didInitBurnInThresholds = false;
+  if (applyHistoryBurnInThresholdInitialization) {
+    applyHistoryBurnInThresholdInitialization({
+      getElementById: source.getElementById,
+      state: source.state
+    });
+    didInitBurnInThresholds = true;
   }
 
   let didBindControls = false;
@@ -121,6 +135,7 @@ export function applyHistoryStartup(input: {
     started: true,
     missingStore: false,
     didInitModeFilter,
+    didInitBurnInThresholds,
     didBindControls
   };
 }

@@ -28,6 +28,7 @@ export function applySettingsModalOpenOrchestration(input: {
   removeLegacyUndoSettingsUI?: unknown;
   initThemeSettingsUI?: unknown;
   initTimerModuleSettingsUI?: unknown;
+  initWinPromptSettingsUI?: unknown;
   initHomeGuideSettingsUI?: unknown;
 }): SettingsModalOpenHostResult {
   const source = toRecord(input);
@@ -48,6 +49,7 @@ export function applySettingsModalOpenOrchestration(input: {
   if (invoke(source.removeLegacyUndoSettingsUI)) initCallCount += 1;
   if (invoke(source.initThemeSettingsUI)) initCallCount += 1;
   if (invoke(source.initTimerModuleSettingsUI)) initCallCount += 1;
+  if (invoke(source.initWinPromptSettingsUI)) initCallCount += 1;
   if (invoke(source.initHomeGuideSettingsUI)) initCallCount += 1;
 
   return {

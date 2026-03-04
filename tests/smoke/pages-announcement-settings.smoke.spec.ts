@@ -176,6 +176,19 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
     await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const runtime = (window as any).CoreGameSettingsStorageRuntime;
+      const manager = (window as any).game_manager;
+      return (
+        !!manager &&
+        !!runtime &&
+        typeof runtime.readStorageFlagFromContext === "function" &&
+        typeof runtime.writeStorageFlagFromContext === "function" &&
+        typeof runtime.readStorageJsonMapFromContext === "function" &&
+        typeof runtime.writeStorageJsonMapFromContext === "function" &&
+        typeof runtime.writeStorageJsonPayloadFromContext === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreGameSettingsStorageRuntime;
@@ -241,6 +254,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.replayMode = true;
       if (typeof manager.tryAutoSubmitOnGameOver === "function") {
         manager.tryAutoSubmitOnGameOver();
+      }
+      if (typeof manager.writeLocalStorageJsonPayload === "function") {
+        manager.writeLocalStorageJsonPayload("last_session_submit_result_v1", {
+          at: new Date().toISOString(),
+          ok: false,
+          reason: "smoke_probe"
+        });
       }
       manager.sessionSubmitDone = prevSubmitDone;
       manager.replayMode = prevReplayMode;

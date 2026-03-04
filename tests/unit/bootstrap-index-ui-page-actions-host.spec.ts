@@ -22,6 +22,10 @@ describe("bootstrap index ui page actions host", () => {
             initTimerModuleSettingsUI() {
               trace.push("settings:init-timer");
               return "timer";
+            },
+            initWinPromptSettingsUI() {
+              trace.push("settings:init-win-prompt");
+              return "win-prompt";
             }
           };
         },
@@ -159,7 +163,8 @@ describe("bootstrap index ui page actions host", () => {
             return {
               initThemeSettingsUI() {},
               removeLegacyUndoSettingsUI() {},
-              initTimerModuleSettingsUI() {}
+              initTimerModuleSettingsUI() {},
+              initWinPromptSettingsUI() {}
             };
           },
           createSettingsModalActionResolvers() {

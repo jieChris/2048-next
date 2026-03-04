@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  applyHistoryBurnInThresholdInitialization,
   applyHistoryModeFilterInitialization,
   bindHistoryControls
 } from "../../src/bootstrap/history-controls-host";
@@ -33,6 +34,40 @@ describe("bootstrap history controls host", () => {
   it("returns noop when mode filter host runtime is missing", () => {
     expect(applyHistoryModeFilterInitialization({})).toEqual({
       didInit: false
+    });
+  });
+
+  it("initializes burn-in threshold input values from state", () => {
+    const minComparableInput = { value: "50" };
+    const maxMismatchRateInput = { value: "1" };
+    const getElementById = vi.fn((id: string) => {
+      if (id === "history-burnin-min-comparable") return minComparableInput;
+      if (id === "history-burnin-max-mismatch-rate") return maxMismatchRateInput;
+      return null;
+    });
+
+    const result = applyHistoryBurnInThresholdInitialization({
+      getElementById,
+      state: {
+        burnInMinComparable: "40",
+        burnInMaxMismatchRate: "0.5"
+      }
+    });
+
+    expect(result).toEqual({
+      didInit: true,
+      didApplyMinComparable: true,
+      didApplyMaxMismatchRate: true
+    });
+    expect(minComparableInput.value).toBe("40");
+    expect(maxMismatchRateInput.value).toBe("0.5");
+  });
+
+  it("returns noop burn-in threshold initialization when getElementById is missing", () => {
+    expect(applyHistoryBurnInThresholdInitialization({})).toEqual({
+      didInit: false,
+      didApplyMinComparable: false,
+      didApplyMaxMismatchRate: false
     });
   });
 

@@ -273,6 +273,7 @@ hr {
     height: $tile-size;
     margin-right: $grid-spacing;
     float: left;
+    box-sizing: border-box;
 
     border-radius: $tile-border-radius;
 
