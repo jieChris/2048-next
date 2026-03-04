@@ -29,11 +29,13 @@ export const BATCH_DEFS = {
         "js/html_actuator.js",
         "js/index_ui.js",
         "js/local_score_manager.js",
+        "js/core_adapter_shadow_runtime.js",
         "js/replay_ui.js",
         "js/test_ui.js",
         "style/main.css",
         "style/main.scss",
-        "src/core/replay-execution.ts"
+        "src/core/replay-execution.ts",
+        "src/bridge/adapter-shadow.ts"
       ].includes(file) ||
       /^src\/bootstrap\/(index-ui-page-actions-host|index-ui-runtime-contract|settings-modal-host|settings-modal-page-host)\.ts$/u.test(
         file
@@ -46,6 +48,7 @@ export const BATCH_DEFS = {
       /^js\/core_replay_(execution|export|lifecycle)_runtime\.js$/u.test(file) ||
       /^tests\/smoke\/history-.*\.smoke\.spec\.ts$/u.test(file) ||
       /^tests\/smoke\/index-ui-.*\.smoke\.spec\.ts$/u.test(file) ||
+      /^tests\/smoke\/pages-adapter-rollout\.smoke\.spec\.ts$/u.test(file) ||
       /^tests\/smoke\/pages-replay-import\.smoke\.spec\.ts$/u.test(file) ||
       /^tests\/smoke\/pages-(announcement-settings|history-adapter-diagnostics|play-modes|replay-runtime)\.smoke\.spec\.ts$/u.test(
         file
@@ -54,12 +57,14 @@ export const BATCH_DEFS = {
       /^tests\/unit\/bootstrap-(index-ui-page-actions-host|index-ui-page-host|index-ui-runtime-contract|settings-modal-host|settings-modal-page-host)\.spec\.ts$/u.test(
         file
       ) ||
+      /^tests\/unit\/bridge-adapter-shadow\.spec\.ts$/u.test(file) ||
       /^tests\/unit\/core-replay-execution\.spec\.ts$/u.test(file)
   },
   "4": {
     name: "batch-4-release-tooling",
     match: (file) =>
       [
+        ".gitignore",
         ".github/workflows/smoke.yml",
         "playwright.config.ts",
         "package.json",
@@ -67,6 +72,8 @@ export const BATCH_DEFS = {
         "scripts/release-readiness-check.mjs",
         "scripts/refactor-progress-report.mjs",
         "scripts/burnin-log-report.mjs",
+        "scripts/burnin-log-daily.mjs",
+        "scripts/burnin-seed-json.mjs",
         "scripts/refactor-closure-audit.mjs",
         "scripts/commit-split-check.mjs",
         "scripts/stage-commit-batch.mjs",

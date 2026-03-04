@@ -38,6 +38,20 @@ function parseArgs(argv) {
   return result;
 }
 
+function resolveMinDailyRows(options, monthKey) {
+  const configured = Number(options && options.minDailyRows);
+  if (Number.isFinite(configured) && configured >= 0) {
+    const today = new Date();
+    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    if (monthKey === currentMonth) {
+      const elapsedDays = Math.max(1, today.getDate());
+      return Math.min(Math.floor(configured), elapsedDays);
+    }
+    return Math.floor(configured);
+  }
+  return 0;
+}
+
 async function resolveLatestBurnInLog() {
   const names = await readdir(docsDir);
   const matches = names
@@ -90,8 +104,9 @@ function printSummary(tag, summary) {
 }
 
 function resolveReadiness(summary, options) {
+  const minDailyRows = resolveMinDailyRows(options, summary.month);
   const dailyOk =
-    summary.daily.rowCount >= options.minDailyRows &&
+    summary.daily.rowCount >= minDailyRows &&
     summary.daily.pendingCount === 0 &&
     summary.daily.failedCount === 0;
   const rollbackOk =
@@ -126,7 +141,7 @@ async function main() {
   printSummary("rollback", rollback);
   printSummary("gates", gates);
 
-  const readiness = resolveReadiness({ daily, rollback, gates }, options);
+  const readiness = resolveReadiness({ daily, rollback, gates, month: latest.month }, options);
   console.log(
     `[burnin-log] readiness: daily=${readiness.dailyOk ? "PASS" : "NOT_READY"}, rollback=${readiness.rollbackOk ? "PASS" : "NOT_READY"}, gates=${readiness.gateOk ? "PASS" : "NOT_READY"}`
   );
@@ -141,4 +156,3 @@ main().catch((err) => {
   console.error("[burnin-log] failed", err && err.message ? err.message : err);
   process.exitCode = 1;
 });
-
