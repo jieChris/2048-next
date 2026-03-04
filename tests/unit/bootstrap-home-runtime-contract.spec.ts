@@ -11,7 +11,7 @@ function createWindowLike() {
     CoreUndoActionRuntime: {
       tryTriggerUndo: () => true
     },
-    LegacyBootstrapRuntime: {
+    CoreBootstrapRuntime: {
       startGameOnAnimationFrame: () => {}
     }
   };
@@ -24,7 +24,7 @@ describe("bootstrap home runtime contract", () => {
 
     expect(result.homeModeRuntime).toBe(source.CoreHomeModeRuntime);
     expect(result.undoActionRuntime).toBe(source.CoreUndoActionRuntime);
-    expect(result.bootstrapRuntime).toBe(source.LegacyBootstrapRuntime);
+    expect(result.bootstrapRuntime).toBe(source.CoreBootstrapRuntime);
   });
 
   it("throws exact error when home mode runtime is missing", () => {

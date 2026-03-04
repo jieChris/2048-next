@@ -1,6 +1,7 @@
 type AnyRecord = Record<string, unknown>;
 
 export interface SimpleRuntimeContractWindowLike {
+  CoreBootstrapRuntime?: unknown;
   LegacyBootstrapRuntime?: unknown;
 }
 
@@ -13,9 +14,9 @@ export function resolveSimpleBootstrapRuntime(
   windowLike: SimpleRuntimeContractWindowLike
 ): AnyRecord {
   const source = windowLike || {};
-  const runtime = source.LegacyBootstrapRuntime;
+  const runtime = source.CoreBootstrapRuntime || source.LegacyBootstrapRuntime;
   if (!runtime || typeof runtime !== "object" || !hasFunction(runtime, "startGameOnAnimationFrame")) {
-    throw new Error("LegacyBootstrapRuntime.startGameOnAnimationFrame is required");
+    throw new Error("CoreBootstrapRuntime.startGameOnAnimationFrame is required");
   }
   return runtime as AnyRecord;
 }

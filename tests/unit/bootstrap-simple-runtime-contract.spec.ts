@@ -8,14 +8,14 @@ describe("bootstrap simple runtime contract", () => {
       startGameOnAnimationFrame() {}
     };
     const result = resolveSimpleBootstrapRuntime({
-      LegacyBootstrapRuntime: runtime
+      CoreBootstrapRuntime: runtime
     });
     expect(result).toBe(runtime);
   });
 
   it("throws exact error when bootstrap runtime is missing", () => {
     expect(() => resolveSimpleBootstrapRuntime({})).toThrowError(
-      "LegacyBootstrapRuntime.startGameOnAnimationFrame is required"
+      "CoreBootstrapRuntime.startGameOnAnimationFrame is required"
     );
   });
 });

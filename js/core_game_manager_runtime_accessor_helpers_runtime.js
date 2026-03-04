@@ -156,25 +156,36 @@ function resolveAdapterMoveResultSessionId(manager, input) {
   return fromManager || null;
 }
 
-function buildAdapterMoveResultDetail(manager, input, modeKey, adapterMode, timestamp) {
-  if (!manager) return null;
-  var sessionId = resolveAdapterMoveResultSessionId(manager, input);
+function resolveAdapterMoveResultState(manager) {
   return {
-    reason: typeof input.reason === "string" && input.reason ? input.reason : "move",
-    direction: Number.isInteger(input.direction) ? input.direction : null,
-    moved: input.moved === true,
-    modeKey: modeKey,
-    adapterMode: adapterMode,
     score: Number.isFinite(manager.score) ? Number(manager.score) : 0,
     over: !!manager.over,
     won: !!manager.won,
     replayMode: !!manager.replayMode,
     successfulMoveCount: resolveRuntimeAccessorNonNegativeInteger(manager.successfulMoveCount, 0),
     undoUsed: resolveRuntimeAccessorNonNegativeInteger(manager.undoUsed, 0),
-    undoDepth: Array.isArray(manager.undoStack) ? manager.undoStack.length : 0,
+    undoDepth: Array.isArray(manager.undoStack) ? manager.undoStack.length : 0
+  };
+}
+
+function resolveAdapterMoveResultInput(input, modeKey, adapterMode, sessionId, timestamp) {
+  return {
+    reason: typeof input.reason === "string" && input.reason ? input.reason : "move",
+    direction: Number.isInteger(input.direction) ? input.direction : null,
+    moved: input.moved === true,
+    modeKey: modeKey,
+    adapterMode: adapterMode,
     sessionId: sessionId,
     at: timestamp
   };
+}
+
+function buildAdapterMoveResultDetail(manager, input, modeKey, adapterMode, timestamp) {
+  if (!manager) return null;
+  var sessionId = resolveAdapterMoveResultSessionId(manager, input);
+  var detail = resolveAdapterMoveResultInput(input, modeKey, adapterMode, sessionId, timestamp);
+  var state = resolveAdapterMoveResultState(manager);
+  return Object.assign(detail, state);
 }
 
 function resolveAdapterMoveResultModeKey(manager, bridge) {
