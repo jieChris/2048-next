@@ -21,5 +21,6 @@
 |---|---|---|---|---|
 | 2026-03-03 | `npm run verify:burnin` | 通过 | - | burn-in/canary/adapter 关键链路通过 |
 | 2026-03-03 | `npm run verify:rollback-drill` | 通过 | - | 回滚演练链路通过 |
-| 2026-03-03 | `npm run verify:refactor:ci` | 待执行 | - | 建议推送前执行 |
-| 2026-03-03 | `npm run verify:prepush` | 待执行 | - | 最终提交前一键验证 |
+| 2026-03-04 | `npm run verify:refactor:ci` | 通过 | 约 66s | 由 `verify:submit-ready` 链路覆盖执行 |
+| 2026-03-04 | `npm run verify:prepush` | 通过 | - | 由 `verify:submit-ready` 链路覆盖执行 |
+| 2026-03-04 | `npm run verify:submit-ready` | 通过 | - | 提交前全量门禁完成（split-check + release gates） |

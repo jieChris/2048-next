@@ -14,11 +14,13 @@
 1. `npm run verify:burnin`
 2. `npm run verify:refactor:ci`
 3. `npm run verify:rollback-drill`
+4. `npm run report:burnin-log`（查看 burn-in 日志完整度）
 
 说明：
 - `verify:burnin` 只覆盖 burn-in/canary/adapter 关键链路。
 - `verify:refactor:ci` 覆盖 `audit + unit + smoke(分片) + build`。
 - `verify:rollback-drill` 覆盖 `emergency_rollback -> resume_canary/reset_policy` 关键回滚链路。
+- `report:burnin-log` 输出日志统计（daily/rollback/gates），用于快速判断是否已接近放量门槛。
 
 ## 4. 日常观测步骤（建议每日一次）
 1. 打开 `history.html`，确认 Burn-in 面板可渲染。

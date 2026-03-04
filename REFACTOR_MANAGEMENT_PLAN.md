@@ -13,9 +13,9 @@
   - 里程碑标签：`refactor-m1`、`refactor-m2`、...
 
 ## 2.1) 当前收敛快照（2026-03）
-- 当前状态总览（2026-03-03）：
+- 当前状态总览（2026-03-04）：
   - 收口目标达成：
-    - `js/index_ui.js`：`107` 行（目标 `<=220`）
+    - `js/index_ui.js`：`85` 行（目标 `<=220`）
     - `js/game_manager.js`：`10` 行（目标 `<3800`）
     - `tests/smoke/pages.smoke.spec.ts`：已移除（已拆分为多 smoke 规格）
     - `js/core_game_manager_*_runtime.js`：已无 `>=20` 行函数热点
@@ -46,6 +46,13 @@
 - 本轮增量（2026-03-01）：
   - 补充（2026-03-03）：
     - 提交分批规则已同步：`scripts/commit-batch-defs.mjs` 已纳入 `scripts/refactor-closure-audit.mjs`，`npm run report:commit-split-check` 恢复 PASS（当前变更已可按 batch-1 + batch-4 分批提交）。
+    - `index_ui` 壳层继续减薄（无行为变更）：
+      - 删除入口中与 host 默认值重复的常量注入（practice/mobile/home-guide 默认配置下沉到 host 默认参数）
+      - 统一 `windowLike` 解析与复用，减少重复环境判定样板
+      - 删除 `applyIndexUiPageBootstrap` 调用中的 `nowMs/touchGuardWindowMs` 重复注入，改为 host 默认值兜底
+      - 新增 `resolveIndexUiRuntimeContracts` 聚合契约解析（保留旧三函数兼容）；`index_ui.js` 优先走聚合入口，缺失时回退旧路径
+      - 当前 `js/index_ui.js` 行数稳定在 `85`（入口样板维持低位，兼容分支覆盖旧 smoke 契约）
+      - 已完成回归：`npm run test:unit` 与 `npm run test:smoke:index-ui` 全绿
     - 新增收口审计脚本：`scripts/refactor-closure-audit.mjs`（配套命令 `npm run audit:refactor-closure`）：
       - 检查项一：`core_game_manager_*_runtime.js` 是否存在 `>19` 行函数
       - 检查项二：runtime helper 函数名跨文件重复定义
@@ -1571,6 +1578,16 @@
   - `verify:release-ready`：PASS
   - 收口指标：`index_ui.js` 107 行、`game_manager.js` 10 行、smoke 已拆分 36 文件。
 
+### 增量更新（2026-03-04）
+- 回放链路收口：
+  - 回放页 `best score` 存储域锁定为 `replay_view`，避免污染正常模式排行榜键。
+  - `actuate` 前的最高分写入新增 replay 页短路保护（即使 `replayMode` 变化也不写常规键）。
+  - 回放 `step/seek` 前取消 pending relayout，修复手动步进/拖动时偶发双次渲染竞态。
+- 校验结果：
+  - `npm run test:unit`：PASS（170 files / 896 tests）
+  - `npm run test:smoke`：PASS（105 tests）
+  - `npm run verify:refactor`：PASS
+
 ## 8) 近期执行顺序（提交前）
 1. 快速迭代检查（开发中多次执行）：
    - `npm run verify:iterate`
@@ -1578,6 +1595,9 @@
    - `npm run report:commit-split-check`
 3. 提交前全量检查（仅提交前执行）：
    - `npm run verify:submit-ready`
+4. Burn-in 日志状态快照（发布前建议每日执行）：
+   - `npm run report:burnin-log`
+   - 如需严格阻断：`npm run verify:burnin-log`
 
 ## 9) 本轮剩余收口任务（M5/M6）
 1. Burn-in 观测收口：

@@ -25,6 +25,7 @@ const REQUIRED_NPM_SCRIPTS = [
   "test:smoke:ci",
   "test:smoke:rollback-drill",
   "report:refactor-progress",
+  "report:burnin-log",
   "report:commit-split-check",
   "report:commit-batch"
 ];

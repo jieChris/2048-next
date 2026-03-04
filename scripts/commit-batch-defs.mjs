@@ -21,15 +21,40 @@ export const BATCH_DEFS = {
         "index.html",
         "play.html",
         "replay.html",
+        "modes.html",
         "capped_2048.html",
         "undo_2048.html",
-        "Practice_board.html"
+        "Practice_board.html",
+        "js/core_index_ui_runtime_contract_runtime.js",
+        "js/html_actuator.js",
+        "js/index_ui.js",
+        "js/local_score_manager.js",
+        "js/replay_ui.js",
+        "js/test_ui.js",
+        "style/main.css",
+        "style/main.scss",
+        "src/core/replay-execution.ts"
       ].includes(file) ||
-      /^tests\/smoke\/history-.*\.smoke\.spec\.ts$/u.test(file) ||
-      /^tests\/smoke\/pages-(announcement-settings|history-adapter-diagnostics|replay-runtime)\.smoke\.spec\.ts$/u.test(
+      /^src\/bootstrap\/(index-ui-page-actions-host|index-ui-runtime-contract|settings-modal-host|settings-modal-page-host)\.ts$/u.test(
         file
       ) ||
-      /^tests\/unit\/bootstrap-history-.*\.spec\.ts$/u.test(file)
+      /^src\/bootstrap\/index-ui-page-host\.ts$/u.test(file) ||
+      /^js\/core_(index_ui_page_actions_host|settings_modal_host|settings_modal_page_host)_runtime\.js$/u.test(
+        file
+      ) ||
+      /^js\/core_index_ui_page_host_runtime\.js$/u.test(file) ||
+      /^js\/core_replay_(execution|export|lifecycle)_runtime\.js$/u.test(file) ||
+      /^tests\/smoke\/history-.*\.smoke\.spec\.ts$/u.test(file) ||
+      /^tests\/smoke\/index-ui-.*\.smoke\.spec\.ts$/u.test(file) ||
+      /^tests\/smoke\/pages-replay-import\.smoke\.spec\.ts$/u.test(file) ||
+      /^tests\/smoke\/pages-(announcement-settings|history-adapter-diagnostics|play-modes|replay-runtime)\.smoke\.spec\.ts$/u.test(
+        file
+      ) ||
+      /^tests\/unit\/bootstrap-history-.*\.spec\.ts$/u.test(file) ||
+      /^tests\/unit\/bootstrap-(index-ui-page-actions-host|index-ui-page-host|index-ui-runtime-contract|settings-modal-host|settings-modal-page-host)\.spec\.ts$/u.test(
+        file
+      ) ||
+      /^tests\/unit\/core-replay-execution\.spec\.ts$/u.test(file)
   },
   "4": {
     name: "batch-4-release-tooling",
@@ -41,6 +66,7 @@ export const BATCH_DEFS = {
         "scripts/refactor-gate.mjs",
         "scripts/release-readiness-check.mjs",
         "scripts/refactor-progress-report.mjs",
+        "scripts/burnin-log-report.mjs",
         "scripts/refactor-closure-audit.mjs",
         "scripts/commit-split-check.mjs",
         "scripts/stage-commit-batch.mjs",
@@ -51,7 +77,8 @@ export const BATCH_DEFS = {
         "docs/RELEASE_CUTOVER_CHECKLIST.zh-CN.md",
         "docs/COMMIT_SPLIT_PLAN.zh-CN.md",
         "docs/REFACTOR_PROGRESS_LOG.zh-CN.md"
-      ].includes(file)
+      ].includes(file) ||
+      /^docs\/BURNIN_EXECUTION_LOG_\d{4}-\d{2}\.zh-CN\.md$/u.test(file)
   }
 };
 

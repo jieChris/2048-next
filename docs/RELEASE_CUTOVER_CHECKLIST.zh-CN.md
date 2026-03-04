@@ -6,6 +6,7 @@
 - [ ] `npm run verify:rollback-drill` 通过
 - [ ] `npm run verify:prepush` 通过
 - [ ] `npm run verify:release-ready` 通过
+- [ ] `npm run report:burnin-log` 输出状态可接受（建议最终执行 `npm run verify:burnin-log`）
 
 ## 2. Burn-in 证据
 - [ ] 最近 7 天 burn-in 记录完整

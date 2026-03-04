@@ -5,17 +5,48 @@ import { BATCH_DEFS } from "./commit-batch-defs.mjs";
 const execFileAsync = promisify(execFile);
 
 function parseArgs(argv) {
-  const args = { batch: "", stage: false };
-  for (const arg of argv) {
+  const args = {
+    batch:
+      process.env.npm_config_batch ||
+      process.env.BATCH ||
+      "",
+    stage:
+      process.env.npm_config_stage === "true" ||
+      process.env.STAGE === "true",
+    help: false
+  };
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--help" || arg === "-h") {
+      args.help = true;
+      continue;
+    }
     if (arg.startsWith("--batch=")) {
       args.batch = arg.slice("--batch=".length);
       continue;
     }
-    if (arg === "--stage") {
+    if (arg === "--batch" || arg === "-b") {
+      const next = argv[i + 1];
+      if (next) {
+        args.batch = next;
+        i += 1;
+      }
+      continue;
+    }
+    if (arg === "--stage" || arg === "-s") {
       args.stage = true;
+      continue;
+    }
+    if (/^[1-4]$/u.test(arg) && !args.batch) {
+      args.batch = arg;
     }
   }
   return args;
+}
+
+function printUsage() {
+  console.log("usage: node scripts/stage-commit-batch.mjs --batch=<1|2|3|4> [--stage]");
+  console.log("also supports: --batch 1 / -b 1 / npm_config_batch=1");
 }
 
 async function getChangedFiles() {
@@ -43,8 +74,13 @@ async function stageFiles(files) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.help) {
+    printUsage();
+    return;
+  }
   if (!args.batch || !Object.prototype.hasOwnProperty.call(BATCH_DEFS, args.batch)) {
-    fail("usage: node scripts/stage-commit-batch.mjs --batch=<1|2|3|4> [--stage]");
+    printUsage();
+    fail("invalid or missing --batch");
   }
 
   const batch = BATCH_DEFS[args.batch];
