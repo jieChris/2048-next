@@ -100,7 +100,8 @@ describe("bridge adapter shadow", () => {
         updatedAt: 210,
         lastMoveResult: {
           score: 64,
-          undoUsed: 3
+          undoUsed: 3,
+          sessionId: "sess-a"
         }
       }
     });
@@ -119,6 +120,7 @@ describe("bridge adapter shadow", () => {
     expect(report.scoreDelta).toBe(0);
     expect(report.isScoreAligned).toBe(true);
     expect(report.undoUsedFromSnapshot).toBe(3);
+    expect(report.sessionId).toBe("sess-a");
     expect(report.snapshotUpdatedAt).toBe(210);
   });
 
@@ -136,6 +138,7 @@ describe("bridge adapter shadow", () => {
     expect(report.hasParityState).toBe(false);
     expect(report.hasSnapshot).toBe(false);
     expect(report.counters.totalEvents).toBe(0);
+    expect(report.sessionId).toBeNull();
     expect(report.lastScoreFromParity).toBeNull();
     expect(report.lastScoreFromSnapshot).toBeNull();
     expect(report.isScoreAligned).toBeNull();
@@ -160,7 +163,8 @@ describe("bridge adapter shadow", () => {
         updatedAt: 100,
         lastMoveResult: {
           score: 128,
-          undoUsed: 1
+          undoUsed: 1,
+          sessionId: "sess-match"
         }
       },
       modeKey: "standard",
@@ -183,7 +187,8 @@ describe("bridge adapter shadow", () => {
         updatedAt: 121,
         lastMoveResult: {
           score: 128,
-          undoUsed: 1
+          undoUsed: 1,
+          sessionId: "sess-match"
         }
       },
       modeKey: "standard",
@@ -200,6 +205,9 @@ describe("bridge adapter shadow", () => {
     expect(diff.schemaVersion).toBe(2);
     expect(diff.hasLegacyReport).toBe(true);
     expect(diff.hasCoreReport).toBe(true);
+    expect(diff.legacySessionId).toBe("sess-match");
+    expect(diff.coreSessionId).toBe("sess-match");
+    expect(diff.isSessionMatch).toBe(true);
     expect(diff.comparable).toBe(true);
     expect(diff.scoreDelta).toBe(0);
     expect(diff.isScoreMatch).toBe(true);
@@ -216,7 +224,8 @@ describe("bridge adapter shadow", () => {
         updatedAt: 200,
         lastMoveResult: {
           score: 256,
-          undoUsed: 2
+          undoUsed: 2,
+          sessionId: "sess-core-only"
         }
       },
       modeKey: "standard",
@@ -233,10 +242,62 @@ describe("bridge adapter shadow", () => {
     expect(diff.schemaVersion).toBe(2);
     expect(diff.hasLegacyReport).toBe(false);
     expect(diff.hasCoreReport).toBe(true);
+    expect(diff.legacySessionId).toBeNull();
+    expect(diff.coreSessionId).toBe("sess-core-only");
+    expect(diff.isSessionMatch).toBeNull();
     expect(diff.comparable).toBe(false);
     expect(diff.scoreDelta).toBeNull();
     expect(diff.isScoreMatch).toBeNull();
     expect(diff.undoUsedDelta).toBeNull();
     expect(diff.bothScoreAligned).toBeNull();
+  });
+
+  it("returns non-comparable AB diff when sessions do not match", () => {
+    const legacyReport = buildAdapterSessionParityReport({
+      parityState: null,
+      snapshot: {
+        adapterMode: "legacy-bridge",
+        modeKey: "standard",
+        updatedAt: 300,
+        lastMoveResult: {
+          score: 512,
+          undoUsed: 0,
+          sessionId: "sess-legacy"
+        }
+      },
+      modeKey: "standard",
+      adapterMode: "legacy-bridge"
+    });
+
+    const coreReport = buildAdapterSessionParityReport({
+      parityState: null,
+      snapshot: {
+        adapterMode: "core-adapter",
+        modeKey: "standard",
+        updatedAt: 301,
+        lastMoveResult: {
+          score: 512,
+          undoUsed: 0,
+          sessionId: "sess-core"
+        }
+      },
+      modeKey: "standard",
+      adapterMode: "core-adapter"
+    });
+
+    const diff = buildAdapterParityABDiffSummary({
+      legacyBridgeReport: legacyReport,
+      coreAdapterReport: coreReport,
+      modeKey: "standard"
+    });
+
+    expect(diff.hasLegacyReport).toBe(true);
+    expect(diff.hasCoreReport).toBe(true);
+    expect(diff.legacySessionId).toBe("sess-legacy");
+    expect(diff.coreSessionId).toBe("sess-core");
+    expect(diff.isSessionMatch).toBe(false);
+    expect(diff.comparable).toBe(false);
+    expect(diff.scoreDelta).toBeNull();
+    expect(diff.isScoreMatch).toBeNull();
   });
 });

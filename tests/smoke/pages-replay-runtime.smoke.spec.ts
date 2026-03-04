@@ -367,6 +367,47 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.afterMinusOne).toBe(Math.max(snapshot.afterPlusTen - 1, 0));
   });
 
+  test("replay import treats REPLAY_v4C payload as v4 instead of v9 verse", async ({ page }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.import === "function" && typeof manager.serialize === "function";
+    });
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const replayText = manager.serialize();
+      const v4Prefix = ((window as any).GameManager && (window as any).GameManager.REPLAY_V4_PREFIX) || "REPLAY_v4C_";
+      const originalAlert = window.alert;
+      const alerts: string[] = [];
+      window.alert = function (msg?: unknown) {
+        alerts.push(typeof msg === "string" ? msg : String(msg));
+      };
+      try {
+        const ok = manager.import(replayText);
+        manager.pause();
+        return {
+          hasV4Prefix: typeof replayText === "string" && replayText.indexOf(v4Prefix) === 0,
+          ok,
+          alerts,
+          replayMovesLength: Array.isArray(manager.replayMoves) ? manager.replayMoves.length : -1
+        };
+      } finally {
+        window.alert = originalAlert;
+      }
+    });
+
+    expect(snapshot.hasV4Prefix).toBe(true);
+    expect(snapshot.ok).toBe(true);
+    expect(snapshot.alerts).toEqual([]);
+    expect(snapshot.replayMovesLength).toBe(0);
+  });
+
   test("replay ui step/seek triggers single final actuate without extra relayout flash", async ({
     page
   }) => {

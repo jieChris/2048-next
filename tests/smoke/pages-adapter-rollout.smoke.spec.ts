@@ -102,8 +102,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(result?.afterABDiff?.modeKey).toBe(result?.payloadModeKey);
     expect(result?.afterABDiff?.hasCoreReport).toBe(true);
     expect(result?.afterABDiff?.hasLegacyReport).toBe(true);
-    expect(result?.afterABDiff?.comparable).toBe(true);
-    expect(result?.afterABDiff?.isScoreMatch).toBe(true);
+    // This smoke seeds legacy/core reports across two page sessions, so strict session
+    // matching should mark AB diff as non-comparable.
+    expect(result?.afterABDiff?.isSessionMatch).toBe(false);
+    expect(result?.afterABDiff?.comparable).toBe(false);
+    expect(result?.afterABDiff?.isScoreMatch).toBeNull();
     expect(result?.payloadParityABDiff?.modeKey).toBe(result?.payloadModeKey);
   });
 
