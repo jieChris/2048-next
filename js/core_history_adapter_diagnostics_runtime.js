@@ -104,6 +104,12 @@
     if (diff.hasLegacyReport === false && diff.hasCoreReport === true) return "缺少 legacy 报告";
     if (diff.hasLegacyReport === true && diff.hasCoreReport === false) return "缺少 core 报告";
     if (diff.hasLegacyReport === false && diff.hasCoreReport === false) return "双侧报告缺失";
+    if (diff.hasLegacyReport === true && diff.hasCoreReport === true && diff.isSessionMatch === false) {
+      return "会话不一致";
+    }
+    if (diff.hasLegacyReport === true && diff.hasCoreReport === true && diff.isSessionMatch === null) {
+      return "缺少会话标识";
+    }
     if (diff.hasLegacyReport === true && diff.hasCoreReport === true) return "mode 不可比";
     return "-";
   }
