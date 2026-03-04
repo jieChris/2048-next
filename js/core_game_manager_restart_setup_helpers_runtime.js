@@ -132,6 +132,12 @@ function resetSetupTimerAndInputState(manager) {
   manager.lastMoveInputAt = 0;
 }
 
+function createAdapterParitySessionId(timestamp) {
+  var base = Number.isFinite(timestamp) ? Number(timestamp) : Date.now();
+  var randomChunk = Math.random().toString(36).slice(2, 10);
+  return "aps_" + String(base.toString(36)) + "_" + randomChunk;
+}
+
 function resetSetupRuntimeState(manager) {
   if (!manager) return;
   resetSetupReplayAndSpawnState(manager);
@@ -140,6 +146,7 @@ function resetSetupRuntimeState(manager) {
   manager.cappedMilestoneCount = 0;
   resetSetupTimerAndInputState(manager);
   manager.sessionStartedAt = Date.now();
+  manager.adapterParitySessionId = createAdapterParitySessionId(manager.sessionStartedAt);
   manager.hasGameStarted = false;
 }
 

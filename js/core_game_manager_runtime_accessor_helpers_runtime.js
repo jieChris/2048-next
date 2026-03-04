@@ -144,8 +144,21 @@ function resolveRuntimeAccessorNonNegativeInteger(value, fallbackValue) {
   return Number.isInteger(value) && value >= 0 ? value : fallbackValue;
 }
 
+function resolveAdapterMoveResultSessionId(manager, input) {
+  var fromInput = isRuntimeAccessorObject(input) && typeof input.sessionId === "string"
+    ? input.sessionId.trim()
+    : "";
+  if (fromInput) return fromInput;
+  if (!manager) return null;
+  var fromManager = typeof manager.adapterParitySessionId === "string"
+    ? manager.adapterParitySessionId.trim()
+    : "";
+  return fromManager || null;
+}
+
 function buildAdapterMoveResultDetail(manager, input, modeKey, adapterMode, timestamp) {
   if (!manager) return null;
+  var sessionId = resolveAdapterMoveResultSessionId(manager, input);
   return {
     reason: typeof input.reason === "string" && input.reason ? input.reason : "move",
     direction: Number.isInteger(input.direction) ? input.direction : null,
@@ -159,6 +172,7 @@ function buildAdapterMoveResultDetail(manager, input, modeKey, adapterMode, time
     successfulMoveCount: resolveRuntimeAccessorNonNegativeInteger(manager.successfulMoveCount, 0),
     undoUsed: resolveRuntimeAccessorNonNegativeInteger(manager.undoUsed, 0),
     undoDepth: Array.isArray(manager.undoStack) ? manager.undoStack.length : 0,
+    sessionId: sessionId,
     at: timestamp
   };
 }
@@ -178,6 +192,9 @@ function buildAdapterSnapshot(adapterMode, modeKey, timestamp, detail) {
   return {
     adapterMode: adapterMode,
     modeKey: modeKey || "unknown",
+    sessionId: detail && typeof detail.sessionId === "string" && detail.sessionId
+      ? detail.sessionId
+      : null,
     updatedAt: timestamp,
     lastMoveResult: detail
   };

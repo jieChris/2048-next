@@ -1533,8 +1533,29 @@ function resolveV9VersePngMapDict() {
   return v9VersePngMapDictCache;
 }
 
+function startsWithIgnoreCase(text, prefix) {
+  if (!(typeof text === "string" && typeof prefix === "string" && prefix)) return false;
+  if (text.length < prefix.length) return false;
+  return text.substring(0, prefix.length).toLowerCase() === prefix.toLowerCase();
+}
+
+function isKnownNonVerseReplayPrefix(trimmed) {
+  var knownPrefixes = [
+    String(GameManager.REPLAY_V4_PREFIX || "REPLAY_v4C_"),
+    String(GameManager.REPLAY_V9_RPL_BASE64_PREFIX || "REPLAY_v9RPL_B64_"),
+    String(GameManager.LEGACY_REPLAY_V1_PREFIX || "REPLAY_v1_"),
+    String(GameManager.LEGACY_REPLAY_V2_PREFIX || "REPLAY_v2_"),
+    String(GameManager.LEGACY_REPLAY_V2S_PREFIX || "REPLAY_v2S_")
+  ];
+  for (var index = 0; index < knownPrefixes.length; index++) {
+    if (startsWithIgnoreCase(trimmed, knownPrefixes[index])) return true;
+  }
+  return false;
+}
+
 function normalizeV9VerseReplayBody(trimmed) {
   if (typeof trimmed !== "string") return null;
+  if (isKnownNonVerseReplayPrefix(trimmed)) return null;
   var prefix = String(GameManager.REPLAY_V9_VERSE_PREFIX || "replay_");
   if (trimmed.length < prefix.length) return null;
   if (trimmed.substring(0, prefix.length).toLowerCase() !== prefix.toLowerCase()) return null;
