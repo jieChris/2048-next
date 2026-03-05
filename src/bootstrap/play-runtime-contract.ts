@@ -19,7 +19,6 @@ export interface PlayRuntimeContractWindowLike {
   CorePlayStartupHostRuntime?: unknown;
   CoreStorageRuntime?: unknown;
   CoreBootstrapRuntime?: unknown;
-  LegacyBootstrapRuntime?: unknown;
 }
 
 export interface ResolvePlayRuntimeContractsResult {
@@ -166,7 +165,7 @@ export function resolvePlayRuntimeContracts(
     "CoreStorageRuntime is required"
   );
   const bootstrapRuntime = requireRuntimeFunctions(
-    source.CoreBootstrapRuntime || source.LegacyBootstrapRuntime,
+    source.CoreBootstrapRuntime,
     ["startGameOnAnimationFrame"],
     "CoreBootstrapRuntime.startGameOnAnimationFrame is required"
   );

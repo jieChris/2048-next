@@ -1,84 +1,4 @@
-// Logic extracted from replay.html
-
-var replayGuideRuntime = window.CoreReplayGuideRuntime;
-if (
-    !replayGuideRuntime ||
-    typeof replayGuideRuntime.readReplayGuideSeenFromContext !== "function" ||
-    typeof replayGuideRuntime.shouldShowReplayGuideFromContext !== "function" ||
-    typeof replayGuideRuntime.markReplayGuideSeenFromContext !== "function"
-) {
-    throw new Error("CoreReplayGuideRuntime is required");
-}
-
-// Guide Logic
-(function() {
-    var guideKey = 'replay_guide_shown_v1';
-    var guideResizeTimer = null;
-    var shouldShowGuide = replayGuideRuntime.shouldShowReplayGuideFromContext({
-        windowLike: typeof window !== "undefined" ? window : null,
-        key: guideKey,
-        seenValue: "true"
-    });
-    if (shouldShowGuide) {
-        // Wait for DOMContentLoaded is handled by script load order or event, but let's be safe inside the main listener or check if body exists
-        // Since replay_ui.js is loaded at end of body, elements should exist.
-        var overlay = document.getElementById('guide-overlay');
-        var message = document.getElementById('guide-message');
-        var titleLink = document.querySelector('.title a');
-        
-        if (overlay && titleLink && message) {
-            function positionGuideMessage() {
-                var rect = titleLink.getBoundingClientRect();
-                var top = rect.bottom + 15;
-                var left = rect.left + 20;
-                var maxLeft = Math.max(8, window.innerWidth - (message.offsetWidth || 260) - 8);
-                if (left > maxLeft) left = maxLeft;
-                if (top > window.innerHeight - 90) {
-                    top = Math.max(8, rect.top - 70);
-                }
-                message.style.top = top + 'px';
-                message.style.left = left + 'px';
-            }
-
-            // Show overlay
-            overlay.style.display = 'block';
-            
-            // Highlight Link
-            titleLink.classList.add('guide-highlight');
-            
-            // Position Message
-            positionGuideMessage();
-            
-            // Dismiss Function
-            function dismiss() {
-                overlay.style.display = 'none';
-                titleLink.classList.remove('guide-highlight');
-                replayGuideRuntime.markReplayGuideSeenFromContext({
-                    windowLike: typeof window !== "undefined" ? window : null,
-                    key: guideKey,
-                    seenValue: "true"
-                });
-            }
-            
-            // Bind Events
-            overlay.addEventListener('click', dismiss);
-            titleLink.addEventListener('click', function() {
-                dismiss();
-            });
-
-            window.addEventListener("resize", function () {
-                if (overlay.style.display !== 'block') return;
-                if (guideResizeTimer) clearTimeout(guideResizeTimer);
-                guideResizeTimer = setTimeout(positionGuideMessage, 100);
-            });
-            window.addEventListener("orientationchange", function () {
-                if (overlay.style.display !== 'block') return;
-                if (guideResizeTimer) clearTimeout(guideResizeTimer);
-                guideResizeTimer = setTimeout(positionGuideMessage, 120);
-            });
-        }
-    }
-})();
+// Replay onboarding guide has been removed intentionally.
 
 function showReplayModal(title, content, actionName, actionCallback) {
   var modal = document.getElementById('replay-modal');
@@ -351,6 +271,9 @@ function requestReplayRelayout() {
 async function loadReplayFromSessionId() {
     var params = new URLSearchParams(window.location.search);
     var localHistoryId = params.get("local_history_id");
+    if (!localHistoryId) {
+        localHistoryId = params.get("id");
+    }
     var sessionId = params.get("session_id");
     if (!localHistoryId && !sessionId) return;
     if (!window.game_manager) {

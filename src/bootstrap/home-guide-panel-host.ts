@@ -125,6 +125,8 @@ export function resolveHomeGuideTargetVisibility(input: {
 
   const windowLike = toRecord(source.windowLike);
   const getComputedStyle = asFunction<(node: unknown) => unknown>(windowLike.getComputedStyle);
+  const viewportWidth = resolveNumber(windowLike.innerWidth, 0);
+  const viewportHeight = resolveNumber(windowLike.innerHeight, 0);
 
   return !!isHomeGuideTargetVisible({
     nodeLike: source.node || null,
@@ -133,6 +135,8 @@ export function resolveHomeGuideTargetVisibility(input: {
         ? function (el: unknown): unknown {
             return getComputedStyle.call(source.windowLike, el);
           }
-        : null
+        : null,
+    viewportWidth,
+    viewportHeight
   });
 }

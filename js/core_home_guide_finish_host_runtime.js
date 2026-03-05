@@ -48,6 +48,12 @@
     style.display = display;
   }
 
+  function getElementById(documentLike, id) {
+    var getter = asFunction(toRecord(documentLike).getElementById);
+    if (!getter) return null;
+    return getter.call(documentLike, id);
+  }
+
   function applyHomeGuideFinish(input) {
     var source = toRecord(input);
     var homeGuideRuntime = toRecord(source.homeGuideRuntime);
@@ -94,6 +100,10 @@
     }
     if (homeGuideState.panel) {
       setDisplay(homeGuideState.panel, resolveDisplayValue(layerDisplayState.panelDisplay));
+    }
+    var banner = getElementById(source.documentLike, "home-guide-message-banner");
+    if (banner) {
+      setDisplay(banner, "none");
     }
 
     var markSeen = resolveBoolean(source.markSeen);
@@ -143,6 +153,7 @@
       markSeen: source.markSeen,
       options: source.options,
       clearHomeGuideHighlight: source.clearHomeGuideHighlight,
+      documentLike: source.documentLike,
       storageLike: storageLike,
       seenKey: source.seenKey,
       syncHomeGuideSettingsUI: source.syncHomeGuideSettingsUI,

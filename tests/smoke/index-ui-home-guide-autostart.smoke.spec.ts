@@ -130,7 +130,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         stepCount: 10,
         stepIndex: 10
       });
-      const stepTargetAdvance = runtime.resolveHomeGuideStepTargetState({
+      const stepTargetMissing = runtime.resolveHomeGuideStepTargetState({
         hasTarget: false,
         targetVisible: false,
         stepIndex: 2
@@ -138,6 +138,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const stepTargetKeep = runtime.resolveHomeGuideStepTargetState({
         hasTarget: true,
         targetVisible: true,
+        stepIndex: 2
+      });
+      const stepTargetHidden = runtime.resolveHomeGuideStepTargetState({
+        hasTarget: true,
+        targetVisible: false,
         stepIndex: 2
       });
       const elevationTop = runtime.resolveHomeGuideElevationPlan({
@@ -280,7 +285,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         homePath: runtime.isHomePagePath("/index.html"),
         playPath: runtime.isHomePagePath("/play.html"),
         hasCompactHint: compactSelectors.includes("#top-mobile-hint-btn"),
+        hasCompactTimerToggle: compactSelectors.includes("#timerbox-toggle-btn"),
         hasDesktopHint: desktopSelectors.includes("#top-mobile-hint-btn"),
+        hasDesktopTimerToggle: desktopSelectors.includes("#timerbox-toggle-btn"),
         resolvedPath,
         resolvedPathFallback,
         seenValue,
@@ -303,8 +310,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         stepRenderState,
         stepIndexAbort,
         stepIndexFinish,
-        stepTargetAdvance,
+        stepTargetMissing,
         stepTargetKeep,
+        stepTargetHidden,
         elevationTop,
         elevationHeading,
         elevationNone,
@@ -343,7 +351,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.homePath).toBe(true);
     expect(snapshot.playPath).toBe(false);
     expect(snapshot.hasCompactHint).toBe(true);
+    expect(snapshot.hasCompactTimerToggle).toBe(true);
     expect(snapshot.hasDesktopHint).toBe(false);
+    expect(snapshot.hasDesktopTimerToggle).toBe(false);
     expect(snapshot.resolvedPath).toBe("/index.html");
     expect(snapshot.resolvedPathFallback).toBe("");
     expect(snapshot.seenValue).toBe("1");
@@ -379,13 +389,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
       shouldFinish: true,
       resolvedIndex: 10
     });
-    expect(snapshot.stepTargetAdvance).toEqual({
-      shouldAdvance: true,
-      nextIndex: 3
+    expect(snapshot.stepTargetMissing).toEqual({
+      shouldAdvance: false,
+      nextIndex: 2
     });
     expect(snapshot.stepTargetKeep).toEqual({
       shouldAdvance: false,
       nextIndex: 2
+    });
+    expect(snapshot.stepTargetHidden).toEqual({
+      shouldAdvance: true,
+      nextIndex: 3
     });
     expect(snapshot.elevationTop).toEqual({
       hostSelector: ".top-action-buttons",

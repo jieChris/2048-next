@@ -443,10 +443,6 @@ export function isTimerLeaderboardAvailableByMode(_mode?: string | null): boolea
 
 export function resolveLegacyModeFromModeKey(input: LegacyModeResolveInput): string {
   const key = input.modeKey || input.fallbackModeKey || input.mode || "";
-  const legacyModeByKey = input.legacyModeByKey || null;
-  if (legacyModeByKey && typeof legacyModeByKey[key] === "string") {
-    return legacyModeByKey[key] || "classic";
-  }
   if (key && key.indexOf("capped") !== -1) return "capped";
   if (key && key.indexOf("practice") !== -1) return "practice";
   return "classic";
@@ -454,15 +450,6 @@ export function resolveLegacyModeFromModeKey(input: LegacyModeResolveInput): str
 
 export function resolveModeCatalogAlias(input: ModeCatalogAliasResolveInput): string {
   const id = input.modeId || input.defaultModeKey;
-  const legacyAliasToModeKey = input.legacyAliasToModeKey || null;
-  if (
-    legacyAliasToModeKey &&
-    Object.prototype.hasOwnProperty.call(legacyAliasToModeKey, id) &&
-    typeof legacyAliasToModeKey[id] === "string" &&
-    legacyAliasToModeKey[id]
-  ) {
-    return legacyAliasToModeKey[id];
-  }
   return id;
 }
 
@@ -477,15 +464,6 @@ export function resolveModeConfigModeKey(input: ModeConfigModeKeyResolveInput): 
   const getModeConfig = typeof source.getModeConfig === "function" ? source.getModeConfig : null;
 
   if (getModeConfig && isPlainRecord(getModeConfig(id))) return id;
-
-  const mapped = resolveModeCatalogAlias({
-    modeId: id,
-    defaultModeKey,
-    legacyAliasToModeKey: source.legacyAliasToModeKey || null
-  });
-  if (mapped && mapped !== id && getModeConfig && isPlainRecord(getModeConfig(mapped))) {
-    return mapped;
-  }
 
   return defaultModeKey;
 }
@@ -537,8 +515,7 @@ export function resolveModeConfigFromCatalog(
   const resolvedModeId = resolveModeConfigModeKey({
     modeId: source.modeId || defaultModeKey,
     defaultModeKey,
-    getModeConfig,
-    legacyAliasToModeKey: source.legacyAliasToModeKey || null
+    getModeConfig
   });
 
   const resolvedModeConfig = getModeConfig ? getModeConfig(resolvedModeId) : null;
@@ -576,7 +553,7 @@ export function resolveDetectedMode(input: DetectModeInput): string {
   const pathname = typeof source.pathname === "string" ? source.pathname : "";
   if (!pathname) return fallbackModeKey;
   if (pathname.indexOf("undo_2048") !== -1) return "classic_4x4_pow2_undo";
-  if (pathname.indexOf("Practice_board") !== -1) return "practice_legacy";
+  if (pathname.indexOf("Practice_board") !== -1) return "practice";
   if (pathname.indexOf("capped_2048") !== -1) return "capped_4x4_pow2_no_undo";
   if (
     pathname === "/" ||

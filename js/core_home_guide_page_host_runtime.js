@@ -300,6 +300,7 @@
         markSeen: markSeen,
         options: options || {},
         clearHomeGuideHighlight: clearHomeGuideHighlight,
+        documentLike: documentLike,
         storageRuntime: source.storageRuntime,
         windowLike: windowLike,
         seenKey: source.seenKey,
@@ -310,23 +311,29 @@
 
     function showHomeGuideStep(index) {
       if (!applyHomeGuideStepOrchestration) return null;
-      return applyHomeGuideStepOrchestration({
-        index: index,
-        maxAdvanceLoops: source.maxAdvanceLoops,
-        stepFlowHostRuntime: source.homeGuideStepFlowHostRuntime,
-        stepViewHostRuntime: source.homeGuideStepViewHostRuntime,
-        documentLike: documentLike,
-        windowLike: windowLike,
-        homeGuideRuntime: source.homeGuideRuntime,
-        homeGuideState: homeGuideState,
-        mobileViewportRuntime: source.mobileViewportRuntime,
-        mobileUiMaxWidth: mobileUiMaxWidth,
-        isElementVisibleForGuide: isElementVisibleForGuide,
-        clearHomeGuideHighlight: clearHomeGuideHighlight,
-        elevateHomeGuideTarget: elevateHomeGuideTarget,
-        finishHomeGuide: finishHomeGuide,
-        positionHomeGuidePanel: positionHomeGuidePanel
-      });
+      var orchestrationResult = toRecord(
+        applyHomeGuideStepOrchestration({
+          index: index,
+          maxAdvanceLoops: source.maxAdvanceLoops,
+          stepFlowHostRuntime: source.homeGuideStepFlowHostRuntime,
+          stepViewHostRuntime: source.homeGuideStepViewHostRuntime,
+          documentLike: documentLike,
+          windowLike: windowLike,
+          homeGuideRuntime: source.homeGuideRuntime,
+          homeGuideState: homeGuideState,
+          mobileViewportRuntime: source.mobileViewportRuntime,
+          mobileUiMaxWidth: mobileUiMaxWidth,
+          isElementVisibleForGuide: isElementVisibleForGuide,
+          clearHomeGuideHighlight: clearHomeGuideHighlight,
+          elevateHomeGuideTarget: elevateHomeGuideTarget,
+          finishHomeGuide: finishHomeGuide,
+          positionHomeGuidePanel: positionHomeGuidePanel
+        })
+      );
+      if (orchestrationResult.didAbort || orchestrationResult.didHitAdvanceLimit) {
+        finishHomeGuide(false, { showDoneNotice: false });
+      }
+      return orchestrationResult;
     }
 
     function isHomePage() {

@@ -31,7 +31,7 @@ describe("bootstrap practice transfer", () => {
       }
     });
 
-    expect(modeConfig.key).toBe("practice_legacy");
+    expect(modeConfig.key).toBe("practice");
     expect(modeConfig.label).toBe("练习板（直通）");
     expect(modeConfig.board_width).toBe(4);
     expect(modeConfig.board_height).toBe(4);

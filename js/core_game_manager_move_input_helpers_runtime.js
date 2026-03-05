@@ -288,14 +288,6 @@ function applyPostMoveLifecycleEffects(manager, postMoveLifecycle) {
   }
 }
 
-function publishSuccessfulMoveAdapterResult(manager, direction) {
-  manager.publishAdapterMoveResult({
-    reason: "move",
-    direction: direction,
-    moved: true
-  });
-}
-
 function finalizeSuccessfulMove(manager, movePlan, direction) {
   if (!manager || !movePlan) return;
   // IPS counts only effective move inputs (invalid directions are excluded).
@@ -307,7 +299,6 @@ function finalizeSuccessfulMove(manager, movePlan, direction) {
   manager.undoStack.push(manager.normalizeUndoStackEntry(movePlan.undo));
   appendPostMoveRecordArtifacts(manager, direction);
   applyPostMoveLifecycleEffects(manager, postMoveLifecycle);
-  publishSuccessfulMoveAdapterResult(manager, direction);
 }
 
 function applyPostMoveScoreFromCoreResult(manager, coreValue) {

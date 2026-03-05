@@ -389,8 +389,8 @@
   });
 
   add({
-    key: "practice_legacy",
-    label: "练习板（Legacy）",
+    key: "practice",
+    label: "练习板（直通）",
     board_width: 4,
     board_height: 4,
     ruleset: "pow2",

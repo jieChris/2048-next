@@ -4,14 +4,15 @@
   <meta charset="utf-8">
   <title>2048 本地历史记录</title>
   <link href="style/main.css?v=1772005002000" rel="stylesheet" type="text/css">
-  <link rel="shortcut icon" href="favicon.ico?v=42">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-1">
+  <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-1">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
 <body data-page="history">
   <div class="container portal-container">
     <div class="portal-header">
-      <h1 class="title"><a href="index.html" style="text-decoration:none;color:inherit;">2048</a> 本地历史</h1>
+      <h1 class="title"><a href="index.html" style="text-decoration:none;color:inherit;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a> 本地历史</h1>
       <div class="portal-nav">
         <a href="index.html">首页</a>
         <a href="modes.html">模式</a>
@@ -36,55 +37,11 @@
           <option value="score_desc">按分数（高到低）</option>
         </select>
 
-        <label>Adapter诊断</label>
-        <select id="history-adapter-filter" class="settings-select portal-inline-select">
-          <option value="all">全部</option>
-          <option value="mismatch">仅不一致</option>
-          <option value="match">仅一致</option>
-          <option value="incomplete">样本不足</option>
-        </select>
-
-        <label>Burn-in窗口</label>
-        <select id="history-burnin-window" class="settings-select portal-inline-select">
-          <option value="50">最近50条</option>
-          <option value="100">最近100条</option>
-          <option value="200" selected>最近200条</option>
-          <option value="500">最近500条</option>
-          <option value="all">全部</option>
-        </select>
-
-        <label>连续窗口</label>
-        <select id="history-sustained-window" class="settings-select portal-inline-select">
-          <option value="1">1个窗口</option>
-          <option value="2">2个窗口</option>
-          <option value="3" selected>3个窗口</option>
-          <option value="4">4个窗口</option>
-        </select>
-
-        <label>最少可比样本</label>
-        <input
-          id="history-burnin-min-comparable"
-          class="portal-inline-input"
-          type="number"
-          min="1"
-          step="1"
-          value="50">
-
-        <label>最大不一致率(%)</label>
-        <input
-          id="history-burnin-max-mismatch-rate"
-          class="portal-inline-input"
-          type="number"
-          min="0.1"
-          step="0.1"
-          value="1">
-
         <button class="replay-button" id="history-load-btn">刷新</button>
       </div>
 
       <div class="portal-actions-inline" style="margin-top:8px;">
         <button class="replay-button" id="history-export-all-btn">导出全部</button>
-        <button class="replay-button" id="history-export-mismatch-btn">导出不一致</button>
         <button class="replay-button" id="history-import-btn">导入合并</button>
         <button class="replay-button" id="history-import-replace-btn">导入并替换</button>
         <button class="replay-button" id="history-clear-all-btn">清空全部</button>
@@ -93,8 +50,6 @@
 
       <div id="history-status" class="portal-status"></div>
       <div id="history-summary" class="portal-muted"></div>
-      <div id="history-burnin-summary" class="history-burnin-card"></div>
-      <div id="history-canary-policy" class="history-canary-card"></div>
     </div>
 
     <div class="portal-actions-inline" style="justify-content:flex-end; margin-bottom:10px;">
@@ -107,51 +62,8 @@
 
   <script src="js/theme_manager.js?v=1771600400000"></script>
   <script src="js/mode_catalog.js?v=1771905000000"></script>
-  <script src="js/core_history_runtime_contract_runtime.js?v=1772276801000"></script>
-  <script src="js/core_history_board_runtime.js?v=1772191000000"></script>
-  <script src="js/core_history_canary_storage_runtime.js?v=1772183000000"></script>
-  <script src="js/core_history_canary_action_runtime.js?v=1772236000000"></script>
-  <script src="js/core_history_canary_source_runtime.js?v=1772237002000"></script>
-  <script src="js/core_history_canary_panel_runtime.js?v=1772195000000"></script>
-  <script src="js/core_history_canary_host_runtime.js?v=1772261001000"></script>
-  <script src="js/core_history_canary_policy_runtime.js?v=1772142000000"></script>
-  <script src="js/core_history_canary_view_runtime.js?v=1772153000000"></script>
-  <script src="js/core_history_status_runtime.js?v=1772224000000"></script>
-  <script src="js/core_history_summary_runtime.js?v=1772156000000"></script>
-  <script src="js/core_history_view_host_runtime.js?v=1772270201000"></script>
-  <script src="js/core_history_export_runtime.js?v=1772231000000"></script>
-  <script src="js/core_history_query_runtime.js?v=1772227000000"></script>
-  <script src="js/core_history_filter_host_runtime.js?v=1772271701000"></script>
-  <script src="js/core_history_load_runtime.js?v=1772239001000"></script>
-  <script src="js/core_history_load_host_runtime.js?v=1772280601000"></script>
-  <script src="js/core_history_load_entry_host_runtime.js?v=1772280601000"></script>
-  <script src="js/core_history_load_context_host_runtime.js?v=1772288601000"></script>
-  <script src="js/core_history_page_host_runtime.js?v=1772309200000"></script>
-  <script src="js/core_history_panel_host_runtime.js?v=1772273401000"></script>
-  <script src="js/core_history_record_view_runtime.js?v=1772219000000"></script>
-  <script src="js/core_history_record_item_runtime.js?v=1772216000000"></script>
-  <script src="js/core_history_record_list_host_runtime.js?v=1772257001000"></script>
-  <script src="js/core_history_import_runtime.js?v=1772232000000"></script>
-  <script src="js/core_history_import_file_runtime.js?v=1772203000000"></script>
-  <script src="js/core_history_import_host_runtime.js?v=1772241001000"></script>
-  <script src="js/core_history_import_bind_host_runtime.js?v=1772259001000"></script>
-  <script src="js/core_history_record_actions_runtime.js?v=1772233000000"></script>
-  <script src="js/core_history_record_host_runtime.js?v=1772242001000"></script>
-  <script src="js/core_history_toolbar_runtime.js?v=1772234000000"></script>
-  <script src="js/core_history_toolbar_host_runtime.js?v=1772240001000"></script>
-  <script src="js/core_history_toolbar_bind_host_runtime.js?v=1772277001000"></script>
-  <script src="js/core_history_toolbar_events_runtime.js?v=1772199000000"></script>
-  <script src="js/core_history_toolbar_events_host_runtime.js?v=1772259001000"></script>
-  <script src="js/core_history_mode_filter_runtime.js?v=1772205000000"></script>
-  <script src="js/core_history_mode_filter_host_runtime.js?v=1772263001000"></script>
-  <script src="js/core_history_controls_host_runtime.js?v=1772277001000"></script>
-  <script src="js/core_history_startup_host_runtime.js?v=1772279801000"></script>
-  <script src="js/core_history_burnin_runtime.js?v=1772225000000"></script>
-  <script src="js/core_history_burnin_host_runtime.js?v=1772261001000"></script>
-  <script src="js/core_history_adapter_diagnostics_runtime.js?v=1772220000000"></script>
-  <script src="js/core_history_adapter_host_runtime.js?v=1772245001000"></script>
-  <script src="js/core_burnin_gate_runtime.js?v=1772006000000"></script>
   <script src="js/local_history_store.js?v=1772006000000"></script>
-  <script src="js/history_page.js?v=1772309200000"></script>
+  <script src="js/refactor_cutover_migration.js?v=1772315000000"></script>
+  <script src="js/history_page.js?v=1772315000000"></script>
 </body>
 </html>

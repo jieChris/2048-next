@@ -282,19 +282,13 @@ function resolveModeConfigFromCatalogById(currentManager, modeId) {
 function resolveModeConfigFromCatalogFallback(currentManager, id) {
   var resolvedById = resolveModeConfigFromCatalogById(currentManager, id);
   if (resolvedById) return resolvedById;
-  var mapped = GameManager.LEGACY_ALIAS_TO_MODE_KEY[id] || id;
-  if (mapped && mapped !== id) {
-    var resolvedByMapped = resolveModeConfigFromCatalogById(currentManager, mapped);
-    if (resolvedByMapped) return resolvedByMapped;
-  }
   return currentManager.normalizeModeConfig(GameManager.DEFAULT_MODE_KEY, GameManager.DEFAULT_MODE_CONFIG);
 }
 
 function createResolveModeConfigPayload(manager, id) {
   return manager.createCoreModeDefaultsPayload({
     modeId: id,
-    getModeConfig: manager.getModeConfigFromCatalog.bind(manager),
-    legacyAliasToModeKey: GameManager.LEGACY_ALIAS_TO_MODE_KEY
+    getModeConfig: manager.getModeConfigFromCatalog.bind(manager)
   });
 }
 
@@ -318,38 +312,6 @@ function resolveModeConfig(manager, modeId) {
   });
 }
 
-function createLegacyModeResolvePayload(manager, modeKey) {
-  return {
-    modeKey: modeKey,
-    fallbackModeKey: manager.modeKey,
-    mode: manager.mode,
-    legacyModeByKey: GameManager.LEGACY_MODE_BY_KEY
-  };
-}
-
-function resolveLegacyModeFallback(manager, modeKey) {
-  var key = modeKey || manager.modeKey || manager.mode;
-  if (GameManager.LEGACY_MODE_BY_KEY[key]) return GameManager.LEGACY_MODE_BY_KEY[key];
-  if (key && key.indexOf("capped") !== -1) return "capped";
-  if (key && key.indexOf("practice") !== -1) return "practice";
-  return "classic";
-}
-
-function getLegacyModeFromModeKey(manager, modeKey) {
-  if (!manager) return "classic";
-  return resolveCorePayloadCallWith(
-    manager,
-    "callCoreModeRuntime",
-    "resolveLegacyModeFromModeKey",
-    createLegacyModeResolvePayload(manager, modeKey),
-    "",
-    function (currentManager, coreCallResult) {
-      return currentManager.resolveCoreStringCallOrFallback(coreCallResult, function () {
-        return resolveLegacyModeFallback(currentManager, modeKey);
-      });
-    }
-  );
-}
 function createTimerMilestoneResolveArgs(manager) {
   return [
     manager.isFibonacciMode() ? "fibonacci" : "pow2",

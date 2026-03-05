@@ -49,6 +49,12 @@ function setDisplay(node: unknown, display: string): void {
   style.display = display;
 }
 
+function getElementById(documentLike: unknown, id: string): unknown {
+  const getter = asFunction<(value: string) => unknown>(toRecord(documentLike).getElementById);
+  if (!getter) return null;
+  return (getter as unknown as Function).call(documentLike, id);
+}
+
 export interface HomeGuideFinishHostResult {
   didFinish: boolean;
   markedSeen: boolean;
@@ -68,6 +74,7 @@ export function applyHomeGuideFinish(input: {
   markSeen?: unknown;
   options?: unknown;
   clearHomeGuideHighlight?: unknown;
+  documentLike?: unknown;
   storageLike?: unknown;
   seenKey?: unknown;
   syncHomeGuideSettingsUI?: unknown;
@@ -131,6 +138,10 @@ export function applyHomeGuideFinish(input: {
   if (homeGuideState.panel) {
     setDisplay(homeGuideState.panel, resolveDisplayValue(layerDisplayState.panelDisplay));
   }
+  const banner = getElementById(source.documentLike, "home-guide-message-banner");
+  if (banner) {
+    setDisplay(banner, "none");
+  }
 
   const markSeen = resolveBoolean(source.markSeen);
   let markedSeen = false;
@@ -172,6 +183,7 @@ export function applyHomeGuideFinishFromContext(input: {
   markSeen?: unknown;
   options?: unknown;
   clearHomeGuideHighlight?: unknown;
+  documentLike?: unknown;
   storageRuntime?: unknown;
   windowLike?: unknown;
   seenKey?: unknown;
@@ -190,6 +202,7 @@ export function applyHomeGuideFinishFromContext(input: {
     markSeen: source.markSeen,
     options: source.options,
     clearHomeGuideHighlight: source.clearHomeGuideHighlight,
+    documentLike: source.documentLike,
     storageLike,
     seenKey: source.seenKey,
     syncHomeGuideSettingsUI: source.syncHomeGuideSettingsUI,

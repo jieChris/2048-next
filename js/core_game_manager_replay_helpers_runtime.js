@@ -426,7 +426,7 @@ function clearTransientTileVisualState(manager) {
 }
 
 function recordPracticeCustomTileActionIfNeeded(manager, x, y, value) {
-  if (!manager.replayMode && manager.sessionReplayV3 && manager.modeKey === "practice_legacy") {
+  if (!manager.replayMode && manager.sessionReplayV3 && manager.modeKey === "practice") {
     manager.sessionReplayV3.actions.push(["p", x, y, value]);
     appendCompactPracticeAction(manager, x, y, value);
   }
@@ -576,10 +576,17 @@ function getFinalBoardMatrix(manager) {
   });
 }
 
+function resolveReplayModeTag(modeKey, fallbackMode) {
+  var key = typeof modeKey === "string" && modeKey ? modeKey : fallbackMode || "";
+  if (key && key.indexOf("capped") !== -1) return "capped";
+  if (key && key.indexOf("practice") !== -1) return "practice";
+  return "classic";
+}
+
 function createDefaultReplayV3Session(manager) {
   return {
     v: 3,
-    mode: manager.getLegacyModeFromModeKey(manager.modeKey || manager.mode),
+    mode: resolveReplayModeTag(manager.modeKey, manager.mode),
     mode_key: manager.modeKey,
     board_width: manager.width,
     board_height: manager.height,
@@ -601,7 +608,7 @@ function resolveReplayV3SessionSource(manager) {
 function createSerializedReplayV3(manager, source) {
   return {
     v: 3,
-    mode: manager.getLegacyModeFromModeKey(source.mode_key || source.mode || manager.modeKey || manager.mode),
+    mode: resolveReplayModeTag(source.mode_key || source.mode, manager.modeKey || manager.mode),
     mode_key: source.mode_key || manager.modeKey,
     board_width: source.board_width || manager.width,
     board_height: source.board_height || manager.height,
@@ -644,11 +651,8 @@ function writeAutoSubmitSkippedResult(manager, skippedReason) {
 }
 
 function resolveAutoSubmitParitySnapshot(manager) {
-  var parity = {
-    report: manager.getAdapterSessionParitySnapshot("readAdapterParityReport", "adapterParityReport"),
-    diff: manager.getAdapterSessionParitySnapshot("readAdapterParityABDiff", "adapterParityABDiff")
-  };
-  return normalizeReplayRecordObject(parity, {});
+  if (!manager) return {};
+  return {};
 }
 
 function createAutoSubmitBestTileResolveArgs(manager) {
@@ -680,12 +684,8 @@ function resolveAutoSubmitBestTileValue(manager) {
 }
 
 function buildAutoSubmitPayloadParityFields(paritySnapshot) {
-  return {
-    adapter_parity_report_v2: paritySnapshot.report,
-    adapter_parity_ab_diff_v2: paritySnapshot.diff,
-    adapter_parity_report_v1: paritySnapshot.report,
-    adapter_parity_ab_diff_v1: paritySnapshot.diff
-  };
+  if (!paritySnapshot) return {};
+  return {};
 }
 
 function buildAutoSubmitPayloadClientFields(windowLike, manager) {
@@ -705,7 +705,7 @@ function assignAutoSubmitPayloadFields(target, fields) {
 
 function buildAutoSubmitPayloadBase(manager, endedAt, bestTileValue) {
   return {
-    mode: manager.getLegacyModeFromModeKey(manager.modeKey || manager.mode),
+    mode: resolveReplayModeTag(manager.modeKey, manager.mode),
     mode_key: manager.modeKey, board_width: manager.width, board_height: manager.height,
     ruleset: manager.ruleset, undo_enabled: !!manager.modeConfig.undo_enabled,
     ranked_bucket: manager.rankedBucket, mode_family: manager.modeFamily, rank_policy: manager.rankPolicy,
@@ -1346,20 +1346,6 @@ function serializeReplayAsV9RplBase64(manager) {
     encodeV9RplBytesToBase64(manager, payload.bytes);
 }
 
-function exportReplayAsV9RplBlob(manager) {
-  var payload = resolveV9RplReplayPayloadForExport(manager);
-  var windowLike = manager ? manager.getWindowLike() : null;
-  var BlobCtor = windowLike && typeof windowLike.Blob === "function"
-    ? windowLike.Blob
-    : (typeof Blob === "function" ? Blob : null);
-  if (typeof BlobCtor !== "function") throw "Blob API is unavailable";
-  return {
-    blob: new BlobCtor([payload.bytes], { type: "application/octet-stream" }),
-    filename: buildV9RplExportFilename(manager, payload.steps.length),
-    stepCount: payload.steps.length
-  };
-}
-
 function resolveV9VerseMoveChunkFromV9Move(v9Move) {
   if (v9Move === 0) return 3;
   if (v9Move === 1) return 1;
@@ -1542,10 +1528,7 @@ function startsWithIgnoreCase(text, prefix) {
 function isKnownNonVerseReplayPrefix(trimmed) {
   var knownPrefixes = [
     String(GameManager.REPLAY_V4_PREFIX || "REPLAY_v4C_"),
-    String(GameManager.REPLAY_V9_RPL_BASE64_PREFIX || "REPLAY_v9RPL_B64_"),
-    String(GameManager.LEGACY_REPLAY_V1_PREFIX || "REPLAY_v1_"),
-    String(GameManager.LEGACY_REPLAY_V2_PREFIX || "REPLAY_v2_"),
-    String(GameManager.LEGACY_REPLAY_V2S_PREFIX || "REPLAY_v2S_")
+    String(GameManager.REPLAY_V9_RPL_BASE64_PREFIX || "REPLAY_v9RPL_B64_")
   ];
   for (var index = 0; index < knownPrefixes.length; index++) {
     if (startsWithIgnoreCase(trimmed, knownPrefixes[index])) return true;
@@ -1671,7 +1654,7 @@ function applyReplayImportActions(manager, payload) {
 }
 
 function isStructuredReplayEnvelope(envelope) {
-  return !!envelope && (envelope.kind === "json-v3" || envelope.kind === "v4c" || envelope.kind === "v9rpl");
+  return !!envelope && (envelope.kind === "v4c" || envelope.kind === "v9rpl");
 }
 
 function applyImportedReplayUndoState(manager) {
@@ -1703,29 +1686,6 @@ function resolveReplayImportErrorMessage(error) {
   return (typeof error === "string" && error) || (error && typeof error.message === "string" && error.message)
     ? ((typeof error === "string" && error) || error.message)
     : String(error);
-}
-
-function normalizeReplayImportOptionalString(raw) {
-  return typeof raw === "string" && raw ? raw : null;
-}
-
-function tryParseJsonV3ReplayEnvelope(manager, trimmed) {
-  if (!(typeof trimmed === "string" && trimmed.charAt(0) === "{")) return null;
-  var replayObj = JSON.parse(trimmed);
-  if (!replayObj) return null;
-  if (replayObj.v !== 3) throw "Unsupported JSON replay version";
-  if (!Array.isArray(replayObj.actions)) throw "Invalid v3 actions";
-  var modeKey = normalizeReplayImportOptionalString(replayObj.mode_key) || normalizeReplayImportOptionalString(replayObj.mode) || manager.modeKey || manager.mode;
-  return {
-    kind: "json-v3",
-    modeKey: modeKey,
-    actions: replayObj.actions,
-    seed: replayObj.seed,
-    specialRulesSnapshot: isReplayRecordObject(replayObj.special_rules_snapshot) ? replayObj.special_rules_snapshot : null,
-    modeFamily: normalizeReplayImportOptionalString(replayObj.mode_family),
-    rankPolicy: normalizeReplayImportOptionalString(replayObj.rank_policy),
-    challengeId: normalizeReplayImportOptionalString(replayObj.challenge_id)
-  };
 }
 
 function tryParseV4cReplayEnvelope(trimmed) {
@@ -1763,8 +1723,6 @@ function parseReplayImportEnvelopeFallback(manager, trimmed) {
   if (verseEnvelope) return verseEnvelope;
   var v9Envelope = tryParseV9RplBase64ReplayEnvelope(manager, trimmed);
   if (v9Envelope) return v9Envelope;
-  var jsonEnvelope = tryParseJsonV3ReplayEnvelope(manager, trimmed);
-  if (jsonEnvelope) return jsonEnvelope;
   return tryParseV4cReplayEnvelope(trimmed);
 }
 
@@ -1781,146 +1739,6 @@ function parseReplayImportEnvelope(manager, trimmed) {
     }, true);
   });
   return normalizeReplayRecordObject(parsedEnvelope, null);
-}
-
-function resolveLegacyReplayV2CodeAt(logString, index) {
-  var code = logString.charCodeAt(index) - 33;
-  if (code < 0 || code > 128) {
-    throw "Invalid replay char at index " + index;
-  }
-  return code;
-}
-
-function createLegacyReplayV2EntryFromCode(code) {
-  if (code === 128) return { move: -1, spawn: null };
-  var dir = (code >> 5) & 3;
-  var is4 = (code >> 4) & 1;
-  var posIdx = code & 15;
-  return {
-    move: dir,
-    spawn: {
-      x: posIdx % 4,
-      y: Math.floor(posIdx / 4),
-      value: is4 ? 4 : 2
-    }
-  };
-}
-
-function appendLegacyReplayV2Entry(decoded, entry) {
-  decoded.replayMoves.push(entry.move);
-  decoded.replaySpawns.push(entry.spawn);
-}
-
-function decodeLegacyReplayV2Log(logString) {
-  var decoded = {
-    replayMoves: [],
-    replaySpawns: []
-  };
-  for (var i = 0; i < logString.length; i++) {
-    var code = resolveLegacyReplayV2CodeAt(logString, i);
-    var entry = createLegacyReplayV2EntryFromCode(code);
-    appendLegacyReplayV2Entry(decoded, entry);
-  }
-  return decoded;
-}
-
-function tryDecodeLegacyReplayV1Envelope(trimmed) {
-  if (trimmed.indexOf(GameManager.LEGACY_REPLAY_V1_PREFIX) !== 0) return null;
-  var v1Parts = trimmed.split("_");
-  var seed = parseFloat(v1Parts[2]);
-  var movesString = v1Parts[3];
-  var replayMovesV1 = movesString.split("").map(function (char) {
-    var val = GameManager.LEGACY_REPLAY_V1_REVERSE_MAPPING[char];
-    if (val === undefined) throw "Invalid move char: " + char;
-    return val;
-  });
-  return {
-    seed: seed,
-    replayMoves: replayMovesV1,
-    replaySpawns: null
-  };
-}
-
-function tryDecodeLegacyReplayV2sEnvelope(trimmed) {
-  if (trimmed.indexOf(GameManager.LEGACY_REPLAY_V2S_PREFIX) !== 0) return null;
-  var rest = trimmed.substring(GameManager.LEGACY_REPLAY_V2S_PREFIX.length);
-  var seedSep = rest.indexOf("_");
-  if (seedSep < 0) throw "Invalid v2S format";
-  var seedS = parseFloat(rest.substring(0, seedSep));
-  if (isNaN(seedS)) throw "Invalid v2S seed";
-  var logStringS = rest.substring(seedSep + 1);
-  var decodedLogS = decodeLegacyReplayV2Log(logStringS);
-  return {
-    seed: seedS,
-    replayMovesV2: logStringS,
-    replayMoves: decodedLogS.replayMoves,
-    replaySpawns: decodedLogS.replaySpawns
-  };
-}
-
-function tryDecodeLegacyReplayV2Envelope(trimmed) {
-  if (trimmed.indexOf(GameManager.LEGACY_REPLAY_V2_PREFIX) !== 0) return null;
-  var logString = trimmed.substring(GameManager.LEGACY_REPLAY_V2_PREFIX.length);
-  var decodedLog = decodeLegacyReplayV2Log(logString);
-  return {
-    seed: 0.123,
-    replayMovesV2: logString,
-    replayMoves: decodedLog.replayMoves,
-    replaySpawns: decodedLog.replaySpawns
-  };
-}
-
-function normalizeDecodedLegacyReplayFromCore(currentManager, coreValue) {
-  return currentManager.isNonArrayObject(coreValue) ? coreValue : undefined;
-}
-
-function decodeLegacyReplayEnvelopeFallback(trimmed) {
-  var v1Envelope = tryDecodeLegacyReplayV1Envelope(trimmed);
-  if (v1Envelope) return v1Envelope;
-  var v2sEnvelope = tryDecodeLegacyReplayV2sEnvelope(trimmed);
-  if (v2sEnvelope) return v2sEnvelope;
-  return tryDecodeLegacyReplayV2Envelope(trimmed);
-}
-
-function decodeLegacyReplayEnvelope(manager, trimmed) {
-  return resolveCoreArgsCallWith(manager, "callCoreReplayLegacyRuntime", "decodeLegacyReplay", [trimmed], undefined, function (currentManager, coreCallResult) {
-    return currentManager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (coreValue) {
-      return normalizeDecodedLegacyReplayFromCore(currentManager, coreValue);
-    }, function () { return decodeLegacyReplayEnvelopeFallback(trimmed); });
-  });
-}
-
-function applyJsonV3ReplayModeConfigFields(manager, envelope, replayModeConfig) {
-  var specialRulesSource = isReplayRecordObject(envelope.specialRulesSnapshot)
-    ? envelope.specialRulesSnapshot
-    : null;
-  var specialRulesSnapshot = specialRulesSource ? manager.clonePlain(specialRulesSource) : null;
-  if (specialRulesSnapshot) {
-    replayModeConfig.special_rules = specialRulesSnapshot;
-  }
-  if (typeof envelope.modeFamily === "string" && envelope.modeFamily) {
-    replayModeConfig.mode_family = envelope.modeFamily;
-  }
-  if (typeof envelope.rankPolicy === "string" && envelope.rankPolicy) {
-    replayModeConfig.rank_policy = envelope.rankPolicy;
-  }
-}
-
-function applyJsonV3ReplayChallengeId(manager, envelope) {
-  if (typeof envelope.challengeId === "string" && envelope.challengeId) {
-    manager.challengeId = envelope.challengeId;
-  }
-}
-
-function applyJsonV3StructuredReplayEnvelope(manager, envelope, replayModeConfig) {
-  applyJsonV3ReplayModeConfigFields(manager, envelope, replayModeConfig);
-  applyJsonV3ReplayChallengeId(manager, envelope);
-  applyReplayImportActions(manager, {
-    replayMoves: envelope.actions,
-    replaySpawns: null
-  });
-  manager.disableSessionSync = true;
-  restartWithSeed(manager, envelope.seed, replayModeConfig);
 }
 
 function decodeReplayV4MoveSpawnFromToken(token) {
@@ -2060,9 +1878,7 @@ function applyStructuredReplayEnvelope(manager, envelope) {
     replayModeConfig = resolveV9RplReplayModeConfig(manager);
   }
   if (replayModeConfig) {
-    if (envelope.kind === "json-v3") {
-      applyJsonV3StructuredReplayEnvelope(manager, envelope, replayModeConfig);
-    } else if (envelope.kind === "v9rpl") {
+    if (envelope.kind === "v9rpl") {
       applyV9RplStructuredReplayEnvelope(manager, envelope, replayModeConfig);
     } else {
       applyV4StructuredReplayEnvelope(manager, envelope, replayModeConfig);
@@ -2073,26 +1889,13 @@ function applyStructuredReplayEnvelope(manager, envelope) {
   return true;
 }
 
-function applyLegacyReplayEnvelope(manager, decodedLegacy) {
-  applyReplayImportActions(manager, {
-    replayMovesV2: decodedLegacy.replayMovesV2,
-    replayMoves: decodedLegacy.replayMoves,
-    replaySpawns: decodedLegacy.replaySpawns
-  });
-  restartWithSeed(manager, decodedLegacy.seed);
-  startImportedReplayPlayback(manager);
-  return true;
-}
-
 function importReplay(manager, replayString) {
   if (!manager) return false;
   try {
     var trimmed = normalizeReplayImportSource(replayString);
     var envelope = parseReplayImportEnvelope(manager, trimmed);
     if (isStructuredReplayEnvelope(envelope)) return applyStructuredReplayEnvelope(manager, envelope);
-    var decodedLegacy = decodeLegacyReplayEnvelope(manager, trimmed);
-    if (decodedLegacy) return applyLegacyReplayEnvelope(manager, decodedLegacy);
-    throw "Unknown replay version";
+    throw "仅支持当前回放格式（v4/v9）";
   } catch (e) {
     alert("导入回放出错: " + resolveReplayImportErrorMessage(e));
     return false;
@@ -2332,7 +2135,7 @@ function resolveDetectedModePathname(windowLike) {
 function resolveDetectedModeByPathname(pathname) {
   if (!pathname) return GameManager.DEFAULT_MODE_KEY;
   if (pathname.indexOf("undo_2048") !== -1) return "classic_4x4_pow2_undo";
-  if (pathname.indexOf("Practice_board") !== -1) return "practice_legacy";
+  if (pathname.indexOf("Practice_board") !== -1) return "practice";
   if (pathname.indexOf("capped_2048") !== -1) return "capped_4x4_pow2_no_undo";
   if (
     pathname === "/" ||

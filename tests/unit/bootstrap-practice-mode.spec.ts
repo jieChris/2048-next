@@ -15,7 +15,7 @@ describe("bootstrap practice mode", () => {
 
   it("builds fibonacci practice mode config", () => {
     const base = {
-      key: "practice_legacy",
+      key: "practice",
       ruleset: "pow2",
       mode_family: "pow2",
       spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
@@ -36,7 +36,7 @@ describe("bootstrap practice mode", () => {
   it("builds pow2 practice mode config", () => {
     const next = buildPracticeModeConfig(
       {
-        key: "practice_legacy",
+        key: "practice",
         ruleset: "fibonacci",
         mode_family: "fibonacci",
         spawn_table: [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]

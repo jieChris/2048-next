@@ -365,6 +365,51 @@ describe("bootstrap home guide page host", () => {
     );
   });
 
+  it("safely exits guide when step orchestration aborts or hits advance limit", () => {
+    const applyHomeGuideFinishFromContext = vi.fn(() => ({ didInvokeFinish: true }));
+    const applyHomeGuideStepOrchestration = vi
+      .fn()
+      .mockReturnValueOnce({ didAbort: true, didHitAdvanceLimit: false, didRender: false })
+      .mockReturnValueOnce({ didAbort: false, didHitAdvanceLimit: true, didRender: false });
+
+    const resolvers = createHomeGuidePageResolvers({
+      homeGuideRuntime: { id: "runtime" },
+      homeGuideFinishHostRuntime: {
+        applyHomeGuideFinishFromContext
+      },
+      homeGuideStepHostRuntime: {
+        applyHomeGuideStepOrchestration
+      },
+      homeGuideState: { active: true, index: 0, steps: [] }
+    });
+
+    expect(resolvers.showHomeGuideStep(0)).toEqual({
+      didAbort: true,
+      didHitAdvanceLimit: false,
+      didRender: false
+    });
+    expect(resolvers.showHomeGuideStep(1)).toEqual({
+      didAbort: false,
+      didHitAdvanceLimit: true,
+      didRender: false
+    });
+
+    expect(applyHomeGuideFinishFromContext).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        markSeen: false,
+        options: { showDoneNotice: false }
+      })
+    );
+    expect(applyHomeGuideFinishFromContext).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        markSeen: false,
+        options: { showDoneNotice: false }
+      })
+    );
+  });
+
   it("returns false result when startup host api is missing", () => {
     const result = applyHomeGuideAutoStartPage({
       homeGuideStartupHostRuntime: {}

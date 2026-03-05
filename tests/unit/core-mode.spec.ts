@@ -606,7 +606,7 @@ describe("core mode: legacy mapping policy", () => {
     ).toBe("capped");
     expect(
       resolveLegacyModeFromModeKey({
-        fallbackModeKey: "practice_legacy"
+        fallbackModeKey: "practice"
       })
     ).toBe("practice");
     expect(
@@ -616,7 +616,7 @@ describe("core mode: legacy mapping policy", () => {
     ).toBe("classic");
   });
 
-  it("resolves catalog alias mapping and keeps passthrough values", () => {
+  it("keeps mode id passthrough without alias remap", () => {
     expect(
       resolveModeCatalogAlias({
         modeId: "classic_no_undo",
@@ -625,7 +625,7 @@ describe("core mode: legacy mapping policy", () => {
           classic_no_undo: "standard_4x4_pow2_no_undo"
         }
       })
-    ).toBe("standard_4x4_pow2_no_undo");
+    ).toBe("classic_no_undo");
 
     expect(
       resolveModeCatalogAlias({
@@ -638,7 +638,7 @@ describe("core mode: legacy mapping policy", () => {
     ).toBe("fib_4x4_undo");
   });
 
-  it("resolves mode config mode key by catalog availability then alias", () => {
+  it("resolves mode config mode key by catalog availability", () => {
     expect(
       resolveModeConfigModeKey({
         modeId: "classic_no_undo",
@@ -805,12 +805,12 @@ describe("core mode: legacy mapping policy", () => {
   it("resolves detected mode from existing/body/path context", () => {
     expect(
       resolveDetectedMode({
-        existingMode: "practice_legacy",
+        existingMode: "practice",
         bodyMode: "classic_4x4_pow2_undo",
         pathname: "/index.html",
         defaultModeKey: "standard_4x4_pow2_no_undo"
       })
-    ).toBe("practice_legacy");
+    ).toBe("practice");
 
     expect(
       resolveDetectedMode({
@@ -833,7 +833,7 @@ describe("core mode: legacy mapping policy", () => {
         pathname: "/Practice_board.html",
         defaultModeKey: "standard_4x4_pow2_no_undo"
       })
-    ).toBe("practice_legacy");
+    ).toBe("practice");
 
     expect(
       resolveDetectedMode({

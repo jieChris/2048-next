@@ -5,7 +5,8 @@
   <title>2048 多玩法</title>
 
   <link href="style/main.css?v=1771930000000" rel="stylesheet" type="text/css">
-  <link rel="shortcut icon" href="favicon.ico?v=42">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-1">
+  <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-1">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=42">
   <meta name="apple-mobile-web-app-capable" content="yes">
 
@@ -37,33 +38,33 @@
         <a class="top-action-btn" id="top-practice-btn" href="Practice_board.html" title="直通练习板">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3h3v3"></path><path d="M11 13L21 3"></path><path d="M21 14v7h-7"></path><path d="M3 10v11h11"></path></svg>
         </a>
-        <a class="top-action-btn" href="replay.html" title="高级回放">
+        <a class="top-action-btn" href="replay.html" target="_blank" rel="noopener noreferrer" title="高级回放">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
         </a>
-        <a class="top-action-btn" href="modes.html" title="模式选择">
+        <a class="top-action-btn" href="modes.html" target="_blank" rel="noopener noreferrer" title="模式选择">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
         </a>
-        <a class="top-action-btn" href="history.html" title="历史记录">
+        <a class="top-action-btn" href="history.html" target="_blank" rel="noopener noreferrer" title="历史记录">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         </a>
         <a class="top-action-btn" id="top-settings-btn" title="设置">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         </a>
       </div>
-      <h1 class="title"><a href="index.html" style="text-decoration: none; color: inherit; cursor: pointer;">2048</a></h1>
+      <h1 class="title"><a href="index.html" style="text-decoration: none; color: inherit; cursor: pointer;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a></h1>
       <div class="scores-container">
         <div class="score-container">0</div>
         <div class="best-container">0</div>
       </div>
       <div class="above-game" style="clear: both; padding-top: 15px;">
       <p class="game-intro" id="play-mode-intro">模式加载中...</p>
-      <a class="restart-button" title="新游戏">
+      <a class="restart-button" title="&#26032;&#28216;&#25103;" aria-label="&#26032;&#28216;&#25103;">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
       </a>
       </div>
     </div>
 
-    <button id="timerbox-toggle-btn" class="top-action-btn timerbox-toggle-btn" type="button" aria-expanded="false" aria-label="展开计时器" title="展开计时器"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+    <button id="timerbox-toggle-btn" class="top-action-btn timerbox-toggle-btn" type="button" aria-expanded="false" aria-label="&#23637;&#24320;&#35745;&#26102;&#22120;" title="&#23637;&#24320;&#35745;&#26102;&#22120;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
     <div id="timerbox">
         <div id="timer"></div>
 
@@ -140,7 +141,7 @@
         <div class="lower">
           <a class="keep-playing-button">继续游戏</a>
           <a class="undo-button" id="undo-btn-gameover">撤销</a>
-          <a class="retry-button">重试</a>
+          <a class="retry-button">新游戏</a>
         </div>
       </div>
 
@@ -243,8 +244,6 @@
   <script src="js/grid.js?v=1771589027738"></script>
   <script src="js/tile.js?v=1771589027738"></script>
   <script src="js/local_score_manager.js?v=1771589027738"></script>
-  
-  <script src="js/core_burnin_gate_runtime.js?v=1772006000000"></script>
   <script src="js/local_history_store.js?v=1772006000000"></script>
   <script src="js/core_mode_catalog_runtime.js?v=1772012000000"></script>
   <script src="js/core_play_runtime_contract_runtime.js?v=1772135000000"></script>
@@ -287,7 +286,6 @@
   <script src="js/core_undo_stack_entry_runtime.js?v=1771961000000"></script>
   <script src="js/core_replay_codec_runtime.js?v=1771962000000"></script>
   <script src="js/core_replay_v4_actions_runtime.js?v=1771963000000"></script>
-  <script src="js/core_replay_legacy_runtime.js?v=1771964000000"></script>
   <script src="js/core_replay_import_runtime.js?v=1771965000000"></script>
   <script src="js/core_replay_execution_runtime.js?v=1771966000000"></script>
   <script src="js/core_replay_dispatch_runtime.js?v=1771973000000"></script>
@@ -303,7 +301,7 @@
   <script src="js/core_game_manager_runtime_call_helpers_runtime.js?v=1772589000000"></script>
   <script src="js/core_game_manager_saved_state_helpers_runtime.js?v=1772589200000"></script>
   <script src="js/core_game_manager_runtime_accessor_helpers_runtime.js?v=1772589300000"></script>
-  <script src="js/core_game_manager_stats_ui_helpers_runtime.js?v=1772589400000"></script>
+  <script src="js/core_game_manager_stats_ui_helpers_runtime.js?v=1772618000000"></script>
   <script src="js/core_game_manager_move_input_helpers_runtime.js?v=1772589500000"></script>
   <script src="js/core_game_manager_stats_display_helpers_runtime.js?v=1772589600000"></script>
   <script src="js/core_game_manager_panel_timer_helpers_runtime.js?v=1772590000000"></script>
@@ -317,7 +315,7 @@
   <script src="js/core_game_manager_static_runtime.js?v=1772585000000"></script>
   <script src="js/core_game_manager_bindings_runtime.js?v=1772585000000"></script>
   <script src="js/game_manager.js?v=1772585000000"></script>
-  <script src="js/legacy_bootstrap_runtime.js?v=1772013000000"></script>
+  <script src="js/core_bootstrap_runtime.js?v=1772315000000"></script>
   <script src="js/core_storage_runtime.js?v=1772115000000"></script>
   <script src="js/play_application.js?v=1772311200000"></script>
   <script src="js/core_capped_timer_scroll_runtime.js?v=1772456000000"></script>
@@ -356,6 +354,7 @@
   <script src="js/core_replay_modal_runtime.js?v=1772317200000"></script>
   <script src="js/core_settings_modal_host_runtime.js?v=1772403000000"></script>
   <script src="js/core_settings_modal_page_host_runtime.js?v=1772519301000"></script>
+  <script src="js/core_top_button_style_runtime.js?v=1772626200000"></script>
   <script src="js/core_replay_export_runtime.js?v=1772319400000"></script>
   <script src="js/core_replay_page_host_runtime.js?v=1772519300000"></script>
   <script src="js/core_pretty_time_runtime.js?v=1772321800000"></script>

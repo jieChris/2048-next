@@ -126,6 +126,11 @@ function setThemeOptionDatasetValue(optionLike: unknown, value: string): void {
   optionRecord.dataset.value = value;
 }
 
+function resolveThemeOptionFromEvent(eventLike: unknown, fallbackOption: unknown): unknown {
+  const eventRecord = toRecord(eventLike);
+  return eventRecord.currentTarget || fallbackOption;
+}
+
 function resolveThemeOptionCount(container: unknown): number {
   return querySelectorAll(container, ".custom-option").length;
 }
@@ -403,9 +408,10 @@ export function applyThemeSettingsUi(input: {
       setThemeOptionDatasetValue(option, resolveText(theme.id));
       bindListener(option, "click", function (eventLike: unknown) {
         stopPropagation(eventLike);
+        const optionLike = resolveThemeOptionFromEvent(eventLike, option);
         const value = resolveText(
           resolveThemeOptionValue.call(themeSettingsRuntime, {
-            optionLike: option
+            optionLike
           })
         );
         confirmedTheme = value;
@@ -413,10 +419,11 @@ export function applyThemeSettingsUi(input: {
         applyPreviewTheme(value);
         closeDropdown();
       });
-      bindListener(option, "mouseenter", function () {
+      bindListener(option, "mouseenter", function (eventLike: unknown) {
+        const optionLike = resolveThemeOptionFromEvent(eventLike, option);
         const value = resolveText(
           resolveThemeOptionValue.call(themeSettingsRuntime, {
-            optionLike: option
+            optionLike
           })
         );
         applyPreviewTheme(value);

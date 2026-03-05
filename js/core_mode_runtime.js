@@ -369,10 +369,6 @@
   function resolveLegacyModeFromModeKey(input) {
     var source = input || {};
     var key = source.modeKey || source.fallbackModeKey || source.mode || "";
-    var legacyModeByKey = source.legacyModeByKey || null;
-    if (legacyModeByKey && typeof legacyModeByKey[key] === "string") {
-      return legacyModeByKey[key] || "classic";
-    }
     if (key && key.indexOf("capped") !== -1) return "capped";
     if (key && key.indexOf("practice") !== -1) return "practice";
     return "classic";
@@ -381,15 +377,6 @@
   function resolveModeCatalogAlias(input) {
     var source = input || {};
     var id = source.modeId || source.defaultModeKey;
-    var legacyAliasToModeKey = source.legacyAliasToModeKey || null;
-    if (
-      legacyAliasToModeKey &&
-      Object.prototype.hasOwnProperty.call(legacyAliasToModeKey, id) &&
-      typeof legacyAliasToModeKey[id] === "string" &&
-      legacyAliasToModeKey[id]
-    ) {
-      return legacyAliasToModeKey[id];
-    }
     return id;
   }
 
@@ -404,15 +391,6 @@
     var getModeConfig = typeof source.getModeConfig === "function" ? source.getModeConfig : null;
 
     if (getModeConfig && isPlainRecord(getModeConfig(id))) return id;
-
-    var mapped = resolveModeCatalogAlias({
-      modeId: id,
-      defaultModeKey: defaultModeKey,
-      legacyAliasToModeKey: source.legacyAliasToModeKey || null
-    });
-    if (mapped && mapped !== id && getModeConfig && isPlainRecord(getModeConfig(mapped))) {
-      return mapped;
-    }
 
     return defaultModeKey;
   }
@@ -462,8 +440,7 @@
     var resolvedModeId = resolveModeConfigModeKey({
       modeId: source.modeId || defaultModeKey,
       defaultModeKey: defaultModeKey,
-      getModeConfig: getModeConfig,
-      legacyAliasToModeKey: source.legacyAliasToModeKey || null
+      getModeConfig: getModeConfig
     });
 
     var resolvedModeConfig = getModeConfig ? getModeConfig(resolvedModeId) : null;
@@ -501,7 +478,7 @@
     var pathname = typeof source.pathname === "string" ? source.pathname : "";
     if (!pathname) return fallbackModeKey;
     if (pathname.indexOf("undo_2048") !== -1) return "classic_4x4_pow2_undo";
-    if (pathname.indexOf("Practice_board") !== -1) return "practice_legacy";
+    if (pathname.indexOf("Practice_board") !== -1) return "practice";
     if (pathname.indexOf("capped_2048") !== -1) return "capped_4x4_pow2_no_undo";
     if (
       pathname === "/" ||

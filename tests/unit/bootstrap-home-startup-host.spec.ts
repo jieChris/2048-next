@@ -5,8 +5,8 @@ import { resolveHomeStartupFromContext } from "../../src/bootstrap/home-startup-
 describe("bootstrap home startup host", () => {
   it("resolves selection from page context and returns startup payload", () => {
     const resolveHomeModeSelectionFromContext = vi.fn(() => ({
-      modeKey: "practice_legacy",
-      modeConfig: { key: "practice_legacy", ruleset: "fibonacci" }
+      modeKey: "practice",
+      modeConfig: { key: "practice", ruleset: "fibonacci" }
     }));
     const windowLike: {
       location: { search: string };
@@ -19,7 +19,7 @@ describe("bootstrap home startup host", () => {
     const documentLike = {
       body: {
         getAttribute(name: string) {
-          return name === "data-mode-id" ? "practice_legacy" : null;
+          return name === "data-mode-id" ? "practice" : null;
         }
       }
     };
@@ -41,12 +41,12 @@ describe("bootstrap home startup host", () => {
       modeCatalog: windowLike.ModeCatalog
     });
     expect(windowLike.GAME_MODE_CONFIG).toEqual({
-      key: "practice_legacy",
+      key: "practice",
       ruleset: "fibonacci"
     });
     expect(payload).toEqual({
-      modeKey: "practice_legacy",
-      modeConfig: { key: "practice_legacy", ruleset: "fibonacci" },
+      modeKey: "practice",
+      modeConfig: { key: "practice", ruleset: "fibonacci" },
       inputManagerCtor,
       defaultBoardWidth: 6
     });

@@ -108,6 +108,8 @@
 
     var windowLike = toRecord(source.windowLike);
     var getComputedStyle = asFunction(windowLike.getComputedStyle);
+    var viewportWidth = resolveNumber(windowLike.innerWidth, 0);
+    var viewportHeight = resolveNumber(windowLike.innerHeight, 0);
 
     return !!isHomeGuideTargetVisible({
       nodeLike: source.node || null,
@@ -116,7 +118,9 @@
           ? function (el) {
               return getComputedStyle.call(source.windowLike, el);
             }
-          : null
+          : null,
+      viewportWidth: viewportWidth,
+      viewportHeight: viewportHeight
     });
   }
 

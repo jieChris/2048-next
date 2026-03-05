@@ -200,7 +200,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasHomeRuntimeContractRuntime).toBe(true);
     expect(snapshot.hasHomeStartupHostRuntime).toBe(true);
     expect(snapshot.hasHomeModeContextRuntime).toBe(true);
-    expect(snapshot.key).toBe("practice_legacy");
+    expect(snapshot.key).toBe("practice");
     expect(snapshot.ruleset).toBe("fibonacci");
     expect(snapshot.spawnTable).toEqual([
       { value: 1, weight: 90 },

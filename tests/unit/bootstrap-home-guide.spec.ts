@@ -102,14 +102,16 @@ describe("bootstrap home guide", () => {
     expect(selectors[selectors.length - 1]).toBe("#top-restart-btn");
   });
 
-  it("inserts mobile hint step before restart in compact viewport", () => {
+  it("inserts mobile hint and timer-toggle steps before restart in compact viewport", () => {
     const steps = buildHomeGuideSteps({ isCompactViewport: true });
     const selectors = steps.map((item) => item.selector);
     const hintIdx = selectors.indexOf("#top-mobile-hint-btn");
+    const timerToggleIdx = selectors.indexOf("#timerbox-toggle-btn");
     const restartIdx = selectors.indexOf("#top-restart-btn");
     expect(hintIdx).toBeGreaterThan(-1);
+    expect(timerToggleIdx).toBeGreaterThan(hintIdx);
     expect(restartIdx).toBeGreaterThan(hintIdx);
-    expect(restartIdx).toBe(hintIdx + 1);
+    expect(restartIdx).toBe(timerToggleIdx + 1);
   });
 
   it("builds panel and settings row html templates", () => {
@@ -346,7 +348,7 @@ describe("bootstrap home guide", () => {
     });
   });
 
-  it("resolves target state for visible and skipped targets", () => {
+  it("resolves target state for visible and hidden targets", () => {
     expect(
       resolveHomeGuideStepTargetState({
         hasTarget: true,
@@ -364,8 +366,8 @@ describe("bootstrap home guide", () => {
         stepIndex: 2
       })
     ).toEqual({
-      shouldAdvance: true,
-      nextIndex: 3
+      shouldAdvance: false,
+      nextIndex: 2
     });
   });
 
@@ -665,6 +667,16 @@ describe("bootstrap home guide", () => {
     expect(
       isHomeGuideTargetVisible({
         nodeLike: {
+          getBoundingClientRect() {
+            return {
+              left: 10,
+              top: 20,
+              right: 110,
+              bottom: 60,
+              width: 100,
+              height: 40
+            };
+          },
           getClientRects() {
             return [{ left: 0 }];
           }
@@ -675,7 +687,9 @@ describe("bootstrap home guide", () => {
             visibility: "visible",
             opacity: "1"
           };
-        }
+        },
+        viewportWidth: 1920,
+        viewportHeight: 1080
       })
     ).toBe(true);
   });
@@ -684,6 +698,16 @@ describe("bootstrap home guide", () => {
     expect(
       isHomeGuideTargetVisible({
         nodeLike: {
+          getBoundingClientRect() {
+            return {
+              left: 0,
+              top: 0,
+              right: 0,
+              bottom: 10,
+              width: 0,
+              height: 10
+            };
+          },
           getClientRects() {
             return [{ left: 0 }];
           }
@@ -695,6 +719,35 @@ describe("bootstrap home guide", () => {
             opacity: "1"
           };
         }
+      })
+    ).toBe(false);
+
+    expect(
+      isHomeGuideTargetVisible({
+        nodeLike: {
+          getBoundingClientRect() {
+            return {
+              left: -240,
+              top: 20,
+              right: -20,
+              bottom: 90,
+              width: 220,
+              height: 70
+            };
+          },
+          getClientRects() {
+            return [{ left: -240 }];
+          }
+        },
+        getComputedStyle() {
+          return {
+            display: "block",
+            visibility: "visible",
+            opacity: "1"
+          };
+        },
+        viewportWidth: 1280,
+        viewportHeight: 720
       })
     ).toBe(false);
 
