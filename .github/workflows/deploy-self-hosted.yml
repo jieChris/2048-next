@@ -46,12 +46,30 @@ jobs:
           ts="$(date -u +%Y%m%d%H%M%S)"
           short_sha="${GITHUB_SHA::7}"
           release_id="${ts}-${short_sha}"
-          artifact_name="dist-${release_id}.tar.gz"
+          artifact_name="site-${release_id}.tar.gz"
           echo "release_id=${release_id}" >> "$GITHUB_OUTPUT"
           echo "artifact_name=${artifact_name}" >> "$GITHUB_OUTPUT"
 
-      - name: Archive dist
-        run: tar -czf "${{ steps.meta.outputs.artifact_name }}" -C dist .
+      - name: Archive static site bundle
+        run: |
+          tar -czf "${{ steps.meta.outputs.artifact_name }}" \
+            --exclude-vcs \
+            index.html \
+            play.html \
+            replay.html \
+            history.html \
+            modes.html \
+            undo_2048.html \
+            capped_2048.html \
+            Practice_board.html \
+            js \
+            style \
+            images \
+            meta \
+            public \
+            favicon.ico \
+            horse-cache-sw.js \
+            LICENSE
 
       - name: Upload release package
         uses: actions/upload-artifact@v4
