@@ -630,7 +630,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.alerts[0]).toContain("加载本地回放失败");
   });
 
-  test("replay ui delegates guide storage decisions to runtime helper", async ({ page }) => {
+  test("replay ui no longer includes onboarding guide storage runtime", async ({ page }) => {
     await page.addInitScript(() => {
       try {
         window.localStorage.removeItem("replay_guide_shown_v1");
@@ -687,7 +687,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.markReplayGuideSeenFromContext !== "function"
       ) {
         return {
-          hasRuntime: false
+          hasRuntime: false,
+          hasOverlay: false,
+          showCalls: Number((window as any).__replayGuideShowCalls || 0),
+          markCalls: Number((window as any).__replayGuideMarkCalls || 0),
+          initialDisplay: "",
+          finalDisplay: ""
         };
       }
 
@@ -711,11 +716,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
 
-    expect(snapshot.hasRuntime).toBe(true);
-    expect(snapshot.hasOverlay).toBe(true);
-    expect(snapshot.showCalls).toBeGreaterThan(0);
-    expect(snapshot.markCalls).toBeGreaterThan(0);
-    expect(snapshot.initialDisplay).toBe("block");
-    expect(snapshot.finalDisplay).toBe("none");
+    expect(snapshot.hasRuntime).toBe(false);
+    expect(snapshot.hasOverlay).toBe(false);
+    expect(snapshot.showCalls).toBe(0);
+    expect(snapshot.markCalls).toBe(0);
+    expect(snapshot.initialDisplay).toBe("");
+    expect(snapshot.finalDisplay).toBe("");
   });
 });
