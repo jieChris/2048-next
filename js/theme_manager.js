@@ -905,8 +905,24 @@
       if (theme.blackTiles && theme.flashy) {
         css += scopeSelector + " .theme-preview-tile.theme-color-" + val + "{background-size:200% 200%;}\n";
       }
+
+      var fontSize = getTileFontSizeByDigits(val);
+      if (fontSize) {
+        css += (scopeSelector + " .tile.tile-" + val + ":not(.selection-tile) .tile-inner") + "{font-size:" + fontSize.desktop + " !important;}\n";
+        css += "@media screen and (max-width: 520px){" + (scopeSelector + " .tile.tile-" + val + ":not(.selection-tile) .tile-inner") + "{font-size:" + fontSize.mobile + " !important;}}\n";
+      }
     }
     return css;
+  }
+
+  function getTileFontSizeByDigits(value) {
+    var n = Math.abs(parseInt(value, 10));
+    if (!isFinite(n)) return null;
+    var digits = String(n).length;
+    if (digits <= 2) return null;
+    if (digits === 3) return { desktop: "45px", mobile: "25px" };
+    if (digits === 4) return { desktop: "35px", mobile: "15px" };
+    return { desktop: "30px", mobile: "12px" };
   }
 
   function timerCss(theme) {
@@ -1986,6 +2002,13 @@
             // z-index adjustment for text not needed if we rely on stacking context of parent
             // But to be safe, treat children (text) as higher
             css += combinedSelector + " > * { position: relative; z-index: 2; }\n";
+        }
+
+        var fontSize = getTileFontSizeByDigits(val);
+        if (fontSize) {
+            var fontSizeSelector = tileSelector.replace(" .tile-inner", ":not(.selection-tile) .tile-inner");
+            css += fontSizeSelector + " { font-size: " + fontSize.desktop + " !important; }\n";
+            css += "@media screen and (max-width: 520px) { " + fontSizeSelector + " { font-size: " + fontSize.mobile + " !important; } }\n";
         }
       }
       return css;

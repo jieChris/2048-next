@@ -624,14 +624,6 @@ function shouldStartTimerAfterUndoRestore(manager, undoRestore) {
     : manager.timerStatus === 0;
 }
 
-function publishUndoAdapterMoveResult(manager, direction) {
-  manager.publishAdapterMoveResult({
-    reason: "undo",
-    direction: direction,
-    moved: true
-  });
-}
-
 function handleUndoMove(manager, direction) {
   if (!manager || direction != -1) return false;
   if (!canExecuteUndoMove(manager)) {
@@ -642,7 +634,6 @@ function handleUndoMove(manager, direction) {
   if (shouldStartTimerAfterUndoRestore(manager, undoRestore)) {
     manager.startTimer();
   }
-  publishUndoAdapterMoveResult(manager, direction);
   return true;
 }
 

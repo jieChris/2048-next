@@ -212,7 +212,7 @@ describe("core game settings storage", () => {
 
   it("reads saved payload from window.name map by resolved mode key", () => {
     const map = {
-      practice_legacy: { saved_at: 1, score: 64 },
+      practice: { saved_at: 1, score: 64 },
       classic_4x4_pow2_undo: { saved_at: 2, score: 128 }
     };
     const windowLike = {
@@ -227,7 +227,7 @@ describe("core game settings storage", () => {
       windowNameKey: "saved_game_state_window_name_v2",
       modeKey: "",
       currentModeKey: "classic_4x4_pow2_undo",
-      currentMode: "practice_legacy",
+      currentMode: "practice",
       defaultModeKey: "standard_4x4_pow2_no_undo"
     });
 
@@ -237,7 +237,7 @@ describe("core game settings storage", () => {
   it("writes saved payload into window.name map and supports deletion", () => {
     const existingMap = {
       standard_4x4_pow2_no_undo: { saved_at: 5, score: 32 },
-      practice_legacy: { saved_at: 7, score: 64 }
+      practice: { saved_at: 7, score: 64 }
     };
     const windowLike = {
       name:
@@ -271,7 +271,7 @@ describe("core game settings storage", () => {
     const deleteResult = writeSavedPayloadToWindowName({
       windowLike,
       windowNameKey: "saved_game_state_window_name_v2",
-      modeKey: "practice_legacy",
+      modeKey: "practice",
       currentModeKey: "",
       currentMode: "",
       defaultModeKey: "standard_4x4_pow2_no_undo",
@@ -281,7 +281,7 @@ describe("core game settings storage", () => {
     const deletedPayload = readSavedPayloadFromWindowName({
       windowLike,
       windowNameKey: "saved_game_state_window_name_v2",
-      modeKey: "practice_legacy",
+      modeKey: "practice",
       currentModeKey: "",
       currentMode: "",
       defaultModeKey: "standard_4x4_pow2_no_undo"
@@ -292,13 +292,13 @@ describe("core game settings storage", () => {
   it("resolves saved game state storage key with mode fallbacks", () => {
     expect(
       resolveSavedGameStateStorageKey({
-        modeKey: "practice_legacy",
+        modeKey: "practice",
         currentModeKey: "classic_4x4_pow2_undo",
         currentMode: "classic_4x4_pow2_undo",
         defaultModeKey: "standard_4x4_pow2_no_undo",
         keyPrefix: "saved_game_state_v2_"
       })
-    ).toBe("saved_game_state_v2_practice_legacy");
+    ).toBe("saved_game_state_v2_practice");
 
     expect(
       resolveSavedGameStateStorageKey({
@@ -348,7 +348,7 @@ describe("core game settings storage", () => {
   it("builds lite saved-game payload with payload-first values", () => {
     const payload = {
       saved_at: 123,
-      mode_key: "practice_legacy",
+      mode_key: "practice",
       board_width: 4,
       board_height: 4,
       ruleset: "pow2",
@@ -386,7 +386,7 @@ describe("core game settings storage", () => {
         [0, 0, 0, 0],
         [0, 0, 0, 0]
       ],
-      practice_restart_mode_config: { key: "practice_legacy", ruleset: "pow2" },
+      practice_restart_mode_config: { key: "practice", ruleset: "pow2" },
       reached_32k: true,
       capped_milestone_count: 3,
       combo_streak: 2,
@@ -417,7 +417,7 @@ describe("core game settings storage", () => {
     });
 
     expect(result).not.toBeNull();
-    expect(result?.mode_key).toBe("practice_legacy");
+    expect(result?.mode_key).toBe("practice");
     expect(result?.board).toEqual(payload.board);
     expect(result?.score).toBe(128);
     expect(result?.move_history).toEqual([]);

@@ -6,8 +6,6 @@
   var COPY_SUCCESS_MESSAGE = "回放代码已复制到剪贴板！";
   var COPY_FAILURE_MESSAGE = "自动复制失败，请手动从文本框复制。";
   var VERSE_DOWNLOAD_SUCCESS_MESSAGE = "v9 文本回放文件已导出。";
-  var RPL_DOWNLOAD_SUCCESS_MESSAGE = "v9 .rpl 回放文件已导出。";
-  var RPL_DOWNLOAD_FAILURE_MESSAGE = "v9 .rpl 导出失败，已回退为 v9 Base64 导出。";
 
   function isRecord(value) {
     return !!value && typeof value === "object";
@@ -63,7 +61,7 @@
   function triggerReplayFileDownload(input) {
     var source = toRecord(input);
     var blob = source.blob;
-    var filename = source.filename == null ? "replay.rpl" : String(source.filename);
+    var filename = source.filename == null ? "replay.txt" : String(source.filename);
     var documentLike = toRecord(source.documentLike);
     var createElement = asFunction(documentLike.createElement);
     var body = toRecord(documentLike.body);
@@ -259,30 +257,6 @@
       }
     }
 
-    var exportV9RplBlob = asFunction(manager.exportV9RplBlob);
-    if (exportV9RplBlob) {
-      try {
-        var exportPayload = toRecord(exportV9RplBlob.call(manager));
-        var fileDownloadResult = triggerReplayFileDownload({
-          windowLike: resolveWindowLike(source),
-          documentLike: source.documentLike,
-          blob: exportPayload.blob,
-          filename: exportPayload.filename
-        });
-        if (fileDownloadResult.downloaded) {
-          alertLike(RPL_DOWNLOAD_SUCCESS_MESSAGE);
-          return {
-            exported: true,
-            format: "v9-rpl",
-            filename: fileDownloadResult.filename
-          };
-        }
-      } catch (rplExportError) {
-        logError("v9 .rpl export failed", rplExportError);
-      }
-      alertLike(RPL_DOWNLOAD_FAILURE_MESSAGE);
-    }
-
     var serializeV9RplBase64 = asFunction(manager.serializeV9RplBase64);
     if (serializeV9RplBase64) {
       try {
@@ -308,7 +282,7 @@
         });
         return {
           exported: true,
-          format: "v9-rpl-base64",
+          format: "v9-base64",
           replay: v9ReplayBase64
         };
       } catch (v9ReplayBase64Error) {

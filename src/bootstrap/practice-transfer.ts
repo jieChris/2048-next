@@ -13,7 +13,7 @@ export interface PracticeTransferOptions {
 }
 
 export interface PracticeTransferModeConfig {
-  key: "practice_legacy";
+  key: "practice";
   label: "练习板（直通）";
   board_width: number;
   board_height: number;
@@ -382,7 +382,7 @@ export function buildPracticeModeConfigFromCurrent(
         ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
         : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
   const modeConfig: PracticeTransferModeConfig = {
-    key: "practice_legacy",
+      key: "practice",
     label: "练习板（直通）",
     board_width: width,
     board_height: height,

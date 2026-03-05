@@ -5,7 +5,8 @@
   <title>2048练习板</title>
 
   <link href="style/main.css?v=1771930000000" rel="stylesheet" type="text/css">
-  <link rel="shortcut icon" href="favicon.ico?v=42">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-1">
+  <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-1">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=42">
   <meta name="apple-mobile-web-app-capable" content="yes">
 
@@ -175,7 +176,7 @@
       }
   </style>
 </head>
-<body data-mode-id="practice_legacy" data-page="practice">
+<body data-mode-id="practice" data-page="practice">
   <div id="guide-overlay">
       <div id="guide-message">
           <span id="guide-arrow">↑</span>
@@ -189,7 +190,7 @@
         <div class="dashboard-box dashboard-stats">
             <div class="dashboard-stats-grid">
                 <div id="practice-stats-actions">
-                    <a class="top-action-btn" href="modes.html" title="模式选择">
+                    <a class="top-action-btn" href="modes.html" target="_blank" rel="noopener noreferrer" title="模式选择">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </a>
                     <a class="top-action-btn" id="top-settings-btn" title="设置">
@@ -198,7 +199,7 @@
                     <button id="practice-mobile-undo-btn" class="top-action-btn practice-mobile-undo-btn" type="button" aria-label="撤回" title="撤回">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
                     </button>
-                    <button id="timerbox-toggle-btn" class="top-action-btn timerbox-toggle-btn" type="button" aria-expanded="false" aria-label="展开计时器" title="展开计时器"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+                    <button id="timerbox-toggle-btn" class="top-action-btn timerbox-toggle-btn" type="button" aria-expanded="false" aria-label="&#23637;&#24320;&#35745;&#26102;&#22120;" title="&#23637;&#24320;&#35745;&#26102;&#22120;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
                 </div>
             </div>
         </div>
@@ -229,14 +230,14 @@
         </div>
     </div>
     <div class="heading">
-      <h1 class="title" style="float: left;"><a href="index.html" style="text-decoration: none; color: inherit; cursor: pointer;">2048</a></h1>
+      <h1 class="title" style="float: left;"><a href="index.html" style="text-decoration: none; color: inherit; cursor: pointer;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a></h1>
       <div class="scores-container" style="float: right;">
         <div class="score-container">0</div>
         <div class="best-container">0</div>
       </div>
       <div class="above-game" style="clear: both; padding-top: 15px;">
       <p class="game-intro">点击下方数字后点击棋盘，可自定义当前盘面。</p>
-      <a class="restart-button" title="新游戏">
+      <a class="restart-button" title="&#26032;&#28216;&#25103;" aria-label="&#26032;&#28216;&#25103;">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
       </a>
       </div>
@@ -332,7 +333,7 @@
         <div class="lower">
 	        <a class="keep-playing-button">继续游戏</a>
           <a class="undo-button" id="undo-btn-gameover">撤销</a>
-          <a class="retry-button">重试</a>
+          <a class="retry-button">新游戏</a>
         </div>
       </div>
 
@@ -427,8 +428,6 @@
   <script src="js/grid.js?v=1771589027738"></script>
   <script src="js/tile.js?v=1771589027738"></script>
   <script src="js/local_score_manager.js?v=1771589027738"></script>
-  
-  <script src="js/core_burnin_gate_runtime.js?v=1772006000000"></script>
   <script src="js/local_history_store.js?v=1772006000000"></script>
   <script src="js/core_rules_runtime.js?v=1771943000000"></script>
   <script src="js/core_mode_runtime.js?v=1772553000000"></script>
@@ -451,7 +450,6 @@
   <script src="js/core_undo_stack_entry_runtime.js?v=1771961000000"></script>
   <script src="js/core_replay_codec_runtime.js?v=1771962000000"></script>
   <script src="js/core_replay_v4_actions_runtime.js?v=1771963000000"></script>
-  <script src="js/core_replay_legacy_runtime.js?v=1771964000000"></script>
   <script src="js/core_replay_import_runtime.js?v=1771965000000"></script>
   <script src="js/core_replay_execution_runtime.js?v=1771966000000"></script>
   <script src="js/core_replay_dispatch_runtime.js?v=1771973000000"></script>
@@ -467,7 +465,7 @@
   <script src="js/core_game_manager_runtime_call_helpers_runtime.js?v=1772589000000"></script>
   <script src="js/core_game_manager_saved_state_helpers_runtime.js?v=1772589200000"></script>
   <script src="js/core_game_manager_runtime_accessor_helpers_runtime.js?v=1772589300000"></script>
-  <script src="js/core_game_manager_stats_ui_helpers_runtime.js?v=1772589400000"></script>
+  <script src="js/core_game_manager_stats_ui_helpers_runtime.js?v=1772618000000"></script>
   <script src="js/core_game_manager_move_input_helpers_runtime.js?v=1772589500000"></script>
   <script src="js/core_game_manager_stats_display_helpers_runtime.js?v=1772589600000"></script>
   <script src="js/core_game_manager_panel_timer_helpers_runtime.js?v=1772590000000"></script>
@@ -481,7 +479,7 @@
   <script src="js/core_game_manager_static_runtime.js?v=1772585000000"></script>
   <script src="js/core_game_manager_bindings_runtime.js?v=1772585000000"></script>
   <script src="js/game_manager.js?v=1772585000000"></script>
-  <script src="js/legacy_bootstrap_runtime.js?v=1772013000000"></script>
+  <script src="js/core_bootstrap_runtime.js?v=1772315000000"></script>
   <script src="js/core_mode_catalog_runtime.js?v=1772012000000"></script>
   <script src="js/core_practice_mode_runtime.js?v=1772011000000"></script>
   <script src="js/core_home_mode_runtime.js?v=1772112000000"></script>

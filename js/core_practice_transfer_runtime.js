@@ -262,7 +262,7 @@
           : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
 
     var modeConfig = {
-      key: "practice_legacy",
+      key: "practice",
       label: "练习板（直通）",
       board_width: width,
       board_height: height,

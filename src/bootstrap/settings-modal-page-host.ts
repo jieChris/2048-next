@@ -10,13 +10,9 @@ function asFunction<T extends (...args: never[]) => unknown>(value: unknown): T 
   return typeof value === "function" ? (value as T) : null;
 }
 
-type UnknownFn = () => unknown;
 const WIN_PROMPT_STORAGE_KEY = "settings_win_prompt_enabled_v1";
 const LEGACY_WIN_PROMPT_STORAGE_KEYS = ["settings_win_prompt_enabled", "win_prompt_enabled"];
 
-function resolvePositiveNumber(value: unknown, fallback: number): number {
-  return Number.isFinite(value) && Number(value) > 0 ? Number(value) : fallback;
-}
 
 function getElementById(documentLike: unknown, id: string): unknown {
   const getter = asFunction<(value: string) => unknown>(toRecord(documentLike).getElementById);
@@ -108,25 +104,6 @@ export interface SettingsModalActionResolvers {
   closeSettingsModal: () => unknown;
 }
 
-function resolveSyncMobileTimerboxUi(source: Record<string, unknown>): UnknownFn | null {
-  const direct = asFunction<UnknownFn>(source.syncMobileTimerboxUi);
-  if (direct) return direct;
-
-  const resolver = asFunction<() => unknown>(source.resolveSyncMobileTimerboxUi);
-  if (resolver) {
-    const resolved = resolver();
-    const callback = asFunction<UnknownFn>(resolved);
-    if (callback) return callback;
-  }
-
-  const windowLike = source.windowLike || null;
-  const syncFromWindow = asFunction<UnknownFn>(toRecord(windowLike).syncMobileTimerboxUI);
-  if (!syncFromWindow) return null;
-  return function (): unknown {
-    return syncFromWindow.call(windowLike);
-  };
-}
-
 export function createSettingsModalInitResolvers(input: {
   themeSettingsPageHostRuntime?: unknown;
   themeSettingsHostRuntime?: unknown;
@@ -143,23 +120,14 @@ export function createSettingsModalInitResolvers(input: {
 }): SettingsModalInitResolvers {
   const source = toRecord(input);
   const windowLike = source.windowLike || null;
-  const retryDelayMs = resolvePositiveNumber(source.retryDelayMs, 60);
-  const setTimeoutLike = asFunction<(callback: () => void, delay: number) => unknown>(
-    source.setTimeoutLike
-  );
   const themePageHostRuntime = toRecord(source.themeSettingsPageHostRuntime);
   const timerSettingsHostRuntime = toRecord(source.timerModuleSettingsHostRuntime);
-  const timerSettingsPageHostRuntime = toRecord(source.timerModuleSettingsPageHostRuntime);
   const applyThemeSettingsPageInit = asFunction<(payload: unknown) => unknown>(
     themePageHostRuntime.applyThemeSettingsPageInit
   );
   const applyLegacyUndoSettingsCleanup = asFunction<(payload: unknown) => unknown>(
     timerSettingsHostRuntime.applyLegacyUndoSettingsCleanup
   );
-  const applyTimerModuleSettingsPageInit = asFunction<(payload: unknown) => unknown>(
-    timerSettingsPageHostRuntime.applyTimerModuleSettingsPageInit
-  );
-
   function initThemeSettingsUI(): unknown {
     if (!applyThemeSettingsPageInit) return null;
     return applyThemeSettingsPageInit({
@@ -178,17 +146,32 @@ export function createSettingsModalInitResolvers(input: {
   }
 
   function initTimerModuleSettingsUI(): unknown {
-    if (!applyTimerModuleSettingsPageInit) return null;
-    return applyTimerModuleSettingsPageInit({
-      timerModuleSettingsHostRuntime: source.timerModuleSettingsHostRuntime,
-      timerModuleRuntime: source.timerModuleRuntime,
-      documentLike: source.documentLike,
-      windowLike,
-      retryDelayMs,
-      setTimeoutLike,
-      reinvokeInit: initTimerModuleSettingsUI,
-      syncMobileTimerboxUi: resolveSyncMobileTimerboxUi(source)
-    });
+    const toggle = getElementById(source.documentLike, "timer-module-view-toggle");
+    if (toggle) {
+      const closest = asFunction<(selector: string) => unknown>(toRecord(toggle).closest);
+      const row = closest ? closest.call(toggle, ".settings-row") : null;
+      const parentNode = toRecord(row).parentNode;
+      const removeChild = asFunction<(child: unknown) => unknown>(toRecord(parentNode).removeChild);
+      if (row && parentNode && removeChild) {
+        removeChild.call(parentNode, row);
+      } else {
+        const toggleStyle = toRecord(toRecord(toggle).style);
+        toggleStyle.display = "none";
+        toRecord(toggle).style = toggleStyle;
+      }
+    }
+
+    const note = getElementById(source.documentLike, "timer-module-view-note");
+    if (note) {
+      const noteStyle = toRecord(toRecord(note).style);
+      noteStyle.display = "none";
+      toRecord(note).style = noteStyle;
+    }
+
+    return {
+      removed: !!toggle,
+      disabled: true
+    };
   }
 
   function initWinPromptSettingsUI(): unknown {

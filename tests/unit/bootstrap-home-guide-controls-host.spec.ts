@@ -144,4 +144,66 @@ describe("bootstrap home guide controls host", () => {
       didSyncSettings: false
     });
   });
+
+  it("supports Esc exit and overlay click next-step", () => {
+    const prevBtn = createButton();
+    const nextBtn = createButton();
+    const skipBtn = createButton();
+    const overlayHandlers: Record<string, (payload: unknown) => void> = {};
+    const documentHandlers: Record<string, (payload: unknown) => void> = {};
+    const overlay = {
+      __homeGuideOverlayDismissBound: false,
+      addEventListener(name: string, handler: (payload: unknown) => void) {
+        overlayHandlers[name] = handler;
+      }
+    };
+    const finishHomeGuide = vi.fn();
+    const homeGuideState = { index: 0, active: true };
+    const showHomeGuideStep = vi.fn();
+
+    applyHomeGuideControls({
+      documentLike: {
+        getElementById(id: string) {
+          if (id === "home-guide-prev") return prevBtn;
+          if (id === "home-guide-next") return nextBtn;
+          if (id === "home-guide-skip") return skipBtn;
+          if (id === "home-guide-overlay") return overlay;
+          return null;
+        },
+        addEventListener(name: string, handler: (payload: unknown) => void) {
+          documentHandlers[name] = handler;
+        }
+      },
+      homeGuideRuntime: {
+        resolveHomeGuideBindingState(payload: { alreadyBound: boolean }) {
+          return {
+            shouldBind: !payload.alreadyBound,
+            boundValue: true
+          };
+        },
+        resolveHomeGuideControlAction(payload: { action: string }) {
+          if (payload.action === "next") {
+            return { nextStepIndex: 1, finishReason: "" };
+          }
+          return { nextStepIndex: 0, finishReason: "" };
+        },
+        resolveHomeGuideFinishState() {
+          return {
+            markSeen: false,
+            showDoneNotice: false
+          };
+        }
+      },
+      homeGuideState,
+      showHomeGuideStep,
+      finishHomeGuide
+    });
+
+    documentHandlers.keydown({ key: "Escape" });
+    expect(finishHomeGuide).toHaveBeenNthCalledWith(1, false, { showDoneNotice: false });
+
+    overlayHandlers.click({ target: overlay });
+    expect(showHomeGuideStep).toHaveBeenCalledWith(1);
+    expect(finishHomeGuide).toHaveBeenCalledTimes(1);
+  });
 });

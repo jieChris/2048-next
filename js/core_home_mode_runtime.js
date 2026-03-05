@@ -68,7 +68,7 @@
       defaultModeKey
     );
 
-    if (modeKey === "practice_legacy" && modeConfig) {
+    if (modeKey === "practice" && modeConfig) {
       var practiceRuntime = global.CorePracticeModeRuntime;
       if (
         practiceRuntime &&

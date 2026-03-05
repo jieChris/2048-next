@@ -58,7 +58,7 @@ function applyCornerStatBaseStyle(cornerEl) {
   cornerEl.style.background = "transparent";
   cornerEl.style.color = "#776e65";
   cornerEl.style.fontWeight = "bold";
-  cornerEl.style.fontSize = "27px";
+  cornerEl.style.fontSize = "20px";
   cornerEl.style.pointerEvents = "none";
 }
 

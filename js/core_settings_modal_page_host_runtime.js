@@ -147,17 +147,31 @@
     }
 
     function initTimerModuleSettingsUI() {
-      if (!applyTimerModuleSettingsPageInit) return null;
-      return applyTimerModuleSettingsPageInit({
-        timerModuleSettingsHostRuntime: source.timerModuleSettingsHostRuntime,
-        timerModuleRuntime: source.timerModuleRuntime,
-        documentLike: source.documentLike,
-        windowLike: windowLike,
-        retryDelayMs: retryDelayMs,
-        setTimeoutLike: setTimeoutLike,
-        reinvokeInit: initTimerModuleSettingsUI,
-        syncMobileTimerboxUi: resolveSyncMobileTimerboxUi(source)
-      });
+      var toggle = getElementById(source.documentLike, "timer-module-view-toggle");
+      if (toggle) {
+        var closest = asFunction(toRecord(toggle).closest);
+        var row = closest ? closest.call(toggle, ".settings-row") : null;
+        var parentNode = toRecord(row).parentNode;
+        if (row && parentNode && asFunction(parentNode.removeChild)) {
+          parentNode.removeChild(row);
+        } else {
+          var toggleStyle = toRecord(toRecord(toggle).style);
+          toggleStyle.display = "none";
+          toRecord(toggle).style = toggleStyle;
+        }
+      }
+
+      var note = getElementById(source.documentLike, "timer-module-view-note");
+      if (note) {
+        var noteStyle = toRecord(toRecord(note).style);
+        noteStyle.display = "none";
+        toRecord(note).style = noteStyle;
+      }
+
+      return {
+        removed: !!toggle,
+        disabled: true
+      };
     }
 
     function initWinPromptSettingsUI() {

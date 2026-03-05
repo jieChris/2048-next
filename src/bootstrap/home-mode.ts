@@ -77,7 +77,7 @@ export function resolveHomeModeSelection<T extends PracticeModeConfigLike>(
     defaultModeKey
   ) as T | null;
 
-  if (modeKey === "practice_legacy" && modeConfig) {
+  if (modeKey === "practice" && modeConfig) {
     modeConfig = buildPracticeModeConfig(
       modeConfig,
       parsePracticeRuleset(options.searchLike || "")

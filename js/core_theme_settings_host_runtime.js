@@ -125,6 +125,11 @@
     optionRecord.dataset.value = value;
   }
 
+  function resolveThemeOptionFromEvent(eventLike, fallbackOption) {
+    var eventRecord = toRecord(eventLike);
+    return eventRecord.currentTarget || fallbackOption;
+  }
+
   function resolveThemeOptionCount(container) {
     return querySelectorAll(container, ".custom-option").length;
   }
@@ -374,9 +379,10 @@
         setThemeOptionDatasetValue(option, resolveText(theme.id));
         bindListener(option, "click", function (eventLike) {
           stopPropagation(eventLike);
+          var optionLike = resolveThemeOptionFromEvent(eventLike, option);
           var value = resolveText(
             resolveThemeOptionValue.call(themeSettingsRuntime, {
-              optionLike: option
+              optionLike: optionLike
             })
           );
           confirmedTheme = value;
@@ -384,10 +390,11 @@
           applyPreviewTheme(value);
           closeDropdown();
         });
-        bindListener(option, "mouseenter", function () {
+        bindListener(option, "mouseenter", function (eventLike) {
+          var optionLike = resolveThemeOptionFromEvent(eventLike, option);
           var value = resolveText(
             resolveThemeOptionValue.call(themeSettingsRuntime, {
-              optionLike: option
+              optionLike: optionLike
             })
           );
           applyPreviewTheme(value);

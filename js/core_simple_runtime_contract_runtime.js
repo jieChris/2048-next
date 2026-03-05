@@ -10,7 +10,7 @@
 
   function resolveSimpleBootstrapRuntime(windowLike) {
     var source = windowLike || {};
-    var runtime = source.CoreBootstrapRuntime || source.LegacyBootstrapRuntime;
+    var runtime = source.CoreBootstrapRuntime;
     if (!runtime || typeof runtime !== "object" || !hasFunction(runtime, "startGameOnAnimationFrame")) {
       throw new Error("CoreBootstrapRuntime.startGameOnAnimationFrame is required");
     }

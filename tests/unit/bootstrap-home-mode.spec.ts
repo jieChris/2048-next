@@ -17,7 +17,7 @@ function createCatalog(items: Record<string, Record<string, unknown>>) {
 
 describe("bootstrap home mode", () => {
   it("resolves home mode key from body data attribute", () => {
-    expect(resolveHomeModeKey("practice_legacy")).toBe("practice_legacy");
+    expect(resolveHomeModeKey("practice")).toBe("practice");
     expect(resolveHomeModeKey("  capped_4x4_pow2_no_undo  ")).toBe("capped_4x4_pow2_no_undo");
     expect(resolveHomeModeKey("")).toBe(DEFAULT_HOME_MODE_KEY);
     expect(resolveHomeModeKey(null, "fallback_mode")).toBe("fallback_mode");
@@ -42,12 +42,12 @@ describe("bootstrap home mode", () => {
 
   it("applies fibonacci practice ruleset when in practice mode", () => {
     const result = resolveHomeModeSelection({
-      dataModeId: "practice_legacy",
+      dataModeId: "practice",
       defaultModeKey: DEFAULT_HOME_MODE_KEY,
       searchLike: "?practice_ruleset=fibonacci",
       modeCatalog: createCatalog({
-        practice_legacy: {
-          key: "practice_legacy",
+        practice: {
+          key: "practice",
           ruleset: "pow2",
           mode_family: "pow2",
           spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }]
@@ -55,7 +55,7 @@ describe("bootstrap home mode", () => {
       })
     });
 
-    expect(result.modeKey).toBe("practice_legacy");
+    expect(result.modeKey).toBe("practice");
     expect(result.modeConfig?.ruleset).toBe("fibonacci");
     expect(result.modeConfig?.mode_family).toBe("fibonacci");
     expect(result.modeConfig?.spawn_table).toEqual([
@@ -90,22 +90,22 @@ describe("bootstrap home mode", () => {
     const result = resolveHomeModeSelectionFromContext({
       bodyLike: {
         getAttribute(name: string) {
-          return name === "data-mode-id" ? "practice_legacy" : null;
+          return name === "data-mode-id" ? "practice" : null;
         }
       },
       locationLike: {
         search: "?practice_ruleset=fibonacci"
       },
       modeCatalog: createCatalog({
-        practice_legacy: {
-          key: "practice_legacy",
+        practice: {
+          key: "practice",
           ruleset: "pow2",
           mode_family: "pow2",
           spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }]
         }
       })
     });
-    expect(result.modeKey).toBe("practice_legacy");
+    expect(result.modeKey).toBe("practice");
     expect(result.modeConfig?.ruleset).toBe("fibonacci");
 
     const fallback = resolveHomeModeSelectionFromContext({

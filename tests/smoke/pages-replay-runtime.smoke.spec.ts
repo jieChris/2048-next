@@ -513,7 +513,124 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.replayScoreKey).toBe("bestScoreByMode:replay_view");
   });
 
-  test("replay ui delegates guide storage decisions to runtime helper", async ({ page }) => {
+  test("replay page loads local history replay via local_history_id parameter", async ({ page }) => {
+    const replayId = "lh_replay_local_param";
+    await page.addInitScript((id: string) => {
+      const records = [
+        {
+          id,
+          mode_key: "standard_4x4_pow2_no_undo",
+          replay_string: "replay_(!äfC",
+          ended_at: new Date().toISOString(),
+          saved_at: new Date().toISOString()
+        }
+      ];
+      window.localStorage.setItem("local_game_history_v1", JSON.stringify(records));
+      (window as any).__replayLoadAlerts = [];
+      window.alert = function (message?: unknown) {
+        (window as any).__replayLoadAlerts.push(String(message || ""));
+      };
+    }, replayId);
+
+    const response = await page.goto("/replay.html?local_history_id=" + replayId, {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const titleNode = document.querySelector(".heading .title");
+      return {
+        title: titleNode ? String(titleNode.textContent || "") : "",
+        alertCount: Number(((window as any).__replayLoadAlerts || []).length)
+      };
+    });
+
+    expect(snapshot.alertCount).toBe(0);
+    expect(snapshot.title).toContain("本地记录");
+  });
+
+  test("replay page keeps backward compatibility for legacy id parameter", async ({ page }) => {
+    const replayId = "lh_replay_legacy_param";
+    await page.addInitScript((id: string) => {
+      const records = [
+        {
+          id,
+          mode_key: "standard_4x4_pow2_no_undo",
+          replay_string: "replay_(!äfC",
+          ended_at: new Date().toISOString(),
+          saved_at: new Date().toISOString()
+        }
+      ];
+      window.localStorage.setItem("local_game_history_v1", JSON.stringify(records));
+      (window as any).__replayLoadAlerts = [];
+      window.alert = function (message?: unknown) {
+        (window as any).__replayLoadAlerts.push(String(message || ""));
+      };
+    }, replayId);
+
+    const response = await page.goto("/replay.html?id=" + replayId, {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      const titleNode = document.querySelector(".heading .title");
+      return {
+        title: titleNode ? String(titleNode.textContent || "") : "",
+        alertCount: Number(((window as any).__replayLoadAlerts || []).length)
+      };
+    });
+
+    expect(snapshot.alertCount).toBe(0);
+    expect(snapshot.title).toContain("本地记录");
+  });
+
+  test("replay page reports explicit error when local history replay code is missing", async ({
+    page
+  }) => {
+    const replayId = "lh_replay_missing_code";
+    await page.addInitScript((id: string) => {
+      const records = [
+        {
+          id,
+          mode_key: "standard_4x4_pow2_no_undo",
+          replay_string: "",
+          ended_at: new Date().toISOString(),
+          saved_at: new Date().toISOString()
+        }
+      ];
+      window.localStorage.setItem("local_game_history_v1", JSON.stringify(records));
+      (window as any).__replayLoadAlerts = [];
+      window.alert = function (message?: unknown) {
+        (window as any).__replayLoadAlerts.push(String(message || ""));
+      };
+    }, replayId);
+
+    const response = await page.goto("/replay.html?local_history_id=" + replayId, {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(250);
+
+    const snapshot = await page.evaluate(() => {
+      return {
+        alerts: ((window as any).__replayLoadAlerts || []).map((item: unknown) => String(item || ""))
+      };
+    });
+
+    expect(snapshot.alerts.length).toBeGreaterThan(0);
+    expect(snapshot.alerts[0]).toContain("加载本地回放失败");
+  });
+
+  test("replay ui no longer includes onboarding guide storage runtime", async ({ page }) => {
     await page.addInitScript(() => {
       try {
         window.localStorage.removeItem("replay_guide_shown_v1");
@@ -570,7 +687,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof runtime.markReplayGuideSeenFromContext !== "function"
       ) {
         return {
-          hasRuntime: false
+          hasRuntime: false,
+          hasOverlay: false,
+          showCalls: Number((window as any).__replayGuideShowCalls || 0),
+          markCalls: Number((window as any).__replayGuideMarkCalls || 0),
+          initialDisplay: "",
+          finalDisplay: ""
         };
       }
 
@@ -594,11 +716,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
 
-    expect(snapshot.hasRuntime).toBe(true);
-    expect(snapshot.hasOverlay).toBe(true);
-    expect(snapshot.showCalls).toBeGreaterThan(0);
-    expect(snapshot.markCalls).toBeGreaterThan(0);
-    expect(snapshot.initialDisplay).toBe("block");
-    expect(snapshot.finalDisplay).toBe("none");
+    expect(snapshot.hasRuntime).toBe(false);
+    expect(snapshot.hasOverlay).toBe(false);
+    expect(snapshot.showCalls).toBe(0);
+    expect(snapshot.markCalls).toBe(0);
+    expect(snapshot.initialDisplay).toBe("");
+    expect(snapshot.finalDisplay).toBe("");
   });
 });

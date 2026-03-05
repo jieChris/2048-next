@@ -83,11 +83,11 @@ describe("bootstrap undo action", () => {
   it("resolves undo mode id by priority", () => {
     expect(
       resolveUndoModeId({
-        modeId: "practice_legacy",
+        modeId: "practice",
         manager: { mode: "fallback_mode" },
         globalModeConfig: { key: "global_mode" }
       })
-    ).toBe("practice_legacy");
+    ).toBe("practice");
 
     expect(
       resolveUndoModeId({

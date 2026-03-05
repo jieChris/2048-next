@@ -94,10 +94,10 @@ function createFallbackCapped64NoUndoModeConfig() {
   );
 }
 
-function createFallbackPracticeLegacyModeConfig() {
+function createFallbackPracticeModeConfig() {
   return createFallbackPow2ModeConfig(
-    "practice_legacy",
-    "练习板（Legacy）",
+    "practice",
+    "练习板（直通）",
     4,
     4,
     true,
@@ -127,7 +127,7 @@ function createFallbackPow2CappedCoreModeConfigs() {
 
 function createFallbackPow2PracticeCoreModeConfigs() {
   return {
-    practice_legacy: createFallbackPracticeLegacyModeConfig()
+    practice: createFallbackPracticeModeConfig()
   };
 }
 
@@ -218,25 +218,6 @@ function createGameManagerFallbackModeConfigs(defaultModeConfig) {
   return mergeFallbackModeConfigMaps(baseConfigs, fibConfigs);
 }
 
-function createGameManagerLegacyModeByKey() {
-  return {
-  standard_4x4_pow2_no_undo: "classic",
-  classic_4x4_pow2_undo: "classic",
-  capped_4x4_pow2_no_undo: "capped",
-  practice_legacy: "practice"
-};
-}
-
-function createGameManagerLegacyAliasToModeKey() {
-  return {
-  classic: "classic_4x4_pow2_undo",
-  capped: "capped_4x4_pow2_no_undo",
-  practice: "practice_legacy",
-  classic_no_undo: "standard_4x4_pow2_no_undo",
-  classic_undo_only: "classic_4x4_pow2_undo"
-};
-}
-
 function createGameManagerTimerSlotIds() {
   return [16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
 
@@ -256,7 +237,7 @@ function createGameManagerReplayV4ModeCodeToKey() {
     S: "standard_4x4_pow2_no_undo",
     C: "classic_4x4_pow2_undo",
     K: "capped_4x4_pow2_no_undo",
-    P: "practice_legacy"
+    P: "practice"
   };
 }
 
@@ -265,12 +246,8 @@ function createGameManagerReplayV4ModeKeyToCode() {
     standard_4x4_pow2_no_undo: "S",
     classic_4x4_pow2_undo: "C",
     capped_4x4_pow2_no_undo: "K",
-    practice_legacy: "P"
+    practice: "P"
   };
-}
-
-function createGameManagerLegacyReplayV1ReverseMapping() {
-  return { U: 0, R: 1, D: 2, L: 3, Z: -1 };
 }
 
 function applyGameManagerReplayStatics() {
@@ -285,10 +262,6 @@ function applyGameManagerReplayStatics() {
   GameManager.REPLAY_V9_RPL_SENTINEL = [0, 88, 666666666, 233333333, 314159265, 987654321];
   GameManager.REPLAY_V4_MODE_CODE_TO_KEY = createGameManagerReplayV4ModeCodeToKey();
   GameManager.REPLAY_V4_MODE_KEY_TO_CODE = createGameManagerReplayV4ModeKeyToCode();
-  GameManager.LEGACY_REPLAY_V1_PREFIX = "REPLAY_v1_";
-  GameManager.LEGACY_REPLAY_V2_PREFIX = "REPLAY_v2_";
-  GameManager.LEGACY_REPLAY_V2S_PREFIX = "REPLAY_v2S_";
-  GameManager.LEGACY_REPLAY_V1_REVERSE_MAPPING = createGameManagerLegacyReplayV1ReverseMapping();
 }
 
 function applyGameManagerStorageStatics() {
@@ -305,8 +278,6 @@ function applyGameManagerModeStatics() {
   GameManager.DEFAULT_MODE_KEY = "standard_4x4_pow2_no_undo";
   GameManager.DEFAULT_MODE_CONFIG = createGameManagerDefaultModeConfig();
   GameManager.FALLBACK_MODE_CONFIGS = createGameManagerFallbackModeConfigs(GameManager.DEFAULT_MODE_CONFIG);
-  GameManager.LEGACY_MODE_BY_KEY = createGameManagerLegacyModeByKey();
-  GameManager.LEGACY_ALIAS_TO_MODE_KEY = createGameManagerLegacyAliasToModeKey();
   GameManager.TIMER_SLOT_IDS = createGameManagerTimerSlotIds();
 }
 

@@ -344,4 +344,91 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.doneToastVisible).toBe(true);
   });
 
+  test("home guide supports Escape shortcut exit on index page", async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem("home_guide_seen_v1", "1");
+      } catch (_err) {}
+    });
+    const response = await page.goto("/index.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+
+    const started = await page.evaluate(() => {
+      const openSettingsModal = (window as any).openSettingsModal;
+      if (typeof openSettingsModal !== "function") return false;
+      openSettingsModal();
+      const toggle = document.getElementById("home-guide-toggle") as HTMLInputElement | null;
+      if (!toggle) return false;
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event("change", { bubbles: true }));
+      const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
+      return !!(overlay && overlay.style.display !== "none");
+    });
+    expect(started).toBe(true);
+
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(80);
+    const overlayDisplay = await page.evaluate(() => {
+      const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
+      return overlay ? String(overlay.style.display || "") : "";
+    });
+    expect(overlayDisplay).toBe("none");
+  });
+
+  test("home guide supports overlay click to advance step on index page", async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem("home_guide_seen_v1", "1");
+      } catch (_err) {}
+    });
+    const response = await page.goto("/index.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+
+    const started = await page.evaluate(() => {
+      const openSettingsModal = (window as any).openSettingsModal;
+      if (typeof openSettingsModal !== "function") return false;
+      openSettingsModal();
+      const toggle = document.getElementById("home-guide-toggle") as HTMLInputElement | null;
+      if (!toggle) return false;
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event("change", { bubbles: true }));
+      const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
+      return !!(overlay && overlay.style.display !== "none");
+    });
+    expect(started).toBe(true);
+
+    const before = await page.evaluate(() => {
+      const step = document.getElementById("home-guide-step");
+      const title = document.getElementById("home-guide-title");
+      return {
+        stepText: step ? String(step.textContent || "") : "",
+        titleText: title ? String(title.textContent || "") : ""
+      };
+    });
+
+    await page.click("#home-guide-overlay", { position: { x: 10, y: 10 } });
+    await page.waitForTimeout(80);
+    const after = await page.evaluate(() => {
+      const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
+      const step = document.getElementById("home-guide-step");
+      const title = document.getElementById("home-guide-title");
+      return {
+        overlayDisplay: overlay ? String(overlay.style.display || "") : "",
+        stepText: step ? String(step.textContent || "") : "",
+        titleText: title ? String(title.textContent || "") : ""
+      };
+    });
+    expect(after.overlayDisplay).not.toBe("none");
+    expect(after.stepText).not.toBe(before.stepText);
+    expect(after.titleText.length).toBeGreaterThan(0);
+  });
+
 });

@@ -114,7 +114,53 @@
       finishHomeGuide(resolveBoolean(finishState.markSeen), {
         showDoneNotice: resolveBoolean(finishState.showDoneNotice)
       });
-    });
+      });
+  }
+
+  function bindEmergencyExitControls(input) {
+    var source = toRecord(input);
+    var homeGuideRuntime = toRecord(source.homeGuideRuntime);
+    var resolveHomeGuideControlAction = asFunction(homeGuideRuntime.resolveHomeGuideControlAction);
+    var showHomeGuideStep = asFunction(source.showHomeGuideStep);
+    var finishHomeGuide = asFunction(source.finishHomeGuide);
+    if (!finishHomeGuide) return;
+
+    var documentRecord = toRecord(source.documentLike);
+    if (
+      !resolveBoolean(documentRecord.__homeGuideEscapeBound) &&
+      bindListener(source.documentLike, "keydown", function (eventLike) {
+        var key = String(toRecord(eventLike).key || "");
+        if (key !== "Escape" && key !== "Esc") return;
+        if (!resolveBoolean(toRecord(source.homeGuideState).active)) return;
+        finishHomeGuide(false, { showDoneNotice: false });
+      })
+    ) {
+      documentRecord.__homeGuideEscapeBound = true;
+    }
+
+    var overlay = getElementById(source.documentLike, "home-guide-overlay");
+    var overlayRecord = toRecord(overlay);
+    if (
+      !resolveBoolean(overlayRecord.__homeGuideOverlayDismissBound) &&
+      bindListener(overlay, "click", function (eventLike) {
+        var eventRecord = toRecord(eventLike);
+        if (eventRecord.target !== overlay) return;
+        if (!resolveBoolean(toRecord(source.homeGuideState).active)) return;
+        if (!showHomeGuideStep || !resolveHomeGuideControlAction) {
+          finishHomeGuide(false, { showDoneNotice: false });
+          return;
+        }
+        var actionState = toRecord(
+          resolveHomeGuideControlAction({
+            action: "next",
+            stepIndex: resolveNumber(toRecord(source.homeGuideState).index, 0)
+          })
+        );
+        showHomeGuideStep(resolveNumber(actionState.nextStepIndex, 0));
+      })
+    ) {
+      overlayRecord.__homeGuideOverlayDismissBound = true;
+    }
   }
 
   function applyHomeGuideControls(input) {
@@ -166,6 +212,14 @@
     ) {
       boundControlCount += 1;
     }
+
+    bindEmergencyExitControls({
+      documentLike: source.documentLike,
+      homeGuideRuntime: source.homeGuideRuntime,
+      homeGuideState: source.homeGuideState,
+      showHomeGuideStep: showHomeGuideStep,
+      finishHomeGuide: source.finishHomeGuide
+    });
 
     showHomeGuideStep(0);
 

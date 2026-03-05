@@ -229,7 +229,7 @@ function getActualSecondaryRate(manager) {
 
 function finalizeActuatePersistence(manager) {
   if (!manager) return;
-  var shouldFinalizeAsTerminated = manager.modeKey !== "practice_legacy" && isSessionTerminated(manager);
+  var shouldFinalizeAsTerminated = manager.modeKey !== "practice" && isSessionTerminated(manager);
   if (shouldFinalizeAsTerminated) {
     manager.clearSavedGameState(manager.modeKey);
     manager.tryAutoSubmitOnGameOver();

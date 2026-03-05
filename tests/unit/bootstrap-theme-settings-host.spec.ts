@@ -258,9 +258,20 @@ describe("bootstrap theme settings host", () => {
     expect((harness.customSelect.classList as ReturnType<typeof createClassList>).contains("open")).toBe(false);
 
     const secondOption = harness.optionNodes[1];
+    const firstOption = harness.optionNodes[0];
+    const firstHandlers = (firstOption.__handlers || {}) as Record<string, (payload?: unknown) => void>;
     const secondHandlers = (secondOption.__handlers || {}) as Record<string, (payload?: unknown) => void>;
+    firstHandlers.click({ stopPropagation: vi.fn(), currentTarget: firstOption });
+    expect(harness.themeManager.applyTheme).toHaveBeenLastCalledWith("classic");
+
+    firstHandlers.mouseenter({ currentTarget: firstOption });
+    expect(String(harness.styleNodeRef()?.textContent || "")).toContain("classic");
+
+    secondHandlers.mouseenter({ currentTarget: secondOption });
+    expect(String(harness.styleNodeRef()?.textContent || "")).toContain("mint");
+
     const stopClick = vi.fn();
-    secondHandlers.click({ stopPropagation: stopClick });
+    secondHandlers.click({ stopPropagation: stopClick, currentTarget: secondOption });
     expect(stopClick).toHaveBeenCalledTimes(1);
     expect(harness.themeManager.applyTheme).toHaveBeenCalledWith("mint");
     expect(String(harness.styleNodeRef()?.textContent || "")).toContain("mint");

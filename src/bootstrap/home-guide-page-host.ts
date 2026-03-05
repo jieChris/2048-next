@@ -388,6 +388,7 @@ export function createHomeGuidePageResolvers(input: {
       markSeen,
       options: options || {},
       clearHomeGuideHighlight,
+      documentLike,
       storageRuntime: source.storageRuntime,
       windowLike,
       seenKey: source.seenKey,
@@ -398,23 +399,29 @@ export function createHomeGuidePageResolvers(input: {
 
   function showHomeGuideStep(index?: unknown): unknown {
     if (!applyHomeGuideStepOrchestration) return null;
-    return applyHomeGuideStepOrchestration({
-      index,
-      maxAdvanceLoops: source.maxAdvanceLoops,
-      stepFlowHostRuntime: source.homeGuideStepFlowHostRuntime,
-      stepViewHostRuntime: source.homeGuideStepViewHostRuntime,
-      documentLike,
-      windowLike,
-      homeGuideRuntime: source.homeGuideRuntime,
-      homeGuideState,
-      mobileViewportRuntime: source.mobileViewportRuntime,
-      mobileUiMaxWidth,
-      isElementVisibleForGuide,
-      clearHomeGuideHighlight,
-      elevateHomeGuideTarget,
-      finishHomeGuide,
-      positionHomeGuidePanel
-    });
+    const orchestrationResult = toRecord(
+      applyHomeGuideStepOrchestration({
+        index,
+        maxAdvanceLoops: source.maxAdvanceLoops,
+        stepFlowHostRuntime: source.homeGuideStepFlowHostRuntime,
+        stepViewHostRuntime: source.homeGuideStepViewHostRuntime,
+        documentLike,
+        windowLike,
+        homeGuideRuntime: source.homeGuideRuntime,
+        homeGuideState,
+        mobileViewportRuntime: source.mobileViewportRuntime,
+        mobileUiMaxWidth,
+        isElementVisibleForGuide,
+        clearHomeGuideHighlight,
+        elevateHomeGuideTarget,
+        finishHomeGuide,
+        positionHomeGuidePanel
+      })
+    );
+    if (!!orchestrationResult.didAbort || !!orchestrationResult.didHitAdvanceLimit) {
+      finishHomeGuide(false, { showDoneNotice: false });
+    }
+    return orchestrationResult;
   }
 
   function startHomeGuide(options?: unknown): unknown {

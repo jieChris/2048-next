@@ -4,7 +4,7 @@ function restartGame(manager) {
   manager.actuator.continue();
   manager.undoStack = [];
   manager.clearSavedGameState(manager.modeKey);
-  if (manager.modeKey === "practice_legacy" && manager.practiceRestartBoardMatrix) {
+  if (manager.modeKey === "practice" && manager.practiceRestartBoardMatrix) {
     restartWithBoard(
       manager,
       manager.practiceRestartBoardMatrix,
@@ -36,7 +36,7 @@ function createRestartWithBoardSetupArgs(modeConfig, normalizedOptions) {
 
 function shouldPersistPracticeRestartBase(manager, normalizedOptions) {
   if (!manager) return false;
-  if (manager.modeKey !== "practice_legacy") return false;
+  if (manager.modeKey !== "practice") return false;
   if (!(normalizedOptions.setPracticeRestartBase || normalizedOptions.preservePracticeRestartBase)) return false;
   return Array.isArray(manager.initialBoardMatrix) && manager.initialBoardMatrix.length === manager.height;
 }
@@ -92,11 +92,18 @@ function resolveSetupChallengeId(manager, normalizedOptions) {
   return challengeId;
 }
 
+function resolveReplayModeTagFromModeKey(modeKey, fallbackMode) {
+  var key = typeof modeKey === "string" && modeKey ? modeKey : fallbackMode || "";
+  if (key && key.indexOf("capped") !== -1) return "capped";
+  if (key && key.indexOf("practice") !== -1) return "practice";
+  return "classic";
+}
+
 function initializeSetupSessionReplaySnapshot(manager) {
   if (!manager) return;
   manager.sessionReplayV3 = {
     v: 3,
-    mode: manager.getLegacyModeFromModeKey(manager.modeKey || manager.mode),
+    mode: resolveReplayModeTagFromModeKey(manager.modeKey, manager.mode),
     mode_key: manager.modeKey,
     board_width: manager.width,
     board_height: manager.height,
@@ -132,12 +139,6 @@ function resetSetupTimerAndInputState(manager) {
   manager.lastMoveInputAt = 0;
 }
 
-function createAdapterParitySessionId(timestamp) {
-  var base = Number.isFinite(timestamp) ? Number(timestamp) : Date.now();
-  var randomChunk = Math.random().toString(36).slice(2, 10);
-  return "aps_" + String(base.toString(36)) + "_" + randomChunk;
-}
-
 function resetSetupRuntimeState(manager) {
   if (!manager) return;
   resetSetupReplayAndSpawnState(manager);
@@ -146,7 +147,6 @@ function resetSetupRuntimeState(manager) {
   manager.cappedMilestoneCount = 0;
   resetSetupTimerAndInputState(manager);
   manager.sessionStartedAt = Date.now();
-  manager.adapterParitySessionId = createAdapterParitySessionId(manager.sessionStartedAt);
   manager.hasGameStarted = false;
 }
 
