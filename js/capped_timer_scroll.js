@@ -161,12 +161,6 @@
     for (i = 0; i < rows.length; i++) {
       var row = rows[i];
       if (!isRowActive(row)) {
-        if (row && row.style && row.style.display === "none") {
-          if (shouldPreserveHiddenRow(row)) {
-            continue;
-          }
-          row.style.display = "";
-        }
         if (row && typeof row.removeAttribute === "function") {
           row.removeAttribute("data-scroll-hidden");
         }

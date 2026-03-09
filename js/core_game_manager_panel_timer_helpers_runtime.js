@@ -399,6 +399,9 @@ function setTimerRowVisibleState(manager, value, visible, keepSpace) {
   if (!manager) return;
   var row = manager.getTimerRowEl(value);
   if (!row) return;
+  if (row && typeof row.removeAttribute === "function") {
+    row.removeAttribute("data-scroll-hidden");
+  }
   row.style.display = "block";
   if (visible) {
     row.style.visibility = "visible";
@@ -606,3 +609,4 @@ function setCapped64RowVisible(manager, value, visible) {
 function isProgressiveCapped64UnlockValue(value) {
   return value === 16 || value === 32 || value === 64;
 }
+
