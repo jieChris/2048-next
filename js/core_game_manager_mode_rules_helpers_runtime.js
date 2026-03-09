@@ -498,16 +498,14 @@ function applyCappedAndWinMergeEffects(result, value, cappedMode, hasCappedTarge
 function applyTimerMilestoneMergeEffects(result, value, reached32k) {
   if (!result) return;
   if (value === 8192) {
-    result.timerIdsToStamp.push(reached32k ? "timer8192-sub" : "timer8192");
+    result.timerIdsToStamp.push("timer8192");
   }
   if (value === 16384) {
-    result.timerIdsToStamp.push(reached32k ? "timer16384-sub" : "timer16384");
+    result.timerIdsToStamp.push("timer16384");
   }
   if (value === 32768) {
     result.shouldSetReached32k = true;
     result.timerIdsToStamp.push("timer32768");
-    result.showSubTimerContainer = true;
-    result.hideTimerRows = [16, 32];
   }
 }
 function resolveMergeEffectsFallback(currentManager, mergedValue, cappedState) {
