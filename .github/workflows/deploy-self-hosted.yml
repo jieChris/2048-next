@@ -62,6 +62,7 @@ jobs:
             undo_2048.html \
             capped_2048.html \
             Practice_board.html \
+            PKU2048.html \
             js \
             style \
             images \
