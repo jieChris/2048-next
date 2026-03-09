@@ -825,6 +825,28 @@
         buttonHoverText: "#f2d378"
       }
     }),
+    yanyuan: makeTheme("yanyuan", "燕园秋色", [
+      "#f7f2ea", "#efe4d7", "#e6d1bf", "#dcb49b",
+      "#cb9073", "#b76854", "#a34246", "#8f233d",
+      "#9f5c34", "#b67930", "#cb9638", "#ddb055",
+      "#b37a34", "#81343a", "#5d1f31", "#3f1523"
+    ], {
+      lightTextFrom: 4,
+      gradient: false,
+      neon: false,
+      timer: {
+        panelBg: "#8f233d",
+        panelText: "#f8f3eb",
+        panelLabel: "#e5c98b",
+        cellBg: "#f0e4d8",
+        cellText: "#6e2736",
+        cellShadow: "0 0 0 1px rgba(143,35,61,0.12) inset",
+        buttonBg: "#8f233d",
+        buttonText: "#fff8ef",
+        buttonHoverBg: "#a34246",
+        buttonHoverText: "#fff8ef"
+      }
+    }),
     horse_year: makeTheme("horse_year", "马年大吉", [
       "#4f3b36", "#633c3c", "#672422", "#822422",
       "#9c2220", "#b71d1d", "#672422", "#822422",
@@ -1033,6 +1055,21 @@
       css += ".mode-hub-btn { color: #f9f6f2 !important; }\n";
       css += ".mode-hub-btn:hover { color: #f9f6f2 !important; }\n";
       css += ".top-action-btn { background: #8f7a66 !important; color: #f9f6f2 !important; border-radius: 3px !important; box-shadow: none !important; }\n";
+    }
+    if (theme.id === "yanyuan") {
+      css += "html,body{background:#f8f3ec !important;color:#6d564d !important;}\n";
+      css += "body{background-image:radial-gradient(circle at 18% 10%, rgba(143,35,61,0.08), transparent 28%),linear-gradient(180deg,#fbf7f1,#f3eadf) !important;}\n";
+      css += ".game-container{background:#9a867d !important;border-radius:8px !important;box-shadow:0 10px 24px rgba(96,63,52,0.16) !important;}\n";
+      css += ".grid-cell{background:rgba(249,240,231,0.34) !important;border-radius:4px !important;}\n";
+      css += "h1.title{color:#7f2039 !important;font-weight:700 !important;letter-spacing:0.02em;}\n";
+      css += "p,.game-intro,.game-explanation{color:#7f6a62 !important;}\n";
+      css += ".score-container,.best-container{background:#8f233d !important;color:#fff8ef !important;box-shadow:0 8px 18px rgba(143,35,61,0.14) !important;}\n";
+      css += ".score-container:after,.best-container:after{color:#e9cfb0 !important;}\n";
+      css += ".restart-button,.top-action-btn,.replay-button,.replay-modal-actions .replay-button,.replay-control-btn,.game-container .game-message a,.mode-hub-btn{background:#8f233d !important;color:#fff8ef !important;}\n";
+      css += ".restart-button:hover,.top-action-btn:hover,.replay-button:hover,.replay-modal-actions .replay-button:hover,.replay-control-btn:hover,.game-container .game-message a:hover,.mode-hub-btn:hover{background:#a34246 !important;color:#fff8ef !important;}\n";
+      css += ".top-action-btn svg,.restart-button svg{stroke:#fff8ef !important;}\n";
+      css += "a{color:#8f233d !important;}\n";
+      css += "a:hover{color:#6e2736 !important;}\n";
     }
     if (theme.neon) {
       css += "@keyframes themeNeonPulse{0%{filter:drop-shadow(0 0 4px rgba(255,255,255,0.24));}50%{filter:drop-shadow(0 0 14px rgba(255,255,255,0.95));}100%{filter:drop-shadow(0 0 4px rgba(255,255,255,0.24));}}\n";
@@ -1674,6 +1711,13 @@
     } else {
          css += tileCssForValues(theme, POW2_TILE_VALUES, "body:not([data-ruleset=\"fibonacci\"])");
          css += tileCssForValues(theme, FIB_TILE_VALUES, "body[data-ruleset=\"fibonacci\"]");
+    }
+
+    if (theme.id === "yanyuan") {
+      css += "html[data-theme='yanyuan'] .tile .tile-inner,html[data-theme='yanyuan'] .theme-preview-tile{border-radius:4px !important;text-shadow:none !important;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16) !important;}\n";
+      css += "html[data-theme='yanyuan'] .tile.tile-512 .tile-inner,html[data-theme='yanyuan'] .tile.tile-1024 .tile-inner,html[data-theme='yanyuan'] .tile.tile-2048 .tile-inner,html[data-theme='yanyuan'] .tile.tile-4096 .tile-inner,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-512,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-1024,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-2048,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-4096{color:#fff7ec !important;}\n";
+      css += "html[data-theme='yanyuan'] .tile.tile-8192 .tile-inner,html[data-theme='yanyuan'] .tile.tile-16384 .tile-inner,html[data-theme='yanyuan'] .tile.tile-32768 .tile-inner,html[data-theme='yanyuan'] .tile.tile-65536 .tile-inner,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-8192,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-16384,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-32768,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-65536{color:#f7e2d0 !important;}\n";
+      css += "html[data-theme='yanyuan'] .tile.tile-2048 .tile-inner,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-2048{box-shadow:inset 0 0 0 1px rgba(255,248,235,0.22),0 0 0 2px rgba(203,150,56,0.16) !important;}\n";
     }
     
     css += timerCss(theme);
