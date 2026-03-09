@@ -453,15 +453,7 @@ function resolveInvalidatedTimerElementIdsFallback(manager, value) {
 }
 
 function applyInvalidatedSubTimersForReached32k(manager, value) {
-  if (!(manager.reached32k && !manager.isFibonacciMode())) return;
-  if (8192 <= value && value !== 32768) {
-    var subTimer8192El = resolveManagerElementById(manager, "timer8192-sub");
-    if (subTimer8192El) subTimer8192El.textContent = "---------";
-  }
-  if (16384 <= value && value !== 32768) {
-    var subTimer16384El = resolveManagerElementById(manager, "timer16384-sub");
-    if (subTimer16384El) subTimer16384El.textContent = "---------";
-  }
+  invalidateSecondaryTimersByLimit(manager, value, "---------");
 }
 
 function createInvalidatedTimerElementIdsPayload(manager, value) {
@@ -497,27 +489,27 @@ function applyInvalidatedTimerPlaceholdersForCustomTile(manager, value) {
   var invalidatedTimerElementIdsByCore = resolveInvalidatedTimerElementIdsByCore(manager, value);
   if (typeof invalidatedTimerElementIdsByCore !== "undefined") {
     applyInvalidatedTimerPlaceholders(manager, invalidatedTimerElementIdsByCore);
-    return;
+  } else {
+    applyInvalidatedTimerPlaceholders(manager, resolveInvalidatedTimerElementIdsFallback(manager, value));
   }
-  applyInvalidatedTimerPlaceholders(manager, resolveInvalidatedTimerElementIdsFallback(manager, value));
   applyInvalidatedSubTimersForReached32k(manager, value);
+  refreshSecondaryTimerRowsVisibility(manager);
 }
 
 function applyCustomTileReached32kState(manager, value) {
-  if (value < 32768) return;
-  manager.reached32k = true;
-  var subContainer = resolveManagerElementById(manager, "timer32k-sub-container");
-  if (subContainer) subContainer.style.display = "block";
-  var timerRow16 = resolveManagerElementById(manager, "timer-row-16");
-  if (timerRow16) timerRow16.style.display = "none";
-  var timerRow32 = resolveManagerElementById(manager, "timer-row-32");
-  if (timerRow32) timerRow32.style.display = "none";
-  if (value !== 32768) return;
-  var timeStr = manager.pretty(manager.time);
-  var timer32k = resolveManagerElementById(manager, "timer32768");
-  if (timer32k && timer32k.textContent === "") {
-    timer32k.textContent = timeStr;
+  if (value < 32768) {
+    refreshSecondaryTimerRowsVisibility(manager);
+    return;
   }
+  manager.reached32k = true;
+  if (value === 32768) {
+    var timeStr = manager.pretty(manager.time);
+    var timer32k = resolveManagerElementById(manager, "timer32768");
+    if (timer32k && timer32k.textContent === "") {
+      timer32k.textContent = timeStr;
+    }
+  }
+  refreshSecondaryTimerRowsVisibility(manager);
 }
 
 function insertCustomTile(manager, x, y, value) {

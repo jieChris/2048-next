@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048练习板</title>
+  <title>PKU2048</title>
 
   <link href="style/main.css?v=1771930000000" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-1">
@@ -161,7 +161,7 @@
           margin-bottom: 5px;
       }
       .guide-highlight {
-          position: relative;
+          position: static;
           z-index: 2001;
           background: #faf8ef;
           box-shadow: 0 0 0 5px #faf8ef, 0 0 20px 10px rgba(255, 255, 255, 0.5);
@@ -174,9 +174,164 @@
           gap: 8px;
           margin: -2px 0 8px;
       }
+      .pku2048-page.pku2048-stats-inline-mode #stats-panel-toggle {
+          display: none !important;
+      }
+      .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay {
+          display: block !important;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: transparent;
+          z-index: 900;
+          pointer-events: none;
+      }
+      .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay .stats-panel-content {
+          --pku-stats-scale: 1;
+          position: fixed;
+          top: 92px;
+          left: 12px;
+          width: 210px;
+          max-width: 210px;
+          margin: 0;
+          padding: calc(12px * var(--pku-stats-scale));
+          border-radius: calc(8px * var(--pku-stats-scale));
+          background: rgba(187, 173, 160, 0.96);
+          color: #f9f6f2;
+          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+          pointer-events: auto;
+          user-select: none;
+          min-width: 170px;
+          min-height: 180px;
+      }
+      .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay .stats-panel-content::before {
+          content: "";
+          position: absolute;
+          top: -44px;
+          left: -20px;
+          right: -20px;
+          height: 56px;
+          background: transparent;
+          pointer-events: auto;
+      }
+      .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay .stats-panel-content h3 {
+          margin-bottom: calc(8px * var(--pku-stats-scale));
+          color: #f9f6f2;
+          font-size: calc(16px * var(--pku-stats-scale));
+          cursor: grab;
+          touch-action: none;
+      }
+      .pku2048-page.pku2048-stats-inline-dragging #stats-panel-overlay .stats-panel-content h3 {
+          cursor: grabbing;
+      }
+      .pku2048-page.pku2048-stats-inline-locked #stats-panel-overlay .stats-panel-content h3 {
+          cursor: default;
+      }
+      .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay .stats-panel-row {
+          padding: calc(6px * var(--pku-stats-scale)) 0;
+          border-bottom: 1px solid rgba(249, 246, 242, 0.2);
+          font-size: calc(14px * var(--pku-stats-scale));
+      }
+      .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay .stats-panel-row span:last-child {
+          font-weight: 700;
+      }
+      .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay .replay-modal-actions {
+          display: none;
+      }
+      .pku2048-page.pku2048-stats-inline-mode #pku2048-stats-lock-btn {
+          position: absolute;
+          top: 0;
+          left: 50%;
+          width: calc(28px * var(--pku-stats-scale));
+          height: calc(28px * var(--pku-stats-scale));
+          padding: 0;
+          border: calc(1px * var(--pku-stats-scale)) solid rgba(249, 246, 242, 0.45);
+          border-radius: 999px;
+          background: rgba(119, 110, 101, 0.92);
+          color: #f9f6f2;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          opacity: 0;
+          transform: translate(-50%, -108%);
+          transition: opacity 0.16s ease, transform 0.16s ease, background 0.16s ease;
+          pointer-events: none;
+          box-shadow: 0 calc(2px * var(--pku-stats-scale)) calc(8px * var(--pku-stats-scale)) rgba(0, 0, 0, 0.25);
+          z-index: 3;
+      }
+      .pku2048-page.pku2048-stats-inline-mode #pku2048-stats-lock-btn svg {
+          width: calc(14px * var(--pku-stats-scale));
+          height: calc(14px * var(--pku-stats-scale));
+          display: block;
+      }
+      .pku2048-page.pku2048-stats-inline-mode #pku2048-stats-resize-handle {
+          position: absolute;
+          right: calc(3px * var(--pku-stats-scale));
+          bottom: calc(3px * var(--pku-stats-scale));
+          width: calc(16px * var(--pku-stats-scale));
+          height: calc(16px * var(--pku-stats-scale));
+          border: 0;
+          border-radius: calc(4px * var(--pku-stats-scale));
+          padding: 0;
+          background:
+            linear-gradient(135deg, transparent 46%, rgba(249, 246, 242, 0.72) 47%, rgba(249, 246, 242, 0.72) 54%, transparent 55%),
+            linear-gradient(135deg, transparent 62%, rgba(249, 246, 242, 0.5) 63%, rgba(249, 246, 242, 0.5) 70%, transparent 71%);
+          cursor: nwse-resize;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.16s ease;
+          z-index: 3;
+      }
+      .pku2048-page.pku2048-stats-inline-resizing,
+      .pku2048-page.pku2048-stats-inline-resizing * {
+          cursor: nwse-resize !important;
+      }
+      .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay .stats-panel-content:hover #pku2048-stats-lock-btn,
+      .pku2048-page.pku2048-stats-inline-mode #pku2048-stats-lock-btn:hover {
+          opacity: 1;
+          transform: translate(-50%, -100%);
+          pointer-events: auto;
+      }
+      .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay .stats-panel-content:hover #pku2048-stats-resize-handle,
+      .pku2048-page.pku2048-stats-inline-mode #pku2048-stats-resize-handle:hover {
+          opacity: 1;
+          pointer-events: auto;
+      }
+      @media (hover: none), (pointer: coarse) {
+          .pku2048-page.pku2048-stats-inline-mode #pku2048-stats-lock-btn {
+              opacity: 1;
+              transform: translate(-50%, -100%);
+              pointer-events: auto;
+          }
+          .pku2048-page.pku2048-stats-inline-mode #pku2048-stats-resize-handle {
+              opacity: 1;
+              pointer-events: auto;
+          }
+      }
+      .pku2048-page.pku2048-stats-inline-mode #pku2048-stats-lock-btn.is-locked {
+          background: rgba(143, 122, 102, 0.96);
+      }
+      .pku2048-page.pku2048-stats-inline-mode #pku2048-stats-lock-btn:hover {
+          background: rgba(119, 110, 101, 0.95);
+      }
+      @media (max-width: 900px) {
+          .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay .stats-panel-content {
+              top: 84px;
+              left: 8px;
+              width: 186px;
+              max-width: 186px;
+              padding: calc(10px * var(--pku-stats-scale));
+          }
+          .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay .stats-panel-row {
+              font-size: calc(13px * var(--pku-stats-scale));
+          }
+      }
   </style>
 </head>
-<body data-mode-id="practice" data-page="practice">
+<body data-mode-id="practice" data-page="practice" data-page-variant="PKU2048" class="pku2048-page">
   <div id="guide-overlay">
       <div id="guide-message">
           <span id="guide-arrow">↑</span>
@@ -200,7 +355,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
                     </button>
                     <button id="timerbox-toggle-btn" class="top-action-btn timerbox-toggle-btn" type="button" aria-expanded="false" aria-label="&#23637;&#24320;&#35745;&#26102;&#22120;" title="&#23637;&#24320;&#35745;&#26102;&#22120;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
-                </div>
+</div>
             </div>
         </div>
 
@@ -231,6 +386,7 @@
     </div>
     <div class="heading">
       <h1 class="title" style="float: left;"><a href="index.html" style="text-decoration: none; color: inherit; cursor: pointer;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a></h1>
+      
       <div class="scores-container" style="float: right;">
         <div class="score-container">0</div>
         <div class="best-container">0</div>
@@ -311,7 +467,7 @@
             <div class="timertile" id="timer65536" style="margin-left:6px; width:187px"></div>
             <br><br>
         </div>
-<div id="timer-scroll-controls">
+        <div id="timer-scroll-controls">
             <a class="timer-scroll-btn" data-scroll-dir="-1">▲ 上移</a>
             <a class="timer-scroll-btn" data-scroll-dir="1">▼ 下移</a>
         </div>
@@ -404,6 +560,13 @@
           <span>合成 2048 后弹出胜利提示</span>
         </label>
         <div id="win-prompt-note" class="settings-note"></div>
+      </div>
+      <div class="settings-row">
+        <label for="pku2048-inline-stats-toggle">统计面板</label>
+        <label class="settings-switch-row">
+          <input id="pku2048-inline-stats-toggle" type="checkbox">
+          <span>直接显示在页面中</span>
+        </label>
       </div>
       <div class="replay-modal-actions">
         <button id="settings-close-btn" class="replay-button">关闭</button>
@@ -545,6 +708,55 @@
   
   <!-- Test UI Logic -->
   <script src="js/test_ui.js?v=1771939003000"></script>
-
+  <script src="js/pku2048_inline_stats_runtime.js?v=20260310-12"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

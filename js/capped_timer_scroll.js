@@ -47,9 +47,46 @@
     return rows;
   }
 
+  function isScrollManagedHidden(row) {
+    return !!(row && row.getAttribute && row.getAttribute("data-scroll-hidden") === "1");
+  }
+
+  function clearScrollManagedHiddenRows(rows) {
+    var list = Array.isArray(rows) ? rows : [];
+    for (var i = 0; i < list.length; i++) {
+      var row = list[i];
+      if (!isScrollManagedHidden(row)) continue;
+      row.style.display = "";
+      if (row && typeof row.removeAttribute === "function") {
+        row.removeAttribute("data-scroll-hidden");
+      }
+    }
+  }
+
+  function isBusinessHiddenRow(row) {
+    return !!(row && row.getAttribute && row.getAttribute("data-secondary-hidden") === "1");
+  }
+
+  function isExpandedSecondaryRow(row) {
+    if (!row || !row.getAttribute) return false;
+    return !!(row.getAttribute("data-secondary-parent") && row.getAttribute("data-secondary-hidden") !== "1");
+  }
+
+  function shouldPreserveHiddenRow(row) {
+    if (!row) return false;
+    if (isScrollManagedHidden(row)) return false;
+    if (isBusinessHiddenRow(row)) return true;
+    return false;
+  }
+
   function isRowActive(row) {
     if (!row) return false;
     var computed = window.getComputedStyle ? window.getComputedStyle(row) : null;
+    var display = (row.style && row.style.display) || (computed ? computed.display : "");
+    if (display === "none") {
+      if (isBusinessHiddenRow(row)) return false;
+      return isScrollManagedHidden(row);
+    }
     var visibility = (row.style && row.style.visibility) || (computed ? computed.visibility : "");
     return visibility !== "hidden";
   }
@@ -62,6 +99,9 @@
   }
 
   function getRowSortKey(row, fallbackIndex) {
+    var manualOrder = row && row.getAttribute ? parseFloat(row.getAttribute("data-timer-order")) : NaN;
+    if (Number.isFinite(manualOrder)) return manualOrder;
+
     var repeatAttr = row && row.getAttribute ? parseInt(row.getAttribute("data-capped-repeat"), 10) : NaN;
     if (Number.isFinite(repeatAttr) && repeatAttr >= 2) {
       return 100000 + repeatAttr;
@@ -91,6 +131,7 @@
     var rows = getAllTimerRows();
     var controls = document.getElementById("timer-scroll-controls");
     if (!isTimerScrollEnabledMode() || rows.length === 0) {
+      clearScrollManagedHiddenRows(rows);
       if (controls) controls.style.display = "none";
       return;
     }
@@ -120,19 +161,43 @@
     for (i = 0; i < rows.length; i++) {
       var row = rows[i];
       if (!isRowActive(row)) {
+        if (row && row.style && row.style.display === "none") {
+          if (shouldPreserveHiddenRow(row)) {
+            continue;
+          }
+          row.style.display = "";
+        }
+        if (row && typeof row.removeAttribute === "function") {
+          row.removeAttribute("data-scroll-hidden");
+        }
+        continue;
+      }
+      if (isExpandedSecondaryRow(row)) {
         row.style.display = "";
+        if (row && typeof row.removeAttribute === "function") {
+          row.removeAttribute("data-scroll-hidden");
+        }
         continue;
       }
       var idx = activeRows.indexOf(row);
       if (idx >= timerScrollOffset && idx < timerScrollOffset + TIMER_MAX_VISIBLE) {
         row.style.display = "";
+        if (row && typeof row.removeAttribute === "function") {
+          row.removeAttribute("data-scroll-hidden");
+        }
       } else {
         row.style.display = "none";
+        if (row && typeof row.setAttribute === "function") {
+          row.setAttribute("data-scroll-hidden", "1");
+        }
       }
     }
 
     if (controls) {
       controls.style.display = total > TIMER_MAX_VISIBLE ? "block" : "none";
+    }
+    if (total <= TIMER_MAX_VISIBLE) {
+      clearScrollManagedHiddenRows(rows);
     }
   }
 

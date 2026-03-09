@@ -188,11 +188,9 @@ function applyMoveMergeTimerStampEffects(manager, mergeEffects, timeStr) {
 }
 
 function applyMoveMergeVisibilityEffects(manager, mergeEffects) {
-  if (!manager || !mergeEffects) return;
-  if (mergeEffects.showSubTimerContainer) {
-    var subContainer = resolveManagerElementById(manager, "timer32k-sub-container");
-    if (subContainer) subContainer.style.display = "block";
-  }
+  if (!manager) return;
+  refreshSecondaryTimerRowsVisibility(manager);
+  if (!mergeEffects) return;
   var hideTimerRows = Array.isArray(mergeEffects.hideTimerRows) ? mergeEffects.hideTimerRows : [];
   for (var hideIndex = 0; hideIndex < hideTimerRows.length; hideIndex++) {
     var rowEl = resolveManagerElementById(manager, "timer-row-" + String(hideTimerRows[hideIndex]));
@@ -227,6 +225,7 @@ function applyMergedTileEffects(manager, mergedValue, timeStr) {
     manager.reached32k = true;
   }
   applyMoveMergeTimerStampEffects(manager, mergeEffects, timeStr);
+  stampSecondaryTimersForMergedValue(manager, mergedValue, timeStr);
   applyMoveMergeVisibilityEffects(manager, mergeEffects);
 }
 

@@ -43,11 +43,6 @@
       }
     }
 
-    if (source.reached32k && !source.isFibonacciMode) {
-      if (8192 <= limit && limit !== 32768) out.push("timer8192-sub");
-      if (16384 <= limit && limit !== 32768) out.push("timer16384-sub");
-    }
-
     return out;
   }
 

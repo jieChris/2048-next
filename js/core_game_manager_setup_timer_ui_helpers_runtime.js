@@ -17,12 +17,7 @@ function resetTimerTextSlotsForSetup(manager) {
     var timerEl = resolveManagerElementById(manager, "timer" + slotId);
     if (timerEl) timerEl.textContent = "";
   });
-  var sub8k = resolveManagerElementById(manager, "timer8192-sub");
-  if (sub8k) sub8k.textContent = "";
-  var sub16k = resolveManagerElementById(manager, "timer16384-sub");
-  if (sub16k) sub16k.textContent = "";
-  var subContainer = resolveManagerElementById(manager, "timer32k-sub-container");
-  if (subContainer) subContainer.style.display = "none";
+  resetSecondaryTimerRowsForSetup(manager);
 }
 
 function repositionCappedTimerContainerForSetup(manager, cappedTimerContainer) {

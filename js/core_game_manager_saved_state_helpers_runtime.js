@@ -681,22 +681,26 @@ function applySavedDynamicTimerRowsState(manager, container, rowsState, cappedSt
   }
 }
 
-function applySavedTimerSubState(manager, saved) {
-  if (!manager || !saved) return;
+function resolveLegacySavedSecondaryRows(saved) {
+  var rows = [];
+  if (!saved) return rows;
   if (typeof saved.timer_sub_8192 === "string") {
-    var timerSub8192 = resolveManagerElementById(manager, "timer8192-sub");
-    if (timerSub8192) timerSub8192.textContent = saved.timer_sub_8192;
+    rows.push({ parent: 32768, child: 8192, time: saved.timer_sub_8192 });
   }
   if (typeof saved.timer_sub_16384 === "string") {
-    var timerSub16384 = resolveManagerElementById(manager, "timer16384-sub");
-    if (timerSub16384) timerSub16384.textContent = saved.timer_sub_16384;
+    rows.push({ parent: 32768, child: 16384, time: saved.timer_sub_16384 });
   }
-  if (typeof saved.timer_sub_visible === "boolean") {
-    var timer32kSubContainer = resolveManagerElementById(manager, "timer32k-sub-container");
-    if (timer32kSubContainer) {
-      timer32kSubContainer.style.display = saved.timer_sub_visible ? "block" : "none";
-    }
-  }
+  return rows;
+}
+
+function applySavedTimerSubState(manager, saved) {
+  if (!manager || !saved) return;
+  // Secondary rows are collapsed by default on each load.
+  applySecondaryTimerExpandedParentsState(manager, []);
+  var secondaryRows = Array.isArray(saved.timer_secondary_rows)
+    ? saved.timer_secondary_rows
+    : resolveLegacySavedSecondaryRows(saved);
+  applySecondaryTimerRowsState(manager, secondaryRows);
 }
 
 function applySavedManagerBaseState(manager, saved) {
@@ -842,21 +846,48 @@ function collectSavedDynamicTimerRowsState(container) {
   return dynamicRowsState;
 }
 
+function resolveLegacySecondaryTimerSubStateFromRows(rows) {
+  var state = {
+    timer_sub_8192: "",
+    timer_sub_16384: "",
+    timer_sub_visible: false
+  };
+  var list = Array.isArray(rows) ? rows : [];
+  for (var i = 0; i < list.length; i++) {
+    var row = list[i];
+    if (!isNonArrayObject(row)) continue;
+    if (Number(row.parent) !== 32768) continue;
+    var child = Number(row.child);
+    if (child === 8192) {
+      state.timer_sub_8192 = typeof row.time === "string" ? row.time : "";
+      if (row.display === "block") state.timer_sub_visible = true;
+    } else if (child === 16384) {
+      state.timer_sub_16384 = typeof row.time === "string" ? row.time : "";
+      if (row.display === "block") state.timer_sub_visible = true;
+    }
+  }
+  return state;
+}
+
 function collectSavedTimerSubState(manager, documentLike) {
   if (!documentLike) {
     return {
+      timer_secondary_rows: [],
+      timer_secondary_expanded_parents: [],
       timer_sub_8192: "",
       timer_sub_16384: "",
       timer_sub_visible: false
     };
   }
-  var timerSub8192 = resolveManagerElementById(manager, "timer8192-sub");
-  var timerSub16384 = resolveManagerElementById(manager, "timer16384-sub");
-  var timerSubContainer = resolveManagerElementById(manager, "timer32k-sub-container");
+  var secondaryRows = collectSecondaryTimerRowsState(manager);
+  var expandedParents = collectSecondaryTimerExpandedParents(manager);
+  var legacyState = resolveLegacySecondaryTimerSubStateFromRows(secondaryRows);
   return {
-    timer_sub_8192: (timerSub8192 || {}).textContent || "",
-    timer_sub_16384: (timerSub16384 || {}).textContent || "",
-    timer_sub_visible: (((timerSubContainer || {}).style) || {}).display === "block"
+    timer_secondary_rows: secondaryRows,
+    timer_secondary_expanded_parents: expandedParents,
+    timer_sub_8192: legacyState.timer_sub_8192,
+    timer_sub_16384: legacyState.timer_sub_16384,
+    timer_sub_visible: legacyState.timer_sub_visible
   };
 }
 
@@ -968,6 +999,8 @@ function buildSavedGameStateTimerSnapshotPayload(manager, timerSnapshot, subStat
     timer_fixed_rows: snapshot.timerFixedRowsState || {},
     timer_dynamic_rows_capped: Array.isArray(snapshot.timerDynamicRowsCappedState) ? snapshot.timerDynamicRowsCappedState : [],
     timer_dynamic_rows_overflow: Array.isArray(snapshot.timerDynamicRowsOverflowState) ? snapshot.timerDynamicRowsOverflowState : [],
+    timer_secondary_rows: Array.isArray(subState.timer_secondary_rows) ? subState.timer_secondary_rows : [],
+    timer_secondary_expanded_parents: Array.isArray(subState.timer_secondary_expanded_parents) ? subState.timer_secondary_expanded_parents : [],
     timer_sub_8192: subState.timer_sub_8192,
     timer_sub_16384: subState.timer_sub_16384,
     timer_sub_visible: subState.timer_sub_visible
