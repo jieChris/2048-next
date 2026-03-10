@@ -19,54 +19,156 @@
     return path === "/" || /\/index\.html?$/.test(path) || path === "";
   }
 
+  var UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";
+
+  function normalizeUiLang(value) {
+    var text = String(value || "").trim().toLowerCase();
+    return text.indexOf("en") === 0 ? "en" : "zh";
+  }
+
+  function readUiLang() {
+    var globalLike = typeof globalThis === "object" && globalThis ? globalThis : {};
+
+    try {
+      var i18n = globalLike.UII18N;
+      if (i18n && typeof i18n.getLanguage === "function") {
+        return normalizeUiLang(i18n.getLanguage());
+      }
+    } catch (_err) {}
+
+    try {
+      var storage = globalLike.localStorage;
+      if (storage && typeof storage.getItem === "function") {
+        return normalizeUiLang(storage.getItem(UI_LANGUAGE_STORAGE_KEY));
+      }
+    } catch (_err2) {}
+
+    try {
+      var doc = globalLike.document;
+      var root = doc && doc.documentElement;
+      if (root && typeof root.getAttribute === "function") {
+        return normalizeUiLang(root.getAttribute("data-ui-lang") || root.getAttribute("lang"));
+      }
+    } catch (_err3) {}
+
+    return "zh";
+  }
+
+  function resolveLangText(lang, zh, en) {
+    return lang === "en" ? en : zh;
+  }
+
   function buildHomeGuideSteps(options) {
     var opts = options || {};
+    var lang = readUiLang();
     var steps = [
-      { selector: "#home-title-link", title: "2048 标题", desc: "在任何页面点击该标题，都可以返回主页。" },
-      { selector: "#top-announcement-btn", title: "通知按钮", desc: "点击按钮可查看版本通知与更新内容，红点表示有未读消息。" },
-      { selector: "#stats-panel-toggle", title: "统计按钮", desc: "点击后打开统计面板，查看分布、步数与出数信息。" },
-      { selector: "#top-export-replay-btn", title: "导出回放", desc: "导出当前对局回放码，便于分享与复盘。" },
-      { selector: "#top-practice-btn", title: "直通练习板", desc: "把当前盘面发送到练习板页面继续演练。" },
-      { selector: "#top-advanced-replay-btn", title: "高级回放", desc: "打开高级回放页面，可导入回放并控制进度。" },
-      { selector: "#top-modes-btn", title: "模式选择", desc: "进入模式页面，切换不同玩法与棋盘规格。" },
-      { selector: "#top-history-btn", title: "历史记录", desc: "查看本地历史对局，支持回放、导入和导出。" },
-      { selector: "#top-settings-btn", title: "设置按钮", desc: "打开设置面板，调整主题、显示选项与指引开关。" },
-      { selector: "#top-restart-btn", title: "新游戏", desc: "立即开始新的一局并重置当前盘面。" }
+      {
+        selector: "#home-title-link",
+        title: resolveLangText(lang, "2048 标题", "2048 Title"),
+        desc: resolveLangText(lang, "在任何页面点击该标题，都可以返回主页。", "Click this title on any page to return Home.")
+      },
+      {
+        selector: "#top-announcement-btn",
+        title: resolveLangText(lang, "通知按钮", "Announcements"),
+        desc: resolveLangText(
+          lang,
+          "点击按钮可查看版本通知与更新内容，红点表示有未读消息。",
+          "Open announcements and updates. The red dot means unread items."
+        )
+      },
+      {
+        selector: "#stats-panel-toggle",
+        title: resolveLangText(lang, "统计按钮", "Stats"),
+        desc: resolveLangText(
+          lang,
+          "点击后打开统计面板，查看分布、步数与出数信息。",
+          "Open the stats panel to view distribution, move counts, and spawn stats."
+        )
+      },
+      {
+        selector: "#top-export-replay-btn",
+        title: resolveLangText(lang, "导出回放", "Export Replay"),
+        desc: resolveLangText(lang, "导出当前对局回放码，便于分享与复盘。", "Export a replay code for sharing and review.")
+      },
+      {
+        selector: "#top-practice-btn",
+        title: resolveLangText(lang, "直通练习板", "Practice Board"),
+        desc: resolveLangText(
+          lang,
+          "把当前盘面发送到练习板页面继续演练。",
+          "Send the current board to Practice Board and continue training."
+        )
+      },
+      {
+        selector: "#top-advanced-replay-btn",
+        title: resolveLangText(lang, "高级回放", "Advanced Replay"),
+        desc: resolveLangText(
+          lang,
+          "打开高级回放页面，可导入回放并控制进度。",
+          "Open Advanced Replay to import replays and control progress."
+        )
+      },
+      {
+        selector: "#top-modes-btn",
+        title: resolveLangText(lang, "模式选择", "Modes"),
+        desc: resolveLangText(lang, "进入模式页面，切换不同玩法与棋盘规格。", "Open mode selection and switch rules or board sizes.")
+      },
+      {
+        selector: "#top-history-btn",
+        title: resolveLangText(lang, "历史记录", "History"),
+        desc: resolveLangText(lang, "查看本地历史对局，支持回放、导入和导出。", "View local history records with replay/import/export support.")
+      },
+      {
+        selector: "#top-settings-btn",
+        title: resolveLangText(lang, "设置按钮", "Settings"),
+        desc: resolveLangText(
+          lang,
+          "打开设置面板，调整主题、显示选项与指引开关。",
+          "Open settings to configure theme, display options, and guide switches."
+        )
+      },
+      {
+        selector: "#top-restart-btn",
+        title: resolveLangText(lang, "新游戏", "New Game"),
+        desc: resolveLangText(lang, "立即开始新的一局并重置当前盘面。", "Start a new game immediately and reset the board.")
+      }
     ];
     if (opts.isCompactViewport) {
       steps.splice(9, 0, {
         selector: "#top-mobile-hint-btn",
-        title: "提示文本",
-        desc: "移动端可用此按钮打开提示弹窗，集中查看玩法说明与项目说明。"
+        title: resolveLangText(lang, "提示文本", "Guide"),
+        desc: resolveLangText(lang, "移动端可用此按钮打开提示弹窗，集中查看玩法说明与项目说明。", "On mobile, open this to view gameplay and project tips.")
       });
       steps.splice(10, 0, {
         selector: "#timerbox-toggle-btn",
-        title: "展开计时器",
-        desc: "移动端点击此按钮可展开或收起计时器面板。"
+        title: resolveLangText(lang, "展开计时器", "Toggle Timers"),
+        desc: resolveLangText(lang, "移动端点击此按钮可展开或收起计时器面板。", "On mobile, use this button to expand or collapse the timer panel.")
       });
     }
     return steps;
   }
 
   function buildHomeGuidePanelInnerHtml() {
+    var lang = readUiLang();
     return (
       "<div id='home-guide-step' class='home-guide-step'></div>" +
       "<div id='home-guide-title' class='home-guide-title'></div>" +
       "<div id='home-guide-desc' class='home-guide-desc'></div>" +
       "<div class='home-guide-actions'>" +
-      "<button id='home-guide-prev' class='replay-button home-guide-btn'>上一步</button>" +
-      "<button id='home-guide-next' class='replay-button home-guide-btn'>下一步</button>" +
-      "<button id='home-guide-skip' class='replay-button home-guide-btn'>跳过</button>" +
+      "<button id='home-guide-prev' class='replay-button home-guide-btn'>" + resolveLangText(lang, "上一步", "Back") + "</button>" +
+      "<button id='home-guide-next' class='replay-button home-guide-btn'>" + resolveLangText(lang, "下一步", "Next") + "</button>" +
+      "<button id='home-guide-skip' class='replay-button home-guide-btn'>" + resolveLangText(lang, "跳过", "Skip") + "</button>" +
       "</div>"
     );
   }
 
   function buildHomeGuideSettingsRowInnerHtml() {
+    var lang = readUiLang();
     return (
-      "<label for='home-guide-toggle'>新手指引</label>" +
+      "<label for='home-guide-toggle'>" + resolveLangText(lang, "新手指引", "Beginner Guide") + "</label>" +
       "<label class='settings-switch-row'>" +
       "<input id='home-guide-toggle' type='checkbox'>" +
-      "<span>重新播放首页功能指引</span>" +
+      "<span>" + resolveLangText(lang, "重新播放首页功能指引", "Replay homepage feature guide") + "</span>" +
       "</label>" +
       "<div id='home-guide-note' class='settings-note'></div>"
     );
@@ -125,25 +227,31 @@
   function resolveHomeGuideSettingsState(options) {
     var opts = options || {};
     var isHome = !!opts.isHomePage;
+    var lang = readUiLang();
     return {
       toggleDisabled: !isHome,
       toggleChecked: Boolean(isHome && opts.guideActive && opts.fromSettings),
       noteText: isHome
-        ? "打开后将立即进入首页新手引导，完成后自动关闭。"
-        : "该功能仅在首页可用。"
+        ? resolveLangText(
+            lang,
+            "打开后将立即进入首页新手引导，完成后自动关闭。",
+            "Enable to enter the homepage beginner guide immediately; it closes automatically after completion."
+          )
+        : resolveLangText(lang, "该功能仅在首页可用。", "This feature is only available on Home.")
     };
   }
 
   function resolveHomeGuideStepUiState(options) {
     var opts = options || {};
+    var lang = readUiLang();
     var count = Math.max(0, Math.floor(toFiniteNumber(opts.stepCount, 0)));
     var maxIndex = count > 0 ? count - 1 : 0;
     var rawIndex = Math.floor(toFiniteNumber(opts.stepIndex, 0));
     var index = Math.min(Math.max(rawIndex, 0), maxIndex);
     return {
-      stepText: count > 0 ? "步骤 " + (index + 1) + " / " + count : "步骤 0 / 0",
+      stepText: count > 0 ? resolveLangText(lang, "步骤 " + (index + 1) + " / " + count, "Step " + (index + 1) + " / " + count) : resolveLangText(lang, "步骤 0 / 0", "Step 0 / 0"),
       prevDisabled: index <= 0,
-      nextText: count > 0 && index >= count - 1 ? "完成" : "下一步"
+      nextText: count > 0 && index >= count - 1 ? resolveLangText(lang, "完成", "Done") : resolveLangText(lang, "下一步", "Next")
     };
   }
 
@@ -366,7 +474,12 @@
 
   function resolveHomeGuideDoneNotice(options) {
     var opts = options || {};
-    var defaultMessage = "指引已完成，可在设置中重新打开新手指引。";
+    var lang = readUiLang();
+    var defaultMessage = resolveLangText(
+      lang,
+      "指引已完成，可在设置中重新打开新手指引。",
+      "Guide completed. You can reopen Beginner Guide in Settings."
+    );
     var rawMessage = typeof opts.message === "string" ? opts.message.trim() : "";
     var hideDelayMs = Math.max(0, Math.floor(toFiniteNumber(opts.hideDelayMs, 2600)));
     return {

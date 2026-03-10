@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -397,31 +397,10 @@
           <div id="theme-preview-grid" class="theme-preview-grid"></div>
         </div>
       </div>
-      <div class="settings-row tile-palette-settings-row">
-        <label>色板</label>
-        <div class="tile-palette-toolbar">
-          <select id="tile-palette-select" class="settings-select"></select>
-          <button id="tile-palette-create-btn" class="replay-button" type="button">新建</button>
-          <button id="tile-palette-rename-btn" class="replay-button" type="button">重命名</button>
-          <button id="tile-palette-delete-btn" class="replay-button" type="button">删除</button>
-        </div>
-        <div class="tile-palette-toolbar tile-palette-toolbar-secondary">
-          <input id="tile-palette-name-input" class="settings-select tile-palette-name-input" type="text" maxlength="40" placeholder="色板名称">
-          <button id="tile-palette-export-btn" class="replay-button" type="button">导出</button>
-          <button id="tile-palette-import-btn" class="replay-button" type="button">导入</button>
-        </div>
-        <div class="tile-palette-editor-wrap">
-          <div class="tile-palette-editor-block">
-            <div class="tile-palette-editor-title">标准 16 色</div>
-            <div id="tile-palette-editor-pow2" class="tile-palette-editor-grid"></div>
-          </div>
-          <div class="tile-palette-editor-block">
-            <div class="tile-palette-editor-title">斐波那契 16 色</div>
-            <div id="tile-palette-editor-fibonacci" class="tile-palette-editor-grid"></div>
-          </div>
-        </div>
-        <input id="tile-palette-import-input" type="file" accept="application/json" style="display:none">
-        <div id="tile-palette-note" class="settings-note"></div>
+      <div class="settings-row">
+        <label>色板中心</label>
+        <a class="replay-button" href="palette.html">打开色板页面</a>
+        <div class="settings-note">色板编辑已迁移到独立页面。</div>
       </div>
       <div class="settings-row">
         <label for="win-prompt-toggle">胜利提示</label>
@@ -572,5 +551,8 @@
   <!-- Test UI Logic -->
   <script src="js/test_ui.js?v=1771939003000"></script>
 
+  <script src="js/core_i18n_runtime.js?v=20260310-07"></script>
 </body>
 </html>
+
+

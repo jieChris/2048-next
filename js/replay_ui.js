@@ -238,7 +238,25 @@ function updateReplayUI() {
     
     var btn = document.getElementById('replay-pause-btn');
     if(btn) {
-        btn.textContent = game_manager.isPaused ? "▶ 播放" : "⏯ 暂停";
+        var lang = "zh";
+        try {
+            if (window.UII18N && typeof window.UII18N.getLanguage === "function") {
+                var uiLang = String(window.UII18N.getLanguage() || "").toLowerCase();
+                if (uiLang.indexOf("en") === 0) lang = "en";
+            } else if (window.localStorage && typeof window.localStorage.getItem === "function") {
+                var storedLang = String(window.localStorage.getItem("ui_language_v1") || "").toLowerCase();
+                if (storedLang.indexOf("en") === 0) lang = "en";
+            }
+        } catch (_err) {}
+        var nextText;
+        if (game_manager.isPaused) {
+            nextText = lang === "en" ? "▶ Play" : "▶ 播放";
+        } else {
+            nextText = lang === "en" ? "⏯ Pause" : "⏯ 暂停";
+        }
+        if (btn.textContent !== nextText) {
+            btn.textContent = nextText;
+        }
     }
     
     var progress = document.getElementById('replay-progress');

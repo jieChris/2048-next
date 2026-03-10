@@ -4,57 +4,57 @@
       id: "2026-03-05-v2.0",
       version: "v2.0",
       date: "2026-03-05",
-      title: "V2.0重构上线！",
+      title: "V2.0 重构上线",
+      title_en: "V2.0 Refactor Release",
       content:
-        "本次大版本更新，主要工作是对原先的高耦合性代码进行了重构，更换了技术栈，另外修复了一些老版本的问题。\n\nIPS的统计现在已经修复、自定义4率模式修复、新盘面出数问题修复、局内出数问题修复、障碍块模式bug修复、回放文件代码现在与2048Verse通用，同时可以导入2048endgameTablebase v9.0分析回放、修复了历史记录的本地记录、优化了一些布局问题、新增了logo、优化了移动端的体验、可以设置按钮以图标/文字方式显示，提高了可读性、优化了方块中文字的大小、优化了主题效果等等，总之做了很多优化。\n\n如果你在游戏中遇到了什么问题或者有什么好的建议欢迎向我发送邮件：1203214493@qq.com！"
+        "本次大版本更新，主要完成了高耦合代码重构与技术栈升级，并修复了老版本中的多项问题。IPS 统计修复、自定义 4 率模式修复、新盘面与局内出数问题修复、障碍块模式修复、回放文件与 2048Verse 通用并支持导入 2048endgameTablebase v9.0 分析、历史本地记录修复、布局优化、Logo 新增、移动端体验优化、按钮图标/文字切换、方块字体尺寸优化、主题效果优化等。遇到问题或建议可发邮件：1203214493@qq.com。",
+      content_en:
+        "This major release focuses on refactoring high-coupling code and upgrading the tech stack, along with many bug fixes and UX improvements. Fixed: IPS stats, custom 4-rate mode, new-board and in-game spawns, obstacle mode issues, local history persistence, and more. Replay code is now compatible with 2048Verse and supports importing 2048endgameTablebase v9.0 analysis. Added logo updates, mobile UX improvements, icon/text button switch, tile font-size optimization, and theme polishing. Feedback: 1203214493@qq.com."
     },
     {
       id: "2026-02-22-v1.9",
       version: "v1.9",
       date: "2026-02-22",
       title: "移动端适配与斐波那契修复",
-      content:
-        "本版本完成了移动端适配，整体提升了移动端体验；同时修复了斐波那契模式中的一些问题。"
+      title_en: "Mobile Adaptation & Fibonacci Fixes",
+      content: "本版本完成移动端适配并提升整体体验，同时修复了斐波那契模式中的若干问题。",
+      content_en: "This version improves mobile adaptation and overall experience, and fixes several issues in Fibonacci mode."
     },
     {
       id: "2026-02-21-v1.81",
       version: "v1.81",
       date: "2026-02-21",
       title: "封顶模式与练习板更新",
-      content:
-        "开放了几个封顶模式的入口，新增由棋盘直接打开练习板的入口；练习板功能已更新，并新增了新手指引。"
+      title_en: "Capped Modes & Practice Board Update",
+      content: "新增多个封顶模式入口，支持从棋盘直接跳转练习板；练习板功能更新并加入新手指引。",
+      content_en: "Added multiple capped-mode entries and direct board-to-practice navigation. Practice board was updated with a beginner guide."
     },
     {
       id: "2026-02-21-v1.8",
       version: "v1.8",
       date: "2026-02-21",
       title: "回归本地练习",
-      content:
-        "移除未完成的登录及排行榜功能。本站定位为本地练习工具，不再新增在线功能。所有游戏历史现均保存在本地，支持删除与导入/导出，便于查看和管理回放记录。"
+      title_en: "Back to Local Practice",
+      content: "移除未完成的登录与排行榜功能。本站定位为本地练习工具，历史记录本地保存，支持查看、导入、导出与回放。",
+      content_en: "Removed unfinished login and online ranking features. The site is positioned as a local practice tool with local history, import/export, and replay support."
     },
     {
       id: "2026-02-20-v1.72",
       version: "v1.72",
       date: "2026-02-20",
       title: "中局自动保存上线",
-      content:
-        "新增本地中局自动保存：未结束对局在刷新/关闭后可继续。只有主动点击“新游戏”才会清空当前局。退出页面即视为暂停，计时器停止，重新进入页面后继续。"
+      title_en: "Mid-Game Auto Save",
+      content: "新增本地中局自动保存：未结束对局在刷新或关闭后可继续。仅主动点击“新游戏”才会清空当前局。",
+      content_en: "Added local mid-game auto save: unfinished runs can continue after refresh/close. Only clicking New Game clears the current run."
     },
     {
       id: "2026-02-19-v1.71",
       version: "v1.71",
       date: "2026-02-19",
       title: "模式与主题迭代",
-      content:
-        "补充多个模式与计时器逻辑优化，修复部分主题显示与计时器表现问题。"
-    },
-    // {
-    //   id: "2026-02-21-v1.72",
-    //   version: "v1.72",
-    //   date: "2026-02-21",
-    //   title: "你的标题",
-    //   content: "你的公告内容"
-    // }
-
+      title_en: "Modes & Themes Iteration",
+      content: "补充多个模式并优化计时器逻辑，修复部分主题显示与计时器表现问题。",
+      content_en: "Added more modes and optimized timer logic, with fixes for some theme rendering and timer behavior issues."
+    }
   ];
 })();

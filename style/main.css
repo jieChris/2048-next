@@ -296,6 +296,19 @@ h1.title a {
   content: "时间";
 }
 
+html[data-ui-lang="en"] .score-container:after {
+  content: "SCORE";
+}
+
+html[data-ui-lang="en"] .best-container:after {
+  content: "BEST";
+}
+
+html[data-ui-lang="en"] #timer:after,
+html[data-ui-lang="en"] .timer-container:after {
+  content: "TIME";
+}
+
 p {
   margin-top: 0;
   margin-bottom: 10px;

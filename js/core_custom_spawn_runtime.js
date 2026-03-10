@@ -27,6 +27,22 @@
     return fixed.replace(/\.?0+$/, "");
   }
 
+  function resolveUiLang() {
+    try {
+      if (global.UII18N && typeof global.UII18N.getLanguage === "function") {
+        var fromRuntime = String(global.UII18N.getLanguage() || "").toLowerCase();
+        if (fromRuntime.indexOf("en") === 0) return "en";
+      }
+    } catch (_err) {}
+    try {
+      if (global.localStorage && typeof global.localStorage.getItem === "function") {
+        var fromStorage = String(global.localStorage.getItem("ui_language_v1") || "").toLowerCase();
+        if (fromStorage.indexOf("en") === 0) return "en";
+      }
+    } catch (_err2) {}
+    return "zh";
+  }
+
   function inferFourRateFromSpawnTable(spawnTable) {
     if (!Array.isArray(spawnTable)) return 10;
     var totalWeight = 0;
@@ -76,8 +92,11 @@
         ? nextConfig.special_rules
         : {};
     nextConfig.special_rules.custom_spawn_four_rate = parsedRate;
-    nextConfig.label = String(modeConfig && modeConfig.label ? modeConfig.label : "模式") +
-      "（4率 " + formatRatePercent(parsedRate) + "%）";
+    var lang = resolveUiLang();
+    var suffix = lang === "en"
+      ? " (4-Rate " + formatRatePercent(parsedRate) + "%)"
+      : "（4率 " + formatRatePercent(parsedRate) + "%）";
+    nextConfig.label = String(modeConfig && modeConfig.label ? modeConfig.label : (lang === "en" ? "Mode" : "模式")) + suffix;
     return nextConfig;
   }
 

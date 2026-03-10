@@ -1,0 +1,90 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>2048 色板中心</title>
+  <link href="style/main.css?v=1771930000000" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-1">
+  <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+</head>
+<body data-page="palette-hub">
+  <main class="palette-page-shell">
+    <header class="palette-page-header">
+      <div class="palette-title-wrap">
+        <p class="palette-kicker">2048 Theme Toolkit</p>
+        <h1 class="palette-title">色板中心</h1>
+        <p class="palette-subtitle">独立管理砖块与计时图例配色，支持导入导出与实时预览。</p>
+      </div>
+      <nav class="palette-nav">
+        <a class="replay-button palette-nav-btn" href="index.html">回首页</a>
+        <a class="replay-button palette-nav-btn" href="Practice_board.html">练习板</a>
+      </nav>
+    </header>
+
+    <section class="palette-grid">
+      <aside class="palette-sidebar card-surface">
+        <div class="panel-head">
+          <h2>色板列表</h2>
+          <span id="palette-count" class="panel-pill">0</span>
+        </div>
+        <div id="palette-list" class="palette-list" aria-label="色板列表"></div>
+      </aside>
+
+      <section class="palette-editor card-surface">
+        <div class="panel-head">
+          <h2 id="palette-current-name">未选择色板</h2>
+          <span id="palette-current-tag" class="panel-pill">--</span>
+        </div>
+
+        <div class="palette-toolbar">
+          <input id="palette-name-input" class="palette-name-input" type="text" maxlength="40" placeholder="输入色板名称">
+          <button id="palette-create-btn" class="replay-button" type="button">新建副本</button>
+          <button id="palette-rename-btn" class="replay-button" type="button">重命名</button>
+          <button id="palette-delete-btn" class="replay-button" type="button">删除</button>
+          <button id="palette-export-btn" class="replay-button" type="button">导出</button>
+          <button id="palette-import-btn" class="replay-button" type="button">导入</button>
+          <input id="palette-import-input" type="file" accept="application/json" hidden>
+        </div>
+
+        <div class="palette-editor-panels">
+          <section class="color-panel">
+            <div class="color-panel-head">标准 16 色</div>
+            <div id="palette-editor-pow2" class="color-grid"></div>
+          </section>
+          <section class="color-panel">
+            <div class="color-panel-head">斐波那契 16 色</div>
+            <div id="palette-editor-fib" class="color-grid"></div>
+          </section>
+        </div>
+
+        <section class="preview-panel">
+          <div class="color-panel-head">实时预览</div>
+          <div class="preview-group">
+            <h3>标准</h3>
+            <div id="palette-preview-pow2" class="preview-row"></div>
+          </div>
+          <div class="preview-group">
+            <h3>斐波那契</h3>
+            <div id="palette-preview-fib" class="preview-row"></div>
+          </div>
+          <div class="preview-group">
+            <h3>计时图例</h3>
+            <div id="palette-preview-legend" class="legend-row"></div>
+          </div>
+        </section>
+
+        <p id="palette-note" class="palette-note" aria-live="polite"></p>
+      </section>
+    </section>
+  </main>
+
+  <script src="js/theme_manager.js?v=1771600400000"></script>
+  <script src="js/palette_page.js?v=20260310-01"></script>
+  <script src="js/core_i18n_runtime.js?v=20260310-07"></script>
+</body>
+</html>
+
+

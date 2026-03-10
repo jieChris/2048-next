@@ -44,6 +44,26 @@ export function formatRatePercent(rate: number): string {
   return fixed.replace(/\.?0+$/, "");
 }
 
+function resolveUiLang(): "zh" | "en" {
+  const globalLike =
+    typeof globalThis === "object" && globalThis ? (globalThis as Record<string, unknown>) : {};
+  try {
+    const i18n = globalLike.UII18N as { getLanguage?: () => string } | undefined;
+    if (i18n && typeof i18n.getLanguage === "function") {
+      const fromRuntime = String(i18n.getLanguage() || "").toLowerCase();
+      if (fromRuntime.indexOf("en") === 0) return "en";
+    }
+  } catch (_err) {}
+  try {
+    const storageLike = globalLike.localStorage as { getItem?: (key: string) => string | null } | undefined;
+    if (storageLike && typeof storageLike.getItem === "function") {
+      const fromStorage = String(storageLike.getItem("ui_language_v1") || "").toLowerCase();
+      if (fromStorage.indexOf("en") === 0) return "en";
+    }
+  } catch (_err) {}
+  return "zh";
+}
+
 export function inferFourRateFromSpawnTable(
   spawnTable: SpawnTableItemLike[] | null | undefined
 ): number {
@@ -98,8 +118,13 @@ export function applyCustomFourRateToModeConfig<T extends CustomSpawnModeConfigL
       ? nextConfig.special_rules
       : {};
   nextConfig.special_rules.custom_spawn_four_rate = parsedRate;
-  nextConfig.label = String(modeConfig && modeConfig.label ? modeConfig.label : "模式") +
-    "（4率 " + formatRatePercent(parsedRate) + "%）";
+  const lang = resolveUiLang();
+  const suffix = lang === "en"
+    ? " (4-Rate " + formatRatePercent(parsedRate) + "%)"
+    : "（4率 " + formatRatePercent(parsedRate) + "%）";
+  nextConfig.label =
+    String(modeConfig && modeConfig.label ? modeConfig.label : (lang === "en" ? "Mode" : "模式")) +
+    suffix;
 
   return nextConfig;
 }

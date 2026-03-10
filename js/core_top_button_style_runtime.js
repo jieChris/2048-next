@@ -4,6 +4,7 @@
   if (!global) return;
 
   var STORAGE_KEY = "settings_top_button_style_v1";
+  var UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";
   var MODE_ICON = "icon";
   var MODE_TEXT = "text";
   var MODE_ATTR = "data-top-btn-mode";
@@ -23,18 +24,18 @@
   var SETTINGS_VALUE_NOTE_ID = "top-button-style-note";
 
   var ID_LABEL_MAP = {
-    "top-announcement-btn": "\u516c\u544a",
-    "stats-panel-toggle": "\u7edf\u8ba1",
-    "top-export-replay-btn": "\u5bfc\u51fa",
-    "top-practice-btn": "\u7ec3\u4e60",
-    "top-advanced-replay-btn": "\u56de\u653e",
-    "top-modes-btn": "\u6a21\u5f0f",
-    "top-history-btn": "\u5386\u53f2",
-    "top-settings-btn": "\u8bbe\u7f6e",
-    "top-restart-btn": "\u65b0\u5c40",
-    "top-mode-intro-btn": "\u63d0\u793a",
-    "top-mobile-hint-btn": "\u63d0\u793a",
-    "top-mobile-undo-btn": "\u64a4\u56de"
+    "top-announcement-btn": { zh: "\u516c\u544a", en: "News" },
+    "stats-panel-toggle": { zh: "\u7edf\u8ba1", en: "Stats" },
+    "top-export-replay-btn": { zh: "\u5bfc\u51fa", en: "Export" },
+    "top-practice-btn": { zh: "\u7ec3\u4e60", en: "Practice" },
+    "top-advanced-replay-btn": { zh: "\u56de\u653e", en: "Replay" },
+    "top-modes-btn": { zh: "\u6a21\u5f0f", en: "Modes" },
+    "top-history-btn": { zh: "\u5386\u53f2", en: "History" },
+    "top-settings-btn": { zh: "\u8bbe\u7f6e", en: "Settings" },
+    "top-restart-btn": { zh: "\u65b0\u5c40", en: "New" },
+    "top-mode-intro-btn": { zh: "\u63d0\u793a", en: "Guide" },
+    "top-mobile-hint-btn": { zh: "\u63d0\u793a", en: "Guide" },
+    "top-mobile-undo-btn": { zh: "\u64a4\u56de", en: "Undo" }
   };
 
   var isApplying = false;
@@ -42,6 +43,7 @@
   var topButtonsObserver = null;
   var topButtonsObserverHost = null;
   var topButtonsObserverConfig = null;
+  var hasBoundLanguageChange = false;
 
   function isRecord(value) {
     return !!value && typeof value === "object";
@@ -96,6 +98,45 @@
     return text === MODE_TEXT ? MODE_TEXT : MODE_ICON;
   }
 
+  function normalizeUiLang(raw) {
+    var text = String(raw || "").trim().toLowerCase();
+    return text.indexOf("en") === 0 ? "en" : "zh";
+  }
+
+  function readUiLanguage(documentLike) {
+    var i18n = toRecord(global).UII18N;
+    var getLanguage = asFunction(toRecord(i18n).getLanguage);
+    if (getLanguage) {
+      try {
+        return normalizeUiLang(getLanguage.call(i18n));
+      } catch (_err) {}
+    }
+
+    var storage = toRecord(global).localStorage;
+    var getItem = asFunction(toRecord(storage).getItem);
+    if (getItem) {
+      try {
+        return normalizeUiLang(getItem.call(storage, UI_LANGUAGE_STORAGE_KEY));
+      } catch (_err2) {}
+    }
+
+    var doc = documentLike || getDocumentLike();
+    var root = toRecord(doc).documentElement;
+    if (root && asFunction(root.getAttribute)) {
+      try {
+        return normalizeUiLang(root.getAttribute("data-ui-lang") || root.getAttribute("lang"));
+      } catch (_err3) {}
+    }
+
+    return "zh";
+  }
+
+  function resolveLabelByLang(labelLike, lang) {
+    var record = toRecord(labelLike);
+    if (lang === "en") return typeof record.en === "string" ? record.en : "";
+    return typeof record.zh === "string" ? record.zh : "";
+  }
+
   function readStoredMode() {
     var storage = toRecord(global).localStorage;
     var getItem = asFunction(toRecord(storage).getItem);
@@ -130,9 +171,27 @@
     return Number.isFinite(width) ? width <= 980 : false;
   }
 
-  function compactLabel(labelLike) {
+  function compactLabel(labelLike, lang) {
     var text = typeof labelLike === "string" ? labelLike.replace(/\s+/g, "").trim() : "";
     if (!text) return "";
+
+    if (lang === "en") {
+      var lower = text.toLowerCase();
+      if (lower.indexOf("timer") >= 0 || lower.indexOf("time") >= 0) return "Timers";
+      if (lower.indexOf("export") >= 0 && lower.indexOf("replay") >= 0) return "Export";
+      if (lower.indexOf("replay") >= 0) return "Replay";
+      if (lower.indexOf("home") >= 0) return "Home";
+      if (lower.indexOf("mode") >= 0) return "Modes";
+      if (lower.indexOf("setting") >= 0) return "Settings";
+      if (lower.indexOf("stat") >= 0) return "Stats";
+      if (lower.indexOf("announce") >= 0 || lower.indexOf("news") >= 0) return "News";
+      if (lower.indexOf("undo") >= 0) return "Undo";
+      if (lower.indexOf("guide") >= 0 || lower.indexOf("hint") >= 0) return "Guide";
+      if (lower.indexOf("practice") >= 0) return "Practice";
+      if (lower.indexOf("history") >= 0) return "History";
+      if (lower.indexOf("new") >= 0 || lower.indexOf("restart") >= 0) return "New";
+      return text.length > 9 ? text.slice(0, 9) : text;
+    }
 
     if (text.indexOf("\u8ba1\u65f6") >= 0) return "\u8ba1\u65f6";
     if (text.indexOf("\u5bfc") >= 0 && text.indexOf("\u56de\u653e") >= 0) return "\u5bfc\u51fa";
@@ -153,21 +212,22 @@
 
   function resolveButtonLabel(button) {
     var record = toRecord(button);
+    var lang = readUiLanguage(getDocumentLike());
     var id = typeof record.id === "string" ? record.id : "";
-    if (id && ID_LABEL_MAP[id]) return ID_LABEL_MAP[id];
+    if (id && ID_LABEL_MAP[id]) return resolveLabelByLang(ID_LABEL_MAP[id], lang);
 
     var className = typeof record.className === "string" ? record.className : "";
-    if (className.indexOf("mobile-home-btn") >= 0) return "\u9996\u9875";
-    if (className.indexOf("mobile-hint-toggle-btn") >= 0) return "\u63d0\u793a";
-    if (className.indexOf("mobile-undo-top-btn") >= 0) return "\u64a4\u56de";
-    if (className.indexOf("timerbox-toggle-btn") >= 0) return "\u8ba1\u65f6";
-    if (className.indexOf("restart-button") >= 0) return "\u65b0\u5c40";
+    if (className.indexOf("mobile-home-btn") >= 0) return lang === "en" ? "Home" : "\u9996\u9875";
+    if (className.indexOf("mobile-hint-toggle-btn") >= 0) return lang === "en" ? "Guide" : "\u63d0\u793a";
+    if (className.indexOf("mobile-undo-top-btn") >= 0) return lang === "en" ? "Undo" : "\u64a4\u56de";
+    if (className.indexOf("timerbox-toggle-btn") >= 0) return lang === "en" ? "Timers" : "\u8ba1\u65f6";
+    if (className.indexOf("restart-button") >= 0) return lang === "en" ? "New" : "\u65b0\u5c40";
 
     var title = record.getAttribute ? record.getAttribute("title") : "";
-    if (typeof title === "string" && title.trim()) return compactLabel(title);
+    if (typeof title === "string" && title.trim()) return compactLabel(title, lang);
 
     var aria = record.getAttribute ? record.getAttribute("aria-label") : "";
-    if (typeof aria === "string" && aria.trim()) return compactLabel(aria);
+    if (typeof aria === "string" && aria.trim()) return compactLabel(aria, lang);
 
     return "";
   }
@@ -312,6 +372,25 @@
     );
   }
 
+  function resolveSettingsText(lang) {
+    if (lang === "en") {
+      return {
+        heading: "Button Style",
+        toggleLabel: "Text Button Mode",
+        rowNote: "Display style for top buttons on mobile.",
+        textModeNote: "Current: text buttons for better readability.",
+        iconModeNote: "Current: icon buttons for cleaner visuals."
+      };
+    }
+    return {
+      heading: "\u6309\u94ae\u6837\u5f0f",
+      toggleLabel: "\u6587\u5b57\u6309\u94ae\u6a21\u5f0f",
+      rowNote: "\u79fb\u52a8\u7aef\u9876\u90e8\u6309\u94ae\u663e\u793a\u98ce\u683c\u3002",
+      textModeNote: "\u5f53\u524d\u4e3a\u6587\u5b57\u6309\u94ae\uff0c\u53ef\u8bfb\u6027\u66f4\u5f3a\u3002",
+      iconModeNote: "\u5f53\u524d\u4e3a\u56fe\u6807\u6309\u94ae\uff0c\u89c6\u89c9\u66f4\u7b80\u6d01\u3002"
+    };
+  }
+
   function ensureSettingsRow(documentLike) {
     if (!documentLike) return null;
 
@@ -328,19 +407,27 @@
     if (!row) return null;
     row.id = SETTINGS_ROW_ID;
     row.className = "settings-row";
+    var lang = readUiLanguage(documentLike);
+    var copy = resolveSettingsText(lang);
     row.innerHTML =
-      '<div style="font-weight:700; margin-bottom: 6px;">\u6309\u94ae\u6837\u5f0f</div>' +
+      '<div class="top-btn-style-heading" style="font-weight:700; margin-bottom: 6px;">' +
+      copy.heading +
+      "</div>" +
       '<label class="settings-switch-row" for="' +
       SETTINGS_TOGGLE_ID +
       '">' +
-      '<span>\u6587\u5b57\u6309\u94ae\u6a21\u5f0f</span>' +
+      "<span>" +
+      copy.toggleLabel +
+      "</span>" +
       '<input id="' +
       SETTINGS_TOGGLE_ID +
       '" type="checkbox">' +
       "</label>" +
       '<div id="' +
       SETTINGS_VALUE_NOTE_ID +
-      '" class="settings-note">\u79fb\u52a8\u7aef\u9876\u90e8\u6309\u94ae\u663e\u793a\u98ce\u683c\u3002</div>';
+      '" class="settings-note">' +
+      copy.rowNote +
+      "</div>";
 
     var actions = querySelector(content, SETTINGS_ACTIONS_SELECTOR);
     if (actions && actions.parentNode === content && content.insertBefore) {
@@ -352,13 +439,25 @@
     return findSettingsControl(documentLike);
   }
 
+  function updateSettingsStaticText(documentLike) {
+    if (!documentLike) return;
+    var lang = readUiLanguage(documentLike);
+    var copy = resolveSettingsText(lang);
+    var row = documentLike.getElementById(SETTINGS_ROW_ID);
+    if (!row) return;
+    var heading = querySelector(row, ".top-btn-style-heading");
+    if (heading) heading.textContent = copy.heading;
+    var switchLabel = querySelector(row, ".settings-switch-row > span");
+    if (switchLabel) switchLabel.textContent = copy.toggleLabel;
+  }
+
   function updateSettingsNote(documentLike, mode) {
     var note = documentLike ? documentLike.getElementById(SETTINGS_VALUE_NOTE_ID) : null;
     if (!note) return;
+    var lang = readUiLanguage(documentLike);
+    var copy = resolveSettingsText(lang);
     note.textContent =
-      mode === MODE_TEXT
-        ? "\u5f53\u524d\u4e3a\u6587\u5b57\u6309\u94ae\uff0c\u53ef\u8bfb\u6027\u66f4\u5f3a\u3002"
-        : "\u5f53\u524d\u4e3a\u56fe\u6807\u6309\u94ae\uff0c\u89c6\u89c9\u66f4\u7b80\u6d01\u3002";
+      mode === MODE_TEXT ? copy.textModeNote : copy.iconModeNote;
   }
 
   function syncSettingsControl(documentLike, mode) {
@@ -409,6 +508,7 @@
     var control = ensureSettingsRow(documentLike);
     if (!control) return null;
 
+    updateSettingsStaticText(documentLike);
     bindSettingsControl(control, documentLike);
     syncSettingsControl(documentLike, resolveMode(mode));
     return control;
@@ -530,6 +630,17 @@
     });
   }
 
+  function bindLanguageSync(documentLike) {
+    if (hasBoundLanguageChange) return;
+    var addEventListener = asFunction(global.addEventListener);
+    if (!addEventListener) return;
+    hasBoundLanguageChange = true;
+    addEventListener.call(global, "uilanguagechange", function () {
+      var mode = readStoredMode();
+      applyTopButtonStyle(mode, documentLike || getDocumentLike());
+    });
+  }
+
   function boot() {
     var doc = getDocumentLike();
     if (!doc || !isGamePage(doc)) return;
@@ -538,6 +649,7 @@
     applyTopButtonStyle(mode, doc);
     observeTopButtons(doc);
     bindResizeSync(doc);
+    bindLanguageSync(doc);
   }
 
   if (toRecord(global.document).readyState === "loading") {

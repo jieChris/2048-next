@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -18,7 +18,7 @@
       margin-top: 24px;
       background: #faf8ef;
       border: 1px solid #d8d4d0;
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 22px;
     }
     .mode-hub h2 {
@@ -30,13 +30,54 @@
       margin: 0 0 18px;
       color: #8a8178;
     }
+    .mode-priority-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin: 12px 0 14px;
+    }
+    .mode-priority-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-decoration: none;
+      background: #8f7a66;
+      border-radius: 8px;
+      color: #f9f6f2 !important;
+      padding: 14px 16px;
+      min-height: 94px;
+      box-sizing: border-box;
+      transition: background 0.15s ease;
+    }
+    .mode-priority-card:visited,
+    .mode-priority-card:hover,
+    .mode-priority-card:active {
+      color: #f9f6f2 !important;
+      text-decoration: none;
+    }
+    .mode-priority-card:hover {
+      background: #7f6a56;
+    }
+    .mode-priority-card small {
+      color: #e8e2db !important;
+      font-size: 12px;
+      letter-spacing: 0.4px;
+    }
+    .mode-priority-card strong {
+      color: #fffdf8 !important;
+      font-size: 18px;
+      line-height: 1.2;
+    }
+    .mode-key-actions {
+      margin-top: 6px;
+    }
     .mode-major-title {
       margin: 20px 0 10px;
       color: #5f544a;
       font-weight: bold;
-      font-size: 28px;
+      font-size: 24px;
       line-height: 1.15;
-      letter-spacing: 1px;
+      letter-spacing: 0.4px;
       border-left: 4px solid #8f7a66;
       padding-left: 10px;
     }
@@ -66,6 +107,58 @@
     .mode-hub-btn:hover {
       background: #7f6a56;
     }
+    .mode-collapsible {
+      margin-top: 14px;
+      border: 1px solid #ddd7cf;
+      border-radius: 8px;
+      background: #fffdf7;
+      overflow: hidden;
+    }
+    .mode-collapsible summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 12px 14px;
+      font-weight: bold;
+      color: #6f665d;
+      background: #f3efe7;
+      user-select: none;
+    }
+    .mode-collapsible summary::-webkit-details-marker {
+      display: none;
+    }
+    .mode-collapsible summary::after {
+      content: "+";
+      float: right;
+      font-size: 16px;
+      color: #9a9086;
+      font-weight: normal;
+    }
+    .mode-collapsible[open] summary::after {
+      content: "-";
+    }
+    .mode-collapsible-body {
+      padding: 12px 14px 14px;
+    }
+    .mode-hub-actions.mode-hub-actions--dense .mode-hub-btn {
+      min-width: 160px;
+      padding: 9px 14px;
+    }
+    @media (max-width: 900px) {
+      .mode-priority-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 520px) {
+      .mode-hub {
+        padding: 14px;
+      }
+      .mode-collapsible summary {
+        padding: 11px 12px;
+      }
+      .mode-collapsible-body {
+        padding: 10px 12px 12px;
+      }
+    }
   </style>
 </head>
 <body data-page="modes">
@@ -79,90 +172,105 @@
       <h2>选择你要进入的模式</h2>
       <p>本站为本地练习工具，所有记录保存在本地。可在历史页面查看、导出、导入和回放。</p>
 
-      <div class="mode-major-title">不可撤回模式</div>
+      <div class="mode-major-title">推荐入口</div>
+      <div class="mode-priority-grid">
+        <a class="mode-priority-card" href="index.html">
+          <small>不可撤回模式</small>
+          <strong>标准版 4x4（无撤回）</strong>
+        </a>
+        <a class="mode-priority-card" href="undo_2048.html">
+          <small>可撤回模式</small>
+          <strong>经典版 4x4（可撤回）</strong>
+        </a>
+      </div>
 
       <div class="mode-group-title">推荐入口</div>
-      <div class="mode-hub-actions">
-        <a class="mode-hub-btn" href="index.html">标准版 4x4（无撤回）</a>
-      </div>
-
-      <div class="mode-group-title">2幂 - 尺寸扩展</div>
-      <div class="mode-hub-actions">
-        <a class="mode-hub-btn" href="play.html?mode_key=board_3x3_pow2_no_undo">3x3</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_3x4_pow2_no_undo">4x3</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_2x4_pow2_no_undo">4x2</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_5x5_pow2_no_undo">5x5</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_6x6_pow2_no_undo">6x6</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_7x7_pow2_no_undo">7x7</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_8x8_pow2_no_undo">8x8</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_9x9_pow2_no_undo">9x9</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_10x10_pow2_no_undo">10x10</a>
-      </div>
-
-      <div class="mode-group-title">Fibonacci</div>
-      <div class="mode-hub-actions">
+      <div class="mode-hub-actions mode-hub-actions--dense mode-key-actions">
+        <a class="mode-hub-btn" href="play.html?mode_key=board_5x5_pow2_no_undo">5x5（无撤回）</a>
+        <a class="mode-hub-btn" href="play.html?mode_key=spawn_custom_4x4_pow2_undo">4x4 自定义4率（可撤回）</a>
         <a class="mode-hub-btn" href="play.html?mode_key=fib_4x4_no_undo">Fibonacci 4x4</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=fib_3x3_no_undo">Fibonacci 3x3</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=fib_4x3_no_undo">Fibonacci 4x3</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=fib_4x2_no_undo">Fibonacci 4x2</a>
-      </div>
-
-      <div class="mode-group-title">封顶/概率/规则实验</div>
-      <div class="mode-hub-actions">
-        <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_64_no_undo">4x4 封顶64</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_1024_no_undo">4x4 封顶1024</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_no_undo">4x4 2048</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_4096_no_undo">4x4 封顶4096</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=spawn_custom_4x4_pow2_no_undo">4x4 自定义4率</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=spawn50_3x3_pow2_no_undo">3x3 概率50/50</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=dirlock5_4x4_pow2_no_undo">方向锁</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=obstacle_4x4_pow2_no_undo">障碍块</a>
-      </div>
-
-      <div class="mode-major-title">可撤回模式</div>
-
-      <div class="mode-group-title">推荐入口</div>
-      <div class="mode-hub-actions">
-        <a class="mode-hub-btn" href="undo_2048.html">经典版 4x4（可撤回）</a>
-      </div>
-
-      <div class="mode-group-title">2幂 - 尺寸扩展</div>
-      <div class="mode-hub-actions">
-        <a class="mode-hub-btn" href="play.html?mode_key=board_3x3_pow2_undo">3x3</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_3x4_pow2_undo">4x3</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_2x4_pow2_undo">4x2</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_5x5_pow2_undo">5x5</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_6x6_pow2_undo">6x6</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_7x7_pow2_undo">7x7</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_8x8_pow2_undo">8x8</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_9x9_pow2_undo">9x9</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=board_10x10_pow2_undo">10x10</a>
-      </div>
-
-      <div class="mode-group-title">Fibonacci</div>
-      <div class="mode-hub-actions">
-        <a class="mode-hub-btn" href="play.html?mode_key=fib_4x4_undo">Fibonacci 4x4</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=fib_3x3_undo">Fibonacci 3x3</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=fib_4x3_undo">Fibonacci 4x3</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=fib_4x2_undo">Fibonacci 4x2</a>
-      </div>
-
-      <div class="mode-group-title">概率变种</div>
-      <div class="mode-hub-actions">
-        <a class="mode-hub-btn" href="play.html?mode_key=spawn_custom_4x4_pow2_undo">4x4 自定义4率</a>
-      </div>
-
-      <div class="mode-group-title">规则实验</div>
-      <div class="mode-hub-actions">
-        <a class="mode-hub-btn" href="play.html?mode_key=limit3_4x4_pow2_undo">限次撤回（3次）</a>
-        <a class="mode-hub-btn" href="play.html?mode_key=limit5_4x4_pow2_undo">限次撤回（5次）</a>
         <a class="mode-hub-btn" href="play.html?mode_key=combo_4x4_pow2_undo">连击加分</a>
       </div>
 
-      <div class="mode-major-title">工具入口</div>
+      <details class="mode-collapsible">
+        <summary>不可撤回模式</summary>
+        <div class="mode-collapsible-body">
+          <div class="mode-group-title">2幂 - 尺寸扩展</div>
+          <div class="mode-hub-actions mode-hub-actions--dense">
+            <a class="mode-hub-btn" href="play.html?mode_key=board_3x3_pow2_no_undo">3x3</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_3x4_pow2_no_undo">4x3</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_2x4_pow2_no_undo">4x2</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_5x5_pow2_no_undo">5x5</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_6x6_pow2_no_undo">6x6</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_7x7_pow2_no_undo">7x7</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_8x8_pow2_no_undo">8x8</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_9x9_pow2_no_undo">9x9</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_10x10_pow2_no_undo">10x10</a>
+          </div>
 
+          <div class="mode-group-title">Fibonacci</div>
+          <div class="mode-hub-actions mode-hub-actions--dense">
+            <a class="mode-hub-btn" href="play.html?mode_key=fib_4x4_no_undo">Fibonacci 4x4</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=fib_3x3_no_undo">Fibonacci 3x3</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=fib_4x3_no_undo">Fibonacci 4x3</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=fib_4x2_no_undo">Fibonacci 4x2</a>
+          </div>
+
+          <div class="mode-group-title">封顶/概率/规则实验</div>
+          <div class="mode-hub-actions mode-hub-actions--dense">
+            <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_64_no_undo">4x4 封顶64</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_1024_no_undo">4x4 封顶1024</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_no_undo">4x4 2048</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_4096_no_undo">4x4 封顶4096</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=spawn_custom_4x4_pow2_no_undo">4x4 自定义4率</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=spawn50_3x3_pow2_no_undo">3x3 概率50/50</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=dirlock5_4x4_pow2_no_undo">方向锁</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=obstacle_4x4_pow2_no_undo">障碍块</a>
+          </div>
+        </div>
+      </details>
+
+      <details class="mode-collapsible">
+        <summary>可撤回模式</summary>
+        <div class="mode-collapsible-body">
+          <div class="mode-group-title">2幂 - 尺寸扩展</div>
+          <div class="mode-hub-actions mode-hub-actions--dense">
+            <a class="mode-hub-btn" href="play.html?mode_key=board_3x3_pow2_undo">3x3</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_3x4_pow2_undo">4x3</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_2x4_pow2_undo">4x2</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_5x5_pow2_undo">5x5</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_6x6_pow2_undo">6x6</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_7x7_pow2_undo">7x7</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_8x8_pow2_undo">8x8</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_9x9_pow2_undo">9x9</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=board_10x10_pow2_undo">10x10</a>
+          </div>
+
+          <div class="mode-group-title">Fibonacci</div>
+          <div class="mode-hub-actions mode-hub-actions--dense">
+            <a class="mode-hub-btn" href="play.html?mode_key=fib_4x4_undo">Fibonacci 4x4</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=fib_3x3_undo">Fibonacci 3x3</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=fib_4x3_undo">Fibonacci 4x3</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=fib_4x2_undo">Fibonacci 4x2</a>
+          </div>
+
+          <div class="mode-group-title">概率变种</div>
+          <div class="mode-hub-actions mode-hub-actions--dense">
+            <a class="mode-hub-btn" href="play.html?mode_key=spawn_custom_4x4_pow2_undo">4x4 自定义4率</a>
+          </div>
+
+          <div class="mode-group-title">规则实验</div>
+          <div class="mode-hub-actions mode-hub-actions--dense">
+            <a class="mode-hub-btn" href="play.html?mode_key=limit3_4x4_pow2_undo">限次撤回（3次）</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=limit5_4x4_pow2_undo">限次撤回（5次）</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=combo_4x4_pow2_undo">连击加分</a>
+          </div>
+        </div>
+      </details>
+
+      <div class="mode-major-title">工具入口</div>
       <div class="mode-group-title">其他页面</div>
-      <div class="mode-hub-actions">
+      <div class="mode-hub-actions mode-hub-actions--dense">
         <a class="mode-hub-btn" href="Practice_board.html?practice_fresh=1">练习板（Legacy）</a>
         <a class="mode-hub-btn" href="history.html">历史</a>
         <a class="mode-hub-btn" href="replay.html">回放</a>
@@ -170,5 +278,8 @@
     </div>
   </div>
   <script src="js/theme_manager.js?v=1771600400000"></script>
+  <script src="js/core_i18n_runtime.js?v=20260310-07"></script>
 </body>
 </html>
+
+
