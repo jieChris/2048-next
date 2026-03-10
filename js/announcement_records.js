@@ -1,6 +1,17 @@
 (function () {
   window.ANNOUNCEMENT_RECORDS = [
     {
+      id: "2026-03-11-v2.1",
+      version: "v2.1",
+      date: "2026-03-11",
+      title: "V2.1 体验与稳定性更新",
+      title_en: "V2.1 UX & Stability Update",
+      content:
+        "本次更新重点为体验优化与稳定性修复：完善中英文切换，修复移动端英文状态下切回中文不生效问题；色板功能已独立为单独页面，支持标准/斐波那契分离编辑、导入导出与实时预览；模式选择页重构为常用入口优先展示，其余模式分组收纳，页面更清晰；并修复推荐入口卡片在部分主题下文字不可见问题。同时修复了主题设置模块中的 TypeScript 构建报错，提升版本发布稳定性。",
+      content_en:
+        "This update focuses on UX improvements and stability fixes: improved full Chinese/English switching and fixed the mobile issue where switching back to Chinese could fail in English mode; moved the palette feature to a standalone page with separate Standard/Fibonacci editing, import/export, and live preview; redesigned the mode selection page to prioritize commonly used entries while grouping advanced modes into collapsible sections for cleaner navigation; and fixed unreadable text on featured mode cards under some themes. Also fixed a TypeScript build error in the theme settings module to improve release stability."
+    },
+    {
       id: "2026-03-05-v2.0",
       version: "v2.0",
       date: "2026-03-05",
