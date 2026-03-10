@@ -6,6 +6,20 @@
   var POW2_VALUES = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
   var FIB_VALUES = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597];
   var LEGEND_VALUES = [16, 32, 64, 128, 256, 512, 1024, 2048];
+  var REQUIRED_THEME_API_NAMES = [
+    "getTilePalettes",
+    "getActiveTilePaletteId",
+    "setActiveTilePalette",
+    "createTilePalette",
+    "renameTilePalette",
+    "deleteTilePalette",
+    "updateTilePaletteColor",
+    "exportTilePalettes",
+    "importTilePalettes"
+  ];
+  var MAX_RUNTIME_RETRY = 25;
+  var runtimeRetryCount = 0;
+  var bootCompleted = false;
 
   function toRecord(value) {
     return value && typeof value === "object" ? value : {};
@@ -63,8 +77,28 @@
     return !!toRecord(palette).locked || source !== "custom";
   }
 
+  function missingThemeApiNames(themeManager) {
+    var list = [];
+    var source = toRecord(themeManager);
+    for (var i = 0; i < REQUIRED_THEME_API_NAMES.length; i += 1) {
+      var key = REQUIRED_THEME_API_NAMES[i];
+      if (!asFunction(source[key])) list.push(key);
+    }
+    return list;
+  }
+
+  function collectMissingDomIds(items) {
+    var missing = [];
+    for (var i = 0; i < items.length; i += 1) {
+      if (!items[i].node) missing.push(items[i].id);
+    }
+    return missing;
+  }
+
   function bootPalettePage() {
+    if (bootCompleted) return;
     var themeManager = toRecord(global.ThemeManager);
+    var missingApiNames = missingThemeApiNames(themeManager);
     var getTilePalettes = asFunction(themeManager.getTilePalettes);
     var getActiveTilePaletteId = asFunction(themeManager.getActiveTilePaletteId);
     var setActiveTilePalette = asFunction(themeManager.setActiveTilePalette);
@@ -75,16 +109,7 @@
     var exportTilePalettes = asFunction(themeManager.exportTilePalettes);
     var importTilePalettes = asFunction(themeManager.importTilePalettes);
 
-    var requiredReady =
-      getTilePalettes &&
-      getActiveTilePaletteId &&
-      setActiveTilePalette &&
-      createTilePalette &&
-      renameTilePalette &&
-      deleteTilePalette &&
-      updateTilePaletteColor &&
-      exportTilePalettes &&
-      importTilePalettes;
+    var requiredReady = missingApiNames.length === 0;
 
     var paletteListEl = byId("palette-list");
     var paletteCountEl = byId("palette-count");
@@ -114,28 +139,56 @@
       if (type === "err") noteEl.classList.add("err");
     }
 
-    if (
-      !requiredReady ||
-      !paletteListEl ||
-      !paletteCountEl ||
-      !currentNameEl ||
-      !currentTagEl ||
-      !nameInputEl ||
-      !createBtn ||
-      !renameBtn ||
-      !deleteBtn ||
-      !exportBtn ||
-      !importBtn ||
-      !importInput ||
-      !pow2EditorEl ||
-      !fibEditorEl ||
-      !pow2PreviewEl ||
-      !fibPreviewEl ||
-      !legendPreviewEl
-    ) {
-      setNote("色板页面初始化失败：缺少必要运行时或 DOM 节点。", "err");
+    var missingDomIds = collectMissingDomIds([
+      { id: "palette-list", node: paletteListEl },
+      { id: "palette-count", node: paletteCountEl },
+      { id: "palette-current-name", node: currentNameEl },
+      { id: "palette-current-tag", node: currentTagEl },
+      { id: "palette-name-input", node: nameInputEl },
+      { id: "palette-create-btn", node: createBtn },
+      { id: "palette-rename-btn", node: renameBtn },
+      { id: "palette-delete-btn", node: deleteBtn },
+      { id: "palette-export-btn", node: exportBtn },
+      { id: "palette-import-btn", node: importBtn },
+      { id: "palette-import-input", node: importInput },
+      { id: "palette-editor-pow2", node: pow2EditorEl },
+      { id: "palette-editor-fib", node: fibEditorEl },
+      { id: "palette-preview-pow2", node: pow2PreviewEl },
+      { id: "palette-preview-fib", node: fibPreviewEl },
+      { id: "palette-preview-legend", node: legendPreviewEl },
+      { id: "palette-note", node: noteEl }
+    ]);
+
+    if (!requiredReady || missingDomIds.length > 0) {
+      if (!requiredReady && missingDomIds.length === 0 && runtimeRetryCount < MAX_RUNTIME_RETRY) {
+        runtimeRetryCount += 1;
+        global.setTimeout(bootPalettePage, 120);
+        return;
+      }
+
+      var problems = [];
+      if (missingApiNames.length > 0) {
+        problems.push("运行时缺少: " + missingApiNames.join(", "));
+      }
+      if (missingDomIds.length > 0) {
+        problems.push("DOM 缺少: " + missingDomIds.join(", "));
+      }
+      var message = "色板页面初始化失败。";
+      if (problems.length > 0) {
+        message += " " + problems.join("；") + "。";
+      }
+      message += " 请清理浏览器缓存并确认服务器已部署最新 js/theme_manager.js。";
+      setNote(message, "err");
+      if (global.console && typeof global.console.error === "function") {
+        global.console.error("[palette_page] init failed", {
+          missingApiNames: missingApiNames,
+          missingDomIds: missingDomIds,
+          retryCount: runtimeRetryCount
+        });
+      }
       return;
     }
+    bootCompleted = true;
 
     function getPaletteMap(list) {
       var map = {};
