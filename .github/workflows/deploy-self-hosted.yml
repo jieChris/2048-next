@@ -63,6 +63,7 @@ jobs:
             capped_2048.html \
             Practice_board.html \
             PKU2048.html \
+            palette.html \
             js \
             style \
             images \
