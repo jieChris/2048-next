@@ -515,7 +515,7 @@ export function applyThemeSettingsUi(input: {
 
         bindListener(picker, "change", function () {
           const currentId = resolveText(toRecord(paletteSelect).value || getActiveTilePaletteId.call(themeManager));
-          const pickerRef = toRecord(this as unknown);
+          const pickerRef = toRecord(picker);
           const changedColor = resolveText(pickerRef.value);
           const index = resolveNumber(toRecord(pickerRef.dataset).index, 0);
           const changedRuleset = resolveText(toRecord(pickerRef.dataset).ruleset) === "fibonacci" ? "fibonacci" : "pow2";
