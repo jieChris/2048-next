@@ -1597,12 +1597,6 @@ input[type=range]::-webkit-slider-runnable-track {
   opacity: 1;
 }
 
-@media screen and (max-width: 1200px) {
-  body[data-page="game"].mobile-hint-collapsed-content .home-guide-panel {
-    display: none !important;
-  }
-}
-
 /* Settings modal */
 .settings-modal-content {
   max-width: 540px;
@@ -1833,6 +1827,84 @@ input[type=range]::-webkit-slider-runnable-track {
   color: #8a8178;
 }
 
+.tile-palette-settings-row {
+  padding: 10px 12px;
+  border: 1px solid #e0dad2;
+  border-radius: 8px;
+  background: #fdfaf5;
+}
+
+.tile-palette-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.tile-palette-toolbar .replay-button {
+  min-height: 34px;
+  line-height: 34px;
+  padding: 0 12px;
+}
+
+.tile-palette-name-input {
+  min-width: 160px;
+  flex: 1 1 180px;
+}
+
+.tile-palette-editor-wrap {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tile-palette-editor-block {
+  flex: 1 1 220px;
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid #e5dfd7;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.tile-palette-editor-title {
+  font-size: 12px;
+  color: #8a8178;
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+.tile-palette-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.tile-palette-color-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tile-palette-color-item input[type=color] {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tile-palette-color-label {
+  font-size: 11px;
+  color: #8a8178;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media screen and (max-width: 520px) {
   .top-action-buttons {
     position: static;
@@ -1863,6 +1935,17 @@ input[type=range]::-webkit-slider-runnable-track {
   .theme-preview-dual-wrap {
     flex-direction: column;
     gap: 8px;
+  }
+
+  .tile-palette-toolbar .settings-select,
+  .tile-palette-name-input,
+  .tile-palette-toolbar .replay-button {
+    width: 100%;
+  }
+
+  .tile-palette-editor-block {
+    min-width: 0;
+    width: 100%;
   }
 }
 
@@ -3102,4 +3185,58 @@ body[data-page="game"][data-top-button-style="text"] #timerbox-toggle-btn {
   font-size: 13px;
   letter-spacing: 0;
   padding: 0 10px;
+}
+@media screen and (min-width: 981px) and (max-width: 1366px) and ((hover: none) or (pointer: coarse)) {
+  body[data-page="practice"] {
+    margin: 16px 0;
+    padding: 0 14px;
+  }
+
+  body[data-page="practice"] .container {
+    width: 100% !important;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  body[data-page="practice"] .dashboard-container {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px;
+  }
+
+  body[data-page="practice"] .dashboard-stats,
+  body[data-page="practice"] .dashboard-controls {
+    width: 100% !important;
+  }
+
+  body[data-page="practice"] #practice-stats-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  body[data-page="practice"] #practice-stats-actions .practice-mobile-undo-btn {
+    display: none !important;
+  }
+
+  body[data-page="practice"] #practice-stats-actions .timerbox-toggle-btn,
+  body[data-page="practice"] #timerbox-toggle-btn {
+    display: none !important;
+  }
+
+  body[data-page="practice"] #timerbox {
+    float: none;
+    width: min(100%, 560px) !important;
+    margin: 10px auto 0;
+    display: block !important;
+  }
+
+  body[data-page="practice"] #timerbox.timerbox-hidden-mode > * {
+    visibility: visible !important;
+  }
+
+  body[data-page="practice"] .game-container {
+    width: min(100%, 560px);
+    margin-left: auto;
+    margin-right: auto;
+  }
 }

@@ -155,8 +155,6 @@ describe("bootstrap settings modal page host", () => {
   it("creates settings init resolvers and delegates theme/timer/cleanup init", () => {
     const applyThemeSettingsPageInit = vi.fn(() => ({ didApply: true }));
     const applyLegacyUndoSettingsCleanup = vi.fn(() => ({ didRemoveRow: true }));
-    const applyTimerModuleSettingsPageInit = vi.fn(() => ({ didBindToggle: true }));
-    const syncMobileTimerboxUi = vi.fn();
 
     const resolvers = createSettingsModalInitResolvers({
       themeSettingsPageHostRuntime: {
@@ -167,20 +165,19 @@ describe("bootstrap settings modal page host", () => {
       timerModuleSettingsHostRuntime: {
         applyLegacyUndoSettingsCleanup
       },
-      timerModuleSettingsPageHostRuntime: {
-        applyTimerModuleSettingsPageInit
-      },
       timerModuleRuntime: { id: "timer-runtime" },
       documentLike: { id: "document" },
       windowLike: { id: "window" },
       retryDelayMs: 120,
-      setTimeoutLike: vi.fn(),
-      syncMobileTimerboxUi
+      setTimeoutLike: vi.fn()
     });
 
     expect(resolvers.initThemeSettingsUI()).toEqual({ didApply: true });
     expect(resolvers.removeLegacyUndoSettingsUI()).toEqual({ didRemoveRow: true });
-    expect(resolvers.initTimerModuleSettingsUI()).toEqual({ didBindToggle: true });
+    expect(resolvers.initTimerModuleSettingsUI()).toEqual({
+      removed: false,
+      disabled: true
+    });
     expect(resolvers.initWinPromptSettingsUI()).toEqual({
       hasToggle: false,
       didBindToggle: false,
@@ -196,39 +193,41 @@ describe("bootstrap settings modal page host", () => {
     expect(applyLegacyUndoSettingsCleanup).toHaveBeenCalledWith({
       documentLike: { id: "document" }
     });
-    expect(applyTimerModuleSettingsPageInit).toHaveBeenCalledTimes(1);
-    const timerPayload = applyTimerModuleSettingsPageInit.mock.calls[0]?.[0] as Record<
-      string,
-      unknown
-    >;
-    expect(timerPayload.retryDelayMs).toBe(120);
-    expect(typeof timerPayload.reinvokeInit).toBe("function");
-    expect(timerPayload.syncMobileTimerboxUi).toBe(syncMobileTimerboxUi);
   });
 
-  it("resolves syncMobileTimerboxUI from window when resolver input is missing", () => {
-    const applyTimerModuleSettingsPageInit = vi.fn(() => ({ didBindToggle: true }));
-    const syncMobileTimerboxUI = vi.fn();
-    const windowLike = { syncMobileTimerboxUI };
+  it("hides legacy timer module controls from settings modal", () => {
+    const settingsRow = {};
+    const parentNode = {
+      removeChild: vi.fn()
+    };
+    const toggle = {
+      style: {},
+      closest: vi.fn(() => ({
+        ...settingsRow,
+        parentNode
+      }))
+    };
+    const note = {
+      style: {}
+    };
 
     const resolvers = createSettingsModalInitResolvers({
-      timerModuleSettingsPageHostRuntime: {
-        applyTimerModuleSettingsPageInit
-      },
-      windowLike
+      documentLike: {
+        getElementById(id: string) {
+          if (id === "timer-module-view-toggle") return toggle;
+          if (id === "timer-module-view-note") return note;
+          return null;
+        }
+      }
     });
 
-    expect(resolvers.initTimerModuleSettingsUI()).toEqual({ didBindToggle: true });
-
-    const timerPayload = applyTimerModuleSettingsPageInit.mock.calls[0]?.[0] as Record<
-      string,
-      unknown
-    >;
-    const syncResolver = timerPayload.syncMobileTimerboxUi as (() => unknown) | undefined;
-    expect(typeof syncResolver).toBe("function");
-    syncResolver && syncResolver();
-    expect(syncMobileTimerboxUI).toHaveBeenCalledTimes(1);
-    expect(syncMobileTimerboxUI.mock.contexts[0]).toBe(windowLike);
+    expect(resolvers.initTimerModuleSettingsUI()).toEqual({
+      removed: true,
+      disabled: true
+    });
+    expect(parentNode.removeChild).toHaveBeenCalledTimes(1);
+    expect(toggle.closest).toHaveBeenCalledWith(".settings-row");
+    expect((note.style as Record<string, unknown>).display).toBe("none");
   });
 
   it("initializes win prompt toggle state from storage and persists changes", () => {
@@ -327,7 +326,10 @@ describe("bootstrap settings modal page host", () => {
 
     expect(resolvers.initThemeSettingsUI()).toBeNull();
     expect(resolvers.removeLegacyUndoSettingsUI()).toBeNull();
-    expect(resolvers.initTimerModuleSettingsUI()).toBeNull();
+    expect(resolvers.initTimerModuleSettingsUI()).toEqual({
+      removed: false,
+      disabled: true
+    });
     expect(resolvers.initWinPromptSettingsUI()).toEqual({
       hasToggle: false,
       didBindToggle: false,

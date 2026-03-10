@@ -10,6 +10,44 @@
   var FIB_PREVIEW_VALUES = FIB_TILE_VALUES.slice(0, 16);
   var TIMER_VALUES = [16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768];
   var DEFAULT_THEME = "classic";
+  var TILE_PALETTE_STORAGE_KEY = "tile_palette_profiles_v1";
+  var TILE_PALETTE_ACTIVE_KEY = "tile_palette_active_v1";
+  var TILE_PALETTE_VERSION = 1;
+  var DEFAULT_TILE_PALETTE_ID = "follow-theme";
+  var BUILTIN_TILE_PALETTES = [
+    {
+      id: "eyestrain-soft",
+      name: "护眼·暖砂",
+      pow2: [
+        "#ede7df", "#e6dfd4", "#d9d8cf", "#d2d5cb",
+        "#cad2c7", "#c2cec3", "#bbc9c1", "#b4c4bf",
+        "#adbfbd", "#a6bab8", "#9fb4b2", "#98adab",
+        "#90a5a2", "#889d99", "#819591", "#798d88"
+      ],
+      fibonacci: [
+        "#ece9df", "#e7e3d8", "#dfddcf", "#d8d6c6",
+        "#d1cfbe", "#c9c8b7", "#c2c0b0", "#bab8a8",
+        "#b3b1a1", "#aba999", "#a4a291", "#9c9a89",
+        "#959381", "#8d8b7a", "#868472", "#7e7d6a"
+      ]
+    },
+    {
+      id: "night-paper",
+      name: "护眼·夜纸",
+      pow2: [
+        "#e8e5dd", "#dfddd4", "#d6d6cb", "#ced0c4",
+        "#c6cabd", "#bec4b6", "#b6beaf", "#aeb8a8",
+        "#a6b2a1", "#9eac9a", "#96a693", "#8ea08c",
+        "#879985", "#80927f", "#798a79", "#728373"
+      ],
+      fibonacci: [
+        "#e7e4dc", "#dfdbd2", "#d7d2c9", "#cfcac0",
+        "#c7c2b7", "#bfb9ae", "#b7b1a6", "#afa89d",
+        "#a7a095", "#9f978d", "#978f85", "#8f867d",
+        "#877e75", "#80766d", "#786d65", "#70655d"
+      ]
+    }
+  ];
 
   function clamp(num, min, max) {
     return Math.max(min, Math.min(max, num));
@@ -872,12 +910,205 @@
     })
   };
 
-  function legendCss(theme) {
+  function isValidHexColor(value) {
+    if (typeof value !== "string") return false;
+    return /^#([0-9a-fA-F]{6})$/.test(value.trim());
+  }
+
+  function normalizePaletteColor(value, fallback) {
+    if (isValidHexColor(value)) return value.trim().toLowerCase();
+    return String(fallback || "#000000").toLowerCase();
+  }
+
+  function buildThemePaletteColors(theme, ruleset) {
+    var values = ruleset === "fibonacci" ? FIB_PREVIEW_VALUES : POW2_TILE_VALUES;
+    var colors = [];
+    for (var i = 0; i < 16; i++) {
+      colors.push(colorForIndex(theme, i, values.length));
+    }
+    return colors;
+  }
+
+  function normalizePaletteColorArray(input, fallbackColors) {
+    var fallback = Array.isArray(fallbackColors) ? fallbackColors.slice(0, 16) : [];
+    while (fallback.length < 16) fallback.push("#000000");
+    var result = fallback.slice(0, 16);
+    if (!Array.isArray(input)) return result;
+    for (var i = 0; i < 16; i++) {
+      var fallbackColor = result[i];
+      result[i] = normalizePaletteColor(input[i], fallbackColor);
+    }
+    return result;
+  }
+
+  function clonePaletteRecord(record) {
+    return {
+      id: String(record.id || ""),
+      name: String(record.name || ""),
+      pow2: Array.isArray(record.pow2) ? record.pow2.slice(0, 16) : [],
+      fibonacci: Array.isArray(record.fibonacci) ? record.fibonacci.slice(0, 16) : [],
+      createdAt: Number(record.createdAt) || Date.now(),
+      updatedAt: Number(record.updatedAt) || Date.now(),
+      source: String(record.source || "custom"),
+      locked: !!record.locked
+    };
+  }
+
+  function createFollowThemePalette(theme) {
+    return {
+      id: DEFAULT_TILE_PALETTE_ID,
+      name: "跟随主题",
+      pow2: buildThemePaletteColors(theme, "pow2"),
+      fibonacci: buildThemePaletteColors(theme, "fibonacci"),
+      createdAt: 0,
+      updatedAt: 0,
+      source: "follow",
+      locked: true
+    };
+  }
+
+  function createBuiltinPaletteRecords(theme) {
+    var fallbackPow2 = buildThemePaletteColors(theme, "pow2");
+    var fallbackFib = buildThemePaletteColors(theme, "fibonacci");
+    var list = [];
+    for (var i = 0; i < BUILTIN_TILE_PALETTES.length; i++) {
+      var item = BUILTIN_TILE_PALETTES[i];
+      list.push({
+        id: String(item.id),
+        name: String(item.name),
+        pow2: normalizePaletteColorArray(item.pow2, fallbackPow2),
+        fibonacci: normalizePaletteColorArray(item.fibonacci, fallbackFib),
+        createdAt: 0,
+        updatedAt: 0,
+        source: "builtin",
+        locked: true
+      });
+    }
+    return list;
+  }
+
+  function readStoredTilePaletteProfiles() {
+    if (typeof window === "undefined" || !window.localStorage) return [];
+    var raw = null;
+    try {
+      raw = localStorage.getItem(TILE_PALETTE_STORAGE_KEY);
+    } catch (_err) {
+      return [];
+    }
+    if (!raw) return [];
+    var parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (_err2) {
+      return [];
+    }
+    if (!Array.isArray(parsed)) return [];
+    var result = [];
+    for (var i = 0; i < parsed.length; i++) {
+      var item = parsed[i] || {};
+      var id = typeof item.id === "string" ? item.id.trim() : "";
+      if (!id || id === DEFAULT_TILE_PALETTE_ID) continue;
+      var name = typeof item.name === "string" && item.name.trim() ? item.name.trim() : "自定义色板";
+      var fallbackTheme = themes[currentThemeId] || themes[DEFAULT_THEME];
+      var pow2Fallback = buildThemePaletteColors(fallbackTheme, "pow2");
+      var fibFallback = buildThemePaletteColors(fallbackTheme, "fibonacci");
+      result.push({
+        id: id,
+        name: name,
+        pow2: normalizePaletteColorArray(item.pow2, pow2Fallback),
+        fibonacci: normalizePaletteColorArray(item.fibonacci, fibFallback),
+        createdAt: Number(item.createdAt) || Date.now(),
+        updatedAt: Number(item.updatedAt) || Date.now(),
+        source: "custom",
+        locked: false
+      });
+    }
+    return result;
+  }
+
+  function writeStoredTilePaletteProfiles(list) {
+    if (typeof window === "undefined" || !window.localStorage) return false;
+    try {
+      localStorage.setItem(TILE_PALETTE_STORAGE_KEY, JSON.stringify(list || []));
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function readActiveTilePaletteId() {
+    if (typeof window === "undefined" || !window.localStorage) return DEFAULT_TILE_PALETTE_ID;
+    try {
+      var value = localStorage.getItem(TILE_PALETTE_ACTIVE_KEY);
+      return value ? String(value) : DEFAULT_TILE_PALETTE_ID;
+    } catch (_err) {
+      return DEFAULT_TILE_PALETTE_ID;
+    }
+  }
+
+  function writeActiveTilePaletteId(value) {
+    if (typeof window === "undefined" || !window.localStorage) return false;
+    try {
+      localStorage.setItem(TILE_PALETTE_ACTIVE_KEY, String(value || DEFAULT_TILE_PALETTE_ID));
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function getTilePalettesForTheme(theme) {
+    var list = [createFollowThemePalette(theme)].concat(createBuiltinPaletteRecords(theme));
+    var custom = readStoredTilePaletteProfiles();
+    for (var i = 0; i < custom.length; i++) list.push(custom[i]);
+    return list;
+  }
+
+  function resolveActiveTilePalette(theme) {
+    var list = getTilePalettesForTheme(theme);
+    var activeId = readActiveTilePaletteId();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === activeId) return list[i];
+    }
+    return list[0];
+  }
+
+  function resolvePaletteBaseColor(theme, paletteColors, index, totalCount) {
+    if (Array.isArray(paletteColors) && paletteColors.length > 0) {
+      if (index >= 0 && index < paletteColors.length) return paletteColors[index];
+      var denom = Math.max(1, totalCount - 1);
+      return samplePalette(paletteColors, index / denom);
+    }
+    return colorForIndex(theme, index, totalCount);
+  }
+
+  function ensureUniquePaletteName(existingNames, desiredName) {
+    var base = (typeof desiredName === "string" && desiredName.trim()) ? desiredName.trim() : "自定义色板";
+    if (existingNames.indexOf(base) === -1) return base;
+    var idx = 1;
+    var candidate = base + " (" + idx + ")";
+    while (existingNames.indexOf(candidate) !== -1) {
+      idx += 1;
+      candidate = base + " (" + idx + ")";
+    }
+    return candidate;
+  }
+
+  function generateTilePaletteId() {
+    return "palette_" + Date.now().toString(36) + "_" + Math.floor(Math.random() * 0xffff).toString(36);
+  }
+
+  function findCustomPaletteIndexById(list, id) {
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].id === id) return i;
+    }
+    return -1;
+  }
+  function legendCss(theme, pow2PaletteColors) {
     var css = "";
     for (var i = 0; i < TIMER_VALUES.length; i++) {
       var val = TIMER_VALUES[i];
       var tileIdx = POW2_TILE_VALUES.indexOf(val);
-      var base = theme.colors[tileIdx >= 0 ? tileIdx : 0];
+      var base = resolvePaletteBaseColor(theme, pow2PaletteColors, tileIdx >= 0 ? tileIdx : 0, POW2_TILE_VALUES.length);
       var light = mixHex(base, "#ffffff", 0.18);
       css += ".timer-legend-" + val + "{background:" + light + ";";
       css += "box-shadow:0 0 12px 2px " + rgba(base, theme.neon ? 0.45 : 0.35) + ", inset 0 0 0 1px " + rgba("#ffffff", 0.22) + ";";
@@ -886,11 +1117,11 @@
     return css;
   }
 
-  function tileCssForValues(theme, values, scopeSelector) {
+  function tileCssForValues(theme, values, scopeSelector, paletteColors) {
     var css = "";
     for (var i = 0; i < values.length; i++) {
       var val = values[i];
-      var base = colorForIndex(theme, i, values.length);
+      var base = resolvePaletteBaseColor(theme, paletteColors, i, values.length);
       var hi = mixHex(base, "#ffffff", theme.neon ? 0.2 : 0.14);
       var lo = mixHex(base, "#000000", theme.neon ? 0.25 : 0.1);
       var bg = theme.gradient ? "linear-gradient(140deg," + hi + "," + base + "," + lo + ")" : base;
@@ -915,7 +1146,7 @@
       var previewSelector = scopeSelector + " .theme-color-" + val;
 
       css += tileSelector + "," + previewSelector + "{";
-      css += "color:" + text + ";background:" + bg + ";box-shadow:" + shadow + ";" + border + "box-sizing:border-box;";
+      css += "color:" + text + " !important;background:" + bg + " !important;box-shadow:" + shadow + ";" + border + "box-sizing:border-box;";
       if (theme.neon) {
         css += "text-shadow:0 0 10px " + rgba(base, 0.85) + ";";
       }
@@ -927,24 +1158,8 @@
       if (theme.blackTiles && theme.flashy) {
         css += scopeSelector + " .theme-preview-tile.theme-color-" + val + "{background-size:200% 200%;}\n";
       }
-
-      var fontSize = getTileFontSizeByDigits(val);
-      if (fontSize) {
-        css += (scopeSelector + " .tile.tile-" + val + ":not(.selection-tile) .tile-inner") + "{font-size:" + fontSize.desktop + " !important;}\n";
-        css += "@media screen and (max-width: 520px){" + (scopeSelector + " .tile.tile-" + val + ":not(.selection-tile) .tile-inner") + "{font-size:" + fontSize.mobile + " !important;}}\n";
-      }
     }
     return css;
-  }
-
-  function getTileFontSizeByDigits(value) {
-    var n = Math.abs(parseInt(value, 10));
-    if (!isFinite(n)) return null;
-    var digits = String(n).length;
-    if (digits <= 2) return null;
-    if (digits === 3) return { desktop: "45px", mobile: "25px" };
-    if (digits === 4) return { desktop: "35px", mobile: "15px" };
-    return { desktop: "30px", mobile: "12px" };
   }
 
   function timerCss(theme) {
@@ -1040,6 +1255,9 @@
 
   function buildThemeCss(theme) {
     var css = "";
+    var activeTilePalette = resolveActiveTilePalette(theme);
+    var pow2PaletteColors = activeTilePalette.pow2;
+    var fibPaletteColors = activeTilePalette.fibonacci;
     if (theme.id === "classic") {
       // Authentic 2048 looks
       css += "html, body { background: #faf8ef !important; color: #776e65 !important; }\n";
@@ -1706,11 +1924,11 @@
     }
     
     if (theme.horse_year) {
-         css += horseYearTileCss(theme, POW2_TILE_VALUES, "html[data-theme='horse_year'] body:not([data-ruleset=\"fibonacci\"])");
-         css += horseYearTileCss(theme, FIB_TILE_VALUES, "html[data-theme='horse_year'] body[data-ruleset=\"fibonacci\"]");
+         css += horseYearTileCss(theme, POW2_TILE_VALUES, "html[data-theme='horse_year'] body:not([data-ruleset=\"fibonacci\"])", pow2PaletteColors);
+         css += horseYearTileCss(theme, FIB_TILE_VALUES, "html[data-theme='horse_year'] body[data-ruleset=\"fibonacci\"]", fibPaletteColors);
     } else {
-         css += tileCssForValues(theme, POW2_TILE_VALUES, "body:not([data-ruleset=\"fibonacci\"])");
-         css += tileCssForValues(theme, FIB_TILE_VALUES, "body[data-ruleset=\"fibonacci\"]");
+         css += tileCssForValues(theme, POW2_TILE_VALUES, "body:not([data-ruleset=\"fibonacci\"])", pow2PaletteColors);
+         css += tileCssForValues(theme, FIB_TILE_VALUES, "body[data-ruleset=\"fibonacci\"]", fibPaletteColors);
     }
 
     if (theme.id === "yanyuan") {
@@ -1721,7 +1939,7 @@
     }
     
     css += timerCss(theme);
-    css += legendCss(theme);
+    css += legendCss(theme, pow2PaletteColors);
     css += lowPerfCss();
     return css;
   }
@@ -1922,8 +2140,9 @@
     saveTheme(id);
     document.documentElement.setAttribute("data-theme", id);
     syncTimerLegendStyles();
+    var paletteInfo = resolveActiveTilePalette(theme);
     if (typeof window.CustomEvent === "function") {
-      window.dispatchEvent(new CustomEvent("themechange", { detail: { themeId: id } }));
+      window.dispatchEvent(new CustomEvent("themechange", { detail: { themeId: id, paletteId: paletteInfo.id } }));
     }
   }
 
@@ -1950,6 +2169,9 @@
     }
     var css = "";
     var t = getUiTokens(theme);
+    var activeTilePalette = resolveActiveTilePalette(theme);
+    var pow2PaletteColors = activeTilePalette.pow2;
+    var fibPaletteColors = activeTilePalette.fibonacci;
 
     var tilesResetSelector = uniqueSelectors.map(function (sel) {
       return sel + " .theme-preview-tile";
@@ -1983,17 +2205,17 @@
 
     // Tiles
     if (theme.horse_year) {
-      css += horseYearTileCss(theme, POW2_TILE_VALUES, pow2Selector);
-      css += horseYearTileCss(theme, FIB_PREVIEW_VALUES, fibSelector);
+      css += horseYearTileCss(theme, POW2_TILE_VALUES, pow2Selector, pow2PaletteColors);
+      css += horseYearTileCss(theme, FIB_PREVIEW_VALUES, fibSelector, fibPaletteColors);
     } else {
-      css += tileCssForValues(theme, POW2_TILE_VALUES, pow2Selector);
-      css += tileCssForValues(theme, FIB_PREVIEW_VALUES, fibSelector);
+      css += tileCssForValues(theme, POW2_TILE_VALUES, pow2Selector, pow2PaletteColors);
+      css += tileCssForValues(theme, FIB_PREVIEW_VALUES, fibSelector, fibPaletteColors);
     }
 
     return css;
   }
   
-  function horseYearTileCss(theme, values, scopeSelector) {
+  function horseYearTileCss(theme, values, scopeSelector, paletteColors) {
       var css = "";
       // Assets
       var horseIcon = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzViMTAwZSI+PHBhdGggZD0iTTE4LCAzIEMxNi41LCAzLCAxNS41LCAzLjUsIDE0LjUsIDQgQzEzLjUsIDQuNSwgMTIuNSwgNSwgMTEuNSwgNSBDMTAuNSwgNSwgOS41LCA0LjUsIDguNSwgNCBDNy41LCAzLjUsIDYuNSwgMywgNSwgMyBMNSwgNSBDNiwgNSwgNywgNS41LCA4LCA2IEM5LCA2LjUsIDEwLCA3LCAxMSw3IEMxMiw3LCAxMywgNi41LCAxNCwgNiBDMTUsIDUuNSwgMTYsIDUsIDE3LCA1IEwxOCwgMyBaIE02LCA4IEM1LCA4LCA0LCA4LjUsIDMsIDkgQzIsIDkuNSwgMSwgMTAsIDAsIDEwIEwwLCAxMiBDMSwgMTIsIDIsIDExLjUsIDMsIDExIEM0LCAxMC41LCA1LCAxMCwgNiwgMTAgQzcsIDEwLCA4LCAxMC41LCA5LCAxMSBDMTAsIDExLjUsIDExLCAxMiwgMTIsIDEyIEwxMiwgMTAgQzExLCAxMCwgMTAsIDkuNSwgOSwgOSBDOCwgOC41LCA3LCA4LCA2LCA4IFogTTIwLCAxMiBDMTksIDEyLCAxOCwgMTIuNSwgMTcsIDEzIEMxNiwgMTMuNSwgMTUsIDE0LCAxNCwgMTQgQzEzLCAxNCwgMTIsIDEzLjUsIDExLCAxMyBDMTAsIDEyLjUsIDksIDEyLCA4LCAxMiBMOCwgMTQgQzksIDE0LCAxMCwgMTQuNSwgMTEsIDE1IEMxMiwgMTUuNSwgMTMsIDE2LCAxNCwgMTYgQzE1LCAxNiwgMTYsIDE1LjUsIDE3LCAxNSBDMTgsIDE0LjUsIDE5LCAxNCwgMjAsIDE0IEwyMCwgMTIgWiIvPjwvc3ZnPg==";
@@ -2001,7 +2223,7 @@
 
       for (var i = 0; i < values.length; i++) {
         var val = values[i];
-        var base = colorForIndex(theme, i, values.length);
+        var base = resolvePaletteBaseColor(theme, paletteColors, i, values.length);
         var text = (val >= 128 && val <= 2048) ? "#f0b800" : "#f9f6f2";
         
         // Base selector construction
@@ -2047,15 +2269,181 @@
             // But to be safe, treat children (text) as higher
             css += combinedSelector + " > * { position: relative; z-index: 2; }\n";
         }
-
-        var fontSize = getTileFontSizeByDigits(val);
-        if (fontSize) {
-            var fontSizeSelector = tileSelector.replace(" .tile-inner", ":not(.selection-tile) .tile-inner");
-            css += fontSizeSelector + " { font-size: " + fontSize.desktop + " !important; }\n";
-            css += "@media screen and (max-width: 520px) { " + fontSizeSelector + " { font-size: " + fontSize.mobile + " !important; } }\n";
-        }
       }
       return css;
+  }
+
+
+  function getTilePalettes() {
+    var theme = themes[currentThemeId] || themes[DEFAULT_THEME];
+    var list = getTilePalettesForTheme(theme);
+    var result = [];
+    for (var i = 0; i < list.length; i++) {
+      result.push(clonePaletteRecord(list[i]));
+    }
+    return result;
+  }
+
+  function getActiveTilePaletteId() {
+    var theme = themes[currentThemeId] || themes[DEFAULT_THEME];
+    return resolveActiveTilePalette(theme).id;
+  }
+
+  function setActiveTilePalette(id) {
+    var theme = themes[currentThemeId] || themes[DEFAULT_THEME];
+    var list = getTilePalettesForTheme(theme);
+    var targetId = DEFAULT_TILE_PALETTE_ID;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === id) {
+        targetId = list[i].id;
+        break;
+      }
+    }
+    writeActiveTilePaletteId(targetId);
+    applyTheme(currentThemeId);
+    return targetId;
+  }
+
+  function createTilePalette(baseId, name) {
+    var theme = themes[currentThemeId] || themes[DEFAULT_THEME];
+    var all = getTilePalettesForTheme(theme);
+    var base = resolveActiveTilePalette(theme);
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].id === baseId) {
+        base = all[i];
+        break;
+      }
+    }
+    var custom = readStoredTilePaletteProfiles();
+    var usedNames = all.map(function (item) { return item.name; });
+    var finalName = ensureUniquePaletteName(usedNames, name || "自定义色板");
+    var now = Date.now();
+    var created = {
+      id: generateTilePaletteId(),
+      name: finalName,
+      pow2: normalizePaletteColorArray(base.pow2, buildThemePaletteColors(theme, "pow2")),
+      fibonacci: normalizePaletteColorArray(base.fibonacci, buildThemePaletteColors(theme, "fibonacci")),
+      createdAt: now,
+      updatedAt: now,
+      source: "custom",
+      locked: false
+    };
+    custom.push(created);
+    writeStoredTilePaletteProfiles(custom);
+    writeActiveTilePaletteId(created.id);
+    applyTheme(currentThemeId);
+    return clonePaletteRecord(created);
+  }
+
+  function renameTilePalette(id, name) {
+    var custom = readStoredTilePaletteProfiles();
+    var idx = findCustomPaletteIndexById(custom, id);
+    if (idx < 0) return null;
+    var current = custom[idx];
+    var listNames = getTilePalettesForTheme(themes[currentThemeId] || themes[DEFAULT_THEME])
+      .filter(function (item) { return item.id !== id; })
+      .map(function (item) { return item.name; });
+    current.name = ensureUniquePaletteName(listNames, name || current.name || "自定义色板");
+    current.updatedAt = Date.now();
+    custom[idx] = current;
+    writeStoredTilePaletteProfiles(custom);
+    applyTheme(currentThemeId);
+    return clonePaletteRecord(current);
+  }
+
+  function deleteTilePalette(id) {
+    var custom = readStoredTilePaletteProfiles();
+    var idx = findCustomPaletteIndexById(custom, id);
+    if (idx < 0) return false;
+    custom.splice(idx, 1);
+    writeStoredTilePaletteProfiles(custom);
+    if (readActiveTilePaletteId() === id) {
+      writeActiveTilePaletteId(DEFAULT_TILE_PALETTE_ID);
+    }
+    applyTheme(currentThemeId);
+    return true;
+  }
+
+  function updateTilePaletteColor(id, ruleset, index, color) {
+    var targetRuleset = ruleset === "fibonacci" ? "fibonacci" : "pow2";
+    var targetIndex = Math.max(0, Math.min(15, Number(index) || 0));
+    var custom = readStoredTilePaletteProfiles();
+    var idx = findCustomPaletteIndexById(custom, id);
+    if (idx < 0) return false;
+    var theme = themes[currentThemeId] || themes[DEFAULT_THEME];
+    var fallback = buildThemePaletteColors(theme, targetRuleset);
+    var item = custom[idx];
+    item[targetRuleset] = normalizePaletteColorArray(item[targetRuleset], fallback);
+    item[targetRuleset][targetIndex] = normalizePaletteColor(color, fallback[targetIndex]);
+    item.updatedAt = Date.now();
+    custom[idx] = item;
+    writeStoredTilePaletteProfiles(custom);
+    applyTheme(currentThemeId);
+    return true;
+  }
+
+  function exportTilePalettes() {
+    var custom = readStoredTilePaletteProfiles().map(function (item) {
+      return {
+        id: item.id,
+        name: item.name,
+        pow2: Array.isArray(item.pow2) ? item.pow2.slice(0, 16) : [],
+        fibonacci: Array.isArray(item.fibonacci) ? item.fibonacci.slice(0, 16) : [],
+        createdAt: Number(item.createdAt) || Date.now(),
+        updatedAt: Number(item.updatedAt) || Date.now()
+      };
+    });
+    return JSON.stringify({ version: TILE_PALETTE_VERSION, palettes: custom }, null, 2);
+  }
+
+  function importTilePalettes(payload) {
+    var parsed = payload;
+    if (typeof payload === "string") {
+      try {
+        parsed = JSON.parse(payload);
+      } catch (_err) {
+        return { importedCount: 0, renamed: [], error: "invalid_json" };
+      }
+    }
+    if (!parsed || typeof parsed !== "object") {
+      return { importedCount: 0, renamed: [], error: "invalid_payload" };
+    }
+    var sourcePalettes = Array.isArray(parsed.palettes) ? parsed.palettes : [];
+    if (!sourcePalettes.length) {
+      return { importedCount: 0, renamed: [] };
+    }
+    var theme = themes[currentThemeId] || themes[DEFAULT_THEME];
+    var custom = readStoredTilePaletteProfiles();
+    var usedNames = getTilePalettesForTheme(theme).map(function (item) { return item.name; });
+    var renamed = [];
+    var importedCount = 0;
+    for (var i = 0; i < sourcePalettes.length; i++) {
+      var item = sourcePalettes[i];
+      if (!item || typeof item !== "object") continue;
+      var rawName = typeof item.name === "string" && item.name.trim() ? item.name.trim() : "导入色板";
+      var finalName = ensureUniquePaletteName(usedNames, rawName);
+      if (finalName !== rawName) {
+        renamed.push({ from: rawName, to: finalName });
+      }
+      usedNames.push(finalName);
+      var now = Date.now();
+      custom.push({
+        id: generateTilePaletteId(),
+        name: finalName,
+        pow2: normalizePaletteColorArray(item.pow2, buildThemePaletteColors(theme, "pow2")),
+        fibonacci: normalizePaletteColorArray(item.fibonacci, buildThemePaletteColors(theme, "fibonacci")),
+        createdAt: Number(item.createdAt) || now,
+        updatedAt: Number(item.updatedAt) || now,
+        source: "custom",
+        locked: false
+      });
+      importedCount += 1;
+    }
+    if (importedCount > 0) {
+      writeStoredTilePaletteProfiles(custom);
+      applyTheme(currentThemeId);
+    }
+    return { importedCount: importedCount, renamed: renamed };
   }
 
 
@@ -2067,6 +2455,15 @@
       return POW2_TILE_VALUES.slice();
     },
     getCurrentTheme: function () { return currentThemeId; },
+    getTilePalettes: getTilePalettes,
+    getActiveTilePaletteId: getActiveTilePaletteId,
+    setActiveTilePalette: setActiveTilePalette,
+    createTilePalette: createTilePalette,
+    renameTilePalette: renameTilePalette,
+    deleteTilePalette: deleteTilePalette,
+    updateTilePaletteColor: updateTilePaletteColor,
+    exportTilePalettes: exportTilePalettes,
+    importTilePalettes: importTilePalettes,
     syncTimerLegendStyles: syncTimerLegendStyles,
     applyTheme: applyTheme
   };
