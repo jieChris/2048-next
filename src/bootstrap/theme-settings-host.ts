@@ -222,6 +222,20 @@ export function applyThemeSettingsUi(input: {
   const applyTheme = asFunction<(themeId: string) => unknown>(themeManager.applyTheme);
   const getPreviewCss = asFunction<(themeId: string, selectors: unknown) => unknown>(themeManager.getPreviewCss);
   const getTileValues = asFunction<(ruleset: "pow2" | "fibonacci") => unknown>(themeManager.getTileValues);
+  const getTilePalettes = asFunction<() => unknown>(themeManager.getTilePalettes);
+  const getActiveTilePaletteId = asFunction<() => unknown>(themeManager.getActiveTilePaletteId);
+  const setActiveTilePalette = asFunction<(id: string) => unknown>(themeManager.setActiveTilePalette);
+  const createTilePalette = asFunction<(baseId: string, name: string) => unknown>(themeManager.createTilePalette);
+  const renameTilePalette = asFunction<(id: string, name: string) => unknown>(themeManager.renameTilePalette);
+  const deleteTilePalette = asFunction<(id: string) => unknown>(themeManager.deleteTilePalette);
+  const updateTilePaletteColor = asFunction<(
+    id: string,
+    ruleset: "pow2" | "fibonacci",
+    index: number,
+    color: string
+  ) => unknown>(themeManager.updateTilePaletteColor);
+  const exportTilePalettes = asFunction<() => unknown>(themeManager.exportTilePalettes);
+  const importTilePalettes = asFunction<(payload: unknown) => unknown>(themeManager.importTilePalettes);
 
   if (!getThemes || !getCurrentTheme || !applyTheme) {
     return createEmptyResult();
@@ -365,6 +379,354 @@ export function applyThemeSettingsUi(input: {
     return true;
   };
 
+  let syncTilePaletteUi = function (): boolean {
+    return false;
+  };
+
+  const initTilePaletteSettingsUi = function (): boolean {
+    if (
+      !getTilePalettes ||
+      !getActiveTilePaletteId ||
+      !setActiveTilePalette ||
+      !createTilePalette ||
+      !renameTilePalette ||
+      !deleteTilePalette ||
+      !updateTilePaletteColor ||
+      !exportTilePalettes ||
+      !importTilePalettes
+    ) {
+      return false;
+    }
+
+    const paletteSelect = getElementById(documentLike, "tile-palette-select");
+    const createBtn = getElementById(documentLike, "tile-palette-create-btn");
+    const renameBtn = getElementById(documentLike, "tile-palette-rename-btn");
+    const deleteBtn = getElementById(documentLike, "tile-palette-delete-btn");
+    const exportBtn = getElementById(documentLike, "tile-palette-export-btn");
+    const importBtn = getElementById(documentLike, "tile-palette-import-btn");
+    const importInput = getElementById(documentLike, "tile-palette-import-input");
+    const nameInput = getElementById(documentLike, "tile-palette-name-input");
+    const note = getElementById(documentLike, "tile-palette-note");
+    const pow2Editor = getElementById(documentLike, "tile-palette-editor-pow2");
+    const fibEditor = getElementById(documentLike, "tile-palette-editor-fibonacci");
+
+    if (
+      !paletteSelect ||
+      !createBtn ||
+      !renameBtn ||
+      !deleteBtn ||
+      !exportBtn ||
+      !importBtn ||
+      !importInput ||
+      !nameInput ||
+      !pow2Editor ||
+      !fibEditor
+    ) {
+      return false;
+    }
+
+    const fallbackPow2 = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
+    const fallbackFib = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597];
+
+    const resolveDisplayValues = function (ruleset: "pow2" | "fibonacci", fallback: number[]): unknown[] {
+      if (!getTileValues) return fallback.slice();
+      const values = resolveArray(getTileValues.call(themeManager, ruleset));
+      if (!values.length) return fallback.slice();
+      const normalized: unknown[] = [];
+      for (let i = 0; i < Math.min(16, values.length); i += 1) {
+        normalized.push(values[i]);
+      }
+      while (normalized.length < 16) {
+        normalized.push(fallback[normalized.length] || normalized.length + 1);
+      }
+      return normalized;
+    };
+
+    const pow2DisplayValues = resolveDisplayValues("pow2", fallbackPow2);
+    const fibDisplayValues = resolveDisplayValues("fibonacci", fallbackFib);
+
+    const setNote = function (message: unknown, isError: boolean): void {
+      if (!note) return;
+      const noteRecord = toRecord(note);
+      noteRecord.textContent = resolveText(message);
+      const noteStyle = toRecord(noteRecord.style);
+      noteStyle.color = noteRecord.textContent ? (isError ? "#c0392b" : "#6b8e23") : "";
+      noteRecord.style = noteStyle;
+    };
+
+    const getPaletteMap = function (): { list: unknown[]; map: Record<string, unknown> } {
+      const list = resolveArray(getTilePalettes.call(themeManager));
+      const map: Record<string, unknown> = {};
+      for (let i = 0; i < list.length; i += 1) {
+        const item = toRecord(list[i]);
+        const id = resolveText(item.id);
+        if (!id) continue;
+        map[id] = item;
+      }
+      return { list, map };
+    };
+
+    const renderPaletteSelectOptions = function (list: unknown[], activeId: string): void {
+      const selectRecord = toRecord(paletteSelect);
+      selectRecord.innerHTML = "";
+      for (let i = 0; i < list.length; i += 1) {
+        const palette = toRecord(list[i]);
+        const option = createElement(documentLike, "option");
+        if (!option) continue;
+        const optionRecord = toRecord(option);
+        optionRecord.value = resolveText(palette.id);
+        optionRecord.textContent = resolveText(palette.name);
+        appendChild(paletteSelect, option);
+      }
+      selectRecord.value = activeId;
+    };
+
+    const renderPaletteColorEditor = function (
+      host: unknown,
+      palette: Record<string, unknown>,
+      ruleset: "pow2" | "fibonacci",
+      labels: unknown[],
+      locked: boolean
+    ): void {
+      const hostRecord = toRecord(host);
+      hostRecord.innerHTML = "";
+      const colors = resolveArray(palette[ruleset]);
+      for (let i = 0; i < 16; i += 1) {
+        const color = resolveText(colors[i] || "#000000");
+        const row = createElement(documentLike, "label");
+        if (!row) continue;
+        const rowRecord = toRecord(row);
+        rowRecord.className = "tile-palette-color-item";
+
+        const picker = createElement(documentLike, "input");
+        if (!picker) continue;
+        const pickerRecord = toRecord(picker);
+        pickerRecord.type = "color";
+        pickerRecord.value = color;
+        pickerRecord.disabled = locked;
+
+        const label = createElement(documentLike, "span");
+        if (label) {
+          const labelRecord = toRecord(label);
+          labelRecord.className = "tile-palette-color-label";
+          labelRecord.textContent = resolveText(labels[i]);
+          appendChild(row, label);
+        }
+
+        bindListener(picker, "change", function () {
+          const currentId = resolveText(toRecord(paletteSelect).value || getActiveTilePaletteId.call(themeManager));
+          const pickerRef = toRecord(this as unknown);
+          const changedColor = resolveText(pickerRef.value);
+          const index = resolveNumber(toRecord(pickerRef.dataset).index, 0);
+          const changedRuleset = resolveText(toRecord(pickerRef.dataset).ruleset) === "fibonacci" ? "fibonacci" : "pow2";
+          const updated = !!updateTilePaletteColor.call(
+            themeManager,
+            currentId,
+            changedRuleset,
+            index,
+            changedColor
+          );
+          if (!updated) {
+            setNote("当前色板为只读，请先新建副本。", true);
+            return;
+          }
+          setNote("色板颜色已更新。", false);
+          refreshPaletteUi();
+        });
+
+        const pickerDataset = toRecord(pickerRecord.dataset);
+        pickerDataset.index = String(i);
+        pickerDataset.ruleset = ruleset;
+        if (!pickerRecord.dataset) {
+          const setAttribute = asFunction<(name: string, value: string) => unknown>(pickerRecord.setAttribute);
+          if (setAttribute) {
+            setAttribute.call(picker, "data-index", String(i));
+            setAttribute.call(picker, "data-ruleset", ruleset);
+          }
+        }
+
+        appendChild(row, picker);
+        appendChild(host, row);
+      }
+    };
+
+    const refreshPaletteUi = function (): void {
+      const payload = getPaletteMap();
+      const list = payload.list;
+      const map = payload.map;
+      let activeId = resolveText(getActiveTilePaletteId.call(themeManager));
+      if (!map[activeId] && list.length > 0) {
+        activeId = resolveText(toRecord(list[0]).id);
+      }
+      renderPaletteSelectOptions(list, activeId);
+
+      const activePalette = toRecord(map[activeId]);
+      const locked = resolveBoolean(activePalette.locked || activePalette.source !== "custom");
+      toRecord(nameInput).value = resolveText(activePalette.name);
+      toRecord(renameBtn).disabled = locked;
+      toRecord(deleteBtn).disabled = locked;
+
+      renderPaletteColorEditor(pow2Editor, activePalette, "pow2", pow2DisplayValues, locked);
+      renderPaletteColorEditor(fibEditor, activePalette, "fibonacci", fibDisplayValues, locked);
+    };
+
+    if (!toRecord(paletteSelect).__tilePaletteBound) {
+      toRecord(paletteSelect).__tilePaletteBound = true;
+      bindListener(paletteSelect, "change", function () {
+        const selectedId = resolveText(toRecord(paletteSelect).value);
+        setActiveTilePalette.call(themeManager, selectedId);
+        refreshPaletteUi();
+      });
+    }
+
+    if (!toRecord(createBtn).__tilePaletteBound) {
+      toRecord(createBtn).__tilePaletteBound = true;
+      bindListener(createBtn, "click", function () {
+        const activeId = resolveText(getActiveTilePaletteId.call(themeManager));
+        const inputName = resolveText(toRecord(nameInput).value).trim();
+        createTilePalette.call(themeManager, activeId, inputName || "自定义色板");
+        refreshPaletteUi();
+        setNote("已新建色板。", false);
+      });
+    }
+
+    if (!toRecord(renameBtn).__tilePaletteBound) {
+      toRecord(renameBtn).__tilePaletteBound = true;
+      bindListener(renameBtn, "click", function () {
+        const activeId = resolveText(getActiveTilePaletteId.call(themeManager));
+        const inputName = resolveText(toRecord(nameInput).value).trim();
+        if (!inputName) {
+          setNote("请输入色板名称。", true);
+          return;
+        }
+        const renamed = renameTilePalette.call(themeManager, activeId, inputName);
+        if (!renamed) {
+          setNote("当前色板不可重命名。", true);
+          return;
+        }
+        refreshPaletteUi();
+        setNote("已重命名色板。", false);
+      });
+    }
+
+    if (!toRecord(deleteBtn).__tilePaletteBound) {
+      toRecord(deleteBtn).__tilePaletteBound = true;
+      bindListener(deleteBtn, "click", function () {
+        const activeId = resolveText(getActiveTilePaletteId.call(themeManager));
+        const confirmFn = asFunction<(message: string) => unknown>(toRecord(windowLike).confirm);
+        if (confirmFn && !confirmFn.call(windowLike, "确认删除当前色板？")) return;
+        const deleted = deleteTilePalette.call(themeManager, activeId);
+        if (!deleted) {
+          setNote("当前色板不可删除。", true);
+          return;
+        }
+        refreshPaletteUi();
+        setNote("已删除色板。", false);
+      });
+    }
+
+    if (!toRecord(exportBtn).__tilePaletteBound) {
+      toRecord(exportBtn).__tilePaletteBound = true;
+      bindListener(exportBtn, "click", function () {
+        const payload = resolveText(exportTilePalettes.call(themeManager));
+        const blobCtor = toRecord(windowLike).Blob || (typeof Blob === "function" ? Blob : null);
+        const urlApi = toRecord(windowLike).URL || (typeof URL !== "undefined" ? URL : null);
+        if (!blobCtor || !urlApi || typeof toRecord(urlApi).createObjectURL !== "function") {
+          setNote("当前环境不支持导出。", true);
+          return;
+        }
+        const blob = new (blobCtor as any)([payload], { type: "application/json" });
+        const downloadUrl = (toRecord(urlApi).createObjectURL as Function).call(urlApi, blob);
+        const anchor = createElement(documentLike, "a");
+        if (!anchor) {
+          if (typeof toRecord(urlApi).revokeObjectURL === "function") {
+            (toRecord(urlApi).revokeObjectURL as Function).call(urlApi, downloadUrl);
+          }
+          setNote("导出失败。", true);
+          return;
+        }
+        const anchorRecord = toRecord(anchor);
+        anchorRecord.href = downloadUrl;
+        anchorRecord.download = "tile-palettes.json";
+        const click = asFunction<() => unknown>(anchorRecord.click);
+        if (click) click.call(anchorRecord);
+        if (typeof toRecord(urlApi).revokeObjectURL === "function") {
+          setTimeout(function () {
+            (toRecord(urlApi).revokeObjectURL as Function).call(urlApi, downloadUrl);
+          }, 0);
+        }
+        setNote("色板已导出。", false);
+      });
+    }
+
+    if (!toRecord(importBtn).__tilePaletteBound) {
+      toRecord(importBtn).__tilePaletteBound = true;
+      bindListener(importBtn, "click", function () {
+        const click = asFunction<() => unknown>(toRecord(importInput).click);
+        if (click) click.call(importInput);
+      });
+    }
+
+    if (!toRecord(importInput).__tilePaletteBound) {
+      toRecord(importInput).__tilePaletteBound = true;
+      bindListener(importInput, "change", function () {
+        const inputRecord = toRecord(importInput);
+        const files = toRecord(inputRecord.files);
+        const file = files[0];
+        if (!file) return;
+
+        const done = function (textValue: unknown) {
+          const result = toRecord(importTilePalettes.call(themeManager, textValue));
+          refreshPaletteUi();
+          const importedCount = resolveNumber(result.importedCount, 0);
+          if (importedCount <= 0) {
+            setNote("导入失败，请检查 JSON 格式。", true);
+            return;
+          }
+          const renamed = resolveArray(result.renamed);
+          if (renamed.length > 0) {
+            setNote("已导入 " + importedCount + " 个色板，部分名称已自动重命名。", false);
+            return;
+          }
+          setNote("已导入 " + importedCount + " 个色板。", false);
+        };
+
+        if (typeof (file as any).text === "function") {
+          (file as any)
+            .text()
+            .then(function (content: unknown) {
+              done(resolveText(content));
+            })
+            .catch(function () {
+              setNote("读取所选文件失败。", true);
+            });
+          return;
+        }
+
+        const fileReaderCtor = toRecord(windowLike).FileReader || (typeof FileReader === "function" ? FileReader : null);
+        if (!fileReaderCtor) {
+          setNote("当前环境不支持导入。", true);
+          return;
+        }
+        const reader = new (fileReaderCtor as any)();
+        reader.onload = function () {
+          done(resolveText(reader.result));
+        };
+        reader.onerror = function () {
+          setNote("读取所选文件失败。", true);
+        };
+        reader.readAsText(file);
+      });
+    }
+
+    refreshPaletteUi();
+    syncTilePaletteUi = function (): boolean {
+      refreshPaletteUi();
+      return true;
+    };
+    return true;
+  };
+
   const closeDropdown = function (): void {
     classListRemove(customSelect, "open");
     applyPreviewTheme(confirmedTheme);
@@ -489,6 +851,7 @@ export function applyThemeSettingsUi(input: {
   const didRenderPreview = renderDualPreviewGrids();
   const didSyncUi = updateCustomSelectUi();
   const didApplyPreview = applyPreviewTheme(confirmedTheme);
+  initTilePaletteSettingsUi();
 
   let didBindThemeChange = false;
   const changeSyncBindingState = toRecord(
@@ -502,6 +865,7 @@ export function applyThemeSettingsUi(input: {
         confirmedTheme = resolveText(getCurrentTheme.call(themeManager));
         updateCustomSelectUi();
         applyPreviewTheme(confirmedTheme);
+        syncTilePaletteUi();
       })
     ) {
       windowLike.__themeChangeSyncBound = changeSyncBindingState.boundValue;

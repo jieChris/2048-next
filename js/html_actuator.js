@@ -222,14 +222,56 @@ HTMLActuator.prototype.clearContainer = function (container) {
   }
 };
 
+HTMLActuator.prototype.isMobileTileViewport = function () {
+  if (typeof window === "undefined") return false;
+  if (typeof window.matchMedia === "function") {
+    if (window.matchMedia("(max-width: 980px)").matches) return true;
+    if (window.matchMedia("(pointer: coarse)").matches && window.matchMedia("(hover: none)").matches) return true;
+  }
+  return window.innerWidth <= 980;
+};
+
+HTMLActuator.prototype.computeTileFontSize = function (value) {
+  var meta = this.gridMeta || { cell: 107, cols: 4, rows: 4 };
+  var cell = Number(meta.cell);
+  if (!isFinite(cell) || cell <= 0) cell = 107;
+
+  var cols = Number(meta.cols) || 4;
+  var rows = Number(meta.rows) || 4;
+  var maxDim = Math.max(cols, rows);
+
+  var digits = String(Math.max(0, Math.floor(Math.abs(Number(value) || 0)))).length;
+  var boardScale = 1;
+  if (maxDim >= 7) {
+    boardScale = 0.74;
+  } else if (maxDim >= 6) {
+    boardScale = 0.81;
+  } else if (maxDim >= 5) {
+    boardScale = 0.9;
+  }
+
+  var digitScale = 1;
+  if (digits === 3) digitScale = 0.84;
+  if (digits === 4) digitScale = 0.72;
+  if (digits >= 5) digitScale = 0.6;
+
+  var mobileBoost = 1;
+  if (this.isMobileTileViewport()) {
+    if (digits === 3) mobileBoost = 1.1;
+    if (digits >= 4) mobileBoost = 1.03;
+  }
+
+  var raw = cell * 0.48 * boardScale * digitScale * mobileBoost;
+  var minSize = Math.max(11, Math.floor(cell * 0.22));
+  var maxSize = Math.max(minSize, Math.floor(cell * 0.62));
+  var size = Math.round(raw);
+  return Math.max(minSize, Math.min(maxSize, size));
+};
 HTMLActuator.prototype.applyTileStyle = function (wrapper, inner, position, value) {
   var meta = this.gridMeta || { cell: 107, gap: 15 };
   var x = position.x * (meta.cell + meta.gap);
   var y = position.y * (meta.cell + meta.gap);
-  var fontSize = Math.max(14, Math.floor(meta.cell * 0.48));
-  var len = String(value).length;
-  if (len >= 4) fontSize = Math.floor(fontSize * 0.78);
-  if (len >= 5) fontSize = Math.floor(fontSize * 0.68);
+  var fontSize = this.computeTileFontSize(value);
 
   wrapper.style.width = meta.cell + "px";
   wrapper.style.height = meta.cell + "px";
