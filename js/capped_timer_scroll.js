@@ -232,6 +232,11 @@
     var maxOffset = Math.max(0, total - TIMER_MAX_VISIBLE);
     if (timerScrollOffset > maxOffset) timerScrollOffset = maxOffset;
     if (timerScrollOffset < 0) timerScrollOffset = 0;
+    if (total < TIMER_MAX_VISIBLE) {
+      clearScrollManagedHiddenRows(rows);
+      if (controls) controls.style.display = "none";
+      return;
+    }
 
     for (i = 0; i < rows.length; i++) {
       var row = rows[i];
@@ -261,9 +266,6 @@
 
     if (controls) {
       controls.style.display = "flex";
-    }
-    if (total < TIMER_MAX_VISIBLE) {
-      clearScrollManagedHiddenRows(rows);
     }
     } finally {
       suppressObserverDepth -= 1;

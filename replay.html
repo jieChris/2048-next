@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048-Replay</title>
+  <title>2048 高级回放</title>
 
   <link href="style/main.css?v=1772845600000" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-1">
@@ -18,7 +18,7 @@
 <body data-page="replay">
   <div class="container">
     <div class="heading" style="float: none; margin: 0 auto;">
-      <h1 class="title"><a href="index.html" style="text-decoration: none; color: inherit; cursor: pointer;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a> 鍥炴斁</h1>
+      <h1 class="title"><a href="index.html" style="text-decoration: none; color: inherit; cursor: pointer;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a> 高级回放</h1>
       <div class="scores-container">
         <div class="score-container">0</div>
         <div class="best-container">0</div>
@@ -68,11 +68,11 @@
             <input type="range" id="replay-progress" min="0" max="100" value="0" style="width: 100%; cursor: pointer;">
         </div>
         <div class="replay-buttons-row" style="display: flex; justify-content: center; gap: 10px; align-items: center;">
-            <button class="replay-control-btn" id="btn-rewind-10">? -10 姝?/button>
-            <button class="replay-control-btn" id="btn-rewind-1">? -1 姝?/button>
-            <button class="replay-control-btn" id="replay-pause-btn">? 鏆傚仠</button>
-            <button class="replay-control-btn" id="btn-forward-1">+1 姝??</button>
-            <button class="replay-control-btn" id="btn-forward-10">+10 姝??</button>
+            <button class="replay-control-btn" id="btn-rewind-10">⏮ -10 步</button>
+            <button class="replay-control-btn" id="btn-rewind-1">◀ -1 步</button>
+            <button class="replay-control-btn" id="replay-pause-btn">⏯ 暂停</button>
+            <button class="replay-control-btn" id="btn-forward-1">+1 步 ▶</button>
+            <button class="replay-control-btn" id="btn-forward-10">+10 步 ⏭</button>
             
             <select id="replay-speed" style="height: 30px; border-radius: 3px; border: 1px solid #d8d4d0; background: #faf8ef; color: #776e65; font-weight: bold; cursor: pointer; margin-left: 10px;">
                 <option value="0.25">0.25x</option>
@@ -86,8 +86,8 @@
             </select>
         </div>
         <div style="margin-top: 15px; text-align: center;">
-            <a id="import-replay-file-btn" class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: #f9f6f2; padding: 10px 20px; border-radius: 3px; text-decoration: none;">瀵煎叆鍥炴斁鏂囦欢</a>
-            <a id="import-replay-text-btn" class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: #f9f6f2; padding: 10px 20px; border-radius: 3px; text-decoration: none; margin-left: 8px;">绮樿创鍥炴斁浠ｇ爜</a>
+            <a id="import-replay-file-btn" class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: #f9f6f2; padding: 10px 20px; border-radius: 3px; text-decoration: none;">导入回放文件</a>
+            <a id="import-replay-text-btn" class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: #f9f6f2; padding: 10px 20px; border-radius: 3px; text-decoration: none; margin-left: 8px;">粘贴回放代码</a>
         </div>
     </div>
 
@@ -95,11 +95,11 @@
 
   <div id="replay-modal" class="replay-modal-overlay" style="display: none;">
     <div class="replay-modal-content">
-      <h3 id="replay-modal-title">鍥炴斁</h3>
+      <h3 id="replay-modal-title">回放</h3>
       <textarea id="replay-textarea" class="replay-textarea"></textarea>
       <div class="replay-modal-actions">
-        <button id="replay-action-btn" class="replay-button">鎵ц</button>
-        <button class="replay-button">鍏抽棴</button>
+        <button id="replay-action-btn" class="replay-button">执行</button>
+        <button class="replay-button">关闭</button>
       </div>
     </div>
   </div>

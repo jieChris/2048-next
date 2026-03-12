@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048 鏈湴鍘嗗彶璁板綍</title>
+  <title>2048 本地历史记录</title>
   <link href="style/main.css?v=1772845600000" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-1">
   <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-1">
@@ -12,39 +12,39 @@
 <body data-page="history">
   <div class="container portal-container">
     <div class="portal-header">
-      <h1 class="title"><a href="index.html" style="text-decoration:none;color:inherit;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a> 鏈湴鍘嗗彶</h1>
+      <h1 class="title"><a href="index.html" style="text-decoration:none;color:inherit;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a> 本地历史</h1>
       <div class="portal-nav">
-        <a href="index.html">棣栭〉</a>
-        <a href="modes.html">妯″紡</a>
-        <a href="replay.html">鍥炴斁</a>
+        <a href="index.html">首页</a>
+        <a href="modes.html">模式</a>
+        <a href="replay.html">回放</a>
       </div>
     </div>
 
     <div class="portal-card">
       <div class="portal-actions-inline">
-        <label>妯″紡</label>
+        <label>模式</label>
         <select id="history-mode" class="settings-select portal-inline-select">
-          <option value="">鍏ㄩ儴妯″紡</option>
+          <option value="">全部模式</option>
         </select>
 
-        <label>鍏抽敭璇?/label>
-        <input id="history-keyword" class="portal-inline-input" placeholder="妯″紡/鍒嗘暟/ID">
+        <label>关键词</label>
+        <input id="history-keyword" class="portal-inline-input" placeholder="模式/分数/ID">
 
-        <label>鎺掑簭</label>
+        <label>排序</label>
         <select id="history-sort" class="settings-select portal-inline-select">
-          <option value="ended_desc">鎸夋椂闂达紙鏂板埌鏃э級</option>
-          <option value="ended_asc">鎸夋椂闂达紙鏃у埌鏂帮級</option>
-          <option value="score_desc">鎸夊垎鏁帮紙楂樺埌浣庯級</option>
+          <option value="ended_desc">按时间（新到旧）</option>
+          <option value="ended_asc">按时间（旧到新）</option>
+          <option value="score_desc">按分数（高到低）</option>
         </select>
 
-        <button class="replay-button" id="history-load-btn">鍒锋柊</button>
+        <button class="replay-button" id="history-load-btn">刷新</button>
       </div>
 
       <div class="portal-actions-inline" style="margin-top:8px;">
-        <button class="replay-button" id="history-export-all-btn">瀵煎嚭鍏ㄩ儴</button>
-        <button class="replay-button" id="history-import-btn">瀵煎叆鍚堝苟</button>
-        <button class="replay-button" id="history-import-replace-btn">瀵煎叆骞舵浛鎹?/button>
-        <button class="replay-button" id="history-clear-all-btn">娓呯┖鍏ㄩ儴</button>
+        <button class="replay-button" id="history-export-all-btn">导出全部</button>
+        <button class="replay-button" id="history-import-btn">导入合并</button>
+        <button class="replay-button" id="history-import-replace-btn">导入并替换</button>
+        <button class="replay-button" id="history-clear-all-btn">清空全部</button>
         <input id="history-import-file" type="file" accept="application/json,.json" style="display:none;">
       </div>
 
@@ -53,8 +53,8 @@
     </div>
 
     <div class="portal-actions-inline" style="justify-content:flex-end; margin-bottom:10px;">
-      <button class="replay-button" id="history-prev-page">涓婁竴椤?/button>
-      <button class="replay-button" id="history-next-page">涓嬩竴椤?/button>
+      <button class="replay-button" id="history-prev-page">上一页</button>
+      <button class="replay-button" id="history-next-page">下一页</button>
     </div>
 
     <div id="history-list"></div>

@@ -20,6 +20,35 @@
   var PANEL_SCALE_MIN = 0.78;
   var PANEL_SCALE_MAX = 1.65;
 
+  function normalizeStatsPanelVisibilityKeyPart(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
+  function resolveStatsPanelVisibilityKey(documentLike) {
+    var body = documentLike && documentLike.body ? documentLike.body : null;
+    var pathName = "";
+    if (documentLike && documentLike.location && typeof documentLike.location.pathname === "string") {
+      pathName = documentLike.location.pathname;
+    } else if (global.location && typeof global.location.pathname === "string") {
+      pathName = global.location.pathname;
+    }
+    var pathPart = normalizeStatsPanelVisibilityKeyPart(pathName.split("/").pop());
+    var pagePart = normalizeStatsPanelVisibilityKeyPart(body && body.getAttribute ? body.getAttribute("data-page") : "");
+    var variantPart = normalizeStatsPanelVisibilityKeyPart(body && body.getAttribute ? body.getAttribute("data-page-variant") : "");
+    var modePart = normalizeStatsPanelVisibilityKeyPart(body && body.getAttribute ? body.getAttribute("data-mode-id") : "");
+    var parts = [];
+
+    if (pathPart) parts.push(pathPart);
+    else if (pagePart) parts.push(pagePart);
+    if (variantPart && parts.indexOf(variantPart) === -1) parts.push(variantPart);
+    if (modePart && parts.indexOf(modePart) === -1) parts.push(modePart);
+
+    return parts.length ? STATS_PANEL_VISIBLE_KEY + ":" + parts.join(":") : STATS_PANEL_VISIBLE_KEY;
+  }
+
   function readText(key) {
     try {
       return global.localStorage.getItem(key) || "";
@@ -438,7 +467,7 @@
       applyPanelPosition(documentLike, state, state.position || readPosition() || getDefaultPosition(documentLike));
       if (state.size) writeSize(state.size);
       if (state.position) writePosition(state.position);
-      writeFlag(STATS_PANEL_VISIBLE_KEY, true);
+      writeFlag(resolveStatsPanelVisibilityKey(documentLike), true);
       return;
     }
 
@@ -447,7 +476,7 @@
     nodes.body.classList.remove("pku2048-stats-inline-dragging");
     nodes.body.classList.remove("pku2048-stats-inline-resizing");
     if (nodes.statsOverlay) nodes.statsOverlay.style.display = "none";
-    writeFlag(STATS_PANEL_VISIBLE_KEY, false);
+    writeFlag(resolveStatsPanelVisibilityKey(documentLike), false);
   }
 
   function bindToggle(documentLike, state) {
@@ -521,7 +550,6 @@
     start(global.document);
   }
 })(typeof window !== "undefined" ? window : undefined);
-
 
 
 
