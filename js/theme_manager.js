@@ -2044,6 +2044,15 @@
     return null;
   }
 
+  function formatParsedColorRgba(rgb, alpha) {
+    if (!rgb) return "rgba(243, 215, 116, " + String(alpha) + ")";
+    return "rgba(" +
+      String(Math.round(rgb.r)) + ", " +
+      String(Math.round(rgb.g)) + ", " +
+      String(Math.round(rgb.b)) + ", " +
+      String(alpha) + ")";
+  }
+
   function relativeLuminance(rgb) {
     if (!rgb) return 0;
     function channel(v) {
@@ -2062,6 +2071,19 @@
     var hi = Math.max(la, lb);
     var lo = Math.min(la, lb);
     return (hi + 0.05) / (lo + 0.05);
+  }
+
+  function buildTimerLegendBoxShadow(visual) {
+    if (!visual) return "";
+    var backgroundRgb = parseCssColor(visual.backgroundColor);
+    var shadows = [];
+    if (visual.boxShadow && visual.boxShadow !== "none") shadows.push(visual.boxShadow);
+    if (!backgroundRgb) return shadows.join(", ");
+    var isBright = relativeLuminance(backgroundRgb) >= 0.55;
+    shadows.push("0 0 14px 2px " + formatParsedColorRgba(backgroundRgb, isBright ? 0.32 : 0.46));
+    shadows.push("0 0 28px 6px " + formatParsedColorRgba(backgroundRgb, isBright ? 0.18 : 0.28));
+    shadows.push("inset 0 0 0 1px rgba(255, 255, 255, " + String(isBright ? 0.18 : 0.24) + ")");
+    return shadows.join(", ");
   }
 
   function getTimerLegendTargetValue(node, fallbackValue) {
@@ -2085,18 +2107,13 @@
         if (!cache[key]) cache[key] = getComputedTileVisual(value);
         var visual = cache[key];
         if (!visual) continue;
-        var finalTextColor = visual.color;
-        if (contrastRatio(visual.color, visual.backgroundColor) < 1.8) {
-          var bg = parseCssColor(visual.backgroundColor);
-          finalTextColor = relativeLuminance(bg) >= 0.55 ? "#1a1a1a" : "#f9f6f2";
-        }
         node.style.background = visual.background;
         node.style.backgroundImage = visual.backgroundImage;
         node.style.backgroundSize = visual.backgroundSize;
         node.style.backgroundPosition = visual.backgroundPosition;
         node.style.backgroundRepeat = visual.backgroundRepeat;
-        node.style.color = finalTextColor;
-        node.style.boxShadow = visual.boxShadow;
+        node.style.color = visual.color;
+        node.style.boxShadow = buildTimerLegendBoxShadow(visual);
         node.style.border = visual.border;
         node.style.borderRadius = visual.borderRadius;
         node.style.clipPath = visual.clipPath;

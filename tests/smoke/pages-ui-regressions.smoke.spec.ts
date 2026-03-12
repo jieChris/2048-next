@@ -299,4 +299,65 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.firstNameRightDelta).toBeLessThanOrEqual(1);
     expect(snapshot.selfNameRightDelta).toBeLessThanOrEqual(1);
   });
+
+  test("timer legend tiles reuse board tile foreground and background colors", async ({ page }) => {
+    const response = await page.goto("/index.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+
+    const snapshot = await page.evaluate(() => {
+      const values = [32, 64, 128, 2048, 4096, 8192, 16384, 32768, 65536];
+      const results: Array<{
+        value: number;
+        hasLegend: boolean;
+        timerColor: string | null;
+        timerBackground: string | null;
+        timerBoxShadow: string | null;
+        boardColor: string | null;
+        boardBackground: string | null;
+      }> = [];
+
+      for (const value of values) {
+        const legend = document.querySelector(`#timer-row-${value} .timertile`) as HTMLElement | null;
+        const tile = document.createElement("div");
+        tile.className = `tile tile-${value}${value > 2048 ? " tile-super" : ""}`;
+        const inner = document.createElement("div");
+        inner.className = "tile-inner";
+        tile.appendChild(inner);
+        document.body.appendChild(tile);
+
+        const legendStyles = legend ? window.getComputedStyle(legend) : null;
+        const boardStyles = window.getComputedStyle(inner);
+
+        results.push({
+          value,
+          hasLegend: !!legend,
+          timerColor: legendStyles ? legendStyles.color : null,
+          timerBackground: legendStyles ? legendStyles.backgroundColor : null,
+          timerBoxShadow: legendStyles ? legendStyles.boxShadow : null,
+          boardColor: boardStyles.color,
+          boardBackground: boardStyles.backgroundColor
+        });
+
+        tile.remove();
+      }
+
+      return results;
+    });
+
+    for (const result of snapshot) {
+      expect(result.hasLegend, `legend should exist for ${result.value}`).toBe(true);
+      expect(result.timerColor, `legend text color should match board tile for ${result.value}`).toBe(
+        result.boardColor
+      );
+      expect(
+        result.timerBackground,
+        `legend background should match board tile for ${result.value}`
+      ).toBe(result.boardBackground);
+      expect(result.timerBoxShadow, `legend glow should be enabled for ${result.value}`).not.toBe("none");
+    }
+  });
 });

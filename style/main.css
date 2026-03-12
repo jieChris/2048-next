@@ -2150,6 +2150,22 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 
 /* Timer Tiles (Legend Colors & Glows) */
+.timer-legend-16,
+.timer-legend-32,
+.timer-legend-64,
+.timer-legend-128,
+.timer-legend-256,
+.timer-legend-512,
+.timer-legend-1024,
+.timer-legend-2048,
+.timer-legend-4096,
+.timer-legend-8192,
+.timer-legend-16384,
+.timer-legend-32768,
+.timer-legend-65536 {
+  color: #f9f6f2;
+}
+
 .timer-legend-16 {
   background: #f59563;
   box-shadow: 0 0 5px 0 rgba(245, 149, 99, 0.5);
@@ -2208,6 +2224,11 @@ input[type=range]::-webkit-slider-runnable-track {
 .timer-legend-32768 {
   background: #000000;
   box-shadow: 0 0 15px 3px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(100, 100, 100, 0.2);
+}
+
+.timer-legend-65536 {
+  background: #3c3a32;
+  box-shadow: 0 0 15px 3px rgba(60, 58, 50, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
 /* Custom Tile Colors 4096+ to match Timer Legend */
