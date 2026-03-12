@@ -74,7 +74,7 @@
   function resolveLeaderboardSupport(windowLike, manager, documentLike) {
     var onlineRuntime = toRecord(toRecord(windowLike).OnlineLeaderboardRuntime);
     var isModeSupported = asFunction(onlineRuntime.isLeaderboardModeSupported);
-    if (!isModeSupported) return true;
+    if (!isModeSupported) return false;
 
     var candidates = [];
     function pushCandidate(value) {
@@ -325,8 +325,7 @@
       toggleRecord.__timerViewBound = toggleBindingState.boundValue;
       didBindToggle = bindListener(toggle, "change", function () {
         var manager = toRecord(windowLike.game_manager);
-        var setTimerModuleViewMode = asFunction(manager.setTimerModuleViewMode);
-        if (!setTimerModuleViewMode) return;
+        if (typeof manager.setTimerModuleViewMode !== "function") return;
         var nextViewMode = resolveTimerModuleViewMode({
           checked: readToggleChecked(toggle)
         });
@@ -334,7 +333,7 @@
           nextViewMode: nextViewMode,
           checked: readToggleChecked(toggle)
         });
-        setTimerModuleViewMode(resolveText(appliedViewMode));
+        manager.setTimerModuleViewMode(resolveText(appliedViewMode));
         sync();
       });
     }

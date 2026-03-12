@@ -48,6 +48,33 @@
     style.display = display;
   }
 
+  function setBodyClassState(documentLike, className, active) {
+    var body = toRecord(toRecord(documentLike).body);
+    if (!body) return;
+
+    var classList = toRecord(body.classList);
+    var addClass = asFunction(classList.add);
+    var removeClass = asFunction(classList.remove);
+    if (active && addClass) {
+      addClass.call(body.classList, className);
+      return;
+    }
+    if (!active && removeClass) {
+      removeClass.call(body.classList, className);
+      return;
+    }
+
+    var rawClassName = String(body.className || "").trim();
+    var tokens = rawClassName ? rawClassName.split(/\s+/) : [];
+    var nextTokens = tokens.filter(function (token) {
+      return token && token !== className;
+    });
+    if (active) {
+      nextTokens.push(className);
+    }
+    body.className = nextTokens.join(" ");
+  }
+
   function getElementById(documentLike, id) {
     var getter = asFunction(toRecord(documentLike).getElementById);
     if (!getter) return null;
@@ -101,6 +128,7 @@
     if (homeGuideState.panel) {
       setDisplay(homeGuideState.panel, resolveDisplayValue(layerDisplayState.panelDisplay));
     }
+    setBodyClassState(source.documentLike, "home-guide-active", resolveBoolean(homeGuideState.active));
     var banner = getElementById(source.documentLike, "home-guide-message-banner");
     if (banner) {
       setDisplay(banner, "none");

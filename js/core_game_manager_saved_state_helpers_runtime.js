@@ -643,8 +643,28 @@ function applySavedTimerFixedRowsState(manager, saved, cappedStateForRestore) {
   }
 }
 
+function isSavedTimerRowScrollManagedHidden(row) {
+  if (!(row && typeof row.getAttribute === "function")) return false;
+  return row.getAttribute("data-scroll-hidden") === "1";
+}
+
+function shouldIgnoreSavedTimerRowDisplay(row, rowState) {
+  if (!row || !isNonArrayObject(rowState)) return false;
+  if (typeof rowState.display !== "string" || rowState.display !== "none") return false;
+  var currentDisplay = row.style && typeof row.style.display === "string" ? row.style.display : "";
+  if (currentDisplay === "none" && !isSavedTimerRowScrollManagedHidden(row)) {
+    return false;
+  }
+  return true;
+}
+
 function applySavedTimerRowVisibilityState(row, rowState) {
   if (!row) return;
+  if (shouldIgnoreSavedTimerRowDisplay(row, rowState)) {
+    row.style.visibility = typeof rowState.visibility === "string" ? rowState.visibility : "";
+    row.style.pointerEvents = typeof rowState.pointerEvents === "string" ? rowState.pointerEvents : "";
+    return;
+  }
   row.style.display = typeof rowState.display === "string" ? rowState.display : "";
   row.style.visibility = typeof rowState.visibility === "string" ? rowState.visibility : "";
   row.style.pointerEvents = typeof rowState.pointerEvents === "string" ? rowState.pointerEvents : "";
@@ -818,10 +838,18 @@ function collectSavedTimerFixedRowsState(manager) {
     var row = manager.getTimerRowEl(slotId), timerEl = resolveManagerElementById(manager, "timer" + slotId);
     if (!row || !timerEl) continue;
     var legend = row.querySelector(".timertile"), legendText = legend ? (legend.textContent || "") : "", legendClass = legend ? (legend.className || "") : "", legendFontSize = legend ? (legend.style.fontSize || "") : "";
+    var display = row.style.display || "";
+    var visibility = row.style.visibility || "";
+    var pointerEvents = row.style.pointerEvents || "";
+    if (isSavedTimerRowScrollManagedHidden(row)) {
+      display = "";
+      visibility = "";
+      pointerEvents = "";
+    }
     timerFixedRowsState[slotId] = {
-      display: row.style.display || "",
-      visibility: row.style.visibility || "",
-      pointerEvents: row.style.pointerEvents || "",
+      display: display,
+      visibility: visibility,
+      pointerEvents: pointerEvents,
       repeat: row.getAttribute("data-capped-repeat") || "", timerText: timerEl.textContent || "",
       legendText: legendText, legendClass: legendClass, legendFontSize: legendFontSize
     };

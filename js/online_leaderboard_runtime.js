@@ -161,18 +161,13 @@
       panel = createEl("div", "timer-leaderboard-panel", "");
       panel.id = "timer-leaderboard-panel";
 
-      var header = createEl("div", "timer-leaderboard-header", "");
-      var title = createEl("div", "timer-leaderboard-title", "");
-      title.id = "timer-leaderboard-title";
-      var subtitle = createEl("div", "timer-leaderboard-subtitle", "");
-      subtitle.id = "timer-leaderboard-subtitle";
-      header.appendChild(title);
-      header.appendChild(subtitle);
+      var summary = createEl("div", "timer-leaderboard-summary", "");
+      summary.id = "timer-leaderboard-summary";
 
       var list = createEl("div", "timer-leaderboard-list", "");
       list.id = "timer-leaderboard-list";
 
-      panel.appendChild(header);
+      panel.appendChild(summary);
       panel.appendChild(list);
       timerBox.appendChild(panel);
     }
@@ -183,10 +178,36 @@
 
   function updateTimerLeaderboardHeader() {
     var lang = getLanguage();
-    var title = byId("timer-leaderboard-title");
-    var subtitle = byId("timer-leaderboard-subtitle");
-    if (title) title.textContent = lang === "en" ? "LEADERBOARD" : "排行榜";
-    if (subtitle) subtitle.textContent = lang === "en" ? "ALL TIME" : "历史最佳";
+    var summary = byId("timer-leaderboard-summary");
+    if (!summary) return;
+    summary.textContent = "TOP 10";
+    summary.setAttribute("data-label", lang === "en" ? "LEADERBOARD" : "排行榜");
+    summary.setAttribute("title", lang === "en" ? "Leaderboard" : "排行榜");
+  }
+
+  function resolveRankTileFontSize(rankText) {
+    var length = toText(rankText).trim().length;
+    if (length <= 1) return "22px";
+    if (length === 2) return "18px";
+    if (length === 3) return "14px";
+    return "12px";
+  }
+
+  function appendTimerLeaderboardRow(list, rankText, nameText, rowClassName, rankClassName) {
+    if (!list) return;
+    var row = createEl("div", "timer-leaderboard-row", "");
+    if (rowClassName) row.className += " " + rowClassName;
+
+    var rankTile = createEl("div", "timertile timer-leaderboard-rank-tile", toText(rankText));
+    rankTile.style.fontSize = resolveRankTileFontSize(rankText);
+    if (rankClassName) rankTile.className += " " + rankClassName;
+
+    var nameTile = createEl("div", "timertile timer-leaderboard-name-tile", toText(nameText));
+    nameTile.title = toText(nameText);
+
+    row.appendChild(rankTile);
+    row.appendChild(nameTile);
+    list.appendChild(row);
   }
 
   function renderTimerLeaderboardRows(topRows, selfEntry) {
@@ -199,40 +220,27 @@
 
     for (var i = 0; i < rows.length && i < TIMER_LEADERBOARD_TOP_LIMIT; i += 1) {
       var item = rows[i] || {};
-      var row = createEl("div", "timer-leaderboard-row", "");
-      var rank = createEl("div", "timer-leaderboard-rank", String(i + 1));
-      if (i === 0) rank.classList.add("is-top-1");
-      else if (i === 1) rank.classList.add("is-top-2");
-      else if (i === 2) rank.classList.add("is-top-3");
-      var score = Math.floor(Number(item.score) || 0);
       var nick = toText(item.nickname || (lang === "en" ? "Anonymous" : "匿名"));
-      var text = createEl("div", "timer-leaderboard-text", String(score) + " - " + nick);
-      row.appendChild(rank);
-      row.appendChild(text);
-      list.appendChild(row);
+      var rankClassName = "";
+      if (i === 0) rankClassName = "is-top-1";
+      else if (i === 1) rankClassName = "is-top-2";
+      else if (i === 2) rankClassName = "is-top-3";
+      appendTimerLeaderboardRow(list, String(i + 1), nick, "", rankClassName);
     }
 
     while (list.children.length < TIMER_LEADERBOARD_TOP_LIMIT) {
-      var placeholder = createEl("div", "timer-leaderboard-row is-empty", "");
-      placeholder.appendChild(createEl("div", "timer-leaderboard-rank", String(list.children.length + 1)));
-      placeholder.appendChild(createEl("div", "timer-leaderboard-text", lang === "en" ? "--" : "--"));
-      list.appendChild(placeholder);
+      appendTimerLeaderboardRow(list, String(list.children.length + 1), "--", "is-empty", "");
     }
 
-    var myRow = createEl("div", "timer-leaderboard-row is-self", "");
     var myRankText = "--";
-    var myScoreText = "--";
     var myNick = getNickname() || (lang === "en" ? "You" : "我");
 
     if (selfEntry) {
       myRankText = String(selfEntry.rank || "--");
-      myScoreText = String(Math.floor(Number(selfEntry.score) || 0));
       myNick = toText(selfEntry.nickname || myNick);
     }
 
-    myRow.appendChild(createEl("div", "timer-leaderboard-rank", myRankText));
-    myRow.appendChild(createEl("div", "timer-leaderboard-text", myScoreText + " - " + myNick));
-    list.appendChild(myRow);
+    appendTimerLeaderboardRow(list, myRankText, myNick, "is-self", "");
   }
 
   function resolveSelfRank(rows) {

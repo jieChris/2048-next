@@ -432,6 +432,7 @@ export function createHomeGuidePageResolvers(input: {
         homeGuideState,
         options: options || {},
         isHomePage,
+        documentLike,
         getHomeGuideSteps,
         ensureHomeGuideDom
       })

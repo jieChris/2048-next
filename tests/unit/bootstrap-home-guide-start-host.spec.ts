@@ -6,6 +6,7 @@ describe("bootstrap home guide start host", () => {
   it("applies start lifecycle, session state and layer display", () => {
     const overlay = { style: { display: "none" } };
     const panel = { style: { display: "none" } };
+    const documentLike = { body: { className: "" } };
 
     const homeGuideState: Record<string, unknown> = {
       active: false,
@@ -35,6 +36,7 @@ describe("bootstrap home guide start host", () => {
         }
       },
       homeGuideState,
+      documentLike,
       options: { fromSettings: true },
       isHomePage() {
         return true;
@@ -54,6 +56,7 @@ describe("bootstrap home guide start host", () => {
     expect(homeGuideState.index).toBe(0);
     expect(overlay.style.display).toBe("block");
     expect(panel.style.display).toBe("block");
+    expect(documentLike.body.className).toBe("home-guide-active");
   });
 
   it("returns noop when page is not home", () => {

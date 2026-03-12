@@ -36,6 +36,31 @@ function setDisplay(node: unknown, display: string): void {
   style.display = display;
 }
 
+function setBodyClassState(documentLike: unknown, className: string, active: boolean): void {
+  const body = toRecord(toRecord(documentLike).body);
+  if (!body) return;
+
+  const classList = toRecord(body.classList);
+  const addClass = asFunction<(name: string) => unknown>(classList.add);
+  const removeClass = asFunction<(name: string) => unknown>(classList.remove);
+  if (active && addClass) {
+    addClass.call(body.classList, className);
+    return;
+  }
+  if (!active && removeClass) {
+    removeClass.call(body.classList, className);
+    return;
+  }
+
+  const rawClassName = String(body.className || "").trim();
+  const tokens = rawClassName ? rawClassName.split(/\s+/) : [];
+  const nextTokens = tokens.filter((token) => token && token !== className);
+  if (active) {
+    nextTokens.push(className);
+  }
+  body.className = nextTokens.join(" ");
+}
+
 export interface HomeGuideStartHostResult {
   didStart: boolean;
   hasDom: boolean;
@@ -48,6 +73,7 @@ export function applyHomeGuideStart(input: {
   isHomePage?: unknown;
   getHomeGuideSteps?: unknown;
   ensureHomeGuideDom?: unknown;
+  documentLike?: unknown;
 }): HomeGuideStartHostResult {
   const source = toRecord(input);
   const isHomePage = asFunction<() => unknown>(source.isHomePage);
@@ -119,6 +145,7 @@ export function applyHomeGuideStart(input: {
   if (dom.panel) {
     setDisplay(dom.panel, resolveDisplayValue(layerDisplayState.panelDisplay));
   }
+  setBodyClassState(source.documentLike, "home-guide-active", resolveBoolean(homeGuideState.active));
 
   return {
     didStart: true,

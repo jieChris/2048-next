@@ -49,6 +49,31 @@ function setDisplay(node: unknown, display: string): void {
   style.display = display;
 }
 
+function setBodyClassState(documentLike: unknown, className: string, active: boolean): void {
+  const body = toRecord(toRecord(documentLike).body);
+  if (!body) return;
+
+  const classList = toRecord(body.classList);
+  const addClass = asFunction<(name: string) => unknown>(classList.add);
+  const removeClass = asFunction<(name: string) => unknown>(classList.remove);
+  if (active && addClass) {
+    addClass.call(body.classList, className);
+    return;
+  }
+  if (!active && removeClass) {
+    removeClass.call(body.classList, className);
+    return;
+  }
+
+  const rawClassName = String(body.className || "").trim();
+  const tokens = rawClassName ? rawClassName.split(/\s+/) : [];
+  const nextTokens = tokens.filter((token) => token && token !== className);
+  if (active) {
+    nextTokens.push(className);
+  }
+  body.className = nextTokens.join(" ");
+}
+
 function getElementById(documentLike: unknown, id: string): unknown {
   const getter = asFunction<(value: string) => unknown>(toRecord(documentLike).getElementById);
   if (!getter) return null;
@@ -138,6 +163,7 @@ export function applyHomeGuideFinish(input: {
   if (homeGuideState.panel) {
     setDisplay(homeGuideState.panel, resolveDisplayValue(layerDisplayState.panelDisplay));
   }
+  setBodyClassState(source.documentLike, "home-guide-active", resolveBoolean(homeGuideState.active));
   const banner = getElementById(source.documentLike, "home-guide-message-banner");
   if (banner) {
     setDisplay(banner, "none");

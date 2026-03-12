@@ -293,10 +293,7 @@ export function applyTimerModuleSettingsUi(input: {
     toggleRecord.__timerViewBound = toggleBindingState.boundValue;
     didBindToggle = bindListener(toggle, "change", function () {
       const manager = toRecord(windowLike.game_manager);
-      const setTimerModuleViewMode = asFunction<(viewMode: string) => unknown>(
-        manager.setTimerModuleViewMode
-      );
-      if (!setTimerModuleViewMode) return;
+      if (typeof manager.setTimerModuleViewMode !== "function") return;
       const nextViewMode = resolveTimerModuleViewMode({
         checked: readToggleChecked(toggle)
       });
@@ -304,7 +301,7 @@ export function applyTimerModuleSettingsUi(input: {
         nextViewMode,
         checked: readToggleChecked(toggle)
       });
-      setTimerModuleViewMode(resolveText(appliedViewMode));
+      (manager.setTimerModuleViewMode as (viewMode: string) => unknown)(resolveText(appliedViewMode));
       sync();
     });
   }

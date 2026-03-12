@@ -95,6 +95,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         });
         const toggle = document.getElementById("timer-module-view-toggle") as HTMLInputElement | null;
         const note = document.getElementById("timer-module-view-note");
+        const timerBox = document.getElementById("timerbox") as HTMLElement | null;
+        const leaderboardPanel = document.getElementById("timer-leaderboard-panel") as HTMLElement | null;
         if (!toggle) {
           return {
             hasRuntime: true,
@@ -110,7 +112,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
             resolveAppliedViewModeCallCount,
             resolveInitRetryStateCallCount,
             noteText: note ? String(note.textContent || "") : "",
-            toggleChecked: null
+            toggleChecked: null,
+            timerBoxClassName: timerBox ? String(timerBox.className || "") : "",
+            leaderboardPanelDisplay: leaderboardPanel ? String(window.getComputedStyle(leaderboardPanel).display || "") : ""
           };
         }
         toggle.checked = false;
@@ -132,7 +136,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
           resolveAppliedViewModeCallCount,
           resolveInitRetryStateCallCount,
           noteText: note ? String(note.textContent || "") : "",
-          toggleChecked: !!toggle.checked
+          toggleChecked: !!toggle.checked,
+          timerBoxClassName: timerBox ? String(timerBox.className || "") : "",
+          leaderboardPanelDisplay: leaderboardPanel ? String(window.getComputedStyle(leaderboardPanel).display || "") : ""
         };
       } finally {
         runtime.buildTimerModuleSettingsRowInnerHtml = originalBuild;
@@ -160,6 +166,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolveInitRetryStateCallCount).toBeGreaterThan(0);
     expect(snapshot.noteText || "").not.toBe("");
     expect(snapshot.toggleChecked).toBe(false);
+    expect(snapshot.timerBoxClassName).toContain("timerbox-hidden-mode");
+    expect(snapshot.timerBoxClassName).toContain("timerbox-leaderboard-mode");
+    expect(snapshot.leaderboardPanelDisplay).toBe("block");
   });
 
   test("index ui delegates theme settings model to runtime helper", async ({ page }) => {

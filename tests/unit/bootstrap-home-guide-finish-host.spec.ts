@@ -20,6 +20,10 @@ describe("bootstrap home guide finish host", () => {
       overlay: { style: { display: "flex" } },
       panel: { style: { display: "block" } }
     };
+    const documentLike = {
+      body: { className: "home-guide-active" },
+      getElementById: vi.fn(() => null)
+    };
 
     const result = applyHomeGuideFinish({
       homeGuideRuntime: {
@@ -48,6 +52,7 @@ describe("bootstrap home guide finish host", () => {
         showDoneNotice: true
       },
       clearHomeGuideHighlight,
+      documentLike,
       storageLike: { getItem: vi.fn() },
       seenKey: "home_guide_seen_v1",
       syncHomeGuideSettingsUI,
@@ -79,6 +84,7 @@ describe("bootstrap home guide finish host", () => {
     expect(
       ((homeGuideState.panel as Record<string, unknown>).style as Record<string, unknown>).display
     ).toBe("none");
+    expect(documentLike.body.className).toBe("");
   });
 
   it("returns noop when required runtime functions are missing", () => {

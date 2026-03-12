@@ -41,6 +41,33 @@
     style.display = display;
   }
 
+  function setBodyClassState(documentLike, className, active) {
+    var body = toRecord(toRecord(documentLike).body);
+    if (!body) return;
+
+    var classList = toRecord(body.classList);
+    var addClass = asFunction(classList.add);
+    var removeClass = asFunction(classList.remove);
+    if (active && addClass) {
+      addClass.call(body.classList, className);
+      return;
+    }
+    if (!active && removeClass) {
+      removeClass.call(body.classList, className);
+      return;
+    }
+
+    var rawClassName = String(body.className || "").trim();
+    var tokens = rawClassName ? rawClassName.split(/\s+/) : [];
+    var nextTokens = tokens.filter(function (token) {
+      return token && token !== className;
+    });
+    if (active) {
+      nextTokens.push(className);
+    }
+    body.className = nextTokens.join(" ");
+  }
+
   function applyHomeGuideStart(input) {
     var source = toRecord(input);
     var isHomePage = asFunction(source.isHomePage);
@@ -94,6 +121,7 @@
     if (dom.panel) {
       setDisplay(dom.panel, resolveDisplayValue(layerDisplayState.panelDisplay));
     }
+    setBodyClassState(source.documentLike, "home-guide-active", resolveBoolean(homeGuideState.active));
 
     return {
       didStart: true,

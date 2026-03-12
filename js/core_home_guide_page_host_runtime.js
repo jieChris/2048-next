@@ -357,6 +357,7 @@
           homeGuideState: homeGuideState,
           options: options || {},
           isHomePage: isHomePage,
+          documentLike: documentLike,
           getHomeGuideSteps: getHomeGuideSteps,
           ensureHomeGuideDom: ensureHomeGuideDom
         })

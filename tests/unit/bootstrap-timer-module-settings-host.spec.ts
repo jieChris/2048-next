@@ -210,14 +210,19 @@ describe("bootstrap timer module settings host", () => {
       textContent: ""
     };
     const syncMobileTimerboxUi = vi.fn();
-    const setTimerModuleViewMode = vi.fn();
-    const windowLike: Record<string, unknown> = {
-      game_manager: {
-        getTimerModuleViewMode() {
-          return "hidden";
-        },
-        setTimerModuleViewMode
+    const setTimerModuleViewModeCalls: string[] = [];
+    let setTimerModuleViewModeThis: unknown = null;
+    const manager = {
+      getTimerModuleViewMode() {
+        return "hidden";
+      },
+      setTimerModuleViewMode(this: unknown, viewMode: string) {
+        setTimerModuleViewModeThis = this;
+        setTimerModuleViewModeCalls.push(viewMode);
       }
+    };
+    const windowLike: Record<string, unknown> = {
+      game_manager: manager
     };
 
     const result = applyTimerModuleSettingsUi({
@@ -245,7 +250,8 @@ describe("bootstrap timer module settings host", () => {
 
     toggle.checked = true;
     toggleHandlers.change();
-    expect(setTimerModuleViewMode).toHaveBeenCalledWith("timer");
+    expect(setTimerModuleViewModeCalls).toEqual(["timer"]);
+    expect(setTimerModuleViewModeThis).toBe(manager);
     expect(syncMobileTimerboxUi).toHaveBeenCalledTimes(2);
   });
 

@@ -351,6 +351,7 @@ describe("bootstrap home guide page host", () => {
         homeGuideState,
         options: { fromSettings: true },
         isHomePage: expect.any(Function),
+        documentLike: null,
         getHomeGuideSteps: expect.any(Function),
         ensureHomeGuideDom: expect.any(Function)
       })
