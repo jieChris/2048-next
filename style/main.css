@@ -188,32 +188,61 @@ h1.title a {
 }
 
 .timer-scroll-btn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
   background: #eee4da;
   border-radius: 3px;
-  padding: 0 14px;
+  padding: 0;
   text-decoration: none;
   color: #776e65;
   height: 32px;
-  line-height: 32px;
-  font-size: 13px;
+  line-height: 1;
+  font-size: 0;
   font-weight: bold;
   cursor: pointer;
   user-select: none;
-  margin: 0 3px;
   font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .timer-scroll-btn:hover {
-  background: #ded4c8;
-  color: #5a534c;
+  background: #eee4da;
+  color: #776e65;
+}
+
+.timer-scroll-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+  transition: transform 0.15s ease;
+}
+
+.timer-scroll-btn[data-scroll-dir="-1"]:hover svg {
+  transform: translateY(-1px);
+}
+
+.timer-scroll-btn[data-scroll-dir="1"]:hover svg {
+  transform: translateY(1px);
 }
 
 #timer-scroll-controls {
-  display: none;
-  text-align: center;
-  clear: both;
-  padding-top: 14px;
+    display: none;
+    width: 235px;
+    margin: 14px 0 0 15px;
+    text-align: center;
+    clear: both;
+    padding-top: 0;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
 }
 
 #timerbox.timerbox-hidden-mode {
@@ -222,6 +251,119 @@ h1.title a {
 
 #timerbox.timerbox-hidden-mode > * {
   visibility: hidden !important;
+}
+
+#timerbox.timerbox-hidden-mode.timerbox-leaderboard-mode > #timer-leaderboard-panel {
+  visibility: visible !important;
+}
+
+#timerbox.timerbox-leaderboard-mode > * {
+  display: none !important;
+}
+
+#timerbox.timerbox-leaderboard-mode > #timer-leaderboard-panel {
+  display: block !important;
+}
+
+#timer-leaderboard-panel {
+  display: none;
+  border-radius: 8px;
+  background: #ece4db;
+  overflow: hidden;
+  box-sizing: border-box;
+  min-height: 560px;
+}
+
+.timer-leaderboard-header {
+  background: #b8ab9d;
+  color: #fff;
+  text-align: center;
+  padding: 12px 10px 10px;
+}
+
+.timer-leaderboard-title {
+  font-size: 31px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.timer-leaderboard-subtitle {
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.timer-leaderboard-list {
+  padding: 8px;
+}
+
+.timer-leaderboard-row {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.timer-leaderboard-row:last-child {
+  margin-bottom: 0;
+}
+
+.timer-leaderboard-rank {
+  height: 36px;
+  border-radius: 4px;
+  background: #111;
+  color: #fff;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 36px;
+  text-align: center;
+}
+
+.timer-leaderboard-rank.is-top-1 {
+  background: #d8ab00;
+}
+
+.timer-leaderboard-rank.is-top-2 {
+  background: #c9c5bb;
+}
+
+.timer-leaderboard-rank.is-top-3 {
+  background: #b7832d;
+}
+
+.timer-leaderboard-row.is-self .timer-leaderboard-rank {
+  background: #d61212;
+}
+
+.timer-leaderboard-text {
+  height: 36px;
+  border-radius: 4px;
+  background: #f8f3ec;
+  color: #655a4f;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 36px;
+  padding: 0 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#timerbox [id^="timer-row-"]::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+#timerbox > br {
+  display: none !important;
+}
+
+#timerbox [id^="timer-row-"] > br {
+  display: none;
 }
 
 .timertile {

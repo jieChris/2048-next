@@ -8,6 +8,102 @@ function hideLegacyStepStatsForSetup(manager) {
   if (legacyUndoEl) legacyUndoEl.style.visibility = "hidden";
 }
 
+function normalizeLegacyTimerRowsForSetup(manager) {
+  if (!manager) return;
+  var timerBox = resolveManagerElementById(manager, "timerbox");
+  if (!timerBox) return;
+
+  var slots = Array.isArray(GameManager.TIMER_SLOT_IDS) ? GameManager.TIMER_SLOT_IDS : [];
+  var documentLike = resolveManagerDocumentLike(manager);
+  if (!(documentLike && typeof documentLike.createElement === "function")) return;
+
+  for (var i = 0; i < slots.length; i++) {
+    var slot = Number(slots[i]);
+    if (!Number.isInteger(slot) || slot <= 0) continue;
+
+    var rowId = "timer-row-" + String(slot);
+    var existingRow = resolveManagerElementById(manager, rowId);
+    if (existingRow) {
+      var existingClass = String(existingRow.className || "");
+      if (existingClass.indexOf("timer-row-item") === -1) {
+        existingRow.className = (existingClass ? existingClass + " " : "") + "timer-row-item";
+      }
+      continue;
+    }
+
+    var timerEl = resolveManagerElementById(manager, "timer" + String(slot));
+    if (!(timerEl && timerEl.parentNode === timerBox)) continue;
+
+    var legend = timerEl.previousElementSibling;
+    var expectedLegendClass = "timer-legend-" + String(slot);
+    if (
+      !(
+        legend &&
+        legend.parentNode === timerBox &&
+        legend.classList &&
+        legend.classList.contains("timertile") &&
+        String(legend.className || "").indexOf(expectedLegendClass) !== -1
+      )
+    ) {
+      legend = null;
+    }
+
+    var row = documentLike.createElement("div");
+    row.id = rowId;
+    row.className = "timer-row-item";
+
+    var nextAfterTimer = timerEl.nextSibling;
+    timerBox.insertBefore(row, legend || timerEl);
+    if (legend) row.appendChild(legend);
+    row.appendChild(timerEl);
+
+    var cursor = nextAfterTimer;
+    var movedBr = 0;
+    while (cursor && movedBr < 2) {
+      if (cursor.nodeType === 3 && String(cursor.nodeValue || "").trim() === "") {
+        var whitespaceNode = cursor;
+        cursor = cursor.nextSibling;
+        row.appendChild(whitespaceNode);
+        continue;
+      }
+      if (
+        cursor.nodeType === 1 &&
+        cursor.tagName &&
+        String(cursor.tagName).toLowerCase() === "br"
+      ) {
+        var brNode = cursor;
+        cursor = cursor.nextSibling;
+        row.appendChild(brNode);
+        movedBr += 1;
+        continue;
+      }
+      break;
+    }
+
+    while (movedBr < 2) {
+      row.appendChild(documentLike.createElement("br"));
+      movedBr += 1;
+    }
+  }
+}
+
+function cleanupLegacyTimerboxBreakNodesForSetup(manager) {
+  if (!manager) return;
+  var timerBox = resolveManagerElementById(manager, "timerbox");
+  if (!timerBox) return;
+  for (var i = timerBox.childNodes.length - 1; i >= 0; i--) {
+    var node = timerBox.childNodes[i];
+    if (!node) continue;
+    if (
+      node.nodeType === 1 &&
+      node.tagName &&
+      String(node.tagName).toLowerCase() === "br"
+    ) {
+      timerBox.removeChild(node);
+    }
+  }
+}
+
 function resetTimerTextSlotsForSetup(manager) {
   if (!manager) return;
   var timerEl0 = resolveManagerElementById(manager, "timer");
@@ -18,6 +114,77 @@ function resetTimerTextSlotsForSetup(manager) {
     if (timerEl) timerEl.textContent = "";
   });
   resetSecondaryTimerRowsForSetup(manager);
+}
+
+function createSupportedTimerSlotMapForSetup() {
+  var map = {};
+  var slots = Array.isArray(GameManager.TIMER_SLOT_IDS) ? GameManager.TIMER_SLOT_IDS : [];
+  for (var i = 0; i < slots.length; i++) {
+    var slot = Number(slots[i]);
+    if (!Number.isInteger(slot) || slot <= 0) continue;
+    map[String(slot)] = true;
+  }
+  return map;
+}
+
+function hideUnsupportedTimerRowsForSetup(manager) {
+  if (!manager) return;
+  var timerBox = resolveManagerElementById(manager, "timerbox");
+  if (!timerBox || typeof timerBox.querySelectorAll !== "function") return;
+
+  var supportedMap = createSupportedTimerSlotMapForSetup();
+  var rows = timerBox.querySelectorAll("[id^='timer-row-']");
+  for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    var row = rows[rowIndex];
+    var match = row && row.id ? String(row.id).match(/^timer-row-(\d+)$/) : null;
+    if (!match) continue;
+    var slotId = String(match[1] || "");
+    if (supportedMap[slotId] === true) continue;
+    row.style.display = "none";
+    row.style.visibility = "";
+    row.style.pointerEvents = "";
+    row.removeAttribute("data-scroll-hidden");
+  }
+
+  var timerValues = timerBox.querySelectorAll("[id^='timer']");
+  for (var timerIndex = 0; timerIndex < timerValues.length; timerIndex++) {
+    var timerEl = timerValues[timerIndex];
+    var timerMatch = timerEl && timerEl.id ? String(timerEl.id).match(/^timer(\d+)$/) : null;
+    if (!timerMatch) continue;
+    var timerSlotId = String(timerMatch[1] || "");
+    if (supportedMap[timerSlotId] === true) continue;
+
+    timerEl.style.display = "none";
+    var previous = timerEl.previousElementSibling;
+    if (
+      previous &&
+      previous.classList &&
+      previous.classList.contains("timertile") &&
+      String(previous.className || "").indexOf("timer-legend-") !== -1
+    ) {
+      previous.style.display = "none";
+    }
+
+    var cursor = timerEl.nextSibling;
+    var hiddenBr = 0;
+    while (cursor && hiddenBr < 2) {
+      if (cursor.nodeType === 3 && String(cursor.nodeValue || "").trim() === "") {
+        cursor = cursor.nextSibling;
+        continue;
+      }
+      if (
+        cursor.nodeType === 1 &&
+        cursor.tagName &&
+        String(cursor.tagName).toLowerCase() === "br"
+      ) {
+        cursor.style.display = "none";
+        hiddenBr += 1;
+        cursor = cursor.nextSibling;
+        continue;
+      }
+      break;
+    }
+  }
 }
 
 function repositionCappedTimerContainerForSetup(manager, cappedTimerContainer) {
@@ -131,7 +298,10 @@ function resetTimerUiForSetup(manager) {
   if (!manager) return;
   if (manager.ipsInterval) clearInterval(manager.ipsInterval);
   hideLegacyStepStatsForSetup(manager);
+  normalizeLegacyTimerRowsForSetup(manager);
+  cleanupLegacyTimerboxBreakNodesForSetup(manager);
   resetTimerTextSlotsForSetup(manager);
+  hideUnsupportedTimerRowsForSetup(manager);
   var cappedTimerContainer = resolveManagerElementById(manager, "capped-timer-container");
   repositionCappedTimerContainerForSetup(manager, cappedTimerContainer);
   var cappedState = manager.resolveCappedModeState();

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
-  test("index ui no longer shows timer module settings toggle", async ({ page }) => {
+  test("index ui delegates timer module settings model to runtime helper", async ({ page }) => {
     const response = await page.goto("/index.html", {
       waitUntil: "domcontentloaded"
     });
@@ -149,17 +149,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.hasPageHostRuntime).toBe(true);
     expect(snapshot.hasSettingsOpen).toBe(true);
-    expect(snapshot.hasToggle).toBe(false);
+    expect(snapshot.hasToggle).toBe(true);
     expect(snapshot.applyPageHostCallCount).toBeGreaterThanOrEqual(0);
-    expect(snapshot.buildCallCount).toBe(0);
-    expect(snapshot.resolveStateCallCount).toBe(0);
-    expect(snapshot.resolveCurrentViewModeCallCount).toBe(0);
-    expect(snapshot.resolveBindingCallCount).toBe(0);
-    expect(snapshot.resolveViewModeCallCount).toBe(0);
-    expect(snapshot.resolveAppliedViewModeCallCount).toBe(0);
-    expect(snapshot.resolveInitRetryStateCallCount).toBe(0);
-    expect(snapshot.noteText || "").toBe("");
-    expect(snapshot.toggleChecked).toBeNull();
+    expect(snapshot.buildCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveStateCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveCurrentViewModeCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveBindingCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveViewModeCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveAppliedViewModeCallCount).toBeGreaterThan(0);
+    expect(snapshot.resolveInitRetryStateCallCount).toBeGreaterThan(0);
+    expect(snapshot.noteText || "").not.toBe("");
+    expect(snapshot.toggleChecked).toBe(false);
   });
 
   test("index ui delegates theme settings model to runtime helper", async ({ page }) => {

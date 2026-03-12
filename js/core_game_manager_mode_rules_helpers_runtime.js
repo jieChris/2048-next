@@ -507,6 +507,9 @@ function applyTimerMilestoneMergeEffects(result, value, reached32k) {
     result.shouldSetReached32k = true;
     result.timerIdsToStamp.push("timer32768");
   }
+  if (value === 65536) {
+    result.timerIdsToStamp.push("timer65536");
+  }
 }
 function resolveMergeEffectsFallback(currentManager, mergedValue, cappedState) {
   var value = Number(mergedValue);

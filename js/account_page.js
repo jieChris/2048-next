@@ -8,6 +8,7 @@
   var STORAGE_NICKNAME_KEY = "nickname";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var DEFAULT_LIMIT = 20;
+  var DEFAULT_BOARD_MODE = "standard_no_undo";
 
   var apiBases = buildApiBaseCandidates();
   var activeApiBase = apiBases[0];
@@ -29,8 +30,6 @@
       emailPlaceholder: "请输入邮箱",
       passwordLabel: "密码",
       passwordPlaceholder: "请输入密码",
-      nicknameLabel: "昵称（仅注册）",
-      nicknamePlaceholder: "请输入昵称",
       loginBtn: "登录",
       registerBtn: "注册",
       logoutBtn: "退出",
@@ -40,6 +39,7 @@
       userEmail: "邮箱：",
       userCreated: "注册时间：",
       boardHeading: "在线排行榜",
+      boardMode: "模式",
       boardLimit: "条数",
       boardRefresh: "刷新",
       colRank: "排名",
@@ -50,7 +50,9 @@
       boardEmpty: "暂无在线排行榜数据",
       boardFail: "排行榜加载失败",
       requireEmailPass: "请输入邮箱和密码",
-      requireRegisterFields: "请完整填写邮箱、密码和昵称",
+      requireRegisterFields: "请填写邮箱和密码",
+      requireNickname: "请输入昵称",
+      registerNicknamePrompt: "请输入昵称（用于排行榜显示）",
       registerOk: "注册成功，请登录",
       registerFail: "注册失败",
       loginOk: "登录成功",
@@ -75,8 +77,6 @@
       emailPlaceholder: "Enter email",
       passwordLabel: "Password",
       passwordPlaceholder: "Enter password",
-      nicknameLabel: "Nickname (register only)",
-      nicknamePlaceholder: "Enter nickname",
       loginBtn: "Login",
       registerBtn: "Register",
       logoutBtn: "Logout",
@@ -86,6 +86,7 @@
       userEmail: "Email:",
       userCreated: "Created:",
       boardHeading: "Leaderboard",
+      boardMode: "Mode",
       boardLimit: "Limit",
       boardRefresh: "Refresh",
       colRank: "Rank",
@@ -96,7 +97,9 @@
       boardEmpty: "No leaderboard data.",
       boardFail: "Failed to load leaderboard",
       requireEmailPass: "Please enter email and password",
-      requireRegisterFields: "Please enter email, password, and nickname",
+      requireRegisterFields: "Please enter email and password",
+      requireNickname: "Please enter nickname",
+      registerNicknamePrompt: "Enter nickname for leaderboard",
       registerOk: "Registered. Please log in.",
       registerFail: "Register failed",
       loginOk: "Login success",
@@ -107,6 +110,58 @@
       networkError: "Network error"
     }
   };
+
+  var ERROR_CODE_COPY = {
+    zh: {
+      EMPTY: "昵称不能为空",
+      LENGTH: "昵称长度需在 2-20 个字符",
+      CHARS: "昵称仅支持中文、字母、数字、空格、下划线和短横线",
+      INVALID: "昵称不可用，请更换",
+      RESERVED: "昵称不可用，请更换",
+      SENSITIVE: "昵称不可用，请更换",
+      UNAUTHORIZED: "请先登录",
+      INVALID_TOKEN: "登录状态已失效，请重新登录"
+    },
+    en: {
+      EMPTY: "Nickname cannot be empty",
+      LENGTH: "Nickname length must be 2-20 characters",
+      CHARS: "Nickname supports letters, numbers, spaces, underscores and hyphens only",
+      INVALID: "Nickname is not allowed",
+      RESERVED: "Nickname is not allowed",
+      SENSITIVE: "Nickname is not allowed",
+      UNAUTHORIZED: "Please sign in first",
+      INVALID_TOKEN: "Session expired, please sign in again"
+    }
+  };
+
+  var MODE_BUCKET_ALIAS = {
+    standard_no_undo: "standard_no_undo",
+    standard_4x4_pow2_no_undo: "standard_no_undo",
+    capped_4x4_pow2_no_undo: "standard_no_undo",
+    standard_undo: "standard_undo",
+    classic_4x4_pow2_undo: "standard_undo",
+    pow2_3x3: "pow2_3x3",
+    board_3x3_pow2_no_undo: "pow2_3x3",
+    board_3x3_pow2_undo: "pow2_3x3",
+    pow2_2x4: "pow2_2x4",
+    board_2x4_pow2_no_undo: "pow2_2x4",
+    board_2x4_pow2_undo: "pow2_2x4",
+    pow2_3x4: "pow2_3x4",
+    board_3x4_pow2_no_undo: "pow2_3x4",
+    board_3x4_pow2_undo: "pow2_3x4",
+    fib_3x3: "fib_3x3",
+    fib_3x3_no_undo: "fib_3x3",
+    fib_3x3_undo: "fib_3x3"
+  };
+
+  var LEADERBOARD_MODE_OPTIONS = [
+    { value: "standard_no_undo", zh: "普通无撤回", en: "Standard (No Undo)" },
+    { value: "standard_undo", zh: "可撤回", en: "With Undo" },
+    { value: "pow2_3x3", zh: "3x3", en: "3x3" },
+    { value: "pow2_2x4", zh: "2x4", en: "2x4" },
+    { value: "pow2_3x4", zh: "3x4", en: "3x4" },
+    { value: "fib_3x3", zh: "斐波那契3x3", en: "Fibonacci 3x3" }
+  ];
 
   function toText(value) {
     return value == null ? "" : String(value);
@@ -146,6 +201,18 @@
   function t(key) {
     var lang = currentLang === "en" ? "en" : "zh";
     return (COPY[lang] && COPY[lang][key]) || (COPY.zh && COPY.zh[key]) || "";
+  }
+
+  function resolveLeaderboardMode(modeLike) {
+    var key = toText(modeLike).trim().toLowerCase();
+    if (!key) return null;
+    return MODE_BUCKET_ALIAS[key] || null;
+  }
+
+  function getSelectedModeBucket() {
+    var modeSelect = byId("account-board-mode");
+    var modeValue = toText(modeSelect && modeSelect.value).trim();
+    return resolveLeaderboardMode(modeValue) || DEFAULT_BOARD_MODE;
   }
 
   function getToken() {
@@ -268,11 +335,15 @@
     return apiRequest("/login", { method: "POST", body: payload });
   }
 
-  function getLeaderboard(limit) {
+  function getLeaderboard(limit, modeLike) {
     var safeLimit = Number(limit);
     if (!Number.isFinite(safeLimit) || safeLimit <= 0) safeLimit = DEFAULT_LIMIT;
     safeLimit = Math.floor(safeLimit);
-    return apiRequest("/leaderboard?limit=" + encodeURIComponent(String(safeLimit)), { method: "GET" });
+
+    var modeBucket = resolveLeaderboardMode(modeLike) || DEFAULT_BOARD_MODE;
+    var path = "/leaderboard?limit=" + encodeURIComponent(String(safeLimit));
+    if (modeBucket) path += "&mode=" + encodeURIComponent(modeBucket);
+    return apiRequest(path, { method: "GET" });
   }
 
   function getUserInfo(userId) {
@@ -296,6 +367,13 @@
   }
 
   function resolveServerError(result, fallbackKey) {
+    var lang = currentLang === "en" ? "en" : "zh";
+    var code = toText(result && result.code).trim().toUpperCase();
+
+    if (code && ERROR_CODE_COPY[lang] && ERROR_CODE_COPY[lang][code]) {
+      return ERROR_CODE_COPY[lang][code];
+    }
+
     var explicit = toText(result && result.error).trim();
     if (explicit) return explicit;
     return t(fallbackKey);
@@ -343,6 +421,26 @@
     }
   }
 
+  function refreshModeSelectOptions() {
+    var modeSelect = byId("account-board-mode");
+    if (!modeSelect) return;
+
+    var lang = currentLang === "en" ? "en" : "zh";
+    var prevValue = resolveLeaderboardMode(modeSelect.value) || DEFAULT_BOARD_MODE;
+    modeSelect.innerHTML = "";
+
+    for (var i = 0; i < LEADERBOARD_MODE_OPTIONS.length; i += 1) {
+      var optionDef = LEADERBOARD_MODE_OPTIONS[i];
+      var optionEl = global.document.createElement("option");
+      optionEl.value = optionDef.value;
+      optionEl.textContent = lang === "en" ? optionDef.en : optionDef.zh;
+      modeSelect.appendChild(optionEl);
+    }
+
+    modeSelect.value = prevValue;
+    if (!modeSelect.value) modeSelect.value = DEFAULT_BOARD_MODE;
+  }
+
   function resetUserInfo() {
     var id = byId("account-user-id");
     var nick = byId("account-user-nickname");
@@ -387,18 +485,31 @@
       stateTag.textContent = isAuthed ? t("stateAuthed") : t("stateGuest");
     }
 
+    var authGrid = byId("account-auth-grid");
+    var actionRow = byId("account-action-row");
+    var authTip = byId("account-auth-tip");
     var loginBtn = byId("account-login-btn");
+    var registerBtn = byId("account-register-btn");
     var logoutBtn = byId("account-logout-btn");
-    if (loginBtn) loginBtn.disabled = isAuthed;
-    if (logoutBtn) logoutBtn.disabled = !isAuthed;
+    var passwordInput = byId("account-password");
+
+    if (authGrid) authGrid.style.display = isAuthed ? "none" : "";
+    if (actionRow) actionRow.style.display = "";
+    if (loginBtn) loginBtn.style.display = isAuthed ? "none" : "";
+    if (registerBtn) registerBtn.style.display = isAuthed ? "none" : "";
+    if (logoutBtn) logoutBtn.style.display = isAuthed ? "" : "none";
+    if (authTip) authTip.style.display = isAuthed ? "none" : "";
+
+    if (isAuthed && passwordInput) passwordInput.value = "";
   }
 
   async function refreshLeaderboard() {
     var boardTip = byId("account-board-tip");
     var limit = Number(toText(byId("account-board-limit") && byId("account-board-limit").value));
+    var modeBucket = getSelectedModeBucket();
 
     setTip(boardTip, t("boardLoading"), "");
-    var result = await getLeaderboard(limit);
+    var result = await getLeaderboard(limit, modeBucket);
     if (!result || !result.success) {
       renderBoardList([]);
       setTip(boardTip, resolveServerError(result, "boardFail"), "err");
@@ -409,13 +520,27 @@
     setTip(boardTip, "API: " + activeApiBase, "ok");
   }
 
+  function promptRegisterNickname() {
+    var promptText = t("registerNicknamePrompt");
+    if (typeof global.prompt !== "function") return null;
+    var nickname = global.prompt(promptText, "");
+    if (nickname == null) return null;
+    return toText(nickname).trim();
+  }
+
   async function onRegisterClick() {
     var email = toText(byId("account-email") && byId("account-email").value).trim();
     var password = toText(byId("account-password") && byId("account-password").value).trim();
-    var nickname = toText(byId("account-nickname") && byId("account-nickname").value).trim();
 
-    if (!email || !password || !nickname) {
+    if (!email || !password) {
       setTip(byId("account-auth-tip"), t("requireRegisterFields"), "err");
+      return;
+    }
+
+    var nickname = promptRegisterNickname();
+    if (nickname === null) return;
+    if (!nickname) {
+      setTip(byId("account-auth-tip"), t("requireNickname"), "err");
       return;
     }
 
@@ -472,7 +597,6 @@
       "account-auth-heading": t("authHeading"),
       "account-email-label": t("emailLabel"),
       "account-password-label": t("passwordLabel"),
-      "account-nickname-label": t("nicknameLabel"),
       "account-login-btn": t("loginBtn"),
       "account-register-btn": t("registerBtn"),
       "account-logout-btn": t("logoutBtn"),
@@ -482,6 +606,7 @@
       "account-user-email-label": t("userEmail"),
       "account-user-created-label": t("userCreated"),
       "account-board-heading": t("boardHeading"),
+      "account-board-mode-label": t("boardMode"),
       "account-board-limit-label": t("boardLimit"),
       "account-board-refresh": t("boardRefresh"),
       "account-col-rank": t("colRank"),
@@ -499,10 +624,9 @@
 
     var emailInput = byId("account-email");
     var passwordInput = byId("account-password");
-    var nicknameInput = byId("account-nickname");
     if (emailInput) emailInput.setAttribute("placeholder", t("emailPlaceholder"));
     if (passwordInput) passwordInput.setAttribute("placeholder", t("passwordPlaceholder"));
-    if (nicknameInput) nicknameInput.setAttribute("placeholder", t("nicknamePlaceholder"));
+    refreshModeSelectOptions();
 
     syncAuthState();
     refreshLeaderboard();
@@ -514,6 +638,7 @@
     var logoutBtn = byId("account-logout-btn");
     var refreshBtn = byId("account-board-refresh");
     var limitSelect = byId("account-board-limit");
+    var modeSelect = byId("account-board-mode");
 
     if (loginBtn) loginBtn.addEventListener("click", onLoginClick);
     if (registerBtn) registerBtn.addEventListener("click", onRegisterClick);
@@ -522,6 +647,10 @@
     if (limitSelect) {
       limitSelect.value = String(DEFAULT_LIMIT);
       limitSelect.addEventListener("change", refreshLeaderboard);
+    }
+    if (modeSelect) {
+      modeSelect.value = DEFAULT_BOARD_MODE;
+      modeSelect.addEventListener("change", refreshLeaderboard);
     }
 
     global.addEventListener("storage", function (eventLike) {

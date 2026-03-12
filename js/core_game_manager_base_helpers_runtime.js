@@ -276,9 +276,17 @@ function bindSecondaryTimerToggleTarget(manager, element, parentValue) {
   element.addEventListener("click", function (event) {
     if (event && typeof event.preventDefault === "function") event.preventDefault();
     if (event && typeof event.stopPropagation === "function") event.stopPropagation();
-    toggleSecondaryTimerParentExpanded(manager, parent);
+    var expanded = toggleSecondaryTimerParentExpanded(manager, parent);
     refreshSecondaryTimerRowsVisibility(manager);
-    manager.callWindowMethod("updateTimerScroll");
+    if (expanded) {
+      if (!manager.callWindowMethod("cappedTimerScroll", [1])) {
+        manager.callWindowMethod("updateTimerScroll");
+      }
+      return;
+    }
+    if (!manager.callWindowMethod("cappedTimerScroll", [-1])) {
+      manager.callWindowMethod("updateTimerScroll");
+    }
   });
 }
 
@@ -481,6 +489,43 @@ function isSecondaryTimerParentReached(manager, parentValue) {
   return text !== "";
 }
 
+function resolveSecondaryTimerParentAnchor(manager, timerBox, parentValue) {
+  if (!manager || !timerBox) return null;
+  var parent = normalizeSecondaryTimerValue(parentValue);
+  if (parent === null) return null;
+
+  var parentRow = manager.getTimerRowEl ? manager.getTimerRowEl(parent) : null;
+  if (parentRow && parentRow.parentNode === timerBox) return parentRow;
+
+  var parentTimer = resolveManagerElementById(manager, "timer" + String(parent));
+  if (!(parentTimer && parentTimer.parentNode === timerBox)) return null;
+
+  // Legacy pages may not wrap each timer entry with #timer-row-*. In that case,
+  // place secondary rows after the timer value and its trailing <br><br>.
+  var anchor = parentTimer;
+  var cursor = parentTimer.nextSibling;
+  var brCount = 0;
+  while (cursor) {
+    if (cursor.nodeType === 3 && String(cursor.nodeValue || "").trim() === "") {
+      cursor = cursor.nextSibling;
+      continue;
+    }
+    if (
+      cursor.nodeType === 1 &&
+      cursor.tagName &&
+      String(cursor.tagName).toLowerCase() === "br" &&
+      brCount < 2
+    ) {
+      anchor = cursor;
+      brCount += 1;
+      cursor = cursor.nextSibling;
+      continue;
+    }
+    break;
+  }
+  return anchor;
+}
+
 function placeSecondaryTimerRowsNearParents(manager, descriptors) {
   if (!manager) return;
   var timerBox = resolveManagerElementById(manager, "timerbox");
@@ -493,11 +538,9 @@ function placeSecondaryTimerRowsNearParents(manager, descriptors) {
     if (!descriptor || !descriptor.row) continue;
     var parent = normalizeSecondaryTimerValue(descriptor.parent);
     if (parent === null) continue;
-    var parentRow = manager.getTimerRowEl ? manager.getTimerRowEl(parent) : null;
-    if (!(parentRow && parentRow.parentNode === timerBox)) continue;
 
     var key = String(parent);
-    var anchor = tailByParent[key] || parentRow;
+    var anchor = tailByParent[key] || resolveSecondaryTimerParentAnchor(manager, timerBox, parent);
     if (!anchor || anchor.parentNode !== timerBox) continue;
     if (anchor.nextSibling !== descriptor.row) {
       timerBox.insertBefore(descriptor.row, anchor.nextSibling);

@@ -9,10 +9,44 @@
   var STORAGE_LAST_SUBMIT_KEY = "online_last_submit_signature_v1";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var DEFAULT_BOARD_LIMIT = 10;
+  var MODE_BUCKET_ALIAS = {
+    standard: "standard_no_undo",
+    standard_no_undo: "standard_no_undo",
+    standard_4x4_pow2_no_undo: "standard_no_undo",
+    capped_4x4_pow2_no_undo: "standard_no_undo",
+    capped: "standard_no_undo",
+
+    classic_undo: "standard_undo",
+    standard_undo: "standard_undo",
+    classic_4x4_pow2_undo: "standard_undo",
+
+    pow2_3x3: "pow2_3x3",
+    board_3x3_pow2_no_undo: "pow2_3x3",
+    board_3x3_pow2_undo: "pow2_3x3",
+
+    pow2_2x4: "pow2_2x4",
+    board_2x4_pow2_no_undo: "pow2_2x4",
+    board_2x4_pow2_undo: "pow2_2x4",
+
+    pow2_3x4: "pow2_3x4",
+    board_3x4_pow2_no_undo: "pow2_3x4",
+    board_3x4_pow2_undo: "pow2_3x4",
+
+    fib_3x3: "fib_3x3",
+    fib_3x3_no_undo: "fib_3x3",
+    fib_3x3_undo: "fib_3x3"
+  };
+  var TIMER_LEADERBOARD_TOP_LIMIT = 10;
+  var TIMER_LEADERBOARD_FETCH_LIMIT = 500;
 
   var apiBases = buildApiBaseCandidates();
   var activeApiBase = apiBases[0];
   var cachedLeaderboard = [];
+  var cachedLeaderboardMode = "";
+  var timerLeaderboardCacheRows = [];
+  var timerLeaderboardCacheMode = "";
+  var timerLeaderboardCacheTime = 0;
+  var timerLeaderboardLoading = false;
   var submitLock = false;
   var modeIntroBound = false;
   var langSyncBound = false;
@@ -81,6 +115,163 @@
   function getLanguage() {
     var raw = toText(safeGetStorage(UI_LANG_STORAGE_KEY)).toLowerCase();
     return raw === "en" ? "en" : "zh";
+  }
+
+  function resolveLeaderboardMode(modeLike) {
+    var key = toText(modeLike).trim().toLowerCase();
+    if (!key) return null;
+    return MODE_BUCKET_ALIAS[key] || null;
+  }
+
+  function inferModeKeyFromPath() {
+    var path = toText(global.location && global.location.pathname).toLowerCase();
+    if (path.indexOf("undo_2048") >= 0) return "classic_4x4_pow2_undo";
+    if (path.indexOf("capped_2048") >= 0) return "capped_4x4_pow2_no_undo";
+    if (path.indexOf("index") >= 0 || path === "/" || path === "/index.html") return "standard_4x4_pow2_no_undo";
+    return "";
+  }
+
+  function readBodyModeKey() {
+    var body = global.document && global.document.body ? global.document.body : null;
+    if (!body || typeof body.getAttribute !== "function") return "";
+    return toText(body.getAttribute("data-mode-id")).trim();
+  }
+
+  function getCurrentModeKey() {
+    var manager = global.game_manager;
+    if (manager && manager.modeKey) return toText(manager.modeKey).trim();
+    if (manager && manager.mode) return toText(manager.mode).trim();
+    var bodyModeKey = readBodyModeKey();
+    if (bodyModeKey) return bodyModeKey;
+    var modeConfigKey = toText(global.GAME_MODE_CONFIG && global.GAME_MODE_CONFIG.key).trim();
+    if (modeConfigKey) return modeConfigKey;
+    return inferModeKeyFromPath();
+  }
+
+  function isLeaderboardModeSupported(modeLike) {
+    return !!resolveLeaderboardMode(modeLike);
+  }
+
+  function ensureTimerLeaderboardPanel() {
+    var timerBox = byId("timerbox");
+    if (!timerBox) return null;
+
+    var panel = byId("timer-leaderboard-panel");
+    if (!panel) {
+      panel = createEl("div", "timer-leaderboard-panel", "");
+      panel.id = "timer-leaderboard-panel";
+
+      var header = createEl("div", "timer-leaderboard-header", "");
+      var title = createEl("div", "timer-leaderboard-title", "");
+      title.id = "timer-leaderboard-title";
+      var subtitle = createEl("div", "timer-leaderboard-subtitle", "");
+      subtitle.id = "timer-leaderboard-subtitle";
+      header.appendChild(title);
+      header.appendChild(subtitle);
+
+      var list = createEl("div", "timer-leaderboard-list", "");
+      list.id = "timer-leaderboard-list";
+
+      panel.appendChild(header);
+      panel.appendChild(list);
+      timerBox.appendChild(panel);
+    }
+
+    updateTimerLeaderboardHeader();
+    return panel;
+  }
+
+  function updateTimerLeaderboardHeader() {
+    var lang = getLanguage();
+    var title = byId("timer-leaderboard-title");
+    var subtitle = byId("timer-leaderboard-subtitle");
+    if (title) title.textContent = lang === "en" ? "LEADERBOARD" : "排行榜";
+    if (subtitle) subtitle.textContent = lang === "en" ? "ALL TIME" : "历史最佳";
+  }
+
+  function renderTimerLeaderboardRows(topRows, selfEntry) {
+    var list = byId("timer-leaderboard-list");
+    if (!list) return;
+    list.innerHTML = "";
+
+    var lang = getLanguage();
+    var rows = Array.isArray(topRows) ? topRows : [];
+
+    for (var i = 0; i < rows.length && i < TIMER_LEADERBOARD_TOP_LIMIT; i += 1) {
+      var item = rows[i] || {};
+      var row = createEl("div", "timer-leaderboard-row", "");
+      var rank = createEl("div", "timer-leaderboard-rank", String(i + 1));
+      if (i === 0) rank.classList.add("is-top-1");
+      else if (i === 1) rank.classList.add("is-top-2");
+      else if (i === 2) rank.classList.add("is-top-3");
+      var score = Math.floor(Number(item.score) || 0);
+      var nick = toText(item.nickname || (lang === "en" ? "Anonymous" : "匿名"));
+      var text = createEl("div", "timer-leaderboard-text", String(score) + " - " + nick);
+      row.appendChild(rank);
+      row.appendChild(text);
+      list.appendChild(row);
+    }
+
+    while (list.children.length < TIMER_LEADERBOARD_TOP_LIMIT) {
+      var placeholder = createEl("div", "timer-leaderboard-row is-empty", "");
+      placeholder.appendChild(createEl("div", "timer-leaderboard-rank", String(list.children.length + 1)));
+      placeholder.appendChild(createEl("div", "timer-leaderboard-text", lang === "en" ? "--" : "--"));
+      list.appendChild(placeholder);
+    }
+
+    var myRow = createEl("div", "timer-leaderboard-row is-self", "");
+    var myRankText = "--";
+    var myScoreText = "--";
+    var myNick = getNickname() || (lang === "en" ? "You" : "我");
+
+    if (selfEntry) {
+      myRankText = String(selfEntry.rank || "--");
+      myScoreText = String(Math.floor(Number(selfEntry.score) || 0));
+      myNick = toText(selfEntry.nickname || myNick);
+    }
+
+    myRow.appendChild(createEl("div", "timer-leaderboard-rank", myRankText));
+    myRow.appendChild(createEl("div", "timer-leaderboard-text", myScoreText + " - " + myNick));
+    list.appendChild(myRow);
+  }
+
+  function resolveSelfRank(rows) {
+    var list = Array.isArray(rows) ? rows : [];
+    var userId = String(Math.floor(Number(getUserId()) || 0));
+    if (!userId || userId === "0") return null;
+
+    for (var i = 0; i < list.length; i += 1) {
+      var item = list[i] || {};
+      if (String(item.user_id || "") === userId) {
+        return {
+          rank: i + 1,
+          score: Math.floor(Number(item.score) || 0),
+          nickname: toText(item.nickname || getNickname() || "")
+        };
+      }
+    }
+    return {
+      rank: "--",
+      score: 0,
+      nickname: getNickname() || ""
+    };
+  }
+
+  function syncTimerLeaderboardViewMode() {
+    var timerBox = byId("timerbox");
+    if (!timerBox) return;
+
+    var manager = global.game_manager || {};
+    var modeKey = getCurrentModeKey();
+    var supported = isLeaderboardModeSupported(modeKey);
+    var isHiddenView =
+      typeof manager.getTimerModuleViewMode === "function"
+        ? toText(manager.getTimerModuleViewMode()) === "hidden"
+        : false;
+    var enableLeaderboardPanel = supported && isHiddenView;
+
+    timerBox.classList.toggle("timerbox-leaderboard-mode", enableLeaderboardPanel);
+
   }
 
   function buildApiBaseCandidates() {
@@ -179,15 +370,29 @@
     return apiRequest("/login", { method: "POST", body: payload });
   }
 
-  function submitScore(score) {
-    return apiRequest("/score", { method: "POST", auth: true, body: { score: score } });
+  function submitScore(score, modeLike) {
+    var modeKey = toText(modeLike).trim();
+    var modeBucket = resolveLeaderboardMode(modeKey);
+    var payload = { score: score };
+
+    if (modeKey) payload.mode_key = modeKey;
+    if (modeBucket) payload.mode = modeBucket;
+
+    return apiRequest("/score", { method: "POST", auth: true, body: payload });
   }
 
-  function getLeaderboard(limit) {
+  function getLeaderboard(limit, modeLike) {
     var safeLimit = Number(limit);
     if (!Number.isFinite(safeLimit) || safeLimit <= 0) safeLimit = DEFAULT_BOARD_LIMIT;
     safeLimit = Math.floor(safeLimit);
-    return apiRequest("/leaderboard?limit=" + encodeURIComponent(String(safeLimit)), { method: "GET" });
+
+    var modeBucket = resolveLeaderboardMode(modeLike);
+    var path = "/leaderboard?limit=" + encodeURIComponent(String(safeLimit));
+    if (modeBucket) {
+      path += "&mode=" + encodeURIComponent(modeBucket);
+    }
+
+    return apiRequest(path, { method: "GET" });
   }
 
   function getUserInfo(userId) {
@@ -260,11 +465,27 @@
     global.addEventListener("uilanguagechange", function (eventLike) {
       var lang = toText(eventLike && eventLike.detail && eventLike.detail.lang).toLowerCase() === "en" ? "en" : "zh";
       applyToolkitRowText(lang);
+      if (typeof global.syncTimerModuleSettingsUI === "function") {
+        global.syncTimerModuleSettingsUI();
+      }
+      updateTimerLeaderboardHeader();
+      renderTimerLeaderboardRows(
+        timerLeaderboardCacheRows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT),
+        resolveSelfRank(timerLeaderboardCacheRows)
+      );
     });
 
     global.addEventListener("storage", function (eventLike) {
       if (!eventLike || eventLike.key !== UI_LANG_STORAGE_KEY) return;
       applyToolkitRowText(getLanguage());
+      if (typeof global.syncTimerModuleSettingsUI === "function") {
+        global.syncTimerModuleSettingsUI();
+      }
+      updateTimerLeaderboardHeader();
+      renderTimerLeaderboardRows(
+        timerLeaderboardCacheRows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT),
+        resolveSelfRank(timerLeaderboardCacheRows)
+      );
     });
   }
 
@@ -287,15 +508,63 @@
     }
   }
 
-  async function refreshLeaderboard() {
-    var result = await getLeaderboard(DEFAULT_BOARD_LIMIT);
+  async function refreshLeaderboard(modeLike) {
+    var modeBucket = resolveLeaderboardMode(modeLike) || "";
+    var result = await getLeaderboard(DEFAULT_BOARD_LIMIT, modeLike);
     if (!result || !result.success) {
       renderModeIntroLeaderboard([]);
       return false;
     }
     cachedLeaderboard = Array.isArray(result.data) ? result.data : [];
+    cachedLeaderboardMode = modeBucket;
     renderModeIntroLeaderboard(cachedLeaderboard);
     return true;
+  }
+
+  async function refreshTimerLeaderboardPanel(forceRefresh) {
+    var timerBox = byId("timerbox");
+    if (!timerBox) return;
+    ensureTimerLeaderboardPanel();
+    updateTimerLeaderboardHeader();
+    syncTimerLeaderboardViewMode();
+
+    var modeKey = getCurrentModeKey();
+    var modeBucket = resolveLeaderboardMode(modeKey) || "";
+    if (!modeBucket) {
+      renderTimerLeaderboardRows([], null);
+      return;
+    }
+
+    var now = Date.now();
+    if (
+      !forceRefresh &&
+      !timerLeaderboardLoading &&
+      timerLeaderboardCacheMode === modeBucket &&
+      timerLeaderboardCacheRows.length > 0 &&
+      now - timerLeaderboardCacheTime < 12000
+    ) {
+      renderTimerLeaderboardRows(
+        timerLeaderboardCacheRows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT),
+        resolveSelfRank(timerLeaderboardCacheRows)
+      );
+      return;
+    }
+
+    if (timerLeaderboardLoading) return;
+    timerLeaderboardLoading = true;
+    var result = await getLeaderboard(TIMER_LEADERBOARD_FETCH_LIMIT, modeBucket);
+    timerLeaderboardLoading = false;
+
+    if (!result || !result.success) {
+      renderTimerLeaderboardRows([], null);
+      return;
+    }
+
+    var rows = Array.isArray(result.data) ? result.data : [];
+    timerLeaderboardCacheRows = rows;
+    timerLeaderboardCacheMode = modeBucket;
+    timerLeaderboardCacheTime = now;
+    renderTimerLeaderboardRows(rows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT), resolveSelfRank(rows));
   }
 
   function isSessionTerminated(manager) {
@@ -309,7 +578,7 @@
   }
 
   function buildSubmitSignature(manager, score) {
-    var modeKey = manager && manager.modeKey ? String(manager.modeKey) : "unknown";
+    var modeKey = manager && manager.modeKey ? String(manager.modeKey) : getCurrentModeKey() || "unknown";
     var seed = manager && manager.initialSeed != null ? String(manager.initialSeed) : "seedless";
     return [modeKey, seed, String(score)].join("|");
   }
@@ -331,12 +600,14 @@
     if (signature && signature === lastSignature) return;
 
     submitLock = true;
-    var result = await submitScore(score);
+    var submitModeKey = getCurrentModeKey();
+    var result = await submitScore(score, submitModeKey);
     submitLock = false;
 
     if (result && result.success) {
       safeSetStorage(STORAGE_LAST_SUBMIT_KEY, signature);
-      refreshLeaderboard();
+      refreshLeaderboard(getCurrentModeKey());
+      refreshTimerLeaderboardPanel(true);
       return;
     }
 
@@ -353,10 +624,12 @@
 
     modeIntroBound = true;
     introBtn.addEventListener("click", function () {
-      if (cachedLeaderboard.length > 0) {
+      var modeKey = getCurrentModeKey();
+      var modeBucket = resolveLeaderboardMode(modeKey) || "";
+      if (cachedLeaderboard.length > 0 && cachedLeaderboardMode === modeBucket) {
         renderModeIntroLeaderboard(cachedLeaderboard);
       } else {
-        refreshLeaderboard();
+        refreshLeaderboard(modeKey);
       }
     });
   }
@@ -365,28 +638,44 @@
     global.setInterval(function () {
       ensureToolkitEntryRow();
       bindModeIntroRefresh();
+      syncTimerLeaderboardViewMode();
+      if (typeof global.syncTimerModuleSettingsUI === "function") {
+        global.syncTimerModuleSettingsUI();
+      }
       maybeSubmitScoreOnGameOver();
     }, 1500);
 
     global.setInterval(function () {
       if (byId("mode-intro-leaderboard")) {
-        refreshLeaderboard();
+        refreshLeaderboard(getCurrentModeKey());
       }
+      refreshTimerLeaderboardPanel(false);
     }, 30000);
+
+    global.setInterval(function () {
+      refreshTimerLeaderboardPanel(false);
+    }, 12000);
   }
 
   function init() {
     ensureToolkitEntryRow();
     bindLanguageSync();
     bindModeIntroRefresh();
+    ensureTimerLeaderboardPanel();
+    syncTimerLeaderboardViewMode();
+    if (typeof global.syncTimerModuleSettingsUI === "function") {
+      global.syncTimerModuleSettingsUI();
+    }
+    refreshTimerLeaderboardPanel(true);
     if (byId("mode-intro-leaderboard")) {
-      refreshLeaderboard();
+      refreshLeaderboard(getCurrentModeKey());
     }
     startPolling();
   }
 
   global.OnlineLeaderboardRuntime = {
     refreshLeaderboard: refreshLeaderboard,
+    refreshTimerLeaderboardPanel: refreshTimerLeaderboardPanel,
     submitScore: submitScore,
     login: login,
     register: register,
@@ -396,7 +685,9 @@
     saveAuth: saveAuth,
     getAuthToken: getAuthToken,
     getUserId: getUserId,
-    getNickname: getNickname
+    getNickname: getNickname,
+    resolveLeaderboardMode: resolveLeaderboardMode,
+    isLeaderboardModeSupported: isLeaderboardModeSupported
   };
 
   if (global.document.readyState === "loading") {

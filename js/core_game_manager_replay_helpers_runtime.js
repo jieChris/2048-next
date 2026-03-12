@@ -508,6 +508,12 @@ function applyCustomTileReached32kState(manager, value) {
     if (timer32k && timer32k.textContent === "") {
       timer32k.textContent = timeStr;
     }
+  } else if (value === 65536) {
+    var timeStr64k = manager.pretty(manager.time);
+    var timer64k = resolveManagerElementById(manager, "timer65536");
+    if (timer64k && timer64k.textContent === "") {
+      timer64k.textContent = timeStr64k;
+    }
   }
   refreshSecondaryTimerRowsVisibility(manager);
 }

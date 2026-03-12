@@ -71,6 +71,48 @@
     return resolveBoolean(toRecord(toggle).checked);
   }
 
+  function resolveLeaderboardSupport(windowLike, manager, documentLike) {
+    var onlineRuntime = toRecord(toRecord(windowLike).OnlineLeaderboardRuntime);
+    var isModeSupported = asFunction(onlineRuntime.isLeaderboardModeSupported);
+    if (!isModeSupported) return true;
+
+    var candidates = [];
+    function pushCandidate(value) {
+      var text = resolveText(value).trim();
+      if (!text) return;
+      if (candidates.indexOf(text) >= 0) return;
+      candidates.push(text);
+    }
+
+    pushCandidate(manager && manager.modeKey);
+    pushCandidate(manager && manager.mode);
+
+    var bodyLike = toRecord(documentLike).body;
+    var getAttribute = asFunction(toRecord(bodyLike).getAttribute);
+    if (getAttribute) {
+      pushCandidate(getAttribute.call(bodyLike, "data-mode-id"));
+    }
+
+    pushCandidate(toRecord(toRecord(windowLike).GAME_MODE_CONFIG).key);
+
+    if (candidates.length <= 0) return true;
+    for (var i = 0; i < candidates.length; i++) {
+      if (resolveBoolean(isModeSupported(candidates[i]))) return true;
+    }
+    return false;
+  }
+
+  function resolveUiLang(windowLike) {
+    try {
+      var storage = toRecord(windowLike).localStorage;
+      var getter = asFunction(toRecord(storage).getItem);
+      var raw = getter ? resolveText(getter.call(storage, "ui_language_v1")).toLowerCase() : "";
+      return raw === "en" ? "en" : "zh";
+    } catch (_err) {
+      return "zh";
+    }
+  }
+
   function applyLegacyUndoSettingsCleanup(input) {
     var source = toRecord(input);
     var toggle = getElementById(source.documentLike, "undo-enabled-toggle");
@@ -220,19 +262,47 @@
         manager: manager,
         fallbackViewMode: "timer"
       });
+      var hasLeaderboard = resolveLeaderboardSupport(
+        windowLike,
+        manager,
+        source.documentLike
+      );
       var settingsState = toRecord(
         resolveTimerModuleSettingsState({
-          viewMode: viewMode
+          viewMode: viewMode,
+          hasLeaderboard: hasLeaderboard,
+          lang: resolveUiLang(windowLike)
         })
       );
       var toggleRecord = toRecord(toggle);
       toggleRecord.disabled = resolveBoolean(settingsState.toggleDisabled);
       toggleRecord.checked = resolveBoolean(settingsState.toggleChecked);
+
+      var toggleLabel = getElementById(source.documentLike, "timer-module-view-label");
+      if (toggleLabel) {
+        toRecord(toggleLabel).textContent = resolveText(settingsState.toggleLabelText);
+      }
+
+      var closest = asFunction(toggleRecord.closest);
+      var row = closest ? closest.call(toggle, ".settings-row") : null;
+      if (row) {
+        toRecord(toRecord(row).style).display = settingsState.rowVisible === false ? "none" : "";
+      }
+
       if (noteElement) {
         toRecord(noteElement).textContent = resolveText(settingsState.noteText);
       }
       if (syncMobileTimerboxUi) {
         syncMobileTimerboxUi();
+      }
+      var onlineRuntime = toRecord(windowLike).OnlineLeaderboardRuntime;
+      var refreshTimerLeaderboardPanel = asFunction(
+        toRecord(onlineRuntime).refreshTimerLeaderboardPanel
+      );
+      if (refreshTimerLeaderboardPanel) {
+        try {
+          refreshTimerLeaderboardPanel(true);
+        } catch (_errRefresh) {}
       }
       didSync = true;
     };

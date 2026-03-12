@@ -2,8 +2,8 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048 色板中心</title>
-  <link href="style/main.css?v=1771930000000" rel="stylesheet" type="text/css">
+  <title>2048 鑹叉澘涓績</title>
+  <link href="style/main.css?v=1772845600000" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-1">
   <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-1">
@@ -15,63 +15,63 @@
     <header class="palette-page-header">
       <div class="palette-title-wrap">
         <p class="palette-kicker">2048 Theme Toolkit</p>
-        <h1 class="palette-title">色板中心</h1>
-        <p class="palette-subtitle">独立管理砖块与计时图例配色，支持导入导出与实时预览。</p>
+        <h1 class="palette-title">鑹叉澘涓績</h1>
+        <p class="palette-subtitle">鐙珛绠＄悊鐮栧潡涓庤鏃跺浘渚嬮厤鑹诧紝鏀寔瀵煎叆瀵煎嚭涓庡疄鏃堕瑙堛€?/p>
       </div>
       <nav class="palette-nav">
-        <a class="replay-button palette-nav-btn" href="index.html">回首页</a>
-        <a class="replay-button palette-nav-btn" href="Practice_board.html">练习板</a>
+        <a class="replay-button palette-nav-btn" href="index.html">鍥為椤?/a>
+        <a class="replay-button palette-nav-btn" href="Practice_board.html">缁冧範鏉?/a>
       </nav>
     </header>
 
     <section class="palette-grid">
       <aside class="palette-sidebar card-surface">
         <div class="panel-head">
-          <h2>色板列表</h2>
+          <h2>鑹叉澘鍒楄〃</h2>
           <span id="palette-count" class="panel-pill">0</span>
         </div>
-        <div id="palette-list" class="palette-list" aria-label="色板列表"></div>
+        <div id="palette-list" class="palette-list" aria-label="鑹叉澘鍒楄〃"></div>
       </aside>
 
       <section class="palette-editor card-surface">
         <div class="panel-head">
-          <h2 id="palette-current-name">未选择色板</h2>
+          <h2 id="palette-current-name">鏈€夋嫨鑹叉澘</h2>
           <span id="palette-current-tag" class="panel-pill">--</span>
         </div>
 
         <div class="palette-toolbar">
-          <input id="palette-name-input" class="palette-name-input" type="text" maxlength="40" placeholder="输入色板名称">
-          <button id="palette-create-btn" class="replay-button" type="button">新建副本</button>
-          <button id="palette-rename-btn" class="replay-button" type="button">重命名</button>
-          <button id="palette-delete-btn" class="replay-button" type="button">删除</button>
-          <button id="palette-export-btn" class="replay-button" type="button">导出</button>
-          <button id="palette-import-btn" class="replay-button" type="button">导入</button>
+          <input id="palette-name-input" class="palette-name-input" type="text" maxlength="40" placeholder="杈撳叆鑹叉澘鍚嶇О">
+          <button id="palette-create-btn" class="replay-button" type="button">鏂板缓鍓湰</button>
+          <button id="palette-rename-btn" class="replay-button" type="button">閲嶅懡鍚?/button>
+          <button id="palette-delete-btn" class="replay-button" type="button">鍒犻櫎</button>
+          <button id="palette-export-btn" class="replay-button" type="button">瀵煎嚭</button>
+          <button id="palette-import-btn" class="replay-button" type="button">瀵煎叆</button>
           <input id="palette-import-input" type="file" accept="application/json" hidden>
         </div>
 
         <div class="palette-editor-panels">
           <section class="color-panel">
-            <div class="color-panel-head">标准 16 色</div>
+            <div class="color-panel-head">鏍囧噯 16 鑹?/div>
             <div id="palette-editor-pow2" class="color-grid"></div>
           </section>
           <section class="color-panel">
-            <div class="color-panel-head">斐波那契 16 色</div>
+            <div class="color-panel-head">鏂愭尝閭ｅ 16 鑹?/div>
             <div id="palette-editor-fib" class="color-grid"></div>
           </section>
         </div>
 
         <section class="preview-panel">
-          <div class="color-panel-head">实时预览</div>
+          <div class="color-panel-head">瀹炴椂棰勮</div>
           <div class="preview-group">
-            <h3>标准</h3>
+            <h3>鏍囧噯</h3>
             <div id="palette-preview-pow2" class="preview-row"></div>
           </div>
           <div class="preview-group">
-            <h3>斐波那契</h3>
+            <h3>鏂愭尝閭ｅ</h3>
             <div id="palette-preview-fib" class="preview-row"></div>
           </div>
           <div class="preview-group">
-            <h3>计时图例</h3>
+            <h3>璁℃椂鍥句緥</h3>
             <div id="palette-preview-legend" class="legend-row"></div>
           </div>
         </section>
@@ -81,10 +81,14 @@
     </section>
   </main>
 
-  <script src="js/theme_manager.js?v=20260311-01"></script>
+  <script src="js/theme_manager.js?v=1772836200000"></script>
   <script src="js/palette_page.js?v=20260311-01"></script>
-  <script src="js/core_i18n_runtime.js?v=20260310-07"></script>
+  <script src="js/core_i18n_runtime.js?v=20260312-08"></script>
 </body>
 </html>
+
+
+
+
 
 

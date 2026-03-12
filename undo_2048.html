@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>2048</title>
 
-  <link href="style/main.css?v=1771930000000" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=1772845600000" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-1">
   <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-1">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=42">
@@ -18,33 +18,33 @@
 <body data-mode-id="classic_4x4_pow2_undo" data-page="game">
   <div class="container">
     <div class="stats-left">
-      <div id="stats-4-rate">4率: 10%</div>
-      <div id="stats-total">总步数: 0</div>
-      <div id="stats-moves">移动步数: 0</div>
-      <div id="stats-undo">撤回步数: 0</div>
+      <div id="stats-4-rate">4闂? 10%</div>
+      <div id="stats-total">闂傚倷娴囬鏍礈濞戞艾鍨濇い鏍剱閺佸棝鏌ｉ幇顒佹儓闁? 0</div>
+      <div id="stats-moves">缂傚倸鍊风粈渚€藝閹剁瓔鏁嬬憸搴ㄥ箞閵娾晛鐓涘〒姘处濡椼劑姊洪棃娑辨闂傚嫬瀚埢? 0</div>
+      <div id="stats-undo">闂傚倷绶氶埀顒佺☉鐎氬酣鏌涙繝鍐╃閻撱倝鏌″畵顔兼湰濡椼劑姊洪棃娑辨闂傚嫬瀚埢? 0</div>
     </div>
     <div class="stats-right" id="stats-ips">IPS: 0</div>
     <div class="heading">
       <div class="top-action-buttons">
-        <a class="top-action-btn stats-panel-toggle" id="stats-panel-toggle" title="统计">
+        <a class="top-action-btn stats-panel-toggle" id="stats-panel-toggle" title="">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
         </a>
-        <a class="top-action-btn" id="top-export-replay-btn" title="导出回放">
+        <a class="top-action-btn" id="top-export-replay-btn" title="">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
         </a>
-        <a class="top-action-btn" id="top-practice-btn" href="Practice_board.html" title="直通练习板">
+        <a class="top-action-btn" id="top-practice-btn" href="Practice_board.html" title="">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3h3v3"></path><path d="M11 13L21 3"></path><path d="M21 14v7h-7"></path><path d="M3 10v11h11"></path></svg>
         </a>
-        <a class="top-action-btn" href="replay.html" target="_blank" rel="noopener noreferrer" title="高级回放">
+        <a class="top-action-btn" href="replay.html" target="_blank" rel="noopener noreferrer" title="">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
         </a>
-        <a class="top-action-btn" href="modes.html" target="_blank" rel="noopener noreferrer" title="模式选择">
+        <a class="top-action-btn" href="modes.html" target="_blank" rel="noopener noreferrer" title="">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
         </a>
-        <a class="top-action-btn" href="history.html" target="_blank" rel="noopener noreferrer" title="历史记录">
+        <a class="top-action-btn" href="history.html" target="_blank" rel="noopener noreferrer" title="">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         </a>
-        <a class="top-action-btn" id="top-settings-btn" title="设置">
+        <a class="top-action-btn" id="top-settings-btn" title="">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         </a>
       </div>
@@ -54,7 +54,7 @@
         <div class="best-container">0</div>
       </div>
       <div class="above-game" style="clear: both; padding-top: 15px;">
-      <p class="game-intro">合并数字，合成 <strong>2048 方块！</strong> 按 Z 可撤销。</p>
+      <p class="game-intro">闂傚倷绀侀幉锟犳嚌妤ｅ啯鍋嬮柛鈩冪⊕閸ゆ劙鏌ｉ弮鍌氬付闁哄绶氶弻鈩冨緞鎼淬垻銆婇梺鍦櫕閸犳牠寮婚妸銉㈡婵☆垰鐏濋顓㈡⒑鐠団€虫灈闂佸府缍侀悰?<strong>2048 闂傚倷绀侀幖顐﹀磹婵犳艾绠犻柟鐐墯閻掍粙鏌ㄩ悢鍝勑ｉ柡</strong> 闂?Z 闂傚倷绀侀幉锟犳偡椤栫偛鍨傞梺顒€绉寸粻鐗堢箾閸℃ɑ灏伴柣鎾卞劦閺屽秷顧侀柛鎾跺枑娣?</p>
       <a class="restart-button" title="&#26032;&#28216;&#25103;" aria-label="&#26032;&#28216;&#25103;">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
       </a>
@@ -65,47 +65,72 @@
     <div id="timerbox">
         <div id="timer"></div>
 
-        <div id="timer-row-16">
-            <div class="timertile timer-legend-16" style="color: #f9f6f2; font-size: 22px;">16</div>
-            <div class="timertile" id="timer16" style="margin-left:6px; width:187px"></div>
-            <br><br>
-        </div>
         <div id="timer-row-32">
             <div class="timertile timer-legend-32" style="color: #f9f6f2; font-size: 22px;">32</div>
             <div class="timertile" id="timer32" style="margin-left:6px; width:187px"></div>
             <br><br>
         </div>
-        <div class="timertile timer-legend-64" style="color: #f9f6f2; font-size: 22px;">64</div>
-        <div class="timertile" id="timer64" style="margin-left:6px; width:187px"></div>
-        <br><br>
-        <div class="timertile timer-legend-128" style="color: #f9f6f2; font-size: 18px;">128</div>
-        <div class="timertile" id="timer128" style="margin-left:6px; width:187px"></div>
-        <br><br>
-        <div class="timertile timer-legend-256" style="color: #f9f6f2; font-size: 18px;">256</div>
-        <div class="timertile" id="timer256" style="margin-left:6px; width:187px"></div>
-        <br><br>
-        <div class="timertile timer-legend-512" style="color: #f9f6f2; font-size: 18px;">512</div>
-        <div class="timertile" id="timer512" style="margin-left:6px; width:187px"></div>
-        <br><br>
-        <div class="timertile timer-legend-1024" style="color: #f9f6f2; font-size: 14px;">1024</div>
-        <div class="timertile" id="timer1024" style="margin-left:6px; width:187px"></div>
-        <br><br>
-        <div class="timertile timer-legend-2048" style="color: #f9f6f2; font-size: 14px;">2048</div>
-        <div class="timertile" id="timer2048" style="margin-left:6px; width:187px"></div>
-        <br><br>
-        <div class="timertile timer-legend-4096" style="color: #f9f6f2; font-size: 14px;">4096</div>
-        <div class="timertile" id="timer4096" style="margin-left:6px; width:187px"></div>
-        <br><br>
-        <div class="timertile timer-legend-8192" style="color: #f9f6f2; font-size: 14px;">8192</div>
-        <div class="timertile" id="timer8192" style="margin-left:6px; width:187px"></div>
-        <br><br>
-        <div class="timertile timer-legend-16384" style="color: #f9f6f2; font-size: 13px;">16384</div>
-        <div class="timertile" id="timer16384" style="margin-left:6px; width:187px"></div>
-        <br><br>
-        <div class="timertile timer-legend-32768" style="color: #f9f6f2; font-size: 13px;">32768</div>
-        <div class="timertile" id="timer32768" style="margin-left:6px; width:187px"></div>
-        <br><br>
-</div>
+        <div id="timer-row-64">
+            <div class="timertile timer-legend-64" style="color: #f9f6f2; font-size: 22px;">64</div>
+            <div class="timertile" id="timer64" style="margin-left:6px; width:187px"></div>
+            <br><br>
+        </div>
+        <div id="timer-row-128">
+            <div class="timertile timer-legend-128" style="color: #f9f6f2; font-size: 18px;">128</div>
+            <div class="timertile" id="timer128" style="margin-left:6px; width:187px"></div>
+            <br><br>
+        </div>
+        <div id="timer-row-256">
+            <div class="timertile timer-legend-256" style="color: #f9f6f2; font-size: 18px;">256</div>
+            <div class="timertile" id="timer256" style="margin-left:6px; width:187px"></div>
+            <br><br>
+        </div>
+        <div id="timer-row-512">
+            <div class="timertile timer-legend-512" style="color: #f9f6f2; font-size: 18px;">512</div>
+            <div class="timertile" id="timer512" style="margin-left:6px; width:187px"></div>
+            <br><br>
+        </div>
+        <div id="timer-row-1024">
+            <div class="timertile timer-legend-1024" style="color: #f9f6f2; font-size: 14px;">1024</div>
+            <div class="timertile" id="timer1024" style="margin-left:6px; width:187px"></div>
+            <br><br>
+        </div>
+        <div id="timer-row-2048">
+            <div class="timertile timer-legend-2048" style="color: #f9f6f2; font-size: 14px;">2048</div>
+            <div class="timertile" id="timer2048" style="margin-left:6px; width:187px"></div>
+            <br><br>
+        </div>
+        <div id="capped-timer-container"></div>
+        <div id="timer-row-4096">
+            <div class="timertile timer-legend-4096" style="color: #f9f6f2; font-size: 14px;">4096</div>
+            <div class="timertile" id="timer4096" style="margin-left:6px; width:187px"></div>
+            <br><br>
+        </div>
+        <div id="timer-row-8192">
+            <div class="timertile timer-legend-8192" style="color: #f9f6f2; font-size: 14px;">8192</div>
+            <div class="timertile" id="timer8192" style="margin-left:6px; width:187px"></div>
+            <br><br>
+        </div>
+        <div id="timer-row-16384">
+            <div class="timertile timer-legend-16384" style="color: #f9f6f2; font-size: 13px;">16384</div>
+            <div class="timertile" id="timer16384" style="margin-left:6px; width:187px"></div>
+            <br><br>
+        </div>
+        <div id="timer-row-32768">
+            <div class="timertile timer-legend-32768" style="color: #f9f6f2; font-size: 13px;">32768</div>
+            <div class="timertile" id="timer32768" style="margin-left:6px; width:187px"></div>
+            <br><br>
+        </div>
+        <div id="timer-row-65536">
+            <div class="timertile timer-legend-65536" style="color: #f9f6f2; font-size: 12px;">65536</div>
+            <div class="timertile" id="timer65536" style="margin-left:6px; width:187px"></div>
+            <br><br>
+        </div>
+        <div id="timer-scroll-controls">
+            <a class="timer-scroll-btn" data-scroll-dir="-1" aria-label="上移" title="上移"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 15L12 9L18 15"></path></svg></a>
+            <a class="timer-scroll-btn" data-scroll-dir="1" aria-label="下移" title="下移"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 9L12 15L18 9"></path></svg></a>
+        </div>
+    </div>
 
 
 
@@ -113,9 +138,9 @@
       <div class="game-message">
         <p></p>
         <div class="lower">
-	        <a class="keep-playing-button">继续游戏</a>
-          <a class="undo-button" id="undo-btn-gameover">撤销</a>
-          <a class="retry-button">新游戏</a>
+	        <a class="keep-playing-button">缂傚倸鍊搁崐椋庣礊閳ь剟鏌涘☉鍗炵仭闁哄棙婢橀埞鎴︽倷鐎涙ê纰嶉梺纭咁嚋缁绘繂鐣?/a>
+          <a class="undo-button" id="undo-btn-gameover">闂傚倷绶氶埀顒佺☉鐎氬酣鏌涙繝鍐疄鐎?/a>
+          <a class="retry-button">闂傚倷绀侀幖顐﹀磹缂佹ɑ娅犳俊銈呮噺閸嬪鏌涢锝嗙缂?/a>
         </div>
       </div>
 
@@ -152,33 +177,32 @@
     </div>
     <hr>
     <p class="game-explanation">
-      <strong class="important">玩法说明：</strong> 使用 <strong>方向键</strong>、<strong>WASD</strong>、<strong>KHJL</strong> 移动方块，按 <strong>Z</strong> 键撤销上一步，按 <strong>R</strong> 键重开游戏。当两个相同数字的方块接触时，它们会 <strong>合并成一个！
-
+      <strong class="important">闂傚倷鑳剁划顖涚珶閺囥垹鐤炬繝濠傛噺閸忔粓鏌涢幘鑼妽閻庢碍宀搁幃妤€鈽夊▍铏灴閿濈偤寮介鐔哄弳</strong> 婵犵數鍋犻幓顏嗙礊閳ь剚绻涙径瀣鐎?<strong>闂傚倷绀侀幖顐﹀磹婵犳艾绠犻柟鎹愵嚙缁犳牗绻濇繝鍌滃闁?/strong>闂?strong>WASD</strong>闂?strong>KHJL</strong> 缂傚倸鍊风粈渚€藝閹剁瓔鏁嬬憸搴ㄥ箞閵娾晛鐓涢柛娑卞幗椤ユ繈姊洪懡銈呮灁濠⒀勵殜瀹曟垿濡烽埡鍌滃弳濠电偞鍨惰摫婵犫偓娴煎瓨鍊?<strong>Z</strong> 闂傚倸鍊烽悞锕傤敄濞嗘挸绐楁俊銈呮噹缁犵増绻涢崱妯诲鞍闁绘挶鍎甸弻宥堫檨闁告挻姘ㄧ划娆愬緞鐎ｎ剛鐦堟繛杈剧导鐠€锔藉閸パ€鏀芥い鏃傛櫕缂傛岸鏌涙惔銈呭惞婵″弶鍔曢埞鎴犫偓锝庝簽椤?<strong>R</strong> 闂傚倸鍊烽悞锕傤敄濞嗘挸闂柨婵嗩槸闂傤垳绱掔€ｎ偒鍎ラ柛銈嗘礋閺屽秷顧侀柛鎾寸懇婵℃挳骞掑Δ鈧婵嗏攽閻樻彃鈧粯绂嶉悙鐑樷拺闂傚牊绋掗ˉ婊堟煕婵犲倹鎲哥紒杈╁仧閳ь剨缍嗛崑鍡涘煝閺冨牊鐓忛柛顐ｇ箓椤忣參鏌涢妶鍜佸剶闁哄矉缍侀崺锟犲礃閸撗冨Ъ闂備浇顕栭崰妤呭箲閸パ屽殨妞ゆ劧绠戠痪褔鎮归幁鎺戝闁规彃顭峰鍝勑ч崶褍顬堥柣搴㈠嚬閸欏啫顕ｆ繝姘亜闁绘挸閰ｉ弫婊冣攽鎺抽崐鎾剁矆娴ｇ懓绶炵€广儱顦伴崑鈩冪箾閸℃鎳囨俊缁㈠枟娣囧﹪鎮欓幓鎺嗗亾閸ф鏋佺€广儱娲ｅ▽顏堟煟閿濆懏婀版繛鍫熺矋缁绘稓鈧數顭堥宀勬煕韫囨梻銆掓俊?<strong>闂傚倷绀侀幉锟犳嚌妤ｅ啯鍋嬮柛鈩冪⊕閸ゆ劙鏌ｉ弮鍌氬付缂佺媴缍侀弻鐔兼焽閿旇法鏁栧銈呯箰瀹曨剟鍩ユ径鎰闁告剬鍕偓锝囩磽?
     </p>
     <hr>
   </div>
 
    <div id="replay-modal" class="replay-modal-overlay" style="display: none;">
     <div class="replay-modal-content">
-      <h3 id="replay-modal-title">回放</h3>
+      <h3 id="replay-modal-title">闂傚倷鐒﹂幃鍫曞磿閹惰棄纾婚柣鎰惈濡?/h3>
       <textarea id="replay-textarea" class="replay-textarea"></textarea>
       <div class="replay-modal-actions">
-        <button id="replay-action-btn" class="replay-button">执行</button>
-        <button class="replay-button">关闭</button>
+        <button id="replay-action-btn" class="replay-button">闂傚倷绀佸﹢閬嶆偡閹惰棄骞㈤柍鍝勫€归弶</button>
+        <button class="replay-button">闂傚倷鑳堕…鍫㈡崲閹寸偟绠惧┑鐘蹭迹</button>
       </div>
     </div>
   </div>
 
    <div id="settings-modal" class="replay-modal-overlay" style="display: none;">
     <div class="replay-modal-content settings-modal-content">
-      <h3>设置</h3>
+      <h3>闂備浇宕垫慨宕囩矆娴ｈ娅犲ù鐘差儐閸?/h3>
       <div class="settings-row theme-settings-row">
         <div class="theme-selection-col">
-          <label>棋子配色</label>
+          <label>濠电姷顣藉Σ鍛村磻閸曨垼鏁勯柛娑樼摠閸嬨倖绻涢崱妯诲鞍闁绘挴鍋撻柣搴＄畭閸庨亶鎮ч崱娴?/label>
           <div class="custom-select-wrapper">
               <div class="custom-select">
                   <div class="custom-select-trigger" id="theme-select-trigger">
-                      <span>选择主题</span>
+                      <span>闂傚倸鍊风欢锟犲磻閸曨垁鍥箥椤旂懓浜炬慨妯稿劚婵＄晫绱掔€ｎ亶妲圭紒缁樼箓椤繈宕楅崗鑲╂В</span>
                       <div class="custom-arrow"></div>
                   </div>
                   <div class="custom-select-options" id="theme-select-options">
@@ -191,23 +215,22 @@
         </div>
         
         <div class="theme-preview-col">
-          <label>配色预览</label>
+          <label>闂傚倸鍊烽悞锕€顭垮Ο鑲╃煋闂佸灝顑囬悵璺衡攽閻樻彃鏋︾紒鎲嬬秮閺屾盯寮撮妸銉︾彯濠?/label>
           <div id="theme-preview-grid" class="theme-preview-grid"></div>
         </div>
       </div>
       <div class="settings-row">
-        <label for="win-prompt-toggle">胜利提示</label>
+        <label for="win-prompt-toggle">闂傚倷娴囨竟鍫濃枍閺囩姴鍨濈€光偓閸曨偅妲梺鍛婃处閸ㄦ壆绮婚悽鍛婄厵闂侇叏绠戦弸鏂棵?/label>
         <label class="settings-switch-row">
           <input id="win-prompt-toggle" type="checkbox">
-          <span>合成 2048 后弹出胜利提示</span>
+          <span>闂傚倷绀侀幉锟犳嚌妤ｅ啯鍋嬪┑鐘叉搐閸?2048 闂傚倷绀侀幉锟犳嚌閻愵剦娈介柟闂寸劍閸ゅ洤鈹戦悩鍙夋悙缂佲偓閸曨倠鏃堟晝閳ь剟鎮樺┑瀣闊洦绋掗悡鏇㈡煙閸濆嫭顥炴繛鍛閹插憡锛愭担钘夊帯缂?</span>
         </label>
         <div id="win-prompt-note" class="settings-note"></div>
       </div>
       <div class="settings-row">
-        <div class="settings-note">霓虹主题：棋盘动态发光，计时器保持静态霓虹色。</div>
       </div>
       <div class="replay-modal-actions">
-        <button id="settings-close-btn" class="replay-button">关闭</button>
+        <button id="settings-close-btn" class="replay-button">闂傚倷鑳堕…鍫㈡崲閹寸偟绠惧┑鐘蹭迹</button>
       </div>
     </div>
   </div>
@@ -215,7 +238,7 @@
   <script src="js/seedrandom.js?v=1771589027738"></script>
   <script src="js/animframe_polyfill.js?v=1771589027738"></script>
   <script src="js/keyboard_input_manager.js?v=1771589027738"></script>
-  <script src="js/theme_manager.js?v=1771600400000"></script>
+  <script src="js/theme_manager.js?v=1772836200000"></script>
   <script src="js/mode_catalog.js?v=1771905000000"></script>
   <script src="js/html_actuator.js?v=1771792000000"></script>
   <script src="js/grid.js?v=1771589027738"></script>
@@ -231,7 +254,7 @@
   <script src="js/core_move_path_runtime.js?v=1772539000000"></script>
   <script src="js/core_timer_interval_runtime.js?v=1772541000000"></script>
   <script src="js/core_scoring_runtime.js?v=1771950000000"></script>
-  <script src="js/core_merge_effects_runtime.js?v=1771951000000"></script>
+  <script src="js/core_merge_effects_runtime.js?v=1772811000100"></script>
   <script src="js/core_post_move_runtime.js?v=1771952000000"></script>
   <script src="js/core_post_move_record_runtime.js?v=1771954000000"></script>
   <script src="js/core_post_undo_record_runtime.js?v=1771955000000"></script>
@@ -253,7 +276,7 @@
   <script src="js/core_replay_loop_runtime.js?v=1771970000000"></script>
   <script src="js/core_move_apply_runtime.js?v=1771953000000"></script>
   <script src="js/core_game_settings_storage_runtime.js?v=1772461000000"></script>
-  <script src="js/core_game_manager_base_helpers_runtime.js?v=1772586000000"></script>
+  <script src="js/core_game_manager_base_helpers_runtime.js?v=1772815200000"></script>
   <script src="js/core_game_manager_env_helpers_runtime.js?v=1772589100000"></script>
   <script src="js/core_game_manager_runtime_call_helpers_runtime.js?v=1772589000000"></script>
   <script src="js/core_game_manager_saved_state_helpers_runtime.js?v=1772589200000"></script>
@@ -264,12 +287,12 @@
   <script src="js/core_game_manager_panel_timer_helpers_runtime.js?v=1772590000000"></script>
   <script src="js/core_game_manager_undo_stats_helpers_runtime.js?v=1772591000000"></script>
   <script src="js/core_game_manager_restart_setup_helpers_runtime.js?v=1772592000000"></script>
-  <script src="js/core_game_manager_setup_timer_ui_helpers_runtime.js?v=1772593000000"></script>
+  <script src="js/core_game_manager_setup_timer_ui_helpers_runtime.js?v=1772809000100"></script>
   <script src="js/core_game_manager_session_init_helpers_runtime.js?v=1772594000000"></script>
   <script src="js/core_game_manager_common_runtime.js?v=1772585000000"></script>
-  <script src="js/core_game_manager_replay_helpers_runtime.js?v=1772587000000"></script>
-  <script src="js/core_game_manager_mode_rules_helpers_runtime.js?v=1772588000000"></script>
-  <script src="js/core_game_manager_static_runtime.js?v=1772585000000"></script>
+  <script src="js/core_game_manager_replay_helpers_runtime.js?v=1772811000300"></script>
+  <script src="js/core_game_manager_mode_rules_helpers_runtime.js?v=1772811000200"></script>
+  <script src="js/core_game_manager_static_runtime.js?v=1772814200000"></script>
   <script src="js/core_game_manager_bindings_runtime.js?v=1772585000000"></script>
   <script src="js/game_manager.js?v=1772585000000"></script>
   <script src="js/core_bootstrap_runtime.js?v=1772315000000"></script>
@@ -284,8 +307,10 @@
   <script src="js/core_practice_transfer_runtime.js?v=1772080200000"></script>
   <script src="js/core_practice_transfer_host_runtime.js?v=1772321000000"></script>
   <script src="js/core_practice_transfer_page_host_runtime.js?v=1772521800000"></script>
-  <script src="js/core_timer_module_runtime.js?v=1772105000000"></script>
-  <script src="js/core_timer_module_settings_host_runtime.js?v=1772360400000"></script>
+  <script src="js/core_capped_timer_scroll_runtime.js?v=1772456000000"></script>
+  <script src="js/capped_timer_scroll.js?v=1772846500000"></script>
+  <script src="js/core_timer_module_runtime.js?v=1772827800000"></script>
+  <script src="js/core_timer_module_settings_host_runtime.js?v=1772849200000"></script>
   <script src="js/core_timer_module_settings_page_host_runtime.js?v=1772420000000"></script>
   <script src="js/core_theme_settings_runtime.js?v=1772107100000"></script>
   <script src="js/core_theme_settings_host_runtime.js?v=1772386000000"></script>
@@ -314,7 +339,7 @@
   <script src="js/core_storage_runtime.js?v=1772115000000"></script>
   <script src="js/core_replay_modal_runtime.js?v=1772317200000"></script>
   <script src="js/core_settings_modal_host_runtime.js?v=1772403000000"></script>
-  <script src="js/core_settings_modal_page_host_runtime.js?v=1772519301000"></script>
+  <script src="js/core_settings_modal_page_host_runtime.js?v=1772827800001"></script>
   <script src="js/core_top_button_style_runtime.js?v=1772626200000"></script>
   <script src="js/core_replay_export_runtime.js?v=1772319400000"></script>
   <script src="js/core_replay_page_host_runtime.js?v=1772519300000"></script>
@@ -342,10 +367,21 @@
   <script src="js/core_index_ui_page_resolvers_host_runtime.js?v=1772527000000"></script>
   <script src="js/core_index_ui_page_actions_host_runtime.js?v=1772533001000"></script>
   <script src="js/index_ui.js?v=1772533002000"></script>
-  <script src="js/online_leaderboard_runtime.js?v=20260312-02"></script>
+  <script src="js/online_leaderboard_runtime.js?v=20260312-05"></script>
 
-  <script src="js/core_i18n_runtime.js?v=20260310-07"></script>
+  <script src="js/core_i18n_runtime.js?v=20260312-08"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
 
 

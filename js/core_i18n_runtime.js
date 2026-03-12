@@ -260,7 +260,6 @@
     ["合成 2048 后弹出胜利提示", "Show win prompt after reaching 2048"],
     ["合成 2048 时会弹出胜利提示，可选择继续游戏。", "Show win prompt when reaching 2048, with Keep Going option."],
     ["合成 2048 时不弹出胜利提示，将自动继续游戏。", "Do not show win prompt after 2048; continue automatically."],
-    ["霓虹主题：棋盘动态发光，计时器保持静态霓虹色。", "Neon themes: board uses dynamic glow, timer keeps static neon colors."],
     ["打开色板页面", "Open Palette Page"],
     ["色板编辑已迁移到独立页面。", "Palette editing has moved to a standalone page."],
     ["通知按钮", "Announcements"],
@@ -725,8 +724,11 @@
       row.appendChild(select);
       row.appendChild(note);
       var actions = modal.querySelector(".replay-modal-actions");
-      if (actions) modal.insertBefore(row, actions);
-      else modal.appendChild(row);
+      if (actions && actions.parentNode && typeof actions.parentNode.insertBefore === "function") {
+        actions.parentNode.insertBefore(row, actions);
+      } else {
+        modal.appendChild(row);
+      }
     }
     label.textContent = lang === "en" ? "Language" : "界面语言";
     note.textContent = lang === "en" ? "Switch UI language between Chinese and English." : "切换中英文界面，立即生效并自动保存。";

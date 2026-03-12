@@ -8,7 +8,7 @@
     2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025
   ];
   var FIB_PREVIEW_VALUES = FIB_TILE_VALUES.slice(0, 16);
-  var TIMER_VALUES = [16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768];
+  var TIMER_VALUES = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
   var DEFAULT_THEME = "classic";
   var TILE_PALETTE_STORAGE_KEY = "tile_palette_profiles_v1";
   var TILE_PALETTE_ACTIVE_KEY = "tile_palette_active_v1";
@@ -1168,8 +1168,8 @@
     css += "#timer{background:" + t.panelBg + ";color:" + t.panelText + ";box-shadow:0 0 10px " + rgba(t.panelBg, 0.3) + ";}\n";
     css += "#timer:after{color:" + t.panelLabel + ";}\n";
     css += ".timertile{background:" + t.cellBg + ";color:" + t.cellText + ";box-shadow:" + t.cellShadow + ";}\n";
-    css += ".timer-scroll-btn{background:" + t.buttonBg + ";color:" + t.buttonText + ";}\n";
-    css += ".timer-scroll-btn:hover{background:" + t.buttonHoverBg + ";color:" + t.buttonHoverText + ";}\n";
+    css += ".timer-scroll-btn{background:" + t.cellBg + ";color:" + t.cellText + ";}\n";
+    css += ".timer-scroll-btn:hover{background:" + t.cellBg + ";color:" + t.cellText + ";}\n";
     return css;
   }
 
@@ -1845,7 +1845,7 @@
     
     css += pageCss(theme);
     if (theme.id === "classic") {
-      css += ".restart-button,.top-action-btn,.replay-button,.replay-modal-actions .replay-button,.replay-control-btn,.import-replay-button,.game-container .game-message a,.game-container .game-message a.export-replay-button,.game-container .game-message a.import-replay-button,.game-container .game-message a.undo-button,.mode-hub-btn,.timer-scroll-btn,.home-guide-btn{color:#ffffff !important;}\n";
+      css += ".restart-button,.top-action-btn,.replay-button,.replay-modal-actions .replay-button,.replay-control-btn,.import-replay-button,.game-container .game-message a,.game-container .game-message a.export-replay-button,.game-container .game-message a.import-replay-button,.game-container .game-message a.undo-button,.mode-hub-btn,.home-guide-btn{color:#ffffff !important;}\n";
       css += ".top-action-btn svg,.restart-button svg{stroke:#ffffff !important;}\n";
     }
 

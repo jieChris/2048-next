@@ -38,6 +38,9 @@
       result.shouldSetReached32k = true;
       result.timerIdsToStamp.push("timer32768");
     }
+    if (value === 65536) {
+      result.timerIdsToStamp.push("timer65536");
+    }
 
     return result;
   }

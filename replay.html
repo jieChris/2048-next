@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>2048-Replay</title>
 
-  <link href="style/main.css?v=1771930000000" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=1772845600000" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-1">
   <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-1">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=42">
@@ -18,7 +18,7 @@
 <body data-page="replay">
   <div class="container">
     <div class="heading" style="float: none; margin: 0 auto;">
-      <h1 class="title"><a href="index.html" style="text-decoration: none; color: inherit; cursor: pointer;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a> 回放</h1>
+      <h1 class="title"><a href="index.html" style="text-decoration: none; color: inherit; cursor: pointer;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a> 鍥炴斁</h1>
       <div class="scores-container">
         <div class="score-container">0</div>
         <div class="best-container">0</div>
@@ -68,11 +68,11 @@
             <input type="range" id="replay-progress" min="0" max="100" value="0" style="width: 100%; cursor: pointer;">
         </div>
         <div class="replay-buttons-row" style="display: flex; justify-content: center; gap: 10px; align-items: center;">
-            <button class="replay-control-btn" id="btn-rewind-10">⏪ -10 步</button>
-            <button class="replay-control-btn" id="btn-rewind-1">◀ -1 步</button>
-            <button class="replay-control-btn" id="replay-pause-btn">⏯ 暂停</button>
-            <button class="replay-control-btn" id="btn-forward-1">+1 步 ▶</button>
-            <button class="replay-control-btn" id="btn-forward-10">+10 步 ⏩</button>
+            <button class="replay-control-btn" id="btn-rewind-10">? -10 姝?/button>
+            <button class="replay-control-btn" id="btn-rewind-1">? -1 姝?/button>
+            <button class="replay-control-btn" id="replay-pause-btn">? 鏆傚仠</button>
+            <button class="replay-control-btn" id="btn-forward-1">+1 姝??</button>
+            <button class="replay-control-btn" id="btn-forward-10">+10 姝??</button>
             
             <select id="replay-speed" style="height: 30px; border-radius: 3px; border: 1px solid #d8d4d0; background: #faf8ef; color: #776e65; font-weight: bold; cursor: pointer; margin-left: 10px;">
                 <option value="0.25">0.25x</option>
@@ -86,8 +86,8 @@
             </select>
         </div>
         <div style="margin-top: 15px; text-align: center;">
-            <a id="import-replay-file-btn" class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: #f9f6f2; padding: 10px 20px; border-radius: 3px; text-decoration: none;">导入回放文件</a>
-            <a id="import-replay-text-btn" class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: #f9f6f2; padding: 10px 20px; border-radius: 3px; text-decoration: none; margin-left: 8px;">粘贴回放代码</a>
+            <a id="import-replay-file-btn" class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: #f9f6f2; padding: 10px 20px; border-radius: 3px; text-decoration: none;">瀵煎叆鍥炴斁鏂囦欢</a>
+            <a id="import-replay-text-btn" class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: #f9f6f2; padding: 10px 20px; border-radius: 3px; text-decoration: none; margin-left: 8px;">绮樿创鍥炴斁浠ｇ爜</a>
         </div>
     </div>
 
@@ -95,11 +95,11 @@
 
   <div id="replay-modal" class="replay-modal-overlay" style="display: none;">
     <div class="replay-modal-content">
-      <h3 id="replay-modal-title">回放</h3>
+      <h3 id="replay-modal-title">鍥炴斁</h3>
       <textarea id="replay-textarea" class="replay-textarea"></textarea>
       <div class="replay-modal-actions">
-        <button id="replay-action-btn" class="replay-button">执行</button>
-        <button class="replay-button">关闭</button>
+        <button id="replay-action-btn" class="replay-button">鎵ц</button>
+        <button class="replay-button">鍏抽棴</button>
       </div>
     </div>
   </div>
@@ -107,7 +107,7 @@
   <script src="js/seedrandom.js?v=1771589027738"></script>
   <script src="js/animframe_polyfill.js?v=1771589027738"></script>
   <script src="js/replay_input_manager.js?v=1771589027738"></script>
-  <script src="js/theme_manager.js?v=1771787000000"></script>
+  <script src="js/theme_manager.js?v=1772836200000"></script>
   <script src="js/mode_catalog.js?v=1771905000000"></script>
   <script src="js/html_actuator.js?v=1771792000000"></script>
   <script src="js/grid.js?v=1771589027738"></script>
@@ -123,7 +123,7 @@
   <script src="js/core_move_scan_runtime.js?v=1771948000000"></script>
   <script src="js/core_move_path_runtime.js?v=1771949000000"></script>
   <script src="js/core_scoring_runtime.js?v=1771950000000"></script>
-  <script src="js/core_merge_effects_runtime.js?v=1771951000000"></script>
+  <script src="js/core_merge_effects_runtime.js?v=1772811000100"></script>
   <script src="js/core_post_move_runtime.js?v=1771952000000"></script>
   <script src="js/core_post_move_record_runtime.js?v=1771954000000"></script>
   <script src="js/core_post_undo_record_runtime.js?v=1771955000000"></script>
@@ -145,7 +145,7 @@
   <script src="js/core_replay_loop_runtime.js?v=1771970000000"></script>
   <script src="js/core_move_apply_runtime.js?v=1771953000000"></script>
   <script src="js/core_game_settings_storage_runtime.js?v=1772461000000"></script>
-  <script src="js/core_game_manager_base_helpers_runtime.js?v=1772586000000"></script>
+  <script src="js/core_game_manager_base_helpers_runtime.js?v=1772815200000"></script>
   <script src="js/core_game_manager_env_helpers_runtime.js?v=1772589100000"></script>
   <script src="js/core_game_manager_runtime_call_helpers_runtime.js?v=1772589000000"></script>
   <script src="js/core_game_manager_saved_state_helpers_runtime.js?v=1772589200000"></script>
@@ -156,12 +156,12 @@
   <script src="js/core_game_manager_panel_timer_helpers_runtime.js?v=1772590000000"></script>
   <script src="js/core_game_manager_undo_stats_helpers_runtime.js?v=1772591000000"></script>
   <script src="js/core_game_manager_restart_setup_helpers_runtime.js?v=1772592000000"></script>
-  <script src="js/core_game_manager_setup_timer_ui_helpers_runtime.js?v=1772593000000"></script>
+  <script src="js/core_game_manager_setup_timer_ui_helpers_runtime.js?v=1772809000100"></script>
   <script src="js/core_game_manager_session_init_helpers_runtime.js?v=1772594000000"></script>
   <script src="js/core_game_manager_common_runtime.js?v=1772585000000"></script>
-  <script src="js/core_game_manager_replay_helpers_runtime.js?v=1772587000000"></script>
-  <script src="js/core_game_manager_mode_rules_helpers_runtime.js?v=1772588000000"></script>
-  <script src="js/core_game_manager_static_runtime.js?v=1772585000000"></script>
+  <script src="js/core_game_manager_replay_helpers_runtime.js?v=1772811000300"></script>
+  <script src="js/core_game_manager_mode_rules_helpers_runtime.js?v=1772811000200"></script>
+  <script src="js/core_game_manager_static_runtime.js?v=1772814200000"></script>
   <script src="js/core_game_manager_bindings_runtime.js?v=1772585000000"></script>
   <script src="js/game_manager.js?v=1772585000000"></script>
   <script src="js/core_bootstrap_runtime.js?v=1772315000000"></script>
@@ -170,8 +170,12 @@
   <script src="js/core_simple_page_host_runtime.js?v=1772313600000"></script>
   <script src="js/replay_application.js?v=1772313600000"></script>
   <script src="js/replay_ui.js?v=1772457001000"></script>
-  <script src="js/core_i18n_runtime.js?v=20260310-07"></script>
+  <script src="js/core_i18n_runtime.js?v=20260312-08"></script>
 </body>
 </html>
+
+
+
+
 
 
