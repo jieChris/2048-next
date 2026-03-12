@@ -1686,6 +1686,17 @@ input[type=range]::-webkit-slider-runnable-track {
   color: #776e65;
 }
 
+.toolkit-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.toolkit-entry-actions .replay-button {
+  min-width: 96px;
+  text-align: center;
+}
+
 .settings-switch-row {
   display: flex !important;
   align-items: center;
@@ -3251,5 +3262,157 @@ body[data-page="game"][data-top-button-style="text"] #timerbox-toggle-btn {
     width: min(100%, 560px);
     margin-left: auto;
     margin-right: auto;
+  }
+}
+/* Online account + leaderboard runtime */
+.online-account-wrap {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.2fr);
+  gap: 12px;
+  width: 100%;
+}
+
+.online-auth-box,
+.online-board-box {
+  border: 1px solid #d0c7bc;
+  border-radius: 8px;
+  background: #f7f3ed;
+  padding: 10px;
+}
+
+.online-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #776e65;
+  margin-bottom: 6px;
+}
+
+.online-field-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.online-field-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px;
+  border: 1px solid #c7beb2;
+  border-radius: 6px;
+  background: #fff;
+  color: #5f574f;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.online-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+#online-auth-tip.ok {
+  color: #2e7d32;
+}
+
+#online-auth-tip.err {
+  color: #b00020;
+}
+
+.online-board-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.online-refresh-btn {
+  min-width: 68px;
+  padding: 6px 10px;
+}
+
+.online-board-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.online-board-item {
+  display: grid;
+  grid-template-columns: 30px 1fr 70px 130px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e0d7cb;
+  border-radius: 6px;
+  background: #fff;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #5f574f;
+}
+
+.online-rank {
+  text-align: center;
+  font-weight: 700;
+}
+
+.online-score {
+  text-align: right;
+  font-weight: 700;
+}
+
+.online-date {
+  text-align: right;
+  color: #8d857a;
+}
+
+.online-board-empty {
+  border: 1px dashed #d0c7bc;
+  border-radius: 6px;
+  background: #fff;
+  color: #8d857a;
+  padding: 8px;
+  font-size: 12px;
+}
+
+.online-board-empty.err {
+  color: #b00020;
+  border-color: #d88;
+}
+
+.mode-intro-leaderboard-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 78px;
+  gap: 8px;
+  align-items: center;
+  border-bottom: 1px solid #e4ddd4;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.mode-intro-leaderboard-row:last-child {
+  border-bottom: 0;
+}
+
+.mode-intro-leaderboard-score {
+  text-align: right;
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .online-account-wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .online-board-item {
+    grid-template-columns: 30px 1fr 66px;
+  }
+
+  .online-date {
+    display: none;
   }
 }

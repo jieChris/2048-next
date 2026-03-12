@@ -491,6 +491,7 @@
           exportLabel: "Export",
           importLabel: "Import",
           navHome: "Home",
+          navAccount: "Account",
           navPractice: "Practice",
           standard16: "Standard 16 Colors",
           fib16: "Fibonacci 16 Colors",
@@ -513,6 +514,7 @@
           exportLabel: "导出",
           importLabel: "导入",
           navHome: "回首页",
+          navAccount: "账号中心",
           navPractice: "练习板",
           standard16: "标准 16 色",
           fib16: "斐波那契 16 色",
@@ -541,8 +543,17 @@
       if (node) node.textContent = item[1];
     }
     var nav = global.document.querySelectorAll(".palette-nav .palette-nav-btn");
-    if (nav[0]) nav[0].textContent = copy.navHome;
-    if (nav[1]) nav[1].textContent = copy.navPractice;
+    for (var n = 0; n < nav.length; n += 1) {
+      var link = nav[n];
+      var href = String(link.getAttribute("href") || "").toLowerCase();
+      if (href.indexOf("index.html") >= 0) {
+        link.textContent = copy.navHome;
+      } else if (href.indexOf("account.html") >= 0) {
+        link.textContent = copy.navAccount;
+      } else if (href.indexOf("practice_board.html") >= 0) {
+        link.textContent = copy.navPractice;
+      }
+    }
     var heads = global.document.querySelectorAll(".color-panel-head");
     if (heads[0]) heads[0].textContent = copy.standard16;
     if (heads[1]) heads[1].textContent = copy.fib16;
