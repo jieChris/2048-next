@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates timer module settings model to runtime helper", async ({ page }) => {
@@ -8,7 +9,24 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(220);
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CoreTimerModuleRuntime;
+      const pageHostRuntime = (window as any).CoreTimerModuleSettingsPageHostRuntime;
+      return (
+        !!runtime &&
+        typeof runtime.buildTimerModuleSettingsRowInnerHtml === "function" &&
+        typeof runtime.resolveTimerModuleSettingsState === "function" &&
+        typeof runtime.resolveTimerModuleCurrentViewMode === "function" &&
+        typeof runtime.resolveTimerModuleBindingState === "function" &&
+        typeof runtime.resolveTimerModuleViewMode === "function" &&
+        typeof runtime.resolveTimerModuleAppliedViewMode === "function" &&
+        typeof runtime.resolveTimerModuleInitRetryState === "function" &&
+        !!pageHostRuntime &&
+        typeof pageHostRuntime.applyTimerModuleSettingsPageInit === "function" &&
+        (typeof (window as any).openSettingsModal === "function" ||
+          document.getElementById("top-settings-btn") !== null)
+      );
+    });
 
     const snapshot = await page.evaluate(async () => {
       const runtime = (window as any).CoreTimerModuleRuntime;
