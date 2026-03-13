@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates mobile viewport page resolver creation to host runtime helper", async ({
@@ -36,7 +37,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CoreMobileViewportPageHostRuntime;
+      return (
+        !!runtime &&
+        typeof runtime.createMobileViewportPageResolvers === "function" &&
+        typeof (window as any).syncMobileUndoTopButtonAvailability === "function" &&
+        typeof (window as any).syncMobileHintUI === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreMobileViewportPageHostRuntime;
@@ -122,7 +131,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Play response should exist").not.toBeNull();
     expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(260);
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CoreMobileTopButtonsPageHostRuntime;
+      return (
+        !!runtime &&
+        typeof runtime.createMobileTopButtonsPageResolvers === "function" &&
+        typeof (window as any).syncMobileHintUI === "function" &&
+        typeof (window as any).syncMobileUndoTopButtonAvailability === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreMobileTopButtonsPageHostRuntime;
