@@ -183,7 +183,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CorePracticeTransferRuntime;
+      const pageHostRuntime = (window as any).CorePracticeTransferPageHostRuntime;
+      return (
+        !!runtime &&
+        typeof runtime.createPracticeTransferNavigationPlan === "function" &&
+        typeof runtime.resolvePracticeTransferPrecheck === "function" &&
+        !!pageHostRuntime &&
+        typeof pageHostRuntime.createPracticeTransferPageActionResolvers === "function" &&
+        typeof pageHostRuntime.applyPracticeTransferPageAction === "function" &&
+        typeof pageHostRuntime.applyPracticeTransferPageActionFromContext === "function" &&
+        typeof (window as any).openPracticeBoardFromCurrent === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CorePracticeTransferRuntime;
