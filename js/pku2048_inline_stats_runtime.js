@@ -7,6 +7,7 @@
   var STORAGE_KEY_LOCKED = "pku2048.settings.statsPanelInlineLocked";
   var STORAGE_KEY_POSITION = "pku2048.settings.statsPanelInlinePos";
   var STORAGE_KEY_SIZE = "pku2048.settings.statsPanelInlineSize";
+  var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var STATS_PANEL_VISIBLE_KEY = "stats_panel_visible_v1";
   var RETRY_LIMIT = 20;
   var RETRY_DELAY_MS = 300;
@@ -62,6 +63,11 @@
       global.localStorage.setItem(key, value);
     } catch (_error) {
     }
+  }
+
+  function getLanguage() {
+    var raw = String(readText(UI_LANG_STORAGE_KEY) || "").toLowerCase();
+    return raw === "en" ? "en" : "zh";
   }
 
   function readFlag(key) {
@@ -144,8 +150,11 @@
   }
 
   function patchSettingsCopy(nodes) {
-    if (nodes.toggleLabel) nodes.toggleLabel.textContent = "统计面板";
-    if (nodes.toggleDesc) nodes.toggleDesc.textContent = "直接显示在页面中";
+    var lang = getLanguage();
+    if (nodes.toggleLabel) nodes.toggleLabel.textContent = lang === "en" ? "Stats Panel" : "统计面板";
+    if (nodes.toggleDesc) {
+      nodes.toggleDesc.textContent = lang === "en" ? "Show inline on page." : "直接显示在页面中";
+    }
   }
 
   function ensureOverlayOpen(nodes, state) {
@@ -539,6 +548,11 @@
       });
     }
 
+    global.addEventListener("uilanguagechange", sync);
+    global.addEventListener("storage", function (eventLike) {
+      if (!eventLike || eventLike.key !== UI_LANG_STORAGE_KEY) return;
+      sync();
+    });
     global.addEventListener("pageshow", sync);
   }
 
@@ -550,7 +564,5 @@
     start(global.document);
   }
 })(typeof window !== "undefined" ? window : undefined);
-
-
 
 

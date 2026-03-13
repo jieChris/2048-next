@@ -104,6 +104,9 @@
     { s: "#replay-action-btn", zh: "执行", en: "Run" },
     { s: "#settings-modal h3", zh: "设置", en: "Settings" },
     { s: "#settings-close-btn", zh: "关闭", en: "Close" },
+    { s: "#toolkit-palette-link", zh: "主题设置", en: "Theme Settings" },
+    { s: "label[for='pku2048-inline-stats-toggle']", zh: "统计面板", en: "Stats Panel" },
+    { s: "#pku2048-inline-stats-toggle + span", zh: "直接显示在页面中", en: "Show inline on page." },
     { s: "#mode-intro-title", zh: "模式简介", en: "Mode Intro" },
     { s: ".mode-intro-leaderboard-title", zh: "模式排名榜单", en: "Mode Rankings" },
     { s: "#mode-intro-close-btn", zh: "关闭", en: "Close" },
@@ -133,6 +136,8 @@
   ];
 
   var PHRASES = [
+    ["主题设置", "Theme Settings"], ["统计面板", "Stats Panel"], ["直接显示在页面中", "Show inline on page."],
+    ["页面中英文切换", "Switch page language."], ["打开指引", "Open Guide"],
     ["设置", "Settings"], ["关闭", "Close"], ["回放", "Replay"], ["执行", "Run"], ["版本公告", "Announcements"],
     ["统计", "Stats"], ["导出回放", "Export Replay"], ["直通练习板", "Practice Board"], ["高级回放", "Advanced Replay"],
     ["模式选择", "Mode Selection"], ["历史记录", "History"], ["回首页", "Home"], ["首页", "Home"], ["模式", "Mode"],

@@ -436,4 +436,51 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.themeSelectLabel).toBe("选择主题");
     expect(snapshot.themePreviewLabel).toBe("配色预览");
   });
+
+  test("practice-family settings keep toolkit and inline stats copy in English under en mode", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("ui_language_v1", "en");
+      window.localStorage.setItem("practice_guide_shown_v2", "1");
+      window.localStorage.setItem("practice_guide_mobile_shown_v1", "1");
+    });
+
+    const targets = ["/PKU2048.html?practice_fresh=1", "/Practice_board.html?practice_fresh=1"];
+
+    for (const target of targets) {
+      const response = await page.goto(target, { waitUntil: "domcontentloaded" });
+      expect(response, `Response should exist for ${target}`).not.toBeNull();
+      expect(response?.ok(), `Response should be 2xx for ${target}`).toBeTruthy();
+      await expect(page.locator("body")).toBeVisible();
+      await waitForWindowCondition(
+        page,
+        () =>
+          typeof (window as any).openSettingsModal === "function" &&
+          document.getElementById("toolkit-palette-link") !== null,
+        12_000
+      );
+
+      await page.evaluate(() => {
+        (window as any).openSettingsModal();
+      });
+      await page.waitForTimeout(300);
+
+      const snapshot = await page.evaluate(() => ({
+        toolkitText: (document.getElementById("toolkit-palette-link")?.textContent || "").trim(),
+        inlineStatsLabel: (
+          document.querySelector("label[for='pku2048-inline-stats-toggle']")?.textContent || ""
+        ).trim(),
+        inlineStatsDesc: (
+          document.querySelector("#pku2048-inline-stats-toggle + span")?.textContent || ""
+        ).trim()
+      }));
+
+      expect(snapshot.toolkitText).toBe("Theme Settings");
+      if (target.indexOf("PKU2048") >= 0) {
+        expect(snapshot.inlineStatsLabel).toBe("Stats Panel");
+        expect(snapshot.inlineStatsDesc).toBe("Show inline on page.");
+      }
+    }
+  });
 });
