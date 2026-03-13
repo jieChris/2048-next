@@ -4,6 +4,8 @@ import { resolve } from "path";
 export default defineConfig({
   base: "./",
   build: {
+    // Keep legacy runtime assets as real files so page CSP can load them via 'self'.
+    assetsInlineLimit: 0,
     rollupOptions: {
       input: {
         index: resolve(__dirname, "index.html"),

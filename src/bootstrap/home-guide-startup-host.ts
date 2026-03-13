@@ -15,7 +15,7 @@ function resolveDelayMs(input: Record<string, unknown>): number {
   if (Number.isFinite(value) && value >= 0) {
     return value;
   }
-  return 260;
+  return 0;
 }
 
 export interface HomeGuideStartupHostResult {

@@ -279,7 +279,7 @@ export function createIndexUiBootstrapResolvers(input: {
     typeof source.homeGuideAutoStartDelayMs === "number" &&
     Number.isFinite(source.homeGuideAutoStartDelayMs)
       ? source.homeGuideAutoStartDelayMs
-      : 260;
+      : 0;
 
   const pageActionResolvers = toRecord(
     createIndexUiPageActionResolvers({

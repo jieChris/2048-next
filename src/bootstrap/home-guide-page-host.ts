@@ -101,7 +101,7 @@ export function createHomeGuideLifecycleResolvers(input: {
   const pageHostRuntime = toRecord(source.homeGuidePageHostRuntime);
   const windowLike = source.windowLike || null;
   const locationLike = source.locationLike || toRecord(windowLike).location || null;
-  const autoStartDelayMs = resolvePositiveNumber(source.autoStartDelayMs, 260);
+  const autoStartDelayMs = resolvePositiveNumber(source.autoStartDelayMs, 0);
 
   function resolveCloseSettingsModal(): (() => unknown) | null {
     const direct = asFunction<() => unknown>(source.closeSettingsModal);

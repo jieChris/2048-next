@@ -62,7 +62,7 @@
     var pageHostRuntime = toRecord(source.homeGuidePageHostRuntime);
     var windowLike = source.windowLike || null;
     var locationLike = source.locationLike || toRecord(windowLike).location || null;
-    var autoStartDelayMs = resolvePositiveNumber(source.autoStartDelayMs, 260);
+    var autoStartDelayMs = resolvePositiveNumber(source.autoStartDelayMs, 0);
 
     function resolveCloseSettingsModal() {
       var direct = asFunction(source.closeSettingsModal);

@@ -212,7 +212,7 @@
     var homeGuideAutoStartDelayMs =
       typeof source.homeGuideAutoStartDelayMs === "number" && isFinite(source.homeGuideAutoStartDelayMs)
         ? source.homeGuideAutoStartDelayMs
-        : 260;
+        : 0;
 
     var pageActionResolvers = toRecord(
       createIndexUiPageActionResolvers({

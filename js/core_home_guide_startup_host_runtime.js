@@ -20,7 +20,7 @@
     if (Number.isFinite(value) && value >= 0) {
       return value;
     }
-    return 260;
+    return 0;
   }
 
   function applyHomeGuideAutoStart(input) {

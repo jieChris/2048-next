@@ -52,6 +52,8 @@ npm run build
 npm run preview
 ```
 
+`npm run build` 会生成可部署的 `dist/` 目录。当前多页面入口依赖 Vite 处理后的模块资源，生产环境应发布 `dist/`，而不是直接托管仓库源码。
+
 ## 测试命令
 
 ```bash
@@ -81,6 +83,12 @@ npm run verify:release
 npm run report:refactor-progress
 ```
 
+## 部署
+
+- 推荐流程：GitHub Actions 在 CI 中执行 `npm ci && npm run build`，随后把 `dist/` 上传到服务器。
+- 服务器只需要提供静态文件和原子切换发布目录，不需要安装 Node.js。
+- 自托管部署步骤、Secrets 和 Nginx 指向方式见 [docs/SELF_HOSTED_DEPLOY_GUIDE.zh-CN.md](docs/SELF_HOSTED_DEPLOY_GUIDE.zh-CN.md)。
+
 ## 目录结构（简版）
 
 ```text
@@ -105,5 +113,4 @@ npm run report:refactor-progress
 ## 许可证
 
 本项目采用 `MIT License`，详见根目录 [LICENSE](LICENSE)。
-
 

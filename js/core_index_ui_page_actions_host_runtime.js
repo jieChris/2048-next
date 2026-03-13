@@ -184,7 +184,7 @@
         storageRuntime: source.storageRuntime,
         seenKey: homeGuideSeenKey,
         setTimeoutLike: source.setTimeoutLike,
-        autoStartDelayMs: resolveNumber(source.homeGuideAutoStartDelayMs, 260)
+        autoStartDelayMs: resolveNumber(source.homeGuideAutoStartDelayMs, 0)
       })
     );
 
