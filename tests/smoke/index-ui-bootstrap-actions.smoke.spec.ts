@@ -146,7 +146,22 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await waitForWindowCondition(page, () => {
+      const runtimeContractRuntime = (window as any).CoreHomeRuntimeContractRuntime;
+      const startupHostRuntime = (window as any).CoreHomeStartupHostRuntime;
+      const modeRuntime = (window as any).CoreHomeModeRuntime;
+      const cfg = (window as any).GAME_MODE_CONFIG;
+      const runtimeReady =
+        typeof runtimeContractRuntime?.resolveHomeRuntimeContracts === "function" &&
+        typeof startupHostRuntime?.resolveHomeStartupFromContext === "function" &&
+        typeof modeRuntime?.resolveHomeModeSelectionFromContext === "function";
+      const startupCalled =
+        Number((window as any).__homeRuntimeContractCallCount || 0) > 0 &&
+        Number((window as any).__homeStartupHostCallCount || 0) > 0 &&
+        Number((window as any).__homeModeContextCallCount || 0) > 0;
+      const modeReady = !!cfg && typeof cfg.key === "string";
+      return runtimeReady && startupCalled && modeReady;
+    });
 
     const snapshot = await page.evaluate(() => {
       const cfg = (window as any).GAME_MODE_CONFIG;
