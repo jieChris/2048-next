@@ -44,7 +44,30 @@ test.describe("Runtime contract smoke", () => {
       expect(response?.ok(), "Document response should be 2xx").toBeTruthy();
 
       await expect(page.locator("body")).toBeVisible();
-      await page.waitForTimeout(300);
+      await page.waitForFunction(
+        (expected) => {
+          const hasExpectedGameManager =
+            !expected.expectGameManager || Boolean((window as any).game_manager);
+          const hasExpectedBootstrapRuntime =
+            !expected.expectBootstrapRuntime ||
+            Boolean(
+              (window as any).CoreBootstrapRuntime?.startGame &&
+                (window as any).CoreBootstrapRuntime?.startGameOnAnimationFrame
+            );
+          const hasExpectedReplayImportRuntime =
+            !expected.expectReplayImportRuntime ||
+            Boolean((window as any).CoreReplayImportRuntime?.parseReplayImportEnvelope);
+          return (
+            hasExpectedGameManager && hasExpectedBootstrapRuntime && hasExpectedReplayImportRuntime
+          );
+        },
+        {
+          expectGameManager: entry.expectGameManager,
+          expectBootstrapRuntime: entry.expectBootstrapRuntime,
+          expectReplayImportRuntime: entry.expectReplayImportRuntime
+        },
+        { timeout: 12_000 }
+      );
 
       const hasGameManager = await page.evaluate(() => Boolean((window as any).game_manager));
       const hasBootstrapRuntime = await page.evaluate(

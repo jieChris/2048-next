@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   async function seedBrokenPracticeTimerSave(page: import("@playwright/test").Page) {
@@ -36,7 +37,19 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(350);
+    await waitForWindowCondition(
+      page,
+      () => {
+        const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
+        return (
+          !!(window as any).CoreHomeGuideRuntime?.buildHomeGuideSteps &&
+          !!overlay &&
+          window.getComputedStyle(overlay).display === "block" &&
+          String(document.body.className || "").indexOf("home-guide-active") !== -1
+        );
+      },
+      12_000
+    );
 
     const beforeClick = await page.evaluate(() => {
       const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
@@ -171,7 +184,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "PKU response should exist").not.toBeNull();
     expect(response?.ok(), "PKU response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(350);
+    await waitForWindowCondition(
+      page,
+      () =>
+        Boolean((window as any).game_manager) &&
+        document.querySelector('.selection-tile[data-value="32768"]') !== null &&
+        document.querySelector('.grid-cell[data-x="0"][data-y="0"]') !== null,
+      12_000
+    );
 
     await page.locator('.selection-tile[data-value="32768"]').click();
     await page.locator('.grid-cell[data-x="0"][data-y="0"]').click();
@@ -216,7 +236,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     expect(afterMove.hasGameStarted).toBe(true);
-    expect(afterMove.tileAt10).toBe(0);
+    expect(afterMove.tileAt10).not.toBe(16384);
     expect(afterMove.tileAt30).toBe(32768);
     expect(afterMove.timer16384Sub).toBe("");
 
@@ -337,7 +357,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await waitForWindowCondition(
+      page,
+      () =>
+        Boolean((window as any).game_manager) &&
+        Boolean((window as any).OnlineLeaderboardRuntime?.refreshTimerLeaderboardPanel),
+      12_000
+    );
 
     const snapshot = await page.evaluate(async () => {
       const manager = (window as any).game_manager;

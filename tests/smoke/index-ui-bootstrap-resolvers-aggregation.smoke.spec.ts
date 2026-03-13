@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates page bootstrap and undo handler creation to host runtime helper", async ({
@@ -45,7 +46,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CoreIndexUiPageHostRuntime;
+      return (
+        !!runtime &&
+        typeof runtime.createIndexUiTryUndoHandler === "function" &&
+        typeof runtime.applyIndexUiPageBootstrap === "function" &&
+        typeof (window as any).pretty === "function" &&
+        typeof (window as any).openSettingsModal === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreIndexUiPageHostRuntime;
@@ -103,7 +113,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CoreIndexUiPageResolversHostRuntime;
+      return (
+        !!runtime &&
+        typeof runtime.createIndexUiMobileResolvers === "function" &&
+        typeof (window as any).syncMobileHintUI === "function" &&
+        typeof (window as any).syncMobileTimerboxUI === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreIndexUiPageResolversHostRuntime;
@@ -156,7 +174,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CoreIndexUiPageActionsHostRuntime;
+      return (
+        !!runtime &&
+        typeof runtime.createIndexUiPageActionResolvers === "function" &&
+        typeof (window as any).openSettingsModal === "function" &&
+        typeof (window as any).exportReplay === "function" &&
+        typeof (window as any).openPracticeBoardFromCurrent === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreIndexUiPageActionsHostRuntime;

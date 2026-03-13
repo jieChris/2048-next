@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates modal runtime contract checks to runtime helper", async ({ page }) => {
@@ -43,7 +44,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CoreIndexUiRuntimeContractRuntime;
+      return (
+        !!runtime &&
+        (typeof runtime.resolveIndexUiModalRuntimeContracts === "function" ||
+          typeof runtime.resolveIndexUiRuntimeContracts === "function") &&
+        typeof (window as any).openSettingsModal === "function" &&
+        typeof (window as any).closeSettingsModal === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreIndexUiRuntimeContractRuntime;
@@ -110,7 +120,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CoreIndexUiRuntimeContractRuntime;
+      return (
+        !!runtime &&
+        (typeof runtime.resolveIndexUiHomeGuideRuntimeContracts === "function" ||
+          typeof runtime.resolveIndexUiRuntimeContracts === "function") &&
+        !!(window as any).CoreHomeGuideRuntime?.buildHomeGuideSteps
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreIndexUiRuntimeContractRuntime;
@@ -175,7 +193,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CoreIndexUiRuntimeContractRuntime;
+      return (
+        !!runtime &&
+        (typeof runtime.resolveIndexUiCoreRuntimeContracts === "function" ||
+          typeof runtime.resolveIndexUiRuntimeContracts === "function") &&
+        typeof (window as any).pretty === "function" &&
+        typeof (window as any).syncMobileHintUI === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreIndexUiRuntimeContractRuntime;

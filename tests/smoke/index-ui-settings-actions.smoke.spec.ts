@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates settings modal orchestration to host runtime helper", async ({ page }) => {
@@ -8,7 +9,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(220);
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CoreSettingsModalHostRuntime;
+      const pageHostRuntime = (window as any).CoreSettingsModalPageHostRuntime;
+      return (
+        !!runtime &&
+        typeof runtime.applySettingsModalOpenOrchestration === "function" &&
+        typeof runtime.applySettingsModalCloseOrchestration === "function" &&
+        !!pageHostRuntime &&
+        typeof pageHostRuntime.applySettingsModalPageOpen === "function" &&
+        typeof pageHostRuntime.applySettingsModalPageClose === "function" &&
+        typeof (window as any).openSettingsModal === "function" &&
+        typeof (window as any).closeSettingsModal === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(async () => {
       const runtime = (window as any).CoreSettingsModalHostRuntime;
@@ -112,7 +126,24 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(220);
+    await waitForWindowCondition(page, () => {
+      const pageHostRuntime = (window as any).CoreReplayPageHostRuntime;
+      const modalRuntime = (window as any).CoreReplayModalRuntime;
+      const exportRuntime = (window as any).CoreReplayExportRuntime;
+      return (
+        !!pageHostRuntime &&
+        typeof pageHostRuntime.applyReplayModalPageOpen === "function" &&
+        typeof pageHostRuntime.applyReplayModalPageClose === "function" &&
+        typeof pageHostRuntime.applyReplayExportPageActionFromContext === "function" &&
+        !!modalRuntime &&
+        typeof modalRuntime.applyReplayModalOpen === "function" &&
+        typeof modalRuntime.applyReplayModalClose === "function" &&
+        !!exportRuntime &&
+        typeof exportRuntime.applyReplayExport === "function" &&
+        typeof (window as any).exportReplay === "function" &&
+        typeof (window as any).closeReplayModal === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(async () => {
       const pageHostRuntime = (window as any).CoreReplayPageHostRuntime;

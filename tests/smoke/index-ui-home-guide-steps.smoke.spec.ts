@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates home guide step list build to runtime helper", async ({ page }) => {
@@ -13,7 +14,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(220);
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CoreHomeGuideRuntime;
+      const pageHostRuntime = (window as any).CoreHomeGuidePageHostRuntime;
+      return (
+        !!runtime &&
+        typeof runtime.buildHomeGuideSteps === "function" &&
+        !!pageHostRuntime &&
+        typeof pageHostRuntime.applyHomeGuideSettingsPageInit === "function" &&
+        typeof (window as any).openSettingsModal === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(async () => {
       const runtime = (window as any).CoreHomeGuideRuntime;
@@ -355,7 +366,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(220);
+    await waitForWindowCondition(page, () => {
+      return (
+        !!(window as any).CoreHomeGuideRuntime?.buildHomeGuideSteps &&
+        typeof (window as any).openSettingsModal === "function"
+      );
+    });
 
     const started = await page.evaluate(() => {
       const openSettingsModal = (window as any).openSettingsModal;
@@ -401,7 +417,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(220);
+    await waitForWindowCondition(page, () => {
+      return (
+        !!(window as any).CoreHomeGuideRuntime?.buildHomeGuideSteps &&
+        typeof (window as any).openSettingsModal === "function"
+      );
+    });
 
     const started = await page.evaluate(() => {
       const openSettingsModal = (window as any).openSettingsModal;
