@@ -105,6 +105,7 @@
     { s: "#settings-modal h3", zh: "设置", en: "Settings" },
     { s: "#settings-close-btn", zh: "关闭", en: "Close" },
     { s: "#toolkit-palette-link", zh: "主题设置", en: "Theme Settings" },
+    { s: "label[for='timer-module-view-toggle'].settings-toggle-title", zh: "计时器模式", en: "Timer Mode" },
     { s: "label[for='pku2048-inline-stats-toggle']", zh: "统计面板", en: "Stats Panel" },
     { s: "#pku2048-inline-stats-toggle + span", zh: "直接显示在页面中", en: "Show inline on page." },
     { s: "#mode-intro-title", zh: "模式简介", en: "Mode Intro" },

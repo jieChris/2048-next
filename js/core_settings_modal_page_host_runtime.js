@@ -17,6 +17,7 @@
 
   var WIN_PROMPT_STORAGE_KEY = "settings_win_prompt_enabled_v1";
   var LEGACY_WIN_PROMPT_STORAGE_KEYS = ["settings_win_prompt_enabled", "win_prompt_enabled"];
+  var UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";
 
   function resolvePositiveNumber(value, fallback) {
     return Number.isFinite(value) && Number(value) > 0 ? Number(value) : fallback;
@@ -86,6 +87,29 @@
       } catch (_err2) {}
     }
     return didWrite;
+  }
+
+  function readUiLanguage(windowLike) {
+    var storage = toRecord(windowLike).localStorage;
+    var getItem = asFunction(toRecord(storage).getItem);
+    if (!getItem) return "zh";
+    try {
+      var raw = String(getItem.call(storage, UI_LANGUAGE_STORAGE_KEY) || "").trim().toLowerCase();
+      return raw === "en" ? "en" : "zh";
+    } catch (_err) {
+      return "zh";
+    }
+  }
+
+  function resolveLocalizedWinPromptNoteText(enabled, windowLike) {
+    if (readUiLanguage(windowLike) === "en") {
+      return enabled
+        ? "Show win prompt when reaching 2048, with Keep Going option."
+        : "Do not show win prompt after 2048; continue automatically.";
+    }
+    return enabled
+      ? "合成 2048 时会弹出胜利提示，可选择继续游戏。"
+      : "合成 2048 时不弹出胜利提示，将自动继续游戏。";
   }
 
   function resolveWinPromptNoteText(enabled) {
@@ -189,7 +213,7 @@
         var enabled = readWinPromptEnabled(windowLike);
         toggleRecord.checked = enabled;
         if (note) {
-          toRecord(note).textContent = resolveWinPromptNoteText(enabled);
+          toRecord(note).textContent = resolveLocalizedWinPromptNoteText(enabled, windowLike);
         }
       };
 
@@ -204,6 +228,7 @@
       }
 
       sync();
+      bindListener(windowLike, "uilanguagechange", sync);
 
       return {
         hasToggle: true,

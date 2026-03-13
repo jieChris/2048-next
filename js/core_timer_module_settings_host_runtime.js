@@ -71,6 +71,18 @@
     return resolveBoolean(toRecord(toggle).checked);
   }
 
+  function readUiLang(windowLike) {
+    var storage = toRecord(windowLike).localStorage;
+    var getter = asFunction(toRecord(storage).getItem);
+    if (!getter) return "zh";
+    try {
+      var raw = resolveText(getter.call(storage, "ui_language_v1")).toLowerCase();
+      return raw === "en" ? "en" : "zh";
+    } catch (_err) {
+      return "zh";
+    }
+  }
+
   function resolveLeaderboardSupport(windowLike, manager, documentLike) {
     var onlineRuntime = toRecord(toRecord(windowLike).OnlineLeaderboardRuntime);
     var isModeSupported = asFunction(onlineRuntime.isLeaderboardModeSupported);
@@ -277,12 +289,38 @@
         resolveTimerModuleSettingsState({
           viewMode: viewMode,
           hasLeaderboard: hasLeaderboard,
-          lang: resolveUiLang(windowLike)
+          lang: readUiLang(windowLike)
         })
       );
+      var lang = readUiLang(windowLike);
       var toggleRecord = toRecord(toggle);
       toggleRecord.disabled = resolveBoolean(settingsState.toggleDisabled);
       toggleRecord.checked = resolveBoolean(settingsState.toggleChecked);
+
+      var titleElement = querySelector(
+        source.documentLike,
+        "label[for='timer-module-view-toggle'].settings-toggle-title"
+      );
+      if (titleElement) {
+        toRecord(titleElement).textContent = resolveText(
+          settingsState.toggleTitleText || (lang === "en" ? "Timer Mode" : "计时器模式")
+        );
+      }
+
+      var switchLabel = querySelector(
+        source.documentLike,
+        "label.settings-switch[for='timer-module-view-toggle']"
+      );
+      if (switchLabel) {
+        var setAttribute = asFunction(toRecord(switchLabel).setAttribute);
+        if (setAttribute) {
+          setAttribute.call(
+            switchLabel,
+            "aria-label",
+            resolveText(settingsState.toggleTitleText || (lang === "en" ? "Timer Mode" : "计时器模式"))
+          );
+        }
+      }
 
       var toggleLabel = getElementById(source.documentLike, "timer-module-view-label");
       if (toggleLabel) {
@@ -345,6 +383,16 @@
     }
 
     sync();
+    if (!toggleRecord.__timerViewLangBound) {
+      toggleRecord.__timerViewLangBound = true;
+      bindListener(windowLike, "uilanguagechange", function () {
+        sync();
+        var schedule = asFunction(toRecord(windowLike).setTimeout);
+        if (schedule) {
+          schedule(sync, 0);
+        }
+      });
+    }
 
     return {
       hasToggle: true,

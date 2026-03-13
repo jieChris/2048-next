@@ -12,6 +12,7 @@ function asFunction<T extends (...args: never[]) => unknown>(value: unknown): T 
 
 const WIN_PROMPT_STORAGE_KEY = "settings_win_prompt_enabled_v1";
 const LEGACY_WIN_PROMPT_STORAGE_KEYS = ["settings_win_prompt_enabled", "win_prompt_enabled"];
+const UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";
 
 
 function getElementById(documentLike: unknown, id: string): unknown {
@@ -105,6 +106,32 @@ export interface SettingsModalInitResolvers {
   initWinPromptSettingsUI: () => unknown;
 }
 
+void resolveWinPromptNoteTextLegacy;
+void resolveWinPromptNoteText;
+
+function readUiLanguage(windowLike: unknown): "zh" | "en" {
+  const storage = toRecord(windowLike).localStorage;
+  const getItem = asFunction<(key: string) => string | null>(toRecord(storage).getItem);
+  if (!getItem) return "zh";
+  try {
+    const raw = String(getItem.call(storage, UI_LANGUAGE_STORAGE_KEY) || "").trim().toLowerCase();
+    return raw === "en" ? "en" : "zh";
+  } catch (_err) {
+    return "zh";
+  }
+}
+
+function resolveLocalizedWinPromptNoteText(enabled: boolean, windowLike?: unknown): string {
+  if (readUiLanguage(windowLike) === "en") {
+    return enabled
+      ? "Show win prompt when reaching 2048, with Keep Going option."
+      : "Do not show win prompt after 2048; continue automatically.";
+  }
+  return enabled
+    ? "合成 2048 时会弹出胜利提示，可选择继续游戏。"
+    : "合成 2048 时不弹出胜利提示，将自动继续游戏。";
+}
+
 export interface SettingsModalActionResolvers {
   openSettingsModal: () => unknown;
   closeSettingsModal: () => unknown;
@@ -185,7 +212,7 @@ export function createSettingsModalInitResolvers(input: {
       const enabled = readWinPromptEnabled(windowLike);
       toggleRecord.checked = enabled;
       if (note) {
-        toRecord(note).textContent = resolveWinPromptNoteText(enabled);
+        toRecord(note).textContent = resolveLocalizedWinPromptNoteText(enabled, windowLike);
       }
     };
 
@@ -200,6 +227,7 @@ export function createSettingsModalInitResolvers(input: {
     }
 
     sync();
+    bindListener(windowLike, "uilanguagechange", sync);
 
     return {
       hasToggle: true,

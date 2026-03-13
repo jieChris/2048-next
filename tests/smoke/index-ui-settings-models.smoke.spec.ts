@@ -483,4 +483,67 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
     }
   });
+
+  test("settings keep win prompt note in English under en mode", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("ui_language_v1", "en");
+      window.localStorage.setItem("settings_win_prompt_enabled_v1", "1");
+    });
+
+    const response = await page.goto("/index.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(
+      page,
+      () =>
+        typeof (window as any).openSettingsModal === "function" &&
+        !!document.getElementById("win-prompt-note"),
+      12_000
+    );
+
+    await page.evaluate(() => {
+      (window as any).openSettingsModal();
+    });
+    await page.waitForTimeout(300);
+
+    await expect(page.locator("#win-prompt-note")).toHaveText(
+      "Show win prompt when reaching 2048, with Keep Going option."
+    );
+  });
+
+  test("timer module settings copy updates immediately after language switch", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("ui_language_v1", "zh");
+    });
+
+    const response = await page.goto("/index.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(
+      page,
+      () =>
+        typeof (window as any).openSettingsModal === "function" &&
+        typeof (window as any).UII18N?.setLanguage === "function" &&
+        !!(window as any).CoreTimerModuleSettingsHostRuntime,
+      12_000
+    );
+
+    await page.evaluate(() => {
+      (window as any).openSettingsModal();
+    });
+    await page.waitForTimeout(300);
+
+    await page.evaluate(() => {
+      (window as any).UII18N.setLanguage("en");
+    });
+
+    await expect(page.locator("label[for='timer-module-view-toggle'].settings-toggle-title")).toHaveText(
+      "Timer Mode"
+    );
+    await expect(page.locator("#timer-module-view-note")).toContainText(
+      "leaderboard"
+    );
+  });
 });

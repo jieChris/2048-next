@@ -72,6 +72,18 @@ function readToggleChecked(toggle: unknown): boolean {
   return resolveBoolean(toRecord(toggle).checked);
 }
 
+function readUiLang(windowLike: unknown): "zh" | "en" {
+  const storage = toRecord(windowLike).localStorage;
+  const getItem = asFunction<(key: string) => string | null>(toRecord(storage).getItem);
+  if (!getItem) return "zh";
+  try {
+    const raw = resolveText(getItem.call(storage, "ui_language_v1")).toLowerCase();
+    return raw === "en" ? "en" : "zh";
+  } catch (_err) {
+    return "zh";
+  }
+}
+
 export interface LegacyUndoSettingsCleanupResult {
   hadToggle: boolean;
   didRemoveRow: boolean;
@@ -267,12 +279,38 @@ export function applyTimerModuleSettingsUi(input: {
     });
     const settingsState = toRecord(
       resolveTimerModuleSettingsState({
-        viewMode
+        viewMode,
+        lang: readUiLang(windowLike)
       })
     );
     const toggleRecord = toRecord(toggle);
     toggleRecord.disabled = resolveBoolean(settingsState.toggleDisabled);
     toggleRecord.checked = resolveBoolean(settingsState.toggleChecked);
+    const titleElement = querySelector(
+      source.documentLike,
+      "label[for='timer-module-view-toggle'].settings-toggle-title"
+    );
+    if (titleElement) {
+      toRecord(titleElement).textContent = resolveText(
+        settingsState.toggleTitleText || (readUiLang(windowLike) === "en" ? "Timer Mode" : "计时器模式")
+      );
+    }
+    const switchLabel = querySelector(
+      source.documentLike,
+      "label.settings-switch[for='timer-module-view-toggle']"
+    );
+    if (switchLabel) {
+      const setAttribute = asFunction<(name: string, value: string) => unknown>(
+        toRecord(switchLabel).setAttribute
+      );
+      if (setAttribute) {
+        (setAttribute as unknown as Function).call(
+          switchLabel,
+          "aria-label",
+          resolveText(settingsState.toggleTitleText || (readUiLang(windowLike) === "en" ? "Timer Mode" : "计时器模式"))
+        );
+      }
+    }
     if (noteElement) {
       toRecord(noteElement).textContent = resolveText(settingsState.noteText);
     }
@@ -314,6 +352,18 @@ export function applyTimerModuleSettingsUi(input: {
   }
 
   sync();
+  if (!toggleRecord.__timerViewLangBound) {
+    toggleRecord.__timerViewLangBound = true;
+    bindListener(windowLike, "uilanguagechange", function () {
+      sync();
+      const schedule = asFunction<(callback: () => void, delay?: number) => unknown>(
+        toRecord(windowLike).setTimeout
+      );
+      if (schedule) {
+        schedule(sync, 0);
+      }
+    });
+  }
 
   return {
     hasToggle: true,
