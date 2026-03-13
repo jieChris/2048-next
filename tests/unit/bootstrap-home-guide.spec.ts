@@ -120,8 +120,8 @@ describe("bootstrap home guide", () => {
     expect(panelHtml).toContain("id='home-guide-step'");
     expect(panelHtml).toContain("id='home-guide-next'");
     expect(panelHtml).toContain("id='home-guide-skip'");
-    expect(settingsHtml).toContain("id='home-guide-toggle'");
-    expect(settingsHtml).toContain("id='home-guide-note'");
+    expect(settingsHtml).toContain("id='home-guide-trigger-btn'");
+    expect(settingsHtml).not.toContain("home-guide-note");
   });
 
   it("reads seen marker from storage safely", () => {

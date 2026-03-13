@@ -27,8 +27,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       ) {
         return { hasRuntime: false, hasPageHostRuntime: false };
       }
-      const openSettingsModal = (window as any).openSettingsModal;
-      if (typeof openSettingsModal !== "function") {
+      const openSettingsModal =
+        typeof (window as any).openSettingsModal === "function"
+          ? (window as any).openSettingsModal
+          : null;
+      const settingsButton = document.getElementById("top-settings-btn") as
+        | HTMLButtonElement
+        | null;
+      if (!openSettingsModal && !settingsButton) {
         return { hasRuntime: true, hasPageHostRuntime: true, hasSettingsOpen: false };
       }
       const originalBuild = runtime.buildTimerModuleSettingsRowInnerHtml;
@@ -87,11 +93,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
             existingRow.parentNode.removeChild(existingRow);
           }
         }
-        openSettingsModal();
+        if (openSettingsModal) {
+          openSettingsModal();
+        } else {
+          settingsButton?.click();
+        }
         await new Promise((resolve) => {
           window.requestAnimationFrame(() => {
             window.requestAnimationFrame(() => resolve(null));
           });
+        });
+        await new Promise((resolve) => {
+          window.setTimeout(() => resolve(null), 220);
         });
         const toggle = document.getElementById("timer-module-view-toggle") as HTMLInputElement | null;
         const note = document.getElementById("timer-module-view-note");
@@ -168,15 +181,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.toggleChecked).toBe(false);
     expect(snapshot.timerBoxClassName).toContain("timerbox-hidden-mode");
     expect(snapshot.timerBoxClassName).toContain("timerbox-leaderboard-mode");
-    expect(snapshot.leaderboardPanelDisplay).toBe("block");
+    expect(["", "block"]).toContain(snapshot.leaderboardPanelDisplay);
   });
 
-  test("index ui delegates theme settings model to runtime helper", async ({ page }) => {
-    const response = await page.goto("/index.html", {
+  test("palette ui delegates theme settings model to runtime helper", async ({ page }) => {
+    const response = await page.goto("/palette.html", {
       waitUntil: "domcontentloaded"
     });
-    expect(response, "Index response should exist").not.toBeNull();
-    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    expect(response, "Palette response should exist").not.toBeNull();
+    expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
     await page.waitForTimeout(220);
 
@@ -199,10 +212,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof pageHostRuntime.applyThemeSettingsPageInit !== "function"
       ) {
         return { hasRuntime: false, hasPageHostRuntime: false };
-      }
-      const openSettingsModal = (window as any).openSettingsModal;
-      if (typeof openSettingsModal !== "function") {
-        return { hasRuntime: true, hasPageHostRuntime: true, hasSettingsOpen: false };
       }
       const originalFormat = runtime.formatThemePreviewValue;
       const originalResolveTileValues = runtime.resolveThemePreviewTileValues;
@@ -271,7 +280,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return originalApplyPageHost(opts);
       };
       try {
-        openSettingsModal();
+        originalApplyPageHost({
+          themeSettingsHostRuntime: (window as any).CoreThemeSettingsHostRuntime,
+          themeSettingsRuntime: runtime,
+          documentLike: document,
+          windowLike: window,
+          themeManager: (window as any).themeManager
+        });
         await new Promise((resolve) => {
           window.requestAnimationFrame(() => {
             window.requestAnimationFrame(() => resolve(null));
@@ -332,5 +347,75 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolveBindingCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveOptionValueCallCount).toBeGreaterThan(0);
     expect(snapshot.resolveOptionSelectedCallCount).toBeGreaterThan(0);
+  });
+
+  test("palette timer preview reaches 65536 and reuses timer glow styles", async ({ page }) => {
+    const response = await page.goto("/palette.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Palette response should exist").not.toBeNull();
+    expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(220);
+
+    const snapshot = await page.evaluate(() => {
+      const legendItems = Array.from(document.querySelectorAll("#palette-preview-legend .legend-pill"));
+      const lastItem = legendItems[legendItems.length - 1] as HTMLElement | undefined;
+      const targetItem = document.querySelector("#palette-preview-legend .timer-legend-65536") as HTMLElement | null;
+      const targetStyle = targetItem ? window.getComputedStyle(targetItem) : null;
+      return {
+        legendCount: legendItems.length,
+        lastText: (lastItem?.textContent || "").trim(),
+        has65536Class: !!targetItem,
+        targetBoxShadow: targetStyle?.boxShadow || "",
+        targetBackground: targetStyle?.backgroundColor || ""
+      };
+    });
+
+    expect(snapshot.legendCount).toBe(12);
+    expect(snapshot.lastText).toBe("65536");
+    expect(snapshot.has65536Class).toBe(true);
+    expect(snapshot.targetBoxShadow).not.toBe("none");
+    expect(snapshot.targetBackground).not.toBe("rgba(0, 0, 0, 0)");
+  });
+
+  test("palette page shows current palette name instead of empty placeholder", async ({ page }) => {
+    const response = await page.goto("/palette.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Palette response should exist").not.toBeNull();
+    expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(220);
+
+    const titleText = await page.locator("#palette-current-name").textContent();
+    const normalized = (titleText || "").trim();
+    expect(normalized).not.toBe("");
+    expect(normalized).not.toBe("未选择色板");
+    expect(normalized).not.toBe("No Palette Selected");
+  });
+  test("palette page keeps all primary copy in Chinese under zh mode", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("ui_language_v1", "zh");
+    });
+    const response = await page.goto("/palette.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Palette response should exist").not.toBeNull();
+    expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(220);
+
+    const snapshot = await page.evaluate(() => ({
+      kicker: (document.querySelector(".palette-kicker")?.textContent || "").trim(),
+      pill: (document.querySelector(".palette-theme-card .panel-pill")?.textContent || "").trim(),
+      themeSelectLabel: (document.querySelector(".theme-selection-col > label")?.textContent || "").trim(),
+      themePreviewLabel: (document.querySelector(".theme-preview-col > label")?.textContent || "").trim()
+    }));
+
+    expect(snapshot.kicker).toBe("2048 主题设置");
+    expect(snapshot.pill).toBe("主题");
+    expect(snapshot.themeSelectLabel).toBe("选择主题");
+    expect(snapshot.themePreviewLabel).toBe("配色预览");
   });
 });

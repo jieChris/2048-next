@@ -162,15 +162,34 @@
     );
   }
 
+  function buildHomeGuideSettingsRowInnerHtmlLegacy() {
+    var lang = readUiLang();
+    return (
+      "<label for='home-guide-toggle'>" +
+      resolveLangText(lang, "\u65b0\u624b\u6307\u5f15", "Beginner Guide") +
+      "</label>" +
+      "<label class='settings-switch-row'>" +
+      "<input id='home-guide-toggle' type='checkbox'>" +
+      "</label>" +
+      "<div id='home-guide-note' class='settings-note'></div>"
+    );
+  }
+
   function buildHomeGuideSettingsRowInnerHtml() {
     var lang = readUiLang();
     return (
-      "<label for='home-guide-toggle'>" + resolveLangText(lang, "新手指引", "Beginner Guide") + "</label>" +
-      "<label class='settings-switch-row'>" +
-      "<input id='home-guide-toggle' type='checkbox'>" +
-      "<span>" + resolveLangText(lang, "重新播放首页功能指引", "Replay homepage feature guide") + "</span>" +
-      "</label>" +
-      "<div id='home-guide-note' class='settings-note'></div>"
+      "<div class='settings-action-main'>" +
+      "<div class='settings-action-copy'>" +
+      "<div class='settings-toggle-title'>" +
+      resolveLangText(lang, "\u65b0\u624b\u6307\u5f15", "Beginner Guide") +
+      "</div>" +
+      "</div>" +
+      "<button id='home-guide-trigger-btn' type='button' class='settings-inline-action-btn' aria-label='" +
+      resolveLangText(lang, "\u65b0\u624b\u6307\u5f15", "Beginner Guide") +
+      "'>" +
+      resolveLangText(lang, "\u6253\u5f00\u6307\u5f15", "Open Guide") +
+      "</button>" +
+      "</div>"
     );
   }
 

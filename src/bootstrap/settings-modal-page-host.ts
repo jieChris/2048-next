@@ -86,10 +86,16 @@ function writeWinPromptEnabled(windowLike: unknown, enabled: boolean): boolean {
   return didWrite;
 }
 
-function resolveWinPromptNoteText(enabled: boolean): string {
+function resolveWinPromptNoteTextLegacy(enabled: boolean): string {
   return enabled
     ? "合成 2048 时会弹出胜利提示，可选择继续游戏。"
     : "合成 2048 时不弹出胜利提示，将自动继续游戏。";
+}
+
+function resolveWinPromptNoteText(enabled: boolean): string {
+  return enabled
+    ? "合成 2048 时会弹出胜利提示。"
+    : "合成 2048 时不弹出胜利提示，会自动继续游戏。";
 }
 
 export interface SettingsModalInitResolvers {
@@ -121,9 +127,13 @@ export function createSettingsModalInitResolvers(input: {
   const source = toRecord(input);
   const windowLike = source.windowLike || null;
   const themePageHostRuntime = toRecord(source.themeSettingsPageHostRuntime);
+  const timerPageHostRuntime = toRecord(source.timerModuleSettingsPageHostRuntime);
   const timerSettingsHostRuntime = toRecord(source.timerModuleSettingsHostRuntime);
   const applyThemeSettingsPageInit = asFunction<(payload: unknown) => unknown>(
     themePageHostRuntime.applyThemeSettingsPageInit
+  );
+  const applyTimerModuleSettingsPageInit = asFunction<(payload: unknown) => unknown>(
+    timerPageHostRuntime.applyTimerModuleSettingsPageInit
   );
   const applyLegacyUndoSettingsCleanup = asFunction<(payload: unknown) => unknown>(
     timerSettingsHostRuntime.applyLegacyUndoSettingsCleanup
@@ -146,32 +156,17 @@ export function createSettingsModalInitResolvers(input: {
   }
 
   function initTimerModuleSettingsUI(): unknown {
-    const toggle = getElementById(source.documentLike, "timer-module-view-toggle");
-    if (toggle) {
-      const closest = asFunction<(selector: string) => unknown>(toRecord(toggle).closest);
-      const row = closest ? closest.call(toggle, ".settings-row") : null;
-      const parentNode = toRecord(row).parentNode;
-      const removeChild = asFunction<(child: unknown) => unknown>(toRecord(parentNode).removeChild);
-      if (row && parentNode && removeChild) {
-        removeChild.call(parentNode, row);
-      } else {
-        const toggleStyle = toRecord(toRecord(toggle).style);
-        toggleStyle.display = "none";
-        toRecord(toggle).style = toggleStyle;
-      }
-    }
-
-    const note = getElementById(source.documentLike, "timer-module-view-note");
-    if (note) {
-      const noteStyle = toRecord(toRecord(note).style);
-      noteStyle.display = "none";
-      toRecord(note).style = noteStyle;
-    }
-
-    return {
-      removed: !!toggle,
-      disabled: true
-    };
+    if (!applyTimerModuleSettingsPageInit) return null;
+    return applyTimerModuleSettingsPageInit({
+      timerModuleSettingsHostRuntime: source.timerModuleSettingsHostRuntime,
+      timerModuleRuntime: source.timerModuleRuntime,
+      documentLike: source.documentLike,
+      windowLike,
+      retryDelayMs: source.retryDelayMs,
+      setTimeoutLike: source.setTimeoutLike,
+      reinvokeInit: initTimerModuleSettingsUI,
+      syncMobileTimerboxUi: source.syncMobileTimerboxUi
+    });
   }
 
   function initWinPromptSettingsUI(): unknown {
@@ -362,3 +357,5 @@ export function applySettingsModalPageClose(input: {
     didApply: true
   };
 }
+
+export { resolveWinPromptNoteTextLegacy };

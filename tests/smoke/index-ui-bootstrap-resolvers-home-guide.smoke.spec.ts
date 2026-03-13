@@ -132,10 +132,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const openSettingsModal = (window as any).openSettingsModal;
       if (typeof openSettingsModal === "function") {
         openSettingsModal();
-        const toggle = document.getElementById("home-guide-toggle") as HTMLInputElement | null;
-        if (toggle) {
-          toggle.checked = true;
-          toggle.dispatchEvent(new Event("change", { bubbles: true }));
+        const trigger = document.getElementById("home-guide-trigger-btn") as HTMLButtonElement | null;
+        if (trigger) {
+          trigger.click();
         }
         await new Promise((resolve) => {
           window.requestAnimationFrame(() => {

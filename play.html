@@ -182,36 +182,23 @@
   <div id="settings-modal" class="replay-modal-overlay" style="display: none;">
     <div class="replay-modal-content settings-modal-content">
       <h3>闂備浇宕垫慨宕囩矆娴ｈ娅犲ù鐘差儐閸?/h3>
-      <div class="settings-row theme-settings-row">
-        <div class="theme-selection-col">
-          <label>濠电姷顣藉Σ鍛村磻閸曨垼鏁勯柛娑樼摠閸嬨倖绻涢崱妯诲鞍闁绘挴鍋撻柣搴＄畭閸庨亶鎮ч崱娴?/label>
-          <div class="custom-select-wrapper">
-              <div class="custom-select">
-                  <div class="custom-select-trigger" id="theme-select-trigger">
-                      <span>闂傚倸鍊风欢锟犲磻閸曨垁鍥箥椤旂懓浜炬慨妯稿劚婵＄晫绱掔€ｎ亶妲圭紒缁樼箓椤繈宕楅崗鑲╂В</span>
-                      <div class="custom-arrow"></div>
-                  </div>
-                  <div class="custom-select-options" id="theme-select-options">
-                      <!-- Options populated by JS -->
-                  </div>
-              </div>
+      <div class="settings-row settings-toggle-row">
+        <div class="settings-toggle-main">
+          <div class="settings-toggle-copy">
+            <label for="win-prompt-toggle" class="settings-toggle-title">胜利提示</label>
+            <div class="settings-toggle-desc">合成 2048 后弹出胜利提示</div>
           </div>
-          <!-- Hidden original select for fallback/data binding if needed -->
-          <select id="theme-select" style="display:none"></select>
+          <label class="settings-switch" for="win-prompt-toggle" aria-label="胜利提示">
+            <input id="win-prompt-toggle" type="checkbox">
+            <span class="settings-switch-slider"></span>
+          </label>
         </div>
-        
-        <div class="theme-preview-col">
-          <label>闂傚倸鍊烽悞锕€顭垮Ο鑲╃煋闂佸灝顑囬悵璺衡攽閻樻彃鏋︾紒鎲嬬秮閺屾盯寮撮妸銉︾彯濠?/label>
-          <div id="theme-preview-grid" class="theme-preview-grid"></div>
-        </div>
-      </div>
-      <div class="settings-row">
-        <label for="win-prompt-toggle">闂傚倷娴囨竟鍫濃枍閺囩姴鍨濈€光偓閸曨偅妲梺鍛婃处閸ㄦ壆绮婚悽鍛婄厵闂侇叏绠戦弸鏂棵?/label>
-        <label class="settings-switch-row">
-          <input id="win-prompt-toggle" type="checkbox">
-          <span>闂傚倷绀侀幉锟犳嚌妤ｅ啯鍋嬪┑鐘叉搐閸?2048 闂傚倷绀侀幉锟犳嚌閻愵剦娈介柟闂寸劍閸ゅ洤鈹戦悩鍙夋悙缂佲偓閸曨倠鏃堟晝閳ь剟鎮樺┑瀣闊洦绋掗悡鏇㈡煙閸濆嫭顥炴繛鍛閹插憡锛愭担钘夊帯缂?</span>
-        </label>
         <div id="win-prompt-note" class="settings-note"></div>
+      </div>
+      <div id="toolkit-entry-row" class="settings-row toolkit-entry-row">
+        <div class="toolkit-entry-actions">
+          <a id="toolkit-palette-link" class="replay-button" href="palette.html">主题设置</a>
+        </div>
       </div>
       <div class="replay-modal-actions">
         <button id="settings-close-btn" class="replay-button">闂傚倷鑳堕…鍫㈡崲閹寸偟绠惧┑鐘蹭迹</button>
@@ -237,9 +224,6 @@
   <script type="module" src="./src/entries/play.ts"></script>
 </body>
 </html>
-
-
-
 
 
 

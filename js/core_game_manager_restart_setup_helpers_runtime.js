@@ -5,6 +5,16 @@ function restartGame(manager) {
   manager.undoStack = [];
   manager.clearSavedGameState(manager.modeKey);
   if (manager.modeKey === "practice" && manager.practiceRestartBoardMatrix) {
+    if (shouldClearPracticeBoardOnRestart(manager)) {
+      restartWithBoard(
+        manager,
+        createEmptyPracticeBoardMatrix(manager),
+        manager.practiceRestartModeConfig || manager.modeConfig,
+        { setPracticeRestartBase: true }
+      );
+      manager.isTestMode = true;
+      return;
+    }
     restartWithBoard(
       manager,
       manager.practiceRestartBoardMatrix,
@@ -15,6 +25,41 @@ function restartGame(manager) {
     return;
   }
   manager.setup(undefined, { disableStateRestore: true });
+}
+
+function createEmptyPracticeBoardMatrix(manager) {
+  var width = Number.isInteger(manager && manager.width) && manager.width > 0 ? manager.width : 4;
+  var height = Number.isInteger(manager && manager.height) && manager.height > 0 ? manager.height : width;
+  var board = [];
+  for (var y = 0; y < height; y++) {
+    var row = [];
+    for (var x = 0; x < width; x++) {
+      row.push(0);
+    }
+    board.push(row);
+  }
+  return board;
+}
+
+function areBoardMatricesEqual(boardA, boardB) {
+  if (!Array.isArray(boardA) || !Array.isArray(boardB)) return false;
+  if (boardA.length !== boardB.length) return false;
+  for (var y = 0; y < boardA.length; y++) {
+    var rowA = Array.isArray(boardA[y]) ? boardA[y] : [];
+    var rowB = Array.isArray(boardB[y]) ? boardB[y] : [];
+    if (rowA.length !== rowB.length) return false;
+    for (var x = 0; x < rowA.length; x++) {
+      if (Number(rowA[x]) !== Number(rowB[x])) return false;
+    }
+  }
+  return true;
+}
+
+function shouldClearPracticeBoardOnRestart(manager) {
+  if (!manager || manager.modeKey !== "practice") return false;
+  if (manager.hasGameStarted) return false;
+  if (!Array.isArray(manager.practiceRestartBoardMatrix)) return false;
+  return areBoardMatricesEqual(getFinalBoardMatrix(manager), manager.practiceRestartBoardMatrix);
 }
 
 function restartWithSeed(manager, seed, modeConfig) {
@@ -56,6 +101,9 @@ function restartWithBoard(manager, board, modeConfig, options) {
   var setupArgs = createRestartWithBoardSetupArgs(modeConfig, normalizedOptions);
   manager.setup(setupArgs.setupSeed, setupArgs.setupOptions);
   setBoardFromMatrix(manager, board);
+  if (manager.modeKey === "practice" && !normalizedOptions.asReplay && typeof applyPracticeSetupTimerStateFromBoard === "function") {
+    applyPracticeSetupTimerStateFromBoard(manager, board);
+  }
   manager.initialBoardMatrix = getFinalBoardMatrix(manager);
   manager.replayStartBoardMatrix = cloneBoardMatrix(manager.initialBoardMatrix);
   if (shouldPersistPracticeRestartBase(manager, normalizedOptions)) {

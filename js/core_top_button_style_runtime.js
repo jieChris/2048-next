@@ -375,7 +375,6 @@
   function resolveSettingsText(lang) {
     if (lang === "en") {
       return {
-        heading: "Button Style",
         toggleLabel: "Text Button Mode",
         rowNote: "Display style for top buttons on mobile.",
         textModeNote: "Current: text buttons for better readability.",
@@ -383,7 +382,6 @@
       };
     }
     return {
-      heading: "\u6309\u94ae\u6837\u5f0f",
       toggleLabel: "\u6587\u5b57\u6309\u94ae\u6a21\u5f0f",
       rowNote: "\u79fb\u52a8\u7aef\u9876\u90e8\u6309\u94ae\u663e\u793a\u98ce\u683c\u3002",
       textModeNote: "\u5f53\u524d\u4e3a\u6587\u5b57\u6309\u94ae\uff0c\u53ef\u8bfb\u6027\u66f4\u5f3a\u3002",
@@ -406,27 +404,36 @@
     var row = documentLike.createElement("div");
     if (!row) return null;
     row.id = SETTINGS_ROW_ID;
-    row.className = "settings-row";
+    row.className = "settings-row settings-toggle-row";
     var lang = readUiLanguage(documentLike);
     var copy = resolveSettingsText(lang);
     row.innerHTML =
-      '<div class="top-btn-style-heading" style="font-weight:700; margin-bottom: 6px;">' +
-      copy.heading +
-      "</div>" +
-      '<label class="settings-switch-row" for="' +
+      '<div class="settings-toggle-main">' +
+      '<div class="settings-toggle-copy">' +
+      '<label class="settings-toggle-title" for="' +
       SETTINGS_TOGGLE_ID +
       '">' +
-      "<span>" +
       copy.toggleLabel +
-      "</span>" +
+      "</label>" +
+      '<div class="settings-toggle-desc">' +
+      copy.rowNote +
+      "</div>" +
+      "</div>" +
+      '<label class="settings-switch" for="' +
+      SETTINGS_TOGGLE_ID +
+      '" aria-label="' +
+      copy.toggleLabel +
+      '">' +
       '<input id="' +
       SETTINGS_TOGGLE_ID +
       '" type="checkbox">' +
+      '<span class="settings-switch-slider"></span>' +
       "</label>" +
+      "</div>" +
       '<div id="' +
       SETTINGS_VALUE_NOTE_ID +
       '" class="settings-note">' +
-      copy.rowNote +
+      copy.iconModeNote +
       "</div>";
 
     var actions = querySelector(content, SETTINGS_ACTIONS_SELECTOR);
@@ -445,10 +452,14 @@
     var copy = resolveSettingsText(lang);
     var row = documentLike.getElementById(SETTINGS_ROW_ID);
     if (!row) return;
-    var heading = querySelector(row, ".top-btn-style-heading");
-    if (heading) heading.textContent = copy.heading;
-    var switchLabel = querySelector(row, ".settings-switch-row > span");
-    if (switchLabel) switchLabel.textContent = copy.toggleLabel;
+    var switchTitle = querySelector(row, ".settings-toggle-title");
+    if (switchTitle) switchTitle.textContent = copy.toggleLabel;
+    var switchDesc = querySelector(row, ".settings-toggle-desc");
+    if (switchDesc) switchDesc.textContent = copy.rowNote;
+    var switchShell = querySelector(row, ".settings-switch");
+    if (switchShell && switchShell.setAttribute) {
+      switchShell.setAttribute("aria-label", copy.toggleLabel);
+    }
   }
 
   function updateSettingsNote(documentLike, mode) {

@@ -7,6 +7,8 @@ document.addEventListener("DOMContentLoaded", function () {
   var zeroCycleValues = [];
   var currentSelectionRuleset = "pow2";
   var practiceRelayoutTimer = null;
+  var practicePhaseSyncTimer = null;
+  var lastPracticeEditLocked = null;
   var lastGridTouchAt = 0;
   var gridTouchStartX = 0;
   var gridTouchStartY = 0;
@@ -206,6 +208,41 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  function resolvePracticeEditLocked() {
+    var manager = window.game_manager;
+    return !!(manager && manager.hasGameStarted);
+  }
+
+  function syncPracticeSetupPhaseUi() {
+    var locked = resolvePracticeEditLocked();
+    if (lastPracticeEditLocked === locked) return locked;
+    lastPracticeEditLocked = locked;
+
+    if (document.body) {
+      document.body.classList.toggle("practice-setup-locked", locked);
+    }
+    if (selectionGrid) {
+      selectionGrid.classList.toggle("selection-grid-locked", locked);
+      selectionGrid.setAttribute("aria-disabled", locked ? "true" : "false");
+      if (locked) {
+        selectionGrid.setAttribute("title", "游戏已开始，重新开始后才能继续摆盘");
+      } else {
+        selectionGrid.removeAttribute("title");
+      }
+    }
+    if (gridContainer) {
+      gridContainer.classList.toggle("practice-grid-locked", locked);
+    }
+    if (locked) {
+      setSelectedValue(null);
+    } else if (selectedValue === null) {
+      setSelectedValue(currentSelectionRuleset === "fibonacci" ? 1 : 2);
+    } else {
+      syncPracticeGestureEntryUi();
+    }
+    return locked;
+  }
+
   function setSelectedValue(value) {
     selectedValue = value;
     if (selectionGrid) {
@@ -246,6 +283,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var defaultValue = ruleset === "fibonacci" ? 1 : 2;
     zeroCyclePhaseByCell = {};
     renderSelectionGrid(values, defaultValue);
+    syncPracticeSetupPhaseUi();
   }
 
   function getZeroModeGuideText() {
@@ -343,6 +381,7 @@ document.addEventListener("DOMContentLoaded", function () {
       });
       window.game_manager.isTestMode = true;
       syncSelectionGridByRuleset();
+      syncPracticeSetupPhaseUi();
     } catch (err) {
       console.error("Practice transfer restore failed:", err);
       alert("练习板载入盘面失败，请重试。");
@@ -383,6 +422,7 @@ document.addEventListener("DOMContentLoaded", function () {
       });
       manager.isTestMode = true;
       syncSelectionGridByRuleset();
+      syncPracticeSetupPhaseUi();
       stripPracticeFreshFromUrl();
     } catch (err) {
       console.error("Practice fresh start failed:", err);
@@ -575,6 +615,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (selectionGrid) {
     function handleSelectionInteraction(e) {
+      if (syncPracticeSetupPhaseUi()) return;
       var target = e.target.closest(".selection-tile");
       if (target) {
         if (e && e.cancelable) e.preventDefault();
@@ -619,6 +660,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function applyCustomTileToCell(cell) {
       if (!cell) return;
+      if (syncPracticeSetupPhaseUi()) return;
       var x = parseInt(cell.getAttribute("data-x"), 10);
       var y = parseInt(cell.getAttribute("data-y"), 10);
       if (!window.game_manager) return;
@@ -679,8 +721,16 @@ document.addEventListener("DOMContentLoaded", function () {
   setTimeout(function () {
     if (window.game_manager) {
       window.game_manager.isTestMode = true;
+      syncPracticeSetupPhaseUi();
     }
   }, 100);
+
+  if (!window.__practicePhaseSyncBound) {
+    window.__practicePhaseSyncBound = true;
+    practicePhaseSyncTimer = window.setInterval(function () {
+      syncPracticeSetupPhaseUi();
+    }, 150);
+  }
 
   if (!window.__practiceRelayoutBound) {
     window.__practiceRelayoutBound = true;
@@ -688,5 +738,6 @@ document.addEventListener("DOMContentLoaded", function () {
     window.addEventListener("orientationchange", requestPracticeRelayout);
   }
   syncPracticeGestureEntryUi();
+  syncPracticeSetupPhaseUi();
   requestPracticeRelayout();
 });

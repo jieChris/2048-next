@@ -483,7 +483,7 @@
           title: "Palette Center",
           subtitle: "Manage tile and timer-legend colors with import/export and live preview.",
           listTitle: "Palette List",
-          empty: "No Palette Selected",
+          currentName: "Current Palette",
           create: "New Copy",
           rename: "Rename",
           remove: "Delete",
@@ -525,11 +525,11 @@
           custom: "自定义",
           current: "当前"
         };
+    if (!copy.currentName) copy.currentName = lang === "en" ? "Current Palette" : "当前色板";
     var direct = [
       [".palette-title", copy.title],
       [".palette-subtitle", copy.subtitle],
       [".palette-sidebar .panel-head h2", copy.listTitle],
-      ["#palette-current-name", copy.empty],
       ["#palette-create-btn", copy.create],
       ["#palette-rename-btn", copy.rename],
       ["#palette-delete-btn", copy.remove],
@@ -540,6 +540,10 @@
       var item = direct[i];
       var node = global.document.querySelector(item[0]);
       if (node) node.textContent = item[1];
+    }
+    var currentName = global.document.getElementById("palette-current-name");
+    if (currentName && currentName.getAttribute("data-palette-name-bound") !== "1") {
+      currentName.textContent = copy.currentName;
     }
     var nav = global.document.querySelectorAll(".palette-nav .palette-nav-btn");
     for (var n = 0; n < nav.length; n += 1) {
@@ -694,88 +698,79 @@
     return byValue;
   }
 
+  function resolveLanguageFromToggle(toggle) {
+    if (!toggle) return readLanguage();
+    return toggle.checked ? "en" : "zh";
+  }
+
   function ensureLanguageRow(lang) {
     var modal = global.document.querySelector("#settings-modal .settings-modal-content");
     if (!modal) return;
     var row = global.document.getElementById("ui-language-settings-row");
     var label = global.document.getElementById("ui-language-label");
-    var select = global.document.getElementById("ui-language-select");
-    var note = global.document.getElementById("ui-language-note");
+    var toggle = global.document.getElementById("ui-language-toggle");
+    var thumb = global.document.getElementById("ui-language-toggle-thumb");
     if (!row) {
       row = global.document.createElement("div");
       row.id = "ui-language-settings-row";
-      row.className = "settings-row language-settings-row";
-      label = global.document.createElement("label");
-      label.id = "ui-language-label";
-      label.setAttribute("for", "ui-language-select");
-      select = global.document.createElement("select");
-      select.id = "ui-language-select";
-      select.className = "settings-select language-settings-select";
-      var zh = global.document.createElement("option");
-      zh.value = "zh";
-      var en = global.document.createElement("option");
-      en.value = "en";
-      select.appendChild(zh);
-      select.appendChild(en);
-      note = global.document.createElement("div");
-      note.id = "ui-language-note";
-      note.className = "settings-note";
-      row.appendChild(label);
-      row.appendChild(select);
-      row.appendChild(note);
+      row.className = "settings-row settings-toggle-row language-settings-row";
+      row.innerHTML =
+        '<div class="settings-toggle-main language-toggle-main">' +
+        '  <div class="settings-toggle-copy">' +
+        '    <div id="ui-language-label" class="settings-toggle-title"></div>' +
+        '    <div id="ui-language-desc" class="settings-toggle-desc"></div>' +
+        '  </div>' +
+        '  <label class="settings-switch language-settings-switch">' +
+        '    <input id="ui-language-toggle" type="checkbox" role="switch">' +
+        '    <span class="settings-switch-slider language-switch-slider"></span>' +
+        '    <span id="ui-language-toggle-thumb" class="language-switch-thumb">\u4e2d</span>' +
+        '  </label>' +
+        '</div>';
       var actions = modal.querySelector(".replay-modal-actions");
       if (actions && actions.parentNode && typeof actions.parentNode.insertBefore === "function") {
         actions.parentNode.insertBefore(row, actions);
       } else {
         modal.appendChild(row);
       }
+      label = global.document.getElementById("ui-language-label");
+      toggle = global.document.getElementById("ui-language-toggle");
+      thumb = global.document.getElementById("ui-language-toggle-thumb");
     }
-    label.textContent = lang === "en" ? "Language" : "界面语言";
-    note.textContent = lang === "en" ? "Switch UI language between Chinese and English." : "切换中英文界面，立即生效并自动保存。";
+    if (!label || !toggle || !thumb) return;
+    var desc = global.document.getElementById("ui-language-desc");
+    label.textContent = lang === "en" ? "Language" : "\u754c\u9762\u8bed\u8a00";
+    if (desc) desc.textContent = lang === "en" ? "Switch page language." : "\u9875\u9762\u4e2d\u82f1\u6587\u5207\u6362";
+    toggle.setAttribute("aria-label", lang === "en" ? "Language" : "\u754c\u9762\u8bed\u8a00");
     var isLocked = isLanguageSelectLocked();
-    if (select.options && select.options[0]) select.options[0].value = "zh";
-    if (select.options && select.options[1]) select.options[1].value = "en";
-    if (!select.dataset.bound) {
-      select.dataset.bound = "1";
-      var beginSelectInteraction = function () {
+    if (!toggle.dataset.bound) {
+      toggle.dataset.bound = "1";
+      var beginToggleInteraction = function () {
         lockLanguageSelect(1800);
       };
-      var commitSelectLanguage = function () {
+      var commitToggleLanguage = function () {
         lockLanguageSelect(320);
-        var nextLang = resolveLanguageFromSelect(select);
+        var nextLang = resolveLanguageFromToggle(toggle);
         if (nextLang === currentLang) return;
         setLanguage(nextLang, true);
       };
-      var onSelectChange = function () {
-        beginSelectInteraction();
+      var onToggleChange = function () {
+        beginToggleInteraction();
         if (typeof global.setTimeout === "function") {
-          global.setTimeout(commitSelectLanguage, 0);
+          global.setTimeout(commitToggleLanguage, 0);
           return;
         }
-        commitSelectLanguage();
+        commitToggleLanguage();
       };
-      var onSelectPointerUp = function () {
-        beginSelectInteraction();
-        if (typeof global.setTimeout === "function") {
-          global.setTimeout(commitSelectLanguage, 120);
-        }
-      };
-      select.addEventListener("pointerdown", beginSelectInteraction);
-      select.addEventListener("touchstart", beginSelectInteraction);
-      select.addEventListener("mousedown", beginSelectInteraction);
-      select.addEventListener("focus", beginSelectInteraction);
-      select.addEventListener("change", onSelectChange);
-      select.addEventListener("input", onSelectChange);
-      select.addEventListener("pointerup", onSelectPointerUp);
-      select.addEventListener("touchend", onSelectPointerUp);
+      toggle.addEventListener("pointerdown", beginToggleInteraction);
+      toggle.addEventListener("touchstart", beginToggleInteraction);
+      toggle.addEventListener("mousedown", beginToggleInteraction);
+      toggle.addEventListener("focus", beginToggleInteraction);
+      toggle.addEventListener("change", onToggleChange);
+      toggle.addEventListener("input", onToggleChange);
     }
     if (!isLocked) {
-      select.options[0].textContent = lang === "en" ? "Chinese" : "中文";
-      select.options[1].textContent = "English";
-      select.value = lang;
-      if (String(select.value || "") !== lang) {
-        select.selectedIndex = lang === "en" ? 1 : 0;
-      }
+      toggle.checked = lang === "en";
+      thumb.textContent = lang === "en" ? "En" : "\u4e2d";
     }
   }
 

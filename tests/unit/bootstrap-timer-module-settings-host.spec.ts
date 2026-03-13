@@ -154,7 +154,7 @@ describe("bootstrap timer module settings host", () => {
     expect(result).toBe(toggle);
     expect(content.insertedRow).toEqual(
       expect.objectContaining({
-        className: "settings-row",
+        className: "settings-row settings-toggle-row",
         innerHTML: "<input id='timer-module-view-toggle' />"
       })
     );
@@ -162,15 +162,29 @@ describe("bootstrap timer module settings host", () => {
   });
 
   it("returns existing toggle directly when already present", () => {
-    const existingToggle = { id: "timer-module-view-toggle" };
+    const existingRow = {
+      innerHTML: ""
+    };
+    const existingToggle = {
+      id: "timer-module-view-toggle",
+      closest(selector: string) {
+        return selector === ".settings-row" ? existingRow : null;
+      }
+    };
     const result = ensureTimerModuleSettingsToggle({
       documentLike: {
         getElementById(id: string) {
           return id === "timer-module-view-toggle" ? existingToggle : null;
         }
+      },
+      timerModuleRuntime: {
+        buildTimerModuleSettingsRowInnerHtml() {
+          return "<input id='timer-module-view-toggle' />";
+        }
       }
     });
     expect(result).toBe(existingToggle);
+    expect(existingRow.innerHTML).toBe("<input id='timer-module-view-toggle' />");
   });
 
   it("schedules retry when manager is not ready", () => {

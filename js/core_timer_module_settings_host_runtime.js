@@ -144,8 +144,17 @@
   function ensureTimerModuleSettingsToggle(input) {
     var source = toRecord(input);
     var documentLike = source.documentLike;
+    var timerModuleRuntime = toRecord(source.timerModuleRuntime);
+    var buildSettingsRow = asFunction(timerModuleRuntime.buildTimerModuleSettingsRowInnerHtml);
     var existingToggle = getElementById(documentLike, "timer-module-view-toggle");
-    if (existingToggle) return existingToggle;
+    var existingClosest = asFunction(toRecord(existingToggle).closest);
+    var existingRow = existingClosest && existingToggle
+      ? existingClosest.call(existingToggle, ".settings-row")
+      : null;
+    if (existingRow) {
+      toRecord(existingRow).innerHTML = buildSettingsRow ? String(buildSettingsRow()) : "";
+      return getElementById(documentLike, "timer-module-view-toggle");
+    }
 
     var modal = getElementById(documentLike, "settings-modal");
     if (!modal) return null;
@@ -155,10 +164,7 @@
     var row = createElement(documentLike, "div");
     if (!row) return null;
     var rowRecord = toRecord(row);
-    rowRecord.className = "settings-row";
-
-    var timerModuleRuntime = toRecord(source.timerModuleRuntime);
-    var buildSettingsRow = asFunction(timerModuleRuntime.buildTimerModuleSettingsRowInnerHtml);
+    rowRecord.className = "settings-row settings-toggle-row";
     rowRecord.innerHTML = buildSettingsRow ? String(buildSettingsRow()) : "";
 
     var actions = querySelector(content, ".replay-modal-actions");

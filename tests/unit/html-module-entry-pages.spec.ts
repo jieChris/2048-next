@@ -39,4 +39,14 @@ describe("module entry html pages", () => {
       expect(legacyJsScripts).toEqual([]);
     });
   }
+
+  it("palette.html preserves required palette editor mounts", () => {
+    const html = readHtml("palette.html");
+
+    expect(html).toContain('id="palette-editor-pow2"');
+    expect(html).toContain('id="palette-editor-fib"');
+    expect(html).toContain('id="palette-preview-pow2"');
+    expect(html).toContain('id="palette-preview-fib"');
+    expect(html).toContain('id="palette-preview-legend"');
+  });
 });

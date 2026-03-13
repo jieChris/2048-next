@@ -155,6 +155,8 @@ describe("bootstrap settings modal page host", () => {
   it("creates settings init resolvers and delegates theme/timer/cleanup init", () => {
     const applyThemeSettingsPageInit = vi.fn(() => ({ didApply: true }));
     const applyLegacyUndoSettingsCleanup = vi.fn(() => ({ didRemoveRow: true }));
+    const applyTimerModuleSettingsPageInit = vi.fn(() => ({ didApply: true }));
+    const setTimeoutLike = vi.fn();
 
     const resolvers = createSettingsModalInitResolvers({
       themeSettingsPageHostRuntime: {
@@ -165,19 +167,19 @@ describe("bootstrap settings modal page host", () => {
       timerModuleSettingsHostRuntime: {
         applyLegacyUndoSettingsCleanup
       },
+      timerModuleSettingsPageHostRuntime: {
+        applyTimerModuleSettingsPageInit
+      },
       timerModuleRuntime: { id: "timer-runtime" },
       documentLike: { id: "document" },
       windowLike: { id: "window" },
       retryDelayMs: 120,
-      setTimeoutLike: vi.fn()
+      setTimeoutLike
     });
 
     expect(resolvers.initThemeSettingsUI()).toEqual({ didApply: true });
     expect(resolvers.removeLegacyUndoSettingsUI()).toEqual({ didRemoveRow: true });
-    expect(resolvers.initTimerModuleSettingsUI()).toEqual({
-      removed: false,
-      disabled: true
-    });
+    expect(resolvers.initTimerModuleSettingsUI()).toEqual({ didApply: true });
     expect(resolvers.initWinPromptSettingsUI()).toEqual({
       hasToggle: false,
       didBindToggle: false,
@@ -193,41 +195,26 @@ describe("bootstrap settings modal page host", () => {
     expect(applyLegacyUndoSettingsCleanup).toHaveBeenCalledWith({
       documentLike: { id: "document" }
     });
+    expect(applyTimerModuleSettingsPageInit).toHaveBeenCalledWith({
+      timerModuleSettingsHostRuntime: {
+        applyLegacyUndoSettingsCleanup
+      },
+      timerModuleRuntime: { id: "timer-runtime" },
+      documentLike: { id: "document" },
+      windowLike: { id: "window" },
+      retryDelayMs: 120,
+      setTimeoutLike,
+      reinvokeInit: expect.any(Function),
+      syncMobileTimerboxUi: undefined
+    });
   });
 
-  it("hides legacy timer module controls from settings modal", () => {
-    const settingsRow = {};
-    const parentNode = {
-      removeChild: vi.fn()
-    };
-    const toggle = {
-      style: {},
-      closest: vi.fn(() => ({
-        ...settingsRow,
-        parentNode
-      }))
-    };
-    const note = {
-      style: {}
-    };
-
+  it("returns null for timer settings init when page host api is missing", () => {
     const resolvers = createSettingsModalInitResolvers({
-      documentLike: {
-        getElementById(id: string) {
-          if (id === "timer-module-view-toggle") return toggle;
-          if (id === "timer-module-view-note") return note;
-          return null;
-        }
-      }
+      documentLike: {}
     });
 
-    expect(resolvers.initTimerModuleSettingsUI()).toEqual({
-      removed: true,
-      disabled: true
-    });
-    expect(parentNode.removeChild).toHaveBeenCalledTimes(1);
-    expect(toggle.closest).toHaveBeenCalledWith(".settings-row");
-    expect((note.style as Record<string, unknown>).display).toBe("none");
+    expect(resolvers.initTimerModuleSettingsUI()).toBeNull();
   });
 
   it("initializes win prompt toggle state from storage and persists changes", () => {
@@ -267,12 +254,12 @@ describe("bootstrap settings modal page host", () => {
       didSync: true
     });
     expect(toggle.checked).toBe(false);
-    expect(note.textContent).toContain("不弹出胜利提示");
+    expect(note.textContent).toContain("自动继续游戏");
 
     toggle.checked = true;
     handlers.change && handlers.change();
     expect(localStorage.setItem).toHaveBeenCalledWith("settings_win_prompt_enabled_v1", "1");
-    expect(note.textContent).toContain("会弹出胜利提示");
+    expect(note.textContent).toContain("弹出胜利提示");
 
     expect(resolvers.initWinPromptSettingsUI()).toEqual({
       hasToggle: true,
@@ -314,7 +301,7 @@ describe("bootstrap settings modal page host", () => {
       didSync: true
     });
     expect(toggle.checked).toBe(false);
-    expect(note.textContent).toContain("不弹出胜利提示");
+    expect(note.textContent).toContain("自动继续游戏");
   });
 
   it("creates settings init resolvers with safe fallbacks when host apis are missing", () => {
@@ -326,10 +313,7 @@ describe("bootstrap settings modal page host", () => {
 
     expect(resolvers.initThemeSettingsUI()).toBeNull();
     expect(resolvers.removeLegacyUndoSettingsUI()).toBeNull();
-    expect(resolvers.initTimerModuleSettingsUI()).toEqual({
-      removed: false,
-      disabled: true
-    });
+    expect(resolvers.initTimerModuleSettingsUI()).toBeNull();
     expect(resolvers.initWinPromptSettingsUI()).toEqual({
       hasToggle: false,
       didBindToggle: false,

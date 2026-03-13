@@ -5,7 +5,7 @@
 
   var POW2_VALUES = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
   var FIB_VALUES = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597];
-  var LEGEND_VALUES = [16, 32, 64, 128, 256, 512, 1024, 2048];
+  var LEGEND_VALUES = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
   var REQUIRED_THEME_API_NAMES = [
     "getTilePalettes",
     "getActiveTilePaletteId",
@@ -70,6 +70,12 @@
     var b = parseInt(color.slice(5, 7), 16);
     var luminance = (0.299 * r) + (0.587 * g) + (0.114 * b);
     return luminance > 165 ? "#55473a" : "#f9f6f2";
+  }
+
+  function syncLegendPreviewStyles(themeManager) {
+    var syncTimerLegendStyles = asFunction(toRecord(themeManager).syncTimerLegendStyles);
+    if (!syncTimerLegendStyles) return;
+    syncTimerLegendStyles.call(themeManager);
   }
 
   function isLockedPalette(palette) {
@@ -247,6 +253,7 @@
       host.innerHTML = "";
       for (var i = 0; i < 16; i += 1) {
         var item = createEl("label", "color-item", "");
+        if (locked) item.classList.add("is-locked");
         var picker = createEl("input", "", "");
         picker.type = "color";
         picker.value = normalizeHexColor(colors[i], "#000000");
@@ -287,12 +294,18 @@
     function renderLegendRow(host, colors) {
       host.innerHTML = "";
       for (var i = 0; i < LEGEND_VALUES.length; i += 1) {
-        var color = normalizeHexColor(colors[Math.min(i + 3, colors.length - 1)], "#000000");
-        var item = createEl("div", "legend-pill", resolveText(LEGEND_VALUES[i]));
+        var value = LEGEND_VALUES[i];
+        var color = normalizeHexColor(colors[Math.min(i + 4, colors.length - 1)], "#000000");
+        var item = createEl(
+          "div",
+          "legend-pill timer-legend-pill timer-legend-" + resolveText(value),
+          resolveText(value)
+        );
         item.style.background = color;
         item.style.color = textColorForBg(color);
         host.appendChild(item);
       }
+      syncLegendPreviewStyles(themeManager);
     }
 
     function refresh() {
@@ -317,6 +330,7 @@
       ]);
 
       currentNameEl.textContent = activeName;
+      currentNameEl.setAttribute("data-palette-name-bound", "1");
       currentTagEl.textContent = locked ? "只读" : "可编辑";
       nameInputEl.value = activeName;
       renameBtn.disabled = locked;

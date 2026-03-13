@@ -207,20 +207,19 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return originalApplyAutoStartPageHostFromContext(opts);
       };
       try {
-        const existingToggle = document.getElementById("home-guide-toggle");
-        if (existingToggle) {
-          const existingRow = existingToggle.closest(".settings-row");
+        const existingTrigger = document.getElementById("home-guide-trigger-btn");
+        if (existingTrigger) {
+          const existingRow = existingTrigger.closest(".settings-row");
           if (existingRow && existingRow.parentNode) {
             existingRow.parentNode.removeChild(existingRow);
           }
         }
         openSettingsModal();
-        const toggle = document.getElementById("home-guide-toggle") as HTMLInputElement | null;
-        if (!toggle) {
-          return { hasRuntime: true, hasSettingsOpen: true, hasToggle: false };
+        const trigger = document.getElementById("home-guide-trigger-btn") as HTMLButtonElement | null;
+        if (!trigger) {
+          return { hasRuntime: true, hasSettingsOpen: true, hasTrigger: false };
         }
-        toggle.checked = true;
-        toggle.dispatchEvent(new Event("change", { bubbles: true }));
+        trigger.click();
         const overlay = document.getElementById("home-guide-overlay");
         const overlayVisibleBeforeFinish = Boolean(overlay && overlay.style.display !== "none");
         await new Promise((resolve) => {
@@ -246,7 +245,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasRuntime: true,
           hasPageHostRuntime: true,
           hasSettingsOpen: true,
-          hasToggle: true,
+          hasTrigger: true,
           applySettingsPageHostCallCount,
           applyAutoStartPageHostCallCount,
           callCount,
@@ -312,7 +311,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.hasPageHostRuntime).toBe(true);
     expect(snapshot.hasSettingsOpen).toBe(true);
-    expect(snapshot.hasToggle).toBe(true);
+    expect(snapshot.hasTrigger).toBe(true);
     expect(snapshot.applySettingsPageHostCallCount).toBeGreaterThan(0);
     expect(snapshot.applyAutoStartPageHostCallCount).toBe(0);
     expect(snapshot.applyAutoStartPageHostFromContextCallCount).toBeGreaterThanOrEqual(0);
@@ -356,17 +355,28 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(220);
 
     const started = await page.evaluate(() => {
       const openSettingsModal = (window as any).openSettingsModal;
       if (typeof openSettingsModal !== "function") return false;
       openSettingsModal();
-      const toggle = document.getElementById("home-guide-toggle") as HTMLInputElement | null;
-      if (!toggle) return false;
-      toggle.checked = true;
-      toggle.dispatchEvent(new Event("change", { bubbles: true }));
-      const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
-      return !!(overlay && overlay.style.display !== "none");
+      return new Promise<boolean>((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            const trigger = document.getElementById("home-guide-trigger-btn") as HTMLButtonElement | null;
+            if (!trigger) {
+              resolve(false);
+              return;
+            }
+            trigger.click();
+            window.requestAnimationFrame(() => {
+              const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
+              resolve(!!(overlay && overlay.style.display !== "none"));
+            });
+          });
+        });
+      });
     });
     expect(started).toBe(true);
 
@@ -391,17 +401,28 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
+    await page.waitForTimeout(220);
 
     const started = await page.evaluate(() => {
       const openSettingsModal = (window as any).openSettingsModal;
       if (typeof openSettingsModal !== "function") return false;
       openSettingsModal();
-      const toggle = document.getElementById("home-guide-toggle") as HTMLInputElement | null;
-      if (!toggle) return false;
-      toggle.checked = true;
-      toggle.dispatchEvent(new Event("change", { bubbles: true }));
-      const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
-      return !!(overlay && overlay.style.display !== "none");
+      return new Promise<boolean>((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            const trigger = document.getElementById("home-guide-trigger-btn") as HTMLButtonElement | null;
+            if (!trigger) {
+              resolve(false);
+              return;
+            }
+            trigger.click();
+            window.requestAnimationFrame(() => {
+              const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
+              resolve(!!(overlay && overlay.style.display !== "none"));
+            });
+          });
+        });
+      });
     });
     expect(started).toBe(true);
 

@@ -60,15 +60,20 @@
     return true;
   }
 
-  function readToggleChecked(toggle) {
-    return resolveBoolean(toRecord(toggle).checked);
-  }
-
-  function ensureHomeGuideSettingsToggle(input) {
+  function ensureHomeGuideSettingsTrigger(input) {
     var source = toRecord(input);
     var documentLike = toRecord(source.documentLike);
-    var existingToggle = getElementById(documentLike, "home-guide-toggle");
-    if (existingToggle) return existingToggle;
+    var homeGuideRuntime = toRecord(source.homeGuideRuntime);
+    var buildRowInnerHtml = asFunction(homeGuideRuntime.buildHomeGuideSettingsRowInnerHtml);
+    var existingTrigger = getElementById(documentLike, "home-guide-trigger-btn");
+    var existingClosest = asFunction(toRecord(existingTrigger).closest);
+    var existingRow = existingClosest && existingTrigger
+      ? existingClosest.call(existingTrigger, ".settings-row")
+      : null;
+    if (existingRow) {
+      toRecord(existingRow).innerHTML = resolveText(buildRowInnerHtml ? buildRowInnerHtml() : "");
+      return getElementById(documentLike, "home-guide-trigger-btn");
+    }
 
     var modal = getElementById(documentLike, "settings-modal");
     if (!modal) return null;
@@ -79,10 +84,7 @@
     var row = createElement(documentLike, "div");
     if (!row) return null;
     var rowRecord = toRecord(row);
-    rowRecord.className = "settings-row";
-
-    var homeGuideRuntime = toRecord(source.homeGuideRuntime);
-    var buildRowInnerHtml = asFunction(homeGuideRuntime.buildHomeGuideSettingsRowInnerHtml);
+    rowRecord.className = "settings-row settings-action-row";
     rowRecord.innerHTML = resolveText(buildRowInnerHtml ? buildRowInnerHtml() : "");
 
     var actions = querySelector(content, ".replay-modal-actions");
@@ -92,7 +94,7 @@
       appendChild(content, row);
     }
 
-    return getElementById(documentLike, "home-guide-toggle");
+    return getElementById(documentLike, "home-guide-trigger-btn");
   }
 
   function applyHomeGuideSettingsUi(input) {
@@ -110,7 +112,7 @@
       };
     }
 
-    var toggle = ensureHomeGuideSettingsToggle({
+    var toggle = ensureHomeGuideSettingsTrigger({
       documentLike: source.documentLike,
       homeGuideRuntime: homeGuideRuntime
     });
@@ -124,7 +126,6 @@
     }
 
     var documentLike = toRecord(source.documentLike);
-    var note = getElementById(documentLike, "home-guide-note");
     var isHomePage = asFunction(source.isHomePage);
     var closeSettingsModal = asFunction(source.closeSettingsModal);
     var startHomeGuide = asFunction(source.startHomeGuide);
@@ -139,10 +140,6 @@
       }));
       var toggleRecord = toRecord(toggle);
       toggleRecord.disabled = resolveBoolean(uiState.toggleDisabled);
-      toggleRecord.checked = resolveBoolean(uiState.toggleChecked);
-      if (note) {
-        toRecord(note).textContent = resolveText(uiState.noteText);
-      }
       didSync = true;
     };
 
@@ -160,9 +157,9 @@
     var didBindToggle = false;
     if (toggleBindingState.shouldBind) {
       toggleRecord.__homeGuideBound = toggleBindingState.boundValue;
-      didBindToggle = bindListener(toggle, "change", function () {
+      didBindToggle = bindListener(toggle, "click", function () {
         var toggleAction = toRecord(resolveHomeGuideToggleAction({
-          checked: readToggleChecked(toggle),
+          checked: true,
           isHomePage: isHomePage ? !!isHomePage() : false
         }));
         if (toggleAction.shouldResync) {

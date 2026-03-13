@@ -452,8 +452,102 @@ function resolveInvalidatedTimerElementIdsFallback(manager, value) {
   return elementIds;
 }
 
-function applyInvalidatedSubTimersForReached32k(manager, value) {
-  invalidateSecondaryTimersByLimit(manager, value, "---------");
+function createInvalidatedSecondaryTimerElementIdsPayload(manager, value) {
+  var descriptors = resolveSecondaryTimerDescriptors(manager);
+  var payloadDescriptors = [];
+  for (var i = 0; i < descriptors.length; i++) {
+    var descriptor = descriptors[i];
+    if (!descriptor) continue;
+    payloadDescriptors.push({
+      parent: descriptor.parent,
+      child: descriptor.child,
+      parentReached: isSecondaryTimerParentReached(manager, descriptor.parent)
+    });
+  }
+  return {
+    descriptors: payloadDescriptors,
+    value: value
+  };
+}
+
+function resolveInvalidatedSecondaryTimerElementIdsByCore(manager, value) {
+  return resolveCoreArgsCallWith(
+    manager,
+    "callCoreTimerIntervalRuntime",
+    "resolveInvalidatedSecondaryTimerElementIds",
+    [createInvalidatedSecondaryTimerElementIdsPayload(manager, value)],
+    undefined,
+    function (currentManager, coreCallResult) {
+      return currentManager.resolveNormalizedCoreValueOrUndefined(coreCallResult, function (coreValue) {
+        return Array.isArray(coreValue) ? coreValue : [];
+      });
+    }
+  );
+}
+
+function resolveInvalidatedSecondaryTimerElementIdsFallback(manager, value) {
+  var placedValue = normalizeSecondaryTimerValue(value);
+  if (placedValue === null || placedValue < 2048) return [];
+  var descriptors = resolveSecondaryTimerDescriptors(manager);
+  var elementIds = [];
+  for (var i = 0; i < descriptors.length; i++) {
+    var descriptor = descriptors[i];
+    if (!descriptor || descriptor.child !== placedValue) continue;
+    if (normalizeSecondaryTimerValue(descriptor.parent) <= placedValue) continue;
+    if (!isSecondaryTimerParentReached(manager, descriptor.parent)) continue;
+    elementIds.push(resolveSecondaryTimerValueId(descriptor.parent, descriptor.child));
+  }
+  return elementIds;
+}
+
+function applyInvalidatedSecondaryTimerPlaceholdersForCustomTile(manager, value) {
+  var invalidatedIdsByCore = resolveInvalidatedSecondaryTimerElementIdsByCore(manager, value);
+  if (typeof invalidatedIdsByCore !== "undefined") {
+    applyInvalidatedTimerPlaceholders(manager, invalidatedIdsByCore);
+  } else {
+    applyInvalidatedTimerPlaceholders(manager, resolveInvalidatedSecondaryTimerElementIdsFallback(manager, value));
+  }
+}
+
+function syncPracticeRestartBoardSnapshot(manager) {
+  if (!manager || manager.modeKey !== "practice" || manager.hasGameStarted) return;
+  var boardMatrix = getFinalBoardMatrix(manager);
+  manager.initialBoardMatrix = cloneBoardMatrix(boardMatrix);
+  manager.replayStartBoardMatrix = cloneBoardMatrix(boardMatrix);
+  manager.practiceRestartBoardMatrix = cloneBoardMatrix(boardMatrix);
+  manager.practiceRestartModeConfig = manager.modeConfig
+    ? manager.clonePlain(manager.modeConfig)
+    : null;
+}
+
+function collectPracticeBoardMilestoneValues(board) {
+  var values = {};
+  var rows = Array.isArray(board) ? board : [];
+  for (var y = 0; y < rows.length; y++) {
+    var row = Array.isArray(rows[y]) ? rows[y] : [];
+    for (var x = 0; x < row.length; x++) {
+      var value = Number(row[x]);
+      if (!Number.isInteger(value) || value <= 0) continue;
+      values[String(value)] = value;
+    }
+  }
+  return Object.keys(values)
+    .map(function (key) { return values[key]; })
+    .sort(function (a, b) { return b - a; });
+}
+
+function applyPracticeSetupTimerStateFromBoard(manager, board) {
+  if (!manager || manager.modeKey !== "practice") return;
+  var values = collectPracticeBoardMilestoneValues(board);
+  if (!values.length) {
+    refreshSecondaryTimerRowsVisibility(manager);
+    return;
+  }
+  for (var i = 0; i < values.length; i++) {
+    var value = values[i];
+    applyInvalidatedTimerPlaceholdersForCustomTile(manager, value);
+    applyCustomTileReached32kState(manager, value);
+  }
 }
 
 function createInvalidatedTimerElementIdsPayload(manager, value) {
@@ -492,7 +586,7 @@ function applyInvalidatedTimerPlaceholdersForCustomTile(manager, value) {
   } else {
     applyInvalidatedTimerPlaceholders(manager, resolveInvalidatedTimerElementIdsFallback(manager, value));
   }
-  applyInvalidatedSubTimersForReached32k(manager, value);
+  applyInvalidatedSecondaryTimerPlaceholdersForCustomTile(manager, value);
   refreshSecondaryTimerRowsVisibility(manager);
 }
 
@@ -520,17 +614,20 @@ function applyCustomTileReached32kState(manager, value) {
 
 function insertCustomTile(manager, x, y, value) {
   if (!manager) return;
+  if (manager.hasGameStarted) return;
   if (manager.isBlockedCell(x, y)) throw "Blocked cell cannot be edited";
   var cell = { x: x, y: y };
   removeCustomTileExistingAtCell(manager, cell);
   if (value === 0) {
     recordPracticeCustomTileActionIfNeeded(manager, x, y, value);
+    syncPracticeRestartBoardSnapshot(manager);
     clearTransientTileVisualState(manager); actuate(manager); return;
   }
   var tile = new Tile({ x: x, y: y }, value);
   manager.grid.insertTile(tile);
   applyInvalidatedTimerPlaceholdersForCustomTile(manager, value);
   applyCustomTileReached32kState(manager, value);
+  syncPracticeRestartBoardSnapshot(manager);
   clearTransientTileVisualState(manager);
   actuate(manager);
   recordPracticeCustomTileActionIfNeeded(manager, x, y, value);

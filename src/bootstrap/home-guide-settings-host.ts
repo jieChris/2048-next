@@ -61,18 +61,26 @@ function bindListener(
   return true;
 }
 
-function readToggleChecked(toggle: unknown): boolean {
-  return resolveBoolean(toRecord(toggle).checked);
-}
-
-function ensureHomeGuideSettingsToggle(input: {
+function ensureHomeGuideSettingsTrigger(input: {
   documentLike?: unknown;
   homeGuideRuntime?: unknown;
 }): unknown {
   const source = toRecord(input);
   const documentLike = toRecord(source.documentLike);
-  const existingToggle = getElementById(documentLike, "home-guide-toggle");
-  if (existingToggle) return existingToggle;
+  const homeGuideRuntime = toRecord(source.homeGuideRuntime);
+  const buildRowInnerHtml = asFunction<() => unknown>(
+    homeGuideRuntime.buildHomeGuideSettingsRowInnerHtml
+  );
+  const existingTrigger = getElementById(documentLike, "home-guide-trigger-btn");
+  const existingClosest = asFunction<(selector: string) => unknown>(toRecord(existingTrigger).closest);
+  const existingRow =
+    existingClosest && existingTrigger
+      ? (existingClosest as unknown as Function).call(existingTrigger, ".settings-row")
+      : null;
+  if (existingRow) {
+    toRecord(existingRow).innerHTML = resolveText(buildRowInnerHtml ? buildRowInnerHtml() : "");
+    return getElementById(documentLike, "home-guide-trigger-btn");
+  }
 
   const modal = getElementById(documentLike, "settings-modal");
   if (!modal) return null;
@@ -83,12 +91,7 @@ function ensureHomeGuideSettingsToggle(input: {
   const row = createElement(documentLike, "div");
   if (!row) return null;
   const rowRecord = toRecord(row);
-  rowRecord.className = "settings-row";
-
-  const homeGuideRuntime = toRecord(source.homeGuideRuntime);
-  const buildRowInnerHtml = asFunction<() => unknown>(
-    homeGuideRuntime.buildHomeGuideSettingsRowInnerHtml
-  );
+  rowRecord.className = "settings-row settings-action-row";
   rowRecord.innerHTML = resolveText(buildRowInnerHtml ? buildRowInnerHtml() : "");
 
   const actions = querySelector(content, ".replay-modal-actions");
@@ -98,7 +101,7 @@ function ensureHomeGuideSettingsToggle(input: {
     appendChild(content, row);
   }
 
-  return getElementById(documentLike, "home-guide-toggle");
+  return getElementById(documentLike, "home-guide-trigger-btn");
 }
 
 export interface HomeGuideSettingsHostResult {
@@ -141,11 +144,11 @@ export function applyHomeGuideSettingsUi(input: {
     };
   }
 
-  const toggle = ensureHomeGuideSettingsToggle({
+  const trigger = ensureHomeGuideSettingsTrigger({
     documentLike: source.documentLike,
     homeGuideRuntime
   });
-  if (!toggle) {
+  if (!trigger) {
     return {
       hasToggle: false,
       didBindToggle: false,
@@ -154,8 +157,6 @@ export function applyHomeGuideSettingsUi(input: {
     };
   }
 
-  const documentLike = toRecord(source.documentLike);
-  const note = getElementById(documentLike, "home-guide-note");
   const isHomePage = asFunction<() => unknown>(source.isHomePage);
   const closeSettingsModal = asFunction<() => unknown>(source.closeSettingsModal);
   const startHomeGuide = asFunction<(payload: unknown) => unknown>(source.startHomeGuide);
@@ -170,12 +171,8 @@ export function applyHomeGuideSettingsUi(input: {
         fromSettings: resolveBoolean(homeGuideState.fromSettings)
       })
     );
-    const toggleRecord = toRecord(toggle);
-    toggleRecord.disabled = resolveBoolean(uiState.toggleDisabled);
-    toggleRecord.checked = resolveBoolean(uiState.toggleChecked);
-    if (note) {
-      toRecord(note).textContent = resolveText(uiState.noteText);
-    }
+    const triggerRecord = toRecord(trigger);
+    triggerRecord.disabled = resolveBoolean(uiState.toggleDisabled);
     didSync = true;
   };
 
@@ -185,7 +182,7 @@ export function applyHomeGuideSettingsUi(input: {
     didAssignSync = true;
   }
 
-  const toggleRecord = toRecord(toggle);
+  const toggleRecord = toRecord(trigger);
   const toggleBindingState = toRecord(
     resolveHomeGuideBindingState({
       alreadyBound: resolveBoolean(toggleRecord.__homeGuideBound)
@@ -195,10 +192,10 @@ export function applyHomeGuideSettingsUi(input: {
   let didBindToggle = false;
   if (toggleBindingState.shouldBind) {
     toggleRecord.__homeGuideBound = toggleBindingState.boundValue;
-    didBindToggle = bindListener(toggle, "change", function () {
+    didBindToggle = bindListener(trigger, "click", function () {
       const toggleAction = toRecord(
         resolveHomeGuideToggleAction({
-          checked: readToggleChecked(toggle),
+          checked: true,
           isHomePage: isHomePage ? !!isHomePage() : false
         })
       );

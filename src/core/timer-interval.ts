@@ -56,3 +56,43 @@ export function resolveInvalidatedTimerElementIds(input: TimerInvalidationInput)
 
   return out;
 }
+
+export interface SecondaryTimerInvalidationDescriptorInput {
+  parent?: unknown;
+  child?: unknown;
+  parentReached?: boolean | null;
+}
+
+export interface SecondaryTimerInvalidationInput {
+  descriptors?: SecondaryTimerInvalidationDescriptorInput[] | null;
+  value?: unknown;
+}
+
+function normalizeTimerMilestoneValue(value: unknown): number | null {
+  const numeric = Number(value);
+  if (!Number.isInteger(numeric) || numeric <= 0) return null;
+  return numeric;
+}
+
+export function resolveInvalidatedSecondaryTimerElementIds(
+  input: SecondaryTimerInvalidationInput
+): string[] {
+  const source = input || ({} as SecondaryTimerInvalidationInput);
+  const descriptors = Array.isArray(source.descriptors) ? source.descriptors : [];
+  const placedValue = normalizeTimerMilestoneValue(source.value);
+  if (placedValue === null || placedValue < 2048) return [];
+  const out: string[] = [];
+
+  for (let i = 0; i < descriptors.length; i++) {
+    const descriptor = descriptors[i] || {};
+    const parent = normalizeTimerMilestoneValue(descriptor.parent);
+    const child = normalizeTimerMilestoneValue(descriptor.child);
+    if (parent === null || child === null) continue;
+    if (parent <= child) continue;
+    if (child !== placedValue) continue;
+    if (descriptor.parentReached !== true) continue;
+    out.push("timer-secondary-" + String(parent) + "-" + String(child));
+  }
+
+  return out;
+}

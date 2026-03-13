@@ -412,13 +412,13 @@
   function getToolkitCopy(lang) {
     if (lang === "en") {
       return {
-        label: "Toolkit",
-        palette: "Palette Center"
+        label: "Theme Settings",
+        palette: "Theme Settings"
       };
     }
     return {
-      label: "扩展中心",
-      palette: "色板中心"
+      label: "主题设置",
+      palette: "主题设置"
     };
   }
 
@@ -442,10 +442,6 @@
     if (!row) {
       row = createEl("div", "settings-row toolkit-entry-row", "");
       row.id = "toolkit-entry-row";
-
-      var label = createEl("label", "", "");
-      label.id = "toolkit-entry-label";
-      row.appendChild(label);
 
       var actionWrap = createEl("div", "toolkit-entry-actions", "");
       var palette = createEl("a", "replay-button", "");

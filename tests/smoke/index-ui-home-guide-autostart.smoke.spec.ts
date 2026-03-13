@@ -280,8 +280,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         hasRuntime: true,
         panelHasStep: typeof panelHtml === "string" && panelHtml.indexOf("home-guide-step") !== -1,
         panelHasSkip: typeof panelHtml === "string" && panelHtml.indexOf("home-guide-skip") !== -1,
-        settingsHasToggle:
-          typeof settingsRowHtml === "string" && settingsRowHtml.indexOf("home-guide-toggle") !== -1,
+        settingsHasTrigger:
+          typeof settingsRowHtml === "string" &&
+          settingsRowHtml.indexOf("home-guide-trigger-btn") !== -1,
         homePath: runtime.isHomePagePath("/index.html"),
         playPath: runtime.isHomePagePath("/play.html"),
         hasCompactHint: compactSelectors.includes("#top-mobile-hint-btn"),
@@ -347,7 +348,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.panelHasStep).toBe(true);
     expect(snapshot.panelHasSkip).toBe(true);
-    expect(snapshot.settingsHasToggle).toBe(true);
+    expect(snapshot.settingsHasTrigger).toBe(true);
     expect(snapshot.homePath).toBe(true);
     expect(snapshot.playPath).toBe(false);
     expect(snapshot.hasCompactHint).toBe(true);

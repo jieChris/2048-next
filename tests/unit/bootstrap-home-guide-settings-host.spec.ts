@@ -3,17 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import { applyHomeGuideSettingsUi } from "../../src/bootstrap/home-guide-settings-host";
 
 function createHarness() {
-  const toggleHandlers: Record<string, () => void> = {};
-  const toggle = {
+  const triggerHandlers: Record<string, () => void> = {};
+  const trigger = {
     __homeGuideBound: false,
-    checked: false,
     disabled: false,
     addEventListener(name: string, handler: () => void) {
-      toggleHandlers[name] = handler;
+      triggerHandlers[name] = handler;
     }
-  };
-  const note = {
-    textContent: ""
   };
 
   const actions = { parentNode: null as unknown };
@@ -44,8 +40,7 @@ function createHarness() {
   const documentLike = {
     getElementById(id: string) {
       if (id === "settings-modal") return modal;
-      if (id === "home-guide-note") return note;
-      if (id === "home-guide-toggle") return inserted ? toggle : null;
+      if (id === "home-guide-trigger-btn") return inserted ? trigger : null;
       return null;
     },
     createElement() {
@@ -58,9 +53,8 @@ function createHarness() {
 
   return {
     documentLike,
-    toggle,
-    toggleHandlers,
-    note,
+    trigger,
+    triggerHandlers,
     insertedRows
   };
 }
@@ -77,13 +71,13 @@ describe("bootstrap home guide settings host", () => {
       windowLike,
       homeGuideRuntime: {
         buildHomeGuideSettingsRowInnerHtml() {
-          return '<label><input id="home-guide-toggle" /></label><span id="home-guide-note"></span>';
+          return '<button id="home-guide-trigger-btn" type="button">Open Guide</button>';
         },
         resolveHomeGuideSettingsState() {
           return {
             toggleDisabled: false,
             toggleChecked: false,
-            noteText: "未启用"
+            noteText: "Guide is off"
           };
         },
         resolveHomeGuideBindingState() {
@@ -125,13 +119,11 @@ describe("bootstrap home guide settings host", () => {
       didSync: true
     });
     expect(harness.insertedRows).toHaveLength(1);
-    expect(harness.insertedRows[0].className).toBe("settings-row");
-    expect(harness.toggle.__homeGuideBound).toBe(true);
-    expect(harness.note.textContent).toBe("未启用");
+    expect(harness.insertedRows[0].className).toBe("settings-row settings-action-row");
+    expect(harness.trigger.__homeGuideBound).toBe(true);
     expect(typeof windowLike.syncHomeGuideSettingsUI).toBe("function");
 
-    harness.toggle.checked = true;
-    harness.toggleHandlers.change();
+    harness.triggerHandlers.click();
     expect(closeSettingsModal).toHaveBeenCalledTimes(1);
     expect(startHomeGuide).toHaveBeenCalledWith({ fromSettings: true });
   });
@@ -144,7 +136,7 @@ describe("bootstrap home guide settings host", () => {
       documentLike: harness.documentLike,
       homeGuideRuntime: {
         buildHomeGuideSettingsRowInnerHtml() {
-          return '<input id="home-guide-toggle" /><span id="home-guide-note"></span>';
+          return '<button id="home-guide-trigger-btn" type="button">Open Guide</button>';
         },
         resolveHomeGuideSettingsState() {
           syncMarks.push("sync");
@@ -173,7 +165,7 @@ describe("bootstrap home guide settings host", () => {
     });
 
     expect(syncMarks).toEqual(["sync"]);
-    harness.toggleHandlers.change();
+    harness.triggerHandlers.click();
     expect(syncMarks).toEqual(["sync", "sync"]);
   });
 });

@@ -1,4 +1,4 @@
-﻿(function (global) {
+(function (global) {
   "use strict";
 
   if (!global) return;
@@ -17,15 +17,24 @@
   function buildTimerModuleSettingsRowInnerHtml() {
     var isEn = resolveLang() === "en";
     return (
-      "<label for='timer-module-view-toggle'>" +
-      (isEn ? "Right Panel View" : "右侧栏视图") +
+      "<div class='settings-toggle-main'>" +
+      "<div class='settings-toggle-copy'>" +
+      "<label for='timer-module-view-toggle' class='settings-toggle-title'>" +
+      (isEn ? "Timer Mode" : "\u8ba1\u65f6\u5668\u6a21\u5f0f") +
       "</label>" +
-      "<label class='settings-switch-row'>" +
+      "<div id='timer-module-view-label' class='settings-toggle-desc'>" +
+      (isEn
+        ? "Turn on to show timers, turn off to show leaderboard."
+        : "\u5f00\u542f\u65f6\u663e\u793a\u8ba1\u65f6\u5668\uff0c\u5173\u95ed\u65f6\u663e\u793a\u6392\u884c\u699c\u3002") +
+      "</div>" +
+      "</div>" +
+      "<label class='settings-switch' for='timer-module-view-toggle' aria-label='" +
+      (isEn ? "Timer Mode" : "\u8ba1\u65f6\u5668\u6a21\u5f0f") +
+      "'>" +
       "<input id='timer-module-view-toggle' type='checkbox'>" +
-      "<span id='timer-module-view-label'>" +
-      (isEn ? "Timer Mode" : "计时器模式") +
-      "</span>" +
+      "<span class='settings-switch-slider'></span>" +
       "</label>" +
+      "</div>" +
       "<div id='timer-module-view-note' class='settings-note'></div>"
     );
   }
@@ -41,7 +50,10 @@
       return {
         toggleDisabled: true,
         toggleChecked: true,
-        toggleLabelText: lang === "en" ? "Timer Mode" : "计时器模式",
+        toggleLabelText:
+          lang === "en"
+            ? "Leaderboard is not available in this mode."
+            : "当前模式不支持排行榜界面。",
         noteText:
           lang === "en"
             ? "Current mode does not support leaderboard panel."
@@ -55,18 +67,18 @@
       toggleChecked: isTimerMode,
       toggleLabelText: isTimerMode
         ? lang === "en"
-          ? "Timer Mode"
-          : "计时器模式"
+          ? "Timers are shown in the right panel."
+          : "当前右侧显示计时器。"
         : lang === "en"
-          ? "Leaderboard Mode"
-          : "榜单模式",
+          ? "Leaderboard is shown in the right panel."
+          : "当前右侧显示排行榜。",
       noteText: isTimerMode
         ? lang === "en"
-          ? "Switch off to show the top-10 leaderboard in the right panel."
-          : "关闭后显示当前模式榜单（前10名 + 我的排名）。"
+          ? "Switch off to show the leaderboard in the right panel."
+          : "关闭后切换为排行榜界面，不影响棋盘与回放。"
         : lang === "en"
-          ? "Top-10 leaderboard is shown. Toggle on to return to timers."
-          : "当前显示榜单，开启后切回计时器。",
+          ? "Switch on to return to timer view."
+          : "开启后切回计时器界面。",
       rowVisible: true
     };
   }
@@ -138,4 +150,4 @@
     resolveTimerModuleAppliedViewMode;
   global.CoreTimerModuleRuntime.resolveTimerModuleInitRetryState =
     resolveTimerModuleInitRetryState;
-})(typeof window !== "undefined" ? window : undefined);
+})(typeof window !== "undefined" ? window : this);

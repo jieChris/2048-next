@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  resolveInvalidatedSecondaryTimerElementIds,
   resolveMoveInputThrottleMs,
   resolveInvalidatedTimerElementIds,
   resolveTimerUpdateIntervalMs
@@ -81,5 +82,34 @@ describe("core timer interval: resolveInvalidatedTimerElementIds", () => {
         isFibonacciMode: false
       })
     ).toEqual(["timer32768"]);
+  });
+});
+
+describe("core timer interval: resolveInvalidatedSecondaryTimerElementIds", () => {
+  it("invalidates only matching child rows under already reached parents", () => {
+    expect(
+      resolveInvalidatedSecondaryTimerElementIds({
+        value: 8192,
+        descriptors: [
+          { parent: 16384, child: 8192, parentReached: true },
+          { parent: 32768, child: 8192, parentReached: true },
+          { parent: 32768, child: 4096, parentReached: true },
+          { parent: 8192, child: 4096, parentReached: true },
+          { parent: 65536, child: 8192, parentReached: false }
+        ]
+      })
+    ).toEqual(["timer-secondary-16384-8192", "timer-secondary-32768-8192"]);
+  });
+
+  it("does not invalidate descendants when a parent tile is first placed", () => {
+    expect(
+      resolveInvalidatedSecondaryTimerElementIds({
+        value: 32768,
+        descriptors: [
+          { parent: 32768, child: 16384, parentReached: false },
+          { parent: 65536, child: 32768, parentReached: false }
+        ]
+      })
+    ).toEqual([]);
   });
 });

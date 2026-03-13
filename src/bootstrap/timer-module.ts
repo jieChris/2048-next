@@ -14,7 +14,9 @@ export interface ResolveTimerModuleCurrentViewModeOptions {
 export interface ResolveTimerModuleSettingsStateResult {
   toggleDisabled: boolean;
   toggleChecked: boolean;
+  toggleLabelText: string;
   noteText: string;
+  rowVisible?: boolean;
 }
 
 export interface ResolveTimerModuleBindingStateOptions {
@@ -50,13 +52,36 @@ export interface ResolveTimerModuleInitRetryStateResult {
   retryDelayMs: number;
 }
 
+function readTimerModuleUiLang(): "zh" | "en" {
+  try {
+    const raw = String(globalThis.localStorage?.getItem("ui_language_v1") || "").toLowerCase();
+    return raw === "en" ? "en" : "zh";
+  } catch (_error) {
+    return "zh";
+  }
+}
+
 export function buildTimerModuleSettingsRowInnerHtml(): string {
+  const isEn = readTimerModuleUiLang() === "en";
   return (
-    "<label for='timer-module-view-toggle'>计时器显示</label>" +
-    "<label class='settings-switch-row'>" +
-    "<input id='timer-module-view-toggle' type='checkbox'>" +
-    "<span>显示计时器（关闭后隐藏）</span>" +
+    "<div class='settings-toggle-main'>" +
+    "<div class='settings-toggle-copy'>" +
+    "<label for='timer-module-view-toggle' class='settings-toggle-title'>" +
+    (isEn ? "Timer Mode" : "\u8ba1\u65f6\u5668\u6a21\u5f0f") +
     "</label>" +
+    "<div id='timer-module-view-label' class='settings-toggle-desc'>" +
+    (isEn
+      ? "Turn on to show timers, turn off to show leaderboard."
+      : "\u5f00\u542f\u65f6\u663e\u793a\u8ba1\u65f6\u5668\uff0c\u5173\u95ed\u65f6\u663e\u793a\u6392\u884c\u699c\u3002") +
+    "</div>" +
+    "</div>" +
+    "<label class='settings-switch' for='timer-module-view-toggle' aria-label='" +
+    (isEn ? "Timer Mode" : "\u8ba1\u65f6\u5668\u6a21\u5f0f") +
+    "'>" +
+    "<input id='timer-module-view-toggle' type='checkbox'>" +
+    "<span class='settings-switch-slider'></span>" +
+    "</label>" +
+    "</div>" +
     "<div id='timer-module-view-note' class='settings-note'></div>"
   );
 }
@@ -66,10 +91,15 @@ export function resolveTimerModuleSettingsState(
 ): ResolveTimerModuleSettingsStateResult {
   const opts = options || {};
   const viewMode = typeof opts.viewMode === "string" ? opts.viewMode : "timer";
+  const isTimerMode = viewMode !== "hidden";
   return {
     toggleDisabled: false,
-    toggleChecked: viewMode !== "hidden",
-    noteText: "关闭后仅隐藏右侧计时器栏，不影响棋盘和回放。"
+    toggleChecked: isTimerMode,
+    toggleLabelText: isTimerMode ? "当前右侧显示计时器。" : "当前右侧显示排行榜。",
+    noteText: isTimerMode
+      ? "关闭后切换为排行榜界面，不影响棋盘与回放。"
+      : "开启后切回计时器界面。",
+    rowVisible: true
   };
 }
 
@@ -131,7 +161,8 @@ export function resolveTimerModuleInitRetryState(
   const opts = options || {};
   const hasToggle = !!opts.hasToggle;
   const hasManager = !!opts.hasManager;
-  const retryDelayMs = typeof opts.retryDelayMs === "number" && opts.retryDelayMs > 0 ? opts.retryDelayMs : 60;
+  const retryDelayMs =
+    typeof opts.retryDelayMs === "number" && opts.retryDelayMs > 0 ? opts.retryDelayMs : 60;
   return {
     shouldRetry: hasToggle && !hasManager,
     retryDelayMs

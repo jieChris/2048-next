@@ -46,8 +46,36 @@
     return out;
   }
 
+  function normalizeTimerMilestoneValue(value) {
+    var numeric = Number(value);
+    if (!Number.isInteger(numeric) || numeric <= 0) return null;
+    return numeric;
+  }
+
+  function resolveInvalidatedSecondaryTimerElementIds(input) {
+    var source = input || {};
+    var descriptors = Array.isArray(source.descriptors) ? source.descriptors : [];
+    var placedValue = normalizeTimerMilestoneValue(source.value);
+    if (placedValue === null || placedValue < 2048) return [];
+    var out = [];
+
+    for (var i = 0; i < descriptors.length; i++) {
+      var descriptor = descriptors[i] || {};
+      var parent = normalizeTimerMilestoneValue(descriptor.parent);
+      var child = normalizeTimerMilestoneValue(descriptor.child);
+      if (parent === null || child === null) continue;
+      if (parent <= child) continue;
+      if (child !== placedValue) continue;
+      if (descriptor.parentReached !== true) continue;
+      out.push("timer-secondary-" + String(parent) + "-" + String(child));
+    }
+
+    return out;
+  }
+
   global.CoreTimerIntervalRuntime = global.CoreTimerIntervalRuntime || {};
   global.CoreTimerIntervalRuntime.resolveTimerUpdateIntervalMs = resolveTimerUpdateIntervalMs;
   global.CoreTimerIntervalRuntime.resolveMoveInputThrottleMs = resolveMoveInputThrottleMs;
   global.CoreTimerIntervalRuntime.resolveInvalidatedTimerElementIds = resolveInvalidatedTimerElementIds;
+  global.CoreTimerIntervalRuntime.resolveInvalidatedSecondaryTimerElementIds = resolveInvalidatedSecondaryTimerElementIds;
 })(typeof window !== "undefined" ? window : undefined);
