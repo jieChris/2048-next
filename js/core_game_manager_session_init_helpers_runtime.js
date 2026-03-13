@@ -71,7 +71,13 @@ function resetRoundStatsState(manager) {
   manager.spawnValueCounts = {};
   manager.spawnTwos = 0;
   manager.spawnFours = 0;
+  manager.itemProgress = 0;
+  manager.itemInventory = createEmptyItemInventory();
+  manager.nextSpawnSuppressed = false;
+  manager.nextSpawnValueOverride = null;
   manager.undoEnabled = manager.loadUndoSettingForMode(manager.mode);
+  if (typeof updateItemModeHud === "function") updateItemModeHud(manager);
+  if (typeof updateMoveTimeoutHud === "function") updateMoveTimeoutHud(manager, Date.now());
 }
 
 function initializeGameManagerCoreFields(manager, size, InputManager, Actuator, ScoreManager) {
@@ -99,6 +105,11 @@ function initializeGameManagerRuntimeState(manager) {
   manager.timerLeaderboardLoadId = 0; manager.timerModuleBaseHeight = 0; manager.timerUpdateIntervalMs = 10;
   manager.lastStatsPanelUpdateAt = 0;
   manager.pendingMoveInput = null; manager.moveInputFlushScheduled = false; manager.lastMoveInputAt = 0;
+  manager.allowedDirections = [0, 1, 2, 3]; manager.allowedDirectionSet = { "0": true, "1": true, "2": true, "3": true };
+  manager.stoneCellsList = []; manager.stoneValueSet = {};
+  manager.itemModeRules = null; manager.itemInventory = createEmptyItemInventory(); manager.itemProgress = 0;
+  manager.nextSpawnSuppressed = false; manager.nextSpawnValueOverride = null;
+  manager.moveTimeoutMs = null; manager.moveDeadlineAt = null;
   manager.practiceRestartBoardMatrix = null; manager.practiceRestartModeConfig = null;
 }
 
@@ -107,6 +118,11 @@ function bindGameManagerInputEvents(manager) {
   var managerForInput = manager;
   manager.inputManager.on("move", function (direction) {
     handleMoveInput(managerForInput, direction);
+  });
+  manager.inputManager.on("item", function (itemKey) {
+    if (typeof managerForInput.useItem === "function") {
+      managerForInput.useItem(itemKey);
+    }
   });
   manager.inputManager.on("restart", manager.restart.bind(manager));
   manager.inputManager.on("keepPlaying", manager.keepPlaying.bind(manager));

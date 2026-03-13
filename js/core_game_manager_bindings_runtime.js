@@ -161,7 +161,13 @@ function createPostAccessorManagerForwardBindings() {
     ["normalizeSpawnTable", normalizeSpawnTable],
     ["normalizeModeConfig", normalizeModeConfig],
     ["resolveModeConfig", resolveModeConfig],
-    ["normalizeSpecialRules", normalizeSpecialRules]
+    ["normalizeSpecialRules", normalizeSpecialRules],
+    ["getActiveMoveDirections", getActiveMoveDirections],
+    ["isDirectionAllowed", isDirectionAllowed],
+    ["isStoneValue", isStoneValue],
+    ["useItem", useItem],
+    ["updateItemModeHud", updateItemModeHud],
+    ["updateMoveTimeoutHud", updateMoveTimeoutHud]
   ];
 }
 

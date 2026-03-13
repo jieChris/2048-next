@@ -55,7 +55,7 @@ export interface IpsDisplayTextResult {
 
 export function getReplayActionKind(action: unknown): ReplayActionKind {
   if (action === -1) return "u";
-  if (typeof action === "number" && action >= 0 && action <= 3) return "m";
+  if (typeof action === "number" && action >= 0 && action <= 7) return "m";
   if (Array.isArray(action) && action.length > 0) return String(action[0]);
   return "x";
 }

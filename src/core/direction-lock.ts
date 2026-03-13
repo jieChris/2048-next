@@ -5,6 +5,7 @@ export interface LockedDirectionStateInput {
   lockedDirectionTurn: number | null;
   lockedDirection: number | null;
   initialSeed: string | number;
+  availableDirections?: number[] | null;
   randomFromSeed?: (seed: string) => number;
 }
 
@@ -12,6 +13,19 @@ export interface LockedDirectionState {
   lockedDirection: number | null;
   lockedDirectionTurn: number | null;
   activeDirection: number | null;
+}
+
+function normalizeAvailableDirections(rawDirections?: number[] | null): number[] {
+  const source = Array.isArray(rawDirections) ? rawDirections : [];
+  const out: number[] = [];
+  for (let i = 0; i < source.length; i++) {
+    const dir = Number(source[i]);
+    if (!Number.isInteger(dir) || dir < 0 || dir > 7) continue;
+    if (out.indexOf(dir) !== -1) continue;
+    out.push(dir);
+  }
+  if (out.length > 0) return out;
+  return [0, 1, 2, 3];
 }
 
 export function getLockedDirectionState(input: LockedDirectionStateInput): LockedDirectionState {
@@ -60,6 +74,8 @@ export function getLockedDirectionState(input: LockedDirectionStateInput): Locke
 
   let lockedDirection = currentLockedDirection;
   let lockedDirectionTurn = currentLockedDirectionTurn;
+  const availableDirections = normalizeAvailableDirections(input.availableDirections);
+  const directionCount = availableDirections.length;
   if (lockedDirectionTurn !== moveCount) {
     const phase = Math.floor(moveCount / everyK);
     const seed = `${String(input.initialSeed)}:lock:${phase}`;
@@ -67,7 +83,8 @@ export function getLockedDirectionState(input: LockedDirectionStateInput): Locke
       typeof input.randomFromSeed === "function"
         ? input.randomFromSeed(seed)
         : Math.random();
-    lockedDirection = Math.floor(randomValue * 4);
+    const dirIndex = Math.floor(randomValue * directionCount);
+    lockedDirection = availableDirections[dirIndex] ?? availableDirections[0];
     lockedDirectionTurn = moveCount;
   }
 

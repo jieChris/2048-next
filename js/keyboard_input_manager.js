@@ -36,7 +36,21 @@ KeyboardInputManager.prototype.listen = function () {
     68: 1, // D
     83: 2, // S
     65: 3, // A
-    90:-1, // Z (undo)
+    69: 4, // E (up-right)
+    67: 5, // C (down-right)
+    88: 6, // X (down-left)
+    81: 7, // Q (up-left)
+    105: 4, // Numpad 9
+    99: 5, // Numpad 3
+    97: 6, // Numpad 1
+    103: 7, // Numpad 7
+    85:-1, // U (undo)
+    8:-1,  // Backspace (undo)
+  };
+  var itemMap = {
+    49: "hammer", // 1
+    50: "freeze", // 2
+    51: "boost4"  // 3
   };
 
   document.addEventListener("keydown", function (event) {
@@ -45,9 +59,33 @@ KeyboardInputManager.prototype.listen = function () {
     var mapped    = map[event.which];
 
     if (!modifiers) {
+      if (event.which === 90) {
+        var manager = typeof window !== "undefined" ? window.game_manager : null;
+        var useDiagonalZ = false;
+        if (manager && typeof manager.isDirectionAllowed === "function") {
+          useDiagonalZ = !!manager.isDirectionAllowed(6);
+        } else if (manager && Array.isArray(manager.allowedDirections)) {
+          useDiagonalZ = manager.allowedDirections.indexOf(6) !== -1;
+        } else {
+          var rules = manager && manager.modeConfig && manager.modeConfig.special_rules;
+          if (rules && rules.allow_diagonal_moves === true) {
+            useDiagonalZ = true;
+          } else if (rules && Array.isArray(rules.movement_directions)) {
+            useDiagonalZ = rules.movement_directions.indexOf(6) !== -1;
+          }
+        }
+        event.preventDefault();
+        self.emit("move", useDiagonalZ ? 6 : -1);
+        return;
+      }
       if (mapped !== undefined) {
         event.preventDefault();
         self.emit("move", mapped);
+      }
+      var mappedItem = itemMap[event.which];
+      if (mappedItem !== undefined) {
+        event.preventDefault();
+        self.emit("item", mappedItem);
       }
 
       if (event.which === 32) self.restart.bind(self)(event);
@@ -95,7 +133,17 @@ KeyboardInputManager.prototype.listen = function () {
     var absDy = Math.abs(dy);
 
     if (Math.max(absDx, absDy) > 10) {
-      // (right : left) : (down : up)
+      if (
+        absDx > 10 &&
+        absDy > 10 &&
+        Math.abs(absDx - absDy) / Math.max(absDx, absDy) < 0.35
+      ) {
+        if (dx > 0 && dy < 0) self.emit("move", 4); // up-right
+        else if (dx > 0 && dy > 0) self.emit("move", 5); // down-right
+        else if (dx < 0 && dy > 0) self.emit("move", 6); // down-left
+        else self.emit("move", 7); // up-left
+        return;
+      }
       self.emit("move", absDx > absDy ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0));
     }
   });

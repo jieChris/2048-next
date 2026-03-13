@@ -512,6 +512,9 @@ function applyUndoRestoredTiles(manager, undoPayload) {
   for (var undoTileIndex = 0; undoTileIndex < undoTiles.length; undoTileIndex++) {
     var restored = createUndoRestoreTile(manager, undoTiles[undoTileIndex]);
     var tile = new Tile({ x: restored.x, y: restored.y }, restored.value);
+    if (typeof manager.isStoneValue === "function" && manager.isStoneValue(restored.value)) {
+      tile.isStone = true;
+    }
     tile.previousPosition = {
       x: restored.previousPosition.x,
       y: restored.previousPosition.y

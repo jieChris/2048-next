@@ -37,6 +37,9 @@ export function computePostMoveRecord(input: PostMoveRecordInput): PostMoveRecor
   const spawn = input.lastSpawn;
   if (
     spawn &&
+    Number.isInteger(input.direction) &&
+    Number(input.direction) >= 0 &&
+    Number(input.direction) <= 3 &&
     Number.isInteger(input.width) &&
     Number.isInteger(input.height) &&
     Number(input.width) === 4 &&

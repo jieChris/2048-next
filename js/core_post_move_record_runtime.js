@@ -19,6 +19,9 @@
     var spawn = opts.lastSpawn;
     if (
       spawn &&
+      Number.isInteger(opts.direction) &&
+      Number(opts.direction) >= 0 &&
+      Number(opts.direction) <= 3 &&
       Number.isInteger(opts.width) &&
       Number.isInteger(opts.height) &&
       Number(opts.width) === 4 &&

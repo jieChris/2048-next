@@ -2088,7 +2088,7 @@ function resolveReplayActionKindFallback(manager, action) {
     function (managerForKind, kindCallResult) {
       return managerForKind.resolveCoreStringCallOrFallback(kindCallResult, function () {
         if (action === -1) return "u";
-        if (action >= 0 && action <= 3) return "m";
+        if (action >= 0 && action <= 7) return "m";
         if (Array.isArray(action) && action.length > 0) return action[0];
         return "x";
       });
@@ -2467,6 +2467,7 @@ function createReplayModePostMoveRecord() {
 
 function resolveCompactMoveCodeFallback(manager, direction) {
   if (!manager || !manager.lastSpawn) return null;
+  if (!Number.isInteger(direction) || direction < 0 || direction > 3) return null;
   if (manager.width !== 4 || manager.height !== 4) return null;
   if (manager.isFibonacciMode()) return null;
   if (manager.lastSpawn.value !== 2 && manager.lastSpawn.value !== 4) return null;

@@ -6,6 +6,246 @@ function normalizeMoveInputRecordObject(value, fallback) {
   return isMoveInputRecordObject(value) ? value : fallback;
 }
 
+function createEmptyItemInventory() {
+  return { hammer: 0, freeze: 0, boost4: 0 };
+}
+
+function ensureItemInventory(manager) {
+  if (!manager) return createEmptyItemInventory();
+  if (!isMoveInputRecordObject(manager.itemInventory)) {
+    manager.itemInventory = createEmptyItemInventory();
+  }
+  if (!Number.isInteger(manager.itemInventory.hammer) || manager.itemInventory.hammer < 0) {
+    manager.itemInventory.hammer = 0;
+  }
+  if (!Number.isInteger(manager.itemInventory.freeze) || manager.itemInventory.freeze < 0) {
+    manager.itemInventory.freeze = 0;
+  }
+  if (!Number.isInteger(manager.itemInventory.boost4) || manager.itemInventory.boost4 < 0) {
+    manager.itemInventory.boost4 = 0;
+  }
+  return manager.itemInventory;
+}
+
+function isItemModeEnabled(manager) {
+  return !!(
+    manager &&
+    manager.itemModeRules &&
+    typeof manager.itemModeRules === "object" &&
+    manager.itemModeRules.enabled !== false
+  );
+}
+
+function resolveItemGrantEveryMoves(manager) {
+  if (!isItemModeEnabled(manager)) return 0;
+  var value = Number(manager.itemModeRules.grantEveryMoves);
+  return Number.isInteger(value) && value > 0 ? value : 6;
+}
+
+function resolveItemMaxPerType(manager) {
+  if (!isItemModeEnabled(manager)) return 0;
+  var value = Number(manager.itemModeRules.maxPerItem);
+  return Number.isInteger(value) && value > 0 ? value : 3;
+}
+
+function resolveOrCreateHudElement(manager, id, topPx) {
+  if (!manager) return null;
+  var documentLike = resolveManagerDocumentLike(manager);
+  if (!(documentLike && documentLike.body && typeof documentLike.createElement === "function")) return null;
+  var el = resolveManagerElementById(manager, id);
+  if (!el) {
+    el = documentLike.createElement("div");
+    el.id = id;
+    documentLike.body.appendChild(el);
+  }
+  el.className = "mode-status-hud";
+  el.style.position = "fixed";
+  el.style.right = "10px";
+  el.style.top = String(topPx) + "px";
+  el.style.zIndex = "1001";
+  el.style.padding = "4px 8px";
+  el.style.borderRadius = "6px";
+  el.style.background = "rgba(119,110,101,0.9)";
+  el.style.color = "#f9f6f2";
+  el.style.fontSize = "13px";
+  el.style.fontWeight = "700";
+  el.style.pointerEvents = "none";
+  el.style.display = "none";
+  return el;
+}
+
+function updateItemModeHud(manager) {
+  if (!manager) return;
+  var hud = resolveOrCreateHudElement(manager, "item-mode-hud", 34);
+  if (!hud) return;
+  if (!isItemModeEnabled(manager) || manager.replayMode) {
+    hud.style.display = "none";
+    return;
+  }
+  var inventory = ensureItemInventory(manager);
+  hud.style.display = "";
+  hud.textContent =
+    "道具 [1]锤" + inventory.hammer +
+    " [2]冻" + inventory.freeze +
+    " [3]4" + inventory.boost4;
+}
+
+function hasMoveTimeoutMode(manager) {
+  var timeout = Number(manager && manager.moveTimeoutMs);
+  return Number.isInteger(timeout) && timeout > 0;
+}
+
+function resolveMoveTimeoutRemainingMs(manager, nowMs) {
+  if (!hasMoveTimeoutMode(manager)) return null;
+  var deadline = Number(manager.moveDeadlineAt);
+  if (!Number.isFinite(deadline) || deadline <= 0) return null;
+  var now = Number.isFinite(nowMs) ? nowMs : Date.now();
+  var remaining = Math.floor(deadline - now);
+  return remaining > 0 ? remaining : 0;
+}
+
+function updateMoveTimeoutHud(manager, nowMs) {
+  if (!manager) return;
+  var hud = resolveOrCreateHudElement(manager, "move-timeout-hud", 10);
+  if (!hud) return;
+  if (!hasMoveTimeoutMode(manager) || manager.replayMode || manager.over) {
+    hud.style.display = "none";
+    return;
+  }
+  var remaining = resolveMoveTimeoutRemainingMs(manager, nowMs);
+  if (remaining === null) {
+    hud.style.display = "none";
+    return;
+  }
+  hud.style.display = "";
+  hud.textContent = "剩余 " + (remaining / 1000).toFixed(1) + "s";
+}
+
+function resetMoveTimeoutDeadline(manager, nowMs) {
+  if (!hasMoveTimeoutMode(manager) || manager.replayMode) return;
+  var now = Number.isFinite(nowMs) ? nowMs : Date.now();
+  manager.moveDeadlineAt = now + Number(manager.moveTimeoutMs);
+  updateMoveTimeoutHud(manager, now);
+}
+
+function applyMoveTimeoutLoss(manager, nowMs) {
+  if (!manager) return;
+  manager.over = true;
+  manager.stopTimer();
+  writePostMoveEndTimerText(manager);
+  updateMoveTimeoutHud(manager, nowMs);
+  actuate(manager);
+}
+
+function checkAndHandleMoveTimeout(manager, nowMs) {
+  if (!manager) return false;
+  if (!hasMoveTimeoutMode(manager) || manager.replayMode) return false;
+  if (manager.over || (manager.won && !manager.keepPlaying)) return false;
+  var remaining = resolveMoveTimeoutRemainingMs(manager, nowMs);
+  if (remaining === null) return false;
+  if (remaining > 0) {
+    updateMoveTimeoutHud(manager, nowMs);
+    return false;
+  }
+  applyMoveTimeoutLoss(manager, nowMs);
+  return true;
+}
+
+function grantRandomItemCharge(manager) {
+  if (!isItemModeEnabled(manager)) return;
+  var inventory = ensureItemInventory(manager);
+  var maxPerType = resolveItemMaxPerType(manager);
+  var itemIds = ["hammer", "freeze", "boost4"];
+  var candidates = [];
+  for (var i = 0; i < itemIds.length; i++) {
+    var key = itemIds[i];
+    if (inventory[key] < maxPerType) candidates.push(key);
+  }
+  if (!candidates.length) return;
+  var picked = candidates[Math.floor(Math.random() * candidates.length)];
+  inventory[picked] += 1;
+}
+
+function processItemModeAfterSuccessfulMove(manager) {
+  if (!isItemModeEnabled(manager) || manager.replayMode) return;
+  if (!Number.isInteger(manager.itemProgress) || manager.itemProgress < 0) manager.itemProgress = 0;
+  manager.itemProgress += 1;
+  var grantEveryMoves = resolveItemGrantEveryMoves(manager);
+  if (grantEveryMoves > 0 && manager.itemProgress % grantEveryMoves === 0) {
+    grantRandomItemCharge(manager);
+  }
+  updateItemModeHud(manager);
+}
+
+function consumeItemCharge(manager, key) {
+  if (!isItemModeEnabled(manager)) return false;
+  var inventory = ensureItemInventory(manager);
+  if (!Number.isInteger(inventory[key]) || inventory[key] <= 0) return false;
+  inventory[key] -= 1;
+  return true;
+}
+
+function collectRemovableTilesForHammer(manager) {
+  var tiles = [];
+  if (!(manager && manager.grid && typeof manager.grid.eachCell === "function")) return tiles;
+  manager.grid.eachCell(function (_x, _y, tile) {
+    if (!tile) return;
+    if (typeof manager.isStoneValue === "function" && manager.isStoneValue(tile.value)) return;
+    tiles.push(tile);
+  });
+  return tiles;
+}
+
+function useItem(manager, itemKey) {
+  if (!manager) return;
+  if (!isItemModeEnabled(manager) || manager.replayMode) return;
+  if (isGameTerminated(manager)) return;
+  var key = String(itemKey || "");
+  if (key === "1") key = "hammer";
+  if (key === "2") key = "freeze";
+  if (key === "3") key = "boost4";
+  if (key !== "hammer" && key !== "freeze" && key !== "boost4") return;
+  if (!consumeItemCharge(manager, key)) {
+    updateItemModeHud(manager);
+    return;
+  }
+
+  if (key === "hammer") {
+    var removable = collectRemovableTilesForHammer(manager);
+    if (!removable.length) {
+      ensureItemInventory(manager).hammer += 1;
+      updateItemModeHud(manager);
+      return;
+    }
+    var target = removable[Math.floor(Math.random() * removable.length)];
+    manager.grid.removeTile(target);
+    actuate(manager);
+  } else if (key === "freeze") {
+    manager.nextSpawnSuppressed = true;
+  } else if (key === "boost4") {
+    manager.nextSpawnValueOverride = 4;
+  }
+
+  updateItemModeHud(manager);
+}
+
+function consumeItemSpawnSuppression(manager) {
+  if (!isItemModeEnabled(manager) || manager.replayMode) return false;
+  if (manager.nextSpawnSuppressed !== true) return false;
+  manager.nextSpawnSuppressed = false;
+  updateItemModeHud(manager);
+  return true;
+}
+
+function consumeItemSpawnValueOverride(manager, fallbackValue) {
+  if (!isItemModeEnabled(manager) || manager.replayMode) return fallbackValue;
+  var override = Number(manager.nextSpawnValueOverride);
+  if (!Number.isInteger(override) || override <= 0) return fallbackValue;
+  manager.nextSpawnValueOverride = null;
+  updateItemModeHud(manager);
+  return override;
+}
+
 function tryHandleMoveInputImmediately(manager, direction) {
   if (direction == -1) {
     manager.move(direction);
@@ -112,12 +352,15 @@ function flushPendingMoveInput(manager) {
 
 function move(manager, direction) {
   if (!manager) return;
-  // 0: up, 1: right, 2:down, 3: left, -1: undo
+  // 0~7: move directions, -1: undo
   if (handleUndoMove(manager, direction)) return;
+  if (!manager.isDirectionAllowed(direction)) return;
   if (isGameTerminated(manager)) return;
+  if (checkAndHandleMoveTimeout(manager, Date.now())) return;
   var lockedDirection = resolveLockedDirection(manager);
   if (shouldSkipMoveByLockedDirection(manager, direction, lockedDirection)) return;
   var movePlan = buildMovePlan(manager, direction);
+  if (!(movePlan && movePlan.vector)) return;
   var traversals = buildTraversals(manager, movePlan.vector);
   resetGridMergeStateBeforeMove(manager);
   var moved = processMoveTraversals(manager, movePlan, traversals);
@@ -292,6 +535,8 @@ function finalizeSuccessfulMove(manager, movePlan, direction) {
   // IPS counts only effective move inputs (invalid directions are excluded).
   updateIpsInputCountAfterMove(manager);
   applyPostMoveScore(manager, movePlan.scoreBeforeMove);
+  resetMoveTimeoutDeadline(manager, Date.now());
+  processItemModeAfterSuccessfulMove(manager);
   addRandomTile(manager);
   var hasMovesAvailable = movesAvailable(manager);
   var postMoveLifecycle = resolvePostMoveLifecycle(manager, hasMovesAvailable);
@@ -891,7 +1136,7 @@ function primeSeededRandomByStepCount(manager, stepCount) {
 function insertSeededRandomSpawnTile(manager, available) {
   if (!(manager && Array.isArray(available) && available.length > 0)) return;
   primeSeededRandomByStepCount(manager, resolveSpawnStepCount(manager));
-  var value = pickSpawnValue(manager);
+  var value = consumeItemSpawnValueOverride(manager, pickSpawnValue(manager));
   var cell = available[Math.floor(Math.random() * available.length)];
   var tile = new Tile(cell, value);
   manager.grid.insertTile(tile);
@@ -949,9 +1194,9 @@ function shouldUseModeSpawnValue(manager) {
 
 function resolveSpawnValueByCoreRule(manager) {
   if (shouldUseModeSpawnValue(manager)) {
-    return pickSpawnValue(manager);
+    return consumeItemSpawnValueOverride(manager, pickSpawnValue(manager));
   }
-  return resolveMasterSpawnValueByDefault();
+  return consumeItemSpawnValueOverride(manager, resolveMasterSpawnValueByDefault());
 }
 
 function shouldUseFilteredModeCellsForSpawn(manager) {
@@ -986,6 +1231,7 @@ function insertMasterRandomSpawnTile(manager) {
 function addRandomTile(manager) {
   if (!manager) return;
   if (tryInsertForcedReplaySpawn(manager, resolveForcedReplaySpawn(manager))) return;
+  if (consumeItemSpawnSuppression(manager)) return;
   if (shouldUseReplaySeededSpawn(manager)) {
     var available = getAvailableCells(manager);
     if (!available.length) return;
@@ -997,13 +1243,17 @@ function addRandomTile(manager) {
 
 function resolveLockedDirectionStateByCore(manager) {
   if (!manager) return undefined;
+  var availableDirections = typeof manager.getActiveMoveDirections === "function"
+    ? manager.getActiveMoveDirections()
+    : [0, 1, 2, 3];
   return resolveCoreArgsCallWith(manager, "callCoreDirectionLockRuntime", "getLockedDirectionState", [{
     directionLockRules: manager.directionLockRules,
     successfulMoveCount: manager.successfulMoveCount,
     lockConsumedAtMoveCount: manager.lockConsumedAtMoveCount,
     lockedDirectionTurn: manager.lockedDirectionTurn,
     lockedDirection: manager.lockedDirection,
-    initialSeed: manager.initialSeed
+    initialSeed: manager.initialSeed,
+    availableDirections: availableDirections
   }, function (seed) {
     return (new Math.seedrandom(seed))();
   }], undefined, function (currentManager, coreCallResult) {
@@ -1039,9 +1289,13 @@ function shouldActivateDirectionLockFallback(manager, everyK) {
 function refreshFallbackLockedDirection(manager, everyK) {
   if (!manager || !Number.isInteger(everyK) || everyK <= 0) return;
   if (manager.lockedDirectionTurn === manager.successfulMoveCount) return;
+  var directions = typeof manager.getActiveMoveDirections === "function"
+    ? manager.getActiveMoveDirections()
+    : [0, 1, 2, 3];
+  if (!Array.isArray(directions) || !directions.length) directions = [0, 1, 2, 3];
   var phase = Math.floor(manager.successfulMoveCount / everyK);
   var rng = new Math.seedrandom(String(manager.initialSeed) + ":lock:" + phase);
-  manager.lockedDirection = Math.floor(rng() * 4);
+  manager.lockedDirection = directions[Math.floor(rng() * directions.length)] || directions[0];
   manager.lockedDirectionTurn = manager.successfulMoveCount;
 }
 

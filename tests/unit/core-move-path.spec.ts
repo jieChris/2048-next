@@ -13,11 +13,15 @@ describe("core move path: getVector", () => {
     expect(getVector(1)).toEqual({ x: 1, y: 0 });
     expect(getVector(2)).toEqual({ x: 0, y: 1 });
     expect(getVector(3)).toEqual({ x: -1, y: 0 });
+    expect(getVector(4)).toEqual({ x: 1, y: -1 });
+    expect(getVector(5)).toEqual({ x: 1, y: 1 });
+    expect(getVector(6)).toEqual({ x: -1, y: 1 });
+    expect(getVector(7)).toEqual({ x: -1, y: -1 });
   });
 
   it("returns undefined for invalid directions", () => {
     expect(getVector(-1)).toBeUndefined();
-    expect(getVector(4)).toBeUndefined();
+    expect(getVector(8)).toBeUndefined();
     expect(getVector(Number.NaN)).toBeUndefined();
   });
 });

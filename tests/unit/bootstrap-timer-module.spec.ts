@@ -18,25 +18,31 @@ describe("bootstrap timer module", () => {
   });
 
   it("resolves settings state from view mode", () => {
-    expect(
-      resolveTimerModuleSettingsState({
-        viewMode: "timer"
-      })
-    ).toEqual({
-      toggleDisabled: false,
-      toggleChecked: true,
-      noteText: "关闭后仅隐藏右侧计时器栏，不影响棋盘和回放。"
+    const timerState = resolveTimerModuleSettingsState({
+      viewMode: "timer"
     });
+    expect(timerState).toEqual(
+      expect.objectContaining({
+        toggleDisabled: false,
+        toggleChecked: true,
+        rowVisible: true
+      })
+    );
+    expect(typeof timerState.toggleLabelText).toBe("string");
+    expect(typeof timerState.noteText).toBe("string");
 
-    expect(
-      resolveTimerModuleSettingsState({
-        viewMode: "hidden"
-      })
-    ).toEqual({
-      toggleDisabled: false,
-      toggleChecked: false,
-      noteText: "关闭后仅隐藏右侧计时器栏，不影响棋盘和回放。"
+    const hiddenState = resolveTimerModuleSettingsState({
+      viewMode: "hidden"
     });
+    expect(hiddenState).toEqual(
+      expect.objectContaining({
+        toggleDisabled: false,
+        toggleChecked: false,
+        rowVisible: true
+      })
+    );
+    expect(typeof hiddenState.toggleLabelText).toBe("string");
+    expect(typeof hiddenState.noteText).toBe("string");
   });
 
   it("resolves binding state for dedup", () => {

@@ -389,6 +389,76 @@
   });
 
   add({
+    key: "diag_3x3_pow2_no_undo",
+    label: "Diagonal 3x3",
+    board_width: 3,
+    board_height: 3,
+    ruleset: "pow2",
+    undo_enabled: false,
+    spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+    ranked_bucket: "none",
+    mode_family: "pow2",
+    special_rules: { allow_diagonal_moves: true },
+    rank_policy: "unranked"
+  });
+
+  add({
+    key: "diag_4x4_pow2_no_undo",
+    label: "Diagonal 4x4",
+    board_width: 4,
+    board_height: 4,
+    ruleset: "pow2",
+    undo_enabled: false,
+    spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+    ranked_bucket: "none",
+    mode_family: "pow2",
+    special_rules: { allow_diagonal_moves: true },
+    rank_policy: "unranked"
+  });
+
+  add({
+    key: "item_4x4_pow2_no_undo",
+    label: "Item Mode 4x4",
+    board_width: 4,
+    board_height: 4,
+    ruleset: "pow2",
+    undo_enabled: false,
+    spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+    ranked_bucket: "none",
+    mode_family: "item",
+    special_rules: { item_mode: { enabled: true, grant_every_moves: 6, max_per_item: 3 } },
+    rank_policy: "unranked"
+  });
+
+  add({
+    key: "stone_4x4_pow2_no_undo",
+    label: "Stone Mode 4x4",
+    board_width: 4,
+    board_height: 4,
+    ruleset: "pow2",
+    undo_enabled: false,
+    spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+    ranked_bucket: "none",
+    mode_family: "stone",
+    special_rules: { stone_tiles: [[1, 1], [2, 2]] },
+    rank_policy: "unranked"
+  });
+
+  add({
+    key: "timed5s_4x4_pow2_no_undo",
+    label: "Timed 5s 4x4",
+    board_width: 4,
+    board_height: 4,
+    ruleset: "pow2",
+    undo_enabled: false,
+    spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+    ranked_bucket: "none",
+    mode_family: "timed",
+    special_rules: { move_timeout_ms: 5000 },
+    rank_policy: "unranked"
+  });
+
+  add({
     key: "practice",
     label: "练习板（直通）",
     board_width: 4,

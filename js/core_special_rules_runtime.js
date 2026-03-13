@@ -16,14 +16,11 @@
     }
   }
 
-  function computeSpecialRulesState(rules, width, height, clonePlainFn) {
-    var source = rules && typeof rules === "object" ? rules : {};
-    var blockedRaw = Array.isArray(source.blocked_cells) ? source.blocked_cells : [];
-    var blockedCellSet = {};
-    var blockedCellsList = [];
-
-    for (var i = 0; i < blockedRaw.length; i++) {
-      var item = blockedRaw[i];
+  function normalizePointList(rawList, width, height) {
+    var source = Array.isArray(rawList) ? rawList : [];
+    var out = [];
+    for (var i = 0; i < source.length; i++) {
+      var item = source[i];
       var x = null;
       var y = null;
       if (Array.isArray(item) && item.length >= 2) {
@@ -35,9 +32,59 @@
       }
       if (!Number.isInteger(x) || !Number.isInteger(y)) continue;
       if (x < 0 || x >= width || y < 0 || y >= height) continue;
-      blockedCellSet[x + ":" + y] = true;
-      blockedCellsList.push({ x: x, y: y });
+      out.push({ x: x, y: y });
     }
+    return out;
+  }
+
+  function normalizeMovementDirections(rawDirections, allowDiagonalRaw) {
+    var out = [];
+    if (Array.isArray(rawDirections)) {
+      for (var i = 0; i < rawDirections.length; i++) {
+        var dir = Number(rawDirections[i]);
+        if (!Number.isInteger(dir) || dir < 0 || dir > 7) continue;
+        if (out.indexOf(dir) !== -1) continue;
+        out.push(dir);
+      }
+    }
+    if (out.length) return out;
+    if (allowDiagonalRaw === true) return [0, 1, 2, 3, 4, 5, 6, 7];
+    return [0, 1, 2, 3];
+  }
+
+  function normalizeMoveTimeoutMs(rawValue) {
+    var timeoutMs = Number(rawValue);
+    if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) return null;
+    return timeoutMs;
+  }
+
+  function normalizeItemModeRules(rawValue) {
+    if (!(rawValue && typeof rawValue === "object" && !Array.isArray(rawValue))) return null;
+    if (rawValue.enabled === false) return null;
+    var grantEveryMoves =
+      Number.isInteger(rawValue.grant_every_moves) && Number(rawValue.grant_every_moves) > 0
+        ? Number(rawValue.grant_every_moves)
+        : 6;
+    var maxPerItem =
+      Number.isInteger(rawValue.max_per_item) && Number(rawValue.max_per_item) > 0
+        ? Number(rawValue.max_per_item)
+        : 3;
+    return {
+      enabled: true,
+      grantEveryMoves: grantEveryMoves,
+      maxPerItem: maxPerItem
+    };
+  }
+
+  function computeSpecialRulesState(rules, width, height, clonePlainFn) {
+    var source = rules && typeof rules === "object" ? rules : {};
+    var blockedCellsList = normalizePointList(source.blocked_cells, width, height);
+    var blockedCellSet = {};
+    for (var i = 0; i < blockedCellsList.length; i++) {
+      var cell = blockedCellsList[i];
+      blockedCellSet[cell.x + ":" + cell.y] = true;
+    }
+    var stoneCellsList = normalizePointList(source.stone_tiles, width, height);
 
     var undoLimit =
       Number.isInteger(source.undo_limit) && source.undo_limit >= 0
@@ -51,13 +98,23 @@
       source.direction_lock && typeof source.direction_lock === "object"
         ? safeClonePlain(source.direction_lock, null, clonePlainFn)
         : null;
+    var movementDirections = normalizeMovementDirections(
+      source.movement_directions,
+      source.allow_diagonal_moves
+    );
+    var moveTimeoutMs = normalizeMoveTimeoutMs(source.move_timeout_ms);
+    var itemModeRules = normalizeItemModeRules(source.item_mode);
 
     return {
       blockedCellSet: blockedCellSet,
       blockedCellsList: blockedCellsList,
+      stoneCellsList: stoneCellsList,
       undoLimit: undoLimit,
       comboMultiplier: comboMultiplier,
-      directionLockRules: directionLockRules
+      directionLockRules: directionLockRules,
+      movementDirections: movementDirections,
+      moveTimeoutMs: moveTimeoutMs,
+      itemModeRules: itemModeRules
     };
   }
 

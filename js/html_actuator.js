@@ -8,6 +8,7 @@ function HTMLActuator() {
 
   this.score = 0;
   this.gridMeta = null;
+  this.stoneValueSet = {};
   this.lowPerfMode = false;
   this.pendingActuateFrameId = null;
   this.forceSyncActuate = false;
@@ -24,6 +25,11 @@ HTMLActuator.prototype.cancelPendingActuation = function () {
 };
 
 HTMLActuator.prototype.renderActuationFrame = function (grid, metadata) {
+  this.stoneValueSet = {};
+  var stoneValues = metadata && Array.isArray(metadata.stoneValues) ? metadata.stoneValues : [];
+  for (var i = 0; i < stoneValues.length; i++) {
+    this.stoneValueSet[String(Number(stoneValues[i]))] = true;
+  }
   this.ensureGridLayout(grid, metadata);
   this.clearContainer(this.tileContainer);
 
@@ -290,9 +296,11 @@ HTMLActuator.prototype.addTile = function (tile, isMergedInner) {
   var inner = document.createElement("div");
   var position = tile.previousPosition || { x: tile.x, y: tile.y };
   var positionClass = this.positionClass(position);
+  var isStone = !!(tile && tile.isStone === true) || this.stoneValueSet[String(Number(tile.value))] === true;
 
   var classes = ["tile", "tile-" + tile.value, positionClass];
-  if (tile.value > 2048) classes.push("tile-super");
+  if (isStone) classes.push("tile-stone");
+  else if (tile.value > 2048) classes.push("tile-super");
 
   if (isMergedInner) {
     classes.push("tile-tobe-merged");
@@ -301,7 +309,7 @@ HTMLActuator.prototype.addTile = function (tile, isMergedInner) {
   this.applyClasses(wrapper, classes);
 
   inner.classList.add("tile-inner");
-  inner.textContent = tile.value;
+  inner.textContent = isStone ? "" : tile.value;
   this.applyTileStyle(wrapper, inner, position, tile.value);
 
   if (tile.previousPosition) {

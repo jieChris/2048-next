@@ -29,7 +29,6 @@ describe("bootstrap top action bindings host", () => {
       "top-practice-btn": createFakeElement(),
       "practice-mobile-undo-btn": createFakeElement(),
       "top-settings-btn": createFakeElement(),
-      "settings-close-btn": createFakeElement(),
       "settings-modal": createFakeElement()
     };
 
@@ -44,15 +43,14 @@ describe("bootstrap top action bindings host", () => {
       closeSettingsModal
     });
 
-    expect(result).toEqual({ didBind: true, boundControlCount: 7 });
+    expect(result).toEqual({ didBind: true, boundControlCount: 6 });
 
     const withPreventDefault = [
       "undo-link",
       "top-export-replay-btn",
       "top-practice-btn",
       "practice-mobile-undo-btn",
-      "top-settings-btn",
-      "settings-close-btn"
+      "top-settings-btn"
     ];
     for (let i = 0; i < withPreventDefault.length; i++) {
       const id = withPreventDefault[i];
@@ -65,13 +63,13 @@ describe("bootstrap top action bindings host", () => {
     expect(exportReplay).toHaveBeenCalledTimes(1);
     expect(openPracticeBoardFromCurrent).toHaveBeenCalledTimes(1);
     expect(openSettingsModal).toHaveBeenCalledTimes(1);
-    expect(closeSettingsModal).toHaveBeenCalledTimes(1);
+    expect(closeSettingsModal).toHaveBeenCalledTimes(0);
 
     elements["settings-modal"].handlers.click({ target: {} });
-    expect(closeSettingsModal).toHaveBeenCalledTimes(1);
+    expect(closeSettingsModal).toHaveBeenCalledTimes(0);
 
     elements["settings-modal"].handlers.click({ target: elements["settings-modal"] });
-    expect(closeSettingsModal).toHaveBeenCalledTimes(2);
+    expect(closeSettingsModal).toHaveBeenCalledTimes(1);
   });
 
   it("returns noop when getElementById is missing", () => {

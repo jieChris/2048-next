@@ -185,6 +185,7 @@ function resetSetupTimerAndInputState(manager) {
   manager.pendingMoveInput = null;
   manager.moveInputFlushScheduled = false;
   manager.lastMoveInputAt = 0;
+  manager.moveDeadlineAt = null;
 }
 
 function resetSetupRuntimeState(manager) {
@@ -240,6 +241,28 @@ function seedInitialTilesAndSnapshotBoard(manager) {
   manager.initialBoardMatrix = manager.getFinalBoardMatrix();
 }
 
+function placeStoneTilesForSetup(manager) {
+  if (!(manager && manager.grid && Array.isArray(manager.stoneCellsList))) return;
+  if (!manager.stoneCellsList.length) return;
+  if (!isNonArrayObject(manager.stoneValueSet)) manager.stoneValueSet = {};
+  for (var i = 0; i < manager.stoneCellsList.length; i++) {
+    var point = manager.stoneCellsList[i];
+    if (!isNonArrayObject(point)) continue;
+    var x = Number(point.x);
+    var y = Number(point.y);
+    if (!Number.isInteger(x) || !Number.isInteger(y)) continue;
+    if (x < 0 || x >= manager.width || y < 0 || y >= manager.height) continue;
+    if (manager.isBlockedCell(x, y)) continue;
+    var cell = { x: x, y: y };
+    if (!manager.grid.cellAvailable(cell)) continue;
+    var value = resolveStoneMarkerValue(i);
+    var tile = new Tile(cell, value);
+    tile.isStone = true;
+    manager.grid.insertTile(tile);
+    manager.stoneValueSet[String(value)] = true;
+  }
+}
+
 function resolveSetupRestoreAndInitialBoardState(manager, hasInputSeed, normalizedOptions) {
   if (!manager) return { restoredFromSavedState: false };
   var restoredFromSavedState = false;
@@ -248,6 +271,7 @@ function resolveSetupRestoreAndInitialBoardState(manager, hasInputSeed, normaliz
     restoredFromSavedState = tryRestoreLatestSavedState(manager);
   }
   if (!skipStartTiles && !restoredFromSavedState) {
+    placeStoneTilesForSetup(manager);
     seedInitialTilesAndSnapshotBoard(manager);
   }
   return { restoredFromSavedState: restoredFromSavedState };
@@ -260,6 +284,23 @@ function finalizeSetupUiAndStatsState(manager, preferredTimerModuleView, restore
   manager.notifyUndoSettingsStateChanged();
   manager.applyTimerModuleView(preferredTimerModuleView, true);
   manager.actuate();
+  if (typeof updateItemModeHud === "function") {
+    updateItemModeHud(manager);
+  }
+  if (typeof resetMoveTimeoutDeadline === "function") {
+    resetMoveTimeoutDeadline(manager, Date.now());
+  }
+  if (
+    typeof hasMoveTimeoutMode === "function" &&
+    hasMoveTimeoutMode(manager) &&
+    !manager.replayMode &&
+    manager.timerStatus === 0
+  ) {
+    manager.startTimer();
+  }
+  if (typeof updateMoveTimeoutHud === "function") {
+    updateMoveTimeoutHud(manager, Date.now());
+  }
   if (restoredFromSavedState) {
     manager.updateStatsPanel();
   } else {

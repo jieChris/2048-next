@@ -252,13 +252,24 @@ function syncBestScoreBeforeActuate(manager) {
 }
 
 function createActuatorPayloadState(manager) {
+  var stoneValues = [];
+  if (manager && manager.stoneValueSet && typeof manager.stoneValueSet === "object") {
+    for (var key in manager.stoneValueSet) {
+      if (!manager.hasOwnKey(manager.stoneValueSet, key)) continue;
+      if (manager.stoneValueSet[key] !== true) continue;
+      var value = Number(key);
+      if (!Number.isInteger(value)) continue;
+      stoneValues.push(value);
+    }
+  }
   return {
     score: manager.score,
     over: manager.over,
     won: manager.won,
     bestScore: manager.scoreManager.get(),
     terminated: isGameTerminated(manager),
-    blockedCells: manager.blockedCellsList || []
+    blockedCells: manager.blockedCellsList || [],
+    stoneValues: stoneValues
   };
 }
 

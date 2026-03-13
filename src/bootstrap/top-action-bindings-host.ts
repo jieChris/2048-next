@@ -88,10 +88,6 @@ export function applyTopActionBindings(input: {
   if (bindClickWithPreventDefault(getElementById, "top-settings-btn", openSettingsModal)) {
     boundControlCount += 1;
   }
-  if (bindClickWithPreventDefault(getElementById, "settings-close-btn", closeSettingsModal)) {
-    boundControlCount += 1;
-  }
-
   const settingsModal = getElementById("settings-modal");
   if (
     closeSettingsModal &&

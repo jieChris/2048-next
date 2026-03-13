@@ -172,10 +172,17 @@ function shouldUpdateStatsPanelAtTimerTick(manager, overlay, time) {
 
 function executeTimerTick(manager) {
   if (!(manager.startTime && typeof manager.startTime.getTime === "function")) return;
-  var time = Date.now() - manager.startTime.getTime();
+  var nowMs = Date.now();
+  if (typeof checkAndHandleMoveTimeout === "function" && checkAndHandleMoveTimeout(manager, nowMs)) {
+    return;
+  }
+  var time = nowMs - manager.startTime.getTime();
   manager.time = time;
   var timerEl = resolveManagerElementById(manager, "timer");
   if (timerEl) timerEl.textContent = manager.pretty(time);
+  if (typeof updateMoveTimeoutHud === "function") {
+    updateMoveTimeoutHud(manager, nowMs);
+  }
   refreshIpsDisplay(manager, time);
   var overlay = resolveManagerElementById(manager, "stats-panel-overlay");
   if (!shouldUpdateStatsPanelAtTimerTick(manager, overlay, time)) return;
@@ -195,6 +202,9 @@ function startTimer(manager) {
   manager.timerID = setInterval(function () {
     executeTimerTick(manager);
   }, manager.timerUpdateIntervalMs);
+  if (typeof updateMoveTimeoutHud === "function") {
+    updateMoveTimeoutHud(manager, Date.now());
+  }
 }
 
 function stopTimer(manager) {
@@ -207,6 +217,9 @@ function stopTimer(manager) {
   clearInterval(manager.timerID);
   manager.timerID = null;
   manager.timerStatus = 0;
+  if (typeof updateMoveTimeoutHud === "function") {
+    updateMoveTimeoutHud(manager, Date.now());
+  }
 }
 
 function resolvePrettyTimeFallbackString(rawTime) {

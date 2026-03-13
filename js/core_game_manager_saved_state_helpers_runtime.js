@@ -87,7 +87,11 @@ function setBoardFromMatrix(manager, board) {
       if (!Number.isInteger(value) || value < 0) throw "Invalid board value";
       if (manager.isBlockedCell(x, y) && value !== 0) throw "Blocked cell must stay empty";
       if (value > 0) {
-        manager.grid.insertTile(new Tile({ x: x, y: y }, value));
+        var tile = new Tile({ x: x, y: y }, value);
+        if (typeof manager.isStoneValue === "function" && manager.isStoneValue(value)) {
+          tile.isStone = true;
+        }
+        manager.grid.insertTile(tile);
       }
     }
   }

@@ -3,6 +3,19 @@
 
   if (!global) return;
 
+  function normalizeAvailableDirections(rawDirections) {
+    var source = Array.isArray(rawDirections) ? rawDirections : [];
+    var out = [];
+    for (var i = 0; i < source.length; i++) {
+      var dir = Number(source[i]);
+      if (!Number.isInteger(dir) || dir < 0 || dir > 7) continue;
+      if (out.indexOf(dir) !== -1) continue;
+      out.push(dir);
+    }
+    if (out.length) return out;
+    return [0, 1, 2, 3];
+  }
+
   function getLockedDirectionState(input, randomFromSeed) {
     var opts = input || {};
     var rules = opts.directionLockRules && typeof opts.directionLockRules === "object"
@@ -46,6 +59,9 @@
     var lockedDirection = currentLockedDirection;
     var lockedDirectionTurn = currentLockedDirectionTurn;
 
+    var availableDirections = normalizeAvailableDirections(opts.availableDirections);
+    var directionCount = availableDirections.length;
+
     if (lockedDirectionTurn !== moveCount) {
       var phase = Math.floor(moveCount / everyK);
       var seed = String(opts.initialSeed) + ":lock:" + phase;
@@ -57,7 +73,8 @@
         };
       }
       var randomValue = typeof resolver === "function" ? resolver(seed) : Math.random();
-      lockedDirection = Math.floor(randomValue * 4);
+      var dirIndex = Math.floor(randomValue * directionCount);
+      lockedDirection = availableDirections[dirIndex] || availableDirections[0];
       lockedDirectionTurn = moveCount;
     }
 

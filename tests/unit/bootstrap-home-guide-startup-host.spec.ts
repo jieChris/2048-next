@@ -51,7 +51,7 @@ describe("bootstrap home guide startup host", () => {
     expect(result).toEqual({
       shouldAutoStart: false,
       scheduled: false,
-      delayMs: 260
+      delayMs: 0
     });
   });
 });

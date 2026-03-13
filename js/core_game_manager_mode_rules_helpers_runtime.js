@@ -17,6 +17,97 @@ function normalizeSpecialRules(manager, rules) {
     });
   });
 }
+function getDefaultMoveDirections() {
+  return [0, 1, 2, 3];
+}
+function normalizeMoveDirectionsForManager(rawDirections) {
+  var source = Array.isArray(rawDirections) ? rawDirections : [];
+  var out = [];
+  for (var i = 0; i < source.length; i++) {
+    var dir = Number(source[i]);
+    if (!Number.isInteger(dir) || dir < 0 || dir > 7) continue;
+    if (out.indexOf(dir) !== -1) continue;
+    out.push(dir);
+  }
+  return out.length > 0 ? out : getDefaultMoveDirections();
+}
+function applyMoveDirectionsToManager(manager, rawDirections) {
+  if (!manager) return;
+  manager.allowedDirections = normalizeMoveDirectionsForManager(rawDirections);
+  manager.allowedDirectionSet = {};
+  for (var i = 0; i < manager.allowedDirections.length; i++) {
+    manager.allowedDirectionSet[String(manager.allowedDirections[i])] = true;
+  }
+}
+function getActiveMoveDirections(manager) {
+  if (!manager) return getDefaultMoveDirections();
+  return normalizeMoveDirectionsForManager(manager.allowedDirections);
+}
+function isDirectionAllowed(manager, direction) {
+  if (!manager) return false;
+  if (Number(direction) === -1) return true;
+  var key = String(Number(direction));
+  if (!manager.allowedDirectionSet || typeof manager.allowedDirectionSet !== "object") {
+    applyMoveDirectionsToManager(manager, manager.allowedDirections);
+  }
+  return !!manager.allowedDirectionSet[key];
+}
+function resolveStoneMarkerValue(index) {
+  return 3 + (Number(index) * 2);
+}
+function normalizeStoneCellsList(rawCells, width, height) {
+  var source = Array.isArray(rawCells) ? rawCells : [];
+  var out = [];
+  for (var i = 0; i < source.length; i++) {
+    var item = source[i];
+    var x = null;
+    var y = null;
+    if (Array.isArray(item) && item.length >= 2) {
+      x = Number(item[0]);
+      y = Number(item[1]);
+    } else if (isModeRulesRecordObject(item)) {
+      x = Number(item.x);
+      y = Number(item.y);
+    }
+    if (!Number.isInteger(x) || !Number.isInteger(y)) continue;
+    if (x < 0 || x >= width || y < 0 || y >= height) continue;
+    out.push({ x: x, y: y });
+  }
+  return out;
+}
+function applyStoneStateToManager(manager, stoneCellsList) {
+  if (!manager) return;
+  manager.stoneCellsList = Array.isArray(stoneCellsList) ? stoneCellsList.slice() : [];
+  manager.stoneValueSet = {};
+  for (var i = 0; i < manager.stoneCellsList.length; i++) {
+    manager.stoneValueSet[String(resolveStoneMarkerValue(i))] = true;
+  }
+}
+function isStoneValue(manager, value) {
+  if (!manager || !manager.stoneValueSet) return false;
+  return !!manager.stoneValueSet[String(Number(value))];
+}
+function normalizeItemModeRulesForManager(rawRules) {
+  if (!(rawRules && typeof rawRules === "object" && !Array.isArray(rawRules))) return null;
+  if (rawRules.enabled === false) return null;
+  var grantEveryMoves =
+    Number.isInteger(rawRules.grantEveryMoves) && Number(rawRules.grantEveryMoves) > 0
+      ? Number(rawRules.grantEveryMoves)
+      : (Number.isInteger(rawRules.grant_every_moves) && Number(rawRules.grant_every_moves) > 0
+        ? Number(rawRules.grant_every_moves)
+        : 6);
+  var maxPerItem =
+    Number.isInteger(rawRules.maxPerItem) && Number(rawRules.maxPerItem) > 0
+      ? Number(rawRules.maxPerItem)
+      : (Number.isInteger(rawRules.max_per_item) && Number(rawRules.max_per_item) > 0
+        ? Number(rawRules.max_per_item)
+        : 3);
+  return {
+    enabled: true,
+    grantEveryMoves: grantEveryMoves,
+    maxPerItem: maxPerItem
+  };
+}
 function resolveModeCatalogGetModeAccessor(manager) {
   if (!manager) return null;
   var modeCatalogGetMode = manager.resolveWindowNamespaceMethod("ModeCatalog", "getMode");
@@ -375,6 +466,10 @@ function applySpecialRulesStateSnapshot(manager, stateValue) {
     ? state.blockedCellSet
     : {};
   manager.blockedCellsList = Array.isArray(state.blockedCellsList) ? state.blockedCellsList : [];
+  applyStoneStateToManager(
+    manager,
+    normalizeStoneCellsList(state.stoneCellsList, manager.width, manager.height)
+  );
   manager.undoLimit = (Number.isInteger(state.undoLimit) && state.undoLimit >= 0)
     ? state.undoLimit
     : null;
@@ -384,6 +479,12 @@ function applySpecialRulesStateSnapshot(manager, stateValue) {
   manager.directionLockRules = isModeRulesRecordObject(state.directionLockRules)
     ? manager.clonePlain(state.directionLockRules)
     : null;
+  applyMoveDirectionsToManager(manager, state.movementDirections);
+  manager.moveTimeoutMs =
+    Number.isInteger(state.moveTimeoutMs) && Number(state.moveTimeoutMs) > 0
+      ? Number(state.moveTimeoutMs)
+      : null;
+  manager.itemModeRules = normalizeItemModeRulesForManager(state.itemModeRules);
 }
 function applySpecialRulesStateFromCore(manager) {
   if (!manager) return false;
@@ -430,6 +531,10 @@ function applySpecialRulesStateFallback(manager) {
   if (!manager) return;
   var safeRules = normalizeModeRulesRecordObject(manager.specialRules || {}, {});
   applyBlockedCellsFromSpecialRulesFallback(manager, safeRules);
+  applyStoneStateToManager(
+    manager,
+    normalizeStoneCellsList(safeRules.stone_tiles, manager.width, manager.height)
+  );
   manager.undoLimit = (Number.isInteger(safeRules.undo_limit) && safeRules.undo_limit >= 0)
     ? safeRules.undo_limit
     : null;
@@ -439,6 +544,17 @@ function applySpecialRulesStateFallback(manager) {
   manager.directionLockRules = isModeRulesRecordObject(safeRules.direction_lock)
     ? manager.clonePlain(safeRules.direction_lock)
     : null;
+  applyMoveDirectionsToManager(
+    manager,
+    Array.isArray(safeRules.movement_directions)
+      ? safeRules.movement_directions
+      : (safeRules.allow_diagonal_moves === true ? [0, 1, 2, 3, 4, 5, 6, 7] : getDefaultMoveDirections())
+  );
+  manager.moveTimeoutMs =
+    Number.isInteger(safeRules.move_timeout_ms) && Number(safeRules.move_timeout_ms) > 0
+      ? Number(safeRules.move_timeout_ms)
+      : null;
+  manager.itemModeRules = normalizeItemModeRulesForManager(safeRules.item_mode);
 }
 function syncScoreManagerModeKeyForSetup(manager, modeKey) {
   if (!manager || !manager.scoreManager || typeof manager.scoreManager.setModeKey !== "function") return;
@@ -780,7 +896,11 @@ function resolveVectorFallback(direction) {
     0: { x: 0, y: -1 }, // up
     1: { x: 1, y: 0 }, // right
     2: { x: 0, y: 1 }, // down
-    3: { x: -1, y: 0 } // left
+    3: { x: -1, y: 0 }, // left
+    4: { x: 1, y: -1 }, // up-right
+    5: { x: 1, y: 1 }, // down-right
+    6: { x: -1, y: 1 }, // down-left
+    7: { x: -1, y: -1 } // up-left
   }[direction];
 }
 function getVector(manager, direction) {
@@ -826,6 +946,7 @@ function resolveFibonacciMergedValueFallback(currentManager, a, b) {
   return mergedFibonacci;
 }
 function resolveMergedValueFallback(currentManager, a, b) {
+  if (isStoneValue(currentManager, a) || isStoneValue(currentManager, b)) return null;
   if (!Number.isInteger(a) || !Number.isInteger(b) || a <= 0 || b <= 0) return null;
   if (!currentManager.isFibonacciMode()) {
     return resolvePow2MergedValueFallback(currentManager, a, b);
@@ -834,6 +955,7 @@ function resolveMergedValueFallback(currentManager, a, b) {
 }
 function getMergedValue(manager, a, b) {
   if (!manager) return null;
+  if (isStoneValue(manager, a) || isStoneValue(manager, b)) return null;
   return resolveCoreArgsCallWith(manager, "callCoreRulesRuntime", "getMergedValue", createMergedValueResolveArgs(manager, a, b), undefined, function (currentManager, coreCallResult) {
     return currentManager.resolveNormalizedCoreValueOrFallbackAllowNull(coreCallResult, function (coreValue) {
       return normalizeMergedValueFromCore(coreValue);
@@ -888,6 +1010,7 @@ function resolveGridCellValue(cell, manager) {
   return tile ? tile.value : null;
 }
 function createTileMatchesAvailableResolveArgs(manager) {
+  var activeDirections = getActiveMoveDirections(manager);
   return [
     manager.width,
     manager.height,
@@ -897,12 +1020,16 @@ function createTileMatchesAvailableResolveArgs(manager) {
     },
     function (a, b) {
       return getMergedValue(manager, a, b) !== null;
-    }
+    },
+    activeDirections
   ];
 }
 function hasMergeableNeighbor(manager, x, y, tileValue) {
-  for (var direction = 0; direction < 4; direction++) {
+  var directions = getActiveMoveDirections(manager);
+  for (var i = 0; i < directions.length; i++) {
+    var direction = directions[i];
     var vector = getVector(manager, direction);
+    if (!vector) continue;
     var cell = { x: x + vector.x, y: y + vector.y };
     if (manager.isBlockedCell(cell.x, cell.y)) continue;
     var other = manager.grid.cellContent(cell);
