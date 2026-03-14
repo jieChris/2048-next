@@ -152,7 +152,7 @@ jobs:
 
   deploy_secondary:
     name: Deploy To Server (Secondary)
-    if: ${{ secrets.DEPLOY_HOST_2 != '' && secrets.DEPLOY_USER_2 != '' && secrets.DEPLOY_ROOT_2 != '' }}
+    if: ${{ vars.DEPLOY_SECONDARY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: build
