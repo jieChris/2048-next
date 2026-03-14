@@ -9,6 +9,7 @@
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var DEFAULT_LIMIT = 20;
   var DEFAULT_BOARD_MODE = "standard_no_undo";
+  var DEFAULT_API_TIMEOUT_MS = 8000;
 
   var apiBases = buildApiBaseCandidates();
   var activeApiBase = apiBases[0];
@@ -255,11 +256,16 @@
     var locationObj = global.location || {};
     var hostname = toText(locationObj.hostname).toLowerCase();
     var origin = toText(locationObj.origin);
+    var isLocalHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 
     if (hostname === "taihe.fun" && origin) {
       push(origin + "/api");
       push("https://taihe.fun/api");
     } else if (hostname === "www.taihe.fun") {
+      push("https://taihe.fun/api");
+      if (origin) push(origin + "/api");
+    } else if (isLocalHost) {
+      // Local static preview usually has no backend; prefer the production API first.
       push("https://taihe.fun/api");
       if (origin) push(origin + "/api");
     } else {
@@ -271,10 +277,17 @@
     return bases;
   }
 
+  function resolveApiTimeoutMs() {
+    var raw = Number(global.GAME_API_REQUEST_TIMEOUT_MS);
+    if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
+    return DEFAULT_API_TIMEOUT_MS;
+  }
+
   async function apiRequest(path, options) {
     var opts = options || {};
     var method = toText(opts.method || "GET").toUpperCase();
     var lastError = t("networkError");
+    var timeoutMs = resolveApiTimeoutMs();
 
     for (var i = 0; i < apiBases.length; i += 1) {
       var base = apiBases[i];
@@ -283,6 +296,12 @@
         method: method,
         headers: headers
       };
+      var timeoutHandle = null;
+      var controller = null;
+      if (typeof global.AbortController === "function") {
+        controller = new global.AbortController();
+        requestInit.signal = controller.signal;
+      }
 
       if (opts.auth) {
         var token = getToken();
@@ -295,7 +314,16 @@
       }
 
       try {
+        if (controller) {
+          timeoutHandle = global.setTimeout(function () {
+            try { controller.abort(); } catch (_err) {}
+          }, timeoutMs);
+        }
         var response = await global.fetch(base + path, requestInit);
+        if (timeoutHandle) {
+          global.clearTimeout(timeoutHandle);
+          timeoutHandle = null;
+        }
         var data = null;
         try {
           data = await response.json();
@@ -320,7 +348,16 @@
         activeApiBase = base;
         return data;
       } catch (error) {
-        lastError = t("networkError") + ": " + toText(error && error.message);
+        if (timeoutHandle) {
+          global.clearTimeout(timeoutHandle);
+          timeoutHandle = null;
+        }
+        var errorName = toText(error && error.name).toLowerCase();
+        if (errorName === "aborterror") {
+          lastError = t("networkError") + ": timeout";
+        } else {
+          lastError = t("networkError") + ": " + toText(error && error.message);
+        }
       }
     }
 

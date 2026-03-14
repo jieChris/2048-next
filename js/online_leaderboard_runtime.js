@@ -9,6 +9,7 @@
   var STORAGE_LAST_SUBMIT_KEY = "online_last_submit_signature_v1";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var DEFAULT_BOARD_LIMIT = 10;
+  var DEFAULT_API_TIMEOUT_MS = 8000;
   var MODE_BUCKET_ALIAS = {
     standard: "standard_no_undo",
     standard_no_undo: "standard_no_undo",
@@ -298,11 +299,16 @@
     var locationObj = global.location || {};
     var hostname = toText(locationObj.hostname).toLowerCase();
     var origin = toText(locationObj.origin);
+    var isLocalHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 
     if (hostname === "taihe.fun" && origin) {
       push(origin + "/api");
       push("https://taihe.fun/api");
     } else if (hostname === "www.taihe.fun") {
+      push("https://taihe.fun/api");
+      if (origin) push(origin + "/api");
+    } else if (isLocalHost) {
+      // Local static preview usually has no backend; prefer the production API first.
       push("https://taihe.fun/api");
       if (origin) push(origin + "/api");
     } else {
@@ -314,10 +320,17 @@
     return bases;
   }
 
+  function resolveApiTimeoutMs() {
+    var raw = Number(global.GAME_API_REQUEST_TIMEOUT_MS);
+    if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
+    return DEFAULT_API_TIMEOUT_MS;
+  }
+
   async function apiRequest(path, options) {
     var opts = options || {};
     var method = toText(opts.method || "GET").toUpperCase();
     var lastError = "请求失败";
+    var timeoutMs = resolveApiTimeoutMs();
 
     for (var i = 0; i < apiBases.length; i += 1) {
       var base = apiBases[i];
@@ -326,6 +339,12 @@
         method: method,
         headers: headers
       };
+      var timeoutHandle = null;
+      var controller = null;
+      if (typeof global.AbortController === "function") {
+        controller = new global.AbortController();
+        requestInit.signal = controller.signal;
+      }
 
       if (opts.auth) {
         var token = getAuthToken();
@@ -338,7 +357,16 @@
       }
 
       try {
+        if (controller) {
+          timeoutHandle = global.setTimeout(function () {
+            try { controller.abort(); } catch (_err) {}
+          }, timeoutMs);
+        }
         var response = await global.fetch(base + path, requestInit);
+        if (timeoutHandle) {
+          global.clearTimeout(timeoutHandle);
+          timeoutHandle = null;
+        }
         var data = null;
         try {
           data = await response.json();
@@ -363,7 +391,16 @@
         activeApiBase = base;
         return data;
       } catch (error) {
-        lastError = "网络异常: " + toText(error && error.message);
+        if (timeoutHandle) {
+          global.clearTimeout(timeoutHandle);
+          timeoutHandle = null;
+        }
+        var errorName = toText(error && error.name).toLowerCase();
+        if (errorName === "aborterror") {
+          lastError = "网络超时";
+        } else {
+          lastError = "网络异常: " + toText(error && error.message);
+        }
       }
     }
 
@@ -604,9 +641,13 @@
     if (signature && signature === lastSignature) return;
 
     submitLock = true;
-    var submitModeKey = getCurrentModeKey();
-    var result = await submitScore(score, submitModeKey);
-    submitLock = false;
+    var result = null;
+    try {
+      var submitModeKey = getCurrentModeKey();
+      result = await submitScore(score, submitModeKey);
+    } finally {
+      submitLock = false;
+    }
 
     if (result && result.success) {
       safeSetStorage(STORAGE_LAST_SUBMIT_KEY, signature);
