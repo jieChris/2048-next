@@ -35,7 +35,11 @@
     if (!window.LocalHistoryStore) {
       throw new Error("local_history_store_missing");
     }
-    var method = window.LocalHistoryStore[methodName];
+    var preferredAsyncName = methodName + "Async";
+    var method = window.LocalHistoryStore[preferredAsyncName];
+    if (typeof method !== "function") {
+      method = window.LocalHistoryStore[methodName];
+    }
     if (typeof method !== "function") {
       throw new Error("local_history_method_missing:" + methodName);
     }

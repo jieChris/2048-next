@@ -625,16 +625,23 @@
     return Array.isArray(result.items) ? result.items : [];
   }
 
-  function fireAndForget(maybePromise) {
-    if (maybePromise && typeof maybePromise.then === "function") {
-      maybePromise.catch(function () {});
-    }
+  var syncToAsyncQueue = Promise.resolve();
+
+  function enqueueAsyncSyncTask(task) {
+    if (typeof task !== "function") return;
+    syncToAsyncQueue = syncToAsyncQueue
+      .then(function () {
+        return task();
+      })
+      .catch(function () {});
   }
 
   function saveRecordCompat(record) {
     var item = normalizeRecord(record);
     mirrorSaveFallback(item);
-    fireAndForget(saveRecord(item));
+    enqueueAsyncSyncTask(function () {
+      return saveRecord(item);
+    });
     return item;
   }
 
@@ -646,7 +653,6 @@
       var item = all[i];
       if (item && item.id === key) return item;
     }
-    fireAndForget(getById(key));
     return null;
   }
 
@@ -666,13 +672,17 @@
       next.push(item);
     }
     if (removed) writeAllFallback(next);
-    fireAndForget(deleteById(key));
+    enqueueAsyncSyncTask(function () {
+      return deleteById(key);
+    });
     return removed;
   }
 
   function clearAllCompat() {
     writeAllFallback([]);
-    fireAndForget(clearAll());
+    enqueueAsyncSyncTask(function () {
+      return clearAll();
+    });
   }
 
   function listRecordsCompat(options) {
@@ -695,7 +705,6 @@
       if (idSet && !idSet[row.id]) continue;
       rows.push(row);
     }
-    fireAndForget(exportRecords(ids));
     return JSON.stringify({
       v: 1,
       exported_at: nowIso(),
@@ -743,7 +752,9 @@
     sortDesc(next);
     if (next.length > MAX_RECORDS) next = next.slice(0, MAX_RECORDS);
     writeAllFallback(next);
-    fireAndForget(importRecords(text, options));
+    enqueueAsyncSyncTask(function () {
+      return importRecords(text, options);
+    });
 
     return {
       imported: imported,
