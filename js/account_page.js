@@ -230,7 +230,7 @@
 
   function saveAuth(payload) {
     safeSetStorage(STORAGE_TOKEN_KEY, toText(payload && payload.token));
-    safeSetStorage(STORAGE_USER_ID_KEY, toText(payload && payload.userId));
+    safeRemoveStorage(STORAGE_USER_ID_KEY);
     safeSetStorage(STORAGE_NICKNAME_KEY, toText(payload && payload.nickname));
   }
 
