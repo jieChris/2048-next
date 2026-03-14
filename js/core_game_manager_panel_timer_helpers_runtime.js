@@ -6,6 +6,14 @@ function normalizePanelTimerRecordObject(value, fallbackValue) {
   return isPanelTimerRecordObject(value) ? value : fallbackValue;
 }
 
+var MIN_TIMER_UPDATE_INTERVAL_MS = 33;
+var HIDDEN_TIMER_UPDATE_INTERVAL_MS = 250;
+
+function isDocumentHiddenLike() {
+  if (typeof document === "undefined" || !document) return false;
+  return !!document.hidden;
+}
+
 function openStatsPanel(manager) {
   if (!manager) return;
   var overlay = resolveManagerElementById(manager, "stats-panel-overlay");
@@ -152,16 +160,55 @@ function setTimerModuleViewMode(manager, view, skipPersist) {
   manager.applyTimerModuleView(view, !!skipPersist);
 }
 
-function resolveTimerUpdateIntervalMs(manager) {
-  if (!manager) return 10;
-  return resolveCoreArgsCallWith(manager, "callCoreTimerIntervalRuntime", "resolveTimerUpdateIntervalMs", [manager.width, manager.height], 10, function (currentManager, coreCallResult) {
+function resolveVisibleTimerUpdateIntervalMs(manager) {
+  if (!manager) return MIN_TIMER_UPDATE_INTERVAL_MS;
+  return resolveCoreArgsCallWith(
+    manager,
+    "callCoreTimerIntervalRuntime",
+    "resolveTimerUpdateIntervalMs",
+    [manager.width, manager.height],
+    MIN_TIMER_UPDATE_INTERVAL_MS,
+    function (currentManager, coreCallResult) {
     return currentManager.resolveCoreNumericCallOrFallback(coreCallResult, function () {
       var area = (currentManager.width || 4) * (currentManager.height || 4);
       if (area >= 100) return 50;
       if (area >= 64) return 33;
-      return 10;
+      return MIN_TIMER_UPDATE_INTERVAL_MS;
     });
-  });
+    }
+  );
+}
+
+function resolveTimerUpdateIntervalMs(manager) {
+  var visibleInterval = Math.floor(Number(resolveVisibleTimerUpdateIntervalMs(manager)) || MIN_TIMER_UPDATE_INTERVAL_MS);
+  if (visibleInterval < MIN_TIMER_UPDATE_INTERVAL_MS) visibleInterval = MIN_TIMER_UPDATE_INTERVAL_MS;
+  if (isDocumentHiddenLike()) return Math.max(visibleInterval, HIDDEN_TIMER_UPDATE_INTERVAL_MS);
+  return visibleInterval;
+}
+
+function restartTimerIntervalWithCurrentSettings(manager) {
+  if (!manager || manager.timerStatus !== 1) return;
+  var nextInterval = resolveTimerUpdateIntervalMs(manager);
+  if (!Number.isFinite(nextInterval) || nextInterval <= 0) {
+    nextInterval = MIN_TIMER_UPDATE_INTERVAL_MS;
+  }
+  nextInterval = Math.floor(nextInterval);
+  if (manager.timerUpdateIntervalMs === nextInterval && manager.timerID) return;
+  manager.timerUpdateIntervalMs = nextInterval;
+  clearInterval(manager.timerID);
+  manager.timerID = setInterval(function () {
+    executeTimerTick(manager);
+  }, manager.timerUpdateIntervalMs);
+}
+
+function bindTimerVisibilityChangeListener(manager) {
+  if (!manager || manager._timerVisibilityBound) return;
+  if (typeof document === "undefined" || !document || typeof document.addEventListener !== "function") return;
+  manager._timerVisibilityBound = true;
+  manager._timerVisibilityHandler = function () {
+    restartTimerIntervalWithCurrentSettings(manager);
+  };
+  document.addEventListener("visibilitychange", manager._timerVisibilityHandler);
 }
 
 function shouldUpdateStatsPanelAtTimerTick(manager, overlay, time) {
@@ -197,11 +244,9 @@ function startTimer(manager) {
   // Convert accumulated time back to a start timestamp relative to now
   manager.startTime = new Date(Date.now() - (manager.accumulatedTime || 0));
   manager.notifyUndoSettingsStateChanged();
-  manager.timerUpdateIntervalMs = resolveTimerUpdateIntervalMs(manager);
   manager.lastStatsPanelUpdateAt = 0;
-  manager.timerID = setInterval(function () {
-    executeTimerTick(manager);
-  }, manager.timerUpdateIntervalMs);
+  bindTimerVisibilityChangeListener(manager);
+  restartTimerIntervalWithCurrentSettings(manager);
   if (typeof updateMoveTimeoutHud === "function") {
     updateMoveTimeoutHud(manager, Date.now());
   }

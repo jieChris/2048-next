@@ -102,7 +102,7 @@ function initializeGameManagerRuntimeState(manager) {
   manager.ruleset = "pow2"; manager.rankedBucket = "none"; manager.disableSessionSync = false;
   manager.spawnTable = [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
   manager.sessionSubmitDone = false; manager.sessionReplayV3 = null; manager.timerModuleView = "timer";
-  manager.timerLeaderboardLoadId = 0; manager.timerModuleBaseHeight = 0; manager.timerUpdateIntervalMs = 10;
+  manager.timerLeaderboardLoadId = 0; manager.timerModuleBaseHeight = 0; manager.timerUpdateIntervalMs = 33;
   manager.lastStatsPanelUpdateAt = 0;
   manager.pendingMoveInput = null; manager.moveInputFlushScheduled = false; manager.lastMoveInputAt = 0;
   manager.allowedDirections = [0, 1, 2, 3]; manager.allowedDirectionSet = { "0": true, "1": true, "2": true, "3": true };

@@ -133,6 +133,11 @@ var replayRelayoutTimer = null;
 var replaySeekRafId = 0;
 var replayPendingSeekValue = null;
 var replayUiRefreshRafId = 0;
+var replayUiTickTimer = 0;
+var replayUiTickStarted = false;
+var REPLAY_UI_ACTIVE_INTERVAL_MS = 220;
+var REPLAY_UI_IDLE_INTERVAL_MS = 1000;
+var REPLAY_UI_HIDDEN_INTERVAL_MS = 1800;
 
 function cancelReplayPendingRelayout() {
     if (!replayRelayoutTimer) return;
@@ -155,6 +160,7 @@ function replayUiPauseReplay() {
         window.game_manager.pause();
     }
     scheduleReplayUiRefresh();
+    scheduleReplayUiTick(true);
 }
 
 function replayUiToggleReplayPause() {
@@ -162,6 +168,7 @@ function replayUiToggleReplayPause() {
         if(window.game_manager.isPaused) window.game_manager.resume();
         else window.game_manager.pause();
         scheduleReplayUiRefresh();
+        scheduleReplayUiTick(true);
     }
 }
 
@@ -170,6 +177,7 @@ function replayUiStepReplay(delta) {
         cancelReplayPendingRelayout();
         window.game_manager.step(delta);
         scheduleReplayUiRefresh();
+        scheduleReplayUiTick(true);
     }
 }
 
@@ -179,6 +187,7 @@ function replayUiSetReplaySpeed(val) {
     if(window.game_manager && window.game_manager.setSpeed) {
         window.game_manager.setSpeed(multiplier);
     }
+    scheduleReplayUiTick(true);
 }
 
 function resolveReplaySeekIndexFromPercent(value) {
@@ -201,6 +210,7 @@ function flushReplayUiSeek() {
     cancelReplayPendingRelayout();
     window.game_manager.seek(index);
     scheduleReplayUiRefresh();
+    scheduleReplayUiTick(true);
 }
 
 function replayUiSeekReplay(value) {
@@ -215,11 +225,13 @@ function handleReplayScrubStart() {
     if (gameManager && !gameManager.isPaused && gameManager.pause) {
         gameManager.pause();
     }
+    scheduleReplayUiTick(true);
 }
 
 function handleReplayScrubEnd() {
     isScrubbing = false;
     scheduleReplayUiRefresh();
+    scheduleReplayUiTick(true);
 }
 
 window.toggleReplayPause = replayUiToggleReplayPause;
@@ -266,6 +278,42 @@ function updateReplayUI() {
         var percent = total > 0 ? (current / total) * 100 : 0;
         progress.value = percent;
     }
+}
+
+function resolveReplayUiTickIntervalMs() {
+    if (document.hidden) return REPLAY_UI_HIDDEN_INTERVAL_MS;
+    var manager = window.game_manager;
+    if (!manager || manager.isPaused || isScrubbing) return REPLAY_UI_IDLE_INTERVAL_MS;
+    return REPLAY_UI_ACTIVE_INTERVAL_MS;
+}
+
+function clearReplayUiTickTimer() {
+    if (!replayUiTickTimer) return;
+    clearTimeout(replayUiTickTimer);
+    replayUiTickTimer = 0;
+}
+
+function scheduleReplayUiTick(immediate) {
+    clearReplayUiTickTimer();
+    replayUiTickTimer = setTimeout(runReplayUiTick, immediate ? 0 : resolveReplayUiTickIntervalMs());
+}
+
+function runReplayUiTick() {
+    replayUiTickTimer = 0;
+    updateReplayUI();
+    scheduleReplayUiTick(false);
+}
+
+function startReplayUiTicker() {
+    if (replayUiTickStarted) return;
+    replayUiTickStarted = true;
+    document.addEventListener("visibilitychange", function () {
+        scheduleReplayUiTick(true);
+    });
+    window.addEventListener("focus", function () {
+        scheduleReplayUiTick(true);
+    });
+    scheduleReplayUiTick(true);
 }
 
 function requestReplayRelayout() {
@@ -329,11 +377,9 @@ async function loadReplayFromSessionId() {
     }
 }
 
-// Periodic UI update
-setInterval(updateReplayUI, 200);
-
 // Initialize Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
+    startReplayUiTicker();
     // Scrubbing events
     var progressEl = document.getElementById('replay-progress');
     if(progressEl) {

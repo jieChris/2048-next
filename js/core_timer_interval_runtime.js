@@ -15,7 +15,7 @@
     var area = w * h;
     if (area >= 100) return 50;
     if (area >= 64) return 33;
-    return 10;
+    return 33;
   }
 
   function resolveMoveInputThrottleMs(replayMode, width, height) {

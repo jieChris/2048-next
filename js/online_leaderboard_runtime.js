@@ -39,6 +39,14 @@
   };
   var TIMER_LEADERBOARD_TOP_LIMIT = 10;
   var TIMER_LEADERBOARD_FETCH_LIMIT = 500;
+  var POLL_BASE_INTERVAL_VISIBLE_MS = 2500;
+  var POLL_BASE_INTERVAL_HIDDEN_MS = 12000;
+  var TIMER_REFRESH_INTERVAL_VISIBLE_MS = 20000;
+  var TIMER_REFRESH_INTERVAL_HIDDEN_MS = 90000;
+  var MODE_INTRO_REFRESH_INTERVAL_VISIBLE_MS = 45000;
+  var MODE_INTRO_REFRESH_INTERVAL_HIDDEN_MS = 180000;
+  var POLL_BACKOFF_MAX_MS = 60000;
+  var POLL_BACKOFF_MAX_STEP = 4;
 
   var apiBases = buildApiBaseCandidates();
   var activeApiBase = apiBases[0];
@@ -51,6 +59,13 @@
   var submitLock = false;
   var modeIntroBound = false;
   var langSyncBound = false;
+  var pollingStarted = false;
+  var pollingTickTimer = 0;
+  var pollingTickRunning = false;
+  var pollingFailureCount = 0;
+  var pollingLastTimerRefreshTime = 0;
+  var pollingLastModeIntroRefreshTime = 0;
+  var pollingVisibilityBound = false;
 
   function toText(value) {
     return value == null ? "" : String(value);
@@ -194,21 +209,73 @@
     return "12px";
   }
 
-  function appendTimerLeaderboardRow(list, rankText, nameText, rowClassName, rankClassName) {
-    if (!list) return;
+  function resolveFixedNameTileFontSizeFromFirst(topRows, lang) {
+    var rows = Array.isArray(topRows) ? topRows : [];
+    if (rows.length === 0) return "16px";
+    var firstText = formatLeaderboardNameAndScore(rows[0], lang);
+    var length = toText(firstText).trim().length;
+    if (length >= 20) return "14px";
+    if (length >= 18) return "16px";
+    if (length >= 15) return "18px";
+    return "22px";
+  }
+
+  function createTimerLeaderboardRowNode() {
     var row = createEl("div", "timer-leaderboard-row", "");
-    if (rowClassName) row.className += " " + rowClassName;
-
-    var rankTile = createEl("div", "timertile timer-leaderboard-rank-tile", toText(rankText));
-    rankTile.style.fontSize = resolveRankTileFontSize(rankText);
-    if (rankClassName) rankTile.className += " " + rankClassName;
-
-    var nameTile = createEl("div", "timertile timer-leaderboard-name-tile", toText(nameText));
-    nameTile.title = toText(nameText);
-
+    var rankTile = createEl("div", "timertile timer-leaderboard-rank-tile", "");
+    var nameTile = createEl("div", "timertile timer-leaderboard-name-tile", "");
     row.appendChild(rankTile);
     row.appendChild(nameTile);
-    list.appendChild(row);
+    row._rankTile = rankTile;
+    row._nameTile = nameTile;
+    return row;
+  }
+
+  function ensureTimerLeaderboardRowNodes(list, count) {
+    if (!list) return [];
+    var required = Math.max(0, Math.floor(Number(count) || 0));
+    while (list.children.length < required) {
+      list.appendChild(createTimerLeaderboardRowNode());
+    }
+    while (list.children.length > required) {
+      list.removeChild(list.lastChild);
+    }
+    var rows = [];
+    for (var i = 0; i < list.children.length; i += 1) {
+      rows.push(list.children[i]);
+    }
+    return rows;
+  }
+
+  function updateTimerLeaderboardRowNode(row, rankText, nameText, rowClassName, rankClassName, fixedNameFontSize) {
+    if (!row) return;
+    row.className = "timer-leaderboard-row" + (rowClassName ? " " + rowClassName : "");
+
+    var rankTile = row._rankTile;
+    var nameTile = row._nameTile;
+    if (!rankTile || !nameTile) {
+      rankTile = row.querySelector(".timer-leaderboard-rank-tile");
+      nameTile = row.querySelector(".timer-leaderboard-name-tile");
+      if (!rankTile) {
+        rankTile = createEl("div", "timertile timer-leaderboard-rank-tile", "");
+        row.insertBefore(rankTile, row.firstChild);
+      }
+      if (!nameTile) {
+        nameTile = createEl("div", "timertile timer-leaderboard-name-tile", "");
+        row.appendChild(nameTile);
+      }
+      row._rankTile = rankTile;
+      row._nameTile = nameTile;
+    }
+
+    rankTile.className = "timertile timer-leaderboard-rank-tile" + (rankClassName ? " " + rankClassName : "");
+    rankTile.textContent = toText(rankText);
+    rankTile.style.fontSize = resolveRankTileFontSize(rankText);
+
+    nameTile.className = "timertile timer-leaderboard-name-tile";
+    nameTile.textContent = toText(nameText);
+    nameTile.title = toText(nameText);
+    nameTile.style.fontSize = toText(fixedNameFontSize || "16px");
   }
 
   function formatLeaderboardNameAndScore(item, lang) {
@@ -222,10 +289,12 @@
   function renderTimerLeaderboardRows(topRows, selfEntry) {
     var list = byId("timer-leaderboard-list");
     if (!list) return;
-    list.innerHTML = "";
 
     var lang = getLanguage();
     var rows = Array.isArray(topRows) ? topRows : [];
+    var fixedNameFontSize = resolveFixedNameTileFontSizeFromFirst(rows, lang);
+    var rowNodes = ensureTimerLeaderboardRowNodes(list, TIMER_LEADERBOARD_TOP_LIMIT + 1);
+    var rowCursor = 0;
 
     for (var i = 0; i < rows.length && i < TIMER_LEADERBOARD_TOP_LIMIT; i += 1) {
       var item = rows[i] || {};
@@ -234,11 +303,27 @@
       if (i === 0) rankClassName = "is-top-1";
       else if (i === 1) rankClassName = "is-top-2";
       else if (i === 2) rankClassName = "is-top-3";
-      appendTimerLeaderboardRow(list, String(i + 1), displayText, "", rankClassName);
+      updateTimerLeaderboardRowNode(
+        rowNodes[rowCursor],
+        String(i + 1),
+        displayText,
+        "",
+        rankClassName,
+        fixedNameFontSize
+      );
+      rowCursor += 1;
     }
 
-    while (list.children.length < TIMER_LEADERBOARD_TOP_LIMIT) {
-      appendTimerLeaderboardRow(list, String(list.children.length + 1), "--", "is-empty", "");
+    while (rowCursor < TIMER_LEADERBOARD_TOP_LIMIT) {
+      updateTimerLeaderboardRowNode(
+        rowNodes[rowCursor],
+        String(rowCursor + 1),
+        "--",
+        "is-empty",
+        "",
+        fixedNameFontSize
+      );
+      rowCursor += 1;
     }
 
     var myRankText = "--";
@@ -252,7 +337,14 @@
       myIdentityAndScore = formatLeaderboardNameAndScore(selfEntry, lang);
     }
 
-    appendTimerLeaderboardRow(list, myRankText, myIdentityAndScore, "is-self", "");
+    updateTimerLeaderboardRowNode(
+      rowNodes[TIMER_LEADERBOARD_TOP_LIMIT],
+      myRankText,
+      myIdentityAndScore,
+      "is-self",
+      "",
+      fixedNameFontSize
+    );
   }
 
   function resolveSelfRank(rows) {
@@ -583,7 +675,7 @@
 
   async function refreshTimerLeaderboardPanel(forceRefresh) {
     var timerBox = byId("timerbox");
-    if (!timerBox) return;
+    if (!timerBox) return true;
     ensureTimerLeaderboardPanel();
     updateTimerLeaderboardHeader();
     syncTimerLeaderboardViewMode();
@@ -592,7 +684,7 @@
     var modeBucket = resolveLeaderboardMode(modeKey) || "";
     if (!modeBucket) {
       renderTimerLeaderboardRows([], null);
-      return;
+      return true;
     }
 
     var now = Date.now();
@@ -607,24 +699,25 @@
         timerLeaderboardCacheRows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT),
         resolveSelfRank(timerLeaderboardCacheRows)
       );
-      return;
+      return true;
     }
 
-    if (timerLeaderboardLoading) return;
+    if (timerLeaderboardLoading) return true;
     timerLeaderboardLoading = true;
     var result = await getLeaderboard(TIMER_LEADERBOARD_FETCH_LIMIT, modeBucket);
     timerLeaderboardLoading = false;
 
     if (!result || !result.success) {
       renderTimerLeaderboardRows([], null);
-      return;
+      return false;
     }
 
     var rows = Array.isArray(result.data) ? result.data : [];
     timerLeaderboardCacheRows = rows;
     timerLeaderboardCacheMode = modeBucket;
-    timerLeaderboardCacheTime = now;
+    timerLeaderboardCacheTime = Date.now();
     renderTimerLeaderboardRows(rows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT), resolveSelfRank(rows));
+    return true;
   }
 
   function isSessionTerminated(manager) {
@@ -698,27 +791,96 @@
     });
   }
 
-  function startPolling() {
-    global.setInterval(function () {
+  function resolvePollBaseIntervalMs() {
+    return global.document.hidden ? POLL_BASE_INTERVAL_HIDDEN_MS : POLL_BASE_INTERVAL_VISIBLE_MS;
+  }
+
+  function resolveTimerRefreshIntervalMs() {
+    return global.document.hidden ? TIMER_REFRESH_INTERVAL_HIDDEN_MS : TIMER_REFRESH_INTERVAL_VISIBLE_MS;
+  }
+
+  function resolveModeIntroRefreshIntervalMs() {
+    return global.document.hidden ? MODE_INTRO_REFRESH_INTERVAL_HIDDEN_MS : MODE_INTRO_REFRESH_INTERVAL_VISIBLE_MS;
+  }
+
+  function clearPollingTimer() {
+    if (!pollingTickTimer) return;
+    global.clearTimeout(pollingTickTimer);
+    pollingTickTimer = 0;
+  }
+
+  function schedulePollingTick(immediate) {
+    clearPollingTimer();
+    var delay = immediate ? 0 : resolvePollBaseIntervalMs();
+    if (!immediate && pollingFailureCount > 0) {
+      var scale = Math.pow(2, Math.min(pollingFailureCount, POLL_BACKOFF_MAX_STEP));
+      delay = Math.min(POLL_BACKOFF_MAX_MS, delay * scale);
+    }
+    pollingTickTimer = global.setTimeout(runPollingTick, delay);
+  }
+
+  function bindPollingVisibilityRefresh() {
+    if (pollingVisibilityBound) return;
+    pollingVisibilityBound = true;
+    global.document.addEventListener("visibilitychange", function () {
+      if (!global.document.hidden) {
+        pollingFailureCount = 0;
+        schedulePollingTick(true);
+      }
+    });
+    global.addEventListener("online", function () {
+      pollingFailureCount = 0;
+      schedulePollingTick(true);
+    });
+    global.addEventListener("focus", function () {
+      schedulePollingTick(true);
+    });
+  }
+
+  async function runPollingTick() {
+    if (pollingTickRunning) {
+      schedulePollingTick(false);
+      return;
+    }
+    pollingTickRunning = true;
+    var tickFailed = false;
+    var now = Date.now();
+
+    try {
       ensureToolkitEntryRow();
       bindModeIntroRefresh();
       syncTimerLeaderboardViewMode();
       if (typeof global.syncTimerModuleSettingsUI === "function") {
         global.syncTimerModuleSettingsUI();
       }
-      maybeSubmitScoreOnGameOver();
-    }, 1500);
 
-    global.setInterval(function () {
-      if (byId("mode-intro-leaderboard")) {
-        refreshLeaderboard(getCurrentModeKey());
+      await maybeSubmitScoreOnGameOver();
+
+      if (now - pollingLastTimerRefreshTime >= resolveTimerRefreshIntervalMs()) {
+        pollingLastTimerRefreshTime = now;
+        var timerOk = await refreshTimerLeaderboardPanel(false);
+        if (!timerOk) tickFailed = true;
       }
-      refreshTimerLeaderboardPanel(false);
-    }, 30000);
 
-    global.setInterval(function () {
-      refreshTimerLeaderboardPanel(false);
-    }, 12000);
+      if (byId("mode-intro-leaderboard") && now - pollingLastModeIntroRefreshTime >= resolveModeIntroRefreshIntervalMs()) {
+        pollingLastModeIntroRefreshTime = now;
+        var introOk = await refreshLeaderboard(getCurrentModeKey());
+        if (!introOk) tickFailed = true;
+      }
+    } catch (_err) {
+      tickFailed = true;
+    } finally {
+      pollingTickRunning = false;
+      pollingFailureCount = tickFailed ? Math.min(pollingFailureCount + 1, POLL_BACKOFF_MAX_STEP) : 0;
+      schedulePollingTick(false);
+    }
+  }
+
+  function startPolling() {
+    if (pollingStarted) return;
+    pollingStarted = true;
+    bindPollingVisibilityRefresh();
+    schedulePollingTick(true);
   }
 
   function init() {
