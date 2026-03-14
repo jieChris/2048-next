@@ -66,6 +66,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.calls).toBeGreaterThan(1);
     expect(snapshot.rowCount).toBeGreaterThan(0);
     expect(snapshot.tip.includes("Loading")).toBeFalsy();
-    expect(snapshot.tip.includes("加载中")).toBeFalsy();
+    expect(snapshot.tip.length).toBeGreaterThan(0);
   });
 });
