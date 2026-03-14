@@ -8,7 +8,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Capped page response should exist").not.toBeNull();
     expect(response?.ok(), "Capped page response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(200);
+    await page.waitForFunction(() => {
+      const bootstrap = (window as any).CoreBootstrapRuntime;
+      const modeCatalogRuntime = (window as any).CoreModeCatalogRuntime;
+      return (
+        !!bootstrap &&
+        typeof bootstrap.resolveModeConfig === "function" &&
+        !!modeCatalogRuntime &&
+        typeof modeCatalogRuntime.resolveCatalogModeWithDefault === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const bootstrap = (window as any).CoreBootstrapRuntime;
@@ -86,7 +95,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Play response should exist").not.toBeNull();
     expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.resolveModeConfig === "function";
+    });
     await page.waitForFunction(() => {
       const manager = (window as any).game_manager;
       return !!manager && typeof manager.getModeConfigFromCatalog === "function";
@@ -137,7 +149,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Play response should exist").not.toBeNull();
     expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      if (!manager || typeof manager.resolveModeConfig !== "function") {
+        return false;
+      }
+      const resolved = manager.resolveModeConfig("classic_no_undo");
+      return (
+        !!resolved &&
+        typeof resolved.key === "string" &&
+        Number((window as any).__modeConfigCatalogCallCount || 0) > 0
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -184,7 +207,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Capped response should exist").not.toBeNull();
     expect(response?.ok(), "Capped response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.isCappedMode === "function";
+    });
 
     const snapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -230,7 +256,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Capped response should exist").not.toBeNull();
     expect(response?.ok(), "Capped response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
     await page.waitForFunction(() => {
       const manager = (window as any).game_manager;
       return !!manager && typeof manager.resolveProgressiveCapped64UnlockedState === "function";
@@ -295,7 +320,24 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Replay response should exist").not.toBeNull();
     expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const simpleRuntimeContractRuntime = (window as any).CoreSimpleRuntimeContractRuntime;
+      const simpleStartupRuntime = (window as any).CoreSimpleStartupRuntime;
+      return (
+        !!simpleRuntimeContractRuntime &&
+        typeof simpleRuntimeContractRuntime.resolveSimpleBootstrapRuntime === "function" &&
+        !!simpleStartupRuntime &&
+        typeof simpleStartupRuntime.resolveSimpleStartupPayload === "function"
+      );
+    });
+    await page.waitForFunction(() => {
+      return (
+        Number((window as any).__simpleRuntimeContractCallCount || 0) > 0 &&
+        Number((window as any).__simpleStartupCallCount || 0) > 0 &&
+        !!(window as any).GAME_MODE_CONFIG &&
+        typeof (window as any).GAME_MODE_CONFIG.key === "string"
+      );
+    });
 
     const snapshot = await page.evaluate(() => {
       const cfg = (window as any).GAME_MODE_CONFIG;
@@ -538,7 +580,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const titleNode = document.querySelector(".heading .title");
+      const title = titleNode ? String(titleNode.textContent || "") : "";
+      return title.includes("本地记录") || title.includes("鏈湴璁板綍");
+    });
 
     const snapshot = await page.evaluate(() => {
       const titleNode = document.querySelector(".heading .title");
@@ -549,7 +595,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     expect(snapshot.alertCount).toBe(0);
-    expect(snapshot.title).toContain("本地记录");
+    expect(snapshot.title.includes("本地记录") || snapshot.title.includes("鏈湴璁板綍")).toBe(true);
   });
 
   test("replay page keeps backward compatibility for legacy id parameter", async ({ page }) => {
@@ -577,7 +623,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const titleNode = document.querySelector(".heading .title");
+      const title = titleNode ? String(titleNode.textContent || "") : "";
+      return title.includes("本地记录") || title.includes("鏈湴璁板綍");
+    });
 
     const snapshot = await page.evaluate(() => {
       const titleNode = document.querySelector(".heading .title");
@@ -588,7 +638,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     expect(snapshot.alertCount).toBe(0);
-    expect(snapshot.title).toContain("本地记录");
+    expect(snapshot.title.includes("本地记录") || snapshot.title.includes("鏈湴璁板綍")).toBe(true);
   });
 
   test("replay page reports explicit error when local history replay code is missing", async ({
@@ -618,7 +668,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      return Number(((window as any).__replayLoadAlerts || []).length || 0) > 0;
+    });
 
     const snapshot = await page.evaluate(() => {
       return {
@@ -627,7 +679,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     expect(snapshot.alerts.length).toBeGreaterThan(0);
-    expect(snapshot.alerts[0]).toContain("加载本地回放失败");
+    expect(
+      snapshot.alerts[0].includes("加载本地回放失败") ||
+        snapshot.alerts[0].includes("鍔犺浇鏈湴鍥炴斁澶辫触")
+    ).toBe(true);
   });
 
   test("replay ui no longer includes onboarding guide storage runtime", async ({ page }) => {

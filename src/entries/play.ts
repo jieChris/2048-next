@@ -2,6 +2,8 @@ import { loadLegacyScriptsSequentially } from "./legacy-loader";
 
 import seedrandomUrl from "../../js/seedrandom.js?url";
 import animframePolyfillUrl from "../../js/animframe_polyfill.js?url";
+import coreBootstrapRuntimeUrl from "../../js/core_bootstrap_runtime.js?url";
+import coreModeCatalogRuntimeUrl from "../../js/core_mode_catalog_runtime.js?url";
 import keyboardInputManagerUrl from "../../js/keyboard_input_manager.js?url";
 import themeManagerUrl from "../../js/theme_manager.js?url";
 import modeCatalogUrl from "../../js/mode_catalog.js?url";
@@ -10,7 +12,6 @@ import gridUrl from "../../js/grid.js?url";
 import tileUrl from "../../js/tile.js?url";
 import localScoreManagerUrl from "../../js/local_score_manager.js?url";
 import localHistoryStoreUrl from "../../js/local_history_store.js?url";
-import coreModeCatalogRuntimeUrl from "../../js/core_mode_catalog_runtime.js?url";
 import corePlayRuntimeContractRuntimeUrl from "../../js/core_play_runtime_contract_runtime.js?url";
 import corePlayPageHostRuntimeUrl from "../../js/core_play_page_host_runtime.js?url";
 import corePlayPageContextRuntimeUrl from "../../js/core_play_page_context_runtime.js?url";
@@ -80,7 +81,6 @@ import coreGameManagerModeRulesHelpersRuntimeUrl from "../../js/core_game_manage
 import coreGameManagerStaticRuntimeUrl from "../../js/core_game_manager_static_runtime.js?url";
 import coreGameManagerBindingsRuntimeUrl from "../../js/core_game_manager_bindings_runtime.js?url";
 import gameManagerUrl from "../../js/game_manager.js?url";
-import coreBootstrapRuntimeUrl from "../../js/core_bootstrap_runtime.js?url";
 import coreStorageRuntimeUrl from "../../js/core_storage_runtime.js?url";
 import playApplicationUrl from "../../js/play_application.js?url";
 import coreCappedTimerScrollRuntimeUrl from "../../js/core_capped_timer_scroll_runtime.js?url";
@@ -153,6 +153,8 @@ import coreI18nRuntimeUrl from "../../js/core_i18n_runtime.js?url";
 const playLegacyScripts = [
   seedrandomUrl,
   animframePolyfillUrl,
+  coreBootstrapRuntimeUrl,
+  coreModeCatalogRuntimeUrl,
   keyboardInputManagerUrl,
   themeManagerUrl,
   modeCatalogUrl,
@@ -161,7 +163,6 @@ const playLegacyScripts = [
   tileUrl,
   localScoreManagerUrl,
   localHistoryStoreUrl,
-  coreModeCatalogRuntimeUrl,
   corePlayRuntimeContractRuntimeUrl,
   corePlayPageHostRuntimeUrl,
   corePlayPageContextRuntimeUrl,
@@ -231,7 +232,6 @@ const playLegacyScripts = [
   coreGameManagerStaticRuntimeUrl,
   coreGameManagerBindingsRuntimeUrl,
   gameManagerUrl,
-  coreBootstrapRuntimeUrl,
   coreStorageRuntimeUrl,
   playApplicationUrl,
   coreCappedTimerScrollRuntimeUrl,

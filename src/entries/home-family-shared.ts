@@ -154,6 +154,7 @@ export const homeAnnouncementScripts = [
 export const homeCoreScripts = [
   seedrandomUrl,
   animframePolyfillUrl,
+  coreBootstrapRuntimeUrl,
   keyboardInputManagerUrl,
   themeManagerUrl,
   modeCatalogUrl,
@@ -211,13 +212,13 @@ export const homeCoreScripts = [
   coreGameManagerModeRulesHelpersRuntimeUrl,
   coreGameManagerStaticRuntimeUrl,
   coreGameManagerBindingsRuntimeUrl,
-  gameManagerUrl,
-  coreBootstrapRuntimeUrl
+  gameManagerUrl
 ] as const;
 
 export const cappedCoreScripts = [
   seedrandomUrl,
   animframePolyfillUrl,
+  coreBootstrapRuntimeUrl,
   cappedInputManagerUrl,
   themeManagerUrl,
   modeCatalogUrl,
@@ -276,8 +277,7 @@ export const cappedCoreScripts = [
   coreGameManagerModeRulesHelpersRuntimeUrl,
   coreGameManagerStaticRuntimeUrl,
   coreGameManagerBindingsRuntimeUrl,
-  gameManagerUrl,
-  coreBootstrapRuntimeUrl
+  gameManagerUrl
 ] as const;
 
 export const homeStandardStartupScripts = [
