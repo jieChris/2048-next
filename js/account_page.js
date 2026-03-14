@@ -261,19 +261,15 @@
     if (hostname === "taihe.fun" && origin) {
       push(origin + "/api");
       push("https://taihe.fun/api");
-      push("https://www.taihe.fun/api");
     } else if (hostname === "www.taihe.fun") {
-      push("https://taihe.fun/api");
       if (origin) push(origin + "/api");
-      push("https://www.taihe.fun/api");
+      push("https://taihe.fun/api");
     } else if (isLocalHost) {
       if (origin) push(origin + "/api");
       push("https://taihe.fun/api");
-      push("https://www.taihe.fun/api");
     } else {
       if (origin) push(origin + "/api");
       push("https://taihe.fun/api");
-      push("https://www.taihe.fun/api");
     }
 
     if (bases.length === 0) push("https://taihe.fun/api");

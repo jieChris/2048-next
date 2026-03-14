@@ -211,6 +211,17 @@
     list.appendChild(row);
   }
 
+  function formatLeaderboardIdentityAndScore(item, lang) {
+    var source = item && typeof item === "object" ? item : {};
+    var userIdNumber = Math.floor(Number(source.user_id) || 0);
+    var userIdText = userIdNumber > 0 ? String(userIdNumber) : "--";
+    var scoreValue = Math.floor(Number(source.score) || 0);
+    if (lang === "en") {
+      return "ID " + userIdText + " | Best " + String(scoreValue);
+    }
+    return "ID " + userIdText + " | 最高 " + String(scoreValue);
+  }
+
   function renderTimerLeaderboardRows(topRows, selfEntry) {
     var list = byId("timer-leaderboard-list");
     if (!list) return;
@@ -221,12 +232,12 @@
 
     for (var i = 0; i < rows.length && i < TIMER_LEADERBOARD_TOP_LIMIT; i += 1) {
       var item = rows[i] || {};
-      var nick = toText(item.nickname || (lang === "en" ? "Anonymous" : "匿名"));
+      var displayText = formatLeaderboardIdentityAndScore(item, lang);
       var rankClassName = "";
       if (i === 0) rankClassName = "is-top-1";
       else if (i === 1) rankClassName = "is-top-2";
       else if (i === 2) rankClassName = "is-top-3";
-      appendTimerLeaderboardRow(list, String(i + 1), nick, "", rankClassName);
+      appendTimerLeaderboardRow(list, String(i + 1), displayText, "", rankClassName);
     }
 
     while (list.children.length < TIMER_LEADERBOARD_TOP_LIMIT) {
@@ -234,14 +245,17 @@
     }
 
     var myRankText = "--";
-    var myNick = getNickname() || (lang === "en" ? "You" : "我");
+    var myIdentityAndScore = formatLeaderboardIdentityAndScore({
+      user_id: Math.floor(Number(getUserId()) || 0),
+      score: 0
+    }, lang);
 
     if (selfEntry) {
       myRankText = String(selfEntry.rank || "--");
-      myNick = toText(selfEntry.nickname || myNick);
+      myIdentityAndScore = formatLeaderboardIdentityAndScore(selfEntry, lang);
     }
 
-    appendTimerLeaderboardRow(list, myRankText, myNick, "is-self", "");
+    appendTimerLeaderboardRow(list, myRankText, myIdentityAndScore, "is-self", "");
   }
 
   function resolveSelfRank(rows) {
@@ -254,6 +268,7 @@
       if (String(item.user_id || "") === userId) {
         return {
           rank: i + 1,
+          user_id: Math.floor(Number(item.user_id) || 0),
           score: Math.floor(Number(item.score) || 0),
           nickname: toText(item.nickname || getNickname() || "")
         };
@@ -261,6 +276,7 @@
     }
     return {
       rank: "--",
+      user_id: Math.floor(Number(userId) || 0),
       score: 0,
       nickname: getNickname() || ""
     };
@@ -304,19 +320,15 @@
     if (hostname === "taihe.fun" && origin) {
       push(origin + "/api");
       push("https://taihe.fun/api");
-      push("https://www.taihe.fun/api");
     } else if (hostname === "www.taihe.fun") {
-      push("https://taihe.fun/api");
       if (origin) push(origin + "/api");
-      push("https://www.taihe.fun/api");
+      push("https://taihe.fun/api");
     } else if (isLocalHost) {
       if (origin) push(origin + "/api");
       push("https://taihe.fun/api");
-      push("https://www.taihe.fun/api");
     } else {
       if (origin) push(origin + "/api");
       push("https://taihe.fun/api");
-      push("https://www.taihe.fun/api");
     }
 
     if (bases.length === 0) push("https://taihe.fun/api");

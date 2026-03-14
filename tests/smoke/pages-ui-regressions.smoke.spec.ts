@@ -330,7 +330,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     }
   });
 
-  test("leaderboard view reuses timer row layout for rank and nickname rows", async ({ page }) => {
+  test("leaderboard view reuses timer row layout for rank and identity+score rows", async ({ page }) => {
     await page.route("**/api/leaderboard?**", async (route) => {
       await route.fulfill({
         status: 200,
@@ -437,11 +437,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.firstRankClassName).toContain("timertile");
     expect(snapshot.firstNameClassName).toContain("timertile");
     expect(snapshot.firstRankText).toBe("1");
-    expect(snapshot.firstNameText).toBe("Alice");
-    expect(snapshot.firstNameText).not.toContain("4096");
-    expect(snapshot.firstNameText).not.toContain("-");
+    expect(snapshot.firstNameText).toBe("ID 7 | 最高 4096");
+    expect(snapshot.firstNameText).toContain("4096");
+    expect(snapshot.firstNameText).toContain("ID 7");
     expect(snapshot.selfRankText).toBe("2");
-    expect(snapshot.selfNameText).toBe("Bob");
+    expect(snapshot.selfNameText).toBe("ID 8 | 最高 2048");
     expect(snapshot.firstNameWidth).toBe(187);
     expect(snapshot.selfNameWidth).toBe(187);
     expect(snapshot.firstNameRightDelta).toBeLessThanOrEqual(1);
