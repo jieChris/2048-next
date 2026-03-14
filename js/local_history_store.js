@@ -280,17 +280,20 @@
     };
   }
 
-  async function saveRecord(record) {
+  async function saveRecord(record, skipFallbackMirror) {
     var item = normalizeRecord(record);
+    var skipMirror = skipFallbackMirror === true;
 
     var db = await getDatabase();
     if (!db) {
-      var fallbackList = readAllFallback();
-      fallbackList.unshift(item);
-      if (fallbackList.length > MAX_RECORDS) {
-        fallbackList = fallbackList.slice(0, MAX_RECORDS);
+      if (!skipMirror) {
+        var fallbackList = readAllFallback();
+        fallbackList.unshift(item);
+        if (fallbackList.length > MAX_RECORDS) {
+          fallbackList = fallbackList.slice(0, MAX_RECORDS);
+        }
+        writeAllFallback(fallbackList);
       }
-      writeAllFallback(fallbackList);
       return item;
     }
 
@@ -298,7 +301,9 @@
     var tx = db.transaction(STORE_NAME, "readwrite");
     tx.objectStore(STORE_NAME).put(item);
     await txDonePromise(tx);
-    mirrorSaveFallback(item);
+    if (!skipMirror) {
+      mirrorSaveFallback(item);
+    }
     return item;
   }
 
@@ -322,12 +327,14 @@
     return value || null;
   }
 
-  async function deleteById(id) {
+  async function deleteById(id, skipFallbackMirror) {
     var key = String(id || "");
     if (!key) return false;
+    var skipMirror = skipFallbackMirror === true;
 
     var db = await getDatabase();
     if (!db) {
+      if (skipMirror) return false;
       var list = readAllFallback();
       var next = [];
       var removed = false;
@@ -353,14 +360,19 @@
     }
     store.delete(key);
     await txDonePromise(tx);
-    mirrorDeleteFallback(key);
+    if (!skipMirror) {
+      mirrorDeleteFallback(key);
+    }
     return true;
   }
 
-  async function clearAll() {
+  async function clearAll(skipFallbackMirror) {
+    var skipMirror = skipFallbackMirror === true;
     var db = await getDatabase();
     if (!db) {
-      writeAllFallback([]);
+      if (!skipMirror) {
+        writeAllFallback([]);
+      }
       return;
     }
 
@@ -368,7 +380,9 @@
     var tx = db.transaction(STORE_NAME, "readwrite");
     tx.objectStore(STORE_NAME).clear();
     await txDonePromise(tx);
-    writeAllFallback([]);
+    if (!skipMirror) {
+      writeAllFallback([]);
+    }
   }
 
   async function listRecords(options) {
@@ -508,9 +522,10 @@
     return buildEnvelope(rows);
   }
 
-  async function importRecords(text, options) {
+  async function importRecords(text, options, skipFallbackMirror) {
     options = options || {};
     var merge = options.merge !== false;
+    var skipMirror = skipFallbackMirror === true;
 
     var parsed = safeParse(text, null);
     if (!parsed) throw new Error("invalid_json");
@@ -555,7 +570,9 @@
       if (nextFallback.length > MAX_RECORDS) {
         nextFallback = nextFallback.slice(0, MAX_RECORDS);
       }
-      writeAllFallback(nextFallback);
+      if (!skipMirror) {
+        writeAllFallback(nextFallback);
+      }
       return {
         imported: imported,
         replaced: replaced,
@@ -592,7 +609,9 @@
       }
     }
 
-    mirrorReplaceFallback(capped);
+    if (!skipMirror) {
+      mirrorReplaceFallback(capped);
+    }
 
     return {
       imported: imported,
@@ -640,7 +659,7 @@
     var item = normalizeRecord(record);
     mirrorSaveFallback(item);
     enqueueAsyncSyncTask(function () {
-      return saveRecord(item);
+      return saveRecord(item, true);
     });
     return item;
   }
@@ -673,7 +692,7 @@
     }
     if (removed) writeAllFallback(next);
     enqueueAsyncSyncTask(function () {
-      return deleteById(key);
+      return deleteById(key, true);
     });
     return removed;
   }
@@ -681,7 +700,7 @@
   function clearAllCompat() {
     writeAllFallback([]);
     enqueueAsyncSyncTask(function () {
-      return clearAll();
+      return clearAll(true);
     });
   }
 
@@ -753,7 +772,7 @@
     if (next.length > MAX_RECORDS) next = next.slice(0, MAX_RECORDS);
     writeAllFallback(next);
     enqueueAsyncSyncTask(function () {
-      return importRecords(text, options);
+      return importRecords(text, options, true);
     });
 
     return {
