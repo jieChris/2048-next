@@ -211,15 +211,12 @@
     list.appendChild(row);
   }
 
-  function formatLeaderboardIdentityAndScore(item, lang) {
+  function formatLeaderboardNameAndScore(item, lang) {
     var source = item && typeof item === "object" ? item : {};
-    var userIdNumber = Math.floor(Number(source.user_id) || 0);
-    var userIdText = userIdNumber > 0 ? String(userIdNumber) : "--";
+    var nickname = toText(source.nickname).trim();
+    if (!nickname) nickname = lang === "en" ? "Anonymous" : "匿名";
     var scoreValue = Math.floor(Number(source.score) || 0);
-    if (lang === "en") {
-      return "ID " + userIdText + " | Best " + String(scoreValue);
-    }
-    return "ID " + userIdText + " | 最高 " + String(scoreValue);
+    return nickname + "-" + String(scoreValue);
   }
 
   function renderTimerLeaderboardRows(topRows, selfEntry) {
@@ -232,7 +229,7 @@
 
     for (var i = 0; i < rows.length && i < TIMER_LEADERBOARD_TOP_LIMIT; i += 1) {
       var item = rows[i] || {};
-      var displayText = formatLeaderboardIdentityAndScore(item, lang);
+      var displayText = formatLeaderboardNameAndScore(item, lang);
       var rankClassName = "";
       if (i === 0) rankClassName = "is-top-1";
       else if (i === 1) rankClassName = "is-top-2";
@@ -245,14 +242,14 @@
     }
 
     var myRankText = "--";
-    var myIdentityAndScore = formatLeaderboardIdentityAndScore({
-      user_id: Math.floor(Number(getUserId()) || 0),
+    var myIdentityAndScore = formatLeaderboardNameAndScore({
+      nickname: getNickname() || (lang === "en" ? "You" : "我"),
       score: 0
     }, lang);
 
     if (selfEntry) {
       myRankText = String(selfEntry.rank || "--");
-      myIdentityAndScore = formatLeaderboardIdentityAndScore(selfEntry, lang);
+      myIdentityAndScore = formatLeaderboardNameAndScore(selfEntry, lang);
     }
 
     appendTimerLeaderboardRow(list, myRankText, myIdentityAndScore, "is-self", "");
@@ -316,18 +313,11 @@
     var hostname = toText(locationObj.hostname).toLowerCase();
     var origin = toText(locationObj.origin);
     var isLocalHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+    var allowCrossOriginFallback = toText(global.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK).toLowerCase() === "true";
 
-    if (hostname === "taihe.fun" && origin) {
-      push(origin + "/api");
-      push("https://taihe.fun/api");
-    } else if (hostname === "www.taihe.fun") {
-      if (origin) push(origin + "/api");
-      push("https://taihe.fun/api");
-    } else if (isLocalHost) {
-      if (origin) push(origin + "/api");
-      push("https://taihe.fun/api");
-    } else {
-      if (origin) push(origin + "/api");
+    if (origin) push(origin + "/api");
+
+    if (hostname === "taihe.fun" || hostname === "www.taihe.fun" || isLocalHost || allowCrossOriginFallback) {
       push("https://taihe.fun/api");
     }
 
@@ -382,6 +372,11 @@
           global.clearTimeout(timeoutHandle);
           timeoutHandle = null;
         }
+        var contentType = toText(
+          response && response.headers && typeof response.headers.get === "function"
+            ? response.headers.get("content-type")
+            : ""
+        ).toLowerCase();
         var data = null;
         try {
           data = await response.json();
@@ -400,6 +395,12 @@
         }
 
         if (!data || typeof data !== "object") {
+          var origin = toText(global.location && global.location.origin).trim().replace(/\/+$/, "");
+          var normalizedBase = toText(base).trim().replace(/\/+$/, "");
+          var isSameOriginApiBase = !!origin && normalizedBase === origin + "/api";
+          if (contentType.indexOf("text/html") >= 0 && isSameOriginApiBase && apiBases.length === 1) {
+            return { error: "当前站点未配置排行榜 API（/api）。" };
+          }
           if (i < apiBases.length - 1) {
             continue;
           }

@@ -61,7 +61,8 @@
       logoutOk: "已退出登录",
       userInfoFail: "用户信息加载失败",
       noUserInfo: "未找到当前用户信息",
-      networkError: "网络异常"
+      networkError: "网络异常",
+      apiNotConfigured: "当前站点未配置排行榜 API（/api）"
     },
     en: {
       pageTitle: "2048 Account Center",
@@ -108,7 +109,8 @@
       logoutOk: "Logged out",
       userInfoFail: "Failed to load user info",
       noUserInfo: "User not found",
-      networkError: "Network error"
+      networkError: "Network error",
+      apiNotConfigured: "API not configured on this host (/api)"
     }
   };
 
@@ -257,18 +259,11 @@
     var hostname = toText(locationObj.hostname).toLowerCase();
     var origin = toText(locationObj.origin);
     var isLocalHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+    var allowCrossOriginFallback = toText(global.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK).toLowerCase() === "true";
 
-    if (hostname === "taihe.fun" && origin) {
-      push(origin + "/api");
-      push("https://taihe.fun/api");
-    } else if (hostname === "www.taihe.fun") {
-      if (origin) push(origin + "/api");
-      push("https://taihe.fun/api");
-    } else if (isLocalHost) {
-      if (origin) push(origin + "/api");
-      push("https://taihe.fun/api");
-    } else {
-      if (origin) push(origin + "/api");
+    if (origin) push(origin + "/api");
+
+    if (hostname === "taihe.fun" || hostname === "www.taihe.fun" || isLocalHost || allowCrossOriginFallback) {
       push("https://taihe.fun/api");
     }
 
@@ -323,6 +318,11 @@
           global.clearTimeout(timeoutHandle);
           timeoutHandle = null;
         }
+        var contentType = toText(
+          response && response.headers && typeof response.headers.get === "function"
+            ? response.headers.get("content-type")
+            : ""
+        ).toLowerCase();
         var data = null;
         try {
           data = await response.json();
@@ -341,6 +341,12 @@
         }
 
         if (!data || typeof data !== "object") {
+          var origin = toText(global.location && global.location.origin).trim().replace(/\/+$/, "");
+          var normalizedBase = toText(base).trim().replace(/\/+$/, "");
+          var isSameOriginApiBase = !!origin && normalizedBase === origin + "/api";
+          if (contentType.indexOf("text/html") >= 0 && isSameOriginApiBase && apiBases.length === 1) {
+            return { error: t("apiNotConfigured") };
+          }
           if (i < apiBases.length - 1) {
             continue;
           }
