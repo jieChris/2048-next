@@ -402,14 +402,16 @@ body.home-guide-active #timer-scroll-controls {
   min-width: var(--timerbox-main-tile-width);
   max-width: var(--timerbox-main-tile-width);
   margin-left: var(--timerbox-tile-gap);
-  padding: 0 12px;
-  text-align: left;
+  padding: 0 6px;
+  text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   background: #eee4da;
   color: #776e65;
-  font-size: 15px;
+  font-size: 16px;
+  letter-spacing: -0.2px;
+  font-weight: 600;
   box-sizing: border-box;
 }
 
