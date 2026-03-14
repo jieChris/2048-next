@@ -732,7 +732,7 @@ function writeAutoSubmitResultRecord(manager, payload) {
 function resolveAutoSubmitSkippedReason(manager) {
   if (!manager) return "manager_missing";
   if (manager.replayMode) return "replay_mode";
-  if (!isSessionTerminated(manager)) return "not_terminated";
+  if (!manager.over) return "not_game_over";
   return null;
 }
 
