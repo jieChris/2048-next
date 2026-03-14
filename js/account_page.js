@@ -261,16 +261,19 @@
     if (hostname === "taihe.fun" && origin) {
       push(origin + "/api");
       push("https://taihe.fun/api");
+      push("https://www.taihe.fun/api");
     } else if (hostname === "www.taihe.fun") {
       push("https://taihe.fun/api");
       if (origin) push(origin + "/api");
+      push("https://www.taihe.fun/api");
     } else if (isLocalHost) {
-      // Local static preview usually has no backend; prefer the production API first.
-      push("https://taihe.fun/api");
       if (origin) push(origin + "/api");
+      push("https://taihe.fun/api");
+      push("https://www.taihe.fun/api");
     } else {
       if (origin) push(origin + "/api");
       push("https://taihe.fun/api");
+      push("https://www.taihe.fun/api");
     }
 
     if (bases.length === 0) push("https://taihe.fun/api");
@@ -332,7 +335,7 @@
         }
 
         if (!response.ok) {
-          if ((response.status === 404 || response.status === 405) && !data && i < apiBases.length - 1) {
+          if (!data && i < apiBases.length - 1) {
             continue;
           }
           if (data && typeof data === "object") {
@@ -342,6 +345,9 @@
         }
 
         if (!data || typeof data !== "object") {
+          if (i < apiBases.length - 1) {
+            continue;
+          }
           return { error: "Invalid response format" };
         }
 
