@@ -1,24 +1,5 @@
-import { loadLegacyScriptsSequentially } from "./legacy-loader";
-import {
-  cappedCoreScripts,
-  cappedStartupScripts,
-  homeSettingsAndPanelScripts,
-  homeTopButtonStyleScripts,
-  homeIndexTailScripts,
-  homeLeaderboardScripts,
-  homeI18nScripts,
-  showCappedGuideOverlay
-} from "./home-family-shared";
+import { bootstrapHomeFamilyPage } from "./home-family-bootstrap";
+import { showCappedGuideOverlay } from "./home-family-shared";
 
-const cappedLegacyScripts = [
-  ...cappedCoreScripts,
-  ...cappedStartupScripts,
-  ...homeSettingsAndPanelScripts,
-  ...homeTopButtonStyleScripts,
-  ...homeIndexTailScripts,
-  ...homeLeaderboardScripts,
-  ...homeI18nScripts
-] as const;
-
-await loadLegacyScriptsSequentially(cappedLegacyScripts);
+await bootstrapHomeFamilyPage("capped");
 showCappedGuideOverlay();

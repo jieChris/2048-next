@@ -38,7 +38,6 @@ KeyboardInputManager.prototype.listen = function () {
     65: 3, // A
     69: 4, // E (up-right)
     67: 5, // C (down-right)
-    88: 6, // X (down-left)
     81: 7, // Q (up-left)
     105: 4, // Numpad 9
     99: 5, // Numpad 3

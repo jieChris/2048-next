@@ -352,7 +352,7 @@ async function loadReplayFromSessionId() {
             if (!window.LocalHistoryStore || typeof window.LocalHistoryStore.getById !== "function") {
                 throw new Error("local_history_store_missing");
             }
-            var record = window.LocalHistoryStore.getById(localHistoryId);
+            var record = await window.LocalHistoryStore.getById(localHistoryId);
             if (!record) throw new Error("record_not_found");
 
             var replayPayload = record.replay_string

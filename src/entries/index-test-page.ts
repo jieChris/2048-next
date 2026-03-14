@@ -1,3 +1,5 @@
+import { bootstrapHomeFamilyPage } from "./home-family-bootstrap";
+
 function fitUsernameText(): void {
   const fitBox = document.querySelector<HTMLElement>(".username-bg-fit-box");
   const text = document.querySelector<HTMLElement>(".username-bg-text");
@@ -27,6 +29,8 @@ function fitUsernameText(): void {
     text.style.fontSize = `${nextSize}px`;
   }
 }
+
+await bootstrapHomeFamilyPage("index_test");
 
 window.addEventListener("resize", fitUsernameText);
 window.addEventListener("load", fitUsernameText);

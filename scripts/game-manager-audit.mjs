@@ -76,6 +76,14 @@ const PAGE_FILES = [
   "capped_2048.html",
   "Practice_board.html"
 ];
+const MODULE_ENTRY_BY_PAGE_FILE = {
+  "index.html": "index.ts",
+  "play.html": "play.ts",
+  "replay.html": "replay.ts",
+  "undo_2048.html": "undo.ts",
+  "capped_2048.html": "capped.ts",
+  "Practice_board.html": "practice-board.ts"
+};
 const EXPECTED_GAME_MANAGER_RUNTIME_SCRIPT_CHAIN = [
   "core_game_manager_base_helpers_runtime.js",
   "core_game_manager_env_helpers_runtime.js",
@@ -148,6 +156,14 @@ function hasOrderedRuntimeScripts(htmlContent) {
     .join("\\s*");
   const orderedPattern = new RegExp(orderedPatternSource);
   return orderedPattern.test(htmlContent);
+}
+
+function hasModuleEntryScript(htmlContent, entryFileName) {
+  const escapedEntry = escapeRegexLiteral(entryFileName);
+  const pattern = new RegExp(
+    `<script\\s+type=\"module\"\\s+src=\"\\./src/entries/${escapedEntry}\"><\\/script>`
+  );
+  return pattern.test(htmlContent);
 }
 
 function extractFunctionDeclarations(content) {
@@ -349,6 +365,10 @@ async function verifyHtmlScriptOrder(projectRoot) {
   for (const fileName of PAGE_FILES) {
     const filePath = path.resolve(projectRoot, fileName);
     const content = await readFile(filePath, "utf8");
+    const expectedEntry = MODULE_ENTRY_BY_PAGE_FILE[fileName];
+    if (expectedEntry && hasModuleEntryScript(content, expectedEntry)) {
+      continue;
+    }
     if (!hasOrderedRuntimeScripts(content)) {
       fail(
         `[game-manager-audit] ${fileName}: missing or unordered runtime script chain ` +

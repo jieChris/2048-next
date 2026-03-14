@@ -66,6 +66,9 @@
   var pollingLastTimerRefreshTime = 0;
   var pollingLastModeIntroRefreshTime = 0;
   var pollingVisibilityBound = false;
+  var pollingUsingScheduler = false;
+  var schedulerTaskName = "online-leaderboard-main";
+  var refreshScheduler = null;
 
   function toText(value) {
     return value == null ? "" : String(value);
@@ -80,6 +83,14 @@
     if (className) el.className = className;
     if (typeof text === "string") el.textContent = text;
     return el;
+  }
+
+  function getRefreshScheduler() {
+    if (refreshScheduler) return refreshScheduler;
+    var runtime = global.RefreshSchedulerRuntime;
+    if (!runtime || typeof runtime.getDefaultScheduler !== "function") return null;
+    refreshScheduler = runtime.getDefaultScheduler();
+    return refreshScheduler;
   }
 
   function safeGetStorage(key) {
@@ -804,12 +815,14 @@
   }
 
   function clearPollingTimer() {
+    if (pollingUsingScheduler) return;
     if (!pollingTickTimer) return;
     global.clearTimeout(pollingTickTimer);
     pollingTickTimer = 0;
   }
 
   function schedulePollingTick(immediate) {
+    if (pollingUsingScheduler) return;
     clearPollingTimer();
     var delay = immediate ? 0 : resolvePollBaseIntervalMs();
     if (!immediate && pollingFailureCount > 0) {
@@ -825,21 +838,44 @@
     global.document.addEventListener("visibilitychange", function () {
       if (!global.document.hidden) {
         pollingFailureCount = 0;
-        schedulePollingTick(true);
+        if (pollingUsingScheduler) {
+          var visibilityScheduler = getRefreshScheduler();
+          if (visibilityScheduler && typeof visibilityScheduler.wake === "function") {
+            visibilityScheduler.wake(schedulerTaskName);
+          }
+        } else {
+          schedulePollingTick(true);
+        }
       }
     });
     global.addEventListener("online", function () {
       pollingFailureCount = 0;
-      schedulePollingTick(true);
+      if (pollingUsingScheduler) {
+        var onlineScheduler = getRefreshScheduler();
+        if (onlineScheduler && typeof onlineScheduler.wake === "function") {
+          onlineScheduler.wake(schedulerTaskName);
+        }
+      } else {
+        schedulePollingTick(true);
+      }
     });
     global.addEventListener("focus", function () {
-      schedulePollingTick(true);
+      if (pollingUsingScheduler) {
+        var focusScheduler = getRefreshScheduler();
+        if (focusScheduler && typeof focusScheduler.wake === "function") {
+          focusScheduler.wake(schedulerTaskName);
+        }
+      } else {
+        schedulePollingTick(true);
+      }
     });
   }
 
   async function runPollingTick() {
     if (pollingTickRunning) {
-      schedulePollingTick(false);
+      if (!pollingUsingScheduler) {
+        schedulePollingTick(false);
+      }
       return;
     }
     pollingTickRunning = true;
@@ -872,7 +908,13 @@
     } finally {
       pollingTickRunning = false;
       pollingFailureCount = tickFailed ? Math.min(pollingFailureCount + 1, POLL_BACKOFF_MAX_STEP) : 0;
-      schedulePollingTick(false);
+      if (!pollingUsingScheduler) {
+        schedulePollingTick(false);
+      }
+    }
+
+    if (tickFailed && pollingUsingScheduler) {
+      throw new Error("leaderboard_poll_tick_failed");
     }
   }
 
@@ -880,6 +922,22 @@
     if (pollingStarted) return;
     pollingStarted = true;
     bindPollingVisibilityRefresh();
+
+    var scheduler = getRefreshScheduler();
+    if (scheduler && typeof scheduler.register === "function") {
+      pollingUsingScheduler = true;
+      scheduler.register({
+        name: schedulerTaskName,
+        intervalMs: POLL_BASE_INTERVAL_VISIBLE_MS,
+        backgroundIntervalMs: POLL_BASE_INTERVAL_HIDDEN_MS,
+        maxBackoffMs: POLL_BACKOFF_MAX_MS,
+        immediate: true,
+        callback: runPollingTick
+      });
+      return;
+    }
+
+    pollingUsingScheduler = false;
     schedulePollingTick(true);
   }
 

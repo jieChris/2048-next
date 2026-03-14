@@ -1,24 +1,3 @@
-import { loadLegacyScriptsSequentially } from "./legacy-loader";
-import {
-  homeAnnouncementScripts,
-  homeCoreScripts,
-  homeStandardStartupScripts,
-  homeSettingsAndPanelScripts,
-  homeTopButtonStyleScripts,
-  homeIndexTailScripts,
-  homeLeaderboardScripts,
-  homeI18nScripts
-} from "./home-family-shared";
+import { bootstrapHomeFamilyPage } from "./home-family-bootstrap";
 
-const indexLegacyScripts = [
-  ...homeAnnouncementScripts,
-  ...homeCoreScripts,
-  ...homeStandardStartupScripts,
-  ...homeSettingsAndPanelScripts,
-  ...homeTopButtonStyleScripts,
-  ...homeIndexTailScripts,
-  ...homeLeaderboardScripts,
-  ...homeI18nScripts
-] as const;
-
-await loadLegacyScriptsSequentially(indexLegacyScripts);
+await bootstrapHomeFamilyPage("index");

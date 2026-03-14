@@ -1,22 +1,3 @@
-import { loadLegacyScriptsSequentially } from "./legacy-loader";
-import {
-  homeCoreScripts,
-  homeStandardStartupScripts,
-  homeSettingsAndPanelScripts,
-  homeTopButtonStyleScripts,
-  homeIndexTailScripts,
-  homeLeaderboardScripts,
-  homeI18nScripts
-} from "./home-family-shared";
+import { bootstrapHomeFamilyPage } from "./home-family-bootstrap";
 
-const undoLegacyScripts = [
-  ...homeCoreScripts,
-  ...homeStandardStartupScripts,
-  ...homeSettingsAndPanelScripts,
-  ...homeTopButtonStyleScripts,
-  ...homeIndexTailScripts,
-  ...homeLeaderboardScripts,
-  ...homeI18nScripts
-] as const;
-
-await loadLegacyScriptsSequentially(undoLegacyScripts);
+await bootstrapHomeFamilyPage("undo");

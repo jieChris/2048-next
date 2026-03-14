@@ -64,12 +64,12 @@ export const PAGE_MANIFESTS: readonly PageManifestEntry[] = [
   {
     pageId: "practice",
     htmlFile: "Practice_board.html",
-    capabilities: ["core", "standard-startup", "settings-and-panel", "index-tail", "i18n"]
+    capabilities: ["core", "test-ui", "standard-startup", "settings-and-panel", "index-tail", "i18n"]
   },
   {
     pageId: "pku2048",
     htmlFile: "PKU2048.html",
-    capabilities: ["core", "standard-startup", "settings-and-panel", "index-tail", "pku-inline-stats", "i18n"]
+    capabilities: ["core", "test-ui", "standard-startup", "settings-and-panel", "index-tail", "pku-inline-stats", "i18n"]
   },
   {
     pageId: "play",

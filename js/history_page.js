@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   "use strict";
 
   var FILTER_STORAGE_KEY = "history_filter_state_v1";
@@ -25,6 +25,22 @@
     if (!node) return;
     node.textContent = toText(text);
     node.style.color = isError ? "#ff7f7f" : "";
+  }
+
+  function isPromiseLike(value) {
+    return !!value && (typeof value === "object" || typeof value === "function") && typeof value.then === "function";
+  }
+
+  async function callStore(methodName) {
+    if (!window.LocalHistoryStore) {
+      throw new Error("local_history_store_missing");
+    }
+    var method = window.LocalHistoryStore[methodName];
+    if (typeof method !== "function") {
+      throw new Error("local_history_method_missing:" + methodName);
+    }
+    var args = Array.prototype.slice.call(arguments, 1);
+    return await method.apply(window.LocalHistoryStore, args);
   }
 
   function readFilterState(defaults) {
@@ -175,21 +191,30 @@
         exportBtn.addEventListener("click", (function (id, modeKey, replayString) {
           return function () {
             try {
-              var payload = window.LocalHistoryStore.exportRecords([id]);
-              var safeMode = toText(modeKey || "mode").replace(/[^a-zA-Z0-9_-]/g, "_");
-              var filenamePrefix = "history_" + safeMode + "_" + id;
-              window.LocalHistoryStore.download(filenamePrefix + ".json", payload);
-              var replayCode = resolveReplayCode(replayString);
-              if (replayCode.trim()) {
-                window.LocalHistoryStore.download(
-                  filenamePrefix + ".txt",
-                  replayCode,
-                  "text/plain;charset=utf-8"
-                );
-                setStatus("已导出 1 条记录（TXT + JSON）", false);
+              var result = window.LocalHistoryStore.exportRecords([id]);
+              var onPayload = function (payload) {
+                var safeMode = toText(modeKey || "mode").replace(/[^a-zA-Z0-9_-]/g, "_");
+                var filenamePrefix = "history_" + safeMode + "_" + id;
+                window.LocalHistoryStore.download(filenamePrefix + ".json", payload);
+                var replayCode = resolveReplayCode(replayString);
+                if (replayCode.trim()) {
+                  window.LocalHistoryStore.download(
+                    filenamePrefix + ".txt",
+                    replayCode,
+                    "text/plain;charset=utf-8"
+                  );
+                  setStatus("已导出 1 条记录（TXT + JSON）", false);
+                  return;
+                }
+                setStatus("该记录缺少可导入的回放码，已导出 JSON", true);
+              };
+              if (isPromiseLike(result)) {
+                result.then(onPayload).catch(function () {
+                  setStatus("导出失败", true);
+                });
                 return;
               }
-              setStatus("该记录缺少可导入的回放码，已导出 JSON", true);
+              onPayload(result);
             } catch (_error) {
               setStatus("导出失败", true);
             }
@@ -200,15 +225,15 @@
       var deleteBtn = node.querySelector(".history-delete-btn");
       if (deleteBtn) {
         deleteBtn.addEventListener("click", (function (id) {
-          return function () {
+          return async function () {
             if (!confirm("确认删除这条记录？")) return;
-            var ok = window.LocalHistoryStore.deleteById(id);
+            var ok = await callStore("deleteById", id);
             if (!ok) {
               setStatus("删除失败", true);
               return;
             }
             setStatus("已删除记录", false);
-            loadHistory(false);
+            await loadHistory(false);
           };
         })(item.id));
       }
@@ -294,17 +319,17 @@
       var file = fileInput.files && fileInput.files[0];
       if (!file) return;
       var reader = new FileReader();
-      reader.onload = function () {
+      reader.onload = async function () {
         try {
           var text = typeof reader.result === "string" ? reader.result : "";
-          var result = window.LocalHistoryStore.importRecords(text, { merge: merge });
+          var result = await callStore("importRecords", text, { merge: merge });
           setStatus(
             merge
               ? "导入完成：新增 " + result.imported + "，替换 " + result.replaced
               : "导入并替换完成：总计 " + result.total + " 条",
             false
           );
-          loadHistory(true);
+          await loadHistory(true);
         } catch (_error) {
           setStatus("导入失败：文件格式不正确", true);
         }
@@ -331,13 +356,13 @@
     };
     var state = readFilterState(defaults);
 
-    function loadHistory(resetPage) {
+    async function loadHistory(resetPage) {
       readControls(state);
       persistFilterState(state, defaults);
       if (resetPage) state.page = 1;
 
       try {
-        var result = window.LocalHistoryStore.listRecords({
+        var result = await callStore("listRecords", {
           mode_key: state.modeKey,
           keyword: state.keyword,
           sort_by: state.sortBy,
@@ -378,16 +403,16 @@
     var prevBtn = $("history-prev-page");
     var nextBtn = $("history-next-page");
     if (prevBtn) {
-      prevBtn.addEventListener("click", function () {
+      prevBtn.addEventListener("click", async function () {
         if (state.page <= 1) return;
         state.page -= 1;
-        loadHistory(false);
+        await loadHistory(false);
       });
     }
     if (nextBtn) {
-      nextBtn.addEventListener("click", function () {
+      nextBtn.addEventListener("click", async function () {
         state.page += 1;
-        loadHistory(false);
+        await loadHistory(false);
       });
     }
 
@@ -395,10 +420,19 @@
     if (exportAllBtn) {
       exportAllBtn.addEventListener("click", function () {
         try {
-          var payload = window.LocalHistoryStore.exportRecords();
-          var dateTag = new Date().toISOString().slice(0, 10);
-          window.LocalHistoryStore.download("2048_local_history_" + dateTag + ".json", payload);
-          setStatus("已导出全部历史记录", false);
+          var result = window.LocalHistoryStore.exportRecords();
+          var handlePayload = function (payload) {
+            var dateTag = new Date().toISOString().slice(0, 10);
+            window.LocalHistoryStore.download("2048_local_history_" + dateTag + ".json", payload);
+            setStatus("已导出全部历史记录", false);
+          };
+          if (isPromiseLike(result)) {
+            result.then(handlePayload).catch(function () {
+              setStatus("导出失败", true);
+            });
+            return;
+          }
+          handlePayload(result);
         } catch (_error) {
           setStatus("导出失败", true);
         }
@@ -407,12 +441,12 @@
 
     var clearAllBtn = $("history-clear-all-btn");
     if (clearAllBtn) {
-      clearAllBtn.addEventListener("click", function () {
+      clearAllBtn.addEventListener("click", async function () {
         if (!confirm("确认清空全部本地历史记录？此操作不可撤销。")) return;
         try {
-          window.LocalHistoryStore.clearAll();
+          await callStore("clearAll");
           setStatus("已清空全部历史记录", false);
-          loadHistory(true);
+          await loadHistory(true);
         } catch (_error) {
           setStatus("清空失败", true);
         }

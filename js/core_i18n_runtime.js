@@ -1,4 +1,4 @@
-(function (global) {
+﻿(function (global) {
   "use strict";
 
   if (!global || !global.document) return;
@@ -103,7 +103,6 @@
     { s: "#replay-modal-title", zh: "回放", en: "Replay" },
     { s: "#replay-action-btn", zh: "执行", en: "Run" },
     { s: "#settings-modal h3", zh: "设置", en: "Settings" },
-    { s: "#settings-close-btn", zh: "关闭", en: "Close" },
     { s: "#toolkit-palette-link", zh: "主题设置", en: "Theme Settings" },
     { s: "label[for='timer-module-view-toggle'].settings-toggle-title", zh: "计时器模式", en: "Timer Mode" },
     { s: "label[for='pku2048-inline-stats-toggle']", zh: "统计面板", en: "Stats Panel" },

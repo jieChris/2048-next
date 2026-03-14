@@ -1,20 +1,3 @@
-import { loadLegacyScriptsSequentially } from "./legacy-loader";
-import {
-  homeCoreScripts,
-  homeStandardStartupScripts,
-  homeSettingsAndPanelScripts,
-  homeIndexTailScripts,
-  homeTestUiScripts,
-  homeI18nScripts
-} from "./home-family-shared";
+import { bootstrapHomeFamilyPage } from "./home-family-bootstrap";
 
-const practiceBoardLegacyScripts = [
-  ...homeCoreScripts,
-  ...homeStandardStartupScripts,
-  ...homeSettingsAndPanelScripts,
-  ...homeIndexTailScripts,
-  ...homeTestUiScripts,
-  ...homeI18nScripts
-] as const;
-
-await loadLegacyScriptsSequentially(practiceBoardLegacyScripts);
+await bootstrapHomeFamilyPage("practice");

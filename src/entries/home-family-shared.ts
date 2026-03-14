@@ -134,6 +134,7 @@ import coreIndexUiPageHostRuntimeUrl from "../../js/core_index_ui_page_host_runt
 import coreIndexUiPageResolversHostRuntimeUrl from "../../js/core_index_ui_page_resolvers_host_runtime.js?url";
 import coreIndexUiPageActionsHostRuntimeUrl from "../../js/core_index_ui_page_actions_host_runtime.js?url";
 import indexUiUrl from "../../js/index_ui.js?url";
+import refreshSchedulerRuntimeUrl from "../../js/refresh_scheduler_runtime.js?url";
 import onlineLeaderboardRuntimeUrl from "../../js/online_leaderboard_runtime.js?url";
 import testUiUrl from "../../js/test_ui.js?url";
 import pku2048InlineStatsRuntimeUrl from "../../js/pku2048_inline_stats_runtime.js?url";
@@ -142,6 +143,7 @@ import coreSimpleRuntimeContractRuntimeUrl from "../../js/core_simple_runtime_co
 import coreSimpleStartupRuntimeUrl from "../../js/core_simple_startup_runtime.js?url";
 import coreSimplePageHostRuntimeUrl from "../../js/core_simple_page_host_runtime.js?url";
 import cappedApplicationUrl from "../../js/capped_application.js?url";
+import type { RuntimeCapability } from "./runtime-manifest";
 
 export const homeAnnouncementScripts = [
   announcementRecordsUrl,
@@ -366,10 +368,48 @@ export const homeIndexTailScripts = [
   indexUiUrl
 ] as const;
 
-export const homeLeaderboardScripts = [onlineLeaderboardRuntimeUrl] as const;
+export const homeLeaderboardScripts = [
+  refreshSchedulerRuntimeUrl,
+  onlineLeaderboardRuntimeUrl
+] as const;
 export const homeTestUiScripts = [testUiUrl] as const;
 export const homePkuInlineStatsScripts = [pku2048InlineStatsRuntimeUrl] as const;
 export const homeI18nScripts = [coreI18nRuntimeUrl] as const;
+
+const HOME_FAMILY_CAPABILITY_SCRIPTS: Readonly<Record<RuntimeCapability, readonly string[]>> = {
+  announcement: homeAnnouncementScripts,
+  core: homeCoreScripts,
+  "capped-core": cappedCoreScripts,
+  "standard-startup": homeStandardStartupScripts,
+  "capped-startup": cappedStartupScripts,
+  "settings-and-panel": homeSettingsAndPanelScripts,
+  "top-button-style": homeTopButtonStyleScripts,
+  "index-tail": homeIndexTailScripts,
+  leaderboard: homeLeaderboardScripts,
+  "test-ui": homeTestUiScripts,
+  "pku-inline-stats": homePkuInlineStatsScripts,
+  i18n: homeI18nScripts,
+  play: [],
+  replay: [],
+  account: [],
+  history: [],
+  modes: [],
+  palette: []
+} as const;
+
+export function resolveHomeFamilyScriptsByCapabilities(
+  capabilities: readonly RuntimeCapability[]
+): readonly string[] {
+  const scripts: string[] = [];
+  for (const capability of capabilities) {
+    const group = HOME_FAMILY_CAPABILITY_SCRIPTS[capability];
+    if (!group || group.length <= 0) continue;
+    for (const url of group) {
+      scripts.push(url);
+    }
+  }
+  return scripts;
+}
 
 export function showCappedGuideOverlay(): void {
   const guideKey = "capped_guide_shown_v1";

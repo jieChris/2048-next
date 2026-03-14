@@ -641,6 +641,21 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   if (gridContainer) {
+    function applyPracticeTimerPlaceholderForValue(value) {
+      var numeric = Number(value);
+      if (!Number.isInteger(numeric) || numeric < 2048) return;
+      var timerEl = document.getElementById("timer" + String(numeric));
+      if (timerEl && String(timerEl.textContent || "") === "") {
+        timerEl.textContent = "---------";
+      }
+      if (numeric === 16384) {
+        var subTimerEl = document.getElementById("timer-secondary-32768-16384");
+        if (subTimerEl && String(subTimerEl.textContent || "") === "") {
+          subTimerEl.textContent = "---------";
+        }
+      }
+    }
+
     function resolveGridCellFromEvent(e) {
       var cell = e && e.target && e.target.closest ? e.target.closest(".grid-cell") : null;
       if (cell) return cell;
@@ -669,9 +684,11 @@ document.addEventListener("DOMContentLoaded", function () {
       if (selectedValue === 0) {
         var cycleValue = getNextZeroCycleValue(x, y);
         window.game_manager.insertCustomTile(x, y, cycleValue);
+        applyPracticeTimerPlaceholderForValue(cycleValue);
       } else {
         resetZeroCycleValue(x, y);
         window.game_manager.insertCustomTile(x, y, selectedValue);
+        applyPracticeTimerPlaceholderForValue(selectedValue);
       }
     }
 

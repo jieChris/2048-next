@@ -161,11 +161,7 @@ export async function listRecords(options?: {
   const tx = db.transaction(STORE_NAME, "readonly");
   const store = tx.objectStore(STORE_NAME);
 
-  const allRecords = await new Promise<HistoryRecord[]>((resolve, reject) => {
-    const req = store.getAll();
-    req.onsuccess = () => resolve(req.result as HistoryRecord[]);
-    req.onerror = () => reject(req.error);
-  });
+  const allRecords = await readAllRecordsByCursor(store);
   db.close();
 
   let filtered = allRecords.filter((item) => {
@@ -204,11 +200,7 @@ export async function exportRecords(ids?: string[]): Promise<string> {
   const db = await openDatabase();
   const tx = db.transaction(STORE_NAME, "readonly");
   const store = tx.objectStore(STORE_NAME);
-  const all = await new Promise<HistoryRecord[]>((resolve, reject) => {
-    const req = store.getAll();
-    req.onsuccess = () => resolve(req.result as HistoryRecord[]);
-    req.onerror = () => reject(req.error);
-  });
+  const all = await readAllRecordsByCursor(store);
   db.close();
 
   let selected = all;
@@ -279,6 +271,24 @@ export async function importRecords(
 
 function compareDates(a: string | undefined, b: string | undefined): number {
   return (Date.parse(a || "") || 0) - (Date.parse(b || "") || 0);
+}
+
+function readAllRecordsByCursor(store: IDBObjectStore): Promise<HistoryRecord[]> {
+  return new Promise((resolve, reject) => {
+    const items: HistoryRecord[] = [];
+    const req = store.openCursor();
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (!cursor) {
+        resolve(items);
+        return;
+      }
+      const value = cursor.value as HistoryRecord;
+      if (value && typeof value === "object") items.push(value);
+      cursor.continue();
+    };
+    req.onerror = () => reject(req.error);
+  });
 }
 
 // ---------------------------------------------------------------------------

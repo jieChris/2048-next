@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   var MODES = [];
 
   function clone(value) {
@@ -318,13 +318,12 @@
   });
 
   // Phase 2: lightweight rule variants
-  add({
-    key: "limit3_4x4_pow2_undo",
+  addPair({
+    key: "limit3_4x4_pow2",
     label: "限次撤回 4x4（3次）",
     board_width: 4,
     board_height: 4,
     ruleset: "pow2",
-    undo_enabled: true,
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
     ranked_bucket: "none",
     mode_family: "pow2",
@@ -332,13 +331,12 @@
     rank_policy: "unranked"
   });
 
-  add({
-    key: "limit5_4x4_pow2_undo",
+  addPair({
+    key: "limit5_4x4_pow2",
     label: "限次撤回 4x4（5次）",
     board_width: 4,
     board_height: 4,
     ruleset: "pow2",
-    undo_enabled: true,
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
     ranked_bucket: "none",
     mode_family: "pow2",
@@ -346,13 +344,12 @@
     rank_policy: "unranked"
   });
 
-  add({
-    key: "combo_4x4_pow2_undo",
-    label: "连击加分 4x4（可撤回）",
+  addPair({
+    key: "combo_4x4_pow2",
+    label: "连击加分 4x4",
     board_width: 4,
     board_height: 4,
     ruleset: "pow2",
-    undo_enabled: true,
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
     ranked_bucket: "none",
     mode_family: "combo",

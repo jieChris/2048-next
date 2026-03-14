@@ -586,6 +586,13 @@ function applyInvalidatedTimerPlaceholdersForCustomTile(manager, value) {
   } else {
     applyInvalidatedTimerPlaceholders(manager, resolveInvalidatedTimerElementIdsFallback(manager, value));
   }
+  var milestone = Number(value);
+  if (Number.isInteger(milestone) && milestone >= 2048) {
+    var directTimerEl = resolveManagerElementById(manager, "timer" + String(milestone));
+    if (directTimerEl && String(directTimerEl.textContent || "") === "") {
+      directTimerEl.textContent = "---------";
+    }
+  }
   applyInvalidatedSecondaryTimerPlaceholdersForCustomTile(manager, value);
   refreshSecondaryTimerRowsVisibility(manager);
 }
@@ -624,6 +631,8 @@ function insertCustomTileWithValue(manager, x, y, value) {
   syncPracticeRestartBoardSnapshot(manager);
   clearTransientTileVisualState(manager);
   actuate(manager);
+  // Actuate may reset timer row text in practice setup; restore placeholders afterwards.
+  applyInvalidatedTimerPlaceholdersForCustomTile(manager, value);
   recordPracticeCustomTileActionIfNeeded(manager, x, y, value);
 }
 
@@ -874,10 +883,22 @@ function createAutoSubmitExecutionContext(manager) {
   };
 }
 
+function isPromiseLike(value) {
+  return !!value && typeof value.then === "function";
+}
+
 function executeAutoSubmitWithLocalHistory(manager, localHistorySaveRecord, executionContext) {
   try {
-    var savedRecord = localHistorySaveRecord.method.call(localHistorySaveRecord.scope, executionContext.payload);
-    writeAutoSubmitSuccessResult(manager, executionContext.endedAt, executionContext.payload, savedRecord);
+    var saveResult = localHistorySaveRecord.method.call(localHistorySaveRecord.scope, executionContext.payload);
+    if (isPromiseLike(saveResult)) {
+      saveResult.then(function (savedRecord) {
+        writeAutoSubmitSuccessResult(manager, executionContext.endedAt, executionContext.payload, savedRecord);
+      }).catch(function (error) {
+        writeAutoSubmitErrorResult(manager, executionContext.endedAt, executionContext.payload, error);
+      });
+      return;
+    }
+    writeAutoSubmitSuccessResult(manager, executionContext.endedAt, executionContext.payload, saveResult);
   } catch (error) {
     writeAutoSubmitErrorResult(manager, executionContext.endedAt, executionContext.payload, error);
   }
