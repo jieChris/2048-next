@@ -35,7 +35,6 @@
       registerBtn: "注册",
       logoutBtn: "退出",
       userTitle: "当前账号信息",
-      userId: "用户ID：",
       userNickname: "昵称：",
       userEmail: "邮箱：",
       userCreated: "注册时间：",
@@ -83,7 +82,6 @@
       registerBtn: "Register",
       logoutBtn: "Logout",
       userTitle: "Current User",
-      userId: "User ID:",
       userNickname: "Nickname:",
       userEmail: "Email:",
       userCreated: "Created:",
@@ -397,6 +395,10 @@
     return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), { method: "GET" });
   }
 
+  function getMyUserInfo() {
+    return apiRequest("/me", { method: "GET", auth: true });
+  }
+
   function setTip(node, message, type) {
     if (!node) return;
     node.textContent = toText(message);
@@ -487,35 +489,30 @@
   }
 
   function resetUserInfo() {
-    var id = byId("account-user-id");
     var nick = byId("account-user-nickname");
     var email = byId("account-user-email");
     var created = byId("account-user-created");
-    if (id) id.textContent = "--";
     if (nick) nick.textContent = "--";
     if (email) email.textContent = "--";
     if (created) created.textContent = "--";
   }
 
   async function refreshUserInfo() {
-    var userId = getUserId();
-    if (!userId) {
+    if (!getToken()) {
       resetUserInfo();
       return;
     }
 
-    var result = await getUserInfo(userId);
+    var result = await getMyUserInfo();
     if (!result || !result.success || !result.data) {
       setTip(byId("account-auth-tip"), resolveServerError(result, "userInfoFail"), "err");
       return;
     }
 
     var data = result.data || {};
-    var id = byId("account-user-id");
     var nick = byId("account-user-nickname");
     var email = byId("account-user-email");
     var created = byId("account-user-created");
-    if (id) id.textContent = toText(data.id || "--");
     if (nick) nick.textContent = toText(data.nickname || getNickname() || "--");
     if (email) email.textContent = toText(data.email || "--");
     if (created) created.textContent = formatDate(data.created_at);
@@ -646,7 +643,6 @@
       "account-register-btn": t("registerBtn"),
       "account-logout-btn": t("logoutBtn"),
       "account-user-title": t("userTitle"),
-      "account-user-id-label": t("userId"),
       "account-user-nickname-label": t("userNickname"),
       "account-user-email-label": t("userEmail"),
       "account-user-created-label": t("userCreated"),
@@ -726,7 +722,7 @@
     refreshLeaderboard: refreshLeaderboard,
     register: register,
     login: login,
-    getUserInfo: getUserInfo,
+    getUserInfo: getMyUserInfo,
     getApiBase: function () { return activeApiBase; }
   };
 
