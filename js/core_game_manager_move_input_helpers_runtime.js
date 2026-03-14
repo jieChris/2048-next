@@ -48,16 +48,7 @@ function resolveItemMaxPerType(manager) {
   return Number.isInteger(value) && value > 0 ? value : 3;
 }
 
-function resolveOrCreateHudElement(manager, id, topPx) {
-  if (!manager) return null;
-  var documentLike = resolveManagerDocumentLike(manager);
-  if (!(documentLike && documentLike.body && typeof documentLike.createElement === "function")) return null;
-  var el = resolveManagerElementById(manager, id);
-  if (!el) {
-    el = documentLike.createElement("div");
-    el.id = id;
-    documentLike.body.appendChild(el);
-  }
+function applyHudElementStyle(el, topPx) {
   el.className = "mode-status-hud";
   el.style.position = "fixed";
   el.style.right = "10px";
@@ -71,6 +62,19 @@ function resolveOrCreateHudElement(manager, id, topPx) {
   el.style.fontWeight = "700";
   el.style.pointerEvents = "none";
   el.style.display = "none";
+}
+
+function resolveOrCreateHudElement(manager, id, topPx) {
+  if (!manager) return null;
+  var documentLike = resolveManagerDocumentLike(manager);
+  if (!(documentLike && documentLike.body && typeof documentLike.createElement === "function")) return null;
+  var el = resolveManagerElementById(manager, id);
+  if (!el) {
+    el = documentLike.createElement("div");
+    el.id = id;
+    documentLike.body.appendChild(el);
+  }
+  applyHudElementStyle(el, topPx);
   return el;
 }
 
@@ -196,36 +200,39 @@ function collectRemovableTilesForHammer(manager) {
   return tiles;
 }
 
+function applyHammerEffect(manager) {
+  var removable = collectRemovableTilesForHammer(manager);
+  if (!removable.length) {
+    ensureItemInventory(manager).hammer += 1;
+    updateItemModeHud(manager);
+    return;
+  }
+  var target = removable[Math.floor(Math.random() * removable.length)];
+  manager.grid.removeTile(target);
+  actuate(manager);
+}
+
+function resolveItemKeyAlias(itemKey) {
+  var key = String(itemKey || "");
+  if (key === "1") return "hammer";
+  if (key === "2") return "freeze";
+  if (key === "3") return "boost4";
+  return key;
+}
+
 function useItem(manager, itemKey) {
   if (!manager) return;
   if (!isItemModeEnabled(manager) || manager.replayMode) return;
   if (isGameTerminated(manager)) return;
-  var key = String(itemKey || "");
-  if (key === "1") key = "hammer";
-  if (key === "2") key = "freeze";
-  if (key === "3") key = "boost4";
+  var key = resolveItemKeyAlias(itemKey);
   if (key !== "hammer" && key !== "freeze" && key !== "boost4") return;
   if (!consumeItemCharge(manager, key)) {
     updateItemModeHud(manager);
     return;
   }
-
-  if (key === "hammer") {
-    var removable = collectRemovableTilesForHammer(manager);
-    if (!removable.length) {
-      ensureItemInventory(manager).hammer += 1;
-      updateItemModeHud(manager);
-      return;
-    }
-    var target = removable[Math.floor(Math.random() * removable.length)];
-    manager.grid.removeTile(target);
-    actuate(manager);
-  } else if (key === "freeze") {
-    manager.nextSpawnSuppressed = true;
-  } else if (key === "boost4") {
-    manager.nextSpawnValueOverride = 4;
-  }
-
+  if (key === "hammer") { applyHammerEffect(manager); }
+  else if (key === "freeze") { manager.nextSpawnSuppressed = true; }
+  else if (key === "boost4") { manager.nextSpawnValueOverride = 4; }
   updateItemModeHud(manager);
 }
 
@@ -1241,12 +1248,8 @@ function addRandomTile(manager) {
   insertMasterRandomSpawnTile(manager);
 }
 
-function resolveLockedDirectionStateByCore(manager) {
-  if (!manager) return undefined;
-  var availableDirections = typeof manager.getActiveMoveDirections === "function"
-    ? manager.getActiveMoveDirections()
-    : [0, 1, 2, 3];
-  return resolveCoreArgsCallWith(manager, "callCoreDirectionLockRuntime", "getLockedDirectionState", [{
+function buildLockedDirectionCoreArgs(manager, availableDirections) {
+  return [{
     directionLockRules: manager.directionLockRules,
     successfulMoveCount: manager.successfulMoveCount,
     lockConsumedAtMoveCount: manager.lockConsumedAtMoveCount,
@@ -1256,7 +1259,16 @@ function resolveLockedDirectionStateByCore(manager) {
     availableDirections: availableDirections
   }, function (seed) {
     return (new Math.seedrandom(seed))();
-  }], undefined, function (currentManager, coreCallResult) {
+  }];
+}
+
+function resolveLockedDirectionStateByCore(manager) {
+  if (!manager) return undefined;
+  var availableDirections = typeof manager.getActiveMoveDirections === "function"
+    ? manager.getActiveMoveDirections()
+    : [0, 1, 2, 3];
+  var args = buildLockedDirectionCoreArgs(manager, availableDirections);
+  return resolveCoreArgsCallWith(manager, "callCoreDirectionLockRuntime", "getLockedDirectionState", args, undefined, function (currentManager, coreCallResult) {
     return currentManager.resolveCoreRawCallValueOrUndefined(coreCallResult);
   });
 }

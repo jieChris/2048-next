@@ -32,7 +32,10 @@
     "verify:submit-ready": "npm run report:commit-split-check && npm run verify:release",
     "report:refactor-progress": "node scripts/refactor-progress-report.mjs",
     "report:commit-split-check": "node scripts/commit-split-check.mjs",
-    "report:commit-batch": "node scripts/stage-commit-batch.mjs"
+    "report:commit-batch": "node scripts/stage-commit-batch.mjs",
+    "audit:quality": "node scripts/quality-audit.mjs",
+    "audit:resource-budget": "node scripts/resource-budget-check.mjs",
+    "test:unit:tier1": "vitest run tests/unit/core-engine.spec.ts tests/unit/core-rules.spec.ts tests/unit/core-scoring.spec.ts tests/unit/core-move-apply.spec.ts tests/unit/core-move-path.spec.ts tests/unit/core-move-scan.spec.ts tests/unit/core-post-move.spec.ts tests/unit/core-undo-restore.spec.ts tests/unit/core-replay-codec.spec.ts tests/unit/core-replay-lifecycle.spec.ts tests/unit/core-mode.spec.ts tests/unit/core-grid-scan.spec.ts tests/unit/core-merge-effects.spec.ts tests/unit/contracts.spec.ts tests/unit/runtime-manifest.spec.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

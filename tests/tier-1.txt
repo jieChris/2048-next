@@ -1,0 +1,21 @@
+# Tier-1: Fast regression set (PR quick check)
+# Target: < 30s total
+# Covers: core logic, critical bootstrap
+tests/unit/core-engine.spec.ts
+tests/unit/core-rules.spec.ts
+tests/unit/core-scoring.spec.ts
+tests/unit/core-move-apply.spec.ts
+tests/unit/core-move-path.spec.ts
+tests/unit/core-move-scan.spec.ts
+tests/unit/core-post-move.spec.ts
+tests/unit/core-post-move-record.spec.ts
+tests/unit/core-undo-restore.spec.ts
+tests/unit/core-undo-snapshot.spec.ts
+tests/unit/core-replay-codec.spec.ts
+tests/unit/core-replay-lifecycle.spec.ts
+tests/unit/core-replay-import.spec.ts
+tests/unit/core-mode.spec.ts
+tests/unit/core-grid-scan.spec.ts
+tests/unit/core-merge-effects.spec.ts
+tests/unit/contracts.spec.ts
+tests/unit/runtime-manifest.spec.ts

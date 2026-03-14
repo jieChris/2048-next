@@ -1,0 +1,4 @@
+# Tier-3: Full regression (nightly / release)
+# Covers: all unit + all smoke tests
+tests/unit/
+tests/smoke/

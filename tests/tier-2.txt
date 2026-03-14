@@ -1,0 +1,4 @@
+# Tier-2: Extended unit set (merge gate)
+# Target: < 90s total
+# Covers: all unit tests
+tests/unit/

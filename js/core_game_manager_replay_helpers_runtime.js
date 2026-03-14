@@ -590,12 +590,7 @@ function applyInvalidatedTimerPlaceholdersForCustomTile(manager, value) {
   refreshSecondaryTimerRowsVisibility(manager);
 }
 
-function applyCustomTileReached32kState(manager, value) {
-  if (value < 32768) {
-    refreshSecondaryTimerRowsVisibility(manager);
-    return;
-  }
-  manager.reached32k = true;
+function applyCustomTile32kTimerUpdate(manager, value) {
   if (value === 32768) {
     var timeStr = manager.pretty(manager.time);
     var timer32k = resolveManagerElementById(manager, "timer32768");
@@ -609,7 +604,27 @@ function applyCustomTileReached32kState(manager, value) {
       timer64k.textContent = timeStr64k;
     }
   }
+}
+
+function applyCustomTileReached32kState(manager, value) {
+  if (value < 32768) {
+    refreshSecondaryTimerRowsVisibility(manager);
+    return;
+  }
+  manager.reached32k = true;
+  applyCustomTile32kTimerUpdate(manager, value);
   refreshSecondaryTimerRowsVisibility(manager);
+}
+
+function insertCustomTileWithValue(manager, x, y, value) {
+  var tile = new Tile({ x: x, y: y }, value);
+  manager.grid.insertTile(tile);
+  applyInvalidatedTimerPlaceholdersForCustomTile(manager, value);
+  applyCustomTileReached32kState(manager, value);
+  syncPracticeRestartBoardSnapshot(manager);
+  clearTransientTileVisualState(manager);
+  actuate(manager);
+  recordPracticeCustomTileActionIfNeeded(manager, x, y, value);
 }
 
 function insertCustomTile(manager, x, y, value) {
@@ -623,14 +638,7 @@ function insertCustomTile(manager, x, y, value) {
     syncPracticeRestartBoardSnapshot(manager);
     clearTransientTileVisualState(manager); actuate(manager); return;
   }
-  var tile = new Tile({ x: x, y: y }, value);
-  manager.grid.insertTile(tile);
-  applyInvalidatedTimerPlaceholdersForCustomTile(manager, value);
-  applyCustomTileReached32kState(manager, value);
-  syncPracticeRestartBoardSnapshot(manager);
-  clearTransientTileVisualState(manager);
-  actuate(manager);
-  recordPracticeCustomTileActionIfNeeded(manager, x, y, value);
+  insertCustomTileWithValue(manager, x, y, value);
 }
 
 function readFinalBoardTileValue(manager, x, y) {
