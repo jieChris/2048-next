@@ -149,3 +149,92 @@ jobs:
 
       - name: Output deployed release
         run: echo "Deployed release ${RELEASE_ID} to ${DEPLOY_HOST}:${DEPLOY_ROOT}/current"
+
+  deploy_secondary:
+    name: Deploy To Server (Secondary)
+    if: ${{ secrets.DEPLOY_HOST_2 != '' && secrets.DEPLOY_USER_2 != '' && secrets.DEPLOY_ROOT_2 != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST_2 }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT_2 || '22' }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER_2 }}
+      DEPLOY_ROOT: ${{ secrets.DEPLOY_ROOT_2 }}
+      DEPLOY_KEEP_RELEASES: ${{ vars.DEPLOY_KEEP_RELEASES || '5' }}
+      ARTIFACT_NAME: ${{ needs.build.outputs.artifact_name }}
+      RELEASE_ID: ${{ needs.build.outputs.release_id }}
+    steps:
+      - name: Download release package
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: artifact
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY_2 || secrets.DEPLOY_SSH_PRIVATE_KEY }}
+
+      - name: Add server host key
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          tmp_known_hosts="$(mktemp)"
+
+          for attempt in 1 2 3; do
+            ssh-keyscan \
+              -T 15 \
+              -p "${DEPLOY_PORT}" \
+              -t rsa,ecdsa,ed25519 \
+              -H "${DEPLOY_HOST}" > "${tmp_known_hosts}" 2>/dev/null || true
+
+            if [ -s "${tmp_known_hosts}" ]; then
+              cat "${tmp_known_hosts}" >> ~/.ssh/known_hosts
+              chmod 600 ~/.ssh/known_hosts
+              rm -f "${tmp_known_hosts}"
+              exit 0
+            fi
+
+            sleep 3
+          done
+
+          rm -f "${tmp_known_hosts}"
+          echo "Failed to fetch SSH host key from ${DEPLOY_HOST}:${DEPLOY_PORT} after 3 attempts." >&2
+          exit 1
+
+      - name: Upload package
+        run: |
+          scp -P "${DEPLOY_PORT}" \
+            "artifact/${ARTIFACT_NAME}" \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/${ARTIFACT_NAME}"
+
+      - name: Activate release (atomic symlink)
+        run: |
+          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "bash -s -- '${DEPLOY_ROOT}' '${ARTIFACT_NAME}' '${RELEASE_ID}' '${DEPLOY_KEEP_RELEASES}'" <<'REMOTE'
+          set -euo pipefail
+          deploy_root="$1"
+          artifact_name="$2"
+          release_id="$3"
+          keep_releases="$4"
+
+          releases_dir="${deploy_root}/releases"
+          release_dir="${releases_dir}/${release_id}"
+
+          mkdir -p "${releases_dir}" "${deploy_root}/shared"
+          rm -rf "${release_dir}"
+          mkdir -p "${release_dir}"
+
+          tar -xzf "/tmp/${artifact_name}" -C "${release_dir}"
+          ln -sfn "${release_dir}" "${deploy_root}/current"
+          rm -f "/tmp/${artifact_name}"
+
+          cd "${releases_dir}"
+          ls -1dt */ 2>/dev/null | tail -n "+$((keep_releases + 1))" | xargs -r rm -rf
+          REMOTE
+
+      - name: Output deployed release
+        run: echo "Deployed release ${RELEASE_ID} to ${DEPLOY_HOST}:${DEPLOY_ROOT}/current"
