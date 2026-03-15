@@ -63,6 +63,8 @@
       syncNoCandidates: "没有可补录的本地对局",
       syncPartialFail: "部分记录补录失败",
       syncNetworkRetryHint: "网络超时导致上传中断，可稍后重试补录",
+      invalidEmailFormat: "请输入正确的邮箱格式",
+      invalidPasswordPolicy: "密码需为8-16位，且至少包含字母/数字/符号中的两种",
       requireEmailPass: "请输入邮箱和密码",
       requireRegisterFields: "请填写邮箱和密码",
       requireNickname: "请输入昵称",
@@ -120,6 +122,8 @@
       syncNoCandidates: "No local finished games to sync",
       syncPartialFail: "Some records failed to sync",
       syncNetworkRetryHint: "Network timeout interrupted upload; try sync again later",
+      invalidEmailFormat: "Please enter a valid email address",
+      invalidPasswordPolicy: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
       requireEmailPass: "Please enter email and password",
       requireRegisterFields: "Please enter email and password",
       requireNickname: "Please enter nickname",
@@ -145,7 +149,9 @@
       RESERVED: "昵称不可用，请更换",
       SENSITIVE: "昵称不可用，请更换",
       UNAUTHORIZED: "请先登录",
-      INVALID_TOKEN: "登录状态已失效，请重新登录"
+      INVALID_TOKEN: "登录状态已失效，请重新登录",
+      INVALID_EMAIL: "邮箱格式不正确",
+      WEAK_PASSWORD: "密码需为8-16位，且至少包含字母/数字/符号中的两种"
     },
     en: {
       EMPTY: "Nickname cannot be empty",
@@ -155,7 +161,9 @@
       RESERVED: "Nickname is not allowed",
       SENSITIVE: "Nickname is not allowed",
       UNAUTHORIZED: "Please sign in first",
-      INVALID_TOKEN: "Session expired, please sign in again"
+      INVALID_TOKEN: "Session expired, please sign in again",
+      INVALID_EMAIL: "Invalid email format",
+      WEAK_PASSWORD: "Password must be 8-16 chars and include at least two of letters/numbers/symbols"
     }
   };
 
@@ -248,10 +256,53 @@
     return (COPY[lang] && COPY[lang][key]) || (COPY.zh && COPY.zh[key]) || "";
   }
 
+  function setI18nReady(ready) {
+    var body = global.document && global.document.body;
+    if (!body || typeof body.setAttribute !== "function") return;
+    body.setAttribute("data-i18n-ready", ready ? "1" : "0");
+  }
+
   function resolveLeaderboardMode(modeLike) {
     var key = toText(modeLike).trim().toLowerCase();
     if (!key) return null;
     return MODE_BUCKET_ALIAS[key] || null;
+  }
+
+  function isValidEmailFormat(emailLike) {
+    var email = toText(emailLike).trim();
+    if (!email || email.length > 254) return false;
+    if (/\s/.test(email)) return false;
+    var atIndex = email.indexOf("@");
+    if (atIndex <= 0 || atIndex !== email.lastIndexOf("@")) return false;
+    var localPart = email.slice(0, atIndex);
+    var domainPart = email.slice(atIndex + 1);
+    if (!localPart || !domainPart) return false;
+    if (localPart.length > 64) return false;
+    if (localPart.indexOf("..") >= 0 || domainPart.indexOf("..") >= 0) return false;
+    if (!/^[A-Za-z0-9._%+-]+$/.test(localPart)) return false;
+    if (!/^[A-Za-z0-9.-]+$/.test(domainPart)) return false;
+    var labels = domainPart.split(".");
+    if (labels.length < 2) return false;
+    for (var i = 0; i < labels.length; i += 1) {
+      var label = labels[i];
+      if (!label || label.length > 63) return false;
+      if (label.charAt(0) === "-" || label.charAt(label.length - 1) === "-") return false;
+      if (!/^[A-Za-z0-9-]+$/.test(label)) return false;
+    }
+    var tld = labels[labels.length - 1];
+    if (!/^[A-Za-z]{2,63}$/.test(tld)) return false;
+    return true;
+  }
+
+  function isValidRegisterPassword(passwordLike) {
+    var password = toText(passwordLike);
+    if (password.length < 8 || password.length > 16) return false;
+    if (/\s/.test(password)) return false;
+    var groups = 0;
+    if (/[A-Za-z]/.test(password)) groups += 1;
+    if (/[0-9]/.test(password)) groups += 1;
+    if (/[^A-Za-z0-9]/.test(password)) groups += 1;
+    return groups >= 2;
   }
 
   function getSelectedModeBucket() {
@@ -619,6 +670,14 @@
     return [];
   }
 
+  async function ensureLocalHistoryStoreReady() {
+    if (global.LocalHistoryStore && typeof global.LocalHistoryStore === "object") return true;
+    try {
+      await import("./local_history_store.js");
+    } catch (_err) {}
+    return !!(global.LocalHistoryStore && typeof global.LocalHistoryStore === "object");
+  }
+
   async function syncLocalHistoryRecords(showTipOnNoop) {
     if (LOCAL_RECORD_SYNC_RUNNING) return;
 
@@ -628,7 +687,8 @@
       if (showTipOnNoop) setTip(tipNode, t("syncNeedLogin"), "err");
       return;
     }
-    if (!(global.LocalHistoryStore && typeof global.LocalHistoryStore === "object")) {
+    var localStoreReady = await ensureLocalHistoryStoreReady();
+    if (!localStoreReady) {
       if (showTipOnNoop) setTip(tipNode, t("syncNoLocalStore"), "err");
       return;
     }
@@ -883,6 +943,14 @@
       setTip(byId("account-auth-tip"), t("requireRegisterFields"), "err");
       return;
     }
+    if (!isValidEmailFormat(email)) {
+      setTip(byId("account-auth-tip"), t("invalidEmailFormat"), "err");
+      return;
+    }
+    if (!isValidRegisterPassword(password)) {
+      setTip(byId("account-auth-tip"), t("invalidPasswordPolicy"), "err");
+      return;
+    }
 
     var nickname = promptRegisterNickname();
     if (nickname === null) return;
@@ -931,6 +999,7 @@
   }
 
   function applyLanguage() {
+    setI18nReady(false);
     currentLang = readLanguage();
 
     global.document.title = t("pageTitle");
@@ -978,6 +1047,7 @@
 
     syncAuthState();
     refreshLeaderboard();
+    setI18nReady(true);
   }
 
   function bindEvents() {
