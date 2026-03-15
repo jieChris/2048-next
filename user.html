@@ -5,7 +5,7 @@
   <title>用户主页</title>
   <link href="style/main.css?v=20260316-01" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
-  <link href="style/user_profile_page.css?v=20260316-01" rel="stylesheet" type="text/css">
+  <link href="style/user_profile_page.css?v=20260316-02" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-2">
   <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-2">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -59,6 +59,12 @@
             <select id="user-record-order" class="settings-select">
               <option value="desc">Desc</option>
               <option value="asc">Asc</option>
+            </select>
+            <label for="user-record-visibility" id="user-visibility-label">Records</label>
+            <select id="user-record-visibility" class="settings-select">
+              <option value="active">Active</option>
+              <option value="deleted">Deleted</option>
+              <option value="all">All</option>
             </select>
             <button id="user-record-refresh" class="replay-button" type="button">Refresh</button>
           </div>

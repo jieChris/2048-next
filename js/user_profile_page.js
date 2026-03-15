@@ -4,7 +4,7 @@
   if (!global || !global.document) return;
 
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
-  var DEFAULT_API_TIMEOUT_MS = 8000;
+  var DEFAULT_API_TIMEOUT_MS = 12000;
   var DEFAULT_RECORD_LIMIT = 200;
 
   var apiBases = buildApiBaseCandidates();
@@ -15,6 +15,7 @@
   var isOwnProfile = false;
   var cachedRecords = [];
   var activeModeFilter = "all";
+  var activeRecordVisibility = "active";
   var expandedRecordId = "";
   var recordDetailCache = Object.create(null);
   var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
@@ -29,25 +30,39 @@
     { value: "fib_3x3", zh: "\u6590\u6ce2\u90a3\u59513x3", en: "Fibonacci 3x3" }
   ];
 
-  var COPY = {
+    var COPY = {
     zh: {
       pageTitle: "2048 用户主页",
       kicker: "2048 Online Hub",
       title: "用户主页",
-      subtitle: "查看该用户有效上传记录，并按时间/分数排序。",
+      subtitle: "查看该用户历史记录，可按时间/分数排序。",
       navHome: "回首页",
       navAccount: "账号中心",
       infoHeading: "基础信息",
       labelName: "昵称：",
       labelCreated: "注册时间：",
-      recordHeading: "有效上传记录",
+      recordHeading: "历史记录",
       sortByLabel: "排序字段",
       orderLabel: "排序方向",
+      visibilityLabel: "记录状态",
       sortByTime: "时间",
       sortByScore: "分数",
       orderDesc: "倒序",
       orderAsc: "正序",
+      visibilityActive: "有效",
+      visibilityDeleted: "已删除",
+      visibilityAll: "全部",
       refreshBtn: "刷新",
+      deleteBtn: "删除记录",
+      restoreBtn: "恢复记录",
+      deleteConfirm: "确认删除该记录？删除后可在 3 天内恢复。",
+      deleting: "正在删除记录...",
+      restoring: "正在恢复记录...",
+      deleteOk: "记录已删除，可在 3 天内恢复",
+      deleteFail: "删除记录失败",
+      restoreOk: "记录已恢复",
+      restoreFail: "恢复记录失败",
+      deletedHint: "已删除，保留 3 天可恢复",
       colMode: "模式",
       colScore: "分数",
       colDate: "更新时间",
@@ -59,7 +74,7 @@
       mode_fib_3x3: "斐波那契3x3",
       loading: "加载中...",
       updated: "记录已更新",
-      empty: "该用户暂无有效上传记录",
+      empty: "该用户暂无可显示记录",
       invalidUserId: "无效的用户 ID",
       userInfoFail: "用户信息加载失败",
       recordsFail: "用户记录加载失败",
@@ -69,20 +84,34 @@
       pageTitle: "2048 User Profile",
       kicker: "2048 Online Hub",
       title: "User Profile",
-      subtitle: "View valid uploaded records sorted by time or score.",
+      subtitle: "View user history records sorted by time or score.",
       navHome: "Home",
       navAccount: "Account",
       infoHeading: "Basic Info",
       labelName: "Nickname:",
       labelCreated: "Created:",
-      recordHeading: "Valid Uploaded Records",
+      recordHeading: "History Records",
       sortByLabel: "Sort By",
       orderLabel: "Order",
+      visibilityLabel: "Status",
       sortByTime: "Time",
       sortByScore: "Score",
       orderDesc: "Desc",
       orderAsc: "Asc",
+      visibilityActive: "Active",
+      visibilityDeleted: "Deleted",
+      visibilityAll: "All",
       refreshBtn: "Refresh",
+      deleteBtn: "Delete Record",
+      restoreBtn: "Restore Record",
+      deleteConfirm: "Delete this record? It can be restored within 3 days.",
+      deleting: "Deleting record...",
+      restoring: "Restoring record...",
+      deleteOk: "Record deleted. You can restore within 3 days.",
+      deleteFail: "Failed to delete record",
+      restoreOk: "Record restored",
+      restoreFail: "Failed to restore record",
+      deletedHint: "Deleted (recoverable within 3 days)",
       colMode: "Mode",
       colScore: "Score",
       colDate: "Updated",
@@ -94,7 +123,7 @@
       mode_fib_3x3: "Fibonacci 3x3",
       loading: "Loading...",
       updated: "Records updated",
-      empty: "No valid uploaded records for this user.",
+      empty: "No records to show for this user.",
       invalidUserId: "Invalid user id",
       userInfoFail: "Failed to load user info",
       recordsFail: "Failed to load records",
@@ -303,6 +332,7 @@
     var sortBy = toText(opts.sort_by).toLowerCase() === "score" ? "score" : "time";
     var order = toText(opts.order).toLowerCase() === "asc" ? "asc" : "desc";
     var mode = toText(opts.mode).trim().toLowerCase();
+    var status = toText(opts.status).trim().toLowerCase();
 
     var path = "/user/" + encodeURIComponent(String(safeUserId)) + "/records";
     path += "?limit=" + encodeURIComponent(String(safeLimit));
@@ -312,7 +342,36 @@
     if (mode && mode !== "all") {
       path += "&mode=" + encodeURIComponent(mode);
     }
+    if (status === "deleted" || status === "all" || status === "active") {
+      path += "&status=" + encodeURIComponent(status);
+    }
     return apiRequest(path, { method: "GET" });
+  }
+
+  function deleteUserRecord(recordId) {
+    var id = toText(recordId).trim();
+    if (!id) return Promise.resolve({ error: "invalid record id" });
+    var token = getAuthToken();
+    if (!token) return Promise.resolve({ error: "Unauthorized", code: "UNAUTHORIZED" });
+    return apiRequest("/records/" + encodeURIComponent(id), {
+      method: "DELETE",
+      headers: {
+        Authorization: "Bearer " + token
+      }
+    });
+  }
+
+  function restoreUserRecord(recordId) {
+    var id = toText(recordId).trim();
+    if (!id) return Promise.resolve({ error: "invalid record id" });
+    var token = getAuthToken();
+    if (!token) return Promise.resolve({ error: "Unauthorized", code: "UNAUTHORIZED" });
+    return apiRequest("/records/" + encodeURIComponent(id) + "/restore", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token
+      }
+    });
   }
 
   function setTip(message, type) {
@@ -346,6 +405,10 @@
     return Number.isFinite(ts) ? ts : 0;
   }
 
+  function isDeletedRecord(record) {
+    return toText(record && record.deleted_at).trim().length > 0;
+  }
+
   function resolveModeLabel(modeBucket) {
     var key = "mode_" + toText(modeBucket).trim();
     return t(key) || toText(modeBucket).trim() || "--";
@@ -354,6 +417,25 @@
   function getModeFilterValue() {
     var mode = toText(byId("user-record-mode") && byId("user-record-mode").value).trim().toLowerCase();
     return mode || "all";
+  }
+
+  function getRecordVisibilityValue() {
+    var visibility = toText(byId("user-record-visibility") && byId("user-record-visibility").value).trim().toLowerCase();
+    if (visibility === "all" || visibility === "deleted") return visibility;
+    return "active";
+  }
+
+  function updateVisibilityControl() {
+    var label = byId("user-visibility-label");
+    var select = byId("user-record-visibility");
+    if (!label || !select) return;
+    var visible = !!isOwnProfile;
+    label.style.display = visible ? "" : "none";
+    select.style.display = visible ? "" : "none";
+    if (!visible) {
+      activeRecordVisibility = "active";
+      select.value = "active";
+    }
   }
 
   function resolveModeLabelByValue(value) {
@@ -698,7 +780,14 @@
     meta.className = "user-record-detail-meta";
     var bestTileText = (currentLang === "en" ? "Best Tile: " : "\u6700\u5927\u683c: ") + String(Math.floor(Number(detail.best_tile) || 0));
     var durationText = (currentLang === "en" ? "Duration: " : "\u7528\u65f6: ") + String(Math.max(0, Math.round((Number(detail.duration_ms) || 0) / 1000))) + "s";
-    meta.textContent = bestTileText + " \u00b7 " + durationText;
+    var metaText = bestTileText + " \u00b7 " + durationText;
+    if (isDeletedRecord(record)) {
+      metaText += " \u00b7 " + t("deletedHint");
+    }
+    meta.textContent = metaText;
+
+    var actions = global.document.createElement("div");
+    actions.className = "user-record-detail-actions";
 
     var replayBtn = global.document.createElement("button");
     replayBtn.type = "button";
@@ -708,7 +797,54 @@
       if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
       openReplayByRecord(record, detail);
     });
-    meta.appendChild(replayBtn);
+    actions.appendChild(replayBtn);
+
+    if (isOwnProfile) {
+      if (isDeletedRecord(record)) {
+        var restoreBtn = global.document.createElement("button");
+        restoreBtn.type = "button";
+        restoreBtn.className = "replay-button user-record-action-btn";
+        restoreBtn.textContent = t("restoreBtn");
+        restoreBtn.addEventListener("click", function (eventLike) {
+          if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
+          setTip(t("restoring"), "");
+          restoreUserRecord(record.id).then(function (result) {
+            if (result && result.success) {
+              setTip(t("restoreOk"), "ok");
+              refreshRecords();
+              return;
+            }
+            setTip(toText(result && result.error) || t("restoreFail"), "err");
+          }).catch(function (error) {
+            setTip(toText(error && error.message) || t("restoreFail"), "err");
+          });
+        });
+        actions.appendChild(restoreBtn);
+      } else {
+        var deleteBtn = global.document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "replay-button user-record-action-btn user-danger-btn";
+        deleteBtn.textContent = t("deleteBtn");
+        deleteBtn.addEventListener("click", function (eventLike) {
+          if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
+          if (typeof global.confirm === "function" && !global.confirm(t("deleteConfirm"))) return;
+          setTip(t("deleting"), "");
+          deleteUserRecord(record.id).then(function (result) {
+            if (result && result.success) {
+              setTip(t("deleteOk"), "ok");
+              refreshRecords();
+              return;
+            }
+            setTip(toText(result && result.error) || t("deleteFail"), "err");
+          }).catch(function (error) {
+            setTip(toText(error && error.message) || t("deleteFail"), "err");
+          });
+        });
+        actions.appendChild(deleteBtn);
+      }
+    }
+
+    meta.appendChild(actions);
     card.appendChild(meta);
     card.appendChild(createBoardGridNode(detail.final_board));
     return detailHost;
@@ -717,6 +853,9 @@
   function createRecordRow(record) {
     var item = global.document.createElement("div");
     item.className = "user-record-item";
+    if (isDeletedRecord(record)) {
+      item.classList.add("is-deleted");
+    }
     var recordId = toText(record && record.id).trim();
     var isExpanded = !!recordId && recordId === expandedRecordId;
     item.setAttribute("data-open", isExpanded ? "1" : "0");
@@ -807,6 +946,7 @@
   function applyCurrentSortAndRender() {
     var modeFilter = getModeFilterValue();
     activeModeFilter = modeFilter;
+    activeRecordVisibility = getRecordVisibilityValue();
     var filtered = filterRecordsByMode(cachedRecords, modeFilter);
     renderRecords(sortRecords(filtered, getSortByValue(), getOrderValue()));
   }
@@ -827,7 +967,8 @@
         duration_ms: Math.floor(Number(item.duration_ms) || 0),
         end_reason: toText(item.end_reason).trim(),
         ended_at: toText(item.ended_at).trim(),
-        created_at: toText(item.created_at).trim()
+        created_at: toText(item.created_at).trim(),
+        deleted_at: toText(item.deleted_at).trim()
       });
     }
     return out;
@@ -855,6 +996,7 @@
     var result = await getMyUserInfo();
     if (!result || !result.success || !result.data) {
       isOwnProfile = false;
+      updateVisibilityControl();
       applyDocumentTitle();
       return false;
     }
@@ -866,6 +1008,7 @@
     if (isOwnProfile && !resolvedProfileNickname) {
       resolvedProfileNickname = toText(me.nickname).trim();
     }
+    updateVisibilityControl();
     applyDocumentTitle();
     return isOwnProfile;
   }
@@ -878,10 +1021,12 @@
     }
 
     setTip(t("loading"), "");
+    activeRecordVisibility = isOwnProfile ? getRecordVisibilityValue() : "active";
     var result = await getUserRecords(targetUserId, {
       limit: DEFAULT_RECORD_LIMIT,
       page: 1,
       mode: getModeFilterValue(),
+      status: activeRecordVisibility,
       sort_by: getSortByValue(),
       order: getOrderValue()
     });
@@ -930,6 +1075,7 @@
       "user-mode-label": currentLang === "en" ? "Mode" : "\u6a21\u5f0f",
       "user-sort-by-label": t("sortByLabel"),
       "user-order-label": t("orderLabel"),
+      "user-visibility-label": t("visibilityLabel"),
       "user-record-refresh": t("refreshBtn"),
       "user-col-mode": t("colMode"),
       "user-col-score": t("colScore"),
@@ -964,6 +1110,14 @@
       orderSelect.options[1].textContent = t("orderAsc");
     }
 
+    var visibilitySelect = byId("user-record-visibility");
+    if (visibilitySelect && visibilitySelect.options && visibilitySelect.options.length >= 3) {
+      visibilitySelect.options[0].textContent = t("visibilityActive");
+      visibilitySelect.options[1].textContent = t("visibilityDeleted");
+      visibilitySelect.options[2].textContent = t("visibilityAll");
+    }
+
+    updateVisibilityControl();
     applyCurrentSortAndRender();
   }
 
@@ -972,11 +1126,13 @@
     var modeSelect = byId("user-record-mode");
     var sortBySelect = byId("user-record-sort-by");
     var orderSelect = byId("user-record-order");
+    var visibilitySelect = byId("user-record-visibility");
 
     if (refreshBtn) refreshBtn.addEventListener("click", refreshRecords);
     if (modeSelect) modeSelect.addEventListener("change", refreshRecords);
     if (sortBySelect) sortBySelect.addEventListener("change", applyCurrentSortAndRender);
     if (orderSelect) orderSelect.addEventListener("change", applyCurrentSortAndRender);
+    if (visibilitySelect) visibilitySelect.addEventListener("change", refreshRecords);
 
     global.addEventListener("storage", function (eventLike) {
       if (!eventLike) return;
@@ -1003,9 +1159,11 @@
     var sortBySelect = byId("user-record-sort-by");
     var orderSelect = byId("user-record-order");
     var modeSelect = byId("user-record-mode");
+    var visibilitySelect = byId("user-record-visibility");
     if (modeSelect && !modeSelect.value) modeSelect.value = "all";
     if (sortBySelect && !sortBySelect.value) sortBySelect.value = "time";
     if (orderSelect && !orderSelect.value) orderSelect.value = "desc";
+    if (visibilitySelect && !visibilitySelect.value) visibilitySelect.value = "active";
 
     if (!targetUserId) {
       applyDocumentTitle();
@@ -1016,6 +1174,7 @@
 
     var nameNode = byId("user-value-name");
     if (nameNode && targetNicknameHint) nameNode.textContent = targetNicknameHint;
+    updateVisibilityControl();
     applyDocumentTitle();
 
     await resolveOwnership();
@@ -1033,3 +1192,4 @@
     init();
   }
 })(typeof window !== "undefined" ? window : undefined);
+

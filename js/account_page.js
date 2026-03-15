@@ -9,7 +9,11 @@
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var DEFAULT_LIMIT = 20;
   var DEFAULT_BOARD_MODE = "standard_no_undo";
-  var DEFAULT_API_TIMEOUT_MS = 8000;
+  var DEFAULT_API_TIMEOUT_MS = 12000;
+  var LOCAL_RECORD_SYNC_STATE_KEY = "cloud_record_sync_state_v1";
+  var LOCAL_RECORD_SYNC_MAX_MARKS_PER_USER = 6000;
+  var LOCAL_RECORD_SYNC_MAX_UPLOADS_PER_RUN = 600;
+  var LOCAL_RECORD_SYNC_RUNNING = false;
 
   var apiBases = buildApiBaseCandidates();
   var activeApiBase = apiBases[0];
@@ -42,6 +46,7 @@
       boardMode: "模式",
       boardLimit: "条数",
       boardRefresh: "刷新",
+      recordSyncBtn: "补录本地历史",
       colRank: "排名",
       colName: "昵称",
       colScore: "分数",
@@ -50,6 +55,14 @@
       boardEmpty: "暂无在线排行榜数据",
       boardFail: "排行榜加载失败",
       boardUpdated: "排行榜已更新",
+      syncLoading: "正在补录本地历史...",
+      syncDone: "补录完成",
+      syncNoLocalStore: "本地历史模块未加载，无法补录",
+      syncNeedLogin: "请先登录后再补录",
+      syncUnauthorized: "登录已失效，请重新登录",
+      syncNoCandidates: "没有可补录的本地对局",
+      syncPartialFail: "部分记录补录失败",
+      syncNetworkRetryHint: "网络超时导致上传中断，可稍后重试补录",
       requireEmailPass: "请输入邮箱和密码",
       requireRegisterFields: "请填写邮箱和密码",
       requireNickname: "请输入昵称",
@@ -90,6 +103,7 @@
       boardMode: "Mode",
       boardLimit: "Limit",
       boardRefresh: "Refresh",
+      recordSyncBtn: "Sync Local Records",
       colRank: "Rank",
       colName: "Nickname",
       colScore: "Score",
@@ -98,6 +112,14 @@
       boardEmpty: "No leaderboard data.",
       boardFail: "Failed to load leaderboard",
       boardUpdated: "Leaderboard updated",
+      syncLoading: "Syncing local records...",
+      syncDone: "Sync completed",
+      syncNoLocalStore: "Local history is unavailable",
+      syncNeedLogin: "Please sign in before syncing",
+      syncUnauthorized: "Session expired, please sign in again",
+      syncNoCandidates: "No local finished games to sync",
+      syncPartialFail: "Some records failed to sync",
+      syncNetworkRetryHint: "Network timeout interrupted upload; try sync again later",
       requireEmailPass: "Please enter email and password",
       requireRegisterFields: "Please enter email and password",
       requireNickname: "Please enter nickname",
@@ -411,6 +433,10 @@
     return apiRequest(path, { method: "GET" });
   }
 
+  function submitRecord(payload) {
+    return apiRequest("/records", { method: "POST", auth: true, body: payload });
+  }
+
   function getUserInfo(userId) {
     var safeUserId = Math.floor(Number(userId) || 0);
     if (safeUserId <= 0) return Promise.resolve({ error: "invalid user id" });
@@ -446,6 +472,248 @@
     var explicit = toText(result && result.error).trim();
     if (explicit) return explicit;
     return t(fallbackKey);
+  }
+
+  function isTimeoutErrorText(textLike) {
+    var text = toText(textLike).toLowerCase();
+    return text.indexOf("timeout") >= 0 || text.indexOf("超时") >= 0;
+  }
+
+  function readRecordSyncState() {
+    var raw = safeGetStorage(LOCAL_RECORD_SYNC_STATE_KEY);
+    if (!raw) return {};
+    try {
+      var parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (_err) {
+      return {};
+    }
+  }
+
+  function writeRecordSyncState(state) {
+    try {
+      safeSetStorage(LOCAL_RECORD_SYNC_STATE_KEY, JSON.stringify(state || {}));
+    } catch (_err) {}
+  }
+
+  function resolveRecordSyncUserBucket(state, userId) {
+    var root = state && typeof state === "object" ? state : {};
+    var key = String(parsePositiveInt(userId) || 0);
+    if (!key || key === "0") return null;
+    var bucket = root[key];
+    if (!bucket || typeof bucket !== "object") {
+      bucket = {};
+      root[key] = bucket;
+    }
+    return {
+      root: root,
+      key: key,
+      bucket: bucket
+    };
+  }
+
+  function isLocalRecordSynced(syncBucketInfo, localRecordId) {
+    if (!syncBucketInfo || !syncBucketInfo.bucket) return false;
+    var key = toText(localRecordId).trim();
+    if (!key) return false;
+    return !!syncBucketInfo.bucket[key];
+  }
+
+  function markLocalRecordSynced(syncBucketInfo, localRecordId, recordId) {
+    if (!syncBucketInfo || !syncBucketInfo.bucket) return;
+    var key = toText(localRecordId).trim();
+    if (!key) return;
+    syncBucketInfo.bucket[key] = {
+      synced_at: new Date().toISOString(),
+      server_record_id: toText(recordId).trim()
+    };
+
+    var ids = Object.keys(syncBucketInfo.bucket);
+    if (ids.length <= LOCAL_RECORD_SYNC_MAX_MARKS_PER_USER) return;
+    ids.sort(function (a, b) {
+      var ta = Date.parse(toText(syncBucketInfo.bucket[a] && syncBucketInfo.bucket[a].synced_at)) || 0;
+      var tb = Date.parse(toText(syncBucketInfo.bucket[b] && syncBucketInfo.bucket[b].synced_at)) || 0;
+      return tb - ta;
+    });
+    for (var i = LOCAL_RECORD_SYNC_MAX_MARKS_PER_USER; i < ids.length; i += 1) {
+      delete syncBucketInfo.bucket[ids[i]];
+    }
+  }
+
+  function canSyncLocalRecord(record) {
+    var item = record && typeof record === "object" ? record : null;
+    if (!item) return false;
+    var score = Math.floor(Number(item.score) || 0);
+    if (!(score > 0)) return false;
+    var endReason = toText(item.end_reason || "game_over").trim().toLowerCase();
+    if (endReason && endReason !== "game_over") return false;
+    var modeKey = toText(item.mode_key).trim();
+    var modeBucket = resolveLeaderboardMode(modeKey || item.mode || item.mode_bucket);
+    if (!modeKey || !modeBucket) return false;
+    var replayString = toText(item.replay_string).trim();
+    if (!replayString && item.replay != null) {
+      try {
+        replayString = JSON.stringify(item.replay);
+      } catch (_err) {
+        replayString = "";
+      }
+    }
+    return replayString.length > 0;
+  }
+
+  function buildRecordSyncPayload(localRecord) {
+    var record = localRecord && typeof localRecord === "object" ? localRecord : {};
+    var modeKey = toText(record.mode_key).trim();
+    var modeBucket = resolveLeaderboardMode(modeKey || record.mode || record.mode_bucket);
+    if (!modeKey || !modeBucket) return null;
+
+    var replayString = toText(record.replay_string).trim();
+    if (!replayString && record.replay != null) {
+      try {
+        replayString = JSON.stringify(record.replay);
+      } catch (_err) {
+        replayString = "";
+      }
+    }
+    if (!replayString) return null;
+
+    return {
+      mode: modeBucket,
+      mode_key: modeKey,
+      score: Math.floor(Number(record.score) || 0),
+      best_tile: Math.floor(Number(record.best_tile) || 0),
+      duration_ms: Math.floor(Number(record.duration_ms) || 0),
+      ended_at: toText(record.ended_at).trim() || new Date().toISOString(),
+      end_reason: "game_over",
+      final_board: Array.isArray(record.final_board) ? record.final_board : [],
+      replay: record.replay || null,
+      replay_string: replayString,
+      client_record_id: toText(record.id).trim()
+    };
+  }
+
+  async function getAllLocalHistoryRecords() {
+    var store = global.LocalHistoryStore;
+    if (!store || typeof store !== "object") return null;
+
+    try {
+      if (typeof store.getAllAsync === "function") {
+        var asyncRows = await store.getAllAsync();
+        return Array.isArray(asyncRows) ? asyncRows : [];
+      }
+      if (typeof store.getAll === "function") {
+        var rows = store.getAll();
+        return Array.isArray(rows) ? rows : [];
+      }
+      if (typeof store.listRecordsAsync === "function") {
+        var listedAsync = await store.listRecordsAsync({ page: 1, page_size: 5000, sort_by: "ended_desc" });
+        return Array.isArray(listedAsync && listedAsync.items) ? listedAsync.items : [];
+      }
+      if (typeof store.listRecords === "function") {
+        var listed = store.listRecords({ page: 1, page_size: 5000, sort_by: "ended_desc" });
+        return Array.isArray(listed && listed.items) ? listed.items : [];
+      }
+    } catch (_err) {
+      return [];
+    }
+    return [];
+  }
+
+  async function syncLocalHistoryRecords(showTipOnNoop) {
+    if (LOCAL_RECORD_SYNC_RUNNING) return;
+
+    var tipNode = byId("account-board-tip");
+    var token = getToken();
+    if (!token) {
+      if (showTipOnNoop) setTip(tipNode, t("syncNeedLogin"), "err");
+      return;
+    }
+    if (!(global.LocalHistoryStore && typeof global.LocalHistoryStore === "object")) {
+      if (showTipOnNoop) setTip(tipNode, t("syncNoLocalStore"), "err");
+      return;
+    }
+
+    LOCAL_RECORD_SYNC_RUNNING = true;
+    setTip(tipNode, t("syncLoading"), "");
+
+    try {
+      var userInfo = await getMyUserInfo();
+      var currentUserId = parsePositiveInt(userInfo && userInfo.data && (userInfo.data.id || userInfo.data.user_id));
+      if (!currentUserId) {
+        clearAuth();
+        setTip(tipNode, t("syncUnauthorized"), "err");
+        return;
+      }
+
+      var allRows = await getAllLocalHistoryRecords();
+      allRows = Array.isArray(allRows) ? allRows : [];
+      var syncState = readRecordSyncState();
+      var syncBucketInfo = resolveRecordSyncUserBucket(syncState, currentUserId);
+      if (!syncBucketInfo) {
+        setTip(tipNode, t("syncNeedLogin"), "err");
+        return;
+      }
+
+      var candidates = [];
+      for (var i = 0; i < allRows.length; i += 1) {
+        var row = allRows[i];
+        if (!canSyncLocalRecord(row)) continue;
+        if (isLocalRecordSynced(syncBucketInfo, row && row.id)) continue;
+        candidates.push(row);
+      }
+
+      if (candidates.length === 0) {
+        setTip(tipNode, t("syncNoCandidates"), showTipOnNoop ? "ok" : "");
+        return;
+      }
+
+      candidates.sort(function (a, b) {
+        var ta = Date.parse(toText(a && a.ended_at)) || 0;
+        var tb = Date.parse(toText(b && b.ended_at)) || 0;
+        return ta - tb;
+      });
+
+      var attempts = 0;
+      var success = 0;
+      var failed = 0;
+      var timedOut = 0;
+
+      for (var c = 0; c < candidates.length; c += 1) {
+        if (attempts >= LOCAL_RECORD_SYNC_MAX_UPLOADS_PER_RUN) break;
+        var payload = buildRecordSyncPayload(candidates[c]);
+        if (!payload) continue;
+        attempts += 1;
+        var result = await submitRecord(payload);
+        if (result && result.success) {
+          success += 1;
+          markLocalRecordSynced(syncBucketInfo, payload.client_record_id, result.id);
+          continue;
+        }
+
+        var errorText = resolveServerError(result, "syncPartialFail");
+        if (isTimeoutErrorText(errorText)) timedOut += 1;
+        if (toText(result && result.code).toUpperCase() === "UNAUTHORIZED") {
+          clearAuth();
+          setTip(tipNode, t("syncUnauthorized"), "err");
+          writeRecordSyncState(syncBucketInfo.root);
+          return;
+        }
+        failed += 1;
+      }
+
+      writeRecordSyncState(syncBucketInfo.root);
+      if (failed <= 0) {
+        setTip(tipNode, t("syncDone") + " · " + success + "/" + attempts, "ok");
+      } else {
+        var suffix = " · " + success + "/" + attempts;
+        if (timedOut > 0) suffix += " · " + t("syncNetworkRetryHint");
+        setTip(tipNode, t("syncPartialFail") + suffix, "err");
+      }
+    } catch (error) {
+      setTip(tipNode, toText(error && error.message) || t("syncPartialFail"), "err");
+    } finally {
+      LOCAL_RECORD_SYNC_RUNNING = false;
+    }
   }
 
   function renderBoardList(resultList) {
@@ -584,9 +852,14 @@
 
     setTip(boardTip, t("boardLoading"), "");
     var result = await getLeaderboard(limit, modeBucket);
+    var errorText = resolveServerError(result, "boardFail");
+    if ((!result || !result.success) && isTimeoutErrorText(errorText)) {
+      result = await getLeaderboard(limit, modeBucket);
+      errorText = resolveServerError(result, "boardFail");
+    }
     if (!result || !result.success) {
       renderBoardList([]);
-      setTip(boardTip, resolveServerError(result, "boardFail"), "err");
+      setTip(boardTip, errorText, "err");
       return;
     }
 
@@ -643,6 +916,7 @@
       setTip(byId("account-auth-tip"), t("loginOk"), "ok");
       refreshUserInfo();
       refreshLeaderboard();
+      syncLocalHistoryRecords(false);
       return;
     }
 
@@ -682,6 +956,7 @@
       "account-board-mode-label": t("boardMode"),
       "account-board-limit-label": t("boardLimit"),
       "account-board-refresh": t("boardRefresh"),
+      "account-record-sync": t("recordSyncBtn"),
       "account-col-rank": t("colRank"),
       "account-col-name": t("colName"),
       "account-col-score": t("colScore"),
@@ -710,6 +985,7 @@
     var registerBtn = byId("account-register-btn");
     var logoutBtn = byId("account-logout-btn");
     var refreshBtn = byId("account-board-refresh");
+    var recordSyncBtn = byId("account-record-sync");
     var limitSelect = byId("account-board-limit");
     var modeSelect = byId("account-board-mode");
 
@@ -717,6 +993,9 @@
     if (registerBtn) registerBtn.addEventListener("click", onRegisterClick);
     if (logoutBtn) logoutBtn.addEventListener("click", onLogoutClick);
     if (refreshBtn) refreshBtn.addEventListener("click", refreshLeaderboard);
+    if (recordSyncBtn) recordSyncBtn.addEventListener("click", function () {
+      syncLocalHistoryRecords(true);
+    });
     if (limitSelect) {
       limitSelect.value = String(DEFAULT_LIMIT);
       limitSelect.addEventListener("change", refreshLeaderboard);
@@ -748,6 +1027,9 @@
     syncAuthState();
     refreshUserInfo();
     refreshLeaderboard();
+    if (getToken()) {
+      syncLocalHistoryRecords(false);
+    }
   }
 
   global.AccountPageRuntime = {

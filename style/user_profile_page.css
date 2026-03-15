@@ -145,6 +145,18 @@ body[data-page="user-profile"] .user-record-tools .settings-select:focus-visible
   background: rgba(244, 235, 225, 0.48);
 }
 
+.user-record-item.is-deleted {
+  background: rgba(201, 176, 152, 0.16);
+}
+
+.user-record-item.is-deleted .user-record-row {
+  color: #8d7e72;
+}
+
+.user-record-item.is-deleted .user-record-score {
+  color: #7f6f62;
+}
+
 .user-record-row {
   width: 100%;
   border: 0;
@@ -198,11 +210,27 @@ body[data-page="user-profile"] .user-record-tools .settings-select:focus-visible
   color: #7b6b5b;
 }
 
-.user-replay-btn {
+.user-record-detail-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-replay-btn,
+.user-record-action-btn {
   padding: 6px 10px;
   border-radius: 7px;
   font-size: 12px;
   line-height: 1.2;
+}
+
+.user-danger-btn {
+  background: #b4665c;
+}
+
+.user-danger-btn:hover,
+.user-danger-btn:focus-visible {
+  background: #a5564d;
 }
 
 .user-mini-board-wrap {
