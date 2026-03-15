@@ -90,9 +90,29 @@ body[data-page="user-profile"] {
   border-top: 1px solid rgba(154, 133, 113, 0.2);
 }
 
+.user-record-item + .user-record-item {
+  border-top: 1px solid rgba(154, 133, 113, 0.2);
+}
+
 .user-record-empty {
   min-height: 120px;
   color: #8f7f70;
+}
+
+.user-record-item[data-open="1"] {
+  background: rgba(244, 235, 225, 0.48);
+}
+
+.user-record-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-record-row:hover {
+  background: rgba(214, 188, 161, 0.2);
 }
 
 .user-record-mode {
@@ -107,6 +127,67 @@ body[data-page="user-profile"] {
 
 .user-record-date {
   color: #907f6d;
+  font-size: 12px;
+}
+
+.user-record-detail {
+  display: none;
+  padding: 0 10px 11px;
+}
+
+.user-record-item[data-open="1"] .user-record-detail {
+  display: block;
+}
+
+.user-record-detail-card {
+  border: 1px solid #dbcab7;
+  border-radius: 9px;
+  background: #fff;
+  padding: 10px;
+}
+
+.user-record-detail-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #7b6b5b;
+}
+
+.user-replay-btn {
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.user-record-board {
+  --board-size: 4;
+  display: grid;
+  grid-template-columns: repeat(var(--board-size), minmax(0, 1fr));
+  gap: 6px;
+}
+
+.user-record-board-cell {
+  min-height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: #5a4f44;
+  background: rgba(206, 188, 170, 0.34);
+}
+
+.user-record-board-cell.is-empty {
+  color: transparent;
+}
+
+.user-record-detail-error {
+  color: #a44f45;
   font-size: 12px;
 }
 
@@ -157,5 +238,10 @@ body[data-page="user-profile"] {
 
   .user-record-date {
     font-size: 11px;
+  }
+
+  .user-record-detail-meta {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

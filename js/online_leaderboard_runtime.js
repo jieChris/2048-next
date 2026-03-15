@@ -7,6 +7,7 @@
   var STORAGE_USER_ID_KEY = "userId";
   var STORAGE_NICKNAME_KEY = "nickname";
   var STORAGE_LAST_SUBMIT_KEY = "online_last_submit_signature_v1";
+  var STORAGE_LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var DEFAULT_BOARD_LIMIT = 10;
   var DEFAULT_API_TIMEOUT_MS = 8000;
@@ -57,6 +58,7 @@
   var timerLeaderboardCacheTime = 0;
   var timerLeaderboardLoading = false;
   var submitLock = false;
+  var recordSubmitLock = false;
   var modeIntroBound = false;
   var langSyncBound = false;
   var pollingStarted = false;
@@ -608,6 +610,97 @@
     return apiRequest("/score", { method: "POST", auth: true, body: payload });
   }
 
+  function submitRecord(payload) {
+    return apiRequest("/records", { method: "POST", auth: true, body: payload });
+  }
+
+  function resolveManagerBestTileValue(manager) {
+    if (!manager || !manager.grid || typeof manager.grid.eachCell !== "function") return 0;
+    var best = 0;
+    manager.grid.eachCell(function (_x, _y, tile) {
+      var value = Math.floor(Number(tile && tile.value) || 0);
+      if (value > best) best = value;
+    });
+    return best;
+  }
+
+  function resolveManagerDurationMs(manager) {
+    if (!manager) return 0;
+    if (typeof manager.getDurationMs === "function") {
+      return Math.floor(Number(manager.getDurationMs()) || 0);
+    }
+    var startTs = Number(manager.startTimestamp || manager.startTime || 0);
+    if (!Number.isFinite(startTs) || startTs <= 0) return 0;
+    return Math.max(0, Date.now() - startTs);
+  }
+
+  function resolveManagerFinalBoard(manager) {
+    if (!manager) return [];
+    if (typeof manager.getFinalBoardMatrix === "function") {
+      return manager.getFinalBoardMatrix();
+    }
+    if (manager.grid && typeof manager.grid.serialize === "function") {
+      try {
+        var serialized = manager.grid.serialize();
+        var cells = serialized && serialized.cells;
+        if (!Array.isArray(cells)) return [];
+        var board = [];
+        for (var y = 0; y < cells.length; y += 1) {
+          var row = Array.isArray(cells[y]) ? cells[y] : [];
+          var outRow = [];
+          for (var x = 0; x < row.length; x += 1) {
+            var tile = row[x];
+            outRow.push(Math.floor(Number(tile && tile.value) || 0));
+          }
+          board.push(outRow);
+        }
+        return board;
+      } catch (_err) {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  function buildRecordSubmitPayload(manager, modeLike, score) {
+    if (!manager) return null;
+    var modeKey = toText(modeLike || manager.modeKey || manager.mode).trim();
+    var modeBucket = resolveLeaderboardMode(modeKey);
+    if (!modeKey || !modeBucket) return null;
+
+    var replayString = "";
+    if (typeof manager.serialize === "function") {
+      try {
+        replayString = toText(manager.serialize()).trim();
+      } catch (_err) {
+        replayString = "";
+      }
+    }
+    if (!replayString) return null;
+
+    var replayV3 = null;
+    if (typeof manager.serializeV3 === "function") {
+      try {
+        replayV3 = manager.serializeV3();
+      } catch (_err2) {
+        replayV3 = null;
+      }
+    }
+
+    return {
+      mode: modeBucket,
+      mode_key: modeKey,
+      score: Math.floor(Number(score) || 0),
+      best_tile: resolveManagerBestTileValue(manager),
+      duration_ms: resolveManagerDurationMs(manager),
+      ended_at: new Date().toISOString(),
+      end_reason: manager.over ? "game_over" : "win_stop",
+      final_board: resolveManagerFinalBoard(manager),
+      replay: replayV3,
+      replay_string: replayString
+    };
+  }
+
   function getLeaderboard(limit, modeLike) {
     var safeLimit = Number(limit);
     if (!Number.isFinite(safeLimit) || safeLimit <= 0) safeLimit = DEFAULT_BOARD_LIMIT;
@@ -816,6 +909,15 @@
     return [modeKey, seed, String(score)].join("|");
   }
 
+  function buildRecordSubmitSignature(manager, payload) {
+    var modeKey = toText(payload && payload.mode_key).trim() || (manager && manager.modeKey ? String(manager.modeKey) : "unknown");
+    var seed = manager && manager.initialSeed != null ? String(manager.initialSeed) : "seedless";
+    var score = Math.floor(Number(payload && payload.score) || 0);
+    var moveCount = Array.isArray(manager && manager.moveHistory) ? manager.moveHistory.length : 0;
+    var replayLength = toText(payload && payload.replay_string).length;
+    return [modeKey, seed, String(score), String(moveCount), String(replayLength)].join("|");
+  }
+
   async function maybeSubmitScoreOnGameOver() {
     if (submitLock) return;
     var token = getAuthToken();
@@ -849,6 +951,45 @@
     }
 
     var errorText = toText(result && result.error ? result.error : "分数提交失败");
+    if (errorText.indexOf("未授权") >= 0 || errorText.toLowerCase().indexOf("token") >= 0) {
+      clearAuth();
+    }
+  }
+
+  async function maybeSubmitRecordOnGameOver() {
+    if (recordSubmitLock) return;
+    var token = getAuthToken();
+    if (!token) return;
+
+    var manager = global.game_manager;
+    if (!manager || manager.replayMode) return;
+    if (!manager.over) return;
+
+    var score = Math.floor(Number(manager.score) || 0);
+    if (!(score > 0)) return;
+
+    var modeKey = getCurrentModeKey();
+    var payload = buildRecordSubmitPayload(manager, modeKey, score);
+    if (!payload) return;
+
+    var signature = buildRecordSubmitSignature(manager, payload);
+    var lastSignature = toText(safeGetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY));
+    if (signature && signature === lastSignature) return;
+
+    recordSubmitLock = true;
+    var result = null;
+    try {
+      result = await submitRecord(payload);
+    } finally {
+      recordSubmitLock = false;
+    }
+
+    if (result && result.success) {
+      safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY, signature);
+      return;
+    }
+
+    var errorText = toText(result && result.error ? result.error : "记录提交失败");
     if (errorText.indexOf("未授权") >= 0 || errorText.toLowerCase().indexOf("token") >= 0) {
       clearAuth();
     }
@@ -960,6 +1101,7 @@
       }
 
       await maybeSubmitScoreOnGameOver();
+      await maybeSubmitRecordOnGameOver();
 
       if (now - pollingLastTimerRefreshTime >= resolveTimerRefreshIntervalMs()) {
         pollingLastTimerRefreshTime = now;
@@ -1030,6 +1172,7 @@
     refreshLeaderboard: refreshLeaderboard,
     refreshTimerLeaderboardPanel: refreshTimerLeaderboardPanel,
     submitScore: submitScore,
+    submitRecord: submitRecord,
     login: login,
     register: register,
     getUserInfo: getUserInfo,

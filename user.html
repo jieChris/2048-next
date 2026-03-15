@@ -17,7 +17,7 @@
       <div class="palette-title-wrap">
         <p class="palette-kicker" id="user-kicker">2048 Online Hub</p>
         <h1 class="palette-title" id="user-title">User Profile</h1>
-        <p class="palette-subtitle" id="user-subtitle">View valid uploaded records and sort by time/score.</p>
+        <p class="palette-subtitle" id="user-subtitle">View user history records sorted by time or score.</p>
       </div>
       <nav class="palette-nav">
         <a class="replay-button palette-nav-btn" href="index.html" id="user-nav-home">Home</a>
@@ -38,8 +38,18 @@
 
       <section class="card-surface user-record-card">
         <div class="panel-head">
-          <h2 id="user-record-heading">Valid Uploaded Records</h2>
+          <h2 id="user-record-heading">History Records</h2>
           <div class="user-record-tools">
+            <label for="user-record-mode" id="user-mode-label">Mode</label>
+            <select id="user-record-mode" class="settings-select">
+              <option value="all">All</option>
+              <option value="standard_no_undo">Standard (No Undo)</option>
+              <option value="standard_undo">With Undo</option>
+              <option value="pow2_3x3">3x3</option>
+              <option value="pow2_2x4">2x4</option>
+              <option value="pow2_3x4">3x4</option>
+              <option value="fib_3x3">Fibonacci 3x3</option>
+            </select>
             <label for="user-record-sort-by" id="user-sort-by-label">Sort By</label>
             <select id="user-record-sort-by" class="settings-select">
               <option value="time">Time</option>

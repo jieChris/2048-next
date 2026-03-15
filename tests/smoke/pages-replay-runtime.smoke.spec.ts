@@ -555,6 +555,46 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.replayScoreKey).toBe("bestScoreByMode:replay_view");
   });
 
+  test("replay page loads cloud replay via cloud_replay parameter", async ({ page }) => {
+    await page.addInitScript(() => {
+      const payload = {
+        source: "cloud_record",
+        id: "cloud-rec-1",
+        replay_string: "replay_(!盲fC"
+      };
+      window.sessionStorage.setItem("cloud_replay_payload_v1", JSON.stringify(payload));
+      (window as any).__replayLoadAlerts = [];
+      window.alert = function (message?: unknown) {
+        (window as any).__replayLoadAlerts.push(String(message || ""));
+      };
+    });
+
+    const response = await page.goto("/replay.html?cloud_replay=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const titleNode = document.querySelector(".heading .title");
+      const title = titleNode ? String(titleNode.textContent || "") : "";
+      return title.includes("云端记录");
+    });
+
+    const snapshot = await page.evaluate(() => {
+      const titleNode = document.querySelector(".heading .title");
+      return {
+        title: titleNode ? String(titleNode.textContent || "") : "",
+        alerts: ((window as any).__replayLoadAlerts || []).map((item: unknown) => String(item || "")),
+        payloadAfter: window.sessionStorage.getItem("cloud_replay_payload_v1")
+      };
+    });
+
+    expect(snapshot.title.includes("云端记录")).toBe(true);
+    expect(snapshot.payloadAfter).toBeNull();
+    expect(snapshot.alerts.some((item: string) => item.includes("加载云端回放失败"))).toBe(false);
+  });
+
   test("replay page loads local history replay via local_history_id parameter", async ({ page }) => {
     const replayId = "lh_replay_local_param";
     await page.addInitScript((id: string) => {

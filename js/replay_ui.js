@@ -138,6 +138,7 @@ var replayUiTickStarted = false;
 var REPLAY_UI_ACTIVE_INTERVAL_MS = 220;
 var REPLAY_UI_IDLE_INTERVAL_MS = 1000;
 var REPLAY_UI_HIDDEN_INTERVAL_MS = 1800;
+var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
 
 function cancelReplayPendingRelayout() {
     if (!replayRelayoutTimer) return;
@@ -336,14 +337,42 @@ function requestReplayRelayout() {
 
 async function loadReplayFromSessionId() {
     var params = new URLSearchParams(window.location.search);
+    var cloudReplay = params.get("cloud_replay");
     var localHistoryId = params.get("local_history_id");
     if (!localHistoryId) {
         localHistoryId = params.get("id");
     }
     var sessionId = params.get("session_id");
-    if (!localHistoryId && !sessionId) return;
+    if (!cloudReplay && !localHistoryId && !sessionId) return;
     if (!window.game_manager) {
         setTimeout(loadReplayFromSessionId, 60);
+        return;
+    }
+
+    if (cloudReplay === "1") {
+        try {
+            var cloudReplayPayloadRaw = "";
+            if (window.sessionStorage && typeof window.sessionStorage.getItem === "function") {
+                cloudReplayPayloadRaw = String(window.sessionStorage.getItem(CLOUD_REPLAY_STORAGE_KEY) || "");
+            }
+            if (!cloudReplayPayloadRaw) throw new Error("cloud_replay_payload_missing");
+            var cloudReplayPayload = JSON.parse(cloudReplayPayloadRaw);
+            var replayPayload = cloudReplayPayload && cloudReplayPayload.replay_string
+                ? String(cloudReplayPayload.replay_string)
+                : "";
+            if (!replayPayload) throw new Error("cloud_replay_missing");
+            window.game_manager.import(replayPayload);
+            var titleCloud = document.querySelector(".heading .title");
+            if (titleCloud) {
+                titleCloud.innerHTML = "<a href='index.html' style='text-decoration: none; color: inherit; cursor: pointer;'>2048</a> 回放 - 云端记录";
+            }
+            if (window.sessionStorage && typeof window.sessionStorage.removeItem === "function") {
+                window.sessionStorage.removeItem(CLOUD_REPLAY_STORAGE_KEY);
+            }
+            updateReplayUI();
+        } catch (cloudReplayError) {
+            alert("加载云端回放失败: " + (cloudReplayError.message || "unknown"));
+        }
         return;
     }
 
