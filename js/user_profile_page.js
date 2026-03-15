@@ -19,6 +19,8 @@
   var currentLang = readLanguage();
   var targetUserId = 0;
   var targetNicknameHint = "";
+  var resolvedProfileNickname = "";
+  var isOwnProfile = false;
   var cachedRecords = [];
 
   var COPY = {
@@ -115,6 +117,10 @@
     }
   }
 
+  function getAuthToken() {
+    return toText(safeGetStorage("token")).trim();
+  }
+
   function readLanguage() {
     var raw = toText(safeGetStorage(UI_LANG_STORAGE_KEY)).toLowerCase();
     return raw === "en" ? "en" : "zh";
@@ -123,6 +129,17 @@
   function t(key) {
     var lang = currentLang === "en" ? "en" : "zh";
     return (COPY[lang] && COPY[lang][key]) || (COPY.zh && COPY.zh[key]) || "";
+  }
+
+  function resolveProfilePageTitle() {
+    var baseTitle = "\u7528\u6237\u4e3b\u9875";
+    if (isOwnProfile) return baseTitle;
+    var nickname = toText(resolvedProfileNickname || targetNicknameHint).trim();
+    return nickname ? baseTitle + "-" + nickname : baseTitle;
+  }
+
+  function applyDocumentTitle() {
+    global.document.title = resolveProfilePageTitle();
   }
 
   function buildApiBaseCandidates() {
@@ -169,6 +186,14 @@
     for (var i = 0; i < apiBases.length; i += 1) {
       var base = apiBases[i];
       var requestInit = { method: method, headers: {} };
+      var requestHeaders = opts.headers && typeof opts.headers === "object" ? opts.headers : null;
+      if (requestHeaders) {
+        var headerKeys = Object.keys(requestHeaders);
+        for (var h = 0; h < headerKeys.length; h += 1) {
+          var headerKey = headerKeys[h];
+          requestInit.headers[headerKey] = toText(requestHeaders[headerKey]);
+        }
+      }
       var timeoutHandle = null;
       var controller = null;
 
@@ -229,6 +254,17 @@
     var safeUserId = parsePositiveInt(userId);
     if (!safeUserId) return Promise.resolve({ error: t("invalidUserId") });
     return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), { method: "GET" });
+  }
+
+  function getMyUserInfo() {
+    var token = getAuthToken();
+    if (!token) return Promise.resolve(null);
+    return apiRequest("/user/me", {
+      method: "GET",
+      headers: {
+        Authorization: "Bearer " + token
+      }
+    });
   }
 
   function getLeaderboard(limit, modeBucket) {
@@ -380,9 +416,30 @@
     var nameNode = byId("user-value-name");
     var createdNode = byId("user-value-created");
 
-    if (nameNode) nameNode.textContent = toText(data.nickname || targetNicknameHint || "--");
+    resolvedProfileNickname = toText(data.nickname || targetNicknameHint || "").trim();
+    if (nameNode) nameNode.textContent = resolvedProfileNickname || "--";
     if (createdNode) createdNode.textContent = formatDate(data.created_at);
+    applyDocumentTitle();
     return true;
+  }
+
+  async function resolveOwnership() {
+    var result = await getMyUserInfo();
+    if (!result || !result.success || !result.data) {
+      isOwnProfile = false;
+      applyDocumentTitle();
+      return false;
+    }
+
+    var me = result.data || {};
+    var myUserId = parsePositiveInt(me.id || me.user_id);
+    isOwnProfile = !!myUserId && myUserId === targetUserId;
+
+    if (isOwnProfile && !resolvedProfileNickname) {
+      resolvedProfileNickname = toText(me.nickname).trim();
+    }
+    applyDocumentTitle();
+    return isOwnProfile;
   }
 
   async function refreshRecords() {
@@ -432,7 +489,7 @@
 
   function applyLanguage() {
     currentLang = readLanguage();
-    global.document.title = t("pageTitle");
+    applyDocumentTitle();
 
     var textMap = {
       "user-kicker": t("kicker"),
@@ -497,6 +554,7 @@
     var params = new global.URLSearchParams(toText(global.location && global.location.search));
     targetUserId = parsePositiveInt(params.get("id"));
     targetNicknameHint = toText(params.get("nickname")).trim();
+    resolvedProfileNickname = targetNicknameHint;
   }
 
   async function init() {
@@ -510,6 +568,7 @@
     if (orderSelect && !orderSelect.value) orderSelect.value = "desc";
 
     if (!targetUserId) {
+      applyDocumentTitle();
       renderRecords([]);
       setTip(t("invalidUserId"), "err");
       return;
@@ -517,7 +576,9 @@
 
     var nameNode = byId("user-value-name");
     if (nameNode && targetNicknameHint) nameNode.textContent = targetNicknameHint;
+    applyDocumentTitle();
 
+    await resolveOwnership();
     await refreshUserInfo();
     await refreshRecords();
   }

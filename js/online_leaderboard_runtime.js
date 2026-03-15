@@ -244,10 +244,10 @@
     if (rows.length === 0) return "14px";
     var firstText = formatLeaderboardNameAndScore(rows[0], lang);
     var length = toText(firstText).trim().length;
-    if (length >= 20) return "12px";
-    if (length >= 18) return "14px";
-    if (length >= 15) return "16px";
-    return "20px";
+    if (length >= 20) return "10px";
+    if (length >= 18) return "11px";
+    if (length >= 15) return "12px";
+    return "14px";
   }
 
   function createTimerLeaderboardRowNode() {

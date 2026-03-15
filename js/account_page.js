@@ -482,6 +482,7 @@
       } else {
         name.className = "account-name";
       }
+      name.style.fontSize = "11px";
       name.textContent = displayNickname;
       row.appendChild(name);
 
