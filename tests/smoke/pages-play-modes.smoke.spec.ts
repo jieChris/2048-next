@@ -8,7 +8,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Custom-spawn response should exist").not.toBeNull();
     expect(response?.ok(), "Custom-spawn response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const w = window as any;
+      const cfg = w.GAME_MODE_CONFIG;
+      return Boolean(
+        w.CoreCustomSpawnRuntime?.applyCustomFourRateToModeConfig &&
+          w.CorePlayCustomSpawnRuntime?.resolvePlayCustomSpawnModeConfig &&
+          w.CoreStorageRuntime?.resolveStorageByName &&
+          w.CorePlayEntryRuntime?.resolvePlayEntryPlan &&
+          w.CorePlayPageContextRuntime?.resolvePlayCustomSpawnModeConfigFromPageContext &&
+          cfg &&
+          cfg.key === "spawn_custom_4x4_pow2_no_undo" &&
+          Array.isArray(cfg.spawn_table)
+      );
+    }, null, { timeout: 15000 });
 
     const snapshot = await page.evaluate(() => {
       const cfg = (window as any).GAME_MODE_CONFIG;
@@ -117,7 +130,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Capped response should exist").not.toBeNull();
     expect(response?.ok(), "Capped response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(220);
+    await page.waitForFunction(() => {
+      const w = window as any;
+      return Boolean(
+        w.CoreCappedTimerScrollRuntime?.resolveTimerScrollModeFromContext &&
+          w.CoreCappedTimerScrollRuntime?.isTimerScrollModeKey &&
+          typeof w.updateTimerScroll === "function"
+      );
+    }, null, { timeout: 15000 });
 
     const snapshot = await page.evaluate(() => {
       const runtime = (window as any).CoreCappedTimerScrollRuntime;
@@ -171,7 +191,22 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Practice-fibonacci response should exist").not.toBeNull();
     expect(response?.ok(), "Practice-fibonacci response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const w = window as any;
+      const cfg = w.GAME_MODE_CONFIG;
+      return Boolean(
+        w.CorePracticeModeRuntime?.buildPracticeModeConfig &&
+          w.CoreModeCatalogRuntime?.resolveCatalogModeWithDefault &&
+          w.CoreHomeModeRuntime?.resolveHomeModeSelection &&
+          w.CoreHomeRuntimeContractRuntime?.resolveHomeRuntimeContracts &&
+          w.CoreHomeStartupHostRuntime?.resolveHomeStartupFromContext &&
+          w.CoreHomeModeRuntime?.resolveHomeModeSelectionFromContext &&
+          cfg &&
+          cfg.key === "practice" &&
+          cfg.ruleset === "fibonacci" &&
+          Array.isArray(cfg.spawn_table)
+      );
+    }, null, { timeout: 15000 });
 
     const snapshot = await page.evaluate(() => {
       const cfg = (window as any).GAME_MODE_CONFIG;
@@ -234,7 +269,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Play response should exist").not.toBeNull();
     expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return Boolean(
+        manager &&
+          typeof manager.resolveUndoPolicyStateForMode === "function" &&
+          typeof manager.isUndoAllowedByMode === "function" &&
+          typeof manager.isUndoSettingFixedForMode === "function"
+      );
+    }, null, { timeout: 15000 });
 
     const snapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -274,7 +317,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Play response should exist").not.toBeNull();
     expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return Boolean(
+        manager &&
+          typeof manager.restartWithBoard === "function" &&
+          typeof manager.move === "function"
+      );
+    }, null, { timeout: 15000 });
 
     const snapshot = await page.evaluate(async () => {
       window.localStorage.setItem("settings_win_prompt_enabled_v1", "0");
@@ -333,7 +383,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Obstacle mode response should exist").not.toBeNull();
     expect(response?.ok(), "Obstacle mode response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const totalCells = document.querySelectorAll(".grid-cell").length;
+      const obstacleCells = document.querySelectorAll(".grid-cell.grid-cell-obstacle").length;
+      return totalCells === 16 && obstacleCells > 0;
+    });
 
     const snapshot = await page.evaluate(() => {
       const allCells = Array.from(document.querySelectorAll(".grid-cell")) as HTMLElement[];

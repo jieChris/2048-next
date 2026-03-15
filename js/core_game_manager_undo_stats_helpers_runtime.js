@@ -408,7 +408,33 @@ function normalizeUndoIntegerOrFallback(value, fallbackValue) {
   return fallbackValue;
 }
 
-function createNormalizedUndoStackEntry(manager, source, fallbackState, tiles) {
+function normalizeUndoPositionMap(value) {
+  if (!isUndoStatsRecordObject(value)) return null;
+  var map = {};
+  var hasEntry = false;
+  for (var key in value) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+    var entry = value[key];
+    if (!isUndoStatsRecordObject(entry)) continue;
+    if (!Number.isInteger(entry.x) || !Number.isInteger(entry.y)) continue;
+    map[key] = { x: entry.x, y: entry.y };
+    hasEntry = true;
+  }
+  return hasEntry ? map : null;
+}
+
+function mergeUndoPositionMap(baseMap, extraMap) {
+  var merged = normalizeUndoPositionMap(baseMap) || {};
+  var source = normalizeUndoPositionMap(extraMap);
+  if (!source) return merged;
+  for (var key in source) {
+    if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+    merged[key] = source[key];
+  }
+  return merged;
+}
+
+function createNormalizedUndoStackEntry(manager, source, fallbackState, tiles, motionMap) {
   return {
     score: normalizeUndoScoreOrFallback(source, fallbackState.score),
     tiles: tiles,
@@ -423,17 +449,20 @@ function createNormalizedUndoStackEntry(manager, source, fallbackState, tiles) {
     ),
     lockedDirectionTurn: normalizeUndoIntegerOrFallback(source.lockedDirectionTurn, fallbackState.lockedDirectionTurn),
     lockedDirection: normalizeUndoIntegerOrFallback(source.lockedDirection, fallbackState.lockedDirection),
-    undoUsed: normalizeUndoNonNegativeIntegerOrFallback(source.undoUsed, fallbackState.undoUsed)
+    undoUsed: normalizeUndoNonNegativeIntegerOrFallback(source.undoUsed, fallbackState.undoUsed),
+    motionMap: normalizeUndoPositionMap(motionMap)
   };
 }
 
 function normalizeUndoStackEntry(manager, entry) {
   if (!manager) return null;
   var fallbackState = manager.getUndoStateFallbackValues();
-  var source = manager.isNonArrayObject(entry) ? entry : {};
+  var sourceInput = manager.isNonArrayObject(entry) ? entry : {};
+  var source = sourceInput;
   source = resolveUndoStackEntrySourceByCore(manager, source, fallbackState);
   var tiles = collectUndoStackTiles(manager, source);
-  return createNormalizedUndoStackEntry(manager, source, fallbackState, tiles);
+  var motionMap = normalizeUndoPositionMap(source.motionMap) || normalizeUndoPositionMap(sourceInput.motionMap);
+  return createNormalizedUndoStackEntry(manager, source, fallbackState, tiles, motionMap);
 }
 
 function isValidUndoTileRecord(manager, value) {
@@ -610,6 +639,203 @@ function canExecuteUndoMove(manager) {
   return canUndoOperation && hasRemainingUndoBudget && manager.undoStack.length > 0;
 }
 
+function ensureRedoStack(manager) {
+  if (!manager) return [];
+  if (!Array.isArray(manager.redoStack)) manager.redoStack = [];
+  return manager.redoStack;
+}
+
+function isPracticeBoardPageContext(manager) {
+  if (!manager) return false;
+  var windowLike = manager.getWindowLike();
+  var locationLike = windowLike && windowLike.location ? windowLike.location : null;
+  var path = String((locationLike && locationLike.pathname) || "").toLowerCase();
+  return path.indexOf("practice_board") !== -1;
+}
+
+function isPracticeRedoEnabled(manager) {
+  if (!manager || manager.replayMode) return false;
+  var modeKey = String(manager.modeKey || manager.mode || "").toLowerCase();
+  if (modeKey === "practice") return true;
+  return isPracticeBoardPageContext(manager);
+}
+
+function buildUndoSnapshotPositionKey(x, y) {
+  return String(x) + ":" + String(y);
+}
+
+function normalizeUndoSnapshotPosition(value, fallbackX, fallbackY) {
+  var source = isUndoStatsRecordObject(value) ? value : null;
+  var x = source && Number.isInteger(source.x) ? source.x : fallbackX;
+  var y = source && Number.isInteger(source.y) ? source.y : fallbackY;
+  return { x: x, y: y };
+}
+
+function resolveSnapshotPreviousPositionOverride(previousPositionByCurrentKey, x, y) {
+  if (!isUndoStatsRecordObject(previousPositionByCurrentKey)) return null;
+  var key = buildUndoSnapshotPositionKey(x, y);
+  var override = previousPositionByCurrentKey[key];
+  if (!isUndoStatsRecordObject(override)) return null;
+  if (!Number.isInteger(override.x) || !Number.isInteger(override.y)) return null;
+  return { x: override.x, y: override.y };
+}
+
+function buildRedoPreviousPositionMapFromUndoEntry(manager, undoEntry) {
+  var map = {};
+  if (!manager) return map;
+  var source = manager.normalizeUndoStackEntry(undoEntry);
+  if (!source || !Array.isArray(source.tiles)) return map;
+  for (var index = 0; index < source.tiles.length; index++) {
+    var tile = source.tiles[index];
+    if (!isValidUndoTileRecord(manager, tile)) continue;
+    if (!Number.isInteger(tile.x) || !Number.isInteger(tile.y)) continue;
+    var target = tile.previousPosition;
+    if (!Number.isInteger(target.x) || !Number.isInteger(target.y)) continue;
+    var key = buildUndoSnapshotPositionKey(target.x, target.y);
+    if (map[key]) continue;
+    map[key] = { x: tile.x, y: tile.y };
+  }
+  return map;
+}
+
+function buildUndoPreviousPositionMapFromRedoEntry(manager, redoEntry) {
+  var map = {};
+  if (!manager) return map;
+  var source = manager.normalizeUndoStackEntry(redoEntry);
+  if (!source || !Array.isArray(source.tiles)) return map;
+  for (var index = 0; index < source.tiles.length; index++) {
+    var tile = source.tiles[index];
+    if (!isValidUndoTileRecord(manager, tile)) continue;
+    if (!Number.isInteger(tile.x) || !Number.isInteger(tile.y)) continue;
+    var sourcePos = tile.previousPosition;
+    if (!Number.isInteger(sourcePos.x) || !Number.isInteger(sourcePos.y)) continue;
+    var key = buildUndoSnapshotPositionKey(sourcePos.x, sourcePos.y);
+    if (map[key]) continue;
+    map[key] = { x: tile.x, y: tile.y };
+  }
+  return map;
+}
+
+function buildUndoPreviousPositionMapFromUndoEntry(manager, undoEntry) {
+  var map = {};
+  if (!manager) return map;
+  var source = manager.normalizeUndoStackEntry(undoEntry);
+  if (!source || !Array.isArray(source.tiles)) return map;
+  for (var index = 0; index < source.tiles.length; index++) {
+    var tile = source.tiles[index];
+    if (!isValidUndoTileRecord(manager, tile)) continue;
+    if (!Number.isInteger(tile.x) || !Number.isInteger(tile.y)) continue;
+    var target = tile.previousPosition;
+    if (!Number.isInteger(target.x) || !Number.isInteger(target.y)) continue;
+    var key = buildUndoSnapshotPositionKey(tile.x, tile.y);
+    map[key] = { x: target.x, y: target.y };
+  }
+  return map;
+}
+
+function createCurrentUndoStackEntrySnapshot(manager, options) {
+  if (!manager) return null;
+  var opts = normalizeUndoStatsRecordObject(options, {});
+  var previousPositionByCurrentKey = normalizeUndoStatsRecordObject(opts.previousPositionByCurrentKey, null);
+  var motionMap = normalizeUndoPositionMap(opts.motionMap);
+  var fallback = manager.getUndoStateFallbackValues();
+  var snapshot = {
+    score: Number(fallback.score) || 0,
+    tiles: [],
+    comboStreak: Number.isInteger(fallback.comboStreak) ? fallback.comboStreak : 0,
+    successfulMoveCount: Number.isInteger(fallback.successfulMoveCount) ? fallback.successfulMoveCount : 0,
+    lockConsumedAtMoveCount: Number.isInteger(fallback.lockConsumedAtMoveCount) ? fallback.lockConsumedAtMoveCount : -1,
+    lockedDirectionTurn: Number.isInteger(fallback.lockedDirectionTurn) ? fallback.lockedDirectionTurn : null,
+    lockedDirection: Number.isInteger(fallback.lockedDirection) ? fallback.lockedDirection : null,
+    undoUsed: Number.isInteger(fallback.undoUsed) && fallback.undoUsed >= 0 ? fallback.undoUsed : 0
+  };
+  if (motionMap) {
+    snapshot.motionMap = motionMap;
+  }
+
+  if (manager.grid && typeof manager.grid.eachCell === "function") {
+    manager.grid.eachCell(function (x, y, tile) {
+      if (!tile) return;
+      var tileSnapshot = manager.createUndoTileSnapshot(tile, { x: x, y: y });
+      if (!isValidUndoTileRecord(manager, tileSnapshot)) return;
+      var override = resolveSnapshotPreviousPositionOverride(previousPositionByCurrentKey, x, y);
+      if (override) {
+        tileSnapshot.previousPosition = override;
+      } else {
+        tileSnapshot.previousPosition = normalizeUndoSnapshotPosition(tileSnapshot.previousPosition, x, y);
+      }
+      snapshot.tiles.push(tileSnapshot);
+    });
+  }
+
+  return manager.normalizeUndoStackEntry(snapshot);
+}
+
+function pushRedoSnapshotBeforeUndo(manager, undoEntry) {
+  if (!isPracticeRedoEnabled(manager)) return;
+  var previousPositionByCurrentKey = buildRedoPreviousPositionMapFromUndoEntry(manager, undoEntry);
+  var snapshot = createCurrentUndoStackEntrySnapshot(manager, {
+    previousPositionByCurrentKey: previousPositionByCurrentKey,
+    motionMap: buildUndoPreviousPositionMapFromUndoEntry(manager, undoEntry)
+  });
+  if (!snapshot) return;
+  ensureRedoStack(manager).push(snapshot);
+}
+
+function canExecuteRedoMove(manager) {
+  if (!isPracticeRedoEnabled(manager)) return false;
+  return ensureRedoStack(manager).length > 0;
+}
+
+function buildRedoRestoreState(manager, entry) {
+  var fallback = manager.getUndoStateFallbackValues();
+  var source = manager.normalizeUndoStackEntry(entry) || fallback;
+  return {
+    comboStreak: Number.isInteger(source.comboStreak) && source.comboStreak >= 0 ? source.comboStreak : fallback.comboStreak,
+    successfulMoveCount: Number.isInteger(source.successfulMoveCount) && source.successfulMoveCount >= 0
+      ? source.successfulMoveCount
+      : fallback.successfulMoveCount,
+    lockConsumedAtMoveCount: Number.isInteger(source.lockConsumedAtMoveCount)
+      ? source.lockConsumedAtMoveCount
+      : fallback.lockConsumedAtMoveCount,
+    lockedDirectionTurn: Number.isInteger(source.lockedDirectionTurn) ? source.lockedDirectionTurn : fallback.lockedDirectionTurn,
+    lockedDirection: Number.isInteger(source.lockedDirection) ? source.lockedDirection : fallback.lockedDirection,
+    undoUsed: Number.isInteger(source.undoUsed) && source.undoUsed >= 0 ? source.undoUsed : fallback.undoUsed,
+    over: false,
+    won: false,
+    keepPlaying: false,
+    shouldClearMessage: true,
+    shouldStartTimer: manager.timerStatus === 0
+  };
+}
+
+function executeRedoRestorePipeline(manager) {
+  var redoStack = ensureRedoStack(manager);
+  var redoEntry = manager.normalizeUndoStackEntry(redoStack.pop());
+  if (!redoEntry) return null;
+
+  var undoPreviousPositionByCurrentKey = buildUndoPreviousPositionMapFromRedoEntry(manager, redoEntry);
+  undoPreviousPositionByCurrentKey = mergeUndoPositionMap(
+    undoPreviousPositionByCurrentKey,
+    redoEntry.motionMap
+  );
+  var undoSnapshot = createCurrentUndoStackEntrySnapshot(manager, {
+    previousPositionByCurrentKey: undoPreviousPositionByCurrentKey
+  });
+  if (undoSnapshot) manager.undoStack.push(undoSnapshot);
+
+  applyUndoRestoredTiles(manager, redoEntry);
+  var redoRestore = buildRedoRestoreState(manager, redoEntry);
+  applyUndoRestoreState(manager, redoRestore);
+  return redoRestore;
+}
+
+function shouldStartTimerAfterRedoRestore(manager, redoRestore) {
+  return typeof redoRestore.shouldStartTimer === "boolean"
+    ? redoRestore.shouldStartTimer
+    : manager.timerStatus === 0;
+}
+
 function executeUndoRestorePipeline(manager, direction) {
   var prev = manager.normalizeUndoStackEntry(manager.undoStack.pop());
   var undoPayload = computeUndoRestorePayload(manager, prev);
@@ -628,10 +854,26 @@ function shouldStartTimerAfterUndoRestore(manager, undoRestore) {
 }
 
 function handleUndoMove(manager, direction) {
-  if (!manager || direction != -1) return false;
+  if (!manager || (direction != -1 && direction != -2)) return false;
+
+  if (direction == -2) {
+    if (!canExecuteRedoMove(manager)) {
+      return true;
+    }
+    var redoRestore = executeRedoRestorePipeline(manager);
+    if (!redoRestore) return true;
+    actuate(manager);
+    if (shouldStartTimerAfterRedoRestore(manager, redoRestore)) {
+      manager.startTimer();
+    }
+    return true;
+  }
+
   if (!canExecuteUndoMove(manager)) {
     return true;
   }
+  var upcomingUndoEntry = manager.normalizeUndoStackEntry(manager.undoStack[manager.undoStack.length - 1]);
+  pushRedoSnapshotBeforeUndo(manager, upcomingUndoEntry);
   var undoRestore = executeUndoRestorePipeline(manager, direction);
   actuate(manager);
   if (shouldStartTimerAfterUndoRestore(manager, undoRestore)) {

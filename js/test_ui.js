@@ -754,6 +754,26 @@ document.addEventListener("DOMContentLoaded", function () {
     window.addEventListener("resize", requestPracticeRelayout);
     window.addEventListener("orientationchange", requestPracticeRelayout);
   }
+
+  if (!window.__practiceRedoShortcutBound) {
+    window.__practiceRedoShortcutBound = true;
+    document.addEventListener("keydown", function (e) {
+      if (!e || e.defaultPrevented) return;
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      var key = String(e.key || "");
+      var code = String(e.code || "");
+      var which = Number(e.which || e.keyCode || 0);
+      var isRedoKey = which === 89 || code === "KeyY" || key === "y" || key === "Y";
+      if (!isRedoKey) return;
+      var manager = window.game_manager;
+      if (!manager || manager.replayMode) return;
+      var modeKey = String(manager.modeKey || manager.mode || "").toLowerCase();
+      var pathname = String((window.location && window.location.pathname) || "").toLowerCase();
+      if (modeKey !== "practice" && pathname.indexOf("practice_board") === -1) return;
+      if (e.cancelable) e.preventDefault();
+      if (typeof manager.move === "function") manager.move(-2);
+    });
+  }
   syncPracticeGestureEntryUi();
   syncPracticeSetupPhaseUi();
   requestPracticeRelayout();

@@ -254,7 +254,7 @@ function consumeItemSpawnValueOverride(manager, fallbackValue) {
 }
 
 function tryHandleMoveInputImmediately(manager, direction) {
-  if (direction == -1) {
+  if (direction == -1 || direction == -2) {
     manager.move(direction);
     return true;
   }
@@ -548,6 +548,7 @@ function finalizeSuccessfulMove(manager, movePlan, direction) {
   var hasMovesAvailable = movesAvailable(manager);
   var postMoveLifecycle = resolvePostMoveLifecycle(manager, hasMovesAvailable);
   manager.undoStack.push(manager.normalizeUndoStackEntry(movePlan.undo));
+  manager.redoStack = [];
   appendPostMoveRecordArtifacts(manager, direction);
   applyPostMoveLifecycleEffects(manager, postMoveLifecycle);
 }

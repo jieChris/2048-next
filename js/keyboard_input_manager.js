@@ -44,6 +44,7 @@ KeyboardInputManager.prototype.listen = function () {
     97: 6, // Numpad 1
     103: 7, // Numpad 7
     85:-1, // U (undo)
+    89:-2, // Y (redo undo, practice page only)
     8:-1,  // Backspace (undo)
   };
   var itemMap = {
@@ -53,6 +54,18 @@ KeyboardInputManager.prototype.listen = function () {
   };
 
   document.addEventListener("keydown", function (event) {
+    var systemModifiers = event.altKey || event.ctrlKey || event.metaKey;
+    var isRedoKey =
+      event.which === 89 ||
+      event.code === "KeyY" ||
+      event.key === "y" ||
+      event.key === "Y";
+    if (!systemModifiers && isRedoKey) {
+      event.preventDefault();
+      self.emit("move", -2);
+      return;
+    }
+
     var modifiers = event.altKey || event.ctrlKey || event.metaKey ||
                     event.shiftKey;
     var mapped    = map[event.which];

@@ -3,6 +3,7 @@ function restartGame(manager) {
   if (!confirm("是否确认开始新游戏?")) return;
   manager.actuator.continue();
   manager.undoStack = [];
+  manager.redoStack = [];
   manager.clearSavedGameState(manager.modeKey);
   if (manager.modeKey === "practice" && manager.practiceRestartBoardMatrix) {
     if (shouldClearPracticeBoardOnRestart(manager)) {

@@ -143,6 +143,7 @@ function bindGameManagerSavedStatePersistence(manager) {
 function initializeGameManagerUi(manager) {
   if (!manager) return;
   manager.undoStack = [];
+  manager.redoStack = [];
   initCornerStatsUi(manager);
   initStatsPanelUi(manager);
 }
