@@ -74,6 +74,21 @@
     return value == null ? "" : String(value);
   }
 
+  function parsePositiveInt(value) {
+    var parsed = Math.floor(Number(value) || 0);
+    return parsed > 0 ? parsed : 0;
+  }
+
+  function buildUserProfileUrl(userId, nickname) {
+    var safeUserId = parsePositiveInt(userId);
+    if (!safeUserId) return "";
+    var params = new global.URLSearchParams();
+    params.set("id", String(safeUserId));
+    var safeNickname = toText(nickname).trim();
+    if (safeNickname) params.set("nickname", safeNickname);
+    return "user.html?" + params.toString();
+  }
+
   function byId(id) {
     return global.document.getElementById(id);
   }
@@ -258,7 +273,42 @@
     return rows;
   }
 
-  function updateTimerLeaderboardRowNode(row, rankText, nameText, rowClassName, rankClassName, fixedNameFontSize) {
+  function applyNameTileProfileLink(nameTile, profileUrl) {
+    if (!nameTile) return;
+
+    if (!nameTile.__profileClickBound) {
+      nameTile.__profileClickBound = true;
+      nameTile.addEventListener("click", function () {
+        var href = toText(nameTile.getAttribute("data-profile-href")).trim();
+        if (!href) return;
+        global.location.href = href;
+      });
+      nameTile.addEventListener("keydown", function (eventLike) {
+        var key = toText(eventLike && eventLike.key).toLowerCase();
+        if (key !== "enter" && key !== " ") return;
+        var href = toText(nameTile.getAttribute("data-profile-href")).trim();
+        if (!href) return;
+        if (eventLike && typeof eventLike.preventDefault === "function") eventLike.preventDefault();
+        global.location.href = href;
+      });
+    }
+
+    var href = toText(profileUrl).trim();
+    if (href) {
+      nameTile.classList.add("is-user-link");
+      nameTile.setAttribute("data-profile-href", href);
+      nameTile.setAttribute("tabindex", "0");
+      nameTile.setAttribute("role", "link");
+      return;
+    }
+
+    nameTile.classList.remove("is-user-link");
+    nameTile.removeAttribute("data-profile-href");
+    nameTile.removeAttribute("tabindex");
+    nameTile.removeAttribute("role");
+  }
+
+  function updateTimerLeaderboardRowNode(row, rankText, nameText, rowClassName, rankClassName, fixedNameFontSize, profileUrl) {
     if (!row) return;
     row.className = "timer-leaderboard-row" + (rowClassName ? " " + rowClassName : "");
 
@@ -287,6 +337,7 @@
     nameTile.textContent = toText(nameText);
     nameTile.title = toText(nameText);
     nameTile.style.fontSize = toText(fixedNameFontSize || "16px");
+    applyNameTileProfileLink(nameTile, profileUrl);
   }
 
   function formatLeaderboardNameAndScore(item, lang) {
@@ -310,6 +361,7 @@
     for (var i = 0; i < rows.length && i < TIMER_LEADERBOARD_TOP_LIMIT; i += 1) {
       var item = rows[i] || {};
       var displayText = formatLeaderboardNameAndScore(item, lang);
+      var profileUrl = buildUserProfileUrl(item.user_id, item.nickname);
       var rankClassName = "";
       if (i === 0) rankClassName = "is-top-1";
       else if (i === 1) rankClassName = "is-top-2";
@@ -320,7 +372,8 @@
         displayText,
         "",
         rankClassName,
-        fixedNameFontSize
+        fixedNameFontSize,
+        profileUrl
       );
       rowCursor += 1;
     }
@@ -332,7 +385,8 @@
         "--",
         "is-empty",
         "",
-        fixedNameFontSize
+        fixedNameFontSize,
+        ""
       );
       rowCursor += 1;
     }
@@ -347,6 +401,7 @@
       myRankText = String(selfEntry.rank || "--");
       myIdentityAndScore = formatLeaderboardNameAndScore(selfEntry, lang);
     }
+    var selfProfileUrl = selfEntry ? buildUserProfileUrl(selfEntry.user_id, selfEntry.nickname) : "";
 
     updateTimerLeaderboardRowNode(
       rowNodes[TIMER_LEADERBOARD_TOP_LIMIT],
@@ -354,7 +409,8 @@
       myIdentityAndScore,
       "is-self",
       "",
-      fixedNameFontSize
+      fixedNameFontSize,
+      selfProfileUrl
     );
   }
 
@@ -665,7 +721,15 @@
       var item = list[i] || {};
       var row = createEl("div", "mode-intro-leaderboard-row", "");
       row.appendChild(createEl("span", "mode-intro-leaderboard-rank", "#" + String(i + 1)));
-      row.appendChild(createEl("span", "mode-intro-leaderboard-nick", toText(item.nickname || "匿名")));
+      var profileUrl = buildUserProfileUrl(item.user_id, item.nickname);
+      if (profileUrl) {
+        var nickLink = createEl("a", "mode-intro-leaderboard-nick mode-intro-leaderboard-nick-link", toText(item.nickname || "匿名"));
+        nickLink.setAttribute("href", profileUrl);
+        nickLink.setAttribute("title", toText(item.nickname || "匿名"));
+        row.appendChild(nickLink);
+      } else {
+        row.appendChild(createEl("span", "mode-intro-leaderboard-nick", toText(item.nickname || "匿名")));
+      }
       row.appendChild(createEl("span", "mode-intro-leaderboard-score", String(Number(item.score) || 0)));
       host.appendChild(row);
     }

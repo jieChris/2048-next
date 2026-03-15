@@ -1,0 +1,161 @@
+:root {
+  --up-good: #4e8b58;
+  --up-bad: #c2473b;
+}
+
+body[data-page="user-profile"] {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--pp-ink);
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background:
+    radial-gradient(1200px 500px at 8% -20%, rgba(176, 153, 130, 0.33), transparent 68%),
+    radial-gradient(1000px 420px at 95% -24%, rgba(174, 157, 136, 0.25), transparent 70%),
+    linear-gradient(165deg, var(--pp-bg-0), var(--pp-bg-1));
+}
+
+.user-page-shell {
+  width: min(1220px, calc(100vw - 32px));
+}
+
+.user-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.user-info-card,
+.user-record-card {
+  padding: 14px;
+}
+
+.user-info-lines {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  color: #6d5d4f;
+}
+
+.user-info-lines strong {
+  color: #4d4035;
+  font-weight: 700;
+}
+
+.user-record-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.user-record-tools label {
+  margin: 0;
+  font-size: 13px;
+  color: #7b6c5f;
+  font-weight: 700;
+}
+
+.user-record-head-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 110px 190px;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #847463;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.user-record-list {
+  border: 1px solid #dfd4c8;
+  border-radius: 10px;
+  background: #fffaf3;
+  min-height: 260px;
+  max-height: 560px;
+  overflow: auto;
+}
+
+.user-record-empty,
+.user-record-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 110px 190px;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 10px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.user-record-row + .user-record-row {
+  border-top: 1px solid rgba(154, 133, 113, 0.2);
+}
+
+.user-record-empty {
+  min-height: 120px;
+  color: #8f7f70;
+}
+
+.user-record-mode {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-record-score {
+  font-weight: 700;
+}
+
+.user-record-date {
+  color: #907f6d;
+  font-size: 12px;
+}
+
+.user-tip {
+  margin: 10px 0 0;
+  min-height: 20px;
+  font-size: 13px;
+  color: var(--pp-muted);
+}
+
+.user-tip.ok {
+  color: var(--up-good);
+}
+
+.user-tip.err {
+  color: var(--up-bad);
+}
+
+@media (max-width: 980px) {
+  .user-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .user-record-head-row,
+  .user-record-empty,
+  .user-record-row {
+    grid-template-columns: minmax(84px, 1fr) 84px 130px;
+  }
+}
+
+@media (max-width: 560px) {
+  .user-page-shell {
+    width: calc(100vw - 12px);
+    margin: 10px auto 18px;
+  }
+
+  .user-record-tools {
+    justify-content: flex-end;
+  }
+
+  .user-record-head-row,
+  .user-record-empty,
+  .user-record-row {
+    grid-template-columns: minmax(78px, 1fr) 70px 98px;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .user-record-date {
+    font-size: 11px;
+  }
+}

@@ -49,6 +49,7 @@
       boardLoading: "加载中...",
       boardEmpty: "暂无在线排行榜数据",
       boardFail: "排行榜加载失败",
+      boardUpdated: "排行榜已更新",
       requireEmailPass: "请输入邮箱和密码",
       requireRegisterFields: "请填写邮箱和密码",
       requireNickname: "请输入昵称",
@@ -96,6 +97,7 @@
       boardLoading: "Loading...",
       boardEmpty: "No leaderboard data.",
       boardFail: "Failed to load leaderboard",
+      boardUpdated: "Leaderboard updated",
       requireEmailPass: "Please enter email and password",
       requireRegisterFields: "Please enter email and password",
       requireNickname: "Please enter nickname",
@@ -166,6 +168,22 @@
 
   function toText(value) {
     return value == null ? "" : String(value);
+  }
+
+  function parsePositiveInt(value) {
+    var parsed = Math.floor(Number(value) || 0);
+    return parsed > 0 ? parsed : 0;
+  }
+
+  function buildUserProfileUrl(userId, nickname) {
+    var safeUserId = parsePositiveInt(userId);
+    if (!safeUserId) return "";
+
+    var params = new global.URLSearchParams();
+    params.set("id", String(safeUserId));
+    var safeNickname = toText(nickname).trim();
+    if (safeNickname) params.set("nickname", safeNickname);
+    return "user.html?" + params.toString();
   }
 
   function byId(id) {
@@ -450,7 +468,15 @@
       row.appendChild(rank);
 
       var name = global.document.createElement("span");
-      name.className = "account-name";
+      var userProfileUrl = buildUserProfileUrl(item.user_id, item.nickname);
+      if (userProfileUrl) {
+        name = global.document.createElement("a");
+        name.className = "account-name account-name-link";
+        name.setAttribute("href", userProfileUrl);
+        name.setAttribute("title", toText(item.nickname || "--"));
+      } else {
+        name.className = "account-name";
+      }
       name.textContent = toText(item.nickname || "--");
       row.appendChild(name);
 
@@ -559,7 +585,7 @@
     }
 
     renderBoardList(Array.isArray(result.data) ? result.data : []);
-    setTip(boardTip, "API: " + activeApiBase, "ok");
+    setTip(boardTip, t("boardUpdated"), "ok");
   }
 
   function promptRegisterNickname() {

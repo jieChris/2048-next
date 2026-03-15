@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>2048 User Profile</title>
+  <link href="style/main.css?v=20260313-02" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
+  <link href="style/user_profile_page.css?v=20260315-01" rel="stylesheet" type="text/css">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-2">
+  <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-2">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://taihe.fun https://www.taihe.fun; script-src 'self'; style-src 'self' 'unsafe-inline';">
+</head>
+<body data-page="user-profile">
+  <main class="palette-page-shell user-page-shell">
+    <header class="palette-page-header">
+      <div class="palette-title-wrap">
+        <p class="palette-kicker" id="user-kicker">2048 Online Hub</p>
+        <h1 class="palette-title" id="user-title">User Profile</h1>
+        <p class="palette-subtitle" id="user-subtitle">View valid uploaded records and sort by time/score.</p>
+      </div>
+      <nav class="palette-nav">
+        <a class="replay-button palette-nav-btn" href="index.html" id="user-nav-home">Home</a>
+        <a class="replay-button palette-nav-btn" href="account.html" id="user-nav-account">Account</a>
+      </nav>
+    </header>
+
+    <section class="user-grid">
+      <section class="card-surface user-info-card">
+        <div class="panel-head">
+          <h2 id="user-info-heading">Basic Info</h2>
+        </div>
+        <div class="user-info-lines">
+          <div><span id="user-label-name">Nickname:</span><strong id="user-value-name">--</strong></div>
+          <div><span id="user-label-created">Created At:</span><strong id="user-value-created">--</strong></div>
+        </div>
+      </section>
+
+      <section class="card-surface user-record-card">
+        <div class="panel-head">
+          <h2 id="user-record-heading">Valid Uploaded Records</h2>
+          <div class="user-record-tools">
+            <label for="user-record-sort-by" id="user-sort-by-label">Sort By</label>
+            <select id="user-record-sort-by" class="settings-select">
+              <option value="time">Time</option>
+              <option value="score">Score</option>
+            </select>
+            <label for="user-record-order" id="user-order-label">Order</label>
+            <select id="user-record-order" class="settings-select">
+              <option value="desc">Desc</option>
+              <option value="asc">Asc</option>
+            </select>
+            <button id="user-record-refresh" class="replay-button" type="button">Refresh</button>
+          </div>
+        </div>
+
+        <div class="user-record-head-row">
+          <span id="user-col-mode">Mode</span>
+          <span id="user-col-score">Score</span>
+          <span id="user-col-date">Updated</span>
+        </div>
+        <div id="user-record-list" class="user-record-list"></div>
+        <p id="user-record-tip" class="user-tip" aria-live="polite"></p>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="./src/entries/user-profile.ts"></script>
+</body>
+</html>

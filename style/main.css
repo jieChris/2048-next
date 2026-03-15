@@ -415,6 +415,17 @@ body.home-guide-active #timer-scroll-controls {
   box-sizing: border-box;
 }
 
+.timer-leaderboard-row .timer-leaderboard-name-tile.is-user-link {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.timer-leaderboard-row .timer-leaderboard-name-tile.is-user-link:focus-visible {
+  outline: 2px solid rgba(119, 110, 101, 0.5);
+  outline-offset: 1px;
+}
+
 .timer-leaderboard-row.is-empty .timer-leaderboard-name-tile {
   color: #b3a79d;
 }
@@ -4586,6 +4597,17 @@ body[data-page="game"][data-top-button-style="text"] #timerbox-toggle-btn {
 
 .mode-intro-leaderboard-row:last-child {
   border-bottom: 0;
+}
+
+.mode-intro-leaderboard-nick-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.mode-intro-leaderboard-nick-link:hover,
+.mode-intro-leaderboard-nick-link:focus-visible {
+  color: #5f574f;
 }
 
 .mode-intro-leaderboard-score {

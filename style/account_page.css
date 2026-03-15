@@ -168,6 +168,18 @@ body[data-page="account-hub"] {
   white-space: nowrap;
 }
 
+.account-name-link {
+  color: #6d5d4f;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-name-link:hover,
+.account-name-link:focus-visible {
+  color: #3f3328;
+  text-decoration: underline;
+}
+
 .account-date {
   color: #907f6d;
   font-size: 12px;
