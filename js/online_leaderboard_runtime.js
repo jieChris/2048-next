@@ -498,7 +498,7 @@
 
     if (origin) push(origin + "/api");
 
-    if (hostname === "taihe.fun" || hostname === "www.taihe.fun" || isLocalHost || allowCrossOriginFallback) {
+    if (hostname === "taihe.fun" || hostname === "www.taihe.fun" || allowCrossOriginFallback) {
       push("https://taihe.fun/api");
     }
 
