@@ -166,6 +166,7 @@ body[data-page="account-hub"] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 11px;
 }
 
 .account-name-link {

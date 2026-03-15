@@ -74,6 +74,10 @@
     return value == null ? "" : String(value);
   }
 
+  function normalizeLeaderboardNickname(nameLike) {
+    return toText(nameLike).trim().replace(/_/g, "");
+  }
+
   function parsePositiveInt(value) {
     var parsed = Math.floor(Number(value) || 0);
     return parsed > 0 ? parsed : 0;
@@ -237,13 +241,13 @@
 
   function resolveFixedNameTileFontSizeFromFirst(topRows, lang) {
     var rows = Array.isArray(topRows) ? topRows : [];
-    if (rows.length === 0) return "16px";
+    if (rows.length === 0) return "14px";
     var firstText = formatLeaderboardNameAndScore(rows[0], lang);
     var length = toText(firstText).trim().length;
-    if (length >= 20) return "14px";
-    if (length >= 18) return "16px";
-    if (length >= 15) return "18px";
-    return "22px";
+    if (length >= 20) return "12px";
+    if (length >= 18) return "14px";
+    if (length >= 15) return "16px";
+    return "20px";
   }
 
   function createTimerLeaderboardRowNode() {
@@ -336,13 +340,13 @@
     nameTile.className = "timertile timer-leaderboard-name-tile";
     nameTile.textContent = toText(nameText);
     nameTile.title = toText(nameText);
-    nameTile.style.fontSize = toText(fixedNameFontSize || "16px");
+    nameTile.style.fontSize = toText(fixedNameFontSize || "14px");
     applyNameTileProfileLink(nameTile, profileUrl);
   }
 
   function formatLeaderboardNameAndScore(item, lang) {
     var source = item && typeof item === "object" ? item : {};
-    var nickname = toText(source.nickname).trim();
+    var nickname = normalizeLeaderboardNickname(source.nickname);
     if (!nickname) nickname = lang === "en" ? "Anonymous" : "匿名";
     var scoreValue = Math.floor(Number(source.score) || 0);
     return nickname + "-" + String(scoreValue);
@@ -722,13 +726,14 @@
       var row = createEl("div", "mode-intro-leaderboard-row", "");
       row.appendChild(createEl("span", "mode-intro-leaderboard-rank", "#" + String(i + 1)));
       var profileUrl = buildUserProfileUrl(item.user_id, item.nickname);
+      var displayNickname = normalizeLeaderboardNickname(item.nickname) || (getLanguage() === "en" ? "Anonymous" : "匿名");
       if (profileUrl) {
-        var nickLink = createEl("a", "mode-intro-leaderboard-nick mode-intro-leaderboard-nick-link", toText(item.nickname || "匿名"));
+        var nickLink = createEl("a", "mode-intro-leaderboard-nick mode-intro-leaderboard-nick-link", displayNickname);
         nickLink.setAttribute("href", profileUrl);
-        nickLink.setAttribute("title", toText(item.nickname || "匿名"));
+        nickLink.setAttribute("title", displayNickname);
         row.appendChild(nickLink);
       } else {
-        row.appendChild(createEl("span", "mode-intro-leaderboard-nick", toText(item.nickname || "匿名")));
+        row.appendChild(createEl("span", "mode-intro-leaderboard-nick", displayNickname));
       }
       row.appendChild(createEl("span", "mode-intro-leaderboard-score", String(Number(item.score) || 0)));
       host.appendChild(row);

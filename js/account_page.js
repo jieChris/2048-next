@@ -170,6 +170,10 @@
     return value == null ? "" : String(value);
   }
 
+  function normalizeLeaderboardNickname(nameLike) {
+    return toText(nameLike).trim().replace(/_/g, "");
+  }
+
   function parsePositiveInt(value) {
     var parsed = Math.floor(Number(value) || 0);
     return parsed > 0 ? parsed : 0;
@@ -469,15 +473,16 @@
 
       var name = global.document.createElement("span");
       var userProfileUrl = buildUserProfileUrl(item.user_id, item.nickname);
+      var displayNickname = normalizeLeaderboardNickname(item.nickname) || "--";
       if (userProfileUrl) {
         name = global.document.createElement("a");
         name.className = "account-name account-name-link";
         name.setAttribute("href", userProfileUrl);
-        name.setAttribute("title", toText(item.nickname || "--"));
+        name.setAttribute("title", displayNickname);
       } else {
         name.className = "account-name";
       }
-      name.textContent = toText(item.nickname || "--");
+      name.textContent = displayNickname;
       row.appendChild(name);
 
       var score = global.document.createElement("span");

@@ -409,7 +409,7 @@ body.home-guide-active #timer-scroll-controls {
   white-space: nowrap;
   background: #eee4da;
   color: #776e65;
-  font-size: 16px;
+  font-size: 14px;
   letter-spacing: -0.2px;
   font-weight: 600;
   box-sizing: border-box;
@@ -4608,6 +4608,11 @@ body[data-page="game"][data-top-button-style="text"] #timerbox-toggle-btn {
 .mode-intro-leaderboard-nick-link:hover,
 .mode-intro-leaderboard-nick-link:focus-visible {
   color: #5f574f;
+}
+
+.mode-intro-leaderboard-nick,
+.mode-intro-leaderboard-nick-link {
+  font-size: 11px;
 }
 
 .mode-intro-leaderboard-score {
