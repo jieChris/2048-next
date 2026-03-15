@@ -417,8 +417,7 @@ body.home-guide-active #timer-scroll-controls {
 
 .timer-leaderboard-row .timer-leaderboard-name-tile.is-user-link {
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration: none;
 }
 
 .timer-leaderboard-row .timer-leaderboard-name-tile.is-user-link:focus-visible {
@@ -4672,8 +4671,7 @@ body[data-page="game"][data-top-button-style="text"] #timerbox-toggle-btn {
 
 .mode-intro-leaderboard-nick-link {
   color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration: none;
 }
 
 .mode-intro-leaderboard-nick-link:hover,

@@ -14,6 +14,10 @@ body[data-page="account-hub"] {
     linear-gradient(165deg, var(--pp-bg-0), var(--pp-bg-1));
 }
 
+body[data-page="account-hub"][data-i18n-ready="0"] {
+  visibility: hidden;
+}
+
 .account-page-shell {
   width: min(1220px, calc(100vw - 32px));
 }
@@ -221,7 +225,7 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
 .account-name-link:hover,
 .account-name-link:focus-visible {
   color: #3f3328;
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .account-date {

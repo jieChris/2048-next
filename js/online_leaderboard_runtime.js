@@ -10,7 +10,7 @@
   var STORAGE_LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var DEFAULT_BOARD_LIMIT = 10;
-  var DEFAULT_API_TIMEOUT_MS = 8000;
+  var DEFAULT_API_TIMEOUT_MS = 12000;
   var MODE_BUCKET_ALIAS = {
     standard: "standard_no_undo",
     standard_no_undo: "standard_no_undo",
@@ -39,8 +39,8 @@
     fib_3x3_undo: "fib_3x3"
   };
   var TIMER_LEADERBOARD_TOP_LIMIT = 10;
-  var TIMER_LEADERBOARD_FETCH_LIMIT = 500;
-  var POLL_BASE_INTERVAL_VISIBLE_MS = 2500;
+  var TIMER_LEADERBOARD_FETCH_LIMIT = 200;
+  var POLL_BASE_INTERVAL_VISIBLE_MS = 5000;
   var POLL_BASE_INTERVAL_HIDDEN_MS = 12000;
   var TIMER_REFRESH_INTERVAL_VISIBLE_MS = 20000;
   var TIMER_REFRESH_INTERVAL_HIDDEN_MS = 90000;

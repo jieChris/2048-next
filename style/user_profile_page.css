@@ -14,6 +14,10 @@ body[data-page="user-profile"] {
     linear-gradient(165deg, var(--pp-bg-0), var(--pp-bg-1));
 }
 
+body[data-page="user-profile"][data-i18n-ready="0"] {
+  visibility: hidden;
+}
+
 .user-page-shell {
   width: min(1220px, calc(100vw - 32px));
 }

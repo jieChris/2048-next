@@ -166,6 +166,12 @@
     return (COPY[lang] && COPY[lang][key]) || (COPY.zh && COPY.zh[key]) || "";
   }
 
+  function setI18nReady(ready) {
+    var body = global.document && global.document.body;
+    if (!body || typeof body.setAttribute !== "function") return;
+    body.setAttribute("data-i18n-ready", ready ? "1" : "0");
+  }
+
   function resolveRecordHeadingText() {
     if (currentLang === "en") return "History Records";
     return "\u5386\u53f2\u8bb0\u5f55";
@@ -1059,6 +1065,7 @@
   }
 
   function applyLanguage() {
+    setI18nReady(false);
     currentLang = readLanguage();
     applyDocumentTitle();
 
@@ -1119,6 +1126,7 @@
 
     updateVisibilityControl();
     applyCurrentSortAndRender();
+    setI18nReady(true);
   }
 
   function bindEvents() {
