@@ -64,6 +64,7 @@ jobs:
 
   deploy:
     name: Deploy To Server
+    if: ${{ vars.DEPLOY_PRIMARY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: build
@@ -77,6 +78,14 @@ jobs:
       ARTIFACT_NAME: ${{ needs.build.outputs.artifact_name }}
       RELEASE_ID: ${{ needs.build.outputs.release_id }}
     steps:
+      - name: Validate primary deploy settings
+        run: |
+          set -euo pipefail
+          test -n "${DEPLOY_HOST}" || { echo "Missing secret: DEPLOY_HOST" >&2; exit 1; }
+          test -n "${DEPLOY_USER}" || { echo "Missing secret: DEPLOY_USER" >&2; exit 1; }
+          test -n "${DEPLOY_ROOT}" || { echo "Missing secret: DEPLOY_ROOT" >&2; exit 1; }
+          test -n "${DEPLOY_PORT}" || { echo "Missing secret: DEPLOY_PORT" >&2; exit 1; }
+
       - name: Download release package
         uses: actions/download-artifact@v4
         with:
@@ -166,6 +175,14 @@ jobs:
       ARTIFACT_NAME: ${{ needs.build.outputs.artifact_name }}
       RELEASE_ID: ${{ needs.build.outputs.release_id }}
     steps:
+      - name: Validate secondary deploy settings
+        run: |
+          set -euo pipefail
+          test -n "${DEPLOY_HOST}" || { echo "Missing secret: DEPLOY_HOST_2" >&2; exit 1; }
+          test -n "${DEPLOY_USER}" || { echo "Missing secret: DEPLOY_USER_2" >&2; exit 1; }
+          test -n "${DEPLOY_ROOT}" || { echo "Missing secret: DEPLOY_ROOT_2" >&2; exit 1; }
+          test -n "${DEPLOY_PORT}" || { echo "Missing secret: DEPLOY_PORT_2 (or set fallback)" >&2; exit 1; }
+
       - name: Download release package
         uses: actions/download-artifact@v4
         with:
