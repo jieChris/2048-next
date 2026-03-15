@@ -396,44 +396,175 @@
       var row = [];
       for (var c = 0; c < rowSource.length; c += 1) {
         var value = Math.floor(Number(rowSource[c]) || 0);
-        row.push(value > 0 ? value : 0);
+        row.push(value);
       }
       if (row.length > 0) rows.push(row);
     }
     return rows;
   }
 
-  function resolveBoardGridSize(boardMatrix) {
-    var rows = Array.isArray(boardMatrix) ? boardMatrix.length : 0;
+  function resolveBoardDims(boardMatrix) {
+    var rowCount = Array.isArray(boardMatrix) ? boardMatrix.length : 0;
     var cols = 0;
-    for (var i = 0; i < rows; i += 1) {
+    for (var i = 0; i < rowCount; i += 1) {
       var row = boardMatrix[i];
       if (!Array.isArray(row)) continue;
       if (row.length > cols) cols = row.length;
     }
-    var size = Math.max(rows, cols, 2);
-    return size > 8 ? 8 : size;
+    return {
+      rows: Math.max(0, rowCount),
+      cols: Math.max(0, cols)
+    };
+  }
+
+  function computePreviewBoardLayout(cols, rows, boardSize, baseGap) {
+    if (cols === 4 && rows === 4) {
+      var cell44 = (boardSize - baseGap * (cols - 1)) / cols;
+      return {
+        gap: baseGap,
+        cell: cell44,
+        gridWidth: cols * cell44 + (cols - 1) * baseGap,
+        gridHeight: rows * cell44 + (rows - 1) * baseGap
+      };
+    }
+
+    var cellByRows = (boardSize - baseGap * (rows - 1)) / rows;
+    var cellByCols = (boardSize - baseGap * (cols - 1)) / cols;
+    var cell = Math.min(cellByRows, cellByCols);
+    if (rows === 3 && cols === 3) cell = cellByCols;
+    if (!isFinite(cell) || cell < 10) cell = 10;
+
+    return {
+      gap: baseGap,
+      cell: cell,
+      gridWidth: cols * cell + (cols - 1) * baseGap,
+      gridHeight: rows * cell + (rows - 1) * baseGap
+    };
+  }
+
+  function computePreviewTileFontSize(value, cell, cols, rows) {
+    var safeCell = Number(cell) || 0;
+    if (!Number.isFinite(safeCell) || safeCell <= 0) safeCell = 56;
+    var digits = String(Math.max(0, Math.floor(Math.abs(Number(value) || 0)))).length;
+    var maxDim = Math.max(Number(cols) || 4, Number(rows) || 4);
+
+    var boardScale = 1;
+    if (maxDim >= 7) boardScale = 0.74;
+    else if (maxDim >= 6) boardScale = 0.81;
+    else if (maxDim >= 5) boardScale = 0.9;
+
+    var digitScale = 1;
+    if (digits === 3) digitScale = 0.84;
+    if (digits === 4) digitScale = 0.72;
+    if (digits >= 5) digitScale = 0.6;
+
+    var raw = safeCell * 0.48 * boardScale * digitScale;
+    var minSize = Math.max(11, Math.floor(safeCell * 0.22));
+    var maxSize = Math.max(minSize, Math.floor(safeCell * 0.62));
+    return Math.max(minSize, Math.min(maxSize, Math.round(raw)));
+  }
+
+  function isStoneValue(value) {
+    return Number(value) < 0;
+  }
+
+  function resolvePreviewTileClasses(value, x, y) {
+    var classes = ["tile"];
+    var numericValue = Math.floor(Math.abs(Number(value) || 0));
+    classes.push("tile-" + (numericValue || 0));
+    classes.push("tile-position-" + String(x + 1) + "-" + String(y + 1));
+    if (isStoneValue(value)) {
+      classes.push("tile-stone");
+    } else if (numericValue > 2048) {
+      classes.push("tile-super");
+    }
+    return classes.join(" ");
   }
 
   function createBoardGridNode(boardMatrix) {
     var matrix = normalizeBoardMatrix(boardMatrix);
-    var size = resolveBoardGridSize(matrix);
+    var dims = resolveBoardDims(matrix);
+    var rows = dims.rows;
+    var cols = dims.cols;
+    if (rows <= 0 || cols <= 0) {
+      var empty = global.document.createElement("div");
+      empty.className = "user-record-detail-error";
+      empty.textContent = currentLang === "en" ? "No final board data." : "\u65e0\u6700\u7ec8\u76d8\u9762\u6570\u636e";
+      return empty;
+    }
+    var maxDim = Math.max(rows, cols);
+    var baseGap = maxDim >= 5 ? 6 : 8;
+    var boardSize = Math.max(180, Math.min(300, maxDim * 60 + (maxDim - 1) * baseGap));
+    var layout = computePreviewBoardLayout(cols, rows, boardSize, baseGap);
+    var framePadding = 8;
+
+    var wrap = global.document.createElement("div");
+    wrap.className = "user-mini-board-wrap";
 
     var board = global.document.createElement("div");
-    board.className = "user-record-board";
-    board.style.setProperty("--board-size", String(size));
+    board.className = "game-container user-mini-game";
+    board.style.width = String(Math.round(layout.gridWidth + framePadding * 2)) + "px";
+    board.style.height = String(Math.round(layout.gridHeight + framePadding * 2)) + "px";
 
-    for (var r = 0; r < size; r += 1) {
+    var gridContainer = global.document.createElement("div");
+    gridContainer.className = "grid-container";
+    gridContainer.style.left = "50%";
+    gridContainer.style.top = "50%";
+    gridContainer.style.width = String(Math.round(layout.gridWidth)) + "px";
+    gridContainer.style.height = String(Math.round(layout.gridHeight)) + "px";
+    gridContainer.style.transform = "translate(-50%, -50%)";
+    board.appendChild(gridContainer);
+
+    var tileContainer = global.document.createElement("div");
+    tileContainer.className = "tile-container";
+    tileContainer.style.left = "50%";
+    tileContainer.style.top = "50%";
+    tileContainer.style.width = String(Math.round(layout.gridWidth)) + "px";
+    tileContainer.style.height = String(Math.round(layout.gridHeight)) + "px";
+    tileContainer.style.transform = "translate(-50%, -50%)";
+    board.appendChild(tileContainer);
+
+    for (var y = 0; y < rows; y += 1) {
+      var rowEl = global.document.createElement("div");
+      rowEl.className = "grid-row";
+      rowEl.style.marginBottom = y === rows - 1 ? "0" : (String(Math.round(layout.gap)) + "px");
+      for (var x = 0; x < cols; x += 1) {
+        var bgCell = global.document.createElement("div");
+        bgCell.className = "grid-cell";
+        bgCell.style.width = String(Math.round(layout.cell)) + "px";
+        bgCell.style.height = String(Math.round(layout.cell)) + "px";
+        bgCell.style.marginRight = x === cols - 1 ? "0" : (String(Math.round(layout.gap)) + "px");
+        rowEl.appendChild(bgCell);
+      }
+      gridContainer.appendChild(rowEl);
+    }
+
+    for (var r = 0; r < rows; r += 1) {
       var row = matrix[r] || [];
-      for (var c = 0; c < size; c += 1) {
+      for (var c = 0; c < cols; c += 1) {
         var value = Math.floor(Number(row[c]) || 0);
-        var cell = global.document.createElement("div");
-        cell.className = "user-record-board-cell" + (value > 0 ? "" : " is-empty");
-        cell.textContent = value > 0 ? String(value) : "0";
-        board.appendChild(cell);
+        if (!isStoneValue(value) && value <= 0) continue;
+
+        var tile = global.document.createElement("div");
+        tile.setAttribute("class", resolvePreviewTileClasses(value, c, r));
+        tile.style.width = String(Math.round(layout.cell)) + "px";
+        tile.style.height = String(Math.round(layout.cell)) + "px";
+        tile.style.transform = "translate(" + String(Math.round(c * (layout.cell + layout.gap))) + "px, " + String(Math.round(r * (layout.cell + layout.gap))) + "px)";
+
+        var inner = global.document.createElement("div");
+        inner.className = "tile-inner";
+        inner.style.width = String(Math.round(layout.cell)) + "px";
+        inner.style.height = String(Math.round(layout.cell)) + "px";
+        inner.style.lineHeight = String(Math.round(layout.cell)) + "px";
+        inner.style.fontSize = String(computePreviewTileFontSize(value, layout.cell, cols, rows)) + "px";
+        inner.textContent = isStoneValue(value) ? "" : String(Math.floor(Math.abs(value)));
+        tile.appendChild(inner);
+        tileContainer.appendChild(tile);
       }
     }
-    return board;
+
+    wrap.appendChild(board);
+    return wrap;
   }
 
   function normalizeRecordDetailPayload(raw, fallbackRecord) {

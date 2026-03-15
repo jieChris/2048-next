@@ -48,6 +48,7 @@
   var MODE_INTRO_REFRESH_INTERVAL_HIDDEN_MS = 180000;
   var POLL_BACKOFF_MAX_MS = 60000;
   var POLL_BACKOFF_MAX_STEP = 4;
+  var TIMER_LEADERBOARD_FONT_DELTA_PX = 2;
 
   var apiBases = buildApiBaseCandidates();
   var activeApiBase = apiBases[0];
@@ -74,6 +75,21 @@
 
   function toText(value) {
     return value == null ? "" : String(value);
+  }
+
+  function addPxDelta(sizeLike, deltaPx) {
+    var text = toText(sizeLike).trim().toLowerCase();
+    var parsed = parseFloat(text);
+    var delta = Number(deltaPx);
+    if (!Number.isFinite(parsed)) {
+      parsed = 14;
+    }
+    if (!Number.isFinite(delta)) {
+      delta = 0;
+    }
+    var value = parsed + delta;
+    if (value < 1) value = 1;
+    return String(value) + "px";
   }
 
   function normalizeLeaderboardNickname(nameLike) {
@@ -337,12 +353,12 @@
 
     rankTile.className = "timertile timer-leaderboard-rank-tile" + (rankClassName ? " " + rankClassName : "");
     rankTile.textContent = toText(rankText);
-    rankTile.style.fontSize = resolveRankTileFontSize(rankText);
+    rankTile.style.fontSize = addPxDelta(resolveRankTileFontSize(rankText), TIMER_LEADERBOARD_FONT_DELTA_PX);
 
     nameTile.className = "timertile timer-leaderboard-name-tile";
     nameTile.textContent = toText(nameText);
     nameTile.title = toText(nameText);
-    nameTile.style.fontSize = toText(fixedNameFontSize || "14px");
+    nameTile.style.fontSize = addPxDelta(toText(fixedNameFontSize || "14px"), TIMER_LEADERBOARD_FONT_DELTA_PX);
     applyNameTileProfileLink(nameTile, profileUrl);
   }
 
@@ -662,12 +678,7 @@
     return [];
   }
 
-  function buildRecordSubmitPayload(manager, modeLike, score) {
-    if (!manager) return null;
-    var modeKey = toText(modeLike || manager.modeKey || manager.mode).trim();
-    var modeBucket = resolveLeaderboardMode(modeKey);
-    if (!modeKey || !modeBucket) return null;
-
+  function resolveRecordReplayPayload(manager) {
     var replayString = "";
     if (typeof manager.serialize === "function") {
       try {
@@ -676,7 +687,6 @@
         replayString = "";
       }
     }
-    if (!replayString) return null;
 
     var replayV3 = null;
     if (typeof manager.serializeV3 === "function") {
@@ -687,6 +697,29 @@
       }
     }
 
+    if (!replayString && replayV3 != null) {
+      try {
+        replayString = toText(JSON.stringify(replayV3)).trim();
+      } catch (_err3) {
+        replayString = "";
+      }
+    }
+
+    return {
+      replayV3: replayV3,
+      replayString: replayString
+    };
+  }
+
+  function buildRecordSubmitPayload(manager, modeLike, score) {
+    if (!manager) return null;
+    var modeKey = toText(modeLike || manager.modeKey || manager.mode).trim();
+    var modeBucket = resolveLeaderboardMode(modeKey);
+    if (!modeKey || !modeBucket) return null;
+
+    var replayPayload = resolveRecordReplayPayload(manager);
+    if (!replayPayload.replayString) return null;
+
     return {
       mode: modeBucket,
       mode_key: modeKey,
@@ -696,8 +729,8 @@
       ended_at: new Date().toISOString(),
       end_reason: manager.over ? "game_over" : "win_stop",
       final_board: resolveManagerFinalBoard(manager),
-      replay: replayV3,
-      replay_string: replayString
+      replay: replayPayload.replayV3,
+      replay_string: replayPayload.replayString
     };
   }
 
@@ -995,6 +1028,57 @@
     }
   }
 
+  function runPromiseSafely(task) {
+    if (typeof task !== "function") return;
+    try {
+      var maybePromise = task();
+      if (maybePromise && typeof maybePromise.catch === "function") {
+        maybePromise.catch(function () {});
+      }
+    } catch (_err) {}
+  }
+
+  function triggerImmediateOnlineSubmit() {
+    runPromiseSafely(function () {
+      return maybeSubmitScoreOnGameOver();
+    });
+    runPromiseSafely(function () {
+      return maybeSubmitRecordOnGameOver();
+    });
+  }
+
+  function wrapOnlineSubmitHook(manager, methodName, timing) {
+    if (!manager || typeof manager[methodName] !== "function") return;
+    var original = manager[methodName];
+    if (original && original.__onlineImmediateSubmitHooked === true) return;
+
+    var wrapped = function () {
+      if (timing === "before") {
+        triggerImmediateOnlineSubmit();
+      }
+      var result = original.apply(this, arguments);
+      if (timing === "after") {
+        triggerImmediateOnlineSubmit();
+      }
+      return result;
+    };
+
+    wrapped.__onlineImmediateSubmitHooked = true;
+    manager[methodName] = wrapped;
+  }
+
+  function bindImmediateOnlineSubmitHooks() {
+    var manager = global.game_manager;
+    if (!manager || manager.replayMode) return;
+    if (manager.__onlineImmediateSubmitHooksBound === true) return;
+
+    wrapOnlineSubmitHook(manager, "move", "after");
+    wrapOnlineSubmitHook(manager, "restart", "before");
+    wrapOnlineSubmitHook(manager, "restartWithSeed", "before");
+    wrapOnlineSubmitHook(manager, "restartWithBoard", "before");
+    manager.__onlineImmediateSubmitHooksBound = true;
+  }
+
   function bindModeIntroRefresh() {
     if (modeIntroBound) return;
     var introBtn = byId("top-mode-intro-btn");
@@ -1093,6 +1177,7 @@
     var now = Date.now();
 
     try {
+      bindImmediateOnlineSubmitHooks();
       ensureToolkitEntryRow();
       bindModeIntroRefresh();
       syncTimerLeaderboardViewMode();
@@ -1153,6 +1238,7 @@
   }
 
   function init() {
+    bindImmediateOnlineSubmitHooks();
     ensureToolkitEntryRow();
     bindLanguageSync();
     bindModeIntroRefresh();

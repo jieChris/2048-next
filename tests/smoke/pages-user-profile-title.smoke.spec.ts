@@ -169,7 +169,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.locator(".user-record-row").first().click();
 
     await expect(page.locator(".user-record-detail")).toBeVisible();
-    await expect(page.locator(".user-record-board-cell")).toHaveCount(16);
+    await expect(page.locator(".user-mini-game .grid-cell")).toHaveCount(16);
     await expect(page.locator(".user-replay-btn")).toBeVisible();
   });
 });
