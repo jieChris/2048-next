@@ -9,7 +9,7 @@ import { normalizeReplaySeekTarget, planReplayStep } from "../../src/core/replay
 import { parseReplayImportEnvelope } from "../../src/core/replay-import";
 import { encodeBoardV4, decodeBoardV4 } from "../../src/core/replay-codec";
 import { getBestTileValue } from "../../src/core/grid-scan";
-import { createEngineFacade } from "../../src/core/engine";
+import { createEngineFacade, createEngineSession } from "../../src/core/engine";
 
 describe("core engine: pure function delegation", () => {
   it("planTileInteraction delegates to core", () => {
@@ -138,6 +138,111 @@ describe("core engine: pure function delegation", () => {
     });
     expect(score.score).toBe(8);
     expect(score.mergeGain).toBe(8);
+  });
+
+  it("createEngineSession supports init/load/move/undo/export lifecycle", () => {
+    const engine = createEngineSession({
+      width: 4,
+      height: 4,
+      ruleset: "pow2",
+      undoEnabled: true
+    });
+
+    const initialized = engine.init({
+      score: 32,
+      board: [
+        [2, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ]
+    });
+    expect(initialized.score).toBe(32);
+
+    const moved = engine.move({
+      scoreAfterMerge: 40,
+      hasMovesAvailable: true,
+      timerStatus: 1,
+      comboMultiplier: 1
+    });
+    expect(moved.scoring.score).toBe(40);
+    expect(moved.state.successfulMoveCount).toBe(1);
+
+    const undoSnapshot = {
+      ...createUndoSnapshot({
+        score: 12,
+        comboStreak: 0,
+        successfulMoveCount: 0,
+        lockConsumedAtMoveCount: -1,
+        lockedDirectionTurn: null,
+        lockedDirection: null,
+        undoUsed: 0
+      }),
+      score: 12,
+      tiles: [
+        [2, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ]
+    };
+    const restored = engine.undo({
+      snapshot: undoSnapshot,
+      timerStatus: 1,
+      fallbackUndoUsed: 0
+    });
+    expect(restored.score).toBe(12);
+    expect(restored.undoUsed).toBe(1);
+
+    const exported = engine.exportState();
+    expect(exported.config.width).toBe(4);
+    expect(exported.state.score).toBe(12);
+
+    const loaded = engine.load({
+      ...exported,
+      state: {
+        ...exported.state,
+        score: 99
+      }
+    });
+    expect(loaded.score).toBe(99);
+  });
+
+  it("createEngineSession rejects incompatible snapshot version", () => {
+    const engine = createEngineSession({
+      width: 4,
+      height: 4,
+      ruleset: "pow2",
+      undoEnabled: true
+    });
+
+    const exported = engine.exportState();
+    expect(() =>
+      engine.load({
+        ...exported,
+        version: 2
+      })
+    ).toThrow(/Unsupported engine snapshot version/);
+  });
+
+  it("createEngineSession rejects malformed board shape on load", () => {
+    const engine = createEngineSession({
+      width: 4,
+      height: 4,
+      ruleset: "pow2",
+      undoEnabled: true
+    });
+
+    const exported = engine.exportState();
+    expect(() =>
+      engine.load({
+        ...exported,
+        state: {
+          ...exported.state,
+          board: [[2, 0, 0, 0]]
+        }
+      })
+    ).toThrow(/board row count mismatch/);
   });
 
 });
