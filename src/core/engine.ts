@@ -48,6 +48,41 @@ export interface ExportedState {
   timestamp: string;
 }
 
+
+// ---------------------------------------------------------------------------
+// Facade API — unified callable surface for page/runtime integration
+// ---------------------------------------------------------------------------
+
+export interface EngineFacade {
+  planTileInteraction: typeof import("./move-apply").planTileInteraction;
+  computePostMoveLifecycle: typeof import("./post-move").computePostMoveLifecycle;
+  computePostMoveScore: typeof import("./scoring").computePostMoveScore;
+  createUndoSnapshot: typeof import("./undo-snapshot").createUndoSnapshot;
+  computeUndoRestoreState: typeof import("./undo-restore").computeUndoRestoreState;
+  normalizeReplaySeekTarget: typeof import("./replay-lifecycle").normalizeReplaySeekTarget;
+  planReplayStep: typeof import("./replay-lifecycle").planReplayStep;
+  parseReplayImportEnvelope: typeof import("./replay-import").parseReplayImportEnvelope;
+  encodeBoardV4: typeof import("./replay-codec").encodeBoardV4;
+  decodeBoardV4: typeof import("./replay-codec").decodeBoardV4;
+  getBestTileValue: typeof import("./grid-scan").getBestTileValue;
+}
+
+export function createEngineFacade(): EngineFacade {
+  return {
+    planTileInteraction,
+    computePostMoveLifecycle,
+    computePostMoveScore,
+    createUndoSnapshot,
+    computeUndoRestoreState,
+    normalizeReplaySeekTarget,
+    planReplayStep,
+    parseReplayImportEnvelope,
+    encodeBoardV4,
+    decodeBoardV4,
+    getBestTileValue
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Facade API — unified callable surface for page/runtime integration
 // ---------------------------------------------------------------------------
