@@ -40,7 +40,8 @@ npm install
 ### 2.1 安装 Playwright 浏览器（运行 smoke 前必需）
 
 ```bash
-npx playwright install chromium
+# 安装 chromium 与 headless-shell（Playwright 默认无头执行依赖）
+npx playwright install chromium chromium-headless-shell
 # Linux 依赖（容器/CI 推荐）
 npx playwright install-deps chromium
 ```

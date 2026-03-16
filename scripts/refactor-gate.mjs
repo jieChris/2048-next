@@ -27,6 +27,15 @@ function isSmokeScriptName(name) {
   return typeof name === "string" && name.startsWith("test:smoke");
 }
 
+
+function resolveHeadlessShellPathFromChromiumPath(chromiumExecutable) {
+  if (typeof chromiumExecutable !== "string" || !chromiumExecutable) return null;
+  const match = chromiumExecutable.match(/(.*)\/chromium-(\d+)\/chrome-linux64\/chrome$/);
+  if (!match) return null;
+  const [, prefix, revision] = match;
+  return `${prefix}/chromium_headless_shell-${revision}/chrome-headless-shell-linux64/chrome-headless-shell`;
+}
+
 function validateChromiumExecutable(executable) {
   const result = spawnSync(executable, ["--version"], {
     encoding: "utf8",
@@ -60,6 +69,27 @@ async function checkSmokePrecondition() {
         executable: chromiumExecutable,
         reason: validation.reason || "Playwright chromium executable is not runnable"
       };
+    }
+
+    const headlessShellPath = resolveHeadlessShellPathFromChromiumPath(chromiumExecutable);
+    if (headlessShellPath) {
+      if (!fs.existsSync(headlessShellPath)) {
+        return {
+          ok: false,
+          executable: headlessShellPath,
+          reason: "Playwright chromium headless shell executable is missing"
+        };
+      }
+      const headlessValidation = validateChromiumExecutable(headlessShellPath);
+      if (!headlessValidation.ok) {
+        return {
+          ok: false,
+          executable: headlessShellPath,
+          reason:
+            headlessValidation.reason ||
+            "Playwright chromium headless shell executable is not runnable"
+        };
+      }
     }
 
     return { ok: true, executable: chromiumExecutable };
@@ -113,7 +143,7 @@ async function main() {
           console.error(`[verify:refactor] reason: ${precondition.reason}`);
         }
         console.error("[verify:refactor] fix:");
-        console.error("[verify:refactor]   npx playwright install chromium");
+        console.error("[verify:refactor]   npx playwright install chromium chromium-headless-shell");
         console.error("[verify:refactor]   npx playwright install-deps chromium");
         results.push({ name: "smoke", ok: false, code: 1, signal: null, durationMs: 0 });
         break;
@@ -131,7 +161,7 @@ async function main() {
       );
       if (result.name === "smoke") {
         console.error("[verify:refactor] smoke hint: ensure browser binary and Linux deps are installed:");
-        console.error("[verify:refactor]   npx playwright install chromium");
+        console.error("[verify:refactor]   npx playwright install chromium chromium-headless-shell");
         console.error("[verify:refactor]   npx playwright install-deps chromium");
       }
       break;
