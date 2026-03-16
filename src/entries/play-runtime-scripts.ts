@@ -1,12 +1,8 @@
-import { playLegacyScripts } from "./play-runtime-scripts";
-import { replayLegacyScripts } from "./replay-runtime-scripts";
-import announcementRecordsUrl from "../../js/announcement_records.js?url";
-import coreAnnouncementRuntimeUrl from "../../js/core_announcement_runtime.js?url";
-import announcementManagerUrl from "../../js/announcement_manager.js?url";
 import seedrandomUrl from "../../js/seedrandom.js?url";
 import animframePolyfillUrl from "../../js/animframe_polyfill.js?url";
+import coreBootstrapRuntimeUrl from "../../js/core_bootstrap_runtime.js?url";
+import coreModeCatalogRuntimeUrl from "../../js/core_mode_catalog_runtime.js?url";
 import keyboardInputManagerUrl from "../../js/keyboard_input_manager.js?url";
-import cappedInputManagerUrl from "../../js/capped_input_manager.js?url";
 import themeManagerUrl from "../../js/theme_manager.js?url";
 import modeCatalogUrl from "../../js/mode_catalog.js?url";
 import htmlActuatorUrl from "../../js/html_actuator.js?url";
@@ -14,7 +10,25 @@ import gridUrl from "../../js/grid.js?url";
 import tileUrl from "../../js/tile.js?url";
 import localScoreManagerUrl from "../../js/local_score_manager.js?url";
 import localHistoryStoreUrl from "../../js/local_history_store.js?url";
-import coreModeCatalogRuntimeUrl from "../../js/core_mode_catalog_runtime.js?url";
+import corePlayRuntimeContractRuntimeUrl from "../../js/core_play_runtime_contract_runtime.js?url";
+import corePlayPageHostRuntimeUrl from "../../js/core_play_page_host_runtime.js?url";
+import corePlayPageContextRuntimeUrl from "../../js/core_play_page_context_runtime.js?url";
+import corePlayHeaderRuntimeUrl from "../../js/core_play_header_runtime.js?url";
+import corePlayHeaderHostRuntimeUrl from "../../js/core_play_header_host_runtime.js?url";
+import corePlayQueryRuntimeUrl from "../../js/core_play_query_runtime.js?url";
+import corePlayEntryRuntimeUrl from "../../js/core_play_entry_runtime.js?url";
+import corePlayCustomSpawnHostRuntimeUrl from "../../js/core_play_custom_spawn_host_runtime.js?url";
+import corePlayChallengeIntroRuntimeUrl from "../../js/core_play_challenge_intro_runtime.js?url";
+import corePlayChallengeIntroUiRuntimeUrl from "../../js/core_play_challenge_intro_ui_runtime.js?url";
+import corePlayChallengeIntroActionRuntimeUrl from "../../js/core_play_challenge_intro_action_runtime.js?url";
+import corePlayChallengeIntroHostRuntimeUrl from "../../js/core_play_challenge_intro_host_runtime.js?url";
+import corePlayChallengeContextRuntimeUrl from "../../js/core_play_challenge_context_runtime.js?url";
+import corePlayStartGuardRuntimeUrl from "../../js/core_play_start_guard_runtime.js?url";
+import corePlayStartupPayloadRuntimeUrl from "../../js/core_play_startup_payload_runtime.js?url";
+import corePlayStartupContextRuntimeUrl from "../../js/core_play_startup_context_runtime.js?url";
+import corePlayStartupHostRuntimeUrl from "../../js/core_play_startup_host_runtime.js?url";
+import coreCustomSpawnRuntimeUrl from "../../js/core_custom_spawn_runtime.js?url";
+import corePlayCustomSpawnRuntimeUrl from "../../js/core_play_custom_spawn_runtime.js?url";
 import coreRulesRuntimeUrl from "../../js/core_rules_runtime.js?url";
 import coreModeRuntimeUrl from "../../js/core_mode_runtime.js?url";
 import coreSpecialRulesRuntimeUrl from "../../js/core_special_rules_runtime.js?url";
@@ -65,19 +79,14 @@ import coreGameManagerModeRulesHelpersRuntimeUrl from "../../js/core_game_manage
 import coreGameManagerStaticRuntimeUrl from "../../js/core_game_manager_static_runtime.js?url";
 import coreGameManagerBindingsRuntimeUrl from "../../js/core_game_manager_bindings_runtime.js?url";
 import gameManagerUrl from "../../js/game_manager.js?url";
-import coreBootstrapRuntimeUrl from "../../js/core_bootstrap_runtime.js?url";
-import corePracticeModeRuntimeUrl from "../../js/core_practice_mode_runtime.js?url";
-import coreHomeModeRuntimeUrl from "../../js/core_home_mode_runtime.js?url";
-import coreHomeRuntimeContractRuntimeUrl from "../../js/core_home_runtime_contract_runtime.js?url";
-import coreHomeStartupHostRuntimeUrl from "../../js/core_home_startup_host_runtime.js?url";
-import coreHomePageHostRuntimeUrl from "../../js/core_home_page_host_runtime.js?url";
+import coreStorageRuntimeUrl from "../../js/core_storage_runtime.js?url";
+import playApplicationUrl from "../../js/play_application.js?url";
+import coreCappedTimerScrollRuntimeUrl from "../../js/core_capped_timer_scroll_runtime.js?url";
+import cappedTimerScrollUrl from "../../js/capped_timer_scroll.js?url";
 import coreUndoActionRuntimeUrl from "../../js/core_undo_action_runtime.js?url";
-import applicationUrl from "../../js/application.js?url";
 import corePracticeTransferRuntimeUrl from "../../js/core_practice_transfer_runtime.js?url";
 import corePracticeTransferHostRuntimeUrl from "../../js/core_practice_transfer_host_runtime.js?url";
 import corePracticeTransferPageHostRuntimeUrl from "../../js/core_practice_transfer_page_host_runtime.js?url";
-import coreCappedTimerScrollRuntimeUrl from "../../js/core_capped_timer_scroll_runtime.js?url";
-import cappedTimerScrollUrl from "../../js/capped_timer_scroll.js?url";
 import coreTimerModuleRuntimeUrl from "../../js/core_timer_module_runtime.js?url";
 import coreTimerModuleSettingsHostRuntimeUrl from "../../js/core_timer_module_settings_host_runtime.js?url";
 import coreTimerModuleSettingsPageHostRuntimeUrl from "../../js/core_timer_module_settings_page_host_runtime.js?url";
@@ -105,7 +114,6 @@ import coreMobileTopButtonsRuntimeUrl from "../../js/core_mobile_top_buttons_run
 import coreMobileTopButtonsPageHostRuntimeUrl from "../../js/core_mobile_top_buttons_page_host_runtime.js?url";
 import coreMobileViewportRuntimeUrl from "../../js/core_mobile_viewport_runtime.js?url";
 import coreMobileViewportPageHostRuntimeUrl from "../../js/core_mobile_viewport_page_host_runtime.js?url";
-import coreStorageRuntimeUrl from "../../js/core_storage_runtime.js?url";
 import coreReplayModalRuntimeUrl from "../../js/core_replay_modal_runtime.js?url";
 import coreSettingsModalHostRuntimeUrl from "../../js/core_settings_modal_host_runtime.js?url";
 import coreSettingsModalPageHostRuntimeUrl from "../../js/core_settings_modal_page_host_runtime.js?url";
@@ -139,25 +147,13 @@ import indexUiUrl from "../../js/index_ui.js?url";
 import refreshSchedulerRuntimeUrl from "../../js/refresh_scheduler_runtime.js?url";
 import apiSharedUtilsUrl from "../../js/api_shared_utils.js?url";
 import onlineLeaderboardRuntimeUrl from "../../js/online_leaderboard_runtime.js?url";
-import testUiUrl from "../../js/test_ui.js?url";
-import pku2048InlineStatsRuntimeUrl from "../../js/pku2048_inline_stats_runtime.js?url";
 import coreI18nRuntimeUrl from "../../js/core_i18n_runtime.js?url";
-import coreSimpleRuntimeContractRuntimeUrl from "../../js/core_simple_runtime_contract_runtime.js?url";
-import coreSimpleStartupRuntimeUrl from "../../js/core_simple_startup_runtime.js?url";
-import coreSimplePageHostRuntimeUrl from "../../js/core_simple_page_host_runtime.js?url";
-import cappedApplicationUrl from "../../js/capped_application.js?url";
-import type { RuntimeCapability } from "./runtime-manifest";
 
-export const homeAnnouncementScripts = [
-  announcementRecordsUrl,
-  coreAnnouncementRuntimeUrl,
-  announcementManagerUrl
-] as const;
-
-export const homeCoreScripts = [
+export const playLegacyScripts = [
   seedrandomUrl,
   animframePolyfillUrl,
   coreBootstrapRuntimeUrl,
+  coreModeCatalogRuntimeUrl,
   keyboardInputManagerUrl,
   themeManagerUrl,
   modeCatalogUrl,
@@ -166,6 +162,25 @@ export const homeCoreScripts = [
   tileUrl,
   localScoreManagerUrl,
   localHistoryStoreUrl,
+  corePlayRuntimeContractRuntimeUrl,
+  corePlayPageHostRuntimeUrl,
+  corePlayPageContextRuntimeUrl,
+  corePlayHeaderRuntimeUrl,
+  corePlayHeaderHostRuntimeUrl,
+  corePlayQueryRuntimeUrl,
+  corePlayEntryRuntimeUrl,
+  corePlayCustomSpawnHostRuntimeUrl,
+  corePlayChallengeIntroRuntimeUrl,
+  corePlayChallengeIntroUiRuntimeUrl,
+  corePlayChallengeIntroActionRuntimeUrl,
+  corePlayChallengeIntroHostRuntimeUrl,
+  corePlayChallengeContextRuntimeUrl,
+  corePlayStartGuardRuntimeUrl,
+  corePlayStartupPayloadRuntimeUrl,
+  corePlayStartupContextRuntimeUrl,
+  corePlayStartupHostRuntimeUrl,
+  coreCustomSpawnRuntimeUrl,
+  corePlayCustomSpawnRuntimeUrl,
   coreRulesRuntimeUrl,
   coreModeRuntimeUrl,
   coreSpecialRulesRuntimeUrl,
@@ -215,98 +230,15 @@ export const homeCoreScripts = [
   coreGameManagerModeRulesHelpersRuntimeUrl,
   coreGameManagerStaticRuntimeUrl,
   coreGameManagerBindingsRuntimeUrl,
-  gameManagerUrl
-] as const;
-
-export const cappedCoreScripts = [
-  seedrandomUrl,
-  animframePolyfillUrl,
-  coreBootstrapRuntimeUrl,
-  cappedInputManagerUrl,
-  themeManagerUrl,
-  modeCatalogUrl,
-  htmlActuatorUrl,
-  gridUrl,
-  tileUrl,
-  localScoreManagerUrl,
-  localHistoryStoreUrl,
-  coreModeCatalogRuntimeUrl,
-  coreRulesRuntimeUrl,
-  coreModeRuntimeUrl,
-  coreSpecialRulesRuntimeUrl,
-  coreDirectionLockRuntimeUrl,
-  coreGridScanRuntimeUrl,
-  coreMoveScanRuntimeUrl,
-  coreMovePathRuntimeUrl,
-  coreTimerIntervalRuntimeUrl,
-  coreScoringRuntimeUrl,
-  coreMergeEffectsRuntimeUrl,
-  corePostMoveRuntimeUrl,
-  corePostMoveRecordRuntimeUrl,
-  corePostUndoRecordRuntimeUrl,
-  coreUndoRestoreRuntimeUrl,
-  coreUndoSnapshotRuntimeUrl,
-  coreUndoTileSnapshotRuntimeUrl,
-  coreUndoTileRestoreRuntimeUrl,
-  coreUndoRestorePayloadRuntimeUrl,
-  coreUndoStackEntryRuntimeUrl,
-  coreReplayCodecRuntimeUrl,
-  coreReplayV4ActionsRuntimeUrl,
-  coreReplayImportRuntimeUrl,
-  coreReplayExecutionRuntimeUrl,
-  coreReplayDispatchRuntimeUrl,
-  coreReplayLifecycleRuntimeUrl,
-  coreReplayTimerRuntimeUrl,
-  coreReplayFlowRuntimeUrl,
-  coreReplayControlRuntimeUrl,
-  coreReplayLoopRuntimeUrl,
-  coreMoveApplyRuntimeUrl,
-  coreGameSettingsStorageRuntimeUrl,
-  coreGameManagerBaseHelpersRuntimeUrl,
-  coreGameManagerEnvHelpersRuntimeUrl,
-  coreGameManagerRuntimeCallHelpersRuntimeUrl,
-  coreGameManagerSavedStateHelpersRuntimeUrl,
-  coreGameManagerRuntimeAccessorHelpersRuntimeUrl,
-  coreGameManagerStatsUiHelpersRuntimeUrl,
-  coreGameManagerMoveInputHelpersRuntimeUrl,
-  coreGameManagerStatsDisplayHelpersRuntimeUrl,
-  coreGameManagerPanelTimerHelpersRuntimeUrl,
-  coreGameManagerUndoStatsHelpersRuntimeUrl,
-  coreGameManagerRestartSetupHelpersRuntimeUrl,
-  coreGameManagerSetupTimerUiHelpersRuntimeUrl,
-  coreGameManagerSessionInitHelpersRuntimeUrl,
-  coreGameManagerCommonRuntimeUrl,
-  coreGameManagerReplayHelpersRuntimeUrl,
-  coreGameManagerModeRulesHelpersRuntimeUrl,
-  coreGameManagerStaticRuntimeUrl,
-  coreGameManagerBindingsRuntimeUrl,
-  gameManagerUrl
-] as const;
-
-export const homeStandardStartupScripts = [
-  coreModeCatalogRuntimeUrl,
-  corePracticeModeRuntimeUrl,
-  coreHomeModeRuntimeUrl,
-  coreHomeRuntimeContractRuntimeUrl,
-  coreHomeStartupHostRuntimeUrl,
-  coreHomePageHostRuntimeUrl,
+  gameManagerUrl,
+  coreStorageRuntimeUrl,
+  playApplicationUrl,
+  coreCappedTimerScrollRuntimeUrl,
+  cappedTimerScrollUrl,
   coreUndoActionRuntimeUrl,
-  applicationUrl
-] as const;
-
-export const cappedStartupScripts = [
-  coreSimpleRuntimeContractRuntimeUrl,
-  coreSimpleStartupRuntimeUrl,
-  coreSimplePageHostRuntimeUrl,
-  cappedApplicationUrl
-] as const;
-
-export const homeSettingsAndPanelScripts = [
   corePracticeTransferRuntimeUrl,
   corePracticeTransferHostRuntimeUrl,
   corePracticeTransferPageHostRuntimeUrl,
-  coreCappedTimerScrollRuntimeUrl,
-  cappedTimerScrollUrl,
   coreTimerModuleRuntimeUrl,
   coreTimerModuleSettingsHostRuntimeUrl,
   coreTimerModuleSettingsPageHostRuntimeUrl,
@@ -334,15 +266,10 @@ export const homeSettingsAndPanelScripts = [
   coreMobileTopButtonsPageHostRuntimeUrl,
   coreMobileViewportRuntimeUrl,
   coreMobileViewportPageHostRuntimeUrl,
-  coreStorageRuntimeUrl,
   coreReplayModalRuntimeUrl,
   coreSettingsModalHostRuntimeUrl,
-  coreSettingsModalPageHostRuntimeUrl
-] as const;
-
-export const homeTopButtonStyleScripts = [coreTopButtonStyleRuntimeUrl] as const;
-
-export const homeIndexTailScripts = [
+  coreSettingsModalPageHostRuntimeUrl,
+  coreTopButtonStyleRuntimeUrl,
   coreReplayExportRuntimeUrl,
   coreReplayPageHostRuntimeUrl,
   corePrettyTimeRuntimeUrl,
@@ -368,80 +295,10 @@ export const homeIndexTailScripts = [
   coreIndexUiPageHostRuntimeUrl,
   coreIndexUiPageResolversHostRuntimeUrl,
   coreIndexUiPageActionsHostRuntimeUrl,
-  indexUiUrl
-] as const;
-
-export const homeLeaderboardScripts = [
+  indexUiUrl,
   refreshSchedulerRuntimeUrl,
   apiSharedUtilsUrl,
-  onlineLeaderboardRuntimeUrl
+  onlineLeaderboardRuntimeUrl,
+  coreI18nRuntimeUrl
 ] as const;
-export const homeTestUiScripts = [testUiUrl] as const;
-export const homePkuInlineStatsScripts = [pku2048InlineStatsRuntimeUrl] as const;
-export const homeI18nScripts = [coreI18nRuntimeUrl] as const;
 
-const HOME_FAMILY_CAPABILITY_SCRIPTS: Readonly<Record<RuntimeCapability, readonly string[]>> = {
-  announcement: homeAnnouncementScripts,
-  core: homeCoreScripts,
-  "capped-core": cappedCoreScripts,
-  "standard-startup": homeStandardStartupScripts,
-  "capped-startup": cappedStartupScripts,
-  "settings-and-panel": homeSettingsAndPanelScripts,
-  "top-button-style": homeTopButtonStyleScripts,
-  "index-tail": homeIndexTailScripts,
-  leaderboard: homeLeaderboardScripts,
-  "test-ui": homeTestUiScripts,
-  "pku-inline-stats": homePkuInlineStatsScripts,
-  i18n: homeI18nScripts,
-  // Standalone-entry pages: these use dedicated Vite entry files (src/entries/*.ts)
-  // and do NOT load scripts via the home-family legacy loader. Empty arrays are intentional.
-  play: playLegacyScripts,
-  replay: replayLegacyScripts,
-  account: [],
-  history: [],
-  modes: [],
-  palette: []
-} as const;
-
-export function resolveHomeFamilyScriptsByCapabilities(
-  capabilities: readonly RuntimeCapability[]
-): readonly string[] {
-  const scripts: string[] = [];
-  for (const capability of capabilities) {
-    const group = HOME_FAMILY_CAPABILITY_SCRIPTS[capability];
-    if (!group || group.length <= 0) continue;
-    for (const url of group) {
-      scripts.push(url);
-    }
-  }
-  return scripts;
-}
-
-export function showCappedGuideOverlay(): void {
-  const guideKey = "capped_guide_shown_v1";
-  if (window.localStorage.getItem(guideKey)) {
-    return;
-  }
-
-  const overlay = document.getElementById("guide-overlay");
-  const message = document.getElementById("guide-message");
-  const titleLink = document.querySelector<HTMLAnchorElement>(".title a");
-  if (!overlay || !message || !titleLink) {
-    return;
-  }
-
-  overlay.style.display = "block";
-  titleLink.classList.add("guide-highlight");
-  const rect = titleLink.getBoundingClientRect();
-  message.style.top = `${rect.bottom + 15}px`;
-  message.style.left = `${rect.left + 20}px`;
-
-  const dismiss = () => {
-    overlay.style.display = "none";
-    titleLink.classList.remove("guide-highlight");
-    window.localStorage.setItem(guideKey, "true");
-  };
-
-  overlay.addEventListener("click", dismiss, { once: true });
-  titleLink.addEventListener("click", dismiss, { once: true });
-}
