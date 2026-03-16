@@ -144,8 +144,18 @@ jobs:
           releases_dir="${deploy_root}/releases"
           release_dir="${releases_dir}/${release_id}"
 
+          cleanup_release_dir() {
+            local target_dir="$1"
+            [ -e "${target_dir}" ] || return 0
+            if rm -rf -- "${target_dir}"; then
+              return 0
+            fi
+            echo "WARN: failed to fully remove ${target_dir}; skipping." >&2
+            return 0
+          }
+
           mkdir -p "${releases_dir}" "${deploy_root}/shared"
-          rm -rf "${release_dir}"
+          cleanup_release_dir "${release_dir}"
           mkdir -p "${release_dir}"
 
           tar -xzf "/tmp/${artifact_name}" -C "${release_dir}"
@@ -153,7 +163,10 @@ jobs:
           rm -f "/tmp/${artifact_name}"
 
           cd "${releases_dir}"
-          ls -1dt */ 2>/dev/null | tail -n "+$((keep_releases + 1))" | xargs -r rm -rf
+          (ls -1dt -- */ 2>/dev/null || true) | tail -n "+$((keep_releases + 1))" | while IFS= read -r old_release; do
+            [ -n "${old_release}" ] || continue
+            cleanup_release_dir "${old_release}"
+          done
           REMOTE
 
       - name: Output deployed release
@@ -241,8 +254,18 @@ jobs:
           releases_dir="${deploy_root}/releases"
           release_dir="${releases_dir}/${release_id}"
 
+          cleanup_release_dir() {
+            local target_dir="$1"
+            [ -e "${target_dir}" ] || return 0
+            if rm -rf -- "${target_dir}"; then
+              return 0
+            fi
+            echo "WARN: failed to fully remove ${target_dir}; skipping." >&2
+            return 0
+          }
+
           mkdir -p "${releases_dir}" "${deploy_root}/shared"
-          rm -rf "${release_dir}"
+          cleanup_release_dir "${release_dir}"
           mkdir -p "${release_dir}"
 
           tar -xzf "/tmp/${artifact_name}" -C "${release_dir}"
@@ -250,7 +273,10 @@ jobs:
           rm -f "/tmp/${artifact_name}"
 
           cd "${releases_dir}"
-          ls -1dt */ 2>/dev/null | tail -n "+$((keep_releases + 1))" | xargs -r rm -rf
+          (ls -1dt -- */ 2>/dev/null || true) | tail -n "+$((keep_releases + 1))" | while IFS= read -r old_release; do
+            [ -n "${old_release}" ] || continue
+            cleanup_release_dir "${old_release}"
+          done
           REMOTE
 
       - name: Output deployed release
