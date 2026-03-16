@@ -9,6 +9,7 @@ import { normalizeReplaySeekTarget, planReplayStep } from "../../src/core/replay
 import { parseReplayImportEnvelope } from "../../src/core/replay-import";
 import { encodeBoardV4, decodeBoardV4 } from "../../src/core/replay-codec";
 import { getBestTileValue } from "../../src/core/grid-scan";
+import { createEngineFacade } from "../../src/core/engine";
 
 describe("core engine: pure function delegation", () => {
   it("planTileInteraction delegates to core", () => {
@@ -111,4 +112,32 @@ describe("core engine: pure function delegation", () => {
     });
     expect(result).toBeNull();
   });
+
+  it("createEngineFacade exposes unified callable surface", () => {
+    const facade = createEngineFacade();
+    expect(facade.planTileInteraction).toBe(planTileInteraction);
+    expect(facade.computePostMoveLifecycle).toBe(computePostMoveLifecycle);
+    expect(facade.computePostMoveScore).toBe(computePostMoveScore);
+    expect(facade.createUndoSnapshot).toBe(createUndoSnapshot);
+    expect(facade.computeUndoRestoreState).toBe(computeUndoRestoreState);
+    expect(facade.normalizeReplaySeekTarget).toBe(normalizeReplaySeekTarget);
+    expect(facade.planReplayStep).toBe(planReplayStep);
+    expect(facade.parseReplayImportEnvelope).toBe(parseReplayImportEnvelope);
+    expect(facade.encodeBoardV4).toBe(encodeBoardV4);
+    expect(facade.decodeBoardV4).toBe(decodeBoardV4);
+    expect(facade.getBestTileValue).toBe(getBestTileValue);
+  });
+
+  it("createEngineFacade methods are directly callable", () => {
+    const facade = createEngineFacade();
+    const score = facade.computePostMoveScore({
+      scoreBeforeMove: 0,
+      scoreAfterMerge: 8,
+      comboStreak: 0,
+      comboMultiplier: 1
+    });
+    expect(score.score).toBe(8);
+    expect(score.mergeGain).toBe(8);
+  });
+
 });
