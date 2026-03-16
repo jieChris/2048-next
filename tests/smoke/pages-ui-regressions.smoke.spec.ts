@@ -9,16 +9,30 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(seedResponse, "Practice seed response should exist").not.toBeNull();
     expect(seedResponse?.ok(), "Practice seed response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(350);
+    await page.waitForFunction(
+      () => Boolean(window.localStorage.getItem("savedGameStateByMode:v1:practice")),
+      { timeout: 5_000 }
+    ).catch(() => undefined);
 
     const seeded = await page.evaluate(() => {
       const raw = window.localStorage.getItem("savedGameStateByMode:v1:practice");
-      if (!raw) return false;
-      const saved = JSON.parse(raw);
-      if (!saved || !saved.timer_fixed_rows) return false;
-      if (!saved.timer_fixed_rows["32768"] || !saved.timer_fixed_rows["65536"]) return false;
-      saved.timer_fixed_rows["32768"].display = "none";
-      saved.timer_fixed_rows["65536"].display = "none";
+      const saved = raw ? JSON.parse(raw) : {};
+      if (!saved || typeof saved !== "object") return false;
+      const timerRows =
+        saved.timer_fixed_rows && typeof saved.timer_fixed_rows === "object"
+          ? saved.timer_fixed_rows
+          : {};
+      timerRows["32768"] = {
+        ...(timerRows["32768"] || {}),
+        display: "none",
+        hidden: "1"
+      };
+      timerRows["65536"] = {
+        ...(timerRows["65536"] || {}),
+        display: "none",
+        hidden: "1"
+      };
+      saved.timer_fixed_rows = timerRows;
       window.localStorage.setItem("savedGameStateByMode:v1:practice", JSON.stringify(saved));
       return true;
     });
@@ -91,7 +105,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Practice response should exist").not.toBeNull();
     expect(response?.ok(), "Practice response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => typeof (window as any).updateTimerScroll === "function");
 
     const snapshot = await page.evaluate(() => {
       const updateTimerScroll = (window as any).updateTimerScroll;

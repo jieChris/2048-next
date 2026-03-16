@@ -5,30 +5,45 @@ function normalizeStatsPanelVisibilityKeyPart(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function resolveStatsPanelBodyAttribute(body, attrName) {
+  if (!(body && body.getAttribute)) return "";
+  return body.getAttribute(attrName) || "";
+}
+
+function resolveStatsPanelPathName(documentLike) {
+  if (!(documentLike && documentLike.location)) return "";
+  return typeof documentLike.location.pathname === "string" ? documentLike.location.pathname : "";
+}
+
+function pushUniqueStatsPanelKeyPart(parts, value) {
+  if (!(value && parts.indexOf(value) === -1)) return;
+  parts.push(value);
+}
+
+function resolveStatsPanelVisibilityKeyParts(manager, documentLike, body) {
+  var pathPart = normalizeStatsPanelVisibilityKeyPart(resolveStatsPanelPathName(documentLike).split("/").pop());
+  var pagePart = normalizeStatsPanelVisibilityKeyPart(resolveStatsPanelBodyAttribute(body, "data-page"));
+  var variantPart = normalizeStatsPanelVisibilityKeyPart(resolveStatsPanelBodyAttribute(body, "data-page-variant"));
+  var modePart = normalizeStatsPanelVisibilityKeyPart(
+    manager.modeKey || manager.mode || resolveStatsPanelBodyAttribute(body, "data-mode-id")
+  );
+  var parts = [];
+
+  if (pathPart) parts.push(pathPart);
+  else pushUniqueStatsPanelKeyPart(parts, pagePart);
+  pushUniqueStatsPanelKeyPart(parts, variantPart);
+  pushUniqueStatsPanelKeyPart(parts, modePart);
+
+  return parts;
+}
+
 function resolveStatsPanelVisibilityKey(manager) {
   var baseKey = GameManager.STATS_PANEL_VISIBLE_KEY;
   if (!manager) return baseKey;
 
   var documentLike = resolveManagerDocumentLike(manager);
   var body = documentLike && documentLike.body ? documentLike.body : null;
-  var pathName = "";
-  if (documentLike && documentLike.location && typeof documentLike.location.pathname === "string") {
-    pathName = documentLike.location.pathname;
-  }
-  var pathPart = normalizeStatsPanelVisibilityKeyPart(pathName.split("/").pop());
-  var pagePart = normalizeStatsPanelVisibilityKeyPart(body && body.getAttribute ? body.getAttribute("data-page") : "");
-  var variantPart = normalizeStatsPanelVisibilityKeyPart(body && body.getAttribute ? body.getAttribute("data-page-variant") : "");
-  var modePart = normalizeStatsPanelVisibilityKeyPart(
-    manager.modeKey ||
-      manager.mode ||
-      (body && body.getAttribute ? body.getAttribute("data-mode-id") : "")
-  );
-  var parts = [];
-
-  if (pathPart) parts.push(pathPart);
-  else if (pagePart) parts.push(pagePart);
-  if (variantPart && parts.indexOf(variantPart) === -1) parts.push(variantPart);
-  if (modePart && parts.indexOf(modePart) === -1) parts.push(modePart);
+  var parts = resolveStatsPanelVisibilityKeyParts(manager, documentLike, body);
 
   return parts.length ? baseKey + ":" + parts.join(":") : baseKey;
 }
