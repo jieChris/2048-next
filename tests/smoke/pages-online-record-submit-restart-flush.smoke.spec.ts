@@ -3,9 +3,9 @@ import { expect, test } from "@playwright/test";
 test.describe("Legacy Multi-Page Smoke", () => {
   test("online record submit flushes before restart when game is already over", async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("token", "smoke_token");
-      window.localStorage.setItem("userId", "42");
-      window.localStorage.setItem("nickname", "Smoke");
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "42");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
       window.localStorage.removeItem("online_last_submit_signature_v1");
       window.localStorage.removeItem("online_last_record_submit_signature_v1");
 

@@ -1,6 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { countNonEmptyLines } from "./audit-utils.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,14 +22,6 @@ async function readTextOrEmpty(relativePath) {
   } catch {
     return "";
   }
-}
-
-function countNonEmptyLines(content) {
-  if (!content) return 0;
-  return content
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .filter(Boolean).length;
 }
 
 function describeRatio(current, target, direction = "lte") {

@@ -135,6 +135,7 @@ import coreIndexUiPageResolversHostRuntimeUrl from "../../js/core_index_ui_page_
 import coreIndexUiPageActionsHostRuntimeUrl from "../../js/core_index_ui_page_actions_host_runtime.js?url";
 import indexUiUrl from "../../js/index_ui.js?url";
 import refreshSchedulerRuntimeUrl from "../../js/refresh_scheduler_runtime.js?url";
+import apiSharedUtilsUrl from "../../js/api_shared_utils.js?url";
 import onlineLeaderboardRuntimeUrl from "../../js/online_leaderboard_runtime.js?url";
 import testUiUrl from "../../js/test_ui.js?url";
 import pku2048InlineStatsRuntimeUrl from "../../js/pku2048_inline_stats_runtime.js?url";
@@ -370,6 +371,7 @@ export const homeIndexTailScripts = [
 
 export const homeLeaderboardScripts = [
   refreshSchedulerRuntimeUrl,
+  apiSharedUtilsUrl,
   onlineLeaderboardRuntimeUrl
 ] as const;
 export const homeTestUiScripts = [testUiUrl] as const;
@@ -389,6 +391,8 @@ const HOME_FAMILY_CAPABILITY_SCRIPTS: Readonly<Record<RuntimeCapability, readonl
   "test-ui": homeTestUiScripts,
   "pku-inline-stats": homePkuInlineStatsScripts,
   i18n: homeI18nScripts,
+  // Standalone-entry pages: these use dedicated Vite entry files (src/entries/*.ts)
+  // and do NOT load scripts via the home-family legacy loader. Empty arrays are intentional.
   play: [],
   replay: [],
   account: [],

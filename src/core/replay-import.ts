@@ -1,3 +1,12 @@
+export type ReplayFormatKind = "v4c" | "v3-json" | "unknown";
+
+export function detectReplayFormat(input: string): ReplayFormatKind {
+  const trimmed = input.trim();
+  if (trimmed.startsWith("REPLAY_v4C_")) return "v4c";
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) return "v3-json";
+  return "unknown";
+}
+
 export interface ReplayImportV4Envelope {
   kind: "v4c";
   modeKey: string;

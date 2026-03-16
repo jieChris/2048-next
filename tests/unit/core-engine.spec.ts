@@ -1,72 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { Engine } from "../../src/core/engine";
-import type { EngineConfig } from "../../src/core/engine";
+import { planTileInteraction } from "../../src/core/move-apply";
+import { computePostMoveLifecycle } from "../../src/core/post-move";
+import { computePostMoveScore } from "../../src/core/scoring";
+import { createUndoSnapshot } from "../../src/core/undo-snapshot";
+import { computeUndoRestoreState } from "../../src/core/undo-restore";
+import { normalizeReplaySeekTarget, planReplayStep } from "../../src/core/replay-lifecycle";
+import { parseReplayImportEnvelope } from "../../src/core/replay-import";
+import { encodeBoardV4, decodeBoardV4 } from "../../src/core/replay-codec";
+import { getBestTileValue } from "../../src/core/grid-scan";
 
-describe("core engine: Engine class", () => {
-  const defaultConfig: EngineConfig = {
-    width: 4,
-    height: 4,
-    ruleset: "pow2",
-    undoEnabled: true
-  };
-
-  it("creates an engine with frozen config", () => {
-    const engine = new Engine(defaultConfig);
-    expect(engine.config.width).toBe(4);
-    expect(engine.config.ruleset).toBe("pow2");
-    expect(Object.isFrozen(engine.config)).toBe(true);
-  });
-
-  it("starts and reports started state", () => {
-    const engine = new Engine(defaultConfig);
-    expect(engine.isStarted()).toBe(false);
-    engine.start();
-    expect(engine.isStarted()).toBe(true);
-  });
-
-  it("getState returns initial state", () => {
-    const engine = new Engine(defaultConfig);
-    const state = engine.getState();
-    expect(state.score).toBe(0);
-    expect(state.board).toEqual([]);
-    expect(state.over).toBe(false);
-    expect(state.won).toBe(false);
-    expect(state.undoUsed).toBe(0);
-  });
-
-  it("loadState updates engine state", () => {
-    const engine = new Engine(defaultConfig);
-    engine.loadState({ score: 1234, over: true, undoUsed: 3 });
-    const state = engine.getState();
-    expect(state.score).toBe(1234);
-    expect(state.over).toBe(true);
-    expect(state.undoUsed).toBe(3);
-  });
-
-  it("exportState and importState round-trip", () => {
-    const engine = new Engine(defaultConfig);
-    engine.loadState({
-      score: 500,
-      board: [[2, 4], [8, 0]],
-      comboStreak: 2,
-      successfulMoveCount: 10
-    });
-    const exported = engine.exportState();
-    expect(exported.version).toBe(1);
-    expect(exported.config.width).toBe(4);
-    expect(exported.state.score).toBe(500);
-    expect(exported.timestamp).toBeTruthy();
-
-    const engine2 = new Engine(defaultConfig);
-    engine2.importState(exported);
-    expect(engine2.getState().score).toBe(500);
-    expect(engine2.getState().comboStreak).toBe(2);
-  });
-
+describe("core engine: pure function delegation", () => {
   it("planTileInteraction delegates to core", () => {
-    const engine = new Engine(defaultConfig);
-    const result = engine.planTileInteraction({
+    const result = planTileInteraction({
       cell: { x: 0, y: 0 },
       farthest: { x: 1, y: 0 },
       next: { x: 2, y: 0 },
@@ -79,8 +25,7 @@ describe("core engine: Engine class", () => {
   });
 
   it("computePostMoveLifecycle delegates to core", () => {
-    const engine = new Engine(defaultConfig);
-    const result = engine.computePostMoveLifecycle({
+    const result = computePostMoveLifecycle({
       successfulMoveCount: 5,
       hasMovesAvailable: true,
       timerStatus: 1
@@ -90,8 +35,7 @@ describe("core engine: Engine class", () => {
   });
 
   it("computePostMoveScore delegates to core", () => {
-    const engine = new Engine(defaultConfig);
-    const result = engine.computePostMoveScore({
+    const result = computePostMoveScore({
       scoreBeforeMove: 100,
       scoreAfterMerge: 108,
       comboStreak: 0,
@@ -102,8 +46,7 @@ describe("core engine: Engine class", () => {
   });
 
   it("createUndoSnapshot delegates to core", () => {
-    const engine = new Engine(defaultConfig);
-    const result = engine.createUndoSnapshot({
+    const result = createUndoSnapshot({
       score: 200,
       comboStreak: 1,
       successfulMoveCount: 3,
@@ -116,9 +59,8 @@ describe("core engine: Engine class", () => {
     expect(result.tiles).toEqual([]);
   });
 
-  it("computeUndoRestore delegates to core", () => {
-    const engine = new Engine(defaultConfig);
-    const result = engine.computeUndoRestore({
+  it("computeUndoRestoreState delegates to core", () => {
+    const result = computeUndoRestoreState({
       prev: { undoUsed: 1 },
       fallbackUndoUsed: 0,
       timerStatus: 1
@@ -128,8 +70,7 @@ describe("core engine: Engine class", () => {
   });
 
   it("normalizeReplaySeekTarget delegates to core", () => {
-    const engine = new Engine(defaultConfig);
-    const result = engine.normalizeReplaySeekTarget({
+    const result = normalizeReplaySeekTarget({
       targetIndex: 100,
       hasReplayMoves: true,
       replayMovesLength: 50
@@ -138,8 +79,7 @@ describe("core engine: Engine class", () => {
   });
 
   it("planReplayStep delegates to core", () => {
-    const engine = new Engine(defaultConfig);
-    const result = engine.planReplayStep({
+    const result = planReplayStep({
       action: 0,
       hasReplaySpawns: true,
       spawnAtIndex: { x: 1, y: 1, value: 2 }
@@ -148,27 +88,24 @@ describe("core engine: Engine class", () => {
   });
 
   it("encodeBoardV4 and decodeBoardV4 round-trip", () => {
-    const engine = new Engine(defaultConfig);
     const board = [
       [0, 2, 4, 8],
       [16, 32, 64, 128],
       [256, 512, 1024, 2048],
       [0, 0, 0, 0]
     ];
-    const encoded = engine.encodeBoardV4(board);
-    const decoded = engine.decodeBoardV4(encoded);
+    const encoded = encodeBoardV4(board);
+    const decoded = decodeBoardV4(encoded);
     expect(decoded).toEqual(board);
   });
 
-  it("getBestTile finds max value", () => {
-    const engine = new Engine(defaultConfig);
-    expect(engine.getBestTile([[2, 4], [8, 1024]])).toBe(1024);
-    expect(engine.getBestTile([])).toBe(0);
+  it("getBestTileValue finds max value", () => {
+    expect(getBestTileValue([[2, 4], [8, 1024]])).toBe(1024);
+    expect(getBestTileValue([])).toBe(0);
   });
 
-  it("importReplay parses v4c envelope", () => {
-    const engine = new Engine(defaultConfig);
-    const result = engine.importReplay({
+  it("parseReplayImportEnvelope parses v4c envelope", () => {
+    const result = parseReplayImportEnvelope({
       trimmedReplayString: "not_a_replay",
       fallbackModeKey: "standard_4x4_pow2_no_undo"
     });

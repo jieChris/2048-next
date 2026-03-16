@@ -347,8 +347,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     await page.addInitScript(() => {
-      window.localStorage.setItem("userId", "8");
-      window.localStorage.setItem("nickname", "Bob");
+      window.localStorage.setItem("2048_auth_userId_v1", "8");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Bob");
     });
 
     const response = await page.goto("/index.html", {

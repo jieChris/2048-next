@@ -10,7 +10,15 @@ import type {
   HistoryExportEnvelope,
   SubmitPayload,
   ReplayRecord,
-  SessionSnapshot
+  SessionSnapshot,
+  ApiSuccessResponse,
+  ApiErrorResponse,
+  ApiResponse,
+  LeaderboardEntry,
+  UserInfoResponse,
+  LoginResponse,
+  RecordSubmitResponse,
+  UserRecordEntry
 } from "../../src/contracts";
 
 describe("contracts: schema version", () => {
@@ -105,16 +113,178 @@ describe("contracts: HistoryExportEnvelope type shape", () => {
 describe("contracts: SubmitPayload type shape", () => {
   it("satisfies required fields", () => {
     const payload: SubmitPayload = {
-      version: 1,
-      mode_key: "standard_4x4_pow2_no_undo",
       score: 5000,
       best_tile: 1024,
       duration_ms: 120000,
-      replay_string: "REPLAY_v4C_S...",
-      client_version: "1.8",
-      nickname: "player1"
+      mode: "standard_no_undo",
+      mode_key: "standard_4x4_pow2_no_undo",
+      ended_at: "2026-03-15T00:00:00Z",
+      end_reason: "game_over",
+      final_board: [[0, 2, 4, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+      replay: null,
+      replay_string: "REPLAY_v4C_S..."
     };
     expect(payload.score).toBe(5000);
-    expect(payload.nickname).toBe("player1");
+    expect(payload.mode).toBe("standard_no_undo");
+    expect(payload.end_reason).toBe("game_over");
+    expect(payload.final_board).toBeInstanceOf(Array);
+  });
+
+  it("accepts optional fields", () => {
+    const payload: SubmitPayload = {
+      score: 3000,
+      best_tile: 512,
+      duration_ms: 60000,
+      mode: "standard_undo",
+      mode_key: "classic_4x4_pow2_undo",
+      ended_at: "2026-03-15T00:00:00Z",
+      end_reason: "win_stop",
+      final_board: [[2, 4], [8, 16]],
+      replay: { version: 3 },
+      replay_string: "REPLAY_v4C_S...",
+      mode_bucket: "standard_undo",
+      client_record_id: "rec_001",
+      client_version: "1.8"
+    };
+    expect(payload.client_version).toBe("1.8");
+    expect(payload.mode_bucket).toBe("standard_undo");
+  });
+});
+
+describe("contracts: ApiSuccessResponse type shape", () => {
+  it("satisfies required fields", () => {
+    const resp: ApiSuccessResponse<{ count: number }> = {
+      success: true,
+      data: { count: 42 }
+    };
+    expect(resp.success).toBe(true);
+    expect(resp.data?.count).toBe(42);
+  });
+
+  it("allows omitting data", () => {
+    const resp: ApiSuccessResponse = { success: true };
+    expect(resp.success).toBe(true);
+    expect(resp.data).toBeUndefined();
+  });
+});
+
+describe("contracts: ApiErrorResponse type shape", () => {
+  it("satisfies required fields", () => {
+    const resp: ApiErrorResponse = { error: "not found" };
+    expect(resp.error).toBe("not found");
+    expect(resp.code).toBeUndefined();
+  });
+
+  it("accepts optional code", () => {
+    const resp: ApiErrorResponse = { error: "forbidden", code: "AUTH_FAIL" };
+    expect(resp.code).toBe("AUTH_FAIL");
+  });
+});
+
+describe("contracts: ApiResponse discriminated union", () => {
+  it("narrows to success branch", () => {
+    const resp: ApiResponse<number> = { success: true, data: 7 };
+    if ("success" in resp) {
+      expect(resp.success).toBe(true);
+      expect(resp.data).toBe(7);
+    }
+  });
+
+  it("narrows to error branch", () => {
+    const resp: ApiResponse = { error: "oops" };
+    if ("error" in resp) {
+      expect(resp.error).toBe("oops");
+    }
+  });
+});
+
+describe("contracts: LeaderboardEntry type shape", () => {
+  it("satisfies required fields", () => {
+    const entry: LeaderboardEntry = {
+      user_id: 1,
+      nickname: "Alice",
+      score: 99999,
+      game_date: "2026-03-15"
+    };
+    expect(entry.user_id).toBe(1);
+    expect(entry.score).toBe(99999);
+  });
+
+  it("accepts optional mode_bucket", () => {
+    const entry: LeaderboardEntry = {
+      user_id: 2,
+      nickname: "Bob",
+      score: 50000,
+      game_date: "2026-03-15",
+      mode_bucket: "standard_no_undo"
+    };
+    expect(entry.mode_bucket).toBe("standard_no_undo");
+  });
+});
+
+describe("contracts: UserInfoResponse type shape", () => {
+  it("satisfies required fields", () => {
+    const info: UserInfoResponse = {
+      id: 10,
+      nickname: "Player1",
+      created_at: "2026-01-01T00:00:00Z"
+    };
+    expect(info.id).toBe(10);
+    expect(info.nickname).toBe("Player1");
+  });
+});
+
+describe("contracts: LoginResponse type shape", () => {
+  it("satisfies required fields", () => {
+    const login: LoginResponse = {
+      token: "jwt.token.here",
+      userId: 10,
+      nickname: "Player1"
+    };
+    expect(login.token).toBe("jwt.token.here");
+    expect(login.userId).toBe(10);
+  });
+});
+
+describe("contracts: RecordSubmitResponse type shape", () => {
+  it("satisfies required fields", () => {
+    const resp: RecordSubmitResponse = {
+      id: "rec_abc",
+      modeBucket: "standard_no_undo",
+      endedAt: "2026-03-15T00:00:00Z"
+    };
+    expect(resp.id).toBe("rec_abc");
+    expect(resp.duplicate).toBeUndefined();
+  });
+
+  it("accepts optional duplicate flag", () => {
+    const resp: RecordSubmitResponse = {
+      id: "rec_def",
+      modeBucket: "standard_no_undo",
+      endedAt: "2026-03-15T00:00:00Z",
+      duplicate: true
+    };
+    expect(resp.duplicate).toBe(true);
+  });
+});
+
+describe("contracts: UserRecordEntry type shape", () => {
+  it("satisfies required fields", () => {
+    const entry: UserRecordEntry = {
+      id: "rec_001",
+      user_id: 5,
+      mode_bucket: "standard_no_undo",
+      mode_key: "standard_4x4_pow2_no_undo",
+      score: 8000,
+      best_tile: 2048,
+      duration_ms: 180000,
+      ended_at: "2026-03-15T00:00:00Z",
+      end_reason: "game_over",
+      deleted_at: null,
+      created_at: "2026-03-15T00:00:00Z"
+    };
+    expect(entry.id).toBe("rec_001");
+    expect(entry.score).toBe(8000);
+    expect(entry.deleted_at).toBeNull();
   });
 });

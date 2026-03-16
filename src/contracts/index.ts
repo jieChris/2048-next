@@ -123,14 +123,20 @@ export function createSessionSnapshot(partial: Partial<SessionSnapshot>): Sessio
 // ---------------------------------------------------------------------------
 
 export interface SubmitPayload {
-  version: number;
-  mode_key: string;
   score: number;
   best_tile: number;
   duration_ms: number;
+  mode: string;
+  mode_key: string;
+  ended_at: string;
+  end_reason: string;
+  final_board: number[][];
+  replay: Record<string, unknown> | null;
   replay_string: string;
-  client_version: string;
-  nickname: string;
+  // Optional fields used by extended submit flows
+  mode_bucket?: string;
+  client_record_id?: string;
+  client_version?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -149,4 +155,62 @@ export function migrateHistoryRecords(data: unknown, fromVersion: number): Histo
   const migrator = historyMigrators.get(fromVersion);
   if (migrator) return migrator(data);
   return Array.isArray(data) ? (data as HistoryRecord[]) : [];
+}
+
+// ---------------------------------------------------------------------------
+// API response contracts
+// ---------------------------------------------------------------------------
+
+export interface ApiSuccessResponse<T = unknown> {
+  success: true;
+  data?: T;
+}
+
+export interface ApiErrorResponse {
+  error: string;
+  code?: string;
+}
+
+export type ApiResponse<T = unknown> = ApiSuccessResponse<T> | ApiErrorResponse;
+
+export interface LeaderboardEntry {
+  user_id: number;
+  nickname: string;
+  score: number;
+  game_date: string;
+  mode_bucket?: string;
+}
+
+export interface UserInfoResponse {
+  id: number;
+  nickname: string;
+  email?: string;
+  created_at: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  userId: number;
+  nickname: string;
+}
+
+export interface RecordSubmitResponse {
+  id: string;
+  modeBucket: string;
+  endedAt: string;
+  duplicate?: boolean;
+}
+
+export interface UserRecordEntry {
+  id: string;
+  user_id: number;
+  mode_bucket: string;
+  mode_key: string;
+  score: number;
+  best_tile: number;
+  duration_ms: number;
+  ended_at: string;
+  end_reason: string;
+  deleted_at: string | null;
+  created_at: string;
 }

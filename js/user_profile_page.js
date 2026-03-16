@@ -4,10 +4,34 @@
   if (!global || !global.document) return;
 
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
+  var STORAGE_TOKEN_KEY = "2048_auth_token_v1";
   var DEFAULT_API_TIMEOUT_MS = 12000;
   var DEFAULT_RECORD_LIMIT = 200;
 
+  // --- localStorage key migration (old bare keys -> namespaced keys) ---
+  (function migrateStorageKeys() {
+    var migrations = [
+      { oldKey: "token",    newKey: "2048_auth_token_v1" },
+      { oldKey: "userId",   newKey: "2048_auth_userId_v1" },
+      { oldKey: "nickname", newKey: "2048_auth_nickname_v1" }
+    ];
+    try {
+      if (!global.localStorage) return;
+      for (var i = 0; i < migrations.length; i++) {
+        var m = migrations[i];
+        var oldVal = global.localStorage.getItem(m.oldKey);
+        if (oldVal != null && global.localStorage.getItem(m.newKey) == null) {
+          global.localStorage.setItem(m.newKey, oldVal);
+        }
+        if (oldVal != null) {
+          global.localStorage.removeItem(m.oldKey);
+        }
+      }
+    } catch (_err) { /* localStorage unavailable or quota exceeded */ }
+  })();
+
   var apiBases = buildApiBaseCandidates();
+  var activeApiBase = "";
   var currentLang = readLanguage();
   var targetUserId = 0;
   var targetNicknameHint = "";
@@ -153,7 +177,7 @@
   }
 
   function getAuthToken() {
-    return toText(safeGetStorage("token")).trim();
+    return toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim();
   }
 
   function readLanguage() {
@@ -209,12 +233,11 @@
     var locationObj = global.location || {};
     var hostname = toText(locationObj.hostname).toLowerCase();
     var origin = toText(locationObj.origin);
-    var isLocalHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
     var allowCrossOriginFallback = toText(global.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK).toLowerCase() === "true";
 
     if (origin) push(origin + "/api");
 
-    if (hostname === "taihe.fun" || hostname === "www.taihe.fun" || isLocalHost || allowCrossOriginFallback) {
+    if (hostname === "taihe.fun" || hostname === "www.taihe.fun" || allowCrossOriginFallback) {
       push("https://taihe.fun/api");
     }
 
@@ -236,21 +259,27 @@
 
     for (var i = 0; i < apiBases.length; i += 1) {
       var base = apiBases[i];
-      var requestInit = { method: method, headers: {} };
-      var requestHeaders = opts.headers && typeof opts.headers === "object" ? opts.headers : null;
-      if (requestHeaders) {
-        var headerKeys = Object.keys(requestHeaders);
-        for (var h = 0; h < headerKeys.length; h += 1) {
-          var headerKey = headerKeys[h];
-          requestInit.headers[headerKey] = toText(requestHeaders[headerKey]);
-        }
-      }
+      var headers = opts.headers && typeof opts.headers === "object" ? Object.assign({}, opts.headers) : {};
+      var requestInit = {
+        method: method,
+        headers: headers
+      };
       var timeoutHandle = null;
       var controller = null;
 
       if (typeof global.AbortController === "function") {
         controller = new global.AbortController();
         requestInit.signal = controller.signal;
+      }
+
+      if (opts.auth) {
+        var token = getAuthToken();
+        if (token) requestInit.headers.Authorization = "Bearer " + token;
+      }
+
+      if (opts.body !== undefined) {
+        requestInit.headers["Content-Type"] = "application/json";
+        requestInit.body = JSON.stringify(opts.body);
       }
 
       try {
@@ -265,6 +294,11 @@
           global.clearTimeout(timeoutHandle);
           timeoutHandle = null;
         }
+        var contentType = toText(
+          response && response.headers && typeof response.headers.get === "function"
+            ? response.headers.get("content-type")
+            : ""
+        ).toLowerCase();
 
         var data = null;
         try {
@@ -275,14 +309,22 @@
 
         if (!response.ok) {
           if (!data && i < apiBases.length - 1) continue;
-          return data && typeof data === "object" ? data : { error: "HTTP " + response.status };
+          if (data && typeof data === "object") return data;
+          return { error: "HTTP " + response.status };
         }
 
         if (!data || typeof data !== "object") {
+          var origin = toText(global.location && global.location.origin).trim().replace(/\/+$/, "");
+          var normalizedBase = toText(base).trim().replace(/\/+$/, "");
+          var isSameOriginApiBase = !!origin && normalizedBase === origin + "/api";
+          if (contentType.indexOf("text/html") >= 0 && isSameOriginApiBase && apiBases.length === 1) {
+            return { error: t("apiNotConfigured") || "API not configured" };
+          }
           if (i < apiBases.length - 1) continue;
           return { error: "Invalid response format" };
         }
 
+        activeApiBase = base;
         return data;
       } catch (error) {
         if (timeoutHandle) {
@@ -312,9 +354,7 @@
     if (!token) return Promise.resolve(null);
     var requestOptions = {
       method: "GET",
-      headers: {
-        Authorization: "Bearer " + token
-      }
+      auth: true
     };
     return apiRequest("/user/me", requestOptions).then(function (result) {
       if (result && result.success) return result;
@@ -361,9 +401,7 @@
     if (!token) return Promise.resolve({ error: "Unauthorized", code: "UNAUTHORIZED" });
     return apiRequest("/records/" + encodeURIComponent(id), {
       method: "DELETE",
-      headers: {
-        Authorization: "Bearer " + token
-      }
+      auth: true
     });
   }
 
@@ -374,9 +412,7 @@
     if (!token) return Promise.resolve({ error: "Unauthorized", code: "UNAUTHORIZED" });
     return apiRequest("/records/" + encodeURIComponent(id) + "/restore", {
       method: "POST",
-      headers: {
-        Authorization: "Bearer " + token
-      }
+      auth: true
     });
   }
 
@@ -662,7 +698,6 @@
       try { replayString = JSON.stringify(source.replay); } catch (_err) { replayString = ""; }
     }
     var finalBoard = source.final_board;
-    if (finalBoard == null) finalBoard = source.final_board_json;
     return {
       score: Math.floor(Number(source.score != null ? source.score : fallbackRecord && fallbackRecord.score) || 0),
       mode_bucket: toText(source.mode_bucket || (fallbackRecord && fallbackRecord.mode_bucket)).trim(),

@@ -72,7 +72,7 @@ export const BATCH_DEFS = {
         "scripts/commit-split-check.mjs",
         "scripts/stage-commit-batch.mjs",
         "scripts/commit-batch-defs.mjs",
-        "REFACTOR_MANAGEMENT_PLAN.md",
+        "docs/archive/REFACTOR_MANAGEMENT_PLAN.md",
         "docs/RELEASE_STABLE_CHECKLIST.zh-CN.md",
         "docs/COMMIT_SPLIT_PLAN.zh-CN.md",
         "docs/REFACTOR_PROGRESS_LOG.zh-CN.md"

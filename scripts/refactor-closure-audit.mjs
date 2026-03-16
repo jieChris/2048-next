@@ -1,6 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { collectFunctionRanges, countNonEmptyLines } from "./audit-utils.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,33 +17,6 @@ function toAbsolute(relativePath) {
 
 async function readText(relativePath) {
   return readFile(toAbsolute(relativePath), "utf8");
-}
-
-function countNonEmptyLines(content) {
-  return content
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .filter(Boolean).length;
-}
-
-function collectFunctionRanges(content) {
-  const lines = content.split(/\r?\n/u);
-  const starts = [];
-  for (let index = 0; index < lines.length; index += 1) {
-    const match = lines[index].match(/^function\s+([A-Za-z0-9_]+)\s*\(/u);
-    if (!match) continue;
-    starts.push({ line: index + 1, name: match[1] });
-  }
-  return starts.map((entry, index) => {
-    const next = starts[index + 1];
-    const endLine = next ? next.line - 1 : lines.length;
-    return {
-      name: entry.name,
-      startLine: entry.line,
-      endLine,
-      lineCount: endLine - entry.line + 1
-    };
-  });
 }
 
 async function getRuntimeHelperFiles() {

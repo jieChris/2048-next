@@ -3,10 +3,32 @@
 
   if (!global || !global.document) return;
 
-  var STORAGE_TOKEN_KEY = "token";
-  var STORAGE_USER_ID_KEY = "userId";
-  var STORAGE_NICKNAME_KEY = "nickname";
+  var STORAGE_TOKEN_KEY = "2048_auth_token_v1";
+  var STORAGE_USER_ID_KEY = "2048_auth_userId_v1";
+  var STORAGE_NICKNAME_KEY = "2048_auth_nickname_v1";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
+
+  // --- localStorage key migration (old bare keys -> namespaced keys) ---
+  (function migrateStorageKeys() {
+    var migrations = [
+      { oldKey: "token",    newKey: STORAGE_TOKEN_KEY },
+      { oldKey: "userId",   newKey: STORAGE_USER_ID_KEY },
+      { oldKey: "nickname", newKey: STORAGE_NICKNAME_KEY }
+    ];
+    try {
+      if (!global.localStorage) return;
+      for (var i = 0; i < migrations.length; i++) {
+        var m = migrations[i];
+        var oldVal = global.localStorage.getItem(m.oldKey);
+        if (oldVal != null && global.localStorage.getItem(m.newKey) == null) {
+          global.localStorage.setItem(m.newKey, oldVal);
+        }
+        if (oldVal != null) {
+          global.localStorage.removeItem(m.oldKey);
+        }
+      }
+    } catch (_err) { /* localStorage unavailable or quota exceeded */ }
+  })();
   var DEFAULT_LIMIT = 20;
   var DEFAULT_BOARD_MODE = "standard_no_undo";
   var DEFAULT_API_TIMEOUT_MS = 12000;
@@ -14,6 +36,15 @@
   var LOCAL_RECORD_SYNC_MAX_MARKS_PER_USER = 6000;
   var LOCAL_RECORD_SYNC_MAX_UPLOADS_PER_RUN = 600;
   var LOCAL_RECORD_SYNC_RUNNING = false;
+
+  // --- shared API utilities (from api_shared_utils.js) ---
+  var _u = global.ApiSharedUtils || {};
+  var toText = _u.toText || function (v) { return v == null ? "" : String(v); };
+  var safeGetStorage = _u.safeGetStorage || function () { return null; };
+  var safeSetStorage = _u.safeSetStorage || function () {};
+  var safeRemoveStorage = _u.safeRemoveStorage || function () {};
+  var buildApiBaseCandidates = _u.buildApiBaseCandidates || function () { return []; };
+  var resolveApiTimeoutMs = _u.resolveApiTimeoutMs || function () { return DEFAULT_API_TIMEOUT_MS; };
 
   var apiBases = buildApiBaseCandidates();
   var activeApiBase = apiBases[0];
@@ -196,10 +227,6 @@
     { value: "fib_3x3", zh: "斐波那契3x3", en: "Fibonacci 3x3" }
   ];
 
-  function toText(value) {
-    return value == null ? "" : String(value);
-  }
-
   function normalizeLeaderboardNickname(nameLike) {
     return toText(nameLike).trim().replace(/_/g, "");
   }
@@ -222,28 +249,6 @@
 
   function byId(id) {
     return global.document.getElementById(id);
-  }
-
-  function safeGetStorage(key) {
-    try {
-      return global.localStorage ? global.localStorage.getItem(key) : null;
-    } catch (_err) {
-      return null;
-    }
-  }
-
-  function safeSetStorage(key, value) {
-    try {
-      if (!global.localStorage) return;
-      global.localStorage.setItem(key, value);
-    } catch (_err) {}
-  }
-
-  function safeRemoveStorage(key) {
-    try {
-      if (!global.localStorage) return;
-      global.localStorage.removeItem(key);
-    } catch (_err) {}
   }
 
   function readLanguage() {
@@ -324,8 +329,19 @@
   }
 
   function saveAuth(payload) {
+    var userIdValue = toText(
+      payload && (
+        payload.userId != null
+          ? payload.userId
+          : (payload.user_id != null ? payload.user_id : payload.id)
+      )
+    ).trim();
     safeSetStorage(STORAGE_TOKEN_KEY, toText(payload && payload.token));
-    safeRemoveStorage(STORAGE_USER_ID_KEY);
+    if (userIdValue) {
+      safeSetStorage(STORAGE_USER_ID_KEY, userIdValue);
+    } else {
+      safeRemoveStorage(STORAGE_USER_ID_KEY);
+    }
     safeSetStorage(STORAGE_NICKNAME_KEY, toText(payload && payload.nickname));
   }
 
@@ -333,41 +349,6 @@
     safeRemoveStorage(STORAGE_TOKEN_KEY);
     safeRemoveStorage(STORAGE_USER_ID_KEY);
     safeRemoveStorage(STORAGE_NICKNAME_KEY);
-  }
-
-  function buildApiBaseCandidates() {
-    var bases = [];
-
-    function push(base) {
-      var normalized = toText(base).trim().replace(/\/+$/, "");
-      if (!normalized) return;
-      if (bases.indexOf(normalized) >= 0) return;
-      bases.push(normalized);
-    }
-
-    var explicit = toText(global.GAME_API_BASE_URL).trim();
-    if (explicit) push(explicit);
-
-    var locationObj = global.location || {};
-    var hostname = toText(locationObj.hostname).toLowerCase();
-    var origin = toText(locationObj.origin);
-    var isLocalHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-    var allowCrossOriginFallback = toText(global.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK).toLowerCase() === "true";
-
-    if (origin) push(origin + "/api");
-
-    if (hostname === "taihe.fun" || hostname === "www.taihe.fun" || isLocalHost || allowCrossOriginFallback) {
-      push("https://taihe.fun/api");
-    }
-
-    if (bases.length === 0) push("https://taihe.fun/api");
-    return bases;
-  }
-
-  function resolveApiTimeoutMs() {
-    var raw = Number(global.GAME_API_REQUEST_TIMEOUT_MS);
-    if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
-    return DEFAULT_API_TIMEOUT_MS;
   }
 
   async function apiRequest(path, options) {

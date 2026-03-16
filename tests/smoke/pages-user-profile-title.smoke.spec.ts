@@ -10,7 +10,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("own user profile title is 用户主页", async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("token", "test-token-own");
+      window.localStorage.setItem("2048_auth_token_v1", "test-token-own");
     });
 
     await page.route("**/api/**", async (route) => {
@@ -49,7 +49,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("other user profile title is 用户主页-<用户名>", async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("token", "test-token-other");
+      window.localStorage.setItem("2048_auth_token_v1", "test-token-other");
     });
 
     await page.route("**/api/**", async (route) => {
@@ -88,7 +88,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("user profile supports mode filter and expandable record detail", async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("token", "test-token-details");
+      window.localStorage.setItem("2048_auth_token_v1", "test-token-details");
     });
 
     await page.route("**/api/**", async (route) => {

@@ -3,12 +3,34 @@
 
   if (!global || !global.document) return;
 
-  var STORAGE_TOKEN_KEY = "token";
-  var STORAGE_USER_ID_KEY = "userId";
-  var STORAGE_NICKNAME_KEY = "nickname";
+  var STORAGE_TOKEN_KEY = "2048_auth_token_v1";
+  var STORAGE_USER_ID_KEY = "2048_auth_userId_v1";
+  var STORAGE_NICKNAME_KEY = "2048_auth_nickname_v1";
   var STORAGE_LAST_SUBMIT_KEY = "online_last_submit_signature_v1";
   var STORAGE_LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
+
+  // --- localStorage key migration (old bare keys -> namespaced keys) ---
+  (function migrateStorageKeys() {
+    var migrations = [
+      { oldKey: "token",    newKey: STORAGE_TOKEN_KEY },
+      { oldKey: "userId",   newKey: STORAGE_USER_ID_KEY },
+      { oldKey: "nickname", newKey: STORAGE_NICKNAME_KEY }
+    ];
+    try {
+      if (!global.localStorage) return;
+      for (var i = 0; i < migrations.length; i++) {
+        var m = migrations[i];
+        var oldVal = global.localStorage.getItem(m.oldKey);
+        if (oldVal != null && global.localStorage.getItem(m.newKey) == null) {
+          global.localStorage.setItem(m.newKey, oldVal);
+        }
+        if (oldVal != null) {
+          global.localStorage.removeItem(m.oldKey);
+        }
+      }
+    } catch (_err) { /* localStorage unavailable or quota exceeded */ }
+  })();
   var DEFAULT_BOARD_LIMIT = 10;
   var DEFAULT_API_TIMEOUT_MS = 12000;
   var MODE_BUCKET_ALIAS = {
@@ -50,6 +72,15 @@
   var POLL_BACKOFF_MAX_STEP = 4;
   var TIMER_LEADERBOARD_FONT_DELTA_PX = 2;
 
+  // --- shared API utilities (from api_shared_utils.js) ---
+  var _u = global.ApiSharedUtils || {};
+  var toText = _u.toText || function (v) { return v == null ? "" : String(v); };
+  var safeGetStorage = _u.safeGetStorage || function () { return null; };
+  var safeSetStorage = _u.safeSetStorage || function () {};
+  var safeRemoveStorage = _u.safeRemoveStorage || function () {};
+  var buildApiBaseCandidates = _u.buildApiBaseCandidates || function () { return []; };
+  var resolveApiTimeoutMs = _u.resolveApiTimeoutMs || function () { return DEFAULT_API_TIMEOUT_MS; };
+
   var apiBases = buildApiBaseCandidates();
   var activeApiBase = apiBases[0];
   var cachedLeaderboard = [];
@@ -72,10 +103,6 @@
   var pollingUsingScheduler = false;
   var schedulerTaskName = "online-leaderboard-main";
   var refreshScheduler = null;
-
-  function toText(value) {
-    return value == null ? "" : String(value);
-  }
 
   function addPxDelta(sizeLike, deltaPx) {
     var text = toText(sizeLike).trim().toLowerCase();
@@ -130,28 +157,6 @@
     return refreshScheduler;
   }
 
-  function safeGetStorage(key) {
-    try {
-      return global.localStorage ? global.localStorage.getItem(key) : null;
-    } catch (_err) {
-      return null;
-    }
-  }
-
-  function safeSetStorage(key, value) {
-    try {
-      if (!global.localStorage) return;
-      global.localStorage.setItem(key, value);
-    } catch (_err) {}
-  }
-
-  function safeRemoveStorage(key) {
-    try {
-      if (!global.localStorage) return;
-      global.localStorage.removeItem(key);
-    } catch (_err) {}
-  }
-
   function getAuthToken() {
     return toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim();
   }
@@ -165,8 +170,19 @@
   }
 
   function saveAuth(payload) {
+    var userIdValue = toText(
+      payload && (
+        payload.userId != null
+          ? payload.userId
+          : (payload.user_id != null ? payload.user_id : payload.id)
+      )
+    ).trim();
     safeSetStorage(STORAGE_TOKEN_KEY, toText(payload && payload.token));
-    safeSetStorage(STORAGE_USER_ID_KEY, toText(payload && payload.userId));
+    if (userIdValue) {
+      safeSetStorage(STORAGE_USER_ID_KEY, userIdValue);
+    } else {
+      safeRemoveStorage(STORAGE_USER_ID_KEY);
+    }
     safeSetStorage(STORAGE_NICKNAME_KEY, toText(payload && payload.nickname));
   }
 
@@ -477,45 +493,10 @@
 
   }
 
-  function buildApiBaseCandidates() {
-    var bases = [];
-
-    function push(base) {
-      var normalized = toText(base).trim().replace(/\/+$/, "");
-      if (!normalized) return;
-      if (bases.indexOf(normalized) >= 0) return;
-      bases.push(normalized);
-    }
-
-    var explicit = toText(global.GAME_API_BASE_URL).trim();
-    if (explicit) push(explicit);
-
-    var locationObj = global.location || {};
-    var hostname = toText(locationObj.hostname).toLowerCase();
-    var origin = toText(locationObj.origin);
-    var isLocalHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-    var allowCrossOriginFallback = toText(global.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK).toLowerCase() === "true";
-
-    if (origin) push(origin + "/api");
-
-    if (hostname === "taihe.fun" || hostname === "www.taihe.fun" || allowCrossOriginFallback) {
-      push("https://taihe.fun/api");
-    }
-
-    if (bases.length === 0) push("https://taihe.fun/api");
-    return bases;
-  }
-
-  function resolveApiTimeoutMs() {
-    var raw = Number(global.GAME_API_REQUEST_TIMEOUT_MS);
-    if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
-    return DEFAULT_API_TIMEOUT_MS;
-  }
-
   async function apiRequest(path, options) {
     var opts = options || {};
     var method = toText(opts.method || "GET").toUpperCase();
-    var lastError = "请求失败";
+    var lastError = "Network error";
     var timeoutMs = resolveApiTimeoutMs();
 
     for (var i = 0; i < apiBases.length; i += 1) {
@@ -572,7 +553,7 @@
           if (data && typeof data === "object") {
             return data;
           }
-          return { error: "请求失败(" + response.status + ")" };
+          return { error: "HTTP " + response.status };
         }
 
         if (!data || typeof data !== "object") {
@@ -580,12 +561,12 @@
           var normalizedBase = toText(base).trim().replace(/\/+$/, "");
           var isSameOriginApiBase = !!origin && normalizedBase === origin + "/api";
           if (contentType.indexOf("text/html") >= 0 && isSameOriginApiBase && apiBases.length === 1) {
-            return { error: "当前站点未配置排行榜 API（/api）。" };
+            return { error: "API not configured" };
           }
           if (i < apiBases.length - 1) {
             continue;
           }
-          return { error: "响应格式错误" };
+          return { error: "Invalid response format" };
         }
 
         activeApiBase = base;
@@ -597,9 +578,9 @@
         }
         var errorName = toText(error && error.name).toLowerCase();
         if (errorName === "aborterror") {
-          lastError = "网络超时";
+          lastError = "Network timeout";
         } else {
-          lastError = "网络异常: " + toText(error && error.message);
+          lastError = "Network error: " + toText(error && error.message);
         }
       }
     }

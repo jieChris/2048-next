@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048 婵犵數濮伴崹濂稿春閺嵮屾僵闁靛ě鍕闂佸憡绻傜€氀囧几</title>
+  <title>2048</title>
 
 <link href="style/main.css?v=20260316-04" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-2">
@@ -18,10 +18,10 @@
 <body data-page="game">
   <div class="container">
     <div class="stats-left">
-      <div id="stats-4-rate">4闂? 10%</div>
-      <div id="stats-total">闂傚倷娴囬鏍礈濞戞艾鍨濇い鏍剱閺佸棝鏌ｉ幇顒佹儓闁? 0</div>
-      <div id="stats-moves">缂傚倸鍊风粈渚€藝閹剁瓔鏁嬬憸搴ㄥ箞閵娾晛鐓涘〒姘处濡椼劑姊洪棃娑辨闂傚嫬瀚埢? 0</div>
-      <div id="stats-undo">闂傚倷绶氶埀顒佺☉鐎氬酣鏌涙繝鍐╃閻撱倝鏌″畵顔兼湰濡椼劑姊洪棃娑辨闂傚嫬瀚埢? 0</div>
+      <div id="stats-4-rate">4率: 10%</div>
+      <div id="stats-total">总步数: 0</div>
+      <div id="stats-moves">移动步数: 0</div>
+      <div id="stats-undo">撤回步数: 0</div>
     </div>
     <div class="stats-right" id="stats-ips">IPS: 0</div>
     <div class="heading">
@@ -57,7 +57,7 @@
         <div class="best-container">0</div>
       </div>
       <div class="above-game" style="clear: both; padding-top: 15px;">
-      <p class="game-intro" id="play-mode-intro">濠电姷顣藉Σ鍛村垂椤忓牆鐒垫い鎺嗗亾缁剧虎鍘惧☉鐢稿焵椤掑嫭鈷戦柛娑橈攻閳锋帒鈹戦钘夊姢闂囧鏌涢妷锝呭闁?..</p>
+      <p class="game-intro" id="play-mode-intro">加载中...</p>
       <a class="restart-button" title="&#26032;&#28216;&#25103;" aria-label="&#26032;&#28216;&#25103;">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
       </a>
@@ -164,24 +164,24 @@
     </div>
     <hr>
     <p class="game-explanation">
-      <strong class="important" id="play-mode-title">婵犵數濮伴崹濂稿春閺嵮屾僵闁靛ě鍕闂佸憡绻傜€氀囧几</strong>
+      <strong class="important" id="play-mode-title">2048</strong>
     </p>
   </div>
 
   <div id="replay-modal" class="replay-modal-overlay" style="display: none;">
     <div class="replay-modal-content">
-      <h3 id="replay-modal-title">闂傚倷鐒﹂幃鍫曞磿閹惰棄纾婚柣鎰惈濡?/h3>
+      <h3 id="replay-modal-title">回放</h3>
       <textarea id="replay-textarea" class="replay-textarea"></textarea>
       <div class="replay-modal-actions">
-        <button id="replay-action-btn" class="replay-button">闂傚倷绀佸﹢閬嶆偡閹惰棄骞㈤柍鍝勫€归弶</button>
-        <button class="replay-button">闂傚倷鑳堕…鍫㈡崲閹寸偟绠惧┑鐘蹭迹</button>
+        <button id="replay-action-btn" class="replay-button">执行</button>
+        <button class="replay-button">关闭</button>
       </div>
     </div>
   </div>
 
   <div id="settings-modal" class="replay-modal-overlay" style="display: none;">
     <div class="replay-modal-content settings-modal-content">
-      <h3>闂備浇宕垫慨宕囩矆娴ｈ娅犲ù鐘差儐閸?/h3>
+      <h3>设置</h3>
       <div class="settings-row settings-toggle-row">
         <div class="settings-toggle-main">
           <div class="settings-toggle-copy">
@@ -206,15 +206,16 @@
 
   <div id="mode-intro-modal" class="replay-modal-overlay" style="display: none;">
     <div class="replay-modal-content settings-modal-content">
-      <h3 id="mode-intro-title">濠电姷顣藉Σ鍛村垂椤忓牆鐒垫い鎺嗗亾缁剧虎鍘惧☉鐢稿焵椤掑倻纾藉ù锝呮惈琚ラ梺绋款儐閹告悂婀?/h3>
+      <h3 id="mode-intro-title">模式说明</h3>
       <div id="mode-intro-desc" class="mode-intro-desc"></div>
       <div class="mode-intro-leaderboard-wrap">
-        <div class="mode-intro-leaderboard-title">濠电姷顣藉Σ鍛村垂椤忓牆鐒垫い鎺嗗亾缁剧虎鍘惧☉鐢稿焵椤掑嫭鈷戦柛锔诲幖閸斿鎮介娑樻诞妤犵偛鍟村鎾倻閸℃ê浠存繝鐢靛Т閿曘倝宕銈囩焼?/div>
+        <div class="mode-intro-leaderboard-title">排行榜</div>
         <div id="mode-intro-leaderboard" class="mode-intro-leaderboard">
-          濠电姵顔栭崰妤冩暜濡ゅ啫鍨濋悘鐐垫櫕閺嗭箓鏌ｉ弮鍌氬付缂佲偓婢舵劖鐓熼柡鍐ㄦ祩閸ゆ瑩鏌涘Ο缁樺唉闁哄本绋戣灃闁逞屽墴瀹曨垶宕稿Δ浣稿壄闂侀潧楠忕槐鏇㈠煝閺傚簱鏀介柣妯诲絻椤忊晜绻涢崼銏犫枅闁哄被鍔岄埥澶娢熼懖鈺佸О缂傚倷鑳剁划顖炴偋閻樿钃熺€光偓閳ь剚绂掗敃鍌涘仼閻忕偟铏庨崯鍫ユ⒑鐠囪尙绠抽柛瀣仜鐓ゆ繝濠傜墕妗?64 闂備浇顕х换鎰崲鐎ｎ剚顐芥慨妯挎硾杩濇繝鐢靛Т娴硷綁鎮㈤悡搴ｄ紜閻庤娲栧ú銊┿€侀崨瀛樷拺闁革富鍘奸崝瀣偨椤栨粌鏋涢柕鍡曠窔楠炲鈹戦幇顓炰淮婵犵數濮嶉崘顏呯殤闂?        </div>
+          加载中...
+        </div>
       </div>
       <div class="replay-modal-actions">
-        <button id="mode-intro-close-btn" class="replay-button">闂傚倷鑳堕…鍫㈡崲閹寸偟绠惧┑鐘蹭迹</button>
+        <button id="mode-intro-close-btn" class="replay-button">关闭</button>
       </div>
     </div>
   </div>

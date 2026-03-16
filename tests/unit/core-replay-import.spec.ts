@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseReplayImportEnvelope } from "../../src/core/replay-import";
+import { parseReplayImportEnvelope, detectReplayFormat } from "../../src/core/replay-import";
 
 describe("core replay import: parseReplayImportEnvelope", () => {
   it("parses v4C envelope with mode mapping", () => {
@@ -48,5 +48,23 @@ describe("core replay import: parseReplayImportEnvelope", () => {
         fallbackModeKey: "practice"
       })
     ).toBeNull();
+  });
+});
+
+describe("detectReplayFormat", () => {
+  it("detects v4c format", () => {
+    expect(detectReplayFormat("REPLAY_v4C_S...")).toBe("v4c");
+  });
+  it("detects v3 JSON object format", () => {
+    expect(detectReplayFormat('{"version":3}')).toBe("v3-json");
+  });
+  it("detects v3 JSON array format", () => {
+    expect(detectReplayFormat("[1,2,3]")).toBe("v3-json");
+  });
+  it("returns unknown for unrecognized", () => {
+    expect(detectReplayFormat("random")).toBe("unknown");
+  });
+  it("handles whitespace", () => {
+    expect(detectReplayFormat("  REPLAY_v4C_X")).toBe("v4c");
   });
 });
