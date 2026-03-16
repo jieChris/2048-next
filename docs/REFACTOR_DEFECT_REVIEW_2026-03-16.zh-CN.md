@@ -1,115 +1,126 @@
-# 重构遗留缺陷审查报告（2026-03-16）
+# 重构遗留缺陷审查报告（滚动修订，2026-03-16）
 
-> 审查目标：识别“重构未收口”导致的真实缺陷与工程风险，优先关注会影响后续迭代效率/可靠性的问题。
+> 审查目标：持续识别“重构未收口”导致的真实缺陷与工程风险，并按优先级小步推进。
 
-## 审查结论（摘要）
+## 审查结论（当前状态）
 
-当前仓库主线可构建、单测稳定；截至本次修订，P0 已完成，P1/P2 仍有收口空间。当前仍需关注 3 个核心问题：
+当前仓库处于**可构建、单测稳定、门禁可通过**状态；历史审查项中：
 
-1. **入口脚本治理只完成一半**（home-family 使用 manifest，而 `play/replay` 仍是超长手工数组）。
-2. **GameManager runtime helper 的复杂度热点集中且持续存在**（质量审计仍有多条非阻断告警）。
-3. **Engine 统一入口仍需继续向“状态化 API”演进**（本次已补齐 facade，可统一调用，但尚未承载完整状态生命周期）。
+- **P0（smoke 前置 / baseline 漂移）已完成**。
+- **P1（入口治理、Engine 状态化）已完成阶段性收口**。
+- **P2（GameManager runtime helper 复杂度热点）正在持续消减**。
 
----
-
-
-## 本次修订执行结果（2026-03-16，增量）
-
-### 已执行改进
-
-1. **Engine 边界（P1）已推进一阶段**
-   - 在 `src/core/engine.ts` 新增 `createEngineFacade()` 与 `EngineFacade`，把 move/post-move/scoring/undo/replay/import/codec/grid-scan 能力聚合为统一可调用面。
-   - 新增对应单元测试，确保 facade 与底层纯函数映射一致、可直接调用。
-
-2. **smoke 稳定性（P0 延续）继续收敛**
-   - 对高频波动用例改为“就绪条件等待 + 防抖断言”，避免初始化顺序带来的误报。
-   - `test:smoke` 以单 worker 运行，`verify:refactor` 在当前环境下可稳定通过。
-
-### 仍待推进
-
-- **P1**：为 play/replay 增加顺序约束与回退防护（门禁化审计）。
-- **P2**：按质量审计热点拆分 GameManager helper（建议每批 2~4 个函数，配套 unit/smoke 子集）。
-
-
-## 详细问题
-
-### 1) Engine 仍是“壳层”，核心边界没有真正收敛
-
-- 证据：`src/core/engine.ts` 当前仅包含类型定义和对其他模块函数的 re-export，未提供统一状态容器/命令入口。  
-- 影响：
-  - 页面层/运行时仍需拼装多个能力点，难以形成一致调用路径。
-  - 后续迁移中，行为回归验证成本持续偏高（因为不是单入口对照）。
-- 建议（P1）：
-  - 将 `engine.ts` 提升为“可实例化 + 明确生命周期”的统一 API（`init/load/move/undo/replay/import/export`）。
-  - 把跨模块拼装逻辑从页面或 runtime helper 回收到 engine facade。
-
-### 2) 入口 manifest 改造未覆盖关键页面（play/replay）
-
-- 证据：
-  - `src/entries/runtime-manifest.ts` 已定义页面 capability 与校验逻辑；
-  - `src/entries/home-family-bootstrap.ts` 已通过 `getPageManifest` 驱动加载；
-  - `play/replay` 已切换到 `bootstrapHomeFamilyPage`，脚本列表已模块化并接入 capability 映射；剩余缺口是“顺序约束/残留手工入口”的自动化门禁。
-- 影响：
-  - 入口收敛已显著改善，但缺少自动化审计时仍可能回退到手工入口。
-  - 若无门禁，后续迭代中 capability 与入口实现仍可能漂移。
-- 建议（P1/P3）：
-  - 为 play/replay 增加顺序约束校验（或快照审计），确保关键 runtime 依赖顺序不会漂移。
-  - 将“entry 中手工加载残留检测”纳入 `verify:refactor` 门禁。
-
-### 3) Runtime helper 复杂度热点仍集中在 GameManager 相关模块
-
-- 证据：`npm run audit:quality` 给出 19 条复杂度告警，热点集中在：
-  - `core_game_manager_base_helpers_runtime.js`
-  - `core_game_manager_saved_state_helpers_runtime.js`
-  - `core_game_manager_setup_timer_ui_helpers_runtime.js`
-  - `core_game_manager_stats_ui_helpers_runtime.js`
-  - `core_game_manager_undo_stats_helpers_runtime.js`
-- 影响：
-  - 回归改动的连带风险高，定位成本高。
-  - 规则门禁虽通过，但“可维护性债务”持续累积。
-- 建议（P2）：
-  - 先按“高复杂度函数清单”做拆分批次（每批只降 2~4 个函数复杂度）。
-  - 每次拆分绑定对应 unit/smoke 子集，避免一次性大改造成验证盲区。
-
-### 4) 冒烟门禁在新环境可重复失败（已完成）
-
-- 证据：
-  - `README.md` 仅给出 `npm run test:smoke`，未提示 Playwright 浏览器安装前置；
-  - 实际运行时在未安装浏览器的环境会直接报 `Executable doesn't exist ...`。
-- 影响：
-  - `verify:refactor` 出现与业务无关的假失败，降低门禁信号可信度。
-  - 新成员/新 CI 机器首轮验证体验差。
-- 建议（P0）：
-  - 在 README 与 CI 初始化步骤中明确增加 `npx playwright install --with-deps chromium`（或项目约定变体）。
-  - 在门禁脚本中对“浏览器未安装”给出更可操作的诊断提示。
-
-### 5) 基线报告有陈旧结论，和当前构建结果不一致（已完成）
-
-- 证据：
-  - `docs/baseline/complexity-report.md` 仍记载 `favicon/logo 844KB`、`dist 8.4MB over budget`；
-  - 当前 `npm run build` 输出里对应 SVG 约 66KB，`npm run audit:resource-budget` 为 PASS。
-- 影响：
-  - 任务优先级可能被过时数据牵引，影响迭代投入产出比。
-- 建议（P0）：
-  - 增加 baseline 文档“自动更新时间戳 + 数据来源命令”字段。
-  - 将资源体积基线改为脚本自动生成，避免手工复制导致漂移。
+本次滚动修订后，`audit:quality` 复杂度告警已从早期 19 条下降到 **16 条**（非阻断）。
 
 ---
 
-## 优先级建议（执行顺序）
+## 按推荐顺序推进结果
 
-1. **P1：补齐入口 manifest 的关键缺口**（问题 2：play/replay 已推进，下一步统一顺序约束校验）
-2. **P1/P2：继续推进 Engine 状态化 API**（问题 1：在 facade 基础上补生命周期能力）
-3. **P2：按热点批次拆解 runtime helper 复杂度**（问题 3）
+### 1) P1：入口 manifest 关键缺口（已完成）
+
+已完成事项：
+
+- `play/replay` 入口已切换至 `bootstrapHomeFamilyPage("play"|"replay")`。
+- `entry-manifest-audit` 已覆盖：
+  - 入口不允许回退为手工 legacy 导入；
+  - capability 映射校验；
+  - play/replay 关键脚本顺序锚点校验；
+  - import/export 顺序一致性校验。
+- `verify:refactor` 已纳入该审计，门禁可阻断回退。
+
+结论：该问题从“结构性缺口”转为“门禁可控”。
+
+### 2) P1/P2：Engine 状态化 API（已完成阶段目标）
+
+已完成事项：
+
+- `src/core/engine.ts` 已从纯 re-export/facade 发展到 `createEngineSession(config)`：
+  - 生命周期：`init/load/move/undo/replay/importReplay/exportState/getState`；
+  - 增加快照版本校验、棋盘形状校验、state patch sanitize、undo 恢复 sanitize；
+  - 保留 `createEngineFacade()` 兼容调用路径。
+- 单测已覆盖：
+  - facade 映射与可调用性；
+  - session happy-path 生命周期；
+  - snapshot 版本/board shape 异常路径。
+
+结论：Engine 已具备“可实例化 + 有边界校验”的状态容器雏形。下一阶段可考虑把更多页面编排逻辑迁入该边界（非本轮强制项）。
+
+### 3) P2：复杂度热点批次拆分（持续推进中）
+
+本轮新增推进：
+
+- 已先后完成两批“低风险拆分”：
+  1. `core_game_manager_stats_ui_helpers_runtime.js`：
+     - `resolveStatsPanelVisibilityKey` 拆分为路径/属性/去重/parts 组装小函数；
+  2. `core_game_manager_mode_rules_helpers_runtime.js`：
+     - `normalizeStoneCellsList` 抽取 candidate 解析与边界校验；
+     - `normalizeItemModeRulesForManager` 抽取正整数配置读取逻辑。
+
+结果：
+
+- `audit:quality` 复杂度告警由 **19 → 18 → 16**。
+- `core_game_manager_mode_rules_helpers_runtime.js` 相关复杂度告警已清除。
+
+仍需关注的热点（当前 Top）：
+
+1. `core_game_manager_setup_timer_ui_helpers_runtime.js`
+   - `normalizeLegacyTimerRowsForSetup()` = 32
+   - `hideUnsupportedTimerRowsForSetup()` = 29
+2. `core_game_manager_base_helpers_runtime.js`
+   - 多个函数 13~17，且伴随重复块告警
+3. `core_game_manager_saved_state_helpers_runtime.js`
+   - `setBoardFromMatrix` / timer rows 收集函数仍偏高
 
 ---
 
-## 本次审查执行命令
+## 当前风险面评估
 
-- `npm run report:refactor-progress`
-- `npm run verify:refactor`
-- `npx playwright test tests/smoke/pages-runtime-contract.smoke.spec.ts --config=playwright.config.ts --workers=1`
+### A. 功能正确性风险
+
+- 低：门禁（unit + smoke + build + entry audit）可持续通过。
+
+### B. 可维护性风险
+
+- 中：复杂度热点仍集中在少数 runtime helper 文件，后续改动仍存在“牵一发而动全身”风险。
+
+### C. 迭代效率风险
+
+- 中：若不继续拆分 `setup_timer_ui` / `base_helpers` 热点，后续需求改动回归成本会持续偏高。
+
+---
+
+## 下一阶段建议（可执行）
+
+> 维持“小批次 + 可验证 + 可回滚”原则，每批 2~3 个函数。
+
+### 批次建议 A（优先）
+
+- 目标文件：`core_game_manager_setup_timer_ui_helpers_runtime.js`
+- 目标函数：
+  - `normalizeLegacyTimerRowsForSetup`
+  - `hideUnsupportedTimerRowsForSetup`
+- 策略：先提取“输入解析/过滤规则/DOM 决策”纯函数，再收敛主流程条件分支。
+
+### 批次建议 B
+
+- 目标文件：`core_game_manager_base_helpers_runtime.js`
+- 目标函数：
+  - `bindSecondaryTimerToggleTarget`
+  - `resolveSecondaryTimerParentAnchor`
+- 策略：把判定分支与 DOM 选择器决策拆分为 helper，减少单函数路径数。
+
+### 每批验证基线（保持不变）
+
 - `npm run audit:quality`
+- `npm run test:unit`
 - `npm run build`
-- `npm run audit:resource-budget`
+- 必要时：`node scripts/refactor-gate.mjs --smoke-script=test:smoke:runtime-contract`
+
+---
+
+## 本次滚动修订执行命令
+
+- `npm run audit:quality`
+- `npm run test:unit`
+- `npm run build`
 

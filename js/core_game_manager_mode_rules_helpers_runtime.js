@@ -55,23 +55,27 @@ function isDirectionAllowed(manager, direction) {
 function resolveStoneMarkerValue(index) {
   return 3 + (Number(index) * 2);
 }
+function normalizeStoneCellCandidate(item) {
+  if (Array.isArray(item) && item.length >= 2) {
+    return { x: Number(item[0]), y: Number(item[1]) };
+  }
+  if (isModeRulesRecordObject(item)) {
+    return { x: Number(item.x), y: Number(item.y) };
+  }
+  return null;
+}
+function isStoneCellInBounds(candidate, width, height) {
+  if (!candidate) return false;
+  if (!Number.isInteger(candidate.x) || !Number.isInteger(candidate.y)) return false;
+  return !(candidate.x < 0 || candidate.x >= width || candidate.y < 0 || candidate.y >= height);
+}
 function normalizeStoneCellsList(rawCells, width, height) {
   var source = Array.isArray(rawCells) ? rawCells : [];
   var out = [];
   for (var i = 0; i < source.length; i++) {
-    var item = source[i];
-    var x = null;
-    var y = null;
-    if (Array.isArray(item) && item.length >= 2) {
-      x = Number(item[0]);
-      y = Number(item[1]);
-    } else if (isModeRulesRecordObject(item)) {
-      x = Number(item.x);
-      y = Number(item.y);
-    }
-    if (!Number.isInteger(x) || !Number.isInteger(y)) continue;
-    if (x < 0 || x >= width || y < 0 || y >= height) continue;
-    out.push({ x: x, y: y });
+    var candidate = normalizeStoneCellCandidate(source[i]);
+    if (!isStoneCellInBounds(candidate, width, height)) continue;
+    out.push({ x: candidate.x, y: candidate.y });
   }
   return out;
 }
@@ -87,21 +91,20 @@ function isStoneValue(manager, value) {
   if (!manager || !manager.stoneValueSet) return false;
   return !!manager.stoneValueSet[String(Number(value))];
 }
+function resolvePositiveIntegerConfigValue(rawRules, primaryKey, fallbackKey, defaultValue) {
+  if (Number.isInteger(rawRules[primaryKey]) && Number(rawRules[primaryKey]) > 0) {
+    return Number(rawRules[primaryKey]);
+  }
+  if (Number.isInteger(rawRules[fallbackKey]) && Number(rawRules[fallbackKey]) > 0) {
+    return Number(rawRules[fallbackKey]);
+  }
+  return defaultValue;
+}
 function normalizeItemModeRulesForManager(rawRules) {
   if (!(rawRules && typeof rawRules === "object" && !Array.isArray(rawRules))) return null;
   if (rawRules.enabled === false) return null;
-  var grantEveryMoves =
-    Number.isInteger(rawRules.grantEveryMoves) && Number(rawRules.grantEveryMoves) > 0
-      ? Number(rawRules.grantEveryMoves)
-      : (Number.isInteger(rawRules.grant_every_moves) && Number(rawRules.grant_every_moves) > 0
-        ? Number(rawRules.grant_every_moves)
-        : 6);
-  var maxPerItem =
-    Number.isInteger(rawRules.maxPerItem) && Number(rawRules.maxPerItem) > 0
-      ? Number(rawRules.maxPerItem)
-      : (Number.isInteger(rawRules.max_per_item) && Number(rawRules.max_per_item) > 0
-        ? Number(rawRules.max_per_item)
-        : 3);
+  var grantEveryMoves = resolvePositiveIntegerConfigValue(rawRules, "grantEveryMoves", "grant_every_moves", 6);
+  var maxPerItem = resolvePositiveIntegerConfigValue(rawRules, "maxPerItem", "max_per_item", 3);
   return {
     enabled: true,
     grantEveryMoves: grantEveryMoves,
