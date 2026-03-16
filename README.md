@@ -37,6 +37,16 @@
 npm install
 ```
 
+### 2.1 安装 Playwright 浏览器（运行 smoke 前必需）
+
+```bash
+npx playwright install chromium
+# Linux 依赖（容器/CI 推荐）
+npx playwright install-deps chromium
+```
+
+> 若未安装浏览器二进制，`npm run test:smoke` / `npm run verify:refactor` 可能出现 `Executable doesn't exist` 报错。
+
 ### 3. 本地开发
 
 ```bash
@@ -81,6 +91,9 @@ npm run verify:release
 
 # 重构进度报告
 npm run report:refactor-progress
+
+# 更新 baseline 指标文档
+npm run report:baseline
 ```
 
 ## 部署
@@ -113,4 +126,3 @@ npm run report:refactor-progress
 ## 许可证
 
 本项目采用 `MIT License`，详见根目录 [LICENSE](LICENSE)。
-
