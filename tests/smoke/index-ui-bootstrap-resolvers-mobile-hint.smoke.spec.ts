@@ -74,7 +74,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Play response should exist").not.toBeNull();
     expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(260);
+    await page.waitForFunction(() => {
+      const runtime = (window as any).CoreMobileHintPageHostRuntime;
+      return (
+        !!runtime &&
+        typeof runtime.createMobileHintPageResolvers === "function" &&
+        typeof (window as any).syncMobileHintUI === "function"
+      );
+    });
 
     await page.evaluate(() => {
       const syncMobileHintUI = (window as any).syncMobileHintUI;

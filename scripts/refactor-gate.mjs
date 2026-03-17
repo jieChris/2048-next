@@ -1,5 +1,6 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { performance } from "node:perf_hooks";
+import fs from "node:fs";
 
 function parseSmokeScriptArg(argv) {
   for (const arg of argv) {
@@ -16,10 +17,87 @@ const smokeScript = smokeScriptArg || "test:smoke";
 
 const STEPS = [
   { name: "game-manager-audit", cmd: "node", args: ["scripts/game-manager-audit.mjs"] },
+  { name: "entry-manifest-audit", cmd: "node", args: ["scripts/entry-manifest-audit.mjs"] },
+  { name: "engine-audit", cmd: "node", args: ["scripts/engine-audit.mjs"] },
   { name: "unit", cmd: "npm", args: ["run", "test:unit"] },
   { name: "smoke", cmd: "npm", args: ["run", smokeScript] },
   { name: "build", cmd: "npm", args: ["run", "build"] }
 ];
+
+function isSmokeScriptName(name) {
+  return typeof name === "string" && name.startsWith("test:smoke");
+}
+
+
+function resolveHeadlessShellPathFromChromiumPath(chromiumExecutable) {
+  if (typeof chromiumExecutable !== "string" || !chromiumExecutable) return null;
+  const match = chromiumExecutable.match(/(.*)\/chromium-(\d+)\/chrome-linux64\/chrome$/);
+  if (!match) return null;
+  const [, prefix, revision] = match;
+  return `${prefix}/chromium_headless_shell-${revision}/chrome-headless-shell-linux64/chrome-headless-shell`;
+}
+
+function validateChromiumExecutable(executable) {
+  const result = spawnSync(executable, ["--version"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  if (result.status === 0) return { ok: true };
+
+  const errorOutput = String(result.stderr || result.stdout || "").trim();
+  return {
+    ok: false,
+    reason: errorOutput || `chromium validation failed with status=${String(result.status)}`
+  };
+}
+
+async function checkSmokePrecondition() {
+  try {
+    const playwright = await import("@playwright/test");
+    const chromiumExecutable = playwright.chromium.executablePath();
+    if (!chromiumExecutable || !fs.existsSync(chromiumExecutable)) {
+      return {
+        ok: false,
+        executable: chromiumExecutable || null,
+        reason: "Playwright chromium executable is missing"
+      };
+    }
+
+    const validation = validateChromiumExecutable(chromiumExecutable);
+    if (!validation.ok) {
+      return {
+        ok: false,
+        executable: chromiumExecutable,
+        reason: validation.reason || "Playwright chromium executable is not runnable"
+      };
+    }
+
+    const headlessShellPath = resolveHeadlessShellPathFromChromiumPath(chromiumExecutable);
+    if (headlessShellPath) {
+      if (!fs.existsSync(headlessShellPath)) {
+        return {
+          ok: false,
+          executable: headlessShellPath,
+          reason: "Playwright chromium headless shell executable is missing"
+        };
+      }
+      const headlessValidation = validateChromiumExecutable(headlessShellPath);
+      if (!headlessValidation.ok) {
+        return {
+          ok: false,
+          executable: headlessShellPath,
+          reason:
+            headlessValidation.reason ||
+            "Playwright chromium headless shell executable is not runnable"
+        };
+      }
+    }
+
+    return { ok: true, executable: chromiumExecutable };
+  } catch (err) {
+    return { ok: false, executable: null, reason: err instanceof Error ? err.message : String(err) };
+  }
+}
 
 function runStep(step) {
   return new Promise((resolve) => {
@@ -53,7 +131,26 @@ async function main() {
 
   console.log("[verify:refactor] start");
   console.log(`[verify:refactor] smoke script: ${smokeScript}`);
+
   for (const step of STEPS) {
+    if (step.name === "smoke" && isSmokeScriptName(smokeScript)) {
+      const precondition = await checkSmokePrecondition();
+      if (!precondition.ok) {
+        console.error("[verify:refactor] smoke precondition check failed");
+        if (precondition.executable) {
+          console.error(`[verify:refactor] chromium path: ${precondition.executable}`);
+        }
+        if (precondition.reason) {
+          console.error(`[verify:refactor] reason: ${precondition.reason}`);
+        }
+        console.error("[verify:refactor] fix:");
+        console.error("[verify:refactor]   npx playwright install chromium chromium-headless-shell");
+        console.error("[verify:refactor]   npx playwright install-deps chromium");
+        results.push({ name: "smoke", ok: false, code: 1, signal: null, durationMs: 0 });
+        break;
+      }
+    }
+
     console.log(`[verify:refactor] running ${step.name}...`);
     const result = await runStep(step);
     results.push(result);
@@ -63,6 +160,11 @@ async function main() {
           `(code=${String(result.code)}, signal=${String(result.signal)}) ` +
           `after ${formatDuration(result.durationMs)}`
       );
+      if (result.name === "smoke") {
+        console.error("[verify:refactor] smoke hint: ensure browser binary and Linux deps are installed:");
+        console.error("[verify:refactor]   npx playwright install chromium chromium-headless-shell");
+        console.error("[verify:refactor]   npx playwright install-deps chromium");
+      }
       break;
     }
     console.log(
@@ -76,9 +178,7 @@ async function main() {
   console.log("[verify:refactor] summary");
   for (const result of results) {
     const status = result.ok ? "PASS" : "FAIL";
-    console.log(
-      `  - ${status} ${result.name} (${formatDuration(result.durationMs)})`
-    );
+    console.log(`  - ${status} ${result.name} (${formatDuration(result.durationMs)})`);
   }
   console.log(`  - TOTAL ${formatDuration(totalMs)}`);
 

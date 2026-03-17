@@ -12,7 +12,7 @@
     "test:unit": "vitest run tests/unit",
     "test:unit:core": "vitest run tests/unit/core-",
     "test:unit:watch": "vitest tests/unit",
-    "test:smoke": "playwright test --config=playwright.config.ts",
+    "test:smoke": "playwright test --config=playwright.config.ts --workers=1",
     "test:smoke:history": "playwright test --config=playwright.config.ts \"tests/smoke/history-.*\\.smoke\\.spec\\.ts\"",
     "test:smoke:index-ui": "playwright test --config=playwright.config.ts --workers=1 \"tests/smoke/index-ui-.*\\.smoke\\.spec\\.ts\"",
     "test:smoke:pages": "playwright test --config=playwright.config.ts --workers=1 \"tests/smoke/pages-.*\\.smoke\\.spec\\.ts\"",
@@ -35,7 +35,10 @@
     "report:commit-batch": "node scripts/stage-commit-batch.mjs",
     "audit:quality": "node scripts/quality-audit.mjs",
     "audit:resource-budget": "node scripts/resource-budget-check.mjs",
-    "test:unit:tier1": "node scripts/run-tier1.mjs"
+    "test:unit:tier1": "node scripts/run-tier1.mjs",
+    "report:baseline": "node scripts/update-baseline-report.mjs",
+    "audit:entry-manifest": "node scripts/entry-manifest-audit.mjs",
+    "audit:engine": "node scripts/engine-audit.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
