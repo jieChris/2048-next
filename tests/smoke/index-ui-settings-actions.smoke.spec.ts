@@ -3,7 +3,7 @@ import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates settings modal orchestration to host runtime helper", async ({ page }) => {
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();
@@ -120,7 +120,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates replay modal and export page actions to host runtime helper", async ({
     page
   }) => {
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();

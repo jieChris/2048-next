@@ -45,7 +45,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.removeItem("home_guide_seen_v1");
     });
 
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();
@@ -365,7 +365,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("2048_auth_nickname_v1", "Bob");
     });
 
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();
@@ -463,7 +463,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("timer legend tiles reuse board tile foreground and background colors", async ({ page }) => {
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();

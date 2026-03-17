@@ -9,7 +9,7 @@ interface HtmlEntryExpectation {
 }
 
 const ENTRY_PAGES: HtmlEntryExpectation[] = [
-  { htmlPath: "index.html", entryPath: "./src/entries/index.ts" },
+  { htmlPath: "2048.html", entryPath: "./src/entries/index.ts" },
   { htmlPath: "history.html", entryPath: "./src/entries/history.ts" },
   { htmlPath: "modes.html", entryPath: "./src/entries/modes.ts" },
   { htmlPath: "account.html", entryPath: "./src/entries/account.ts" },
@@ -29,6 +29,15 @@ function readHtml(relativePath: string): string {
 }
 
 describe("module entry html pages", () => {
+  it("index.html (blog homepage) does not include runtime module entry", () => {
+    const html = readHtml("index.html");
+    const moduleScripts = html.match(/<script\b[^>]*type="module"[^>]*src="([^"]+)"[^>]*><\/script>/g) || [];
+    const legacyJsScripts = html.match(/<script\b[^>]*src="js\/[^"]+"[^>]*><\/script>/g) || [];
+
+    expect(moduleScripts).toEqual([]);
+    expect(legacyJsScripts).toEqual([]);
+  });
+
   for (const entry of ENTRY_PAGES) {
     it(`${entry.htmlPath} uses a single module entry`, () => {
       const html = readHtml(entry.htmlPath);

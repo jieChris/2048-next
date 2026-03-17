@@ -53,10 +53,12 @@ describe("bootstrap home guide", () => {
     ).toBe("");
   });
 
-  it("identifies index homepage paths", () => {
+  it("identifies homepage paths", () => {
     expect(isHomePagePath("/")).toBe(true);
     expect(isHomePagePath("/index.html")).toBe(true);
+    expect(isHomePagePath("/2048.html")).toBe(true);
     expect(isHomePagePath("/foo/index.htm")).toBe(true);
+    expect(isHomePagePath("/foo/2048.htm")).toBe(true);
     expect(isHomePagePath("")).toBe(true);
   });
 
@@ -69,6 +71,12 @@ describe("bootstrap home guide", () => {
     expect(
       shouldAutoStartHomeGuide({
         pathname: "/index.html",
+        seenValue: "0"
+      })
+    ).toBe(true);
+    expect(
+      shouldAutoStartHomeGuide({
+        pathname: "/2048.html",
         seenValue: "0"
       })
     ).toBe(true);

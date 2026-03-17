@@ -3,7 +3,7 @@ import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates timer module settings model to runtime helper", async ({ page }) => {
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();
@@ -490,7 +490,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("settings_win_prompt_enabled_v1", "1");
     });
 
-    const response = await page.goto("/index.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
@@ -517,7 +517,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("ui_language_v1", "zh");
     });
 
-    const response = await page.goto("/index.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();

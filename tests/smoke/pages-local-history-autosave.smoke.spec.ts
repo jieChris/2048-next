@@ -9,11 +9,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       } catch (_err) {}
     });
 
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
-    expect(response, "Index response should exist").not.toBeNull();
-    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
 
     await page.waitForFunction(() => {

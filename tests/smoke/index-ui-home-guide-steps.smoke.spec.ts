@@ -8,7 +8,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         window.localStorage.setItem("home_guide_seen_v1", "1");
       } catch (_err) {}
     });
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();
@@ -360,7 +360,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         window.localStorage.setItem("home_guide_seen_v1", "1");
       } catch (_err) {}
     });
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response).not.toBeNull();
@@ -411,7 +411,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         window.localStorage.setItem("home_guide_seen_v1", "1");
       } catch (_err) {}
     });
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response).not.toBeNull();

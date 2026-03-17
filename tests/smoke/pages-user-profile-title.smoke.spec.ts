@@ -1,11 +1,11 @@
 ﻿import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
-  test("home page title stays 2048", async ({ page }) => {
+  test("home page title stays 余晖笔记", async ({ page }) => {
     const response = await page.goto("/index.html", { waitUntil: "domcontentloaded" });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
-    await expect(page).toHaveTitle("2048");
+    await expect(page).toHaveTitle("余晖笔记");
   });
 
   test("own user profile title is 用户主页", async ({ page }) => {

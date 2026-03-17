@@ -9,7 +9,7 @@ interface SmokePage {
 }
 
 const PAGES: SmokePage[] = [
-  { name: "index", path: "/index.html", expectGameManager: true, expectBootstrapRuntime: true, expectReplayImportRuntime: true },
+  { name: "index", path: "/2048.html", expectGameManager: true, expectBootstrapRuntime: true, expectReplayImportRuntime: true },
   { name: "undo", path: "/undo_2048.html", expectGameManager: true, expectBootstrapRuntime: true, expectReplayImportRuntime: true },
   { name: "capped", path: "/capped_2048.html", expectGameManager: true, expectBootstrapRuntime: true, expectReplayImportRuntime: true },
   { name: "practice", path: "/Practice_board.html", expectGameManager: true, expectBootstrapRuntime: true, expectReplayImportRuntime: true },

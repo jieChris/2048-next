@@ -486,7 +486,7 @@ export function resolveHomeGuidePathname(options: ResolveHomeGuidePathnameOption
 
 export function isHomePagePath(pathname: string | null | undefined): boolean {
   const path = typeof pathname === "string" ? pathname : "";
-  return path === "/" || /\/index\.html?$/.test(path) || path === "";
+  return path === "/" || /\/(?:index|2048)\.html?$/.test(path) || path === "";
 }
 
 export function buildHomeGuideSteps(options: BuildHomeGuideStepsOptions): HomeGuideStep[] {

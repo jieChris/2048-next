@@ -3,7 +3,7 @@ import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("home guide runtime provides homepage auto-start gating", async ({ page }) => {
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();
@@ -57,7 +57,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const compactSteps = runtime.buildHomeGuideSteps({ isCompactViewport: true });
       const desktopSteps = runtime.buildHomeGuideSteps({ isCompactViewport: false });
       const resolvedPath = runtime.resolveHomeGuidePathname({
-        locationLike: { pathname: "/index.html" }
+        locationLike: { pathname: "/2048.html" }
       });
       const resolvedPathFallback = runtime.resolveHomeGuidePathname({
         locationLike: {
@@ -95,7 +95,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         }
       });
       const resolvedAutoStart = runtime.resolveHomeGuideAutoStart({
-        pathname: "/index.html",
+      pathname: "/2048.html",
         seenKey: "home_guide_seen_v1",
         storageLike: {
           getItem() {
@@ -293,7 +293,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         settingsHasTrigger:
           typeof settingsRowHtml === "string" &&
           settingsRowHtml.indexOf("home-guide-trigger-btn") !== -1,
-        homePath: runtime.isHomePagePath("/index.html"),
+      homePath: runtime.isHomePagePath("/2048.html"),
         playPath: runtime.isHomePagePath("/play.html"),
         hasCompactHint: compactSelectors.includes("#top-mobile-hint-btn"),
         hasCompactTimerToggle: compactSelectors.includes("#timerbox-toggle-btn"),
@@ -305,11 +305,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
         markResult,
         writes,
         autoStart: runtime.shouldAutoStartHomeGuide({
-          pathname: "/index.html",
+      pathname: "/2048.html",
           seenValue: "0"
         }),
         blockedSeen: runtime.shouldAutoStartHomeGuide({
-          pathname: "/index.html",
+      pathname: "/2048.html",
           seenValue: "1"
         }),
         blockedPath: runtime.shouldAutoStartHomeGuide({
@@ -365,7 +365,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasCompactTimerToggle).toBe(true);
     expect(snapshot.hasDesktopHint).toBe(false);
     expect(snapshot.hasDesktopTimerToggle).toBe(false);
-    expect(snapshot.resolvedPath).toBe("/index.html");
+    expect(snapshot.resolvedPath).toBe("/2048.html");
     expect(snapshot.resolvedPathFallback).toBe("");
     expect(snapshot.seenValue).toBe("1");
     expect(snapshot.markResult).toBe(true);

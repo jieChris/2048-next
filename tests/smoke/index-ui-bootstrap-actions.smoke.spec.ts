@@ -3,7 +3,7 @@ import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("application handle_undo delegates to undo-action runtime", async ({ page }) => {
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();
@@ -140,7 +140,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       });
     });
 
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();
@@ -192,7 +192,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("practice transfer flow delegates transfer navigation plan to runtime helper", async ({ page }) => {
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();

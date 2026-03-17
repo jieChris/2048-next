@@ -31,7 +31,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       });
     });
 
-    const response = await page.goto("/index.html", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();

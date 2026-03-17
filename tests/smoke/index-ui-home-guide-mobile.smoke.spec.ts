@@ -95,6 +95,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
         typeof topActionsRuntime.createTopActionsPageResolvers === "function"
       );
     });
+    await page.waitForFunction(
+      () =>
+        Boolean(document.getElementById("top-mobile-hint-btn")) &&
+        Boolean(document.getElementById("top-mobile-undo-btn")),
+      null,
+      { timeout: 12_000 }
+    );
 
     const snapshot = await page.evaluate(async () => {
       const runtime = (window as any).CoreMobileHintRuntime;

@@ -35,7 +35,7 @@ describe("runtime-manifest: getPageManifest", () => {
   it("returns manifest for known page", () => {
     const manifest = getPageManifest("index");
     expect(manifest).toBeDefined();
-    expect(manifest!.htmlFile).toBe("index.html");
+    expect(manifest!.htmlFile).toBe("2048.html");
   });
 
   it("returns undefined for unknown page", () => {

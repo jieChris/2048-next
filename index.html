@@ -2,58 +2,89 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>Taihe 个人主页</title>
+  <title>余晖笔记</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Taihe 的个人站点主页，包含 2048 游戏入口与常用导航。">
+  <meta name="description" content="余晖笔记：记录技术、写作与生活观察。">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-2">
   <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-2">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=42">
-  <link rel="stylesheet" href="style/homepage.css?v=20260317-01">
+  <link rel="stylesheet" href="style/homepage.css?v=20260317-03">
 </head>
 <body>
   <header class="site-header">
     <div class="site-brand">
-      <img src="meta/logo.svg?v=20260305" alt="2048 logo" class="site-logo">
+      <div class="site-avatar" aria-hidden="true">余</div>
       <div>
-        <h1>Taihe 个人站点</h1>
-        <p>记录、工具与 2048 游戏入口</p>
+        <h1>余晖笔记</h1>
+        <p>技术笔记 · 产品观察 · 生活随写</p>
       </div>
     </div>
     <nav class="site-nav" aria-label="站点导航">
-      <a href="2048.html" class="btn btn-primary">开始 2048</a>
-      <a href="modes.html" class="btn">模式</a>
-      <a href="account.html" class="btn">账号中心</a>
-      <a href="history.html" class="btn">本地历史</a>
+      <a href="#latest" class="nav-link is-active">最新</a>
+      <a href="#topics" class="nav-link">专题</a>
+      <a href="#archive" class="nav-link">归档</a>
+      <a href="#about" class="nav-link">关于</a>
     </nav>
   </header>
 
   <main>
-    <section class="hero">
-      <h2>欢迎来到我的主页</h2>
-      <p>这是一个个人学习与娱乐站点。你可以从这里进入 2048 游戏、查看历史记录、管理账号与回放功能。</p>
-      <div class="hero-actions">
-        <a href="2048.html" class="btn btn-primary">进入游戏主页</a>
-        <a href="replay.html" class="btn">高级回放</a>
+    <section class="hero" id="latest">
+      <h2>把复杂问题讲明白，是一种长期能力</h2>
+      <p>这里主要记录工程实践中的设计取舍、问题复盘与执行方法，强调可验证、可复用、可落地。</p>
+      <div class="hero-meta">
+        <span>更新频率：每周</span>
+        <span>栏目：工程 / 架构 / 复盘</span>
       </div>
     </section>
 
-    <section class="grid">
-      <article class="card">
-        <h3>站点说明</h3>
-        <p>本网站用于个人技术实践与游戏体验展示，页面内容持续迭代更新。</p>
+    <section class="posts-grid" id="posts">
+      <article class="post-card">
+        <p class="post-meta">2026-03-17 · 架构</p>
+        <h3>如何为长期项目建立“稳定核心 + 快速迭代”边界</h3>
+        <p>从模块职责划分、接口约束和变更路径三个维度，降低后续改造的耦合成本。</p>
       </article>
-      <article class="card">
-        <h3>常用入口</h3>
+      <article class="post-card">
+        <p class="post-meta">2026-03-10 · 工程效率</p>
+        <h3>把一次线上故障写成团队资产：复盘模板实战</h3>
+        <p>用统一结构记录“现象-定位-根因-修复-预防”，让经验可检索、可迁移。</p>
+      </article>
+      <article class="post-card">
+        <p class="post-meta">2026-03-02 · 前端</p>
+        <h3>多入口页面如何避免启动逻辑失控</h3>
+        <p>通过入口清单、启动约束与自动化校验，控制维护成本和回归风险。</p>
+      </article>
+    </section>
+
+    <section class="info-grid">
+      <article class="card" id="topics">
+        <h3>专题方向</h3>
         <ul>
-          <li><a href="2048.html">2048 标准模式主页</a></li>
-          <li><a href="play.html?mode_key=standard_4x4_pow2_no_undo">多玩法入口</a></li>
-          <li><a href="palette.html">主题设置</a></li>
+          <li>系统重构与演进路线</li>
+          <li>测试策略与质量门禁</li>
+          <li>自动化部署与运维治理</li>
         </ul>
       </article>
-      <article class="card">
-        <h3>联系与反馈</h3>
-        <p>如需反馈问题或建议，可通过账号中心与历史回放信息进行复现说明。</p>
+      <article class="card" id="archive">
+        <h3>归档索引</h3>
+        <ul>
+          <li>2026 年（12）</li>
+          <li>2025 年（27）</li>
+          <li>2024 年（34）</li>
+        </ul>
       </article>
+      <article class="card" id="about">
+        <h3>关于本站</h3>
+        <p>聚焦真实项目中的决策与实践细节，尽量避免空泛结论，优先给出可操作方法。</p>
+      </article>
+    </section>
+
+    <section class="newsletter" aria-label="订阅更新">
+      <h3>邮件订阅</h3>
+      <p>每月一封精选内容摘要，包含最新文章和主题合集。</p>
+      <form class="newsletter-form" action="#" method="post">
+        <input type="email" placeholder="your@email.com" aria-label="邮箱地址">
+        <button type="submit">订阅</button>
+      </form>
     </section>
   </main>
 
