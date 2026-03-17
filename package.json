@@ -37,7 +37,8 @@
     "audit:resource-budget": "node scripts/resource-budget-check.mjs",
     "test:unit:tier1": "node scripts/run-tier1.mjs",
     "report:baseline": "node scripts/update-baseline-report.mjs",
-    "audit:entry-manifest": "node scripts/entry-manifest-audit.mjs"
+    "audit:entry-manifest": "node scripts/entry-manifest-audit.mjs",
+    "audit:engine": "node scripts/engine-audit.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

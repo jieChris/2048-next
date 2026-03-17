@@ -18,6 +18,7 @@ const smokeScript = smokeScriptArg || "test:smoke";
 const STEPS = [
   { name: "game-manager-audit", cmd: "node", args: ["scripts/game-manager-audit.mjs"] },
   { name: "entry-manifest-audit", cmd: "node", args: ["scripts/entry-manifest-audit.mjs"] },
+  { name: "engine-audit", cmd: "node", args: ["scripts/engine-audit.mjs"] },
   { name: "unit", cmd: "npm", args: ["run", "test:unit"] },
   { name: "smoke", cmd: "npm", args: ["run", smokeScript] },
   { name: "build", cmd: "npm", args: ["run", "build"] }
