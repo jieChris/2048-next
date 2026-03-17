@@ -48,7 +48,7 @@ export interface PageManifestEntry {
 export const PAGE_MANIFESTS: readonly PageManifestEntry[] = [
   {
     pageId: "index",
-    htmlFile: "index.html",
+    htmlFile: "2048.html",
     capabilities: ["announcement", "core", "standard-startup", "settings-and-panel", "top-button-style", "index-tail", "leaderboard", "i18n"]
   },
   {

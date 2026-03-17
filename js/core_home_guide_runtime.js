@@ -16,7 +16,7 @@
 
   function isHomePagePath(pathname) {
     var path = typeof pathname === "string" ? pathname : "";
-    return path === "/" || /\/index\.html?$/.test(path) || path === "";
+    return path === "/" || /\/index\.html?$/.test(path) || /\/2048\.html?$/.test(path) || path === "";
   }
 
   var UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";

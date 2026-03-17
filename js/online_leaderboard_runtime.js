@@ -207,7 +207,7 @@
     var path = toText(global.location && global.location.pathname).toLowerCase();
     if (path.indexOf("undo_2048") >= 0) return "classic_4x4_pow2_undo";
     if (path.indexOf("capped_2048") >= 0) return "capped_4x4_pow2_no_undo";
-    if (path.indexOf("index") >= 0 || path === "/" || path === "/index.html") return "standard_4x4_pow2_no_undo";
+    if (path.indexOf("2048.html") >= 0 || path.indexOf("index") >= 0 || path === "/" || path === "/index.html") return "standard_4x4_pow2_no_undo";
     return "";
   }
 

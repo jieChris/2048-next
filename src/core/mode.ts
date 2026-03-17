@@ -558,6 +558,8 @@ export function resolveDetectedMode(input: DetectModeInput): string {
   if (
     pathname === "/" ||
     /\/$/.test(pathname) ||
+    pathname.indexOf("/2048.html") !== -1 ||
+    pathname.indexOf("2048.html") !== -1 ||
     pathname.indexOf("/index.html") !== -1 ||
     pathname.indexOf("index.html") !== -1
   ) {

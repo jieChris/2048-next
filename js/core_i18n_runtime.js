@@ -32,6 +32,7 @@
   }
 
   var PAGE_TITLE_MAP = {
+    "2048.html": { zh: "2048", en: "2048" },
     "index.html": { zh: "2048", en: "2048" },
     "undo_2048.html": { zh: "2048（可撤回）", en: "2048 (Undo)" },
     "capped_2048.html": { zh: "2048（封顶）", en: "2048 (Capped)" },
@@ -554,7 +555,7 @@
     for (var n = 0; n < nav.length; n += 1) {
       var link = nav[n];
       var href = String(link.getAttribute("href") || "").toLowerCase();
-      if (href.indexOf("index.html") >= 0) {
+      if (href.indexOf("index.html") >= 0 || href.indexOf("2048.html") >= 0) {
         link.textContent = copy.navHome;
       } else if (href.indexOf("account.html") >= 0) {
         link.textContent = copy.navAccount;
@@ -584,7 +585,7 @@
   function applyPageSpecificText(lang) {
     var page = String((global.location && global.location.pathname) || "").split("/").pop() || "index.html";
     page = page.toLowerCase();
-    if (page === "index.html") {
+    if (page === "index.html" || page === "2048.html") {
       var indexCopyZh = "项目由Gemini和Codex基于几个项目整合改版，开源在<a href=\"https://github.com/jieChris/2048-next\" target=\"_blank\">GitHub</a>。原作者 <a href=\"http://gabrielecirulli.com\" target=\"_blank\">Gabriele Cirulli.</a> 基于 <a href=\"https://itunes.apple.com/us/app/1024!/id823499224\" target=\"_blank\">Veewo Studio 的 1024</a> 且概念受 <a href=\"http://asherv.com/threes/\" target=\"_blank\">Asher Vollmer 的 Threes</a> 启发。撤销 Mod 由 <a href=\"http://quaxio.com/\">Alok Menghrajani</a> 制作，<a href=\"https://github.com/gabrielecirulli/2048\">源代码</a>。项目改自<a href=\"https://github.com/gabrielecirulli/2048\">2048</a>。计时器参考<a href=\"https://github.com/neiunderscore/2048-timer?tab=readme-ov-file\">2048-timer</a>。";
       var indexCopyEn = "Project fork adapted with Gemini and Codex, open sourced on <a href=\"https://github.com/jieChris/2048-next\" target=\"_blank\">GitHub</a>. Original game by <a href=\"http://gabrielecirulli.com\" target=\"_blank\">Gabriele Cirulli</a>, based on <a href=\"https://itunes.apple.com/us/app/1024!/id823499224\" target=\"_blank\">1024 by Veewo Studio</a> and inspired by <a href=\"http://asherv.com/threes/\" target=\"_blank\">Threes by Asher Vollmer</a>. Undo mod by <a href=\"http://quaxio.com/\">Alok Menghrajani</a>, source at <a href=\"https://github.com/gabrielecirulli/2048\">GitHub</a>. Timer reference: <a href=\"https://github.com/neiunderscore/2048-timer?tab=readme-ov-file\">2048-timer</a>.";
       var leaderboardZh = "推荐具有排行榜功能的<a href=\"https://www.2048verse.com\" target=\"_blank\" rel=\"noopener noreferrer\">2048verse</a>";

@@ -364,7 +364,7 @@ async function loadReplayFromSessionId() {
             window.game_manager.import(replayPayload);
             var titleCloud = document.querySelector(".heading .title");
             if (titleCloud) {
-                titleCloud.innerHTML = "<a href='index.html' style='text-decoration: none; color: inherit; cursor: pointer;'>2048</a> 回放 - 云端记录";
+      titleCloud.innerHTML = "<a href='2048.html' style='text-decoration: none; color: inherit; cursor: pointer;'>2048</a> 回放 - 云端记录";
             }
             if (window.sessionStorage && typeof window.sessionStorage.removeItem === "function") {
                 window.sessionStorage.removeItem(CLOUD_REPLAY_STORAGE_KEY);
@@ -392,7 +392,7 @@ async function loadReplayFromSessionId() {
             window.game_manager.import(replayPayload);
             var titleLocal = document.querySelector(".heading .title");
             if (titleLocal) {
-                titleLocal.innerHTML = "<a href='index.html' style='text-decoration: none; color: inherit; cursor: pointer;'>2048</a> 回放 - 本地记录";
+      titleLocal.innerHTML = "<a href='2048.html' style='text-decoration: none; color: inherit; cursor: pointer;'>2048</a> 回放 - 本地记录";
             }
             updateReplayUI();
         } catch (errorLocal) {

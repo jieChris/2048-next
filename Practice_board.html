@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048练习板</title>
+  <title>2048缁冧範鏉?/title>
 
 <link href="style/main.css?v=20260316-04" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-2">
@@ -179,8 +179,8 @@
 <body data-mode-id="practice" data-page="practice">
   <div id="guide-overlay">
       <div id="guide-message">
-          <span id="guide-arrow">↓</span>
-          点击下方数字后点击棋盘，可自定义当前盘面。
+          <span id="guide-arrow">鈫?/span>
+          鐐瑰嚮涓嬫柟鏁板瓧鍚庣偣鍑绘鐩橈紝鍙嚜瀹氫箟褰撳墠鐩橀潰銆?
       </div>
   </div>
   <div class="container">
@@ -230,13 +230,13 @@
         </div>
     </div>
     <div class="heading">
-      <h1 class="title" style="float: left;"><a href="index.html" style="text-decoration: none; color: inherit; cursor: pointer;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a></h1>
+      <h1 class="title" style="float: left;"><a href="2048.html" style="text-decoration: none; color: inherit; cursor: pointer;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a></h1>
       <div class="scores-container" style="float: right;">
         <div class="score-container">0</div>
         <div class="best-container">0</div>
       </div>
       <div class="above-game" style="clear: both; padding-top: 15px;">
-      <p class="game-intro">点击下方数字后点击棋盘，可自定义当前盘面。</p>
+      <p class="game-intro">鐐瑰嚮涓嬫柟鏁板瓧鍚庣偣鍑绘鐩橈紝鍙嚜瀹氫箟褰撳墠鐩橀潰銆?/p>
       <a class="restart-button" title="&#26032;&#28216;&#25103;" aria-label="&#26032;&#28216;&#25103;">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
       </a>
@@ -307,8 +307,8 @@
             <br><br>
         </div>
 <div id="timer-scroll-controls">
-            <a class="timer-scroll-btn" data-scroll-dir="-1" aria-label="上移" title="上移"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 15L12 9L18 15"></path></svg></a>
-            <a class="timer-scroll-btn" data-scroll-dir="1" aria-label="下移" title="下移"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 9L12 15L18 9"></path></svg></a>
+            <a class="timer-scroll-btn" data-scroll-dir="-1" aria-label="涓婄Щ" title="涓婄Щ"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 15L12 9L18 15"></path></svg></a>
+            <a class="timer-scroll-btn" data-scroll-dir="1" aria-label="涓嬬Щ" title="涓嬬Щ"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 9L12 15L18 9"></path></svg></a>
         </div>
     </div>
 
@@ -318,9 +318,9 @@
       <div class="game-message">
         <p></p>
         <div class="lower">
-          <a class="keep-playing-button">继续游戏</a>
-          <a class="undo-button" id="undo-btn-gameover">撤回</a>
-          <a class="retry-button">新游戏</a>
+          <a class="keep-playing-button">缁х画娓告垙</a>
+          <a class="undo-button" id="undo-btn-gameover">鎾ゅ洖</a>
+          <a class="retry-button">鏂版父鎴?/a>
         </div>
       </div>
 
@@ -357,7 +357,7 @@
     </div>
     <hr>
     <p class="game-explanation">
-      <strong class="important">练习板支持直通局面与基线重试。</strong>
+      <strong class="important">缁冧範鏉挎敮鎸佺洿閫氬眬闈笌鍩虹嚎閲嶈瘯銆?/strong>
     </p>
     
     </div>
@@ -368,14 +368,14 @@
 
   <div id="settings-modal" class="replay-modal-overlay" style="display: none;">
     <div class="replay-modal-content settings-modal-content">
-      <h3>设置</h3>
+      <h3>璁剧疆</h3>
       <div class="settings-row settings-toggle-row">
         <div class="settings-toggle-main">
           <div class="settings-toggle-copy">
-            <label for="win-prompt-toggle" class="settings-toggle-title">胜利提示</label>
-            <div class="settings-toggle-desc">合成 2048 后弹出胜利提示</div>
+            <label for="win-prompt-toggle" class="settings-toggle-title">鑳滃埄鎻愮ず</label>
+            <div class="settings-toggle-desc">鍚堟垚 2048 鍚庡脊鍑鸿儨鍒╂彁绀?/div>
           </div>
-          <label class="settings-switch" for="win-prompt-toggle" aria-label="胜利提示">
+          <label class="settings-switch" for="win-prompt-toggle" aria-label="鑳滃埄鎻愮ず">
             <input id="win-prompt-toggle" type="checkbox">
             <span class="settings-switch-slider"></span>
           </label>
@@ -384,7 +384,7 @@
       </div>
       <div id="toolkit-entry-row" class="settings-row toolkit-entry-row">
         <div class="toolkit-entry-actions">
-          <a id="toolkit-palette-link" class="replay-button" href="palette.html">主题设置</a>
+          <a id="toolkit-palette-link" class="replay-button" href="palette.html">涓婚璁剧疆</a>
         </div>
       </div>
       
@@ -394,6 +394,7 @@
   <script type="module" src="./src/entries/practice-board.ts"></script>
 </body>
 </html>
+
 
 
 

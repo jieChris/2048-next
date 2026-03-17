@@ -9,6 +9,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: resolve(__dirname, "index.html"),
+        game2048: resolve(__dirname, "2048.html"),
         index_test: resolve(__dirname, "index_test.html"),
         play: resolve(__dirname, "play.html"),
         undo: resolve(__dirname, "undo_2048.html"),

@@ -64,7 +64,6 @@ jobs:
 
   deploy:
     name: Deploy To Server
-    if: ${{ vars.DEPLOY_PRIMARY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: build
