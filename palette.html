@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048 涓婚璁剧疆</title>
+  <title>2048 主题设置</title>
 <link href="style/main.css?v=20260316-04" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-2">
@@ -14,28 +14,28 @@
   <main class="palette-page-shell">
     <header class="palette-page-header">
       <div class="palette-title-wrap">
-        <p class="palette-kicker">2048 涓婚璁剧疆</p>
-        <h1 class="palette-title">涓婚璁剧疆</h1>
-        <p class="palette-subtitle">缁熶竴绠＄悊妫嬪瓙涓婚涓庤壊鏉块厤鑹诧紝鏀寔瀵煎叆銆佸鍑轰笌瀹炴椂棰勮銆?/p>
+        <p class="palette-kicker">2048 主题设置</p>
+        <h1 class="palette-title">主题设置</h1>
+        <p class="palette-subtitle">统一管理棋子主题与色板配色，支持导入、导出与实时预览。</p>
       </div>
       <nav class="palette-nav">
-        <a class="replay-button palette-nav-btn" href="2048.html">鍥為椤?/a>
-        <a class="replay-button palette-nav-btn" href="Practice_board.html">缁冧範鏉?/a>
+        <a class="replay-button palette-nav-btn" href="2048.html">返回首页</a>
+        <a class="replay-button palette-nav-btn" href="Practice_board.html">练习板</a>
       </nav>
     </header>
 
     <section class="card-surface palette-theme-card">
       <div class="panel-head">
-        <h2>涓婚璁剧疆</h2>
-        <span class="panel-pill">涓婚</span>
+        <h2>主题设置</h2>
+        <span class="panel-pill">主题</span>
       </div>
       <div class="theme-settings-row palette-theme-settings-row">
         <div class="theme-selection-col">
-          <label>閫夋嫨涓婚</label>
+          <label>选择主题</label>
           <div class="custom-select-wrapper">
             <div class="custom-select">
               <div class="custom-select-trigger" id="theme-select-trigger">
-                <span>閫夋嫨涓婚</span>
+                <span>选择主题</span>
                 <div class="custom-arrow"></div>
               </div>
               <div class="custom-select-options" id="theme-select-options"></div>
@@ -45,7 +45,7 @@
         </div>
 
         <div class="theme-preview-col">
-          <label>閰嶈壊棰勮</label>
+          <label>配色预览</label>
           <div id="theme-preview-grid" class="theme-preview-grid"></div>
         </div>
       </div>
@@ -54,51 +54,51 @@
     <section class="palette-grid">
       <aside class="palette-sidebar card-surface">
         <div class="panel-head">
-          <h2>鑹叉澘鍒楄〃</h2>
+          <h2>色板列表</h2>
           <span id="palette-count" class="panel-pill">0</span>
         </div>
-        <div id="palette-list" class="palette-list" aria-label="鑹叉澘鍒楄〃"></div>
+        <div id="palette-list" class="palette-list" aria-label="色板列表"></div>
       </aside>
 
       <section class="palette-editor card-surface">
         <div class="panel-head">
-          <h2 id="palette-current-name">褰撳墠鑹叉澘</h2>
+          <h2 id="palette-current-name">当前色板</h2>
           <span id="palette-current-tag" class="panel-pill">--</span>
         </div>
 
         <div class="palette-toolbar">
-          <input id="palette-name-input" class="palette-name-input" type="text" maxlength="40" placeholder="杈撳叆鑹叉澘鍚嶇О">
-          <button id="palette-create-btn" class="replay-button" type="button">鏂板缓鍓湰</button>
-          <button id="palette-rename-btn" class="replay-button" type="button">閲嶅懡鍚?/button>
-          <button id="palette-delete-btn" class="replay-button" type="button">鍒犻櫎</button>
-          <button id="palette-export-btn" class="replay-button" type="button">瀵煎嚭</button>
-          <button id="palette-import-btn" class="replay-button" type="button">瀵煎叆</button>
+          <input id="palette-name-input" class="palette-name-input" type="text" maxlength="40" placeholder="输入色板名称">
+          <button id="palette-create-btn" class="replay-button" type="button">新建副本</button>
+          <button id="palette-rename-btn" class="replay-button" type="button">重命名</button>
+          <button id="palette-delete-btn" class="replay-button" type="button">删除</button>
+          <button id="palette-export-btn" class="replay-button" type="button">导出</button>
+          <button id="palette-import-btn" class="replay-button" type="button">导入</button>
           <input id="palette-import-input" type="file" accept="application/json" hidden>
         </div>
 
         <div class="palette-editor-panels">
           <section class="color-panel">
-            <div class="color-panel-head">鏍囧噯 16 鑹?/div>
+            <div class="color-panel-head">标准 16 色</div>
             <div id="palette-editor-pow2" class="color-grid"></div>
           </section>
           <section class="color-panel">
-            <div class="color-panel-head">鏂愭尝閭ｅ 16 鑹?/div>
+            <div class="color-panel-head">斐波那契 16 色</div>
             <div id="palette-editor-fib" class="color-grid"></div>
           </section>
         </div>
 
         <section class="preview-panel">
-          <div class="color-panel-head">瀹炴椂棰勮</div>
+          <div class="color-panel-head">实时预览</div>
           <div class="preview-group">
-            <h3>鏍囧噯</h3>
+            <h3>标准</h3>
             <div id="palette-preview-pow2" class="preview-row"></div>
           </div>
           <div class="preview-group">
-            <h3>鏂愭尝閭ｅ</h3>
+            <h3>斐波那契</h3>
             <div id="palette-preview-fib" class="preview-row"></div>
           </div>
           <div class="preview-group">
-            <h3>璁℃椂鍥句緥</h3>
+            <h3>计时图例</h3>
             <div id="palette-preview-legend" class="legend-row"></div>
           </div>
         </section>
@@ -111,6 +111,8 @@
   <script type="module" src="./src/entries/palette.ts"></script>
 </body>
 </html>
+
+
 
 
 
