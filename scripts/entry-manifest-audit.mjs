@@ -92,7 +92,7 @@ function ensureImportAndExportOrderAligned(importOrder, exportedOrder, moduleNam
   }
 }
 
-async function main() {
+async function runEntryManifestAudit() {
   const playEntry = await readUtf8("src/entries/play.ts");
   const replayEntry = await readUtf8("src/entries/replay.ts");
   const shared = await readUtf8("src/entries/home-family-shared.ts");
@@ -147,7 +147,26 @@ async function main() {
   );
 }
 
-main().catch((err) => {
-  console.error(`[entry-manifest-audit] FAIL: ${err instanceof Error ? err.message : String(err)}`);
-  process.exitCode = 1;
-});
+function isDirectCliExecution() {
+  return Boolean(process.argv[1] && path.resolve(process.argv[1]) === __filename);
+}
+
+if (isDirectCliExecution()) {
+  runEntryManifestAudit().catch((err) => {
+    console.error(
+      `[entry-manifest-audit] FAIL: ${err instanceof Error ? err.message : String(err)}`
+    );
+    process.exitCode = 1;
+  });
+}
+
+export {
+  ensureCapabilityMapped,
+  ensureEntryHasNoLegacyImports,
+  ensureEntryUsesManifest,
+  ensureImportAndExportOrderAligned,
+  ensureScriptOrderConstraints,
+  extractScriptImportOrder,
+  isDirectCliExecution,
+  runEntryManifestAudit
+};

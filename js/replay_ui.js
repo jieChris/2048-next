@@ -335,6 +335,92 @@ function requestReplayRelayout() {
     }, 120);
 }
 
+function resolveReplayDiagnosticsElement(id) {
+    return document.getElementById(id);
+}
+
+function clearReplayDiagnosticsPanel() {
+    var panel = resolveReplayDiagnosticsElement("replay-diagnostics-panel");
+    var summary = resolveReplayDiagnosticsElement("replay-diagnostics-summary");
+    var samples = resolveReplayDiagnosticsElement("replay-diagnostics-samples");
+    if (summary) summary.textContent = "";
+    if (samples) samples.textContent = "";
+    if (panel) panel.style.display = "none";
+}
+
+function normalizeReplayDiagnosticsEntry(rawEntry) {
+    if (!(rawEntry && typeof rawEntry === "object" && !Array.isArray(rawEntry))) return null;
+    var key = typeof rawEntry.key === "string" ? rawEntry.key : "";
+    var schemaVersion = Number(rawEntry.schemaVersion);
+    var payload = rawEntry.payload;
+    if (!key) return null;
+    if (!Number.isInteger(schemaVersion) || schemaVersion < 1) return null;
+    if (!(payload && typeof payload === "object" && !Array.isArray(payload))) return null;
+    return {
+        key: key,
+        schemaVersion: schemaVersion,
+        payload: payload
+    };
+}
+
+function resolveReplaySecondaryPlacementDiagnosticsEntry(record) {
+    var entries = Array.isArray(record && record.diagnostics_index_entries)
+        ? record.diagnostics_index_entries
+        : [];
+    for (var i = 0; i < entries.length; i++) {
+        var entry = normalizeReplayDiagnosticsEntry(entries[i]);
+        if (!(entry && entry.key === "secondaryTimerPlacement")) continue;
+        return entry;
+    }
+    return null;
+}
+
+function resolveReplayDiagnosticsNumber(payload, field) {
+    if (!payload || typeof payload !== "object") return 0;
+    return Number(payload[field]) || 0;
+}
+
+function buildReplayDiagnosticsSummaryText(entry) {
+    var payload = entry ? entry.payload : null;
+    return "诊断 secondaryTimerPlacement(v" + String(entry.schemaVersion) + ")" +
+        " · 有效 " + String(resolveReplayDiagnosticsNumber(payload, "validPlacementDescriptors")) +
+        " · 放置 " + String(resolveReplayDiagnosticsNumber(payload, "placed")) +
+        " · 去重跳过 " + String(resolveReplayDiagnosticsNumber(payload, "skippedDuplicate")) +
+        " · 锚点缺失 " + String(resolveReplayDiagnosticsNumber(payload, "skippedMissingAnchor")) +
+        " · 去重键类 " + String(resolveReplayDiagnosticsNumber(payload, "dedupeKeyKinds"));
+}
+
+function buildReplayDiagnosticsSampleText(entry) {
+    var payload = entry ? entry.payload : null;
+    var source = payload && Array.isArray(payload.dedupeKeySamples)
+        ? payload.dedupeKeySamples
+        : [];
+    var samples = [];
+    for (var i = 0; i < source.length; i++) {
+        var sample = typeof source[i] === "string" ? source[i].trim() : "";
+        if (!sample) continue;
+        samples.push(sample);
+        if (samples.length >= 3) break;
+    }
+    if (!samples.length) return "";
+    return "样本: " + samples.join(" | ");
+}
+
+function renderReplayDiagnosticsPanelFromRecord(record) {
+    var panel = resolveReplayDiagnosticsElement("replay-diagnostics-panel");
+    var summary = resolveReplayDiagnosticsElement("replay-diagnostics-summary");
+    var samples = resolveReplayDiagnosticsElement("replay-diagnostics-samples");
+    if (!(panel && summary && samples)) return;
+    var entry = resolveReplaySecondaryPlacementDiagnosticsEntry(record);
+    if (!entry) {
+        clearReplayDiagnosticsPanel();
+        return;
+    }
+    summary.textContent = buildReplayDiagnosticsSummaryText(entry);
+    samples.textContent = buildReplayDiagnosticsSampleText(entry);
+    panel.style.display = "block";
+}
+
 async function loadReplayFromSessionId() {
     var params = new URLSearchParams(window.location.search);
     var cloudReplay = params.get("cloud_replay");
@@ -343,7 +429,10 @@ async function loadReplayFromSessionId() {
         localHistoryId = params.get("id");
     }
     var sessionId = params.get("session_id");
-    if (!cloudReplay && !localHistoryId && !sessionId) return;
+    if (!cloudReplay && !localHistoryId && !sessionId) {
+        clearReplayDiagnosticsPanel();
+        return;
+    }
     if (!window.game_manager) {
         setTimeout(loadReplayFromSessionId, 60);
         return;
@@ -369,8 +458,10 @@ async function loadReplayFromSessionId() {
             if (window.sessionStorage && typeof window.sessionStorage.removeItem === "function") {
                 window.sessionStorage.removeItem(CLOUD_REPLAY_STORAGE_KEY);
             }
+            clearReplayDiagnosticsPanel();
             updateReplayUI();
         } catch (cloudReplayError) {
+            clearReplayDiagnosticsPanel();
             alert("加载云端回放失败: " + (cloudReplayError.message || "unknown"));
         }
         return;
@@ -394,14 +485,17 @@ async function loadReplayFromSessionId() {
             if (titleLocal) {
       titleLocal.innerHTML = "<a href='2048.html' style='text-decoration: none; color: inherit; cursor: pointer;'>2048</a> 回放 - 本地记录";
             }
+            renderReplayDiagnosticsPanelFromRecord(record);
             updateReplayUI();
         } catch (errorLocal) {
+            clearReplayDiagnosticsPanel();
             alert("加载本地回放失败: " + (errorLocal.message || "unknown"));
         }
         return;
     }
 
     if (sessionId) {
+        clearReplayDiagnosticsPanel();
         alert("在线回放已移除。请从本地历史页面打开回放。");
     }
 }
@@ -409,6 +503,7 @@ async function loadReplayFromSessionId() {
 // Initialize Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
     startReplayUiTicker();
+    clearReplayDiagnosticsPanel();
     // Scrubbing events
     var progressEl = document.getElementById('replay-progress');
     if(progressEl) {

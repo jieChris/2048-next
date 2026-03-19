@@ -242,25 +242,48 @@ function seedInitialTilesAndSnapshotBoard(manager) {
   manager.initialBoardMatrix = manager.getFinalBoardMatrix();
 }
 
-function placeStoneTilesForSetup(manager) {
-  if (!(manager && manager.grid && Array.isArray(manager.stoneCellsList))) return;
-  if (!manager.stoneCellsList.length) return;
+function hasStoneCellsForSetup(manager) {
+  return !!(manager && manager.grid && Array.isArray(manager.stoneCellsList) && manager.stoneCellsList.length);
+}
+
+function ensureStoneValueSetForSetup(manager) {
+  if (!manager) return {};
   if (!isNonArrayObject(manager.stoneValueSet)) manager.stoneValueSet = {};
+  return manager.stoneValueSet;
+}
+
+function normalizeStoneCellForSetup(point, width, height) {
+  if (!isNonArrayObject(point)) return null;
+  var x = Number(point.x);
+  var y = Number(point.y);
+  if (!Number.isInteger(x) || !Number.isInteger(y)) return null;
+  if (x < 0 || x >= width || y < 0 || y >= height) return null;
+  return { x: x, y: y };
+}
+
+function canPlaceStoneCellForSetup(manager, cell) {
+  if (!(manager && cell)) return false;
+  if (manager.isBlockedCell(cell.x, cell.y)) return false;
+  return manager.grid.cellAvailable(cell);
+}
+
+function insertStoneTileForSetup(manager, stoneValueSet, cell, index) {
+  if (!(manager && stoneValueSet && cell)) return;
+  var value = resolveStoneMarkerValue(index);
+  var tile = new Tile(cell, value);
+  tile.isStone = true;
+  manager.grid.insertTile(tile);
+  stoneValueSet[String(value)] = true;
+}
+
+function placeStoneTilesForSetup(manager) {
+  if (!hasStoneCellsForSetup(manager)) return;
+  var stoneValueSet = ensureStoneValueSetForSetup(manager);
   for (var i = 0; i < manager.stoneCellsList.length; i++) {
-    var point = manager.stoneCellsList[i];
-    if (!isNonArrayObject(point)) continue;
-    var x = Number(point.x);
-    var y = Number(point.y);
-    if (!Number.isInteger(x) || !Number.isInteger(y)) continue;
-    if (x < 0 || x >= manager.width || y < 0 || y >= manager.height) continue;
-    if (manager.isBlockedCell(x, y)) continue;
-    var cell = { x: x, y: y };
-    if (!manager.grid.cellAvailable(cell)) continue;
-    var value = resolveStoneMarkerValue(i);
-    var tile = new Tile(cell, value);
-    tile.isStone = true;
-    manager.grid.insertTile(tile);
-    manager.stoneValueSet[String(value)] = true;
+    var cell = normalizeStoneCellForSetup(manager.stoneCellsList[i], manager.width, manager.height);
+    if (!cell) continue;
+    if (!canPlaceStoneCellForSetup(manager, cell)) continue;
+    insertStoneTileForSetup(manager, stoneValueSet, cell, i);
   }
 }
 

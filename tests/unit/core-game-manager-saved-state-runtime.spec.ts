@@ -46,7 +46,7 @@ function createElement(options?: {
   };
 }
 
-function loadSavedStateRuntime(slotIds: number[]) {
+function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, unknown>) {
   const scriptPath = path.resolve(process.cwd(), "js/core_game_manager_saved_state_helpers_runtime.js");
   const script = readFileSync(scriptPath, "utf8");
   const context = {
@@ -63,13 +63,20 @@ function loadSavedStateRuntime(slotIds: number[]) {
     },
     resolveManagerDocumentLike() {
       return null;
-    }
+    },
+    ...(extraContext || {})
   } as Record<string, unknown>;
 
   vm.runInNewContext(script, context);
   return context as {
     applySavedTimerFixedRowsState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
     collectSavedTimerFixedRowsState: (manager: Record<string, unknown>) => Record<string, unknown>;
+    buildSavedGameStateDiagnosticsPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
+    buildSavedGameStatePayload: (manager: Record<string, unknown>, now: number) => Record<string, unknown> | null;
+    buildLiteSavedGameStatePayloadFallback: (
+      manager: Record<string, unknown>,
+      payload: Record<string, unknown>
+    ) => Record<string, unknown> | null;
   };
 }
 
@@ -202,5 +209,150 @@ describe("core game manager saved state runtime", () => {
     );
 
     expect(row32k.style.display).toBe("none");
+  });
+
+  it("builds diagnostics index entries from manager helper with stable options", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const optionSnapshots: Array<Record<string, unknown>> = [];
+    const manager = {
+      resolveSecondaryTimerPlacementDiagnosticsIndexEntry(options: Record<string, unknown>) {
+        optionSnapshots.push({ ...options });
+        return {
+          key: "secondaryTimerPlacement",
+          schemaVersion: 1,
+          payload: { placed: 1 }
+        };
+      }
+    };
+
+    expect(runtime.buildSavedGameStateDiagnosticsPayload(manager)).toEqual({
+      diagnostics_index_entries: [
+        {
+          key: "secondaryTimerPlacement",
+          schemaVersion: 1,
+          payload: { placed: 1 }
+        }
+      ]
+    });
+    expect(optionSnapshots).toEqual([
+      {
+        failureOnly: false,
+        includeWhenNoActivity: false,
+        maxDedupeKeys: 3
+      }
+    ]);
+  });
+
+  it("falls back to global diagnostics entry resolver when manager helper is unavailable", () => {
+    const runtime = loadSavedStateRuntime([32768], {
+      resolveSecondaryTimerPlacementDiagnosticsIndexEntry(manager: Record<string, unknown>, options: Record<string, unknown>) {
+        return {
+          key: "secondaryTimerPlacement",
+          schemaVersion: 1,
+          payload: {
+            mode: manager.modeKey || "unknown",
+            options
+          }
+        };
+      }
+    });
+    const manager = {
+      modeKey: "classic"
+    };
+
+    expect(runtime.buildSavedGameStateDiagnosticsPayload(manager)).toEqual({
+      diagnostics_index_entries: [
+        {
+          key: "secondaryTimerPlacement",
+          schemaVersion: 1,
+          payload: {
+            mode: "classic",
+            options: {
+              failureOnly: false,
+              includeWhenNoActivity: false,
+              maxDedupeKeys: 3
+            }
+          }
+        }
+      ]
+    });
+  });
+
+  it("includes diagnostics index entries in full and lite saved payloads", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const manager = {
+      modeKey: "classic",
+      mode: "classic",
+      width: 4,
+      height: 4,
+      ruleset: "classic",
+      score: 123,
+      over: false,
+      won: false,
+      keepPlaying: false,
+      initialSeed: 1,
+      seed: 2,
+      spawnValueCounts: { "2": 5, "4": 1 },
+      reached32k: false,
+      cappedMilestoneCount: 0,
+      capped64Unlocked: null,
+      moveHistory: [],
+      ipsInputCount: 0,
+      undoStack: [],
+      redoStack: [],
+      replayCompactLog: "",
+      sessionReplayV3: null,
+      comboStreak: 0,
+      successfulMoveCount: 0,
+      undoUsed: 0,
+      challengeId: null,
+      lockConsumedAtMoveCount: -1,
+      lockedDirectionTurn: null,
+      lockedDirection: null,
+      hasGameStarted: true,
+      getDurationMs() {
+        return 4567;
+      },
+      getFinalBoardMatrix() {
+        return [
+          [2, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ];
+      },
+      safeClonePlain(value: unknown, fallback: unknown) {
+        try {
+          return JSON.parse(JSON.stringify(value));
+        } catch {
+          return fallback;
+        }
+      },
+      resolveSecondaryTimerPlacementDiagnosticsIndexEntry() {
+        return {
+          key: "secondaryTimerPlacement",
+          schemaVersion: 1,
+          payload: { validPlacementDescriptors: 2 }
+        };
+      }
+    };
+
+    const fullPayload = runtime.buildSavedGameStatePayload(manager, 1000) as Record<string, unknown>;
+    expect(fullPayload.diagnostics_index_entries).toEqual([
+      {
+        key: "secondaryTimerPlacement",
+        schemaVersion: 1,
+        payload: { validPlacementDescriptors: 2 }
+      }
+    ]);
+
+    const litePayload = runtime.buildLiteSavedGameStatePayloadFallback(manager, fullPayload) as Record<string, unknown>;
+    expect(litePayload.diagnostics_index_entries).toEqual([
+      {
+        key: "secondaryTimerPlacement",
+        schemaVersion: 1,
+        payload: { validPlacementDescriptors: 2 }
+      }
+    ]);
   });
 });

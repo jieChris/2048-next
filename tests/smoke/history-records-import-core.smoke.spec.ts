@@ -39,6 +39,16 @@ test.describe("History smoke: import", () => {
 
   test("supports import merge", async ({ page }) => {
     await page.evaluate(() => {
+      const diagnosticEntries = Array.from({ length: 9 }, (_item, index) => ({
+        key: index === 0 ? "secondaryTimerPlacement" : "diag_entry_" + String(index),
+        schemaVersion: 1,
+        payload: {
+          validPlacementDescriptors: 3 + index,
+          placed: 2 + index,
+          note: "n".repeat(220),
+          dedupeKeySamples: Array.from({ length: 12 }, (_sample, sampleIndex) => "sample_" + String(index) + "_" + String(sampleIndex))
+        }
+      }));
       (window as any).__historyImportMockText = JSON.stringify({
         records: [
           {
@@ -59,7 +69,8 @@ test.describe("History smoke: import", () => {
               [0, 0, 0, 0]
             ],
             ended_at: new Date().toISOString(),
-            replay_string: ""
+            replay_string: "",
+            diagnostics_index_entries: diagnosticEntries
           }
         ]
       });
@@ -84,6 +95,26 @@ test.describe("History smoke: import", () => {
     await page.click("#history-import-btn");
     await page.dispatchEvent("#history-import-file", "change");
     await expect(page.locator(".history-item")).toHaveCount(1);
+
+    const snapshot = await page.evaluate(() => {
+      const store = (window as any).LocalHistoryStore;
+      const record = store.getById("import_merge_1");
+      const entries = Array.isArray(record?.diagnostics_index_entries) ? record.diagnostics_index_entries : [];
+      const firstPayload = entries[0]?.payload || {};
+      const firstNote = String(firstPayload.note || "");
+      const firstSamples = Array.isArray(firstPayload.dedupeKeySamples) ? firstPayload.dedupeKeySamples : [];
+      return {
+        entryCount: entries.length,
+        firstKey: String(entries[0]?.key || ""),
+        firstNoteLength: firstNote.length,
+        firstSampleCount: firstSamples.length
+      };
+    });
+
+    expect(snapshot.entryCount).toBe(6);
+    expect(snapshot.firstKey).toBe("secondaryTimerPlacement");
+    expect(snapshot.firstNoteLength).toBe(160);
+    expect(snapshot.firstSampleCount).toBe(8);
   });
 
   test("supports import replace", async ({ page }) => {
@@ -116,7 +147,18 @@ test.describe("History smoke: import", () => {
             duration_ms: 9999,
             final_board: [],
             ended_at: new Date().toISOString(),
-            replay_string: ""
+            replay_string: "",
+            diagnostics_index_entries: [
+              {
+                key: "secondaryTimerPlacement",
+                schemaVersion: 1,
+                payload: {
+                  validPlacementDescriptors: 5,
+                  placed: 4,
+                  skippedDuplicate: 1
+                }
+              }
+            ]
           }
         ]
       });
@@ -146,12 +188,14 @@ test.describe("History smoke: import", () => {
       return {
         count: all.length,
         modeKey: all[0]?.mode_key,
-        score: all[0]?.score
+        score: all[0]?.score,
+        diagnosticsKey: all[0]?.diagnostics_index_entries?.[0]?.key || null
       };
     });
 
     expect(snapshot.count).toBe(1);
     expect(snapshot.modeKey).toBe("practice");
     expect(snapshot.score).toBe(777);
+    expect(snapshot.diagnosticsKey).toBe("secondaryTimerPlacement");
   });
 });

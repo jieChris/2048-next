@@ -173,22 +173,40 @@ function resolveStatsPanelTopActionHost(documentLike, exportBtn, practiceStatsAc
   return null;
 }
 
+function mountStatsPanelToggleBeforeExport(btn, topActionHost, exportBtn) {
+  if (btn.parentNode !== topActionHost || btn.nextSibling !== exportBtn) {
+    topActionHost.insertBefore(btn, exportBtn);
+  }
+}
+
+function mountStatsPanelToggleAtTopActionStart(btn, topActionHost) {
+  if (btn.parentNode !== topActionHost) {
+    topActionHost.insertBefore(btn, topActionHost.firstChild);
+  }
+}
+
+function mountStatsPanelToggleIntoTopActions(btn, topActionHost, exportBtn) {
+  if (!topActionHost) return false;
+  btn.classList.remove("is-floating");
+  if (exportBtn && exportBtn.parentNode === topActionHost) {
+    mountStatsPanelToggleBeforeExport(btn, topActionHost, exportBtn);
+    return true;
+  }
+  mountStatsPanelToggleAtTopActionStart(btn, topActionHost);
+  return true;
+}
+
+function mountStatsPanelToggleAsFloating(documentLike, btn) {
+  var body = documentLike.body;
+  if (!(body && typeof body.appendChild === "function")) return;
+  if (btn.parentNode !== body) body.appendChild(btn);
+  btn.classList.add("is-floating");
+}
+
 function mountStatsPanelToggleButton(documentLike, btn, topActionHost, exportBtn) {
   if (!documentLike || !btn) return;
-  var body = documentLike.body;
-  if (topActionHost) {
-    btn.classList.remove("is-floating");
-    if (exportBtn && exportBtn.parentNode === topActionHost) {
-      if (btn.parentNode !== topActionHost || btn.nextSibling !== exportBtn) topActionHost.insertBefore(btn, exportBtn);
-    } else if (btn.parentNode !== topActionHost) {
-      topActionHost.insertBefore(btn, topActionHost.firstChild);
-    }
-    return;
-  }
-  if (body && typeof body.appendChild === "function") {
-    if (btn.parentNode !== body) body.appendChild(btn);
-    btn.classList.add("is-floating");
-  }
+  if (mountStatsPanelToggleIntoTopActions(btn, topActionHost, exportBtn)) return;
+  mountStatsPanelToggleAsFloating(documentLike, btn);
 }
 
 function createStatsPanelOverlayHtml() {

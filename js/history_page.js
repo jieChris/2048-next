@@ -121,6 +121,90 @@
     return typeof value === "string" ? value : "";
   }
 
+  function normalizeHistoryDiagnosticsIndexEntry(rawEntry) {
+    if (!rawEntry || typeof rawEntry !== "object" || Array.isArray(rawEntry)) return null;
+    var key = typeof rawEntry.key === "string" && rawEntry.key ? rawEntry.key : "";
+    if (!key) return null;
+    var schemaVersion = Number(rawEntry.schemaVersion);
+    if (!Number.isInteger(schemaVersion) || schemaVersion < 1) return null;
+    var payload = rawEntry.payload;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+    return {
+      key: key,
+      schemaVersion: schemaVersion,
+      payload: payload
+    };
+  }
+
+  function normalizeHistoryDiagnosticsIndexEntries(rawEntries) {
+    var source = Array.isArray(rawEntries) ? rawEntries : [];
+    var entries = [];
+    for (var i = 0; i < source.length; i += 1) {
+      var entry = normalizeHistoryDiagnosticsIndexEntry(source[i]);
+      if (!entry) continue;
+      entries.push(entry);
+    }
+    return entries;
+  }
+
+  function resolveHistorySecondaryPlacementDiagnosticsEntry(item) {
+    var entries = normalizeHistoryDiagnosticsIndexEntries(item && item.diagnostics_index_entries);
+    for (var i = 0; i < entries.length; i += 1) {
+      if (entries[i].key === "secondaryTimerPlacement") return entries[i];
+    }
+    return null;
+  }
+
+  function resolveHistoryDiagnosticsNumeric(payload, key) {
+    if (!payload || typeof payload !== "object") return 0;
+    return Number(payload[key]) || 0;
+  }
+
+  function buildHistorySecondaryPlacementDiagnosticsSummaryText(entry) {
+    var payload = entry ? entry.payload : null;
+    var validCount = resolveHistoryDiagnosticsNumeric(payload, "validPlacementDescriptors");
+    var placedCount = resolveHistoryDiagnosticsNumeric(payload, "placed");
+    var duplicateCount = resolveHistoryDiagnosticsNumeric(payload, "skippedDuplicate");
+    var missingAnchorCount = resolveHistoryDiagnosticsNumeric(payload, "skippedMissingAnchor");
+    var keyKinds = resolveHistoryDiagnosticsNumeric(payload, "dedupeKeyKinds");
+    return "诊断 secondaryTimerPlacement(v" + String(entry.schemaVersion) + ")" +
+      " · 有效 " + String(validCount) +
+      " · 放置 " + String(placedCount) +
+      " · 去重跳过 " + String(duplicateCount) +
+      " · 锚点缺失 " + String(missingAnchorCount) +
+      " · 去重键类 " + String(keyKinds);
+  }
+
+  function resolveHistoryDiagnosticsSampleText(payload) {
+    var samples = payload && Array.isArray(payload.dedupeKeySamples) ? payload.dedupeKeySamples : [];
+    var normalized = [];
+    for (var i = 0; i < samples.length; i += 1) {
+      var value = typeof samples[i] === "string" ? samples[i].trim() : "";
+      if (!value) continue;
+      normalized.push(value);
+      if (normalized.length >= 3) break;
+    }
+    if (!normalized.length) return "";
+    return "样本: " + normalized.join(" | ");
+  }
+
+  function appendHistoryDiagnosticsSummary(node, item) {
+    if (!node) return;
+    var secondaryPlacementEntry = resolveHistorySecondaryPlacementDiagnosticsEntry(item);
+    if (!secondaryPlacementEntry) return;
+    var summaryNode = document.createElement("div");
+    summaryNode.className = "history-item-diagnostics";
+    summaryNode.textContent = buildHistorySecondaryPlacementDiagnosticsSummaryText(secondaryPlacementEntry);
+    node.appendChild(summaryNode);
+
+    var sampleText = resolveHistoryDiagnosticsSampleText(secondaryPlacementEntry.payload);
+    if (!sampleText) return;
+    var sampleNode = document.createElement("div");
+    sampleNode.className = "history-item-diagnostics-samples";
+    sampleNode.textContent = sampleText;
+    node.appendChild(sampleNode);
+  }
+
   function normalizeBoardMatrix(raw) {
     var source = raw;
     if (typeof source === "string") {
@@ -332,6 +416,8 @@
           "<button class='replay-button history-export-btn'>导出</button>" +
           "<button class='replay-button history-delete-btn'>删除</button>" +
         "</div>";
+
+      appendHistoryDiagnosticsSummary(node, item);
 
       var boardNode = createBoardGridNode(item.final_board);
       if (boardNode) {

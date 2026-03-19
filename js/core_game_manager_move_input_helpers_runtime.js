@@ -220,19 +220,39 @@ function resolveItemKeyAlias(itemKey) {
   return key;
 }
 
-function useItem(manager, itemKey) {
-  if (!manager) return;
-  if (!isItemModeEnabled(manager) || manager.replayMode) return;
-  if (isGameTerminated(manager)) return;
+function canUseItemNow(manager) {
+  if (!manager) return false;
+  if (!isItemModeEnabled(manager) || manager.replayMode) return false;
+  return !isGameTerminated(manager);
+}
+
+function resolveUsableItemKey(itemKey) {
   var key = resolveItemKeyAlias(itemKey);
-  if (key !== "hammer" && key !== "freeze" && key !== "boost4") return;
+  if (key !== "hammer" && key !== "freeze" && key !== "boost4") return null;
+  return key;
+}
+
+function applyItemEffect(manager, key) {
+  if (key === "hammer") {
+    applyHammerEffect(manager);
+    return;
+  }
+  if (key === "freeze") {
+    manager.nextSpawnSuppressed = true;
+    return;
+  }
+  manager.nextSpawnValueOverride = 4;
+}
+
+function useItem(manager, itemKey) {
+  if (!canUseItemNow(manager)) return;
+  var key = resolveUsableItemKey(itemKey);
+  if (!key) return;
   if (!consumeItemCharge(manager, key)) {
     updateItemModeHud(manager);
     return;
   }
-  if (key === "hammer") { applyHammerEffect(manager); }
-  else if (key === "freeze") { manager.nextSpawnSuppressed = true; }
-  else if (key === "boost4") { manager.nextSpawnValueOverride = 4; }
+  applyItemEffect(manager, key);
   updateItemModeHud(manager);
 }
 

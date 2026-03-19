@@ -3,6 +3,10 @@
 
   var STORAGE_KEY = "local_game_history_v1";
   var MAX_RECORDS = 5000;
+  var MAX_DIAGNOSTICS_INDEX_ENTRIES = 6;
+  var MAX_DIAGNOSTIC_PAYLOAD_KEYS = 24;
+  var MAX_DIAGNOSTIC_STRING_LENGTH = 160;
+  var MAX_DIAGNOSTIC_ARRAY_ITEMS = 8;
 
   var DB_NAME = "game_history_db";
   var DB_VERSION = 1;
@@ -50,6 +54,94 @@
     return !!value && typeof value === "object" && !Array.isArray(value);
   }
 
+  function truncateDiagnosticText(value, maxLength) {
+    var text = typeof value === "string" ? value : String(value || "");
+    if (text.length <= maxLength) return text;
+    return text.slice(0, maxLength);
+  }
+
+  function normalizeDiagnosticPayloadArrayValue(value) {
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === "boolean") return value;
+    if (typeof value === "string" && value) {
+      return truncateDiagnosticText(value, MAX_DIAGNOSTIC_STRING_LENGTH);
+    }
+    return null;
+  }
+
+  function normalizeDiagnosticPayloadArray(values) {
+    var source = Array.isArray(values) ? values : [];
+    var out = [];
+    for (var i = 0; i < source.length; i += 1) {
+      if (out.length >= MAX_DIAGNOSTIC_ARRAY_ITEMS) break;
+      var normalized = normalizeDiagnosticPayloadArrayValue(source[i]);
+      if (normalized === null) continue;
+      out.push(normalized);
+    }
+    return out;
+  }
+
+  function normalizeDiagnosticPayloadValue(value) {
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === "boolean") return value;
+    if (typeof value === "string") {
+      if (!value) return "";
+      return truncateDiagnosticText(value, MAX_DIAGNOSTIC_STRING_LENGTH);
+    }
+    if (Array.isArray(value)) {
+      return normalizeDiagnosticPayloadArray(value);
+    }
+    return null;
+  }
+
+  function normalizeDiagnosticPayload(payload) {
+    if (!isPlainObject(payload)) return null;
+    var out = {};
+    var keys = Object.keys(payload);
+    var accepted = 0;
+    for (var i = 0; i < keys.length; i += 1) {
+      if (accepted >= MAX_DIAGNOSTIC_PAYLOAD_KEYS) break;
+      var key = truncateDiagnosticText(keys[i], 64);
+      if (!key) continue;
+      var value = normalizeDiagnosticPayloadValue(payload[keys[i]]);
+      if (value === null) continue;
+      out[key] = value;
+      accepted += 1;
+    }
+    return Object.keys(out).length > 0 ? out : {};
+  }
+
+  function normalizeDiagnosticsIndexEntry(entry) {
+    if (!isPlainObject(entry)) return null;
+    var key = typeof entry.key === "string" && entry.key ? entry.key : "";
+    if (!key) return null;
+    var schemaVersion = Number(entry.schemaVersion);
+    if (!Number.isInteger(schemaVersion) || schemaVersion < 1) return null;
+    var payload = normalizeDiagnosticPayload(entry.payload);
+    if (!payload) return null;
+    return {
+      key: truncateDiagnosticText(key, 64),
+      schemaVersion: schemaVersion,
+      payload: payload
+    };
+  }
+
+  function normalizeDiagnosticsIndexEntries(entries) {
+    var list = Array.isArray(entries) ? entries : [];
+    var normalized = [];
+    for (var i = 0; i < list.length; i += 1) {
+      if (normalized.length >= MAX_DIAGNOSTICS_INDEX_ENTRIES) break;
+      var entry = normalizeDiagnosticsIndexEntry(list[i]);
+      if (!entry) continue;
+      normalized.push(entry);
+    }
+    return normalized;
+  }
+
   function compareDatesDesc(a, b) {
     var ta = Date.parse(a && a.ended_at ? a.ended_at : "") || 0;
     var tb = Date.parse(b && b.ended_at ? b.ended_at : "") || 0;
@@ -94,7 +186,8 @@
       end_reason: raw.end_reason || "game_over",
       client_version: raw.client_version || "1.8",
       replay: isPlainObject(raw.replay) ? raw.replay : null,
-      replay_string: replayString
+      replay_string: replayString,
+      diagnostics_index_entries: normalizeDiagnosticsIndexEntries(raw.diagnostics_index_entries)
     };
   }
 

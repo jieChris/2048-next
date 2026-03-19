@@ -23,7 +23,21 @@ test.describe("History smoke: export", () => {
         duration_ms: 1000,
         final_board: [],
         ended_at: new Date(now).toISOString(),
-        replay_string: "replay_(!äfC"
+        replay_string: "replay_(!äfC",
+        diagnostics_index_entries: [
+          {
+            key: "secondaryTimerPlacement",
+            schemaVersion: 1,
+            payload: {
+              validPlacementDescriptors: 3,
+              placed: 2,
+              skippedDuplicate: 1,
+              skippedMissingAnchor: 0,
+              dedupeKeyKinds: 2,
+              dedupeKeySamples: ["parent-child:8192:4096#2"]
+            }
+          }
+        ]
       });
       store.saveRecord({
         id: "export_2",
@@ -44,14 +58,15 @@ test.describe("History smoke: export", () => {
 
     const snapshot = await page.evaluate(() => {
       const store = (window as any).LocalHistoryStore;
-      const calls: Array<{ file: string; size: number; mime: string }> = [];
+      const calls: Array<{ file: string; size: number; mime: string; payload: string }> = [];
       const originalDownload = store.download;
 
       store.download = function (file: string, payload: string, mimeType?: string) {
         calls.push({
           file: String(file || ""),
           size: String(payload || "").length,
-          mime: String(mimeType || "application/json;charset=utf-8")
+          mime: String(mimeType || "application/json;charset=utf-8"),
+          payload: String(payload || "")
         });
       };
 
@@ -75,5 +90,11 @@ test.describe("History smoke: export", () => {
     expect(snapshot[0].size).toBeGreaterThan(10);
     expect(snapshot[1].size).toBeGreaterThan(10);
     expect(snapshot[2].size).toBeGreaterThan(0);
+
+    const singleExportPayload = JSON.parse(String(snapshot[1].payload || "{}"));
+    const records = Array.isArray(singleExportPayload.records) ? singleExportPayload.records : [];
+    expect(records.length).toBe(1);
+    expect(records[0]?.id).toBe("export_1");
+    expect(records[0]?.diagnostics_index_entries?.[0]?.key).toBe("secondaryTimerPlacement");
   });
 });

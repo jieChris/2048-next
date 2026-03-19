@@ -76,24 +76,43 @@ function writeStorageJsonPayloadFallback(storage, key, payload) {
   return writeStorageItemSafe(storage, key, serialized);
 }
 
-function setBoardFromMatrix(manager, board) {
+function assertSavedBoardMatrixShape(manager, board) {
   if (!manager) throw "Invalid board matrix";
   if (!Array.isArray(board) || board.length !== manager.height) throw "Invalid board matrix";
+}
+
+function assertSavedBoardRowShape(manager, row) {
+  if (!Array.isArray(row) || row.length !== manager.width) throw "Invalid board row";
+}
+
+function validateSavedBoardCellValue(manager, x, y, value) {
+  if (!Number.isInteger(value) || value < 0) throw "Invalid board value";
+  if (manager.isBlockedCell(x, y) && value !== 0) throw "Blocked cell must stay empty";
+}
+
+function insertSavedBoardTileIfNeeded(manager, x, y, value) {
+  if (value <= 0) return;
+  var tile = new Tile({ x: x, y: y }, value);
+  if (typeof manager.isStoneValue === "function" && manager.isStoneValue(value)) {
+    tile.isStone = true;
+  }
+  manager.grid.insertTile(tile);
+}
+
+function applySavedBoardMatrixRow(manager, row, y) {
+  assertSavedBoardRowShape(manager, row);
+  for (var x = 0; x < manager.width; x++) {
+    var value = row[x];
+    validateSavedBoardCellValue(manager, x, y, value);
+    insertSavedBoardTileIfNeeded(manager, x, y, value);
+  }
+}
+
+function setBoardFromMatrix(manager, board) {
+  assertSavedBoardMatrixShape(manager, board);
   manager.grid = new Grid(manager.width, manager.height);
   for (var y = 0; y < manager.height; y++) {
-    if (!Array.isArray(board[y]) || board[y].length !== manager.width) throw "Invalid board row";
-    for (var x = 0; x < manager.width; x++) {
-      var value = board[y][x];
-      if (!Number.isInteger(value) || value < 0) throw "Invalid board value";
-      if (manager.isBlockedCell(x, y) && value !== 0) throw "Blocked cell must stay empty";
-      if (value > 0) {
-        var tile = new Tile({ x: x, y: y }, value);
-        if (typeof manager.isStoneValue === "function" && manager.isStoneValue(value)) {
-          tile.isStone = true;
-        }
-        manager.grid.insertTile(tile);
-      }
-    }
+    applySavedBoardMatrixRow(manager, board[y], y);
   }
 }
 
@@ -835,31 +854,72 @@ function applySavedTimerDomState(manager, saved, cappedStateForRestore) {
   applySavedTimerSubState(manager, saved);
 }
 
+function resolveSavedTimerFixedRowLegendState(row) {
+  var legend = row ? row.querySelector(".timertile") : null;
+  return {
+    legendText: legend ? (legend.textContent || "") : "",
+    legendClass: legend ? (legend.className || "") : "",
+    legendFontSize: legend ? (legend.style.fontSize || "") : ""
+  };
+}
+
+function resolveSavedTimerFixedRowVisibilityState(row) {
+  var state = {
+    display: row && row.style ? (row.style.display || "") : "",
+    visibility: row && row.style ? (row.style.visibility || "") : "",
+    pointerEvents: row && row.style ? (row.style.pointerEvents || "") : ""
+  };
+  if (isSavedTimerRowScrollManagedHidden(row)) {
+    state.display = "";
+    state.visibility = "";
+    state.pointerEvents = "";
+  }
+  return state;
+}
+
+function buildSavedTimerFixedRowEntry(row, timerEl) {
+  var legendState = resolveSavedTimerFixedRowLegendState(row);
+  var visibilityState = resolveSavedTimerFixedRowVisibilityState(row);
+  return {
+    display: visibilityState.display,
+    visibility: visibilityState.visibility,
+    pointerEvents: visibilityState.pointerEvents,
+    repeat: row.getAttribute("data-capped-repeat") || "",
+    timerText: timerEl.textContent || "",
+    legendText: legendState.legendText,
+    legendClass: legendState.legendClass,
+    legendFontSize: legendState.legendFontSize
+  };
+}
+
 function collectSavedTimerFixedRowsState(manager) {
   var timerFixedRowsState = {};
   if (!manager) return timerFixedRowsState;
   for (var timerSlotIndex = 0; timerSlotIndex < GameManager.TIMER_SLOT_IDS.length; timerSlotIndex++) {
     var slotId = String(GameManager.TIMER_SLOT_IDS[timerSlotIndex]);
-    var row = manager.getTimerRowEl(slotId), timerEl = resolveManagerElementById(manager, "timer" + slotId);
+    var row = manager.getTimerRowEl(slotId);
+    var timerEl = resolveManagerElementById(manager, "timer" + slotId);
     if (!row || !timerEl) continue;
-    var legend = row.querySelector(".timertile"), legendText = legend ? (legend.textContent || "") : "", legendClass = legend ? (legend.className || "") : "", legendFontSize = legend ? (legend.style.fontSize || "") : "";
-    var display = row.style.display || "";
-    var visibility = row.style.visibility || "";
-    var pointerEvents = row.style.pointerEvents || "";
-    if (isSavedTimerRowScrollManagedHidden(row)) {
-      display = "";
-      visibility = "";
-      pointerEvents = "";
-    }
-    timerFixedRowsState[slotId] = {
-      display: display,
-      visibility: visibility,
-      pointerEvents: pointerEvents,
-      repeat: row.getAttribute("data-capped-repeat") || "", timerText: timerEl.textContent || "",
-      legendText: legendText, legendClass: legendClass, legendFontSize: legendFontSize
-    };
+    timerFixedRowsState[slotId] = buildSavedTimerFixedRowEntry(row, timerEl);
   }
   return timerFixedRowsState;
+}
+
+function isSavedDynamicTimerRowElement(row) {
+  return !!(row && row.classList && row.classList.contains("timer-row-item"));
+}
+
+function resolveSavedDynamicTimerRowState(row) {
+  var tiles = row.querySelectorAll(".timertile");
+  var legend = tiles.length > 0 ? tiles[0] : null;
+  var timer = tiles.length > 1 ? tiles[1] : null;
+  return {
+    repeat: row.getAttribute("data-capped-repeat") || "",
+    label: legend ? (legend.textContent || "") : "",
+    labelClass: legend ? (legend.className || "") : "",
+    labelFontSize: legend ? (legend.style.fontSize || "") : "",
+    time: timer ? (timer.textContent || "") : ""
+  };
 }
 
 function collectSavedDynamicTimerRowsState(container) {
@@ -867,14 +927,8 @@ function collectSavedDynamicTimerRowsState(container) {
   if (!container) return dynamicRowsState;
   for (var rowIndex = 0; rowIndex < container.children.length; rowIndex++) {
     var row = container.children[rowIndex];
-    if (!row || !row.classList || !row.classList.contains("timer-row-item")) continue;
-    var tiles = row.querySelectorAll(".timertile");
-    var legend = tiles.length > 0 ? tiles[0] : null, timer = tiles.length > 1 ? tiles[1] : null;
-    var label = legend ? (legend.textContent || "") : "", labelClass = legend ? (legend.className || "") : "", labelFontSize = legend ? (legend.style.fontSize || "") : "", time = timer ? (timer.textContent || "") : "";
-    dynamicRowsState.push({
-      repeat: row.getAttribute("data-capped-repeat") || "",
-      label: label, labelClass: labelClass, labelFontSize: labelFontSize, time: time
-    });
+    if (!isSavedDynamicTimerRowElement(row)) continue;
+    dynamicRowsState.push(resolveSavedDynamicTimerRowState(row));
   }
   return dynamicRowsState;
 }
@@ -941,6 +995,58 @@ function collectSavedTimerDomSnapshotState(manager, documentLike) {
     timerSnapshot.timerDynamicRowsOverflowState = collectSavedDynamicTimerRowsState(overflowContainer);
   }
   return timerSnapshot;
+}
+
+function createSavedStateDiagnosticsIndexEntryOptions() {
+  return {
+    failureOnly: false,
+    includeWhenNoActivity: false,
+    maxDedupeKeys: 3
+  };
+}
+
+function resolveSavedStateSecondaryPlacementDiagnosticsEntry(manager) {
+  if (!manager) return null;
+  var options = createSavedStateDiagnosticsIndexEntryOptions();
+  if (typeof manager.resolveSecondaryTimerPlacementDiagnosticsIndexEntry === "function") {
+    return manager.resolveSecondaryTimerPlacementDiagnosticsIndexEntry(options);
+  }
+  if (typeof resolveSecondaryTimerPlacementDiagnosticsIndexEntry === "function") {
+    return resolveSecondaryTimerPlacementDiagnosticsIndexEntry(manager, options);
+  }
+  return null;
+}
+
+function isSavedStateDiagnosticsIndexEntry(value) {
+  if (!isNonArrayObject(value)) return false;
+  if (!(typeof value.key === "string" && value.key)) return false;
+  if (!Number.isInteger(Number(value.schemaVersion)) || Number(value.schemaVersion) < 1) return false;
+  if (!isNonArrayObject(value.payload)) return false;
+  return true;
+}
+
+function normalizeSavedStateDiagnosticsIndexEntries(entries) {
+  var list = Array.isArray(entries) ? entries : [];
+  var normalized = [];
+  for (var i = 0; i < list.length; i++) {
+    var entry = list[i];
+    if (!isSavedStateDiagnosticsIndexEntry(entry)) continue;
+    normalized.push({
+      key: String(entry.key),
+      schemaVersion: Number(entry.schemaVersion),
+      payload: entry.payload
+    });
+  }
+  return normalized;
+}
+
+function buildSavedGameStateDiagnosticsPayload(manager) {
+  var entries = [];
+  var secondaryPlacementEntry = resolveSavedStateSecondaryPlacementDiagnosticsEntry(manager);
+  if (secondaryPlacementEntry) entries.push(secondaryPlacementEntry);
+  return {
+    diagnostics_index_entries: normalizeSavedStateDiagnosticsIndexEntries(entries)
+  };
 }
 
 function buildSavedGameStateMetaPayload(manager, now) {
@@ -1053,7 +1159,8 @@ function buildSavedGameStatePayload(manager, now) {
     buildSavedGameStateProgressPayload(manager),
     buildSavedGameStateDirectionLockPayload(manager),
     buildSavedGameStateBoardSnapshotPayload(manager),
-    buildSavedGameStateTimerSnapshotPayload(manager, timerSnapshot, subState)
+    buildSavedGameStateTimerSnapshotPayload(manager, timerSnapshot, subState),
+    buildSavedGameStateDiagnosticsPayload(manager)
   );
 }
 
@@ -1159,6 +1266,15 @@ function buildLiteSavedGameStateReplayTrimPayload() {
   };
 }
 
+function buildLiteSavedGameStateDiagnosticsPayload(payload) {
+  if (!isNonArrayObject(payload)) {
+    return { diagnostics_index_entries: [] };
+  }
+  return {
+    diagnostics_index_entries: normalizeSavedStateDiagnosticsIndexEntries(payload.diagnostics_index_entries)
+  };
+}
+
 function buildLiteSavedGameStatePayloadFallback(manager, payload) {
   if (!manager) return null;
   if (!normalizeSavedStateRecordObject(payload, null)) return null;
@@ -1167,7 +1283,8 @@ function buildLiteSavedGameStatePayloadFallback(manager, payload) {
     buildLiteSavedGameStateMetaPayload(manager, payload),
     buildLiteSavedGameStateProgressPayload(payload),
     buildLiteSavedGameStateBoardSnapshotPayload(manager, payload),
-    buildLiteSavedGameStateReplayTrimPayload()
+    buildLiteSavedGameStateReplayTrimPayload(),
+    buildLiteSavedGameStateDiagnosticsPayload(payload)
   );
 }
 

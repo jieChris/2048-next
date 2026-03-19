@@ -9,7 +9,8 @@ const projectRoot = path.resolve(__dirname, "..");
 const REQUIRED_FILES = [
   "docs/RELEASE_STABLE_CHECKLIST.zh-CN.md",
   ".github/workflows/smoke.yml",
-  "scripts/refactor-gate.mjs"
+  "scripts/refactor-gate.mjs",
+  "scripts/refactor-timeout-env-keys.mjs"
 ];
 
 const REQUIRED_NPM_SCRIPTS = [
@@ -24,8 +25,102 @@ const REQUIRED_NPM_SCRIPTS = [
   "report:commit-batch"
 ];
 
+const SMOKE_WORKFLOW_REQUIRED_SNIPPETS = [
+  "refactor-gate:",
+  "REFACTOR_GATE_TIMEOUT_DEFAULT_MS",
+  "REFACTOR_GATE_TIMEOUT_UNIT_MS",
+  "REFACTOR_GATE_TIMEOUT_SMOKE_MS",
+  "REFACTOR_GATE_TIMEOUT_BUILD_MS",
+  "REFACTOR_GATE_OUTPUT_TAIL_LINES",
+  "npm run verify:refactor:ci",
+  "name: refactor-gate-summary",
+  "artifacts/refactor-gate-summary.md",
+  "Publish refactor gate summary",
+  "Download refactor gate summary artifact",
+  "Extract refactor gate summary fields",
+  "refactor-gate-summary/artifacts/refactor-gate-summary.json",
+  "| failed_step | ${REF_GATE_FAILED_STEP} |",
+  "| has_timeout | ${REF_GATE_HAS_TIMEOUT} |",
+  "| timeout_steps | ${REF_GATE_TIMEOUT_STEPS} |",
+  "| tail_lines_band | ${REF_GATE_TAIL_LINES_BAND} |",
+  "node scripts/refactor-timeout-env-keys.mjs --steps=\"${REF_GATE_TIMEOUT_STEPS}\"",
+  "while IFS= read -r timeout_key; do",
+  "Timeout tuning key(s):",
+  "echo \"   - \\`${timeout_key}\\`\";",
+  "REF_GATE_HAS_TIMEOUT: ${{ steps.refactor-summary.outputs.has_timeout }}",
+  "REF_GATE_TIMEOUT_STEPS: ${{ steps.refactor-summary.outputs.timeout_steps }}",
+  "REF_GATE_TAIL_LINES_BAND: ${{ steps.refactor-summary.outputs.tail_lines_band }}",
+  "tail_lines_band: tailLinesBand",
+  "Tail lines advisory:",
+  "REFACTOR_GATE_OUTPUT_TAIL_LINES=${REF_GATE_OUTPUT_TAIL_LINES}",
+  "matrix:",
+  "- history",
+  "- index-ui",
+  "- pages",
+  "npm run test:smoke:${{ matrix.suite }}",
+  "diagnostics-index:",
+  "REFACTOR_GATE_RESULT: ${{ needs['refactor-gate'].result }}",
+  "| Refactor Gate | ${REFACTOR_GATE_RESULT} |",
+  "release-ready:",
+  "npm run verify:release-ready",
+  "npm run report:refactor-progress"
+];
+
+const REFACTOR_GATE_REQUIRED_SNIPPETS = [
+  "--smoke-script=",
+  "const smokeScript =",
+  "npm\", args: [\"run\", smokeScript]",
+  "STEP_TIMEOUT_DEFAULT_ENV_KEY = \"REFACTOR_GATE_TIMEOUT_DEFAULT_MS\"",
+  "\"REFACTOR_GATE_TIMEOUT_UNIT_MS\"",
+  "\"REFACTOR_GATE_TIMEOUT_SMOKE_MS\"",
+  "\"REFACTOR_GATE_TIMEOUT_BUILD_MS\"",
+  "STEP_OUTPUT_TAIL_LINES_ENV_KEY = \"REFACTOR_GATE_OUTPUT_TAIL_LINES\"",
+  "MAX_STEP_OUTPUT_TAIL_LINES",
+  "Math.min(parsed, MAX_STEP_OUTPUT_TAIL_LINES)",
+  "resolveStepTimeoutMs"
+];
+
 function fail(message) {
   throw new Error(message);
+}
+
+function escapeRegexLiteral(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function findMissingSnippets(content, snippets) {
+  const source = String(content || "");
+  return snippets.filter((snippet) => !source.includes(snippet));
+}
+
+function ensureContainsSnippets(content, snippets, scope) {
+  const missing = findMissingSnippets(content, snippets);
+  if (missing.length > 0) {
+    fail(`[verify:release-ready] ${scope} missing required snippet: ${missing[0]}`);
+  }
+}
+
+function extractWorkflowJobBlock(workflowContent, jobName) {
+  const source = String(workflowContent || "");
+  const escapedJobName = escapeRegexLiteral(jobName);
+  const pattern = new RegExp(
+    `\\n\\s{2}${escapedJobName}:\\n([\\s\\S]*?)(?=\\n\\s{2}[A-Za-z0-9_-]+:\\n|$)`
+  );
+  const match = source.match(pattern);
+  return match ? match[0] : null;
+}
+
+function ensureJobNeedsDependency(workflowContent, jobName, dependencyName) {
+  const jobBlock = extractWorkflowJobBlock(workflowContent, jobName);
+  if (!jobBlock) {
+    fail(`[verify:release-ready] smoke workflow missing job: ${jobName}`);
+  }
+  const dependencyLine = `- ${dependencyName}`;
+  if (!jobBlock.includes(dependencyLine)) {
+    fail(
+      `[verify:release-ready] smoke workflow job "${jobName}" missing dependency: ${dependencyName}`
+    );
+  }
 }
 
 async function readText(relativePath) {
@@ -61,44 +156,35 @@ async function verifyPackageScripts() {
   }
 }
 
+function verifySmokeWorkflowShardingContent(workflowContent) {
+  ensureContainsSnippets(
+    workflowContent,
+    SMOKE_WORKFLOW_REQUIRED_SNIPPETS,
+    "smoke workflow"
+  );
+  ensureJobNeedsDependency(workflowContent, "diagnostics-index", "refactor-gate");
+  ensureJobNeedsDependency(workflowContent, "release-ready", "refactor-gate");
+}
+
 async function verifySmokeWorkflowSharding() {
   const workflow = await readText(".github/workflows/smoke.yml");
-  const requiredSnippets = [
-    "matrix:",
-    "- history",
-    "- index-ui",
-    "- pages",
-    "npm run test:smoke:${{ matrix.suite }}",
-    "release-ready:",
-    "npm run verify:release-ready",
-    "npm run report:refactor-progress"
-  ];
-  for (const snippet of requiredSnippets) {
-    if (!workflow.includes(snippet)) {
-      fail(
-        `[verify:release-ready] smoke workflow missing required snippet: ${snippet}`
-      );
-    }
-  }
+  verifySmokeWorkflowShardingContent(workflow);
+}
+
+function verifyRefactorGateSupportsSmokeScriptParamContent(gateContent) {
+  ensureContainsSnippets(
+    gateContent,
+    REFACTOR_GATE_REQUIRED_SNIPPETS,
+    "refactor gate"
+  );
 }
 
 async function verifyRefactorGateSupportsSmokeScriptParam() {
   const gate = await readText("scripts/refactor-gate.mjs");
-  const requiredSnippets = [
-    "--smoke-script=",
-    "const smokeScript =",
-    "npm\", args: [\"run\", smokeScript]"
-  ];
-  for (const snippet of requiredSnippets) {
-    if (!gate.includes(snippet)) {
-      fail(
-        `[verify:release-ready] refactor gate missing smoke-script parameter support: ${snippet}`
-      );
-    }
-  }
+  verifyRefactorGateSupportsSmokeScriptParamContent(gate);
 }
 
-async function main() {
+async function runReleaseReadinessCheck() {
   console.log("[verify:release-ready] start");
   await verifyFilesExist();
   await verifyPackageScripts();
@@ -109,7 +195,26 @@ async function main() {
   );
 }
 
-main().catch((err) => {
-  console.error("[verify:release-ready] failed", err && err.message ? err.message : err);
-  process.exitCode = 1;
-});
+function isDirectCliExecution() {
+  return Boolean(process.argv[1] && path.resolve(process.argv[1]) === __filename);
+}
+
+if (isDirectCliExecution()) {
+  runReleaseReadinessCheck().catch((err) => {
+    console.error("[verify:release-ready] failed", err && err.message ? err.message : err);
+    process.exitCode = 1;
+  });
+}
+
+export {
+  REFACTOR_GATE_REQUIRED_SNIPPETS,
+  SMOKE_WORKFLOW_REQUIRED_SNIPPETS,
+  ensureContainsSnippets,
+  ensureJobNeedsDependency,
+  extractWorkflowJobBlock,
+  findMissingSnippets,
+  isDirectCliExecution,
+  runReleaseReadinessCheck,
+  verifyRefactorGateSupportsSmokeScriptParamContent,
+  verifySmokeWorkflowShardingContent
+};

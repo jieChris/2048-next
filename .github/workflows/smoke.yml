@@ -12,6 +12,107 @@ on:
       - develop
 
 jobs:
+  refactor-gate:
+    name: Refactor Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      REFACTOR_GATE_TIMEOUT_DEFAULT_MS: "360000"
+      REFACTOR_GATE_TIMEOUT_UNIT_MS: "420000"
+      REFACTOR_GATE_TIMEOUT_SMOKE_MS: "420000"
+      REFACTOR_GATE_TIMEOUT_BUILD_MS: "240000"
+      REFACTOR_GATE_OUTPUT_TAIL_LINES: "80"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run refactor gate (CI profile)
+        run: npm run verify:refactor:ci
+
+      - name: Upload refactor gate summary artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: refactor-gate-summary
+          path: |
+            artifacts/refactor-gate-summary.json
+            artifacts/refactor-gate-summary.md
+            artifacts/refactor-gate/steps
+          retention-days: 14
+
+      - name: Publish refactor gate summary
+        if: always()
+        run: |
+          {
+            echo "### Refactor Gate Summary";
+            echo "";
+            if [ -f artifacts/refactor-gate-summary.md ]; then
+              cat artifacts/refactor-gate-summary.md;
+            else
+              echo "summary file missing: artifacts/refactor-gate-summary.md";
+            fi
+            echo "";
+            echo "| Artifact | Value |";
+            echo "| --- | --- |";
+            echo "| Name | \`refactor-gate-summary\` |";
+            echo "| Files | \`artifacts/refactor-gate-summary.json\`, \`artifacts/refactor-gate-summary.md\`, \`artifacts/refactor-gate/steps\` |";
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  quality-audit-report:
+    name: Quality Audit Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate quality audit markdown report
+        run: npm run audit:quality:report
+
+      - name: Upload quality audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-audit-report
+          path: |
+            artifacts/quality-audit-summary.md
+            artifacts/quality-audit-history.json
+          retention-days: 14
+
+      - name: Publish quality audit summary
+        if: always()
+        run: |
+          {
+            echo "### Quality Audit Artifact";
+            echo "";
+            echo "| Item | Value |";
+            echo "| --- | --- |";
+            echo "| Artifact | \`quality-audit-report\` |";
+            echo "| Run | [actions run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) |";
+            echo "| Files | \`artifacts/quality-audit-summary.md\`, \`artifacts/quality-audit-history.json\` |";
+          } >> "$GITHUB_STEP_SUMMARY"
+
   smoke:
     name: Smoke (${{ matrix.suite }})
     runs-on: ubuntu-latest
@@ -53,10 +154,183 @@ jobs:
             test-results
           retention-days: 14
 
+      - name: Publish smoke diagnostics summary
+        if: always()
+        run: |
+          {
+            echo "### Smoke Diagnostics (${{ matrix.suite }})";
+            echo "";
+            echo "| Item | Value |";
+            echo "| --- | --- |";
+            echo "| Artifact | \`playwright-report-${{ matrix.suite }}\` |";
+            echo "| Run | [actions run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) |";
+            echo "| Diagnose | Download artifact, inspect \`playwright-report/index.html\` and \`test-results\`. |";
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  diagnostics-index:
+    name: Diagnostics Index
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - refactor-gate
+      - quality-audit-report
+      - smoke
+    env:
+      REFACTOR_GATE_RESULT: ${{ needs['refactor-gate'].result }}
+      QUALITY_RESULT: ${{ needs['quality-audit-report'].result }}
+      SMOKE_RESULT: ${{ needs.smoke.result }}
+    steps:
+      - name: Download refactor gate summary artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: refactor-gate-summary
+          path: refactor-gate-summary
+
+      - name: Extract refactor gate summary fields
+        if: always()
+        id: refactor-summary
+        shell: bash
+        run: |
+          SUMMARY_JSON="refactor-gate-summary/artifacts/refactor-gate-summary.json"
+          if [ ! -f "$SUMMARY_JSON" ]; then
+            {
+              echo "status=unknown";
+              echo "failed_step=unknown";
+              echo "total_duration=unknown";
+              echo "output_tail_lines=unknown";
+              echo "slowest_step=unknown";
+              echo "slowest_duration=unknown";
+              echo "has_timeout=unknown";
+              echo "timeout_steps=unknown";
+              echo "tail_lines_band=unknown";
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          node -e "
+            const fs = require('node:fs');
+            const summaryPath = process.argv[1];
+            const outPath = process.argv[2];
+            const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+            const steps = Array.isArray(summary.steps) ? summary.steps : [];
+            let slowest = null;
+            for (const step of steps) {
+              if (!slowest || Number(step.durationMs || 0) > Number(slowest.durationMs || 0)) {
+                slowest = step;
+              }
+            }
+            const timeoutSteps = steps
+              .filter((step) => String(step && step.signal || '') === 'TIMEOUT')
+              .map((step) => String(step && step.name || 'unknown'));
+            const outputTailLinesRaw = summary.outputTailLines;
+            const outputTailLinesNum = Number.parseInt(String(outputTailLinesRaw || ''), 10);
+            let tailLinesBand = 'unknown';
+            if (Number.isFinite(outputTailLinesNum) && outputTailLinesNum > 0) {
+              if (outputTailLinesNum < 80) {
+                tailLinesBand = 'low';
+              } else if (outputTailLinesNum > 180) {
+                tailLinesBand = 'high';
+              } else {
+                tailLinesBand = 'balanced';
+              }
+            }
+            const fields = {
+              status: String(summary.status || 'unknown'),
+              failed_step: String(summary.failedStep || 'none'),
+              total_duration: String(summary.totalDuration || 'unknown'),
+              output_tail_lines: String(summary.outputTailLines || 'unknown'),
+              slowest_step: String((slowest && slowest.name) || 'unknown'),
+              slowest_duration: String((slowest && slowest.duration) || 'unknown'),
+              has_timeout: timeoutSteps.length > 0 ? 'true' : 'false',
+              timeout_steps: timeoutSteps.length > 0 ? timeoutSteps.join(',') : 'none',
+              tail_lines_band: tailLinesBand
+            };
+            const lines = Object.entries(fields).map(([k, v]) => k + '=' + v);
+            fs.appendFileSync(outPath, lines.join('\n') + '\n');
+          " "$SUMMARY_JSON" "$GITHUB_OUTPUT"
+
+      - name: Publish diagnostics index
+        env:
+          REF_GATE_SUMMARY_STATUS: ${{ steps.refactor-summary.outputs.status }}
+          REF_GATE_FAILED_STEP: ${{ steps.refactor-summary.outputs.failed_step }}
+          REF_GATE_TOTAL_DURATION: ${{ steps.refactor-summary.outputs.total_duration }}
+          REF_GATE_OUTPUT_TAIL_LINES: ${{ steps.refactor-summary.outputs.output_tail_lines }}
+          REF_GATE_SLOWEST_STEP: ${{ steps.refactor-summary.outputs.slowest_step }}
+          REF_GATE_SLOWEST_DURATION: ${{ steps.refactor-summary.outputs.slowest_duration }}
+          REF_GATE_HAS_TIMEOUT: ${{ steps.refactor-summary.outputs.has_timeout }}
+          REF_GATE_TIMEOUT_STEPS: ${{ steps.refactor-summary.outputs.timeout_steps }}
+          REF_GATE_TAIL_LINES_BAND: ${{ steps.refactor-summary.outputs.tail_lines_band }}
+        run: |
+          {
+            echo "## Diagnostics Index";
+            echo "";
+            echo "| Category | Status | Artifact |";
+            echo "| --- | --- | --- |";
+            echo "| Refactor Gate | ${REFACTOR_GATE_RESULT} | \`refactor-gate-summary\` + job logs (\`verify:refactor:ci\`) |";
+            echo "| Quality Audit | ${QUALITY_RESULT} | \`quality-audit-report\` |";
+            echo "| Smoke (matrix) | ${SMOKE_RESULT} | \`playwright-report-history\`, \`playwright-report-index-ui\`, \`playwright-report-pages\` |";
+            echo "";
+            echo "| Refactor Gate Summary Field | Value |";
+            echo "| --- | --- |";
+            echo "| status | ${REF_GATE_SUMMARY_STATUS} |";
+            echo "| failed_step | ${REF_GATE_FAILED_STEP} |";
+            echo "| total_duration | ${REF_GATE_TOTAL_DURATION} |";
+            echo "| output_tail_lines | ${REF_GATE_OUTPUT_TAIL_LINES} |";
+            echo "| slowest_step | ${REF_GATE_SLOWEST_STEP} |";
+            echo "| slowest_duration | ${REF_GATE_SLOWEST_DURATION} |";
+            echo "| has_timeout | ${REF_GATE_HAS_TIMEOUT} |";
+            echo "| timeout_steps | ${REF_GATE_TIMEOUT_STEPS} |";
+            echo "| tail_lines_band | ${REF_GATE_TAIL_LINES_BAND} |";
+            echo "";
+            echo "### Triage Priority";
+            if [ "${REFACTOR_GATE_RESULT}" != "success" ]; then
+              echo "1. Refactor gate failed: inspect \`Refactor Gate\` job logs first, prioritize timeout/code/signal in verify summary.";
+            fi
+            if [ "${REF_GATE_FAILED_STEP}" != "none" ] && [ "${REF_GATE_FAILED_STEP}" != "unknown" ]; then
+              echo "2. Refactor gate summary indicates failed step: \`${REF_GATE_FAILED_STEP}\`.";
+            fi
+            if [ "${REF_GATE_HAS_TIMEOUT}" = "true" ]; then
+              echo "3. Refactor gate timeout step(s): \`${REF_GATE_TIMEOUT_STEPS}\`. Check step budgets and machine load first.";
+              timeout_step_env_keys="$(node scripts/refactor-timeout-env-keys.mjs --steps="${REF_GATE_TIMEOUT_STEPS}")";
+              echo "   Timeout tuning key(s):";
+              while IFS= read -r timeout_key; do
+                if [ -z "${timeout_key}" ]; then
+                  continue;
+                fi
+                echo "   - \`${timeout_key}\`";
+              done <<< "${timeout_step_env_keys}"
+            fi
+            if [ "${SMOKE_RESULT}" != "success" ]; then
+              echo "4. Smoke failed: download \`playwright-report-*\` first, inspect \`playwright-report/index.html\` and \`test-results\`.";
+            fi
+            if [ "${QUALITY_RESULT}" != "success" ]; then
+              echo "5. Quality audit failed: inspect \`quality-audit-report\` for trend warning and file-level diff.";
+            fi
+            if [ "${REF_GATE_TAIL_LINES_BAND}" = "low" ]; then
+              echo "6. Tail lines advisory: \`REFACTOR_GATE_OUTPUT_TAIL_LINES=${REF_GATE_OUTPUT_TAIL_LINES}\` may be too short for failed-step diagnostics; consider increasing and compare over 3-5 runs.";
+            fi
+            if [ "${REF_GATE_TAIL_LINES_BAND}" = "high" ]; then
+              echo "6. Tail lines advisory: \`REFACTOR_GATE_OUTPUT_TAIL_LINES=${REF_GATE_OUTPUT_TAIL_LINES}\` may add log noise; consider reducing while keeping triage signal.";
+            fi
+            if [ "${REF_GATE_TAIL_LINES_BAND}" = "unknown" ]; then
+              echo "6. Tail lines advisory: unavailable \`output_tail_lines\`; verify refactor gate summary artifact publishing.";
+            fi
+            if [ "${REFACTOR_GATE_RESULT}" = "success" ] && [ "${SMOKE_RESULT}" = "success" ] && [ "${QUALITY_RESULT}" = "success" ]; then
+              echo "1. No diagnostic failures detected in smoke/quality jobs.";
+            fi
+            echo "";
+            echo "- Run: [actions run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})";
+          } >> "$GITHUB_STEP_SUMMARY"
+
   release-ready:
     name: Release Ready
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs:
+      - refactor-gate
+      - quality-audit-report
+      - smoke
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -167,6 +167,22 @@ function hasModuleEntryScript(htmlContent, entryFileName) {
   return pattern.test(htmlContent);
 }
 
+function hasGamePageMarkers(htmlContent) {
+  if (typeof htmlContent !== "string") return false;
+  return (
+    /\bdata-page\s*=\s*["']game["']/.test(htmlContent) ||
+    /\bclass\s*=\s*["'][^"']*\bgame-container\b[^"']*["']/.test(htmlContent)
+  );
+}
+
+function shouldEnforceRuntimeScriptChain(fileName, htmlContent) {
+  const expectedEntry = MODULE_ENTRY_BY_PAGE_FILE[fileName];
+  if (expectedEntry && hasModuleEntryScript(htmlContent, expectedEntry)) {
+    return false;
+  }
+  return hasGamePageMarkers(htmlContent);
+}
+
 function extractFunctionDeclarations(content) {
   const out = [];
   const pattern = /function\s+([A-Za-z0-9_]+)\s*\(/g;
@@ -346,8 +362,8 @@ async function verifyHtmlScriptOrder(projectRoot) {
   for (const fileName of PAGE_FILES) {
     const filePath = path.resolve(projectRoot, fileName);
     const content = await readFile(filePath, "utf8");
-    const expectedEntry = MODULE_ENTRY_BY_PAGE_FILE[fileName];
-    if (expectedEntry && hasModuleEntryScript(content, expectedEntry)) {
+    if (!shouldEnforceRuntimeScriptChain(fileName, content)) {
+      // Allow non-game landing pages (for example a content homepage) to skip game runtime chain checks.
       continue;
     }
     if (!hasOrderedRuntimeScripts(content)) {
@@ -515,7 +531,22 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  console.error("[game-manager-audit] unexpected error", error);
-  process.exitCode = 1;
-});
+function isDirectCliExecution() {
+  return Boolean(process.argv[1] && path.resolve(process.argv[1]) === __filename);
+}
+
+if (isDirectCliExecution()) {
+  main().catch((error) => {
+    console.error("[game-manager-audit] unexpected error", error);
+    process.exitCode = 1;
+  });
+}
+
+export {
+  EXPECTED_GAME_MANAGER_RUNTIME_SCRIPT_CHAIN,
+  hasGamePageMarkers,
+  hasModuleEntryScript,
+  hasOrderedRuntimeScripts,
+  isDirectCliExecution,
+  shouldEnforceRuntimeScriptChain
+};

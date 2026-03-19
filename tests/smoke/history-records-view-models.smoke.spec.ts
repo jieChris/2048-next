@@ -30,7 +30,21 @@ test.describe("History smoke: item render and actions", () => {
           [0, 0, 0, 0]
         ],
         ended_at: new Date().toISOString(),
-        replay_string: ""
+        replay_string: "",
+        diagnostics_index_entries: [
+          {
+            key: "secondaryTimerPlacement",
+            schemaVersion: 1,
+            payload: {
+              validPlacementDescriptors: 3,
+              placed: 2,
+              skippedDuplicate: 1,
+              skippedMissingAnchor: 0,
+              dedupeKeyKinds: 2,
+              dedupeKeySamples: ["parent-child:8192:4096#2"]
+            }
+          }
+        ]
       });
     });
 
@@ -41,6 +55,8 @@ test.describe("History smoke: item render and actions", () => {
     await expect(page.locator(".history-item")).toHaveCount(1);
     await expect(page.locator(".history-item-head").first()).toContainText("分数: 512");
     await expect(page.locator(".history-item-head").first()).toContainText("最大块: 64");
+    await expect(page.locator(".history-item-diagnostics").first()).toContainText("secondaryTimerPlacement");
+    await expect(page.locator(".history-item-diagnostics").first()).toContainText("有效 3");
     await expect(page.locator(".history-board")).toHaveCount(1);
   });
 

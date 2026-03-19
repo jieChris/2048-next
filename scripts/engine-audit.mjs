@@ -26,29 +26,50 @@ function ensureExactlyOne(source, label, regex) {
   }
 }
 
-async function main() {
-  const source = await readEngineSource();
+const ENGINE_AUDIT_RULES = [
+  {
+    label: "createEngineFacade",
+    regex: /export\s+function\s+createEngineFacade\s*\(/g
+  },
+  {
+    label: "createEngineSession",
+    regex: /export\s+function\s+createEngineSession\s*\(/g
+  },
+  {
+    label: "UndoSnapshotLike",
+    regex: /type\s+UndoSnapshotLike\s*=/g
+  }
+];
 
-  ensureExactlyOne(
-    source,
-    "createEngineFacade",
-    /export\s+function\s+createEngineFacade\s*\(/g
-  );
-  ensureExactlyOne(
-    source,
-    "createEngineSession",
-    /export\s+function\s+createEngineSession\s*\(/g
-  );
-  ensureExactlyOne(
-    source,
-    "UndoSnapshotLike",
-    /type\s+UndoSnapshotLike\s*=/g
-  );
+function validateEngineSource(source, rules = ENGINE_AUDIT_RULES) {
+  for (const { label, regex } of rules) {
+    ensureExactlyOne(source, label, regex);
+  }
+}
+
+async function runEngineAudit() {
+  const source = await readEngineSource();
+  validateEngineSource(source);
 
   console.log("[engine-audit] PASS: engine exports and helper type are single-defined");
 }
 
-main().catch((err) => {
-  console.error(`[engine-audit] FAIL: ${err instanceof Error ? err.message : String(err)}`);
-  process.exitCode = 1;
-});
+function isDirectCliExecution() {
+  return Boolean(process.argv[1] && path.resolve(process.argv[1]) === __filename);
+}
+
+if (isDirectCliExecution()) {
+  runEngineAudit().catch((err) => {
+    console.error(`[engine-audit] FAIL: ${err instanceof Error ? err.message : String(err)}`);
+    process.exitCode = 1;
+  });
+}
+
+export {
+  ENGINE_AUDIT_RULES,
+  countMatches,
+  ensureExactlyOne,
+  isDirectCliExecution,
+  runEngineAudit,
+  validateEngineSource
+};

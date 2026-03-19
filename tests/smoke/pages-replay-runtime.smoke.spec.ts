@@ -603,6 +603,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
           id,
           mode_key: "standard_4x4_pow2_no_undo",
           replay_string: "replay_(!äfC",
+          diagnostics_index_entries: [
+            {
+              key: "secondaryTimerPlacement",
+              schemaVersion: 1,
+              payload: {
+                validPlacementDescriptors: 3,
+                placed: 2,
+                skippedDuplicate: 1,
+                skippedMissingAnchor: 0,
+                dedupeKeyKinds: 2,
+                dedupeKeySamples: ["parent-child:8192:4096#2"]
+              }
+            }
+          ],
           ended_at: new Date().toISOString(),
           saved_at: new Date().toISOString()
         }
@@ -630,12 +644,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const titleNode = document.querySelector(".heading .title");
       return {
         title: titleNode ? String(titleNode.textContent || "") : "",
-        alertCount: Number(((window as any).__replayLoadAlerts || []).length)
+        alertCount: Number(((window as any).__replayLoadAlerts || []).length),
+        diagnosticsText: String((document.getElementById("replay-diagnostics-summary")?.textContent || "")).trim(),
+        diagnosticsSamplesText: String((document.getElementById("replay-diagnostics-samples")?.textContent || "")).trim()
       };
     });
 
     expect(snapshot.alertCount).toBe(0);
     expect(snapshot.title.includes("本地记录") || snapshot.title.includes("鏈湴璁板綍")).toBe(true);
+    expect(snapshot.diagnosticsText).toContain("secondaryTimerPlacement");
+    expect(snapshot.diagnosticsText).toContain("有效 3");
+    expect(snapshot.diagnosticsSamplesText).toContain("parent-child:8192:4096#2");
   });
 
   test("replay page keeps backward compatibility for legacy id parameter", async ({ page }) => {

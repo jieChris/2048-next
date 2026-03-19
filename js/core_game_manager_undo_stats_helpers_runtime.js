@@ -79,15 +79,19 @@ function resolveForcedUndoSettingFallbackByMode(modeConfig, targetMode) {
   return null;
 }
 
-function buildUndoPolicyFallbackInput(forcedUndoSetting, optionsSnapshot) {
+function createUndoPolicyOptionsPayload(optionsSnapshot) {
   return {
-    forcedUndoSetting: forcedUndoSetting,
     hasGameStarted: optionsSnapshot.hasGameStarted,
     replayMode: optionsSnapshot.replayMode,
     undoLimit: optionsSnapshot.undoLimit,
     undoUsed: optionsSnapshot.undoUsed,
     undoEnabled: optionsSnapshot.undoEnabled
   };
+}
+
+function buildUndoPolicyFallbackInput(forcedUndoSetting, optionsSnapshot) {
+  var baseOptions = createUndoPolicyOptionsPayload(optionsSnapshot);
+  return Object.assign({ forcedUndoSetting: forcedUndoSetting }, baseOptions);
 }
 
 function resolveUndoPolicyFallbackState(fallbackInput) {
@@ -105,15 +109,8 @@ function resolveUndoPolicyFallbackState(fallbackInput) {
 }
 
 function createUndoPolicyResolvePayload(targetMode, modeConfig, optionsSnapshot) {
-  return {
-    mode: targetMode,
-    modeConfig: modeConfig,
-    hasGameStarted: optionsSnapshot.hasGameStarted,
-    replayMode: optionsSnapshot.replayMode,
-    undoLimit: optionsSnapshot.undoLimit,
-    undoUsed: optionsSnapshot.undoUsed,
-    undoEnabled: optionsSnapshot.undoEnabled
-  };
+  var baseOptions = createUndoPolicyOptionsPayload(optionsSnapshot);
+  return Object.assign({ mode: targetMode, modeConfig: modeConfig }, baseOptions);
 }
 
 function resolveUndoPolicyStateFallback(modeConfig, targetMode, optionsSnapshot) {
@@ -325,19 +322,33 @@ function computeStepStats(manager) {
   return computeFallbackStepStats(manager, src, limit);
 }
 
+function resolveUndoFallbackScoreValue(value) {
+  if (Number.isFinite(value) && typeof value === "number") return Number(value);
+  return 0;
+}
+
+function resolveUndoFallbackNonNegativeInteger(value) {
+  return normalizeUndoNonNegativeIntegerOrFallback(value, 0);
+}
+
+function resolveUndoFallbackIntegerOrDefault(value, defaultValue) {
+  return normalizeUndoIntegerOrFallback(value, defaultValue);
+}
+
+function resolveUndoFallbackIntegerOrNull(value) {
+  return Number.isInteger(value) ? value : null;
+}
+
 function getUndoStateFallbackValues(manager) {
   if (!manager) return {};
   return {
-    score: Number.isFinite(manager.score) && typeof manager.score === "number" ? Number(manager.score) : 0,
-    comboStreak: Number.isInteger(manager.comboStreak) && manager.comboStreak >= 0 ? manager.comboStreak : 0,
-    successfulMoveCount:
-      Number.isInteger(manager.successfulMoveCount) && manager.successfulMoveCount >= 0
-        ? manager.successfulMoveCount
-        : 0,
-    lockConsumedAtMoveCount: Number.isInteger(manager.lockConsumedAtMoveCount) ? manager.lockConsumedAtMoveCount : -1,
-    lockedDirectionTurn: Number.isInteger(manager.lockedDirectionTurn) ? manager.lockedDirectionTurn : null,
-    lockedDirection: Number.isInteger(manager.lockedDirection) ? manager.lockedDirection : null,
-    undoUsed: Number.isInteger(manager.undoUsed) && manager.undoUsed >= 0 ? manager.undoUsed : 0
+    score: resolveUndoFallbackScoreValue(manager.score),
+    comboStreak: resolveUndoFallbackNonNegativeInteger(manager.comboStreak),
+    successfulMoveCount: resolveUndoFallbackNonNegativeInteger(manager.successfulMoveCount),
+    lockConsumedAtMoveCount: resolveUndoFallbackIntegerOrDefault(manager.lockConsumedAtMoveCount, -1),
+    lockedDirectionTurn: resolveUndoFallbackIntegerOrNull(manager.lockedDirectionTurn),
+    lockedDirection: resolveUndoFallbackIntegerOrNull(manager.lockedDirection),
+    undoUsed: resolveUndoFallbackNonNegativeInteger(manager.undoUsed)
   };
 }
 
@@ -680,66 +691,82 @@ function resolveSnapshotPreviousPositionOverride(previousPositionByCurrentKey, x
   return { x: override.x, y: override.y };
 }
 
-function buildRedoPreviousPositionMapFromUndoEntry(manager, undoEntry) {
+function resolveUndoStackEntryTilesForPositionMap(manager, entry) {
+  if (!manager) return [];
+  var source = manager.normalizeUndoStackEntry(entry);
+  if (!source) return [];
+  return collectUndoStackTiles(manager, source);
+}
+
+function resolveUndoTileCurrentPosition(tile) {
+  if (!Number.isInteger(tile.x) || !Number.isInteger(tile.y)) return null;
+  return { x: tile.x, y: tile.y };
+}
+
+function resolveUndoTilePreviousPosition(tile) {
+  var source = tile ? tile.previousPosition : null;
+  if (!source) return null;
+  if (!Number.isInteger(source.x) || !Number.isInteger(source.y)) return null;
+  return { x: source.x, y: source.y };
+}
+
+function writeUndoSnapshotPositionMapEntry(map, keyPosition, valuePosition, preserveFirstEntry) {
+  if (!(map && keyPosition && valuePosition)) return;
+  var key = buildUndoSnapshotPositionKey(keyPosition.x, keyPosition.y);
+  if (preserveFirstEntry && map[key]) return;
+  map[key] = { x: valuePosition.x, y: valuePosition.y };
+}
+
+function buildUndoSnapshotPositionMap(manager, entry, keyResolver, valueResolver, preserveFirstEntry) {
   var map = {};
-  if (!manager) return map;
-  var source = manager.normalizeUndoStackEntry(undoEntry);
-  if (!source || !Array.isArray(source.tiles)) return map;
-  for (var index = 0; index < source.tiles.length; index++) {
-    var tile = source.tiles[index];
+  if (!(manager && typeof keyResolver === "function" && typeof valueResolver === "function")) return map;
+  var tiles = resolveUndoStackEntryTilesForPositionMap(manager, entry);
+  for (var index = 0; index < tiles.length; index++) {
+    var tile = tiles[index];
     if (!isValidUndoTileRecord(manager, tile)) continue;
-    if (!Number.isInteger(tile.x) || !Number.isInteger(tile.y)) continue;
-    var target = tile.previousPosition;
-    if (!Number.isInteger(target.x) || !Number.isInteger(target.y)) continue;
-    var key = buildUndoSnapshotPositionKey(target.x, target.y);
-    if (map[key]) continue;
-    map[key] = { x: tile.x, y: tile.y };
+    var keyPosition = keyResolver(tile);
+    if (!keyPosition) continue;
+    var valuePosition = valueResolver(tile);
+    if (!valuePosition) continue;
+    writeUndoSnapshotPositionMapEntry(map, keyPosition, valuePosition, preserveFirstEntry);
   }
   return map;
+}
+
+function buildRedoPreviousPositionMapFromUndoEntry(manager, undoEntry) {
+  return buildUndoPreviousPositionMapFromRedoEntry(manager, undoEntry);
 }
 
 function buildUndoPreviousPositionMapFromRedoEntry(manager, redoEntry) {
-  var map = {};
-  if (!manager) return map;
-  var source = manager.normalizeUndoStackEntry(redoEntry);
-  if (!source || !Array.isArray(source.tiles)) return map;
-  for (var index = 0; index < source.tiles.length; index++) {
-    var tile = source.tiles[index];
-    if (!isValidUndoTileRecord(manager, tile)) continue;
-    if (!Number.isInteger(tile.x) || !Number.isInteger(tile.y)) continue;
-    var sourcePos = tile.previousPosition;
-    if (!Number.isInteger(sourcePos.x) || !Number.isInteger(sourcePos.y)) continue;
-    var key = buildUndoSnapshotPositionKey(sourcePos.x, sourcePos.y);
-    if (map[key]) continue;
-    map[key] = { x: tile.x, y: tile.y };
-  }
-  return map;
+  return buildUndoSnapshotPositionMap(
+    manager,
+    redoEntry,
+    resolveUndoTilePreviousPosition,
+    resolveUndoTileCurrentPosition,
+    true
+  );
 }
 
 function buildUndoPreviousPositionMapFromUndoEntry(manager, undoEntry) {
-  var map = {};
-  if (!manager) return map;
-  var source = manager.normalizeUndoStackEntry(undoEntry);
-  if (!source || !Array.isArray(source.tiles)) return map;
-  for (var index = 0; index < source.tiles.length; index++) {
-    var tile = source.tiles[index];
-    if (!isValidUndoTileRecord(manager, tile)) continue;
-    if (!Number.isInteger(tile.x) || !Number.isInteger(tile.y)) continue;
-    var target = tile.previousPosition;
-    if (!Number.isInteger(target.x) || !Number.isInteger(target.y)) continue;
-    var key = buildUndoSnapshotPositionKey(tile.x, tile.y);
-    map[key] = { x: target.x, y: target.y };
-  }
-  return map;
+  return buildUndoSnapshotPositionMap(
+    manager,
+    undoEntry,
+    resolveUndoTileCurrentPosition,
+    resolveUndoTilePreviousPosition,
+    false
+  );
 }
 
-function createCurrentUndoStackEntrySnapshot(manager, options) {
-  if (!manager) return null;
+function resolveCurrentUndoSnapshotOptions(options) {
   var opts = normalizeUndoStatsRecordObject(options, {});
-  var previousPositionByCurrentKey = normalizeUndoStatsRecordObject(opts.previousPositionByCurrentKey, null);
-  var motionMap = normalizeUndoPositionMap(opts.motionMap);
-  var fallback = manager.getUndoStateFallbackValues();
-  var snapshot = {
+  return {
+    previousPositionByCurrentKey: normalizeUndoStatsRecordObject(opts.previousPositionByCurrentKey, null),
+    motionMap: normalizeUndoPositionMap(opts.motionMap)
+  };
+}
+
+function createCurrentUndoSnapshotBaseState(fallback) {
+  return {
     score: Number(fallback.score) || 0,
     tiles: [],
     comboStreak: Number.isInteger(fallback.comboStreak) ? fallback.comboStreak : 0,
@@ -749,25 +776,42 @@ function createCurrentUndoStackEntrySnapshot(manager, options) {
     lockedDirection: Number.isInteger(fallback.lockedDirection) ? fallback.lockedDirection : null,
     undoUsed: Number.isInteger(fallback.undoUsed) && fallback.undoUsed >= 0 ? fallback.undoUsed : 0
   };
-  if (motionMap) {
-    snapshot.motionMap = motionMap;
-  }
+}
 
-  if (manager.grid && typeof manager.grid.eachCell === "function") {
-    manager.grid.eachCell(function (x, y, tile) {
-      if (!tile) return;
-      var tileSnapshot = manager.createUndoTileSnapshot(tile, { x: x, y: y });
-      if (!isValidUndoTileRecord(manager, tileSnapshot)) return;
-      var override = resolveSnapshotPreviousPositionOverride(previousPositionByCurrentKey, x, y);
-      if (override) {
-        tileSnapshot.previousPosition = override;
-      } else {
-        tileSnapshot.previousPosition = normalizeUndoSnapshotPosition(tileSnapshot.previousPosition, x, y);
-      }
-      snapshot.tiles.push(tileSnapshot);
-    });
-  }
+function applyCurrentUndoSnapshotMotionMap(snapshot, motionMap) {
+  if (!(snapshot && motionMap)) return;
+  snapshot.motionMap = motionMap;
+}
 
+function resolveCurrentUndoTilePreviousPosition(previousPositionByCurrentKey, x, y, previousPosition) {
+  var override = resolveSnapshotPreviousPositionOverride(previousPositionByCurrentKey, x, y);
+  if (override) return override;
+  return normalizeUndoSnapshotPosition(previousPosition, x, y);
+}
+
+function collectCurrentUndoSnapshotTiles(manager, snapshot, previousPositionByCurrentKey) {
+  if (!(manager && snapshot && manager.grid && typeof manager.grid.eachCell === "function")) return;
+  manager.grid.eachCell(function (x, y, tile) {
+    if (!tile) return;
+    var tileSnapshot = manager.createUndoTileSnapshot(tile, { x: x, y: y });
+    if (!isValidUndoTileRecord(manager, tileSnapshot)) return;
+    tileSnapshot.previousPosition = resolveCurrentUndoTilePreviousPosition(
+      previousPositionByCurrentKey,
+      x,
+      y,
+      tileSnapshot.previousPosition
+    );
+    snapshot.tiles.push(tileSnapshot);
+  });
+}
+
+function createCurrentUndoStackEntrySnapshot(manager, options) {
+  if (!manager) return null;
+  var normalizedOptions = resolveCurrentUndoSnapshotOptions(options);
+  var fallback = manager.getUndoStateFallbackValues();
+  var snapshot = createCurrentUndoSnapshotBaseState(fallback);
+  applyCurrentUndoSnapshotMotionMap(snapshot, normalizedOptions.motionMap);
+  collectCurrentUndoSnapshotTiles(manager, snapshot, normalizedOptions.previousPositionByCurrentKey);
   return manager.normalizeUndoStackEntry(snapshot);
 }
 
@@ -917,27 +961,11 @@ function computeUndoRestoreState(manager, prev) {
 }
 
 function buildUndoRestoreTileFallback(source, previous) {
-  return {
-    x: source.x,
-    y: source.y,
-    value: source.value,
-    previousPosition: {
-      x: previous.x,
-      y: previous.y
-    }
-  };
+  return buildUndoTileSnapshotCorePayload(source, previous);
 }
 
 function buildUndoRestoreTileCorePayload(source, previous) {
-  return {
-    x: source.x,
-    y: source.y,
-    value: source.value,
-    previousPosition: {
-      x: previous.x,
-      y: previous.y
-    }
-  };
+  return buildUndoTileSnapshotCorePayload(source, previous);
 }
 
 function resolveUndoRestoreTileByCore(manager, source, previous, fallback) {
@@ -983,14 +1011,7 @@ function resolveUndoRestorePayloadFallbackScore(manager, source) {
 }
 
 function resolveUndoRestorePayloadFallbackTiles(manager, source) {
-  var rawTiles = Array.isArray(source.tiles) ? source.tiles : [];
-  var tiles = [];
-  for (var index = 0; index < rawTiles.length; index++) {
-    var item = rawTiles[index];
-    if (!manager.isNonArrayObject(item)) continue;
-    tiles.push(item);
-  }
-  return tiles;
+  return collectUndoStackTiles(manager, source);
 }
 
 function resolveUndoRestorePayloadFallback(manager, prev) {

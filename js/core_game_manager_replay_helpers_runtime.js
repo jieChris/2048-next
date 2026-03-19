@@ -717,21 +717,65 @@ function resolveReplayV3SessionSource(manager) {
   return normalizeReplayRecordObject(replay, {});
 }
 
+function resolveSerializedReplayV3Mode(manager, source) {
+  return resolveReplayModeTag(source.mode_key || source.mode, manager.modeKey || manager.mode);
+}
+
+function resolveSerializedReplayV3ModeKey(manager, source) {
+  return source.mode_key || manager.modeKey;
+}
+
+function resolveSerializedReplayV3BoardWidth(manager, source) {
+  return source.board_width || manager.width;
+}
+
+function resolveSerializedReplayV3BoardHeight(manager, source) {
+  return source.board_height || manager.height;
+}
+
+function resolveSerializedReplayV3Ruleset(manager, source) {
+  return source.ruleset || manager.ruleset;
+}
+
+function resolveSerializedReplayV3UndoEnabled(manager, source) {
+  return typeof source.undo_enabled === "boolean" ? source.undo_enabled : !!manager.modeConfig.undo_enabled;
+}
+
+function resolveSerializedReplayV3ModeFamily(manager, source) {
+  return source.mode_family || manager.modeFamily;
+}
+
+function resolveSerializedReplayV3RankPolicy(manager, source) {
+  return source.rank_policy || manager.rankPolicy;
+}
+
+function resolveSerializedReplayV3SpecialRulesSnapshot(manager, source) {
+  return manager.clonePlain(source.special_rules_snapshot || manager.specialRules || {});
+}
+
+function resolveSerializedReplayV3ChallengeId(manager, source) {
+  return source.challenge_id || manager.challengeId || null;
+}
+
+function resolveSerializedReplayV3Actions(source) {
+  return Array.isArray(source.actions) ? source.actions.slice() : [];
+}
+
 function createSerializedReplayV3(manager, source) {
   return {
     v: 3,
-    mode: resolveReplayModeTag(source.mode_key || source.mode, manager.modeKey || manager.mode),
-    mode_key: source.mode_key || manager.modeKey,
-    board_width: source.board_width || manager.width,
-    board_height: source.board_height || manager.height,
-    ruleset: source.ruleset || manager.ruleset,
-    undo_enabled: typeof source.undo_enabled === "boolean" ? source.undo_enabled : !!manager.modeConfig.undo_enabled,
-    mode_family: source.mode_family || manager.modeFamily,
-    rank_policy: source.rank_policy || manager.rankPolicy,
-    special_rules_snapshot: manager.clonePlain(source.special_rules_snapshot || manager.specialRules || {}),
-    challenge_id: source.challenge_id || manager.challengeId || null,
+    mode: resolveSerializedReplayV3Mode(manager, source),
+    mode_key: resolveSerializedReplayV3ModeKey(manager, source),
+    board_width: resolveSerializedReplayV3BoardWidth(manager, source),
+    board_height: resolveSerializedReplayV3BoardHeight(manager, source),
+    ruleset: resolveSerializedReplayV3Ruleset(manager, source),
+    undo_enabled: resolveSerializedReplayV3UndoEnabled(manager, source),
+    mode_family: resolveSerializedReplayV3ModeFamily(manager, source),
+    rank_policy: resolveSerializedReplayV3RankPolicy(manager, source),
+    special_rules_snapshot: resolveSerializedReplayV3SpecialRulesSnapshot(manager, source),
+    challenge_id: resolveSerializedReplayV3ChallengeId(manager, source),
     seed: source.seed,
-    actions: Array.isArray(source.actions) ? source.actions.slice() : []
+    actions: resolveSerializedReplayV3Actions(source)
   };
 }
 
@@ -2371,6 +2415,12 @@ function createAppendCompactMoveCodePayload(manager, rawCode) {
   };
 }
 
+function tryHandleReplayCompactLogByCoreResult(currentManager, coreCallResult) {
+  return currentManager.tryHandleCoreRawValue(coreCallResult, function (coreValue) {
+    currentManager.replayCompactLog = coreValue;
+  });
+}
+
 function tryAppendCompactMoveCodeByCore(manager, rawCode) {
   if (!manager) return false;
   return resolveCoreArgsCallWith(
@@ -2380,9 +2430,7 @@ function tryAppendCompactMoveCodeByCore(manager, rawCode) {
     [createAppendCompactMoveCodePayload(manager, rawCode)],
     false,
     function (currentManager, coreCallResult) {
-      return currentManager.tryHandleCoreRawValue(coreCallResult, function (coreValue) {
-        currentManager.replayCompactLog = coreValue;
-      });
+      return tryHandleReplayCompactLogByCoreResult(currentManager, coreCallResult);
     }
   );
 }
@@ -2411,9 +2459,7 @@ function appendCompactUndo(manager) {
     [manager.replayCompactLog],
     false,
     function (currentManager, coreCallResult) {
-      return currentManager.tryHandleCoreRawValue(coreCallResult, function (coreValue) {
-        currentManager.replayCompactLog = coreValue;
-      });
+      return tryHandleReplayCompactLogByCoreResult(currentManager, coreCallResult);
     }
   )) {
     return;
@@ -2441,9 +2487,7 @@ function tryAppendCompactPracticeActionByCore(manager, payload) {
     [payload],
     false,
     function (currentManager, coreCallResult) {
-      return currentManager.tryHandleCoreRawValue(coreCallResult, function (coreValue) {
-        currentManager.replayCompactLog = coreValue;
-      });
+      return tryHandleReplayCompactLogByCoreResult(currentManager, coreCallResult);
     }
   );
 }
@@ -2661,7 +2705,7 @@ function decodeReplayV4BoardFallback(manager, encoded) {
       var exp = decodeReplay128(manager, encoded.charAt(idx++));
       row.push(exp === 0 ? 0 : Math.pow(2, exp));
     }
-    rows.push(row);
+    rows[rows.length] = row;
   }
   return rows;
 }
