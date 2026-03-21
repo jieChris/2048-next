@@ -2340,3 +2340,31 @@
 1. 扫描并收敛 `history_page.js` / `user_profile_page.js` 的历史字段拼装分支。
 2. 输出 WS3/WS8 的 F sign-off 证据表并完成签收。
 3. 连续观察 2-3 轮 CI，确认门禁稳定无误报。
+
+## 本轮增量（第73批）
+
+### 1) WS3-02 第三批：`user_profile_page` 历史记录归一化收敛
+- 文件：
+  - `js/user_profile_page.js`
+  - `src/entries/user-profile.ts`
+- 改动：
+  - 新增 `normalizeHistoryRecordViaRuntime()`，统一走 `CoreGameSettingsStorageRuntime.normalizeHistoryRecordFromContext`；
+  - `normalizeRecordDetailPayload()` 与 `normalizeUserRecordsFromApi()` 改为优先消费 runtime 归一化结果，保留 fallback 兜底；
+  - `user-profile` 入口补齐 runtime 依赖导入，避免页面层出现“有调用无运行时”的不一致。
+
+### 2) 验证证据（2026-03-22）
+- `npx playwright test --config=playwright.config.ts tests/smoke/pages-user-profile-title.smoke.spec.ts`
+  - PASS（6 tests）
+- `npx vitest run tests/unit/core-game-settings-storage.spec.ts tests/unit/contracts.spec.ts`
+  - PASS（53 tests）
+- `npm run verify:prepush`
+  - PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+
+### 3) 风险控制结论
+- 本批将 user-profile 历史字段归一化从页面层重复拼装推进到 runtime 统一入口，WS3-02 单一真源目标继续前进。
+- 当前剩余风险是 `history_page.js` 仍有展示层字段分支，需继续收敛。
+
+### 4) 接下来需要做的工作（明确）
+1. 扫描并收敛 `history_page.js` 剩余字段拼装分支，优先复用 runtime/contracts 入口。
+2. 产出并签收 WS3/WS8 的 F sign-off 证据表。
+3. 连续观察 2-3 轮 CI，确认新增归一化路径长期稳定。

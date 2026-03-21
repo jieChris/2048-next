@@ -564,6 +564,51 @@
     return rows;
   }
 
+  function normalizeHistoryRecordViaRuntime(raw, fallbackRecord) {
+    var runtime = global.CoreGameSettingsStorageRuntime;
+    if (!runtime || typeof runtime.normalizeHistoryRecordFromContext !== "function") {
+      return null;
+    }
+    var source = raw && typeof raw === "object" ? raw : {};
+    var fallback = fallbackRecord && typeof fallbackRecord === "object" ? fallbackRecord : null;
+    var candidate = {};
+    if (fallback) {
+      candidate.mode = toText(fallback.mode || fallback.mode_bucket).trim();
+      candidate.mode_key = toText(fallback.mode_key).trim();
+      candidate.score = fallback.score;
+      candidate.best_tile = fallback.best_tile;
+      candidate.duration_ms = fallback.duration_ms;
+      candidate.ended_at = fallback.ended_at;
+      candidate.end_reason = fallback.end_reason;
+      if (fallback.final_board != null) candidate.final_board = fallback.final_board;
+      if (fallback.replay_string != null) candidate.replay_string = fallback.replay_string;
+      if (fallback.replay != null) candidate.replay = fallback.replay;
+      if (fallback.id != null) candidate.id = fallback.id;
+    }
+    if (source.mode != null || source.mode_bucket != null) {
+      candidate.mode = toText(source.mode || source.mode_bucket).trim();
+    }
+    if (source.mode_key != null) candidate.mode_key = toText(source.mode_key).trim();
+    if (source.score != null) candidate.score = source.score;
+    if (source.best_tile != null) candidate.best_tile = source.best_tile;
+    if (source.duration_ms != null) candidate.duration_ms = source.duration_ms;
+    if (source.ended_at != null) candidate.ended_at = source.ended_at;
+    if (source.end_reason != null) candidate.end_reason = source.end_reason;
+    if (source.final_board != null) candidate.final_board = source.final_board;
+    if (source.replay_string != null) candidate.replay_string = source.replay_string;
+    if (source.replay != null) candidate.replay = source.replay;
+    if (source.id != null) candidate.id = source.id;
+    try {
+      return runtime.normalizeHistoryRecordFromContext({
+        record: candidate,
+        nowIso: function () { return ""; },
+        idFactory: function () { return ""; }
+      });
+    } catch (_err) {
+      return null;
+    }
+  }
+
   function resolveBoardDims(boardMatrix) {
     var rowCount = Array.isArray(boardMatrix) ? boardMatrix.length : 0;
     var cols = 0;
@@ -730,6 +775,24 @@
 
   function normalizeRecordDetailPayload(raw, fallbackRecord) {
     var source = raw && typeof raw === "object" ? raw : {};
+    var normalized = normalizeHistoryRecordViaRuntime(source, fallbackRecord);
+    if (normalized) {
+      var normalizedReplayString = toText(normalized.replay_string).trim();
+      if (!normalizedReplayString && normalized.replay != null) {
+        try { normalizedReplayString = JSON.stringify(normalized.replay); } catch (_err) { normalizedReplayString = ""; }
+      }
+      return {
+        score: Math.floor(Number(normalized.score) || 0),
+        mode_bucket: toText(source.mode_bucket || (fallbackRecord && fallbackRecord.mode_bucket) || normalized.mode).trim(),
+        mode_key: toText(source.mode_key || (fallbackRecord && fallbackRecord.mode_key) || normalized.mode_key).trim(),
+        best_tile: Math.floor(Number(normalized.best_tile) || 0),
+        duration_ms: Math.floor(Number(normalized.duration_ms) || 0),
+        ended_at: toText(source.ended_at || normalized.ended_at || (fallbackRecord && fallbackRecord.ended_at)).trim(),
+        replay_string: normalizedReplayString,
+        final_board: normalizeBoardMatrix(normalized.final_board)
+      };
+    }
+
     var replayString = toText(source.replay_string).trim();
     if (!replayString && source.replay != null) {
       try { replayString = JSON.stringify(source.replay); } catch (_err) { replayString = ""; }
@@ -1116,16 +1179,17 @@
     for (var i = 0; i < data.length; i += 1) {
       var item = data[i];
       if (!item || typeof item !== "object") continue;
+      var normalized = normalizeHistoryRecordViaRuntime(item, null);
       out.push({
-        id: toText(item.id).trim(),
+        id: toText(item.id || (normalized && normalized.id)).trim(),
         user_id: parsePositiveInt(item.user_id),
-        mode_bucket: toText(item.mode_bucket).trim(),
-        mode_key: toText(item.mode_key).trim(),
-        score: Math.floor(Number(item.score) || 0),
-        best_tile: Math.floor(Number(item.best_tile) || 0),
-        duration_ms: Math.floor(Number(item.duration_ms) || 0),
-        end_reason: toText(item.end_reason).trim(),
-        ended_at: toText(item.ended_at).trim(),
+        mode_bucket: toText(item.mode_bucket || (normalized && normalized.mode)).trim(),
+        mode_key: toText(item.mode_key || (normalized && normalized.mode_key)).trim(),
+        score: Math.floor(Number((normalized && normalized.score) != null ? normalized.score : item.score) || 0),
+        best_tile: Math.floor(Number((normalized && normalized.best_tile) != null ? normalized.best_tile : item.best_tile) || 0),
+        duration_ms: Math.floor(Number((normalized && normalized.duration_ms) != null ? normalized.duration_ms : item.duration_ms) || 0),
+        end_reason: toText(item.end_reason || (normalized && normalized.end_reason)).trim(),
+        ended_at: toText(item.ended_at || (normalized && normalized.ended_at)).trim(),
         created_at: toText(item.created_at).trim(),
         deleted_at: toText(item.deleted_at).trim()
       });

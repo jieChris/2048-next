@@ -251,3 +251,15 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. 推进 WS3-02 下一批：评估 `history_page.js` / `user_profile_page.js` 是否仍存在隐式字段拼装并逐步收敛到 contracts。
 2. 汇总 WS3/WS8 的 F sign-off 证据表并完成签收。
 3. 继续观察 2-3 轮 CI，确认 WS8 深度门禁长期稳定。
+
+## 17. 增量状态更新（2026-03-22 / Batch-WS3-05）
+- WS3-02（历史隐式结构迁移到 contracts）：`in_progress`
+  - 本批完成：`js/user_profile_page.js` 的记录列表与回放详情归一化改为优先复用 `CoreGameSettingsStorageRuntime.normalizeHistoryRecordFromContext`，并保留页面兜底分支。
+  - 本批完成：`src/entries/user-profile.ts` 补齐 `core_game_settings_storage_runtime.js` 依赖导入，确保统一归一化入口可用。
+  - 验证：`npx playwright test --config=playwright.config.ts tests/smoke/pages-user-profile-title.smoke.spec.ts`、`npx vitest run tests/unit/core-game-settings-storage.spec.ts tests/unit/contracts.spec.ts`、`npm run verify:prepush` 全绿。
+- WS8-01（架构契约门禁）：`in_progress`
+  - 状态：本批改动已通过 refactor gate 全链路，未引入 contracts/engine/legacy 回流告警。
+### 接下来必须做的工作（按优先级）
+1. 继续 WS3-02：扫描并收敛 `history_page.js` 剩余字段拼装分支，优先抽到 runtime/contracts。
+2. 输出 WS3/WS8 的 F sign-off 证据表并完成 A/F 签收。
+3. 连续观察 2-3 轮 CI，确认 user-profile 相关链路长期稳定。

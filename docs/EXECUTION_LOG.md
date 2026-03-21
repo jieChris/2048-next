@@ -406,3 +406,26 @@
 1. 推进 WS3-02 下一批：收敛历史展示层隐式字段拼装。
 2. 汇总 WS3/WS8 的 F sign-off 证据表并签收。
 3. 连续观察 2-3 轮 CI，确认门禁稳定无误报。
+
+## [2026-03-22] Batch-WS3-05
+- 目标：推进 WS3-02 第三批，收敛历史展示层（user profile）字段拼装到统一 runtime contracts 入口。
+- 完成项：
+1. 在 `js/user_profile_page.js` 新增 `normalizeHistoryRecordViaRuntime()`，集中调用 `CoreGameSettingsStorageRuntime.normalizeHistoryRecordFromContext`。
+2. `normalizeRecordDetailPayload()` 改为优先消费 runtime 归一化结果，保留原有兜底逻辑。
+3. `normalizeUserRecordsFromApi()` 改为优先使用 runtime 归一化结果（score/best_tile/duration/mode/end_reason/ended_at），减少页面层重复拼装。
+4. 在 `src/entries/user-profile.ts` 增加 `core_game_settings_storage_runtime.js` 导入，确保页面运行时具备统一归一化能力。
+- 验证证据：
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/pages-user-profile-title.smoke.spec.ts`
+  - 结果：PASS（6 tests）
+  - 命令：`npx vitest run tests/unit/core-game-settings-storage.spec.ts tests/unit/contracts.spec.ts`
+  - 结果：PASS（53 tests）
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：`history_page.js` 仍存在 owner/filter 侧的页面组装逻辑，虽非核心协议风险点，但仍需继续收敛字段拼装分支。
+  - 缓解动作：下一批联动 `history_page.js` + `LocalHistoryStore` 输出字段，继续压缩页面层隐式结构依赖。
+- 下一步（1-3条）：
+1. 推进 WS3-02 下一批：收敛 `history_page.js` 字段拼装分支并补回归测试。
+2. 汇总 WS3/WS8 F sign-off 证据表并完成签收。
+3. 连续观察 2-3 轮 CI，确认 user-profile/history 链路稳定。
