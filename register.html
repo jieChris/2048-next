@@ -19,7 +19,7 @@
       <div class="palette-title-wrap">
         <p class="palette-kicker" id="register-kicker">2048 Online Hub</p>
         <h1 class="palette-title" id="register-title">Create Account</h1>
-        <p class="palette-subtitle" id="register-subtitle">Complete captcha verification before creating an account.</p>
+        <p class="palette-subtitle" id="register-subtitle">Complete human verification and nickname check before creating an account.</p>
       </div>
       <nav class="palette-nav">
         <a class="replay-button palette-nav-btn" href="account.html" id="register-nav-login">Back to Login</a>
@@ -41,13 +41,6 @@
 
         <label for="register-nickname" id="register-nickname-label">Nickname</label>
         <input id="register-nickname" class="account-input" type="text" maxlength="20" placeholder="Enter nickname">
-
-        <label for="register-captcha-answer" id="register-captcha-label">Image Captcha</label>
-        <div class="account-login-captcha-row">
-          <img id="register-captcha-image" class="account-login-captcha-image" alt="register captcha">
-          <button id="register-captcha-refresh" class="replay-button account-login-captcha-refresh" type="button">Refresh</button>
-        </div>
-        <input id="register-captcha-answer" class="account-input" type="text" maxlength="8" autocomplete="off" placeholder="Enter captcha">
 
         <label id="register-turnstile-label">Human Verification</label>
         <div id="register-turnstile-wrap" class="register-turnstile-wrap">
