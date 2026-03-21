@@ -276,3 +276,19 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. 继续 WS3-02：收敛 `history_page.js` 的 owner/diagnostics 结构分支，评估抽到 contracts/runtime 的可行入口。
 2. 输出 WS3/WS8 F sign-off 证据表并完成 A/F 签收。
 3. 连续观察 2-3 轮 CI，确认 history/user-profile 新归一化路径长期稳定。
+
+## 19. 增量状态更新（2026-03-22 / Batch-WS3-07）
+- WS3-02（历史隐式结构迁移到 contracts）：`in_progress`
+  - 本批完成：在 `src/core/game-settings-storage.ts` / `js/core_game_settings_storage_runtime.js` 新增统一入口：
+    - `normalizeHistoryOwnerMetaFromContext`
+    - `normalizeHistoryDiagnosticsIndexEntriesFromContext`
+  - 本批完成：`js/local_history_store.js` 的 owner 与 diagnostics 归一化改为优先复用上述 runtime 入口，保留本地 fallback。
+  - 本批完成：`js/history_page.js` 的 owner 显示与 diagnostics 解析改为优先复用 runtime 入口，减少页面层重复规则。
+  - 本批完成：`tests/unit/core-game-settings-storage.spec.ts` 新增 owner/diagnostics 归一化单测。
+  - 验证：定向 unit + history smoke + `npm run verify:prepush` 全绿。
+- WS8-01（架构契约门禁）：`in_progress`
+  - 状态：本批改动通过 refactor gate 全链路，无 contracts/legacy 回流告警。
+### 接下来必须做的工作（按优先级）
+1. 继续 WS3-02：评估并抽取 owner/diagnostics 的 contracts 类型与最小校验函数，减少页面层专用结构。
+2. 输出 WS3/WS8 F sign-off 证据表并完成 A/F 签收。
+3. 连续观察 2-3 轮 CI，确认 history/user-profile 新路径长期稳定。

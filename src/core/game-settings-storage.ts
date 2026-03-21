@@ -83,6 +83,175 @@ function normalizeNonNegativeInteger(value: unknown, fallback: number): number {
   return Math.max(0, normalizeInteger(value, fallback));
 }
 
+function normalizePositiveInteger(value: unknown, fallback: number): number {
+  const normalized = normalizeInteger(value, fallback);
+  return normalized > 0 ? normalized : fallback;
+}
+
+function normalizeHistoryOwnerKeyPart(value: unknown, maxLength: number): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_.:@-]+/g, "_")
+    .slice(0, maxLength);
+}
+
+function normalizeHistoryDiagnosticPayloadArrayValue(value: unknown, maxStringLength: number): string | number | boolean | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string" && value) {
+    return value.slice(0, maxStringLength);
+  }
+  return null;
+}
+
+function normalizeHistoryDiagnosticPayloadArray(
+  value: unknown,
+  options: { maxArrayItems: number; maxStringLength: number }
+): Array<string | number | boolean> {
+  const source = Array.isArray(value) ? value : [];
+  const out: Array<string | number | boolean> = [];
+  for (let i = 0; i < source.length; i += 1) {
+    if (out.length >= options.maxArrayItems) break;
+    const normalized = normalizeHistoryDiagnosticPayloadArrayValue(source[i], options.maxStringLength);
+    if (normalized === null) continue;
+    out.push(normalized);
+  }
+  return out;
+}
+
+function normalizeHistoryDiagnosticPayloadValue(
+  value: unknown,
+  options: { maxArrayItems: number; maxStringLength: number }
+): string | number | boolean | Array<string | number | boolean> | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    return value.slice(0, options.maxStringLength);
+  }
+  if (Array.isArray(value)) {
+    return normalizeHistoryDiagnosticPayloadArray(value, options);
+  }
+  return null;
+}
+
+function normalizeHistoryDiagnosticPayload(
+  payload: unknown,
+  options: {
+    maxPayloadKeys: number;
+    keyMaxLength: number;
+    maxArrayItems: number;
+    maxStringLength: number;
+  }
+): Record<string, unknown> | null {
+  if (!isObjectRecord(payload)) return null;
+  const out: Record<string, unknown> = {};
+  const keys = Object.keys(payload);
+  let accepted = 0;
+  for (let i = 0; i < keys.length; i += 1) {
+    if (accepted >= options.maxPayloadKeys) break;
+    const key = keys[i].slice(0, options.keyMaxLength);
+    if (!key) continue;
+    const value = normalizeHistoryDiagnosticPayloadValue(payload[keys[i]], options);
+    if (value === null) continue;
+    out[key] = value;
+    accepted += 1;
+  }
+  return out;
+}
+
+export function normalizeHistoryOwnerMetaFromContext(options: {
+  record?: unknown;
+  authUserId?: unknown;
+  authNickname?: unknown;
+  keyPartMaxLength?: unknown;
+}): Record<string, unknown> {
+  const opts = options || {};
+  const source = isObjectRecord(opts.record) ? opts.record : {};
+  const keyPartMaxLength = normalizePositiveInteger(opts.keyPartMaxLength, 64);
+
+  const ownerTypeRaw = typeof source.owner_type === "string" ? source.owner_type.trim().toLowerCase() : "";
+  let ownerUserId =
+    source.owner_user_id == null ? "" : String(source.owner_user_id).trim();
+  let ownerNickname =
+    source.owner_nickname == null ? "" : String(source.owner_nickname).trim();
+  let ownerKey = typeof source.owner_key === "string" ? source.owner_key.trim() : "";
+
+  if (!ownerTypeRaw && !ownerUserId && !ownerNickname) {
+    ownerUserId = opts.authUserId == null ? "" : String(opts.authUserId).trim();
+    ownerNickname = opts.authNickname == null ? "" : String(opts.authNickname).trim();
+  }
+
+  let ownerType: "guest" | "user" = ownerTypeRaw === "guest" ? "guest" : "user";
+  if (!ownerUserId && !ownerNickname) ownerType = "guest";
+  if (ownerType === "guest") {
+    ownerUserId = "";
+    ownerNickname = "";
+  }
+
+  if (!ownerKey) {
+    if (ownerType === "guest") {
+      ownerKey = "guest";
+    } else if (ownerUserId) {
+      ownerKey = "user:" + normalizeHistoryOwnerKeyPart(ownerUserId, keyPartMaxLength);
+    } else {
+      const normalizedNickname = normalizeHistoryOwnerKeyPart(ownerNickname, keyPartMaxLength);
+      ownerKey = normalizedNickname ? "nick:" + normalizedNickname : "guest";
+    }
+  }
+
+  return {
+    owner_type: ownerType,
+    owner_user_id: ownerUserId || null,
+    owner_nickname: ownerNickname,
+    owner_key: ownerKey || "guest"
+  };
+}
+
+export function normalizeHistoryDiagnosticsIndexEntriesFromContext(options: {
+  entries?: unknown;
+  maxEntries?: unknown;
+  maxPayloadKeys?: unknown;
+  maxStringLength?: unknown;
+  maxArrayItems?: unknown;
+  keyMaxLength?: unknown;
+}): Array<Record<string, unknown>> {
+  const opts = options || {};
+  const maxEntries = normalizePositiveInteger(opts.maxEntries, 6);
+  const maxPayloadKeys = normalizePositiveInteger(opts.maxPayloadKeys, 24);
+  const maxStringLength = normalizePositiveInteger(opts.maxStringLength, 160);
+  const maxArrayItems = normalizePositiveInteger(opts.maxArrayItems, 8);
+  const keyMaxLength = normalizePositiveInteger(opts.keyMaxLength, 64);
+  const source = Array.isArray(opts.entries) ? opts.entries : [];
+  const out: Array<Record<string, unknown>> = [];
+  for (let i = 0; i < source.length; i += 1) {
+    if (out.length >= maxEntries) break;
+    const entry = source[i];
+    if (!isObjectRecord(entry)) continue;
+    const key = typeof entry.key === "string" ? entry.key.slice(0, keyMaxLength) : "";
+    if (!key) continue;
+    const schemaVersion = Number(entry.schemaVersion);
+    if (!Number.isInteger(schemaVersion) || schemaVersion < 1) continue;
+    const payload = normalizeHistoryDiagnosticPayload(entry.payload, {
+      maxPayloadKeys,
+      keyMaxLength,
+      maxArrayItems,
+      maxStringLength
+    });
+    if (!payload) continue;
+    out.push({
+      key,
+      schemaVersion,
+      payload
+    });
+  }
+  return out;
+}
+
 function safeClonePlain<T>(value: T, fallback: T): T {
   try {
     return JSON.parse(JSON.stringify(value)) as T;

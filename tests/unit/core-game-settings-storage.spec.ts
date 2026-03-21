@@ -4,6 +4,8 @@ import {
   buildLiteSavedGameStatePayload,
   getSavedGameStateStoragesFromContext,
   normalizeTimerModuleViewMode,
+  normalizeHistoryDiagnosticsIndexEntriesFromContext,
+  normalizeHistoryOwnerMetaFromContext,
   normalizeHistoryRecordFromContext,
   readSavedPayloadByKeyFromStorages,
   readSavedPayloadFromWindowName,
@@ -539,6 +541,79 @@ describe("core game settings storage", () => {
         record: null
       })
     ).toBeNull();
+  });
+
+  it("normalizes history owner meta with auth fallback and key sanitization", () => {
+    expect(
+      normalizeHistoryOwnerMetaFromContext({
+        record: {},
+        authUserId: "User#01",
+        authNickname: "Alice",
+        keyPartMaxLength: 64
+      })
+    ).toEqual({
+      owner_type: "user",
+      owner_user_id: "User#01",
+      owner_nickname: "Alice",
+      owner_key: "user:user_01"
+    });
+
+    expect(
+      normalizeHistoryOwnerMetaFromContext({
+        record: {
+          owner_type: "guest",
+          owner_user_id: "123",
+          owner_nickname: "Nope"
+        }
+      })
+    ).toEqual({
+      owner_type: "guest",
+      owner_user_id: null,
+      owner_nickname: "",
+      owner_key: "guest"
+    });
+  });
+
+  it("normalizes diagnostics index entries with limits and payload sanitization", () => {
+    const normalized = normalizeHistoryDiagnosticsIndexEntriesFromContext({
+      entries: [
+        {
+          key: "secondaryTimerPlacement",
+          schemaVersion: 2,
+          payload: {
+            placed: 3,
+            flag: true,
+            message: "abcdef",
+            list: [1, "", "xy", false, "zzzz", "overflow"],
+            ignored: { nested: true },
+            invalid: Number.NaN
+          }
+        },
+        {
+          key: "",
+          schemaVersion: 2,
+          payload: { bad: true }
+        }
+      ],
+      maxEntries: 1,
+      maxPayloadKeys: 4,
+      maxStringLength: 5,
+      maxArrayItems: 3,
+      keyMaxLength: 8
+    });
+
+    expect(normalized).toEqual([
+      {
+        key: "secondar",
+        schemaVersion: 2,
+        payload: {
+          placed: 3,
+          flag: true,
+          message: "abcde",
+          list: [1, "xy", false]
+        }
+      }
+    ]);
   });
 
   it("normalizes timer module view mode", () => {

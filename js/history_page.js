@@ -41,7 +41,23 @@
     return getUiLang() === "en" ? "Unknown User" : "未知用户";
   }
 
+  function resolveRuntimeNormalizedHistoryOwnerMeta(item) {
+    var runtime = window.CoreGameSettingsStorageRuntime;
+    if (!runtime || typeof runtime.normalizeHistoryOwnerMetaFromContext !== "function") return null;
+    try {
+      return runtime.normalizeHistoryOwnerMetaFromContext({
+        record: item
+      });
+    } catch (_err) {
+      return null;
+    }
+  }
+
   function normalizeOwnerDisplay(item) {
+    var runtimeOwnerMeta = resolveRuntimeNormalizedHistoryOwnerMeta(item);
+    if (runtimeOwnerMeta && typeof runtimeOwnerMeta === "object") {
+      item = Object.assign({}, item, runtimeOwnerMeta);
+    }
     var ownerType = toText(item && item.owner_type).trim().toLowerCase();
     var ownerUserId = toText(item && item.owner_user_id).trim();
     var ownerNickname = toText(item && item.owner_nickname).trim();
@@ -190,6 +206,8 @@
   function normalizeHistoryRecordForView(raw) {
     var item = raw && typeof raw === "object" ? raw : {};
     var normalized = normalizeHistoryRecordViaRuntime(item);
+    var ownerMeta = resolveRuntimeNormalizedHistoryOwnerMeta(item);
+    var diagnosticsEntries = normalizeHistoryDiagnosticsIndexEntries(item.diagnostics_index_entries);
     var replayString = toText(item.replay_string || (normalized && normalized.replay_string)).trim();
     if (!replayString && normalized && normalized.replay != null) {
       try { replayString = JSON.stringify(normalized.replay); } catch (_err) { replayString = ""; }
@@ -204,11 +222,11 @@
       ended_at: toText(item.ended_at || (normalized && normalized.ended_at)).trim(),
       replay_string: replayString,
       final_board: item.final_board != null ? item.final_board : (normalized && normalized.final_board),
-      owner_type: item.owner_type,
-      owner_user_id: item.owner_user_id,
-      owner_nickname: item.owner_nickname,
-      owner_key: item.owner_key,
-      diagnostics_index_entries: item.diagnostics_index_entries
+      owner_type: toText(ownerMeta && ownerMeta.owner_type ? ownerMeta.owner_type : item.owner_type).trim().toLowerCase(),
+      owner_user_id: toText(ownerMeta && ownerMeta.owner_user_id != null ? ownerMeta.owner_user_id : item.owner_user_id).trim(),
+      owner_nickname: toText(ownerMeta && ownerMeta.owner_nickname != null ? ownerMeta.owner_nickname : item.owner_nickname).trim(),
+      owner_key: toText(ownerMeta && ownerMeta.owner_key != null ? ownerMeta.owner_key : item.owner_key).trim(),
+      diagnostics_index_entries: diagnosticsEntries
     };
   }
 
@@ -228,6 +246,20 @@
   }
 
   function normalizeHistoryDiagnosticsIndexEntries(rawEntries) {
+    var runtime = window.CoreGameSettingsStorageRuntime;
+    if (runtime && typeof runtime.normalizeHistoryDiagnosticsIndexEntriesFromContext === "function") {
+      try {
+        var normalizedByRuntime = runtime.normalizeHistoryDiagnosticsIndexEntriesFromContext({
+          entries: rawEntries,
+          maxEntries: 6,
+          maxPayloadKeys: 24,
+          maxStringLength: 160,
+          maxArrayItems: 8,
+          keyMaxLength: 64
+        });
+        if (Array.isArray(normalizedByRuntime)) return normalizedByRuntime;
+      } catch (_err) {}
+    }
     var source = Array.isArray(rawEntries) ? rawEntries : [];
     var entries = [];
     for (var i = 0; i < source.length; i += 1) {

@@ -59,6 +59,146 @@
     return Math.max(0, normalizeInteger(value, fallback));
   }
 
+  function normalizePositiveInteger(value, fallback) {
+    var normalized = normalizeInteger(value, fallback);
+    return normalized > 0 ? normalized : fallback;
+  }
+
+  function normalizeHistoryOwnerKeyPart(value, maxLength) {
+    return String(value == null ? "" : value)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_.:@-]+/g, "_")
+      .slice(0, maxLength);
+  }
+
+  function normalizeHistoryDiagnosticPayloadArrayValue(value, maxStringLength) {
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === "boolean") return value;
+    if (typeof value === "string" && value) {
+      return value.slice(0, maxStringLength);
+    }
+    return null;
+  }
+
+  function normalizeHistoryDiagnosticPayloadArray(value, options) {
+    var source = Array.isArray(value) ? value : [];
+    var out = [];
+    for (var i = 0; i < source.length; i++) {
+      if (out.length >= options.maxArrayItems) break;
+      var normalized = normalizeHistoryDiagnosticPayloadArrayValue(source[i], options.maxStringLength);
+      if (normalized === null) continue;
+      out.push(normalized);
+    }
+    return out;
+  }
+
+  function normalizeHistoryDiagnosticPayloadValue(value, options) {
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === "boolean") return value;
+    if (typeof value === "string") {
+      return value.slice(0, options.maxStringLength);
+    }
+    if (Array.isArray(value)) {
+      return normalizeHistoryDiagnosticPayloadArray(value, options);
+    }
+    return null;
+  }
+
+  function normalizeHistoryDiagnosticPayload(payload, options) {
+    if (!isObjectRecord(payload)) return null;
+    var out = {};
+    var keys = Object.keys(payload);
+    var accepted = 0;
+    for (var i = 0; i < keys.length; i++) {
+      if (accepted >= options.maxPayloadKeys) break;
+      var key = keys[i].slice(0, options.keyMaxLength);
+      if (!key) continue;
+      var value = normalizeHistoryDiagnosticPayloadValue(payload[keys[i]], options);
+      if (value === null) continue;
+      out[key] = value;
+      accepted += 1;
+    }
+    return out;
+  }
+
+  function normalizeHistoryOwnerMetaFromContext(options) {
+    var opts = options || {};
+    var source = isObjectRecord(opts.record) ? opts.record : {};
+    var keyPartMaxLength = normalizePositiveInteger(opts.keyPartMaxLength, 64);
+    var ownerTypeRaw = typeof source.owner_type === "string" ? source.owner_type.trim().toLowerCase() : "";
+    var ownerUserId = source.owner_user_id == null ? "" : String(source.owner_user_id).trim();
+    var ownerNickname = source.owner_nickname == null ? "" : String(source.owner_nickname).trim();
+    var ownerKey = typeof source.owner_key === "string" ? source.owner_key.trim() : "";
+
+    if (!ownerTypeRaw && !ownerUserId && !ownerNickname) {
+      ownerUserId = opts.authUserId == null ? "" : String(opts.authUserId).trim();
+      ownerNickname = opts.authNickname == null ? "" : String(opts.authNickname).trim();
+    }
+
+    var ownerType = ownerTypeRaw === "guest" ? "guest" : "user";
+    if (!ownerUserId && !ownerNickname) ownerType = "guest";
+    if (ownerType === "guest") {
+      ownerUserId = "";
+      ownerNickname = "";
+    }
+
+    if (!ownerKey) {
+      if (ownerType === "guest") {
+        ownerKey = "guest";
+      } else if (ownerUserId) {
+        ownerKey = "user:" + normalizeHistoryOwnerKeyPart(ownerUserId, keyPartMaxLength);
+      } else {
+        var normalizedNickname = normalizeHistoryOwnerKeyPart(ownerNickname, keyPartMaxLength);
+        ownerKey = normalizedNickname ? "nick:" + normalizedNickname : "guest";
+      }
+    }
+
+    return {
+      owner_type: ownerType,
+      owner_user_id: ownerUserId || null,
+      owner_nickname: ownerNickname,
+      owner_key: ownerKey || "guest"
+    };
+  }
+
+  function normalizeHistoryDiagnosticsIndexEntriesFromContext(options) {
+    var opts = options || {};
+    var maxEntries = normalizePositiveInteger(opts.maxEntries, 6);
+    var maxPayloadKeys = normalizePositiveInteger(opts.maxPayloadKeys, 24);
+    var maxStringLength = normalizePositiveInteger(opts.maxStringLength, 160);
+    var maxArrayItems = normalizePositiveInteger(opts.maxArrayItems, 8);
+    var keyMaxLength = normalizePositiveInteger(opts.keyMaxLength, 64);
+    var source = Array.isArray(opts.entries) ? opts.entries : [];
+    var out = [];
+    for (var i = 0; i < source.length; i++) {
+      if (out.length >= maxEntries) break;
+      var entry = source[i];
+      if (!isObjectRecord(entry)) continue;
+      var key = typeof entry.key === "string" ? entry.key.slice(0, keyMaxLength) : "";
+      if (!key) continue;
+      var schemaVersion = Number(entry.schemaVersion);
+      if (!Number.isInteger(schemaVersion) || schemaVersion < 1) continue;
+      var payload = normalizeHistoryDiagnosticPayload(entry.payload, {
+        maxPayloadKeys: maxPayloadKeys,
+        keyMaxLength: keyMaxLength,
+        maxArrayItems: maxArrayItems,
+        maxStringLength: maxStringLength
+      });
+      if (!payload) continue;
+      out.push({
+        key: key,
+        schemaVersion: schemaVersion,
+        payload: payload
+      });
+    }
+    return out;
+  }
+
   function safeClonePlain(value, fallback) {
     try {
       return JSON.parse(JSON.stringify(value));
@@ -591,6 +731,10 @@
   global.CoreGameSettingsStorageRuntime.writeTimerModuleViewForModeToMap = writeTimerModuleViewForModeToMap;
   global.CoreGameSettingsStorageRuntime.readUndoEnabledForModeFromMap = readUndoEnabledForModeFromMap;
   global.CoreGameSettingsStorageRuntime.writeUndoEnabledForModeToMap = writeUndoEnabledForModeToMap;
+  global.CoreGameSettingsStorageRuntime.normalizeHistoryOwnerMetaFromContext =
+    normalizeHistoryOwnerMetaFromContext;
+  global.CoreGameSettingsStorageRuntime.normalizeHistoryDiagnosticsIndexEntriesFromContext =
+    normalizeHistoryDiagnosticsIndexEntriesFromContext;
   global.CoreGameSettingsStorageRuntime.normalizeHistoryRecordFromContext =
     normalizeHistoryRecordFromContext;
 })(typeof window !== "undefined" ? window : undefined);

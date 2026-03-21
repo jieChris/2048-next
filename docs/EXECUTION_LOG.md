@@ -452,3 +452,34 @@
 1. 推进 WS3-02 下一批：收敛 owner/diagnostics 分支并补测试。
 2. 汇总 WS3/WS8 F sign-off 证据表并完成签收。
 3. 连续观察 2-3 轮 CI，确认新归一化路径稳定。
+
+## [2026-03-22] Batch-WS3-07
+- 目标：推进 WS3-02 第五批，收敛 owner/diagnostics 归一化规则到 runtime 统一入口。
+- 完成项：
+1. 在 `src/core/game-settings-storage.ts` 新增并导出：
+   - `normalizeHistoryOwnerMetaFromContext()`
+   - `normalizeHistoryDiagnosticsIndexEntriesFromContext()`
+2. 在 `js/core_game_settings_storage_runtime.js` 同步新增并导出上述函数，形成 legacy/runtime 侧统一入口。
+3. 在 `js/local_history_store.js`：
+   - `resolveOwnerMetaFromRaw` 改为优先调用 runtime 的 owner 归一化；
+   - `normalizeDiagnosticsIndexEntries` 改为优先调用 runtime 的 diagnostics 归一化。
+4. 在 `js/history_page.js`：
+   - `normalizeOwnerDisplay` 改为优先消费 runtime owner 归一化；
+   - `normalizeHistoryDiagnosticsIndexEntries` 改为优先消费 runtime diagnostics 归一化；
+   - `normalizeHistoryRecordForView` 联动使用 runtime owner/diagnostics 结果。
+5. 在 `tests/unit/core-game-settings-storage.spec.ts` 补 owner/diagnostics 归一化单测。
+- 验证证据：
+  - 命令：`npx vitest run tests/unit/core-game-settings-storage.spec.ts`
+  - 结果：PASS（26 tests）
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/history-records-owner-filter.smoke.spec.ts tests/smoke/history-records-view-models.smoke.spec.ts tests/smoke/history-records-view-list-export.smoke.spec.ts`
+  - 结果：PASS（5 tests）
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：owner/diagnostics 目前已统一到 runtime 入口，但仍未在 `src/contracts` 形成显式协议类型与矩阵校验。
+  - 缓解动作：下一批将 owner/diagnostics 引入 contracts 最小类型与断言，进一步降低隐式结构风险。
+- 下一步（1-3条）：
+1. 推进 WS3-02 下一批：owner/diagnostics contracts 化（类型 + 断言 + 必要单测）。
+2. 汇总 WS3/WS8 F sign-off 证据表并完成签收。
+3. 连续观察 2-3 轮 CI，确认新归一化路径稳定。

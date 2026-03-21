@@ -2397,3 +2397,37 @@
 1. 继续收敛 owner/diagnostics 结构并评估 contracts/runtime 入口。
 2. 产出 WS3/WS8 F sign-off 证据表并完成签收。
 3. 连续观察 2-3 轮 CI，确认新路径长期稳定。
+
+## 本轮增量（第75批）
+
+### 1) WS3-02 第五批：owner/diagnostics 归一化入口统一
+- 文件：
+  - `src/core/game-settings-storage.ts`
+  - `js/core_game_settings_storage_runtime.js`
+  - `js/local_history_store.js`
+  - `js/history_page.js`
+  - `tests/unit/core-game-settings-storage.spec.ts`
+- 改动：
+  - 新增 runtime 统一入口：
+    - `normalizeHistoryOwnerMetaFromContext`
+    - `normalizeHistoryDiagnosticsIndexEntriesFromContext`
+  - `local_history_store` 改为优先复用统一入口处理 owner 与 diagnostics；
+  - `history_page` 改为优先复用统一入口处理 owner 显示与 diagnostics 解析；
+  - 补齐 owner/diagnostics 单测断言，覆盖 key 归一化与 payload 限幅规则。
+
+### 2) 验证证据（2026-03-22）
+- `npx vitest run tests/unit/core-game-settings-storage.spec.ts`
+  - PASS（26 tests）
+- `npx playwright test --config=playwright.config.ts tests/smoke/history-records-owner-filter.smoke.spec.ts tests/smoke/history-records-view-models.smoke.spec.ts tests/smoke/history-records-view-list-export.smoke.spec.ts`
+  - PASS（5 tests）
+- `npm run verify:prepush`
+  - PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+
+### 3) 风险控制结论
+- owner/diagnostics 规则已从页面散点逻辑收敛到 runtime 单入口，降低了历史链路隐式结构漂移风险。
+- 剩余风险：contracts 层尚未显式声明 owner/diagnostics 协议，仍需下一批补齐。
+
+### 4) 接下来需要做的工作（明确）
+1. 将 owner/diagnostics 引入 `src/contracts` 最小协议与断言。
+2. 产出 WS3/WS8 F sign-off 证据表并完成签收。
+3. 连续观察 2-3 轮 CI，确认新入口长期稳定。

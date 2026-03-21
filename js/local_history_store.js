@@ -48,7 +48,31 @@
       .slice(0, 64);
   }
 
+  function resolveRuntimeNormalizedHistoryOwnerMeta(raw) {
+    var runtime = window.CoreGameSettingsStorageRuntime;
+    if (!runtime || typeof runtime.normalizeHistoryOwnerMetaFromContext !== "function") return null;
+    try {
+      return runtime.normalizeHistoryOwnerMetaFromContext({
+        record: raw,
+        authUserId: safeReadLocalStorageText(AUTH_USER_ID_STORAGE_KEY),
+        authNickname: safeReadLocalStorageText(AUTH_NICKNAME_STORAGE_KEY),
+        keyPartMaxLength: 64
+      });
+    } catch (_err) {
+      return null;
+    }
+  }
+
   function resolveOwnerMetaFromRaw(raw) {
+    var normalizedByRuntime = resolveRuntimeNormalizedHistoryOwnerMeta(raw);
+    if (isPlainObject(normalizedByRuntime)) {
+      return {
+        owner_type: toText(normalizedByRuntime.owner_type).trim().toLowerCase() === "guest" ? "guest" : "user",
+        owner_user_id: toText(normalizedByRuntime.owner_user_id).trim() || null,
+        owner_nickname: toText(normalizedByRuntime.owner_nickname).trim(),
+        owner_key: toText(normalizedByRuntime.owner_key).trim() || "guest"
+      };
+    }
     var ownerTypeRaw = toText(raw && raw.owner_type).trim().toLowerCase();
     var ownerUserId = toText(raw && raw.owner_user_id).trim();
     var ownerNickname = toText(raw && raw.owner_nickname).trim();
@@ -191,6 +215,8 @@
   }
 
   function normalizeDiagnosticsIndexEntries(entries) {
+    var normalizedByRuntime = resolveRuntimeNormalizedDiagnosticsIndexEntries(entries);
+    if (Array.isArray(normalizedByRuntime)) return normalizedByRuntime;
     var list = Array.isArray(entries) ? entries : [];
     var normalized = [];
     for (var i = 0; i < list.length; i += 1) {
@@ -200,6 +226,25 @@
       normalized.push(entry);
     }
     return normalized;
+  }
+
+  function resolveRuntimeNormalizedDiagnosticsIndexEntries(entries) {
+    var runtime = window.CoreGameSettingsStorageRuntime;
+    if (!runtime || typeof runtime.normalizeHistoryDiagnosticsIndexEntriesFromContext !== "function") {
+      return null;
+    }
+    try {
+      return runtime.normalizeHistoryDiagnosticsIndexEntriesFromContext({
+        entries: entries,
+        maxEntries: MAX_DIAGNOSTICS_INDEX_ENTRIES,
+        maxPayloadKeys: MAX_DIAGNOSTIC_PAYLOAD_KEYS,
+        maxStringLength: MAX_DIAGNOSTIC_STRING_LENGTH,
+        maxArrayItems: MAX_DIAGNOSTIC_ARRAY_ITEMS,
+        keyMaxLength: 64
+      });
+    } catch (_err) {
+      return null;
+    }
   }
 
   function compareDatesDesc(a, b) {
