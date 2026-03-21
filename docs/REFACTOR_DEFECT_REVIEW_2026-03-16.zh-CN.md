@@ -2461,3 +2461,37 @@
 1. 产出 WS3/WS8 F sign-off 证据表并完成签收。
 2. 连续观察 2-3 轮 CI，确认 contracts 扩展长期稳定。
 3. 评估并决定是否扩展 contracts matrix 覆盖 owner/diagnostics。
+
+## 本轮增量（第77批）
+
+### 1) WS8-01 门禁升级：contracts matrix 覆盖扩展到 `HistoryRecord`
+- 文件：
+  - `scripts/contracts-matrix-audit.mjs`
+  - `src/contracts/index.ts`
+  - `tests/unit/contracts-matrix-audit-helpers.spec.ts`
+  - `tests/unit/contracts.spec.ts`
+  - `docs/baseline/CONTRACTS_REPLAY_IMPORT_EXPORT_MATRIX.md`
+- 改动：
+  - matrix gate 从 5 合同升级为 6 合同，新增 `HistoryRecord`；
+  - token 审计补齐 HistoryRecord 及 owner/diagnostics 相关 required keys 与 `is*` 函数；
+  - matrix 行绑定 `HistoryRecord` 的 producer/consumer/assertion，并满足 unit+smoke 深度约束；
+  - 基线文档同步升级到 6 合同版本。
+
+### 2) 验证证据（2026-03-22）
+- `npx vitest run tests/unit/contracts.spec.ts tests/unit/contracts-matrix-audit-helpers.spec.ts`
+  - PASS（37 tests）
+- `node scripts/contracts-matrix-audit.mjs`
+  - PASS
+- `npx playwright test --config=playwright.config.ts tests/smoke/history-records-owner-filter.smoke.spec.ts tests/smoke/history-records-view-models.smoke.spec.ts`
+  - PASS（4 tests）
+- `npm run verify:prepush`
+  - PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+
+### 3) 风险控制结论
+- owner/diagnostics 已实现“contracts 协议 + matrix gate + unit/smoke 深度”的三层防回退约束。
+- 剩余主要工作从技术实现转向流程签收（F sign-off 证据表）。
+
+### 4) 接下来需要做的工作（明确）
+1. 产出并签收 WS3/WS8 F sign-off 证据表。
+2. 连续观察 2-3 轮 CI，确认 6 合同 matrix 稳定。
+3. 评估并执行 WS8-01 的 done 收口。

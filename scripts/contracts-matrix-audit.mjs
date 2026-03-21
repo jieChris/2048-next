@@ -14,6 +14,7 @@ const MATRIX_DOC_PATH = path.resolve(
 );
 
 const REQUIRED_CONTRACT_NAMES = [
+  "HistoryRecord",
   "ReplayRecord",
   "HistoryExportEnvelope",
   "SubmitPayload",
@@ -22,11 +23,17 @@ const REQUIRED_CONTRACT_NAMES = [
 ];
 const REQUIRED_TOKENS = [
   "CORE_CONTRACT_COVERAGE_MATRIX",
+  "HISTORY_RECORD_REQUIRED_KEYS",
+  "HISTORY_OWNER_META_REQUIRED_KEYS",
+  "HISTORY_DIAGNOSTICS_INDEX_ENTRY_REQUIRED_KEYS",
   "REPLAY_RECORD_REQUIRED_KEYS",
   "HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS",
   "SUBMIT_PAYLOAD_REQUIRED_KEYS",
   "SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS",
   "SESSION_INIT_PAYLOAD_REQUIRED_KEYS",
+  "isHistoryRecordLike",
+  "isHistoryOwnerMetaLike",
+  "isHistoryDiagnosticsIndexEntryLike",
   "isReplayRecordLike",
   "isHistoryExportEnvelopeLike",
   "isSavedGameStatePayloadLike",

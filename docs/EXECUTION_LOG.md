@@ -514,3 +514,38 @@
 1. 汇总 WS3/WS8 F sign-off 证据表并完成签收。
 2. 连续观察 2-3 轮 CI，确认 contracts 扩展稳定。
 3. 评估 matrix 扩展方案与改造成本。
+
+## [2026-03-22] Batch-WS8-05
+- 目标：将 owner/diagnostics 对应的 `HistoryRecord` 正式纳入 contracts matrix gate，形成 contracts 层面的持续 CI 约束。
+- 完成项：
+1. `scripts/contracts-matrix-audit.mjs`：
+   - `REQUIRED_CONTRACT_NAMES` 从 5 行扩展为 6 行（新增 `HistoryRecord`）；
+   - `REQUIRED_TOKENS` 新增 HistoryRecord 相关 required keys 与 `is*` 校验函数 token；
+   - 保持 assertions 深度规则（每行至少 1 unit + 1 smoke）。
+2. `src/contracts/index.ts`：
+   - `ContractCoverageMatrixEntry` 新增 `HistoryRecord` 合同类型；
+   - `CORE_CONTRACT_COVERAGE_MATRIX` 新增 `HistoryRecord` 行，绑定 producer/consumer/assertion 路径。
+3. `tests/unit/contracts-matrix-audit-helpers.spec.ts`：
+   - `VALID_CONTRACTS_SOURCE` 与期望行列表扩展至 6 行；
+   - doc 校验样例同步包含 `HistoryRecord`。
+4. `tests/unit/contracts.spec.ts`：
+   - matrix 行数断言从 5 改为 6。
+5. `docs/baseline/CONTRACTS_REPLAY_IMPORT_EXPORT_MATRIX.md`：
+   - 矩阵文档升级为 6 合同版本，加入 `HistoryRecord` 行和代码锚点。
+- 验证证据：
+  - 命令：`npx vitest run tests/unit/contracts.spec.ts tests/unit/contracts-matrix-audit-helpers.spec.ts`
+  - 结果：PASS（37 tests）
+  - 命令：`node scripts/contracts-matrix-audit.mjs`
+  - 结果：PASS
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/history-records-owner-filter.smoke.spec.ts tests/smoke/history-records-view-models.smoke.spec.ts`
+  - 结果：PASS（4 tests）
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：技术门禁已补齐，但 WS3/WS8 尚缺 F sign-off 证据表的流程签收。
+  - 缓解动作：下一批直接产出并沉淀 F sign-off 表，完成 A/F 签收。
+- 下一步（1-3条）：
+1. 产出 WS3/WS8 F sign-off 证据表并完成签收。
+2. 连续观察 2-3 轮 CI，确认 6 合同 matrix 稳定。
+3. 评估 WS8-01 切换到 done 的时机。

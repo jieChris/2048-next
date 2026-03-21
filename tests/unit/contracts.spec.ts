@@ -429,7 +429,7 @@ describe("contracts: replay/import/export matrix", () => {
   });
 
   it("defines non-empty producer/consumer/assertion paths for each matrix row", () => {
-    expect(REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX.length).toBe(5);
+    expect(REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX.length).toBe(6);
     expect(CORE_CONTRACT_COVERAGE_MATRIX).toBe(REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX);
     for (const row of REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX) {
       expect(row.requiredKeys.length).toBeGreaterThan(0);

@@ -607,6 +607,7 @@ export function isSubmitPayloadLike(value: unknown): value is SubmitPayload {
 
 export interface ContractCoverageMatrixEntry {
   contract:
+    | "HistoryRecord"
     | "ReplayRecord"
     | "HistoryExportEnvelope"
     | "SubmitPayload"
@@ -619,6 +620,23 @@ export interface ContractCoverageMatrixEntry {
 }
 
 export const CORE_CONTRACT_COVERAGE_MATRIX: readonly ContractCoverageMatrixEntry[] = [
+  {
+    contract: "HistoryRecord",
+    requiredKeys: HISTORY_RECORD_REQUIRED_KEYS,
+    producers: [
+      "js/local_history_store.js::normalizeRecord",
+      "src/storage/history-idb.ts::saveRecord/importRecords/migrateFromLocalStorage"
+    ],
+    consumers: [
+      "js/history_page.js::normalizeHistoryRecordForView",
+      "src/storage/history-idb.ts::listRecords/getById/exportRecords"
+    ],
+    assertions: [
+      "tests/unit/contracts.spec.ts::contracts history owner diagnostics helpers",
+      "tests/smoke/history-records-owner-filter.smoke.spec.ts::separates guest/account records and filters by owner",
+      "tests/smoke/history-records-view-models.smoke.spec.ts::renders record head and final board"
+    ]
+  },
   {
     contract: "ReplayRecord",
     requiredKeys: REPLAY_RECORD_REQUIRED_KEYS,

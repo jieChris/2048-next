@@ -308,3 +308,17 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. 输出 WS3/WS8 F sign-off 证据表并完成 A/F 签收。
 2. 继续观察 2-3 轮 CI，确认 contracts 扩展长期稳定。
 3. 评估是否将 owner/diagnostics 纳入 matrix 行（如纳入需联动升级 contracts-matrix-audit 规则）。
+
+## 21. 增量状态更新（2026-03-22 / Batch-WS8-05）
+- WS8-01（架构契约门禁）：`in_progress`
+  - 本批完成：`contracts-matrix-audit` 扩展为 6 行强校验，新增 `HistoryRecord` 合同行。
+  - 本批完成：matrix token 校验补充 `HISTORY_RECORD_REQUIRED_KEYS`、`HISTORY_OWNER_META_REQUIRED_KEYS`、`HISTORY_DIAGNOSTICS_INDEX_ENTRY_REQUIRED_KEYS` 及对应 `is*` 函数。
+  - 本批完成：`src/contracts/index.ts` 的 `CORE_CONTRACT_COVERAGE_MATRIX` 新增 `HistoryRecord` 行，并绑定 `unit + smoke` assertions（满足深度门禁）。
+  - 本批完成：`docs/baseline/CONTRACTS_REPLAY_IMPORT_EXPORT_MATRIX.md` 升级为包含 `HistoryRecord` 的 6 合同基线。
+  - 验证：`node scripts/contracts-matrix-audit.mjs`、定向 unit/smoke、`npm run verify:prepush` 全绿。
+- WS3-02（历史隐式结构迁移到 contracts）：`in_progress`
+  - 状态：owner/diagnostics 已从 runtime 规则提升到 contracts + matrix 双重约束。
+### 接下来必须做的工作（按优先级）
+1. 输出 WS3/WS8 F sign-off 证据表并完成 A/F 签收。
+2. 连续观察 2-3 轮 CI，确认 6 合同 matrix 门禁长期稳定。
+3. 按签收结果决定是否将 WS8-01 从 in_progress 转入 done。

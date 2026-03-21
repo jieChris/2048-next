@@ -1,12 +1,13 @@
-﻿# Contracts 覆盖矩阵（Replay / Import / Export / SavedState / SessionInit）
+﻿# Contracts 覆盖矩阵（History / Replay / Import / Export / SavedState / SessionInit）
 
-> 范围：WS3-01 第二批，覆盖 `ReplayRecord`、`HistoryExportEnvelope`、`SubmitPayload`、`SavedGameStatePayload`、`SessionInitPayload`。
+> 范围：WS3-01 第二批，覆盖 `HistoryRecord`、`ReplayRecord`、`HistoryExportEnvelope`、`SubmitPayload`、`SavedGameStatePayload`、`SessionInitPayload`。
 > 目标：明确字段、生产方、消费方、断言位置，避免隐式结构漂移。
 
 ## 矩阵
 
 | Contract | 必填字段 | 生产方（Producer） | 消费方（Consumer） | 断言位置（Assertion） |
 |---|---|---|---|---|
+| HistoryRecord | `id` `mode` `mode_key` `board_width` `board_height` `ruleset` `undo_enabled` `ranked_bucket` `mode_family` `rank_policy` `special_rules_snapshot` `challenge_id` `score` `best_tile` `duration_ms` `final_board` `ended_at` `saved_at` `end_reason` `client_version` `replay` `replay_string` `owner_type` `owner_user_id` `owner_nickname` `owner_key` `diagnostics_index_entries` | `js/local_history_store.js::normalizeRecord`、`src/storage/history-idb.ts::saveRecord/importRecords/migrateFromLocalStorage` | `js/history_page.js::normalizeHistoryRecordForView`、`src/storage/history-idb.ts::listRecords/getById/exportRecords` | `tests/unit/contracts.spec.ts`、`tests/smoke/history-records-owner-filter.smoke.spec.ts`、`tests/smoke/history-records-view-models.smoke.spec.ts` |
 | ReplayRecord | `version` `kind` `modeKey` `initialBoardEncoded` `actionsEncoded` `replayString` | `js/core_game_manager_replay_helpers_runtime.js::serializeReplay*` | `js/core_game_manager_replay_helpers_runtime.js::importReplay/importV9RplBuffer`、`src/bootstrap/replay/*` | `tests/unit/contracts.spec.ts`、`tests/unit/core-replay-*.spec.ts`、`tests/smoke/pages-replay-runtime.smoke.spec.ts` |
 | HistoryExportEnvelope | `v` `exported_at` `count` `records` | `src/bootstrap/history/*::exportRecords` | `src/bootstrap/history/*::importRecords`、`tests/smoke/history-records-*.smoke.spec.ts` | `tests/unit/contracts.spec.ts`、`tests/smoke/history-records-view-list-export.smoke.spec.ts` |
 | SubmitPayload | `score` `best_tile` `duration_ms` `mode` `mode_key` `ended_at` `end_reason` `final_board` `replay` `replay_string` | `src/bootstrap/play/*::buildSubmitPayload` | API `/submit`、`src/services/api/*` | `tests/unit/contracts.spec.ts`、`tests/smoke/pages-online-record-submit-restart-flush.smoke.spec.ts` |
@@ -16,11 +17,17 @@
 ## 代码锚点
 
 - 常量与校验函数：`src/contracts/index.ts`
+  - `HISTORY_RECORD_REQUIRED_KEYS`
+  - `HISTORY_OWNER_META_REQUIRED_KEYS`
+  - `HISTORY_DIAGNOSTICS_INDEX_ENTRY_REQUIRED_KEYS`
   - `REPLAY_RECORD_REQUIRED_KEYS`
   - `HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS`
   - `SUBMIT_PAYLOAD_REQUIRED_KEYS`
   - `SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS`
   - `SESSION_INIT_PAYLOAD_REQUIRED_KEYS`
+  - `isHistoryRecordLike()`
+  - `isHistoryOwnerMetaLike()`
+  - `isHistoryDiagnosticsIndexEntryLike()`
   - `isReplayRecordLike()`
   - `isHistoryExportEnvelopeLike()`
   - `isSubmitPayloadLike()`
