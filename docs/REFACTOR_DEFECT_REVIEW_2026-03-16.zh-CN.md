@@ -2092,3 +2092,62 @@
 1. WS3-01：完成 replay/import/export contracts 矩阵与断言。
 2. WS8-01：把写入边界审计扩展到 saved-state/session-init。
 3. 联动 smoke 契约用例，形成完整发布级证据链。
+
+## 本轮增量（第66批）
+
+### 1) WS3-01 首批落地：contracts 覆盖矩阵 + 最小断言
+- 文件：
+  - `src/contracts/index.ts`
+  - `tests/unit/contracts.spec.ts`
+  - `docs/baseline/CONTRACTS_REPLAY_IMPORT_EXPORT_MATRIX.md`
+- 改动：
+  - 增加 replay/import/export 的必填字段常量与运行时最小校验函数；
+  - 增加统一矩阵常量，集中声明字段、生产方、消费方、断言位置；
+  - 增补 unit 正反用例，确保矩阵与字段约束可执行。
+
+### 2) 验证证据（2026-03-21）
+- `npx vitest run tests/unit/contracts.spec.ts`
+  - PASS（1 file / 26 tests）
+- `npm run verify:prepush`
+  - PASS（audit/unit/smoke/build 全通过）
+
+### 3) 风险控制结论
+- 本批把“contracts 覆盖矩阵”从文档目标转为代码常量 + 单测断言，减少口头约定风险。
+- 仍需扩展范围（saved-state/session-init）并纳入 gate，才能形成完整闭环。
+
+### 4) 接下来需要做的工作（明确）
+1. 扩展矩阵覆盖到 saved-state/session-init。
+2. 把矩阵完整性校验接入 CI gate。
+3. 增补 matrix 映射到 smoke 的回归用例。
+
+## 本轮增量（第67批）
+
+### 1) gate 联动：contracts-matrix-audit 落地
+- 文件：
+  - `scripts/contracts-matrix-audit.mjs`
+  - `scripts/refactor-gate.mjs`
+  - `scripts/refactor-timeout-env-keys.mjs`
+  - `scripts/release-readiness-check.mjs`
+  - `tests/unit/contracts-matrix-audit-helpers.spec.ts`
+  - `tests/unit/refactor-timeout-env-keys.spec.ts`
+  - `tests/unit/release-readiness-check-helpers.spec.ts`
+- 改动：
+  - 新增 contracts 矩阵审计脚本；
+  - 接入 refactor gate 执行链；
+  - 补 timeout env 映射；
+  - 补 release-ready 强约束；
+  - 补辅助单测防回退。
+
+### 2) 验证证据（2026-03-21）
+- `node scripts/contracts-matrix-audit.mjs` -> PASS
+- `npm run verify:release-ready` -> PASS
+- `npm run verify:prepush` -> PASS（含 contracts-matrix-audit）
+
+### 3) 风险控制结论
+- contracts 矩阵已进入 CI 阻断链路，回退风险明显降低。
+- 仍需扩展覆盖范围至 saved-state/session-init，当前属于“首批可用，不是最终闭环”。
+
+### 4) 接下来需要做的工作（明确）
+1. 扩展矩阵 + 审计到 saved-state/session-init。
+2. 增补对应 smoke 契约场景并沉淀 F sign-off。
+3. 评估 WS3-01 / WS8-01 的 done 条件并准备收口。

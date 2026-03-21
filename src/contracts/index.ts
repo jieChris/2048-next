@@ -11,6 +11,18 @@
 // ---------------------------------------------------------------------------
 export const CONTRACT_SCHEMA_VERSION = 1;
 
+function isNonArrayObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasRequiredObjectKeys(
+  value: unknown,
+  requiredKeys: readonly string[]
+): value is Record<string, unknown> {
+  if (!isNonArrayObject(value)) return false;
+  return requiredKeys.every((key) => Object.prototype.hasOwnProperty.call(value, key));
+}
+
 // ---------------------------------------------------------------------------
 // Replay contracts
 // ---------------------------------------------------------------------------
@@ -22,6 +34,19 @@ export interface ReplayRecord {
   initialBoardEncoded: string;
   actionsEncoded: string;
   replayString: string;
+}
+
+export const REPLAY_RECORD_REQUIRED_KEYS = [
+  "version",
+  "kind",
+  "modeKey",
+  "initialBoardEncoded",
+  "actionsEncoded",
+  "replayString"
+] as const;
+
+export function isReplayRecordLike(value: unknown): value is ReplayRecord {
+  return hasRequiredObjectKeys(value, REPLAY_RECORD_REQUIRED_KEYS);
 }
 
 export function createEmptyReplayRecord(modeKey: string): ReplayRecord {
@@ -69,6 +94,20 @@ export interface HistoryExportEnvelope {
   exported_at: string;
   count: number;
   records: HistoryRecord[];
+}
+
+export const HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS = [
+  "v",
+  "exported_at",
+  "count",
+  "records"
+] as const;
+
+export function isHistoryExportEnvelopeLike(
+  value: unknown
+): value is HistoryExportEnvelope {
+  if (!hasRequiredObjectKeys(value, HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS)) return false;
+  return Array.isArray(value.records);
 }
 
 export interface HistoryListResult {
@@ -138,6 +177,78 @@ export interface SubmitPayload {
   client_record_id?: string;
   client_version?: string;
 }
+
+export const SUBMIT_PAYLOAD_REQUIRED_KEYS = [
+  "score",
+  "best_tile",
+  "duration_ms",
+  "mode",
+  "mode_key",
+  "ended_at",
+  "end_reason",
+  "final_board",
+  "replay",
+  "replay_string"
+] as const;
+
+export function isSubmitPayloadLike(value: unknown): value is SubmitPayload {
+  if (!hasRequiredObjectKeys(value, SUBMIT_PAYLOAD_REQUIRED_KEYS)) return false;
+  return Array.isArray(value.final_board);
+}
+
+export interface ContractCoverageMatrixEntry {
+  contract: "ReplayRecord" | "HistoryExportEnvelope" | "SubmitPayload";
+  requiredKeys: readonly string[];
+  producers: readonly string[];
+  consumers: readonly string[];
+  assertions: readonly string[];
+}
+
+export const REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX: readonly ContractCoverageMatrixEntry[] = [
+  {
+    contract: "ReplayRecord",
+    requiredKeys: REPLAY_RECORD_REQUIRED_KEYS,
+    producers: [
+      "js/core_game_manager_replay_helpers_runtime.js::serializeReplay*"
+    ],
+    consumers: [
+      "js/core_game_manager_replay_helpers_runtime.js::importReplay/importV9RplBuffer",
+      "src/bootstrap/replay/*"
+    ],
+    assertions: [
+      "tests/unit/contracts.spec.ts::contracts matrix + isReplayRecordLike",
+      "tests/unit/core-replay-*.spec.ts"
+    ]
+  },
+  {
+    contract: "HistoryExportEnvelope",
+    requiredKeys: HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS,
+    producers: [
+      "src/bootstrap/history/*::exportRecords"
+    ],
+    consumers: [
+      "src/bootstrap/history/*::importRecords",
+      "tests/smoke/history-records-*.smoke.spec.ts"
+    ],
+    assertions: [
+      "tests/unit/contracts.spec.ts::contracts matrix + isHistoryExportEnvelopeLike"
+    ]
+  },
+  {
+    contract: "SubmitPayload",
+    requiredKeys: SUBMIT_PAYLOAD_REQUIRED_KEYS,
+    producers: [
+      "src/bootstrap/play/*::buildSubmitPayload"
+    ],
+    consumers: [
+      "API /submit endpoint",
+      "src/services/api/*"
+    ],
+    assertions: [
+      "tests/unit/contracts.spec.ts::contracts matrix + isSubmitPayloadLike"
+    ]
+  }
+];
 
 // ---------------------------------------------------------------------------
 // Versioned schema migration

@@ -8,8 +8,10 @@ const projectRoot = path.resolve(__dirname, "..");
 
 const REQUIRED_FILES = [
   "docs/RELEASE_STABLE_CHECKLIST.zh-CN.md",
+  "docs/baseline/CONTRACTS_REPLAY_IMPORT_EXPORT_MATRIX.md",
   ".github/workflows/smoke.yml",
   "scripts/refactor-gate.mjs",
+  "scripts/contracts-matrix-audit.mjs",
   "scripts/refactor-timeout-env-keys.mjs"
 ];
 
@@ -72,10 +74,12 @@ const REFACTOR_GATE_REQUIRED_SNIPPETS = [
   "npm\", args: [\"run\", smokeScript]",
   "STEP_TIMEOUT_DEFAULT_ENV_KEY = \"REFACTOR_GATE_TIMEOUT_DEFAULT_MS\"",
   "\"REFACTOR_GATE_TIMEOUT_LEGACY_BOUNDARY_AUDIT_MS\"",
+  "\"REFACTOR_GATE_TIMEOUT_CONTRACTS_MATRIX_AUDIT_MS\"",
   "\"REFACTOR_GATE_TIMEOUT_UNIT_MS\"",
   "\"REFACTOR_GATE_TIMEOUT_SMOKE_MS\"",
   "\"REFACTOR_GATE_TIMEOUT_BUILD_MS\"",
   "legacy-boundary-audit",
+  "contracts-matrix-audit",
   "STEP_OUTPUT_TAIL_LINES_ENV_KEY = \"REFACTOR_GATE_OUTPUT_TAIL_LINES\"",
   "MAX_STEP_OUTPUT_TAIL_LINES",
   "Math.min(parsed, MAX_STEP_OUTPUT_TAIL_LINES)",

@@ -184,3 +184,53 @@
 1. 推进 WS3-01：落地 replay/import/export contracts 覆盖矩阵与断言。
 2. 扩展 WS8-01：补齐 saved-state/session-init 的关键字段写入边界审计。
 3. 基于矩阵补一轮 smoke 契约用例，形成可发布证据。
+
+## [2026-03-21] Batch-WS3-01
+- 目标：落地 replay/import/export 的 contracts 覆盖矩阵，并把最小断言纳入 CI。
+- 完成项：
+1. 在 `src/contracts/index.ts` 新增必填字段常量：`REPLAY_RECORD_REQUIRED_KEYS`、`HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS`、`SUBMIT_PAYLOAD_REQUIRED_KEYS`。
+2. 新增运行时最小校验函数：`isReplayRecordLike()`、`isHistoryExportEnvelopeLike()`、`isSubmitPayloadLike()`。
+3. 新增 `REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX`，把 contract 字段、生产方、消费方、断言位置集中声明。
+4. 在 `tests/unit/contracts.spec.ts` 增补矩阵与校验函数断言（正反用例）。
+5. 新增文档 `docs/baseline/CONTRACTS_REPLAY_IMPORT_EXPORT_MATRIX.md` 作为 WS3-01 首批矩阵基线。
+- 验证证据：
+  - 命令：`npx vitest run tests/unit/contracts.spec.ts`
+  - 结果：PASS（1 file / 26 tests）
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / engine-audit / unit / smoke / build 全通过）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：当前矩阵覆盖了 replay/import/export 三类核心 contract，但尚未覆盖 saved-state/session-init。
+  - 缓解动作：下一批继续扩展矩阵范围，并把覆盖率校验接入 gate。
+- 下一步（1-3条）：
+1. 扩展矩阵到 saved-state/session-init 并补最小校验函数。
+2. 增补 matrix->smoke 的契约用例映射，形成发布证据链。
+3. 增加 gate 检查：缺失 matrix 行或必填字段漂移时阻断。
+
+## [2026-03-21] Batch-WS8-02
+- 目标：将 WS3-01 的 contracts 矩阵接入 refactor gate，防止后续结构漂移。
+- 完成项：
+1. 新增 `scripts/contracts-matrix-audit.mjs`，校验 `src/contracts/index.ts` 中矩阵与关键 token 完整性。
+2. 审计规则已覆盖：`ReplayRecord`、`HistoryExportEnvelope`、`SubmitPayload` 三行矩阵必须存在，且 `requiredKeys/producers/consumers/assertions` 不为空。
+3. 将 `contracts-matrix-audit` 接入 `scripts/refactor-gate.mjs` 执行步骤与 timeout 映射。
+4. 更新 `scripts/refactor-timeout-env-keys.mjs`，新增 `REFACTOR_GATE_TIMEOUT_CONTRACTS_MATRIX_AUDIT_MS` 映射。
+5. 更新 `scripts/release-readiness-check.mjs`：把矩阵文档与审计脚本纳入必检文件，并要求 gate 包含 `contracts-matrix-audit` 关键片段。
+6. 新增/更新单测：
+   - `tests/unit/contracts-matrix-audit-helpers.spec.ts`
+   - `tests/unit/refactor-timeout-env-keys.spec.ts`
+   - `tests/unit/release-readiness-check-helpers.spec.ts`
+- 验证证据：
+  - 命令：`node scripts/contracts-matrix-audit.mjs`
+  - 结果：PASS
+  - 命令：`npm run verify:release-ready`
+  - 结果：PASS
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（包含 `contracts-matrix-audit` 在内的全部 gate 步骤通过）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：当前门禁已保护 replay/import/export 三类矩阵，但尚未覆盖 saved-state/session-init 的 contracts 行。
+  - 缓解动作：下一批扩展矩阵和审计规则到 saved-state/session-init，并补对应 smoke 契约用例。
+- 下一步（1-3条）：
+1. 扩展矩阵与审计到 saved-state/session-init。
+2. 增补 matrix->smoke 场景映射并落地回归用例。
+3. 收敛 WS3/WS8 为可签收状态（准备 F sign-off 证据表）。

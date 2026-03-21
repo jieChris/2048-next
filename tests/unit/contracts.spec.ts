@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   CONTRACT_SCHEMA_VERSION,
   createEmptyReplayRecord,
-  createSessionSnapshot
+  createSessionSnapshot,
+  HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS,
+  REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX,
+  REPLAY_RECORD_REQUIRED_KEYS,
+  SUBMIT_PAYLOAD_REQUIRED_KEYS,
+  isHistoryExportEnvelopeLike,
+  isReplayRecordLike,
+  isSubmitPayloadLike
 } from "../../src/contracts";
 import type {
   HistoryRecord,
@@ -37,6 +44,19 @@ describe("contracts: ReplayRecord", () => {
     expect(record.initialBoardEncoded).toBe("");
     expect(record.actionsEncoded).toBe("");
     expect(record.replayString).toBe("");
+  });
+
+  it("isReplayRecordLike validates required keys", () => {
+    const valid = {
+      version: 1,
+      kind: "v4c",
+      modeKey: "standard_4x4_pow2_no_undo",
+      initialBoardEncoded: "",
+      actionsEncoded: "",
+      replayString: "REPLAY_v4C_X"
+    };
+    expect(isReplayRecordLike(valid)).toBe(true);
+    expect(isReplayRecordLike({ modeKey: "x" })).toBe(false);
   });
 });
 
@@ -108,6 +128,24 @@ describe("contracts: HistoryExportEnvelope type shape", () => {
     expect(envelope.v).toBe(1);
     expect(envelope.records).toEqual([]);
   });
+
+  it("isHistoryExportEnvelopeLike validates required keys", () => {
+    const valid = {
+      v: 1,
+      exported_at: "2026-03-15T00:00:00Z",
+      count: 1,
+      records: []
+    };
+    expect(isHistoryExportEnvelopeLike(valid)).toBe(true);
+    expect(
+      isHistoryExportEnvelopeLike({
+        v: 1,
+        exported_at: "2026-03-15T00:00:00Z",
+        count: 1,
+        records: "bad"
+      })
+    ).toBe(false);
+  });
 });
 
 describe("contracts: SubmitPayload type shape", () => {
@@ -148,6 +186,64 @@ describe("contracts: SubmitPayload type shape", () => {
     };
     expect(payload.client_version).toBe("1.8");
     expect(payload.mode_bucket).toBe("standard_undo");
+  });
+
+  it("isSubmitPayloadLike validates required keys", () => {
+    const valid = {
+      score: 100,
+      best_tile: 16,
+      duration_ms: 1000,
+      mode: "standard_no_undo",
+      mode_key: "standard_4x4_pow2_no_undo",
+      ended_at: "2026-03-15T00:00:00Z",
+      end_reason: "game_over",
+      final_board: [[2, 0], [0, 0]],
+      replay: null,
+      replay_string: ""
+    };
+    expect(isSubmitPayloadLike(valid)).toBe(true);
+    expect(isSubmitPayloadLike({ ...valid, final_board: "bad" })).toBe(false);
+  });
+});
+
+describe("contracts: replay/import/export matrix", () => {
+  it("exposes stable required keys for core contracts", () => {
+    expect(REPLAY_RECORD_REQUIRED_KEYS).toEqual([
+      "version",
+      "kind",
+      "modeKey",
+      "initialBoardEncoded",
+      "actionsEncoded",
+      "replayString"
+    ]);
+    expect(HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS).toEqual([
+      "v",
+      "exported_at",
+      "count",
+      "records"
+    ]);
+    expect(SUBMIT_PAYLOAD_REQUIRED_KEYS).toEqual([
+      "score",
+      "best_tile",
+      "duration_ms",
+      "mode",
+      "mode_key",
+      "ended_at",
+      "end_reason",
+      "final_board",
+      "replay",
+      "replay_string"
+    ]);
+  });
+
+  it("defines non-empty producer/consumer/assertion paths for each matrix row", () => {
+    expect(REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX.length).toBe(3);
+    for (const row of REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX) {
+      expect(row.requiredKeys.length).toBeGreaterThan(0);
+      expect(row.producers.length).toBeGreaterThan(0);
+      expect(row.consumers.length).toBeGreaterThan(0);
+      expect(row.assertions.length).toBeGreaterThan(0);
+    }
   });
 });
 

@@ -135,3 +135,38 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. 产出 WS3-01 contracts 覆盖矩阵（replay/import/export 优先）。
 2. 扩展 WS8-01 审计范围到 saved-state/session-init 关键字段。
 3. 增补与 contracts 绑定的 smoke 契约回归并沉淀 F sign-off。
+
+## 10. 增量状态更新（2026-03-21 / Batch-WS3-01）
+
+- WS3-01（contracts 覆盖矩阵）：`in_progress`
+  - 本批已完成：
+    - replay/import/export 三类 contract 的必填字段常量；
+    - 对应运行时最小校验函数；
+    - 统一矩阵常量 `REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX`；
+    - 对应 unit 断言与基线文档。
+  - 验证：`npm run verify:prepush` 全绿。
+  - 剩余：覆盖面扩展到 saved-state/session-init，并接入 gate 检查。
+
+- WS8-01（架构契约门禁）：`in_progress`
+  - 已有 replay 写入边界门禁。
+  - 下一步与 WS3 联动：加入 matrix 覆盖度审计。
+
+### 接下来必须做的工作（按优先级）
+1. 扩展 WS3-01 矩阵到 saved-state/session-init。
+2. 增加 matrix 漂移检查并接入 `verify:refactor:ci`。
+3. 补齐 matrix 绑定的 smoke 契约回归并沉淀 F sign-off 证据。
+
+## 11. 增量状态更新（2026-03-21 / Batch-WS8-02）
+
+- WS8-01（架构契约门禁）：`in_progress`
+  - 本批完成：`contracts-matrix-audit` 已接入 `verify:refactor:ci` 并通过。
+  - 当前效果：contracts 矩阵（replay/import/export）从“文档约束”升级为“CI 阻断约束”。
+
+- WS3-01（contracts 覆盖矩阵）：`in_progress`
+  - 本批完成：矩阵完整性已有自动审计兜底。
+  - 剩余工作：矩阵覆盖范围扩展到 saved-state/session-init。
+
+### 接下来必须做的工作（按优先级）
+1. 扩展 WS3-01：新增 saved-state/session-init 合同矩阵行与校验函数。
+2. 扩展 WS8-01：将上述新增矩阵行并入 `contracts-matrix-audit` 强校验。
+3. 联动 smoke：为新增矩阵行补回归场景，形成 F sign-off 证据链。
