@@ -134,16 +134,40 @@ jobs:
       - name: Upload package
         run: |
           set -euo pipefail
+          artifact_path="artifact/${ARTIFACT_NAME}"
+          remote_path="/tmp/${ARTIFACT_NAME}"
+
           for attempt in 1 2 3; do
             if scp ${SSH_COMMON_OPTS} -P "${DEPLOY_PORT}" \
-              "artifact/${ARTIFACT_NAME}" \
-              "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/${ARTIFACT_NAME}"; then
+              "${artifact_path}" \
+              "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_path}"; then
               exit 0
             fi
             echo "WARN: scp upload attempt ${attempt} failed, retrying..." >&2
             sleep $((attempt * 5))
           done
-          echo "ERROR: failed to upload package after 3 attempts." >&2
+
+          for attempt in 1 2 3; do
+            if scp -O ${SSH_COMMON_OPTS} -P "${DEPLOY_PORT}" \
+              "${artifact_path}" \
+              "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_path}"; then
+              echo "INFO: uploaded package via legacy scp protocol (-O)." >&2
+              exit 0
+            fi
+            echo "WARN: legacy scp (-O) upload attempt ${attempt} failed, retrying..." >&2
+            sleep $((attempt * 5))
+          done
+
+          for attempt in 1 2 3; do
+            if ssh ${SSH_COMMON_OPTS} -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+              "cat > '${remote_path}'" < "${artifact_path}"; then
+              echo "INFO: uploaded package via ssh stream fallback." >&2
+              exit 0
+            fi
+            echo "WARN: ssh stream upload attempt ${attempt} failed, retrying..." >&2
+            sleep $((attempt * 5))
+          done
+          echo "ERROR: failed to upload package after scp/legacy-scp/ssh-stream retries." >&2
           exit 1
 
       - name: Activate release (atomic symlink)
@@ -270,16 +294,40 @@ jobs:
       - name: Upload package
         run: |
           set -euo pipefail
+          artifact_path="artifact/${ARTIFACT_NAME}"
+          remote_path="/tmp/${ARTIFACT_NAME}"
+
           for attempt in 1 2 3; do
             if scp ${SSH_COMMON_OPTS} -P "${DEPLOY_PORT}" \
-              "artifact/${ARTIFACT_NAME}" \
-              "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/${ARTIFACT_NAME}"; then
+              "${artifact_path}" \
+              "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_path}"; then
               exit 0
             fi
             echo "WARN: scp upload attempt ${attempt} failed, retrying..." >&2
             sleep $((attempt * 5))
           done
-          echo "ERROR: failed to upload package after 3 attempts." >&2
+
+          for attempt in 1 2 3; do
+            if scp -O ${SSH_COMMON_OPTS} -P "${DEPLOY_PORT}" \
+              "${artifact_path}" \
+              "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_path}"; then
+              echo "INFO: uploaded package via legacy scp protocol (-O)." >&2
+              exit 0
+            fi
+            echo "WARN: legacy scp (-O) upload attempt ${attempt} failed, retrying..." >&2
+            sleep $((attempt * 5))
+          done
+
+          for attempt in 1 2 3; do
+            if ssh ${SSH_COMMON_OPTS} -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+              "cat > '${remote_path}'" < "${artifact_path}"; then
+              echo "INFO: uploaded package via ssh stream fallback." >&2
+              exit 0
+            fi
+            echo "WARN: ssh stream upload attempt ${attempt} failed, retrying..." >&2
+            sleep $((attempt * 5))
+          done
+          echo "ERROR: failed to upload package after scp/legacy-scp/ssh-stream retries." >&2
           exit 1
 
       - name: Activate release (atomic symlink)
