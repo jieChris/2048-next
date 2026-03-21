@@ -133,47 +133,66 @@ jobs:
 
       - name: Upload package
         run: |
-          scp -P "${DEPLOY_PORT}" \
-            "artifact/${ARTIFACT_NAME}" \
-            "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/${ARTIFACT_NAME}"
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if scp ${SSH_COMMON_OPTS} -P "${DEPLOY_PORT}" \
+              "artifact/${ARTIFACT_NAME}" \
+              "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/${ARTIFACT_NAME}"; then
+              exit 0
+            fi
+            echo "WARN: scp upload attempt ${attempt} failed, retrying..." >&2
+            sleep $((attempt * 5))
+          done
+          echo "ERROR: failed to upload package after 3 attempts." >&2
+          exit 1
 
       - name: Activate release (atomic symlink)
         run: |
-          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "bash -s -- '${DEPLOY_ROOT}' '${ARTIFACT_NAME}' '${RELEASE_ID}' '${DEPLOY_KEEP_RELEASES}'" <<'REMOTE'
           set -euo pipefail
-          deploy_root="$1"
-          artifact_name="$2"
-          release_id="$3"
-          keep_releases="$4"
+          for attempt in 1 2 3; do
+            if ssh ${SSH_COMMON_OPTS} -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+              "bash -s -- '${DEPLOY_ROOT}' '${ARTIFACT_NAME}' '${RELEASE_ID}' '${DEPLOY_KEEP_RELEASES}'" <<'REMOTE'
+            set -euo pipefail
+            deploy_root="$1"
+            artifact_name="$2"
+            release_id="$3"
+            keep_releases="$4"
 
-          releases_dir="${deploy_root}/releases"
-          release_dir="${releases_dir}/${release_id}"
+            releases_dir="${deploy_root}/releases"
+            release_dir="${releases_dir}/${release_id}"
 
-          cleanup_release_dir() {
-            local target_dir="$1"
-            [ -e "${target_dir}" ] || return 0
-            if rm -rf -- "${target_dir}"; then
+            cleanup_release_dir() {
+              local target_dir="$1"
+              [ -e "${target_dir}" ] || return 0
+              if rm -rf -- "${target_dir}"; then
+                return 0
+              fi
+              echo "WARN: failed to fully remove ${target_dir}; skipping." >&2
               return 0
-            fi
-            echo "WARN: failed to fully remove ${target_dir}; skipping." >&2
-            return 0
-          }
+            }
 
-          mkdir -p "${releases_dir}" "${deploy_root}/shared"
-          cleanup_release_dir "${release_dir}"
-          mkdir -p "${release_dir}"
+            mkdir -p "${releases_dir}" "${deploy_root}/shared"
+            cleanup_release_dir "${release_dir}"
+            mkdir -p "${release_dir}"
 
-          tar -xzf "/tmp/${artifact_name}" -C "${release_dir}"
-          ln -sfn "${release_dir}" "${deploy_root}/current"
-          rm -f "/tmp/${artifact_name}"
+            tar -xzf "/tmp/${artifact_name}" -C "${release_dir}"
+            ln -sfn "${release_dir}" "${deploy_root}/current"
+            rm -f "/tmp/${artifact_name}"
 
-          cd "${releases_dir}"
-          (ls -1dt -- */ 2>/dev/null || true) | tail -n "+$((keep_releases + 1))" | while IFS= read -r old_release; do
-            [ -n "${old_release}" ] || continue
-            cleanup_release_dir "${old_release}"
-          done
+            cd "${releases_dir}"
+            (ls -1dt -- */ 2>/dev/null || true) | tail -n "+$((keep_releases + 1))" | while IFS= read -r old_release; do
+              [ -n "${old_release}" ] || continue
+              cleanup_release_dir "${old_release}"
+            done
           REMOTE
+            then
+              exit 0
+            fi
+            echo "WARN: ssh activation attempt ${attempt} failed, retrying..." >&2
+            sleep $((attempt * 5))
+          done
+          echo "ERROR: failed to activate release after 3 attempts." >&2
+          exit 1
 
       - name: Output deployed release
         run: echo "Deployed release ${RELEASE_ID} to ${DEPLOY_HOST}:${DEPLOY_ROOT}/current"

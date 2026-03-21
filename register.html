@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>2048 Register</title>
+  <link href="style/main.css?v=20260316-04" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
+  <link href="style/account_page.css?v=20260321-01" rel="stylesheet" type="text/css">
+  <link href="style/register_page.css?v=20260321-01" rel="stylesheet" type="text/css">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-2">
+  <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-2">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://taihe.fun https://www.taihe.fun; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
+</head>
+<body data-page="register-hub" data-i18n-ready="0">
+  <main class="palette-page-shell register-page-shell">
+    <header class="palette-page-header">
+      <div class="palette-title-wrap">
+        <p class="palette-kicker" id="register-kicker">2048 Online Hub</p>
+        <h1 class="palette-title" id="register-title">Create Account</h1>
+        <p class="palette-subtitle" id="register-subtitle">Complete captcha verification before creating an account.</p>
+      </div>
+      <nav class="palette-nav">
+        <a class="replay-button palette-nav-btn" href="account.html" id="register-nav-login">Back to Login</a>
+        <a class="replay-button palette-nav-btn" href="2048.html" id="register-nav-home">Home</a>
+      </nav>
+    </header>
+
+    <section class="card-surface register-card">
+      <div class="panel-head">
+        <h2 id="register-heading">Register</h2>
+      </div>
+
+      <div class="account-auth-grid register-auth-grid">
+        <label for="register-email" id="register-email-label">Email</label>
+        <input id="register-email" class="account-input" type="email" placeholder="Enter email">
+
+        <label for="register-password" id="register-password-label">Password</label>
+        <input id="register-password" class="account-input" type="password" placeholder="Enter password">
+
+        <label for="register-nickname" id="register-nickname-label">Nickname</label>
+        <input id="register-nickname" class="account-input" type="text" maxlength="20" placeholder="Enter nickname">
+
+        <label for="register-captcha-answer" id="register-captcha-label">Image Captcha</label>
+        <div class="account-login-captcha-row">
+          <img id="register-captcha-image" class="account-login-captcha-image" alt="register captcha">
+          <button id="register-captcha-refresh" class="replay-button account-login-captcha-refresh" type="button">Refresh</button>
+        </div>
+        <input id="register-captcha-answer" class="account-input" type="text" maxlength="8" autocomplete="off" placeholder="Enter captcha">
+      </div>
+
+      <div class="account-action-row register-action-row">
+        <button id="register-submit-btn" class="replay-button" type="button">Register</button>
+        <a id="register-back-login-btn" class="replay-button" href="account.html">Back to Login</a>
+      </div>
+
+      <p id="register-tip" class="account-tip" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script type="module" src="./src/entries/register.ts"></script>
+</body>
+</html>
+

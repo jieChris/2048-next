@@ -58,10 +58,11 @@
       pageTitle: "2048 账号中心",
       kicker: "2048 Online Hub",
       title: "账号中心",
-      subtitle: "注册、登录并查看在线排行榜。登录后游戏会自动提交结算分数。",
+      subtitle: "登录后可自动补录本地战绩并查看在线排行榜。",
       navHome: "回首页",
       navPalette: "主题设置",
       navPractice: "练习板",
+      navRegister: "去注册",
       authHeading: "账号",
       stateGuest: "未登录",
       stateAuthed: "已登录",
@@ -75,7 +76,7 @@
       loginCaptchaLoading: "正在加载图片验证码...",
       loginCaptchaPrompt: "登录失败次数过多，请先完成图片验证码",
       loginBtn: "登录",
-      registerBtn: "注册",
+      registerBtn: "去注册",
       logoutBtn: "退出",
       userTitle: "当前账号信息",
       userNickname: "昵称：",
@@ -122,10 +123,11 @@
       pageTitle: "2048 Account Center",
       kicker: "2048 Online Hub",
       title: "Account Center",
-      subtitle: "Register, sign in, and view online rankings. Scores are auto-submitted after each game.",
+      subtitle: "Sign in to sync local records and view online rankings.",
       navHome: "Home",
       navPalette: "Theme Settings",
       navPractice: "Practice",
+      navRegister: "Create Account",
       authHeading: "Account",
       stateGuest: "Guest",
       stateAuthed: "Signed In",
@@ -139,7 +141,7 @@
       loginCaptchaLoading: "Loading captcha...",
       loginCaptchaPrompt: "Too many failed logins, complete captcha first",
       loginBtn: "Login",
-      registerBtn: "Register",
+      registerBtn: "Create Account",
       logoutBtn: "Logout",
       userTitle: "Current User",
       userNickname: "Nickname:",
@@ -958,7 +960,7 @@
     var actionRow = byId("account-action-row");
     var authTip = byId("account-auth-tip");
     var loginBtn = byId("account-login-btn");
-    var registerBtn = byId("account-register-btn");
+    var registerBtn = byId("account-open-register-btn");
     var logoutBtn = byId("account-logout-btn");
     var passwordInput = byId("account-password");
     var captchaWrap = byId("account-login-captcha-wrap");
@@ -1109,13 +1111,14 @@
       "account-nav-home": t("navHome"),
       "account-nav-palette": t("navPalette"),
       "account-nav-practice": t("navPractice"),
+      "account-nav-register": t("navRegister"),
       "account-auth-heading": t("authHeading"),
       "account-email-label": t("emailLabel"),
       "account-password-label": t("passwordLabel"),
       "account-login-captcha-label": t("loginCaptchaLabel"),
       "account-login-captcha-refresh": t("loginCaptchaRefresh"),
       "account-login-btn": t("loginBtn"),
-      "account-register-btn": t("registerBtn"),
+      "account-open-register-btn": t("registerBtn"),
       "account-logout-btn": t("logoutBtn"),
       "account-user-title": t("userTitle"),
       "account-user-nickname-label": t("userNickname"),
@@ -1156,7 +1159,7 @@
 
   function bindEvents() {
     var loginBtn = byId("account-login-btn");
-    var registerBtn = byId("account-register-btn");
+    var registerBtn = byId("account-open-register-btn");
     var logoutBtn = byId("account-logout-btn");
     var refreshBtn = byId("account-board-refresh");
     var recordSyncBtn = byId("account-record-sync");
@@ -1165,7 +1168,7 @@
     var modeSelect = byId("account-board-mode");
 
     if (loginBtn) loginBtn.addEventListener("click", onLoginClick);
-    if (registerBtn) registerBtn.addEventListener("click", onRegisterClick);
+    if (registerBtn) registerBtn.setAttribute("href", "register.html");
     if (logoutBtn) logoutBtn.addEventListener("click", onLogoutClick);
     if (refreshBtn) refreshBtn.addEventListener("click", refreshLeaderboard);
     if (loginCaptchaRefreshBtn) {
@@ -1205,6 +1208,18 @@
     bindEvents();
     applyLanguage();
     syncAuthState();
+    try {
+      var params = new global.URLSearchParams(toText(global.location && global.location.search));
+      if (params.get("registered") === "1" && !getToken()) {
+        setTip(byId("account-auth-tip"), t("registerOk"), "ok");
+      }
+      if (params.get("registered") === "1" && global.history && typeof global.history.replaceState === "function") {
+        params.delete("registered");
+        var query = params.toString();
+        var nextUrl = toText(global.location && global.location.pathname) + (query ? "?" + query : "") + toText(global.location && global.location.hash);
+        global.history.replaceState(null, "", nextUrl);
+      }
+    } catch (_err) {}
     refreshUserInfo();
     refreshLeaderboard();
     if (getToken()) {

@@ -18,6 +18,7 @@ export default defineConfig({
         PKU2048: resolve(__dirname, "PKU2048.html"),
         palette: resolve(__dirname, "palette.html"),
         account: resolve(__dirname, "account.html"),
+        register: resolve(__dirname, "register.html"),
         user: resolve(__dirname, "user.html"),
         replay: resolve(__dirname, "replay.html"),
         modes: resolve(__dirname, "modes.html"),
