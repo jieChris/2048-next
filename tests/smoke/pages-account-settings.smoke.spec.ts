@@ -109,6 +109,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(nicknameCheckCalls).toBeGreaterThanOrEqual(2);
     expect(nicknameUpdateCalls).toBe(1);
     expect(nicknameUpdatePayload?.nickname).toBe("SmokeNew");
+    await expect(page.locator("#settings-current-nickname")).toHaveText("SmokeNew");
+    await page.waitForFunction(() => window.localStorage.getItem("2048_auth_nickname_v1") === "SmokeNew");
 
     const nicknameSnapshot = await page.evaluate(() => {
       return {
