@@ -36,6 +36,7 @@ const STEP_TIMEOUT_DEFAULT_ENV_KEY = "REFACTOR_GATE_TIMEOUT_DEFAULT_MS";
 const STEP_TIMEOUT_BY_NAME_MS = {
   "game-manager-audit": 60_000,
   "entry-manifest-audit": 60_000,
+  "legacy-boundary-audit": 60_000,
   "engine-audit": 60_000,
   unit: 300_000,
   smoke: 300_000,
@@ -44,6 +45,7 @@ const STEP_TIMEOUT_BY_NAME_MS = {
 const STEP_TIMEOUT_ENV_KEY_BY_NAME = {
   "game-manager-audit": "REFACTOR_GATE_TIMEOUT_GAME_MANAGER_AUDIT_MS",
   "entry-manifest-audit": "REFACTOR_GATE_TIMEOUT_ENTRY_MANIFEST_AUDIT_MS",
+  "legacy-boundary-audit": "REFACTOR_GATE_TIMEOUT_LEGACY_BOUNDARY_AUDIT_MS",
   "engine-audit": "REFACTOR_GATE_TIMEOUT_ENGINE_AUDIT_MS",
   unit: "REFACTOR_GATE_TIMEOUT_UNIT_MS",
   smoke: "REFACTOR_GATE_TIMEOUT_SMOKE_MS",
@@ -53,6 +55,7 @@ const STEP_TIMEOUT_ENV_KEY_BY_NAME = {
 const STEPS = [
   { name: "game-manager-audit", cmd: "node", args: ["scripts/game-manager-audit.mjs"] },
   { name: "entry-manifest-audit", cmd: "node", args: ["scripts/entry-manifest-audit.mjs"] },
+  { name: "legacy-boundary-audit", cmd: "node", args: ["scripts/legacy-boundary-audit.mjs"] },
   { name: "engine-audit", cmd: "node", args: ["scripts/engine-audit.mjs"] },
   { name: "unit", cmd: "npm", args: ["run", "test:unit"] },
   { name: "smoke", cmd: "npm", args: ["run", smokeScript] },
@@ -441,6 +444,7 @@ function printFailureTriageHint(failedStepName) {
   if (
     failedStepName === "game-manager-audit" ||
     failedStepName === "entry-manifest-audit" ||
+    failedStepName === "legacy-boundary-audit" ||
     failedStepName === "engine-audit"
   ) {
     console.error("[verify:refactor] triage priority:");

@@ -16,8 +16,11 @@ describe("refactor-timeout-env-keys helpers", () => {
   });
 
   it("maps timeout steps to unique budget env keys", () => {
-    const keys = resolveTimeoutBudgetEnvKeys("unit,unit,smoke,unknown-step,smoke");
+    const keys = resolveTimeoutBudgetEnvKeys(
+      "legacy-boundary-audit,unit,unit,smoke,unknown-step,smoke"
+    );
     expect(keys).toEqual([
+      STEP_TIMEOUT_ENV_KEY_BY_NAME["legacy-boundary-audit"],
       STEP_TIMEOUT_ENV_KEY_BY_NAME.unit,
       STEP_TIMEOUT_ENV_KEY_BY_NAME.smoke,
       DEFAULT_TIMEOUT_ENV_KEY
