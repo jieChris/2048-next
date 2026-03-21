@@ -4,6 +4,7 @@ import {
   CORE_CONTRACT_COVERAGE_MATRIX,
   CONTRACT_SCHEMA_VERSION,
   HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS,
+  HISTORY_RECORD_REQUIRED_KEYS,
   REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX,
   REPLAY_RECORD_REQUIRED_KEYS,
   SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS,
@@ -12,10 +13,12 @@ import {
   createEmptyReplayRecord,
   createSessionSnapshot,
   isHistoryExportEnvelopeLike,
+  isHistoryRecordLike,
   isReplayRecordLike,
   isSavedGameStatePayloadLike,
   isSessionInitPayloadLike,
-  isSubmitPayloadLike
+  isSubmitPayloadLike,
+  normalizeHistoryRecordLike
 } from "../../src/contracts";
 import type {
   HistoryRecord,
@@ -119,6 +122,75 @@ describe("contracts: HistoryRecord type shape", () => {
     };
     expect(record.id).toBe("test_001");
     expect(record.score).toBe(1234);
+  });
+
+  it("exposes stable required keys and validates runtime shape", () => {
+    expect(HISTORY_RECORD_REQUIRED_KEYS).toEqual([
+      "id",
+      "mode",
+      "mode_key",
+      "board_width",
+      "board_height",
+      "ruleset",
+      "undo_enabled",
+      "ranked_bucket",
+      "mode_family",
+      "rank_policy",
+      "special_rules_snapshot",
+      "challenge_id",
+      "score",
+      "best_tile",
+      "duration_ms",
+      "final_board",
+      "ended_at",
+      "saved_at",
+      "end_reason",
+      "client_version",
+      "replay",
+      "replay_string"
+    ]);
+    const record = normalizeHistoryRecordLike(
+      {
+        id: "shape_1",
+        mode_key: "practice",
+        final_board: [[2, 4]],
+        ended_at: "2026-03-21T00:00:00Z",
+        saved_at: "2026-03-21T00:00:00Z"
+      },
+      {
+        nowIso: () => "2026-03-21T00:00:00Z",
+        idFactory: () => "id-fallback"
+      }
+    );
+    expect(record).not.toBeNull();
+    expect(isHistoryRecordLike(record)).toBe(true);
+    expect(isHistoryRecordLike({ id: "x" })).toBe(false);
+  });
+
+  it("normalizes partial history record payloads with defaults", () => {
+    const normalized = normalizeHistoryRecordLike(
+      {
+        score: 12.9,
+        best_tile: "128",
+        duration_ms: -5,
+        replay: { version: 3 }
+      },
+      {
+        nowIso: () => "2026-03-21T12:34:56Z",
+        idFactory: () => "generated-id",
+        defaultClientVersion: "1.9"
+      }
+    );
+    expect(normalized).not.toBeNull();
+    expect(normalized?.id).toBe("generated-id");
+    expect(normalized?.mode).toBe("local");
+    expect(normalized?.mode_key).toBe("unknown");
+    expect(normalized?.score).toBe(12);
+    expect(normalized?.best_tile).toBe(128);
+    expect(normalized?.duration_ms).toBe(0);
+    expect(normalized?.client_version).toBe("1.9");
+    expect(normalized?.ended_at).toBe("2026-03-21T12:34:56Z");
+    expect(normalized?.replay_string).toContain("\"version\":3");
   });
 });
 

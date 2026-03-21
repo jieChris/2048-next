@@ -23,7 +23,7 @@
 | WS2-01 | 汇总绕过 Engine 的状态写入点 | WS2 | B / E | P0 | 2026-03-21 | done | 无 | F 复核首轮扫描范围与风险分级可接受 | unit/smoke + 扫描 | 已形成 Top10 清单与总量统计（22） |
 | WS2-02 | undo/replay/import/export 统一引擎管线 | WS2 | B / C | P1 | 2026-03-24 | in_progress | 依赖 WS2-01 | F 确认撤回、回放、导入导出都可正常使用 | `npm run test:smoke:ci` | 已完成 move/undo/replay/restart/saved-state 写入收口，剩余 import/export 持续推进 |
 | WS3-01 | 建立 contracts 覆盖矩阵（状态/回放/提交/同步） | WS3 | B / D | P1 | 待定 | in_progress | 无 | F 确认对外展示和存储字段稳定 | `npm run test:unit` | 覆盖矩阵可追踪 |
-| WS3-02 | 历史隐式结构迁移到 contracts | WS3 | C / D | P1 | 待定 | pending | 需兼容策略 | F 确认历史/回放页面无字段丢失 | unit + smoke | 旧结构退出主链路 |
+| WS3-02 | 历史隐式结构迁移到 contracts | WS3 | C / D | P1 | 待定 | in_progress | 需兼容策略 | F 确认历史/回放页面无字段丢失 | unit + smoke | 旧结构退出主链路 |
 | WS4-01 | 页面信息架构与导航树落图 | WS4 | A / C | P1 | 2026-03-24 | in_progress | 产品边界确认 | F 确认入口层级和命名符合使用预期 | 文档评审 | 已完成首轮页面清单（17 html / 22 entries） |
 | WS4-02 | 散点 html 入口纳管/归档 | WS4 | C / D | P1 | 2026-03-28 | in_progress | 依赖 WS4-01 | F 确认入口清单和页面分组清晰 | `npm run audit:entry-manifest` | 已识别 4 个平台内非统一入口页面 |
 | WS5-01 | 页面到服务层调用改造（去直接规则、存储访问） | WS5 | C / D | P1 | 待定 | pending | 依赖 WS6 抽象 | F 确认页面交互未退化 | smoke + code audit | UI 与核心解耦 |
@@ -219,3 +219,19 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. 形成 WS3/WS8 F sign-off 证据表（体验/业务/证据/风险四栏）。
 2. 启动 WS3-02（历史隐式结构迁移到 contracts）首批切片任务。
 3. 在 CI 连续观察至少 2-3 轮，确认新门禁稳定无误报。
+
+## 15. 增量状态更新（2026-03-21 / Batch-WS3-03）
+
+- WS3-02（历史隐式结构迁移到 contracts）：`pending -> in_progress`
+  - 本批完成：`HistoryRecord` 新增 contracts 运行时入口（必填键常量、`isHistoryRecordLike`、`normalizeHistoryRecordLike`）。
+  - 本批完成：`src/storage/history-idb.ts` 迁移到 contracts 归一化链路，导入/导出/读写不再直接类型断言。
+  - 本批完成：contracts 单测补齐 HistoryRecord 运行时校验与默认值归一化断言。
+  - 验证：`npm run verify:prepush` 全绿。
+
+- WS3-01（contracts 覆盖矩阵）：`in_progress`
+  - 本批状态：矩阵门禁保持通过；历史结构迁移工作与现有 contracts 门禁兼容，无回退。
+
+### 接下来必须做的工作（按优先级）
+1. 继续 WS3-02：将 `js/local_history_store.js` 中 `normalizeRecord` 的隐式结构逐步收敛到 contracts 单一真源。
+2. 整理 WS3/WS8 的 F sign-off 证据表并完成 A/F 共同确认。
+3. 连续观察 2-3 轮 CI 结果，确认 WS8 深度门禁长期稳定。

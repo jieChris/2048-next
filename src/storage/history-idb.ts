@@ -6,7 +6,16 @@
  * localStorage and a fallback path when IndexedDB is unavailable.
  */
 
-import type { HistoryRecord, HistoryListResult, HistoryImportResult, HistoryExportEnvelope } from "../contracts";
+import {
+  isHistoryExportEnvelopeLike,
+  normalizeHistoryRecordLike
+} from "../contracts";
+import type {
+  HistoryRecord,
+  HistoryListResult,
+  HistoryImportResult,
+  HistoryExportEnvelope
+} from "../contracts";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -48,7 +57,7 @@ export async function migrateFromLocalStorage(): Promise<number> {
   if (typeof localStorage === "undefined") return 0;
   if (localStorage.getItem(MIGRATION_FLAG)) return 0;
 
-  let records: HistoryRecord[];
+  let records: unknown[];
   try {
     const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
     records = raw ? JSON.parse(raw) : [];
@@ -66,10 +75,12 @@ export async function migrateFromLocalStorage(): Promise<number> {
   const tx = db.transaction(STORE_NAME, "readwrite");
   const store = tx.objectStore(STORE_NAME);
 
+  let migrated = 0;
   for (const record of records) {
-    if (record && typeof record === "object" && record.id) {
-      store.put(record);
-    }
+    const normalized = normalizeHistoryRecordLike(record);
+    if (!normalized) continue;
+    store.put(normalized);
+    migrated += 1;
   }
 
   await new Promise<void>((resolve, reject) => {
@@ -79,7 +90,7 @@ export async function migrateFromLocalStorage(): Promise<number> {
 
   localStorage.setItem(MIGRATION_FLAG, "1");
   db.close();
-  return records.length;
+  return migrated;
 }
 
 // ---------------------------------------------------------------------------
@@ -87,16 +98,18 @@ export async function migrateFromLocalStorage(): Promise<number> {
 // ---------------------------------------------------------------------------
 
 export async function saveRecord(record: HistoryRecord): Promise<HistoryRecord> {
+  const normalized = normalizeHistoryRecordLike(record);
+  if (!normalized) throw new Error("invalid_record");
   const db = await openDatabase();
   const tx = db.transaction(STORE_NAME, "readwrite");
   const store = tx.objectStore(STORE_NAME);
-  store.put(record);
+  store.put(normalized);
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
   db.close();
-  return record;
+  return normalized;
 }
 
 export async function getById(id: string): Promise<HistoryRecord | null> {
@@ -105,7 +118,10 @@ export async function getById(id: string): Promise<HistoryRecord | null> {
   const store = tx.objectStore(STORE_NAME);
   const result = await new Promise<HistoryRecord | null>((resolve, reject) => {
     const req = store.get(id);
-    req.onsuccess = () => resolve((req.result as HistoryRecord) || null);
+    req.onsuccess = () => {
+      const normalized = normalizeHistoryRecordLike(req.result);
+      resolve(normalized || null);
+    };
     req.onerror = () => reject(req.error);
   });
   db.close();
@@ -118,7 +134,10 @@ export async function deleteById(id: string): Promise<boolean> {
   const store = tx.objectStore(STORE_NAME);
   const existing = await new Promise<HistoryRecord | undefined>((resolve, reject) => {
     const req = store.get(id);
-    req.onsuccess = () => resolve(req.result as HistoryRecord | undefined);
+    req.onsuccess = () => {
+      const normalized = normalizeHistoryRecordLike(req.result);
+      resolve(normalized || undefined);
+    };
     req.onerror = () => reject(req.error);
   });
   if (!existing) { db.close(); return false; }
@@ -228,7 +247,7 @@ export async function importRecords(
 
   let incoming: unknown[];
   if (Array.isArray(parsed)) incoming = parsed;
-  else if (parsed && typeof parsed === "object" && Array.isArray((parsed as HistoryExportEnvelope).records)) {
+  else if (isHistoryExportEnvelopeLike(parsed)) {
     incoming = (parsed as HistoryExportEnvelope).records;
   } else throw new Error("invalid_payload");
 
@@ -240,13 +259,16 @@ export async function importRecords(
   let replaced = 0;
 
   for (const raw of incoming) {
-    const item = raw as HistoryRecord;
-    if (!item || !item.id) continue;
+    const item = normalizeHistoryRecordLike(raw);
+    if (!item) continue;
 
     if (merge) {
       const existing = await new Promise<HistoryRecord | undefined>((resolve, reject) => {
         const req = store.get(item.id);
-        req.onsuccess = () => resolve(req.result as HistoryRecord | undefined);
+        req.onsuccess = () => {
+          const normalized = normalizeHistoryRecordLike(req.result);
+          resolve(normalized || undefined);
+        };
         req.onerror = () => reject(req.error);
       });
       if (existing) replaced++; else imported++;
@@ -283,8 +305,8 @@ function readAllRecordsByCursor(store: IDBObjectStore): Promise<HistoryRecord[]>
         resolve(items);
         return;
       }
-      const value = cursor.value as HistoryRecord;
-      if (value && typeof value === "object") items.push(value);
+      const normalized = normalizeHistoryRecordLike(cursor.value);
+      if (normalized) items.push(normalized);
       cursor.continue();
     };
     req.onerror = () => reject(req.error);

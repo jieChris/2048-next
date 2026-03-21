@@ -89,6 +89,119 @@ export interface HistoryRecord {
   replay_string: string;
 }
 
+export const HISTORY_RECORD_REQUIRED_KEYS = [
+  "id",
+  "mode",
+  "mode_key",
+  "board_width",
+  "board_height",
+  "ruleset",
+  "undo_enabled",
+  "ranked_bucket",
+  "mode_family",
+  "rank_policy",
+  "special_rules_snapshot",
+  "challenge_id",
+  "score",
+  "best_tile",
+  "duration_ms",
+  "final_board",
+  "ended_at",
+  "saved_at",
+  "end_reason",
+  "client_version",
+  "replay",
+  "replay_string"
+] as const;
+
+function createHistoryRecordId(): string {
+  return "hist_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now().toString(36);
+}
+
+function resolveHistoryRecordIso(nowIso?: () => string): string {
+  if (typeof nowIso === "function") return String(nowIso() || "");
+  return new Date().toISOString();
+}
+
+function normalizeHistoryBoardMatrix(value: unknown): number[][] {
+  if (!Array.isArray(value)) return [];
+  return value.map((row) => (Array.isArray(row) ? row.map((cell) => Math.floor(Number(cell) || 0)) : []));
+}
+
+function normalizeInteger(value: unknown, fallback: number): number {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? Math.floor(numeric) : fallback;
+}
+
+function normalizeNonNegativeInteger(value: unknown, fallback: number): number {
+  return Math.max(0, normalizeInteger(value, fallback));
+}
+
+function normalizeHistoryReplayString(
+  replayStringValue: unknown,
+  replayValue: unknown
+): string {
+  if (typeof replayStringValue === "string") return replayStringValue;
+  if (isNonArrayObject(replayValue)) {
+    try {
+      return JSON.stringify(replayValue);
+    } catch (_err) {
+      return "";
+    }
+  }
+  return "";
+}
+
+export function normalizeHistoryRecordLike(
+  value: unknown,
+  options?: {
+    nowIso?: () => string;
+    idFactory?: () => string;
+    defaultClientVersion?: string;
+  }
+): HistoryRecord | null {
+  if (!isNonArrayObject(value)) return null;
+  const source = value as Record<string, unknown>;
+  const now = resolveHistoryRecordIso(options?.nowIso);
+  const idFactory = typeof options?.idFactory === "function" ? options.idFactory : createHistoryRecordId;
+  const id = typeof source.id === "string" && source.id.trim() ? source.id.trim() : idFactory();
+  const replay = isNonArrayObject(source.replay) ? source.replay : null;
+  return {
+    id,
+    mode: typeof source.mode === "string" && source.mode ? source.mode : "local",
+    mode_key: typeof source.mode_key === "string" && source.mode_key ? source.mode_key : "unknown",
+    board_width: normalizeInteger(source.board_width, 4),
+    board_height: normalizeInteger(source.board_height, 4),
+    ruleset: typeof source.ruleset === "string" && source.ruleset ? source.ruleset : "pow2",
+    undo_enabled: !!source.undo_enabled,
+    ranked_bucket: typeof source.ranked_bucket === "string" && source.ranked_bucket ? source.ranked_bucket : "none",
+    mode_family: typeof source.mode_family === "string" && source.mode_family ? source.mode_family : "pow2",
+    rank_policy: typeof source.rank_policy === "string" && source.rank_policy ? source.rank_policy : "unranked",
+    special_rules_snapshot: isNonArrayObject(source.special_rules_snapshot) ? source.special_rules_snapshot : {},
+    challenge_id: typeof source.challenge_id === "string" && source.challenge_id ? source.challenge_id : null,
+    score: normalizeInteger(source.score, 0),
+    best_tile: normalizeInteger(source.best_tile, 0),
+    duration_ms: normalizeNonNegativeInteger(source.duration_ms, 0),
+    final_board: normalizeHistoryBoardMatrix(source.final_board),
+    ended_at: typeof source.ended_at === "string" && source.ended_at ? source.ended_at : now,
+    saved_at: typeof source.saved_at === "string" && source.saved_at ? source.saved_at : now,
+    end_reason: typeof source.end_reason === "string" && source.end_reason ? source.end_reason : "game_over",
+    client_version:
+      typeof source.client_version === "string" && source.client_version
+        ? source.client_version
+        : String(options?.defaultClientVersion || "1.8"),
+    replay,
+    replay_string: normalizeHistoryReplayString(source.replay_string, replay)
+  };
+}
+
+export function isHistoryRecordLike(value: unknown): value is HistoryRecord {
+  if (!hasRequiredObjectKeys(value, HISTORY_RECORD_REQUIRED_KEYS)) return false;
+  if (typeof value.id !== "string" || !value.id) return false;
+  if (!Array.isArray(value.final_board)) return false;
+  return true;
+}
+
 export interface HistoryExportEnvelope {
   v: number;
   exported_at: string;

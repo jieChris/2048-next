@@ -334,3 +334,43 @@
 1. 形成 WS3/WS8 的 F sign-off 证据表并完成 A/F 共同确认。
 2. 启动 WS3-02（历史隐式结构迁移到 contracts）首批任务拆分。
 3. 连续观察 2-3 轮真实 CI，确认新深度门禁无误报。
+
+## [2026-03-21] Batch-WS3-03
+- 目标：启动 WS3-02 首批切片，把历史结构从“隐式对象”迁移到 contracts 运行时入口。
+- 完成项：
+1. 在 `src/contracts/index.ts` 新增 HistoryRecord 运行时契约能力：
+   - `HISTORY_RECORD_REQUIRED_KEYS`
+   - `isHistoryRecordLike()`
+   - `normalizeHistoryRecordLike()`
+2. 在 `src/storage/history-idb.ts` 将以下链路切换到 contracts 归一化入口：
+   - `migrateFromLocalStorage`
+   - `saveRecord`
+   - `getById`
+   - `importRecords`
+   - 游标读取路径 `readAllRecordsByCursor`
+   - 同时把 envelope 判定改为复用 `isHistoryExportEnvelopeLike()`。
+3. 扩展 `tests/unit/contracts.spec.ts`：
+   - 新增 HistoryRecord 必填键常量断言；
+   - 新增 `isHistoryRecordLike` 正反断言；
+   - 新增 `normalizeHistoryRecordLike` 默认值与数字字符串归一化断言。
+- 验证证据：
+  - 命令：`npx vitest run tests/unit/contracts.spec.ts`
+  - 结果：PASS（1 file / 29 tests）
+  - 命令：`npx vitest run tests/unit/contracts-matrix-audit-helpers.spec.ts`
+  - 结果：PASS（1 file / 6 tests）
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/history-records-import-core.smoke.spec.ts`
+  - 结果：PASS（2 tests）
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/history-records-view-list-export.smoke.spec.ts`
+  - 结果：PASS（1 test）
+  - 命令：`node scripts/contracts-matrix-audit.mjs`
+  - 结果：PASS
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：`src/storage/history-idb.ts` 已 contracts 化，但 `js/local_history_store.js` 仍保留独立 `normalizeRecord` 逻辑，存在“双实现漂移”风险。
+  - 缓解动作：下一批将 `local_history_store` 迁移到 contracts 归一化单一真源，避免字段漂移。
+- 下一步（1-3条）：
+1. 推进 WS3-02 第二批：收敛 `js/local_history_store.js` 的历史归一化逻辑到 contracts。
+2. 输出 WS3/WS8 的 F sign-off 证据表并完成签收。
+3. 继续观察 2-3 轮 CI，确认新增门禁稳定。
