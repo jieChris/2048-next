@@ -10,7 +10,8 @@
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-2">
   <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-2">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://taihe.fun https://www.taihe.fun; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
+  <meta name="turnstile-site-key" content="0x4AAAAAACuEcCjf-_Mtr_HS">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://taihe.fun https://www.taihe.fun; img-src 'self' data:; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; frame-src https://challenges.cloudflare.com;">
 </head>
 <body data-page="register-hub" data-i18n-ready="0">
   <main class="palette-page-shell register-page-shell">
@@ -48,6 +49,11 @@
         </div>
         <input id="register-captcha-answer" class="account-input" type="text" maxlength="8" autocomplete="off" placeholder="Enter captcha">
 
+        <label id="register-turnstile-label">Human Verification</label>
+        <div id="register-turnstile-wrap" class="register-turnstile-wrap">
+          <div id="register-turnstile-widget"></div>
+        </div>
+
         <label for="register-email-code" id="register-email-code-label">Email Verification Code</label>
         <input id="register-email-code" class="account-input" type="text" maxlength="6" autocomplete="one-time-code" placeholder="Enter 6-digit code from email">
       </div>
@@ -62,6 +68,7 @@
     </section>
   </main>
 
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <script type="module" src="./src/entries/register.ts"></script>
 </body>
 </html>

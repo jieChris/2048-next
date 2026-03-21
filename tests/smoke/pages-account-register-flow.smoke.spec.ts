@@ -37,6 +37,21 @@ test.describe("Legacy Multi-Page Smoke", () => {
     let registerVerifyCalls = 0;
     let registerVerifyPayload: Record<string, unknown> | null = null;
 
+    await page.addInitScript(() => {
+      (window as unknown as { GAME_TURNSTILE_SITE_KEY?: string }).GAME_TURNSTILE_SITE_KEY = "turnstile-site-test";
+      (window as unknown as { turnstile?: { render: (host: unknown, options?: Record<string, unknown>) => string; reset: (id: string) => void } }).turnstile = {
+        render: (_host: unknown, options?: Record<string, unknown>) => {
+          if (options && typeof options.callback === "function") {
+            (options.callback as (token: string) => void)("turnstile-token-test");
+          }
+          return "turnstile-widget-test";
+        },
+        reset: (_id: string) => {
+          return;
+        }
+      };
+    });
+
     await page.route("**/api/**", async (route) => {
       const requestUrl = new URL(route.request().url());
       const pathname = requestUrl.pathname;
@@ -108,6 +123,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(registerStartPayload?.nickname).toBe("SmokeUser");
     expect(registerStartPayload?.captcha_id).toBe("reg-captcha-1");
     expect(registerStartPayload?.captcha_answer).toBe("ABCD");
+    expect(registerStartPayload?.turnstile_token).toBe("turnstile-token-test");
 
     expect(registerVerifyCalls).toBe(1);
     expect(registerVerifyPayload).not.toBeNull();

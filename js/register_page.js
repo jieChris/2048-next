@@ -18,6 +18,10 @@
   var captchaId = "";
   var captchaLoading = false;
   var captchaEndpoint = "";
+  var turnstileSiteKey = "";
+  var turnstileWidgetId = null;
+  var turnstileToken = "";
+  var turnstileRenderTried = false;
 
   var COPY = {
     zh: {
@@ -39,12 +43,15 @@
       emailCodeLabel: "\u90ae\u7bb1\u9a8c\u8bc1\u7801",
       emailCodePlaceholder: "\u8bf7\u8f93\u5165\u90ae\u7bb1\u6536\u5230\u76846\u4f4d\u9a8c\u8bc1\u7801",
       captchaRefresh: "\u6362\u4e00\u5f20",
+      turnstileLabel: "\u4eba\u673a\u9a8c\u8bc1",
       sendCodeBtn: "\u53d1\u9001\u9a8c\u8bc1\u7801",
       submitBtn: "\u6ce8\u518c",
       backLoginBtn: "\u8fd4\u56de\u767b\u5f55",
       loadingCaptcha: "\u6b63\u5728\u52a0\u8f7d\u56fe\u7247\u9a8c\u8bc1\u7801...",
       requireFields: "\u8bf7\u586b\u5199\u90ae\u7bb1\u3001\u5bc6\u7801\u3001\u6635\u79f0\u548c\u56fe\u7247\u9a8c\u8bc1\u7801",
       requireEmailCode: "\u8bf7\u8f93\u5165\u90ae\u7bb1\u9a8c\u8bc1\u7801",
+      turnstileMissingConfig: "\u672a\u914d\u7f6e Turnstile site key\uff0c\u8bf7\u8054\u7cfb\u7ba1\u7406\u5458",
+      turnstileRequired: "\u8bf7\u5148\u5b8c\u6210\u4eba\u673a\u9a8c\u8bc1",
       codeSent: "\u9a8c\u8bc1\u7801\u5df2\u53d1\u9001\uff0c\u8bf7\u67e5\u6536\u90ae\u7bb1\u540e\u8f93\u5165\u9a8c\u8bc1\u7801\u518d\u70b9\u51fb\u6ce8\u518c",
       invalidEmail: "\u8bf7\u8f93\u5165\u6b63\u786e\u7684\u90ae\u7bb1\u683c\u5f0f",
       invalidPassword: "\u5bc6\u7801\u9700\u4e3a8-16\u4f4d\uff0c\u4e14\u81f3\u5c11\u5305\u542b\u5b57\u6bcd/\u6570\u5b57/\u7b26\u53f7\u4e2d\u7684\u4e24\u79cd",
@@ -74,12 +81,15 @@
       emailCodeLabel: "Email Verification Code",
       emailCodePlaceholder: "Enter 6-digit code from email",
       captchaRefresh: "Refresh",
+      turnstileLabel: "Human Verification",
       sendCodeBtn: "Send Code",
       submitBtn: "Register",
       backLoginBtn: "Back to Login",
       loadingCaptcha: "Loading captcha...",
       requireFields: "Email, password, nickname and captcha are required",
       requireEmailCode: "Please enter the email verification code",
+      turnstileMissingConfig: "Turnstile site key is not configured",
+      turnstileRequired: "Please complete human verification",
       codeSent: "Verification code sent. Enter it and click Register again.",
       invalidEmail: "Please enter a valid email address",
       invalidPassword: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
@@ -110,6 +120,10 @@
       IMAGE_CAPTCHA_INVALID: "\u56fe\u7247\u9a8c\u8bc1\u7801\u9519\u8bef\uff0c\u8bf7\u91cd\u8bd5",
       IMAGE_CAPTCHA_EXPIRED: "\u56fe\u7247\u9a8c\u8bc1\u7801\u5df2\u8fc7\u671f\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5",
       IMAGE_CAPTCHA_ATTEMPTS_EXCEEDED: "\u56fe\u7247\u9a8c\u8bc1\u7801\u5c1d\u8bd5\u6b21\u6570\u8fc7\u591a\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5",
+      CAPTCHA_REQUIRED: "\u8bf7\u5148\u5b8c\u6210 Turnstile \u4eba\u673a\u9a8c\u8bc1",
+      CAPTCHA_FAILED: "Turnstile \u6821\u9a8c\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5",
+      CAPTCHA_VERIFY_FAILED: "Turnstile \u9a8c\u8bc1\u670d\u52a1\u5f02\u5e38\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5",
+      TURNSTILE_NOT_CONFIGURED: "\u670d\u52a1\u7aef\u672a\u914d\u7f6e Turnstile",
       VERIFICATION_REQUIRED: "\u8bf7\u5148\u53d1\u9001\u90ae\u7bb1\u9a8c\u8bc1\u7801",
       VERIFICATION_NOT_FOUND: "\u672a\u627e\u5230\u6709\u6548\u9a8c\u8bc1\u8bf7\u6c42\uff0c\u8bf7\u91cd\u65b0\u53d1\u9001\u9a8c\u8bc1\u7801",
       INVALID_VERIFICATION_CODE: "\u9a8c\u8bc1\u7801\u9519\u8bef",
@@ -134,6 +148,10 @@
       IMAGE_CAPTCHA_INVALID: "Incorrect image captcha",
       IMAGE_CAPTCHA_EXPIRED: "Image captcha expired, please refresh",
       IMAGE_CAPTCHA_ATTEMPTS_EXCEEDED: "Too many captcha attempts, please refresh",
+      CAPTCHA_REQUIRED: "Please complete Turnstile verification",
+      CAPTCHA_FAILED: "Turnstile verification failed",
+      CAPTCHA_VERIFY_FAILED: "Turnstile verification service is unavailable",
+      TURNSTILE_NOT_CONFIGURED: "Turnstile is not configured on server",
       VERIFICATION_REQUIRED: "Please send email verification code first",
       VERIFICATION_NOT_FOUND: "Verification request not found. Please send code again.",
       INVALID_VERIFICATION_CODE: "Invalid verification code",
@@ -150,6 +168,90 @@
   function readLanguage() {
     var raw = toText(safeGetStorage(UI_LANG_STORAGE_KEY)).toLowerCase();
     return raw === "en" ? "en" : "zh";
+  }
+
+  function readTurnstileSiteKey() {
+    var explicit = toText(global.GAME_TURNSTILE_SITE_KEY).trim();
+    if (explicit) return explicit;
+    if (!global.document || typeof global.document.querySelector !== "function") return "";
+    var meta = global.document.querySelector("meta[name='turnstile-site-key']");
+    return toText(meta && meta.getAttribute("content")).trim();
+  }
+
+  function setTurnstileVisible(visible) {
+    var label = byId("register-turnstile-label");
+    var wrap = byId("register-turnstile-wrap");
+    var display = visible ? "" : "none";
+    if (label) label.style.display = display;
+    if (wrap) wrap.style.display = display;
+  }
+
+  function resetTurnstileToken() {
+    turnstileToken = "";
+    if (
+      typeof global.turnstile !== "undefined" &&
+      global.turnstile &&
+      typeof global.turnstile.reset === "function" &&
+      turnstileWidgetId != null
+    ) {
+      try {
+        global.turnstile.reset(turnstileWidgetId);
+      } catch (_err) {}
+    }
+  }
+
+  function tryRenderTurnstileWidget() {
+    if (!turnstileSiteKey) {
+      setTurnstileVisible(false);
+      return false;
+    }
+    setTurnstileVisible(true);
+
+    if (
+      typeof global.turnstile === "undefined" ||
+      !global.turnstile ||
+      typeof global.turnstile.render !== "function"
+    ) {
+      return false;
+    }
+    if (turnstileWidgetId != null) return true;
+
+    var host = byId("register-turnstile-widget");
+    if (!host) return false;
+    host.innerHTML = "";
+    try {
+      turnstileWidgetId = global.turnstile.render(host, {
+        sitekey: turnstileSiteKey,
+        callback: function (token) {
+          turnstileToken = toText(token).trim();
+        },
+        "expired-callback": function () {
+          turnstileToken = "";
+        },
+        "error-callback": function () {
+          turnstileToken = "";
+        }
+      });
+      turnstileRenderTried = true;
+      return true;
+    } catch (_err) {
+      turnstileWidgetId = null;
+      return false;
+    }
+  }
+
+  function ensureTurnstileWidgetReady() {
+    if (!turnstileSiteKey) {
+      setTurnstileVisible(false);
+      return;
+    }
+    var attempts = 0;
+    (function tick() {
+      if (tryRenderTurnstileWidget()) return;
+      attempts += 1;
+      if (attempts >= 20) return;
+      global.setTimeout(tick, 250);
+    })();
   }
 
   function t(key) {
@@ -408,6 +510,18 @@
   async function onSendCodeClick() {
     var form = readRegisterForm();
     if (!validateRegisterBase(form)) return;
+    if (!turnstileSiteKey) {
+      setTip(t("turnstileMissingConfig"), "err");
+      return;
+    }
+    if (turnstileWidgetId == null && !tryRenderTurnstileWidget()) {
+      setTip(t("turnstileRequired"), "err");
+      return;
+    }
+    if (!turnstileToken) {
+      setTip(t("turnstileRequired"), "err");
+      return;
+    }
 
     setSendCodeEnabled(false);
     setSubmitEnabled(false);
@@ -425,9 +539,13 @@
           password: form.password,
           nickname: form.nickname,
           captcha_id: captchaId,
-          captcha_answer: form.captchaAnswer
+          captcha_answer: form.captchaAnswer,
+          turnstile_token: turnstileToken,
+          turnstileToken: turnstileToken,
+          captchaToken: turnstileToken
         }
       });
+      resetTurnstileToken();
 
       if (startResult && startResult.success) {
         setTip(t("codeSent"), "ok");
@@ -492,6 +610,7 @@
       "register-password-label": t("passwordLabel"),
       "register-nickname-label": t("nicknameLabel"),
       "register-captcha-label": t("captchaLabel"),
+      "register-turnstile-label": t("turnstileLabel"),
       "register-email-code-label": t("emailCodeLabel"),
       "register-captcha-refresh": t("captchaRefresh"),
       "register-send-code-btn": t("sendCodeBtn"),
@@ -518,6 +637,7 @@
     if (captchaInput) captchaInput.setAttribute("placeholder", t("captchaPlaceholder"));
     if (codeInput) codeInput.setAttribute("placeholder", t("emailCodePlaceholder"));
     if (captchaImage) captchaImage.setAttribute("alt", t("captchaLabel"));
+    setTurnstileVisible(!!turnstileSiteKey);
 
     setI18nReady(true);
   }
@@ -576,9 +696,11 @@
   }
 
   async function init() {
+    turnstileSiteKey = readTurnstileSiteKey();
     applyLanguage();
     bindEvents();
     bindLanguageSync();
+    ensureTurnstileWidgetReady();
     setSendCodeEnabled(false);
     setSubmitEnabled(false);
     await loadCaptcha(false);

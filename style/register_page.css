@@ -25,6 +25,11 @@ body[data-page="register-hub"][data-i18n-ready="0"] {
   max-width: 520px;
 }
 
+.register-turnstile-wrap {
+  min-height: 66px;
+  padding: 6px 0;
+}
+
 .register-action-row .replay-button {
   display: inline-flex;
   align-items: center;
@@ -39,4 +44,3 @@ body[data-page="register-hub"][data-i18n-ready="0"] {
     margin: 10px auto 18px;
   }
 }
-
