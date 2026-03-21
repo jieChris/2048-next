@@ -6,6 +6,8 @@
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var STORAGE_TOKEN_KEY = "2048_auth_token_v1";
   var DEFAULT_API_TIMEOUT_MS = 12000;
+  var RECORD_REPLAY_API_TIMEOUT_MS = 30000;
+  var SIGNED_REPLAY_FETCH_TIMEOUT_MS = 30000;
   var DEFAULT_RECORD_LIMIT = 200;
 
   // --- localStorage key migration (old bare keys -> namespaced keys) ---
@@ -254,7 +256,8 @@
   async function apiRequest(path, options) {
     var opts = options || {};
     var method = toText(opts.method || "GET").toUpperCase();
-    var timeoutMs = resolveApiTimeoutMs();
+    var timeoutMs = Math.floor(Number(opts.timeoutMs) || 0);
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) timeoutMs = resolveApiTimeoutMs();
     var lastError = t("networkError");
 
     for (var i = 0; i < apiBases.length; i += 1) {
@@ -429,12 +432,46 @@
 
   function formatDate(raw) {
     var text = toText(raw).trim();
-    return text || "--";
+    if (!text) return "--";
+
+    // Prefer already-normalized datetime text and strip milliseconds/timezone suffix.
+    var normalized = text
+      .replace("T", " ")
+      .replace(/\.\d+Z?$/i, "")
+      .replace(/Z$/i, "");
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(normalized)) {
+      return normalized;
+    }
+
+    var ts = parseDateTs(text);
+    if (!Number.isFinite(ts) || ts <= 0) return text;
+
+    var date = new Date(ts);
+    var year = date.getFullYear();
+    var month = String(date.getMonth() + 1).padStart(2, "0");
+    var day = String(date.getDate()).padStart(2, "0");
+    var hour = String(date.getHours()).padStart(2, "0");
+    var minute = String(date.getMinutes()).padStart(2, "0");
+    var second = String(date.getSeconds()).padStart(2, "0");
+    return year + "-" + month + "-" + day + " " + hour + ":" + minute + ":" + second;
   }
 
   function resolveRecordDateValue(record) {
     var source = record && typeof record === "object" ? record : {};
+    if (!isOwnProfile) {
+      return toText(source.created_at || source.ended_at || source.game_date).trim();
+    }
     return toText(source.ended_at || source.game_date || source.created_at).trim();
+  }
+
+  function resolveRecordDateLabelText() {
+    return currentLang === "en" ? "Uploaded At" : "\u4e0a\u4f20\u65f6\u95f4";
+  }
+
+  function syncRecordDateLabel() {
+    var node = byId("user-col-date");
+    if (!node) return;
+    node.textContent = resolveRecordDateLabelText();
   }
 
   function parseDateTs(raw) {
@@ -711,7 +748,28 @@
   }
 
   async function tryFetchReplayEnvelopeFromSignedUrl(url, fallbackRecord) {
-    var response = await global.fetch(url, { method: "GET", credentials: "omit" });
+    var controller = typeof global.AbortController === "function" ? new global.AbortController() : null;
+    var timeoutHandle = null;
+    if (controller) {
+      timeoutHandle = global.setTimeout(function () {
+        try { controller.abort(); } catch (_err) {}
+      }, SIGNED_REPLAY_FETCH_TIMEOUT_MS);
+    }
+
+    var response = null;
+    try {
+      response = await global.fetch(url, {
+        method: "GET",
+        credentials: "omit",
+        signal: controller ? controller.signal : undefined
+      });
+    } finally {
+      if (timeoutHandle) {
+        global.clearTimeout(timeoutHandle);
+        timeoutHandle = null;
+      }
+    }
+
     if (!response || !response.ok) throw new Error("Signed replay fetch failed");
     var text = await response.text();
     if (!text) return normalizeRecordDetailPayload({}, fallbackRecord);
@@ -720,6 +778,44 @@
     } catch (_parseErr) {
       return normalizeRecordDetailPayload({ replay_string: text }, fallbackRecord);
     }
+  }
+
+  function isTimeoutLikeText(textLike) {
+    var text = toText(textLike).toLowerCase();
+    if (!text) return false;
+    return text.indexOf("timeout") >= 0 || text.indexOf("\u8d85\u65f6") >= 0;
+  }
+
+  function buildRecordReplayPath(recordId, downloadMode) {
+    var path = "/records/" + encodeURIComponent(recordId) + "/replay";
+    var mode = toText(downloadMode).trim().toLowerCase();
+    if (mode === "signed_url" || mode === "proxy") {
+      path += "?download=" + encodeURIComponent(mode);
+    }
+    return path;
+  }
+
+  async function requestRecordReplay(recordId, downloadMode) {
+    return await apiRequest(buildRecordReplayPath(recordId, downloadMode), {
+      method: "GET",
+      timeoutMs: RECORD_REPLAY_API_TIMEOUT_MS
+    });
+  }
+
+  async function resolveReplayPayloadFromApiResult(result, record) {
+    if (!result || !result.success) {
+      throw new Error(toText(result && result.error) || "Replay load failed");
+    }
+
+    if (result.data && typeof result.data === "object") {
+      return normalizeRecordDetailPayload(result.data, record);
+    }
+
+    if (toText(result.mode).toLowerCase() === "signed_url" && toText(result.url).trim()) {
+      return await tryFetchReplayEnvelopeFromSignedUrl(toText(result.url).trim(), record);
+    }
+
+    return normalizeRecordDetailPayload({}, record);
   }
 
   async function loadRecordDetail(record) {
@@ -732,23 +828,45 @@
     recordDetailCache[recordId] = { loading: true };
 
     try {
-      var result = await apiRequest("/records/" + encodeURIComponent(recordId) + "/replay?download=proxy", { method: "GET" });
+      var lastErrorText = "";
+
+      // Prefer backend-configured mode first (signed_url/proxy), then fallback.
+      var result = await requestRecordReplay(recordId, "");
       if (!result || !result.success) {
-        throw new Error(toText(result && result.error) || "Replay load failed");
-      }
-
-      var payload = null;
-      if (result.data && typeof result.data === "object") {
-        payload = normalizeRecordDetailPayload(result.data, record);
-      } else if (toText(result.mode).toLowerCase() === "signed_url" && toText(result.url).trim()) {
-        payload = await tryFetchReplayEnvelopeFromSignedUrl(toText(result.url).trim(), record);
+        lastErrorText = toText(result && result.error);
       } else {
-        payload = normalizeRecordDetailPayload({}, record);
+        var payload = await resolveReplayPayloadFromApiResult(result, record);
+        var detail = Object.assign({ loading: false }, payload);
+        recordDetailCache[recordId] = detail;
+        return detail;
       }
 
-      var detail = Object.assign({ loading: false }, payload);
-      recordDetailCache[recordId] = detail;
-      return detail;
+      var signedUrlResult = await requestRecordReplay(recordId, "signed_url");
+      if (signedUrlResult && signedUrlResult.success) {
+        var signedPayload = await resolveReplayPayloadFromApiResult(signedUrlResult, record);
+        var signedDetail = Object.assign({ loading: false }, signedPayload);
+        recordDetailCache[recordId] = signedDetail;
+        return signedDetail;
+      }
+      if (toText(signedUrlResult && signedUrlResult.error).trim()) {
+        lastErrorText = toText(signedUrlResult && signedUrlResult.error);
+      }
+
+      var proxyResult = await requestRecordReplay(recordId, "proxy");
+      if (proxyResult && proxyResult.success) {
+        var proxyPayload = await resolveReplayPayloadFromApiResult(proxyResult, record);
+        var proxyDetail = Object.assign({ loading: false }, proxyPayload);
+        recordDetailCache[recordId] = proxyDetail;
+        return proxyDetail;
+      }
+
+      var proxyError = toText(proxyResult && proxyResult.error).trim();
+      if (proxyError) lastErrorText = proxyError;
+
+      if (isTimeoutLikeText(lastErrorText)) {
+        throw new Error(currentLang === "en" ? "Replay load timed out" : "\u56de\u653e\u52a0\u8f7d\u8d85\u65f6");
+      }
+      throw new Error(lastErrorText || "Replay load failed");
     } catch (error) {
       var failed = {
         loading: false,
@@ -1038,6 +1156,7 @@
     if (!result || !result.success || !result.data) {
       isOwnProfile = false;
       updateVisibilityControl();
+      syncRecordDateLabel();
       applyDocumentTitle();
       return false;
     }
@@ -1050,6 +1169,7 @@
       resolvedProfileNickname = toText(me.nickname).trim();
     }
     updateVisibilityControl();
+    syncRecordDateLabel();
     applyDocumentTitle();
     return isOwnProfile;
   }
@@ -1121,7 +1241,7 @@
       "user-record-refresh": t("refreshBtn"),
       "user-col-mode": t("colMode"),
       "user-col-score": t("colScore"),
-      "user-col-date": t("colDate")
+      "user-col-date": resolveRecordDateLabelText()
     };
 
     var keys = Object.keys(textMap);
@@ -1160,6 +1280,7 @@
     }
 
     updateVisibilityControl();
+    syncRecordDateLabel();
     applyCurrentSortAndRender();
     setI18nReady(true);
   }
@@ -1235,4 +1356,3 @@
     init();
   }
 })(typeof window !== "undefined" ? window : undefined);
-

@@ -19,6 +19,7 @@ export default defineConfig({
         palette: resolve(__dirname, "palette.html"),
         account: resolve(__dirname, "account.html"),
         register: resolve(__dirname, "register.html"),
+        password: resolve(__dirname, "password.html"),
         user: resolve(__dirname, "user.html"),
         replay: resolve(__dirname, "replay.html"),
         modes: resolve(__dirname, "modes.html"),

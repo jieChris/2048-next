@@ -77,6 +77,8 @@
       loginCaptchaPrompt: "登录失败次数过多，请先完成图片验证码",
       loginBtn: "登录",
       registerBtn: "去注册",
+      resetPasswordBtn: "找回密码",
+      changePasswordBtn: "修改密码",
       logoutBtn: "退出",
       userTitle: "当前账号信息",
       userNickname: "昵称：",
@@ -142,6 +144,8 @@
       loginCaptchaPrompt: "Too many failed logins, complete captcha first",
       loginBtn: "Login",
       registerBtn: "Create Account",
+      resetPasswordBtn: "Forgot Password",
+      changePasswordBtn: "Change Password",
       logoutBtn: "Logout",
       userTitle: "Current User",
       userNickname: "Nickname:",
@@ -961,6 +965,8 @@
     var authTip = byId("account-auth-tip");
     var loginBtn = byId("account-login-btn");
     var registerBtn = byId("account-open-register-btn");
+    var resetPasswordBtn = byId("account-open-reset-password-btn");
+    var changePasswordBtn = byId("account-open-change-password-btn");
     var logoutBtn = byId("account-logout-btn");
     var passwordInput = byId("account-password");
     var captchaWrap = byId("account-login-captcha-wrap");
@@ -969,6 +975,8 @@
     if (actionRow) actionRow.style.display = "";
     if (loginBtn) loginBtn.style.display = isAuthed ? "none" : "";
     if (registerBtn) registerBtn.style.display = isAuthed ? "none" : "";
+    if (resetPasswordBtn) resetPasswordBtn.style.display = isAuthed ? "none" : "";
+    if (changePasswordBtn) changePasswordBtn.style.display = isAuthed ? "" : "none";
     if (logoutBtn) logoutBtn.style.display = isAuthed ? "" : "none";
     if (authTip) authTip.style.display = isAuthed ? "none" : "";
     if (captchaWrap) captchaWrap.style.display = isAuthed ? "none" : (loginCaptchaRequired ? "grid" : "none");
@@ -1119,6 +1127,8 @@
       "account-login-captcha-refresh": t("loginCaptchaRefresh"),
       "account-login-btn": t("loginBtn"),
       "account-open-register-btn": t("registerBtn"),
+      "account-open-reset-password-btn": t("resetPasswordBtn"),
+      "account-open-change-password-btn": t("changePasswordBtn"),
       "account-logout-btn": t("logoutBtn"),
       "account-user-title": t("userTitle"),
       "account-user-nickname-label": t("userNickname"),
@@ -1160,6 +1170,8 @@
   function bindEvents() {
     var loginBtn = byId("account-login-btn");
     var registerBtn = byId("account-open-register-btn");
+    var resetPasswordBtn = byId("account-open-reset-password-btn");
+    var changePasswordBtn = byId("account-open-change-password-btn");
     var logoutBtn = byId("account-logout-btn");
     var refreshBtn = byId("account-board-refresh");
     var recordSyncBtn = byId("account-record-sync");
@@ -1169,6 +1181,8 @@
 
     if (loginBtn) loginBtn.addEventListener("click", onLoginClick);
     if (registerBtn) registerBtn.setAttribute("href", "register.html");
+    if (resetPasswordBtn) resetPasswordBtn.setAttribute("href", "password.html?mode=reset");
+    if (changePasswordBtn) changePasswordBtn.setAttribute("href", "password.html?mode=change");
     if (logoutBtn) logoutBtn.addEventListener("click", onLogoutClick);
     if (refreshBtn) refreshBtn.addEventListener("click", refreshLeaderboard);
     if (loginCaptchaRefreshBtn) {

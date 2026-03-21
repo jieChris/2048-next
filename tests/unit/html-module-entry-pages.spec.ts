@@ -14,6 +14,7 @@ const ENTRY_PAGES: HtmlEntryExpectation[] = [
   { htmlPath: "modes.html", entryPath: "./src/entries/modes.ts" },
   { htmlPath: "account.html", entryPath: "./src/entries/account.ts" },
   { htmlPath: "register.html", entryPath: "./src/entries/register.ts" },
+  { htmlPath: "password.html", entryPath: "./src/entries/password.ts" },
   { htmlPath: "user.html", entryPath: "./src/entries/user-profile.ts" },
   { htmlPath: "palette.html", entryPath: "./src/entries/palette.ts" },
   { htmlPath: "replay.html", entryPath: "./src/entries/replay.ts" },

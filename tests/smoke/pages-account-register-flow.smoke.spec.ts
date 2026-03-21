@@ -28,6 +28,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("body")).toBeVisible();
 
     await expect(page.locator("#account-open-register-btn")).toBeVisible();
+    await expect(page.locator("#account-open-reset-password-btn")).toBeVisible();
+    await expect(page.locator("#account-open-change-password-btn")).toBeHidden();
     await expect(page.locator("#account-register-btn")).toHaveCount(0);
   });
 

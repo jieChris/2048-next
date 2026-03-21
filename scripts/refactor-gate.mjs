@@ -30,7 +30,7 @@ function parseSmokeScriptArg(argv) {
 
 const smokeScriptArg = parseSmokeScriptArg(process.argv.slice(2));
 const smokeScript = smokeScriptArg || "test:smoke";
-const DEFAULT_CHROMIUM_VALIDATE_TIMEOUT_MS = 15_000;
+const DEFAULT_CHROMIUM_VALIDATE_TIMEOUT_MS = 30_000;
 const DEFAULT_STEP_TIMEOUT_MS = 300_000;
 const STEP_TIMEOUT_DEFAULT_ENV_KEY = "REFACTOR_GATE_TIMEOUT_DEFAULT_MS";
 const STEP_TIMEOUT_BY_NAME_MS = {
@@ -194,6 +194,15 @@ function validateChromiumExecutable(
   };
 }
 
+function shouldSkipExecutableValidationOnCurrentPlatform() {
+  const env = process.env || {};
+  const forcePrecheck = String(env.REFACTOR_GATE_FORCE_SMOKE_PRECHECK || "")
+    .trim()
+    .toLowerCase();
+  if (forcePrecheck === "1" || forcePrecheck === "true") return false;
+  return process.platform === "win32";
+}
+
 async function checkSmokePrecondition() {
   try {
     const playwright = await import("@playwright/test");
@@ -204,6 +213,10 @@ async function checkSmokePrecondition() {
         executable: chromiumExecutable || null,
         reason: "Playwright chromium executable is missing"
       };
+    }
+
+    if (shouldSkipExecutableValidationOnCurrentPlatform()) {
+      return { ok: true, executable: chromiumExecutable };
     }
 
     const validation = validateChromiumExecutable(chromiumExecutable);

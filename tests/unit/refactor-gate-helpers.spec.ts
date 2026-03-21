@@ -58,7 +58,7 @@ describe("refactor-gate helpers", () => {
       delete process.env[STEP_TIMEOUT_ENV_KEY_BY_NAME.smoke];
       expect(resolveStepTimeoutMs("smoke")).toBeGreaterThan(0);
       expect(resolveStepTimeoutMs("unknown-step")).toBe(DEFAULT_STEP_TIMEOUT_MS);
-      expect(DEFAULT_CHROMIUM_VALIDATE_TIMEOUT_MS).toBe(15_000);
+      expect(DEFAULT_CHROMIUM_VALIDATE_TIMEOUT_MS).toBe(30_000);
     } finally {
       if (typeof originalDefault === "string") {
         process.env[STEP_TIMEOUT_DEFAULT_ENV_KEY] = originalDefault;
