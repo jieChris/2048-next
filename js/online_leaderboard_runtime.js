@@ -739,12 +739,14 @@
     if (lang === "en") {
       return {
         label: "Theme Settings",
-        palette: "Theme Settings"
+        palette: "Theme Settings",
+        account: "Account Center"
       };
     }
     return {
       label: "主题设置",
-      palette: "主题设置"
+      palette: "主题设置",
+      account: "账号中心"
     };
   }
 
@@ -752,11 +754,16 @@
     var copy = getToolkitCopy(lang);
     var label = byId("toolkit-entry-label");
     var palette = byId("toolkit-palette-link");
+    var account = byId("toolkit-account-link");
 
     if (label) label.textContent = copy.label;
     if (palette) {
       palette.textContent = copy.palette;
       palette.setAttribute("href", "palette.html");
+    }
+    if (account) {
+      account.textContent = copy.account;
+      account.setAttribute("href", "account.html");
     }
   }
 
@@ -773,8 +780,12 @@
       var palette = createEl("a", "replay-button", "");
       palette.id = "toolkit-palette-link";
       palette.setAttribute("href", "palette.html");
+      var account = createEl("a", "replay-button", "");
+      account.id = "toolkit-account-link";
+      account.setAttribute("href", "account.html");
 
       actionWrap.appendChild(palette);
+      actionWrap.appendChild(account);
       row.appendChild(actionWrap);
 
       var actionHost = modalContent.querySelector(".replay-modal-actions");

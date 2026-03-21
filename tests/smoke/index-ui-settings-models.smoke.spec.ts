@@ -457,7 +457,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         page,
         () =>
           typeof (window as any).openSettingsModal === "function" &&
-          document.getElementById("toolkit-palette-link") !== null,
+          document.getElementById("toolkit-palette-link") !== null &&
+          document.getElementById("toolkit-account-link") !== null,
         12_000
       );
 
@@ -468,6 +469,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
       const snapshot = await page.evaluate(() => ({
         toolkitText: (document.getElementById("toolkit-palette-link")?.textContent || "").trim(),
+        accountText: (document.getElementById("toolkit-account-link")?.textContent || "").trim(),
         inlineStatsLabel: (
           document.querySelector("label[for='pku2048-inline-stats-toggle']")?.textContent || ""
         ).trim(),
@@ -477,6 +479,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }));
 
       expect(snapshot.toolkitText).toBe("Theme Settings");
+      expect(snapshot.accountText).toBe("Account Center");
       if (target.indexOf("PKU2048") >= 0) {
         expect(snapshot.inlineStatsLabel).toBe("Stats Panel");
         expect(snapshot.inlineStatsDesc).toBe("Show inline on page.");

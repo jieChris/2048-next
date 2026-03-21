@@ -294,7 +294,7 @@ jobs:
               [ -n "${old_release}" ] || continue
               cleanup_release_dir "${old_release}"
             done
-REMOTE
+            REMOTE
             then
               exit 0
             fi

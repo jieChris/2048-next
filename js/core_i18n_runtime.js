@@ -105,6 +105,7 @@
     { s: "#replay-action-btn", zh: "执行", en: "Run" },
     { s: "#settings-modal h3", zh: "设置", en: "Settings" },
     { s: "#toolkit-palette-link", zh: "主题设置", en: "Theme Settings" },
+    { s: "#toolkit-account-link", zh: "账号中心", en: "Account Center" },
     { s: "label[for='timer-module-view-toggle'].settings-toggle-title", zh: "计时器模式", en: "Timer Mode" },
     { s: "label[for='pku2048-inline-stats-toggle']", zh: "统计面板", en: "Stats Panel" },
     { s: "#pku2048-inline-stats-toggle + span", zh: "直接显示在页面中", en: "Show inline on page." },

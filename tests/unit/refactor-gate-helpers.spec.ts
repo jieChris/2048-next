@@ -51,9 +51,26 @@ describe("refactor-gate helpers", () => {
   });
 
   it("resolves step timeout budgets", () => {
-    expect(resolveStepTimeoutMs("smoke")).toBeGreaterThan(0);
-    expect(resolveStepTimeoutMs("unknown-step")).toBe(DEFAULT_STEP_TIMEOUT_MS);
-    expect(DEFAULT_CHROMIUM_VALIDATE_TIMEOUT_MS).toBe(15_000);
+    const originalDefault = process.env[STEP_TIMEOUT_DEFAULT_ENV_KEY];
+    const originalSmoke = process.env[STEP_TIMEOUT_ENV_KEY_BY_NAME.smoke];
+    try {
+      delete process.env[STEP_TIMEOUT_DEFAULT_ENV_KEY];
+      delete process.env[STEP_TIMEOUT_ENV_KEY_BY_NAME.smoke];
+      expect(resolveStepTimeoutMs("smoke")).toBeGreaterThan(0);
+      expect(resolveStepTimeoutMs("unknown-step")).toBe(DEFAULT_STEP_TIMEOUT_MS);
+      expect(DEFAULT_CHROMIUM_VALIDATE_TIMEOUT_MS).toBe(15_000);
+    } finally {
+      if (typeof originalDefault === "string") {
+        process.env[STEP_TIMEOUT_DEFAULT_ENV_KEY] = originalDefault;
+      } else {
+        delete process.env[STEP_TIMEOUT_DEFAULT_ENV_KEY];
+      }
+      if (typeof originalSmoke === "string") {
+        process.env[STEP_TIMEOUT_ENV_KEY_BY_NAME.smoke] = originalSmoke;
+      } else {
+        delete process.env[STEP_TIMEOUT_ENV_KEY_BY_NAME.smoke];
+      }
+    }
   });
 
   it("supports step/default timeout overrides via environment variables", () => {
