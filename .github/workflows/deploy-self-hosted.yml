@@ -193,6 +193,13 @@ jobs:
       DEPLOY_KEEP_RELEASES: ${{ vars.DEPLOY_KEEP_RELEASES || '5' }}
       ARTIFACT_NAME: ${{ needs.build.outputs.artifact_name }}
       RELEASE_ID: ${{ needs.build.outputs.release_id }}
+      SSH_COMMON_OPTS: >-
+        -o BatchMode=yes
+        -o StrictHostKeyChecking=yes
+        -o ConnectTimeout=20
+        -o ServerAliveInterval=15
+        -o ServerAliveCountMax=6
+        -o TCPKeepAlive=yes
     steps:
       - name: Validate secondary deploy settings
         run: |

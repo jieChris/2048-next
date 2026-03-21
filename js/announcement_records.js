@@ -1,6 +1,16 @@
 (function () {
   window.ANNOUNCEMENT_RECORDS = [
     {
+      id: "2026-03-21-v2.2",
+      version: "v2.2",
+      date: "2026-03-21",
+      title: "排行榜与登录功能测试版",
+      title_en: "Leaderboard & Login Test Build",
+      content: "新增排行榜功能和登录功能的测试版本，欢迎体验并反馈问题。",
+      content_en:
+        "Added a test build for leaderboard and login features. Feedback is welcome."
+    },
+    {
       id: "2026-03-11-v2.1",
       version: "v2.1",
       date: "2026-03-11",
