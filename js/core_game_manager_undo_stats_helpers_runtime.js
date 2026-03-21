@@ -480,8 +480,13 @@ function isValidUndoTileRecord(manager, value) {
   return !!(
     manager &&
     manager.isNonArrayObject(value) &&
+    Number.isInteger(value.x) &&
+    Number.isInteger(value.y) &&
+    Number.isFinite(value.value) &&
     value.previousPosition &&
-    manager.isNonArrayObject(value.previousPosition)
+    manager.isNonArrayObject(value.previousPosition) &&
+    Number.isInteger(value.previousPosition.x) &&
+    Number.isInteger(value.previousPosition.y)
   );
 }
 
@@ -549,8 +554,17 @@ function applyUndoRestoredTiles(manager, undoPayload) {
     ? Number(undoPayload.score)
     : 0;
   var undoTiles = Array.isArray(undoPayload.tiles) ? undoPayload.tiles : [];
+  var gridWidth = manager.grid && Array.isArray(manager.grid.cells) ? manager.grid.cells.length : 0;
+  var gridHeight = Number.isInteger(manager.height) && manager.height > 0
+    ? manager.height
+    : (Number.isInteger(manager.width) && manager.width > 0 ? manager.width : gridWidth);
   for (var undoTileIndex = 0; undoTileIndex < undoTiles.length; undoTileIndex++) {
     var restored = createUndoRestoreTile(manager, undoTiles[undoTileIndex]);
+    var x = Number(restored && restored.x);
+    var y = Number(restored && restored.y);
+    if (!Number.isInteger(x) || !Number.isInteger(y)) continue;
+    if (x < 0 || y < 0 || x >= gridWidth || y >= gridHeight) continue;
+    if (!manager.grid.cells[x]) continue;
     var tile = new Tile({ x: restored.x, y: restored.y }, restored.value);
     if (typeof manager.isStoneValue === "function" && manager.isStoneValue(restored.value)) {
       tile.isStone = true;
@@ -961,11 +975,27 @@ function computeUndoRestoreState(manager, prev) {
 }
 
 function buildUndoRestoreTileFallback(source, previous) {
-  return buildUndoTileSnapshotCorePayload(source, previous);
+  return {
+    x: source && Number.isInteger(source.x) ? source.x : null,
+    y: source && Number.isInteger(source.y) ? source.y : null,
+    value: source && Number.isFinite(source.value) ? Number(source.value) : null,
+    previousPosition: {
+      x: previous && Number.isInteger(previous.x) ? previous.x : null,
+      y: previous && Number.isInteger(previous.y) ? previous.y : null
+    }
+  };
 }
 
 function buildUndoRestoreTileCorePayload(source, previous) {
-  return buildUndoTileSnapshotCorePayload(source, previous);
+  return {
+    x: source && Number.isInteger(source.x) ? source.x : null,
+    y: source && Number.isInteger(source.y) ? source.y : null,
+    value: source && Number.isFinite(source.value) ? Number(source.value) : null,
+    previousPosition: {
+      x: previous && Number.isInteger(previous.x) ? previous.x : null,
+      y: previous && Number.isInteger(previous.y) ? previous.y : null
+    }
+  };
 }
 
 function resolveUndoRestoreTileByCore(manager, source, previous, fallback) {

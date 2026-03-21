@@ -10,7 +10,6 @@ function readLocalStorageJsonMap(manager, key) {
     });
   });
 }
-
 function writeLocalStorageJsonPayload(manager, key, payload) {
   if (!manager) return false;
   var coreCallResult = callCoreStorageRuntime(
@@ -27,7 +26,6 @@ function writeLocalStorageJsonPayload(manager, key, payload) {
     return writeStorageJsonPayloadFallback(storage, key, payload);
   });
 }
-
 function readStorageItemSafe(storage, key) {
   if (!storage || typeof storage.getItem !== "function") return null;
   try {
@@ -36,7 +34,6 @@ function readStorageItemSafe(storage, key) {
     return null;
   }
 }
-
 function parseStorageJsonMap(raw, guardObjectFn) {
   if (!raw) return {};
   try {
@@ -47,13 +44,11 @@ function parseStorageJsonMap(raw, guardObjectFn) {
     return {};
   }
 }
-
 function readStorageJsonMapFallback(storage, key, guardObjectFn) {
   if (!canReadFromStorage(storage)) return {};
   var raw = readStorageItemSafe(storage, key);
   return parseStorageJsonMap(raw, guardObjectFn);
 }
-
 function writeStorageItemSafe(storage, key, value) {
   if (!storage || typeof storage.setItem !== "function") return false;
   try {
@@ -63,7 +58,6 @@ function writeStorageItemSafe(storage, key, value) {
     return false;
   }
 }
-
 function writeStorageJsonPayloadFallback(storage, key, payload) {
   if (!canWriteToStorage(storage)) return false;
   var serialized = null;
@@ -75,21 +69,17 @@ function writeStorageJsonPayloadFallback(storage, key, payload) {
   if (typeof serialized !== "string") return false;
   return writeStorageItemSafe(storage, key, serialized);
 }
-
 function assertSavedBoardMatrixShape(manager, board) {
   if (!manager) throw "Invalid board matrix";
   if (!Array.isArray(board) || board.length !== manager.height) throw "Invalid board matrix";
 }
-
 function assertSavedBoardRowShape(manager, row) {
   if (!Array.isArray(row) || row.length !== manager.width) throw "Invalid board row";
 }
-
 function validateSavedBoardCellValue(manager, x, y, value) {
   if (!Number.isInteger(value) || value < 0) throw "Invalid board value";
   if (manager.isBlockedCell(x, y) && value !== 0) throw "Blocked cell must stay empty";
 }
-
 function insertSavedBoardTileIfNeeded(manager, x, y, value) {
   if (value <= 0) return;
   var tile = new Tile({ x: x, y: y }, value);
@@ -98,7 +88,6 @@ function insertSavedBoardTileIfNeeded(manager, x, y, value) {
   }
   manager.grid.insertTile(tile);
 }
-
 function applySavedBoardMatrixRow(manager, row, y) {
   assertSavedBoardRowShape(manager, row);
   for (var x = 0; x < manager.width; x++) {
@@ -107,7 +96,6 @@ function applySavedBoardMatrixRow(manager, row, y) {
     insertSavedBoardTileIfNeeded(manager, x, y, value);
   }
 }
-
 function setBoardFromMatrix(manager, board) {
   assertSavedBoardMatrixShape(manager, board);
   manager.grid = new Grid(manager.width, manager.height);
@@ -115,7 +103,6 @@ function setBoardFromMatrix(manager, board) {
     applySavedBoardMatrixRow(manager, board[y], y);
   }
 }
-
 function cloneBoardMatrix(board) {
   if (!Array.isArray(board)) return [];
   var out = [];
@@ -124,11 +111,9 @@ function cloneBoardMatrix(board) {
   }
   return out;
 }
-
 function normalizeSavedStateRecordObject(value, fallbackValue) {
   return isNonArrayObject(value) ? value : fallbackValue;
 }
-
 function readWindowNameRawValue(windowLike) {
   var raw = "";
   try {
@@ -138,7 +123,6 @@ function readWindowNameRawValue(windowLike) {
   }
   return raw;
 }
-
 function decodeWindowNamePayloadMap(encoded) {
   if (!encoded) return null;
   try {
@@ -149,19 +133,16 @@ function decodeWindowNamePayloadMap(encoded) {
     return null;
   }
 }
-
 function resolveSavedStateModeKey(manager, modeKey) {
   if (typeof modeKey === "string" && modeKey) return modeKey;
   if (!manager) return GameManager.DEFAULT_MODE_KEY;
   return manager.modeKey || manager.mode || GameManager.DEFAULT_MODE_KEY;
 }
-
 function resolveWindowNameLookupMarker(marker) {
   return typeof marker === "string" && marker
     ? marker
     : (GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY + "=");
 }
-
 function scanWindowNamePartsByMarker(raw, marker) {
   var lookupMarker = resolveWindowNameLookupMarker(marker);
   var parts = raw ? raw.split("&") : [];
@@ -180,7 +161,6 @@ function scanWindowNamePartsByMarker(raw, marker) {
   }
   return { keptParts: keptParts, map: map };
 }
-
 function resolveWindowNameSavedCandidateFallback(manager, windowLike, marker) {
   if (!manager) return null;
   var windowNameRaw = readWindowNameRawValue(windowLike);
