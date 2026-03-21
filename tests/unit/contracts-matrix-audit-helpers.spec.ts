@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  extractFieldStringValues,
   extractMatrixContractBlocks,
   findMissingSnippets,
   rowFieldHasNonEmptyArray,
   verifyContractsMatrixContent,
+  verifyMatrixAssertionPathsExist,
   verifyMatrixDocContent
 } from "../../scripts/contracts-matrix-audit.mjs";
 
@@ -75,6 +77,7 @@ describe("contracts-matrix-audit helpers", () => {
     ]);
     expect(rowFieldHasNonEmptyArray(rows[0].body, "producers")).toBe(true);
     expect(rowFieldHasNonEmptyArray(rows[0].body, "missing")).toBe(false);
+    expect(extractFieldStringValues(rows[0].body, "assertions")).toEqual(["c"]);
   });
 
   it("verifies contracts matrix content", () => {
@@ -91,5 +94,30 @@ describe("contracts-matrix-audit helpers", () => {
       "ReplayRecord\nHistoryExportEnvelope\nSubmitPayload\nSavedGameStatePayload\nSessionInitPayload";
     expect(() => verifyMatrixDocContent(validDoc)).not.toThrow();
     expect(() => verifyMatrixDocContent("ReplayRecord")).toThrow(/matrix doc missing contract name/);
+  });
+
+  it("verifies assertion path existence for direct and wildcard paths", async () => {
+    const rows = [
+      {
+        contract: "ReplayRecord",
+        body: `
+assertions: [
+  "tests/unit/contracts.spec.ts::ok",
+  "tests/unit/core-replay-*.spec.ts::wildcard"
+]`
+      }
+    ];
+    await expect(verifyMatrixAssertionPathsExist(rows, process.cwd())).resolves.toBeUndefined();
+    await expect(
+      verifyMatrixAssertionPathsExist(
+        [
+          {
+            contract: "ReplayRecord",
+            body: `assertions: ["tests/unit/not-exists-*.spec.ts::missing"]`
+          }
+        ],
+        process.cwd()
+      )
+    ).rejects.toThrow(/no matches/);
   });
 });

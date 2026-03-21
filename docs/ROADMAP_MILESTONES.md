@@ -186,3 +186,18 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. 为 saved-state/session-init 补 smoke 契约回归并登记到 matrix assertions。
 2. 扩展 `contracts-matrix-audit` 到 assertions 路径存在性检查。
 3. 形成 WS3/WS8 收口用的 F sign-off 证据表。
+
+## 13. 增量状态更新（2026-03-21 / Batch-WS8-03）
+
+- WS8-01（架构契约门禁）：`in_progress`
+  - 本批完成：`contracts-matrix-audit` 已校验 assertions 路径存在性（支持通配路径）。
+  - 当前门禁能力：合同行完整性 + assertions 路径可达性。
+
+- WS3-01（contracts 覆盖矩阵）：`in_progress`
+  - 本批完成：`SavedGameStatePayload` 与 `SessionInitPayload` 已有 smoke 契约用例绑定并通过。
+  - 剩余：覆盖深度规则（每行 unit+smoke 最低配额）尚未固化。
+
+### 接下来必须做的工作（按优先级）
+1. 增加 matrix 覆盖深度审计（每行至少 unit + smoke）。
+2. 增补 saved-state 异常路径 smoke 契约场景。
+3. 整理 WS3/WS8 F sign-off 证据并评估收口。

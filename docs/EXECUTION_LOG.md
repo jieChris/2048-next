@@ -264,3 +264,33 @@
 1. 增补 `SavedGameStatePayload` / `SessionInitPayload` 的 smoke 契约用例。
 2. 扩展 `contracts-matrix-audit`：校验 assertions 中的测试文件路径存在。
 3. 整理 WS3/WS8 的 F sign-off 证据表并准备收口。
+
+## [2026-03-21] Batch-WS8-03
+- 目标：补齐 saved-state/session-init 的 smoke 契约场景，并把 matrix assertions 路径存在性纳入 gate 审计。
+- 完成项：
+1. 新增 smoke 用例 `tests/smoke/pages-contracts-saved-session.smoke.spec.ts`：
+   - 验证 play 启动链路 `SessionInitPayload` 最小合同（`modeKey/modeConfig/inputManagerCtor/defaultBoardWidth`）；
+   - 验证 practice 强制保存后的 `SavedGameStatePayload` 最小合同（含 `board` 数组与关键字段）。
+2. 扩展 `scripts/contracts-matrix-audit.mjs`：
+   - 新增 assertions 字段解析；
+   - 新增 assertions 路径存在性检查（支持普通路径与 `*` 通配匹配）；
+   - matrix 校验流程加入该检查。
+3. 更新 `src/contracts/index.ts` 的 `SavedGameStatePayload` / `SessionInitPayload` 行 assertions，接入新 smoke 用例路径。
+4. 扩展 `tests/unit/contracts-matrix-audit-helpers.spec.ts`，覆盖 assertions 路径检查正反用例。
+- 验证证据：
+  - 命令：`npx vitest run tests/unit/contracts.spec.ts tests/unit/contracts-matrix-audit-helpers.spec.ts tests/unit/bootstrap-play-startup-payload.spec.ts`
+  - 结果：PASS（3 files / 35 tests）
+  - 命令：`node scripts/contracts-matrix-audit.mjs`
+  - 结果：PASS
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/pages-contracts-saved-session.smoke.spec.ts`
+  - 结果：PASS（2 tests）
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（含 contracts-matrix-audit + 全量 smoke）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：矩阵与 gate 已覆盖 saved-state/session-init，但 assertions 目前只校验“路径存在”，尚未校验“场景覆盖深度”。
+  - 缓解动作：下一批为关键 contract 增加覆盖度指标（例如每行最少 1 unit + 1 smoke）。
+- 下一步（1-3条）：
+1. 在 matrix audit 中加入“每个 contract 至少绑定 unit+smoke 各 1 条”的规则。
+2. 补充 SavedState 的异常路径 smoke（损坏 payload/版本不匹配）契约。
+3. 汇总 WS3/WS8 的 F sign-off 证据并准备收口。

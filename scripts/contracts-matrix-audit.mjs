@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -37,6 +37,10 @@ const REQUIRED_TOKENS = [
 
 function fail(message) {
   throw new Error(message);
+}
+
+function escapeRegexLiteral(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function findMissingSnippets(content, snippets) {
@@ -87,6 +91,21 @@ function rowFieldHasNonEmptyArray(rowBody, fieldName, { allowIdentifier = false 
   return /"[^"]+"/.test(match[1]);
 }
 
+function extractFieldStringValues(rowBody, fieldName) {
+  const escapedField = String(fieldName).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const fieldPattern = new RegExp(`${escapedField}:\\s*\\[([\\s\\S]*?)\\]`, "m");
+  const match = String(rowBody || "").match(fieldPattern);
+  if (!match) return [];
+  const values = [];
+  const stringPattern = /"([^"]+)"/g;
+  let valueMatch = stringPattern.exec(match[1]);
+  while (valueMatch) {
+    values.push(valueMatch[1]);
+    valueMatch = stringPattern.exec(match[1]);
+  }
+  return values;
+}
+
 function verifyContractsMatrixContent(contractsContent) {
   const missingTokens = findMissingSnippets(contractsContent, REQUIRED_TOKENS);
   if (missingTokens.length > 0) {
@@ -115,6 +134,7 @@ function verifyContractsMatrixContent(contractsContent) {
       }
     }
   }
+  return rows;
 }
 
 function verifyMatrixDocContent(docContent) {
@@ -127,13 +147,82 @@ function verifyMatrixDocContent(docContent) {
   }
 }
 
+async function pathExists(filePath) {
+  try {
+    await access(filePath);
+    return true;
+  } catch (_err) {
+    return false;
+  }
+}
+
+function hasWildcard(inputPath) {
+  return String(inputPath || "").includes("*");
+}
+
+function convertWildcardSegmentToRegex(wildcardFileName) {
+  const escaped = escapeRegexLiteral(wildcardFileName).replace(/\\\*/g, ".*");
+  return new RegExp(`^${escaped}$`);
+}
+
+async function doesWildcardPathMatchAnyFile(projectRoot, wildcardRelativePath) {
+  const normalized = String(wildcardRelativePath || "").replace(/\\/g, "/");
+  const dirPart = path.dirname(normalized);
+  const filePart = path.basename(normalized);
+  const absoluteDir = path.resolve(projectRoot, dirPart);
+  const dirExists = await pathExists(absoluteDir);
+  if (!dirExists) return false;
+  const namePattern = convertWildcardSegmentToRegex(filePart);
+  const entries = await readdir(absoluteDir, { withFileTypes: true });
+  return entries.some((entry) => entry.isFile() && namePattern.test(entry.name));
+}
+
+function resolveAssertionFilePathFromLabel(assertionLabel) {
+  const label = String(assertionLabel || "");
+  const separatorIndex = label.indexOf("::");
+  if (separatorIndex < 0) return label.trim();
+  return label.slice(0, separatorIndex).trim();
+}
+
+async function verifyMatrixAssertionPathsExist(rows, projectRoot) {
+  for (const row of rows) {
+    const assertionLabels = extractFieldStringValues(row.body, "assertions");
+    for (const assertionLabel of assertionLabels) {
+      const assertionPath = resolveAssertionFilePathFromLabel(assertionLabel);
+      if (!assertionPath) {
+        fail(
+          `[contracts-matrix-audit] assertion label is missing file path for contract ${row.contract}: ${assertionLabel}`
+        );
+      }
+      if (hasWildcard(assertionPath)) {
+        const matched = await doesWildcardPathMatchAnyFile(projectRoot, assertionPath);
+        if (!matched) {
+          fail(
+            `[contracts-matrix-audit] assertion wildcard path has no matches for contract ${row.contract}: ${assertionPath}`
+          );
+        }
+        continue;
+      }
+      const absolutePath = path.resolve(projectRoot, assertionPath);
+      const exists = await pathExists(absolutePath);
+      if (!exists) {
+        fail(
+          `[contracts-matrix-audit] assertion file path does not exist for contract ${row.contract}: ${assertionPath}`
+        );
+      }
+    }
+  }
+}
+
 async function main() {
+  const projectRoot = path.resolve(__dirname, "..");
   const [contractsContent, matrixDocContent] = await Promise.all([
     readFile(CONTRACTS_FILE_PATH, "utf8"),
     readFile(MATRIX_DOC_PATH, "utf8")
   ]);
-  verifyContractsMatrixContent(contractsContent);
+  const rows = verifyContractsMatrixContent(contractsContent);
   verifyMatrixDocContent(matrixDocContent);
+  await verifyMatrixAssertionPathsExist(rows, projectRoot);
   console.log("[contracts-matrix-audit] PASS: contracts matrix + doc baseline verified");
 }
 
@@ -152,9 +241,11 @@ export {
   REQUIRED_CONTRACT_NAMES,
   REQUIRED_TOKENS,
   extractMatrixContractBlocks,
+  extractFieldStringValues,
   findMissingSnippets,
   isDirectCliExecution,
   rowFieldHasNonEmptyArray,
   verifyContractsMatrixContent,
+  verifyMatrixAssertionPathsExist,
   verifyMatrixDocContent
 };

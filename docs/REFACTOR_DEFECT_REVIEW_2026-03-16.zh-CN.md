@@ -2187,3 +2187,35 @@
 1. 增补 saved-state/session-init 的 smoke 契约场景。
 2. 审计脚本增加 assertions 路径存在性检查。
 3. 整理 F sign-off 证据并评估 WS3/WS8 完成条件。
+
+## 本轮增量（第69批）
+
+### 1) smoke 契约补齐（saved-state/session-init）
+- 文件：
+  - `tests/smoke/pages-contracts-saved-session.smoke.spec.ts`
+  - `src/contracts/index.ts`
+- 改动：
+  - 新增 SessionInit 与 SavedState 的端到端 smoke 合同断言；
+  - 将新 smoke 场景挂入 contracts 矩阵 assertions。
+
+### 2) matrix 审计增强（assertions 路径存在性）
+- 文件：
+  - `scripts/contracts-matrix-audit.mjs`
+  - `tests/unit/contracts-matrix-audit-helpers.spec.ts`
+- 改动：
+  - 审计脚本新增 assertions 字段解析与路径存在性检查（含 `*` 通配）；
+  - 单测覆盖路径检查正反样例。
+
+### 3) 验证证据（2026-03-21）
+- `node scripts/contracts-matrix-audit.mjs` -> PASS
+- `npx playwright test --config=playwright.config.ts tests/smoke/pages-contracts-saved-session.smoke.spec.ts` -> PASS
+- `npm run verify:prepush` -> PASS
+
+### 4) 风险控制结论
+- 矩阵从“字段存在”升级到“字段 + 测试路径可达”，质量闭环更完整。
+- 下一步需继续提升“覆盖深度”校验，避免只有路径没有有效断言。
+
+### 5) 接下来需要做的工作（明确）
+1. 增加 contract 行级 unit/smoke 覆盖度门禁。
+2. 补 saved-state 异常路径 smoke。
+3. 准备 WS3/WS8 收口证据与签收模板。

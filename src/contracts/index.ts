@@ -318,7 +318,8 @@ export const CORE_CONTRACT_COVERAGE_MATRIX: readonly ContractCoverageMatrixEntry
     ],
     assertions: [
       "tests/unit/contracts.spec.ts::contracts matrix + isSavedGameStatePayloadLike",
-      "tests/unit/core-game-manager-saved-state-runtime.spec.ts"
+      "tests/unit/core-game-manager-saved-state-runtime.spec.ts",
+      "tests/smoke/pages-contracts-saved-session.smoke.spec.ts::saved-state payload contract"
     ]
   },
   {
@@ -333,7 +334,8 @@ export const CORE_CONTRACT_COVERAGE_MATRIX: readonly ContractCoverageMatrixEntry
     ],
     assertions: [
       "tests/unit/contracts.spec.ts::contracts matrix + isSessionInitPayloadLike",
-      "tests/unit/bootstrap-play-startup-payload.spec.ts"
+      "tests/unit/bootstrap-play-startup-payload.spec.ts",
+      "tests/smoke/pages-contracts-saved-session.smoke.spec.ts::session-init payload contract"
     ]
   }
 ];
