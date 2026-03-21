@@ -1,3 +1,5 @@
+import type { SessionInitPayload } from "../contracts";
+
 export interface PlayStartupPayloadModeConfigLike {
   key?: unknown;
 }
@@ -8,12 +10,7 @@ export interface ResolvePlayStartupPayloadOptions {
   defaultBoardWidth?: number | null | undefined;
 }
 
-export interface PlayStartupPayload {
-  modeKey: unknown;
-  modeConfig: PlayStartupPayloadModeConfigLike;
-  inputManagerCtor: unknown;
-  defaultBoardWidth: number;
-}
+export type PlayStartupPayload = SessionInitPayload;
 
 export function resolvePlayStartupPayload(
   options: ResolvePlayStartupPayloadOptions

@@ -13,13 +13,24 @@ const MATRIX_DOC_PATH = path.resolve(
   "CONTRACTS_REPLAY_IMPORT_EXPORT_MATRIX.md"
 );
 
-const REQUIRED_CONTRACT_NAMES = ["ReplayRecord", "HistoryExportEnvelope", "SubmitPayload"];
+const REQUIRED_CONTRACT_NAMES = [
+  "ReplayRecord",
+  "HistoryExportEnvelope",
+  "SubmitPayload",
+  "SavedGameStatePayload",
+  "SessionInitPayload"
+];
 const REQUIRED_TOKENS = [
+  "CORE_CONTRACT_COVERAGE_MATRIX",
   "REPLAY_RECORD_REQUIRED_KEYS",
   "HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS",
   "SUBMIT_PAYLOAD_REQUIRED_KEYS",
+  "SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS",
+  "SESSION_INIT_PAYLOAD_REQUIRED_KEYS",
   "isReplayRecordLike",
   "isHistoryExportEnvelopeLike",
+  "isSavedGameStatePayloadLike",
+  "isSessionInitPayloadLike",
   "isSubmitPayloadLike",
   "REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX"
 ];
@@ -34,11 +45,23 @@ function findMissingSnippets(content, snippets) {
 }
 
 function extractMatrixContractBlocks(contractsContent) {
-  const matrixSectionMatch = String(contractsContent || "").match(
-    /export const REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX[\s\S]*?=\s*\[([\s\S]*?)\];/m
-  );
-  if (!matrixSectionMatch) return [];
-  const matrixBody = matrixSectionMatch[1];
+  const source = String(contractsContent || "");
+  const candidateNames = [
+    "CORE_CONTRACT_COVERAGE_MATRIX",
+    "REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX"
+  ];
+  let matrixBody = null;
+  for (const name of candidateNames) {
+    const pattern = new RegExp(
+      `export const ${name}[\\s\\S]*?=\\s*\\[([\\s\\S]*?)\\];`,
+      "m"
+    );
+    const match = source.match(pattern);
+    if (!match) continue;
+    matrixBody = match[1];
+    break;
+  }
+  if (!matrixBody) return [];
   const rowPattern = /{\s*contract:\s*"([^"]+)"([\s\S]*?)\n\s*}\s*,?/g;
   const rows = [];
   let match = rowPattern.exec(matrixBody);

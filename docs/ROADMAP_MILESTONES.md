@@ -170,3 +170,19 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. 扩展 WS3-01：新增 saved-state/session-init 合同矩阵行与校验函数。
 2. 扩展 WS8-01：将上述新增矩阵行并入 `contracts-matrix-audit` 强校验。
 3. 联动 smoke：为新增矩阵行补回归场景，形成 F sign-off 证据链。
+
+## 12. 增量状态更新（2026-03-21 / Batch-WS3-02）
+
+- WS3-01（contracts 覆盖矩阵）：`in_progress`
+  - 本批完成：矩阵已覆盖 `SavedGameStatePayload` 与 `SessionInitPayload`。
+  - 当前覆盖：Replay / HistoryExport / Submit / SavedState / SessionInit（5 行）。
+  - 验证：`verify:release-ready` + `verify:prepush` 全绿。
+
+- WS8-01（架构契约门禁）：`in_progress`
+  - 本批完成：`contracts-matrix-audit` 解析兼容 `CORE_CONTRACT_COVERAGE_MATRIX`，并校验 5 行合同完整性。
+  - 剩余：将矩阵 assertions 路径存在性纳入审计。
+
+### 接下来必须做的工作（按优先级）
+1. 为 saved-state/session-init 补 smoke 契约回归并登记到 matrix assertions。
+2. 扩展 `contracts-matrix-audit` 到 assertions 路径存在性检查。
+3. 形成 WS3/WS8 收口用的 F sign-off 证据表。

@@ -2151,3 +2151,39 @@
 1. 扩展矩阵 + 审计到 saved-state/session-init。
 2. 增补对应 smoke 契约场景并沉淀 F sign-off。
 3. 评估 WS3-01 / WS8-01 的 done 条件并准备收口。
+
+## 本轮增量（第68批）
+
+### 1) contracts 矩阵扩展到 saved-state/session-init
+- 文件：
+  - `src/contracts/index.ts`
+  - `src/bootstrap/play-startup-payload.ts`
+  - `docs/baseline/CONTRACTS_REPLAY_IMPORT_EXPORT_MATRIX.md`
+- 改动：
+  - 新增 `SavedGameStatePayload` / `SessionInitPayload` 合同；
+  - 新增对应必填字段常量与最小校验函数；
+  - 矩阵从 3 行扩展到 5 行，并保持兼容别名导出。
+
+### 2) gate 同步与校验增强
+- 文件：
+  - `scripts/contracts-matrix-audit.mjs`
+  - `tests/unit/contracts-matrix-audit-helpers.spec.ts`
+  - `tests/unit/contracts.spec.ts`
+- 改动：
+  - 审计脚本支持解析 `CORE_CONTRACT_COVERAGE_MATRIX`；
+  - 强校验合同行数与每行字段完整性；
+  - 单测覆盖新合同行与新校验函数。
+
+### 3) 验证证据（2026-03-21）
+- `node scripts/contracts-matrix-audit.mjs` -> PASS
+- `npm run verify:release-ready` -> PASS
+- `npm run verify:prepush` -> PASS（含 contracts-matrix-audit）
+
+### 4) 风险控制结论
+- 目前 contracts 矩阵覆盖已扩展到 saved-state/session-init，结构漂移风险进一步下降。
+- 下一阶段主要风险是“缺少端到端 smoke 证据”，需补齐后再做 WS3/WS8 收口。
+
+### 5) 接下来需要做的工作（明确）
+1. 增补 saved-state/session-init 的 smoke 契约场景。
+2. 审计脚本增加 assertions 路径存在性检查。
+3. 整理 F sign-off 证据并评估 WS3/WS8 完成条件。

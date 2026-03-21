@@ -234,3 +234,33 @@
 1. 扩展矩阵与审计到 saved-state/session-init。
 2. 增补 matrix->smoke 场景映射并落地回归用例。
 3. 收敛 WS3/WS8 为可签收状态（准备 F sign-off 证据表）。
+
+## [2026-03-21] Batch-WS3-02
+- 目标：把 contracts 矩阵从 replay/import/export 扩展到 saved-state/session-init，并保持 gate 全绿。
+- 完成项：
+1. 在 `src/contracts/index.ts` 新增合同：`SavedGameStatePayload`、`SessionInitPayload`。
+2. 新增必填字段常量与最小校验函数：
+   - `SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS` + `isSavedGameStatePayloadLike()`
+   - `SESSION_INIT_PAYLOAD_REQUIRED_KEYS` + `isSessionInitPayloadLike()`
+3. 新增 `CORE_CONTRACT_COVERAGE_MATRIX` 并保留 `REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX` 别名兼容。
+4. 在 `src/bootstrap/play-startup-payload.ts` 对齐 `SessionInitPayload` 类型来源（contracts 单一真源）。
+5. 更新 `scripts/contracts-matrix-audit.mjs`：支持解析 `CORE_CONTRACT_COVERAGE_MATRIX`，并强校验 5 个合同行。
+6. 更新并扩展文档基线：`docs/baseline/CONTRACTS_REPLAY_IMPORT_EXPORT_MATRIX.md`。
+7. 扩展单测：`tests/unit/contracts.spec.ts`、`tests/unit/contracts-matrix-audit-helpers.spec.ts`、`tests/unit/bootstrap-play-startup-payload.spec.ts`。
+- 验证证据：
+  - 命令：`npx vitest run tests/unit/contracts.spec.ts tests/unit/contracts-matrix-audit-helpers.spec.ts tests/unit/bootstrap-play-startup-payload.spec.ts`
+  - 结果：PASS（3 files / 34 tests）
+  - 命令：`node scripts/contracts-matrix-audit.mjs`
+  - 结果：PASS
+  - 命令：`npm run verify:release-ready`
+  - 结果：PASS
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（含 contracts-matrix-audit）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：矩阵和 gate 已覆盖到 saved-state/session-init，但 smoke 契约场景还未对这两行做端到端绑定。
+  - 缓解动作：下一批补齐对应 smoke 案例，并把案例路径纳入 matrix 审计。
+- 下一步（1-3条）：
+1. 增补 `SavedGameStatePayload` / `SessionInitPayload` 的 smoke 契约用例。
+2. 扩展 `contracts-matrix-audit`：校验 assertions 中的测试文件路径存在。
+3. 整理 WS3/WS8 的 F sign-off 证据表并准备收口。

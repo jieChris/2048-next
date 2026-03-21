@@ -12,10 +12,14 @@ const VALID_CONTRACTS_SOURCE = `
 export const REPLAY_RECORD_REQUIRED_KEYS = ["version"];
 export const HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS = ["v"];
 export const SUBMIT_PAYLOAD_REQUIRED_KEYS = ["score"];
+export const SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS = ["v"];
+export const SESSION_INIT_PAYLOAD_REQUIRED_KEYS = ["modeKey"];
 export function isReplayRecordLike(v) { return !!v; }
 export function isHistoryExportEnvelopeLike(v) { return !!v; }
 export function isSubmitPayloadLike(v) { return !!v; }
-export const REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX = [
+export function isSavedGameStatePayloadLike(v) { return !!v; }
+export function isSessionInitPayloadLike(v) { return !!v; }
+export const CORE_CONTRACT_COVERAGE_MATRIX = [
   {
     contract: "ReplayRecord",
     requiredKeys: REPLAY_RECORD_REQUIRED_KEYS,
@@ -36,8 +40,23 @@ export const REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX = [
     producers: ["a"],
     consumers: ["b"],
     assertions: ["c"]
+  },
+  {
+    contract: "SavedGameStatePayload",
+    requiredKeys: SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS,
+    producers: ["a"],
+    consumers: ["b"],
+    assertions: ["c"]
+  },
+  {
+    contract: "SessionInitPayload",
+    requiredKeys: SESSION_INIT_PAYLOAD_REQUIRED_KEYS,
+    producers: ["a"],
+    consumers: ["b"],
+    assertions: ["c"]
   }
 ];
+export const REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX = CORE_CONTRACT_COVERAGE_MATRIX;
 `;
 
 describe("contracts-matrix-audit helpers", () => {
@@ -50,7 +69,9 @@ describe("contracts-matrix-audit helpers", () => {
     expect(rows.map((row) => row.contract)).toEqual([
       "ReplayRecord",
       "HistoryExportEnvelope",
-      "SubmitPayload"
+      "SubmitPayload",
+      "SavedGameStatePayload",
+      "SessionInitPayload"
     ]);
     expect(rowFieldHasNonEmptyArray(rows[0].body, "producers")).toBe(true);
     expect(rowFieldHasNonEmptyArray(rows[0].body, "missing")).toBe(false);
@@ -66,7 +87,8 @@ describe("contracts-matrix-audit helpers", () => {
   });
 
   it("verifies matrix doc content", () => {
-    const validDoc = "ReplayRecord\nHistoryExportEnvelope\nSubmitPayload";
+    const validDoc =
+      "ReplayRecord\nHistoryExportEnvelope\nSubmitPayload\nSavedGameStatePayload\nSessionInitPayload";
     expect(() => verifyMatrixDocContent(validDoc)).not.toThrow();
     expect(() => verifyMatrixDocContent("ReplayRecord")).toThrow(/matrix doc missing contract name/);
   });

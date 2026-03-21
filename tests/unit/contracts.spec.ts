@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CORE_CONTRACT_COVERAGE_MATRIX,
   CONTRACT_SCHEMA_VERSION,
-  createEmptyReplayRecord,
-  createSessionSnapshot,
   HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS,
   REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX,
   REPLAY_RECORD_REQUIRED_KEYS,
+  SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS,
+  SESSION_INIT_PAYLOAD_REQUIRED_KEYS,
   SUBMIT_PAYLOAD_REQUIRED_KEYS,
+  createEmptyReplayRecord,
+  createSessionSnapshot,
   isHistoryExportEnvelopeLike,
   isReplayRecordLike,
+  isSavedGameStatePayloadLike,
+  isSessionInitPayloadLike,
   isSubmitPayloadLike
 } from "../../src/contracts";
 import type {
@@ -234,16 +239,69 @@ describe("contracts: replay/import/export matrix", () => {
       "replay",
       "replay_string"
     ]);
+    expect(SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS).toEqual([
+      "v",
+      "saved_at",
+      "mode_key",
+      "board_width",
+      "board_height",
+      "ruleset",
+      "board",
+      "score",
+      "over",
+      "won",
+      "keep_playing",
+      "duration_ms"
+    ]);
+    expect(SESSION_INIT_PAYLOAD_REQUIRED_KEYS).toEqual([
+      "modeKey",
+      "modeConfig",
+      "inputManagerCtor",
+      "defaultBoardWidth"
+    ]);
   });
 
   it("defines non-empty producer/consumer/assertion paths for each matrix row", () => {
-    expect(REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX.length).toBe(3);
+    expect(REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX.length).toBe(5);
+    expect(CORE_CONTRACT_COVERAGE_MATRIX).toBe(REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX);
     for (const row of REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX) {
       expect(row.requiredKeys.length).toBeGreaterThan(0);
       expect(row.producers.length).toBeGreaterThan(0);
       expect(row.consumers.length).toBeGreaterThan(0);
       expect(row.assertions.length).toBeGreaterThan(0);
     }
+  });
+
+  it("validates saved-state and session-init payload minimum shapes", () => {
+    const savedStatePayload = {
+      v: 1,
+      saved_at: Date.now(),
+      mode_key: "standard_4x4_pow2_no_undo",
+      board_width: 4,
+      board_height: 4,
+      ruleset: "pow2",
+      board: [[0, 2], [4, 8]],
+      score: 1024,
+      over: false,
+      won: false,
+      keep_playing: false,
+      duration_ms: 1200
+    };
+    const sessionInitPayload = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      modeConfig: { key: "standard_4x4_pow2_no_undo" },
+      inputManagerCtor: function InputManagerCtor() {},
+      defaultBoardWidth: 4
+    };
+    expect(isSavedGameStatePayloadLike(savedStatePayload)).toBe(true);
+    expect(isSavedGameStatePayloadLike({ ...savedStatePayload, board: "bad" })).toBe(false);
+    expect(isSessionInitPayloadLike(sessionInitPayload)).toBe(true);
+    expect(
+      isSessionInitPayloadLike({
+        ...sessionInitPayload,
+        defaultBoardWidth: Number.NaN
+      })
+    ).toBe(false);
   });
 });
 

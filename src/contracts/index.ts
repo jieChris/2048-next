@@ -141,6 +141,60 @@ export interface SessionSnapshot {
   timestamp: string;
 }
 
+export interface SessionInitPayload {
+  modeKey: unknown;
+  modeConfig: unknown;
+  inputManagerCtor: unknown;
+  defaultBoardWidth: number;
+}
+
+export const SESSION_INIT_PAYLOAD_REQUIRED_KEYS = [
+  "modeKey",
+  "modeConfig",
+  "inputManagerCtor",
+  "defaultBoardWidth"
+] as const;
+
+export function isSessionInitPayloadLike(value: unknown): value is SessionInitPayload {
+  if (!hasRequiredObjectKeys(value, SESSION_INIT_PAYLOAD_REQUIRED_KEYS)) return false;
+  return Number.isFinite(value.defaultBoardWidth);
+}
+
+export interface SavedGameStatePayload {
+  v: number;
+  saved_at: number;
+  mode_key: string;
+  board_width: number;
+  board_height: number;
+  ruleset: string;
+  board: number[][];
+  score: number;
+  over: boolean;
+  won: boolean;
+  keep_playing: boolean;
+  duration_ms: number;
+}
+
+export const SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS = [
+  "v",
+  "saved_at",
+  "mode_key",
+  "board_width",
+  "board_height",
+  "ruleset",
+  "board",
+  "score",
+  "over",
+  "won",
+  "keep_playing",
+  "duration_ms"
+] as const;
+
+export function isSavedGameStatePayloadLike(value: unknown): value is SavedGameStatePayload {
+  if (!hasRequiredObjectKeys(value, SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS)) return false;
+  return Array.isArray(value.board);
+}
+
 export function createSessionSnapshot(partial: Partial<SessionSnapshot>): SessionSnapshot {
   return {
     version: partial.version ?? CONTRACT_SCHEMA_VERSION,
@@ -197,14 +251,19 @@ export function isSubmitPayloadLike(value: unknown): value is SubmitPayload {
 }
 
 export interface ContractCoverageMatrixEntry {
-  contract: "ReplayRecord" | "HistoryExportEnvelope" | "SubmitPayload";
+  contract:
+    | "ReplayRecord"
+    | "HistoryExportEnvelope"
+    | "SubmitPayload"
+    | "SavedGameStatePayload"
+    | "SessionInitPayload";
   requiredKeys: readonly string[];
   producers: readonly string[];
   consumers: readonly string[];
   assertions: readonly string[];
 }
 
-export const REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX: readonly ContractCoverageMatrixEntry[] = [
+export const CORE_CONTRACT_COVERAGE_MATRIX: readonly ContractCoverageMatrixEntry[] = [
   {
     contract: "ReplayRecord",
     requiredKeys: REPLAY_RECORD_REQUIRED_KEYS,
@@ -247,8 +306,39 @@ export const REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX: readonly ContractCoverageMatr
     assertions: [
       "tests/unit/contracts.spec.ts::contracts matrix + isSubmitPayloadLike"
     ]
+  },
+  {
+    contract: "SavedGameStatePayload",
+    requiredKeys: SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS,
+    producers: [
+      "js/core_game_manager_saved_state_helpers_runtime.js::buildSavedGameStatePayload"
+    ],
+    consumers: [
+      "js/core_game_manager_saved_state_helpers_runtime.js::resolveSavedStateRestoreDecision/applySavedStateRestore"
+    ],
+    assertions: [
+      "tests/unit/contracts.spec.ts::contracts matrix + isSavedGameStatePayloadLike",
+      "tests/unit/core-game-manager-saved-state-runtime.spec.ts"
+    ]
+  },
+  {
+    contract: "SessionInitPayload",
+    requiredKeys: SESSION_INIT_PAYLOAD_REQUIRED_KEYS,
+    producers: [
+      "src/bootstrap/play-startup-payload.ts::resolvePlayStartupPayload"
+    ],
+    consumers: [
+      "src/bootstrap/play-startup-host.ts::resolvePlayStartupFromContext",
+      "src/entries/play.ts"
+    ],
+    assertions: [
+      "tests/unit/contracts.spec.ts::contracts matrix + isSessionInitPayloadLike",
+      "tests/unit/bootstrap-play-startup-payload.spec.ts"
+    ]
   }
 ];
+
+export const REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX = CORE_CONTRACT_COVERAGE_MATRIX;
 
 // ---------------------------------------------------------------------------
 // Versioned schema migration
