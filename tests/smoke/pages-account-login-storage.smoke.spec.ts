@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test.describe("Legacy Multi-Page Smoke", () => {
   test("account login stores namespaced auth fields including user id", async ({ page }) => {
     let loginCalls = 0;
+    let recordUploadCalls = 0;
 
     await page.route("**/api/**", async (route) => {
       const requestUrl = new URL(route.request().url());
@@ -49,6 +50,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return;
       }
 
+      if (pathname.endsWith("/api/records")) {
+        recordUploadCalls += 1;
+      }
+
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -83,5 +88,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.userId).toBe("42");
     expect(snapshot.nickname).toBe("Smoke");
     expect(loginCalls).toBe(1);
+    expect(recordUploadCalls).toBe(0);
   });
 });

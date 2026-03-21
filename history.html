@@ -27,7 +27,12 @@
           <option value="">全部模式</option>
         </select>
 
-        <label>鍏抽敭璇</label>
+        <label>归属</label>
+        <select id="history-owner" class="settings-select portal-inline-select">
+          <option value="">全部归属</option>
+        </select>
+
+        <label>关键词</label>
         <input id="history-keyword" class="portal-inline-input" placeholder="模式/分数/ID">
 
         <label>排序</label>
@@ -43,7 +48,7 @@
       <div class="portal-actions-inline" style="margin-top:8px;">
         <button class="replay-button" id="history-export-all-btn">导出全部</button>
         <button class="replay-button" id="history-import-btn">导入合并</button>
-        <button class="replay-button" id="history-import-replace-btn">瀵煎叆骞舵浛鎹</button>
+        <button class="replay-button" id="history-import-replace-btn">导入并替换</button>
         <button class="replay-button" id="history-clear-all-btn">清空全部</button>
         <input id="history-import-file" type="file" accept="application/json,.json" style="display:none;">
       </div>
@@ -53,8 +58,8 @@
     </div>
 
     <div class="portal-actions-inline" style="justify-content:flex-end; margin-bottom:10px;">
-      <button class="replay-button" id="history-prev-page">涓婁竴椤</button>
-      <button class="replay-button" id="history-next-page">涓嬩竴椤</button>
+      <button class="replay-button" id="history-prev-page">上一页</button>
+      <button class="replay-button" id="history-next-page">下一页</button>
     </div>
 
     <div id="history-list"></div>

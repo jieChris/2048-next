@@ -660,6 +660,10 @@ hr {
   background: rgba(238, 228, 218, 0.5);
   z-index: 100;
   text-align: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 16px 0;
   -webkit-animation: fade-in 800ms ease 1200ms;
   -moz-animation: fade-in 800ms ease 1200ms;
   animation: fade-in 800ms ease 1200ms;
@@ -671,9 +675,9 @@ hr {
 .game-container .game-message p {
   font-size: 60px;
   font-weight: bold;
-  height: 60px;
-  line-height: 60px;
-  margin-top: 222px;
+  height: auto;
+  line-height: 1.05;
+  margin: 0;
 }
 
 .game-container .game-message .lower {
@@ -681,7 +685,21 @@ hr {
   justify-content: center;
   align-items: center;
   gap: 9px;
-  margin-top: 59px;
+  margin-top: 28px;
+  width: min(320px, 82%);
+}
+
+.game-container .game-message.game-over .lower.has-undo-controls {
+  justify-content: space-between;
+  gap: 9px;
+  width: min(214px, 54%);
+}
+
+.game-container .game-message.game-over .lower.has-undo-controls > a.undo-button,
+.game-container .game-message.game-over .lower.has-undo-controls > a.retry-button {
+  flex: 0 1 calc(50% - 4.5px);
+  min-width: 63px;
+  max-width: 91px;
 }
 
 .game-container .game-message a {
@@ -694,6 +712,7 @@ hr {
   height: 40px;
   line-height: 42px;
   margin-left: 0;
+  text-align: center;
 }
 
 .game-container .game-message a.keep-playing-button {
@@ -715,7 +734,11 @@ html[data-theme="classic"] .game-container .game-message a.retry-button {
 
 .game-container .game-message.game-won,
 .game-container .game-message.game-over {
-  display: block;
+  display: flex;
+}
+
+.game-container .game-message.game-over p {
+  transform: translateX(20px);
 }
 
 .grid-container {
@@ -1246,6 +1269,10 @@ body.board-low-perf .tile .tile-inner::after {
     background: rgba(238, 228, 218, 0.5);
     z-index: 100;
     text-align: center;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 18px 16px 0;
     -webkit-animation: fade-in 800ms ease 1200ms;
     -moz-animation: fade-in 800ms ease 1200ms;
     animation: fade-in 800ms ease 1200ms;
@@ -1257,9 +1284,9 @@ body.board-low-perf .tile .tile-inner::after {
   .game-container .game-message p {
     font-size: 60px;
     font-weight: bold;
-    height: 60px;
-    line-height: 60px;
-    margin-top: 222px;
+    height: auto;
+    line-height: 1.05;
+    margin: 0;
   }
 
   .game-container .game-message .lower {
@@ -1267,7 +1294,21 @@ body.board-low-perf .tile .tile-inner::after {
     justify-content: center;
     align-items: center;
     gap: 9px;
-    margin-top: 59px;
+    margin-top: 28px;
+    width: min(320px, 82%);
+  }
+
+  .game-container .game-message.game-over .lower.has-undo-controls {
+    justify-content: space-between;
+    gap: 9px;
+    width: min(214px, 54%);
+  }
+
+  .game-container .game-message.game-over .lower.has-undo-controls > a.undo-button,
+  .game-container .game-message.game-over .lower.has-undo-controls > a.retry-button {
+    flex: 0 1 calc(50% - 4.5px);
+    min-width: 63px;
+    max-width: 91px;
   }
 
   .game-container .game-message a {
@@ -1280,6 +1321,7 @@ body.board-low-perf .tile .tile-inner::after {
     height: 40px;
     line-height: 42px;
     margin-left: 0;
+    text-align: center;
   }
 
   .game-container .game-message a.keep-playing-button {
@@ -1297,7 +1339,11 @@ body.board-low-perf .tile .tile-inner::after {
 
   .game-container .game-message.game-won,
   .game-container .game-message.game-over {
-    display: block;
+    display: flex;
+  }
+
+  .game-container .game-message.game-over p {
+    transform: translateX(20px);
   }
 
   .grid-container {
@@ -1473,13 +1519,25 @@ body.board-low-perf .tile .tile-inner::after {
 
   .game-message p {
     font-size: 30px !important;
-    height: 30px !important;
-    line-height: 30px !important;
-    margin-top: 90px !important;
+    height: auto !important;
+    line-height: 1.1 !important;
+    margin: 0 !important;
   }
 
   .game-message .lower {
-    margin-top: 30px !important;
+    margin-top: 20px !important;
+    width: min(240px, 88%) !important;
+  }
+
+  .game-message.game-over .lower.has-undo-controls {
+    width: min(179px, 60%) !important;
+    gap: 6px !important;
+  }
+
+  .game-message.game-over .lower.has-undo-controls > a.undo-button,
+  .game-message.game-over .lower.has-undo-controls > a.retry-button {
+    max-width: 80px !important;
+    min-width: 57px !important;
   }
 
   /* Mobile Optimization for Milestones */
@@ -3445,6 +3503,17 @@ body[data-page="history"] .portal-inline-select:focus-visible {
   align-items: center;
   margin-bottom: 8px;
   font-size: 14px;
+}
+
+.history-owner-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(187, 173, 160, 0.18);
+  color: #6f645a;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .history-item-actions {

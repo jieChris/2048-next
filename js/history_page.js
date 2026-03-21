@@ -20,6 +20,55 @@
       .replace(/'/g, "&#39;");
   }
 
+  function getUiLang() {
+    try {
+      var raw = toText(localStorage.getItem("ui_language_v1")).trim().toLowerCase();
+      return raw === "en" ? "en" : "zh";
+    } catch (_error) {
+      return "zh";
+    }
+  }
+
+  function getGuestOwnerLabel() {
+    return getUiLang() === "en" ? "Guest" : "游客";
+  }
+
+  function getAllOwnersLabel() {
+    return getUiLang() === "en" ? "All Owners" : "全部归属";
+  }
+
+  function getUnknownOwnerLabel() {
+    return getUiLang() === "en" ? "Unknown User" : "未知用户";
+  }
+
+  function normalizeOwnerDisplay(item) {
+    var ownerType = toText(item && item.owner_type).trim().toLowerCase();
+    var ownerUserId = toText(item && item.owner_user_id).trim();
+    var ownerNickname = toText(item && item.owner_nickname).trim();
+    var ownerKey = toText(item && item.owner_key).trim();
+
+    if (!ownerKey) {
+      if (ownerType === "guest" || (!ownerUserId && !ownerNickname)) {
+        ownerKey = "guest";
+      } else if (ownerUserId) {
+        ownerKey = "user:" + ownerUserId;
+      } else {
+        ownerKey = "nick:" + ownerNickname.toLowerCase();
+      }
+    }
+
+    var isGuest = ownerType === "guest" || ownerKey === "guest" || (!ownerUserId && !ownerNickname);
+    var label = isGuest
+      ? getGuestOwnerLabel()
+      : (ownerNickname || (ownerUserId ? "ID:" + ownerUserId : getUnknownOwnerLabel()));
+
+    return {
+      key: ownerKey || "guest",
+      isGuest: isGuest,
+      label: label
+    };
+  }
+
   function setStatus(text, isError) {
     var node = $("history-status");
     if (!node) return;
@@ -58,6 +107,7 @@
         page: 1,
         pageSize: defaults.pageSize,
         modeKey: typeof filter.modeKey === "string" ? filter.modeKey : defaults.modeKey,
+        ownerKey: typeof filter.ownerKey === "string" ? filter.ownerKey : defaults.ownerKey,
         keyword: typeof filter.keyword === "string" ? filter.keyword : defaults.keyword,
         sortBy: typeof filter.sortBy === "string" ? filter.sortBy : defaults.sortBy
       };
@@ -69,11 +119,13 @@
   function persistFilterState(state, defaults) {
     var filter = {
       modeKey: toText(state.modeKey),
+      ownerKey: toText(state.ownerKey),
       keyword: toText(state.keyword),
       sortBy: toText(state.sortBy)
     };
     var isDefault =
       filter.modeKey === toText(defaults.modeKey) &&
+      filter.ownerKey === toText(defaults.ownerKey) &&
       filter.keyword === toText(defaults.keyword) &&
       filter.sortBy === toText(defaults.sortBy);
 
@@ -401,11 +453,13 @@
     for (var i = 0; i < items.length; i += 1) {
       var item = items[i] || {};
       var modeText = resolveModeLabel(item.mode_key, item.mode);
+      var ownerDisplay = normalizeOwnerDisplay(item);
       var node = document.createElement("div");
       node.className = "history-item";
       node.innerHTML =
         "<div class='history-item-head'>" +
           "<strong>" + escapeHtml(modeText) + "</strong>" +
+          "<span class='history-owner-tag'>" + escapeHtml(ownerDisplay.label) + "</span>" +
           "<span>分数: " + escapeHtml(Number(item.score) || 0) + "</span>" +
           "<span>最大块: " + escapeHtml(Number(item.best_tile) || 0) + "</span>" +
           "<span>时长: " + escapeHtml(formatDuration(item.duration_ms)) + "</span>" +
@@ -506,18 +560,22 @@
 
   function readControls(state) {
     var mode = $("history-mode");
+    var owner = $("history-owner");
     var keyword = $("history-keyword");
     var sort = $("history-sort");
     state.modeKey = mode ? toText(mode.value) : "";
+    state.ownerKey = owner ? toText(owner.value) : "";
     state.keyword = keyword ? toText(keyword.value) : "";
     state.sortBy = sort ? toText(sort.value || "ended_desc") : "ended_desc";
   }
 
   function applyControls(state) {
     var mode = $("history-mode");
+    var owner = $("history-owner");
     var keyword = $("history-keyword");
     var sort = $("history-sort");
     if (mode) mode.value = toText(state.modeKey);
+    if (owner) owner.value = toText(state.ownerKey);
     if (keyword) keyword.value = toText(state.keyword);
     if (sort) sort.value = toText(state.sortBy || "ended_desc");
   }
@@ -537,6 +595,85 @@
       option.textContent = String(mode.label);
       modeSelect.appendChild(option);
     }
+  }
+
+  function clearSelectOptions(selectNode) {
+    if (!selectNode) return;
+    while (selectNode.options.length > 0) {
+      selectNode.remove(0);
+    }
+  }
+
+  function sortOwnerEntries(entries) {
+    return entries.sort(function (a, b) {
+      if (a.isGuest && !b.isGuest) return 1;
+      if (!a.isGuest && b.isGuest) return -1;
+      var aLabel = toText(a.label);
+      var bLabel = toText(b.label);
+      return aLabel.localeCompare(bLabel, "zh-Hans-CN");
+    });
+  }
+
+  async function rebuildOwnerFilterOptions(selectedOwnerKey) {
+    var ownerSelect = $("history-owner");
+    if (!ownerSelect) return;
+
+    var records = [];
+    try {
+      var all = await callStore("getAll");
+      records = Array.isArray(all) ? all : [];
+    } catch (_error) {
+      records = [];
+    }
+
+    var ownerMap = {};
+    for (var i = 0; i < records.length; i += 1) {
+      var display = normalizeOwnerDisplay(records[i]);
+      if (!display.key) continue;
+      if (!ownerMap[display.key]) ownerMap[display.key] = display;
+    }
+
+    var owners = [];
+    var keys = Object.keys(ownerMap);
+    for (var k = 0; k < keys.length; k += 1) {
+      owners.push(ownerMap[keys[k]]);
+    }
+    sortOwnerEntries(owners);
+
+    clearSelectOptions(ownerSelect);
+
+    var allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = getAllOwnersLabel();
+    ownerSelect.appendChild(allOption);
+
+    for (var o = 0; o < owners.length; o += 1) {
+      var option = document.createElement("option");
+      option.value = owners[o].key;
+      option.textContent = owners[o].label;
+      ownerSelect.appendChild(option);
+    }
+
+    var preferredValue = toText(selectedOwnerKey).trim();
+    if (preferredValue) {
+      var found = false;
+      for (var idx = 0; idx < ownerSelect.options.length; idx += 1) {
+        if (toText(ownerSelect.options[idx].value) === preferredValue) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        var stale = document.createElement("option");
+        stale.value = preferredValue;
+        stale.textContent = preferredValue === "guest" ? getGuestOwnerLabel() : preferredValue;
+        ownerSelect.appendChild(stale);
+      }
+      ownerSelect.value = preferredValue;
+      return;
+    }
+
+    ownerSelect.value = "";
   }
 
   function bindImport(loadHistory) {
@@ -598,6 +735,7 @@
       page: 1,
       pageSize: 30,
       modeKey: "",
+      ownerKey: "",
       keyword: "",
       sortBy: "ended_desc"
     };
@@ -611,6 +749,7 @@
       try {
         var result = await callStore("listRecords", {
           mode_key: state.modeKey,
+          owner_key: state.ownerKey,
           keyword: state.keyword,
           sort_by: state.sortBy,
           page: state.page,
@@ -618,6 +757,7 @@
         });
         renderList(Array.isArray(result.items) ? result.items : [], loadHistory);
         renderSummary(result || {}, state);
+        await rebuildOwnerFilterOptions(state.ownerKey);
         setStatus("", false);
       } catch (_error) {
         setStatus("加载历史失败", true);
@@ -625,7 +765,13 @@
     }
 
     initModeFilter();
-    applyControls(state);
+    rebuildOwnerFilterOptions(state.ownerKey).then(function () {
+      applyControls(state);
+      loadHistory(true);
+    }).catch(function () {
+      applyControls(state);
+      loadHistory(true);
+    });
 
     var loadBtn = $("history-load-btn");
     if (loadBtn) {
@@ -635,9 +781,11 @@
     }
 
     var mode = $("history-mode");
+    var owner = $("history-owner");
     var sort = $("history-sort");
     var keyword = $("history-keyword");
     if (mode) mode.addEventListener("change", function () { loadHistory(true); });
+    if (owner) owner.addEventListener("change", function () { loadHistory(true); });
     if (sort) sort.addEventListener("change", function () { loadHistory(true); });
     if (keyword) {
       keyword.addEventListener("keydown", function (event) {
@@ -701,7 +849,6 @@
     }
 
     bindImport(loadHistory);
-    loadHistory(true);
   }
 
   if (document.readyState === "loading") {

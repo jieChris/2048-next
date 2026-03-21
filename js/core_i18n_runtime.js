@@ -143,6 +143,7 @@
     ["设置", "Settings"], ["关闭", "Close"], ["回放", "Replay"], ["执行", "Run"], ["版本公告", "Announcements"],
     ["统计", "Stats"], ["导出回放", "Export Replay"], ["直通练习板", "Practice Board"], ["高级回放", "Advanced Replay"],
     ["模式选择", "Mode Selection"], ["历史记录", "History"], ["回首页", "Home"], ["首页", "Home"], ["模式", "Mode"],
+    ["归属", "Owner"], ["全部归属", "All Owners"], ["游客", "Guest"], ["未知用户", "Unknown User"],
     ["关键词", "Keyword"], ["排序", "Sort"], ["全部模式", "All Modes"], ["刷新", "Refresh"], ["导出全部", "Export All"],
     ["导入合并", "Import & Merge"], ["导入并替换", "Import & Replace"], ["清空全部", "Clear All"], ["上一页", "Prev"], ["下一页", "Next"],
     ["新游戏", "New Game"], ["新局", "New Run"], ["撤回", "Undo"], ["撤销", "Undo"], ["继续游戏", "Keep Going"],

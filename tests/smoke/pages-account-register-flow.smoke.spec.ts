@@ -29,8 +29,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await expect(page.locator("#account-open-register-btn")).toBeVisible();
     await expect(page.locator("#account-open-reset-password-btn")).toBeVisible();
-    await expect(page.locator("#account-open-change-password-btn")).toBeHidden();
+    await expect(page.locator("#account-nav-settings")).toBeVisible();
     await expect(page.locator("#account-register-btn")).toHaveCount(0);
+    await expect(page.locator("#account-open-change-password-btn")).toHaveCount(0);
+    await expect(page.locator("#account-logout-btn")).toHaveCount(0);
+    await expect(page.locator("#account-record-sync")).toHaveCount(0);
   });
 
   test("register page validates nickname and redirects back to login", async ({ page }) => {

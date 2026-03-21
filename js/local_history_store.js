@@ -12,6 +12,8 @@
   var DB_VERSION = 1;
   var STORE_NAME = "records";
   var MIGRATION_FLAG = "idb_history_migrated_v1";
+  var AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
+  var AUTH_NICKNAME_STORAGE_KEY = "2048_auth_nickname_v1";
 
   var idbReadyPromise = null;
   var migrationPromise = null;
@@ -23,6 +25,64 @@
     } catch (_err) {
       return fallback;
     }
+  }
+
+  function toText(value) {
+    return value == null ? "" : String(value);
+  }
+
+  function safeReadLocalStorageText(key) {
+    try {
+      if (typeof localStorage === "undefined") return "";
+      return toText(localStorage.getItem(key)).trim();
+    } catch (_err) {
+      return "";
+    }
+  }
+
+  function sanitizeOwnerKeyPart(value) {
+    return toText(value)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_.:@-]+/g, "_")
+      .slice(0, 64);
+  }
+
+  function resolveOwnerMetaFromRaw(raw) {
+    var ownerTypeRaw = toText(raw && raw.owner_type).trim().toLowerCase();
+    var ownerUserId = toText(raw && raw.owner_user_id).trim();
+    var ownerNickname = toText(raw && raw.owner_nickname).trim();
+    var ownerKey = toText(raw && raw.owner_key).trim();
+
+    if (!ownerTypeRaw && !ownerUserId && !ownerNickname) {
+      ownerUserId = safeReadLocalStorageText(AUTH_USER_ID_STORAGE_KEY);
+      ownerNickname = safeReadLocalStorageText(AUTH_NICKNAME_STORAGE_KEY);
+    }
+
+    var ownerType = ownerTypeRaw === "guest" ? "guest" : "user";
+    if (!ownerUserId && !ownerNickname) ownerType = "guest";
+    if (ownerType === "guest") {
+      ownerUserId = "";
+      ownerNickname = "";
+    }
+
+    if (!ownerKey) {
+      if (ownerType === "guest") {
+        ownerKey = "guest";
+      } else if (ownerUserId) {
+        ownerKey = "user:" + sanitizeOwnerKeyPart(ownerUserId);
+      } else {
+        var normalizedNick = sanitizeOwnerKeyPart(ownerNickname);
+        ownerKey = normalizedNick ? "nick:" + normalizedNick : "guest";
+      }
+    }
+
+    return {
+      owner_type: ownerType,
+      owner_user_id: ownerUserId || null,
+      owner_nickname: ownerNickname,
+      owner_key: ownerKey || "guest"
+    };
   }
 
   function readAllFallback() {
@@ -163,6 +223,7 @@
     var replayString = typeof raw.replay_string === "string"
       ? raw.replay_string
       : (raw.replay ? JSON.stringify(raw.replay) : "");
+    var ownerMeta = resolveOwnerMetaFromRaw(raw);
 
     return {
       id: typeof raw.id === "string" && raw.id ? raw.id : makeId(),
@@ -187,6 +248,10 @@
       client_version: raw.client_version || "1.8",
       replay: isPlainObject(raw.replay) ? raw.replay : null,
       replay_string: replayString,
+      owner_type: ownerMeta.owner_type,
+      owner_user_id: ownerMeta.owner_user_id,
+      owner_nickname: ownerMeta.owner_nickname,
+      owner_key: ownerMeta.owner_key,
       diagnostics_index_entries: normalizeDiagnosticsIndexEntries(raw.diagnostics_index_entries)
     };
   }
@@ -326,14 +391,27 @@
       String(item.score),
       String(item.best_tile),
       item.ruleset,
-      item.challenge_id || ""
+      item.challenge_id || "",
+      item.owner_key || "",
+      item.owner_user_id || "",
+      item.owner_nickname || ""
     ].join(" ").toLowerCase();
     return haystack.indexOf(keyword) !== -1;
+  }
+
+  function matchesOwner(item, ownerKey) {
+    if (!ownerKey) return true;
+    var resolvedKey = toText(item && item.owner_key).trim();
+    if (!resolvedKey) {
+      resolvedKey = resolveOwnerMetaFromRaw(item).owner_key;
+    }
+    return resolvedKey === ownerKey;
   }
 
   function listRecordsFromFallback(options) {
     options = options || {};
     var modeKey = String(options.mode_key || "");
+    var ownerKey = String(options.owner_key || "");
     var keyword = String(options.keyword || "").toLowerCase();
     var sortBy = String(options.sort_by || "ended_desc");
     var page = Number.isInteger(options.page) && options.page > 0 ? options.page : 1;
@@ -347,6 +425,7 @@
       var row = fallbackList[f];
       if (!row) continue;
       if (modeKey && row.mode_key !== modeKey) continue;
+      if (!matchesOwner(row, ownerKey)) continue;
       if (!matchesKeyword(row, keyword)) continue;
       filteredFallback.push(row);
     }
@@ -481,6 +560,7 @@
   async function listRecords(options) {
     options = options || {};
     var modeKey = String(options.mode_key || "");
+    var ownerKey = String(options.owner_key || "");
     var keyword = String(options.keyword || "").toLowerCase();
     var sortBy = String(options.sort_by || "ended_desc");
     var page = Number.isInteger(options.page) && options.page > 0 ? options.page : 1;
@@ -521,7 +601,7 @@
         }
 
         var item = cursor.value;
-        if ((!modeKey || item.mode_key === modeKey) && matchesKeyword(item, keyword)) {
+        if ((!modeKey || item.mode_key === modeKey) && matchesOwner(item, ownerKey) && matchesKeyword(item, keyword)) {
           if (total >= start && total < endExclusive) {
             items.push(item);
           }

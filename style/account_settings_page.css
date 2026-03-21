@@ -1,0 +1,81 @@
+body[data-page="account-settings-hub"] {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--pp-ink);
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background:
+    radial-gradient(1200px 500px at 8% -20%, rgba(176, 153, 130, 0.33), transparent 68%),
+    radial-gradient(1000px 420px at 95% -24%, rgba(174, 157, 136, 0.25), transparent 70%),
+    linear-gradient(165deg, var(--pp-bg-0), var(--pp-bg-1));
+}
+
+body[data-page="account-settings-hub"][data-i18n-ready="0"] {
+  visibility: hidden;
+}
+
+.account-settings-page-shell {
+  width: min(800px, calc(100vw - 32px));
+}
+
+.settings-card {
+  padding: 16px;
+}
+
+.settings-section + .settings-section {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(143, 121, 101, 0.22);
+}
+
+.settings-section h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #725f4d;
+}
+
+.settings-grid {
+  max-width: 560px;
+}
+
+.settings-current-nickname-wrap {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid #dfd4c8;
+  border-radius: 8px;
+  background: #fffaf3;
+  color: #5f5247;
+  font-weight: 700;
+}
+
+.settings-action-row .replay-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  text-decoration: none;
+}
+
+.settings-feedback {
+  margin: 0;
+  min-height: 18px;
+  font-size: 12px;
+  color: #c2473b;
+}
+
+.settings-feedback.active {
+  color: #c2473b;
+}
+
+#settings-new-nickname.input-error {
+  border-color: #c2473b;
+  box-shadow: 0 0 0 1px rgba(194, 71, 59, 0.2);
+}
+
+@media (max-width: 560px) {
+  .account-settings-page-shell {
+    width: calc(100vw - 12px);
+    margin: 10px auto 18px;
+  }
+}

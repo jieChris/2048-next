@@ -179,6 +179,9 @@ function applyUndoLinkUiState(undoLink, canUndo, modeUndoCapable) {
 function applyUndoGameOverButtonUiState(undoBtn, canUndo) {
   if (!undoBtn) return;
   undoBtn.style.display = canUndo ? "inline-block" : "none";
+  var lower = undoBtn.parentElement;
+  if (!(lower && lower.classList && typeof lower.classList.toggle === "function")) return;
+  lower.classList.toggle("has-undo-controls", !!canUndo);
 }
 
 function applyPracticeUndoButtonUiState(practiceUndoBtn, canUndo) {
