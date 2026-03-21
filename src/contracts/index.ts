@@ -87,6 +87,30 @@ export interface HistoryRecord {
   client_version: string;
   replay: Record<string, unknown> | null;
   replay_string: string;
+  owner_type: "guest" | "user";
+  owner_user_id: string | null;
+  owner_nickname: string;
+  owner_key: string;
+  diagnostics_index_entries: HistoryDiagnosticsIndexEntry[];
+}
+
+export interface HistoryOwnerMeta {
+  owner_type: "guest" | "user";
+  owner_user_id: string | null;
+  owner_nickname: string;
+  owner_key: string;
+}
+
+export type HistoryDiagnosticPayloadValue =
+  | string
+  | number
+  | boolean
+  | Array<string | number | boolean>;
+
+export interface HistoryDiagnosticsIndexEntry {
+  key: string;
+  schemaVersion: number;
+  payload: Record<string, HistoryDiagnosticPayloadValue>;
 }
 
 export const HISTORY_RECORD_REQUIRED_KEYS = [
@@ -111,7 +135,25 @@ export const HISTORY_RECORD_REQUIRED_KEYS = [
   "end_reason",
   "client_version",
   "replay",
-  "replay_string"
+  "replay_string",
+  "owner_type",
+  "owner_user_id",
+  "owner_nickname",
+  "owner_key",
+  "diagnostics_index_entries"
+] as const;
+
+export const HISTORY_OWNER_META_REQUIRED_KEYS = [
+  "owner_type",
+  "owner_user_id",
+  "owner_nickname",
+  "owner_key"
+] as const;
+
+export const HISTORY_DIAGNOSTICS_INDEX_ENTRY_REQUIRED_KEYS = [
+  "key",
+  "schemaVersion",
+  "payload"
 ] as const;
 
 function createHistoryRecordId(): string {
@@ -137,6 +179,19 @@ function normalizeNonNegativeInteger(value: unknown, fallback: number): number {
   return Math.max(0, normalizeInteger(value, fallback));
 }
 
+function normalizePositiveInteger(value: unknown, fallback: number): number {
+  const normalized = normalizeInteger(value, fallback);
+  return normalized > 0 ? normalized : fallback;
+}
+
+function normalizeHistoryOwnerKeyPart(value: unknown, maxLength: number): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_.:@-]+/g, "_")
+    .slice(0, maxLength);
+}
+
 function normalizeHistoryReplayString(
   replayStringValue: unknown,
   replayValue: unknown
@@ -150,6 +205,180 @@ function normalizeHistoryReplayString(
     }
   }
   return "";
+}
+
+function normalizeHistoryDiagnosticPayloadArrayValue(
+  value: unknown,
+  maxStringLength: number
+): string | number | boolean | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string" && value) return value.slice(0, maxStringLength);
+  return null;
+}
+
+function normalizeHistoryDiagnosticPayloadArray(
+  value: unknown,
+  options: { maxArrayItems: number; maxStringLength: number }
+): Array<string | number | boolean> {
+  const source = Array.isArray(value) ? value : [];
+  const out: Array<string | number | boolean> = [];
+  for (let i = 0; i < source.length; i += 1) {
+    if (out.length >= options.maxArrayItems) break;
+    const normalized = normalizeHistoryDiagnosticPayloadArrayValue(
+      source[i],
+      options.maxStringLength
+    );
+    if (normalized === null) continue;
+    out.push(normalized);
+  }
+  return out;
+}
+
+function normalizeHistoryDiagnosticPayloadValue(
+  value: unknown,
+  options: { maxArrayItems: number; maxStringLength: number }
+): HistoryDiagnosticPayloadValue | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value.slice(0, options.maxStringLength);
+  if (Array.isArray(value)) return normalizeHistoryDiagnosticPayloadArray(value, options);
+  return null;
+}
+
+function normalizeHistoryDiagnosticPayload(
+  payload: unknown,
+  options: {
+    maxPayloadKeys: number;
+    keyMaxLength: number;
+    maxArrayItems: number;
+    maxStringLength: number;
+  }
+): Record<string, HistoryDiagnosticPayloadValue> | null {
+  if (!isNonArrayObject(payload)) return null;
+  const out: Record<string, HistoryDiagnosticPayloadValue> = {};
+  const keys = Object.keys(payload);
+  let accepted = 0;
+  for (let i = 0; i < keys.length; i += 1) {
+    if (accepted >= options.maxPayloadKeys) break;
+    const key = keys[i].slice(0, options.keyMaxLength);
+    if (!key) continue;
+    const normalized = normalizeHistoryDiagnosticPayloadValue(payload[keys[i]], options);
+    if (normalized === null) continue;
+    out[key] = normalized;
+    accepted += 1;
+  }
+  return out;
+}
+
+export function normalizeHistoryOwnerMetaLike(
+  value: unknown,
+  options?: {
+    authUserId?: unknown;
+    authNickname?: unknown;
+    keyPartMaxLength?: unknown;
+  }
+): HistoryOwnerMeta {
+  const source = isNonArrayObject(value) ? value : {};
+  const keyPartMaxLength = normalizePositiveInteger(options?.keyPartMaxLength, 64);
+  const ownerTypeRaw =
+    typeof source.owner_type === "string" ? source.owner_type.trim().toLowerCase() : "";
+  let ownerUserId = source.owner_user_id == null ? "" : String(source.owner_user_id).trim();
+  let ownerNickname =
+    source.owner_nickname == null ? "" : String(source.owner_nickname).trim();
+  let ownerKey = typeof source.owner_key === "string" ? source.owner_key.trim() : "";
+
+  if (!ownerTypeRaw && !ownerUserId && !ownerNickname) {
+    ownerUserId = options?.authUserId == null ? "" : String(options.authUserId).trim();
+    ownerNickname =
+      options?.authNickname == null ? "" : String(options.authNickname).trim();
+  }
+
+  let ownerType: "guest" | "user" = ownerTypeRaw === "guest" ? "guest" : "user";
+  if (!ownerUserId && !ownerNickname) ownerType = "guest";
+  if (ownerType === "guest") {
+    ownerUserId = "";
+    ownerNickname = "";
+  }
+
+  if (!ownerKey) {
+    if (ownerType === "guest") {
+      ownerKey = "guest";
+    } else if (ownerUserId) {
+      ownerKey = "user:" + normalizeHistoryOwnerKeyPart(ownerUserId, keyPartMaxLength);
+    } else {
+      const normalizedNickname = normalizeHistoryOwnerKeyPart(ownerNickname, keyPartMaxLength);
+      ownerKey = normalizedNickname ? "nick:" + normalizedNickname : "guest";
+    }
+  }
+
+  return {
+    owner_type: ownerType,
+    owner_user_id: ownerUserId || null,
+    owner_nickname: ownerNickname,
+    owner_key: ownerKey || "guest"
+  };
+}
+
+export function isHistoryOwnerMetaLike(value: unknown): value is HistoryOwnerMeta {
+  if (!hasRequiredObjectKeys(value, HISTORY_OWNER_META_REQUIRED_KEYS)) return false;
+  if (value.owner_type !== "guest" && value.owner_type !== "user") return false;
+  if (value.owner_user_id !== null && typeof value.owner_user_id !== "string") return false;
+  if (typeof value.owner_nickname !== "string") return false;
+  if (typeof value.owner_key !== "string" || !value.owner_key) return false;
+  return true;
+}
+
+export function normalizeHistoryDiagnosticsIndexEntriesLike(
+  value: unknown,
+  options?: {
+    maxEntries?: unknown;
+    maxPayloadKeys?: unknown;
+    maxStringLength?: unknown;
+    maxArrayItems?: unknown;
+    keyMaxLength?: unknown;
+  }
+): HistoryDiagnosticsIndexEntry[] {
+  const source = Array.isArray(value) ? value : [];
+  const maxEntries = normalizePositiveInteger(options?.maxEntries, 6);
+  const maxPayloadKeys = normalizePositiveInteger(options?.maxPayloadKeys, 24);
+  const maxStringLength = normalizePositiveInteger(options?.maxStringLength, 160);
+  const maxArrayItems = normalizePositiveInteger(options?.maxArrayItems, 8);
+  const keyMaxLength = normalizePositiveInteger(options?.keyMaxLength, 64);
+  const out: HistoryDiagnosticsIndexEntry[] = [];
+  for (let i = 0; i < source.length; i += 1) {
+    if (out.length >= maxEntries) break;
+    const entry = source[i];
+    if (!isNonArrayObject(entry)) continue;
+    const key = typeof entry.key === "string" ? entry.key.slice(0, keyMaxLength) : "";
+    if (!key) continue;
+    const schemaVersion = Number(entry.schemaVersion);
+    if (!Number.isInteger(schemaVersion) || schemaVersion < 1) continue;
+    const payload = normalizeHistoryDiagnosticPayload(entry.payload, {
+      maxPayloadKeys,
+      keyMaxLength,
+      maxArrayItems,
+      maxStringLength
+    });
+    if (!payload) continue;
+    out.push({
+      key,
+      schemaVersion,
+      payload
+    });
+  }
+  return out;
+}
+
+export function isHistoryDiagnosticsIndexEntryLike(
+  value: unknown
+): value is HistoryDiagnosticsIndexEntry {
+  if (!hasRequiredObjectKeys(value, HISTORY_DIAGNOSTICS_INDEX_ENTRY_REQUIRED_KEYS)) return false;
+  if (typeof value.key !== "string" || !value.key) return false;
+  const schemaVersion = Number(value.schemaVersion);
+  if (!Number.isInteger(schemaVersion) || schemaVersion < 1) return false;
+  if (!isNonArrayObject(value.payload)) return false;
+  return true;
 }
 
 export function normalizeHistoryRecordLike(
@@ -166,6 +395,10 @@ export function normalizeHistoryRecordLike(
   const idFactory = typeof options?.idFactory === "function" ? options.idFactory : createHistoryRecordId;
   const id = typeof source.id === "string" && source.id.trim() ? source.id.trim() : idFactory();
   const replay = isNonArrayObject(source.replay) ? source.replay : null;
+  const ownerMeta = normalizeHistoryOwnerMetaLike(source);
+  const diagnosticsEntries = normalizeHistoryDiagnosticsIndexEntriesLike(
+    source.diagnostics_index_entries
+  );
   return {
     id,
     mode: typeof source.mode === "string" && source.mode ? source.mode : "local",
@@ -191,7 +424,12 @@ export function normalizeHistoryRecordLike(
         ? source.client_version
         : String(options?.defaultClientVersion || "1.8"),
     replay,
-    replay_string: normalizeHistoryReplayString(source.replay_string, replay)
+    replay_string: normalizeHistoryReplayString(source.replay_string, replay),
+    owner_type: ownerMeta.owner_type,
+    owner_user_id: ownerMeta.owner_user_id,
+    owner_nickname: ownerMeta.owner_nickname,
+    owner_key: ownerMeta.owner_key,
+    diagnostics_index_entries: diagnosticsEntries
   };
 }
 
@@ -199,6 +437,10 @@ export function isHistoryRecordLike(value: unknown): value is HistoryRecord {
   if (!hasRequiredObjectKeys(value, HISTORY_RECORD_REQUIRED_KEYS)) return false;
   if (typeof value.id !== "string" || !value.id) return false;
   if (!Array.isArray(value.final_board)) return false;
+  if (!isHistoryOwnerMetaLike(value)) return false;
+  if (!Array.isArray(value.diagnostics_index_entries)) return false;
+  if (!value.diagnostics_index_entries.every((entry) => isHistoryDiagnosticsIndexEntryLike(entry)))
+    return false;
   return true;
 }
 

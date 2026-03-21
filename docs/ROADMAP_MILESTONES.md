@@ -292,3 +292,19 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. 继续 WS3-02：评估并抽取 owner/diagnostics 的 contracts 类型与最小校验函数，减少页面层专用结构。
 2. 输出 WS3/WS8 F sign-off 证据表并完成 A/F 签收。
 3. 连续观察 2-3 轮 CI，确认 history/user-profile 新路径长期稳定。
+
+## 20. 增量状态更新（2026-03-22 / Batch-WS3-08）
+- WS3-02（历史隐式结构迁移到 contracts）：`in_progress`
+  - 本批完成：`src/contracts/index.ts` 将 `owner/diagnostics` 显式纳入 `HistoryRecord` 协议（字段、required keys、归一化、校验）。
+  - 本批完成：新增并导出 contracts 级 helper：
+    - `normalizeHistoryOwnerMetaLike` / `isHistoryOwnerMetaLike`
+    - `normalizeHistoryDiagnosticsIndexEntriesLike` / `isHistoryDiagnosticsIndexEntryLike`
+  - 本批完成：`normalizeHistoryRecordLike` 联动 owner/diagnostics 归一化并输出稳定默认值。
+  - 本批完成：`tests/unit/contracts.spec.ts` 补齐 owner/diagnostics 合同断言。
+  - 验证：`npx vitest run tests/unit/contracts.spec.ts`、history 定向 smoke、`npm run verify:prepush` 全绿。
+- WS8-01（架构契约门禁）：`in_progress`
+  - 状态：contracts 扩展未破坏现有 matrix gate，完整 refactor gate 通过。
+### 接下来必须做的工作（按优先级）
+1. 输出 WS3/WS8 F sign-off 证据表并完成 A/F 签收。
+2. 继续观察 2-3 轮 CI，确认 contracts 扩展长期稳定。
+3. 评估是否将 owner/diagnostics 纳入 matrix 行（如纳入需联动升级 contracts-matrix-audit 规则）。

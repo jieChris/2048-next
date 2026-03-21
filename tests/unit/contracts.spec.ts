@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   CORE_CONTRACT_COVERAGE_MATRIX,
   CONTRACT_SCHEMA_VERSION,
+  HISTORY_DIAGNOSTICS_INDEX_ENTRY_REQUIRED_KEYS,
   HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS,
+  HISTORY_OWNER_META_REQUIRED_KEYS,
   HISTORY_RECORD_REQUIRED_KEYS,
   REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX,
   REPLAY_RECORD_REQUIRED_KEYS,
@@ -13,11 +15,15 @@ import {
   createEmptyReplayRecord,
   createSessionSnapshot,
   isHistoryExportEnvelopeLike,
+  isHistoryDiagnosticsIndexEntryLike,
+  isHistoryOwnerMetaLike,
   isHistoryRecordLike,
   isReplayRecordLike,
   isSavedGameStatePayloadLike,
   isSessionInitPayloadLike,
   isSubmitPayloadLike,
+  normalizeHistoryDiagnosticsIndexEntriesLike,
+  normalizeHistoryOwnerMetaLike,
   normalizeHistoryRecordLike
 } from "../../src/contracts";
 import type {
@@ -118,7 +124,12 @@ describe("contracts: HistoryRecord type shape", () => {
       end_reason: "game_over",
       client_version: "1.8",
       replay: null,
-      replay_string: ""
+      replay_string: "",
+      owner_type: "guest",
+      owner_user_id: null,
+      owner_nickname: "",
+      owner_key: "guest",
+      diagnostics_index_entries: []
     };
     expect(record.id).toBe("test_001");
     expect(record.score).toBe(1234);
@@ -147,7 +158,12 @@ describe("contracts: HistoryRecord type shape", () => {
       "end_reason",
       "client_version",
       "replay",
-      "replay_string"
+      "replay_string",
+      "owner_type",
+      "owner_user_id",
+      "owner_nickname",
+      "owner_key",
+      "diagnostics_index_entries"
     ]);
     const record = normalizeHistoryRecordLike(
       {
@@ -191,6 +207,85 @@ describe("contracts: HistoryRecord type shape", () => {
     expect(normalized?.client_version).toBe("1.9");
     expect(normalized?.ended_at).toBe("2026-03-21T12:34:56Z");
     expect(normalized?.replay_string).toContain("\"version\":3");
+    expect(normalized?.owner_type).toBe("guest");
+    expect(normalized?.owner_key).toBe("guest");
+    expect(normalized?.diagnostics_index_entries).toEqual([]);
+  });
+});
+
+describe("contracts: history owner/diagnostics helpers", () => {
+  it("normalizes owner meta and validates shape", () => {
+    expect(HISTORY_OWNER_META_REQUIRED_KEYS).toEqual([
+      "owner_type",
+      "owner_user_id",
+      "owner_nickname",
+      "owner_key"
+    ]);
+
+    const owner = normalizeHistoryOwnerMetaLike({
+      owner_type: "user",
+      owner_user_id: "User#01",
+      owner_nickname: "Alice"
+    });
+    expect(owner).toEqual({
+      owner_type: "user",
+      owner_user_id: "User#01",
+      owner_nickname: "Alice",
+      owner_key: "user:user_01"
+    });
+    expect(isHistoryOwnerMetaLike(owner)).toBe(true);
+    expect(isHistoryOwnerMetaLike({ owner_type: "guest", owner_key: "guest" })).toBe(false);
+  });
+
+  it("normalizes diagnostics entries and validates shape", () => {
+    expect(HISTORY_DIAGNOSTICS_INDEX_ENTRY_REQUIRED_KEYS).toEqual([
+      "key",
+      "schemaVersion",
+      "payload"
+    ]);
+
+    const diagnostics = normalizeHistoryDiagnosticsIndexEntriesLike(
+      [
+        {
+          key: "secondaryTimerPlacement",
+          schemaVersion: 2,
+          payload: {
+            placed: 3,
+            desc: "abcdefgh",
+            list: [1, "", "xy", false, "zzzz"],
+            bad: { nested: true }
+          }
+        },
+        { key: "", schemaVersion: 1, payload: {} }
+      ],
+      {
+        maxEntries: 1,
+        maxPayloadKeys: 3,
+        maxStringLength: 5,
+        maxArrayItems: 3,
+        keyMaxLength: 8
+      }
+    );
+
+    expect(diagnostics).toEqual([
+      {
+        key: "secondar",
+        schemaVersion: 2,
+        payload: {
+          placed: 3,
+          desc: "abcde",
+          list: [1, "xy", false]
+        }
+      }
+    ]);
+    expect(isHistoryDiagnosticsIndexEntryLike(diagnostics[0])).toBe(true);
+    expect(
+      isHistoryDiagnosticsIndexEntryLike({
+        key: "x",
+        schemaVersion: 0,
+        payload: {}
+      })
+    ).toBe(false);
   });
 });
 

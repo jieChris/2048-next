@@ -2431,3 +2431,33 @@
 1. 将 owner/diagnostics 引入 `src/contracts` 最小协议与断言。
 2. 产出 WS3/WS8 F sign-off 证据表并完成签收。
 3. 连续观察 2-3 轮 CI，确认新入口长期稳定。
+
+## 本轮增量（第76批）
+
+### 1) WS3-02 第六批：owner/diagnostics 协议进入 contracts
+- 文件：
+  - `src/contracts/index.ts`
+  - `tests/unit/contracts.spec.ts`
+- 改动：
+  - 扩展 `HistoryRecord` 协议字段：`owner_type/owner_user_id/owner_nickname/owner_key/diagnostics_index_entries`；
+  - 新增 `HISTORY_OWNER_META_REQUIRED_KEYS`、`HISTORY_DIAGNOSTICS_INDEX_ENTRY_REQUIRED_KEYS`；
+  - 新增 owner/diagnostics 的 normalize + is helper；
+  - `normalizeHistoryRecordLike` / `isHistoryRecordLike` 联动新 helper；
+  - 补齐 contracts 单测与必填键断言。
+
+### 2) 验证证据（2026-03-22）
+- `npx vitest run tests/unit/contracts.spec.ts`
+  - PASS（31 tests）
+- `npx playwright test --config=playwright.config.ts tests/smoke/history-records-owner-filter.smoke.spec.ts tests/smoke/history-records-view-list-export.smoke.spec.ts`
+  - PASS（2 tests）
+- `npm run verify:prepush`
+  - PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+
+### 3) 风险控制结论
+- owner/diagnostics 已不再是“仅 runtime 规则”，而是明确的 contracts 协议字段与校验能力。
+- 剩余风险是 matrix 尚未独立覆盖这两类结构，后续需评估是否扩展。
+
+### 4) 接下来需要做的工作（明确）
+1. 产出 WS3/WS8 F sign-off 证据表并完成签收。
+2. 连续观察 2-3 轮 CI，确认 contracts 扩展长期稳定。
+3. 评估并决定是否扩展 contracts matrix 覆盖 owner/diagnostics。

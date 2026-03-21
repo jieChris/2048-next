@@ -483,3 +483,34 @@
 1. 推进 WS3-02 下一批：owner/diagnostics contracts 化（类型 + 断言 + 必要单测）。
 2. 汇总 WS3/WS8 F sign-off 证据表并完成签收。
 3. 连续观察 2-3 轮 CI，确认新归一化路径稳定。
+
+## [2026-03-22] Batch-WS3-08
+- 目标：推进 WS3-02 第六批，将 owner/diagnostics 从 runtime 入口收敛进一步提升为 contracts 显式协议。
+- 完成项：
+1. 在 `src/contracts/index.ts` 扩展 `HistoryRecord`：新增 `owner_type/owner_user_id/owner_nickname/owner_key/diagnostics_index_entries`。
+2. 新增 contracts 常量：
+   - `HISTORY_OWNER_META_REQUIRED_KEYS`
+   - `HISTORY_DIAGNOSTICS_INDEX_ENTRY_REQUIRED_KEYS`
+3. 新增 contracts helper：
+   - `normalizeHistoryOwnerMetaLike` / `isHistoryOwnerMetaLike`
+   - `normalizeHistoryDiagnosticsIndexEntriesLike` / `isHistoryDiagnosticsIndexEntryLike`
+4. `normalizeHistoryRecordLike` 与 `isHistoryRecordLike` 联动上述 helper，完成 owner/diagnostics 协议化。
+5. 更新 `tests/unit/contracts.spec.ts`：
+   - 历史必填键断言更新；
+   - 新增 owner/diagnostics helper 归一化与校验测试。
+6. 修复一次 build 类型问题（`schemaVersion` unknown）并通过全链路门禁。
+- 验证证据：
+  - 命令：`npx vitest run tests/unit/contracts.spec.ts`
+  - 结果：PASS（31 tests）
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/history-records-owner-filter.smoke.spec.ts tests/smoke/history-records-view-list-export.smoke.spec.ts`
+  - 结果：PASS（2 tests）
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：owner/diagnostics 虽已 contracts 化，但未纳入 matrix 独立合同行，当前仍依附于 HistoryRecord 合同断言。
+  - 缓解动作：后续评估是否升级 matrix 覆盖范围，并同步调整 audit 规则与文档。
+- 下一步（1-3条）：
+1. 汇总 WS3/WS8 F sign-off 证据表并完成签收。
+2. 连续观察 2-3 轮 CI，确认 contracts 扩展稳定。
+3. 评估 matrix 扩展方案与改造成本。
