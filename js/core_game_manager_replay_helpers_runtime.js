@@ -337,8 +337,18 @@ function applyReplaySeekRestartPlan(manager, restartPlan) {
     restartWithSeed(manager, manager.initialSeed, manager.modeConfig);
   }
   if (restartPlan.shouldApplyReplayIndex) {
-    manager.replayIndex = restartPlan.replayIndex;
+    setRuntimeReplayIndexForReplay(manager, restartPlan.replayIndex);
   }
+}
+
+function setRuntimeReplayIndexForReplay(manager, value) {
+  if (!manager) return;
+  if (typeof manager.setRuntimeReplayIndex === "function") {
+    manager.setRuntimeReplayIndex(value);
+    return;
+  }
+  var nextIndex = Number(value);
+  manager.replayIndex = Number.isInteger(nextIndex) && nextIndex >= 0 ? nextIndex : 0;
 }
 
 function executeReplaySeekSteps(manager, normalizedTargetIndex) {
@@ -1841,7 +1851,7 @@ function applyImportedReplayUndoState(manager) {
 }
 
 function startImportedReplayPlayback(manager) {
-  manager.replayIndex = 0;
+  setRuntimeReplayIndexForReplay(manager, 0);
   manager.replayDelay = 200;
   resumeReplay(manager);
 }
@@ -2236,7 +2246,7 @@ function executePlannedReplayStep(manager) {
   var resolvedAction = resolveReplayExecutionAction(manager, stepExecutionPlan.action);
   var dispatchPlan = resolveReplayDispatchPlan(manager, resolvedAction);
   executeReplayDispatchPlan(manager, dispatchPlan);
-  manager.replayIndex = stepExecutionPlan.nextReplayIndex;
+  setRuntimeReplayIndexForReplay(manager, stepExecutionPlan.nextReplayIndex);
 }
 
 function createSpawnValueCountResolveArgs(manager, value) {

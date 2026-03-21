@@ -49,3 +49,51 @@ function callCoreStorageRuntime(manager, methodName, payload, includeWindowConte
     [resolvedPayload]
   );
 }
+
+function setRuntimeScore(manager, value) {
+  if (!manager) return;
+  var nextScore = Number(value);
+  manager.score = Number.isFinite(nextScore) ? nextScore : 0;
+}
+
+function addRuntimeScoreDelta(manager, delta) {
+  if (!manager) return;
+  var numericDelta = Number(delta);
+  if (!Number.isFinite(numericDelta) || numericDelta === 0) return;
+  var baseScore = Number(manager.score);
+  manager.score = (Number.isFinite(baseScore) ? baseScore : 0) + numericDelta;
+}
+
+function setRuntimeReplayIndex(manager, value) {
+  if (!manager) return;
+  var nextIndex = Number(value);
+  manager.replayIndex = Number.isInteger(nextIndex) && nextIndex >= 0 ? nextIndex : 0;
+}
+
+function setRuntimeUndoStack(manager, nextUndoStack) {
+  if (!manager) return;
+  manager.undoStack = Array.isArray(nextUndoStack) ? nextUndoStack : [];
+}
+
+function pushRuntimeUndoStackEntry(manager, entry) {
+  if (!manager) return;
+  if (!Array.isArray(manager.undoStack)) manager.undoStack = [];
+  manager.undoStack.push(entry);
+}
+
+function clearRuntimeRedoStack(manager) {
+  if (!manager) return;
+  manager.redoStack = [];
+}
+
+function writeRuntimeGridCell(manager, x, y, tile) {
+  if (!(manager && manager.grid && Array.isArray(manager.grid.cells))) return false;
+  if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0) return false;
+  if (!Array.isArray(manager.grid.cells[x])) return false;
+  manager.grid.cells[x][y] = tile || null;
+  return true;
+}
+
+function clearRuntimeGridCell(manager, x, y) {
+  return writeRuntimeGridCell(manager, x, y, null);
+}

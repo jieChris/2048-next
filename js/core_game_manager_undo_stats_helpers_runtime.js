@@ -550,12 +550,32 @@ function createUndoTileSnapshot(manager, tile, target) {
   return buildUndoTileSnapshotFallback(tile, target);
 }
 
+function setRuntimeScoreForUndo(manager, value) {
+  if (!manager) return;
+  if (typeof manager.setRuntimeScore === "function") {
+    manager.setRuntimeScore(value);
+    return;
+  }
+  var next = Number(value);
+  manager.score = Number.isFinite(next) ? next : 0;
+}
+
+function writeRuntimeGridCellForUndo(manager, x, y, tile) {
+  if (!manager) return false;
+  if (typeof manager.writeRuntimeGridCell === "function") {
+    return manager.writeRuntimeGridCell(x, y, tile);
+  }
+  if (!(manager.grid && Array.isArray(manager.grid.cells) && Array.isArray(manager.grid.cells[x]))) return false;
+  manager.grid.cells[x][y] = tile || null;
+  return true;
+}
+
 function applyUndoRestoredTiles(manager, undoPayload) {
   if (!manager) return;
   manager.grid.build();
-  manager.score = Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
+  setRuntimeScoreForUndo(manager, Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
     ? Number(undoPayload.score)
-    : 0;
+    : 0);
   var undoTiles = Array.isArray(undoPayload.tiles) ? undoPayload.tiles : [];
   var gridWidth = manager.grid && Array.isArray(manager.grid.cells) ? manager.grid.cells.length : 0;
   var gridHeight = Number.isInteger(manager.height) && manager.height > 0
@@ -576,7 +596,7 @@ function applyUndoRestoredTiles(manager, undoPayload) {
       x: restored.previousPosition.x,
       y: restored.previousPosition.y
     };
-    manager.grid.cells[tile.x][tile.y] = tile;
+    writeRuntimeGridCellForUndo(manager, tile.x, tile.y, tile);
   }
 }
 

@@ -87,7 +87,15 @@ function createPreAccessorManagerForwardBindings() {
     ["resolveNormalizedCoreValueOrFallbackAllowNull", resolveNormalizedCoreValueOrFallbackAllowNull],
     ["resolveCoreRawCallValueOrUndefined", resolveCoreRawCallValueOrUndefined],
     ["tryHandleCoreRawValue", tryHandleCoreRawValue],
-    ["createCoreModeContextPayload", createCoreModeContextPayload]
+    ["createCoreModeContextPayload", createCoreModeContextPayload],
+    ["setRuntimeScore", setRuntimeScore],
+    ["addRuntimeScoreDelta", addRuntimeScoreDelta],
+    ["setRuntimeReplayIndex", setRuntimeReplayIndex],
+    ["setRuntimeUndoStack", setRuntimeUndoStack],
+    ["pushRuntimeUndoStackEntry", pushRuntimeUndoStackEntry],
+    ["clearRuntimeRedoStack", clearRuntimeRedoStack],
+    ["writeRuntimeGridCell", writeRuntimeGridCell],
+    ["clearRuntimeGridCell", clearRuntimeGridCell]
   ];
 }
 

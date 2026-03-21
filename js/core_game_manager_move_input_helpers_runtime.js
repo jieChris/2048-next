@@ -468,6 +468,64 @@ function applyMoveMergeVisibilityEffects(manager, mergeEffects) {
   }
 }
 
+function addRuntimeScoreDeltaForMove(manager, delta) {
+  if (!manager) return;
+  if (typeof manager.addRuntimeScoreDelta === "function") {
+    manager.addRuntimeScoreDelta(delta);
+    return;
+  }
+  var baseScore = Number(manager.score);
+  var numericDelta = Number(delta);
+  manager.score = (Number.isFinite(baseScore) ? baseScore : 0) + (Number.isFinite(numericDelta) ? numericDelta : 0);
+}
+
+function setRuntimeScoreForMove(manager, value) {
+  if (!manager) return;
+  if (typeof manager.setRuntimeScore === "function") {
+    manager.setRuntimeScore(value);
+    return;
+  }
+  var next = Number(value);
+  manager.score = Number.isFinite(next) ? next : 0;
+}
+
+function writeRuntimeGridCellForMove(manager, x, y, tile) {
+  if (!manager) return false;
+  if (typeof manager.writeRuntimeGridCell === "function") {
+    return manager.writeRuntimeGridCell(x, y, tile);
+  }
+  if (!(manager.grid && Array.isArray(manager.grid.cells) && Array.isArray(manager.grid.cells[x]))) return false;
+  manager.grid.cells[x][y] = tile || null;
+  return true;
+}
+
+function clearRuntimeGridCellForMove(manager, x, y) {
+  if (!manager) return false;
+  if (typeof manager.clearRuntimeGridCell === "function") {
+    return manager.clearRuntimeGridCell(x, y);
+  }
+  return writeRuntimeGridCellForMove(manager, x, y, null);
+}
+
+function pushRuntimeUndoEntryForMove(manager, entry) {
+  if (!manager) return;
+  if (typeof manager.pushRuntimeUndoStackEntry === "function") {
+    manager.pushRuntimeUndoStackEntry(entry);
+    return;
+  }
+  if (!Array.isArray(manager.undoStack)) manager.undoStack = [];
+  manager.undoStack.push(entry);
+}
+
+function clearRuntimeRedoStackForMove(manager) {
+  if (!manager) return;
+  if (typeof manager.clearRuntimeRedoStack === "function") {
+    manager.clearRuntimeRedoStack();
+    return;
+  }
+  manager.redoStack = [];
+}
+
 function applyMergedTileMutation(manager, movePlan, context) {
   var tile = context.tile;
   var next = context.next;
@@ -478,7 +536,7 @@ function applyMergedTileMutation(manager, movePlan, context) {
   manager.grid.insertTile(merged);
   manager.grid.removeTile(tile);
   tile.updatePosition(interaction.target);
-  manager.score += merged.value;
+  addRuntimeScoreDeltaForMove(manager, merged.value);
   return merged;
 }
 
@@ -512,8 +570,8 @@ function applyShiftedMoveTraversalContext(manager, movePlan, context) {
   var tile = context.tile;
   var interaction = context.interaction;
   movePlan.undo.tiles.push(manager.createUndoTileSnapshot(tile, interaction.target));
-  manager.grid.cells[tile.x][tile.y] = null;
-  manager.grid.cells[interaction.target.x][interaction.target.y] = tile;
+  clearRuntimeGridCellForMove(manager, tile.x, tile.y);
+  writeRuntimeGridCellForMove(manager, interaction.target.x, interaction.target.y, tile);
   tile.updatePosition(interaction.target);
   return interaction.moved === true;
 }
@@ -567,8 +625,8 @@ function finalizeSuccessfulMove(manager, movePlan, direction) {
   addRandomTile(manager);
   var hasMovesAvailable = movesAvailable(manager);
   var postMoveLifecycle = resolvePostMoveLifecycle(manager, hasMovesAvailable);
-  manager.undoStack.push(manager.normalizeUndoStackEntry(movePlan.undo));
-  manager.redoStack = [];
+  pushRuntimeUndoEntryForMove(manager, manager.normalizeUndoStackEntry(movePlan.undo));
+  clearRuntimeRedoStackForMove(manager);
   appendPostMoveRecordArtifacts(manager, direction);
   applyPostMoveLifecycleEffects(manager, postMoveLifecycle);
 }
@@ -577,7 +635,7 @@ function applyPostMoveScoreFromCoreResult(manager, coreValue) {
   if (!manager) return;
   var scoreResult = normalizeMoveInputRecordObject(coreValue, {});
   if (Number.isFinite(scoreResult.score)) {
-    manager.score = Number(scoreResult.score);
+    setRuntimeScoreForMove(manager, Number(scoreResult.score));
   }
   if (Number.isInteger(scoreResult.comboStreak) && scoreResult.comboStreak >= 0) {
     manager.comboStreak = scoreResult.comboStreak;
@@ -592,7 +650,7 @@ function applyPostMoveScoreFallback(manager, scoreBeforeMove) {
     if (manager.comboMultiplier > 1 && manager.comboStreak > 1) {
       var comboBonus = Math.floor(mergeGain * (manager.comboMultiplier - 1) * (manager.comboStreak - 1));
       if (comboBonus > 0) {
-        manager.score += comboBonus;
+        addRuntimeScoreDeltaForMove(manager, comboBonus);
       }
     }
   } else {

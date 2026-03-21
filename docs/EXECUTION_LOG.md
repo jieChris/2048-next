@@ -106,3 +106,21 @@
 1. 推进 WS2-02：对 `move/undo/replay` 先做统一入口封装。
 2. 推进 WS3-01：建立 contracts 覆盖矩阵并补最小断言。
 3. 推进 WS4-02：执行 4 个非统一入口页面的纳管方案。
+
+## [2026-03-21] Batch-WS2-01
+- 目标：推进 WS2-02 首批改造，先收口 `move/undo/replay` 的核心状态写入入口。
+- 完成项：
+1. 在 `core_game_manager_runtime_call_helpers_runtime.js` 新增统一写入 helper（`score/grid/undoStack/replayIndex`）。
+2. 在 `core_game_manager_bindings_runtime.js` 暴露对应 Runtime 写入方法，统一从 manager 原型调用。
+3. 在 `move/undo/replay` 三条链路替换关键直接赋值为统一写入入口，并保留 fallback 逻辑保证兼容。
+- 验证证据：
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（audit/unit/smoke/build 全通过，包含 `legacy-boundary-audit`）。
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：当前收口覆盖了首批高频写点，但 `restart/saved-state/import/export` 仍存在未收口状态写入。
+  - 缓解动作：下一批次继续按风险顺序推进 `restart/saved-state`，并补 contracts 覆盖矩阵。
+- 下一步（1-3条）：
+1. 执行 WS2-02 第二批：收口 `restart/saved-state` 状态写入入口。
+2. 执行 WS3-01：补齐对应 contracts 映射与断言。
+3. 将收口规则补充到质量门禁断言中，防止回流。
