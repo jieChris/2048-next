@@ -184,6 +184,39 @@ function resolveAssertionFilePathFromLabel(assertionLabel) {
   return label.slice(0, separatorIndex).trim();
 }
 
+function normalizeAssertionPath(assertionLabel) {
+  return resolveAssertionFilePathFromLabel(assertionLabel).replace(/\\/g, "/").toLowerCase();
+}
+
+function isUnitAssertionPath(assertionLabel) {
+  const normalized = normalizeAssertionPath(assertionLabel);
+  return normalized.includes("/tests/unit/") || normalized.startsWith("tests/unit/");
+}
+
+function isSmokeAssertionPath(assertionLabel) {
+  const normalized = normalizeAssertionPath(assertionLabel);
+  return normalized.includes("/tests/smoke/") || normalized.startsWith("tests/smoke/");
+}
+
+function verifyMatrixAssertionCoverageDepth(rows) {
+  for (const row of rows) {
+    const assertionLabels = extractFieldStringValues(row.body, "assertions");
+    const unitCount = assertionLabels.filter((assertionLabel) =>
+      isUnitAssertionPath(assertionLabel)
+    ).length;
+    const smokeCount = assertionLabels.filter((assertionLabel) =>
+      isSmokeAssertionPath(assertionLabel)
+    ).length;
+    if (unitCount < 1 || smokeCount < 1) {
+      fail(
+        "[contracts-matrix-audit] matrix row " +
+          `${row.contract} must bind at least one unit + one smoke assertion ` +
+          `(unit=${unitCount}, smoke=${smokeCount})`
+      );
+    }
+  }
+}
+
 async function verifyMatrixAssertionPathsExist(rows, projectRoot) {
   for (const row of rows) {
     const assertionLabels = extractFieldStringValues(row.body, "assertions");
@@ -222,6 +255,7 @@ async function main() {
   ]);
   const rows = verifyContractsMatrixContent(contractsContent);
   verifyMatrixDocContent(matrixDocContent);
+  verifyMatrixAssertionCoverageDepth(rows);
   await verifyMatrixAssertionPathsExist(rows, projectRoot);
   console.log("[contracts-matrix-audit] PASS: contracts matrix + doc baseline verified");
 }
@@ -244,7 +278,10 @@ export {
   extractFieldStringValues,
   findMissingSnippets,
   isDirectCliExecution,
+  isSmokeAssertionPath,
+  isUnitAssertionPath,
   rowFieldHasNonEmptyArray,
+  verifyMatrixAssertionCoverageDepth,
   verifyContractsMatrixContent,
   verifyMatrixAssertionPathsExist,
   verifyMatrixDocContent

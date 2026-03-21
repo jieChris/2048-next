@@ -11,11 +11,25 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
       (window as any).GAME_API_REQUEST_TIMEOUT_MS = 120;
       (window as any).__recordSubmitCalls = 0;
+      (window as any).__recordSubmitLastPayload = null;
 
       const originalFetch = window.fetch.bind(window);
       window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
         const url = typeof input === "string" ? input : String((input as Request).url || input);
         if (url.includes("/records")) {
+          let parsedPayload: Record<string, unknown> | null = null;
+          if (init && typeof init.body === "string" && init.body.length > 0) {
+            try {
+              const parsed = JSON.parse(init.body);
+              parsedPayload =
+                parsed && typeof parsed === "object"
+                  ? (parsed as Record<string, unknown>)
+                  : null;
+            } catch (_err) {
+              parsedPayload = null;
+            }
+          }
+          (window as any).__recordSubmitLastPayload = parsedPayload;
           (window as any).__recordSubmitCalls = Number((window as any).__recordSubmitCalls || 0) + 1;
           return new Response(JSON.stringify({ success: true, id: "rec-smoke-1" }), {
             status: 200,
@@ -75,10 +89,35 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const snapshot = await page.evaluate(() => ({
       calls: Number((window as any).__recordSubmitCalls || 0),
-      lastRecordSignature: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || "")
+      lastRecordSignature: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || ""),
+      payloadHasRequiredKeys: (() => {
+        const payload = (window as any).__recordSubmitLastPayload;
+        const requiredKeys = [
+          "score",
+          "best_tile",
+          "duration_ms",
+          "mode",
+          "mode_key",
+          "ended_at",
+          "end_reason",
+          "final_board",
+          "replay",
+          "replay_string"
+        ];
+        return (
+          !!payload &&
+          requiredKeys.every((key) => Object.prototype.hasOwnProperty.call(payload, key))
+        );
+      })(),
+      payloadFinalBoardIsArray: (() => {
+        const payload = (window as any).__recordSubmitLastPayload;
+        return !!payload && Array.isArray((payload as any).final_board);
+      })()
     }));
 
     expect(snapshot.calls).toBeGreaterThanOrEqual(1);
     expect(snapshot.lastRecordSignature.length).toBeGreaterThan(0);
+    expect(snapshot.payloadHasRequiredKeys).toBe(true);
+    expect(snapshot.payloadFinalBoardIsArray).toBe(true);
   });
 });

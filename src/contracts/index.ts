@@ -276,7 +276,8 @@ export const CORE_CONTRACT_COVERAGE_MATRIX: readonly ContractCoverageMatrixEntry
     ],
     assertions: [
       "tests/unit/contracts.spec.ts::contracts matrix + isReplayRecordLike",
-      "tests/unit/core-replay-*.spec.ts"
+      "tests/unit/core-replay-*.spec.ts",
+      "tests/smoke/pages-replay-runtime.smoke.spec.ts::replay import treats REPLAY_v4C payload as v4 instead of v9 verse"
     ]
   },
   {
@@ -290,7 +291,8 @@ export const CORE_CONTRACT_COVERAGE_MATRIX: readonly ContractCoverageMatrixEntry
       "tests/smoke/history-records-*.smoke.spec.ts"
     ],
     assertions: [
-      "tests/unit/contracts.spec.ts::contracts matrix + isHistoryExportEnvelopeLike"
+      "tests/unit/contracts.spec.ts::contracts matrix + isHistoryExportEnvelopeLike",
+      "tests/smoke/history-records-view-list-export.smoke.spec.ts::history records page exports selected records and all records through runtime helper"
     ]
   },
   {
@@ -304,7 +306,8 @@ export const CORE_CONTRACT_COVERAGE_MATRIX: readonly ContractCoverageMatrixEntry
       "src/services/api/*"
     ],
     assertions: [
-      "tests/unit/contracts.spec.ts::contracts matrix + isSubmitPayloadLike"
+      "tests/unit/contracts.spec.ts::contracts matrix + isSubmitPayloadLike",
+      "tests/smoke/pages-online-record-submit-restart-flush.smoke.spec.ts::online record submit payload preserves SubmitPayload contract keys"
     ]
   },
   {
@@ -319,7 +322,8 @@ export const CORE_CONTRACT_COVERAGE_MATRIX: readonly ContractCoverageMatrixEntry
     assertions: [
       "tests/unit/contracts.spec.ts::contracts matrix + isSavedGameStatePayloadLike",
       "tests/unit/core-game-manager-saved-state-runtime.spec.ts",
-      "tests/smoke/pages-contracts-saved-session.smoke.spec.ts::saved-state payload contract"
+      "tests/smoke/pages-contracts-saved-session.smoke.spec.ts::saved-state payload contract",
+      "tests/smoke/pages-contracts-saved-session.smoke.spec.ts::saved-state restore rejects version-mismatch payload"
     ]
   },
   {

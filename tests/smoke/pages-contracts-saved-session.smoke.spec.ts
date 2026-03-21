@@ -120,4 +120,142 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasRequiredKeys).toBe(true);
     expect(snapshot.boardIsArray).toBe(true);
   });
+
+  test("saved-state restore rejects version-mismatch payload", async ({ page }) => {
+    await page.addInitScript(() => {
+      const modeKey = "practice";
+      const payload = {
+        v: 999,
+        saved_at: Date.now(),
+        mode_key: modeKey,
+        board_width: 4,
+        board_height: 4,
+        ruleset: "standard",
+        board: [
+          [2, 4, 8, 16],
+          [32, 64, 128, 256],
+          [512, 1024, 2, 4],
+          [8, 16, 32, 64]
+        ],
+        score: 4096,
+        over: false,
+        won: false,
+        keep_playing: false,
+        duration_ms: 2345
+      };
+      const raw = JSON.stringify(payload);
+      window.localStorage.setItem("savedGameStateByMode:v1:" + modeKey, raw);
+      window.localStorage.setItem("savedGameStateLiteByMode:v1:" + modeKey, raw);
+    });
+
+    const response = await page.goto("/Practice_board.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Practice response should exist").not.toBeNull();
+    expect(response?.ok(), "Practice response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(
+      page,
+      () => Boolean((window as any).game_manager),
+      12_000
+    );
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const modeKey = String(manager?.modeKey || manager?.mode || "practice");
+      const fullKey = "savedGameStateByMode:v1:" + modeKey;
+      const liteKey = "savedGameStateLiteByMode:v1:" + modeKey;
+      const fullRaw = window.localStorage.getItem(fullKey);
+      const liteRaw = window.localStorage.getItem(liteKey);
+      const parsePayload = (raw: string | null): Record<string, unknown> | null => {
+        if (typeof raw !== "string" || raw.length === 0) return null;
+        try {
+          const parsed = JSON.parse(raw);
+          return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+        } catch (_err) {
+          return null;
+        }
+      };
+      const fullParsed = parsePayload(fullRaw);
+      const liteParsed = parsePayload(liteRaw);
+      return {
+        modeKey,
+        managerScore: Number(manager?.score || 0),
+        fullStillVersionMismatch:
+          !!fullParsed && Number((fullParsed as any).v) === 999,
+        liteStillVersionMismatch:
+          !!liteParsed && Number((liteParsed as any).v) === 999
+      };
+    });
+
+    expect(snapshot.managerScore).not.toBe(4096);
+    expect(snapshot.fullStillVersionMismatch).toBe(false);
+    expect(snapshot.liteStillVersionMismatch).toBe(false);
+  });
+
+  test("saved-state restore rejects malformed board payload", async ({ page }) => {
+    await page.addInitScript(() => {
+      const modeKey = "practice";
+      const payload = {
+        v: 1,
+        saved_at: Date.now(),
+        mode_key: modeKey,
+        board_width: 4,
+        board_height: 4,
+        ruleset: "standard",
+        board: "not-an-array",
+        score: 8192,
+        over: false,
+        won: false,
+        keep_playing: false,
+        duration_ms: 3456
+      };
+      const raw = JSON.stringify(payload);
+      window.localStorage.setItem("savedGameStateByMode:v1:" + modeKey, raw);
+      window.localStorage.setItem("savedGameStateLiteByMode:v1:" + modeKey, raw);
+    });
+
+    const response = await page.goto("/Practice_board.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Practice response should exist").not.toBeNull();
+    expect(response?.ok(), "Practice response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(
+      page,
+      () => Boolean((window as any).game_manager),
+      12_000
+    );
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const modeKey = String(manager?.modeKey || manager?.mode || "practice");
+      const fullKey = "savedGameStateByMode:v1:" + modeKey;
+      const liteKey = "savedGameStateLiteByMode:v1:" + modeKey;
+      const fullRaw = window.localStorage.getItem(fullKey);
+      const liteRaw = window.localStorage.getItem(liteKey);
+      const parsePayload = (raw: string | null): Record<string, unknown> | null => {
+        if (typeof raw !== "string" || raw.length === 0) return null;
+        try {
+          const parsed = JSON.parse(raw);
+          return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+        } catch (_err) {
+          return null;
+        }
+      };
+      const fullParsed = parsePayload(fullRaw);
+      const liteParsed = parsePayload(liteRaw);
+      const isMalformedBoard = (value: Record<string, unknown> | null): boolean =>
+        !!value && !Array.isArray((value as any).board);
+      return {
+        managerScore: Number(manager?.score || 0),
+        fullStillMalformedBoard: isMalformedBoard(fullParsed),
+        liteStillMalformedBoard: isMalformedBoard(liteParsed)
+      };
+    });
+
+    expect(snapshot.managerScore).not.toBe(8192);
+    expect(snapshot.fullStillMalformedBoard).toBe(false);
+    expect(snapshot.liteStillMalformedBoard).toBe(false);
+  });
 });

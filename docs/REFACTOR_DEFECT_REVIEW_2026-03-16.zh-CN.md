@@ -2219,3 +2219,50 @@
 1. 增加 contract 行级 unit/smoke 覆盖度门禁。
 2. 补 saved-state 异常路径 smoke。
 3. 准备 WS3/WS8 收口证据与签收模板。
+
+## 本轮增量（第70批）
+
+### 1) WS8-01：contracts 矩阵覆盖深度门禁落地
+- 文件：
+  - `scripts/contracts-matrix-audit.mjs`
+  - `tests/unit/contracts-matrix-audit-helpers.spec.ts`
+- 改动：
+  - 新增 assertions 深度规则：每个 contract 行至少绑定 `1 条 unit + 1 条 smoke`；
+  - 新增 `verifyMatrixAssertionCoverageDepth()` 并接入 matrix 审计主流程；
+  - 单测补齐正反样例，确保深度门禁可阻断回退。
+
+### 2) WS3-01：Submit/SavedState smoke 契约补齐
+- 文件：
+  - `tests/smoke/pages-online-record-submit-restart-flush.smoke.spec.ts`
+  - `tests/smoke/pages-contracts-saved-session.smoke.spec.ts`
+  - `src/contracts/index.ts`
+  - `docs/baseline/CONTRACTS_REPLAY_IMPORT_EXPORT_MATRIX.md`
+- 改动：
+  - 在 `/records` 提交流程捕获请求体并断言 `SubmitPayload` 必填字段与 `final_board` 数组结构；
+  - 新增 SavedState 异常路径 smoke：
+    - `saved-state restore rejects version-mismatch payload`
+    - `saved-state restore rejects malformed board payload`
+  - 矩阵 assertions 与基线文档同步更新，5 行 contract 均达到 `unit + smoke` 最低配额。
+
+### 3) 验证证据（2026-03-21）
+- `npm run test:unit -- tests/unit/contracts-matrix-audit-helpers.spec.ts`
+  - PASS（全量 unit：140 files / 832 tests）
+- `node scripts/contracts-matrix-audit.mjs`
+  - PASS
+- `npx playwright test --config=playwright.config.ts tests/smoke/pages-online-submit-timeout-retry.smoke.spec.ts`
+  - PASS（1 test）
+- `npx playwright test --config=playwright.config.ts tests/smoke/pages-online-record-submit-restart-flush.smoke.spec.ts`
+  - PASS（1 test）
+- `npx playwright test --config=playwright.config.ts tests/smoke/pages-contracts-saved-session.smoke.spec.ts`
+  - PASS（4 tests）
+- `npm run verify:prepush`
+  - PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+
+### 4) 风险控制结论
+- WS3/WS8 在“字段完整性 + 路径可达性 + 覆盖深度 + 异常路径 smoke”四层门禁上已形成闭环。
+- 当前剩余风险主要是流程性风险：F sign-off 证据表还未统一汇总签收。
+
+### 5) 接下来需要做的工作（明确）
+1. 输出 WS3/WS8 的 F sign-off 证据表并完成签收。
+2. 启动 WS3-02（历史隐式结构迁移到 contracts）首批切片。
+3. 连续观察 2-3 轮真实 CI，确认深度门禁稳定无误报。

@@ -294,3 +294,43 @@
 1. 在 matrix audit 中加入“每个 contract 至少绑定 unit+smoke 各 1 条”的规则。
 2. 补充 SavedState 的异常路径 smoke（损坏 payload/版本不匹配）契约。
 3. 汇总 WS3/WS8 的 F sign-off 证据并准备收口。
+
+## [2026-03-21] Batch-WS8-04
+- 目标：完成 WS3/WS8 收口前的“覆盖深度门禁 + 异常路径 smoke + Submit 合同 smoke 绑定”。
+- 完成项：
+1. 扩展 `scripts/contracts-matrix-audit.mjs`：
+   - 新增 assertions 覆盖深度规则：每个 contract 行至少 `1 unit + 1 smoke`；
+   - 新增 `verifyMatrixAssertionCoverageDepth()` 并接入主流程；
+   - 导出 `isUnitAssertionPath()`、`isSmokeAssertionPath()` 用于单测。
+2. 扩展 `tests/unit/contracts-matrix-audit-helpers.spec.ts`：
+   - 新增覆盖深度规则正反用例，防回退。
+3. 补齐 SubmitPayload 的 smoke 合同断言：
+   - 在 `tests/smoke/pages-online-record-submit-restart-flush.smoke.spec.ts` 采集 `/records` 请求体并断言 `SubmitPayload` 必填键与 `final_board` 数组形态。
+4. 补齐 SavedState 异常路径 smoke：
+   - 在 `tests/smoke/pages-contracts-saved-session.smoke.spec.ts` 新增两条用例：
+     - `saved-state restore rejects version-mismatch payload`
+     - `saved-state restore rejects malformed board payload`
+5. 更新 contracts 矩阵与基线文档断言映射：
+   - `src/contracts/index.ts`
+   - `docs/baseline/CONTRACTS_REPLAY_IMPORT_EXPORT_MATRIX.md`
+- 验证证据：
+  - 命令：`npm run test:unit -- tests/unit/contracts-matrix-audit-helpers.spec.ts`
+  - 结果：PASS（全量 unit：140 files / 832 tests）
+  - 命令：`node scripts/contracts-matrix-audit.mjs`
+  - 结果：PASS
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/pages-online-submit-timeout-retry.smoke.spec.ts`
+  - 结果：PASS（1 test）
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/pages-online-record-submit-restart-flush.smoke.spec.ts`
+  - 结果：PASS（1 test）
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/pages-contracts-saved-session.smoke.spec.ts`
+  - 结果：PASS（4 tests）
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：WS3/WS8 技术闭环已基本齐备，但 F sign-off 证据表仍需按“体验/业务/证据/风险”四栏汇总并签收。
+  - 缓解动作：下一批聚焦证据表沉淀与 WS3-02 首批切片启动。
+- 下一步（1-3条）：
+1. 形成 WS3/WS8 的 F sign-off 证据表并完成 A/F 共同确认。
+2. 启动 WS3-02（历史隐式结构迁移到 contracts）首批任务拆分。
+3. 连续观察 2-3 轮真实 CI，确认新深度门禁无误报。

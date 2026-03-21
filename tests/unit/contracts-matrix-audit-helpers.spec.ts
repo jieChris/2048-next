@@ -5,6 +5,7 @@ import {
   extractMatrixContractBlocks,
   findMissingSnippets,
   rowFieldHasNonEmptyArray,
+  verifyMatrixAssertionCoverageDepth,
   verifyContractsMatrixContent,
   verifyMatrixAssertionPathsExist,
   verifyMatrixDocContent
@@ -119,5 +120,25 @@ assertions: [
         process.cwd()
       )
     ).rejects.toThrow(/no matches/);
+  });
+
+  it("verifies matrix assertion depth requires unit and smoke coverage per contract", () => {
+    expect(() =>
+      verifyMatrixAssertionCoverageDepth([
+        {
+          contract: "ReplayRecord",
+          body: `assertions: ["tests/unit/contracts.spec.ts::ok", "tests/smoke/pages-replay-runtime.smoke.spec.ts::ok"]`
+        }
+      ])
+    ).not.toThrow();
+
+    expect(() =>
+      verifyMatrixAssertionCoverageDepth([
+        {
+          contract: "ReplayRecord",
+          body: `assertions: ["tests/unit/contracts.spec.ts::only-unit"]`
+        }
+      ])
+    ).toThrow(/at least one unit \+ one smoke assertion/);
   });
 });

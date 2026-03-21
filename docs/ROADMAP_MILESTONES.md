@@ -9,7 +9,7 @@
 |---|---|---|---|---|---|---|---|
 | M1 停止增量污染 | 禁止 legacy 回流、入口散点增量 | A / E | P0 | 待定 | in_progress | F 先签字确认“无新增散点入口、无 legacy 回流” | 新增改动全部通过架构门禁 |
 | M2 Engine 单核统一 | 核心状态变化统一入口 | B / E | P0 | 待定 | pending | F 确认主链路体验与行为一致 | 主链路无绕过 Engine 调用 |
-| M3 contracts 统一 | 核心数据结构协议化 | B / D / E | P1 | 待定 | pending | F 确认数据展示、回放、提交格式可用 | 状态/回放/提交结构 contracts 化 |
+| M3 contracts 统一 | 核心数据结构协议化 | B / D / E | P1 | 待定 | in_progress | F 确认数据展示、回放、提交格式可用 | 状态/回放/提交结构 contracts 化 |
 | M4 页面体系重组 | 页面域与入口系统化 | C / A | P1 | 待定 | pending | F 确认导航、跳转、信息架构清晰 | 散点入口收敛并纳管 |
 | M5 旧壳退场 | legacy 物理删除与防回流 | A / D / E | P1 | 待定 | pending | F 确认旧入口已退出用户路径 | legacy 依赖清零 |
 | M6 PKU 正式化 | 比赛链路正式产品化 | C / D / F | P2 | 待定 | pending | F 以产品视角签字确认可发布 | 比赛/榜单/导播/观战可用且有测试 |
@@ -22,7 +22,7 @@
 | WS1-02 | 建立 legacy 回流门禁规则 | WS1 | E / A | P0 | 2026-03-21 | done | 无 | F 复核门禁覆盖 legacy-loader 导入与调用边界 | `npm run verify:prepush` | 已接入 `legacy-boundary-audit` 且全链路通过 |
 | WS2-01 | 汇总绕过 Engine 的状态写入点 | WS2 | B / E | P0 | 2026-03-21 | done | 无 | F 复核首轮扫描范围与风险分级可接受 | unit/smoke + 扫描 | 已形成 Top10 清单与总量统计（22） |
 | WS2-02 | undo/replay/import/export 统一引擎管线 | WS2 | B / C | P1 | 2026-03-24 | in_progress | 依赖 WS2-01 | F 确认撤回、回放、导入导出都可正常使用 | `npm run test:smoke:ci` | 已完成 move/undo/replay/restart/saved-state 写入收口，剩余 import/export 持续推进 |
-| WS3-01 | 建立 contracts 覆盖矩阵（状态/回放/提交/同步） | WS3 | B / D | P1 | 待定 | pending | 无 | F 确认对外展示和存储字段稳定 | `npm run test:unit` | 覆盖矩阵可追踪 |
+| WS3-01 | 建立 contracts 覆盖矩阵（状态/回放/提交/同步） | WS3 | B / D | P1 | 待定 | in_progress | 无 | F 确认对外展示和存储字段稳定 | `npm run test:unit` | 覆盖矩阵可追踪 |
 | WS3-02 | 历史隐式结构迁移到 contracts | WS3 | C / D | P1 | 待定 | pending | 需兼容策略 | F 确认历史/回放页面无字段丢失 | unit + smoke | 旧结构退出主链路 |
 | WS4-01 | 页面信息架构与导航树落图 | WS4 | A / C | P1 | 2026-03-24 | in_progress | 产品边界确认 | F 确认入口层级和命名符合使用预期 | 文档评审 | 已完成首轮页面清单（17 html / 22 entries） |
 | WS4-02 | 散点 html 入口纳管/归档 | WS4 | C / D | P1 | 2026-03-28 | in_progress | 依赖 WS4-01 | F 确认入口清单和页面分组清晰 | `npm run audit:entry-manifest` | 已识别 4 个平台内非统一入口页面 |
@@ -201,3 +201,21 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. 增加 matrix 覆盖深度审计（每行至少 unit + smoke）。
 2. 增补 saved-state 异常路径 smoke 契约场景。
 3. 整理 WS3/WS8 F sign-off 证据并评估收口。
+
+## 14. 增量状态更新（2026-03-21 / Batch-WS8-04）
+
+- WS8-01（架构契约门禁）：`in_progress`
+  - 本批完成：`contracts-matrix-audit` 新增“覆盖深度”规则，每个 contract 行必须至少绑定 `1 unit + 1 smoke` assertions。
+  - 本批完成：Submit 合同补充 smoke 断言（在线提交请求体字段完整性），并接入矩阵 assertions。
+  - 本批完成：SavedState 合同补充异常路径 smoke（版本不匹配、board 结构损坏）。
+  - 验证：`npm run verify:prepush` 全绿（含 contracts-matrix-audit + 全量 smoke）。
+
+- WS3-01（contracts 覆盖矩阵）：`in_progress`
+  - 本批完成：5 行矩阵 assertions 全部达到“unit + smoke”最低配额。
+  - 本批完成：基线文档断言映射更新（Replay/History/Submit/SavedState/SessionInit）。
+  - 剩余：WS3/WS8 的 F sign-off 证据表仍待整理并签收。
+
+### 接下来必须做的工作（按优先级）
+1. 形成 WS3/WS8 F sign-off 证据表（体验/业务/证据/风险四栏）。
+2. 启动 WS3-02（历史隐式结构迁移到 contracts）首批切片任务。
+3. 在 CI 连续观察至少 2-3 轮，确认新门禁稳定无误报。
