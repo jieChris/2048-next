@@ -117,3 +117,21 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. WS3-01 contracts 矩阵落地并补齐最小断言。
 2. WS8-01 写入口审计门禁落地并接入 `verify:refactor:ci`。
 3. 完成一轮账号/历史/回放链路的 smoke 聚焦回归并记录 F sign-off 证据。
+
+## 9. 增量状态更新（2026-03-21 / Batch-WS8-01）
+
+- WS8-01（架构契约门禁）：`in_progress`
+  - 本批新增能力：
+    - `game-manager-audit` 已可阻断 replay/import/export 关键字段绕过 `setRuntime*ForReplay` 的直接写入。
+  - 已验证：`npm run verify:prepush` 全绿。
+  - 剩余：将同类写入边界扩展到 saved-state / session-init 等模块。
+
+- WS2-02：`in_progress`（工程收口已完成，等待门禁覆盖面继续扩大后转 `done`）
+
+- WS3-01：`pending -> next`（下一批主线）
+  - 目标：contracts 矩阵 + 最小断言 + smoke 契约验收清单。
+
+### 接下来必须做的工作（按优先级）
+1. 产出 WS3-01 contracts 覆盖矩阵（replay/import/export 优先）。
+2. 扩展 WS8-01 审计范围到 saved-state/session-init 关键字段。
+3. 增补与 contracts 绑定的 smoke 契约回归并沉淀 F sign-off。

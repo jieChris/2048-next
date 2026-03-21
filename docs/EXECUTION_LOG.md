@@ -164,3 +164,23 @@
 1. 推进 WS3-01：建立 replay/import/export 字段的 contracts 映射矩阵与最小断言。
 2. 推进 WS8-01：新增“关键状态写入不得绕过 runtime helper”的审计规则。
 3. 对账号/历史/回放主链路补一轮 smoke 聚焦回归（保证页面行为与数据一致）。
+
+## [2026-03-21] Batch-WS8-01
+- 目标：把“关键状态写入不能绕过 runtime helper”固化为自动审计门禁（先覆盖 replay/import/export 关键字段）。
+- 完成项：
+1. 在 `scripts/game-manager-audit.mjs` 新增 replay 写入边界规则：`manager.replayIndex/replayMoves/replaySpawns/replayMovesV2/undoEnabled/disableSessionSync/replayDelay` 仅允许在 `setRuntime*ForReplay` 包装函数内赋值。
+2. 新增 `collectReplayRuntimeWriteBoundaryViolations()`，并接入 `game-manager-audit` 主流程失败阻断。
+3. 在 `tests/unit/game-manager-audit-helpers.spec.ts` 增加正反两类单测（绕过写入应报违规、包装写入应通过）。
+- 验证证据：
+  - 命令：`npm run test:unit -- tests/unit/game-manager-audit-helpers.spec.ts`
+  - 结果：PASS（全量 unit：139 files / 820 tests）
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（audit/unit/smoke/build 全通过）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：当前规则覆盖 replay 关键字段，其他模块（如 saved-state/session-init）仍需按同策略扩展。
+  - 缓解动作：下一批把同类边界规则扩展到其它高风险状态字段，并与 WS3-01 合并推进。
+- 下一步（1-3条）：
+1. 推进 WS3-01：落地 replay/import/export contracts 覆盖矩阵与断言。
+2. 扩展 WS8-01：补齐 saved-state/session-init 的关键字段写入边界审计。
+3. 基于矩阵补一轮 smoke 契约用例，形成可发布证据。

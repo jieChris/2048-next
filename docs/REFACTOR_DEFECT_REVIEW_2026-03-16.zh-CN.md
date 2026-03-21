@@ -2059,3 +2059,36 @@
 1. WS3-01：完成 replay/import/export 的 contracts 覆盖矩阵（字段、来源、消费方、断言）。
 2. WS8-01：新增“关键状态写入不得绕过 runtime helper”的审计脚本并接入 CI 门禁。
 3. 增补聚焦回归：账号中心/本地历史/回放页的 smoke 契约场景，形成 F sign-off 证据。
+
+## 本轮增量（第65批）
+
+### 1) WS8-01：写入边界门禁首批落地（replay/import/export）
+- 文件：
+  - `scripts/game-manager-audit.mjs`
+  - `tests/unit/game-manager-audit-helpers.spec.ts`
+- 改动：
+  - 新增 replay 关键字段写入边界审计规则；
+  - 仅允许以下字段在 `setRuntime*ForReplay` 包装函数内赋值：
+    - `replayIndex`
+    - `replayMoves`
+    - `replaySpawns`
+    - `replayMovesV2`
+    - `undoEnabled`
+    - `disableSessionSync`
+    - `replayDelay`
+  - 一旦检测到绕过写入，`game-manager-audit` 直接失败阻断。
+
+### 2) 验证证据（2026-03-21）
+- `npm run test:unit -- tests/unit/game-manager-audit-helpers.spec.ts`
+  - PASS（全量 unit：139 files / 820 tests）
+- `npm run verify:prepush`
+  - PASS（audit/unit/smoke/build 全通过）
+
+### 3) 风险控制结论
+- 当前门禁已经覆盖 replay/import/export 主链路高频写点，能有效防止回流直接赋值。
+- 剩余风险是覆盖面：saved-state/session-init 等模块尚待补齐同类规则。
+
+### 4) 接下来需要做的工作（明确）
+1. WS3-01：完成 replay/import/export contracts 矩阵与断言。
+2. WS8-01：把写入边界审计扩展到 saved-state/session-init。
+3. 联动 smoke 契约用例，形成完整发布级证据链。

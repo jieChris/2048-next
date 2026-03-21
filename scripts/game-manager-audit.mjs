@@ -69,6 +69,43 @@ const MAX_RUNTIME_ACCESSOR_HELPERS_LINES = 320;
 const MAX_MODE_RULES_HELPERS_LINES = 1200;
 const MAX_SAVED_STATE_HELPERS_LINES = 1350;
 const MAX_RUNTIME_HELPER_FUNCTION_LINES = 19;
+const REPLAY_RUNTIME_WRITE_BOUNDARY_RULES = [
+  {
+    label: "manager.replayIndex",
+    pattern: /\bmanager\.replayIndex\s*=/g,
+    allowedOwnerNames: ["setRuntimeReplayIndexForReplay"]
+  },
+  {
+    label: "manager.replayMoves",
+    pattern: /\bmanager\.replayMoves\s*=/g,
+    allowedOwnerNames: ["setRuntimeReplayMovesForReplay"]
+  },
+  {
+    label: "manager.replaySpawns",
+    pattern: /\bmanager\.replaySpawns\s*=/g,
+    allowedOwnerNames: ["setRuntimeReplaySpawnsForReplay"]
+  },
+  {
+    label: "manager.replayMovesV2",
+    pattern: /\bmanager\.replayMovesV2\s*=/g,
+    allowedOwnerNames: ["setRuntimeReplayMovesV2ForReplay"]
+  },
+  {
+    label: "manager.undoEnabled",
+    pattern: /\bmanager\.undoEnabled\s*=/g,
+    allowedOwnerNames: ["setRuntimeUndoEnabledForReplay"]
+  },
+  {
+    label: "manager.disableSessionSync",
+    pattern: /\bmanager\.disableSessionSync\s*=/g,
+    allowedOwnerNames: ["setRuntimeDisableSessionSyncForReplay"]
+  },
+  {
+    label: "manager.replayDelay",
+    pattern: /\bmanager\.replayDelay\s*=/g,
+    allowedOwnerNames: ["setRuntimeReplayDelayForReplay"]
+  }
+];
 const PAGE_FILES = [
   "index.html",
   "play.html",
@@ -214,6 +251,22 @@ function findRegexMatchLineNumbers(content, regex) {
   return lines;
 }
 
+function findRegexMatchesWithLineNumbers(content, regex) {
+  const out = [];
+  if (!(regex instanceof RegExp)) return out;
+  const flags = regex.flags.includes("g") ? regex.flags : `${regex.flags}g`;
+  const globalRegex = new RegExp(regex.source, flags);
+  let match = globalRegex.exec(content);
+  while (match) {
+    out.push({
+      line: resolveLineNumber(content, match.index),
+      snippet: match[0]
+    });
+    match = globalRegex.exec(content);
+  }
+  return out;
+}
+
 function findOwnerFunctionName(functionDecls, callIndex) {
   let owner = null;
   for (const fn of functionDecls) {
@@ -355,6 +408,51 @@ function verifyRuntimeHelperFunctionHotspots(fileLabel, content) {
   );
 }
 
+function resolveOwnerFunctionNameByLine(functionRanges, line) {
+  if (!Array.isArray(functionRanges)) return null;
+  for (const range of functionRanges) {
+    if (!range) continue;
+    if (!Number.isInteger(range.startLine) || !Number.isInteger(range.endLine)) continue;
+    if (line >= range.startLine && line <= range.endLine) {
+      return range.name || null;
+    }
+  }
+  return null;
+}
+
+function collectReplayRuntimeWriteBoundaryViolations(replayContent) {
+  const functionRanges = collectFunctionRanges(replayContent);
+  const violations = [];
+  for (const rule of REPLAY_RUNTIME_WRITE_BOUNDARY_RULES) {
+    const allowedOwnerNames = new Set(rule.allowedOwnerNames || []);
+    const matches = findRegexMatchesWithLineNumbers(replayContent, rule.pattern);
+    for (const match of matches) {
+      const owner = resolveOwnerFunctionNameByLine(functionRanges, match.line) || "<global>";
+      if (allowedOwnerNames.has(owner)) continue;
+      violations.push({
+        field: rule.label,
+        owner,
+        line: match.line,
+        snippet: match.snippet
+      });
+    }
+  }
+  return violations.sort((left, right) => left.line - right.line);
+}
+
+function verifyReplayRuntimeWriteBoundaries(replayContent) {
+  const violations = collectReplayRuntimeWriteBoundaryViolations(replayContent);
+  if (violations.length <= 0) return;
+  const summary = violations
+    .slice(0, 12)
+    .map((item) => `${item.field}@L${item.line}(${item.owner})`)
+    .join(", ");
+  fail(
+    "[game-manager-audit] replay helper state writes must go through setRuntime*ForReplay wrappers; " +
+      `violations: ${summary}`
+  );
+}
+
 async function verifyHtmlScriptOrder(projectRoot) {
   const expectedScriptChainText = EXPECTED_GAME_MANAGER_RUNTIME_SCRIPT_CHAIN
     .map((fileName) => fileName.replace(/_runtime\.js$/, ""))
@@ -439,6 +537,7 @@ async function main() {
     );
   }
   verifyRuntimeHelperFunctionHotspots("replay helpers", replayHelpersContent);
+  verifyReplayRuntimeWriteBoundaries(replayHelpersContent);
   const savedStateHelpersLineCount = savedStateHelpersContent.split(/\r?\n/).length;
   if (savedStateHelpersLineCount > MAX_SAVED_STATE_HELPERS_LINES) {
     fail(
@@ -547,6 +646,7 @@ export {
   hasGamePageMarkers,
   hasModuleEntryScript,
   hasOrderedRuntimeScripts,
+  collectReplayRuntimeWriteBoundaryViolations,
   isDirectCliExecution,
   shouldEnforceRuntimeScriptChain
 };

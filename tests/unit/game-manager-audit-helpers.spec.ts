@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   EXPECTED_GAME_MANAGER_RUNTIME_SCRIPT_CHAIN,
+  collectReplayRuntimeWriteBoundaryViolations,
   hasGamePageMarkers,
   hasOrderedRuntimeScripts,
   shouldEnforceRuntimeScriptChain
@@ -45,5 +46,36 @@ describe("game-manager-audit helpers", () => {
       true
     );
     expect(shouldEnforceRuntimeScriptChain("index.html", nonGamePage)).toBe(false);
+  });
+
+  it("collects violations when replay writes bypass runtime wrappers", () => {
+    const replayContent = `
+function setRuntimeReplayMovesForReplay(manager, replayMoves) {
+  manager.replayMoves = replayMoves;
+}
+function badReplayWrite(manager) {
+  manager.replayMoves = [];
+  manager.undoEnabled = true;
+}
+`;
+    const violations = collectReplayRuntimeWriteBoundaryViolations(replayContent);
+    expect(violations).toHaveLength(2);
+    expect(violations.map((item) => item.owner)).toEqual([
+      "badReplayWrite",
+      "badReplayWrite"
+    ]);
+  });
+
+  it("allows replay writes inside approved wrapper functions", () => {
+    const replayContent = `
+function setRuntimeReplayIndexForReplay(manager, value) { manager.replayIndex = value; }
+function setRuntimeReplayMovesForReplay(manager, value) { manager.replayMoves = value; }
+function setRuntimeReplaySpawnsForReplay(manager, value) { manager.replaySpawns = value; }
+function setRuntimeReplayMovesV2ForReplay(manager, value) { manager.replayMovesV2 = value; }
+function setRuntimeUndoEnabledForReplay(manager, value) { manager.undoEnabled = value; }
+function setRuntimeDisableSessionSyncForReplay(manager, value) { manager.disableSessionSync = value; }
+function setRuntimeReplayDelayForReplay(manager, value) { manager.replayDelay = value; }
+`;
+    expect(collectReplayRuntimeWriteBoundaryViolations(replayContent)).toEqual([]);
   });
 });
