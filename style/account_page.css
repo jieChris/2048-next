@@ -55,6 +55,30 @@ body[data-page="account-hub"][data-i18n-ready="0"] {
   background: #fffdf9;
 }
 
+.account-login-captcha {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.account-login-captcha-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-login-captcha-image {
+  width: 140px;
+  height: 48px;
+  border: 1px solid #d8cfc3;
+  border-radius: 8px;
+  background: #f7f1e8;
+}
+
+.account-login-captcha-refresh {
+  min-height: 36px;
+}
+
 .account-action-row {
   margin-top: 12px;
   display: flex;

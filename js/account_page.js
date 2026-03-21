@@ -49,6 +49,9 @@
   var apiBases = buildApiBaseCandidates();
   var activeApiBase = apiBases[0];
   var currentLang = readLanguage();
+  var loginCaptchaRequired = false;
+  var loginCaptchaId = "";
+  var loginCaptchaLoading = false;
 
   var COPY = {
     zh: {
@@ -66,6 +69,11 @@
       emailPlaceholder: "请输入邮箱",
       passwordLabel: "密码",
       passwordPlaceholder: "请输入密码",
+      loginCaptchaLabel: "图片验证码",
+      loginCaptchaPlaceholder: "请输入图片验证码",
+      loginCaptchaRefresh: "换一张",
+      loginCaptchaLoading: "正在加载图片验证码...",
+      loginCaptchaPrompt: "登录失败次数过多，请先完成图片验证码",
       loginBtn: "登录",
       registerBtn: "注册",
       logoutBtn: "退出",
@@ -125,6 +133,11 @@
       emailPlaceholder: "Enter email",
       passwordLabel: "Password",
       passwordPlaceholder: "Enter password",
+      loginCaptchaLabel: "Image captcha",
+      loginCaptchaPlaceholder: "Enter captcha",
+      loginCaptchaRefresh: "Refresh",
+      loginCaptchaLoading: "Loading captcha...",
+      loginCaptchaPrompt: "Too many failed logins, complete captcha first",
       loginBtn: "Login",
       registerBtn: "Register",
       logoutBtn: "Logout",
@@ -182,7 +195,12 @@
       UNAUTHORIZED: "请先登录",
       INVALID_TOKEN: "登录状态已失效，请重新登录",
       INVALID_EMAIL: "邮箱格式不正确",
-      WEAK_PASSWORD: "密码需为8-16位，且至少包含字母/数字/符号中的两种"
+      WEAK_PASSWORD: "密码需为8-16位，且至少包含字母/数字/符号中的两种",
+      INVALID_CREDENTIALS: "邮箱或密码错误",
+      IMAGE_CAPTCHA_REQUIRED: "请先完成图片验证码",
+      IMAGE_CAPTCHA_INVALID: "图片验证码错误，请重试",
+      IMAGE_CAPTCHA_EXPIRED: "图片验证码已过期，请刷新后重试",
+      IMAGE_CAPTCHA_ATTEMPTS_EXCEEDED: "图片验证码尝试次数过多，请刷新后重试"
     },
     en: {
       EMPTY: "Nickname cannot be empty",
@@ -194,7 +212,12 @@
       UNAUTHORIZED: "Please sign in first",
       INVALID_TOKEN: "Session expired, please sign in again",
       INVALID_EMAIL: "Invalid email format",
-      WEAK_PASSWORD: "Password must be 8-16 chars and include at least two of letters/numbers/symbols"
+      WEAK_PASSWORD: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
+      INVALID_CREDENTIALS: "Invalid email or password",
+      IMAGE_CAPTCHA_REQUIRED: "Please complete image captcha",
+      IMAGE_CAPTCHA_INVALID: "Incorrect image captcha",
+      IMAGE_CAPTCHA_EXPIRED: "Image captcha expired, please refresh",
+      IMAGE_CAPTCHA_ATTEMPTS_EXCEEDED: "Too many captcha attempts, please refresh"
     }
   };
 
@@ -452,6 +475,69 @@
 
   function login(payload) {
     return apiRequest("/login", { method: "POST", body: payload });
+  }
+
+  function resolveLoginCaptchaCode(result) {
+    return toText(result && result.code).trim().toUpperCase();
+  }
+
+  function shouldRequireLoginCaptcha(result) {
+    if (!result || typeof result !== "object") return false;
+    if (result.captcha_required === true || toText(result.captcha_required) === "true") return true;
+
+    var code = resolveLoginCaptchaCode(result);
+    return (
+      code === "IMAGE_CAPTCHA_REQUIRED" ||
+      code === "IMAGE_CAPTCHA_INVALID" ||
+      code === "IMAGE_CAPTCHA_EXPIRED" ||
+      code === "IMAGE_CAPTCHA_ATTEMPTS_EXCEEDED"
+    );
+  }
+
+  function setLoginCaptchaRequiredState(required) {
+    loginCaptchaRequired = !!required;
+    var wrap = byId("account-login-captcha-wrap");
+    if (wrap) wrap.style.display = loginCaptchaRequired ? "grid" : "none";
+
+    if (loginCaptchaRequired) return;
+
+    loginCaptchaId = "";
+    var imageNode = byId("account-login-captcha-image");
+    var inputNode = byId("account-login-captcha-answer");
+    if (imageNode) imageNode.removeAttribute("src");
+    if (inputNode) inputNode.value = "";
+  }
+
+  async function refreshLoginCaptchaChallenge(showErrorTip) {
+    if (loginCaptchaLoading) return false;
+    loginCaptchaLoading = true;
+    if (showErrorTip) setTip(byId("account-auth-tip"), t("loginCaptchaLoading"), "");
+
+    var refreshBtn = byId("account-login-captcha-refresh");
+    if (refreshBtn) refreshBtn.disabled = true;
+
+    try {
+      var result = await apiRequest("/login/captcha", { method: "GET" });
+      var captchaId = toText(result && result.captcha_id).trim();
+      var imageDataUrl = toText(result && result.captcha_image_data_url).trim();
+      if (!result || !result.success || !captchaId || !imageDataUrl) {
+        if (showErrorTip) setTip(byId("account-auth-tip"), resolveServerError(result, "loginFail"), "err");
+        return false;
+      }
+
+      loginCaptchaId = captchaId;
+      var imageNode = byId("account-login-captcha-image");
+      if (imageNode) imageNode.setAttribute("src", imageDataUrl);
+      var inputNode = byId("account-login-captcha-answer");
+      if (inputNode) {
+        inputNode.value = "";
+        try { inputNode.focus(); } catch (_err) {}
+      }
+      return true;
+    } finally {
+      loginCaptchaLoading = false;
+      if (refreshBtn) refreshBtn.disabled = false;
+    }
   }
 
   function getLeaderboard(limit, modeLike) {
@@ -875,6 +961,7 @@
     var registerBtn = byId("account-register-btn");
     var logoutBtn = byId("account-logout-btn");
     var passwordInput = byId("account-password");
+    var captchaWrap = byId("account-login-captcha-wrap");
 
     if (authGrid) authGrid.style.display = isAuthed ? "none" : "";
     if (actionRow) actionRow.style.display = "";
@@ -882,8 +969,12 @@
     if (registerBtn) registerBtn.style.display = isAuthed ? "none" : "";
     if (logoutBtn) logoutBtn.style.display = isAuthed ? "" : "none";
     if (authTip) authTip.style.display = isAuthed ? "none" : "";
+    if (captchaWrap) captchaWrap.style.display = isAuthed ? "none" : (loginCaptchaRequired ? "grid" : "none");
 
-    if (isAuthed && passwordInput) passwordInput.value = "";
+    if (isAuthed) {
+      if (passwordInput) passwordInput.value = "";
+      setLoginCaptchaRequiredState(false);
+    }
   }
 
   async function refreshLeaderboard() {
@@ -952,14 +1043,27 @@
   async function onLoginClick() {
     var email = toText(byId("account-email") && byId("account-email").value).trim();
     var password = toText(byId("account-password") && byId("account-password").value).trim();
+    var captchaAnswer = toText(byId("account-login-captcha-answer") && byId("account-login-captcha-answer").value).trim().toUpperCase();
 
     if (!email || !password) {
       setTip(byId("account-auth-tip"), t("requireEmailPass"), "err");
       return;
     }
 
-    var result = await login({ email: email, password: password });
+    if (loginCaptchaRequired && !captchaAnswer) {
+      setTip(byId("account-auth-tip"), t("loginCaptchaPrompt"), "err");
+      return;
+    }
+
+    var payload = { email: email, password: password };
+    if (loginCaptchaRequired) {
+      payload.captcha_id = loginCaptchaId;
+      payload.captcha_answer = captchaAnswer;
+    }
+
+    var result = await login(payload);
     if (result && result.success) {
+      setLoginCaptchaRequiredState(false);
       saveAuth(result);
       syncAuthState();
       setTip(byId("account-auth-tip"), t("loginOk"), "ok");
@@ -967,6 +1071,19 @@
       refreshLeaderboard();
       syncLocalHistoryRecords(false);
       return;
+    }
+
+    if (shouldRequireLoginCaptcha(result)) {
+      setLoginCaptchaRequiredState(true);
+      var code = resolveLoginCaptchaCode(result);
+      var mustRefreshCaptcha =
+        !loginCaptchaId ||
+        code === "IMAGE_CAPTCHA_INVALID" ||
+        code === "IMAGE_CAPTCHA_EXPIRED" ||
+        code === "IMAGE_CAPTCHA_ATTEMPTS_EXCEEDED";
+      if (mustRefreshCaptcha) {
+        await refreshLoginCaptchaChallenge(false);
+      }
     }
 
     setTip(byId("account-auth-tip"), resolveServerError(result, "loginFail"), "err");
@@ -995,6 +1112,8 @@
       "account-auth-heading": t("authHeading"),
       "account-email-label": t("emailLabel"),
       "account-password-label": t("passwordLabel"),
+      "account-login-captcha-label": t("loginCaptchaLabel"),
+      "account-login-captcha-refresh": t("loginCaptchaRefresh"),
       "account-login-btn": t("loginBtn"),
       "account-register-btn": t("registerBtn"),
       "account-logout-btn": t("logoutBtn"),
@@ -1022,8 +1141,12 @@
 
     var emailInput = byId("account-email");
     var passwordInput = byId("account-password");
+    var loginCaptchaInput = byId("account-login-captcha-answer");
+    var loginCaptchaImage = byId("account-login-captcha-image");
     if (emailInput) emailInput.setAttribute("placeholder", t("emailPlaceholder"));
     if (passwordInput) passwordInput.setAttribute("placeholder", t("passwordPlaceholder"));
+    if (loginCaptchaInput) loginCaptchaInput.setAttribute("placeholder", t("loginCaptchaPlaceholder"));
+    if (loginCaptchaImage) loginCaptchaImage.setAttribute("alt", t("loginCaptchaLabel"));
     refreshModeSelectOptions();
 
     syncAuthState();
@@ -1037,6 +1160,7 @@
     var logoutBtn = byId("account-logout-btn");
     var refreshBtn = byId("account-board-refresh");
     var recordSyncBtn = byId("account-record-sync");
+    var loginCaptchaRefreshBtn = byId("account-login-captcha-refresh");
     var limitSelect = byId("account-board-limit");
     var modeSelect = byId("account-board-mode");
 
@@ -1044,6 +1168,11 @@
     if (registerBtn) registerBtn.addEventListener("click", onRegisterClick);
     if (logoutBtn) logoutBtn.addEventListener("click", onLogoutClick);
     if (refreshBtn) refreshBtn.addEventListener("click", refreshLeaderboard);
+    if (loginCaptchaRefreshBtn) {
+      loginCaptchaRefreshBtn.addEventListener("click", function () {
+        refreshLoginCaptchaChallenge(true);
+      });
+    }
     if (recordSyncBtn) recordSyncBtn.addEventListener("click", function () {
       syncLocalHistoryRecords(true);
     });
