@@ -2,8 +2,8 @@ function restartGame(manager) {
   if (!manager) return;
   if (!confirm("是否确认开始新游戏?")) return;
   manager.actuator.continue();
-  manager.undoStack = [];
-  manager.redoStack = [];
+  manager.setRuntimeUndoStack([]);
+  manager.setRuntimeRedoStack([]);
   manager.clearSavedGameState(manager.modeKey);
   if (manager.modeKey === "practice" && manager.practiceRestartBoardMatrix) {
     if (shouldClearPracticeBoardOnRestart(manager)) {
@@ -116,7 +116,7 @@ function restartWithBoard(manager, board, modeConfig, options) {
 function initializeSetupSeedAndReplayState(manager, inputSeed) {
   if (!manager) return { hasInputSeed: false };
   var hasInputSeed = typeof inputSeed !== "undefined";
-  if (hasInputSeed) manager.replayIndex = 0;
+  if (hasInputSeed) manager.setRuntimeReplayIndex(0);
   manager.initialSeed = hasInputSeed ? inputSeed : Math.random();
   manager.seed = manager.initialSeed;
   manager.replayMode = hasInputSeed;
@@ -376,8 +376,8 @@ function setupGame(manager, inputSeed, options) {
   var resolvedModeConfig = resolveSetupModeConfig(manager, setupOptions, detectedMode);
   var cfg = manager.normalizeModeConfig(resolvedModeConfig && resolvedModeConfig.key, resolvedModeConfig);
   applySetupModeConfig(manager, cfg);
-  manager.grid = new Grid(manager.width, manager.height);
-  manager.score = 0;
+  manager.setRuntimeGrid(new Grid(manager.width, manager.height));
+  manager.setRuntimeScore(0);
   manager.over = false;
   manager.won = false;
   manager.keepPlaying = false;

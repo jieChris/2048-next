@@ -98,7 +98,7 @@ function applySavedBoardMatrixRow(manager, row, y) {
 }
 function setBoardFromMatrix(manager, board) {
   assertSavedBoardMatrixShape(manager, board);
-  manager.grid = new Grid(manager.width, manager.height);
+  manager.setRuntimeGrid(new Grid(manager.width, manager.height));
   for (var y = 0; y < manager.height; y++) {
     applySavedBoardMatrixRow(manager, board[y], y);
   }
@@ -727,7 +727,7 @@ function applySavedTimerSubState(manager, saved) {
 }
 
 function applySavedManagerBaseState(manager, saved) {
-  manager.score = Number.isInteger(saved.score) && saved.score >= 0 ? saved.score : 0;
+  manager.setRuntimeScore(Number.isInteger(saved.score) && saved.score >= 0 ? saved.score : 0);
   manager.over = !!saved.over;
   manager.won = !!saved.won;
   manager.keepPlaying = !!saved.keep_playing;
@@ -749,8 +749,8 @@ function applySavedManagerReplayState(manager, saved) {
   manager.ipsInputCount = Number.isInteger(saved.ips_input_count) && saved.ips_input_count >= 0
     ? saved.ips_input_count
     : manager.moveHistory.length;
-  manager.undoStack = Array.isArray(saved.undo_stack) ? saved.undo_stack.slice() : [];
-  manager.redoStack = Array.isArray(saved.redo_stack) ? saved.redo_stack.slice() : [];
+  manager.setRuntimeUndoStack(Array.isArray(saved.undo_stack) ? saved.undo_stack.slice() : []);
+  manager.setRuntimeRedoStack(Array.isArray(saved.redo_stack) ? saved.redo_stack.slice() : []);
   manager.replayCompactLog = typeof saved.replay_compact_log === "string" ? saved.replay_compact_log : "";
   manager.sessionReplayV3 = isNonArrayObject(saved.session_replay_v3)
     ? manager.clonePlain(saved.session_replay_v3)

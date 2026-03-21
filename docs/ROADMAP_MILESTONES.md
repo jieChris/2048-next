@@ -21,7 +21,7 @@
 | WS1-01 | 盘点并标记所有 legacy 入口与调用点 | WS1 | A / D | P0 | 待定 | in_progress | 无 | F 确认看板中 legacy 清单完整、无遗漏入口 | `rg -n "legacy|runtime" js *.html src` | 形成清单并分级 |
 | WS1-02 | 建立 legacy 回流门禁规则 | WS1 | E / A | P0 | 2026-03-21 | done | 无 | F 复核门禁覆盖 legacy-loader 导入与调用边界 | `npm run verify:prepush` | 已接入 `legacy-boundary-audit` 且全链路通过 |
 | WS2-01 | 汇总绕过 Engine 的状态写入点 | WS2 | B / E | P0 | 2026-03-21 | done | 无 | F 复核首轮扫描范围与风险分级可接受 | unit/smoke + 扫描 | 已形成 Top10 清单与总量统计（22） |
-| WS2-02 | undo/replay/import/export 统一引擎管线 | WS2 | B / C | P1 | 2026-03-24 | in_progress | 依赖 WS2-01 | F 确认撤回、回放、导入导出都可正常使用 | `npm run test:smoke:ci` | 已完成 move/undo/replay 首批写入收口，剩余 import/export 持续推进 |
+| WS2-02 | undo/replay/import/export 统一引擎管线 | WS2 | B / C | P1 | 2026-03-24 | in_progress | 依赖 WS2-01 | F 确认撤回、回放、导入导出都可正常使用 | `npm run test:smoke:ci` | 已完成 move/undo/replay/restart/saved-state 写入收口，剩余 import/export 持续推进 |
 | WS3-01 | 建立 contracts 覆盖矩阵（状态/回放/提交/同步） | WS3 | B / D | P1 | 待定 | pending | 无 | F 确认对外展示和存储字段稳定 | `npm run test:unit` | 覆盖矩阵可追踪 |
 | WS3-02 | 历史隐式结构迁移到 contracts | WS3 | C / D | P1 | 待定 | pending | 需兼容策略 | F 确认历史/回放页面无字段丢失 | unit + smoke | 旧结构退出主链路 |
 | WS4-01 | 页面信息架构与导航树落图 | WS4 | A / C | P1 | 2026-03-24 | in_progress | 产品边界确认 | F 确认入口层级和命名符合使用预期 | 文档评审 | 已完成首轮页面清单（17 html / 22 entries） |

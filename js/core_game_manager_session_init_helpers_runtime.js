@@ -142,8 +142,8 @@ function bindGameManagerSavedStatePersistence(manager) {
 
 function initializeGameManagerUi(manager) {
   if (!manager) return;
-  manager.undoStack = [];
-  manager.redoStack = [];
+  manager.setRuntimeUndoStack([]);
+  manager.setRuntimeRedoStack([]);
   initCornerStatsUi(manager);
   initStatsPanelUi(manager);
 }

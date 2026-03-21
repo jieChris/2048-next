@@ -70,9 +70,19 @@ function setRuntimeReplayIndex(manager, value) {
   manager.replayIndex = Number.isInteger(nextIndex) && nextIndex >= 0 ? nextIndex : 0;
 }
 
+function setRuntimeGrid(manager, grid) {
+  if (!manager) return;
+  manager.grid = grid || null;
+}
+
 function setRuntimeUndoStack(manager, nextUndoStack) {
   if (!manager) return;
   manager.undoStack = Array.isArray(nextUndoStack) ? nextUndoStack : [];
+}
+
+function setRuntimeRedoStack(manager, nextRedoStack) {
+  if (!manager) return;
+  manager.redoStack = Array.isArray(nextRedoStack) ? nextRedoStack : [];
 }
 
 function pushRuntimeUndoStackEntry(manager, entry) {

@@ -124,3 +124,24 @@
 1. 执行 WS2-02 第二批：收口 `restart/saved-state` 状态写入入口。
 2. 执行 WS3-01：补齐对应 contracts 映射与断言。
 3. 将收口规则补充到质量门禁断言中，防止回流。
+
+## [2026-03-21] Batch-WS2-02
+- 目标：完成 WS2-02 第二批改造，收口 `restart/saved-state/session-init` 的状态写入入口。
+- 完成项：
+1. 为 runtime helper 增加 `setRuntimeGrid` 与 `setRuntimeRedoStack`。
+2. 在 `restart_setup` 中把 `grid/score/undoStack/redoStack/replayIndex` 的关键直接写入改为统一入口。
+3. 在 `saved_state` 中把 `setBoardFromMatrix`、`base/replay state` 的 `grid/score/undoStack/redoStack` 改为统一入口。
+4. 在 `session_init` 中把 `undoStack/redoStack` 初始化改为统一入口。
+- 验证证据：
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（audit/unit/smoke/build 全通过）。
+  - 命令：对 `restart_setup/saved_state/session_init` 扫描 `grid/score/undoStack/redoStack/replayIndex` 直接写入
+  - 结果：目标文件内关键直接写入已清零。
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：`import/export` 链路仍有部分状态写入与协议耦合，尚未完全统一。
+  - 缓解动作：下一批次聚焦 `WS2-02` 收尾 + `WS3-01` contracts 覆盖矩阵联动。
+- 下一步（1-3条）：
+1. 推进 WS2-02 收尾：处理 import/export 链路剩余写点。
+2. 推进 WS3-01：建立 contracts 覆盖矩阵并补最小断言。
+3. 评估将“状态写入必须走 runtime helper”纳入审计脚本。
