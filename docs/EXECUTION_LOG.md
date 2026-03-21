@@ -374,3 +374,35 @@
 1. 推进 WS3-02 第二批：收敛 `js/local_history_store.js` 的历史归一化逻辑到 contracts。
 2. 输出 WS3/WS8 的 F sign-off 证据表并完成签收。
 3. 继续观察 2-3 轮 CI，确认新增门禁稳定。
+
+## [2026-03-21] Batch-WS3-04
+- 目标：完成 WS3-02 第二批，将 `local_history_store` 的历史归一化逻辑收敛到 runtime contracts 入口。
+- 完成项：
+1. 在 `src/core/game-settings-storage.ts` 新增 `normalizeHistoryRecordFromContext()`，与 contracts 的 HistoryRecord 默认值/数值归一化规则对齐。
+2. 在 `js/core_game_settings_storage_runtime.js` 同步新增并导出 `normalizeHistoryRecordFromContext`，作为 legacy 页面可复用的统一入口。
+3. 在 `js/local_history_store.js` 重构 `normalizeRecord`：
+   - 优先调用 `CoreGameSettingsStorageRuntime.normalizeHistoryRecordFromContext`；
+   - 保留 `normalizeRecordFallback` 作为运行时兜底；
+   - owner/diagnostics 的扩展字段继续在本模块附加。
+4. 在 `tests/unit/core-game-settings-storage.spec.ts` 新增 HistoryRecord 归一化测试（正向与空输入）。
+- 验证证据：
+  - 命令：`npx vitest run tests/unit/core-game-settings-storage.spec.ts`
+  - 结果：PASS（1 file / 24 tests）
+  - 命令：`npx vitest run tests/unit/contracts.spec.ts`
+  - 结果：PASS（1 file / 29 tests）
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/history-records-import-core.smoke.spec.ts`
+  - 结果：PASS（2 tests）
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/history-records-view-list-export.smoke.spec.ts`
+  - 结果：PASS（1 test）
+  - 命令：`node scripts/contracts-matrix-audit.mjs`
+  - 结果：PASS
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：`local_history_store` 已收敛，但历史展示层（`history_page.js` / `user_profile_page.js`）仍可能存在字段拼装分支，需继续统一。
+  - 缓解动作：下一批扫描页面层的历史字段拼装点并收敛到 contracts 访问路径。
+- 下一步（1-3条）：
+1. 推进 WS3-02 下一批：收敛历史展示层隐式字段拼装。
+2. 汇总 WS3/WS8 的 F sign-off 证据表并签收。
+3. 连续观察 2-3 轮 CI，确认门禁稳定无误报。

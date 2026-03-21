@@ -4,6 +4,7 @@ import {
   buildLiteSavedGameStatePayload,
   getSavedGameStateStoragesFromContext,
   normalizeTimerModuleViewMode,
+  normalizeHistoryRecordFromContext,
   readSavedPayloadByKeyFromStorages,
   readSavedPayloadFromWindowName,
   removeKeysFromStorages,
@@ -489,6 +490,53 @@ describe("core game settings storage", () => {
       buildLiteSavedGameStatePayload({
         payload: {},
         savedStateVersion: "invalid"
+      })
+    ).toBeNull();
+  });
+
+  it("normalizes history record payload with defaults and numeric coercion", () => {
+    const normalized = normalizeHistoryRecordFromContext({
+      record: {
+        score: "1024",
+        best_tile: "256",
+        duration_ms: "-20",
+        replay: { v: 3 }
+      },
+      nowIso: () => "2026-03-21T12:34:56Z",
+      idFactory: () => "hist-from-core",
+      defaultClientVersion: "2.0"
+    });
+
+    expect(normalized).toEqual({
+      id: "hist-from-core",
+      mode: "local",
+      mode_key: "unknown",
+      board_width: 4,
+      board_height: 4,
+      ruleset: "pow2",
+      undo_enabled: false,
+      ranked_bucket: "none",
+      mode_family: "pow2",
+      rank_policy: "unranked",
+      special_rules_snapshot: {},
+      challenge_id: null,
+      score: 1024,
+      best_tile: 256,
+      duration_ms: 0,
+      final_board: [],
+      ended_at: "2026-03-21T12:34:56Z",
+      saved_at: "2026-03-21T12:34:56Z",
+      end_reason: "game_over",
+      client_version: "2.0",
+      replay: { v: 3 },
+      replay_string: JSON.stringify({ v: 3 })
+    });
+  });
+
+  it("returns null when history record input is not an object", () => {
+    expect(
+      normalizeHistoryRecordFromContext({
+        record: null
       })
     ).toBeNull();
   });

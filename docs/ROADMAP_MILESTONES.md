@@ -235,3 +235,19 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. 继续 WS3-02：将 `js/local_history_store.js` 中 `normalizeRecord` 的隐式结构逐步收敛到 contracts 单一真源。
 2. 整理 WS3/WS8 的 F sign-off 证据表并完成 A/F 共同确认。
 3. 连续观察 2-3 轮 CI 结果，确认 WS8 深度门禁长期稳定。
+
+## 16. 增量状态更新（2026-03-21 / Batch-WS3-04）
+
+- WS3-02（历史隐式结构迁移到 contracts）：`in_progress`
+  - 本批完成：在 `src/core/game-settings-storage.ts` / `js/core_game_settings_storage_runtime.js` 新增统一入口 `normalizeHistoryRecordFromContext`。
+  - 本批完成：`js/local_history_store.js` 的 `normalizeRecord` 改为优先复用 runtime contracts 入口，保留 fallback 防退化。
+  - 本批完成：新增 `tests/unit/core-game-settings-storage.spec.ts` 的 HistoryRecord 归一化断言（默认值、数字字符串、无效输入）。
+  - 验证：`npm run verify:prepush` 全绿。
+
+- WS8-01（架构契约门禁）：`in_progress`
+  - 本批状态：contracts-matrix-audit 持续通过；历史导入/导出 smoke 通过，未引入回退信号。
+
+### 接下来必须做的工作（按优先级）
+1. 推进 WS3-02 下一批：评估 `history_page.js` / `user_profile_page.js` 是否仍存在隐式字段拼装并逐步收敛到 contracts。
+2. 汇总 WS3/WS8 的 F sign-off 证据表并完成签收。
+3. 继续观察 2-3 轮 CI，确认 WS8 深度门禁长期稳定。

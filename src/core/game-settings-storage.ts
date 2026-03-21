@@ -67,6 +67,22 @@ function cloneBoardMatrix(value: unknown): number[][] | null {
   return out;
 }
 
+function normalizeHistoryBoardMatrix(value: unknown): number[][] {
+  if (!Array.isArray(value)) return [];
+  return value.map((row) =>
+    Array.isArray(row) ? row.map((cell) => Math.floor(Number(cell) || 0)) : []
+  );
+}
+
+function normalizeInteger(value: unknown, fallback: number): number {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? Math.floor(numeric) : fallback;
+}
+
+function normalizeNonNegativeInteger(value: unknown, fallback: number): number {
+  return Math.max(0, normalizeInteger(value, fallback));
+}
+
 function safeClonePlain<T>(value: T, fallback: T): T {
   try {
     return JSON.parse(JSON.stringify(value)) as T;
@@ -594,4 +610,68 @@ export function writeUndoEnabledForModeToMap(options: {
   if (!mode) return map;
   map[mode] = !!opts.enabled;
   return map;
+}
+
+export function normalizeHistoryRecordFromContext(options: {
+  record?: unknown;
+  nowIso?: unknown;
+  idFactory?: unknown;
+  defaultClientVersion?: unknown;
+}): Record<string, unknown> | null {
+  const opts = options || {};
+  const source = isObjectRecord(opts.record) ? opts.record : null;
+  if (!source) return null;
+
+  const nowIsoProvider = typeof opts.nowIso === "function" ? opts.nowIso : () => new Date().toISOString();
+  const idFactory =
+    typeof opts.idFactory === "function"
+      ? (opts.idFactory as () => string)
+      : () => "hist_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now().toString(36);
+  const now = String(nowIsoProvider() || "");
+  const id = typeof source.id === "string" && source.id.trim() ? source.id.trim() : idFactory();
+  const replay = isObjectRecord(source.replay) ? source.replay : null;
+
+  let replayString = "";
+  if (typeof source.replay_string === "string") {
+    replayString = source.replay_string;
+  } else if (replay) {
+    try {
+      replayString = JSON.stringify(replay);
+    } catch (_err) {
+      replayString = "";
+    }
+  }
+
+  return {
+    id,
+    mode: typeof source.mode === "string" && source.mode ? source.mode : "local",
+    mode_key: typeof source.mode_key === "string" && source.mode_key ? source.mode_key : "unknown",
+    board_width: normalizeInteger(source.board_width, 4),
+    board_height: normalizeInteger(source.board_height, 4),
+    ruleset: typeof source.ruleset === "string" && source.ruleset ? source.ruleset : "pow2",
+    undo_enabled: !!source.undo_enabled,
+    ranked_bucket:
+      typeof source.ranked_bucket === "string" && source.ranked_bucket ? source.ranked_bucket : "none",
+    mode_family: typeof source.mode_family === "string" && source.mode_family ? source.mode_family : "pow2",
+    rank_policy:
+      typeof source.rank_policy === "string" && source.rank_policy ? source.rank_policy : "unranked",
+    special_rules_snapshot: isObjectRecord(source.special_rules_snapshot) ? source.special_rules_snapshot : {},
+    challenge_id:
+      typeof source.challenge_id === "string" && source.challenge_id ? source.challenge_id : null,
+    score: normalizeInteger(source.score, 0),
+    best_tile: normalizeInteger(source.best_tile, 0),
+    duration_ms: normalizeNonNegativeInteger(source.duration_ms, 0),
+    final_board: normalizeHistoryBoardMatrix(source.final_board),
+    ended_at: typeof source.ended_at === "string" && source.ended_at ? source.ended_at : now,
+    saved_at: typeof source.saved_at === "string" && source.saved_at ? source.saved_at : now,
+    end_reason: typeof source.end_reason === "string" && source.end_reason ? source.end_reason : "game_over",
+    client_version:
+      typeof source.client_version === "string" && source.client_version
+        ? source.client_version
+        : typeof opts.defaultClientVersion === "string" && opts.defaultClientVersion
+          ? opts.defaultClientVersion
+          : "1.8",
+    replay,
+    replay_string: replayString
+  };
 }

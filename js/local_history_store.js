@@ -216,15 +216,13 @@
     return records;
   }
 
-  function normalizeRecord(raw) {
+  function normalizeRecordFallback(raw) {
     raw = isPlainObject(raw) ? raw : {};
     var modeKey = typeof raw.mode_key === "string" && raw.mode_key ? raw.mode_key : "unknown";
     var endedAt = typeof raw.ended_at === "string" && raw.ended_at ? raw.ended_at : nowIso();
     var replayString = typeof raw.replay_string === "string"
       ? raw.replay_string
       : (raw.replay ? JSON.stringify(raw.replay) : "");
-    var ownerMeta = resolveOwnerMetaFromRaw(raw);
-
     return {
       id: typeof raw.id === "string" && raw.id ? raw.id : makeId(),
       mode: raw.mode || "local",
@@ -247,13 +245,40 @@
       end_reason: raw.end_reason || "game_over",
       client_version: raw.client_version || "1.8",
       replay: isPlainObject(raw.replay) ? raw.replay : null,
-      replay_string: replayString,
+      replay_string: replayString
+    };
+  }
+
+  function resolveRuntimeNormalizedHistoryRecord(raw) {
+    var runtime = window.CoreGameSettingsStorageRuntime;
+    if (!runtime || typeof runtime.normalizeHistoryRecordFromContext !== "function") return null;
+    try {
+      return runtime.normalizeHistoryRecordFromContext({
+        record: raw,
+        nowIso: nowIso,
+        idFactory: makeId,
+        defaultClientVersion: "1.8"
+      });
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function normalizeRecord(raw) {
+    raw = isPlainObject(raw) ? raw : {};
+    var ownerMeta = resolveOwnerMetaFromRaw(raw);
+    var normalizedByRuntime = resolveRuntimeNormalizedHistoryRecord(raw);
+    var base = isPlainObject(normalizedByRuntime)
+      ? normalizedByRuntime
+      : normalizeRecordFallback(raw);
+
+    return Object.assign({}, base, {
       owner_type: ownerMeta.owner_type,
       owner_user_id: ownerMeta.owner_user_id,
       owner_nickname: ownerMeta.owner_nickname,
       owner_key: ownerMeta.owner_key,
       diagnostics_index_entries: normalizeDiagnosticsIndexEntries(raw.diagnostics_index_entries)
-    };
+    });
   }
 
   function requestToPromise(request) {
