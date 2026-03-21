@@ -96,3 +96,24 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 2. 任务改为 `done` 时必须附上对应 commit 和验证结果。
 3. `blocked` 超过 48 小时必须在执行日志中登记升级处理。
 4. 每周至少刷新一次里程碑总览中的优先级和验收状态。
+
+## 8. 增量状态更新（2026-03-21 / Batch-WS2-03）
+
+- WS2-02（undo/replay/import/export 统一引擎管线）：`in_progress`
+  - 已完成范围：`move/undo/replay/restart/saved-state/import/export` 关键状态写入口统一。
+  - 已完成证据：`npm run verify:prepush` 全绿。
+  - 剩余工作：将“禁止绕过 runtime helper 写关键状态”固化为审计门禁（与 WS8-01 联动）。
+
+- WS3-01（contracts 覆盖矩阵）：`pending -> next`
+  - 下一批启动项：
+    1. replay/import/export 结构字段矩阵（来源、消费方、断言位置）；
+    2. 单测最小集合（字段存在性、类型、兼容分支）；
+    3. 与 smoke 场景绑定的契约验收清单。
+
+- WS8-01（架构契约门禁）：`in_progress`
+  - 下一批重点：新增对关键写入路径的静态审计，防止后续回流直接赋值。
+
+### 接下来必须做的工作（按优先级）
+1. WS3-01 contracts 矩阵落地并补齐最小断言。
+2. WS8-01 写入口审计门禁落地并接入 `verify:refactor:ci`。
+3. 完成一轮账号/历史/回放链路的 smoke 聚焦回归并记录 F sign-off 证据。

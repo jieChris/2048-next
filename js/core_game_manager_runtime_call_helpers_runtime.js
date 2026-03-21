@@ -70,6 +70,36 @@ function setRuntimeReplayIndex(manager, value) {
   manager.replayIndex = Number.isInteger(nextIndex) && nextIndex >= 0 ? nextIndex : 0;
 }
 
+function setRuntimeReplayMoves(manager, replayMoves) {
+  if (!manager) return;
+  manager.replayMoves = Array.isArray(replayMoves) ? replayMoves : [];
+}
+
+function setRuntimeReplaySpawns(manager, replaySpawns) {
+  if (!manager) return;
+  manager.replaySpawns = replaySpawns;
+}
+
+function setRuntimeReplayMovesV2(manager, replayMovesV2) {
+  if (!manager) return;
+  manager.replayMovesV2 = replayMovesV2;
+}
+
+function setRuntimeUndoEnabled(manager, undoEnabled) {
+  if (!manager) return;
+  manager.undoEnabled = undoEnabled;
+}
+
+function setRuntimeDisableSessionSync(manager, disableSessionSync) {
+  if (!manager) return;
+  manager.disableSessionSync = disableSessionSync;
+}
+
+function setRuntimeReplayDelay(manager, replayDelay) {
+  if (!manager) return;
+  manager.replayDelay = replayDelay;
+}
+
 function setRuntimeGrid(manager, grid) {
   if (!manager) return;
   manager.grid = grid || null;

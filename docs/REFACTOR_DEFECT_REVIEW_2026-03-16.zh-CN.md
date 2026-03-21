@@ -2020,3 +2020,42 @@
    - `npm run build`
 3. 可选增量（按需，不是当前清单必做）
    - 若后续新增 diagnostics key，沿用第61批体积约束与第62/63批回归模板扩展测试与展示。
+
+## 本轮增量（第64批）
+
+### 1) WS2-02 收尾：import/export 写入口统一
+- 文件：
+  - `js/core_game_manager_runtime_call_helpers_runtime.js`
+  - `js/core_game_manager_bindings_runtime.js`
+  - `js/core_game_manager_replay_helpers_runtime.js`
+- 改动：
+  - 新增 replay/import/export 相关统一写入口：
+    - `setRuntimeReplayMoves`
+    - `setRuntimeReplaySpawns`
+    - `setRuntimeReplayMovesV2`
+    - `setRuntimeUndoEnabled`
+    - `setRuntimeDisableSessionSync`
+    - `setRuntimeReplayDelay`
+  - 将 replay import/export 链路中的关键直接赋值迁移为统一写入口调用。
+- 效果：
+  - import/export 与 replay 主链路关键状态写入实现一致化，降低后续重构回归风险。
+
+### 2) 验证证据（2026-03-21）
+- `npm run verify:prepush`
+  - PASS：
+    - game-manager-audit
+    - entry-manifest-audit
+    - legacy-boundary-audit
+    - engine-audit
+    - unit
+    - smoke
+    - build
+
+### 3) 风险控制结论
+- 本批以“写入口统一”为主，行为语义保持不变，未引入新功能分支。
+- 当前残余风险在于：规则已落地到代码，但尚未全部固化为自动审计项。
+
+### 4) 接下来需要做的工作（明确）
+1. WS3-01：完成 replay/import/export 的 contracts 覆盖矩阵（字段、来源、消费方、断言）。
+2. WS8-01：新增“关键状态写入不得绕过 runtime helper”的审计脚本并接入 CI 门禁。
+3. 增补聚焦回归：账号中心/本地历史/回放页的 smoke 契约场景，形成 F sign-off 证据。

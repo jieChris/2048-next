@@ -145,3 +145,22 @@
 1. 推进 WS2-02 收尾：处理 import/export 链路剩余写点。
 2. 推进 WS3-01：建立 contracts 覆盖矩阵并补最小断言。
 3. 评估将“状态写入必须走 runtime helper”纳入审计脚本。
+
+## [2026-03-21] Batch-WS2-03
+- 目标：完成 WS2-02 收尾，统一 import/export 链路关键状态写入口。
+- 完成项：
+1. 在 `js/core_game_manager_runtime_call_helpers_runtime.js` 新增统一写入口：`setRuntimeReplayMoves`、`setRuntimeReplaySpawns`、`setRuntimeReplayMovesV2`、`setRuntimeUndoEnabled`、`setRuntimeDisableSessionSync`、`setRuntimeReplayDelay`。
+2. 在 `js/core_game_manager_bindings_runtime.js` 暴露以上写入口到 `GameManager` 原型，保证运行时统一调用。
+3. 在 `js/core_game_manager_replay_helpers_runtime.js` 将 import/export 关键直接赋值改为统一写入口（`replayMoves/replaySpawns/replayMovesV2/undoEnabled/disableSessionSync/replayDelay`）。
+4. 保留 fallback 语义，确保行为不回归。
+- 验证证据：
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / engine-audit / unit / smoke / build 全通过）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：本批完成了 import/export 写入口收口，但“写入口必须经 runtime helper”的规则尚未纳入自动审计。
+  - 缓解动作：下一批优先补齐 WS8-01 审计断言与 WS3-01 contracts 覆盖矩阵。
+- 下一步（1-3条）：
+1. 推进 WS3-01：建立 replay/import/export 字段的 contracts 映射矩阵与最小断言。
+2. 推进 WS8-01：新增“关键状态写入不得绕过 runtime helper”的审计规则。
+3. 对账号/历史/回放主链路补一轮 smoke 聚焦回归（保证页面行为与数据一致）。

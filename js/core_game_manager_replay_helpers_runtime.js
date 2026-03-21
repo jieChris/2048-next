@@ -203,7 +203,7 @@ function resolveReplaySpeedState(manager, multiplier) {
 function setReplaySpeed(manager, multiplier) {
   if (!manager) return;
   var state = resolveReplaySpeedState(manager, multiplier);
-  manager.replayDelay = state.replayDelay;
+  setRuntimeReplayDelayForReplay(manager, state.replayDelay);
   if (!state.shouldResume) return;
   resumeReplay(manager);
 }
@@ -349,6 +349,60 @@ function setRuntimeReplayIndexForReplay(manager, value) {
   }
   var nextIndex = Number(value);
   manager.replayIndex = Number.isInteger(nextIndex) && nextIndex >= 0 ? nextIndex : 0;
+}
+
+function setRuntimeReplayMovesForReplay(manager, replayMoves) {
+  if (!manager) return;
+  if (typeof manager.setRuntimeReplayMoves === "function") {
+    manager.setRuntimeReplayMoves(replayMoves);
+    return;
+  }
+  manager.replayMoves = Array.isArray(replayMoves) ? replayMoves : [];
+}
+
+function setRuntimeReplaySpawnsForReplay(manager, replaySpawns) {
+  if (!manager) return;
+  if (typeof manager.setRuntimeReplaySpawns === "function") {
+    manager.setRuntimeReplaySpawns(replaySpawns);
+    return;
+  }
+  manager.replaySpawns = replaySpawns;
+}
+
+function setRuntimeReplayMovesV2ForReplay(manager, replayMovesV2) {
+  if (!manager) return;
+  if (typeof manager.setRuntimeReplayMovesV2 === "function") {
+    manager.setRuntimeReplayMovesV2(replayMovesV2);
+    return;
+  }
+  manager.replayMovesV2 = replayMovesV2;
+}
+
+function setRuntimeUndoEnabledForReplay(manager, undoEnabled) {
+  if (!manager) return;
+  if (typeof manager.setRuntimeUndoEnabled === "function") {
+    manager.setRuntimeUndoEnabled(undoEnabled);
+    return;
+  }
+  manager.undoEnabled = undoEnabled;
+}
+
+function setRuntimeDisableSessionSyncForReplay(manager, disableSessionSync) {
+  if (!manager) return;
+  if (typeof manager.setRuntimeDisableSessionSync === "function") {
+    manager.setRuntimeDisableSessionSync(disableSessionSync);
+    return;
+  }
+  manager.disableSessionSync = disableSessionSync;
+}
+
+function setRuntimeReplayDelayForReplay(manager, replayDelay) {
+  if (!manager) return;
+  if (typeof manager.setRuntimeReplayDelay === "function") {
+    manager.setRuntimeReplayDelay(replayDelay);
+    return;
+  }
+  manager.replayDelay = replayDelay;
 }
 
 function executeReplaySeekSteps(manager, normalizedTargetIndex) {
@@ -1635,7 +1689,7 @@ function applyV9RplStructuredReplayEnvelope(manager, envelope, replayModeConfig)
     replayMoves: envelope.replayMoves,
     replaySpawns: envelope.replaySpawns
   });
-  manager.disableSessionSync = true;
+  setRuntimeDisableSessionSyncForReplay(manager, true);
   restartWithBoard(manager, envelope.initialBoard, replayModeConfig, { asReplay: true });
 }
 
@@ -1822,12 +1876,12 @@ function serializeReplay(manager) {
 function applyReplayImportActions(manager, payload) {
   if (!manager) return;
   var source = normalizeReplayRecordObject(payload, {});
-  manager.replayMoves = Array.isArray(source.replayMoves) ? source.replayMoves : [];
+  setRuntimeReplayMovesForReplay(manager, source.replayMoves);
   if (manager.hasOwnKey(source, "replaySpawns")) {
-    manager.replaySpawns = source.replaySpawns;
+    setRuntimeReplaySpawnsForReplay(manager, source.replaySpawns);
   }
   if (typeof source.replayMovesV2 === "string") {
-    manager.replayMovesV2 = source.replayMovesV2;
+    setRuntimeReplayMovesV2ForReplay(manager, source.replayMovesV2);
   }
 }
 
@@ -1840,9 +1894,9 @@ function applyImportedReplayUndoState(manager) {
   var undoState = manager.resolveUndoPolicyStateForMode(manager.mode);
   var forcedUndoSetting = undoState ? undoState.forcedUndoSetting : null;
   if (forcedUndoSetting !== null) {
-    manager.undoEnabled = forcedUndoSetting;
+    setRuntimeUndoEnabledForReplay(manager, forcedUndoSetting);
   } else {
-    manager.undoEnabled = !!importedUndoEnabled;
+    setRuntimeUndoEnabledForReplay(manager, !!importedUndoEnabled);
   }
   manager.updateUndoUiState(manager.resolveUndoPolicyStateForMode(manager.mode, {
     undoEnabled: manager.undoEnabled
@@ -1852,7 +1906,7 @@ function applyImportedReplayUndoState(manager) {
 
 function startImportedReplayPlayback(manager) {
   setRuntimeReplayIndexForReplay(manager, 0);
-  manager.replayDelay = 200;
+  setRuntimeReplayDelayForReplay(manager, 200);
   resumeReplay(manager);
 }
 
@@ -2046,7 +2100,7 @@ function applyV4StructuredReplayEnvelope(manager, envelope, replayModeConfig) {
       ? decodedV4Actions.replaySpawns
       : []
   });
-  manager.disableSessionSync = true;
+  setRuntimeDisableSessionSyncForReplay(manager, true);
   restartWithBoard(manager, initialBoard, replayModeConfig, { asReplay: true });
 }
 
