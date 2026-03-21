@@ -429,3 +429,26 @@
 1. 推进 WS3-02 下一批：收敛 `history_page.js` 字段拼装分支并补回归测试。
 2. 汇总 WS3/WS8 F sign-off 证据表并完成签收。
 3. 连续观察 2-3 轮 CI，确认 user-profile/history 链路稳定。
+
+## [2026-03-22] Batch-WS3-06
+- 目标：推进 WS3-02 第四批，收敛历史页（history page）字段拼装到 runtime contracts 入口。
+- 完成项：
+1. 在 `js/history_page.js` 新增 `normalizeHistoryRecordViaRuntime()` 与 `normalizeHistoryRecordForView()`，统一 history 列表渲染输入。
+2. `renderList()` 改为直接消费 `normalizeHistoryRecordForView()` 的结果，减少页面层散点字段拼装。
+3. `normalizeBoardMatrix()` 改为优先复用 runtime 归一化输出，原本字符串解析分支保留为 fallback。
+4. 在 `src/entries/history.ts` 增加 `core_game_settings_storage_runtime.js` 导入，确保统一归一化依赖稳定加载。
+- 验证证据：
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/pages-runtime-contract.smoke.spec.ts`
+  - 结果：PASS（8 tests）
+  - 命令：`npx playwright test --config=playwright.config.ts tests/smoke/history-records-view-list-export.smoke.spec.ts tests/smoke/history-records-view-models.smoke.spec.ts tests/smoke/history-records-import-mode-filter.smoke.spec.ts tests/smoke/history-records-owner-filter.smoke.spec.ts`
+  - 结果：PASS（6 tests）
+  - 命令：`npm run verify:prepush`
+  - 结果：PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+- 风险与阻塞：
+  - 风险级别：P1
+  - 描述：历史页的 owner/diagnostics 仍是页面层专用结构，尚未形成 contracts 统一协议。
+  - 缓解动作：下一批对 owner/diagnostics 做协议化评估，优先抽取可复用运行时入口。
+- 下一步（1-3条）：
+1. 推进 WS3-02 下一批：收敛 owner/diagnostics 分支并补测试。
+2. 汇总 WS3/WS8 F sign-off 证据表并完成签收。
+3. 连续观察 2-3 轮 CI，确认新归一化路径稳定。

@@ -173,6 +173,45 @@
     return typeof value === "string" ? value : "";
   }
 
+  function normalizeHistoryRecordViaRuntime(raw) {
+    var runtime = window.CoreGameSettingsStorageRuntime;
+    if (!runtime || typeof runtime.normalizeHistoryRecordFromContext !== "function") return null;
+    try {
+      return runtime.normalizeHistoryRecordFromContext({
+        record: raw && typeof raw === "object" ? raw : {},
+        nowIso: function () { return ""; },
+        idFactory: function () { return ""; }
+      });
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function normalizeHistoryRecordForView(raw) {
+    var item = raw && typeof raw === "object" ? raw : {};
+    var normalized = normalizeHistoryRecordViaRuntime(item);
+    var replayString = toText(item.replay_string || (normalized && normalized.replay_string)).trim();
+    if (!replayString && normalized && normalized.replay != null) {
+      try { replayString = JSON.stringify(normalized.replay); } catch (_err) { replayString = ""; }
+    }
+    return {
+      id: toText(item.id || (normalized && normalized.id)).trim(),
+      mode: toText(item.mode || (normalized && normalized.mode)).trim(),
+      mode_key: toText(item.mode_key || (normalized && normalized.mode_key)).trim(),
+      score: Math.floor(Number((normalized && normalized.score) != null ? normalized.score : item.score) || 0),
+      best_tile: Math.floor(Number((normalized && normalized.best_tile) != null ? normalized.best_tile : item.best_tile) || 0),
+      duration_ms: Math.floor(Number((normalized && normalized.duration_ms) != null ? normalized.duration_ms : item.duration_ms) || 0),
+      ended_at: toText(item.ended_at || (normalized && normalized.ended_at)).trim(),
+      replay_string: replayString,
+      final_board: item.final_board != null ? item.final_board : (normalized && normalized.final_board),
+      owner_type: item.owner_type,
+      owner_user_id: item.owner_user_id,
+      owner_nickname: item.owner_nickname,
+      owner_key: item.owner_key,
+      diagnostics_index_entries: item.diagnostics_index_entries
+    };
+  }
+
   function normalizeHistoryDiagnosticsIndexEntry(rawEntry) {
     if (!rawEntry || typeof rawEntry !== "object" || Array.isArray(rawEntry)) return null;
     var key = typeof rawEntry.key === "string" && rawEntry.key ? rawEntry.key : "";
@@ -258,6 +297,10 @@
   }
 
   function normalizeBoardMatrix(raw) {
+    var normalizedRecord = normalizeHistoryRecordViaRuntime({ final_board: raw });
+    if (normalizedRecord && Array.isArray(normalizedRecord.final_board)) {
+      return normalizedRecord.final_board;
+    }
     var source = raw;
     if (typeof source === "string") {
       try {
@@ -451,7 +494,7 @@
     }
 
     for (var i = 0; i < items.length; i += 1) {
-      var item = items[i] || {};
+      var item = normalizeHistoryRecordForView(items[i]);
       var modeText = resolveModeLabel(item.mode_key, item.mode);
       var ownerDisplay = normalizeOwnerDisplay(item);
       var node = document.createElement("div");

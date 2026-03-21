@@ -2368,3 +2368,32 @@
 1. 扫描并收敛 `history_page.js` 剩余字段拼装分支，优先复用 runtime/contracts 入口。
 2. 产出并签收 WS3/WS8 的 F sign-off 证据表。
 3. 连续观察 2-3 轮 CI，确认新增归一化路径长期稳定。
+
+## 本轮增量（第74批）
+
+### 1) WS3-02 第四批：`history_page` 历史记录渲染归一化收敛
+- 文件：
+  - `js/history_page.js`
+  - `src/entries/history.ts`
+- 改动：
+  - 新增 `normalizeHistoryRecordViaRuntime` / `normalizeHistoryRecordForView`，history 列表渲染优先走 runtime contracts 归一化；
+  - `renderList` 改为消费归一化结果，减少页面层重复字段拼装；
+  - `normalizeBoardMatrix` 优先复用 runtime 归一化输出，旧字符串解析逻辑仅保留 fallback；
+  - `history` entry 补齐 runtime 依赖导入，避免运行时入口缺失。
+
+### 2) 验证证据（2026-03-22）
+- `npx playwright test --config=playwright.config.ts tests/smoke/pages-runtime-contract.smoke.spec.ts`
+  - PASS（8 tests）
+- `npx playwright test --config=playwright.config.ts tests/smoke/history-records-view-list-export.smoke.spec.ts tests/smoke/history-records-view-models.smoke.spec.ts tests/smoke/history-records-import-mode-filter.smoke.spec.ts tests/smoke/history-records-owner-filter.smoke.spec.ts`
+  - PASS（6 tests）
+- `npm run verify:prepush`
+  - PASS（game-manager-audit / entry-manifest-audit / legacy-boundary-audit / contracts-matrix-audit / engine-audit / unit / smoke / build 全通过）
+
+### 3) 风险控制结论
+- 本批完成 history 页主渲染链路的 contracts/runtime 收敛，WS3-02 持续向“单一真源”推进。
+- 剩余风险主要在 owner/diagnostics 的页面专用结构，仍需协议化。
+
+### 4) 接下来需要做的工作（明确）
+1. 继续收敛 owner/diagnostics 结构并评估 contracts/runtime 入口。
+2. 产出 WS3/WS8 F sign-off 证据表并完成签收。
+3. 连续观察 2-3 轮 CI，确认新路径长期稳定。

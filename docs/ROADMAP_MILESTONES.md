@@ -263,3 +263,16 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. 继续 WS3-02：扫描并收敛 `history_page.js` 剩余字段拼装分支，优先抽到 runtime/contracts。
 2. 输出 WS3/WS8 的 F sign-off 证据表并完成 A/F 签收。
 3. 连续观察 2-3 轮 CI，确认 user-profile 相关链路长期稳定。
+
+## 18. 增量状态更新（2026-03-22 / Batch-WS3-06）
+- WS3-02（历史隐式结构迁移到 contracts）：`in_progress`
+  - 本批完成：`js/history_page.js` 新增 `normalizeHistoryRecordForView`，渲染链路（列表字段/回放导出/棋盘预览）统一优先复用 `CoreGameSettingsStorageRuntime.normalizeHistoryRecordFromContext`。
+  - 本批完成：`normalizeBoardMatrix` 优先复用 runtime 归一化结果，页面侧字符串/数组分支仅作为兜底。
+  - 本批完成：`src/entries/history.ts` 补齐 `core_game_settings_storage_runtime.js` 导入，确保历史页运行时依赖一致。
+  - 验证：历史页定向 smoke + `npm run verify:prepush` 全绿。
+- WS8-01（架构契约门禁）：`in_progress`
+  - 状态：本批改动通过 refactor gate 全链路，未出现 contracts/legacy 回流告警。
+### 接下来必须做的工作（按优先级）
+1. 继续 WS3-02：收敛 `history_page.js` 的 owner/diagnostics 结构分支，评估抽到 contracts/runtime 的可行入口。
+2. 输出 WS3/WS8 F sign-off 证据表并完成 A/F 签收。
+3. 连续观察 2-3 轮 CI，确认 history/user-profile 新归一化路径长期稳定。
