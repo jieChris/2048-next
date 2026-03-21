@@ -344,6 +344,21 @@
     }
   }
 
+  function isNicknameErrorCode(code) {
+    var normalized = toText(code).trim().toUpperCase();
+    return (
+      normalized === "EMPTY" ||
+      normalized === "LENGTH" ||
+      normalized === "CHARS" ||
+      normalized === "INVALID" ||
+      normalized === "RESERVED" ||
+      normalized === "SENSITIVE" ||
+      normalized === "NICKNAME_EXISTS" ||
+      normalized === "DUPLICATE_NICKNAME" ||
+      normalized === "NICKNAME_TAKEN"
+    );
+  }
+
   function normalizeServerCode(result) {
     return toText(result && result.code).trim().toUpperCase();
   }
@@ -505,7 +520,7 @@
       nicknameValidationValue = normalized;
       nicknameValidationState = "invalid";
       setNicknameValidationUi(true);
-      if (showTipOnError) setTip(t("invalidNickname"), "err");
+      if (showTipOnError) setTip("", "");
       return false;
     }
     if (normalized && normalized === nicknameValidationValue && nicknameValidationState === "available") {
@@ -528,13 +543,13 @@
     if (available === false) {
       nicknameValidationState = "unavailable";
       setNicknameValidationUi(true);
-      if (showTipOnError) setTip(t("nicknameTaken"), "err");
+      if (showTipOnError) setTip("", "");
       return false;
     }
 
     nicknameValidationState = "error";
     setNicknameValidationUi(true);
-    if (showTipOnError) setTip(t("nicknameCheckFailed"), "err");
+    if (showTipOnError) setTip("", "");
     return false;
   }
 
@@ -561,7 +576,9 @@
       return false;
     }
     if (!isValidNickname(form.nickname)) {
-      setTip(t("invalidNickname"), "err");
+      nicknameValidationState = "invalid";
+      setNicknameValidationUi(true);
+      setTip("", "");
       return false;
     }
     return true;
@@ -605,6 +622,12 @@
         return;
       }
 
+      if (isNicknameErrorCode(normalizeServerCode(startResult))) {
+        nicknameValidationState = "unavailable";
+        setNicknameValidationUi(true);
+        setTip("", "");
+        return;
+      }
       setTip(resolveServerError(startResult, "registerFail"), "err");
     } finally {
       setSendCodeEnabled(true);
@@ -639,6 +662,12 @@
         return;
       }
 
+      if (isNicknameErrorCode(normalizeServerCode(result))) {
+        nicknameValidationState = "unavailable";
+        setNicknameValidationUi(true);
+        setTip("", "");
+        return;
+      }
       setTip(resolveServerError(result, "registerFail"), "err");
     } finally {
       setSubmitEnabled(true);
