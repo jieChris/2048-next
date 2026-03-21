@@ -53,6 +53,7 @@
       invalidPassword: "\u5bc6\u7801\u9700\u4e3a8-16\u4f4d\uff0c\u4e14\u81f3\u5c11\u5305\u542b\u5b57\u6bcd/\u6570\u5b57/\u7b26\u53f7\u4e2d\u7684\u4e24\u79cd",
       invalidNickname: "\u6635\u79f0\u9700\u4e3a2-20\u4f4d\uff0c\u4ec5\u652f\u6301\u4e2d\u6587\u3001\u5b57\u6bcd\u3001\u6570\u5b57\u3001\u7a7a\u683c\u3001\u4e0b\u5212\u7ebf\u548c\u77ed\u6a2a\u7ebf",
       nicknameTaken: "\u6635\u79f0\u5df2\u88ab\u5360\u7528\uff0c\u8bf7\u66f4\u6362",
+      nicknameUnavailableInline: "\u5f53\u524d\u6635\u79f0\u4e0d\u53ef\u7528\uff0c\u8bf7\u66f4\u6362\u6635\u79f0",
       nicknameCheckFailed: "\u6635\u79f0\u6821\u9a8c\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5",
       registerOk: "\u6ce8\u518c\u6210\u529f\uff0c\u6b63\u5728\u8fd4\u56de\u767b\u5f55\u9875...",
       registerFail: "\u6ce8\u518c\u5931\u8d25",
@@ -87,6 +88,7 @@
       invalidPassword: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
       invalidNickname: "Nickname must be 2-20 chars and use letters/numbers/spaces/_/-/Chinese only",
       nicknameTaken: "Nickname already exists",
+      nicknameUnavailableInline: "Nickname unavailable, please choose another",
       nicknameCheckFailed: "Nickname validation failed, please retry",
       registerOk: "Registered. Redirecting to login...",
       registerFail: "Register failed",
@@ -325,6 +327,23 @@
     if (sendBtn) sendBtn.disabled = !enabled;
   }
 
+  function setNicknameValidationUi(invalid) {
+    var nicknameInput = byId("register-nickname");
+    var feedback = byId("register-nickname-feedback");
+    if (nicknameInput) {
+      nicknameInput.classList.toggle("input-error", !!invalid);
+    }
+    if (feedback) {
+      if (invalid) {
+        feedback.textContent = t("nicknameUnavailableInline");
+        feedback.classList.add("active");
+      } else {
+        feedback.textContent = "";
+        feedback.classList.remove("active");
+      }
+    }
+  }
+
   function normalizeServerCode(result) {
     return toText(result && result.code).trim().toUpperCase();
   }
@@ -476,6 +495,7 @@
       nicknameValidationSerial += 1;
       nicknameValidationValue = normalized;
       nicknameValidationState = "idle";
+      setNicknameValidationUi(false);
     }
   }
 
@@ -484,6 +504,7 @@
     if (!isValidNickname(normalized)) {
       nicknameValidationValue = normalized;
       nicknameValidationState = "invalid";
+      setNicknameValidationUi(true);
       if (showTipOnError) setTip(t("invalidNickname"), "err");
       return false;
     }
@@ -500,16 +521,19 @@
 
     if (available === true) {
       nicknameValidationState = "available";
+      setNicknameValidationUi(false);
       if (showTipOnError) setTip("", "");
       return true;
     }
     if (available === false) {
       nicknameValidationState = "unavailable";
+      setNicknameValidationUi(true);
       if (showTipOnError) setTip(t("nicknameTaken"), "err");
       return false;
     }
 
     nicknameValidationState = "error";
+    setNicknameValidationUi(true);
     if (showTipOnError) setTip(t("nicknameCheckFailed"), "err");
     return false;
   }
@@ -658,6 +682,11 @@
     if (passwordInput) passwordInput.setAttribute("placeholder", t("passwordPlaceholder"));
     if (nicknameInput) nicknameInput.setAttribute("placeholder", t("nicknamePlaceholder"));
     if (codeInput) codeInput.setAttribute("placeholder", t("emailCodePlaceholder"));
+    setNicknameValidationUi(
+      nicknameValidationState === "invalid" ||
+        nicknameValidationState === "unavailable" ||
+        nicknameValidationState === "error"
+    );
     setTurnstileVisible(!!turnstileSiteKey);
 
     setI18nReady(true);

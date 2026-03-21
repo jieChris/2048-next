@@ -30,6 +30,35 @@ body[data-page="register-hub"][data-i18n-ready="0"] {
   padding: 6px 0;
 }
 
+.register-nickname-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.register-nickname-field .account-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.register-nickname-feedback {
+  display: none;
+  color: #c2473b;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.register-nickname-feedback.active {
+  display: inline;
+}
+
+.register-page-shell .account-input.input-error {
+  border-color: #c2473b;
+  box-shadow: inset 0 0 0 1px rgba(194, 71, 59, 0.16);
+}
+
 .register-action-row .replay-button {
   display: inline-flex;
   align-items: center;
@@ -42,5 +71,15 @@ body[data-page="register-hub"][data-i18n-ready="0"] {
   .register-page-shell {
     width: calc(100vw - 12px);
     margin: 10px auto 18px;
+  }
+
+  .register-nickname-field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .register-nickname-feedback {
+    white-space: normal;
   }
 }

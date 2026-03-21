@@ -115,9 +115,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.fill("#register-nickname", "TakenUser");
     await page.locator("#register-nickname").blur();
     await expect(page.locator("#register-tip")).toContainText("Nickname already exists");
+    await expect(page.locator("#register-nickname")).toHaveClass(/input-error/);
+    await expect(page.locator("#register-nickname-feedback")).toContainText("Nickname unavailable, please choose another");
 
     await page.fill("#register-nickname", "SmokeUser");
+    await expect(page.locator("#register-nickname")).not.toHaveClass(/input-error/);
+    await expect(page.locator("#register-nickname-feedback")).toHaveText("");
     await page.locator("#register-nickname").blur();
+    await expect(page.locator("#register-nickname")).not.toHaveClass(/input-error/);
+    await expect(page.locator("#register-nickname-feedback")).toHaveText("");
     await page.click("#register-send-code-btn");
     await page.fill("#register-email-code", "246810");
     await page.click("#register-submit-btn");
@@ -194,6 +200,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.fill("#register-nickname", "SmokeUser");
     await page.locator("#register-nickname").blur();
     await expect(page.locator("#register-tip")).toContainText("Nickname validation failed");
+    await expect(page.locator("#register-nickname")).toHaveClass(/input-error/);
+    await expect(page.locator("#register-nickname-feedback")).toContainText("Nickname unavailable, please choose another");
 
     await page.click("#register-send-code-btn");
     await page.waitForTimeout(200);
