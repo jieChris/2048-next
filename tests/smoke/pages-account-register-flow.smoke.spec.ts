@@ -32,8 +32,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("register page requires captcha payload and redirects back to login", async ({ page }) => {
-    let registerCalls = 0;
-    let registerPayload: Record<string, unknown> | null = null;
+    let registerStartCalls = 0;
+    let registerStartPayload: Record<string, unknown> | null = null;
+    let registerVerifyCalls = 0;
+    let registerVerifyPayload: Record<string, unknown> | null = null;
 
     await page.route("**/api/**", async (route) => {
       const requestUrl = new URL(route.request().url());
@@ -53,14 +55,26 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return;
       }
 
-      if (pathname.endsWith("/api/register")) {
-        registerCalls += 1;
+      if (pathname.endsWith("/api/register/start")) {
+        registerStartCalls += 1;
         const body = route.request().postDataJSON();
-        registerPayload = body && typeof body === "object" ? (body as Record<string, unknown>) : null;
+        registerStartPayload = body && typeof body === "object" ? (body as Record<string, unknown>) : null;
         await route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ success: true })
+          body: JSON.stringify({ success: true, expires_in: 600, retry_after: 60 })
+        });
+        return;
+      }
+
+      if (pathname.endsWith("/api/register/verify")) {
+        registerVerifyCalls += 1;
+        const body = route.request().postDataJSON();
+        registerVerifyPayload = body && typeof body === "object" ? (body as Record<string, unknown>) : null;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true, userId: 123, token: "smoke-token", nickname: "SmokeUser" })
         });
         return;
       }
@@ -82,16 +96,22 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.fill("#register-password", "smoke_pass1!");
     await page.fill("#register-nickname", "SmokeUser");
     await page.fill("#register-captcha-answer", "ABCD");
+    await page.click("#register-send-code-btn");
+    await page.fill("#register-email-code", "246810");
     await page.click("#register-submit-btn");
 
     await page.waitForURL(/account\.html\?registered=1/, { timeout: 4000 });
 
-    expect(registerCalls).toBe(1);
-    expect(registerPayload).not.toBeNull();
-    expect(registerPayload?.email).toBe("smoke@example.com");
-    expect(registerPayload?.nickname).toBe("SmokeUser");
-    expect(registerPayload?.captcha_id).toBe("reg-captcha-1");
-    expect(registerPayload?.captcha_answer).toBe("ABCD");
+    expect(registerStartCalls).toBe(1);
+    expect(registerStartPayload).not.toBeNull();
+    expect(registerStartPayload?.email).toBe("smoke@example.com");
+    expect(registerStartPayload?.nickname).toBe("SmokeUser");
+    expect(registerStartPayload?.captcha_id).toBe("reg-captcha-1");
+    expect(registerStartPayload?.captcha_answer).toBe("ABCD");
+
+    expect(registerVerifyCalls).toBe(1);
+    expect(registerVerifyPayload).not.toBeNull();
+    expect(registerVerifyPayload?.email).toBe("smoke@example.com");
+    expect(registerVerifyPayload?.code).toBe("246810");
   });
 });
-

@@ -47,9 +47,13 @@
           <button id="register-captcha-refresh" class="replay-button account-login-captcha-refresh" type="button">Refresh</button>
         </div>
         <input id="register-captcha-answer" class="account-input" type="text" maxlength="8" autocomplete="off" placeholder="Enter captcha">
+
+        <label for="register-email-code" id="register-email-code-label">Email Verification Code</label>
+        <input id="register-email-code" class="account-input" type="text" maxlength="6" autocomplete="one-time-code" placeholder="Enter 6-digit code from email">
       </div>
 
       <div class="account-action-row register-action-row">
+        <button id="register-send-code-btn" class="replay-button" type="button">Send Code</button>
         <button id="register-submit-btn" class="replay-button" type="button">Register</button>
         <a id="register-back-login-btn" class="replay-button" href="account.html">Back to Login</a>
       </div>
@@ -61,4 +65,3 @@
   <script type="module" src="./src/entries/register.ts"></script>
 </body>
 </html>
-

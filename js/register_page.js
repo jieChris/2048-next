@@ -66,11 +66,16 @@
       nicknamePlaceholder: "Enter nickname (2-20 chars)",
       captchaLabel: "Image Captcha",
       captchaPlaceholder: "Enter captcha",
+      emailCodeLabel: "Email Verification Code",
+      emailCodePlaceholder: "Enter 6-digit code from email",
       captchaRefresh: "Refresh",
+      sendCodeBtn: "Send Code",
       submitBtn: "Register",
       backLoginBtn: "Back to Login",
       loadingCaptcha: "Loading captcha...",
       requireFields: "Email, password, nickname and captcha are required",
+      requireEmailCode: "Please enter the email verification code",
+      codeSent: "Verification code sent. Enter it and click Register again.",
       invalidEmail: "Please enter a valid email address",
       invalidPassword: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
       invalidNickname: "Nickname must be 2-20 chars and use letters/numbers/spaces/_/-/Chinese only",
@@ -117,7 +122,13 @@
       IMAGE_CAPTCHA_REQUIRED: "Please complete image captcha",
       IMAGE_CAPTCHA_INVALID: "Incorrect image captcha",
       IMAGE_CAPTCHA_EXPIRED: "Image captcha expired, please refresh",
-      IMAGE_CAPTCHA_ATTEMPTS_EXCEEDED: "Too many captcha attempts, please refresh"
+      IMAGE_CAPTCHA_ATTEMPTS_EXCEEDED: "Too many captcha attempts, please refresh",
+      VERIFICATION_REQUIRED: "Please send email verification code first",
+      VERIFICATION_NOT_FOUND: "Verification request not found. Please send code again.",
+      INVALID_VERIFICATION_CODE: "Invalid verification code",
+      VERIFICATION_EXPIRED: "Verification code expired. Please send again.",
+      VERIFICATION_ATTEMPTS_EXCEEDED: "Too many verification attempts. Please send again.",
+      RESEND_COOLDOWN: "Please wait before requesting another code"
     }
   };
 
@@ -132,7 +143,7 @@
 
   function t(key) {
     var lang = currentLang === "en" ? "en" : "zh";
-    return (COPY[lang] && COPY[lang][key]) || (COPY.zh && COPY.zh[key]) || "";
+    return (COPY[lang] && COPY[lang][key]) || (COPY.en && COPY.en[key]) || (COPY.zh && COPY.zh[key]) || "";
   }
 
   function setI18nReady(ready) {
@@ -200,11 +211,21 @@
     if (submitBtn) submitBtn.disabled = !enabled;
   }
 
+  function setSendCodeEnabled(enabled) {
+    var sendBtn = byId("register-send-code-btn");
+    if (sendBtn) sendBtn.disabled = !enabled;
+  }
+
   function resolveServerError(result, fallbackKey) {
     var lang = currentLang === "en" ? "en" : "zh";
     var code = toText(result && result.code).trim().toUpperCase();
-    if (code && ERROR_CODE_COPY[lang] && ERROR_CODE_COPY[lang][code]) {
-      return ERROR_CODE_COPY[lang][code];
+    if (code) {
+      if (ERROR_CODE_COPY[lang] && ERROR_CODE_COPY[lang][code]) {
+        return ERROR_CODE_COPY[lang][code];
+      }
+      if (ERROR_CODE_COPY.en && ERROR_CODE_COPY.en[code]) {
+        return ERROR_CODE_COPY.en[code];
+      }
     }
     var explicit = toText(result && result.error).trim();
     if (explicit) return explicit;
@@ -326,10 +347,14 @@
         if (imageNode) imageNode.setAttribute("src", imageDataUrl);
         var answerNode = byId("register-captcha-answer");
         if (answerNode) answerNode.value = "";
+        var codeNode = byId("register-email-code");
+        if (codeNode) codeNode.value = "";
+        setSendCodeEnabled(true);
         setSubmitEnabled(true);
         return true;
       }
 
+      setSendCodeEnabled(false);
       setSubmitEnabled(false);
       setTip(t("captchaUnavailable"), "err");
       return false;
@@ -339,45 +364,90 @@
     }
   }
 
-  async function onSubmitRegister() {
-    var email = toText(byId("register-email") && byId("register-email").value).trim();
-    var password = toText(byId("register-password") && byId("register-password").value).trim();
-    var nickname = toText(byId("register-nickname") && byId("register-nickname").value).trim();
-    var captchaAnswer = toText(byId("register-captcha-answer") && byId("register-captcha-answer").value).trim().toUpperCase();
+  function readRegisterForm() {
+    return {
+      email: toText(byId("register-email") && byId("register-email").value).trim(),
+      password: toText(byId("register-password") && byId("register-password").value).trim(),
+      nickname: toText(byId("register-nickname") && byId("register-nickname").value).trim(),
+      captchaAnswer: toText(byId("register-captcha-answer") && byId("register-captcha-answer").value).trim().toUpperCase(),
+      verificationCode: toText(byId("register-email-code") && byId("register-email-code").value).trim()
+    };
+  }
 
-    if (!email || !password || !nickname || !captchaAnswer || !captchaId) {
+  function validateRegisterBase(form) {
+    if (!form.email || !form.password || !form.nickname || !form.captchaAnswer || !captchaId) {
       setTip(t("requireFields"), "err");
-      return;
+      return false;
     }
-    if (!isValidEmailFormat(email)) {
+    if (!isValidEmailFormat(form.email)) {
       setTip(t("invalidEmail"), "err");
-      return;
+      return false;
     }
-    if (!isValidRegisterPassword(password)) {
+    if (!isValidRegisterPassword(form.password)) {
       setTip(t("invalidPassword"), "err");
-      return;
+      return false;
     }
-    if (!isValidNickname(nickname)) {
+    if (!isValidNickname(form.nickname)) {
       setTip(t("invalidNickname"), "err");
-      return;
+      return false;
     }
+    return true;
+  }
 
+  async function onSendCodeClick() {
+    var form = readRegisterForm();
+    if (!validateRegisterBase(form)) return;
+
+    setSendCodeEnabled(false);
     setSubmitEnabled(false);
     try {
-      var available = await checkNicknameAvailable(nickname);
+      var available = await checkNicknameAvailable(form.nickname);
       if (available === false) {
         setTip(t("nicknameTaken"), "err");
         return;
       }
 
-      var result = await apiRequest("/register", {
+      var startResult = await apiRequest("/register/start", {
         method: "POST",
         body: {
-          email: email,
-          password: password,
-          nickname: nickname,
+          email: form.email,
+          password: form.password,
+          nickname: form.nickname,
           captcha_id: captchaId,
-          captcha_answer: captchaAnswer
+          captcha_answer: form.captchaAnswer
+        }
+      });
+
+      if (startResult && startResult.success) {
+        setTip(t("codeSent"), "ok");
+        return;
+      }
+
+      setTip(resolveServerError(startResult, "registerFail"), "err");
+      if (shouldRefreshCaptcha(startResult)) {
+        await loadCaptcha(false);
+      }
+    } finally {
+      setSendCodeEnabled(true);
+      setSubmitEnabled(true);
+    }
+  }
+
+  async function onSubmitRegister() {
+    var form = readRegisterForm();
+    if (!validateRegisterBase(form)) return;
+    if (!form.verificationCode) {
+      setTip(t("requireEmailCode"), "err");
+      return;
+    }
+
+    setSubmitEnabled(false);
+    try {
+      var result = await apiRequest("/register/verify", {
+        method: "POST",
+        body: {
+          email: form.email,
+          code: form.verificationCode
         }
       });
 
@@ -390,9 +460,6 @@
       }
 
       setTip(resolveServerError(result, "registerFail"), "err");
-      if (shouldRefreshCaptcha(result)) {
-        await loadCaptcha(false);
-      }
     } finally {
       setSubmitEnabled(true);
     }
@@ -414,7 +481,9 @@
       "register-password-label": t("passwordLabel"),
       "register-nickname-label": t("nicknameLabel"),
       "register-captcha-label": t("captchaLabel"),
+      "register-email-code-label": t("emailCodeLabel"),
       "register-captcha-refresh": t("captchaRefresh"),
+      "register-send-code-btn": t("sendCodeBtn"),
       "register-submit-btn": t("submitBtn"),
       "register-back-login-btn": t("backLoginBtn")
     };
@@ -430,21 +499,30 @@
     var passwordInput = byId("register-password");
     var nicknameInput = byId("register-nickname");
     var captchaInput = byId("register-captcha-answer");
+    var codeInput = byId("register-email-code");
     var captchaImage = byId("register-captcha-image");
     if (emailInput) emailInput.setAttribute("placeholder", t("emailPlaceholder"));
     if (passwordInput) passwordInput.setAttribute("placeholder", t("passwordPlaceholder"));
     if (nicknameInput) nicknameInput.setAttribute("placeholder", t("nicknamePlaceholder"));
     if (captchaInput) captchaInput.setAttribute("placeholder", t("captchaPlaceholder"));
+    if (codeInput) codeInput.setAttribute("placeholder", t("emailCodePlaceholder"));
     if (captchaImage) captchaImage.setAttribute("alt", t("captchaLabel"));
 
     setI18nReady(true);
   }
 
   function bindEvents() {
+    var sendCodeBtn = byId("register-send-code-btn");
     var submitBtn = byId("register-submit-btn");
     var refreshBtn = byId("register-captcha-refresh");
     var captchaInput = byId("register-captcha-answer");
+    var codeInput = byId("register-email-code");
 
+    if (sendCodeBtn) {
+      sendCodeBtn.addEventListener("click", function () {
+        onSendCodeClick();
+      });
+    }
     if (submitBtn) {
       submitBtn.addEventListener("click", function () {
         onSubmitRegister();
@@ -457,6 +535,18 @@
     }
     if (captchaInput) {
       captchaInput.addEventListener("keydown", function (eventLike) {
+        if (!eventLike || eventLike.key !== "Enter") return;
+        eventLike.preventDefault();
+        var hasCode = toText(byId("register-email-code") && byId("register-email-code").value).trim();
+        if (hasCode) {
+          onSubmitRegister();
+        } else {
+          onSendCodeClick();
+        }
+      });
+    }
+    if (codeInput) {
+      codeInput.addEventListener("keydown", function (eventLike) {
         if (!eventLike || eventLike.key !== "Enter") return;
         eventLike.preventDefault();
         onSubmitRegister();
@@ -478,6 +568,7 @@
     applyLanguage();
     bindEvents();
     bindLanguageSync();
+    setSendCodeEnabled(false);
     setSubmitEnabled(false);
     await loadCaptcha(false);
   }
@@ -492,4 +583,3 @@
     init();
   }
 })(typeof window !== "undefined" ? window : undefined);
-
