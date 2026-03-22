@@ -3,8 +3,29 @@
 
   if (!global) return;
 
+  function resolveEngineUndoFacade() {
+    var facade = global && global.CoreEngineFacade;
+    if (!facade || typeof facade !== "object") return null;
+    if (typeof facade.createUndoSnapshot !== "function") return null;
+    return facade;
+  }
+
   function createUndoSnapshot(input) {
     var opts = input || {};
+    var facade = resolveEngineUndoFacade();
+    if (facade) {
+      try {
+        return facade.createUndoSnapshot({
+          score: opts.score,
+          comboStreak: opts.comboStreak,
+          successfulMoveCount: opts.successfulMoveCount,
+          lockConsumedAtMoveCount: opts.lockConsumedAtMoveCount,
+          lockedDirectionTurn: opts.lockedDirectionTurn,
+          lockedDirection: opts.lockedDirection,
+          undoUsed: opts.undoUsed
+        });
+      } catch (_err) {}
+    }
     return {
       score: Number.isFinite(opts.score) ? Number(opts.score) : 0,
       tiles: [],

@@ -1760,3 +1760,165 @@
 1. å¯åŠ¨ `WS4-03`ï¼Œä¸º `src/pages/* -> ../../js/*.js` å»ºç«‹ `legacy-runtime-import boundary`ï¼Œé˜²æ­¢ page shell é•¿æœŸå›ºåŒ–ã€‚
 2. ç»§ç»­æŠŠé¡µé¢ç¼–æ’ä» `js/*_page.js` å¾€ `features/services` æ”¶ã€‚
 3. å¹¶è¡Œæ¨è¿› `WS6-01A`ï¼ŒæŠŠ `service-boundary` ä» syntax-level gate å‡çº§ä¸º owner-aware gateã€‚
+## [2026-03-22] Batch-WS4-03
+
+### 1) ç›®æ ‡
+- å†»ç»“ `src/pages/* -> ../../js/*.js` çš„ legacy é€‚é…å…¥å£ï¼Œé˜»æ­¢æ–°å¢ legacy importã€‚
+
+### 2) æ”¹åŠ¨
+- `scripts/page-legacy-runtime-boundary-audit.mjs`
+- `tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts`
+- `scripts/refactor-gate.mjs`
+- `package.json`
+
+### 3) éªŒè¯
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/refactor-gate-helpers.spec.ts`
+
+### 4) é˜¶æ®µç»“è®º
+- `WS4-03` è¾¹ç•Œå·²è½åœ°ä¸º allowlist gateï¼›æ–°å¢ legacy page import ä¼šç›´æ¥é˜»æ–­ã€‚
+
+### 5) æ¥ä¸‹æ¥è¦åšçš„äº‹
+1. é€é¡µç§»é™¤ legacy importï¼Œå¹¶åˆ é™¤å¯¹åº” allowlist æ¡ç›®ã€‚
+2. è‹¥å¿…é¡»å¼•å…¥æ–°çš„ legacy importï¼Œå¿…é¡»åŒæ­¥æ›´æ–° allowlist å¹¶è¯´æ˜åŸå› ã€‚
+
+## [2026-03-22] Batch-WS4-02E
+### 1) Ä¿±ê
+- Undo snapshot/restore ÏÈ×ß Engine facade£¬legacy runtime ±£Áô fallback¡£
+
+### 2) ¸Ä¶¯
+- `src/bootstrap/engine-facade-host.ts`
+- `src/entries/home-family-bootstrap.ts`
+- `js/core_undo_snapshot_runtime.js`
+- `js/core_undo_restore_runtime.js`
+- `tests/unit/bootstrap-engine-facade-host.spec.ts`
+
+### 3) ÑéÖ¤
+- `npx vitest run tests/unit/bootstrap-engine-facade-host.spec.ts tests/unit/core-undo-snapshot.spec.ts tests/unit/core-undo-restore.spec.ts`
+
+### 4) ½×¶Î½áÂÛ
+- Undo snapshot/restore ÒÑÓÅÏÈ×ß `CoreEngineFacade`£¬Ê§°ÜÊ±»ØÍË legacy Âß¼­¡£
+
+### 5) ½ÓÏÂÀ´Òª×öµÄ¹¤×÷
+1. ÍÆ½ø WS4-02B£º`palette` È¥ legacy£¨Èı¸ö theme settings runtime£©¡£
+2. ±£³Ö undo Ïà¹Ø smoke ¸²¸ÇÃæ£¬È·ÈÏÎŞ»Ø¹é¡£
+
+## [2026-03-22] Batch-WS4-02B
+### 1) Ä¿±ê
+- `palette` È¥ legacy£¨Èı¸ö theme settings runtime£©¡£
+
+### 2) ¸Ä¶¯
+- `src/pages/palette-page.ts`
+- `scripts/page-legacy-runtime-boundary-audit.mjs`
+
+### 3) ÑéÖ¤
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx vitest run tests/unit/palette-entry-bootstrap.spec.ts`
+- `npx playwright test --config=playwright.config.ts tests/smoke/pages-palette-page-system.smoke.spec.ts`
+
+### 4) ½×¶Î½áÂÛ
+- `palette` ÒÑÒÆ³ı `core_theme_settings_*` legacy import£¬page-legacy allowlist Í¬²½ÊÕËõ¡£
+
+### 5) ½ÓÏÂÀ´Òª×öµÄ¹¤×÷
+1. ¼ÌĞø´¦Àí `modes` / `history` µÄ legacy import£¬ËõĞ¡ allowlist¡£
+2. ±£³Ö `palette` Ïà¹Ø smoke ¸²¸Ç£¬È·ÈÏÎŞ»Ø¹é¡£
+
+## [2026-03-22] Batch-WS4-03A
+### 1) Ä¿±ê
+- `modes` Ëõ¼õ legacy import£¬ÒÆ³ı `core_i18n_runtime.js`¡£
+
+### 2) ¸Ä¶¯
+- `src/pages/modes-page.ts`
+- `scripts/page-legacy-runtime-boundary-audit.mjs`
+
+### 3) ÑéÖ¤
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx playwright test --config=playwright.config.ts tests/smoke/pages-modes-page-system.smoke.spec.ts`
+
+### 4) ½×¶Î½áÂÛ
+- `modes` ½ö±£Áô `theme_manager.js` legacy import£¬allowlist ¼ÌĞøÊÕËõ¡£
+
+### 5) ½ÓÏÂÀ´Òª×öµÄ¹¤×÷
+1. ²ğ·Ö `history` Ò³Ãæ legacy import£¬ÓÅÏÈ¸ôÀë¿ÉÌæ»»µÄ runtime¡£
+2. ³ÖĞøËõ¼õ allowlist ²¢²¹Æë¶¨Ïò smoke Ö¤¾İ¡£
+
+## [2026-03-22] Batch-WS4-03B
+### 1) Ä¿±ê
+- `history` Ëõ¼õ legacy import£¬ÒÆ³ı `core_i18n_runtime.js`¡£
+
+### 2) ¸Ä¶¯
+- `src/pages/history-page.ts`
+- `scripts/page-legacy-runtime-boundary-audit.mjs`
+
+### 3) ÑéÖ¤
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx playwright test --config=playwright.config.ts tests/smoke/pages-history-page-system.smoke.spec.ts`
+
+### 4) ½×¶Î½áÂÛ
+- `history` ÒÑÒÆ³ı `core_i18n_runtime.js` legacy import£¬allowlist ¼ÌĞøÊÕËõ¡£
+
+### 5) ½ÓÏÂÀ´Òª×öµÄ¹¤×÷
+1. ²ğ½â `history_page.js` Àï¿É¶ÀÁ¢Ç¨ÒÆµÄ runtime Âß¼­¡£
+2. ¼ÌĞø°´Åú´ÎËõ¼õ allowlist¡£
+
+## [2026-03-22] Batch-WS4-03C
+### 1) Ä¿±ê
+- `history` È¥ legacy£¨refactor_cutover_migration£©¡£
+
+### 2) ¸Ä¶¯
+- `src/bootstrap/refactor-cutover-migration.ts`
+- `src/pages/history-page.ts`
+- `scripts/page-legacy-runtime-boundary-audit.mjs`
+
+### 3) ÑéÖ¤
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx playwright test --config=playwright.config.ts tests/smoke/pages-history-page-system.smoke.spec.ts`
+
+### 4) ½×¶Î½áÂÛ
+- `history` ÒÆ³ı `refactor_cutover_migration.js` legacy import£¬Ç¨ÒÆÂß¼­Âäµ½ TS¡£
+
+### 5) ½ÓÏÂÀ´Òª×öµÄ¹¤×÷
+1. ²ğ½â `history_page.js` ÄÚ²¿Âß¼­£¨É¸Ñ¡×´Ì¬¡¢äÖÈ¾Ä£ĞÍµÈ£©¡£
+2. ¼ÌĞøËõ¼õ allowlist ²¢²¹Æë¶¨Ïò smoke¡£
+
+## [2026-03-22] Batch-WS4-03D
+### 1) Ä¿±ê
+- history Ò³ÃæÒÆ³ı `history_page.js` Ö±Á¬£¬×ªÓÉ entry ¼ÓÔØ legacy¡£
+
+### 2) ¸Ä¶¯
+- `src/pages/history-page.ts`
+- `src/entries/history.ts`
+- `scripts/page-legacy-runtime-boundary-audit.mjs`
+
+### 3) ÑéÖ¤
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx playwright test --config=playwright.config.ts tests/smoke/pages-history-page-system.smoke.spec.ts`
+
+### 4) ½×¶Î½áÂÛ
+- history page shell ÒÑÓë `history_page.js` ½âñî£¬legacy ½öÓÉ entry ¼ÓÔØ¡£
+
+### 5) ½ÓÏÂÀ´Òª×öµÄ¹¤×÷
+1. ½« `history_page.js` µÄÉ¸Ñ¡/äÖÈ¾Âß¼­Ç¨ÒÆµ½ TS feature Ä£¿é¡£
+2. ¼ÌĞøÊÕËõ allowlist ²¢²¹Æë¶¨Ïò smoke¡£
+
+## [2026-03-22] Batch-WS4-03E
+### 1) Ä¿±ê
+- history Ò³ÃæÓÃ TS runtime È¡´ú legacy history_page.js£¬²¢ÒÆ³ı entry loader¡£
+
+### 2) ¸Ä¶¯
+- `src/pages/history-page-runtime.ts`
+- `src/pages/history-page.ts`
+- `src/entries/history.ts`
+
+### 3) ÑéÖ¤
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx vitest run tests/unit/history-entry-bootstrap.spec.ts`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-history-page-system.smoke.spec.ts tests/smoke/pages-local-history-autosave.smoke.spec.ts`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/history-records-import-core.smoke.spec.ts tests/smoke/history-records-import-mode-filter.smoke.spec.ts tests/smoke/history-records-owner-filter.smoke.spec.ts tests/smoke/history-records-toolbar-events.smoke.spec.ts tests/smoke/history-records-view-list-export.smoke.spec.ts tests/smoke/history-records-view-models.smoke.spec.ts`
+
+### 4) ½×¶Î½áÂÛ
+- history page ÒÑ´Ó legacy history_page.js ÇĞ»»µ½ TS runtime£»ÏÖÓĞÑÌ²âÈ«²¿Í¨¹ı¡£
+
+### 5) ½ÓÏÂÀ´Òª×öµÄ¹¤×÷
+1. ÆÀ¹À²¢Ìæ»»Ê£Óà legacy ÒÀÀµ£¨LocalHistoryStore/ModeCatalog/CoreGameSettingsStorageRuntime£©¡£
+2. ¸ù¾İ F ÑéÊÕÇåµ¥Íê³É×îÖÕÑéÊÕÇ©×Ö¡£

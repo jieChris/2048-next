@@ -1,3 +1,42 @@
+﻿# [2026-03-22] Batch-WS4-03D4
+- Goal:
+  - stabilize palette runtime bindings and history page runtime copy
+- Completed:
+  1. exposed mutable theme settings runtime globals for palette and normalized copy strings
+  2. fixed history page runtime copy (owner labels, summary, diagnostics, empty state)
+  3. tightened history runtime typing around storage, imports, and async export payloads
+  4. fixed `registerEngineFacade` typing in home-family bootstrap
+- Verification Evidence:
+  - command: `npm run verify:prepush`
+  - result: `PASS`
+- Risk And Blockers:
+  - risk level: `P2`
+  - description:
+    - history runtime copy still needs a full i18n pass once legacy text cleanup starts
+- Next Steps (1-3):
+  1. continue `WS4-03` allowlist shrink per page
+  2. revisit history copy when the i18n migration plan is defined
+# [2026-03-22] Batch-WS4-03
+- Goal:
+  - freeze `src/pages/* -> ../../js/*.js` legacy adapters with an allowlist-based boundary audit
+- Completed:
+  1. added [scripts/page-legacy-runtime-boundary-audit.mjs](G:\2048\2048undo\2048-next\scripts\page-legacy-runtime-boundary-audit.mjs) with an explicit allowlist of current page-shell legacy imports
+  2. added [tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts](G:\2048\2048undo\2048-next\tests\unit\page-legacy-runtime-boundary-audit-helpers.spec.ts) to cover helper behavior (including dynamic import detection)
+  3. wired the audit into [scripts/refactor-gate.mjs](G:\2048\2048undo\2048-next\scripts\refactor-gate.mjs) with a dedicated timeout budget
+  4. exposed `npm run audit:page-legacy-runtime-boundary` in [package.json](G:\2048\2048undo\2048-next\package.json)
+- Verification Evidence:
+  - command: `node scripts/page-legacy-runtime-boundary-audit.mjs`
+  - result: `PASS`
+  - command: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/refactor-gate-helpers.spec.ts`
+  - result: `14 passed`
+- Risk And Blockers:
+  - risk level: `P2`
+  - description:
+    - allowlist drift can cause false positives if a page shell changes without updating the allowlist
+- Next Steps (1-3):
+  1. remove legacy imports per page and delete the corresponding allowlist entries
+  2. keep `WS4-03` under CI observation for a few cycles before tightening further
+
 # [2026-03-22] Batch-WS4-02D3
 - Goal:
   - complete the final `WS4-02` cut by migrating `user-profile` into unified direct-page bootstrap and reducing remaining `direct-module` to `0`
@@ -459,4 +498,65 @@
 
 # 闂佹彃绉甸悗顖炲箥瑜戦、鎴﹀籍閵夈儳绠堕柨娑樼墛缁挳宕濋…鎺旂
 
+
+
+## [2026-03-22] Batch-WS4-02E
+- Ŀ�꣺Undo snapshot/restore ���� Engine facade��legacy runtime ���� fallback��
+- ���1������ `src/bootstrap/engine-facade-host.ts`��ע�� `CoreEngineFacade`��createUndoSnapshot/computeUndoRestoreState����
+- ���2��`src/entries/home-family-bootstrap.ts` �� legacy loader ǰע�� facade��
+- ���3��`js/core_undo_snapshot_runtime.js` / `js/core_undo_restore_runtime.js` ���ȵ��� `CoreEngineFacade`��ʧ���� fallback ԭ�߼���
+- ���4������ `tests/unit/bootstrap-engine-facade-host.spec.ts`��
+- ��֤��`npx vitest run tests/unit/bootstrap-engine-facade-host.spec.ts tests/unit/core-undo-snapshot.spec.ts tests/unit/core-undo-restore.spec.ts`
+- ����/˵���������� undo snapshot/restore������ undo ��·���� legacy runtime ���ء�
+- ��һ�����ƽ� WS4-02B `palette` ȥ legacy������ theme settings runtime����
+
+## [2026-03-22] Batch-WS4-02B
+- Ŀ�꣺`palette` ȥ legacy������ theme settings runtime����
+- ���1��`src/pages/palette-page.ts` ��Ϊʹ�� TS �� theme settings ģ�飬�Ƴ� `core_theme_settings_*` legacy import��
+- ���2��`scripts/page-legacy-runtime-boundary-audit.mjs` allowlist ɾ������ legacy import��
+- ��֤��`node scripts/page-legacy-runtime-boundary-audit.mjs`��`npx vitest run tests/unit/palette-entry-bootstrap.spec.ts`��`npx playwright test --config=playwright.config.ts tests/smoke/pages-palette-page-system.smoke.spec.ts`��
+- ˵����`theme_manager.js` / `palette_page.js` / `core_i18n_runtime.js` �Ա����
+- ��һ�������� `modes` / `history` �� legacy import Ǩ�����ȼ���������С allowlist��
+
+## [2026-03-22] Batch-WS4-03A
+- Ŀ�꣺`modes` ���� legacy import���Ƴ� `core_i18n_runtime.js`��
+- ���1��`src/pages/modes-page.ts` ɾ�� `core_i18n_runtime.js` import��
+- ���2��`scripts/page-legacy-runtime-boundary-audit.mjs` allowlist ͬ��������
+- ��֤��`node scripts/page-legacy-runtime-boundary-audit.mjs`��`npx playwright test --config=playwright.config.ts tests/smoke/pages-modes-page-system.smoke.spec.ts`��
+- ˵����`theme_manager.js` �Ա��������ҳ������һ���ԡ�
+- ��һ�������� `history` ȥ legacy �Ĳ��·������������ allowlist��
+
+## [2026-03-22] Batch-WS4-03B
+- Ŀ�꣺`history` ���� legacy import���Ƴ� `core_i18n_runtime.js`��
+- ���1��`src/pages/history-page.ts` ɾ�� `core_i18n_runtime.js` import��
+- ���2��`scripts/page-legacy-runtime-boundary-audit.mjs` allowlist ͬ��������
+- ��֤��`node scripts/page-legacy-runtime-boundary-audit.mjs`��`npx playwright test --config=playwright.config.ts tests/smoke/pages-history-page-system.smoke.spec.ts`��
+- ˵����history �Ա��� `history_page.js` / storage ��� runtime��
+- ��һ�������� `history_page.js` �ڲ����滻�� runtime ��ڣ�������֡�
+
+## [2026-03-22] Batch-WS4-03C
+- Ŀ�꣺`history` ȥ legacy��refactor_cutover_migration����
+- ���1������ `src/bootstrap/refactor-cutover-migration.ts`������ cutover Ǩ���߼���best score / saved-state / history / filter cleanup����
+- ���2��`src/pages/history-page.ts` ��Ϊ���� `runRefactorCutoverMigration`���Ƴ� `refactor_cutover_migration.js` import��
+- ���3��`scripts/page-legacy-runtime-boundary-audit.mjs` allowlist ͬ��������
+- ��֤��`node scripts/page-legacy-runtime-boundary-audit.mjs`��`npx playwright test --config=playwright.config.ts tests/smoke/pages-history-page-system.smoke.spec.ts`��
+- ˵����`history_page.js` / `local_history_store.js` �� legacy �Ա����
+- ��һ����������� `history_page.js` �ڲ��߼�����Ǩ�� TS��
+
+## [2026-03-22] Batch-WS4-03D
+- Ŀ�꣺history ҳ���Ƴ� `history_page.js` ֱ����ת�� entry ���� legacy��
+- ���1��`src/pages/history-page.ts` ɾ�� `history_page.js` import��
+- ���2��`src/entries/history.ts` ʹ�� `loadLegacyScriptsSequentially` ���� `history_page.js`��
+- ���3��`scripts/page-legacy-runtime-boundary-audit.mjs` allowlist ������
+- ��֤��`node scripts/page-legacy-runtime-boundary-audit.mjs`��`npx playwright test --config=playwright.config.ts tests/smoke/pages-history-page-system.smoke.spec.ts`��
+- ˵����legacy ���ڣ����� page shell ������ں��� TS �滻��
+- ��һ���������� `history_page.js` �ڲ��߼������滻��
+
+## [2026-03-22] Batch-WS4-03E
+- Ŀ�꣺history ҳ���� TS runtime ȡ�� legacy history_page.js�����Ƴ� entry loader��
+- ���1������ `src/pages/history-page-runtime.ts`��Ǩ��ɸѡ/��Ⱦ/���뵼��/��ҳ�߼��� TS��
+- ���2��`src/pages/history-page.ts` ���� TS runtime��`src/entries/history.ts` �Ƴ� legacy loader��
+- ��֤��`node scripts/page-legacy-runtime-boundary-audit.mjs`��`npx vitest run tests/unit/history-entry-bootstrap.spec.ts`��history ��� smoke ȫ�ס�
+- ˵���������� `LocalHistoryStore/ModeCatalog/CoreGameSettingsStorageRuntime` legacy runtime������ҵ�����塣
+- ��һ����������һ���滻 legacy ������LocalHistoryStore/ModeCatalog �ȣ���
 

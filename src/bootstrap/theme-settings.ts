@@ -1,4 +1,4 @@
-export interface ThemeLike {
+﻿export interface ThemeLike {
   id?: string | null | undefined;
   label?: string | null | undefined;
 }
@@ -114,7 +114,7 @@ export function resolveThemeSelectLabel(options: ResolveThemeSelectLabelOptions)
   const opts = options || {};
   const themes = Array.isArray(opts.themes) ? opts.themes : [];
   const fallbackLabel =
-    typeof opts.fallbackLabel === "string" && opts.fallbackLabel ? opts.fallbackLabel : "选择主题";
+    typeof opts.fallbackLabel === "string" && opts.fallbackLabel ? opts.fallbackLabel : "\u9009\u62e9\u4e3b\u9898";
   const currentThemeId = typeof opts.currentThemeId === "string" ? opts.currentThemeId : "";
   for (let i = 0; i < themes.length; i += 1) {
     const item = themes[i];
@@ -214,3 +214,4 @@ export function resolveThemeOptions(options: ResolveThemeOptionsOptions): Resolv
   }
   return result;
 }
+

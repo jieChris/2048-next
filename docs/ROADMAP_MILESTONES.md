@@ -1,3 +1,23 @@
+# A-F Collaborative Delta (2026-03-22, Batch-WS4-03)
+
+## Phase Decision
+- `WS4-03`
+  - page-shell legacy boundary: `enforced`
+  - status: `done`
+  - note: allowlist-based freeze is in place; de-legacy work proceeds by shrinking the allowlist
+
+## New Priority Tasks
+- `WS4-03`
+  - task: `legacy-runtime-import boundary` for `src/pages/* -> ../../js/*.js`
+  - owner: `A / C / E`
+  - status: `done`
+  - done: audit script + allowlist added, dynamic import scanned, gate blocks new legacy imports
+- `WS4-03-next`
+  - task: shrink allowlist page-by-page (remove legacy imports and delete allowlist entries)
+  - owner: `A / C`
+  - status: `pending`
+  - done: each page shell no longer imports legacy runtime and is removed from allowlist
+
 # A-F Collaborative Delta (2026-03-22, Batch-WS4-02D3)
 
 ## Phase Decision
@@ -7,7 +27,7 @@
   - status: `done`
 - `WS4`
   - page-entry stage result: `stage pass`
-  - remaining work: `WS4-03` page-shell de-legacy boundary
+  - remaining work: `WS4-03-next` allowlist shrink + page-shell de-legacy
 - `WS6-01`
   - unchanged: `near stage pass`, not `done`
 
@@ -27,8 +47,8 @@
 - `WS4-03`
   - task: `legacy-runtime-import boundary` for `src/pages/* -> ../../js/*.js`
   - owner: `A / C / E`
-  - status: `pending`
-  - done: page shells remain thin adapters, new direct legacy imports are blocked, and de-legacy work can proceed without reopening entry drift
+  - status: `done`
+  - done: allowlist-based boundary audit is enforced; new legacy imports in page shells are blocked
 
 ## F Sign-off Update
 - `WS4 stage pass` has been reached for page-entry closure.
@@ -754,3 +774,59 @@ F sign-off 涓嶆槸鈥滅湅璧锋潵鍙互鈥濓紝鑰屾槸浠ヤ笅 4 椤瑰悓鏃舵弧瓒筹細
 
 
 
+
+## 40. 增量状态更新（2026-03-22 / Batch-WS4-02E）
+- WS4-02E（Undo Engine facade）：`done`
+- 关键完成：注册 `CoreEngineFacade` 并让 legacy undo snapshot/restore 优先走 facade。
+- 验证：`npx vitest run tests/unit/bootstrap-engine-facade-host.spec.ts tests/unit/core-undo-snapshot.spec.ts tests/unit/core-undo-restore.spec.ts`
+- 接下来要做的工作：
+1. WS4-02B `palette` 去 legacy（移除三个 theme settings runtime import）。
+2. 跑 palette 定向 unit/smoke + `audit:entry-manifest`。
+
+## 41. 增量状态更新（2026-03-22 / Batch-WS4-02B）
+- WS4-02B（palette 去 legacy）：`done`
+- 关键完成：`palette-page.ts` 移除 `core_theme_settings_*` legacy import，改用 TS 版 theme settings 模块。
+- 验证：`node scripts/page-legacy-runtime-boundary-audit.mjs`；`npx vitest run tests/unit/palette-entry-bootstrap.spec.ts`；`npx playwright test --config=playwright.config.ts tests/smoke/pages-palette-page-system.smoke.spec.ts`。
+- 接下来要做的工作：
+1. 评估 `modes` / `history` 的 legacy import 迁移顺序，继续缩小 allowlist。
+2. 视需要补充 palette 相关 unit/smoke 证据到签收表。
+
+## 42. 增量状态更新（2026-03-22 / Batch-WS4-03A）
+- WS4-03A（modes 缩减 legacy import）：`done`
+- 关键完成：`modes-page.ts` 移除 `core_i18n_runtime.js` import。
+- 验证：`node scripts/page-legacy-runtime-boundary-audit.mjs`；`npx playwright test --config=playwright.config.ts tests/smoke/pages-modes-page-system.smoke.spec.ts`。
+- 接下来要做的工作：
+1. 评估 `history` 页面 legacy import 的可替换点，规划拆分顺序。
+2. 按批次继续缩减 allowlist。
+
+## 43. 增量状态更新（2026-03-22 / Batch-WS4-03B）
+- WS4-03B（history 缩减 legacy import）：`done`
+- 关键完成：`history-page.ts` 移除 `core_i18n_runtime.js` import。
+- 验证：`node scripts/page-legacy-runtime-boundary-audit.mjs`；`npx playwright test --config=playwright.config.ts tests/smoke/pages-history-page-system.smoke.spec.ts`。
+- 接下来要做的工作：
+1. 评估 `history_page.js` 的可拆分点，继续削减 runtime 依赖。
+2. 按批次持续缩减 allowlist。
+
+## 44. 增量状态更新（2026-03-22 / Batch-WS4-03C）
+- WS4-03C（history 去 refactor_cutover_migration）：`done`
+- 关键完成：cutover 迁移逻辑改由 TS 版 `runRefactorCutoverMigration` 执行，移除 legacy import。
+- 验证：`node scripts/page-legacy-runtime-boundary-audit.mjs`；`npx playwright test --config=playwright.config.ts tests/smoke/pages-history-page-system.smoke.spec.ts`。
+- 接下来要做的工作：
+1. 继续拆分 `history_page.js` 逻辑，减少 legacy runtime 依赖。
+2. 按批次持续缩减 allowlist。
+
+## 45. 增量状态更新（2026-03-22 / Batch-WS4-03D）
+- WS4-03D（history 去 `history_page.js` 直连）：`done`
+- 关键完成：`history_page.js` 由 entry 加载，page shell 不再直接 import。
+- 验证：`node scripts/page-legacy-runtime-boundary-audit.mjs`；`npx playwright test --config=playwright.config.ts tests/smoke/pages-history-page-system.smoke.spec.ts`。
+- 接下来要做的工作：
+1. 迁移 `history_page.js` 的筛选/渲染逻辑到 TS feature。
+2. 继续缩减 allowlist。
+
+## 46. 增量状态更新（2026-03-22 / Batch-WS4-03E）
+- WS4-03E（history TS runtime 替代 legacy）：`done`
+- 关键完成：history 页面逻辑迁到 `history-page-runtime.ts`，移除 legacy loader。
+- 验证：`node scripts/page-legacy-runtime-boundary-audit.mjs`；history 相关 unit + smoke 全部通过。
+- 接下来要做的工作：
+1. 继续替换剩余 legacy 依赖（LocalHistoryStore/ModeCatalog/CoreGameSettingsStorageRuntime）。
+2. 完成 F 验收签字并更新 guardrails。

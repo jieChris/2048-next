@@ -1,3 +1,14 @@
+# A-F Guardrail Delta (2026-03-22, Batch-WS4-03)
+
+## Batch Impact
+- Added `page-legacy-runtime-boundary-audit` to refactor gate to freeze `src/pages/* -> ../../js/*.js` legacy adapters.
+- Current `src/pages` legacy imports are allowlisted; any new legacy import in page shells now fails gate.
+- Dynamic `import("...")` is included in the audit scan.
+
+## Guardrail Consequence
+- WS4-03 is now enforceable: page-shell de-legacy can proceed by shrinking the allowlist.
+- Next step: remove legacy imports per page and delete the corresponding allowlist entries.
+
 # A-F Guardrail Delta (2026-03-22, Batch-WS4-02D3)
 
 ## Batch Impact
@@ -219,10 +230,11 @@ PR 进入合并前，至少跑以下项：
   - network access -> shared fetch helper or service/api layer
 
 ## Refactor Gate Mapping
-- `npm run verify:prepush` now includes `service-boundary-audit`.
+- `npm run verify:prepush` now includes `page-legacy-runtime-boundary-audit` and `service-boundary-audit`.
 - Current expected refactor gate chain:
   - `game-manager-audit`
   - `entry-manifest-audit`
+  - `page-legacy-runtime-boundary-audit`
   - `legacy-boundary-audit`
   - `service-boundary-audit`
   - `contracts-matrix-audit`
@@ -316,3 +328,6 @@ PR 进入合并前，至少跑以下项：
 
 # 鏋舵瀯绾㈢嚎涓庨棬绂佽鍒?
 
+
+## [2026-03-22] Update
+- history page shell no longer imports `history_page.js`; legacy page import allowlist reduced accordingly.

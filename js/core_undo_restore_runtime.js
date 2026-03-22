@@ -3,8 +3,25 @@
 
   if (!global) return;
 
+  function resolveEngineUndoFacade() {
+    var facade = global && global.CoreEngineFacade;
+    if (!facade || typeof facade !== "object") return null;
+    if (typeof facade.computeUndoRestoreState !== "function") return null;
+    return facade;
+  }
+
   function computeUndoRestoreState(input) {
     var opts = input || {};
+    var facade = resolveEngineUndoFacade();
+    if (facade) {
+      try {
+        return facade.computeUndoRestoreState({
+          prev: opts.prev,
+          fallbackUndoUsed: opts.fallbackUndoUsed,
+          timerStatus: opts.timerStatus
+        });
+      } catch (_err) {}
+    }
     var source = opts.prev && typeof opts.prev === "object" ? opts.prev : {};
     var fallbackUndoUsed =
       Number.isInteger(opts.fallbackUndoUsed) && opts.fallbackUndoUsed >= 0

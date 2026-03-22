@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "audit:game-manager": "node scripts/game-manager-audit.mjs",
     "audit:refactor-closure": "node scripts/refactor-closure-audit.mjs",
+    "audit:page-legacy-runtime-boundary": "node scripts/page-legacy-runtime-boundary-audit.mjs",
     "test:unit": "vitest run tests/unit",
     "test:unit:core": "vitest run tests/unit/core-",
     "test:unit:watch": "vitest tests/unit",

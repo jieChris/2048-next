@@ -1,37 +1,66 @@
 ﻿import "../../js/theme_manager.js";
-import "../../js/core_theme_settings_runtime.js";
-import "../../js/core_theme_settings_host_runtime.js";
-import "../../js/core_theme_settings_page_host_runtime.js";
 import "../../js/palette_page.js";
 import "../../js/core_i18n_runtime.js";
+import { applyThemeSettingsUi } from "../bootstrap/theme-settings-host";
+import { applyThemeSettingsPageInit } from "../bootstrap/theme-settings-page-host";
+import * as themeSettingsRuntimeModule from "../bootstrap/theme-settings";
 
 const globalWindow = window as Window & {
-  CoreThemeSettingsHostRuntime?: {
-    applyThemeSettingsUi?: (payload: unknown) => unknown;
-  };
-  CoreThemeSettingsPageHostRuntime?: {
-    applyThemeSettingsPageInit?: (payload: unknown) => unknown;
-  };
-  CoreThemeSettingsRuntime?: Record<string, unknown>;
   ThemeManager?: Record<string, unknown>;
   UII18N?: {
     getLanguage?: () => string;
   };
+  CoreThemeSettingsRuntime?: typeof themeSettingsRuntime;
+  CoreThemeSettingsHostRuntime?: {
+    applyThemeSettingsUi: typeof applyThemeSettingsUi;
+  };
+  CoreThemeSettingsPageHostRuntime?: {
+    applyThemeSettingsPageInit: typeof applyThemeSettingsPageInit;
+  };
 };
 
-const applyThemeSettingsUi = globalWindow.CoreThemeSettingsHostRuntime?.applyThemeSettingsUi;
-const applyThemeSettingsPageInit = globalWindow.CoreThemeSettingsPageHostRuntime?.applyThemeSettingsPageInit;
+const themeSettingsRuntime = {
+  formatThemePreviewValue: themeSettingsRuntimeModule.formatThemePreviewValue,
+  resolveThemePreviewTileValues: themeSettingsRuntimeModule.resolveThemePreviewTileValues,
+  resolveThemePreviewLayout: themeSettingsRuntimeModule.resolveThemePreviewLayout,
+  resolveThemePreviewCssSelectors: themeSettingsRuntimeModule.resolveThemePreviewCssSelectors,
+  resolveThemeOptions: themeSettingsRuntimeModule.resolveThemeOptions,
+  resolveThemeSelectLabel: themeSettingsRuntimeModule.resolveThemeSelectLabel,
+  resolveThemeDropdownToggleState: themeSettingsRuntimeModule.resolveThemeDropdownToggleState,
+  resolveThemeBindingState: themeSettingsRuntimeModule.resolveThemeBindingState,
+  resolveThemeOptionValue: themeSettingsRuntimeModule.resolveThemeOptionValue,
+  resolveThemeOptionSelectedState: themeSettingsRuntimeModule.resolveThemeOptionSelectedState
+};
+
+const themeSettingsHostRuntime = {
+  applyThemeSettingsUi
+};
+const themeSettingsPageHostRuntime = {
+  applyThemeSettingsPageInit
+};
+
+function ensureThemeSettingsGlobals(): void {
+  if (!globalWindow.CoreThemeSettingsRuntime) {
+    globalWindow.CoreThemeSettingsRuntime = themeSettingsRuntime;
+  }
+  if (!globalWindow.CoreThemeSettingsHostRuntime) {
+    globalWindow.CoreThemeSettingsHostRuntime = themeSettingsHostRuntime;
+  }
+  if (!globalWindow.CoreThemeSettingsPageHostRuntime) {
+    globalWindow.CoreThemeSettingsPageHostRuntime = themeSettingsPageHostRuntime;
+  }
+}
 
 function applyThemePageCopy(): void {
   const lang = typeof globalWindow.UII18N?.getLanguage === "function"
     ? globalWindow.UII18N.getLanguage()
     : "zh";
   const isEnglish = String(lang || "").toLowerCase().startsWith("en");
-  const title = isEnglish ? "Theme Settings" : "主题设置";
+  const title = isEnglish ? "Theme Settings" : "\u4e3b\u9898\u8bbe\u7f6e";
   const subtitle = isEnglish
     ? "Manage tile themes and palette colors with import/export and live preview."
-    : "统一管理棋子主题与色板配色，支持导入、导出与实时预览。";
-  const pillText = isEnglish ? "Theme" : "主题";
+    : "\u7edf\u4e00\u7ba1\u7406\u68cb\u5b50\u4e3b\u9898\u4e0e\u8272\u677f\u914d\u8272\uff0c\u652f\u6301\u5bfc\u5165\u3001\u5bfc\u51fa\u4e0e\u5b9e\u65f6\u9884\u89c8\u3002";
+  const pillText = isEnglish ? "Theme" : "\u4e3b\u9898";
   const copy = isEnglish
     ? {
         kicker: "2048 Theme Settings",
@@ -55,25 +84,25 @@ function applyThemePageCopy(): void {
         namePlaceholder: "Palette name"
       }
     : {
-        kicker: "2048 主题设置",
-        navHome: "回首页",
-        navPractice: "练习板",
-        themeSelectLabel: "选择主题",
-        themePreviewLabel: "配色预览",
-        paletteList: "色板列表",
-        currentPalette: "当前色板",
-        create: "新建副本",
-        rename: "重命名",
-        remove: "删除",
-        exportLabel: "导出",
-        importLabel: "导入",
-        standard16: "标准 16 色",
-        fib16: "斐波那契 16 色",
-        livePreview: "实时预览",
-        standard: "标准",
-        fibonacci: "斐波那契",
-        timerLegend: "计时图例",
-        namePlaceholder: "输入色板名称"
+        kicker: "2048 \u4e3b\u9898\u8bbe\u7f6e",
+        navHome: "\u56de\u9996\u9875",
+        navPractice: "\u7ec3\u4e60\u677f",
+        themeSelectLabel: "\u9009\u62e9\u4e3b\u9898",
+        themePreviewLabel: "\u914d\u8272\u9884\u89c8",
+        paletteList: "\u8272\u677f\u5217\u8868",
+        currentPalette: "\u5f53\u524d\u8272\u677f",
+        create: "\u65b0\u5efa\u526f\u672c",
+        rename: "\u91cd\u547d\u540d",
+        remove: "\u5220\u9664",
+        exportLabel: "\u5bfc\u51fa",
+        importLabel: "\u5bfc\u5165",
+        standard16: "\u6807\u51c6 16 \u8272",
+        fib16: "\u6590\u6ce2\u90a3\u5951 16 \u8272",
+        livePreview: "\u5b9e\u65f6\u9884\u89c8",
+        standard: "\u6807\u51c6",
+        fibonacci: "\u6590\u6ce2\u90a3\u5951",
+        timerLegend: "\u8ba1\u65f6\u56fe\u4f8b",
+        namePlaceholder: "\u8f93\u5165\u8272\u677f\u540d\u79f0"
       };
 
   document.title = `2048 ${title}`;
@@ -130,19 +159,20 @@ export function bootstrapPalettePage(): void {
     document.body.setAttribute("data-page-family", "palette");
   }
 
+  ensureThemeSettingsGlobals();
+
   if (typeof applyThemeSettingsPageInit === "function") {
     applyThemeSettingsPageInit({
-      themeSettingsHostRuntime: globalWindow.CoreThemeSettingsHostRuntime,
-      themeSettingsRuntime: globalWindow.CoreThemeSettingsRuntime,
+      themeSettingsHostRuntime,
+      themeSettingsRuntime,
       documentLike: document,
-      windowLike: window,
-      themeManager: globalWindow.ThemeManager
+      windowLike: window
     });
-  } else if (typeof applyThemeSettingsUi === "function") {
+  } else {
     applyThemeSettingsUi({
       documentLike: document,
       windowLike: window,
-      themeSettingsRuntime: globalWindow.CoreThemeSettingsRuntime,
+      themeSettingsRuntime,
       themeManager: globalWindow.ThemeManager
     });
   }
@@ -150,4 +180,8 @@ export function bootstrapPalettePage(): void {
   applyThemePageCopy();
   window.addEventListener("uilanguagechange", applyThemePageCopy);
 }
+
+
+
+
 

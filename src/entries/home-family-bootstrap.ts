@@ -1,4 +1,5 @@
 import { createBootstrapPipeline, resolvePageDescriptor } from "../bootstrap/page-bootstrap";
+import { registerEngineFacade, type EngineFacadeWindowLike } from "../bootstrap/engine-facade-host";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
 import { getPageManifest } from "./runtime-manifest";
 import { resolveHomeFamilyScriptsByCapabilities } from "./home-family-shared";
@@ -18,6 +19,9 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   }
 
   await runBootstrapPipeline(pageId);
+  registerEngineFacade(
+    typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
+  );
   const scripts = resolveHomeFamilyScriptsByCapabilities(manifest.capabilities);
   await loadLegacyScriptsSequentially(scripts);
 }

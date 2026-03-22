@@ -36,6 +36,7 @@ const STEP_TIMEOUT_DEFAULT_ENV_KEY = "REFACTOR_GATE_TIMEOUT_DEFAULT_MS";
 const STEP_TIMEOUT_BY_NAME_MS = {
   "game-manager-audit": 60_000,
   "entry-manifest-audit": 60_000,
+  "page-legacy-runtime-boundary-audit": 60_000,
   "legacy-boundary-audit": 60_000,
   "service-boundary-audit": 60_000,
   "contracts-matrix-audit": 60_000,
@@ -47,6 +48,8 @@ const STEP_TIMEOUT_BY_NAME_MS = {
 const STEP_TIMEOUT_ENV_KEY_BY_NAME = {
   "game-manager-audit": "REFACTOR_GATE_TIMEOUT_GAME_MANAGER_AUDIT_MS",
   "entry-manifest-audit": "REFACTOR_GATE_TIMEOUT_ENTRY_MANIFEST_AUDIT_MS",
+  "page-legacy-runtime-boundary-audit":
+    "REFACTOR_GATE_TIMEOUT_PAGE_LEGACY_RUNTIME_BOUNDARY_AUDIT_MS",
   "legacy-boundary-audit": "REFACTOR_GATE_TIMEOUT_LEGACY_BOUNDARY_AUDIT_MS",
   "service-boundary-audit": "REFACTOR_GATE_TIMEOUT_SERVICE_BOUNDARY_AUDIT_MS",
   "contracts-matrix-audit": "REFACTOR_GATE_TIMEOUT_CONTRACTS_MATRIX_AUDIT_MS",
@@ -59,6 +62,11 @@ const STEP_TIMEOUT_ENV_KEY_BY_NAME = {
 const STEPS = [
   { name: "game-manager-audit", cmd: "node", args: ["scripts/game-manager-audit.mjs"] },
   { name: "entry-manifest-audit", cmd: "node", args: ["scripts/entry-manifest-audit.mjs"] },
+  {
+    name: "page-legacy-runtime-boundary-audit",
+    cmd: "node",
+    args: ["scripts/page-legacy-runtime-boundary-audit.mjs"]
+  },
   { name: "legacy-boundary-audit", cmd: "node", args: ["scripts/legacy-boundary-audit.mjs"] },
   { name: "service-boundary-audit", cmd: "node", args: ["scripts/service-boundary-audit.mjs"] },
   { name: "contracts-matrix-audit", cmd: "node", args: ["scripts/contracts-matrix-audit.mjs"] },
@@ -450,6 +458,7 @@ function printFailureTriageHint(failedStepName) {
   if (
     failedStepName === "game-manager-audit" ||
     failedStepName === "entry-manifest-audit" ||
+    failedStepName === "page-legacy-runtime-boundary-audit" ||
     failedStepName === "legacy-boundary-audit" ||
     failedStepName === "engine-audit"
   ) {
