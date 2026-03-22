@@ -26,16 +26,25 @@ function normalizePortablePath(filePath) {
 function toProjectRelativePath(filePath) {
   const normalizedPath = normalizePortablePath(filePath);
   const normalizedRoot = normalizePortablePath(projectRoot);
-  if (normalizedRoot && normalizedPath.startsWith(`${normalizedRoot}/`)) {
-    return normalizedPath.slice(normalizedRoot.length + 1);
-  }
   const rootName = path.basename(projectRoot);
   const marker = `/${rootName}/`;
-  const markerIndex = normalizedPath.lastIndexOf(marker);
-  if (markerIndex !== -1) {
-    return normalizedPath.slice(markerIndex + marker.length);
+  let relativePath = normalizedPath;
+  if (normalizedRoot && normalizedPath.startsWith(`${normalizedRoot}/`)) {
+    relativePath = normalizedPath.slice(normalizedRoot.length + 1);
+  } else {
+    relativePath = normalizePortablePath(path.relative(projectRoot, filePath));
   }
-  return normalizePortablePath(path.relative(projectRoot, filePath));
+  if (/^[A-Za-z]:\//u.test(relativePath)) {
+    const embeddedIndex = relativePath.lastIndexOf(marker);
+    if (embeddedIndex !== -1) {
+      return relativePath.slice(embeddedIndex + marker.length);
+    }
+  }
+  const markerIndex = relativePath.lastIndexOf(marker);
+  if (markerIndex !== -1) {
+    return relativePath.slice(markerIndex + marker.length);
+  }
+  return relativePath;
 }
 
 function shouldAuditFile(filePath, allowedFileSuffixes = DEFAULT_ALLOWED_FILE_SUFFIXES) {
