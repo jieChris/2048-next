@@ -24,6 +24,17 @@ function normalizePortablePath(filePath) {
 }
 
 function toProjectRelativePath(filePath) {
+  const normalizedPath = normalizePortablePath(filePath);
+  const normalizedRoot = normalizePortablePath(projectRoot);
+  if (normalizedRoot && normalizedPath.startsWith(`${normalizedRoot}/`)) {
+    return normalizedPath.slice(normalizedRoot.length + 1);
+  }
+  const rootName = path.basename(projectRoot);
+  const marker = `/${rootName}/`;
+  const markerIndex = normalizedPath.lastIndexOf(marker);
+  if (markerIndex !== -1) {
+    return normalizedPath.slice(markerIndex + marker.length);
+  }
   return normalizePortablePath(path.relative(projectRoot, filePath));
 }
 
