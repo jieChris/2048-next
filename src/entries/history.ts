@@ -1,7 +1,4 @@
-import "../../js/theme_manager.js";
-import "../../js/mode_catalog.js";
-import "../../js/core_game_settings_storage_runtime.js";
-import "../../js/local_history_store.js";
-import "../../js/refactor_cutover_migration.js";
-import "../../js/history_page.js";
-import "../../js/core_i18n_runtime.js";
+import { bootstrapDirectPage } from "../app/bootstrap-direct-page";
+import { bootstrapHistoryPage } from "../pages/history-page";
+
+await bootstrapDirectPage("history", bootstrapHistoryPage);

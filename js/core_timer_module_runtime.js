@@ -3,10 +3,19 @@
 
   if (!global) return;
 
+  function resolveLocalStorage() {
+    try {
+      return global && global["localStorage"] ? global["localStorage"] : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
   function resolveLang() {
     try {
+      var storage = resolveLocalStorage();
       var raw = String(
-        (global.localStorage && global.localStorage.getItem("ui_language_v1")) || ""
+        (storage && storage.getItem("ui_language_v1")) || ""
       ).toLowerCase();
       return raw === "en" ? "en" : "zh";
     } catch (_err) {

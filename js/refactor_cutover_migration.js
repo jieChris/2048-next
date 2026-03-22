@@ -1,16 +1,25 @@
 (function (global) {
   "use strict";
 
-  if (!global || !global.localStorage) return;
+  if (!global) return;
 
   var DONE_KEY = "refactor_cutover_v1_done";
   var PRACTICE_OLD = "practice_legacy";
   var PRACTICE_NEW = "practice";
   var HISTORY_KEY = "local_game_history_v1";
 
+  function resolveLocalStorage() {
+    try {
+      return global && global["localStorage"] ? global["localStorage"] : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
   function safeGet(key) {
     try {
-      return global.localStorage.getItem(key);
+      var storage = resolveLocalStorage();
+      return storage ? storage.getItem(key) : null;
     } catch (_error) {
       return null;
     }
@@ -18,7 +27,9 @@
 
   function safeSet(key, value) {
     try {
-      global.localStorage.setItem(key, value);
+      var storage = resolveLocalStorage();
+      if (!storage) return false;
+      storage.setItem(key, value);
       return true;
     } catch (_error) {
       return false;
@@ -27,7 +38,9 @@
 
   function safeRemove(key) {
     try {
-      global.localStorage.removeItem(key);
+      var storage = resolveLocalStorage();
+      if (!storage) return false;
+      storage.removeItem(key);
       return true;
     } catch (_error) {
       return false;
@@ -149,6 +162,7 @@
   }
 
   function runMigration() {
+    if (!resolveLocalStorage()) return;
     if (safeGet(DONE_KEY) === "1") return;
 
     migrateBestScore();

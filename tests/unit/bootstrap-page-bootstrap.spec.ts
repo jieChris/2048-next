@@ -26,6 +26,20 @@ describe("bootstrap: page-bootstrap", () => {
     expect(desc.needsI18n).toBe(true);
   });
 
+  it("resolvePageDescriptor returns register, password, and user-profile pages", () => {
+    const register = resolvePageDescriptor("register");
+    const password = resolvePageDescriptor("password");
+    const userProfile = resolvePageDescriptor("user-profile");
+
+    expect(register.pageId).toBe("register");
+    expect(password.pageId).toBe("password");
+    expect(userProfile.pageId).toBe("user-profile");
+    expect(register.needsLeaderboard).toBe(false);
+    expect(password.needsLeaderboard).toBe(false);
+    expect(userProfile.needsHistory).toBe(true);
+    expect(userProfile.needsReplay).toBe(true);
+  });
+
   it("resolvePageDescriptor returns unknown page with defaults", () => {
     const desc = resolvePageDescriptor("nonexistent");
     expect(desc.needsLeaderboard).toBe(false);

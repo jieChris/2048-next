@@ -30,9 +30,13 @@ export type RuntimeCapability =
   | "play"
   | "replay"
   | "account"
+  | "account-settings"
   | "history"
   | "modes"
-  | "palette";
+  | "palette"
+  | "user-profile"
+  | "register"
+  | "password";
 
 // ---------------------------------------------------------------------------
 // Page manifest
@@ -87,9 +91,29 @@ export const PAGE_MANIFESTS: readonly PageManifestEntry[] = [
     capabilities: ["account"]
   },
   {
+    pageId: "account-settings",
+    htmlFile: "account_settings.html",
+    capabilities: ["account"]
+  },
+  {
     pageId: "history",
     htmlFile: "history.html",
     capabilities: ["history"]
+  },
+  {
+    pageId: "user-profile",
+    htmlFile: "user.html",
+    capabilities: ["user-profile"]
+  },
+  {
+    pageId: "register",
+    htmlFile: "register.html",
+    capabilities: ["register"]
+  },
+  {
+    pageId: "password",
+    htmlFile: "password.html",
+    capabilities: ["password"]
   },
   {
     pageId: "modes",

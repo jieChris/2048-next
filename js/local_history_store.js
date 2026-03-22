@@ -31,13 +31,38 @@
     return value == null ? "" : String(value);
   }
 
-  function safeReadLocalStorageText(key) {
+  function resolveLocalStorage() {
     try {
-      if (typeof localStorage === "undefined") return "";
-      return toText(localStorage.getItem(key)).trim();
+      if (typeof localStorage === "undefined") return null;
+      return localStorage;
     } catch (_err) {
-      return "";
+      return null;
     }
+  }
+
+  function readLocalStorageItem(key) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.getItem !== "function") return null;
+    try {
+      return storage.getItem(key);
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function writeLocalStorageItem(key, value) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.setItem !== "function") return false;
+    try {
+      storage.setItem(key, value);
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function safeReadLocalStorageText(key) {
+    return toText(readLocalStorageItem(key)).trim();
   }
 
   function sanitizeOwnerKeyPart(value) {
@@ -48,31 +73,8 @@
       .slice(0, 64);
   }
 
-  function resolveRuntimeNormalizedHistoryOwnerMeta(raw) {
-    var runtime = window.CoreGameSettingsStorageRuntime;
-    if (!runtime || typeof runtime.normalizeHistoryOwnerMetaFromContext !== "function") return null;
-    try {
-      return runtime.normalizeHistoryOwnerMetaFromContext({
-        record: raw,
-        authUserId: safeReadLocalStorageText(AUTH_USER_ID_STORAGE_KEY),
-        authNickname: safeReadLocalStorageText(AUTH_NICKNAME_STORAGE_KEY),
-        keyPartMaxLength: 64
-      });
-    } catch (_err) {
-      return null;
-    }
-  }
-
   function resolveOwnerMetaFromRaw(raw) {
-    var normalizedByRuntime = resolveRuntimeNormalizedHistoryOwnerMeta(raw);
-    if (isPlainObject(normalizedByRuntime)) {
-      return {
-        owner_type: toText(normalizedByRuntime.owner_type).trim().toLowerCase() === "guest" ? "guest" : "user",
-        owner_user_id: toText(normalizedByRuntime.owner_user_id).trim() || null,
-        owner_nickname: toText(normalizedByRuntime.owner_nickname).trim(),
-        owner_key: toText(normalizedByRuntime.owner_key).trim() || "guest"
-      };
-    }
+    raw = isPlainObject(raw) ? raw : {};
     var ownerTypeRaw = toText(raw && raw.owner_type).trim().toLowerCase();
     var ownerUserId = toText(raw && raw.owner_user_id).trim();
     var ownerNickname = toText(raw && raw.owner_nickname).trim();
@@ -111,7 +113,7 @@
 
   function readAllFallback() {
     try {
-      var parsed = safeParse(localStorage.getItem(STORAGE_KEY) || "[]", []);
+      var parsed = safeParse(readLocalStorageItem(STORAGE_KEY) || "[]", []);
       return Array.isArray(parsed) ? parsed : [];
     } catch (_err) {
       return [];
@@ -119,9 +121,7 @@
   }
 
   function writeAllFallback(records) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    } catch (_err) {}
+    writeLocalStorageItem(STORAGE_KEY, JSON.stringify(records));
   }
 
   function nowIso() {
@@ -215,8 +215,6 @@
   }
 
   function normalizeDiagnosticsIndexEntries(entries) {
-    var normalizedByRuntime = resolveRuntimeNormalizedDiagnosticsIndexEntries(entries);
-    if (Array.isArray(normalizedByRuntime)) return normalizedByRuntime;
     var list = Array.isArray(entries) ? entries : [];
     var normalized = [];
     for (var i = 0; i < list.length; i += 1) {
@@ -226,25 +224,6 @@
       normalized.push(entry);
     }
     return normalized;
-  }
-
-  function resolveRuntimeNormalizedDiagnosticsIndexEntries(entries) {
-    var runtime = window.CoreGameSettingsStorageRuntime;
-    if (!runtime || typeof runtime.normalizeHistoryDiagnosticsIndexEntriesFromContext !== "function") {
-      return null;
-    }
-    try {
-      return runtime.normalizeHistoryDiagnosticsIndexEntriesFromContext({
-        entries: entries,
-        maxEntries: MAX_DIAGNOSTICS_INDEX_ENTRIES,
-        maxPayloadKeys: MAX_DIAGNOSTIC_PAYLOAD_KEYS,
-        maxStringLength: MAX_DIAGNOSTIC_STRING_LENGTH,
-        maxArrayItems: MAX_DIAGNOSTIC_ARRAY_ITEMS,
-        keyMaxLength: 64
-      });
-    } catch (_err) {
-      return null;
-    }
   }
 
   function compareDatesDesc(a, b) {
@@ -302,7 +281,15 @@
         record: raw,
         nowIso: nowIso,
         idFactory: makeId,
-        defaultClientVersion: "1.8"
+        defaultClientVersion: "1.8",
+        authUserId: safeReadLocalStorageText(AUTH_USER_ID_STORAGE_KEY),
+        authNickname: safeReadLocalStorageText(AUTH_NICKNAME_STORAGE_KEY),
+        ownerKeyPartMaxLength: 64,
+        maxDiagnosticEntries: MAX_DIAGNOSTICS_INDEX_ENTRIES,
+        maxDiagnosticPayloadKeys: MAX_DIAGNOSTIC_PAYLOAD_KEYS,
+        maxDiagnosticStringLength: MAX_DIAGNOSTIC_STRING_LENGTH,
+        maxDiagnosticArrayItems: MAX_DIAGNOSTIC_ARRAY_ITEMS,
+        maxDiagnosticKeyLength: 64
       });
     } catch (_err) {
       return null;
@@ -311,18 +298,30 @@
 
   function normalizeRecord(raw) {
     raw = isPlainObject(raw) ? raw : {};
-    var ownerMeta = resolveOwnerMetaFromRaw(raw);
     var normalizedByRuntime = resolveRuntimeNormalizedHistoryRecord(raw);
-    var base = isPlainObject(normalizedByRuntime)
+    var hasRuntimeBase = isPlainObject(normalizedByRuntime);
+    var base = hasRuntimeBase
       ? normalizedByRuntime
       : normalizeRecordFallback(raw);
+    if (hasRuntimeBase) {
+      return Object.assign({}, base, {
+        diagnostics_index_entries: Array.isArray(base.diagnostics_index_entries)
+          ? base.diagnostics_index_entries
+          : []
+      });
+    }
+    var ownerMeta = resolveOwnerMetaFromRaw(base);
+    var diagnosticsSource =
+      base && base.diagnostics_index_entries != null
+        ? base.diagnostics_index_entries
+        : raw.diagnostics_index_entries;
 
     return Object.assign({}, base, {
       owner_type: ownerMeta.owner_type,
       owner_user_id: ownerMeta.owner_user_id,
       owner_nickname: ownerMeta.owner_nickname,
       owner_key: ownerMeta.owner_key,
-      diagnostics_index_entries: normalizeDiagnosticsIndexEntries(raw.diagnostics_index_entries)
+      diagnostics_index_entries: normalizeDiagnosticsIndexEntries(diagnosticsSource)
     });
   }
 
@@ -425,12 +424,12 @@
     migrationPromise = (async function () {
       var db = await getDatabase();
       if (!db) return 0;
-      if (typeof localStorage === "undefined") return 0;
-      if (localStorage.getItem(MIGRATION_FLAG)) return 0;
+      if (!resolveLocalStorage()) return 0;
+      if (readLocalStorageItem(MIGRATION_FLAG)) return 0;
 
       var legacyRecords = readAllFallback();
       if (!legacyRecords.length) {
-        localStorage.setItem(MIGRATION_FLAG, "1");
+        writeLocalStorageItem(MIGRATION_FLAG, "1");
         return 0;
       }
 
@@ -442,7 +441,7 @@
         store.put(normalizeRecord(item));
       }
       await txDonePromise(tx);
-      localStorage.setItem(MIGRATION_FLAG, "1");
+      writeLocalStorageItem(MIGRATION_FLAG, "1");
       return legacyRecords.length;
     })().catch(function () {
       forceLocalFallback = true;

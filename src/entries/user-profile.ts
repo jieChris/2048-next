@@ -1,2 +1,4 @@
-import "../../js/core_game_settings_storage_runtime.js";
-import "../../js/user_profile_page.js";
+import { bootstrapDirectPage } from "../app/bootstrap-direct-page";
+import { bootstrapUserProfilePage } from "../pages/user-profile-page";
+
+await bootstrapDirectPage("user-profile", bootstrapUserProfilePage);

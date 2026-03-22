@@ -1,3 +1,4 @@
-import "../../js/api_shared_utils.js";
-import "../../js/register_page.js";
+import { bootstrapDirectPage } from "../app/bootstrap-direct-page";
+import { bootstrapRegisterPage } from "../pages/register-page";
 
+await bootstrapDirectPage("register", bootstrapRegisterPage);

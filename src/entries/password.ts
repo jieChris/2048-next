@@ -1,2 +1,4 @@
-import "../../js/api_shared_utils.js";
-import "../../js/password_page.js";
+import { bootstrapDirectPage } from "../app/bootstrap-direct-page";
+import { bootstrapPasswordPage } from "../pages/password-page";
+
+await bootstrapDirectPage("password", bootstrapPasswordPage);

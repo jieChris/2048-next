@@ -1,3 +1,94 @@
+# A-F Guardrail Delta (2026-03-22, Batch-WS4-02D3)
+
+## Batch Impact
+- Page-entry debt is now `0`: the audited set no longer contains any `direct-module` page entries.
+- `entry-manifest-audit` now covers all 16 audited page entries under the same manifest/bootstrap classification model.
+- Guard focus shifts from `entry migration` to `page-shell de-legacy`.
+
+## Current Flaky Record
+- `suspected_flake`
+  - scope: unrelated `history` / `index-ui` smoke runs during repeated `verify:prepush` attempts
+  - failure shapes observed: `ERR_CONNECTION_REFUSED`, `ERR_CONNECTION_RESET`, and isolated startup timeouts
+  - rerun result: corresponding single-test reruns passed
+  - final full `verify:prepush`: passed
+  - impact on this batch decision: do not classify `user-profile` migration as a regression based on these signals
+
+## Guardrail Consequence
+- Next gate work should focus on two things:
+  1. preserve `direct-module = 0` under `entry-manifest-audit`
+  2. add the next-stage `legacy-runtime-import boundary` for `src/pages/*` transitional adapters
+
+# A-F Guardrail Consolidation (2026-03-22)
+
+## Single Truth
+- 本节作为 2026-03-22 起的主规范，优先级高于下方仍保留的旧 `rg` 示例与零散补丁描述。
+- 目标不是“再加一个检查命令”，而是把边界、阻断条件、例外机制、CI 放行条件写成单一真相。
+
+## CI Blocking Topology
+- `PR minimum`
+  1. `npm run test:unit`
+  2. `npm run audit:entry-manifest`
+  3. `npm run audit:service-boundary`
+  4. `npm run test:smoke:runtime-contract`
+- `Main release minimum`
+  1. `npm run verify:refactor:ci`
+  2. `npm run build`
+  3. deploy 必须依赖上一步成功的结果
+- 在 deploy workflow 完成硬绑定之前，不得把“deploy 成功”视为最终发布证据。
+
+## Service Boundary Single Truth
+- `R4/R5` 的正式门禁命令统一为 `npm run audit:service-boundary`。
+- 当前已阻断：
+  - direct `localStorage.*`
+  - direct `sessionStorage.*`
+  - direct `fetch(...)`
+- 下一批必须纳入的等价写法：
+  - `window.fetch`
+  - `globalThis.fetch`
+  - bracket notation，例如 `['fetch']`、`['localStorage']`
+- `.html inline script` 是否纳入同一审计面，必须显式决定；未决定前不得宣称“页面层直连已完全清零”。
+
+## Allowed Owners And Exceptions
+- `Allowed storage owners`
+  - `src/storage/**`
+  - 已审批的共享 helper
+  - ADR 明确登记的临时 shim
+- `Allowed network owners`
+  - `src/services/**`（落地后）
+  - 已审批的共享 fetch helper
+  - ADR 明确登记的临时 shim
+- 任一例外都必须登记：
+  - path
+  - owner
+  - reason
+  - expiry batch
+  - replacement plan
+
+## Gate Coverage Limits
+- `service-boundary-audit`
+  - 当前仍是 syntax-level gate，不等于 ownership-complete gate。
+- `entry-manifest-audit`
+  - 当前是 spec-table gate，不等于 repository HTML inventory gate。
+- `release-ready`
+  - 当前是 snippet gate，不是 workflow parser，也不是 deploy DAG validator。
+- 任何对外结论都必须写清“当前 gate 能拦什么、不能拦什么”。
+
+## Flaky Smoke Policy
+- 满足以下条件的 smoke 视为 `flaky suspect`：
+  - 首次完整运行失败；
+  - 在无代码修改条件下，单用例或复跑通过。
+- 每条记录必须落账：
+  - test file
+  - failure shape
+  - rerun result
+  - owner
+  - quarantine decision
+  - close condition
+- 稳定性证据必须区分：
+  - `first_run_pass`
+  - `rerun_pass`
+  - `suspected_flake`
+
 # 架构红线与门禁规则
 
 > 目标：把“理想状态”转为可执行、可阻断、可审计的工程规则。  
@@ -113,3 +204,115 @@ PR 进入合并前，至少跑以下项：
 2. 触发 P0/P1 时，先阻断合并，再给出修复或回滚路径。
 3. 触发 P2/P3 时，必须写明负责人、截止时间和下一次复核点。
 4. 修复完成后补回归测试，并更新 `docs/ROADMAP_MILESTONES.md` 和 `docs/EXECUTION_LOG.md` 中的验证状态。
+# Guardrail Update (2026-03-22)
+
+## Service Boundary Gate
+- `R4` and `R5` now map to `npm run audit:service-boundary`.
+- Scope: `src/**/*.ts`, `src/**/*.js`, `js/**/*.ts`, `js/**/*.js`.
+- Blocked patterns:
+  - direct `localStorage.*`
+  - direct `sessionStorage.*`
+  - direct `fetch(...)`
+- Required path:
+  - page/UI layer -> shared helper or service/api layer
+  - storage access -> storage/helper layer
+  - network access -> shared fetch helper or service/api layer
+
+## Refactor Gate Mapping
+- `npm run verify:prepush` now includes `service-boundary-audit`.
+- Current expected refactor gate chain:
+  - `game-manager-audit`
+  - `entry-manifest-audit`
+  - `legacy-boundary-audit`
+  - `service-boundary-audit`
+  - `contracts-matrix-audit`
+  - `engine-audit`
+  - `unit`
+  - `smoke`
+  - `build`
+
+## PR Minimum Checks
+- PR minimum checks are now:
+  1. `npm run test:unit`
+  2. `npm run audit:entry-manifest`
+  3. `npm run audit:service-boundary`
+  4. `npm run test:smoke:runtime-contract`
+
+## Baseline
+- Repository baseline on 2026-03-22:
+  - `src+js direct localStorage = 0`
+  - `src+js direct fetch = 0`
+- Any new direct hit is treated as an architecture regression and must be blocked by CI.
+# A-F Guardrail Consolidation (2026-03-22)
+
+## Single Truth
+- 本节作为 2026-03-22 起的主规范，优先级高于下方仍保留的旧 `rg` 示例与零散补丁描述。
+- 目标不是“再加一个检查命令”，而是把边界、阻断条件、例外机制、CI 放行条件写成单一真相。
+
+## CI Blocking Topology
+- `PR minimum`
+  1. `npm run test:unit`
+  2. `npm run audit:entry-manifest`
+  3. `npm run audit:service-boundary`
+  4. `npm run test:smoke:runtime-contract`
+- `Main release minimum`
+  1. `npm run verify:refactor:ci`
+  2. `npm run build`
+  3. deploy 必须依赖上一步成功的结果
+- 在 deploy workflow 完成硬绑定之前，不得把“deploy 成功”视为最终发布证据。
+
+## Service Boundary Single Truth
+- `R4/R5` 的正式门禁命令统一为 `npm run audit:service-boundary`。
+- 当前已阻断：
+  - direct `localStorage.*`
+  - direct `sessionStorage.*`
+  - direct `fetch(...)`
+- 下一批必须纳入的等价写法：
+  - `window.fetch`
+  - `globalThis.fetch`
+  - bracket notation，例如 `["fetch"]`、`["localStorage"]`
+- `.html inline script` 是否纳入同一审计面，必须显式决定；未决定前不得宣称“页面层直连已完全清零”。
+
+## Allowed Owners And Exceptions
+- `Allowed storage owners`
+  - `src/storage/**`
+  - 已审批的共享 helper
+  - ADR 明确登记的临时 shim
+- `Allowed network owners`
+  - `src/services/**`（落地后）
+  - 已审批的共享 fetch helper
+  - ADR 明确登记的临时 shim
+- 任一例外都必须登记：
+  - path
+  - owner
+  - reason
+  - expiry batch
+  - replacement plan
+
+## Gate Coverage Limits
+- `service-boundary-audit`
+  - 当前仍是 syntax-level gate，不等于 ownership-complete gate。
+- `entry-manifest-audit`
+  - 当前是 spec-table gate，不等于 repository HTML inventory gate。
+- `release-ready`
+  - 当前是 snippet gate，不是 workflow parser，也不是 deploy DAG validator。
+- 任何对外结论都必须写清“当前 gate 能拦什么、不能拦什么”。
+
+## Flaky Smoke Policy
+- 满足以下条件的 smoke 视为 `flaky suspect`：
+  - 首次完整运行失败；
+  - 在无代码修改条件下，单用例或复跑通过。
+- 每条记录必须落账：
+  - test file
+  - failure shape
+  - rerun result
+  - owner
+  - quarantine decision
+  - close condition
+- 稳定性证据必须区分：
+  - `first_run_pass`
+  - `rerun_pass`
+  - `suspected_flake`
+
+# 鏋舵瀯绾㈢嚎涓庨棬绂佽鍒?
+

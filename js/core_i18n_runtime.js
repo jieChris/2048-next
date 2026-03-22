@@ -15,6 +15,14 @@
   var originalConfirm = null;
   var originalPrompt = null;
 
+  function resolveLocalStorage() {
+    try {
+      return global && global["localStorage"] ? global["localStorage"] : null;
+    } catch (_e0) {
+      return null;
+    }
+  }
+
   function getNow() {
     if (global.Date && typeof global.Date.now === "function") return global.Date.now();
     return new Date().getTime();
@@ -322,7 +330,8 @@
 
   function readLanguage() {
     try {
-      var saved = global.localStorage ? global.localStorage.getItem(STORAGE_KEY) : null;
+      var storage = resolveLocalStorage();
+      var saved = storage ? storage.getItem(STORAGE_KEY) : null;
       if (saved) return normalizeLang(saved);
     } catch (_e1) {}
     return DEFAULT_LANG;
@@ -330,7 +339,8 @@
 
   function saveLanguage(lang) {
     try {
-      if (global.localStorage) global.localStorage.setItem(STORAGE_KEY, lang);
+      var storage = resolveLocalStorage();
+      if (storage) storage.setItem(STORAGE_KEY, lang);
     } catch (_e2) {}
   }
 

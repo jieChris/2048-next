@@ -1,3 +1,129 @@
+# A-F Collaborative Delta (2026-03-22, Batch-WS4-02D3)
+
+## Phase Decision
+- `WS4-02`
+  - audited entries: `16`
+  - remaining `direct-module`: `0`
+  - status: `done`
+- `WS4`
+  - page-entry stage result: `stage pass`
+  - remaining work: `WS4-03` page-shell de-legacy boundary
+- `WS6-01`
+  - unchanged: `near stage pass`, not `done`
+
+## Updated Snapshot
+- `manifest-bootstrap`
+  - `index / undo / capped / practice / pku2048 / play / replay / index_test`
+  - `account / account-settings / history / register / password / modes / palette / user-profile`
+- `direct-module`
+  - `none`
+
+## New Priority Tasks
+- `WS4-02D2`
+  - task: `user-profile` reclassification to `profile-history-replay` and final migration
+  - owner: `A / C / F`
+  - status: `done`
+  - done: `user-profile` now uses `bootstrapDirectPage`, is present in `runtime-manifest`, has dedicated unit + page-system smoke, and drives remaining `direct-module` to `0`
+- `WS4-03`
+  - task: `legacy-runtime-import boundary` for `src/pages/* -> ../../js/*.js`
+  - owner: `A / C / E`
+  - status: `pending`
+  - done: page shells remain thin adapters, new direct legacy imports are blocked, and de-legacy work can proceed without reopening entry drift
+
+## F Sign-off Update
+- `WS4 stage pass` has been reached for page-entry closure.
+- `WS4 done` has not been reached; page-shell de-legacy and deeper feature extraction remain open.
+
+# A-F Collaborative Delta (2026-03-22)
+
+## Phase Decision
+- `WS6-01`
+  - 结论：`near stage pass`, not `done`
+  - 已达成：`src+js direct localStorage = 0`、`src+js direct fetch = 0`、`service-boundary-audit` 已入 gate
+  - 未达成：owner/exception 机制、扫描范围定义、连续 3 轮主分支 CI 证据落表、灰度可发布结论
+- `WS4-02`
+  - 结论：已从“入口盘点”转为“迁移决策”，不能继续按旧的“4 个散点页”口径推进
+  - 当前口径：`16` 个已审计入口，其中 `3` 个仍是 `direct-module`
+
+## Updated Snapshot
+- `manifest-ready direct-module`
+  - `none`
+- `not-yet-manifested direct-module`
+  - `register / password / user-profile`
+- `main blockers`
+  1. legacy shell 未退场
+  2. `Engine/contracts` 不是唯一运行现实
+  3. deploy 未被完整质量门禁阻断
+
+## New Priority Tasks
+- `WS4-02A`
+  - task: `modes` bootstrap migration sample
+  - owner: `C`
+  - status: `done`
+  - done: 已作为首个 `direct-module -> unified bootstrap` 样板页落地，并通过 `audit:entry-manifest` + `pages-modes-page-system` + `verify:prepush`
+- `WS4-02B`
+  - task: `palette` bootstrap migration sample
+  - owner: `C`
+  - status: `done`
+  - done: 已作为第二个 `direct-module -> unified bootstrap` 样板页落地，并通过 `audit:entry-manifest` + `pages-palette-page-system` + `palette` 定向 smoke + `verify:prepush`
+- `WS4-02C`
+  - task: `history + account` page-system migration
+  - owner: `C / A`
+  - status: `done`
+  - done: `history` 作为 `storage/contracts-first` 功能页样板、`account` 作为 `services/auth-first` 账号壳页样板完成迁移，并通过 `audit:entry-manifest` + dedicated page-system smoke + `verify:prepush`
+- `WS4-02D`
+  - task: `register + password` auth-security migration + `user-profile` reclassification to profile-history family
+  - owner: `A / C / F`
+  - status: `pending`
+  - done: `account-settings` 已并入 unified bootstrap；剩余 `register / password / user-profile` 完成 family 重分类与迁移批次冻结
+- `WS6-01A`
+  - task: owner-aware `service-boundary` audit
+  - owner: `D / E`
+  - status: `in_progress`
+  - done: 不仅拦语法形式，也拦未授权 owner 的直连路径
+- `WS6-01B`
+  - task: WS6 stability evidence table
+  - owner: `D / E / F`
+  - status: `pending`
+  - done: 主分支连续 3 轮 CI 证据落表，可用于阶段性签收
+- `CI-GATE-01`
+  - task: deploy gate hardening
+  - owner: `D / E`
+  - status: `pending`
+  - done: deploy 必须依赖 `verify:refactor:ci` 成功结果
+- `QA-FLAKE-01`
+  - task: smoke de-flake ledger
+  - owner: `E`
+  - status: `in_progress`
+  - done: 已知 flaky 用例有台账、有 owner、有关闭条件
+- `B-ENG-01`
+  - task: single Engine session takeover
+  - owner: `B`
+  - status: `in_progress`
+  - done: `play/undo/practice/replay` 不再依赖 `window.game_manager`
+- `B-CONTRACT-01`
+  - task: replay contract upgrade
+  - owner: `B`
+  - status: `in_progress`
+  - done: `ReplayRecord/ReplayEnvelope` 覆盖实际支持格式并由 `src/core + src/contracts` 消费
+- `B-COMP-01`
+  - task: competition/submit contract formalization
+  - owner: `B / D`
+  - status: `pending`
+  - done: `SubmitPayload`、`challenge_id`、比赛元数据进入正式 contract
+
+## F Sign-off Conditions
+- `WS4 stage pass`
+  1. 页面信息架构冻结
+  2. 4 个 `direct-module` 已被处置或写明退场批次
+  3. 关键跨页路径稳定
+  4. `audit:entry-manifest` 结论与用户可感知页面体系一致
+- `WS6 stage pass`
+  1. 技术边界闭合
+  2. 用户可见链路无回归
+  3. 连续稳定性证据足够
+  4. 可以进入灰度发布窗口
+
 # 里程碑推进看板
 > 用途：把重构目标拆成可执行任务，并跟踪状态、阻塞、验收与发布节奏。
 > 状态枚举：`pending` / `in_progress` / `blocked` / `done`
@@ -22,16 +148,16 @@
 | WS1-02 | 建立 legacy 回流门禁规则 | WS1 | E / A | P0 | 2026-03-21 | done | 无 | F 复核门禁覆盖 legacy-loader 导入与调用边界 | `npm run verify:prepush` | 已接入 `legacy-boundary-audit` 且全链路通过 |
 | WS2-01 | 汇总绕过 Engine 的状态写入点 | WS2 | B / E | P0 | 2026-03-21 | done | 无 | F 复核首轮扫描范围与风险分级可接受 | unit/smoke + 扫描 | 已形成 Top10 清单与总量统计（22） |
 | WS2-02 | undo/replay/import/export 统一引擎管线 | WS2 | B / C | P1 | 2026-03-24 | in_progress | 依赖 WS2-01 | F 确认撤回、回放、导入导出都可正常使用 | `npm run test:smoke:ci` | 已完成 move/undo/replay/restart/saved-state 写入收口，剩余 import/export 持续推进 |
-| WS3-01 | 建立 contracts 覆盖矩阵（状态/回放/提交/同步） | WS3 | B / D | P1 | 待定 | in_progress | 无 | F 确认对外展示和存储字段稳定 | `npm run test:unit` | 覆盖矩阵可追踪 |
-| WS3-02 | 历史隐式结构迁移到 contracts | WS3 | C / D | P1 | 待定 | in_progress | 需兼容策略 | F 确认历史/回放页面无字段丢失 | unit + smoke | 旧结构退出主链路 |
+| WS3-01 | 建立 contracts 覆盖矩阵（状态/回放/提交/同步） | WS3 | B / D | P1 | 2026-03-22 | done | 无 | F sign-off 已补证据表（WS3=pass） | `npm run test:unit` + `node scripts/contracts-matrix-audit.mjs` | 6 合同矩阵可追踪，含 `HistoryRecord` 且 unit+smoke 深度达标 |
+| WS3-02 | 历史隐式结构迁移到 contracts | WS3 | C / D | P1 | 2026-03-22 | done | 无 | F sign-off 已补收口结论（WS3-02=pass） | unit + smoke + `npm run verify:prepush` | 主链路历史结构已统一走 runtime/contracts，fallback 仅保留兼容兜底 |
 | WS4-01 | 页面信息架构与导航树落图 | WS4 | A / C | P1 | 2026-03-24 | in_progress | 产品边界确认 | F 确认入口层级和命名符合使用预期 | 文档评审 | 已完成首轮页面清单（17 html / 22 entries） |
-| WS4-02 | 散点 html 入口纳管/归档 | WS4 | C / D | P1 | 2026-03-28 | in_progress | 依赖 WS4-01 | F 确认入口清单和页面分组清晰 | `npm run audit:entry-manifest` | 已识别 4 个平台内非统一入口页面 |
+| WS4-02 | 散点 html 入口纳管/归档 | WS4 | C / D | P1 | 2026-03-28 | in_progress | 依赖 WS4-01 | F 确认入口清单和页面分组清晰 | `npm run audit:entry-manifest` | 已纳管 16 个入口，剩余 3 个 `direct-module` 待迁移/决策 |
 | WS5-01 | 页面到服务层调用改造（去直接规则、存储访问） | WS5 | C / D | P1 | 待定 | pending | 依赖 WS6 抽象 | F 确认页面交互未退化 | smoke + code audit | UI 与核心解耦 |
-| WS6-01 | storage 抽象统一（history/settings/replay） | WS6 | D / B | P1 | 待定 | pending | 无 | F 确认设置、历史、回放行为一致 | `npm run test:unit` + `npm run test:smoke:ci` | 页面不直连 `localStorage` |
+| WS6-01 | storage 抽象统一（history/settings/replay） | WS6 | D / B | P1 | 待定 | in_progress | 无 | F 确认设置、历史、回放行为一致 | `npm run test:unit` + `npm run test:smoke:ci` | 页面不直连 `localStorage`（`src` 层已清零；`js` 历史层待分批收口） |
 | WS6-02 | API 层统一（leaderboard/submission/broadcast/account） | WS6 | D / C | P2 | 待定 | pending | 无 | F 确认对外能力可用且错误提示明确 | smoke + integration | 页面不直连业务 API 协议 |
 | WS7-01 | PKU 页面域正式化并接入统一导航 | WS7 | C / F | P2 | 待定 | pending | IA 待确定 | F 确认 PKU 不再是隐藏页 | smoke | PKU 不再隐藏入口 |
 | WS7-02 | PKU 观战/导播链路测试化 | WS7 | C / E | P2 | 待定 | pending | 测试夹具准备 | F 确认关键链路可回归 | smoke | 关键链路可回滚 |
-| WS8-01 | 增加架构契约测试（Engine/contracts/legacy） | WS8 | E / A | P0 | 2026-03-24 | in_progress | 需继续扩展 contracts/engine 边界断言 | F 确认门禁足够拦截回退 | `npm run verify:prepush` | legacy 边界契约已落地，Engine/contracts 契约继续补齐 |
+| WS8-01 | 增加架构契约测试（Engine/contracts/legacy） | WS8 | E / A | P0 | 2026-03-22 | done | 无 | F sign-off 已补连续 CI 证据（WS8=pass） | `npm run verify:prepush` + GitHub Actions `Smoke` 连续 run | legacy/contracts matrix 门禁已落地并通过连续 CI 稳定性观察 |
 
 ## 3. F sign-off 通过条件模板
 
@@ -322,3 +448,309 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 1. 输出 WS3/WS8 F sign-off 证据表并完成 A/F 签收。
 2. 连续观察 2-3 轮 CI，确认 6 合同 matrix 门禁长期稳定。
 3. 按签收结果决定是否将 WS8-01 从 in_progress 转入 done。
+
+## 22. 增量状态更新（2026-03-22 / Batch-WS8-06）
+- WS3-01（contracts 覆盖矩阵）：`in_progress -> done`
+  - 本批完成：补齐 WS3/WS8 F sign-off 证据表，形成“体验/业务/证据/风险”四栏收口记录。
+  - 本批完成：在看板任务池内更新 WS3-01 状态为 `done`，并补充 matrix gate 的 6 合同验收口径。
+  - 结论：WS3-01 退出条件满足，转入已完成态。
+- WS8-01（架构契约门禁）：`in_progress`
+  - 本批完成：形成阶段性 F sign-off 评估，明确当前唯一阻塞项为“CI 连续稳定性观察”。
+  - 结论：维持 `in_progress`，待观察通过后再转 `done`。
+
+### WS3/WS8 F sign-off 证据表（2026-03-22）
+| Workstream | F sign-off 结果 | 体验 | 业务 | 证据 | 风险 | 备注 |
+|---|---|---|---|---|---|---|
+| WS3-01 | pass | pass（历史/回放页面字段展示正常） | pass（contracts 覆盖矩阵可追踪且已扩到 6 合同） | `npx vitest run tests/unit/contracts.spec.ts tests/unit/contracts-matrix-audit-helpers.spec.ts`；`node scripts/contracts-matrix-audit.mjs`；`npm run verify:prepush` | none | 对外展示与存储字段稳定，满足收口条件 |
+| WS8-01 | pass | pass（门禁链路稳定） | pass（legacy + contracts matrix 契约持续阻断回退） | `npm run verify:prepush`；GitHub Actions `Smoke` 连续成功 run：`23381819139` / `23381923006` / `23382265813`（均含 `Refactor Gate=success`） | none | 连续观察条件满足，已转 done |
+
+### 接下来必须做的工作（按优先级）
+1. 完成 WS8-01 的 2-3 轮 CI 连续观察，并把 run 号/结论回填到执行日志。
+2. 继续推进 WS3-02（历史隐式结构迁移），清理剩余 fallback 分支并补充对应 smoke。
+3. 满足稳定性条件后，将 WS8-01 从 `in_progress` 转为 `done` 并更新里程碑状态。
+
+## 23. 增量状态更新（2026-03-22 / Batch-WS3-09）
+- WS3-02（历史隐式结构迁移到 contracts）：`in_progress`
+  - 本批完成：`js/history_page.js` 的 owner/diagnostics 渲染路径收敛为“先 `normalizeHistoryRecordForView`，再复用统一结果渲染/过滤”，移除页面层 owner 二次 runtime 归一化。
+  - 本批完成：owner 筛选选项重建逻辑改为基于归一化记录计算，减少同一记录在页面层被多套规则重复处理。
+  - 本批完成：诊断摘要读取优先消费已归一化的 `diagnostics_index_entries`，仅在缺失时才走兜底归一化。
+  - 验证：history 定向 smoke + `npm run verify:prepush` 全绿。
+- WS8-01（架构契约门禁）：`in_progress`
+  - 本批状态：完整 refactor gate 再次通过（含 contracts-matrix-audit / smoke / build），未出现 contracts/legacy 回流告警。
+
+### 接下来必须做的工作（按优先级）
+1. 执行并登记 WS8-01 的 2-3 轮 CI 连续观察证据（run id / 结果 / 结论），完成后评估转 `done`。
+2. 继续 WS3-02 下一批：收敛 `js/local_history_store.js` 中仍保留的 owner/diagnostics fallback 分支。
+3. 为上述 fallback 收敛补充最小 smoke 覆盖，确保历史列表、导出、owner 过滤行为不回退。
+
+## 24. 增量状态更新（2026-03-22 / Batch-WS3-10）
+- WS3-02（历史隐式结构迁移到 contracts）：`in_progress`
+  - 本批完成：`js/local_history_store.js` 的 `normalizeRecord` 改为复用同一次 runtime 归一化结果，避免 owner/diagnostics 在同一记录上重复调用 runtime helper。
+  - 本批完成：owner 与 diagnostics 归一化新增 `preferRuntime` 开关，在已有 runtime 归一化结果时直接走本地归并逻辑，减少重复路径与规则漂移面。
+  - 本批完成：`diagnostics_index_entries` 改为优先消费 `base`（runtime 或 fallback）中的归一化字段，仅在缺失时回退到原始输入。
+  - 验证：history 定向 smoke、`contracts-matrix-audit`、`npm run verify:prepush` 全绿。
+- WS8-01（架构契约门禁）：`in_progress`
+  - 本批状态：refactor gate 再次全通过，contracts/legacy/engine 门禁无回退信号。
+
+### 接下来必须做的工作（按优先级）
+1. 执行并登记 WS8-01 的 2-3 轮 CI 连续观察证据（run id / 关键步骤 / 结论），满足条件后转 `done`。
+2. 继续 WS3-02：评估并清理 `local_history_store.js` 中 remaining fallback（例如 payload 手工 sanitize 的冗余路径）并补最小回归。
+3. 观察完成后同步更新里程碑总览与 F sign-off 结果列，准备进入下一 Workstream。
+
+## 25. 增量状态更新（2026-03-22 / Batch-WS3-11）
+- WS3-02（历史隐式结构迁移到 contracts）：`in_progress`
+  - 本批完成：`normalizeHistoryRecordFromContext`（TS + runtime）扩展为直接产出 `owner_*` 与 `diagnostics_index_entries`，统一复用已有 owner/diagnostics helper。
+  - 本批完成：`js/local_history_store.js` 在 runtime 归一化成功时直接复用归一化结果，不再对同一记录做 owner/diagnostics 二次归一化。
+  - 本批完成：`resolveRuntimeNormalizedHistoryRecord` 传入 auth 与 diagnostics 限幅参数，确保 runtime 结果与 store 约束一致。
+  - 本批完成：补齐 `core-game-settings-storage` 单测期望（history record 默认包含 owner/diagnostics）。
+  - 验证：定向 unit + history smoke + `npm run verify:prepush` 全绿。
+- WS8-01（架构契约门禁）：`in_progress`
+  - 本批状态：refactor gate 全链路持续通过，未出现 engine/contracts/legacy 回流告警。
+
+### 接下来必须做的工作（按优先级）
+1. 执行并登记 WS8-01 的 2-3 轮 CI 连续观察证据（run id / 结果 / 结论），完成后评估转 `done`。
+2. 继续 WS3-02：评估 `history_page.js` 与 `local_history_store.js` 是否仍有 diagnostics payload 手工 fallback 可下沉到 runtime/contracts。
+3. 按观察结果更新 F sign-off 结论列，并准备切换到 WS4/WS6 的下一批任务。
+
+## 26. 增量状态更新（2026-03-22 / Batch-WS8-07）
+- WS8-01（架构契约门禁）：`in_progress -> done`
+  - 本批完成：补录 GitHub Actions `Smoke` 连续稳定性证据（main 分支，连续 3 次成功）：
+    - run `23381819139`（sha `71e518d644dc884a6f24a0cf1f2b3d8e10116112`）
+    - run `23381923006`（sha `b512262b8c515e24602d7166afa5719b68a32bd7`）
+    - run `23382265813`（sha `8d462ce433df7d3df45cbcc891138fd9067c6991`）
+  - 本批完成：上述 3 次 run 的 `Refactor Gate` job 均为 `completed/success`，且 Smoke 子任务（pages/index-ui/history）全部成功。
+  - 结论：满足“2-3 轮 CI 连续观察”收口条件，WS8-01 转入 `done`。
+- WS3-02（历史隐式结构迁移到 contracts）：`in_progress`
+  - 本批状态：继续推进 fallback 精简，当前无门禁阻塞信号。
+
+### 接下来必须做的工作（按优先级）
+1. 继续 WS3-02：清理 diagnostics payload 手工 fallback 冗余，并补最小定向回归。
+2. 启动 WS4/WS6 下一批任务拆分（入口体系 + storage/API 抽象）并更新任务池状态。
+3. 在下一个批次给出 WS3-02 收口判断（是否可转 done 或进入尾项清单）。
+
+## 27. 增量状态更新（2026-03-22 / Batch-WS3-12）
+- WS3-02（历史隐式结构迁移到 contracts）：`in_progress`
+  - 本批完成：`js/local_history_store.js` 删除 owner/diagnostics 的冗余 runtime 二次归一化分支，收敛为两条明确路径：
+    - runtime 整条记录归一化成功 -> 直接复用；
+    - runtime 记录归一化失败 -> 本地 fallback 归一化。
+  - 本批完成：移除 `resolveRuntimeNormalizedHistoryOwnerMeta` 与 `resolveRuntimeNormalizedDiagnosticsIndexEntries` 相关冗余调用链，降低 list/filter/import 场景重复计算。
+  - 验证：history 定向 smoke + 定向 unit + `npm run verify:prepush` 全绿。
+- WS8-01（架构契约门禁）：`done`
+  - 本批状态：门禁稳定维持，无回退信号。
+
+### 接下来必须做的工作（按优先级）
+1. 对 WS3-02 做收口评估：确认 diagnostics payload fallback 是否仍需保留，或可继续下沉到 runtime/contracts。
+2. 启动 WS4/WS6 下一批任务拆分并更新任务池（入口体系与 storage/API 抽象）。
+3. 给出 M3（contracts 统一）下一阶段里程碑目标与验收口径。
+
+## 28. 增量状态更新（2026-03-22 / Batch-WS3-13-WS6-01)
+- WS3-02（历史隐式结构迁移到 contracts）：`in_progress -> done`
+  - 本批结论：主链路历史记录已统一走 runtime/contracts 归一化；页面与 store 层的重复归一化分支已清理到“runtime 成功直接复用 / fallback 兜底”双路径。
+  - 兼容策略：fallback 保留用于运行时不可用或历史数据容错，不再作为主链路结构来源。
+  - 验证依据：history 定向 smoke、unit、`npm run verify:prepush` 持续通过（最近批次连续全绿）。
+- WS6-01（storage 抽象统一）：`pending -> in_progress`
+  - 本批完成：`src/entries` 首轮基线扫描：
+    - `localStorage` 直连点：2 处（`src/entries/home-family-shared.ts`）
+    - `fetch` 直连点：0 处
+  - 本批完成：入口审计命令 `npm run audit:entry-manifest` 通过，为 WS4/WS6 下一批拆分提供稳定基线。
+
+### 接下来必须做的工作（按优先级）
+1. WS6-01 下一批：处理 `src/entries/home-family-shared.ts` 的 2 处引导态 localStorage 访问，评估是否纳入 storage helper。
+2. WS4-01/WS4-02 下一批：基于已通过的 entry-manifest 审计，输出非统一入口页面的处置优先级（纳管/归档/删除）。
+3. 更新 M3/M4 下一阶段验收口径，确保任务池状态与执行证据一致。
+
+## 29. 增量状态更新（2026-03-22 / Batch-WS6-02）
+- WS6-01（storage 抽象统一）：`in_progress`
+  - 本批完成：`src/entries/home-family-shared.ts` 的 2 处引导态 `localStorage` 直连访问已改为复用 `game-settings-storage` helper（`readStorageFlagFromContext` / `writeStorageFlagFromContext`）。
+  - 本批完成：`src/entries` 直连访问复扫结果更新：
+    - `localStorage`：0 处
+    - `fetch`：0 处
+  - 验证：`audit:entry-manifest`、定向 unit、`npm run verify:prepush` 全绿。
+- WS3-02（历史隐式结构迁移到 contracts）：`done`
+  - 本批状态：已收口，无新增回退信号。
+
+### 接下来必须做的工作（按优先级）
+1. WS6-01 下一批：扩展扫描范围到 `src/features` 与 `src/app`，补齐“页面/feature 不直连 storage”的边界清单。
+2. WS4-01/WS4-02：输出 4 个非统一入口页面的处置优先级与迁移路径。
+3. 评估 WS6-01 的 done 条件与剩余工作量（history/settings/replay 三域覆盖度）。
+
+## 30. 增量状态更新（2026-03-22 / Batch-WS6-03）
+- WS6-01（storage 抽象统一）：`in_progress`
+  - 本批完成：`src/storage/history-idb.ts` 将 migration 阶段 localStorage 访问集中为内部 helper（`resolveLocalStorage/readLocalStorageItem/writeLocalStorageItem`），移除散点直接读写。
+  - 本批完成：`src` 全目录分域复扫（bootstrap/contracts/core/entries/storage/utils）结果：
+    - direct `localStorage`：0 处
+    - direct `fetch`：0 处
+  - 验证：`npm run verify:prepush` 全绿。
+- WS4-01/WS4-02：`in_progress`
+  - 本批状态：沿用 entry-manifest 门禁稳定通过，等待下一批输出入口处置优先级清单。
+
+### 接下来必须做的工作（按优先级）
+1. WS6-01 下一批：把同样扫描口径扩展到 `js` 历史层并做分域优先级（高频页面优先）。
+2. WS4 下一批：输出 4 个非统一入口页面的迁移/归档优先级及目标批次。
+3. 更新 WS6 完成判定：区分“src 层清零已达成”与“全仓历史层收口”的里程碑门槛。
+
+## 31. 增量状态更新（2026-03-22 / Batch-WS6-04）
+- WS6-01（storage 抽象统一）：`in_progress`
+  - 本批完成：`js/history_page.js` 将 `localStorage` 访问收敛到页内 helper（`readLocalStorageItem/writeLocalStorageItem/removeLocalStorageItem`），移除散点直连调用。
+  - 本批完成：`src/storage/history-idb.ts` migration 路径 localStorage 访问统一到 helper，`src` 层保持 0 直连命中。
+  - 本批完成：`src+js` 口径复扫：
+    - direct `localStorage`：`50 -> 40`
+    - direct `fetch`：`7 -> 7`
+  - 验证：history 定向 smoke + `npm run verify:prepush` 全绿。
+
+### 接下来必须做的工作（按优先级）
+1. WS6-01 下一批聚焦高频文件：`js/user_profile_page.js`、`js/local_history_store.js`、`js/theme_manager.js`。
+2. 针对上述文件先做“散点调用收敛到 helper”改造，再评估是否进一步下沉 runtime/core。
+3. 同步更新 WS6 的分域清单（高频/低频）与预计批次数。
+
+## 32. 增量状态更新（2026-03-22 / Batch-WS6-05）
+- WS6-01（storage 抽象统一）：`in_progress`
+  - 本批完成：`js/user_profile_page.js` 的 storage 访问收敛到 helper（`resolveLocalStorage/readLocalStorageItem/writeLocalStorageItem/removeLocalStorageItem/writeSessionStorageItem`），移除 direct `localStorage/sessionStorage` 调用。
+  - 本批完成：`user_profile_page` 文件内 storage 直连命中从 `5` 降至 `0`（`fetch` 保持 `2`）。
+  - 本批完成：`src+js` 口径复扫：
+    - direct `localStorage`：`40 -> 35`
+    - direct `fetch`：`7 -> 7`
+  - 验证：`pages-user-profile-title` 定向 smoke + `npm run verify:prepush` 全绿。
+
+### 接下来必须做的工作（按优先级）
+1. WS6-01 下一批继续处理高频文件：`js/local_history_store.js` 与 `js/theme_manager.js`。
+2. 对 `js` 层的 `fetch` 点位做分层（API helper 内可保留、页面直连需收敛）并补规则说明。
+3. 维持每批 `src+js` 命中数趋势记录，确保 WS6 可量化收口。
+
+## 33. 增量状态更新（2026-03-22 / Batch-WS6-06）
+- WS6-01（storage 抽象统一）：`in_progress`
+  - 本批完成：`js/local_history_store.js` 与 `js/theme_manager.js` 的 localStorage 访问收敛到文件内 helper，移除 direct `localStorage.*` 调用。
+  - 本批完成：两文件 file-level 结果：
+    - `local_history_store.js`：`localStorage 6 -> 0`
+    - `theme_manager.js`：`localStorage 6 -> 0`
+  - 本批完成：`src+js` 口径复扫：
+    - direct `localStorage`：`35 -> 23`
+    - direct `fetch`：`7 -> 7`
+  - 验证：`npm run verify:prepush` 全绿。
+
+### 接下来必须做的工作（按优先级）
+1. WS6-01 下一批处理高优先级剩余：`js/online_leaderboard_runtime.js`、`js/account_page.js`。
+2. 建立 `fetch` 点位分类规则：API helper 内允许、页面直连收敛，并回填到 guardrails/看板。
+3. 维持每批指标快照（`src+js localStorage/fetch`）直至 WS6 收口。
+
+## 34. 增量状态更新（2026-03-22 / Batch-WS6-07）
+- WS6-01（storage 抽象统一）：`in_progress`
+  - 本批完成：`js/online_leaderboard_runtime.js` 与 `js/account_page.js` 的 localStorage 访问收敛到 helper，移除 direct `localStorage.*` 调用。
+  - 本批完成：两文件 file-level 结果：
+    - `online_leaderboard_runtime.js`：`localStorage 4 -> 0`
+    - `account_page.js`：`localStorage 4 -> 0`
+  - 本批完成：`src+js` 口径复扫：
+    - direct `localStorage`：`23 -> 15`
+    - direct `fetch`：`7 -> 7`
+  - 验证：账号/榜单定向 smoke 通过；`verify:prepush` 首次出现 replay 用例超时，重跑失败用例后再次执行 `verify:prepush` 全绿。
+
+### 接下来必须做的工作（按优先级）
+1. WS6-01 下一批处理剩余高值文件：`js/api_shared_utils.js`、`js/refactor_cutover_migration.js`、`js/replay_ui.js`。
+2. 明确 `fetch` 点位分类规则并写入 guardrails（封装层允许、页面直连收敛）。
+3. 继续维持每批指标快照，推动 `src+js localStorage` 向个位数收敛。
+
+## 35. 增量状态更新（2026-03-22 / Batch-WS6-08）
+- WS6-01（storage 抽象统一）：`in_progress`
+  - 本批完成：`js/api_shared_utils.js`、`js/refactor_cutover_migration.js`、`js/replay_ui.js` 引入统一 storage resolver/helper，移除 direct `localStorage/sessionStorage` 访问链路。
+  - 本批完成：三文件 file-level 结果：
+    - `api_shared_utils.js`：`localStorage 3 -> 0`
+    - `refactor_cutover_migration.js`：`localStorage 3 -> 0`
+    - `replay_ui.js`：`localStorage 2 -> 0`
+  - 本批完成：`src+js` 口径复扫：
+    - direct `localStorage`：`15 -> 7`
+    - direct `fetch`：`7 -> 7`
+  - 验证：定向 smoke（account/replay）+ `npm run verify:prepush` 全绿。
+- WS4-01/WS4-02：`in_progress`
+  - 本批状态：入口体系门禁保持稳定，未新增入口侧回流信号。
+
+### 接下来必须做的工作（按优先级）
+1. WS6-01 下一批处理剩余 `localStorage` 高值文件：`js/core_custom_spawn_runtime.js`、`js/core_i18n_runtime.js`、`js/pku2048_inline_stats_runtime.js`、`js/core_timer_module_runtime.js`。
+2. 输出并落地 `fetch` 点位分类规则：API helper 内保留、页面直连继续收敛。
+3. 维持每批 `src+js localStorage/fetch` 指标快照，推动 WS6-01 收口判定。
+
+## 36. 增量状态更新（2026-03-22 / Batch-WS6-09）
+- WS6-01（storage 抽象统一）：`in_progress`
+  - 本批完成：`js/core_custom_spawn_runtime.js`、`js/core_i18n_runtime.js`、`js/pku2048_inline_stats_runtime.js`、`js/core_timer_module_runtime.js` 引入 storage resolver/helper，移除 direct `localStorage.*` 访问。
+  - 本批完成：四文件 file-level 结果：
+    - `core_custom_spawn_runtime.js`：`localStorage 2 -> 0`
+    - `core_i18n_runtime.js`：`localStorage 2 -> 0`
+    - `pku2048_inline_stats_runtime.js`：`localStorage 2 -> 0`
+    - `core_timer_module_runtime.js`：`localStorage 1 -> 0`
+  - 本批完成：`src+js` 口径复扫：
+    - direct `localStorage`：`7 -> 0`（已清零）
+    - direct `fetch`：`7 -> 7`
+  - 验证：`npm run verify:prepush` 全绿（含 unit/smoke/build）。
+- WS4-01/WS4-02：`in_progress`
+  - 本批状态：入口门禁继续稳定，未出现 storage 回流导致的入口层回归。
+
+### 接下来必须做的工作（按优先级）
+1. 进入 WS6 下一收口项：对剩余 `fetch` 点位做分类处置（API helper 保留、页面直连收敛）。
+2. 把 `fetch` 分类规则回填到 guardrails 与 roadmap，形成可审计标准。
+3. 连续保持 refactor gate 观察，确认 `localStorage=0` 状态稳定不反弹。
+
+## 37. 增量状态更新（2026-03-22 / Batch-WS6-10）
+- WS6-01（storage 抽象统一）：`in_progress`
+  - 本批完成：`js/api_shared_utils.js` 新增统一 `callFetch` 入口，页面层 API 请求改为经 shared helper 调用。
+  - 本批完成：`js/account_page.js`、`js/account_settings_page.js`、`js/online_leaderboard_runtime.js`、`js/password_page.js`、`js/register_page.js`、`js/user_profile_page.js` 的 direct `fetch` 调用全部替换为 `callFetch`。
+  - 本批完成：`src+js` 口径复扫：
+    - direct `localStorage`：`0 -> 0`
+    - direct `fetch`：`7 -> 0`（已清零）
+  - 验证：`npm run verify:prepush` 全绿（含 unit/smoke/build）。
+- WS4-01/WS4-02：`in_progress`
+  - 本批状态：入口门禁无回流告警，页面行为保持稳定。
+
+### 接下来必须做的工作（按优先级）
+1. 将“页面层不得 direct storage/fetch，统一走 shared helper/service”写入 guardrails 并补审计项。
+2. 评估 WS6-01 的 `done` 退出条件（是否纳入连续 CI 观察与反弹阈值）。
+3. 联动 WS4 输出入口清单与迁移/归档优先级，避免新增散点入口回流。
+
+## 38. 增量状态更新（2026-03-22 / Batch-WS6-11）
+- WS6-01（storage 抽象统一）：`in_progress`
+  - 本批完成：新增 `scripts/service-boundary-audit.mjs`，把“页面层不得 direct storage/fetch”固化为正式门禁。
+  - 本批完成：`package.json` 新增 `npm run audit:service-boundary`；`scripts/refactor-gate.mjs` 将 `service-boundary-audit` 接入 `verify:prepush`。
+  - 本批完成：`docs/ARCHITECTURE_GUARDRAILS.md` 顶部补充 2026-03-22 guardrail update，明确：
+    - `R4/R5 -> npm run audit:service-boundary`
+    - PR 最小检查纳入 `audit:service-boundary`
+    - 当前基线 `src+js direct localStorage=0 / direct fetch=0`
+  - 验证：`audit:service-boundary`、定向 unit、完整 `npm run verify:prepush` 全绿。
+- WS8-01（架构契约门禁）：`done`
+  - 本批状态：门禁覆盖面继续扩大，storage/fetch 边界正式进入 refactor gate 主链路。
+
+### 接下来必须做的工作（按优先级）
+1. 定义 WS6-01 的 `done` 退出条件，并要求连续 CI 观察不反弹。
+2. 评估是否为 `service-boundary-audit` 增补允许名单/例外机制，避免未来 helper 层演进时被迫绕规则。
+3. 联动 WS4 输出页面入口迁移/归档优先级，防止新增散点入口重新引入边界回流。
+
+### WS6-01 `done` 退出条件（2026-03-22 草案）
+1. `src+js direct localStorage = 0` 且 `src+js direct fetch = 0`，并由 `npm run audit:service-boundary` 自动验证。
+2. `service-boundary-audit` 已纳入 `npm run verify:prepush`，且本地 refactor gate 全链路通过。
+3. 主分支 CI 连续 3 轮通过，期间无 `service-boundary-audit` 回流告警。
+4. `ARCHITECTURE_GUARDRAILS.md` 已明确 R4/R5 的正式命令、范围、阻断条件。
+5. 若出现 helper/service 层合法例外，必须先补白名单/ADR，再允许合并；否则不计入 done。
+## 39. 增量状态更新（2026-03-22 / Batch-WS4-03-WS6-12）
+- WS4-01/WS4-02（页面入口体系治理）：`in_progress`
+  - 本批完成：`entry-manifest-audit` 从仅校验 `play/replay`，扩展为校验全部 16 个 2048 页面入口的架构分类。
+  - 本批完成：显式固化两类入口：
+    - `manifest-bootstrap`：`index / undo / capped / practice / pku2048 / play / replay / index_test`
+    - `direct-module`：`account / account-settings / history / modes / palette / password / register / user-profile`
+  - 本批完成：入口分类现由 `npm run audit:entry-manifest` 自动验证，避免新入口或旧入口改造悄然偏离既定架构。
+  - 当前结论：2048 产品线页面入口已全部纳入清单；剩余债务已收敛为“已知 direct-module 入口待迁移”。
+- WS6-01（storage 抽象统一）：`in_progress`
+  - 本批状态：新增入口分类审计未破坏现有 refactor gate，完整 `npm run verify:prepush` 全绿。
+
+### 当前入口清单（2026-03-22）
+1. `index.html`：站点首页/独立壳，不属于 2048 产品线页面系统。
+2. 2048 产品线页：16 个，已全部映射到 `src/entries/*`。
+3. `direct-module` 入口 8 个，是 WS4 下一阶段的主要迁移对象。
+
+### 接下来必须做的工作（按优先级）
+1. 输出 8 个 `direct-module` 入口的迁移优先级：`history / modes / palette` 优先，`account-family` 次之。
+2. 评估是否将 `history / modes / palette` 先并入统一 bootstrap/manifest，缩小入口体系双轨。
+3. 为 `index.html` 明确长期定位：保留为独立站点壳，或纳入正式产品导航层。
+
+
+# 閲岀▼纰戞帹杩涚湅鏉?
+
+
+
+

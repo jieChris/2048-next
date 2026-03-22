@@ -49,6 +49,36 @@
     }
   ];
 
+  function resolveLocalStorage() {
+    try {
+      if (typeof window === "undefined" || !window.localStorage) return null;
+      return window.localStorage;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function readLocalStorageItem(key) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.getItem !== "function") return null;
+    try {
+      return storage.getItem(key);
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function writeLocalStorageItem(key, value) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.setItem !== "function") return false;
+    try {
+      storage.setItem(key, value);
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
   function clamp(num, min, max) {
     return Math.max(min, Math.min(max, num));
   }
@@ -988,13 +1018,7 @@
   }
 
   function readStoredTilePaletteProfiles() {
-    if (typeof window === "undefined" || !window.localStorage) return [];
-    var raw = null;
-    try {
-      raw = localStorage.getItem(TILE_PALETTE_STORAGE_KEY);
-    } catch (_err) {
-      return [];
-    }
+    var raw = readLocalStorageItem(TILE_PALETTE_STORAGE_KEY);
     if (!raw) return [];
     var parsed;
     try {
@@ -1027,33 +1051,16 @@
   }
 
   function writeStoredTilePaletteProfiles(list) {
-    if (typeof window === "undefined" || !window.localStorage) return false;
-    try {
-      localStorage.setItem(TILE_PALETTE_STORAGE_KEY, JSON.stringify(list || []));
-      return true;
-    } catch (_err) {
-      return false;
-    }
+    return writeLocalStorageItem(TILE_PALETTE_STORAGE_KEY, JSON.stringify(list || []));
   }
 
   function readActiveTilePaletteId() {
-    if (typeof window === "undefined" || !window.localStorage) return DEFAULT_TILE_PALETTE_ID;
-    try {
-      var value = localStorage.getItem(TILE_PALETTE_ACTIVE_KEY);
-      return value ? String(value) : DEFAULT_TILE_PALETTE_ID;
-    } catch (_err) {
-      return DEFAULT_TILE_PALETTE_ID;
-    }
+    var value = readLocalStorageItem(TILE_PALETTE_ACTIVE_KEY);
+    return value ? String(value) : DEFAULT_TILE_PALETTE_ID;
   }
 
   function writeActiveTilePaletteId(value) {
-    if (typeof window === "undefined" || !window.localStorage) return false;
-    try {
-      localStorage.setItem(TILE_PALETTE_ACTIVE_KEY, String(value || DEFAULT_TILE_PALETTE_ID));
-      return true;
-    } catch (_err) {
-      return false;
-    }
+    return writeLocalStorageItem(TILE_PALETTE_ACTIVE_KEY, String(value || DEFAULT_TILE_PALETTE_ID));
   }
 
   function getTilePalettesForTheme(theme) {
@@ -1945,17 +1952,11 @@
   }
 
   function getSavedTheme() {
-    try {
-      return localStorage.getItem(STORAGE_KEY) || DEFAULT_THEME;
-    } catch (e) {
-      return DEFAULT_THEME;
-    }
+    return readLocalStorageItem(STORAGE_KEY) || DEFAULT_THEME;
   }
 
   function saveTheme(themeId) {
-    try {
-      localStorage.setItem(STORAGE_KEY, themeId);
-    } catch (e) {}
+    writeLocalStorageItem(STORAGE_KEY, themeId);
   }
 
   function ensureStyleTag() {

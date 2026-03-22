@@ -1,2 +1,4 @@
-import "../../js/api_shared_utils.js";
-import "../../js/account_settings_page.js";
+import { bootstrapDirectPage } from "../app/bootstrap-direct-page";
+import { bootstrapAccountSettingsPage } from "../pages/account-settings-page";
+
+await bootstrapDirectPage("account-settings", bootstrapAccountSettingsPage);

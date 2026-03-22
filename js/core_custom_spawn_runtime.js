@@ -27,6 +27,14 @@
     return fixed.replace(/\.?0+$/, "");
   }
 
+  function resolveLocalStorage() {
+    try {
+      return global && global["localStorage"] ? global["localStorage"] : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
   function resolveUiLang() {
     try {
       if (global.UII18N && typeof global.UII18N.getLanguage === "function") {
@@ -35,8 +43,9 @@
       }
     } catch (_err) {}
     try {
-      if (global.localStorage && typeof global.localStorage.getItem === "function") {
-        var fromStorage = String(global.localStorage.getItem("ui_language_v1") || "").toLowerCase();
+      var storage = resolveLocalStorage();
+      if (storage && typeof storage.getItem === "function") {
+        var fromStorage = String(storage.getItem("ui_language_v1") || "").toLowerCase();
         if (fromStorage.indexOf("en") === 0) return "en";
       }
     } catch (_err2) {}

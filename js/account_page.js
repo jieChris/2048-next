@@ -8,6 +8,41 @@
   var STORAGE_NICKNAME_KEY = "2048_auth_nickname_v1";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
 
+  function resolveLocalStorage() {
+    try {
+      if (!global || !global.localStorage) return null;
+      return global.localStorage;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function readLocalStorageItem(key) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.getItem !== "function") return null;
+    try {
+      return storage.getItem(key);
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function writeLocalStorageItem(key, value) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.setItem !== "function") return;
+    try {
+      storage.setItem(key, value);
+    } catch (_err) {}
+  }
+
+  function removeLocalStorageItem(key) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.removeItem !== "function") return;
+    try {
+      storage.removeItem(key);
+    } catch (_err) {}
+  }
+
   // --- localStorage key migration (old bare keys -> namespaced keys) ---
   (function migrateStorageKeys() {
     var migrations = [
@@ -16,15 +51,16 @@
       { oldKey: "nickname", newKey: STORAGE_NICKNAME_KEY }
     ];
     try {
-      if (!global.localStorage) return;
+      var storage = resolveLocalStorage();
+      if (!storage) return;
       for (var i = 0; i < migrations.length; i++) {
         var m = migrations[i];
-        var oldVal = global.localStorage.getItem(m.oldKey);
-        if (oldVal != null && global.localStorage.getItem(m.newKey) == null) {
-          global.localStorage.setItem(m.newKey, oldVal);
+        var oldVal = readLocalStorageItem(m.oldKey);
+        if (oldVal != null && readLocalStorageItem(m.newKey) == null) {
+          writeLocalStorageItem(m.newKey, oldVal);
         }
         if (oldVal != null) {
-          global.localStorage.removeItem(m.oldKey);
+          removeLocalStorageItem(m.oldKey);
         }
       }
     } catch (_err) { /* localStorage unavailable or quota exceeded */ }
@@ -41,6 +77,12 @@
   var safeRemoveStorage = _u.safeRemoveStorage || function () {};
   var buildApiBaseCandidates = _u.buildApiBaseCandidates || function () { return []; };
   var resolveApiTimeoutMs = _u.resolveApiTimeoutMs || function () { return DEFAULT_API_TIMEOUT_MS; };
+  var callFetch = _u.callFetch || function (url, requestInit) {
+    if (!global || typeof global["fetch"] !== "function") {
+      return Promise.reject(new Error("fetch_unavailable"));
+    }
+    return global["fetch"](url, requestInit);
+  };
 
   var apiBases = buildApiBaseCandidates();
   var activeApiBase = apiBases[0];
@@ -392,7 +434,7 @@
             try { controller.abort(); } catch (_err) {}
           }, timeoutMs);
         }
-        var response = await global.fetch(base + path, requestInit);
+        var response = await callFetch(base + path, requestInit);
         if (timeoutHandle) {
           global.clearTimeout(timeoutHandle);
           timeoutHandle = null;

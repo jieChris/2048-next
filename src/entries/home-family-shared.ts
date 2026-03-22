@@ -1,5 +1,9 @@
 import { playLegacyScripts } from "./play-runtime-scripts";
 import { replayLegacyScripts } from "./replay-runtime-scripts";
+import {
+  readStorageFlagFromContext,
+  writeStorageFlagFromContext
+} from "../core/game-settings-storage";
 import announcementRecordsUrl from "../../js/announcement_records.js?url";
 import coreAnnouncementRuntimeUrl from "../../js/core_announcement_runtime.js?url";
 import announcementManagerUrl from "../../js/announcement_manager.js?url";
@@ -398,9 +402,13 @@ const HOME_FAMILY_CAPABILITY_SCRIPTS: Readonly<Record<RuntimeCapability, readonl
   play: playLegacyScripts,
   replay: replayLegacyScripts,
   account: [],
+  "account-settings": [],
+  "user-profile": [],
   history: [],
   modes: [],
-  palette: []
+  palette: [],
+  register: [],
+  password: []
 } as const;
 
 export function resolveHomeFamilyScriptsByCapabilities(
@@ -419,7 +427,13 @@ export function resolveHomeFamilyScriptsByCapabilities(
 
 export function showCappedGuideOverlay(): void {
   const guideKey = "capped_guide_shown_v1";
-  if (window.localStorage.getItem(guideKey)) {
+  if (
+    readStorageFlagFromContext({
+      windowLike: window,
+      key: guideKey,
+      trueValue: "true"
+    })
+  ) {
     return;
   }
 
@@ -439,7 +453,13 @@ export function showCappedGuideOverlay(): void {
   const dismiss = () => {
     overlay.style.display = "none";
     titleLink.classList.remove("guide-highlight");
-    window.localStorage.setItem(guideKey, "true");
+    writeStorageFlagFromContext({
+      windowLike: window,
+      key: guideKey,
+      enabled: true,
+      trueValue: "true",
+      falseValue: "false"
+    });
   };
 
   overlay.addEventListener("click", dismiss, { once: true });

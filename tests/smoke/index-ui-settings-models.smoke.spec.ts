@@ -153,6 +153,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         await new Promise((resolve) => {
           window.requestAnimationFrame(() => resolve(null));
         });
+        await new Promise((resolve) => {
+          window.setTimeout(() => resolve(null), 120);
+        });
         return {
           hasRuntime: true,
           hasPageHostRuntime: true,

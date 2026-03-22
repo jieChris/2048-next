@@ -1,3 +1,116 @@
+# A-F Sync Update (2026-03-22, Batch-WS4-02D3)
+
+## Current Stage Decision
+- `WS4` page-entry migration has completed its current cut.
+- Audited page entries: `16`
+- Remaining `direct-module` entries: `0`
+- Final page completed in this batch: `user-profile`
+- `user-profile` is now frozen under the `profile-history-replay` family, not `auth-security`.
+- Completed direct-page bootstrap samples are now:
+  - `modes`
+  - `palette`
+  - `history`
+  - `account`
+  - `account-settings`
+  - `register`
+  - `password`
+  - `user-profile`
+
+## What Changed In This Batch
+- `src/entries/user-profile.ts` now boots through `bootstrapDirectPage("user-profile", bootstrapUserProfilePage)`.
+- `src/pages/user-profile-page.ts` was added as a thin page-system shell over the existing legacy profile runtime.
+- `runtime-manifest`, `page-bootstrap`, `home-family-shared`, and `entry-manifest-audit` now treat `user-profile` as a first-class manifest-managed page.
+- Dedicated unit and page-system smoke coverage were added for `user-profile`.
+
+## Verification Snapshot
+- Targeted unit: pass
+- `npm run audit:entry-manifest`: pass
+- Targeted smoke:
+  - `pages-user-profile-page-system`: pass
+  - `pages-user-profile-title`: pass
+- Final `npm run verify:prepush`: pass
+- Stability note:
+  - intermediate full runs hit existing Playwright server/startup instability in unrelated `history` / `index-ui` smoke suites
+  - single-test reruns passed
+  - final full `verify:prepush` passed
+  - current classification: `suspected_flake` outside the `user-profile` migration itself
+
+## Immediate Next Step
+- `WS4-02` page-entry closure is complete.
+- The next page-system task is `WS4-03`: define and enforce a `legacy-runtime-import boundary` for `src/pages/* -> ../../js/*.js` transitional adapters while keeping current behavior stable.
+
+# A-F Sync Update (2026-03-22)
+
+## 当前阶段判断
+- 本节作为 2026-03-22 的主裁决，优先级高于下方仍未重写的旧基线描述。
+- `WS6` 已从“代码清理阶段”转入“稳定性观察阶段”：
+  - `src+js direct localStorage = 0`
+  - `src+js direct fetch = 0`
+  - `audit:service-boundary` 已接入 `verify:prepush`
+  - 但尚未满足 `done`，因为还缺 owner/exception 正式机制、扫描范围定义、主分支连续 3 轮 CI 证据落表。
+- `WS4` 已从“入口识别阶段”转入“迁移决策阶段”：
+  - 当前已审计 `16` 个页面入口。
+  - 其中 `3` 个仍为 `direct-module`。
+  - 其中 `0` 个已 manifest-ready：`history / account / account-settings` 已完成迁移。
+  - 其中 `3` 个仍未进入 `runtime-manifest`：`register / password / user-profile`。
+  - `modes` 已完成第一批 `direct-module -> manifest-bootstrap` 样板迁移。
+  - `palette` 已完成第二批 `direct-module -> manifest-bootstrap` 样板迁移，验证了 `page host + feature host + i18n/page copy` 组合路径。
+  - `history` 已完成第三批样板迁移，作为 `storage/contracts-first` 功能页样板。
+  - `account` 已完成第四批样板迁移，作为 `services/auth-first` 账号壳页样板。
+  - `account-settings` 已完成第五批样板迁移，纳入 `authenticated account shell` family。
+- 当前真正的主阻塞已经切换为：
+  1. legacy shell 仍在主链路中；
+  2. `Engine/contracts` 还不是唯一运行现实；
+  3. deploy 尚未被完整质量门禁硬阻断。
+
+## 结构性缺口
+- `Legacy shell still alive`
+  - 主入口仍依赖 legacy loader，`M5` 还不能进入删除阶段。
+- `Engine single entry not real yet`
+  - `createEngineSession()` 已存在，但尚未接管主链路；页面层仍依赖 `window.game_manager`。
+- `Contracts single source not closed yet`
+  - replay/import/export/competition 的协议仍存在“文档声明”和“运行现实”偏移。
+- `Page system still dual-track`
+  - 入口已经被清单化，`modes / palette / history / account` 已进入统一 direct-page bootstrap；
+  - 但页面系统本身还没有形成完整的 `app bootstrap + pages shell + features orchestration + ui presentation` 四层闭合。
+- `Release gate not fully authoritative`
+  - deploy workflow 仍可能绕过完整 `verify:refactor:ci` 语义门禁。
+
+## 里程碑依赖顺序
+1. `M2 + M3`
+   - 先完成唯一 Engine 会话、回放协议统一、比赛提交协议统一。
+2. `M4`
+   - 再把页面体系从“可审计”推进到“可迁移、可解释、可验收”。
+3. `M5`
+   - 在核心与页面体系收口后，执行 legacy shell cutover 与物理退场。
+4. `M6`
+   - 最后将 PKU 从隐藏能力升格为正式产品线。
+
+## 最小可发布切片
+- `Slice A: Ordinary Play Platformization`
+  - 普通游玩、模式、历史、回放形成统一页面系统与稳定主链路。
+- `Slice B: Account Domain Closure`
+  - 账号中心、设置、资料、注册、密码恢复形成明确能力边界与统一体验。
+- `Slice C: PKU Formal Product Line`
+  - 比赛、提交、榜单、导播、观战进入正式页面与协议体系。
+
+## 下一批角色分工
+- `A`
+  - 输出 `M2/M3 -> M4 -> M5` 的 cutover 依赖图，并拍板允许保留的临时直连边界。
+- `B`
+  - 拆解并推进：
+    - `B-ENG-01` 唯一 Engine 会话接管
+    - `B-CONTRACT-01` Replay 合同升级
+    - `B-COMP-01` Competition/Submit 合同落地
+- `C`
+  - 已完成 `modes -> palette -> history -> account -> account-settings` 五个 direct-page 样板；下一批推进 `register + password` 的 `auth-security` family，并将 `user-profile` 重分类到 `profile-history` 轨。
+- `D`
+  - 把 `service-boundary` 从语法阻断升级为 owner-aware 审计，并将 deploy 绑定到已通过门禁的构建。
+- `E`
+  - 建立 `CI blocking topology` 与 `flake ledger`，把“首次失败/复跑通过”纳入结构化管理。
+- `F`
+  - 输出 `WS4/WS6` sign-off 验收矩阵，维护阶段性 `pass` 与最终 `done` 的区别。
+
 # 2048 平台重构总推进文档
 
 > 文档定位：这是唯一的“总控文档”，用于定义目标、约束、里程碑和验收规则。  
@@ -158,3 +271,8 @@
 1. 先补录第 3 节基线数值（用脚本产出，不手填估算）。
 2. 在 `ROADMAP_MILESTONES` 中给每个 WS 指派负责人和时间窗。
 3. 先把 M1 作为硬约束达成，再推进 M2/M3。
+
+
+# 2048 骞冲彴閲嶆瀯鎬绘帹杩涙枃妗?
+
+

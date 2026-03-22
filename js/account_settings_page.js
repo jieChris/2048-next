@@ -17,6 +17,12 @@
   var safeRemoveStorage = _u.safeRemoveStorage || function () {};
   var buildApiBaseCandidates = _u.buildApiBaseCandidates || function () { return []; };
   var resolveApiTimeoutMs = _u.resolveApiTimeoutMs || function () { return DEFAULT_API_TIMEOUT_MS; };
+  var callFetch = _u.callFetch || function (url, requestInit) {
+    if (!global || typeof global["fetch"] !== "function") {
+      return Promise.reject(new Error("fetch_unavailable"));
+    }
+    return global["fetch"](url, requestInit);
+  };
 
   var apiBases = buildApiBaseCandidates();
   var currentLang = readLanguage();
@@ -300,7 +306,7 @@
           }, timeoutMs);
         }
 
-        var response = await global.fetch(base + path, requestInit);
+        var response = await callFetch(base + path, requestInit);
         if (timeoutHandle) {
           global.clearTimeout(timeoutHandle);
           timeoutHandle = null;

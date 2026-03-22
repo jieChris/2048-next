@@ -531,7 +531,12 @@ describe("core game settings storage", () => {
       end_reason: "game_over",
       client_version: "2.0",
       replay: { v: 3 },
-      replay_string: JSON.stringify({ v: 3 })
+      replay_string: JSON.stringify({ v: 3 }),
+      owner_type: "guest",
+      owner_user_id: null,
+      owner_nickname: "",
+      owner_key: "guest",
+      diagnostics_index_entries: []
     });
   });
 

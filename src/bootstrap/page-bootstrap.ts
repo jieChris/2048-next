@@ -48,6 +48,10 @@ const PAGE_DESCRIPTORS: Record<string, Partial<PageCapabilityDescriptor>> = {
   replay: { needsReplay: true },
   history: { needsHistory: true },
   account: { needsLeaderboard: true },
+  "account-settings": { needsSettings: true, needsI18n: true },
+  "user-profile": { needsHistory: true, needsReplay: true },
+  register: {},
+  password: {},
   modes: { needsI18n: true },
   palette: { needsSettings: true },
   index_test: { needsSettings: true, needsI18n: true, devOnly: true }

@@ -19,9 +19,18 @@
 
   /* ---------- safe localStorage wrappers ---------- */
 
+  function resolveLocalStorage() {
+    try {
+      return global && global["localStorage"] ? global["localStorage"] : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
   function safeGetStorage(key) {
     try {
-      return global.localStorage ? global.localStorage.getItem(key) : null;
+      var storage = resolveLocalStorage();
+      return storage ? storage.getItem(key) : null;
     } catch (_err) {
       return null;
     }
@@ -29,15 +38,17 @@
 
   function safeSetStorage(key, value) {
     try {
-      if (!global.localStorage) return;
-      global.localStorage.setItem(key, value);
+      var storage = resolveLocalStorage();
+      if (!storage) return;
+      storage.setItem(key, value);
     } catch (_err) {}
   }
 
   function safeRemoveStorage(key) {
     try {
-      if (!global.localStorage) return;
-      global.localStorage.removeItem(key);
+      var storage = resolveLocalStorage();
+      if (!storage) return;
+      storage.removeItem(key);
     } catch (_err) {}
   }
 
@@ -84,6 +95,17 @@
     return (Number.isFinite(fallback) && fallback > 0) ? Math.floor(fallback) : 12000;
   }
 
+  function callFetch(url, requestInit) {
+    try {
+      if (!global || typeof global["fetch"] !== "function") {
+        return Promise.reject(new Error("fetch_unavailable"));
+      }
+      return global["fetch"](url, requestInit);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+
   /* ---------- public namespace ---------- */
 
   global.ApiSharedUtils = {
@@ -92,7 +114,8 @@
     safeSetStorage: safeSetStorage,
     safeRemoveStorage: safeRemoveStorage,
     buildApiBaseCandidates: buildApiBaseCandidates,
-    resolveApiTimeoutMs: resolveApiTimeoutMs
+    resolveApiTimeoutMs: resolveApiTimeoutMs,
+    callFetch: callFetch
   };
 
 })(typeof window !== "undefined" ? window : undefined);

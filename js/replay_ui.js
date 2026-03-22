@@ -140,6 +140,48 @@ var REPLAY_UI_IDLE_INTERVAL_MS = 1000;
 var REPLAY_UI_HIDDEN_INTERVAL_MS = 1800;
 var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
 
+function resolveLocalStorage() {
+    try {
+        return window && window["localStorage"] ? window["localStorage"] : null;
+    } catch (_error) {
+        return null;
+    }
+}
+
+function resolveSessionStorage() {
+    try {
+        return window && window["sessionStorage"] ? window["sessionStorage"] : null;
+    } catch (_error) {
+        return null;
+    }
+}
+
+function readLocalStorageItem(key) {
+    try {
+        var storage = resolveLocalStorage();
+        return storage ? storage.getItem(key) : null;
+    } catch (_error) {
+        return null;
+    }
+}
+
+function readSessionStorageItem(key) {
+    try {
+        var storage = resolveSessionStorage();
+        return storage ? storage.getItem(key) : null;
+    } catch (_error) {
+        return null;
+    }
+}
+
+function removeSessionStorageItem(key) {
+    try {
+        var storage = resolveSessionStorage();
+        if (!storage) return;
+        storage.removeItem(key);
+    } catch (_error) {}
+}
+
 function cancelReplayPendingRelayout() {
     if (!replayRelayoutTimer) return;
     clearTimeout(replayRelayoutTimer);
@@ -256,8 +298,8 @@ function updateReplayUI() {
             if (window.UII18N && typeof window.UII18N.getLanguage === "function") {
                 var uiLang = String(window.UII18N.getLanguage() || "").toLowerCase();
                 if (uiLang.indexOf("en") === 0) lang = "en";
-            } else if (window.localStorage && typeof window.localStorage.getItem === "function") {
-                var storedLang = String(window.localStorage.getItem("ui_language_v1") || "").toLowerCase();
+            } else {
+                var storedLang = String(readLocalStorageItem("ui_language_v1") || "").toLowerCase();
                 if (storedLang.indexOf("en") === 0) lang = "en";
             }
         } catch (_err) {}
@@ -440,10 +482,7 @@ async function loadReplayFromSessionId() {
 
     if (cloudReplay === "1") {
         try {
-            var cloudReplayPayloadRaw = "";
-            if (window.sessionStorage && typeof window.sessionStorage.getItem === "function") {
-                cloudReplayPayloadRaw = String(window.sessionStorage.getItem(CLOUD_REPLAY_STORAGE_KEY) || "");
-            }
+            var cloudReplayPayloadRaw = String(readSessionStorageItem(CLOUD_REPLAY_STORAGE_KEY) || "");
             if (!cloudReplayPayloadRaw) throw new Error("cloud_replay_payload_missing");
             var cloudReplayPayload = JSON.parse(cloudReplayPayloadRaw);
             var replayPayload = cloudReplayPayload && cloudReplayPayload.replay_string
@@ -455,9 +494,7 @@ async function loadReplayFromSessionId() {
             if (titleCloud) {
       titleCloud.innerHTML = "<a href='2048.html' style='text-decoration: none; color: inherit; cursor: pointer;'>2048</a> 回放 - 云端记录";
             }
-            if (window.sessionStorage && typeof window.sessionStorage.removeItem === "function") {
-                window.sessionStorage.removeItem(CLOUD_REPLAY_STORAGE_KEY);
-            }
+            removeSessionStorageItem(CLOUD_REPLAY_STORAGE_KEY);
             clearReplayDiagnosticsPanel();
             updateReplayUI();
         } catch (cloudReplayError) {

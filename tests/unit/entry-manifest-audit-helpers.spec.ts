@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  PAGE_ENTRY_SPECS,
+  collectPageEntryRecords,
+  detectEntryArchitecture,
   ensureCapabilityMapped,
+  ensureDirectPageUsesManifest,
+  ensureAllPageEntriesExist,
   ensureEntryHasNoLegacyImports,
+  ensurePageEntryArchitectures,
   ensureEntryUsesManifest,
   ensureImportAndExportOrderAligned,
   ensureScriptOrderConstraints,
@@ -28,16 +34,95 @@ describe("entry-manifest-audit helpers", () => {
   });
 
   it("rejects direct runtime script imports in entry files", () => {
-    const validEntry = 'import { bootstrapHomeFamilyPage } from "./home-family-bootstrap";';
+    const validEntry = [
+      'import { bootstrapDirectPage } from "../app/bootstrap-direct-page";',
+      'import { bootstrapModesPage } from "../pages/modes-page";',
+      "",
+      'await bootstrapDirectPage("modes", bootstrapModesPage);'
+    ].join("\n");
     const invalidEntry = [
-      'import { bootstrapHomeFamilyPage } from "./home-family-bootstrap";',
-      'import "./legacy-runtime.js";'
+      'import { bootstrapDirectPage } from "../app/bootstrap-direct-page";',
+      'import "../../js/theme_manager.js";'
     ].join("\n");
 
-    expect(() => ensureEntryHasNoLegacyImports(validEntry, "play.ts")).not.toThrow();
-    expect(() => ensureEntryHasNoLegacyImports(invalidEntry, "play.ts")).toThrow(
+    expect(() => ensureEntryHasNoLegacyImports(validEntry, "modes.ts")).not.toThrow();
+    expect(() => ensureEntryHasNoLegacyImports(invalidEntry, "modes.ts")).toThrow(
       /should not import runtime scripts directly/
     );
+  });
+
+  it("validates direct-page manifest bootstrap usage", () => {
+    const validEntry = [
+      'import { bootstrapDirectPage } from "../app/bootstrap-direct-page";',
+      'import { bootstrapPalettePage } from "../pages/palette-page";',
+      "",
+      'await bootstrapDirectPage("palette", bootstrapPalettePage);'
+    ].join("\n");
+    const validAccountEntry = [
+      'import { bootstrapDirectPage } from "../app/bootstrap-direct-page";',
+      'import { bootstrapAccountPage } from "../pages/account-page";',
+      "",
+      'await bootstrapDirectPage("account", bootstrapAccountPage);'
+    ].join("\n");
+    const validAccountSettingsEntry = [
+      'import { bootstrapDirectPage } from "../app/bootstrap-direct-page";',
+      'import { bootstrapAccountSettingsPage } from "../pages/account-settings-page";',
+      "",
+      'await bootstrapDirectPage("account-settings", bootstrapAccountSettingsPage);'
+    ].join("\n");
+    const validHistoryEntry = [
+      'import { bootstrapDirectPage } from "../app/bootstrap-direct-page";',
+      'import { bootstrapHistoryPage } from "../pages/history-page";',
+      "",
+      'await bootstrapDirectPage("history", bootstrapHistoryPage);'
+    ].join("\n");
+    const validRegisterEntry = [
+      'import { bootstrapDirectPage } from "../app/bootstrap-direct-page";',
+      'import { bootstrapRegisterPage } from "../pages/register-page";',
+      "",
+      'await bootstrapDirectPage("register", bootstrapRegisterPage);'
+    ].join("\n");
+    const validPasswordEntry = [
+      'import { bootstrapDirectPage } from "../app/bootstrap-direct-page";',
+      'import { bootstrapPasswordPage } from "../pages/password-page";',
+      "",
+      'await bootstrapDirectPage("password", bootstrapPasswordPage);'
+    ].join("\n");
+    const validUserProfileEntry = [
+      'import { bootstrapDirectPage } from "../app/bootstrap-direct-page";',
+      'import { bootstrapUserProfilePage } from "../pages/user-profile-page";',
+      "",
+      'await bootstrapDirectPage("user-profile", bootstrapUserProfilePage);'
+    ].join("\n");
+
+    expect(() =>
+      ensureDirectPageUsesManifest(validEntry, "palette.ts", "palette")
+    ).not.toThrow();
+    expect(() =>
+      ensureDirectPageUsesManifest(validAccountEntry, "account.ts", "account")
+    ).not.toThrow();
+    expect(() =>
+      ensureDirectPageUsesManifest(
+        validAccountSettingsEntry,
+        "account-settings.ts",
+        "account-settings"
+      )
+    ).not.toThrow();
+    expect(() =>
+      ensureDirectPageUsesManifest(validHistoryEntry, "history.ts", "history")
+    ).not.toThrow();
+    expect(() =>
+      ensureDirectPageUsesManifest(validRegisterEntry, "register.ts", "register")
+    ).not.toThrow();
+    expect(() =>
+      ensureDirectPageUsesManifest(validPasswordEntry, "password.ts", "password")
+    ).not.toThrow();
+    expect(() =>
+      ensureDirectPageUsesManifest(validUserProfileEntry, "user-profile.ts", "user-profile")
+    ).not.toThrow();
+    expect(() =>
+      ensureDirectPageUsesManifest(validEntry, "palette.ts", "modes")
+    ).toThrow(/must call bootstrapDirectPage\("modes", \.\.\.\)/);
   });
 
   it("validates capability to symbol mapping", () => {
@@ -93,5 +178,55 @@ describe("entry-manifest-audit helpers", () => {
     expect(() =>
       ensureScriptOrderConstraints(order, "play-runtime-scripts.ts", invalidConstraints)
     ).toThrow(/invalid order/);
+  });
+
+  it("detects entry architecture styles", () => {
+    expect(
+      detectEntryArchitecture('import { bootstrapHomeFamilyPage } from "./home-family-bootstrap";')
+    ).toBe("manifest-bootstrap");
+    expect(
+      detectEntryArchitecture('import { bootstrapDirectPage } from "../app/bootstrap-direct-page";')
+    ).toBe("manifest-bootstrap");
+    expect(detectEntryArchitecture('import "../../js/account_page.js";')).toBe("direct-module");
+  });
+
+  it("collects page entry records from the explicit page spec list", () => {
+    const records = [
+      { fileName: "index.ts", content: 'bootstrapHomeFamilyPage("index");' },
+      { fileName: "account.ts", content: 'import "../../js/account_page.js";' },
+      {
+        fileName: "account-settings.ts",
+        content: 'await bootstrapDirectPage("account-settings", bootstrapAccountSettingsPage);'
+      }
+    ];
+
+    const collected = collectPageEntryRecords(records);
+    expect(collected.find((entry) => entry.entryFile === "index.ts")?.fileRecord).toEqual(records[0]);
+    expect(collected.find((entry) => entry.entryFile === "account.ts")?.fileRecord).toEqual(records[1]);
+    expect(collected.find((entry) => entry.entryFile === "account-settings.ts")?.fileRecord).toEqual(
+      records[2]
+    );
+    expect(PAGE_ENTRY_SPECS.some((entry) => entry.entryFile === "user-profile.ts")).toBe(true);
+    expect(PAGE_ENTRY_SPECS.some((entry) => entry.entryFile === "account-settings.ts")).toBe(true);
+    expect(PAGE_ENTRY_SPECS.some((entry) => entry.entryFile === "register.ts")).toBe(true);
+    expect(PAGE_ENTRY_SPECS.some((entry) => entry.entryFile === "password.ts")).toBe(true);
+  });
+
+  it("rejects missing page entry files and architecture drift", () => {
+    expect(() =>
+      ensureAllPageEntriesExist([
+        { htmlFile: "2048.html", entryFile: "index.ts", fileRecord: null }
+      ])
+    ).toThrow(/missing page entry files/);
+
+    expect(() =>
+      ensurePageEntryArchitectures([
+        {
+          entryFile: "index.ts",
+          architecture: "manifest-bootstrap",
+          fileRecord: { content: 'import "../../js/index_page.js";' }
+        }
+      ])
+    ).toThrow(/page entry architecture drift/);
   });
 });

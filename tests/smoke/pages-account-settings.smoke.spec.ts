@@ -131,7 +131,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(passwordChangePayload?.new_password).toBe("new_pass2!");
 
     await page.click("#settings-logout-btn");
-    await page.waitForURL(/2048\.html/, { timeout: 4000 });
+    await page.waitForURL(/2048\.html/, {
+      timeout: 4000,
+      waitUntil: "domcontentloaded"
+    });
 
     const logoutSnapshot = await page.evaluate(() => ({
       token: window.localStorage.getItem("2048_auth_token_v1"),

@@ -6,6 +6,25 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "..");
 
+const PAGE_ENTRY_SPECS = [
+  { htmlFile: "2048.html", entryFile: "index.ts", pageId: "index", architecture: "manifest-bootstrap" },
+  { htmlFile: "undo_2048.html", entryFile: "undo.ts", pageId: "undo", architecture: "manifest-bootstrap" },
+  { htmlFile: "capped_2048.html", entryFile: "capped.ts", pageId: "capped", architecture: "manifest-bootstrap" },
+  { htmlFile: "Practice_board.html", entryFile: "practice-board.ts", pageId: "practice", architecture: "manifest-bootstrap" },
+  { htmlFile: "PKU2048.html", entryFile: "pku2048.ts", pageId: "pku2048", architecture: "manifest-bootstrap" },
+  { htmlFile: "play.html", entryFile: "play.ts", pageId: "play", architecture: "manifest-bootstrap" },
+  { htmlFile: "replay.html", entryFile: "replay.ts", pageId: "replay", architecture: "manifest-bootstrap" },
+  { htmlFile: "index_test.html", entryFile: "index-test-page.ts", pageId: "index_test", architecture: "manifest-bootstrap" },
+  { htmlFile: "account.html", entryFile: "account.ts", pageId: "account", architecture: "manifest-bootstrap" },
+  { htmlFile: "account_settings.html", entryFile: "account-settings.ts", pageId: "account-settings", architecture: "manifest-bootstrap" },
+  { htmlFile: "register.html", entryFile: "register.ts", pageId: "register", architecture: "manifest-bootstrap" },
+  { htmlFile: "password.html", entryFile: "password.ts", pageId: "password", architecture: "manifest-bootstrap" },
+  { htmlFile: "history.html", entryFile: "history.ts", pageId: "history", architecture: "manifest-bootstrap" },
+  { htmlFile: "modes.html", entryFile: "modes.ts", pageId: "modes", architecture: "manifest-bootstrap" },
+  { htmlFile: "palette.html", entryFile: "palette.ts", pageId: "palette", architecture: "manifest-bootstrap" },
+  { htmlFile: "user.html", entryFile: "user-profile.ts", pageId: "user-profile", architecture: "manifest-bootstrap" }
+];
+
 function fail(message) {
   throw new Error(message);
 }
@@ -27,6 +46,18 @@ function ensureEntryUsesManifest(entryContent, entryName, pageId) {
   }
 }
 
+function ensureDirectPageUsesManifest(entryContent, entryName, pageId) {
+  if (!entryContent.includes("bootstrapDirectPage")) {
+    fail(`${entryName}: missing bootstrapDirectPage import/call`);
+  }
+  if (!entryContent.includes(`bootstrapDirectPage("${pageId}"`)) {
+    fail(`${entryName}: must call bootstrapDirectPage("${pageId}", ...)`);
+  }
+  if (entryContent.includes("loadLegacyScriptsSequentially")) {
+    fail(`${entryName}: should not directly call loadLegacyScriptsSequentially`);
+  }
+}
+
 function ensureCapabilityMapped(sharedContent, capability, symbolName) {
   const bindingPattern = new RegExp(`\\b${capability}\\s*:\\s*${symbolName}\\b`);
   if (!bindingPattern.test(sharedContent)) {
@@ -36,12 +67,53 @@ function ensureCapabilityMapped(sharedContent, capability, symbolName) {
 
 function ensureEntryHasNoLegacyImports(entryContent, entryName) {
   const lines = entryContent.split(/\r?\n/);
-  const nonBootstrapImports = lines.filter(
-    (line) => line.startsWith("import ") && !line.includes('"./home-family-bootstrap"')
+  const directLegacyImports = lines.filter(
+    (line) =>
+      line.startsWith("import ") && (line.includes("../../js/") || line.includes("?url"))
   );
-  if (nonBootstrapImports.length > 0) {
+  if (directLegacyImports.length > 0) {
     fail(`${entryName}: should not import runtime scripts directly`);
   }
+}
+
+function detectEntryArchitecture(entryContent) {
+  return String(entryContent || "").match(/bootstrapHomeFamilyPage|bootstrapDirectPage/)
+    ? "manifest-bootstrap"
+    : "direct-module";
+}
+
+function collectPageEntryRecords(fileRecords) {
+  return PAGE_ENTRY_SPECS.map((spec) => {
+    const record = fileRecords.find((entry) => entry.fileName === spec.entryFile) || null;
+    return {
+      ...spec,
+      fileRecord: record
+    };
+  });
+}
+
+function ensureAllPageEntriesExist(pageEntryRecords) {
+  const missing = pageEntryRecords.filter((entry) => !entry.fileRecord);
+  if (missing.length === 0) return;
+  fail(
+    "[entry-manifest-audit] missing page entry files: " +
+      missing.map((entry) => `${entry.htmlFile} -> ${entry.entryFile}`).join(", ")
+  );
+}
+
+function ensurePageEntryArchitectures(pageEntryRecords) {
+  const mismatches = [];
+  for (const entry of pageEntryRecords) {
+    if (!entry.fileRecord) continue;
+    const actualArchitecture = detectEntryArchitecture(entry.fileRecord.content);
+    if (actualArchitecture !== entry.architecture) {
+      mismatches.push(
+        `${entry.entryFile}: expected ${entry.architecture}, received ${actualArchitecture}`
+      );
+    }
+  }
+  if (mismatches.length === 0) return;
+  fail("[entry-manifest-audit] page entry architecture drift: " + mismatches.join(", "));
 }
 
 function extractScriptImportOrder(moduleContent, exportName, moduleName) {
@@ -93,19 +165,60 @@ function ensureImportAndExportOrderAligned(importOrder, exportedOrder, moduleNam
 }
 
 async function runEntryManifestAudit() {
+  const entryDir = path.resolve(repoRoot, "src", "entries");
+  const { readdir } = await import("node:fs/promises");
+  const entryDirEntries = await readdir(entryDir, { withFileTypes: true });
+  const entryFileRecords = [];
+  for (const entry of entryDirEntries) {
+    if (!entry.isFile() || !entry.name.endsWith(".ts")) continue;
+    const filePath = path.resolve(entryDir, entry.name);
+    const content = await readFile(filePath, "utf8");
+    entryFileRecords.push({ fileName: entry.name, filePath, content });
+  }
+  const pageEntryRecords = collectPageEntryRecords(entryFileRecords);
+
   const playEntry = await readUtf8("src/entries/play.ts");
   const replayEntry = await readUtf8("src/entries/replay.ts");
+  const accountEntry = await readUtf8("src/entries/account.ts");
+  const accountSettingsEntry = await readUtf8("src/entries/account-settings.ts");
+  const registerEntry = await readUtf8("src/entries/register.ts");
+  const passwordEntry = await readUtf8("src/entries/password.ts");
+  const userProfileEntry = await readUtf8("src/entries/user-profile.ts");
+  const modesEntry = await readUtf8("src/entries/modes.ts");
+  const paletteEntry = await readUtf8("src/entries/palette.ts");
   const shared = await readUtf8("src/entries/home-family-shared.ts");
   const playRuntimeScripts = await readUtf8("src/entries/play-runtime-scripts.ts");
   const replayRuntimeScripts = await readUtf8("src/entries/replay-runtime-scripts.ts");
 
   ensureEntryUsesManifest(playEntry, "src/entries/play.ts", "play");
   ensureEntryUsesManifest(replayEntry, "src/entries/replay.ts", "replay");
+  ensureDirectPageUsesManifest(accountEntry, "src/entries/account.ts", "account");
+  ensureDirectPageUsesManifest(
+    accountSettingsEntry,
+    "src/entries/account-settings.ts",
+    "account-settings"
+  );
+  ensureDirectPageUsesManifest(registerEntry, "src/entries/register.ts", "register");
+  ensureDirectPageUsesManifest(passwordEntry, "src/entries/password.ts", "password");
+  ensureDirectPageUsesManifest(userProfileEntry, "src/entries/user-profile.ts", "user-profile");
+  ensureDirectPageUsesManifest(await readUtf8("src/entries/history.ts"), "src/entries/history.ts", "history");
+  ensureDirectPageUsesManifest(modesEntry, "src/entries/modes.ts", "modes");
+  ensureDirectPageUsesManifest(paletteEntry, "src/entries/palette.ts", "palette");
   ensureEntryHasNoLegacyImports(playEntry, "src/entries/play.ts");
   ensureEntryHasNoLegacyImports(replayEntry, "src/entries/replay.ts");
+  ensureEntryHasNoLegacyImports(accountEntry, "src/entries/account.ts");
+  ensureEntryHasNoLegacyImports(accountSettingsEntry, "src/entries/account-settings.ts");
+  ensureEntryHasNoLegacyImports(registerEntry, "src/entries/register.ts");
+  ensureEntryHasNoLegacyImports(passwordEntry, "src/entries/password.ts");
+  ensureEntryHasNoLegacyImports(userProfileEntry, "src/entries/user-profile.ts");
+  ensureEntryHasNoLegacyImports(await readUtf8("src/entries/history.ts"), "src/entries/history.ts");
+  ensureEntryHasNoLegacyImports(modesEntry, "src/entries/modes.ts");
+  ensureEntryHasNoLegacyImports(paletteEntry, "src/entries/palette.ts");
 
   ensureCapabilityMapped(shared, "play", "playLegacyScripts");
   ensureCapabilityMapped(shared, "replay", "replayLegacyScripts");
+  ensureAllPageEntriesExist(pageEntryRecords);
+  ensurePageEntryArchitectures(pageEntryRecords);
 
   const playOrder = extractScriptImportOrder(
     playRuntimeScripts,
@@ -143,7 +256,7 @@ async function runEntryManifestAudit() {
   ]);
 
   console.log(
-    "[entry-manifest-audit] PASS: play/replay entries are manifest-driven, capability-mapped and order-guarded"
+    "[entry-manifest-audit] PASS: page entries are classified, manifest-driven entries are guarded, and play/replay order is stable"
   );
 }
 
@@ -161,8 +274,14 @@ if (isDirectCliExecution()) {
 }
 
 export {
+  PAGE_ENTRY_SPECS,
+  collectPageEntryRecords,
+  detectEntryArchitecture,
   ensureCapabilityMapped,
+  ensureAllPageEntriesExist,
   ensureEntryHasNoLegacyImports,
+  ensurePageEntryArchitectures,
+  ensureDirectPageUsesManifest,
   ensureEntryUsesManifest,
   ensureImportAndExportOrderAligned,
   ensureScriptOrderConstraints,

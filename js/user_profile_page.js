@@ -10,6 +10,58 @@
   var SIGNED_REPLAY_FETCH_TIMEOUT_MS = 30000;
   var DEFAULT_RECORD_LIMIT = 200;
 
+  function resolveLocalStorage() {
+    try {
+      if (!global || !global.localStorage) return null;
+      return global.localStorage;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function resolveSessionStorage() {
+    try {
+      if (!global || !global.sessionStorage) return null;
+      return global.sessionStorage;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function readLocalStorageItem(key) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.getItem !== "function") return null;
+    try {
+      return storage.getItem(key);
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function writeLocalStorageItem(key, value) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.setItem !== "function") return;
+    try {
+      storage.setItem(key, value);
+    } catch (_err) {}
+  }
+
+  function removeLocalStorageItem(key) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.removeItem !== "function") return;
+    try {
+      storage.removeItem(key);
+    } catch (_err) {}
+  }
+
+  function writeSessionStorageItem(key, value) {
+    var storage = resolveSessionStorage();
+    if (!storage || typeof storage.setItem !== "function") return;
+    try {
+      storage.setItem(key, value);
+    } catch (_err) {}
+  }
+
   // --- localStorage key migration (old bare keys -> namespaced keys) ---
   (function migrateStorageKeys() {
     var migrations = [
@@ -18,15 +70,16 @@
       { oldKey: "nickname", newKey: "2048_auth_nickname_v1" }
     ];
     try {
-      if (!global.localStorage) return;
+      var storage = resolveLocalStorage();
+      if (!storage) return;
       for (var i = 0; i < migrations.length; i++) {
         var m = migrations[i];
-        var oldVal = global.localStorage.getItem(m.oldKey);
-        if (oldVal != null && global.localStorage.getItem(m.newKey) == null) {
-          global.localStorage.setItem(m.newKey, oldVal);
+        var oldVal = readLocalStorageItem(m.oldKey);
+        if (oldVal != null && readLocalStorageItem(m.newKey) == null) {
+          writeLocalStorageItem(m.newKey, oldVal);
         }
         if (oldVal != null) {
-          global.localStorage.removeItem(m.oldKey);
+          removeLocalStorageItem(m.oldKey);
         }
       }
     } catch (_err) { /* localStorage unavailable or quota exceeded */ }
@@ -171,11 +224,7 @@
   }
 
   function safeGetStorage(key) {
-    try {
-      return global.localStorage ? global.localStorage.getItem(key) : null;
-    } catch (_err) {
-      return null;
-    }
+    return readLocalStorageItem(key);
   }
 
   function getAuthToken() {
@@ -253,6 +302,13 @@
     return DEFAULT_API_TIMEOUT_MS;
   }
 
+  function callFetch(url, requestInit) {
+    if (!global || typeof global["fetch"] !== "function") {
+      return Promise.reject(new Error("fetch_unavailable"));
+    }
+    return global["fetch"](url, requestInit);
+  }
+
   async function apiRequest(path, options) {
     var opts = options || {};
     var method = toText(opts.method || "GET").toUpperCase();
@@ -292,7 +348,7 @@
           }, timeoutMs);
         }
 
-        var response = await global.fetch(base + path, requestInit);
+        var response = await callFetch(base + path, requestInit);
         if (timeoutHandle) {
           global.clearTimeout(timeoutHandle);
           timeoutHandle = null;
@@ -821,7 +877,7 @@
 
     var response = null;
     try {
-      response = await global.fetch(url, {
+      response = await callFetch(url, {
         method: "GET",
         credentials: "omit",
         signal: controller ? controller.signal : undefined
@@ -960,11 +1016,7 @@
       setTip(currentLang === "en" ? "Replay payload is missing." : "\u8be5\u8bb0\u5f55\u7f3a\u5c11\u56de\u653e\u6570\u636e", "err");
       return;
     }
-    try {
-      if (global.sessionStorage && typeof global.sessionStorage.setItem === "function") {
-        global.sessionStorage.setItem(CLOUD_REPLAY_STORAGE_KEY, payload);
-      }
-    } catch (_err) {}
+    writeSessionStorageItem(CLOUD_REPLAY_STORAGE_KEY, payload);
     global.location.href = "replay.html?cloud_replay=1";
   }
 

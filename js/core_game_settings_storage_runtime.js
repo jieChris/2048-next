@@ -674,6 +674,22 @@
       }
     }
 
+    var ownerMeta = normalizeHistoryOwnerMetaFromContext({
+      record: source,
+      authUserId: opts.authUserId,
+      authNickname: opts.authNickname,
+      keyPartMaxLength: opts.ownerKeyPartMaxLength
+    });
+
+    var diagnosticsIndexEntries = normalizeHistoryDiagnosticsIndexEntriesFromContext({
+      entries: source.diagnostics_index_entries,
+      maxEntries: opts.maxDiagnosticEntries,
+      maxPayloadKeys: opts.maxDiagnosticPayloadKeys,
+      maxStringLength: opts.maxDiagnosticStringLength,
+      maxArrayItems: opts.maxDiagnosticArrayItems,
+      keyMaxLength: opts.maxDiagnosticKeyLength
+    });
+
     return {
       id: id,
       mode: typeof source.mode === "string" && source.mode ? source.mode : "local",
@@ -699,7 +715,12 @@
           ? source.client_version
           : (typeof opts.defaultClientVersion === "string" && opts.defaultClientVersion ? opts.defaultClientVersion : "1.8"),
       replay: replay,
-      replay_string: replayString
+      replay_string: replayString,
+      owner_type: ownerMeta.owner_type,
+      owner_user_id: ownerMeta.owner_user_id,
+      owner_nickname: ownerMeta.owner_nickname,
+      owner_key: ownerMeta.owner_key,
+      diagnostics_index_entries: diagnosticsIndexEntries
     };
   }
 

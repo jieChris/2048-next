@@ -50,9 +50,18 @@
     return parts.length ? STATS_PANEL_VISIBLE_KEY + ":" + parts.join(":") : STATS_PANEL_VISIBLE_KEY;
   }
 
+  function resolveLocalStorage() {
+    try {
+      return global && global["localStorage"] ? global["localStorage"] : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
   function readText(key) {
     try {
-      return global.localStorage.getItem(key) || "";
+      var storage = resolveLocalStorage();
+      return (storage && storage.getItem(key)) || "";
     } catch (_error) {
       return "";
     }
@@ -60,7 +69,9 @@
 
   function writeText(key, value) {
     try {
-      global.localStorage.setItem(key, value);
+      var storage = resolveLocalStorage();
+      if (!storage) return;
+      storage.setItem(key, value);
     } catch (_error) {
     }
   }
@@ -564,5 +575,4 @@
     start(global.document);
   }
 })(typeof window !== "undefined" ? window : undefined);
-
 

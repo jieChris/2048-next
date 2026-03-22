@@ -11,6 +11,41 @@
     return value == null ? "" : String(value);
   }
 
+  function resolveLocalStorage() {
+    try {
+      if (typeof localStorage === "undefined") return null;
+      return localStorage;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function readLocalStorageItem(key) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.getItem !== "function") return null;
+    try {
+      return storage.getItem(key);
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function writeLocalStorageItem(key, value) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.setItem !== "function") return;
+    try {
+      storage.setItem(key, value);
+    } catch (_error) {}
+  }
+
+  function removeLocalStorageItem(key) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.removeItem !== "function") return;
+    try {
+      storage.removeItem(key);
+    } catch (_error) {}
+  }
+
   function escapeHtml(value) {
     return toText(value)
       .replace(/&/g, "&amp;")
@@ -22,7 +57,7 @@
 
   function getUiLang() {
     try {
-      var raw = toText(localStorage.getItem("ui_language_v1")).trim().toLowerCase();
+      var raw = toText(readLocalStorageItem("ui_language_v1")).trim().toLowerCase();
       return raw === "en" ? "en" : "zh";
     } catch (_error) {
       return "zh";
@@ -41,23 +76,8 @@
     return getUiLang() === "en" ? "Unknown User" : "未知用户";
   }
 
-  function resolveRuntimeNormalizedHistoryOwnerMeta(item) {
-    var runtime = window.CoreGameSettingsStorageRuntime;
-    if (!runtime || typeof runtime.normalizeHistoryOwnerMetaFromContext !== "function") return null;
-    try {
-      return runtime.normalizeHistoryOwnerMetaFromContext({
-        record: item
-      });
-    } catch (_err) {
-      return null;
-    }
-  }
-
   function normalizeOwnerDisplay(item) {
-    var runtimeOwnerMeta = resolveRuntimeNormalizedHistoryOwnerMeta(item);
-    if (runtimeOwnerMeta && typeof runtimeOwnerMeta === "object") {
-      item = Object.assign({}, item, runtimeOwnerMeta);
-    }
+    item = item && typeof item === "object" ? item : {};
     var ownerType = toText(item && item.owner_type).trim().toLowerCase();
     var ownerUserId = toText(item && item.owner_user_id).trim();
     var ownerNickname = toText(item && item.owner_nickname).trim();
@@ -114,7 +134,7 @@
 
   function readFilterState(defaults) {
     try {
-      var raw = localStorage.getItem(FILTER_STORAGE_KEY);
+      var raw = readLocalStorageItem(FILTER_STORAGE_KEY);
       if (!raw) return defaults;
       var parsed = JSON.parse(raw);
       var filter = parsed && parsed.filter && typeof parsed.filter === "object" ? parsed.filter : parsed;
@@ -146,11 +166,11 @@
       filter.sortBy === toText(defaults.sortBy);
 
     if (isDefault) {
-      localStorage.removeItem(FILTER_STORAGE_KEY);
+      removeLocalStorageItem(FILTER_STORAGE_KEY);
       return;
     }
 
-    localStorage.setItem(
+    writeLocalStorageItem(
       FILTER_STORAGE_KEY,
       JSON.stringify({
         schemaVersion: 2,
@@ -206,26 +226,30 @@
   function normalizeHistoryRecordForView(raw) {
     var item = raw && typeof raw === "object" ? raw : {};
     var normalized = normalizeHistoryRecordViaRuntime(item);
-    var ownerMeta = resolveRuntimeNormalizedHistoryOwnerMeta(item);
-    var diagnosticsEntries = normalizeHistoryDiagnosticsIndexEntries(item.diagnostics_index_entries);
-    var replayString = toText(item.replay_string || (normalized && normalized.replay_string)).trim();
-    if (!replayString && normalized && normalized.replay != null) {
-      try { replayString = JSON.stringify(normalized.replay); } catch (_err) { replayString = ""; }
+    var base = normalized && typeof normalized === "object" ? normalized : item;
+    var diagnosticsSource =
+      base && base.diagnostics_index_entries != null
+        ? base.diagnostics_index_entries
+        : item.diagnostics_index_entries;
+    var diagnosticsEntries = normalizeHistoryDiagnosticsIndexEntries(diagnosticsSource);
+    var replayString = toText(base.replay_string || item.replay_string).trim();
+    if (!replayString && base && base.replay != null) {
+      try { replayString = JSON.stringify(base.replay); } catch (_err) { replayString = ""; }
     }
     return {
-      id: toText(item.id || (normalized && normalized.id)).trim(),
-      mode: toText(item.mode || (normalized && normalized.mode)).trim(),
-      mode_key: toText(item.mode_key || (normalized && normalized.mode_key)).trim(),
-      score: Math.floor(Number((normalized && normalized.score) != null ? normalized.score : item.score) || 0),
-      best_tile: Math.floor(Number((normalized && normalized.best_tile) != null ? normalized.best_tile : item.best_tile) || 0),
-      duration_ms: Math.floor(Number((normalized && normalized.duration_ms) != null ? normalized.duration_ms : item.duration_ms) || 0),
-      ended_at: toText(item.ended_at || (normalized && normalized.ended_at)).trim(),
+      id: toText(base.id || item.id).trim(),
+      mode: toText(base.mode || item.mode).trim(),
+      mode_key: toText(base.mode_key || item.mode_key).trim(),
+      score: Math.floor(Number(base.score != null ? base.score : item.score) || 0),
+      best_tile: Math.floor(Number(base.best_tile != null ? base.best_tile : item.best_tile) || 0),
+      duration_ms: Math.floor(Number(base.duration_ms != null ? base.duration_ms : item.duration_ms) || 0),
+      ended_at: toText(base.ended_at || item.ended_at).trim(),
       replay_string: replayString,
-      final_board: item.final_board != null ? item.final_board : (normalized && normalized.final_board),
-      owner_type: toText(ownerMeta && ownerMeta.owner_type ? ownerMeta.owner_type : item.owner_type).trim().toLowerCase(),
-      owner_user_id: toText(ownerMeta && ownerMeta.owner_user_id != null ? ownerMeta.owner_user_id : item.owner_user_id).trim(),
-      owner_nickname: toText(ownerMeta && ownerMeta.owner_nickname != null ? ownerMeta.owner_nickname : item.owner_nickname).trim(),
-      owner_key: toText(ownerMeta && ownerMeta.owner_key != null ? ownerMeta.owner_key : item.owner_key).trim(),
+      final_board: base.final_board != null ? base.final_board : item.final_board,
+      owner_type: toText(base.owner_type != null ? base.owner_type : item.owner_type).trim().toLowerCase(),
+      owner_user_id: toText(base.owner_user_id != null ? base.owner_user_id : item.owner_user_id).trim(),
+      owner_nickname: toText(base.owner_nickname != null ? base.owner_nickname : item.owner_nickname).trim(),
+      owner_key: toText(base.owner_key != null ? base.owner_key : item.owner_key).trim(),
       diagnostics_index_entries: diagnosticsEntries
     };
   }
@@ -271,7 +295,9 @@
   }
 
   function resolveHistorySecondaryPlacementDiagnosticsEntry(item) {
-    var entries = normalizeHistoryDiagnosticsIndexEntries(item && item.diagnostics_index_entries);
+    var entries = Array.isArray(item && item.diagnostics_index_entries)
+      ? item.diagnostics_index_entries
+      : normalizeHistoryDiagnosticsIndexEntries(item && item.diagnostics_index_entries);
     for (var i = 0; i < entries.length; i += 1) {
       if (entries[i].key === "secondaryTimerPlacement") return entries[i];
     }
@@ -703,7 +729,8 @@
 
     var ownerMap = {};
     for (var i = 0; i < records.length; i += 1) {
-      var display = normalizeOwnerDisplay(records[i]);
+      var normalizedRecord = normalizeHistoryRecordForView(records[i]);
+      var display = normalizeOwnerDisplay(normalizedRecord);
       if (!display.key) continue;
       if (!ownerMap[display.key]) ownerMap[display.key] = display;
     }

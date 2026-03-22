@@ -28,6 +28,57 @@ const LEGACY_STORAGE_KEY = "local_game_history_v1";
 const MIGRATION_FLAG = "idb_history_migrated_v1";
 
 // ---------------------------------------------------------------------------
+// localStorage helpers (migration-only)
+// ---------------------------------------------------------------------------
+
+function resolveLocalStorage(): Storage | null {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    return localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function readLocalStorageItem(key: string): string | null {
+  const storage = resolveLocalStorage();
+  if (!storage) return null;
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalStorageItem(key: string, value: string): void {
+  const storage = resolveLocalStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(key, value);
+  } catch {
+    // best-effort migration marker write
+  }
+}
+
+function isMigrationCompleted(): boolean {
+  return readLocalStorageItem(MIGRATION_FLAG) === "1";
+}
+
+function markMigrationCompleted(): void {
+  writeLocalStorageItem(MIGRATION_FLAG, "1");
+}
+
+function readLegacyHistoryRecordsFromLocalStorage(): unknown[] {
+  try {
+    const raw = readLocalStorageItem(LEGACY_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
 // DB lifecycle
 // ---------------------------------------------------------------------------
 
@@ -54,20 +105,13 @@ function openDatabase(): Promise<IDBDatabase> {
 
 export async function migrateFromLocalStorage(): Promise<number> {
   if (typeof indexedDB === "undefined") return 0;
-  if (typeof localStorage === "undefined") return 0;
-  if (localStorage.getItem(MIGRATION_FLAG)) return 0;
+  if (!resolveLocalStorage()) return 0;
+  if (isMigrationCompleted()) return 0;
 
-  let records: unknown[];
-  try {
-    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
-    records = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(records)) records = [];
-  } catch {
-    records = [];
-  }
+  const records = readLegacyHistoryRecordsFromLocalStorage();
 
   if (records.length === 0) {
-    localStorage.setItem(MIGRATION_FLAG, "1");
+    markMigrationCompleted();
     return 0;
   }
 
@@ -88,7 +132,7 @@ export async function migrateFromLocalStorage(): Promise<number> {
     tx.onerror = () => reject(tx.error);
   });
 
-  localStorage.setItem(MIGRATION_FLAG, "1");
+  markMigrationCompleted();
   db.close();
   return migrated;
 }
