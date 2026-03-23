@@ -266,7 +266,7 @@
     var collapsible = !!(isCollapseViewportFn && isCollapseViewportFn());
     var timerModuleHidden = hasClass(timerBox, hiddenClassName);
 
-    if (!collapsible || timerModuleHidden) {
+    if (!collapsible) {
       var hiddenModel = callRuntime(source.mobileTimerboxRuntime, "resolveMobileTimerboxDisplayModel", {
         collapsible: false,
         timerModuleHidden: timerModuleHidden,

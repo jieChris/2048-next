@@ -285,6 +285,42 @@ h1.title a {
   justify-content: center;
 }
 
+@media screen and (max-width: 980px) {
+  body[data-page="game"] #timerbox #timer-scroll-controls,
+  body[data-page="practice"] #timerbox #timer-scroll-controls {
+    width: calc(100% - 30px);
+    max-width: 250px;
+    margin: 14px auto 0 !important;
+    box-sizing: border-box;
+    padding-left: 15px;
+    padding-right: 0;
+  }
+
+  body[data-page="game"] #timerbox #timer-leaderboard-panel,
+  body[data-page="practice"] #timerbox #timer-leaderboard-panel {
+    width: min(100%, 250px);
+    margin: 0 auto;
+  }
+
+  body[data-page="game"] #timerbox .timer-leaderboard-list,
+  body[data-page="practice"] #timerbox .timer-leaderboard-list {
+    max-width: 250px;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  body[data-page="game"] #timerbox .timer-leaderboard-row,
+  body[data-page="practice"] #timerbox .timer-leaderboard-row {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  body[data-page="game"] #timerbox.is-mobile-expanded #timer-scroll-controls,
+  body[data-page="practice"] #timerbox.is-mobile-expanded #timer-scroll-controls {
+    margin: 14px auto 0 !important;
+  }
+}
+
 body.home-guide-active #timer-scroll-controls {
   position: relative;
   z-index: 3240;
@@ -2916,15 +2952,69 @@ body[data-page="practice"] .top-action-btn.reset-btn .reset-bottom-mover {
   background: #f4f0ea;
 }
 
-@media screen and (max-width: 520px) {
+@media screen and (max-width: 980px) {
   .settings-modal-content {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    max-width: min(92vw, 540px);
+    gap: 12px;
   }
 
   .settings-row {
-    margin: 14px 0;
+    margin: 0;
   }
 
+  .settings-toggle-row {
+    width: 100%;
+  }
+
+  .settings-modal-content > .settings-row.settings-toggle-row,
+  .settings-modal-content > .settings-row.language-settings-row,
+  .settings-modal-content > .settings-row.settings-action-row {
+    width: 100%;
+  }
+
+  .settings-modal-content > .settings-row.settings-toggle-row,
+  .settings-modal-content > .settings-row.language-settings-row {
+    order: 10;
+  }
+
+  .settings-modal-content > .toolkit-entry-row {
+    order: 20;
+  }
+
+  .settings-modal-content > .settings-row.settings-action-row {
+    order: 30;
+  }
+
+  .settings-modal-content > .replay-modal-actions {
+    order: 40;
+  }
+
+  .settings-action-row,
+  .settings-action-main {
+    display: block;
+  }
+
+  .settings-inline-action-btn {
+    display: inline-block;
+    margin-top: 10px;
+  }
+
+  .theme-settings-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .theme-selection-col,
+  .theme-preview-col {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+}
+
+@media screen and (max-width: 520px) {
   .settings-toggle-row {
     width: 100%;
   }
@@ -4583,7 +4673,11 @@ body[data-page="practice"] #test-grid-container.practice-grid-locked .grid-cell 
 }
 
 body[data-page="game"][data-top-button-style="text"] .top-action-buttons .top-action-btn,
-body[data-page="game"][data-top-button-style="text"] #timerbox-toggle-btn {
+body[data-page="game"][data-top-button-style="text"] .top-action-buttons .restart-button,
+body[data-page="game"][data-top-button-style="text"] #timerbox-toggle-btn,
+body[data-page="practice"][data-top-button-style="text"] #practice-stats-actions .top-action-btn,
+body[data-page="practice"][data-top-button-style="text"] #practice-stats-actions .restart-button,
+body[data-page="practice"][data-top-button-style="text"] #timerbox-toggle-btn {
   font-size: 13px;
   letter-spacing: 0;
   padding: 0 10px;

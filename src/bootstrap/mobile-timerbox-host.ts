@@ -406,7 +406,7 @@ export function applyMobileTimerboxUiSync(input: {
   const collapsible = !!(isCollapseViewportFn && isCollapseViewportFn());
   const timerModuleHidden = hasClass(timerBox, hiddenClassName);
 
-  if (!collapsible || timerModuleHidden) {
+  if (!collapsible) {
     const hiddenModel = callRuntime(source.mobileTimerboxRuntime, "resolveMobileTimerboxDisplayModel", {
       collapsible: false,
       timerModuleHidden,

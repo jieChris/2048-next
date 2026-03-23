@@ -148,15 +148,15 @@ describe("bootstrap mobile timerbox host", () => {
     });
   });
 
-  it("applies hidden timerbox model when module is hidden", () => {
-    const remove = vi.fn();
+  it("keeps mobile timerbox toggle flow when module is hidden", () => {
+    const toggle = vi.fn();
     const setAttribute = vi.fn();
     const timerBox = {
       classList: {
         contains(name: string) {
           return name === "timerbox-hidden-mode";
         },
-        remove
+        toggle
       }
     };
     const toggleBtn = {
@@ -200,13 +200,18 @@ describe("bootstrap mobile timerbox host", () => {
       didApply: true,
       didPersist: false,
       collapsible: true,
-      timerModuleHidden: true
+      timerModuleHidden: false
     });
     expect(runtime.resolveMobileTimerboxDisplayModel).toHaveBeenCalledTimes(1);
+    expect(runtime.resolveMobileTimerboxDisplayModel).toHaveBeenCalledWith({
+      collapsible: true,
+      timerModuleHidden: false,
+      collapsed: true
+    });
     expect(runtime.resolveMobileTimerboxAppliedModel).toHaveBeenCalledTimes(1);
-    expect(toggleBtn.style.display).toBe("none");
+    expect(toggleBtn.style.display).toBe("inline-flex");
     expect(setAttribute).toHaveBeenCalledWith("aria-expanded", "false");
-    expect(remove).toHaveBeenCalledWith("is-mobile-expanded");
+    expect(toggle).toHaveBeenCalledWith("is-mobile-expanded", false);
   });
 
   it("applies expanded timerbox model and persists collapsed state", () => {

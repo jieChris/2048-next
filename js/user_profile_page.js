@@ -866,6 +866,26 @@
     };
   }
 
+  function hasBoardCells(boardMatrix) {
+    var matrix = normalizeBoardMatrix(boardMatrix);
+    for (var y = 0; y < matrix.length; y += 1) {
+      var row = Array.isArray(matrix[y]) ? matrix[y] : [];
+      for (var x = 0; x < row.length; x += 1) {
+        if (Math.floor(Number(row[x]) || 0) !== 0) return true;
+      }
+    }
+    return false;
+  }
+
+  function buildLocalRecordDetailFallback(record) {
+    var payload = normalizeRecordDetailPayload(record, record);
+    var replayString = toText(payload && payload.replay_string).trim();
+    var hasReplay = !!replayString;
+    var hasBoard = hasBoardCells(payload && payload.final_board);
+    if (!hasReplay && !hasBoard) return null;
+    return Object.assign({ loading: false }, payload);
+  }
+
   async function tryFetchReplayEnvelopeFromSignedUrl(url, fallbackRecord) {
     var controller = typeof global.AbortController === "function" ? new global.AbortController() : null;
     var timeoutHandle = null;
@@ -944,6 +964,12 @@
     var cached = recordDetailCache[recordId];
     if (cached && !cached.loading) return cached;
 
+    var eagerLocalDetail = buildLocalRecordDetailFallback(record);
+    if (eagerLocalDetail) {
+      recordDetailCache[recordId] = eagerLocalDetail;
+      return eagerLocalDetail;
+    }
+
     recordDetailCache[recordId] = { loading: true };
 
     try {
@@ -982,11 +1008,22 @@
       var proxyError = toText(proxyResult && proxyResult.error).trim();
       if (proxyError) lastErrorText = proxyError;
 
+      var localDetailFallback = buildLocalRecordDetailFallback(record);
+      if (localDetailFallback) {
+        recordDetailCache[recordId] = localDetailFallback;
+        return localDetailFallback;
+      }
+
       if (isTimeoutLikeText(lastErrorText)) {
         throw new Error(currentLang === "en" ? "Replay load timed out" : "\u56de\u653e\u52a0\u8f7d\u8d85\u65f6");
       }
       throw new Error(lastErrorText || "Replay load failed");
     } catch (error) {
+      var localDetail = buildLocalRecordDetailFallback(record);
+      if (localDetail) {
+        recordDetailCache[recordId] = localDetail;
+        return localDetail;
+      }
       var failed = {
         loading: false,
         error: toText(error && error.message) || "Replay load failed"
@@ -1243,7 +1280,15 @@
         end_reason: toText(item.end_reason || (normalized && normalized.end_reason)).trim(),
         ended_at: toText(item.ended_at || (normalized && normalized.ended_at)).trim(),
         created_at: toText(item.created_at).trim(),
-        deleted_at: toText(item.deleted_at).trim()
+        deleted_at: toText(item.deleted_at).trim(),
+        replay_string: toText(
+          (normalized && normalized.replay_string != null ? normalized.replay_string : item.replay_string) ||
+          ""
+        ).trim(),
+        replay: (normalized && normalized.replay != null ? normalized.replay : item.replay),
+        final_board: normalizeBoardMatrix(
+          (normalized && normalized.final_board != null ? normalized.final_board : item.final_board)
+        )
       });
     }
     return out;

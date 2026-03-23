@@ -8,7 +8,9 @@
   var STORAGE_NICKNAME_KEY = "2048_auth_nickname_v1";
   var STORAGE_LAST_SUBMIT_KEY = "online_last_submit_signature_v1";
   var STORAGE_LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
+  var STORAGE_PENDING_RECORD_SUBMIT_KEY = "online_pending_record_submit_signature_v1";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
+  var RECORD_SUBMIT_PENDING_TTL_MS = 10 * 60 * 1000;
 
   function resolveLocalStorage() {
     try {
@@ -232,6 +234,64 @@
     safeRemoveStorage(STORAGE_TOKEN_KEY);
     safeRemoveStorage(STORAGE_USER_ID_KEY);
     safeRemoveStorage(STORAGE_NICKNAME_KEY);
+    safeRemoveStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY);
+  }
+
+  function clearPendingRecordSubmitSignature() {
+    safeRemoveStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY);
+  }
+
+  function readPendingRecordSubmitSignature() {
+    var raw = toText(safeGetStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY)).trim();
+    if (!raw) return "";
+    var now = Date.now();
+    try {
+      var parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        var signature = toText(parsed.signature).trim();
+        var createdAt = Math.floor(Number(parsed.createdAt) || 0);
+        if (!signature) {
+          clearPendingRecordSubmitSignature();
+          return "";
+        }
+        if (createdAt > 0 && now - createdAt > RECORD_SUBMIT_PENDING_TTL_MS) {
+          clearPendingRecordSubmitSignature();
+          return "";
+        }
+        return signature;
+      }
+    } catch (_err) {
+      if (raw.indexOf("|") >= 0) return raw;
+    }
+    clearPendingRecordSubmitSignature();
+    return "";
+  }
+
+  function writePendingRecordSubmitSignature(signature) {
+    var text = toText(signature).trim();
+    if (!text) {
+      clearPendingRecordSubmitSignature();
+      return;
+    }
+    safeSetStorage(
+      STORAGE_PENDING_RECORD_SUBMIT_KEY,
+      JSON.stringify({
+        signature: text,
+        createdAt: Date.now()
+      })
+    );
+  }
+
+  function isTransientRecordSubmitErrorText(errorTextLike) {
+    var text = toText(errorTextLike).trim().toLowerCase();
+    if (!text) return false;
+    return (
+      text.indexOf("timeout") >= 0 ||
+      text.indexOf("network timeout") >= 0 ||
+      text.indexOf("network error") >= 0 ||
+      text.indexOf("\u8d85\u65f6") >= 0 ||
+      text.indexOf("\u7f51\u7edc") >= 0
+    );
   }
 
   function getLanguage() {
@@ -1041,11 +1101,14 @@
 
     var signature = buildRecordSubmitSignature(manager, payload);
     var lastSignature = toText(safeGetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY));
+    var pendingSignature = readPendingRecordSubmitSignature();
     if (signature && signature === lastSignature) return;
+    if (signature && signature === pendingSignature) return;
 
     recordSubmitLock = true;
     var result = null;
     try {
+      writePendingRecordSubmitSignature(signature);
       result = await submitRecord(payload);
     } finally {
       recordSubmitLock = false;
@@ -1053,12 +1116,17 @@
 
     if (result && result.success) {
       safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY, signature);
+      clearPendingRecordSubmitSignature();
       return;
     }
 
     var errorText = toText(result && result.error ? result.error : "记录提交失败");
     if (errorText.indexOf("未授权") >= 0 || errorText.toLowerCase().indexOf("token") >= 0) {
       clearAuth();
+      return;
+    }
+    if (!isTransientRecordSubmitErrorText(errorText)) {
+      clearPendingRecordSubmitSignature();
     }
   }
 

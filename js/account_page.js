@@ -734,6 +734,7 @@
     var loginBtn = byId("account-login-btn");
     var registerBtn = byId("account-open-register-btn");
     var resetPasswordBtn = byId("account-open-reset-password-btn");
+    var settingsNavBtn = byId("account-nav-settings");
     var passwordInput = byId("account-password");
     var captchaWrap = byId("account-login-captcha-wrap");
 
@@ -742,6 +743,7 @@
     if (loginBtn) loginBtn.style.display = isAuthed ? "none" : "";
     if (registerBtn) registerBtn.style.display = isAuthed ? "none" : "";
     if (resetPasswordBtn) resetPasswordBtn.style.display = isAuthed ? "none" : "";
+    if (settingsNavBtn) settingsNavBtn.style.display = isAuthed ? "" : "none";
     if (authTip) authTip.style.display = isAuthed ? "none" : "";
     if (captchaWrap) captchaWrap.style.display = isAuthed ? "none" : (loginCaptchaRequired ? "grid" : "none");
 
