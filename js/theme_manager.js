@@ -14,6 +14,12 @@
   var TILE_PALETTE_ACTIVE_KEY = "tile_palette_active_v1";
   var TILE_PALETTE_VERSION = 1;
   var DEFAULT_TILE_PALETTE_ID = "follow-theme";
+  var TILE_PALETTE_DIMENSION_SUFFIX = {
+    background: "",
+    text: "Text",
+    border: "Border",
+    glow: "Glow"
+  };
   var BUILTIN_TILE_PALETTES = [
     {
       id: "eyestrain-soft",
@@ -971,12 +977,102 @@
     return result;
   }
 
+  function normalizeTilePaletteRuleset(value) {
+    return value === "fibonacci" ? "fibonacci" : "pow2";
+  }
+
+  function normalizeTilePaletteDimension(value) {
+    return value === "text" || value === "border" || value === "glow" ? value : "background";
+  }
+
+  function resolveTilePaletteDimensionKey(ruleset, dimension) {
+    var base = normalizeTilePaletteRuleset(ruleset);
+    var suffix = TILE_PALETTE_DIMENSION_SUFFIX[normalizeTilePaletteDimension(dimension)] || "";
+    return base + suffix;
+  }
+
+  function buildDefaultPaletteTextColors(theme, ruleset, backgroundColors) {
+    var bgColors = normalizePaletteColorArray(backgroundColors, buildThemePaletteColors(theme, ruleset));
+    var textColors = [];
+    for (var i = 0; i < 16; i++) {
+      var bg = bgColors[i];
+      if (theme && theme.blackTiles) {
+        textColors.push("#f4f7ff");
+      } else if (isValidHexColor(bg)) {
+        var rgb = hexToRgb(bg);
+        var luminance = (0.299 * rgb.r) + (0.587 * rgb.g) + (0.114 * rgb.b);
+        textColors.push(luminance >= 170 ? "#55473a" : "#f9f6f2");
+      } else {
+        textColors.push(tileTextColor(i, theme.lightTextFrom));
+      }
+    }
+    return textColors;
+  }
+
+  function buildDefaultPaletteBorderColors(theme, ruleset, backgroundColors) {
+    var bgColors = normalizePaletteColorArray(backgroundColors, buildThemePaletteColors(theme, ruleset));
+    var borderColors = [];
+    var mixRatio = theme && theme.blackTiles ? 0.35 : 0.24;
+    for (var i = 0; i < 16; i++) {
+      borderColors.push(mixHex(bgColors[i], "#ffffff", mixRatio));
+    }
+    return borderColors;
+  }
+
+  function buildDefaultPaletteGlowColors(theme, ruleset, backgroundColors) {
+    var bgColors = normalizePaletteColorArray(backgroundColors, buildThemePaletteColors(theme, ruleset));
+    var glowColors = [];
+    var mixRatio = theme && theme.neon ? 0.06 : 0.14;
+    for (var i = 0; i < 16; i++) {
+      glowColors.push(mixHex(bgColors[i], "#ffffff", mixRatio));
+    }
+    return glowColors;
+  }
+
+  function resolvePaletteDimensionColors(theme, paletteRecord, ruleset, dimension) {
+    var targetRuleset = normalizeTilePaletteRuleset(ruleset);
+    var targetDimension = normalizeTilePaletteDimension(dimension);
+    var bgKey = resolveTilePaletteDimensionKey(targetRuleset, "background");
+    var bgFallback = buildThemePaletteColors(theme, targetRuleset);
+    var backgroundColors = normalizePaletteColorArray(
+      paletteRecord ? paletteRecord[bgKey] : null,
+      bgFallback
+    );
+    if (targetDimension === "background") return backgroundColors;
+    var targetKey = resolveTilePaletteDimensionKey(targetRuleset, targetDimension);
+    var fallback;
+    if (targetDimension === "text") {
+      fallback = buildDefaultPaletteTextColors(theme, targetRuleset, backgroundColors);
+    } else if (targetDimension === "border") {
+      fallback = buildDefaultPaletteBorderColors(theme, targetRuleset, backgroundColors);
+    } else {
+      fallback = buildDefaultPaletteGlowColors(theme, targetRuleset, backgroundColors);
+    }
+    return normalizePaletteColorArray(paletteRecord ? paletteRecord[targetKey] : null, fallback);
+  }
+
+  function resolvePaletteStyleBundle(theme, paletteRecord, ruleset) {
+    var targetRuleset = normalizeTilePaletteRuleset(ruleset);
+    return {
+      background: resolvePaletteDimensionColors(theme, paletteRecord, targetRuleset, "background"),
+      text: resolvePaletteDimensionColors(theme, paletteRecord, targetRuleset, "text"),
+      border: resolvePaletteDimensionColors(theme, paletteRecord, targetRuleset, "border"),
+      glow: resolvePaletteDimensionColors(theme, paletteRecord, targetRuleset, "glow")
+    };
+  }
+
   function clonePaletteRecord(record) {
     return {
       id: String(record.id || ""),
       name: String(record.name || ""),
       pow2: Array.isArray(record.pow2) ? record.pow2.slice(0, 16) : [],
       fibonacci: Array.isArray(record.fibonacci) ? record.fibonacci.slice(0, 16) : [],
+      pow2Text: Array.isArray(record.pow2Text) ? record.pow2Text.slice(0, 16) : [],
+      fibonacciText: Array.isArray(record.fibonacciText) ? record.fibonacciText.slice(0, 16) : [],
+      pow2Border: Array.isArray(record.pow2Border) ? record.pow2Border.slice(0, 16) : [],
+      fibonacciBorder: Array.isArray(record.fibonacciBorder) ? record.fibonacciBorder.slice(0, 16) : [],
+      pow2Glow: Array.isArray(record.pow2Glow) ? record.pow2Glow.slice(0, 16) : [],
+      fibonacciGlow: Array.isArray(record.fibonacciGlow) ? record.fibonacciGlow.slice(0, 16) : [],
       createdAt: Number(record.createdAt) || Date.now(),
       updatedAt: Number(record.updatedAt) || Date.now(),
       source: String(record.source || "custom"),
@@ -1008,6 +1104,12 @@
         name: String(item.name),
         pow2: normalizePaletteColorArray(item.pow2, fallbackPow2),
         fibonacci: normalizePaletteColorArray(item.fibonacci, fallbackFib),
+        pow2Text: resolvePaletteDimensionColors(theme, item, "pow2", "text"),
+        fibonacciText: resolvePaletteDimensionColors(theme, item, "fibonacci", "text"),
+        pow2Border: resolvePaletteDimensionColors(theme, item, "pow2", "border"),
+        fibonacciBorder: resolvePaletteDimensionColors(theme, item, "fibonacci", "border"),
+        pow2Glow: resolvePaletteDimensionColors(theme, item, "pow2", "glow"),
+        fibonacciGlow: resolvePaletteDimensionColors(theme, item, "fibonacci", "glow"),
         createdAt: 0,
         updatedAt: 0,
         source: "builtin",
@@ -1041,6 +1143,12 @@
         name: name,
         pow2: normalizePaletteColorArray(item.pow2, pow2Fallback),
         fibonacci: normalizePaletteColorArray(item.fibonacci, fibFallback),
+        pow2Text: resolvePaletteDimensionColors(fallbackTheme, item, "pow2", "text"),
+        fibonacciText: resolvePaletteDimensionColors(fallbackTheme, item, "fibonacci", "text"),
+        pow2Border: resolvePaletteDimensionColors(fallbackTheme, item, "pow2", "border"),
+        fibonacciBorder: resolvePaletteDimensionColors(fallbackTheme, item, "fibonacci", "border"),
+        pow2Glow: resolvePaletteDimensionColors(fallbackTheme, item, "pow2", "glow"),
+        fibonacciGlow: resolvePaletteDimensionColors(fallbackTheme, item, "fibonacci", "glow"),
         createdAt: Number(item.createdAt) || Date.now(),
         updatedAt: Number(item.updatedAt) || Date.now(),
         source: "custom",
@@ -1124,29 +1232,42 @@
     return css;
   }
 
-  function tileCssForValues(theme, values, scopeSelector, paletteColors) {
+  function tileCssForValues(theme, values, scopeSelector, paletteStyles) {
+    var paletteBackground = Array.isArray(paletteStyles)
+      ? paletteStyles
+      : (paletteStyles && Array.isArray(paletteStyles.background) ? paletteStyles.background : []);
+    var paletteText = paletteStyles && Array.isArray(paletteStyles.text) ? paletteStyles.text : [];
+    var paletteBorder = paletteStyles && Array.isArray(paletteStyles.border) ? paletteStyles.border : [];
+    var paletteGlow = paletteStyles && Array.isArray(paletteStyles.glow) ? paletteStyles.glow : [];
     var css = "";
     for (var i = 0; i < values.length; i++) {
       var val = values[i];
-      var base = resolvePaletteBaseColor(theme, paletteColors, i, values.length);
+      var base = resolvePaletteBaseColor(theme, paletteBackground, i, values.length);
       var hi = mixHex(base, "#ffffff", theme.neon ? 0.2 : 0.14);
       var lo = mixHex(base, "#000000", theme.neon ? 0.25 : 0.1);
       var bg = theme.gradient ? "linear-gradient(140deg," + hi + "," + base + "," + lo + ")" : base;
-      var text = tileTextColor(i, theme.lightTextFrom);
-      var shadow = theme.neon
-        ? "0 0 24px 4px " + rgba(base, 0.55) + ", inset 0 0 0 1px " + rgba("#ffffff", 0.22)
-        : "0 0 22px 3px " + rgba(base, 0.32) + ", inset 0 0 0 1px " + rgba("#ffffff", 0.16);
-      var border = "";
+      var text = normalizePaletteColor(paletteText[i], tileTextColor(i, theme.lightTextFrom));
+      var borderColor = normalizePaletteColor(
+        paletteBorder[i],
+        mixHex(base, "#ffffff", theme.blackTiles ? 0.35 : 0.24)
+      );
+      var glowColor = normalizePaletteColor(
+        paletteGlow[i],
+        mixHex(base, "#ffffff", theme.neon ? 0.06 : 0.14)
+      );
+      var glowAlpha = theme.neon ? 0.56 : 0.34;
+      var shadow = "0 0 20px 3px " + rgba(glowColor, glowAlpha) + ", inset 0 0 0 1px " + rgba(borderColor, 0.5);
+      var border = "border:1px solid " + borderColor + ";";
 
       if (theme.blackTiles) {
         var darkHi = mixHex("#101523", "#ffffff", 0.08);
         var darkLo = mixHex("#040509", "#000000", 0.25);
         bg = "linear-gradient(145deg," + darkHi + "," + "#090b12" + "," + darkLo + ")";
-        text = "#f4f7ff";
-        border = "2px solid " + mixHex(base, "#ffffff", 0.35) + ";";
+        text = normalizePaletteColor(paletteText[i], "#f4f7ff");
+        border = "border:2px solid " + normalizePaletteColor(paletteBorder[i], mixHex(base, "#ffffff", 0.35)) + ";";
         shadow =
-          "0 0 18px 2px " + rgba(base, 0.78) +
-          ", 0 0 30px 6px " + rgba(base, 0.38) +
+          "0 0 18px 2px " + rgba(glowColor, 0.78) +
+          ", 0 0 30px 6px " + rgba(glowColor, 0.38) +
           ", inset 0 0 0 1px " + rgba("#ffffff", 0.24);
       }
       var tileSelector = scopeSelector + " .tile.tile-" + val + " .tile-inner";
@@ -1155,7 +1276,7 @@
       css += tileSelector + "," + previewSelector + "{";
       css += "color:" + text + " !important;background:" + bg + " !important;box-shadow:" + shadow + ";" + border + "box-sizing:border-box;";
       if (theme.neon) {
-        css += "text-shadow:0 0 10px " + rgba(base, 0.85) + ";";
+        css += "text-shadow:0 0 10px " + rgba(glowColor, 0.85) + ";";
       }
       css += "}\n";
 
@@ -1263,8 +1384,10 @@
   function buildThemeCss(theme) {
     var css = "";
     var activeTilePalette = resolveActiveTilePalette(theme);
-    var pow2PaletteColors = activeTilePalette.pow2;
-    var fibPaletteColors = activeTilePalette.fibonacci;
+    var pow2PaletteStyles = resolvePaletteStyleBundle(theme, activeTilePalette, "pow2");
+    var fibPaletteStyles = resolvePaletteStyleBundle(theme, activeTilePalette, "fibonacci");
+    var pow2PaletteColors = pow2PaletteStyles.background;
+    var fibPaletteColors = fibPaletteStyles.background;
     if (theme.id === "classic") {
       // Authentic 2048 looks
       css += "html, body { background: #faf8ef !important; color: #776e65 !important; }\n";
@@ -1934,8 +2057,8 @@
          css += horseYearTileCss(theme, POW2_TILE_VALUES, "html[data-theme='horse_year'] body:not([data-ruleset=\"fibonacci\"])", pow2PaletteColors);
          css += horseYearTileCss(theme, FIB_TILE_VALUES, "html[data-theme='horse_year'] body[data-ruleset=\"fibonacci\"]", fibPaletteColors);
     } else {
-         css += tileCssForValues(theme, POW2_TILE_VALUES, "body:not([data-ruleset=\"fibonacci\"])", pow2PaletteColors);
-         css += tileCssForValues(theme, FIB_TILE_VALUES, "body[data-ruleset=\"fibonacci\"]", fibPaletteColors);
+         css += tileCssForValues(theme, POW2_TILE_VALUES, "body:not([data-ruleset=\"fibonacci\"])", pow2PaletteStyles);
+         css += tileCssForValues(theme, FIB_TILE_VALUES, "body[data-ruleset=\"fibonacci\"]", fibPaletteStyles);
     }
 
     if (theme.id === "yanyuan") {
@@ -2188,8 +2311,10 @@
     var css = "";
     var t = getUiTokens(theme);
     var activeTilePalette = resolveActiveTilePalette(theme);
-    var pow2PaletteColors = activeTilePalette.pow2;
-    var fibPaletteColors = activeTilePalette.fibonacci;
+    var pow2PaletteStyles = resolvePaletteStyleBundle(theme, activeTilePalette, "pow2");
+    var fibPaletteStyles = resolvePaletteStyleBundle(theme, activeTilePalette, "fibonacci");
+    var pow2PaletteColors = pow2PaletteStyles.background;
+    var fibPaletteColors = fibPaletteStyles.background;
 
     var tilesResetSelector = uniqueSelectors.map(function (sel) {
       return sel + " .theme-preview-tile";
@@ -2226,8 +2351,8 @@
       css += horseYearTileCss(theme, POW2_TILE_VALUES, pow2Selector, pow2PaletteColors);
       css += horseYearTileCss(theme, FIB_PREVIEW_VALUES, fibSelector, fibPaletteColors);
     } else {
-      css += tileCssForValues(theme, POW2_TILE_VALUES, pow2Selector, pow2PaletteColors);
-      css += tileCssForValues(theme, FIB_PREVIEW_VALUES, fibSelector, fibPaletteColors);
+      css += tileCssForValues(theme, POW2_TILE_VALUES, pow2Selector, pow2PaletteStyles);
+      css += tileCssForValues(theme, FIB_PREVIEW_VALUES, fibSelector, fibPaletteStyles);
     }
 
     return css;
@@ -2341,6 +2466,12 @@
       name: finalName,
       pow2: normalizePaletteColorArray(base.pow2, buildThemePaletteColors(theme, "pow2")),
       fibonacci: normalizePaletteColorArray(base.fibonacci, buildThemePaletteColors(theme, "fibonacci")),
+      pow2Text: resolvePaletteDimensionColors(theme, base, "pow2", "text"),
+      fibonacciText: resolvePaletteDimensionColors(theme, base, "fibonacci", "text"),
+      pow2Border: resolvePaletteDimensionColors(theme, base, "pow2", "border"),
+      fibonacciBorder: resolvePaletteDimensionColors(theme, base, "fibonacci", "border"),
+      pow2Glow: resolvePaletteDimensionColors(theme, base, "pow2", "glow"),
+      fibonacciGlow: resolvePaletteDimensionColors(theme, base, "fibonacci", "glow"),
       createdAt: now,
       updatedAt: now,
       source: "custom",
@@ -2382,17 +2513,41 @@
     return true;
   }
 
-  function updateTilePaletteColor(id, ruleset, index, color) {
-    var targetRuleset = ruleset === "fibonacci" ? "fibonacci" : "pow2";
-    var targetIndex = Math.max(0, Math.min(15, Number(index) || 0));
+  function updateTilePaletteColor(id, ruleset, dimensionOrIndex, indexOrColor, maybeColor) {
+    var targetRuleset = normalizeTilePaletteRuleset(ruleset);
+    var hasDimension = typeof dimensionOrIndex === "string";
+    var targetDimension = hasDimension
+      ? normalizeTilePaletteDimension(dimensionOrIndex)
+      : "background";
+    var targetIndex = Math.max(0, Math.min(15, Number(hasDimension ? indexOrColor : dimensionOrIndex) || 0));
+    var color = hasDimension ? maybeColor : indexOrColor;
     var custom = readStoredTilePaletteProfiles();
     var idx = findCustomPaletteIndexById(custom, id);
     if (idx < 0) return false;
     var theme = themes[currentThemeId] || themes[DEFAULT_THEME];
-    var fallback = buildThemePaletteColors(theme, targetRuleset);
     var item = custom[idx];
-    item[targetRuleset] = normalizePaletteColorArray(item[targetRuleset], fallback);
-    item[targetRuleset][targetIndex] = normalizePaletteColor(color, fallback[targetIndex]);
+    var targetKey = resolveTilePaletteDimensionKey(targetRuleset, targetDimension);
+    var fallback = resolvePaletteDimensionColors(theme, item, targetRuleset, targetDimension);
+    item[targetKey] = normalizePaletteColorArray(item[targetKey], fallback);
+    item[targetKey][targetIndex] = normalizePaletteColor(color, fallback[targetIndex]);
+    if (targetDimension === "background") {
+      var textKey = resolveTilePaletteDimensionKey(targetRuleset, "text");
+      var borderKey = resolveTilePaletteDimensionKey(targetRuleset, "border");
+      var glowKey = resolveTilePaletteDimensionKey(targetRuleset, "glow");
+      var nextBackground = item[targetKey];
+      item[textKey] = normalizePaletteColorArray(
+        item[textKey],
+        buildDefaultPaletteTextColors(theme, targetRuleset, nextBackground)
+      );
+      item[borderKey] = normalizePaletteColorArray(
+        item[borderKey],
+        buildDefaultPaletteBorderColors(theme, targetRuleset, nextBackground)
+      );
+      item[glowKey] = normalizePaletteColorArray(
+        item[glowKey],
+        buildDefaultPaletteGlowColors(theme, targetRuleset, nextBackground)
+      );
+    }
     item.updatedAt = Date.now();
     custom[idx] = item;
     writeStoredTilePaletteProfiles(custom);
@@ -2407,6 +2562,12 @@
         name: item.name,
         pow2: Array.isArray(item.pow2) ? item.pow2.slice(0, 16) : [],
         fibonacci: Array.isArray(item.fibonacci) ? item.fibonacci.slice(0, 16) : [],
+        pow2Text: Array.isArray(item.pow2Text) ? item.pow2Text.slice(0, 16) : [],
+        fibonacciText: Array.isArray(item.fibonacciText) ? item.fibonacciText.slice(0, 16) : [],
+        pow2Border: Array.isArray(item.pow2Border) ? item.pow2Border.slice(0, 16) : [],
+        fibonacciBorder: Array.isArray(item.fibonacciBorder) ? item.fibonacciBorder.slice(0, 16) : [],
+        pow2Glow: Array.isArray(item.pow2Glow) ? item.pow2Glow.slice(0, 16) : [],
+        fibonacciGlow: Array.isArray(item.fibonacciGlow) ? item.fibonacciGlow.slice(0, 16) : [],
         createdAt: Number(item.createdAt) || Date.now(),
         updatedAt: Number(item.updatedAt) || Date.now()
       };
@@ -2450,6 +2611,12 @@
         name: finalName,
         pow2: normalizePaletteColorArray(item.pow2, buildThemePaletteColors(theme, "pow2")),
         fibonacci: normalizePaletteColorArray(item.fibonacci, buildThemePaletteColors(theme, "fibonacci")),
+        pow2Text: resolvePaletteDimensionColors(theme, item, "pow2", "text"),
+        fibonacciText: resolvePaletteDimensionColors(theme, item, "fibonacci", "text"),
+        pow2Border: resolvePaletteDimensionColors(theme, item, "pow2", "border"),
+        fibonacciBorder: resolvePaletteDimensionColors(theme, item, "fibonacci", "border"),
+        pow2Glow: resolvePaletteDimensionColors(theme, item, "pow2", "glow"),
+        fibonacciGlow: resolvePaletteDimensionColors(theme, item, "fibonacci", "glow"),
         createdAt: Number(item.createdAt) || now,
         updatedAt: Number(item.updatedAt) || now,
         source: "custom",

@@ -102,9 +102,13 @@ describe("bootstrap theme settings", () => {
     expect(resolveThemePreviewLayout()).toEqual({
       containerClassName: "theme-preview-dual-wrap",
       innerHtml:
-        "<div class='theme-preview-grid-block'>" +
+        "<div class='theme-preview-grid-block' data-ruleset='pow2'>" +
         "<div class='theme-preview-grid-title'>标准版</div>" +
         "<div id='theme-preview-grid-pow2' class='theme-preview-grid'></div>" +
+        "</div>" +
+        "<div class='theme-preview-grid-block' data-ruleset='fibonacci'>" +
+        "<div class='theme-preview-grid-title'>斐波那契</div>" +
+        "<div id='theme-preview-grid-fib' class='theme-preview-grid'></div>" +
         "</div>",
       pow2GridId: "theme-preview-grid-pow2",
       fibonacciGridId: "theme-preview-grid-fib",

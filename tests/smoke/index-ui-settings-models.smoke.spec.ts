@@ -434,7 +434,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       themePreviewLabel: (document.querySelector(".theme-preview-col > label")?.textContent || "").trim()
     }));
 
-    expect(snapshot.kicker).toBe("2048 主题设置");
+    expect(snapshot.kicker).toBe("2048 色板中心");
     expect(snapshot.pill).toBe("主题");
     expect(snapshot.themeSelectLabel).toBe("选择主题");
     expect(snapshot.themePreviewLabel).toBe("配色预览");

@@ -162,9 +162,13 @@ export function resolveThemePreviewLayout(): ResolveThemePreviewLayoutResult {
   return {
     containerClassName: "theme-preview-dual-wrap",
     innerHtml:
-      "<div class='theme-preview-grid-block'>" +
+      "<div class='theme-preview-grid-block' data-ruleset='pow2'>" +
       "<div class='theme-preview-grid-title'>\u6807\u51c6\u7248</div>" +
       "<div id='theme-preview-grid-pow2' class='theme-preview-grid'></div>" +
+      "</div>" +
+      "<div class='theme-preview-grid-block' data-ruleset='fibonacci'>" +
+      "<div class='theme-preview-grid-title'>\u6590\u6ce2\u90a3\u5951</div>" +
+      "<div id='theme-preview-grid-fib' class='theme-preview-grid'></div>" +
       "</div>",
     pow2GridId: "theme-preview-grid-pow2",
     fibonacciGridId: "theme-preview-grid-fib",
@@ -214,4 +218,3 @@ export function resolveThemeOptions(options: ResolveThemeOptionsOptions): Resolv
   }
   return result;
 }
-

@@ -56,53 +56,61 @@ function applyThemePageCopy(): void {
     ? globalWindow.UII18N.getLanguage()
     : "zh";
   const isEnglish = String(lang || "").toLowerCase().startsWith("en");
-  const title = isEnglish ? "Theme Settings" : "\u4e3b\u9898\u8bbe\u7f6e";
+  const title = isEnglish ? "Palette Center" : "\u8272\u677f\u4e2d\u5fc3";
   const subtitle = isEnglish
-    ? "Manage tile themes and palette colors with import/export and live preview."
-    : "\u7edf\u4e00\u7ba1\u7406\u68cb\u5b50\u4e3b\u9898\u4e0e\u8272\u677f\u914d\u8272\uff0c\u652f\u6301\u5bfc\u5165\u3001\u5bfc\u51fa\u4e0e\u5b9e\u65f6\u9884\u89c8\u3002";
+    ? "Manage board palettes by board type and color dimensions with live preview."
+    : "\u6309\u68cb\u76d8\u7c7b\u578b\u4e0e\u914d\u8272\u7ef4\u5ea6\u7edf\u4e00\u7ba1\u7406\u989c\u8272\uff0c\u652f\u6301\u5bfc\u5165\u5bfc\u51fa\u4e0e\u5b9e\u65f6\u9884\u89c8\u3002";
   const pillText = isEnglish ? "Theme" : "\u4e3b\u9898";
   const copy = isEnglish
     ? {
-        kicker: "2048 Theme Settings",
+        kicker: "2048 Palette Center",
         navHome: "Home",
         navPractice: "Practice Board",
         themeSelectLabel: "Select Theme",
         themePreviewLabel: "Theme Preview",
+        boardSelectLabel: "Board Select",
+        board2048: "2048",
+        boardFib: "Fibonacci",
+        themeModesTitle: "Theme & Modes",
         paletteList: "Palette List",
         currentPalette: "Current Palette",
-        create: "New Copy",
+        create: "Create",
         rename: "Rename",
         remove: "Delete",
         exportLabel: "Export",
         importLabel: "Import",
-        standard16: "Standard 16 Colors",
-        fib16: "Fibonacci 16 Colors",
-        livePreview: "Live Preview",
-        standard: "Standard",
-        fibonacci: "Fibonacci",
-        timerLegend: "Timer Legend",
-        namePlaceholder: "Palette name"
+        background: "Background",
+        text: "Text",
+        border: "Border",
+        glow: "Glow",
+        namePlaceholder: "Palette name",
+        editorPanel: "Background Color",
+        boardPreview: "Color Preview"
       }
     : {
-        kicker: "2048 \u4e3b\u9898\u8bbe\u7f6e",
+        kicker: "2048 \u8272\u677f\u4e2d\u5fc3",
         navHome: "\u56de\u9996\u9875",
         navPractice: "\u7ec3\u4e60\u677f",
         themeSelectLabel: "\u9009\u62e9\u4e3b\u9898",
         themePreviewLabel: "\u914d\u8272\u9884\u89c8",
+        boardSelectLabel: "\u68cb\u76d8\u9009\u62e9",
+        board2048: "2048",
+        boardFib: "\u6590\u6ce2\u90a3\u5951",
+        themeModesTitle: "\u4e3b\u9898\u4e0e\u6a21\u5f0f",
         paletteList: "\u8272\u677f\u5217\u8868",
         currentPalette: "\u5f53\u524d\u8272\u677f",
-        create: "\u65b0\u5efa\u526f\u672c",
+        create: "\u65b0\u5efa",
         rename: "\u91cd\u547d\u540d",
         remove: "\u5220\u9664",
         exportLabel: "\u5bfc\u51fa",
         importLabel: "\u5bfc\u5165",
-        standard16: "\u6807\u51c6 16 \u8272",
-        fib16: "\u6590\u6ce2\u90a3\u5951 16 \u8272",
-        livePreview: "\u5b9e\u65f6\u9884\u89c8",
-        standard: "\u6807\u51c6",
-        fibonacci: "\u6590\u6ce2\u90a3\u5951",
-        timerLegend: "\u8ba1\u65f6\u56fe\u4f8b",
-        namePlaceholder: "\u8f93\u5165\u8272\u677f\u540d\u79f0"
+        background: "\u80cc\u666f",
+        text: "\u6587\u5b57",
+        border: "\u8fb9\u6846",
+        glow: "\u53d1\u5149",
+        namePlaceholder: "\u8f93\u5165\u5f53\u524d\u4e3b\u9898\u540d\u79f0\uff08\u53ef\u7f16\u8f91\uff09",
+        editorPanel: "\u80cc\u666f\u989c\u8272",
+        boardPreview: "\u989c\u8272\u9884\u89c8"
       };
 
   document.title = `2048 ${title}`;
@@ -115,6 +123,8 @@ function applyThemePageCopy(): void {
   const navLinks = document.querySelectorAll(".palette-nav .palette-nav-btn");
   const themeSelectLabel = document.querySelector(".theme-selection-col > label");
   const themePreviewLabel = document.querySelector(".theme-preview-col > label");
+  const boardSelectLabel = document.querySelector(".board-selection-col > label");
+  const boardButtons = document.querySelectorAll(".palette-board-btn");
   const listTitle = document.querySelector(".palette-sidebar .panel-head h2");
   const currentPalette = document.getElementById("palette-current-name");
   const createButton = document.getElementById("palette-create-btn");
@@ -123,18 +133,22 @@ function applyThemePageCopy(): void {
   const exportButton = document.getElementById("palette-export-btn");
   const importButton = document.getElementById("palette-import-btn");
   const nameInput = document.getElementById("palette-name-input");
-  const colorPanelHeads = document.querySelectorAll(".color-panel-head");
-  const previewTitles = document.querySelectorAll(".preview-group h3");
+  const editorPanelHead = document.getElementById("palette-editor-panel-head");
+  const previewPanelHead = document.getElementById("palette-preview-panel-head");
+  const dimensionTabs = document.querySelectorAll(".palette-dimension-tab");
 
   if (kicker) kicker.textContent = copy.kicker;
   if (pageTitle) pageTitle.textContent = title;
   if (pageSubtitle) pageSubtitle.textContent = subtitle;
-  if (themeCardTitle) themeCardTitle.textContent = title;
+  if (themeCardTitle) themeCardTitle.textContent = copy.themeModesTitle;
   if (panelPill) panelPill.textContent = pillText;
   if (navLinks[0]) navLinks[0].textContent = copy.navHome;
   if (navLinks[1]) navLinks[1].textContent = copy.navPractice;
   if (themeSelectLabel) themeSelectLabel.textContent = copy.themeSelectLabel;
   if (themePreviewLabel) themePreviewLabel.textContent = copy.themePreviewLabel;
+  if (boardSelectLabel) boardSelectLabel.textContent = copy.boardSelectLabel;
+  if (boardButtons[0]) boardButtons[0].textContent = copy.board2048;
+  if (boardButtons[1]) boardButtons[1].textContent = copy.boardFib;
   if (listTitle) listTitle.textContent = copy.paletteList;
   if (currentPalette && currentPalette.getAttribute("data-palette-name-bound") !== "1") {
     currentPalette.textContent = copy.currentPalette;
@@ -145,12 +159,12 @@ function applyThemePageCopy(): void {
   if (exportButton) exportButton.textContent = copy.exportLabel;
   if (importButton) importButton.textContent = copy.importLabel;
   if (nameInput) nameInput.setAttribute("placeholder", copy.namePlaceholder);
-  if (colorPanelHeads[0]) colorPanelHeads[0].textContent = copy.standard16;
-  if (colorPanelHeads[1]) colorPanelHeads[1].textContent = copy.fib16;
-  if (colorPanelHeads[2]) colorPanelHeads[2].textContent = copy.livePreview;
-  if (previewTitles[0]) previewTitles[0].textContent = copy.standard;
-  if (previewTitles[1]) previewTitles[1].textContent = copy.fibonacci;
-  if (previewTitles[2]) previewTitles[2].textContent = copy.timerLegend;
+  if (editorPanelHead) editorPanelHead.textContent = copy.editorPanel;
+  if (previewPanelHead) previewPanelHead.textContent = copy.boardPreview;
+  if (dimensionTabs[0]) dimensionTabs[0].textContent = copy.background;
+  if (dimensionTabs[1]) dimensionTabs[1].textContent = copy.text;
+  if (dimensionTabs[2]) dimensionTabs[2].textContent = copy.border;
+  if (dimensionTabs[3]) dimensionTabs[3].textContent = copy.glow;
 }
 
 export function bootstrapPalettePage(): void {
@@ -180,8 +194,3 @@ export function bootstrapPalettePage(): void {
   applyThemePageCopy();
   window.addEventListener("uilanguagechange", applyThemePageCopy);
 }
-
-
-
-
-

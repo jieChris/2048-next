@@ -510,13 +510,11 @@
           navHome: "Home",
           navAccount: "Account",
           navPractice: "Practice",
-          standard16: "Standard 16 Colors",
-          fib16: "Fibonacci 16 Colors",
-          livePreview: "Live Preview",
+          previewPanel: "Color Preview",
           standard: "Standard",
           fibonacci: "Fibonacci",
           timerLegend: "Timer Legend",
-          namePlaceholder: "Palette name",
+          namePlaceholder: "Palette name (editable)",
           custom: "Custom",
           current: "Current"
         }
@@ -533,13 +531,11 @@
           navHome: "回首页",
           navAccount: "账号中心",
           navPractice: "练习板",
-          standard16: "标准 16 色",
-          fib16: "斐波那契 16 色",
-          livePreview: "实时预览",
+          previewPanel: "颜色预览",
           standard: "标准",
           fibonacci: "斐波那契",
           timerLegend: "计时图例",
-          namePlaceholder: "输入色板名称",
+          namePlaceholder: "输入当前主题名称（可编辑）",
           custom: "自定义",
           current: "当前"
         };
@@ -557,40 +553,38 @@
     for (var i = 0; i < direct.length; i += 1) {
       var item = direct[i];
       var node = global.document.querySelector(item[0]);
-      if (node) node.textContent = item[1];
+      if (node) setTextIfChanged(node, item[1]);
     }
     var currentName = global.document.getElementById("palette-current-name");
     if (currentName && currentName.getAttribute("data-palette-name-bound") !== "1") {
-      currentName.textContent = copy.currentName;
+      setTextIfChanged(currentName, copy.currentName);
     }
     var nav = global.document.querySelectorAll(".palette-nav .palette-nav-btn");
     for (var n = 0; n < nav.length; n += 1) {
       var link = nav[n];
       var href = String(link.getAttribute("href") || "").toLowerCase();
       if (href.indexOf("index.html") >= 0 || href.indexOf("2048.html") >= 0) {
-        link.textContent = copy.navHome;
+        setTextIfChanged(link, copy.navHome);
       } else if (href.indexOf("account.html") >= 0) {
-        link.textContent = copy.navAccount;
+        setTextIfChanged(link, copy.navAccount);
       } else if (href.indexOf("practice_board.html") >= 0) {
-        link.textContent = copy.navPractice;
+        setTextIfChanged(link, copy.navPractice);
       }
     }
-    var heads = global.document.querySelectorAll(".color-panel-head");
-    if (heads[0]) heads[0].textContent = copy.standard16;
-    if (heads[1]) heads[1].textContent = copy.fib16;
-    if (heads[2]) heads[2].textContent = copy.livePreview;
+    var previewHead = global.document.getElementById("palette-preview-panel-head");
+    if (previewHead) setTextIfChanged(previewHead, copy.previewPanel);
     var previewTitles = global.document.querySelectorAll(".preview-group h3");
-    if (previewTitles[0]) previewTitles[0].textContent = copy.standard;
-    if (previewTitles[1]) previewTitles[1].textContent = copy.fibonacci;
-    if (previewTitles[2]) previewTitles[2].textContent = copy.timerLegend;
+    if (previewTitles[0]) setTextIfChanged(previewTitles[0], copy.standard);
+    if (previewTitles[1]) setTextIfChanged(previewTitles[1], copy.fibonacci);
+    if (previewTitles[2]) setTextIfChanged(previewTitles[2], copy.timerLegend);
     var input = global.document.getElementById("palette-name-input");
     if (input) input.setAttribute("placeholder", copy.namePlaceholder);
     var list = global.document.getElementById("palette-list");
     if (list) {
       var custom = list.querySelectorAll(".palette-chip.custom");
-      for (var c = 0; c < custom.length; c += 1) custom[c].textContent = copy.custom;
+      for (var c = 0; c < custom.length; c += 1) setTextIfChanged(custom[c], copy.custom);
       var chips = list.querySelectorAll(".palette-chip.current");
-      for (var k = 0; k < chips.length; k += 1) chips[k].textContent = copy.current;
+      for (var k = 0; k < chips.length; k += 1) setTextIfChanged(chips[k], copy.current);
     }
   }
 

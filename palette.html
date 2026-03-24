@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048 主题设置</title>
-<link href="style/main.css?v=20260316-04" rel="stylesheet" type="text/css">
-  <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
+  <title>2048 色板中心</title>
+  <link href="style/main.css?v=20260316-04" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260324-01" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-2">
   <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-2">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -14,19 +14,19 @@
   <main class="palette-page-shell">
     <header class="palette-page-header">
       <div class="palette-title-wrap">
-        <p class="palette-kicker">2048 主题设置</p>
-        <h1 class="palette-title">主题设置</h1>
-        <p class="palette-subtitle">统一管理棋子主题与色板配色，支持导入、导出与实时预览。</p>
+        <p class="palette-kicker">2048 色板中心</p>
+        <h1 class="palette-title">色板中心</h1>
+        <p class="palette-subtitle">按棋盘类型与配色维度统一管理颜色，支持导入导出与实时预览。</p>
       </div>
       <nav class="palette-nav">
-        <a class="replay-button palette-nav-btn" href="2048.html">返回首页</a>
+        <a class="replay-button palette-nav-btn" href="2048.html">回首页</a>
         <a class="replay-button palette-nav-btn" href="Practice_board.html">练习板</a>
       </nav>
     </header>
 
     <section class="card-surface palette-theme-card">
       <div class="panel-head">
-        <h2>主题设置</h2>
+        <h2>主题与模式</h2>
         <span class="panel-pill">主题</span>
       </div>
       <div class="theme-settings-row palette-theme-settings-row">
@@ -42,6 +42,14 @@
             </div>
           </div>
           <select id="theme-select" style="display:none"></select>
+
+          <div class="board-selection-col">
+            <label>棋盘选择</label>
+            <div id="palette-board-switch" class="palette-board-switch">
+              <button type="button" class="palette-board-btn is-active" data-board="pow2">2048</button>
+              <button type="button" class="palette-board-btn" data-board="fibonacci">斐波那契</button>
+            </div>
+          </div>
         </div>
 
         <div class="theme-preview-col">
@@ -67,8 +75,8 @@
         </div>
 
         <div class="palette-toolbar">
-          <input id="palette-name-input" class="palette-name-input" type="text" maxlength="40" placeholder="输入色板名称">
-          <button id="palette-create-btn" class="replay-button" type="button">新建副本</button>
+          <input id="palette-name-input" class="palette-name-input" type="text" maxlength="40" placeholder="输入当前主题名称（可编辑）">
+          <button id="palette-create-btn" class="replay-button" type="button">新建</button>
           <button id="palette-rename-btn" class="replay-button" type="button">重命名</button>
           <button id="palette-delete-btn" class="replay-button" type="button">删除</button>
           <button id="palette-export-btn" class="replay-button" type="button">导出</button>
@@ -76,32 +84,75 @@
           <input id="palette-import-input" type="file" accept="application/json" hidden>
         </div>
 
-        <div class="palette-editor-panels">
-          <section class="color-panel">
-            <div class="color-panel-head">标准 16 色</div>
-            <div id="palette-editor-pow2" class="color-grid"></div>
-          </section>
-          <section class="color-panel">
-            <div class="color-panel-head">斐波那契 16 色</div>
-            <div id="palette-editor-fib" class="color-grid"></div>
-          </section>
+        <div id="palette-dimension-tabs" class="palette-dimension-tabs" role="tablist" aria-label="颜色维度">
+          <button type="button" class="palette-dimension-tab is-active" data-dimension="background">背景</button>
+          <button type="button" class="palette-dimension-tab" data-dimension="text">文字</button>
+          <button type="button" class="palette-dimension-tab" data-dimension="border">边框</button>
+          <button type="button" class="palette-dimension-tab" data-dimension="glow">发光</button>
         </div>
 
-        <section class="preview-panel">
-          <div class="color-panel-head">实时预览</div>
-          <div class="preview-group">
-            <h3>标准</h3>
-            <div id="palette-preview-pow2" class="preview-row"></div>
-          </div>
-          <div class="preview-group">
-            <h3>斐波那契</h3>
-            <div id="palette-preview-fib" class="preview-row"></div>
-          </div>
-          <div class="preview-group">
-            <h3>计时图例</h3>
-            <div id="palette-preview-legend" class="legend-row"></div>
+        <section class="color-panel">
+          <div id="palette-editor-panel-head" class="color-panel-head">背景颜色</div>
+          <div class="editor-workspace">
+            <div class="editor-targets">
+              <div id="palette-editor-current" class="color-grid color-grid-targets"></div>
+            </div>
+            <aside id="palette-swatch-popover" class="editor-palette editor-palette-popover">
+              <div class="editor-palette-tile">
+                <span id="palette-swatch-tile" class="swatch-tile-chip"></span>
+                <span id="palette-swatch-value" class="swatch-tile-value">2</span>
+              </div>
+              <div class="editor-palette-main">
+                <div class="editor-picker-left">
+                  <div id="palette-picker-sv" class="picker-sv">
+                    <span id="palette-picker-cursor" class="picker-sv-cursor"></span>
+                  </div>
+                  <div class="picker-controls-row">
+                    <span id="palette-picker-current" class="picker-current-dot"></span>
+                    <input id="palette-picker-hue" class="picker-hue" type="range" min="0" max="360" step="1" value="45">
+                  </div>
+                  <div class="picker-rgb-row">
+                    <label>
+                      <input id="palette-picker-r" type="number" min="0" max="255" step="1" value="237">
+                      <span>R</span>
+                    </label>
+                    <label>
+                      <input id="palette-picker-g" type="number" min="0" max="255" step="1" value="194">
+                      <span>G</span>
+                    </label>
+                    <label>
+                      <input id="palette-picker-b" type="number" min="0" max="255" step="1" value="46">
+                      <span>B</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="editor-presets-right">
+                  <div class="editor-palette-head">预设颜色</div>
+                  <div id="palette-swatch-grid" class="swatch-grid swatch-grid-presets"></div>
+                </div>
+              </div>
+            </aside>
           </div>
         </section>
+
+        <section class="preview-panel">
+          <div id="palette-preview-panel-head" class="color-panel-head">颜色预览</div>
+          <div class="preview-layout">
+            <div class="preview-board-wrap" >
+              <div id="palette-preview-board" class="palette-board-preview"></div>
+            </div>
+            <aside class="preview-timer-wrap">
+              <div id="palette-preview-legend" class="legend-row" ></div>
+            </aside>
+          </div>
+        </section>
+
+        <div class="legacy-hooks" hidden aria-hidden="true">
+          <div id="palette-editor-pow2"></div>
+          <div id="palette-editor-fib"></div>
+          <div id="palette-preview-pow2"></div>
+          <div id="palette-preview-fib"></div>
+        </div>
 
         <p id="palette-note" class="palette-note" aria-live="polite"></p>
       </section>
@@ -111,13 +162,3 @@
   <script type="module" src="./src/entries/palette.ts"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-

@@ -414,6 +414,34 @@
   });
 
   add({
+    key: "diag_3x4_pow2_no_undo",
+    label: "Diagonal 4x3",
+    board_width: 4,
+    board_height: 3,
+    ruleset: "pow2",
+    undo_enabled: false,
+    spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+    ranked_bucket: "none",
+    mode_family: "pow2",
+    special_rules: { allow_diagonal_moves: true },
+    rank_policy: "unranked"
+  });
+
+  add({
+    key: "diag_2x4_pow2_no_undo",
+    label: "Diagonal 4x2",
+    board_width: 4,
+    board_height: 2,
+    ruleset: "pow2",
+    undo_enabled: false,
+    spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+    ranked_bucket: "none",
+    mode_family: "pow2",
+    special_rules: { allow_diagonal_moves: true },
+    rank_policy: "unranked"
+  });
+
+  add({
     key: "item_4x4_pow2_no_undo",
     label: "Item Mode 4x4",
     board_width: 4,

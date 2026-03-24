@@ -188,11 +188,13 @@ function createGameManagerFallbackPow2VariantModeConfigs() {
 
   var diag3NoUndo = createFallbackPow2ModeConfig("diag_3x3_pow2_no_undo", "Diagonal 3x3 (No Undo)", 3, 3, false, null, "none");
   var diag4NoUndo = createFallbackPow2ModeConfig("diag_4x4_pow2_no_undo", "Diagonal 4x4 (No Undo)", 4, 4, false, null, "none");
+  var diag4x3NoUndo = createFallbackPow2ModeConfig("diag_3x4_pow2_no_undo", "Diagonal 4x3 (No Undo)", 4, 3, false, null, "none");
+  var diag4x2NoUndo = createFallbackPow2ModeConfig("diag_2x4_pow2_no_undo", "Diagonal 4x2 (No Undo)", 4, 2, false, null, "none");
   var itemNoUndo = createFallbackPow2ModeConfig("item_4x4_pow2_no_undo", "Item Mode 4x4 (No Undo)", 4, 4, false, null, "none");
   var stoneNoUndo = createFallbackPow2ModeConfig("stone_4x4_pow2_no_undo", "Stone Mode 4x4 (No Undo)", 4, 4, false, null, "none");
   var timed5sNoUndo = createFallbackPow2ModeConfig("timed5s_4x4_pow2_no_undo", "Timed 5s 4x4 (No Undo)", 4, 4, false, null, "none");
 
-  var variantList = [diag3NoUndo, diag4NoUndo, itemNoUndo, stoneNoUndo, timed5sNoUndo];
+  var variantList = [diag3NoUndo, diag4NoUndo, diag4x3NoUndo, diag4x2NoUndo, itemNoUndo, stoneNoUndo, timed5sNoUndo];
   for (var i = 0; i < variantList.length; i++) {
     var item = variantList[i];
     item.mode_family = "pow2";
@@ -202,6 +204,8 @@ function createGameManagerFallbackPow2VariantModeConfigs() {
 
   diag3NoUndo.special_rules.allow_diagonal_moves = true;
   diag4NoUndo.special_rules.allow_diagonal_moves = true;
+  diag4x3NoUndo.special_rules.allow_diagonal_moves = true;
+  diag4x2NoUndo.special_rules.allow_diagonal_moves = true;
   itemNoUndo.mode_family = "item";
   itemNoUndo.special_rules.item_mode = { enabled: true, grant_every_moves: 6, max_per_item: 3 };
   stoneNoUndo.mode_family = "stone";
@@ -213,6 +217,8 @@ function createGameManagerFallbackPow2VariantModeConfigs() {
     spawn50_3x3_pow2_no_undo: spawn50,
     diag_3x3_pow2_no_undo: diag3NoUndo,
     diag_4x4_pow2_no_undo: diag4NoUndo,
+    diag_3x4_pow2_no_undo: diag4x3NoUndo,
+    diag_2x4_pow2_no_undo: diag4x2NoUndo,
     item_4x4_pow2_no_undo: itemNoUndo,
     stone_4x4_pow2_no_undo: stoneNoUndo,
     timed5s_4x4_pow2_no_undo: timed5sNoUndo
