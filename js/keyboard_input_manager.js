@@ -159,8 +159,10 @@ KeyboardInputManager.prototype.listen = function () {
 
   // Listen to swipe events
   var touchStartClientX, touchStartClientY;
+  var touchStartPointerId = null;
   var touchStartDiagonalDirection = null;
   var diagonalAssistActive = false;
+  var diagonalAssistTouchId = null;
   var gameContainer = document.getElementsByClassName("game-container")[0];
   var diagonalAssistButton = null;
 
@@ -180,10 +182,49 @@ KeyboardInputManager.prototype.listen = function () {
   function setDiagonalAssistActive(active) {
     var nextActive = !!active && isDiagonalModeEnabled();
     diagonalAssistActive = nextActive;
+    if (!nextActive) {
+      diagonalAssistTouchId = null;
+    }
     if (diagonalAssistButton) {
       diagonalAssistButton.classList.toggle("is-active", nextActive);
       diagonalAssistButton.setAttribute("aria-pressed", nextActive ? "true" : "false");
     }
+  }
+
+  function resolveDiagonalDirectionByDelta(dx, dy) {
+    var absDx = Math.abs(dx);
+    var absDy = Math.abs(dy);
+    if (absDx <= 10 || absDy <= 10) return null;
+    var ratio = absDx / absDy;
+    if (ratio < 0.5 || ratio > 2) return null;
+    if (dx > 0 && dy < 0) return 4; // up-right
+    if (dx > 0 && dy > 0) return 5; // down-right
+    if (dx < 0 && dy > 0) return 6; // down-left
+    return 7; // up-left
+  }
+
+  function resolveGestureTouch(touchList) {
+    if (!touchList || touchList.length === 0) return null;
+    if (!diagonalAssistActive || diagonalAssistTouchId == null) {
+      return touchList[0];
+    }
+    for (var i = 0; i < touchList.length; i += 1) {
+      if (touchList[i].identifier !== diagonalAssistTouchId) {
+        return touchList[i];
+      }
+    }
+    return null;
+  }
+
+  function resolveChangedTouch(changedTouches) {
+    if (!changedTouches || changedTouches.length === 0) return null;
+    if (touchStartPointerId == null) return changedTouches[0];
+    for (var i = 0; i < changedTouches.length; i += 1) {
+      if (changedTouches[i].identifier === touchStartPointerId) {
+        return changedTouches[i];
+      }
+    }
+    return changedTouches[0];
   }
 
   function syncDiagonalAssistButtonLayout() {
@@ -220,6 +261,9 @@ KeyboardInputManager.prototype.listen = function () {
 
       var pressStart = function (event) {
         if (event && typeof event.preventDefault === "function") event.preventDefault();
+        if (event && event.touches && event.touches.length > 0) {
+          diagonalAssistTouchId = event.touches[0].identifier;
+        }
         setDiagonalAssistActive(true);
       };
       var pressEnd = function () {
@@ -260,11 +304,15 @@ KeyboardInputManager.prototype.listen = function () {
   ensureDiagonalAssistUi();
 
   gameContainer.addEventListener("touchstart", function (event) {
-    if (event.touches.length > 1) return;
+    if (!event.touches || event.touches.length === 0) return;
+    if (!diagonalAssistActive && event.touches.length > 1) return;
 
     syncDiagonalAssistVisibility();
-    touchStartClientX = event.touches[0].clientX;
-    touchStartClientY = event.touches[0].clientY;
+    var touchPoint = resolveGestureTouch(event.touches);
+    if (!touchPoint) return;
+    touchStartPointerId = touchPoint.identifier;
+    touchStartClientX = touchPoint.clientX;
+    touchStartClientY = touchPoint.clientY;
     touchStartDiagonalDirection = resolveDiagonalDirectionByQuadrant(
       touchStartClientX,
       touchStartClientY
@@ -277,21 +325,33 @@ KeyboardInputManager.prototype.listen = function () {
   });
 
   gameContainer.addEventListener("touchend", function (event) {
-    if (event.touches.length > 0) return;
+    var changedTouch = resolveChangedTouch(event.changedTouches);
+    if (!changedTouch) return;
 
-    var dx = event.changedTouches[0].clientX - touchStartClientX;
+    var dx = changedTouch.clientX - touchStartClientX;
     var absDx = Math.abs(dx);
 
-    var dy = event.changedTouches[0].clientY - touchStartClientY;
+    var dy = changedTouch.clientY - touchStartClientY;
     var absDy = Math.abs(dy);
 
     if (Math.max(absDx, absDy) > 10) {
-      if (diagonalAssistActive && isDiagonalModeEnabled()) {
+      var diagonalModeEnabled = isDiagonalModeEnabled();
+      if (diagonalAssistActive && diagonalModeEnabled) {
         self.emit("move", touchStartDiagonalDirection == null ? 4 : touchStartDiagonalDirection);
+        touchStartPointerId = null;
         return;
+      }
+      if (diagonalModeEnabled) {
+        var diagonalDirection = resolveDiagonalDirectionByDelta(dx, dy);
+        if (diagonalDirection != null) {
+          self.emit("move", diagonalDirection);
+          touchStartPointerId = null;
+          return;
+        }
       }
       self.emit("move", absDx > absDy ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0));
     }
+    touchStartPointerId = null;
   });
 };
 
