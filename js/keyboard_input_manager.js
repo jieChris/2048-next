@@ -160,24 +160,10 @@ KeyboardInputManager.prototype.listen = function () {
   // Listen to swipe events
   var touchStartClientX, touchStartClientY;
   var touchStartPointerId = null;
-  var touchStartDiagonalDirection = null;
   var diagonalAssistActive = false;
   var diagonalAssistTouchId = null;
   var gameContainer = document.getElementsByClassName("game-container")[0];
   var diagonalAssistButton = null;
-
-  function resolveDiagonalDirectionByQuadrant(clientX, clientY) {
-    if (!gameContainer) return 4;
-    var rect = gameContainer.getBoundingClientRect();
-    var x = clientX - rect.left;
-    var y = clientY - rect.top;
-    var leftHalf = x < rect.width / 2;
-    var topHalf = y < rect.height / 2;
-    if (topHalf && leftHalf) return 7; // up-left
-    if (topHalf && !leftHalf) return 4; // up-right
-    if (!topHalf && !leftHalf) return 5; // down-right
-    return 6; // down-left
-  }
 
   function setDiagonalAssistActive(active) {
     var nextActive = !!active && isDiagonalModeEnabled();
@@ -201,6 +187,29 @@ KeyboardInputManager.prototype.listen = function () {
     if (dx > 0 && dy > 0) return 5; // down-right
     if (dx < 0 && dy > 0) return 6; // down-left
     return 7; // up-left
+  }
+
+  function resolveNearestDiagonalDirection(dx, dy) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) <= 10) return null;
+    var angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    if (angle < 0) angle += 360;
+    var options = [
+      { angle: 315, dir: 4 }, // up-right
+      { angle: 45, dir: 5 },  // down-right
+      { angle: 135, dir: 6 }, // down-left
+      { angle: 225, dir: 7 }  // up-left
+    ];
+    var best = options[0];
+    var bestDistance = 360;
+    for (var i = 0; i < options.length; i += 1) {
+      var distance = Math.abs(angle - options[i].angle);
+      distance = Math.min(distance, 360 - distance);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = options[i];
+      }
+    }
+    return best.dir;
   }
 
   function resolveGestureTouch(touchList) {
@@ -266,7 +275,14 @@ KeyboardInputManager.prototype.listen = function () {
         }
         setDiagonalAssistActive(true);
       };
-      var pressEnd = function () {
+      var pressEnd = function (event) {
+        if (event && event.touches && diagonalAssistTouchId != null) {
+          for (var i = 0; i < event.touches.length; i += 1) {
+            if (event.touches[i].identifier === diagonalAssistTouchId) {
+              return;
+            }
+          }
+        }
         setDiagonalAssistActive(false);
       };
       diagonalAssistButton.addEventListener("touchstart", pressStart, { passive: false });
@@ -313,10 +329,6 @@ KeyboardInputManager.prototype.listen = function () {
     touchStartPointerId = touchPoint.identifier;
     touchStartClientX = touchPoint.clientX;
     touchStartClientY = touchPoint.clientY;
-    touchStartDiagonalDirection = resolveDiagonalDirectionByQuadrant(
-      touchStartClientX,
-      touchStartClientY
-    );
     event.preventDefault();
   });
 
@@ -337,7 +349,10 @@ KeyboardInputManager.prototype.listen = function () {
     if (Math.max(absDx, absDy) > 10) {
       var diagonalModeEnabled = isDiagonalModeEnabled();
       if (diagonalAssistActive && diagonalModeEnabled) {
-        self.emit("move", touchStartDiagonalDirection == null ? 4 : touchStartDiagonalDirection);
+        var forcedDiagonalDirection = resolveNearestDiagonalDirection(dx, dy);
+        if (forcedDiagonalDirection != null) {
+          self.emit("move", forcedDiagonalDirection);
+        }
         touchStartPointerId = null;
         return;
       }
