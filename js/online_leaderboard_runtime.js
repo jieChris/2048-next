@@ -1128,7 +1128,7 @@
 
     var manager = global.game_manager;
     if (!manager || manager.replayMode) return;
-    if (!manager.over) return;
+    if (!isSessionTerminated(manager)) return;
 
     var score = Math.floor(Number(manager.score) || 0);
     if (!(score > 0)) return;
