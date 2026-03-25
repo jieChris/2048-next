@@ -108,6 +108,7 @@
       navPractice: "练习板",
       navRegister: "去注册",
       authHeading: "账号",
+      authSubtitle: "登录后可同步成绩并查看在线排行。",
       stateGuest: "未登录",
       stateAuthed: "已登录",
       emailLabel: "邮箱",
@@ -127,10 +128,12 @@
       userEmail: "邮箱：",
       userCreated: "注册时间：",
       boardHeading: "在线排行榜",
+      boardSubtitle: "按模式和榜单筛选后查看排行。",
       boardMode: "模式",
       boardMetric: "榜单",
       boardLimit: "条数",
       boardRefresh: "刷新",
+      boardRefreshing: "刷新中...",
       boardPrev: "上一页",
       boardNext: "下一页",
       boardMetricScore: "分数",
@@ -173,6 +176,7 @@
       navPractice: "Practice",
       navRegister: "Create Account",
       authHeading: "Account",
+      authSubtitle: "Sign in to sync records and compare rankings.",
       stateGuest: "Guest",
       stateAuthed: "Signed In",
       emailLabel: "Email",
@@ -192,10 +196,12 @@
       userEmail: "Email:",
       userCreated: "Created:",
       boardHeading: "Leaderboard",
+      boardSubtitle: "Filter by mode and metric.",
       boardMode: "Mode",
       boardMetric: "Metric",
       boardLimit: "Limit",
       boardRefresh: "Refresh",
+      boardRefreshing: "Refreshing...",
       boardPrev: "Prev",
       boardNext: "Next",
       boardMetricScore: "Score",
@@ -799,10 +805,11 @@
     scoreHeader.textContent = metric === "score" ? t("colScore") : t("colMinSteps");
   }
 
-  function renderBoardList(resultList, pageLike, pageSizeLike, metricLike) {
+  function renderBoardList(resultList, pageLike, pageSizeLike, metricLike, stateLike) {
     var host = byId("account-board-list");
     if (!host) return;
     host.innerHTML = "";
+    var renderState = toText(stateLike).toLowerCase() === "error" ? "error" : "ready";
     var safePage = Math.floor(Number(pageLike) || 1);
     if (safePage <= 0) safePage = 1;
     var safePageSize = Math.floor(Number(pageSizeLike) || DEFAULT_LIMIT);
@@ -811,20 +818,37 @@
 
     if (!Array.isArray(resultList) || resultList.length === 0) {
       var empty = global.document.createElement("div");
-      empty.className = "account-board-empty";
-      empty.textContent = t("boardEmpty");
+      if (renderState === "error") {
+        empty.className = "account-board-empty err is-error";
+        empty.textContent = t("boardFail");
+        host.setAttribute("data-board-state", "error");
+      } else {
+        empty.className = "account-board-empty is-empty";
+        empty.textContent = t("boardEmpty");
+        host.setAttribute("data-board-state", "empty");
+      }
+      empty.setAttribute("role", "status");
       host.appendChild(empty);
       return;
     }
+    host.setAttribute("data-board-state", "ready");
 
     for (var i = 0; i < resultList.length; i += 1) {
       var item = resultList[i] || {};
       var row = global.document.createElement("div");
       row.className = "account-board-row";
+      var absoluteRank = rankOffset + i + 1;
+      if (absoluteRank === 1) {
+        row.classList.add("is-rank-top1");
+      } else if (absoluteRank === 2) {
+        row.classList.add("is-rank-top2");
+      } else if (absoluteRank === 3) {
+        row.classList.add("is-rank-top3");
+      }
 
       var rank = global.document.createElement("span");
       rank.className = "account-rank";
-      rank.textContent = String(rankOffset + i + 1);
+      rank.textContent = String(absoluteRank);
       row.appendChild(rank);
 
       var name = global.document.createElement("span");
@@ -838,7 +862,6 @@
       } else {
         name.className = "account-name";
       }
-      name.style.fontSize = "11px";
       name.textContent = displayNickname;
       row.appendChild(name);
 
@@ -962,6 +985,8 @@
 
   async function refreshLeaderboard(resetPage) {
     var boardTip = byId("account-board-tip");
+    var refreshBtn = byId("account-board-refresh");
+    var boardList = byId("account-board-list");
     var modeBucket = getSelectedModeBucket();
     var metric = getSelectedLeaderboardMetric();
     var safeLimit = DEFAULT_LIMIT;
@@ -969,31 +994,45 @@
 
     syncLeaderboardMetricColumnHeader(metric);
     setTip(boardTip, t("boardLoading"), "");
-    var result = await getLeaderboard(safeLimit, modeBucket, leaderboardPage, metric);
-    var errorText = resolveServerError(result, "boardFail");
-    if ((!result || !result.success) && isTimeoutErrorText(errorText)) {
-      result = await getLeaderboard(safeLimit, modeBucket, leaderboardPage, metric);
-      errorText = resolveServerError(result, "boardFail");
+    if (boardList) boardList.setAttribute("data-board-state", "loading");
+    if (refreshBtn) {
+      refreshBtn.disabled = true;
+      refreshBtn.classList.add("is-loading");
+      refreshBtn.textContent = t("boardRefreshing");
     }
-    if (!result || !result.success) {
-      renderBoardList([], leaderboardPage, safeLimit, metric);
-      leaderboardHasPrev = leaderboardPage > 1;
-      leaderboardHasNext = false;
-      leaderboardTotalPages = 0;
-      syncLeaderboardPagerUi();
-      setTip(boardTip, errorText, "err");
-      return;
-    }
+    try {
+      var result = await getLeaderboard(safeLimit, modeBucket, leaderboardPage, metric);
+      var errorText = resolveServerError(result, "boardFail");
+      if ((!result || !result.success) && isTimeoutErrorText(errorText)) {
+        result = await getLeaderboard(safeLimit, modeBucket, leaderboardPage, metric);
+        errorText = resolveServerError(result, "boardFail");
+      }
+      if (!result || !result.success) {
+        renderBoardList([], leaderboardPage, safeLimit, metric, "error");
+        leaderboardHasPrev = leaderboardPage > 1;
+        leaderboardHasNext = false;
+        leaderboardTotalPages = 0;
+        syncLeaderboardPagerUi();
+        setTip(boardTip, errorText, "err");
+        return;
+      }
 
-    var list = Array.isArray(result.data) ? result.data : [];
-    var meta = resolvePagerMeta(result, leaderboardPage, safeLimit, list.length);
-    leaderboardPage = meta.page;
-    leaderboardTotalPages = meta.totalPages;
-    leaderboardHasPrev = meta.hasPrev;
-    leaderboardHasNext = meta.hasNext;
-    renderBoardList(list, leaderboardPage, safeLimit, metric);
-    syncLeaderboardPagerUi();
-    setTip(boardTip, t("boardUpdated"), "ok");
+      var list = Array.isArray(result.data) ? result.data : [];
+      var meta = resolvePagerMeta(result, leaderboardPage, safeLimit, list.length);
+      leaderboardPage = meta.page;
+      leaderboardTotalPages = meta.totalPages;
+      leaderboardHasPrev = meta.hasPrev;
+      leaderboardHasNext = meta.hasNext;
+      renderBoardList(list, leaderboardPage, safeLimit, metric, list.length ? "ready" : "empty");
+      syncLeaderboardPagerUi();
+      setTip(boardTip, t("boardUpdated"), "ok");
+    } finally {
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.classList.remove("is-loading");
+        refreshBtn.textContent = t("boardRefresh");
+      }
+    }
   }
 
   function promptRegisterNickname() {
@@ -1101,6 +1140,7 @@
       "account-nav-practice": t("navPractice"),
       "account-nav-register": t("navRegister"),
       "account-auth-heading": t("authHeading"),
+      "account-auth-subtitle": t("authSubtitle"),
       "account-email-label": t("emailLabel"),
       "account-password-label": t("passwordLabel"),
       "account-login-captcha-label": t("loginCaptchaLabel"),
@@ -1113,6 +1153,7 @@
       "account-user-email-label": t("userEmail"),
       "account-user-created-label": t("userCreated"),
       "account-board-heading": t("boardHeading"),
+      "account-board-subtitle": t("boardSubtitle"),
       "account-board-mode-label": t("boardMode"),
       "account-board-metric-label": t("boardMetric"),
       "account-board-refresh": t("boardRefresh"),
@@ -1233,7 +1274,6 @@
       }
     } catch (_err) {}
     refreshUserInfo();
-    refreshLeaderboard();
   }
 
   global.AccountPageRuntime = {

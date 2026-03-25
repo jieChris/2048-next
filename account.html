@@ -29,25 +29,34 @@
 
     <section class="account-grid">
       <section class="card-surface account-auth-card">
-        <div class="panel-head">
-          <h2 id="account-auth-heading">Account</h2>
+        <div class="panel-head account-auth-title-row">
+          <div class="account-auth-title-wrap">
+            <h2 id="account-auth-heading">Account</h2>
+            <p id="account-auth-subtitle" class="account-auth-subtitle">Sign in to sync records and compare rankings.</p>
+          </div>
           <span id="account-auth-state-tag" class="panel-pill">--</span>
         </div>
 
-        <div id="account-auth-grid" class="account-auth-grid">
-          <label for="account-email" id="account-email-label">Email</label>
-          <input id="account-email" class="account-input" type="email" placeholder="Enter email">
-
-          <label for="account-password" id="account-password-label">Password</label>
-          <input id="account-password" class="account-input" type="password" placeholder="Enter password">
-
-          <div id="account-login-captcha-wrap" class="account-login-captcha" style="display:none;">
-            <label for="account-login-captcha-answer" id="account-login-captcha-label">Image Captcha</label>
-            <div class="account-login-captcha-row">
-              <img id="account-login-captcha-image" class="account-login-captcha-image" alt="login captcha">
-              <button id="account-login-captcha-refresh" class="replay-button account-login-captcha-refresh" type="button">Refresh</button>
+        <div class="account-auth-form-surface">
+          <div id="account-auth-grid" class="account-auth-grid">
+            <div class="account-form-field">
+              <label for="account-email" id="account-email-label">Email</label>
+              <input id="account-email" class="account-input" type="email" placeholder="Enter email">
             </div>
-            <input id="account-login-captcha-answer" class="account-input" type="text" maxlength="8" autocomplete="off" placeholder="Enter captcha">
+
+            <div class="account-form-field">
+              <label for="account-password" id="account-password-label">Password</label>
+              <input id="account-password" class="account-input" type="password" placeholder="Enter password">
+            </div>
+
+            <div id="account-login-captcha-wrap" class="account-login-captcha" style="display:none;">
+              <label for="account-login-captcha-answer" id="account-login-captcha-label">Image Captcha</label>
+              <div class="account-login-captcha-row">
+                <img id="account-login-captcha-image" class="account-login-captcha-image" alt="login captcha">
+                <button id="account-login-captcha-refresh" class="replay-button account-login-captcha-refresh" type="button">Refresh</button>
+              </div>
+              <input id="account-login-captcha-answer" class="account-input" type="text" maxlength="8" autocomplete="off" placeholder="Enter captcha">
+            </div>
           </div>
         </div>
 
@@ -70,8 +79,13 @@
       </section>
 
       <section class="card-surface account-board-card">
-        <div class="panel-head">
-          <h2 id="account-board-heading">Leaderboard</h2>
+        <div class="panel-head account-board-title-row">
+          <div class="account-board-title-wrap">
+            <h2 id="account-board-heading">Leaderboard</h2>
+            <p id="account-board-subtitle" class="account-board-subtitle">Filter by mode and metric to compare records.</p>
+          </div>
+        </div>
+        <div class="account-board-filter-row" role="group" aria-label="Leaderboard filters">
           <div class="account-board-tools">
             <label for="account-board-mode" id="account-board-mode-label">Mode</label>
             <select id="account-board-mode" class="settings-select"></select>
@@ -80,14 +94,15 @@
             <button id="account-board-refresh" class="replay-button" type="button">Refresh</button>
           </div>
         </div>
-
-        <div class="account-board-head-row">
-          <span id="account-col-rank">Rank</span>
-          <span id="account-col-name">Name</span>
-          <span id="account-col-score">Score</span>
-          <span id="account-col-date">Updated</span>
+        <div class="account-board-table-wrap">
+          <div class="account-board-head-row">
+            <span id="account-col-rank">Rank</span>
+            <span id="account-col-name">Name</span>
+            <span id="account-col-score">Score</span>
+            <span id="account-col-date">Updated</span>
+          </div>
+          <div id="account-board-list" class="account-board-list" data-board-state="idle" aria-live="polite"></div>
         </div>
-        <div id="account-board-list" class="account-board-list"></div>
         <div class="account-board-pagination">
           <button id="account-board-prev" class="replay-button" type="button">上一页</button>
           <span id="account-board-page" class="account-page-indicator">第1页</span>
