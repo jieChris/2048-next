@@ -41,13 +41,41 @@ describe("core replay import: parseReplayImportEnvelope", () => {
         fallbackModeKey: "practice"
       })
     ).toBeNull();
+  });
 
-    expect(
-      parseReplayImportEnvelope({
-        trimmedReplayString: JSON.stringify({ v: 3, actions: [] }),
-        fallbackModeKey: "practice"
-      })
-    ).toBeNull();
+  it("parses v3 JSON envelope with mode key and seed", () => {
+    const parsed = parseReplayImportEnvelope({
+      trimmedReplayString: JSON.stringify({
+        v: 3,
+        mode_key: "diag_4x4_pow2_no_undo",
+        seed: 0.125,
+        actions: [["m", 6], ["u"]]
+      }),
+      fallbackModeKey: "practice"
+    });
+    expect(parsed).not.toBeNull();
+    expect(parsed?.kind).toBe("v3-json");
+    if (!parsed || parsed.kind !== "v3-json") return;
+    expect(parsed.modeKey).toBe("diag_4x4_pow2_no_undo");
+    expect(parsed.seed).toBe(0.125);
+    expect(parsed.actions).toEqual([["m", 6], ["u"]]);
+  });
+
+  it("uses fallback mode key when v3 payload omits mode key", () => {
+    const parsed = parseReplayImportEnvelope({
+      trimmedReplayString: JSON.stringify({
+        v: 3,
+        seed: 0.5,
+        actions: [1, 2, 3]
+      }),
+      fallbackModeKey: "practice"
+    });
+    expect(parsed).not.toBeNull();
+    expect(parsed?.kind).toBe("v3-json");
+    if (!parsed || parsed.kind !== "v3-json") return;
+    expect(parsed.modeKey).toBe("practice");
+    expect(parsed.seed).toBe(0.5);
+    expect(parsed.actions).toEqual([1, 2, 3]);
   });
 });
 

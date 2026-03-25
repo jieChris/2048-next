@@ -1862,12 +1862,61 @@ function decodeV9VerseReplayEnvelope(trimmed) {
   };
 }
 
+function isReplayV4Direction(direction) {
+  return Number.isInteger(direction) && direction >= 0 && direction <= 3;
+}
+
+function isReplayV4PracticeAction(action) {
+  if (!Array.isArray(action) || action.length < 4) return false;
+  if (String(action[0]) !== "p") return false;
+  var x = Number(action[1]);
+  var y = Number(action[2]);
+  var value = Number(action[3]);
+  if (!Number.isInteger(x) || x < 0 || x > 3) return false;
+  if (!Number.isInteger(y) || y < 0 || y > 3) return false;
+  if (!Number.isInteger(value) || value < 0) return false;
+  if (value === 0) return true;
+  var lg = Math.log(value) / Math.log(2);
+  return Math.floor(lg) === lg;
+}
+
+function isReplayV4CompatibleSessionAction(action) {
+  if (action === -1) return true;
+  if (typeof action === "number") return isReplayV4Direction(action);
+  if (!Array.isArray(action) || !action.length) return false;
+  var kind = String(action[0]);
+  if (kind === "m") return isReplayV4Direction(Number(action[1]));
+  if (kind === "u") return true;
+  if (kind === "p") return isReplayV4PracticeAction(action);
+  return false;
+}
+
+function hasReplayV3IncompatibleActionsForV4(manager) {
+  if (!(manager && manager.sessionReplayV3 && Array.isArray(manager.sessionReplayV3.actions))) return false;
+  var actions = manager.sessionReplayV3.actions;
+  for (var i = 0; i < actions.length; i++) {
+    if (!isReplayV4CompatibleSessionAction(actions[i])) return true;
+  }
+  return false;
+}
+
+function shouldSerializeReplayAsV4(manager) {
+  if (!manager) return false;
+  if (manager.width !== 4 || manager.height !== 4 || manager.isFibonacciMode()) return false;
+  if (!GameManager.REPLAY_V4_MODE_KEY_TO_CODE || !GameManager.REPLAY_V4_MODE_KEY_TO_CODE[manager.modeKey]) return false;
+  if (hasReplayV3IncompatibleActionsForV4(manager)) return false;
+  return true;
+}
+
 function serializeReplay(manager) {
   if (!manager) return "{}";
-  if (manager.width !== 4 || manager.height !== 4 || manager.isFibonacciMode()) {
+  if (!shouldSerializeReplayAsV4(manager)) {
     return JSON.stringify(serializeReplayV3(manager));
   }
-  var modeCode = GameManager.REPLAY_V4_MODE_KEY_TO_CODE[manager.modeKey] || "C";
+  var modeCode = GameManager.REPLAY_V4_MODE_KEY_TO_CODE[manager.modeKey];
+  if (!modeCode) {
+    return JSON.stringify(serializeReplayV3(manager));
+  }
   var initialBoard = manager.initialBoardMatrix || getFinalBoardMatrix(manager);
   var encodedBoard = encodeBoardV4(manager, initialBoard);
   return GameManager.REPLAY_V4_PREFIX + modeCode + encodedBoard + (manager.replayCompactLog || "");
@@ -1886,7 +1935,7 @@ function applyReplayImportActions(manager, payload) {
 }
 
 function isStructuredReplayEnvelope(envelope) {
-  return !!envelope && (envelope.kind === "v4c" || envelope.kind === "v9rpl");
+  return !!envelope && (envelope.kind === "v4c" || envelope.kind === "v9rpl" || envelope.kind === "v3-json");
 }
 
 function applyImportedReplayUndoState(manager) {
@@ -1955,6 +2004,8 @@ function parseReplayImportEnvelopeFallback(manager, trimmed) {
   if (verseEnvelope) return verseEnvelope;
   var v9Envelope = tryParseV9RplBase64ReplayEnvelope(manager, trimmed);
   if (v9Envelope) return v9Envelope;
+  var v3Envelope = tryParseReplayV3JsonEnvelope(manager, trimmed);
+  if (v3Envelope) return v3Envelope;
   return tryParseV4cReplayEnvelope(trimmed);
 }
 
@@ -2104,17 +2155,68 @@ function applyV4StructuredReplayEnvelope(manager, envelope, replayModeConfig) {
   restartWithBoard(manager, initialBoard, replayModeConfig, { asReplay: true });
 }
 
+function resolveReplayV3ModeKeyFromEnvelope(manager, replaySource) {
+  var source = normalizeReplayRecordObject(replaySource, {});
+  var modeKey = typeof source.mode_key === "string" && source.mode_key ? source.mode_key : "";
+  if (modeKey) return modeKey;
+  var modeTag = typeof source.mode === "string" ? source.mode.toLowerCase() : "";
+  if (modeTag === "practice") return "practice";
+  if (modeTag === "capped") return "capped_4x4_pow2_no_undo";
+  if (modeTag === "classic") return "classic_4x4_pow2_undo";
+  return manager.modeKey || manager.mode || GameManager.DEFAULT_MODE_KEY;
+}
+
+function tryParseReplayV3JsonEnvelope(manager, trimmed) {
+  if (typeof trimmed !== "string" || !trimmed) return null;
+  var firstChar = trimmed.charAt(0);
+  if (firstChar !== "{" && firstChar !== "[") return null;
+  var parsed = JSON.parse(trimmed);
+  var replaySource = null;
+  if (Array.isArray(parsed)) {
+    replaySource = { actions: parsed };
+  } else if (manager && typeof manager.isNonArrayObject === "function" && manager.isNonArrayObject(parsed)) {
+    replaySource = parsed;
+  } else if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    replaySource = parsed;
+  }
+  if (!replaySource) throw "Invalid v3 replay payload";
+  var normalizedSource = normalizeReplayRecordObject(replaySource, {});
+  var actions = Array.isArray(normalizedSource.actions) ? normalizedSource.actions.slice() : [];
+  var parsedSeed = Number(normalizedSource.seed);
+  return {
+    kind: "v3-json",
+    modeKey: resolveReplayV3ModeKeyFromEnvelope(manager, normalizedSource),
+    seed: Number.isFinite(parsedSeed) ? parsedSeed : null,
+    actions: actions
+  };
+}
+
+function applyV3StructuredReplayEnvelope(manager, envelope, replayModeConfig) {
+  if (!Number.isFinite(envelope && envelope.seed)) {
+    throw "Missing v3 replay seed";
+  }
+  restartWithSeed(manager, envelope.seed, replayModeConfig);
+  applyReplayImportActions(manager, {
+    replayMoves: Array.isArray(envelope && envelope.actions) ? envelope.actions : [],
+    replaySpawns: null
+  });
+  setRuntimeDisableSessionSyncForReplay(manager, true);
+}
+
 function applyStructuredReplayEnvelope(manager, envelope) {
   var replayModeConfig = manager.resolveModeConfig(envelope.modeKey);
   if (!replayModeConfig && envelope.kind === "v9rpl") {
     replayModeConfig = resolveV9RplReplayModeConfig(manager);
   }
-  if (replayModeConfig) {
-    if (envelope.kind === "v9rpl") {
-      applyV9RplStructuredReplayEnvelope(manager, envelope, replayModeConfig);
-    } else {
-      applyV4StructuredReplayEnvelope(manager, envelope, replayModeConfig);
-    }
+  if (!replayModeConfig) {
+    throw "Replay mode config unavailable";
+  }
+  if (envelope.kind === "v9rpl") {
+    applyV9RplStructuredReplayEnvelope(manager, envelope, replayModeConfig);
+  } else if (envelope.kind === "v3-json") {
+    applyV3StructuredReplayEnvelope(manager, envelope, replayModeConfig);
+  } else {
+    applyV4StructuredReplayEnvelope(manager, envelope, replayModeConfig);
   }
   applyImportedReplayUndoState(manager);
   startImportedReplayPlayback(manager);

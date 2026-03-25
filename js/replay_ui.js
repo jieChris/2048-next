@@ -182,6 +182,74 @@ function removeSessionStorageItem(key) {
     } catch (_error) {}
 }
 
+function safeReplayText(value) {
+    return value == null ? "" : String(value).trim();
+}
+
+function readReplayModeCodeFromV4Payload(payloadText) {
+    var text = safeReplayText(payloadText);
+    var prefix = String((window.GameManager && window.GameManager.REPLAY_V4_PREFIX) || "REPLAY_v4C_");
+    if (!text || text.indexOf(prefix) !== 0 || text.length <= prefix.length) return "";
+    return text.charAt(prefix.length);
+}
+
+function resolveReplayModeKeyFromV4Code(modeCode) {
+    var map = (window.GameManager && window.GameManager.REPLAY_V4_MODE_CODE_TO_KEY) || {};
+    var code = safeReplayText(modeCode);
+    return code && map && map[code] ? String(map[code]) : "";
+}
+
+function isV4ReplayPayload(payloadText) {
+    return !!readReplayModeCodeFromV4Payload(payloadText);
+}
+
+function isV4CompatibleReplayAction(action) {
+    if (action === -1) return true;
+    if (typeof action === "number") {
+        return Number.isInteger(action) && action >= 0 && action <= 3;
+    }
+    if (!Array.isArray(action) || !action.length) return false;
+    var kind = String(action[0]);
+    if (kind === "u") return true;
+    if (kind === "m") {
+        var dir = Number(action[1]);
+        return Number.isInteger(dir) && dir >= 0 && dir <= 3;
+    }
+    if (kind === "p") return true;
+    return false;
+}
+
+function shouldPreferStructuredReplay(recordLike) {
+    var source = recordLike && typeof recordLike === "object" ? recordLike : {};
+    var replayObject = source.replay && typeof source.replay === "object" ? source.replay : null;
+    if (!replayObject) return false;
+    var replayString = safeReplayText(source.replay_string);
+    if (!replayString) return true;
+    if (!isV4ReplayPayload(replayString)) return false;
+    var v4ModeKey = resolveReplayModeKeyFromV4Code(readReplayModeCodeFromV4Payload(replayString));
+    var recordModeKey = safeReplayText(source.mode_key || replayObject.mode_key);
+    if (recordModeKey && v4ModeKey && recordModeKey !== v4ModeKey) return true;
+    var actions = Array.isArray(replayObject.actions) ? replayObject.actions : [];
+    for (var i = 0; i < actions.length; i += 1) {
+        if (!isV4CompatibleReplayAction(actions[i])) return true;
+    }
+    return false;
+}
+
+function resolveReplayPayloadForImport(recordLike) {
+    var source = recordLike && typeof recordLike === "object" ? recordLike : {};
+    var replayString = safeReplayText(source.replay_string);
+    var replayObject = source.replay && typeof source.replay === "object" ? source.replay : null;
+    if (shouldPreferStructuredReplay(source) && replayObject) {
+        try { return JSON.stringify(replayObject); } catch (_err) {}
+    }
+    if (replayString) return replayString;
+    if (replayObject) {
+        try { return JSON.stringify(replayObject); } catch (_err2) { return ""; }
+    }
+    return "";
+}
+
 function cancelReplayPendingRelayout() {
     if (!replayRelayoutTimer) return;
     clearTimeout(replayRelayoutTimer);
@@ -485,9 +553,7 @@ async function loadReplayFromSessionId() {
             var cloudReplayPayloadRaw = String(readSessionStorageItem(CLOUD_REPLAY_STORAGE_KEY) || "");
             if (!cloudReplayPayloadRaw) throw new Error("cloud_replay_payload_missing");
             var cloudReplayPayload = JSON.parse(cloudReplayPayloadRaw);
-            var replayPayload = cloudReplayPayload && cloudReplayPayload.replay_string
-                ? String(cloudReplayPayload.replay_string)
-                : "";
+            var replayPayload = resolveReplayPayloadForImport(cloudReplayPayload);
             if (!replayPayload) throw new Error("cloud_replay_missing");
             window.game_manager.import(replayPayload);
             var titleCloud = document.querySelector(".heading .title");
@@ -512,9 +578,7 @@ async function loadReplayFromSessionId() {
             var record = await window.LocalHistoryStore.getById(localHistoryId);
             if (!record) throw new Error("record_not_found");
 
-            var replayPayload = record.replay_string
-              ? record.replay_string
-              : (record.replay ? JSON.stringify(record.replay) : "");
+            var replayPayload = resolveReplayPayloadForImport(record);
             if (!replayPayload) throw new Error("replay_missing");
 
             window.game_manager.import(replayPayload);

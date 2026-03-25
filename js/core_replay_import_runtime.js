@@ -11,10 +11,47 @@
     P: "practice"
   };
 
+  function resolveReplayV3ModeKey(source, fallbackModeKey) {
+    var modeKey = source && typeof source.mode_key === "string" ? source.mode_key.trim() : "";
+    if (modeKey) return modeKey;
+    var modeTag = source && typeof source.mode === "string" ? source.mode.trim().toLowerCase() : "";
+    if (modeTag === "practice") return "practice";
+    if (modeTag === "capped") return "capped_4x4_pow2_no_undo";
+    if (modeTag === "classic") return "classic_4x4_pow2_undo";
+    return fallbackModeKey;
+  }
+
+  function parseReplayV3JsonEnvelope(trimmedReplayString, fallbackModeKey) {
+    if (typeof trimmedReplayString !== "string" || !trimmedReplayString) return null;
+    var firstChar = trimmedReplayString.charAt(0);
+    if (firstChar !== "{" && firstChar !== "[") return null;
+    var parsed = JSON.parse(trimmedReplayString);
+    if (Array.isArray(parsed)) {
+      return {
+        kind: "v3-json",
+        modeKey: fallbackModeKey,
+        seed: null,
+        actions: parsed.slice()
+      };
+    }
+    if (!parsed || typeof parsed !== "object") throw "Invalid v3 replay payload";
+    var actions = Array.isArray(parsed.actions) ? parsed.actions.slice() : [];
+    var parsedSeed = Number(parsed.seed);
+    return {
+      kind: "v3-json",
+      modeKey: resolveReplayV3ModeKey(parsed, fallbackModeKey),
+      seed: Number.isFinite(parsedSeed) ? parsedSeed : null,
+      actions: actions
+    };
+  }
+
   function parseReplayImportEnvelope(input) {
     var trimmedReplayString = input && typeof input.trimmedReplayString === "string"
       ? input.trimmedReplayString
       : "";
+    var fallbackModeKey = input && typeof input.fallbackModeKey === "string" && input.fallbackModeKey
+      ? input.fallbackModeKey
+      : "standard_4x4_pow2_no_undo";
 
     var v4Prefix = input && typeof input.v4Prefix === "string" && input.v4Prefix
       ? input.v4Prefix
@@ -32,6 +69,9 @@
         actionsEncoded: body.substring(17)
       };
     }
+
+    var v3Envelope = parseReplayV3JsonEnvelope(trimmedReplayString, fallbackModeKey);
+    if (v3Envelope) return v3Envelope;
 
     return null;
   }
