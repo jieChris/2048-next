@@ -9,6 +9,9 @@
   var RECORD_REPLAY_API_TIMEOUT_MS = 30000;
   var SIGNED_REPLAY_FETCH_TIMEOUT_MS = 30000;
   var DEFAULT_RECORD_LIMIT = 20;
+  var BEIJING_TIMEZONE = "Asia/Shanghai";
+  var DATETIME_TEXT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/;
+  var beijingDateFormatter = null;
 
   function resolveLocalStorage() {
     try {
@@ -550,38 +553,86 @@
     if (nextBtn) nextBtn.disabled = !recordHasNext;
   }
 
+  function resolveBeijingDateFormatter() {
+    if (beijingDateFormatter) return beijingDateFormatter;
+    try {
+      beijingDateFormatter = new Intl.DateTimeFormat("en-GB", {
+        timeZone: BEIJING_TIMEZONE,
+        hour12: false,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+    } catch (_err) {
+      beijingDateFormatter = null;
+    }
+    return beijingDateFormatter;
+  }
+
+  function formatTimestampInBeijing(ts) {
+    if (!Number.isFinite(ts) || ts <= 0) return "";
+
+    var formatter = resolveBeijingDateFormatter();
+    if (formatter && typeof formatter.formatToParts === "function") {
+      var parts = formatter.formatToParts(new Date(ts));
+      var map = Object.create(null);
+      for (var i = 0; i < parts.length; i += 1) {
+        var part = parts[i];
+        if (part && part.type && part.type !== "literal") map[part.type] = part.value;
+      }
+      if (map.year && map.month && map.day && map.hour && map.minute && map.second) {
+        return map.year + "-" + map.month + "-" + map.day + " " + map.hour + ":" + map.minute + ":" + map.second;
+      }
+    }
+
+    // Fallback: manually shift to UTC+8 and format in UTC fields.
+    var shifted = new Date(ts + 8 * 60 * 60 * 1000);
+    var year = shifted.getUTCFullYear();
+    var month = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+    var day = String(shifted.getUTCDate()).padStart(2, "0");
+    var hour = String(shifted.getUTCHours()).padStart(2, "0");
+    var minute = String(shifted.getUTCMinutes()).padStart(2, "0");
+    var second = String(shifted.getUTCSeconds()).padStart(2, "0");
+    return year + "-" + month + "-" + day + " " + hour + ":" + minute + ":" + second;
+  }
+
+  function parseUtcDatetimeText(raw) {
+    var text = toText(raw).trim();
+    var normalized = text
+      .replace("T", " ")
+      .replace(/\.\d+$/i, "")
+      .replace(/\.\d+Z$/i, "Z");
+    var match = normalized.match(DATETIME_TEXT_PATTERN);
+    if (!match) return 0;
+    var year = Number(match[1]);
+    var month = Number(match[2]) - 1;
+    var day = Number(match[3]);
+    var hour = Number(match[4]);
+    var minute = Number(match[5]);
+    var second = Number(match[6]);
+    return Date.UTC(year, month, day, hour, minute, second);
+  }
+
   function formatDate(raw) {
     var text = toText(raw).trim();
     if (!text) return "--";
 
-    // Prefer already-normalized datetime text and strip milliseconds/timezone suffix.
-    var normalized = text
-      .replace("T", " ")
-      .replace(/\.\d+Z?$/i, "")
-      .replace(/Z$/i, "");
-    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(normalized)) {
-      return normalized;
+    // Backend often returns `YYYY-MM-DD HH:mm:ss` as UTC; convert to Beijing time explicitly.
+    var hasExplicitTimezone = /Z$/i.test(text) || /[+-]\d{2}:?\d{2}$/i.test(text);
+    var ts = hasExplicitTimezone ? parseDateTs(text) : parseUtcDatetimeText(text);
+    if (!Number.isFinite(ts) || ts <= 0) {
+      ts = parseDateTs(text);
     }
-
-    var ts = parseDateTs(text);
     if (!Number.isFinite(ts) || ts <= 0) return text;
-
-    var date = new Date(ts);
-    var year = date.getFullYear();
-    var month = String(date.getMonth() + 1).padStart(2, "0");
-    var day = String(date.getDate()).padStart(2, "0");
-    var hour = String(date.getHours()).padStart(2, "0");
-    var minute = String(date.getMinutes()).padStart(2, "0");
-    var second = String(date.getSeconds()).padStart(2, "0");
-    return year + "-" + month + "-" + day + " " + hour + ":" + minute + ":" + second;
+    return formatTimestampInBeijing(ts) || text;
   }
 
   function resolveRecordDateValue(record) {
     var source = record && typeof record === "object" ? record : {};
-    if (!isOwnProfile) {
-      return toText(source.created_at || source.ended_at || source.game_date).trim();
-    }
-    return toText(source.ended_at || source.game_date || source.created_at).trim();
+    return toText(source.created_at || source.ended_at || source.game_date).trim();
   }
 
   function resolveRecordDateLabelText() {
@@ -597,6 +648,10 @@
   function parseDateTs(raw) {
     var source = toText(raw).trim();
     if (!source) return 0;
+
+    var utcTs = parseUtcDatetimeText(source);
+    if (Number.isFinite(utcTs) && utcTs > 0) return utcTs;
+
     var normalized = source.replace(" ", "T");
     var ts = Date.parse(normalized);
     if (Number.isFinite(ts)) return ts;
@@ -695,6 +750,8 @@
     if (fallback) {
       candidate.mode = toText(fallback.mode || fallback.mode_bucket).trim();
       candidate.mode_key = toText(fallback.mode_key).trim();
+      candidate.board_width = fallback.board_width;
+      candidate.board_height = fallback.board_height;
       candidate.score = fallback.score;
       candidate.best_tile = fallback.best_tile;
       candidate.duration_ms = fallback.duration_ms;
@@ -709,6 +766,8 @@
       candidate.mode = toText(source.mode || source.mode_bucket).trim();
     }
     if (source.mode_key != null) candidate.mode_key = toText(source.mode_key).trim();
+    if (source.board_width != null) candidate.board_width = source.board_width;
+    if (source.board_height != null) candidate.board_height = source.board_height;
     if (source.score != null) candidate.score = source.score;
     if (source.best_tile != null) candidate.best_tile = source.best_tile;
     if (source.duration_ms != null) candidate.duration_ms = source.duration_ms;
@@ -908,6 +967,8 @@
         score: Math.floor(Number(normalized.score) || 0),
         mode_bucket: toText(source.mode_bucket || (fallbackRecord && fallbackRecord.mode_bucket) || normalized.mode).trim(),
         mode_key: toText(source.mode_key || (fallbackRecord && fallbackRecord.mode_key) || normalized.mode_key).trim(),
+        board_width: parsePositiveInt(source.board_width || normalized.board_width || (fallbackRecord && fallbackRecord.board_width)),
+        board_height: parsePositiveInt(source.board_height || normalized.board_height || (fallbackRecord && fallbackRecord.board_height)),
         best_tile: Math.floor(Number(normalized.best_tile) || 0),
         duration_ms: Math.floor(Number(normalized.duration_ms) || 0),
         ended_at: toText(source.ended_at || normalized.ended_at || (fallbackRecord && fallbackRecord.ended_at)).trim(),
@@ -929,6 +990,8 @@
       score: Math.floor(Number(source.score != null ? source.score : fallbackRecord && fallbackRecord.score) || 0),
       mode_bucket: toText(source.mode_bucket || (fallbackRecord && fallbackRecord.mode_bucket)).trim(),
       mode_key: toText(source.mode_key || (fallbackRecord && fallbackRecord.mode_key)).trim(),
+      board_width: parsePositiveInt(source.board_width || (fallbackRecord && fallbackRecord.board_width)),
+      board_height: parsePositiveInt(source.board_height || (fallbackRecord && fallbackRecord.board_height)),
       best_tile: Math.floor(Number(source.best_tile != null ? source.best_tile : fallbackRecord && fallbackRecord.best_tile) || 0),
       duration_ms: Math.floor(Number(source.duration_ms != null ? source.duration_ms : fallbackRecord && fallbackRecord.duration_ms) || 0),
       ended_at: toText(source.ended_at || (fallbackRecord && fallbackRecord.ended_at)).trim(),
@@ -1109,9 +1172,11 @@
       source: "cloud_record",
       id: toText(record && record.id).trim(),
       score: Math.floor(Number(record && record.score) || 0),
-      mode_key: toText(record && record.mode_key).trim(),
-      mode_bucket: toText(record && record.mode_bucket).trim(),
-      ended_at: toText(record && record.ended_at).trim(),
+      mode_key: toText((detail && detail.mode_key) || (record && record.mode_key)).trim(),
+      mode_bucket: toText((detail && detail.mode_bucket) || (record && record.mode_bucket)).trim(),
+      board_width: parsePositiveInt((detail && detail.board_width) || (record && record.board_width)),
+      board_height: parsePositiveInt((detail && detail.board_height) || (record && record.board_height)),
+      ended_at: toText((detail && detail.ended_at) || (record && record.ended_at)).trim(),
       replay_string: replayString,
       replay: replayObject
     });
@@ -1353,6 +1418,8 @@
         user_id: parsePositiveInt(item.user_id),
         mode_bucket: toText(item.mode_bucket || (normalized && normalized.mode)).trim(),
         mode_key: toText(item.mode_key || (normalized && normalized.mode_key)).trim(),
+        board_width: parsePositiveInt(item.board_width || (normalized && normalized.board_width)),
+        board_height: parsePositiveInt(item.board_height || (normalized && normalized.board_height)),
         score: Math.floor(Number((normalized && normalized.score) != null ? normalized.score : item.score) || 0),
         best_tile: Math.floor(Number((normalized && normalized.best_tile) != null ? normalized.best_tile : item.best_tile) || 0),
         duration_ms: Math.floor(Number((normalized && normalized.duration_ms) != null ? normalized.duration_ms : item.duration_ms) || 0),

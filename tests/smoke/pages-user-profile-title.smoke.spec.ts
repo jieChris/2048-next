@@ -120,7 +120,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 best_tile: 64,
                 duration_ms: 6000,
                 ended_at: "2026-03-14T10:00:00.000Z",
-                created_at: "2026-03-14T10:01:02.000Z"
+                created_at: "2026-03-14 10:01:02"
               }
             ]
           })
@@ -147,7 +147,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForSelector(".user-record-item");
 
     await expect(page.locator("#user-col-date")).toHaveText("上传时间");
-    await expect(page.locator(".user-record-date").first()).toHaveText(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/);
+    await expect(page.locator(".user-record-date").first()).toHaveText("2026-03-14 18:01:02");
   });
 
   test("user profile supports mode filter and expandable record detail", async ({ page }) => {

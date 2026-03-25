@@ -254,6 +254,11 @@ function cloneReplayObjectShallow(source) {
     return out;
 }
 
+function toPositiveInteger(value) {
+    var parsed = Math.floor(Number(value) || 0);
+    return parsed > 0 ? parsed : 0;
+}
+
 function tryBuildStructuredReplayForImport(recordLike) {
     var source = recordLike && typeof recordLike === "object" ? recordLike : {};
     var replayObject = source.replay && typeof source.replay === "object" ? source.replay : null;
@@ -282,6 +287,10 @@ function tryBuildStructuredReplayForImport(recordLike) {
     if (!safeReplayText(structured.mode) && modeKey) {
         structured.mode = inferReplayModeTagFromModeKey(modeKey);
     }
+    var boardWidth = toPositiveInteger(source.board_width || structured.board_width);
+    var boardHeight = toPositiveInteger(source.board_height || structured.board_height);
+    if (boardWidth && !toPositiveInteger(structured.board_width)) structured.board_width = boardWidth;
+    if (boardHeight && !toPositiveInteger(structured.board_height)) structured.board_height = boardHeight;
     return structured;
 }
 
@@ -294,8 +303,12 @@ function resolveReplayPayloadForImport(recordLike) {
     var source = recordLike && typeof recordLike === "object" ? recordLike : {};
     var replayString = safeReplayText(source.replay_string);
     var structured = tryBuildStructuredReplayForImport(source);
+    var sourceTag = safeReplayText(source.source).toLowerCase();
 
     // Prefer canonical structured replay when seed is present; it avoids string transport/encoding drift.
+    if (sourceTag === "cloud_record" && structured) {
+        try { return JSON.stringify(structured); } catch (_cloudErr) {}
+    }
     if (structured && hasUsableReplaySeed(structured)) {
         try { return JSON.stringify(structured); } catch (_err) {}
     }
