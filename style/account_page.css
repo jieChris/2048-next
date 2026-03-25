@@ -220,6 +220,14 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
   overflow: auto;
 }
 
+.account-board-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .account-board-empty,
 .account-board-row {
   display: grid;
@@ -306,5 +314,9 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
 
   .account-date {
     font-size: 11px;
+  }
+
+  .account-board-pagination {
+    justify-content: center;
   }
 }

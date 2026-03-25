@@ -65,7 +65,7 @@
       }
     } catch (_err) { /* localStorage unavailable or quota exceeded */ }
   })();
-  var DEFAULT_LIMIT = 20;
+  var DEFAULT_LIMIT = 8;
   var DEFAULT_BOARD_MODE = "standard_no_undo";
   var DEFAULT_BOARD_METRIC = "score";
   var DEFAULT_API_TIMEOUT_MS = 12000;
@@ -962,10 +962,9 @@
 
   async function refreshLeaderboard(resetPage) {
     var boardTip = byId("account-board-tip");
-    var limit = Number(toText(byId("account-board-limit") && byId("account-board-limit").value));
     var modeBucket = getSelectedModeBucket();
     var metric = getSelectedLeaderboardMetric();
-    var safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : DEFAULT_LIMIT;
+    var safeLimit = DEFAULT_LIMIT;
     if (resetPage === true) leaderboardPage = 1;
 
     syncLeaderboardMetricColumnHeader(metric);
@@ -1116,7 +1115,6 @@
       "account-board-heading": t("boardHeading"),
       "account-board-mode-label": t("boardMode"),
       "account-board-metric-label": t("boardMetric"),
-      "account-board-limit-label": t("boardLimit"),
       "account-board-refresh": t("boardRefresh"),
       "account-board-prev": t("boardPrev"),
       "account-board-next": t("boardNext"),
@@ -1156,7 +1154,6 @@
     var resetPasswordBtn = byId("account-open-reset-password-btn");
     var refreshBtn = byId("account-board-refresh");
     var loginCaptchaRefreshBtn = byId("account-login-captcha-refresh");
-    var limitSelect = byId("account-board-limit");
     var modeSelect = byId("account-board-mode");
     var metricSelect = byId("account-board-metric");
     var prevBtn = byId("account-board-prev");
@@ -1173,12 +1170,6 @@
     if (loginCaptchaRefreshBtn) {
       loginCaptchaRefreshBtn.addEventListener("click", function () {
         refreshLoginCaptchaChallenge(true);
-      });
-    }
-    if (limitSelect) {
-      limitSelect.value = String(DEFAULT_LIMIT);
-      limitSelect.addEventListener("change", function () {
-        refreshLeaderboard(true);
       });
     }
     if (modeSelect) {
