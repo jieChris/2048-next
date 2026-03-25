@@ -236,16 +236,75 @@ function shouldPreferStructuredReplay(recordLike) {
     return false;
 }
 
+function inferReplayModeTagFromModeKey(modeKey) {
+    var key = safeReplayText(modeKey).toLowerCase();
+    if (!key) return "";
+    if (key.indexOf("practice") !== -1) return "practice";
+    if (key.indexOf("capped") !== -1) return "capped";
+    return "classic";
+}
+
+function cloneReplayObjectShallow(source) {
+    var out = {};
+    if (!source || typeof source !== "object") return out;
+    for (var key in source) {
+        if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+        out[key] = source[key];
+    }
+    return out;
+}
+
+function tryBuildStructuredReplayForImport(recordLike) {
+    var source = recordLike && typeof recordLike === "object" ? recordLike : {};
+    var replayObject = source.replay && typeof source.replay === "object" ? source.replay : null;
+    var structured = replayObject ? cloneReplayObjectShallow(replayObject) : null;
+    var replayString = safeReplayText(source.replay_string);
+
+    if (!structured && replayString) {
+        var first = replayString.charAt(0);
+        if (first === "{" || first === "[") {
+            try {
+                var parsed = JSON.parse(replayString);
+                if (Array.isArray(parsed)) {
+                    structured = { v: 3, actions: parsed.slice() };
+                } else if (parsed && typeof parsed === "object") {
+                    structured = cloneReplayObjectShallow(parsed);
+                }
+            } catch (_parseErr) {
+                structured = null;
+            }
+        }
+    }
+
+    if (!structured || typeof structured !== "object") return null;
+    var modeKey = safeReplayText(source.mode_key || structured.mode_key);
+    if (modeKey && !safeReplayText(structured.mode_key)) structured.mode_key = modeKey;
+    if (!safeReplayText(structured.mode) && modeKey) {
+        structured.mode = inferReplayModeTagFromModeKey(modeKey);
+    }
+    return structured;
+}
+
+function hasUsableReplaySeed(structuredReplay) {
+    var seed = Number(structuredReplay && structuredReplay.seed);
+    return Number.isFinite(seed);
+}
+
 function resolveReplayPayloadForImport(recordLike) {
     var source = recordLike && typeof recordLike === "object" ? recordLike : {};
     var replayString = safeReplayText(source.replay_string);
-    var replayObject = source.replay && typeof source.replay === "object" ? source.replay : null;
-    if (shouldPreferStructuredReplay(source) && replayObject) {
-        try { return JSON.stringify(replayObject); } catch (_err) {}
+    var structured = tryBuildStructuredReplayForImport(source);
+
+    // Prefer canonical structured replay when seed is present; it avoids string transport/encoding drift.
+    if (structured && hasUsableReplaySeed(structured)) {
+        try { return JSON.stringify(structured); } catch (_err) {}
+    }
+    if (shouldPreferStructuredReplay(source) && structured) {
+        try { return JSON.stringify(structured); } catch (_err2) {}
     }
     if (replayString) return replayString;
-    if (replayObject) {
-        try { return JSON.stringify(replayObject); } catch (_err2) { return ""; }
+    if (structured) {
+        try { return JSON.stringify(structured); } catch (_err3) { return ""; }
     }
     return "";
 }

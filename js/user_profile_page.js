@@ -8,7 +8,7 @@
   var DEFAULT_API_TIMEOUT_MS = 12000;
   var RECORD_REPLAY_API_TIMEOUT_MS = 30000;
   var SIGNED_REPLAY_FETCH_TIMEOUT_MS = 30000;
-  var DEFAULT_RECORD_LIMIT = 200;
+  var DEFAULT_RECORD_LIMIT = 20;
 
   function resolveLocalStorage() {
     try {
@@ -95,6 +95,11 @@
   var cachedRecords = [];
   var activeModeFilter = "all";
   var activeRecordVisibility = "active";
+  var recordPage = 1;
+  var recordTotalPages = 0;
+  var recordHasPrev = false;
+  var recordHasNext = false;
+  var recordsRequestSeq = 0;
   var expandedRecordId = "";
   var recordDetailCache = Object.create(null);
   var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
@@ -440,7 +445,8 @@
     var status = toText(opts.status).trim().toLowerCase();
 
     var path = "/user/" + encodeURIComponent(String(safeUserId)) + "/records";
-    path += "?limit=" + encodeURIComponent(String(safeLimit));
+    path += "?page_size=" + encodeURIComponent(String(safeLimit));
+    path += "&limit=" + encodeURIComponent(String(safeLimit));
     path += "&page=" + encodeURIComponent(String(safePage));
     path += "&sort_by=" + encodeURIComponent(sortBy);
     path += "&order=" + encodeURIComponent(order);
@@ -484,6 +490,64 @@
     if (!message) return;
     if (type === "ok") tip.classList.add("ok");
     if (type === "err") tip.classList.add("err");
+  }
+
+  function resolvePagerMeta(result, fallbackPage, pageSize, itemCount) {
+    var page = Math.floor(Number(fallbackPage) || 1);
+    if (page <= 0) page = 1;
+    var size = Math.floor(Number(pageSize) || DEFAULT_RECORD_LIMIT);
+    if (size <= 0) size = DEFAULT_RECORD_LIMIT;
+    var count = Math.max(0, Math.floor(Number(itemCount) || 0));
+
+    var pagination = (result && (result.pagination || result.page_info || result.meta)) || {};
+    var rawPage = Math.floor(
+      Number(
+        pagination.page != null ? pagination.page :
+        pagination.current_page != null ? pagination.current_page :
+        page
+      ) || page
+    );
+    if (rawPage <= 0) rawPage = page;
+
+    var rawTotalPages = Math.floor(
+      Number(
+        pagination.total_pages != null ? pagination.total_pages :
+        pagination.pages != null ? pagination.pages :
+        pagination.page_count != null ? pagination.page_count :
+        0
+      ) || 0
+    );
+    if (rawTotalPages < 0) rawTotalPages = 0;
+
+    var hasPrev = typeof pagination.has_prev === "boolean" ? pagination.has_prev : rawPage > 1;
+    var hasNext = typeof pagination.has_next === "boolean"
+      ? pagination.has_next
+      : (rawTotalPages > 0 ? rawPage < rawTotalPages : count >= size);
+
+    return {
+      page: rawPage,
+      totalPages: rawTotalPages,
+      hasPrev: !!hasPrev,
+      hasNext: !!hasNext
+    };
+  }
+
+  function resolveRecordPageText(page, totalPages) {
+    var safePage = Math.max(1, Math.floor(Number(page) || 1));
+    var safeTotal = Math.max(0, Math.floor(Number(totalPages) || 0));
+    if (currentLang === "en") {
+      return safeTotal > 0 ? "Page " + safePage + "/" + safeTotal : "Page " + safePage;
+    }
+    return safeTotal > 0 ? "第" + safePage + "/" + safeTotal + "页" : "第" + safePage + "页";
+  }
+
+  function syncRecordPagerUi() {
+    var pageNode = byId("user-record-page");
+    if (pageNode) pageNode.textContent = resolveRecordPageText(recordPage, recordTotalPages);
+    var prevBtn = byId("user-record-prev");
+    var nextBtn = byId("user-record-next");
+    if (prevBtn) prevBtn.disabled = !recordHasPrev;
+    if (nextBtn) nextBtn.disabled = !recordHasNext;
   }
 
   function formatDate(raw) {
@@ -834,6 +898,9 @@
     var normalized = normalizeHistoryRecordViaRuntime(source, fallbackRecord);
     if (normalized) {
       var normalizedReplayString = toText(normalized.replay_string).trim();
+      var normalizedReplayObject = normalized && typeof normalized.replay === "object" && normalized.replay
+        ? normalized.replay
+        : (source && typeof source.replay === "object" && source.replay ? source.replay : null);
       if (!normalizedReplayString && normalized.replay != null) {
         try { normalizedReplayString = JSON.stringify(normalized.replay); } catch (_err) { normalizedReplayString = ""; }
       }
@@ -845,11 +912,15 @@
         duration_ms: Math.floor(Number(normalized.duration_ms) || 0),
         ended_at: toText(source.ended_at || normalized.ended_at || (fallbackRecord && fallbackRecord.ended_at)).trim(),
         replay_string: normalizedReplayString,
+        replay: normalizedReplayObject,
         final_board: normalizeBoardMatrix(normalized.final_board)
       };
     }
 
     var replayString = toText(source.replay_string).trim();
+    var replayObject = source && typeof source.replay === "object" && source.replay
+      ? source.replay
+      : (fallbackRecord && typeof fallbackRecord.replay === "object" && fallbackRecord.replay ? fallbackRecord.replay : null);
     if (!replayString && source.replay != null) {
       try { replayString = JSON.stringify(source.replay); } catch (_err) { replayString = ""; }
     }
@@ -862,6 +933,7 @@
       duration_ms: Math.floor(Number(source.duration_ms != null ? source.duration_ms : fallbackRecord && fallbackRecord.duration_ms) || 0),
       ended_at: toText(source.ended_at || (fallbackRecord && fallbackRecord.ended_at)).trim(),
       replay_string: replayString,
+      replay: replayObject,
       final_board: normalizeBoardMatrix(finalBoard)
     };
   }
@@ -880,7 +952,8 @@
   function buildLocalRecordDetailFallback(record) {
     var payload = normalizeRecordDetailPayload(record, record);
     var replayString = toText(payload && payload.replay_string).trim();
-    var hasReplay = !!replayString;
+    var hasReplayObject = !!(payload && payload.replay && typeof payload.replay === "object");
+    var hasReplay = !!replayString || hasReplayObject;
     var hasBoard = hasBoardCells(payload && payload.final_board);
     if (!hasReplay && !hasBoard) return null;
     return Object.assign({ loading: false }, payload);
@@ -974,39 +1047,34 @@
 
     try {
       var lastErrorText = "";
+      // Prefer proxy first for browser compatibility (avoid signed-url CORS issues),
+      // then fall back to backend default mode and explicit signed_url mode.
+      var attempts = ["proxy", "", "signed_url"];
+      for (var i = 0; i < attempts.length; i += 1) {
+        var mode = attempts[i];
+        var result = null;
+        try {
+          result = await requestRecordReplay(recordId, mode);
+        } catch (requestError) {
+          lastErrorText = toText(requestError && requestError.message) || lastErrorText;
+          continue;
+        }
 
-      // Prefer backend-configured mode first (signed_url/proxy), then fallback.
-      var result = await requestRecordReplay(recordId, "");
-      if (!result || !result.success) {
-        lastErrorText = toText(result && result.error);
-      } else {
-        var payload = await resolveReplayPayloadFromApiResult(result, record);
-        var detail = Object.assign({ loading: false }, payload);
-        recordDetailCache[recordId] = detail;
-        return detail;
-      }
+        if (!result || !result.success) {
+          var errorText = toText(result && result.error).trim();
+          if (errorText) lastErrorText = errorText;
+          continue;
+        }
 
-      var signedUrlResult = await requestRecordReplay(recordId, "signed_url");
-      if (signedUrlResult && signedUrlResult.success) {
-        var signedPayload = await resolveReplayPayloadFromApiResult(signedUrlResult, record);
-        var signedDetail = Object.assign({ loading: false }, signedPayload);
-        recordDetailCache[recordId] = signedDetail;
-        return signedDetail;
+        try {
+          var payload = await resolveReplayPayloadFromApiResult(result, record);
+          var detail = Object.assign({ loading: false }, payload);
+          recordDetailCache[recordId] = detail;
+          return detail;
+        } catch (resolveError) {
+          lastErrorText = toText(resolveError && resolveError.message) || lastErrorText;
+        }
       }
-      if (toText(signedUrlResult && signedUrlResult.error).trim()) {
-        lastErrorText = toText(signedUrlResult && signedUrlResult.error);
-      }
-
-      var proxyResult = await requestRecordReplay(recordId, "proxy");
-      if (proxyResult && proxyResult.success) {
-        var proxyPayload = await resolveReplayPayloadFromApiResult(proxyResult, record);
-        var proxyDetail = Object.assign({ loading: false }, proxyPayload);
-        recordDetailCache[recordId] = proxyDetail;
-        return proxyDetail;
-      }
-
-      var proxyError = toText(proxyResult && proxyResult.error).trim();
-      if (proxyError) lastErrorText = proxyError;
 
       var localDetailFallback = buildLocalRecordDetailFallback(record);
       if (localDetailFallback) {
@@ -1035,7 +1103,8 @@
 
   function createReplaySessionPayload(record, detail) {
     var replayString = toText(detail && detail.replay_string).trim();
-    if (!replayString) return "";
+    var replayObject = detail && detail.replay && typeof detail.replay === "object" ? detail.replay : null;
+    if (!replayString && !replayObject) return "";
     return JSON.stringify({
       source: "cloud_record",
       id: toText(record && record.id).trim(),
@@ -1043,7 +1112,8 @@
       mode_key: toText(record && record.mode_key).trim(),
       mode_bucket: toText(record && record.mode_bucket).trim(),
       ended_at: toText(record && record.ended_at).trim(),
-      replay_string: replayString
+      replay_string: replayString,
+      replay: replayObject
     });
   }
 
@@ -1122,7 +1192,7 @@
           restoreUserRecord(record.id).then(function (result) {
             if (result && result.success) {
               setTip(t("restoreOk"), "ok");
-              refreshRecords();
+              refreshRecords(false);
               return;
             }
             setTip(toText(result && result.error) || t("restoreFail"), "err");
@@ -1143,7 +1213,7 @@
           deleteUserRecord(record.id).then(function (result) {
             if (result && result.success) {
               setTip(t("deleteOk"), "ok");
-              refreshRecords();
+              refreshRecords(false);
               return;
             }
             setTip(toText(result && result.error) || t("deleteFail"), "err");
@@ -1219,6 +1289,16 @@
     }
   }
 
+  function renderRecordsLoadingHint() {
+    var list = byId("user-record-list");
+    if (!list) return;
+    list.innerHTML = "";
+    var loading = global.document.createElement("div");
+    loading.className = "user-record-empty";
+    loading.textContent = currentLang === "en" ? "Loading records..." : "\u6b63\u5728\u52a0\u8f7d\u8bb0\u5f55...";
+    list.appendChild(loading);
+  }
+
   function sortRecords(records, sortBy, order) {
     var list = Array.isArray(records) ? records.slice() : [];
     var by = sortBy === "score" ? "score" : "time";
@@ -1258,8 +1338,7 @@
     var modeFilter = getModeFilterValue();
     activeModeFilter = modeFilter;
     activeRecordVisibility = getRecordVisibilityValue();
-    var filtered = filterRecordsByMode(cachedRecords, modeFilter);
-    renderRecords(sortRecords(filtered, getSortByValue(), getOrderValue()));
+    renderRecords(Array.isArray(cachedRecords) ? cachedRecords : []);
   }
 
   function normalizeUserRecordsFromApi(data) {
@@ -1335,32 +1414,47 @@
     return isOwnProfile;
   }
 
-  async function refreshRecords() {
+  async function refreshRecords(resetPage) {
     if (!targetUserId) {
       renderRecords([]);
       setTip(t("invalidUserId"), "err");
       return;
     }
 
+    if (resetPage === true) recordPage = 1;
     setTip(t("loading"), "");
+    renderRecordsLoadingHint();
+    var requestSeq = ++recordsRequestSeq;
+    activeModeFilter = getModeFilterValue();
     activeRecordVisibility = isOwnProfile ? getRecordVisibilityValue() : "active";
     var result = await getUserRecords(targetUserId, {
       limit: DEFAULT_RECORD_LIMIT,
-      page: 1,
-      mode: getModeFilterValue(),
+      page: recordPage,
+      mode: activeModeFilter,
       status: activeRecordVisibility,
       sort_by: getSortByValue(),
       order: getOrderValue()
     });
+    if (requestSeq !== recordsRequestSeq) return;
 
     if (!result || !result.success) {
       cachedRecords = [];
       applyCurrentSortAndRender();
+      recordHasPrev = recordPage > 1;
+      recordHasNext = false;
+      recordTotalPages = 0;
+      syncRecordPagerUi();
       setTip(toText(result && result.error) || t("recordsFail"), "err");
       return;
     }
 
     cachedRecords = normalizeUserRecordsFromApi(result.data);
+    var meta = resolvePagerMeta(result, recordPage, DEFAULT_RECORD_LIMIT, cachedRecords.length);
+    recordPage = meta.page;
+    recordTotalPages = meta.totalPages;
+    recordHasPrev = meta.hasPrev;
+    recordHasNext = meta.hasNext;
+    syncRecordPagerUi();
     if (expandedRecordId) {
       var exists = false;
       for (var i = 0; i < cachedRecords.length; i += 1) {
@@ -1400,6 +1494,8 @@
       "user-order-label": t("orderLabel"),
       "user-visibility-label": t("visibilityLabel"),
       "user-record-refresh": t("refreshBtn"),
+      "user-record-prev": currentLang === "en" ? "Prev" : "上一页",
+      "user-record-next": currentLang === "en" ? "Next" : "下一页",
       "user-col-mode": t("colMode"),
       "user-col-score": t("colScore"),
       "user-col-date": resolveRecordDateLabelText()
@@ -1442,6 +1538,7 @@
 
     updateVisibilityControl();
     syncRecordDateLabel();
+    syncRecordPagerUi();
     applyCurrentSortAndRender();
     setI18nReady(true);
   }
@@ -1452,12 +1549,28 @@
     var sortBySelect = byId("user-record-sort-by");
     var orderSelect = byId("user-record-order");
     var visibilitySelect = byId("user-record-visibility");
+    var prevBtn = byId("user-record-prev");
+    var nextBtn = byId("user-record-next");
 
-    if (refreshBtn) refreshBtn.addEventListener("click", refreshRecords);
-    if (modeSelect) modeSelect.addEventListener("change", refreshRecords);
-    if (sortBySelect) sortBySelect.addEventListener("change", applyCurrentSortAndRender);
-    if (orderSelect) orderSelect.addEventListener("change", applyCurrentSortAndRender);
-    if (visibilitySelect) visibilitySelect.addEventListener("change", refreshRecords);
+    if (refreshBtn) refreshBtn.addEventListener("click", function () { refreshRecords(false); });
+    if (modeSelect) modeSelect.addEventListener("change", function () { refreshRecords(true); });
+    if (sortBySelect) sortBySelect.addEventListener("change", function () { refreshRecords(true); });
+    if (orderSelect) orderSelect.addEventListener("change", function () { refreshRecords(true); });
+    if (visibilitySelect) visibilitySelect.addEventListener("change", function () { refreshRecords(true); });
+    if (prevBtn) {
+      prevBtn.addEventListener("click", function () {
+        if (!recordHasPrev) return;
+        recordPage = Math.max(1, recordPage - 1);
+        refreshRecords(false);
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener("click", function () {
+        if (!recordHasNext) return;
+        recordPage += 1;
+        refreshRecords(false);
+      });
+    }
 
     global.addEventListener("storage", function (eventLike) {
       if (!eventLike) return;
@@ -1479,6 +1592,7 @@
   async function init() {
     parseQuery();
     bindEvents();
+    syncRecordPagerUi();
     applyLanguage();
 
     var sortBySelect = byId("user-record-sort-by");
@@ -1502,9 +1616,11 @@
     updateVisibilityControl();
     applyDocumentTitle();
 
-    await resolveOwnership();
-    await refreshUserInfo();
-    await refreshRecords();
+    var ownershipPromise = resolveOwnership();
+    var userInfoPromise = refreshUserInfo();
+    var recordsPromise = refreshRecords(true);
+    await Promise.all([userInfoPromise, recordsPromise]);
+    await ownershipPromise;
   }
 
   global.UserProfilePageRuntime = {
