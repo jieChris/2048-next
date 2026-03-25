@@ -109,6 +109,7 @@
   var POLL_BACKOFF_MAX_MS = 60000;
   var POLL_BACKOFF_MAX_STEP = 4;
   var TIMER_LEADERBOARD_FONT_DELTA_PX = 2;
+  var MIN_STEP_TARGET_TILES = [2048, 4096, 8192];
 
   // --- shared API utilities (from api_shared_utils.js) ---
   var _u = global.ApiSharedUtils || {};
@@ -794,6 +795,37 @@
     };
   }
 
+  function normalizePositiveStepCount(valueLike) {
+    var value = Math.floor(Number(valueLike) || 0);
+    return value > 0 ? value : null;
+  }
+
+  function resolveRecordTotalMoveSteps(manager) {
+    if (!manager) return null;
+    var directCount = normalizePositiveStepCount(manager.successfulMoveCount);
+    if (directCount !== null) return directCount;
+    if (Array.isArray(manager.moveHistory)) {
+      return normalizePositiveStepCount(manager.moveHistory.length);
+    }
+    return null;
+  }
+
+  function buildRecordMinStepStats(manager, bestTileValue) {
+    var out = {};
+    var bestTile = Math.floor(Number(bestTileValue) || 0);
+    var totalMoveSteps = resolveRecordTotalMoveSteps(manager);
+    for (var i = 0; i < MIN_STEP_TARGET_TILES.length; i += 1) {
+      var target = MIN_STEP_TARGET_TILES[i];
+      var key = "min_steps_" + String(target);
+      if (totalMoveSteps !== null && bestTile >= target) {
+        out[key] = totalMoveSteps;
+      } else {
+        out[key] = null;
+      }
+    }
+    return out;
+  }
+
   function buildRecordSubmitPayload(manager, modeLike, score) {
     if (!manager) return null;
     var modeKey = toText(modeLike || manager.modeKey || manager.mode).trim();
@@ -803,15 +835,21 @@
     var replayPayload = resolveRecordReplayPayload(manager);
     if (!replayPayload.replayString) return null;
 
+    var bestTile = resolveManagerBestTileValue(manager);
+    var minStepStats = buildRecordMinStepStats(manager, bestTile);
+
     return {
       mode: modeBucket,
       mode_key: modeKey,
       score: Math.floor(Number(score) || 0),
-      best_tile: resolveManagerBestTileValue(manager),
+      best_tile: bestTile,
       duration_ms: resolveManagerDurationMs(manager),
       ended_at: new Date().toISOString(),
       end_reason: manager.over ? "game_over" : "win_stop",
       final_board: resolveManagerFinalBoard(manager),
+      min_steps_2048: minStepStats.min_steps_2048,
+      min_steps_4096: minStepStats.min_steps_4096,
+      min_steps_8192: minStepStats.min_steps_8192,
       replay: replayPayload.replayV3,
       replay_string: replayPayload.replayString
     };

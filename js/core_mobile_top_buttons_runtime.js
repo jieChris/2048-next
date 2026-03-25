@@ -258,6 +258,13 @@
 
     if (!isCompactViewport()) {
       setExpandedState(doc, false);
+      var existingDesktopBtn = doc.getElementById(DEFAULT_EXPAND_BUTTON_ID);
+      if (existingDesktopBtn && existingDesktopBtn.style) {
+        existingDesktopBtn.style.display = "none";
+      }
+      if (existingDesktopBtn && typeof existingDesktopBtn.setAttribute === "function") {
+        existingDesktopBtn.setAttribute("aria-hidden", "true");
+      }
       syncMobileActionButtonClasses(host, doc);
       return null;
     }
@@ -268,6 +275,10 @@
       DEFAULT_EXPAND_CLASS_NAME,
       ""
     );
+    if (btn.style) btn.style.display = "";
+    if (typeof btn.setAttribute === "function") {
+      btn.setAttribute("aria-hidden", "false");
+    }
     if (btn.parentNode !== host) appendChild(host, btn);
 
     if (!btn.__mobileActionsToggleBound && typeof btn.addEventListener === "function") {

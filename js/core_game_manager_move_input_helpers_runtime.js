@@ -1238,6 +1238,143 @@ function resolveMasterSpawnValueByDefault() {
   return Math.random() < 0.9 ? 2 : 4;
 }
 
+function getClassicUndoForceStageOneValues() {
+  return [131072, 65536, 32768, 16384, 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8];
+}
+
+function getClassicUndoForceStageTwoValues() {
+  return [262144, 131072, 65536, 32768, 16384, 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16];
+}
+
+function getClassicUndoStageOneSpawnRules() {
+  return [{ value: 2, weight: 87 }, { value: 4, weight: 10 }, { value: 8, weight: 3 }];
+}
+
+function getClassicUndoStageTwoSpawnRules() {
+  return [{ value: 2, weight: 84 }, { value: 4, weight: 10 }, { value: 16, weight: 3 }, { value: 32, weight: 2 }, { value: 64, weight: 1 }];
+}
+
+function isClassicUndo4x4SpawnRuleMode(manager) {
+  if (!manager || manager.replayMode) return false;
+  if (manager.width !== 4 || manager.height !== 4) return false;
+  return String(manager.modeKey || manager.mode || "").toLowerCase() === "classic_4x4_pow2_undo";
+}
+
+function createSpawnBoardStats() {
+  return {
+    counts: {},
+    filled: 0,
+    maxValue: 0
+  };
+}
+
+function collectSpawnBoardStats(manager) {
+  var stats = createSpawnBoardStats();
+  if (!(manager && manager.grid && typeof manager.grid.eachCell === "function")) return stats;
+  manager.grid.eachCell(function (_x, _y, tile) {
+    if (!tile) return;
+    var value = Number(tile.value);
+    if (!Number.isInteger(value) || value <= 0) return;
+    var key = String(value);
+    stats.counts[key] = (stats.counts[key] || 0) + 1;
+    stats.filled += 1;
+    if (value > stats.maxValue) stats.maxValue = value;
+  });
+  return stats;
+}
+
+function buildSpawnValueCountMap(values) {
+  if (!Array.isArray(values) || !values.length) return null;
+  var required = {};
+  for (var i = 0; i < values.length; i++) {
+    var value = Number(values[i]);
+    if (!Number.isInteger(value) || value <= 0) return null;
+    var key = String(value);
+    required[key] = (required[key] || 0) + 1;
+  }
+  return required;
+}
+
+function hasAllRequiredSpawnCounts(actualCounts, requiredCounts) {
+  for (var key in requiredCounts) {
+    if (!Object.prototype.hasOwnProperty.call(requiredCounts, key)) continue;
+    if (Number(actualCounts[key] || 0) !== Number(requiredCounts[key] || 0)) return false;
+  }
+  return true;
+}
+
+function hasNoUnexpectedSpawnCounts(actualCounts, requiredCounts) {
+  for (var key in actualCounts) {
+    if (!Object.prototype.hasOwnProperty.call(actualCounts, key)) continue;
+    if (!Object.prototype.hasOwnProperty.call(requiredCounts, key)) return false;
+  }
+  return true;
+}
+
+function hasExactSpawnBoardValues(stats, values) {
+  if (!stats || !Array.isArray(values)) return false;
+  if (stats.filled !== values.length) return false;
+  var required = buildSpawnValueCountMap(values);
+  if (!required) return false;
+  return (
+    hasAllRequiredSpawnCounts(stats.counts, required) &&
+    hasNoUnexpectedSpawnCounts(stats.counts, required)
+  );
+}
+
+function resolveTotalPositiveSpawnWeight(rules) {
+  var totalWeight = 0;
+  for (var i = 0; i < rules.length; i++) {
+    var item = rules[i];
+    var weight = Number(item && item.weight);
+    if (Number.isFinite(weight) && weight > 0) totalWeight += weight;
+  }
+  return totalWeight;
+}
+
+function resolveWeightedSpawnValueCursor(rules, cursor, fallbackValue) {
+  var acc = 0;
+  for (var ruleIndex = 0; ruleIndex < rules.length; ruleIndex++) {
+    var rule = rules[ruleIndex];
+    var ruleWeight = Number(rule && rule.weight);
+    var ruleValue = Number(rule && rule.value);
+    if (!(Number.isFinite(ruleWeight) && ruleWeight > 0 && Number.isInteger(ruleValue) && ruleValue > 0)) continue;
+    acc += ruleWeight;
+    if (cursor < acc) return ruleValue;
+  }
+  return fallbackValue;
+}
+
+function resolveSpawnValueByWeightedRules(weightRules, fallbackValue) {
+  var rules = Array.isArray(weightRules) ? weightRules : [];
+  var totalWeight = resolveTotalPositiveSpawnWeight(rules);
+  if (!(totalWeight > 0)) return fallbackValue;
+  var cursor = Math.random() * totalWeight;
+  return resolveWeightedSpawnValueCursor(rules, cursor, fallbackValue);
+}
+
+function resolveClassicUndo4x4ForcedSpawnValue(manager, stats) {
+  if (!isClassicUndo4x4SpawnRuleMode(manager)) return null;
+  if (hasExactSpawnBoardValues(stats, getClassicUndoForceStageTwoValues())) return 16;
+  if (hasExactSpawnBoardValues(stats, getClassicUndoForceStageOneValues())) return 8;
+  return null;
+}
+
+function resolveClassicUndo4x4WeightedSpawnRules(maxValue) {
+  if (maxValue >= 262144) return getClassicUndoStageTwoSpawnRules();
+  if (maxValue >= 131072) return getClassicUndoStageOneSpawnRules();
+  return null;
+}
+
+function resolveClassicUndo4x4WeightedSpawnValue(manager, stats) {
+  if (!isClassicUndo4x4SpawnRuleMode(manager)) return null;
+  var maxValue = Number(stats && stats.maxValue);
+  if (!Number.isFinite(maxValue) || maxValue <= 0) return null;
+  var rules = resolveClassicUndo4x4WeightedSpawnRules(maxValue);
+  if (!rules) return null;
+  return resolveSpawnValueByWeightedRules(rules, 2);
+}
+
 function applySpawnTableWeightSummaryItem(summary, item) {
   if (!(summary && item)) return;
   var value = Number(item.value);
@@ -1279,6 +1416,15 @@ function shouldUseModeSpawnValue(manager) {
 }
 
 function resolveSpawnValueByCoreRule(manager) {
+  var boardStats = collectSpawnBoardStats(manager);
+  var forcedValue = resolveClassicUndo4x4ForcedSpawnValue(manager, boardStats);
+  if (forcedValue !== null) {
+    return consumeItemSpawnValueOverride(manager, forcedValue);
+  }
+  var weightedValue = resolveClassicUndo4x4WeightedSpawnValue(manager, boardStats);
+  if (weightedValue !== null) {
+    return consumeItemSpawnValueOverride(manager, weightedValue);
+  }
   if (shouldUseModeSpawnValue(manager)) {
     return consumeItemSpawnValueOverride(manager, pickSpawnValue(manager));
   }

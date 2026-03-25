@@ -585,6 +585,9 @@ export interface SubmitPayload {
   mode_bucket?: string;
   client_record_id?: string;
   client_version?: string;
+  min_steps_2048?: number | null;
+  min_steps_4096?: number | null;
+  min_steps_8192?: number | null;
 }
 
 export const SUBMIT_PAYLOAD_REQUIRED_KEYS = [
@@ -759,6 +762,9 @@ export interface LeaderboardEntry {
   score: number;
   game_date: string;
   mode_bucket?: string;
+  min_steps_2048?: number | null;
+  min_steps_4096?: number | null;
+  min_steps_8192?: number | null;
 }
 
 export interface UserInfoResponse {
@@ -793,4 +799,7 @@ export interface UserRecordEntry {
   end_reason: string;
   deleted_at: string | null;
   created_at: string;
+  min_steps_2048?: number | null;
+  min_steps_4096?: number | null;
+  min_steps_8192?: number | null;
 }

@@ -354,10 +354,14 @@ describe("contracts: SubmitPayload type shape", () => {
       replay_string: "REPLAY_v4C_S...",
       mode_bucket: "standard_undo",
       client_record_id: "rec_001",
-      client_version: "1.8"
+      client_version: "1.8",
+      min_steps_2048: 612,
+      min_steps_4096: null,
+      min_steps_8192: null
     };
     expect(payload.client_version).toBe("1.8");
     expect(payload.mode_bucket).toBe("standard_undo");
+    expect(payload.min_steps_2048).toBe(612);
   });
 
   it("isSubmitPayloadLike validates required keys", () => {
@@ -537,9 +541,13 @@ describe("contracts: LeaderboardEntry type shape", () => {
       nickname: "Bob",
       score: 50000,
       game_date: "2026-03-15",
-      mode_bucket: "standard_no_undo"
+      mode_bucket: "standard_no_undo",
+      min_steps_2048: 588,
+      min_steps_4096: null,
+      min_steps_8192: null
     };
     expect(entry.mode_bucket).toBe("standard_no_undo");
+    expect(entry.min_steps_2048).toBe(588);
   });
 });
 
@@ -602,10 +610,12 @@ describe("contracts: UserRecordEntry type shape", () => {
       ended_at: "2026-03-15T00:00:00Z",
       end_reason: "game_over",
       deleted_at: null,
-      created_at: "2026-03-15T00:00:00Z"
+      created_at: "2026-03-15T00:00:00Z",
+      min_steps_2048: 604
     };
     expect(entry.id).toBe("rec_001");
     expect(entry.score).toBe(8000);
     expect(entry.deleted_at).toBeNull();
+    expect(entry.min_steps_2048).toBe(604);
   });
 });

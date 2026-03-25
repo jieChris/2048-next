@@ -67,6 +67,7 @@
   })();
   var DEFAULT_LIMIT = 20;
   var DEFAULT_BOARD_MODE = "standard_no_undo";
+  var DEFAULT_BOARD_METRIC = "score";
   var DEFAULT_API_TIMEOUT_MS = 12000;
 
   // --- shared API utilities (from api_shared_utils.js) ---
@@ -90,6 +91,10 @@
   var loginCaptchaRequired = false;
   var loginCaptchaId = "";
   var loginCaptchaLoading = false;
+  var leaderboardPage = 1;
+  var leaderboardTotalPages = 0;
+  var leaderboardHasPrev = false;
+  var leaderboardHasNext = false;
 
   var COPY = {
     zh: {
@@ -123,11 +128,19 @@
       userCreated: "注册时间：",
       boardHeading: "在线排行榜",
       boardMode: "模式",
+      boardMetric: "榜单",
       boardLimit: "条数",
       boardRefresh: "刷新",
+      boardPrev: "上一页",
+      boardNext: "下一页",
+      boardMetricScore: "分数",
+      boardMetricMinSteps2k: "合成2K最少步数",
+      boardMetricMinSteps4k: "合成4K最少步数",
+      boardMetricMinSteps8k: "合成8K最少步数",
       colRank: "排名",
       colName: "昵称",
       colScore: "分数",
+      colMinSteps: "最少步数",
       colDate: "更新时间",
       boardLoading: "加载中...",
       boardEmpty: "暂无在线排行榜数据",
@@ -180,11 +193,19 @@
       userCreated: "Created:",
       boardHeading: "Leaderboard",
       boardMode: "Mode",
+      boardMetric: "Metric",
       boardLimit: "Limit",
       boardRefresh: "Refresh",
+      boardPrev: "Prev",
+      boardNext: "Next",
+      boardMetricScore: "Score",
+      boardMetricMinSteps2k: "Fewest Steps to 2K",
+      boardMetricMinSteps4k: "Fewest Steps to 4K",
+      boardMetricMinSteps8k: "Fewest Steps to 8K",
       colRank: "Rank",
       colName: "Nickname",
       colScore: "Score",
+      colMinSteps: "Fewest Steps",
       colDate: "Updated",
       boardLoading: "Loading...",
       boardEmpty: "No leaderboard data.",
@@ -264,6 +285,22 @@
     fib_3x3_no_undo: "fib_3x3",
     fib_3x3_undo: "fib_3x3"
   };
+  var LEADERBOARD_METRIC_ALIAS = {
+    score: "score",
+    by_score: "score",
+    min_steps_2048: "min_steps_2048",
+    least_steps_2k: "min_steps_2048",
+    least_steps_2048: "min_steps_2048",
+    steps_to_2048: "min_steps_2048",
+    min_steps_4096: "min_steps_4096",
+    least_steps_4k: "min_steps_4096",
+    least_steps_4096: "min_steps_4096",
+    steps_to_4096: "min_steps_4096",
+    min_steps_8192: "min_steps_8192",
+    least_steps_8k: "min_steps_8192",
+    least_steps_8192: "min_steps_8192",
+    steps_to_8192: "min_steps_8192"
+  };
 
   var LEADERBOARD_MODE_OPTIONS = [
     { value: "standard_no_undo", zh: "普通无撤回", en: "Standard (No Undo)" },
@@ -272,6 +309,12 @@
     { value: "pow2_2x4", zh: "2x4", en: "2x4" },
     { value: "pow2_3x4", zh: "3x4", en: "3x4" },
     { value: "fib_3x3", zh: "斐波那契3x3", en: "Fibonacci 3x3" }
+  ];
+  var LEADERBOARD_METRIC_OPTIONS = [
+    { value: "score", copyKey: "boardMetricScore" },
+    { value: "min_steps_2048", copyKey: "boardMetricMinSteps2k" },
+    { value: "min_steps_4096", copyKey: "boardMetricMinSteps4k" },
+    { value: "min_steps_8192", copyKey: "boardMetricMinSteps8k" }
   ];
 
   function normalizeLeaderboardNickname(nameLike) {
@@ -320,6 +363,20 @@
     return MODE_BUCKET_ALIAS[key] || null;
   }
 
+  function resolveLeaderboardMetric(metricLike) {
+    var key = toText(metricLike).trim().toLowerCase();
+    if (!key) return null;
+    return LEADERBOARD_METRIC_ALIAS[key] || null;
+  }
+
+  function resolveMetricTargetTile(metricLike) {
+    var metric = resolveLeaderboardMetric(metricLike);
+    if (metric === "min_steps_2048") return 2048;
+    if (metric === "min_steps_4096") return 4096;
+    if (metric === "min_steps_8192") return 8192;
+    return null;
+  }
+
   function isValidEmailFormat(emailLike) {
     var email = toText(emailLike).trim();
     if (!email || email.length > 254) return false;
@@ -361,6 +418,12 @@
     var modeSelect = byId("account-board-mode");
     var modeValue = toText(modeSelect && modeSelect.value).trim();
     return resolveLeaderboardMode(modeValue) || DEFAULT_BOARD_MODE;
+  }
+
+  function getSelectedLeaderboardMetric() {
+    var metricSelect = byId("account-board-metric");
+    var metricValue = toText(metricSelect && metricSelect.value).trim();
+    return resolveLeaderboardMetric(metricValue) || DEFAULT_BOARD_METRIC;
   }
 
   function getToken() {
@@ -564,14 +627,23 @@
     }
   }
 
-  function getLeaderboard(limit, modeLike) {
+  function getLeaderboard(limit, modeLike, pageLike, metricLike) {
     var safeLimit = Number(limit);
     if (!Number.isFinite(safeLimit) || safeLimit <= 0) safeLimit = DEFAULT_LIMIT;
     safeLimit = Math.floor(safeLimit);
+    var safePage = Number(pageLike);
+    if (!Number.isFinite(safePage) || safePage <= 0) safePage = 1;
+    safePage = Math.floor(safePage);
 
     var modeBucket = resolveLeaderboardMode(modeLike) || DEFAULT_BOARD_MODE;
-    var path = "/leaderboard?limit=" + encodeURIComponent(String(safeLimit));
+    var metric = resolveLeaderboardMetric(metricLike) || DEFAULT_BOARD_METRIC;
+    var path = "/leaderboard?page=" + encodeURIComponent(String(safePage));
+    path += "&page_size=" + encodeURIComponent(String(safeLimit));
+    path += "&limit=" + encodeURIComponent(String(safeLimit));
     if (modeBucket) path += "&mode=" + encodeURIComponent(modeBucket);
+    if (metric) path += "&metric=" + encodeURIComponent(metric);
+    var metricTargetTile = resolveMetricTargetTile(metric);
+    if (metricTargetTile) path += "&target_tile=" + encodeURIComponent(String(metricTargetTile));
     return apiRequest(path, { method: "GET" });
   }
 
@@ -599,6 +671,66 @@
     return toText(raw).trim() || "--";
   }
 
+  function resolvePagerMeta(result, fallbackPage, pageSize, itemCount) {
+    var page = Math.floor(Number(fallbackPage) || 1);
+    if (page <= 0) page = 1;
+    var size = Math.floor(Number(pageSize) || DEFAULT_LIMIT);
+    if (size <= 0) size = DEFAULT_LIMIT;
+    var count = Math.max(0, Math.floor(Number(itemCount) || 0));
+
+    var pagination = (result && (result.pagination || result.page_info || result.meta)) || {};
+    var rawPage = Math.floor(
+      Number(
+        pagination.page != null ? pagination.page :
+        pagination.current_page != null ? pagination.current_page :
+        page
+      ) || page
+    );
+    if (rawPage <= 0) rawPage = page;
+
+    var rawTotalPages = Math.floor(
+      Number(
+        pagination.total_pages != null ? pagination.total_pages :
+        pagination.pages != null ? pagination.pages :
+        pagination.page_count != null ? pagination.page_count :
+        0
+      ) || 0
+    );
+    if (rawTotalPages < 0) rawTotalPages = 0;
+
+    var hasPrev = typeof pagination.has_prev === "boolean" ? pagination.has_prev : rawPage > 1;
+    var hasNext = typeof pagination.has_next === "boolean"
+      ? pagination.has_next
+      : (rawTotalPages > 0 ? rawPage < rawTotalPages : count >= size);
+
+    return {
+      page: rawPage,
+      totalPages: rawTotalPages,
+      hasPrev: !!hasPrev,
+      hasNext: !!hasNext
+    };
+  }
+
+  function resolveBoardPageText(page, totalPages) {
+    var safePage = Math.max(1, Math.floor(Number(page) || 1));
+    var safeTotal = Math.max(0, Math.floor(Number(totalPages) || 0));
+    if (currentLang === "en") {
+      return safeTotal > 0 ? "Page " + safePage + "/" + safeTotal : "Page " + safePage;
+    }
+    return safeTotal > 0 ? "第" + safePage + "/" + safeTotal + "页" : "第" + safePage + "页";
+  }
+
+  function syncLeaderboardPagerUi() {
+    var pageNode = byId("account-board-page");
+    if (pageNode) {
+      pageNode.textContent = resolveBoardPageText(leaderboardPage, leaderboardTotalPages);
+    }
+    var prevBtn = byId("account-board-prev");
+    var nextBtn = byId("account-board-next");
+    if (prevBtn) prevBtn.disabled = !leaderboardHasPrev;
+    if (nextBtn) nextBtn.disabled = !leaderboardHasNext;
+  }
+
   function resolveServerError(result, fallbackKey) {
     var lang = currentLang === "en" ? "en" : "zh";
     var code = toText(result && result.code).trim().toUpperCase();
@@ -617,10 +749,65 @@
     return text.indexOf("timeout") >= 0 || text.indexOf("超时") >= 0;
   }
 
-  function renderBoardList(resultList) {
+  function resolveMetricValueFromKeys(item, keys) {
+    if (!item || !Array.isArray(keys)) return null;
+    for (var i = 0; i < keys.length; i += 1) {
+      var key = keys[i];
+      if (!key) continue;
+      var value = Number(item[key]);
+      if (Number.isFinite(value) && value > 0) return Math.floor(value);
+    }
+    return null;
+  }
+
+  function resolveLeaderboardDisplayValue(item, metricLike) {
+    var metric = resolveLeaderboardMetric(metricLike) || DEFAULT_BOARD_METRIC;
+    if (metric === "score") {
+      return Math.floor(Number(item && item.score) || 0);
+    }
+    if (metric === "min_steps_2048") {
+      return resolveMetricValueFromKeys(item, [
+        "min_steps_2048",
+        "least_steps_2048",
+        "least_steps_2k",
+        "steps_to_2048"
+      ]);
+    }
+    if (metric === "min_steps_4096") {
+      return resolveMetricValueFromKeys(item, [
+        "min_steps_4096",
+        "least_steps_4096",
+        "least_steps_4k",
+        "steps_to_4096"
+      ]);
+    }
+    if (metric === "min_steps_8192") {
+      return resolveMetricValueFromKeys(item, [
+        "min_steps_8192",
+        "least_steps_8192",
+        "least_steps_8k",
+        "steps_to_8192"
+      ]);
+    }
+    return null;
+  }
+
+  function syncLeaderboardMetricColumnHeader(metricLike) {
+    var scoreHeader = byId("account-col-score");
+    if (!scoreHeader) return;
+    var metric = resolveLeaderboardMetric(metricLike) || DEFAULT_BOARD_METRIC;
+    scoreHeader.textContent = metric === "score" ? t("colScore") : t("colMinSteps");
+  }
+
+  function renderBoardList(resultList, pageLike, pageSizeLike, metricLike) {
     var host = byId("account-board-list");
     if (!host) return;
     host.innerHTML = "";
+    var safePage = Math.floor(Number(pageLike) || 1);
+    if (safePage <= 0) safePage = 1;
+    var safePageSize = Math.floor(Number(pageSizeLike) || DEFAULT_LIMIT);
+    if (safePageSize <= 0) safePageSize = DEFAULT_LIMIT;
+    var rankOffset = (safePage - 1) * safePageSize;
 
     if (!Array.isArray(resultList) || resultList.length === 0) {
       var empty = global.document.createElement("div");
@@ -637,7 +824,7 @@
 
       var rank = global.document.createElement("span");
       rank.className = "account-rank";
-      rank.textContent = String(i + 1);
+      rank.textContent = String(rankOffset + i + 1);
       row.appendChild(rank);
 
       var name = global.document.createElement("span");
@@ -657,7 +844,8 @@
 
       var score = global.document.createElement("span");
       score.className = "account-score";
-      score.textContent = String(Number(item.score) || 0);
+      var displayValue = resolveLeaderboardDisplayValue(item, metricLike);
+      score.textContent = displayValue == null ? "--" : String(displayValue);
       row.appendChild(score);
 
       var date = global.document.createElement("span");
@@ -687,6 +875,25 @@
 
     modeSelect.value = prevValue;
     if (!modeSelect.value) modeSelect.value = DEFAULT_BOARD_MODE;
+  }
+
+  function refreshMetricSelectOptions() {
+    var metricSelect = byId("account-board-metric");
+    if (!metricSelect) return;
+
+    var prevValue = resolveLeaderboardMetric(metricSelect.value) || DEFAULT_BOARD_METRIC;
+    metricSelect.innerHTML = "";
+
+    for (var i = 0; i < LEADERBOARD_METRIC_OPTIONS.length; i += 1) {
+      var optionDef = LEADERBOARD_METRIC_OPTIONS[i];
+      var optionEl = global.document.createElement("option");
+      optionEl.value = optionDef.value;
+      optionEl.textContent = t(optionDef.copyKey);
+      metricSelect.appendChild(optionEl);
+    }
+
+    metricSelect.value = prevValue;
+    if (!metricSelect.value) metricSelect.value = DEFAULT_BOARD_METRIC;
   }
 
   function resetUserInfo() {
@@ -753,25 +960,40 @@
     }
   }
 
-  async function refreshLeaderboard() {
+  async function refreshLeaderboard(resetPage) {
     var boardTip = byId("account-board-tip");
     var limit = Number(toText(byId("account-board-limit") && byId("account-board-limit").value));
     var modeBucket = getSelectedModeBucket();
+    var metric = getSelectedLeaderboardMetric();
+    var safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : DEFAULT_LIMIT;
+    if (resetPage === true) leaderboardPage = 1;
 
+    syncLeaderboardMetricColumnHeader(metric);
     setTip(boardTip, t("boardLoading"), "");
-    var result = await getLeaderboard(limit, modeBucket);
+    var result = await getLeaderboard(safeLimit, modeBucket, leaderboardPage, metric);
     var errorText = resolveServerError(result, "boardFail");
     if ((!result || !result.success) && isTimeoutErrorText(errorText)) {
-      result = await getLeaderboard(limit, modeBucket);
+      result = await getLeaderboard(safeLimit, modeBucket, leaderboardPage, metric);
       errorText = resolveServerError(result, "boardFail");
     }
     if (!result || !result.success) {
-      renderBoardList([]);
+      renderBoardList([], leaderboardPage, safeLimit, metric);
+      leaderboardHasPrev = leaderboardPage > 1;
+      leaderboardHasNext = false;
+      leaderboardTotalPages = 0;
+      syncLeaderboardPagerUi();
       setTip(boardTip, errorText, "err");
       return;
     }
 
-    renderBoardList(Array.isArray(result.data) ? result.data : []);
+    var list = Array.isArray(result.data) ? result.data : [];
+    var meta = resolvePagerMeta(result, leaderboardPage, safeLimit, list.length);
+    leaderboardPage = meta.page;
+    leaderboardTotalPages = meta.totalPages;
+    leaderboardHasPrev = meta.hasPrev;
+    leaderboardHasNext = meta.hasNext;
+    renderBoardList(list, leaderboardPage, safeLimit, metric);
+    syncLeaderboardPagerUi();
     setTip(boardTip, t("boardUpdated"), "ok");
   }
 
@@ -893,11 +1115,13 @@
       "account-user-created-label": t("userCreated"),
       "account-board-heading": t("boardHeading"),
       "account-board-mode-label": t("boardMode"),
+      "account-board-metric-label": t("boardMetric"),
       "account-board-limit-label": t("boardLimit"),
       "account-board-refresh": t("boardRefresh"),
+      "account-board-prev": t("boardPrev"),
+      "account-board-next": t("boardNext"),
       "account-col-rank": t("colRank"),
       "account-col-name": t("colName"),
-      "account-col-score": t("colScore"),
       "account-col-date": t("colDate")
     };
 
@@ -917,6 +1141,9 @@
     if (loginCaptchaInput) loginCaptchaInput.setAttribute("placeholder", t("loginCaptchaPlaceholder"));
     if (loginCaptchaImage) loginCaptchaImage.setAttribute("alt", t("loginCaptchaLabel"));
     refreshModeSelectOptions();
+    refreshMetricSelectOptions();
+    syncLeaderboardMetricColumnHeader(getSelectedLeaderboardMetric());
+    syncLeaderboardPagerUi();
 
     syncAuthState();
     refreshLeaderboard();
@@ -931,11 +1158,18 @@
     var loginCaptchaRefreshBtn = byId("account-login-captcha-refresh");
     var limitSelect = byId("account-board-limit");
     var modeSelect = byId("account-board-mode");
+    var metricSelect = byId("account-board-metric");
+    var prevBtn = byId("account-board-prev");
+    var nextBtn = byId("account-board-next");
 
     if (loginBtn) loginBtn.addEventListener("click", onLoginClick);
     if (registerBtn) registerBtn.setAttribute("href", "register.html");
     if (resetPasswordBtn) resetPasswordBtn.setAttribute("href", "password.html?mode=reset");
-    if (refreshBtn) refreshBtn.addEventListener("click", refreshLeaderboard);
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", function () {
+        refreshLeaderboard(false);
+      });
+    }
     if (loginCaptchaRefreshBtn) {
       loginCaptchaRefreshBtn.addEventListener("click", function () {
         refreshLoginCaptchaChallenge(true);
@@ -943,11 +1177,35 @@
     }
     if (limitSelect) {
       limitSelect.value = String(DEFAULT_LIMIT);
-      limitSelect.addEventListener("change", refreshLeaderboard);
+      limitSelect.addEventListener("change", function () {
+        refreshLeaderboard(true);
+      });
     }
     if (modeSelect) {
       modeSelect.value = DEFAULT_BOARD_MODE;
-      modeSelect.addEventListener("change", refreshLeaderboard);
+      modeSelect.addEventListener("change", function () {
+        refreshLeaderboard(true);
+      });
+    }
+    if (metricSelect) {
+      metricSelect.value = DEFAULT_BOARD_METRIC;
+      metricSelect.addEventListener("change", function () {
+        refreshLeaderboard(true);
+      });
+    }
+    if (prevBtn) {
+      prevBtn.addEventListener("click", function () {
+        if (!leaderboardHasPrev) return;
+        leaderboardPage = Math.max(1, leaderboardPage - 1);
+        refreshLeaderboard(false);
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener("click", function () {
+        if (!leaderboardHasNext) return;
+        leaderboardPage += 1;
+        refreshLeaderboard(false);
+      });
     }
 
     global.addEventListener("storage", function (eventLike) {
@@ -968,6 +1226,7 @@
 
   function init() {
     bindEvents();
+    syncLeaderboardPagerUi();
     applyLanguage();
     syncAuthState();
     try {

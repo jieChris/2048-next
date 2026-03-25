@@ -4688,6 +4688,11 @@ body[data-page="practice"] #test-grid-container.practice-grid-locked .grid-cell 
   body[data-page="game"] .top-action-buttons .mobile-home-btn {
     display: none !important;
   }
+
+  body[data-page="game"] .top-action-buttons .mobile-actions-expand-toggle,
+  body[data-page="game"] .top-action-buttons #top-actions-expand-toggle {
+    display: none !important;
+  }
 }
 
 body[data-page="game"][data-top-button-style="text"] .top-action-buttons .top-action-btn,

@@ -150,6 +150,14 @@ body[data-page="account-hub"][data-i18n-ready="0"] {
   font-weight: 700;
 }
 
+.account-page-indicator {
+  min-width: 78px;
+  text-align: center;
+  font-size: 12px;
+  color: #7b6c5f;
+  font-weight: 700;
+}
+
 body[data-page="account-hub"] .account-board-tools .settings-select {
   -webkit-appearance: none;
   appearance: none;

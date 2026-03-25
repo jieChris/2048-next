@@ -221,6 +221,53 @@ describe("core mode: normalizeModeConfig", () => {
     expect(cappedByRule.max_tile).toBe(233);
   });
 
+  it("keeps pow2 max tile only for capped or enforced modes", () => {
+    const uncapped = normalizeModeConfig({
+      modeKey: "classic_4x4_pow2_undo",
+      rawConfig: {
+        key: "classic_4x4_pow2_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        max_tile: 131072,
+        special_rules: {}
+      },
+      defaultModeKey: "standard_4x4_pow2_no_undo",
+      defaultModeConfig: DEFAULT_MODE_CONFIG
+    });
+    expect(uncapped.max_tile).toBeNull();
+
+    const cappedByKey = normalizeModeConfig({
+      modeKey: "capped_4x4_pow2_no_undo",
+      rawConfig: {
+        key: "capped_4x4_pow2_no_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        max_tile: 2048,
+        special_rules: {}
+      },
+      defaultModeKey: "standard_4x4_pow2_no_undo",
+      defaultModeConfig: DEFAULT_MODE_CONFIG
+    });
+    expect(cappedByKey.max_tile).toBe(2048);
+
+    const cappedByRule = normalizeModeConfig({
+      modeKey: "pow2_custom",
+      rawConfig: {
+        key: "pow2_custom",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        max_tile: 8192,
+        special_rules: { enforce_max_tile: true }
+      },
+      defaultModeKey: "standard_4x4_pow2_no_undo",
+      defaultModeConfig: DEFAULT_MODE_CONFIG
+    });
+    expect(cappedByRule.max_tile).toBe(8192);
+  });
+
   it("normalizes custom pow2 four-rate to strict spawn table", () => {
     const cfg = normalizeModeConfig({
       modeKey: "spawn_custom_4x4_pow2_no_undo",

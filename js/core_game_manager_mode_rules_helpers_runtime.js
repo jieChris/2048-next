@@ -278,14 +278,13 @@ function applyModeConfigMaxTileDefaults(manager, cfg) {
   var hasNumericMaxTile = Number.isInteger(cfg.max_tile) && cfg.max_tile > 0;
   var isCappedKey = typeof cfg.key === "string" && cfg.key.indexOf("capped") !== -1;
   var forceMaxTile = !!cfg.special_rules.enforce_max_tile;
-  if (cfg.ruleset === "fibonacci") {
-    // Fibonacci modes are uncapped by default; only explicit capped modes should enforce max_tile.
-    cfg.max_tile = (hasNumericMaxTile && (isCappedKey || forceMaxTile)) ? cfg.max_tile : null;
+  // Both pow2 and fibonacci modes are uncapped by default.
+  // Only explicit capped-mode keys or enforce_max_tile should keep max_tile.
+  if (hasNumericMaxTile && (isCappedKey || forceMaxTile)) {
+    cfg.max_tile = cfg.max_tile;
     return;
   }
-  if (!hasNumericMaxTile) {
-    cfg.max_tile = resolveTheoreticalMaxTile(manager, cfg.board_width, cfg.board_height, cfg.ruleset);
-  }
+  cfg.max_tile = null;
 }
 function normalizeModeConfigCustomSpawnFourRate(rawRate) {
   var customFourRate = Number(rawRate);

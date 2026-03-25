@@ -153,6 +153,11 @@ function setCompactViewport(): void {
   (globalThis as any).innerWidth = 375;
 }
 
+function setDesktopViewport(): void {
+  (globalThis as any).matchMedia = () => ({ matches: false });
+  (globalThis as any).innerWidth = 1280;
+}
+
 afterEach(() => {
   (globalThis as any).matchMedia = originalMatchMedia;
   (globalThis as any).innerWidth = originalInnerWidth;
@@ -226,6 +231,23 @@ describe("bootstrap mobile top buttons", () => {
 
     (btn as FakeElement).dispatch("click", { preventDefault() {} });
     expect(btn?.innerHTML).toContain("M12 8v8");
+  });
+
+  it("hides expand button when viewport is not compact", () => {
+    setCompactViewport();
+    const doc = createFakeDocument(true);
+    const btn = ensureMobileExpandToggleButtonDom({ isGamePageScope: true, documentLike: doc as any });
+    expect(btn).not.toBeNull();
+    expect(btn?.style.display).toBe("");
+
+    setDesktopViewport();
+    const desktopResult = ensureMobileExpandToggleButtonDom({
+      isGamePageScope: true,
+      documentLike: doc as any
+    });
+    expect(desktopResult).toBeNull();
+    expect(btn?.style.display).toBe("none");
+    expect(btn?.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("uses undo button as primary and collapses timer in undo modes", () => {

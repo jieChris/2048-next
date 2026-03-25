@@ -121,13 +121,10 @@
     var isCappedKey = typeof cfg.key === "string" && cfg.key.indexOf("capped") !== -1;
     var forceMaxTile = !!cfg.special_rules.enforce_max_tile;
 
-    var getTheoreticalMaxTile = resolveGetTheoreticalMaxTile(opts);
-    if (cfg.ruleset === "fibonacci") {
-      cfg.max_tile = hasNumericMaxTile && (isCappedKey || forceMaxTile) ? cfg.max_tile : null;
-    } else if (hasNumericMaxTile) {
+    if (hasNumericMaxTile && (isCappedKey || forceMaxTile)) {
       cfg.max_tile = cfg.max_tile;
     } else {
-      cfg.max_tile = getTheoreticalMaxTile(cfg.board_width, cfg.board_height, cfg.ruleset);
+      cfg.max_tile = null;
     }
 
     var normalizeSpawnTable = resolveNormalizeSpawnTable(opts);

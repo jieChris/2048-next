@@ -36,8 +36,10 @@
     var explicitMaxTile = Number.isInteger(options.max_tile) && options.max_tile > 0
       ? options.max_tile
       : null;
-    var inferredMaxTile = getTheoreticalMaxTile(options.board_width, options.board_height, ruleset);
-    var defaultMaxTile = ruleset === "fibonacci" ? null : inferredMaxTile;
+    var isCappedKey = typeof options.key === "string" && options.key.indexOf("capped") !== -1;
+    var specialRules = clone(options.special_rules || {});
+    var forceMaxTile = !!(specialRules && specialRules.enforce_max_tile);
+    var defaultMaxTile = (isCappedKey || forceMaxTile) ? explicitMaxTile : null;
     return {
       key: options.key,
       label: options.label,
@@ -45,13 +47,13 @@
       board_height: options.board_height,
       ruleset: ruleset,
       undo_enabled: !!options.undo_enabled,
-      max_tile: explicitMaxTile || defaultMaxTile,
+      max_tile: defaultMaxTile,
       spawn_table: clone(options.spawn_table || (ruleset === "fibonacci"
         ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
         : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }])),
       ranked_bucket: options.ranked_bucket || "none",
       mode_family: options.mode_family || (ruleset === "fibonacci" ? "fibonacci" : "pow2"),
-      special_rules: clone(options.special_rules || {}),
+      special_rules: specialRules,
       rank_policy: options.rank_policy || (options.ranked_bucket && options.ranked_bucket !== "none" ? "ranked" : "unranked")
     };
   }

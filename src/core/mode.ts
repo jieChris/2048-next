@@ -1,4 +1,4 @@
-import { getTheoreticalMaxTile, normalizeSpawnTable, type SpawnTableItem } from "./rules";
+import { normalizeSpawnTable, type SpawnTableItem } from "./rules";
 
 import type { Ruleset } from "./engine";
 
@@ -194,12 +194,10 @@ export function normalizeModeConfig(input: NormalizeModeConfigInput): ModeConfig
   const isCappedKey = typeof cfg.key === "string" && cfg.key.indexOf("capped") !== -1;
   const forceMaxTile = !!cfg.special_rules.enforce_max_tile;
 
-  if (cfg.ruleset === "fibonacci") {
-    cfg.max_tile = hasNumericMaxTile && (isCappedKey || forceMaxTile) ? Number(cfg.max_tile) : null;
-  } else if (hasNumericMaxTile) {
+  if (hasNumericMaxTile && (isCappedKey || forceMaxTile)) {
     cfg.max_tile = Number(cfg.max_tile);
   } else {
-    cfg.max_tile = getTheoreticalMaxTile(cfg.board_width, cfg.board_height, cfg.ruleset);
+    cfg.max_tile = null;
   }
 
   let customFourRate = Number(cfg.special_rules.custom_spawn_four_rate);

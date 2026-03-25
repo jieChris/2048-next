@@ -303,6 +303,13 @@ export function ensureMobileExpandToggleButtonDom(
 
   if (!isCompactViewport()) {
     setExpandedState(doc, false);
+    const existingDesktopBtn = doc.getElementById(DEFAULT_EXPAND_BUTTON_ID);
+    if (existingDesktopBtn?.style) {
+      existingDesktopBtn.style.display = "none";
+    }
+    if (typeof existingDesktopBtn?.setAttribute === "function") {
+      existingDesktopBtn.setAttribute("aria-hidden", "true");
+    }
     syncMobileActionButtonClasses(host, doc);
     return null;
   }
@@ -313,6 +320,10 @@ export function ensureMobileExpandToggleButtonDom(
     DEFAULT_EXPAND_CLASS_NAME,
     ""
   );
+  if (btn.style) btn.style.display = "";
+  if (typeof btn.setAttribute === "function") {
+    btn.setAttribute("aria-hidden", "false");
+  }
   if ((btn as any).parentNode !== host) {
     appendChild(host, btn);
   }
