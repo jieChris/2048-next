@@ -4619,19 +4619,12 @@ body[data-page="practice"] #test-grid-container.practice-grid-locked .grid-cell 
 }
 
 @media screen and (max-width: 980px) {
-  body[data-page="game"] .mobile-home-btn {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    order: -1;
-  }
-
   body[data-page="game"] .site-logo {
     display: none !important;
   }
 }
 
-/* Mobile game top-action explicit order */
+/* Mobile game top-actions: primary five + expandable overflow row */
 @media screen and (max-width: 980px) {
   body[data-page="game"] .top-action-buttons {
     display: flex;
@@ -4641,24 +4634,49 @@ body[data-page="practice"] #test-grid-container.practice-grid-locked .grid-cell 
     gap: 8px;
   }
 
-  body[data-page="game"] .top-action-buttons .mobile-home-btn { order: 1; }
-  body[data-page="game"] .top-action-buttons #top-announcement-btn { order: 2; }
-  body[data-page="game"] .top-action-buttons #stats-panel-toggle { order: 3; }
-  body[data-page="game"] .top-action-buttons #top-export-replay-btn { order: 4; }
-  body[data-page="game"] .top-action-buttons #top-practice-btn { order: 5; }
-  body[data-page="game"] .top-action-buttons #top-advanced-replay-btn { order: 6; }
-  body[data-page="game"] .top-action-buttons #top-modes-btn { order: 7; }
-  body[data-page="game"] .top-action-buttons #top-history-btn { order: 8; }
-  body[data-page="game"] .top-action-buttons #top-settings-btn { order: 9; }
+  body[data-page="game"] .top-action-buttons .top-action-btn,
   body[data-page="game"] .top-action-buttons .restart-button,
-  body[data-page="game"] .top-action-buttons #top-restart-btn { order: 10; }
-  body[data-page="game"] .top-action-buttons .mobile-hint-toggle-btn,
-  body[data-page="game"] .top-action-buttons #top-mode-intro-btn,
-  body[data-page="game"] .top-action-buttons #top-mobile-hint-btn { order: 11; }
-  body[data-page="game"] .top-action-buttons .mobile-undo-top-btn,
-  body[data-page="game"] .top-action-buttons #top-mobile-undo-btn { order: 12; }
-  body[data-page="game"] .top-action-buttons .timerbox-toggle-btn,
-  body[data-page="game"] .top-action-buttons #timerbox-toggle-btn { order: 13; }
+  body[data-page="game"] .top-action-buttons #timerbox-toggle-btn {
+    flex: 0 0 calc((100% - 40px) / 6);
+    width: calc((100% - 40px) / 6);
+    min-width: 0;
+    max-width: 64px;
+    justify-content: center;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body[data-page="game"] .top-action-buttons .mobile-actions-primary {
+    order: 10;
+    display: inline-flex !important;
+  }
+
+  body[data-page="game"] .top-action-buttons .mobile-actions-expand-toggle {
+    order: 11;
+    display: inline-flex !important;
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+
+  body[data-page="game"] .top-action-buttons .mobile-actions-expand-toggle svg {
+    width: 30px !important;
+    height: 30px !important;
+    stroke-width: 2.6px;
+    display: block;
+  }
+
+  body[data-page="game"][data-top-button-style="icon"] .top-action-buttons .mobile-actions-expand-toggle {
+    font-size: 0;
+  }
+
+  body[data-page="game"] .top-action-buttons .mobile-actions-collapse-target {
+    order: 100;
+    display: none !important;
+  }
+
+  body[data-page="game"][data-mobile-actions-expanded="1"] .top-action-buttons .mobile-actions-collapse-target {
+    display: inline-flex !important;
+  }
 
   /* Announcement appears only in no-undo modes */
   body[data-page="game"][data-mode-id*="_undo"]:not([data-mode-id*="no_undo"]):not([data-mode-id*="no-undo"]) #top-announcement-btn {

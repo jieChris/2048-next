@@ -1,42 +1,65 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  ensureMobileExpandToggleButtonDom,
   ensureMobileHintToggleButtonDom,
   ensureMobileUndoTopButtonDom
 } from "../../src/bootstrap/mobile-top-buttons";
+
+type EventHandler = (event?: unknown) => void;
 
 type FakeElement = {
   id: string;
   className: string;
   href: string;
   innerHTML: string;
+  textContent: string;
   parentNode: FakeElement | null;
   nextSibling: FakeElement | null;
   lastElementChild: FakeElement | null;
   children: FakeElement[];
+  style: { display?: string };
   appendChild: (node: FakeElement) => void;
   insertBefore: (node: FakeElement, referenceNode: FakeElement | null) => void;
+  getAttribute: (name: string) => string | null;
+  setAttribute: (name: string, value: string) => void;
+  addEventListener: (type: string, listener: EventHandler) => void;
+  dispatch: (type: string, event?: unknown) => void;
 };
 
 type FakeDocument = {
   all: FakeElement[];
   host: FakeElement;
+  body: FakeElement;
+  documentElement: FakeElement;
   settingsBtn: FakeElement | null;
   getElementById: (id: string) => FakeElement | null;
   createElement: (tagName: string) => FakeElement;
   querySelector: (selector: string) => FakeElement | null;
 };
 
+const originalMatchMedia = (globalThis as any).matchMedia;
+const originalInnerWidth = (globalThis as any).innerWidth;
+
+function hasClass(node: FakeElement | null, className: string): boolean {
+  if (!node) return false;
+  return (" " + node.className + " ").indexOf(" " + className + " ") >= 0;
+}
+
 function createElement(id = ""): FakeElement {
+  const attrs: Record<string, string> = {};
+  const listeners: Record<string, EventHandler[]> = {};
   const el: FakeElement = {
     id,
     className: "",
     href: "",
     innerHTML: "",
+    textContent: "",
     parentNode: null,
     nextSibling: null,
     lastElementChild: null,
     children: [],
+    style: {},
     appendChild(node: FakeElement) {
       detach(node);
       el.children.push(node);
@@ -53,6 +76,20 @@ function createElement(id = ""): FakeElement {
       }
       node.parentNode = el;
       relink(el);
+    },
+    getAttribute(name: string) {
+      return Object.prototype.hasOwnProperty.call(attrs, name) ? attrs[name] : null;
+    },
+    setAttribute(name: string, value: string) {
+      attrs[name] = String(value);
+    },
+    addEventListener(type: string, listener: EventHandler) {
+      if (!listeners[type]) listeners[type] = [];
+      listeners[type].push(listener);
+    },
+    dispatch(type: string, event?: unknown) {
+      const handlers = listeners[type] || [];
+      for (let i = 0; i < handlers.length; i += 1) handlers[i](event);
     }
   };
   return el;
@@ -77,7 +114,10 @@ function relink(parent: FakeElement): void {
 
 function createFakeDocument(withSettings: boolean): FakeDocument {
   const host = createElement("host");
-  const all: FakeElement[] = [host];
+  const body = createElement("body");
+  const documentElement = createElement("html");
+  documentElement.setAttribute("lang", "en");
+  const all: FakeElement[] = [host, body, documentElement];
   const settingsBtn = withSettings ? createElement("top-settings-btn") : null;
   if (settingsBtn) {
     host.appendChild(settingsBtn);
@@ -87,6 +127,8 @@ function createFakeDocument(withSettings: boolean): FakeDocument {
   return {
     all,
     host,
+    body,
+    documentElement,
     settingsBtn,
     getElementById(id: string) {
       for (let i = 0; i < all.length; i++) {
@@ -105,6 +147,16 @@ function createFakeDocument(withSettings: boolean): FakeDocument {
     }
   };
 }
+
+function setCompactViewport(): void {
+  (globalThis as any).matchMedia = () => ({ matches: true });
+  (globalThis as any).innerWidth = 375;
+}
+
+afterEach(() => {
+  (globalThis as any).matchMedia = originalMatchMedia;
+  (globalThis as any).innerWidth = originalInnerWidth;
+});
 
 describe("bootstrap mobile top buttons", () => {
   it("returns null outside game scope", () => {
@@ -152,5 +204,58 @@ describe("bootstrap mobile top buttons", () => {
     const btn = ensureMobileHintToggleButtonDom({ isGamePageScope: true, documentLike: doc as any });
     expect(btn).not.toBeNull();
     expect(doc.host.lastElementChild?.id).toBe("top-mobile-hint-btn");
+  });
+
+  it("supports text and icon variants for expand button", () => {
+    setCompactViewport();
+    const doc = createFakeDocument(true);
+    doc.body.setAttribute("data-top-button-style", "text");
+    const btn = ensureMobileExpandToggleButtonDom({ isGamePageScope: true, documentLike: doc as any });
+    expect(btn).not.toBeNull();
+    expect(btn?.textContent).toBe("Expand");
+
+    (btn as FakeElement).dispatch("click", { preventDefault() {} });
+    expect(btn?.textContent).toBe("Collapse");
+    expect(doc.body.getAttribute("data-mobile-actions-expanded")).toBe("1");
+
+    doc.body.setAttribute("data-top-button-style", "icon");
+    ensureMobileExpandToggleButtonDom({ isGamePageScope: true, documentLike: doc as any });
+    expect(btn?.innerHTML).toContain('rect x="4" y="4" width="16" height="16" rx="3"');
+    expect(btn?.innerHTML).toContain("M8 12h8");
+    expect(btn?.innerHTML).not.toContain("M12 8v8");
+
+    (btn as FakeElement).dispatch("click", { preventDefault() {} });
+    expect(btn?.innerHTML).toContain("M12 8v8");
+  });
+
+  it("uses undo button as primary and collapses timer in undo modes", () => {
+    setCompactViewport();
+    const doc = createFakeDocument(true);
+    const stats = createElement("stats-panel-toggle");
+    const practice = createElement("top-practice-btn");
+    const restart = createElement("top-restart-btn");
+    const timer = createElement("timerbox-toggle-btn");
+    const extra = createElement("top-history-btn");
+    doc.all.push(stats, practice, restart, timer, extra);
+    doc.host.insertBefore(stats, doc.settingsBtn);
+    doc.host.insertBefore(practice, doc.settingsBtn);
+    doc.host.insertBefore(restart, doc.settingsBtn);
+    doc.host.insertBefore(timer, doc.settingsBtn);
+    doc.host.insertBefore(extra, doc.settingsBtn);
+    const undo = ensureMobileUndoTopButtonDom({ isGamePageScope: true, documentLike: doc as any }) as FakeElement;
+    ensureMobileExpandToggleButtonDom({ isGamePageScope: true, documentLike: doc as any });
+
+    doc.body.setAttribute("data-mode-id", "standard_4x4_pow2_no_undo");
+    ensureMobileExpandToggleButtonDom({ isGamePageScope: true, documentLike: doc as any });
+    expect(hasClass(timer, "mobile-actions-primary")).toBe(true);
+    expect(hasClass(undo, "mobile-actions-collapse-target")).toBe(true);
+    expect(hasClass(extra, "mobile-actions-collapse-target")).toBe(true);
+
+    doc.body.setAttribute("data-mode-id", "classic_4x4_pow2_undo");
+    ensureMobileExpandToggleButtonDom({ isGamePageScope: true, documentLike: doc as any });
+    expect(hasClass(timer, "mobile-actions-collapse-target")).toBe(true);
+    expect(hasClass(timer, "mobile-actions-primary")).toBe(false);
+    expect(hasClass(undo, "mobile-actions-primary")).toBe(true);
+    expect(hasClass(undo, "mobile-actions-collapse-target")).toBe(false);
   });
 });
