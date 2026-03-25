@@ -2166,20 +2166,14 @@ function resolveReplayV3ModeKeyFromEnvelope(manager, replaySource) {
   return manager.modeKey || manager.mode || GameManager.DEFAULT_MODE_KEY;
 }
 
-function tryParseReplayV3JsonEnvelope(manager, trimmed) {
-  if (typeof trimmed !== "string" || !trimmed) return null;
-  var firstChar = trimmed.charAt(0);
-  if (firstChar !== "{" && firstChar !== "[") return null;
-  var parsed = JSON.parse(trimmed);
-  var replaySource = null;
-  if (Array.isArray(parsed)) {
-    replaySource = { actions: parsed };
-  } else if (manager && typeof manager.isNonArrayObject === "function" && manager.isNonArrayObject(parsed)) {
-    replaySource = parsed;
-  } else if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-    replaySource = parsed;
-  }
-  if (!replaySource) throw "Invalid v3 replay payload";
+function resolveReplayV3ImportSource(manager, parsed) {
+  if (Array.isArray(parsed)) return { actions: parsed };
+  if (manager && typeof manager.isNonArrayObject === "function" && manager.isNonArrayObject(parsed)) return parsed;
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+  return null;
+}
+
+function createReplayV3JsonEnvelope(manager, replaySource) {
   var normalizedSource = normalizeReplayRecordObject(replaySource, {});
   var actions = Array.isArray(normalizedSource.actions) ? normalizedSource.actions.slice() : [];
   var parsedSeed = Number(normalizedSource.seed);
@@ -2189,6 +2183,16 @@ function tryParseReplayV3JsonEnvelope(manager, trimmed) {
     seed: Number.isFinite(parsedSeed) ? parsedSeed : null,
     actions: actions
   };
+}
+
+function tryParseReplayV3JsonEnvelope(manager, trimmed) {
+  if (typeof trimmed !== "string" || !trimmed) return null;
+  var firstChar = trimmed.charAt(0);
+  if (firstChar !== "{" && firstChar !== "[") return null;
+  var parsed = JSON.parse(trimmed);
+  var replaySource = resolveReplayV3ImportSource(manager, parsed);
+  if (!replaySource) throw "Invalid v3 replay payload";
+  return createReplayV3JsonEnvelope(manager, replaySource);
 }
 
 function applyV3StructuredReplayEnvelope(manager, envelope, replayModeConfig) {
@@ -2203,21 +2207,30 @@ function applyV3StructuredReplayEnvelope(manager, envelope, replayModeConfig) {
   setRuntimeDisableSessionSyncForReplay(manager, true);
 }
 
-function applyStructuredReplayEnvelope(manager, envelope) {
+function resolveStructuredReplayModeConfig(manager, envelope) {
   var replayModeConfig = manager.resolveModeConfig(envelope.modeKey);
   if (!replayModeConfig && envelope.kind === "v9rpl") {
     replayModeConfig = resolveV9RplReplayModeConfig(manager);
   }
-  if (!replayModeConfig) {
-    throw "Replay mode config unavailable";
-  }
+  if (!replayModeConfig) throw "Replay mode config unavailable";
+  return replayModeConfig;
+}
+
+function applyStructuredReplayEnvelopeByKind(manager, envelope, replayModeConfig) {
   if (envelope.kind === "v9rpl") {
     applyV9RplStructuredReplayEnvelope(manager, envelope, replayModeConfig);
-  } else if (envelope.kind === "v3-json") {
-    applyV3StructuredReplayEnvelope(manager, envelope, replayModeConfig);
-  } else {
-    applyV4StructuredReplayEnvelope(manager, envelope, replayModeConfig);
+    return;
   }
+  if (envelope.kind === "v3-json") {
+    applyV3StructuredReplayEnvelope(manager, envelope, replayModeConfig);
+    return;
+  }
+  applyV4StructuredReplayEnvelope(manager, envelope, replayModeConfig);
+}
+
+function applyStructuredReplayEnvelope(manager, envelope) {
+  var replayModeConfig = resolveStructuredReplayModeConfig(manager, envelope);
+  applyStructuredReplayEnvelopeByKind(manager, envelope, replayModeConfig);
   applyImportedReplayUndoState(manager);
   startImportedReplayPlayback(manager);
   return true;
