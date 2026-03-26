@@ -67,6 +67,18 @@ body[data-page="user-profile"][data-i18n-ready="0"] {
   font-weight: 700;
 }
 
+.user-record-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.user-record-pager .replay-button {
+  min-width: 84px;
+}
+
 body[data-page="user-profile"] .user-record-tools .settings-select {
   -webkit-appearance: none;
   appearance: none;

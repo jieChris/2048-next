@@ -5,8 +5,11 @@
 
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var STORAGE_TOKEN_KEY = "2048_auth_token_v1";
+  var STORAGE_USER_ID_KEY = "2048_auth_userId_v1";
   var DEFAULT_API_TIMEOUT_MS = 12000;
+  var AUTH_API_TIMEOUT_MS = 30000;
   var RECORD_REPLAY_API_TIMEOUT_MS = 30000;
+  var USER_RECORDS_API_TIMEOUT_MS = 30000;
   var SIGNED_REPLAY_FETCH_TIMEOUT_MS = 30000;
   var DEFAULT_RECORD_LIMIT = 20;
   var BEIJING_TIMEZONE = "Asia/Shanghai";
@@ -239,6 +242,10 @@
     return toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim();
   }
 
+  function getStoredUserId() {
+    return parsePositiveInt(safeGetStorage(STORAGE_USER_ID_KEY));
+  }
+
   function readLanguage() {
     var raw = toText(safeGetStorage(UI_LANG_STORAGE_KEY)).toLowerCase();
     return raw === "en" ? "en" : "zh";
@@ -419,18 +426,38 @@
   function getMyUserInfo() {
     var token = getAuthToken();
     if (!token) return Promise.resolve(null);
-    var requestOptions = {
-      method: "GET",
-      auth: true
-    };
-    return apiRequest("/user/me", requestOptions).then(function (result) {
-      if (result && result.success) return result;
-      var errorText = toText(result && result.error).toLowerCase();
-      if (errorText.indexOf("404") === -1 && errorText.indexOf("not found") === -1) {
-        return result;
+    return (async function () {
+      var requestOptions = {
+        method: "GET",
+        auth: true,
+        timeoutMs: AUTH_API_TIMEOUT_MS
+      };
+
+      var result = await apiRequest("/user/me", requestOptions);
+      if (result && result.success && result.data) return result;
+
+      if (isTimeoutLikeText(toText(result && result.error))) {
+        result = await apiRequest("/user/me", requestOptions);
+        if (result && result.success && result.data) return result;
       }
-      return apiRequest("/me", requestOptions);
-    });
+
+      var errorText = toText(result && result.error).toLowerCase();
+      var shouldFallback =
+        !result ||
+        !result.success ||
+        !result.data ||
+        errorText.indexOf("404") >= 0 ||
+        errorText.indexOf("not found") >= 0;
+      if (!shouldFallback) return result;
+
+      var fallback = await apiRequest("/me", requestOptions);
+      if (fallback && fallback.success && fallback.data) return fallback;
+      if (isTimeoutLikeText(toText(fallback && fallback.error))) {
+        fallback = await apiRequest("/me", requestOptions);
+        if (fallback && fallback.success && fallback.data) return fallback;
+      }
+      return fallback || result;
+    })();
   }
 
   function getUserRecords(userId, options) {
@@ -459,7 +486,7 @@
     if (status === "deleted" || status === "all" || status === "active") {
       path += "&status=" + encodeURIComponent(status);
     }
-    return apiRequest(path, { method: "GET" });
+    return apiRequest(path, { method: "GET", timeoutMs: USER_RECORDS_API_TIMEOUT_MS });
   }
 
   function deleteUserRecord(recordId) {
@@ -1461,11 +1488,13 @@
   async function resolveOwnership() {
     var result = await getMyUserInfo();
     if (!result || !result.success || !result.data) {
-      isOwnProfile = false;
+      var localUserId = getStoredUserId();
+      var ownershipFromStorage = !!localUserId && localUserId === targetUserId && isTimeoutLikeText(toText(result && result.error));
+      isOwnProfile = ownershipFromStorage;
       updateVisibilityControl();
       syncRecordDateLabel();
       applyDocumentTitle();
-      return false;
+      return isOwnProfile;
     }
 
     var me = result.data || {};
@@ -1502,6 +1531,16 @@
       sort_by: getSortByValue(),
       order: getOrderValue()
     });
+    if ((!result || !result.success) && isTimeoutLikeText(toText(result && result.error))) {
+      result = await getUserRecords(targetUserId, {
+        limit: DEFAULT_RECORD_LIMIT,
+        page: recordPage,
+        mode: activeModeFilter,
+        status: activeRecordVisibility,
+        sort_by: getSortByValue(),
+        order: getOrderValue()
+      });
+    }
     if (requestSeq !== recordsRequestSeq) return;
 
     if (!result || !result.success) {
@@ -1685,9 +1724,9 @@
 
     var ownershipPromise = resolveOwnership();
     var userInfoPromise = refreshUserInfo();
-    var recordsPromise = refreshRecords(true);
-    await Promise.all([userInfoPromise, recordsPromise]);
     await ownershipPromise;
+    await userInfoPromise;
+    await refreshRecords(true);
   }
 
   global.UserProfilePageRuntime = {

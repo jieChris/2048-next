@@ -69,6 +69,7 @@
   var DEFAULT_BOARD_MODE = "standard_no_undo";
   var DEFAULT_BOARD_METRIC = "score";
   var DEFAULT_API_TIMEOUT_MS = 12000;
+  var AUTH_API_TIMEOUT_MS = 30000;
 
   // --- shared API utilities (from api_shared_utils.js) ---
   var _u = global.ApiSharedUtils || {};
@@ -467,11 +468,30 @@
     safeRemoveStorage(STORAGE_NICKNAME_KEY);
   }
 
+  function resolveRequestTimeoutMs(path, options) {
+    var opts = options || {};
+    var preferred = Number(opts.timeoutMs);
+    if (Number.isFinite(preferred) && preferred > 0) {
+      return Math.floor(preferred);
+    }
+    var fallback = resolveApiTimeoutMs();
+    var normalizedPath = toText(path).trim();
+    if (
+      normalizedPath === "/login" ||
+      normalizedPath === "/login/captcha" ||
+      normalizedPath === "/user/me" ||
+      normalizedPath === "/me"
+    ) {
+      return Math.max(Math.floor(fallback), AUTH_API_TIMEOUT_MS);
+    }
+    return Math.floor(fallback);
+  }
+
   async function apiRequest(path, options) {
     var opts = options || {};
     var method = toText(opts.method || "GET").toUpperCase();
     var lastError = t("networkError");
-    var timeoutMs = resolveApiTimeoutMs();
+    var timeoutMs = resolveRequestTimeoutMs(path, opts);
 
     for (var i = 0; i < apiBases.length; i += 1) {
       var base = apiBases[i];
@@ -566,8 +586,17 @@
     return apiRequest("/register", { method: "POST", body: payload });
   }
 
-  function login(payload) {
-    return apiRequest("/login", { method: "POST", body: payload });
+  async function login(payload) {
+    var requestOptions = {
+      method: "POST",
+      body: payload,
+      timeoutMs: AUTH_API_TIMEOUT_MS
+    };
+    var result = await apiRequest("/login", requestOptions);
+    if (result && !result.success && isTimeoutErrorText(result.error)) {
+      result = await apiRequest("/login", requestOptions);
+    }
+    return result;
   }
 
   function resolveLoginCaptchaCode(result) {
@@ -610,7 +639,10 @@
     if (refreshBtn) refreshBtn.disabled = true;
 
     try {
-      var result = await apiRequest("/login/captcha", { method: "GET" });
+      var result = await apiRequest("/login/captcha", {
+        method: "GET",
+        timeoutMs: AUTH_API_TIMEOUT_MS
+      });
       var captchaId = toText(result && result.captcha_id).trim();
       var imageDataUrl = toText(result && result.captcha_image_data_url).trim();
       if (!result || !result.success || !captchaId || !imageDataUrl) {
@@ -659,8 +691,27 @@
     return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), { method: "GET" });
   }
 
-  function getMyUserInfo() {
-    return apiRequest("/me", { method: "GET", auth: true });
+  async function getMyUserInfo() {
+    var requestOptions = {
+      method: "GET",
+      auth: true,
+      timeoutMs: AUTH_API_TIMEOUT_MS
+    };
+
+    var primary = await apiRequest("/user/me", requestOptions);
+    if (primary && primary.success && primary.data) return primary;
+    if (isTimeoutErrorText(toText(primary && primary.error))) {
+      primary = await apiRequest("/user/me", requestOptions);
+      if (primary && primary.success && primary.data) return primary;
+    }
+
+    var fallback = await apiRequest("/me", requestOptions);
+    if (fallback && fallback.success && fallback.data) return fallback;
+    if (isTimeoutErrorText(toText(fallback && fallback.error))) {
+      fallback = await apiRequest("/me", requestOptions);
+      if (fallback && fallback.success && fallback.data) return fallback;
+    }
+    return fallback || primary;
   }
 
   function setTip(node, message, type) {
@@ -928,16 +979,20 @@
     if (created) created.textContent = "--";
   }
 
-  async function refreshUserInfo() {
+  async function refreshUserInfo(options) {
+    var opts = options && typeof options === "object" ? options : {};
     if (!getToken()) {
       resetUserInfo();
-      return;
+      return false;
     }
 
     var result = await getMyUserInfo();
     if (!result || !result.success || !result.data) {
-      setTip(byId("account-auth-tip"), resolveServerError(result, "userInfoFail"), "err");
-      return;
+      var errorText = resolveServerError(result, "userInfoFail");
+      if (!(opts.silentTimeout && isTimeoutErrorText(errorText))) {
+        setTip(byId("account-auth-tip"), errorText, "err");
+      }
+      return false;
     }
 
     var data = result.data || {};
@@ -947,6 +1002,7 @@
     if (nick) nick.textContent = toText(data.nickname || getNickname() || "--");
     if (email) email.textContent = toText(data.email || "--");
     if (created) created.textContent = formatDate(data.created_at);
+    return true;
   }
 
   function syncAuthState() {
@@ -1103,7 +1159,7 @@
       saveAuth(result);
       syncAuthState();
       setTip(byId("account-auth-tip"), t("loginOk"), "ok");
-      refreshUserInfo();
+      refreshUserInfo({ silentTimeout: true });
       refreshLeaderboard();
       return;
     }

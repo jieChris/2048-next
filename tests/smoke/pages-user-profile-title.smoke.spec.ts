@@ -339,4 +339,71 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".user-mini-game .grid-cell")).toHaveCount(16);
     await expect(page.locator(".user-replay-btn")).toBeVisible();
   });
+
+  test("own profile still shows record management actions when ownership resolves slower than records", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "test-token-owner-race");
+      window.localStorage.setItem("2048_auth_userId_v1", "9");
+    });
+
+    await page.route("**/api/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("/user/me")) {
+        await new Promise((resolve) => setTimeout(resolve, 450));
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+          })
+        });
+        return;
+      }
+      if (url.includes("/user/9/records")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: [
+              {
+                id: "rec-owner-race-1",
+                user_id: 9,
+                mode_bucket: "standard_no_undo",
+                mode_key: "standard_4x4_pow2_no_undo",
+                score: 4096,
+                best_tile: 512,
+                duration_ms: 16000,
+                ended_at: "2026-03-15T08:00:00.000Z",
+                created_at: "2026-03-15 08:00:00",
+                replay_string: "replay_(!盲fC"
+              }
+            ]
+          })
+        });
+        return;
+      }
+      if (url.includes("/user/9")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+          })
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    const response = await page.goto("/user.html?id=9&nickname=Owner", { waitUntil: "domcontentloaded" });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+
+    await page.waitForSelector(".user-record-item");
+    await page.locator(".user-record-row").first().click();
+    await expect(page.locator(".user-record-action-btn")).toHaveCount(1);
+  });
 });
