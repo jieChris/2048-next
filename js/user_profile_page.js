@@ -1673,7 +1673,7 @@
     var result = await getMyUserInfo();
     if (!result || !result.success || !result.data) {
       var localUserId = getStoredUserId();
-      var ownershipFromStorage = !!localUserId && localUserId === targetUserId && isTimeoutLikeText(toText(result && result.error));
+      var ownershipFromStorage = !!localUserId && localUserId === targetUserId && !!getAuthToken();
       isOwnProfile = ownershipFromStorage;
       updateVisibilityControl();
       syncRecordDateLabel();
@@ -1911,6 +1911,8 @@
 
     var nameNode = byId("user-value-name");
     if (nameNode && targetNicknameHint) nameNode.textContent = targetNicknameHint;
+    var initialUserId = getStoredUserId();
+    isOwnProfile = !!initialUserId && initialUserId === targetUserId && !!getAuthToken();
     updateVisibilityControl();
     applyDocumentTitle();
 
