@@ -106,6 +106,7 @@
   var recordHasPrev = false;
   var recordHasNext = false;
   var recordsRequestSeq = 0;
+  var recordsLoading = false;
   var expandedRecordId = "";
   var recordDetailCache = Object.create(null);
   var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
@@ -477,6 +478,15 @@
     return normalizeReplayFileVersion(raw);
   }
 
+  function buildLocalReplayContractFallback() {
+    replayContractCache.payloadVersion = CLOUD_REPLAY_PAYLOAD_VERSION;
+    replayContractCache.replayFileVersion = CLOUD_REPLAY_FILE_VERSION;
+    return {
+      payloadVersion: CLOUD_REPLAY_PAYLOAD_VERSION,
+      replayFileVersion: CLOUD_REPLAY_FILE_VERSION
+    };
+  }
+
   async function fetchReplayContractFromApi() {
     if (replayContractCache.payloadVersion > 0 && replayContractCache.replayFileVersion > 0) {
       return {
@@ -492,19 +502,16 @@
         timeoutMs: DEFAULT_API_TIMEOUT_MS
       });
       if (result && result.error) {
-        throw new Error(toText(result.error) || "replay_contract_fetch_failed");
+        // Replay contract endpoint may be missing on some deployments.
+        // In that case, fall back to local contract constants instead of blocking replay.
+        return buildLocalReplayContractFallback();
       }
 
       var replayFileVersion = parseReplayFileVersionFromApiResult(result);
       var payloadVersion = parseReplayPayloadVersionFromApiResult(result);
 
       if (!replayFileVersion || !payloadVersion) {
-        replayContractCache.payloadVersion = CLOUD_REPLAY_PAYLOAD_VERSION;
-        replayContractCache.replayFileVersion = CLOUD_REPLAY_FILE_VERSION;
-        return {
-          payloadVersion: CLOUD_REPLAY_PAYLOAD_VERSION,
-          replayFileVersion: CLOUD_REPLAY_FILE_VERSION
-        };
+        return buildLocalReplayContractFallback();
       }
 
       replayContractCache.payloadVersion = payloadVersion;
@@ -771,6 +778,14 @@
     }
     if (!Number.isFinite(ts) || ts <= 0) return text;
     return formatTimestampInBeijing(ts) || text;
+  }
+
+  function formatDurationHms(durationMsLike) {
+    var totalSeconds = Math.max(0, Math.floor(Number(durationMsLike) / 1000) || 0);
+    var hours = Math.floor(totalSeconds / 3600);
+    var minutes = Math.floor((totalSeconds % 3600) / 60);
+    var seconds = totalSeconds % 60;
+    return String(hours).padStart(2, "0") + ":" + String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
   }
 
   function resolveRecordDateValue(record) {
@@ -1212,6 +1227,17 @@
     return text.indexOf("timeout") >= 0 || text.indexOf("\u8d85\u65f6") >= 0;
   }
 
+  function isNotFoundLikeText(textLike) {
+    var text = toText(textLike).toLowerCase();
+    if (!text) return false;
+    return (
+      text.indexOf("404") >= 0 ||
+      text.indexOf("not found") >= 0 ||
+      text.indexOf("record not found") >= 0 ||
+      text.indexOf("\u4e0d\u5b58\u5728") >= 0
+    );
+  }
+
   function buildRecordReplayPath(recordId, downloadMode) {
     var path = "/records/" + encodeURIComponent(recordId) + "/replay";
     var mode = toText(downloadMode).trim().toLowerCase();
@@ -1275,13 +1301,28 @@
         try {
           result = await requestRecordReplay(recordId, mode);
         } catch (requestError) {
-          lastErrorText = toText(requestError && requestError.message) || lastErrorText;
+          var requestErrorText = toText(requestError && requestError.message);
+          if (isNotFoundLikeText(requestErrorText)) {
+            lastErrorText = currentLang === "en"
+              ? "Replay data is unavailable for this record."
+              : "\u8be5\u8bb0\u5f55\u7684\u56de\u653e\u6570\u636e\u4e0d\u5b58\u5728\u6216\u5df2\u88ab\u6e05\u7406";
+          } else {
+            lastErrorText = requestErrorText || lastErrorText;
+          }
           continue;
         }
 
         if (!result || !result.success) {
           var errorText = toText(result && result.error).trim();
-          if (errorText) lastErrorText = errorText;
+          if (errorText) {
+            if (isNotFoundLikeText(errorText)) {
+              lastErrorText = currentLang === "en"
+                ? "Replay data is unavailable for this record."
+                : "\u8be5\u8bb0\u5f55\u7684\u56de\u653e\u6570\u636e\u4e0d\u5b58\u5728\u6216\u5df2\u88ab\u6e05\u7406";
+            } else {
+              lastErrorText = errorText;
+            }
+          }
           continue;
         }
 
@@ -1396,7 +1437,7 @@
     var meta = global.document.createElement("div");
     meta.className = "user-record-detail-meta";
     var bestTileText = (currentLang === "en" ? "Best Tile: " : "\u6700\u5927\u683c: ") + String(Math.floor(Number(detail.best_tile) || 0));
-    var durationText = (currentLang === "en" ? "Duration: " : "\u7528\u65f6: ") + String(Math.max(0, Math.round((Number(detail.duration_ms) || 0) / 1000))) + "s";
+    var durationText = (currentLang === "en" ? "Duration: " : "\u7528\u65f6: ") + formatDurationHms(detail.duration_ms);
     var metaText = bestTileText + " \u00b7 " + durationText;
     if (isDeletedRecord(record)) {
       metaText += " \u00b7 " + t("deletedHint");
@@ -1517,7 +1558,9 @@
       expandedRecordId = "";
       var empty = global.document.createElement("div");
       empty.className = "user-record-empty";
-      empty.textContent = t("empty");
+      empty.textContent = recordsLoading
+        ? (currentLang === "en" ? "Loading records..." : "\u6b63\u5728\u52a0\u8f7d\u8bb0\u5f55...")
+        : t("empty");
       list.appendChild(empty);
       return;
     }
@@ -1528,13 +1571,8 @@
   }
 
   function renderRecordsLoadingHint() {
-    var list = byId("user-record-list");
-    if (!list) return;
-    list.innerHTML = "";
-    var loading = global.document.createElement("div");
-    loading.className = "user-record-empty";
-    loading.textContent = currentLang === "en" ? "Loading records..." : "\u6b63\u5728\u52a0\u8f7d\u8bb0\u5f55...";
-    list.appendChild(loading);
+    recordsLoading = true;
+    renderRecords([]);
   }
 
   function sortRecords(records, sortBy, order) {
@@ -1640,6 +1678,7 @@
       updateVisibilityControl();
       syncRecordDateLabel();
       applyDocumentTitle();
+      applyCurrentSortAndRender();
       return isOwnProfile;
     }
 
@@ -1653,17 +1692,20 @@
     updateVisibilityControl();
     syncRecordDateLabel();
     applyDocumentTitle();
+    applyCurrentSortAndRender();
     return isOwnProfile;
   }
 
   async function refreshRecords(resetPage) {
     if (!targetUserId) {
+      recordsLoading = false;
       renderRecords([]);
       setTip(t("invalidUserId"), "err");
       return;
     }
 
     if (resetPage === true) recordPage = 1;
+    recordsLoading = true;
     setTip(t("loading"), "");
     renderRecordsLoadingHint();
     var requestSeq = ++recordsRequestSeq;
@@ -1690,6 +1732,7 @@
     if (requestSeq !== recordsRequestSeq) return;
 
     if (!result || !result.success) {
+      recordsLoading = false;
       cachedRecords = [];
       applyCurrentSortAndRender();
       recordHasPrev = recordPage > 1;
@@ -1701,6 +1744,7 @@
     }
 
     cachedRecords = normalizeUserRecordsFromApi(result.data);
+    recordsLoading = false;
     var meta = resolvePagerMeta(result, recordPage, DEFAULT_RECORD_LIMIT, cachedRecords.length);
     recordPage = meta.page;
     recordTotalPages = meta.totalPages;
@@ -1845,6 +1889,7 @@
     parseQuery();
     bindEvents();
     syncRecordPagerUi();
+    recordsLoading = true;
     applyLanguage();
 
     var sortBySelect = byId("user-record-sort-by");
@@ -1858,6 +1903,7 @@
 
     if (!targetUserId) {
       applyDocumentTitle();
+      recordsLoading = false;
       renderRecords([]);
       setTip(t("invalidUserId"), "err");
       return;
@@ -1870,9 +1916,8 @@
 
     var ownershipPromise = resolveOwnership();
     var userInfoPromise = refreshUserInfo();
-    await ownershipPromise;
-    await userInfoPromise;
-    await refreshRecords(true);
+    var recordsPromise = refreshRecords(true);
+    await Promise.all([ownershipPromise, userInfoPromise, recordsPromise]);
   }
 
   global.UserProfilePageRuntime = {
