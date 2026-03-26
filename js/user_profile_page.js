@@ -447,6 +447,36 @@
     return "\u56de\u653e\u6587\u4ef6\u7248\u672c\u4e0d\u5339\u914d\uff08\u671f\u671b " + expectedText + "\uff0c\u5b9e\u9645 " + actualText + "\uff09\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5\u3002";
   }
 
+  function resolveReplayContractField(source, fieldNames) {
+    if (!source || !fieldNames || !fieldNames.length) return "";
+    for (var i = 0; i < fieldNames.length; i += 1) {
+      var key = fieldNames[i];
+      var value = source[key];
+      if (value != null && toText(value).trim()) return value;
+    }
+    return "";
+  }
+
+  function parseReplayPayloadVersionFromApiResult(result) {
+    var raw = resolveReplayContractField(result, [
+      "cloud_payload_version",
+      "cloudPayloadVersion",
+      "payload_version",
+      "payloadVersion"
+    ]);
+    return parsePositiveInt(raw);
+  }
+
+  function parseReplayFileVersionFromApiResult(result) {
+    var raw = resolveReplayContractField(result, [
+      "replay_file_version",
+      "replayFileVersion",
+      "file_version",
+      "fileVersion"
+    ]);
+    return normalizeReplayFileVersion(raw);
+  }
+
   async function fetchReplayContractFromApi() {
     if (replayContractCache.payloadVersion > 0 && replayContractCache.replayFileVersion > 0) {
       return {
@@ -461,11 +491,22 @@
         method: "GET",
         timeoutMs: DEFAULT_API_TIMEOUT_MS
       });
-      var replayFileVersion = normalizeReplayFileVersion(result && result.replay_file_version);
-      var payloadVersion = parsePositiveInt(result && result.cloud_payload_version);
-      if (!replayFileVersion || !payloadVersion) {
-        throw new Error("replay_contract_invalid");
+      if (result && result.error) {
+        throw new Error(toText(result.error) || "replay_contract_fetch_failed");
       }
+
+      var replayFileVersion = parseReplayFileVersionFromApiResult(result);
+      var payloadVersion = parseReplayPayloadVersionFromApiResult(result);
+
+      if (!replayFileVersion || !payloadVersion) {
+        replayContractCache.payloadVersion = CLOUD_REPLAY_PAYLOAD_VERSION;
+        replayContractCache.replayFileVersion = CLOUD_REPLAY_FILE_VERSION;
+        return {
+          payloadVersion: CLOUD_REPLAY_PAYLOAD_VERSION,
+          replayFileVersion: CLOUD_REPLAY_FILE_VERSION
+        };
+      }
+
       replayContractCache.payloadVersion = payloadVersion;
       replayContractCache.replayFileVersion = replayFileVersion;
       return {
