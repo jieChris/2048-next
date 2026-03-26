@@ -121,7 +121,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.payloadFinalBoardIsArray).toBe(true);
   });
 
-  test("online record submit includes min_steps_2048 when session ends by win-stop", async ({ page }) => {
+  test("online record submit skips win-stop sessions until real game over", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
       window.localStorage.setItem("2048_auth_userId_v1", "42");
@@ -208,18 +208,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.restart();
     });
 
-    await page.waitForFunction(() => Number((window as any).__recordSubmitCalls || 0) >= 1, null, {
-      timeout: 4000
-    });
+    await page.waitForTimeout(1400);
 
     const snapshot = await page.evaluate(() => ({
       calls: Number((window as any).__recordSubmitCalls || 0),
       payload: (window as any).__recordSubmitLastPayload || null
     }));
 
-    expect(snapshot.calls).toBeGreaterThanOrEqual(1);
-    expect(snapshot.payload).toBeTruthy();
-    expect(Number((snapshot.payload as { min_steps_2048?: unknown }).min_steps_2048 || 0)).toBeGreaterThan(0);
-    expect(String((snapshot.payload as { end_reason?: unknown }).end_reason || "")).toBe("win_stop");
+    expect(snapshot.calls).toBe(0);
+    expect(snapshot.payload).toBeNull();
   });
 });

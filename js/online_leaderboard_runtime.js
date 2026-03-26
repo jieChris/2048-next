@@ -699,14 +699,17 @@
     return apiRequest("/login", { method: "POST", body: payload });
   }
 
-  function submitScore(score, modeLike) {
-    var modeKey = toText(modeLike).trim();
-    var modeBucket = resolveLeaderboardMode(modeKey);
-    var payload = { score: score };
-
-    if (modeKey) payload.mode_key = modeKey;
-    if (modeBucket) payload.mode = modeBucket;
-
+  function submitScore(scoreOrPayload, modeLike) {
+    var payload = null;
+    if (scoreOrPayload && typeof scoreOrPayload === "object" && !Array.isArray(scoreOrPayload)) {
+      payload = Object.assign({}, scoreOrPayload);
+    } else {
+      var modeKey = toText(modeLike).trim();
+      var modeBucket = resolveLeaderboardMode(modeKey);
+      payload = { score: scoreOrPayload };
+      if (modeKey) payload.mode_key = modeKey;
+      if (modeBucket) payload.mode = modeBucket;
+    }
     return apiRequest("/score", { method: "POST", auth: true, body: payload });
   }
 
@@ -845,7 +848,7 @@
       best_tile: bestTile,
       duration_ms: resolveManagerDurationMs(manager),
       ended_at: new Date().toISOString(),
-      end_reason: manager.over ? "game_over" : "win_stop",
+      end_reason: "game_over",
       final_board: resolveManagerFinalBoard(manager),
       min_steps_2048: minStepStats.min_steps_2048,
       min_steps_4096: minStepStats.min_steps_4096,
@@ -853,6 +856,22 @@
       replay: replayPayload.replayV3,
       replay_string: replayPayload.replayString
     };
+  }
+
+  function buildScoreSubmitPayload(manager, modeLike, score) {
+    var modeKey = toText(modeLike || (manager && (manager.modeKey || manager.mode))).trim();
+    var modeBucket = resolveLeaderboardMode(modeKey);
+    var bestTile = resolveManagerBestTileValue(manager);
+    var minStepStats = buildRecordMinStepStats(manager, bestTile);
+    var payload = {
+      score: Math.floor(Number(score) || 0),
+      min_steps_2048: minStepStats.min_steps_2048,
+      min_steps_4096: minStepStats.min_steps_4096,
+      min_steps_8192: minStepStats.min_steps_8192
+    };
+    if (modeKey) payload.mode_key = modeKey;
+    if (modeBucket) payload.mode = modeBucket;
+    return payload;
   }
 
   function getLeaderboard(limit, modeLike) {
@@ -1060,12 +1079,7 @@
 
   function isSessionTerminated(manager) {
     if (!manager) return false;
-    try {
-      if (typeof manager.isSessionTerminated === "function") {
-        return !!manager.isSessionTerminated();
-      }
-    } catch (_err) {}
-    return !!(manager.over || (manager.won && !manager.keepPlaying));
+    return !!manager.over;
   }
 
   function buildSubmitSignature(manager, score) {
@@ -1103,7 +1117,7 @@
     var result = null;
     try {
       var submitModeKey = getCurrentModeKey();
-      result = await submitScore(score, submitModeKey);
+      result = await submitScore(buildScoreSubmitPayload(manager, submitModeKey, score));
     } finally {
       submitLock = false;
     }
