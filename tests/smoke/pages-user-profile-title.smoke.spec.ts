@@ -340,6 +340,87 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".user-replay-btn")).toBeVisible();
   });
 
+  test("user profile blocks replay when replay contract version mismatches", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "test-token-contract-mismatch");
+      window.localStorage.setItem("2048_auth_userId_v1", "9");
+    });
+
+    await page.route("**/api/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("/user/me")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+          })
+        });
+        return;
+      }
+      if (url.includes("/replay/version")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            cloud_payload_version: 2,
+            replay_file_version: 99
+          })
+        });
+        return;
+      }
+      if (url.includes("/user/9/records")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: [
+              {
+                id: "rec-contract-1",
+                user_id: 9,
+                mode_bucket: "standard_no_undo",
+                mode_key: "standard_4x4_pow2_no_undo",
+                score: 512,
+                best_tile: 64,
+                duration_ms: 7000,
+                ended_at: "2026-03-15T08:00:00.000Z",
+                created_at: "2026-03-15 08:00:00",
+                replay_string: "replay_(!盲fC"
+              }
+            ]
+          })
+        });
+        return;
+      }
+      if (url.includes("/user/9")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+          })
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    const response = await page.goto("/user.html?id=9&nickname=Owner", { waitUntil: "domcontentloaded" });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+
+    await page.waitForSelector(".user-record-item");
+    await page.locator(".user-record-row").first().click();
+    await page.locator(".user-replay-btn").click();
+
+    await expect(page.locator("#user-record-tip")).toContainText("回放文件版本不匹配");
+    await expect(page).toHaveURL(/\/user\.html\?/);
+  });
+
   test("own profile still shows record management actions when ownership resolves slower than records", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "test-token-owner-race");

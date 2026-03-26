@@ -109,6 +109,16 @@
   var expandedRecordId = "";
   var recordDetailCache = Object.create(null);
   var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
+  var cloudReplayContract = global.CLOUD_REPLAY_CONTRACT && typeof global.CLOUD_REPLAY_CONTRACT === "object"
+    ? global.CLOUD_REPLAY_CONTRACT
+    : {};
+  var CLOUD_REPLAY_PAYLOAD_VERSION = parsePositiveInt(cloudReplayContract.cloud_payload_version) || 2;
+  var CLOUD_REPLAY_FILE_VERSION = normalizeReplayFileVersion(cloudReplayContract.replay_file_version) || 1;
+  var replayContractCache = {
+    payloadVersion: 0,
+    replayFileVersion: 0,
+    pending: null
+  };
 
   var LEADERBOARD_MODE_OPTIONS = [
     { value: "all", zh: "\u5168\u90e8", en: "All" },
@@ -226,6 +236,11 @@
   }
 
   function parsePositiveInt(value) {
+    var parsed = Math.floor(Number(value) || 0);
+    return parsed > 0 ? parsed : 0;
+  }
+
+  function normalizeReplayFileVersion(value) {
     var parsed = Math.floor(Number(value) || 0);
     return parsed > 0 ? parsed : 0;
   }
@@ -415,6 +430,66 @@
     }
 
     return { error: lastError };
+  }
+
+  function resolveReplayContractMismatchMessage(kind, expected, actual) {
+    var expectedText = String(expected);
+    var actualText = actual > 0 ? String(actual) : (currentLang === "en" ? "missing" : "\u7f3a\u5931");
+    if (currentLang === "en") {
+      if (kind === "payload") {
+        return "Replay payload version mismatch (expected " + expectedText + ", got " + actualText + "). Please refresh and retry.";
+      }
+      return "Replay file version mismatch (expected " + expectedText + ", got " + actualText + "). Please refresh and retry.";
+    }
+    if (kind === "payload") {
+      return "\u56de\u653e\u8f7d\u8377\u7248\u672c\u4e0d\u5339\u914d\uff08\u671f\u671b " + expectedText + "\uff0c\u5b9e\u9645 " + actualText + "\uff09\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5\u3002";
+    }
+    return "\u56de\u653e\u6587\u4ef6\u7248\u672c\u4e0d\u5339\u914d\uff08\u671f\u671b " + expectedText + "\uff0c\u5b9e\u9645 " + actualText + "\uff09\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5\u3002";
+  }
+
+  async function fetchReplayContractFromApi() {
+    if (replayContractCache.payloadVersion > 0 && replayContractCache.replayFileVersion > 0) {
+      return {
+        payloadVersion: replayContractCache.payloadVersion,
+        replayFileVersion: replayContractCache.replayFileVersion
+      };
+    }
+    if (replayContractCache.pending) return replayContractCache.pending;
+
+    replayContractCache.pending = (async function () {
+      var result = await apiRequest("/replay/version", {
+        method: "GET",
+        timeoutMs: DEFAULT_API_TIMEOUT_MS
+      });
+      var replayFileVersion = normalizeReplayFileVersion(result && result.replay_file_version);
+      var payloadVersion = parsePositiveInt(result && result.cloud_payload_version);
+      if (!replayFileVersion || !payloadVersion) {
+        throw new Error("replay_contract_invalid");
+      }
+      replayContractCache.payloadVersion = payloadVersion;
+      replayContractCache.replayFileVersion = replayFileVersion;
+      return {
+        payloadVersion: payloadVersion,
+        replayFileVersion: replayFileVersion
+      };
+    })().finally(function () {
+      replayContractCache.pending = null;
+    });
+
+    return replayContractCache.pending;
+  }
+
+  async function ensureReplayContractAligned(expectedReplayFileVersion) {
+    var expectedFileVersion = normalizeReplayFileVersion(expectedReplayFileVersion) || CLOUD_REPLAY_FILE_VERSION;
+    var contract = await fetchReplayContractFromApi();
+    var apiPayloadVersion = parsePositiveInt(contract && contract.payloadVersion);
+    var apiReplayFileVersion = normalizeReplayFileVersion(contract && contract.replayFileVersion);
+    if (apiPayloadVersion !== CLOUD_REPLAY_PAYLOAD_VERSION) {
+      throw new Error(resolveReplayContractMismatchMessage("payload", CLOUD_REPLAY_PAYLOAD_VERSION, apiPayloadVersion));
+    }
+    if (apiReplayFileVersion !== expectedFileVersion) {
+      throw new Error(resolveReplayContractMismatchMessage("file", expectedFileVersion, apiReplayFileVersion));
+    }
   }
 
   function getUserInfo(userId) {
@@ -981,6 +1056,7 @@
 
   function normalizeRecordDetailPayload(raw, fallbackRecord) {
     var source = raw && typeof raw === "object" ? raw : {};
+    var fallback = fallbackRecord && typeof fallbackRecord === "object" ? fallbackRecord : null;
     var normalized = normalizeHistoryRecordViaRuntime(source, fallbackRecord);
     if (normalized) {
       var normalizedReplayString = toText(normalized.replay_string).trim();
@@ -990,17 +1066,23 @@
       if (!normalizedReplayString && normalized.replay != null) {
         try { normalizedReplayString = JSON.stringify(normalized.replay); } catch (_err) { normalizedReplayString = ""; }
       }
+      var replayFileVersion = normalizeReplayFileVersion(
+        source.replay_file_version ||
+        normalized.replay_file_version ||
+        (fallback && fallback.replay_file_version)
+      );
       return {
         score: Math.floor(Number(normalized.score) || 0),
-        mode_bucket: toText(source.mode_bucket || (fallbackRecord && fallbackRecord.mode_bucket) || normalized.mode).trim(),
-        mode_key: toText(source.mode_key || (fallbackRecord && fallbackRecord.mode_key) || normalized.mode_key).trim(),
-        board_width: parsePositiveInt(source.board_width || normalized.board_width || (fallbackRecord && fallbackRecord.board_width)),
-        board_height: parsePositiveInt(source.board_height || normalized.board_height || (fallbackRecord && fallbackRecord.board_height)),
+        mode_bucket: toText(source.mode_bucket || (fallback && fallback.mode_bucket) || normalized.mode).trim(),
+        mode_key: toText(source.mode_key || (fallback && fallback.mode_key) || normalized.mode_key).trim(),
+        board_width: parsePositiveInt(source.board_width || normalized.board_width || (fallback && fallback.board_width)),
+        board_height: parsePositiveInt(source.board_height || normalized.board_height || (fallback && fallback.board_height)),
         best_tile: Math.floor(Number(normalized.best_tile) || 0),
         duration_ms: Math.floor(Number(normalized.duration_ms) || 0),
-        ended_at: toText(source.ended_at || normalized.ended_at || (fallbackRecord && fallbackRecord.ended_at)).trim(),
+        ended_at: toText(source.ended_at || normalized.ended_at || (fallback && fallback.ended_at)).trim(),
         replay_string: normalizedReplayString,
         replay: normalizedReplayObject,
+        replay_file_version: replayFileVersion,
         final_board: normalizeBoardMatrix(normalized.final_board)
       };
     }
@@ -1024,6 +1106,7 @@
       ended_at: toText(source.ended_at || (fallbackRecord && fallbackRecord.ended_at)).trim(),
       replay_string: replayString,
       replay: replayObject,
+      replay_file_version: normalizeReplayFileVersion(source.replay_file_version || (fallbackRecord && fallbackRecord.replay_file_version)),
       final_board: normalizeBoardMatrix(finalBoard)
     };
   }
@@ -1110,7 +1193,12 @@
     }
 
     if (result.data && typeof result.data === "object") {
-      return normalizeRecordDetailPayload(result.data, record);
+      var replayFileVersion = normalizeReplayFileVersion(result.replay_file_version);
+      var normalizedData = result.data;
+      if (replayFileVersion > 0 && normalizedData.replay_file_version == null) {
+        normalizedData = Object.assign({}, normalizedData, { replay_file_version: replayFileVersion });
+      }
+      return normalizeRecordDetailPayload(normalizedData, record);
     }
 
     if (toText(result.mode).toLowerCase() === "signed_url" && toText(result.url).trim()) {
@@ -1195,8 +1283,13 @@
     var replayString = toText(detail && detail.replay_string).trim();
     var replayObject = detail && detail.replay && typeof detail.replay === "object" ? detail.replay : null;
     if (!replayString && !replayObject) return "";
+    var replayFileVersion = normalizeReplayFileVersion(
+      (detail && detail.replay_file_version) || (record && record.replay_file_version) || CLOUD_REPLAY_FILE_VERSION
+    );
     return JSON.stringify({
       source: "cloud_record",
+      cloud_payload_version: CLOUD_REPLAY_PAYLOAD_VERSION,
+      replay_file_version: replayFileVersion,
       id: toText(record && record.id).trim(),
       score: Math.floor(Number(record && record.score) || 0),
       mode_key: toText((detail && detail.mode_key) || (record && record.mode_key)).trim(),
@@ -1209,7 +1302,17 @@
     });
   }
 
-  function openReplayByRecord(record, detail) {
+  async function openReplayByRecord(record, detail) {
+    var replayFileVersion = normalizeReplayFileVersion(
+      (detail && detail.replay_file_version) || (record && record.replay_file_version) || CLOUD_REPLAY_FILE_VERSION
+    );
+    try {
+      await ensureReplayContractAligned(replayFileVersion);
+    } catch (versionError) {
+      setTip(toText(versionError && versionError.message) || (currentLang === "en" ? "Replay version check failed" : "\u56de\u653e\u7248\u672c\u6821\u9a8c\u5931\u8d25"), "err");
+      return;
+    }
+
     var payload = createReplaySessionPayload(record, detail);
     if (!payload) {
       setTip(currentLang === "en" ? "Replay payload is missing." : "\u8be5\u8bb0\u5f55\u7f3a\u5c11\u56de\u653e\u6570\u636e", "err");
@@ -1268,7 +1371,9 @@
     replayBtn.textContent = currentLang === "en" ? "Watch Replay" : "\u67e5\u770b\u56de\u653e";
     replayBtn.addEventListener("click", function (eventLike) {
       if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
-      openReplayByRecord(record, detail);
+      openReplayByRecord(record, detail).catch(function (error) {
+        setTip(toText(error && error.message) || (currentLang === "en" ? "Replay open failed" : "\u6253\u5f00\u56de\u653e\u5931\u8d25"), "err");
+      });
     });
     actions.appendChild(replayBtn);
 

@@ -139,6 +139,11 @@ var REPLAY_UI_ACTIVE_INTERVAL_MS = 220;
 var REPLAY_UI_IDLE_INTERVAL_MS = 1000;
 var REPLAY_UI_HIDDEN_INTERVAL_MS = 1800;
 var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
+var cloudReplayContract = window && window.CLOUD_REPLAY_CONTRACT && typeof window.CLOUD_REPLAY_CONTRACT === "object"
+    ? window.CLOUD_REPLAY_CONTRACT
+    : {};
+var CLOUD_REPLAY_PAYLOAD_VERSION = normalizePositiveInteger(cloudReplayContract.cloud_payload_version) || 2;
+var CLOUD_REPLAY_FILE_VERSION = normalizePositiveInteger(cloudReplayContract.replay_file_version) || 1;
 
 function resolveLocalStorage() {
     try {
@@ -184,6 +189,36 @@ function removeSessionStorageItem(key) {
 
 function safeReplayText(value) {
     return value == null ? "" : String(value).trim();
+}
+
+function normalizePositiveInteger(value) {
+    var parsed = Math.floor(Number(value) || 0);
+    return parsed > 0 ? parsed : 0;
+}
+
+function resolveReplayUiLanguage() {
+    try {
+        if (window.UII18N && typeof window.UII18N.getLanguage === "function") {
+            var uiLang = String(window.UII18N.getLanguage() || "").toLowerCase();
+            if (uiLang.indexOf("en") === 0) return "en";
+        }
+        var storedLang = String(readLocalStorageItem("ui_language_v1") || "").toLowerCase();
+        if (storedLang.indexOf("en") === 0) return "en";
+    } catch (_err) {}
+    return "zh";
+}
+
+function resolveCloudReplayVersionMismatchMessage(kind, expected, actual) {
+    var lang = resolveReplayUiLanguage();
+    var label = kind === "file"
+        ? (lang === "en" ? "Replay file version" : "回放文件版本")
+        : (lang === "en" ? "Cloud payload version" : "云端回放载荷版本");
+    var expectedText = String(expected);
+    var actualText = actual > 0 ? String(actual) : (lang === "en" ? "missing" : "缺失");
+    if (lang === "en") {
+        return label + " mismatch (expected " + expectedText + ", got " + actualText + "). Please refresh and retry.";
+    }
+    return label + "不匹配（期望 " + expectedText + "，实际 " + actualText + "）。请刷新后重试。";
 }
 
 function readReplayModeCodeFromV4Payload(payloadText) {
@@ -625,6 +660,14 @@ async function loadReplayFromSessionId() {
             var cloudReplayPayloadRaw = String(readSessionStorageItem(CLOUD_REPLAY_STORAGE_KEY) || "");
             if (!cloudReplayPayloadRaw) throw new Error("cloud_replay_payload_missing");
             var cloudReplayPayload = JSON.parse(cloudReplayPayloadRaw);
+            var cloudPayloadVersion = normalizePositiveInteger(cloudReplayPayload && cloudReplayPayload.cloud_payload_version);
+            if (cloudPayloadVersion !== CLOUD_REPLAY_PAYLOAD_VERSION) {
+                throw new Error("cloud_payload_version_mismatch:" + String(cloudPayloadVersion));
+            }
+            var replayFileVersion = normalizePositiveInteger(cloudReplayPayload && cloudReplayPayload.replay_file_version);
+            if (replayFileVersion !== CLOUD_REPLAY_FILE_VERSION) {
+                throw new Error("cloud_replay_file_version_mismatch:" + String(replayFileVersion));
+            }
             var replayPayload = resolveReplayPayloadForImport(cloudReplayPayload);
             if (!replayPayload) throw new Error("cloud_replay_missing");
             window.game_manager.import(replayPayload);
@@ -637,7 +680,20 @@ async function loadReplayFromSessionId() {
             updateReplayUI();
         } catch (cloudReplayError) {
             clearReplayDiagnosticsPanel();
-            alert("加载云端回放失败: " + (cloudReplayError.message || "unknown"));
+            var cloudReplayErrorMessage = String((cloudReplayError && cloudReplayError.message) || "unknown");
+            if (cloudReplayErrorMessage.indexOf("cloud_payload_version_mismatch:") === 0) {
+                var payloadVersionRaw = cloudReplayErrorMessage.split(":")[1];
+                var payloadVersion = normalizePositiveInteger(payloadVersionRaw);
+                alert(resolveCloudReplayVersionMismatchMessage("payload", CLOUD_REPLAY_PAYLOAD_VERSION, payloadVersion));
+                return;
+            }
+            if (cloudReplayErrorMessage.indexOf("cloud_replay_file_version_mismatch:") === 0) {
+                var replayVersionRaw = cloudReplayErrorMessage.split(":")[1];
+                var replayVersion = normalizePositiveInteger(replayVersionRaw);
+                alert(resolveCloudReplayVersionMismatchMessage("file", CLOUD_REPLAY_FILE_VERSION, replayVersion));
+                return;
+            }
+            alert("加载云端回放失败: " + cloudReplayErrorMessage);
         }
         return;
     }

@@ -65,6 +65,7 @@ import coreSimplePageHostRuntimeUrl from "../../js/core_simple_page_host_runtime
 import replayApplicationUrl from "../../js/replay_application.js?url";
 import replayUiUrl from "../../js/replay_ui.js?url";
 import coreI18nRuntimeUrl from "../../js/core_i18n_runtime.js?url";
+import coreCloudReplayContractRuntimeUrl from "../../js/core_cloud_replay_contract_runtime.js?url";
 
 export const replayLegacyScripts = [
   seedrandomUrl,
@@ -133,6 +134,6 @@ export const replayLegacyScripts = [
   coreSimplePageHostRuntimeUrl,
   replayApplicationUrl,
   replayUiUrl,
-  coreI18nRuntimeUrl
+  coreI18nRuntimeUrl,
+  coreCloudReplayContractRuntimeUrl
 ] as const;
-
