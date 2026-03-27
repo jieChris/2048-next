@@ -55,6 +55,7 @@ export function applyReplayModalOpen(input: {
   const titleEl = getElementById("replay-modal-title");
   const textEl = getElementById("replay-textarea");
   const actionBtn = getElementById("replay-action-btn");
+  const downloadBtn = getElementById("replay-download-btn");
   const querySelector = asFunction<(selector: unknown) => unknown>(modal.querySelector);
   const closeBtn = (
     querySelector ? querySelector.call(modal, ".replay-button:not(#replay-action-btn)") : null
@@ -84,6 +85,12 @@ export function applyReplayModalOpen(input: {
       setDisplayStyle(actionBtnRecord, "none");
       actionBtnRecord.onclick = null;
     }
+  }
+
+  if (downloadBtn) {
+    const downloadBtnRecord = toRecord(downloadBtn);
+    setDisplayStyle(downloadBtnRecord, "none");
+    downloadBtnRecord.onclick = null;
   }
 
   const closeCallback = asFunction<() => unknown>(source.closeCallback);

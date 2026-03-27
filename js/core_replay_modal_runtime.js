@@ -49,6 +49,7 @@
     var titleEl = getElementById("replay-modal-title");
     var textEl = getElementById("replay-textarea");
     var actionBtn = getElementById("replay-action-btn");
+    var downloadBtn = getElementById("replay-download-btn");
     var querySelector = asFunction(modal.querySelector);
     var closeBtn = (
       querySelector ? querySelector.call(modal, ".replay-button:not(#replay-action-btn)") : null
@@ -78,6 +79,12 @@
         setDisplayStyle(actionBtnRecord, "none");
         actionBtnRecord.onclick = null;
       }
+    }
+
+    if (downloadBtn) {
+      var downloadBtnRecord = toRecord(downloadBtn);
+      setDisplayStyle(downloadBtnRecord, "none");
+      downloadBtnRecord.onclick = null;
     }
 
     var closeCallback = asFunction(source.closeCallback);

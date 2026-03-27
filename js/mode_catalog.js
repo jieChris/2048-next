@@ -5,6 +5,122 @@
     return JSON.parse(JSON.stringify(value));
   }
 
+  function resolveUiLanguage() {
+    var lang = "";
+    try {
+      if (global.UII18N && typeof global.UII18N.getLanguage === "function") {
+        lang = String(global.UII18N.getLanguage() || "").trim().toLowerCase();
+      }
+    } catch (_err) {}
+    if (lang.indexOf("en") === 0) return "en";
+    if (lang.indexOf("zh") === 0) return "zh";
+
+    try {
+      var storage = global.localStorage;
+      if (storage && typeof storage.getItem === "function") {
+        lang = String(storage.getItem("ui_language_v1") || "").trim().toLowerCase();
+        if (lang.indexOf("en") === 0) return "en";
+        if (lang.indexOf("zh") === 0) return "zh";
+      }
+    } catch (_err2) {}
+
+    try {
+      var root = global.document && global.document.documentElement;
+      if (root) {
+        lang = String(root.getAttribute("data-ui-lang") || root.getAttribute("lang") || "")
+          .trim()
+          .toLowerCase();
+        if (lang.indexOf("en") === 0) return "en";
+      }
+    } catch (_err3) {}
+
+    return "zh";
+  }
+
+  function resolveModeSizeText(mode) {
+    var width = Number(mode && mode.board_width);
+    var height = Number(mode && mode.board_height);
+    if (!Number.isFinite(width) || width <= 0) width = 4;
+    if (!Number.isFinite(height) || height <= 0) height = width;
+    return Math.floor(width) + "x" + Math.floor(height);
+  }
+
+  function resolveLocalizedModeLabel(mode, lang) {
+    var key = String(mode && mode.key ? mode.key : "");
+    var sizeText = resolveModeSizeText(mode);
+    var isEn = lang === "en";
+
+    if (key.indexOf("board_") === 0 && key.indexOf("_pow2") !== -1) {
+      return sizeText;
+    }
+
+    if (key === "standard_4x4_pow2_no_undo") {
+      return isEn ? "Standard 4x4 (No Undo)" : "标准版 4x4（无撤回）";
+    }
+    if (key === "classic_4x4_pow2_undo") {
+      return isEn ? "Classic 4x4 (Undo)" : "经典版 4x4（可撤回）";
+    }
+    if (key === "capped_4x4_pow2_no_undo") {
+      return isEn ? "Capped 4x4 (2048, No Undo)" : "4x4（2048，无撤回）";
+    }
+    if (key === "capped_4x4_pow2_1024_no_undo") {
+      return isEn ? "Capped 4x4 (1024, No Undo)" : "封顶版 4x4（1024，无撤回）";
+    }
+    if (key === "capped_4x4_pow2_64_no_undo") {
+      return isEn ? "Capped 4x4 (64, No Undo)" : "封顶版 4x4（64，无撤回）";
+    }
+    if (key === "capped_4x4_pow2_4096_no_undo") {
+      return isEn ? "Capped 4x4 (4096, No Undo)" : "封顶版 4x4（4096，无撤回）";
+    }
+    if (key.indexOf("fib_") === 0) {
+      return isEn ? "Fibonacci " + sizeText : "斐波那契 " + sizeText;
+    }
+    if (key === "spawn_custom_4x4_pow2") {
+      return isEn ? "4x4 Custom 4 Spawn Rate" : "4x4 自定义4率";
+    }
+    if (key === "spawn95_4x4_pow2") {
+      return isEn ? "4x4 Spawn 95/5" : "4x4 概率 95/5";
+    }
+    if (key === "spawn80_4x4_pow2") {
+      return isEn ? "4x4 Spawn 80/20" : "4x4 概率 80/20";
+    }
+    if (key === "spawn50_3x3_pow2_no_undo") {
+      return isEn ? "3x3 Spawn 50/50 (No Undo)" : "3x3 概率 50/50（无撤回）";
+    }
+    if (key === "limit3_4x4_pow2") {
+      return isEn ? "Limited Undo 4x4 (3 Uses)" : "限次撤回 4x4（3次）";
+    }
+    if (key === "limit5_4x4_pow2") {
+      return isEn ? "Limited Undo 4x4 (5 Uses)" : "限次撤回 4x4（5次）";
+    }
+    if (key === "combo_4x4_pow2") {
+      return isEn ? "Combo Bonus 4x4" : "连击加分 4x4";
+    }
+    if (key === "dirlock5_4x4_pow2_no_undo") {
+      return isEn ? "Direction Lock 4x4 (Lock 1 Direction Every 5 Moves)" : "方向锁 4x4（每5步锁1方向）";
+    }
+    if (key === "obstacle_4x4_pow2_no_undo") {
+      return isEn ? "Obstacle 4x4 (No Undo)" : "障碍块 4x4（无撤回）";
+    }
+    if (key.indexOf("diag_") === 0) {
+      return isEn ? "Diagonal " + sizeText : "斜向 " + sizeText;
+    }
+    if (key === "item_4x4_pow2_no_undo") {
+      return isEn ? "Item Mode 4x4" : "道具模式 4x4";
+    }
+    if (key === "stone_4x4_pow2_no_undo") {
+      return isEn ? "Stone Mode 4x4" : "石头模式 4x4";
+    }
+    if (key === "timed5s_4x4_pow2_no_undo") {
+      return isEn ? "Timed 5s 4x4" : "限时 5 秒 4x4";
+    }
+    if (key === "practice") {
+      return isEn ? "Practice Board (Direct)" : "练习板（直通）";
+    }
+
+    return String(mode && mode.label ? mode.label : "");
+  }
+
   function getTheoreticalMaxTile(width, height, ruleset) {
     var w = Number(width);
     var h = Number(height);
@@ -505,12 +621,20 @@
   }
 
   function getMode(key) {
-    return INDEX[key] ? clone(INDEX[key]) : null;
+    if (!INDEX[key]) return null;
+    var mode = clone(INDEX[key]);
+    mode.label = resolveLocalizedModeLabel(mode, resolveUiLanguage());
+    return mode;
   }
 
   function listModes() {
     var out = [];
-    for (var i = 0; i < MODES.length; i++) out.push(clone(MODES[i]));
+    var lang = resolveUiLanguage();
+    for (var i = 0; i < MODES.length; i++) {
+      var mode = clone(MODES[i]);
+      mode.label = resolveLocalizedModeLabel(mode, lang);
+      out.push(mode);
+    }
     return out;
   }
 

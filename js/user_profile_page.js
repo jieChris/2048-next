@@ -115,6 +115,7 @@
     : {};
   var CLOUD_REPLAY_PAYLOAD_VERSION = parsePositiveInt(cloudReplayContract.cloud_payload_version) || 2;
   var CLOUD_REPLAY_FILE_VERSION = normalizeReplayFileVersion(cloudReplayContract.replay_file_version) || 1;
+  var CLOUD_REPLAY_LOGIC_VERSION = toText(cloudReplayContract.replay_logic_version).trim() || "v1";
   var replayContractCache = {
     payloadVersion: 0,
     replayFileVersion: 0,
@@ -1372,6 +1373,7 @@
       source: "cloud_record",
       cloud_payload_version: CLOUD_REPLAY_PAYLOAD_VERSION,
       replay_file_version: replayFileVersion,
+      replay_logic_version: CLOUD_REPLAY_LOGIC_VERSION,
       id: toText(record && record.id).trim(),
       score: Math.floor(Number(record && record.score) || 0),
       mode_key: toText((detail && detail.mode_key) || (record && record.mode_key)).trim(),

@@ -1,10 +1,16 @@
-export type ReplayFormatKind = "v4c" | "v3-json" | "unknown";
+export type ReplayFormatKind = "v1rpl-b64" | "v4c" | "v3-json" | "unknown";
 
 export function detectReplayFormat(input: string): ReplayFormatKind {
   const trimmed = input.trim();
+  if (trimmed.startsWith("REPLAY_v1RPL_B64_")) return "v1rpl-b64";
   if (trimmed.startsWith("REPLAY_v4C_")) return "v4c";
   if (trimmed.startsWith("{") || trimmed.startsWith("[")) return "v3-json";
   return "unknown";
+}
+
+export interface ReplayImportV1Envelope {
+  kind: "v1rpl-b64";
+  encodedBase64: string;
 }
 
 export interface ReplayImportV4Envelope {
@@ -21,14 +27,20 @@ export interface ReplayImportV3JsonEnvelope {
   actions: unknown[];
 }
 
-export type ReplayImportEnvelope = ReplayImportV4Envelope | ReplayImportV3JsonEnvelope | null;
+export type ReplayImportEnvelope =
+  | ReplayImportV1Envelope
+  | ReplayImportV4Envelope
+  | ReplayImportV3JsonEnvelope
+  | null;
 
 export interface ParseReplayImportEnvelopeInput {
   trimmedReplayString: string;
   fallbackModeKey: string;
   v4Prefix?: string;
+  v1RplBase64Prefix?: string;
 }
 
+const DEFAULT_V1_RPL_BASE64_PREFIX = "REPLAY_v1RPL_B64_";
 const DEFAULT_V4_PREFIX = "REPLAY_v4C_";
 
 const V4_MODE_CODE_TO_MODE_KEY: Record<string, string> = {
@@ -79,6 +91,18 @@ export function parseReplayImportEnvelope(input: ParseReplayImportEnvelopeInput)
       ? input.fallbackModeKey
       : "standard_4x4_pow2_no_undo";
   const v4Prefix = typeof input.v4Prefix === "string" && input.v4Prefix ? input.v4Prefix : DEFAULT_V4_PREFIX;
+  const v1Prefix =
+    typeof input.v1RplBase64Prefix === "string" && input.v1RplBase64Prefix
+      ? input.v1RplBase64Prefix
+      : DEFAULT_V1_RPL_BASE64_PREFIX;
+  if (trimmedReplayString.indexOf(v1Prefix) === 0) {
+    const body = trimmedReplayString.substring(v1Prefix.length);
+    if (!body) throw "Invalid replay v1 payload";
+    return {
+      kind: "v1rpl-b64",
+      encodedBase64: body
+    };
+  }
   if (trimmedReplayString.indexOf(v4Prefix) === 0) {
     const body = trimmedReplayString.substring(v4Prefix.length);
     if (body.length < 17) throw "Invalid v4C payload";

@@ -165,6 +165,51 @@ function initializeSetupSessionReplaySnapshot(manager) {
     seed: manager.initialSeed,
     actions: []
   };
+  manager.sessionReplayV1 = {
+    v: 1,
+    mode_key: manager.modeKey,
+    ruleset: manager.ruleset,
+    board_width: manager.width,
+    board_height: manager.height,
+    start_unix_ms: Date.now(),
+    init_tiles: [],
+    records: [],
+    last_event_at_ms: Date.now(),
+    supported: true
+  };
+}
+
+function resolveReplayV1InitTilesFromBoardMatrix(board, width, height, ruleset) {
+  if (!Array.isArray(board) || board.length !== height) return null;
+  var fib = String(ruleset || "pow2") === "fibonacci";
+  var initTiles = [];
+  for (var y = 0; y < height; y++) {
+    var row = board[y];
+    if (!Array.isArray(row) || row.length !== width) return null;
+    for (var x = 0; x < width; x++) {
+      var value = Number(row[x]);
+      if (value === 0) continue;
+      if (fib) {
+        if (value !== 1 && value !== 2) return null;
+      } else if (value !== 2 && value !== 4) {
+        return null;
+      }
+      initTiles.push({ cellIndex: y * width + x, valueBit: fib ? (value === 2 ? 1 : 0) : (value === 4 ? 1 : 0) });
+    }
+  }
+  return initTiles;
+}
+
+function syncSetupSessionReplayV1InitTiles(manager) {
+  if (!(manager && manager.sessionReplayV1)) return;
+  var board = Array.isArray(manager.initialBoardMatrix) ? manager.initialBoardMatrix : manager.getFinalBoardMatrix();
+  var initTiles = resolveReplayV1InitTilesFromBoardMatrix(board, manager.width, manager.height, manager.ruleset);
+  manager.sessionReplayV1.mode_key = manager.modeKey;
+  manager.sessionReplayV1.ruleset = manager.ruleset;
+  manager.sessionReplayV1.board_width = manager.width;
+  manager.sessionReplayV1.board_height = manager.height;
+  manager.sessionReplayV1.init_tiles = Array.isArray(initTiles) ? initTiles : [];
+  manager.sessionReplayV1.supported = !!(initTiles && manager.width * manager.height <= 16);
 }
 
 function resetSetupReplayAndSpawnState(manager) {
@@ -183,6 +228,7 @@ function resetSetupTimerAndInputState(manager) {
   manager.timerID = null;
   manager.time = 0;
   manager.accumulatedTime = 0;
+  manager.timerFrozen = false;
   manager.pendingMoveInput = null;
   manager.moveInputFlushScheduled = false;
   manager.lastMoveInputAt = 0;
@@ -348,6 +394,7 @@ function runSetupStateInitialization(manager, inputSeed, setupOptions) {
     seedState.hasInputSeed,
     normalizedOptions
   );
+  syncSetupSessionReplayV1InitTiles(manager);
   finalizeSetupUiAndStatsState(manager, preferredTimerModuleView, restoreState.restoredFromSavedState);
 }
 

@@ -1,4 +1,4 @@
-(function (global) {
+﻿(function (global) {
   "use strict";
 
   if (!global) return;
@@ -62,11 +62,11 @@
         toggleLabelText:
           lang === "en"
             ? "Leaderboard is not available in this mode."
-            : "当前模式不支持排行榜界面。",
+            : "\u5f53\u524d\u6a21\u5f0f\u4e0d\u652f\u6301\u6392\u884c\u699c\u754c\u9762\u3002",
         noteText:
           lang === "en"
             ? "Current mode does not support leaderboard panel."
-            : "当前模式不支持排行榜面板。",
+            : "\u5f53\u524d\u6a21\u5f0f\u4e0d\u652f\u6301\u6392\u884c\u699c\u9762\u677f\u3002",
         rowVisible: false
       };
     }
@@ -77,17 +77,17 @@
       toggleLabelText: isTimerMode
         ? lang === "en"
           ? "Timers are shown in the right panel."
-          : "当前右侧显示计时器。"
+          : "\u5f53\u524d\u53f3\u4fa7\u663e\u793a\u8ba1\u65f6\u5668\u3002"
         : lang === "en"
           ? "Leaderboard is shown in the right panel."
-          : "当前右侧显示排行榜。",
+          : "\u5f53\u524d\u53f3\u4fa7\u663e\u793a\u6392\u884c\u699c\u3002",
       noteText: isTimerMode
         ? lang === "en"
           ? "Switch off to show the leaderboard in the right panel."
-          : "关闭后切换为排行榜界面，不影响棋盘与回放。"
+          : "\u5173\u95ed\u540e\u5207\u6362\u4e3a\u6392\u884c\u699c\u754c\u9762\uff0c\u4e0d\u5f71\u54cd\u68cb\u76d8\u4e0e\u56de\u653e\u3002"
         : lang === "en"
           ? "Switch on to return to timer view."
-          : "开启后切回计时器界面。",
+          : "\u5f00\u542f\u540e\u5207\u56de\u8ba1\u65f6\u5668\u754c\u9762\u3002",
       rowVisible: true
     };
   }

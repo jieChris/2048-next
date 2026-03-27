@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 
 import {
   buildPlayModeIntroText,
@@ -12,15 +12,20 @@ describe("bootstrap play header", () => {
     expect(compactPlayModeLabel({ label: "标准版 4x4（无撤回）" })).toBe("标准4x4");
     expect(compactPlayModeLabel({ label: "经典版 4x4（可撤回）" })).toBe("经典4x4");
     expect(compactPlayModeLabel({ label: "封顶版 4x4（64，无撤回）" })).toBe("封顶4x4（64，无撤回）");
+    (globalThis as unknown as { UII18N?: { getLanguage?: () => string } }).UII18N = {
+      getLanguage: () => "en"
+    };
     expect(compactPlayModeLabel({ label: "Fibonacci 4x4（无撤回）" })).toBe("Fib4x4");
+    (globalThis as unknown as { UII18N?: { getLanguage?: () => string } }).UII18N = {
+      getLanguage: () => "zh"
+    };
+    expect(compactPlayModeLabel({ label: "Diagonal 4x2 (No Undo)" })).toBe("斜向4x2");
     expect(compactPlayModeLabel({ label: "练习板（Legacy）" })).toBe("练习板");
   });
 
-  it("falls back to key or default text", () => {
-    expect(compactPlayModeLabel({ key: "spawn_custom_4x4_pow2_no_undo" })).toBe(
-      "spawn_custom_4x4_pow2_no_undo"
-    );
-    expect(compactPlayModeLabel(null)).toBe("模式");
+  it("falls back to empty label or default text", () => {
+    expect(compactPlayModeLabel({ key: "spawn_custom_4x4_pow2_no_undo" })).toBe("");
+    expect(compactPlayModeLabel(null)).toBe("");
   });
 
   it("resolves rule text", () => {
@@ -59,3 +64,5 @@ describe("bootstrap play header", () => {
     });
   });
 });
+
+

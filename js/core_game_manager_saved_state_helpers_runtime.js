@@ -776,6 +776,7 @@ function applySavedManagerTimerState(manager, saved) {
   manager.time = manager.accumulatedTime;
   manager.startTime = null;
   manager.timerStatus = 0;
+  manager.timerFrozen = !!saved.timer_frozen;
 }
 
 function applySavedManagerBoardSnapshotState(manager, saved) {
@@ -811,9 +812,10 @@ function applySavedTimerPostRestoreState(manager, saved, cappedStateForRestore) 
   normalizeCappedRepeatLegendClasses(manager, cappedStateForRestore);
   manager.callWindowMethod("updateTimerScroll");
   manager.timerModuleView = saved.timer_module_view === "hidden" ? "hidden" : "timer";
+  manager.timerFrozen = !!saved.timer_frozen;
   var timerEl = resolveManagerElementById(manager, "timer");
   if (timerEl) timerEl.textContent = manager.pretty(manager.accumulatedTime);
-  if (!(manager.over || manager.won) && saved.timer_status === 1) {
+  if (!(manager.over || manager.won || manager.timerFrozen) && saved.timer_status === 1) {
     manager.startTimer();
   }
 }
@@ -1069,10 +1071,12 @@ function buildSavedGameStateReplayStatePayload(manager) {
 }
 
 function buildSavedGameStateTimerCorePayload(manager) {
+  var isTerminatedState = !!(manager.over || (manager.won && !manager.keepPlaying));
   return {
-    timer_status: manager.timerStatus === 1 ? 1 : 0,
+    timer_status: isTerminatedState ? 0 : (manager.timerStatus === 1 ? 1 : 0),
     duration_ms: manager.getDurationMs(),
-    has_game_started: !!manager.hasGameStarted
+    has_game_started: !!manager.hasGameStarted,
+    timer_frozen: isTerminatedState
   };
 }
 
@@ -1258,13 +1262,23 @@ function buildLiteSavedGameStateDiagnosticsPayload(payload) {
 function buildLiteSavedGameStatePayloadFallback(manager, payload) {
   if (!manager) return null;
   if (!normalizeSavedStateRecordObject(payload, null)) return null;
+  var timerStatus = Number(payload.timer_status);
+  var isTimerFrozen = !!payload.timer_frozen;
+  var timerDurationMs = Number(payload.duration_ms);
+  var hasGameStarted = !!payload.has_game_started;
   return Object.assign(
     {},
     buildLiteSavedGameStateMetaPayload(manager, payload),
     buildLiteSavedGameStateProgressPayload(payload),
     buildLiteSavedGameStateBoardSnapshotPayload(manager, payload),
     buildLiteSavedGameStateReplayTrimPayload(),
-    buildLiteSavedGameStateDiagnosticsPayload(payload)
+    buildLiteSavedGameStateDiagnosticsPayload(payload),
+    {
+      timer_status: timerStatus === 1 ? 1 : 0,
+      timer_frozen: isTimerFrozen,
+      duration_ms: Number.isFinite(timerDurationMs) ? Math.floor(timerDurationMs) : 0,
+      has_game_started: hasGameStarted
+    }
   );
 }
 

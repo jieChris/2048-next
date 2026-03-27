@@ -294,8 +294,10 @@ function applyGameManagerReplayStatics() {
   GameManager.REPLAY128_ASCII_COUNT = 94;   // "!".."~"
   GameManager.REPLAY128_EXTRA_CODES = createGameManagerReplay128ExtraCodes();
   GameManager.REPLAY128_TOTAL = 128;
+  GameManager.REPLAY_V1_RPL_BASE64_PREFIX = "REPLAY_v1RPL_B64_";
   GameManager.REPLAY_V4_PREFIX = "REPLAY_v4C_";
   GameManager.REPLAY_V9_VERSE_PREFIX = "replay_";
+  GameManager.REPLAY_FIB_VERSE_PREFIX = "replay_fib_";
   GameManager.REPLAY_V9_RPL_BASE64_PREFIX = "REPLAY_v9RPL_B64_";
   GameManager.REPLAY_V9_RPL_RECORD_BYTES = 25;
   GameManager.REPLAY_V9_RPL_SENTINEL = [0, 88, 666666666, 233333333, 314159265, 987654321];
@@ -325,5 +327,4 @@ function applyGameManagerStaticConfiguration() {
   applyGameManagerStorageStatics();
   applyGameManagerModeStatics();
 }
-
 

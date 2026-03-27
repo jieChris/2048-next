@@ -67,7 +67,7 @@ export function resolveModeLabel(
       return mode.label;
     }
   }
-  return modeKey || fallback || "\u672a\u77e5";
+  return fallback || modeKey || "\u672a\u77e5";
 }
 
 function normalizeHistoryRecordViaRuntime(

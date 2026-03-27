@@ -202,7 +202,7 @@
       var mode = catalog.getMode(modeKey);
       if (mode && typeof mode.label === "string" && mode.label) return mode.label;
     }
-    return modeKey || fallback || "未知";
+    return fallback || modeKey || "未知";
   }
 
   function resolveReplayCode(value) {

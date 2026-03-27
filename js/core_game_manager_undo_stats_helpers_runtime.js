@@ -673,6 +673,7 @@ function applyPostUndoRecordArtifacts(manager, postUndoRecord, direction) {
   if (postUndoRecord.shouldAppendCompactUndo) {
     appendCompactUndo(manager);
   }
+  if (postUndoRecord.shouldRecordMoveHistory) recordSessionReplayV1Undo(manager, 1);
   if (postUndoRecord.shouldPushSessionAction && manager.sessionReplayV3) {
     manager.sessionReplayV3.actions.push(
       Array.isArray(postUndoRecord.sessionAction) ? postUndoRecord.sessionAction : ["u"]

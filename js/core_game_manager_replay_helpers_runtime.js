@@ -13,12 +13,106 @@ var V9_VERSE_PNG_CHARSET = [
   "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_",
   "`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o",
   "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~",
-  "Ç", "ü", "é", "â", "ä", "à", "å", "ç", "ê", "ë", "è", "ï", "î", "ì",
-  "Ä", "Å", "É", "æ", "Æ", "ô", "ö", "ò", "û", "ù",
-  "ÿ", "Ö", "Ü", "ø", "£", "Ø", "×", "ƒ", "á"
+  "脟", "眉", "茅", "芒", "盲", "脿", "氓", "莽", "锚", "毛", "猫", "茂", "卯", "矛",
+  "脛", "脜", "脡", "忙", "脝", "么", "枚", "貌", "没", "霉",
+  "每", "脰", "脺", "酶", "拢", "脴", "脳", "茠", "谩"
 ];
 
 var v9VersePngMapDictCache = null;
+var REPLAY_V1_EXT_MODE_KEY = 1;
+var REPLAY_V1_EXT_RULESET = 2;
+
+function resolveReplayV1CodecRuntime(manager) {
+  if (!(manager && typeof manager.getWindowLike === "function")) return null;
+  var windowLike = manager.getWindowLike();
+  if (!(windowLike && isReplayRecordObject(windowLike.CoreReplayCodecRuntime))) return null;
+  return windowLike.CoreReplayCodecRuntime;
+}
+
+function resolveReplayV1Base64Prefix() {
+  return String(GameManager.REPLAY_V1_RPL_BASE64_PREFIX || "REPLAY_v1RPL_B64_");
+}
+
+function resolveReplayFibVersePrefix() {
+  return String(GameManager.REPLAY_FIB_VERSE_PREFIX || "replay_fib_");
+}
+
+function encodeReplayV1Utf8Text(text) {
+  var sourceText = typeof text === "string" ? text : String(text == null ? "" : text);
+  if (!sourceText) return new Uint8Array(0);
+  if (typeof TextEncoder === "function") {
+    return new TextEncoder().encode(sourceText);
+  }
+  var escaped = unescape(encodeURIComponent(sourceText));
+  var bytes = new Uint8Array(escaped.length);
+  for (var i = 0; i < escaped.length; i++) bytes[i] = escaped.charCodeAt(i) & 255;
+  return bytes;
+}
+
+function decodeReplayV1Utf8Text(payload) {
+  if (!payload) return "";
+  var bytes = payload instanceof Uint8Array ? payload : new Uint8Array(payload);
+  if (!bytes.length) return "";
+  if (typeof TextDecoder === "function") {
+    try {
+      return new TextDecoder("utf-8").decode(bytes);
+    } catch (_err) {}
+  }
+  var binary = "";
+  for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i] & 255);
+  try {
+    return decodeURIComponent(escape(binary));
+  } catch (_err2) {
+    return binary;
+  }
+}
+
+function resolveSessionReplayV1DeltaMs(session, nowMs) {
+  var lastAt = Number(session && session.last_event_at_ms);
+  if (!Number.isFinite(lastAt) || lastAt < 0) lastAt = nowMs;
+  var delta = Math.floor(nowMs - lastAt);
+  if (!Number.isFinite(delta) || delta < 0) delta = 0;
+  session.last_event_at_ms = nowMs;
+  return delta;
+}
+
+function canRecordSessionReplayV1(manager, session) {
+  if (!(session && session.supported)) return false;
+  if (!manager || !manager.replayMode) return true;
+  return !(Array.isArray(manager.replayMoves) && manager.replayMoves.length > 0);
+}
+
+function recordSessionReplayV1Move(manager, direction, spawn) {
+  var session = manager && manager.sessionReplayV1;
+  if (!canRecordSessionReplayV1(manager, session)) return;
+  if (!Number.isInteger(direction) || direction < 0 || direction > 7) return;
+  if (!(spawn && Number.isInteger(spawn.x) && Number.isInteger(spawn.y))) return;
+  var fib = !!(manager && typeof manager.isFibonacciMode === "function" && manager.isFibonacciMode());
+  if (fib) {
+    if (spawn.value !== 1 && spawn.value !== 2) return;
+  } else if (spawn.value !== 2 && spawn.value !== 4) {
+    return;
+  }
+  if (spawn.x < 0 || spawn.x >= manager.width || spawn.y < 0 || spawn.y >= manager.height) return;
+  var nowMs = Date.now();
+  session.records.push({
+    kind: "move", dir: direction, spawnIndex: spawn.y * manager.width + spawn.x,
+    spawnValueBit: fib ? (spawn.value === 2 ? 1 : 0) : (spawn.value === 4 ? 1 : 0), deltaMs: resolveSessionReplayV1DeltaMs(session, nowMs)
+  });
+}
+
+function recordSessionReplayV1Undo(manager, undoCount) {
+  var session = manager && manager.sessionReplayV1;
+  if (!canRecordSessionReplayV1(manager, session)) return;
+  var count = Number(undoCount);
+  if (!Number.isInteger(count) || count <= 0) count = 1;
+  var nowMs = Date.now();
+  if (count === 1) {
+    session.records.push({ kind: "undo1", deltaMs: resolveSessionReplayV1DeltaMs(session, nowMs) });
+    return;
+  }
+  session.records.push({ kind: "undon", undoCount: count, deltaMs: resolveSessionReplayV1DeltaMs(session, nowMs) });
+}
 
 function resolveReplayPauseStateFallback() {
   return {
@@ -52,9 +146,16 @@ function isReplayTickTokenActive(manager, token) {
 function pauseReplay(manager) {
   if (!manager) return;
   var state = resolveCorePayloadCallWith(manager, "callCoreReplayTimerRuntime", "computeReplayPauseState", {}, {}, function (currentManager, coreCallResult) {
-    return currentManager.resolveCoreObjectCallOrFallback(coreCallResult, function () {
-      return resolveReplayPauseStateFallback();
-    });
+    if (currentManager && typeof currentManager.resolveCoreObjectCallOrFallback === "function") {
+      return currentManager.resolveCoreObjectCallOrFallback(coreCallResult, function () {
+        return resolveReplayPauseStateFallback();
+      });
+    }
+    var coreValue = coreCallResult && Object.prototype.hasOwnProperty.call(coreCallResult, "value")
+      ? coreCallResult.value
+      : undefined;
+    if (coreValue && typeof coreValue === "object" && !Array.isArray(coreValue)) return coreValue;
+    return resolveReplayPauseStateFallback();
   });
   var pauseState = normalizeReplayPauseState(manager, state);
   manager.isPaused = pauseState.isPaused !== false;
@@ -66,11 +167,21 @@ function pauseReplay(manager) {
 
 function resolveReplayResumeState(manager) {
   var state = resolveCorePayloadCallWith(manager, "callCoreReplayTimerRuntime", "computeReplayResumeState", { replayDelay: manager.replayDelay }, {}, function (currentManager, coreCallResult) {
-    return currentManager.resolveCoreObjectCallOrFallback(coreCallResult, function () {
-      return { isPaused: false, shouldClearInterval: true, delay: manager.replayDelay || 200 };
-    });
+    if (currentManager && typeof currentManager.resolveCoreObjectCallOrFallback === "function") {
+      return currentManager.resolveCoreObjectCallOrFallback(coreCallResult, function () {
+        return { isPaused: false, shouldClearInterval: true, delay: manager.replayDelay || 200 };
+      });
+    }
+    var coreValue = coreCallResult && Object.prototype.hasOwnProperty.call(coreCallResult, "value")
+      ? coreCallResult.value
+      : undefined;
+    if (coreValue && typeof coreValue === "object" && !Array.isArray(coreValue)) return coreValue;
+    return { isPaused: false, shouldClearInterval: true, delay: manager.replayDelay || 200 };
   });
-  return manager.isNonArrayObject(state) ? state : {};
+  if (manager && typeof manager.isNonArrayObject === "function") {
+    return manager.isNonArrayObject(state) ? state : {};
+  }
+  return state && typeof state === "object" && !Array.isArray(state) ? state : {};
 }
 
 function resolveReplayShouldStopAtTick(manager) {
@@ -192,12 +303,24 @@ function resolveReplaySpeedState(manager, multiplier) {
     createReplaySpeedPayload(manager, multiplier),
     {},
     function (currentManager, coreCallResult) {
-      return currentManager.resolveCoreObjectCallOrFallback(coreCallResult, function () {
-        return createReplaySpeedFallback(currentManager, multiplier);
-      });
+      if (currentManager && typeof currentManager.resolveCoreObjectCallOrFallback === "function") {
+        return currentManager.resolveCoreObjectCallOrFallback(coreCallResult, function () {
+          return createReplaySpeedFallback(currentManager, multiplier);
+        });
+      }
+      var coreValue = coreCallResult && Object.prototype.hasOwnProperty.call(coreCallResult, "value")
+        ? coreCallResult.value
+        : undefined;
+      if (coreValue && typeof coreValue === "object" && !Array.isArray(coreValue)) {
+        return coreValue;
+      }
+      return createReplaySpeedFallback(currentManager || manager, multiplier);
     }
   );
-  return manager.isNonArrayObject(state) ? state : {};
+  if (manager && typeof manager.isNonArrayObject === "function") {
+    return manager.isNonArrayObject(state) ? state : {};
+  }
+  return state && typeof state === "object" && !Array.isArray(state) ? state : {};
 }
 
 function setReplaySpeed(manager, multiplier) {
@@ -465,12 +588,28 @@ function seekReplay(manager, targetIndex) {
   });
 }
 
-function stepReplay(manager, delta) {
+function stepReplay(manager, delta, options) {
   if (!manager || !manager.replayMoves) return;
   var normalizedDelta = Number(delta);
   if (!Number.isFinite(normalizedDelta)) return;
   normalizedDelta = normalizedDelta > 0 ? Math.floor(normalizedDelta) : Math.ceil(normalizedDelta);
   if (normalizedDelta === 0) return;
+  var preferAnimatedStep = !!(
+    options &&
+    typeof options === "object" &&
+    options.preferAnimatedStep === true
+  );
+  if (
+    preferAnimatedStep &&
+    normalizedDelta === 1 &&
+    manager.replayMode &&
+    Array.isArray(manager.replayMoves)
+  ) {
+    if (manager.replayIndex >= manager.replayMoves.length) return;
+    pauseReplay(manager);
+    executePlannedReplayStep(manager);
+    return;
+  }
   manager.seek(manager.replayIndex + normalizedDelta);
 }
 
@@ -519,6 +658,10 @@ function resolveInvalidatedTimerElementIdsFallback(manager, value) {
 function createInvalidatedSecondaryTimerElementIdsPayload(manager, value) {
   var descriptors = resolveSecondaryTimerDescriptors(manager);
   var payloadDescriptors = [];
+  var normalizedValue = value;
+  if (typeof resolveSecondaryTimerSlotByValue === "function") {
+    normalizedValue = resolveSecondaryTimerSlotByValue(manager, value);
+  }
   for (var i = 0; i < descriptors.length; i++) {
     var descriptor = descriptors[i];
     if (!descriptor) continue;
@@ -530,7 +673,7 @@ function createInvalidatedSecondaryTimerElementIdsPayload(manager, value) {
   }
   return {
     descriptors: payloadDescriptors,
-    value: value
+    value: normalizedValue
   };
 }
 
@@ -550,7 +693,9 @@ function resolveInvalidatedSecondaryTimerElementIdsByCore(manager, value) {
 }
 
 function resolveInvalidatedSecondaryTimerElementIdsFallback(manager, value) {
-  var placedValue = normalizeSecondaryTimerValue(value);
+  var placedValue = typeof resolveSecondaryTimerSlotByValue === "function"
+    ? resolveSecondaryTimerSlotByValue(manager, value)
+    : normalizeSecondaryTimerValue(value);
   if (placedValue === null || placedValue < 2048) return [];
   var descriptors = resolveSecondaryTimerDescriptors(manager);
   var elementIds = [];
@@ -1693,6 +1838,15 @@ function applyV9RplStructuredReplayEnvelope(manager, envelope, replayModeConfig)
   restartWithBoard(manager, envelope.initialBoard, replayModeConfig, { asReplay: true });
 }
 
+function applyV1RplStructuredReplayEnvelope(manager, envelope, replayModeConfig) {
+  applyReplayImportActions(manager, {
+    replayMoves: envelope.replayMoves,
+    replaySpawns: envelope.replaySpawns
+  });
+  setRuntimeDisableSessionSyncForReplay(manager, true);
+  restartWithBoard(manager, envelope.initialBoard, replayModeConfig, { asReplay: true });
+}
+
 function parseV9RplBufferLike(sourceBuffer) {
   var bytes = normalizeV9RplBufferLike(sourceBuffer);
   if (!bytes) throw "Invalid .rpl buffer";
@@ -1709,19 +1863,29 @@ function createV9RplStructuredReplayEnvelope(parsed, replayModeConfig) {
   };
 }
 
+function hasReplayV1Magic(bytes) {
+  return !!(bytes && bytes.length >= 4 && bytes[0] === 82 && bytes[1] === 80 && bytes[2] === 76 && bytes[3] === 49);
+}
+
+function createStructuredReplayEnvelopeFromRplBuffer(manager, sourceBuffer) {
+  var bytes = normalizeV9RplBufferLike(sourceBuffer);
+  if (!bytes) throw "Invalid .rpl buffer";
+  if (hasReplayV1Magic(bytes)) {
+    var codec = resolveReplayV1CodecRuntime(manager);
+    if (!(codec && typeof codec.decodeReplayV1Rpl === "function")) throw "Replay v1 codec unavailable";
+    return createReplayV1StructuredReplayEnvelope(manager, codec.decodeReplayV1Rpl(bytes));
+  }
+  var replayModeConfig = resolveV9RplReplayModeConfig(manager);
+  if (!replayModeConfig) throw "Replay mode config is unavailable";
+  return createV9RplStructuredReplayEnvelope(parseV9RplBytes(bytes), replayModeConfig);
+}
+
 function importV9RplBuffer(manager, sourceBuffer) {
   if (!manager) return false;
   try {
-    var parsed = parseV9RplBufferLike(sourceBuffer);
-    var replayModeConfig = resolveV9RplReplayModeConfig(manager);
-    if (!replayModeConfig) throw "Replay mode config is unavailable";
-    var envelope = createV9RplStructuredReplayEnvelope(parsed, replayModeConfig);
-    applyV9RplStructuredReplayEnvelope(manager, envelope, replayModeConfig);
-    applyImportedReplayUndoState(manager);
-    startImportedReplayPlayback(manager);
-    return true;
+    return applyStructuredReplayEnvelope(manager, createStructuredReplayEnvelopeFromRplBuffer(manager, sourceBuffer));
   } catch (e) {
-    alert("导入 .rpl 回放出错: " + resolveReplayImportErrorMessage(e));
+    alert("\u5bfc\u5165 .rpl \u56de\u653e\u51fa\u9519: " + resolveReplayImportErrorMessage(e));
     return false;
   }
 }
@@ -1759,6 +1923,8 @@ function startsWithIgnoreCase(text, prefix) {
 
 function isKnownNonVerseReplayPrefix(trimmed) {
   var knownPrefixes = [
+    resolveReplayV1Base64Prefix(),
+    resolveReplayFibVersePrefix(),
     String(GameManager.REPLAY_V4_PREFIX || "REPLAY_v4C_"),
     String(GameManager.REPLAY_V9_RPL_BASE64_PREFIX || "REPLAY_v9RPL_B64_")
   ];
@@ -1791,6 +1957,15 @@ function decodeV9VerseSpawnFromToken(token) {
     x: spawnPos % 4,
     y: Math.floor(spawnPos / 4),
     value: (((token >> 4) & 1) + 1) === 2 ? 4 : 2
+  };
+}
+
+function decodeFibVerseSpawnFromToken(token) {
+  var spawnPos = ((token & 3) << 2) + ((token & 15) >> 2);
+  return {
+    x: spawnPos % 4,
+    y: Math.floor(spawnPos / 4),
+    value: (((token >> 4) & 1) + 1) === 2 ? 2 : 1
   };
 }
 
@@ -1862,6 +2037,162 @@ function decodeV9VerseReplayEnvelope(trimmed) {
   };
 }
 
+function normalizeFibVerseReplayBody(trimmed) {
+  if (typeof trimmed !== "string") return null;
+  var prefix = resolveReplayFibVersePrefix();
+  if (trimmed.length < prefix.length) return null;
+  if (trimmed.substring(0, prefix.length).toLowerCase() !== prefix.toLowerCase()) return null;
+  return trimmed.substring(prefix.length);
+}
+
+function createFibVerseDecodeStartupState(pngMapDict, body) {
+  var initialBoard = createEmptyV9RplBoard();
+  var firstSpawn = decodeFibVerseSpawnFromToken(decodeV9VerseTokenAt(pngMapDict, body, 0));
+  var secondSpawn = decodeFibVerseSpawnFromToken(decodeV9VerseTokenAt(pngMapDict, body, 1));
+  if (initialBoard[firstSpawn.y][firstSpawn.x] !== 0) throw "Invalid replay startup collision";
+  initialBoard[firstSpawn.y][firstSpawn.x] = firstSpawn.value;
+  if (initialBoard[secondSpawn.y][secondSpawn.x] !== 0) throw "Invalid replay startup collision";
+  initialBoard[secondSpawn.y][secondSpawn.x] = secondSpawn.value;
+  return {
+    initialBoard: initialBoard
+  };
+}
+
+function decodeFibVerseReplayStepToken(token, index) {
+  var moveChunkToV9Move = [2, 1, 3, 0];
+  var moveChunk = decodeV9VerseMoveChunkFromToken(token);
+  var v9Move = moveChunkToV9Move[moveChunk];
+  if (!Number.isInteger(v9Move)) throw "Invalid replay move at index " + String(index);
+  return {
+    internalDirection: convertV9RplMoveToInternalDirection(v9Move),
+    spawn: decodeFibVerseSpawnFromToken(token)
+  };
+}
+
+function decodeFibVerseReplaySteps(body, pngMapDict) {
+  var replayMoves = [];
+  var replaySpawns = [];
+  for (var index = 2; index < body.length; index++) {
+    var token = decodeV9VerseTokenAt(pngMapDict, body, index);
+    var decodedStep = decodeFibVerseReplayStepToken(token, index);
+    replayMoves.push(decodedStep.internalDirection);
+    replaySpawns.push(decodedStep.spawn);
+  }
+  return { replayMoves: replayMoves, replaySpawns: replaySpawns };
+}
+
+function decodeFibVerseReplayEnvelope(trimmed) {
+  var body = normalizeFibVerseReplayBody(trimmed);
+  if (!body) return null;
+  if (body.length < 2) throw "Invalid replay payload";
+  var pngMapDict = resolveV9VersePngMapDict();
+  var startupState = createFibVerseDecodeStartupState(pngMapDict, body);
+  var decodedSteps = decodeFibVerseReplaySteps(body, pngMapDict);
+  return {
+    kind: "v9rpl",
+    modeKey: "fib_4x4_no_undo",
+    initialBoard: startupState.initialBoard,
+    replayMoves: decodedSteps.replayMoves,
+    replaySpawns: decodedSteps.replaySpawns
+  };
+}
+
+function resolveV1RplBase64PayloadBody(trimmed) {
+  var prefix = resolveReplayV1Base64Prefix();
+  if (!(typeof trimmed === "string" && trimmed.indexOf(prefix) === 0)) return null;
+  return trimmed.substring(prefix.length);
+}
+
+function resolveReplayV1ContainsUndo(decoded) {
+  if (!decoded) return false;
+  if ((Number(decoded.flags) & 2) === 2) return true;
+  var records = Array.isArray(decoded.records) ? decoded.records : [];
+  for (var i = 0; i < records.length; i++) {
+    if (records[i] && (records[i].kind === "undo1" || records[i].kind === "undon")) return true;
+  }
+  return false;
+}
+
+function resolveReplayV1ExtPayload(decoded, extType) {
+  var records = Array.isArray(decoded && decoded.records) ? decoded.records : [];
+  for (var i = 0; i < records.length; i++) {
+    var record = records[i];
+    if (!(record && record.kind === "ext")) continue;
+    if (Number(record.extType) !== Number(extType)) continue;
+    return record.payload || null;
+  }
+  return null;
+}
+
+function resolveReplayV1ModeKeyFromExt(decoded) {
+  var payload = resolveReplayV1ExtPayload(decoded, REPLAY_V1_EXT_MODE_KEY);
+  var modeKey = decodeReplayV1Utf8Text(payload).trim();
+  return modeKey || "";
+}
+
+function resolveReplayV1RulesetFromExt(decoded) {
+  var payload = resolveReplayV1ExtPayload(decoded, REPLAY_V1_EXT_RULESET);
+  var ruleset = decodeReplayV1Utf8Text(payload).trim().toLowerCase();
+  return ruleset === "fibonacci" ? "fibonacci" : (ruleset === "pow2" ? "pow2" : "");
+}
+
+function resolveReplayV1ModeKeyByShape(width, height, hasUndo) {
+  if (width === 4 && height === 4) return hasUndo ? "classic_4x4_pow2_undo" : "standard_4x4_pow2_no_undo";
+  if (width === 3 && height === 4) return hasUndo ? "board_3x4_pow2_undo" : "board_3x4_pow2_no_undo";
+  if (width === 2 && height === 4) return hasUndo ? "board_2x4_pow2_undo" : "board_2x4_pow2_no_undo";
+  if (width === 3 && height === 3) return hasUndo ? "board_3x3_pow2_undo" : "board_3x3_pow2_no_undo";
+  return GameManager.DEFAULT_MODE_KEY;
+}
+
+function resolveReplayV1ModeKeyFromDecoded(manager, decoded) {
+  var extModeKey = resolveReplayV1ModeKeyFromExt(decoded);
+  if (extModeKey) {
+    if (!(manager && typeof manager.resolveModeConfig === "function")) return extModeKey;
+    if (manager.resolveModeConfig(extModeKey)) return extModeKey;
+  }
+  var width = Number(decoded && decoded.width);
+  var height = Number(decoded && decoded.height);
+  var inferred = resolveReplayV1ModeKeyByShape(width, height, resolveReplayV1ContainsUndo(decoded));
+  if (!(manager && typeof manager.resolveModeConfig === "function")) return inferred;
+  return manager.resolveModeConfig(inferred) ? inferred : (manager.modeKey || inferred);
+}
+
+function resolveReplayV1RulesetFromModeKey(manager, modeKey, decoded) {
+  if (manager && typeof manager.resolveModeConfig === "function") {
+    var cfg = manager.resolveModeConfig(modeKey);
+    if (cfg && cfg.ruleset === "fibonacci") return "fibonacci";
+    if (cfg && cfg.ruleset === "pow2") return "pow2";
+  }
+  var extRuleset = resolveReplayV1RulesetFromExt(decoded);
+  if (extRuleset) return extRuleset;
+  return "pow2";
+}
+
+function createReplayV1StructuredReplayEnvelope(manager, decoded) {
+  var codec = resolveReplayV1CodecRuntime(manager);
+  if (!(codec && typeof codec.replayV1InitTilesToBoard === "function")) throw "Replay v1 board codec unavailable";
+  if (typeof codec.replayV1RecordsToReplayActions !== "function") throw "Replay v1 action codec unavailable";
+  var modeKey = resolveReplayV1ModeKeyFromDecoded(manager, decoded);
+  var ruleset = resolveReplayV1RulesetFromModeKey(manager, modeKey, decoded);
+  var initialBoard = codec.replayV1InitTilesToBoard(decoded.width, decoded.height, decoded.initTiles || [], ruleset);
+  var actions = codec.replayV1RecordsToReplayActions(decoded.records || [], decoded.width, ruleset);
+  return { kind: "v1rpl", modeKey: modeKey, initialBoard: initialBoard, replayMoves: actions.replayMoves, replaySpawns: actions.replaySpawns };
+}
+
+function parseV1RplBase64ReplayEnvelopeByBody(manager, encodedBase64) {
+  if (!encodedBase64) throw "Invalid replay v1 payload";
+  var codec = resolveReplayV1CodecRuntime(manager);
+  if (!(codec && typeof codec.decodeReplayV1Rpl === "function")) throw "Replay v1 codec unavailable";
+  var bytes = decodeV9RplBase64ToBytes(manager, encodedBase64);
+  return createReplayV1StructuredReplayEnvelope(manager, codec.decodeReplayV1Rpl(bytes));
+}
+
+function tryParseV1RplBase64ReplayEnvelope(manager, trimmed) {
+  var body = resolveV1RplBase64PayloadBody(trimmed);
+  if (body === null) return null;
+  return parseV1RplBase64ReplayEnvelopeByBody(manager, body);
+}
+
 function isReplayV4Direction(direction) {
   return Number.isInteger(direction) && direction >= 0 && direction <= 3;
 }
@@ -1908,8 +2239,168 @@ function shouldSerializeReplayAsV4(manager) {
   return true;
 }
 
+function resolveReplayV1SessionForSerialize(manager) {
+  var session = manager && manager.sessionReplayV1;
+  if (!isReplayRecordObject(session)) return null;
+  if (!Array.isArray(session.init_tiles) || !Array.isArray(session.records)) return null;
+  if (!Number.isInteger(session.board_width) || !Number.isInteger(session.board_height)) return null;
+  return session;
+}
+
+function shouldSerializeReplayAsV1(manager) {
+  var session = resolveReplayV1SessionForSerialize(manager);
+  if (!manager || !session || session.supported !== true) return false;
+  if (manager.modeKey === "practice") return false;
+  if (manager.width * manager.height > 16) return false;
+  return session.board_width === manager.width && session.board_height === manager.height;
+}
+
+function createReplayV1ExtRecords(session) {
+  var records = [];
+  var modeKey = typeof session.mode_key === "string" ? session.mode_key.trim() : "";
+  if (modeKey) {
+    records.push({
+      kind: "ext",
+      extType: REPLAY_V1_EXT_MODE_KEY,
+      payload: encodeReplayV1Utf8Text(modeKey)
+    });
+  }
+  var ruleset = typeof session.ruleset === "string" ? session.ruleset.trim().toLowerCase() : "";
+  if (ruleset === "pow2" || ruleset === "fibonacci") {
+    records.push({
+      kind: "ext",
+      extType: REPLAY_V1_EXT_RULESET,
+      payload: encodeReplayV1Utf8Text(ruleset)
+    });
+  }
+  return records;
+}
+
+function createReplayV1SerializeInput(session) {
+  var extRecords = createReplayV1ExtRecords(session);
+  var sourceRecords = Array.isArray(session.records) ? session.records.slice() : [];
+  return {
+    width: session.board_width,
+    height: session.board_height,
+    initTiles: session.init_tiles.slice(),
+    records: extRecords.concat(sourceRecords),
+    startUnixMs: Number(session.start_unix_ms)
+  };
+}
+
+function shouldSerializeReplayAsFibVerse(manager) {
+  var session = resolveReplayV1SessionForSerialize(manager);
+  if (!manager || !session || session.supported !== true) return false;
+  if (manager.width !== 4 || manager.height !== 4) return false;
+  if (!(typeof manager.isFibonacciMode === "function" && manager.isFibonacciMode())) return false;
+  return Array.isArray(session.init_tiles) && session.init_tiles.length >= 2;
+}
+
+function encodeFibVerseToken(moveChunk, spawnPos, spawnValueBit) {
+  if (!Number.isInteger(moveChunk) || moveChunk < 0 || moveChunk > 3) throw "Invalid replay move chunk";
+  if (!Number.isInteger(spawnPos) || spawnPos < 0 || spawnPos > 15) throw "Invalid replay spawn position";
+  if (!Number.isInteger(spawnValueBit) || (spawnValueBit !== 0 && spawnValueBit !== 1)) {
+    throw "Invalid replay spawn value bit";
+  }
+  var token = ((moveChunk & 3) << 5) | ((spawnValueBit & 1) << 4) | ((spawnPos & 3) << 2) | ((spawnPos >> 2) & 3);
+  if (token < 0 || token >= V9_VERSE_PNG_CHARSET.length) throw "Invalid replay token";
+  return V9_VERSE_PNG_CHARSET[token];
+}
+
+function resolveFibVerseStartupTokensFromSession(session) {
+  var tiles = Array.isArray(session && session.init_tiles) ? session.init_tiles.slice() : [];
+  tiles.sort(function (a, b) {
+    return Number(a && a.cellIndex) - Number(b && b.cellIndex);
+  });
+  var tokens = [];
+  for (var i = 0; i < tiles.length; i++) {
+    var tile = tiles[i] || {};
+    var cellIndex = Number(tile.cellIndex);
+    var valueBit = Number(tile.valueBit);
+    if (!Number.isInteger(cellIndex) || cellIndex < 0 || cellIndex > 15) continue;
+    if (!Number.isInteger(valueBit) || (valueBit !== 0 && valueBit !== 1)) continue;
+    tokens.push(encodeFibVerseToken(0, cellIndex, valueBit));
+    if (tokens.length >= 2) break;
+  }
+  if (tokens.length < 2) throw "Invalid fibonacci replay startup tiles";
+  return tokens;
+}
+
+function resolveFibVerseReplayStepRecords(records) {
+  var source = Array.isArray(records) ? records : [];
+  var effectiveMoves = [];
+  for (var i = 0; i < source.length; i++) {
+    var record = source[i];
+    if (!(record && typeof record === "object")) continue;
+    if (record.kind === "move") {
+      effectiveMoves.push(record);
+      continue;
+    }
+    if (record.kind === "undo1") {
+      if (effectiveMoves.length > 0) effectiveMoves.pop();
+      continue;
+    }
+    if (record.kind === "undon") {
+      var undoCount = Number(record.undoCount);
+      if (!Number.isInteger(undoCount) || undoCount <= 0) continue;
+      while (undoCount > 0 && effectiveMoves.length > 0) {
+        effectiveMoves.pop();
+        undoCount -= 1;
+      }
+    }
+  }
+  return effectiveMoves;
+}
+
+function buildFibVerseReplayTokensFromSession(session) {
+  var tokens = resolveFibVerseStartupTokensFromSession(session);
+  var steps = resolveFibVerseReplayStepRecords(session.records);
+  for (var i = 0; i < steps.length; i++) {
+    var step = steps[i] || {};
+    var v9Move = convertInternalDirectionToV9RplMove(step.dir);
+    if (!Number.isInteger(v9Move)) throw "Invalid fibonacci replay move";
+    var moveChunk = resolveV9VerseMoveChunkFromV9Move(v9Move);
+    if (!Number.isInteger(moveChunk)) throw "Invalid fibonacci replay move";
+    var spawnIndex = Number(step.spawnIndex);
+    var spawnValueBit = Number(step.spawnValueBit);
+    if (!Number.isInteger(spawnIndex) || spawnIndex < 0 || spawnIndex > 15) {
+      throw "Invalid fibonacci replay spawn position";
+    }
+    if (!Number.isInteger(spawnValueBit) || (spawnValueBit !== 0 && spawnValueBit !== 1)) {
+      throw "Invalid fibonacci replay spawn value";
+    }
+    tokens.push(encodeFibVerseToken(moveChunk, spawnIndex, spawnValueBit));
+  }
+  return tokens;
+}
+
+function serializeReplayAsFibVerse(manager) {
+  var session = resolveReplayV1SessionForSerialize(manager);
+  if (!session) throw "Replay session unavailable";
+  var tokens = buildFibVerseReplayTokensFromSession(session);
+  return resolveReplayFibVersePrefix() + tokens.join("");
+}
+
+function serializeReplayAsV1RplBase64(manager) {
+  var session = resolveReplayV1SessionForSerialize(manager);
+  var codec = resolveReplayV1CodecRuntime(manager);
+  if (!(session && codec && typeof codec.encodeReplayV1Rpl === "function")) throw "Replay v1 codec unavailable";
+  var bytes = codec.encodeReplayV1Rpl(createReplayV1SerializeInput(session));
+  return resolveReplayV1Base64Prefix() + encodeV9RplBytesToBase64(manager, bytes);
+}
+
 function serializeReplay(manager) {
   if (!manager) return "{}";
+  if (shouldSerializeReplayAsFibVerse(manager)) {
+    try {
+      return serializeReplayAsFibVerse(manager);
+    } catch (_fibErr) {}
+  }
+  if (shouldSerializeReplayAsV1(manager)) {
+    try {
+      return serializeReplayAsV1RplBase64(manager);
+    } catch (_err) {}
+  }
   if (!shouldSerializeReplayAsV4(manager)) {
     return JSON.stringify(serializeReplayV3(manager));
   }
@@ -1935,7 +2426,7 @@ function applyReplayImportActions(manager, payload) {
 }
 
 function isStructuredReplayEnvelope(envelope) {
-  return !!envelope && (envelope.kind === "v4c" || envelope.kind === "v9rpl" || envelope.kind === "v3-json");
+  return !!envelope && (envelope.kind === "v4c" || envelope.kind === "v9rpl" || envelope.kind === "v1rpl" || envelope.kind === "v3-json");
 }
 
 function applyImportedReplayUndoState(manager) {
@@ -1990,6 +2481,8 @@ function createReplayImportEnvelopePayload(manager, trimmed) {
   return {
     trimmedReplayString: trimmed,
     fallbackModeKey: manager.modeKey || manager.mode || GameManager.DEFAULT_MODE_KEY,
+    v1RplBase64Prefix: resolveReplayV1Base64Prefix(),
+    fibVersePrefix: resolveReplayFibVersePrefix(),
     v4Prefix: GameManager.REPLAY_V4_PREFIX
   };
 }
@@ -1999,11 +2492,22 @@ function normalizeReplayImportEnvelopeFromCore(currentManager, value) {
   return currentManager.isNonArrayObject(value) ? value : undefined;
 }
 
+function normalizeParsedReplayImportEnvelope(manager, parsedEnvelope) {
+  if (parsedEnvelope && parsedEnvelope.kind === "v1rpl-b64") {
+    return parseV1RplBase64ReplayEnvelopeByBody(manager, parsedEnvelope.encodedBase64);
+  }
+  return normalizeReplayRecordObject(parsedEnvelope, null);
+}
+
 function parseReplayImportEnvelopeFallback(manager, trimmed) {
   var verseEnvelope = decodeV9VerseReplayEnvelope(trimmed);
   if (verseEnvelope) return verseEnvelope;
+  var fibVerseEnvelope = decodeFibVerseReplayEnvelope(trimmed);
+  if (fibVerseEnvelope) return fibVerseEnvelope;
   var v9Envelope = tryParseV9RplBase64ReplayEnvelope(manager, trimmed);
   if (v9Envelope) return v9Envelope;
+  var v1Envelope = tryParseV1RplBase64ReplayEnvelope(manager, trimmed);
+  if (v1Envelope) return v1Envelope;
   var v3Envelope = tryParseReplayV3JsonEnvelope(manager, trimmed);
   if (v3Envelope) return v3Envelope;
   return tryParseV4cReplayEnvelope(trimmed);
@@ -2012,8 +2516,12 @@ function parseReplayImportEnvelopeFallback(manager, trimmed) {
 function parseReplayImportEnvelope(manager, trimmed) {
   var verseEnvelope = decodeV9VerseReplayEnvelope(trimmed);
   if (verseEnvelope) return verseEnvelope;
+  var fibVerseEnvelope = decodeFibVerseReplayEnvelope(trimmed);
+  if (fibVerseEnvelope) return fibVerseEnvelope;
   var v9Envelope = tryParseV9RplBase64ReplayEnvelope(manager, trimmed);
   if (v9Envelope) return v9Envelope;
+  var v1Envelope = tryParseV1RplBase64ReplayEnvelope(manager, trimmed);
+  if (v1Envelope) return v1Envelope;
   var parsedEnvelope = resolveCorePayloadCallWith(manager, "callCoreReplayImportRuntime", "parseReplayImportEnvelope", createReplayImportEnvelopePayload(manager, trimmed), undefined, function (currentManager, coreCallResult) {
     return currentManager.resolveNormalizedCoreValueOrFallbackAllowNull(coreCallResult, function (value) {
       return normalizeReplayImportEnvelopeFromCore(currentManager, value);
@@ -2021,7 +2529,7 @@ function parseReplayImportEnvelope(manager, trimmed) {
       return parseReplayImportEnvelopeFallback(currentManager, trimmed);
     }, true);
   });
-  return normalizeReplayRecordObject(parsedEnvelope, null);
+  return normalizeParsedReplayImportEnvelope(manager, parsedEnvelope);
 }
 
 function decodeReplayV4MoveSpawnFromToken(token) {
@@ -2221,6 +2729,10 @@ function applyStructuredReplayEnvelopeByKind(manager, envelope, replayModeConfig
     applyV9RplStructuredReplayEnvelope(manager, envelope, replayModeConfig);
     return;
   }
+  if (envelope.kind === "v1rpl") {
+    applyV1RplStructuredReplayEnvelope(manager, envelope, replayModeConfig);
+    return;
+  }
   if (envelope.kind === "v3-json") {
     applyV3StructuredReplayEnvelope(manager, envelope, replayModeConfig);
     return;
@@ -2242,9 +2754,9 @@ function importReplay(manager, replayString) {
     var trimmed = normalizeReplayImportSource(replayString);
     var envelope = parseReplayImportEnvelope(manager, trimmed);
     if (isStructuredReplayEnvelope(envelope)) return applyStructuredReplayEnvelope(manager, envelope);
-    throw "仅支持当前回放格式（v4/v9）";
+    throw "\u4ec5\u652f\u6301\u5f53\u524d\u56de\u653e\u683c\u5f0f\uff08v1/v4/v9\uff09";
   } catch (e) {
-    alert("导入回放出错: " + resolveReplayImportErrorMessage(e));
+    alert("\u5bfc\u5165\u56de\u653e\u51fa\u9519: " + resolveReplayImportErrorMessage(e));
     return false;
   }
 }
@@ -2462,7 +2974,7 @@ function recordSpawnValue(manager, value) {
 function refreshSpawnRateDisplay(manager) {
   if (!manager) return;
   // Top-left rate: current observed secondary spawn rate.
-  // pow2 => 出4率, fibonacci => 出2率
+  // pow2/fibonacci both display observed secondary spawn rate percentage.
   var text = manager.getActualSecondaryRate();
   var rateEl = resolveManagerElementById(manager, "stats-4-rate");
   if (rateEl) rateEl.textContent = text;

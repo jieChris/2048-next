@@ -5,7 +5,10 @@
 
   var COPY_SUCCESS_MESSAGE = "回放代码已复制到剪贴板！";
   var COPY_FAILURE_MESSAGE = "自动复制失败，请手动从文本框复制。";
-  var VERSE_DOWNLOAD_SUCCESS_MESSAGE = "v9 文本回放文件已导出。";
+  var DOWNLOAD_FAILURE_MESSAGE = "导出文件失败，请稍后重试。";
+  var DOWNLOAD_BUTTON_ID = "replay-download-btn";
+  var DOWNLOAD_BUTTON_LABEL = "导出文件";
+
 
   function isRecord(value) {
     return !!value && typeof value === "object";
@@ -13,6 +16,11 @@
 
   function toRecord(value) {
     return isRecord(value) ? value : {};
+  }
+
+  function toObjectLike(value) {
+    if (isRecord(value)) return value;
+    return typeof value === "function" ? value : {};
   }
 
   function asFunction(value) {
@@ -47,7 +55,7 @@
 
   function resolveUrlRuntime(windowLike) {
     var windowRecord = toRecord(windowLike);
-    var urlRecord = toRecord(windowRecord.URL);
+    var urlRecord = toObjectLike(windowRecord.URL);
     var createObjectURL = asFunction(urlRecord.createObjectURL);
     var revokeObjectURL = asFunction(urlRecord.revokeObjectURL);
     if (!createObjectURL || !revokeObjectURL) return null;
@@ -196,100 +204,74 @@
     }
   }
 
+  function resolveReplayDownloadFilename(input) {
+    var source = toRecord(input);
+    var replay = source.replay == null ? "" : String(source.replay);
+    if (replay.indexOf("REPLAY_v1RPL_B64_") === 0) return "replay-v1.txt";
+    return "replay.txt";
+  }
+
+  function ensureReplayDownloadButton(input) {
+    var source = toRecord(input);
+    var documentLike = toRecord(source.documentLike);
+    var getElementById = asFunction(documentLike.getElementById);
+    if (!getElementById) return null;
+
+    var existing = getElementById.call(documentLike, DOWNLOAD_BUTTON_ID);
+    if (existing) return existing;
+
+    var modal = getElementById.call(documentLike, "replay-modal");
+    if (!modal) return null;
+
+    var modalRecord = toRecord(modal);
+    var querySelector = asFunction(modalRecord.querySelector);
+    if (!querySelector) return null;
+    var actions = querySelector.call(modalRecord, ".replay-modal-actions");
+    if (!actions) return null;
+
+    var createElement = asFunction(documentLike.createElement);
+    var appendChild = asFunction(toRecord(actions).appendChild);
+    if (!createElement || !appendChild) return null;
+
+    var button = createElement.call(documentLike, "button");
+    button.id = DOWNLOAD_BUTTON_ID;
+    button.className = "replay-button";
+    button.type = "button";
+    button.style.display = "none";
+    button.textContent = DOWNLOAD_BUTTON_LABEL;
+    appendChild.call(actions, button);
+    return button;
+  }
+
+  function configureReplayDownloadButton(input) {
+    var source = toRecord(input);
+    var button = ensureReplayDownloadButton(source);
+    if (!button) return { configured: false };
+
+    var alertLike = resolveAlert(source);
+    button.style.display = "inline-block";
+    button.textContent = DOWNLOAD_BUTTON_LABEL;
+    button.onclick = function () {
+      var replay = source.replay == null ? "" : String(source.replay);
+      if (!replay) return { downloaded: false };
+      var result = triggerReplayFileDownload({
+        blob: new Blob([replay], { type: "text/plain;charset=utf-8" }),
+        filename: resolveReplayDownloadFilename({ replay: replay }),
+        documentLike: source.documentLike,
+        windowLike: source.windowLike
+      });
+      if (!result.downloaded) {
+        alertLike(DOWNLOAD_FAILURE_MESSAGE);
+      }
+      return result;
+    };
+
+    return { configured: true };
+  }
+
   function applyReplayExport(input) {
     var source = toRecord(input);
     var manager = toRecord(source.gameManager);
-    var alertLike = resolveAlert(source);
-    var logError = resolveConsoleError(source);
-    var exportV9VerseBlob = asFunction(manager.exportV9VerseBlob);
-    if (exportV9VerseBlob) {
-      try {
-        var verseExportPayload = toRecord(exportV9VerseBlob.call(manager));
-        var verseFileDownloadResult = triggerReplayFileDownload({
-          windowLike: resolveWindowLike(source),
-          documentLike: source.documentLike,
-          blob: verseExportPayload.blob,
-          filename: verseExportPayload.filename
-        });
-        if (verseFileDownloadResult.downloaded) {
-          alertLike(VERSE_DOWNLOAD_SUCCESS_MESSAGE);
-          return {
-            exported: true,
-            format: "v9-verse",
-            filename: verseFileDownloadResult.filename
-          };
-        }
-      } catch (verseExportError) {
-        logError("v9 verse export failed", verseExportError);
-      }
-    }
-
-    var serializeV9Verse = asFunction(manager.serializeV9Verse);
-    if (serializeV9Verse) {
-      try {
-        var verseReplay = String(serializeV9Verse.call(manager));
-        var showReplayModalVerse = asFunction(source.showReplayModal);
-        if (showReplayModalVerse) {
-          showReplayModalVerse("导出 v9 回放", verseReplay, "再次复制", function (text) {
-            return applyReplayClipboardCopy({
-              text: text,
-              navigatorLike: source.navigatorLike,
-              documentLike: source.documentLike,
-              alertLike: source.alertLike,
-              consoleLike: source.consoleLike
-            });
-          });
-        }
-        applyReplayClipboardCopy({
-          text: verseReplay,
-          navigatorLike: source.navigatorLike,
-          documentLike: source.documentLike,
-          alertLike: source.alertLike,
-          consoleLike: source.consoleLike
-        });
-        return {
-          exported: true,
-          format: "v9-verse",
-          replay: verseReplay
-        };
-      } catch (v9VerseExportError) {
-        logError("v9 verse text export failed", v9VerseExportError);
-      }
-    }
-
-    var serializeV9RplBase64 = asFunction(manager.serializeV9RplBase64);
-    if (serializeV9RplBase64) {
-      try {
-        var v9ReplayBase64 = String(serializeV9RplBase64.call(manager));
-        var showReplayModalV9 = asFunction(source.showReplayModal);
-        if (showReplayModalV9) {
-          showReplayModalV9("导出 v9 回放（Base64）", v9ReplayBase64, "再次复制", function (text) {
-            return applyReplayClipboardCopy({
-              text: text,
-              navigatorLike: source.navigatorLike,
-              documentLike: source.documentLike,
-              alertLike: source.alertLike,
-              consoleLike: source.consoleLike
-            });
-          });
-        }
-        applyReplayClipboardCopy({
-          text: v9ReplayBase64,
-          navigatorLike: source.navigatorLike,
-          documentLike: source.documentLike,
-          alertLike: source.alertLike,
-          consoleLike: source.consoleLike
-        });
-        return {
-          exported: true,
-          format: "v9-base64",
-          replay: v9ReplayBase64
-        };
-      } catch (v9ReplayBase64Error) {
-        logError("v9 base64 replay export failed", v9ReplayBase64Error);
-      }
-    }
-
     var serialize = asFunction(manager.serialize);
     if (!serialize) {
       return {
@@ -298,9 +280,10 @@
     }
 
     var replay = String(serialize.call(manager));
+    var isV1 = replay.indexOf("REPLAY_v1RPL_B64_") === 0;
     var showReplayModal = asFunction(source.showReplayModal);
     if (showReplayModal) {
-      showReplayModal("导出回放", replay, "再次复制", function (text) {
+      showReplayModal(isV1 ? "导出回放 (v1)" : "导出回放", replay, "再次复制", function (text) {
         return applyReplayClipboardCopy({
           text: text,
           navigatorLike: source.navigatorLike,
@@ -308,6 +291,12 @@
           alertLike: source.alertLike,
           consoleLike: source.consoleLike
         });
+      });
+      configureReplayDownloadButton({
+        replay: replay,
+        documentLike: source.documentLike,
+        windowLike: resolveWindowLike(source),
+        alertLike: source.alertLike
       });
     }
 
@@ -321,7 +310,7 @@
 
     return {
       exported: true,
-      format: "text",
+      format: isV1 ? "v1-rpl-base64" : "text",
       replay: replay
     };
   }

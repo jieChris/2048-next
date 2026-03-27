@@ -353,6 +353,7 @@ export function buildLiteSavedGameStatePayload(
         ? Number(payload.ips_input_count)
         : 0,
     timer_status: payload.timer_status === 1 ? 1 : 0,
+    timer_frozen: !!payload.timer_frozen,
     duration_ms: Number.isFinite(Number(payload.duration_ms))
       ? Math.floor(Number(payload.duration_ms))
       : Number.isFinite(fallbackDurationMs)

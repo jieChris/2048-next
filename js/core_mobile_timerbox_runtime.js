@@ -1,11 +1,11 @@
-(function (global) {
+﻿(function (global) {
   "use strict";
 
   if (!global) return;
 
   var DEFAULT_STORAGE_KEY = "ui_timerbox_collapsed_mobile_v1";
-  var LABEL_EXPAND = "展开计时器";
-  var LABEL_COLLAPSE = "收起计时器";
+  var LABEL_EXPAND = "\u5c55\u5f00\u8ba1\u65f6\u5668";
+  var LABEL_COLLAPSE = "\u6536\u8d77\u8ba1\u65f6\u5668";
   var ICON_COLLAPSED =
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
   var ICON_EXPANDED =

@@ -381,6 +381,38 @@ describe("core game manager base helpers runtime", () => {
     expect(refreshCalls).toBe(1);
   });
 
+  it("maps fibonacci merged milestone values to timer slots before secondary stamping", () => {
+    const runtime = loadBaseHelpersRuntime([32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]);
+    const stamped = { textContent: "" };
+    const descriptors = [{ parent: 8192, child: 2048, timerEl: stamped }];
+    const manager = {
+      elements: {
+        timer8192: { textContent: "1:23.456" }
+      },
+      timerMilestoneSlotByValue: {
+        "13": "32",
+        "21": "64",
+        "34": "128",
+        "55": "256",
+        "89": "512",
+        "144": "1024",
+        "233": "2048",
+        "377": "4096",
+        "610": "8192"
+      }
+    };
+    let refreshCalls = 0;
+    runtime.resolveSecondaryTimerDescriptors = () => descriptors as Array<Record<string, unknown>>;
+    runtime.refreshSecondaryTimerRowsVisibility = () => {
+      refreshCalls += 1;
+    };
+
+    runtime.stampSecondaryTimersForMergedValue(manager, 233, "0:12.345");
+
+    expect(stamped.textContent).toBe("0:12.345");
+    expect(refreshCalls).toBe(1);
+  });
+
   it("normalizes empty and undefined stamp text to empty string", () => {
     const runtime = loadBaseHelpersRuntime([8192]);
     const descriptor = {

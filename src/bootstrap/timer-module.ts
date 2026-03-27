@@ -1,4 +1,4 @@
-export interface ResolveTimerModuleSettingsStateOptions {
+﻿export interface ResolveTimerModuleSettingsStateOptions {
   viewMode?: string | null | undefined;
 }
 
@@ -95,10 +95,12 @@ export function resolveTimerModuleSettingsState(
   return {
     toggleDisabled: false,
     toggleChecked: isTimerMode,
-    toggleLabelText: isTimerMode ? "当前右侧显示计时器。" : "当前右侧显示排行榜。",
+    toggleLabelText: isTimerMode
+      ? "\u5f53\u524d\u53f3\u4fa7\u663e\u793a\u8ba1\u65f6\u5668\u3002"
+      : "\u5f53\u524d\u53f3\u4fa7\u663e\u793a\u6392\u884c\u699c\u3002",
     noteText: isTimerMode
-      ? "关闭后切换为排行榜界面，不影响棋盘与回放。"
-      : "开启后切回计时器界面。",
+      ? "\u5173\u95ed\u540e\u5207\u6362\u4e3a\u6392\u884c\u699c\u754c\u9762\uff0c\u4e0d\u5f71\u54cd\u68cb\u76d8\u4e0e\u56de\u653e\u3002"
+      : "\u5f00\u542f\u540e\u5207\u56de\u8ba1\u65f6\u5668\u754c\u9762\u3002",
     rowVisible: true
   };
 }

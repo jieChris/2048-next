@@ -1,109 +1,114 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048 高级回放</title>
-
-<link href="style/main.css?v=20260316-04" rel="stylesheet" type="text/css">
+  <title>&#22238;&#25918;</title>
+  <link href="style/main.css?v=20260328-02" rel="stylesheet" type="text/css">
+  <link href="style/replay_page_rebuild.css?v=20260328-02" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-2">
   <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-2">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=42">
   <meta name="apple-mobile-web-app-capable" content="yes">
-
   <meta name="HandheldFriendly" content="True">
   <meta name="MobileOptimized" content="320">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0, maximum-scale=1, user-scalable=no, minimal-ui">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.google-analytics.com; style-src 'self' 'unsafe-inline';">
 </head>
 <body data-page="replay">
-  <div class="container">
-    <div class="heading" style="float: none; margin: 0 auto;">
-      <h1 class="title"><a href="2048.html" style="text-decoration: none; color: inherit; cursor: pointer;"><img class="site-logo" style="height:56px;width:auto;max-width:220px;display:block" src="meta/logo.svg?v=20260305" alt="2048 logo"></a> 高级回放</h1>
-      <div class="scores-container">
-        <div class="score-container">0</div>
-        <div class="best-container">0</div>
+  <div class="container replay-v1-page">
+    <div class="replay-top-stats">
+      <div class="replay-metric-card">
+        <span id="replay-score-label" class="replay-metric-label">&#20998;&#25968;&#65306;</span>
+        <span id="replay-score-value" class="replay-metric-value">0</span>
+      </div>
+      <div class="replay-metric-card">
+        <span id="replay-step-time-label" class="replay-metric-label">&#21333;&#27493;&#29992;&#26102;&#65306;</span>
+        <span id="replay-step-timer" class="replay-metric-value" aria-live="polite">0.0000 s</span>
       </div>
     </div>
 
-    <div class="game-container game-container-replay" style="float: none; margin: 20px auto 0;">
-      <div class="game-message">
-        <p></p>
-      </div>
-
-      <div class="grid-container">
-        <div class="grid-row">
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
+    <div class="replay-board-shell">
+      <div class="game-container game-container-replay">
+        <div class="game-message">
+          <p></p>
         </div>
-        <div class="grid-row">
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
+        <div class="grid-container">
+          <div class="grid-row">
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+          </div>
+          <div class="grid-row">
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+          </div>
+          <div class="grid-row">
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+          </div>
+          <div class="grid-row">
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+          </div>
         </div>
-        <div class="grid-row">
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-        </div>
-        <div class="grid-row">
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-        </div>
-      </div>
-
-      <div class="tile-container">
-
+        <div class="tile-container"></div>
       </div>
     </div>
-    
-    <!-- Replay Controls -->
-    <div class="replay-controls-panel" style="margin-top: 30px; background: #faf8ef; padding: 10px; border-radius: 6px;">
-        <div class="replay-progress-container" style="margin-bottom: 15px;">
-            <input type="range" id="replay-progress" min="0" max="100" value="0" style="width: 100%; cursor: pointer;">
-        </div>
-        <div class="replay-buttons-row" style="display: flex; justify-content: center; gap: 10px; align-items: center;">
-            <button class="replay-control-btn" id="btn-rewind-10">后退10步</button>
-            <button class="replay-control-btn" id="btn-rewind-1">后退1步</button>
-            <button class="replay-control-btn" id="replay-pause-btn">暂停</button>
-            <button class="replay-control-btn" id="btn-forward-1">前进1步</button>
-            <button class="replay-control-btn" id="btn-forward-10">前进10步</button>
-            
-            <select id="replay-speed" style="height: 30px; border-radius: 3px; border: 1px solid #d8d4d0; background: #faf8ef; color: #776e65; font-weight: bold; cursor: pointer; margin-left: 10px;">
-                <option value="0.25">0.25x</option>
-                <option value="0.5">0.5x</option>
-                <option value="1" selected>1x</option>
-                <option value="2">2x</option>
-                <option value="4">4x</option>
-                <option value="8">8x</option>
-                <option value="16">16x</option>
-                <option value="32">32x</option>
-            </select>
-        </div>
-        <div style="margin-top: 15px; text-align: center;">
-            <a id="import-replay-file-btn" class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: #f9f6f2; padding: 10px 20px; border-radius: 3px; text-decoration: none;">导入回放文件</a>
-            <a id="import-replay-text-btn" class="import-replay-button" style="display: inline-block; cursor: pointer; background: #8f7a66; color: #f9f6f2; padding: 10px 20px; border-radius: 3px; text-decoration: none; margin-left: 8px;">粘贴回放代码</a>
-        </div>
-        <div id="replay-diagnostics-panel" class="replay-diagnostics-panel" style="display: none;">
-            <div id="replay-diagnostics-summary" class="replay-diagnostics-summary"></div>
-            <div id="replay-diagnostics-samples" class="replay-diagnostics-samples"></div>
-        </div>
+
+    <div class="replay-progress-wrap">
+      <input type="range" id="replay-progress" min="0" max="100" value="0">
     </div>
 
+    <div class="replay-step-buttons">
+      <button class="replay-control-btn" id="btn-rewind-10">&#36864;10</button>
+      <button class="replay-control-btn" id="btn-rewind-1">&#36864;1</button>
+      <button class="replay-control-btn" id="replay-pause-btn">&#26242;&#20572;</button>
+      <button class="replay-control-btn" id="btn-forward-1">&#36827;1</button>
+      <button class="replay-control-btn" id="btn-forward-10">&#36827;10</button>
+    </div>
+
+    <div class="replay-action-buttons">
+      <button class="replay-control-btn replay-action-btn" id="replay-toggle-diagnostics-btn">&#32479;&#35745;&#20449;&#24687;</button>
+      <button class="replay-control-btn replay-action-btn" id="replay-open-speed-btn">&#35774;&#32622;&#36895;&#24230;</button>
+      <a id="import-replay-file-btn" class="import-replay-button replay-action-btn">&#23548;&#20837;&#22238;&#25918;</a>
+      <a id="import-replay-text-btn" class="import-replay-button replay-action-btn">&#31896;&#36148;&#22238;&#25918;</a>
+    </div>
+
+    <div id="replay-diagnostics-panel" class="replay-diagnostics-panel" style="display: none;">
+      <div id="replay-diagnostics-summary" class="replay-diagnostics-summary"></div>
+      <div id="replay-diagnostics-samples" class="replay-diagnostics-samples"></div>
+    </div>
+
+    <div class="replay-hidden-scoreboard" aria-hidden="true">
+      <div class="score-container">0</div>
+      <div class="best-container">0</div>
+    </div>
   </div>
 
   <div id="replay-modal" class="replay-modal-overlay" style="display: none;">
     <div class="replay-modal-content">
-      <h3 id="replay-modal-title">回放</h3>
+      <h3 id="replay-modal-title">&#22238;&#25918;</h3>
+      <div id="replay-singleline-wrap" class="replay-singleline-wrap" style="display: none;">
+        <input id="replay-singleline-input" class="replay-singleline-input" type="text" inputmode="numeric">
+        <span id="replay-singleline-unit" class="replay-singleline-unit">ms</span>
+      </div>
+      <div id="replay-speed-mode-wrap" class="replay-speed-mode-wrap" style="display: none;">
+        <label class="replay-speed-mode-label">
+          <input id="replay-speed-mode-original" type="checkbox">
+          <span id="replay-speed-mode-text">&#25353;&#21407;&#36895;&#22238;&#25918;</span>
+        </label>
+      </div>
       <textarea id="replay-textarea" class="replay-textarea"></textarea>
       <div class="replay-modal-actions">
-        <button id="replay-action-btn" class="replay-button">执行</button>
-        <button class="replay-button">关闭</button>
+        <button id="replay-action-btn" class="replay-button">&#25191;&#34892;</button>
+        <button class="replay-button">&#20851;&#38381;</button>
       </div>
     </div>
   </div>
@@ -111,13 +116,3 @@
   <script type="module" src="./src/entries/replay.ts"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-

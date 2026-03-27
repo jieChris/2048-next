@@ -170,8 +170,61 @@ function isSecondaryTimerPowerOfTwo(rawValue) {
   return (value & (value - 1)) === 0;
 }
 
+function getSecondaryTimerSlotIds() {
+  return Array.isArray(GameManager.TIMER_SLOT_IDS) ? GameManager.TIMER_SLOT_IDS : [];
+}
+
+function resolveSecondaryTimerSlotIndexByValue(slotValue) {
+  var slots = getSecondaryTimerSlotIds();
+  for (var i = 0; i < slots.length; i++) {
+    if (Number(slots[i]) === Number(slotValue)) return i;
+  }
+  return -1;
+}
+
+function resolveSecondaryTimerDisplayValueBySlot(manager, slotValue) {
+  var slot = normalizeSecondaryTimerValue(slotValue);
+  if (slot === null) return null;
+  var milestones = manager && Array.isArray(manager.timerMilestones) ? manager.timerMilestones : null;
+  var slotIndex = resolveSecondaryTimerSlotIndexByValue(slot);
+  if (slotIndex >= 0 && milestones && slotIndex < milestones.length) {
+    var mapped = normalizeSecondaryTimerValue(milestones[slotIndex]);
+    if (mapped !== null) return mapped;
+  }
+  return slot;
+}
+
+function resolveSecondaryTimerSlotByValue(manager, rawValue) {
+  var value = normalizeSecondaryTimerValue(rawValue);
+  if (value === null) return null;
+
+  var slotByMilestone = manager && isCoreHelperRecordObject(manager.timerMilestoneSlotByValue)
+    ? manager.timerMilestoneSlotByValue
+    : null;
+  if (slotByMilestone && Object.prototype.hasOwnProperty.call(slotByMilestone, String(value))) {
+    var mappedSlot = normalizeSecondaryTimerValue(slotByMilestone[String(value)]);
+    if (mappedSlot !== null) return mappedSlot;
+  }
+
+  var slotIndex = resolveSecondaryTimerSlotIndexByValue(value);
+  if (slotIndex >= 0) return value;
+
+  var milestones = manager && Array.isArray(manager.timerMilestones) ? manager.timerMilestones : null;
+  if (milestones) {
+    for (var i = 0; i < milestones.length; i++) {
+      if (Number(milestones[i]) !== value) continue;
+      var slots = getSecondaryTimerSlotIds();
+      if (i >= slots.length) break;
+      var slotFromIndex = normalizeSecondaryTimerValue(slots[i]);
+      if (slotFromIndex !== null) return slotFromIndex;
+    }
+  }
+
+  return value;
+}
+
 function getSecondaryTimerParentValues() {
-  var slots = Array.isArray(GameManager.TIMER_SLOT_IDS) ? GameManager.TIMER_SLOT_IDS : [];
+  var slots = getSecondaryTimerSlotIds();
   var parents = [];
   for (var i = 0; i < slots.length; i++) {
     var value = normalizeSecondaryTimerValue(slots[i]);
@@ -447,7 +500,7 @@ function createSecondaryTimerRowElement(manager, parentValue, childValue) {
   legend.className = "timertile timer-secondary-legend timer-legend-" + String(child);
   legend.style.color = "#f9f6f2";
   legend.style.fontSize = resolveSecondaryTimerLegendFontSize(child);
-  legend.textContent = String(child);
+  legend.textContent = String(resolveSecondaryTimerDisplayValueBySlot(manager, child) || child);
 
   var timer = documentLike.createElement("div");
   timer.className = "timertile";
@@ -1142,7 +1195,7 @@ function stampSecondaryTimerDescriptorsForValue(manager, descriptors, merged, ti
 
 function stampSecondaryTimersForMergedValue(manager, mergedValue, timeStr) {
   if (!manager) return;
-  var merged = normalizeSecondaryTimerValue(mergedValue);
+  var merged = resolveSecondaryTimerSlotByValue(manager, mergedValue);
   if (merged === null || merged < 2048) return;
   if (!isSecondaryTimerPowerOfTwo(merged)) return;
   var descriptors = resolveSecondaryTimerDescriptors(manager);
@@ -1173,7 +1226,7 @@ function applySecondaryTimerInvalidationText(descriptor, text) {
 
 function invalidateSecondaryTimersByLimit(manager, limitValue, placeholderText) {
   if (!manager) return false;
-  var limit = normalizeSecondaryTimerValue(limitValue);
+  var limit = resolveSecondaryTimerSlotByValue(manager, limitValue);
   if (limit === null || limit < 2048) return false;
   var text = resolveSecondaryTimerInvalidationPlaceholderText(placeholderText);
   var descriptors = resolveSecondaryTimerDescriptors(manager);

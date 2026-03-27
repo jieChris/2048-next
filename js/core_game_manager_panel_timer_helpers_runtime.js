@@ -206,6 +206,7 @@ function bindTimerVisibilityChangeListener(manager) {
   if (typeof document === "undefined" || !document || typeof document.addEventListener !== "function") return;
   manager._timerVisibilityBound = true;
   manager._timerVisibilityHandler = function () {
+    if (manager && manager.timerFrozen) return;
     restartTimerIntervalWithCurrentSettings(manager);
   };
   document.addEventListener("visibilitychange", manager._timerVisibilityHandler);
@@ -241,6 +242,7 @@ function startTimer(manager) {
   if (!manager || manager.timerStatus !== 0) return;
   manager.timerStatus = 1;
   manager.hasGameStarted = true;
+  manager.timerFrozen = false;
   // Convert accumulated time back to a start timestamp relative to now
   manager.startTime = new Date(Date.now() - (manager.accumulatedTime || 0));
   manager.notifyUndoSettingsStateChanged();
@@ -259,6 +261,7 @@ function stopTimer(manager) {
   } else {
     manager.accumulatedTime = Date.now() - manager.startTime.getTime();
   }
+  manager.timerFrozen = !!(manager.over || (manager.won && !manager.keepPlaying));
   clearInterval(manager.timerID);
   manager.timerID = null;
   manager.timerStatus = 0;

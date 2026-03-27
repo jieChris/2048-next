@@ -3,6 +3,26 @@ import { describe, expect, it } from "vitest";
 import { parseReplayImportEnvelope, detectReplayFormat } from "../../src/core/replay-import";
 
 describe("core replay import: parseReplayImportEnvelope", () => {
+  it("parses v1 base64 envelope", () => {
+    const parsed = parseReplayImportEnvelope({
+      trimmedReplayString: "REPLAY_v1RPL_B64_AQID",
+      fallbackModeKey: "practice"
+    });
+    expect(parsed).not.toBeNull();
+    expect(parsed?.kind).toBe("v1rpl-b64");
+    if (!parsed || parsed.kind !== "v1rpl-b64") return;
+    expect(parsed.encodedBase64).toBe("AQID");
+  });
+
+  it("throws for empty v1 base64 payload", () => {
+    expect(() =>
+      parseReplayImportEnvelope({
+        trimmedReplayString: "REPLAY_v1RPL_B64_",
+        fallbackModeKey: "practice"
+      })
+    ).toThrow("Invalid replay v1 payload");
+  });
+
   it("parses v4C envelope with mode mapping", () => {
     const parsed = parseReplayImportEnvelope({
       trimmedReplayString: "REPLAY_v4C_C" + "!".repeat(16) + "abc",
@@ -80,6 +100,9 @@ describe("core replay import: parseReplayImportEnvelope", () => {
 });
 
 describe("detectReplayFormat", () => {
+  it("detects v1 rpl base64 format", () => {
+    expect(detectReplayFormat("REPLAY_v1RPL_B64_abc")).toBe("v1rpl-b64");
+  });
   it("detects v4c format", () => {
     expect(detectReplayFormat("REPLAY_v4C_S...")).toBe("v4c");
   });

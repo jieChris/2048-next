@@ -47,7 +47,7 @@
     "practice_board.html": { zh: "2048练习板", en: "2048 Practice Board" },
     "pku2048.html": { zh: "PKU2048", en: "PKU2048" },
     "play.html": { zh: "2048 多玩法", en: "2048 Multi Modes" },
-    "replay.html": { zh: "2048 高级回放", en: "2048 Advanced Replay" },
+    "replay.html": { zh: "回放", en: "Replay" },
     "history.html": { zh: "2048 本地历史记录", en: "2048 Local History" },
     "modes.html": { zh: "2048 模式选择", en: "2048 Modes" },
     "palette.html": { zh: "2048 色板中心", en: "2048 Palette Center" }
@@ -120,8 +120,8 @@
     { s: "#mode-intro-title", zh: "模式简介", en: "Mode Intro" },
     { s: ".mode-intro-leaderboard-title", zh: "模式排名榜单", en: "Mode Rankings" },
     { s: "#mode-intro-close-btn", zh: "关闭", en: "Close" },
-    { s: "#import-replay-file-btn", zh: "导入回放文件", en: "Import Replay File" },
-    { s: "#import-replay-text-btn", zh: "粘贴回放代码", en: "Paste Replay Code" }
+    { s: "#import-replay-file-btn", zh: "导入回放", en: "Import Replay" },
+    { s: "#import-replay-text-btn", zh: "粘贴回放", en: "Paste Replay" }
   ];
 
   var FIXED_SELECTOR_ATTR = [

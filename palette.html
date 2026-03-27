@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>2048 色板中心</title>
-  <link href="style/main.css?v=20260316-04" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260324-01" rel="stylesheet" type="text/css">
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-2">
   <link rel="shortcut icon" href="meta/favicon.svg?v=20260305-2">
@@ -16,7 +16,7 @@
       <div class="palette-title-wrap">
         <p class="palette-kicker">2048 色板中心</p>
         <h1 class="palette-title">色板中心</h1>
-        <p class="palette-subtitle">按棋盘类型与配色维度统一管理颜色，支持导入导出与实时预览。</p>
+        <p class="palette-subtitle">按棋盘类型与配色维度统一管理颜色，支持当前棋盘实时预览。</p>
       </div>
       <nav class="palette-nav">
         <a class="replay-button palette-nav-btn" href="2048.html">回首页</a>
@@ -35,7 +35,7 @@
           <div class="custom-select-wrapper">
             <div class="custom-select">
               <div class="custom-select-trigger" id="theme-select-trigger">
-                <span>选择主题</span>
+                <span>经典</span>
                 <div class="custom-arrow"></div>
               </div>
               <div class="custom-select-options" id="theme-select-options"></div>
@@ -53,7 +53,7 @@
         </div>
 
         <div class="theme-preview-col">
-          <label>配色预览</label>
+          <label>颜色预览</label>
           <div id="theme-preview-grid" class="theme-preview-grid"></div>
         </div>
       </div>
@@ -70,13 +70,13 @@
 
       <section class="palette-editor card-surface">
         <div class="panel-head">
-          <h2 id="palette-current-name">当前色板</h2>
+          <h2 id="palette-current-name">跟随主题</h2>
           <span id="palette-current-tag" class="panel-pill">--</span>
         </div>
 
         <div class="palette-toolbar">
-          <input id="palette-name-input" class="palette-name-input" type="text" maxlength="40" placeholder="输入当前主题名称（可编辑）">
-          <button id="palette-create-btn" class="replay-button" type="button">新建</button>
+          <input id="palette-name-input" class="palette-name-input" type="text" maxlength="40" placeholder="输入当前主题体名称（可编辑）">
+          <button id="palette-create-btn" class="replay-button" type="button">新建副本</button>
           <button id="palette-rename-btn" class="replay-button" type="button">重命名</button>
           <button id="palette-delete-btn" class="replay-button" type="button">删除</button>
           <button id="palette-export-btn" class="replay-button" type="button">导出</button>
@@ -162,3 +162,4 @@
   <script type="module" src="./src/entries/palette.ts"></script>
 </body>
 </html>
+

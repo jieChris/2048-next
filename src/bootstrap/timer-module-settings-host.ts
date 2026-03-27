@@ -1,4 +1,4 @@
-function isRecord(value: unknown): value is Record<string, unknown> {
+﻿function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object";
 }
 
@@ -292,7 +292,7 @@ export function applyTimerModuleSettingsUi(input: {
     );
     if (titleElement) {
       toRecord(titleElement).textContent = resolveText(
-        settingsState.toggleTitleText || (readUiLang(windowLike) === "en" ? "Timer Mode" : "计时器模式")
+        settingsState.toggleTitleText || (readUiLang(windowLike) === "en" ? "Timer Mode" : "\u8ba1\u65f6\u5668\u6a21\u5f0f")
       );
     }
     const switchLabel = querySelector(
@@ -307,7 +307,7 @@ export function applyTimerModuleSettingsUi(input: {
         (setAttribute as unknown as Function).call(
           switchLabel,
           "aria-label",
-          resolveText(settingsState.toggleTitleText || (readUiLang(windowLike) === "en" ? "Timer Mode" : "计时器模式"))
+          resolveText(settingsState.toggleTitleText || (readUiLang(windowLike) === "en" ? "Timer Mode" : "\u8ba1\u65f6\u5668\u6a21\u5f0f"))
         );
       }
     }

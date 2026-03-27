@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 function createElement(options?: {
   display?: string;
@@ -70,8 +70,10 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
   vm.runInNewContext(script, context);
   return context as {
     applySavedTimerFixedRowsState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
+    applySavedTimerPostRestoreState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
     collectSavedTimerFixedRowsState: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStateDiagnosticsPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
+    buildSavedGameStateTimerCorePayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStatePayload: (manager: Record<string, unknown>, now: number) => Record<string, unknown> | null;
     buildLiteSavedGameStatePayloadFallback: (
       manager: Record<string, unknown>,
@@ -354,5 +356,70 @@ describe("core game manager saved state runtime", () => {
         payload: { validPlacementDescriptors: 2 }
       }
     ]);
+  });
+
+  it("saves terminal timer state as frozen and non-resumable", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const payload = runtime.buildSavedGameStateTimerCorePayload({
+      timerStatus: 1,
+      over: true,
+      won: false,
+      keepPlaying: false,
+      hasGameStarted: true,
+      getDurationMs() {
+        return 1234;
+      }
+    });
+
+    expect(payload).toEqual({
+      timer_status: 0,
+      duration_ms: 1234,
+      has_game_started: true,
+      timer_frozen: true
+    });
+  });
+
+  it("does not auto-resume timer on restore when saved state is frozen", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const startTimer = vi.fn();
+    const manager = {
+      accumulatedTime: 4321,
+      over: false,
+      won: false,
+      timerStatus: 0,
+      timerFrozen: false,
+      timerModuleView: "timer",
+      elements: {
+        timer: {
+          textContent: ""
+        }
+      },
+      resolveProvidedCappedModeState() {
+        return {
+          isCappedMode: false,
+          cappedTargetValue: null,
+          isProgressiveCapped64Mode: false
+        };
+      },
+      pretty(value: number) {
+        return String(value);
+      },
+      callWindowMethod() {},
+      startTimer
+    };
+
+    runtime.applySavedTimerPostRestoreState(
+      manager,
+      {
+        timer_module_view: "timer",
+        timer_status: 1,
+        timer_frozen: true
+      },
+      { isCappedMode: false }
+    );
+
+    expect(manager.timerFrozen).toBe(true);
+    expect(startTimer).not.toHaveBeenCalled();
+    expect((manager.elements.timer as { textContent: string }).textContent).toBe("4321");
   });
 });

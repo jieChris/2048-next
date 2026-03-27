@@ -203,7 +203,7 @@ h1.title a {
 }
 
 #timer:after {
-  content: "时间";
+  content: "\65f6\95f4";
   position: absolute;
   width: 100%;
   top: 10px;
@@ -552,7 +552,7 @@ body.home-guide-active #timer-scroll-controls {
   line-height: 13px;
   text-align: center;
   color: #eee4da;
-  content: "时间";
+  content: "\65f6\95f4";
 }
 
 html[data-ui-lang="en"] .score-container:after {
@@ -686,6 +686,58 @@ hr {
   margin-left: 114px;
 }
 
+body[data-page="replay"] .replay-heading {
+  float: none;
+  margin: 0 auto;
+  width: min(100%, 740px);
+}
+
+body[data-page="replay"] .replay-hidden-scoreboard {
+  display: none;
+}
+
+body[data-page="replay"] .replay-stats-strip {
+  width: min(100%, 740px);
+  margin: 16px auto 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+body[data-page="replay"] .replay-stat-card {
+  background: #b7aba0;
+  color: #f8f4ed;
+  border-radius: 2px;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+body[data-page="replay"] .replay-stat-label,
+body[data-page="replay"] .replay-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+
+body[data-page="replay"] .replay-stat-card-step .replay-stat-value {
+  font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
+}
+
+body[data-page="replay"] .game-container.game-container-replay {
+  float: none;
+  margin: 12px auto 0;
+  box-shadow: 0 0 0 6px rgba(245, 214, 193, 0.28);
+}
+
+html[data-ui-lang="en"] body[data-page="replay"] .replay-stat-label,
+html[data-ui-lang="en"] body[data-page="replay"] .replay-stat-value {
+  font-size: 16px;
+}
 .game-container .game-message {
   display: none;
   position: absolute;
@@ -1625,13 +1677,27 @@ body.board-low-perf .tile .tile-inner::after {
 
 /* Replay Controls Panel */
 .replay-controls-panel {
-  border: 1px solid #d8d4d0;
+  width: min(100%, 540px);
+  margin: 16px auto 0;
+  padding: 8px 8px 0;
+  box-sizing: border-box;
+}
+
+.replay-progress-container {
+  margin-bottom: 12px;
+}
+
+.replay-progress-container #replay-progress {
+  width: 100%;
+  cursor: pointer;
 }
 
 .replay-diagnostics-panel {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed #d8d4d0;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px dashed #d8d4d0;
+  border-radius: 8px;
+  background: rgba(255, 253, 249, 0.95);
   text-align: left;
 }
 
@@ -1651,19 +1717,96 @@ body.board-low-perf .tile .tile-inner::after {
 }
 
 .replay-control-btn {
-  background: #8f7a66;
+  background: #b8aca1;
   border-radius: 3px;
-  padding: 0 10px;
+  padding: 0 12px;
   color: #f9f6f2;
-  height: 30px;
-  line-height: 30px;
+  min-height: 36px;
+  line-height: 36px;
   cursor: pointer;
   border: none;
-  font-weight: bold;
+  font-weight: 700;
+  font-size: 26px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .replay-control-btn:hover {
-  background: #7f6a56;
+  background: #a69689;
+}
+
+.replay-buttons-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  align-items: center;
+}
+
+.replay-actions-row {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.replay-meta-btn,
+.import-replay-button {
+  min-height: 40px;
+  line-height: 40px;
+  font-size: 18px;
+}
+
+.import-replay-button {
+  background: #b8aca1;
+  color: #f9f6f2;
+  border-radius: 3px;
+  padding: 0 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.import-replay-button:hover {
+  background: #a69689;
+}
+
+.replay-meta-btn.is-active {
+  background: #8f7a66;
+}
+
+.replay-speed-settings {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.replay-speed-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: #8a8178;
+}
+
+#replay-playback-mode,
+#replay-speed {
+  min-width: 112px;
+  height: 36px;
+  border-radius: 3px;
+  border: 1px solid #d8d4d0;
+  background: #faf8ef;
+  color: #776e65;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0 10px;
+}
+
+#replay-speed.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 input[type=range] {
@@ -3981,13 +4124,6 @@ body[data-page="history"] .portal-inline-select:focus-visible {
     margin-bottom: 8px;
   }
 
-  body[data-page="replay"] .scores-container {
-    float: none;
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-  }
-
   body[data-page="replay"] .game-container.game-container-replay {
     margin: 12px auto 0 !important;
   }
@@ -3997,22 +4133,44 @@ body[data-page="history"] .portal-inline-select:focus-visible {
     width: 100%;
   }
 
+  body[data-page="replay"] .replay-stats-strip {
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  body[data-page="replay"] .replay-stat-card {
+    min-height: 62px;
+    padding: 0 12px;
+  }
+
+  body[data-page="replay"] .replay-stat-label,
+  body[data-page="replay"] .replay-stat-value {
+    font-size: 16px;
+  }
+
   body[data-page="replay"] .replay-buttons-row {
-    display: flex !important;
-    flex-wrap: wrap;
-    justify-content: center !important;
-    gap: 8px !important;
+    gap: 6px !important;
   }
 
   body[data-page="replay"] .replay-control-btn {
     min-height: 36px;
     line-height: 36px;
-    padding: 0 12px;
+    padding: 0 8px;
+    font-size: 18px;
   }
 
+  body[data-page="replay"] #replay-playback-mode,
   body[data-page="replay"] #replay-speed {
     min-height: 36px;
     margin-left: 0 !important;
+  }
+
+  body[data-page="replay"] .replay-actions-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body[data-page="replay"] .replay-speed-settings {
+    grid-template-columns: 1fr;
   }
 
   body[data-page="replay"] .import-replay-button {
@@ -4465,6 +4623,7 @@ body[data-page="practice"] #test-grid-container.practice-grid-locked .grid-cell 
   }
 
   body[data-page="replay"] .replay-control-btn,
+  body[data-page="replay"] #replay-playback-mode,
   body[data-page="replay"] #replay-speed,
   body[data-page="replay"] .import-replay-button {
     width: 100%;

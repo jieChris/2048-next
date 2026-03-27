@@ -369,6 +369,7 @@ describe("core game settings storage", () => {
       seed: 17,
       ips_input_count: 4,
       timer_status: 1,
+      timer_frozen: true,
       duration_ms: 6543,
       has_game_started: true,
       initial_board_matrix: [
@@ -423,6 +424,7 @@ describe("core game settings storage", () => {
     expect(result?.mode_key).toBe("practice");
     expect(result?.board).toEqual(payload.board);
     expect(result?.score).toBe(128);
+    expect(result?.timer_frozen).toBe(true);
     expect(result?.move_history).toEqual([]);
     expect(result?.undo_stack).toEqual([]);
     expect(result?.replay_compact_log).toBe("");

@@ -39,4 +39,8 @@ describe("history-record-normalize", () => {
     });
     expect(label).toBe("Pow2 Mode");
   });
+
+  it("falls back to the provided label before the mode key", () => {
+    expect(resolveModeLabel("diag_4x2_pow2_no_undo", "Diagonal 4x2")).toBe("Diagonal 4x2");
+  });
 });

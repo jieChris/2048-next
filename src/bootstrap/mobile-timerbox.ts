@@ -1,4 +1,4 @@
-interface StorageLike {
+﻿interface StorageLike {
   getItem?(key: string): string | null;
   setItem?(key: string, value: string): void;
 }
@@ -55,8 +55,8 @@ export interface MobileTimerboxAppliedModel {
 }
 
 const DEFAULT_STORAGE_KEY = "ui_timerbox_collapsed_mobile_v1";
-const LABEL_EXPAND = "展开计时器";
-const LABEL_COLLAPSE = "收起计时器";
+const LABEL_EXPAND = "\u5c55\u5f00\u8ba1\u65f6\u5668";
+const LABEL_COLLAPSE = "\u6536\u8d77\u8ba1\u65f6\u5668";
 const ICON_COLLAPSED =
   '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
 const ICON_EXPANDED =
@@ -159,11 +159,13 @@ export function resolveMobileTimerboxAppliedModel(
       ? opts.fallbackIconSvg
       : getTimerboxToggleIconSvg(collapsed);
   const toggleDisplay =
-    displayModel && (displayModel.toggleDisplay === "inline-flex" || displayModel.toggleDisplay === "none")
+    displayModel &&
+    (displayModel.toggleDisplay === "inline-flex" || displayModel.toggleDisplay === "none")
       ? displayModel.toggleDisplay
       : fallbackToggleDisplay;
   const ariaExpanded =
-    displayModel && (displayModel.ariaExpanded === "true" || displayModel.ariaExpanded === "false")
+    displayModel &&
+    (displayModel.ariaExpanded === "true" || displayModel.ariaExpanded === "false")
       ? displayModel.ariaExpanded
       : fallbackAriaExpanded;
   const label =

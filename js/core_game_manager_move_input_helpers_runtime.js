@@ -602,6 +602,7 @@ function appendPostMoveRecordArtifacts(manager, direction) {
   var postMoveRecord = computePostMoveRecord(manager, direction);
   if (postMoveRecord.shouldRecordMoveHistory) manager.moveHistory.push(direction);
   if (Number.isInteger(postMoveRecord.compactMoveCode)) appendCompactMoveCode(manager, postMoveRecord.compactMoveCode);
+  if (postMoveRecord.shouldRecordMoveHistory) recordSessionReplayV1Move(manager, direction, manager.lastSpawn);
   if (postMoveRecord.shouldPushSessionAction && manager.sessionReplayV3) {
     manager.sessionReplayV3.actions.push(Array.isArray(postMoveRecord.sessionAction) ? postMoveRecord.sessionAction : ["m", direction]);
   }
