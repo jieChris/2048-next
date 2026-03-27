@@ -27,6 +27,8 @@
   function resolvePlayModeTitle(modeConfig) {
     var key = String((modeConfig && modeConfig.key) || "").trim();
     var lang = resolvePlayHeaderLang();
+    var configuredLabel = String((modeConfig && modeConfig.label) || "").trim();
+    if (configuredLabel) return localizeFallbackModeLabel(configuredLabel, lang);
     var modeCatalog = global && global.ModeCatalog && typeof global.ModeCatalog.getMode === "function"
       ? global.ModeCatalog
       : null;

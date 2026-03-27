@@ -12,15 +12,7 @@ function readLocalStorageJsonMap(manager, key) {
 }
 function writeLocalStorageJsonPayload(manager, key, payload) {
   if (!manager) return false;
-  var coreCallResult = callCoreStorageRuntime(
-    manager,
-    "writeStorageJsonPayloadFromContext",
-    {
-      key: key,
-      payload: payload
-    },
-    true
-  );
+  var coreCallResult = callCoreStorageRuntime(manager, "writeStorageJsonPayloadFromContext", { key: key, payload: payload }, true);
   return manager.resolveCoreBooleanCallOrFallback(coreCallResult, function () {
     var storage = manager.getWebStorageByName("localStorage");
     return writeStorageJsonPayloadFallback(storage, key, payload);

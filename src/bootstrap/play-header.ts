@@ -39,6 +39,8 @@ function localizeFallbackModeLabel(raw: string, lang: "zh" | "en"): string {
 function resolvePlayModeTitle(modeConfig: PlayHeaderModeConfigLike | null | undefined): string {
   const key = String(modeConfig?.key || "").trim();
   const lang = resolvePlayHeaderLang();
+  const configuredLabel = String(modeConfig?.label || "").trim();
+  if (configuredLabel) return localizeFallbackModeLabel(configuredLabel, lang);
   const globalLike = globalThis as {
     ModeCatalog?: { getMode?: (modeKey: string) => { label?: string } | null | undefined } | null | undefined;
   };
