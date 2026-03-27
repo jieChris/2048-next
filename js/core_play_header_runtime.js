@@ -2,11 +2,18 @@
   "use strict";
 
   if (!global) return;
+
   function resolvePlayHeaderLang() {
     var globalLike = typeof global !== "undefined" ? global : null;
     var lang = "";
     try {
-      lang = String(globalLike && globalLike.UII18N && typeof globalLike.UII18N.getLanguage === "function" ? globalLike.UII18N.getLanguage() : "").trim().toLowerCase();
+      lang = String(
+        globalLike && globalLike.UII18N && typeof globalLike.UII18N.getLanguage === "function"
+          ? globalLike.UII18N.getLanguage()
+          : ""
+      )
+        .trim()
+        .toLowerCase();
     } catch (_err) {}
     return lang.indexOf("en") === 0 ? "en" : "zh";
   }
@@ -29,14 +36,36 @@
     var lang = resolvePlayHeaderLang();
     var configuredLabel = String((modeConfig && modeConfig.label) || "").trim();
     if (configuredLabel) return localizeFallbackModeLabel(configuredLabel, lang);
-    var modeCatalog = global && global.ModeCatalog && typeof global.ModeCatalog.getMode === "function"
-      ? global.ModeCatalog
-      : null;
+    var modeCatalog =
+      global && global.ModeCatalog && typeof global.ModeCatalog.getMode === "function"
+        ? global.ModeCatalog
+        : null;
     if (modeCatalog && key) {
       var mode = modeCatalog.getMode(key);
       if (mode && typeof mode.label === "string" && mode.label) return mode.label;
     }
     return localizeFallbackModeLabel((modeConfig && modeConfig.label) || "", lang);
+  }
+
+  function formatPlayCustomFourRate(rate) {
+    return Number(rate).toFixed(2).replace(/\.?0+$/, "");
+  }
+
+  function resolvePlayCustomFourRate(modeConfig) {
+    var specialRules = modeConfig && modeConfig.special_rules;
+    if (!specialRules || typeof specialRules !== "object") return null;
+    var rawRate = specialRules.custom_spawn_four_rate;
+    var parsedRate = Number(rawRate);
+    if (!Number.isFinite(parsedRate)) return null;
+    if (parsedRate < 0 || parsedRate > 100) return null;
+    return Math.round(parsedRate * 100) / 100;
+  }
+
+  function resolvePlayCustomFourRateSuffix(modeConfig, lang) {
+    var customFourRate = resolvePlayCustomFourRate(modeConfig);
+    if (customFourRate === null) return "";
+    var rateText = formatPlayCustomFourRate(customFourRate);
+    return lang === "en" ? "(4-Rate " + rateText + "%)" : "（4率" + rateText + "%）";
   }
 
   function compactPlayModeLabel(modeConfig) {
@@ -54,6 +83,11 @@
     if (lang === "en") {
       output = output.replace(/Fibonacci/gi, "Fib");
     }
+    var hasCustomRateText = /(4率|4-Rate)\s*\d/i.test(output);
+    if (!hasCustomRateText) {
+      var suffix = resolvePlayCustomFourRateSuffix(modeConfig, lang);
+      if (suffix) output += suffix;
+    }
     return output;
   }
 
@@ -65,7 +99,9 @@
 
   function buildPlayModeIntroText(modeConfig) {
     var modeText = compactPlayModeLabel(modeConfig);
-    var boardText = String(String(modeConfig && modeConfig.board_width) + "x" + String(modeConfig && modeConfig.board_height));
+    var boardText = String(
+      String(modeConfig && modeConfig.board_width) + "x" + String(modeConfig && modeConfig.board_height)
+    );
     var rulesText = resolvePlayRulesText(modeConfig && modeConfig.ruleset);
     return modeText + "｜" + boardText + "｜" + rulesText;
   }
@@ -88,5 +124,3 @@
   global.CorePlayHeaderRuntime.buildPlayModeIntroText = buildPlayModeIntroText;
   global.CorePlayHeaderRuntime.resolvePlayHeaderState = resolvePlayHeaderState;
 })(typeof window !== "undefined" ? window : undefined);
-
-

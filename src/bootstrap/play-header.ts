@@ -4,6 +4,7 @@
   board_width?: number | null | undefined;
   board_height?: number | null | undefined;
   ruleset?: string | null | undefined;
+  special_rules?: Record<string, unknown> | null | undefined;
 }
 
 export interface PlayHeaderState {
@@ -51,6 +52,30 @@ function resolvePlayModeTitle(modeConfig: PlayHeaderModeConfigLike | null | unde
   return localizeFallbackModeLabel(String(modeConfig?.label || ""), lang);
 }
 
+function formatPlayCustomFourRate(rate: number): string {
+  return Number(rate).toFixed(2).replace(/\.?0+$/, "");
+}
+
+function resolvePlayCustomFourRate(modeConfig: PlayHeaderModeConfigLike | null | undefined): number | null {
+  const specialRules = modeConfig?.special_rules;
+  if (!specialRules || typeof specialRules !== "object") return null;
+  const rawRate = (specialRules as Record<string, unknown>).custom_spawn_four_rate;
+  const parsedRate = Number(rawRate);
+  if (!Number.isFinite(parsedRate)) return null;
+  if (parsedRate < 0 || parsedRate > 100) return null;
+  return Math.round(parsedRate * 100) / 100;
+}
+
+function resolvePlayCustomFourRateSuffix(
+  modeConfig: PlayHeaderModeConfigLike | null | undefined,
+  lang: "zh" | "en"
+): string {
+  const customFourRate = resolvePlayCustomFourRate(modeConfig);
+  if (customFourRate === null) return "";
+  const rateText = formatPlayCustomFourRate(customFourRate);
+  return lang === "en" ? "(4-Rate " + rateText + "%)" : "（4率" + rateText + "%）";
+}
+
 export function compactPlayModeLabel(modeConfig: PlayHeaderModeConfigLike | null | undefined): string {
   const lang = resolvePlayHeaderLang();
   const raw = resolvePlayModeTitle(modeConfig);
@@ -66,6 +91,11 @@ export function compactPlayModeLabel(modeConfig: PlayHeaderModeConfigLike | null
     .replace(/\s+/g, "");
   if (lang === "en") {
     output = output.replace(/Fibonacci/gi, "Fib");
+  }
+  const hasCustomRateText = /(4率|4-Rate)\s*\d/i.test(output);
+  if (!hasCustomRateText) {
+    const suffix = resolvePlayCustomFourRateSuffix(modeConfig, lang);
+    if (suffix) output += suffix;
   }
   return output;
 }
@@ -98,4 +128,3 @@ export function resolvePlayHeaderState(
     introDisplay: ""
   };
 }
-

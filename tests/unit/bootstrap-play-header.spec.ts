@@ -45,6 +45,18 @@ describe("bootstrap play header", () => {
     ).toBe("4x4自定义4率（4率25%）｜4x4｜2幂");
   });
 
+  it("appends four-rate suffix from special rules when label has no rate text", () => {
+    expect(
+      buildPlayModeIntroText({
+        label: "4x4 自定义4率（无撤回）",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        special_rules: { custom_spawn_four_rate: 25 }
+      })
+    ).toBe("4x4自定义4率（4率25%）｜4x4｜2幂");
+  });
+
   it("resolves header state for dom rendering", () => {
     expect(
       resolvePlayHeaderState({
