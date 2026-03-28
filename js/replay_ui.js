@@ -1558,14 +1558,73 @@
     scheduleReplayUiTick(true);
   }
 
+  function resolveReplayContainerForStepAnimation() {
+    return document.querySelector(".game-container.game-container-replay");
+  }
+
+  function executeReplayAnimatedForwardStep(manager) {
+    manager.step(1, { preferAnimatedStep: true });
+  }
+
+  function forceReplayActuateAfterStep(manager) {
+    if (!manager || typeof manager.actuate !== "function") return;
+    manager.actuate();
+  }
+
+  function executeReplayAnimatedBackwardStep(manager) {
+    var replayMoves = Array.isArray(manager.replayMoves) ? manager.replayMoves : [];
+    if (!replayMoves.length) return false;
+
+    var currentIndex = Math.floor(Number(manager.replayIndex) || 0);
+    if (currentIndex <= 0) return false;
+
+    var targetIndex = currentIndex - 1;
+    if (targetIndex <= 0) {
+      manager.seek(0);
+      return true;
+    }
+
+    var anchorIndex = Math.max(0, targetIndex - 1);
+    var replayContainer = resolveReplayContainerForStepAnimation();
+    if (replayContainer && replayContainer.classList) {
+      replayContainer.classList.add("replay-step-preseek-hidden");
+    }
+
+    manager.seek(anchorIndex);
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(function () {
+        if (replayContainer && replayContainer.classList) {
+          replayContainer.classList.remove("replay-step-preseek-hidden");
+        }
+        replayPauseBridgeSuppressed = true;
+        try {
+          executeReplayAnimatedForwardStep(manager);
+          forceReplayActuateAfterStep(manager);
+        } finally {
+          replayPauseBridgeSuppressed = false;
+        }
+        scheduleReplayUiRefresh();
+        scheduleReplayUiTick(true);
+      });
+    });
+    return true;
+  }
+
   function replayUiStepReplay(delta) {
     if (!window.game_manager || typeof window.game_manager.step !== "function") return;
     stopReplayAutoPlayback();
     if (window.game_manager.pause) window.game_manager.pause();
     cancelReplayPendingRelayout();
+    if (delta === -1 && executeReplayAnimatedBackwardStep(window.game_manager)) return;
+
     replayPauseBridgeSuppressed = true;
     try {
-      window.game_manager.step(delta);
+      if (delta === 1) {
+        executeReplayAnimatedForwardStep(window.game_manager);
+        forceReplayActuateAfterStep(window.game_manager);
+      } else {
+        window.game_manager.step(delta);
+      }
     } finally {
       replayPauseBridgeSuppressed = false;
     }
@@ -1582,11 +1641,14 @@
       manager.resume();
     }
     if (replayAutoPlaybackActive) queueReplayAutoPlaybackTick();
+    updateReplayUI();
+    scheduleReplayUiRefresh();
     scheduleReplayUiTick(true);
   }
 
   function replayUiSetReplayPlaybackMode(mode) {
     setReplayPlaybackMode(mode);
+    updateReplayUI();
     scheduleReplayUiRefresh();
   }
 

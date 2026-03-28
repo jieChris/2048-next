@@ -12,7 +12,7 @@ body[data-page="replay"] .top-action-btn.is-floating {
 
 body[data-page="replay"] .container.replay-v1-page {
   width: 760px;
-  margin: 38px auto 16px;
+  margin: 50px auto 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -92,6 +92,7 @@ body[data-page="replay"] #replay-progress {
 
 body[data-page="replay"] .replay-step-buttons {
   width: 294px;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
@@ -245,7 +246,7 @@ body[data-page="replay"] .replay-singleline-unit {
 @media screen and (max-width: 980px) {
   body[data-page="replay"] .container.replay-v1-page {
     width: min(100%, 760px);
-    margin: 18px auto 12px;
+    margin: 50px auto 12px;
     padding: 0 10px;
     box-sizing: border-box;
   }
@@ -293,6 +294,7 @@ body[data-page="replay"] .replay-singleline-unit {
 
   body[data-page="replay"] .replay-step-buttons {
     width: min(100%, 360px);
+    margin: 0 auto;
   }
 
   body[data-page="replay"] .replay-control-btn,
@@ -342,14 +344,14 @@ body[data-page="replay"] .replay-singleline-unit {
     width: 100%;
     max-width: 100%;
     padding: 0;
-    margin: 0 auto 12px;
+    margin: 50px auto 12px;
     align-items: stretch;
   }
 
   body[data-page="replay"] .replay-top-stats {
-    width: calc(100% - 30px);
-    max-width: calc(100% - 30px);
-    margin: 30px auto 0;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
     gap: 8px;
     box-sizing: border-box;
   }
@@ -381,11 +383,12 @@ body[data-page="replay"] .replay-singleline-unit {
   }
 
   body[data-page="replay"] .game-container.game-container-replay {
-    width: 280px;
-    height: 280px;
-    max-width: 280px;
-    min-width: 280px;
-    min-height: 280px;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    aspect-ratio: 1 / 1;
     float: none !important;
     position: relative;
     top: auto;
@@ -403,4 +406,13 @@ body[data-page="replay"] .replay-singleline-unit {
     margin-right: 0;
     box-sizing: border-box;
   }
+
+  body[data-page="replay"] .replay-step-buttons {
+    width: min(100%, 360px);
+    margin: 0 auto;
+  }
+}
+
+body[data-page="replay"] .game-container.game-container-replay.replay-step-preseek-hidden {
+  opacity: 0;
 }
