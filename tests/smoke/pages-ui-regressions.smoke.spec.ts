@@ -313,6 +313,55 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(afterSecondRestart.nonZeroCount).toBe(0);
   });
 
+  test("practice board keeps setup editable after first move", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("practice_guide_shown_v2", "1");
+      window.localStorage.setItem("practice_guide_mobile_shown_v1", "1");
+    });
+
+    const response = await page.goto("/Practice_board.html?practice_fresh=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Practice response should exist").not.toBeNull();
+    expect(response?.ok(), "Practice response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(
+      page,
+      () =>
+        Boolean((window as any).game_manager) &&
+        document.querySelector('.selection-tile[data-value="32"]') !== null &&
+        document.querySelector('.selection-tile[data-value="16"]') !== null &&
+        document.querySelector('.grid-cell[data-x="0"][data-y="0"]') !== null &&
+        document.querySelector('.grid-cell[data-x="1"][data-y="0"]') !== null,
+      12_000
+    );
+
+    await page.locator('.selection-tile[data-value="32"]').click();
+    await page.locator('.grid-cell[data-x="0"][data-y="0"]').click();
+    await page.waitForTimeout(120);
+
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(180);
+
+    await page.locator('.selection-tile[data-value="16"]').click();
+    await page.locator('.grid-cell[data-x="1"][data-y="0"]').click();
+    await page.waitForTimeout(120);
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const tileAt10 = manager?.grid?.cellContent({ x: 1, y: 0 });
+      return {
+        hasGameStarted: !!manager?.hasGameStarted,
+        tileAt10: tileAt10 ? Number(tileAt10.value) : 0,
+        bodyClassName: String(document.body.className || "")
+      };
+    });
+
+    expect(snapshot.hasGameStarted).toBe(true);
+    expect(snapshot.tileAt10).toBe(16);
+    expect(snapshot.bodyClassName).not.toContain("practice-setup-locked");
+  });
+
   test("legacy global stats visibility key no longer auto-opens undo practice or replay pages", async ({
     page
   }) => {

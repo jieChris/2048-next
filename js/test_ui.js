@@ -209,6 +209,27 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function resolvePracticeEditLocked() {
+    var pageVariant = "";
+    try {
+      pageVariant = String(
+        (document.body && document.body.getAttribute("data-page-variant")) || ""
+      ).toLowerCase();
+    } catch (_err) {
+      pageVariant = "";
+    }
+    if (pageVariant === "pku2048") {
+      var pkuManager = window.game_manager;
+      return !!(pkuManager && pkuManager.hasGameStarted);
+    }
+    var path = "";
+    try {
+      path = String((window.location && window.location.pathname) || "").toLowerCase();
+    } catch (_err2) {
+      path = "";
+    }
+    if (path.indexOf("practice_board") !== -1) {
+      return false;
+    }
     var manager = window.game_manager;
     return !!(manager && manager.hasGameStarted);
   }

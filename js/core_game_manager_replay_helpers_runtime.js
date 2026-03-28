@@ -865,9 +865,35 @@ function insertCustomTileWithValue(manager, x, y, value) {
   recordPracticeCustomTileActionIfNeeded(manager, x, y, value);
 }
 
+function resolveCustomTileEditPageVariant(manager) {
+  var documentLike = resolveManagerDocumentLike(manager);
+  var body = documentLike && documentLike.body ? documentLike.body : null;
+  if (!body || typeof body.getAttribute !== "function") return "";
+  return String(body.getAttribute("data-page-variant") || "").toLowerCase();
+}
+
+function resolveCustomTileEditPathname(manager) {
+  var windowLike = manager && typeof manager.getWindowLike === "function"
+    ? manager.getWindowLike()
+    : null;
+  if (!(windowLike && windowLike.location && windowLike.location.pathname)) return "";
+  return String(windowLike.location.pathname).toLowerCase();
+}
+
+function shouldLockCustomTileEditAfterStart(manager) {
+  if (!manager) return true;
+  var pageVariant = resolveCustomTileEditPageVariant(manager);
+  if (pageVariant === "pku2048") return true;
+  var modeKey = String(manager.modeKey || manager.mode || "").toLowerCase();
+  var pathname = resolveCustomTileEditPathname(manager);
+  if (pathname.indexOf("practice_board") !== -1) return false;
+  if (modeKey === "practice") return false;
+  return true;
+}
+
 function insertCustomTile(manager, x, y, value) {
   if (!manager) return;
-  if (manager.hasGameStarted) return;
+  if (manager.hasGameStarted && shouldLockCustomTileEditAfterStart(manager)) return;
   if (manager.isBlockedCell(x, y)) throw "Blocked cell cannot be edited";
   var cell = { x: x, y: y };
   removeCustomTileExistingAtCell(manager, cell);
