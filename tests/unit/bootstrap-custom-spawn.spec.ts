@@ -75,4 +75,25 @@ describe("bootstrap custom spawn", () => {
       applyCustomFourRateToModeConfig({ label: "x", spawn_table: [] }, 200)
     ).toThrow("invalid_custom_four_rate");
   });
+
+  it("supports every integer four-rate from 0 to 100", () => {
+    const base = {
+      label: "custom",
+      spawn_table: [
+        { value: 2, weight: 90 },
+        { value: 4, weight: 10 }
+      ],
+      special_rules: {}
+    };
+    for (let rate = 0; rate <= 100; rate += 1) {
+      const next = applyCustomFourRateToModeConfig(base, rate);
+      const spawnTable = Array.isArray(next.spawn_table) ? next.spawn_table : [];
+      const two = spawnTable.find((item: { value: number }) => item.value === 2);
+      const four = spawnTable.find((item: { value: number }) => item.value === 4);
+      expect(next.special_rules.custom_spawn_four_rate).toBe(rate);
+      expect(Number((two?.weight ?? 0) + (four?.weight ?? 0))).toBe(100);
+      expect(Number(two?.weight ?? 0)).toBe(100 - rate);
+      expect(Number(four?.weight ?? 0)).toBe(rate);
+    }
+  });
 });

@@ -25,6 +25,9 @@ export interface ReplayImportV3JsonEnvelope {
   modeKey: string;
   seed: number | null;
   actions: unknown[];
+  specialRulesSnapshot?: {
+    custom_spawn_four_rate?: number;
+  } | null;
 }
 
 export type ReplayImportEnvelope =
@@ -60,6 +63,23 @@ function resolveReplayV3ModeKey(source: Record<string, unknown>, fallbackModeKey
   return fallbackModeKey;
 }
 
+function normalizeReplayV3CustomFourRate(rawRate: unknown): number | null {
+  const parsed = Number(rawRate);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) return null;
+  return Math.round(parsed * 100) / 100;
+}
+
+function resolveReplayV3SpecialRulesSnapshot(
+  source: Record<string, unknown>
+): ReplayImportV3JsonEnvelope["specialRulesSnapshot"] {
+  const rawSnapshot = source.special_rules_snapshot;
+  if (!rawSnapshot || typeof rawSnapshot !== "object") return null;
+  const snapshot = rawSnapshot as Record<string, unknown>;
+  const customFourRate = normalizeReplayV3CustomFourRate(snapshot.custom_spawn_four_rate);
+  if (customFourRate === null) return null;
+  return { custom_spawn_four_rate: customFourRate };
+}
+
 function parseReplayV3JsonEnvelope(trimmedReplayString: string, fallbackModeKey: string): ReplayImportEnvelope {
   const firstChar = trimmedReplayString.charAt(0);
   if (firstChar !== "{" && firstChar !== "[") return null;
@@ -80,7 +100,8 @@ function parseReplayV3JsonEnvelope(trimmedReplayString: string, fallbackModeKey:
     kind: "v3-json",
     modeKey: resolveReplayV3ModeKey(source, fallbackModeKey),
     seed: Number.isFinite(parsedSeed) ? parsedSeed : null,
-    actions
+    actions,
+    specialRulesSnapshot: resolveReplayV3SpecialRulesSnapshot(source)
   };
 }
 

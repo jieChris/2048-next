@@ -2748,6 +2748,20 @@ function resolveReplayV3ImportSource(manager, parsed) {
   return null;
 }
 
+function normalizeReplayV3CustomFourRate(rawRate) {
+  var parsed = Number(rawRate);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) return null;
+  return Math.round(parsed * 100) / 100;
+}
+
+function resolveReplayV3SpecialRulesSnapshotForEnvelope(source) {
+  var snapshot = normalizeReplayRecordObject(source && source.special_rules_snapshot, null);
+  if (!snapshot) return null;
+  var customFourRate = normalizeReplayV3CustomFourRate(snapshot.custom_spawn_four_rate);
+  if (customFourRate === null) return null;
+  return { custom_spawn_four_rate: customFourRate };
+}
+
 function createReplayV3JsonEnvelope(manager, replaySource) {
   var normalizedSource = normalizeReplayRecordObject(replaySource, {});
   var actions = Array.isArray(normalizedSource.actions) ? normalizedSource.actions.slice() : [];
@@ -2756,7 +2770,8 @@ function createReplayV3JsonEnvelope(manager, replaySource) {
     kind: "v3-json",
     modeKey: resolveReplayV3ModeKeyFromEnvelope(manager, normalizedSource),
     seed: Number.isFinite(parsedSeed) ? parsedSeed : null,
-    actions: actions
+    actions: actions,
+    specialRulesSnapshot: resolveReplayV3SpecialRulesSnapshotForEnvelope(normalizedSource)
   };
 }
 
@@ -2782,12 +2797,67 @@ function applyV3StructuredReplayEnvelope(manager, envelope, replayModeConfig) {
   setRuntimeDisableSessionSyncForReplay(manager, true);
 }
 
+function shouldApplyReplayV3CustomSpawnOverrides(modeConfig, envelope) {
+  var modeKey = "";
+  if (modeConfig && typeof modeConfig.key === "string") modeKey = modeConfig.key;
+  if (!modeKey && envelope && typeof envelope.modeKey === "string") modeKey = envelope.modeKey;
+  return modeKey.indexOf("spawn_custom_4x4_pow2") === 0;
+}
+
+function resolveReplayV3EnvelopeCustomFourRate(envelope) {
+  var source = normalizeReplayRecordObject(envelope, {});
+  var snapshot = normalizeReplayRecordObject(source.specialRulesSnapshot || source.special_rules_snapshot, null);
+  if (!snapshot) return null;
+  return normalizeReplayV3CustomFourRate(snapshot.custom_spawn_four_rate);
+}
+
+function cloneReplayModeConfigForImport(modeConfig) {
+  var nextConfig = {};
+  for (var key in modeConfig) {
+    if (Object.prototype.hasOwnProperty.call(modeConfig, key)) nextConfig[key] = modeConfig[key];
+  }
+  return nextConfig;
+}
+
+function createReplayCustomSpawnTableByRate(parsedRate) {
+  var twoRate = Math.round((100 - parsedRate) * 100) / 100;
+  var spawnTable = [];
+  if (twoRate > 0) spawnTable.push({ value: 2, weight: twoRate });
+  if (parsedRate > 0) spawnTable.push({ value: 4, weight: parsedRate });
+  return spawnTable.length ? spawnTable : [{ value: 2, weight: 100 }];
+}
+
+function cloneReplaySpecialRulesForImport(specialRules) {
+  var source = normalizeReplayRecordObject(specialRules, {});
+  var next = {};
+  for (var key in source) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) next[key] = source[key];
+  }
+  return next;
+}
+
+function applyReplayV3CustomFourRateToModeConfig(modeConfig, parsedRate) {
+  if (parsedRate === null || !modeConfig) return modeConfig;
+  var nextConfig = cloneReplayModeConfigForImport(modeConfig);
+  nextConfig.spawn_table = createReplayCustomSpawnTableByRate(parsedRate);
+  var nextSpecialRules = cloneReplaySpecialRulesForImport(nextConfig.special_rules);
+  nextSpecialRules.custom_spawn_four_rate = parsedRate;
+  nextConfig.special_rules = nextSpecialRules;
+  return nextConfig;
+}
+
 function resolveStructuredReplayModeConfig(manager, envelope) {
   var replayModeConfig = manager.resolveModeConfig(envelope.modeKey);
   if (!replayModeConfig && envelope.kind === "v9rpl") {
     replayModeConfig = resolveV9RplReplayModeConfig(manager);
   }
   if (!replayModeConfig) throw "Replay mode config unavailable";
+  if (envelope.kind === "v3-json" && shouldApplyReplayV3CustomSpawnOverrides(replayModeConfig, envelope)) {
+    replayModeConfig = applyReplayV3CustomFourRateToModeConfig(
+      replayModeConfig,
+      resolveReplayV3EnvelopeCustomFourRate(envelope)
+    );
+  }
   return replayModeConfig;
 }
 

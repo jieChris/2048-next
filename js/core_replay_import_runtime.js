@@ -22,6 +22,21 @@
     return fallbackModeKey;
   }
 
+  function normalizeReplayV3CustomFourRate(rawRate) {
+    var parsed = Number(rawRate);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) return null;
+    return Math.round(parsed * 100) / 100;
+  }
+
+  function resolveReplayV3SpecialRulesSnapshot(source) {
+    if (!(source && typeof source === "object")) return null;
+    var snapshot = source.special_rules_snapshot;
+    if (!(snapshot && typeof snapshot === "object")) return null;
+    var customFourRate = normalizeReplayV3CustomFourRate(snapshot.custom_spawn_four_rate);
+    if (customFourRate === null) return null;
+    return { custom_spawn_four_rate: customFourRate };
+  }
+
   function parseReplayV3JsonEnvelope(trimmedReplayString, fallbackModeKey) {
     if (typeof trimmedReplayString !== "string" || !trimmedReplayString) return null;
     var firstChar = trimmedReplayString.charAt(0);
@@ -42,7 +57,8 @@
       kind: "v3-json",
       modeKey: resolveReplayV3ModeKey(parsed, fallbackModeKey),
       seed: Number.isFinite(parsedSeed) ? parsedSeed : null,
-      actions: actions
+      actions: actions,
+      specialRulesSnapshot: resolveReplayV3SpecialRulesSnapshot(parsed)
     };
   }
 

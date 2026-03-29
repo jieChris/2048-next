@@ -592,11 +592,11 @@
 
   function buildStandardReplayPayloadV1(recordLike) {
     var source = normalizeReplayRecordLike(recordLike);
+    var replayCode = normalizeLegacyReplayStringForImport(source.replay_string);
+    if (replayCode) return replayCode;
     var structured = normalizeStructuredReplayV1(source);
-    if (structured) {
-      return JSON.stringify(structured);
-    }
-    return normalizeLegacyReplayStringForImport(source.replay_string);
+    if (!structured) return "";
+    return JSON.stringify(structured);
   }
 
   function buildDiagonalReplayPayloadV1(recordLike) {

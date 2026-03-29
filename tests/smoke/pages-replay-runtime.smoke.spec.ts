@@ -851,6 +851,61 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.replayMovesLength).toBeGreaterThanOrEqual(0);
   });
 
+  test("replay page prefers replay_string when local history record contains both replay object and replay_string", async ({
+    page
+  }) => {
+    const replayId = "lh_replay_prefer_string";
+    await page.addInitScript((id: string) => {
+      const records = [
+        {
+          id,
+          mode_key: "standard_4x4_pow2_no_undo",
+          replay: {
+            v: 3,
+            mode_key: "standard_4x4_pow2_no_undo",
+            seed: 0.125,
+            actions: [0, 1, 2]
+          },
+          replay_string: JSON.stringify({
+            v: 3,
+            mode_key: "standard_4x4_pow2_no_undo",
+            seed: 0.25,
+            actions: [3]
+          }),
+          ended_at: new Date().toISOString(),
+          saved_at: new Date().toISOString()
+        }
+      ];
+      window.localStorage.setItem("local_game_history_v1", JSON.stringify(records));
+      (window as any).__replayLoadAlerts = [];
+      window.alert = function (message?: unknown) {
+        (window as any).__replayLoadAlerts.push(String(message || ""));
+      };
+    }, replayId);
+
+    const response = await page.goto("/replay.html?local_history_id=" + replayId, {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && Array.isArray(manager.replayMoves);
+    });
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      return {
+        replayMoves: Array.isArray(manager?.replayMoves) ? manager.replayMoves.slice() : [],
+        alertCount: Number(((window as any).__replayLoadAlerts || []).length)
+      };
+    });
+
+    expect(snapshot.alertCount).toBe(0);
+    expect(snapshot.replayMoves).toEqual([3]);
+  });
+
   test("replay page reports explicit error when local history replay code is missing", async ({
     page
   }) => {

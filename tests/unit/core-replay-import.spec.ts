@@ -97,6 +97,45 @@ describe("core replay import: parseReplayImportEnvelope", () => {
     expect(parsed.seed).toBe(0.5);
     expect(parsed.actions).toEqual([1, 2, 3]);
   });
+
+  it("keeps custom four-rate snapshot from v3 payload", () => {
+    const parsed = parseReplayImportEnvelope({
+      trimmedReplayString: JSON.stringify({
+        v: 3,
+        mode_key: "spawn_custom_4x4_pow2_no_undo",
+        seed: 0.75,
+        special_rules_snapshot: {
+          custom_spawn_four_rate: 37.456
+        },
+        actions: [0, 1, 2]
+      }),
+      fallbackModeKey: "practice"
+    });
+    expect(parsed).not.toBeNull();
+    expect(parsed?.kind).toBe("v3-json");
+    if (!parsed || parsed.kind !== "v3-json") return;
+    expect(parsed.modeKey).toBe("spawn_custom_4x4_pow2_no_undo");
+    expect(parsed.specialRulesSnapshot).toEqual({ custom_spawn_four_rate: 37.46 });
+  });
+
+  it("parses custom four-rate snapshot for every integer rate 0-100", () => {
+    for (let rate = 0; rate <= 100; rate += 1) {
+      const parsed = parseReplayImportEnvelope({
+        trimmedReplayString: JSON.stringify({
+          v: 3,
+          mode_key: "spawn_custom_4x4_pow2_no_undo",
+          seed: 1,
+          special_rules_snapshot: { custom_spawn_four_rate: rate },
+          actions: []
+        }),
+        fallbackModeKey: "practice"
+      });
+      expect(parsed).not.toBeNull();
+      expect(parsed?.kind).toBe("v3-json");
+      if (!parsed || parsed.kind !== "v3-json") continue;
+      expect(parsed.specialRulesSnapshot).toEqual({ custom_spawn_four_rate: rate });
+    }
+  });
 });
 
 describe("detectReplayFormat", () => {
