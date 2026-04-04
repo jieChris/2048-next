@@ -1,4 +1,4 @@
-(function (global) {
+﻿(function (global) {
   "use strict";
 
   if (!global) return;
@@ -24,7 +24,7 @@
   var HISTORY_ICON_SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line class="history-hand history-hand-long" x1="12" y1="12" x2="12" y2="6"></line><line class="history-hand history-hand-short" x1="12" y1="12" x2="12" y2="7.6"></line></svg>';
   var ADVANCED_REPLAY_ICON_SVG =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="reset-top-trace" d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path><g class="reset-top-static"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></g><g class="reset-top-mover" style="offset-path:path(\'M20.49 15 A9 9 0 1 1 18.37 5.64 L23 10\');"><line x1="-6.5" y1="0" x2="0" y2="0"></line><polyline points="-3.8 -3.8 0 0 -3.8 3.8"></polyline></g><path class="reset-bottom-trace" d="M0 0L0 0" style="display:none;"></path><g class="reset-bottom-static" style="display:none;"></g><g class="reset-bottom-mover" style="display:none;"></g></svg>';
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="reset-top-trace" d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path><g class="reset-top-static"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></g><g class="reset-top-mover" style="offset-path:path(\'M20.49 15 A9 9 0 1 1 18.37 5.64 L23 10\');"><line x1="-6.5" y1="0" x2="0" y2="0"></line><polyline points="-3.8 -3.8 0 0 -3.8 3.8"></polyline></g><polygon points="9.1 8.7 9.1 15.3 15.7 12" fill="currentColor" stroke="none"></polygon><path class="reset-bottom-trace" d="M0 0L0 0" style="display:none;"></path><g class="reset-bottom-static" style="display:none;"></g><g class="reset-bottom-mover" style="display:none;"></g></svg>';
   var RESET_ICON_SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="reset-top-trace" d="M3.51 9A9 9 0 0 1 18.36 5.64L23 10"></path><path class="reset-bottom-trace" d="M20.49 15A9 9 0 0 1 5.64 18.36L1 14"></path><g class="reset-top-static"><polyline points="23 4 23 10 17 10"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path></g><g class="reset-bottom-static"><polyline points="1 20 1 14 7 14"></polyline><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></g><g class="reset-top-mover"><line x1="-6.5" y1="0" x2="0" y2="0"></line><polyline points="-3.8 -3.8 0 0 -3.8 3.8"></polyline></g><g class="reset-bottom-mover"><line x1="-6.5" y1="0" x2="0" y2="0"></line><polyline points="-3.8 -3.8 0 0 -3.8 3.8"></polyline></g></svg>';
 
@@ -767,3 +767,4 @@
   global.CoreTopActionBindingsHostRuntime = global.CoreTopActionBindingsHostRuntime || {};
   global.CoreTopActionBindingsHostRuntime.applyTopActionBindings = applyTopActionBindings;
 })(typeof window !== "undefined" ? window : undefined);
+

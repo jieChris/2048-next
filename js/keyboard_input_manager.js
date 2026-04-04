@@ -104,7 +104,33 @@ KeyboardInputManager.prototype.listen = function () {
     return false;
   }
 
+  function isEditableTarget(target) {
+    if (!target) return false;
+    var el = target.nodeType === 1 ? target : target.parentElement;
+    if (!el) return false;
+    if (el.isContentEditable) return true;
+    if (el.closest) {
+      var editable = el.closest("input, textarea, select, [contenteditable=''], [contenteditable='true']");
+      if (editable) return true;
+    }
+    var tag = String(el.tagName || "").toUpperCase();
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  }
+
+  function isPracticeCodeModalOpen() {
+    return !!(
+      document &&
+      document.body &&
+      document.body.classList &&
+      document.body.classList.contains("practice-board-code-open")
+    );
+  }
+
   document.addEventListener("keydown", function (event) {
+    if (isEditableTarget(event.target) || isPracticeCodeModalOpen()) {
+      return;
+    }
+
     var systemModifiers = event.altKey || event.ctrlKey || event.metaKey;
     var isRedoKey =
       event.which === 89 ||

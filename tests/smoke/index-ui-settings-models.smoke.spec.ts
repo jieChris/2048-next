@@ -370,7 +370,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.resolveOptionSelectedCallCount).toBeGreaterThan(0);
   });
 
-  test("palette timer preview reaches 65536 and reuses timer glow styles", async ({ page }) => {
+  test("palette preview removes timer legend and keeps board preview only", async ({ page }) => {
     const response = await page.goto("/palette.html", {
       waitUntil: "domcontentloaded"
     });
@@ -380,24 +380,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForTimeout(220);
 
     const snapshot = await page.evaluate(() => {
-      const legendItems = Array.from(document.querySelectorAll("#palette-preview-legend .legend-pill"));
-      const lastItem = legendItems[legendItems.length - 1] as HTMLElement | undefined;
-      const targetItem = document.querySelector("#palette-preview-legend .timer-legend-65536") as HTMLElement | null;
-      const targetStyle = targetItem ? window.getComputedStyle(targetItem) : null;
+      const legendHost = document.getElementById("palette-preview-legend");
+      const legacyLegendItems = Array.from(document.querySelectorAll("#palette-preview-legend .legend-pill"));
       return {
-        legendCount: legendItems.length,
-        lastText: (lastItem?.textContent || "").trim(),
-        has65536Class: !!targetItem,
-        targetBoxShadow: targetStyle?.boxShadow || "",
-        targetBackground: targetStyle?.backgroundColor || ""
+        hasLegendHost: Boolean(legendHost),
+        legendCount: legacyLegendItems.length
       };
     });
 
-    expect(snapshot.legendCount).toBe(12);
-    expect(snapshot.lastText).toBe("65536");
-    expect(snapshot.has65536Class).toBe(true);
-    expect(snapshot.targetBoxShadow).not.toBe("none");
-    expect(snapshot.targetBackground).not.toBe("rgba(0, 0, 0, 0)");
+    expect(snapshot.hasLegendHost).toBe(false);
+    expect(snapshot.legendCount).toBe(0);
   });
 
   test("palette page shows current palette name instead of empty placeholder", async ({ page }) => {

@@ -1,21 +1,16 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
-  test("palette board switch updates preview board and legend values", async ({ page }) => {
+  test("palette board switch updates preview board", async ({ page }) => {
     const response = await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
     expect(response, "Palette response should exist").not.toBeNull();
     expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
     await expect(page.locator("#palette-preview-board .preview-tile")).toHaveCount(16);
-    await expect(page.locator("#palette-preview-legend .legend-pill")).toHaveCount(12);
 
     const initialSnapshot = await page.evaluate(() => {
       const selected = document.querySelector(".palette-board-btn.is-active") as HTMLElement | null;
       const board = document.getElementById("palette-preview-board");
-      const legendTexts = Array.from(
-        document.querySelectorAll("#palette-preview-legend .legend-pill"),
-        (node) => String(node.textContent || "").trim()
-      );
       const boardTexts = Array.from(
         document.querySelectorAll("#palette-preview-board .preview-tile"),
         (node) => String(node.textContent || "").trim()
@@ -23,7 +18,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return {
         selectedBoard: selected?.getAttribute("data-board") || "",
         boardClassName: String(board?.className || ""),
-        legendTexts,
         boardTexts
       };
     });
@@ -31,8 +25,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(initialSnapshot.selectedBoard).toBe("pow2");
     expect(initialSnapshot.boardClassName).toContain("is-pow2");
     expect(initialSnapshot.boardClassName).not.toContain("is-fibonacci");
-    expect(initialSnapshot.legendTexts[0]).toBe("32");
-    expect(initialSnapshot.legendTexts[initialSnapshot.legendTexts.length - 1]).toBe("65536");
     expect(initialSnapshot.boardTexts.slice(0, 4)).toEqual(["2", "4", "8", "16"]);
 
     await page.locator('.palette-board-btn[data-board="fibonacci"]').click();
@@ -40,39 +32,23 @@ test.describe("Legacy Multi-Page Smoke", () => {
       .poll(async () => {
         return page.evaluate(() => {
           const selected = document.querySelector(".palette-board-btn.is-active") as HTMLElement | null;
-          const legendTexts = Array.from(
-            document.querySelectorAll("#palette-preview-legend .legend-pill"),
-            (node) => String(node.textContent || "").trim()
-          );
           return {
-            selectedBoard: selected?.getAttribute("data-board") || "",
-            legendFirst: legendTexts[0] || "",
-            legendLast: legendTexts[legendTexts.length - 1] || ""
+            selectedBoard: selected?.getAttribute("data-board") || ""
           };
         });
       })
       .toEqual({
-        selectedBoard: "fibonacci",
-        legendFirst: "8",
-        legendLast: "1597"
+        selectedBoard: "fibonacci"
       });
 
     const fibonacciSnapshot = await page.evaluate(() => {
-      const legendTexts = Array.from(
-        document.querySelectorAll("#palette-preview-legend .legend-pill"),
-        (node) => String(node.textContent || "").trim()
-      );
       const boardTexts = Array.from(
         document.querySelectorAll("#palette-preview-board .preview-tile"),
         (node) => String(node.textContent || "").trim()
       );
-      return { legendTexts, boardTexts };
+      return { boardTexts };
     });
 
-    expect(fibonacciSnapshot.legendTexts).toHaveLength(12);
-    expect(fibonacciSnapshot.legendTexts[0]).toBe("8");
-    expect(fibonacciSnapshot.legendTexts[fibonacciSnapshot.legendTexts.length - 1]).toBe("1597");
-    expect(fibonacciSnapshot.legendTexts).not.toContain("2048");
     expect(fibonacciSnapshot.boardTexts.slice(0, 4)).toEqual(["1", "2", "3", "5"]);
 
     await page.locator('.palette-board-btn[data-board="pow2"]').click();

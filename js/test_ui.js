@@ -3,6 +3,10 @@ document.addEventListener("DOMContentLoaded", function () {
   var PRACTICE_TRANSFER_SESSION_KEY = "practice_board_transfer_session_v1";
   var gridContainer = document.getElementById("test-grid-container");
   var selectionGrid = document.getElementById("selection-grid");
+  var practiceBoardCodeToggleBtn = document.getElementById("practice-board-code-btn");
+  var practiceBoardCodePanel = document.getElementById("practice-board-code-panel");
+  var practiceBoardCodeInput = document.getElementById("practice-board-code-input");
+  var practiceBoardCodeConfirmBtn = document.getElementById("practice-board-code-confirm");
   var selectedValue = null;
   var zeroCycleValues = [];
   var currentSelectionRuleset = "pow2";
@@ -14,6 +18,12 @@ document.addEventListener("DOMContentLoaded", function () {
   var gridTouchStartY = 0;
   var gridTouchMoved = false;
   var TOUCH_TAP_MAX_DISTANCE = 12;
+  var PRACTICE_CODE_SHAPES = {
+    16: { width: 4, height: 4 },
+    12: { width: 4, height: 3 },
+    9: { width: 3, height: 3 },
+    8: { width: 4, height: 2 }
+  };
   var POW2_ZERO_CYCLE_VALUES = (function () {
     var values = [0];
     for (var exp = 1; exp <= 16; exp++) {
@@ -37,6 +47,215 @@ document.addEventListener("DOMContentLoaded", function () {
     } catch (_err) {
       return null;
     }
+  }
+
+  function normalizePracticeBoardCodeInput(raw) {
+    if (typeof raw !== "string") return "";
+    return raw.replace(/\s+/g, "").toUpperCase();
+  }
+
+  function resolvePracticeBoardShapeByLength(codeLength) {
+    if (!Number.isInteger(codeLength)) return null;
+    if (Object.prototype.hasOwnProperty.call(PRACTICE_CODE_SHAPES, codeLength)) {
+      return PRACTICE_CODE_SHAPES[codeLength];
+    }
+    return null;
+  }
+
+  function decodePracticeBoardCellValue(ch) {
+    var digit = Number.parseInt(ch, 16);
+    if (!Number.isInteger(digit) || digit < 0 || digit > 15) return null;
+    if (digit === 0) return 0;
+    return Math.pow(2, digit);
+  }
+
+  function decodePracticeBoardCode(raw) {
+    var code = normalizePracticeBoardCodeInput(raw);
+    if (!code) {
+      return { ok: false, message: "请输入盘面代码。" };
+    }
+    if (!/^[0-9A-F]+$/.test(code)) {
+      return { ok: false, message: "盘面代码仅支持 0-9 和 A-F。" };
+    }
+    var shape = resolvePracticeBoardShapeByLength(code.length);
+    if (!shape) {
+      return { ok: false, message: "长度仅支持 8、9、12、16 位。" };
+    }
+
+    var board = [];
+    var cursor = 0;
+    for (var y = 0; y < shape.height; y++) {
+      var row = [];
+      for (var x = 0; x < shape.width; x++) {
+        var value = decodePracticeBoardCellValue(code.charAt(cursor));
+        if (value === null) {
+          return { ok: false, message: "盘面代码包含非法字符。" };
+        }
+        row.push(value);
+        cursor += 1;
+      }
+      board.push(row);
+    }
+
+    return {
+      ok: true,
+      code: code,
+      width: shape.width,
+      height: shape.height,
+      board: board
+    };
+  }
+
+  function buildPracticeModeConfigForBoard(manager, width, height) {
+    var base =
+      manager && manager.modeConfig && typeof manager.clonePlain === "function"
+        ? manager.clonePlain(manager.modeConfig)
+        : cloneJsonSafe(manager ? manager.modeConfig : null);
+    if (!(base && typeof base === "object" && !Array.isArray(base))) {
+      base = {};
+    }
+    if (typeof base.key !== "string" || !base.key) {
+      base.key = "practice";
+    }
+    base.board_width = width;
+    base.board_height = height;
+    return base;
+  }
+
+  function applyPracticeBoardCode(rawCode) {
+    var manager = window.game_manager;
+    if (!manager || typeof manager.restartWithBoard !== "function") {
+      alert("游戏尚未完成初始化，请稍后重试。");
+      return false;
+    }
+
+    var decoded = decodePracticeBoardCode(rawCode);
+    if (!decoded.ok) {
+      alert(decoded.message);
+      return false;
+    }
+
+    var modeConfig = buildPracticeModeConfigForBoard(manager, decoded.width, decoded.height);
+    try {
+      manager.restartWithBoard(decoded.board, modeConfig, {
+        setPracticeRestartBase: true,
+        asReplay: false
+      });
+      manager.isTestMode = true;
+      syncSelectionGridByRuleset();
+      syncPracticeSetupPhaseUi();
+      requestPracticeRelayout();
+      return true;
+    } catch (err) {
+      console.error("Practice board code apply failed:", err);
+      alert("应用盘面代码失败，请稍后重试。");
+      return false;
+    }
+  }
+
+  function setPracticeBoardCodePanelOpen(open) {
+    if (!practiceBoardCodePanel) return;
+    var shouldOpen = !!open;
+    practiceBoardCodePanel.classList.toggle("is-open", shouldOpen);
+    practiceBoardCodePanel.setAttribute("aria-hidden", shouldOpen ? "false" : "true");
+    if (document.body && document.body.classList) {
+      document.body.classList.toggle("practice-board-code-open", shouldOpen);
+    }
+    if (practiceBoardCodeToggleBtn) {
+      practiceBoardCodeToggleBtn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+    }
+    if (shouldOpen && practiceBoardCodeInput) {
+      practiceBoardCodeInput.focus();
+      practiceBoardCodeInput.select();
+    }
+  }
+
+  function bindPracticeBoardCodePanel() {
+    setPracticeBoardCodePanelOpen(false);
+
+    if (practiceBoardCodeToggleBtn) {
+      practiceBoardCodeToggleBtn.addEventListener("click", function (e) {
+        if (e && e.cancelable) e.preventDefault();
+        var open = !!(
+          practiceBoardCodePanel &&
+          practiceBoardCodePanel.classList &&
+          practiceBoardCodePanel.classList.contains("is-open")
+        );
+        setPracticeBoardCodePanelOpen(!open);
+      });
+    }
+
+    if (practiceBoardCodePanel) {
+      practiceBoardCodePanel.addEventListener("click", function (e) {
+        if (
+          !practiceBoardCodePanel.classList ||
+          !practiceBoardCodePanel.classList.contains("is-open")
+        ) {
+          return;
+        }
+        if (e && e.target === practiceBoardCodePanel) {
+          if (e.cancelable) e.preventDefault();
+          setPracticeBoardCodePanelOpen(false);
+        }
+      });
+    }
+
+    if (practiceBoardCodeConfirmBtn) {
+      practiceBoardCodeConfirmBtn.addEventListener("click", function (e) {
+        if (e && e.cancelable) e.preventDefault();
+        var raw = practiceBoardCodeInput ? String(practiceBoardCodeInput.value || "") : "";
+        var applied = applyPracticeBoardCode(raw);
+        if (!applied) return;
+        if (practiceBoardCodeInput) {
+          practiceBoardCodeInput.value = normalizePracticeBoardCodeInput(raw);
+        }
+        setPracticeBoardCodePanelOpen(false);
+      });
+    }
+
+    if (practiceBoardCodeInput) {
+      practiceBoardCodeInput.addEventListener("input", function () {
+        var normalized = normalizePracticeBoardCodeInput(String(practiceBoardCodeInput.value || ""));
+        if (normalized !== practiceBoardCodeInput.value) {
+          practiceBoardCodeInput.value = normalized;
+        }
+      });
+      practiceBoardCodeInput.addEventListener("keydown", function (e) {
+        if (e && typeof e.stopPropagation === "function") {
+          e.stopPropagation();
+        }
+        if (!e || e.key !== "Enter") return;
+        if (e.cancelable) e.preventDefault();
+        if (!practiceBoardCodeConfirmBtn || typeof practiceBoardCodeConfirmBtn.click !== "function") return;
+        practiceBoardCodeConfirmBtn.click();
+      });
+      practiceBoardCodeInput.addEventListener("keyup", function (e) {
+        if (e && typeof e.stopPropagation === "function") {
+          e.stopPropagation();
+        }
+      });
+      practiceBoardCodeInput.addEventListener("keypress", function (e) {
+        if (e && typeof e.stopPropagation === "function") {
+          e.stopPropagation();
+        }
+      });
+    }
+
+    document.addEventListener("keydown", function (e) {
+      if (!e) return;
+      var key = String(e.key || "");
+      var code = String(e.code || "");
+      if (key !== "Escape" && code !== "Escape") return;
+      if (
+        !practiceBoardCodePanel ||
+        !practiceBoardCodePanel.classList ||
+        !practiceBoardCodePanel.classList.contains("is-open")
+      ) {
+        return;
+      }
+      if (e.cancelable) e.preventDefault();
+      setPracticeBoardCodePanelOpen(false);
+    });
   }
 
   function getCellKey(x, y) {
@@ -451,9 +670,20 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   syncSelectionGridByRuleset();
+  bindPracticeBoardCodePanel();
 
   // Guide Logic
   (function () {
+    var pageTag = "";
+    try {
+      pageTag = String((document.body && document.body.getAttribute("data-page")) || "").toLowerCase();
+    } catch (_err) {
+      pageTag = "";
+    }
+    if (pageTag === "practice") {
+      return;
+    }
+
     var mobileGuide = isPracticeMobileViewport();
     var guideKey = mobileGuide ? "practice_guide_mobile_shown_v1" : "practice_guide_shown_v2";
     var guideSeenFlagName = mobileGuide ? "practice_guide_mobile_seen_v1" : "practice_guide_seen_v2";
@@ -780,6 +1010,13 @@ document.addEventListener("DOMContentLoaded", function () {
     window.__practiceRedoShortcutBound = true;
     document.addEventListener("keydown", function (e) {
       if (!e || e.defaultPrevented) return;
+      var target = e.target;
+      var editable = !!(
+        target &&
+        target.closest &&
+        target.closest("input, textarea, select, [contenteditable=''], [contenteditable='true']")
+      );
+      if (editable) return;
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       var key = String(e.key || "");
       var code = String(e.code || "");

@@ -119,3 +119,47 @@ Main Batch: WS4-03E (T4)
 Change Log
 - 2026-03-22: Document created.
 - 2026-03-22: WS4-04A drafted for remaining history legacy dependency removal.
+
+## 2026-04-04 Sync (UX-RELAY-01)
+
+### New Cycle
+- Cycle ID: UX-RELAY-01
+- Focus: practice-board code input v1, practice-board UI cleanup, mobile palette scroll-lock, palette preview cleanup, relay-mode feasibility analysis
+- Guardrails: no code changes outside the assigned batch; keep v1 board-code contract stable; do not alter unrelated history migration work
+
+### Batch Status
+- Batch 1: `done`
+  - Scope: practice-board code input button + inline input panel + code parser/apply flow + remove practice best-score display
+  - Evidence: `npm run build`; `npx playwright test --config=playwright.config.ts tests/smoke/pages-practice-redo-y.smoke.spec.ts`; `npx playwright test --config=playwright.config.ts tests/smoke/pages-practice-board-code-input.smoke.spec.ts`
+- Batch 2: `done`
+  - Scope: mobile palette scroll-lock when color picker is open + remove timer preview from palette preview area
+  - Evidence: `npm run build`; `npx playwright test --config=playwright.config.ts tests/smoke/pages-palette-board-switch-preview.smoke.spec.ts`
+- Batch 3: `done`
+  - Scope: 55 relay-mode feasibility and security analysis document
+  - Evidence: manual doc review of `docs/RELAY_MODE_FEASIBILITY_2026-04-04.zh-CN.md`
+
+### Agent Ownership
+- A: `done` - approved the 2026-04-04 batch boundaries, confirmed the v1 board-code contract, and closed the cycle sequencing review.
+- B: `done` - finished Batch 2 UI work on palette scroll-lock and preview cleanup.
+- C: `done` - added practice-board code-input validation coverage and parity checks.
+- D: `done` - produced the relay-mode feasibility and safety analysis document.
+- E: `done` - kept execution-log and assignment-doc updates readable and UTF-8 clean.
+
+### Verification Commands
+- Batch 1: `npm run build`
+- Batch 1 smoke: `npx playwright test --config=playwright.config.ts tests/smoke/pages-practice-redo-y.smoke.spec.ts`
+- Batch 1 smoke (board code): `npx playwright test --config=playwright.config.ts tests/smoke/pages-practice-board-code-input.smoke.spec.ts`
+- Batch 2 smoke: `npx playwright test --config=playwright.config.ts tests/smoke/pages-palette-board-switch-preview.smoke.spec.ts`
+- Batch 2 gate: `npm run build`
+- Batch 3 gate: manual doc review of `docs/RELAY_MODE_FEASIBILITY_2026-04-04.zh-CN.md`
+
+### Status By Agent
+- A: `done` - cycle boundary approved and status synchronized.
+- B: `done` - Batch 2 implementation owner, verified.
+- C: `done` - Batch 1 test coverage owner, verified.
+- D: `done` - Batch 3 analysis owner, verified.
+- E: `done` - log/documentation hygiene owner, verified.
+
+### Notes
+- The clean execution source for this cycle is `docs/MULTI_AGENT_EXECUTION_PLAN_2026-04-04.zh-CN.md`.
+- Historical WS4 history-legacy work remains unchanged and separate from this cycle.

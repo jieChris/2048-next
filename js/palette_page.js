@@ -36,6 +36,12 @@
     activeColorIndex: 0,
     swatchOpen: false
   };
+  var bodyScrollLockState = {
+    active: false,
+    scrollY: 0,
+    bodyStyles: null,
+    htmlOverflow: ""
+  };
 
   function toRecord(value) {
     return value && typeof value === "object" ? value : {};
@@ -55,6 +61,61 @@
 
   function byId(id) {
     return global.document.getElementById(id);
+  }
+
+  function lockBodyScroll() {
+    if (bodyScrollLockState.active) return;
+    var body = global.document.body;
+    var html = global.document.documentElement;
+    if (!body || !html) return;
+    bodyScrollLockState.active = true;
+    bodyScrollLockState.scrollY = global.scrollY || global.pageYOffset || 0;
+    bodyScrollLockState.bodyStyles = {
+      overflow: body.style.overflow,
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      touchAction: body.style.touchAction
+    };
+    bodyScrollLockState.htmlOverflow = html.style.overflow;
+    html.style.overflow = "hidden";
+    body.classList.add("palette-swatch-open");
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = "-" + String(bodyScrollLockState.scrollY) + "px";
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.touchAction = "none";
+  }
+
+  function unlockBodyScroll() {
+    if (!bodyScrollLockState.active) return;
+    var body = global.document.body;
+    var html = global.document.documentElement;
+    var snapshot = bodyScrollLockState.bodyStyles || {};
+    if (body) {
+      body.classList.remove("palette-swatch-open");
+      body.style.overflow = snapshot.overflow || "";
+      body.style.position = snapshot.position || "";
+      body.style.top = snapshot.top || "";
+      body.style.left = snapshot.left || "";
+      body.style.right = snapshot.right || "";
+      body.style.width = snapshot.width || "";
+      body.style.touchAction = snapshot.touchAction || "";
+    }
+    if (html) {
+      html.style.overflow = bodyScrollLockState.htmlOverflow || "";
+    }
+    bodyScrollLockState.active = false;
+    bodyScrollLockState.bodyStyles = null;
+    bodyScrollLockState.htmlOverflow = "";
+    if (bodyScrollLockState.scrollY) {
+      global.scrollTo(0, bodyScrollLockState.scrollY);
+    }
+    bodyScrollLockState.scrollY = 0;
   }
 
   function createEl(tag, className, text) {
@@ -408,7 +469,6 @@
       { id: "palette-picker-g", node: pickerGInputEl },
       { id: "palette-picker-b", node: pickerBInputEl },
       { id: "palette-preview-board", node: previewBoardEl },
-      { id: "palette-preview-legend", node: legendPreviewEl },
       { id: "palette-note", node: noteEl }
     ]);
 
@@ -549,9 +609,11 @@
       if (!swatchPopoverEl) return;
       if (state.swatchOpen) {
         swatchPopoverEl.classList.add("is-open");
+        lockBodyScroll();
         positionSwatchPopover();
       } else {
         swatchPopoverEl.classList.remove("is-open");
+        unlockBodyScroll();
       }
     }
 
@@ -783,34 +845,9 @@
       return values.slice(4, 16);
     }
 
-    function renderLegendRow(palette, ruleset) {
-      var valueRuleset = ruleset === "fibonacci" ? "fibonacci" : "pow2";
-      var visualRuleset = resolvePreviewVisualRuleset(valueRuleset);
-      var colors = getDimensionColors(palette, visualRuleset, "background");
-      var legendValues = resolveLegendValues(valueRuleset);
-      legendPreviewEl.classList.toggle("is-fibonacci", visualRuleset === "fibonacci");
-      legendPreviewEl.classList.toggle("is-pow2", visualRuleset !== "fibonacci");
+    function renderLegendRow() {
+      if (!legendPreviewEl) return;
       legendPreviewEl.innerHTML = "";
-      for (var i = 0; i < legendValues.length; i += 1) {
-        var value = legendValues[i];
-        var color = colors[Math.min(i + 4, colors.length - 1)];
-        var item = createEl(
-          "div",
-          "legend-pill timer-legend-pill timer-legend-" + value,
-          String(value)
-        );
-        item.style.background = color;
-        item.style.color = deriveTextColors([color])[0];
-        item.style.boxShadow = "0 0 12px 2px " + rgba(color, 0.34);
-        if (valueRuleset === "fibonacci") {
-          item.style.border = "1px solid " + mixHex(color, "#ffffff", 0.24);
-          item.style.boxShadow = "0 0 12px 2px " + rgba(color, 0.34) + ", inset 0 0 0 1px " + rgba(mixHex(color, "#ffffff", 0.24), 0.28);
-        }
-        legendPreviewEl.appendChild(item);
-      }
-      if (visualRuleset === "pow2" && syncTimerLegendStyles) {
-        syncTimerLegendStyles.call(themeManager);
-      }
     }
 
     function renderLegacyHooks(palette) {
@@ -895,7 +932,6 @@
       renderDimensionTabs();
       renderColorEditor(activeId, activePalette, state.selectedBoard, state.selectedDimension, locked);
       renderBoardPreview(activePalette, state.selectedBoard);
-      renderLegendRow(activePalette, state.selectedBoard);
       syncPreviewLegendSize();
       renderLegacyHooks(activePalette);
       syncTopPanelHeight();

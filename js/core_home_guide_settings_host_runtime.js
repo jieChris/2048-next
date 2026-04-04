@@ -60,6 +60,19 @@
     return true;
   }
 
+  function removeHomeGuideSettingsTriggerRow(documentLike) {
+    var trigger = getElementById(documentLike, "home-guide-trigger-btn");
+    var triggerClosest = asFunction(toRecord(trigger).closest);
+    var row = triggerClosest && trigger ? triggerClosest.call(trigger, ".settings-row") : null;
+    var node = row || trigger;
+    if (!node) return false;
+    var parentNode = toRecord(node).parentNode;
+    var removeChild = asFunction(toRecord(parentNode).removeChild);
+    if (!removeChild) return false;
+    removeChild.call(parentNode, node);
+    return true;
+  }
+
   function ensureHomeGuideSettingsTrigger(input) {
     var source = toRecord(input);
     var documentLike = toRecord(source.documentLike);
@@ -112,6 +125,17 @@
       };
     }
 
+    var isHomePage = asFunction(source.isHomePage);
+    if (isHomePage && !isHomePage()) {
+      removeHomeGuideSettingsTriggerRow(toRecord(source.documentLike));
+      return {
+        hasToggle: false,
+        didBindToggle: false,
+        didAssignSync: false,
+        didSync: false
+      };
+    }
+
     var toggle = ensureHomeGuideSettingsTrigger({
       documentLike: source.documentLike,
       homeGuideRuntime: homeGuideRuntime
@@ -126,7 +150,6 @@
     }
 
     var documentLike = toRecord(source.documentLike);
-    var isHomePage = asFunction(source.isHomePage);
     var closeSettingsModal = asFunction(source.closeSettingsModal);
     var startHomeGuide = asFunction(source.startHomeGuide);
     var homeGuideState = toRecord(source.homeGuideState);
