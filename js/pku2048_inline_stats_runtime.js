@@ -148,8 +148,8 @@
     return {
       body: documentLike.body,
       toggle: documentLike.getElementById("pku2048-inline-stats-toggle"),
-      toggleLabel: documentLike.querySelector('label[for="pku2048-inline-stats-toggle"]'),
-      toggleDesc: documentLike.querySelector("#pku2048-inline-stats-toggle + span"),
+      toggleLabel: documentLike.querySelector('label.settings-toggle-title[for="pku2048-inline-stats-toggle"]'),
+      toggleDesc: documentLike.querySelector("#pku2048-inline-stats-desc"),
       settingsBtn: documentLike.getElementById("top-settings-btn"),
       statsButton: documentLike.getElementById("stats-panel-toggle"),
       statsOverlay: overlay,
@@ -516,7 +516,10 @@
 
   function start(documentLike) {
     var body = documentLike.body;
-    if (!body || body.getAttribute("data-page-variant") !== "PKU2048") return;
+    if (!body) return;
+    var pageVariant = String(body.getAttribute("data-page-variant") || "");
+    var pageId = String(body.getAttribute("data-page") || "");
+    if (pageVariant !== "PKU2048" && pageId !== "practice") return;
 
     var state = {
       retryCount: 0,
@@ -575,4 +578,3 @@
     start(global.document);
   }
 })(typeof window !== "undefined" ? window : undefined);
-
