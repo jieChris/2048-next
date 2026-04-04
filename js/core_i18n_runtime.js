@@ -9,11 +9,14 @@
   var applying = false;
   var observer = null;
   var refreshTimer = 0;
+  var lastObserverApplyAt = 0;
   var languageSelectLockUntil = 0;
   var dialogPatched = false;
   var originalAlert = null;
   var originalConfirm = null;
   var originalPrompt = null;
+  var OBSERVER_MIN_APPLY_INTERVAL_MS = 220;
+  var OBSERVER_APPLY_DEBOUNCE_MS = 120;
 
   function resolveLocalStorage() {
     try {
@@ -650,6 +653,17 @@
     return true;
   }
 
+  function shouldScheduleApplyForMutations(mutations) {
+    if (!mutations || !mutations.length) return false;
+    for (var i = 0; i < mutations.length; i += 1) {
+      var mutation = mutations[i];
+      if (!mutation) continue;
+      if (mutation.type === "characterData") continue;
+      if (!isIgnorableMutationTarget(mutation.target)) return true;
+    }
+    return false;
+  }
+
   function translateAttrs(lang) {
     var attrs = ["title", "placeholder", "aria-label"];
     var nodes = global.document.querySelectorAll("[title],[placeholder],[aria-label]");
@@ -814,8 +828,9 @@
     if (map) global.document.title = lang === "en" ? map.en : map.zh;
   }
 
-  function applyLanguage(lang) {
+  function applyLanguage(lang, options) {
     if (applying) return;
+    options = options && typeof options === "object" ? options : {};
     applying = true;
     try {
       var safe = normalizeLang(lang);
@@ -829,22 +844,31 @@
       applyModeButtons(safe);
       applyPalettePageText(safe);
       applyPageSpecificText(safe);
-      translateAttrs(safe);
-      translateInputValues(safe);
-      translateTextNodes(safe);
+      if (!options.skipAttrTranslation) translateAttrs(safe);
+      if (!options.skipInputValueTranslation) translateInputValues(safe);
+      if (!options.skipTextNodeTranslation) translateTextNodes(safe);
       patchDialogs();
     } finally {
       applying = false;
     }
   }
 
-  function scheduleApply() {
+  function scheduleApply(options) {
+    options = options && typeof options === "object" ? options : {};
     if (isLanguageSelectLocked()) return;
     if (refreshTimer) global.clearTimeout(refreshTimer);
+    var debounceMs = Number(options.debounceMs);
+    if (!Number.isFinite(debounceMs) || debounceMs < 0) debounceMs = 30;
     refreshTimer = global.setTimeout(function () {
       refreshTimer = 0;
-      applyLanguage(currentLang || readLanguage());
-    }, 30);
+      if (options.fromObserver) {
+        if (global.document && global.document.hidden) return;
+        var now = getNow();
+        if ((now - lastObserverApplyAt) < OBSERVER_MIN_APPLY_INTERVAL_MS) return;
+        lastObserverApplyAt = now;
+      }
+      applyLanguage(currentLang || readLanguage(), options.applyOptions);
+    }, debounceMs);
   }
 
   function setLanguage(lang, persist) {
@@ -872,12 +896,18 @@
         if (applying) return;
         if (isLanguageSelectLocked()) return;
         if (shouldIgnoreMutations(mutations)) return;
-        scheduleApply();
+        if (!shouldScheduleApplyForMutations(mutations)) return;
+        scheduleApply({
+          fromObserver: true,
+          debounceMs: OBSERVER_APPLY_DEBOUNCE_MS,
+          applyOptions: {
+            skipTextNodeTranslation: true
+          }
+        });
       });
       observer.observe(global.document.body, {
         childList: true,
         subtree: true,
-        characterData: true,
         attributes: true,
         attributeFilter: ["title", "placeholder", "aria-label"]
       });

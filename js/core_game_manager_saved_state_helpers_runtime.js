@@ -284,8 +284,9 @@ function getSavedGameStateStoragesFallback(manager) {
   var out = [];
   var localStore = manager.getWebStorageByName("localStorage");
   var sessionStore = manager.getWebStorageByName("sessionStorage");
+  var mobileSafari = isMobileSafariLikeByManager(manager);
   if (localStore) out.push(localStore);
-  if (sessionStore && sessionStore !== localStore) out.push(sessionStore);
+  if (!mobileSafari && sessionStore && sessionStore !== localStore) out.push(sessionStore);
   return out;
 }
 
@@ -460,11 +461,38 @@ function shouldClearSavedStateForTerminatedSession(manager) {
   return manager.modeKey !== "practice" && isSessionTerminated(manager);
 }
 
+function resolveSaveThrottleUserAgent(manager) {
+  if (!(manager && typeof manager.getWindowLike === "function")) return "";
+  var windowLike = manager.getWindowLike();
+  var navigatorLike = windowLike && windowLike.navigator ? windowLike.navigator : null;
+  return navigatorLike && typeof navigatorLike.userAgent === "string"
+    ? navigatorLike.userAgent
+    : "";
+}
+
+function isMobileSafariUserAgent(userAgent) {
+  var ua = String(userAgent || "");
+  if (!ua) return false;
+  if (!/iPhone|iPad|iPod/i.test(ua)) return false;
+  if (!/Safari/i.test(ua)) return false;
+  if (/CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/i.test(ua)) return false;
+  return true;
+}
+
+function isMobileSafariLikeByManager(manager) {
+  return isMobileSafariUserAgent(resolveSaveThrottleUserAgent(manager));
+}
+
+function resolveSaveGameStateThrottleMs(manager) {
+  if (isMobileSafariLikeByManager(manager)) return 600;
+  return 150;
+}
+
 function shouldSkipSaveGameStateByThrottle(manager, options, now) {
   if (!manager) return true;
   if (options && options.force) return false;
   if (!manager.lastSavedGameStateAt) return false;
-  return (now - manager.lastSavedGameStateAt) < 150;
+  return (now - manager.lastSavedGameStateAt) < resolveSaveGameStateThrottleMs(manager);
 }
 
 function saveGameState(manager, options) {
