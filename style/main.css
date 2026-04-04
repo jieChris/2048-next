@@ -5120,3 +5120,9 @@ body[data-page="practice"][data-top-button-style="text"] #timerbox-toggle-btn {
     box-shadow: 0 5px 14px rgba(30, 22, 15, 0.22);
   }
 }
+
+body[data-page="game"] .game-container,
+body[data-page="practice"] .game-container,
+body[data-page="replay"] .game-container.game-container-replay {
+  margin-top: 35px !important;
+}

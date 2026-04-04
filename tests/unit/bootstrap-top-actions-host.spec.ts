@@ -50,7 +50,7 @@ describe("bootstrap top actions host", () => {
     expect(createGameTopActionsPlacementState).toHaveBeenCalledTimes(1);
     expect(syncGameTopActionsPlacement).toHaveBeenCalledTimes(1);
     expect(querySelector).toHaveBeenCalledWith(".top-action-buttons");
-    expect(querySelector).toHaveBeenCalledWith(".above-game .restart-button");
+    expect(querySelector).toHaveBeenCalledWith("#top-restart-btn");
     expect(getElementById).toHaveBeenCalledWith("timerbox-toggle-btn");
     expect(createGameTopActionsPlacementState).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -109,7 +109,7 @@ describe("bootstrap top actions host", () => {
     expect(createPracticeTopActionsPlacementState).toHaveBeenCalledTimes(1);
     expect(syncPracticeTopActionsPlacement).toHaveBeenCalledTimes(1);
     expect(getElementById).toHaveBeenCalledWith("practice-stats-actions");
-    expect(querySelector).toHaveBeenCalledWith(".above-game .restart-button");
+    expect(querySelector).toHaveBeenCalledWith("#top-restart-btn");
     expect(createPracticeTopActionsPlacementState).toHaveBeenCalledWith(
       expect.objectContaining({
         createComment

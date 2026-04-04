@@ -179,6 +179,19 @@ function mountStatsPanelToggleBeforeExport(btn, topActionHost, exportBtn) {
   }
 }
 
+function resolveRestartButtonInTopActionHost(topActionHost) {
+  if (!(topActionHost && typeof topActionHost.querySelector === "function")) return null;
+  return topActionHost.querySelector("#top-restart-btn") ||
+    topActionHost.querySelector(".restart-button");
+}
+
+function mountStatsPanelToggleBeforeRestart(btn, topActionHost, restartBtn) {
+  if (!restartBtn || restartBtn.parentNode !== topActionHost) return false;
+  if (btn.parentNode === topActionHost && btn.nextSibling === restartBtn) return true;
+  topActionHost.insertBefore(btn, restartBtn);
+  return true;
+}
+
 function mountStatsPanelToggleAtTopActionStart(btn, topActionHost) {
   if (btn.parentNode !== topActionHost) {
     topActionHost.insertBefore(btn, topActionHost.firstChild);
@@ -188,6 +201,10 @@ function mountStatsPanelToggleAtTopActionStart(btn, topActionHost) {
 function mountStatsPanelToggleIntoTopActions(btn, topActionHost, exportBtn) {
   if (!topActionHost) return false;
   btn.classList.remove("is-floating");
+  var restartBtn = resolveRestartButtonInTopActionHost(topActionHost);
+  if (mountStatsPanelToggleBeforeRestart(btn, topActionHost, restartBtn)) {
+    return true;
+  }
   if (exportBtn && exportBtn.parentNode === topActionHost) {
     mountStatsPanelToggleBeforeExport(btn, topActionHost, exportBtn);
     return true;

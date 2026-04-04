@@ -113,7 +113,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasModeCatalogRuntime).toBe(true);
     expect(snapshot.key).toBe("spawn_custom_4x4_pow2_no_undo");
     expect(snapshot.label).toContain("4率 25%");
-    expect(snapshot.introText).toContain("4率25%");
+    expect(snapshot.introText).toBe("");
     expect(snapshot.spawnTable).toEqual([
       { value: 2, weight: 75 },
       { value: 4, weight: 25 }

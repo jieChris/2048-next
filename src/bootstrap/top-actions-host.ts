@@ -72,7 +72,7 @@ export function applyGameTopActionsPlacementSync(input: {
       createState({
         enabled: true,
         topActionButtons: querySelector(".top-action-buttons"),
-        restartBtn: querySelector(".above-game .restart-button"),
+        restartBtn: querySelector("#top-restart-btn") || querySelector(".above-game .restart-button"),
         timerToggleBtn: getElementById("timerbox-toggle-btn"),
         createComment
       }) || null;
@@ -134,7 +134,7 @@ export function applyPracticeTopActionsPlacementSync(input: {
       createState({
         enabled: true,
         topActionButtons: getElementById("practice-stats-actions"),
-        restartBtn: querySelector(".above-game .restart-button"),
+        restartBtn: querySelector("#top-restart-btn") || querySelector(".above-game .restart-button"),
         createComment
       }) || null;
     didCreateState = !!state;

@@ -522,3 +522,9 @@ hr {
     }
   }
 }
+
+body[data-page="game"] .game-container,
+body[data-page="practice"] .game-container,
+body[data-page="replay"] .game-container.game-container-replay {
+  margin-top: 35px !important;
+}

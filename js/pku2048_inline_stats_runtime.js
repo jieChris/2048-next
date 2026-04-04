@@ -313,6 +313,7 @@
     if (!button || button.__pku2048LockBound) return;
     button.__pku2048LockBound = true;
     updateLockButtonVisual(button, state.locked);
+    button.style.display = state.inlineEnabled ? "" : "none";
 
     button.addEventListener("click", function (event) {
       event.preventDefault();
@@ -338,6 +339,7 @@
 
     if (!handle || handle.__pku2048ResizeBound) return;
     handle.__pku2048ResizeBound = true;
+    handle.style.display = state.inlineEnabled ? "" : "none";
 
     handle.addEventListener("pointerdown", function (event) {
       var latestNodes = resolveNodes(documentLike);
@@ -474,6 +476,8 @@
     nodes.body.classList.toggle("pku2048-stats-inline-mode", state.inlineEnabled);
 
     if (nodes.statsButton) nodes.statsButton.style.display = state.inlineEnabled ? "none" : "";
+    if (nodes.lockButton) nodes.lockButton.style.display = state.inlineEnabled ? "" : "none";
+    if (nodes.resizeHandle) nodes.resizeHandle.style.display = state.inlineEnabled ? "" : "none";
 
     if (state.inlineEnabled) {
       ensureOverlayOpen(nodes, state);

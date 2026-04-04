@@ -50,7 +50,7 @@
         createState({
           enabled: true,
           topActionButtons: querySelector(".top-action-buttons"),
-          restartBtn: querySelector(".above-game .restart-button"),
+          restartBtn: querySelector("#top-restart-btn") || querySelector(".above-game .restart-button"),
           timerToggleBtn: getElementById("timerbox-toggle-btn"),
           createComment: createComment
         }) || null;
@@ -102,7 +102,7 @@
         createState({
           enabled: true,
           topActionButtons: getElementById("practice-stats-actions"),
-          restartBtn: querySelector(".above-game .restart-button"),
+          restartBtn: querySelector("#top-restart-btn") || querySelector(".above-game .restart-button"),
           createComment: createComment
         }) || null;
       didCreateState = !!state;
