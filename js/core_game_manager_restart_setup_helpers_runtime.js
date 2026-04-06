@@ -209,7 +209,7 @@ function syncSetupSessionReplayV1InitTiles(manager) {
   manager.sessionReplayV1.board_width = manager.width;
   manager.sessionReplayV1.board_height = manager.height;
   manager.sessionReplayV1.init_tiles = Array.isArray(initTiles) ? initTiles : [];
-  manager.sessionReplayV1.supported = !!(initTiles && manager.width * manager.height <= 16);
+  manager.sessionReplayV1.supported = !!initTiles;
 }
 
 function resetSetupReplayAndSpawnState(manager) {

@@ -555,6 +555,70 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.replayMovesLength).toBe(0);
   });
 
+  test("5x5 mode serializes replay as v1 with per-step deltaMs", async ({ page }) => {
+    const response = await page.goto("/play.html?mode_key=board_5x5_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "5x5 play response should exist").not.toBeNull();
+    expect(response?.ok(), "5x5 play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      const codec = (window as any).CoreReplayCodecRuntime;
+      return (
+        !!manager &&
+        typeof manager.move === "function" &&
+        typeof manager.serialize === "function" &&
+        !!codec &&
+        typeof codec.decodeReplayV1Rpl === "function"
+      );
+    });
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const codec = (window as any).CoreReplayCodecRuntime;
+      const prefix =
+        ((window as any).GameManager && (window as any).GameManager.REPLAY_V1_RPL_BASE64_PREFIX) ||
+        "REPLAY_v1RPL_B64_";
+      for (let i = 0; i < 64; i += 1) {
+        manager.move(i % 4);
+        const session = manager.sessionReplayV1;
+        if (session && Array.isArray(session.records) && session.records.length > 0) break;
+      }
+      const replayText = String(manager.serialize());
+      const hasV1Prefix = replayText.startsWith(prefix);
+      if (!hasV1Prefix) {
+        return {
+          hasV1Prefix,
+          replayTextHead: replayText.slice(0, 40)
+        };
+      }
+      const encoded = replayText.slice(prefix.length);
+      const binary = window.atob(encoded);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i) & 255;
+      const decoded = codec.decodeReplayV1Rpl(bytes);
+      const moveRecords = Array.isArray(decoded?.records)
+        ? decoded.records.filter((record: any) => record && record.kind === "move")
+        : [];
+      return {
+        hasV1Prefix,
+        width: Number(decoded?.width),
+        height: Number(decoded?.height),
+        moveCount: moveRecords.length,
+        hasDeltaMs: moveRecords.every(
+          (record: any) => Number.isInteger(record?.deltaMs) && Number(record.deltaMs) >= 0
+        )
+      };
+    });
+
+    expect(snapshot.hasV1Prefix).toBe(true);
+    expect(snapshot.width).toBe(5);
+    expect(snapshot.height).toBe(5);
+    expect(snapshot.moveCount).toBeGreaterThan(0);
+    expect(snapshot.hasDeltaMs).toBe(true);
+  });
+
   test("replay ui step/seek triggers single final actuate without extra relayout flash", async ({
     page
   }) => {

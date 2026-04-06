@@ -97,7 +97,7 @@ function createFallbackCapped64NoUndoModeConfig() {
 function createFallbackPracticeModeConfig() {
   return createFallbackPow2ModeConfig(
     "practice",
-    "缁冧範鏉匡紙鐩撮€氾級",
+    "练习板（直通）",
     4,
     4,
     true,
@@ -327,4 +327,3 @@ function applyGameManagerStaticConfiguration() {
   applyGameManagerStorageStatics();
   applyGameManagerModeStatics();
 }
-

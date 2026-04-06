@@ -56,6 +56,64 @@ npm run dev
 
 启动后按终端提示访问本地地址（通常为 `http://localhost:5173`）。
 
+### 3.1 本地联调 API（登录/账号/排行榜可直接测）
+
+前端仓已内置 `/api` 代理，默认转发到 `http://127.0.0.1:8787`。  
+可直接一键启动（推荐）：
+
+```bash
+npm run dev:local
+```
+
+默认 `API` 以本地模式启动（`wrangler dev --local`），不依赖 Cloudflare 远程 tail 通道，更稳定。  
+如果你需要连远程资源调试，可改成：
+
+```bash
+# Windows PowerShell
+$env:LOCAL_API_MODE="remote"
+npm run dev:local
+```
+
+手动两端启动方式：
+
+1. 在 `2048-game-api` 仓启动 Worker：
+
+```bash
+npx wrangler dev --port 8787
+```
+
+2. 在当前前端仓启动：
+
+```bash
+npm run dev
+```
+
+这样页面里所有 `/api/*` 请求都会转发到本地 API，不需要先推服务器。
+
+如果本地网络无法稳定连接 Cloudflare 开发通道，但你仍希望在本地页面使用线上 API（含 CF 服务），可直接运行：
+
+```bash
+npm run dev:cloud-api
+```
+
+该命令会把前端 `/api/*` 代理到 `https://taihe.fun/api/*`。
+
+如你的 API 端口不是 `8787`，可在启动前设置：
+
+```bash
+# Windows PowerShell
+$env:VITE_API_PROXY_TARGET="http://127.0.0.1:8799"
+npm run dev
+```
+
+如 API 仓不在默认相邻目录，可指定目录后再一键启动：
+
+```bash
+# Windows PowerShell
+$env:LOCAL_API_DIR="G:\\2048\\2048undo\\2048-game-api\\2048-game-api"
+npm run dev:local
+```
+
 ### 4. 构建与预览
 
 ```bash

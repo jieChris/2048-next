@@ -9,8 +9,8 @@ import {
 } from "../../src/entries/runtime-manifest";
 
 describe("runtime-manifest: PAGE_MANIFESTS", () => {
-  it("has 16 page entries", () => {
-    expect(PAGE_MANIFESTS.length).toBe(16);
+  it("has 17 page entries", () => {
+    expect(PAGE_MANIFESTS.length).toBe(17);
   });
 
   it("all entries have unique pageId", () => {
@@ -65,7 +65,7 @@ describe("runtime-manifest: getProductionPages", () => {
   it("excludes devOnly pages", () => {
     const prod = getProductionPages();
     expect(prod.every((p) => !p.devOnly)).toBe(true);
-    expect(prod.length).toBe(15);
+    expect(prod.length).toBe(16);
   });
 });
 

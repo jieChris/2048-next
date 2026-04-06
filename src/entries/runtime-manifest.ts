@@ -33,6 +33,7 @@ export type RuntimeCapability =
   | "account-settings"
   | "history"
   | "modes"
+  | "relay-5x5"
   | "palette"
   | "user-profile"
   | "register"
@@ -119,6 +120,11 @@ export const PAGE_MANIFESTS: readonly PageManifestEntry[] = [
     pageId: "modes",
     htmlFile: "modes.html",
     capabilities: ["modes"]
+  },
+  {
+    pageId: "relay-5x5",
+    htmlFile: "relay_5x5.html",
+    capabilities: ["relay-5x5"]
   },
   {
     pageId: "palette",

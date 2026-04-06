@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { parseReplayImportEnvelope, detectReplayFormat } from "../../src/core/replay-import";
+import { detectReplayFormat, parseReplayImportEnvelope } from "../../src/core/replay-import";
 
-describe("core replay import: parseReplayImportEnvelope", () => {
+describe("core replay import: v1 only", () => {
   it("parses v1 base64 envelope", () => {
     const parsed = parseReplayImportEnvelope({
-      trimmedReplayString: "REPLAY_v1RPL_B64_AQID",
-      fallbackModeKey: "practice"
+      trimmedReplayString: "REPLAY_v1RPL_B64_AQID"
     });
     expect(parsed).not.toBeNull();
     expect(parsed?.kind).toBe("v1rpl-b64");
@@ -14,147 +13,37 @@ describe("core replay import: parseReplayImportEnvelope", () => {
     expect(parsed.encodedBase64).toBe("AQID");
   });
 
-  it("throws for empty v1 base64 payload", () => {
+  it("throws for empty v1 payload", () => {
     expect(() =>
       parseReplayImportEnvelope({
-        trimmedReplayString: "REPLAY_v1RPL_B64_",
-        fallbackModeKey: "practice"
+        trimmedReplayString: "REPLAY_v1RPL_B64_"
       })
     ).toThrow("Invalid replay v1 payload");
   });
 
-  it("parses v4C envelope with mode mapping", () => {
-    const parsed = parseReplayImportEnvelope({
-      trimmedReplayString: "REPLAY_v4C_C" + "!".repeat(16) + "abc",
-      fallbackModeKey: "practice"
-    });
-    expect(parsed).not.toBeNull();
-    expect(parsed?.kind).toBe("v4c");
-    if (!parsed || parsed.kind !== "v4c") return;
-    expect(parsed.modeKey).toBe("classic_4x4_pow2_undo");
-    expect(parsed.initialBoardEncoded).toBe("!".repeat(16));
-    expect(parsed.actionsEncoded).toBe("abc");
-  });
-
-  it("throws for invalid v4C payload size", () => {
-    expect(() =>
-      parseReplayImportEnvelope({
-        trimmedReplayString: "REPLAY_v4C_Cshort",
-        fallbackModeKey: "practice"
-      })
-    ).toThrow("Invalid v4C payload");
-  });
-
-  it("throws for invalid v4C mode code", () => {
-    expect(() =>
-      parseReplayImportEnvelope({
-        trimmedReplayString: "REPLAY_v4C_X" + "!".repeat(16),
-        fallbackModeKey: "practice"
-      })
-    ).toThrow("Invalid v4C mode");
-  });
-
-  it("returns null for unsupported legacy payloads", () => {
+  it("returns null for legacy formats", () => {
     expect(
       parseReplayImportEnvelope({
-        trimmedReplayString: "REPLAY_v2_abc",
-        fallbackModeKey: "practice"
+        trimmedReplayString: "REPLAY_v4C_C!!!!!!!!!!!!!!!!abc"
       })
     ).toBeNull();
-  });
-
-  it("parses v3 JSON envelope with mode key and seed", () => {
-    const parsed = parseReplayImportEnvelope({
-      trimmedReplayString: JSON.stringify({
-        v: 3,
-        mode_key: "diag_4x4_pow2_no_undo",
-        seed: 0.125,
-        actions: [["m", 6], ["u"]]
-      }),
-      fallbackModeKey: "practice"
-    });
-    expect(parsed).not.toBeNull();
-    expect(parsed?.kind).toBe("v3-json");
-    if (!parsed || parsed.kind !== "v3-json") return;
-    expect(parsed.modeKey).toBe("diag_4x4_pow2_no_undo");
-    expect(parsed.seed).toBe(0.125);
-    expect(parsed.actions).toEqual([["m", 6], ["u"]]);
-  });
-
-  it("uses fallback mode key when v3 payload omits mode key", () => {
-    const parsed = parseReplayImportEnvelope({
-      trimmedReplayString: JSON.stringify({
-        v: 3,
-        seed: 0.5,
-        actions: [1, 2, 3]
-      }),
-      fallbackModeKey: "practice"
-    });
-    expect(parsed).not.toBeNull();
-    expect(parsed?.kind).toBe("v3-json");
-    if (!parsed || parsed.kind !== "v3-json") return;
-    expect(parsed.modeKey).toBe("practice");
-    expect(parsed.seed).toBe(0.5);
-    expect(parsed.actions).toEqual([1, 2, 3]);
-  });
-
-  it("keeps custom four-rate snapshot from v3 payload", () => {
-    const parsed = parseReplayImportEnvelope({
-      trimmedReplayString: JSON.stringify({
-        v: 3,
-        mode_key: "spawn_custom_4x4_pow2_no_undo",
-        seed: 0.75,
-        special_rules_snapshot: {
-          custom_spawn_four_rate: 37.456
-        },
-        actions: [0, 1, 2]
-      }),
-      fallbackModeKey: "practice"
-    });
-    expect(parsed).not.toBeNull();
-    expect(parsed?.kind).toBe("v3-json");
-    if (!parsed || parsed.kind !== "v3-json") return;
-    expect(parsed.modeKey).toBe("spawn_custom_4x4_pow2_no_undo");
-    expect(parsed.specialRulesSnapshot).toEqual({ custom_spawn_four_rate: 37.46 });
-  });
-
-  it("parses custom four-rate snapshot for every integer rate 0-100", () => {
-    for (let rate = 0; rate <= 100; rate += 1) {
-      const parsed = parseReplayImportEnvelope({
-        trimmedReplayString: JSON.stringify({
-          v: 3,
-          mode_key: "spawn_custom_4x4_pow2_no_undo",
-          seed: 1,
-          special_rules_snapshot: { custom_spawn_four_rate: rate },
-          actions: []
-        }),
-        fallbackModeKey: "practice"
-      });
-      expect(parsed).not.toBeNull();
-      expect(parsed?.kind).toBe("v3-json");
-      if (!parsed || parsed.kind !== "v3-json") continue;
-      expect(parsed.specialRulesSnapshot).toEqual({ custom_spawn_four_rate: rate });
-    }
+    expect(
+      parseReplayImportEnvelope({
+        trimmedReplayString: '{"v":3,"actions":[0,1,2]}'
+      })
+    ).toBeNull();
   });
 });
 
 describe("detectReplayFormat", () => {
-  it("detects v1 rpl base64 format", () => {
+  it("detects v1 format", () => {
     expect(detectReplayFormat("REPLAY_v1RPL_B64_abc")).toBe("v1rpl-b64");
   });
-  it("detects v4c format", () => {
-    expect(detectReplayFormat("REPLAY_v4C_S...")).toBe("v4c");
-  });
-  it("detects v3 JSON object format", () => {
-    expect(detectReplayFormat('{"version":3}')).toBe("v3-json");
-  });
-  it("detects v3 JSON array format", () => {
-    expect(detectReplayFormat("[1,2,3]")).toBe("v3-json");
-  });
-  it("returns unknown for unrecognized", () => {
+
+  it("returns unknown for non-v1", () => {
+    expect(detectReplayFormat("REPLAY_v4C_S...")).toBe("unknown");
+    expect(detectReplayFormat('{"version":3}')).toBe("unknown");
+    expect(detectReplayFormat("[1,2,3]")).toBe("unknown");
     expect(detectReplayFormat("random")).toBe("unknown");
-  });
-  it("handles whitespace", () => {
-    expect(detectReplayFormat("  REPLAY_v4C_X")).toBe("v4c");
   });
 });

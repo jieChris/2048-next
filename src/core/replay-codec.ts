@@ -6,6 +6,7 @@ export const REPLAY_V1_MAGIC = "RPL1";
 export const REPLAY_V1_FLAG_HAS_START_UNIX_MS = 1 << 0;
 export const REPLAY_V1_FLAG_CONTAINS_UNDO_RECORDS = 1 << 1;
 export const REPLAY_V1_FLAG_CONTAINS_CHECKPOINTS = 1 << 2;
+export const REPLAY_V1_FLAG_EXTENDED_INIT_TILES = 1 << 3;
 
 export const REPLAY_V1_RECORD_UNDO1 = 0x80;
 export const REPLAY_V1_RECORD_UNDON = 0x81;
@@ -308,6 +309,12 @@ export function encodeReplayV1Rpl(input: ReplayV1EncodeInput): Uint8Array {
   }
   if (containsUndo) flags |= REPLAY_V1_FLAG_CONTAINS_UNDO_RECORDS;
   if (containsCheckpoints) flags |= REPLAY_V1_FLAG_CONTAINS_CHECKPOINTS;
+  const useExtendedInitTiles = width * height > 16;
+  if (useExtendedInitTiles) {
+    flags |= REPLAY_V1_FLAG_EXTENDED_INIT_TILES;
+  } else {
+    flags &= ~REPLAY_V1_FLAG_EXTENDED_INIT_TILES;
+  }
 
   const chunks: number[][] = [];
   appendBytes(chunks, [82, 80, 76, 49]); // RPL1
@@ -328,7 +335,11 @@ export function encodeReplayV1Rpl(input: ReplayV1EncodeInput): Uint8Array {
       "Invalid replay v1 init tile cell index"
     );
     const valueBit = assertIntegerRange(Number(tile && tile.valueBit), 0, 1, "Invalid replay v1 init tile value bit");
-    appendBytes(chunks, [(cellIndex & 0x0f) | ((valueBit & 1) << 4)]);
+    if ((flags & REPLAY_V1_FLAG_EXTENDED_INIT_TILES) !== 0) {
+      appendBytes(chunks, encodeUleb128((cellIndex << 1) | (valueBit & 1)));
+    } else {
+      appendBytes(chunks, [(cellIndex & 0x0f) | ((valueBit & 1) << 4)]);
+    }
   }
 
   for (let i = 0; i < records.length; i += 1) {
@@ -381,13 +392,28 @@ export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | U
 
   const initTiles: ReplayV1InitTile[] = [];
   for (let i = 0; i < initCount; i += 1) {
-    if (offset >= crcOffset) throw "Unexpected EOF while decoding replay v1 init tiles";
-    const token = bytes[offset];
-    offset += 1;
-    initTiles.push({
-      cellIndex: token & 0x0f,
-      valueBit: ((token >> 4) & 1) as 0 | 1
-    });
+    if ((flags & REPLAY_V1_FLAG_EXTENDED_INIT_TILES) !== 0) {
+      const decoded = decodeUleb128(bytes, offset);
+      offset = decoded.nextOffset;
+      const encodedTile = decoded.value;
+      const cellIndex = encodedTile >>> 1;
+      const valueBit = (encodedTile & 1) as 0 | 1;
+      if (!Number.isInteger(cellIndex) || cellIndex < 0 || cellIndex >= width * height) {
+        throw "Invalid replay v1 init tile cell index";
+      }
+      initTiles.push({
+        cellIndex,
+        valueBit
+      });
+    } else {
+      if (offset >= crcOffset) throw "Unexpected EOF while decoding replay v1 init tiles";
+      const token = bytes[offset];
+      offset += 1;
+      initTiles.push({
+        cellIndex: token & 0x0f,
+        valueBit: ((token >> 4) & 1) as 0 | 1
+      });
+    }
   }
 
   const records: ReplayV1Record[] = [];

@@ -50,6 +50,7 @@ const PAGE_DESCRIPTORS: Record<string, Partial<PageCapabilityDescriptor>> = {
   account: { needsLeaderboard: true },
   "account-settings": { needsSettings: true, needsI18n: true },
   "user-profile": { needsHistory: true, needsReplay: true },
+  "relay-5x5": { needsI18n: true },
   register: {},
   password: {},
   modes: { needsI18n: true },

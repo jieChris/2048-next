@@ -289,13 +289,13 @@ function renderList(
           };
           if (isPromiseLike(result)) {
             result.then(onPayload).catch(() => {
-              setStatus(documentLike, "瀵煎嚭澶辫触", true);
+              setStatus(documentLike, "导出失败", true);
             });
             return;
           }
           onPayload(result);
         } catch (_err) {
-          setStatus(documentLike, "瀵煎嚭澶辫触", true);
+          setStatus(documentLike, "导出失败", true);
         }
       });
     }
@@ -306,7 +306,7 @@ function renderList(
         if (!windowLike.confirm("\u786e\u8ba4\u5220\u9664\u8fd9\u6761\u8bb0\u5f55\uff1f")) return;
         const ok = await callStore(windowLike, "deleteById", item.id);
         if (!ok) {
-          setStatus(documentLike, "鍒犻櫎澶辫触", true);
+          setStatus(documentLike, "删除失败", true);
           return;
         }
         setStatus(documentLike, "\u5df2\u5220\u9664\u8bb0\u5f55", false);
@@ -464,7 +464,7 @@ function bindImport(
   });
 
   importReplaceBtn.addEventListener("click", () => {
-    if (!windowLike.confirm("纭瀵煎叆骞舵浛鎹㈠叏閮ㄥ綋鍓嶅巻鍙茶褰曪紵")) return;
+    if (!windowLike.confirm("确认导入并替换全部当前历史记录？")) return;
     openPicker(false);
   });
 
@@ -485,7 +485,7 @@ function bindImport(
         );
         await loadHistory(true);
       } catch (_err) {
-        setStatus(documentLike, "瀵煎叆澶辫触锛氭枃浠舵牸寮忎笉姝ｇ‘", true);
+        setStatus(documentLike, "导入失败：文件格式不正确", true);
       }
     };
     reader.onerror = () => {
@@ -543,7 +543,7 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
       await rebuildOwnerFilterOptions(windowLike, documentLike, controller, resolveLang(), state.ownerKey);
       setStatus(documentLike, "", false);
     } catch (_err) {
-      setStatus(documentLike, "鍔犺浇鍘嗗彶澶辫触", true);
+      setStatus(documentLike, "加载历史失败", true);
     }
   };
 
@@ -615,13 +615,13 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
           };
           if (isPromiseLike(result)) {
             result.then(handlePayload).catch(() => {
-              setStatus(documentLike, "瀵煎嚭澶辫触", true);
+      setStatus(documentLike, "导出失败", true);
             });
             return;
           }
           handlePayload(result);
         } catch (_err) {
-          setStatus(documentLike, "瀵煎嚭澶辫触", true);
+          setStatus(documentLike, "导出失败", true);
         }
       });
     }

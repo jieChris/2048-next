@@ -20,6 +20,7 @@ const PAGE_LEGACY_IMPORT_ALLOWLIST = {
     "../../js/core_game_settings_storage_runtime.js",
     "../../js/local_history_store.js"
   ]),
+  "relay-5x5-page.ts": new Set(["../../js/api_shared_utils.js", "../../js/relay_5x5_page.js"]),
   "modes-page.ts": new Set(["../../js/theme_manager.js"]),
   "palette-page.ts": new Set([
     "../../js/theme_manager.js",

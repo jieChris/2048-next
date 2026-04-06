@@ -24,6 +24,11 @@
     if (body && typeof body.setAttribute === "function") {
       body.setAttribute("data-mode-id", String(headerState.bodyModeId || ""));
       body.setAttribute("data-ruleset", String(headerState.bodyRuleset || ""));
+      body.setAttribute("data-mode-title", String(headerState.titleText || ""));
+    }
+
+    if (typeof documentLike.title === "string") {
+      documentLike.title = String(headerState.titleText || "");
     }
 
     if (title) {

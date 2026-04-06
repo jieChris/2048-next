@@ -196,6 +196,31 @@ describe("core replay codec", () => {
     expect(mapped.replaySpawns[0]).toEqual({ x: 3, y: 3, value: 2 });
   });
 
+  it("encodes and decodes replay v1 init tiles for 5x5 board", () => {
+    const encoded = encodeReplayV1Rpl({
+      width: 5,
+      height: 5,
+      initTiles: [
+        { cellIndex: 0, valueBit: 0 },
+        { cellIndex: 24, valueBit: 1 }
+      ],
+      records: [{ kind: "move", dir: 2, spawnIndex: 20, spawnValueBit: 0, deltaMs: 16 }]
+    });
+    const decoded = decodeReplayV1Rpl(encoded);
+    expect(decoded.width).toBe(5);
+    expect(decoded.height).toBe(5);
+    expect(decoded.initTiles).toEqual([
+      { cellIndex: 0, valueBit: 0 },
+      { cellIndex: 24, valueBit: 1 }
+    ]);
+    expect(decoded.records[0]).toMatchObject({
+      kind: "move",
+      dir: 2,
+      spawnIndex: 20,
+      spawnValueBit: 0
+    });
+  });
+
   it("rejects replay v1 payload when crc mismatch", () => {
     const encoded = encodeReplayV1Rpl({
       width: 4,

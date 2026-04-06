@@ -1,8 +1,10 @@
-﻿export interface PlayHeaderModeConfigLike {
+export interface PlayHeaderModeConfigLike {
   key?: string | null | undefined;
   label?: string | null | undefined;
   board_width?: number | null | undefined;
   board_height?: number | null | undefined;
+  max_tile?: number | null | undefined;
+  undo_enabled?: boolean | null | undefined;
   ruleset?: string | null | undefined;
   special_rules?: Record<string, unknown> | null | undefined;
 }
@@ -50,6 +52,110 @@ function resolvePlayModeTitle(modeConfig: PlayHeaderModeConfigLike | null | unde
     if (mode && typeof mode.label === "string" && mode.label) return mode.label;
   }
   return localizeFallbackModeLabel(String(modeConfig?.label || ""), lang);
+}
+
+function resolvePlayBoardSizeText(modeConfig: PlayHeaderModeConfigLike | null | undefined): string {
+  const widthRaw = Number(modeConfig?.board_width);
+  const heightRaw = Number(modeConfig?.board_height);
+  const width = Number.isFinite(widthRaw) && widthRaw > 0 ? Math.floor(widthRaw) : 4;
+  const height = Number.isFinite(heightRaw) && heightRaw > 0 ? Math.floor(heightRaw) : width;
+  return String(width) + "x" + String(height);
+}
+
+function resolvePlayModeUndoState(
+  modeConfig: PlayHeaderModeConfigLike | null | undefined
+): "undo" | "no_undo" | null {
+  const undoEnabled = modeConfig?.undo_enabled;
+  if (typeof undoEnabled === "boolean") return undoEnabled ? "undo" : "no_undo";
+
+  const key = String(modeConfig?.key || "").trim().toLowerCase();
+  if (key.indexOf("_no_undo") >= 0) return "no_undo";
+  if (key.indexOf("_undo") >= 0) return "undo";
+
+  const label = String(modeConfig?.label || "");
+  if (/可撤回|\(Undo\)/i.test(label)) return "undo";
+  if (/无撤回|\(No Undo\)/i.test(label)) return "no_undo";
+  return null;
+}
+
+function appendUndoSuffix(base: string, lang: "zh" | "en", undoState: "undo" | "no_undo" | null): string {
+  if (undoState === "undo") return base + (lang === "en" ? " (Undo)" : "（可撤回）");
+  return base;
+}
+
+function resolvePlayModeBoardTitle(modeConfig: PlayHeaderModeConfigLike | null | undefined): string {
+  const lang = resolvePlayHeaderLang();
+  const key = String(modeConfig?.key || "").trim().toLowerCase();
+  const sizeText = resolvePlayBoardSizeText(modeConfig);
+  const undoState = resolvePlayModeUndoState(modeConfig);
+  const specialRules = modeConfig?.special_rules;
+  const allowDiagonalMoves =
+    !!specialRules &&
+    typeof specialRules === "object" &&
+    (specialRules as Record<string, unknown>).allow_diagonal_moves === true;
+
+  if (key.indexOf("diag_") === 0 || allowDiagonalMoves) {
+    return appendUndoSuffix(lang === "en" ? "Diagonal " + sizeText : "八方向" + sizeText, lang, undoState);
+  }
+
+  if (key.indexOf("fib_") === 0 || String(modeConfig?.ruleset || "").toLowerCase() === "fibonacci") {
+    return appendUndoSuffix(lang === "en" ? "Fibonacci " + sizeText : "斐波那契" + sizeText, lang, undoState);
+  }
+
+  if (key.indexOf("capped_") === 0) {
+    const maxTileRaw = Number(modeConfig?.max_tile);
+    const maxTile = Number.isFinite(maxTileRaw) && maxTileRaw > 0 ? Math.floor(maxTileRaw) : null;
+    const base = lang === "en"
+      ? maxTile === null
+        ? "Capped " + sizeText
+        : "Capped " + sizeText + " (" + String(maxTile) + ")"
+      : maxTile === null
+        ? "封顶" + sizeText
+        : "封顶" + sizeText + "（" + String(maxTile) + "）";
+    return appendUndoSuffix(base, lang, undoState);
+  }
+
+  if (key.indexOf("spawn_custom_") === 0) {
+    return appendUndoSuffix(lang === "en" ? "Custom 4-Rate " + sizeText : "自定义4率" + sizeText, lang, undoState);
+  }
+
+  if (key.indexOf("spawn95_") === 0 || key.indexOf("spawn80_") === 0 || key.indexOf("spawn50_") === 0) {
+    return appendUndoSuffix(lang === "en" ? "Spawn Variant " + sizeText : "概率变种" + sizeText, lang, undoState);
+  }
+
+  if (key.indexOf("limit3_") === 0 || key.indexOf("limit5_") === 0) {
+    return appendUndoSuffix(lang === "en" ? "Limited Undo " + sizeText : "限次撤回" + sizeText, lang, undoState);
+  }
+
+  if (key.indexOf("combo_") === 0) {
+    return appendUndoSuffix(lang === "en" ? "Combo " + sizeText : "连击加分" + sizeText, lang, undoState);
+  }
+
+  if (key.indexOf("dirlock") === 0) {
+    return appendUndoSuffix(lang === "en" ? "Direction Lock " + sizeText : "方向锁" + sizeText, lang, undoState);
+  }
+
+  if (key.indexOf("obstacle_") === 0) {
+    return appendUndoSuffix(lang === "en" ? "Obstacle " + sizeText : "障碍块" + sizeText, lang, undoState);
+  }
+
+  if (key.indexOf("stone_") === 0) {
+    return appendUndoSuffix(lang === "en" ? "Stone Mode " + sizeText : "石头模式" + sizeText, lang, undoState);
+  }
+
+  if (key.indexOf("item_") === 0) {
+    return appendUndoSuffix(lang === "en" ? "Item Mode " + sizeText : "道具模式" + sizeText, lang, undoState);
+  }
+
+  if (key.indexOf("timed") === 0) {
+    return appendUndoSuffix(lang === "en" ? "Timed " + sizeText : "限时模式" + sizeText, lang, undoState);
+  }
+
+  if (key === "practice") {
+    return lang === "en" ? "Practice Board" : "练习板";
+  }
+
+  return appendUndoSuffix(sizeText, lang, undoState);
 }
 
 function formatPlayCustomFourRate(rate: number): string {
@@ -118,7 +224,7 @@ export function buildPlayModeIntroText(modeConfig: PlayHeaderModeConfigLike | nu
 export function resolvePlayHeaderState(
   modeConfig: PlayHeaderModeConfigLike | null | undefined
 ): PlayHeaderState {
-  const titleText = resolvePlayModeTitle(modeConfig);
+  const titleText = resolvePlayModeBoardTitle(modeConfig) || resolvePlayModeTitle(modeConfig);
   return {
     bodyModeId: String(modeConfig?.key || ""),
     bodyRuleset: String(modeConfig?.ruleset || ""),

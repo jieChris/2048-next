@@ -541,6 +541,16 @@
         }
 
         if (!response.ok) {
+          var responseCode = toText(data && data.code).trim().toUpperCase();
+          var isUnauthorizedResponse =
+            response.status === 401 ||
+            response.status === 403 ||
+            responseCode === "UNAUTHORIZED" ||
+            responseCode === "INVALID_TOKEN";
+          if (opts.auth && isUnauthorizedResponse) {
+            clearAuth();
+            syncAuthState();
+          }
           if (!data && i < apiBases.length - 1) {
             continue;
           }

@@ -11,6 +11,7 @@ interface HtmlEntryExpectation {
 const ENTRY_PAGES: HtmlEntryExpectation[] = [
   { htmlPath: "2048.html", entryPath: "./src/entries/index.ts" },
   { htmlPath: "history.html", entryPath: "./src/entries/history.ts" },
+  { htmlPath: "relay_5x5.html", entryPath: "./src/entries/relay-5x5.ts" },
   { htmlPath: "modes.html", entryPath: "./src/entries/modes.ts" },
   { htmlPath: "account.html", entryPath: "./src/entries/account.ts" },
   { htmlPath: "account_settings.html", entryPath: "./src/entries/account-settings.ts" },

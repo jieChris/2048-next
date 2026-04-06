@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "node scripts/dev-local.mjs",
+    "dev:cloud-api": "node scripts/dev-cloud-api.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview --open",
     "audit:game-manager": "node scripts/game-manager-audit.mjs",

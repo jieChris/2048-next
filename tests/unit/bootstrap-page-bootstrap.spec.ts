@@ -40,6 +40,12 @@ describe("bootstrap: page-bootstrap", () => {
     expect(userProfile.needsReplay).toBe(true);
   });
 
+  it("resolvePageDescriptor returns relay-5x5 page with i18n enabled", () => {
+    const relay = resolvePageDescriptor("relay-5x5");
+    expect(relay.pageId).toBe("relay-5x5");
+    expect(relay.needsI18n).toBe(true);
+  });
+
   it("resolvePageDescriptor returns unknown page with defaults", () => {
     const desc = resolvePageDescriptor("nonexistent");
     expect(desc.needsLeaderboard).toBe(false);

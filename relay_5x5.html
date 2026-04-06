@@ -1,0 +1,595 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>5x5 接力模式</title>
+  <link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260305-2">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+  <style>
+    .relay-page { margin-top: 24px; margin-bottom: 24px; position: relative; }
+    .relay-head { margin-bottom: 14px; }
+    .relay-head h1 { margin: 0; color: #776e65; font-size: 34px; line-height: 1.1; }
+    .relay-head p { margin: 10px 0 0; color: #8a8178; font-size: 15px; }
+    .relay-nav { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .relay-nav-btn {
+      display: inline-block;
+      background: #8f7a66;
+      color: #f9f6f2;
+      text-decoration: none;
+      border: 1px solid #8f7a66;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 14px;
+      font-weight: bold;
+      font-family: inherit;
+      line-height: 1.2;
+      cursor: pointer;
+    }
+    .relay-nav-btn:hover { background: #7f6a56; }
+    .relay-panel {
+      background: #faf8ef;
+      border: 1px solid #ddd4c5;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .relay-panel h2 { margin: 0 0 10px; font-size: 22px; color: #6f665d; }
+    .relay-status-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .relay-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid #d7cbb9;
+      background: #fffdf7;
+      color: #7b6c5a;
+      padding: 4px 10px;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+    #relay-my-case-pill {
+      border-color: #8f7a66;
+      background: #fff3d6;
+      color: #5f4f3f;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 14px;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) inset, 0 0 0 1px rgba(143, 122, 102, 0.14);
+    }
+    .relay-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      border: 1px solid #8f7a66;
+      background: #8f7a66;
+      color: #f9f6f2;
+      border-radius: 6px;
+      padding: 0 12px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .relay-btn:disabled { opacity: 0.62; cursor: not-allowed; }
+    .relay-btn--ghost { background: #fffdf7; color: #8f7a66; }
+    .relay-btn--icon {
+      width: 34px;
+      min-width: 34px;
+      padding: 0;
+    }
+    .relay-row-claim-btn {
+      min-width: 84px;
+      height: 30px;
+      line-height: 28px;
+      padding: 0 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+    .relay-btn-icon {
+      width: 18px;
+      height: 18px;
+      display: block;
+      pointer-events: none;
+    }
+    .relay-table-wrap { width: 100%; overflow: hidden; }
+    .relay-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 0;
+      table-layout: fixed;
+      background: #fffdf7;
+      border: 1px solid #e2d8ca;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .relay-table th,
+    .relay-table td {
+      border-bottom: 1px solid #ece3d7;
+      text-align: left;
+      padding: 8px 10px;
+      color: #6f665d;
+      font-size: 13px;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .relay-table th { background: #f4eee4; font-weight: bold; }
+    .relay-table tr:last-child td { border-bottom: 0; }
+    .relay-table-pager {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .relay-claim-modules {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .relay-claim-card {
+      border: 1px solid #e2d8ca;
+      background: #fffdf7;
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 92px;
+    }
+    .relay-claim-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .relay-claim-empty {
+      margin: 0;
+      color: #7f6a56;
+      font-size: 13px;
+    }
+    .relay-claim-item {
+      border: 1px solid #e7ddcf;
+      border-radius: 8px;
+      background: #fffaf0;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .relay-claim-item-main {
+      margin: 0;
+      color: #6f665d;
+      font-size: 13px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .relay-claim-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .relay-page-info {
+      min-width: 72px;
+      text-align: center;
+      color: #7f6a56;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .relay-held-snapshot-wrap {
+      width: min(340px, 100%);
+      max-width: min(340px, 100%);
+      justify-self: start;
+      margin-bottom: 10px;
+    }
+    .relay-held-snapshot-board-wrap {
+      width: min(340px, 100%);
+      margin-top: 8px;
+    }
+    .relay-snapshot-board {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #bbada0;
+      border-radius: 8px;
+      padding: 10px;
+      box-sizing: border-box;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 8px;
+    }
+    .relay-snapshot-cell {
+      background: rgba(238, 228, 218, 0.35);
+      border-radius: 4px;
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .relay-snapshot-tile {
+      width: 100%;
+      height: 100%;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      line-height: 1;
+      color: #776e65;
+      font-size: clamp(14px, 2.1vw, 30px);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24) inset;
+      user-select: none;
+    }
+    .relay-held-snapshot-hint {
+      width: min(340px, 100%);
+      margin: 8px 0 0;
+      min-height: 18px;
+      color: #7f6a56;
+      font-size: 13px;
+    }
+    .relay-snapshot-replay-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+    .relay-replay-wrap {
+      width: min(460px, 100%);
+      margin-bottom: 10px;
+    }
+    .relay-replay-inline-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 8px;
+    }
+    .relay-replay-case-name {
+      flex: 1 1 220px;
+      min-height: 34px;
+      box-sizing: border-box;
+      border: 1px solid #d6cab9;
+      border-radius: 6px;
+      background: #fffdf7;
+      color: #6f665d;
+      padding: 6px 10px;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      font-weight: 700;
+    }
+    .relay-replay-segment-row {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+    }
+    .relay-replay-segment-title {
+      margin-top: 12px;
+      margin-bottom: 6px;
+    }
+    .relay-replay-segment-board-title {
+      margin-top: 10px;
+      margin-bottom: 6px;
+    }
+    .relay-replay-segment-row .relay-segment-select {
+      width: 100%;
+      min-width: 0;
+      margin-bottom: 0;
+    }
+    #relay-replay-copy-segment-btn {
+      min-width: 112px;
+      white-space: nowrap;
+    }
+    .relay-replay-segment-board-wrap {
+      width: 225px;
+      height: 225px;
+      max-width: 225px;
+      margin-left: 90px;
+      position: relative;
+    }
+    .relay-replay-segment-board-wrap::before {
+      content: "<-";
+      position: absolute;
+      left: -68px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #7f6a56;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+      pointer-events: none;
+    }
+    .relay-replay-segment-board-wrap .relay-snapshot-board {
+      width: 209px;
+      height: 209px;
+      aspect-ratio: 1 / 1;
+      padding: 8px;
+      gap: 6px;
+      border-radius: 6px;
+    }
+    #relay-replay-segment-end-board.relay-snapshot-board {
+      width: 209px;
+      height: 209px;
+      min-width: 209px;
+      min-height: 209px;
+      max-width: 209px;
+      max-height: 209px;
+      padding: 8px;
+      gap: 6px;
+      box-sizing: content-box;
+    }
+    .relay-replay-segment-hint {
+      width: min(240px, 100%);
+      margin: 6px 0 0 90px;
+      min-height: 18px;
+      color: #7f6a56;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    #relay-replay-segment-board-hint {
+      margin-left: 90px;
+    }
+    .relay-held-snapshot-title {
+      display: block;
+      width: min(340px, 100%);
+      margin: 0 0 6px;
+      color: #7a6d5e;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .relay-replay-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .relay-replay-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .relay-segment-select {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #d6cab9;
+      border-radius: 6px;
+      background: #fffdf7;
+      color: #5e554b;
+      padding: 8px 10px;
+      font-size: 13px;
+      outline: none;
+      margin-bottom: 6px;
+    }
+    .relay-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .relay-grid--advanced {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 10px;
+    }
+    .relay-field { display: flex; flex-direction: column; gap: 6px; }
+    .relay-field label { font-size: 13px; color: #7a6d5e; font-weight: bold; }
+    .relay-input,
+    .relay-textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #d6cab9;
+      border-radius: 6px;
+      background: #fffdf7;
+      color: #5e554b;
+      padding: 8px 10px;
+      font-size: 14px;
+      outline: none;
+    }
+    .relay-input:focus,
+    .relay-textarea:focus {
+      border-color: #8f7a66;
+      box-shadow: 0 0 0 2px rgba(143, 122, 102, 0.18);
+    }
+    .relay-textarea { resize: vertical; min-height: 110px; }
+    .relay-textarea--readonly {
+      min-height: 140px;
+      resize: vertical;
+      font-family: Consolas, "SFMono-Regular", Menlo, Monaco, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      background: #fffaf0;
+    }
+    .relay-action-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .relay-note {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 20;
+      margin: 0;
+      min-height: 0;
+      max-width: min(360px, calc(100% - 24px));
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #d7cbb9;
+      background: #fff7ea;
+      color: #7f6a56;
+      font-size: 13px;
+      line-height: 1.4;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      display: none;
+    }
+    .relay-note:not(:empty) { display: block; }
+    .relay-note.is-error {
+      color: #fff8f7;
+      background: #bf3b2f;
+      border-color: #a8342a;
+    }
+    .relay-advanced-toggle-row { margin: 2px 0 10px; }
+    .relay-advanced-panel {
+      border: 1px dashed #d8ccb9;
+      border-radius: 8px;
+      background: #fffdf7;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .relay-advanced-panel[hidden] { display: none !important; }
+    @media (max-width: 900px) {
+      .relay-grid { grid-template-columns: 1fr; }
+      .relay-grid--advanced { grid-template-columns: 1fr; }
+      .relay-snapshot-replay-row { grid-template-columns: 1fr; }
+      .relay-claim-modules { grid-template-columns: 1fr; }
+      .relay-head h1 { font-size: 28px; }
+      .relay-table th,
+      .relay-table td {
+        padding: 6px 6px;
+        font-size: 12px;
+      }
+      .relay-table th:nth-child(4),
+      .relay-table td:nth-child(4) {
+        width: 82px;
+        min-width: 82px;
+        text-align: center;
+      }
+      .relay-row-claim-btn {
+        width: 100%;
+        min-width: 0;
+        height: 28px;
+        line-height: 26px;
+        padding: 0 4px;
+        font-size: 11px;
+      }
+      .relay-replay-inline-row {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+      }
+      .relay-replay-segment-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      #relay-replay-copy-segment-btn {
+        width: 100%;
+      }
+      .relay-note {
+        max-width: calc(100% - 20px);
+      }
+    }
+  </style>
+</head>
+<body data-page="relay-5x5">
+  <div class="container relay-page">
+    <header class="relay-head">
+      <h1 id="relay-title">5x5 接力模式（MVP）</h1>
+      <p id="relay-subtitle">单档接力，接档需先申请并由持有者批准，持有权持续到交接或释放。</p>
+    </header>
+
+    <nav class="relay-nav">
+      <a class="relay-nav-btn" href="2048.html" id="relay-nav-home">回首页</a>
+      <a class="relay-nav-btn" href="modes.html" id="relay-nav-modes">模式选择</a>
+      <button id="relay-open-5x5-btn" class="relay-nav-btn" type="button">前往5x5无撤回版</button>
+    </nav>
+
+    <section class="relay-panel">
+      <h2 id="relay-list-title">接力档案列表</h2>
+      <p id="relay-note" class="relay-note"></p>
+      <div class="relay-status-row">
+        <span id="relay-my-case-pill" class="relay-pill">当前存档：未登录</span>
+        <button id="relay-refresh-btn" class="relay-btn" type="button">刷新列表</button>
+      </div>
+      <div class="relay-table-wrap">
+        <table class="relay-table">
+          <thead>
+            <tr>
+              <th id="relay-col-case">档案</th>
+              <th id="relay-col-holder">持有者</th>
+              <th id="relay-col-updated">更新时间</th>
+              <th id="relay-col-claim">接档</th>
+            </tr>
+          </thead>
+          <tbody id="relay-case-table-body"></tbody>
+        </table>
+      </div>
+      <div id="relay-table-pager" class="relay-table-pager">
+        <button id="relay-page-prev-btn" class="relay-btn relay-btn--ghost" type="button">上一页</button>
+        <span id="relay-page-info" class="relay-page-info">1 / 1</span>
+        <button id="relay-page-next-btn" class="relay-btn relay-btn--ghost" type="button">下一页</button>
+      </div>
+      <div class="relay-claim-modules">
+        <div class="relay-claim-card">
+          <label id="relay-request-manage-title" class="relay-held-snapshot-title">申请接档管理</label>
+          <div id="relay-request-manage-body" class="relay-claim-body"></div>
+        </div>
+        <div class="relay-claim-card">
+          <label id="relay-incoming-claim-title" class="relay-held-snapshot-title">接档确认</label>
+          <div id="relay-incoming-claim-body" class="relay-claim-body"></div>
+        </div>
+      </div>
+      <div class="relay-snapshot-replay-row">
+        <div class="relay-held-snapshot-wrap">
+          <label id="relay-held-snapshot-title" class="relay-held-snapshot-title">当前持有存档快照</label>
+          <div class="relay-held-snapshot-board-wrap">
+            <div id="relay-held-snapshot-board" class="relay-snapshot-board" role="img" aria-label="当前持有存档快照棋盘"></div>
+          </div>
+          <p id="relay-held-snapshot-hint" class="relay-held-snapshot-hint"></p>
+        </div>
+        <div class="relay-replay-wrap">
+          <label id="relay-replay-chain-title" class="relay-held-snapshot-title">整档回放聚合</label>
+          <div class="relay-replay-inline-row">
+            <div id="relay-replay-case-name" class="relay-replay-case-name">-</div>
+            <button id="relay-replay-copy-full-btn" class="relay-btn relay-btn--ghost relay-btn--icon" type="button" aria-label="复制回放代码" title="复制回放代码">
+              <img class="relay-btn-icon" src="meta/icons/relay-copy.svg" alt="">
+            </button>
+            <button id="relay-replay-export-full-btn" class="relay-btn relay-btn--ghost relay-btn--icon" type="button" aria-label="导出回放文件" title="导出回放文件">
+              <img class="relay-btn-icon" src="meta/icons/relay-export.svg" alt="">
+            </button>
+          </div>
+          <label id="relay-replay-segment-label" class="relay-held-snapshot-title relay-replay-segment-title" for="relay-replay-segment-select">分段回放</label>
+          <div class="relay-replay-segment-row">
+            <select id="relay-replay-segment-select" class="relay-segment-select"></select>
+            <button id="relay-replay-copy-segment-btn" class="relay-btn relay-btn--ghost" type="button">复制当前段回放</button>
+          </div>
+          <label id="relay-replay-segment-board-title" class="relay-held-snapshot-title relay-replay-segment-board-title">分段终盘快照</label>
+          <div class="relay-replay-segment-board-wrap">
+            <div
+              id="relay-replay-segment-end-board"
+              class="relay-snapshot-board"
+              style="width:209px;height:209px;min-width:209px;min-height:209px;max-width:209px;max-height:209px;padding:8px;gap:6px;box-sizing:content-box;"
+              role="img"
+              aria-label="选定分段的最后盘面"
+            ></div>
+          </div>
+          <p id="relay-replay-segment-board-hint" class="relay-replay-segment-hint"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="relay-panel">
+      <h2 id="relay-action-title">接力操作</h2>
+      <p id="relay-note-secondary" class="relay-note"></p>
+      <div class="relay-grid">
+        <div class="relay-field">
+          <label for="relay-case-id" id="relay-label-case">档案 ID</label>
+          <input id="relay-case-id" class="relay-input" type="text" placeholder="例如：case-001">
+        </div>
+        <div class="relay-field">
+          <label for="relay-target-nickname" id="relay-label-target-nickname">目标用户昵称</label>
+          <input id="relay-target-nickname" class="relay-input" type="text" placeholder="例如：PlayerA">
+        </div>
+      </div>
+      <div class="relay-action-row">
+        <button id="relay-create-btn" class="relay-btn" type="button">制档</button>
+        <button id="relay-load-btn" class="relay-btn relay-btn--ghost" type="button">读档</button>
+        <button id="relay-delete-btn" class="relay-btn relay-btn--ghost" type="button">销档</button>
+        <button id="relay-request-claim-btn" class="relay-btn relay-btn--ghost" type="button">申请接档</button>
+        <button id="relay-claim-btn" class="relay-btn" type="button">接档</button>
+        <button id="relay-submit-btn" class="relay-btn" type="button">提交进度</button>
+        <button id="relay-designate-target-btn" class="relay-btn relay-btn--ghost" type="button">指定递交</button>
+        <button id="relay-handoff-btn" class="relay-btn relay-btn--ghost" type="button">批准交接</button>
+      </div>
+    </section>
+  </div>
+  <script type="module" src="./src/entries/relay-5x5.ts"></script>
+</body>
+</html>

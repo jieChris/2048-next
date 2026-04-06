@@ -169,7 +169,7 @@
     ["练习板支持直通局面与基线重试。", "Practice board supports direct board transfer and baseline retries."],
     ["模式加载中...", "Loading mode..."], ["模式简介", "Mode Intro"], ["模式排名榜单", "Mode Rankings"],
     ["榜单功能即将上线，这里将展示 64 封顶模式排行榜。", "Leaderboard coming soon. Rankings for 64-capped mode will be shown here."],
-    ["不可撤回模式", "No-Undo Modes"], ["可撤回模式", "Undo Modes"], ["推荐入口", "Recommended"], ["规则实验", "Rule Experiments"],
+    ["无撤回模式", "No-Undo Modes"], ["可撤回模式", "Undo Modes"], ["推荐入口", "Recommended"], ["规则实验", "Rule Experiments"],
     ["概率变种", "Spawn Variants"], ["工具入口", "Tools"], ["其他页面", "Other Pages"], ["练习板（Legacy）", "Practice Board (Legacy)"],
     ["本站为本地练习工具，所有记录保存在本地。可在历史页面查看、导出、导入和回放。", "This site is for local practice. Records are stored locally and can be viewed, exported, imported and replayed from History."],
     ["暂无历史记录。你可以开始一局游戏后再回来查看。", "No local records yet. Start a game and come back later."],
@@ -824,6 +824,15 @@
   function applyTitle(lang) {
     var path = String((global.location && global.location.pathname) || "");
     var name = (path.split("/").pop() || "index.html").toLowerCase();
+    var body = global.document && global.document.body;
+    var dynamicModeTitle = "";
+    if (body && typeof body.getAttribute === "function") {
+      dynamicModeTitle = String(body.getAttribute("data-mode-title") || "").trim();
+    }
+    if (name === "play.html" && dynamicModeTitle) {
+      global.document.title = dynamicModeTitle;
+      return;
+    }
     var map = PAGE_TITLE_MAP[name];
     if (map) global.document.title = lang === "en" ? map.en : map.zh;
   }

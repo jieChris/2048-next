@@ -1035,9 +1035,11 @@ function createSerializedReplayV3(manager, source) {
 }
 
 function serializeReplayV3(manager) {
-  if (!manager) return { v: 3, actions: [] };
-  var source = resolveReplayV3SessionSource(manager);
-  return createSerializedReplayV3(manager, source);
+  return {
+    v: 1,
+    replay_logic_version: "v1",
+    replay_string: serializeReplay(manager)
+  };
 }
 
 function writeAutoSubmitResultRecord(manager, payload) {
@@ -1764,9 +1766,7 @@ function buildV9RplExportFilename(manager, stepCount) {
 }
 
 function serializeReplayAsV9RplBase64(manager) {
-  var payload = resolveV9RplReplayPayloadForExport(manager);
-  return String(GameManager.REPLAY_V9_RPL_BASE64_PREFIX || "REPLAY_v9RPL_B64_") +
-    encodeV9RplBytesToBase64(manager, payload.bytes);
+  return serializeReplay(manager);
 }
 
 function resolveV9VerseMoveChunkFromV9Move(v9Move) {
@@ -1845,7 +1845,7 @@ function resolveV9VerseReplayPayloadForExport(manager) {
 }
 
 function serializeReplayAsV9Verse(manager) {
-  return resolveV9VerseReplayPayloadForExport(manager).text;
+  return serializeReplay(manager);
 }
 
 function buildV9VerseExportFilename(manager, stepCount) {
@@ -1855,16 +1855,16 @@ function buildV9VerseExportFilename(manager, stepCount) {
 }
 
 function exportReplayAsV9VerseBlob(manager) {
-  var payload = resolveV9VerseReplayPayloadForExport(manager);
+  var replayText = serializeReplay(manager);
   var windowLike = manager ? manager.getWindowLike() : null;
   var BlobCtor = windowLike && typeof windowLike.Blob === "function"
     ? windowLike.Blob
     : (typeof Blob === "function" ? Blob : null);
   if (typeof BlobCtor !== "function") throw "Blob API is unavailable";
   return {
-    blob: new BlobCtor([payload.text], { type: "text/plain;charset=utf-8" }),
-    filename: buildV9VerseExportFilename(manager, payload.stepCount),
-    stepCount: payload.stepCount
+    blob: new BlobCtor([replayText], { type: "text/plain;charset=utf-8" }),
+    filename: "replay-v1.txt",
+    stepCount: 0
   };
 }
 
@@ -1916,14 +1916,10 @@ function hasReplayV1Magic(bytes) {
 function createStructuredReplayEnvelopeFromRplBuffer(manager, sourceBuffer) {
   var bytes = normalizeV9RplBufferLike(sourceBuffer);
   if (!bytes) throw "Invalid .rpl buffer";
-  if (hasReplayV1Magic(bytes)) {
-    var codec = resolveReplayV1CodecRuntime(manager);
-    if (!(codec && typeof codec.decodeReplayV1Rpl === "function")) throw "Replay v1 codec unavailable";
-    return createReplayV1StructuredReplayEnvelope(manager, codec.decodeReplayV1Rpl(bytes));
-  }
-  var replayModeConfig = resolveV9RplReplayModeConfig(manager);
-  if (!replayModeConfig) throw "Replay mode config is unavailable";
-  return createV9RplStructuredReplayEnvelope(parseV9RplBytes(bytes), replayModeConfig);
+  if (!hasReplayV1Magic(bytes)) throw "Only replay v1 (.rpl) is supported";
+  var codec = resolveReplayV1CodecRuntime(manager);
+  if (!(codec && typeof codec.decodeReplayV1Rpl === "function")) throw "Replay v1 codec unavailable";
+  return createReplayV1StructuredReplayEnvelope(manager, codec.decodeReplayV1Rpl(bytes));
 }
 
 function importV9RplBuffer(manager, sourceBuffer) {
@@ -1931,7 +1927,7 @@ function importV9RplBuffer(manager, sourceBuffer) {
   try {
     return applyStructuredReplayEnvelope(manager, createStructuredReplayEnvelopeFromRplBuffer(manager, sourceBuffer));
   } catch (e) {
-    alert("\u5bfc\u5165 .rpl \u56de\u653e\u51fa\u9519: " + resolveReplayImportErrorMessage(e));
+    alert("\u5bfc\u5165 .rpl(v1) \u56de\u653e\u51fa\u9519: " + resolveReplayImportErrorMessage(e));
     return false;
   }
 }
@@ -1945,10 +1941,7 @@ function resolveV9RplBase64PayloadBody(trimmed) {
 function tryParseV9RplBase64ReplayEnvelope(manager, trimmed) {
   var encodedBase64 = resolveV9RplBase64PayloadBody(trimmed);
   if (encodedBase64 === null) return null;
-  if (!encodedBase64) throw "Invalid v9 .rpl payload";
-  var bytes = decodeV9RplBase64ToBytes(manager, encodedBase64);
-  var parsed = parseV9RplBytes(bytes);
-  return createV9RplStructuredReplayEnvelope(parsed, { key: "standard_4x4_pow2_no_undo" });
+  throw "Legacy replay format is not supported. Please use replay v1";
 }
 
 function resolveV9VersePngMapDict() {
@@ -2297,7 +2290,6 @@ function shouldSerializeReplayAsV1(manager) {
   var session = resolveReplayV1SessionForSerialize(manager);
   if (!manager || !session || session.supported !== true) return false;
   if (manager.modeKey === "practice") return false;
-  if (manager.width * manager.height > 16) return false;
   return session.board_width === manager.width && session.board_height === manager.height;
 }
 
@@ -2473,11 +2465,9 @@ function serializeReplayAsV3OrV4(manager) {
 
 function serializeReplay(manager) {
   if (!manager) return "{}";
-  var fibVerse = trySerializeReplayAsFibVerse(manager);
-  if (fibVerse) return fibVerse;
   var replayV1 = trySerializeReplayAsV1(manager);
   if (replayV1) return replayV1;
-  return serializeReplayAsV3OrV4(manager);
+  throw "Replay v1 codec unavailable";
 }
 
 function applyReplayImportActions(manager, payload) {
@@ -2493,7 +2483,7 @@ function applyReplayImportActions(manager, payload) {
 }
 
 function isStructuredReplayEnvelope(envelope) {
-  return !!envelope && (envelope.kind === "v4c" || envelope.kind === "v9rpl" || envelope.kind === "v1rpl" || envelope.kind === "v3-json");
+  return !!envelope && envelope.kind === "v1rpl";
 }
 
 function applyImportedReplayUndoState(manager) {
@@ -2567,26 +2557,12 @@ function normalizeParsedReplayImportEnvelope(manager, parsedEnvelope) {
 }
 
 function parseReplayImportEnvelopeFallback(manager, trimmed) {
-  var verseEnvelope = decodeV9VerseReplayEnvelope(trimmed);
-  if (verseEnvelope) return verseEnvelope;
-  var fibVerseEnvelope = decodeFibVerseReplayEnvelope(trimmed);
-  if (fibVerseEnvelope) return fibVerseEnvelope;
-  var v9Envelope = tryParseV9RplBase64ReplayEnvelope(manager, trimmed);
-  if (v9Envelope) return v9Envelope;
   var v1Envelope = tryParseV1RplBase64ReplayEnvelope(manager, trimmed);
   if (v1Envelope) return v1Envelope;
-  var v3Envelope = tryParseReplayV3JsonEnvelope(manager, trimmed);
-  if (v3Envelope) return v3Envelope;
-  return tryParseV4cReplayEnvelope(trimmed);
+  return null;
 }
 
 function parseReplayImportEnvelope(manager, trimmed) {
-  var verseEnvelope = decodeV9VerseReplayEnvelope(trimmed);
-  if (verseEnvelope) return verseEnvelope;
-  var fibVerseEnvelope = decodeFibVerseReplayEnvelope(trimmed);
-  if (fibVerseEnvelope) return fibVerseEnvelope;
-  var v9Envelope = tryParseV9RplBase64ReplayEnvelope(manager, trimmed);
-  if (v9Envelope) return v9Envelope;
   var v1Envelope = tryParseV1RplBase64ReplayEnvelope(manager, trimmed);
   if (v1Envelope) return v1Envelope;
   var parsedEnvelope = resolveCorePayloadCallWith(manager, "callCoreReplayImportRuntime", "parseReplayImportEnvelope", createReplayImportEnvelopePayload(manager, trimmed), undefined, function (currentManager, coreCallResult) {
@@ -2862,19 +2838,11 @@ function resolveStructuredReplayModeConfig(manager, envelope) {
 }
 
 function applyStructuredReplayEnvelopeByKind(manager, envelope, replayModeConfig) {
-  if (envelope.kind === "v9rpl") {
-    applyV9RplStructuredReplayEnvelope(manager, envelope, replayModeConfig);
-    return;
-  }
   if (envelope.kind === "v1rpl") {
     applyV1RplStructuredReplayEnvelope(manager, envelope, replayModeConfig);
     return;
   }
-  if (envelope.kind === "v3-json") {
-    applyV3StructuredReplayEnvelope(manager, envelope, replayModeConfig);
-    return;
-  }
-  applyV4StructuredReplayEnvelope(manager, envelope, replayModeConfig);
+  throw "Only replay v1 is supported";
 }
 
 function applyStructuredReplayEnvelope(manager, envelope) {
@@ -2891,7 +2859,7 @@ function importReplay(manager, replayString) {
     var trimmed = normalizeReplayImportSource(replayString);
     var envelope = parseReplayImportEnvelope(manager, trimmed);
     if (isStructuredReplayEnvelope(envelope)) return applyStructuredReplayEnvelope(manager, envelope);
-    throw "\u4ec5\u652f\u6301\u5f53\u524d\u56de\u653e\u683c\u5f0f\uff08v1/v4/v9\uff09";
+    throw "\u4ec5\u652f\u6301\u56de\u653e v1 \u683c\u5f0f";
   } catch (e) {
     alert("\u5bfc\u5165\u56de\u653e\u51fa\u9519: " + resolveReplayImportErrorMessage(e));
     return false;

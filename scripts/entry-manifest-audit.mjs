@@ -20,6 +20,7 @@ const PAGE_ENTRY_SPECS = [
   { htmlFile: "register.html", entryFile: "register.ts", pageId: "register", architecture: "manifest-bootstrap" },
   { htmlFile: "password.html", entryFile: "password.ts", pageId: "password", architecture: "manifest-bootstrap" },
   { htmlFile: "history.html", entryFile: "history.ts", pageId: "history", architecture: "manifest-bootstrap" },
+  { htmlFile: "relay_5x5.html", entryFile: "relay-5x5.ts", pageId: "relay-5x5", architecture: "manifest-bootstrap" },
   { htmlFile: "modes.html", entryFile: "modes.ts", pageId: "modes", architecture: "manifest-bootstrap" },
   { htmlFile: "palette.html", entryFile: "palette.ts", pageId: "palette", architecture: "manifest-bootstrap" },
   { htmlFile: "user.html", entryFile: "user-profile.ts", pageId: "user-profile", architecture: "manifest-bootstrap" }

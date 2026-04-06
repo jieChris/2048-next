@@ -69,11 +69,31 @@ describe("bootstrap play header", () => {
     ).toEqual({
       bodyModeId: "spawn_custom_4x4_pow2_no_undo",
       bodyRuleset: "pow2",
-      titleText: "4x4 自定义4率（无撤回）（4率 25%）",
+      titleText: "自定义4率4x4",
       introText: "4x4自定义4率（4率25%）｜4x4｜2幂",
       titleDisplay: "",
       introDisplay: ""
     });
+  });
+
+  it("uses mode-correlated board title text", () => {
+    expect(
+      resolvePlayHeaderState({
+        key: "classic_4x4_pow2_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2"
+      }).titleText
+    ).toBe("4x4（可撤回）");
+    expect(
+      resolvePlayHeaderState({
+        key: "diag_4x4_pow2_no_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        special_rules: { allow_diagonal_moves: true }
+      }).titleText
+    ).toBe("八方向4x4");
   });
 });
 

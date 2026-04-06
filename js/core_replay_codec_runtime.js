@@ -10,6 +10,7 @@
   var REPLAY_V1_FLAG_HAS_START_UNIX_MS = 1 << 0;
   var REPLAY_V1_FLAG_CONTAINS_UNDO_RECORDS = 1 << 1;
   var REPLAY_V1_FLAG_CONTAINS_CHECKPOINTS = 1 << 2;
+  var REPLAY_V1_FLAG_EXTENDED_INIT_TILES = 1 << 3;
   var REPLAY_V1_RECORD_UNDO1 = 0x80;
   var REPLAY_V1_RECORD_UNDON = 0x81;
   var REPLAY_V1_RECORD_CHECKPOINT = 0x82;
@@ -329,6 +330,9 @@
     }
     if (containsUndo) flags |= REPLAY_V1_FLAG_CONTAINS_UNDO_RECORDS;
     if (containsCheckpoints) flags |= REPLAY_V1_FLAG_CONTAINS_CHECKPOINTS;
+    var useExtendedInitTiles = width * height > 16;
+    if (useExtendedInitTiles) flags |= REPLAY_V1_FLAG_EXTENDED_INIT_TILES;
+    else flags &= ~REPLAY_V1_FLAG_EXTENDED_INIT_TILES;
 
     var chunks = [];
     chunks.push([82, 80, 76, 49]);
@@ -346,7 +350,11 @@
         "Invalid replay v1 init tile cell index"
       );
       var valueBit = assertIntegerRange(Number(tile.valueBit), 0, 1, "Invalid replay v1 init tile value bit");
-      chunks.push([(cellIndex & 0x0f) | ((valueBit & 1) << 4)]);
+      if ((flags & REPLAY_V1_FLAG_EXTENDED_INIT_TILES) !== 0) {
+        chunks.push(encodeUleb128((cellIndex << 1) | (valueBit & 1)));
+      } else {
+        chunks.push([(cellIndex & 0x0f) | ((valueBit & 1) << 4)]);
+      }
     }
 
     for (i = 0; i < records.length; i++) {
@@ -405,13 +413,28 @@
 
     var initTiles = [];
     for (var i = 0; i < initCount; i++) {
-      if (offset >= crcOffset) throw "Unexpected EOF while decoding replay v1 init tiles";
-      var token = bytes[offset];
-      offset += 1;
-      initTiles.push({
-        cellIndex: token & 0x0f,
-        valueBit: (token >> 4) & 1
-      });
+      if ((flags & REPLAY_V1_FLAG_EXTENDED_INIT_TILES) !== 0) {
+        var initDecoded = decodeUleb128(bytes, offset);
+        offset = initDecoded.nextOffset;
+        var encodedTile = initDecoded.value;
+        var initCellIndex = encodedTile >>> 1;
+        var initValueBit = encodedTile & 1;
+        if (!Number.isInteger(initCellIndex) || initCellIndex < 0 || initCellIndex >= width * height) {
+          throw "Invalid replay v1 init tile cell index";
+        }
+        initTiles.push({
+          cellIndex: initCellIndex,
+          valueBit: initValueBit
+        });
+      } else {
+        if (offset >= crcOffset) throw "Unexpected EOF while decoding replay v1 init tiles";
+        var token = bytes[offset];
+        offset += 1;
+        initTiles.push({
+          cellIndex: token & 0x0f,
+          valueBit: (token >> 4) & 1
+        });
+      }
     }
 
     var records = [];
@@ -626,6 +649,7 @@
   global.CoreReplayCodecRuntime.REPLAY_V1_FLAG_HAS_START_UNIX_MS = REPLAY_V1_FLAG_HAS_START_UNIX_MS;
   global.CoreReplayCodecRuntime.REPLAY_V1_FLAG_CONTAINS_UNDO_RECORDS = REPLAY_V1_FLAG_CONTAINS_UNDO_RECORDS;
   global.CoreReplayCodecRuntime.REPLAY_V1_FLAG_CONTAINS_CHECKPOINTS = REPLAY_V1_FLAG_CONTAINS_CHECKPOINTS;
+  global.CoreReplayCodecRuntime.REPLAY_V1_FLAG_EXTENDED_INIT_TILES = REPLAY_V1_FLAG_EXTENDED_INIT_TILES;
   global.CoreReplayCodecRuntime.REPLAY_V1_RECORD_UNDO1 = REPLAY_V1_RECORD_UNDO1;
   global.CoreReplayCodecRuntime.REPLAY_V1_RECORD_UNDON = REPLAY_V1_RECORD_UNDON;
   global.CoreReplayCodecRuntime.REPLAY_V1_RECORD_CHECKPOINT = REPLAY_V1_RECORD_CHECKPOINT;

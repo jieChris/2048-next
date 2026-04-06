@@ -1080,13 +1080,22 @@ function buildSavedGameStateCoreStatePayload(manager) {
 }
 
 function buildSavedGameStateReplayStatePayload(manager) {
+  var replayString = "";
+  try {
+    if (typeof serializeReplay === "function") {
+      replayString = String(serializeReplay(manager) || "");
+    }
+  } catch (_err) {
+    replayString = "";
+  }
   return {
     move_history: manager.moveHistory ? manager.moveHistory.slice() : [],
     ips_input_count: Number.isInteger(manager.ipsInputCount) && manager.ipsInputCount >= 0 ? manager.ipsInputCount : 0,
     undo_stack: manager.undoStack ? manager.safeClonePlain(manager.undoStack, []) : [],
     redo_stack: manager.redoStack ? manager.safeClonePlain(manager.redoStack, []) : [],
     replay_compact_log: manager.replayCompactLog || "",
-    session_replay_v3: manager.sessionReplayV3 ? manager.safeClonePlain(manager.sessionReplayV3, null) : null
+    session_replay_v3: manager.sessionReplayV3 ? manager.safeClonePlain(manager.sessionReplayV3, null) : null,
+    replay_string: replayString
   };
 }
 

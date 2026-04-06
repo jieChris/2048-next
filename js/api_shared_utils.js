@@ -71,10 +71,21 @@
     var hostname = toText(locationObj.hostname).toLowerCase();
     var origin = toText(locationObj.origin);
     var allowCrossOriginFallback = toText(global.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK).toLowerCase() === "true";
+    var isMirrorHost = hostname === "2048next.cn" || hostname === "www.2048next.cn";
+
+    if (isMirrorHost) {
+      push("https://taihe.fun/api");
+    }
 
     if (origin) push(origin + "/api");
 
-    if (hostname === "taihe.fun" || hostname === "www.taihe.fun" || allowCrossOriginFallback) {
+    if (
+      hostname === "taihe.fun" ||
+      hostname === "www.taihe.fun" ||
+      hostname === "2048next.cn" ||
+      hostname === "www.2048next.cn" ||
+      allowCrossOriginFallback
+    ) {
       push("https://taihe.fun/api");
     }
 
