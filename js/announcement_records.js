@@ -1,6 +1,66 @@
 (function () {
   window.ANNOUNCEMENT_RECORDS = [
     {
+      id: "2026-04-06-v2.4",
+      version: "v2.4",
+      date: "2026-04-06",
+      title: "5x5 接力模式上线与 UI 优化",
+      title_en: "5x5 Relay Mode Released + UI Polish",
+      content:
+        "本次更新新增了 5x5 棋盘接力模式，并同步优化了模式页、接力页与部分操作提示的 UI 细节。\n\n" +
+        "5x5 接力模式详细用法：\n" +
+        "1. 先登录账号，再进入「5x5 接力」页面。\n" +
+        "2. 在「5x5 无撤回版」先游玩一局，回到接力页点击「制档」，即可把当前盘面创建为接力档案。\n" +
+        "3. 持有者可继续游玩后点击「提交进度」，更新该档案的快照与回放分段。\n" +
+        "4. 其他用户可在档案列表点击「申请接档」；持有者在申请列表中选择并批准目标用户。\n" +
+        "5. 持有者也可直接指定递交：输入目标用户昵称并发起指定递交，目标用户确认后即完成移交。\n" +
+        "6. 目标用户确认接档成功后，会获得该档案所有权，并可在接力页「读档」后跳转到 5x5 无撤回版继续游玩。\n" +
+        "7. 当档案彻底结束或不再需要时，可由当前持有者执行「销档」永久删除。\n\n" +
+        "补充说明：\n" +
+        "- 同一时间每位用户最多持有 1 个接力档案。\n" +
+        "- 档案移交会同步最新进度，便于多人连续接力。",
+      content_en:
+        "This release introduces 5x5 Relay Mode and further polishes UI details across modes/relay pages.\n\n" +
+        "How to use 5x5 Relay Mode:\n" +
+        "1. Sign in, then open the \"5x5 Relay\" page.\n" +
+        "2. Play in \"5x5 No-Undo\" first, return to relay page, and click \"Create\" to archive current board.\n" +
+        "3. The holder can keep playing and click \"Submit Progress\" to update snapshot and replay segments.\n" +
+        "4. Other users click \"Request Claim\" in list; holder reviews requests and approves one target.\n" +
+        "5. Holder may also designate by nickname directly; target confirms and handoff completes.\n" +
+        "6. After confirmation, target becomes holder and can click \"Load\" to continue in 5x5 No-Undo.\n" +
+        "7. When a case is finished, current holder can \"Delete\" it permanently.\n\n" +
+        "Notes:\n" +
+        "- Each user can hold at most one relay case at a time.\n" +
+        "- Handoff synchronizes latest progress for continuous relay play."
+    },
+    {
+      id: "2026-04-06-v2.3",
+      version: "v2.3",
+      date: "2026-04-06",
+      title: "新增 5x5 接力模式与界面优化",
+      title_en: "5x5 Relay Mode Added + UI Improvements",
+      content:
+        "本次更新新增 5x5 接力模式（MVP），并优化了接力页与模式页的部分交互和视觉样式。\n\n" +
+        "5x5 接力模式详细用法：\n" +
+        "1. 登录账号后进入“5x5 接力模式”。\n" +
+        "2. 先在“5x5 无撤回版”游玩一局，回到接力页点击“制档”创建档案。\n" +
+        "3. 如需指定递交，输入“档案ID”和“目标用户昵称”，点击“指定递交”。\n" +
+        "4. 目标用户会在“接档确认”模块看到待接档案，点击“确认接档”即可获得存档并继续游玩。\n" +
+        "5. 持有者可在继续游玩后点击“提交进度”更新快照与回放；需要交接时由目标用户先申请或由持有者直接指定后再交接。\n" +
+        "6. 点击“读档”会将当前档案同步到 5x5 无撤回版并跳转开始游玩；“销档”会永久删除该档案。\n\n" +
+        "说明：每个用户同一时间仅可持有一个接力档案。",
+      content_en:
+        "This update adds 5x5 Relay Mode (MVP) and improves parts of the relay/modes UI.\n\n" +
+        "How to use 5x5 Relay Mode:\n" +
+        "1. Sign in and open \"5x5 Relay Mode\".\n" +
+        "2. Play in \"5x5 No-Undo\" first, then return and click \"Create\" to archive your current board.\n" +
+        "3. To designate handoff directly, enter \"Case ID\" and target \"Nickname\", then click \"Designate Handoff\".\n" +
+        "4. The target user receives it in \"Claim Confirmation\" and clicks \"Confirm Claim\" to take ownership.\n" +
+        "5. Holder can continue playing and click \"Submit\" to update snapshot/replay before handoff.\n" +
+        "6. \"Load\" syncs case snapshot to 5x5 No-Undo and redirects to continue; \"Delete\" permanently removes the case.\n\n" +
+        "Note: each user can hold only one relay case at a time."
+    },
+    {
       id: "2026-03-21-v2.2",
       version: "v2.2",
       date: "2026-03-21",
