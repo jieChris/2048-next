@@ -8,7 +8,23 @@ export default defineConfig(({ mode }) => {
     "/api": {
       target: apiProxyTarget,
       changeOrigin: true,
-      secure: false
+      secure: false,
+      configure(proxy) {
+        proxy.on("error", (_err, _req, res) => {
+          const response = res as any;
+          if (!response || typeof response.writeHead !== "function") return;
+          if (response.headersSent || response.writableEnded) return;
+          const body = JSON.stringify({
+            success: false,
+            error: "api_unavailable"
+          });
+          response.writeHead(200, {
+            "Content-Type": "application/json; charset=utf-8",
+            "Content-Length": String(body.length)
+          });
+          response.end(body);
+        });
+      }
     }
   };
 

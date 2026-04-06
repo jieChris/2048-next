@@ -187,6 +187,12 @@
     return global.document.getElementById(id);
   }
 
+function shouldAutoLoadOnlineLeaderboard() {
+  if (global.__FORCE_ONLINE_LEADERBOARD__ === true) return true;
+  if (global.__DISABLE_ONLINE_LEADERBOARD__ === true) return false;
+  return true;
+}
+
   function createEl(tag, className, text) {
     var el = global.document.createElement(tag);
     if (className) el.className = className;
@@ -1017,8 +1023,8 @@
     }
   }
 
-  async function refreshLeaderboard(modeLike) {
-    var modeBucket = resolveLeaderboardMode(modeLike) || "";
+async function refreshLeaderboard(modeLike) {
+  var modeBucket = resolveLeaderboardMode(modeLike) || "";
     var result = await getLeaderboard(DEFAULT_BOARD_LIMIT, modeLike);
     if (!result || !result.success) {
       renderModeIntroLeaderboard([]);
@@ -1039,12 +1045,12 @@
 
     var modeKey = getCurrentModeKey();
     var modeBucket = resolveLeaderboardMode(modeKey) || "";
-    if (!modeBucket) {
-      renderTimerLeaderboardRows([], null);
-      return true;
-    }
+  if (!modeBucket) {
+    renderTimerLeaderboardRows([], null);
+    return true;
+  }
 
-    var now = Date.now();
+  var now = Date.now();
     if (
       !forceRefresh &&
       !timerLeaderboardLoading &&
@@ -1391,8 +1397,9 @@
     schedulePollingTick(true);
   }
 
-  function init() {
-    bindImmediateOnlineSubmitHooks();
+function init() {
+  var allowOnlineAutoload = shouldAutoLoadOnlineLeaderboard();
+  bindImmediateOnlineSubmitHooks();
     ensureToolkitEntryRow();
     bindLanguageSync();
     bindModeIntroRefresh();
@@ -1401,6 +1408,7 @@
     if (typeof global.syncTimerModuleSettingsUI === "function") {
       global.syncTimerModuleSettingsUI();
     }
+    if (!allowOnlineAutoload) return;
     refreshTimerLeaderboardPanel(true);
     if (byId("mode-intro-leaderboard")) {
       refreshLeaderboard(getCurrentModeKey());

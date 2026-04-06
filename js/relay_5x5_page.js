@@ -23,10 +23,11 @@
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_TIMEOUT_MS;
   };
   var callFetch = _u.callFetch || function (url, init) {
-    if (!global || typeof global.fetch !== "function") {
+    var fetchFn = global && global["fetch"];
+    if (typeof fetchFn !== "function") {
       return Promise.reject(new Error("fetch_unavailable"));
     }
-    return global.fetch(url, init);
+    return fetchFn.call(global, url, init);
   };
 
   var COPY = {

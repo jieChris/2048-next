@@ -1941,7 +1941,13 @@ function resolveV9RplBase64PayloadBody(trimmed) {
 function tryParseV9RplBase64ReplayEnvelope(manager, trimmed) {
   var encodedBase64 = resolveV9RplBase64PayloadBody(trimmed);
   if (encodedBase64 === null) return null;
-  throw "Legacy replay format is not supported. Please use replay v1";
+  var bytes = decodeV9RplBase64ToBytes(manager, encodedBase64);
+  if (hasReplayV1Magic(bytes)) {
+    var codec = resolveReplayV1CodecRuntime(manager);
+    if (!(codec && typeof codec.decodeReplayV1Rpl === "function")) throw "Replay v1 codec unavailable";
+    return createReplayV1StructuredReplayEnvelope(manager, codec.decodeReplayV1Rpl(bytes));
+  }
+  return createV9RplStructuredReplayEnvelope(parseV9RplBytes(bytes), resolveV9RplReplayModeConfig(manager));
 }
 
 function resolveV9VersePngMapDict() {
@@ -2483,7 +2489,13 @@ function applyReplayImportActions(manager, payload) {
 }
 
 function isStructuredReplayEnvelope(envelope) {
-  return !!envelope && envelope.kind === "v1rpl";
+  return !!(
+    envelope &&
+    (envelope.kind === "v1rpl" ||
+      envelope.kind === "v9rpl" ||
+      envelope.kind === "v4c" ||
+      envelope.kind === "v3-json")
+  );
 }
 
 function applyImportedReplayUndoState(manager) {
@@ -2559,6 +2571,16 @@ function normalizeParsedReplayImportEnvelope(manager, parsedEnvelope) {
 function parseReplayImportEnvelopeFallback(manager, trimmed) {
   var v1Envelope = tryParseV1RplBase64ReplayEnvelope(manager, trimmed);
   if (v1Envelope) return v1Envelope;
+  var v9RplBase64Envelope = tryParseV9RplBase64ReplayEnvelope(manager, trimmed);
+  if (v9RplBase64Envelope) return v9RplBase64Envelope;
+  var fibVerseEnvelope = decodeFibVerseReplayEnvelope(trimmed);
+  if (fibVerseEnvelope) return fibVerseEnvelope;
+  var v9VerseEnvelope = decodeV9VerseReplayEnvelope(trimmed);
+  if (v9VerseEnvelope) return v9VerseEnvelope;
+  var v4Envelope = tryParseV4cReplayEnvelope(trimmed);
+  if (v4Envelope) return v4Envelope;
+  var v3Envelope = tryParseReplayV3JsonEnvelope(manager, trimmed);
+  if (v3Envelope) return v3Envelope;
   return null;
 }
 
@@ -2572,7 +2594,9 @@ function parseReplayImportEnvelope(manager, trimmed) {
       return parseReplayImportEnvelopeFallback(currentManager, trimmed);
     }, true);
   });
-  return normalizeParsedReplayImportEnvelope(manager, parsedEnvelope);
+  var normalizedEnvelope = normalizeParsedReplayImportEnvelope(manager, parsedEnvelope);
+  if (normalizedEnvelope) return normalizedEnvelope;
+  return parseReplayImportEnvelopeFallback(manager, trimmed);
 }
 
 function decodeReplayV4MoveSpawnFromToken(token) {
@@ -2837,12 +2861,18 @@ function resolveStructuredReplayModeConfig(manager, envelope) {
   return replayModeConfig;
 }
 
+function resolveStructuredReplayEnvelopeApplyHandler(kind) {
+  if (kind === "v1rpl") return applyV1RplStructuredReplayEnvelope;
+  if (kind === "v9rpl") return applyV9RplStructuredReplayEnvelope;
+  if (kind === "v4c") return applyV4StructuredReplayEnvelope;
+  if (kind === "v3-json") return applyV3StructuredReplayEnvelope;
+  return null;
+}
+
 function applyStructuredReplayEnvelopeByKind(manager, envelope, replayModeConfig) {
-  if (envelope.kind === "v1rpl") {
-    applyV1RplStructuredReplayEnvelope(manager, envelope, replayModeConfig);
-    return;
-  }
-  throw "Only replay v1 is supported";
+  var handler = resolveStructuredReplayEnvelopeApplyHandler(envelope && envelope.kind);
+  if (!handler) throw "Unsupported replay format";
+  handler(manager, envelope, replayModeConfig);
 }
 
 function applyStructuredReplayEnvelope(manager, envelope) {

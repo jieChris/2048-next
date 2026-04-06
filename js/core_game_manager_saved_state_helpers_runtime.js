@@ -164,7 +164,6 @@ function resolveWindowNameSavedCandidateFallback(manager, windowLike, marker) {
   var payload = map[savedKey];
   return normalizeSavedStateRecordObject(payload, null);
 }
-
 function buildReadWindowNameSavedCandidateCorePayload(manager, windowLike) {
   return manager.createCoreModeContextPayload({
     windowLike: windowLike,
@@ -172,7 +171,6 @@ function buildReadWindowNameSavedCandidateCorePayload(manager, windowLike) {
     modeKey: manager.modeKey
   });
 }
-
 function normalizeWindowNameSavedCandidateFromCore(manager, coreCallResult) {
   return manager.resolveNormalizedCoreValueOrFallbackAllowNull(
     coreCallResult,
@@ -184,7 +182,6 @@ function normalizeWindowNameSavedCandidateFromCore(manager, coreCallResult) {
     function () { return undefined; }
   );
 }
-
 function resolveWindowNameSavedCandidate(manager, windowLike) {
   if (!manager) return null;
   var windowNameSavedCoreCallResult = callCoreStorageRuntime(
@@ -198,7 +195,6 @@ function resolveWindowNameSavedCandidate(manager, windowLike) {
   var marker = GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY + "=";
   return resolveWindowNameSavedCandidateFallback(manager, windowLike, marker);
 }
-
 function resolveLatestSavedPayloadCandidate(candidates) {
   var best = null;
   if (!Array.isArray(candidates)) return best;
@@ -217,7 +213,6 @@ function resolveLatestSavedPayloadCandidate(candidates) {
   }
   return best;
 }
-
 function resolveLatestSavedPayloadForManager(manager, windowNameSavedCandidate) {
   if (!manager) return null;
   var candidates = [
@@ -227,25 +222,21 @@ function resolveLatestSavedPayloadForManager(manager, windowNameSavedCandidate) 
   ];
   return resolveLatestSavedPayloadCandidate(candidates);
 }
-
 function isSavedStateTerminalForRestore(saved) {
   if (!saved) return false;
   if (!!saved.terminated) return true;
   return !!(saved.over || (saved.won && !saved.keep_playing)) && saved.mode_key !== "practice";
 }
-
 function isSavedStateSizeOrRulesetMismatch(manager, saved) {
   if (!(manager && saved)) return true;
   if (Number(saved.board_width) !== manager.width || Number(saved.board_height) !== manager.height) return true;
   if (!!saved.ruleset && saved.ruleset !== manager.ruleset) return true;
   return false;
 }
-
 function isSavedStateBoardInvalidForRestore(manager, saved) {
   if (!(manager && saved)) return true;
   return !Array.isArray(saved.board) || saved.board.length !== manager.height;
 }
-
 function resolveSavedStateRestoreDecision(manager, saved) {
   if (Number(saved.v) !== GameManager.SAVED_GAME_STATE_VERSION) return { canRestore: false, shouldClearSavedState: true };
   if (isSavedStateTerminalForRestore(saved)) return { canRestore: false, shouldClearSavedState: true };
@@ -254,7 +245,6 @@ function resolveSavedStateRestoreDecision(manager, saved) {
   if (isSavedStateBoardInvalidForRestore(manager, saved)) return { canRestore: false, shouldClearSavedState: true };
   return { canRestore: true, shouldClearSavedState: true };
 }
-
 function resolveSavedStateStorageKeyFallback(manager, keyPrefix, modeKey) {
   if (!manager) return "";
   var key = (typeof modeKey === "string" && modeKey)
@@ -262,7 +252,6 @@ function resolveSavedStateStorageKeyFallback(manager, keyPrefix, modeKey) {
     : (manager.modeKey || manager.mode || GameManager.DEFAULT_MODE_KEY);
   return (typeof keyPrefix === "string" ? keyPrefix : "") + key;
 }
-
 function resolveSavedGameStateStorageKey(manager, keyPrefix, modeKey) {
   if (!manager) return null;
   var coreCallResult = callCoreStorageRuntime(manager, "resolveSavedGameStateStorageKey", manager.createCoreModeContextPayload({
@@ -275,11 +264,9 @@ function resolveSavedGameStateStorageKey(manager, keyPrefix, modeKey) {
     return resolveSavedStateStorageKeyFallback(manager, keyPrefix, modeKey);
   });
 }
-
 function normalizeSavedGameStateStoragesFromCore(storagesByCore) {
   return Array.isArray(storagesByCore) ? storagesByCore : undefined;
 }
-
 function getSavedGameStateStoragesFallback(manager) {
   var out = [];
   var localStore = manager.getWebStorageByName("localStorage");
@@ -289,7 +276,6 @@ function getSavedGameStateStoragesFallback(manager) {
   if (!mobileSafari && sessionStore && sessionStore !== localStore) out.push(sessionStore);
   return out;
 }
-
 function getSavedGameStateStorages(manager) {
   if (!manager) return [];
   var coreCallResult = callCoreStorageRuntime(manager, "getSavedGameStateStoragesFromContext", {}, true);
@@ -299,7 +285,6 @@ function getSavedGameStateStorages(manager) {
     return getSavedGameStateStoragesFallback(manager);
   });
 }
-
 function parseSavedPayloadRawObject(manager, raw) {
   if (!manager || !raw) return null;
   try {
@@ -309,7 +294,6 @@ function parseSavedPayloadRawObject(manager, raw) {
     return null;
   }
 }
-
 function readSavedPayloadFromStorageByKey(manager, store, key) {
   if (!manager || !store) return null;
   var raw = null;
@@ -326,7 +310,6 @@ function readSavedPayloadFromStorageByKey(manager, store, key) {
   } catch (_errRemove) {}
   return null;
 }
-
 function resolveLatestSavedPayloadBySavedAt(best, nextPayload) {
   if (!nextPayload) return best;
   if (!best) return nextPayload;
@@ -334,7 +317,6 @@ function resolveLatestSavedPayloadBySavedAt(best, nextPayload) {
   var nextSavedAt = Number(nextPayload.saved_at) || 0;
   return nextSavedAt >= bestSavedAt ? nextPayload : best;
 }
-
 function readSavedPayloadByKeyFallback(manager, stores, key) {
   var targetStores = Array.isArray(stores) ? stores : [];
   var best = null;
@@ -344,20 +326,17 @@ function readSavedPayloadByKeyFallback(manager, stores, key) {
   }
   return best;
 }
-
 function createReadSavedPayloadByKeyCorePayload(stores, key) {
   return {
     storages: Array.isArray(stores) ? stores : [],
     key: key
   };
 }
-
 function normalizeSavedPayloadByKeyFromCore(currentManager, savedByCore) {
   return currentManager.isNonArrayObject(savedByCore)
     ? savedByCore
     : (savedByCore === null ? null : undefined);
 }
-
 function readSavedPayloadByKey(manager, key) {
   if (!manager) return null;
   var stores = getSavedGameStateStorages(manager);
@@ -368,7 +347,6 @@ function readSavedPayloadByKey(manager, key) {
     return readSavedPayloadByKeyFallback(manager, stores, key);
   });
 }
-
 function mergeWindowNameSavedPayloadMap(manager, modeKey, payload, map) {
   var nextMap = normalizeSavedStateRecordObject(map, {});
   var key = resolveSavedStateModeKey(manager, modeKey);
@@ -379,7 +357,6 @@ function mergeWindowNameSavedPayloadMap(manager, modeKey, payload, map) {
   }
   return nextMap;
 }
-
 function buildWindowNameSavedPayloadString(marker, keptParts, map) {
   var encodedMap = null;
   try {
@@ -393,7 +370,6 @@ function buildWindowNameSavedPayloadString(marker, keptParts, map) {
   var nextWindowName = nextParts.join("&");
   return typeof nextWindowName === "string" ? nextWindowName : null;
 }
-
 function buildWriteWindowNameSavedPayloadCorePayload(manager, windowLike, modeKey, payload) {
   return Object.assign(
     {},
@@ -405,7 +381,6 @@ function buildWriteWindowNameSavedPayloadCorePayload(manager, windowLike, modeKe
     { payload: payload }
   );
 }
-
 function writeWindowNameSavedPayloadFallback(manager, windowLike, modeKey, payload) {
   if (!windowLike) return false;
   var marker = GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY + "=";
@@ -422,7 +397,6 @@ function writeWindowNameSavedPayloadFallback(manager, windowLike, modeKey, paylo
     return false;
   }
 }
-
 function writeWindowNameSavedPayload(manager, modeKey, payload) {
   if (!manager) return false;
   var windowLike = manager.getWindowLike();
@@ -433,13 +407,11 @@ function writeWindowNameSavedPayload(manager, modeKey, payload) {
     return writeWindowNameSavedPayloadFallback(manager, windowLike, modeKey, payload);
   });
 }
-
 function resolveSavedStatePathname(windowLike) {
   return (windowLike && windowLike.location && windowLike.location.pathname)
     ? String(windowLike.location.pathname)
     : "";
 }
-
 function shouldUseSavedGameState(manager) {
   if (!manager) return false;
   var windowLike = manager.getWindowLike();
@@ -455,12 +427,10 @@ function shouldUseSavedGameState(manager) {
     return pathname.indexOf("replay.html") === -1;
   });
 }
-
 function shouldClearSavedStateForTerminatedSession(manager) {
   if (!manager) return false;
   return manager.modeKey !== "practice" && isSessionTerminated(manager);
 }
-
 function resolveSaveThrottleUserAgent(manager) {
   if (!(manager && typeof manager.getWindowLike === "function")) return "";
   var windowLike = manager.getWindowLike();
@@ -469,7 +439,6 @@ function resolveSaveThrottleUserAgent(manager) {
     ? navigatorLike.userAgent
     : "";
 }
-
 function isMobileSafariUserAgent(userAgent) {
   var ua = String(userAgent || "");
   if (!ua) return false;
@@ -478,23 +447,19 @@ function isMobileSafariUserAgent(userAgent) {
   if (/CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/i.test(ua)) return false;
   return true;
 }
-
 function isMobileSafariLikeByManager(manager) {
   return isMobileSafariUserAgent(resolveSaveThrottleUserAgent(manager));
 }
-
 function resolveSaveGameStateThrottleMs(manager) {
   if (isMobileSafariLikeByManager(manager)) return 600;
   return 150;
 }
-
 function shouldSkipSaveGameStateByThrottle(manager, options, now) {
   if (!manager) return true;
   if (options && options.force) return false;
   if (!manager.lastSavedGameStateAt) return false;
   return (now - manager.lastSavedGameStateAt) < resolveSaveGameStateThrottleMs(manager);
 }
-
 function saveGameState(manager, options) {
   if (!manager) return;
   options = normalizeSavedStateRecordObject(options, {});
@@ -512,7 +477,6 @@ function saveGameState(manager, options) {
     manager.lastSavedGameStateAt = now;
   } catch (_err) {}
 }
-
 function removeSavedKeysFromStoragesFallback(stores, keys) {
   var targetStores = Array.isArray(stores) ? stores : [];
   var targetKeys = Array.isArray(keys) ? keys : [];
@@ -524,7 +488,6 @@ function removeSavedKeysFromStoragesFallback(stores, keys) {
     }
   }
 }
-
 function clearSavedGameState(manager, modeKey) {
   if (!manager) return;
   writeWindowNameSavedPayload(manager, modeKey, null);
@@ -538,7 +501,6 @@ function clearSavedGameState(manager, modeKey) {
   if (manager.resolveCoreBooleanCallOrFallback(removeCoreCallResult, function () { return false; })) return;
   removeSavedKeysFromStoragesFallback(stores, keys);
 }
-
 function normalizeSavedDynamicTimerRowInfo(rowState) {
   var source = normalizeSavedStateRecordObject(rowState, {});
   return {
@@ -549,11 +511,9 @@ function normalizeSavedDynamicTimerRowInfo(rowState) {
     labelFontSize: typeof source.labelFontSize === "string" ? source.labelFontSize : ""
   };
 }
-
 function shouldApplySavedDynamicTimerRowRepeat(rowInfo) {
   return !!(rowInfo && Number.isFinite(rowInfo.repeat) && rowInfo.repeat >= 2);
 }
-
 function createSavedDynamicTimerRowContainer(documentLike, rowInfo, shouldApplyRepeat) {
   var rowDiv = documentLike.createElement("div");
   if (!rowDiv) return null;
