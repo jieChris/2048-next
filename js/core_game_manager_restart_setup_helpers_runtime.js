@@ -62,9 +62,19 @@ function resolveNoXSelectionOverlayId() {
   return "no-x-selection-overlay";
 }
 
-function removeNoXSelectionOverlay(windowLike) {
-  if (!(windowLike && windowLike.document && typeof windowLike.document.getElementById === "function")) return;
-  var overlay = windowLike.document.getElementById(resolveNoXSelectionOverlayId());
+function resolveNoXSelectionDocumentLike(manager, windowLike) {
+  var documentLike = resolveManagerDocumentLike(manager);
+  if (documentLike) return documentLike;
+  if (windowLike && typeof windowLike.getDocumentLike === "function") {
+    return windowLike.getDocumentLike() || null;
+  }
+  return null;
+}
+
+function removeNoXSelectionOverlay(manager, windowLike) {
+  if (!manager) return;
+  resolveNoXSelectionDocumentLike(manager, windowLike);
+  var overlay = resolveManagerElementById(manager, resolveNoXSelectionOverlayId());
   if (overlay && overlay.parentNode && typeof overlay.parentNode.removeChild === "function") {
     overlay.parentNode.removeChild(overlay);
   }
@@ -97,7 +107,7 @@ function syncNoXHeaderStateAfterSelection(manager) {
   if (!(playHeaderHostRuntime && typeof playHeaderHostRuntime.resolvePlayHeaderFromContext === "function")) return;
   playHeaderHostRuntime.resolvePlayHeaderFromContext({
     modeConfig: manager.modeConfig,
-    documentLike: windowLike.document || null,
+    documentLike: resolveManagerDocumentLike(manager),
     resolveHeaderState: playHeaderRuntime.resolvePlayHeaderState
   });
 }
@@ -141,7 +151,7 @@ function createNoXSelectionOptionButton(documentLike, manager, value, selectedVa
   button.addEventListener("click", function () {
     applyNoXSelectionToManager(manager, value);
     setNoXSelectionPendingState(manager, false);
-    removeNoXSelectionOverlay(manager.getWindowLike ? manager.getWindowLike() : null);
+    removeNoXSelectionOverlay(manager, manager.getWindowLike ? manager.getWindowLike() : null);
   });
   return button;
 }
@@ -149,9 +159,9 @@ function createNoXSelectionOptionButton(documentLike, manager, value, selectedVa
 function ensureNoXSelectionOverlayForManager(manager) {
   if (!manager) return;
   var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
-  var documentLike = windowLike && windowLike.document ? windowLike.document : null;
+  var documentLike = resolveNoXSelectionDocumentLike(manager, windowLike);
   if (!(documentLike && documentLike.body && typeof documentLike.createElement === "function")) return;
-  removeNoXSelectionOverlay(windowLike);
+  removeNoXSelectionOverlay(manager, windowLike);
 
   if (!isNoXModeConfig(manager.modeConfig) || manager.noXSelectionPending !== true) return;
 
@@ -210,7 +220,7 @@ function ensureNoXSelectionOverlayForManager(manager) {
 function resolveSetupNoXModeConfig(manager, modeConfig, setupOptions, inputSeed) {
   if (!isNoXModeConfig(modeConfig)) {
     setNoXSelectionPendingState(manager, false);
-    removeNoXSelectionOverlay(manager.getWindowLike ? manager.getWindowLike() : null);
+    removeNoXSelectionOverlay(manager, manager.getWindowLike ? manager.getWindowLike() : null);
     return modeConfig;
   }
 

@@ -398,21 +398,26 @@ function flushPendingMoveInput(manager) {
   return scheduleDelayedPendingMoveInput(manager, direction, wait);
 }
 
-function move(manager, direction) {
-  if (!manager) return;
+function shouldAbortMoveBeforePlanning(manager, direction) {
+  if (!manager) return true;
   if (manager.noXSelectionPending === true) {
     if (typeof ensureNoXSelectionOverlayForManager === "function") {
       ensureNoXSelectionOverlayForManager(manager);
     }
-    return;
+    return true;
   }
   // 0~7: move directions, -1: undo
-  if (handleUndoMove(manager, direction)) return;
-  if (!manager.isDirectionAllowed(direction)) return;
-  if (isGameTerminated(manager)) return;
-  if (checkAndHandleMoveTimeout(manager, Date.now())) return;
+  if (handleUndoMove(manager, direction)) return true;
+  if (!manager.isDirectionAllowed(direction)) return true;
+  if (isGameTerminated(manager)) return true;
+  if (checkAndHandleMoveTimeout(manager, Date.now())) return true;
   var lockedDirection = resolveLockedDirection(manager);
-  if (shouldSkipMoveByLockedDirection(manager, direction, lockedDirection)) return;
+  if (shouldSkipMoveByLockedDirection(manager, direction, lockedDirection)) return true;
+  return false;
+}
+
+function move(manager, direction) {
+  if (shouldAbortMoveBeforePlanning(manager, direction)) return;
   var movePlan = buildMovePlan(manager, direction);
   if (!(movePlan && movePlan.vector)) return;
   var traversals = buildTraversals(manager, movePlan.vector);
