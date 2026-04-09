@@ -1,5 +1,6 @@
 import { createBootstrapPipeline, resolvePageDescriptor } from "../bootstrap/page-bootstrap";
 import { getPageManifest } from "../entries/runtime-manifest";
+import { bindStandaloneInternalNavigation } from "./standalone-navigation";
 
 export interface DirectPageBootstrapResult {
   pageId: string;
@@ -33,6 +34,7 @@ export async function bootstrapDirectPage(
   if (typeof pageInit === "function") {
     await pageInit();
   }
+  bindStandaloneInternalNavigation();
 
   return {
     pageId: manifest.pageId,

@@ -33,6 +33,62 @@
     }
   }
 
+  var STANDALONE_DISPLAY_MODE_QUERIES = [
+    "(display-mode: standalone)",
+    "(display-mode: window-controls-overlay)",
+    "(display-mode: fullscreen)",
+    "(display-mode: minimal-ui)"
+  ];
+
+  function matchesStandaloneDisplayMode(windowLike) {
+    var matchMedia = asFunction(windowLike.matchMedia);
+    if (!matchMedia) return false;
+    for (var i = 0; i < STANDALONE_DISPLAY_MODE_QUERIES.length; i += 1) {
+      var query = STANDALONE_DISPLAY_MODE_QUERIES[i];
+      try {
+        var queryResult = toRecord(matchMedia.call(windowLike, query));
+        if (queryResult.matches === true) return true;
+      } catch (_err) {
+        // Ignore unsupported media queries from host runtime.
+      }
+    }
+    return false;
+  }
+
+  function hasLegacyStandaloneFlag(windowLike) {
+    var navigatorLike = toRecord(windowLike.navigator);
+    return navigatorLike.standalone === true;
+  }
+
+  function isStandaloneAppWindow(windowLike) {
+    return hasLegacyStandaloneFlag(windowLike) || matchesStandaloneDisplayMode(windowLike);
+  }
+
+  function navigateCurrentWindow(windowLike, openUrl) {
+    var locationLike = toRecord(windowLike.location);
+    var assign = asFunction(locationLike.assign);
+    if (assign) {
+      assign.call(locationLike, openUrl);
+      return true;
+    }
+    if ("href" in locationLike) {
+      try {
+        locationLike.href = openUrl;
+        return true;
+      } catch (_err) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  function openInTargetWindow(windowLike, openUrl, target) {
+    var openFn = asFunction(windowLike.open);
+    if (!openFn) return false;
+    openFn.call(windowLike, openUrl, target);
+    return true;
+  }
+
   function resolvePlanFailedMessage(input) {
     return typeof input.planFailedMessage === "string" && input.planFailedMessage
       ? input.planFailedMessage
@@ -99,16 +155,21 @@
     }
 
     var windowLike = toRecord(source.windowLike);
-    var openFn = asFunction(windowLike.open);
-    if (!openFn) {
+    var openTarget = isStandaloneAppWindow(windowLike) ? "_self" : "_blank";
+    if (openTarget === "_self" && navigateCurrentWindow(windowLike, openUrl)) {
+      return {
+        opened: true,
+        reason: "opened",
+        openUrl: openUrl
+      };
+    }
+    if (!openInTargetWindow(windowLike, openUrl, openTarget)) {
       return {
         opened: false,
         reason: "window-open-missing",
         openUrl: openUrl
       };
     }
-
-    openFn.call(windowLike, openUrl, "_blank");
     return {
       opened: true,
       reason: "opened",

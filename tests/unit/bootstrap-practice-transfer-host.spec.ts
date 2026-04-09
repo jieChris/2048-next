@@ -106,4 +106,39 @@ describe("bootstrap practice transfer host", () => {
       openUrl: "Practice_board.html?practice_token=abc"
     });
   });
+
+  it("navigates in current window for standalone app mode", () => {
+    const open = vi.fn();
+    const assign = vi.fn();
+    const result = applyPracticeTransferFromCurrent({
+      manager: { id: "manager" },
+      windowLike: {
+        navigator: { standalone: true },
+        location: { assign },
+        open
+      },
+      practiceTransferRuntime: {
+        resolvePracticeTransferPrecheck() {
+          return {
+            canOpen: true,
+            board: [[2, 4]],
+            alertMessage: null
+          };
+        },
+        createPracticeTransferNavigationPlan() {
+          return {
+            openUrl: "Practice_board.html?practice_token=standalone"
+          };
+        }
+      }
+    });
+
+    expect(assign).toHaveBeenCalledWith("Practice_board.html?practice_token=standalone");
+    expect(open).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      opened: true,
+      reason: "opened",
+      openUrl: "Practice_board.html?practice_token=standalone"
+    });
+  });
 });

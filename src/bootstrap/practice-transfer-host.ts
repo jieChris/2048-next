@@ -28,6 +28,66 @@ function readWindowName(windowLike: unknown): string {
   }
 }
 
+const STANDALONE_DISPLAY_MODE_QUERIES = [
+  "(display-mode: standalone)",
+  "(display-mode: window-controls-overlay)",
+  "(display-mode: fullscreen)",
+  "(display-mode: minimal-ui)"
+] as const;
+
+function matchesStandaloneDisplayMode(windowLike: Record<string, unknown>): boolean {
+  const matchMedia = asFunction<(query: string) => unknown>(windowLike.matchMedia);
+  if (!matchMedia) return false;
+  for (let i = 0; i < STANDALONE_DISPLAY_MODE_QUERIES.length; i += 1) {
+    const query = STANDALONE_DISPLAY_MODE_QUERIES[i];
+    try {
+      const queryResult = toRecord(matchMedia.call(windowLike, query));
+      if (queryResult.matches === true) return true;
+    } catch (_err) {
+      // Ignore unsupported media queries from host runtime.
+    }
+  }
+  return false;
+}
+
+function hasLegacyStandaloneFlag(windowLike: Record<string, unknown>): boolean {
+  const navigatorLike = toRecord(windowLike.navigator);
+  return navigatorLike.standalone === true;
+}
+
+function isStandaloneAppWindow(windowLike: Record<string, unknown>): boolean {
+  return hasLegacyStandaloneFlag(windowLike) || matchesStandaloneDisplayMode(windowLike);
+}
+
+function navigateCurrentWindow(windowLike: Record<string, unknown>, openUrl: string): boolean {
+  const locationLike = toRecord(windowLike.location);
+  const assign = asFunction<(url: string) => unknown>(locationLike.assign);
+  if (assign) {
+    assign.call(locationLike, openUrl);
+    return true;
+  }
+  if ("href" in locationLike) {
+    try {
+      (locationLike as { href: string }).href = openUrl;
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+  return false;
+}
+
+function openInTargetWindow(
+  windowLike: Record<string, unknown>,
+  openUrl: string,
+  target: "_self" | "_blank"
+): boolean {
+  const openFn = asFunction<(url: unknown, targetName: unknown) => unknown>(windowLike.open);
+  if (!openFn) return false;
+  openFn.call(windowLike, openUrl, target);
+  return true;
+}
+
 function resolvePlanFailedMessage(input: Record<string, unknown>): string {
   return typeof input.planFailedMessage === "string" && input.planFailedMessage
     ? input.planFailedMessage
@@ -114,16 +174,21 @@ export function applyPracticeTransferFromCurrent(input: {
   }
 
   const windowLike = toRecord(source.windowLike);
-  const openFn = asFunction<(url: unknown, target: unknown) => unknown>(windowLike.open);
-  if (!openFn) {
+  const openTarget: "_self" | "_blank" = isStandaloneAppWindow(windowLike) ? "_self" : "_blank";
+  if (openTarget === "_self" && navigateCurrentWindow(windowLike, openUrl)) {
+    return {
+      opened: true,
+      reason: "opened",
+      openUrl
+    };
+  }
+  if (!openInTargetWindow(windowLike, openUrl, openTarget)) {
     return {
       opened: false,
       reason: "window-open-missing",
       openUrl
     };
   }
-
-  openFn.call(windowLike, openUrl, "_blank");
   return {
     opened: true,
     reason: "opened",

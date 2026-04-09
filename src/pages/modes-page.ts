@@ -1,5 +1,5 @@
 ﻿import "../../js/theme_manager.js";
-
+import { isStandaloneAppWindow } from "../app/standalone-navigation";
 const MODE_WINDOW_PREFIX = "mode-singleton-";
 
 function isEnglishUi(): boolean {
@@ -64,6 +64,10 @@ function collectModeLinks(): HTMLAnchorElement[] {
 }
 
 function openModeInSingletonWindow(link: HTMLAnchorElement): void {
+  if (isStandaloneAppWindow()) {
+    window.location.href = link.href;
+    return;
+  }
   const targetName = String(link.target || "").trim();
   if (!targetName) {
     window.location.href = link.href;
@@ -149,3 +153,4 @@ export function bootstrapModesPage(): void {
     }
   });
 }
+
