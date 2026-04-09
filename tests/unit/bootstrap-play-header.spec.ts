@@ -94,6 +94,21 @@ describe("bootstrap play header", () => {
         special_rules: { allow_diagonal_moves: true }
       }).titleText
     ).toBe("八方向4x4");
+    expect(
+      resolvePlayHeaderState({
+        key: "nox_4x4_pow2_no_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        special_rules: { no_x_enabled: true, no_x_target: 8192 }
+      }).titleText
+    ).toBe("NO-8K");
+    expect(
+      compactPlayModeLabel({
+        key: "nox_4x4_pow2_no_undo",
+        special_rules: { no_x_enabled: true, no_x_target: 16384 }
+      })
+    ).toBe("NO-16K");
   });
 });
 

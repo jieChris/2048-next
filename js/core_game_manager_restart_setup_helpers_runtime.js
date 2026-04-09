@@ -1,6 +1,244 @@
+var NO_X_FORBIDDEN_TILE_OPTIONS = [1024, 2048, 4096, 8192, 16384, 32768];
+var DEFAULT_NO_X_FORBIDDEN_TILE = 8192;
+
+function resolveNoXForbiddenTileOption(rawValue) {
+  var value = Number(rawValue);
+  if (!Number.isInteger(value) || value <= 0) return null;
+  for (var i = 0; i < NO_X_FORBIDDEN_TILE_OPTIONS.length; i++) {
+    if (value === NO_X_FORBIDDEN_TILE_OPTIONS[i]) return value;
+  }
+  return null;
+}
+
+function formatNoXForbiddenTileLabel(value) {
+  var resolved = resolveNoXForbiddenTileOption(value);
+  if (resolved === null) return "";
+  var kilo = Math.round(resolved / 1024);
+  return String(kilo) + "k";
+}
+
+function isNoXModeConfig(modeConfig) {
+  if (!isNonArrayObject(modeConfig)) return false;
+  var key = String(modeConfig.key || "").toLowerCase();
+  if (key.indexOf("nox_") >= 0 || key.indexOf("no_x") >= 0) return true;
+  var specialRules = modeConfig.special_rules;
+  if (!isNonArrayObject(specialRules)) return false;
+  return specialRules.no_x_enabled === true;
+}
+
+function resolveNoXForbiddenTileFromModeConfig(modeConfig) {
+  if (!isNonArrayObject(modeConfig) || !isNonArrayObject(modeConfig.special_rules)) return null;
+  return resolveNoXForbiddenTileOption(modeConfig.special_rules.no_x_target);
+}
+
+function ensureNoXSpecialRulesObject(modeConfig) {
+  if (!isNonArrayObject(modeConfig)) return {};
+  if (!isNonArrayObject(modeConfig.special_rules)) {
+    modeConfig.special_rules = {};
+  }
+  return modeConfig.special_rules;
+}
+
+function applyNoXSelectionToModeConfig(modeConfig, forbiddenTile) {
+  if (!isNonArrayObject(modeConfig)) return;
+  var rules = ensureNoXSpecialRulesObject(modeConfig);
+  rules.no_x_enabled = true;
+  rules.no_x_target = forbiddenTile;
+}
+
+function setNoXSelectionPendingState(manager, pending) {
+  if (!manager) return;
+  manager.noXSelectionPending = pending === true;
+  var documentLike = resolveManagerDocumentLike(manager);
+  if (!(documentLike && documentLike.body && typeof documentLike.body.setAttribute === "function")) return;
+  if (manager.noXSelectionPending) {
+    documentLike.body.setAttribute("data-no-x-selecting", "1");
+  } else if (typeof documentLike.body.removeAttribute === "function") {
+    documentLike.body.removeAttribute("data-no-x-selecting");
+  }
+}
+
+function resolveNoXSelectionOverlayId() {
+  return "no-x-selection-overlay";
+}
+
+function removeNoXSelectionOverlay(windowLike) {
+  if (!(windowLike && windowLike.document && typeof windowLike.document.getElementById === "function")) return;
+  var overlay = windowLike.document.getElementById(resolveNoXSelectionOverlayId());
+  if (overlay && overlay.parentNode && typeof overlay.parentNode.removeChild === "function") {
+    overlay.parentNode.removeChild(overlay);
+  }
+}
+
+function applyNoXSelectionToManager(manager, forbiddenTile) {
+  if (!manager) return;
+  var resolved = resolveNoXForbiddenTileOption(forbiddenTile);
+  if (resolved === null) return;
+  applyNoXSelectionToModeConfig(manager.modeConfig, resolved);
+  if (isNonArrayObject(manager.specialRules)) {
+    manager.specialRules.no_x_enabled = true;
+    manager.specialRules.no_x_target = resolved;
+  }
+  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
+  if (windowLike && isNonArrayObject(windowLike.GAME_MODE_CONFIG)) {
+    applyNoXSelectionToModeConfig(windowLike.GAME_MODE_CONFIG, resolved);
+  }
+  manager.noXPendingDefaultTarget = resolved;
+  syncNoXHeaderStateAfterSelection(manager);
+}
+
+function syncNoXHeaderStateAfterSelection(manager) {
+  if (!manager || typeof manager.getWindowLike !== "function") return;
+  var windowLike = manager.getWindowLike();
+  if (!windowLike) return;
+  var playHeaderRuntime = windowLike.CorePlayHeaderRuntime;
+  var playHeaderHostRuntime = windowLike.CorePlayHeaderHostRuntime;
+  if (!(playHeaderRuntime && typeof playHeaderRuntime.resolvePlayHeaderState === "function")) return;
+  if (!(playHeaderHostRuntime && typeof playHeaderHostRuntime.resolvePlayHeaderFromContext === "function")) return;
+  playHeaderHostRuntime.resolvePlayHeaderFromContext({
+    modeConfig: manager.modeConfig,
+    documentLike: windowLike.document || null,
+    resolveHeaderState: playHeaderRuntime.resolvePlayHeaderState
+  });
+}
+
+function buildNoXSelectionTitle(windowLike) {
+  var lang = "";
+  try {
+    if (windowLike && windowLike.UII18N && typeof windowLike.UII18N.getLanguage === "function") {
+      lang = String(windowLike.UII18N.getLanguage() || "").trim().toLowerCase();
+    }
+  } catch (_err) {}
+  if (lang.indexOf("en") === 0) return "Choose forbidden X";
+  return "\u9009\u62e9 NO X \u7684 X";
+}
+
+function buildNoXSelectionSubtitle(windowLike) {
+  var lang = "";
+  try {
+    if (windowLike && windowLike.UII18N && typeof windowLike.UII18N.getLanguage === "function") {
+      lang = String(windowLike.UII18N.getLanguage() || "").trim().toLowerCase();
+    }
+  } catch (_err) {}
+  if (lang.indexOf("en") === 0) return "Click one option. If X appears, game ends.";
+  return "\u70b9\u51fb\u9009\u62e9 1k~32k\uff0c\u82e5\u5408\u6210\u51fa X \u6570\uff0c\u672c\u5c40\u7acb\u5373\u7ed3\u675f\u3002";
+}
+
+function createNoXSelectionOptionButton(documentLike, manager, value, selectedValue) {
+  var button = documentLike.createElement("button");
+  button.type = "button";
+  button.setAttribute("data-no-x-value", String(value));
+  button.textContent = "NO " + String(formatNoXForbiddenTileLabel(value)).toUpperCase();
+  button.style.padding = "10px 12px";
+  button.style.borderRadius = "8px";
+  button.style.border = value === selectedValue ? "2px solid #8f7a66" : "1px solid #c9bfb1";
+  button.style.background = value === selectedValue ? "#f3eee6" : "#fff";
+  button.style.color = "#5f574f";
+  button.style.fontSize = "16px";
+  button.style.fontWeight = "700";
+  button.style.cursor = "pointer";
+  button.style.transition = "all 0.12s ease";
+  button.addEventListener("click", function () {
+    applyNoXSelectionToManager(manager, value);
+    setNoXSelectionPendingState(manager, false);
+    removeNoXSelectionOverlay(manager.getWindowLike ? manager.getWindowLike() : null);
+  });
+  return button;
+}
+
+function ensureNoXSelectionOverlayForManager(manager) {
+  if (!manager) return;
+  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
+  var documentLike = windowLike && windowLike.document ? windowLike.document : null;
+  if (!(documentLike && documentLike.body && typeof documentLike.createElement === "function")) return;
+  removeNoXSelectionOverlay(windowLike);
+
+  if (!isNoXModeConfig(manager.modeConfig) || manager.noXSelectionPending !== true) return;
+
+  var selectedValue = resolveNoXForbiddenTileOption(manager.noXPendingDefaultTarget);
+  if (selectedValue === null) selectedValue = resolveNoXForbiddenTileFromModeConfig(manager.modeConfig);
+  if (selectedValue === null) selectedValue = DEFAULT_NO_X_FORBIDDEN_TILE;
+
+  var overlay = documentLike.createElement("div");
+  overlay.id = resolveNoXSelectionOverlayId();
+  overlay.style.position = "fixed";
+  overlay.style.inset = "0";
+  overlay.style.zIndex = "4000";
+  overlay.style.background = "rgba(32,24,17,0.5)";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.padding = "20px";
+
+  var panel = documentLike.createElement("div");
+  panel.style.width = "min(520px, 96vw)";
+  panel.style.background = "#fbf8f1";
+  panel.style.border = "1px solid #d8ccbc";
+  panel.style.borderRadius = "12px";
+  panel.style.boxShadow = "0 16px 38px rgba(0,0,0,0.25)";
+  panel.style.padding = "18px 16px 16px";
+  panel.style.boxSizing = "border-box";
+
+  var title = documentLike.createElement("div");
+  title.textContent = buildNoXSelectionTitle(windowLike);
+  title.style.fontSize = "20px";
+  title.style.fontWeight = "700";
+  title.style.color = "#5a5249";
+  title.style.marginBottom = "6px";
+  panel.appendChild(title);
+
+  var subtitle = documentLike.createElement("div");
+  subtitle.textContent = buildNoXSelectionSubtitle(windowLike);
+  subtitle.style.fontSize = "14px";
+  subtitle.style.color = "#7b7167";
+  subtitle.style.marginBottom = "14px";
+  panel.appendChild(subtitle);
+
+  var grid = documentLike.createElement("div");
+  grid.style.display = "grid";
+  grid.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))";
+  grid.style.gap = "10px";
+  for (var i = 0; i < NO_X_FORBIDDEN_TILE_OPTIONS.length; i++) {
+    grid.appendChild(createNoXSelectionOptionButton(documentLike, manager, NO_X_FORBIDDEN_TILE_OPTIONS[i], selectedValue));
+  }
+  panel.appendChild(grid);
+
+  overlay.appendChild(panel);
+  documentLike.body.appendChild(overlay);
+}
+
+function resolveSetupNoXModeConfig(manager, modeConfig, setupOptions, inputSeed) {
+  if (!isNoXModeConfig(modeConfig)) {
+    setNoXSelectionPendingState(manager, false);
+    removeNoXSelectionOverlay(manager.getWindowLike ? manager.getWindowLike() : null);
+    return modeConfig;
+  }
+
+  var selectedFromOptions = resolveNoXForbiddenTileOption(
+    setupOptions && setupOptions.noXTarget
+  );
+  var selectedValue = selectedFromOptions;
+  if (selectedValue === null) {
+    selectedValue = resolveNoXForbiddenTileFromModeConfig(modeConfig);
+  }
+  if (selectedValue === null) {
+    selectedValue = DEFAULT_NO_X_FORBIDDEN_TILE;
+  }
+
+  applyNoXSelectionToModeConfig(modeConfig, selectedValue);
+  manager.noXPendingDefaultTarget = selectedValue;
+
+  var shouldRequireSelection =
+    !(setupOptions && setupOptions.skipNoXSelection === true) &&
+    typeof inputSeed === "undefined";
+  setNoXSelectionPendingState(manager, shouldRequireSelection);
+
+  return modeConfig;
+}
+
 function restartGame(manager) {
   if (!manager) return;
-  if (!confirm("是否确认开始新游戏?")) return;
+  if (!confirm("\u662f\u5426\u786e\u8ba4\u5f00\u59cb\u65b0\u6e38\u620f\uff1f")) return;
   manager.actuator.continue();
   manager.setRuntimeUndoStack([]);
   manager.setRuntimeRedoStack([]);
@@ -239,6 +477,8 @@ function resetSetupRuntimeState(manager) {
   if (!manager) return;
   resetSetupReplayAndSpawnState(manager);
   manager.reached32k = false;
+  manager.noXTriggered = false;
+  manager.noXTriggeredTile = null;
   manager.isTestMode = false;
   manager.cappedMilestoneCount = 0;
   resetSetupTimerAndInputState(manager);
@@ -376,6 +616,7 @@ function finalizeSetupUiAndStatsState(manager, preferredTimerModuleView, restore
   } else {
     manager.updateStatsPanel(0, 0, 0);
   }
+  ensureNoXSelectionOverlayForManager(manager);
 }
 
 function runSetupStateInitialization(manager, inputSeed, setupOptions) {
@@ -422,6 +663,7 @@ function setupGame(manager, inputSeed, options) {
   var detectedMode = detectMode(manager);
   var resolvedModeConfig = resolveSetupModeConfig(manager, setupOptions, detectedMode);
   var cfg = manager.normalizeModeConfig(resolvedModeConfig && resolvedModeConfig.key, resolvedModeConfig);
+  cfg = resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed);
   applySetupModeConfig(manager, cfg);
   manager.setRuntimeGrid(new Grid(manager.width, manager.height));
   manager.setRuntimeScore(0);

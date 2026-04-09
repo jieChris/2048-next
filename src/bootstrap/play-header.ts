@@ -62,6 +62,36 @@ function resolvePlayBoardSizeText(modeConfig: PlayHeaderModeConfigLike | null | 
   return String(width) + "x" + String(height);
 }
 
+function resolveNoXTargetFromModeConfig(
+  modeConfig: PlayHeaderModeConfigLike | null | undefined
+): number | null {
+  const specialRules = modeConfig?.special_rules;
+  if (!specialRules || typeof specialRules !== "object") return null;
+  const rawTarget = (specialRules as Record<string, unknown>).no_x_target;
+  const target = Number(rawTarget);
+  if (!Number.isInteger(target) || target < 1024) return null;
+  return target;
+}
+
+function resolveNoXDisplayLabel(
+  modeConfig: PlayHeaderModeConfigLike | null | undefined
+): string | null {
+  const key = String(modeConfig?.key || "").trim().toLowerCase();
+  const specialRules = modeConfig?.special_rules;
+  const isNoXMode =
+    key.indexOf("nox_") >= 0 ||
+    key.indexOf("no_x") >= 0 ||
+    !!(
+      specialRules &&
+      typeof specialRules === "object" &&
+      (specialRules as Record<string, unknown>).no_x_enabled === true
+    );
+  if (!isNoXMode) return null;
+  const target = resolveNoXTargetFromModeConfig(modeConfig);
+  if (target === null) return "NO-X";
+  return "NO-" + String(Math.round(target / 1024)).toUpperCase() + "K";
+}
+
 function resolvePlayModeUndoState(
   modeConfig: PlayHeaderModeConfigLike | null | undefined
 ): "undo" | "no_undo" | null {
@@ -88,6 +118,8 @@ function resolvePlayModeBoardTitle(modeConfig: PlayHeaderModeConfigLike | null |
   const key = String(modeConfig?.key || "").trim().toLowerCase();
   const sizeText = resolvePlayBoardSizeText(modeConfig);
   const undoState = resolvePlayModeUndoState(modeConfig);
+  const noXLabel = resolveNoXDisplayLabel(modeConfig);
+  if (noXLabel) return noXLabel;
   const specialRules = modeConfig?.special_rules;
   const allowDiagonalMoves =
     !!specialRules &&
@@ -183,6 +215,8 @@ function resolvePlayCustomFourRateSuffix(
 }
 
 export function compactPlayModeLabel(modeConfig: PlayHeaderModeConfigLike | null | undefined): string {
+  const noXLabel = resolveNoXDisplayLabel(modeConfig);
+  if (noXLabel) return noXLabel;
   const lang = resolvePlayHeaderLang();
   const raw = resolvePlayModeTitle(modeConfig);
 

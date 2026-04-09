@@ -208,7 +208,6 @@
     ["Undo Mod 由 Alok Menghrajani 制作，源代码。项目改自2048。计时器参考2048-timer。", "Undo mod by Alok Menghrajani. Forked from 2048. Timer reference: 2048-timer."],
     ["项目由Gemini和Codex基于几个项目整合改版，开源在GitHub。原作者 Gabriele Cirulli. 基于 Veewo Studio 的 1024 且概念受 Asher Vollmer 的 Threes 启发。 Undo Mod 由 Alok Menghrajani 制作，源代码。项目改自2048。计时器参考2048-timer。", "This project is an integrated fork adapted with Gemini and Codex and is open source on GitHub. Original game by Gabriele Cirulli, based on 1024 by Veewo Studio and inspired by Threes by Asher Vollmer. Undo mod by Alok Menghrajani. Timer reference: 2048-timer."],
     ["欢迎加入中国第一2048交流群：", "Join the 2048 community group: "],
-    ["推荐具有排行榜功能的", "Recommended leaderboard site: "],
     ["2048 标题", "2048 Title"],
     ["在任何页面点击该标题，都可以返回主页。", "Click this title on any page to return home."],
     ["上一步", "Back"], ["下一步", "Next"], ["跳过", "Skip"],
@@ -598,8 +597,6 @@
     if (page === "index.html" || page === "2048.html") {
       var indexCopyZh = "项目由Gemini和Codex基于几个项目整合改版，开源在<a href=\"https://github.com/jieChris/2048-next\" target=\"_blank\">GitHub</a>。原作者 <a href=\"http://gabrielecirulli.com\" target=\"_blank\">Gabriele Cirulli.</a> 基于 <a href=\"https://itunes.apple.com/us/app/1024!/id823499224\" target=\"_blank\">Veewo Studio 的 1024</a> 且概念受 <a href=\"http://asherv.com/threes/\" target=\"_blank\">Asher Vollmer 的 Threes</a> 启发。撤销 Mod 由 <a href=\"http://quaxio.com/\">Alok Menghrajani</a> 制作，<a href=\"https://github.com/gabrielecirulli/2048\">源代码</a>。项目改自<a href=\"https://github.com/gabrielecirulli/2048\">2048</a>。计时器参考<a href=\"https://github.com/neiunderscore/2048-timer?tab=readme-ov-file\">2048-timer</a>。";
       var indexCopyEn = "Project fork adapted with Gemini and Codex, open sourced on <a href=\"https://github.com/jieChris/2048-next\" target=\"_blank\">GitHub</a>. Original game by <a href=\"http://gabrielecirulli.com\" target=\"_blank\">Gabriele Cirulli</a>, based on <a href=\"https://itunes.apple.com/us/app/1024!/id823499224\" target=\"_blank\">1024 by Veewo Studio</a> and inspired by <a href=\"http://asherv.com/threes/\" target=\"_blank\">Threes by Asher Vollmer</a>. Undo mod by <a href=\"http://quaxio.com/\">Alok Menghrajani</a>, source at <a href=\"https://github.com/gabrielecirulli/2048\">GitHub</a>. Timer reference: <a href=\"https://github.com/neiunderscore/2048-timer?tab=readme-ov-file\">2048-timer</a>.";
-      var leaderboardZh = "推荐具有排行榜功能的<a href=\"https://www.2048verse.com\" target=\"_blank\" rel=\"noopener noreferrer\">2048verse</a>";
-      var leaderboardEn = "Recommended leaderboard site: <a href=\"https://www.2048verse.com\" target=\"_blank\" rel=\"noopener noreferrer\">2048verse</a>";
       var intro = global.document.querySelector(".game-intro");
       if (intro) {
         setTextIfChanged(intro, lang === "en"
@@ -610,16 +607,13 @@
       if (exp) {
         setTextIfChanged(exp, lang === "en"
           ? "How to play: use Arrow keys, WASD, or KHJL to move tiles. Undo is disabled on this page. Press R to restart. When two equal tiles touch, they merge into one."
-          : "玩法说明： 使用 方向键、WASD、KHJL 移动方块。本页不支持撤回，按 R 键重开游戏。当两个相同数字的方块接触时，它们会 合并成一个！");
+          : "玩法说明： 使用 方向键、WASD、KHJL 移动方块。本页不支持撤回，按 R 键重开游戏。当两个相同数字的方块接触时，它们会合并成一个！");
       }
       var copy = global.document.querySelectorAll(".mobile-hide-project-copy");
       if (copy[0]) {
         setHtmlIfChangedByLang(copy[0], lang, indexCopyZh, indexCopyEn);
       }
       if (copy[1]) setTextIfChanged(copy[1], lang === "en" ? "Join the 2048 community group: 94064339" : "欢迎加入中国第一2048交流群：94064339");
-      if (copy[2]) {
-        setHtmlIfChangedByLang(copy[2], lang, leaderboardZh, leaderboardEn);
-      }
     }
     if (page === "undo_2048.html") {
       var undoIntro = global.document.querySelector(".game-intro");

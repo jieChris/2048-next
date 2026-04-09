@@ -10,7 +10,8 @@
       : 0;
     var successfulMoveCount = currentCount + 1;
     var hasMovesAvailable = !!opts.hasMovesAvailable;
-    var over = !hasMovesAvailable;
+    var forcedOver = !!opts.forcedOver;
+    var over = forcedOver || !hasMovesAvailable;
     var timerStatus = Number(opts.timerStatus);
 
     return {

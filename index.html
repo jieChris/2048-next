@@ -4,10 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>2048</title>
-  <meta http-equiv="refresh" content="0; url=2048.html" />
+  <script>
+    (function () {
+      var target = "2048.html" + window.location.search + window.location.hash;
+      window.location.replace(target);
+    })();
+  </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0; url=2048.html" />
+  </noscript>
 </head>
-<body>
-  <p>Redirecting to classic 2048...</p>
-  <p><a href="2048.html">Open classic 2048</a></p>
-</body>
+<body></body>
 </html>

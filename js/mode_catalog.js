@@ -87,6 +87,9 @@
     if (key === "spawn50_3x3_pow2_no_undo") {
       return isEn ? "3x3 Spawn 50/50 (No Undo)" : "3x3 概率 50/50（无撤回）";
     }
+    if (key === "nox_4x4_pow2_no_undo") {
+      return isEn ? "NO X 4x4 (No Undo)" : "NO X 4x4（无撤回）";
+    }
     if (key === "limit3_4x4_pow2") {
       return isEn ? "Limited Undo 4x4 (3 Uses)" : "限次撤回 4x4（3次）";
     }
@@ -432,6 +435,20 @@
     spawn_table: [{ value: 2, weight: 50 }, { value: 4, weight: 50 }],
     ranked_bucket: "none",
     mode_family: "pow2",
+    rank_policy: "unranked"
+  });
+
+  add({
+    key: "nox_4x4_pow2_no_undo",
+    label: "NO X 4x4（无撤回）",
+    board_width: 4,
+    board_height: 4,
+    ruleset: "pow2",
+    undo_enabled: false,
+    spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+    ranked_bucket: "none",
+    mode_family: "pow2",
+    special_rules: { no_x_enabled: true, no_x_target: null },
     rank_policy: "unranked"
   });
 

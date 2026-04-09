@@ -111,6 +111,8 @@ function initializeGameManagerRuntimeState(manager) {
   manager.nextSpawnSuppressed = false; manager.nextSpawnValueOverride = null;
   manager.moveTimeoutMs = null; manager.moveDeadlineAt = null;
   manager.practiceRestartBoardMatrix = null; manager.practiceRestartModeConfig = null;
+  manager.noXTriggered = false; manager.noXTriggeredTile = null;
+  manager.noXSelectionPending = false; manager.noXPendingDefaultTarget = null;
   manager.timerFrozen = false;
 }
 

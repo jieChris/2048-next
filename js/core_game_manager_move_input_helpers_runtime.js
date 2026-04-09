@@ -155,6 +155,27 @@ function checkAndHandleMoveTimeout(manager, nowMs) {
   return true;
 }
 
+function resolveNoXForbiddenTile(manager) {
+  if (!(manager && manager.specialRules && typeof manager.specialRules === "object")) return null;
+  if (manager.specialRules.no_x_enabled !== true) return null;
+  var tile = Number(manager.specialRules.no_x_target);
+  if (!Number.isInteger(tile) || tile <= 0) return null;
+  return tile;
+}
+
+function applyNoXForbiddenTileLoss(manager, mergedValue) {
+  if (!manager) return false;
+  var forbiddenTile = resolveNoXForbiddenTile(manager);
+  if (forbiddenTile === null) return false;
+  if (Number(mergedValue) !== forbiddenTile) return false;
+  manager.noXTriggered = true;
+  manager.noXTriggeredTile = forbiddenTile;
+  manager.won = false;
+  manager.keepPlaying = false;
+  manager.over = true;
+  return true;
+}
+
 function grantRandomItemCharge(manager) {
   if (!isItemModeEnabled(manager)) return;
   var inventory = ensureItemInventory(manager);
@@ -379,6 +400,12 @@ function flushPendingMoveInput(manager) {
 
 function move(manager, direction) {
   if (!manager) return;
+  if (manager.noXSelectionPending === true) {
+    if (typeof ensureNoXSelectionOverlayForManager === "function") {
+      ensureNoXSelectionOverlayForManager(manager);
+    }
+    return;
+  }
   // 0~7: move directions, -1: undo
   if (handleUndoMove(manager, direction)) return;
   if (!manager.isDirectionAllowed(direction)) return;
@@ -552,6 +579,7 @@ function applyMergedTileEffects(manager, mergedValue, timeStr) {
   if (mergeEffects.shouldSetReached32k) {
     manager.reached32k = true;
   }
+  applyNoXForbiddenTileLoss(manager, mergedValue);
   applyMoveMergeTimerStampEffects(manager, mergeEffects, timeStr);
   stampSecondaryTimersForMergedValue(manager, mergedValue, timeStr);
   applyMoveMergeVisibilityEffects(manager, mergeEffects);
@@ -623,9 +651,12 @@ function finalizeSuccessfulMove(manager, movePlan, direction) {
   applyPostMoveScore(manager, movePlan.scoreBeforeMove);
   resetMoveTimeoutDeadline(manager, Date.now());
   processItemModeAfterSuccessfulMove(manager);
-  addRandomTile(manager);
-  var hasMovesAvailable = movesAvailable(manager);
-  var postMoveLifecycle = resolvePostMoveLifecycle(manager, hasMovesAvailable);
+  var forcedOver = !!manager.over;
+  if (!forcedOver) {
+    addRandomTile(manager);
+  }
+  var hasMovesAvailable = forcedOver ? false : movesAvailable(manager);
+  var postMoveLifecycle = resolvePostMoveLifecycle(manager, hasMovesAvailable, forcedOver);
   pushRuntimeUndoEntryForMove(manager, manager.normalizeUndoStackEntry(movePlan.undo));
   clearRuntimeRedoStackForMove(manager);
   appendPostMoveRecordArtifacts(manager, direction);
@@ -683,21 +714,22 @@ function createPostMoveLifecycleDefaultState() {
   };
 }
 
-function createPostMoveLifecyclePayload(manager, hasMovesAvailable) {
+function createPostMoveLifecyclePayload(manager, hasMovesAvailable, forcedOver) {
   return {
     successfulMoveCount: manager.successfulMoveCount,
     hasMovesAvailable: hasMovesAvailable,
+    forcedOver: !!forcedOver,
     timerStatus: manager.timerStatus
   };
 }
 
-function resolvePostMoveLifecycle(manager, hasMovesAvailable) {
+function resolvePostMoveLifecycle(manager, hasMovesAvailable, forcedOver) {
   if (!manager) return createPostMoveLifecycleDefaultState();
-  return resolveCorePayloadCallWith(manager, "callCorePostMoveRuntime", "computePostMoveLifecycle", createPostMoveLifecyclePayload(manager, hasMovesAvailable), undefined, function (currentManager, coreCallResult) {
+  return resolveCorePayloadCallWith(manager, "callCorePostMoveRuntime", "computePostMoveLifecycle", createPostMoveLifecyclePayload(manager, hasMovesAvailable, forcedOver), undefined, function (currentManager, coreCallResult) {
     return currentManager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (coreValue) {
-      return applyCorePostMoveLifecycleResult(currentManager, coreValue, hasMovesAvailable);
+      return applyCorePostMoveLifecycleResult(currentManager, coreValue, hasMovesAvailable, forcedOver);
     }, function () {
-      return applyFallbackPostMoveLifecycleResult(currentManager, hasMovesAvailable);
+      return applyFallbackPostMoveLifecycleResult(currentManager, hasMovesAvailable, forcedOver);
     });
   });
 }
@@ -716,8 +748,11 @@ function applyCorePostMoveSuccessfulMoveCount(manager, postMoveResult) {
   manager.successfulMoveCount += 1;
 }
 
-function resolveCorePostMoveOverState(postMoveResult, hasMovesAvailable) {
-  return typeof postMoveResult.over === "boolean" ? postMoveResult.over : !hasMovesAvailable;
+function resolveCorePostMoveOverState(postMoveResult, hasMovesAvailable, forcedOver) {
+  if (typeof postMoveResult.over === "boolean") {
+    return !!postMoveResult.over || !!forcedOver;
+  }
+  return !!forcedOver || !hasMovesAvailable;
 }
 
 function shouldCorePostMoveEndTimer(postMoveResult, over) {
@@ -731,11 +766,11 @@ function resolveCorePostMoveShouldStartTimer(manager, postMoveResult) {
   return manager.timerStatus === 0 && !manager.over;
 }
 
-function applyCorePostMoveLifecycleResult(manager, coreValue, hasMovesAvailable) {
+function applyCorePostMoveLifecycleResult(manager, coreValue, hasMovesAvailable, forcedOver) {
   if (!manager) return createPostMoveLifecycleDefaultState();
   var postMoveResult = normalizeMoveInputRecordObject(coreValue, {});
   applyCorePostMoveSuccessfulMoveCount(manager, postMoveResult);
-  manager.over = resolveCorePostMoveOverState(postMoveResult, hasMovesAvailable);
+  manager.over = resolveCorePostMoveOverState(postMoveResult, hasMovesAvailable, forcedOver);
   if (shouldCorePostMoveEndTimer(postMoveResult, manager.over)) {
     manager.stopTimer();
     writePostMoveEndTimerText(manager);
@@ -746,7 +781,7 @@ function applyCorePostMoveLifecycleResult(manager, coreValue, hasMovesAvailable)
   };
 }
 
-function applyFallbackPostMoveLifecycleResult(manager, hasMovesAvailable) {
+function applyFallbackPostMoveLifecycleResult(manager, hasMovesAvailable, forcedOver) {
   if (!manager) {
     return {
       postMoveResult: null,
@@ -754,7 +789,7 @@ function applyFallbackPostMoveLifecycleResult(manager, hasMovesAvailable) {
     };
   }
   manager.successfulMoveCount += 1;
-  if (!hasMovesAvailable) {
+  if (forcedOver || !hasMovesAvailable) {
     manager.over = true;
     manager.stopTimer();
     writePostMoveEndTimerText(manager);

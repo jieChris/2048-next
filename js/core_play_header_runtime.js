@@ -55,6 +55,32 @@
     return String(width) + "x" + String(height);
   }
 
+  function resolveNoXTargetFromModeConfig(modeConfig) {
+    var specialRules = modeConfig && modeConfig.special_rules;
+    if (!specialRules || typeof specialRules !== "object") return null;
+    var rawTarget = specialRules.no_x_target;
+    var target = Number(rawTarget);
+    if (!Number.isInteger(target) || target < 1024) return null;
+    return target;
+  }
+
+  function resolveNoXDisplayLabel(modeConfig) {
+    var key = String((modeConfig && modeConfig.key) || "").trim().toLowerCase();
+    var specialRules = modeConfig && modeConfig.special_rules;
+    var isNoXMode =
+      key.indexOf("nox_") >= 0 ||
+      key.indexOf("no_x") >= 0 ||
+      !!(
+        specialRules &&
+        typeof specialRules === "object" &&
+        specialRules.no_x_enabled === true
+      );
+    if (!isNoXMode) return null;
+    var target = resolveNoXTargetFromModeConfig(modeConfig);
+    if (target === null) return "NO-X";
+    return "NO-" + String(Math.round(target / 1024)).toUpperCase() + "K";
+  }
+
   function resolvePlayModeUndoState(modeConfig) {
     var undoEnabled = modeConfig && modeConfig.undo_enabled;
     if (typeof undoEnabled === "boolean") return undoEnabled ? "undo" : "no_undo";
@@ -79,6 +105,8 @@
     var key = String((modeConfig && modeConfig.key) || "").trim().toLowerCase();
     var sizeText = resolvePlayBoardSizeText(modeConfig);
     var undoState = resolvePlayModeUndoState(modeConfig);
+    var noXLabel = resolveNoXDisplayLabel(modeConfig);
+    if (noXLabel) return noXLabel;
     var specialRules = modeConfig && modeConfig.special_rules;
     var allowDiagonalMoves =
       !!specialRules &&
@@ -171,6 +199,8 @@
   }
 
   function compactPlayModeLabel(modeConfig) {
+    var noXLabel = resolveNoXDisplayLabel(modeConfig);
+    if (noXLabel) return noXLabel;
     var lang = resolvePlayHeaderLang();
     var raw = resolvePlayModeTitle(modeConfig);
     var output = String(raw)

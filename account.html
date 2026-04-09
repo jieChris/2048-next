@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048 Account Center</title>
+  <title>2048 账号中心</title>
 <link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
   <link href="style/account_page.css?v=20260321-01" rel="stylesheet" type="text/css">
@@ -15,15 +15,15 @@
   <main class="palette-page-shell account-page-shell">
     <header class="palette-page-header">
       <div class="palette-title-wrap">
-        <p class="palette-kicker" id="account-kicker">2048 Online Hub</p>
-        <h1 class="palette-title" id="account-title">Account Center</h1>
-        <p class="palette-subtitle" id="account-subtitle">Log in to sync records and check online leaderboards.</p>
+        <p class="palette-kicker" id="account-kicker">2048 在线中心</p>
+        <h1 class="palette-title" id="account-title">账号中心</h1>
+        <p class="palette-subtitle" id="account-subtitle">登录后可同步记录并查看在线排行榜。</p>
       </div>
       <nav class="palette-nav">
         <a class="replay-button palette-nav-btn" href="account_settings.html" id="account-nav-settings">账号设置</a>
-        <a class="replay-button palette-nav-btn" href="2048.html" id="account-nav-home">Home</a>
-        <a class="replay-button palette-nav-btn" href="palette.html" id="account-nav-palette">Theme Settings</a>
-        <a class="replay-button palette-nav-btn" href="Practice_board.html" id="account-nav-practice">Practice</a>
+        <a class="replay-button palette-nav-btn" href="2048.html" id="account-nav-home">首页</a>
+        <a class="replay-button palette-nav-btn" href="palette.html" id="account-nav-palette">主题设置</a>
+        <a class="replay-button palette-nav-btn" href="Practice_board.html" id="account-nav-practice">练习盘</a>
       </nav>
     </header>
 
@@ -31,8 +31,8 @@
       <section class="card-surface account-auth-card">
         <div class="panel-head account-auth-title-row">
           <div class="account-auth-title-wrap">
-            <h2 id="account-auth-heading">Account</h2>
-            <p id="account-auth-subtitle" class="account-auth-subtitle">Sign in to sync records and compare rankings.</p>
+            <h2 id="account-auth-heading">账号登录</h2>
+            <p id="account-auth-subtitle" class="account-auth-subtitle">登录后可同步记录并参与排行比较。</p>
           </div>
           <span id="account-auth-state-tag" class="panel-pill">--</span>
         </div>
@@ -40,40 +40,40 @@
         <div class="account-auth-form-surface">
           <div id="account-auth-grid" class="account-auth-grid">
             <div class="account-form-field">
-              <label for="account-email" id="account-email-label">Email</label>
-              <input id="account-email" class="account-input" type="email" placeholder="Enter email">
+              <label for="account-email" id="account-email-label">邮箱</label>
+              <input id="account-email" class="account-input" type="email" placeholder="请输入邮箱">
             </div>
 
             <div class="account-form-field">
-              <label for="account-password" id="account-password-label">Password</label>
-              <input id="account-password" class="account-input" type="password" placeholder="Enter password">
+              <label for="account-password" id="account-password-label">密码</label>
+              <input id="account-password" class="account-input" type="password" placeholder="请输入密码">
             </div>
 
             <div id="account-login-captcha-wrap" class="account-login-captcha" style="display:none;">
-              <label for="account-login-captcha-answer" id="account-login-captcha-label">Image Captcha</label>
+              <label for="account-login-captcha-answer" id="account-login-captcha-label">图形验证码</label>
               <div class="account-login-captcha-row">
-                <img id="account-login-captcha-image" class="account-login-captcha-image" alt="login captcha">
-                <button id="account-login-captcha-refresh" class="replay-button account-login-captcha-refresh" type="button">Refresh</button>
+                <img id="account-login-captcha-image" class="account-login-captcha-image" alt="登录验证码">
+                <button id="account-login-captcha-refresh" class="replay-button account-login-captcha-refresh" type="button">刷新</button>
               </div>
-              <input id="account-login-captcha-answer" class="account-input" type="text" maxlength="8" autocomplete="off" placeholder="Enter captcha">
+              <input id="account-login-captcha-answer" class="account-input" type="text" maxlength="8" autocomplete="off" placeholder="请输入验证码">
             </div>
           </div>
         </div>
 
         <div id="account-action-row" class="account-action-row">
-          <button id="account-login-btn" class="replay-button" type="button">Login</button>
-          <a id="account-open-register-btn" class="replay-button" href="register.html">Create Account</a>
-          <a id="account-open-reset-password-btn" class="replay-button" href="password.html?mode=reset">Forgot Password</a>
+          <button id="account-login-btn" class="replay-button" type="button">登录</button>
+          <a id="account-open-register-btn" class="replay-button" href="register.html">注册账号</a>
+          <a id="account-open-reset-password-btn" class="replay-button" href="password.html?mode=reset">忘记密码</a>
         </div>
 
         <p id="account-auth-tip" class="account-tip" aria-live="polite"></p>
 
         <section class="account-user-card">
-          <h3 id="account-user-title">Current Account</h3>
+          <h3 id="account-user-title">当前账号</h3>
           <div class="account-user-lines">
-            <div><span id="account-user-nickname-label">Nickname:</span><strong id="account-user-nickname">--</strong></div>
-            <div><span id="account-user-email-label">Email:</span><strong id="account-user-email">--</strong></div>
-            <div><span id="account-user-created-label">Created At:</span><strong id="account-user-created">--</strong></div>
+            <div><span id="account-user-nickname-label">昵称：</span><strong id="account-user-nickname">--</strong></div>
+            <div><span id="account-user-email-label">邮箱：</span><strong id="account-user-email">--</strong></div>
+            <div><span id="account-user-created-label">创建时间：</span><strong id="account-user-created">--</strong></div>
           </div>
         </section>
       </section>
@@ -81,25 +81,25 @@
       <section class="card-surface account-board-card">
         <div class="panel-head account-board-title-row">
           <div class="account-board-title-wrap">
-            <h2 id="account-board-heading">Leaderboard</h2>
-            <p id="account-board-subtitle" class="account-board-subtitle">Filter by mode and metric to compare records.</p>
+            <h2 id="account-board-heading">排行榜</h2>
+            <p id="account-board-subtitle" class="account-board-subtitle">按模式与指标筛选记录进行比较。</p>
           </div>
         </div>
-        <div class="account-board-filter-row" role="group" aria-label="Leaderboard filters">
+        <div class="account-board-filter-row" role="group" aria-label="排行榜筛选">
           <div class="account-board-tools">
-            <label for="account-board-mode" id="account-board-mode-label">Mode</label>
+            <label for="account-board-mode" id="account-board-mode-label">模式</label>
             <select id="account-board-mode" class="settings-select"></select>
-            <label for="account-board-metric" id="account-board-metric-label">Metric</label>
+            <label for="account-board-metric" id="account-board-metric-label">指标</label>
             <select id="account-board-metric" class="settings-select"></select>
-            <button id="account-board-refresh" class="replay-button" type="button">Refresh</button>
+            <button id="account-board-refresh" class="replay-button" type="button">刷新</button>
           </div>
         </div>
         <div class="account-board-table-wrap">
           <div class="account-board-head-row">
-            <span id="account-col-rank">Rank</span>
-            <span id="account-col-name">Name</span>
-            <span id="account-col-score">Score</span>
-            <span id="account-col-date">Updated</span>
+            <span id="account-col-rank">排名</span>
+            <span id="account-col-name">昵称</span>
+            <span id="account-col-score">分数</span>
+            <span id="account-col-date">更新时间</span>
           </div>
           <div id="account-board-list" class="account-board-list" data-board-state="idle" aria-live="polite"></div>
         </div>
@@ -116,7 +116,3 @@
   <script type="module" src="./src/entries/account.ts"></script>
 </body>
 </html>
-
-
-
-

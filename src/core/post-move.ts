@@ -1,6 +1,7 @@
 export interface PostMoveLifecycleInput {
   successfulMoveCount: number;
   hasMovesAvailable: boolean;
+  forcedOver?: boolean;
   timerStatus: number;
 }
 
@@ -18,7 +19,8 @@ export function computePostMoveLifecycle(input: PostMoveLifecycleInput): PostMov
       : 0;
   const successfulMoveCount = currentCount + 1;
   const hasMovesAvailable = !!input.hasMovesAvailable;
-  const over = !hasMovesAvailable;
+  const forcedOver = !!input.forcedOver;
+  const over = forcedOver || !hasMovesAvailable;
   const timerStatus = Number(input.timerStatus);
 
   return {

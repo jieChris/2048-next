@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048 Register</title>
+  <title>2048 注册</title>
   <link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
   <link href="style/account_page.css?v=20260321-01" rel="stylesheet" type="text/css">
@@ -17,47 +17,47 @@
   <main class="palette-page-shell register-page-shell">
     <header class="palette-page-header">
       <div class="palette-title-wrap">
-        <p class="palette-kicker" id="register-kicker">2048 Online Hub</p>
-        <h1 class="palette-title" id="register-title">Create Account</h1>
-        <p class="palette-subtitle" id="register-subtitle">Complete human verification and nickname check before creating an account.</p>
+        <p class="palette-kicker" id="register-kicker">2048 在线中心</p>
+        <h1 class="palette-title" id="register-title">注册账号</h1>
+        <p class="palette-subtitle" id="register-subtitle">完成人机验证并通过昵称校验后即可创建账号。</p>
       </div>
       <nav class="palette-nav">
-        <a class="replay-button palette-nav-btn" href="account.html" id="register-nav-login">Back to Login</a>
-        <a class="replay-button palette-nav-btn" href="2048.html" id="register-nav-home">Home</a>
+        <a class="replay-button palette-nav-btn" href="account.html" id="register-nav-login">返回登录</a>
+        <a class="replay-button palette-nav-btn" href="2048.html" id="register-nav-home">首页</a>
       </nav>
     </header>
 
     <section class="card-surface register-card">
       <div class="panel-head">
-        <h2 id="register-heading">Register</h2>
+        <h2 id="register-heading">账号注册</h2>
       </div>
 
       <div class="account-auth-grid register-auth-grid">
-        <label for="register-email" id="register-email-label">Email</label>
-        <input id="register-email" class="account-input" type="email" placeholder="Enter email">
+        <label for="register-email" id="register-email-label">邮箱</label>
+        <input id="register-email" class="account-input" type="email" placeholder="请输入邮箱">
 
-        <label for="register-password" id="register-password-label">Password</label>
-        <input id="register-password" class="account-input" type="password" placeholder="Enter password">
+        <label for="register-password" id="register-password-label">密码</label>
+        <input id="register-password" class="account-input" type="password" placeholder="请输入密码">
 
-        <label for="register-nickname" id="register-nickname-label">Nickname</label>
+        <label for="register-nickname" id="register-nickname-label">昵称</label>
         <div class="register-nickname-field">
-          <input id="register-nickname" class="account-input" type="text" maxlength="20" placeholder="Enter nickname">
+          <input id="register-nickname" class="account-input" type="text" maxlength="20" placeholder="请输入昵称">
           <span id="register-nickname-feedback" class="register-nickname-feedback" aria-live="polite"></span>
         </div>
 
-        <label id="register-turnstile-label">Human Verification</label>
+        <label id="register-turnstile-label">人机验证</label>
         <div id="register-turnstile-wrap" class="register-turnstile-wrap">
           <div id="register-turnstile-widget"></div>
         </div>
 
-        <label for="register-email-code" id="register-email-code-label">Email Verification Code</label>
-        <input id="register-email-code" class="account-input" type="text" maxlength="6" autocomplete="one-time-code" placeholder="Enter 6-digit code from email">
+        <label for="register-email-code" id="register-email-code-label">邮箱验证码</label>
+        <input id="register-email-code" class="account-input" type="text" maxlength="6" autocomplete="one-time-code" placeholder="请输入邮箱中的 6 位验证码">
       </div>
 
       <div class="account-action-row register-action-row">
-        <button id="register-send-code-btn" class="replay-button" type="button">Send Code</button>
-        <button id="register-submit-btn" class="replay-button" type="button">Register</button>
-        <a id="register-back-login-btn" class="replay-button" href="account.html">Back to Login</a>
+        <button id="register-send-code-btn" class="replay-button" type="button">发送验证码</button>
+        <button id="register-submit-btn" class="replay-button" type="button">注册</button>
+        <a id="register-back-login-btn" class="replay-button" href="account.html">返回登录</a>
       </div>
 
       <p id="register-tip" class="account-tip" aria-live="polite"></p>
@@ -68,4 +68,3 @@
   <script type="module" src="./src/entries/register.ts"></script>
 </body>
 </html>
-

@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048 Account Settings</title>
+  <title>2048 账号设置</title>
   <link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
   <link href="style/account_page.css?v=20260321-01" rel="stylesheet" type="text/css">
@@ -16,52 +16,52 @@
   <main class="palette-page-shell account-settings-page-shell">
     <header class="palette-page-header">
       <div class="palette-title-wrap">
-        <p class="palette-kicker" id="settings-kicker">2048 Online Hub</p>
-        <h1 class="palette-title" id="settings-title">Account Settings</h1>
-        <p class="palette-subtitle" id="settings-subtitle">Manage nickname, password and session in one place.</p>
+        <p class="palette-kicker" id="settings-kicker">2048 在线中心</p>
+        <h1 class="palette-title" id="settings-title">账号设置</h1>
+        <p class="palette-subtitle" id="settings-subtitle">在这里统一管理昵称、密码和登录状态。</p>
       </div>
       <nav class="palette-nav">
-        <a class="replay-button palette-nav-btn" href="account.html" id="settings-nav-account">Back to Account</a>
-        <a class="replay-button palette-nav-btn" href="2048.html" id="settings-nav-home">Home</a>
+        <a class="replay-button palette-nav-btn" href="account.html" id="settings-nav-account">返回账号中心</a>
+        <a class="replay-button palette-nav-btn" href="2048.html" id="settings-nav-home">首页</a>
       </nav>
     </header>
 
     <section class="card-surface settings-card">
       <section class="settings-section">
-        <h2 id="settings-nickname-heading">Change Nickname</h2>
+        <h2 id="settings-nickname-heading">修改昵称</h2>
         <div class="account-auth-grid settings-grid">
-          <label id="settings-current-nickname-label" for="settings-new-nickname">Current Nickname</label>
+          <label id="settings-current-nickname-label" for="settings-new-nickname">当前昵称</label>
           <div class="settings-current-nickname-wrap">
             <strong id="settings-current-nickname">--</strong>
           </div>
 
-          <label id="settings-new-nickname-label" for="settings-new-nickname">New Nickname</label>
-          <input id="settings-new-nickname" class="account-input" type="text" maxlength="20" placeholder="Enter new nickname">
+          <label id="settings-new-nickname-label" for="settings-new-nickname">新昵称</label>
+          <input id="settings-new-nickname" class="account-input" type="text" maxlength="20" placeholder="请输入新昵称">
           <p id="settings-nickname-feedback" class="settings-feedback" aria-live="polite"></p>
         </div>
         <div class="account-action-row settings-action-row">
-          <button id="settings-update-nickname-btn" class="replay-button" type="button">Save Nickname</button>
+          <button id="settings-update-nickname-btn" class="replay-button" type="button">保存昵称</button>
         </div>
       </section>
 
       <section class="settings-section">
-        <h2 id="settings-password-heading">Change Password</h2>
+        <h2 id="settings-password-heading">修改密码</h2>
         <div class="account-auth-grid settings-grid">
-          <label id="settings-current-password-label" for="settings-current-password">Current Password</label>
-          <input id="settings-current-password" class="account-input" type="password" placeholder="Enter current password">
+          <label id="settings-current-password-label" for="settings-current-password">当前密码</label>
+          <input id="settings-current-password" class="account-input" type="password" placeholder="请输入当前密码">
 
-          <label id="settings-new-password-label" for="settings-new-password">New Password</label>
-          <input id="settings-new-password" class="account-input" type="password" placeholder="Enter new password">
+          <label id="settings-new-password-label" for="settings-new-password">新密码</label>
+          <input id="settings-new-password" class="account-input" type="password" placeholder="请输入新密码">
         </div>
         <div class="account-action-row settings-action-row">
-          <button id="settings-change-password-btn" class="replay-button" type="button">Change Password</button>
+          <button id="settings-change-password-btn" class="replay-button" type="button">修改密码</button>
         </div>
       </section>
 
       <section class="settings-section">
-        <h2 id="settings-session-heading">Session</h2>
+        <h2 id="settings-session-heading">登录会话</h2>
         <div class="account-action-row settings-action-row">
-          <button id="settings-logout-btn" class="replay-button" type="button">Logout</button>
+          <button id="settings-logout-btn" class="replay-button" type="button">退出登录</button>
         </div>
       </section>
 
@@ -72,4 +72,3 @@
   <script type="module" src="./src/entries/account-settings.ts"></script>
 </body>
 </html>
-

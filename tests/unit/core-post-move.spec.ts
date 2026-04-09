@@ -49,4 +49,19 @@ describe("core post move: computePostMoveLifecycle", () => {
     });
     expect(result.successfulMoveCount).toBe(1);
   });
+
+  it("respects forced game-over even when moves are still available", () => {
+    const result = computePostMoveLifecycle({
+      successfulMoveCount: 2,
+      hasMovesAvailable: true,
+      forcedOver: true,
+      timerStatus: 0
+    });
+    expect(result).toEqual({
+      successfulMoveCount: 3,
+      over: true,
+      shouldEndTime: true,
+      shouldStartTimer: false
+    });
+  });
 });

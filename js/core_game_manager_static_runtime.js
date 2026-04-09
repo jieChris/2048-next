@@ -193,8 +193,9 @@ function createGameManagerFallbackPow2VariantModeConfigs() {
   var itemNoUndo = createFallbackPow2ModeConfig("item_4x4_pow2_no_undo", "Item Mode 4x4 (No Undo)", 4, 4, false, null, "none");
   var stoneNoUndo = createFallbackPow2ModeConfig("stone_4x4_pow2_no_undo", "Stone Mode 4x4 (No Undo)", 4, 4, false, null, "none");
   var timed5sNoUndo = createFallbackPow2ModeConfig("timed5s_4x4_pow2_no_undo", "Timed 5s 4x4 (No Undo)", 4, 4, false, null, "none");
+  var noXNoUndo = createFallbackPow2ModeConfig("nox_4x4_pow2_no_undo", "NO X 4x4 (No Undo)", 4, 4, false, null, "none");
 
-  var variantList = [diag3NoUndo, diag4NoUndo, diag4x3NoUndo, diag4x2NoUndo, itemNoUndo, stoneNoUndo, timed5sNoUndo];
+  var variantList = [diag3NoUndo, diag4NoUndo, diag4x3NoUndo, diag4x2NoUndo, itemNoUndo, stoneNoUndo, timed5sNoUndo, noXNoUndo];
   for (var i = 0; i < variantList.length; i++) {
     var item = variantList[i];
     item.mode_family = "pow2";
@@ -212,6 +213,8 @@ function createGameManagerFallbackPow2VariantModeConfigs() {
   stoneNoUndo.special_rules.stone_tiles = [[1, 1], [2, 2]];
   timed5sNoUndo.mode_family = "timed";
   timed5sNoUndo.special_rules.move_timeout_ms = 5000;
+  noXNoUndo.special_rules.no_x_enabled = true;
+  noXNoUndo.special_rules.no_x_target = null;
 
   return {
     spawn50_3x3_pow2_no_undo: spawn50,
@@ -221,7 +224,8 @@ function createGameManagerFallbackPow2VariantModeConfigs() {
     diag_2x4_pow2_no_undo: diag4x2NoUndo,
     item_4x4_pow2_no_undo: itemNoUndo,
     stone_4x4_pow2_no_undo: stoneNoUndo,
-    timed5s_4x4_pow2_no_undo: timed5sNoUndo
+    timed5s_4x4_pow2_no_undo: timed5sNoUndo,
+    nox_4x4_pow2_no_undo: noXNoUndo
   };
 }
 

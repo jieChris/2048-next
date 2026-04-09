@@ -25,3 +25,4 @@ artifacts
 *.njsproj
 *.sln
 *.sw?
+zotero-import/
