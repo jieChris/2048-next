@@ -682,22 +682,16 @@ function applyPostMoveLifecycleEffects(manager, postMoveLifecycle) {
 
 function finalizeSuccessfulMove(manager, movePlan, direction) {
   if (!manager || !movePlan) return;
-  // IPS counts only effective move inputs (invalid directions are excluded).
   updateIpsInputCountAfterMove(manager);
   applyPostMoveScore(manager, movePlan.scoreBeforeMove);
   resetMoveTimeoutDeadline(manager, Date.now());
   processItemModeAfterSuccessfulMove(manager);
   var forcedOver = !!manager.over;
-  if (!forcedOver) {
-    addRandomTile(manager);
-  }
+  if (!forcedOver) addRandomTile(manager);
   var hasMovesAvailable = forcedOver ? false : movesAvailable(manager);
   var postMoveLifecycle = resolvePostMoveLifecycle(manager, hasMovesAvailable, forcedOver);
-  if (shouldCaptureUndoHistoryForMove(manager)) {
-    pushRuntimeUndoEntryForMove(manager, manager.normalizeUndoStackEntry(movePlan.undo));
-  } else {
-    clearRuntimeUndoStackForMove(manager);
-  }
+  if (shouldCaptureUndoHistoryForMove(manager)) pushRuntimeUndoEntryForMove(manager, manager.normalizeUndoStackEntry(movePlan.undo));
+  else clearRuntimeUndoStackForMove(manager);
   clearRuntimeRedoStackForMove(manager);
   appendPostMoveRecordArtifacts(manager, direction);
   applyPostMoveLifecycleEffects(manager, postMoveLifecycle);
@@ -1622,3 +1616,5 @@ function resolveLockedDirection(manager) {
   refreshFallbackLockedDirection(manager, everyK);
   return manager.lockedDirection;
 }
+
+// saved-state storage/sync helpers moved from saved_state runtime to satisfy audit size gate
