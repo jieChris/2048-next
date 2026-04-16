@@ -705,7 +705,18 @@ function shouldAutoLoadOnlineLeaderboard() {
     return apiRequest("/login", { method: "POST", body: payload });
   }
 
-  function submitScore(scoreOrPayload, modeLike) {
+  // Keep raw score/record submission on a private token so the runtime no longer
+  // acts as a ready-made console helper for arbitrary POST payloads.
+  var INTERNAL_SUBMIT_TOKEN = {};
+
+  function isInternalSubmitToken(token) {
+    return token === INTERNAL_SUBMIT_TOKEN;
+  }
+
+  function submitScore(scoreOrPayload, modeLike, submitToken) {
+    if (!isInternalSubmitToken(submitToken)) {
+      return Promise.resolve({ success: false, error: "client_submit_api_disabled" });
+    }
     var payload = null;
     if (scoreOrPayload && typeof scoreOrPayload === "object" && !Array.isArray(scoreOrPayload)) {
       payload = Object.assign({}, scoreOrPayload);
@@ -719,7 +730,10 @@ function shouldAutoLoadOnlineLeaderboard() {
     return apiRequest("/score", { method: "POST", auth: true, body: payload });
   }
 
-  function submitRecord(payload) {
+  function submitRecord(payload, submitToken) {
+    if (!isInternalSubmitToken(submitToken)) {
+      return Promise.resolve({ success: false, error: "client_submit_api_disabled" });
+    }
     return apiRequest("/records", { method: "POST", auth: true, body: payload });
   }
 
@@ -1123,7 +1137,7 @@ async function refreshLeaderboard(modeLike) {
     var result = null;
     try {
       var submitModeKey = getCurrentModeKey();
-      result = await submitScore(buildScoreSubmitPayload(manager, submitModeKey, score));
+      result = await submitScore(buildScoreSubmitPayload(manager, submitModeKey, score), null, INTERNAL_SUBMIT_TOKEN);
     } finally {
       submitLock = false;
     }
@@ -1167,7 +1181,7 @@ async function refreshLeaderboard(modeLike) {
     var result = null;
     try {
       writePendingRecordSubmitSignature(signature);
-      result = await submitRecord(payload);
+      result = await submitRecord(payload, INTERNAL_SUBMIT_TOKEN);
     } finally {
       recordSubmitLock = false;
     }
@@ -1419,8 +1433,6 @@ function init() {
   global.OnlineLeaderboardRuntime = {
     refreshLeaderboard: refreshLeaderboard,
     refreshTimerLeaderboardPanel: refreshTimerLeaderboardPanel,
-    submitScore: submitScore,
-    submitRecord: submitRecord,
     login: login,
     register: register,
     getUserInfo: getUserInfo,

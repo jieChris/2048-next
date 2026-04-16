@@ -79,6 +79,9 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
       manager: Record<string, unknown>,
       payload: Record<string, unknown>
     ) => Record<string, unknown> | null;
+    resolveLatestSavedPayloadCandidate: (
+      candidates: Array<Record<string, unknown> | null | undefined>
+    ) => Record<string, unknown> | null;
   };
 }
 
@@ -330,6 +333,9 @@ describe("core game manager saved state runtime", () => {
           return fallback;
         }
       },
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      },
       resolveSecondaryTimerPlacementDiagnosticsIndexEntry() {
         return {
           key: "secondaryTimerPlacement",
@@ -356,6 +362,31 @@ describe("core game manager saved state runtime", () => {
         payload: { validPlacementDescriptors: 2 }
       }
     ]);
+  });
+
+  it("prefers richer saved payloads when timestamps are equal", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const savedAt = 1700000000000;
+    const litePayload = {
+      saved_at: savedAt,
+      mode_key: "practice",
+      board: [[2, 0, 0, 0]],
+      replay_compact_log: ""
+    };
+    const fullWindowPayload = {
+      saved_at: savedAt,
+      mode_key: "practice",
+      board: [[2, 0, 0, 0]],
+      replay_compact_log: "m1",
+      timer_fixed_rows: {},
+      timer_dynamic_rows_capped: [],
+      timer_dynamic_rows_overflow: [],
+      timer_secondary_rows: []
+    };
+
+    expect(
+      runtime.resolveLatestSavedPayloadCandidate([null, litePayload, fullWindowPayload])
+    ).toEqual(fullWindowPayload);
   });
 
   it("saves terminal timer state as frozen and non-resumable", () => {

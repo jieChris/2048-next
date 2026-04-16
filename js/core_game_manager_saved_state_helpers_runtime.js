@@ -195,6 +195,24 @@ function resolveWindowNameSavedCandidate(manager, windowLike) {
   var marker = GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY + "=";
   return resolveWindowNameSavedCandidateFallback(manager, windowLike, marker);
 }
+function resolveSavedPayloadRichnessScore(payload) {
+  if (!normalizeSavedStateRecordObject(payload, null)) return -1;
+  var richnessKeys = [
+    "timer_fixed_rows",
+    "timer_dynamic_rows_capped",
+    "timer_dynamic_rows_overflow",
+    "timer_secondary_rows",
+    "timer_secondary_expanded_parents",
+    "timer_sub_8192",
+    "timer_sub_16384",
+    "timer_sub_visible"
+  ];
+  var score = 0;
+  for (var keyIndex = 0; keyIndex < richnessKeys.length; keyIndex++) {
+    if (Object.prototype.hasOwnProperty.call(payload, richnessKeys[keyIndex])) score += 1;
+  }
+  return score;
+}
 function resolveLatestSavedPayloadCandidate(candidates) {
   var best = null;
   if (!Array.isArray(candidates)) return best;
@@ -207,9 +225,14 @@ function resolveLatestSavedPayloadCandidate(candidates) {
     }
     var bestAt = Number(best.saved_at) || 0;
     var nextAt = Number(nextCandidate.saved_at) || 0;
-    // Keep the first candidate when timestamps are equal (full > lite > window).
-    // This avoids downgrading to lite/window snapshots that may omit replay history.
-    if (nextAt > bestAt) best = nextCandidate;
+    if (nextAt > bestAt) {
+      best = nextCandidate;
+      continue;
+    }
+    if (nextAt < bestAt) continue;
+    if (resolveSavedPayloadRichnessScore(nextCandidate) > resolveSavedPayloadRichnessScore(best)) {
+      best = nextCandidate;
+    }
   }
   return best;
 }
@@ -233,11 +256,57 @@ function isSavedStateSizeOrRulesetMismatch(manager, saved) {
   if (!!saved.ruleset && saved.ruleset !== manager.ruleset) return true;
   return false;
 }
+
+function resolveSavedStateModeConfigForPolicy(manager) {
+  if (!manager) return null;
+  try {
+    if (typeof manager.resolveModeConfig === "function") {
+      var resolved = manager.resolveModeConfig(manager.modeKey || manager.mode || GameManager.DEFAULT_MODE_KEY);
+      if (normalizeSavedStateRecordObject(resolved, null)) return resolved;
+    }
+  } catch (_err) {}
+  return normalizeSavedStateRecordObject(manager.modeConfig, null);
+}
+
+function isSavedStateRestrictedForRankedMode(manager) {
+  if (!manager) return false;
+  var modeConfig = resolveSavedStateModeConfigForPolicy(manager);
+  var rankPolicy = modeConfig && typeof modeConfig.rank_policy === "string" && modeConfig.rank_policy
+    ? modeConfig.rank_policy
+    : manager.rankPolicy;
+  if (rankPolicy === "ranked") return true;
+  var rankedBucket = modeConfig && typeof modeConfig.ranked_bucket === "string" && modeConfig.ranked_bucket
+    ? modeConfig.ranked_bucket
+    : manager.rankedBucket;
+  return !!(typeof rankedBucket === "string" && rankedBucket && rankedBucket !== "none");
+}
+
+function resolveSavedStateUndoModeConfig(manager) {
+  if (!manager) return null;
+  try {
+    if (typeof manager.resolveModeConfig === "function") {
+      var resolved = manager.resolveModeConfig(manager.modeKey || manager.mode || GameManager.DEFAULT_MODE_KEY);
+      if (normalizeSavedStateRecordObject(resolved, null)) return resolved;
+    }
+  } catch (_err) {}
+  return normalizeSavedStateRecordObject(manager.modeConfig, null);
+}
+
+function shouldRestoreSavedStateUndoHistory(manager) {
+  if (!manager) return false;
+  var modeConfig = resolveSavedStateUndoModeConfig(manager);
+  if (modeConfig && typeof modeConfig.undo_enabled === "boolean") {
+    return modeConfig.undo_enabled;
+  }
+  return !!manager.undoEnabled;
+}
+
 function isSavedStateBoardInvalidForRestore(manager, saved) {
   if (!(manager && saved)) return true;
   return !Array.isArray(saved.board) || saved.board.length !== manager.height;
 }
 function resolveSavedStateRestoreDecision(manager, saved) {
+  if (isSavedStateRestrictedForRankedMode(manager)) return { canRestore: false, shouldClearSavedState: false };
   if (Number(saved.v) !== GameManager.SAVED_GAME_STATE_VERSION) return { canRestore: false, shouldClearSavedState: true };
   if (isSavedStateTerminalForRestore(saved)) return { canRestore: false, shouldClearSavedState: true };
   if (saved.mode_key !== manager.modeKey) return { canRestore: false, shouldClearSavedState: false };
@@ -263,6 +332,9 @@ function resolveSavedGameStateStorageKey(manager, keyPrefix, modeKey) {
   }, function () {
     return resolveSavedStateStorageKeyFallback(manager, keyPrefix, modeKey);
   });
+}
+function resolveSavedGameStateSyncStorageKey(manager, modeKey) {
+  return resolveSavedGameStateStorageKey(manager, GameManager.SAVED_GAME_STATE_SYNC_KEY_PREFIX, modeKey);
 }
 function normalizeSavedGameStateStoragesFromCore(storagesByCore) {
   return Array.isArray(storagesByCore) ? storagesByCore : undefined;
@@ -424,6 +496,7 @@ function shouldUseSavedGameState(manager) {
   return manager.resolveCoreBooleanCallOrFallback(coreCallResult, function () {
     if (!windowLike) return false;
     if (manager.replayMode) return false;
+    if (isSavedStateRestrictedForRankedMode(manager)) return false;
     return pathname.indexOf("replay.html") === -1;
   });
 }
@@ -451,14 +524,59 @@ function isMobileSafariLikeByManager(manager) {
   return isMobileSafariUserAgent(resolveSaveThrottleUserAgent(manager));
 }
 function resolveSaveGameStateThrottleMs(manager) {
-  if (isMobileSafariLikeByManager(manager)) return 600;
-  return 150;
+  if (isMobileSafariLikeByManager(manager)) return 900;
+  return 350;
+}
+function resolveSaveGameStateFullPersistIntervalMs(manager) {
+  if (isMobileSafariLikeByManager(manager)) return 12000;
+  return 5000;
+}
+function resolveLastFullSavedStatePersistAt(manager) {
+  if (!manager) return 0;
+  var persistedAt = Number(manager.lastSavedGameStateFullAt);
+  var attemptedAt = Number(manager.lastSavedGameStateFullAttemptAt);
+  var persisted = Number.isFinite(persistedAt) && persistedAt > 0 ? Math.floor(persistedAt) : 0;
+  var attempted = Number.isFinite(attemptedAt) && attemptedAt > 0 ? Math.floor(attemptedAt) : 0;
+  return attempted > persisted ? attempted : persisted;
 }
 function shouldSkipSaveGameStateByThrottle(manager, options, now) {
   if (!manager) return true;
   if (options && options.force) return false;
   if (!manager.lastSavedGameStateAt) return false;
   return (now - manager.lastSavedGameStateAt) < resolveSaveGameStateThrottleMs(manager);
+}
+function shouldPersistFullSavedGameStatePayload(manager, now, options) {
+  if (!manager) return false;
+  if (options && (options.force || options.forceFull)) return true;
+  var lastFullPersistAt = resolveLastFullSavedStatePersistAt(manager);
+  if (!(lastFullPersistAt > 0)) return true;
+  return (now - lastFullPersistAt) >= resolveSaveGameStateFullPersistIntervalMs(manager);
+}
+function buildSavedGameStateLiteSourcePayload(manager, now) {
+  if (!manager) return null;
+  return Object.assign(
+    {},
+    buildSavedGameStateMetaPayload(manager, now),
+    buildSavedGameStateCoreStatePayload(manager),
+    buildSavedGameStateProgressPayload(manager),
+    buildSavedGameStateDirectionLockPayload(manager),
+    buildSavedGameStateBoardSnapshotPayload(manager),
+    buildSavedGameStateTimerCorePayload(manager),
+    buildSavedGameStateDiagnosticsPayload(manager)
+  );
+}
+function buildSavedGameStatePersistPlan(manager, now, saveOptions) {
+  if (!manager) return null;
+  var shouldPersistFull = shouldPersistFullSavedGameStatePayload(manager, now, saveOptions);
+  var fullPayload = shouldPersistFull ? buildSavedGameStatePayload(manager, now, saveOptions) : null;
+  var litePayloadSource = normalizeSavedStateRecordObject(fullPayload, null)
+    || buildSavedGameStateLiteSourcePayload(manager, now);
+  if (!normalizeSavedStateRecordObject(litePayloadSource, null)) return null;
+  return {
+    fullPayload: normalizeSavedStateRecordObject(fullPayload, null),
+    litePayloadSource: litePayloadSource,
+    preferFullWindowNamePayload: !!(saveOptions && (saveOptions.force || saveOptions.forceFull))
+  };
 }
 function saveGameState(manager, options) {
   if (!manager) return;
@@ -471,10 +589,18 @@ function saveGameState(manager, options) {
   }
   if (shouldSkipSaveGameStateByThrottle(manager, options, now)) return;
   try {
-    var payload = buildSavedGameStatePayload(manager, now);
-    var persistResult = persistSavedGameStatePayload(manager, payload);
-    if (!persistResult) return;
+    var persistPlan = buildSavedGameStatePersistPlan(manager, now, options);
+    if (!normalizeSavedStateRecordObject(persistPlan, null)) return;
+    var persistResult = persistSavedGameStatePayload(manager, persistPlan);
+    if (!(persistResult && persistResult.persisted)) return;
     manager.lastSavedGameStateAt = now;
+    if (normalizeSavedStateRecordObject(persistPlan.fullPayload, null)) {
+      manager.lastSavedGameStateFullAttemptAt = now;
+    }
+    if (persistResult.persistedFull) {
+      manager.lastSavedGameStateFullAt = now;
+    }
+    rememberSavedStateKnownSavedAt(manager, now);
   } catch (_err) {}
 }
 function removeSavedKeysFromStoragesFallback(stores, keys) {
@@ -729,8 +855,13 @@ function applySavedManagerReplayState(manager, saved) {
   manager.ipsInputCount = Number.isInteger(saved.ips_input_count) && saved.ips_input_count >= 0
     ? saved.ips_input_count
     : manager.moveHistory.length;
-  manager.setRuntimeUndoStack(Array.isArray(saved.undo_stack) ? saved.undo_stack.slice() : []);
-  manager.setRuntimeRedoStack(Array.isArray(saved.redo_stack) ? saved.redo_stack.slice() : []);
+  if (shouldRestoreSavedStateUndoHistory(manager)) {
+    manager.setRuntimeUndoStack(Array.isArray(saved.undo_stack) ? saved.undo_stack.slice() : []);
+    manager.setRuntimeRedoStack(Array.isArray(saved.redo_stack) ? saved.redo_stack.slice() : []);
+  } else {
+    manager.setRuntimeUndoStack([]);
+    manager.setRuntimeRedoStack([]);
+  }
   manager.replayCompactLog = typeof saved.replay_compact_log === "string" ? saved.replay_compact_log : "";
   manager.sessionReplayV3 = isNonArrayObject(saved.session_replay_v3)
     ? manager.clonePlain(saved.session_replay_v3)
@@ -1032,14 +1163,25 @@ function buildSavedGameStateCoreStatePayload(manager) {
     keep_playing: manager.keepPlaying,
     initial_seed: manager.initialSeed,
     seed: manager.seed,
-    spawn_value_counts: manager.spawnValueCounts ? manager.safeClonePlain(manager.spawnValueCounts, {}) : {},
+    spawn_value_counts: manager.spawnValueCounts || {},
     reached_32k: !!manager.reached32k,
     capped_milestone_count: Number.isInteger(manager.cappedMilestoneCount) ? manager.cappedMilestoneCount : 0,
-    capped64_unlocked: manager.capped64Unlocked ? manager.safeClonePlain(manager.capped64Unlocked, null) : null
+    capped64_unlocked: manager.capped64Unlocked || null
   };
 }
 
-function buildSavedGameStateReplayStatePayload(manager) {
+function shouldIncludeReplayStringInSavedPayload(manager, now, saveOptions) {
+  if (!manager) return false;
+  if (saveOptions && saveOptions.force) return true;
+  var lastSavedAt = Number(manager.lastReplayStringSavedAt);
+  if (!Number.isFinite(lastSavedAt) || lastSavedAt <= 0) return true;
+  return (now - lastSavedAt) >= 8000;
+}
+
+function resolveReplayStringForSavedPayload(manager, now, saveOptions) {
+  if (!(manager && shouldIncludeReplayStringInSavedPayload(manager, now, saveOptions))) {
+    return "";
+  }
   var replayString = "";
   try {
     if (typeof serializeReplay === "function") {
@@ -1048,14 +1190,21 @@ function buildSavedGameStateReplayStatePayload(manager) {
   } catch (_err) {
     replayString = "";
   }
+  if (replayString) {
+    manager.lastReplayStringSavedAt = now;
+  }
+  return replayString;
+}
+
+function buildSavedGameStateReplayStatePayload(manager, now, saveOptions) {
   return {
-    move_history: manager.moveHistory ? manager.moveHistory.slice() : [],
+    move_history: Array.isArray(manager.moveHistory) ? manager.moveHistory : [],
     ips_input_count: Number.isInteger(manager.ipsInputCount) && manager.ipsInputCount >= 0 ? manager.ipsInputCount : 0,
-    undo_stack: manager.undoStack ? manager.safeClonePlain(manager.undoStack, []) : [],
-    redo_stack: manager.redoStack ? manager.safeClonePlain(manager.redoStack, []) : [],
+    undo_stack: Array.isArray(manager.undoStack) ? manager.undoStack : [],
+    redo_stack: Array.isArray(manager.redoStack) ? manager.redoStack : [],
     replay_compact_log: manager.replayCompactLog || "",
-    session_replay_v3: manager.sessionReplayV3 ? manager.safeClonePlain(manager.sessionReplayV3, null) : null,
-    replay_string: replayString
+    session_replay_v3: manager.sessionReplayV3 || null,
+    replay_string: resolveReplayStringForSavedPayload(manager, now, saveOptions)
   };
 }
 
@@ -1069,12 +1218,12 @@ function buildSavedGameStateTimerCorePayload(manager) {
   };
 }
 
-function buildSavedGameStateBasePayload(manager, now) {
+function buildSavedGameStateBasePayload(manager, now, saveOptions) {
   return Object.assign(
     {},
     buildSavedGameStateMetaPayload(manager, now),
     buildSavedGameStateCoreStatePayload(manager),
-    buildSavedGameStateReplayStatePayload(manager),
+    buildSavedGameStateReplayStatePayload(manager, now, saveOptions),
     buildSavedGameStateTimerCorePayload(manager)
   );
 }
@@ -1120,13 +1269,13 @@ function buildSavedGameStateTimerSnapshotPayload(manager, timerSnapshot, subStat
   };
 }
 
-function buildSavedGameStatePayload(manager, now) {
+function buildSavedGameStatePayload(manager, now, saveOptions) {
   if (!manager) return null;
   var documentLike = resolveManagerDocumentLike(manager);
   var timerSnapshot = collectSavedTimerDomSnapshotState(manager, documentLike);
   var timerSubState = collectSavedTimerSubState(manager, documentLike);
   var subState = normalizeSavedStateRecordObject(timerSubState, {});
-  var basePayload = buildSavedGameStateBasePayload(manager, now);
+  var basePayload = buildSavedGameStateBasePayload(manager, now, saveOptions);
   return Object.assign(
     basePayload,
     buildSavedGameStateProgressPayload(manager),
@@ -1201,7 +1350,6 @@ function buildLiteSavedGameStateProgressPayload(payload) {
   return {
     reached_32k: !!payload.reached_32k,
     capped_milestone_count: Number.isInteger(payload.capped_milestone_count) ? payload.capped_milestone_count : 0,
-    capped64_unlocked: null,
     combo_streak: Number.isInteger(payload.combo_streak) ? payload.combo_streak : 0,
     successful_move_count: Number.isInteger(payload.successful_move_count) ? payload.successful_move_count : 0,
     undo_used: Number.isInteger(payload.undo_used) ? payload.undo_used : 0,
@@ -1234,8 +1382,39 @@ function buildLiteSavedGameStateReplayTrimPayload() {
     move_history: [],
     undo_stack: [],
     replay_compact_log: "",
-    session_replay_v3: null,
-    spawn_value_counts: {}
+    session_replay_v3: null
+  };
+}
+
+function resolveLiteSavedNumericSeed(value, fallback) {
+  var seedValue = Number(value);
+  if (Number.isFinite(seedValue)) return seedValue;
+  var fallbackSeed = Number(fallback);
+  return Number.isFinite(fallbackSeed) ? fallbackSeed : 0;
+}
+
+function buildLiteSavedGameStateCoreRestorePayload(manager, payload) {
+  var source = normalizeSavedStateRecordObject(payload, {});
+  var board = Array.isArray(source.board) ? cloneBoardMatrix(source.board) : manager.getFinalBoardMatrix();
+  var score = Number(source.score);
+  if (!Number.isFinite(score) || score < 0) score = Number(manager.score) || 0;
+  var ipsInputCount = Number(source.ips_input_count);
+  if (!Number.isFinite(ipsInputCount) || ipsInputCount < 0) {
+    ipsInputCount = Array.isArray(source.move_history) ? source.move_history.length : 0;
+  }
+  return {
+    board: board,
+    score: Math.floor(score),
+    over: !!source.over,
+    won: !!source.won,
+    keep_playing: !!source.keep_playing,
+    initial_seed: resolveLiteSavedNumericSeed(source.initial_seed, manager.initialSeed),
+    seed: resolveLiteSavedNumericSeed(source.seed, manager.seed),
+    spawn_value_counts: isNonArrayObject(source.spawn_value_counts) ? manager.clonePlain(source.spawn_value_counts) : {},
+    ips_input_count: Math.floor(ipsInputCount),
+    capped64_unlocked: isNonArrayObject(source.capped64_unlocked)
+      ? manager.safeClonePlain(source.capped64_unlocked, null)
+      : null
   };
 }
 
@@ -1258,6 +1437,7 @@ function buildLiteSavedGameStatePayloadFallback(manager, payload) {
   return Object.assign(
     {},
     buildLiteSavedGameStateMetaPayload(manager, payload),
+    buildLiteSavedGameStateCoreRestorePayload(manager, payload),
     buildLiteSavedGameStateProgressPayload(payload),
     buildLiteSavedGameStateBoardSnapshotPayload(manager, payload),
     buildLiteSavedGameStateReplayTrimPayload(),
@@ -1273,33 +1453,97 @@ function buildLiteSavedGameStatePayloadFallback(manager, payload) {
 
 function buildLiteSavedGameStateCoreCallPayload(manager, payload) {
   if (!manager) return { payload: payload };
-  return { payload: payload, savedStateVersion: GameManager.SAVED_GAME_STATE_VERSION, modeKey: manager.modeKey, width: manager.width, height: manager.height, ruleset: manager.ruleset, score: manager.score, initialSeed: manager.initialSeed, seed: manager.seed, durationMs: manager.getDurationMs(), finalBoardMatrix: manager.getFinalBoardMatrix(), initialBoardMatrix: manager.initialBoardMatrix, replayStartBoardMatrix: manager.replayStartBoardMatrix, practiceRestartBoardMatrix: manager.practiceRestartBoardMatrix, practiceRestartModeConfig: manager.practiceRestartModeConfig };
+  return {
+    payload: payload,
+    savedStateVersion: GameManager.SAVED_GAME_STATE_VERSION,
+    modeKey: manager.modeKey,
+    width: manager.width,
+    height: manager.height,
+    ruleset: manager.ruleset,
+    score: manager.score,
+    initialSeed: manager.initialSeed,
+    seed: manager.seed,
+    durationMs: manager.getDurationMs(),
+    finalBoardMatrix: manager.getFinalBoardMatrix(),
+    initialBoardMatrix: manager.initialBoardMatrix,
+    replayStartBoardMatrix: manager.replayStartBoardMatrix,
+    practiceRestartBoardMatrix: manager.practiceRestartBoardMatrix,
+    practiceRestartModeConfig: manager.practiceRestartModeConfig,
+    over: !!(payload && payload.over),
+    won: !!(payload && payload.won),
+    keepPlaying: !!(payload && payload.keep_playing),
+    spawnValueCounts: payload ? payload.spawn_value_counts : null,
+    ipsInputCount: payload ? payload.ips_input_count : null,
+    capped64Unlocked: payload ? payload.capped64_unlocked : null
+  };
 }
 
-function persistSavedPayloadWithLiteFallback(manager, key, liteKey, payload, litePayload) {
-  var persisted = persistSavedPayloadToStorages(manager, key, payload);
-  if (!persisted) {
-    persisted = persistSavedPayloadToStorages(manager, key, litePayload);
+function ensureLiteSavedGameStateRestoreFields(manager, litePayload, payloadSource) {
+  if (!manager) return null;
+  var normalizedLite = normalizeSavedStateRecordObject(litePayload, null);
+  if (!normalizedLite) return null;
+  return Object.assign(
+    {},
+    normalizedLite,
+    buildLiteSavedGameStateCoreRestorePayload(manager, payloadSource)
+  );
+}
+
+function buildLiteSavedGameStatePayload(manager, payloadSource) {
+  if (!(manager && normalizeSavedStateRecordObject(payloadSource, null))) return null;
+  var litePayloadCoreCallResult = callCoreStorageRuntime(
+    manager,
+    "buildLiteSavedGameStatePayload",
+    buildLiteSavedGameStateCoreCallPayload(manager, payloadSource),
+    false
+  );
+  var litePayload = manager.resolveNormalizedCoreValueOrFallback(litePayloadCoreCallResult, function (litePayloadByCore) {
+    return manager.isNonArrayObject(litePayloadByCore) ? litePayloadByCore : undefined;
+  }, function () { return buildLiteSavedGameStatePayloadFallback(manager, payloadSource); });
+  return ensureLiteSavedGameStateRestoreFields(manager, litePayload, payloadSource);
+}
+
+function persistSavedPayloadWithLiteFallback(manager, key, liteKey, fullPayload, litePayload) {
+  var hasFullPayload = !!normalizeSavedStateRecordObject(fullPayload, null);
+  var persisted = false;
+  var persistedFull = false;
+  if (hasFullPayload) {
+    persistedFull = persistSavedPayloadToStorages(manager, key, fullPayload);
+    persisted = persistedFull;
+    if (!persisted) {
+      persisted = persistSavedPayloadToStorages(manager, key, litePayload);
+    }
   }
   var litePersisted = persistSavedPayloadToStorages(manager, liteKey, litePayload);
   if (!(persisted || litePersisted)) {
     clearSavedGameState(manager, manager.modeKey);
-    persisted = persistSavedPayloadToStorages(manager, key, litePayload);
+    if (hasFullPayload) {
+      persisted = persistSavedPayloadToStorages(manager, key, litePayload);
+    }
     litePersisted = persistSavedPayloadToStorages(manager, liteKey, litePayload);
   }
-  return !!(persisted || litePersisted);
+  return {
+    persisted: !!(persisted || litePersisted),
+    persistedFull: !!persistedFull
+  };
 }
 
-function persistSavedGameStatePayload(manager, payload) {
-  if (!manager || !payload) return false;
+function persistSavedGameStatePayload(manager, persistPlan) {
+  if (!manager || !persistPlan) return { persisted: false, persistedFull: false };
+  var fullPayload = normalizeSavedStateRecordObject(persistPlan.fullPayload, null);
+  var litePayloadSource = normalizeSavedStateRecordObject(persistPlan.litePayloadSource, null);
+  if (!litePayloadSource) return { persisted: false, persistedFull: false };
   var key = resolveSavedGameStateStorageKey(manager, GameManager.SAVED_GAME_STATE_KEY_PREFIX);
   var liteKey = resolveSavedGameStateStorageKey(manager, GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX);
-  var litePayloadCoreCallResult = callCoreStorageRuntime(manager, "buildLiteSavedGameStatePayload", buildLiteSavedGameStateCoreCallPayload(manager, payload), false);
-  var litePayload = manager.resolveNormalizedCoreValueOrFallback(litePayloadCoreCallResult, function (litePayloadByCore) {
-    return manager.isNonArrayObject(litePayloadByCore) ? litePayloadByCore : undefined;
-  }, function () { return buildLiteSavedGameStatePayloadFallback(manager, payload); });
-  writeWindowNameSavedPayload(manager, manager.modeKey, litePayload);
-  return persistSavedPayloadWithLiteFallback(manager, key, liteKey, payload, litePayload);
+  var litePayload = buildLiteSavedGameStatePayload(manager, litePayloadSource);
+  if (!normalizeSavedStateRecordObject(litePayload, null)) {
+    return { persisted: false, persistedFull: false };
+  }
+  var windowNamePayload = !!persistPlan.preferFullWindowNamePayload && fullPayload
+    ? fullPayload
+    : litePayload;
+  writeWindowNameSavedPayload(manager, manager.modeKey, windowNamePayload);
+  return persistSavedPayloadWithLiteFallback(manager, key, liteKey, fullPayload, litePayload);
 }
 
 function resolveLatestSavedPayloadForRestore(manager) {
@@ -1337,5 +1581,205 @@ function tryRestoreLatestSavedState(manager) {
   if (!manager || !normalizeSavedStateRecordObject(saved, null)) return false;
   var restoreDecision = resolveSavedStateRestoreDecision(manager, saved);
   if (handleSavedStateRestoreDecisionFailure(manager, restoreDecision)) return false;
-  return applySavedStateRestore(manager, saved);
+  var restored = applySavedStateRestore(manager, saved);
+  if (restored) {
+    rememberSavedStateKnownSavedAt(manager, resolveSavedStateSavedAt(saved));
+  }
+  return restored;
+}
+
+function resolveSavedStateSavedAt(saved) {
+  var value = Number(saved && saved.saved_at);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.floor(value);
+}
+
+function resolveManagerSavedStateKnownSavedAt(manager) {
+  if (!manager) return 0;
+  var persistedAt = Number(manager.lastSavedGameStateAt);
+  var syncedAt = Number(manager.lastSyncedSavedStateAt);
+  var best = Number.isFinite(persistedAt) && persistedAt > 0 ? Math.floor(persistedAt) : 0;
+  var synced = Number.isFinite(syncedAt) && syncedAt > 0 ? Math.floor(syncedAt) : 0;
+  return synced > best ? synced : best;
+}
+
+function rememberSavedStateKnownSavedAt(manager, savedAt) {
+  if (!manager) return 0;
+  var value = Number(savedAt);
+  if (!Number.isFinite(value) || value <= 0) return resolveManagerSavedStateKnownSavedAt(manager);
+  var normalized = Math.floor(value);
+  if (normalized > (Number(manager.lastSyncedSavedStateAt) || 0)) {
+    manager.lastSyncedSavedStateAt = normalized;
+  }
+  return normalized;
+}
+
+function ensureSavedStateSyncClientId(manager) {
+  if (!manager) return "";
+  if (typeof manager.savedStateSyncClientId === "string" && manager.savedStateSyncClientId) {
+    return manager.savedStateSyncClientId;
+  }
+  manager.savedStateSyncClientId =
+    "tab_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now().toString(36);
+  return manager.savedStateSyncClientId;
+}
+
+function buildSavedStateSyncStatePayload(manager, now) {
+  if (!manager) return null;
+  var safeNow = Number.isFinite(Number(now)) ? Math.floor(Number(now)) : Date.now();
+  return Object.assign(
+    {},
+    buildSavedGameStateMetaPayload(manager, safeNow),
+    buildSavedGameStateCoreStatePayload(manager),
+    buildSavedGameStateProgressPayload(manager),
+    buildSavedGameStateDirectionLockPayload(manager),
+    buildSavedGameStateTimerCorePayload(manager),
+    {
+      // Keep cross-tab sync lightweight to avoid per-move full snapshot serialization.
+      move_history: [],
+      undo_stack: [],
+      redo_stack: [],
+      replay_compact_log: "",
+      session_replay_v3: null,
+      replay_string: "",
+      ips_input_count:
+        Number.isInteger(manager.ipsInputCount) && manager.ipsInputCount >= 0
+          ? manager.ipsInputCount
+          : 0
+    }
+  );
+}
+
+function buildSavedStateSyncEventPayload(manager, now) {
+  if (!manager) return null;
+  var snapshot = buildSavedStateSyncStatePayload(manager, now);
+  if (!normalizeSavedStateRecordObject(snapshot, null)) return null;
+  return {
+    v: GameManager.SAVED_GAME_STATE_VERSION,
+    mode_key: manager.modeKey,
+    source_client_id: ensureSavedStateSyncClientId(manager),
+    saved_at: resolveSavedStateSavedAt(snapshot),
+    state: snapshot
+  };
+}
+
+function parseSavedStateSyncEventPayload(manager, raw) {
+  if (!(manager && typeof raw === "string" && raw)) return null;
+  var parsed = null;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (_errParse) {
+    return null;
+  }
+  if (!normalizeSavedStateRecordObject(parsed, null)) return null;
+  var state = normalizeSavedStateRecordObject(parsed.state, null);
+  if (!state) return null;
+  var savedAt = resolveSavedStateSavedAt(state);
+  if (!(savedAt > 0)) savedAt = resolveSavedStateSavedAt(parsed);
+  if (!(savedAt > 0)) return null;
+  return {
+    sourceClientId: typeof parsed.source_client_id === "string" ? parsed.source_client_id : "",
+    savedAt: savedAt,
+    state: state
+  };
+}
+
+function resolveSavedStateSyncRestoreDecision(manager, saved) {
+  if (!(manager && saved)) return false;
+  if (Number(saved.v) !== GameManager.SAVED_GAME_STATE_VERSION) return false;
+  if (saved.mode_key !== manager.modeKey) return false;
+  if (isSavedStateSizeOrRulesetMismatch(manager, saved)) return false;
+  if (isSavedStateBoardInvalidForRestore(manager, saved)) return false;
+  return true;
+}
+
+function shouldApplySavedStateSync(manager, state, savedAt, sourceClientId) {
+  if (!(manager && state)) return false;
+  if (!resolveSavedStateSyncRestoreDecision(manager, state)) return false;
+  var clientId = ensureSavedStateSyncClientId(manager);
+  if (sourceClientId && clientId && sourceClientId === clientId) return false;
+  return savedAt > resolveManagerSavedStateKnownSavedAt(manager);
+}
+
+function markSkipActuatePersistenceOnce(manager) {
+  if (!manager) return;
+  manager.skipActuatePersistenceOnce = true;
+}
+
+function consumeSkipActuatePersistenceOnce(manager) {
+  if (!(manager && manager.skipActuatePersistenceOnce)) return false;
+  manager.skipActuatePersistenceOnce = false;
+  return true;
+}
+
+function applySavedStateSyncSnapshot(manager, state, savedAt) {
+  if (!(manager && state)) return false;
+  if (!applySavedStateRestore(manager, state)) return false;
+  rememberSavedStateKnownSavedAt(manager, savedAt);
+  if (typeof manager.updateUndoUiState === "function") {
+    manager.updateUndoUiState();
+  }
+  if (typeof manager.notifyUndoSettingsStateChanged === "function") {
+    manager.notifyUndoSettingsStateChanged();
+  }
+  if (typeof manager.actuate === "function") {
+    markSkipActuatePersistenceOnce(manager);
+    manager.actuate();
+  }
+  return true;
+}
+
+function resolveSavedStateSyncThrottleMs(manager) {
+  if (isMobileSafariLikeByManager(manager)) return 900;
+  return 300;
+}
+
+function shouldSkipSavedStateSyncPublishByThrottle(manager, now) {
+  if (!manager) return true;
+  if (!manager.lastSavedStateSyncPublishedAt) return false;
+  return (now - manager.lastSavedStateSyncPublishedAt) < resolveSavedStateSyncThrottleMs(manager);
+}
+
+function publishSavedStateSyncSnapshot(manager) {
+  if (!manager) return false;
+  if (!shouldUseSavedGameState(manager)) return false;
+  if (manager.replayMode) return false;
+  var now = Date.now();
+  if (shouldSkipSavedStateSyncPublishByThrottle(manager, now)) return false;
+  var storage = manager.getWebStorageByName("localStorage");
+  if (!canWriteToStorage(storage)) return false;
+  var key = resolveSavedGameStateSyncStorageKey(manager);
+  if (!(typeof key === "string" && key)) return false;
+  var eventPayload = buildSavedStateSyncEventPayload(manager, now);
+  if (!eventPayload) return false;
+  var written = writeStorageJsonPayloadFallback(storage, key, eventPayload);
+  if (written) {
+    manager.lastSavedStateSyncPublishedAt = now;
+    rememberSavedStateKnownSavedAt(manager, eventPayload.saved_at);
+  }
+  return written;
+}
+
+function handleSavedStateSyncStorageEvent(manager, storageEvent) {
+  if (!(manager && storageEvent)) return;
+  var syncKey = resolveSavedGameStateSyncStorageKey(manager);
+  if (!(typeof syncKey === "string" && syncKey)) return;
+  if (storageEvent.key !== syncKey) return;
+  if (!(typeof storageEvent.newValue === "string" && storageEvent.newValue)) return;
+  var parsed = parseSavedStateSyncEventPayload(manager, storageEvent.newValue);
+  if (!parsed) return;
+  if (!shouldApplySavedStateSync(manager, parsed.state, parsed.savedAt, parsed.sourceClientId)) return;
+  applySavedStateSyncSnapshot(manager, parsed.state, parsed.savedAt);
+}
+
+function bindSavedStateSyncStorageListener(manager, windowLike) {
+  if (!manager) return;
+  if (!(windowLike && typeof windowLike.addEventListener === "function")) return;
+  if (manager.savedStateSyncListenerBound) return;
+  if (!shouldUseSavedGameState(manager)) return;
+  ensureSavedStateSyncClientId(manager);
+  windowLike.addEventListener("storage", function (storageEvent) {
+    handleSavedStateSyncStorageEvent(manager, storageEvent);
+  });
+  manager.savedStateSyncListenerBound = true;
 }

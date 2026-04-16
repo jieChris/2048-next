@@ -114,6 +114,7 @@ function initializeGameManagerRuntimeState(manager) {
   manager.noXTriggered = false; manager.noXTriggeredTile = null;
   manager.noXSelectionPending = false; manager.noXPendingDefaultTarget = null;
   manager.timerFrozen = false;
+  manager.singleModePageLockState = null;
 }
 
 function bindGameManagerInputEvents(manager) {
@@ -140,6 +141,7 @@ function bindGameManagerSavedStatePersistence(manager) {
   };
   windowLikeForPersistence.addEventListener("beforeunload", saveHandler);
   windowLikeForPersistence.addEventListener("pagehide", saveHandler);
+  bindSavedStateSyncStorageListener(manager, windowLikeForPersistence);
   manager.savedGameStateBound = true;
 }
 

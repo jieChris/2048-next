@@ -294,19 +294,7 @@
   };
   var LEADERBOARD_METRIC_ALIAS = {
     score: "score",
-    by_score: "score",
-    min_steps_2048: "min_steps_2048",
-    least_steps_2k: "min_steps_2048",
-    least_steps_2048: "min_steps_2048",
-    steps_to_2048: "min_steps_2048",
-    min_steps_4096: "min_steps_4096",
-    least_steps_4k: "min_steps_4096",
-    least_steps_4096: "min_steps_4096",
-    steps_to_4096: "min_steps_4096",
-    min_steps_8192: "min_steps_8192",
-    least_steps_8k: "min_steps_8192",
-    least_steps_8192: "min_steps_8192",
-    steps_to_8192: "min_steps_8192"
+    by_score: "score"
   };
 
   var LEADERBOARD_MODE_OPTIONS = [
@@ -318,10 +306,7 @@
     { value: "fib_3x3", zh: "斐波那契3x3", en: "Fibonacci 3x3" }
   ];
   var LEADERBOARD_METRIC_OPTIONS = [
-    { value: "score", copyKey: "boardMetricScore" },
-    { value: "min_steps_2048", copyKey: "boardMetricMinSteps2k" },
-    { value: "min_steps_4096", copyKey: "boardMetricMinSteps4k" },
-    { value: "min_steps_8192", copyKey: "boardMetricMinSteps8k" }
+    { value: "score", copyKey: "boardMetricScore" }
   ];
 
   function normalizeLeaderboardNickname(nameLike) {

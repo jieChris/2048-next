@@ -316,7 +316,14 @@ function applyGameManagerStorageStatics() {
   GameManager.SAVED_GAME_STATE_VERSION = 1;
   GameManager.SAVED_GAME_STATE_KEY_PREFIX = "savedGameStateByMode:v1:";
   GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX = "savedGameStateLiteByMode:v1:";
+  GameManager.SAVED_GAME_STATE_SYNC_KEY_PREFIX = "savedGameStateSyncByMode:v1:";
   GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY = "__gm_saved_state_v1__";
+  GameManager.SINGLE_MODE_PAGE_LOCK_KEY_PREFIX = "playModeSinglePageLock:v1:";
+  GameManager.SINGLE_MODE_PAGE_TAB_ID_SESSION_KEY = "playModeSinglePageTabId:v1";
+  GameManager.SINGLE_MODE_PAGE_LOCK_TTL_MS = 12000;
+  GameManager.SINGLE_MODE_PAGE_LOCK_HEARTBEAT_MS = 3000;
+  GameManager.SINGLE_MODE_PAGE_DUPLICATE_MESSAGE = "\u975e\u6cd5\u64cd\u4f5c\uff1a\u4e00\u4e2a\u6a21\u5f0f\u53ea\u80fd\u5f00\u4e00\u4e2a\u9875\u9762";
+  GameManager.SINGLE_MODE_PAGE_DUPLICATE_REDIRECT_URL = "modes.html";
 }
 
 function applyGameManagerModeStatics() {

@@ -159,7 +159,7 @@
     ["关键词", "Keyword"], ["排序", "Sort"], ["全部模式", "All Modes"], ["刷新", "Refresh"], ["导出全部", "Export All"],
     ["导入合并", "Import & Merge"], ["导入并替换", "Import & Replace"], ["清空全部", "Clear All"], ["上一页", "Prev"], ["下一页", "Next"],
     ["新游戏", "New Game"], ["新局", "New Run"], ["撤回", "Undo"], ["撤销", "Undo"], ["继续游戏", "Keep Going"],
-    ["无撤回", "No Undo"], ["可撤回", "Undo"],
+    ["无撤回", "No Undo"], ["可撤回", "Undo"], ["娱乐", "Entertainment"], ["娱乐模式", "Entertainment"],
     ["玩法提示", "Guide"], ["展开计时器", "Show Timers"], ["收起计时器", "Hide Timers"],
     ["棋子配色", "Tile Theme"], ["选择主题", "Select Theme"], ["配色预览", "Theme Preview"],
     ["色板", "Palette"], ["新建", "Create"], ["新建副本", "New Copy"], ["重命名", "Rename"], ["删除", "Delete"], ["导出", "Export"], ["导入", "Import"],

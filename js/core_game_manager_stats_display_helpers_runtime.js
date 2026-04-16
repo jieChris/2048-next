@@ -229,6 +229,12 @@ function getActualSecondaryRate(manager) {
 
 function finalizeActuatePersistence(manager) {
   if (!manager) return;
+  if (typeof consumeSkipActuatePersistenceOnce === "function" && consumeSkipActuatePersistenceOnce(manager)) {
+    return;
+  }
+  if (typeof publishSavedStateSyncSnapshot === "function") {
+    publishSavedStateSyncSnapshot(manager);
+  }
   var shouldFinalizeAsTerminated = manager.modeKey !== "practice" && isSessionTerminated(manager);
   if (shouldFinalizeAsTerminated) {
     manager.clearSavedGameState(manager.modeKey);
@@ -273,9 +279,24 @@ function createActuatorPayloadState(manager) {
   };
 }
 
+function normalizeActuateStatsNumber(value) {
+  var num = Number(value);
+  if (!Number.isFinite(num) || num < 0) return 0;
+  return Math.floor(num);
+}
+
+function resolveStepStatsFastPath(manager) {
+  if (!manager || manager.replayMode) return null;
+  return {
+    totalSteps: normalizeActuateStatsNumber(Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0),
+    moveSteps: normalizeActuateStatsNumber(manager.successfulMoveCount),
+    undoSteps: normalizeActuateStatsNumber(manager.undoUsed)
+  };
+}
+
 function updateActuateStatsAndPanel(manager) {
   if (!manager) return;
-  var stepStats = manager.computeStepStats();
+  var stepStats = resolveStepStatsFastPath(manager) || manager.computeStepStats();
   var stats = normalizeStatsDisplayRecordObject(stepStats, {});
   updateStatsLabelText(manager, "stats-total", "总步数: ", stats.totalSteps);
   updateStatsLabelText(manager, "stats-moves", "移动步数: ", stats.moveSteps);

@@ -87,6 +87,26 @@ test.describe("Legacy Multi-Page Smoke", () => {
       } catch (_err) {
         parsed = null;
       }
+      const marker = "__gm_saved_state_v1__=";
+      const windowNamePart = String(window.name || "")
+        .split("&")
+        .find((part) => typeof part === "string" && part.indexOf(marker) === 0);
+      let windowNamePayload: Record<string, unknown> | null = null;
+      try {
+        const payloadMap = windowNamePart
+          ? JSON.parse(decodeURIComponent(windowNamePart.substring(marker.length)))
+          : null;
+        const modePayload =
+          payloadMap && typeof payloadMap === "object" && !Array.isArray(payloadMap)
+            ? (payloadMap as Record<string, Record<string, unknown>>)[modeKey]
+            : null;
+        windowNamePayload =
+          modePayload && typeof modePayload === "object" && !Array.isArray(modePayload)
+            ? modePayload
+            : null;
+      } catch (_err) {
+        windowNamePayload = null;
+      }
       const requiredKeys = [
         "v",
         "saved_at",
@@ -110,7 +130,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         storageKey,
         hasRaw: typeof raw === "string" && raw.length > 0,
         hasRequiredKeys,
-        boardIsArray: !!parsed && Array.isArray(parsed.board)
+        boardIsArray: !!parsed && Array.isArray(parsed.board),
+        windowNameHasTimerSnapshot:
+          !!windowNamePayload &&
+          Object.prototype.hasOwnProperty.call(windowNamePayload, "timer_fixed_rows")
       };
     });
 
@@ -119,6 +142,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasRaw).toBe(true);
     expect(snapshot.hasRequiredKeys).toBe(true);
     expect(snapshot.boardIsArray).toBe(true);
+    expect(snapshot.windowNameHasTimerSnapshot).toBe(true);
   });
 
   test("saved-state restore rejects version-mismatch payload", async ({ page }) => {
@@ -257,5 +281,77 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.managerScore).not.toBe(8192);
     expect(snapshot.fullStillMalformedBoard).toBe(false);
     expect(snapshot.liteStillMalformedBoard).toBe(false);
+  });
+
+  test("ranked play modes ignore injected local saved-state payloads", async ({ page }) => {
+    await page.addInitScript(() => {
+      const modeKey = "standard_4x4_pow2_no_undo";
+      const payload = {
+        v: 1,
+        saved_at: Date.now(),
+        terminated: false,
+        mode_key: modeKey,
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        board: [
+          [1024, 1024, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        score: 424242,
+        over: false,
+        won: false,
+        keep_playing: false,
+        duration_ms: 777,
+        has_game_started: true
+      };
+      const raw = JSON.stringify(payload);
+      window.localStorage.setItem("savedGameStateByMode:v1:" + modeKey, raw);
+      window.localStorage.setItem("savedGameStateLiteByMode:v1:" + modeKey, raw);
+      window.localStorage.setItem(
+        "savedGameStateSyncByMode:v1:" + modeKey,
+        JSON.stringify({
+          v: 1,
+          mode_key: modeKey,
+          source_client_id: "smoke_test",
+          saved_at: payload.saved_at,
+          state: payload
+        })
+      );
+      window.name =
+        "__gm_saved_state_v1__=" + encodeURIComponent(JSON.stringify({ [modeKey]: payload }));
+    });
+
+    const response = await page.goto("/play.html?mode=standard_4x4_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Ranked play response should exist").not.toBeNull();
+    expect(response?.ok(), "Ranked play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const board =
+        typeof manager.getFinalBoardMatrix === "function"
+          ? manager.getFinalBoardMatrix()
+          : manager.grid.cells.map((column: Array<{ value: number } | null>) =>
+              column.map((cell) => (cell ? cell.value : 0))
+            );
+      return {
+        score: Number(manager.score || 0),
+        board
+      };
+    });
+
+    expect(snapshot.score).not.toBe(424242);
+    expect(snapshot.board).not.toEqual([
+      [1024, 1024, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0]
+    ]);
   });
 });

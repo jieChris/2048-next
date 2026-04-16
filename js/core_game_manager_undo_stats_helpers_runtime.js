@@ -683,9 +683,11 @@ function applyPostUndoRecordArtifacts(manager, postUndoRecord, direction) {
 
 function canExecuteUndoMove(manager) {
   if (!manager) return false;
-  var canUndoOperation = manager.replayMode || manager.isUndoInteractionEnabled();
+  var currentMode = manager.modeKey || manager.mode;
+  var state = resolveUndoPolicyStateForCurrentSessionMode(manager, currentMode);
+  var canUndoOperation = !!manager.replayMode || !!(state && state.isUndoInteractionEnabled);
   var hasRemainingUndoBudget = manager.undoLimit === null || manager.undoUsed < manager.undoLimit;
-  return canUndoOperation && hasRemainingUndoBudget && manager.undoStack.length > 0;
+  return canUndoOperation && hasRemainingUndoBudget && Array.isArray(manager.undoStack) && manager.undoStack.length > 0;
 }
 
 function ensureRedoStack(manager) {

@@ -179,6 +179,8 @@
       var modeBtn = modeButtons[j];
       addClassIfMissing(modeBtn, "mode-btn");
       ensureIconMarkup(modeBtn, MODE_ICON_SVG, textMode);
+      setAttrIfChanged(modeBtn, "target", "_blank");
+      setAttrIfChanged(modeBtn, "rel", "noopener noreferrer");
     }
 
     var historyButtons = collectButtonsByIdAndSelector(

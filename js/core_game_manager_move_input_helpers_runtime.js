@@ -549,6 +549,37 @@ function pushRuntimeUndoEntryForMove(manager, entry) {
   manager.undoStack.push(entry);
 }
 
+function clearRuntimeUndoStackForMove(manager) {
+  if (!manager) return;
+  if (typeof manager.setRuntimeUndoStack === "function") {
+    manager.setRuntimeUndoStack([]);
+    return;
+  }
+  manager.undoStack = [];
+}
+
+function resolveUndoHistoryModeConfigForMove(manager) {
+  if (!manager) return null;
+  try {
+    if (typeof manager.resolveModeConfig === "function") {
+      var resolved = manager.resolveModeConfig(manager.modeKey || manager.mode || "");
+      if (resolved && typeof resolved === "object") return resolved;
+    }
+  } catch (_err) {}
+  return manager.modeConfig && typeof manager.modeConfig === "object"
+    ? manager.modeConfig
+    : null;
+}
+
+function shouldCaptureUndoHistoryForMove(manager) {
+  if (!manager) return false;
+  var modeConfig = resolveUndoHistoryModeConfigForMove(manager);
+  if (modeConfig && typeof modeConfig.undo_enabled === "boolean") {
+    return modeConfig.undo_enabled;
+  }
+  return !!manager.undoEnabled;
+}
+
 function clearRuntimeRedoStackForMove(manager) {
   if (!manager) return;
   if (typeof manager.clearRuntimeRedoStack === "function") {
@@ -662,7 +693,11 @@ function finalizeSuccessfulMove(manager, movePlan, direction) {
   }
   var hasMovesAvailable = forcedOver ? false : movesAvailable(manager);
   var postMoveLifecycle = resolvePostMoveLifecycle(manager, hasMovesAvailable, forcedOver);
-  pushRuntimeUndoEntryForMove(manager, manager.normalizeUndoStackEntry(movePlan.undo));
+  if (shouldCaptureUndoHistoryForMove(manager)) {
+    pushRuntimeUndoEntryForMove(manager, manager.normalizeUndoStackEntry(movePlan.undo));
+  } else {
+    clearRuntimeUndoStackForMove(manager);
+  }
   clearRuntimeRedoStackForMove(manager);
   appendPostMoveRecordArtifacts(manager, direction);
   applyPostMoveLifecycleEffects(manager, postMoveLifecycle);
