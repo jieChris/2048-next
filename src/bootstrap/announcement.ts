@@ -10,6 +10,7 @@ interface WindowLike {
 interface AnnouncementRecordLike {
   id?: unknown;
   date?: unknown;
+  pinned?: unknown;
 }
 
 function toAnnouncementRecords(value: unknown): AnnouncementRecordLike[] {
@@ -18,6 +19,10 @@ function toAnnouncementRecords(value: unknown): AnnouncementRecordLike[] {
 }
 
 function compareAnnouncementRecords(a: AnnouncementRecordLike, b: AnnouncementRecordLike): number {
+  const ap = a && a.pinned === true ? 1 : 0;
+  const bp = b && b.pinned === true ? 1 : 0;
+  if (ap !== bp) return bp - ap;
+
   const ad = String((a && a.date) || "");
   const bd = String((b && b.date) || "");
   if (ad === bd) {
@@ -53,7 +58,16 @@ export function resolveLatestAnnouncementId(options: {
     records: options && options.records
   });
   if (!records.length) return "";
-  const latestId = records[0] && records[0].id;
+
+  let latestRecord: AnnouncementRecordLike | null = null;
+  for (let i = 0; i < records.length; i += 1) {
+    if (records[i] && records[i].pinned === true) continue;
+    latestRecord = records[i];
+    break;
+  }
+  if (!latestRecord) latestRecord = records[0] || null;
+
+  const latestId = latestRecord && latestRecord.id;
   return latestId ? String(latestId) : "";
 }
 

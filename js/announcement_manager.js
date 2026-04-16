@@ -100,6 +100,13 @@
       var head = document.createElement("div");
       head.className = "announcement-item-head";
 
+      if (item.pinned === true) {
+        var pinBadge = document.createElement("span");
+        pinBadge.className = "announcement-pin-badge";
+        pinBadge.textContent = lang === "en" ? "Pinned" : "置顶";
+        head.appendChild(pinBadge);
+      }
+
       var version = document.createElement("span");
       version.className = "announcement-version";
       version.textContent = item.version || "-";

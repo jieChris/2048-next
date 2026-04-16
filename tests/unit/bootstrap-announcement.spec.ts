@@ -25,6 +25,22 @@ describe("bootstrap announcement", () => {
     ]);
   });
 
+  it("sorts pinned records to the top", () => {
+    const result = resolveAnnouncementRecords({
+      records: [
+        { id: "2026-02-22-v1.9", date: "2026-02-22" },
+        { id: "2026-01-01-top", date: "2026-01-01", pinned: true },
+        { id: "2026-02-21-v1.81", date: "2026-02-21" }
+      ]
+    });
+
+    expect(result.map((item) => String(item.id))).toEqual([
+      "2026-01-01-top",
+      "2026-02-22-v1.9",
+      "2026-02-21-v1.81"
+    ]);
+  });
+
   it("resolves latest announcement id from records", () => {
     const latestId = resolveLatestAnnouncementId({
       records: [
@@ -34,6 +50,18 @@ describe("bootstrap announcement", () => {
     });
 
     expect(latestId).toBe("b");
+  });
+
+  it("resolves latest announcement id by ignoring pinned records", () => {
+    const latestId = resolveLatestAnnouncementId({
+      records: [
+        { id: "2026-04-16-top", date: "2026-04-16", pinned: true },
+        { id: "2026-04-16-v2.5", date: "2026-04-16" },
+        { id: "2026-04-15-v2.4", date: "2026-04-15" }
+      ]
+    });
+
+    expect(latestId).toBe("2026-04-16-v2.5");
   });
 
   it("reads seen id from local storage safely", () => {

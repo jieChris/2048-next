@@ -1,6 +1,50 @@
 (function () {
   window.ANNOUNCEMENT_RECORDS = [
     {
+      id: "2026-04-16-top-beta-notice",
+      version: "置顶",
+      date: "2026-04-16",
+      pinned: true,
+      title: "内测说明与反馈渠道",
+      title_en: "Beta Notice & Feedback Channels",
+      content:
+        "现在本站处于内测阶段，很多功能仍未完善，排行榜信息目前只作参考。\n" +
+        "本站完善之后有极小概率重置排行榜及账号数据，望周知。\n\n" +
+        "若在游戏中遇到 bug 或对本站有什么建议，欢迎加入 QQ 群 94064339 反馈，\n" +
+        "亦可发送邮件至 advice@taihe.fun。\n\n" +
+        "感谢大家的支持。",
+      content_en:
+        "The site is currently in beta, and many features are still under development.\n" +
+        "Leaderboard data is for reference only at this stage.\n" +
+        "After the site is fully improved, there is a very small chance that leaderboard and account data may be reset.\n\n" +
+        "If you encounter bugs or have suggestions, please join QQ Group 94064339,\n" +
+        "or send an email to advice@taihe.fun.\n\n" +
+        "Thank you for your support."
+    },
+    {
+      id: "2026-04-16-v2.5",
+      version: "v2.5",
+      date: "2026-04-16",
+      title: "公平性与稳定性修复 + UI 体验优化",
+      title_en: "Fairness/Stability Fixes + UI Improvements",
+      content:
+        "本次更新修复了一些关键问题，这些问题曾导致：\n" +
+        "1. 用户可以通过多开标签页的方法多开对局，影响排行榜公平性；\n" +
+        "2. 用户可以在控制台通过代码在无撤回模式中实现撤回；\n" +
+        "3. 排行榜信息遗漏一些玩家的最高分数；\n" +
+        "4. 随着游戏进程推进，游戏会越来越卡（由错误的统计方式增大开销导致）；\n" +
+        "5. 计时器在某些情况下会挂掉，导致无法正确统计里程碑计时。\n\n" +
+        "另外，本次还对 UI 做了一些改动，提升了整体使用体验。",
+      content_en:
+        "This update fixes several critical issues that previously caused:\n" +
+        "1. Multiple concurrent runs by opening multiple tabs, which affected leaderboard fairness;\n" +
+        "2. Console-script undo in No-Undo modes;\n" +
+        "3. Missing best scores for some players in leaderboard data;\n" +
+        "4. Increasing lag as runs progressed due to an incorrect stats aggregation approach;\n" +
+        "5. Timer failures in some cases, resulting in incorrect milestone timing.\n\n" +
+        "We also made several UI updates to improve overall usability."
+    },
+    {
       id: "2026-04-06-v2.4",
       version: "v2.4",
       date: "2026-04-06",

@@ -2796,6 +2796,20 @@ body[data-page="practice"] .top-action-btn.reset-btn .reset-bottom-mover {
   flex-wrap: wrap;
 }
 
+.announcement-pin-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #f3d7bc;
+  color: #7b4d22;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+}
+
 .announcement-version {
   color: #8f7a66;
   font-weight: bold;

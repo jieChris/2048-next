@@ -9,6 +9,10 @@
   }
 
   function compareAnnouncementRecords(a, b) {
+    var ap = a && a.pinned === true ? 1 : 0;
+    var bp = b && b.pinned === true ? 1 : 0;
+    if (ap !== bp) return bp - ap;
+
     var ad = String((a && a.date) || "");
     var bd = String((b && b.date) || "");
     if (ad === bd) {
@@ -32,7 +36,16 @@
       records: options && options.records
     });
     if (!records.length) return "";
-    return records[0] && records[0].id ? String(records[0].id) : "";
+
+    var latestRecord = null;
+    for (var i = 0; i < records.length; i += 1) {
+      if (records[i] && records[i].pinned === true) continue;
+      latestRecord = records[i];
+      break;
+    }
+    if (!latestRecord) latestRecord = records[0] || null;
+
+    return latestRecord && latestRecord.id ? String(latestRecord.id) : "";
   }
 
   function resolveLocalStorage(windowLike) {
