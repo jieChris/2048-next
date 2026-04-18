@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildPracticeModeConfigFromSelection,
   buildPracticeModeConfig,
   parsePracticeRuleset
 } from "../../src/bootstrap/practice-mode";
+import { normalizeModeConfig } from "../../src/core/mode";
 
 describe("bootstrap practice mode", () => {
   it("parses practice ruleset query", () => {
@@ -50,5 +52,43 @@ describe("bootstrap practice mode", () => {
       { value: 2, weight: 90 },
       { value: 4, weight: 10 }
     ]);
+  });
+
+  it("preserves capped max tile when converting a selected mode into practice mode", () => {
+    const selected = buildPracticeModeConfigFromSelection({
+      key: "capped_4x4_pow2_64_no_undo",
+      board_width: 4,
+      board_height: 4,
+      ruleset: "pow2",
+      mode_family: "pow2",
+      special_rules: {},
+      spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+      max_tile: 64
+    });
+
+    expect(selected.key).toBe("practice");
+    expect(selected.max_tile).toBe(64);
+    expect(selected.special_rules.enforce_max_tile).toBe(true);
+
+    const normalized = normalizeModeConfig({
+      modeKey: selected.key,
+      rawConfig: selected,
+      defaultModeKey: "standard_4x4_pow2_no_undo",
+      defaultModeConfig: {
+        key: "standard_4x4_pow2_no_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        special_rules: {},
+        undo_enabled: false,
+        max_tile: null,
+        spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+        ranked_bucket: "standard",
+        mode_family: "pow2",
+        rank_policy: "ranked"
+      }
+    });
+
+    expect(normalized.max_tile).toBe(64);
   });
 });

@@ -78,8 +78,15 @@
         : "Practice_board.html";
     var token = typeof opts.token === "string" ? opts.token : "";
     var ruleset = opts.practiceRuleset === "fibonacci" ? "fibonacci" : "pow2";
+    var practiceModeKey =
+      typeof opts.practiceModeKey === "string" && opts.practiceModeKey.trim() && opts.practiceModeKey !== "practice"
+        ? opts.practiceModeKey.trim()
+        : "";
     var url = basePath + "?practice_token=" + encodeURIComponent(token);
     url = appendQueryParam(url, "practice_ruleset", ruleset);
+    if (practiceModeKey) {
+      url = appendQueryParam(url, "practice_mode_key", practiceModeKey);
+    }
     if (opts.includeGuideSeen) {
       url = appendQueryParam(url, "practice_guide_seen", "1");
     }
@@ -136,6 +143,18 @@
     return { persisted: false, target: "none" };
   }
 
+  function resolvePracticeTransferSourceModeKey(options) {
+    var opts = options || {};
+    var cfg =
+      opts.gameModeConfig && typeof opts.gameModeConfig === "object"
+        ? opts.gameModeConfig
+        : opts.manager && opts.manager.modeConfig && typeof opts.manager.modeConfig === "object"
+          ? opts.manager.modeConfig
+          : null;
+    var raw = cfg && typeof cfg.key === "string" ? cfg.key.trim() : "";
+    return raw && raw !== "practice" ? raw : "";
+  }
+
   function createPracticeTransferNavigationPlan(options) {
     var opts = options || {};
     var token = buildPracticeTransferToken({
@@ -147,6 +166,7 @@
       gameModeConfig: opts.gameModeConfig || null,
       manager: opts.manager || null
     });
+    var practiceModeKey = resolvePracticeTransferSourceModeKey(opts);
     var practiceRuleset = modeConfig.ruleset === "fibonacci" ? "fibonacci" : "pow2";
     var payload = buildPracticeTransferPayload({
       token: token,
@@ -166,6 +186,7 @@
     var baseUrl = buildPracticeBoardUrl({
       token: token,
       practiceRuleset: practiceRuleset,
+      practiceModeKey: practiceModeKey,
       includeGuideSeen: guideSeen,
       basePath: opts.basePath
     });
@@ -194,6 +215,7 @@
     var urlWithPayload = buildPracticeBoardUrl({
       token: token,
       practiceRuleset: practiceRuleset,
+      practiceModeKey: practiceModeKey,
       includeGuideSeen: guideSeen,
       includePayload: true,
       payload: payloadString,

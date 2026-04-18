@@ -891,18 +891,35 @@ function shouldLockCustomTileEditAfterStart(manager) {
   return true;
 }
 
+function resolveCustomTileEditMaxTile(manager) {
+  if (!manager) return null;
+  var modeConfigMaxTile = Number(manager.modeConfig && manager.modeConfig.max_tile);
+  if (Number.isFinite(modeConfigMaxTile) && modeConfigMaxTile > 0) {
+    return Math.floor(modeConfigMaxTile);
+  }
+  var managerMaxTile = Number(manager.maxTile);
+  if (Number.isFinite(managerMaxTile) && managerMaxTile > 0) {
+    return Math.floor(managerMaxTile);
+  }
+  return null;
+}
+
 function insertCustomTile(manager, x, y, value) {
   if (!manager) return;
   if (manager.hasGameStarted && shouldLockCustomTileEditAfterStart(manager)) return;
   if (manager.isBlockedCell(x, y)) throw "Blocked cell cannot be edited";
+  var numericValue = Number(value);
+  if (!Number.isInteger(numericValue) || numericValue < 0) return;
+  var maxTile = resolveCustomTileEditMaxTile(manager);
+  if (Number.isFinite(maxTile) && maxTile > 0 && numericValue > maxTile) return;
   var cell = { x: x, y: y };
   removeCustomTileExistingAtCell(manager, cell);
-  if (value === 0) {
-    recordPracticeCustomTileActionIfNeeded(manager, x, y, value);
+  if (numericValue === 0) {
+    recordPracticeCustomTileActionIfNeeded(manager, x, y, numericValue);
     syncPracticeRestartBoardSnapshot(manager);
     clearTransientTileVisualState(manager); actuate(manager); return;
   }
-  insertCustomTileWithValue(manager, x, y, value);
+  insertCustomTileWithValue(manager, x, y, numericValue);
 }
 
 function readFinalBoardTileValue(manager, x, y) {

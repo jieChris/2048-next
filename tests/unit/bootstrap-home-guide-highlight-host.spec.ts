@@ -49,7 +49,7 @@ describe("bootstrap home guide highlight host", () => {
     expect(homeGuideState.elevated).toEqual([]);
   });
 
-  it("applies elevation plan and scopes top actions", () => {
+  it("skips host elevation when the plan keeps focus on the target only", () => {
     const topActionButtons = createNode();
     const headingHost = createNode();
     const target = {
@@ -67,20 +67,20 @@ describe("bootstrap home guide highlight host", () => {
       homeGuideRuntime: {
         resolveHomeGuideElevationPlan() {
           return {
-            hostSelector: ".top-action-buttons",
-            shouldScopeTopActions: true
+            hostSelector: "",
+            shouldScopeTopActions: false
           };
         }
       }
     });
 
     expect(result).toEqual({
-      didElevateHost: true,
-      didScopeTopActions: true
+      didElevateHost: false,
+      didScopeTopActions: false
     });
-    expect(topActionButtons.classList.add).toHaveBeenCalledWith("home-guide-elevated");
-    expect(topActionButtons.classList.add).toHaveBeenCalledWith("home-guide-scope");
-    expect(homeGuideState.elevated).toEqual([topActionButtons]);
+    expect(topActionButtons.classList.add).not.toHaveBeenCalled();
+    expect(headingHost.classList.add).not.toHaveBeenCalled();
+    expect(homeGuideState.elevated).toEqual([]);
   });
 
   it("returns noop when target closest or elevation resolver is missing", () => {

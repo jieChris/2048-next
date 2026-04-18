@@ -78,12 +78,6 @@
     if (key === "spawn_custom_4x4_pow2") {
       return isEn ? "4x4 Custom 4 Spawn Rate" : "4x4 自定义4率";
     }
-    if (key === "spawn95_4x4_pow2") {
-      return isEn ? "4x4 Spawn 95/5" : "4x4 概率 95/5";
-    }
-    if (key === "spawn80_4x4_pow2") {
-      return isEn ? "4x4 Spawn 80/20" : "4x4 概率 80/20";
-    }
     if (key === "spawn50_3x3_pow2_no_undo") {
       return isEn ? "3x3 Spawn 50/50 (No Undo)" : "3x3 概率 50/50（无撤回）";
     }
@@ -398,29 +392,6 @@
     board_height: 4,
     ruleset: "pow2",
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
-    mode_family: "pow2",
-    rank_policy: "unranked"
-  });
-
-  // Phase 1: spawn probabilities
-  addPair({
-    key: "spawn95_4x4_pow2",
-    label: "4x4 概率 95/5",
-    board_width: 4,
-    board_height: 4,
-    ruleset: "pow2",
-    spawn_table: [{ value: 2, weight: 95 }, { value: 4, weight: 5 }],
-    mode_family: "pow2",
-    rank_policy: "unranked"
-  });
-
-  addPair({
-    key: "spawn80_4x4_pow2",
-    label: "4x4 概率 80/20",
-    board_width: 4,
-    board_height: 4,
-    ruleset: "pow2",
-    spawn_table: [{ value: 2, weight: 80 }, { value: 4, weight: 20 }],
     mode_family: "pow2",
     rank_policy: "unranked"
   });

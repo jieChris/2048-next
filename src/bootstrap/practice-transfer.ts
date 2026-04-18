@@ -44,6 +44,7 @@ export interface PracticeGuideSeenOptions {
 export interface BuildPracticeBoardUrlOptions {
   token: string;
   practiceRuleset?: string | null | undefined;
+  practiceModeKey?: string | null | undefined;
   includeGuideSeen?: boolean;
   includePayload?: boolean;
   payload?: string | null | undefined;
@@ -190,8 +191,15 @@ export function buildPracticeBoardUrl(options: BuildPracticeBoardUrlOptions): st
   const basePath = typeof opts.basePath === "string" && opts.basePath ? opts.basePath : "Practice_board.html";
   const token = typeof opts.token === "string" ? opts.token : "";
   const ruleset = opts.practiceRuleset === "fibonacci" ? "fibonacci" : "pow2";
+  const practiceModeKey =
+    typeof opts.practiceModeKey === "string" && opts.practiceModeKey.trim() && opts.practiceModeKey !== "practice"
+      ? opts.practiceModeKey.trim()
+      : "";
   let url = basePath + "?practice_token=" + encodeURIComponent(token);
   url = appendQueryParam(url, "practice_ruleset", ruleset);
+  if (practiceModeKey) {
+    url = appendQueryParam(url, "practice_mode_key", practiceModeKey);
+  }
   if (opts.includeGuideSeen) {
     url = appendQueryParam(url, "practice_guide_seen", "1");
   }
@@ -252,6 +260,18 @@ export function persistPracticeTransferPayload(
   return { persisted: false, target: "none" };
 }
 
+function resolvePracticeTransferSourceModeKey(options: PracticeTransferOptions): string {
+  const opts = options || {};
+  const cfg =
+    opts.gameModeConfig && typeof opts.gameModeConfig === "object"
+      ? opts.gameModeConfig
+      : opts.manager && opts.manager.modeConfig && typeof opts.manager.modeConfig === "object"
+        ? opts.manager.modeConfig
+        : null;
+  const raw = cfg && typeof cfg.key === "string" ? cfg.key.trim() : "";
+  return raw && raw !== "practice" ? raw : "";
+}
+
 export function createPracticeTransferNavigationPlan(
   options: CreatePracticeTransferNavigationPlanOptions
 ): PracticeTransferNavigationPlan {
@@ -265,6 +285,7 @@ export function createPracticeTransferNavigationPlan(
     gameModeConfig: opts.gameModeConfig || null,
     manager: opts.manager || null
   });
+  const practiceModeKey = resolvePracticeTransferSourceModeKey(opts);
   const practiceRuleset = modeConfig.ruleset === "fibonacci" ? "fibonacci" : "pow2";
   const payload = buildPracticeTransferPayload({
     token,
@@ -284,6 +305,7 @@ export function createPracticeTransferNavigationPlan(
   const baseUrl = buildPracticeBoardUrl({
     token,
     practiceRuleset,
+    practiceModeKey,
     includeGuideSeen: guideSeen,
     basePath: opts.basePath
   });
@@ -312,6 +334,7 @@ export function createPracticeTransferNavigationPlan(
   const urlWithPayload = buildPracticeBoardUrl({
     token,
     practiceRuleset,
+    practiceModeKey,
     includeGuideSeen: guideSeen,
     includePayload: true,
     payload: payloadString,

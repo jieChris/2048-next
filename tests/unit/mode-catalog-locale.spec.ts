@@ -39,5 +39,19 @@ describe("mode catalog localization", () => {
     expect(zhCatalog.getMode?.("fib_4x2_no_undo")?.label).toBe("斐波那契 4x2");
     expect(enCatalog.getMode?.("fib_4x2_no_undo")?.label).toBe("Fibonacci 4x2");
   });
+
+  it("does not expose removed 4x4 probability variants", () => {
+    const zhCatalog = loadModeCatalog("zh");
+    const keys = (zhCatalog.listModes?.() || []).map((mode) => mode.key);
+
+    expect(zhCatalog.getMode?.("spawn95_4x4_pow2_undo")).toBeNull();
+    expect(zhCatalog.getMode?.("spawn95_4x4_pow2_no_undo")).toBeNull();
+    expect(zhCatalog.getMode?.("spawn80_4x4_pow2_undo")).toBeNull();
+    expect(zhCatalog.getMode?.("spawn80_4x4_pow2_no_undo")).toBeNull();
+    expect(keys).not.toContain("spawn95_4x4_pow2_undo");
+    expect(keys).not.toContain("spawn95_4x4_pow2_no_undo");
+    expect(keys).not.toContain("spawn80_4x4_pow2_undo");
+    expect(keys).not.toContain("spawn80_4x4_pow2_no_undo");
+  });
 });
 

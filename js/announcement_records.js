@@ -22,6 +22,25 @@
         "Thank you for your support."
     },
     {
+      id: "2026-04-19-v2.7",
+      version: "v2.7",
+      date: "2026-04-19",
+      title: "\u7ec3\u4e60\u677f\u6a21\u5f0f\u9009\u62e9\u4e0e\u663e\u793a\u66f4\u65b0",
+      title_en: "Practice Board Mode Picker & Display Update",
+      content:
+        "\u672c\u6b21\u66f4\u65b0\u4e3b\u8981\u805a\u7126\u7ec3\u4e60\u677f\u4f53\u9a8c\uff1a\n" +
+        "1. \u7ec3\u4e60\u677f\u7684\u300c\u9009\u62e9\u6a21\u5f0f\u300d\u73b0\u5728\u53ea\u4fdd\u7559\u65e0\u64a4\u56de\u6807\u51c6\u7248\u3001\u5c01\u9876\u3001\u6590\u6ce2\u90a3\u5951\u548c\u659c\u5411\u56db\u7c7b\u5e38\u7528\u6a21\u5f0f\uff0c\u5165\u53e3\u66f4\u6e05\u6670\uff1b\n" +
+        "2. \u68cb\u76d8\u5de6\u4e0a\u89d2\u65b0\u589e\u5f53\u524d\u6a21\u5f0f\u540d\u79f0\u663e\u793a\uff0c\u5207\u6362\u6a21\u5f0f\u540e\u4f1a\u540c\u6b65\u66f4\u65b0\uff1b\n" +
+        "3. \u7ec3\u4e60\u677f\u4e2d\u7684\u6a21\u5f0f\u540d\u79f0\u4e0d\u518d\u663e\u793a\u300c\u65e0\u64a4\u56de\u300d\u5b57\u6837\uff0c\u907f\u514d\u4e0e\u7ec3\u4e60\u677f\u652f\u6301\u64a4\u56de\u7684\u673a\u5236\u4ea7\u751f\u6df7\u6dc6\uff1b\n" +
+        "4. \u5c01\u9876\u7ec3\u4e60\u677f\u73b0\u5728\u4f1a\u4e25\u683c\u9650\u5236\u53ef\u653e\u7f6e\u7684\u6570\u5b57\u4e0a\u9650\uff0c\u4f8b\u5982 64 \u5c01\u9876\u4e0d\u80fd\u518d\u653e\u7f6e 128\uff0c\u76d8\u9762\u7801\u5bfc\u5165\u548c\u81ea\u5b9a\u4e49\u653e\u7f6e\u4e5f\u4f1a\u540c\u6b65\u9075\u5b88\u8fd9\u4e2a\u89c4\u5219\u3002",
+      content_en:
+        "This update focuses on the practice board experience:\n" +
+        "1. The practice-board mode picker now keeps only four commonly used families: Standard, Capped, Fibonacci, and Diagonal, making the entry list clearer;\n" +
+        "2. The current mode name is now shown at the top-left of the board and updates immediately after switching modes;\n" +
+        "3. Practice-board mode labels no longer show \"No Undo\", avoiding confusion because the practice board itself supports undo;\n" +
+        "4. Capped practice boards now strictly enforce placement limits. For example, Capped 64 can no longer place 128, and the same rule also applies to board-code import and custom tile placement."
+    },
+    {
       id: "2026-04-18-v2.6",
       version: "v2.6",
       date: "2026-04-18",

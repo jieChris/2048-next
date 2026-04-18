@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { startHomeGuideFromPageHost } from "./support/home-guide";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
@@ -135,22 +136,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       );
     });
 
-    const snapshot = await page.evaluate(async () => {
-      const runtime = (window as any).CoreHomeGuidePageHostRuntime;
-      const openSettingsModal = (window as any).openSettingsModal;
-      if (typeof openSettingsModal === "function") {
-        openSettingsModal();
-        const trigger = document.getElementById("home-guide-trigger-btn") as HTMLButtonElement | null;
-        if (trigger) {
-          trigger.click();
-        }
-        await new Promise((resolve) => {
-          window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(() => resolve(null));
-          });
-        });
-      }
+    const started = await startHomeGuideFromPageHost(page);
+    expect(started).toBe(true);
 
+    const snapshot = await page.evaluate(() => {
+      const runtime = (window as any).CoreHomeGuidePageHostRuntime;
       return {
         hasRuntime: !!runtime && typeof runtime.createHomeGuidePageResolvers === "function",
         createCallCount: Number((window as any).__homeGuidePageResolverCreateCalls || 0),

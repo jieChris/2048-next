@@ -1,9 +1,12 @@
 ﻿import "../../js/theme_manager.js";
 import "../../js/palette_page.js";
 import "../../js/core_i18n_runtime.js";
+import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { applyThemeSettingsUi } from "../bootstrap/theme-settings-host";
 import { applyThemeSettingsPageInit } from "../bootstrap/theme-settings-page-host";
 import * as themeSettingsRuntimeModule from "../bootstrap/theme-settings";
+
+const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
 
 const globalWindow = window as Window & {
   ThemeManager?: Record<string, unknown>;
@@ -38,6 +41,27 @@ const themeSettingsHostRuntime = {
 const themeSettingsPageHostRuntime = {
   applyThemeSettingsPageInit
 };
+
+function readNightBackgroundPreference(): boolean {
+  const storageLike = resolveStorageByName({
+    windowLike: window as unknown as Record<string, unknown>,
+    storageName: "localStorage"
+  });
+  return (
+    safeReadStorageItem({
+      storageLike,
+      key: NIGHT_BACKGROUND_STORAGE_KEY
+    }) === "1"
+  );
+}
+
+function syncNightBackgroundAttribute(): void {
+  if (readNightBackgroundPreference()) {
+    document.documentElement.setAttribute("data-night-background", "1");
+    return;
+  }
+  document.documentElement.removeAttribute("data-night-background");
+}
 
 function ensureThemeSettingsGlobals(): void {
   if (!globalWindow.CoreThemeSettingsRuntime) {
@@ -168,10 +192,16 @@ function applyThemePageCopy(): void {
 }
 
 export function bootstrapPalettePage(): void {
+  syncNightBackgroundAttribute();
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
   if (document.body) {
     document.body.setAttribute("data-page-family", "palette");
   }
+  window.addEventListener("storage", (event) => {
+    if (!event || !event.key || event.key === NIGHT_BACKGROUND_STORAGE_KEY) {
+      syncNightBackgroundAttribute();
+    }
+  });
 
   ensureThemeSettingsGlobals();
 

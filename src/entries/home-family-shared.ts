@@ -111,6 +111,8 @@ import coreMobileTopButtonsPageHostRuntimeUrl from "../../js/core_mobile_top_but
 import coreMobileViewportRuntimeUrl from "../../js/core_mobile_viewport_runtime.js?url";
 import coreMobileViewportPageHostRuntimeUrl from "../../js/core_mobile_viewport_page_host_runtime.js?url";
 import coreStorageRuntimeUrl from "../../js/core_storage_runtime.js?url";
+import coreBgmRuntimeUrl from "../../js/core_bgm_runtime.js?url";
+import coreNightModeRuntimeUrl from "../../js/core_night_mode_runtime.js?url";
 import coreReplayModalRuntimeUrl from "../../js/core_replay_modal_runtime.js?url";
 import coreSettingsModalHostRuntimeUrl from "../../js/core_settings_modal_host_runtime.js?url";
 import coreSettingsModalPageHostRuntimeUrl from "../../js/core_settings_modal_page_host_runtime.js?url";
@@ -342,6 +344,8 @@ export const homeSettingsAndPanelScripts = [
   coreMobileViewportRuntimeUrl,
   coreMobileViewportPageHostRuntimeUrl,
   coreStorageRuntimeUrl,
+  coreBgmRuntimeUrl,
+  coreNightModeRuntimeUrl,
   coreReplayModalRuntimeUrl,
   coreSettingsModalHostRuntimeUrl,
   coreSettingsModalPageHostRuntimeUrl

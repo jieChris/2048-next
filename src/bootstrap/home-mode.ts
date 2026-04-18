@@ -1,6 +1,8 @@
 import { resolveCatalogModeWithDefault, type ModeCatalogLike } from "./mode-catalog";
 import {
+  buildPracticeModeConfigFromSelection,
   buildPracticeModeConfig,
+  parsePracticeModeKey,
   parsePracticeRuleset,
   type PracticeModeConfigLike
 } from "./practice-mode";
@@ -34,6 +36,16 @@ export interface HomeModeSelectionFromContextOptions {
 export interface HomeModeSelectionResult<T extends PracticeModeConfigLike> {
   modeKey: string;
   modeConfig: T | null;
+}
+
+function resolvePracticeSelectedMode<T extends PracticeModeConfigLike>(
+  searchLike: SearchLike,
+  modeCatalog: ModeCatalogLike | null | undefined
+): T | null {
+  if (!modeCatalog || typeof modeCatalog.getMode !== "function") return null;
+  const key = parsePracticeModeKey(searchLike);
+  if (!key) return null;
+  return (modeCatalog.getMode(key) as T | null) || null;
 }
 
 function resolveDataModeIdFromBody(bodyLike: BodyLike | null | undefined): string {
@@ -78,10 +90,16 @@ export function resolveHomeModeSelection<T extends PracticeModeConfigLike>(
   ) as T | null;
 
   if (modeKey === "practice" && modeConfig) {
-    modeConfig = buildPracticeModeConfig(
-      modeConfig,
-      parsePracticeRuleset(options.searchLike || "")
-    ) as T;
+    const selectedMode = resolvePracticeSelectedMode<T>(
+      options.searchLike || "",
+      options.modeCatalog || null
+    );
+    modeConfig = selectedMode
+      ? (buildPracticeModeConfigFromSelection(selectedMode) as T)
+      : (buildPracticeModeConfig(
+          modeConfig,
+          parsePracticeRuleset(options.searchLike || "")
+        ) as T);
   }
 
   return {

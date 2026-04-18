@@ -159,7 +159,10 @@
       label: label,
       colors: colors,
       lightTextFrom: config.lightTextFrom,
+      uiBaseTheme: typeof config.uiBaseTheme === "string" ? config.uiBaseTheme : "",
+      tileOnlyTheme: !!config.tileOnlyTheme,
       gradient: !!config.gradient,
+      nightUi: !!config.nightUi,
       neon: !!config.neon,
       blackTiles: !!config.blackTiles,
       flashy: !!config.flashy,
@@ -943,8 +946,38 @@
         buttonHoverBg: "#d32f2f",
         buttonHoverText: "#fff"
       }
+    }),
+    midnight_nebula: makeTheme("midnight_nebula", "夜幕星云", [
+      "#def7ff", "#cdcfff", "#b6bcff", "#9fa5ff",
+      "#898dff", "#7578ff", "#6768f8", "#6659f0",
+      "#704eea", "#8045ea", "#923ee8", "#a63ee5",
+      "#bb4ae2", "#cf58dd", "#dd6cd9", "#eb86df"
+    ], {
+      uiBaseTheme: "classic",
+      tileOnlyTheme: true,
+      lightTextFrom: 3,
+      gradient: true,
+      nightUi: true,
+      neon: false,
+      timer: {
+        panelBg: "linear-gradient(180deg, #2b3f81 0%, #1b2454 100%)",
+        panelText: "#eef3ff",
+        panelLabel: "#b8c8ff",
+        cellBg: "linear-gradient(180deg, rgba(52, 71, 128, 0.94) 0%, rgba(31, 39, 86, 0.94) 100%)",
+        cellText: "#eef3ff",
+        cellShadow: "0 10px 18px rgba(8,12,32,0.24), inset 0 0 0 1px rgba(201,212,255,0.16)",
+        buttonBg: "linear-gradient(180deg, #4e70da 0%, #3f52aa 100%)",
+        buttonText: "#f8fbff",
+        buttonHoverBg: "linear-gradient(180deg, #6d89ff 0%, #6047c4 100%)",
+        buttonHoverText: "#ffffff"
+      }
     })
   };
+
+  function resolveUiTheme(theme) {
+    if (!theme || !theme.uiBaseTheme || !themes[theme.uiBaseTheme]) return theme;
+    return themes[theme.uiBaseTheme];
+  }
 
   function isValidHexColor(value) {
     if (typeof value !== "string") return false;
@@ -1291,7 +1324,8 @@
   }
 
   function timerCss(theme) {
-    var t = theme.timer;
+    var uiTheme = resolveUiTheme(theme);
+    var t = uiTheme.timer;
     var css = "";
     css += "#timer{background:" + t.panelBg + ";color:" + t.panelText + ";box-shadow:0 0 10px " + rgba(t.panelBg, 0.3) + ";}\n";
     css += "#timer:after{color:" + t.panelLabel + ";}\n";
@@ -1302,10 +1336,11 @@
   }
 
   function getUiTokens(theme) {
-    var accentA = colorForIndex(theme, 0, theme.colors.length);
-    var accentB = colorForIndex(theme, 5, theme.colors.length);
-    var accentC = colorForIndex(theme, 10, theme.colors.length);
-    var darkUi = !!(theme.neon || theme.blackTiles);
+    var uiTheme = resolveUiTheme(theme);
+    var accentA = colorForIndex(uiTheme, 0, uiTheme.colors.length);
+    var accentB = colorForIndex(uiTheme, 5, uiTheme.colors.length);
+    var accentC = colorForIndex(uiTheme, 10, uiTheme.colors.length);
+    var darkUi = !!(uiTheme.neon || uiTheme.blackTiles || uiTheme.nightUi);
     var baseBgA = darkUi ? "#0f1220" : "#faf8ef";
     var baseBgB = darkUi ? "#191d30" : "#f1eee3";
 
@@ -1329,9 +1364,18 @@
     };
   }
 
-  function pageCss(theme) {
-    var t = getUiTokens(theme);
+  function actionButtonChromeCss() {
     var css = "";
+    css += ".top-action-btn svg, .restart-button svg { width: 28px; height: 28px; vertical-align: middle; }\n";
+    css += ".top-action-btn, .restart-button { display: inline-flex !important; justify-content: center; align-items: center; padding: 0 !important; width: 50px !important; height: 50px !important; min-width: 50px !important; border-radius: 12px !important; }\n";
+    return css;
+  }
+
+  function pageCss(theme) {
+    var css = actionButtonChromeCss();
+    if (theme && theme.tileOnlyTheme) return css;
+    var uiTheme = resolveUiTheme(theme);
+    var t = getUiTokens(theme);
 
     css += "html,body{background:radial-gradient(circle at 14% 10%," + mixHex(t.pageBgA, "#ffffff", 0.06) + ",transparent 36%),linear-gradient(160deg," + t.pageBgA + "," + t.pageBgB + ");color:" + t.text + ";}\n";
     css += "h1.title,.mode-hub h2,.portal-section-title,.replay-modal-content h3,.mode-group-title{color:" + t.text + ";}\n";
@@ -1346,16 +1390,11 @@
     css += ".game-container{background:" + t.gameBg + ";box-shadow:" + t.shadow + ", inset 0 0 0 1px " + rgba(t.border, 0.42) + ";}\n";
     css += ".grid-cell{background:" + t.gridCellBg + ";}\n";
     css += ".game-container .game-message{background:" + rgba(t.pageBgA, 0.72) + ";}\n";
-    css += ".game-container .game-message.game-won{background:" + rgba(colorForIndex(theme, 8, theme.colors.length), 0.42) + ";}\n";
+    css += ".game-container .game-message.game-won{background:" + rgba(colorForIndex(uiTheme, 8, uiTheme.colors.length), 0.42) + ";}\n";
 
     css += ".restart-button,.top-action-btn,.replay-button,.replay-modal-actions .replay-button,.replay-control-btn,.game-container .game-message a,.game-container .game-message a.export-replay-button,.game-container .game-message a.import-replay-button,.game-container .game-message a.undo-button,.mode-hub-btn{background:" + t.buttonBg + ";color:" + t.buttonText + ";box-shadow:0 0 0 1px " + rgba(t.border, 0.44) + " inset, 0 6px 16px " + rgba(t.buttonBg, 0.28) + ";}\n";
     css += ".restart-button:hover,.top-action-btn:hover,.replay-button:hover,.replay-modal-actions .replay-button:hover,.replay-control-btn:hover,.game-container .game-message a:hover,.mode-hub-btn:hover{background:" + t.buttonHoverBg + ";color:" + t.buttonText + ";}\n";
     
-    // Icon styles - general alignment
-    css += ".top-action-btn svg, .restart-button svg { width: 28px; height: 28px; vertical-align: middle; }\n";
-    css += ".top-action-btn, .restart-button { display: inline-flex !important; justify-content: center; align-items: center; padding: 0 !important; width: 50px !important; height: 50px !important; min-width: 50px !important; border-radius: 12px !important; }\n";
-
-
     css += ".replay-modal-content,.portal-card,.history-item,.mode-hub,.replay-controls-panel{background:" + t.surface + ";border-color:" + t.border + ";color:" + t.text + ";box-shadow:" + t.shadow + ";}\n";
     css += ".stats-panel-row{border-bottom-color:" + t.panelLine + ";color:" + t.text + ";}\n";
     css += ".replay-textarea,.settings-select,.portal-form input,.portal-inline-input,.portal-inline-select{background:" + t.surfaceSoft + ";border-color:" + t.border + ";color:" + t.text + ";}\n";
@@ -1363,11 +1402,56 @@
     css += ".final-board-cell,.final-board-cell-empty{background:" + t.gridCellBg + ";color:" + t.muted + ";}\n";
     css += ".portal-table th,.portal-table td{border-bottom-color:" + t.panelLine + ";color:" + t.text + ";}\n";
     css += "input[type=range]::-webkit-slider-runnable-track{background:" + mixHex(t.border, t.surface, 0.4) + ";}\n";
-    css += "input[type=range]::-webkit-slider-thumb{background:" + colorForIndex(theme, 8, theme.colors.length) + ";}\n";
+    css += "input[type=range]::-webkit-slider-thumb{background:" + colorForIndex(uiTheme, 8, uiTheme.colors.length) + ";}\n";
 
-    if (theme.neon) {
-      css += ".game-container,.top-action-btn,.restart-button,.mode-hub-btn,.portal-card,.history-item{box-shadow:0 0 0 1px " + rgba(t.border, 0.6) + ",0 0 18px " + rgba(colorForIndex(theme, 0, theme.colors.length), 0.22) + ",0 10px 28px rgba(6,8,18,0.52);}\n";
+    if (uiTheme.neon) {
+      css += ".game-container,.top-action-btn,.restart-button,.mode-hub-btn,.portal-card,.history-item{box-shadow:0 0 0 1px " + rgba(t.border, 0.6) + ",0 0 18px " + rgba(colorForIndex(uiTheme, 0, uiTheme.colors.length), 0.22) + ",0 10px 28px rgba(6,8,18,0.52);}\n";
     }
+    return css;
+  }
+
+  function midnightNebulaAccentCss(scopeSelectors) {
+    var scopes = Array.isArray(scopeSelectors) && scopeSelectors.length ? scopeSelectors : ["body"];
+    var css = "";
+    var tile2Selectors = [];
+    var tile4Selectors = [];
+    var tile2048Selectors = [];
+    for (var i = 0; i < scopes.length; i++) {
+      var scope = scopes[i] || "body";
+      tile2Selectors.push(scope + " .tile.tile-2 .tile-inner");
+      tile2Selectors.push(scope + " .theme-preview-tile.theme-color-2");
+      tile4Selectors.push(scope + " .tile.tile-4 .tile-inner");
+      tile4Selectors.push(scope + " .theme-preview-tile.theme-color-4");
+      tile2048Selectors.push(scope + " .tile.tile-2048 .tile-inner");
+      tile2048Selectors.push(scope + " .theme-preview-tile.theme-color-2048");
+    }
+    css += tile2Selectors.join(",") + "{background:linear-gradient(145deg,#f4fdff,#d9f1ff,#b7deff) !important;color:#12213e !important;border:1px solid #78d3ff !important;box-shadow:0 0 18px rgba(120,211,255,0.36), inset 0 0 0 1px rgba(255,255,255,0.56) !important;text-shadow:none !important;}\n";
+    css += tile4Selectors.join(",") + "{background:linear-gradient(145deg,#f4f0ff,#d7d2ff,#b7afff) !important;color:#24194b !important;border:1px solid #9e93ff !important;box-shadow:0 0 18px rgba(158,147,255,0.34), inset 0 0 0 1px rgba(255,255,255,0.48) !important;text-shadow:none !important;}\n";
+    css += tile2048Selectors.join(",") + "{box-shadow:0 0 24px rgba(154,90,255,0.34), 0 0 48px rgba(102,155,255,0.18), inset 0 0 0 1px rgba(255,255,255,0.22) !important;}\n";
+    return css;
+  }
+
+  function nightBackgroundCss() {
+    var css = "";
+    css += "html[data-night-background='1']{background:linear-gradient(180deg,#101726 0%,#0b1220 52%,#070d16 100%) !important;color-scheme:dark;}\n";
+    css += "html[data-night-background='1'] body{background:transparent !important;color:#ece2d3 !important;}\n";
+    css += "html[data-night-background='1'] h1.title,html[data-night-background='1'] h1.title a,html[data-night-background='1'] .mode-group-title,html[data-night-background='1'] .replay-modal-content h3,html[data-night-background='1'] .settings-modal-content h3,html[data-night-background='1'] .announcement-modal-content h3{color:#ece2d3 !important;}\n";
+    css += "html[data-night-background='1'] p,html[data-night-background='1'] .game-intro,html[data-night-background='1'] .game-explanation,html[data-night-background='1'] .settings-note,html[data-night-background='1'] .stats-left,html[data-night-background='1'] .stats-right,html[data-night-background='1'] .site-record-footer p{color:#c8bcaa !important;}\n";
+    css += "html[data-night-background='1'] a:not(.top-action-btn):not(.restart-button):not(.replay-button):not(.mode-hub-btn):not(.keep-playing-button):not(.retry-button):not(.undo-button){color:#f0dcc0 !important;}\n";
+    css += "html[data-night-background='1'] .score-container,html[data-night-background='1'] .best-container,html[data-night-background='1'] #timer,html[data-night-background='1'] .timer-container,html[data-night-background='1'] .timer-leaderboard-summary{background:linear-gradient(180deg, rgba(43,60,83,0.96) 0%, rgba(23,33,49,0.96) 100%) !important;color:#ece2d3 !important;box-shadow:0 10px 24px rgba(2,6,16,0.3), inset 0 0 0 1px rgba(235,244,255,0.06) !important;}\n";
+    css += "html[data-night-background='1'] .score-container:after,html[data-night-background='1'] .best-container:after,html[data-night-background='1'] #timer:after,html[data-night-background='1'] .timer-container:after,html[data-night-background='1'] .timer-leaderboard-summary:after{color:#97a7bc !important;}\n";
+    css += "html[data-night-background='1'] .timer-scroll-btn,html[data-night-background='1'] .timerbox-toggle-btn,html[data-night-background='1'] .mobile-hint-toggle-btn,html[data-night-background='1'] .stats-panel-toggle{background:linear-gradient(180deg, rgba(38,53,76,0.96) 0%, rgba(24,35,52,0.96) 100%) !important;color:#ece2d3 !important;border:1px solid rgba(181,198,221,0.16) !important;box-shadow:0 8px 18px rgba(2,6,16,0.22), inset 0 1px 0 rgba(255,255,255,0.05) !important;}\n";
+    css += "html[data-night-background='1'] .timer-scroll-btn:hover,html[data-night-background='1'] .timerbox-toggle-btn:hover,html[data-night-background='1'] .mobile-hint-toggle-btn:hover,html[data-night-background='1'] .stats-panel-toggle:hover{background:linear-gradient(180deg, rgba(51,70,98,0.98) 0%, rgba(28,41,62,0.98) 100%) !important;color:#fff4e1 !important;}\n";
+    css += "html[data-night-background='1'] .timertile:not([class*='timer-legend-']),html[data-night-background='1'] .timer-leaderboard-row .timer-leaderboard-name-tile{background:linear-gradient(180deg, rgba(25,36,56,0.96) 0%, rgba(16,24,38,0.96) 100%) !important;color:#ece2d3 !important;box-shadow:inset 0 0 0 1px rgba(233,241,255,0.06) !important;}\n";
+    css += "html[data-night-background='1'] .game-container{background:linear-gradient(180deg, rgba(27,39,61,0.98) 0%, rgba(15,24,39,0.98) 100%) !important;box-shadow:0 16px 34px rgba(2,6,16,0.28), inset 0 0 0 1px rgba(235,244,255,0.05) !important;border:none !important;}\n";
+    css += "html[data-night-background='1'] .grid-cell{background:rgba(176,192,214,0.12) !important;box-shadow:inset 0 0 0 1px rgba(235,244,255,0.03) !important;}\n";
+    css += "html[data-night-background='1'] .game-container .game-message{background:rgba(8,14,25,0.82) !important;color:#ece2d3 !important;}\n";
+    css += "html[data-night-background='1'] .game-container .game-message.game-won{background:rgba(183,141,60,0.74) !important;}\n";
+    css += "html[data-night-background='1'] .game-container .game-message.game-over{background:rgba(8,14,25,0.86) !important;}\n";
+    css += "html[data-night-background='1'] .restart-button,html[data-night-background='1'] .top-action-btn,html[data-night-background='1'] .replay-button,html[data-night-background='1'] .replay-modal-actions .replay-button,html[data-night-background='1'] .replay-control-btn,html[data-night-background='1'] .import-replay-button,html[data-night-background='1'] .game-container .game-message a,html[data-night-background='1'] .game-container .game-message a.export-replay-button,html[data-night-background='1'] .game-container .game-message a.import-replay-button,html[data-night-background='1'] .game-container .game-message a.undo-button,html[data-night-background='1'] .mode-hub-btn,html[data-night-background='1'] .home-guide-btn{background:linear-gradient(180deg, rgba(69,98,130,0.98) 0%, rgba(47,68,92,0.98) 100%) !important;color:#f6efe3 !important;box-shadow:0 10px 22px rgba(2,6,16,0.24), inset 0 0 0 1px rgba(255,255,255,0.08) !important;}\n";
+    css += "html[data-night-background='1'] .restart-button:hover,html[data-night-background='1'] .top-action-btn:hover,html[data-night-background='1'] .replay-button:hover,html[data-night-background='1'] .replay-modal-actions .replay-button:hover,html[data-night-background='1'] .replay-control-btn:hover,html[data-night-background='1'] .game-container .game-message a:hover,html[data-night-background='1'] .mode-hub-btn:hover{background:linear-gradient(180deg, rgba(84,117,152,1) 0%, rgba(56,81,109,1) 100%) !important;color:#fff4e1 !important;}\n";
+    css += "html[data-night-background='1'] .top-action-btn svg,html[data-night-background='1'] .restart-button svg{stroke:#f6efe3 !important;}\n";
+    css += "html[data-night-background='1'] .replay-modal-content,html[data-night-background='1'] .portal-card,html[data-night-background='1'] .history-item,html[data-night-background='1'] .mode-hub,html[data-night-background='1'] .replay-controls-panel,html[data-night-background='1'] .settings-modal-content,html[data-night-background='1'] .announcement-modal-content,html[data-night-background='1'] .mobile-hint-modal-content,html[data-night-background='1'] .mobile-hint-body{background:linear-gradient(180deg, rgba(24,36,56,0.96) 0%, rgba(13,21,34,0.97) 100%) !important;border-color:rgba(181,198,221,0.16) !important;color:#ece2d3 !important;box-shadow:0 20px 42px rgba(1,4,12,0.42), inset 0 1px 0 rgba(255,255,255,0.04) !important;}\n";
     return css;
   }
 
@@ -1388,7 +1472,7 @@
     var fibPaletteStyles = resolvePaletteStyleBundle(theme, activeTilePalette, "fibonacci");
     var pow2PaletteColors = pow2PaletteStyles.background;
     var fibPaletteColors = fibPaletteStyles.background;
-    if (theme.id === "classic") {
+    if (resolveUiTheme(theme).id === "classic") {
       // Authentic 2048 looks
       css += "html, body { background: #faf8ef !important; color: #776e65 !important; }\n";
       css += ".game-container { background: #bbada0 !important; border-radius: 6px !important; border: none !important; box-shadow: none !important; }\n";
@@ -1974,7 +2058,7 @@
     }
     
     css += pageCss(theme);
-    if (theme.id === "classic") {
+    if (resolveUiTheme(theme).id === "classic") {
       css += ".restart-button,.top-action-btn,.replay-button,.replay-modal-actions .replay-button,.replay-control-btn,.import-replay-button,.game-container .game-message a,.game-container .game-message a.export-replay-button,.game-container .game-message a.import-replay-button,.game-container .game-message a.undo-button,.mode-hub-btn,.home-guide-btn{color:#ffffff !important;}\n";
       css += ".top-action-btn svg,.restart-button svg{stroke:#ffffff !important;}\n";
     }
@@ -2060,6 +2144,9 @@
          css += tileCssForValues(theme, POW2_TILE_VALUES, "body:not([data-ruleset=\"fibonacci\"])", pow2PaletteStyles);
          css += tileCssForValues(theme, FIB_TILE_VALUES, "body[data-ruleset=\"fibonacci\"]", fibPaletteStyles);
     }
+    if (theme.id === "midnight_nebula") {
+      css += midnightNebulaAccentCss(["body"]);
+    }
 
     if (theme.id === "yanyuan") {
       css += "html[data-theme='yanyuan'] .tile .tile-inner,html[data-theme='yanyuan'] .theme-preview-tile{border-radius:4px !important;text-shadow:none !important;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16) !important;}\n";
@@ -2070,6 +2157,7 @@
     
     css += timerCss(theme);
     css += legendCss(theme, pow2PaletteColors);
+    css += nightBackgroundCss();
     css += lowPerfCss();
     return css;
   }
@@ -2309,6 +2397,7 @@
       if (uniqueSelectors.indexOf(selectors[si]) === -1) uniqueSelectors.push(selectors[si]);
     }
     var css = "";
+    var uiTheme = resolveUiTheme(theme);
     var t = getUiTokens(theme);
     var activeTilePalette = resolveActiveTilePalette(theme);
     var pow2PaletteStyles = resolvePaletteStyleBundle(theme, activeTilePalette, "pow2");
@@ -2326,8 +2415,10 @@
     css += afterResetSelector + "{content:none;background-image:none;opacity:0;}\n";
 
     // Default container style for preview
-    for (var i = 0; i < uniqueSelectors.length; i++) {
-      css += uniqueSelectors[i] + " { background: " + t.gameBg + " !important; box-shadow: " + t.shadow + "; border: 1px solid " + t.border + "; }\n";
+    if (!theme.tileOnlyTheme) {
+      for (var i = 0; i < uniqueSelectors.length; i++) {
+        css += uniqueSelectors[i] + " { background: " + t.gameBg + " !important; box-shadow: " + t.shadow + "; border: 1px solid " + t.border + "; }\n";
+      }
     }
     
     // Theme-specific container overrides
@@ -2340,9 +2431,9 @@
         css += uniqueSelectors[i] + " { background-image: url('" + cloudPattern + "'); }\n";
       }
     }
-    if (theme.neon) {
+    if (!theme.tileOnlyTheme && uiTheme.neon) {
       for (i = 0; i < uniqueSelectors.length; i++) {
-        css += uniqueSelectors[i] + " { box-shadow: 0 0 0 1px " + rgba(t.border, 0.6) + ",0 0 18px " + rgba(colorForIndex(theme, 0, theme.colors.length), 0.22) + ",0 10px 28px rgba(6,8,18,0.52); } \n";
+        css += uniqueSelectors[i] + " { box-shadow: 0 0 0 1px " + rgba(t.border, 0.6) + ",0 0 18px " + rgba(colorForIndex(uiTheme, 0, uiTheme.colors.length), 0.22) + ",0 10px 28px rgba(6,8,18,0.52); } \n";
       }
     }
 
@@ -2353,6 +2444,9 @@
     } else {
       css += tileCssForValues(theme, POW2_TILE_VALUES, pow2Selector, pow2PaletteStyles);
       css += tileCssForValues(theme, FIB_PREVIEW_VALUES, fibSelector, fibPaletteStyles);
+    }
+    if (theme.id === "midnight_nebula") {
+      css += midnightNebulaAccentCss(uniqueSelectors);
     }
 
     return css;

@@ -29,6 +29,17 @@
     }
   }
 
+  function parsePracticeModeKey(searchLike) {
+    try {
+      var params = new URLSearchParams(searchLike || "");
+      var raw = params.get("practice_mode_key");
+      var key = typeof raw === "string" ? raw.trim() : "";
+      return key && key !== "practice" ? key : "";
+    } catch (_err) {
+      return "";
+    }
+  }
+
   function buildPracticeModeConfig(baseConfig, rulesetRaw) {
     var ruleset = rulesetRaw === "fibonacci" ? "fibonacci" : "pow2";
     var cfg = cloneModeConfig(baseConfig || {});
@@ -39,6 +50,58 @@
         ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
         : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
     return cfg;
+  }
+
+  function buildPracticeModeConfigFromSelection(baseConfig) {
+    var source = cloneModeConfig(baseConfig || {});
+    var ruleset = source.ruleset === "fibonacci" ? "fibonacci" : "pow2";
+    var boardWidth = Number.isInteger(source.board_width) && Number(source.board_width) > 0
+      ? Number(source.board_width)
+      : 4;
+    var boardHeight = Number.isInteger(source.board_height) && Number(source.board_height) > 0
+      ? Number(source.board_height)
+      : boardWidth;
+    var specialRules =
+      source.special_rules && typeof source.special_rules === "object" && !Array.isArray(source.special_rules)
+        ? cloneModeConfig(source.special_rules)
+        : {};
+    source.key = "practice";
+    source.label = "练习板（直通）";
+    source.board_width = boardWidth;
+    source.board_height = boardHeight;
+    source.ruleset = ruleset;
+    source.undo_enabled = true;
+    source.spawn_table =
+      Array.isArray(source.spawn_table) && source.spawn_table.length > 0
+        ? cloneModeConfig(source.spawn_table)
+        : (ruleset === "fibonacci"
+          ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
+          : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }]);
+    source.ranked_bucket = "none";
+    source.mode_family =
+      typeof source.mode_family === "string" && source.mode_family
+        ? source.mode_family
+        : (ruleset === "fibonacci" ? "fibonacci" : "pow2");
+    source.rank_policy = "unranked";
+    source.special_rules = specialRules;
+    if (Number.isInteger(source.max_tile) && Number(source.max_tile) > 0) {
+      source.max_tile = Number(source.max_tile);
+      source.special_rules.enforce_max_tile = true;
+    } else {
+      delete source.max_tile;
+    }
+    return source;
+  }
+
+  function resolvePracticeSelectedMode(modeCatalog, searchLike) {
+    if (!modeCatalog || typeof modeCatalog.getMode !== "function") return null;
+    var practiceRuntime = global.CorePracticeModeRuntime;
+    var key =
+      practiceRuntime && typeof practiceRuntime.parsePracticeModeKey === "function"
+        ? practiceRuntime.parsePracticeModeKey(searchLike)
+        : parsePracticeModeKey(searchLike);
+    if (!key) return null;
+    return modeCatalog.getMode(key) || null;
   }
 
   function resolveCatalogModeWithDefault(catalog, modeKey, defaultModeKey) {
@@ -70,7 +133,17 @@
 
     if (modeKey === "practice" && modeConfig) {
       var practiceRuntime = global.CorePracticeModeRuntime;
-      if (
+      var selectedMode = resolvePracticeSelectedMode(opts.modeCatalog || null, opts.searchLike || "");
+      if (selectedMode) {
+        if (
+          practiceRuntime &&
+          typeof practiceRuntime.buildPracticeModeConfigFromSelection === "function"
+        ) {
+          modeConfig = practiceRuntime.buildPracticeModeConfigFromSelection(selectedMode);
+        } else {
+          modeConfig = buildPracticeModeConfigFromSelection(selectedMode);
+        }
+      } else if (
         practiceRuntime &&
         typeof practiceRuntime.parsePracticeRuleset === "function" &&
         typeof practiceRuntime.buildPracticeModeConfig === "function"

@@ -128,6 +128,10 @@
       userNickname: "昵称：",
       userEmail: "邮箱：",
       userCreated: "注册时间：",
+      guideTitle: "新手指引",
+      guideDesc: "返回首页并重新打开新手指引。",
+      guidePill: "指引",
+      guideOpen: "打开指引",
       boardHeading: "在线排行榜",
       boardSubtitle: "按模式和榜单筛选后查看排行。",
       boardMode: "模式",
@@ -196,6 +200,10 @@
       userNickname: "Nickname:",
       userEmail: "Email:",
       userCreated: "Created:",
+      guideTitle: "Beginner Guide",
+      guideDesc: "Jump back to Home and reopen the onboarding guide.",
+      guidePill: "Guide",
+      guideOpen: "Open Guide",
       boardHeading: "Leaderboard",
       boardSubtitle: "Filter by mode and metric.",
       boardMode: "Mode",
@@ -1203,6 +1211,10 @@
       "account-user-nickname-label": t("userNickname"),
       "account-user-email-label": t("userEmail"),
       "account-user-created-label": t("userCreated"),
+      "account-guide-title": t("guideTitle"),
+      "account-guide-desc": t("guideDesc"),
+      "account-guide-pill": t("guidePill"),
+      "account-open-guide-btn": t("guideOpen"),
       "account-board-heading": t("boardHeading"),
       "account-board-subtitle": t("boardSubtitle"),
       "account-board-mode-label": t("boardMode"),
@@ -1250,6 +1262,7 @@
     var metricSelect = byId("account-board-metric");
     var prevBtn = byId("account-board-prev");
     var nextBtn = byId("account-board-next");
+    var guideBtn = byId("account-open-guide-btn");
 
     if (loginBtn) loginBtn.addEventListener("click", onLoginClick);
     if (registerBtn) registerBtn.setAttribute("href", "register.html");
@@ -1288,6 +1301,14 @@
         if (!leaderboardHasNext) return;
         leaderboardPage += 1;
         refreshLeaderboard(false);
+      });
+    }
+    if (guideBtn) {
+      guideBtn.addEventListener("click", function () {
+        writeLocalStorageItem("home_guide_seen_v1", "0");
+        if (global.location) {
+          global.location.href = "2048.html";
+        }
       });
     }
 

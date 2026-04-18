@@ -112,101 +112,17 @@
 
   function applyHomeGuideSettingsUi(input) {
     var source = toRecord(input);
-    var homeGuideRuntime = toRecord(source.homeGuideRuntime);
-    var resolveHomeGuideSettingsState = asFunction(homeGuideRuntime.resolveHomeGuideSettingsState);
-    var resolveHomeGuideBindingState = asFunction(homeGuideRuntime.resolveHomeGuideBindingState);
-    var resolveHomeGuideToggleAction = asFunction(homeGuideRuntime.resolveHomeGuideToggleAction);
-    if (!resolveHomeGuideSettingsState || !resolveHomeGuideBindingState || !resolveHomeGuideToggleAction) {
-      return {
-        hasToggle: false,
-        didBindToggle: false,
-        didAssignSync: false,
-        didSync: false
-      };
-    }
-
-    var isHomePage = asFunction(source.isHomePage);
-    if (isHomePage && !isHomePage()) {
-      removeHomeGuideSettingsTriggerRow(toRecord(source.documentLike));
-      return {
-        hasToggle: false,
-        didBindToggle: false,
-        didAssignSync: false,
-        didSync: false
-      };
-    }
-
-    var toggle = ensureHomeGuideSettingsTrigger({
-      documentLike: source.documentLike,
-      homeGuideRuntime: homeGuideRuntime
-    });
-    if (!toggle) {
-      return {
-        hasToggle: false,
-        didBindToggle: false,
-        didAssignSync: false,
-        didSync: false
-      };
-    }
-
-    var documentLike = toRecord(source.documentLike);
-    var closeSettingsModal = asFunction(source.closeSettingsModal);
-    var startHomeGuide = asFunction(source.startHomeGuide);
-    var homeGuideState = toRecord(source.homeGuideState);
-
-    var didSync = false;
-    var sync = function () {
-      var uiState = toRecord(resolveHomeGuideSettingsState({
-        isHomePage: isHomePage ? !!isHomePage() : false,
-        guideActive: resolveBoolean(homeGuideState.active),
-        fromSettings: resolveBoolean(homeGuideState.fromSettings)
-      }));
-      var toggleRecord = toRecord(toggle);
-      toggleRecord.disabled = resolveBoolean(uiState.toggleDisabled);
-      didSync = true;
-    };
-
+    removeHomeGuideSettingsTriggerRow(toRecord(source.documentLike));
     var didAssignSync = false;
     if (isRecord(source.windowLike)) {
-      source.windowLike.syncHomeGuideSettingsUI = sync;
+      source.windowLike.syncHomeGuideSettingsUI = function () {};
       didAssignSync = true;
     }
-
-    var toggleRecord = toRecord(toggle);
-    var toggleBindingState = toRecord(resolveHomeGuideBindingState({
-      alreadyBound: resolveBoolean(toggleRecord.__homeGuideBound)
-    }));
-
-    var didBindToggle = false;
-    if (toggleBindingState.shouldBind) {
-      toggleRecord.__homeGuideBound = toggleBindingState.boundValue;
-      didBindToggle = bindListener(toggle, "click", function () {
-        var toggleAction = toRecord(resolveHomeGuideToggleAction({
-          checked: true,
-          isHomePage: isHomePage ? !!isHomePage() : false
-        }));
-        if (toggleAction.shouldResync) {
-          sync();
-          return;
-        }
-        if (toggleAction.shouldStartGuide && startHomeGuide) {
-          if (toggleAction.shouldCloseSettings && closeSettingsModal) {
-            closeSettingsModal();
-          }
-          startHomeGuide({
-            fromSettings: resolveBoolean(toggleAction.startFromSettings)
-          });
-        }
-      });
-    }
-
-    sync();
-
     return {
-      hasToggle: true,
-      didBindToggle: didBindToggle,
+      hasToggle: false,
+      didBindToggle: false,
       didAssignSync: didAssignSync,
-      didSync: didSync
+      didSync: false
     };
   }
 

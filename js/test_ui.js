@@ -3,10 +3,17 @@ document.addEventListener("DOMContentLoaded", function () {
   var PRACTICE_TRANSFER_SESSION_KEY = "practice_board_transfer_session_v1";
   var gridContainer = document.getElementById("test-grid-container");
   var selectionGrid = document.getElementById("selection-grid");
+  var practiceModePickerBtn = document.getElementById("practice-mode-picker-btn");
+  var practiceModePanel = document.getElementById("practice-mode-panel");
+  var practiceModeCloseBtn = document.getElementById("practice-mode-close");
+  var practiceModeCurrent = document.getElementById("practice-mode-current");
+  var practiceModeBadge = document.getElementById("practice-mode-badge");
+  var practiceModeList = document.getElementById("practice-mode-list");
   var practiceBoardCodeToggleBtn = document.getElementById("practice-board-code-btn");
   var practiceBoardCodePanel = document.getElementById("practice-board-code-panel");
   var practiceBoardCodeInput = document.getElementById("practice-board-code-input");
   var practiceBoardCodeConfirmBtn = document.getElementById("practice-board-code-confirm");
+  var currentPracticeModeSelectionKey = "";
   var selectedValue = null;
   var zeroCycleValues = [];
   var currentSelectionRuleset = "pow2";
@@ -46,6 +53,330 @@ document.addEventListener("DOMContentLoaded", function () {
       return JSON.parse(JSON.stringify(value));
     } catch (_err) {
       return null;
+    }
+  }
+
+  function toPositiveInt(value, fallback) {
+    var num = Number(value);
+    if (!Number.isFinite(num) || num <= 0) return fallback;
+    return Math.floor(num);
+  }
+
+  function getPracticeModeRuntime() {
+    return window.CorePracticeModeRuntime || null;
+  }
+
+  function resolvePracticeModeKeyParam() {
+    var practiceRuntime = getPracticeModeRuntime();
+    if (practiceRuntime && typeof practiceRuntime.parsePracticeModeKey === "function") {
+      return practiceRuntime.parsePracticeModeKey(window.location.search || "");
+    }
+    try {
+      var params = new URLSearchParams(window.location.search || "");
+      var raw = params.get("practice_mode_key");
+      var key = typeof raw === "string" ? raw.trim() : "";
+      return key && key !== "practice" ? key : "";
+    } catch (_err) {
+      return "";
+    }
+  }
+
+  function resolveDefaultPracticeSpawnTable(ruleset) {
+    return ruleset === "fibonacci"
+      ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
+      : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
+  }
+
+  function buildPracticeModeConfigFromCatalogMode(mode) {
+    var practiceRuntime = getPracticeModeRuntime();
+    if (
+      practiceRuntime &&
+      typeof practiceRuntime.buildPracticeModeConfigFromSelection === "function"
+    ) {
+      return practiceRuntime.buildPracticeModeConfigFromSelection(mode || {});
+    }
+    var source = cloneJsonSafe(mode || {}) || {};
+    var ruleset = source.ruleset === "fibonacci" ? "fibonacci" : "pow2";
+    source.key = "practice";
+    source.label = "练习板（直通）";
+    source.board_width = toPositiveInt(source.board_width, 4);
+    source.board_height = toPositiveInt(source.board_height, source.board_width);
+    source.ruleset = ruleset;
+    source.undo_enabled = true;
+    source.spawn_table =
+      Array.isArray(source.spawn_table) && source.spawn_table.length > 0
+        ? (cloneJsonSafe(source.spawn_table) || source.spawn_table)
+        : resolveDefaultPracticeSpawnTable(ruleset);
+    source.ranked_bucket = "none";
+    source.mode_family =
+      typeof source.mode_family === "string" && source.mode_family
+        ? source.mode_family
+        : (ruleset === "fibonacci" ? "fibonacci" : "pow2");
+    source.rank_policy = "unranked";
+    source.special_rules =
+      source.special_rules && typeof source.special_rules === "object" && !Array.isArray(source.special_rules)
+        ? (cloneJsonSafe(source.special_rules) || source.special_rules)
+        : {};
+    if (Number.isInteger(source.max_tile) && Number(source.max_tile) > 0) {
+      source.max_tile = Number(source.max_tile);
+      source.special_rules.enforce_max_tile = true;
+    } else {
+      delete source.max_tile;
+    }
+    return source;
+  }
+
+  function isPracticeSelectableCatalogMode(mode) {
+    if (!(mode && typeof mode === "object")) return false;
+    var key = typeof mode.key === "string" ? mode.key.trim() : "";
+    if (!key || key === "practice") return false;
+    if (key === "standard_4x4_pow2_no_undo") return true;
+    if (key.indexOf("board_") === 0 && key.indexOf("_pow2_no_undo") !== -1) return true;
+    if (key.indexOf("capped_") === 0 && key.indexOf("_no_undo") !== -1) return true;
+    if (key.indexOf("fib_") === 0 && key.indexOf("_no_undo") !== -1) return true;
+    if (key.indexOf("diag_") === 0 && key.indexOf("_no_undo") !== -1) return true;
+    return false;
+  }
+
+  function getPracticeModeSignature(modeConfig) {
+    if (!(modeConfig && typeof modeConfig === "object")) return "";
+    return JSON.stringify({
+      board_width: toPositiveInt(modeConfig.board_width, 4),
+      board_height: toPositiveInt(modeConfig.board_height, toPositiveInt(modeConfig.board_width, 4)),
+      ruleset: modeConfig.ruleset === "fibonacci" ? "fibonacci" : "pow2",
+      mode_family:
+        typeof modeConfig.mode_family === "string" && modeConfig.mode_family
+          ? modeConfig.mode_family
+          : "",
+      max_tile:
+        Number.isInteger(modeConfig.max_tile) && Number(modeConfig.max_tile) > 0
+          ? Number(modeConfig.max_tile)
+          : null,
+      spawn_table:
+        Array.isArray(modeConfig.spawn_table) && modeConfig.spawn_table.length > 0
+          ? (cloneJsonSafe(modeConfig.spawn_table) || modeConfig.spawn_table)
+          : [],
+      special_rules:
+        modeConfig.special_rules && typeof modeConfig.special_rules === "object" && !Array.isArray(modeConfig.special_rules)
+          ? (cloneJsonSafe(modeConfig.special_rules) || modeConfig.special_rules)
+          : {}
+    });
+  }
+
+  function normalizePracticeModeOptionLabel(label) {
+    var text = typeof label === "string" ? label.trim() : "";
+    return text
+      .replace(/（\s*([^（）]*?)\s*[，,]\s*无撤回\s*）/g, "（$1）")
+      .replace(/\(\s*([^()]*?)\s*,\s*No Undo\s*\)/gi, "($1)")
+      .replace(/（\s*无撤回\s*）/g, "")
+      .replace(/\(\s*No Undo\s*\)/gi, "")
+      .replace(/无撤回/g, "")
+      .replace(/\bNo Undo\b/gi, "")
+      .replace(/[，,]\s*）/g, "）")
+      .replace(/[，,]\s*\)/g, ")")
+      .replace(/\(\s*\)/g, "")
+      .replace(/（\s*）/g, "")
+      .replace(/\s{2,}/g, " ")
+      .replace(/\s+([）)])/g, "$1")
+      .replace(/([（(])\s+/g, "$1")
+      .trim();
+  }
+
+  function getPracticeSelectableModes() {
+    if (!(window.ModeCatalog && typeof window.ModeCatalog.listModes === "function")) return [];
+    var rawModes = window.ModeCatalog.listModes();
+    var out = [];
+    var seen = {};
+    for (var i = 0; i < rawModes.length; i++) {
+      var mode = rawModes[i];
+      if (!isPracticeSelectableCatalogMode(mode)) continue;
+      var practiceConfig = buildPracticeModeConfigFromCatalogMode(mode);
+      var signature = getPracticeModeSignature(practiceConfig);
+      if (!signature || seen[signature]) continue;
+      seen[signature] = true;
+      out.push({
+        key: mode.key,
+        label: normalizePracticeModeOptionLabel(typeof mode.label === "string" && mode.label ? mode.label : mode.key),
+        ruleset: practiceConfig.ruleset,
+        board_width: practiceConfig.board_width,
+        board_height: practiceConfig.board_height,
+        practiceConfig: practiceConfig
+      });
+    }
+    return out;
+  }
+
+  function findPracticeSelectableModeByKey(key) {
+    if (!key) return null;
+    var modes = getPracticeSelectableModes();
+    for (var i = 0; i < modes.length; i++) {
+      if (modes[i].key === key) return modes[i];
+    }
+    return null;
+  }
+
+  function resolveCurrentPracticeModeSelectionKey() {
+    if (currentPracticeModeSelectionKey && findPracticeSelectableModeByKey(currentPracticeModeSelectionKey)) {
+      return currentPracticeModeSelectionKey;
+    }
+    var paramKey = resolvePracticeModeKeyParam();
+    if (paramKey && findPracticeSelectableModeByKey(paramKey)) {
+      return paramKey;
+    }
+    var currentConfig =
+      window.game_manager && window.game_manager.modeConfig
+        ? window.game_manager.modeConfig
+        : window.GAME_MODE_CONFIG;
+    var currentSignature = getPracticeModeSignature(currentConfig);
+    if (!currentSignature) return "";
+    var modes = getPracticeSelectableModes();
+    for (var i = 0; i < modes.length; i++) {
+      if (getPracticeModeSignature(modes[i].practiceConfig) === currentSignature) {
+        return modes[i].key;
+      }
+    }
+    return "";
+  }
+
+  function getPracticeModeRulesetText(ruleset) {
+    return ruleset === "fibonacci" ? "斐波那契" : "2 的幂";
+  }
+
+  function syncPracticeModePickerUi() {
+    var activeKey = resolveCurrentPracticeModeSelectionKey();
+    if (activeKey) currentPracticeModeSelectionKey = activeKey;
+    var activeMode = findPracticeSelectableModeByKey(activeKey);
+    var activeLabel = activeMode ? activeMode.label : "默认练习板";
+    if (practiceModePickerBtn) {
+      var title = "选择模式（当前：" + activeLabel + "）";
+      practiceModePickerBtn.setAttribute("title", title);
+      practiceModePickerBtn.setAttribute("aria-label", title);
+      practiceModePickerBtn.setAttribute("data-active-practice-mode-key", activeKey || "");
+    }
+    if (practiceModeCurrent) {
+      practiceModeCurrent.textContent = "当前模式：" + activeLabel;
+    }
+    if (practiceModeBadge) {
+      practiceModeBadge.textContent = activeLabel;
+      practiceModeBadge.setAttribute("title", activeLabel);
+      practiceModeBadge.setAttribute("aria-label", "当前练习板模式：" + activeLabel);
+    }
+    if (!practiceModeList) return;
+    practiceModeList.innerHTML = "";
+    var modes = getPracticeSelectableModes();
+    if (!modes.length) {
+      var empty = document.createElement("div");
+      empty.className = "practice-mode-empty";
+      empty.textContent = "暂无可选模式";
+      practiceModeList.appendChild(empty);
+      return;
+    }
+    for (var i = 0; i < modes.length; i++) {
+      var option = modes[i];
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "practice-mode-option";
+      if (option.key === activeKey) {
+        button.classList.add("is-active");
+      }
+      button.setAttribute("data-practice-mode-key", option.key);
+
+      var label = document.createElement("span");
+      label.className = "practice-mode-option-label";
+      label.textContent = option.label;
+      button.appendChild(label);
+
+      var meta = document.createElement("span");
+      meta.className = "practice-mode-option-meta";
+      meta.textContent =
+        option.board_width + "x" + option.board_height + " · " + getPracticeModeRulesetText(option.ruleset);
+      button.appendChild(meta);
+
+      practiceModeList.appendChild(button);
+    }
+  }
+
+  function setPracticeModePanelOpen(open) {
+    if (!practiceModePanel) return;
+    var shouldOpen = !!open;
+    if (shouldOpen && practiceBoardCodePanel && practiceBoardCodePanel.classList.contains("is-open")) {
+      setPracticeBoardCodePanelOpen(false);
+    }
+    practiceModePanel.classList.toggle("is-open", shouldOpen);
+    practiceModePanel.setAttribute("aria-hidden", shouldOpen ? "false" : "true");
+    if (document.body && document.body.classList) {
+      document.body.classList.toggle("practice-mode-open", shouldOpen);
+    }
+    if (practiceModePickerBtn) {
+      practiceModePickerBtn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+    }
+    if (shouldOpen) {
+      syncPracticeModePickerUi();
+      if (practiceModeCloseBtn) practiceModeCloseBtn.focus();
+    }
+  }
+
+  function buildEmptyPracticeBoardForModeConfig(modeConfig) {
+    var width = toPositiveInt(modeConfig && modeConfig.board_width, 4);
+    var height = toPositiveInt(modeConfig && modeConfig.board_height, width);
+    var board = [];
+    for (var y = 0; y < height; y++) {
+      var row = [];
+      for (var x = 0; x < width; x++) {
+        row.push(0);
+      }
+      board.push(row);
+    }
+    return board;
+  }
+
+  function updatePracticeModeUrlState(modeKey, ruleset) {
+    if (!window.history || typeof window.history.replaceState !== "function") return;
+    try {
+      var params = new URLSearchParams(window.location.search || "");
+      params.delete("practice_fresh");
+      params.delete("practice_payload");
+      params.delete("practice_token");
+      if (modeKey && modeKey !== "practice") {
+        params.set("practice_mode_key", modeKey);
+      } else {
+        params.delete("practice_mode_key");
+      }
+      params.set("practice_ruleset", ruleset === "fibonacci" ? "fibonacci" : "pow2");
+      var next = "Practice_board.html";
+      var query = params.toString();
+      if (query) next += "?" + query;
+      window.history.replaceState(null, "", next);
+    } catch (_err) {}
+  }
+
+  function applyPracticeModeSelection(modeKey) {
+    var option = findPracticeSelectableModeByKey(modeKey);
+    var manager = window.game_manager;
+    if (!option) return false;
+    if (!manager || typeof manager.restartWithBoard !== "function") {
+      alert("游戏尚未完成初始化，请稍后重试。");
+      return false;
+    }
+    var modeConfig = cloneJsonSafe(option.practiceConfig) || option.practiceConfig;
+    var emptyBoard = buildEmptyPracticeBoardForModeConfig(modeConfig);
+    try {
+      manager.restartWithBoard(emptyBoard, modeConfig, {
+        setPracticeRestartBase: true,
+        asReplay: false
+      });
+      manager.isTestMode = true;
+      currentPracticeModeSelectionKey = option.key;
+      updatePracticeModeUrlState(option.key, modeConfig.ruleset);
+      syncSelectionGridByRuleset();
+      syncPracticeSetupPhaseUi();
+      syncPracticeModePickerUi();
+      requestPracticeRelayout();
+      return true;
+    } catch (err) {
+      console.error("Practice mode selection failed:", err);
+      alert("切换练习模式失败，请稍后重试。");
+      return false;
     }
   }
 
@@ -136,6 +467,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     var modeConfig = buildPracticeModeConfigForBoard(manager, decoded.width, decoded.height);
+    var maxTile = Number(modeConfig && modeConfig.max_tile);
+    var boardValidation = validatePracticeBoardValuesAgainstMaxTile(decoded.board, maxTile);
+    if (!boardValidation.ok) {
+      alert(boardValidation.message);
+      return false;
+    }
     try {
       manager.restartWithBoard(decoded.board, modeConfig, {
         setPracticeRestartBase: true,
@@ -156,6 +493,9 @@ document.addEventListener("DOMContentLoaded", function () {
   function setPracticeBoardCodePanelOpen(open) {
     if (!practiceBoardCodePanel) return;
     var shouldOpen = !!open;
+    if (shouldOpen && practiceModePanel && practiceModePanel.classList.contains("is-open")) {
+      setPracticeModePanelOpen(false);
+    }
     practiceBoardCodePanel.classList.toggle("is-open", shouldOpen);
     practiceBoardCodePanel.setAttribute("aria-hidden", shouldOpen ? "false" : "true");
     if (document.body && document.body.classList) {
@@ -309,18 +649,22 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  function stripPracticeFreshFromUrl() {
+  function replacePracticeUrlSearchParams(params) {
     if (!window.history || typeof window.history.replaceState !== "function") return;
+    try {
+      var next = "Practice_board.html";
+      var query = params && typeof params.toString === "function" ? params.toString() : "";
+      if (query) next += "?" + query;
+      window.history.replaceState(null, "", next);
+    } catch (_err) {}
+  }
+
+  function stripPracticeFreshFromUrl() {
     try {
       var params = new URLSearchParams(window.location.search || "");
       if (params.get("practice_fresh") !== "1") return;
       params.delete("practice_fresh");
-      var next = "Practice_board.html";
-      var query = params.toString();
-      if (query) {
-        next += "?" + query;
-      }
-      window.history.replaceState(null, "", next);
+      replacePracticeUrlSearchParams(params);
     } catch (_err) {}
   }
 
@@ -368,23 +712,27 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function stripPayloadFromUrl(token) {
-    if (!window.history || typeof window.history.replaceState !== "function") return;
-    var next = "Practice_board.html";
-    var ruleset = getPracticeRulesetParam();
-    if (token) {
-      next += "?practice_token=" + encodeURIComponent(token);
-      if (ruleset) next += "&practice_ruleset=" + encodeURIComponent(ruleset);
-    } else if (ruleset) {
-      next += "?practice_ruleset=" + encodeURIComponent(ruleset);
-    }
-    window.history.replaceState(null, "", next);
+    try {
+      var params = new URLSearchParams(window.location.search || "");
+      if (token && !params.get("practice_token")) {
+        params.set("practice_token", token);
+      }
+      params.delete("practice_payload");
+      replacePracticeUrlSearchParams(params);
+    } catch (_err) {}
   }
 
   function getPracticeRulesetParam() {
     try {
       var params = new URLSearchParams(window.location.search || "");
       var raw = params.get("practice_ruleset");
-      return raw === "fibonacci" ? "fibonacci" : "pow2";
+      if (raw === "fibonacci") return "fibonacci";
+      var practiceModeKey = resolvePracticeModeKeyParam();
+      if (practiceModeKey) {
+        var selectedMode = findPracticeSelectableModeByKey(practiceModeKey);
+        if (selectedMode && selectedMode.ruleset === "fibonacci") return "fibonacci";
+      }
+      return "pow2";
     } catch (_err) {
       return "pow2";
     }
@@ -397,9 +745,89 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     } catch (_err) {}
     try {
+      if (
+        window.GAME_MODE_CONFIG &&
+        typeof window.GAME_MODE_CONFIG === "object" &&
+        window.GAME_MODE_CONFIG.ruleset === "fibonacci"
+      ) {
+        return "fibonacci";
+      }
+    } catch (_errWindow) {}
+    try {
       if (document.body && document.body.getAttribute("data-ruleset") === "fibonacci") return "fibonacci";
     } catch (_err2) {}
     return getPracticeRulesetParam();
+  }
+
+  function resolvePracticePlacementMaxTile() {
+    var manager = window.game_manager;
+    var sources = [
+      manager && manager.modeConfig ? manager.modeConfig : null,
+      window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object" ? window.GAME_MODE_CONFIG : null
+    ];
+    for (var i = 0; i < sources.length; i++) {
+      var source = sources[i];
+      var raw = Number(source && source.max_tile);
+      if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
+    }
+    var managerMaxTile = Number(manager && manager.maxTile);
+    if (Number.isFinite(managerMaxTile) && managerMaxTile > 0) {
+      return Math.floor(managerMaxTile);
+    }
+    return null;
+  }
+
+  function isPracticePlacementValueAllowed(value, maxTile) {
+    var numeric = Number(value);
+    if (!Number.isInteger(numeric) || numeric < 0) return false;
+    if (numeric === 0) return true;
+    if (!Number.isFinite(maxTile) || maxTile <= 0) return true;
+    return numeric <= maxTile;
+  }
+
+  function filterPracticePlacementValues(values, maxTile) {
+    var list = Array.isArray(values) ? values : [];
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      var value = Number(list[i]);
+      if (!isPracticePlacementValueAllowed(value, maxTile)) continue;
+      out.push(value);
+    }
+    if (out.indexOf(0) === -1) out.unshift(0);
+    return out;
+  }
+
+  function resolvePracticeDefaultSelectionValue(ruleset, values) {
+    var preferred = ruleset === "fibonacci" ? 1 : 2;
+    var list = Array.isArray(values) ? values : [];
+    if (list.indexOf(preferred) !== -1) return preferred;
+    for (var i = 0; i < list.length; i++) {
+      if (Number(list[i]) > 0) return Number(list[i]);
+    }
+    return 0;
+  }
+
+  function validatePracticeBoardValuesAgainstMaxTile(board, maxTile) {
+    if (!Number.isFinite(maxTile) || maxTile <= 0) {
+      return { ok: true };
+    }
+    var rows = Array.isArray(board) ? board : [];
+    for (var y = 0; y < rows.length; y++) {
+      var row = Array.isArray(rows[y]) ? rows[y] : [];
+      for (var x = 0; x < row.length; x++) {
+        var value = Number(row[x]);
+        if (!Number.isInteger(value) || value < 0) {
+          return { ok: false, message: "棋盘码包含非法数字。" };
+        }
+        if (value > maxTile) {
+          return {
+            ok: false,
+            message: "当前封顶模式最多只能放置到 " + String(maxTile) + "。"
+          };
+        }
+      }
+    }
+    return { ok: true };
   }
 
   function getSelectionValuesForRuleset(ruleset) {
@@ -517,13 +945,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function syncSelectionGridByRuleset() {
     var ruleset = getCurrentRuleset();
+    var maxTile = resolvePracticePlacementMaxTile();
     currentSelectionRuleset = ruleset;
-    zeroCycleValues = ruleset === "fibonacci" ? FIBONACCI_ZERO_CYCLE_VALUES.slice() : POW2_ZERO_CYCLE_VALUES.slice();
-    var values = getSelectionValuesForRuleset(ruleset);
-    var defaultValue = ruleset === "fibonacci" ? 1 : 2;
+    zeroCycleValues = filterPracticePlacementValues(
+      ruleset === "fibonacci" ? FIBONACCI_ZERO_CYCLE_VALUES.slice() : POW2_ZERO_CYCLE_VALUES.slice(),
+      maxTile
+    );
+    var values = filterPracticePlacementValues(getSelectionValuesForRuleset(ruleset), maxTile);
+    var defaultValue = resolvePracticeDefaultSelectionValue(ruleset, values);
     zeroCyclePhaseByCell = {};
     renderSelectionGrid(values, defaultValue);
     syncPracticeSetupPhaseUi();
+    syncPracticeModePickerUi();
   }
 
   function getZeroModeGuideText() {
@@ -628,18 +1061,14 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  function buildEmptyPracticeBoard(manager) {
+  function buildEmptyPracticeBoard(manager, modeConfig) {
+    if (modeConfig) return buildEmptyPracticeBoardForModeConfig(modeConfig);
     var width = Number.isInteger(manager && manager.width) && manager.width > 0 ? manager.width : 4;
     var height = Number.isInteger(manager && manager.height) && manager.height > 0 ? manager.height : width;
-    var board = [];
-    for (var y = 0; y < height; y++) {
-      var row = [];
-      for (var x = 0; x < width; x++) {
-        row.push(0);
-      }
-      board.push(row);
-    }
-    return board;
+    return buildEmptyPracticeBoardForModeConfig({
+      board_width: width,
+      board_height: height
+    });
   }
 
   function applyPracticeFreshStart(retriesLeft) {
@@ -670,6 +1099,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   syncSelectionGridByRuleset();
+  bindPracticeModePicker();
   bindPracticeBoardCodePanel();
 
   // Guide Logic
@@ -859,6 +1289,63 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
   })();
+
+  function bindPracticeModePicker() {
+    setPracticeModePanelOpen(false);
+
+    if (practiceModePickerBtn) {
+      practiceModePickerBtn.addEventListener("click", function (e) {
+        if (e && e.cancelable) e.preventDefault();
+        var open = !!(
+          practiceModePanel &&
+          practiceModePanel.classList &&
+          practiceModePanel.classList.contains("is-open")
+        );
+        setPracticeModePanelOpen(!open);
+      });
+    }
+
+    if (practiceModeCloseBtn) {
+      practiceModeCloseBtn.addEventListener("click", function (e) {
+        if (e && e.cancelable) e.preventDefault();
+        setPracticeModePanelOpen(false);
+      });
+    }
+
+    if (practiceModePanel) {
+      practiceModePanel.addEventListener("click", function (e) {
+        if (!practiceModePanel.classList || !practiceModePanel.classList.contains("is-open")) {
+          return;
+        }
+        if (e && e.target === practiceModePanel) {
+          if (e.cancelable) e.preventDefault();
+          setPracticeModePanelOpen(false);
+        }
+      });
+    }
+
+    if (practiceModeList) {
+      practiceModeList.addEventListener("click", function (e) {
+        var target = e && e.target && e.target.closest
+          ? e.target.closest("[data-practice-mode-key]")
+          : null;
+        if (!target) return;
+        if (e && e.cancelable) e.preventDefault();
+        var modeKey = String(target.getAttribute("data-practice-mode-key") || "");
+        if (!modeKey) return;
+        if (!applyPracticeModeSelection(modeKey)) return;
+        setPracticeModePanelOpen(false);
+      });
+    }
+
+    document.addEventListener("keydown", function (e) {
+      if (!e || e.defaultPrevented || e.key !== "Escape") return;
+      if (practiceModePanel && practiceModePanel.classList.contains("is-open")) {
+        if (e.cancelable) e.preventDefault();
+        setPracticeModePanelOpen(false);
+      }
+    });
+  }
 
   if (window.game_manager) {
     window.game_manager.isTestMode = true;

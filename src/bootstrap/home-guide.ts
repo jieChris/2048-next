@@ -668,23 +668,8 @@ export function resolveHomeGuideStepTargetState(
 }
 
 export function resolveHomeGuideElevationPlan(
-  options: ResolveHomeGuideElevationPlanOptions
+  _options: ResolveHomeGuideElevationPlanOptions
 ): ResolveHomeGuideElevationPlanResult {
-  const opts = options || {};
-  const hasTop = !!opts.hasTopActionButtonsAncestor;
-  const hasHeading = !!opts.hasHeadingAncestor;
-  if (hasTop) {
-    return {
-      hostSelector: ".top-action-buttons",
-      shouldScopeTopActions: true
-    };
-  }
-  if (hasHeading) {
-    return {
-      hostSelector: ".heading",
-      shouldScopeTopActions: false
-    };
-  }
   return {
     hostSelector: "",
     shouldScopeTopActions: false

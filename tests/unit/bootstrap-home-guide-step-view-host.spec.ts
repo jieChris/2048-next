@@ -3,14 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import { applyHomeGuideStepView } from "../../src/bootstrap/home-guide-step-view-host";
 
 describe("bootstrap home guide step view host", () => {
-  it("renders step view model and schedules panel layout", () => {
+  it("renders step view model and schedules a banner reposition pass", () => {
     const stepEl = { textContent: "" };
     const titleEl = { textContent: "" };
     const descEl = { textContent: "" };
     const prevBtn = { disabled: false };
     const nextBtn = { textContent: "" };
     const requestAnimationFrame = vi.fn((cb: () => void) => cb());
-    const positionHomeGuidePanel = vi.fn();
 
     const result = applyHomeGuideStepView({
       documentLike: {
@@ -27,34 +26,32 @@ describe("bootstrap home guide step view host", () => {
       homeGuideRuntime: {
         resolveHomeGuideStepRenderState(payload: { stepIndex: number; stepCount: number }) {
           return {
-            stepText: "第 " + (payload.stepIndex + 1) + " / " + payload.stepCount + " 步",
-            titleText: "标题",
-            descText: "说明",
+            stepText: "Step " + (payload.stepIndex + 1) + " / " + payload.stepCount,
+            titleText: "Title",
+            descText: "Description",
             prevDisabled: true,
-            nextText: "完成"
+            nextText: "Done"
           };
         }
       },
       step: { selector: "#x", title: "A", desc: "B" },
       stepIndex: 2,
-      stepCount: 4,
-      positionHomeGuidePanel
+      stepCount: 4
     });
 
     expect(result).toEqual({
       didRender: true,
       didSchedulePanel: true
     });
-    expect(stepEl.textContent).toBe("第 3 / 4 步");
-    expect(titleEl.textContent).toBe("标题");
-    expect(descEl.textContent).toBe("说明");
+    expect(stepEl.textContent).toBe("Step 3 / 4");
+    expect(titleEl.textContent).toBe("Title");
+    expect(descEl.textContent).toBe("Description");
     expect(prevBtn.disabled).toBe(true);
-    expect(nextBtn.textContent).toBe("完成");
+    expect(nextBtn.textContent).toBe("Done");
     expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
-    expect(positionHomeGuidePanel).toHaveBeenCalledTimes(1);
   });
 
-  it("renders without scheduling when raf or panel callback is missing", () => {
+  it("renders without scheduling when requestAnimationFrame is missing", () => {
     const nextBtn = { textContent: "" };
     const result = applyHomeGuideStepView({
       documentLike: {
@@ -70,7 +67,7 @@ describe("bootstrap home guide step view host", () => {
             titleText: "",
             descText: "",
             prevDisabled: false,
-            nextText: "下一步"
+            nextText: "Next"
           };
         }
       }
@@ -80,7 +77,7 @@ describe("bootstrap home guide step view host", () => {
       didRender: true,
       didSchedulePanel: false
     });
-    expect(nextBtn.textContent).toBe("下一步");
+    expect(nextBtn.textContent).toBe("Next");
   });
 
   it("returns noop when step render resolver is missing", () => {

@@ -40,7 +40,7 @@ function createDocumentHarness() {
 }
 
 describe("bootstrap home guide dom host", () => {
-  it("creates missing overlay/panel and writes them into state", () => {
+  it("creates missing overlay/banner and writes them into state", () => {
     const harness = createDocumentHarness();
     const homeGuideState: Record<string, unknown> = {};
 
@@ -58,22 +58,22 @@ describe("bootstrap home guide dom host", () => {
     expect(result.createdPanel).toBe(true);
     expect(harness.appendedNodes).toHaveLength(2);
     expect((result.overlay as Record<string, unknown>).id).toBe("home-guide-overlay");
-    expect((result.panel as Record<string, unknown>).id).toBe("home-guide-panel");
+    expect((result.panel as Record<string, unknown>).id).toBe("home-guide-message-banner");
     expect((result.panel as Record<string, unknown>).innerHTML).toBe("<div>guide panel</div>");
     expect(homeGuideState.overlay).toBe(result.overlay);
     expect(homeGuideState.panel).toBe(result.panel);
   });
 
-  it("reuses existing overlay/panel without recreating", () => {
+  it("reuses existing overlay/banner without recreating", () => {
     const harness = createDocumentHarness();
     harness.nodesById["home-guide-overlay"] = {
       id: "home-guide-overlay",
       className: "home-guide-overlay",
       style: { display: "none" }
     };
-    harness.nodesById["home-guide-panel"] = {
-      id: "home-guide-panel",
-      className: "home-guide-panel",
+    harness.nodesById["home-guide-message-banner"] = {
+      id: "home-guide-message-banner",
+      className: "home-guide-message-banner",
       style: { display: "none" },
       innerHTML: "existing"
     };

@@ -93,20 +93,12 @@
       {
         selector: "#top-practice-btn",
         title: resolveLangText(lang, "直通练习板", "Practice Board"),
-        desc: resolveLangText(
-          lang,
-          "把当前盘面发送到练习板页面继续演练。",
-          "Send the current board to Practice Board and continue training."
-        )
+        desc: resolveLangText(lang, "把当前盘面发送到练习板页面继续演练。", "Send the current board to Practice Board and continue training.")
       },
       {
         selector: "#top-advanced-replay-btn",
         title: resolveLangText(lang, "高级回放", "Advanced Replay"),
-        desc: resolveLangText(
-          lang,
-          "打开高级回放页面，可导入回放并控制进度。",
-          "Open Advanced Replay to import replays and control progress."
-        )
+        desc: resolveLangText(lang, "打开高级回放页面，可导入回放并控制进度。", "Open Advanced Replay to import replays and control progress.")
       },
       {
         selector: "#top-modes-btn",
@@ -116,15 +108,15 @@
       {
         selector: "#top-history-btn",
         title: resolveLangText(lang, "历史记录", "History"),
-        desc: resolveLangText(lang, "查看本地历史对局，支持回放、导入和导出。", "View local history records with replay/import/export support.")
+        desc: resolveLangText(lang, "查看本地历史对局，支持回放、导入与导出。", "View local history records with replay/import/export support.")
       },
       {
         selector: "#top-settings-btn",
         title: resolveLangText(lang, "设置按钮", "Settings"),
         desc: resolveLangText(
           lang,
-          "打开设置面板，调整主题、显示选项与指引开关。",
-          "Open settings to configure theme, display options, and guide switches."
+          "打开设置可以调整主题、显示选项和常用功能开关。",
+          "Open settings to configure theme, display options, and quick toggles."
         )
       },
       {
@@ -147,7 +139,6 @@
     }
     return steps;
   }
-
   function buildHomeGuidePanelInnerHtml() {
     var lang = readUiLang();
     return (
@@ -327,21 +318,6 @@
   }
 
   function resolveHomeGuideElevationPlan(options) {
-    var opts = options || {};
-    var hasTop = !!opts.hasTopActionButtonsAncestor;
-    var hasHeading = !!opts.hasHeadingAncestor;
-    if (hasTop) {
-      return {
-        hostSelector: ".top-action-buttons",
-        shouldScopeTopActions: true
-      };
-    }
-    if (hasHeading) {
-      return {
-        hostSelector: ".heading",
-        shouldScopeTopActions: false
-      };
-    }
     return {
       hostSelector: "",
       shouldScopeTopActions: false
@@ -496,8 +472,8 @@
     var lang = readUiLang();
     var defaultMessage = resolveLangText(
       lang,
-      "指引已完成，可在设置中重新打开新手指引。",
-      "Guide completed. You can reopen Beginner Guide in Settings."
+        "指引已完成，可在账号中心重新打开新手指引。",
+        "Guide completed. You can reopen Beginner Guide from Account Center."
     );
     var rawMessage = typeof opts.message === "string" ? opts.message.trim() : "";
     var hideDelayMs = Math.max(0, Math.floor(toFiniteNumber(opts.hideDelayMs, 2600)));

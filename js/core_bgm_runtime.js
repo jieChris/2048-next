@@ -210,20 +210,20 @@
       if (!state.enabled) {
         return {
           title: "Background Music",
-          desc: "Loop background music during gameplay.",
+          desc: "Loop background music on the current page.",
           note: "Audio stays unloaded until you enable it, so page startup stays fast."
         };
       }
       if (state.awaitingGesture) {
         return {
           title: "Background Music",
-          desc: "Loop background music during gameplay.",
+          desc: "Loop background music on the current page.",
           note: "Enabled. Music will start on your next click or key press."
         };
       }
       return {
         title: "Background Music",
-        desc: "Loop background music during gameplay.",
+        desc: "Loop background music on the current page.",
         note: "Enabled. Music is ready for this run."
       };
     }
@@ -231,20 +231,20 @@
     if (!state.enabled) {
       return {
         title: "\u80cc\u666f\u97f3\u4e50",
-        desc: "\u5f00\u542f\u540e\u5728\u5bf9\u5c40\u9875\u9762\u5faa\u73af\u64ad\u653e\u80cc\u666f\u97f3\u4e50\u3002",
+        desc: "\u5f00\u542f\u540e\u5728\u5f53\u524d\u9875\u9762\u5faa\u73af\u64ad\u653e\u80cc\u666f\u97f3\u4e50\u3002",
         note: "\u9ed8\u8ba4\u4e0d\u52a0\u8f7d\u97f3\u9891\uff0c\u5f00\u542f\u540e\u624d\u4f1a\u5f00\u59cb\u8bf7\u6c42\uff0c\u907f\u514d\u62d6\u6162\u9875\u9762\u3002"
       };
     }
     if (state.awaitingGesture) {
       return {
         title: "\u80cc\u666f\u97f3\u4e50",
-        desc: "\u5f00\u542f\u540e\u5728\u5bf9\u5c40\u9875\u9762\u5faa\u73af\u64ad\u653e\u80cc\u666f\u97f3\u4e50\u3002",
+        desc: "\u5f00\u542f\u540e\u5728\u5f53\u524d\u9875\u9762\u5faa\u73af\u64ad\u653e\u80cc\u666f\u97f3\u4e50\u3002",
         note: "\u5df2\u5f00\u542f\uff0c\u5c06\u5728\u4e0b\u4e00\u6b21\u70b9\u51fb\u6216\u6309\u952e\u540e\u5f00\u59cb\u64ad\u653e\u3002"
       };
     }
     return {
       title: "\u80cc\u666f\u97f3\u4e50",
-      desc: "\u5f00\u542f\u540e\u5728\u5bf9\u5c40\u9875\u9762\u5faa\u73af\u64ad\u653e\u80cc\u666f\u97f3\u4e50\u3002",
+      desc: "\u5f00\u542f\u540e\u5728\u5f53\u524d\u9875\u9762\u5faa\u73af\u64ad\u653e\u80cc\u666f\u97f3\u4e50\u3002",
       note: "\u5df2\u5f00\u542f\uff0c\u672c\u5c40\u6e38\u620f\u53ef\u4f7f\u7528\u80cc\u666f\u97f3\u4e50\u3002"
     };
   }

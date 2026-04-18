@@ -1,4 +1,32 @@
 import "../../js/theme_manager.js";
+import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
+
+const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
+
+function readNightBackgroundPreference(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  const storageLike = resolveStorageByName({
+    windowLike: window as unknown as Record<string, unknown>,
+    storageName: "localStorage"
+  });
+  return safeReadStorageItem({
+    storageLike,
+    key: NIGHT_BACKGROUND_STORAGE_KEY
+  }) === "1";
+}
+
+function syncNightBackgroundAttribute(): void {
+  if (typeof document === "undefined" || !document.documentElement) {
+    return;
+  }
+  if (readNightBackgroundPreference()) {
+    document.documentElement.setAttribute("data-night-background", "1");
+    return;
+  }
+  document.documentElement.removeAttribute("data-night-background");
+}
 
 function isEnglishUi(): boolean {
   if (typeof document === "undefined") return false;
@@ -35,6 +63,7 @@ export function bootstrapModesPage(): void {
     return;
   }
 
+  syncNightBackgroundAttribute();
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
   if (document.body) {
     document.body.setAttribute("data-page-family", "modes");
@@ -45,6 +74,12 @@ export function bootstrapModesPage(): void {
     const link = document.querySelector("a[data-mode-relay='5x5']");
     if (link) {
       link.textContent = resolveRelayLinkLabel();
+    }
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === NIGHT_BACKGROUND_STORAGE_KEY) {
+      syncNightBackgroundAttribute();
     }
   });
 }

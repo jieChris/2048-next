@@ -953,8 +953,30 @@ function releaseSingleModePageLock(manager) {
   }
 }
 
+function shouldSkipSingleModePageLock(manager) {
+  if (!manager) return true;
+  var windowLike = resolveSingleModePageLockWindowLike(manager);
+  var pathname = "";
+  try {
+    pathname = windowLike && windowLike.location && typeof windowLike.location.pathname === "string"
+      ? windowLike.location.pathname
+      : "";
+  } catch (_errPathname) {
+    pathname = "";
+  }
+  var normalizedPath = String(pathname || "").toLowerCase();
+  return (
+    normalizedPath.indexOf("replay.html") !== -1 ||
+    normalizedPath.indexOf("practice_board.html") !== -1
+  );
+}
+
 function ensureSingleModePageLock(manager) {
   if (!manager) return true;
+  if (shouldSkipSingleModePageLock(manager)) {
+    releaseSingleModePageLock(manager);
+    return true;
+  }
   var modeKey = String(manager.modeKey || manager.mode || "");
   if (!modeKey) return true;
   var windowLike = resolveSingleModePageLockWindowLike(manager);

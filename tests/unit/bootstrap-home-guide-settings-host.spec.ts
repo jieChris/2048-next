@@ -60,112 +60,56 @@ function createHarness() {
 }
 
 describe("bootstrap home guide settings host", () => {
-  it("creates settings row, syncs ui and triggers guide start action", () => {
+  it("keeps settings free of guide actions and exposes a noop sync hook", () => {
     const harness = createHarness();
-    const closeSettingsModal = vi.fn();
-    const startHomeGuide = vi.fn();
     const windowLike: Record<string, unknown> = {};
 
     const result = applyHomeGuideSettingsUi({
       documentLike: harness.documentLike,
-      windowLike,
-      homeGuideRuntime: {
-        buildHomeGuideSettingsRowInnerHtml() {
-          return '<button id="home-guide-trigger-btn" type="button">Open Guide</button>';
-        },
-        resolveHomeGuideSettingsState() {
-          return {
-            toggleDisabled: false,
-            toggleChecked: false,
-            noteText: "Guide is off"
-          };
-        },
-        resolveHomeGuideBindingState() {
-          return {
-            shouldBind: true,
-            boundValue: true
-          };
-        },
-        resolveHomeGuideToggleAction(payload: { checked: boolean }) {
-          if (!payload.checked) {
-            return {
-              shouldResync: false,
-              shouldStartGuide: false
-            };
-          }
-          return {
-            shouldResync: false,
-            shouldStartGuide: true,
-            shouldCloseSettings: true,
-            startFromSettings: true
-          };
-        }
-      },
-      homeGuideState: {
-        active: false,
-        fromSettings: false
-      },
-      isHomePage() {
-        return true;
-      },
-      closeSettingsModal,
-      startHomeGuide
+      windowLike
     });
 
     expect(result).toEqual({
-      hasToggle: true,
-      didBindToggle: true,
+      hasToggle: false,
+      didBindToggle: false,
       didAssignSync: true,
-      didSync: true
+      didSync: false
     });
-    expect(harness.insertedRows).toHaveLength(1);
-    expect(harness.insertedRows[0].className).toBe("settings-row settings-action-row");
-    expect(harness.trigger.__homeGuideBound).toBe(true);
+    expect(harness.insertedRows).toHaveLength(0);
+    expect(harness.trigger.__homeGuideBound).toBe(false);
     expect(typeof windowLike.syncHomeGuideSettingsUI).toBe("function");
-
-    harness.triggerHandlers.click();
-    expect(closeSettingsModal).toHaveBeenCalledTimes(1);
-    expect(startHomeGuide).toHaveBeenCalledWith({ fromSettings: true });
+    expect(harness.triggerHandlers.click).toBeUndefined();
   });
 
-  it("resyncs only when toggle action requests resync", () => {
-    const harness = createHarness();
-    const syncMarks: string[] = [];
-
-    applyHomeGuideSettingsUi({
-      documentLike: harness.documentLike,
-      homeGuideRuntime: {
-        buildHomeGuideSettingsRowInnerHtml() {
-          return '<button id="home-guide-trigger-btn" type="button">Open Guide</button>';
-        },
-        resolveHomeGuideSettingsState() {
-          syncMarks.push("sync");
-          return {
-            toggleDisabled: false,
-            toggleChecked: false,
-            noteText: ""
-          };
-        },
-        resolveHomeGuideBindingState() {
-          return {
-            shouldBind: true,
-            boundValue: true
-          };
-        },
-        resolveHomeGuideToggleAction() {
-          return {
-            shouldResync: true,
-            shouldStartGuide: false
-          };
+  it("removes an existing guide action row when one is already present", () => {
+    const removedNodes: unknown[] = [];
+    const row = {
+      parentNode: {
+        removeChild(node: unknown) {
+          removedNodes.push(node);
         }
-      },
-      isHomePage() {
-        return true;
+      }
+    };
+    const trigger = {
+      closest(selector: string) {
+        return selector === ".settings-row" ? row : null;
+      }
+    };
+
+    const result = applyHomeGuideSettingsUi({
+      documentLike: {
+        getElementById(id: string) {
+          return id === "home-guide-trigger-btn" ? trigger : null;
+        }
       }
     });
 
-    expect(syncMarks).toEqual(["sync"]);
-    harness.triggerHandlers.click();
-    expect(syncMarks).toEqual(["sync", "sync"]);
+    expect(result).toEqual({
+      hasToggle: false,
+      didBindToggle: false,
+      didAssignSync: false,
+      didSync: false
+    });
+    expect(removedNodes).toEqual([row]);
   });
 });

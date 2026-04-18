@@ -59,69 +59,91 @@ function setStyleImportant(node: unknown, propertyName: string, value: string): 
   style[propertyName] = value;
 }
 
+function isNightBackgroundEnabled(documentLike: unknown): boolean {
+  const documentElement = toRecord(toRecord(documentLike).documentElement);
+  const getAttribute = asFunction<(name: string) => unknown>(documentElement.getAttribute);
+  if (!getAttribute) return false;
+  return resolveText(getAttribute.call(documentElement, "data-night-background")) === "1";
+}
+
 function applyGuideTextVisibilityStyles(input: {
   panel?: unknown;
   stepEl?: unknown;
   titleEl?: unknown;
   descEl?: unknown;
+  documentLike?: unknown;
 }): void {
   const source = toRecord(input);
+  const isNightMode = isNightBackgroundEnabled(source.documentLike);
   if (source.panel) {
     setStyleImportant(source.panel, "display", "block");
     setStyleImportant(source.panel, "opacity", "1");
     setStyleImportant(source.panel, "visibility", "visible");
-    setStyleImportant(source.panel, "z-index", "3300");
-    setStyleImportant(source.panel, "background", "#fffdf8");
-    setStyleImportant(source.panel, "border", "1px solid #d8d4d0");
+    setStyleImportant(source.panel, "z-index", "3401");
+    setStyleImportant(source.panel, "background", isNightMode ? "rgba(24, 36, 56, 0.96)" : "#fffdf8");
+    setStyleImportant(
+      source.panel,
+      "border",
+      isNightMode ? "1px solid rgba(181, 198, 221, 0.16)" : "1px solid #d8d4d0"
+    );
   }
   if (source.stepEl) {
     setStyleImportant(source.stepEl, "display", "block");
-    setStyleImportant(source.stepEl, "color", "#8a8178");
+    setStyleImportant(source.stepEl, "color", isNightMode ? "#b8c2d3" : "#8a8178");
   }
   if (source.titleEl) {
     setStyleImportant(source.titleEl, "display", "block");
-    setStyleImportant(source.titleEl, "color", "#5f544a");
+    setStyleImportant(source.titleEl, "color", isNightMode ? "#ece2d3" : "#5f544a");
   }
   if (source.descEl) {
     setStyleImportant(source.descEl, "display", "block");
-    setStyleImportant(source.descEl, "color", "#776e65");
+    setStyleImportant(source.descEl, "color", isNightMode ? "#d9d0c2" : "#776e65");
   }
 }
 
-function ensureGuideMessageBanner(documentLike: unknown): unknown {
-  const existing = getElementById(documentLike, "home-guide-message-banner");
-  if (existing) return existing;
-  const banner = createElement(documentLike, "div");
-  if (!banner) return null;
-  const bannerRecord = toRecord(banner);
-  bannerRecord.id = "home-guide-message-banner";
-  const body = toRecord(toRecord(documentLike).body);
-  if (!body) return null;
-  appendChild(body, banner);
+function ensureGuideMessageBanner(documentLike: unknown, homeGuideRuntime: unknown): unknown {
+  let banner = getElementById(documentLike, "home-guide-message-banner");
+  if (!banner) {
+    const nextBanner = createElement(documentLike, "div");
+    if (!nextBanner) return null;
+    const bannerRecord = toRecord(nextBanner);
+    bannerRecord.id = "home-guide-message-banner";
+    bannerRecord.className = "home-guide-message-banner";
+    const body = toRecord(toRecord(documentLike).body);
+    if (!body) return null;
+    appendChild(body, nextBanner);
+    banner = nextBanner;
+  }
+
+  const hasRequiredNodes =
+    !!querySelector(banner, "#home-guide-step") &&
+    !!querySelector(banner, "#home-guide-title") &&
+    !!querySelector(banner, "#home-guide-desc") &&
+    !!querySelector(banner, "#home-guide-prev") &&
+    !!querySelector(banner, "#home-guide-next") &&
+    !!querySelector(banner, "#home-guide-skip");
+  if (hasRequiredNodes) return banner;
+
+  const buildPanelHtml = asFunction<() => unknown>(toRecord(homeGuideRuntime).buildHomeGuidePanelInnerHtml);
+  if (!buildPanelHtml) return banner;
+  toRecord(banner).innerHTML = resolveText(buildPanelHtml.call(homeGuideRuntime));
   return banner;
 }
 
 function applyGuideMessageBanner(input: {
   documentLike?: unknown;
   windowLike?: unknown;
+  homeGuideRuntime?: unknown;
   step?: unknown;
-  stepText?: unknown;
-  titleText?: unknown;
-  descText?: unknown;
 }): void {
   const source = toRecord(input);
-  const banner = ensureGuideMessageBanner(source.documentLike);
+  const banner = ensureGuideMessageBanner(source.documentLike, source.homeGuideRuntime);
   if (!banner) return;
-  const stepText = resolveText(source.stepText).trim();
-  const titleText = resolveText(source.titleText).trim();
-  const descText = resolveText(source.descText).trim();
-  const message = stepText
-    ? stepText + " · " + titleText + "： " + descText
-    : titleText + "： " + descText;
-  toRecord(banner).textContent = message;
+
   const windowLike = toRecord(source.windowLike);
   const viewportWidth = resolveNumber(windowLike.innerWidth, 0);
   const viewportHeight = resolveNumber(windowLike.innerHeight, 0);
+  const isNightMode = isNightBackgroundEnabled(source.documentLike);
   const defaultWidth = viewportWidth > 0 ? Math.min(520, Math.max(300, viewportWidth - 24)) : 460;
   const minGap = 10;
 
@@ -135,16 +157,24 @@ function applyGuideMessageBanner(input: {
   setStyleImportant(banner, "z-index", "3401");
   setStyleImportant(banner, "max-width", defaultWidth + "px");
   setStyleImportant(banner, "width", defaultWidth + "px");
-  setStyleImportant(banner, "padding", "10px 12px");
-  setStyleImportant(banner, "border-radius", "8px");
-  setStyleImportant(banner, "background", "rgba(40, 34, 28, 0.94)");
-  setStyleImportant(banner, "color", "#f9f6f2");
-  setStyleImportant(banner, "font-size", "18px");
-  setStyleImportant(banner, "font-weight", "600");
-  setStyleImportant(banner, "line-height", "1.55");
+  setStyleImportant(banner, "padding", "14px 16px");
+  setStyleImportant(banner, "border-radius", "10px");
+  setStyleImportant(banner, "background", isNightMode ? "rgba(24, 36, 56, 0.96)" : "#fffdf8");
+  setStyleImportant(
+    banner,
+    "border",
+    isNightMode ? "1px solid rgba(181, 198, 221, 0.16)" : "1px solid #d8d4d0"
+  );
+  setStyleImportant(
+    banner,
+    "box-shadow",
+    isNightMode
+      ? "0 20px 42px rgba(1, 4, 12, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.04)"
+      : "0 8px 28px rgba(0, 0, 0, 0.25)"
+  );
+  setStyleImportant(banner, "box-sizing", "border-box");
   setStyleImportant(banner, "text-align", "left");
-  setStyleImportant(banner, "box-shadow", "0 8px 22px rgba(0,0,0,0.35)");
-  setStyleImportant(banner, "pointer-events", "none");
+  setStyleImportant(banner, "pointer-events", "auto");
   setStyleImportant(banner, "white-space", "normal");
 
   const step = toRecord(source.step);
@@ -178,22 +208,6 @@ function applyGuideMessageBanner(input: {
   if (targetRight <= 0 || targetLeft >= viewportWidth) return;
   setStyleImportant(banner, "left", Math.round(left) + "px");
   setStyleImportant(banner, "top", Math.round(top) + "px");
-}
-
-function ensureStepPanelStructure(documentLike: unknown, homeGuideRuntime: unknown): void {
-  const panel = getElementById(documentLike, "home-guide-panel");
-  if (!panel) return;
-  const hasRequiredNodes =
-    !!querySelector(panel, "#home-guide-step") &&
-    !!querySelector(panel, "#home-guide-title") &&
-    !!querySelector(panel, "#home-guide-desc") &&
-    !!querySelector(panel, "#home-guide-prev") &&
-    !!querySelector(panel, "#home-guide-next") &&
-    !!querySelector(panel, "#home-guide-skip");
-  if (hasRequiredNodes) return;
-  const buildPanelHtml = asFunction<() => unknown>(toRecord(homeGuideRuntime).buildHomeGuidePanelInnerHtml);
-  if (!buildPanelHtml) return;
-  toRecord(panel).innerHTML = resolveText(buildPanelHtml.call(homeGuideRuntime));
 }
 
 export interface HomeGuideStepViewHostResult {
@@ -230,9 +244,7 @@ export function applyHomeGuideStepView(input: {
     })
   );
 
-  ensureStepPanelStructure(source.documentLike, source.homeGuideRuntime);
-
-  const panel = getElementById(source.documentLike, "home-guide-panel");
+  const panel = ensureGuideMessageBanner(source.documentLike, source.homeGuideRuntime);
   const stepEl = getElementById(source.documentLike, "home-guide-step");
   const titleEl = getElementById(source.documentLike, "home-guide-title");
   const descEl = getElementById(source.documentLike, "home-guide-desc");
@@ -243,7 +255,8 @@ export function applyHomeGuideStepView(input: {
     panel,
     stepEl,
     titleEl,
-    descEl
+    descEl,
+    documentLike: source.documentLike
   });
 
   if (stepEl) toRecord(stepEl).textContent = resolveText(stepRenderState.stepText);
@@ -255,19 +268,23 @@ export function applyHomeGuideStepView(input: {
   applyGuideMessageBanner({
     documentLike: source.documentLike,
     windowLike: source.windowLike,
-    step: source.step,
-    stepText: stepRenderState.stepText,
-    titleText: stepRenderState.titleText,
-    descText: stepRenderState.descText
+    homeGuideRuntime: source.homeGuideRuntime,
+    step: source.step
   });
 
   let didSchedulePanel = false;
   const requestAnimationFrame = asFunction<(cb: (...args: never[]) => unknown) => unknown>(
     toRecord(source.windowLike).requestAnimationFrame
   );
-  const positionHomeGuidePanel = asFunction<() => unknown>(source.positionHomeGuidePanel);
-  if (requestAnimationFrame && positionHomeGuidePanel) {
-    requestAnimationFrame(positionHomeGuidePanel);
+  if (requestAnimationFrame) {
+    requestAnimationFrame(function () {
+      applyGuideMessageBanner({
+        documentLike: source.documentLike,
+        windowLike: source.windowLike,
+        homeGuideRuntime: source.homeGuideRuntime,
+        step: source.step
+      });
+    });
     didSchedulePanel = true;
   }
 

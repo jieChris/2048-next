@@ -9,6 +9,7 @@
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260409-1">
   <link rel="manifest" href="site.webmanifest?v=20260409-1">
 
+<script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
 <link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
   <meta name="apple-mobile-web-app-capable" content="yes">
 
@@ -176,25 +177,22 @@
       }
       #practice-stats-actions {
           position: static;
-          display: flex;
+          display: grid;
+          grid-template-columns: repeat(3, max-content);
           justify-content: flex-start;
+          align-content: flex-start;
           gap: 8px;
           margin: -2px 0 8px;
       }
-      @media (min-width: 901px) {
-          #practice-stats-actions {
-              display: grid;
-              grid-template-columns: repeat(3, max-content);
-              justify-content: flex-start;
-              align-content: flex-start;
-              gap: 8px;
-          }
-      }
+      #practice-mode-picker-btn,
       #practice-board-code-btn {
           outline: none !important;
           box-shadow: none !important;
           border: none !important;
       }
+      #practice-mode-picker-btn:focus,
+      #practice-mode-picker-btn:focus-visible,
+      #practice-mode-picker-btn:active,
       #practice-board-code-btn:focus,
       #practice-board-code-btn:focus-visible,
       #practice-board-code-btn:active {
@@ -251,13 +249,210 @@
           padding: 9px 14px;
           white-space: nowrap;
       }
+      .practice-mode-panel {
+          position: fixed;
+          inset: 0;
+          z-index: 2390;
+          display: none;
+          align-items: flex-start;
+          justify-content: center;
+          padding: 86px 12px 12px;
+          background: rgba(0, 0, 0, 0.34);
+      }
+      .practice-mode-panel.is-open {
+          display: flex;
+      }
+      .practice-mode-dialog {
+          width: min(720px, calc(100vw - 24px));
+          max-height: calc(100vh - 104px);
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          background: #faf8ef;
+          border: 2px solid #bbada0;
+          border-radius: 12px;
+          box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
+          padding: 12px;
+      }
+      .practice-mode-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+      }
+      .practice-mode-title-wrap {
+          min-width: 0;
+      }
+      .practice-mode-title {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 700;
+          color: #776e65;
+      }
+      .practice-mode-current {
+          margin-top: 4px;
+          font-size: 12px;
+          color: #8f7a66;
+      }
+      .practice-mode-close {
+          flex: 0 0 auto;
+          min-width: 88px;
+      }
+      .practice-mode-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+          gap: 8px;
+          overflow-y: auto;
+          padding-right: 2px;
+      }
+      .practice-mode-option {
+          display: block;
+          width: 100%;
+          padding: 11px 12px;
+          text-align: left;
+          border: 1px solid #d8cbbf;
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.88);
+          color: #5f544a;
+          cursor: pointer;
+          transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+      }
+      .practice-mode-option:hover {
+          transform: translateY(-1px);
+          border-color: #8f7a66;
+          box-shadow: 0 8px 16px rgba(143, 122, 102, 0.14);
+      }
+      .practice-mode-option.is-active {
+          border-color: #8f7a66;
+          background: #f3ece3;
+          box-shadow: 0 0 0 2px rgba(143, 122, 102, 0.12);
+      }
+      .practice-mode-option-label {
+          display: block;
+          font-size: 14px;
+          font-weight: 700;
+      }
+      .practice-mode-option-meta {
+          display: block;
+          margin-top: 4px;
+          font-size: 12px;
+          color: #8f7a66;
+      }
+      .practice-mode-empty {
+          padding: 16px 4px;
+          text-align: center;
+          color: #8f7a66;
+          font-size: 13px;
+      }
+      .practice-mode-badge {
+          position: absolute;
+          top: -34px;
+          left: 0;
+          z-index: 6;
+          display: inline-flex;
+          align-items: center;
+          max-width: calc(100% - 8px);
+          padding: 6px 12px;
+          border-radius: 999px;
+          background: rgba(250, 248, 239, 0.96);
+          border: 1px solid rgba(143, 122, 102, 0.22);
+          box-shadow: 0 10px 22px rgba(143, 122, 102, 0.14);
+          color: #776e65;
+          font-size: 13px;
+          font-weight: 700;
+          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          pointer-events: none;
+      }
+      body.practice-mode-open {
+          overflow: hidden;
+      }
       body.practice-board-code-open {
           overflow: hidden;
       }
+      html[data-night-background="1"] body[data-page="practice"] .dashboard-box {
+          background: linear-gradient(180deg, rgba(24, 36, 56, 0.96) 0%, rgba(13, 21, 34, 0.97) 100%);
+          border: 1px solid rgba(181, 198, 221, 0.16);
+          box-shadow: 0 18px 36px rgba(1, 5, 14, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          color: #ece2d3;
+      }
+      html[data-night-background="1"] body[data-page="practice"] .dashboard-controls label {
+          color: #ece2d3;
+      }
+      html[data-night-background="1"] body[data-page="practice"] .dashboard-controls select {
+          border: 1px solid rgba(181, 198, 221, 0.16);
+          background: rgba(16, 24, 38, 0.92);
+          color: #ece2d3;
+      }
+      html[data-night-background="1"] body[data-page="practice"] .selection-tile.tile-0 .tile-inner {
+          background: rgba(176, 192, 214, 0.14);
+          color: #ece2d3;
+          box-shadow: inset 0 0 0 1px rgba(235, 244, 255, 0.04);
+      }
+      html[data-night-background="1"] body[data-page="practice"] .selection-tile.selected {
+          box-shadow: 0 0 0 2px rgba(237, 195, 123, 0.82), 0 0 16px rgba(213, 168, 106, 0.34);
+          border-color: rgba(237, 195, 123, 0.88);
+      }
+      html[data-night-background="1"] body[data-page="practice"] .practice-board-code-dialog {
+          background: linear-gradient(180deg, rgba(24, 36, 56, 0.96) 0%, rgba(13, 21, 34, 0.97) 100%);
+          border-color: rgba(181, 198, 221, 0.16);
+          box-shadow: 0 20px 42px rgba(1, 4, 12, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+      html[data-night-background="1"] body[data-page="practice"] .practice-board-code-title {
+          color: #ece2d3;
+      }
+      html[data-night-background="1"] body[data-page="practice"] .practice-mode-dialog {
+          background: linear-gradient(180deg, rgba(24, 36, 56, 0.96) 0%, rgba(13, 21, 34, 0.97) 100%);
+          border-color: rgba(181, 198, 221, 0.16);
+          box-shadow: 0 20px 42px rgba(1, 4, 12, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+      html[data-night-background="1"] body[data-page="practice"] .practice-mode-title {
+          color: #ece2d3;
+      }
+      html[data-night-background="1"] body[data-page="practice"] .practice-mode-current,
+      html[data-night-background="1"] body[data-page="practice"] .practice-mode-option-meta,
+      html[data-night-background="1"] body[data-page="practice"] .practice-mode-empty {
+          color: #a7b6d6;
+      }
+      html[data-night-background="1"] body[data-page="practice"] .practice-mode-option {
+          background: rgba(16, 24, 38, 0.92);
+          border-color: rgba(181, 198, 221, 0.16);
+          color: #ece2d3;
+      }
+      html[data-night-background="1"] body[data-page="practice"] .practice-mode-option:hover {
+          border-color: rgba(137, 176, 255, 0.55);
+          box-shadow: 0 10px 22px rgba(1, 4, 12, 0.28);
+      }
+      html[data-night-background="1"] body[data-page="practice"] .practice-mode-option.is-active {
+          background: rgba(34, 51, 78, 0.96);
+          border-color: rgba(137, 176, 255, 0.66);
+          box-shadow: 0 0 0 2px rgba(137, 176, 255, 0.18);
+      }
+      html[data-night-background="1"] body[data-page="practice"] .practice-mode-badge {
+          background: linear-gradient(180deg, rgba(41, 59, 92, 0.98) 0%, rgba(23, 35, 54, 0.98) 100%);
+          border-color: rgba(181, 198, 221, 0.18);
+          box-shadow: 0 14px 28px rgba(1, 4, 12, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+          color: #ece2d3;
+      }
+      html[data-night-background="1"] body[data-page="practice"] .practice-board-code-input {
+          border-color: rgba(181, 198, 221, 0.16);
+          background: rgba(16, 24, 38, 0.92);
+          color: #ece2d3;
+      }
       @media (max-width: 640px) {
+          .practice-mode-panel,
           .practice-board-code-panel {
               padding-top: 70px;
           }
+          .practice-mode-badge {
+              top: -30px;
+              max-width: calc(100% - 4px);
+              padding: 5px 10px;
+              font-size: 12px;
+          }
+          .practice-mode-header,
           .practice-board-code-row {
               flex-direction: column;
               align-items: stretch;
@@ -439,6 +634,9 @@
         <a class="top-action-btn" href="modes.html" target="_blank" rel="noopener noreferrer" title="">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </a>
+                    <button id="practice-mode-picker-btn" class="top-action-btn" type="button" aria-label="选择模式" title="选择模式">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="8" cy="6.5" r="1.6" fill="currentColor"></circle><circle cx="15" cy="12" r="1.6" fill="currentColor"></circle><circle cx="11" cy="17.5" r="1.6" fill="currentColor"></circle></svg>
+                    </button>
                     <button id="practice-board-code-btn" class="top-action-btn" type="button" aria-label="输入盘面代码" title="输入盘面代码">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="none" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.994 1c-1.258.015-2.179-.03-2.931.385a1.88 1.88 0 0 0-.838.998C.06 2.822 0 3.343 0 4v8c0 .658.06 1.179.225 1.617.164.439.461.79.838.998.752.416 1.673.37 2.931.385H12.006c1.258-.014 2.179.03 2.932-.385a1.88 1.88 0 0 0 .838-.998c.164-.438.224-.96.224-1.617V4c0-.658-.06-1.178-.225-1.617-.005-.013-.012-.023-.017-.035l-.82.806c.037.23.062.499.062.846v8c0 .592-.063 1.006-.16 1.266-.098.26-.203.371-.387.472-.366.202-1.194.247-2.453.262H4c-1.259-.015-2.09-.06-2.455-.262-.183-.1-.287-.212-.385-.472C1.063 13.006 1 12.592 1 12V4c0-.592.063-1.006.16-1.266.098-.26.202-.371.385-.472C1.91 2.06 2.74 2.015 4 2h3.852l.982-1H3.998z"></path><path d="M11.238 0l-.353.36-6.969 7.095-.03.045c-.061.099-.27.45-.583 1.088-.314.638-.7 1.51-1.012 2.492L2 12l.92-.291a18.163 18.163 0 0 0 2.492-1.012c.638-.313.987-.52 1.088-.584l.045-.029L14 2.762zM4.891 7.89l1.218 1.22-.177.175c.007-.005-.379.227-.961.514-.214.105-.536.222-.834.338l-.274-.274c.116-.298.233-.62.338-.834.287-.582.518-.966.514-.96zM4 12v1h10V7h-1v5z"></path></g></svg>
                     </button>
@@ -561,6 +759,7 @@
 
 
     <div class="game-container">
+      <div id="practice-mode-badge" class="practice-mode-badge" aria-live="polite">默认练习板</div>
       <div class="game-message">
         <p></p>
         <div class="lower">
@@ -607,6 +806,18 @@
     </p>
     
     </div>
+  <div id="practice-mode-panel" class="practice-mode-panel" aria-hidden="true">
+    <div class="practice-mode-dialog" role="dialog" aria-modal="true" aria-labelledby="practice-mode-title">
+      <div class="practice-mode-header">
+        <div class="practice-mode-title-wrap">
+          <div id="practice-mode-title" class="practice-mode-title">选择模式</div>
+          <div id="practice-mode-current" class="practice-mode-current">当前模式：默认练习板</div>
+        </div>
+        <button id="practice-mode-close" class="replay-button practice-mode-close" type="button">关闭</button>
+      </div>
+      <div id="practice-mode-list" class="practice-mode-list"></div>
+    </div>
+  </div>
   <div id="practice-board-code-panel" class="practice-board-code-panel" aria-hidden="true">
     <div class="practice-board-code-dialog" role="dialog" aria-modal="true" aria-labelledby="practice-board-code-title">
       <div id="practice-board-code-title" class="practice-board-code-title">输入盘面代码</div>
@@ -631,6 +842,32 @@
           </label>
         </div>
         <div id="win-prompt-note" class="settings-note"></div>
+      </div>
+      <div id="bgm-settings-row" class="settings-row settings-toggle-row">
+        <div class="settings-toggle-main">
+          <div class="settings-toggle-copy">
+            <label for="bgm-toggle" class="settings-toggle-title">背景音乐</label>
+            <div id="bgm-toggle-desc" class="settings-toggle-desc">开启后在当前页面循环播放背景音乐</div>
+          </div>
+          <label class="settings-switch" for="bgm-toggle" aria-label="背景音乐">
+            <input id="bgm-toggle" type="checkbox">
+            <span class="settings-switch-slider"></span>
+          </label>
+        </div>
+        <div id="bgm-note" class="settings-note">默认不加载音频，开启后才会开始请求，避免拖慢页面。</div>
+      </div>
+      <div id="night-bg-settings-row" class="settings-row settings-toggle-row">
+        <div class="settings-toggle-main">
+          <div class="settings-toggle-copy">
+            <label for="night-bg-toggle" class="settings-toggle-title">夜间模式</label>
+            <div id="night-bg-toggle-desc" class="settings-toggle-desc">为页面切换成柔和的夜间模式</div>
+          </div>
+          <label class="settings-switch" for="night-bg-toggle" aria-label="夜间模式">
+            <input id="night-bg-toggle" type="checkbox">
+            <span class="settings-switch-slider"></span>
+          </label>
+        </div>
+        <div id="night-bg-note" class="settings-note">开启后会在所有带设置弹窗的页面同步生效。</div>
       </div>
       <div class="settings-row settings-toggle-row">
         <div class="settings-toggle-main">

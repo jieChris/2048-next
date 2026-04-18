@@ -379,15 +379,15 @@ describe("bootstrap home guide", () => {
     });
   });
 
-  it("resolves elevation plan for top-actions/heading/none", () => {
+  it("resolves elevation plan to keep focus on the current target only", () => {
     expect(
       resolveHomeGuideElevationPlan({
         hasTopActionButtonsAncestor: true,
         hasHeadingAncestor: true
       })
     ).toEqual({
-      hostSelector: ".top-action-buttons",
-      shouldScopeTopActions: true
+      hostSelector: "",
+      shouldScopeTopActions: false
     });
     expect(
       resolveHomeGuideElevationPlan({
@@ -395,7 +395,7 @@ describe("bootstrap home guide", () => {
         hasHeadingAncestor: true
       })
     ).toEqual({
-      hostSelector: ".heading",
+      hostSelector: "",
       shouldScopeTopActions: false
     });
     expect(

@@ -1,7 +1,49 @@
 import { expect, test } from "@playwright/test";
+import { startHomeGuideFromPageHost } from "./support/home-guide";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test("home guide only highlights the active target on index page", async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem("home_guide_seen_v1", "1");
+      } catch (_err) {}
+    });
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => {
+      const runtime = (window as any).CoreHomeGuideRuntime;
+      const pageHostRuntime = (window as any).CoreHomeGuidePageHostRuntime;
+      return (
+        !!runtime &&
+        !!pageHostRuntime &&
+        typeof runtime.resolveHomeGuideElevationPlan === "function" &&
+        typeof pageHostRuntime.createHomeGuidePageResolvers === "function"
+      );
+    });
+
+    expect(await startHomeGuideFromPageHost(page)).toBe(true);
+    await expect
+      .poll(async () => page.evaluate(() => document.querySelectorAll(".home-guide-highlight").length))
+      .toBe(1);
+
+    const snapshot = await page.evaluate(() => ({
+      highlightedCount: document.querySelectorAll(".home-guide-highlight").length,
+      elevatedCount: document.querySelectorAll(".home-guide-elevated").length,
+      scopedCount: document.querySelectorAll(".home-guide-scope").length
+    }));
+
+    expect(snapshot).toEqual({
+      highlightedCount: 1,
+      elevatedCount: 0,
+      scopedCount: 0
+    });
+  });
+
   test("index ui delegates home guide step list build to runtime helper", async ({ page }) => {
     await page.addInitScript(() => {
       try {
@@ -218,19 +260,56 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return originalApplyAutoStartPageHostFromContext(opts);
       };
       try {
-        const existingTrigger = document.getElementById("home-guide-trigger-btn");
-        if (existingTrigger) {
-          const existingRow = existingTrigger.closest(".settings-row");
-          if (existingRow && existingRow.parentNode) {
-            existingRow.parentNode.removeChild(existingRow);
-          }
-        }
         openSettingsModal();
         const trigger = document.getElementById("home-guide-trigger-btn") as HTMLButtonElement | null;
-        if (!trigger) {
-          return { hasRuntime: true, hasSettingsOpen: true, hasTrigger: false };
+        const pageHostContracts = (window as any).CoreHomeGuidePageHostRuntime;
+        const homeGuideRuntime = (window as any).CoreHomeGuideRuntime;
+        const resolvers = pageHostContracts?.createHomeGuidePageResolvers?.({
+          homeGuideRuntime,
+          locationLike: window.location,
+          isCompactViewport: () => window.innerWidth <= 760,
+          homeGuideDomHostRuntime: (window as any).CoreHomeGuideDomHostRuntime,
+          homeGuideHighlightHostRuntime: (window as any).CoreHomeGuideHighlightHostRuntime,
+          homeGuidePanelHostRuntime: (window as any).CoreHomeGuidePanelHostRuntime,
+          homeGuideDoneNoticeHostRuntime: (window as any).CoreHomeGuideDoneNoticeHostRuntime,
+          mobileViewportRuntime: (window as any).CoreMobileViewportRuntime,
+          documentLike: document,
+          windowLike: window,
+          homeGuideState: {
+            active: false,
+            fromSettings: false,
+            index: 0,
+            steps: [],
+            target: null,
+            elevated: [],
+            panel: null,
+            overlay: null
+          },
+          mobileUiMaxWidth: 760,
+          panelMargin: 12,
+          defaultPanelHeight: 160,
+          setTimeoutLike: window.setTimeout.bind(window),
+          clearTimeoutLike: window.clearTimeout.bind(window),
+          homeGuideFinishHostRuntime: (window as any).CoreHomeGuideFinishHostRuntime,
+          homeGuideStepHostRuntime: (window as any).CoreHomeGuideStepHostRuntime,
+          homeGuideStepFlowHostRuntime: (window as any).CoreHomeGuideStepFlowHostRuntime,
+          homeGuideStepViewHostRuntime: (window as any).CoreHomeGuideStepViewHostRuntime,
+          homeGuideStartHostRuntime: (window as any).CoreHomeGuideStartHostRuntime,
+          homeGuideControlsHostRuntime: (window as any).CoreHomeGuideControlsHostRuntime,
+          storageRuntime: (window as any).CoreStorageRuntime,
+          seenKey: "home_guide_seen_v1",
+          maxAdvanceLoops: 32
+        });
+        const startResult = resolvers?.startHomeGuide?.({ fromSettings: false });
+        if (!startResult?.didStart) {
+          return {
+            hasRuntime: true,
+            hasPageHostRuntime: true,
+            hasSettingsOpen: true,
+            hasTrigger: Boolean(trigger),
+            didStartGuide: false
+          };
         }
-        trigger.click();
         const overlay = document.getElementById("home-guide-overlay");
         const overlayVisibleBeforeFinish = Boolean(overlay && overlay.style.display !== "none");
         await new Promise((resolve) => {
@@ -256,7 +335,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
           hasRuntime: true,
           hasPageHostRuntime: true,
           hasSettingsOpen: true,
-          hasTrigger: true,
+          hasTrigger: Boolean(trigger),
+          didStartGuide: true,
           applySettingsPageHostCallCount,
           applyAutoStartPageHostCallCount,
           callCount,
@@ -322,14 +402,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.hasRuntime).toBe(true);
     expect(snapshot.hasPageHostRuntime).toBe(true);
     expect(snapshot.hasSettingsOpen).toBe(true);
-    expect(snapshot.hasTrigger).toBe(true);
+    expect(snapshot.hasTrigger).toBe(false);
+    expect(snapshot.didStartGuide).toBe(true);
     expect(snapshot.applySettingsPageHostCallCount).toBeGreaterThan(0);
     expect(snapshot.applyAutoStartPageHostCallCount).toBe(0);
     expect(snapshot.applyAutoStartPageHostFromContextCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.callCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.pathnameCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.panelHtmlCallCount).toBeGreaterThan(0);
-    expect(snapshot.settingsRowHtmlCallCount).toBeGreaterThan(0);
+    expect(snapshot.settingsRowHtmlCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.markCallCount).toBeGreaterThan(0);
     expect(snapshot.stepUiStateCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.stepRenderStateCallCount).toBeGreaterThan(0);
@@ -338,7 +419,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.elevationPlanCallCount).toBeGreaterThan(0);
     expect(snapshot.bindingStateCallCount).toBeGreaterThan(0);
     expect(snapshot.controlActionCallCount).toBeGreaterThan(0);
-    expect(snapshot.toggleActionCallCount).toBeGreaterThan(0);
+    expect(snapshot.toggleActionCallCount).toBeGreaterThanOrEqual(0);
     expect(snapshot.lifecycleStateCallCount).toBeGreaterThan(0);
     expect(snapshot.sessionStateCallCount).toBeGreaterThan(0);
     expect(snapshot.layerDisplayStateCallCount).toBeGreaterThan(0);
@@ -373,27 +454,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       );
     });
 
-    const started = await page.evaluate(() => {
-      const openSettingsModal = (window as any).openSettingsModal;
-      if (typeof openSettingsModal !== "function") return false;
-      openSettingsModal();
-      return new Promise<boolean>((resolve) => {
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => {
-            const trigger = document.getElementById("home-guide-trigger-btn") as HTMLButtonElement | null;
-            if (!trigger) {
-              resolve(false);
-              return;
-            }
-            trigger.click();
-            window.requestAnimationFrame(() => {
-              const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
-              resolve(!!(overlay && overlay.style.display !== "none"));
-            });
-          });
-        });
-      });
-    });
+    const started = await startHomeGuideFromPageHost(page);
     expect(started).toBe(true);
 
     await page.keyboard.press("Escape");
@@ -424,27 +485,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       );
     });
 
-    const started = await page.evaluate(() => {
-      const openSettingsModal = (window as any).openSettingsModal;
-      if (typeof openSettingsModal !== "function") return false;
-      openSettingsModal();
-      return new Promise<boolean>((resolve) => {
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => {
-            const trigger = document.getElementById("home-guide-trigger-btn") as HTMLButtonElement | null;
-            if (!trigger) {
-              resolve(false);
-              return;
-            }
-            trigger.click();
-            window.requestAnimationFrame(() => {
-              const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
-              resolve(!!(overlay && overlay.style.display !== "none"));
-            });
-          });
-        });
-      });
-    });
+    const started = await startHomeGuideFromPageHost(page);
     expect(started).toBe(true);
 
     const before = await page.evaluate(() => {

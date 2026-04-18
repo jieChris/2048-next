@@ -413,11 +413,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       nextIndex: 3
     });
     expect(snapshot.elevationTop).toEqual({
-      hostSelector: ".top-action-buttons",
-      shouldScopeTopActions: true
+      hostSelector: "",
+      shouldScopeTopActions: false
     });
     expect(snapshot.elevationHeading).toEqual({
-      hostSelector: ".heading",
+      hostSelector: "",
       shouldScopeTopActions: false
     });
     expect(snapshot.elevationNone).toEqual({
@@ -530,7 +530,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       behavior: "smooth"
     });
     expect(snapshot.doneNotice).toEqual({
-      message: "指引已完成，可在设置中重新打开新手指引。",
+      message: "指引已完成，可在账号中心重新打开新手指引。",
       hideDelayMs: 2600
     });
     expect(snapshot.doneNoticeStyle).toMatchObject({

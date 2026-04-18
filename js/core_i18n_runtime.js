@@ -106,6 +106,7 @@
     leather: "Leather", forest: "Forest", pop: "High Contrast", neon_flux: "Dynamic Neon", neon_black: "Neon Pulse",
     cyberpunk: "Cyberpunk", retro: "Retro Pixel", glass: "Frosted Glass", space: "Deep Space", sakura: "Sakura",
     mecha: "Mecha", neumorphism: "Neumorphism", clay: "Clay", bauhaus: "Bauhaus", nordic: "Nordic Frost",
+    midnight_nebula: "Midnight Nebula",
     luxury: "Black Gold", yanyuan: "Yanyuan Autumn", horse_year: "Year of the Horse"
   };
 

@@ -8,7 +8,8 @@
   <link rel="shortcut icon" href="meta/favicon.ico?v=20260409-1">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260409-1">
   <link rel="manifest" href="site.webmanifest?v=20260409-1">
-<link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
+  <script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
+  <link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
   <link href="style/account_page.css?v=20260321-01" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
@@ -78,6 +79,17 @@
             <div><span id="account-user-email-label">邮箱：</span><strong id="account-user-email">--</strong></div>
             <div><span id="account-user-created-label">创建时间：</span><strong id="account-user-created">--</strong></div>
           </div>
+        </section>
+
+        <section class="account-guide-card">
+          <div class="panel-head account-guide-head">
+            <div class="account-guide-copy">
+              <h3 id="account-guide-title">新手指引</h3>
+              <p id="account-guide-desc" class="account-guide-desc">返回首页并重新打开新手指引。</p>
+            </div>
+            <span id="account-guide-pill" class="panel-pill">Guide</span>
+          </div>
+          <button id="account-open-guide-btn" class="replay-button account-guide-open-btn" type="button">打开指引</button>
         </section>
       </section>
 

@@ -291,4 +291,75 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.value).toBe("13A");
     expect(snapshot.board).toEqual(before);
   });
+
+  test("practice board code input rejects tiles above capped mode limit", async ({ page }) => {
+    const response = await page.goto("/Practice_board.html?practice_guide_seen=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Practice board response should exist").not.toBeNull();
+    expect(response?.ok(), "Practice board response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+
+    await page.waitForFunction(
+      () =>
+        Boolean((window as any).game_manager) &&
+        typeof (window as any).game_manager.restartWithBoard === "function" &&
+        document.getElementById("practice-mode-picker-btn") !== null
+    );
+
+    await page.click("#practice-mode-picker-btn");
+    await expect(page.locator("#practice-mode-panel")).toHaveClass(/is-open/);
+    await page.click('[data-practice-mode-key="capped_4x4_pow2_64_no_undo"]');
+    await expect(page.locator("#practice-mode-panel")).not.toHaveClass(/is-open/);
+
+    const baseline = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      if (!manager || !manager.grid || !manager.grid.cells) return null;
+      const width = Number(manager.width) || 0;
+      const height = Number(manager.height) || 0;
+      const board: number[][] = [];
+      for (let y = 0; y < height; y += 1) {
+        const row: number[] = [];
+        for (let x = 0; x < width; x += 1) {
+          const tile = manager.grid.cells[x] ? manager.grid.cells[x][y] : null;
+          row.push(tile ? Number(tile.value) || 0 : 0);
+        }
+        board.push(row);
+      }
+      return board;
+    });
+    expect(baseline).not.toBeNull();
+
+    await page.click("#practice-board-code-btn");
+    await page.fill("#practice-board-code-input", "7000000000000000");
+
+    let dialogMessage = "";
+    page.once("dialog", async (dialog) => {
+      dialogMessage = dialog.message();
+      await dialog.accept();
+    });
+    await page.locator("#practice-board-code-confirm").click({ force: true });
+    expect(dialogMessage).toContain("64");
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          const manager = (window as any).game_manager;
+          if (!manager || !manager.grid || !manager.grid.cells) return null;
+          const width = Number(manager.width) || 0;
+          const height = Number(manager.height) || 0;
+          const board: number[][] = [];
+          for (let y = 0; y < height; y += 1) {
+            const row: number[] = [];
+            for (let x = 0; x < width; x += 1) {
+              const tile = manager.grid.cells[x] ? manager.grid.cells[x][y] : null;
+              row.push(tile ? Number(tile.value) || 0 : 0);
+            }
+            board.push(row);
+          }
+          return board;
+        });
+      })
+      .toEqual(baseline);
+  });
 });

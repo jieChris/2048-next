@@ -12,6 +12,7 @@
     window.location.replace("play.html?mode_key=capped_4x4_pow2_no_undo");
   </script>
 
+<script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
 <link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
   <meta name="apple-mobile-web-app-capable" content="yes">
 
@@ -277,6 +278,32 @@
           </label>
         </div>
         <div id="win-prompt-note" class="settings-note"></div>
+      </div>
+      <div id="bgm-settings-row" class="settings-row settings-toggle-row">
+        <div class="settings-toggle-main">
+          <div class="settings-toggle-copy">
+            <label for="bgm-toggle" class="settings-toggle-title">背景音乐</label>
+            <div id="bgm-toggle-desc" class="settings-toggle-desc">开启后在当前页面循环播放背景音乐</div>
+          </div>
+          <label class="settings-switch" for="bgm-toggle" aria-label="背景音乐">
+            <input id="bgm-toggle" type="checkbox">
+            <span class="settings-switch-slider"></span>
+          </label>
+        </div>
+        <div id="bgm-note" class="settings-note">默认不加载音频，开启后才会开始请求，避免拖慢页面。</div>
+      </div>
+      <div id="night-bg-settings-row" class="settings-row settings-toggle-row">
+        <div class="settings-toggle-main">
+          <div class="settings-toggle-copy">
+            <label for="night-bg-toggle" class="settings-toggle-title">夜间模式</label>
+            <div id="night-bg-toggle-desc" class="settings-toggle-desc">为页面切换成柔和的夜间模式</div>
+          </div>
+          <label class="settings-switch" for="night-bg-toggle" aria-label="夜间模式">
+            <input id="night-bg-toggle" type="checkbox">
+            <span class="settings-switch-slider"></span>
+          </label>
+        </div>
+        <div id="night-bg-note" class="settings-note">开启后会在所有带设置弹窗的页面同步生效。</div>
       </div>
       <div id="toolkit-entry-row" class="settings-row toolkit-entry-row">
         <div class="toolkit-entry-actions">
