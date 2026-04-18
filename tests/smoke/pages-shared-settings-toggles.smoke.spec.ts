@@ -1,6 +1,74 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test("night mode toggle stays synced across two pages", async ({ page }) => {
+    const context = page.context();
+    await context.addInitScript(() => {
+      window.localStorage.setItem("home_guide_seen_v1", "1");
+      window.localStorage.setItem("practice_guide_shown_v2", "1");
+      window.localStorage.setItem("practice_guide_mobile_shown_v1", "1");
+      window.localStorage.setItem("settings_night_background_enabled_v1", "0");
+      window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.removeItem("settings_night_theme_auto_applied_v1");
+      window.localStorage.removeItem("settings_night_theme_pending_v1");
+    });
+
+    const secondPage = await context.newPage();
+
+    const firstResponse = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(firstResponse, "Home response should exist").not.toBeNull();
+    expect(firstResponse?.ok(), "Home response should be 2xx").toBeTruthy();
+
+    const secondResponse = await secondPage.goto("/Practice_board.html?practice_guide_seen=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(secondResponse, "Practice board response should exist").not.toBeNull();
+    expect(secondResponse?.ok(), "Practice board response should be 2xx").toBeTruthy();
+
+    await page.waitForFunction(() => {
+      return (
+        !!(window as any).CoreNightModeRuntime &&
+        typeof (window as any).openSettingsModal === "function"
+      );
+    }, null, { timeout: 15000 });
+    await secondPage.waitForFunction(() => {
+      return (
+        !!(window as any).CoreNightModeRuntime &&
+        typeof (window as any).openSettingsModal === "function"
+      );
+    }, null, { timeout: 15000 });
+
+    await page.evaluate(() => {
+      (window as any).CoreNightModeRuntime.setNightBackgroundEnabled(false);
+      (window as any).openSettingsModal();
+    });
+    await secondPage.evaluate(() => {
+      (window as any).CoreNightModeRuntime.setNightBackgroundEnabled(false);
+      (window as any).openSettingsModal();
+    });
+
+    await expect(page.locator("#night-bg-toggle")).not.toBeChecked();
+    await expect(secondPage.locator("#night-bg-toggle")).not.toBeChecked();
+
+    await page.click("label.settings-switch[for='night-bg-toggle']");
+    await page.waitForFunction(() => {
+      return window.localStorage.getItem("settings_night_background_enabled_v1") === "1";
+    });
+    await expect(page.locator("#night-bg-toggle")).toBeChecked();
+    await expect(secondPage.locator("#night-bg-toggle")).toBeChecked();
+
+    await secondPage.click("label.settings-switch[for='night-bg-toggle']");
+    await secondPage.waitForFunction(() => {
+      return window.localStorage.getItem("settings_night_background_enabled_v1") === "0";
+    });
+    await expect(secondPage.locator("#night-bg-toggle")).not.toBeChecked();
+    await expect(page.locator("#night-bg-toggle")).not.toBeChecked();
+
+    await secondPage.close();
+  });
+
   test("home page exposes shared background music and night mode toggles", async ({
     page
   }) => {
@@ -9,8 +77,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("settings_bgm_enabled_v1", "0");
       window.localStorage.setItem("settings_night_background_enabled_v1", "0");
       window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
       window.localStorage.removeItem("settings_night_theme_auto_applied_v1");
       window.localStorage.removeItem("settings_night_theme_pending_v1");
+      window.localStorage.removeItem("settings_day_theme_profile_v1");
+      window.localStorage.removeItem("settings_night_theme_profile_v1");
+      window.localStorage.removeItem("settings_day_tile_palette_v1");
+      window.localStorage.removeItem("settings_night_tile_palette_v1");
     });
 
     const response = await page.goto("/2048.html", {
@@ -74,9 +147,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
           typeof (window as any).ThemeManager?.getCurrentTheme === "function"
             ? (window as any).ThemeManager.getCurrentTheme()
             : "",
+        currentTilePalette:
+          typeof (window as any).ThemeManager?.getActiveTilePaletteId === "function"
+            ? (window as any).ThemeManager.getActiveTilePaletteId()
+            : "",
         savedTheme: window.localStorage.getItem("theme_profile_v1"),
+        savedTilePalette: window.localStorage.getItem("tile_palette_active_v1"),
         autoThemeApplied: window.localStorage.getItem("settings_night_theme_auto_applied_v1"),
-        autoThemePending: window.localStorage.getItem("settings_night_theme_pending_v1")
+        autoThemePending: window.localStorage.getItem("settings_night_theme_pending_v1"),
+        dayTheme: window.localStorage.getItem("settings_day_theme_profile_v1"),
+        nightTheme: window.localStorage.getItem("settings_night_theme_profile_v1"),
+        dayTilePalette: window.localStorage.getItem("settings_day_tile_palette_v1"),
+        nightTilePalette: window.localStorage.getItem("settings_night_tile_palette_v1")
       };
     });
 
@@ -84,9 +166,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(afterNightEnable.night.dataAttribute).toBe("1");
     expect(afterNightEnable.night.hasStyleTag).toBe(true);
     expect(afterNightEnable.currentTheme).toBe("midnight_nebula");
+    expect(afterNightEnable.currentTilePalette).toBe("follow-theme");
     expect(afterNightEnable.savedTheme).toBe("midnight_nebula");
+    expect(afterNightEnable.savedTilePalette).toBe("follow-theme");
     expect(afterNightEnable.autoThemeApplied).toBe("1");
     expect(afterNightEnable.autoThemePending).toBe("0");
+    expect(afterNightEnable.dayTheme).toBe("classic");
+    expect(afterNightEnable.nightTheme).toBe("midnight_nebula");
+    expect(afterNightEnable.dayTilePalette).toBe("follow-theme");
+    expect(afterNightEnable.nightTilePalette).toBe("follow-theme");
 
     const nightBoardSnapshot = await page.evaluate(() => {
       const gameContainer = document.querySelector(".game-container");
@@ -102,9 +190,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.evaluate(() => {
       (window as any).ThemeManager.applyTheme("ocean");
+      (window as any).ThemeManager.setActiveTilePalette("night-paper");
     });
     await page.waitForFunction(() => {
-      return window.localStorage.getItem("theme_profile_v1") === "ocean";
+      return (
+        window.localStorage.getItem("theme_profile_v1") === "ocean" &&
+        window.localStorage.getItem("tile_palette_active_v1") === "night-paper" &&
+        window.localStorage.getItem("settings_night_theme_profile_v1") === "ocean" &&
+        window.localStorage.getItem("settings_night_tile_palette_v1") === "night-paper"
+      );
     });
 
     await page.click("label.settings-switch[for='bgm-toggle']");
@@ -120,11 +214,27 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#night-bg-toggle")).not.toBeChecked();
 
     const finalNightSnapshot = await page.evaluate(() => {
-      return (window as any).CoreNightModeRuntime.getNightModeRuntimeSnapshot();
+      return {
+        night: (window as any).CoreNightModeRuntime.getNightModeRuntimeSnapshot(),
+        currentTheme:
+          typeof (window as any).ThemeManager?.getCurrentTheme === "function"
+            ? (window as any).ThemeManager.getCurrentTheme()
+            : "",
+        currentTilePalette:
+          typeof (window as any).ThemeManager?.getActiveTilePaletteId === "function"
+            ? (window as any).ThemeManager.getActiveTilePaletteId()
+            : "",
+        savedTheme: window.localStorage.getItem("theme_profile_v1"),
+        savedTilePalette: window.localStorage.getItem("tile_palette_active_v1")
+      };
     });
 
-    expect(finalNightSnapshot.enabled).toBe(false);
-    expect(finalNightSnapshot.dataAttribute).toBe("");
+    expect(finalNightSnapshot.night.enabled).toBe(false);
+    expect(finalNightSnapshot.night.dataAttribute).toBe("");
+    expect(finalNightSnapshot.currentTheme).toBe("classic");
+    expect(finalNightSnapshot.currentTilePalette).toBe("follow-theme");
+    expect(finalNightSnapshot.savedTheme).toBe("classic");
+    expect(finalNightSnapshot.savedTilePalette).toBe("follow-theme");
 
     await page.click("label.settings-switch[for='night-bg-toggle']");
     await page.waitForFunction(() => {
@@ -138,13 +248,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
           typeof (window as any).ThemeManager?.getCurrentTheme === "function"
             ? (window as any).ThemeManager.getCurrentTheme()
             : "",
+        currentTilePalette:
+          typeof (window as any).ThemeManager?.getActiveTilePaletteId === "function"
+            ? (window as any).ThemeManager.getActiveTilePaletteId()
+            : "",
         savedTheme: window.localStorage.getItem("theme_profile_v1"),
+        savedTilePalette: window.localStorage.getItem("tile_palette_active_v1"),
         autoThemeApplied: window.localStorage.getItem("settings_night_theme_auto_applied_v1")
       };
     });
 
     expect(secondNightEnable.currentTheme).toBe("ocean");
+    expect(secondNightEnable.currentTilePalette).toBe("night-paper");
     expect(secondNightEnable.savedTheme).toBe("ocean");
+    expect(secondNightEnable.savedTilePalette).toBe("night-paper");
     expect(secondNightEnable.autoThemeApplied).toBe("1");
   });
 

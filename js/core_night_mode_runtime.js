@@ -7,6 +7,14 @@
   var AUTO_THEME_APPLIED_KEY = "settings_night_theme_auto_applied_v1";
   var AUTO_THEME_PENDING_KEY = "settings_night_theme_pending_v1";
   var AUTO_THEME_ID = "midnight_nebula";
+  var THEME_PROFILE_KEY = "theme_profile_v1";
+  var TILE_PALETTE_ACTIVE_KEY = "tile_palette_active_v1";
+  var DAY_THEME_KEY = "settings_day_theme_profile_v1";
+  var NIGHT_THEME_KEY = "settings_night_theme_profile_v1";
+  var DAY_TILE_PALETTE_KEY = "settings_day_tile_palette_v1";
+  var NIGHT_TILE_PALETTE_KEY = "settings_night_tile_palette_v1";
+  var DEFAULT_DAY_THEME_ID = "classic";
+  var DEFAULT_TILE_PALETTE_ID = "follow-theme";
   var STORAGE_TRUE_VALUE = "1";
   var STORAGE_FALSE_VALUE = "0";
   var STYLE_ID = "night-background-style";
@@ -14,7 +22,9 @@
   var state = {
     enabled: false,
     hasToggleBinding: false,
-    hasLanguageBinding: false
+    hasLanguageBinding: false,
+    hasStorageBinding: false,
+    hasThemeChangeBinding: false
   };
 
   function isRecord(value) {
@@ -111,6 +121,169 @@
 
   function safeWriteStorageFlag(enabled) {
     return safeWriteBooleanFlag(STORAGE_KEY, enabled);
+  }
+
+  function safeReadTextValue(key) {
+    if (typeof key !== "string" || !key) return "";
+    var storage = toRecord(global).localStorage;
+    var getItem = asFunction(toRecord(storage).getItem);
+    if (!getItem) return "";
+    try {
+      return String(getItem.call(storage, key) || "");
+    } catch (_err) {
+      return "";
+    }
+  }
+
+  function safeWriteTextValue(key, value) {
+    if (typeof key !== "string" || !key) return false;
+    var storage = toRecord(global).localStorage;
+    var setItem = asFunction(toRecord(storage).setItem);
+    if (!setItem) return false;
+    try {
+      setItem.call(storage, key, String(value || ""));
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function getModeThemeStorageKey(isNight) {
+    return isNight ? NIGHT_THEME_KEY : DAY_THEME_KEY;
+  }
+
+  function getModeTilePaletteStorageKey(isNight) {
+    return isNight ? NIGHT_TILE_PALETTE_KEY : DAY_TILE_PALETTE_KEY;
+  }
+
+  function readModeAppearance(isNight) {
+    return {
+      themeId:
+        safeReadTextValue(getModeThemeStorageKey(isNight)) ||
+        (isNight ? AUTO_THEME_ID : DEFAULT_DAY_THEME_ID),
+      tilePaletteId:
+        safeReadTextValue(getModeTilePaletteStorageKey(isNight)) || DEFAULT_TILE_PALETTE_ID
+    };
+  }
+
+  function writeModeAppearance(isNight, appearance) {
+    var payload = toRecord(appearance);
+    var didWrite = false;
+    var themeId = typeof payload.themeId === "string" ? payload.themeId : "";
+    var tilePaletteId = typeof payload.tilePaletteId === "string" ? payload.tilePaletteId : "";
+    if (themeId) {
+      didWrite = safeWriteTextValue(getModeThemeStorageKey(isNight), themeId) || didWrite;
+    }
+    if (tilePaletteId) {
+      didWrite =
+        safeWriteTextValue(getModeTilePaletteStorageKey(isNight), tilePaletteId) || didWrite;
+    }
+    return didWrite;
+  }
+
+  function getThemeManager() {
+    return toRecord(global.ThemeManager);
+  }
+
+  function readCurrentThemeId() {
+    var themeManager = getThemeManager();
+    var getCurrentTheme = asFunction(themeManager.getCurrentTheme);
+    if (getCurrentTheme) {
+      try {
+        var themeId = String(getCurrentTheme.call(themeManager) || "");
+        if (themeId) return themeId;
+      } catch (_err) {}
+    }
+    return safeReadTextValue(THEME_PROFILE_KEY) || DEFAULT_DAY_THEME_ID;
+  }
+
+  function readCurrentTilePaletteId() {
+    var themeManager = getThemeManager();
+    var getActiveTilePaletteId = asFunction(themeManager.getActiveTilePaletteId);
+    if (getActiveTilePaletteId) {
+      try {
+        var paletteId = String(getActiveTilePaletteId.call(themeManager) || "");
+        if (paletteId) return paletteId;
+      } catch (_err) {}
+    }
+    return safeReadTextValue(TILE_PALETTE_ACTIVE_KEY) || DEFAULT_TILE_PALETTE_ID;
+  }
+
+  function syncCurrentAppearanceToMode(isNight) {
+    return writeModeAppearance(isNight, {
+      themeId: readCurrentThemeId(),
+      tilePaletteId: readCurrentTilePaletteId()
+    });
+  }
+
+  function ensureCurrentModeAppearanceSeeded() {
+    if (state.enabled) {
+      var hasNightTheme = !!safeReadTextValue(NIGHT_THEME_KEY);
+      var hasNightPalette = !!safeReadTextValue(NIGHT_TILE_PALETTE_KEY);
+      if (!hasNightTheme) {
+        if (!safeReadBooleanFlag(AUTO_THEME_APPLIED_KEY) && !safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
+          // Preserve legacy users who already had night mode enabled before per-mode tile sync shipped.
+          safeWriteTextValue(NIGHT_THEME_KEY, readCurrentThemeId() || AUTO_THEME_ID);
+          markNightThemeAutoApplied();
+        } else if (safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
+          safeWriteTextValue(NIGHT_THEME_KEY, AUTO_THEME_ID);
+        } else {
+          safeWriteTextValue(NIGHT_THEME_KEY, readCurrentThemeId() || AUTO_THEME_ID);
+        }
+      }
+      if (!hasNightPalette) {
+        safeWriteTextValue(NIGHT_TILE_PALETTE_KEY, readCurrentTilePaletteId() || DEFAULT_TILE_PALETTE_ID);
+      }
+      return true;
+    }
+
+    if (!safeReadTextValue(DAY_THEME_KEY)) {
+      safeWriteTextValue(DAY_THEME_KEY, readCurrentThemeId() || DEFAULT_DAY_THEME_ID);
+    }
+    if (!safeReadTextValue(DAY_TILE_PALETTE_KEY)) {
+      safeWriteTextValue(DAY_TILE_PALETTE_KEY, readCurrentTilePaletteId() || DEFAULT_TILE_PALETTE_ID);
+    }
+    return true;
+  }
+
+  function applyModeAppearance(isNight) {
+    var appearance = readModeAppearance(isNight);
+    var themeManager = getThemeManager();
+    var applyTheme = asFunction(themeManager.applyTheme);
+    var setActiveTilePalette = asFunction(themeManager.setActiveTilePalette);
+    var currentThemeId = readCurrentThemeId();
+    var currentTilePaletteId = readCurrentTilePaletteId();
+
+    safeWriteTextValue(THEME_PROFILE_KEY, appearance.themeId);
+    safeWriteTextValue(TILE_PALETTE_ACTIVE_KEY, appearance.tilePaletteId);
+
+    var didApply = false;
+    if (applyTheme && appearance.themeId && currentThemeId !== appearance.themeId) {
+      try {
+        applyTheme.call(themeManager, appearance.themeId);
+        didApply = true;
+      } catch (_err) {}
+    }
+    if (
+      setActiveTilePalette &&
+      appearance.tilePaletteId &&
+      currentTilePaletteId !== appearance.tilePaletteId
+    ) {
+      try {
+        setActiveTilePalette.call(themeManager, appearance.tilePaletteId);
+        didApply = true;
+      } catch (_err) {}
+    }
+    return didApply;
+  }
+
+  function syncAppearanceForCurrentState() {
+    ensureCurrentModeAppearanceSeeded();
+    var applied = applyModeAppearance(state.enabled);
+    if (state.enabled && safeReadBooleanFlag(AUTO_THEME_PENDING_KEY) && applied) {
+      markNightThemeAutoApplied();
+    }
+    return applied;
   }
 
   function readUiLanguage() {
@@ -238,41 +411,57 @@
 
   function tryApplyNightThemePreset() {
     if (!state.enabled) return false;
-    if (safeReadBooleanFlag(AUTO_THEME_APPLIED_KEY)) {
-      safeWriteBooleanFlag(AUTO_THEME_PENDING_KEY, false);
-      return false;
-    }
-
-    var themeManager = toRecord(global.ThemeManager);
-    var applyTheme = asFunction(themeManager.applyTheme);
-    if (!applyTheme) return false;
-
-    var getCurrentTheme = asFunction(themeManager.getCurrentTheme);
-    var currentThemeId = getCurrentTheme ? String(getCurrentTheme.call(themeManager) || "") : "";
-    try {
-      if (currentThemeId !== AUTO_THEME_ID) {
-        applyTheme.call(themeManager, AUTO_THEME_ID);
-      }
-      markNightThemeAutoApplied();
-      return true;
-    } catch (_err) {
-      return false;
-    }
+    return syncAppearanceForCurrentState();
   }
 
   function setNightBackgroundEnabled(enabled) {
     var wasEnabled = !!state.enabled;
+    if (wasEnabled && !enabled) {
+      syncCurrentAppearanceToMode(true);
+    } else if (!wasEnabled && enabled) {
+      syncCurrentAppearanceToMode(false);
+    }
     state.enabled = !!enabled;
     safeWriteStorageFlag(state.enabled);
     applyNightBackground(state.enabled);
     if (state.enabled && !wasEnabled) {
+      if (!safeReadTextValue(NIGHT_THEME_KEY)) {
+        safeWriteTextValue(
+          NIGHT_THEME_KEY,
+          safeReadBooleanFlag(AUTO_THEME_APPLIED_KEY) ? readCurrentThemeId() || AUTO_THEME_ID : AUTO_THEME_ID
+        );
+      }
+      if (!safeReadTextValue(NIGHT_TILE_PALETTE_KEY)) {
+        safeWriteTextValue(NIGHT_TILE_PALETTE_KEY, DEFAULT_TILE_PALETTE_ID);
+      }
       if (!safeReadBooleanFlag(AUTO_THEME_APPLIED_KEY)) {
         safeWriteBooleanFlag(AUTO_THEME_PENDING_KEY, true);
-        tryApplyNightThemePreset();
       } else if (safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
         safeWriteBooleanFlag(AUTO_THEME_PENDING_KEY, false);
       }
+      syncAppearanceForCurrentState();
+    } else if (!state.enabled && wasEnabled) {
+      if (!safeReadTextValue(DAY_THEME_KEY)) {
+        safeWriteTextValue(DAY_THEME_KEY, DEFAULT_DAY_THEME_ID);
+      }
+      if (!safeReadTextValue(DAY_TILE_PALETTE_KEY)) {
+        safeWriteTextValue(DAY_TILE_PALETTE_KEY, DEFAULT_TILE_PALETTE_ID);
+      }
+      syncAppearanceForCurrentState();
+      if (safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
+        safeWriteBooleanFlag(AUTO_THEME_PENDING_KEY, false);
+      }
+    } else {
+      syncAppearanceForCurrentState();
     }
+    syncNightModeSettingsUI();
+    return state.enabled;
+  }
+
+  function syncNightBackgroundStateFromStorage() {
+    state.enabled = safeReadStorageFlag();
+    applyNightBackground(state.enabled);
+    syncAppearanceForCurrentState();
     syncNightModeSettingsUI();
     return state.enabled;
   }
@@ -296,6 +485,41 @@
     return true;
   }
 
+  function bindStorageListener() {
+    if (state.hasStorageBinding) return false;
+    bindListener(global, "storage", function (eventLike) {
+      var eventRecord = toRecord(eventLike);
+      var key = typeof eventRecord.key === "string" ? eventRecord.key : "";
+      if (
+        key &&
+        key !== STORAGE_KEY &&
+        key !== DAY_THEME_KEY &&
+        key !== NIGHT_THEME_KEY &&
+        key !== DAY_TILE_PALETTE_KEY &&
+        key !== NIGHT_TILE_PALETTE_KEY &&
+        key !== AUTO_THEME_APPLIED_KEY &&
+        key !== AUTO_THEME_PENDING_KEY
+      ) {
+        return;
+      }
+      syncNightBackgroundStateFromStorage();
+    });
+    state.hasStorageBinding = true;
+    return true;
+  }
+
+  function bindThemeChangeListener() {
+    if (state.hasThemeChangeBinding) return false;
+    bindListener(global, "themechange", function () {
+      syncCurrentAppearanceToMode(state.enabled);
+      if (state.enabled && safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
+        markNightThemeAutoApplied();
+      }
+    });
+    state.hasThemeChangeBinding = true;
+    return true;
+  }
+
   function getRuntimeSnapshot() {
     var doc = getDocumentLike();
     var root = doc && doc.documentElement ? doc.documentElement : null;
@@ -305,7 +529,11 @@
       dataAttribute: root ? String(root.getAttribute("data-night-background") || "") : "",
       togglePresent: !!getElementById("night-bg-toggle"),
       autoThemeApplied: safeReadBooleanFlag(AUTO_THEME_APPLIED_KEY),
-      autoThemePending: safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)
+      autoThemePending: safeReadBooleanFlag(AUTO_THEME_PENDING_KEY),
+      dayThemeId: safeReadTextValue(DAY_THEME_KEY),
+      nightThemeId: safeReadTextValue(NIGHT_THEME_KEY),
+      dayTilePaletteId: safeReadTextValue(DAY_TILE_PALETTE_KEY),
+      nightTilePaletteId: safeReadTextValue(NIGHT_TILE_PALETTE_KEY)
     };
   }
 
@@ -317,15 +545,17 @@
         if (safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
           tryApplyNightThemePreset();
         } else {
-          // Preserve existing users who already had night mode enabled before this auto-theme behavior shipped.
-          markNightThemeAutoApplied();
+          ensureCurrentModeAppearanceSeeded();
         }
       } else if (safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
-        safeWriteBooleanFlag(AUTO_THEME_PENDING_KEY, false);
+        tryApplyNightThemePreset();
       }
     }
+    syncAppearanceForCurrentState();
     bindToggle();
     bindLanguageListener();
+    bindStorageListener();
+    bindThemeChangeListener();
     syncNightModeSettingsUI();
   }
 

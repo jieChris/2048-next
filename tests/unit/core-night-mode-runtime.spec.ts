@@ -9,6 +9,7 @@ type StorageMap = Map<string, string>;
 type MockNode = {
   id?: string;
   textContent?: string;
+  checked?: boolean;
   style: Record<string, string>;
   parentNode: MockNode | null;
 };
@@ -31,6 +32,13 @@ function createStorage(storageMap?: StorageMap) {
 function createMockDocument() {
   const attrs = new Map<string, string>();
   const elementsById = new Map<string, MockNode>();
+  const nightToggle = {
+    id: "night-bg-toggle",
+    checked: false,
+    style: {},
+    parentNode: null
+  } as MockNode;
+  elementsById.set("night-bg-toggle", nightToggle);
 
   const documentElement = {
     style: {} as Record<string, string>,
@@ -81,12 +89,18 @@ function loadNightModeRuntime(options?: {
   const script = readFileSync(scriptPath, "utf8");
   const { map, localStorage } = createStorage(options?.storageMap);
   const documentLike = createMockDocument();
+  const listeners = new Map<string, Array<(event?: unknown) => void>>();
   const context = {
     console,
     document: documentLike,
     localStorage,
     ThemeManager: options?.themeManager,
-    addEventListener: vi.fn()
+    addEventListener: vi.fn((eventName: string, handler: (event?: unknown) => void) => {
+      const key = String(eventName);
+      const bucket = listeners.get(key) || [];
+      bucket.push(handler);
+      listeners.set(key, bucket);
+    })
   } as Record<string, unknown>;
   context.window = context;
 
@@ -100,17 +114,28 @@ function loadNightModeRuntime(options?: {
       };
     },
     storageMap: map,
-    documentLike
+    documentLike,
+    dispatchWindowEvent(eventName: string, event?: unknown) {
+      const bucket = listeners.get(String(eventName)) || [];
+      for (const handler of bucket) {
+        handler(event);
+      }
+    }
   };
 }
 
 describe("core night mode runtime", () => {
   it("auto-switches to midnight nebula the first time night mode is enabled", () => {
     let currentThemeId = "classic";
+    let currentTilePaletteId = "follow-theme";
     const themeManager = {
       getCurrentTheme: vi.fn(() => currentThemeId),
+      getActiveTilePaletteId: vi.fn(() => currentTilePaletteId),
       applyTheme: vi.fn((themeId: string) => {
         currentThemeId = themeId;
+      }),
+      setActiveTilePalette: vi.fn((paletteId: string) => {
+        currentTilePaletteId = paletteId;
       })
     };
     const { context, storageMap } = loadNightModeRuntime({ themeManager });
@@ -120,9 +145,14 @@ describe("core night mode runtime", () => {
 
     expect(themeManager.applyTheme).toHaveBeenCalledWith("midnight_nebula");
     expect(currentThemeId).toBe("midnight_nebula");
+    expect(currentTilePaletteId).toBe("follow-theme");
     expect(storageMap.get("settings_night_background_enabled_v1")).toBe("1");
     expect(storageMap.get("settings_night_theme_auto_applied_v1")).toBe("1");
     expect(storageMap.get("settings_night_theme_pending_v1")).toBe("0");
+    expect(storageMap.get("settings_day_theme_profile_v1")).toBe("classic");
+    expect(storageMap.get("settings_night_theme_profile_v1")).toBe("midnight_nebula");
+    expect(storageMap.get("settings_day_tile_palette_v1")).toBe("follow-theme");
+    expect(storageMap.get("settings_night_tile_palette_v1")).toBe("follow-theme");
     expect(snapshot.autoThemeApplied).toBe(true);
     expect(snapshot.autoThemePending).toBe(false);
   });
@@ -136,12 +166,18 @@ describe("core night mode runtime", () => {
     expect(sharedStorage.get("settings_night_background_enabled_v1")).toBe("1");
     expect(sharedStorage.get("settings_night_theme_auto_applied_v1")).not.toBe("1");
     expect(sharedStorage.get("settings_night_theme_pending_v1")).toBe("1");
+    expect(sharedStorage.get("settings_night_theme_profile_v1")).toBe("midnight_nebula");
 
     let currentThemeId = "classic";
+    let currentTilePaletteId = "follow-theme";
     const themeManager = {
       getCurrentTheme: vi.fn(() => currentThemeId),
+      getActiveTilePaletteId: vi.fn(() => currentTilePaletteId),
       applyTheme: vi.fn((themeId: string) => {
         currentThemeId = themeId;
+      }),
+      setActiveTilePalette: vi.fn((paletteId: string) => {
+        currentTilePaletteId = paletteId;
       })
     };
     const secondLoad = loadNightModeRuntime({
@@ -152,6 +188,7 @@ describe("core night mode runtime", () => {
 
     expect(themeManager.applyTheme).toHaveBeenCalledWith("midnight_nebula");
     expect(currentThemeId).toBe("midnight_nebula");
+    expect(currentTilePaletteId).toBe("follow-theme");
     expect(sharedStorage.get("settings_night_theme_auto_applied_v1")).toBe("1");
     expect(sharedStorage.get("settings_night_theme_pending_v1")).toBe("0");
     expect(snapshot.autoThemeApplied).toBe(true);
@@ -162,9 +199,14 @@ describe("core night mode runtime", () => {
     const sharedStorage = new Map<string, string>([
       ["settings_night_background_enabled_v1", "1"]
     ]);
+    let currentTilePaletteId = "night-paper";
     const themeManager = {
       getCurrentTheme: vi.fn(() => "ocean"),
-      applyTheme: vi.fn()
+      getActiveTilePaletteId: vi.fn(() => currentTilePaletteId),
+      applyTheme: vi.fn(),
+      setActiveTilePalette: vi.fn((paletteId: string) => {
+        currentTilePaletteId = paletteId;
+      })
     };
     const runtime = loadNightModeRuntime({
       storageMap: sharedStorage,
@@ -175,8 +217,80 @@ describe("core night mode runtime", () => {
     expect(themeManager.applyTheme).not.toHaveBeenCalled();
     expect(sharedStorage.get("settings_night_theme_auto_applied_v1")).toBe("1");
     expect(sharedStorage.get("settings_night_theme_pending_v1")).not.toBe("1");
+    expect(sharedStorage.get("settings_night_theme_profile_v1")).toBe("ocean");
+    expect(sharedStorage.get("settings_night_tile_palette_v1")).toBe("night-paper");
     expect(snapshot.enabled).toBe(true);
     expect(snapshot.autoThemeApplied).toBe(true);
     expect(snapshot.autoThemePending).toBe(false);
+  });
+
+  it("restores separate day and night tile appearances when switching modes", () => {
+    let currentThemeId = "classic";
+    let currentTilePaletteId = "follow-theme";
+    const themeManager = {
+      getCurrentTheme: vi.fn(() => currentThemeId),
+      getActiveTilePaletteId: vi.fn(() => currentTilePaletteId),
+      applyTheme: vi.fn((themeId: string) => {
+        currentThemeId = themeId;
+      }),
+      setActiveTilePalette: vi.fn((paletteId: string) => {
+        currentTilePaletteId = paletteId;
+      })
+    };
+    const runtime = loadNightModeRuntime({ themeManager });
+
+    runtime.context.CoreNightModeRuntime.setNightBackgroundEnabled(true);
+    currentThemeId = "ocean";
+    currentTilePaletteId = "night-paper";
+
+    runtime.context.CoreNightModeRuntime.setNightBackgroundEnabled(false);
+
+    expect(currentThemeId).toBe("classic");
+    expect(currentTilePaletteId).toBe("follow-theme");
+    expect(runtime.storageMap.get("settings_night_theme_profile_v1")).toBe("ocean");
+    expect(runtime.storageMap.get("settings_night_tile_palette_v1")).toBe("night-paper");
+    expect(runtime.storageMap.get("settings_day_theme_profile_v1")).toBe("classic");
+    expect(runtime.storageMap.get("settings_day_tile_palette_v1")).toBe("follow-theme");
+
+    runtime.context.CoreNightModeRuntime.setNightBackgroundEnabled(true);
+
+    expect(currentThemeId).toBe("ocean");
+    expect(currentTilePaletteId).toBe("night-paper");
+  });
+
+  it("syncs the checkbox state when another page changes night mode through storage", () => {
+    const sharedStorage = new Map<string, string>([
+      ["settings_night_background_enabled_v1", "0"]
+    ]);
+    const runtime = loadNightModeRuntime({
+      storageMap: sharedStorage
+    });
+
+    const toggleBefore = runtime.documentLike.getElementById("night-bg-toggle") as MockNode | null;
+    expect(toggleBefore?.checked).toBe(false);
+
+    sharedStorage.set("settings_night_background_enabled_v1", "1");
+    runtime.dispatchWindowEvent("storage", {
+      key: "settings_night_background_enabled_v1"
+    });
+
+    const enabledSnapshot = runtime.context.CoreNightModeRuntime.getNightModeRuntimeSnapshot();
+    const toggleAfterEnable = runtime.documentLike.getElementById("night-bg-toggle") as MockNode | null;
+
+    expect(enabledSnapshot.enabled).toBe(true);
+    expect(enabledSnapshot.dataAttribute).toBe("1");
+    expect(toggleAfterEnable?.checked).toBe(true);
+
+    sharedStorage.set("settings_night_background_enabled_v1", "0");
+    runtime.dispatchWindowEvent("storage", {
+      key: "settings_night_background_enabled_v1"
+    });
+
+    const disabledSnapshot = runtime.context.CoreNightModeRuntime.getNightModeRuntimeSnapshot();
+    const toggleAfterDisable = runtime.documentLike.getElementById("night-bg-toggle") as MockNode | null;
+
+    expect(disabledSnapshot.enabled).toBe(false);
+    expect(disabledSnapshot.dataAttribute).toBe("");
+    expect(toggleAfterDisable?.checked).toBe(false);
   });
 });
