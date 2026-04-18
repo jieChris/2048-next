@@ -265,6 +265,107 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(secondNightEnable.autoThemeApplied).toBe("1");
   });
 
+  test("palette theme changes persist in night mode after returning to the home page", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      if (window.localStorage.getItem("__night_theme_palette_regression_seeded_v1") === "1") {
+        return;
+      }
+      window.localStorage.setItem("__night_theme_palette_regression_seeded_v1", "1");
+      window.localStorage.setItem("home_guide_seen_v1", "1");
+      window.localStorage.setItem("settings_night_background_enabled_v1", "1");
+      window.localStorage.setItem("theme_profile_v1", "midnight_nebula");
+      window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
+      window.localStorage.setItem("settings_day_theme_profile_v1", "classic");
+      window.localStorage.setItem("settings_day_tile_palette_v1", "follow-theme");
+      window.localStorage.setItem("settings_night_theme_profile_v1", "midnight_nebula");
+      window.localStorage.setItem("settings_night_tile_palette_v1", "follow-theme");
+      window.localStorage.setItem("settings_night_theme_auto_applied_v1", "1");
+      window.localStorage.setItem("settings_night_theme_pending_v1", "0");
+    });
+
+    const homeResponse = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(homeResponse, "Home response should exist").not.toBeNull();
+    expect(homeResponse?.ok(), "Home response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+
+    await page.waitForFunction(() => {
+      return (
+        !!(window as any).CoreNightModeRuntime &&
+        typeof (window as any).ThemeManager?.getCurrentTheme === "function"
+      );
+    }, null, { timeout: 15000 });
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          return {
+            currentTheme: (window as any).ThemeManager.getCurrentTheme(),
+            nightTheme: window.localStorage.getItem("settings_night_theme_profile_v1"),
+            dataNight: document.documentElement.getAttribute("data-night-background") || ""
+          };
+        });
+      })
+      .toEqual({
+        currentTheme: "midnight_nebula",
+        nightTheme: "midnight_nebula",
+        dataNight: "1"
+      });
+
+    const paletteResponse = await page.goto("/palette.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(paletteResponse, "Palette response should exist").not.toBeNull();
+    expect(paletteResponse?.ok(), "Palette response should be 2xx").toBeTruthy();
+    await expect(page.locator(".theme-selection-col")).toBeVisible();
+
+    await page.evaluate(() => {
+      (window as any).ThemeManager.applyTheme("ocean");
+    });
+    await page.waitForFunction(() => {
+      return (
+        typeof (window as any).ThemeManager?.getCurrentTheme === "function" &&
+        (window as any).ThemeManager.getCurrentTheme() === "ocean" &&
+        window.localStorage.getItem("theme_profile_v1") === "ocean" &&
+        window.localStorage.getItem("settings_night_theme_profile_v1") === "ocean" &&
+        window.localStorage.getItem("settings_day_theme_profile_v1") === "classic"
+      );
+    }, null, { timeout: 15000 });
+
+    const returnHomeResponse = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(returnHomeResponse, "Return-home response should exist").not.toBeNull();
+    expect(returnHomeResponse?.ok(), "Return-home response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          return {
+            currentTheme:
+              typeof (window as any).ThemeManager?.getCurrentTheme === "function"
+                ? (window as any).ThemeManager.getCurrentTheme()
+                : "",
+            savedTheme: window.localStorage.getItem("theme_profile_v1"),
+            nightTheme: window.localStorage.getItem("settings_night_theme_profile_v1"),
+            dayTheme: window.localStorage.getItem("settings_day_theme_profile_v1"),
+            dataNight: document.documentElement.getAttribute("data-night-background") || ""
+          };
+        });
+      })
+      .toEqual({
+        currentTheme: "ocean",
+        savedTheme: "ocean",
+        nightTheme: "ocean",
+        dayTheme: "classic",
+        dataNight: "1"
+      });
+  });
+
   test("modes page follows saved night background preference", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("settings_night_background_enabled_v1", "1");
