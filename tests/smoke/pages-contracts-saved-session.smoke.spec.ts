@@ -341,6 +341,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
               column.map((cell) => (cell ? cell.value : 0))
             );
       return {
+        clientRecordId: String(manager.clientRecordId || ""),
         score: Number(manager.score || 0),
         board
       };
@@ -353,5 +354,171 @@ test.describe("Legacy Multi-Page Smoke", () => {
       [0, 0, 0, 0],
       [0, 0, 0, 0]
     ]);
+  });
+
+  test("ranked play modes restore verified cloud checkpoints instead of local injected payloads", async ({
+    page
+  }) => {
+    let checkpointData: Record<string, unknown> | null = null;
+
+    await page.route("**/api/ranked-checkpoint**", async (route) => {
+      const request = route.request();
+      if (request.method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: checkpointData
+          })
+        });
+        return;
+      }
+      if (request.method() === "POST") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        checkpointData = {
+          mode_key: body.mode_key,
+          mode_bucket: body.mode,
+          client_record_id: body.client_record_id,
+          replay_string: body.replay_string,
+          duration_ms: body.duration_ms,
+          ui_state: body.ui_state,
+          updated_at: new Date().toISOString()
+        };
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            verified: true,
+            data: checkpointData
+          })
+        });
+        return;
+      }
+      if (request.method() === "DELETE") {
+        checkpointData = null;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            deleted: true
+          })
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "1");
+      window.localStorage.setItem("2048_auth_nickname_v1", "SmokeUser");
+    });
+
+    const firstResponse = await page.goto("/play.html?mode=standard_4x4_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(firstResponse, "Initial ranked play response should exist").not.toBeNull();
+    expect(firstResponse?.ok(), "Initial ranked play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+    await page.waitForFunction(
+      () => {
+        const manager = (window as any).game_manager;
+        return !!manager && manager.rankCheckpointRestorePending !== true;
+      },
+      { timeout: 12_000 }
+    );
+
+    const liveSnapshot = await page.evaluate(async () => {
+      const manager = (window as any).game_manager;
+      manager.move(2);
+      manager.move(0);
+      manager.move(2);
+      await new Promise((resolve) => window.setTimeout(resolve, 1800));
+      const board =
+        typeof manager.getFinalBoardMatrix === "function"
+          ? manager.getFinalBoardMatrix()
+          : manager.grid.cells.map((column: Array<{ value: number } | null>) =>
+              column.map((cell) => (cell ? cell.value : 0))
+            );
+      return {
+        clientRecordId: String(manager.clientRecordId || ""),
+        replayString: typeof manager.serialize === "function" ? String(manager.serialize() || "") : "",
+        score: Number(manager.score || 0),
+        board
+      };
+    });
+
+    await expect
+      .poll(() => checkpointData, {
+        timeout: 12_000
+      })
+      .not.toBeNull();
+
+    await page.addInitScript(() => {
+      const modeKey = "standard_4x4_pow2_no_undo";
+      const payload = {
+        v: 1,
+        saved_at: Date.now(),
+        terminated: false,
+        mode_key: modeKey,
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        board: [
+          [1024, 1024, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        score: 424242,
+        over: false,
+        won: false,
+        keep_playing: false,
+        duration_ms: 777,
+        has_game_started: true
+      };
+      const raw = JSON.stringify(payload);
+      window.localStorage.setItem("savedGameStateByMode:v1:" + modeKey, raw);
+      window.localStorage.setItem("savedGameStateLiteByMode:v1:" + modeKey, raw);
+      window.name =
+        "__gm_saved_state_v1__=" + encodeURIComponent(JSON.stringify({ [modeKey]: payload }));
+    });
+
+    const reloadResponse = await page.reload({ waitUntil: "domcontentloaded" });
+    expect(reloadResponse, "Reloaded ranked play response should exist").not.toBeNull();
+    expect(reloadResponse?.ok(), "Reloaded ranked play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+    await page.waitForTimeout(3000);
+
+    const restoredSnapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const board =
+        typeof manager.getFinalBoardMatrix === "function"
+          ? manager.getFinalBoardMatrix()
+          : manager.grid.cells.map((column: Array<{ value: number } | null>) =>
+            column.map((cell) => (cell ? cell.value : 0))
+            );
+      return {
+        clientRecordId: String(manager.clientRecordId || ""),
+        restoreError: String((manager as any).lastRankedCheckpointRestoreError || ""),
+        restorePending: !!(manager as any).rankCheckpointRestorePending,
+        restoreNeeded: !!(manager as any).needsRankedCheckpointRestore,
+        score: Number(manager.score || 0),
+        board
+      };
+    });
+
+    expect(restoredSnapshot.clientRecordId).toBe(liveSnapshot.clientRecordId);
+    expect(restoredSnapshot.board).toEqual(liveSnapshot.board);
+    expect(restoredSnapshot.score).toBe(liveSnapshot.score);
+    expect(restoredSnapshot.restoreError).toBe("");
+    expect(restoredSnapshot.restorePending).toBe(false);
+    expect(restoredSnapshot.restoreNeeded).toBe(false);
+    expect(restoredSnapshot.score).not.toBe(424242);
   });
 });

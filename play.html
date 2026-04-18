@@ -194,6 +194,19 @@
         </div>
         <div id="win-prompt-note" class="settings-note"></div>
       </div>
+      <div id="bgm-settings-row" class="settings-row settings-toggle-row">
+        <div class="settings-toggle-main">
+          <div class="settings-toggle-copy">
+            <label for="bgm-toggle" class="settings-toggle-title">背景音乐</label>
+            <div id="bgm-toggle-desc" class="settings-toggle-desc">开启后在对局页面循环播放背景音乐</div>
+          </div>
+          <label class="settings-switch" for="bgm-toggle" aria-label="背景音乐">
+            <input id="bgm-toggle" type="checkbox">
+            <span class="settings-switch-slider"></span>
+          </label>
+        </div>
+        <div id="bgm-note" class="settings-note">默认不加载音频，开启后才会开始请求，避免拖慢页面。</div>
+      </div>
       <div id="toolkit-entry-row" class="settings-row toolkit-entry-row">
         <div class="toolkit-entry-actions">
           <a id="toolkit-palette-link" class="replay-button" href="palette.html">主题设置</a>

@@ -465,7 +465,20 @@ function resetSetupReplayAndSpawnState(manager) {
   manager.replayCompactLog = "";
   manager.initialBoardMatrix = null;
   manager.replayStartBoardMatrix = null;
+  if (typeof assignManagerClientRecordId === "function") {
+    assignManagerClientRecordId(manager, "");
+  } else {
+    manager.clientRecordId = "";
+  }
   manager.sessionSubmitDone = false;
+  manager.needsRankedCheckpointRestore = false;
+  manager.rankCheckpointRestorePending = false;
+  manager.rankCheckpointRestoreScheduled = false;
+  manager.rankCheckpointApplying = false;
+  manager.rankCheckpointSaveConflict = "";
+  manager.lastRankedCheckpointSignature = "";
+  manager.lastRankedCheckpointSavedAt = 0;
+  manager.lastRankedCheckpointSaveError = "";
   manager.lastSpawn = null;
   manager.forcedSpawn = null;
 }
@@ -531,6 +544,27 @@ function shouldTryRestoreSavedStateInSetup(manager, hasInputSeed, normalizedOpti
   return shouldUseSavedGameState(manager);
 }
 
+function hasRankedCheckpointAuthTokenForSetup(manager) {
+  if (!manager || manager.rankPolicy !== "ranked") return false;
+  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
+  try {
+    var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
+    var token = storage && typeof storage.getItem === "function"
+      ? String(storage.getItem("2048_auth_token_v1") || "").trim()
+      : "";
+    return !!token;
+  } catch (_err) {
+    return false;
+  }
+}
+
+function shouldScheduleRankedCheckpointRestoreInSetup(manager, hasInputSeed, normalizedOptions) {
+  if (!manager || manager.rankPolicy !== "ranked") return false;
+  var skipStartTiles = !!normalizedOptions.skipStartTiles;
+  if (hasInputSeed || skipStartTiles || normalizedOptions.disableStateRestore) return false;
+  return hasRankedCheckpointAuthTokenForSetup(manager);
+}
+
 function seedInitialTilesAndSnapshotBoard(manager) {
   for (var startIndex = 0; startIndex < manager.startTiles; startIndex++) {
     manager.addRandomTile();
@@ -590,6 +624,10 @@ function resolveSetupRestoreAndInitialBoardState(manager, hasInputSeed, normaliz
   if (shouldTryRestoreSavedStateInSetup(manager, hasInputSeed, normalizedOptions)) {
     restoredFromSavedState = tryRestoreLatestSavedState(manager);
   }
+  manager.needsRankedCheckpointRestore =
+    !restoredFromSavedState &&
+    shouldScheduleRankedCheckpointRestoreInSetup(manager, hasInputSeed, normalizedOptions);
+  manager.rankCheckpointRestorePending = !!manager.needsRankedCheckpointRestore;
   if (!skipStartTiles && !restoredFromSavedState) {
     placeStoneTilesForSetup(manager);
     seedInitialTilesAndSnapshotBoard(manager);
@@ -647,6 +685,17 @@ function runSetupStateInitialization(manager, inputSeed, setupOptions) {
   );
   syncSetupSessionReplayV1InitTiles(manager);
   finalizeSetupUiAndStatsState(manager, preferredTimerModuleView, restoreState.restoredFromSavedState);
+  try {
+    var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
+    if (
+      manager.needsRankedCheckpointRestore &&
+      windowLike &&
+      windowLike.OnlineLeaderboardRuntime &&
+      typeof windowLike.OnlineLeaderboardRuntime.scheduleRankedCheckpointRestore === "function"
+    ) {
+      windowLike.OnlineLeaderboardRuntime.scheduleRankedCheckpointRestore(manager, { reason: "setup" });
+    }
+  } catch (_errCheckpointRestore) {}
 }
 
 function resolveGlobalSetupModeConfig(manager) {

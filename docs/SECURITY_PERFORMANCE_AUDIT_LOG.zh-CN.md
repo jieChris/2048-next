@@ -351,3 +351,213 @@
 - 仍建议继续关注的边界：
   - 极端长局下 full payload 的体积增长是否会带来新的持久化压力。
   - 移动端浏览器在 `pagehide`/`beforeunload` 时序上的兼容差异。
+
+## 2026-04-18 安全性与完整性复查
+
+### 代码范围
+
+- `G:\2048\2048undo\2048-next\js\core_game_manager_saved_state_helpers_runtime.js`
+- `G:\2048\2048undo\2048-next\js\core_game_manager_session_init_helpers_runtime.js`
+- `G:\2048\2048undo\2048-next\js\core_game_manager_restart_setup_helpers_runtime.js`
+- `G:\2048\2048undo\2048-next\js\online_leaderboard_runtime.js`
+- `G:\2048\2048undo\2048-next\tests\smoke\pages-contracts-saved-session.smoke.spec.ts`
+- `G:\2048\2048undo\2048-next\tests\smoke\pages-online-record-submit-restart-flush.smoke.spec.ts`
+- `G:\2048\2048undo\2048-game-api\2048-game-api\src\index.ts`
+- `G:\2048\2048undo\2048-game-api\2048-game-api\test\index.spec.ts`
+
+### 本次高优先级发现
+
+1. P0：ranked 模式本地 saved-state 限制被回退，已重新允许注入/伪造本地存档后恢复对局。
+- `js/core_game_manager_saved_state_helpers_runtime.js` 中 `isSavedStateRestrictedForRankedMode()` 现在固定返回 `false`，导致 ranked 模式重新走入 `shouldUseSavedGameState()` 和 `resolveSavedStateRestoreDecision()` 的恢复流程。
+- 这会重新打开此前已经收口的攻击面：玩家可通过 `localStorage` / `window.name` 注入棋盘、分数、回放上下文与 `client_record_id`，再在 ranked 页面直接恢复。
+- 动态复测已证实：`tests/smoke/pages-contracts-saved-session.smoke.spec.ts` 里的 “ranked play modes ignore injected local saved-state payloads” 现在失败，注入分数 `424242` 会被实际恢复。
+
+2. P1：`client_record_id` 的当前去重路径会把“同一存档分叉出的不同终局”视作同一条记录，并允许第二条分叉继续影响排行榜同步。
+- 前端现在把 `client_record_id` 写入 saved-state，并在刷新恢复后继续复用；`tests/smoke/pages-online-record-submit-restart-flush.smoke.spec.ts` 已验证同一局刷新前后 `client_record_id` 保持不变。
+- 后端 `/api/records` 在检测到已存在的 `client_record_id` 时，会直接返回 `duplicate: true`，但仍调用 `syncVerifiedLeaderboardArtifacts(...)` 使用“当前请求的校验结果”更新排行榜。
+- 这意味着：如果玩家从同一存档分叉出两条不同终局，后一次提交即便复用了旧记录 ID，仍可能把新的分数同步进 `scores / mode_scores`，而 `user_records` 和已存储 replay 仍保留第一次提交的内容，造成“排行榜成绩”和“记录详情/回放”不一致。
+- 现有 Worker 回归只覆盖了“同 replay 重提”的幂等路径，尚未覆盖“同 `client_record_id` + 不同合法 replay”的分叉场景。
+
+### 动态复测结果
+
+- 前端烟测：
+  - `npx playwright test --config=playwright.config.ts tests/smoke/pages-contracts-saved-session.smoke.spec.ts -g "ranked play modes ignore injected local saved-state payloads"`
+  - 结果：失败。ranked 页面实际恢复了注入的本地存档。
+- 前端烟测：
+  - `npx playwright test --config=playwright.config.ts tests/smoke/pages-online-record-submit-restart-flush.smoke.spec.ts`
+  - 结果：3/3 通过，证明当前实现会在刷新恢复后保留同一 `client_record_id`。
+- Worker 定向回归：
+  - `npx vitest run test/index.spec.ts -t "record submit treats repeated client_record_id as duplicate and reuses existing record"`
+  - 结果：通过。证明当前后端确实启用了“同 `client_record_id` 直接视作重复记录”的分支。
+
+### 与上次结论相比的变化
+
+- 上次已经完成的“ranked 模式不使用本地 saved-state”前端收口，在当前工作区实现中被直接回退。
+- 这次新增的 `client_record_id` 续传设计，本意是解决刷新/重试幂等，但在 ranked 本地恢复重新开启后，会进一步放大“同一起点分叉对局”的完整性风险。
+- 当前最稳妥的修复方向仍是：
+  - 重新关闭 ranked 模式本地 saved-state 的恢复入口；
+  - 将 `client_record_id` 去重从“仅按 ID 视作同局”提升为“ID + replay 指纹/终局指纹一致才视作同局”，否则拒绝并返回冲突错误。
+
+## 2026-04-18 ranked 断点续玩整改
+
+### 本次落地修改
+
+- 已修复：`ranked` 模式重新恢复为“不直接信任本地 saved-state”。本地 `localStorage` / `window.name` 中注入的棋盘、分数、回放上下文不再作为权威恢复源。
+- 已新增：Cloudflare Worker 提供服务端权威断点续玩接口：
+  - `GET /api/ranked-checkpoint`
+  - `POST /api/ranked-checkpoint`
+  - `DELETE /api/ranked-checkpoint`
+- 已新增：`POST /api/ranked-checkpoint` 会先按 `requireTerminal: false` 校验 ongoing replay；只有合法、未终局、模式匹配的 ranked 对局才能保存 checkpoint。
+- 已新增：checkpoint 附带受校验的 `ui_state.saved_state` 兜底快照。该快照写库前会校验棋盘、分数、模式、规则集、尺寸与回放重算结果一致，不一致则直接丢弃。
+- 已修复：前端 ranked 页面恢复链路改为“优先拉取服务端 checkpoint，再恢复本地界面状态”；本地缓存只作为非权威临时缓存，不再单独决定恢复结果。
+- 已修复：对局成功提交 `/api/records` 或玩家主动 restart 时，会同步删除对应 ranked checkpoint，避免旧进度复活。
+
+### 代码范围
+
+- 前端：
+  - `G:\2048\2048undo\2048-next\js\core_game_manager_saved_state_helpers_runtime.js`
+  - `G:\2048\2048undo\2048-next\js\core_game_manager_session_init_helpers_runtime.js`
+  - `G:\2048\2048undo\2048-next\js\core_game_manager_restart_setup_helpers_runtime.js`
+  - `G:\2048\2048undo\2048-next\js\core_game_manager_move_input_helpers_runtime.js`
+  - `G:\2048\2048undo\2048-next\js\online_leaderboard_runtime.js`
+- 后端：
+  - `G:\2048\2048undo\2048-game-api\2048-game-api\src\index.ts`
+  - `G:\2048\2048undo\2048-game-api\2048-game-api\src\replay_verify.ts`
+- 回归测试：
+  - `G:\2048\2048undo\2048-next\tests\smoke\pages-contracts-saved-session.smoke.spec.ts`
+  - `G:\2048\2048undo\2048-next\tests\smoke\pages-online-record-submit-restart-flush.smoke.spec.ts`
+  - `G:\2048\2048undo\2048-game-api\2048-game-api\test\index.spec.ts`
+
+### 动态验证结果
+
+- Worker：
+  - `npx tsc --noEmit`
+  - `npx vitest run test/index.spec.ts`
+  - 结果：26/26 通过。
+- 前端：
+  - `npx playwright test --config=playwright.config.ts tests/smoke/pages-online-record-submit-restart-flush.smoke.spec.ts tests/smoke/pages-contracts-saved-session.smoke.spec.ts`
+  - 结果：9/9 通过。
+- 新增关键校验点：
+  - ranked 页面不会再恢复恶意注入的本地 saved-state；
+  - ranked 页面会优先恢复服务端已验证 checkpoint；
+  - 刷新续玩后 `client_record_id` 仍可续传，但 checkpoint 权威来源已切换到后端；
+  - 终局提交或重开后，旧 checkpoint 会被清理。
+
+### 当前结论
+
+- `ranked` 模式已经从“本地可伪造存档恢复”收口为“服务端校验后的 checkpoint 恢复”。
+- 这次整改同时保住了“中途关闭/刷新后可继续游玩”的体验和 ranked 对局的基本完整性边界。
+- 仍需继续关注的边界：
+  - 长局 replay 与 `ui_state.saved_state` 体积增长后的存储压力；
+  - 多设备同时打开同一 ranked 模式时的 checkpoint 覆盖策略；
+  - `client_record_id` 的最终去重语义是否还需要再提升到 replay 指纹级别。
+
+## 2026-04-18 `client_record_id` 分叉冲突收口
+
+### 本次落地修改
+
+- 已修复：`/api/records` 不再把“同 `client_record_id` 的任何新提交”一律视作同一局。
+- 已新增：后端现在会把旧记录与当前经 replay 校验后的终局结果做一致性比对，字段包括：
+  - `mode_bucket`
+  - `mode_key`
+  - `score`
+  - `best_tile`
+  - `duration_ms`
+  - `end_reason`
+  - `final_board_json`
+- 已修复：只有上述终局指纹完全一致时，才会继续走 duplicate 幂等复用路径。
+- 已修复：若同一 `client_record_id` 对应的终局指纹不一致，后端会返回 `409 CLIENT_RECORD_CONFLICT`，并拒绝同步 `scores / mode_scores`，避免排行榜与 `user_records` / replay 明细漂移。
+
+### 代码范围
+
+- `G:\2048\2048undo\2048-game-api\2048-game-api\src\index.ts`
+- `G:\2048\2048undo\2048-game-api\2048-game-api\test\index.spec.ts`
+
+### 动态验证结果
+
+- `npx tsc --noEmit`
+  - 结果：通过。
+- `npx vitest run test/index.spec.ts`
+  - 结果：27/27 通过。
+- 新增关键回归：
+  - 同 replay、同终局、同 `client_record_id` 的重复提交仍会按幂等复用旧记录；
+  - 同 `client_record_id` 但终局指纹不同的提交会返回 `CLIENT_RECORD_CONFLICT`；
+  - 冲突请求不会触发新的 COS 上传，也不会污染 `scores / mode_scores`。
+
+### 当前结论
+
+- 这次收口后，“同一起点分叉出不同终局但复用同一 `client_record_id`”的路径已经不能再借 duplicate 分支污染排行榜。
+- 当前 duplicate 语义已经从“仅按 ID 判定”提升到“按 ID + 终局指纹判定”，完整性边界明显收紧。
+
+## 2026-04-18 replay 指纹级去重收口
+
+### 本次落地修改
+
+- 已修复：`/api/records` 的 duplicate 语义继续从“ID + 终局指纹”提升到“ID + replay 指纹”。
+- 已新增：`user_records` 增加 `replay_fingerprint` 字段，使用 `replay_string` 的稳定哈希持久化记录实际提交的 replay。
+- 已修复：若同一 `client_record_id` 的后续提交虽然终局结果一致，但 replay 内容不同，后端也会返回 `409 CLIENT_RECORD_REPLAY_CONFLICT`。
+- 已加固：对历史旧记录，如果库里还没有 `replay_fingerprint`，后端会在 duplicate 路径上按需读取已存 replay 对象，计算并回填 fingerprint，再进行判定。
+
+### 代码范围
+
+- `G:\2048\2048undo\2048-game-api\2048-game-api\src\index.ts`
+- `G:\2048\2048undo\2048-game-api\2048-game-api\test\index.spec.ts`
+
+### 动态验证结果
+
+- `npx tsc --noEmit`
+  - 结果：通过。
+- `npx vitest run test/index.spec.ts`
+  - 结果：28/28 通过。
+- 新增关键回归：
+  - 同 `client_record_id`、同终局、但仅 `startUnixMs` 不同导致 replay 内容不同的提交，会被拒绝为 `CLIENT_RECORD_REPLAY_CONFLICT`；
+  - 新记录入库后会写入 `replay_fingerprint`；
+  - replay 指纹冲突不会触发第二次 COS 上传，也不会新增第二条 `user_records`。
+
+### 当前结论
+
+- 当前 duplicate 判定已经提升到“ID + replay 指纹”级别。
+- 这意味着即使两次提交打出了完全相同的终局棋盘、分数和时长，只要 replay 内容不同，也不会再被错误视作同一局。
+
+## 2026-04-18 ranked checkpoint 链路前进约束
+
+### 本次落地修改
+
+- 已修复：`/api/ranked-checkpoint` 不再接受“最后写入覆盖前值”的无条件 upsert。
+- 已新增：服务端现在会把已存 checkpoint replay 与新提交 replay 做链路比较，只允许这三种结果：
+  - `identical`：同一 replay 的幂等重复保存；
+  - `extends`：在当前 replay 链路基础上的继续推进；
+  - 其余全部拒绝。
+- 已修复：如果新提交 replay 比已存 replay 更旧，会返回 `409 CHECKPOINT_STALE_REPLAY`，防止旧页面/旧设备回退覆盖新进度。
+- 已修复：如果新提交 replay 与已存 replay 不在同一条链路上，会返回 `409 CHECKPOINT_REPLAY_CONFLICT`，防止分叉 checkpoint 覆盖。
+- 已修复：如果同一模式下已有 checkpoint 绑定了另一条 `client_record_id` 会话，本次保存会返回 `409 CHECKPOINT_SESSION_CONFLICT`，阻止多页面/多设备并行会话互相覆盖。
+- 已加固：前端在收到上述 checkpoint 冲突码后，会停止后续自动 checkpoint 保存，避免冲突页面持续重试刷请求。
+
+### 代码范围
+
+- `G:\2048\2048undo\2048-game-api\2048-game-api\src\replay_verify.ts`
+- `G:\2048\2048undo\2048-game-api\2048-game-api\src\index.ts`
+- `G:\2048\2048undo\2048-game-api\2048-game-api\test\index.spec.ts`
+- `G:\2048\2048undo\2048-next\js\core_game_manager_session_init_helpers_runtime.js`
+- `G:\2048\2048undo\2048-next\js\core_game_manager_restart_setup_helpers_runtime.js`
+- `G:\2048\2048undo\2048-next\js\online_leaderboard_runtime.js`
+
+### 动态验证结果
+
+- Worker：
+  - `npx tsc --noEmit`
+  - `npx vitest run test/index.spec.ts`
+  - 结果：30/30 通过。
+- 前端：
+  - `npx playwright test --config=playwright.config.ts tests/smoke/pages-online-record-submit-restart-flush.smoke.spec.ts tests/smoke/pages-contracts-saved-session.smoke.spec.ts`
+  - 结果：9/9 通过。
+- 新增关键回归：
+  - 同一 checkpoint 链路的 forward save 可以继续覆盖更新；
+  - 旧 replay 回退保存会返回 `CHECKPOINT_STALE_REPLAY`；
+  - 同模式不同 `client_record_id` 会话会返回 `CHECKPOINT_SESSION_CONFLICT`；
+  - 同 `client_record_id` 但 replay 根不同的保存会返回 `CHECKPOINT_REPLAY_CONFLICT`。
+
+### 当前结论
+
+- ranked checkpoint 现在已经从“单键最后写入生效”收口到“只允许当前 replay 链路向前推进”。
+- 这一步把多开页面、多设备并发和旧页面回退覆盖这几个完整性风险一起压住了。

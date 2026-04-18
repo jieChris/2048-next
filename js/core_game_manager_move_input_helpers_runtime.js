@@ -319,6 +319,7 @@ function queueMoveInputDirection(manager, direction) {
 
 function handleMoveInput(manager, direction) {
   if (!manager) return;
+  if (manager.rankCheckpointRestorePending === true || manager.rankCheckpointApplying === true) return;
   if (tryHandleMoveInputImmediately(manager, direction)) return;
   queueMoveInputDirection(manager, direction);
 }

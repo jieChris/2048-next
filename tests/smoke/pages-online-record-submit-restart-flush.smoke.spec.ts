@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test.describe.configure({ mode: "serial" });
+
   test("online record submit flushes before restart when game is already over", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
@@ -90,6 +92,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const snapshot = await page.evaluate(() => ({
       calls: Number((window as any).__recordSubmitCalls || 0),
       lastRecordSignature: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || ""),
+      payloadClientRecordId: (() => {
+        const payload = (window as any).__recordSubmitLastPayload;
+        return payload ? String((payload as any).client_record_id || "") : "";
+      })(),
       payloadHasRequiredKeys: (() => {
         const payload = (window as any).__recordSubmitLastPayload;
         const requiredKeys = [
@@ -117,8 +123,114 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(snapshot.calls).toBeGreaterThanOrEqual(1);
     expect(snapshot.lastRecordSignature.length).toBeGreaterThan(0);
+    expect(snapshot.payloadClientRecordId.length).toBeGreaterThan(0);
     expect(snapshot.payloadHasRequiredKeys).toBe(true);
     expect(snapshot.payloadFinalBoardIsArray).toBe(true);
+  });
+
+  test("saved session preserves client record id across reload", async ({ page }) => {
+    let checkpointData: Record<string, unknown> | null = null;
+
+    await page.route("**/api/ranked-checkpoint**", async (route) => {
+      const request = route.request();
+      if (request.method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: checkpointData
+          })
+        });
+        return;
+      }
+      if (request.method() === "POST") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        checkpointData = {
+          mode_key: body.mode_key,
+          mode_bucket: body.mode,
+          client_record_id: body.client_record_id,
+          replay_string: body.replay_string,
+          duration_ms: body.duration_ms,
+          ui_state: body.ui_state,
+          updated_at: new Date().toISOString()
+        };
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            verified: true,
+            data: checkpointData
+          })
+        });
+        return;
+      }
+      if (request.method() === "DELETE") {
+        checkpointData = null;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            deleted: true
+          })
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "42");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+    });
+
+    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+
+    await page.waitForFunction(() => !!(window as any).game_manager);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && manager.rankCheckpointRestorePending !== true;
+    });
+
+    const firstSnapshot = await page.evaluate(async () => {
+      const manager = (window as any).game_manager;
+      manager.move(2);
+      manager.move(0);
+      manager.move(2);
+      await new Promise((resolve) => window.setTimeout(resolve, 1800));
+      return {
+        clientRecordId: String(manager.clientRecordId || "")
+      };
+    });
+
+    expect(firstSnapshot.clientRecordId.length).toBeGreaterThan(0);
+    await expect
+      .poll(() => checkpointData, {
+        timeout: 12_000
+      })
+      .not.toBeNull();
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => !!(window as any).game_manager);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && manager.rankCheckpointRestorePending !== true;
+    });
+
+    const secondSnapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      return {
+        clientRecordId: String(manager.clientRecordId || "")
+      };
+    });
+
+    expect(secondSnapshot.clientRecordId).toBe(firstSnapshot.clientRecordId);
   });
 
   test("online record submit skips win-stop sessions until real game over", async ({ page }) => {

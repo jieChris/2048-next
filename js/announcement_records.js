@@ -22,6 +22,27 @@
         "Thank you for your support."
     },
     {
+      id: "2026-04-18-v2.6",
+      version: "v2.6",
+      date: "2026-04-18",
+      title: "\u80cc\u666f\u97f3\u4e50\u3001\u7eed\u73a9\u4e0e\u6392\u884c\u699c\u663e\u793a\u66f4\u65b0",
+      title_en: "BGM, Resume, and Leaderboard Display Update",
+      content:
+        "\u672c\u6b21\u66f4\u65b0\u4e3b\u8981\u5e26\u6765\u4e86\u51e0\u9879\u73a9\u5bb6\u53ef\u4ee5\u76f4\u63a5\u611f\u77e5\u5230\u7684\u6539\u52a8\uff1a\n" +
+        "1. \u65b0\u589e\u80cc\u666f\u97f3\u4e50\u5f00\u5173\uff0c\u9ed8\u8ba4\u5173\u95ed\uff0c\u5f00\u542f\u540e\u624d\u4f1a\u52a0\u8f7d\u97f3\u9891\uff0c\u5c3d\u91cf\u4e0d\u5f71\u54cd\u9875\u9762\u6253\u5f00\u901f\u5ea6\uff1b\n" +
+        "2. Ranked \u5bf9\u5c40\u73b0\u5728\u652f\u6301\u4e2d\u9014\u5237\u65b0\u6216\u5173\u95ed\u9875\u9762\u540e\u7ee7\u7eed\u8fdb\u5ea6\uff0c\u65ad\u70b9\u6062\u590d\u66f4\u7a33\u5b9a\uff1b\n" +
+        "3. \u603b\u699c\u548c\u6a21\u5f0f\u699c\u7684\u6700\u9ad8\u5206\u663e\u793a\u903b\u8f91\u5df2\u4fee\u6b63\uff0c\u4e3b\u9875\u4e0e\u6392\u884c\u699c\u4e4b\u95f4\u7684\u6700\u9ad8\u6210\u7ee9\u540c\u6b65\u66f4\u51c6\u786e\uff1b\n" +
+        "4. \u6392\u884c\u699c\u5df2\u79fb\u9664\u300c\u6700\u5c0f\u6b65\u6570\u300d\u699c\u5355\uff0c\u699c\u5355\u5165\u53e3\u66f4\u7b80\u6d01\uff1b\n" +
+        "5. \u90e8\u5206\u8bbe\u7f6e\u6587\u6848\u4e0e\u9875\u9762\u7ec6\u8282\u4e5f\u505a\u4e86\u540c\u6b65\u8c03\u6574\u3002",
+      content_en:
+        "This update brings several player-facing improvements:\n" +
+        "1. Added a background music toggle. It stays off by default and only loads audio after you enable it, so startup remains fast;\n" +
+        "2. Ranked runs can now continue more reliably after a refresh or after closing/reopening the page mid-run;\n" +
+        "3. Best-score display has been corrected for both global and mode leaderboards, so profile highs sync more accurately to leaderboard entries;\n" +
+        "4. The \"Minimum Steps\" leaderboard has been removed for a cleaner leaderboard entry flow;\n" +
+        "5. We also polished some settings copy and page details."
+    },
+    {
       id: "2026-04-16-v2.5",
       version: "v2.5",
       date: "2026-04-16",

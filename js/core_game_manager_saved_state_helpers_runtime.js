@@ -150,6 +150,51 @@ function resolveSavedPayloadRichnessScore(payload) {
   }
   return score;
 }
+function resolveClientRecordIdCrypto() {
+  try {
+    if (typeof globalThis !== "undefined" && globalThis && globalThis.crypto) {
+      return globalThis.crypto;
+    }
+  } catch (_err) {}
+  return null;
+}
+function buildClientRecordIdRandomSuffix() {
+  var cryptoLike = resolveClientRecordIdCrypto();
+  if (cryptoLike && typeof cryptoLike.getRandomValues === "function" && typeof Uint8Array !== "undefined") {
+    try {
+      var bytes = new Uint8Array(12);
+      cryptoLike.getRandomValues(bytes);
+      var hex = "";
+      for (var byteIndex = 0; byteIndex < bytes.length; byteIndex++) {
+        hex += bytes[byteIndex].toString(16).padStart(2, "0");
+      }
+      if (hex) return hex;
+    } catch (_errRandom) {}
+  }
+  return Math.random().toString(36).slice(2, 14) + Math.random().toString(36).slice(2, 14);
+}
+function createManagerClientRecordId() {
+  var cryptoLike = resolveClientRecordIdCrypto();
+  if (cryptoLike && typeof cryptoLike.randomUUID === "function") {
+    try {
+      return "rec_" + String(cryptoLike.randomUUID()).replace(/-/g, "");
+    } catch (_errUuid) {}
+  }
+  return "rec_" + Date.now().toString(36) + "_" + buildClientRecordIdRandomSuffix();
+}
+function assignManagerClientRecordId(manager, nextId) {
+  if (!manager) return "";
+  var normalized = typeof nextId === "string" ? nextId.trim() : "";
+  if (!normalized) normalized = createManagerClientRecordId();
+  manager.clientRecordId = normalized;
+  return normalized;
+}
+function resolveManagerClientRecordId(manager) {
+  if (!manager) return "";
+  var current = typeof manager.clientRecordId === "string" ? manager.clientRecordId.trim() : "";
+  if (current) return current;
+  return assignManagerClientRecordId(manager, "");
+}
 function resolveLatestSavedPayloadCandidate(candidates) {
   var best = null;
   if (!Array.isArray(candidates)) return best;
@@ -206,16 +251,9 @@ function resolveSavedStateModeConfigForPolicy(manager) {
 }
 
 function isSavedStateRestrictedForRankedMode(manager) {
-  if (!manager) return false;
   var modeConfig = resolveSavedStateModeConfigForPolicy(manager);
-  var rankPolicy = modeConfig && typeof modeConfig.rank_policy === "string" && modeConfig.rank_policy
-    ? modeConfig.rank_policy
-    : manager.rankPolicy;
-  if (rankPolicy === "ranked") return true;
-  var rankedBucket = modeConfig && typeof modeConfig.ranked_bucket === "string" && modeConfig.ranked_bucket
-    ? modeConfig.ranked_bucket
-    : manager.rankedBucket;
-  return !!(typeof rankedBucket === "string" && rankedBucket && rankedBucket !== "none");
+  if (modeConfig && modeConfig.rank_policy === "ranked") return true;
+  return !!(manager && manager.rankPolicy === "ranked");
 }
 
 function resolveSavedStateUndoModeConfig(manager) {
@@ -584,6 +622,10 @@ function applySavedManagerBaseState(manager, saved) {
   manager.capped64Unlocked = isNonArrayObject(saved.capped64_unlocked)
     ? manager.clonePlain(saved.capped64_unlocked)
     : manager.capped64Unlocked;
+  assignManagerClientRecordId(
+    manager,
+    typeof saved.client_record_id === "string" ? saved.client_record_id : ""
+  );
   manager.challengeId = typeof saved.challenge_id === "string" && saved.challenge_id ? saved.challenge_id : null;
   manager.hasGameStarted = !!saved.has_game_started;
   manager.sessionSubmitDone = false;
@@ -903,6 +945,7 @@ function buildSavedGameStateCoreStatePayload(manager) {
     keep_playing: manager.keepPlaying,
     initial_seed: manager.initialSeed,
     seed: manager.seed,
+    client_record_id: resolveManagerClientRecordId(manager),
     spawn_value_counts: manager.spawnValueCounts || {},
     reached_32k: !!manager.reached32k,
     capped_milestone_count: Number.isInteger(manager.cappedMilestoneCount) ? manager.cappedMilestoneCount : 0,
@@ -1150,6 +1193,9 @@ function buildLiteSavedGameStateCoreRestorePayload(manager, payload) {
     keep_playing: !!source.keep_playing,
     initial_seed: resolveLiteSavedNumericSeed(source.initial_seed, manager.initialSeed),
     seed: resolveLiteSavedNumericSeed(source.seed, manager.seed),
+    client_record_id: typeof source.client_record_id === "string" && source.client_record_id
+      ? source.client_record_id
+      : resolveManagerClientRecordId(manager),
     spawn_value_counts: isNonArrayObject(source.spawn_value_counts) ? manager.clonePlain(source.spawn_value_counts) : {},
     ips_input_count: Math.floor(ipsInputCount),
     capped64_unlocked: isNonArrayObject(source.capped64_unlocked)
@@ -1203,6 +1249,7 @@ function buildLiteSavedGameStateCoreCallPayload(manager, payload) {
     score: manager.score,
     initialSeed: manager.initialSeed,
     seed: manager.seed,
+    clientRecordId: resolveManagerClientRecordId(manager),
     durationMs: manager.getDurationMs(),
     finalBoardMatrix: manager.getFinalBoardMatrix(),
     initialBoardMatrix: manager.initialBoardMatrix,

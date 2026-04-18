@@ -114,6 +114,15 @@ function initializeGameManagerRuntimeState(manager) {
   manager.noXTriggered = false; manager.noXTriggeredTile = null;
   manager.noXSelectionPending = false; manager.noXPendingDefaultTarget = null;
   manager.timerFrozen = false;
+  manager.clientRecordId = "";
+  manager.needsRankedCheckpointRestore = false;
+  manager.rankCheckpointRestorePending = false;
+  manager.rankCheckpointRestoreScheduled = false;
+  manager.rankCheckpointApplying = false;
+  manager.rankCheckpointSaveConflict = "";
+  manager.lastRankedCheckpointSignature = "";
+  manager.lastRankedCheckpointSavedAt = 0;
+  manager.lastRankedCheckpointSaveError = "";
   manager.singleModePageLockState = null;
 }
 
@@ -138,6 +147,15 @@ function bindGameManagerSavedStatePersistence(manager) {
   if (!(windowLikeForPersistence && !manager.savedGameStateBound)) return;
   var saveHandler = function () {
     saveGameState(manager, { force: true });
+    try {
+      if (
+        windowLikeForPersistence &&
+        windowLikeForPersistence.OnlineLeaderboardRuntime &&
+        typeof windowLikeForPersistence.OnlineLeaderboardRuntime.persistRankedCheckpointOnPageHide === "function"
+      ) {
+        windowLikeForPersistence.OnlineLeaderboardRuntime.persistRankedCheckpointOnPageHide(manager);
+      }
+    } catch (_errCheckpoint) {}
   };
   windowLikeForPersistence.addEventListener("beforeunload", saveHandler);
   windowLikeForPersistence.addEventListener("pagehide", saveHandler);
