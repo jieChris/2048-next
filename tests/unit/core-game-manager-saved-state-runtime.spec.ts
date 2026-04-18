@@ -47,7 +47,12 @@ function createElement(options?: {
 }
 
 function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, unknown>) {
+  const clientRecordScriptPath = path.resolve(
+    process.cwd(),
+    "js/core_game_manager_client_record_id_runtime.js"
+  );
   const scriptPath = path.resolve(process.cwd(), "js/core_game_manager_saved_state_helpers_runtime.js");
+  const clientRecordScript = readFileSync(clientRecordScriptPath, "utf8");
   const script = readFileSync(scriptPath, "utf8");
   const context = {
     console,
@@ -67,6 +72,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     ...(extraContext || {})
   } as Record<string, unknown>;
 
+  vm.runInNewContext(clientRecordScript, context);
   vm.runInNewContext(script, context);
   return context as {
     applySavedTimerFixedRowsState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;

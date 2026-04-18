@@ -39,6 +39,7 @@ import coreReplayControlRuntimeUrl from "../../js/core_replay_control_runtime.js
 import coreReplayLoopRuntimeUrl from "../../js/core_replay_loop_runtime.js?url";
 import coreMoveApplyRuntimeUrl from "../../js/core_move_apply_runtime.js?url";
 import coreGameSettingsStorageRuntimeUrl from "../../js/core_game_settings_storage_runtime.js?url";
+import coreGameManagerClientRecordIdRuntimeUrl from "../../js/core_game_manager_client_record_id_runtime.js?url";
 import coreGameManagerBaseHelpersRuntimeUrl from "../../js/core_game_manager_base_helpers_runtime.js?url";
 import coreGameManagerEnvHelpersRuntimeUrl from "../../js/core_game_manager_env_helpers_runtime.js?url";
 import coreGameManagerRuntimeCallHelpersRuntimeUrl from "../../js/core_game_manager_runtime_call_helpers_runtime.js?url";
@@ -109,6 +110,7 @@ export const replayLegacyScripts = [
   coreReplayLoopRuntimeUrl,
   coreMoveApplyRuntimeUrl,
   coreGameSettingsStorageRuntimeUrl,
+  coreGameManagerClientRecordIdRuntimeUrl,
   coreGameManagerBaseHelpersRuntimeUrl,
   coreGameManagerEnvHelpersRuntimeUrl,
   coreGameManagerRuntimeCallHelpersRuntimeUrl,
