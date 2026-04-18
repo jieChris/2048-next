@@ -642,6 +642,11 @@ function finalizeSetupUiAndStatsState(manager, preferredTimerModuleView, restore
   manager.notifyUndoSettingsStateChanged();
   manager.applyTimerModuleView(preferredTimerModuleView, true);
   manager.actuate();
+  if (restoredFromSavedState) {
+    if (!manager.callWindowMethod("cappedTimerReset")) {
+      manager.callWindowMethod("updateTimerScroll");
+    }
+  }
   if (typeof updateItemModeHud === "function") {
     updateItemModeHud(manager);
   }
