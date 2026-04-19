@@ -13,6 +13,8 @@ var V9_VERSE_PNG_CHARSET = [
 var v9VersePngMapDictCache = null;
 var REPLAY_V1_EXT_MODE_KEY = 1;
 var REPLAY_V1_EXT_RULESET = 2;
+var REPLAY_V1_EXT_CHALLENGE_ID = 3;
+var REPLAY_V1_EXT_SEED = 4;
 
 function isReplayRecordObject(value) {
   return !!(value && typeof value === "object");
@@ -2332,6 +2334,11 @@ function createReplayV1ExtRecords(session) {
   var ruleset = typeof session.ruleset === "string" ? session.ruleset.trim().toLowerCase() : "";
   if (ruleset !== "pow2" && ruleset !== "fibonacci") return records;
   appendReplayV1ExtRecord(records, REPLAY_V1_EXT_RULESET, ruleset);
+  appendReplayV1ExtRecord(records, REPLAY_V1_EXT_CHALLENGE_ID, session && session.challenge_id);
+  var seedValue = Math.floor(Number(session && session.seed));
+  if (Number.isInteger(seedValue) && seedValue >= 0) {
+    appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SEED, String(seedValue));
+  }
   return records;
 }
 

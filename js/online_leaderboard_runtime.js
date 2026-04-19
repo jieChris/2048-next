@@ -13,6 +13,7 @@
   var RECORD_SUBMIT_PENDING_TTL_MS = 10 * 60 * 1000;
   var RANKED_CHECKPOINT_SAVE_DEBOUNCE_MS = 1500;
   var RANKED_CHECKPOINT_MIN_SAVE_INTERVAL_MS = 3000;
+  var RANKED_CHECKPOINT_LOCAL_MIRROR_KEY_PREFIX = "ranked_checkpoint_local_mirror:v1:";
 
   function resolveLocalStorage() {
     try {
@@ -213,6 +214,53 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function getAuthToken() {
     return toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim();
+  }
+
+  function getRankedSessionRuntime() {
+    return global && global.RankedSessionRuntime ? global.RankedSessionRuntime : null;
+  }
+
+  function resolveManagerRankedModeKey(manager) {
+    return toText(manager && (manager.modeKey || manager.mode)).trim() || getCurrentModeKey();
+  }
+
+  function resolveRankedSessionContextForMode(modeLike) {
+    var modeKey = toText(modeLike).trim() || getCurrentModeKey();
+    var runtime = getRankedSessionRuntime();
+    if (runtime && typeof runtime.getCurrentContext === "function") {
+      return runtime.getCurrentContext(modeKey);
+    }
+    var context = global.GAME_CHALLENGE_CONTEXT;
+    if (!context || typeof context !== "object" || Array.isArray(context)) return null;
+    if (toText(context.mode_key).trim() && toText(context.mode_key).trim() !== modeKey) return null;
+    return context;
+  }
+
+  function resolveRankedSessionTokenForManager(manager) {
+    var directToken = toText(manager && manager.rankedSessionToken).trim();
+    if (directToken) return directToken;
+    var context = resolveRankedSessionContextForMode(resolveManagerRankedModeKey(manager));
+    return toText(context && context.ranked_session_token).trim();
+  }
+
+  function prepareRankedSessionForRestart(manager) {
+    if (!shouldUseRankedCheckpoint(manager)) return true;
+    if (manager && (manager.rankCheckpointApplying === true || manager.replayMode === true)) return true;
+    if (!getAuthToken()) return true;
+    var modeKey = resolveManagerRankedModeKey(manager);
+    var runtime = getRankedSessionRuntime();
+    if (runtime && typeof runtime.promotePrefetchedSession === "function") {
+      if (runtime.promotePrefetchedSession(modeKey)) {
+        return true;
+      }
+      if (typeof runtime.ensurePrefetch === "function") {
+        runtime.ensurePrefetch(modeKey).catch(function () {});
+      }
+    }
+    if (global && typeof global.alert === "function") {
+      global.alert("新的排位对局尚未准备好，请稍后再试。");
+    }
+    return false;
   }
 
   function getUserId() {
@@ -747,6 +795,130 @@ function shouldAutoLoadOnlineLeaderboard() {
     return !!(value && typeof value === "object" && !Array.isArray(value));
   }
 
+  function resolveRankedCheckpointLocalMirrorModeKey(modeLike) {
+    return toText(modeLike).trim() || getCurrentModeKey();
+  }
+
+  function resolveRankedCheckpointLocalMirrorStorageKey(modeLike) {
+    var modeKey = resolveRankedCheckpointLocalMirrorModeKey(modeLike);
+    return modeKey ? RANKED_CHECKPOINT_LOCAL_MIRROR_KEY_PREFIX + modeKey : "";
+  }
+
+  function normalizeRankedCheckpointLocalMirrorRecord(rawValue, expectedModeKey) {
+    if (!isPlainRecord(rawValue)) return null;
+    var modeKey = toText(rawValue.mode_key).trim();
+    if (!modeKey) return null;
+    if (expectedModeKey && modeKey !== expectedModeKey) return null;
+    var replayString = toText(rawValue.replay_string).trim();
+    if (!replayString) return null;
+    var durationMs = Math.max(0, Math.floor(Number(rawValue.duration_ms) || 0));
+    var savedAt = Math.max(0, Math.floor(Number(rawValue.saved_at) || 0));
+    return {
+      mode: toText(rawValue.mode).trim(),
+      mode_key: modeKey,
+      client_record_id: toText(rawValue.client_record_id).trim() || null,
+      replay_string: replayString,
+      duration_ms: durationMs,
+      ui_state: isPlainRecord(rawValue.ui_state) ? Object.assign({}, rawValue.ui_state) : {},
+      saved_at: savedAt,
+      owner_user_id: toText(rawValue.owner_user_id).trim() || null
+    };
+  }
+
+  function readRankedCheckpointLocalMirror(modeLike) {
+    var modeKey = resolveRankedCheckpointLocalMirrorModeKey(modeLike);
+    var storageKey = resolveRankedCheckpointLocalMirrorStorageKey(modeKey);
+    if (!modeKey || !storageKey) return null;
+    var raw = readLocalStorageItem(storageKey);
+    if (!raw) return null;
+    var parsed = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (_err) {
+      removeLocalStorageItem(storageKey);
+      return null;
+    }
+    var record = normalizeRankedCheckpointLocalMirrorRecord(parsed, modeKey);
+    if (!record) {
+      removeLocalStorageItem(storageKey);
+      return null;
+    }
+    var currentUserId = toText(getUserId()).trim();
+    var ownerUserId = toText(record.owner_user_id).trim();
+    if (currentUserId) {
+      if (!ownerUserId || ownerUserId !== currentUserId) return null;
+    } else if (ownerUserId) {
+      return null;
+    }
+    return record;
+  }
+
+  function hasRankedCheckpointLocalMirror(modeLike) {
+    return !!readRankedCheckpointLocalMirror(modeLike);
+  }
+
+  function clearRankedCheckpointLocalMirror(modeLike) {
+    var storageKey = resolveRankedCheckpointLocalMirrorStorageKey(modeLike);
+    if (!storageKey) return;
+    removeLocalStorageItem(storageKey);
+  }
+
+  function buildRankedCheckpointLocalMirrorPayload(manager) {
+    if (!shouldUseRankedCheckpoint(manager) || isSessionTerminated(manager)) return null;
+    var payload = buildRankedCheckpointPayload(manager);
+    if (!payload) return null;
+    return {
+      mode: toText(payload.mode).trim(),
+      mode_key: toText(payload.mode_key).trim(),
+      client_record_id: toText(payload.client_record_id).trim() || null,
+      replay_string: toText(payload.replay_string).trim(),
+      duration_ms: Math.max(0, Math.floor(Number(payload.duration_ms) || 0)),
+      ui_state: isPlainRecord(payload.ui_state) ? Object.assign({}, payload.ui_state) : {},
+      saved_at: Date.now(),
+      owner_user_id: toText(getUserId()).trim() || null
+    };
+  }
+
+  function persistRankedCheckpointLocalMirror(manager) {
+    if (!shouldUseRankedCheckpoint(manager)) return false;
+    var modeKey = resolveRankedCheckpointLocalMirrorModeKey(manager && (manager.modeKey || manager.mode));
+    if (!modeKey) return false;
+    var payload = buildRankedCheckpointLocalMirrorPayload(manager);
+    if (!payload) {
+      clearRankedCheckpointLocalMirror(modeKey);
+      return false;
+    }
+    try {
+      writeLocalStorageItem(resolveRankedCheckpointLocalMirrorStorageKey(modeKey), JSON.stringify(payload));
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function buildRankedCheckpointRestoreCandidates(localMirror, remoteCheckpoint) {
+    var candidates = [];
+    if (remoteCheckpoint) candidates.push({ source: "remote", data: remoteCheckpoint });
+    if (localMirror) candidates.push({ source: "local", data: localMirror });
+    return candidates;
+  }
+
+  function restoreRankedCheckpointLocalMirror(manager, checkpointData) {
+    var modeKey = toText(manager && (manager.modeKey || manager.mode)).trim();
+    var restoreData = normalizeRankedCheckpointLocalMirrorRecord(checkpointData, modeKey);
+    if (!restoreData) {
+      clearRankedCheckpointLocalMirror(modeKey);
+      return false;
+    }
+    var restored = restoreRankedCheckpointForManager(manager, restoreData);
+    if (!restored) {
+      clearRankedCheckpointLocalMirror(modeKey);
+      return false;
+    }
+    persistRankedCheckpointLocalMirror(manager);
+    return true;
+  }
+
   function shouldUseRankedCheckpoint(manager) {
     return !!(
       manager &&
@@ -761,7 +933,8 @@ function shouldAutoLoadOnlineLeaderboard() {
     rankedCheckpointSaveTimer = 0;
   }
 
-  function buildRankedCheckpointUiState(manager) {
+  function buildRankedCheckpointUiState(manager, options) {
+    var opts = isPlainRecord(options) ? options : {};
     var documentLike = global.document || null;
     var timerSnapshot =
       typeof collectSavedTimerDomSnapshotState === "function"
@@ -798,7 +971,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       timer_sub_16384: toText(subState.timer_sub_16384),
       timer_sub_visible: !!subState.timer_sub_visible
     };
-    if (typeof buildSavedGameStatePayload === "function") {
+    if (opts.includeSavedState !== false && typeof buildSavedGameStatePayload === "function") {
       try {
         uiState.saved_state = buildSavedGameStatePayload(manager, Date.now(), {
           force: true,
@@ -809,8 +982,9 @@ function shouldAutoLoadOnlineLeaderboard() {
     return uiState;
   }
 
-  function buildRankedCheckpointPayload(manager) {
+  function buildRankedCheckpointPayload(manager, options) {
     if (!shouldUseRankedCheckpoint(manager)) return null;
+    var opts = isPlainRecord(options) ? options : {};
     var replayPayload = resolveRecordReplayPayload(manager);
     if (!replayPayload.replayString) return null;
     if (!(manager.hasGameStarted || (Array.isArray(manager.moveHistory) && manager.moveHistory.length > 0))) {
@@ -819,10 +993,13 @@ function shouldAutoLoadOnlineLeaderboard() {
     return {
       mode: resolveLeaderboardMode(manager.modeKey || manager.mode),
       mode_key: toText(manager.modeKey || manager.mode).trim(),
+      ranked_session_token: resolveRankedSessionTokenForManager(manager) || null,
       client_record_id: resolveManagerClientRecordIdForSubmit(manager) || null,
       duration_ms: resolveManagerDurationMs(manager),
       replay_string: replayPayload.replayString,
-      ui_state: buildRankedCheckpointUiState(manager)
+      ui_state: buildRankedCheckpointUiState(manager, {
+        includeSavedState: opts.includeSavedState !== false
+      })
     };
   }
 
@@ -1061,7 +1238,8 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   async function maybeSaveRankedCheckpoint(manager, options) {
-    if (!shouldUseRankedCheckpoint(manager) || !getAuthToken()) return false;
+    if (!shouldUseRankedCheckpoint(manager)) return false;
+    if (!getAuthToken()) return false;
     if (manager.rankCheckpointRestorePending === true || manager.rankCheckpointApplying === true) return false;
     if (toText(manager.rankCheckpointSaveConflict).trim()) return false;
     if (isSessionTerminated(manager)) return false;
@@ -1104,7 +1282,7 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   async function clearRankedCheckpointForManager(manager, options) {
-    if (!shouldUseRankedCheckpoint(manager) || !getAuthToken()) return false;
+    if (!shouldUseRankedCheckpoint(manager)) return false;
     clearRankedCheckpointSaveTimer();
     manager.rankCheckpointSaveConflict = "";
     manager.lastRankedCheckpointSignature = "";
@@ -1112,6 +1290,8 @@ function shouldAutoLoadOnlineLeaderboard() {
     manager.lastRankedCheckpointSaveError = "";
     var opts = isPlainRecord(options) ? options : {};
     var modeKey = toText(manager.modeKey || manager.mode).trim();
+    clearRankedCheckpointLocalMirror(modeKey);
+    if (!getAuthToken()) return true;
     if (!modeKey) return false;
     var result = await deleteRankedCheckpoint(modeKey, INTERNAL_SUBMIT_TOKEN, {
       keepalive: opts.keepalive === true
@@ -1125,25 +1305,42 @@ function shouldAutoLoadOnlineLeaderboard() {
       manager.rankCheckpointRestorePending = false;
       return false;
     }
-    if (!shouldUseRankedCheckpoint(manager) || !getAuthToken()) {
+    if (!shouldUseRankedCheckpoint(manager)) {
       manager.needsRankedCheckpointRestore = false;
       manager.rankCheckpointRestorePending = false;
       return false;
     }
     manager.rankCheckpointRestorePending = true;
     var expectedModeKey = toText(manager.modeKey || manager.mode).trim();
-    var result = await loadRankedCheckpoint(expectedModeKey);
+    var localMirror = readRankedCheckpointLocalMirror(expectedModeKey);
+    var result = null;
+    if (getAuthToken()) {
+      try {
+        result = await loadRankedCheckpoint(expectedModeKey);
+      } catch (_errLoad) {
+        result = null;
+      }
+    }
     if (toText(manager.modeKey || manager.mode).trim() !== expectedModeKey) {
       manager.rankCheckpointRestorePending = false;
       return false;
     }
     var checkpointData = normalizeRankedCheckpointResponseData(result);
-    var restored = checkpointData ? restoreRankedCheckpointForManager(manager, checkpointData) : false;
+    var candidates = buildRankedCheckpointRestoreCandidates(localMirror, checkpointData);
+    var restored = false;
+    for (var i = 0; i < candidates.length; i += 1) {
+      var candidate = candidates[i];
+      restored = candidate.source === "local"
+        ? restoreRankedCheckpointLocalMirror(manager, candidate.data)
+        : restoreRankedCheckpointForManager(manager, candidate.data);
+      if (restored) break;
+    }
     manager.needsRankedCheckpointRestore = false;
     manager.rankCheckpointRestorePending = false;
     if (restored) {
       manager.rankCheckpointSaveConflict = "";
       manager.lastRankedCheckpointSaveError = "";
+      persistRankedCheckpointLocalMirror(manager);
     }
     return restored;
   }
@@ -1167,6 +1364,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function persistRankedCheckpointOnPageHide(manager) {
     clearRankedCheckpointSaveTimer();
+    persistRankedCheckpointLocalMirror(manager);
     maybeSaveRankedCheckpoint(manager, { force: true, keepalive: true }).catch(function () {});
   }
 
@@ -1298,6 +1496,9 @@ function shouldAutoLoadOnlineLeaderboard() {
     return {
       mode: modeBucket,
       mode_key: modeKey,
+      ranked_session_token: shouldUseRankedCheckpoint(manager)
+        ? (resolveRankedSessionTokenForManager(manager) || null)
+        : null,
       score: Math.floor(Number(score) || 0),
       best_tile: bestTile,
       duration_ms: resolveManagerDurationMs(manager),
@@ -1635,6 +1836,10 @@ async function refreshLeaderboard(modeLike) {
     if (result && result.success) {
       safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY, signature);
       clearPendingRecordSubmitSignature();
+      var rankedSessionRuntime = getRankedSessionRuntime();
+      if (rankedSessionRuntime && typeof rankedSessionRuntime.clearActiveSession === "function") {
+        rankedSessionRuntime.clearActiveSession(modeKey);
+      }
       clearRankedCheckpointForManager(manager, { keepalive: true }).catch(function () {});
       return;
     }
@@ -1682,13 +1887,19 @@ async function refreshLeaderboard(modeLike) {
           methodName === "restartWithSeed" ||
           methodName === "restartWithBoard"
         ) {
-          clearRankedCheckpointForManager(currentManager, {}).catch(function () {});
+          if (!prepareRankedSessionForRestart(currentManager)) {
+            return currentManager;
+          }
+          if (!(currentManager && (currentManager.rankCheckpointApplying === true || currentManager.replayMode === true))) {
+            clearRankedCheckpointForManager(currentManager, {}).catch(function () {});
+          }
         }
       }
       var result = original.apply(this, arguments);
       if (timing === "after") {
         triggerImmediateOnlineSubmit();
         if (methodName === "move" && currentManager.rankCheckpointApplying !== true) {
+          persistRankedCheckpointLocalMirror(currentManager);
           scheduleRankedCheckpointSave(currentManager, { reason: "move" });
         }
       }
@@ -1907,6 +2118,7 @@ function init() {
     getNickname: getNickname,
     resolveLeaderboardMode: resolveLeaderboardMode,
     isLeaderboardModeSupported: isLeaderboardModeSupported,
+    hasLocalRankedCheckpointMirror: hasRankedCheckpointLocalMirror,
     scheduleRankedCheckpointRestore: scheduleRankedCheckpointRestore,
     persistRankedCheckpointOnPageHide: persistRankedCheckpointOnPageHide
   };

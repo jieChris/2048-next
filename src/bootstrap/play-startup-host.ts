@@ -77,6 +77,7 @@ export interface ResolvePlayStartupFromContextOptions {
   resolveChallengeContext: (options: {
     challengeId: string;
     modeConfig: unknown;
+    existingContext?: unknown;
   }) => unknown;
   applyHeader: (modeConfig: unknown) => void;
   resolveStartupPayload: (options: {
@@ -149,7 +150,8 @@ export function resolvePlayStartupFromContext(
     windowLike.GAME_MODE_CONFIG = modeConfig;
     windowLike.GAME_CHALLENGE_CONTEXT = opts.resolveChallengeContext({
       challengeId,
-      modeConfig
+      modeConfig,
+      existingContext: windowLike.GAME_CHALLENGE_CONTEXT
     });
   }
   opts.applyHeader(modeConfig);

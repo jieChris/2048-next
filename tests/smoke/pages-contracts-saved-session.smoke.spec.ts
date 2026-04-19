@@ -521,4 +521,101 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(restoredSnapshot.restoreNeeded).toBe(false);
     expect(restoredSnapshot.score).not.toBe(424242);
   });
+
+  test("ranked home page restores local checkpoint mirror across immediate reload without auth", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      window.localStorage.removeItem("2048_auth_token_v1");
+      window.localStorage.removeItem("2048_auth_userId_v1");
+      window.localStorage.removeItem("2048_auth_nickname_v1");
+      if (!window.sessionStorage.getItem("__smoke_ranked_local_mirror_reset__")) {
+        window.localStorage.removeItem("ranked_checkpoint_local_mirror:v1:standard_4x4_pow2_no_undo");
+        window.sessionStorage.setItem("__smoke_ranked_local_mirror_reset__", "1");
+      }
+    });
+
+    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Home ranked response should exist").not.toBeNull();
+    expect(response?.ok(), "Home ranked response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+    await page.waitForFunction(
+      () => {
+        const manager = (window as any).game_manager;
+        return !!manager && manager.rankCheckpointRestorePending !== true;
+      },
+      { timeout: 12_000 }
+    );
+
+    const liveSnapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      manager.move(2);
+      manager.move(0);
+      manager.move(2);
+      const onlineRuntime = (window as any).OnlineLeaderboardRuntime;
+      if (onlineRuntime && typeof onlineRuntime.persistRankedCheckpointOnPageHide === "function") {
+        onlineRuntime.persistRankedCheckpointOnPageHide(manager);
+      }
+      const board =
+        typeof manager.getFinalBoardMatrix === "function"
+          ? manager.getFinalBoardMatrix()
+          : manager.grid.cells.map((column: Array<{ value: number } | null>) =>
+              column.map((cell) => (cell ? cell.value : 0))
+            );
+      const rawMirror = window.localStorage.getItem("ranked_checkpoint_local_mirror:v1:standard_4x4_pow2_no_undo");
+      let mirror: Record<string, unknown> | null = null;
+      try {
+        mirror = rawMirror ? (JSON.parse(rawMirror) as Record<string, unknown>) : null;
+      } catch (_err) {
+        mirror = null;
+      }
+      return {
+        clientRecordId: String(manager.clientRecordId || ""),
+        score: Number(manager.score || 0),
+        stepCount: Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0,
+        board,
+        mirrorReplayLength: mirror ? String(mirror.replay_string || "").length : 0
+      };
+    });
+
+    expect(liveSnapshot.stepCount).toBeGreaterThan(0);
+
+    const reloadResponse = await page.reload({ waitUntil: "domcontentloaded" });
+    expect(reloadResponse, "Reloaded home ranked response should exist").not.toBeNull();
+    expect(reloadResponse?.ok(), "Reloaded home ranked response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+    await page.waitForFunction(
+      () => {
+        const manager = (window as any).game_manager;
+        return (
+          !!manager &&
+          manager.rankCheckpointRestorePending !== true &&
+          manager.needsRankedCheckpointRestore !== true
+        );
+      },
+      { timeout: 12_000 }
+    );
+
+    const restoredSnapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const board =
+        typeof manager.getFinalBoardMatrix === "function"
+          ? manager.getFinalBoardMatrix()
+          : manager.grid.cells.map((column: Array<{ value: number } | null>) =>
+              column.map((cell) => (cell ? cell.value : 0))
+            );
+      return {
+        clientRecordId: String(manager.clientRecordId || ""),
+        restoreError: String((manager as any).lastRankedCheckpointRestoreError || ""),
+        score: Number(manager.score || 0),
+        board
+      };
+    });
+
+    expect(restoredSnapshot.score).toBe(liveSnapshot.score);
+    expect(restoredSnapshot.board).toEqual(liveSnapshot.board);
+    expect(restoredSnapshot.restoreError).toBe("");
+  });
 });

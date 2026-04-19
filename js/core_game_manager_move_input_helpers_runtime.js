@@ -1305,6 +1305,86 @@ function shouldUseReplaySeededSpawn(manager) {
   return !!(manager && manager.replayMode);
 }
 
+function resolveRankedDeterministicSeed(manager) {
+  var seed = Math.floor(Number(manager && manager.initialSeed));
+  return Number.isInteger(seed) && seed >= 0 ? seed : null;
+}
+
+function createRankedDeterministicHash(seed, stepCount, channel) {
+  var text = String(Math.floor(seed)) + "|" + String(Math.floor(stepCount)) + "|" + String(channel || "");
+  var hash = 0x811c9dc5;
+  for (var i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x85ebca6b);
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 0xc2b2ae35);
+  hash ^= hash >>> 16;
+  return hash >>> 0;
+}
+
+function resolveRankedDeterministicUnitFloat(seed, stepCount, channel) {
+  return createRankedDeterministicHash(seed, stepCount, channel) / 4294967296;
+}
+
+function resolveRankedDeterministicSpawnValue(manager, seed, stepCount) {
+  var table = Array.isArray(manager && manager.spawnTable) && manager.spawnTable.length
+    ? manager.spawnTable
+    : ((manager && manager.ruleset) === "fibonacci"
+      ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
+      : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }]);
+  var totalWeight = 0;
+  for (var i = 0; i < table.length; i++) {
+    var weight = Math.max(0, Math.floor(Number(table[i] && table[i].weight) || 0));
+    totalWeight += weight;
+  }
+  if (!(totalWeight > 0)) {
+    return (manager && manager.ruleset) === "fibonacci" ? 1 : 2;
+  }
+  var cursor = Math.min(
+    resolveRankedDeterministicUnitFloat(seed, stepCount, "spawn:value"),
+    0.9999999999999999
+  ) * totalWeight;
+  var running = 0;
+  for (var j = 0; j < table.length; j++) {
+    var item = table[j];
+    running += Math.max(0, Math.floor(Number(item && item.weight) || 0));
+    if (cursor < running) {
+      return Math.floor(Number(item && item.value) || 0) || ((manager && manager.ruleset) === "fibonacci" ? 1 : 2);
+    }
+  }
+  var fallback = table[table.length - 1];
+  return Math.floor(Number(fallback && fallback.value) || 0) || ((manager && manager.ruleset) === "fibonacci" ? 1 : 2);
+}
+
+function shouldUseRankedDeterministicSpawn(manager) {
+  return !!(
+    manager &&
+    !manager.replayMode &&
+    String(manager.rankPolicy || "").toLowerCase() === "ranked" &&
+    resolveRankedDeterministicSeed(manager) !== null
+  );
+}
+
+function insertRankedDeterministicSpawnTile(manager, available) {
+  if (!(manager && Array.isArray(available) && available.length > 0)) return;
+  var seed = resolveRankedDeterministicSeed(manager);
+  if (seed === null) return;
+  var stepCount = resolveSpawnStepCount(manager);
+  var value = consumeItemSpawnValueOverride(
+    manager,
+    resolveRankedDeterministicSpawnValue(manager, seed, stepCount)
+  );
+  var cellRoll = resolveRankedDeterministicUnitFloat(seed, stepCount, "spawn:cell");
+  var cell = available[Math.min(available.length - 1, Math.floor(cellRoll * available.length))];
+  var tile = new Tile(cell, value);
+  manager.grid.insertTile(tile);
+  manager.lastSpawn = { x: cell.x, y: cell.y, value: value };
+  recordSpawnValue(manager, value);
+}
+
 function resolveMasterSpawnValueByDefault() {
   return Math.random() < 0.9 ? 2 : 4;
 }
@@ -1539,6 +1619,12 @@ function addRandomTile(manager) {
     var available = getAvailableCells(manager);
     if (!available.length) return;
     insertSeededRandomSpawnTile(manager, available);
+    return;
+  }
+  if (shouldUseRankedDeterministicSpawn(manager)) {
+    var rankedAvailable = getAvailableCells(manager);
+    if (!rankedAvailable.length) return;
+    insertRankedDeterministicSpawnTile(manager, rankedAvailable);
     return;
   }
   insertMasterRandomSpawnTile(manager);

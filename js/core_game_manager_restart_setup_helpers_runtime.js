@@ -361,22 +361,77 @@ function restartWithBoard(manager, board, modeConfig, options) {
   manager.actuate();
 }
 
+function resolveFreshSetupSeed(manager) {
+  var cryptoLike = null;
+  try {
+    var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+    cryptoLike = windowLike && (windowLike.crypto || windowLike.msCrypto) ? (windowLike.crypto || windowLike.msCrypto) : null;
+  } catch (_errWindowCrypto) {}
+  if (!cryptoLike) {
+    try {
+      cryptoLike = typeof crypto !== "undefined" ? crypto : null;
+    } catch (_errGlobalCrypto) {}
+  }
+  if (cryptoLike && typeof cryptoLike.getRandomValues === "function" && typeof Uint32Array !== "undefined") {
+    try {
+      var values = new Uint32Array(2);
+      cryptoLike.getRandomValues(values);
+      return (values[0] & 2097151) * 4294967296 + (values[1] >>> 0);
+    } catch (_errRandomValues) {}
+  }
+  return Math.random();
+}
+
+function resolveSetupRankedSessionContext(manager) {
+  if (!manager || manager.rankPolicy !== "ranked") return null;
+  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
+  var context = windowLike && windowLike.GAME_CHALLENGE_CONTEXT ? windowLike.GAME_CHALLENGE_CONTEXT : null;
+  if (!context || typeof context !== "object" || Array.isArray(context)) return null;
+  var modeKey = typeof manager.modeKey === "string" && manager.modeKey
+    ? manager.modeKey
+    : (typeof manager.mode === "string" ? manager.mode : "");
+  var contextModeKey = typeof context.mode_key === "string" ? context.mode_key.trim() : "";
+  if (modeKey && contextModeKey && contextModeKey !== modeKey) return null;
+  var challengeId = typeof context.id === "string" ? context.id.trim() : "";
+  var seed = Math.floor(Number(context.seed));
+  var rankedSessionToken = typeof context.ranked_session_token === "string"
+    ? context.ranked_session_token.trim()
+    : "";
+  if (!challengeId) return null;
+  if (!Number.isInteger(seed) || seed < 0) return null;
+  return {
+    id: challengeId,
+    mode_key: contextModeKey || modeKey,
+    seed: seed,
+    ranked_session_token: rankedSessionToken
+  };
+}
+
 function initializeSetupSeedAndReplayState(manager, inputSeed) {
-  if (!manager) return { hasInputSeed: false };
+  if (!manager) return { hasInputSeed: false, rankedSessionContext: null };
   var hasInputSeed = typeof inputSeed !== "undefined";
-  if (hasInputSeed) manager.setRuntimeReplayIndex(0);
-  manager.initialSeed = hasInputSeed ? inputSeed : Math.random();
+  var rankedSessionContext = hasInputSeed ? null : resolveSetupRankedSessionContext(manager);
+  if (hasInputSeed && typeof manager.setRuntimeReplayIndex === "function") manager.setRuntimeReplayIndex(0);
+  manager.initialSeed = hasInputSeed
+    ? inputSeed
+    : (rankedSessionContext ? rankedSessionContext.seed : resolveFreshSetupSeed(manager));
   manager.seed = manager.initialSeed;
   manager.replayMode = hasInputSeed;
   if (!hasInputSeed) manager.disableSessionSync = false;
-  return { hasInputSeed: hasInputSeed };
+  return {
+    hasInputSeed: hasInputSeed,
+    rankedSessionContext: rankedSessionContext
+  };
 }
 
-function resolveSetupChallengeId(manager, normalizedOptions) {
+function resolveSetupChallengeId(manager, normalizedOptions, rankedSessionContext) {
   if (!manager) return null;
   var challengeId = typeof normalizedOptions.challengeId === "string" && normalizedOptions.challengeId
     ? normalizedOptions.challengeId
     : null;
+  if (!challengeId && rankedSessionContext && rankedSessionContext.id) {
+    challengeId = rankedSessionContext.id;
+  }
   var windowLike = manager.getWindowLike();
   if (
     !challengeId &&
@@ -387,6 +442,12 @@ function resolveSetupChallengeId(manager, normalizedOptions) {
     challengeId = windowLike.GAME_CHALLENGE_CONTEXT.id;
   }
   return challengeId;
+}
+
+function resolveSetupRankedSessionToken(rankedSessionContext) {
+  return rankedSessionContext && typeof rankedSessionContext.ranked_session_token === "string"
+    ? rankedSessionContext.ranked_session_token
+    : "";
 }
 
 function resolveReplayModeTagFromModeKey(modeKey, fallbackMode) {
@@ -420,6 +481,8 @@ function initializeSetupSessionReplaySnapshot(manager) {
     board_width: manager.width,
     board_height: manager.height,
     start_unix_ms: Date.now(),
+    challenge_id: manager.challengeId || null,
+    seed: manager.initialSeed,
     init_tiles: [],
     records: [],
     last_event_at_ms: Date.now(),
@@ -456,6 +519,8 @@ function syncSetupSessionReplayV1InitTiles(manager) {
   manager.sessionReplayV1.ruleset = manager.ruleset;
   manager.sessionReplayV1.board_width = manager.width;
   manager.sessionReplayV1.board_height = manager.height;
+  manager.sessionReplayV1.challenge_id = manager.challengeId || null;
+  manager.sessionReplayV1.seed = manager.initialSeed;
   manager.sessionReplayV1.init_tiles = Array.isArray(initTiles) ? initTiles : [];
   manager.sessionReplayV1.supported = !!initTiles;
 }
@@ -465,6 +530,7 @@ function resetSetupReplayAndSpawnState(manager) {
   manager.replayCompactLog = "";
   manager.initialBoardMatrix = null;
   manager.replayStartBoardMatrix = null;
+  manager.rankedSessionToken = "";
   if (typeof assignManagerClientRecordId === "function") {
     assignManagerClientRecordId(manager, "");
   } else {
@@ -558,11 +624,56 @@ function hasRankedCheckpointAuthTokenForSetup(manager) {
   }
 }
 
+function hasRankedCheckpointLocalMirrorForSetup(manager) {
+  if (!manager || manager.rankPolicy !== "ranked") return false;
+  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
+  var modeKey = typeof manager.modeKey === "string" && manager.modeKey
+    ? manager.modeKey
+    : (typeof manager.mode === "string" ? manager.mode : "");
+  if (!modeKey) return false;
+  try {
+    var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
+    if (!storage || typeof storage.getItem !== "function") return false;
+    var raw = storage.getItem("ranked_checkpoint_local_mirror:v1:" + modeKey);
+    return typeof raw === "string" && raw.trim().length > 0;
+  } catch (_err) {
+    return false;
+  }
+}
+
+function readRankedCheckpointLocalMirrorSavedStateForSetup(manager) {
+  if (!manager || manager.rankPolicy !== "ranked") return null;
+  if (hasRankedCheckpointAuthTokenForSetup(manager)) return null;
+  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
+  var modeKey = typeof manager.modeKey === "string" && manager.modeKey
+    ? manager.modeKey
+    : (typeof manager.mode === "string" ? manager.mode : "");
+  if (!modeKey) return null;
+  try {
+    var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
+    if (!storage || typeof storage.getItem !== "function") return null;
+    var raw = storage.getItem("ranked_checkpoint_local_mirror:v1:" + modeKey);
+    if (!(typeof raw === "string" && raw)) return null;
+    var parsed = JSON.parse(raw);
+    var uiState = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed.ui_state
+      : null;
+    var savedState = uiState && typeof uiState === "object" && !Array.isArray(uiState)
+      ? uiState.saved_state
+      : null;
+    if (!(savedState && typeof savedState === "object" && !Array.isArray(savedState))) return null;
+    if (String(savedState.mode_key || "").trim() !== modeKey) return null;
+    return savedState;
+  } catch (_err) {
+    return null;
+  }
+}
+
 function shouldScheduleRankedCheckpointRestoreInSetup(manager, hasInputSeed, normalizedOptions) {
   if (!manager || manager.rankPolicy !== "ranked") return false;
   var skipStartTiles = !!normalizedOptions.skipStartTiles;
   if (hasInputSeed || skipStartTiles || normalizedOptions.disableStateRestore) return false;
-  return hasRankedCheckpointAuthTokenForSetup(manager);
+  return hasRankedCheckpointAuthTokenForSetup(manager) || hasRankedCheckpointLocalMirrorForSetup(manager);
 }
 
 function seedInitialTilesAndSnapshotBoard(manager) {
@@ -624,6 +735,12 @@ function resolveSetupRestoreAndInitialBoardState(manager, hasInputSeed, normaliz
   if (shouldTryRestoreSavedStateInSetup(manager, hasInputSeed, normalizedOptions)) {
     restoredFromSavedState = tryRestoreLatestSavedState(manager);
   }
+  if (!restoredFromSavedState && !hasInputSeed && !skipStartTiles && !normalizedOptions.disableStateRestore) {
+    var rankedLocalMirrorSavedState = readRankedCheckpointLocalMirrorSavedStateForSetup(manager);
+    if (rankedLocalMirrorSavedState && typeof applySavedStateRestore === "function") {
+      restoredFromSavedState = applySavedStateRestore(manager, rankedLocalMirrorSavedState);
+    }
+  }
   manager.needsRankedCheckpointRestore =
     !restoredFromSavedState &&
     shouldScheduleRankedCheckpointRestoreInSetup(manager, hasInputSeed, normalizedOptions);
@@ -677,7 +794,8 @@ function runSetupStateInitialization(manager, inputSeed, setupOptions) {
   var normalizedOptions = isNonArrayObject(setupOptions) ? setupOptions : {};
   var seedState = initializeSetupSeedAndReplayState(manager, inputSeed);
   resetSetupRuntimeState(manager);
-  manager.challengeId = resolveSetupChallengeId(manager, normalizedOptions);
+  manager.challengeId = resolveSetupChallengeId(manager, normalizedOptions, seedState.rankedSessionContext);
+  manager.rankedSessionToken = resolveSetupRankedSessionToken(seedState.rankedSessionContext);
   initializeSetupSessionReplaySnapshot(manager);
   initializeTimerMilestones(manager);
   resetRoundStatsState(manager);

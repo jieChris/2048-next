@@ -13,7 +13,7 @@ describe("bootstrap play startup host", () => {
     const resolveStartupContext = vi.fn(() => ({
       kind: "abort" as const,
       shouldAlert: true,
-      alertMessage: "无效模式",
+      alertMessage: "鏃犳晥妯″紡",
       redirectUrl: "play.html?mode_key=standard_4x4_pow2_no_undo"
     }));
     const resolveChallengeContext = vi.fn();
@@ -42,7 +42,7 @@ describe("bootstrap play startup host", () => {
     });
 
     expect(result).toBeNull();
-    expect(alert).toHaveBeenCalledWith("无效模式");
+    expect(alert).toHaveBeenCalledWith("鏃犳晥妯″紡");
     expect(windowLike.location.href).toBe("play.html?mode_key=standard_4x4_pow2_no_undo");
     expect(resolveChallengeContext).not.toHaveBeenCalled();
     expect(applyHeader).not.toHaveBeenCalled();
@@ -71,7 +71,7 @@ describe("bootstrap play startup host", () => {
       opts.resolveGuardState({ entryModeConfig: { key: "raw" }, resolvedModeConfig: { key: "raw" } });
       return {
         kind: "start" as const,
-        modeConfig: { key: "standard_4x4_pow2_no_undo", label: "标准模式" },
+        modeConfig: { key: "standard_4x4_pow2_no_undo", label: "鏍囧噯妯″紡" },
         challengeId: "daily-1"
       };
     });
@@ -110,21 +110,23 @@ describe("bootstrap play startup host", () => {
       entryModeConfig: { key: "raw" },
       resolvedModeConfig: { key: "raw" }
     });
-    expect(resolveChallengeContext).toHaveBeenCalledWith({
-      challengeId: "daily-1",
-      modeConfig: { key: "standard_4x4_pow2_no_undo", label: "标准模式" }
-    });
+    expect(resolveChallengeContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        challengeId: "daily-1",
+        existingContext: undefined
+      })
+    );
     expect(windowLike.GAME_MODE_CONFIG).toEqual({
       key: "standard_4x4_pow2_no_undo",
-      label: "标准模式"
+      label: "鏍囧噯妯″紡"
     });
     expect(windowLike.GAME_CHALLENGE_CONTEXT).toEqual({ id: "daily-1" });
     expect(applyHeader).toHaveBeenCalledWith({
       key: "standard_4x4_pow2_no_undo",
-      label: "标准模式"
+      label: "鏍囧噯妯″紡"
     });
     expect(resolveStartupPayload).toHaveBeenCalledWith({
-      modeConfig: { key: "standard_4x4_pow2_no_undo", label: "标准模式" },
+      modeConfig: { key: "standard_4x4_pow2_no_undo", label: "鏍囧噯妯″紡" },
       inputManagerCtor,
       defaultBoardWidth: 4
     });
@@ -162,5 +164,55 @@ describe("bootstrap play startup host", () => {
       inputManagerCtor,
       defaultBoardWidth: 6
     });
+  });
+
+  it("keeps preloaded ranked challenge context on play startup", () => {
+    const preloadedContext = {
+      id: "rch_seeded",
+      mode_key: "standard_4x4_pow2_no_undo",
+      seed: 123456,
+      ranked_session_token: "rs1.token"
+    };
+    const resolveChallengeContext = vi.fn((options: any) => options.existingContext);
+    const windowLike: {
+      location: { search: string; href: string };
+      ModeCatalog: {};
+      GAME_MODE_CONFIG?: unknown;
+      GAME_CHALLENGE_CONTEXT?: unknown;
+    } = {
+      location: {
+        search: "?mode_key=standard_4x4_pow2_no_undo",
+        href: "play.html?mode_key=standard_4x4_pow2_no_undo"
+      },
+      ModeCatalog: {},
+      GAME_CHALLENGE_CONTEXT: preloadedContext
+    };
+
+    resolvePlayStartupFromContext({
+      windowLike,
+      inputManagerCtor: function FakeInput() {},
+      resolveEntryPlan: () => ({
+        modeKey: "standard_4x4_pow2_no_undo",
+        challengeId: "",
+        modeConfig: {}
+      }),
+      resolveStartupContext: () => ({
+        kind: "start",
+        modeConfig: { key: "standard_4x4_pow2_no_undo" },
+        challengeId: ""
+      }),
+      resolveModeConfig: (_modeKey: string, modeConfig: unknown) => modeConfig,
+      resolveGuardState: () => ({}),
+      resolveChallengeContext,
+      applyHeader: () => {},
+      resolveStartupPayload: () => null
+    });
+
+    expect(resolveChallengeContext).toHaveBeenCalledWith({
+      challengeId: "",
+      modeConfig: { key: "standard_4x4_pow2_no_undo" },
+      existingContext: preloadedContext
+    });
+    expect(windowLike.GAME_CHALLENGE_CONTEXT).toEqual(preloadedContext);
   });
 });

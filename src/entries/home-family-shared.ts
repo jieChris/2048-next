@@ -55,6 +55,7 @@ import coreGameManagerBaseHelpersRuntimeUrl from "../../js/core_game_manager_bas
 import coreGameManagerEnvHelpersRuntimeUrl from "../../js/core_game_manager_env_helpers_runtime.js?url";
 import coreGameManagerRuntimeCallHelpersRuntimeUrl from "../../js/core_game_manager_runtime_call_helpers_runtime.js?url";
 import coreGameManagerSavedStateHelpersRuntimeUrl from "../../js/core_game_manager_saved_state_helpers_runtime.js?url";
+import coreRankedCheckpointLocalMirrorFallbackRuntimeUrl from "../../js/core_ranked_checkpoint_local_mirror_fallback_runtime.js?url";
 import coreGameManagerRuntimeAccessorHelpersRuntimeUrl from "../../js/core_game_manager_runtime_accessor_helpers_runtime.js?url";
 import coreGameManagerStatsUiHelpersRuntimeUrl from "../../js/core_game_manager_stats_ui_helpers_runtime.js?url";
 import coreGameManagerMoveInputHelpersRuntimeUrl from "../../js/core_game_manager_move_input_helpers_runtime.js?url";
@@ -209,6 +210,7 @@ export const homeCoreScripts = [
   coreGameManagerEnvHelpersRuntimeUrl,
   coreGameManagerRuntimeCallHelpersRuntimeUrl,
   coreGameManagerSavedStateHelpersRuntimeUrl,
+  coreRankedCheckpointLocalMirrorFallbackRuntimeUrl,
   coreGameManagerRuntimeAccessorHelpersRuntimeUrl,
   coreGameManagerStatsUiHelpersRuntimeUrl,
   coreGameManagerMoveInputHelpersRuntimeUrl,

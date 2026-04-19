@@ -1,5 +1,6 @@
 import { createBootstrapPipeline, resolvePageDescriptor } from "../bootstrap/page-bootstrap";
 import { registerEngineFacade, type EngineFacadeWindowLike } from "../bootstrap/engine-facade-host";
+import { bootstrapRankedSessionForHomeFamilyPage } from "../bootstrap/ranked-session";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
 import { getPageManifest } from "./runtime-manifest";
@@ -66,6 +67,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
 
   bindNightBackgroundSync();
   await runBootstrapPipeline(pageId);
+  await bootstrapRankedSessionForHomeFamilyPage(pageId);
   registerEngineFacade(
     typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
   );

@@ -411,7 +411,8 @@
       windowLike.GAME_MODE_CONFIG = modeConfig;
       windowLike.GAME_CHALLENGE_CONTEXT = opts.resolveChallengeContext({
         challengeId: challengeId,
-        modeConfig: modeConfig
+        modeConfig: modeConfig,
+        existingContext: windowLike.GAME_CHALLENGE_CONTEXT
       });
     }
     opts.applyHeader(modeConfig);
