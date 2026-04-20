@@ -738,6 +738,25 @@ function initializeReplayStateHistory(manager) {
   return entry;
 }
 
+function shouldPrimeReplaySeekCheckpoints(manager) {
+  if (!manager) return false;
+  var replayMoves = Array.isArray(manager.replayMoves) ? manager.replayMoves : [];
+  return replayMoves.length > REPLAY_SEEK_TAIL_HISTORY_LENGTH;
+}
+
+function primeReplaySeekCheckpoints(manager) {
+  if (!shouldPrimeReplaySeekCheckpoints(manager)) return;
+  var startEntry = getReplayStateHistoryEntry(manager, 0);
+  if (!(startEntry && manager.isNonArrayObject(startEntry))) return;
+  executeReplaySeekWithoutIntermediateActuation(manager, function () {
+    pauseReplay(manager);
+    executeReplaySeekSteps(manager, manager.replayMoves.length);
+    applyReplayStateHistoryEntry(manager, 0, {
+      entry: startEntry
+    });
+  });
+}
+
 function shouldBypassReplayStateHistory(manager) {
   return !!(manager && manager.replayStateHistoryBypass === true);
 }
@@ -3455,6 +3474,7 @@ function applyImportedReplayUndoState(manager) {
 function startImportedReplayPlayback(manager) {
   setRuntimeReplayIndexForReplay(manager, 0);
   initializeReplayStateHistory(manager);
+  primeReplaySeekCheckpoints(manager);
   setRuntimeReplayDelayForReplay(manager, 200);
   resumeReplay(manager);
 }
