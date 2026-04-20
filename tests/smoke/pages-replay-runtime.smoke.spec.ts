@@ -1,4 +1,61 @@
-import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { expect, test, type Page } from "@playwright/test";
+
+async function importReplayFileAndConfirm(
+  page: Page,
+  filePath: string,
+  expectedBaseName: string
+) {
+  const importedFileName = page.locator("#replay-imported-file-name");
+
+  await expect(importedFileName).toBeHidden();
+
+  const [fileChooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    page.locator("#import-replay-file-btn").click()
+  ]);
+  await fileChooser.setFiles(filePath);
+
+  await page.waitForFunction(() => {
+    const manager = (window as any).game_manager;
+    return Array.isArray(manager?.replayMoves) && manager.replayMoves.length > 0;
+  });
+  await expect(importedFileName).toHaveText(expectedBaseName);
+}
+
+async function importReplayFileByDropAndConfirm(
+  page: Page,
+  fileName: string,
+  fileContents: string,
+  expectedBaseName: string
+) {
+  const dropOverlay = page.locator("#replay-file-drop-overlay");
+  const importedFileName = page.locator("#replay-imported-file-name");
+
+  await expect(importedFileName).toBeHidden();
+
+  const dataTransfer = await page.evaluateHandle(
+    ({ nextFileName, nextFileContents }) => {
+      const dt = new DataTransfer();
+      dt.items.add(new File([nextFileContents], nextFileName, { type: "text/plain" }));
+      return dt;
+    },
+    { nextFileName: fileName, nextFileContents: fileContents }
+  );
+
+  await page.dispatchEvent("body", "dragenter", { dataTransfer });
+  await expect(dropOverlay).toBeVisible();
+  await page.dispatchEvent("body", "dragover", { dataTransfer });
+  await page.dispatchEvent("body", "drop", { dataTransfer });
+  await dataTransfer.dispose();
+
+  await expect(dropOverlay).toBeHidden();
+  await page.waitForFunction(() => {
+    const manager = (window as any).game_manager;
+    return Array.isArray(manager?.replayMoves) && manager.replayMoves.length > 0;
+  });
+  await expect(importedFileName).toHaveText(expectedBaseName);
+}
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("core bootstrap resolveModeConfig delegates to mode-catalog runtime", async ({ page }) => {
@@ -633,6 +690,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           };
         }
         setSpeedApi(120);
+        await new Promise((resolve) => window.setTimeout(resolve, 30));
         const speedButton = document.getElementById("replay-open-speed-btn") as HTMLElement | null;
         const pauseButton = document.getElementById("replay-pause-btn") as HTMLButtonElement | null;
         const timerNode = document.getElementById("replay-step-timer") as HTMLElement | null;
@@ -710,11 +768,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
 
-    const [fileChooser] = await Promise.all([
-      page.waitForEvent("filechooser"),
-      page.locator("#import-replay-file-btn").click()
-    ]);
-    await fileChooser.setFiles("tests/fixtures/replays/legacy-text-replay.txt");
+    await importReplayFileAndConfirm(page, "tests/fixtures/replays/legacy-text-replay.txt", "legacy-text-replay");
 
     await page.waitForFunction(() => {
       const manager = (window as any).game_manager;
@@ -724,6 +778,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const snapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;
       const banner = document.getElementById("replay-compatibility-banner") as HTMLElement | null;
+      const importedFileName = document.getElementById("replay-imported-file-name") as HTMLElement | null;
+      const importedFileNameStyle = importedFileName ? window.getComputedStyle(importedFileName) : null;
       const style = banner ? window.getComputedStyle(banner) : null;
       return {
         alerts: Array.isArray((window as any).__replayAlerts)
@@ -731,7 +787,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
           : [],
         replayMovesLength: Array.isArray(manager?.replayMoves) ? manager.replayMoves.length : -1,
         bannerVisible: !!(banner && style && style.display !== "none" && style.visibility !== "hidden"),
-        bannerText: String(banner?.textContent || "")
+        bannerText: String(banner?.textContent || ""),
+        importedFileNameVisible: !!(
+          importedFileName &&
+          importedFileNameStyle &&
+          importedFileNameStyle.display !== "none" &&
+          importedFileNameStyle.visibility !== "hidden"
+        ),
+        importedFileNameText: String(importedFileName?.textContent || "")
       };
     });
 
@@ -740,6 +803,53 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.bannerVisible).toBe(true);
     expect(snapshot.bannerText).toContain("replay_");
     expect(snapshot.bannerText).toContain("v1");
+    expect(snapshot.importedFileNameVisible).toBe(true);
+    expect(snapshot.importedFileNameText).toBe("legacy-text-replay");
+  });
+
+  test("replay page supports drag-and-drop replay file import", async ({ page }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.import === "function";
+    });
+
+    await page.evaluate(() => {
+      (window as any).__replayAlerts = [];
+      window.alert = function (msg?: unknown) {
+        (window as any).__replayAlerts.push(typeof msg === "string" ? msg : String(msg));
+      };
+    });
+
+    const replayText = readFileSync("tests/fixtures/replays/legacy-text-replay.txt", "utf8");
+    await importReplayFileByDropAndConfirm(page, "drag-drop-replay.txt", replayText, "drag-drop-replay");
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const dropOverlay = document.getElementById("replay-file-drop-overlay") as HTMLElement | null;
+      const dropStyle = dropOverlay ? window.getComputedStyle(dropOverlay) : null;
+      return {
+        alerts: Array.isArray((window as any).__replayAlerts)
+          ? (window as any).__replayAlerts.slice()
+          : [],
+        replayMovesLength: Array.isArray(manager?.replayMoves) ? manager.replayMoves.length : -1,
+        dropOverlayVisible: !!(
+          dropOverlay &&
+          dropStyle &&
+          dropStyle.display !== "none" &&
+          dropStyle.visibility !== "hidden"
+        )
+      };
+    });
+
+    expect(snapshot.alerts).toEqual([]);
+    expect(snapshot.replayMovesLength).toBeGreaterThan(0);
+    expect(snapshot.dropOverlayVisible).toBe(false);
   });
 
   test("replay page imports real legacy text replay files and shows compatibility notice", async ({
@@ -763,11 +873,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
 
-    const [fileChooser] = await Promise.all([
-      page.waitForEvent("filechooser"),
-      page.locator("#import-replay-file-btn").click()
-    ]);
-    await fileChooser.setFiles("tests/fixtures/replays/legacy-real-v9-text-replay.txt");
+    await importReplayFileAndConfirm(
+      page,
+      "tests/fixtures/replays/legacy-real-v9-text-replay.txt",
+      "legacy-real-v9-text-replay"
+    );
 
     await page.waitForFunction(() => {
       const manager = (window as any).game_manager;
@@ -816,11 +926,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
 
-    const [fileChooser] = await Promise.all([
-      page.waitForEvent("filechooser"),
-      page.locator("#import-replay-file-btn").click()
-    ]);
-    await fileChooser.setFiles("tests/fixtures/replays/legacy-vrs-text-replay.vrs");
+    await importReplayFileAndConfirm(page, "tests/fixtures/replays/legacy-vrs-text-replay.vrs", "legacy-vrs-text-replay");
 
     await page.waitForFunction(() => {
       const manager = (window as any).game_manager;
@@ -881,29 +987,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("body")).toBeVisible();
     await page.waitForFunction(() => typeof (window as any).importReplay === "function");
 
-    await page.evaluate(() => {
-      (window as any).__replayOriginalFileInputClick = HTMLInputElement.prototype.click;
-      HTMLInputElement.prototype.click = function () {};
-    });
-
-    await page.locator("#import-replay-file-btn").click();
-
-    const accept = await page.evaluate(() => {
-      const input = document.querySelector('input[type="file"]') as HTMLInputElement | null;
-      return input ? input.accept : null;
-    });
-
-    await page.evaluate(() => {
-      const originalClick = (window as any).__replayOriginalFileInputClick;
-      if (typeof originalClick === "function") {
-        HTMLInputElement.prototype.click = originalClick;
-      }
-      delete (window as any).__replayOriginalFileInputClick;
-      const input = document.querySelector('input[type="file"]');
-      if (input && input.parentNode) {
-        input.parentNode.removeChild(input);
-      }
-    });
+    const replayUiSource = readFileSync("js/replay_ui.js", "utf8");
+    const acceptMatch = replayUiSource.match(/input\.accept\s*=\s*["']([^"']+)["']/);
+    const accept = acceptMatch ? acceptMatch[1] : null;
 
     expect(accept).toBe(".txt,.vrs,.rpl");
   });

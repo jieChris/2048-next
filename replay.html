@@ -19,6 +19,7 @@
 </head>
 <body data-page="replay">
   <div class="container replay-v1-page">
+    <div id="replay-imported-file-name" class="replay-imported-file-name" style="display: none;"></div>
     <div class="replay-top-stats">
       <div class="replay-metric-card">
         <span id="replay-score-label" class="replay-metric-label">&#20998;&#25968;&#65306;</span>
@@ -113,6 +114,13 @@
         <button id="replay-action-btn" class="replay-button">&#25191;&#34892;</button>
         <button class="replay-button">&#20851;&#38381;</button>
       </div>
+    </div>
+  </div>
+
+  <div id="replay-file-drop-overlay" class="replay-file-drop-overlay" style="display: none;">
+    <div class="replay-file-drop-panel">
+      <div id="replay-file-drop-title" class="replay-file-drop-title">&#25302;&#25341;&#22238;&#25918;&#25991;&#20214;&#21040;&#27492;&#22788;</div>
+      <div id="replay-file-drop-hint" class="replay-file-drop-hint">&#25903;&#25345; .txt / .vrs / .rpl</div>
     </div>
   </div>
 

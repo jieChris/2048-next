@@ -8,7 +8,6 @@
   var REPLAY_UI_IDLE_INTERVAL_MS = 1000;
   var REPLAY_UI_HIDDEN_INTERVAL_MS = 1800;
   var REPLAY_COMPATIBILITY_BANNER_ID = "replay-compatibility-banner";
-
   var isScrubbing = false;
   var replayRelayoutTimer = null;
   var replaySeekRafId = 0;
@@ -25,6 +24,10 @@
   var replayPlaybackMode = "fixed";
   var replayAutoPlaybackTimer = 0;
   var replayAutoPlaybackActive = false;
+  var replayFileImportBusy = false;
+  var replayImportedFileBaseName = "";
+  var replayFileDropOverlayVisible = false;
+  var replayFileDragDepth = 0;
   var replayInitialEmptyBoardResolved = false;
   var REPLAY_STEP_INTERVAL_MIN_MS = 1;
   var REPLAY_STEP_INTERVAL_MAX_MS = 10000;
@@ -51,6 +54,7 @@
       importTitle: "\u5bfc\u5165\u56de\u653e",
       importAction: "\u5f00\u59cb\u56de\u653e",
       importFileFailed: "\u5bfc\u5165\u56de\u653e\u6587\u4ef6\u5931\u8d25",
+      importFileTypeInvalid: "\u4ec5\u652f\u6301 .txt\u3001.vrs\u3001.rpl \u56de\u653e\u6587\u4ef6",
       importReplayFailed: "\u5bfc\u5165\u56de\u653e\u5931\u8d25",
       cloudLoadFailed: "\u52a0\u8f7d\u4e91\u7aef\u56de\u653e\u5931\u8d25",
       localLoadFailed: "\u52a0\u8f7d\u672c\u5730\u56de\u653e\u5931\u8d25",
@@ -70,6 +74,7 @@
       importTitle: "Import Replay",
       importAction: "Start Replay",
       importFileFailed: "Failed to import replay file",
+      importFileTypeInvalid: "Only .txt, .vrs, and .rpl replay files are supported.",
       importReplayFailed: "Failed to import replay",
       cloudLoadFailed: "Failed to load cloud replay",
       localLoadFailed: "Failed to load local replay",
@@ -205,6 +210,8 @@
     if (key === "speedSettings") return isEn ? "Set Speed" : "\u8bbe\u7f6e\u901f\u5ea6";
     if (key === "importFile") return isEn ? "Import Replay" : "\u5bfc\u5165\u56de\u653e";
     if (key === "importText") return isEn ? "Paste Replay" : "\u7c98\u8d34\u56de\u653e";
+    if (key === "dragImportTitle") return isEn ? "Drop replay file here" : "\u62d6\u62fd\u56de\u653e\u6587\u4ef6\u5230\u6b64\u5904";
+    if (key === "dragImportHint") return isEn ? "Supports .txt / .vrs / .rpl" : "\u652f\u6301 .txt / .vrs / .rpl";
     if (key === "emptyDiagnostics") return isEn ? "No diagnostics available." : "\u6682\u65e0\u7edf\u8ba1\u4fe1\u606f";
     if (key === "setSpeedTitle") return isEn ? "Set Step Duration (ms)" : "\u8bbe\u7f6e\u5355\u6b65\u901f\u5ea6\uff08ms\uff09";
     if (key === "setSpeedAction") return isEn ? "Apply" : "\u786e\u5b9a";
@@ -556,6 +563,12 @@
     var importTextBtn = document.getElementById("import-replay-text-btn");
     if (importTextBtn) importTextBtn.textContent = resolveReplayTimelineLabel("importText");
 
+    var dropTitle = document.getElementById("replay-file-drop-title");
+    if (dropTitle) dropTitle.textContent = resolveReplayTimelineLabel("dragImportTitle");
+
+    var dropHint = document.getElementById("replay-file-drop-hint");
+    if (dropHint) dropHint.textContent = resolveReplayTimelineLabel("dragImportHint");
+
     var rewind10Btn = document.getElementById("btn-rewind-10");
     if (rewind10Btn) rewind10Btn.textContent = resolveReplayTimelineLabel("rewind10");
 
@@ -567,6 +580,8 @@
 
     var forward10Btn = document.getElementById("btn-forward-10");
     if (forward10Btn) forward10Btn.textContent = resolveReplayTimelineLabel("forward10");
+
+    syncReplayImportedFileNameElement();
   }
 
   function cloneShallow(source) {
@@ -987,6 +1002,137 @@
     clearReplayTransientQueryParams();
   }
 
+  function resolveReplayImportedFileBaseName(fileName) {
+    var normalized = toText(fileName).trim();
+    if (!normalized) return "";
+    var slashIndex = Math.max(normalized.lastIndexOf("/"), normalized.lastIndexOf("\\"));
+    if (slashIndex >= 0) normalized = normalized.substring(slashIndex + 1);
+    var dotIndex = normalized.lastIndexOf(".");
+    if (dotIndex > 0) normalized = normalized.substring(0, dotIndex);
+    return normalized.trim();
+  }
+
+  function resolveReplayImportFileExtension(fileName) {
+    var normalized = toText(fileName).trim().toLowerCase();
+    if (!normalized) return "";
+    var dotIndex = normalized.lastIndexOf(".");
+    if (dotIndex < 0) return "";
+    return normalized.substring(dotIndex);
+  }
+
+  function isReplayImportFileExtensionAllowed(fileName) {
+    var extension = resolveReplayImportFileExtension(fileName);
+    return extension === ".txt" || extension === ".vrs" || extension === ".rpl";
+  }
+
+  function resolveReplayImportedFileNameElement() {
+    return document.getElementById("replay-imported-file-name");
+  }
+
+  function syncReplayImportedFileNameElement() {
+    var banner = resolveReplayImportedFileNameElement();
+    if (!banner) return;
+    var name = toText(replayImportedFileBaseName).trim();
+    banner.textContent = name;
+    banner.style.display = name ? "block" : "none";
+  }
+
+  function setReplayImportedFileBaseName(name) {
+    replayImportedFileBaseName = toText(name).trim();
+    syncReplayImportedFileNameElement();
+  }
+
+  function clearReplayImportedFileBaseName() {
+    setReplayImportedFileBaseName("");
+  }
+
+  function isReplayFileDragEvent(eventLike) {
+    var transfer = eventLike && eventLike.dataTransfer;
+    if (!transfer) return false;
+    var items = transfer.items;
+    if (items && typeof items.length === "number") {
+      for (var index = 0; index < items.length; index += 1) {
+        var item = items[index];
+        if (item && item.kind === "file") return true;
+      }
+    }
+    var types = transfer.types;
+    if (!types) return false;
+    if (typeof types.indexOf === "function") return types.indexOf("Files") >= 0;
+    if (typeof types.contains === "function") return types.contains("Files");
+    return false;
+  }
+
+  function syncReplayFileDropOverlay() {
+    var overlay = document.getElementById("replay-file-drop-overlay");
+    if (!overlay) return;
+    overlay.style.display = replayFileDropOverlayVisible ? "flex" : "none";
+  }
+
+  function setReplayFileDropOverlayVisible(visible) {
+    replayFileDropOverlayVisible = visible === true;
+    syncReplayFileDropOverlay();
+  }
+
+  function clearReplayFileDropState() {
+    replayFileDragDepth = 0;
+    setReplayFileDropOverlayVisible(false);
+  }
+
+  function extractReplayImportFileFromDataTransfer(dataTransfer) {
+    if (!dataTransfer || !dataTransfer.files || !dataTransfer.files.length) return null;
+    for (var index = 0; index < dataTransfer.files.length; index += 1) {
+      var file = dataTransfer.files[index];
+      if (file) return file;
+    }
+    return null;
+  }
+
+  function handleReplayFileDragEnter(event) {
+    if (!isReplayFileDragEvent(event) || replayFileImportBusy) return;
+    if (typeof event.preventDefault === "function") event.preventDefault();
+    replayFileDragDepth += 1;
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    setReplayFileDropOverlayVisible(true);
+  }
+
+  function handleReplayFileDragOver(event) {
+    if (!isReplayFileDragEvent(event) || replayFileImportBusy) return;
+    if (typeof event.preventDefault === "function") event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    if (!replayFileDropOverlayVisible) setReplayFileDropOverlayVisible(true);
+  }
+
+  function handleReplayFileDragLeave(event) {
+    if (!isReplayFileDragEvent(event)) return;
+    if (typeof event.preventDefault === "function") event.preventDefault();
+    replayFileDragDepth = Math.max(0, replayFileDragDepth - 1);
+    if (replayFileDragDepth === 0) setReplayFileDropOverlayVisible(false);
+  }
+
+  function handleReplayFileDrop(event) {
+    if (!isReplayFileDragEvent(event)) return;
+    if (typeof event.preventDefault === "function") event.preventDefault();
+    var file = extractReplayImportFileFromDataTransfer(event.dataTransfer);
+    clearReplayFileDropState();
+    if (!file || replayFileImportBusy) return;
+    if (!isReplayImportFileExtensionAllowed(file.name)) {
+      alert(t("importFileFailed") + ": " + t("importFileTypeInvalid"));
+      return;
+    }
+    importReplayFromFile(file);
+  }
+
+  function bindReplayFileDropHandlers() {
+    if (!document || document.__replayFileDropBound) return;
+    document.__replayFileDropBound = true;
+    document.addEventListener("dragenter", handleReplayFileDragEnter);
+    document.addEventListener("dragover", handleReplayFileDragOver);
+    document.addEventListener("dragleave", handleReplayFileDragLeave);
+    document.addEventListener("drop", handleReplayFileDrop);
+    window.addEventListener("blur", clearReplayFileDropState);
+  }
+
   function showReplayModal(title, content, actionName, actionCallback, options) {
     var modal = document.getElementById("replay-modal");
     var titleEl = document.getElementById("replay-modal-title");
@@ -1163,6 +1309,7 @@
         syncReplayCompatibilityNotice(source, payload);
         captureReplayTimelineFromReplayPayload(payload);
         clearReplayTransientQueryState();
+        clearReplayImportedFileBaseName();
         window.closeReplayModal();
         if (!resumeReplayPlaybackPreferred(window.game_manager)) {
           startReplayAutoPlayback();
@@ -1236,43 +1383,62 @@
     return !!(file && typeof file.name === "string" && file.name.toLowerCase().endsWith(".rpl"));
   }
 
+  async function executeReplayFileImport(gameManager, file) {
+    if (shouldUseBinaryReplayImport(file) && typeof gameManager.importV9RplBuffer === "function") {
+      var buffer = await readReplayFileAsArrayBuffer(file);
+      var ok = gameManager.importV9RplBuffer(buffer);
+      if (!ok) throw new Error("binary_import_rejected");
+      applyReplayCompatibilityNotice(createReplayCompatibilityMeta("legacy_v9rpl", true));
+      captureReplayTimelineFromRplBuffer(buffer);
+      clearReplayTransientQueryState();
+      return true;
+    }
+
+    var replayText = await readReplayFileAsText(file);
+    var source = {
+      replay_string: toText(replayText).trim(),
+      replay_logic_version: REPLAY_LOGIC_VERSION,
+      source: "file"
+    };
+    var payload = resolveReplayPayloadForImportV1(source);
+    importReplayPayloadV1(payload, "file_text");
+    syncReplayCompatibilityNotice(source, payload);
+    captureReplayTimelineFromReplayPayload(payload);
+    clearReplayTransientQueryState();
+    return true;
+  }
+
   async function importReplayFromFile(file) {
-    if (!file) return;
+    if (!file || replayFileImportBusy) return;
+    if (!isReplayImportFileExtensionAllowed(file.name)) {
+      alert(t("importFileFailed") + ": " + t("importFileTypeInvalid"));
+      return;
+    }
     var gameManager = window.game_manager;
     if (!gameManager) return;
+    replayFileImportBusy = true;
+    clearReplayFileDropState();
+
+    var importedFileName = toText(file && file.name).trim();
+    var importedFileBaseName = resolveReplayImportedFileBaseName(importedFileName);
+    stopReplayAutoPlayback();
+    if (window.game_manager && typeof window.game_manager.pause === "function") {
+      window.game_manager.pause();
+    }
+    clearReplayImportedFileBaseName();
 
     try {
-      if (shouldUseBinaryReplayImport(file) && typeof gameManager.importV9RplBuffer === "function") {
-        var buffer = await readReplayFileAsArrayBuffer(file);
-        var ok = gameManager.importV9RplBuffer(buffer);
-        if (!ok) throw new Error("binary_import_rejected");
-        applyReplayCompatibilityNotice(createReplayCompatibilityMeta("legacy_v9rpl", true));
-        captureReplayTimelineFromRplBuffer(buffer);
-        clearReplayTransientQueryState();
-        if (!resumeReplayPlaybackPreferred(window.game_manager)) {
-          startReplayAutoPlayback();
-        }
-        updateReplayUI();
-        return;
-      }
-
-      var replayText = await readReplayFileAsText(file);
-      var source = {
-        replay_string: toText(replayText).trim(),
-        replay_logic_version: REPLAY_LOGIC_VERSION,
-        source: "file"
-      };
-      var payload = resolveReplayPayloadForImportV1(source);
-      importReplayPayloadV1(payload, "file_text");
-      syncReplayCompatibilityNotice(source, payload);
-      captureReplayTimelineFromReplayPayload(payload);
-      clearReplayTransientQueryState();
+      await executeReplayFileImport(gameManager, file);
+      setReplayImportedFileBaseName(importedFileBaseName || importedFileName);
       if (!resumeReplayPlaybackPreferred(window.game_manager)) {
         startReplayAutoPlayback();
       }
       updateReplayUI();
+      requestReplayRelayout();
     } catch (error) {
       alert(t("importFileFailed") + ": " + resolveReplayImportErrorMessage(error));
+    } finally {
+      replayFileImportBusy = false;
     }
   }
 
@@ -1503,6 +1669,7 @@
     resetReplayTimelineMeta();
     clearReplayDiagnosticsPanel();
     clearReplayCompatibilityNotice();
+    clearReplayImportedFileBaseName();
 
     if (gameManager.actuator && typeof gameManager.actuator.invalidateLayoutCache === "function") {
       gameManager.actuator.invalidateLayoutCache();
@@ -1601,6 +1768,7 @@
         importReplayPayloadV1(replayPayload, "cloud_query");
         syncReplayCompatibilityNotice(payload, replayPayload);
         captureReplayTimelineFromReplayPayload(replayPayload);
+        clearReplayImportedFileBaseName();
         if (!resumeReplayPlaybackPreferred(window.game_manager)) {
           startReplayAutoPlayback();
         }
@@ -1650,6 +1818,7 @@
         syncReplayCompatibilityNotice(localReplayPayload, replayPayload);
         captureReplayTimelineFromReplayPayload(replayPayload);
         clearReplayTransientQueryState();
+        clearReplayImportedFileBaseName();
         removeLocalStorageItem(LOCAL_REPLAY_HANDOFF_STORAGE_PREFIX + handoffId);
         setReplayPageTitleSuffix("local");
         clearReplayDiagnosticsPanel();
@@ -1681,6 +1850,7 @@
         importReplayPayloadV1(replayPayloadLocal, "local_history_query");
         syncReplayCompatibilityNotice(record, replayPayloadLocal);
         captureReplayTimelineFromReplayPayload(replayPayloadLocal);
+        clearReplayImportedFileBaseName();
         if (!resumeReplayPlaybackPreferred(window.game_manager)) {
           startReplayAutoPlayback();
         }
@@ -2179,6 +2349,8 @@
     startReplayUiTicker();
     clearReplayDiagnosticsPanel();
     clearReplayCompatibilityNotice();
+    clearReplayImportedFileBaseName();
+    clearReplayFileDropState();
     resetReplayTimelineMeta();
     stopReplayAutoPlayback();
     setReplayDiagnosticsVisible(false);
@@ -2238,6 +2410,7 @@
     var modalCloseBtn = document.querySelector("#replay-modal .replay-modal-actions button:last-child");
     if (modalCloseBtn) modalCloseBtn.addEventListener("click", window.closeReplayModal);
 
+    bindReplayFileDropHandlers();
     ensureReplayBoardEmptyWithoutReplaySource();
     loadReplayFromQueryV1();
 

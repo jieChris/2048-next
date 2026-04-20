@@ -50,6 +50,21 @@ body[data-page="replay"] .replay-compatibility-banner {
   word-break: break-word;
 }
 
+body[data-page="replay"] .replay-imported-file-name {
+  width: 620px;
+  min-height: 44px;
+  padding: 10px 16px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: #ece6dd;
+  color: #6b5c4d;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  word-break: break-word;
+}
+
 body[data-page="replay"] .replay-metric-card {
   min-height: 86px;
   border-radius: 18px;
@@ -199,6 +214,47 @@ body[data-page="replay"] .replay-modal-content h3 {
   margin-bottom: 10px;
 }
 
+body[data-page="replay"] .replay-file-drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: rgba(244, 245, 246, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+body[data-page="replay"] .replay-file-drop-panel {
+  width: min(92vw, 560px);
+  padding: 36px 28px;
+  box-sizing: border-box;
+  border: 3px dashed rgba(184, 172, 161, 0.92);
+  border-radius: 24px;
+  background: rgba(255, 252, 247, 0.96);
+  box-shadow: 0 22px 54px rgba(126, 110, 92, 0.18);
+  text-align: center;
+}
+
+body[data-page="replay"] .replay-file-drop-title {
+  color: #6a5d51;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+body[data-page="replay"] .replay-file-drop-hint {
+  margin-top: 10px;
+  color: #8a7d70;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
 body[data-page="replay"] .replay-textarea {
   width: 100%;
   min-height: 180px;
@@ -298,6 +354,14 @@ html[data-night-background="1"] body[data-page="replay"] .replay-compatibility-b
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
+html[data-night-background="1"] body[data-page="replay"] .replay-imported-file-name {
+  background: linear-gradient(180deg, rgba(43, 60, 83, 0.96) 0%, rgba(23, 33, 49, 0.96) 100%);
+  color: #fff4e1;
+  box-shadow:
+    0 16px 34px rgba(2, 6, 16, 0.28),
+    inset 0 0 0 1px rgba(235, 244, 255, 0.05);
+}
+
 html[data-night-background="1"] body[data-page="replay"] .replay-progress-wrap {
   background: rgba(18, 29, 46, 0.72);
   border: 1px solid rgba(181, 198, 221, 0.16);
@@ -316,6 +380,26 @@ html[data-night-background="1"] body[data-page="replay"] #replay-progress {
 html[data-night-background="1"] body[data-page="replay"] .replay-speed-mode-label,
 html[data-night-background="1"] body[data-page="replay"] .replay-singleline-unit {
   color: #d9d0c2;
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-file-drop-overlay {
+  background: rgba(6, 12, 22, 0.7);
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-file-drop-panel {
+  border-color: rgba(213, 168, 106, 0.9);
+  background: rgba(16, 24, 38, 0.95);
+  box-shadow:
+    0 28px 60px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(235, 244, 255, 0.05);
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-file-drop-title {
+  color: #f2e4cf;
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-file-drop-hint {
+  color: #b7c5d7;
 }
 
 html[data-night-background="1"] body[data-page="replay"] .replay-singleline-input {
