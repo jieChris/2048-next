@@ -33,6 +33,19 @@ function setDisplayStyle(target: unknown, display: string): void {
   style.display = display;
 }
 
+function bindModalOverlayClose(modalNode: unknown, closeCallback: (() => unknown) | null): void {
+  const modal = toRecord(modalNode);
+  if (!closeCallback) {
+    modal.onclick = null;
+    return;
+  }
+  modal.onclick = function (eventLike: unknown) {
+    const eventRecord = toRecord(eventLike);
+    if (eventRecord.target && eventRecord.target !== modalNode) return undefined;
+    return closeCallback();
+  };
+}
+
 export function applyReplayModalOpen(input: {
   documentLike?: unknown;
   getElementById?: unknown;
@@ -56,10 +69,8 @@ export function applyReplayModalOpen(input: {
   const textEl = getElementById("replay-textarea");
   const actionBtn = getElementById("replay-action-btn");
   const downloadBtn = getElementById("replay-download-btn");
-  const querySelector = asFunction<(selector: unknown) => unknown>(modal.querySelector);
-  const closeBtn = (
-    querySelector ? querySelector.call(modal, ".replay-button:not(#replay-action-btn)") : null
-  );
+  const openPageBtn = getElementById("replay-open-page-btn");
+  const closeBtn = getElementById("replay-close-btn");
 
   setDisplayStyle(modal, "flex");
   if (titleEl) {
@@ -93,9 +104,16 @@ export function applyReplayModalOpen(input: {
     downloadBtnRecord.onclick = null;
   }
 
+  if (openPageBtn) {
+    const openPageBtnRecord = toRecord(openPageBtn);
+    setDisplayStyle(openPageBtnRecord, "none");
+    openPageBtnRecord.onclick = null;
+  }
+
   const closeCallback = asFunction<() => unknown>(source.closeCallback);
-  if (closeBtn && closeCallback) {
-    toRecord(closeBtn).onclick = closeCallback;
+  bindModalOverlayClose(modalNode, closeCallback);
+  if (closeBtn) {
+    toRecord(closeBtn).onclick = closeCallback || null;
   }
 
   return {

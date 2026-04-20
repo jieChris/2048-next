@@ -77,6 +77,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
   return context as {
     applySavedTimerFixedRowsState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
     applySavedTimerPostRestoreState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
+    applySavedManagerReplayState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
     collectSavedTimerFixedRowsState: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStateDiagnosticsPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStateTimerCorePayload: (manager: Record<string, unknown>) => Record<string, unknown>;
@@ -370,6 +371,90 @@ describe("core game manager saved state runtime", () => {
     ]);
   });
 
+  it("persists session replay v1 in full and lite saved payloads", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const sessionReplayV1 = {
+      v: 1,
+      mode_key: "classic_4x4_pow2_undo",
+      ruleset: "pow2",
+      board_width: 4,
+      board_height: 4,
+      start_unix_ms: 100,
+      challenge_id: null,
+      seed: 7,
+      init_tiles: [
+        { cellIndex: 0, valueBit: 0 },
+        { cellIndex: 5, valueBit: 1 }
+      ],
+      records: [
+        { kind: "move", dir: 1, spawnIndex: 2, spawnValueBit: 0, deltaMs: 50 }
+      ],
+      last_event_at_ms: 150,
+      supported: true
+    };
+    const manager = {
+      modeKey: "classic_4x4_pow2_undo",
+      mode: "classic_4x4_pow2_undo",
+      width: 4,
+      height: 4,
+      ruleset: "pow2",
+      score: 32,
+      over: false,
+      won: false,
+      keepPlaying: false,
+      initialSeed: 7,
+      seed: 9,
+      spawnValueCounts: { "2": 3, "4": 1 },
+      reached32k: false,
+      cappedMilestoneCount: 0,
+      capped64Unlocked: null,
+      moveHistory: [0, 1],
+      ipsInputCount: 2,
+      undoStack: [],
+      redoStack: [],
+      replayCompactLog: "ab",
+      sessionReplayV1,
+      sessionReplayV3: null,
+      comboStreak: 0,
+      successfulMoveCount: 2,
+      undoUsed: 0,
+      challengeId: null,
+      lockConsumedAtMoveCount: -1,
+      lockedDirectionTurn: null,
+      lockedDirection: null,
+      hasGameStarted: true,
+      getDurationMs() {
+        return 500;
+      },
+      getFinalBoardMatrix() {
+        return [
+          [2, 0, 0, 0],
+          [0, 4, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ];
+      },
+      safeClonePlain(value: unknown, fallback: unknown) {
+        try {
+          return JSON.parse(JSON.stringify(value));
+        } catch {
+          return fallback;
+        }
+      },
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      }
+    };
+
+    const fullPayload = runtime.buildSavedGameStatePayload(manager, 1000) as Record<string, unknown>;
+    expect(fullPayload.session_replay_v1).toEqual(sessionReplayV1);
+    expect(fullPayload.session_replay_v1).not.toBe(sessionReplayV1);
+
+    const litePayload = runtime.buildLiteSavedGameStatePayloadFallback(manager, fullPayload) as Record<string, unknown>;
+    expect(litePayload.session_replay_v1).toEqual(sessionReplayV1);
+    expect(litePayload.session_replay_v1).not.toBe(sessionReplayV1);
+  });
+
   it("prefers richer saved payloads when timestamps are equal", () => {
     const runtime = loadSavedStateRuntime([32768]);
     const savedAt = 1700000000000;
@@ -458,5 +543,95 @@ describe("core game manager saved state runtime", () => {
     expect(manager.timerFrozen).toBe(true);
     expect(startTimer).not.toHaveBeenCalled();
     expect((manager.elements.timer as { textContent: string }).textContent).toBe("4321");
+  });
+
+  it("restores session replay v1 and resets its idle timer after refresh", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const savedLastEventAt = 1234;
+    const manager = {
+      moveHistory: [],
+      ipsInputTimes: [1, 2, 3],
+      ipsInputCount: 0,
+      undoStack: ["stale"],
+      redoStack: ["stale"],
+      replayCompactLog: "",
+      sessionReplayV1: { stale: true },
+      sessionReplayV3: { stale: true },
+      spawnValueCounts: null,
+      spawnTwos: 0,
+      spawnFours: 0,
+      undoEnabled: true,
+      modeConfig: {
+        undo_enabled: true
+      },
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      },
+      setRuntimeUndoStack(value: unknown) {
+        this.undoStack = value;
+      },
+      setRuntimeRedoStack(value: unknown) {
+        this.redoStack = value;
+      }
+    };
+
+    runtime.applySavedManagerReplayState(manager, {
+      move_history: [0, 1, 2],
+      ips_input_count: 3,
+      undo_stack: ["u1"],
+      redo_stack: ["r1"],
+      replay_compact_log: "compact",
+      session_replay_v1: {
+        v: 1,
+        mode_key: "classic_4x4_pow2_undo",
+        ruleset: "pow2",
+        board_width: 4,
+        board_height: 4,
+        start_unix_ms: 100,
+        challenge_id: null,
+        seed: 9,
+        init_tiles: [
+          { cellIndex: 0, valueBit: 0 },
+          { cellIndex: 1, valueBit: 0 }
+        ],
+        records: [
+          { kind: "move", dir: 1, spawnIndex: 3, spawnValueBit: 0, deltaMs: 40 }
+        ],
+        last_event_at_ms: savedLastEventAt,
+        supported: true
+      },
+      session_replay_v3: {
+        v: 3,
+        actions: [["m", 1]]
+      },
+      spawn_value_counts: { "2": 2, "4": 1 }
+    });
+
+    expect(manager.moveHistory).toEqual([0, 1, 2]);
+    expect(manager.ipsInputTimes).toEqual([]);
+    expect(manager.ipsInputCount).toBe(3);
+    expect(manager.undoStack).toEqual(["u1"]);
+    expect(manager.redoStack).toEqual(["r1"]);
+    expect(manager.replayCompactLog).toBe("compact");
+    expect(manager.sessionReplayV1).toMatchObject({
+      v: 1,
+      mode_key: "classic_4x4_pow2_undo",
+      ruleset: "pow2",
+      board_width: 4,
+      board_height: 4,
+      seed: 9,
+      supported: true
+    });
+    expect((manager.sessionReplayV1 as { last_event_at_ms: number }).last_event_at_ms).not.toBe(savedLastEventAt);
+    expect((manager.sessionReplayV1 as { records: unknown[] }).records).toEqual([
+      { kind: "move", dir: 1, spawnIndex: 3, spawnValueBit: 0, deltaMs: 40 }
+    ]);
+    expect(manager.sessionReplayV3).toEqual({
+      v: 3,
+      actions: [["m", 1]]
+    });
+    expect(manager.spawnValueCounts).toEqual({ "2": 2, "4": 1 });
+    expect(manager.spawnTwos).toBe(2);
+    expect(manager.spawnFours).toBe(1);
   });
 });

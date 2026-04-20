@@ -283,6 +283,116 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.liteStillMalformedBoard).toBe(false);
   });
 
+  test("non-practice replay session survives reload and can keep exporting replay", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      const modeKey = "classic_4x4_pow2_undo";
+      window.localStorage.removeItem("savedGameStateByMode:v1:" + modeKey);
+      window.localStorage.removeItem("savedGameStateLiteByMode:v1:" + modeKey);
+      window.name = "";
+    });
+
+    const response = await page.goto("/undo_2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Undo response should exist").not.toBeNull();
+    expect(response?.ok(), "Undo response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(
+      page,
+      () =>
+        Boolean((window as any).game_manager) && typeof (window as any).saveGameState === "function",
+      12_000
+    );
+
+    const beforeReload = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const save = (window as any).saveGameState;
+      const modeKey = String(manager.modeKey || manager.mode || "classic_4x4_pow2_undo");
+      const trySuccessfulMove = (): boolean => {
+        const startLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+        for (const direction of [0, 1, 2, 3]) {
+          manager.move(direction);
+          const nextLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+          if (nextLength > startLength) return true;
+        }
+        return false;
+      };
+
+      const movedFirst = trySuccessfulMove();
+      const movedSecond = trySuccessfulMove();
+      save(manager, { force: true });
+
+      const board =
+        typeof manager.getFinalBoardMatrix === "function"
+          ? manager.getFinalBoardMatrix()
+          : manager.grid.cells.map((column: Array<{ value: number } | null>) =>
+              column.map((cell) => (cell ? cell.value : 0))
+            );
+      const replay = typeof manager.serialize === "function" ? String(manager.serialize() || "") : "";
+      const savedRaw = window.localStorage.getItem("savedGameStateByMode:v1:" + modeKey);
+      return {
+        board,
+        replay,
+        movedFirst,
+        movedSecond,
+        moveHistoryLength: Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0,
+        hasSavedPayload: typeof savedRaw === "string" && savedRaw.length > 0
+      };
+    });
+
+    expect(beforeReload.hasSavedPayload).toBe(true);
+    expect(beforeReload.movedFirst).toBe(true);
+    expect(beforeReload.movedSecond).toBe(true);
+    expect(beforeReload.moveHistoryLength).toBeGreaterThan(0);
+    expect(beforeReload.replay.startsWith("REPLAY_v1RPL_B64_")).toBe(true);
+
+    const reloadResponse = await page.reload({ waitUntil: "domcontentloaded" });
+    expect(reloadResponse, "Reloaded undo response should exist").not.toBeNull();
+    expect(reloadResponse?.ok(), "Reloaded undo response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+
+    const afterReload = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const trySuccessfulMove = (): boolean => {
+        const startLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+        for (const direction of [0, 1, 2, 3]) {
+          manager.move(direction);
+          const nextLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+          if (nextLength > startLength) return true;
+        }
+        return false;
+      };
+      const board =
+        typeof manager.getFinalBoardMatrix === "function"
+          ? manager.getFinalBoardMatrix()
+          : manager.grid.cells.map((column: Array<{ value: number } | null>) =>
+              column.map((cell) => (cell ? cell.value : 0))
+            );
+      const replayBeforeNextMove =
+        typeof manager.serialize === "function" ? String(manager.serialize() || "") : "";
+      const movedAgain = trySuccessfulMove();
+      const replayAfterNextMove =
+        typeof manager.serialize === "function" ? String(manager.serialize() || "") : "";
+      return {
+        board,
+        replayBeforeNextMove,
+        replayAfterNextMove,
+        movedAgain,
+        moveHistoryLength: Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0
+      };
+    });
+
+    expect(afterReload.board).toEqual(beforeReload.board);
+    expect(afterReload.replayBeforeNextMove.startsWith("REPLAY_v1RPL_B64_")).toBe(true);
+    expect(afterReload.moveHistoryLength).toBeGreaterThanOrEqual(beforeReload.moveHistoryLength);
+    expect(afterReload.movedAgain).toBe(true);
+    expect(afterReload.moveHistoryLength).toBeGreaterThan(beforeReload.moveHistoryLength);
+    expect(afterReload.replayAfterNextMove.startsWith("REPLAY_v1RPL_B64_")).toBe(true);
+  });
+
   test("ranked play modes ignore injected local saved-state payloads", async ({ page }) => {
     await page.addInitScript(() => {
       const modeKey = "standard_4x4_pow2_no_undo";

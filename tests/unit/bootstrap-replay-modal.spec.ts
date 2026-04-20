@@ -12,7 +12,7 @@ describe("bootstrap replay modal", () => {
     const closeBtn = { onclick: null as null | (() => unknown) };
     const modal = {
       style: { display: "none" },
-      querySelector: vi.fn(() => closeBtn)
+      onclick: null as null | ((eventLike?: unknown) => unknown)
     };
     const titleEl = { textContent: "" };
     const textEl = { value: "" };
@@ -21,11 +21,22 @@ describe("bootstrap replay modal", () => {
       textContent: "",
       onclick: null as null | (() => unknown)
     };
+    const downloadBtn = {
+      style: { display: "inline-block" },
+      onclick: vi.fn()
+    };
+    const openPageBtn = {
+      style: { display: "inline-block" },
+      onclick: vi.fn()
+    };
     const getElementById = vi.fn((id: string) => {
       if (id === "replay-modal") return modal;
       if (id === "replay-modal-title") return titleEl;
       if (id === "replay-textarea") return textEl;
       if (id === "replay-action-btn") return actionBtn;
+      if (id === "replay-download-btn") return downloadBtn;
+      if (id === "replay-open-page-btn") return openPageBtn;
+      if (id === "replay-close-btn") return closeBtn;
       return null;
     });
     const actionCallback = vi.fn();
@@ -35,7 +46,7 @@ describe("bootstrap replay modal", () => {
       getElementById,
       title: "导出回放",
       content: "data",
-      actionName: "再次复制",
+      actionName: "复制回放",
       actionCallback,
       closeCallback
     });
@@ -45,19 +56,28 @@ describe("bootstrap replay modal", () => {
     expect(titleEl.textContent).toBe("导出回放");
     expect(textEl.value).toBe("data");
     expect(actionBtn.style.display).toBe("inline-block");
-    expect(actionBtn.textContent).toBe("再次复制");
+    expect(actionBtn.textContent).toBe("复制回放");
+    expect(downloadBtn.style.display).toBe("none");
+    expect(downloadBtn.onclick).toBeNull();
+    expect(openPageBtn.style.display).toBe("none");
+    expect(openPageBtn.onclick).toBeNull();
 
     actionBtn.onclick?.();
     expect(actionCallback).toHaveBeenCalledWith("data");
 
-    closeBtn.onclick?.();
+    modal.onclick?.({ target: actionBtn });
+    expect(closeCallback).toHaveBeenCalledTimes(0);
+
+    modal.onclick?.({ target: modal });
     expect(closeCallback).toHaveBeenCalledTimes(1);
+
+    closeBtn.onclick?.();
+    expect(closeCallback).toHaveBeenCalledTimes(2);
   });
 
   it("hides replay action button when action is not provided", () => {
     const modal = {
-      style: { display: "none" },
-      querySelector: vi.fn(() => null)
+      style: { display: "none" }
     };
     const actionBtn = {
       style: { display: "inline-block" },

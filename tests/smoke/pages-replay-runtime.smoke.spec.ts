@@ -512,6 +512,160 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.pauseTextDuringPlay.toLowerCase()).not.toBe(snapshot.pauseTextAfterPause.toLowerCase());
   });
 
+  test("replay page imports legacy replay text files and shows compatibility notice", async ({
+    page
+  }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.import === "function";
+    });
+
+    await page.evaluate(() => {
+      (window as any).__replayAlerts = [];
+      window.alert = function (msg?: unknown) {
+        (window as any).__replayAlerts.push(typeof msg === "string" ? msg : String(msg));
+      };
+    });
+
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      page.locator("#import-replay-file-btn").click()
+    ]);
+    await fileChooser.setFiles("tests/fixtures/replays/legacy-text-replay.txt");
+
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return Array.isArray(manager?.replayMoves) && manager.replayMoves.length > 0;
+    });
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const banner = document.getElementById("replay-compatibility-banner") as HTMLElement | null;
+      const style = banner ? window.getComputedStyle(banner) : null;
+      return {
+        alerts: Array.isArray((window as any).__replayAlerts)
+          ? (window as any).__replayAlerts.slice()
+          : [],
+        replayMovesLength: Array.isArray(manager?.replayMoves) ? manager.replayMoves.length : -1,
+        bannerVisible: !!(banner && style && style.display !== "none" && style.visibility !== "hidden"),
+        bannerText: String(banner?.textContent || "")
+      };
+    });
+
+    expect(snapshot.alerts).toEqual([]);
+    expect(snapshot.replayMovesLength).toBeGreaterThan(0);
+    expect(snapshot.bannerVisible).toBe(true);
+    expect(snapshot.bannerText).toContain("replay_");
+    expect(snapshot.bannerText).toContain("v1");
+  });
+
+  test("replay page imports real legacy text replay files and shows compatibility notice", async ({
+    page
+  }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.import === "function";
+    });
+
+    await page.evaluate(() => {
+      (window as any).__replayAlerts = [];
+      window.alert = function (msg?: unknown) {
+        (window as any).__replayAlerts.push(typeof msg === "string" ? msg : String(msg));
+      };
+    });
+
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      page.locator("#import-replay-file-btn").click()
+    ]);
+    await fileChooser.setFiles("tests/fixtures/replays/legacy-real-v9-text-replay.txt");
+
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return Array.isArray(manager?.replayMoves) && manager.replayMoves.length > 0;
+    });
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const banner = document.getElementById("replay-compatibility-banner") as HTMLElement | null;
+      const style = banner ? window.getComputedStyle(banner) : null;
+      return {
+        replayMovesLength: Array.isArray(manager?.replayMoves) ? manager.replayMoves.length : 0,
+        modeKey: manager?.modeKey || manager?.mode?.key || "",
+        alerts: Array.isArray((window as any).__replayAlerts) ? (window as any).__replayAlerts.slice() : [],
+        bannerVisible: !!banner && style?.display !== "none",
+        bannerText: banner ? banner.textContent || "" : ""
+      };
+    });
+
+    expect(snapshot.replayMovesLength).toBeGreaterThan(0);
+    expect(snapshot.modeKey).toBe("standard_4x4_pow2_no_undo");
+    expect(snapshot.alerts).toEqual([]);
+    expect(snapshot.bannerVisible).toBe(true);
+    expect(snapshot.bannerText).toContain("replay_");
+    expect(snapshot.bannerText).toContain("v1");
+  });
+
+  test("replay page keeps compatibility notice hidden for mainstream v1 replay imports", async ({
+    page
+  }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.serialize === "function";
+    });
+
+    const replayText = await page.evaluate(() => {
+      return String((window as any).game_manager.serialize());
+    });
+
+    await page.evaluate(() => {
+      (window as any).__replayAlerts = [];
+      window.alert = function (msg?: unknown) {
+        (window as any).__replayAlerts.push(typeof msg === "string" ? msg : String(msg));
+      };
+    });
+
+    await page.locator("#import-replay-text-btn").click();
+    await expect(page.locator("#replay-modal")).toBeVisible();
+    await page.locator("#replay-textarea").fill(replayText);
+    await page.locator("#replay-action-btn").click();
+    await expect(page.locator("#replay-modal")).toBeHidden();
+
+    const snapshot = await page.evaluate(() => {
+      const banner = document.getElementById("replay-compatibility-banner") as HTMLElement | null;
+      const style = banner ? window.getComputedStyle(banner) : null;
+      return {
+        alerts: Array.isArray((window as any).__replayAlerts)
+          ? (window as any).__replayAlerts.slice()
+          : [],
+        bannerVisible: !!(banner && style && style.display !== "none" && style.visibility !== "hidden"),
+        bannerText: String(banner?.textContent || "")
+      };
+    });
+
+    expect(snapshot.alerts).toEqual([]);
+    expect(snapshot.bannerVisible).toBe(false);
+    expect(snapshot.bannerText).toBe("");
+  });
+
   test("replay import accepts serialized v1 payload", async ({ page }) => {
     const response = await page.goto("/replay.html", {
       waitUntil: "domcontentloaded"

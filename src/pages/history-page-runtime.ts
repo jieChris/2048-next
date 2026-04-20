@@ -256,7 +256,12 @@ function renderList(
     const replayBtn = node.querySelector(".history-replay-btn") as HTMLButtonElement | null;
     if (replayBtn) {
       replayBtn.addEventListener("click", () => {
-        windowLike.location.href = "replay.html?local_history_id=" + encodeURIComponent(item.id);
+        const url = "replay.html?local_history_id=" + encodeURIComponent(item.id);
+        if (typeof windowLike.open === "function") {
+          windowLike.open(url, "_blank");
+          return;
+        }
+        windowLike.location.href = url;
       });
     }
 

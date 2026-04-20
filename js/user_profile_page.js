@@ -1403,6 +1403,10 @@
       return;
     }
     writeSessionStorageItem(CLOUD_REPLAY_STORAGE_KEY, payload);
+    if (typeof global.open === "function") {
+      global.open("replay.html?cloud_replay=1", "_blank");
+      return;
+    }
     global.location.href = "replay.html?cloud_replay=1";
   }
 

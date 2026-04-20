@@ -12,10 +12,27 @@
     return value == null ? "" : String(value);
   }
 
-  function readLocalStorageItem(key) {
+  function resolveLocalStorageLike() {
+    var runtime = global.CoreStorageRuntime;
+    if (runtime && typeof runtime.resolveStorageByName === "function") {
+      return runtime.resolveStorageByName({
+        windowLike: global,
+        storageName: "localStorage"
+      });
+    }
     try {
-      return global.localStorage && typeof global.localStorage.getItem === "function"
-        ? global.localStorage.getItem(key)
+      return global["localStorage"] || null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function readLocalStorageItem(key) {
+    var storageLike = resolveLocalStorageLike();
+    if (!storageLike) return null;
+    try {
+      return typeof storageLike.getItem === "function"
+        ? storageLike.getItem(key)
         : null;
     } catch (_err) {
       return null;
@@ -23,17 +40,21 @@
   }
 
   function writeLocalStorageItem(key, value) {
+    var storageLike = resolveLocalStorageLike();
+    if (!storageLike) return;
     try {
-      if (global.localStorage && typeof global.localStorage.setItem === "function") {
-        global.localStorage.setItem(key, value);
+      if (typeof storageLike.setItem === "function") {
+        storageLike.setItem(key, value);
       }
     } catch (_err) {}
   }
 
   function removeLocalStorageItem(key) {
+    var storageLike = resolveLocalStorageLike();
+    if (!storageLike) return;
     try {
-      if (global.localStorage && typeof global.localStorage.removeItem === "function") {
-        global.localStorage.removeItem(key);
+      if (typeof storageLike.removeItem === "function") {
+        storageLike.removeItem(key);
       }
     } catch (_err) {}
   }

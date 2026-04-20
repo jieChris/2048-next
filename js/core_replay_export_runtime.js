@@ -8,6 +8,15 @@
   var DOWNLOAD_FAILURE_MESSAGE = "导出文件失败，请稍后重试。";
   var DOWNLOAD_BUTTON_ID = "replay-download-btn";
   var DOWNLOAD_BUTTON_LABEL = "导出文件";
+  var OPEN_PAGE_FAILURE_MESSAGE = "\u6253\u5f00\u56de\u653e\u9875\u9762\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
+  var OPEN_PAGE_BUTTON_ID = "replay-open-page-btn";
+  var OPEN_PAGE_BUTTON_LABEL = "\u6253\u5f00\u56de\u653e\u9875";
+  var REPLAY_PAGE_HANDOFF_STORAGE_PREFIX = "replay_export_payload_v1:";
+  var REPLAY_PAGE_HANDOFF_QUERY_FLAG = "local_replay=1";
+  var REPLAY_PAGE_HANDOFF_QUERY_KEY = "handoff";
+  var REPLAY_LOGIC_VERSION = "v1";
+  var REPLAY_TRANSIENT_NOTICE_ID = "replay-export-toast";
+  var REPLAY_TRANSIENT_NOTICE_HIDE_DELAY_MS = 1600;
 
 
   function isRecord(value) {
@@ -37,6 +46,88 @@
     return function (_message) {};
   }
 
+  function resolveTimeoutLike(input) {
+    var windowLike = toRecord(resolveWindowLike(input));
+    return asFunction(windowLike.setTimeout) ||
+      (typeof setTimeout === "function" ? setTimeout : null);
+  }
+
+  function resolveClearTimeoutLike(input) {
+    var windowLike = toRecord(resolveWindowLike(input));
+    return asFunction(windowLike.clearTimeout) ||
+      (typeof clearTimeout === "function" ? clearTimeout : null);
+  }
+
+  function applyReplayTransientNoticeStyle(style) {
+    style.position = "fixed";
+    style.left = "50%";
+    style.top = "48px";
+    style.transform = "translateX(-50%)";
+    style.maxWidth = "min(calc(100vw - 32px), 360px)";
+    style.padding = "10px 16px";
+    style.borderRadius = "999px";
+    style.background = "#ffffff";
+    style.color = "#3c3024";
+    style.fontSize = "14px";
+    style.lineHeight = "1.4";
+    style.boxShadow = "0 10px 24px rgba(0, 0, 0, 0.18)";
+    style.zIndex = "4000";
+    style.pointerEvents = "none";
+    style.opacity = "0";
+    style.transition = "opacity 180ms ease";
+    style.textAlign = "center";
+  }
+
+  function resolveReplayTransientNotice(input) {
+    var documentLike = toRecord(input.documentLike);
+    var getElementById = asFunction(documentLike.getElementById);
+    var createElement = asFunction(documentLike.createElement);
+    var body = toRecord(documentLike.body);
+    var appendChild = asFunction(body.appendChild);
+
+    if (getElementById) {
+      var existing = getElementById.call(documentLike, REPLAY_TRANSIENT_NOTICE_ID);
+      if (existing) return toRecord(existing);
+    }
+    if (!createElement || !appendChild) return null;
+
+    var toast = toRecord(createElement.call(documentLike, "div"));
+    toast.id = REPLAY_TRANSIENT_NOTICE_ID;
+    if (typeof toast.setAttribute === "function") {
+      toast.setAttribute("role", "status");
+      toast.setAttribute("aria-live", "polite");
+    }
+    applyReplayTransientNoticeStyle(toRecord(toast.style));
+    appendChild.call(body, toast);
+    return toast;
+  }
+
+  function showReplayTransientNotice(input, message) {
+    var toast = resolveReplayTransientNotice(input);
+    var setTimeoutLike = resolveTimeoutLike(input);
+    var clearTimeoutLike = resolveClearTimeoutLike(input);
+    if (!toast || !setTimeoutLike) return false;
+
+    toast.textContent = message;
+    toRecord(toast.style).opacity = "1";
+
+    var previousTimer = toast.__hideTimer;
+    if (previousTimer && clearTimeoutLike) {
+      clearTimeoutLike(previousTimer);
+    }
+
+    toast.__hideTimer = setTimeoutLike(function () {
+      toRecord(toast.style).opacity = "0";
+    }, REPLAY_TRANSIENT_NOTICE_HIDE_DELAY_MS);
+
+    return true;
+  }
+
+  function notifyReplayCopySuccess(input) {
+    if (showReplayTransientNotice(input, COPY_SUCCESS_MESSAGE)) return;
+    resolveAlert(input)(COPY_SUCCESS_MESSAGE);
+  }
+
   function resolveConsoleError(input) {
     var consoleLike = toRecord(input.consoleLike);
     var errorFn = asFunction(consoleLike.error);
@@ -51,6 +142,54 @@
   function resolveWindowLike(input) {
     if (isRecord(input.windowLike)) return input.windowLike;
     return global;
+  }
+
+  function resolveStorageLike(input) {
+    var source = toRecord(input);
+    var storageName = source.storageName == null ? "" : String(source.storageName);
+    if (!storageName) return null;
+
+    var windowLike = toRecord(resolveWindowLike(source));
+    try {
+      var storage = windowLike[storageName];
+      var storageRecord = toObjectLike(storage);
+      var setItem = asFunction(storageRecord.setItem);
+      var removeItem = asFunction(storageRecord.removeItem);
+      if (!setItem || !removeItem) return null;
+      return storageRecord;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function safeWriteStorageItem(input) {
+    var source = toRecord(input);
+    var storageLike = toRecord(source.storageLike);
+    var key = source.key == null ? "" : String(source.key);
+    var value = source.value == null ? "" : String(source.value);
+    var setItem = asFunction(storageLike.setItem);
+    if (!setItem || !key) return false;
+    try {
+      setItem.call(storageLike, key, value);
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function safeRemoveStorageItem(input) {
+    var source = toRecord(input);
+    var storageLike = toRecord(source.storageLike);
+    var key = source.key == null ? "" : String(source.key);
+    var removeItem = asFunction(storageLike.removeItem);
+    if (!removeItem || !key) return;
+    try {
+      removeItem.call(storageLike, key);
+    } catch (_error) {}
+  }
+
+  function createReplayPageHandoffId() {
+    return String(Date.now()) + "-" + Math.random().toString(36).slice(2, 10);
   }
 
   function resolveUrlRuntime(windowLike) {
@@ -109,7 +248,6 @@
   }
 
   function applyFallbackCopy(input, text) {
-    var alertLike = resolveAlert(input);
     var logError = resolveConsoleError(input);
     var documentLike = toRecord(input.documentLike);
     var createElement = asFunction(documentLike.createElement);
@@ -137,7 +275,7 @@
 
       execCommand.call(documentLike, "copy");
       removeChild.call(body, textArea);
-      alertLike(COPY_SUCCESS_MESSAGE);
+      notifyReplayCopySuccess(input);
       return {
         copied: true,
         method: "fallback"
@@ -149,7 +287,7 @@
         } catch (_err) {}
       }
       logError("Fallback copy failed", error);
-      alertLike(COPY_FAILURE_MESSAGE);
+      resolveAlert(input)(COPY_FAILURE_MESSAGE);
       return {
         copied: false,
         method: "fallback-error"
@@ -160,7 +298,6 @@
   function applyReplayClipboardCopy(input) {
     var source = toRecord(input);
     var text = source.text == null ? "" : String(source.text);
-    var alertLike = resolveAlert(source);
     var navigatorLike = toRecord(source.navigatorLike);
     var clipboard = toRecord(navigatorLike.clipboard);
     var writeText = asFunction(clipboard.writeText);
@@ -179,7 +316,7 @@
       var thenFn = asFunction(writeResultRecord.then);
       if (thenFn) {
         var chained = thenFn.call(writeResult, function () {
-          alertLike(COPY_SUCCESS_MESSAGE);
+          notifyReplayCopySuccess(source);
         });
         var chainedRecord = toRecord(chained);
         var catchFn = asFunction(chainedRecord.catch);
@@ -189,7 +326,7 @@
           });
         }
       } else {
-        alertLike(COPY_SUCCESS_MESSAGE);
+        notifyReplayCopySuccess(source);
       }
       return {
         attempted: true,
@@ -211,41 +348,22 @@
     return "replay.txt";
   }
 
-  function ensureReplayDownloadButton(input) {
+  function resolveReplayModalButton(input) {
     var source = toRecord(input);
+    var buttonId = source.buttonId == null ? "" : String(source.buttonId);
+    if (!buttonId) return null;
     var documentLike = toRecord(source.documentLike);
     var getElementById = asFunction(documentLike.getElementById);
     if (!getElementById) return null;
-
-    var existing = getElementById.call(documentLike, DOWNLOAD_BUTTON_ID);
-    if (existing) return existing;
-
-    var modal = getElementById.call(documentLike, "replay-modal");
-    if (!modal) return null;
-
-    var modalRecord = toRecord(modal);
-    var querySelector = asFunction(modalRecord.querySelector);
-    if (!querySelector) return null;
-    var actions = querySelector.call(modalRecord, ".replay-modal-actions");
-    if (!actions) return null;
-
-    var createElement = asFunction(documentLike.createElement);
-    var appendChild = asFunction(toRecord(actions).appendChild);
-    if (!createElement || !appendChild) return null;
-
-    var button = createElement.call(documentLike, "button");
-    button.id = DOWNLOAD_BUTTON_ID;
-    button.className = "replay-button";
-    button.type = "button";
-    button.style.display = "none";
-    button.textContent = DOWNLOAD_BUTTON_LABEL;
-    appendChild.call(actions, button);
-    return button;
+    return getElementById.call(documentLike, buttonId);
   }
 
   function configureReplayDownloadButton(input) {
     var source = toRecord(input);
-    var button = ensureReplayDownloadButton(source);
+    var button = resolveReplayModalButton({
+      documentLike: source.documentLike,
+      buttonId: DOWNLOAD_BUTTON_ID
+    });
     if (!button) return { configured: false };
 
     var alertLike = resolveAlert(source);
@@ -269,6 +387,83 @@
     return { configured: true };
   }
 
+  function openReplayPageFromExport(input) {
+    var source = toRecord(input);
+    var replay = source.replay == null ? "" : String(source.replay).trim();
+    var windowLike = toRecord(resolveWindowLike(source));
+    var localStorageLike = resolveStorageLike({
+      windowLike: windowLike,
+      storageName: "localStorage"
+    });
+    var openFn = asFunction(windowLike.open);
+
+    if (!replay || !localStorageLike || !openFn) {
+      return { opened: false };
+    }
+
+    var handoffId = createReplayPageHandoffId();
+    var storageKey = REPLAY_PAGE_HANDOFF_STORAGE_PREFIX + handoffId;
+    var payload = JSON.stringify({
+      replay_string: replay,
+      replay_logic_version: REPLAY_LOGIC_VERSION,
+      source: "export_modal"
+    });
+    if (!safeWriteStorageItem({
+      storageLike: localStorageLike,
+      key: storageKey,
+      value: payload
+    })) {
+      return { opened: false };
+    }
+
+    var url =
+      "replay.html?" +
+      REPLAY_PAGE_HANDOFF_QUERY_FLAG +
+      "&" +
+      REPLAY_PAGE_HANDOFF_QUERY_KEY +
+      "=" +
+      encodeURIComponent(handoffId);
+
+  try {
+    openFn.call(windowLike, url, "_blank", "noopener");
+    return {
+      opened: true,
+      url: url
+      };
+    } catch (_error) {
+      safeRemoveStorageItem({
+        storageLike: localStorageLike,
+        key: storageKey
+      });
+      return { opened: false };
+    }
+  }
+
+  function configureReplayOpenPageButton(input) {
+    var source = toRecord(input);
+    var button = resolveReplayModalButton({
+      documentLike: source.documentLike,
+      buttonId: OPEN_PAGE_BUTTON_ID
+    });
+    if (!button) return { configured: false };
+
+    var alertLike = resolveAlert(source);
+    button.textContent = OPEN_PAGE_BUTTON_LABEL;
+    button.style.display = "inline-block";
+    button.onclick = function () {
+      var result = openReplayPageFromExport({
+        replay: source.replay,
+        windowLike: source.windowLike
+      });
+      if (!result.opened) {
+        alertLike(OPEN_PAGE_FAILURE_MESSAGE);
+      }
+      return result;
+    };
+
+    return { configured: true };
+  }
+
   function applyReplayExport(input) {
     var source = toRecord(input);
     var manager = toRecord(source.gameManager);
@@ -283,11 +478,12 @@
     var isV1 = replay.indexOf("REPLAY_v1RPL_B64_") === 0;
     var showReplayModal = asFunction(source.showReplayModal);
     if (showReplayModal) {
-      showReplayModal(isV1 ? "导出回放 (v1)" : "导出回放", replay, "再次复制", function (text) {
+      showReplayModal(isV1 ? "导出回放 (v1)" : "导出回放", replay, "复制回放", function (text) {
         return applyReplayClipboardCopy({
           text: text,
           navigatorLike: source.navigatorLike,
           documentLike: source.documentLike,
+          windowLike: source.windowLike,
           alertLike: source.alertLike,
           consoleLike: source.consoleLike
         });
@@ -298,15 +494,13 @@
         windowLike: resolveWindowLike(source),
         alertLike: source.alertLike
       });
+      configureReplayOpenPageButton({
+        replay: replay,
+        documentLike: source.documentLike,
+        windowLike: resolveWindowLike(source),
+        alertLike: source.alertLike
+      });
     }
-
-    applyReplayClipboardCopy({
-      text: replay,
-      navigatorLike: source.navigatorLike,
-      documentLike: source.documentLike,
-      alertLike: source.alertLike,
-      consoleLike: source.consoleLike
-    });
 
     return {
       exported: true,

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+﻿import { describe, expect, it, vi } from "vitest";
 
 import { applyReplayClipboardCopy, applyReplayExport } from "../../src/bootstrap/replay-export";
 
@@ -8,9 +8,25 @@ describe("bootstrap replay export", () => {
     expect(result).toEqual({ exported: false });
   });
 
-  it("exports replay, opens modal and copies via clipboard", async () => {
+  it("exports replay, opens modal and only copies via the explicit copy action", async () => {
     const alertLike = vi.fn();
     const writeText = vi.fn(() => Promise.resolve(undefined));
+    const toast = {
+      style: {},
+      textContent: "",
+      setAttribute: vi.fn()
+    };
+    const body = {
+      appendChild: vi.fn()
+    };
+    const documentLike = {
+      body,
+      getElementById: vi.fn(() => null),
+      createElement: vi.fn((tagName: string) => {
+        if (tagName === "div") return toast;
+        return null;
+      })
+    };
     let actionCallback: ((text: unknown) => unknown) | null = null;
 
     const showReplayModal = vi.fn(
@@ -31,6 +47,7 @@ describe("bootstrap replay export", () => {
           writeText
         }
       },
+      documentLike,
       alertLike
     });
 
@@ -39,18 +56,29 @@ describe("bootstrap replay export", () => {
     expect(showReplayModal).toHaveBeenCalledWith(
       "导出回放",
       "replay-v4",
-      "再次复制",
+      "复制回放",
       expect.any(Function)
     );
-    expect(writeText).toHaveBeenCalledWith("replay-v4");
+    expect(writeText).not.toHaveBeenCalled();
 
     await Promise.resolve();
-    expect(alertLike).toHaveBeenCalledTimes(1);
+    expect(alertLike).toHaveBeenCalledTimes(0);
 
     actionCallback?.("replay-v4-copy");
     await Promise.resolve();
     expect(writeText).toHaveBeenCalledWith("replay-v4-copy");
-    expect(alertLike).toHaveBeenCalledTimes(2);
+    expect(alertLike).toHaveBeenCalledTimes(0);
+    expect(documentLike.createElement).toHaveBeenCalledWith("div");
+    expect(body.appendChild).toHaveBeenCalledWith(toast);
+    expect(String(toast.textContent || "")).not.toHaveLength(0);
+    expect(toast.style).toMatchObject({
+      opacity: "1",
+      pointerEvents: "none",
+      position: "fixed",
+      top: "48px",
+      background: "#ffffff",
+      color: "#3c3024"
+    });
   });
 
   it("falls back to execCommand copy when clipboard API is unavailable", () => {
@@ -61,13 +89,19 @@ describe("bootstrap replay export", () => {
       focus: vi.fn(),
       select: vi.fn()
     };
+    const toast = {
+      style: {},
+      textContent: "",
+      setAttribute: vi.fn()
+    };
     const body = {
       appendChild: vi.fn(),
       removeChild: vi.fn()
     };
     const documentLike = {
       body,
-      createElement: vi.fn(() => textArea),
+      getElementById: vi.fn(() => null),
+      createElement: vi.fn((tagName: string) => (tagName === "textarea" ? textArea : toast)),
       execCommand: vi.fn()
     };
 
@@ -82,7 +116,9 @@ describe("bootstrap replay export", () => {
     expect(documentLike.execCommand).toHaveBeenCalledWith("copy");
     expect(body.appendChild).toHaveBeenCalledWith(textArea);
     expect(body.removeChild).toHaveBeenCalledWith(textArea);
-    expect(alertLike).toHaveBeenCalledWith("回放代码已复制到剪贴板！");
+    expect(body.appendChild).toHaveBeenCalledWith(toast);
+    expect(String(toast.textContent || "")).not.toHaveLength(0);
+    expect(alertLike).not.toHaveBeenCalled();
   });
 
   it("adds a download-file action in replay modal export flow", () => {
@@ -91,17 +127,17 @@ describe("bootstrap replay export", () => {
 
     const removed: unknown[] = [];
     const anchors: Array<Record<string, unknown>> = [];
-    const actions = {
-      appendChild: vi.fn()
+    const downloadButton = {
+      style: {},
+      textContent: "",
+      onclick: null as null | (() => unknown)
+    };
+    const openPageButton = {
+      style: {},
+      textContent: "",
+      onclick: null as null | (() => unknown)
     };
 
-    const modal = {
-      querySelector: vi.fn((selector: unknown) => {
-        return selector === ".replay-modal-actions" ? actions : null;
-      })
-    };
-
-    let downloadButton: Record<string, unknown> | null = null;
     const documentLike = {
       body: {
         appendChild: vi.fn(),
@@ -110,21 +146,11 @@ describe("bootstrap replay export", () => {
         })
       },
       getElementById: vi.fn((id: unknown) => {
-        if (id === "replay-modal") return modal;
         if (id === "replay-download-btn") return downloadButton;
+        if (id === "replay-open-page-btn") return openPageButton;
         return null;
       }),
       createElement: vi.fn((tagName: unknown) => {
-        if (tagName === "button") {
-          downloadButton = {
-            style: {},
-            textContent: "",
-            className: "",
-            type: "",
-            onclick: null
-          };
-          return downloadButton;
-        }
         if (tagName === "a") {
           const anchor = {
             style: {},
@@ -167,11 +193,10 @@ describe("bootstrap replay export", () => {
       alertLike
     });
 
-    expect(downloadButton).toBeTruthy();
-    expect(downloadButton?.onclick).toEqual(expect.any(Function));
-    expect(downloadButton?.style).toMatchObject({ display: "inline-block" });
+    expect(downloadButton.onclick).toEqual(expect.any(Function));
+    expect(downloadButton.style).toMatchObject({ display: "inline-block" });
 
-    const clickResult = (downloadButton?.onclick as (() => unknown) | null)?.();
+    const clickResult = downloadButton.onclick?.();
     expect(clickResult).toMatchObject({ downloaded: true, filename: "replay-v1.txt" });
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).toHaveBeenCalledTimes(1);
@@ -184,7 +209,16 @@ describe("bootstrap replay export", () => {
     const alertLike = vi.fn();
     const writeText = vi.fn(() => Promise.resolve(undefined));
     const anchorClick = vi.fn();
-    let downloadButton: Record<string, unknown> | null = null;
+    const downloadButton = {
+      style: {},
+      textContent: "",
+      onclick: null as null | (() => unknown)
+    };
+    const openPageButton = {
+      style: {},
+      textContent: "",
+      onclick: null as null | (() => unknown)
+    };
 
     const documentLike = {
       body: {
@@ -192,21 +226,11 @@ describe("bootstrap replay export", () => {
         removeChild: vi.fn()
       },
       getElementById: vi.fn((id: unknown) => {
-        if (id === "replay-modal") return modal;
         if (id === "replay-download-btn") return downloadButton;
+        if (id === "replay-open-page-btn") return openPageButton;
         return null;
       }),
       createElement: vi.fn((tagName: unknown) => {
-        if (tagName === "button") {
-          downloadButton = {
-            style: {},
-            textContent: "",
-            className: "",
-            type: "",
-            onclick: null
-          };
-          return downloadButton;
-        }
         if (tagName === "a") {
           return {
             style: {},
@@ -220,12 +244,6 @@ describe("bootstrap replay export", () => {
       execCommand: vi.fn()
     };
 
-    const actions = { appendChild: vi.fn() };
-    const modal = {
-      querySelector: vi.fn((selector: unknown) => {
-        return selector === ".replay-modal-actions" ? actions : null;
-      })
-    };
     const createObjectURL = vi.fn(() => "blob://replay-export");
     const revokeObjectURL = vi.fn();
     function URLRuntime() {}
@@ -251,12 +269,103 @@ describe("bootstrap replay export", () => {
       alertLike
     });
 
-    const clickResult = (downloadButton?.onclick as (() => unknown) | null)?.();
+    const clickResult = downloadButton.onclick?.();
     expect(clickResult).toMatchObject({ downloaded: true, filename: "replay-v1.txt" });
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).toHaveBeenCalledTimes(1);
     expect(anchorClick).toHaveBeenCalledTimes(1);
-    expect(alertLike).not.toHaveBeenCalledWith("瀵煎嚭鏂囦欢澶辫触锛岃绋嶅悗閲嶈瘯銆?");
+    expect(alertLike).not.toHaveBeenCalled();
+  });
+
+  it("adds an open-replay-page action in replay modal export flow", () => {
+    const downloadButton = {
+      style: {},
+      textContent: "",
+      onclick: null as null | (() => unknown)
+    };
+    const openPageButton = {
+      style: {},
+      textContent: "",
+      onclick: null as null | (() => unknown)
+    };
+    const localStorageLike = {
+      setItem: vi.fn(),
+      removeItem: vi.fn()
+    };
+    const open = vi.fn(() => ({ closed: false }));
+
+    applyReplayExport({
+      gameManager: {
+        serialize() {
+          return "replay-open-page";
+        }
+      },
+      showReplayModal: vi.fn(),
+      documentLike: {
+        getElementById(id: string) {
+          if (id === "replay-download-btn") return downloadButton;
+          if (id === "replay-open-page-btn") return openPageButton;
+          return null;
+        }
+      },
+      windowLike: {
+        localStorage: localStorageLike,
+        open
+      }
+    });
+
+    expect(String(openPageButton.textContent || "")).not.toHaveLength(0);
+    expect(openPageButton.style).toMatchObject({ display: "inline-block" });
+
+    const clickResult = openPageButton.onclick?.();
+    expect(clickResult).toMatchObject({ opened: true });
+    expect(localStorageLike.setItem).toHaveBeenCalledTimes(1);
+    expect(localStorageLike.setItem.mock.calls[0][0]).toMatch(/^replay_export_payload_v1:/);
+    expect(localStorageLike.setItem.mock.calls[0][1]).toContain("replay-open-page");
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open.mock.calls[0][0]).toMatch(/^replay\.html\?local_replay=1&handoff=/);
+    expect(open.mock.calls[0][1]).toBe("_blank");
+    expect(open.mock.calls[0][2]).toBe("noopener");
+  });
+
+  it("treats noopener tab opens as success even when window.open returns null", () => {
+    const alertLike = vi.fn();
+    const openPageButton = {
+      style: {},
+      textContent: "",
+      onclick: null as null | (() => unknown)
+    };
+    const localStorageLike = {
+      setItem: vi.fn(),
+      removeItem: vi.fn()
+    };
+    const open = vi.fn(() => null);
+
+    applyReplayExport({
+      gameManager: {
+        serialize() {
+          return "replay-open-page";
+        }
+      },
+      showReplayModal: vi.fn(),
+      documentLike: {
+        getElementById(id: string) {
+          if (id === "replay-open-page-btn") return openPageButton;
+          return null;
+        }
+      },
+      windowLike: {
+        localStorage: localStorageLike,
+        open
+      },
+      alertLike
+    });
+
+    const clickResult = openPageButton.onclick?.();
+    expect(clickResult).toMatchObject({ opened: true });
+    expect(localStorageLike.setItem).toHaveBeenCalledTimes(1);
+    expect(localStorageLike.removeItem).not.toHaveBeenCalled();
+    expect(alertLike).not.toHaveBeenCalled();
   });
 
   it("reports fallback error when execCommand copy fails", () => {
@@ -281,6 +390,8 @@ describe("bootstrap replay export", () => {
 
     expect(result).toEqual({ attempted: true, method: "fallback-error" });
     expect(error).toHaveBeenCalledTimes(1);
-    expect(alertLike).toHaveBeenCalledWith("自动复制失败，请手动从文本框复制。");
+    expect(alertLike).toHaveBeenCalledTimes(1);
   });
 });
+
+

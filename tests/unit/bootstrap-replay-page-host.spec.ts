@@ -153,6 +153,7 @@ describe("bootstrap replay page host", () => {
     const applyReplayExport = vi.fn();
     const showReplayModal = vi.fn();
     const gameManager = { id: "manager" };
+    const windowLike = { id: "window" };
     const navigatorLike = { id: "navigator" };
     const documentLike = { id: "document" };
     const alertLike = vi.fn();
@@ -164,6 +165,7 @@ describe("bootstrap replay page host", () => {
       },
       gameManager,
       showReplayModal,
+      windowLike,
       navigatorLike,
       documentLike,
       alertLike,
@@ -173,6 +175,7 @@ describe("bootstrap replay page host", () => {
     expect(applyReplayExport).toHaveBeenCalledWith({
       gameManager,
       showReplayModal,
+      windowLike,
       navigatorLike,
       documentLike,
       alertLike,
@@ -188,6 +191,9 @@ describe("bootstrap replay page host", () => {
     const applyReplayExport = vi.fn();
     const showReplayModal = vi.fn();
     const gameManager = { id: "manager" };
+    const windowLike = {
+      game_manager: gameManager
+    };
     const navigatorLike = { id: "navigator" };
     const documentLike = { id: "document" };
     const alertLike = vi.fn();
@@ -197,9 +203,7 @@ describe("bootstrap replay page host", () => {
       replayExportRuntime: {
         applyReplayExport
       },
-      windowLike: {
-        game_manager: gameManager
-      },
+      windowLike,
       showReplayModal,
       navigatorLike,
       documentLike,
@@ -210,6 +214,7 @@ describe("bootstrap replay page host", () => {
     expect(applyReplayExport).toHaveBeenCalledWith({
       gameManager,
       showReplayModal,
+      windowLike,
       navigatorLike,
       documentLike,
       alertLike,

@@ -114,7 +114,6 @@
     { s: "#announcement-modal h3", zh: "版本公告", en: "Announcements" },
     { s: "#announcement-close-btn", zh: "关闭", en: "Close" },
     { s: "#replay-modal-title", zh: "回放", en: "Replay" },
-    { s: "#replay-action-btn", zh: "执行", en: "Run" },
     { s: "#settings-modal h3", zh: "设置", en: "Settings" },
     { s: "#toolkit-palette-link", zh: "主题设置", en: "Theme Settings" },
     { s: "#toolkit-account-link", zh: "账号中心", en: "Account Center" },

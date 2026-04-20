@@ -155,6 +155,7 @@
     applyExport({
       gameManager: source.gameManager,
       showReplayModal: source.showReplayModal,
+      windowLike: source.windowLike,
       navigatorLike: source.navigatorLike,
       documentLike: source.documentLike,
       alertLike: source.alertLike,
@@ -174,6 +175,7 @@
       replayExportRuntime: source.replayExportRuntime,
       gameManager: gameManager,
       showReplayModal: source.showReplayModal,
+      windowLike: source.windowLike,
       navigatorLike: source.navigatorLike,
       documentLike: source.documentLike,
       alertLike: source.alertLike,

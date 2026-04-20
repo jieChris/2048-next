@@ -193,7 +193,6 @@ function isSavedStateSizeOrRulesetMismatch(manager, saved) {
   if (!!saved.ruleset && saved.ruleset !== manager.ruleset) return true;
   return false;
 }
-
 function resolveSavedStateModeConfigForPolicy(manager) {
   if (!manager) return null;
   try {
@@ -204,13 +203,11 @@ function resolveSavedStateModeConfigForPolicy(manager) {
   } catch (_err) {}
   return normalizeSavedStateRecordObject(manager.modeConfig, null);
 }
-
 function isSavedStateRestrictedForRankedMode(manager) {
   var modeConfig = resolveSavedStateModeConfigForPolicy(manager);
   if (modeConfig && modeConfig.rank_policy === "ranked") return true;
   return !!(manager && manager.rankPolicy === "ranked");
 }
-
 function resolveSavedStateUndoModeConfig(manager) {
   if (!manager) return null;
   try {
@@ -221,7 +218,6 @@ function resolveSavedStateUndoModeConfig(manager) {
   } catch (_err) {}
   return normalizeSavedStateRecordObject(manager.modeConfig, null);
 }
-
 function shouldRestoreSavedStateUndoHistory(manager) {
   if (!manager) return false;
   var modeConfig = resolveSavedStateUndoModeConfig(manager);
@@ -230,7 +226,6 @@ function shouldRestoreSavedStateUndoHistory(manager) {
   }
   return !!manager.undoEnabled;
 }
-
 function isSavedStateBoardInvalidForRestore(manager, saved) {
   if (!(manager && saved)) return true;
   return !Array.isArray(saved.board) || saved.board.length !== manager.height;
@@ -382,7 +377,6 @@ function createSavedDynamicTimerRowContainer(documentLike, rowInfo, shouldApplyR
   }
   return rowDiv;
 }
-
 function createSavedDynamicTimerLegendElement(manager, documentLike, resolvedCappedState, rowInfo, shouldApplyRepeat) {
   var legend = documentLike.createElement("div");
   if (!legend) return null;
@@ -398,7 +392,6 @@ function createSavedDynamicTimerLegendElement(manager, documentLike, resolvedCap
   if (rowInfo.labelFontSize) legend.style.fontSize = rowInfo.labelFontSize;
   return legend;
 }
-
 function createSavedDynamicTimerValueElement(documentLike, rowInfo) {
   var val = documentLike.createElement("div");
   if (!val) return null;
@@ -407,7 +400,6 @@ function createSavedDynamicTimerValueElement(documentLike, rowInfo) {
   val.textContent = rowInfo.timeText;
   return val;
 }
-
 function appendSavedDynamicTimerRowChildren(documentLike, rowDiv, legend, val) {
   var brTop = documentLike.createElement("br");
   var brBottom = documentLike.createElement("br");
@@ -418,7 +410,6 @@ function appendSavedDynamicTimerRowChildren(documentLike, rowDiv, legend, val) {
   rowDiv.appendChild(brBottom);
   return true;
 }
-
 function resolveSavedDynamicTimerDocumentLike(manager) {
   if (!manager) return null;
   var documentLike = resolveManagerDocumentLike(manager);
@@ -426,11 +417,9 @@ function resolveSavedDynamicTimerDocumentLike(manager) {
   if (typeof documentLike.createElement !== "function") return null;
   return documentLike;
 }
-
 function resolveSavedDynamicTimerResolvedState(manager, cappedState) {
   return manager.resolveProvidedCappedModeState(cappedState);
 }
-
 function createSavedDynamicTimerRow(manager, rowState, cappedState) {
   var documentLike = resolveSavedDynamicTimerDocumentLike(manager);
   if (!documentLike) return null;
@@ -446,7 +435,6 @@ function createSavedDynamicTimerRow(manager, rowState, cappedState) {
   if (!appendSavedDynamicTimerRowChildren(documentLike, rowDiv, legend, val)) return null;
   return rowDiv;
 }
-
 function normalizeCappedRepeatLegendClasses(manager, cappedState) {
   if (!manager) return;
   var documentLike = resolveManagerDocumentLike(manager), resolvedCappedState = manager.resolveProvidedCappedModeState(cappedState);
@@ -465,7 +453,6 @@ function normalizeCappedRepeatLegendClasses(manager, cappedState) {
   }
   manager.callWindowNamespaceMethod("ThemeManager", "syncTimerLegendStyles");
 }
-
 function applySavedTimerFixedRowsState(manager, saved, cappedStateForRestore) {
   if (!manager || !saved) return;
   var fixed = saved.timer_fixed_rows;
@@ -484,12 +471,10 @@ function applySavedTimerFixedRowsState(manager, saved, cappedStateForRestore) {
     applySavedTimerRowLegendState(manager, row, legend, rowState, cappedStateForRestore);
   }
 }
-
 function isSavedTimerRowScrollManagedHidden(row) {
   if (!(row && typeof row.getAttribute === "function")) return false;
   return row.getAttribute("data-scroll-hidden") === "1";
 }
-
 function shouldIgnoreSavedTimerRowDisplay(row, rowState) {
   if (!row || !isNonArrayObject(rowState)) return false;
   if (typeof rowState.display !== "string" || rowState.display !== "none") return false;
@@ -499,7 +484,6 @@ function shouldIgnoreSavedTimerRowDisplay(row, rowState) {
   }
   return true;
 }
-
 function applySavedTimerRowVisibilityState(row, rowState) {
   if (!row) return;
   if (shouldIgnoreSavedTimerRowDisplay(row, rowState)) {
@@ -511,7 +495,6 @@ function applySavedTimerRowVisibilityState(row, rowState) {
   row.style.visibility = typeof rowState.visibility === "string" ? rowState.visibility : "";
   row.style.pointerEvents = typeof rowState.pointerEvents === "string" ? rowState.pointerEvents : "";
 }
-
 function applySavedTimerRowRepeatState(row, rowState) {
   if (!row) return;
   if (typeof rowState.repeat === "string" && rowState.repeat) {
@@ -520,7 +503,6 @@ function applySavedTimerRowRepeatState(row, rowState) {
   }
   row.removeAttribute("data-capped-repeat");
 }
-
 function applySavedTimerRowLegendState(manager, row, legend, rowState, cappedStateForRestore) {
   if (!manager || !row || !legend) return;
   if (row.getAttribute("data-capped-repeat") && cappedStateForRestore.isCappedMode) {
@@ -531,7 +513,6 @@ function applySavedTimerRowLegendState(manager, row, legend, rowState, cappedSta
   if (typeof rowState.legendText === "string") legend.textContent = rowState.legendText;
   legend.style.fontSize = typeof rowState.legendFontSize === "string" ? rowState.legendFontSize : "";
 }
-
 function applySavedDynamicTimerRowsState(manager, container, rowsState, cappedStateForRestore) {
   if (!manager || !container) return;
   var rows = Array.isArray(rowsState) ? rowsState : [];
@@ -542,7 +523,6 @@ function applySavedDynamicTimerRowsState(manager, container, rowsState, cappedSt
     container.appendChild(rowElement);
   }
 }
-
 function resolveLegacySavedSecondaryRows(saved) {
   var rows = [];
   if (!saved) return rows;
@@ -554,7 +534,6 @@ function resolveLegacySavedSecondaryRows(saved) {
   }
   return rows;
 }
-
 function applySavedTimerSubState(manager, saved) {
   if (!manager || !saved) return;
   // Secondary rows are collapsed by default on each load.
@@ -564,7 +543,6 @@ function applySavedTimerSubState(manager, saved) {
     : resolveLegacySavedSecondaryRows(saved);
   applySecondaryTimerRowsState(manager, secondaryRows);
 }
-
 function applySavedManagerBaseState(manager, saved) {
   manager.setRuntimeScore(Number.isInteger(saved.score) && saved.score >= 0 ? saved.score : 0);
   manager.over = !!saved.over;
@@ -585,6 +563,31 @@ function applySavedManagerBaseState(manager, saved) {
   manager.hasGameStarted = !!saved.has_game_started;
   manager.sessionSubmitDone = false;
 }
+function cloneSavedReplaySessionState(manager, session, fallbackValue) {
+  if (!isNonArrayObject(session)) return fallbackValue;
+  if (manager && typeof manager.safeClonePlain === "function") {
+    return manager.safeClonePlain(session, fallbackValue);
+  }
+  if (manager && typeof manager.clonePlain === "function") {
+    try {
+      return manager.clonePlain(session);
+    } catch (_errClone) {}
+  }
+  try {
+    return JSON.parse(JSON.stringify(session));
+  } catch (_errJson) {
+    return fallbackValue;
+  }
+}
+function normalizeSavedReplayV1Session(manager, session) {
+  var cloned = cloneSavedReplaySessionState(manager, session, null);
+  if (!isNonArrayObject(cloned)) return null;
+  if (!Array.isArray(cloned.init_tiles) || !Array.isArray(cloned.records)) return null;
+  if (!Number.isInteger(cloned.board_width) || !Number.isInteger(cloned.board_height)) return null;
+  cloned.last_event_at_ms = Date.now();
+  cloned.supported = cloned.supported !== false;
+  return cloned;
+}
 
 function applySavedManagerReplayState(manager, saved) {
   manager.moveHistory = Array.isArray(saved.move_history) ? saved.move_history.slice() : [];
@@ -600,6 +603,7 @@ function applySavedManagerReplayState(manager, saved) {
     manager.setRuntimeRedoStack([]);
   }
   manager.replayCompactLog = typeof saved.replay_compact_log === "string" ? saved.replay_compact_log : "";
+  manager.sessionReplayV1 = normalizeSavedReplayV1Session(manager, saved.session_replay_v1);
   manager.sessionReplayV3 = isNonArrayObject(saved.session_replay_v3)
     ? manager.clonePlain(saved.session_replay_v3)
     : manager.sessionReplayV3;
@@ -941,6 +945,7 @@ function buildSavedGameStateReplayStatePayload(manager, now, saveOptions) {
     undo_stack: Array.isArray(manager.undoStack) ? manager.undoStack : [],
     redo_stack: Array.isArray(manager.redoStack) ? manager.redoStack : [],
     replay_compact_log: manager.replayCompactLog || "",
+    session_replay_v1: cloneSavedReplaySessionState(manager, manager.sessionReplayV1, null),
     session_replay_v3: manager.sessionReplayV3 || null,
     replay_string: resolveReplayStringForSavedPayload(manager, now, saveOptions)
   };
@@ -1115,11 +1120,12 @@ function buildLiteSavedGameStateBoardSnapshotPayload(manager, payload) {
   };
 }
 
-function buildLiteSavedGameStateReplayTrimPayload() {
+function buildLiteSavedGameStateReplayTrimPayload(manager, payload) {
   return {
     move_history: [],
     undo_stack: [],
     replay_compact_log: "",
+    session_replay_v1: cloneSavedReplaySessionState(manager, payload && payload.session_replay_v1, null),
     session_replay_v3: null
   };
 }
@@ -1181,7 +1187,7 @@ function buildLiteSavedGameStatePayloadFallback(manager, payload) {
     buildLiteSavedGameStateCoreRestorePayload(manager, payload),
     buildLiteSavedGameStateProgressPayload(payload),
     buildLiteSavedGameStateBoardSnapshotPayload(manager, payload),
-    buildLiteSavedGameStateReplayTrimPayload(),
+    buildLiteSavedGameStateReplayTrimPayload(manager, payload),
     buildLiteSavedGameStateDiagnosticsPayload(payload),
     {
       timer_status: timerStatus === 1 ? 1 : 0,
@@ -1220,6 +1226,12 @@ function buildLiteSavedGameStateCoreCallPayload(manager, payload) {
   };
 }
 
+function buildLiteSavedGameStateReplayRestorePayload(manager, payloadSource) {
+  return {
+    session_replay_v1: cloneSavedReplaySessionState(manager, payloadSource && payloadSource.session_replay_v1, null)
+  };
+}
+
 function ensureLiteSavedGameStateRestoreFields(manager, litePayload, payloadSource) {
   if (!manager) return null;
   var normalizedLite = normalizeSavedStateRecordObject(litePayload, null);
@@ -1227,7 +1239,8 @@ function ensureLiteSavedGameStateRestoreFields(manager, litePayload, payloadSour
   return Object.assign(
     {},
     normalizedLite,
-    buildLiteSavedGameStateCoreRestorePayload(manager, payloadSource)
+    buildLiteSavedGameStateCoreRestorePayload(manager, payloadSource),
+    buildLiteSavedGameStateReplayRestorePayload(manager, payloadSource)
   );
 }
 

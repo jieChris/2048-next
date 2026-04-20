@@ -67,6 +67,16 @@ function resolveLocalStorage(windowLike: RankedSessionWindowLike): Storage | nul
   }) as Storage | null;
 }
 
+function resolveFetchLike(windowLike: RankedSessionWindowLike): typeof globalThis.fetch | null {
+  if (typeof windowLike.fetch === "function") {
+    return windowLike.fetch.bind(windowLike) as typeof globalThis.fetch;
+  }
+  if (typeof globalThis.fetch === "function") {
+    return globalThis.fetch.bind(globalThis) as typeof globalThis.fetch;
+  }
+  return null;
+}
+
 function removeStorageKey(storageLike: Storage | null, key: string): void {
   if (!storageLike || typeof storageLike.removeItem !== "function" || !key) return;
   try {
@@ -228,12 +238,14 @@ function createRankedSessionRuntime(
   const requestSession = async (modeKey: string): Promise<RankedSessionRecord | null> => {
     const authToken = readAuthToken(windowLike);
     if (!authToken || !isRankedModeKey(modeKey)) return null;
+    const fetchLike = resolveFetchLike(windowLike);
+    if (!fetchLike) return null;
     const requestKey = `start:${modeKey}`;
     const existing = sessionRequestCache.get(requestKey);
     if (existing) return existing;
     const requestPromise = (async () => {
       try {
-        const response = await fetch("/api/ranked-session/start", {
+        const response = await fetchLike("/api/ranked-session/start", {
           method: "POST",
           headers: {
             "content-type": "application/json",

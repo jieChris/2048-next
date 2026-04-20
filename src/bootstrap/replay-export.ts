@@ -2,8 +2,17 @@ const COPY_SUCCESS_MESSAGE = "回放代码已复制到剪贴板！";
 const COPY_FAILURE_MESSAGE = "自动复制失败，请手动从文本框复制。";
 
 const DOWNLOAD_FAILURE_MESSAGE = "导出文件失败，请稍后重试。";
+const OPEN_PAGE_FAILURE_MESSAGE = "打开回放页面失败，请稍后重试。";
 const DOWNLOAD_BUTTON_ID = "replay-download-btn";
 const DOWNLOAD_BUTTON_LABEL = "导出文件";
+const OPEN_PAGE_BUTTON_ID = "replay-open-page-btn";
+const OPEN_PAGE_BUTTON_LABEL = "打开回放页";
+const REPLAY_PAGE_HANDOFF_STORAGE_PREFIX = "replay_export_payload_v1:";
+const REPLAY_PAGE_HANDOFF_QUERY_FLAG = "local_replay=1";
+const REPLAY_PAGE_HANDOFF_QUERY_KEY = "handoff";
+const REPLAY_LOGIC_VERSION = "v1";
+const REPLAY_TRANSIENT_NOTICE_ID = "replay-export-toast";
+const REPLAY_TRANSIENT_NOTICE_HIDE_DELAY_MS = 1600;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object";
@@ -32,6 +41,102 @@ function resolveAlert(input: Record<string, unknown>): (message: string) => void
   return function (_message: string) {};
 }
 
+function resolveTimeoutLike(
+  input: Record<string, unknown>
+): ((handler: () => unknown, ms: number) => unknown) | null {
+  const windowLike = toRecord(resolveWindowLike(input));
+  return (
+    asFunction<(handler: () => unknown, ms: number) => unknown>(windowLike.setTimeout) ||
+    (typeof setTimeout === "function" ? setTimeout : null)
+  );
+}
+
+function resolveClearTimeoutLike(input: Record<string, unknown>): ((handle: unknown) => void) | null {
+  const windowLike = toRecord(resolveWindowLike(input));
+  const directClearTimeout = asFunction<(handle: unknown) => unknown>(windowLike.clearTimeout);
+  if (directClearTimeout) {
+    return function (handle: unknown) {
+      directClearTimeout(handle);
+    };
+  }
+  if (typeof clearTimeout === "function") {
+    return function (handle: unknown) {
+      clearTimeout(handle as never);
+    };
+  }
+  return null;
+}
+
+function applyReplayTransientNoticeStyle(style: Record<string, unknown>): void {
+  style.position = "fixed";
+  style.left = "50%";
+  style.top = "48px";
+  style.transform = "translateX(-50%)";
+  style.maxWidth = "min(calc(100vw - 32px), 360px)";
+  style.padding = "10px 16px";
+  style.borderRadius = "999px";
+  style.background = "#ffffff";
+  style.color = "#3c3024";
+  style.fontSize = "14px";
+  style.lineHeight = "1.4";
+  style.boxShadow = "0 10px 24px rgba(0, 0, 0, 0.18)";
+  style.zIndex = "4000";
+  style.pointerEvents = "none";
+  style.opacity = "0";
+  style.transition = "opacity 180ms ease";
+  style.textAlign = "center";
+}
+
+function resolveReplayTransientNotice(input: Record<string, unknown>): Record<string, unknown> | null {
+  const documentLike = toRecord(input.documentLike);
+  const getElementById = asFunction<(id: string) => unknown>(documentLike.getElementById);
+  const createElement = asFunction<(tagName: string) => unknown>(documentLike.createElement);
+  const body = toRecord(documentLike.body);
+  const appendChild = asFunction<(child: unknown) => unknown>(body.appendChild);
+
+  if (getElementById) {
+    const existing = getElementById.call(documentLike, REPLAY_TRANSIENT_NOTICE_ID);
+    if (existing) return toRecord(existing);
+  }
+  if (!createElement || !appendChild) return null;
+
+  const toast = toRecord(createElement.call(documentLike, "div"));
+  toast.id = REPLAY_TRANSIENT_NOTICE_ID;
+  if (typeof toast.setAttribute === "function") {
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+  }
+  applyReplayTransientNoticeStyle(toRecord(toast.style));
+  appendChild.call(body, toast);
+  return toast;
+}
+
+function showReplayTransientNotice(input: Record<string, unknown>, message: string): boolean {
+  const toast = resolveReplayTransientNotice(input);
+  const setTimeoutLike = resolveTimeoutLike(input);
+  const clearTimeoutLike = resolveClearTimeoutLike(input);
+  if (!toast || !setTimeoutLike) return false;
+
+  toast.textContent = message;
+  toRecord(toast.style).opacity = "1";
+
+  const previousTimer = toast.__hideTimer;
+  if (previousTimer && clearTimeoutLike) {
+    clearTimeoutLike(previousTimer);
+  }
+
+  toast.__hideTimer = setTimeoutLike(function () {
+    toRecord(toast.style).opacity = "0";
+  }, REPLAY_TRANSIENT_NOTICE_HIDE_DELAY_MS);
+
+  return true;
+}
+
+function notifyReplayCopySuccess(input: Record<string, unknown>): void {
+  if (showReplayTransientNotice(input, COPY_SUCCESS_MESSAGE)) return;
+  resolveAlert(input)(COPY_SUCCESS_MESSAGE);
+}
+
 function resolveConsoleError(
   input: Record<string, unknown>
 ): (message: string, reason: unknown) => void {
@@ -49,6 +154,70 @@ function resolveWindowLike(input: Record<string, unknown>): unknown {
   if (isRecord(input.windowLike)) return input.windowLike;
   if (typeof window !== "undefined") return window;
   return null;
+}
+
+function resolveStorageLike(input: {
+  windowLike?: unknown;
+  storageName?: unknown;
+}): Record<string, unknown> | null {
+  const source = toRecord(input);
+  const storageName = source.storageName == null ? "" : String(source.storageName);
+  if (!storageName) return null;
+
+  const windowLike = toRecord(resolveWindowLike(source));
+  try {
+    const storage = windowLike[storageName];
+    const storageRecord = toObjectLike(storage);
+    const setItem = asFunction<(key: string, value: string) => unknown>(storageRecord.setItem);
+    const removeItem = asFunction<(key: string) => unknown>(storageRecord.removeItem);
+    if (!setItem || !removeItem) return null;
+    return storageRecord;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function safeWriteStorageItem(input: {
+  storageLike?: unknown;
+  key?: unknown;
+  value?: unknown;
+}): boolean {
+  const source = toRecord(input);
+  const storageLike = toRecord(source.storageLike);
+  const key = source.key == null ? "" : String(source.key);
+  const value = source.value == null ? "" : String(source.value);
+  const setItem = asFunction<(key: string, value: string) => unknown>(storageLike.setItem);
+  if (!setItem || !key) return false;
+  try {
+    setItem.call(storageLike, key, value);
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function safeRemoveStorageItem(input: {
+  storageLike?: unknown;
+  key?: unknown;
+}): void {
+  const source = toRecord(input);
+  const storageLike = toRecord(source.storageLike);
+  const key = source.key == null ? "" : String(source.key);
+  const removeItem = asFunction<(key: string) => unknown>(storageLike.removeItem);
+  if (!removeItem || !key) return;
+  try {
+    removeItem.call(storageLike, key);
+  } catch (_error) {}
+}
+
+function createReplayPageHandoffId(): string {
+  return (
+    String(Date.now()) +
+    "-" +
+    Math.random()
+      .toString(36)
+      .slice(2, 10)
+  );
 }
 
 function resolveUrlRuntime(input: { windowLike?: unknown }): {
@@ -126,7 +295,6 @@ function applyFallbackCopy(input: Record<string, unknown>, text: string): {
   copied: boolean;
   method: "fallback" | "fallback-error";
 } {
-  const alertLike = resolveAlert(input);
   const logError = resolveConsoleError(input);
   const documentLike = toRecord(input.documentLike);
   const createElement = asFunction<(tagName: unknown) => unknown>(documentLike.createElement);
@@ -154,7 +322,7 @@ function applyFallbackCopy(input: Record<string, unknown>, text: string): {
 
     execCommand.call(documentLike, "copy");
     removeChild.call(body, textArea);
-    alertLike(COPY_SUCCESS_MESSAGE);
+    notifyReplayCopySuccess(input);
     return {
       copied: true,
       method: "fallback"
@@ -166,7 +334,7 @@ function applyFallbackCopy(input: Record<string, unknown>, text: string): {
       } catch (_err) {}
     }
     logError("Fallback copy failed", error);
-    alertLike(COPY_FAILURE_MESSAGE);
+    resolveAlert(input)(COPY_FAILURE_MESSAGE);
     return {
       copied: false,
       method: "fallback-error"
@@ -178,6 +346,7 @@ export function applyReplayClipboardCopy(input: {
   text?: unknown;
   navigatorLike?: unknown;
   documentLike?: unknown;
+  windowLike?: unknown;
   alertLike?: unknown;
   consoleLike?: unknown;
 }): {
@@ -186,7 +355,6 @@ export function applyReplayClipboardCopy(input: {
 } {
   const source = toRecord(input);
   const text = source.text == null ? "" : String(source.text);
-  const alertLike = resolveAlert(source);
   const navigatorLike = toRecord(source.navigatorLike);
   const clipboard = toRecord(navigatorLike.clipboard);
   const writeText = asFunction<(value: unknown) => unknown>(clipboard.writeText);
@@ -205,7 +373,7 @@ export function applyReplayClipboardCopy(input: {
     const thenFn = asFunction<(onFulfilled: () => unknown) => unknown>(writeResultRecord.then);
     if (thenFn) {
       const chained = thenFn.call(writeResult, function () {
-        alertLike(COPY_SUCCESS_MESSAGE);
+        notifyReplayCopySuccess(source);
       });
       const chainedRecord = toRecord(chained);
       const catchFn = asFunction<(onRejected: (reason: unknown) => unknown) => unknown>(
@@ -217,7 +385,7 @@ export function applyReplayClipboardCopy(input: {
         });
       }
     } else {
-      alertLike(COPY_SUCCESS_MESSAGE);
+      notifyReplayCopySuccess(source);
     }
     return {
       attempted: true,
@@ -238,38 +406,18 @@ function resolveReplayDownloadFilename(input: { replay?: unknown }): string {
   return "replay.txt";
 }
 
-function ensureReplayDownloadButton(input: { documentLike?: unknown }): Record<string, unknown> | null {
+function resolveReplayModalButton(input: {
+  documentLike?: unknown;
+  buttonId?: unknown;
+}): Record<string, unknown> | null {
   const source = toRecord(input);
+  const buttonId = source.buttonId == null ? "" : String(source.buttonId);
+  if (!buttonId) return null;
   const documentLike = toRecord(source.documentLike);
   const getElementById = asFunction<(id: string) => unknown>(documentLike.getElementById);
   if (!getElementById) return null;
-
-  const existing = getElementById.call(documentLike, DOWNLOAD_BUTTON_ID);
-  if (existing) return toRecord(existing);
-
-  const modal = getElementById.call(documentLike, "replay-modal");
-  if (!modal) return null;
-
-  const modalRecord = toRecord(modal);
-  const querySelector = asFunction<(selector: string) => unknown>(modalRecord.querySelector);
-  if (!querySelector) return null;
-  const actions = querySelector.call(modalRecord, ".replay-modal-actions");
-  if (!actions) return null;
-
-  const actionsRecord = toRecord(actions);
-  const appendChild = asFunction<(child: unknown) => unknown>(actionsRecord.appendChild);
-  const createElement = asFunction<(tagName: string) => unknown>(documentLike.createElement);
-  if (!appendChild || !createElement) return null;
-
-  const button = toRecord(createElement.call(documentLike, "button"));
-  button.id = DOWNLOAD_BUTTON_ID;
-  button.className = "replay-button";
-  button.type = "button";
-  button.textContent = DOWNLOAD_BUTTON_LABEL;
-  const style = toRecord(button.style);
-  style.display = "none";
-  appendChild.call(actionsRecord, button);
-  return button;
+  const button = getElementById.call(documentLike, buttonId);
+  return button ? toRecord(button) : null;
 }
 
 function configureReplayDownloadButton(input: {
@@ -279,7 +427,10 @@ function configureReplayDownloadButton(input: {
   alertLike?: unknown;
 }): { configured: boolean } {
   const source = toRecord(input);
-  const button = ensureReplayDownloadButton({ documentLike: source.documentLike });
+  const button = resolveReplayModalButton({
+    documentLike: source.documentLike,
+    buttonId: DOWNLOAD_BUTTON_ID
+  });
   if (!button) return { configured: false };
 
   const alertLike = resolveAlert(source);
@@ -297,6 +448,97 @@ function configureReplayDownloadButton(input: {
     });
     if (!result.downloaded) {
       alertLike(DOWNLOAD_FAILURE_MESSAGE);
+    }
+    return result;
+  };
+
+  return { configured: true };
+}
+
+function openReplayPageFromExport(input: {
+  replay?: unknown;
+  windowLike?: unknown;
+  alertLike?: unknown;
+}): { opened: boolean; url?: string } {
+  const source = toRecord(input);
+  const replay = source.replay == null ? "" : String(source.replay).trim();
+  const windowLike = toRecord(resolveWindowLike(source));
+  const localStorageLike = resolveStorageLike({
+    windowLike,
+    storageName: "localStorage"
+  });
+  const openFn = asFunction<(url: string, target?: string, features?: string) => unknown>(windowLike.open);
+
+  if (!replay || !localStorageLike || !openFn) {
+    return { opened: false };
+  }
+
+  const handoffId = createReplayPageHandoffId();
+  const storageKey = REPLAY_PAGE_HANDOFF_STORAGE_PREFIX + handoffId;
+  const payload = JSON.stringify({
+    replay_string: replay,
+    replay_logic_version: REPLAY_LOGIC_VERSION,
+    source: "export_modal"
+  });
+  if (
+    !safeWriteStorageItem({
+      storageLike: localStorageLike,
+      key: storageKey,
+      value: payload
+    })
+  ) {
+    return { opened: false };
+  }
+
+  const url =
+    "replay.html?" +
+    REPLAY_PAGE_HANDOFF_QUERY_FLAG +
+    "&" +
+    REPLAY_PAGE_HANDOFF_QUERY_KEY +
+    "=" +
+    encodeURIComponent(handoffId);
+
+  try {
+    // Some browsers return null for successful noopener tab opens.
+    openFn.call(windowLike, url, "_blank", "noopener");
+    return {
+      opened: true,
+      url
+    };
+  } catch (_error) {
+    safeRemoveStorageItem({
+      storageLike: localStorageLike,
+      key: storageKey
+    });
+    return { opened: false };
+  }
+}
+
+function configureReplayOpenPageButton(input: {
+  replay?: unknown;
+  documentLike?: unknown;
+  windowLike?: unknown;
+  alertLike?: unknown;
+}): { configured: boolean } {
+  const source = toRecord(input);
+  const button = resolveReplayModalButton({
+    documentLike: source.documentLike,
+    buttonId: OPEN_PAGE_BUTTON_ID
+  });
+  if (!button) return { configured: false };
+
+  const alertLike = resolveAlert(source);
+  button.textContent = OPEN_PAGE_BUTTON_LABEL;
+  const style = toRecord(button.style);
+  style.display = "inline-block";
+  button.onclick = function () {
+    const result = openReplayPageFromExport({
+      replay: source.replay,
+      windowLike: source.windowLike,
+      alertLike: source.alertLike
+    });
+    if (!result.opened) {
+      alertLike(OPEN_PAGE_FAILURE_MESSAGE);
     }
     return result;
   };
@@ -336,11 +578,12 @@ export function applyReplayExport(input: {
     ) => unknown
   >(source.showReplayModal);
   if (showReplayModal) {
-    showReplayModal(isV1 ? "导出回放 (v1)" : "导出回放", replay, "再次复制", function (text: unknown) {
+    showReplayModal(isV1 ? "导出回放 (v1)" : "导出回放", replay, "复制回放", function (text: unknown) {
       return applyReplayClipboardCopy({
         text,
         navigatorLike: source.navigatorLike,
         documentLike: source.documentLike,
+        windowLike: source.windowLike,
         alertLike: source.alertLike,
         consoleLike: source.consoleLike
       });
@@ -351,15 +594,13 @@ export function applyReplayExport(input: {
       windowLike: resolveWindowLike(source),
       alertLike: source.alertLike
     });
+    configureReplayOpenPageButton({
+      replay,
+      documentLike: source.documentLike,
+      windowLike: resolveWindowLike(source),
+      alertLike: source.alertLike
+    });
   }
-
-  applyReplayClipboardCopy({
-    text: replay,
-    navigatorLike: source.navigatorLike,
-    documentLike: source.documentLike,
-    alertLike: source.alertLike,
-    consoleLike: source.consoleLike
-  });
 
   return {
     exported: true,

@@ -583,7 +583,12 @@
       if (replayBtn) {
         replayBtn.addEventListener("click", (function (id) {
           return function () {
-            location.href = "replay.html?local_history_id=" + encodeURIComponent(id);
+            var url = "replay.html?local_history_id=" + encodeURIComponent(id);
+            if (typeof window.open === "function") {
+              window.open(url, "_blank");
+              return;
+            }
+            location.href = url;
           };
         })(item.id));
       }

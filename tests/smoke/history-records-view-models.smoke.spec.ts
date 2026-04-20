@@ -66,8 +66,12 @@ test.describe("History smoke: item render and actions", () => {
   });
 
   test("supports replay jump action", async ({ page }) => {
+    const popupPromise = page.waitForEvent("popup");
     await page.click(".history-replay-btn");
-    await page.waitForURL(/\/replay\.html\?local_history_id=/);
-    await expect(page).toHaveURL(/render_1/);
+    const replayPage = await popupPromise;
+    await replayPage.waitForLoadState("domcontentloaded");
+    await expect(replayPage).toHaveURL(/\/replay\.html\?local_history_id=/);
+    await expect(replayPage).toHaveURL(/render_1/);
+    await expect(page).toHaveURL(/\/history\.html/);
   });
 });

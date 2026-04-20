@@ -35,6 +35,19 @@
     style.display = display;
   }
 
+  function bindModalOverlayClose(modalNode, closeCallback) {
+    var modal = toRecord(modalNode);
+    if (!closeCallback) {
+      modal.onclick = null;
+      return;
+    }
+    modal.onclick = function (eventLike) {
+      var eventRecord = toRecord(eventLike);
+      if (eventRecord.target && eventRecord.target !== modalNode) return undefined;
+      return closeCallback();
+    };
+  }
+
   function applyReplayModalOpen(input) {
     var source = toRecord(input);
     var getElementById = resolveGetElementById(source);
@@ -50,10 +63,8 @@
     var textEl = getElementById("replay-textarea");
     var actionBtn = getElementById("replay-action-btn");
     var downloadBtn = getElementById("replay-download-btn");
-    var querySelector = asFunction(modal.querySelector);
-    var closeBtn = (
-      querySelector ? querySelector.call(modal, ".replay-button:not(#replay-action-btn)") : null
-    );
+    var openPageBtn = getElementById("replay-open-page-btn");
+    var closeBtn = getElementById("replay-close-btn");
 
     setDisplayStyle(modal, "flex");
     if (titleEl) {
@@ -87,9 +98,16 @@
       downloadBtnRecord.onclick = null;
     }
 
+    if (openPageBtn) {
+      var openPageBtnRecord = toRecord(openPageBtn);
+      setDisplayStyle(openPageBtnRecord, "none");
+      openPageBtnRecord.onclick = null;
+    }
+
     var closeCallback = asFunction(source.closeCallback);
-    if (closeBtn && closeCallback) {
-      toRecord(closeBtn).onclick = closeCallback;
+    bindModalOverlayClose(modalNode, closeCallback);
+    if (closeBtn) {
+      toRecord(closeBtn).onclick = closeCallback || null;
     }
 
     return {

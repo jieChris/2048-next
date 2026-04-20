@@ -3,9 +3,11 @@
 
   var REPLAY_LOGIC_VERSION = "v1";
   var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
+  var LOCAL_REPLAY_HANDOFF_STORAGE_PREFIX = "replay_export_payload_v1:";
   var REPLAY_UI_ACTIVE_INTERVAL_MS = 220;
   var REPLAY_UI_IDLE_INTERVAL_MS = 1000;
   var REPLAY_UI_HIDDEN_INTERVAL_MS = 1800;
+  var REPLAY_COMPATIBILITY_BANNER_ID = "replay-compatibility-banner";
 
   var isScrubbing = false;
   var replayRelayoutTimer = null;
@@ -14,7 +16,9 @@
   var replayUiRefreshRafId = 0;
   var replayUiTickTimer = 0;
   var replayUiTickStarted = false;
+  var replayUiInitialized = false;
   var replayQueryRetryCount = 0;
+  var replayQueryRetryTimer = 0;
   var REPLAY_QUERY_MAX_RETRIES = 180;
   var replayDiagnosticsVisible = false;
   var replayStepIntervalMs = 100;
@@ -152,6 +156,10 @@
 
   function readLocalStorageItem(key) {
     return safeReadStorageItem("localStorage", key);
+  }
+
+  function removeLocalStorageItem(key) {
+    safeRemoveStorageItem("localStorage", key);
   }
 
   function readSessionStorageItem(key) {
@@ -500,23 +508,182 @@
     return toText(value).trim();
   }
 
+  function startsWithIgnoreCase(text, prefix) {
+    var source = toText(text);
+    var token = toText(prefix);
+    if (!source || !token || source.length < token.length) return false;
+    return source.substring(0, token.length).toLowerCase() === token.toLowerCase();
+  }
+
+  function isStructuredReplayPayload(value) {
+    return !!(isObject(value) && Array.isArray(value.actions));
+  }
+
+  function isStructuredReplayPayloadV1(value) {
+    if (!isStructuredReplayPayload(value)) return false;
+    return toText(value.replay_logic_version).trim().toLowerCase() === REPLAY_LOGIC_VERSION;
+  }
+
+  function createReplayCompatibilityMeta(kind, isLegacyCompat) {
+    return {
+      kind: toText(kind).trim().toLowerCase(),
+      isLegacyCompat: isLegacyCompat === true
+    };
+  }
+
+  function resolveReplayCompatibilityMetaFromStructured(value) {
+    if (Array.isArray(value)) return createReplayCompatibilityMeta("legacy_json_array", true);
+    if (!isStructuredReplayPayload(value)) return null;
+    if (isStructuredReplayPayloadV1(value)) {
+      return createReplayCompatibilityMeta("mainstream_structured_v1", false);
+    }
+    return createReplayCompatibilityMeta("legacy_structured_json", true);
+  }
+
+  function resolveReplayCompatibilityMetaFromText(replayText) {
+    var text = toText(replayText).trim();
+    if (!text) return null;
+
+    if (startsWithIgnoreCase(text, resolveReplayV1PrefixForTimeline())) {
+      return createReplayCompatibilityMeta("mainstream_v1", false);
+    }
+    if (startsWithIgnoreCase(text, "replay_fib_")) {
+      return createReplayCompatibilityMeta("legacy_fib_verse", true);
+    }
+    if (startsWithIgnoreCase(text, "replay_")) {
+      return createReplayCompatibilityMeta("legacy_verse", true);
+    }
+    if (startsWithIgnoreCase(text, "REPLAY_v4C_")) {
+      return createReplayCompatibilityMeta("legacy_v4c", true);
+    }
+    if (startsWithIgnoreCase(text, "REPLAY_v9RPL_B64_") || startsWithIgnoreCase(text, "REPLAY_v9RPL_")) {
+      return createReplayCompatibilityMeta("legacy_v9rpl", true);
+    }
+    if (startsWithIgnoreCase(text, "REPLAY_v9VERSE_")) {
+      return createReplayCompatibilityMeta("legacy_v9verse", true);
+    }
+
+    var firstChar = text.charAt(0);
+    if (firstChar !== "{" && firstChar !== "[") return null;
+
+    var parsed = safeJsonParse(text);
+    var structuredMeta = resolveReplayCompatibilityMetaFromStructured(parsed);
+    if (structuredMeta) return structuredMeta;
+    if (parsed !== null) return createReplayCompatibilityMeta("legacy_json", true);
+    return null;
+  }
+
+  function resolveReplayImportCompatibilityMeta(recordLike, payload) {
+    var source = normalizeReplayRecordLike(recordLike);
+    var replayStringMeta = resolveReplayCompatibilityMetaFromText(source.replay_string);
+    if (replayStringMeta) return replayStringMeta;
+
+    var structuredMeta = resolveReplayCompatibilityMetaFromStructured(source.replay);
+    if (structuredMeta) return structuredMeta;
+
+    return resolveReplayCompatibilityMetaFromText(payload);
+  }
+
+  function resolveReplayCompatibilityKindLabel(kind) {
+    var isEn = resolveLanguage() === "en";
+    if (kind === "legacy_verse") {
+      return isEn ? "legacy text replay (replay_)" : "\u65e7\u7248\u6587\u5b57\u56de\u653e\uff08replay_\uff09";
+    }
+    if (kind === "legacy_fib_verse") {
+      return isEn
+        ? "legacy Fibonacci text replay (replay_fib_)"
+        : "\u65e7\u7248\u6590\u6ce2\u90a3\u5951\u6587\u5b57\u56de\u653e\uff08replay_fib_\uff09";
+    }
+    if (kind === "legacy_v4c") {
+      return isEn ? "legacy compact replay (REPLAY_v4C_)" : "\u65e7\u7248\u7d27\u51d1\u56de\u653e\uff08REPLAY_v4C_\uff09";
+    }
+    if (kind === "legacy_v9rpl") {
+      return isEn ? "legacy v9 RPL replay" : "\u65e7\u7248 v9 RPL \u56de\u653e";
+    }
+    if (kind === "legacy_v9verse") {
+      return isEn ? "legacy v9 verse replay" : "\u65e7\u7248 v9 verse \u56de\u653e";
+    }
+    if (kind === "legacy_structured_json" || kind === "legacy_json" || kind === "legacy_json_array") {
+      return isEn ? "legacy structured replay (JSON)" : "\u65e7\u7248\u7ed3\u6784\u5316\u56de\u653e\uff08JSON\uff09";
+    }
+    return isEn ? "legacy replay" : "\u65e7\u7248\u56de\u653e";
+  }
+
+  function buildReplayCompatibilityNoticeText(meta) {
+    if (!(meta && meta.isLegacyCompat)) return "";
+
+    var label = resolveReplayCompatibilityKindLabel(meta.kind);
+    if (!label) return "";
+
+    if (resolveLanguage() === "en") {
+      return (
+        "Compatibility mode: this replay uses " +
+        label +
+        ". It has been loaded with legacy compatibility; the current mainstream format is v1 replay, so playback details or statistics may differ slightly."
+      );
+    }
+
+    return (
+      "\u517c\u5bb9\u63d0\u793a\uff1a\u5f53\u524d\u56de\u653e\u4e3a" +
+      label +
+      "\uff0c\u5df2\u6309\u517c\u5bb9\u6a21\u5f0f\u52a0\u8f7d\uff1b\u5f53\u524d\u4e3b\u6d41\u683c\u5f0f\u4e3a v1 \u56de\u653e\uff0c\u90e8\u5206\u56de\u653e\u8868\u73b0\u6216\u7edf\u8ba1\u4fe1\u606f\u53ef\u80fd\u7565\u6709\u5dee\u5f02\u3002"
+    );
+  }
+
+  function ensureReplayCompatibilityBannerElement() {
+    var existing = document.getElementById(REPLAY_COMPATIBILITY_BANNER_ID);
+    if (existing) return existing;
+
+    var container = document.querySelector(".container.replay-v1-page");
+    if (!container) return null;
+
+    var banner = document.createElement("div");
+    banner.id = REPLAY_COMPATIBILITY_BANNER_ID;
+    banner.className = "replay-compatibility-banner";
+    banner.style.display = "none";
+    banner.setAttribute("role", "status");
+    banner.setAttribute("aria-live", "polite");
+
+    var topStats = container.querySelector(".replay-top-stats");
+    if (topStats) {
+      container.insertBefore(banner, topStats);
+    } else {
+      container.insertBefore(banner, container.firstChild);
+    }
+    return banner;
+  }
+
+  function clearReplayCompatibilityNotice() {
+    var banner = ensureReplayCompatibilityBannerElement();
+    if (!banner) return;
+    banner.textContent = "";
+    banner.style.display = "none";
+    banner.removeAttribute("data-compat-kind");
+  }
+
+  function applyReplayCompatibilityNotice(meta) {
+    var banner = ensureReplayCompatibilityBannerElement();
+    if (!banner) return;
+    if (!(meta && meta.isLegacyCompat)) {
+      clearReplayCompatibilityNotice();
+      return;
+    }
+
+    banner.setAttribute("data-compat-kind", toText(meta.kind).trim().toLowerCase() || "legacy");
+    banner.textContent = buildReplayCompatibilityNoticeText(meta);
+    banner.style.display = "block";
+  }
+
+  function syncReplayCompatibilityNotice(recordLike, payload) {
+    var meta = resolveReplayImportCompatibilityMeta(recordLike, payload);
+    applyReplayCompatibilityNotice(meta);
+    return meta;
+  }
+
   function normalizeLegacyReplayStringForImport(replayString) {
     var text = toText(replayString).trim();
     if (!text) return "";
-
-    var looksLikeLegacyReplay =
-      text.indexOf("replay_") === 0 ||
-      text.indexOf("REPLAY_v4C_") === 0 ||
-      text.indexOf("REPLAY_v9RPL_") === 0 ||
-      text.indexOf("REPLAY_v9VERSE_") === 0;
-    if (!looksLikeLegacyReplay) return text;
-
-    var normalized = "";
-    for (var i = 0; i < text.length; i += 1) {
-      var code = text.charCodeAt(i);
-      normalized += code <= 127 ? text.charAt(i) : "?";
-    }
-    return normalized;
+    return text;
   }
 
   function isDiagonalModeKey(modeKey) {
@@ -681,6 +848,53 @@
       "<a href='2048.html' style='text-decoration: none; color: inherit; cursor: pointer;'>2048</a> " +
       "\u56de\u653e - " +
       suffix;
+  }
+
+  function clearReplayQueryRetryTimer() {
+    if (!replayQueryRetryTimer) return;
+    clearTimeout(replayQueryRetryTimer);
+    replayQueryRetryTimer = 0;
+  }
+
+  function scheduleReplayQueryRetry() {
+    clearReplayQueryRetryTimer();
+    replayQueryRetryTimer = setTimeout(function () {
+      replayQueryRetryTimer = 0;
+      loadReplayFromQueryV1();
+    }, 60);
+  }
+
+  function clearReplayTransientQueryParams() {
+    if (
+      !window ||
+      !window.location ||
+      !window.history ||
+      typeof window.history.replaceState !== "function" ||
+      typeof URL !== "function"
+    ) {
+      return;
+    }
+
+    var url = new URL(window.location.href);
+    var changed = false;
+    var transientKeys = ["cloud_replay", "local_replay", "handoff"];
+    for (var i = 0; i < transientKeys.length; i += 1) {
+      var key = transientKeys[i];
+      if (!url.searchParams.has(key)) continue;
+      url.searchParams.delete(key);
+      changed = true;
+    }
+    if (!changed) return;
+
+    var nextSearch = url.searchParams.toString();
+    var nextUrl = url.pathname + (nextSearch ? "?" + nextSearch : "") + url.hash;
+    window.history.replaceState(window.history.state, document.title, nextUrl);
+  }
+
+  function clearReplayTransientQueryState() {
+    clearReplayQueryRetryTimer();
+    replayQueryRetryCount = 0;
+    clearReplayTransientQueryParams();
   }
 
   function showReplayModal(title, content, actionName, actionCallback, options) {
@@ -856,7 +1070,9 @@
         };
         var payload = resolveReplayPayloadForImportV1(source);
         importReplayPayloadV1(payload, "manual_text");
+        syncReplayCompatibilityNotice(source, payload);
         captureReplayTimelineFromReplayPayload(payload);
+        clearReplayTransientQueryState();
         window.closeReplayModal();
         if (!resumeReplayPlaybackPreferred(window.game_manager)) {
           startReplayAutoPlayback();
@@ -908,7 +1124,9 @@
         var buffer = await readReplayFileAsArrayBuffer(file);
         var ok = gameManager.importV9RplBuffer(buffer);
         if (!ok) throw new Error("binary_import_rejected");
+        applyReplayCompatibilityNotice(createReplayCompatibilityMeta("legacy_v9rpl", true));
         captureReplayTimelineFromRplBuffer(buffer);
+        clearReplayTransientQueryState();
         if (!resumeReplayPlaybackPreferred(window.game_manager)) {
           startReplayAutoPlayback();
         }
@@ -924,7 +1142,9 @@
       };
       var payload = resolveReplayPayloadForImportV1(source);
       importReplayPayloadV1(payload, "file_text");
+      syncReplayCompatibilityNotice(source, payload);
       captureReplayTimelineFromReplayPayload(payload);
+      clearReplayTransientQueryState();
       if (!resumeReplayPlaybackPreferred(window.game_manager)) {
         startReplayAutoPlayback();
       }
@@ -1116,8 +1336,10 @@
   function hasReplayQueryTarget() {
     var params = new URLSearchParams(window.location.search || "");
     var cloudReplay = params.get("cloud_replay");
+    var localReplay = params.get("local_replay");
+    var handoffId = params.get("handoff");
     var localHistoryId = params.get("local_history_id") || params.get("id");
-    return cloudReplay === "1" || !!localHistoryId;
+    return cloudReplay === "1" || !!localHistoryId || (localReplay === "1" && !!handoffId);
   }
 
   function resolveReplayBoardSize(gameManager) {
@@ -1158,6 +1380,7 @@
 
     resetReplayTimelineMeta();
     clearReplayDiagnosticsPanel();
+    clearReplayCompatibilityNotice();
 
     if (gameManager.actuator && typeof gameManager.actuator.invalidateLayoutCache === "function") {
       gameManager.actuator.invalidateLayoutCache();
@@ -1215,8 +1438,10 @@
   async function loadReplayFromQueryV1() {
     var params = new URLSearchParams(window.location.search);
     var cloudReplay = params.get("cloud_replay");
+    var localReplay = params.get("local_replay");
+    var handoffId = toText(params.get("handoff")).trim();
     var localHistoryId = params.get("local_history_id") || params.get("id");
-    var hasTarget = cloudReplay === "1" || !!localHistoryId;
+    var hasTarget = cloudReplay === "1" || !!localHistoryId || (localReplay === "1" && !!handoffId);
 
     clearReplayDiagnosticsPanel();
     if (!hasTarget) return;
@@ -1224,10 +1449,11 @@
     if (!isGameManagerReplayReady()) {
       replayQueryRetryCount += 1;
       if (replayQueryRetryCount > REPLAY_QUERY_MAX_RETRIES) {
+        clearReplayQueryRetryTimer();
         alert("game_manager_not_ready");
         return;
       }
-      setTimeout(loadReplayFromQueryV1, 60);
+      scheduleReplayQueryRetry();
       return;
     }
 
@@ -1251,13 +1477,16 @@
 
         var replayPayload = resolveReplayPayloadForImportV1(payload);
         importReplayPayloadV1(replayPayload, "cloud_query");
+        syncReplayCompatibilityNotice(payload, replayPayload);
         captureReplayTimelineFromReplayPayload(replayPayload);
         if (!resumeReplayPlaybackPreferred(window.game_manager)) {
           startReplayAutoPlayback();
         }
 
+        clearReplayQueryRetryTimer();
         replayQueryRetryCount = 0;
         removeSessionStorageItem(CLOUD_REPLAY_STORAGE_KEY);
+        clearReplayTransientQueryParams();
         setReplayPageTitleSuffix("cloud");
         clearReplayDiagnosticsPanel();
         updateReplayUI();
@@ -1265,9 +1494,10 @@
         var cloudMessage = resolveReplayImportErrorMessage(errorCloud);
         if (cloudMessage.indexOf("import_rejected:cloud_query") === 0 && replayQueryRetryCount < REPLAY_QUERY_MAX_RETRIES) {
           replayQueryRetryCount += 1;
-          setTimeout(loadReplayFromQueryV1, 60);
+          scheduleReplayQueryRetry();
           return;
         }
+        clearReplayQueryRetryTimer();
         if (cloudMessage.indexOf("cloud_payload_version_mismatch:") === 0) {
           var payloadVersion = normalizePositiveInteger(cloudMessage.split(":")[1]);
           alert(resolveCloudReplayVersionMismatchMessage("payload", CLOUD_REPLAY_PAYLOAD_VERSION, payloadVersion));
@@ -1283,6 +1513,43 @@
       return;
     }
 
+    if (localReplay === "1" && handoffId) {
+      try {
+        var rawLocalReplay = toText(
+          readLocalStorageItem(LOCAL_REPLAY_HANDOFF_STORAGE_PREFIX + handoffId)
+        ).trim();
+        if (!rawLocalReplay) throw new Error("local_replay_payload_missing");
+
+        var localReplayPayload = safeJsonParse(rawLocalReplay);
+        if (!isObject(localReplayPayload)) throw new Error("local_replay_payload_invalid");
+
+        var replayPayload = resolveReplayPayloadForImportV1(localReplayPayload);
+        importReplayPayloadV1(replayPayload, "local_query");
+        syncReplayCompatibilityNotice(localReplayPayload, replayPayload);
+        captureReplayTimelineFromReplayPayload(replayPayload);
+        clearReplayTransientQueryState();
+        removeLocalStorageItem(LOCAL_REPLAY_HANDOFF_STORAGE_PREFIX + handoffId);
+        setReplayPageTitleSuffix("local");
+        clearReplayDiagnosticsPanel();
+        updateReplayUI();
+      } catch (errorLocalReplay) {
+        var localReplayMessage = resolveReplayImportErrorMessage(errorLocalReplay);
+        if (
+          (localReplayMessage === "local_replay_payload_missing" ||
+            localReplayMessage.indexOf("import_rejected:local_query") === 0) &&
+          replayQueryRetryCount < REPLAY_QUERY_MAX_RETRIES
+        ) {
+          replayQueryRetryCount += 1;
+          scheduleReplayQueryRetry();
+          return;
+        }
+        clearReplayTransientQueryState();
+        clearReplayDiagnosticsPanel();
+        alert(t("localLoadFailed") + ": " + localReplayMessage);
+      }
+      return;
+    }
+
     if (localHistoryId) {
       try {
         var record = await resolveLocalHistoryRecordById(localHistoryId);
@@ -1290,11 +1557,13 @@
 
         var replayPayloadLocal = resolveReplayPayloadForImportV1(record);
         importReplayPayloadV1(replayPayloadLocal, "local_history_query");
+        syncReplayCompatibilityNotice(record, replayPayloadLocal);
         captureReplayTimelineFromReplayPayload(replayPayloadLocal);
         if (!resumeReplayPlaybackPreferred(window.game_manager)) {
           startReplayAutoPlayback();
         }
 
+        clearReplayQueryRetryTimer();
         replayQueryRetryCount = 0;
         setReplayPageTitleSuffix("local");
         renderReplayDiagnosticsPanelFromRecord(record);
@@ -1306,9 +1575,10 @@
           replayQueryRetryCount < REPLAY_QUERY_MAX_RETRIES
         ) {
           replayQueryRetryCount += 1;
-          setTimeout(loadReplayFromQueryV1, 60);
+          scheduleReplayQueryRetry();
           return;
         }
+        clearReplayQueryRetryTimer();
         clearReplayDiagnosticsPanel();
         alert(t("localLoadFailed") + ": " + localMessage);
       }
@@ -1819,10 +2089,14 @@
     isDiagonalModeKey: isDiagonalModeKey
   };
 
-  document.addEventListener("DOMContentLoaded", function () {
+  function initializeReplayUiPage() {
+    if (replayUiInitialized) return;
+    replayUiInitialized = true;
+
     syncReplayDocumentTitle();
     startReplayUiTicker();
     clearReplayDiagnosticsPanel();
+    clearReplayCompatibilityNotice();
     resetReplayTimelineMeta();
     stopReplayAutoPlayback();
     setReplayDiagnosticsVisible(false);
@@ -1892,5 +2166,11 @@
     }
     requestReplayRelayout();
     scheduleReplayUiRefresh();
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeReplayUiPage);
+  } else {
+    initializeReplayUiPage();
+  }
 })();

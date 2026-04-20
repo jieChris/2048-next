@@ -246,4 +246,127 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.openDisplay).toBe("flex");
     expect(snapshot.closeDisplay).toBe("none");
   });
+
+  test("index replay export uses transient copy notice and closes on overlay click", async ({
+    page
+  }) => {
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => {
+      const exportReplay = (window as any).exportReplay;
+      return typeof exportReplay === "function" && !!document.getElementById("replay-modal");
+    });
+
+    const snapshot = await page.evaluate(async () => {
+      const exportReplay = (window as any).exportReplay;
+      if (typeof exportReplay !== "function") {
+        return { hasBindings: false };
+      }
+
+      const originalAlert = window.alert;
+      const clipboardDescriptor = Object.getOwnPropertyDescriptor(
+        Object.getPrototypeOf(navigator),
+        "clipboard"
+      );
+      let alertCount = 0;
+      const clipboardWrites: string[] = [];
+
+      window.alert = function () {
+        alertCount += 1;
+      };
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText(text: unknown) {
+            clipboardWrites.push(String(text ?? ""));
+            return Promise.resolve();
+          }
+        }
+      });
+
+      try {
+        exportReplay();
+        await new Promise((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => resolve(null));
+          });
+        });
+
+        const modal = document.getElementById("replay-modal") as HTMLElement | null;
+        const actionBtn = document.getElementById("replay-action-btn") as HTMLButtonElement | null;
+        if (!modal || !actionBtn) {
+          return { hasBindings: false };
+        }
+        const actionText = String(actionBtn.textContent || "");
+
+        actionBtn.click();
+        await Promise.resolve();
+
+        const toast = document.getElementById("replay-export-toast") as HTMLElement | null;
+        const visibleToastStyle = toast ? window.getComputedStyle(toast) : null;
+        const modalOpenDisplay = String(modal.style.display || "");
+        const toastPosition = visibleToastStyle ? visibleToastStyle.position : "";
+        const toastTop = visibleToastStyle ? visibleToastStyle.top : "";
+        const toastBackground = visibleToastStyle ? visibleToastStyle.backgroundColor : "";
+        const toastColor = visibleToastStyle ? visibleToastStyle.color : "";
+        const toastPointerEvents = visibleToastStyle ? visibleToastStyle.pointerEvents : "";
+        const toastOpacity = visibleToastStyle ? visibleToastStyle.opacity : "";
+
+        await new Promise((resolve) => window.setTimeout(resolve, 1850));
+        const hiddenOpacity = toast ? window.getComputedStyle(toast).opacity : null;
+
+        exportReplay();
+        await new Promise((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => resolve(null));
+          });
+        });
+        modal.click();
+        await new Promise((resolve) => window.requestAnimationFrame(() => resolve(null)));
+
+        return {
+          hasBindings: true,
+          alertCount,
+          clipboardWrites,
+          actionText,
+          modalOpenDisplay,
+          modalClosedDisplay: String(modal.style.display || ""),
+          toastText: toast ? String(toast.textContent || "") : "",
+          toastPosition,
+          toastTop,
+          toastBackground,
+          toastColor,
+          toastPointerEvents,
+          toastOpacity,
+          hiddenOpacity
+        };
+      } finally {
+        window.alert = originalAlert;
+        if (clipboardDescriptor) {
+          Object.defineProperty(Object.getPrototypeOf(navigator), "clipboard", clipboardDescriptor);
+        } else {
+          delete (navigator as Navigator & { clipboard?: unknown }).clipboard;
+        }
+      }
+    });
+
+    expect(snapshot.hasBindings).toBe(true);
+    expect(snapshot.alertCount).toBe(0);
+    expect(snapshot.clipboardWrites.length).toBeGreaterThan(0);
+    expect(snapshot.actionText).toBe("复制回放");
+    expect(snapshot.toastText).not.toHaveLength(0);
+    expect(snapshot.toastPosition).toBe("fixed");
+    expect(snapshot.toastTop).toBe("48px");
+    expect(snapshot.toastBackground).toBe("rgb(255, 255, 255)");
+    expect(snapshot.toastColor).toBe("rgb(60, 48, 36)");
+    expect(snapshot.toastPointerEvents).toBe("none");
+    expect(snapshot.toastOpacity).toBe("1");
+    expect(snapshot.hiddenOpacity).toBe("0");
+    expect(snapshot.modalOpenDisplay).toBe("flex");
+    expect(snapshot.modalClosedDisplay).toBe("none");
+  });
 });

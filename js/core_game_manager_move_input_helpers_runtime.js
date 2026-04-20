@@ -1329,34 +1329,41 @@ function resolveRankedDeterministicUnitFloat(seed, stepCount, channel) {
   return createRankedDeterministicHash(seed, stepCount, channel) / 4294967296;
 }
 
+function resolveRankedSpawnFallbackValue(manager) {
+  return (manager && manager.ruleset) === "fibonacci" ? 1 : 2;
+}
+
+function resolveRankedSpawnTable(manager) {
+  if (Array.isArray(manager && manager.spawnTable) && manager.spawnTable.length) {
+    return manager.spawnTable;
+  }
+  return (manager && manager.ruleset) === "fibonacci"
+    ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
+    : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
+}
+
+function resolveRankedSpawnWeight(item) {
+  return Math.max(0, Math.floor(Number(item && item.weight) || 0));
+}
+
+function resolveRankedSpawnValueOrFallback(manager, item) {
+  return Math.floor(Number(item && item.value) || 0) || resolveRankedSpawnFallbackValue(manager);
+}
+
 function resolveRankedDeterministicSpawnValue(manager, seed, stepCount) {
-  var table = Array.isArray(manager && manager.spawnTable) && manager.spawnTable.length
-    ? manager.spawnTable
-    : ((manager && manager.ruleset) === "fibonacci"
-      ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
-      : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }]);
+  var table = resolveRankedSpawnTable(manager);
   var totalWeight = 0;
-  for (var i = 0; i < table.length; i++) {
-    var weight = Math.max(0, Math.floor(Number(table[i] && table[i].weight) || 0));
-    totalWeight += weight;
-  }
-  if (!(totalWeight > 0)) {
-    return (manager && manager.ruleset) === "fibonacci" ? 1 : 2;
-  }
-  var cursor = Math.min(
-    resolveRankedDeterministicUnitFloat(seed, stepCount, "spawn:value"),
-    0.9999999999999999
-  ) * totalWeight;
+  for (var i = 0; i < table.length; i++) totalWeight += resolveRankedSpawnWeight(table[i]);
+  if (!(totalWeight > 0)) return resolveRankedSpawnFallbackValue(manager);
+  var cursor = Math.min(resolveRankedDeterministicUnitFloat(seed, stepCount, "spawn:value"), 0.9999999999999999) * totalWeight;
   var running = 0;
   for (var j = 0; j < table.length; j++) {
     var item = table[j];
-    running += Math.max(0, Math.floor(Number(item && item.weight) || 0));
-    if (cursor < running) {
-      return Math.floor(Number(item && item.value) || 0) || ((manager && manager.ruleset) === "fibonacci" ? 1 : 2);
-    }
+    running += resolveRankedSpawnWeight(item);
+    if (cursor < running) return resolveRankedSpawnValueOrFallback(manager, item);
   }
   var fallback = table[table.length - 1];
-  return Math.floor(Number(fallback && fallback.value) || 0) || ((manager && manager.ruleset) === "fibonacci" ? 1 : 2);
+  return resolveRankedSpawnValueOrFallback(manager, fallback);
 }
 
 function shouldUseRankedDeterministicSpawn(manager) {

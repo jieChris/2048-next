@@ -10,7 +10,23 @@ var V9_VERSE_PNG_CHARSET = [
   "每", "脰", "脺", "酶", "拢", "脴", "脳", "茠", "谩"
 ];
 
+var V9_VERSE_PNG_CHARSET_LEGACY = [
+  " ", "!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/",
+  "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ";", "<", "=", ">", "?",
+  "@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O",
+  "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_",
+  "`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o",
+  "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~",
+  "\u00C7", "\u00FC", "\u00E9", "\u00E2", "\u00E4", "\u00E0", "\u00E5", "\u00E7",
+  "\u00EA", "\u00EB", "\u00E8", "\u00EF", "\u00EE", "\u00EC", "\u00C4", "\u00C5",
+  "\u00C9", "\u00E6", "\u00C6", "\u00F4", "\u00F6", "\u00F2", "\u00FB", "\u00F9",
+  "\u00FF", "\u00D6", "\u00DC", "\u00F8", "\u00A3", "\u00D8", "\u00D7", "\u0192",
+  "\u00E1"
+];
 var v9VersePngMapDictCache = null;
+var v9VerseLegacyPngMapDictCache = null;
+var v9VerseCorruptionRepairMapCache = null;
+var v9VerseCorruptionRepairMaxKeyLength = 0;
 var REPLAY_V1_EXT_MODE_KEY = 1;
 var REPLAY_V1_EXT_RULESET = 2;
 var REPLAY_V1_EXT_CHALLENGE_ID = 3;
@@ -1979,6 +1995,259 @@ function resolveV9VersePngMapDict() {
   return v9VersePngMapDictCache;
 }
 
+function resolveV9VerseLegacyPngMapDict() {
+  if (v9VerseLegacyPngMapDictCache) return v9VerseLegacyPngMapDictCache;
+  var nextMap = {};
+  for (var index = 0; index < V9_VERSE_PNG_CHARSET_LEGACY.length; index++) {
+    nextMap[V9_VERSE_PNG_CHARSET_LEGACY[index]] = index;
+  }
+  v9VerseLegacyPngMapDictCache = nextMap;
+  return v9VerseLegacyPngMapDictCache;
+}
+
+function hasOwnV9VerseChar(pngMapDict, char) {
+  return !!(char && Object.prototype.hasOwnProperty.call(pngMapDict, char));
+}
+
+function shouldSkipV9VerseAsciiChar(char) {
+  if (!char) return true;
+  var code = char.charCodeAt(0);
+  return code >= 32 && code <= 126;
+}
+
+function resolveV9VerseCorruptionRepairDecoder() {
+  if (typeof TextDecoder !== "function") return null;
+  try {
+    return new TextDecoder("gb18030");
+  } catch (_error) {}
+  try {
+    return new TextDecoder("gbk");
+  } catch (_fallbackError) {}
+  return null;
+}
+
+function decodeUtf8BytesAsV9VerseCorruptedText(text, decoder) {
+  if (!(typeof text === "string" && text && decoder && typeof TextEncoder === "function")) return "";
+  try {
+    var decoded = decoder.decode(new TextEncoder().encode(text));
+    if (!(typeof decoded === "string" && decoded) || decoded.indexOf("\uFFFD") !== -1) return "";
+    return decoded;
+  } catch (_error) {
+    return "";
+  }
+}
+
+function createV9VerseRepairSourceCharset() {
+  var source = [];
+  var seen = {};
+
+  function append(chars) {
+    for (var index = 0; index < chars.length; index++) {
+      var char = chars[index];
+      if (!char || Object.prototype.hasOwnProperty.call(seen, char)) continue;
+      seen[char] = true;
+      source.push(char);
+    }
+  }
+
+  append(V9_VERSE_PNG_CHARSET);
+  append(V9_VERSE_PNG_CHARSET_LEGACY);
+  return source;
+}
+
+function resolveV9VerseRepairSourcePriority(sourceText) {
+  var currentMap = resolveV9VersePngMapDict();
+  var score = 0;
+  for (var index = 0; index < sourceText.length; index++) {
+    var char = sourceText.charAt(index);
+    if (hasOwnV9VerseChar(currentMap, char)) {
+      score += 2;
+      continue;
+    }
+    if (shouldSkipV9VerseAsciiChar(char)) score += 1;
+  }
+  return score;
+}
+
+function isValidV9VerseRepairBrokenText(brokenText, sourceText) {
+  return !!(
+    brokenText &&
+    sourceText &&
+    brokenText !== sourceText &&
+    brokenText.indexOf("\uFFFD") === -1
+  );
+}
+
+function createV9VerseRepairEntryRecord(sourceText, priority) {
+  return {
+    value: sourceText,
+    priority: priority
+  };
+}
+
+function resolvePreferredV9VerseRepairEntry(existing, sourceText, priority) {
+  if (!(existing && typeof existing === "object")) {
+    return createV9VerseRepairEntryRecord(sourceText, priority);
+  }
+  if (priority > Number(existing.priority)) {
+    return createV9VerseRepairEntryRecord(sourceText, priority);
+  }
+  if (priority === Number(existing.priority) && existing.value !== sourceText) return null;
+  return existing;
+}
+
+function appendV9VerseRepairEntry(map, brokenText, sourceText) {
+  if (!isValidV9VerseRepairBrokenText(brokenText, sourceText)) return;
+  var priority = resolveV9VerseRepairSourcePriority(sourceText);
+  var existing = Object.prototype.hasOwnProperty.call(map, brokenText) ? map[brokenText] : undefined;
+  map[brokenText] = resolvePreferredV9VerseRepairEntry(existing, sourceText, priority);
+}
+
+function createEmptyV9VerseRepairRuntime() {
+  return {
+    map: {},
+    maxKeyLength: 0
+  };
+}
+
+function cacheV9VerseCorruptionRepairRuntime(runtime) {
+  v9VerseCorruptionRepairMapCache = runtime.map;
+  v9VerseCorruptionRepairMaxKeyLength = runtime.maxKeyLength;
+  return {
+    map: v9VerseCorruptionRepairMapCache,
+    maxKeyLength: v9VerseCorruptionRepairMaxKeyLength
+  };
+}
+
+function registerV9VerseRepairVariants(nextMap, decoder, sourceText) {
+  var oneStep = decodeUtf8BytesAsV9VerseCorruptedText(sourceText, decoder);
+  appendV9VerseRepairEntry(nextMap, oneStep, sourceText);
+  var twoStep = decodeUtf8BytesAsV9VerseCorruptedText(oneStep, decoder);
+  appendV9VerseRepairEntry(nextMap, twoStep, sourceText);
+}
+
+function createV9VerseCorruptionRepairEntries(charset, decoder) {
+  var nextMap = {};
+  for (var firstIndex = 0; firstIndex < charset.length; firstIndex++) {
+    var firstChar = charset[firstIndex];
+    for (var secondIndex = 0; secondIndex < charset.length; secondIndex++) {
+      var secondChar = charset[secondIndex];
+      if (shouldSkipV9VerseAsciiChar(firstChar) && shouldSkipV9VerseAsciiChar(secondChar)) continue;
+      registerV9VerseRepairVariants(nextMap, decoder, firstChar + secondChar);
+    }
+  }
+  return nextMap;
+}
+
+function finalizeV9VerseCorruptionRepairRuntime(nextMap) {
+  var runtime = createEmptyV9VerseRepairRuntime();
+  var keys = Object.keys(nextMap);
+  for (var index = 0; index < keys.length; index++) {
+    var key = keys[index];
+    var value = nextMap[key];
+    if (!(value && typeof value === "object" && typeof value.value === "string" && value.value)) continue;
+    runtime.map[key] = value.value;
+    if (key.length > runtime.maxKeyLength) runtime.maxKeyLength = key.length;
+  }
+  return runtime;
+}
+
+function buildV9VerseCorruptionRepairMap() {
+  if (v9VerseCorruptionRepairMapCache) {
+    return {
+      map: v9VerseCorruptionRepairMapCache,
+      maxKeyLength: v9VerseCorruptionRepairMaxKeyLength
+    };
+  }
+  var decoder = resolveV9VerseCorruptionRepairDecoder();
+  if (!decoder) return cacheV9VerseCorruptionRepairRuntime(createEmptyV9VerseRepairRuntime());
+  var charset = createV9VerseRepairSourceCharset();
+  var nextMap = createV9VerseCorruptionRepairEntries(charset, decoder);
+  return cacheV9VerseCorruptionRepairRuntime(finalizeV9VerseCorruptionRepairRuntime(nextMap));
+}
+
+function hasUnsupportedV9VerseChars(body, currentMap, legacyMap) {
+  for (var index = 0; index < body.length; index++) {
+    var char = body.charAt(index);
+    if (hasOwnV9VerseChar(currentMap, char) || hasOwnV9VerseChar(legacyMap, char)) continue;
+    return true;
+  }
+  return false;
+}
+
+function resolveV9VerseRepairMatch(runtime, body, index) {
+  var matchedKey = "";
+  var replacement = "";
+  var sliceLength = Math.min(runtime.maxKeyLength, body.length - index);
+  while (sliceLength > 1) {
+    var slice = body.substring(index, index + sliceLength);
+    if (Object.prototype.hasOwnProperty.call(runtime.map, slice)) {
+      matchedKey = slice;
+      replacement = runtime.map[slice];
+      break;
+    }
+    sliceLength -= 1;
+  }
+  return {
+    matchedKey: matchedKey,
+    replacement: replacement
+  };
+}
+
+function repairV9VerseCorruptedBodyOnce(body, runtime) {
+  var repaired = "";
+  var changed = false;
+  for (var index = 0; index < body.length;) {
+    var match = resolveV9VerseRepairMatch(runtime, body, index);
+    if (!match.matchedKey) { repaired += body.charAt(index); index += 1; continue; }
+    repaired += match.replacement;
+    index += match.matchedKey.length;
+    changed = true;
+  }
+  return { body: repaired, changed: changed };
+}
+
+function repairV9VerseCorruptedBody(body) {
+  if (typeof body !== "string" || !body) return body;
+  var currentMap = resolveV9VersePngMapDict();
+  var legacyMap = resolveV9VerseLegacyPngMapDict();
+  if (!hasUnsupportedV9VerseChars(body, currentMap, legacyMap)) return body;
+  var runtime = buildV9VerseCorruptionRepairMap();
+  if (!runtime.maxKeyLength) return body;
+  var nextBody = body;
+  for (var pass = 0; pass < 2; pass++) {
+    var repaired = repairV9VerseCorruptedBodyOnce(nextBody, runtime);
+    if (!repaired.changed) break;
+    nextBody = repaired.body;
+    if (!hasUnsupportedV9VerseChars(nextBody, currentMap, legacyMap)) break;
+  }
+  return nextBody;
+}
+
+function scanV9VerseSpecialCharsetUsage(body, currentMap, legacyMap) {
+  var usage = {
+    hasCurrentSpecial: false,
+    hasLegacySpecial: false
+  };
+  for (var index = 0; index < body.length; index++) {
+    var char = body.charAt(index);
+    if (shouldSkipV9VerseAsciiChar(char)) continue;
+    if (hasOwnV9VerseChar(currentMap, char)) usage.hasCurrentSpecial = true;
+    if (hasOwnV9VerseChar(legacyMap, char)) usage.hasLegacySpecial = true;
+    if (usage.hasCurrentSpecial && usage.hasLegacySpecial) break;
+  }
+  return usage;
+}
+
+function resolveV9VersePngMapDictForBody(body) {
+  var currentMap = resolveV9VersePngMapDict();
+  if (typeof body !== "string" || !body) return currentMap;
+  var legacyMap = resolveV9VerseLegacyPngMapDict();
+  var usage = scanV9VerseSpecialCharsetUsage(body, currentMap, legacyMap);
+  if (usage.hasLegacySpecial && !usage.hasCurrentSpecial) return legacyMap;
+  return currentMap;
+}
+
 function startsWithIgnoreCase(text, prefix) {
   if (!(typeof text === "string" && typeof prefix === "string" && prefix)) return false;
   if (text.length < prefix.length) return false;
@@ -2088,8 +2357,9 @@ function decodeV9VerseReplaySteps(body, pngMapDict, currentBoard) {
 function decodeV9VerseReplayEnvelope(trimmed) {
   var body = normalizeV9VerseReplayBody(trimmed);
   if (!body) return null;
+  body = repairV9VerseCorruptedBody(body);
   if (body.length < 2) throw "Invalid replay payload";
-  var pngMapDict = resolveV9VersePngMapDict();
+  var pngMapDict = resolveV9VersePngMapDictForBody(body);
   var startupState = createV9VerseDecodeStartupState(pngMapDict, body);
   var decodedSteps = decodeV9VerseReplaySteps(body, pngMapDict, startupState.currentBoard);
   return {
@@ -2148,8 +2418,9 @@ function decodeFibVerseReplaySteps(body, pngMapDict) {
 function decodeFibVerseReplayEnvelope(trimmed) {
   var body = normalizeFibVerseReplayBody(trimmed);
   if (!body) return null;
+  body = repairV9VerseCorruptedBody(body);
   if (body.length < 2) throw "Invalid replay payload";
-  var pngMapDict = resolveV9VersePngMapDict();
+  var pngMapDict = resolveV9VersePngMapDictForBody(body);
   var startupState = createFibVerseDecodeStartupState(pngMapDict, body);
   var decodedSteps = decodeFibVerseReplaySteps(body, pngMapDict);
   return {

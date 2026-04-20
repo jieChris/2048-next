@@ -36,6 +36,20 @@ body[data-page="replay"] .replay-top-stats {
   gap: 14px;
 }
 
+body[data-page="replay"] .replay-compatibility-banner {
+  width: 620px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  border: 1px solid #e9d9b4;
+  border-radius: 12px;
+  background: #fffdf6;
+  color: #755820;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: left;
+  word-break: break-word;
+}
+
 body[data-page="replay"] .replay-metric-card {
   min-height: 86px;
   border-radius: 18px;
@@ -275,6 +289,15 @@ html[data-night-background="1"] body[data-page="replay"] .replay-metric-value {
   color: #fff4e1;
 }
 
+html[data-night-background="1"] body[data-page="replay"] .replay-compatibility-banner {
+  border-color: rgba(219, 183, 112, 0.42);
+  background: rgba(60, 44, 18, 0.72);
+  color: #f4ddb0;
+  box-shadow:
+    0 12px 28px rgba(2, 6, 16, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
 html[data-night-background="1"] body[data-page="replay"] .replay-progress-wrap {
   background: rgba(18, 29, 46, 0.72);
   border: 1px solid rgba(181, 198, 221, 0.16);
@@ -322,6 +345,7 @@ html[data-night-background="1"] body[data-page="replay"] .replay-singleline-inpu
   }
 
   body[data-page="replay"] .replay-top-stats,
+  body[data-page="replay"] .replay-compatibility-banner,
   body[data-page="replay"] .replay-action-buttons,
   body[data-page="replay"] .replay-diagnostics-panel {
     width: 100%;
@@ -467,6 +491,7 @@ html[data-night-background="1"] body[data-page="replay"] .replay-singleline-inpu
   }
 
   body[data-page="replay"] .replay-progress-wrap,
+  body[data-page="replay"] .replay-compatibility-banner,
   body[data-page="replay"] .replay-action-buttons,
   body[data-page="replay"] .replay-diagnostics-panel {
     width: 100%;

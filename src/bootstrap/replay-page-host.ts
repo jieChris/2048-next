@@ -203,6 +203,7 @@ export function applyReplayExportPageAction(input: {
   replayExportRuntime?: unknown;
   gameManager?: unknown;
   showReplayModal?: unknown;
+  windowLike?: unknown;
   navigatorLike?: unknown;
   documentLike?: unknown;
   alertLike?: unknown;
@@ -221,6 +222,7 @@ export function applyReplayExportPageAction(input: {
   applyExport({
     gameManager: source.gameManager,
     showReplayModal: source.showReplayModal,
+    windowLike: source.windowLike,
     navigatorLike: source.navigatorLike,
     documentLike: source.documentLike,
     alertLike: source.alertLike,
@@ -248,6 +250,7 @@ export function applyReplayExportPageActionFromContext(input: {
     replayExportRuntime: source.replayExportRuntime,
     gameManager,
     showReplayModal: source.showReplayModal,
+    windowLike: source.windowLike,
     navigatorLike: source.navigatorLike,
     documentLike: source.documentLike,
     alertLike: source.alertLike,
