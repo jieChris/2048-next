@@ -23,10 +23,26 @@ var V9_VERSE_PNG_CHARSET_LEGACY = [
   "\u00FF", "\u00D6", "\u00DC", "\u00F8", "\u00A3", "\u00D8", "\u00D7", "\u0192",
   "\u00E1"
 ];
+var LEGACY_VRS_NEW_CHARSET = [
+  "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f",
+  "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v",
+  "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L",
+  "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "\u00C0",
+  "\u00C1", "\u00C2", "\u00C3", "\u00C4", "\u00C5", "\u00C6", "\u00C7", "\u00C8",
+  "\u00C9", "\u00CA", "\u00CB", "\u00CC", "\u00CD", "\u00CE", "\u00CF", "\u00D0",
+  "\u00D1", "\u00D2", "\u00D3", "\u00D4", "\u00D5", "\u00D6", "\u00D7", "\u00D8",
+  "\u00D9", "\u00DA", "\u00DB", "\u00DC", "\u00DD", "\u00DE", "\u00DF", "\u00E0",
+  "\u00E1", "\u00E2", "\u00E3", "\u00E4", "\u00E5", "\u00E6", "\u00E7", "\u00E8",
+  "\u00E9", "\u00EA", "\u00EB", "\u00EC", "\u00ED", "\u00EE", "\u00EF", "\u00F0",
+  "\u00F1", "\u00F2", "\u00F3", "\u00F4", "\u00F5", "\u00F6", "\u00F7", "\u00F8",
+  "\u00F9", "\u00FA", "\u00FB", "\u00FC", "\u00FD", "\u00FE", "\u00FF", "\u00A4",
+  "\u00BE"
+];
 var v9VersePngMapDictCache = null;
 var v9VerseLegacyPngMapDictCache = null;
 var v9VerseCorruptionRepairMapCache = null;
 var v9VerseCorruptionRepairMaxKeyLength = 0;
+var legacyVrsNewCharMapCache = null;
 var REPLAY_V1_EXT_MODE_KEY = 1;
 var REPLAY_V1_EXT_RULESET = 2;
 var REPLAY_V1_EXT_CHALLENGE_ID = 3;
@@ -555,6 +571,191 @@ function setRuntimeReplayDelayForReplay(manager, replayDelay) {
   manager.replayDelay = replayDelay;
 }
 
+function normalizeReplayStateHistoryIndex(value) {
+  var nextIndex = Number(value);
+  if (!Number.isFinite(nextIndex)) return -1;
+  nextIndex = Math.floor(nextIndex);
+  return nextIndex >= 0 ? nextIndex : -1;
+}
+
+function ensureReplayStateHistoryStore(manager) {
+  if (!manager) return [];
+  if (!Array.isArray(manager.replayStateHistory)) manager.replayStateHistory = [];
+  return manager.replayStateHistory;
+}
+
+function clearReplayStateHistory(manager) {
+  if (!manager) return;
+  manager.replayStateHistory = [];
+  manager.replayStateHistoryMaxIndex = -1;
+}
+
+function cloneReplayStateHistoryEntry(manager, entry) {
+  if (!(manager && entry)) return null;
+  try {
+    return manager.clonePlain(entry);
+  } catch (_err) {
+    return null;
+  }
+}
+
+function createReplayStateHistoryEntry(manager) {
+  if (!(manager && typeof createCurrentUndoStackEntrySnapshot === "function")) return null;
+  var snapshot = createCurrentUndoStackEntrySnapshot(manager, {});
+  if (!(snapshot && manager.isNonArrayObject(snapshot))) return null;
+  var entry = cloneReplayStateHistoryEntry(manager, snapshot);
+  if (!(entry && manager.isNonArrayObject(entry))) return null;
+  entry.over = !!manager.over;
+  entry.won = !!manager.won;
+  entry.keepPlaying = !!manager.keepPlaying;
+  entry.shouldClearMessage = true;
+  return entry;
+}
+
+function storeReplayStateHistoryEntry(manager, replayIndex) {
+  if (!manager) return null;
+  var normalizedIndex = normalizeReplayStateHistoryIndex(replayIndex);
+  if (normalizedIndex < 0) return null;
+  var entry = createReplayStateHistoryEntry(manager);
+  if (!(entry && manager.isNonArrayObject(entry))) return null;
+  var store = ensureReplayStateHistoryStore(manager);
+  store[normalizedIndex] = entry;
+  if (!Number.isInteger(manager.replayStateHistoryMaxIndex) || normalizedIndex > manager.replayStateHistoryMaxIndex) {
+    manager.replayStateHistoryMaxIndex = normalizedIndex;
+  }
+  return entry;
+}
+
+function getReplayStateHistoryEntry(manager, replayIndex) {
+  if (!manager) return null;
+  var normalizedIndex = normalizeReplayStateHistoryIndex(replayIndex);
+  if (normalizedIndex < 0) return null;
+  var store = ensureReplayStateHistoryStore(manager);
+  return cloneReplayStateHistoryEntry(manager, store[normalizedIndex]);
+}
+
+function initializeReplayStateHistory(manager) {
+  clearReplayStateHistory(manager);
+  return storeReplayStateHistoryEntry(manager, 0);
+}
+
+function shouldBypassReplayStateHistory(manager) {
+  return !!(manager && manager.replayStateHistoryBypass === true);
+}
+
+function createReplayStateHistoryBypassGuard(manager) {
+  return { hadBypass: shouldBypassReplayStateHistory(manager) };
+}
+
+function beginReplayStateHistoryBypass(manager, guard) {
+  if (!(manager && guard)) return;
+  manager.replayStateHistoryBypass = true;
+}
+
+function restoreReplayStateHistoryBypass(manager, guard) {
+  if (!(manager && guard)) return;
+  manager.replayStateHistoryBypass = guard.hadBypass === true;
+}
+
+function executeWithReplayStateHistoryBypass(manager, callback) {
+  if (!(manager && typeof callback === "function")) return;
+  var guard = createReplayStateHistoryBypassGuard(manager);
+  beginReplayStateHistoryBypass(manager, guard);
+  try {
+    callback();
+  } finally {
+    restoreReplayStateHistoryBypass(manager, guard);
+  }
+}
+
+function collectReplayCurrentTilePositionsByValue(manager) {
+  var buckets = {};
+  if (!(manager && manager.grid && typeof manager.grid.eachCell === "function")) return buckets;
+  manager.grid.eachCell(function (_x, _y, tile) {
+    if (!tile) return;
+    var key = String(Number(tile.value));
+    if (!Array.isArray(buckets[key])) buckets[key] = [];
+    buckets[key].push({ x: Number(tile.x), y: Number(tile.y) });
+  });
+  return buckets;
+}
+
+function takeReplayCurrentTilePositionByValueBucket(bucket, targetX, targetY) {
+  if (!Array.isArray(bucket) || bucket.length === 0) return null;
+  var bestIndex = 0;
+  var bestDistance = Number.POSITIVE_INFINITY;
+  for (var index = 0; index < bucket.length; index++) {
+    var point = bucket[index];
+    if (!(point && Number.isInteger(point.x) && Number.isInteger(point.y))) continue;
+    var distance = Math.abs(point.x - targetX) + Math.abs(point.y - targetY);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  }
+  var picked = bucket.splice(bestIndex, 1);
+  return picked.length ? picked[0] : null;
+}
+
+function createAnimatedReplayBackwardHistoryEntry(manager, targetEntry) {
+  var animatedEntry = cloneReplayStateHistoryEntry(manager, targetEntry);
+  if (!(manager && animatedEntry && Array.isArray(animatedEntry.tiles))) return animatedEntry;
+  var buckets = collectReplayCurrentTilePositionsByValue(manager);
+  for (var tileIndex = 0; tileIndex < animatedEntry.tiles.length; tileIndex++) {
+    var tile = animatedEntry.tiles[tileIndex];
+    if (!(tile && Number.isFinite(tile.value) && Number.isInteger(tile.x) && Number.isInteger(tile.y))) continue;
+    var bucket = buckets[String(Number(tile.value))];
+    var currentPosition = takeReplayCurrentTilePositionByValueBucket(bucket, tile.x, tile.y);
+    if (!currentPosition) continue;
+    tile.previousPosition = {
+      x: currentPosition.x,
+      y: currentPosition.y
+    };
+  }
+  return animatedEntry;
+}
+
+function applyReplayStateHistoryEntry(manager, replayIndex, options) {
+  if (!manager) return false;
+  var normalizedIndex = normalizeReplayStateHistoryIndex(replayIndex);
+  if (normalizedIndex < 0) return false;
+  var opts = manager.isNonArrayObject(options) ? options : {};
+  var entry = opts.entry || getReplayStateHistoryEntry(manager, normalizedIndex);
+  if (!(entry && manager.isNonArrayObject(entry))) return false;
+  if (manager.actuator && typeof manager.actuator.cancelPendingActuation === "function") {
+    manager.actuator.cancelPendingActuation();
+  }
+  applyUndoRestoredTiles(manager, entry);
+  applyUndoRestoreState(manager, entry);
+  manager.replayMode = true;
+  setRuntimeReplayIndexForReplay(manager, normalizedIndex);
+  if (opts.animate !== true && typeof manager.clearTransientTileVisualState === "function") {
+    manager.clearTransientTileVisualState();
+  }
+  if (manager.actuator && typeof manager.actuator.invalidateLayoutCache === "function") {
+    manager.actuator.invalidateLayoutCache();
+  }
+  manager.actuate();
+  return true;
+}
+
+function tryRestoreReplayStateHistoryBackward(manager, stepCount) {
+  if (!(manager && Array.isArray(manager.replayMoves))) return false;
+  var currentIndex = normalizeReplayStateHistoryIndex(manager.replayIndex);
+  if (currentIndex <= 0) return false;
+  var normalizedStepCount = Math.max(1, Math.floor(Number(stepCount) || 0));
+  var targetIndex = Math.max(0, currentIndex - normalizedStepCount);
+  var targetEntry = getReplayStateHistoryEntry(manager, targetIndex);
+  if (!(targetEntry && manager.isNonArrayObject(targetEntry))) return false;
+  if (normalizedStepCount === 1) {
+    targetEntry = createAnimatedReplayBackwardHistoryEntry(manager, targetEntry);
+  }
+  return applyReplayStateHistoryEntry(manager, targetIndex, {
+    entry: targetEntry,
+    animate: normalizedStepCount === 1
+  });
+}
+
 function executeReplaySeekSteps(manager, normalizedTargetIndex) {
   while (manager.replayIndex < normalizedTargetIndex) {
     executePlannedReplayStep(manager);
@@ -597,7 +798,7 @@ function executeReplaySeekWithoutIntermediateActuation(manager, callback) {
   var guard = createReplaySeekActuationGuard(manager);
   beginReplaySeekActuationGuard(manager, guard);
   try {
-    callback();
+    executeWithReplayStateHistoryBypass(manager, callback);
   } finally {
     restoreReplaySeekActuationGuard(manager, guard);
   }
@@ -633,6 +834,10 @@ function stepReplay(manager, delta, options) {
   if (!manager || !manager.replayMoves) return;
   var normalizedDelta = normalizeReplayStepDelta(delta);
   if (normalizedDelta === 0) return;
+  if (normalizedDelta < 0) {
+    pauseReplay(manager);
+    if (tryRestoreReplayStateHistoryBackward(manager, Math.abs(normalizedDelta))) return;
+  }
   if (shouldUseAnimatedReplayStep(manager, normalizedDelta, options)) {
     if (manager.replayIndex >= manager.replayMoves.length) return;
     pauseReplay(manager);
@@ -2248,6 +2453,231 @@ function resolveV9VersePngMapDictForBody(body) {
   return currentMap;
 }
 
+function resolveLegacyVrsNewCharMap() {
+  if (legacyVrsNewCharMapCache) return legacyVrsNewCharMapCache;
+  var nextMap = {};
+  for (var index = 0; index < LEGACY_VRS_NEW_CHARSET.length; index++) {
+    nextMap[LEGACY_VRS_NEW_CHARSET[index]] = index;
+  }
+  legacyVrsNewCharMapCache = nextMap;
+  return legacyVrsNewCharMapCache;
+}
+
+function resolveLegacyVrsVariantConfig(variantKey) {
+  if (variantKey === "2x4") {
+    return {
+      key: "2x4",
+      width: 4,
+      height: 2,
+      modeKey: "board_2x4_pow2_no_undo"
+    };
+  }
+  if (variantKey === "3x3") {
+    return {
+      key: "3x3",
+      width: 3,
+      height: 3,
+      modeKey: "board_3x3_pow2_no_undo"
+    };
+  }
+  if (variantKey === "3x4") {
+    return {
+      key: "3x4",
+      width: 4,
+      height: 3,
+      modeKey: "board_3x4_pow2_no_undo"
+    };
+  }
+  if (variantKey === "4x4") {
+    return {
+      key: "4x4",
+      width: 4,
+      height: 4,
+      modeKey: "standard_4x4_pow2_no_undo"
+    };
+  }
+  return null;
+}
+
+function resolveLegacyVrsModeKey(manager, variantConfig) {
+  if (!variantConfig) return GameManager.DEFAULT_MODE_KEY;
+  var inferred = resolveReplayV1ModeKeyByShape(variantConfig.width, variantConfig.height, false);
+  var fallbackModeKey = variantConfig.modeKey || inferred;
+  if (!(manager && typeof manager.resolveModeConfig === "function")) return fallbackModeKey;
+  if (manager.resolveModeConfig(fallbackModeKey)) return fallbackModeKey;
+  if (manager.resolveModeConfig(inferred)) return inferred;
+  return manager.modeKey || fallbackModeKey;
+}
+
+function createEmptyLegacyVrsBoard(variantConfig) {
+  var width = Number(variantConfig && variantConfig.width);
+  var height = Number(variantConfig && variantConfig.height);
+  var board = [];
+  for (var y = 0; y < height; y++) {
+    var row = [];
+    for (var x = 0; x < width; x++) row.push(0);
+    board.push(row);
+  }
+  return board;
+}
+
+function assertLegacyVrsReplayCellInBounds(variantConfig, x, y, label) {
+  if (!variantConfig) throw "Replay variant config unavailable";
+  if (!Number.isInteger(x) || !Number.isInteger(y)) throw "Invalid " + label + " coordinates";
+  if (x < 0 || x >= variantConfig.width || y < 0 || y >= variantConfig.height) {
+    throw "Invalid " + label + " coordinates";
+  }
+}
+
+function setLegacyVrsBoardSpawn(board, spawn, label) {
+  if (!Array.isArray(board) || !(spawn && Number.isInteger(spawn.x) && Number.isInteger(spawn.y))) {
+    throw "Invalid " + label + " data";
+  }
+  if (!Array.isArray(board[spawn.y]) || board[spawn.y][spawn.x] !== 0) {
+    throw "Invalid " + label + " collision";
+  }
+  board[spawn.y][spawn.x] = Number(spawn.value);
+}
+
+function normalizeLegacyVrsMoveChunk(moveValue, label) {
+  var mapping = [0, 2, 3, 1];
+  var internalDirection = mapping[moveValue];
+  if (!Number.isInteger(internalDirection)) throw "Invalid " + label + " move";
+  return internalDirection;
+}
+
+function decodeLegacyVrsOldSpawnFromToken(token, variantConfig) {
+  var spawnPos = ((token & 3) << 2) + ((token & 15) >> 2);
+  var x = spawnPos % 4;
+  var y = Math.floor(spawnPos / 4);
+  assertLegacyVrsReplayCellInBounds(variantConfig, x, y, "legacy replay spawn");
+  return {
+    x: x,
+    y: y,
+    value: (((token >> 4) & 1) + 1) === 2 ? 4 : 2
+  };
+}
+
+function decodeLegacyVrsOldReplayStepToken(token, variantConfig) {
+  return {
+    internalDirection: normalizeLegacyVrsMoveChunk((token >> 5) & 3, "legacy replay"),
+    spawn: decodeLegacyVrsOldSpawnFromToken(token, variantConfig)
+  };
+}
+
+function resolveLegacyVrsNewTokenValue(charMap, chunk, chunkIndex) {
+  if (!(typeof chunk === "string" && chunk.length === 3)) {
+    throw "Invalid VRS token length at index " + String(chunkIndex);
+  }
+  var value0 = charMap[chunk.charAt(0)];
+  var value1 = charMap[chunk.charAt(1)];
+  var value2 = charMap[chunk.charAt(2)];
+  if (!Number.isInteger(value0) || !Number.isInteger(value1) || !Number.isInteger(value2)) {
+    throw "Invalid VRS token at index " + String(chunkIndex);
+  }
+  return (value0 << 14) + (value1 << 7) + value2;
+}
+
+function decodeLegacyVrsNewSpawnFromBinary(binary, variantConfig) {
+  var spawnValueBit = (binary >> 2) & 3;
+  if (spawnValueBit !== 0 && spawnValueBit !== 1) throw "Invalid VRS spawn value";
+  var x = (binary >> 4) & 7;
+  var y = (binary >> 7) & 7;
+  assertLegacyVrsReplayCellInBounds(variantConfig, x, y, "VRS spawn");
+  return {
+    x: x,
+    y: y,
+    value: spawnValueBit === 1 ? 4 : 2
+  };
+}
+
+function decodeLegacyVrsNewReplayStepBinary(binary, variantConfig) {
+  return {
+    internalDirection: normalizeLegacyVrsMoveChunk(binary & 3, "VRS"),
+    spawn: decodeLegacyVrsNewSpawnFromBinary(binary, variantConfig)
+  };
+}
+
+function createLegacyVrsReplayEnvelope(manager, variantConfig, initialBoard, replayMoves, replaySpawns) {
+  return {
+    kind: "v9rpl",
+    modeKey: resolveLegacyVrsModeKey(manager, variantConfig),
+    initialBoard: initialBoard,
+    replayMoves: replayMoves,
+    replaySpawns: replaySpawns
+  };
+}
+
+function decodeLegacyVrsStructuredTextEnvelope(manager, trimmed) {
+  if (typeof trimmed !== "string" || !trimmed) return null;
+  var match = /^(\d+x\d+)-([^_]*)_(.*)$/.exec(trimmed);
+  if (!match) return null;
+  var variantConfig = resolveLegacyVrsVariantConfig(match[1]);
+  if (!variantConfig) return null;
+  var movesText = typeof match[3] === "string" ? match[3] : "";
+  if (movesText.length < 6) throw "Invalid VRS replay payload";
+  var charMap = resolveLegacyVrsNewCharMap();
+  var initialBoard = createEmptyLegacyVrsBoard(variantConfig);
+  var replayMoves = [];
+  var replaySpawns = [];
+  var tokenIndex = 0;
+  for (var index = 0; index < movesText.length; index += 3) {
+    var chunk = movesText.substring(index, index + 3);
+    if (chunk.length < 3) break;
+    var binary = resolveLegacyVrsNewTokenValue(charMap, chunk, tokenIndex);
+    var decodedStep = decodeLegacyVrsNewReplayStepBinary(binary, variantConfig);
+    if (tokenIndex < 2) {
+      setLegacyVrsBoardSpawn(initialBoard, decodedStep.spawn, "VRS startup");
+    } else {
+      replayMoves.push(decodedStep.internalDirection);
+      replaySpawns.push(decodedStep.spawn);
+    }
+    tokenIndex += 1;
+  }
+  if (tokenIndex < 2) throw "Invalid VRS replay payload";
+  return createLegacyVrsReplayEnvelope(manager, variantConfig, initialBoard, replayMoves, replaySpawns);
+}
+
+function normalizeLegacyVrsOldReplayPayload(trimmed) {
+  if (typeof trimmed !== "string" || !trimmed) return null;
+  var basePrefix = String(GameManager.REPLAY_V9_VERSE_PREFIX || "replay_");
+  var variants = ["2x4", "3x3", "3x4"];
+  for (var index = 0; index < variants.length; index++) {
+    var variantKey = variants[index];
+    var variantPrefix = basePrefix + variantKey;
+    if (!startsWithIgnoreCase(trimmed, variantPrefix)) continue;
+    return {
+      variantKey: variantKey,
+      body: trimmed.substring(variantPrefix.length)
+    };
+  }
+  return null;
+}
+
+function decodeLegacyVrsOldVariantReplayEnvelope(manager, trimmed) {
+  var normalized = normalizeLegacyVrsOldReplayPayload(trimmed);
+  if (!normalized) return null;
+  var variantConfig = resolveLegacyVrsVariantConfig(normalized.variantKey);
+  if (!variantConfig) return null;
+  var body = repairV9VerseCorruptedBody(normalized.body);
+  if (body.length < 2) throw "Invalid replay payload";
+  var pngMapDict = resolveV9VersePngMapDictForBody(body);
+  var initialBoard = createEmptyLegacyVrsBoard(variantConfig);
+  var firstSpawn = decodeLegacyVrsOldSpawnFromToken(decodeV9VerseTokenAt(pngMapDict, body, 0), variantConfig);
+  var secondSpawn = decodeLegacyVrsOldSpawnFromToken(decodeV9VerseTokenAt(pngMapDict, body, 1), variantConfig);
+  setLegacyVrsBoardSpawn(initialBoard, firstSpawn, "legacy replay startup");
+  setLegacyVrsBoardSpawn(initialBoard, secondSpawn, "legacy replay startup");
+  var replayMoves = [];
+  var replaySpawns = [];
+  for (var bodyIndex = 2; bodyIndex < body.length; bodyIndex++) {
+    var token = decodeV9VerseTokenAt(pngMapDict, body, bodyIndex);
+    var decodedStep = decodeLegacyVrsOldReplayStepToken(token, variantConfig);
+    replayMoves.push(decodedStep.internalDirection);
+    replaySpawns.push(decodedStep.spawn);
+  }
+  return createLegacyVrsReplayEnvelope(manager, variantConfig, initialBoard, replayMoves, replaySpawns);
+}
+
 function startsWithIgnoreCase(text, prefix) {
   if (!(typeof text === "string" && typeof prefix === "string" && prefix)) return false;
   if (text.length < prefix.length) return false;
@@ -2781,6 +3211,19 @@ function applyReplayImportActions(manager, payload) {
   if (typeof source.replayMovesV2 === "string") {
     setRuntimeReplayMovesV2ForReplay(manager, source.replayMovesV2);
   }
+  manager.replayRequiresUndoHistory = false;
+  var replayMoves = Array.isArray(source.replayMoves) ? source.replayMoves : [];
+  for (var moveIndex = 0; moveIndex < replayMoves.length; moveIndex++) {
+    var replayAction = replayMoves[moveIndex];
+    if (replayAction === -1) {
+      manager.replayRequiresUndoHistory = true;
+      break;
+    }
+    if (Array.isArray(replayAction) && String(replayAction[0]) === "u") {
+      manager.replayRequiresUndoHistory = true;
+      break;
+    }
+  }
 }
 
 function isStructuredReplayEnvelope(envelope) {
@@ -2810,6 +3253,7 @@ function applyImportedReplayUndoState(manager) {
 
 function startImportedReplayPlayback(manager) {
   setRuntimeReplayIndexForReplay(manager, 0);
+  initializeReplayStateHistory(manager);
   setRuntimeReplayDelayForReplay(manager, 200);
   resumeReplay(manager);
 }
@@ -2868,6 +3312,10 @@ function parseReplayImportEnvelopeFallback(manager, trimmed) {
   if (v1Envelope) return v1Envelope;
   var v9RplBase64Envelope = tryParseV9RplBase64ReplayEnvelope(manager, trimmed);
   if (v9RplBase64Envelope) return v9RplBase64Envelope;
+  var legacyVrsStructuredEnvelope = decodeLegacyVrsStructuredTextEnvelope(manager, trimmed);
+  if (legacyVrsStructuredEnvelope) return legacyVrsStructuredEnvelope;
+  var legacyVrsOldVariantEnvelope = decodeLegacyVrsOldVariantReplayEnvelope(manager, trimmed);
+  if (legacyVrsOldVariantEnvelope) return legacyVrsOldVariantEnvelope;
   var fibVerseEnvelope = decodeFibVerseReplayEnvelope(trimmed);
   if (fibVerseEnvelope) return fibVerseEnvelope;
   var v9VerseEnvelope = decodeV9VerseReplayEnvelope(trimmed);
@@ -3358,6 +3806,7 @@ function executePlannedReplayStep(manager) {
   var dispatchPlan = resolveReplayDispatchPlan(manager, resolvedAction);
   executeReplayDispatchPlan(manager, dispatchPlan);
   setRuntimeReplayIndexForReplay(manager, stepExecutionPlan.nextReplayIndex);
+  storeReplayStateHistoryEntry(manager, stepExecutionPlan.nextReplayIndex);
 }
 
 function createSpawnValueCountResolveArgs(manager, value) {

@@ -361,7 +361,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.modeKey).toBe("standard_4x4_pow2_no_undo");
   });
 
-  test("replay step controls advance replay index deterministically", async ({ page }) => {
+  test("replay step controls advance replay index deterministically and rewinds without seek", async ({ page }) => {
     const response = await page.goto("/replay.html", {
       waitUntil: "domcontentloaded"
     });
@@ -392,21 +392,36 @@ test.describe("Legacy Multi-Page Smoke", () => {
           ok = manager.import("replay_(!\u76f2fC");
         }
         manager.pause();
+        const originalSeek = manager.seek;
+        let seekCallCount = 0;
+        manager.seek = function (...args: unknown[]) {
+          seekCallCount += 1;
+          return originalSeek.apply(this, args);
+        };
         const total = Array.isArray(manager.replayMoves) ? manager.replayMoves.length : 0;
         const before = Number(manager.replayIndex);
         manager.step(1);
         const afterPlusOne = Number(manager.replayIndex);
         manager.step(10);
         const afterPlusTen = Number(manager.replayIndex);
+        const seekCountBeforeBack = seekCallCount;
         manager.step(-1);
         const afterMinusOne = Number(manager.replayIndex);
+        const seekCountAfterMinusOne = seekCallCount;
+        manager.step(-10);
+        const afterMinusTen = Number(manager.replayIndex);
+        const seekCountAfterMinusTen = seekCallCount;
         return {
           ok,
           total,
           before,
           afterPlusOne,
           afterPlusTen,
-          afterMinusOne
+          afterMinusOne,
+          afterMinusTen,
+          seekCountBeforeBack,
+          seekCountAfterMinusOne,
+          seekCountAfterMinusTen
         };
       } finally {
         window.alert = originalAlert;
@@ -418,6 +433,60 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.afterPlusOne).toBe(Math.min(snapshot.before + 1, snapshot.total));
     expect(snapshot.afterPlusTen).toBe(Math.min(snapshot.afterPlusOne + 10, snapshot.total));
     expect(snapshot.afterMinusOne).toBe(Math.max(snapshot.afterPlusTen - 1, 0));
+    expect(snapshot.afterMinusTen).toBe(Math.max(snapshot.afterMinusOne - 10, 0));
+    expect(snapshot.seekCountAfterMinusOne).toBe(snapshot.seekCountBeforeBack);
+    expect(snapshot.seekCountAfterMinusTen).toBe(snapshot.seekCountAfterMinusOne);
+  });
+
+  test("replay forward step after rewind still dispatches real move execution", async ({ page }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.import === "function" && typeof manager.step === "function";
+    });
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const originalAlert = window.alert;
+      window.alert = function (_msg) {};
+      try {
+        let ok = manager.import("replay_(!\u00e4fC");
+        if (!ok) {
+          ok = manager.import("replay_(!\u76f2fC");
+        }
+        manager.pause();
+        const originalMove = manager.move;
+        let moveCallCount = 0;
+        manager.move = function (...args: unknown[]) {
+          moveCallCount += 1;
+          return originalMove.apply(this, args);
+        };
+        manager.step(5);
+        const moveCountAfterWarmup = moveCallCount;
+        manager.step(-2);
+        const moveCountAfterRewind = moveCallCount;
+        manager.step(1);
+        const moveCountAfterForward = moveCallCount;
+        return {
+          ok,
+          moveCountAfterWarmup,
+          moveCountAfterRewind,
+          moveCountAfterForward
+        };
+      } finally {
+        window.alert = originalAlert;
+      }
+    });
+
+    expect(snapshot.ok).toBe(true);
+    expect(snapshot.moveCountAfterWarmup).toBeGreaterThan(0);
+    expect(snapshot.moveCountAfterRewind).toBe(snapshot.moveCountAfterWarmup);
+    expect(snapshot.moveCountAfterForward).toBe(snapshot.moveCountAfterRewind + 1);
   });
 
   test("replay page supports step-timer and fixed-step-ms playback speed", async ({
@@ -616,6 +685,119 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.bannerVisible).toBe(true);
     expect(snapshot.bannerText).toContain("replay_");
     expect(snapshot.bannerText).toContain("v1");
+  });
+
+  test("replay page imports legacy VRS text files and shows compatibility notice", async ({
+    page
+  }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.import === "function";
+    });
+
+    await page.evaluate(() => {
+      (window as any).__replayAlerts = [];
+      window.alert = function (msg?: unknown) {
+        (window as any).__replayAlerts.push(typeof msg === "string" ? msg : String(msg));
+      };
+    });
+
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      page.locator("#import-replay-file-btn").click()
+    ]);
+    await fileChooser.setFiles("tests/fixtures/replays/legacy-vrs-text-replay.vrs");
+
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return Array.isArray(manager?.replayMoves) && manager.replayMoves.length > 0;
+    });
+
+    await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      if (typeof (window as any).pauseReplay === "function") {
+        (window as any).pauseReplay();
+      }
+      if (manager && typeof manager.seek === "function") {
+        manager.seek(1);
+      }
+    });
+
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return Number(manager?.replayIndex) === 1;
+    });
+
+    await page.waitForFunction(() => {
+      const timer = document.getElementById("replay-step-timer");
+      const text = String(timer?.textContent || "").trim();
+      return text !== "" && text !== "0.0000 s";
+    });
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const banner = document.getElementById("replay-compatibility-banner") as HTMLElement | null;
+      const stepTimer = document.getElementById("replay-step-timer") as HTMLElement | null;
+      const style = banner ? window.getComputedStyle(banner) : null;
+      return {
+        replayMovesLength: Array.isArray(manager?.replayMoves) ? manager.replayMoves.length : 0,
+        modeKey: manager?.modeKey || manager?.mode?.key || "",
+        alerts: Array.isArray((window as any).__replayAlerts) ? (window as any).__replayAlerts.slice() : [],
+        bannerVisible: !!banner && style?.display !== "none",
+        bannerText: banner ? banner.textContent || "" : "",
+        stepTimerText: stepTimer ? stepTimer.textContent || "" : ""
+      };
+    });
+
+    expect(snapshot.replayMovesLength).toBe(1);
+    expect(snapshot.modeKey).toBe("standard_4x4_pow2_no_undo");
+    expect(snapshot.alerts).toEqual([]);
+    expect(snapshot.bannerVisible).toBe(true);
+    expect(snapshot.bannerText).toContain(".vrs");
+    expect(snapshot.bannerText).toContain("v1");
+    expect(snapshot.stepTimerText).not.toBe("0.0000 s");
+  });
+
+  test("replay page import file chooser only accepts txt vrs and rpl", async ({ page }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => typeof (window as any).importReplay === "function");
+
+    await page.evaluate(() => {
+      (window as any).__replayOriginalFileInputClick = HTMLInputElement.prototype.click;
+      HTMLInputElement.prototype.click = function () {};
+    });
+
+    await page.locator("#import-replay-file-btn").click();
+
+    const accept = await page.evaluate(() => {
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement | null;
+      return input ? input.accept : null;
+    });
+
+    await page.evaluate(() => {
+      const originalClick = (window as any).__replayOriginalFileInputClick;
+      if (typeof originalClick === "function") {
+        HTMLInputElement.prototype.click = originalClick;
+      }
+      delete (window as any).__replayOriginalFileInputClick;
+      const input = document.querySelector('input[type="file"]');
+      if (input && input.parentNode) {
+        input.parentNode.removeChild(input);
+      }
+    });
+
+    expect(accept).toBe(".txt,.vrs,.rpl");
   });
 
   test("replay page keeps compatibility notice hidden for mainstream v1 replay imports", async ({

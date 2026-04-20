@@ -287,8 +287,34 @@
     return Math.floor(numeric);
   }
 
-  function applyReplayTimelineFromV1Decoded(decoded) {
+  function applyReplayTimelineFromStepDurations(rawDurations, startUnixMs) {
     resetReplayTimelineMeta();
+    if (!Array.isArray(rawDurations) || !rawDurations.length) return;
+
+    var deltas = [];
+    for (var index = 0; index < rawDurations.length; index += 1) {
+      deltas.push(normalizeReplayDeltaMs(rawDurations[index]));
+    }
+
+    var cumulative = [];
+    var running = 0;
+    for (var stepIndex = 0; stepIndex < deltas.length; stepIndex += 1) {
+      running += deltas[stepIndex];
+      cumulative.push(running);
+    }
+
+    replayTimelineMeta.available = true;
+    replayTimelineMeta.stepDurationsMs = deltas;
+    replayTimelineMeta.cumulativeMsByStep = cumulative;
+    replayTimelineMeta.totalMs = running;
+    var normalizedStartUnixMs = Number(startUnixMs);
+    replayTimelineMeta.startUnixMs =
+      Number.isFinite(normalizedStartUnixMs) && normalizedStartUnixMs > 0
+        ? Math.floor(normalizedStartUnixMs)
+        : null;
+  }
+
+  function applyReplayTimelineFromV1Decoded(decoded) {
     if (!decoded || !Array.isArray(decoded.records)) return;
 
     var deltas = [];
@@ -311,23 +337,7 @@
       }
     }
 
-    if (!deltas.length) return;
-
-    var cumulative = [];
-    var running = 0;
-    for (var index = 0; index < deltas.length; index += 1) {
-      running += deltas[index];
-      cumulative.push(running);
-    }
-
-    replayTimelineMeta.available = true;
-    replayTimelineMeta.stepDurationsMs = deltas;
-    replayTimelineMeta.cumulativeMsByStep = cumulative;
-    replayTimelineMeta.totalMs = running;
-    var startUnixMs = Number(decoded.startUnixMs);
-    replayTimelineMeta.startUnixMs = Number.isFinite(startUnixMs) && startUnixMs > 0
-      ? Math.floor(startUnixMs)
-      : null;
+    applyReplayTimelineFromStepDurations(deltas, decoded.startUnixMs);
   }
 
   function resolveReplayV1PrefixForTimeline() {
@@ -372,7 +382,11 @@
     resetReplayTimelineMeta();
     var text = toText(payload).trim();
     var prefix = resolveReplayV1PrefixForTimeline();
-    if (!text || text.indexOf(prefix) !== 0) return;
+    if (!text) return;
+    if (text.indexOf(prefix) !== 0) {
+      captureReplayTimelineFromLegacyVrsText(text);
+      return;
+    }
 
     var codec = window.CoreReplayCodecRuntime;
     if (!(codec && typeof codec.decodeReplayV1Rpl === "function")) return;
@@ -400,6 +414,76 @@
       applyReplayTimelineFromV1Decoded(decoded);
     } catch (_error) {
       resetReplayTimelineMeta();
+    }
+  }
+
+  function resolveLegacyVrsTimelineCharMap() {
+    if (window && typeof window.resolveLegacyVrsNewCharMap === "function") {
+      try {
+        return window.resolveLegacyVrsNewCharMap();
+      } catch (_error) {}
+    }
+
+    var charset = window && window.LEGACY_VRS_NEW_CHARSET;
+    if (!Array.isArray(charset) || !charset.length) return null;
+    var charMap = {};
+    for (var index = 0; index < charset.length; index += 1) {
+      charMap[charset[index]] = index;
+    }
+    return charMap;
+  }
+
+  function resolveLegacyVrsTimelineBinary(charMap, chunk, chunkIndex) {
+    if (!(typeof chunk === "string" && chunk.length === 3)) {
+      throw new Error("invalid_vrs_chunk_length:" + String(chunkIndex));
+    }
+    var value0 = charMap[chunk.charAt(0)];
+    var value1 = charMap[chunk.charAt(1)];
+    var value2 = charMap[chunk.charAt(2)];
+    if (!Number.isInteger(value0) || !Number.isInteger(value1) || !Number.isInteger(value2)) {
+      throw new Error("invalid_vrs_chunk:" + String(chunkIndex));
+    }
+    return (value0 << 14) + (value1 << 7) + value2;
+  }
+
+  function decodeLegacyVrsTimelineDurationMs(binary) {
+    var timeResolution = (binary >> 10) & 7;
+    var timeMultiplier = (binary >> 13) & 255;
+
+    // Some legacy files use the max pair as an unavailable-timing sentinel.
+    if (timeResolution === 7 && timeMultiplier === 255) return 0;
+    if (timeMultiplier <= 0) return 0;
+    return timeMultiplier * Math.pow(10, timeResolution);
+  }
+
+  function captureReplayTimelineFromLegacyVrsText(payload) {
+    var text = toText(payload).trim();
+    var match = /^(?:2x4|3x3|3x4|4x4)-[^_]*_(.*)$/.exec(text);
+    if (!match) return false;
+
+    var movesText = toText(match[1]);
+    if (!movesText) return false;
+
+    var charMap = resolveLegacyVrsTimelineCharMap();
+    if (!charMap) return false;
+
+    try {
+      var deltas = [];
+      var tokenIndex = 0;
+      for (var index = 0; index < movesText.length; index += 3) {
+        var chunk = movesText.substring(index, index + 3);
+        if (chunk.length < 3) break;
+        var binary = resolveLegacyVrsTimelineBinary(charMap, chunk, tokenIndex);
+        if (tokenIndex >= 2) {
+          deltas.push(decodeLegacyVrsTimelineDurationMs(binary));
+        }
+        tokenIndex += 1;
+      }
+      applyReplayTimelineFromStepDurations(deltas, null);
+      return replayTimelineMeta.available;
+    } catch (_error) {
+      resetReplayTimelineMeta();
+      return false;
     }
   }
 
@@ -562,6 +646,9 @@
     if (startsWithIgnoreCase(text, "REPLAY_v9VERSE_")) {
       return createReplayCompatibilityMeta("legacy_v9verse", true);
     }
+    if (/^(?:2x4|3x3|3x4|4x4)-[^_]*_/.test(text)) {
+      return createReplayCompatibilityMeta("legacy_vrs_text", true);
+    }
 
     var firstChar = text.charAt(0);
     if (firstChar !== "{" && firstChar !== "[") return null;
@@ -602,6 +689,9 @@
     }
     if (kind === "legacy_v9verse") {
       return isEn ? "legacy v9 verse replay" : "\u65e7\u7248 v9 verse \u56de\u653e";
+    }
+    if (kind === "legacy_vrs_text") {
+      return isEn ? "legacy Verse VRS text replay (.vrs/.txt)" : "\u65e7\u7248 Verse VRS \u6587\u672c\u56de\u653e\uff08.vrs/.txt\uff09";
     }
     if (kind === "legacy_structured_json" || kind === "legacy_json" || kind === "legacy_json_array") {
       return isEn ? "legacy structured replay (JSON)" : "\u65e7\u7248\u7ed3\u6784\u5316\u56de\u653e\uff08JSON\uff09";
@@ -1097,16 +1187,48 @@
     });
   }
 
+  function decodeReplayTextBytes(bytes, encoding, options) {
+    var normalizedBytes = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || 0);
+    var opts = options && typeof options === "object" ? options : {};
+    var start = Math.max(0, Math.floor(Number(opts.start) || 0));
+    var slice = start > 0 ? normalizedBytes.subarray(start) : normalizedBytes;
+    if (typeof TextDecoder === "function") {
+      return new TextDecoder(encoding, { fatal: opts.fatal === true }).decode(slice);
+    }
+    var text = "";
+    for (var index = 0; index < slice.length; index++) {
+      text += String.fromCharCode(slice[index] & 255);
+    }
+    return text;
+  }
+
+  function decodeReplayTextBuffer(buffer) {
+    var bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer || 0);
+    if (!bytes.length) return "";
+    if (bytes.length >= 2 && bytes[0] === 255 && bytes[1] === 254) {
+      return decodeReplayTextBytes(bytes, "utf-16le", { fatal: true, start: 2 });
+    }
+    if (bytes.length >= 2 && bytes[0] === 254 && bytes[1] === 255) {
+      return decodeReplayTextBytes(bytes, "utf-16be", { fatal: true, start: 2 });
+    }
+    if (bytes.length >= 3 && bytes[0] === 239 && bytes[1] === 187 && bytes[2] === 191) {
+      return decodeReplayTextBytes(bytes, "utf-8", { fatal: true, start: 3 });
+    }
+    var encodings = ["utf-8", "gb18030", "big5", "shift_jis", "euc-kr"];
+    for (var index = 0; index < encodings.length; index++) {
+      try {
+        return decodeReplayTextBytes(bytes, encodings[index], { fatal: true });
+      } catch (_decodeErr) {}
+    }
+    try {
+      return decodeReplayTextBytes(bytes, "iso-8859-1", { fatal: false });
+    } catch (_latinErr) {}
+    return decodeReplayTextBytes(bytes, "utf-8", { fatal: false });
+  }
+
   function readReplayFileAsText(file) {
-    return new Promise(function (resolve, reject) {
-      var reader = new FileReader();
-      reader.onload = function () {
-        resolve(typeof reader.result === "string" ? reader.result : "");
-      };
-      reader.onerror = function () {
-        reject(reader.error || new Error("file_read_failed"));
-      };
-      reader.readAsText(file, "utf-8");
+    return readReplayFileAsArrayBuffer(file).then(function (buffer) {
+      return decodeReplayTextBuffer(buffer);
     });
   }
 
@@ -1173,7 +1295,7 @@
     }
 
     input.type = "file";
-    input.accept = ".rpl,.txt,.json,text/plain,application/octet-stream";
+    input.accept = ".txt,.vrs,.rpl";
     input.style.display = "none";
     input.addEventListener("change", function () {
       var files = input.files;
@@ -1841,51 +1963,11 @@
     manager.actuate();
   }
 
-  function executeReplayAnimatedBackwardStep(manager) {
-    var replayMoves = Array.isArray(manager.replayMoves) ? manager.replayMoves : [];
-    if (!replayMoves.length) return false;
-
-    var currentIndex = Math.floor(Number(manager.replayIndex) || 0);
-    if (currentIndex <= 0) return false;
-
-    var targetIndex = currentIndex - 1;
-    if (targetIndex <= 0) {
-      manager.seek(0);
-      return true;
-    }
-
-    var anchorIndex = Math.max(0, targetIndex - 1);
-    var replayContainer = resolveReplayContainerForStepAnimation();
-    if (replayContainer && replayContainer.classList) {
-      replayContainer.classList.add("replay-step-preseek-hidden");
-    }
-
-    manager.seek(anchorIndex);
-    window.requestAnimationFrame(function () {
-      window.requestAnimationFrame(function () {
-        if (replayContainer && replayContainer.classList) {
-          replayContainer.classList.remove("replay-step-preseek-hidden");
-        }
-        replayPauseBridgeSuppressed = true;
-        try {
-          executeReplayAnimatedForwardStep(manager);
-          forceReplayActuateAfterStep(manager);
-        } finally {
-          replayPauseBridgeSuppressed = false;
-        }
-        scheduleReplayUiRefresh();
-        scheduleReplayUiTick(true);
-      });
-    });
-    return true;
-  }
-
   function replayUiStepReplay(delta) {
     if (!window.game_manager || typeof window.game_manager.step !== "function") return;
     stopReplayAutoPlayback();
     if (window.game_manager.pause) window.game_manager.pause();
     cancelReplayPendingRelayout();
-    if (delta === -1 && executeReplayAnimatedBackwardStep(window.game_manager)) return;
 
     replayPauseBridgeSuppressed = true;
     try {

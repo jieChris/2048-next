@@ -574,6 +574,7 @@ function resolveUndoHistoryModeConfigForMove(manager) {
 
 function shouldCaptureUndoHistoryForMove(manager) {
   if (!manager) return false;
+  if (manager.replayMode && manager.replayRequiresUndoHistory === true) return true;
   var modeConfig = resolveUndoHistoryModeConfigForMove(manager);
   if (modeConfig && typeof modeConfig.undo_enabled === "boolean") {
     return modeConfig.undo_enabled;
