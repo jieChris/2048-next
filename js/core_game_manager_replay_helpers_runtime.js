@@ -43,6 +43,9 @@ var v9VerseLegacyPngMapDictCache = null;
 var v9VerseCorruptionRepairMapCache = null;
 var v9VerseCorruptionRepairMaxKeyLength = 0;
 var legacyVrsNewCharMapCache = null;
+var REPLAY_STATE_HISTORY_WINDOW = 512;
+var REPLAY_SEEK_CHECKPOINT_INTERVAL = 64;
+var REPLAY_SEEK_TAIL_HISTORY_LENGTH = 16;
 var REPLAY_V1_EXT_MODE_KEY = 1;
 var REPLAY_V1_EXT_RULESET = 2;
 var REPLAY_V1_EXT_CHALLENGE_ID = 3;
@@ -588,6 +591,55 @@ function clearReplayStateHistory(manager) {
   if (!manager) return;
   manager.replayStateHistory = [];
   manager.replayStateHistoryMaxIndex = -1;
+  manager.replayStateHistoryPruneCursor = 0;
+}
+
+function ensureReplaySeekCheckpointStore(manager) {
+  if (!manager) return [];
+  if (!Array.isArray(manager.replaySeekCheckpointHistory)) manager.replaySeekCheckpointHistory = [];
+  return manager.replaySeekCheckpointHistory;
+}
+
+function clearReplaySeekCheckpointStore(manager) {
+  if (!manager) return;
+  manager.replaySeekCheckpointHistory = [];
+  manager.replaySeekCheckpointMaxIndex = -1;
+}
+
+function resolveReplaySeekCheckpointInterval(manager) {
+  if (!manager) return REPLAY_SEEK_CHECKPOINT_INTERVAL;
+  var replayMoves = Array.isArray(manager.replayMoves) ? manager.replayMoves : [];
+  if (replayMoves.length >= 50000) return 128;
+  if (replayMoves.length >= 10000) return 64;
+  return 32;
+}
+
+function shouldStoreReplaySeekCheckpointAtIndex(manager, replayIndex) {
+  var normalizedIndex = normalizeReplayStateHistoryIndex(replayIndex);
+  if (normalizedIndex < 0) return false;
+  if (normalizedIndex === 0) return true;
+  var replayMoves = Array.isArray(manager && manager.replayMoves) ? manager.replayMoves : [];
+  if (replayMoves.length > 0 && normalizedIndex === replayMoves.length) return true;
+  var interval = resolveReplaySeekCheckpointInterval(manager);
+  if (!(interval > 0)) return false;
+  return normalizedIndex % interval === 0;
+}
+
+function pruneReplayStateHistoryStore(manager, latestIndex) {
+  if (!manager) return;
+  var normalizedIndex = normalizeReplayStateHistoryIndex(latestIndex);
+  if (normalizedIndex < 0) return;
+  var pruneBefore = normalizedIndex - REPLAY_STATE_HISTORY_WINDOW;
+  if (pruneBefore <= 0) return;
+  var store = ensureReplayStateHistoryStore(manager);
+  var cursor = Number.isInteger(manager.replayStateHistoryPruneCursor)
+    ? manager.replayStateHistoryPruneCursor
+    : 0;
+  if (cursor < 0) cursor = 0;
+  for (var index = cursor; index < pruneBefore; index++) {
+    if (store[index] !== undefined) store[index] = undefined;
+  }
+  manager.replayStateHistoryPruneCursor = pruneBefore;
 }
 
 function cloneReplayStateHistoryEntry(manager, entry) {
@@ -612,17 +664,61 @@ function createReplayStateHistoryEntry(manager) {
   return entry;
 }
 
-function storeReplayStateHistoryEntry(manager, replayIndex) {
+function storeReplaySeekCheckpointEntry(manager, replayIndex, options) {
   if (!manager) return null;
   var normalizedIndex = normalizeReplayStateHistoryIndex(replayIndex);
   if (normalizedIndex < 0) return null;
-  var entry = createReplayStateHistoryEntry(manager);
+  var opts = manager.isNonArrayObject(options) ? options : {};
+  if (opts.force !== true && !shouldStoreReplaySeekCheckpointAtIndex(manager, normalizedIndex)) return null;
+  var entry = opts.entry || createReplayStateHistoryEntry(manager);
+  if (!(entry && manager.isNonArrayObject(entry))) return null;
+  entry = cloneReplayStateHistoryEntry(manager, entry);
+  if (!(entry && manager.isNonArrayObject(entry))) return null;
+  var store = ensureReplaySeekCheckpointStore(manager);
+  store[normalizedIndex] = entry;
+  if (!Number.isInteger(manager.replaySeekCheckpointMaxIndex) || normalizedIndex > manager.replaySeekCheckpointMaxIndex) {
+    manager.replaySeekCheckpointMaxIndex = normalizedIndex;
+  }
+  return entry;
+}
+
+function getReplaySeekCheckpointEntry(manager, replayIndex) {
+  if (!manager) return null;
+  var normalizedIndex = normalizeReplayStateHistoryIndex(replayIndex);
+  if (normalizedIndex < 0) return null;
+  var store = ensureReplaySeekCheckpointStore(manager);
+  return cloneReplayStateHistoryEntry(manager, store[normalizedIndex]);
+}
+
+function resolveNearestReplaySeekCheckpointIndex(manager, replayIndex) {
+  if (!manager) return -1;
+  var normalizedIndex = normalizeReplayStateHistoryIndex(replayIndex);
+  if (normalizedIndex < 0) return -1;
+  var store = ensureReplaySeekCheckpointStore(manager);
+  if (store[normalizedIndex]) return normalizedIndex;
+  var interval = resolveReplaySeekCheckpointInterval(manager);
+  if (!(interval > 0)) return store[0] ? 0 : -1;
+  var candidate = normalizedIndex - (normalizedIndex % interval);
+  for (var index = candidate; index >= 0; index -= interval) {
+    if (store[index]) return index;
+  }
+  return store[0] ? 0 : -1;
+}
+
+function storeReplayStateHistoryEntry(manager, replayIndex, options) {
+  if (!manager) return null;
+  var normalizedIndex = normalizeReplayStateHistoryIndex(replayIndex);
+  if (normalizedIndex < 0) return null;
+  var opts = manager.isNonArrayObject(options) ? options : {};
+  if (opts.allowBypass !== true && shouldBypassReplayStateHistory(manager)) return null;
+  var entry = opts.entry || createReplayStateHistoryEntry(manager);
   if (!(entry && manager.isNonArrayObject(entry))) return null;
   var store = ensureReplayStateHistoryStore(manager);
   store[normalizedIndex] = entry;
   if (!Number.isInteger(manager.replayStateHistoryMaxIndex) || normalizedIndex > manager.replayStateHistoryMaxIndex) {
     manager.replayStateHistoryMaxIndex = normalizedIndex;
   }
+  pruneReplayStateHistoryStore(manager, normalizedIndex);
   return entry;
 }
 
@@ -636,7 +732,10 @@ function getReplayStateHistoryEntry(manager, replayIndex) {
 
 function initializeReplayStateHistory(manager) {
   clearReplayStateHistory(manager);
-  return storeReplayStateHistoryEntry(manager, 0);
+  clearReplaySeekCheckpointStore(manager);
+  var entry = storeReplayStateHistoryEntry(manager, 0, { allowBypass: true });
+  if (entry) storeReplaySeekCheckpointEntry(manager, 0, { entry: entry, force: true });
+  return entry;
 }
 
 function shouldBypassReplayStateHistory(manager) {
@@ -661,6 +760,17 @@ function executeWithReplayStateHistoryBypass(manager, callback) {
   if (!(manager && typeof callback === "function")) return;
   var guard = createReplayStateHistoryBypassGuard(manager);
   beginReplayStateHistoryBypass(manager, guard);
+  try {
+    callback();
+  } finally {
+    restoreReplayStateHistoryBypass(manager, guard);
+  }
+}
+
+function executeWithReplayStateHistoryCapture(manager, callback) {
+  if (!(manager && typeof callback === "function")) return;
+  var guard = createReplayStateHistoryBypassGuard(manager);
+  manager.replayStateHistoryBypass = false;
   try {
     callback();
   } finally {
@@ -756,6 +866,91 @@ function tryRestoreReplayStateHistoryBackward(manager, stepCount) {
   });
 }
 
+function resolveReplaySeekAnchorPlan(manager, normalizedTargetIndex, options) {
+  var opts = manager && manager.isNonArrayObject(options) ? options : {};
+  var preferExecution = opts.preferExecution === true;
+  var currentIndex = normalizeReplayStateHistoryIndex(manager && manager.replayIndex);
+  if (currentIndex === normalizedTargetIndex) {
+    return {
+      kind: "current",
+      replayIndex: currentIndex,
+      isExact: true
+    };
+  }
+  if (!(preferExecution && currentIndex >= 0 && currentIndex < normalizedTargetIndex)) {
+    var exactHistoryEntry = getReplayStateHistoryEntry(manager, normalizedTargetIndex);
+    if (exactHistoryEntry) {
+      return {
+        kind: "history",
+        replayIndex: normalizedTargetIndex,
+        entry: exactHistoryEntry,
+        isExact: true
+      };
+    }
+    var exactCheckpointEntry = getReplaySeekCheckpointEntry(manager, normalizedTargetIndex);
+    if (exactCheckpointEntry) {
+      return {
+        kind: "checkpoint",
+        replayIndex: normalizedTargetIndex,
+        entry: exactCheckpointEntry,
+        isExact: true
+      };
+    }
+  }
+
+  var bestKind = "restart";
+  var bestIndex = -1;
+  var bestEntry = null;
+
+  if (currentIndex >= 0 && currentIndex < normalizedTargetIndex) {
+    bestKind = "current";
+    bestIndex = currentIndex;
+  }
+
+  var checkpointIndex = resolveNearestReplaySeekCheckpointIndex(manager, normalizedTargetIndex);
+  if (checkpointIndex >= 0 && checkpointIndex < normalizedTargetIndex && checkpointIndex > bestIndex) {
+    var checkpointEntry = getReplaySeekCheckpointEntry(manager, checkpointIndex);
+    if (checkpointEntry) {
+      bestKind = "checkpoint";
+      bestIndex = checkpointIndex;
+      bestEntry = checkpointEntry;
+    }
+  }
+
+  return {
+    kind: bestKind,
+    replayIndex: bestIndex >= 0 ? bestIndex : 0,
+    entry: bestEntry,
+    isExact: false
+  };
+}
+
+function applyReplaySeekAnchorPlan(manager, normalizedTargetIndex, anchorPlan) {
+  if (!manager) return;
+  if (!manager.isNonArrayObject(anchorPlan)) return;
+  if (anchorPlan.kind === "current") return;
+  if ((anchorPlan.kind === "history" || anchorPlan.kind === "checkpoint") && anchorPlan.entry) {
+    applyReplayStateHistoryEntry(manager, anchorPlan.replayIndex, {
+      entry: anchorPlan.entry
+    });
+    return;
+  }
+  var normalizedRewindPlan = resolveReplaySeekRewindPlan(manager, normalizedTargetIndex);
+  var restartPlan = resolveReplaySeekRestartPlan(manager, normalizedRewindPlan);
+  applyReplaySeekRestartPlan(manager, restartPlan);
+}
+
+function executeReplaySeekStepsWithTailHistory(manager, normalizedTargetIndex, anchorPlan) {
+  if (!manager) return;
+  var anchorIndex = normalizeReplayStateHistoryIndex(anchorPlan && anchorPlan.replayIndex);
+  if (anchorIndex < 0) anchorIndex = 0;
+  var tailStartIndex = Math.max(anchorIndex, normalizedTargetIndex - REPLAY_SEEK_TAIL_HISTORY_LENGTH);
+  executeReplaySeekSteps(manager, tailStartIndex);
+  executeWithReplayStateHistoryCapture(manager, function () {
+    executeReplaySeekSteps(manager, normalizedTargetIndex);
+  });
+}
+
 function executeReplaySeekSteps(manager, normalizedTargetIndex) {
   while (manager.replayIndex < normalizedTargetIndex) {
     executePlannedReplayStep(manager);
@@ -804,16 +999,20 @@ function executeReplaySeekWithoutIntermediateActuation(manager, callback) {
   }
 }
 
-function seekReplay(manager, targetIndex) {
+function seekReplay(manager, targetIndex, options) {
   if (!manager) return;
   var normalizedTargetIndex = normalizeReplaySeekTargetIndex(manager, targetIndex);
+  var anchorPlan = resolveReplaySeekAnchorPlan(manager, normalizedTargetIndex, options);
+  if (anchorPlan.isExact === true && anchorPlan.kind === "current") return;
   executeReplaySeekWithoutIntermediateActuation(manager, function () {
     pauseReplay(manager);
-    var normalizedRewindPlan = resolveReplaySeekRewindPlan(manager, normalizedTargetIndex);
-    var restartPlan = resolveReplaySeekRestartPlan(manager, normalizedRewindPlan);
-    applyReplaySeekRestartPlan(manager, restartPlan);
-    executeReplaySeekSteps(manager, normalizedTargetIndex);
+    applyReplaySeekAnchorPlan(manager, normalizedTargetIndex, anchorPlan);
+    if (manager.replayIndex < normalizedTargetIndex) {
+      executeReplaySeekStepsWithTailHistory(manager, normalizedTargetIndex, anchorPlan);
+    }
   });
+  storeReplayStateHistoryEntry(manager, normalizedTargetIndex, { allowBypass: true });
+  storeReplaySeekCheckpointEntry(manager, normalizedTargetIndex);
 }
 
 function normalizeReplayStepDelta(delta) {
@@ -844,7 +1043,9 @@ function stepReplay(manager, delta, options) {
     executePlannedReplayStep(manager);
     return;
   }
-  manager.seek(manager.replayIndex + normalizedDelta);
+  manager.seek(manager.replayIndex + normalizedDelta, {
+    preferExecution: normalizedDelta > 0
+  });
 }
 
 function keepPlaying(manager) {
@@ -3807,6 +4008,7 @@ function executePlannedReplayStep(manager) {
   executeReplayDispatchPlan(manager, dispatchPlan);
   setRuntimeReplayIndexForReplay(manager, stepExecutionPlan.nextReplayIndex);
   storeReplayStateHistoryEntry(manager, stepExecutionPlan.nextReplayIndex);
+  storeReplaySeekCheckpointEntry(manager, stepExecutionPlan.nextReplayIndex);
 }
 
 function createSpawnValueCountResolveArgs(manager, value) {

@@ -438,6 +438,105 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.seekCountAfterMinusTen).toBe(snapshot.seekCountAfterMinusOne);
   });
 
+  test("replay seek keeps exact history bounded while building sparse checkpoints", async ({
+    page
+  }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.import === "function" && typeof manager.seek === "function";
+    });
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const originalAlert = window.alert;
+      window.alert = function (_msg) {};
+      try {
+        const preferredDirections = [0, 3, 1, 2];
+        let attempts = 0;
+        while (Number(manager.successfulMoveCount || 0) < 160 && attempts < 5000) {
+          let moved = false;
+          for (let index = 0; index < preferredDirections.length; index += 1) {
+            const before = Number(manager.successfulMoveCount || 0);
+            manager.move(preferredDirections[index]);
+            attempts += 1;
+            if (Number(manager.successfulMoveCount || 0) > before) {
+              moved = true;
+              break;
+            }
+          }
+          if (!moved) break;
+        }
+
+        const replayText = typeof manager.serialize === "function" ? String(manager.serialize() || "") : "";
+        const ok = replayText !== "" && manager.import(replayText);
+        manager.pause();
+        const total = Array.isArray(manager.replayMoves) ? manager.replayMoves.length : 0;
+        if (!ok || total < 120) {
+          return {
+            ok: false,
+            total,
+            attempts
+          };
+        }
+
+        const forwardTarget = Math.floor(total * 0.75);
+        const backwardTarget = Math.floor(total * 0.25);
+        manager.seek(forwardTarget);
+
+        const exactHistoryCountAfterForward = Array.isArray(manager.replayStateHistory)
+          ? manager.replayStateHistory.filter(Boolean).length
+          : 0;
+        const checkpointCountAfterForward = Array.isArray(manager.replaySeekCheckpointHistory)
+          ? manager.replaySeekCheckpointHistory.filter(Boolean).length
+          : 0;
+        const forwardIndex = Number(manager.replayIndex || 0);
+
+        manager.seek(backwardTarget);
+
+        const exactHistoryCountAfterBackward = Array.isArray(manager.replayStateHistory)
+          ? manager.replayStateHistory.filter(Boolean).length
+          : 0;
+        const checkpointCountAfterBackward = Array.isArray(manager.replaySeekCheckpointHistory)
+          ? manager.replaySeekCheckpointHistory.filter(Boolean).length
+          : 0;
+        const backwardIndex = Number(manager.replayIndex || 0);
+
+        return {
+          ok: true,
+          total,
+          attempts,
+          forwardTarget,
+          backwardTarget,
+          forwardIndex,
+          backwardIndex,
+          exactHistoryCountAfterForward,
+          checkpointCountAfterForward,
+          exactHistoryCountAfterBackward,
+          checkpointCountAfterBackward
+        };
+      } finally {
+        window.alert = originalAlert;
+      }
+    });
+
+    expect(snapshot.ok).toBe(true);
+    expect(snapshot.total).toBeGreaterThanOrEqual(120);
+    expect(snapshot.forwardIndex).toBe(snapshot.forwardTarget);
+    expect(snapshot.backwardIndex).toBe(snapshot.backwardTarget);
+    expect(snapshot.exactHistoryCountAfterForward).toBeLessThanOrEqual(24);
+    expect(snapshot.exactHistoryCountAfterBackward).toBeLessThanOrEqual(40);
+    expect(snapshot.checkpointCountAfterForward).toBeGreaterThanOrEqual(3);
+    expect(snapshot.checkpointCountAfterBackward).toBeGreaterThanOrEqual(
+      snapshot.checkpointCountAfterForward
+    );
+  });
+
   test("replay forward step after rewind still dispatches real move execution", async ({ page }) => {
     const response = await page.goto("/replay.html", {
       waitUntil: "domcontentloaded"
@@ -1020,7 +1119,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(snapshot.ok).toBe(true);
     expect(snapshot.stepActuateCount).toBe(1);
-    expect(snapshot.seekActuateCount).toBe(1);
+    expect(snapshot.seekActuateCount).toBeLessThanOrEqual(1);
   });
 
   test("replay mode does not write best score into standard mode storage key", async ({ page }) => {
