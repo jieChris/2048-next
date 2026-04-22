@@ -261,7 +261,7 @@
   }
 
   function formatReplayStartTime(startUnixMs) {
-    var numeric = Number(startUnixMs);
+    var numeric = normalizeReplayStartUnixMs(startUnixMs);
     if (!Number.isFinite(numeric) || numeric <= 0) return "";
     var date = new Date(numeric);
     if (Number.isNaN(date.getTime())) return "";
@@ -278,6 +278,15 @@
       ":" +
       pad2(date.getSeconds())
     );
+  }
+
+  function normalizeReplayStartUnixMs(startUnixMs) {
+    var numeric = Number(startUnixMs);
+    if (!Number.isFinite(numeric) || numeric <= 0) return null;
+    if (numeric < 100000000000) {
+      return Math.floor(numeric * 1000);
+    }
+    return Math.floor(numeric);
   }
 
   function resetReplayTimelineMeta() {
@@ -314,11 +323,7 @@
     replayTimelineMeta.stepDurationsMs = deltas;
     replayTimelineMeta.cumulativeMsByStep = cumulative;
     replayTimelineMeta.totalMs = running;
-    var normalizedStartUnixMs = Number(startUnixMs);
-    replayTimelineMeta.startUnixMs =
-      Number.isFinite(normalizedStartUnixMs) && normalizedStartUnixMs > 0
-        ? Math.floor(normalizedStartUnixMs)
-        : null;
+    replayTimelineMeta.startUnixMs = normalizeReplayStartUnixMs(startUnixMs);
   }
 
   function applyReplayTimelineFromV1Decoded(decoded) {

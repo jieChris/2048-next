@@ -1085,6 +1085,186 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.replayMovesLength).toBe(0);
   });
 
+  test("live v1 replay serialization keeps start timestamp within backend-safe integer range", async ({
+    browser
+  }) => {
+    const cases = [
+      { url: "/2048.html", expectedModeKey: "standard_4x4_pow2_no_undo" },
+      { url: "/play.html?mode_key=board_3x3_pow2_no_undo", expectedModeKey: "board_3x3_pow2_no_undo" }
+    ];
+
+    for (const testCase of cases) {
+      const page = await browser.newPage();
+      const response = await page.goto(testCase.url, {
+        waitUntil: "domcontentloaded"
+      });
+      expect(response).not.toBeNull();
+      expect(response?.ok()).toBeTruthy();
+      await expect(page.locator("body")).toBeVisible();
+      await page.waitForFunction(() => {
+        const manager = (window as any).game_manager;
+        const codec = (window as any).CoreReplayCodecRuntime;
+        return (
+          !!manager &&
+          typeof manager.move === "function" &&
+          typeof manager.serialize === "function" &&
+          !!codec &&
+          typeof codec.decodeReplayV1Rpl === "function"
+        );
+      });
+
+      const snapshot = await page.evaluate(() => {
+        const manager = (window as any).game_manager;
+        const codec = (window as any).CoreReplayCodecRuntime;
+        const prefix =
+          ((window as any).GameManager && (window as any).GameManager.REPLAY_V1_RPL_BASE64_PREFIX) ||
+          "REPLAY_v1RPL_B64_";
+
+        const trySuccessfulMove = () => {
+          const startLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+          for (const direction of [0, 1, 2, 3]) {
+            manager.move(direction);
+            const nextLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+            if (nextLength > startLength) return true;
+          }
+          return false;
+        };
+
+        for (let i = 0; i < 6; i += 1) {
+          if (trySuccessfulMove()) break;
+        }
+
+        const replayText = String(manager.serialize());
+        const encoded = replayText.startsWith(prefix) ? replayText.slice(prefix.length) : "";
+        const binary = window.atob(encoded);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i) & 255;
+        const decoded = codec.decodeReplayV1Rpl(bytes);
+        return {
+          modeKey: String(manager.modeKey || ""),
+          replayTextHead: replayText.slice(0, 24),
+          startUnixMs: decoded ? decoded.startUnixMs : null
+        };
+      });
+
+      expect(snapshot.modeKey).toBe(testCase.expectedModeKey);
+      expect(snapshot.replayTextHead).toContain("REPLAY_v1RPL_B64_");
+      expect(
+        snapshot.startUnixMs === null ||
+          (Number.isInteger(snapshot.startUnixMs) && Number(snapshot.startUnixMs) > 0 && Number(snapshot.startUnixMs) <= 0xffffffff)
+      ).toBe(true);
+
+      await page.close();
+    }
+  });
+
+  test("live v1 replay roundtrip preserves terminal board state for 4x4 and 3x3", async ({
+    browser
+  }) => {
+    const cases = [
+      { url: "/2048.html", expectedModeKey: "standard_4x4_pow2_no_undo" },
+      { url: "/play.html?mode_key=board_3x3_pow2_no_undo", expectedModeKey: "board_3x3_pow2_no_undo" }
+    ];
+
+    for (const testCase of cases) {
+      const page = await browser.newPage();
+      const response = await page.goto(testCase.url, {
+        waitUntil: "domcontentloaded"
+      });
+      expect(response).not.toBeNull();
+      expect(response?.ok()).toBeTruthy();
+      await expect(page.locator("body")).toBeVisible();
+      await page.waitForFunction(() => {
+        const manager = (window as any).game_manager;
+        return (
+          !!manager &&
+          typeof manager.move === "function" &&
+          typeof manager.serialize === "function" &&
+          typeof manager.import === "function" &&
+          typeof manager.seek === "function"
+        );
+      });
+
+      const snapshot = await page.evaluate(() => {
+        const manager = (window as any).game_manager;
+        const originalAlert = window.alert;
+        window.alert = function (_msg) {};
+        const toBoardRows = () => {
+          const columns = manager && manager.grid && Array.isArray(manager.grid.cells) ? manager.grid.cells : [];
+          const width = Array.isArray(columns) ? columns.length : 0;
+          const height = width > 0 && Array.isArray(columns[0]) ? columns[0].length : 0;
+          const rows = [];
+          for (let y = 0; y < height; y += 1) {
+            const row = [];
+            for (let x = 0; x < width; x += 1) {
+              const column = Array.isArray(columns[x]) ? columns[x] : [];
+              const cell = column[y];
+              row.push(cell ? Math.floor(Number(cell.value) || 0) : 0);
+            }
+            rows.push(row);
+          }
+          return rows;
+        };
+        const trySuccessfulMove = () => {
+          const startLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+          for (const direction of [0, 1, 2, 3]) {
+            manager.move(direction);
+            const nextLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+            if (nextLength > startLength) return true;
+          }
+          return false;
+        };
+
+        try {
+          let attempts = 0;
+          while (Number(manager.successfulMoveCount || 0) < 24 && attempts < 160) {
+            if (!trySuccessfulMove()) break;
+            attempts += 1;
+          }
+
+          const replayText = String(manager.serialize() || "");
+          const expectedScore = Math.floor(Number(manager.score) || 0);
+          const expectedMoves = Math.floor(Number(manager.successfulMoveCount) || 0);
+          const expectedBoard = toBoardRows();
+          const ok = replayText !== "" && manager.import(replayText);
+          manager.pause();
+          const total = Array.isArray(manager.replayMoves) ? manager.replayMoves.length : 0;
+          if (!ok || total !== expectedMoves) {
+            return {
+              ok: false,
+              total,
+              expectedMoves,
+              modeKey: String(manager.modeKey || "")
+            };
+          }
+          manager.seek(total);
+          return {
+            ok: true,
+            modeKey: String(manager.modeKey || ""),
+            total,
+            expectedScore,
+            actualScore: Math.floor(Number(manager.score) || 0),
+            expectedMoves,
+            actualMoves: Math.floor(Number(manager.successfulMoveCount) || 0),
+            expectedBoard,
+            actualBoard: toBoardRows()
+          };
+        } finally {
+          window.alert = originalAlert;
+        }
+      });
+
+      expect(snapshot.ok).toBe(true);
+      expect(snapshot.modeKey).toBe(testCase.expectedModeKey);
+      expect(snapshot.total).toBe(snapshot.expectedMoves);
+      expect(snapshot.actualScore).toBe(snapshot.expectedScore);
+      expect(snapshot.actualMoves).toBe(snapshot.expectedMoves);
+      expect(snapshot.actualBoard).toEqual(snapshot.expectedBoard);
+
+      await page.close();
+    }
+  });
+
   test("5x5 mode serializes replay as v1 with per-step deltaMs", async ({ page }) => {
     const response = await page.goto("/play.html?mode_key=board_5x5_pow2_no_undo", {
       waitUntil: "domcontentloaded"

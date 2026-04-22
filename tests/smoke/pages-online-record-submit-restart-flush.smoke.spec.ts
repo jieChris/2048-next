@@ -577,4 +577,133 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.calls).toBe(0);
     expect(snapshot.payload).toBeNull();
   });
+
+  test("online record submit dedupes identical replay payloads even if client record id changes", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "42");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+      window.localStorage.removeItem("online_last_submit_signature_v1");
+      window.localStorage.removeItem("online_last_record_submit_signature_v1");
+      window.localStorage.removeItem("online_pending_record_submit_signature_v1");
+
+      (window as any).GAME_API_REQUEST_TIMEOUT_MS = 120;
+      (window as any).__recordSubmitCalls = 0;
+      (window as any).__recordSubmitPayloads = [];
+
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const url = typeof input === "string" ? input : String((input as Request).url || input);
+        if (url.includes("/records")) {
+          let parsedPayload: Record<string, unknown> | null = null;
+          if (init && typeof init.body === "string" && init.body.length > 0) {
+            try {
+              const parsed = JSON.parse(init.body);
+              parsedPayload =
+                parsed && typeof parsed === "object"
+                  ? (parsed as Record<string, unknown>)
+                  : null;
+            } catch (_err) {
+              parsedPayload = null;
+            }
+          }
+          (window as any).__recordSubmitCalls = Number((window as any).__recordSubmitCalls || 0) + 1;
+          ((window as any).__recordSubmitPayloads as Array<Record<string, unknown> | null>).push(
+            parsedPayload
+          );
+          return new Response(JSON.stringify({ success: true, id: "rec-smoke-dedupe-1" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        if (url.includes("/score")) {
+          return new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        if (url.includes("/leaderboard")) {
+          return new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        return originalFetch(input, init);
+      };
+    });
+
+    const response = await page.goto("/play.html?mode_key=board_3x3_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && !!(window as any).OnlineLeaderboardRuntime;
+    });
+
+    await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const trySuccessfulMove = (): boolean => {
+        const startLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+        for (const direction of [0, 1, 2, 3]) {
+          manager.move(direction);
+          const nextLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+          if (nextLength > startLength) return true;
+        }
+        return false;
+      };
+
+      for (let i = 0; i < 6; i += 1) {
+        if (manager.over) break;
+        trySuccessfulMove();
+      }
+
+      const stableReplay = String(manager.serialize() || "");
+      manager.serialize = () => stableReplay;
+      manager.over = true;
+      manager.won = false;
+      manager.keepPlaying = false;
+      manager.score = Math.max(512, Number(manager.score || 0));
+      window.dispatchEvent(new Event("online"));
+    });
+
+    await page.waitForFunction(() => Number((window as any).__recordSubmitCalls || 0) >= 1, null, {
+      timeout: 4000
+    });
+
+    await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      manager.clientRecordId = "rec_reassigned_for_duplicate_probe";
+      window.dispatchEvent(new Event("online"));
+    });
+
+    await page.waitForTimeout(1200);
+
+    const snapshot = await page.evaluate(() => ({
+      calls: Number((window as any).__recordSubmitCalls || 0),
+      payloads: Array.isArray((window as any).__recordSubmitPayloads)
+        ? (window as any).__recordSubmitPayloads.map((item: any) => ({
+            clientRecordId: item ? String(item.client_record_id || "") : "",
+            replayString: item ? String(item.replay_string || "") : ""
+          }))
+        : [],
+      lastRecordSignature: String(
+        window.localStorage.getItem("online_last_record_submit_signature_v1") || ""
+      )
+    }));
+
+    expect(snapshot.calls).toBe(1);
+    expect(snapshot.payloads).toHaveLength(1);
+    expect(snapshot.payloads[0]?.clientRecordId.length).toBeGreaterThan(0);
+    expect(snapshot.payloads[0]?.replayString.length).toBeGreaterThan(0);
+    expect(snapshot.lastRecordSignature.length).toBeGreaterThan(0);
+  });
 });

@@ -3286,6 +3286,7 @@ function createReplayV1ExtRecords(session) {
 }
 
 function createReplayV1SerializeInput(session) {
+  var startUnixMs = normalizeReplayV1SerializedStartUnixMs(session && session.start_unix_ms);
   var extRecords = createReplayV1ExtRecords(session);
   var sourceRecords = Array.isArray(session.records) ? session.records.slice() : [];
   return {
@@ -3293,8 +3294,19 @@ function createReplayV1SerializeInput(session) {
     height: session.board_height,
     initTiles: session.init_tiles.slice(),
     records: extRecords.concat(sourceRecords),
-    startUnixMs: Number(session.start_unix_ms)
+    startUnixMs: startUnixMs
   };
+}
+
+function normalizeReplayV1SerializedStartUnixMs(rawStartUnixMs) {
+  var parsed = Math.floor(Number(rawStartUnixMs));
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  if (parsed <= 4294967295) return parsed;
+  var seconds = Math.floor(parsed / 1000);
+  if (Number.isFinite(seconds) && seconds > 0 && seconds <= 4294967295) {
+    return seconds;
+  }
+  return null;
 }
 
 function shouldSerializeReplayAsFibVerse(manager) {

@@ -1816,21 +1816,38 @@ async function refreshLeaderboard(modeLike) {
     return "";
   }
 
+  function buildReplaySubmitFingerprint(replayStringLike) {
+    var text = toText(replayStringLike);
+    if (!text) return "replay:none";
+    var hash = 2166136261;
+    for (var index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return "replay:" + (hash >>> 0).toString(16) + ":" + String(text.length);
+  }
+
   function buildSubmitSignature(manager, score) {
     var modeKey = manager && manager.modeKey ? String(manager.modeKey) : getCurrentModeKey() || "unknown";
     var seed = manager && manager.initialSeed != null ? String(manager.initialSeed) : "seedless";
-    var clientRecordId = resolveManagerClientRecordIdForSubmit(manager) || "recordless";
-    return [modeKey, seed, clientRecordId, String(score)].join("|");
+    var replayFingerprint = buildReplaySubmitFingerprint("");
+    if (manager && typeof manager.serialize === "function") {
+      try {
+        replayFingerprint = buildReplaySubmitFingerprint(manager.serialize());
+      } catch (_err) {
+        replayFingerprint = buildReplaySubmitFingerprint("");
+      }
+    }
+    return [modeKey, seed, replayFingerprint, String(score)].join("|");
   }
 
   function buildRecordSubmitSignature(manager, payload) {
     var modeKey = toText(payload && payload.mode_key).trim() || (manager && manager.modeKey ? String(manager.modeKey) : "unknown");
     var seed = manager && manager.initialSeed != null ? String(manager.initialSeed) : "seedless";
-    var clientRecordId = toText(payload && payload.client_record_id).trim() || resolveManagerClientRecordIdForSubmit(manager) || "recordless";
     var score = Math.floor(Number(payload && payload.score) || 0);
     var moveCount = Array.isArray(manager && manager.moveHistory) ? manager.moveHistory.length : 0;
-    var replayLength = toText(payload && payload.replay_string).length;
-    return [modeKey, seed, clientRecordId, String(score), String(moveCount), String(replayLength)].join("|");
+    var replayFingerprint = buildReplaySubmitFingerprint(payload && payload.replay_string);
+    return [modeKey, seed, replayFingerprint, String(score), String(moveCount)].join("|");
   }
 
   async function maybeSubmitScoreOnGameOver() {
