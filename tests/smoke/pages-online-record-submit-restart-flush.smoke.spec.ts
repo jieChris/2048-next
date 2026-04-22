@@ -241,7 +241,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.lastRecordSignature.length).toBeGreaterThan(0);
     expect(snapshot.payloadModeKey).toBe("capped_4x4_pow2_64_no_undo");
     expect(snapshot.payloadMode.length).toBeGreaterThan(0);
-    expect(snapshot.payloadEndReason).toBe("win_stop");
+    expect(snapshot.payloadEndReason).toBe("game_over");
     expect(snapshot.payloadHasReplayString).toBe(true);
   });
 

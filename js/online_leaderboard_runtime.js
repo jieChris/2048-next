@@ -1,4 +1,4 @@
-ï»¿(function (global) {
+(function (global) {
   "use strict";
 
   if (!global || !global.document) return;
@@ -260,7 +260,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       }
     }
     if (global && typeof global.alert === "function") {
-      global.alert("æ–°çš„æ’ä½å¯¹å±€å°šæœªå‡†å¤‡å¥½ï¼Œè¯·ç¨åå†è¯•ã€‚");
+      global.alert("ĞÂµÄÅÅÎ»¶Ô¾ÖÉĞÎ´×¼±¸ºÃ£¬ÇëÉÔºóÔÙÊÔ¡£");
     }
     return false;
   }
@@ -461,8 +461,8 @@ function shouldAutoLoadOnlineLeaderboard() {
     var summary = byId("timer-leaderboard-summary");
     if (!summary) return;
     summary.textContent = "TOP 10";
-    summary.setAttribute("data-label", lang === "en" ? "LEADERBOARD" : "æ’è¡Œæ¦œ");
-    summary.setAttribute("title", lang === "en" ? "Leaderboard" : "æ’è¡Œæ¦œ");
+    summary.setAttribute("data-label", lang === "en" ? "LEADERBOARD" : "ÅÅĞĞ°ñ");
+    summary.setAttribute("title", lang === "en" ? "Leaderboard" : "ÅÅĞĞ°ñ");
   }
 
   function resolveRankTileFontSize(rankText) {
@@ -581,7 +581,7 @@ function shouldAutoLoadOnlineLeaderboard() {
   function formatLeaderboardNameAndScore(item, lang) {
     var source = item && typeof item === "object" ? item : {};
     var nickname = normalizeLeaderboardNickname(source.nickname);
-    if (!nickname) nickname = lang === "en" ? "Anonymous" : "åŒ¿å";
+    if (!nickname) nickname = lang === "en" ? "Anonymous" : "ÄäÃû";
     var scoreValue = Math.floor(Number(source.score) || 0);
     return nickname + "-" + String(scoreValue);
   }
@@ -631,7 +631,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
     var myRankText = "--";
     var myIdentityAndScore = formatLeaderboardNameAndScore({
-      nickname: getNickname() || (lang === "en" ? "You" : "æˆ‘"),
+      nickname: getNickname() || (lang === "en" ? "You" : "ÎÒ"),
       score: 0
     }, lang);
 
@@ -1544,7 +1544,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       best_tile: bestTile,
       duration_ms: resolveManagerDurationMs(manager),
       ended_at: new Date().toISOString(),
-      end_reason: resolveSessionEndReason(manager) || "game_over",
+      end_reason: resolveRecordSubmitEndReason(manager) || "game_over",
       final_board: resolveManagerFinalBoard(manager),
       min_steps_2048: minStepStats.min_steps_2048,
       min_steps_4096: minStepStats.min_steps_4096,
@@ -1587,7 +1587,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function getUserInfo(userId) {
     var safeUserId = Math.floor(Number(userId) || 0);
-    if (safeUserId <= 0) return Promise.resolve({ error: "æ— æ•ˆçš„ç”¨æˆ·ID" });
+    if (safeUserId <= 0) return Promise.resolve({ error: "ÎŞĞ§µÄÓÃ»§ID" });
     return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), { method: "GET" });
   }
 
@@ -1600,9 +1600,9 @@ function shouldAutoLoadOnlineLeaderboard() {
       };
     }
     return {
-      label: "ä¸»é¢˜è®¾ç½®",
-      palette: "ä¸»é¢˜è®¾ç½®",
-      account: "è´¦å·ä¸­å¿ƒ"
+      label: "Ö÷ÌâÉèÖÃ",
+      palette: "Ö÷ÌâÉèÖÃ",
+      account: "ÕËºÅÖĞĞÄ"
     };
   }
 
@@ -1691,7 +1691,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!host) return;
     host.innerHTML = "";
     if (!Array.isArray(list) || list.length === 0) {
-      host.textContent = getLanguage() === "en" ? "No online leaderboard data." : "æš‚æ— åœ¨çº¿æ’è¡Œæ¦œæ•°æ®";
+      host.textContent = getLanguage() === "en" ? "No online leaderboard data." : "ÔİÎŞÔÚÏßÅÅĞĞ°ñÊı¾İ";
       return;
     }
 
@@ -1700,7 +1700,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       var row = createEl("div", "mode-intro-leaderboard-row", "");
       row.appendChild(createEl("span", "mode-intro-leaderboard-rank", "#" + String(i + 1)));
       var profileUrl = buildUserProfileUrl(item.user_id, item.nickname);
-      var displayNickname = normalizeLeaderboardNickname(item.nickname) || (getLanguage() === "en" ? "Anonymous" : "åŒ¿å");
+      var displayNickname = normalizeLeaderboardNickname(item.nickname) || (getLanguage() === "en" ? "Anonymous" : "ÄäÃû");
       if (profileUrl) {
         var nickLink = createEl("a", "mode-intro-leaderboard-nick mode-intro-leaderboard-nick-link", displayNickname);
         nickLink.setAttribute("href", profileUrl);
@@ -1803,6 +1803,10 @@ async function refreshLeaderboard(modeLike) {
     return shouldTreatWinStopAsTerminalFallback(manager) ? "win_stop" : "";
   }
 
+  function resolveRecordSubmitEndReason(manager) {
+    return isSessionTerminated(manager) ? "game_over" : "";
+  }
+
   function resolveManagerClientRecordIdForSubmit(manager) {
     var current = toText(manager && manager.clientRecordId).trim();
     if (current) return current;
@@ -1863,8 +1867,8 @@ async function refreshLeaderboard(modeLike) {
       return;
     }
 
-    var errorText = toText(result && result.error ? result.error : "åˆ†æ•°æäº¤å¤±è´¥");
-    if (errorText.indexOf("æœªæˆæƒ") >= 0 || errorText.toLowerCase().indexOf("token") >= 0) {
+    var errorText = toText(result && result.error ? result.error : "·ÖÊıÌá½»Ê§°Ü");
+    if (errorText.indexOf("Î´ÊÚÈ¨") >= 0 || errorText.toLowerCase().indexOf("token") >= 0) {
       clearAuth();
     }
   }
@@ -1912,8 +1916,8 @@ async function refreshLeaderboard(modeLike) {
       return;
     }
 
-    var errorText = toText(result && result.error ? result.error : "è®°å½•æäº¤å¤±è´¥");
-    if (errorText.indexOf("æœªæˆæƒ") >= 0 || errorText.toLowerCase().indexOf("token") >= 0) {
+    var errorText = toText(result && result.error ? result.error : "¼ÇÂ¼Ìá½»Ê§°Ü");
+    if (errorText.indexOf("Î´ÊÚÈ¨") >= 0 || errorText.toLowerCase().indexOf("token") >= 0) {
       clearAuth();
       return;
     }
