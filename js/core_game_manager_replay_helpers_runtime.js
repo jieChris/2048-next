@@ -1510,8 +1510,29 @@ function writeAutoSubmitResultRecord(manager, payload) {
 function resolveAutoSubmitSkippedReason(manager) {
   if (!manager) return "manager_missing";
   if (manager.replayMode) return "replay_mode";
-  if (!manager.over) return "not_game_over";
+  if (!isTerminalSessionForPersistence(manager)) return "not_game_over";
   return null;
+}
+
+function shouldAutoSubmitCompletedWinState(manager) {
+  if (!manager || manager.over || !manager.won || manager.keepPlaying) return false;
+  var modeConfig = manager.modeConfig && typeof manager.modeConfig === "object" ? manager.modeConfig : null;
+  var maxTile = Math.floor(Number(modeConfig && modeConfig.max_tile));
+  if (Number.isInteger(maxTile) && maxTile > 0) return true;
+  var specialRules = modeConfig && modeConfig.special_rules && typeof modeConfig.special_rules === "object"
+    ? modeConfig.special_rules
+    : (manager.specialRules && typeof manager.specialRules === "object" ? manager.specialRules : null);
+  return !!(specialRules && specialRules.enforce_max_tile === true);
+}
+
+function isTerminalSessionForPersistence(manager) {
+  if (!manager || manager.replayMode) return false;
+  return !!manager.over || shouldAutoSubmitCompletedWinState(manager);
+}
+
+function resolveTerminalSessionEndReason(manager) {
+  if (!isTerminalSessionForPersistence(manager)) return "";
+  return manager.over ? "game_over" : "win_stop";
 }
 
 function writeAutoSubmitSkippedResult(manager, skippedReason) {
@@ -1562,9 +1583,10 @@ function buildAutoSubmitPayloadParityFields(paritySnapshot) {
 }
 
 function buildAutoSubmitPayloadClientFields(windowLike, manager) {
+  var endReason = resolveTerminalSessionEndReason(manager);
   return {
     client_version: (windowLike && windowLike.GAME_CLIENT_VERSION) || "1.8",
-    end_reason: manager.over ? "game_over" : "win_stop"
+    end_reason: endReason || "game_over"
   };
 }
 

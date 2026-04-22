@@ -11,6 +11,8 @@
   var STORAGE_PENDING_RECORD_SUBMIT_KEY = "online_pending_record_submit_signature_v1";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var RECORD_SUBMIT_PENDING_TTL_MS = 10 * 60 * 1000;
+  var RECORD_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
+  var RECORD_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
   var RANKED_CHECKPOINT_SAVE_DEBOUNCE_MS = 1500;
   var RANKED_CHECKPOINT_MIN_SAVE_INTERVAL_MS = 3000;
   var RANKED_CHECKPOINT_LOCAL_MIRROR_KEY_PREFIX = "ranked_checkpoint_local_mirror:v1:";
@@ -299,43 +301,81 @@ function shouldAutoLoadOnlineLeaderboard() {
     safeRemoveStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY);
   }
 
-  function readPendingRecordSubmitSignature() {
+  function readPendingRecordSubmitState() {
     var raw = toText(safeGetStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY)).trim();
-    if (!raw) return "";
+    if (!raw) return null;
     var now = Date.now();
     try {
       var parsed = JSON.parse(raw);
       if (parsed && typeof parsed === "object") {
         var signature = toText(parsed.signature).trim();
-        var createdAt = Math.floor(Number(parsed.createdAt) || 0);
+        var createdAt = Math.max(0, Math.floor(Number(parsed.createdAt) || 0));
+        var lastAttemptAt = Math.max(0, Math.floor(Number(parsed.lastAttemptAt || createdAt) || 0));
+        var retryCount = Math.max(0, Math.floor(Number(parsed.retryCount) || 0));
         if (!signature) {
           clearPendingRecordSubmitSignature();
-          return "";
+          return null;
         }
         if (createdAt > 0 && now - createdAt > RECORD_SUBMIT_PENDING_TTL_MS) {
           clearPendingRecordSubmitSignature();
-          return "";
+          return null;
         }
-        return signature;
+        return {
+          signature: signature,
+          createdAt: createdAt > 0 ? createdAt : (lastAttemptAt > 0 ? lastAttemptAt : now),
+          lastAttemptAt: lastAttemptAt,
+          retryCount: retryCount
+        };
       }
     } catch (_err) {
-      if (raw.indexOf("|") >= 0) return raw;
+      if (raw.indexOf("|") >= 0) {
+        return {
+          signature: raw,
+          createdAt: 0,
+          lastAttemptAt: 0,
+          retryCount: 0
+        };
+      }
     }
     clearPendingRecordSubmitSignature();
-    return "";
+    return null;
   }
 
-  function writePendingRecordSubmitSignature(signature) {
+  function readPendingRecordSubmitSignature() {
+    var state = readPendingRecordSubmitState();
+    return state ? state.signature : "";
+  }
+
+  function resolvePendingRecordSubmitRetryDelayMs(state) {
+    var retryCount = Math.max(0, Math.floor(Number(state && state.retryCount) || 0));
+    var delayMs = RECORD_SUBMIT_PENDING_RETRY_BASE_MS * Math.pow(2, retryCount);
+    if (!Number.isFinite(delayMs) || delayMs <= 0) delayMs = RECORD_SUBMIT_PENDING_RETRY_BASE_MS;
+    if (delayMs > RECORD_SUBMIT_PENDING_RETRY_MAX_MS) delayMs = RECORD_SUBMIT_PENDING_RETRY_MAX_MS;
+    return delayMs;
+  }
+
+  function shouldDeferPendingRecordSubmitRetry(state) {
+    if (!state) return false;
+    var lastAttemptAt = Math.max(0, Math.floor(Number(state.lastAttemptAt) || 0));
+    if (lastAttemptAt <= 0) return false;
+    return (Date.now() - lastAttemptAt) < resolvePendingRecordSubmitRetryDelayMs(state);
+  }
+
+  function writePendingRecordSubmitSignature(signature, previousState) {
     var text = toText(signature).trim();
     if (!text) {
       clearPendingRecordSubmitSignature();
       return;
     }
+    var now = Date.now();
+    var previous = previousState && toText(previousState.signature).trim() === text ? previousState : null;
     safeSetStorage(
       STORAGE_PENDING_RECORD_SUBMIT_KEY,
       JSON.stringify({
         signature: text,
-        createdAt: Date.now()
+        createdAt: previous && Number(previous.createdAt) > 0 ? Math.floor(Number(previous.createdAt)) : now,
+        lastAttemptAt: now,
+        retryCount: previous ? Math.max(0, Math.floor(Number(previous.retryCount) || 0)) + 1 : 0
       })
     );
   }
@@ -1484,7 +1524,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!manager) return null;
     var modeKey = toText(modeLike || manager.modeKey || manager.mode).trim();
     var modeBucket = resolveLeaderboardMode(modeKey);
-    if (!modeKey || !modeBucket) return null;
+    if (!modeKey) return null;
 
     var replayPayload = resolveRecordReplayPayload(manager);
     if (!replayPayload.replayString) return null;
@@ -1494,8 +1534,9 @@ function shouldAutoLoadOnlineLeaderboard() {
     var clientRecordId = resolveManagerClientRecordIdForSubmit(manager);
 
     return {
-      mode: modeBucket,
+      mode: modeBucket || toText(manager.mode).trim() || modeKey,
       mode_key: modeKey,
+      mode_bucket: modeBucket || undefined,
       ranked_session_token: shouldUseRankedCheckpoint(manager)
         ? (resolveRankedSessionTokenForManager(manager) || null)
         : null,
@@ -1503,7 +1544,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       best_tile: bestTile,
       duration_ms: resolveManagerDurationMs(manager),
       ended_at: new Date().toISOString(),
-      end_reason: "game_over",
+      end_reason: resolveSessionEndReason(manager) || "game_over",
       final_board: resolveManagerFinalBoard(manager),
       min_steps_2048: minStepStats.min_steps_2048,
       min_steps_4096: minStepStats.min_steps_4096,
@@ -1733,9 +1774,33 @@ async function refreshLeaderboard(modeLike) {
     return true;
   }
 
+  function shouldTreatWinStopAsTerminalFallback(manager) {
+    if (!manager || manager.over || !manager.won || manager.keepPlaying) return false;
+    var modeConfig = manager.modeConfig && typeof manager.modeConfig === "object" ? manager.modeConfig : null;
+    var maxTile = Math.floor(Number(modeConfig && modeConfig.max_tile));
+    if (Number.isInteger(maxTile) && maxTile > 0) return true;
+    var specialRules = modeConfig && modeConfig.special_rules && typeof modeConfig.special_rules === "object"
+      ? modeConfig.special_rules
+      : (manager.specialRules && typeof manager.specialRules === "object" ? manager.specialRules : null);
+    return !!(specialRules && specialRules.enforce_max_tile === true);
+  }
+
   function isSessionTerminated(manager) {
     if (!manager) return false;
-    return !!manager.over;
+    if (typeof isTerminalSessionForPersistence === "function") {
+      return !!isTerminalSessionForPersistence(manager);
+    }
+    return !!manager.over || shouldTreatWinStopAsTerminalFallback(manager);
+  }
+
+  function resolveSessionEndReason(manager) {
+    if (!manager) return "";
+    if (typeof resolveTerminalSessionEndReason === "function") {
+      var sharedReason = toText(resolveTerminalSessionEndReason(manager)).trim();
+      if (sharedReason) return sharedReason;
+    }
+    if (manager.over) return "game_over";
+    return shouldTreatWinStopAsTerminalFallback(manager) ? "win_stop" : "";
   }
 
   function resolveManagerClientRecordIdForSubmit(manager) {
@@ -1776,6 +1841,9 @@ async function refreshLeaderboard(modeLike) {
     var score = Math.floor(Number(manager.score) || 0);
     if (!(score > 0)) return;
 
+    var submitModeKey = getCurrentModeKey();
+    if (!resolveLeaderboardMode(submitModeKey)) return;
+
     var signature = buildSubmitSignature(manager, score);
     var lastSignature = toText(safeGetStorage(STORAGE_LAST_SUBMIT_KEY));
     if (signature && signature === lastSignature) return;
@@ -1783,7 +1851,6 @@ async function refreshLeaderboard(modeLike) {
     submitLock = true;
     var result = null;
     try {
-      var submitModeKey = getCurrentModeKey();
       result = await submitScore(buildScoreSubmitPayload(manager, submitModeKey, score), null, INTERNAL_SUBMIT_TOKEN);
     } finally {
       submitLock = false;
@@ -1820,14 +1887,15 @@ async function refreshLeaderboard(modeLike) {
 
     var signature = buildRecordSubmitSignature(manager, payload);
     var lastSignature = toText(safeGetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY));
-    var pendingSignature = readPendingRecordSubmitSignature();
+    var pendingState = readPendingRecordSubmitState();
+    var pendingSignature = pendingState ? pendingState.signature : "";
     if (signature && signature === lastSignature) return;
-    if (signature && signature === pendingSignature) return;
+    if (signature && signature === pendingSignature && shouldDeferPendingRecordSubmitRetry(pendingState)) return;
 
     recordSubmitLock = true;
     var result = null;
     try {
-      writePendingRecordSubmitSignature(signature);
+      writePendingRecordSubmitSignature(signature, pendingState);
       result = await submitRecord(payload, INTERNAL_SUBMIT_TOKEN);
     } finally {
       recordSubmitLock = false;
