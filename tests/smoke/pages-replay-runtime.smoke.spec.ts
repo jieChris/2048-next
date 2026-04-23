@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
+const STABLE_SPARSE_CHECKPOINT_REPLAY_TEXT = readFileSync(
+  "tests/fixtures/replays/legacy-real-v9-text-replay.txt",
+  "utf8"
+).trim();
+
 async function importReplayFileAndConfirm(
   page: Page,
   filePath: string,
@@ -509,36 +514,19 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return !!manager && typeof manager.import === "function" && typeof manager.seek === "function";
     });
 
-    const snapshot = await page.evaluate(() => {
+    const snapshot = await page.evaluate((replayText) => {
       const manager = (window as any).game_manager;
       const originalAlert = window.alert;
       window.alert = function (_msg) {};
       try {
-        const preferredDirections = [0, 3, 1, 2];
-        let attempts = 0;
-        while (Number(manager.successfulMoveCount || 0) < 160 && attempts < 5000) {
-          let moved = false;
-          for (let index = 0; index < preferredDirections.length; index += 1) {
-            const before = Number(manager.successfulMoveCount || 0);
-            manager.move(preferredDirections[index]);
-            attempts += 1;
-            if (Number(manager.successfulMoveCount || 0) > before) {
-              moved = true;
-              break;
-            }
-          }
-          if (!moved) break;
-        }
-
-        const replayText = typeof manager.serialize === "function" ? String(manager.serialize() || "") : "";
-        const ok = replayText !== "" && manager.import(replayText);
+        const ok = typeof replayText === "string" && replayText !== "" && manager.import(replayText);
         manager.pause();
         const total = Array.isArray(manager.replayMoves) ? manager.replayMoves.length : 0;
         if (!ok || total < 120) {
           return {
             ok: false,
             total,
-            attempts
+            replayTextLength: typeof replayText === "string" ? replayText.length : 0
           };
         }
 
@@ -574,7 +562,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return {
           ok: true,
           total,
-          attempts,
           forwardTarget,
           backwardTarget,
           forwardIndex,
@@ -588,7 +575,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       } finally {
         window.alert = originalAlert;
       }
-    });
+    }, STABLE_SPARSE_CHECKPOINT_REPLAY_TEXT);
 
     expect(snapshot.ok).toBe(true);
     expect(snapshot.total).toBeGreaterThanOrEqual(120);

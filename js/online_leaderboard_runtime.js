@@ -265,7 +265,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       }
     }
     if (global && typeof global.alert === "function") {
-      global.alert("ĞÂµÄÅÅÎ»¶Ô¾ÖÉĞÎ´×¼±¸ºÃ£¬ÇëÉÔºóÔÙÊÔ¡£");
+      global.alert("æ–°çš„æ’ä½å¯¹å±€å°šæœªå‡†å¤‡å¥½ï¼Œè¯·ç¨åå†è¯•ã€‚");
     }
     return false;
   }
@@ -593,8 +593,8 @@ function shouldAutoLoadOnlineLeaderboard() {
     var summary = byId("timer-leaderboard-summary");
     if (!summary) return;
     summary.textContent = "TOP 10";
-    summary.setAttribute("data-label", lang === "en" ? "LEADERBOARD" : "ÅÅĞĞ°ñ");
-    summary.setAttribute("title", lang === "en" ? "Leaderboard" : "ÅÅĞĞ°ñ");
+    summary.setAttribute("data-label", lang === "en" ? "LEADERBOARD" : "æ’è¡Œæ¦œ");
+    summary.setAttribute("title", lang === "en" ? "Leaderboard" : "æ’è¡Œæ¦œ");
   }
 
   function resolveRankTileFontSize(rankText) {
@@ -713,7 +713,7 @@ function shouldAutoLoadOnlineLeaderboard() {
   function formatLeaderboardNameAndScore(item, lang) {
     var source = item && typeof item === "object" ? item : {};
     var nickname = normalizeLeaderboardNickname(source.nickname);
-    if (!nickname) nickname = lang === "en" ? "Anonymous" : "ÄäÃû";
+    if (!nickname) nickname = lang === "en" ? "Anonymous" : "åŒ¿å";
     var scoreValue = Math.floor(Number(source.score) || 0);
     return nickname + "-" + String(scoreValue);
   }
@@ -763,7 +763,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
     var myRankText = "--";
     var myIdentityAndScore = formatLeaderboardNameAndScore({
-      nickname: getNickname() || (lang === "en" ? "You" : "ÎÒ"),
+      nickname: getNickname() || (lang === "en" ? "You" : "æˆ‘"),
       score: 0
     }, lang);
 
@@ -1719,7 +1719,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function getUserInfo(userId) {
     var safeUserId = Math.floor(Number(userId) || 0);
-    if (safeUserId <= 0) return Promise.resolve({ error: "ÎŞĞ§µÄÓÃ»§ID" });
+    if (safeUserId <= 0) return Promise.resolve({ error: "æ— æ•ˆçš„ç”¨æˆ·ID" });
     return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), { method: "GET" });
   }
 
@@ -1732,9 +1732,9 @@ function shouldAutoLoadOnlineLeaderboard() {
       };
     }
     return {
-      label: "Ö÷ÌâÉèÖÃ",
-      palette: "Ö÷ÌâÉèÖÃ",
-      account: "ÕËºÅÖĞĞÄ"
+      label: "ä¸»é¢˜è®¾ç½®",
+      palette: "ä¸»é¢˜è®¾ç½®",
+      account: "è´¦å·ä¸­å¿ƒ"
     };
   }
 
@@ -1823,7 +1823,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!host) return;
     host.innerHTML = "";
     if (!Array.isArray(list) || list.length === 0) {
-      host.textContent = getLanguage() === "en" ? "No online leaderboard data." : "ÔİÎŞÔÚÏßÅÅĞĞ°ñÊı¾İ";
+      host.textContent = getLanguage() === "en" ? "No online leaderboard data." : "æš‚æ— åœ¨çº¿æ’è¡Œæ¦œæ•°æ®";
       return;
     }
 
@@ -1832,7 +1832,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       var row = createEl("div", "mode-intro-leaderboard-row", "");
       row.appendChild(createEl("span", "mode-intro-leaderboard-rank", "#" + String(i + 1)));
       var profileUrl = buildUserProfileUrl(item.user_id, item.nickname);
-      var displayNickname = normalizeLeaderboardNickname(item.nickname) || (getLanguage() === "en" ? "Anonymous" : "ÄäÃû");
+      var displayNickname = normalizeLeaderboardNickname(item.nickname) || (getLanguage() === "en" ? "Anonymous" : "åŒ¿å");
       if (profileUrl) {
         var nickLink = createEl("a", "mode-intro-leaderboard-nick mode-intro-leaderboard-nick-link", displayNickname);
         nickLink.setAttribute("href", profileUrl);
