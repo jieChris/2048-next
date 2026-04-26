@@ -530,6 +530,7 @@ export interface SavedGameStatePayload {
   won: boolean;
   keep_playing: boolean;
   duration_ms: number;
+  ranked_session_token?: string | null;
 }
 
 export const SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS = [

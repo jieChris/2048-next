@@ -85,12 +85,17 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     collectSavedTimerFixedRowsState: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStateDiagnosticsPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStateTimerCorePayload: (manager: Record<string, unknown>) => Record<string, unknown>;
+    buildSavedGameStateProgressPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStatePayload: (manager: Record<string, unknown>, now: number) => Record<string, unknown> | null;
     buildLiteSavedGameStatePayloadFallback: (
       manager: Record<string, unknown>,
       payload: Record<string, unknown>
     ) => Record<string, unknown> | null;
     clearSavedGameState: (manager: Record<string, unknown>, modeKey?: string) => void;
+    resolveSavedStateRestoreDecision: (
+      manager: Record<string, unknown>,
+      saved: Record<string, unknown>
+    ) => { canRestore: boolean; shouldClearSavedState: boolean };
     resolveLatestSavedPayloadCandidate: (
       candidates: Array<Record<string, unknown> | null | undefined>
     ) => Record<string, unknown> | null;
@@ -569,6 +574,105 @@ describe("core game manager saved state runtime", () => {
       "savedGameStateByMode:v1:classic_4x4_pow2_undo",
       "savedGameStateLiteByMode:v1:classic_4x4_pow2_undo"
     ]);
+  });
+
+  it("persists ranked session identity in saved progress payloads", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const payload = runtime.buildSavedGameStateProgressPayload({
+      comboStreak: 1,
+      successfulMoveCount: 2,
+      undoUsed: 0,
+      challengeId: "ranked-active",
+      rankedSessionToken: "ranked-token",
+      lockConsumedAtMoveCount: -1,
+      lockedDirectionTurn: null,
+      lockedDirection: null
+    });
+
+    expect(payload.challenge_id).toBe("ranked-active");
+    expect(payload.ranked_session_token).toBe("ranked-token");
+  });
+
+  it("allows ranked saved-state restore when active session identity matches", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const modeKey = "standard_4x4_pow2_no_undo";
+    const saved = {
+      v: 1,
+      mode_key: modeKey,
+      board_width: 4,
+      board_height: 4,
+      ruleset: "pow2",
+      board: [
+        [2, 0, 0, 0],
+        [0, 4, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      over: false,
+      won: false,
+      keep_playing: false,
+      initial_seed: 101,
+      challenge_id: "ranked-active",
+      ranked_session_token: "ranked-token"
+    };
+    const manager = {
+      modeKey,
+      mode: modeKey,
+      rankPolicy: "ranked",
+      modeConfig: { rank_policy: "ranked" },
+      width: 4,
+      height: 4,
+      ruleset: "pow2",
+      initialSeed: 101,
+      challengeId: "ranked-active",
+      rankedSessionToken: "ranked-token"
+    };
+
+    expect(runtime.resolveSavedStateRestoreDecision(manager, saved)).toEqual({
+      canRestore: true,
+      shouldClearSavedState: true
+    });
+  });
+
+  it("clears ranked saved-state restore when restart advanced to a new session", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const modeKey = "standard_4x4_pow2_no_undo";
+    const saved = {
+      v: 1,
+      mode_key: modeKey,
+      board_width: 4,
+      board_height: 4,
+      ruleset: "pow2",
+      board: [
+        [2, 0, 0, 0],
+        [0, 4, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      over: false,
+      won: false,
+      keep_playing: false,
+      initial_seed: 101,
+      challenge_id: "old-ranked",
+      ranked_session_token: "old-token"
+    };
+    const manager = {
+      modeKey,
+      mode: modeKey,
+      rankPolicy: "ranked",
+      modeConfig: { rank_policy: "ranked" },
+      width: 4,
+      height: 4,
+      ruleset: "pow2",
+      initialSeed: 202,
+      challengeId: "new-ranked",
+      rankedSessionToken: "new-token"
+    };
+
+    expect(runtime.resolveSavedStateRestoreDecision(manager, saved)).toEqual({
+      canRestore: false,
+      shouldClearSavedState: true
+    });
   });
 
   it("saves terminal timer state as frozen and non-resumable", () => {

@@ -515,6 +515,168 @@ test.describe("Legacy Multi-Page Smoke", () => {
     ]);
   });
 
+  test("ranked play modes restore matching local saved-state on reload", async ({
+    page
+  }) => {
+    const modeKey = "standard_4x4_pow2_no_undo";
+
+    await page.route("**/api/ranked-checkpoint**", async (route) => {
+      const request = route.request();
+      if (request.method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: null
+          })
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          verified: true,
+          data: null
+        })
+      });
+    });
+
+    await page.route("**/api/ranked-session/start", async (route) => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            mode_key: modeKey,
+            challenge_id: "resume-prefetch",
+            seed: 909,
+            ranked_session_token: "resume-prefetch-token",
+            issued_at: nowSec,
+            exp: nowSec + 3600
+          }
+        })
+      });
+    });
+
+    await page.addInitScript((activeModeKey) => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "1");
+      window.localStorage.setItem("2048_auth_nickname_v1", "SmokeUser");
+      window.localStorage.setItem(
+        "ranked_session_active:v1:" + activeModeKey,
+        JSON.stringify({
+          mode_key: activeModeKey,
+          challenge_id: "resume-active",
+          seed: 707,
+          ranked_session_token: "resume-active-token",
+          issued_at: nowSec,
+          exp: nowSec + 3600,
+          owner_user_id: "1"
+        })
+      );
+      if (!window.sessionStorage.getItem("__smoke_ranked_saved_state_resume_reset__")) {
+        window.localStorage.removeItem("savedGameStateByMode:v1:" + activeModeKey);
+        window.localStorage.removeItem("savedGameStateLiteByMode:v1:" + activeModeKey);
+        window.name = "";
+        window.sessionStorage.setItem("__smoke_ranked_saved_state_resume_reset__", "1");
+      }
+    }, modeKey);
+
+    const response = await page.goto("/play.html?mode=standard_4x4_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Initial ranked play response should exist").not.toBeNull();
+    expect(response?.ok(), "Initial ranked play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+
+    const liveSnapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const trySuccessfulMove = (): boolean => {
+        const startLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+        for (const direction of [0, 1, 2, 3]) {
+          manager.move(direction);
+          const nextLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+          if (nextLength > startLength) return true;
+        }
+        return false;
+      };
+      const movedFirst = trySuccessfulMove();
+      const movedSecond = trySuccessfulMove();
+      const save = (window as any).saveGameState;
+      if (typeof save === "function") save(manager, { force: true });
+      const mode = String(manager.modeKey || manager.mode || "standard_4x4_pow2_no_undo");
+      const raw = window.localStorage.getItem("savedGameStateByMode:v1:" + mode);
+      let saved: Record<string, unknown> | null = null;
+      try {
+        saved = raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+      } catch (_err) {
+        saved = null;
+      }
+      return {
+        board: manager.getFinalBoardMatrix(),
+        score: Number(manager.score || 0),
+        seed: Number(manager.initialSeed),
+        rankedSessionToken: String(manager.rankedSessionToken || ""),
+        savedRankedSessionToken: String(saved?.ranked_session_token || ""),
+        savedChallengeId: String(saved?.challenge_id || ""),
+        movedFirst,
+        movedSecond,
+        moveHistoryLength: Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0,
+        hasSavedPayload: typeof raw === "string" && raw.length > 0
+      };
+    });
+
+    expect(liveSnapshot.hasSavedPayload).toBe(true);
+    expect(liveSnapshot.movedFirst).toBe(true);
+    expect(liveSnapshot.movedSecond).toBe(true);
+    expect(liveSnapshot.moveHistoryLength).toBeGreaterThan(0);
+    expect(liveSnapshot.seed).toBe(707);
+    expect(liveSnapshot.rankedSessionToken).toBe("resume-active-token");
+    expect(liveSnapshot.savedRankedSessionToken).toBe("resume-active-token");
+    expect(liveSnapshot.savedChallengeId).toBe("resume-active");
+
+    const reloadResponse = await page.reload({ waitUntil: "domcontentloaded" });
+    expect(reloadResponse, "Reloaded ranked play response should exist").not.toBeNull();
+    expect(reloadResponse?.ok(), "Reloaded ranked play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+    await page.waitForFunction(
+      () => {
+        const manager = (window as any).game_manager;
+        return (
+          !!manager &&
+          manager.rankCheckpointRestorePending !== true &&
+          manager.needsRankedCheckpointRestore !== true
+        );
+      },
+      { timeout: 12_000 }
+    );
+
+    const restoredSnapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      return {
+        board: manager.getFinalBoardMatrix(),
+        score: Number(manager.score || 0),
+        seed: Number(manager.initialSeed),
+        rankedSessionToken: String(manager.rankedSessionToken || ""),
+        moveHistoryLength: Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0
+      };
+    });
+
+    expect(restoredSnapshot.board).toEqual(liveSnapshot.board);
+    expect(restoredSnapshot.score).toBe(liveSnapshot.score);
+    expect(restoredSnapshot.seed).toBe(liveSnapshot.seed);
+    expect(restoredSnapshot.rankedSessionToken).toBe(liveSnapshot.rankedSessionToken);
+    expect(restoredSnapshot.moveHistoryLength).toBeGreaterThanOrEqual(liveSnapshot.moveHistoryLength);
+  });
+
   test("ranked play modes restore verified cloud checkpoints instead of local injected payloads", async ({
     page
   }) => {

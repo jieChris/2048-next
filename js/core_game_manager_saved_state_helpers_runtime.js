@@ -208,6 +208,75 @@ function isSavedStateRestrictedForRankedMode(manager) {
   if (modeConfig && modeConfig.rank_policy === "ranked") return true;
   return !!(manager && manager.rankPolicy === "ranked");
 }
+function resolveSavedStateRankedContext(manager) {
+  if (!manager) return null;
+  var modeKey = resolveSavedStateModeKey(manager);
+  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
+  var runtime = windowLike && windowLike.RankedSessionRuntime ? windowLike.RankedSessionRuntime : null;
+  if (runtime && typeof runtime.getCurrentContext === "function") {
+    try {
+      var runtimeContext = runtime.getCurrentContext(modeKey);
+      if (normalizeSavedStateRecordObject(runtimeContext, null)) return runtimeContext;
+    } catch (_errRuntimeContext) {}
+  }
+  var context = windowLike && normalizeSavedStateRecordObject(windowLike.GAME_CHALLENGE_CONTEXT, null)
+    ? windowLike.GAME_CHALLENGE_CONTEXT
+    : null;
+  if (!context) return null;
+  var contextModeKey = typeof context.mode_key === "string" ? context.mode_key.trim() : "";
+  if (contextModeKey && contextModeKey !== modeKey) return null;
+  return context;
+}
+function resolveSavedStateRankedSessionToken(manager) {
+  var directToken = typeof (manager && manager.rankedSessionToken) === "string"
+    ? manager.rankedSessionToken.trim()
+    : "";
+  if (directToken) return directToken;
+  var context = resolveSavedStateRankedContext(manager);
+  return typeof (context && context.ranked_session_token) === "string"
+    ? context.ranked_session_token.trim()
+    : "";
+}
+function resolveSavedStateRankedChallengeId(manager) {
+  var directChallengeId = typeof (manager && manager.challengeId) === "string"
+    ? manager.challengeId.trim()
+    : "";
+  if (directChallengeId) return directChallengeId;
+  var context = resolveSavedStateRankedContext(manager);
+  var contextChallengeId = typeof (context && context.id) === "string"
+    ? context.id.trim()
+    : "";
+  if (contextChallengeId) return contextChallengeId;
+  return typeof (context && context.challenge_id) === "string" ? context.challenge_id.trim() : "";
+}
+function resolveSavedStateRankedSeed(manager) {
+  var directSeed = Math.floor(Number(manager && manager.initialSeed));
+  if (Number.isSafeInteger(directSeed) && directSeed >= 0) return directSeed;
+  var context = resolveSavedStateRankedContext(manager);
+  var contextSeed = Math.floor(Number(context && context.seed));
+  return Number.isSafeInteger(contextSeed) && contextSeed >= 0 ? contextSeed : null;
+}
+function normalizeSavedStateRankedPayloadSeed(saved) {
+  var seed = Math.floor(Number(saved && saved.initial_seed));
+  return Number.isSafeInteger(seed) && seed >= 0 ? seed : null;
+}
+function isSavedStateRankedSessionValidForRestore(manager, saved) {
+  if (!isSavedStateRestrictedForRankedMode(manager)) return true;
+  var currentToken = resolveSavedStateRankedSessionToken(manager);
+  var savedToken = typeof (saved && saved.ranked_session_token) === "string"
+    ? saved.ranked_session_token.trim()
+    : "";
+  if (!currentToken || !savedToken || currentToken !== savedToken) return false;
+  var currentChallengeId = resolveSavedStateRankedChallengeId(manager);
+  var savedChallengeId = typeof (saved && saved.challenge_id) === "string"
+    ? saved.challenge_id.trim()
+    : "";
+  if (!currentChallengeId || !savedChallengeId || currentChallengeId !== savedChallengeId) return false;
+  var currentSeed = resolveSavedStateRankedSeed(manager);
+  var savedSeed = normalizeSavedStateRankedPayloadSeed(saved);
+  if (currentSeed === null || savedSeed === null) return false;
+  return currentSeed === savedSeed;
+}
 function resolveSavedStateUndoModeConfig(manager) {
   if (!manager) return null;
   try {
@@ -231,12 +300,12 @@ function isSavedStateBoardInvalidForRestore(manager, saved) {
   return !Array.isArray(saved.board) || saved.board.length !== manager.height;
 }
 function resolveSavedStateRestoreDecision(manager, saved) {
-  if (isSavedStateRestrictedForRankedMode(manager)) return { canRestore: false, shouldClearSavedState: false };
   if (Number(saved.v) !== GameManager.SAVED_GAME_STATE_VERSION) return { canRestore: false, shouldClearSavedState: true };
   if (isSavedStateTerminalForRestore(saved)) return { canRestore: false, shouldClearSavedState: true };
   if (saved.mode_key !== manager.modeKey) return { canRestore: false, shouldClearSavedState: false };
   if (isSavedStateSizeOrRulesetMismatch(manager, saved)) return { canRestore: false, shouldClearSavedState: true };
   if (isSavedStateBoardInvalidForRestore(manager, saved)) return { canRestore: false, shouldClearSavedState: true };
+  if (!isSavedStateRankedSessionValidForRestore(manager, saved)) return { canRestore: false, shouldClearSavedState: true };
   return { canRestore: true, shouldClearSavedState: true };
 }
 function shouldUseSavedGameState(manager) {
@@ -251,7 +320,6 @@ function shouldUseSavedGameState(manager) {
   return manager.resolveCoreBooleanCallOrFallback(coreCallResult, function () {
     if (!windowLike) return false;
     if (manager.replayMode) return false;
-    if (isSavedStateRestrictedForRankedMode(manager)) return false;
     return pathname.indexOf("replay.html") === -1;
   });
 }
@@ -571,6 +639,9 @@ function applySavedManagerBaseState(manager, saved) {
     typeof saved.client_record_id === "string" ? saved.client_record_id : ""
   );
   manager.challengeId = typeof saved.challenge_id === "string" && saved.challenge_id ? saved.challenge_id : null;
+  if (typeof saved.ranked_session_token === "string") {
+    manager.rankedSessionToken = saved.ranked_session_token;
+  }
   manager.hasGameStarted = !!saved.has_game_started;
   manager.sessionSubmitDone = false;
 }
@@ -987,7 +1058,8 @@ function buildSavedGameStateProgressPayload(manager) {
     combo_streak: Number.isInteger(manager.comboStreak) ? manager.comboStreak : 0,
     successful_move_count: Number.isInteger(manager.successfulMoveCount) ? manager.successfulMoveCount : 0,
     undo_used: Number.isInteger(manager.undoUsed) ? manager.undoUsed : 0,
-    challenge_id: manager.challengeId || null
+    challenge_id: manager.challengeId || null,
+    ranked_session_token: manager.rankedSessionToken || null
   };
 }
 
@@ -1110,7 +1182,8 @@ function buildLiteSavedGameStateProgressPayload(payload) {
     lock_consumed_at_move_count: Number.isInteger(payload.lock_consumed_at_move_count) ? payload.lock_consumed_at_move_count : -1,
     locked_direction_turn: Number.isInteger(payload.locked_direction_turn) ? payload.locked_direction_turn : null,
     locked_direction: Number.isInteger(payload.locked_direction) ? payload.locked_direction : null,
-    challenge_id: payload.challenge_id || null
+    challenge_id: payload.challenge_id || null,
+    ranked_session_token: payload.ranked_session_token || null
   };
 }
 
