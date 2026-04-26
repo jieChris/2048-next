@@ -403,6 +403,118 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.payloadFinalBoardIsArray).toBe(true);
   });
 
+  test("online record submit follows local terminal auto-submit without polling", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__DISABLE_ONLINE_LEADERBOARD__ = true;
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "42");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+      window.localStorage.removeItem("online_last_submit_signature_v1");
+      window.localStorage.removeItem("online_last_record_submit_signature_v1");
+      window.localStorage.removeItem("online_pending_record_submit_signature_v1");
+      window.localStorage.removeItem("last_session_submit_result_v1");
+
+      (window as any).__recordSubmitCalls = 0;
+      (window as any).__recordSubmitLastPayload = null;
+
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const url = typeof input === "string" ? input : String((input as Request).url || input);
+        if (url.includes("/records")) {
+          let parsedPayload: Record<string, unknown> | null = null;
+          if (init && typeof init.body === "string" && init.body.length > 0) {
+            try {
+              const parsed = JSON.parse(init.body);
+              parsedPayload = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+            } catch (_err) {
+              parsedPayload = null;
+            }
+          }
+          (window as any).__recordSubmitLastPayload = parsedPayload;
+          (window as any).__recordSubmitCalls = Number((window as any).__recordSubmitCalls || 0) + 1;
+          return new Response(JSON.stringify({ success: true, id: "rec-smoke-local-terminal-1" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        if (url.includes("/score") || url.includes("/leaderboard")) {
+          return new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        return originalFetch(input, init);
+      };
+    });
+
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return (
+        !!manager &&
+        !!(window as any).OnlineLeaderboardRuntime &&
+        typeof manager.tryAutoSubmitOnGameOver === "function"
+      );
+    });
+
+    await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      manager.sessionSubmitDone = false;
+      manager.replayMode = false;
+      manager.over = true;
+      manager.won = false;
+      manager.keepPlaying = false;
+      manager.score = Math.max(1024, Number(manager.score || 0));
+      if (Array.isArray(manager.moveHistory) && manager.moveHistory.length === 0) {
+        manager.moveHistory.push(0, 1, 2, 3);
+      } else {
+        manager.moveHistory = [0, 1, 2, 3];
+      }
+      manager.successfulMoveCount = Math.max(4, Number(manager.successfulMoveCount || 0));
+      if (typeof manager.serialize !== "function") {
+        manager.serialize = () => '{"v":3,"actions":[0,1,2,3]}';
+      }
+      if (typeof manager.serializeV3 !== "function") {
+        manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2, 3] });
+      }
+
+      manager.tryAutoSubmitOnGameOver();
+    });
+
+    await page.waitForFunction(() => Number((window as any).__recordSubmitCalls || 0) >= 1, null, {
+      timeout: 4000
+    });
+
+    const snapshot = await page.evaluate(() => ({
+      calls: Number((window as any).__recordSubmitCalls || 0),
+      localResult: (() => {
+        const raw = window.localStorage.getItem("last_session_submit_result_v1");
+        try {
+          return raw ? JSON.parse(raw) : null;
+        } catch (_err) {
+          return null;
+        }
+      })(),
+      payload: (window as any).__recordSubmitLastPayload || null
+    }));
+
+    expect(snapshot.calls).toBeGreaterThanOrEqual(1);
+    expect(snapshot.localResult?.ok).toBe(true);
+    expect(snapshot.payload).toMatchObject({
+      score: expect.any(Number),
+      mode_key: "standard_4x4_pow2_no_undo",
+      replay_string: expect.any(String)
+    });
+  });
+
   test("online record submit flushes capped completion win-stop sessions before restart", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");

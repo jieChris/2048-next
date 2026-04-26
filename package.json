@@ -28,6 +28,7 @@
     "test:smoke:play-replay": "playwright test --config=playwright.config.ts tests/smoke/pages-play-modes.smoke.spec.ts tests/smoke/pages-replay-runtime.smoke.spec.ts",
     "test:smoke:recent-regression": "playwright test --config=playwright.config.ts tests/smoke/pages-play-modes.smoke.spec.ts tests/smoke/pages-replay-runtime.smoke.spec.ts \"tests/smoke/history-records-.*\\.smoke\\.spec\\.ts\"",
     "test:smoke:headed": "playwright test --config=playwright.config.ts --headed",
+    "test:refactor-contract": "playwright test --config=playwright.refactor-contract.config.ts --workers=1",
     "verify:iterate": "npm run audit:game-manager && npm run test:unit:core && npm run test:smoke:runtime-contract && npm run test:smoke:play-replay",
     "verify:refactor": "node scripts/refactor-gate.mjs",
     "verify:refactor:ci": "node scripts/refactor-gate.mjs --smoke-script=test:smoke:ci",

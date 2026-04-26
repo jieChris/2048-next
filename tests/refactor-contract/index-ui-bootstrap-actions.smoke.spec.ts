@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { waitForWindowCondition } from "./support/runtime-ready";
+import { waitForWindowCondition } from "../smoke/support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("application handle_undo delegates to undo-action runtime", async ({ page }) => {

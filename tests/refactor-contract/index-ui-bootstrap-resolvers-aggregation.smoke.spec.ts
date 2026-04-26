@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { waitForWindowCondition } from "./support/runtime-ready";
+import { waitForWindowCondition } from "../smoke/support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates page bootstrap and undo handler creation to host runtime helper", async ({

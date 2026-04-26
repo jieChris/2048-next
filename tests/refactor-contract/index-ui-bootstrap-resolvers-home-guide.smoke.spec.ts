@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { startHomeGuideFromPageHost } from "./support/home-guide";
-import { waitForWindowCondition } from "./support/runtime-ready";
+import { startHomeGuideFromPageHost } from "../smoke/support/home-guide";
+import { waitForWindowCondition } from "../smoke/support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("index ui delegates home guide page resolver creation to host runtime helper", async ({

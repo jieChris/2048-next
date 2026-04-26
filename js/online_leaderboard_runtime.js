@@ -1080,10 +1080,11 @@ function shouldAutoLoadOnlineLeaderboard() {
     return token === INTERNAL_SUBMIT_TOKEN;
   }
 
-  function submitScore(scoreOrPayload, modeLike, submitToken) {
+  function submitScore(scoreOrPayload, modeLike, submitToken, options) {
     if (!isInternalSubmitToken(submitToken)) {
       return Promise.resolve({ success: false, error: "client_submit_api_disabled" });
     }
+    var opts = options && typeof options === "object" ? options : {};
     var payload = null;
     if (scoreOrPayload && typeof scoreOrPayload === "object" && !Array.isArray(scoreOrPayload)) {
       payload = Object.assign({}, scoreOrPayload);
@@ -1094,14 +1095,25 @@ function shouldAutoLoadOnlineLeaderboard() {
       if (modeKey) payload.mode_key = modeKey;
       if (modeBucket) payload.mode = modeBucket;
     }
-    return apiRequest("/score", { method: "POST", auth: true, body: payload });
+    return apiRequest("/score", {
+      method: "POST",
+      auth: true,
+      body: payload,
+      keepalive: opts.keepalive === true
+    });
   }
 
-  function submitRecord(payload, submitToken) {
+  function submitRecord(payload, submitToken, options) {
     if (!isInternalSubmitToken(submitToken)) {
       return Promise.resolve({ success: false, error: "client_submit_api_disabled" });
     }
-    return apiRequest("/records", { method: "POST", auth: true, body: payload });
+    var opts = options && typeof options === "object" ? options : {};
+    return apiRequest("/records", {
+      method: "POST",
+      auth: true,
+      body: payload,
+      keepalive: opts.keepalive === true
+    });
   }
 
   function isPlainRecord(value) {
@@ -2748,6 +2760,7 @@ async function refreshLeaderboard(modeLike) {
     wrapOnlineSubmitHook(manager, "restart", "before");
     wrapOnlineSubmitHook(manager, "restartWithSeed", "before");
     wrapOnlineSubmitHook(manager, "restartWithBoard", "before");
+    wrapOnlineSubmitHook(manager, "tryAutoSubmitOnGameOver", "after");
     manager.__onlineImmediateSubmitHooksBound = true;
   }
 
@@ -2755,10 +2768,10 @@ async function refreshLeaderboard(modeLike) {
     var manager = global.game_manager;
     if (!manager || manager.replayMode) return;
     runPromiseSafely(function () {
-      return maybeSubmitRecordOnGameOver({ keepalive: true, forcePendingRetry: true, manager: manager });
+      return maybeSubmitRecordOnGameOver({ keepalive: true, manager: manager });
     });
     runPromiseSafely(function () {
-      return maybeSubmitScoreOnGameOver({ keepalive: true, forcePendingRetry: true, manager: manager });
+      return maybeSubmitScoreOnGameOver({ keepalive: true, manager: manager });
     });
   }
 
@@ -2943,10 +2956,10 @@ function init() {
     }
     if (!allowOnlineAutoload) return;
     runPromiseSafely(function () {
-      return retryPendingRecordSubmit({});
+      return retryPendingRecordSubmit({ forcePendingRetry: true });
     });
     runPromiseSafely(function () {
-      return retryPendingScoreSubmit({});
+      return retryPendingScoreSubmit({ forcePendingRetry: true });
     });
     refreshTimerLeaderboardPanel(true);
     if (byId("mode-intro-leaderboard")) {

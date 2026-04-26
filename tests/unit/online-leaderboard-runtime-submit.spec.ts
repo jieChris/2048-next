@@ -12,6 +12,7 @@ const PREFETCH_SESSION_KEY = `ranked_session_prefetch:v1:${MODE_KEY}`;
 const CHECKPOINT_MIRROR_KEY = `ranked_checkpoint_local_mirror:v1:${MODE_KEY}`;
 const CHECKPOINT_CLEAR_KEY = `ranked_checkpoint_cleared_at:v1:user:7:${MODE_KEY}`;
 const PENDING_RECORD_KEY = "online_pending_record_submit_signature_v1";
+const PENDING_SCORE_KEY = "online_pending_score_submit_v1";
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -37,6 +38,7 @@ interface FetchCall {
   url: string;
   init: {
     body?: string;
+    keepalive?: boolean;
     method?: string;
   };
 }
@@ -133,6 +135,7 @@ function createTerminatedManager(overrides: Record<string, unknown> = {}): Recor
 function loadOnlineLeaderboardRuntime(options: {
   manager: Record<string, unknown>;
   fetchImpl: (url: string, init: FetchCall["init"]) => Promise<Record<string, unknown>>;
+  disableOnlineLeaderboard?: boolean;
   storage?: MemoryStorage;
 }) {
   const storage = options.storage || new MemoryStorage();
@@ -144,7 +147,7 @@ function loadOnlineLeaderboardRuntime(options: {
     return options.fetchImpl(url, init);
   });
   const windowLike: Record<string, unknown> = {
-    __DISABLE_ONLINE_LEADERBOARD__: true,
+    __DISABLE_ONLINE_LEADERBOARD__: options.disableOnlineLeaderboard !== false,
     document: createDocumentStub(),
     localStorage: storage,
     location: {
@@ -198,6 +201,104 @@ async function flushRuntimePromises(): Promise<void> {
 }
 
 describe("online leaderboard terminal submission", () => {
+  it("retries pending record submit immediately on startup even during retry backoff", async () => {
+    const storage = new MemoryStorage();
+    const now = Date.now();
+    storage.setItem(
+      PENDING_RECORD_KEY,
+      JSON.stringify({
+        signature: "pending-record-signature",
+        payload: {
+          mode_key: MODE_KEY,
+          score: 2048,
+          replay_string: "pending-replay-v1"
+        },
+        ownerUserId: "7",
+        createdAt: now,
+        lastAttemptAt: now,
+        retryCount: 4
+      })
+    );
+    let recordPayload: Record<string, unknown> | null = null;
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      storage,
+      disableOnlineLeaderboard: false,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records")) {
+          recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
+          return createJsonResponse({ success: true, data: { id: "record-pending-startup" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
+    expect(storage.getItem(PENDING_RECORD_KEY)).toBeNull();
+    expect(storage.getItem(PENDING_SCORE_KEY)).toBeNull();
+    expect(recordPayload).toMatchObject({
+      mode_key: MODE_KEY,
+      score: 2048,
+      replay_string: "pending-replay-v1"
+    });
+  });
+
+  it("submits online record when local terminal auto-submit runs", async () => {
+    const localAutoSubmit = vi.fn(function (this: Record<string, unknown>) {
+      this.sessionSubmitDone = true;
+    });
+    const manager = createTerminatedManager({
+      tryAutoSubmitOnGameOver: localAutoSubmit
+    });
+    let recordPayload: Record<string, unknown> | null = null;
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records")) {
+          recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
+          return createJsonResponse({ success: true, data: { id: "record-from-local-submit" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.tryAutoSubmitOnGameOver as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(localAutoSubmit).toHaveBeenCalledTimes(1);
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
+    expect(recordPayload).toMatchObject({
+      mode_key: MODE_KEY,
+      score: 4096,
+      replay_string: "replay-v1"
+    });
+  });
+
+  it("uses keepalive when flushing terminal record during pagehide", async () => {
+    const manager = createTerminatedManager();
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse({ success: true, data: { id: "record-keepalive" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    const addEventListenerMock = runtime.windowLike.addEventListener as ReturnType<typeof vi.fn>;
+    const pagehideCall = addEventListenerMock.mock.calls.find((call) => call[0] === "pagehide");
+    expect(pagehideCall).toBeTruthy();
+
+    const pagehideHandler = pagehideCall?.[1] as (() => void) | undefined;
+    pagehideHandler?.();
+    await flushRuntimePromises();
+
+    const recordCall = runtime.fetchCalls.find((call) => call.url.endsWith("/records"));
+    expect(recordCall?.init.keepalive).toBe(true);
+  });
+
   it("submits verified records and skips legacy score when replay data exists", async () => {
     const manager = createTerminatedManager();
     let recordPayload: Record<string, unknown> | null = null;
