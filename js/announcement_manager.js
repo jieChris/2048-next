@@ -126,9 +126,26 @@
       content.className = "announcement-content";
       content.textContent = resolveLocalizedField(item, "content", "content_en", lang);
 
+      var linkHref = item && item.link_href ? String(item.link_href) : "";
+      var linkLabel = resolveLocalizedField(item, "link_label", "link_label_en", lang);
+
       card.appendChild(head);
       card.appendChild(title);
       card.appendChild(content);
+      if (linkHref && linkLabel) {
+        var linkRow = document.createElement("div");
+        linkRow.className = "announcement-link-row";
+
+        var link = document.createElement("a");
+        link.className = "announcement-link";
+        link.href = linkHref;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = linkLabel;
+
+        linkRow.appendChild(link);
+        card.appendChild(linkRow);
+      }
       list.appendChild(card);
     }
   }

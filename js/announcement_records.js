@@ -1,6 +1,18 @@
 (function () {
   window.ANNOUNCEMENT_RECORDS = [
     {
+      id: "2026-04-26-issue-violation-group",
+      version: "公告",
+      date: "2026-04-26",
+      title: "问题犯规交流群",
+      title_en: "Issue & Fair-Play QQ Group",
+      content: "欢迎加入问题犯规交流群 1103144436。",
+      content_en: "Welcome to join the issue & fair-play QQ group 1103144436.",
+      link_label: "1103144436",
+      link_label_en: "QQ Group 1103144436",
+      link_href: "https://qm.qq.com/q/QkKc783jCW"
+    },
+    {
       id: "2026-04-26-source-policy-and-domain-notice",
       version: "置顶",
       date: "2026-04-26",

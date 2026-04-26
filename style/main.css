@@ -2850,6 +2850,29 @@ body[data-page="practice"] .top-action-btn.reset-btn .reset-bottom-mover {
   white-space: pre-line;
 }
 
+.announcement-link-row {
+  margin-top: 8px;
+}
+
+.announcement-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #f3e5d4;
+  color: #8c4f1b;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.announcement-link:hover {
+  background: #ead4b9;
+  color: #6f3f17;
+}
+
 .announcement-empty {
   text-align: center;
   color: #9f978d;
