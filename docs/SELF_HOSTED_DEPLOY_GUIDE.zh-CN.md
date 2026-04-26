@@ -145,3 +145,12 @@ sudo nginx -t && sudo systemctl reload nginx
 ### 8.4 如何确认服务器不需要 Node.js
 
 只要构建发生在 GitHub Actions，而服务器只负责接收 `dist` 文件并提供静态访问，就不需要在服务器安装 Node.js 或 npm。
+
+## 9. 游戏数据后端迁移说明
+
+本文档只覆盖静态站点 `dist/` 发布。若上线独立游戏数据后端、Postgres、replay 文件存储、D1/COS 迁移、备份恢复和 `/api/*` 反代灰度，请使用：
+
+- `docs/SRE_GAME_DATA_OPERATIONS_RUNBOOK.zh-CN.md`
+- `deploy/caddy/2048-next.Caddyfile.example`
+- `deploy/nginx/2048-next.nginx.conf.example`
+- `scripts/migrations/README.md`

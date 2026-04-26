@@ -1,6 +1,22 @@
 (function () {
   window.ANNOUNCEMENT_RECORDS = [
     {
+      id: "2026-04-26-source-policy-and-domain-notice",
+      version: "置顶",
+      date: "2026-04-26",
+      pinned: true,
+      title: "项目开源与正式站点公告",
+      title_en: "Project Source and Official Site Notice",
+      content:
+        "综合考虑取消开源。\n" +
+        "欢迎访问 2048.cn。\n" +
+        "本站（taihe.fun）在该项目完成后将关闭入口，仅开放 2048.cn。",
+      content_en:
+        "综合考虑取消开源。\n" +
+        "欢迎访问 2048.cn。\n" +
+        "本站（taihe.fun）在该项目完成后将关闭入口，仅开放 2048.cn。"
+    },
+    {
       id: "2026-04-16-top-beta-notice",
       version: "置顶",
       date: "2026-04-16",

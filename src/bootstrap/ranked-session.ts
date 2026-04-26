@@ -4,6 +4,7 @@ import { resolveStorageByName, safeReadStorageItem, safeSetStorageItem } from ".
 const AUTH_TOKEN_STORAGE_KEY = "2048_auth_token_v1";
 const ACTIVE_SESSION_STORAGE_KEY_PREFIX = "ranked_session_active:v1:";
 const PREFETCH_SESSION_STORAGE_KEY_PREFIX = "ranked_session_prefetch:v1:";
+const DEFAULT_REMOTE_API_BASE_URL = "https://taihe.fun/api";
 
 const RANKED_MODE_KEYS = new Set([
   "standard_4x4_pow2_no_undo",
@@ -40,6 +41,9 @@ export interface RankedSessionRuntime {
 interface RankedSessionWindowLike extends Window {
   [key: string]: unknown;
   GAME_CHALLENGE_CONTEXT?: unknown;
+  GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK?: unknown;
+  GAME_API_BASE_URL?: unknown;
+  GAME_API_FALLBACK_BASE_URL?: unknown;
   RankedSessionRuntime?: RankedSessionRuntime;
 }
 
@@ -75,6 +79,53 @@ function resolveFetchLike(windowLike: RankedSessionWindowLike): typeof globalThi
     return globalThis.fetch.bind(globalThis) as typeof globalThis.fetch;
   }
   return null;
+}
+
+function normalizeApiBase(base: unknown): string {
+  return String(base || "").trim().replace(/\/+$/, "");
+}
+
+function isLocalDevelopmentHostname(hostname: unknown): boolean {
+  const host = String(hostname || "").toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || host === "::1" || host.startsWith("127.");
+}
+
+function shouldUseRemoteApiFallback(hostname: unknown, allowCrossOriginFallback: boolean): boolean {
+  const host = String(hostname || "").toLowerCase();
+  if (allowCrossOriginFallback) return true;
+  if (host === "taihe.fun" || host === "www.taihe.fun") return true;
+  if (host === "2048next.cn" || host === "www.2048next.cn") return true;
+  return !!host && !isLocalDevelopmentHostname(host);
+}
+
+export function buildRankedSessionApiBaseCandidates(windowLike: RankedSessionWindowLike): string[] {
+  const bases: string[] = [];
+  const push = (base: unknown): void => {
+    const normalized = normalizeApiBase(base);
+    if (!normalized || bases.includes(normalized)) return;
+    bases.push(normalized);
+  };
+
+  push(windowLike.GAME_API_BASE_URL);
+
+  const locationLike = windowLike.location;
+  const hostname = String(locationLike?.hostname || "").toLowerCase();
+  const origin = String(locationLike?.origin || "");
+  const allowCrossOriginFallback =
+    String(windowLike.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK || "").toLowerCase() === "true";
+  const remoteFallback = normalizeApiBase(windowLike.GAME_API_FALLBACK_BASE_URL) || DEFAULT_REMOTE_API_BASE_URL;
+
+  if (/^https?:\/\//i.test(origin)) {
+    push(`${origin}/api`);
+  }
+  if (shouldUseRemoteApiFallback(hostname, allowCrossOriginFallback)) {
+    push(remoteFallback);
+  }
+  if (bases.length === 0) {
+    push(remoteFallback);
+  }
+
+  return bases;
 }
 
 function removeStorageKey(storageLike: Storage | null, key: string): void {
@@ -245,21 +296,37 @@ function createRankedSessionRuntime(
     if (existing) return existing;
     const requestPromise = (async () => {
       try {
-        const response = await fetchLike("/api/ranked-session/start", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            Authorization: `Bearer ${authToken}`
-          },
-          body: JSON.stringify({ mode_key: modeKey })
-        });
-        if (!response.ok) return null;
-        const payload = (await response.json()) as {
-          success?: boolean;
-          data?: Record<string, unknown>;
-        };
-        if (!payload || payload.success !== true) return null;
-        return normalizeRankedSessionRecord(payload.data || null, modeKey);
+        const apiBases = buildRankedSessionApiBaseCandidates(windowLike);
+        for (let index = 0; index < apiBases.length; index += 1) {
+          try {
+            const response = await fetchLike(`${apiBases[index]}/ranked-session/start`, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                Authorization: `Bearer ${authToken}`
+              },
+              body: JSON.stringify({ mode_key: modeKey })
+            });
+            const payload = (await response.json().catch(() => null)) as {
+              success?: boolean;
+              data?: Record<string, unknown>;
+            } | null;
+            if (!response.ok) {
+              if (!payload && index < apiBases.length - 1) continue;
+              return null;
+            }
+            if (!payload || payload.success !== true) {
+              if (index < apiBases.length - 1) continue;
+              return null;
+            }
+            return normalizeRankedSessionRecord(payload.data || null, modeKey);
+          } catch (_requestErr) {
+            if (index >= apiBases.length - 1) {
+              return null;
+            }
+          }
+        }
+        return null;
       } catch (_err) {
         return null;
       } finally {

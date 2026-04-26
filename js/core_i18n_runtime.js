@@ -202,11 +202,7 @@
     ["按 R 键重开游戏", "press R to restart"],
     ["按 Z 键撤回上一步", "press Z to undo one step"],
     ["当两个相同数字的方块接触时，它们会 合并成一个！", "When two tiles with the same number touch, they merge into one!"],
-    ["项目由Gemini和Codex基于几个项目整合改版，开源在GitHub。", "This project is an integrated fork adapted with Gemini and Codex, open sourced on GitHub."],
-    ["项目由Gemini和Codex基于几个项目整合改，开源在GitHub。", "This project is an integrated fork adapted with Gemini and Codex, open sourced on GitHub."],
-    ["基于 Veewo Studio 的 1024 且概念受 Asher Vollmer 的 Threes 启发。", "Based on 1024 by Veewo Studio and inspired by Threes by Asher Vollmer."],
-    ["Undo Mod 由 Alok Menghrajani 制作，源代码。项目改自2048。计时器参考2048-timer。", "Undo mod by Alok Menghrajani. Forked from 2048. Timer reference: 2048-timer."],
-    ["项目由Gemini和Codex基于几个项目整合改版，开源在GitHub。原作者 Gabriele Cirulli. 基于 Veewo Studio 的 1024 且概念受 Asher Vollmer 的 Threes 启发。 Undo Mod 由 Alok Menghrajani 制作，源代码。项目改自2048。计时器参考2048-timer。", "This project is an integrated fork adapted with Gemini and Codex and is open source on GitHub. Original game by Gabriele Cirulli, based on 1024 by Veewo Studio and inspired by Threes by Asher Vollmer. Undo mod by Alok Menghrajani. Timer reference: 2048-timer."],
+    ["公告：综合考虑取消开源，欢迎访问 2048.cn。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 2048.cn。", "公告：综合考虑取消开源，欢迎访问 2048.cn。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 2048.cn。"],
     ["欢迎加入中国第一2048交流群：", "Join the 2048 community group: "],
     ["2048 标题", "2048 Title"],
     ["在任何页面点击该标题，都可以返回主页。", "Click this title on any page to return home."],
@@ -595,8 +591,8 @@
     var page = String((global.location && global.location.pathname) || "").split("/").pop() || "index.html";
     page = page.toLowerCase();
     if (page === "index.html" || page === "2048.html") {
-      var indexCopyZh = "项目由Gemini和Codex基于几个项目整合改版，开源在<a href=\"https://github.com/jieChris/2048-next\" target=\"_blank\">GitHub</a>。原作者 <a href=\"http://gabrielecirulli.com\" target=\"_blank\">Gabriele Cirulli.</a> 基于 <a href=\"https://itunes.apple.com/us/app/1024!/id823499224\" target=\"_blank\">Veewo Studio 的 1024</a> 且概念受 <a href=\"http://asherv.com/threes/\" target=\"_blank\">Asher Vollmer 的 Threes</a> 启发。撤销 Mod 由 <a href=\"http://quaxio.com/\">Alok Menghrajani</a> 制作，<a href=\"https://github.com/gabrielecirulli/2048\">源代码</a>。项目改自<a href=\"https://github.com/gabrielecirulli/2048\">2048</a>。计时器参考<a href=\"https://github.com/neiunderscore/2048-timer?tab=readme-ov-file\">2048-timer</a>。";
-      var indexCopyEn = "Project fork adapted with Gemini and Codex, open sourced on <a href=\"https://github.com/jieChris/2048-next\" target=\"_blank\">GitHub</a>. Original game by <a href=\"http://gabrielecirulli.com\" target=\"_blank\">Gabriele Cirulli</a>, based on <a href=\"https://itunes.apple.com/us/app/1024!/id823499224\" target=\"_blank\">1024 by Veewo Studio</a> and inspired by <a href=\"http://asherv.com/threes/\" target=\"_blank\">Threes by Asher Vollmer</a>. Undo mod by <a href=\"http://quaxio.com/\">Alok Menghrajani</a>, source at <a href=\"https://github.com/gabrielecirulli/2048\">GitHub</a>. Timer reference: <a href=\"https://github.com/neiunderscore/2048-timer?tab=readme-ov-file\">2048-timer</a>.";
+      var indexCopyZh = "公告：综合考虑取消开源，欢迎访问 <a href=\"https://2048.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048.cn</a>。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 <a href=\"https://2048.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048.cn</a>。";
+      var indexCopyEn = "公告：综合考虑取消开源，欢迎访问 <a href=\"https://2048.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048.cn</a>。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 <a href=\"https://2048.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048.cn</a>。";
       var intro = global.document.querySelector(".game-intro");
       if (intro) {
         setTextIfChanged(intro, lang === "en"

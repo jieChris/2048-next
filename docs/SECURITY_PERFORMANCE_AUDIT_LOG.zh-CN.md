@@ -561,3 +561,161 @@
 
 - ranked checkpoint 现在已经从“单键最后写入生效”收口到“只允许当前 replay 链路向前推进”。
 - 这一步把多开页面、多设备并发和旧页面回退覆盖这几个完整性风险一起压住了。
+
+## 2026-04-23 前端安全性、完整性与结构审计
+
+### 审计范围
+
+- 审计对象：`G:\2048\2048undo\2048-next` 当前前端仓库。
+- 审计重点：
+  - 排位链路是否仍把关键随机信息暴露给客户端；
+  - 页面运行时是否仍存在易被控制台篡改的高耦合全局入口；
+  - 发布前完整性约束是否正常；
+  - 当前代码结构中哪些部分最值得继续拆分，哪些文件属于可清理冗余。
+
+### 本次校验命令
+
+- `npm run audit:quality:report`
+  - 结果：通过，输出 18 条 advisory 级质量问题。
+- `npm run audit:resource-budget`
+  - 结果：通过。
+- `npm run verify:release-ready`
+  - 结果：通过。
+
+### 新增发现
+
+#### 1. [高] 排位 seed 仍然暴露在客户端，且仍参与前端初始化与回放链路
+
+代码证据：
+- `src/bootstrap/ranked-session.ts`
+  - `14-21`：`RankedSessionRecord` 持久化包含 `seed`；
+  - `24-29`：`RankedChallengeContext` 继续暴露 `seed`；
+  - `165-172`：`buildChallengeContext()` 把 `record.seed` 放进上下文；
+  - `175-182`：上下文被写入 `window.GAME_CHALLENGE_CONTEXT`。
+- `js/core_game_manager_restart_setup_helpers_runtime.js`
+  - `385-407`：`resolveSetupRankedSessionContext()` 从 `GAME_CHALLENGE_CONTEXT` 读取 `seed`；
+  - `410-418`：`initializeSetupSeedAndReplayState()` 用该 `seed` 初始化 `manager.initialSeed` / `manager.seed`。
+- `js/core_game_manager_replay_helpers_runtime.js`
+  - `1425`：session replay v3 记录 `seed: manager.initialSeed`；
+  - `1492`：序列化 replay 时继续输出 `seed`；
+  - `3754-3759`：导入 replay 时再次解析 `seed`；
+  - `3775-3778`：回放恢复强依赖该 `seed`。
+
+影响：
+- 排位局随机源虽然不再由普通 `Math.random()` 直接决定，但“决定后续生成结果的 seed”仍由客户端持有。
+- 只要攻击者还原当前 PRNG 规则，就仍可做“下一步生成预测”或离线搜路，不属于真正的服务端保密随机。
+- 这不会直接绕过你已经补上的 replay / checkpoint 服务端校验，但会继续损害排位公平性。
+
+建议：
+- 排位模式继续推进到“客户端不持有完整 seed”的方案。
+- 若短期不改协议，至少不要再把 `seed` 放进 `localStorage` 和 `window.GAME_CHALLENGE_CONTEXT`，并把回放校验链路改成服务端可验证的 challenge/step token 方案。
+
+#### 2. [高] `window.game_manager` 仍是可写全局入口，完整性边界过宽
+
+代码证据：
+- `js/core_bootstrap_runtime.js:64-70`
+  - GameManager 启动后直接写入 `global.game_manager = manager`。
+- 直接依赖该全局对象的运行时代码仍很多，包括：
+  - `js/html_actuator.js:425`
+  - `js/keyboard_input_manager.js:61`
+  - `js/online_leaderboard_runtime.js:421, 683, 1841, 1881, 1986, 2108, 2162`
+  - `js/replay_ui.js:911, 922, 1287, 1417, 1648, 1710, 1928, 1960, 2028, 2234`
+  - `js/test_ui.js:355, 457, 763, 868, 880, 973, 1051, 1085, 1424, 1513`
+
+影响：
+- 控制台、扩展脚本、第三方注入脚本都能直接篡改 GameManager 实例状态和方法。
+- 这种暴露不仅是作弊面，也是结构完整性问题：排行、回放、练习板、UI 都共用一个可变单例，任何一处补丁都可能波及其他页。
+
+建议：
+- 先做一层只读 facade，把 UI 侧读取统一收口到 `GameRuntimeFacade` 一类对象。
+- 排行/回放/练习板不要直接抓 `window.game_manager`，改为事件订阅或显式依赖注入。
+- `test_ui.js` 相关能力应明确限定到练习/测试上下文，不应继续扩大到通用运行时。
+
+#### 3. [中] challenge context 与 replay seed 多点重复传递，增加泄露面和后续迁移成本
+
+代码证据：
+- `src/bootstrap/ranked-session.ts:165-182`
+- `src/bootstrap/play-startup-host.ts:151-154`
+- `js/core_game_manager_restart_setup_helpers_runtime.js:385-418`
+- `js/online_leaderboard_runtime.js:229-245`
+- `js/core_game_manager_replay_helpers_runtime.js:1425, 1492, 3754-3778`
+
+影响：
+- 当前 challenge 信息同时存在于 storage、window 全局、manager 实例、replay 结构中。
+- 只要后续要迁移到“服务端掌控随机”或“challenge step token”模型，就需要同时改多条链路，风险和改造成本都会偏高。
+
+建议：
+- 把排位 challenge 解析与读取集中到单一模块，其他模块只拿 opaque session handle。
+- replay 与 ranked challenge 拆开建模，不要继续把“排位随机初始化信息”和“本地回放恢复信息”混在一个 seed 字段里。
+
+#### 4. [中] 高复杂度与重复逻辑仍集中在 replay / restart / undo / saved-state 核心文件
+
+质量审计证据：
+- `core_game_manager_replay_helpers_runtime.js`
+  - 9 个复杂度超限点；
+  - 17 个重复代码块。
+- `core_game_manager_restart_setup_helpers_runtime.js`
+  - 7 个复杂度超限点；
+  - 其中 `ensureSingleModePageLock()` 复杂度 33，`readRankedCheckpointLocalMirrorSavedStateForSetup()` 复杂度 27。
+- `core_game_manager_undo_stats_helpers_runtime.js`
+  - `applyUndoRestoredTiles()` 复杂度 23；
+  - 文件中有 6 个重复代码块。
+- `core_game_manager_saved_state_helpers_runtime.js`
+  - 文件中有 5 个重复代码块。
+
+影响：
+- 这些文件正好承载了对局恢复、回放、撤回、排位恢复等高风险逻辑。
+- 复杂度过高时，修一个边界很容易带出另一个边界回归，这也是近阶段“修保存/修回放/修锁页”反复联动的根因之一。
+
+建议：
+- `core_game_manager_replay_helpers_runtime.js` 优先拆成：
+  - replay 记录；
+  - replay 序列化/导入；
+  - replay seek / checkpoint；
+  - ranked auto-submit。
+- `core_game_manager_restart_setup_helpers_runtime.js` 优先拆成：
+  - seed / challenge 初始化；
+  - ranked checkpoint 恢复；
+  - 单页锁与页面环境判断。
+- `saved-state` 与 `undo` 的重复块应继续抽成共享 helper，减少后续规则分叉。
+
+#### 5. [低] `ranked_seed_validator.html` 更像开发期工具文件，应与正式页面隔离
+
+代码证据：
+- 根目录存在 `ranked_seed_validator.html`，文件本身仍完整可用。
+- 代码库内未发现其他页面、脚本或文档对该文件的引用。
+- `vite.config.ts:43-62` 的 build input 未包含该页面。
+
+结论：
+- 该文件当前不像正式入口，更像本地测试/研究工具。
+- 它本身不会进入正常构建产物，但如果后续有人手工上传整个根目录，仍可能把这类内部工具一起暴露出去。
+
+建议：
+- 移到 `tools/`、`internal/` 或单独的安全研究目录。
+- 若不再需要，直接删除；若保留，至少在部署说明中明确“不得发布”。
+
+### 完整性校验结论
+
+- 当前发布约束层面没有发现新的构建级问题：
+  - 资源预算通过；
+  - release readiness 校验通过。
+- `play.html` 不是冗余页，当前仍是正式运行入口：
+  - `vite.config.ts:47` 将其纳入构建输入；
+  - `src/entries/runtime-manifest.ts:79-87` 为其登记了正式 page entry；
+  - `modes.html:518, 543-621` 仍大量跳转到 `play.html?mode_key=...`。
+- 因此，现阶段不应把 `play.html` 当作死代码删除；如果以后要收口页面入口，应先把 `modes.html`、runtime manifest、测试用例和旧跳转链路一起迁移。
+
+### 建议优先级
+
+1. 优先收口排位 seed 可见性，避免继续让客户端持有完整随机初始化信息。
+2. 收口 `window.game_manager`，先减少排行榜、回放、测试 UI 对全局单例的直接读写。
+3. 拆分 replay / restart 两个核心运行时文件，先把 challenge、checkpoint、replay import/export 分层。
+4. 清理开发期工具页面与重复逻辑，减少误发布面和后续维护噪音。
+
+### 当前结论
+
+- 这个前端项目当前“可运行、可发布、构建约束正常”，但还不能算“安全边界完善”。
+- 之前围绕 replay 校验、checkpoint 前进约束做的后端收口已经明显提升了完整性，但前端侧仍保留两个关键遗留口子：
+  - 排位 seed 仍可见；
+  - GameManager 全局对象仍可被任意篡改。
+- 从结构上看，最该继续动刀的不是页面壳子，而是 replay / restart / saved-state / undo 这几块核心运行时的拆分与收口。

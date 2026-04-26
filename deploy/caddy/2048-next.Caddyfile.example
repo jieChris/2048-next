@@ -1,0 +1,35 @@
+# 2048-next Caddy reverse proxy example.
+# Replace placeholders before production use.
+
+2048next.example.com {
+	root * /var/www/2048-next/current
+	encode zstd gzip
+
+	log {
+		output file /var/log/caddy/2048-next.access.log {
+			roll_size 100MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+		format json
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	@api path /api/*
+	reverse_proxy @api 127.0.0.1:3000 {
+		header_up Host {host}
+		header_up X-Request-Id {http.request.header.X-Request-Id}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		health_uri /health
+		health_interval 30s
+		health_timeout 5s
+	}
+
+	file_server
+}

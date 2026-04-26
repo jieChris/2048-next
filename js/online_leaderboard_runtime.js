@@ -159,6 +159,8 @@
   var schedulerTaskName = "online-leaderboard-main";
   var refreshScheduler = null;
   var rankedCheckpointSaveTimer = 0;
+  var rankedSessionExpiredNoticeModeKey = "";
+  var rankedSessionExpiredNoticeAt = 0;
 
   function addPxDelta(sizeLike, deltaPx) {
     var text = toText(sizeLike).trim().toLowerCase();
@@ -1409,6 +1411,90 @@ function shouldAutoLoadOnlineLeaderboard() {
     );
   }
 
+  function isRankedSessionExpiredCode(codeLike) {
+    var code = toText(codeLike).trim().toUpperCase();
+    return code === "RANKED_SESSION_EXPIRED" || code.indexOf("RANKED_SESSION_EXPIRED") >= 0;
+  }
+
+  function isRankedSessionExpiredResult(result) {
+    if (!isPlainRecord(result)) return false;
+    if (
+      isRankedSessionExpiredCode(result.code) ||
+      isRankedSessionExpiredCode(result.error) ||
+      isRankedSessionExpiredCode(result.reason) ||
+      isRankedSessionExpiredCode(result.message)
+    ) {
+      return true;
+    }
+    var data = isPlainRecord(result.data) ? result.data : null;
+    return !!(
+      data &&
+      (
+        isRankedSessionExpiredCode(data.code) ||
+        isRankedSessionExpiredCode(data.error) ||
+        isRankedSessionExpiredCode(data.reason) ||
+        isRankedSessionExpiredCode(data.message)
+      )
+    );
+  }
+
+  function notifyRankedSessionExpired(modeKey) {
+    var normalizedModeKey = toText(modeKey).trim() || "unknown";
+    var now = Date.now();
+    if (
+      rankedSessionExpiredNoticeModeKey === normalizedModeKey &&
+      now - rankedSessionExpiredNoticeAt < 30000
+    ) {
+      return;
+    }
+    rankedSessionExpiredNoticeModeKey = normalizedModeKey;
+    rankedSessionExpiredNoticeAt = now;
+    if (global && typeof global.alert === "function") {
+      global.alert(
+        getLanguage() === "en"
+          ? "This ranked session has expired. Please start a new ranked game."
+          : "本次排位会话已过期，请重新开始排位。"
+      );
+    }
+  }
+
+  function handleRankedSessionExpired(manager, modeLike) {
+    var modeKey = toText(modeLike || (manager && (manager.modeKey || manager.mode))).trim() || getCurrentModeKey();
+    clearRankedCheckpointSaveTimer();
+    clearPendingRecordSubmitSignature();
+    if (modeKey) {
+      clearRankedCheckpointLocalMirror(modeKey);
+    }
+    var runtime = getRankedSessionRuntime();
+    if (runtime && modeKey) {
+      if (typeof runtime.clearModeSession === "function") {
+        runtime.clearModeSession(modeKey);
+      } else if (typeof runtime.clearActiveSession === "function") {
+        runtime.clearActiveSession(modeKey);
+      }
+    } else if (
+      modeKey &&
+      global &&
+      global.GAME_CHALLENGE_CONTEXT &&
+      toText(global.GAME_CHALLENGE_CONTEXT.mode_key).trim() === modeKey
+    ) {
+      global.GAME_CHALLENGE_CONTEXT = null;
+    }
+    if (manager) {
+      manager.rankedSessionToken = "";
+      manager.needsRankedCheckpointRestore = false;
+      manager.rankCheckpointRestorePending = false;
+      manager.rankCheckpointRestoreScheduled = false;
+      manager.rankCheckpointApplying = false;
+      manager.rankCheckpointSaveConflict = "RANKED_SESSION_EXPIRED";
+      manager.lastRankedCheckpointSignature = "";
+      manager.lastRankedCheckpointSavedAt = 0;
+      manager.lastRankedCheckpointSaveError = "RANKED_SESSION_EXPIRED";
+      manager.lastRankedCheckpointRestoreError = "RANKED_SESSION_EXPIRED";
+    }
+    notifyRankedSessionExpired(modeKey);
+  }
+
   async function maybeSaveRankedCheckpoint(manager, options) {
     if (!shouldUseRankedCheckpoint(manager)) return false;
     if (!getAuthToken()) return false;
@@ -1435,6 +1521,10 @@ function shouldAutoLoadOnlineLeaderboard() {
       manager.lastRankedCheckpointSignature = signature;
       manager.lastRankedCheckpointSavedAt = now;
       return true;
+    }
+    if (isRankedSessionExpiredResult(result)) {
+      handleRankedSessionExpired(manager, toText(payload && payload.mode_key).trim());
+      return false;
     }
     manager.lastRankedCheckpointSaveError = toText(result && (result.code || result.error)).trim();
     if (isRankedCheckpointConflictCode(result && result.code)) {
@@ -1492,6 +1582,12 @@ function shouldAutoLoadOnlineLeaderboard() {
       } catch (_errLoad) {
         result = null;
       }
+    }
+    if (isRankedSessionExpiredResult(result)) {
+      handleRankedSessionExpired(manager, expectedModeKey);
+      manager.needsRankedCheckpointRestore = false;
+      manager.rankCheckpointRestorePending = false;
+      return false;
     }
     if (toText(manager.modeKey || manager.mode).trim() !== expectedModeKey) {
       manager.rankCheckpointRestorePending = false;
@@ -1982,21 +2078,58 @@ async function refreshLeaderboard(modeLike) {
     return [modeKey, seed, replayFingerprint, String(score), String(moveCount)].join("|");
   }
 
+  function shouldSkipLegacyScoreSubmit(manager) {
+    if (shouldUseRankedCheckpoint(manager)) return true;
+    var replayPayload = resolveRecordReplayPayload(manager);
+    return !!(replayPayload && replayPayload.replayString);
+  }
+
+  function clearPendingScoreSubmitStateForSignature(signature) {
+    var text = toText(signature).trim();
+    if (!text) return;
+    var pendingState = readPendingScoreSubmitState();
+    if (pendingState && toText(pendingState.signature).trim() === text) {
+      clearPendingScoreSubmitState();
+    }
+  }
+
   async function maybeSubmitScoreOnGameOver() {
     var opts = arguments.length > 0 && arguments[0] && typeof arguments[0] === "object" ? arguments[0] : {};
-    await retryPendingScoreSubmit(opts);
-    if (submitLock) return;
     if (!getAuthToken()) return;
 
     var manager = opts.manager || global.game_manager;
-    if (!manager || manager.replayMode) return;
-    if (!isSessionTerminated(manager)) return;
+    if (manager && shouldUseRankedCheckpoint(manager)) {
+      if (isSessionTerminated(manager)) {
+        var rankedScore = Math.floor(Number(manager.score) || 0);
+        if (rankedScore > 0) {
+          clearPendingScoreSubmitStateForSignature(buildSubmitSignature(manager, rankedScore));
+        }
+      }
+      return;
+    }
+    if (!manager || manager.replayMode || !isSessionTerminated(manager)) {
+      await retryPendingScoreSubmit(opts);
+      return;
+    }
 
     var score = Math.floor(Number(manager.score) || 0);
-    if (!(score > 0)) return;
+    if (!(score > 0)) {
+      await retryPendingScoreSubmit(opts);
+      return;
+    }
 
     var submitModeKey = toText(manager.modeKey || manager.mode).trim() || getCurrentModeKey();
-    if (!resolveLeaderboardMode(submitModeKey)) return;
+    if (!resolveLeaderboardMode(submitModeKey)) {
+      await retryPendingScoreSubmit(opts);
+      return;
+    }
+    if (shouldSkipLegacyScoreSubmit(manager)) {
+      clearPendingScoreSubmitStateForSignature(buildSubmitSignature(manager, score));
+      return;
+    }
+
+    await retryPendingScoreSubmit(opts);
+    if (submitLock) return;
 
     var payload = buildScoreSubmitPayload(manager, submitModeKey, score);
     var signature = buildSubmitSignature(manager, score);
@@ -2083,6 +2216,11 @@ async function refreshLeaderboard(modeLike) {
     }
 
     var errorText = toText(result && result.error ? result.error : "record_submit_failed");
+    if (isRankedSessionExpiredResult(result)) {
+      clearPendingRecordSubmitSignature();
+      handleRankedSessionExpired(manager, modeKey);
+      return;
+    }
     if (isUnauthorizedSubmitErrorText(errorText)) {
       clearPendingRecordSubmitSignature();
       clearAuth();
@@ -2195,6 +2333,16 @@ async function refreshLeaderboard(modeLike) {
     }
 
     var errorText = toText(result && result.error ? result.error : "record_submit_failed");
+    if (isRankedSessionExpiredResult(result)) {
+      var expiredModeKey = toText(pendingState.payload && pendingState.payload.mode_key).trim() || getCurrentModeKey();
+      var expiredManager = global.game_manager;
+      if (expiredManager && toText(expiredManager.modeKey || expiredManager.mode).trim() !== expiredModeKey) {
+        expiredManager = null;
+      }
+      clearPendingRecordSubmitSignature();
+      handleRankedSessionExpired(expiredManager, expiredModeKey);
+      return result;
+    }
     if (isUnauthorizedSubmitErrorText(errorText)) {
       clearPendingRecordSubmitSignature();
       clearAuth();
@@ -2218,10 +2366,10 @@ async function refreshLeaderboard(modeLike) {
 
   function triggerImmediateOnlineSubmit() {
     runPromiseSafely(function () {
-      return maybeSubmitScoreOnGameOver();
+      return maybeSubmitRecordOnGameOver();
     });
     runPromiseSafely(function () {
-      return maybeSubmitRecordOnGameOver();
+      return maybeSubmitScoreOnGameOver();
     });
   }
 
@@ -2281,10 +2429,10 @@ async function refreshLeaderboard(modeLike) {
     var manager = global.game_manager;
     if (!manager || manager.replayMode) return;
     runPromiseSafely(function () {
-      return maybeSubmitScoreOnGameOver({ keepalive: true, forcePendingRetry: true, manager: manager });
+      return maybeSubmitRecordOnGameOver({ keepalive: true, forcePendingRetry: true, manager: manager });
     });
     runPromiseSafely(function () {
-      return maybeSubmitRecordOnGameOver({ keepalive: true, forcePendingRetry: true, manager: manager });
+      return maybeSubmitScoreOnGameOver({ keepalive: true, forcePendingRetry: true, manager: manager });
     });
   }
 
@@ -2401,8 +2549,8 @@ async function refreshLeaderboard(modeLike) {
         global.syncTimerModuleSettingsUI();
       }
 
-      await maybeSubmitScoreOnGameOver();
       await maybeSubmitRecordOnGameOver();
+      await maybeSubmitScoreOnGameOver();
       await maybeSaveRankedCheckpoint(global.game_manager, {}).catch(function () {});
 
       if (now - pollingLastTimerRefreshTime >= resolveTimerRefreshIntervalMs()) {
@@ -2469,10 +2617,10 @@ function init() {
     }
     if (!allowOnlineAutoload) return;
     runPromiseSafely(function () {
-      return retryPendingScoreSubmit({});
+      return retryPendingRecordSubmit({});
     });
     runPromiseSafely(function () {
-      return retryPendingRecordSubmit({});
+      return retryPendingScoreSubmit({});
     });
     refreshTimerLeaderboardPanel(true);
     if (byId("mode-intro-leaderboard")) {
