@@ -3,6 +3,156 @@ import { expect, test } from "@playwright/test";
 test.describe("Legacy Multi-Page Smoke", () => {
   test.describe.configure({ mode: "serial" });
 
+  test("ranked record submit after restart preserves the next session for leaderboard upload", async ({
+    page
+  }) => {
+    const modeKey = "standard_4x4_pow2_no_undo";
+    const nowSec = Math.floor(Date.now() / 1000);
+    const oldSession = {
+      mode_key: modeKey,
+      challenge_id: "ranked-old",
+      seed: 123,
+      ranked_session_token: "old-ranked-token",
+      issued_at: nowSec - 60,
+      exp: nowSec + 3600
+    };
+    const nextSession = {
+      mode_key: modeKey,
+      challenge_id: "ranked-next",
+      seed: 456,
+      ranked_session_token: "next-ranked-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600
+    };
+    let prefetchCounter = 0;
+    const recordPayloads: Array<Record<string, unknown>> = [];
+
+    await page.route("**/api/records", async (route) => {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      recordPayloads.push(body);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: { id: `record-${recordPayloads.length}` } })
+      });
+    });
+    await page.route("**/api/ranked-checkpoint**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: route.request().method() === "GET" ? null : undefined,
+          deleted: route.request().method() === "DELETE" ? true : undefined,
+          verified: route.request().method() === "POST" ? true : undefined
+        })
+      });
+    });
+    await page.route("**/api/ranked-session/start", async (route) => {
+      prefetchCounter += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            mode_key: modeKey,
+            challenge_id: `ranked-prefetch-${prefetchCounter}`,
+            seed: 700 + prefetchCounter,
+            ranked_session_token: `prefetch-ranked-token-${prefetchCounter}`,
+            issued_at: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 3600
+          }
+        })
+      });
+    });
+    await page.route("**/api/leaderboard**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    await page.addInitScript(
+      ({ modeKey: injectedModeKey, oldSession: injectedOld, nextSession: injectedNext }) => {
+        window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+        window.localStorage.setItem("2048_auth_userId_v1", "42");
+        window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+        window.localStorage.removeItem("online_last_record_submit_signature_v1");
+        window.localStorage.removeItem("online_pending_record_submit_signature_v1");
+        window.localStorage.setItem(
+          "ranked_session_active:v1:" + injectedModeKey,
+          JSON.stringify(injectedOld)
+        );
+        window.localStorage.setItem(
+          "ranked_session_prefetch:v1:" + injectedModeKey,
+          JSON.stringify(injectedNext)
+        );
+        window.confirm = () => true;
+      },
+      { modeKey, oldSession, nextSession }
+    );
+
+    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && !!(window as any).OnlineLeaderboardRuntime;
+    });
+
+    await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      manager.replayMode = false;
+      manager.over = true;
+      manager.won = false;
+      manager.keepPlaying = false;
+      manager.score = 2048;
+      manager.moveHistory = [0, 1, 2];
+      manager.successfulMoveCount = 3;
+      manager.serialize = () => "old-ranked-replay";
+      manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2] });
+      manager.restart();
+    });
+
+    await expect
+      .poll(() => recordPayloads.length, { timeout: 5000 })
+      .toBeGreaterThanOrEqual(1);
+
+    const afterRestartSession = await page.evaluate((injectedModeKey) => {
+      const raw = window.localStorage.getItem("ranked_session_active:v1:" + injectedModeKey);
+      const active = raw ? JSON.parse(raw) : null;
+      return {
+        managerToken: String((window as any).game_manager?.rankedSessionToken || ""),
+        activeToken: active ? String(active.ranked_session_token || "") : ""
+      };
+    }, modeKey);
+    expect(recordPayloads[0]?.ranked_session_token).toBe("old-ranked-token");
+    expect(afterRestartSession.managerToken).toBe("next-ranked-token");
+    expect(afterRestartSession.activeToken).toBe("next-ranked-token");
+
+    await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      manager.replayMode = false;
+      manager.over = true;
+      manager.won = false;
+      manager.keepPlaying = false;
+      manager.score = 4096;
+      manager.moveHistory = [1, 2, 3, 0];
+      manager.successfulMoveCount = 4;
+      manager.serialize = () => "next-ranked-replay";
+      manager.serializeV3 = () => ({ v: 3, actions: [1, 2, 3, 0] });
+      window.dispatchEvent(new Event("online"));
+    });
+
+    await expect
+      .poll(() => recordPayloads.length, { timeout: 5000 })
+      .toBeGreaterThanOrEqual(2);
+    expect(recordPayloads[1]?.ranked_session_token).toBe("next-ranked-token");
+  });
+
   test("online record submit flushes before restart when game is already over", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");

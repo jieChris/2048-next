@@ -53,6 +53,50 @@ export interface ResolvePlayCustomSpawnModeConfigFromContextOptions {
   playCustomSpawnRuntimeLike: PlayCustomSpawnHostRuntimeLike;
 }
 
+function normalizePlayCustomSpawnLanguage(value: unknown): "en" | "zh" | "" {
+  const lang = String(value || "").trim().toLowerCase();
+  if (lang.startsWith("en")) return "en";
+  if (lang.startsWith("zh")) return "zh";
+  return "";
+}
+
+function resolvePlayCustomSpawnLanguage(
+  windowLike: PlayCustomSpawnHostWindowLike | null
+): "en" | "zh" {
+  const anyWindow = windowLike as any;
+  try {
+    const fromI18n = normalizePlayCustomSpawnLanguage(anyWindow?.UII18N?.getLanguage?.());
+    if (fromI18n) return fromI18n;
+  } catch (_errI18n) {}
+  try {
+    const fromStorage = normalizePlayCustomSpawnLanguage(anyWindow?.localStorage?.getItem?.("ui_language_v1"));
+    if (fromStorage) return fromStorage;
+  } catch (_errStorage) {}
+  try {
+    const root = anyWindow?.document?.documentElement || (typeof document !== "undefined" ? document.documentElement : null);
+    const fromDocument = normalizePlayCustomSpawnLanguage(
+      root?.getAttribute?.("data-ui-lang") || root?.getAttribute?.("lang")
+    );
+    if (fromDocument) return fromDocument;
+  } catch (_errDocument) {}
+  return "zh";
+}
+
+function resolvePlayCustomSpawnCopy(windowLike: PlayCustomSpawnHostWindowLike | null): {
+  prompt: string;
+  invalid: string;
+} {
+  return resolvePlayCustomSpawnLanguage(windowLike) === "en"
+    ? {
+        prompt: "Enter 4 spawn rate (0-100, decimals allowed)",
+        invalid: "Invalid input. Enter a number from 0 to 100."
+      }
+    : {
+        prompt: "请输入 4 率（0-100，可输入小数）",
+        invalid: "输入无效，请输入 0 到 100 的数字。"
+      };
+}
+
 export function resolvePlayCustomSpawnModeConfigFromContext(
   options: ResolvePlayCustomSpawnModeConfigFromContextOptions
 ): unknown {
@@ -88,13 +132,13 @@ export function resolvePlayCustomSpawnModeConfigFromContext(
       }),
     promptRate: (defaultValueText) => {
       if (windowLike && typeof windowLike.prompt === "function") {
-        return windowLike.prompt("请输入 4 率（0-100，可输入小数）", String(defaultValueText));
+        return windowLike.prompt(resolvePlayCustomSpawnCopy(windowLike).prompt, String(defaultValueText));
       }
       return null;
     },
     alertInvalidInput: () => {
       if (windowLike && typeof windowLike.alert === "function") {
-        windowLike.alert("输入无效，请输入 0 到 100 的数字。");
+        windowLike.alert(resolvePlayCustomSpawnCopy(windowLike).invalid);
       }
     },
     replaceUrl: (nextUrl) => {

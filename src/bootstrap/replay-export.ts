@@ -1,18 +1,52 @@
-const COPY_SUCCESS_MESSAGE = "回放代码已复制到剪贴板！";
-const COPY_FAILURE_MESSAGE = "自动复制失败，请手动从文本框复制。";
-
-const DOWNLOAD_FAILURE_MESSAGE = "导出文件失败，请稍后重试。";
-const OPEN_PAGE_FAILURE_MESSAGE = "打开回放页面失败，请稍后重试。";
 const DOWNLOAD_BUTTON_ID = "replay-download-btn";
-const DOWNLOAD_BUTTON_LABEL = "导出文件";
 const OPEN_PAGE_BUTTON_ID = "replay-open-page-btn";
-const OPEN_PAGE_BUTTON_LABEL = "打开回放页";
 const REPLAY_PAGE_HANDOFF_STORAGE_PREFIX = "replay_export_payload_v1:";
 const REPLAY_PAGE_HANDOFF_QUERY_FLAG = "local_replay=1";
 const REPLAY_PAGE_HANDOFF_QUERY_KEY = "handoff";
 const REPLAY_LOGIC_VERSION = "v1";
 const REPLAY_TRANSIENT_NOTICE_ID = "replay-export-toast";
 const REPLAY_TRANSIENT_NOTICE_HIDE_DELAY_MS = 1600;
+const UI_LANGUAGE_KEY = "ui_language_v1";
+
+type ReplayExportLang = "en" | "zh";
+
+const REPLAY_EXPORT_COPY: Record<
+  ReplayExportLang,
+  {
+    copySuccess: string;
+    copyFailure: string;
+    downloadFailure: string;
+    openPageFailure: string;
+    downloadButton: string;
+    openPageButton: string;
+    exportTitle: string;
+    exportV1Title: string;
+    copyAction: string;
+  }
+> = {
+  zh: {
+    copySuccess: "回放代码已复制到剪贴板！",
+    copyFailure: "自动复制失败，请手动从文本框复制。",
+    downloadFailure: "导出文件失败，请稍后重试。",
+    openPageFailure: "打开回放页面失败，请稍后重试。",
+    downloadButton: "导出文件",
+    openPageButton: "打开回放页",
+    exportTitle: "导出回放",
+    exportV1Title: "导出回放 (v1)",
+    copyAction: "复制回放"
+  },
+  en: {
+    copySuccess: "Replay code copied to clipboard.",
+    copyFailure: "Automatic copy failed. Please copy from the text box manually.",
+    downloadFailure: "Export failed. Please try again later.",
+    openPageFailure: "Could not open the replay page. Please try again later.",
+    downloadButton: "Download File",
+    openPageButton: "Open Replay Page",
+    exportTitle: "Export Replay",
+    exportV1Title: "Export Replay (v1)",
+    copyAction: "Copy Replay"
+  }
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object";
@@ -29,6 +63,51 @@ function toObjectLike(value: unknown): Record<string, unknown> {
 
 function asFunction<T extends (...args: never[]) => unknown>(value: unknown): T | null {
   return typeof value === "function" ? (value as T) : null;
+}
+
+function normalizeReplayExportLanguage(value: unknown): ReplayExportLang | "" {
+  const lang = String(value || "").trim().toLowerCase();
+  if (lang.startsWith("en")) return "en";
+  if (lang.startsWith("zh")) return "zh";
+  return "";
+}
+
+function resolveReplayExportLanguage(input: Record<string, unknown>): ReplayExportLang {
+  const windowLike = toRecord(resolveWindowLike(input));
+  try {
+    const i18n = toRecord(windowLike.UII18N);
+    const getLanguage = asFunction<() => unknown>(i18n.getLanguage);
+    if (getLanguage) {
+      const fromI18n = normalizeReplayExportLanguage(getLanguage.call(i18n));
+      if (fromI18n) return fromI18n;
+    }
+  } catch (_errorI18n) {}
+  try {
+    const storageLike = toRecord(windowLike.localStorage);
+    const getItem = asFunction<(key: string) => unknown>(storageLike.getItem);
+    if (getItem) {
+      const fromStorage = normalizeReplayExportLanguage(getItem.call(storageLike, UI_LANGUAGE_KEY));
+      if (fromStorage) return fromStorage;
+    }
+  } catch (_errorStorage) {}
+  try {
+    const documentLike = toRecord(
+      input.documentLike || windowLike.document || (typeof document !== "undefined" ? document : null)
+    );
+    const root = toRecord(documentLike.documentElement);
+    const getAttribute = asFunction<(name: string) => unknown>(root.getAttribute);
+    if (getAttribute) {
+      const fromDocument = normalizeReplayExportLanguage(
+        getAttribute.call(root, "data-ui-lang") || getAttribute.call(root, "lang")
+      );
+      if (fromDocument) return fromDocument;
+    }
+  } catch (_errorDocument) {}
+  return "zh";
+}
+
+function resolveReplayExportCopy(input: Record<string, unknown>) {
+  return REPLAY_EXPORT_COPY[resolveReplayExportLanguage(input)];
 }
 
 function resolveAlert(input: Record<string, unknown>): (message: string) => void {
@@ -133,8 +212,9 @@ function showReplayTransientNotice(input: Record<string, unknown>, message: stri
 }
 
 function notifyReplayCopySuccess(input: Record<string, unknown>): void {
-  if (showReplayTransientNotice(input, COPY_SUCCESS_MESSAGE)) return;
-  resolveAlert(input)(COPY_SUCCESS_MESSAGE);
+  const copy = resolveReplayExportCopy(input);
+  if (showReplayTransientNotice(input, copy.copySuccess)) return;
+  resolveAlert(input)(copy.copySuccess);
 }
 
 function resolveConsoleError(
@@ -334,7 +414,7 @@ function applyFallbackCopy(input: Record<string, unknown>, text: string): {
       } catch (_err) {}
     }
     logError("Fallback copy failed", error);
-    resolveAlert(input)(COPY_FAILURE_MESSAGE);
+    resolveAlert(input)(resolveReplayExportCopy(input).copyFailure);
     return {
       copied: false,
       method: "fallback-error"
@@ -434,7 +514,8 @@ function configureReplayDownloadButton(input: {
   if (!button) return { configured: false };
 
   const alertLike = resolveAlert(source);
-  button.textContent = DOWNLOAD_BUTTON_LABEL;
+  const copy = resolveReplayExportCopy(source);
+  button.textContent = copy.downloadButton;
   const style = toRecord(button.style);
   style.display = "inline-block";
   button.onclick = function () {
@@ -447,7 +528,7 @@ function configureReplayDownloadButton(input: {
       windowLike: source.windowLike
     });
     if (!result.downloaded) {
-      alertLike(DOWNLOAD_FAILURE_MESSAGE);
+      alertLike(copy.downloadFailure);
     }
     return result;
   };
@@ -528,7 +609,8 @@ function configureReplayOpenPageButton(input: {
   if (!button) return { configured: false };
 
   const alertLike = resolveAlert(source);
-  button.textContent = OPEN_PAGE_BUTTON_LABEL;
+  const copy = resolveReplayExportCopy(source);
+  button.textContent = copy.openPageButton;
   const style = toRecord(button.style);
   style.display = "inline-block";
   button.onclick = function () {
@@ -538,7 +620,7 @@ function configureReplayOpenPageButton(input: {
       alertLike: source.alertLike
     });
     if (!result.opened) {
-      alertLike(OPEN_PAGE_FAILURE_MESSAGE);
+      alertLike(copy.openPageFailure);
     }
     return result;
   };
@@ -578,7 +660,8 @@ export function applyReplayExport(input: {
     ) => unknown
   >(source.showReplayModal);
   if (showReplayModal) {
-    showReplayModal(isV1 ? "导出回放 (v1)" : "导出回放", replay, "复制回放", function (text: unknown) {
+    const copy = resolveReplayExportCopy(source);
+    showReplayModal(isV1 ? copy.exportV1Title : copy.exportTitle, replay, copy.copyAction, function (text: unknown) {
       return applyReplayClipboardCopy({
         text,
         navigatorLike: source.navigatorLike,

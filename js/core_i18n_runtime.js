@@ -153,7 +153,8 @@
     ["主题设置", "Theme Settings"], ["统计面板", "Stats Panel"], ["直接显示在页面中", "Show inline on page."],
     ["页面中英文切换", "Switch page language."], ["打开指引", "Open Guide"],
     ["设置", "Settings"], ["关闭", "Close"], ["回放", "Replay"], ["执行", "Run"], ["版本公告", "Announcements"],
-    ["统计", "Stats"], ["导出回放", "Export Replay"], ["直通练习板", "Practice Board"], ["高级回放", "Advanced Replay"],
+    ["统计", "Stats"], ["统计汇总", "Stats Summary"], ["总步数", "Total Steps"], ["移动步数", "Move Steps"], ["撤回步数", "Undo Steps"],
+    ["导出回放", "Export Replay"], ["直通练习板", "Practice Board"], ["高级回放", "Advanced Replay"],
     ["模式选择", "Mode Selection"], ["历史记录", "History"], ["回首页", "Home"], ["首页", "Home"], ["模式", "Mode"],
     ["归属", "Owner"], ["全部归属", "All Owners"], ["游客", "Guest"], ["未知用户", "Unknown User"],
     ["关键词", "Keyword"], ["排序", "Sort"], ["全部模式", "All Modes"], ["刷新", "Refresh"], ["导出全部", "Export All"],
@@ -259,6 +260,17 @@
   var sortedZh = [];
   var sortedEn = [];
   var EXTRA_PHRASES = [
+    ["是否确认开始新游戏？", "Start a new game?"],
+    ["新的排位对局尚未准备好，请稍后再试。", "The next ranked game is not ready yet. Please try again in a moment."],
+    ["非法操作：一个模式只能开一个页面", "Invalid operation: only one page can be open for each mode."],
+    ["输入无效，请输入 0 到 100 的数字。", "Invalid input. Enter a number from 0 to 100."],
+    ["游戏尚未完成初始化，请稍后重试。", "Game is still initializing. Please try again later."],
+    ["切换练习模式失败，请稍后重试。", "Failed to switch practice mode. Please try again later."],
+    ["应用盘面代码失败，请稍后重试。", "Failed to apply board code. Please try again later."],
+    ["练习板载入盘面失败，请重试。", "Failed to load the practice board. Please try again."],
+    ["确认删除当前色板？", "Delete current palette?"],
+    ["导入 .rpl(v1) 回放出错:", "Failed to import .rpl(v1) replay:"],
+    ["导入回放出错:", "Failed to import replay:"],
     ["新手指引", "Beginner Guide"],
     ["重新播放首页功能指引", "Replay homepage feature guide"],
     ["打开后将立即进入首页新手引导，完成后自动关闭。", "Enable to enter the homepage beginner guide immediately; it closes automatically after completion."],
@@ -424,7 +436,14 @@
     for (var i = 0; i < FIXED_SELECTOR_TEXT.length; i += 1) {
       var item = FIXED_SELECTOR_TEXT[i];
       var nodes = global.document.querySelectorAll(item.s);
-      for (var j = 0; j < nodes.length; j += 1) nodes[j].textContent = lang === "en" ? item.en : item.zh;
+      for (var j = 0; j < nodes.length; j += 1) {
+        if (item.s === "#replay-modal-title") {
+          var modal = global.document.getElementById("replay-modal");
+          var modalStyle = modal && modal.style ? String(modal.style.display || "") : "";
+          if (modalStyle && modalStyle !== "none") continue;
+        }
+        nodes[j].textContent = lang === "en" ? item.en : item.zh;
+      }
     }
     for (var k = 0; k < FIXED_SELECTOR_ATTR.length; k += 1) {
       var ai = FIXED_SELECTOR_ATTR[k];
@@ -591,8 +610,8 @@
     var page = String((global.location && global.location.pathname) || "").split("/").pop() || "index.html";
     page = page.toLowerCase();
     if (page === "index.html" || page === "2048.html") {
-      var indexCopyZh = "公告：综合考虑取消开源，欢迎访问 <a href=\"https://2048next.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048next.cn</a>。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 <a href=\"https://2048next.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048next.cn</a>。";
-      var indexCopyEn = "公告：综合考虑取消开源，欢迎访问 <a href=\"https://2048next.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048next.cn</a>。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 <a href=\"https://2048next.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048next.cn</a>。";
+      var indexCopyZh = "欢迎加入中国第一2048交流群：<a href=\"https://qm.qq.com/q/vyQfeNUGY0\" target=\"_blank\" rel=\"noopener noreferrer\">94064339</a><br>问题反馈交流群：<a href=\"https://qm.qq.com/q/QkKc783jCW\" target=\"_blank\" rel=\"noopener noreferrer\">1103144436</a>";
+      var indexCopyEn = "欢迎加入中国第一2048交流群：<a href=\"https://qm.qq.com/q/vyQfeNUGY0\" target=\"_blank\" rel=\"noopener noreferrer\">94064339</a><br>Feedback QQ group: <a href=\"https://qm.qq.com/q/QkKc783jCW\" target=\"_blank\" rel=\"noopener noreferrer\">1103144436</a>";
       var intro = global.document.querySelector(".game-intro");
       if (intro) {
         setTextIfChanged(intro, lang === "en"
@@ -609,7 +628,10 @@
       if (copy[0]) {
         setHtmlIfChangedByLang(copy[0], lang, indexCopyZh, indexCopyEn);
       }
-      if (copy[1]) setTextIfChanged(copy[1], lang === "en" ? "Join the 2048 community group: 94064339" : "欢迎加入中国第一2048交流群：94064339");
+      if (copy[1]) {
+        setTextIfChanged(copy[1], "");
+        copy[1].style.display = "none";
+      }
     }
     if (page === "undo_2048.html") {
       var undoIntro = global.document.querySelector(".game-intro");

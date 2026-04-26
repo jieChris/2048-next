@@ -3,20 +3,39 @@
 
   if (!global) return;
 
-  var COPY_SUCCESS_MESSAGE = "回放代码已复制到剪贴板！";
-  var COPY_FAILURE_MESSAGE = "自动复制失败，请手动从文本框复制。";
-  var DOWNLOAD_FAILURE_MESSAGE = "导出文件失败，请稍后重试。";
   var DOWNLOAD_BUTTON_ID = "replay-download-btn";
-  var DOWNLOAD_BUTTON_LABEL = "导出文件";
-  var OPEN_PAGE_FAILURE_MESSAGE = "\u6253\u5f00\u56de\u653e\u9875\u9762\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
   var OPEN_PAGE_BUTTON_ID = "replay-open-page-btn";
-  var OPEN_PAGE_BUTTON_LABEL = "\u6253\u5f00\u56de\u653e\u9875";
   var REPLAY_PAGE_HANDOFF_STORAGE_PREFIX = "replay_export_payload_v1:";
   var REPLAY_PAGE_HANDOFF_QUERY_FLAG = "local_replay=1";
   var REPLAY_PAGE_HANDOFF_QUERY_KEY = "handoff";
   var REPLAY_LOGIC_VERSION = "v1";
   var REPLAY_TRANSIENT_NOTICE_ID = "replay-export-toast";
   var REPLAY_TRANSIENT_NOTICE_HIDE_DELAY_MS = 1600;
+  var UI_LANGUAGE_KEY = "ui_language_v1";
+  var REPLAY_EXPORT_COPY = {
+    zh: {
+      copySuccess: "回放代码已复制到剪贴板！",
+      copyFailure: "自动复制失败，请手动从文本框复制。",
+      downloadFailure: "导出文件失败，请稍后重试。",
+      openPageFailure: "\u6253\u5f00\u56de\u653e\u9875\u9762\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002",
+      downloadButton: "导出文件",
+      openPageButton: "\u6253\u5f00\u56de\u653e\u9875",
+      exportTitle: "导出回放",
+      exportV1Title: "导出回放 (v1)",
+      copyAction: "复制回放"
+    },
+    en: {
+      copySuccess: "Replay code copied to clipboard.",
+      copyFailure: "Automatic copy failed. Please copy from the text box manually.",
+      downloadFailure: "Export failed. Please try again later.",
+      openPageFailure: "Could not open the replay page. Please try again later.",
+      downloadButton: "Download File",
+      openPageButton: "Open Replay Page",
+      exportTitle: "Export Replay",
+      exportV1Title: "Export Replay (v1)",
+      copyAction: "Copy Replay"
+    }
+  };
 
 
   function isRecord(value) {
@@ -34,6 +53,49 @@
 
   function asFunction(value) {
     return typeof value === "function" ? value : null;
+  }
+
+  function normalizeReplayExportLanguage(value) {
+    var lang = String(value || "").trim().toLowerCase();
+    if (lang.indexOf("en") === 0) return "en";
+    if (lang.indexOf("zh") === 0) return "zh";
+    return "";
+  }
+
+  function resolveReplayExportLanguage(input) {
+    var windowLike = toRecord(resolveWindowLike(input));
+    try {
+      var i18n = toRecord(windowLike.UII18N);
+      var getLanguage = asFunction(i18n.getLanguage);
+      if (getLanguage) {
+        var fromI18n = normalizeReplayExportLanguage(getLanguage.call(i18n));
+        if (fromI18n) return fromI18n;
+      }
+    } catch (_errorI18n) {}
+    try {
+      var storageLike = toRecord(windowLike.localStorage);
+      var getItem = asFunction(storageLike.getItem);
+      if (getItem) {
+        var fromStorage = normalizeReplayExportLanguage(getItem.call(storageLike, UI_LANGUAGE_KEY));
+        if (fromStorage) return fromStorage;
+      }
+    } catch (_errorStorage) {}
+    try {
+      var documentLike = toRecord(input.documentLike || windowLike.document || (typeof document !== "undefined" ? document : null));
+      var root = toRecord(documentLike.documentElement);
+      var getAttribute = asFunction(root.getAttribute);
+      if (getAttribute) {
+        var fromDocument = normalizeReplayExportLanguage(
+          getAttribute.call(root, "data-ui-lang") || getAttribute.call(root, "lang")
+        );
+        if (fromDocument) return fromDocument;
+      }
+    } catch (_errorDocument) {}
+    return "zh";
+  }
+
+  function resolveReplayExportCopy(input) {
+    return REPLAY_EXPORT_COPY[resolveReplayExportLanguage(input)];
   }
 
   function resolveAlert(input) {
@@ -124,8 +186,9 @@
   }
 
   function notifyReplayCopySuccess(input) {
-    if (showReplayTransientNotice(input, COPY_SUCCESS_MESSAGE)) return;
-    resolveAlert(input)(COPY_SUCCESS_MESSAGE);
+    var copy = resolveReplayExportCopy(input);
+    if (showReplayTransientNotice(input, copy.copySuccess)) return;
+    resolveAlert(input)(copy.copySuccess);
   }
 
   function resolveConsoleError(input) {
@@ -287,7 +350,7 @@
         } catch (_err) {}
       }
       logError("Fallback copy failed", error);
-      resolveAlert(input)(COPY_FAILURE_MESSAGE);
+      resolveAlert(input)(resolveReplayExportCopy(input).copyFailure);
       return {
         copied: false,
         method: "fallback-error"
@@ -367,8 +430,9 @@
     if (!button) return { configured: false };
 
     var alertLike = resolveAlert(source);
+    var copy = resolveReplayExportCopy(source);
     button.style.display = "inline-block";
-    button.textContent = DOWNLOAD_BUTTON_LABEL;
+    button.textContent = copy.downloadButton;
     button.onclick = function () {
       var replay = source.replay == null ? "" : String(source.replay);
       if (!replay) return { downloaded: false };
@@ -379,7 +443,7 @@
         windowLike: source.windowLike
       });
       if (!result.downloaded) {
-        alertLike(DOWNLOAD_FAILURE_MESSAGE);
+        alertLike(copy.downloadFailure);
       }
       return result;
     };
@@ -448,7 +512,8 @@
     if (!button) return { configured: false };
 
     var alertLike = resolveAlert(source);
-    button.textContent = OPEN_PAGE_BUTTON_LABEL;
+    var copy = resolveReplayExportCopy(source);
+    button.textContent = copy.openPageButton;
     button.style.display = "inline-block";
     button.onclick = function () {
       var result = openReplayPageFromExport({
@@ -456,7 +521,7 @@
         windowLike: source.windowLike
       });
       if (!result.opened) {
-        alertLike(OPEN_PAGE_FAILURE_MESSAGE);
+        alertLike(copy.openPageFailure);
       }
       return result;
     };
@@ -478,7 +543,8 @@
     var isV1 = replay.indexOf("REPLAY_v1RPL_B64_") === 0;
     var showReplayModal = asFunction(source.showReplayModal);
     if (showReplayModal) {
-      showReplayModal(isV1 ? "导出回放 (v1)" : "导出回放", replay, "复制回放", function (text) {
+      var copy = resolveReplayExportCopy(source);
+      showReplayModal(isV1 ? copy.exportV1Title : copy.exportTitle, replay, copy.copyAction, function (text) {
         return applyReplayClipboardCopy({
           text: text,
           navigatorLike: source.navigatorLike,

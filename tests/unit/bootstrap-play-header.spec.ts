@@ -100,6 +100,15 @@ describe("bootstrap play header", () => {
         board_width: 4,
         board_height: 4,
         ruleset: "pow2",
+        special_rules: { no_x_enabled: true, no_x_target: 64 }
+      }).titleText
+    ).toBe("NO-64");
+    expect(
+      resolvePlayHeaderState({
+        key: "nox_4x4_pow2_no_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
         special_rules: { no_x_enabled: true, no_x_target: 8192 }
       }).titleText
     ).toBe("NO-8K");

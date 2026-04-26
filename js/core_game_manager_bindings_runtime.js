@@ -261,13 +261,31 @@ function resolveStatsPanelStepValues(manager, totalSteps, moveSteps, undoSteps) 
   };
 }
 
+function resolveStatsPanelBindingLanguage(manager) {
+  try {
+    if (typeof resolveStatsPanelLanguage === "function") {
+      return resolveStatsPanelLanguage(manager, resolveManagerDocumentLike(manager));
+    }
+  } catch (_errStatsPanelLanguage) {}
+  return "zh";
+}
+
+function buildStatsPanelSpawnCountLabel(lang, value) {
+  return lang === "en" ? String(value) + " Spawns" : "出" + String(value) + "数量";
+}
+
+function buildStatsPanelSecondaryRateLabel(lang, value) {
+  return lang === "en" ? "Actual " + String(value) + "-Rate" : "实际出" + String(value) + "率";
+}
+
 function applyStatsPanelSpawnLabels(manager, pair) {
+  var lang = resolveStatsPanelBindingLanguage(manager);
   var twoLabel = resolveManagerElementById(manager, "stats-panel-two-label");
-  if (twoLabel) twoLabel.textContent = "出" + pair.primary + "数量";
+  if (twoLabel) twoLabel.textContent = buildStatsPanelSpawnCountLabel(lang, pair.primary);
   var fourLabel = resolveManagerElementById(manager, "stats-panel-four-label");
-  if (fourLabel) fourLabel.textContent = "出" + pair.secondary + "数量";
+  if (fourLabel) fourLabel.textContent = buildStatsPanelSpawnCountLabel(lang, pair.secondary);
   var rateLabel = resolveManagerElementById(manager, "stats-panel-four-rate-label");
-  if (rateLabel) rateLabel.textContent = "实际出" + pair.secondary + "率";
+  if (rateLabel) rateLabel.textContent = buildStatsPanelSecondaryRateLabel(lang, pair.secondary);
 }
 
 function applyStatsPanelStepAndSpawnValues(manager, stepValues, pair) {

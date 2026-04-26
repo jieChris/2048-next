@@ -7,12 +7,14 @@
   var DEFAULT_INVALID_MODE_REDIRECT_URL = "play.html?mode_key=standard_4x4_pow2_no_undo";
   var DEFAULT_INVALID_MODE_MESSAGE = "\u65e0\u6548\u6a21\u5f0f\uff0c\u5df2\u56de\u9000\u5230\u6807\u51c6\u6a21\u5f0f";
   var DEFAULT_DUPLICATE_MODE_REDIRECT_URL = "modes.html";
-  var DEFAULT_DUPLICATE_MODE_MESSAGE = "\u975e\u6cd5\u64cd\u4f5c\uff1a\u4e00\u4e2a\u6a21\u5f0f\u53ea\u80fd\u5f00\u4e00\u4e2a\u9875\u9762";
+  var DEFAULT_DUPLICATE_MODE_MESSAGE_ZH = "\u975e\u6cd5\u64cd\u4f5c\uff1a\u4e00\u4e2a\u6a21\u5f0f\u53ea\u80fd\u5f00\u4e00\u4e2a\u9875\u9762";
+  var DEFAULT_DUPLICATE_MODE_MESSAGE_EN = "Illegal operation: each mode can only be open in one page.";
   var DEFAULT_SINGLE_INSTANCE_LOCK_KEY_PREFIX = "playModeSinglePageLock:v1:";
   var DEFAULT_SINGLE_INSTANCE_TAB_ID_SESSION_KEY = "playModeSinglePageTabId:v1";
   var DEFAULT_SINGLE_INSTANCE_TTL_MS = 12000;
   var DEFAULT_SINGLE_INSTANCE_HEARTBEAT_MS = 3000;
   var DEFAULT_BOARD_WIDTH = 4;
+  var UI_LANGUAGE_KEY = "ui_language_v1";
 
   function asPositiveInt(rawValue, fallbackValue) {
     var value = Number(rawValue);
@@ -93,6 +95,49 @@
     }
     if (!serialized) return false;
     return writeStorageItemSafe(storageLike, key, serialized);
+  }
+
+  function normalizePlayStartupLanguage(value) {
+    var lang = String(value || "").trim().toLowerCase();
+    if (lang.indexOf("en") === 0) return "en";
+    if (lang.indexOf("zh") === 0) return "zh";
+    return "";
+  }
+
+  function resolvePlayStartupLanguage(windowLike) {
+    var lang = "";
+    try {
+      var i18n = windowLike && windowLike.UII18N ? windowLike.UII18N : null;
+      if (i18n && typeof i18n.getLanguage === "function") {
+        lang = normalizePlayStartupLanguage(i18n.getLanguage());
+        if (lang) return lang;
+      }
+    } catch (_errI18n) {}
+    try {
+      lang = normalizePlayStartupLanguage(
+        readStorageItemSafe(resolveLocalStorage(windowLike), UI_LANGUAGE_KEY)
+      );
+      if (lang) return lang;
+    } catch (_errStorage) {}
+    try {
+      var documentLike = windowLike && windowLike.document ? windowLike.document : null;
+      if (!documentLike && typeof document !== "undefined") documentLike = document;
+      var root = documentLike && documentLike.documentElement ? documentLike.documentElement : null;
+      if (root && typeof root.getAttribute === "function") {
+        lang = normalizePlayStartupLanguage(
+          root.getAttribute("data-ui-lang") || root.getAttribute("lang")
+        );
+        if (lang) return lang;
+      }
+    } catch (_errDocument) {}
+    return "zh";
+  }
+
+  function resolveDuplicateModeMessage(windowLike, configuredMessage) {
+    if (typeof configuredMessage === "string" && configuredMessage) return configuredMessage;
+    return resolvePlayStartupLanguage(windowLike) === "en"
+      ? DEFAULT_DUPLICATE_MODE_MESSAGE_EN
+      : DEFAULT_DUPLICATE_MODE_MESSAGE_ZH;
   }
 
   function createSinglePageLockToken() {
@@ -349,9 +394,7 @@
     var duplicateModeRedirectUrl = String(
       opts.duplicateModeRedirectUrl || DEFAULT_DUPLICATE_MODE_REDIRECT_URL
     );
-    var duplicateModeMessage = String(
-      opts.duplicateModeMessage || DEFAULT_DUPLICATE_MODE_MESSAGE
-    );
+    var duplicateModeMessage = resolveDuplicateModeMessage(windowLike, opts.duplicateModeMessage);
     var defaultModeKey = String(opts.defaultModeKey || DEFAULT_MODE_KEY);
     var defaultBoardWidth = Number(opts.defaultBoardWidth || DEFAULT_BOARD_WIDTH);
     var searchLike = String((locationLike && locationLike.search) || "");

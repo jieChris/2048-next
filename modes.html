@@ -160,6 +160,42 @@
       color: var(--mode-secondary);
     }
 
+    @media (min-width: 901px) {
+      html[data-ui-lang="en"] .mode-select-top {
+        grid-template-columns: 220px minmax(0, 1fr);
+        grid-template-rows: 48px auto;
+        grid-template-areas:
+          "brand frequent"
+          "brand priority";
+      }
+
+      html[data-ui-lang="en"] .mode-brand-panel {
+        grid-area: brand;
+        min-height: 0;
+      }
+
+      html[data-ui-lang="en"] .mode-frequent-title {
+        grid-area: frequent;
+        writing-mode: horizontal-tb;
+        text-orientation: mixed;
+        justify-content: flex-start;
+        min-height: 0;
+        padding: 0 16px;
+        font-size: 22px;
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      html[data-ui-lang="en"] .mode-priority-grid {
+        grid-area: priority;
+        min-height: 0;
+      }
+
+      html[data-ui-lang="en"] .mode-priority-card {
+        min-height: 72px;
+      }
+    }
+
     .mode-select-body {
       border: 1px solid var(--mode-line);
       border-radius: 14px;
@@ -597,7 +633,7 @@
             <a class="mode-hub-btn" href="play.html?mode_key=item_4x4_pow2_no_undo">4x4 道具模式</a>
             <a class="mode-hub-btn" href="play.html?mode_key=stone_4x4_pow2_no_undo">4x4 石头模式</a>
             <a class="mode-hub-btn" href="play.html?mode_key=timed5s_4x4_pow2_no_undo">4x4 限时5秒</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=nox_4x4_pow2_no_undo">NO X（1k~32k）</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=nox_4x4_pow2_no_undo">NO X（64~32k）</a>
             <a class="mode-hub-btn" href="relay_5x5.html">5x5 接力模式</a>
           </div>
         </div>

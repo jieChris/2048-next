@@ -12,6 +12,15 @@
     return windowLike.localStorage || null;
   }
 
+  function isMobileSafariUserAgent(userAgent) {
+    var ua = String(userAgent || "");
+    if (!ua) return false;
+    if (!/iPhone|iPad|iPod/i.test(ua)) return false;
+    if (!/Safari/i.test(ua)) return false;
+    if (/CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/i.test(ua)) return false;
+    return true;
+  }
+
   function resolveModeKey(options) {
     var opts = options || {};
     if (typeof opts.modeKey === "string" && opts.modeKey) return opts.modeKey;
@@ -440,8 +449,12 @@
     var storages = [];
     var localStorage = win.localStorage || null;
     var sessionStorage = win.sessionStorage || null;
+    var userAgent = win && win.navigator ? win.navigator.userAgent || "" : "";
+    var shouldSkipSessionStorage = isMobileSafariUserAgent(userAgent);
     if (localStorage) storages.push(localStorage);
-    if (sessionStorage && sessionStorage !== localStorage) storages.push(sessionStorage);
+    if (!shouldSkipSessionStorage && sessionStorage && sessionStorage !== localStorage) {
+      storages.push(sessionStorage);
+    }
     return storages;
   }
 

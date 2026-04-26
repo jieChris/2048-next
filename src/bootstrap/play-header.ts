@@ -69,8 +69,14 @@ function resolveNoXTargetFromModeConfig(
   if (!specialRules || typeof specialRules !== "object") return null;
   const rawTarget = (specialRules as Record<string, unknown>).no_x_target;
   const target = Number(rawTarget);
-  if (!Number.isInteger(target) || target < 1024) return null;
+  if (!Number.isInteger(target) || target < 64) return null;
   return target;
+}
+
+function formatNoXTargetLabel(target: number): string {
+  if (target < 1024) return String(target);
+  if (target % 1024 === 0) return String(Math.round(target / 1024)).toUpperCase() + "K";
+  return String(target);
 }
 
 function resolveNoXDisplayLabel(
@@ -89,7 +95,7 @@ function resolveNoXDisplayLabel(
   if (!isNoXMode) return null;
   const target = resolveNoXTargetFromModeConfig(modeConfig);
   if (target === null) return "NO-X";
-  return "NO-" + String(Math.round(target / 1024)).toUpperCase() + "K";
+  return "NO-" + formatNoXTargetLabel(target);
 }
 
 function resolvePlayModeUndoState(

@@ -632,6 +632,186 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(restoredSnapshot.score).not.toBe(424242);
   });
 
+  test("ranked restart blocks stale cloud checkpoint restore on immediate reload", async ({
+    page
+  }) => {
+    const modeKey = "standard_4x4_pow2_no_undo";
+    const now = Date.now();
+    const oldBoard = [
+      [1024, 1024, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0]
+    ];
+    const checkpointData: Record<string, unknown> = {
+      mode_key: modeKey,
+      mode_bucket: "standard_no_undo",
+      ranked_session_token: "old-ranked-token",
+      client_record_id: "old-record-id",
+      replay_string: "old-replay",
+      duration_ms: 3000,
+      updated_at: new Date(now - 60_000).toISOString(),
+      ui_state: {
+        saved_state: {
+          v: 1,
+          saved_at: now - 60_000,
+          terminated: false,
+          mode_key: modeKey,
+          board_width: 4,
+          board_height: 4,
+          ruleset: "pow2",
+          board: oldBoard,
+          score: 424242,
+          over: false,
+          won: false,
+          keep_playing: false,
+          initial_seed: 101,
+          seed: 101,
+          duration_ms: 3000,
+          has_game_started: true
+        }
+      }
+    };
+
+    await page.route("**/api/ranked-checkpoint**", async (route) => {
+      const request = route.request();
+      if (request.method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: checkpointData
+          })
+        });
+        return;
+      }
+      if (request.method() === "DELETE") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            deleted: true
+          })
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          verified: true,
+          data: checkpointData
+        })
+      });
+    });
+
+    await page.route("**/api/ranked-session/start", async (route) => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            mode_key: modeKey,
+            challenge_id: "next-prefetch",
+            seed: 303,
+            ranked_session_token: "next-prefetch-token",
+            issued_at: nowSec,
+            exp: nowSec + 3600
+          }
+        })
+      });
+    });
+
+    await page.addInitScript(() => {
+      const modeKey = "standard_4x4_pow2_no_undo";
+      const nowSec = Math.floor(Date.now() / 1000);
+      const activeSession = {
+        mode_key: modeKey,
+        challenge_id: "old-session",
+        seed: 101,
+        ranked_session_token: "old-ranked-token",
+        issued_at: nowSec - 120,
+        exp: nowSec + 3600
+      };
+      const prefetchedSession = {
+        mode_key: modeKey,
+        challenge_id: "new-session",
+        seed: 202,
+        ranked_session_token: "new-ranked-token",
+        issued_at: nowSec,
+        exp: nowSec + 3600
+      };
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "1");
+      window.localStorage.setItem("2048_auth_nickname_v1", "SmokeUser");
+      window.localStorage.setItem("ranked_session_active:v1:" + modeKey, JSON.stringify(activeSession));
+      window.localStorage.setItem("ranked_session_prefetch:v1:" + modeKey, JSON.stringify(prefetchedSession));
+      window.confirm = () => true;
+    });
+
+    const response = await page.goto("/play.html?mode=standard_4x4_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Initial ranked play response should exist").not.toBeNull();
+    expect(response?.ok(), "Initial ranked play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+    await page.waitForFunction(() => Number((window as any).game_manager?.score || 0) === 424242, {
+      timeout: 12_000
+    });
+
+    const restoredOld = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      return {
+        score: Number(manager.score || 0),
+        board: manager.getFinalBoardMatrix()
+      };
+    });
+    expect(restoredOld.score).toBe(424242);
+    expect(restoredOld.board).toEqual(oldBoard);
+
+    const clearMarkerWritten = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      manager.restart();
+      return !!window.localStorage.getItem(
+        "ranked_checkpoint_cleared_at:v1:user:1:standard_4x4_pow2_no_undo"
+      );
+    });
+    expect(clearMarkerWritten).toBe(true);
+
+    const reloadResponse = await page.reload({ waitUntil: "domcontentloaded" });
+    expect(reloadResponse, "Reloaded ranked play response should exist").not.toBeNull();
+    expect(reloadResponse?.ok(), "Reloaded ranked play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+    await page.waitForFunction(
+      () => {
+        const manager = (window as any).game_manager;
+        return (
+          !!manager &&
+          manager.rankCheckpointRestorePending !== true &&
+          manager.needsRankedCheckpointRestore !== true
+        );
+      },
+      { timeout: 12_000 }
+    );
+
+    const afterReload = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      return {
+        score: Number(manager.score || 0),
+        board: manager.getFinalBoardMatrix()
+      };
+    });
+    expect(afterReload.score).not.toBe(424242);
+    expect(afterReload.board).not.toEqual(oldBoard);
+  });
+
   test("ranked home page restores local checkpoint mirror across immediate reload without auth", async ({
     page
   }) => {

@@ -40,6 +40,16 @@ describe("mode catalog localization", () => {
     expect(enCatalog.getMode?.("fib_4x2_no_undo")?.label).toBe("Fibonacci 4x2");
   });
 
+  it("returns localized generated special mode labels by language", () => {
+    const zhCatalog = loadModeCatalog("zh");
+    const enCatalog = loadModeCatalog("en");
+
+    expect(zhCatalog.getMode?.("spawn_custom_4x4_pow2_no_undo")?.label).toBe("4x4 自定义4率（无撤回）");
+    expect(enCatalog.getMode?.("spawn_custom_4x4_pow2_no_undo")?.label).toBe("4x4 Custom 4-Rate");
+    expect(enCatalog.getMode?.("limit3_4x4_pow2_no_undo")?.label).toBe("Limited Undo 4x4 (3)");
+    expect(enCatalog.getMode?.("combo_4x4_pow2_no_undo")?.label).toBe("Combo Scoring 4x4");
+  });
+
   it("does not expose removed 4x4 probability variants", () => {
     const zhCatalog = loadModeCatalog("zh");
     const keys = (zhCatalog.listModes?.() || []).map((mode) => mode.key);

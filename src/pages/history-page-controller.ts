@@ -24,7 +24,7 @@ export interface HistoryPageController {
   readFilterState: (defaults: HistoryFilterStateDefaults) => HistoryFilterState;
   persistFilterState: (state: HistoryFilterState, defaults: HistoryFilterStateDefaults) => void;
   normalizeRecord: (record: unknown) => HistoryRecordViewModel;
-  resolveModeLabel: (modeKey: string, fallback: string) => string;
+  resolveModeLabel: (modeKey: string, fallback: string, lang?: string) => string;
   resolveReplayCode: (value: unknown) => string;
   createBoardPreview: (board: unknown) => HTMLElement | null;
 }
@@ -56,9 +56,10 @@ export function createHistoryPageController(options?: HistoryPageControllerDeps)
       normalizeHistoryRecordForView(record, {
         runtime
       }),
-    resolveModeLabel: (modeKey: string, fallback: string) =>
+    resolveModeLabel: (modeKey: string, fallback: string, lang?: string) =>
       resolveModeLabel(modeKey, fallback, {
-        modeCatalog
+        modeCatalog,
+        lang
       }),
     resolveReplayCode,
     createBoardPreview: (board: unknown) =>

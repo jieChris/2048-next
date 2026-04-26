@@ -45,6 +45,22 @@
     return Math.floor(width) + "x" + Math.floor(height);
   }
 
+  function resolveSpecialPairEnglishModeLabel(key, sizeText) {
+    if (key.indexOf("spawn_custom_") === 0) {
+      return sizeText + " Custom 4-Rate";
+    }
+    if (key.indexOf("limit3_") === 0) {
+      return "Limited Undo " + sizeText + " (3)";
+    }
+    if (key.indexOf("limit5_") === 0) {
+      return "Limited Undo " + sizeText + " (5)";
+    }
+    if (key.indexOf("combo_") === 0) {
+      return "Combo Scoring " + sizeText;
+    }
+    return "";
+  }
+
   function resolveLocalizedModeLabel(mode, lang) {
     var key = String(mode && mode.key ? mode.key : "");
     var sizeText = resolveModeSizeText(mode);
@@ -52,6 +68,11 @@
 
     if (key.indexOf("board_") === 0 && key.indexOf("_pow2") !== -1) {
       return sizeText;
+    }
+
+    if (isEn) {
+      var specialPairLabel = resolveSpecialPairEnglishModeLabel(key, sizeText);
+      if (specialPairLabel) return specialPairLabel;
     }
 
     if (key === "standard_4x4_pow2_no_undo") {

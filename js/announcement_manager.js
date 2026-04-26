@@ -6,8 +6,16 @@
     if (window.UII18N && typeof window.UII18N.getLanguage === "function") {
       return window.UII18N.getLanguage();
     }
+    try {
+      var storage = window.localStorage;
+      var saved = storage && typeof storage.getItem === "function"
+        ? String(storage.getItem("ui_language_v1") || "").trim().toLowerCase()
+        : "";
+      if (saved.indexOf("en") === 0) return "en";
+      if (saved.indexOf("zh") === 0) return "zh";
+    } catch (_errStorage) {}
     var html = document && document.documentElement;
-    var value = html ? String(html.getAttribute("data-ui-lang") || "") : "";
+    var value = html ? String(html.getAttribute("data-ui-lang") || html.getAttribute("lang") || "") : "";
     return value.indexOf("en") === 0 ? "en" : "zh";
   }
 
@@ -77,6 +85,12 @@
     return item[zhField] || item[enField] || "";
   }
 
+  function resolveAnnouncementVersion(item, lang) {
+    var text = resolveLocalizedField(item, "version", "version_en", lang);
+    if (lang === "en" && text === "置顶") return "Pinned";
+    return text;
+  }
+
   function renderAnnouncementList() {
     var list = document.getElementById("announcement-list");
     if (!list) return;
@@ -109,7 +123,7 @@
 
       var version = document.createElement("span");
       version.className = "announcement-version";
-      version.textContent = item.version || "-";
+      version.textContent = resolveAnnouncementVersion(item, lang) || "-";
 
       var date = document.createElement("span");
       date.className = "announcement-date";

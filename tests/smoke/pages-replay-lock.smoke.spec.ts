@@ -1,6 +1,39 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Replay Lock Smoke", () => {
+  test("play page duplicate mode guard uses English message", async ({ page }) => {
+    let duplicateDialogMessage = "";
+    page.on("dialog", async (dialog) => {
+      duplicateDialogMessage = dialog.message();
+      await dialog.dismiss();
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("ui_language_v1", "en");
+      window.localStorage.setItem(
+        "playModeSinglePageLock:v1:standard_4x4_pow2_no_undo",
+        JSON.stringify({
+          tab_id: "tab_existing",
+          token: "token_existing",
+          mode_key: "standard_4x4_pow2_no_undo",
+          instance_id: "win_existing",
+          updated_at: Date.now()
+        })
+      );
+    });
+
+    const response = await page.goto("/play.html?mode_key=standard_4x4_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Play response should exist").not.toBeNull();
+    expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
+
+    await page.waitForURL(/\/modes\.html$/);
+    expect(duplicateDialogMessage).toBe(
+      "Illegal operation: each mode can only be open in one page."
+    );
+  });
+
   test("replay page ignores the gameplay single-page lock", async ({ page }) => {
     let duplicateDialogMessage = "";
     page.on("dialog", async (dialog) => {

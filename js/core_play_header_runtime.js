@@ -60,8 +60,14 @@
     if (!specialRules || typeof specialRules !== "object") return null;
     var rawTarget = specialRules.no_x_target;
     var target = Number(rawTarget);
-    if (!Number.isInteger(target) || target < 1024) return null;
+    if (!Number.isInteger(target) || target < 64) return null;
     return target;
+  }
+
+  function formatNoXTargetLabel(target) {
+    if (target < 1024) return String(target);
+    if (target % 1024 === 0) return String(Math.round(target / 1024)).toUpperCase() + "K";
+    return String(target);
   }
 
   function resolveNoXDisplayLabel(modeConfig) {
@@ -78,7 +84,7 @@
     if (!isNoXMode) return null;
     var target = resolveNoXTargetFromModeConfig(modeConfig);
     if (target === null) return "NO-X";
-    return "NO-" + String(Math.round(target / 1024)).toUpperCase() + "K";
+    return "NO-" + formatNoXTargetLabel(target);
   }
 
   function resolvePlayModeUndoState(modeConfig) {

@@ -10,6 +10,122 @@ export interface HistoryPageRuntimeOptions {
 
 const UI_LANGUAGE_KEY = "ui_language_v1";
 
+type HistoryUiLang = "en" | "zh";
+
+const HISTORY_COPY: Record<
+  HistoryUiLang,
+  {
+    guestOwner: string;
+    allOwners: string;
+    unknownOwner: string;
+    noRecords: string;
+    score: string;
+    bestTile: string;
+    duration: string;
+    ended: string;
+    replay: string;
+    exportRecord: string;
+    deleteRecord: string;
+    exportOneSuccess: string;
+    exportJsonOnly: string;
+    exportFailed: string;
+    deleteConfirm: string;
+    deleteFailed: string;
+    deleteSuccess: string;
+    importReplaceConfirm: string;
+    importInvalid: string;
+    importReadFailed: string;
+    loadFailed: string;
+    moduleMissing: string;
+    exportAllSuccess: string;
+    clearAllConfirm: string;
+    clearAllSuccess: string;
+    clearFailed: string;
+    diagnosticsPrefix: string;
+    diagnosticsValid: string;
+    diagnosticsPlaced: string;
+    diagnosticsDuplicate: string;
+    diagnosticsMissingAnchor: string;
+    diagnosticsKeyKinds: string;
+    samplePrefix: string;
+  }
+> = {
+  zh: {
+    guestOwner: "\u6e38\u5ba2",
+    allOwners: "\u5168\u90e8\u5f52\u5c5e",
+    unknownOwner: "\u672a\u77e5\u7528\u6237",
+    noRecords: "\u6682\u65e0\u5386\u53f2\u8bb0\u5f55\u3002\u4f60\u53ef\u4ee5\u5f00\u59cb\u4e00\u5c40\u6e38\u620f\u540e\u518d\u56de\u6765\u67e5\u770b\u3002",
+    score: "\u5206\u6570",
+    bestTile: "\u6700\u5927\u5757",
+    duration: "\u65f6\u957f",
+    ended: "\u7ed3\u675f",
+    replay: "\u56de\u653e",
+    exportRecord: "\u5bfc\u51fa",
+    deleteRecord: "\u5220\u9664",
+    exportOneSuccess: "\u5df2\u5bfc\u51fa 1 \u6761\u8bb0\u5f55\uff08TXT + JSON\uff09",
+    exportJsonOnly: "\u8be5\u8bb0\u5f55\u7f3a\u5c11\u53ef\u5bfc\u5165\u7684\u56de\u653e\u7801\uff0c\u5df2\u5bfc\u51fa JSON",
+    exportFailed: "\u5bfc\u51fa\u5931\u8d25",
+    deleteConfirm: "\u786e\u8ba4\u5220\u9664\u8fd9\u6761\u8bb0\u5f55\uff1f",
+    deleteFailed: "\u5220\u9664\u5931\u8d25",
+    deleteSuccess: "\u5df2\u5220\u9664\u8bb0\u5f55",
+    importReplaceConfirm: "\u786e\u8ba4\u5bfc\u5165\u5e76\u66ff\u6362\u5168\u90e8\u5f53\u524d\u5386\u53f2\u8bb0\u5f55\uff1f",
+    importInvalid: "\u5bfc\u5165\u5931\u8d25\uff1a\u6587\u4ef6\u683c\u5f0f\u4e0d\u6b63\u786e",
+    importReadFailed: "\u5bfc\u5165\u5931\u8d25\uff1a\u6587\u4ef6\u8bfb\u53d6\u9519\u8bef",
+    loadFailed: "\u52a0\u8f7d\u5386\u53f2\u5931\u8d25",
+    moduleMissing: "\u672c\u5730\u5386\u53f2\u6a21\u5757\u672a\u52a0\u8f7d",
+    exportAllSuccess: "\u5df2\u5bfc\u51fa\u5168\u90e8\u5386\u53f2\u8bb0\u5f55",
+    clearAllConfirm: "\u786e\u8ba4\u6e05\u7a7a\u5168\u90e8\u672c\u5730\u5386\u53f2\u8bb0\u5f55\uff1f\u6b64\u64cd\u4f5c\u4e0d\u53ef\u64a4\u9500\u3002",
+    clearAllSuccess: "\u5df2\u6e05\u7a7a\u5168\u90e8\u5386\u53f2\u8bb0\u5f55",
+    clearFailed: "\u6e05\u7a7a\u5931\u8d25",
+    diagnosticsPrefix: "\u8bca\u65ad",
+    diagnosticsValid: "\u6709\u6548",
+    diagnosticsPlaced: "\u653e\u7f6e",
+    diagnosticsDuplicate: "\u53bb\u91cd\u8df3\u8fc7",
+    diagnosticsMissingAnchor: "\u951a\u70b9\u7f3a\u5931",
+    diagnosticsKeyKinds: "\u53bb\u91cd\u952e\u7c7b",
+    samplePrefix: "\u6837\u672c"
+  },
+  en: {
+    guestOwner: "Guest",
+    allOwners: "All Owners",
+    unknownOwner: "Unknown User",
+    noRecords: "No local records yet. Start a game and come back later.",
+    score: "Score",
+    bestTile: "Max Tile",
+    duration: "Duration",
+    ended: "Ended",
+    replay: "Replay",
+    exportRecord: "Export",
+    deleteRecord: "Delete",
+    exportOneSuccess: "Exported 1 record (TXT + JSON)",
+    exportJsonOnly: "This record has no importable replay code. JSON was exported.",
+    exportFailed: "Export failed",
+    deleteConfirm: "Delete this record?",
+    deleteFailed: "Delete failed",
+    deleteSuccess: "Record deleted",
+    importReplaceConfirm: "Import and replace all current local history records?",
+    importInvalid: "Import failed: invalid file format",
+    importReadFailed: "Import failed: file read error",
+    loadFailed: "Failed to load history",
+    moduleMissing: "Local history module is not loaded",
+    exportAllSuccess: "Exported all local history records",
+    clearAllConfirm: "Clear all local history records? This cannot be undone.",
+    clearAllSuccess: "Cleared all local history records",
+    clearFailed: "Clear failed",
+    diagnosticsPrefix: "Diagnostics",
+    diagnosticsValid: "valid",
+    diagnosticsPlaced: "placed",
+    diagnosticsDuplicate: "dedupe skipped",
+    diagnosticsMissingAnchor: "missing anchor",
+    diagnosticsKeyKinds: "dedupe key kinds",
+    samplePrefix: "Sample"
+  }
+};
+
+function getHistoryCopy(lang: HistoryUiLang) {
+  return HISTORY_COPY[lang];
+}
+
 function toText(value: unknown): string {
   return value == null ? "" : String(value);
 }
@@ -23,7 +139,7 @@ function escapeHtml(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
-function getUiLang(storageLike: Storage | null): "en" | "zh" {
+function getUiLang(storageLike: Storage | null): HistoryUiLang {
   try {
     const raw = toText(
       safeReadStorageItem({
@@ -39,19 +155,19 @@ function getUiLang(storageLike: Storage | null): "en" | "zh" {
   }
 }
 
-function getGuestOwnerLabel(lang: "en" | "zh"): string {
-  return lang === "en" ? "Guest" : "\u6e38\u5ba2";
+function getGuestOwnerLabel(lang: HistoryUiLang): string {
+  return getHistoryCopy(lang).guestOwner;
 }
 
-function getAllOwnersLabel(lang: "en" | "zh"): string {
-  return lang === "en" ? "All Owners" : "\u5168\u90e8\u5f52\u5c5e";
+function getAllOwnersLabel(lang: HistoryUiLang): string {
+  return getHistoryCopy(lang).allOwners;
 }
 
-function getUnknownOwnerLabel(lang: "en" | "zh"): string {
-  return lang === "en" ? "Unknown User" : "\u672a\u77e5\u7528\u6237";
+function getUnknownOwnerLabel(lang: HistoryUiLang): string {
+  return getHistoryCopy(lang).unknownOwner;
 }
 
-function normalizeOwnerDisplay(item: HistoryRecordViewModel, lang: "en" | "zh") {
+function normalizeOwnerDisplay(item: HistoryRecordViewModel, lang: HistoryUiLang) {
   const ownerType = toText(item.owner_type).trim().toLowerCase();
   const ownerUserId = toText(item.owner_user_id).trim();
   const ownerNickname = toText(item.owner_nickname).trim();
@@ -138,30 +254,45 @@ function resolveHistoryDiagnosticsNumeric(payload: unknown, key: string): number
   return Number((payload as Record<string, unknown>)[key]) || 0;
 }
 
-function buildHistorySecondaryPlacementDiagnosticsSummaryText(entry: HistoryDiagnosticsIndexEntry): string {
+function buildHistorySecondaryPlacementDiagnosticsSummaryText(
+  entry: HistoryDiagnosticsIndexEntry,
+  lang: HistoryUiLang
+): string {
   const payload = entry ? entry.payload : null;
   const validCount = resolveHistoryDiagnosticsNumeric(payload, "validPlacementDescriptors");
   const placedCount = resolveHistoryDiagnosticsNumeric(payload, "placed");
   const duplicateCount = resolveHistoryDiagnosticsNumeric(payload, "skippedDuplicate");
   const missingAnchorCount = resolveHistoryDiagnosticsNumeric(payload, "skippedMissingAnchor");
   const keyKinds = resolveHistoryDiagnosticsNumeric(payload, "dedupeKeyKinds");
+  const copy = getHistoryCopy(lang);
   return (
-    "\u8bca\u65ad secondaryTimerPlacement(v" +
+    copy.diagnosticsPrefix +
+    " secondaryTimerPlacement(v" +
     String(entry.schemaVersion) +
-    ")\u00b7 \u6709\u6548 " +
+    ")\u00b7 " +
+    copy.diagnosticsValid +
+    " " +
     String(validCount) +
-    " \u00b7 \u653e\u7f6e " +
+    " \u00b7 " +
+    copy.diagnosticsPlaced +
+    " " +
     String(placedCount) +
-    " \u00b7 \u53bb\u91cd\u8df3\u8fc7 " +
+    " \u00b7 " +
+    copy.diagnosticsDuplicate +
+    " " +
     String(duplicateCount) +
-    " \u00b7 \u951a\u70b9\u7f3a\u5931 " +
+    " \u00b7 " +
+    copy.diagnosticsMissingAnchor +
+    " " +
     String(missingAnchorCount) +
-    " \u00b7 \u53bb\u91cd\u952e\u7c7b " +
+    " \u00b7 " +
+    copy.diagnosticsKeyKinds +
+    " " +
     String(keyKinds)
   );
 }
 
-function resolveHistoryDiagnosticsSampleText(payload: unknown): string {
+function resolveHistoryDiagnosticsSampleText(payload: unknown, lang: HistoryUiLang): string {
   const samples = payload && Array.isArray((payload as any).dedupeKeySamples) ? (payload as any).dedupeKeySamples : [];
   const normalized: string[] = [];
   for (let i = 0; i < samples.length; i += 1) {
@@ -171,18 +302,23 @@ function resolveHistoryDiagnosticsSampleText(payload: unknown): string {
     if (normalized.length >= 3) break;
   }
   if (!normalized.length) return "";
-  return "\u6837\u672c: " + normalized.join(" | ");
+  return getHistoryCopy(lang).samplePrefix + ": " + normalized.join(" | ");
 }
 
-function appendHistoryDiagnosticsSummary(documentLike: Document, node: HTMLElement, item: HistoryRecordViewModel): void {
+function appendHistoryDiagnosticsSummary(
+  documentLike: Document,
+  node: HTMLElement,
+  item: HistoryRecordViewModel,
+  lang: HistoryUiLang
+): void {
   const secondaryPlacementEntry = resolveHistorySecondaryPlacementDiagnosticsEntry(item);
   if (!secondaryPlacementEntry) return;
   const summaryNode = documentLike.createElement("div");
   summaryNode.className = "history-item-diagnostics";
-  summaryNode.textContent = buildHistorySecondaryPlacementDiagnosticsSummaryText(secondaryPlacementEntry);
+  summaryNode.textContent = buildHistorySecondaryPlacementDiagnosticsSummaryText(secondaryPlacementEntry, lang);
   node.appendChild(summaryNode);
 
-  const sampleText = resolveHistoryDiagnosticsSampleText(secondaryPlacementEntry.payload);
+  const sampleText = resolveHistoryDiagnosticsSampleText(secondaryPlacementEntry.payload, lang);
   if (!sampleText) return;
   const sampleNode = documentLike.createElement("div");
   sampleNode.className = "history-item-diagnostics-samples";
@@ -190,14 +326,21 @@ function appendHistoryDiagnosticsSummary(documentLike: Document, node: HTMLEleme
   node.appendChild(sampleNode);
 }
 
-function renderSummary(documentLike: Document, result: Record<string, unknown>, state: HistoryFilterState): void {
+function renderSummary(
+  documentLike: Document,
+  result: Record<string, unknown>,
+  state: HistoryFilterState,
+  lang: HistoryUiLang
+): void {
   const node = documentLike.getElementById("history-summary");
   if (!node) return;
   const total = Number(result.total) || 0;
   const page = Number(result.page) || Number(state.page) || 1;
   const pageSize = Number(result.page_size) || Number(state.pageSize) || 30;
   const maxPage = Math.max(1, Math.ceil(total / pageSize));
-  node.textContent = "\u5171" + total + " \u6761 \u00b7 \u7b2c " + page + "/" + maxPage + " \u9875";
+  node.textContent = lang === "en"
+    ? total + " records · Page " + page + "/" + maxPage
+    : "\u5171" + total + " \u6761 \u00b7 \u7b2c " + page + "/" + maxPage + " \u9875";
 
   const prev = documentLike.getElementById("history-prev-page") as HTMLButtonElement | null;
   const next = documentLike.getElementById("history-next-page") as HTMLButtonElement | null;
@@ -210,24 +353,25 @@ function renderList(
   documentLike: Document,
   items: unknown[],
   controller: ReturnType<typeof createHistoryPageController>,
-  lang: "en" | "zh",
+  lang: HistoryUiLang,
   loadHistory: (resetPage: boolean) => Promise<void>
 ): void {
   const list = documentLike.getElementById("history-list");
   if (!list) return;
   list.innerHTML = "";
+  const copy = getHistoryCopy(lang);
 
   if (!items.length) {
     list.innerHTML =
       "<div class='history-item'>" +
-      "\u6682\u65e0\u5386\u53f2\u8bb0\u5f55\u3002\u4f60\u53ef\u4ee5\u5f00\u59cb\u4e00\u5c40\u6e38\u620f\u540e\u518d\u56de\u6765\u67e5\u770b\u3002" +
+      escapeHtml(copy.noRecords) +
       "</div>";
     return;
   }
 
   for (let i = 0; i < items.length; i += 1) {
     const item = controller.normalizeRecord(items[i]);
-    const modeText = controller.resolveModeLabel(item.mode_key, item.mode);
+    const modeText = controller.resolveModeLabel(item.mode_key, item.mode, lang);
     const ownerDisplay = normalizeOwnerDisplay(item, lang);
     const node = documentLike.createElement("div");
     node.className = "history-item";
@@ -235,18 +379,18 @@ function renderList(
       "<div class='history-item-head'>" +
         "<strong>" + escapeHtml(modeText) + "</strong>" +
         "<span class='history-owner-tag'>" + escapeHtml(ownerDisplay.label) + "</span>" +
-        "<span>\u5206\u6570: " + escapeHtml(Number(item.score) || 0) + "</span>" +
-        "<span>\u6700\u5927\u5757: " + escapeHtml(Number(item.best_tile) || 0) + "</span>" +
-        "<span>\u65f6\u957f: " + escapeHtml(formatDuration(item.duration_ms)) + "</span>" +
-        "<span>\u7ed3\u675f: " + escapeHtml(formatEndedAt(item.ended_at)) + "</span>" +
+        "<span>" + escapeHtml(copy.score) + ": " + escapeHtml(Number(item.score) || 0) + "</span>" +
+        "<span>" + escapeHtml(copy.bestTile) + ": " + escapeHtml(Number(item.best_tile) || 0) + "</span>" +
+        "<span>" + escapeHtml(copy.duration) + ": " + escapeHtml(formatDuration(item.duration_ms)) + "</span>" +
+        "<span>" + escapeHtml(copy.ended) + ": " + escapeHtml(formatEndedAt(item.ended_at)) + "</span>" +
       "</div>" +
       "<div class='history-item-actions'>" +
-        "<button class='replay-button history-replay-btn'>\u56de\u653e</button>" +
-        "<button class='replay-button history-export-btn'>\u5bfc\u51fa</button>" +
-        "<button class='replay-button history-delete-btn'>\u5220\u9664</button>" +
+        "<button class='replay-button history-replay-btn'>" + escapeHtml(copy.replay) + "</button>" +
+        "<button class='replay-button history-export-btn'>" + escapeHtml(copy.exportRecord) + "</button>" +
+        "<button class='replay-button history-delete-btn'>" + escapeHtml(copy.deleteRecord) + "</button>" +
       "</div>";
 
-    appendHistoryDiagnosticsSummary(documentLike, node, item);
+    appendHistoryDiagnosticsSummary(documentLike, node, item, lang);
 
     const boardNode = controller.createBoardPreview(item.final_board);
     if (boardNode) {
@@ -279,28 +423,20 @@ function renderList(
             const replayCode = controller.resolveReplayCode(item.replay_string);
             if (replayCode.trim()) {
               store.download(filenamePrefix + ".txt", replayCode, "text/plain;charset=utf-8");
-              setStatus(
-                documentLike,
-                "\u5df2\u5bfc\u51fa 1 \u6761\u8bb0\u5f55\uff08TXT + JSON\uff09",
-                false
-              );
+              setStatus(documentLike, copy.exportOneSuccess, false);
               return;
             }
-            setStatus(
-              documentLike,
-              "\u8be5\u8bb0\u5f55\u7f3a\u5c11\u53ef\u5bfc\u5165\u7684\u56de\u653e\u7801\uff0c\u5df2\u5bfc\u51fa JSON",
-              true
-            );
+            setStatus(documentLike, copy.exportJsonOnly, true);
           };
           if (isPromiseLike(result)) {
             result.then(onPayload).catch(() => {
-              setStatus(documentLike, "导出失败", true);
+              setStatus(documentLike, copy.exportFailed, true);
             });
             return;
           }
           onPayload(result);
         } catch (_err) {
-          setStatus(documentLike, "导出失败", true);
+          setStatus(documentLike, copy.exportFailed, true);
         }
       });
     }
@@ -308,13 +444,13 @@ function renderList(
     const deleteBtn = node.querySelector(".history-delete-btn") as HTMLButtonElement | null;
     if (deleteBtn) {
       deleteBtn.addEventListener("click", async () => {
-        if (!windowLike.confirm("\u786e\u8ba4\u5220\u9664\u8fd9\u6761\u8bb0\u5f55\uff1f")) return;
+        if (!windowLike.confirm(copy.deleteConfirm)) return;
         const ok = await callStore(windowLike, "deleteById", item.id);
         if (!ok) {
-          setStatus(documentLike, "删除失败", true);
+          setStatus(documentLike, copy.deleteFailed, true);
           return;
         }
-        setStatus(documentLike, "\u5df2\u5220\u9664\u8bb0\u5f55", false);
+        setStatus(documentLike, copy.deleteSuccess, false);
         await loadHistory(false);
       });
     }
@@ -345,7 +481,12 @@ function applyControls(documentLike: Document, state: HistoryFilterState): void 
   if (sort) sort.value = toText(state.sortBy || "ended_desc");
 }
 
-function initModeFilter(windowLike: Window, documentLike: Document): void {
+function initModeFilter(
+  windowLike: Window,
+  documentLike: Document,
+  controller: ReturnType<typeof createHistoryPageController>,
+  lang: HistoryUiLang
+): void {
   const modeSelect = documentLike.getElementById("history-mode") as HTMLSelectElement | null;
   if (!modeSelect) return;
   const catalog = (windowLike as any).ModeCatalog;
@@ -358,7 +499,7 @@ function initModeFilter(windowLike: Window, documentLike: Document): void {
     if (!mode.key || !mode.label) continue;
     const option = documentLike.createElement("option");
     option.value = String(mode.key);
-    option.textContent = String(mode.label);
+    option.textContent = controller.resolveModeLabel(String(mode.key), String(mode.label), lang);
     modeSelect.appendChild(option);
   }
 }
@@ -384,7 +525,7 @@ async function rebuildOwnerFilterOptions(
   windowLike: Window,
   documentLike: Document,
   controller: ReturnType<typeof createHistoryPageController>,
-  lang: "en" | "zh",
+  lang: HistoryUiLang,
   selectedOwnerKey: string
 ): Promise<void> {
   const ownerSelect = documentLike.getElementById("history-owner") as HTMLSelectElement | null;
@@ -448,6 +589,7 @@ async function rebuildOwnerFilterOptions(
 function bindImport(
   windowLike: Window,
   documentLike: Document,
+  resolveLang: () => HistoryUiLang,
   loadHistory: (resetPage: boolean) => Promise<void>
 ): void {
   const importBtn = documentLike.getElementById("history-import-btn") as HTMLButtonElement | null;
@@ -469,7 +611,7 @@ function bindImport(
   });
 
   importReplaceBtn.addEventListener("click", () => {
-    if (!windowLike.confirm("确认导入并替换全部当前历史记录？")) return;
+    if (!windowLike.confirm(getHistoryCopy(resolveLang()).importReplaceConfirm)) return;
     openPicker(false);
   });
 
@@ -481,20 +623,25 @@ function bindImport(
       try {
         const text = typeof reader.result === "string" ? reader.result : "";
         const result = await callStore(windowLike, "importRecords", text, { merge });
+        const lang = resolveLang();
         setStatus(
           documentLike,
           merge
-            ? "\u5bfc\u5165\u5b8c\u6210\uff1a\u65b0\u589e " + result.imported + "\uff0c\u66ff\u6362 " + result.replaced
-            : "\u5bfc\u5165\u5e76\u66ff\u6362\u5b8c\u6210\uff1a\u603b\u8ba1 " + result.total + " \u6761",
+            ? lang === "en"
+              ? "Import complete: added " + result.imported + ", replaced " + result.replaced
+              : "\u5bfc\u5165\u5b8c\u6210\uff1a\u65b0\u589e " + result.imported + "\uff0c\u66ff\u6362 " + result.replaced
+            : lang === "en"
+              ? "Import and replace complete: " + result.total + " records total"
+              : "\u5bfc\u5165\u5e76\u66ff\u6362\u5b8c\u6210\uff1a\u603b\u8ba1 " + result.total + " \u6761",
           false
         );
         await loadHistory(true);
       } catch (_err) {
-        setStatus(documentLike, "导入失败：文件格式不正确", true);
+        setStatus(documentLike, getHistoryCopy(resolveLang()).importInvalid, true);
       }
     };
     reader.onerror = () => {
-      setStatus(documentLike, "\u5bfc\u5165\u5931\u8d25\uff1a\u6587\u4ef6\u8bfb\u53d6\u9519\u8bef", true);
+      setStatus(documentLike, getHistoryCopy(resolveLang()).importReadFailed, true);
     };
     reader.readAsText(file, "utf-8");
   });
@@ -536,29 +683,30 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
         page: state.page,
         page_size: state.pageSize
       });
+      const lang = resolveLang();
       renderList(
         windowLike,
         documentLike,
         Array.isArray(result.items) ? result.items : [],
         controller,
-        resolveLang(),
+        lang,
         loadHistory
       );
-      renderSummary(documentLike, result || {}, state);
-      await rebuildOwnerFilterOptions(windowLike, documentLike, controller, resolveLang(), state.ownerKey);
+      renderSummary(documentLike, result || {}, state, lang);
+      await rebuildOwnerFilterOptions(windowLike, documentLike, controller, lang, state.ownerKey);
       setStatus(documentLike, "", false);
     } catch (_err) {
-      setStatus(documentLike, "加载历史失败", true);
+      setStatus(documentLike, getHistoryCopy(resolveLang()).loadFailed, true);
     }
   };
 
   const bootstrap = () => {
     if (!(windowLike as any).LocalHistoryStore) {
-      setStatus(documentLike, "\u672c\u5730\u5386\u53f2\u6a21\u5757\u672a\u52a0\u8f7d", true);
+      setStatus(documentLike, getHistoryCopy(resolveLang()).moduleMissing, true);
       return;
     }
 
-    initModeFilter(windowLike, documentLike);
+    initModeFilter(windowLike, documentLike, controller, resolveLang());
     rebuildOwnerFilterOptions(windowLike, documentLike, controller, resolveLang(), state.ownerKey)
       .then(() => {
         applyControls(documentLike, state);
@@ -616,17 +764,17 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
           const handlePayload = (payload: unknown) => {
             const dateTag = new Date().toISOString().slice(0, 10);
             store.download("2048_local_history_" + dateTag + ".json", toText(payload));
-            setStatus(documentLike, "\u5df2\u5bfc\u51fa\u5168\u90e8\u5386\u53f2\u8bb0\u5f55", false);
+            setStatus(documentLike, getHistoryCopy(resolveLang()).exportAllSuccess, false);
           };
           if (isPromiseLike(result)) {
             result.then(handlePayload).catch(() => {
-      setStatus(documentLike, "导出失败", true);
+              setStatus(documentLike, getHistoryCopy(resolveLang()).exportFailed, true);
             });
             return;
           }
           handlePayload(result);
         } catch (_err) {
-          setStatus(documentLike, "导出失败", true);
+          setStatus(documentLike, getHistoryCopy(resolveLang()).exportFailed, true);
         }
       });
     }
@@ -634,24 +782,20 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
     const clearAllBtn = documentLike.getElementById("history-clear-all-btn") as HTMLButtonElement | null;
     if (clearAllBtn) {
       clearAllBtn.addEventListener("click", async () => {
-        if (
-          !windowLike.confirm(
-            "\u786e\u8ba4\u6e05\u7a7a\u5168\u90e8\u672c\u5730\u5386\u53f2\u8bb0\u5f55\uff1f\u6b64\u64cd\u4f5c\u4e0d\u53ef\u64a4\u9500\u3002"
-          )
-        ) {
+        if (!windowLike.confirm(getHistoryCopy(resolveLang()).clearAllConfirm)) {
           return;
         }
         try {
           await callStore(windowLike, "clearAll");
-          setStatus(documentLike, "\u5df2\u6e05\u7a7a\u5168\u90e8\u5386\u53f2\u8bb0\u5f55", false);
+          setStatus(documentLike, getHistoryCopy(resolveLang()).clearAllSuccess, false);
           await loadHistory(true);
         } catch (_err) {
-          setStatus(documentLike, "娓呯┖澶辫触", true);
+          setStatus(documentLike, getHistoryCopy(resolveLang()).clearFailed, true);
         }
       });
     }
 
-    bindImport(windowLike, documentLike, loadHistory);
+    bindImport(windowLike, documentLike, resolveLang, loadHistory);
   };
 
   if (documentLike.readyState === "loading") {

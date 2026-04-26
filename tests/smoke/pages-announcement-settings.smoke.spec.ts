@@ -89,9 +89,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
         initialUnread,
         afterUnread: !!(btn && btn.classList.contains("has-unread")),
         modalDisplay: modal ? String(modal.style.display || "") : "",
-        hasGroupLink: !!document.querySelector(".announcement-link"),
-        groupLinkHref: String(
-          (document.querySelector(".announcement-link") as HTMLAnchorElement | null)?.href || ""
+        hasAnnouncementLink: !!document.querySelector(".announcement-link"),
+        homeFeedbackText: String(
+          (document.querySelector(".mobile-hide-project-copy")?.textContent || "").trim()
+        ),
+        homeFeedbackHref: String(
+          (
+            document.querySelectorAll(".mobile-hide-project-copy a")[1] as HTMLAnchorElement | null
+          )?.href || ""
         ),
         resolveCalls: Number((window as any).__announcementResolveCalls || 0),
         unreadCalls: Number((window as any).__announcementUnreadCalls || 0),
@@ -105,8 +110,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.initialUnread).toBe(true);
     expect(snapshot.afterUnread).toBe(false);
     expect(snapshot.modalDisplay).toBe("flex");
-    expect(snapshot.hasGroupLink).toBe(true);
-    expect(snapshot.groupLinkHref).toBe("https://qm.qq.com/q/QkKc783jCW");
+    expect(snapshot.hasAnnouncementLink).toBe(false);
+    expect(snapshot.homeFeedbackText).toContain("问题反馈交流群");
+    expect(snapshot.homeFeedbackHref).toBe("https://qm.qq.com/q/QkKc783jCW");
     expect(snapshot.resolveCalls).toBeGreaterThan(0);
     expect(snapshot.unreadCalls).toBeGreaterThan(0);
     expect(snapshot.markCalls).toBeGreaterThan(0);

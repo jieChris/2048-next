@@ -1,18 +1,6 @@
 (function () {
   window.ANNOUNCEMENT_RECORDS = [
     {
-      id: "2026-04-26-issue-violation-group",
-      version: "公告",
-      date: "2026-04-26",
-      title: "问题犯规交流群",
-      title_en: "Issue & Fair-Play QQ Group",
-      content: "欢迎加入问题犯规交流群 1103144436。",
-      content_en: "Welcome to join the issue & fair-play QQ group 1103144436.",
-      link_label: "1103144436",
-      link_label_en: "QQ Group 1103144436",
-      link_href: "https://qm.qq.com/q/QkKc783jCW"
-    },
-    {
       id: "2026-04-26-source-policy-and-domain-notice",
       version: "置顶",
       date: "2026-04-26",
@@ -24,9 +12,9 @@
         "欢迎访问 2048next.cn。\n" +
         "本站（taihe.fun）在该项目完成后将关闭入口，仅开放 2048next.cn。",
       content_en:
-        "综合考虑取消开源。\n" +
-        "欢迎访问 2048next.cn。\n" +
-        "本站（taihe.fun）在该项目完成后将关闭入口，仅开放 2048next.cn。"
+        "After review, the project will no longer be open sourced.\n" +
+        "Please visit 2048next.cn.\n" +
+        "After this project is completed, taihe.fun will close this entry and only 2048next.cn will remain open."
     },
     {
       id: "2026-04-16-top-beta-notice",

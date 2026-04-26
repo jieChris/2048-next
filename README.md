@@ -117,11 +117,26 @@ npm run dev:local
 ### 4. 构建与预览
 
 ```bash
-npm run build
 npm run preview
 ```
 
-`npm run build` 会生成可部署的 `dist/` 目录。当前多页面入口依赖 Vite 处理后的模块资源，生产环境应发布 `dist/`，而不是直接托管仓库源码。
+`npm run preview` 会先执行一次 `build`，然后启动本地预览站点。`npm run build` 单独执行时仍会生成可部署的 `dist/` 目录。当前多页面入口依赖 Vite 处理后的模块资源，生产环境应发布 `dist/`，而不是直接托管仓库源码。
+
+`npm run preview` 默认会把本地预览站点的 `/api/*` 请求代理到 `https://taihe.fun/api/*`，因此在不启动本地 API 仓的情况下，也可以直接登录、查看排行榜并使用在线功能。
+
+如果你要改用其他 API 目标，可在启动前覆盖：
+
+```bash
+# Windows PowerShell
+$env:VITE_API_PROXY_TARGET="https://taihe.fun"
+npm run preview
+```
+
+如果你已经自行构建过，且明确要保留原始 `vite preview` 行为，可运行：
+
+```bash
+npm run preview:raw
+```
 
 ## 测试命令
 

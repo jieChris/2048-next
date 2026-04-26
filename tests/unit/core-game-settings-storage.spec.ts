@@ -176,6 +176,24 @@ describe("core game settings storage", () => {
     ).toEqual([localStorage]);
   });
 
+  it("skips sessionStorage for mobile Safari saved-state restore", () => {
+    const localStorage = { setItem: vi.fn() };
+    const sessionStorage = { setItem: vi.fn() };
+
+    expect(
+      getSavedGameStateStoragesFromContext({
+        windowLike: {
+          localStorage,
+          sessionStorage,
+          navigator: {
+            userAgent:
+              "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+          }
+        }
+      })
+    ).toEqual([localStorage]);
+  });
+
   it("removes multiple keys from available storages safely", () => {
     const removeA = vi.fn();
     const removeB = vi.fn(() => {

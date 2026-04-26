@@ -15,6 +15,79 @@ function resolveStatsPanelPathName(documentLike) {
   return typeof documentLike.location.pathname === "string" ? documentLike.location.pathname : "";
 }
 
+function normalizeStatsPanelLanguage(value) {
+  var lang = String(value || "").trim().toLowerCase();
+  if (lang.indexOf("en") === 0) return "en";
+  if (lang.indexOf("zh") === 0) return "zh";
+  return "";
+}
+
+function resolveStatsPanelWindowLike(manager, documentLike) {
+  if (manager && typeof manager.getWindowLike === "function") {
+    try {
+      var managerWindow = manager.getWindowLike();
+      if (managerWindow) return managerWindow;
+    } catch (_errManagerWindow) {}
+  }
+  if (documentLike && documentLike.defaultView) return documentLike.defaultView;
+  if (typeof window !== "undefined") return window;
+  return null;
+}
+
+function resolveStatsPanelLanguage(manager, documentLike) {
+  var windowLike = resolveStatsPanelWindowLike(manager, documentLike);
+  var lang = "";
+  try {
+    var i18n = windowLike && windowLike.UII18N;
+    if (i18n && typeof i18n.getLanguage === "function") {
+      lang = normalizeStatsPanelLanguage(i18n.getLanguage());
+      if (lang) return lang;
+    }
+  } catch (_errI18n) {}
+  try {
+    var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
+    lang = storage && typeof storage.getItem === "function"
+      ? normalizeStatsPanelLanguage(storage.getItem("ui_language_v1"))
+      : "";
+    if (lang) return lang;
+  } catch (_errStorage) {}
+  try {
+    var root = documentLike && documentLike.documentElement ? documentLike.documentElement : null;
+    if (!root && windowLike && windowLike.document) root = windowLike.document.documentElement;
+    if (root && typeof root.getAttribute === "function") {
+      lang = normalizeStatsPanelLanguage(root.getAttribute("data-ui-lang") || root.getAttribute("lang"));
+      if (lang) return lang;
+    }
+  } catch (_errDocument) {}
+  return "zh";
+}
+
+function resolveStatsPanelCopy(lang) {
+  return lang === "en"
+    ? {
+      button: "Stats",
+      title: "Stats Summary",
+      totalSteps: "Total Steps",
+      moveSteps: "Move Steps",
+      undoSteps: "Undo Steps",
+      primarySpawns: "2 Spawns",
+      secondarySpawns: "4 Spawns",
+      secondaryRate: "Actual 4-Rate",
+      close: "Close"
+    }
+    : {
+      button: "\u7edf\u8ba1",
+      title: "\u7edf\u8ba1\u6c47\u603b",
+      totalSteps: "\u603b\u6b65\u6570",
+      moveSteps: "\u79fb\u52a8\u6b65\u6570",
+      undoSteps: "\u64a4\u56de\u6b65\u6570",
+      primarySpawns: "\u51fa2\u6570\u91cf",
+      secondarySpawns: "\u51fa4\u6570\u91cf",
+      secondaryRate: "\u5b9e\u9645\u51fa4\u7387",
+      close: "\u5173\u95ed"
+    };
+}
+
 function pushUniqueStatsPanelKeyPart(parts, value) {
   if (!(value && parts.indexOf(value) === -1)) return;
   parts.push(value);
@@ -153,10 +226,11 @@ function resolveOrCreateStatsPanelToggleButton(manager, documentLike) {
   return btn;
 }
 
-function configureStatsPanelToggleButton(btn) {
+function configureStatsPanelToggleButton(btn, lang) {
   if (!btn) return;
-  btn.title = "统计";
-  btn.setAttribute("aria-label", "统计");
+  var copy = resolveStatsPanelCopy(lang);
+  btn.title = copy.button;
+  btn.setAttribute("aria-label", copy.button);
   if (!btn.querySelector("svg")) {
     btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>';
   }
@@ -226,18 +300,19 @@ function mountStatsPanelToggleButton(documentLike, btn, topActionHost, exportBtn
   mountStatsPanelToggleAsFloating(documentLike, btn);
 }
 
-function createStatsPanelOverlayHtml() {
+function createStatsPanelOverlayHtml(lang) {
+  var copy = resolveStatsPanelCopy(lang);
   return (
     "<div class='replay-modal-content stats-panel-content'>" +
-    "<h3>统计汇总</h3>" +
-    "<div class='stats-panel-row'><span>总步数</span><span id='stats-panel-total'>0</span></div>" +
-    "<div class='stats-panel-row'><span>移动步数</span><span id='stats-panel-moves'>0</span></div>" +
-    "<div class='stats-panel-row'><span>撤回步数</span><span id='stats-panel-undo'>0</span></div>" +
-    "<div class='stats-panel-row'><span id='stats-panel-two-label'>出2数量</span><span id='stats-panel-two'>0</span></div>" +
-    "<div class='stats-panel-row'><span id='stats-panel-four-label'>出4数量</span><span id='stats-panel-four'>0</span></div>" +
-    "<div class='stats-panel-row'><span id='stats-panel-four-rate-label'>实际出4率</span><span id='stats-panel-four-rate'>0.00</span></div>" +
+    "<h3 id='stats-panel-title'>" + copy.title + "</h3>" +
+    "<div class='stats-panel-row'><span id='stats-panel-total-label'>" + copy.totalSteps + "</span><span id='stats-panel-total'>0</span></div>" +
+    "<div class='stats-panel-row'><span id='stats-panel-moves-label'>" + copy.moveSteps + "</span><span id='stats-panel-moves'>0</span></div>" +
+    "<div class='stats-panel-row'><span id='stats-panel-undo-label'>" + copy.undoSteps + "</span><span id='stats-panel-undo'>0</span></div>" +
+    "<div class='stats-panel-row'><span id='stats-panel-two-label'>" + copy.primarySpawns + "</span><span id='stats-panel-two'>0</span></div>" +
+    "<div class='stats-panel-row'><span id='stats-panel-four-label'>" + copy.secondarySpawns + "</span><span id='stats-panel-four'>0</span></div>" +
+    "<div class='stats-panel-row'><span id='stats-panel-four-rate-label'>" + copy.secondaryRate + "</span><span id='stats-panel-four-rate'>0.00</span></div>" +
     "<div class='replay-modal-actions'>" +
-    "<button id='stats-panel-close' class='replay-button'>关闭</button>" +
+    "<button id='stats-panel-close' class='replay-button'>" + copy.close + "</button>" +
     "</div>" +
     "</div>"
   );
@@ -248,7 +323,7 @@ function appendStatsPanelOverlayToDocumentBody(documentLike, overlay) {
   documentLike.body.appendChild(overlay);
 }
 
-function resolveOrCreateStatsPanelOverlay(manager, documentLike) {
+function resolveOrCreateStatsPanelOverlay(manager, documentLike, lang) {
   if (!manager || !documentLike) return null;
   var overlay = resolveManagerElementById(manager, "stats-panel-overlay");
   if (overlay) return overlay;
@@ -257,7 +332,7 @@ function resolveOrCreateStatsPanelOverlay(manager, documentLike) {
   overlay.id = "stats-panel-overlay";
   overlay.className = "replay-modal-overlay";
   overlay.style.display = "none";
-  overlay.innerHTML = createStatsPanelOverlayHtml();
+  overlay.innerHTML = createStatsPanelOverlayHtml(lang);
   appendStatsPanelOverlayToDocumentBody(documentLike, overlay);
   return overlay;
 }
@@ -320,13 +395,14 @@ function initStatsPanelUi(manager) {
   if (!manager) return;
   var documentLike = resolveManagerDocumentLike(manager);
   if (!documentLike || !documentLike.body) return;
+  var lang = resolveStatsPanelLanguage(manager, documentLike);
   var btn = resolveOrCreateStatsPanelToggleButton(manager, documentLike);
-  configureStatsPanelToggleButton(btn);
+  configureStatsPanelToggleButton(btn, lang);
   var exportBtn = resolveManagerElementById(manager, "top-export-replay-btn");
   var practiceStatsActions = resolveManagerElementById(manager, "practice-stats-actions");
   var topActionHost = resolveStatsPanelTopActionHost(documentLike, exportBtn, practiceStatsActions);
   mountStatsPanelToggleButton(documentLike, btn, topActionHost, exportBtn);
-  var overlay = resolveOrCreateStatsPanelOverlay(manager, documentLike);
+  var overlay = resolveOrCreateStatsPanelOverlay(manager, documentLike, lang);
   bindStatsPanelUiEvents(manager, btn, overlay);
   var isOpen = resolveStatsPanelInitialOpenState(manager);
   applyStatsPanelOverlayDisplay(overlay, isOpen);

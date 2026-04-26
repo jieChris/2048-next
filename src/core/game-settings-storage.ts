@@ -7,6 +7,9 @@ interface StorageLike {
 interface WindowLike {
   localStorage?: StorageLike | null;
   sessionStorage?: StorageLike | null;
+  navigator?: {
+    userAgent?: string;
+  } | null;
   name?: string;
 }
 
@@ -40,6 +43,15 @@ function resolveLocalStorage(windowLike: unknown): StorageLike | null {
   const storage = win.localStorage;
   if (!storage) return null;
   return storage;
+}
+
+function isMobileSafariUserAgent(userAgent: unknown): boolean {
+  const ua = String(userAgent || "");
+  if (!ua) return false;
+  if (!/iPhone|iPad|iPod/i.test(ua)) return false;
+  if (!/Safari/i.test(ua)) return false;
+  if (/CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/i.test(ua)) return false;
+  return true;
 }
 
 function resolveModeKey(options: {
@@ -533,8 +545,12 @@ export function getSavedGameStateStoragesFromContext(options: {
   const storages: StorageLike[] = [];
   const localStorage = win.localStorage || null;
   const sessionStorage = win.sessionStorage || null;
+  const userAgent = win.navigator?.userAgent || "";
+  const shouldSkipSessionStorage = isMobileSafariUserAgent(userAgent);
   if (localStorage) storages.push(localStorage);
-  if (sessionStorage && sessionStorage !== localStorage) storages.push(sessionStorage);
+  if (!shouldSkipSessionStorage && sessionStorage && sessionStorage !== localStorage) {
+    storages.push(sessionStorage);
+  }
   return storages;
 }
 

@@ -727,6 +727,12 @@
     if (type === "err") node.classList.add("err");
   }
 
+  function clearAuthErrorTip() {
+    var node = byId("account-auth-tip");
+    if (!node || !node.classList || !node.classList.contains("err")) return;
+    setTip(node, "", "");
+  }
+
   function formatDate(raw) {
     return toText(raw).trim() || "--";
   }
@@ -1183,6 +1189,22 @@
     setTip(byId("account-auth-tip"), resolveServerError(result, "loginFail"), "err");
   }
 
+  function triggerLoginFromKeyboard(eventLike) {
+    if (!eventLike) return;
+    if (eventLike.isComposing === true) return;
+    var key = toText(eventLike.key);
+    if (key !== "Enter") return;
+    if (typeof eventLike.preventDefault === "function") eventLike.preventDefault();
+    onLoginClick();
+  }
+
+  function bindLoginInputBehavior(inputNode) {
+    if (!inputNode || typeof inputNode.addEventListener !== "function") return;
+    inputNode.addEventListener("keydown", triggerLoginFromKeyboard);
+    inputNode.addEventListener("focus", clearAuthErrorTip);
+    inputNode.addEventListener("input", clearAuthErrorTip);
+  }
+
   function applyLanguage() {
     setI18nReady(false);
     currentLang = readLanguage();
@@ -1263,8 +1285,14 @@
     var prevBtn = byId("account-board-prev");
     var nextBtn = byId("account-board-next");
     var guideBtn = byId("account-open-guide-btn");
+    var emailInput = byId("account-email");
+    var passwordInput = byId("account-password");
+    var loginCaptchaInput = byId("account-login-captcha-answer");
 
     if (loginBtn) loginBtn.addEventListener("click", onLoginClick);
+    bindLoginInputBehavior(emailInput);
+    bindLoginInputBehavior(passwordInput);
+    bindLoginInputBehavior(loginCaptchaInput);
     if (registerBtn) registerBtn.setAttribute("href", "register.html");
     if (resetPasswordBtn) resetPasswordBtn.setAttribute("href", "password.html?mode=reset");
     if (refreshBtn) {

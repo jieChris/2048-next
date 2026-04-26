@@ -510,6 +510,40 @@ test.describe("Legacy Multi-Page Smoke", () => {
     );
   });
 
+  test("restart confirmation dialog is English under en mode", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("ui_language_v1", "en");
+      window.localStorage.setItem("home_guide_seen_v1", "1");
+    });
+
+    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(
+      page,
+      () =>
+        !!(window as any).game_manager &&
+        typeof (window as any).UII18N?.getLanguage === "function" &&
+        (window as any).UII18N.getLanguage() === "en" &&
+        document.getElementById("top-restart-btn")?.getAttribute("title") === "New Game",
+      12_000
+    );
+
+    await expect(page.locator("#top-restart-btn")).toHaveAttribute("title", "New Game");
+    await expect(page.locator("#top-restart-btn")).toHaveAttribute("aria-label", "New Game");
+
+    const dialogMessagePromise = new Promise<string>((resolve) => {
+      page.once("dialog", async (dialog) => {
+        const message = dialog.message();
+        await dialog.dismiss();
+        resolve(message);
+      });
+    });
+    await page.click(".restart-button");
+    await expect(dialogMessagePromise).resolves.toBe("Start a new game?");
+  });
+
   test("timer module settings copy updates immediately after language switch", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("ui_language_v1", "zh");

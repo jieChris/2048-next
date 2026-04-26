@@ -43,4 +43,21 @@ describe("history-record-normalize", () => {
   it("falls back to the provided label before the mode key", () => {
     expect(resolveModeLabel("diag_4x2_pow2_no_undo", "Diagonal 4x2")).toBe("Diagonal 4x2");
   });
+
+  it("resolves English labels for generated modes when catalog labels are legacy Chinese", () => {
+    expect(
+      resolveModeLabel("spawn_custom_4x4_pow2_no_undo", "4x4 自定义4率（无撤回）", {
+        lang: "en",
+        modeCatalog: {
+          getMode: () => ({ label: "4x4 自定义4率（无撤回）", board_width: 4, board_height: 4 })
+        }
+      })
+    ).toBe("4x4 Custom 4-Rate");
+
+    expect(
+      resolveModeLabel("limit3_4x4_pow2_no_undo", "限次撤回 4x4（3次）（无撤回）", {
+        lang: "en"
+      })
+    ).toBe("Limited Undo 4x4 (3)");
+  });
 });

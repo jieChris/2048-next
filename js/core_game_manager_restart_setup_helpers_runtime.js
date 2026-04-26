@@ -1,4 +1,4 @@
-var NO_X_FORBIDDEN_TILE_OPTIONS = [1024, 2048, 4096, 8192, 16384, 32768];
+var NO_X_FORBIDDEN_TILE_OPTIONS = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768];
 var DEFAULT_NO_X_FORBIDDEN_TILE = 8192;
 
 function resolveNoXForbiddenTileOption(rawValue) {
@@ -13,6 +13,7 @@ function resolveNoXForbiddenTileOption(rawValue) {
 function formatNoXForbiddenTileLabel(value) {
   var resolved = resolveNoXForbiddenTileOption(value);
   if (resolved === null) return "";
+  if (resolved < 1024) return String(resolved);
   var kilo = Math.round(resolved / 1024);
   return String(kilo) + "k";
 }
@@ -112,26 +113,48 @@ function syncNoXHeaderStateAfterSelection(manager) {
   });
 }
 
-function buildNoXSelectionTitle(windowLike) {
+function normalizeNoXSelectionLanguage(value) {
+  var lang = String(value || "").trim().toLowerCase();
+  if (lang.indexOf("en") === 0) return "en";
+  if (lang.indexOf("zh") === 0) return "zh";
+  return "";
+}
+
+function resolveNoXSelectionLanguage(windowLike) {
   var lang = "";
   try {
     if (windowLike && windowLike.UII18N && typeof windowLike.UII18N.getLanguage === "function") {
-      lang = String(windowLike.UII18N.getLanguage() || "").trim().toLowerCase();
+      lang = normalizeNoXSelectionLanguage(windowLike.UII18N.getLanguage());
+      if (lang) return lang;
     }
   } catch (_err) {}
-  if (lang.indexOf("en") === 0) return "Choose forbidden X";
+  try {
+    var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
+    lang = storage && typeof storage.getItem === "function"
+      ? normalizeNoXSelectionLanguage(storage.getItem("ui_language_v1"))
+      : "";
+    if (lang) return lang;
+  } catch (_errStorage) {}
+  try {
+    var documentLike = windowLike && windowLike.document ? windowLike.document : null;
+    if (!documentLike && typeof document !== "undefined") documentLike = document;
+    var root = documentLike && documentLike.documentElement ? documentLike.documentElement : null;
+    if (root && typeof root.getAttribute === "function") {
+      lang = normalizeNoXSelectionLanguage(root.getAttribute("data-ui-lang") || root.getAttribute("lang"));
+      if (lang) return lang;
+    }
+  } catch (_errDocument) {}
+  return "zh";
+}
+
+function buildNoXSelectionTitle(windowLike) {
+  if (resolveNoXSelectionLanguage(windowLike) === "en") return "Choose forbidden X";
   return "\u9009\u62e9 NO X \u7684 X";
 }
 
 function buildNoXSelectionSubtitle(windowLike) {
-  var lang = "";
-  try {
-    if (windowLike && windowLike.UII18N && typeof windowLike.UII18N.getLanguage === "function") {
-      lang = String(windowLike.UII18N.getLanguage() || "").trim().toLowerCase();
-    }
-  } catch (_err) {}
-  if (lang.indexOf("en") === 0) return "Click one option. If X appears, game ends.";
-  return "\u70b9\u51fb\u9009\u62e9 1k~32k\uff0c\u82e5\u5408\u6210\u51fa X \u6570\uff0c\u672c\u5c40\u7acb\u5373\u7ed3\u675f\u3002";
+  if (resolveNoXSelectionLanguage(windowLike) === "en") return "Click one option. If X appears, game ends.";
+  return "\u70b9\u51fb\u9009\u62e9 64~32k\uff0c\u82e5\u5408\u6210\u51fa X \u6570\uff0c\u672c\u5c40\u7acb\u5373\u7ed3\u675f\u3002";
 }
 
 function createNoXSelectionOptionButton(documentLike, manager, value, selectedValue) {
@@ -206,7 +229,7 @@ function ensureNoXSelectionOverlayForManager(manager) {
 
   var grid = documentLike.createElement("div");
   grid.style.display = "grid";
-  grid.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))";
+  grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(86px, 1fr))";
   grid.style.gap = "10px";
   for (var i = 0; i < NO_X_FORBIDDEN_TILE_OPTIONS.length; i++) {
     grid.appendChild(createNoXSelectionOptionButton(documentLike, manager, NO_X_FORBIDDEN_TILE_OPTIONS[i], selectedValue));
@@ -246,9 +269,35 @@ function resolveSetupNoXModeConfig(manager, modeConfig, setupOptions, inputSeed)
   return modeConfig;
 }
 
+function resolveRestartConfirmLanguage(manager) {
+  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  try {
+    var i18n = windowLike && windowLike.UII18N;
+    if (i18n && typeof i18n.getLanguage === "function") {
+      var fromI18n = String(i18n.getLanguage() || "").toLowerCase();
+      if (fromI18n.indexOf("en") === 0) return "en";
+      if (fromI18n.indexOf("zh") === 0) return "zh";
+    }
+  } catch (_errI18n) {}
+  try {
+    var storageLike = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
+    var fromStorage = storageLike && typeof storageLike.getItem === "function"
+      ? String(storageLike.getItem("ui_language_v1") || "").toLowerCase()
+      : "";
+    if (fromStorage.indexOf("en") === 0) return "en";
+  } catch (_errStorage) {}
+  return "zh";
+}
+
+function resolveRestartConfirmMessage(manager) {
+  return resolveRestartConfirmLanguage(manager) === "en"
+    ? "Start a new game?"
+    : "\u662f\u5426\u786e\u8ba4\u5f00\u59cb\u65b0\u6e38\u620f\uff1f";
+}
+
 function restartGame(manager) {
   if (!manager) return;
-  if (!confirm("\u662f\u5426\u786e\u8ba4\u5f00\u59cb\u65b0\u6e38\u620f\uff1f")) return;
+  if (!confirm(resolveRestartConfirmMessage(manager))) return;
   manager.actuator.continue();
   manager.setRuntimeUndoStack([]);
   manager.setRuntimeRedoStack([]);
