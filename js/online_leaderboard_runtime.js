@@ -330,28 +330,85 @@ function shouldAutoLoadOnlineLeaderboard() {
     }
   }
 
+  function shouldSkipRankedSessionPreparationForRestart(manager) {
+    return (
+      !shouldUseRankedCheckpoint(manager) ||
+      (manager && (manager.rankCheckpointApplying === true || manager.replayMode === true)) ||
+      !getAuthToken()
+    );
+  }
+
+  function alertRankedRestartSessionUnavailable() {
+    if (global && typeof global.alert === "function") {
+      global.alert(
+        getLanguage() === "en"
+          ? "Could not create the next ranked game. Please check your connection or sign in again."
+          : "\u65b0\u7684\u6392\u4f4d\u5bf9\u5c40\u521b\u5efa\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u7f51\u7edc\u6216\u91cd\u65b0\u767b\u5f55\u540e\u518d\u8bd5\u3002"
+      );
+    }
+  }
+
+  function scheduleRankedSessionPrefetchForRestart(modeKey, runtime) {
+    if (runtime && typeof runtime.ensurePrefetch === "function") {
+      runtime.ensurePrefetch(modeKey).catch(function () {});
+    }
+  }
+
   function prepareRankedSessionForRestart(manager) {
-    if (!shouldUseRankedCheckpoint(manager)) return true;
-    if (manager && (manager.rankCheckpointApplying === true || manager.replayMode === true)) return true;
-    if (!getAuthToken()) return true;
+    if (shouldSkipRankedSessionPreparationForRestart(manager)) return true;
     var modeKey = resolveManagerRankedModeKey(manager);
     var runtime = getRankedSessionRuntime();
     if (runtime && typeof runtime.promotePrefetchedSession === "function") {
       if (runtime.promotePrefetchedSession(modeKey)) {
         return true;
       }
-      if (typeof runtime.ensurePrefetch === "function") {
-        runtime.ensurePrefetch(modeKey).catch(function () {});
-      }
-    }
-    if (global && typeof global.alert === "function") {
-      global.alert(
-        getLanguage() === "en"
-          ? "The next ranked game is not ready yet. Please try again in a moment."
-          : "\u65b0\u7684\u6392\u4f4d\u5bf9\u5c40\u5c1a\u672a\u51c6\u5907\u597d\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5\u3002"
-      );
     }
     return false;
+  }
+
+  function beginAsyncRankedRestart(manager, original, thisArg, args) {
+    if (shouldSkipRankedSessionPreparationForRestart(manager)) return false;
+    var modeKey = resolveManagerRankedModeKey(manager);
+    var runtime = getRankedSessionRuntime();
+    if (!runtime || typeof runtime.startNextSession !== "function") {
+      scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
+      alertRankedRestartSessionUnavailable();
+      return true;
+    }
+    if (manager && manager.rankedRestartPreparing === true) return true;
+    if (manager) manager.rankedRestartPreparing = true;
+    Promise.resolve()
+      .then(function () {
+        return runtime.startNextSession(modeKey);
+      })
+      .then(
+        function (ready) {
+          if (!ready) {
+            scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
+            alertRankedRestartSessionUnavailable();
+            return;
+          }
+          if (!(manager && (manager.rankCheckpointApplying === true || manager.replayMode === true))) {
+            clearRankedCheckpointForManager(manager, { keepalive: true }).catch(function () {});
+          }
+          original.apply(thisArg, args || []);
+        },
+        function () {
+          alertRankedRestartSessionUnavailable();
+        }
+      )
+      .then(
+        function () {
+          if (manager) manager.rankedRestartPreparing = false;
+        },
+        function (err) {
+          if (manager) manager.rankedRestartPreparing = false;
+          global.setTimeout(function () {
+            throw err;
+          }, 0);
+        }
+      );
+    return true;
   }
 
   function getUserId() {
@@ -2651,6 +2708,12 @@ async function refreshLeaderboard(modeLike) {
           methodName === "restartWithBoard"
         ) {
           if (!prepareRankedSessionForRestart(currentManager)) {
+            beginAsyncRankedRestart(
+              currentManager,
+              original,
+              this,
+              Array.prototype.slice.call(arguments)
+            );
             return currentManager;
           }
           if (!(currentManager && (currentManager.rankCheckpointApplying === true || currentManager.replayMode === true))) {

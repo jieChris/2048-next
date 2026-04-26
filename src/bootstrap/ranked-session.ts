@@ -42,6 +42,7 @@ export interface RankedChallengeContext {
 export interface RankedSessionRuntime {
   getCurrentContext: (modeLike?: string | null | undefined) => RankedChallengeContext | null;
   promotePrefetchedSession: (modeLike?: string | null | undefined) => boolean;
+  startNextSession: (modeLike?: string | null | undefined) => Promise<boolean>;
   ensurePrefetch: (modeLike?: string | null | undefined) => Promise<boolean>;
   clearActiveSession: (modeLike?: string | null | undefined) => void;
   clearModeSession: (modeLike?: string | null | undefined) => void;
@@ -338,6 +339,15 @@ export function createRankedSessionRuntime(
     removeStorageKey(storageLike, resolveModeStorageKey(PREFETCH_SESSION_STORAGE_KEY_PREFIX, modeKey));
   };
 
+  const activateSession = (modeKey: string, session: RankedSessionRecord): boolean => {
+    if (!writeActiveSession(modeKey, session)) return false;
+    clearPrefetchedSession(modeKey);
+    if (pageModeResolver() === modeKey) {
+      syncWindowChallengeContext(windowLike, modeKey, session);
+    }
+    return true;
+  };
+
   const requestSession = async (modeKey: string): Promise<RankedSessionRecord | null> => {
     const authToken = readAuthToken(windowLike);
     if (!authToken || !isRankedModeKey(modeKey)) return null;
@@ -412,11 +422,23 @@ export function createRankedSessionRuntime(
         void runtime.ensurePrefetch(modeKey);
         return false;
       }
-      if (!writeActiveSession(modeKey, prefetched)) return false;
-      clearPrefetchedSession(modeKey);
-      if (pageModeResolver() === modeKey) {
-        syncWindowChallengeContext(windowLike, modeKey, prefetched);
+      if (!activateSession(modeKey, prefetched)) return false;
+      void runtime.ensurePrefetch(modeKey);
+      return true;
+    },
+    async startNextSession(modeLike) {
+      const modeKey = resolveModeKey(modeLike);
+      if (!modeKey) return false;
+      if (runtime.promotePrefetchedSession(modeKey)) return true;
+      const session = await requestSession(modeKey);
+      if (!session) return false;
+      const active = readActiveSession(modeKey);
+      if (isSameRankedSessionRecord(active, session)) {
+        clearPrefetchedSession(modeKey);
+        void runtime.ensurePrefetch(modeKey);
+        return false;
       }
+      if (!activateSession(modeKey, session)) return false;
       void runtime.ensurePrefetch(modeKey);
       return true;
     },
@@ -431,7 +453,12 @@ export function createRankedSessionRuntime(
       }
       const session = await requestSession(modeKey);
       if (!session) return false;
-      if (isSameRankedSessionRecord(active, session)) return false;
+      if (
+        isSameRankedSessionRecord(active, session) ||
+        isSameRankedSessionRecord(readActiveSession(modeKey), session)
+      ) {
+        return false;
+      }
       return writePrefetchedSession(modeKey, session);
     },
     clearActiveSession(modeLike) {

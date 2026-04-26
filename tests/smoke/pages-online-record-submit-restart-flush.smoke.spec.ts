@@ -3,9 +3,7 @@ import { expect, test } from "@playwright/test";
 test.describe("Legacy Multi-Page Smoke", () => {
   test.describe.configure({ mode: "serial" });
 
-  test("ranked record submit after restart preserves the next session for leaderboard upload", async ({
-    page
-  }) => {
+  test("ranked record submit after restart preserves the next session for leaderboard upload", async ({ page }) => {
     const modeKey = "standard_4x4_pow2_no_undo";
     const nowSec = Math.floor(Date.now() / 1000);
     const oldSession = {
@@ -35,7 +33,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ success: true, data: { id: `record-${recordPayloads.length}` } })
+        body: JSON.stringify({
+          success: true,
+          data: { id: `record-${recordPayloads.length}` }
+        })
       });
     });
     await page.route("**/api/ranked-checkpoint**", async (route) => {
@@ -83,20 +84,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
         window.localStorage.removeItem("online_last_record_submit_signature_v1");
         window.localStorage.removeItem("online_pending_record_submit_signature_v1");
-        window.localStorage.setItem(
-          "ranked_session_active:v1:" + injectedModeKey,
-          JSON.stringify(injectedOld)
-        );
-        window.localStorage.setItem(
-          "ranked_session_prefetch:v1:" + injectedModeKey,
-          JSON.stringify(injectedNext)
-        );
+        window.localStorage.setItem("ranked_session_active:v1:" + injectedModeKey, JSON.stringify(injectedOld));
+        window.localStorage.setItem("ranked_session_prefetch:v1:" + injectedModeKey, JSON.stringify(injectedNext));
         window.confirm = () => true;
       },
       { modeKey, oldSession, nextSession }
     );
 
-    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
     expect(response, "Game response should exist").not.toBeNull();
     expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
@@ -119,9 +116,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.restart();
     });
 
-    await expect
-      .poll(() => recordPayloads.length, { timeout: 5000 })
-      .toBeGreaterThanOrEqual(1);
+    await expect.poll(() => recordPayloads.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
 
     const afterRestartSession = await page.evaluate((injectedModeKey) => {
       const raw = window.localStorage.getItem("ranked_session_active:v1:" + injectedModeKey);
@@ -149,10 +144,142 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.dispatchEvent(new Event("online"));
     });
 
-    await expect
-      .poll(() => recordPayloads.length, { timeout: 5000 })
-      .toBeGreaterThanOrEqual(2);
+    await expect.poll(() => recordPayloads.length, { timeout: 5000 }).toBeGreaterThanOrEqual(2);
     expect(recordPayloads[1]?.ranked_session_token).toBe("next-ranked-token");
+  });
+
+  test("ranked restart creates the next session on demand when prefetch is not ready", async ({ page }) => {
+    const modeKey = "standard_4x4_pow2_no_undo";
+    const nowSec = Math.floor(Date.now() / 1000);
+    const oldSession = {
+      mode_key: modeKey,
+      challenge_id: "ranked-old",
+      seed: 123,
+      ranked_session_token: "old-ranked-token",
+      issued_at: nowSec - 60,
+      exp: nowSec + 3600,
+      owner_user_id: "42"
+    };
+    const recordPayloads: Array<Record<string, unknown>> = [];
+    let sessionStartRequests = 0;
+
+    await page.route("**/api/records", async (route) => {
+      recordPayloads.push(route.request().postDataJSON() as Record<string, unknown>);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: { id: `record-${recordPayloads.length}` }
+        })
+      });
+    });
+    await page.route("**/api/ranked-checkpoint**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: route.request().method() === "GET" ? null : undefined,
+          deleted: route.request().method() === "DELETE" ? true : undefined,
+          verified: route.request().method() === "POST" ? true : undefined
+        })
+      });
+    });
+    await page.route("**/api/ranked-session/start", async (route) => {
+      sessionStartRequests += 1;
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      const isFirst = sessionStartRequests === 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            mode_key: modeKey,
+            challenge_id: isFirst ? "ranked-next" : `ranked-prefetch-${sessionStartRequests}`,
+            seed: isFirst ? 456 : 800 + sessionStartRequests,
+            ranked_session_token: isFirst ? "next-ranked-token" : `prefetch-ranked-token-${sessionStartRequests}`,
+            issued_at: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 3600
+          }
+        })
+      });
+    });
+    await page.route("**/api/leaderboard**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    await page.addInitScript(
+      ({ modeKey: injectedModeKey, oldSession: injectedOld }) => {
+        window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+        window.localStorage.setItem("2048_auth_userId_v1", "42");
+        window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+        window.localStorage.removeItem("online_last_record_submit_signature_v1");
+        window.localStorage.removeItem("online_pending_record_submit_signature_v1");
+        window.localStorage.setItem("ranked_session_active:v1:" + injectedModeKey, JSON.stringify(injectedOld));
+        window.localStorage.removeItem("ranked_session_prefetch:v1:" + injectedModeKey);
+        (window as any).__rankedRestartAlerts = [];
+        window.alert = (message?: unknown) => {
+          (window as any).__rankedRestartAlerts.push(String(message || ""));
+        };
+        window.confirm = () => true;
+      },
+      { modeKey, oldSession }
+    );
+
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && !!(window as any).OnlineLeaderboardRuntime;
+    });
+
+    await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      manager.replayMode = false;
+      manager.over = true;
+      manager.won = false;
+      manager.keepPlaying = false;
+      manager.score = 2048;
+      manager.moveHistory = [0, 1, 2];
+      manager.successfulMoveCount = 3;
+      manager.serialize = () => "old-ranked-replay";
+      manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2] });
+      manager.restart();
+    });
+
+    await expect
+      .poll(
+        () =>
+          page.evaluate((injectedModeKey) => {
+            const raw = window.localStorage.getItem("ranked_session_active:v1:" + injectedModeKey);
+            const active = raw ? JSON.parse(raw) : null;
+            return {
+              activeToken: active ? String(active.ranked_session_token || "") : "",
+              managerToken: String((window as any).game_manager?.rankedSessionToken || ""),
+              alerts: ((window as any).__rankedRestartAlerts || []).length
+            };
+          }, modeKey),
+        { timeout: 5000 }
+      )
+      .toMatchObject({
+        activeToken: "next-ranked-token",
+        managerToken: "next-ranked-token",
+        alerts: 0
+      });
+
+    expect(recordPayloads[0]?.ranked_session_token).toBe("old-ranked-token");
+    expect(recordPayloads[0]?.challenge_id).toBe("ranked-old");
+    expect(sessionStartRequests).toBeGreaterThanOrEqual(1);
   });
 
   test("online record submit flushes before restart when game is already over", async ({ page }) => {
@@ -175,10 +302,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           if (init && typeof init.body === "string" && init.body.length > 0) {
             try {
               const parsed = JSON.parse(init.body);
-              parsedPayload =
-                parsed && typeof parsed === "object"
-                  ? (parsed as Record<string, unknown>)
-                  : null;
+              parsedPayload = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
             } catch (_err) {
               parsedPayload = null;
             }
@@ -209,7 +333,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
 
-    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
     expect(response, "Game response should exist").not.toBeNull();
     expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
@@ -262,10 +388,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           "replay",
           "replay_string"
         ];
-        return (
-          !!payload &&
-          requiredKeys.every((key) => Object.prototype.hasOwnProperty.call(payload, key))
-        );
+        return !!payload && requiredKeys.every((key) => Object.prototype.hasOwnProperty.call(payload, key));
       })(),
       payloadFinalBoardIsArray: (() => {
         const payload = (window as any).__recordSubmitLastPayload;
@@ -300,10 +423,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           if (init && typeof init.body === "string" && init.body.length > 0) {
             try {
               const parsed = JSON.parse(init.body);
-              parsedPayload =
-                parsed && typeof parsed === "object"
-                  ? (parsed as Record<string, unknown>)
-                  : null;
+              parsedPayload = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
             } catch (_err) {
               parsedPayload = null;
             }
@@ -385,7 +505,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       })(),
       payloadHasReplayString: (() => {
         const payload = (window as any).__recordSubmitLastPayload;
-        return !!payload && typeof (payload as any).replay_string === "string" && !!(payload as any).replay_string.trim();
+        return (
+          !!payload && typeof (payload as any).replay_string === "string" && !!(payload as any).replay_string.trim()
+        );
       })()
     }));
 
@@ -419,10 +541,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           if (init && typeof init.body === "string" && init.body.length > 0) {
             try {
               const parsed = JSON.parse(init.body);
-              parsedPayload =
-                parsed && typeof parsed === "object"
-                  ? (parsed as Record<string, unknown>)
-                  : null;
+              parsedPayload = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
             } catch (_err) {
               parsedPayload = null;
             }
@@ -460,7 +579,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
 
-    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
     expect(response, "Game response should exist").not.toBeNull();
     expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
@@ -601,7 +722,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       );
     });
 
-    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
     expect(response, "Game response should exist").not.toBeNull();
     expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
@@ -667,10 +790,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           if (init && typeof init.body === "string" && init.body.length > 0) {
             try {
               const parsed = JSON.parse(init.body);
-              parsedPayload =
-                parsed && typeof parsed === "object"
-                  ? (parsed as Record<string, unknown>)
-                  : null;
+              parsedPayload = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
             } catch (_err) {
               parsedPayload = null;
             }
@@ -701,7 +821,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
 
-    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
     expect(response, "Game response should exist").not.toBeNull();
     expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
@@ -745,9 +867,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.payload).toBeNull();
   });
 
-  test("online record submit dedupes identical replay payloads even if client record id changes", async ({
-    page
-  }) => {
+  test("online record submit dedupes identical replay payloads even if client record id changes", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
       window.localStorage.setItem("2048_auth_userId_v1", "42");
@@ -768,18 +888,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
           if (init && typeof init.body === "string" && init.body.length > 0) {
             try {
               const parsed = JSON.parse(init.body);
-              parsedPayload =
-                parsed && typeof parsed === "object"
-                  ? (parsed as Record<string, unknown>)
-                  : null;
+              parsedPayload = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
             } catch (_err) {
               parsedPayload = null;
             }
           }
           (window as any).__recordSubmitCalls = Number((window as any).__recordSubmitCalls || 0) + 1;
-          ((window as any).__recordSubmitPayloads as Array<Record<string, unknown> | null>).push(
-            parsedPayload
-          );
+          ((window as any).__recordSubmitPayloads as Array<Record<string, unknown> | null>).push(parsedPayload);
           return new Response(JSON.stringify({ success: true, id: "rec-smoke-dedupe-1" }), {
             status: 200,
             headers: { "Content-Type": "application/json" }
@@ -862,9 +977,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
             replayString: item ? String(item.replay_string || "") : ""
           }))
         : [],
-      lastRecordSignature: String(
-        window.localStorage.getItem("online_last_record_submit_signature_v1") || ""
-      )
+      lastRecordSignature: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || "")
     }));
 
     expect(snapshot.calls).toBe(1);

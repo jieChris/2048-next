@@ -465,6 +465,157 @@ describe("online leaderboard terminal submission", () => {
     });
   });
 
+  it("creates the next ranked session on demand when restart has no prefetched session", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const oldSession = {
+      mode_key: MODE_KEY,
+      challenge_id: "ranked-old",
+      seed: 123,
+      ranked_session_token: "old-ranked-token",
+      issued_at: nowSec - 60,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    };
+    const nextSession = {
+      mode_key: MODE_KEY,
+      challenge_id: "ranked-next",
+      seed: 456,
+      ranked_session_token: "next-ranked-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    };
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(oldSession));
+
+    const originalRestart = vi.fn(function (this: Record<string, unknown>) {
+      this.over = false;
+      this.score = 0;
+      this.initialSeed = 456;
+      this.moveHistory = [];
+      this.rankedSessionToken = "next-ranked-token";
+      this.clientRecordId = "rec_client_next";
+    });
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      rankedSessionToken: "old-ranked-token",
+      restart: originalRestart
+    });
+    let recordPayload: Record<string, unknown> | null = null;
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records")) {
+          recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
+          return createJsonResponse({
+            success: true,
+            data: { id: "record-old" }
+          });
+        }
+        if (url.includes("/ranked-checkpoint")) {
+          return createJsonResponse({ success: true, deleted: true });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    runtime.windowLike.GAME_CHALLENGE_CONTEXT = {
+      id: oldSession.challenge_id,
+      mode_key: MODE_KEY,
+      seed: oldSession.seed,
+      ranked_session_token: oldSession.ranked_session_token
+    };
+    const startNextSession = vi.fn(async () => {
+      storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(nextSession));
+      runtime.windowLike.GAME_CHALLENGE_CONTEXT = {
+        id: nextSession.challenge_id,
+        mode_key: MODE_KEY,
+        seed: nextSession.seed,
+        ranked_session_token: nextSession.ranked_session_token
+      };
+      return true;
+    });
+    runtime.windowLike.RankedSessionRuntime = {
+      getCurrentContext: vi.fn(() => {
+        const raw = storage.getItem(ACTIVE_SESSION_KEY);
+        if (!raw) return null;
+        const active = JSON.parse(raw);
+        return {
+          id: active.challenge_id,
+          mode_key: active.mode_key,
+          seed: active.seed,
+          ranked_session_token: active.ranked_session_token
+        };
+      }),
+      promotePrefetchedSession: vi.fn(() => false),
+      startNextSession,
+      ensurePrefetch: vi.fn(async () => true),
+      clearActiveSession: vi.fn()
+    };
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+
+    expect(originalRestart).not.toHaveBeenCalled();
+    await flushRuntimePromises();
+
+    expect(startNextSession).toHaveBeenCalledWith(MODE_KEY);
+    expect(originalRestart).toHaveBeenCalledTimes(1);
+    expect(recordPayload?.ranked_session_token).toBe("old-ranked-token");
+    expect(recordPayload?.challenge_id).toBe("ranked-old");
+    expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}").ranked_session_token).toBe("next-ranked-token");
+    expect(runtime.windowLike.alert).not.toHaveBeenCalled();
+  });
+
+  it("keeps the current game and alerts when on-demand ranked session creation fails", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    storage.setItem(
+      ACTIVE_SESSION_KEY,
+      JSON.stringify({
+        mode_key: MODE_KEY,
+        challenge_id: "ranked-old",
+        seed: 123,
+        ranked_session_token: "old-ranked-token",
+        issued_at: nowSec - 60,
+        exp: nowSec + 3600,
+        owner_user_id: "7"
+      })
+    );
+    const originalRestart = vi.fn();
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      rankedSessionToken: "old-ranked-token",
+      restart: originalRestart
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse({
+            success: true,
+            data: { id: "record-old" }
+          });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    const ensurePrefetch = vi.fn(async () => false);
+    runtime.windowLike.RankedSessionRuntime = {
+      promotePrefetchedSession: vi.fn(() => false),
+      startNextSession: vi.fn(async () => false),
+      ensurePrefetch
+    };
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(originalRestart).not.toHaveBeenCalled();
+    expect(ensurePrefetch).toHaveBeenCalledWith(MODE_KEY);
+    expect(runtime.windowLike.alert).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}").ranked_session_token).toBe("old-ranked-token");
+  });
+
   it("does not restore stale ranked checkpoints from a previous active session", async () => {
     const storage = new MemoryStorage();
     const nowSec = Math.floor(Date.now() / 1000);

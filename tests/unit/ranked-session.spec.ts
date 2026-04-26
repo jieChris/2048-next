@@ -138,6 +138,73 @@ describe("ranked session runtime", () => {
     expect(storage.getItem(PREFETCH_KEY)).toBeNull();
   });
 
+  it("starts and activates a fresh ranked session on demand when no prefetch exists", async () => {
+    const storage = new MemoryStorage();
+    const activeSession = createSession();
+    const nextSession = createSession({
+      challenge_id: "ranked-next",
+      seed: 222,
+      ranked_session_token: "next-token"
+    });
+    storage.setItem(ACTIVE_KEY, JSON.stringify(activeSession));
+    let requestCount = 0;
+    const fetchImpl = vi.fn(async () => {
+      requestCount += 1;
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data:
+            requestCount === 1
+              ? nextSession
+              : createSession({
+                  challenge_id: "ranked-prefetch-after-next",
+                  seed: 333,
+                  ranked_session_token: "prefetch-after-next-token"
+                })
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    });
+    const windowLike = createWindowLike(storage, fetchImpl);
+    const runtime = createRankedSessionRuntime(windowLike, "index");
+
+    await expect(runtime.startNextSession(MODE_KEY)).resolves.toBe(true);
+
+    const active = JSON.parse(storage.getItem(ACTIVE_KEY) || "{}");
+    expect(active.ranked_session_token).toBe("next-token");
+    expect(active.owner_user_id).toBe("7");
+    expect((windowLike as Window & { GAME_CHALLENGE_CONTEXT?: unknown }).GAME_CHALLENGE_CONTEXT).toMatchObject({
+      ranked_session_token: "next-token",
+      seed: 222
+    });
+    expect(fetchImpl).toHaveBeenCalled();
+  });
+
+  it("does not activate an on-demand ranked session that reuses the active seed", async () => {
+    const storage = new MemoryStorage();
+    const activeSession = createSession();
+    storage.setItem(ACTIVE_KEY, JSON.stringify(activeSession));
+    const fetchImpl = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: createSession({
+            challenge_id: "ranked-same-seed",
+            ranked_session_token: "same-seed-token"
+          })
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    });
+    const runtime = createRankedSessionRuntime(createWindowLike(storage, fetchImpl), "index");
+
+    await expect(runtime.startNextSession(MODE_KEY)).resolves.toBe(false);
+
+    expect(JSON.parse(storage.getItem(ACTIVE_KEY) || "{}").ranked_session_token).toBe(
+      "active-token"
+    );
+  });
+
   it("drops stored ranked sessions that do not belong to the current user", async () => {
     const storage = new MemoryStorage();
     storage.setItem(
