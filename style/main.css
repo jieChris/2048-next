@@ -825,6 +825,12 @@ html[data-theme="classic"] .game-container .game-message a.retry-button {
   display: flex;
 }
 
+.game-container .game-message.game-won.game-message-temporarily-hidden,
+.game-container .game-message.game-over.game-message-temporarily-hidden {
+  display: none !important;
+  pointer-events: none;
+}
+
 .game-container .game-message.game-over p {
   transform: translateX(20px);
 }

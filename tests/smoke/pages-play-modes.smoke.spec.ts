@@ -374,6 +374,90 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot?.messageText).not.toContain("你赢了");
   });
 
+  test("game-over overlay temporarily hides for screenshots on blank click and page return", async ({
+    page
+  }) => {
+    const response = await page.goto("/play.html?mode_key=standard_4x4_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Play response should exist").not.toBeNull();
+    expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return Boolean(
+        manager &&
+          typeof manager.restartWithBoard === "function" &&
+          typeof manager.actuate === "function"
+      );
+    }, null, { timeout: 15000 });
+
+    await page.evaluate(async () => {
+      const manager = (window as any).game_manager;
+      const board = [
+        [2, 4, 2, 4],
+        [4, 2, 4, 2],
+        [2, 4, 2, 4],
+        [4, 2, 4, 2]
+      ];
+      manager.restartWithBoard(board, null, { preserveSeed: true, preserveMode: true });
+      manager.over = true;
+      manager.won = false;
+      manager.keepPlaying = false;
+      manager.actuate();
+      await new Promise((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(resolve);
+        });
+      });
+    });
+
+    const overlay = page.locator(".game-message");
+    await expect(overlay).toBeVisible();
+
+    const readOverlayState = async () =>
+      page.evaluate(() => {
+        const node = document.querySelector(".game-message") as HTMLElement | null;
+        if (!node) return null;
+        const style = window.getComputedStyle(node);
+        return {
+          className: node.className,
+          display: style.display,
+          pointerEvents: style.pointerEvents,
+          text: String(node.textContent || "")
+        };
+      });
+
+    await page.mouse.click(10, 10);
+
+    await expect.poll(readOverlayState, {
+      message: "blank click should temporarily hide the game-over overlay"
+    }).toMatchObject({
+      className: expect.stringContaining("game-message-temporarily-hidden"),
+      display: "none",
+      pointerEvents: "none"
+    });
+
+    await page.waitForTimeout(1100);
+    await expect(overlay).toBeVisible();
+
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event("blur"));
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    await expect.poll(readOverlayState, {
+      message: "returning to the page should temporarily hide the game-over overlay again"
+    }).toMatchObject({
+      className: expect.stringContaining("game-message-temporarily-hidden"),
+      display: "none",
+      pointerEvents: "none"
+    });
+
+    await page.waitForTimeout(1100);
+    await expect(overlay).toBeVisible();
+  });
+
   test("obstacle mode keeps grid aligned with obstacle cells sized like normal cells", async ({
     page
   }) => {

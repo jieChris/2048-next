@@ -202,7 +202,7 @@
     ["按 R 键重开游戏", "press R to restart"],
     ["按 Z 键撤回上一步", "press Z to undo one step"],
     ["当两个相同数字的方块接触时，它们会 合并成一个！", "When two tiles with the same number touch, they merge into one!"],
-    ["公告：综合考虑取消开源，欢迎访问 2048.cn。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 2048.cn。", "公告：综合考虑取消开源，欢迎访问 2048.cn。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 2048.cn。"],
+    ["公告：综合考虑取消开源，欢迎访问 2048next.cn。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 2048next.cn。", "公告：综合考虑取消开源，欢迎访问 2048next.cn。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 2048next.cn。"],
     ["欢迎加入中国第一2048交流群：", "Join the 2048 community group: "],
     ["2048 标题", "2048 Title"],
     ["在任何页面点击该标题，都可以返回主页。", "Click this title on any page to return home."],
@@ -591,8 +591,8 @@
     var page = String((global.location && global.location.pathname) || "").split("/").pop() || "index.html";
     page = page.toLowerCase();
     if (page === "index.html" || page === "2048.html") {
-      var indexCopyZh = "公告：综合考虑取消开源，欢迎访问 <a href=\"https://2048.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048.cn</a>。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 <a href=\"https://2048.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048.cn</a>。";
-      var indexCopyEn = "公告：综合考虑取消开源，欢迎访问 <a href=\"https://2048.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048.cn</a>。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 <a href=\"https://2048.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048.cn</a>。";
+      var indexCopyZh = "公告：综合考虑取消开源，欢迎访问 <a href=\"https://2048next.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048next.cn</a>。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 <a href=\"https://2048next.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048next.cn</a>。";
+      var indexCopyEn = "公告：综合考虑取消开源，欢迎访问 <a href=\"https://2048next.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048next.cn</a>。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 <a href=\"https://2048next.cn\" target=\"_blank\" rel=\"noopener noreferrer\">2048next.cn</a>。";
       var intro = global.document.querySelector(".game-intro");
       if (intro) {
         setTextIfChanged(intro, lang === "en"

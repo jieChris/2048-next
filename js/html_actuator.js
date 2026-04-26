@@ -12,6 +12,12 @@ function HTMLActuator() {
   this.lowPerfMode = false;
   this.pendingActuateFrameId = null;
   this.forceSyncActuate = false;
+  this.endMessageRestoreTimerId = null;
+  this.endMessageHideDelayMs = 1000;
+  this.endMessageReturnArm = false;
+  this.activeMessageType = null;
+
+  this.bindEndMessageVisibilityHandlers();
 }
 
 HTMLActuator.prototype.cancelPendingActuation = function () {
@@ -22,6 +28,120 @@ HTMLActuator.prototype.cancelPendingActuation = function () {
     clearTimeout(this.pendingActuateFrameId);
   }
   this.pendingActuateFrameId = null;
+};
+
+HTMLActuator.prototype.bindEndMessageVisibilityHandlers = function () {
+  if (
+    typeof document === "undefined" ||
+    typeof window === "undefined" ||
+    !this.messageContainer
+  ) {
+    return;
+  }
+
+  var self = this;
+  document.addEventListener("click", function (event) {
+    self.handleEndMessageBlankClick(event);
+  }, true);
+  document.addEventListener("visibilitychange", function () {
+    self.handleEndMessageVisibilityChange();
+  });
+  window.addEventListener("blur", function () {
+    self.handleEndMessageBlur();
+  });
+  window.addEventListener("focus", function () {
+    self.handleEndMessageFocus();
+  });
+};
+
+HTMLActuator.prototype.handleEndMessageBlankClick = function (event) {
+  if (!this.shouldAllowTemporaryEndMessageHide()) return;
+  if (this.isEndMessageTemporarilyHidden()) return;
+
+  var target = event && event.target ? event.target : null;
+  if (!target || !target.closest) return;
+  if (this.messageContainer.contains(target)) return;
+  if (target.closest(".game-container")) return;
+  if (target.closest("a, button, input, textarea, select, label")) return;
+
+  this.temporarilyHideEndMessage(false);
+};
+
+HTMLActuator.prototype.handleEndMessageVisibilityChange = function () {
+  if (!this.shouldAllowTemporaryEndMessageHide()) return;
+  if (document.visibilityState === "hidden") {
+    this.endMessageReturnArm = true;
+    return;
+  }
+  if (document.visibilityState === "visible" && this.endMessageReturnArm) {
+    this.endMessageReturnArm = false;
+    this.temporarilyHideEndMessage(true);
+  }
+};
+
+HTMLActuator.prototype.handleEndMessageBlur = function () {
+  if (!this.shouldAllowTemporaryEndMessageHide()) return;
+  this.endMessageReturnArm = true;
+};
+
+HTMLActuator.prototype.handleEndMessageFocus = function () {
+  if (!this.shouldAllowTemporaryEndMessageHide()) return;
+  if (this.endMessageReturnArm) {
+    this.endMessageReturnArm = false;
+    this.temporarilyHideEndMessage(true);
+  }
+};
+
+HTMLActuator.prototype.shouldAllowTemporaryEndMessageHide = function () {
+  if (!this.messageContainer) return false;
+  if (!this.isEndMessageActive()) return false;
+  if (typeof document !== "undefined" && document.body) {
+    if (document.body.getAttribute("data-page") === "replay") {
+      return false;
+    }
+  }
+  return true;
+};
+
+HTMLActuator.prototype.isEndMessageActive = function () {
+  return this.activeMessageType === "game-over" || this.activeMessageType === "game-won";
+};
+
+HTMLActuator.prototype.isEndMessageTemporarilyHidden = function () {
+  return !!(
+    this.messageContainer &&
+    this.messageContainer.classList.contains("game-message-temporarily-hidden")
+  );
+};
+
+HTMLActuator.prototype.clearEndMessageRestoreTimer = function () {
+  if (this.endMessageRestoreTimerId === null) return;
+  clearTimeout(this.endMessageRestoreTimerId);
+  this.endMessageRestoreTimerId = null;
+};
+
+HTMLActuator.prototype.temporarilyHideEndMessage = function (allowTimerReset) {
+  if (!this.shouldAllowTemporaryEndMessageHide()) return false;
+  if (this.isEndMessageTemporarilyHidden() && allowTimerReset !== true) {
+    return false;
+  }
+
+  this.clearEndMessageRestoreTimer();
+  this.messageContainer.classList.add("game-message-temporarily-hidden");
+
+  var self = this;
+  this.endMessageRestoreTimerId = window.setTimeout(function () {
+    self.endMessageRestoreTimerId = null;
+    self.restoreTemporarilyHiddenEndMessage();
+  }, this.endMessageHideDelayMs);
+
+  return true;
+};
+
+HTMLActuator.prototype.restoreTemporarilyHiddenEndMessage = function () {
+  if (!this.messageContainer) return;
+  if (!this.isEndMessageActive()) return;
+  this.messageContainer.classList.remove("game-message-temporarily-hidden");
 };
 
 HTMLActuator.prototype.renderActuationFrame = function (grid, metadata) {
@@ -415,8 +535,9 @@ HTMLActuator.prototype.message = function (won) {
   }
 
   var type = won ? "game-won" : "game-over";
-  var message = won ? "你赢了！" : "游戏结束！";
+  var message = won ? "\u4f60\u8d62\u4e86\uff01" : "\u6e38\u620f\u7ed3\u675f\uff01";
 
+  this.activeMessageType = type;
   this.messageContainer.classList.add(type);
   this.messageContainer.getElementsByTagName("p")[0].textContent = message;
 };
@@ -448,6 +569,10 @@ HTMLActuator.prototype.tryAutoContinueWithoutPrompt = function () {
 };
 
 HTMLActuator.prototype.clearMessage = function () {
+  this.activeMessageType = null;
+  this.endMessageReturnArm = false;
+  this.clearEndMessageRestoreTimer();
+  this.messageContainer.classList.remove("game-message-temporarily-hidden");
   this.messageContainer.classList.remove("game-won");
   this.messageContainer.classList.remove("game-over");
 };
