@@ -1277,7 +1277,14 @@
   }
 
   function generateTilePaletteId() {
-    return "palette_" + Date.now().toString(36) + "_" + Math.floor(Math.random() * 0xffff).toString(36);
+    if (
+      typeof CoreCryptoRandomRuntime !== "undefined" &&
+      CoreCryptoRandomRuntime &&
+      typeof CoreCryptoRandomRuntime.randomId === "function"
+    ) {
+      return CoreCryptoRandomRuntime.randomId("palette", { length: 6 });
+    }
+    return "palette_" + Date.now().toString(36) + "_000000";
   }
 
   function findCustomPaletteIndexById(list, id) {

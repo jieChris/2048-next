@@ -140,8 +140,23 @@
       : DEFAULT_DUPLICATE_MODE_MESSAGE_ZH;
   }
 
+  var startupRandomIdFallbackCounter = 0;
+
+  function createStartupRandomId(prefix) {
+    if (
+      global &&
+      global.CoreCryptoRandomRuntime &&
+      typeof global.CoreCryptoRandomRuntime.randomId === "function"
+    ) {
+      return global.CoreCryptoRandomRuntime.randomId(prefix, { length: 10 });
+    }
+    startupRandomIdFallbackCounter = (startupRandomIdFallbackCounter + 1) >>> 0;
+    return String(prefix || "id") + "_" + Date.now().toString(36) + "_" +
+      startupRandomIdFallbackCounter.toString(36).padStart(10, "0");
+  }
+
   function createSinglePageLockToken() {
-    return "lock_" + Math.random().toString(36).slice(2, 12) + "_" + Date.now().toString(36);
+    return createStartupRandomId("lock");
   }
 
   function resolveSinglePageWindowInstanceId(windowLike) {
@@ -152,7 +167,7 @@
     ) {
       return windowLike.__playSinglePageWindowInstanceId;
     }
-    var instanceId = "win_" + Math.random().toString(36).slice(2, 12) + "_" + Date.now().toString(36);
+    var instanceId = createStartupRandomId("win");
     if (windowLike) {
       windowLike.__playSinglePageWindowInstanceId = instanceId;
     }
@@ -205,11 +220,11 @@
     var sessionKey = String(sessionTabIdKey || DEFAULT_SINGLE_INSTANCE_TAB_ID_SESSION_KEY);
     var tabId = readStorageItemSafe(sessionStorageLike, sessionKey);
     if (!(typeof tabId === "string" && tabId)) {
-      tabId = "tab_" + Math.random().toString(36).slice(2, 12) + "_" + Date.now().toString(36);
+      tabId = createStartupRandomId("tab");
       writeStorageItemSafe(sessionStorageLike, sessionKey, tabId);
     }
     if (!(typeof tabId === "string" && tabId)) {
-      tabId = "tab_" + Math.random().toString(36).slice(2, 12) + "_" + Date.now().toString(36);
+      tabId = createStartupRandomId("tab");
     }
     if (windowLike) {
       windowLike.__playSinglePageTabId = tabId;

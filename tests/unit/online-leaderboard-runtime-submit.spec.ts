@@ -200,10 +200,12 @@ async function flushRuntimePromises(): Promise<void> {
 describe("online leaderboard terminal submission", () => {
   it("submits verified records and skips legacy score when replay data exists", async () => {
     const manager = createTerminatedManager();
+    let recordPayload: Record<string, unknown> | null = null;
     const runtime = loadOnlineLeaderboardRuntime({
       manager,
-      fetchImpl: async (url) => {
+      fetchImpl: async (url, init) => {
         if (url.endsWith("/records")) {
+          recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
           return createJsonResponse({ success: true, data: { id: "record-1" } });
         }
         if (url.endsWith("/score")) {
@@ -218,6 +220,16 @@ describe("online leaderboard terminal submission", () => {
 
     expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
     expect(runtime.fetchCalls.some((call) => call.url.endsWith("/score"))).toBe(false);
+    expect(recordPayload).toMatchObject({
+      mode_key: MODE_KEY,
+      ranked_session_token: null,
+      challenge_id: null,
+      initial_seed: null,
+      seed: null,
+      ranked_verification: null,
+      client_record_id: "rec_client_1",
+      replay_string: "replay-v1"
+    });
   });
 
   it("clears ranked state and prompts when final record submit reports an expired session", async () => {
@@ -433,6 +445,17 @@ describe("online leaderboard terminal submission", () => {
 
     expect(recordPayload).not.toBeNull();
     expect(recordPayload?.ranked_session_token).toBe("old-ranked-token");
+    expect(recordPayload?.challenge_id).toBe("ranked-old");
+    expect(recordPayload?.initial_seed).toBe(123);
+    expect(recordPayload?.seed).toBe(123);
+    expect(recordPayload?.ranked_verification).toEqual({
+      random_source: "server_seed",
+      replay_format: "v1",
+      challenge_id: "ranked-old",
+      seed: 123,
+      mode_key: MODE_KEY,
+      ranked_session_token: "old-ranked-token"
+    });
     expect(storage.getItem(ACTIVE_SESSION_KEY)).not.toBeNull();
     expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}").ranked_session_token).toBe(
       "next-ranked-token"

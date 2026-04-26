@@ -10,7 +10,15 @@ const DEFAULT_REMOTE_API_BASE_URL = "https://taihe.fun/api";
 const RANKED_MODE_KEYS = new Set([
   "standard_4x4_pow2_no_undo",
   "classic_4x4_pow2_undo",
-  "capped_4x4_pow2_no_undo"
+  "capped_4x4_pow2_no_undo",
+  "board_3x3_pow2_no_undo",
+  "board_3x3_pow2_undo",
+  "board_2x4_pow2_no_undo",
+  "board_2x4_pow2_undo",
+  "board_3x4_pow2_no_undo",
+  "board_3x4_pow2_undo",
+  "fib_3x3_no_undo",
+  "fib_3x3_undo"
 ]);
 
 export interface RankedSessionRecord {

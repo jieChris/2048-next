@@ -252,7 +252,13 @@
   }
 
   function createReplayPageHandoffId() {
-    return String(Date.now()) + "-" + Math.random().toString(36).slice(2, 10);
+    if (
+      global.CoreCryptoRandomRuntime &&
+      typeof global.CoreCryptoRandomRuntime.randomBase36 === "function"
+    ) {
+      return String(Date.now()) + "-" + global.CoreCryptoRandomRuntime.randomBase36(8);
+    }
+    return String(Date.now()) + "-00000000";
   }
 
   function resolveUrlRuntime(windowLike) {

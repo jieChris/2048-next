@@ -1,4 +1,5 @@
 import type { Ruleset } from "./engine";
+import { randomUnitFloat } from "../utils/crypto-random";
 
 export interface SpawnTableItem {
   value: number;
@@ -68,7 +69,7 @@ export function getTheoreticalMaxTile(width: number, height: number, ruleset: Ru
 
 export function pickSpawnValue(
   spawnTable: SpawnTableItem[] | null | undefined,
-  random: () => number = Math.random
+  random: () => number = randomUnitFloat
 ): number {
   const table = Array.isArray(spawnTable) ? spawnTable : [];
   if (!table.length) return 2;

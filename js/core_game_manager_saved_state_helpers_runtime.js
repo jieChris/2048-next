@@ -342,9 +342,20 @@ function removeSavedKeysFromStoragesFallback(stores, keys) {
     }
   }
 }
+
+function resetSavedGameStatePersistenceThrottleAfterClear(manager) {
+  if (!manager) return;
+  manager.lastSavedGameStateAt = 0;
+  manager.lastSavedGameStateFullAt = 0;
+  manager.lastSavedGameStateFullAttemptAt = 0;
+  manager.lastSavedStateSyncPublishedAt = 0;
+  manager.lastReplayStringSavedAt = 0;
+}
+
 function clearSavedGameState(manager, modeKey) {
   if (!manager) return;
   writeWindowNameSavedPayload(manager, modeKey, null);
+  resetSavedGameStatePersistenceThrottleAfterClear(manager);
   if (!shouldUseSavedGameState(manager)) return;
   var keys = [
     resolveSavedGameStateStorageKey(manager, GameManager.SAVED_GAME_STATE_KEY_PREFIX, modeKey),

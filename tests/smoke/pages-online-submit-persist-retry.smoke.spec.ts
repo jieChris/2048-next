@@ -40,7 +40,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       (window as any).GAME_API_REQUEST_TIMEOUT_MS = 120;
     });
 
-    const response = await page.goto("/play.html?mode_key=board_3x3_pow2_no_undo", {
+    const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response).not.toBeNull();
@@ -54,6 +54,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.won = false;
       manager.keepPlaying = false;
       manager.score = Math.max(512, Number(manager.score || 0));
+      manager.rankPolicy = "unranked";
+      manager.serialize = () => "";
+      manager.serializeV3 = () => null;
       window.dispatchEvent(new Event("online"));
     });
 
@@ -68,6 +71,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(firstSnapshot.pending.length).toBeGreaterThan(0);
     expect(firstSnapshot.last).toBe("");
+
+    await page.evaluate(() => {
+      const modeKey = "board_3x3_pow2_no_undo";
+      for (const key of Object.keys(window.localStorage)) {
+        if (key.startsWith("savedGameState") && key.includes(modeKey)) {
+          window.localStorage.removeItem(key);
+        }
+      }
+    });
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => !!(window as any).OnlineLeaderboardRuntime);
@@ -84,8 +96,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(finalSnapshot.pending).toBe("");
     expect(finalSnapshot.last.length).toBeGreaterThan(0);
     expect(scoreBodies).toHaveLength(2);
-    expect(String(scoreBodies[0]?.mode_key || "")).toBe("board_3x3_pow2_no_undo");
-    expect(String(scoreBodies[1]?.mode_key || "")).toBe("board_3x3_pow2_no_undo");
+    expect(String(scoreBodies[0]?.mode_key || "")).toBe("standard_4x4_pow2_no_undo");
+    expect(String(scoreBodies[1]?.mode_key || "")).toBe("standard_4x4_pow2_no_undo");
     expect(Number(scoreBodies[1]?.score || 0)).toBeGreaterThan(0);
   });
 

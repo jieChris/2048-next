@@ -145,6 +145,55 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.windowNameHasTimerSnapshot).toBe(true);
   });
 
+  test("restart immediately persists the fresh opening seed for reload safety", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+      window.name = "";
+      window.confirm = () => true;
+    });
+
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(
+      page,
+      () => Boolean((window as any).game_manager),
+      12_000
+    );
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      manager.restart();
+      const modeKey = String(manager.modeKey || manager.mode || "standard_4x4_pow2_no_undo");
+      const raw = window.localStorage.getItem("savedGameStateByMode:v1:" + modeKey);
+      let saved: Record<string, unknown> | null = null;
+      try {
+        saved = raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+      } catch (_err) {
+        saved = null;
+      }
+      const board =
+        typeof manager.getFinalBoardMatrix === "function"
+          ? manager.getFinalBoardMatrix()
+          : null;
+      return {
+        seed: manager.initialSeed,
+        board,
+        savedSeed: saved ? saved.initial_seed : null,
+        savedBoard: saved ? saved.board : null
+      };
+    });
+
+    expect(snapshot.savedSeed).toBe(snapshot.seed);
+    expect(snapshot.savedBoard).toEqual(snapshot.board);
+  });
+
   test("saved-state restore rejects version-mismatch payload", async ({ page }) => {
     await page.addInitScript(() => {
       const modeKey = "practice";

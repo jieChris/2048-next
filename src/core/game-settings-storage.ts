@@ -1,3 +1,5 @@
+import { randomBase36 } from "../utils/crypto-random";
+
 interface StorageLike {
   getItem?(key: string): string | null;
   setItem?(key: string, value: string): unknown;
@@ -820,7 +822,7 @@ export function normalizeHistoryRecordFromContext(options: {
   const idFactory =
     typeof opts.idFactory === "function"
       ? (opts.idFactory as () => string)
-      : () => "hist_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now().toString(36);
+      : () => "hist_" + randomBase36(8) + "_" + Date.now().toString(36);
   const now = String(nowIsoProvider() || "");
   const id = typeof source.id === "string" && source.id.trim() ? source.id.trim() : idFactory();
   const replay = isObjectRecord(source.replay) ? source.replay : null;

@@ -276,8 +276,9 @@
     board_height: 3,
     ruleset: "pow2",
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+    ranked_bucket: "pow2_3x3",
     mode_family: "pow2",
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   // Keep existing keys for compatibility (3x4 key means board 4x3).
@@ -288,8 +289,9 @@
     board_height: 3,
     ruleset: "pow2",
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+    ranked_bucket: "pow2_3x4",
     mode_family: "pow2",
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   // Keep existing keys for compatibility (2x4 key means board 4x2).
@@ -300,8 +302,9 @@
     board_height: 2,
     ruleset: "pow2",
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+    ranked_bucket: "pow2_2x4",
     mode_family: "pow2",
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   addPair({
@@ -322,8 +325,9 @@
     board_height: 3,
     ruleset: "fibonacci",
     spawn_table: [{ value: 1, weight: 90 }, { value: 2, weight: 10 }],
+    ranked_bucket: "fib_3x3",
     mode_family: "fibonacci",
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   // Phase 1: size ladder 5x5..10x10 (pow2)

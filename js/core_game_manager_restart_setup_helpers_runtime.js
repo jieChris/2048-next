@@ -18,6 +18,8 @@ function formatNoXForbiddenTileLabel(value) {
   return String(kilo) + "k";
 }
 
+var restartRandomIdFallbackCounter = 0;
+
 function isNoXModeConfig(modeConfig) {
   if (!isNonArrayObject(modeConfig)) return false;
   var key = String(modeConfig.key || "").toLowerCase();
@@ -410,7 +412,29 @@ function restartWithBoard(manager, board, modeConfig, options) {
   manager.actuate();
 }
 
-function resolveFreshSetupSeed(manager) {
+function normalizeFreshSetupSeedValue(value) {
+  var seed = Math.floor(Number(value));
+  return Number.isSafeInteger(seed) && seed >= 0 ? seed : null;
+}
+
+function resolveRestartCryptoRandomRuntime() {
+  if (typeof CoreCryptoRandomRuntime !== "undefined" && CoreCryptoRandomRuntime) {
+    return CoreCryptoRandomRuntime;
+  }
+  return null;
+}
+
+function createRestartRandomId(prefix, length) {
+  var runtime = resolveRestartCryptoRandomRuntime();
+  if (runtime && typeof runtime.randomId === "function") {
+    return runtime.randomId(prefix, { length: length || 10 });
+  }
+  restartRandomIdFallbackCounter = (restartRandomIdFallbackCounter + 1) >>> 0;
+  return String(prefix || "id") + "_" + Date.now().toString(36) + "_" +
+    restartRandomIdFallbackCounter.toString(36).padStart(length || 10, "0");
+}
+
+function resolveFreshSetupCryptoLike(manager) {
   var cryptoLike = null;
   try {
     var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
@@ -421,14 +445,77 @@ function resolveFreshSetupSeed(manager) {
       cryptoLike = typeof crypto !== "undefined" ? crypto : null;
     } catch (_errGlobalCrypto) {}
   }
+  return cryptoLike;
+}
+
+function resolveCryptoFreshSetupSeed(manager) {
+  var runtime = resolveRestartCryptoRandomRuntime();
+  if (runtime && typeof runtime.randomSeed === "function") {
+    try {
+      return normalizeFreshSetupSeedValue(runtime.randomSeed());
+    } catch (_errRuntimeRandomSeed) {}
+  }
+  var cryptoLike = resolveFreshSetupCryptoLike(manager);
   if (cryptoLike && typeof cryptoLike.getRandomValues === "function" && typeof Uint32Array !== "undefined") {
     try {
       var values = new Uint32Array(2);
       cryptoLike.getRandomValues(values);
-      return (values[0] & 2097151) * 4294967296 + (values[1] >>> 0);
+      return normalizeFreshSetupSeedValue((values[0] & 2097151) * 4294967296 + (values[1] >>> 0));
     } catch (_errRandomValues) {}
   }
-  return Math.random();
+  return null;
+}
+
+function resolveFreshSetupPerformanceNow(manager) {
+  var performanceLike = null;
+  try {
+    var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+    performanceLike = windowLike && windowLike.performance ? windowLike.performance : null;
+  } catch (_errWindowPerformance) {}
+  if (!performanceLike) {
+    try {
+      performanceLike = typeof performance !== "undefined" ? performance : null;
+    } catch (_errGlobalPerformance) {}
+  }
+  if (performanceLike && typeof performanceLike.now === "function") {
+    try {
+      return Math.max(0, Math.floor(performanceLike.now() * 1000));
+    } catch (_errPerformanceNow) {}
+  }
+  return 0;
+}
+
+function resolveFreshSetupSeedCounter(manager) {
+  if (!manager) return 0;
+  var counter = Math.floor(Number(manager.freshSetupSeedCounter) || 0) + 1;
+  manager.freshSetupSeedCounter = counter;
+  return counter;
+}
+
+function createFallbackFreshSetupSeed(manager) {
+  var now = Math.max(0, Math.floor(Date.now()));
+  var perfNow = resolveFreshSetupPerformanceNow(manager);
+  var counter = resolveFreshSetupSeedCounter(manager);
+  var mixedHigh = Math.imul((now >>> 0) ^ (counter >>> 0), 2654435761) >>> 0;
+  var mixedLow = Math.imul((perfNow >>> 0) ^ ((counter * 2246822519) >>> 0), 3266489917) >>> 0;
+  var high = (
+    mixedHigh ^
+    (Math.floor(now / 4294967296) & 2097151) ^
+    (perfNow & 2097151) ^
+    (counter & 2097151)
+  ) & 2097151;
+  var low = (
+    mixedLow ^
+    (now >>> 0) ^
+    ((perfNow * 2654435761) >>> 0) ^
+    ((counter * 2246822519) >>> 0)
+  ) >>> 0;
+  return high * 4294967296 + low;
+}
+
+function resolveFreshSetupSeed(manager) {
+  var cryptoSeed = resolveCryptoFreshSetupSeed(manager);
+  return cryptoSeed !== null ? cryptoSeed : createFallbackFreshSetupSeed(manager);
 }
 
 function resolveSetupRankedSessionContext(manager) {
@@ -988,7 +1075,7 @@ function resolveSingleModePageLockKey(modeKey) {
 }
 
 function createSingleModePageLockToken() {
-  return "lock_" + Math.random().toString(36).slice(2, 12) + "_" + Date.now().toString(36);
+  return createRestartRandomId("lock", 10);
 }
 
 function resolveSingleModePageWindowInstanceId(windowLike) {
@@ -999,7 +1086,7 @@ function resolveSingleModePageWindowInstanceId(windowLike) {
   ) {
     return windowLike.__playSinglePageWindowInstanceId;
   }
-  var instanceId = "win_" + Math.random().toString(36).slice(2, 12) + "_" + Date.now().toString(36);
+  var instanceId = createRestartRandomId("win", 10);
   if (windowLike) {
     windowLike.__playSinglePageWindowInstanceId = instanceId;
   }
@@ -1078,11 +1165,11 @@ function resolveSingleModePageTabId(windowLike) {
   var sessionKey = resolveSingleModePageTabIdSessionKey();
   var tabId = readSingleModePageStorageItemSafe(sessionStorageLike, sessionKey);
   if (!(typeof tabId === "string" && tabId)) {
-    tabId = "tab_" + Math.random().toString(36).slice(2, 12) + "_" + Date.now().toString(36);
+    tabId = createRestartRandomId("tab", 10);
     writeSingleModePageStorageItemSafe(sessionStorageLike, sessionKey, tabId);
   }
   if (!(typeof tabId === "string" && tabId)) {
-    tabId = "tab_" + Math.random().toString(36).slice(2, 12) + "_" + Date.now().toString(36);
+    tabId = createRestartRandomId("tab", 10);
   }
   if (windowLike) {
     windowLike.__playSinglePageTabId = tabId;

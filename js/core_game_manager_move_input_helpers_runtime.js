@@ -6,6 +6,30 @@ function normalizeMoveInputRecordObject(value, fallback) {
   return isMoveInputRecordObject(value) ? value : fallback;
 }
 
+function resolveMoveInputCryptoRandomRuntime() {
+  if (typeof CoreCryptoRandomRuntime !== "undefined" && CoreCryptoRandomRuntime) {
+    return CoreCryptoRandomRuntime;
+  }
+  return null;
+}
+
+function resolveMoveInputRandomUnitFloat() {
+  var runtime = resolveMoveInputCryptoRandomRuntime();
+  if (runtime && typeof runtime.randomUnitFloat === "function") {
+    return runtime.randomUnitFloat();
+  }
+  return 0;
+}
+
+function resolveMoveInputRandomInt(maxExclusive) {
+  var runtime = resolveMoveInputCryptoRandomRuntime();
+  if (runtime && typeof runtime.randomInt === "function") {
+    return runtime.randomInt(maxExclusive);
+  }
+  var max = Math.floor(Number(maxExclusive) || 0);
+  return max > 0 ? 0 : 0;
+}
+
 function createEmptyItemInventory() {
   return { hammer: 0, freeze: 0, boost4: 0 };
 }
@@ -187,7 +211,7 @@ function grantRandomItemCharge(manager) {
     if (inventory[key] < maxPerType) candidates.push(key);
   }
   if (!candidates.length) return;
-  var picked = candidates[Math.floor(Math.random() * candidates.length)];
+  var picked = candidates[resolveMoveInputRandomInt(candidates.length)];
   inventory[picked] += 1;
 }
 
@@ -228,7 +252,7 @@ function applyHammerEffect(manager) {
     updateItemModeHud(manager);
     return;
   }
-  var target = removable[Math.floor(Math.random() * removable.length)];
+  var target = removable[resolveMoveInputRandomInt(removable.length)];
   manager.grid.removeTile(target);
   actuate(manager);
 }
@@ -1284,18 +1308,64 @@ function resolveRecordedSpawnCount(manager) {
 }
 
 function primeSeededRandomByStepCount(manager, stepCount) {
-  if (!manager) return;
-  Math.seedrandom(manager.seed);
+  if (!manager || typeof Math.seedrandom !== "function") return null;
+  var rng = new Math.seedrandom(manager.seed);
   for (var i = 0; i < stepCount; i++) {
-    Math.random();
+    rng();
   }
+  return rng;
+}
+
+function createSeededReplayFallbackRandomSource(manager, stepCount) {
+  var cursor = 0;
+  var seed = Math.floor(Number(manager && manager.seed) || 0);
+  var normalizedStepCount = Math.floor(Number(stepCount) || 0);
+  return function () {
+    var value = createRankedDeterministicHash(seed, normalizedStepCount, "replay:" + String(cursor));
+    cursor += 1;
+    return value / 4294967296;
+  };
+}
+
+function createSeededReplayRandomSource(manager, stepCount) {
+  var rng = primeSeededRandomByStepCount(manager, stepCount);
+  return typeof rng === "function" ? rng : createSeededReplayFallbackRandomSource(manager, stepCount);
+}
+
+function resolveSeededReplaySpawnTableTotalWeight(table) {
+  var totalWeight = 0;
+  var list = Array.isArray(table) ? table : [];
+  for (var i = 0; i < list.length; i++) {
+    totalWeight += Number(list[i] && list[i].weight) || 0;
+  }
+  return totalWeight;
+}
+
+function resolveSeededReplaySpawnValueByWeight(table, totalWeight, rng) {
+  var list = Array.isArray(table) ? table : [];
+  var randomSource = typeof rng === "function" ? rng : function () { return 0; };
+  var pick = randomSource() * totalWeight;
+  var running = 0;
+  for (var index = 0; index < list.length; index++) {
+    running += Number(list[index] && list[index].weight) || 0;
+    if (pick <= running) return list[index].value;
+  }
+  return list[list.length - 1].value;
+}
+
+function resolveSeededReplaySpawnValue(manager, rng) {
+  var table = manager && Array.isArray(manager.spawnTable) ? manager.spawnTable : [];
+  if (!table.length) return 2;
+  var totalWeight = resolveSeededReplaySpawnTableTotalWeight(table);
+  if (totalWeight <= 0) return table[0].value;
+  return resolveSeededReplaySpawnValueByWeight(table, totalWeight, rng);
 }
 
 function insertSeededRandomSpawnTile(manager, available) {
   if (!(manager && Array.isArray(available) && available.length > 0)) return;
-  primeSeededRandomByStepCount(manager, resolveSpawnStepCount(manager));
-  var value = consumeItemSpawnValueOverride(manager, pickSpawnValue(manager));
-  var cell = available[Math.floor(Math.random() * available.length)];
+  var randomSource = createSeededReplayRandomSource(manager, resolveSpawnStepCount(manager));
+  var value = consumeItemSpawnValueOverride(manager, resolveSeededReplaySpawnValue(manager, randomSource));
+  var cell = available[Math.floor(randomSource() * available.length)];
   var tile = new Tile(cell, value);
   manager.grid.insertTile(tile);
   manager.lastSpawn = { x: cell.x, y: cell.y, value: value };
@@ -1394,7 +1464,7 @@ function insertRankedDeterministicSpawnTile(manager, available) {
 }
 
 function resolveMasterSpawnValueByDefault() {
-  return Math.random() < 0.9 ? 2 : 4;
+  return resolveMoveInputRandomUnitFloat() < 0.9 ? 2 : 4;
 }
 
 function getClassicUndoForceStageOneValues() {
@@ -1508,7 +1578,7 @@ function resolveSpawnValueByWeightedRules(weightRules, fallbackValue) {
   var rules = Array.isArray(weightRules) ? weightRules : [];
   var totalWeight = resolveTotalPositiveSpawnWeight(rules);
   if (!(totalWeight > 0)) return fallbackValue;
-  var cursor = Math.random() * totalWeight;
+  var cursor = resolveMoveInputRandomUnitFloat() * totalWeight;
   return resolveWeightedSpawnValueCursor(rules, cursor, fallbackValue);
 }
 
@@ -1596,7 +1666,7 @@ function shouldUseFilteredModeCellsForSpawn(manager) {
 
 function pickRandomCellFromAvailableList(available) {
   if (!Array.isArray(available) || !available.length) return null;
-  return available[Math.floor(Math.random() * available.length)];
+  return available[resolveMoveInputRandomInt(available.length)];
 }
 
 function resolveMasterSpawnCell(manager) {

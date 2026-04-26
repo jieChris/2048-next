@@ -7,6 +7,19 @@ function isModeRulesNonArrayObject(value) {
 function normalizeModeRulesRecordObject(value, fallback) {
   return isModeRulesRecordObject(value) ? value : fallback;
 }
+function resolveModeRulesCryptoRandomRuntime() {
+  if (typeof CoreCryptoRandomRuntime !== "undefined" && CoreCryptoRandomRuntime) {
+    return CoreCryptoRandomRuntime;
+  }
+  return null;
+}
+function resolveModeRulesRandomUnitFloat() {
+  var runtime = resolveModeRulesCryptoRandomRuntime();
+  if (runtime && typeof runtime.randomUnitFloat === "function") {
+    return runtime.randomUnitFloat();
+  }
+  return 0;
+}
 function normalizeSpecialRules(manager, rules) {
   if (!manager) return {};
   return resolveCorePayloadCallWith(manager, "callCoreModeRuntime", "normalizeSpecialRules", rules, undefined, function (currentManager, coreCallResult) {
@@ -757,7 +770,7 @@ function findFarthestPosition(manager, cell, vector) {
   return findFarthestPositionFallback(manager, cell, vector);
 }
 function createPickSpawnValueResolveArgs(manager) {
-  return [manager.spawnTable || [], Math.random];
+  return [manager.spawnTable || [], resolveModeRulesRandomUnitFloat];
 }
 function normalizePickSpawnValueFromCore(coreValue) {
   var value = Number(coreValue);
@@ -771,7 +784,7 @@ function resolveSpawnTableTotalWeight(table) {
   return totalWeight;
 }
 function resolveSpawnValueByWeight(table, totalWeight) {
-  var pick = Math.random() * totalWeight;
+  var pick = resolveModeRulesRandomUnitFloat() * totalWeight;
   var running = 0;
   for (var index = 0; index < table.length; index++) {
     running += table[index].weight;

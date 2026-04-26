@@ -137,8 +137,16 @@ function bindGameManagerInputEvents(manager) {
       managerForInput.useItem(itemKey);
     }
   });
-  manager.inputManager.on("restart", manager.restart.bind(manager));
-  manager.inputManager.on("keepPlaying", manager.keepPlaying.bind(manager));
+  manager.inputManager.on("restart", function () {
+    if (typeof managerForInput.restart === "function") {
+      managerForInput.restart();
+    }
+  });
+  manager.inputManager.on("keepPlaying", function () {
+    if (typeof managerForInput.keepPlaying === "function") {
+      managerForInput.keepPlaying();
+    }
+  });
 }
 
 function bindGameManagerSavedStatePersistence(manager) {

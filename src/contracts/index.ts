@@ -6,6 +6,8 @@
  * happen here — adapters and consumers import from this single source.
  */
 
+import { randomBase36 } from "../utils/crypto-random";
+
 // ---------------------------------------------------------------------------
 // Schema version
 // ---------------------------------------------------------------------------
@@ -157,7 +159,7 @@ export const HISTORY_DIAGNOSTICS_INDEX_ENTRY_REQUIRED_KEYS = [
 ] as const;
 
 function createHistoryRecordId(): string {
-  return "hist_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now().toString(36);
+  return "hist_" + randomBase36(8) + "_" + Date.now().toString(36);
 }
 
 function resolveHistoryRecordIso(nowIso?: () => string): string {
@@ -576,6 +578,11 @@ export interface SubmitPayload {
   duration_ms: number;
   mode: string;
   mode_key: string;
+  ranked_session_token: string | null;
+  challenge_id: string | null;
+  initial_seed: number | null;
+  seed: number | null;
+  ranked_verification: RankedVerificationPayload | null;
   ended_at: string;
   end_reason: string;
   final_board: number[][];
@@ -590,12 +597,26 @@ export interface SubmitPayload {
   min_steps_8192?: number | null;
 }
 
+export interface RankedVerificationPayload {
+  random_source: "server_seed";
+  replay_format: "v1";
+  challenge_id: string | null;
+  seed: number | null;
+  mode_key: string;
+  ranked_session_token: string | null;
+}
+
 export const SUBMIT_PAYLOAD_REQUIRED_KEYS = [
   "score",
   "best_tile",
   "duration_ms",
   "mode",
   "mode_key",
+  "ranked_session_token",
+  "challenge_id",
+  "initial_seed",
+  "seed",
+  "ranked_verification",
   "ended_at",
   "end_reason",
   "final_board",

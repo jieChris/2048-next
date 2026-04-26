@@ -15,6 +15,20 @@ export interface LockedDirectionState {
   activeDirection: number | null;
 }
 
+function randomUnitFromSeed(seed: string): number {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x85ebca6b);
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 0xc2b2ae35);
+  hash ^= hash >>> 16;
+  return (hash >>> 0) / 4294967296;
+}
+
 function normalizeAvailableDirections(rawDirections?: number[] | null): number[] {
   const source = Array.isArray(rawDirections) ? rawDirections : [];
   const out: number[] = [];
@@ -82,7 +96,7 @@ export function getLockedDirectionState(input: LockedDirectionStateInput): Locke
     const randomValue =
       typeof input.randomFromSeed === "function"
         ? input.randomFromSeed(seed)
-        : Math.random();
+        : randomUnitFromSeed(seed);
     const dirIndex = Math.floor(randomValue * directionCount);
     lockedDirection = availableDirections[dirIndex] ?? availableDirections[0];
     lockedDirectionTurn = moveCount;

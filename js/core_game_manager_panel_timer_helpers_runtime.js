@@ -994,8 +994,15 @@ function ensureSavedStateSyncClientId(manager) {
   if (typeof manager.savedStateSyncClientId === "string" && manager.savedStateSyncClientId) {
     return manager.savedStateSyncClientId;
   }
-  manager.savedStateSyncClientId =
-    "tab_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now().toString(36);
+  if (
+    typeof CoreCryptoRandomRuntime !== "undefined" &&
+    CoreCryptoRandomRuntime &&
+    typeof CoreCryptoRandomRuntime.randomId === "function"
+  ) {
+    manager.savedStateSyncClientId = CoreCryptoRandomRuntime.randomId("tab", { length: 8 });
+    return manager.savedStateSyncClientId;
+  }
+  manager.savedStateSyncClientId = "tab_" + Date.now().toString(36) + "_00000000";
   return manager.savedStateSyncClientId;
 }
 

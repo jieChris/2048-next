@@ -1,3 +1,5 @@
+var clientRecordIdFallbackCounter = 0;
+
 function resolveClientRecordIdCrypto() {
   try {
     if (typeof globalThis !== "undefined" && globalThis && globalThis.crypto) {
@@ -7,6 +9,13 @@ function resolveClientRecordIdCrypto() {
   return null;
 }
 function buildClientRecordIdRandomSuffix() {
+  if (
+    typeof CoreCryptoRandomRuntime !== "undefined" &&
+    CoreCryptoRandomRuntime &&
+    typeof CoreCryptoRandomRuntime.randomHex === "function"
+  ) {
+    return CoreCryptoRandomRuntime.randomHex(12);
+  }
   var cryptoLike = resolveClientRecordIdCrypto();
   if (cryptoLike && typeof cryptoLike.getRandomValues === "function" && typeof Uint8Array !== "undefined") {
     try {
@@ -19,7 +28,8 @@ function buildClientRecordIdRandomSuffix() {
       if (hex) return hex;
     } catch (_errRandom) {}
   }
-  return Math.random().toString(36).slice(2, 14) + Math.random().toString(36).slice(2, 14);
+  clientRecordIdFallbackCounter = (clientRecordIdFallbackCounter + 1) >>> 0;
+  return Date.now().toString(36) + clientRecordIdFallbackCounter.toString(36).padStart(6, "0");
 }
 function createManagerClientRecordId() {
   var cryptoLike = resolveClientRecordIdCrypto();

@@ -67,6 +67,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.won = false;
       manager.keepPlaying = false;
       manager.score = Math.max(256, Number(manager.score || 0));
+      manager.rankPolicy = "unranked";
+      manager.serialize = () => "";
+      manager.serializeV3 = () => null;
+      window.dispatchEvent(new Event("online"));
     });
 
     await page.waitForFunction(() => Number((window as any).__scoreSubmitCalls || 0) >= 2, null, {

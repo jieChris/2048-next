@@ -30,6 +30,7 @@ import type {
   HistoryRecord,
   HistoryExportEnvelope,
   SubmitPayload,
+  RankedVerificationPayload,
   ReplayRecord,
   SessionSnapshot,
   ApiSuccessResponse,
@@ -328,6 +329,11 @@ describe("contracts: SubmitPayload type shape", () => {
       duration_ms: 120000,
       mode: "standard_no_undo",
       mode_key: "standard_4x4_pow2_no_undo",
+      ranked_session_token: null,
+      challenge_id: null,
+      initial_seed: null,
+      seed: null,
+      ranked_verification: null,
       ended_at: "2026-03-15T00:00:00Z",
       end_reason: "game_over",
       final_board: [[0, 2, 4, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
@@ -347,6 +353,18 @@ describe("contracts: SubmitPayload type shape", () => {
       duration_ms: 60000,
       mode: "standard_undo",
       mode_key: "classic_4x4_pow2_undo",
+      ranked_session_token: "ranked-token",
+      challenge_id: "ranked-1",
+      initial_seed: 123,
+      seed: 123,
+      ranked_verification: {
+        random_source: "server_seed",
+        replay_format: "v1",
+        challenge_id: "ranked-1",
+        seed: 123,
+        mode_key: "classic_4x4_pow2_undo",
+        ranked_session_token: "ranked-token"
+      },
       ended_at: "2026-03-15T00:00:00Z",
       end_reason: "win_stop",
       final_board: [[2, 4], [8, 16]],
@@ -371,6 +389,11 @@ describe("contracts: SubmitPayload type shape", () => {
       duration_ms: 1000,
       mode: "standard_no_undo",
       mode_key: "standard_4x4_pow2_no_undo",
+      ranked_session_token: null,
+      challenge_id: null,
+      initial_seed: null,
+      seed: null,
+      ranked_verification: null,
       ended_at: "2026-03-15T00:00:00Z",
       end_reason: "game_over",
       final_board: [[2, 0], [0, 0]],
@@ -404,6 +427,11 @@ describe("contracts: replay/import/export matrix", () => {
       "duration_ms",
       "mode",
       "mode_key",
+      "ranked_session_token",
+      "challenge_id",
+      "initial_seed",
+      "seed",
+      "ranked_verification",
       "ended_at",
       "end_reason",
       "final_board",
@@ -473,6 +501,23 @@ describe("contracts: replay/import/export matrix", () => {
         defaultBoardWidth: Number.NaN
       })
     ).toBe(false);
+  });
+});
+
+describe("contracts: RankedVerificationPayload type shape", () => {
+  it("satisfies required fields", () => {
+    const verification: RankedVerificationPayload = {
+      random_source: "server_seed",
+      replay_format: "v1",
+      challenge_id: "ranked-1",
+      seed: 123,
+      mode_key: "standard_4x4_pow2_no_undo",
+      ranked_session_token: "ranked-token"
+    };
+
+    expect(verification.random_source).toBe("server_seed");
+    expect(verification.replay_format).toBe("v1");
+    expect(verification.seed).toBe(123);
   });
 });
 

@@ -72,7 +72,7 @@
           return rng();
         };
       }
-      var randomValue = typeof resolver === "function" ? resolver(seed) : Math.random();
+      var randomValue = typeof resolver === "function" ? resolver(seed) : 0;
       var dirIndex = Math.floor(randomValue * directionCount);
       lockedDirection = availableDirections[dirIndex] || availableDirections[0];
       lockedDirectionTurn = moveCount;

@@ -51,6 +51,16 @@
     return Math.pow(2, cells + 1);
   }
 
+  function resolveRulesRandomUnitFloat() {
+    if (
+      global.CoreCryptoRandomRuntime &&
+      typeof global.CoreCryptoRandomRuntime.randomUnitFloat === "function"
+    ) {
+      return global.CoreCryptoRandomRuntime.randomUnitFloat();
+    }
+    return 0;
+  }
+
   function pickSpawnValue(spawnTable, random) {
     var table = Array.isArray(spawnTable) ? spawnTable : [];
     if (!table.length) return 2;
@@ -60,7 +70,7 @@
     }
     if (totalWeight <= 0) return table[0].value;
 
-    var rng = typeof random === "function" ? random : Math.random;
+    var rng = typeof random === "function" ? random : resolveRulesRandomUnitFloat;
     var pick = rng() * totalWeight;
     var running = 0;
     for (var j = 0; j < table.length; j++) {

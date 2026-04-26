@@ -128,10 +128,19 @@
     return new Date().toISOString();
   }
 
+  var localHistoryIdFallbackCounter = 0;
+
   function makeId() {
-    var t = Date.now().toString(36);
-    var r = Math.random().toString(36).slice(2, 10);
-    return "lh_" + t + "_" + r;
+    if (
+      typeof CoreCryptoRandomRuntime !== "undefined" &&
+      CoreCryptoRandomRuntime &&
+      typeof CoreCryptoRandomRuntime.randomId === "function"
+    ) {
+      return CoreCryptoRandomRuntime.randomId("lh", { length: 8 });
+    }
+    localHistoryIdFallbackCounter = (localHistoryIdFallbackCounter + 1) >>> 0;
+    return "lh_" + Date.now().toString(36) + "_" +
+      localHistoryIdFallbackCounter.toString(36).padStart(8, "0");
   }
 
   function isPlainObject(value) {

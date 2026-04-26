@@ -57,7 +57,11 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
   const context = {
     console,
     GameManager: {
-      TIMER_SLOT_IDS: slotIds
+      TIMER_SLOT_IDS: slotIds,
+      SAVED_GAME_STATE_VERSION: 1,
+      SAVED_GAME_STATE_KEY_PREFIX: "savedGameStateByMode:v1:",
+      SAVED_GAME_STATE_LITE_KEY_PREFIX: "savedGameStateLiteByMode:v1:",
+      SAVED_GAME_STATE_WINDOW_NAME_KEY: "__gm_saved_state_v1__"
     },
     isNonArrayObject(value: unknown) {
       return !!value && typeof value === "object" && !Array.isArray(value);
@@ -86,6 +90,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
       manager: Record<string, unknown>,
       payload: Record<string, unknown>
     ) => Record<string, unknown> | null;
+    clearSavedGameState: (manager: Record<string, unknown>, modeKey?: string) => void;
     resolveLatestSavedPayloadCandidate: (
       candidates: Array<Record<string, unknown> | null | undefined>
     ) => Record<string, unknown> | null;
@@ -478,6 +483,92 @@ describe("core game manager saved state runtime", () => {
     expect(
       runtime.resolveLatestSavedPayloadCandidate([null, litePayload, fullWindowPayload])
     ).toEqual(fullWindowPayload);
+  });
+
+  it("resets saved-state throttles when clearing a restarted game", () => {
+    const runtime = loadSavedStateRuntime([32768], {
+      callCoreStorageRuntime() {
+        return undefined;
+      },
+      resolveSavedGameStateStorageKey(
+        manager: Record<string, unknown>,
+        keyPrefix: string,
+        modeKey?: string
+      ) {
+        return keyPrefix + String(modeKey || manager.modeKey || manager.mode || "");
+      },
+      getSavedGameStateStorages(manager: Record<string, unknown>) {
+        const windowLike =
+          typeof manager.getWindowLike === "function"
+            ? (manager.getWindowLike as () => Record<string, unknown>)()
+            : null;
+        return windowLike && windowLike.localStorage ? [windowLike.localStorage] : [];
+      },
+      resolveSavedStatePathname(windowLike: Record<string, unknown> | null) {
+        const locationLike = windowLike?.location as Record<string, unknown> | undefined;
+        return typeof locationLike?.pathname === "string" ? locationLike.pathname : "";
+      },
+      writeWindowNameSavedPayload() {
+        return true;
+      }
+    });
+    const removedKeys: string[] = [];
+    const manager = {
+      modeKey: "classic_4x4_pow2_undo",
+      mode: "classic_4x4_pow2_undo",
+      replayMode: false,
+      lastSavedGameStateAt: 1000,
+      lastSavedGameStateFullAt: 1000,
+      lastSavedGameStateFullAttemptAt: 1000,
+      lastSavedStateSyncPublishedAt: 1000,
+      lastReplayStringSavedAt: 1000,
+      getWindowLike() {
+        return {
+          name: "",
+          location: { pathname: "/undo_2048.html" },
+          localStorage: {
+            removeItem(key: string) {
+              removedKeys.push(key);
+            }
+          }
+        };
+      },
+      resolveCoreBooleanCallOrFallback(value: unknown, fallback: () => boolean) {
+        return typeof value === "boolean" ? value : fallback();
+      },
+      createCoreModeContextPayload(payload: Record<string, unknown>) {
+        return payload;
+      },
+      resolveNormalizedCoreValueOrFallbackAllowNull(
+        value: unknown,
+        _normalizer: (payload: unknown) => unknown,
+        fallback: () => unknown
+      ) {
+        return typeof value === "undefined" ? fallback() : value;
+      },
+      resolveNormalizedCoreValueOrFallback(
+        value: unknown,
+        _normalizer: (payload: unknown) => unknown,
+        fallback: () => unknown
+      ) {
+        return typeof value === "undefined" ? fallback() : value;
+      },
+      isNonArrayObject(value: unknown) {
+        return !!value && typeof value === "object" && !Array.isArray(value);
+      }
+    } as Record<string, unknown>;
+
+    runtime.clearSavedGameState(manager, "classic_4x4_pow2_undo");
+
+    expect(manager.lastSavedGameStateAt).toBe(0);
+    expect(manager.lastSavedGameStateFullAt).toBe(0);
+    expect(manager.lastSavedGameStateFullAttemptAt).toBe(0);
+    expect(manager.lastSavedStateSyncPublishedAt).toBe(0);
+    expect(manager.lastReplayStringSavedAt).toBe(0);
+    expect(removedKeys).toEqual([
+      "savedGameStateByMode:v1:classic_4x4_pow2_undo",
+      "savedGameStateLiteByMode:v1:classic_4x4_pow2_undo"
+    ]);
   });
 
   it("saves terminal timer state as frozen and non-resumable", () => {

@@ -30,7 +30,9 @@ Grid.prototype.randomAvailableCell = function () {
   var cells = this.availableCells();
 
   if (cells.length) {
-    return cells[Math.floor(Math.random() * cells.length)];
+    var runtime = typeof CoreCryptoRandomRuntime !== "undefined" ? CoreCryptoRandomRuntime : null;
+    var index = runtime && typeof runtime.randomInt === "function" ? runtime.randomInt(cells.length) : 0;
+    return cells[index];
   }
 };
 

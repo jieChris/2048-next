@@ -665,6 +665,20 @@
     return map;
   }
 
+  var historyRecordIdFallbackCounter = 0;
+
+  function createHistoryRecordIdFallback() {
+    if (
+      global.CoreCryptoRandomRuntime &&
+      typeof global.CoreCryptoRandomRuntime.randomId === "function"
+    ) {
+      return global.CoreCryptoRandomRuntime.randomId("hist", { length: 8 });
+    }
+    historyRecordIdFallbackCounter = (historyRecordIdFallbackCounter + 1) >>> 0;
+    return "hist_" + Date.now().toString(36) + "_" +
+      historyRecordIdFallbackCounter.toString(36).padStart(8, "0");
+  }
+
   function normalizeHistoryRecordFromContext(options) {
     var opts = options || {};
     var source = isObjectRecord(opts.record) ? opts.record : null;
@@ -673,7 +687,7 @@
     var nowIsoProvider = typeof opts.nowIso === "function" ? opts.nowIso : function () { return new Date().toISOString(); };
     var idFactory = typeof opts.idFactory === "function"
       ? opts.idFactory
-      : function () { return "hist_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now().toString(36); };
+      : createHistoryRecordIdFallback;
     var now = String(nowIsoProvider() || "");
     var id = typeof source.id === "string" && source.id.trim() ? source.id.trim() : idFactory();
     var replay = isObjectRecord(source.replay) ? source.replay : null;

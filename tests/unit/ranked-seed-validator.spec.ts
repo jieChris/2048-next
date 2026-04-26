@@ -17,6 +17,10 @@ import {
 } from "../../scripts/ranked-seed-validator.mjs";
 
 type MoveInputRuntime = {
+  insertSeededRandomSpawnTile: (
+    manager: Record<string, unknown>,
+    available: Array<{ x: number; y: number }>
+  ) => void;
   createRankedDeterministicHash: (seed: number, stepCount: number, channel: string) => number;
   resolveRankedDeterministicUnitFloat: (seed: number, stepCount: number, channel: string) => number;
   resolveRankedDeterministicSpawnValue: (
@@ -82,6 +86,73 @@ function loadMoveInputRuntime(): MoveInputRuntime {
   } as Record<string, unknown>;
   vm.runInNewContext(script, context);
   return context as MoveInputRuntime;
+}
+
+function loadReplaySeededMoveInputRuntime() {
+  const scriptPath = path.resolve(process.cwd(), "js/core_game_manager_move_input_helpers_runtime.js");
+  const script = readFileSync(scriptPath, "utf8");
+  const seededValues = [0.11, 0.22, 0.05, 0.75];
+  const seedrandomCallModes: string[] = [];
+  let nativeRandomCalls = 0;
+  let seededRandomCalls = 0;
+  const mathLike = Object.create(Math) as Math & {
+    random: () => number;
+    seedrandom: new (seed: unknown) => () => number;
+  };
+  const nativeRandom = () => {
+    nativeRandomCalls += 1;
+    return 0.99;
+  };
+  function SeedRandom(this: unknown, _seed: unknown) {
+    let index = 0;
+    const rng = () => {
+      seededRandomCalls += 1;
+      const value = seededValues[index];
+      index += 1;
+      return typeof value === "number" ? value : 0;
+    };
+    if (!(this instanceof (SeedRandom as unknown as { new (): unknown }))) {
+      mathLike.random = rng;
+      seedrandomCallModes.push("global");
+    } else {
+      seedrandomCallModes.push("local");
+    }
+    return rng;
+  }
+  mathLike.random = nativeRandom;
+  mathLike.seedrandom = SeedRandom as unknown as new (seed: unknown) => () => number;
+  const insertedTiles: Array<{ x: number; y: number; value: number }> = [];
+  const context = {
+    console,
+    Math: mathLike,
+    Number,
+    String,
+    Array,
+    Object,
+    Tile: function FakeTile(this: { x: number; y: number; value: number }, cell: { x: number; y: number }, value: number) {
+      this.x = cell.x;
+      this.y = cell.y;
+      this.value = value;
+    },
+    pickSpawnValue() {
+      return 2;
+    },
+    recordSpawnValue(manager: Record<string, unknown>, value: number) {
+      manager.recordedSpawnValue = value;
+    }
+  } as Record<string, unknown>;
+
+  vm.runInNewContext(script, context);
+
+  return {
+    runtime: context as MoveInputRuntime,
+    mathLike,
+    nativeRandom,
+    insertedTiles,
+    getSeedrandomCallModes: () => seedrandomCallModes.slice(),
+    getNativeRandomCalls: () => nativeRandomCalls,
+    getSeededRandomCalls: () => seededRandomCalls
+  };
 }
 
 function loadCoreHelperRuntimes(): CoreHelperRuntimes {
@@ -214,6 +285,45 @@ describe("ranked seed validator", () => {
         resolveRankedDeterministicUnitFloat(testCase.seed, testCase.stepCount, testCase.channel)
       ).toBe(runtime.resolveRankedDeterministicUnitFloat(testCase.seed, testCase.stepCount, testCase.channel));
     }
+  });
+
+  it("keeps replay seeded spawn randomness local to the replay path", () => {
+    const {
+      runtime,
+      mathLike,
+      nativeRandom,
+      insertedTiles,
+      getNativeRandomCalls,
+      getSeededRandomCalls,
+      getSeedrandomCallModes
+    } = loadReplaySeededMoveInputRuntime();
+    const manager = {
+      seed: "replay-seed",
+      replayMode: true,
+      replayIndex: 2,
+      spawnTable: [
+        { value: 2, weight: 90 },
+        { value: 4, weight: 10 }
+      ],
+      grid: {
+        insertTile(tile: { x: number; y: number; value: number }) {
+          insertedTiles.push({ x: tile.x, y: tile.y, value: tile.value });
+        }
+      }
+    } as Record<string, unknown>;
+
+    runtime.insertSeededRandomSpawnTile(manager, [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 }
+    ]);
+
+    expect(getSeedrandomCallModes()).toEqual(["local"]);
+    expect(mathLike.random).toBe(nativeRandom);
+    expect(getNativeRandomCalls()).toBe(0);
+    expect(getSeededRandomCalls()).toBe(4);
+    expect(insertedTiles).toEqual([{ x: 1, y: 1, value: 2 }]);
+    expect(manager.lastSpawn).toEqual({ x: 1, y: 1, value: 2 });
+    expect(manager.recordedSpawnValue).toBe(2);
   });
 
   it("predicts the next ranked spawn the same way as the runtime logic", () => {

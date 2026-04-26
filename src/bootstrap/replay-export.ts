@@ -1,3 +1,5 @@
+import { randomBase36 } from "../utils/crypto-random";
+
 const DOWNLOAD_BUTTON_ID = "replay-download-btn";
 const OPEN_PAGE_BUTTON_ID = "replay-open-page-btn";
 const REPLAY_PAGE_HANDOFF_STORAGE_PREFIX = "replay_export_payload_v1:";
@@ -291,13 +293,7 @@ function safeRemoveStorageItem(input: {
 }
 
 function createReplayPageHandoffId(): string {
-  return (
-    String(Date.now()) +
-    "-" +
-    Math.random()
-      .toString(36)
-      .slice(2, 10)
-  );
+  return String(Date.now()) + "-" + randomBase36(8);
 }
 
 function resolveUrlRuntime(input: { windowLike?: unknown }): {

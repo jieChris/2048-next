@@ -1,3 +1,5 @@
+import { randomBase36 } from "../utils/crypto-random";
+
 type JsonLike = Record<string, unknown> | Array<unknown> | string | number | boolean | null;
 
 export interface PracticeTransferManagerLike {
@@ -213,15 +215,19 @@ export function buildPracticeTransferToken(options: BuildPracticeTransferTokenOp
   const opts = options || {};
   const nowMs = Number.isFinite(opts.nowMs) ? Number(opts.nowMs) : Date.now();
   const prefix = typeof opts.prefix === "string" && opts.prefix ? opts.prefix : "p";
-  const randomSource = typeof opts.randomLike === "function" ? opts.randomLike : Math.random;
-  let randomValue = 0;
-  try {
-    randomValue = Number(randomSource());
-  } catch (_err) {
-    randomValue = 0;
+  let suffix = "";
+  if (typeof opts.randomLike === "function") {
+    let randomValue = 0;
+    try {
+      randomValue = Number(opts.randomLike());
+    } catch (_err) {
+      randomValue = 0;
+    }
+    if (!Number.isFinite(randomValue)) randomValue = 0;
+    suffix = randomValue.toString(36).slice(2, 8);
+  } else {
+    suffix = randomBase36(6);
   }
-  if (!Number.isFinite(randomValue)) randomValue = 0;
-  const suffix = randomValue.toString(36).slice(2, 8);
   return prefix + nowMs + "_" + suffix;
 }
 

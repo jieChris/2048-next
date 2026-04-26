@@ -254,6 +254,33 @@ function shouldAutoLoadOnlineLeaderboard() {
     return toText(context && context.ranked_session_token).trim();
   }
 
+  function resolveRankedChallengeIdForManager(manager) {
+    var directId = toText(manager && manager.challengeId).trim();
+    if (directId) return directId;
+    var context = resolveRankedSessionContextForMode(resolveManagerRankedModeKey(manager));
+    return toText(context && context.id).trim() || toText(context && context.challenge_id).trim();
+  }
+
+  function resolveRankedSeedForManager(manager) {
+    var directSeed = Math.floor(Number(manager && manager.initialSeed));
+    if (Number.isSafeInteger(directSeed) && directSeed >= 0) return directSeed;
+    var context = resolveRankedSessionContextForMode(resolveManagerRankedModeKey(manager));
+    var contextSeed = Math.floor(Number(context && context.seed));
+    return Number.isSafeInteger(contextSeed) && contextSeed >= 0 ? contextSeed : null;
+  }
+
+  function buildRankedVerificationPayload(manager) {
+    if (!shouldUseRankedCheckpoint(manager)) return null;
+    return {
+      random_source: "server_seed",
+      replay_format: "v1",
+      challenge_id: resolveRankedChallengeIdForManager(manager) || null,
+      seed: resolveRankedSeedForManager(manager),
+      mode_key: resolveManagerRankedModeKey(manager),
+      ranked_session_token: resolveRankedSessionTokenForManager(manager) || null
+    };
+  }
+
   function resolveActiveRankedSessionToken(modeLike) {
     var context = resolveRankedSessionContextForMode(modeLike);
     return toText(context && context.ranked_session_token).trim();
@@ -1382,6 +1409,10 @@ function shouldAutoLoadOnlineLeaderboard() {
       mode: resolveLeaderboardMode(manager.modeKey || manager.mode),
       mode_key: toText(manager.modeKey || manager.mode).trim(),
       ranked_session_token: resolveRankedSessionTokenForManager(manager) || null,
+      challenge_id: resolveRankedChallengeIdForManager(manager) || null,
+      initial_seed: resolveRankedSeedForManager(manager),
+      seed: resolveRankedSeedForManager(manager),
+      ranked_verification: buildRankedVerificationPayload(manager),
       client_record_id: resolveManagerClientRecordIdForSubmit(manager) || null,
       duration_ms: resolveManagerDurationMs(manager),
       replay_string: replayPayload.replayString,
@@ -1983,14 +2014,23 @@ function shouldAutoLoadOnlineLeaderboard() {
     var bestTile = resolveManagerBestTileValue(manager);
     var minStepStats = buildRecordMinStepStats(manager, bestTile);
     var clientRecordId = resolveManagerClientRecordIdForSubmit(manager);
+    var isRankedSubmit = shouldUseRankedCheckpoint(manager);
+    var rankedVerification = buildRankedVerificationPayload(manager);
+    var rankedSeed = isRankedSubmit ? resolveRankedSeedForManager(manager) : null;
 
     return {
       mode: modeBucket || toText(manager.mode).trim() || modeKey,
       mode_key: modeKey,
       mode_bucket: modeBucket || undefined,
-      ranked_session_token: shouldUseRankedCheckpoint(manager)
+      ranked_session_token: isRankedSubmit
         ? (resolveRankedSessionTokenForManager(manager) || null)
         : null,
+      challenge_id: isRankedSubmit
+        ? (resolveRankedChallengeIdForManager(manager) || null)
+        : null,
+      initial_seed: rankedSeed,
+      seed: rankedSeed,
+      ranked_verification: rankedVerification,
       score: Math.floor(Number(score) || 0),
       best_tile: bestTile,
       duration_ms: resolveManagerDurationMs(manager),

@@ -139,28 +139,28 @@ function createGameManagerFallbackPow2CoreModeConfigs(defaultModeConfig) {
   return configs;
 }
 
-function createFallbackPow2BoardModeConfig(key, label, boardWidth, boardHeight, undoEnabled) {
-  return createFallbackPow2ModeConfig(key, label, boardWidth, boardHeight, undoEnabled, null, "none");
+function createFallbackPow2BoardModeConfig(key, label, boardWidth, boardHeight, undoEnabled, rankedBucket) {
+  return createFallbackPow2ModeConfig(key, label, boardWidth, boardHeight, undoEnabled, null, rankedBucket || "none");
 }
 
 function createGameManagerFallbackPow2Board3x3ModeConfigs() {
   return {
-    board_3x3_pow2_undo: createFallbackPow2BoardModeConfig("board_3x3_pow2_undo", "3x3 (Undo)", 3, 3, true),
-    board_3x3_pow2_no_undo: createFallbackPow2BoardModeConfig("board_3x3_pow2_no_undo", "3x3 (No Undo)", 3, 3, false)
+    board_3x3_pow2_undo: createFallbackPow2BoardModeConfig("board_3x3_pow2_undo", "3x3 (Undo)", 3, 3, true, "pow2_3x3"),
+    board_3x3_pow2_no_undo: createFallbackPow2BoardModeConfig("board_3x3_pow2_no_undo", "3x3 (No Undo)", 3, 3, false, "pow2_3x3")
   };
 }
 
 function createGameManagerFallbackPow2Board4x3ModeConfigs() {
   return {
-    board_3x4_pow2_undo: createFallbackPow2BoardModeConfig("board_3x4_pow2_undo", "4x3 (Undo)", 4, 3, true),
-    board_3x4_pow2_no_undo: createFallbackPow2BoardModeConfig("board_3x4_pow2_no_undo", "4x3 (No Undo)", 4, 3, false)
+    board_3x4_pow2_undo: createFallbackPow2BoardModeConfig("board_3x4_pow2_undo", "4x3 (Undo)", 4, 3, true, "pow2_3x4"),
+    board_3x4_pow2_no_undo: createFallbackPow2BoardModeConfig("board_3x4_pow2_no_undo", "4x3 (No Undo)", 4, 3, false, "pow2_3x4")
   };
 }
 
 function createGameManagerFallbackPow2Board4x2ModeConfigs() {
   return {
-    board_2x4_pow2_undo: createFallbackPow2BoardModeConfig("board_2x4_pow2_undo", "4x2 (Undo)", 4, 2, true),
-    board_2x4_pow2_no_undo: createFallbackPow2BoardModeConfig("board_2x4_pow2_no_undo", "4x2 (No Undo)", 4, 2, false)
+    board_2x4_pow2_undo: createFallbackPow2BoardModeConfig("board_2x4_pow2_undo", "4x2 (Undo)", 4, 2, true, "pow2_2x4"),
+    board_2x4_pow2_no_undo: createFallbackPow2BoardModeConfig("board_2x4_pow2_no_undo", "4x2 (No Undo)", 4, 2, false, "pow2_2x4")
   };
 }
 
@@ -240,8 +240,8 @@ function createGameManagerFallbackFibModeConfigs() {
   return {
     fib_4x4_undo: createFallbackFibModeConfig("fib_4x4_undo", "Fibonacci 4x4 (Undo)", 4, 4, true, null, "none"),
     fib_4x4_no_undo: createFallbackFibModeConfig("fib_4x4_no_undo", "Fibonacci 4x4 (No Undo)", 4, 4, false, null, "none"),
-    fib_3x3_undo: createFallbackFibModeConfig("fib_3x3_undo", "Fibonacci 3x3 (Undo)", 3, 3, true, null, "none"),
-    fib_3x3_no_undo: createFallbackFibModeConfig("fib_3x3_no_undo", "Fibonacci 3x3 (No Undo)", 3, 3, false, null, "none")
+    fib_3x3_undo: createFallbackFibModeConfig("fib_3x3_undo", "Fibonacci 3x3 (Undo)", 3, 3, true, null, "fib_3x3"),
+    fib_3x3_no_undo: createFallbackFibModeConfig("fib_3x3_no_undo", "Fibonacci 3x3 (No Undo)", 3, 3, false, null, "fib_3x3")
   };
 }
 

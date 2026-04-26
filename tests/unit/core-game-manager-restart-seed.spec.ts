@@ -14,6 +14,8 @@ type RestartSeedRuntime = {
 function loadRestartSeedRuntime(options?: {
   globalCrypto?: { getRandomValues?: (values: Uint32Array) => Uint32Array | void } | null;
   mathRandomValue?: number;
+  nowMs?: number;
+  performanceNowMs?: number;
 }) {
   const scriptPath = path.resolve(
     process.cwd(),
@@ -25,18 +27,24 @@ function loadRestartSeedRuntime(options?: {
   };
   const mathRandom = vi.fn(() => options?.mathRandomValue ?? 0.25);
   math.random = mathRandom;
+  const dateNow = vi.fn(() => options?.nowMs ?? 1_700_000_000_000);
+  const performanceNow = vi.fn(() => options?.performanceNowMs ?? 123.456);
   const context = {
     console,
     Math: math,
     Uint32Array,
-    crypto: options?.globalCrypto || null
+    crypto: options?.globalCrypto || null,
+    Date: { now: dateNow },
+    performance: { now: performanceNow }
   } as Record<string, unknown>;
 
   vm.runInNewContext(script, context);
 
   return {
     runtime: context as RestartSeedRuntime,
-    mathRandom
+    mathRandom,
+    dateNow,
+    performanceNow
   };
 }
 
@@ -70,7 +78,7 @@ describe("core game manager restart seed runtime", () => {
     expect(mathRandom).not.toHaveBeenCalled();
   });
 
-  it("falls back to Math.random when crypto seed generation fails", () => {
+  it("mixes fallback fresh seeds without Math.random when crypto seed generation fails", () => {
     const cryptoLike = {
       getRandomValues: vi.fn(() => {
         throw new Error("crypto unavailable");
@@ -85,10 +93,38 @@ describe("core game manager restart seed runtime", () => {
 
     runtime.initializeSetupSeedAndReplayState(manager);
 
-    expect(manager.initialSeed).toBe(0.375);
-    expect(manager.seed).toBe(0.375);
+    expect(Number.isSafeInteger(manager.initialSeed)).toBe(true);
+    expect(manager.initialSeed).not.toBe(0.375);
+    expect(manager.seed).toBe(manager.initialSeed);
+    expect(manager.freshSetupSeedCounter).toBe(1);
     expect(cryptoLike.getRandomValues).toHaveBeenCalledTimes(1);
-    expect(mathRandom).toHaveBeenCalledTimes(1);
+    expect(mathRandom).not.toHaveBeenCalled();
+  });
+
+  it("does not repeat fallback fresh seeds without Math.random", () => {
+    const cryptoLike = {
+      getRandomValues: vi.fn(() => {
+        throw new Error("crypto unavailable");
+      })
+    };
+    const { runtime, mathRandom } = loadRestartSeedRuntime({
+      mathRandomValue: 0.125,
+      nowMs: 1_700_000_000_000,
+      performanceNowMs: 100
+    });
+    const manager = {
+      getWindowLike() {
+        return { crypto: cryptoLike, performance: { now: () => 100 } };
+      }
+    } as Record<string, unknown>;
+
+    runtime.initializeSetupSeedAndReplayState(manager);
+    const firstSeed = manager.initialSeed;
+    runtime.initializeSetupSeedAndReplayState(manager);
+
+    expect(manager.initialSeed).not.toBe(firstSeed);
+    expect(manager.freshSetupSeedCounter).toBe(2);
+    expect(mathRandom).not.toHaveBeenCalled();
   });
 
   it("preserves explicit replay seeds and skips fresh random generation", () => {
