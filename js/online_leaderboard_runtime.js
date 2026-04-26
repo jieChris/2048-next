@@ -1057,26 +1057,51 @@ function shouldAutoLoadOnlineLeaderboard() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }
 
-  function readRankedCheckpointClearedAt(modeLike) {
+  function readRankedCheckpointClearMarker(modeLike) {
     var storageKey = resolveRankedCheckpointClearMarkerStorageKey(modeLike);
-    if (!storageKey) return 0;
+    if (!storageKey) return {
+      clearedAt: 0,
+      sessionToken: "",
+      clientRecordId: ""
+    };
     var raw = readLocalStorageItem(storageKey);
-    if (!raw) return 0;
+    if (!raw) return {
+      clearedAt: 0,
+      sessionToken: "",
+      clientRecordId: ""
+    };
     try {
       var parsed = JSON.parse(raw);
-      if (isPlainRecord(parsed)) return normalizeTimestampMs(parsed.cleared_at);
+      if (isPlainRecord(parsed)) {
+        return {
+          clearedAt: normalizeTimestampMs(parsed.cleared_at),
+          sessionToken: toText(parsed.ranked_session_token).trim(),
+          clientRecordId: toText(parsed.client_record_id).trim()
+        };
+      }
     } catch (_err) {}
-    return normalizeTimestampMs(raw);
+    return {
+      clearedAt: normalizeTimestampMs(raw),
+      sessionToken: "",
+      clientRecordId: ""
+    };
   }
 
-  function markRankedCheckpointCleared(modeLike, clearedAt) {
+  function readRankedCheckpointClearedAt(modeLike) {
+    return readRankedCheckpointClearMarker(modeLike).clearedAt;
+  }
+
+  function markRankedCheckpointCleared(modeLike, clearedAt, clearContext) {
     var modeKey = resolveRankedCheckpointLocalMirrorModeKey(modeLike);
     var storageKey = resolveRankedCheckpointClearMarkerStorageKey(modeKey);
     if (!modeKey || !storageKey) return false;
+    var context = isPlainRecord(clearContext) ? clearContext : {};
     var payload = {
       mode_key: modeKey,
       owner_user_id: toText(getUserId()).trim() || null,
-      cleared_at: normalizeTimestampMs(clearedAt) || Date.now()
+      cleared_at: normalizeTimestampMs(clearedAt) || Date.now(),
+      ranked_session_token: toText(context.rankedSessionToken).trim() || null,
+      client_record_id: toText(context.clientRecordId).trim() || null
     };
     try {
       writeLocalStorageItem(storageKey, JSON.stringify(payload));
@@ -1113,6 +1138,8 @@ function shouldAutoLoadOnlineLeaderboard() {
       var parsed = JSON.parse(raw);
       if (!isPlainRecord(parsed)) return null;
       if (toText(parsed.mode_key).trim() && toText(parsed.mode_key).trim() !== modeKey) return null;
+      var currentUserId = toText(getUserId()).trim();
+      if (currentUserId && toText(parsed.owner_user_id).trim() !== currentUserId) return null;
       return parsed;
     } catch (_err) {
       return null;
@@ -1124,16 +1151,36 @@ function shouldAutoLoadOnlineLeaderboard() {
     var modeKey = resolveRankedCheckpointLocalMirrorModeKey(modeLike || checkpointData.mode_key);
     if (!modeKey) return false;
 
-    var clearedAt = readRankedCheckpointClearedAt(modeKey);
+    var clearMarker = readRankedCheckpointClearMarker(modeKey);
+    var clearedAt = clearMarker.clearedAt;
+    var checkpointToken = toText(checkpointData.ranked_session_token).trim();
+    var checkpointClientRecordId = toText(checkpointData.client_record_id).trim();
     if (clearedAt > 0) {
+      if (
+        clearMarker.clientRecordId &&
+        checkpointClientRecordId &&
+        clearMarker.clientRecordId === checkpointClientRecordId
+      ) {
+        return true;
+      }
+      if (
+        clearMarker.sessionToken &&
+        checkpointToken &&
+        clearMarker.sessionToken === checkpointToken &&
+        !checkpointClientRecordId
+      ) {
+        return true;
+      }
       var checkpointAtForClear = resolveRankedCheckpointTimestampMs(checkpointData);
       if (!(checkpointAtForClear > clearedAt)) return true;
     }
 
-    var activeSession = readActiveRankedSessionRecord(modeKey);
+    var hasAuth = !!getAuthToken();
+    var activeSession = hasAuth ? readActiveRankedSessionRecord(modeKey) : null;
+    if (hasAuth && !activeSession) return true;
     if (!activeSession) return false;
     var activeToken = toText(activeSession.ranked_session_token).trim();
-    var checkpointToken = toText(checkpointData.ranked_session_token).trim();
+    if (activeToken && !checkpointToken) return true;
     if (activeToken && checkpointToken && activeToken !== checkpointToken) return true;
 
     var activeIssuedAt = normalizeTimestampMs(activeSession.issued_at);
@@ -1721,7 +1768,10 @@ function shouldAutoLoadOnlineLeaderboard() {
     manager.lastRankedCheckpointSaveError = "";
     var opts = isPlainRecord(options) ? options : {};
     var modeKey = toText(manager.modeKey || manager.mode).trim();
-    markRankedCheckpointCleared(modeKey, Date.now());
+    markRankedCheckpointCleared(modeKey, Date.now(), {
+      rankedSessionToken: resolveRankedSessionTokenForManager(manager),
+      clientRecordId: toText(manager.clientRecordId).trim()
+    });
     clearRankedCheckpointLocalMirror(modeKey);
     if (!getAuthToken()) return true;
     if (!modeKey) return false;

@@ -2,6 +2,7 @@ import { parsePlayModeKey } from "./play-query";
 import { resolveStorageByName, safeReadStorageItem, safeSetStorageItem } from "./storage";
 
 const AUTH_TOKEN_STORAGE_KEY = "2048_auth_token_v1";
+const AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
 const ACTIVE_SESSION_STORAGE_KEY_PREFIX = "ranked_session_active:v1:";
 const PREFETCH_SESSION_STORAGE_KEY_PREFIX = "ranked_session_prefetch:v1:";
 const DEFAULT_REMOTE_API_BASE_URL = "https://taihe.fun/api";
@@ -20,6 +21,7 @@ export interface RankedSessionRecord {
   ranked_session_token: string;
   issued_at: number;
   exp: number;
+  owner_user_id?: string | null | undefined;
 }
 
 export interface RankedChallengeContext {
@@ -144,6 +146,15 @@ function readAuthToken(windowLike: RankedSessionWindowLike): string {
   ).trim();
 }
 
+function readAuthUserId(windowLike: RankedSessionWindowLike): string {
+  return (
+    safeReadStorageItem({
+      storageLike: resolveLocalStorage(windowLike),
+      key: AUTH_USER_ID_STORAGE_KEY
+    }) || ""
+  ).trim();
+}
+
 function resolveModeStorageKey(prefix: string, modeKey: string): string {
   return `${prefix}${modeKey}`;
 }
@@ -182,21 +193,31 @@ function normalizeRankedSessionRecord(
     seed,
     ranked_session_token: rankedSessionToken,
     issued_at: issuedAt,
-    exp
+    exp,
+    owner_user_id:
+      typeof parsed.owner_user_id === "string" && parsed.owner_user_id.trim()
+        ? parsed.owner_user_id.trim()
+        : null
   };
 }
 
 function readRankedSessionRecord(
   storageLike: Storage | null,
   storageKey: string,
-  expectedModeKey: string
+  expectedModeKey: string,
+  expectedOwnerUserId: string
 ): RankedSessionRecord | null {
   const raw = safeReadStorageItem({
     storageLike,
     key: storageKey
   });
   const normalized = normalizeRankedSessionRecord(raw, expectedModeKey);
-  if (normalized) return normalized;
+  if (
+    normalized &&
+    (!expectedOwnerUserId || normalized.owner_user_id === expectedOwnerUserId)
+  ) {
+    return normalized;
+  }
   removeStorageKey(storageLike, storageKey);
   return null;
 }
@@ -204,12 +225,16 @@ function readRankedSessionRecord(
 function writeRankedSessionRecord(
   storageLike: Storage | null,
   storageKey: string,
-  record: RankedSessionRecord
+  record: RankedSessionRecord,
+  ownerUserId: string
 ): boolean {
   return safeSetStorageItem({
     storageLike,
     key: storageKey,
-    value: JSON.stringify(record)
+    value: JSON.stringify({
+      ...record,
+      owner_user_id: ownerUserId || null
+    })
   });
 }
 
@@ -233,13 +258,28 @@ function syncWindowChallengeContext(
   windowLike.GAME_CHALLENGE_CONTEXT = context;
 }
 
-function createRankedSessionRuntime(
+function isSameRankedSessionRecord(
+  left: RankedSessionRecord | null,
+  right: RankedSessionRecord | null
+): boolean {
+  if (!left || !right) return false;
+  if (left.ranked_session_token && right.ranked_session_token) {
+    if (left.ranked_session_token === right.ranked_session_token) return true;
+  }
+  if (left.challenge_id && right.challenge_id && left.challenge_id === right.challenge_id) {
+    return true;
+  }
+  return left.seed === right.seed;
+}
+
+export function createRankedSessionRuntime(
   windowLike: RankedSessionWindowLike,
   pageId: string
 ): RankedSessionRuntime {
   const storageLike = resolveLocalStorage(windowLike);
   const pageModeResolver = () => resolveRankedModeKeyForPage(windowLike, pageId);
   const sessionRequestCache = new Map<string, Promise<RankedSessionRecord | null>>();
+  const ownerUserIdResolver = () => readAuthUserId(windowLike);
 
   const resolveModeKey = (modeLike?: string | null | undefined): string | null => {
     const explicitModeKey = String(modeLike || "").trim();
@@ -251,28 +291,32 @@ function createRankedSessionRuntime(
     readRankedSessionRecord(
       storageLike,
       resolveModeStorageKey(ACTIVE_SESSION_STORAGE_KEY_PREFIX, modeKey),
-      modeKey
+      modeKey,
+      ownerUserIdResolver()
     );
 
   const readPrefetchedSession = (modeKey: string): RankedSessionRecord | null =>
     readRankedSessionRecord(
       storageLike,
       resolveModeStorageKey(PREFETCH_SESSION_STORAGE_KEY_PREFIX, modeKey),
-      modeKey
+      modeKey,
+      ownerUserIdResolver()
     );
 
   const writeActiveSession = (modeKey: string, record: RankedSessionRecord): boolean =>
     writeRankedSessionRecord(
       storageLike,
       resolveModeStorageKey(ACTIVE_SESSION_STORAGE_KEY_PREFIX, modeKey),
-      record
+      record,
+      ownerUserIdResolver()
     );
 
   const writePrefetchedSession = (modeKey: string, record: RankedSessionRecord): boolean =>
     writeRankedSessionRecord(
       storageLike,
       resolveModeStorageKey(PREFETCH_SESSION_STORAGE_KEY_PREFIX, modeKey),
-      record
+      record,
+      ownerUserIdResolver()
     );
 
   const clearActiveSession = (modeKey: string): void => {
@@ -319,7 +363,13 @@ function createRankedSessionRuntime(
               if (index < apiBases.length - 1) continue;
               return null;
             }
-            return normalizeRankedSessionRecord(payload.data || null, modeKey);
+            const session = normalizeRankedSessionRecord(payload.data || null, modeKey);
+            return session
+              ? {
+                  ...session,
+                  owner_user_id: ownerUserIdResolver() || null
+                }
+              : null;
           } catch (_requestErr) {
             if (index >= apiBases.length - 1) {
               return null;
@@ -346,8 +396,14 @@ function createRankedSessionRuntime(
     promotePrefetchedSession(modeLike) {
       const modeKey = resolveModeKey(modeLike);
       if (!modeKey) return false;
+      const active = readActiveSession(modeKey);
       const prefetched = readPrefetchedSession(modeKey);
       if (!prefetched) return false;
+      if (isSameRankedSessionRecord(active, prefetched)) {
+        clearPrefetchedSession(modeKey);
+        void runtime.ensurePrefetch(modeKey);
+        return false;
+      }
       if (!writeActiveSession(modeKey, prefetched)) return false;
       clearPrefetchedSession(modeKey);
       if (pageModeResolver() === modeKey) {
@@ -359,9 +415,15 @@ function createRankedSessionRuntime(
     async ensurePrefetch(modeLike) {
       const modeKey = resolveModeKey(modeLike);
       if (!modeKey) return false;
-      if (readPrefetchedSession(modeKey)) return true;
+      const active = readActiveSession(modeKey);
+      const existingPrefetch = readPrefetchedSession(modeKey);
+      if (existingPrefetch) {
+        if (!isSameRankedSessionRecord(active, existingPrefetch)) return true;
+        clearPrefetchedSession(modeKey);
+      }
       const session = await requestSession(modeKey);
       if (!session) return false;
+      if (isSameRankedSessionRecord(active, session)) return false;
       return writePrefetchedSession(modeKey, session);
     },
     clearActiveSession(modeLike) {

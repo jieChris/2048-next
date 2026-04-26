@@ -229,7 +229,8 @@ describe("online leaderboard terminal submission", () => {
       seed: 123,
       ranked_session_token: "ranked-token",
       issued_at: futureExp - 120,
-      exp: futureExp
+      exp: futureExp,
+      owner_user_id: "7"
     };
     storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(session));
     storage.setItem(PREFETCH_SESSION_KEY, JSON.stringify({ ...session, challenge_id: "ranked-2" }));
@@ -348,7 +349,8 @@ describe("online leaderboard terminal submission", () => {
       seed: 123,
       ranked_session_token: "old-ranked-token",
       issued_at: nowSec - 60,
-      exp: nowSec + 3600
+      exp: nowSec + 3600,
+      owner_user_id: "7"
     };
     const nextSession = {
       mode_key: MODE_KEY,
@@ -356,7 +358,8 @@ describe("online leaderboard terminal submission", () => {
       seed: 456,
       ranked_session_token: "next-ranked-token",
       issued_at: nowSec,
-      exp: nowSec + 3600
+      exp: nowSec + 3600,
+      owner_user_id: "7"
     };
     storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(oldSession));
     storage.setItem(PREFETCH_SESSION_KEY, JSON.stringify(nextSession));
@@ -450,7 +453,8 @@ describe("online leaderboard terminal submission", () => {
         seed: 456,
         ranked_session_token: "active-token",
         issued_at: nowSec,
-        exp: nowSec + 3600
+        exp: nowSec + 3600,
+        owner_user_id: "7"
       })
     );
     const manager = createTerminatedManager({
@@ -482,6 +486,160 @@ describe("online leaderboard terminal submission", () => {
                 saved_state: {
                   v: 1,
                   saved_at: (nowSec - 60) * 1000,
+                  mode_key: MODE_KEY,
+                  board_width: 4,
+                  board_height: 4,
+                  ruleset: "pow2",
+                  board: [[1024, 1024, 0, 0]],
+                  score: 424242,
+                  over: false,
+                  won: false,
+                  keep_playing: false
+                }
+              }
+            }
+          });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    runtime.windowLike.OnlineLeaderboardRuntime.scheduleRankedCheckpointRestore(manager, {
+      delayMs: 0
+    });
+    await flushRuntimePromises();
+
+    expect(manager.needsRankedCheckpointRestore).toBe(false);
+    expect(manager.rankCheckpointRestorePending).toBe(false);
+    expect(manager.lastRankedCheckpointRestoreError).toBe("");
+    expect(manager.score).toBe(0);
+  });
+
+  it("does not restore a cleared checkpoint even if the server reports a newer timestamp", async () => {
+    const storage = new MemoryStorage();
+    const now = Date.now();
+    const nowSec = Math.floor(now / 1000);
+    storage.setItem(
+      ACTIVE_SESSION_KEY,
+      JSON.stringify({
+        mode_key: MODE_KEY,
+        challenge_id: "ranked-active",
+        seed: 456,
+        ranked_session_token: "active-token",
+        issued_at: nowSec,
+        exp: nowSec + 3600,
+        owner_user_id: "7"
+      })
+    );
+    storage.setItem(
+      CHECKPOINT_CLEAR_KEY,
+      JSON.stringify({
+        mode_key: MODE_KEY,
+        owner_user_id: "7",
+        cleared_at: now,
+        ranked_session_token: "active-token",
+        client_record_id: "old-record"
+      })
+    );
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      over: false,
+      score: 0,
+      hasGameStarted: false,
+      moveHistory: [],
+      needsRankedCheckpointRestore: true,
+      lastRankedCheckpointRestoreError: ""
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.includes("/ranked-checkpoint")) {
+          return createJsonResponse({
+            success: true,
+            data: {
+              mode_key: MODE_KEY,
+              mode_bucket: "standard_no_undo",
+              ranked_session_token: "active-token",
+              client_record_id: "old-record",
+              replay_string: "old-replay",
+              duration_ms: 3000,
+              updated_at: new Date(now + 60_000).toISOString(),
+              ui_state: {
+                saved_state: {
+                  v: 1,
+                  saved_at: now + 60_000,
+                  mode_key: MODE_KEY,
+                  board_width: 4,
+                  board_height: 4,
+                  ruleset: "pow2",
+                  board: [[1024, 1024, 0, 0]],
+                  score: 424242,
+                  over: false,
+                  won: false,
+                  keep_playing: false
+                }
+              }
+            }
+          });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    runtime.windowLike.OnlineLeaderboardRuntime.scheduleRankedCheckpointRestore(manager, {
+      delayMs: 0
+    });
+    await flushRuntimePromises();
+
+    expect(manager.needsRankedCheckpointRestore).toBe(false);
+    expect(manager.rankCheckpointRestorePending).toBe(false);
+    expect(manager.lastRankedCheckpointRestoreError).toBe("");
+    expect(manager.score).toBe(0);
+  });
+
+  it("requires active ranked checkpoints to carry the current session token", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    storage.setItem(
+      ACTIVE_SESSION_KEY,
+      JSON.stringify({
+        mode_key: MODE_KEY,
+        challenge_id: "ranked-active",
+        seed: 456,
+        ranked_session_token: "active-token",
+        issued_at: nowSec,
+        exp: nowSec + 3600,
+        owner_user_id: "7"
+      })
+    );
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      over: false,
+      score: 0,
+      hasGameStarted: false,
+      moveHistory: [],
+      needsRankedCheckpointRestore: true,
+      lastRankedCheckpointRestoreError: ""
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.includes("/ranked-checkpoint")) {
+          return createJsonResponse({
+            success: true,
+            data: {
+              mode_key: MODE_KEY,
+              mode_bucket: "standard_no_undo",
+              client_record_id: "tokenless-record",
+              replay_string: "old-replay",
+              duration_ms: 3000,
+              updated_at: new Date().toISOString(),
+              ui_state: {
+                saved_state: {
+                  v: 1,
+                  saved_at: Date.now(),
                   mode_key: MODE_KEY,
                   board_width: 4,
                   board_height: 4,

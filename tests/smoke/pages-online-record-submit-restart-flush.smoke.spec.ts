@@ -14,7 +14,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       seed: 123,
       ranked_session_token: "old-ranked-token",
       issued_at: nowSec - 60,
-      exp: nowSec + 3600
+      exp: nowSec + 3600,
+      owner_user_id: "42"
     };
     const nextSession = {
       mode_key: modeKey,
@@ -22,7 +23,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       seed: 456,
       ranked_session_token: "next-ranked-token",
       issued_at: nowSec,
-      exp: nowSec + 3600
+      exp: nowSec + 3600,
+      owner_user_id: "42"
     };
     let prefetchCounter = 0;
     const recordPayloads: Array<Record<string, unknown>> = [];
@@ -546,6 +548,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         checkpointData = {
           mode_key: body.mode_key,
           mode_bucket: body.mode,
+          ranked_session_token: body.ranked_session_token,
           client_record_id: body.client_record_id,
           replay_string: body.replay_string,
           duration_ms: body.duration_ms,
@@ -579,9 +582,23 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     await page.addInitScript(() => {
+      const modeKey = "standard_4x4_pow2_no_undo";
+      const nowSec = Math.floor(Date.now() / 1000);
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
       window.localStorage.setItem("2048_auth_userId_v1", "42");
       window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+      window.localStorage.setItem(
+        "ranked_session_active:v1:" + modeKey,
+        JSON.stringify({
+          mode_key: modeKey,
+          challenge_id: "smoke-ranked-active",
+          seed: 101,
+          ranked_session_token: "smoke-ranked-token",
+          issued_at: nowSec,
+          exp: nowSec + 3600,
+          owner_user_id: "42"
+        })
+      );
     });
 
     const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });

@@ -489,6 +489,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         checkpointData = {
           mode_key: body.mode_key,
           mode_bucket: body.mode,
+          ranked_session_token: body.ranked_session_token,
           client_record_id: body.client_record_id,
           replay_string: body.replay_string,
           duration_ms: body.duration_ms,
@@ -522,9 +523,23 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     await page.addInitScript(() => {
+      const modeKey = "standard_4x4_pow2_no_undo";
+      const nowSec = Math.floor(Date.now() / 1000);
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
       window.localStorage.setItem("2048_auth_userId_v1", "1");
       window.localStorage.setItem("2048_auth_nickname_v1", "SmokeUser");
+      window.localStorage.setItem(
+        "ranked_session_active:v1:" + modeKey,
+        JSON.stringify({
+          mode_key: modeKey,
+          challenge_id: "smoke-ranked-active",
+          seed: 101,
+          ranked_session_token: "smoke-ranked-token",
+          issued_at: nowSec,
+          exp: nowSec + 3600,
+          owner_user_id: "1"
+        })
+      );
     });
 
     const firstResponse = await page.goto("/play.html?mode=standard_4x4_pow2_no_undo", {
@@ -736,7 +751,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         seed: 101,
         ranked_session_token: "old-ranked-token",
         issued_at: nowSec - 120,
-        exp: nowSec + 3600
+        exp: nowSec + 3600,
+        owner_user_id: "1"
       };
       const prefetchedSession = {
         mode_key: modeKey,
@@ -744,7 +760,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         seed: 202,
         ranked_session_token: "new-ranked-token",
         issued_at: nowSec,
-        exp: nowSec + 3600
+        exp: nowSec + 3600,
+        owner_user_id: "1"
       };
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
       window.localStorage.setItem("2048_auth_userId_v1", "1");
