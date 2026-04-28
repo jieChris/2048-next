@@ -90,7 +90,11 @@
   function resolveOffer(payload) {
     var record = toRecord(payload);
     var data = toRecord(record.data);
-    return toRecord(data.offer || data || record.offer);
+    if (data.offer && typeof data.offer === "object") return toRecord(data.offer);
+    if (data.id) return data;
+    if (record.offer && typeof record.offer === "object") return toRecord(record.offer);
+    if (record.id) return record;
+    return {};
   }
 
   function getOfferId(offer) {
@@ -111,7 +115,15 @@
 
   function resolveBoardFromOffer(offer) {
     var payload = parseOfferPayload(offer) || {};
-    return normalizeBoard(payload.board || offer.board);
+    var rawBoard = payload.board || offer.board;
+    if (!rawBoard && typeof offer.board_json === "string") {
+      try {
+        rawBoard = JSON.parse(offer.board_json);
+      } catch (_err) {
+        rawBoard = null;
+      }
+    }
+    return normalizeBoard(rawBoard);
   }
 
   function resolveScoreFromOffer(offer) {
