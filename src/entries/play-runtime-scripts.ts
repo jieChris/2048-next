@@ -150,6 +150,7 @@ import coreIndexUiPageActionsHostRuntimeUrl from "../../js/core_index_ui_page_ac
 import indexUiUrl from "../../js/index_ui.js?url";
 import refreshSchedulerRuntimeUrl from "../../js/refresh_scheduler_runtime.js?url";
 import apiSharedUtilsUrl from "../../js/api_shared_utils.js?url";
+import adminRescueClientRuntimeUrl from "../../js/admin_rescue_client_runtime.js?url";
 import onlineLeaderboardRuntimeUrl from "../../js/online_leaderboard_runtime.js?url";
 import coreI18nRuntimeUrl from "../../js/core_i18n_runtime.js?url";
 
@@ -306,6 +307,7 @@ export const playLegacyScripts = [
   indexUiUrl,
   refreshSchedulerRuntimeUrl,
   apiSharedUtilsUrl,
+  adminRescueClientRuntimeUrl,
   onlineLeaderboardRuntimeUrl,
   coreI18nRuntimeUrl
 ] as const;

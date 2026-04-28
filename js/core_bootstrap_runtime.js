@@ -67,6 +67,14 @@
     }
 
     global.game_manager = manager;
+    if (
+      global.AdminRescueClientRuntime &&
+      typeof global.AdminRescueClientRuntime.scheduleCheck === "function"
+    ) {
+      try {
+        global.AdminRescueClientRuntime.scheduleCheck(manager);
+      } catch (_err) {}
+    }
     return manager;
   }
 
