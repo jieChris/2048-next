@@ -235,7 +235,7 @@ function finalizeActuatePersistence(manager) {
   if (typeof publishSavedStateSyncSnapshot === "function") {
     publishSavedStateSyncSnapshot(manager);
   }
-  var shouldFinalizeAsTerminated = manager.modeKey !== "practice" && isSessionTerminated(manager);
+  var shouldFinalizeAsTerminated = manager.modeKey !== "practice" && !!manager.over;
   if (shouldFinalizeAsTerminated) {
     manager.clearSavedGameState(manager.modeKey);
     manager.tryAutoSubmitOnGameOver();

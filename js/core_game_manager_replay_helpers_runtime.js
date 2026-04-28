@@ -1726,7 +1726,10 @@ function tryAutoSubmitOnGameOver(manager) {
 
 function isSessionTerminated(manager) {
   if (!manager) return false;
-  return !!(manager.over || (manager.won && !manager.keepPlaying));
+  if (typeof isTerminalSessionForPersistence === "function") {
+    return !!isTerminalSessionForPersistence(manager);
+  }
+  return !!manager.over;
 }
 
 function v9RplCloneBoardMatrix(board) {

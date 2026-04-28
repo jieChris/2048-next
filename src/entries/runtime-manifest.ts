@@ -30,6 +30,7 @@ export type RuntimeCapability =
   | "play"
   | "replay"
   | "account"
+  | "admin"
   | "account-settings"
   | "history"
   | "modes"
@@ -90,6 +91,11 @@ export const PAGE_MANIFESTS: readonly PageManifestEntry[] = [
     pageId: "account",
     htmlFile: "account.html",
     capabilities: ["account"]
+  },
+  {
+    pageId: "admin",
+    htmlFile: "admin.html",
+    capabilities: ["admin"]
   },
   {
     pageId: "account-settings",

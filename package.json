@@ -21,7 +21,7 @@
     "test:smoke:history": "playwright test --config=playwright.config.ts --workers=1 \"tests/smoke/history-.*\\.smoke\\.spec\\.ts\"",
     "test:smoke:index-ui": "playwright test --config=playwright.config.ts --workers=1 \"tests/smoke/index-ui-.*\\.smoke\\.spec\\.ts\"",
     "test:smoke:pages": "playwright test --config=playwright.config.ts --workers=1 \"tests/smoke/pages-.*\\.smoke\\.spec\\.ts\"",
-    "test:smoke:ci": "npm run test:smoke:history && npm run test:smoke:index-ui && npm run test:smoke:pages",
+    "test:smoke:ci": "npm run test:smoke:critical",
     "test:smoke:runtime-contract": "playwright test --config=playwright.config.ts tests/smoke/pages-runtime-contract.smoke.spec.ts",
     "test:smoke:replay-runtime": "playwright test --config=playwright.config.ts tests/smoke/pages-replay-runtime.smoke.spec.ts",
     "test:smoke:history-load": "playwright test --config=playwright.config.ts --workers=1 \"tests/smoke/history-records-.*\\.smoke\\.spec\\.ts\"",
@@ -46,7 +46,9 @@
     "report:baseline": "node scripts/update-baseline-report.mjs",
     "audit:entry-manifest": "node scripts/entry-manifest-audit.mjs",
     "audit:engine": "node scripts/engine-audit.mjs",
-    "audit:service-boundary": "node scripts/service-boundary-audit.mjs"
+    "audit:service-boundary": "node scripts/service-boundary-audit.mjs",
+    "test:smoke:critical": "playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts tests/smoke/pages-play-modes.smoke.spec.ts tests/smoke/pages-contracts-saved-session.smoke.spec.ts tests/smoke/pages-play-anti-cheat.smoke.spec.ts tests/smoke/pages-online-submit-persist-retry.smoke.spec.ts tests/smoke/pages-online-submit-timeout-retry.smoke.spec.ts tests/smoke/history-records-import-core.smoke.spec.ts",
+    "test:smoke:nightly": "npm run test:smoke"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

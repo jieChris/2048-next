@@ -829,4 +829,34 @@ describe("core game manager saved state runtime", () => {
     expect(manager.spawnTwos).toBe(2);
     expect(manager.spawnFours).toBe(1);
   });
+
+  it("keeps win-prompt saved states restorable", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      width: 4,
+      height: 4,
+      ruleset: "pow2"
+    };
+
+    expect(
+      runtime.resolveSavedStateRestoreDecision(manager, {
+        v: 1,
+        mode_key: "standard_4x4_pow2_no_undo",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        board: [
+          [2048, 2, 4, 8],
+          [16, 32, 64, 128],
+          [256, 512, 1024, 2],
+          [4, 8, 16, 32]
+        ],
+        score: 800000,
+        over: false,
+        won: true,
+        keep_playing: false
+      })
+    ).toEqual({ canRestore: true, shouldClearSavedState: true });
+  });
 });

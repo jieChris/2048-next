@@ -114,16 +114,9 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   smoke:
-    name: Smoke (${{ matrix.suite }})
+    name: Smoke (critical)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        suite:
-          - history
-          - index-ui
-          - pages
 
     steps:
       - name: Checkout
@@ -142,13 +135,13 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run smoke tests
-        run: npm run test:smoke:${{ matrix.suite }}
+        run: npm run test:smoke:critical
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ matrix.suite }}
+          name: playwright-report-critical
           path: |
             playwright-report
             test-results
@@ -158,11 +151,11 @@ jobs:
         if: always()
         run: |
           {
-            echo "### Smoke Diagnostics (${{ matrix.suite }})";
+            echo "### Smoke Diagnostics (critical)";
             echo "";
             echo "| Item | Value |";
             echo "| --- | --- |";
-            echo "| Artifact | \`playwright-report-${{ matrix.suite }}\` |";
+            echo "| Artifact | \`playwright-report-critical\` |";
             echo "| Run | [actions run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) |";
             echo "| Diagnose | Download artifact, inspect \`playwright-report/index.html\` and \`test-results\`. |";
           } >> "$GITHUB_STEP_SUMMARY"

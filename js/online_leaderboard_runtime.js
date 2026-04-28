@@ -11,12 +11,15 @@
   var STORAGE_LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
   var STORAGE_PENDING_RECORD_SUBMIT_KEY = "online_pending_record_submit_signature_v1";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
+  var BEST_SCORE_STORAGE_KEY_PREFIX = "bestScoreByMode:";
   var SCORE_SUBMIT_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
   var SCORE_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
   var SCORE_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
   var RECORD_SUBMIT_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
   var RECORD_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
   var RECORD_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
+  var ACCOUNT_BEST_SCORE_SYNC_FETCH_LIMIT = 500;
+  var ACCOUNT_BEST_SCORE_SYNC_TTL_MS = 30000;
   var RANKED_CHECKPOINT_SAVE_DEBOUNCE_MS = 1500;
   var RANKED_CHECKPOINT_MIN_SAVE_INTERVAL_MS = 3000;
   var RANKED_CHECKPOINT_LOCAL_MIRROR_KEY_PREFIX = "ranked_checkpoint_local_mirror:v1:";
@@ -158,11 +161,14 @@
   var pollingVisibilityBound = false;
   var pollingUsingScheduler = false;
   var lifecycleSubmitFlushBound = false;
+  var authBestScoreSyncBound = false;
   var schedulerTaskName = "online-leaderboard-main";
   var refreshScheduler = null;
   var rankedCheckpointSaveTimer = 0;
   var rankedSessionExpiredNoticeModeKey = "";
   var rankedSessionExpiredNoticeAt = 0;
+  var accountBestScoreSyncPending = Object.create(null);
+  var accountBestScoreSyncLastAt = Object.create(null);
 
   function addPxDelta(sizeLike, deltaPx) {
     var text = toText(sizeLike).trim().toLowerCase();
@@ -434,6 +440,9 @@ function shouldAutoLoadOnlineLeaderboard() {
       safeRemoveStorage(STORAGE_USER_ID_KEY);
     }
     safeSetStorage(STORAGE_NICKNAME_KEY, toText(payload && payload.nickname));
+    runPromiseSafely(function () {
+      return syncAccountBestScoreForCurrentMode({ force: true });
+    });
   }
 
   function clearAuth() {
@@ -2151,6 +2160,127 @@ function shouldAutoLoadOnlineLeaderboard() {
     return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), { method: "GET" });
   }
 
+  function normalizeAccountBestScore(valueLike) {
+    var value = Math.floor(Number(valueLike) || 0);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  }
+
+  function getAccountBestScoreSyncKey(userIdLike, modeLike) {
+    var userId = toText(userIdLike).trim();
+    var modeKey = toText(modeLike).trim();
+    return userId && modeKey ? userId + "|" + modeKey : "";
+  }
+
+  function getAccountBestScoreStorageKey(modeLike) {
+    var modeKey = toText(modeLike).trim();
+    return modeKey ? BEST_SCORE_STORAGE_KEY_PREFIX + modeKey : "";
+  }
+
+  function getAccountBestScoreRecords(userId, modeKey, modeBucket) {
+    var safeUserId = Math.floor(Number(userId) || 0);
+    if (safeUserId <= 0 || !modeKey || !modeBucket) {
+      return Promise.resolve({ success: true, data: [] });
+    }
+    var safeLimit = ACCOUNT_BEST_SCORE_SYNC_FETCH_LIMIT;
+    var path = "/user/" + encodeURIComponent(String(safeUserId)) + "/records";
+    path += "?page_size=" + encodeURIComponent(String(safeLimit));
+    path += "&limit=" + encodeURIComponent(String(safeLimit));
+    path += "&page=1";
+    path += "&sort_by=score";
+    path += "&order=desc";
+    path += "&status=active";
+    path += "&mode=" + encodeURIComponent(modeBucket);
+    path += "&mode_key=" + encodeURIComponent(modeKey);
+    return apiRequest(path, { method: "GET", auth: true });
+  }
+
+  function resolveAccountBestScoreFromRecords(result, modeKey) {
+    if (!result || !result.success || !Array.isArray(result.data)) return 0;
+    var normalizedModeKey = toText(modeKey).trim().toLowerCase();
+    if (!normalizedModeKey) return 0;
+    var bestScore = 0;
+    for (var i = 0; i < result.data.length; i += 1) {
+      var item = result.data[i] || {};
+      var itemModeKey = toText(item.mode_key || item.modeKey).trim().toLowerCase();
+      if (itemModeKey !== normalizedModeKey) continue;
+      var score = normalizeAccountBestScore(item.score);
+      if (score > bestScore) bestScore = score;
+    }
+    return bestScore;
+  }
+
+  function getVisibleBestScoreContainer(manager) {
+    var actuator = manager && manager.actuator ? manager.actuator : null;
+    if (actuator && actuator.bestContainer) return actuator.bestContainer;
+    if (!global.document || typeof global.document.querySelector !== "function") return null;
+    return global.document.querySelector(".best-container");
+  }
+
+  function updateVisibleBestScore(manager, bestScore) {
+    var scoreText = String(normalizeAccountBestScore(bestScore));
+    var actuator = manager && manager.actuator ? manager.actuator : null;
+    if (actuator && typeof actuator.updateBestScore === "function" && actuator.bestContainer) {
+      actuator.updateBestScore(scoreText);
+      return;
+    }
+    var bestContainer = getVisibleBestScoreContainer(manager);
+    if (bestContainer) bestContainer.textContent = scoreText;
+  }
+
+  function applyAccountBestScoreToCurrentManager(modeKey, serverBestScore) {
+    var score = normalizeAccountBestScore(serverBestScore);
+    if (!(score > 0)) return false;
+    var manager = global.game_manager;
+    if (!manager || manager.replayMode) return false;
+    var currentModeKey = toText(manager.modeKey || manager.mode).trim() || getCurrentModeKey();
+    if (currentModeKey && currentModeKey !== modeKey) return false;
+    if (!manager.scoreManager || typeof manager.scoreManager.get !== "function" || typeof manager.scoreManager.set !== "function") {
+      return false;
+    }
+    var localBestScore = normalizeAccountBestScore(manager.scoreManager.get());
+    if (score <= localBestScore) return false;
+    manager.scoreManager.set(score);
+    var storageKey = getAccountBestScoreStorageKey(modeKey);
+    if (storageKey) safeSetStorage(storageKey, String(score));
+    updateVisibleBestScore(manager, score);
+    return true;
+  }
+
+  async function syncAccountBestScoreForCurrentMode(options) {
+    var opts = options && typeof options === "object" ? options : {};
+    var token = getAuthToken();
+    var userId = getUserId();
+    var modeKey = getCurrentModeKey();
+    var modeBucket = resolveLeaderboardMode(modeKey);
+    if (!token || !userId || !modeKey || !modeBucket) return false;
+
+    var syncKey = getAccountBestScoreSyncKey(userId, modeKey);
+    if (!syncKey) return false;
+    if (accountBestScoreSyncPending[syncKey]) return accountBestScoreSyncPending[syncKey];
+
+    var now = Date.now();
+    var lastSyncAt = Number(accountBestScoreSyncLastAt[syncKey] || 0);
+    if (opts.force !== true && lastSyncAt > 0 && now - lastSyncAt < ACCOUNT_BEST_SCORE_SYNC_TTL_MS) {
+      return false;
+    }
+    accountBestScoreSyncLastAt[syncKey] = now;
+
+    var promise = (async function () {
+      var result = await getAccountBestScoreRecords(userId, modeKey, modeBucket);
+      var serverBestScore = resolveAccountBestScoreFromRecords(result, modeKey);
+      return applyAccountBestScoreToCurrentManager(modeKey, serverBestScore);
+    })();
+
+    accountBestScoreSyncPending[syncKey] = promise;
+    try {
+      return await promise;
+    } catch (_err) {
+      return false;
+    } finally {
+      delete accountBestScoreSyncPending[syncKey];
+    }
+  }
+
   function getToolkitCopy(lang) {
     if (lang === "en") {
       return {
@@ -2243,6 +2373,19 @@ function shouldAutoLoadOnlineLeaderboard() {
         timerLeaderboardCacheRows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT),
         resolveSelfRank(timerLeaderboardCacheRows)
       );
+    });
+  }
+
+  function bindAuthBestScoreSync() {
+    if (authBestScoreSyncBound) return;
+    authBestScoreSyncBound = true;
+
+    global.addEventListener("storage", function (eventLike) {
+      if (!eventLike) return;
+      if (eventLike.key !== STORAGE_TOKEN_KEY && eventLike.key !== STORAGE_USER_ID_KEY) return;
+      runPromiseSafely(function () {
+        return syncAccountBestScoreForCurrentMode({ force: true });
+      });
     });
   }
 
@@ -2947,6 +3090,7 @@ function init() {
     scheduleRankedCheckpointRestore(global.game_manager, { reason: "init" });
     ensureToolkitEntryRow();
     bindLanguageSync();
+    bindAuthBestScoreSync();
     bindLifecycleSubmitFlush();
     bindModeIntroRefresh();
     ensureTimerLeaderboardPanel();
@@ -2960,6 +3104,9 @@ function init() {
     });
     runPromiseSafely(function () {
       return retryPendingScoreSubmit({ forcePendingRetry: true });
+    });
+    runPromiseSafely(function () {
+      return syncAccountBestScoreForCurrentMode({ force: true });
     });
     refreshTimerLeaderboardPanel(true);
     if (byId("mode-intro-leaderboard")) {
@@ -2982,6 +3129,7 @@ function init() {
     getNickname: getNickname,
     resolveLeaderboardMode: resolveLeaderboardMode,
     isLeaderboardModeSupported: isLeaderboardModeSupported,
+    syncAccountBestScoreForCurrentMode: syncAccountBestScoreForCurrentMode,
     hasLocalRankedCheckpointMirror: hasRankedCheckpointLocalMirror,
     scheduleRankedCheckpointRestore: scheduleRankedCheckpointRestore,
     persistRankedCheckpointOnPageHide: persistRankedCheckpointOnPageHide

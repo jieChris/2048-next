@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>2048 &#31649;&#29702;&#21518;&#21488;</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260409-1">
+  <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260409-1">
+  <link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
+  <link href="style/admin_page.css?v=20260428-01" rel="stylesheet" type="text/css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://taihe.fun https://www.taihe.fun; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
+</head>
+<body data-page="admin-console">
+  <main class="palette-page-shell admin-page-shell">
+    <header class="palette-page-header admin-header">
+      <div class="palette-title-wrap">
+        <p class="palette-kicker">2048 Admin Console</p>
+        <h1 class="palette-title">&#31649;&#29702;&#21518;&#21488;</h1>
+        <p class="palette-subtitle">&#26597;&#30475; D1 &#34920;&#25968;&#25454;&#12289;&#25191;&#34892;&#26597;&#35810;&#12289;&#31614;&#21457;&#24674;&#22797;&#23545;&#23616;&#12290;</p>
+      </div>
+      <nav class="palette-nav">
+        <a class="replay-button palette-nav-btn" href="account.html">&#36134;&#25143;&#20013;&#24515;</a>
+        <a class="replay-button palette-nav-btn" href="2048.html">&#22238;&#21040;&#28216;&#25103;</a>
+      </nav>
+    </header>
+
+    <section class="admin-grid">
+      <section class="card-surface admin-card admin-auth-card">
+        <div class="panel-head">
+          <div>
+            <h2>&#26435;&#38480;&#29366;&#24577;</h2>
+            <p>&#20351;&#29992;&#24403;&#21069;&#30331;&#24405; token &#39564;&#35777; Admin API&#12290;</p>
+          </div>
+          <span id="admin-auth-state" class="panel-pill">&#26410;&#39564;&#35777;</span>
+        </div>
+        <div class="admin-actions">
+          <button id="admin-check-auth" class="replay-button" type="button">&#26816;&#26597;&#31649;&#29702;&#26435;&#38480;</button>
+          <button id="admin-refresh-tables" class="replay-button" type="button">&#21047;&#26032;&#34920;&#21015;&#34920;</button>
+        </div>
+        <pre id="admin-auth-output" class="admin-output" aria-live="polite"></pre>
+      </section>
+
+      <section class="card-surface admin-card admin-query-card">
+        <div class="panel-head">
+          <div>
+            <h2>&#25968;&#25454;&#26597;&#35810;</h2>
+            <p>&#36873;&#25321;&#34920;&#24555;&#36895;&#26597;&#30475;&#65292;&#25110;&#36755;&#20837; SQL&#65292;&#25903;&#25345;&#23548;&#20986;&#32467;&#26524;&#12290;</p>
+          </div>
+        </div>
+        <div class="admin-form-grid">
+          <label>&#25968;&#25454;&#34920;
+            <select id="admin-table-select" class="settings-select"></select>
+          </label>
+          <label>&#27599;&#39029;&#26465;&#25968;
+            <input id="admin-table-limit" class="admin-input" type="number" min="1" max="200" value="50">
+          </label>
+          <label>&#39029;&#30721;
+            <input id="admin-table-page" class="admin-input" type="number" min="1" value="1">
+          </label>
+        </div>
+        <div class="admin-actions">
+          <button id="admin-load-table" class="replay-button" type="button">&#21152;&#36733;&#34920;&#25968;&#25454;</button>
+          <button id="admin-export-result" class="replay-button" type="button">&#23548;&#20986;&#26597;&#35810;&#32467;&#26524;</button>
+        </div>
+        <label class="admin-sql-label">&#33258;&#23450;&#20041; SQL
+          <textarea id="admin-sql" class="admin-textarea" spellcheck="false" placeholder="SELECT * FROM users ORDER BY id DESC LIMIT 20;"></textarea>
+        </label>
+        <div class="admin-actions">
+          <button id="admin-run-sql" class="replay-button" type="button">&#25191;&#34892;&#26597;&#35810;</button>
+        </div>
+        <p id="admin-query-tip" class="admin-tip" aria-live="polite"></p>
+        <div id="admin-result" class="admin-result-wrap"></div>
+      </section>
+
+      <section class="card-surface admin-card admin-rescue-card">
+        <div class="panel-head">
+          <div>
+            <h2>&#31614;&#21457;&#24674;&#22797;&#23545;&#23616;</h2>
+            <p>&#20026;&#25351;&#23450;&#29992;&#25143;&#31614;&#21457;&#19968;&#20221;&#24453;&#30830;&#35748;&#30340;&#24674;&#22797;&#30424;&#38754;&#12290;</p>
+          </div>
+        </div>
+        <div class="admin-form-grid admin-rescue-grid">
+          <label>&#29992;&#25143; ID
+            <input id="admin-rescue-user-id" class="admin-input" type="number" min="1" placeholder="&#36755;&#20837;&#29992;&#25143; ID">
+          </label>
+          <label>&#27169;&#24335;
+            <select id="admin-rescue-mode-select" class="settings-select"></select>
+            <input id="admin-rescue-mode-key" type="hidden">
+            <input id="admin-rescue-mode-bucket" type="hidden">
+          </label>
+          <label>&#20998;&#25968;
+            <input id="admin-rescue-score" class="admin-input" type="number" min="0" placeholder="&#24674;&#22797;&#36215;&#22987;&#20998;&#25968;">
+          </label>
+          <label>&#26102;&#38271; ms
+            <input id="admin-rescue-duration" class="admin-input" type="number" min="0" placeholder="&#24674;&#22797;&#36215;&#22987;&#26102;&#38271;">
+          </label>
+          <label>&#36807;&#26399;&#23567;&#26102;
+            <input id="admin-rescue-expires" class="admin-input" type="number" min="1" max="720" value="168">
+          </label>
+        </div>
+        <label class="admin-sql-label">&#30424;&#38754; JSON&#65288;4 x 4 &#25968;&#32452;&#65289;
+          <textarea id="admin-rescue-board" class="admin-textarea admin-board-textarea" spellcheck="false" placeholder="&#36755;&#20837; 4x4 &#30424;&#38754; JSON&#65292;&#20363;&#22914; [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]"></textarea>
+        </label>
+        <label class="admin-sql-label">&#21407;&#22240;
+          <textarea id="admin-rescue-reason" class="admin-textarea" spellcheck="false" placeholder="&#31616;&#35201;&#35828;&#26126;&#20026;&#20160;&#20040;&#31614;&#21457;&#36825;&#20221;&#24674;&#22797;&#21333;"></textarea>
+        </label>
+        <div class="admin-actions">
+          <button id="admin-create-rescue" class="replay-button" type="button">&#31614;&#21457;&#24674;&#22797;&#21333;</button>
+          <button id="admin-list-rescue" class="replay-button" type="button">&#26597;&#30475;&#24674;&#22797;&#21333;</button>
+        </div>
+        <p id="admin-rescue-tip" class="admin-tip" aria-live="polite"></p>
+        <pre id="admin-rescue-output" class="admin-output" aria-live="polite"></pre>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="/src/entries/admin.ts"></script>
+</body>
+</html>

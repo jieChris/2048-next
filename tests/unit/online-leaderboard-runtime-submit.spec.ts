@@ -13,6 +13,7 @@ const CHECKPOINT_MIRROR_KEY = `ranked_checkpoint_local_mirror:v1:${MODE_KEY}`;
 const CHECKPOINT_CLEAR_KEY = `ranked_checkpoint_cleared_at:v1:user:7:${MODE_KEY}`;
 const PENDING_RECORD_KEY = "online_pending_record_submit_signature_v1";
 const PENDING_SCORE_KEY = "online_pending_score_submit_v1";
+const BEST_SCORE_KEY = `bestScoreByMode:${MODE_KEY}`;
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -132,6 +133,16 @@ function createTerminatedManager(overrides: Record<string, unknown> = {}): Recor
   };
 }
 
+function createScoreManagerStub(storage: MemoryStorage, score: number): Record<string, unknown> {
+  storage.setItem(BEST_SCORE_KEY, String(score));
+  return {
+    get: vi.fn(() => storage.getItem(BEST_SCORE_KEY) || "0"),
+    set: vi.fn((nextScore: number) => {
+      storage.setItem(BEST_SCORE_KEY, String(nextScore));
+    })
+  };
+}
+
 function loadOnlineLeaderboardRuntime(options: {
   manager: Record<string, unknown>;
   fetchImpl: (url: string, init: FetchCall["init"]) => Promise<Record<string, unknown>>;
@@ -201,6 +212,84 @@ async function flushRuntimePromises(): Promise<void> {
 }
 
 describe("online leaderboard terminal submission", () => {
+  it("syncs the authenticated account best score for the current exact mode on startup", async () => {
+    const storage = new MemoryStorage();
+    const scoreManager = createScoreManagerStub(storage, 16);
+    const bestContainer = { textContent: "" };
+    const updateBestScore = vi.fn((bestScore: number | string) => {
+      bestContainer.textContent = String(bestScore);
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({
+        over: false,
+        score: 0,
+        scoreManager,
+        actuator: {
+          bestContainer,
+          updateBestScore
+        }
+      }),
+      storage,
+      disableOnlineLeaderboard: false,
+      fetchImpl: async (url) => {
+        if (url.includes("/user/7/records")) {
+          return createJsonResponse({
+            success: true,
+            data: [
+              { mode_key: "capped_4x4_pow2_no_undo", mode_bucket: "standard_no_undo", score: 8192 },
+              { mode_key: MODE_KEY, mode_bucket: "standard_no_undo", score: 4096 }
+            ]
+          });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    await flushRuntimePromises();
+
+    const bestScoreCall = runtime.fetchCalls.find((call) => call.url.includes("/user/7/records"));
+    expect(bestScoreCall?.url).toContain("mode=standard_no_undo");
+    expect(bestScoreCall?.url).toContain(`mode_key=${encodeURIComponent(MODE_KEY)}`);
+    expect(scoreManager.set).toHaveBeenCalledWith(4096);
+    expect(storage.getItem(BEST_SCORE_KEY)).toBe("4096");
+    expect(updateBestScore).toHaveBeenCalledWith("4096");
+    expect(bestContainer.textContent).toBe("4096");
+  });
+
+  it("does not lower the local best score when the account record is lower", async () => {
+    const storage = new MemoryStorage();
+    const scoreManager = createScoreManagerStub(storage, 8192);
+    const updateBestScore = vi.fn();
+    loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({
+        over: false,
+        score: 0,
+        scoreManager,
+        actuator: {
+          bestContainer: { textContent: "" },
+          updateBestScore
+        }
+      }),
+      storage,
+      disableOnlineLeaderboard: false,
+      fetchImpl: async (url) => {
+        if (url.includes("/user/7/records")) {
+          return createJsonResponse({
+            success: true,
+            data: [{ mode_key: MODE_KEY, mode_bucket: "standard_no_undo", score: 4096 }]
+          });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    await flushRuntimePromises();
+
+    expect(scoreManager.set).not.toHaveBeenCalled();
+    expect(storage.getItem(BEST_SCORE_KEY)).toBe("8192");
+    expect(updateBestScore).not.toHaveBeenCalled();
+  });
+
   it("retries pending record submit immediately on startup even during retry backoff", async () => {
     const storage = new MemoryStorage();
     const now = Date.now();

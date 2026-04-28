@@ -185,7 +185,7 @@ function resolveLatestSavedPayloadForManager(manager, windowNameSavedCandidate) 
 function isSavedStateTerminalForRestore(saved) {
   if (!saved) return false;
   if (!!saved.terminated) return true;
-  return !!(saved.over || (saved.won && !saved.keep_playing)) && saved.mode_key !== "practice";
+  return !!saved.over && saved.mode_key !== "practice";
 }
 function isSavedStateSizeOrRulesetMismatch(manager, saved) {
   if (!(manager && saved)) return true;
@@ -325,7 +325,7 @@ function shouldUseSavedGameState(manager) {
 }
 function shouldClearSavedStateForTerminatedSession(manager) {
   if (!manager) return false;
-  return manager.modeKey !== "practice" && isSessionTerminated(manager);
+  return manager.modeKey !== "practice" && !!manager.over;
 }
 function resolveLastFullSavedStatePersistAt(manager) {
   if (!manager) return 0;

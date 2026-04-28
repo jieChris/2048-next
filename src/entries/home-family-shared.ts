@@ -414,6 +414,7 @@ const HOME_FAMILY_CAPABILITY_SCRIPTS: Readonly<Record<RuntimeCapability, readonl
   play: playLegacyScripts,
   replay: replayLegacyScripts,
   account: [],
+  admin: [],
   "account-settings": [],
   "user-profile": [],
   history: [],
