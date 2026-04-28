@@ -1,6 +1,7 @@
 ﻿import "../../js/api_shared_utils.js";
 
 type JsonRecord = Record<string, unknown>;
+type TipState = "ok" | "err" | "busy" | "idle";
 
 type ApiSharedUtilsLike = {
   buildApiBaseCandidates?: () => string[];
@@ -33,6 +34,9 @@ const RESCUE_MODE_OPTIONS: RescueModeOption[] = [
 ];
 
 let latestResult: unknown = null;
+let isAdminAuthorized = false;
+let rescueSubmitInFlight = false;
+const tipTimers = new WeakMap<HTMLElement, number>();
 
 function byId<T extends HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
@@ -42,11 +46,40 @@ function toText(value: unknown): string {
   return value == null ? "" : String(value);
 }
 
-function getApiBases(): string[] {
-  const win = window as AdminWindow;
-  const bases = [...(win.ApiSharedUtils?.buildApiBaseCandidates?.() || [])];
-  if (!bases.includes(REMOTE_API_BASE)) bases.push(REMOTE_API_BASE);
-  return bases.length ? bases : [window.location.origin + "/api", REMOTE_API_BASE];
+function stringify(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (_err) {
+    return String(value);
+  }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char] || char));
+}
+
+function formatCell(value: unknown): string {
+  if (value && typeof value === "object") return stringify(value);
+  return String(value ?? "");
+}
+
+function getInputValue(id: string): string {
+  return toText((byId<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id)?.value || "").trim());
+}
+
+function setInputValue(id: string, value: string): void {
+  const input = byId<HTMLInputElement>(id);
+  if (input) input.value = value;
+}
+
+function parsePositiveInt(id: string, fallback: number): number {
+  const parsed = Number.parseInt(getInputValue(id), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseNonNegativeInt(id: string, fallback: number): number {
+  const parsed = Number.parseInt(getInputValue(id), 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
 function getAuthToken(): string {
@@ -57,19 +90,30 @@ function getAuthToken(): string {
   }
 }
 
+function getApiBases(): string[] {
+  const win = window as AdminWindow;
+  const bases = [...(win.ApiSharedUtils?.buildApiBaseCandidates?.() || [])];
+  if (!bases.includes(REMOTE_API_BASE)) bases.push(REMOTE_API_BASE);
+  return bases.length ? bases : [window.location.origin + "/api", REMOTE_API_BASE];
+}
+
+function getErrorMessage(result: JsonRecord | null | undefined, fallback: string): string {
+  return toText(result?.error || result?.message || result?.code || fallback);
+}
+
 async function apiRequest(path: string, options: RequestInit = {}): Promise<JsonRecord> {
   const token = getAuthToken();
+  if (!token) return { success: false, code: "NO_TOKEN", error: "\u672a\u767b\u5f55\u6216 token \u4e0d\u5b58\u5728" };
   let lastError = "api_unavailable";
   for (const base of getApiBases()) {
     try {
       const headers = new Headers(options.headers || {});
-      if (token) headers.set("Authorization", "Bearer " + token);
+      headers.set("Authorization", "Bearer " + token);
       if (options.body !== undefined && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
       const response = await fetch(base + path, { ...options, headers });
       const data = (await response.json().catch(() => null)) as JsonRecord | null;
-      if (response.ok && data) return data;
-      lastError = toText(data?.error || data?.message || data?.code || response.statusText || response.status);
       if (data) return data;
+      lastError = toText(response.statusText || response.status);
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
     }
@@ -77,19 +121,34 @@ async function apiRequest(path: string, options: RequestInit = {}): Promise<Json
   return { success: false, error: lastError };
 }
 
-function setTip(node: HTMLElement | null, message: string, state: "ok" | "err" | "idle" = "idle"): void {
+function clearTip(node: HTMLElement | null): void {
   if (!node) return;
+  const existing = tipTimers.get(node);
+  if (existing) window.clearTimeout(existing);
+  tipTimers.delete(node);
+  node.textContent = "";
+  node.removeAttribute("data-state");
+}
+
+function setTip(node: HTMLElement | null, message: string, state: TipState = "idle", autoClearMs = 0): void {
+  if (!node) return;
+  const existing = tipTimers.get(node);
+  if (existing) window.clearTimeout(existing);
+  tipTimers.delete(node);
   node.textContent = message;
   if (state === "idle") node.removeAttribute("data-state");
   else node.setAttribute("data-state", state);
+  if (autoClearMs > 0) {
+    const timer = window.setTimeout(() => clearTip(node), autoClearMs);
+    tipTimers.set(node, timer);
+  }
 }
 
-function stringify(value: unknown): string {
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch (_err) {
-    return String(value);
-  }
+function setButtonBusy(id: string, busy: boolean): void {
+  const button = byId<HTMLButtonElement>(id);
+  if (!button) return;
+  button.disabled = busy;
+  button.toggleAttribute("aria-busy", busy);
 }
 
 function renderOutput(node: HTMLElement | null, value: unknown): void {
@@ -106,15 +165,6 @@ function normalizeRows(data: unknown): JsonRecord[] {
     }
   }
   return [];
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char] || char));
-}
-
-function formatCell(value: unknown): string {
-  if (value && typeof value === "object") return stringify(value);
-  return String(value ?? "");
 }
 
 function renderTable(target: HTMLElement | null, payload: unknown): void {
@@ -139,10 +189,12 @@ function fillTableSelect(payload: unknown): void {
   if (!select) return;
   const rows = normalizeRows(payload);
   const names = rows.map((row) => toText(row.name || row.table_name || row.tbl_name)).filter(Boolean);
-  const tables = payload && typeof payload === "object" && !Array.isArray(payload) ? payload as JsonRecord : {};
-  const fallback = Array.isArray(tables.tables) ? tables.tables.map(toText) : [];
+  const record = payload && typeof payload === "object" && !Array.isArray(payload) ? payload as JsonRecord : {};
+  const fallback = Array.isArray(record.tables) ? record.tables.map(toText) : [];
   const allNames = Array.from(new Set([...names, ...fallback].filter(Boolean))).sort();
-  select.innerHTML = allNames.map((name) => '<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</option>').join("");
+  select.innerHTML = allNames.length
+    ? allNames.map((name) => '<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</option>').join("")
+    : '<option value="">\u65e0\u53ef\u7528\u6570\u636e\u8868</option>';
 }
 
 function initRescueModeSelect(): void {
@@ -150,9 +202,12 @@ function initRescueModeSelect(): void {
   if (!select) return;
   select.innerHTML = [
     '<option value="">\u8bf7\u9009\u62e9\u6a21\u5f0f</option>',
-    ...RESCUE_MODE_OPTIONS.map((option) => '<option value="' + escapeHtml(option.modeKey) + '">' + escapeHtml(option.label) + ' - ' + escapeHtml(option.modeKey) + '</option>')
+    ...RESCUE_MODE_OPTIONS.map((option) => '<option value="' + escapeHtml(option.modeKey) + '">' + escapeHtml(option.label) + ' | ' + escapeHtml(option.modeKey) + '</option>')
   ].join("");
-  select.addEventListener("change", syncRescueModeFields);
+  select.addEventListener("change", () => {
+    syncRescueModeFields();
+    clearTip(byId("admin-rescue-tip"));
+  });
   syncRescueModeFields();
 }
 
@@ -163,73 +218,110 @@ function syncRescueModeFields(): void {
   setInputValue("admin-rescue-mode-bucket", option?.modeBucket || "");
 }
 
-function getInputValue(id: string): string {
-  return toText((byId<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id)?.value || "").trim());
-}
-
-function setInputValue(id: string, value: string): void {
-  const input = byId<HTMLInputElement>(id);
-  if (input) input.value = value;
-}
-
-function parsePositiveInt(id: string, fallback: number): number {
-  const parsed = Number.parseInt(getInputValue(id), 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function parseNonNegativeInt(id: string, fallback: number): number {
-  const parsed = Number.parseInt(getInputValue(id), 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
-}
-
-async function checkAuth(): Promise<void> {
-  const output = byId("admin-auth-output");
-  const result = await apiRequest("/admin/me", { method: "GET" });
-  renderOutput(output, result);
-  const ok = result.success !== false && !!result.admin;
+function setAuthState(ok: boolean, label: string): void {
+  isAdminAuthorized = ok;
   const state = byId("admin-auth-state");
   if (state) {
-    state.textContent = ok ? "\u5df2\u6388\u6743" : "\u672a\u6388\u6743/\u672a\u767b\u5f55";
+    state.textContent = label;
     state.classList.toggle("admin-state-ok", ok);
+    state.classList.toggle("admin-state-err", !ok);
   }
+}
+
+async function checkAuth(): Promise<boolean> {
+  const output = byId("admin-auth-output");
+  clearTip(byId("admin-query-tip"));
+  setButtonBusy("admin-check-auth", true);
+  setAuthState(false, "\u68c0\u67e5\u4e2d");
+  renderOutput(output, { status: "checking" });
+  try {
+    const result = await apiRequest("/admin/me", { method: "GET" });
+    renderOutput(output, result);
+    const ok = result.success !== false && result.admin === true;
+    if (ok) {
+      const user = result.user as JsonRecord | undefined;
+      setAuthState(true, "\u5df2\u6388\u6743");
+      setTip(byId("admin-query-tip"), "\u7ba1\u7406\u5458\u6743\u9650\u6b63\u5e38" + (user?.id ? " ID=" + user.id : ""), "ok", 3500);
+      return true;
+    }
+    setAuthState(false, result.code === "NO_TOKEN" ? "\u672a\u767b\u5f55" : "\u65e0\u6743\u9650");
+    setTip(byId("admin-query-tip"), getErrorMessage(result, "\u6743\u9650\u68c0\u67e5\u5931\u8d25"), "err");
+    return false;
+  } finally {
+    setButtonBusy("admin-check-auth", false);
+  }
+}
+
+async function ensureAdminReady(): Promise<boolean> {
+  if (isAdminAuthorized) return true;
+  return checkAuth();
 }
 
 async function refreshTables(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
   const output = byId("admin-auth-output");
-  const result = await apiRequest("/admin/tables", { method: "GET" });
-  renderOutput(output, result);
-  fillTableSelect(result);
-  const tableCount = normalizeRows(result).length;
-  if (result.success === false) setTip(byId("admin-query-tip"), "\u52a0\u8f7d\u8868\u5931\u8d25\uff1a" + toText(result.error || result.code || "unknown"), "err");
-  else if (tableCount <= 0) setTip(byId("admin-query-tip"), "\u672a\u8fd4\u56de\u6570\u636e\u8868\uff0c\u8bf7\u68c0\u67e5\u662f\u5426\u5df2\u767b\u5f55\u7ba1\u7406\u5458\u8d26\u53f7\u3002", "err");
-  else setTip(byId("admin-query-tip"), "\u5df2\u52a0\u8f7d " + tableCount + " \u5f20\u8868", "ok");
+  const tip = byId("admin-query-tip");
+  setButtonBusy("admin-refresh-tables", true);
+  setTip(tip, "\u6b63\u5728\u52a0\u8f7d\u6570\u636e\u8868...", "busy");
+  try {
+    const result = await apiRequest("/admin/tables", { method: "GET" });
+    renderOutput(output, result);
+    fillTableSelect(result);
+    const tableCount = normalizeRows(result).length;
+    if (result.success === false) setTip(tip, "\u52a0\u8f7d\u8868\u5931\u8d25\uff1a" + getErrorMessage(result, "unknown"), "err");
+    else setTip(tip, "\u5df2\u52a0\u8f7d " + tableCount + " \u5f20\u8868", "ok", 3500);
+  } finally {
+    setButtonBusy("admin-refresh-tables", false);
+  }
 }
 
 async function loadSelectedTable(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
   const table = getInputValue("admin-table-select");
   const limit = Math.min(parsePositiveInt("admin-table-limit", 50), 200);
   const page = parsePositiveInt("admin-table-page", 1);
+  const tip = byId("admin-query-tip");
   if (!table) {
-    setTip(byId("admin-query-tip"), "\u8bf7\u5148\u9009\u62e9\u6570\u636e\u8868", "err");
+    setTip(tip, "\u8bf7\u5148\u9009\u62e9\u6570\u636e\u8868", "err");
     return;
   }
-  const result = await apiRequest("/admin/table/" + encodeURIComponent(table) + "?limit=" + limit + "&page=" + page, { method: "GET" });
-  renderTable(byId("admin-result"), result);
-  setTip(byId("admin-query-tip"), result.success === false ? "\u52a0\u8f7d\u8868\u5931\u8d25" : "\u8868\u6570\u636e\u5df2\u52a0\u8f7d", result.success === false ? "err" : "ok");
+  setButtonBusy("admin-load-table", true);
+  setTip(tip, "\u6b63\u5728\u52a0\u8f7d " + table + "...", "busy");
+  try {
+    const result = await apiRequest("/admin/table/" + encodeURIComponent(table) + "?limit=" + limit + "&page=" + page, { method: "GET" });
+    renderTable(byId("admin-result"), result);
+    const rowCount = normalizeRows(result).length;
+    setTip(tip, result.success === false ? "\u52a0\u8f7d\u8868\u5931\u8d25\uff1a" + getErrorMessage(result, "unknown") : "\u5df2\u52a0\u8f7d " + rowCount + " \u884c", result.success === false ? "err" : "ok", result.success === false ? 0 : 3500);
+  } finally {
+    setButtonBusy("admin-load-table", false);
+  }
 }
 
 async function runSql(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
   const sql = getInputValue("admin-sql");
+  const tip = byId("admin-query-tip");
   if (!sql) {
-    setTip(byId("admin-query-tip"), "\u8bf7\u8f93\u5165 SQL", "err");
+    setTip(tip, "\u8bf7\u8f93\u5165 SQL", "err");
     return;
   }
-  const result = await apiRequest("/admin/query", { method: "POST", body: JSON.stringify({ sql }) });
-  renderTable(byId("admin-result"), result);
-  setTip(byId("admin-query-tip"), "\u67e5\u8be2\u5df2\u8fd4\u56de", result.success === false ? "err" : "ok");
+  setButtonBusy("admin-run-sql", true);
+  setTip(tip, "\u6b63\u5728\u6267\u884c SQL...", "busy");
+  try {
+    const result = await apiRequest("/admin/query", { method: "POST", body: JSON.stringify({ sql }) });
+    renderTable(byId("admin-result"), result);
+    const rowCount = normalizeRows(result).length;
+    setTip(tip, result.success === false ? "SQL \u5931\u8d25\uff1a" + getErrorMessage(result, "unknown") : "SQL \u5df2\u8fd4\u56de " + rowCount + " \u884c", result.success === false ? "err" : "ok", result.success === false ? 0 : 3500);
+  } finally {
+    setButtonBusy("admin-run-sql", false);
+  }
 }
 
 function exportLatestResult(): void {
+  if (!latestResult) {
+    setTip(byId("admin-query-tip"), "\u6ca1\u6709\u53ef\u5bfc\u51fa\u7684\u67e5\u8be2\u7ed3\u679c", "err");
+    return;
+  }
   const blob = new Blob([stringify(latestResult)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -239,6 +331,7 @@ function exportLatestResult(): void {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+  setTip(byId("admin-query-tip"), "\u5df2\u5bfc\u51fa\u5f53\u524d\u7ed3\u679c", "ok", 2500);
 }
 
 function parseBoard(): number[][] | null {
@@ -254,6 +347,9 @@ function parseBoard(): number[][] | null {
 }
 
 async function createRescueOffer(): Promise<void> {
+  if (rescueSubmitInFlight) return;
+  if (!(await ensureAdminReady())) return;
+  clearTip(byId("admin-rescue-tip"));
   syncRescueModeFields();
   const board = parseBoard();
   if (!board) {
@@ -274,16 +370,39 @@ async function createRescueOffer(): Promise<void> {
     setTip(byId("admin-rescue-tip"), "\u8bf7\u586b\u5199\u7528\u6237 ID \u5e76\u9009\u62e9\u6a21\u5f0f", "err");
     return;
   }
-  const result = await apiRequest("/admin/rescue-offers", { method: "POST", body: JSON.stringify(payload) });
-  renderOutput(byId("admin-rescue-output"), result);
-  setTip(byId("admin-rescue-tip"), result.success === false ? "\u7b7e\u53d1\u5931\u8d25" : "\u5df2\u7b7e\u53d1\u6062\u590d\u5355", result.success === false ? "err" : "ok");
+  rescueSubmitInFlight = true;
+  setButtonBusy("admin-create-rescue", true);
+  setTip(byId("admin-rescue-tip"), "\u6b63\u5728\u7b7e\u53d1\u6062\u590d\u5355...", "busy");
+  renderOutput(byId("admin-rescue-output"), { status: "submitting", payload });
+  try {
+    const result = await apiRequest("/admin/rescue-offers", { method: "POST", body: JSON.stringify(payload) });
+    renderOutput(byId("admin-rescue-output"), result);
+    if (result.success === false) {
+      setTip(byId("admin-rescue-tip"), "\u7b7e\u53d1\u5931\u8d25\uff1a" + getErrorMessage(result, "unknown"), "err");
+      return;
+    }
+    const data = result.data as JsonRecord | undefined;
+    setTip(byId("admin-rescue-tip"), "\u5df2\u7b7e\u53d1\u6062\u590d\u5355" + (data?.id ? " ID=" + data.id : ""), "ok", 5000);
+  } finally {
+    rescueSubmitInFlight = false;
+    setButtonBusy("admin-create-rescue", false);
+  }
 }
 
 async function listRescueOffers(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
   const userId = parsePositiveInt("admin-rescue-user-id", 0);
   const path = userId ? "/admin/rescue-offers?user_id=" + userId : "/admin/rescue-offers";
-  const result = await apiRequest(path, { method: "GET" });
-  renderOutput(byId("admin-rescue-output"), result);
+  setButtonBusy("admin-list-rescue", true);
+  setTip(byId("admin-rescue-tip"), "\u6b63\u5728\u67e5\u770b\u6062\u590d\u5355...", "busy");
+  try {
+    const result = await apiRequest(path, { method: "GET" });
+    renderOutput(byId("admin-rescue-output"), result);
+    const rowCount = normalizeRows(result).length;
+    setTip(byId("admin-rescue-tip"), result.success === false ? "\u67e5\u770b\u5931\u8d25\uff1a" + getErrorMessage(result, "unknown") : "\u5df2\u8fd4\u56de " + rowCount + " \u6761\u6062\u590d\u5355", result.success === false ? "err" : "ok", result.success === false ? 0 : 3500);
+  } finally {
+    setButtonBusy("admin-list-rescue", false);
+  }
 }
 
 function bind(id: string, handler: () => void | Promise<void>): void {
@@ -294,11 +413,22 @@ function bind(id: string, handler: () => void | Promise<void>): void {
   });
 }
 
+function bindTipReset(): void {
+  for (const id of ["admin-rescue-user-id", "admin-rescue-score", "admin-rescue-duration", "admin-rescue-expires", "admin-rescue-board", "admin-rescue-reason"]) {
+    byId<HTMLInputElement | HTMLTextAreaElement>(id)?.addEventListener("input", () => clearTip(byId("admin-rescue-tip")));
+  }
+  for (const id of ["admin-table-select", "admin-table-limit", "admin-table-page", "admin-sql"]) {
+    byId<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id)?.addEventListener("input", () => clearTip(byId("admin-query-tip")));
+    byId<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id)?.addEventListener("change", () => clearTip(byId("admin-query-tip")));
+  }
+}
+
 export function bootstrapAdminPage(): void {
   if (typeof document === "undefined") return;
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
   initRescueModeSelect();
-  bind("admin-check-auth", checkAuth);
+  bindTipReset();
+  bind("admin-check-auth", async () => { await checkAuth(); });
   bind("admin-refresh-tables", refreshTables);
   bind("admin-load-table", loadSelectedTable);
   bind("admin-run-sql", runSql);
@@ -306,5 +436,4 @@ export function bootstrapAdminPage(): void {
   bind("admin-create-rescue", createRescueOffer);
   bind("admin-list-rescue", listRescueOffers);
   void checkAuth();
-  void refreshTables();
 }
