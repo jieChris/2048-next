@@ -36,6 +36,7 @@ export type RuntimeCapability =
   | "modes"
   | "relay-5x5"
   | "palette"
+  | "stone-2k-monitor"
   | "user-profile"
   | "register"
   | "password";
@@ -136,6 +137,11 @@ export const PAGE_MANIFESTS: readonly PageManifestEntry[] = [
     pageId: "palette",
     htmlFile: "palette.html",
     capabilities: ["palette"]
+  },
+  {
+    pageId: "stone-2k-monitor",
+    htmlFile: "stone_2k_monitor.html",
+    capabilities: ["stone-2k-monitor"]
   },
   {
     pageId: "index_test",

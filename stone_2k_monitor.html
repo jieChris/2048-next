@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>2K Stone 成绩监测</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260409-1">
+  <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260409-1">
+  <link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
+  <link href="style/stone_2k_monitor.css?v=20260430-01" rel="stylesheet" type="text/css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://taihe.fun https://www.taihe.fun; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
+</head>
+<body data-page="stone-2k-monitor">
+  <main class="stone-monitor-shell">
+    <header class="stone-hero">
+      <div class="stone-hero-copy">
+        <p class="stone-kicker">2048 Hidden Metrics</p>
+        <h1>2K Stone 成绩监测</h1>
+        <p>独立查看 Stone Mode 达成 2048 后上传的隐藏统计，不进入公开排行榜。</p>
+      </div>
+      <nav class="stone-nav" aria-label="页面导航">
+        <a class="stone-button ghost" href="modes.html">模式列表</a>
+        <a class="stone-button ghost" href="2048.html">回到游戏</a>
+      </nav>
+    </header>
+
+    <section class="stone-control-card" aria-label="筛选与刷新">
+      <div class="stone-field grow">
+        <label for="stone-filter-names">玩家昵称</label>
+        <input id="stone-filter-names" type="text" placeholder="留空查看全部；多个昵称用逗号分隔">
+      </div>
+      <div class="stone-field small">
+        <label for="stone-filter-limit">条数</label>
+        <input id="stone-filter-limit" type="number" min="1" max="200" value="50">
+      </div>
+      <label class="stone-check">
+        <input id="stone-filter-latest" type="checkbox">
+        <span>每人仅最高一条</span>
+      </label>
+      <label class="stone-check">
+        <input id="stone-auto-refresh" type="checkbox" checked>
+        <span>自动刷新</span>
+      </label>
+      <button id="stone-refresh" class="stone-button" type="button">刷新数据</button>
+    </section>
+
+    <p id="stone-status" class="stone-status" aria-live="polite">正在准备数据源…</p>
+
+    <section class="stone-stats-grid" aria-label="概览统计">
+      <article class="stone-stat-card">
+        <span>记录数</span>
+        <strong id="stone-stat-count">--</strong>
+      </article>
+      <article class="stone-stat-card">
+        <span>最高分</span>
+        <strong id="stone-stat-best-score">--</strong>
+      </article>
+      <article class="stone-stat-card">
+        <span>最高砖块</span>
+        <strong id="stone-stat-best-tile">--</strong>
+      </article>
+      <article class="stone-stat-card">
+        <span>最近上传</span>
+        <strong id="stone-stat-latest">--</strong>
+      </article>
+    </section>
+
+    <section class="stone-content-grid">
+      <section class="stone-panel stone-table-panel">
+        <div class="stone-panel-head">
+          <div>
+            <h2>实时成绩</h2>
+            <p>按分数降序展示，点击一行可预览最终盘面。</p>
+          </div>
+          <button id="stone-export" class="stone-button slim" type="button">导出 JSON</button>
+        </div>
+        <div id="stone-table-wrap" class="stone-table-wrap"></div>
+      </section>
+
+      <aside class="stone-panel stone-preview-panel">
+        <div class="stone-panel-head compact">
+          <div>
+            <h2>盘面预览</h2>
+            <p id="stone-preview-meta">选择一条成绩查看详情。</p>
+          </div>
+        </div>
+        <div id="stone-board-preview" class="stone-board-preview empty">暂无盘面</div>
+        <dl class="stone-detail-list">
+          <div><dt>玩家</dt><dd id="stone-detail-nickname">--</dd></div>
+          <div><dt>分数</dt><dd id="stone-detail-score">--</dd></div>
+          <div><dt>耗时</dt><dd id="stone-detail-duration">--</dd></div>
+          <div><dt>时间</dt><dd id="stone-detail-ended">--</dd></div>
+        </dl>
+      </aside>
+    </section>
+  </main>
+
+  <script type="module" src="/src/entries/stone-2k-monitor.ts"></script>
+</body>
+</html>

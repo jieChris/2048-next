@@ -423,6 +423,7 @@ const HOME_FAMILY_CAPABILITY_SCRIPTS: Readonly<Record<RuntimeCapability, readonl
   modes: [],
   "relay-5x5": [],
   palette: [],
+  "stone-2k-monitor": [],
   register: [],
   password: []
 } as const;

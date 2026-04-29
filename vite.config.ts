@@ -59,6 +59,7 @@ export default defineConfig(({ mode }) => {
           replay: resolve(__dirname, "replay.html"),
           modes: resolve(__dirname, "modes.html"),
           history: resolve(__dirname, "history.html"),
+          stone_2k_monitor: resolve(__dirname, "stone_2k_monitor.html"),
           relay_5x5: resolve(__dirname, "relay_5x5.html")
         }
       }
