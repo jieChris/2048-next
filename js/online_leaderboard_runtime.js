@@ -779,8 +779,8 @@ function shouldAutoLoadOnlineLeaderboard() {
     var summary = byId("timer-leaderboard-summary");
     if (!summary) return;
     summary.textContent = "TOP 10";
-    summary.setAttribute("data-label", lang === "en" ? "LEADERBOARD" : "排行�?);
-    summary.setAttribute("title", lang === "en" ? "Leaderboard" : "排行�?);
+    summary.setAttribute("data-label", lang === "en" ? "LEADERBOARD" : "鎺掕姒?);
+    summary.setAttribute("title", lang === "en" ? "Leaderboard" : "鎺掕姒?);
   }
 
   function resolveRankTileFontSize(rankText) {
@@ -899,7 +899,7 @@ function shouldAutoLoadOnlineLeaderboard() {
   function formatLeaderboardNameAndScore(item, lang) {
     var source = item && typeof item === "object" ? item : {};
     var nickname = normalizeLeaderboardNickname(source.nickname);
-    if (!nickname) nickname = lang === "en" ? "Anonymous" : "匿名";
+    if (!nickname) nickname = lang === "en" ? "Anonymous" : "鍖垮悕";
     var scoreValue = Math.floor(Number(source.score) || 0);
     return nickname + "-" + String(scoreValue);
   }
@@ -949,7 +949,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
     var myRankText = "--";
     var myIdentityAndScore = formatLeaderboardNameAndScore({
-      nickname: getNickname() || (lang === "en" ? "You" : "�?),
+      nickname: getNickname() || (lang === "en" ? "You" : "鎴?),
       score: 0
     }, lang);
 
@@ -1851,7 +1851,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       global.alert(
         getLanguage() === "en"
           ? "This ranked session has expired. Please start a new ranked game."
-          : "本次排位会话已过期，请重新开始排位�?
+          : "鏈鎺掍綅浼氳瘽宸茶繃鏈燂紝璇烽噸鏂板紑濮嬫帓浣嶃€?
       );
     }
   }
@@ -2280,7 +2280,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function getUserInfo(userId) {
     var safeUserId = Math.floor(Number(userId) || 0);
-    if (safeUserId <= 0) return Promise.resolve({ error: "无效的用户ID" });
+    if (safeUserId <= 0) return Promise.resolve({ error: "鏃犳晥鐨勭敤鎴稩D" });
     return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), { method: "GET" });
   }
 
@@ -2414,9 +2414,9 @@ function shouldAutoLoadOnlineLeaderboard() {
       };
     }
     return {
-      label: "主题设置",
-      palette: "主题设置",
-      account: "账号中心"
+      label: "涓婚璁剧疆",
+      palette: "涓婚璁剧疆",
+      account: "璐﹀彿涓績"
     };
   }
 
@@ -2518,7 +2518,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!host) return;
     host.innerHTML = "";
     if (!Array.isArray(list) || list.length === 0) {
-      host.textContent = getLanguage() === "en" ? "No online leaderboard data." : "暂无在线排行榜数�?;
+      host.textContent = getLanguage() === "en" ? "No online leaderboard data." : "鏆傛棤鍦ㄧ嚎鎺掕姒滄暟鎹?;
       return;
     }
 
@@ -2527,7 +2527,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       var row = createEl("div", "mode-intro-leaderboard-row", "");
       row.appendChild(createEl("span", "mode-intro-leaderboard-rank", "#" + String(i + 1)));
       var profileUrl = buildUserProfileUrl(item.user_id, item.nickname);
-      var displayNickname = normalizeLeaderboardNickname(item.nickname) || (getLanguage() === "en" ? "Anonymous" : "匿名");
+      var displayNickname = normalizeLeaderboardNickname(item.nickname) || (getLanguage() === "en" ? "Anonymous" : "鍖垮悕");
       if (profileUrl) {
         var nickLink = createEl("a", "mode-intro-leaderboard-nick mode-intro-leaderboard-nick-link", displayNickname);
         nickLink.setAttribute("href", profileUrl);
@@ -3376,3 +3376,4 @@ function init() {
     init();
   }
 })(typeof window !== "undefined" ? window : undefined);
+
