@@ -94,8 +94,8 @@
     standard: "standard_no_undo",
     standard_no_undo: "standard_no_undo",
     standard_4x4_pow2_no_undo: "standard_no_undo",
-    capped_4x4_pow2_no_undo: "standard_no_undo",
-    capped: "standard_no_undo",
+    capped_4x4_pow2_no_undo: "capped",
+    capped: "capped",
 
     classic_undo: "standard_undo",
     standard_undo: "standard_undo",

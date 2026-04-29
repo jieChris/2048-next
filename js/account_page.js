@@ -284,7 +284,8 @@
   var MODE_BUCKET_ALIAS = {
     standard_no_undo: "standard_no_undo",
     standard_4x4_pow2_no_undo: "standard_no_undo",
-    capped_4x4_pow2_no_undo: "standard_no_undo",
+    capped_4x4_pow2_no_undo: "capped",
+    capped: "capped",
     standard_undo: "standard_undo",
     classic_4x4_pow2_undo: "standard_undo",
     pow2_3x3: "pow2_3x3",
@@ -307,6 +308,7 @@
 
   var LEADERBOARD_MODE_OPTIONS = [
     { value: "standard_no_undo", zh: "普通无撤回", en: "Standard (No Undo)" },
+    { value: "capped", zh: "2K封顶", en: "2K Capped" },
     { value: "standard_undo", zh: "可撤回", en: "With Undo" },
     { value: "pow2_3x3", zh: "3x3", en: "3x3" },
     { value: "pow2_2x4", zh: "2x4", en: "2x4" },

@@ -22,7 +22,7 @@ const REMOTE_API_BASE = "https://taihe.fun/api";
 const RESCUE_MODE_OPTIONS: RescueModeOption[] = [
   { label: "4x4 \u65e0\u64a4\u56de", modeKey: "standard_4x4_pow2_no_undo", modeBucket: "standard_no_undo" },
   { label: "4x4 \u6709\u64a4\u56de", modeKey: "classic_4x4_pow2_undo", modeBucket: "standard_undo" },
-  { label: "4x4 \u5408\u6210 2048 \u7ed3\u675f", modeKey: "capped_4x4_pow2_no_undo", modeBucket: "standard_no_undo" },
+  { label: "4x4 \u5408\u6210 2048 \u7ed3\u675f", modeKey: "capped_4x4_pow2_no_undo", modeBucket: "capped" },
   { label: "3x3 \u65e0\u64a4\u56de", modeKey: "board_3x3_pow2_no_undo", modeBucket: "pow2_3x3" },
   { label: "3x3 \u6709\u64a4\u56de", modeKey: "board_3x3_pow2_undo", modeBucket: "pow2_3x3" },
   { label: "4x2 \u65e0\u64a4\u56de", modeKey: "board_2x4_pow2_no_undo", modeBucket: "pow2_2x4" },
