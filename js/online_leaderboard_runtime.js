@@ -10,8 +10,8 @@
   var STORAGE_PENDING_SCORE_SUBMIT_KEY = "online_pending_score_submit_v1";
   var STORAGE_LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
   var STORAGE_PENDING_RECORD_SUBMIT_KEY = "online_pending_record_submit_signature_v1";
-  var STORAGE_LAST_capped_2k_SUBMIT_KEY = "online_last_capped_2k_submit_signature_v1";
-  var STORAGE_PENDING_capped_2k_SUBMIT_KEY = "online_pending_capped_2k_submit_v1";
+  var STORAGE_LAST_STONE_2K_SUBMIT_KEY = "online_last_stone_2k_submit_signature_v1";
+  var STORAGE_PENDING_STONE_2K_SUBMIT_KEY = "online_pending_stone_2k_submit_v1";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var BEST_SCORE_STORAGE_KEY_PREFIX = "bestScoreByMode:";
   var SCORE_SUBMIT_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
@@ -20,9 +20,9 @@
   var RECORD_SUBMIT_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
   var RECORD_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
   var RECORD_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
-  var capped_2k_SUBMIT_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
-  var capped_2k_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
-  var capped_2k_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
+  var STONE_2K_SUBMIT_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
+  var STONE_2K_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
+  var STONE_2K_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
   var ACCOUNT_BEST_SCORE_SYNC_FETCH_LIMIT = 500;
   var ACCOUNT_BEST_SCORE_SYNC_TTL_MS = 30000;
   var RANKED_CHECKPOINT_SAVE_DEBOUNCE_MS = 1500;
@@ -457,7 +457,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     safeRemoveStorage(STORAGE_NICKNAME_KEY);
     safeRemoveStorage(STORAGE_PENDING_SCORE_SUBMIT_KEY);
     safeRemoveStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY);
-    safeRemoveStorage(STORAGE_PENDING_capped_2k_SUBMIT_KEY);
+    safeRemoveStorage(STORAGE_PENDING_STONE_2K_SUBMIT_KEY);
   }
 
   function clearPendingScoreSubmitState() {
@@ -469,7 +469,7 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function clearPendingStone2kSubmitState() {
-    safeRemoveStorage(STORAGE_PENDING_capped_2k_SUBMIT_KEY);
+    safeRemoveStorage(STORAGE_PENDING_STONE_2K_SUBMIT_KEY);
   }
 
   function clonePendingSubmitPayload(payload) {
@@ -581,8 +581,8 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function readPendingStone2kSubmitState() {
     var state = buildPendingSubmitState(
-      safeGetStorage(STORAGE_PENDING_capped_2k_SUBMIT_KEY),
-      capped_2k_SUBMIT_PENDING_TTL_MS,
+      safeGetStorage(STORAGE_PENDING_STONE_2K_SUBMIT_KEY),
+      STONE_2K_SUBMIT_PENDING_TTL_MS,
       normalizePendingStone2kSubmitPayload
     );
     if (!state) {
@@ -622,8 +622,8 @@ function shouldAutoLoadOnlineLeaderboard() {
   function resolvePendingStone2kSubmitRetryDelayMs(state) {
     return resolvePendingSubmitRetryDelayMs(
       state,
-      capped_2k_SUBMIT_PENDING_RETRY_BASE_MS,
-      capped_2k_SUBMIT_PENDING_RETRY_MAX_MS
+      STONE_2K_SUBMIT_PENDING_RETRY_BASE_MS,
+      STONE_2K_SUBMIT_PENDING_RETRY_MAX_MS
     );
   }
 
@@ -779,8 +779,8 @@ function shouldAutoLoadOnlineLeaderboard() {
     var summary = byId("timer-leaderboard-summary");
     if (!summary) return;
     summary.textContent = "TOP 10";
-    summary.setAttribute("data-label", lang === "en" ? "LEADERBOARD" : "鎺掕姒?);
-    summary.setAttribute("title", lang === "en" ? "Leaderboard" : "鎺掕姒?);
+    summary.setAttribute("data-label", lang === "en" ? "LEADERBOARD" : "排行榜");
+    summary.setAttribute("title", lang === "en" ? "Leaderboard" : "排行榜");
   }
 
   function resolveRankTileFontSize(rankText) {
@@ -899,7 +899,7 @@ function shouldAutoLoadOnlineLeaderboard() {
   function formatLeaderboardNameAndScore(item, lang) {
     var source = item && typeof item === "object" ? item : {};
     var nickname = normalizeLeaderboardNickname(source.nickname);
-    if (!nickname) nickname = lang === "en" ? "Anonymous" : "鍖垮悕";
+    if (!nickname) nickname = lang === "en" ? "Anonymous" : "匿名";
     var scoreValue = Math.floor(Number(source.score) || 0);
     return nickname + "-" + String(scoreValue);
   }
@@ -949,7 +949,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
     var myRankText = "--";
     var myIdentityAndScore = formatLeaderboardNameAndScore({
-      nickname: getNickname() || (lang === "en" ? "You" : "鎴?),
+      nickname: getNickname() || (lang === "en" ? "You" : "我"),
       score: 0
     }, lang);
 
@@ -1797,7 +1797,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     var now = Date.now();
     var previous = previousState && toText(previousState.signature).trim() === text ? previousState : null;
     safeSetStorage(
-      STORAGE_PENDING_capped_2k_SUBMIT_KEY,
+      STORAGE_PENDING_STONE_2K_SUBMIT_KEY,
       JSON.stringify({
         signature: text,
         payload: normalizedPayload,
@@ -1851,7 +1851,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       global.alert(
         getLanguage() === "en"
           ? "This ranked session has expired. Please start a new ranked game."
-          : "鏈鎺掍綅浼氳瘽宸茶繃鏈燂紝璇烽噸鏂板紑濮嬫帓浣嶃€?
+          : "本次排位会话已过期，请重新开始排位。"
       );
     }
   }
@@ -2280,7 +2280,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function getUserInfo(userId) {
     var safeUserId = Math.floor(Number(userId) || 0);
-    if (safeUserId <= 0) return Promise.resolve({ error: "鏃犳晥鐨勭敤鎴稩D" });
+    if (safeUserId <= 0) return Promise.resolve({ error: "无效的用户ID" });
     return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), { method: "GET" });
   }
 
@@ -2414,9 +2414,9 @@ function shouldAutoLoadOnlineLeaderboard() {
       };
     }
     return {
-      label: "涓婚璁剧疆",
-      palette: "涓婚璁剧疆",
-      account: "璐﹀彿涓績"
+      label: "主题设置",
+      palette: "主题设置",
+      account: "账号中心"
     };
   }
 
@@ -2518,7 +2518,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!host) return;
     host.innerHTML = "";
     if (!Array.isArray(list) || list.length === 0) {
-      host.textContent = getLanguage() === "en" ? "No online leaderboard data." : "鏆傛棤鍦ㄧ嚎鎺掕姒滄暟鎹?;
+      host.textContent = getLanguage() === "en" ? "No online leaderboard data." : "暂无在线排行榜数据";
       return;
     }
 
@@ -2527,7 +2527,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       var row = createEl("div", "mode-intro-leaderboard-row", "");
       row.appendChild(createEl("span", "mode-intro-leaderboard-rank", "#" + String(i + 1)));
       var profileUrl = buildUserProfileUrl(item.user_id, item.nickname);
-      var displayNickname = normalizeLeaderboardNickname(item.nickname) || (getLanguage() === "en" ? "Anonymous" : "鍖垮悕");
+      var displayNickname = normalizeLeaderboardNickname(item.nickname) || (getLanguage() === "en" ? "Anonymous" : "匿名");
       if (profileUrl) {
         var nickLink = createEl("a", "mode-intro-leaderboard-nick mode-intro-leaderboard-nick-link", displayNickname);
         nickLink.setAttribute("href", profileUrl);
@@ -2984,12 +2984,12 @@ async function refreshLeaderboard(modeLike) {
     }
 
     if (result && result.success) {
-      safeSetStorage(STORAGE_LAST_capped_2k_SUBMIT_KEY, pendingState.signature);
+      safeSetStorage(STORAGE_LAST_STONE_2K_SUBMIT_KEY, pendingState.signature);
       clearPendingStone2kSubmitState();
       return result;
     }
 
-    var errorText = toText(result && result.error ? result.error : "capped_2k_submit_failed");
+    var errorText = toText(result && result.error ? result.error : "stone_2k_submit_failed");
     if (isUnauthorizedSubmitErrorText(errorText)) {
       clearPendingStone2kSubmitState();
       clearAuth();
@@ -3023,7 +3023,7 @@ async function refreshLeaderboard(modeLike) {
     if (!getAuthToken()) return;
     if (stone2kSubmitLock) return;
 
-    var lastSignature = toText(safeGetStorage(STORAGE_LAST_capped_2k_SUBMIT_KEY));
+    var lastSignature = toText(safeGetStorage(STORAGE_LAST_STONE_2K_SUBMIT_KEY));
     var pendingState = readPendingStone2kSubmitState();
     var pendingSignature = pendingState ? pendingState.signature : "";
     if (signature && signature === lastSignature) return;
@@ -3041,12 +3041,12 @@ async function refreshLeaderboard(modeLike) {
     }
 
     if (result && result.success) {
-      safeSetStorage(STORAGE_LAST_capped_2k_SUBMIT_KEY, signature);
+      safeSetStorage(STORAGE_LAST_STONE_2K_SUBMIT_KEY, signature);
       clearPendingStone2kSubmitState();
       return;
     }
 
-    var errorText = toText(result && result.error ? result.error : "capped_2k_submit_failed");
+    var errorText = toText(result && result.error ? result.error : "stone_2k_submit_failed");
     if (isUnauthorizedSubmitErrorText(errorText)) {
       clearPendingStone2kSubmitState();
       clearAuth();
@@ -3376,4 +3376,3 @@ function init() {
     init();
   }
 })(typeof window !== "undefined" ? window : undefined);
-
