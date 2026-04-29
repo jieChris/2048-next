@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>2K Stone 成绩监测</title>
+  <title>2K &#23553;&#39030;&#25104;&#32489;&#30417;&#27979;</title>
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260409-1">
   <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260409-1">
   <link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
-  <link href="style/stone_2k_monitor.css?v=20260430-01" rel="stylesheet" type="text/css">
+  <link href="style/stone_2k_monitor.css?v=20260430-02" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://taihe.fun https://www.taihe.fun; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -16,52 +16,52 @@
     <header class="stone-hero">
       <div class="stone-hero-copy">
         <p class="stone-kicker">2048 Hidden Metrics</p>
-        <h1>2K Stone 成绩监测</h1>
-        <p>独立查看 Stone Mode 达成 2048 后上传的隐藏统计，不进入公开排行榜。</p>
+        <h1>2K &#23553;&#39030;&#25104;&#32489;&#30417;&#27979;</h1>
+        <p>&#29420;&#31435;&#26597;&#30475; 4x4 2048 &#23553;&#39030;&#27169;&#24335;&#19978;&#20256;&#30340;&#38544;&#34255;&#32479;&#35745;&#65292;&#19981;&#36827;&#20837;&#20844;&#24320;&#25490;&#34892;&#27036;&#12290;</p>
       </div>
-      <nav class="stone-nav" aria-label="页面导航">
-        <a class="stone-button ghost" href="modes.html">模式列表</a>
-        <a class="stone-button ghost" href="2048.html">回到游戏</a>
+      <nav class="stone-nav" aria-label="&#39029;&#38754;&#23548;&#33322;">
+        <a class="stone-button ghost" href="modes.html">&#27169;&#24335;&#21015;&#34920;</a>
+        <a class="stone-button ghost" href="capped_2048.html">&#24320;&#22987;&#23553;&#39030;&#27169;&#24335;</a>
       </nav>
     </header>
 
-    <section class="stone-control-card" aria-label="筛选与刷新">
+    <section class="stone-control-card" aria-label="&#31579;&#36873;&#19982;&#21047;&#26032;">
       <div class="stone-field grow">
-        <label for="stone-filter-names">玩家昵称</label>
-        <input id="stone-filter-names" type="text" placeholder="留空查看全部；多个昵称用逗号分隔">
+        <label for="stone-filter-names">&#29609;&#23478;&#26165;&#31216;</label>
+        <input id="stone-filter-names" type="text" placeholder="&#30041;&#31354;&#26597;&#30475;&#20840;&#37096;&#65307;&#22810;&#20010;&#26165;&#31216;&#29992;&#36887;&#21495;&#20998;&#38548;">
       </div>
       <div class="stone-field small">
-        <label for="stone-filter-limit">条数</label>
+        <label for="stone-filter-limit">&#26465;&#25968;</label>
         <input id="stone-filter-limit" type="number" min="1" max="200" value="50">
       </div>
       <label class="stone-check">
         <input id="stone-filter-latest" type="checkbox">
-        <span>每人仅最高一条</span>
+        <span>&#27599;&#20154;&#20165;&#26368;&#39640;&#19968;&#26465;</span>
       </label>
       <label class="stone-check">
         <input id="stone-auto-refresh" type="checkbox" checked>
-        <span>自动刷新</span>
+        <span>&#33258;&#21160;&#21047;&#26032;</span>
       </label>
-      <button id="stone-refresh" class="stone-button" type="button">刷新数据</button>
+      <button id="stone-refresh" class="stone-button" type="button">&#21047;&#26032;&#25968;&#25454;</button>
     </section>
 
-    <p id="stone-status" class="stone-status" aria-live="polite">正在准备数据源…</p>
+    <p id="stone-status" class="stone-status" aria-live="polite">&#27491;&#22312;&#20934;&#22791;&#25968;&#25454;&#28304;&#8230;</p>
 
-    <section class="stone-stats-grid" aria-label="概览统计">
+    <section class="stone-stats-grid" aria-label="&#27010;&#35272;&#32479;&#35745;">
       <article class="stone-stat-card">
-        <span>记录数</span>
+        <span>&#35760;&#24405;&#25968;</span>
         <strong id="stone-stat-count">--</strong>
       </article>
       <article class="stone-stat-card">
-        <span>最高分</span>
+        <span>&#26368;&#39640;&#20998;</span>
         <strong id="stone-stat-best-score">--</strong>
       </article>
       <article class="stone-stat-card">
-        <span>最高砖块</span>
+        <span>&#26368;&#39640;&#30742;&#22359;</span>
         <strong id="stone-stat-best-tile">--</strong>
       </article>
       <article class="stone-stat-card">
-        <span>最近上传</span>
+        <span>&#26368;&#36817;&#19978;&#20256;</span>
         <strong id="stone-stat-latest">--</strong>
       </article>
     </section>
@@ -70,10 +70,10 @@
       <section class="stone-panel stone-table-panel">
         <div class="stone-panel-head">
           <div>
-            <h2>实时成绩</h2>
-            <p>按分数降序展示，点击一行可预览最终盘面。</p>
+            <h2>&#23454;&#26102;&#25104;&#32489;</h2>
+            <p>&#25353;&#20998;&#25968;&#38477;&#24207;&#23637;&#31034;&#65292;&#28857;&#20987;&#19968;&#34892;&#21487;&#39044;&#35272;&#26368;&#32456;&#30424;&#38754;&#12290;</p>
           </div>
-          <button id="stone-export" class="stone-button slim" type="button">导出 JSON</button>
+          <button id="stone-export" class="stone-button slim" type="button">&#23548;&#20986; JSON</button>
         </div>
         <div id="stone-table-wrap" class="stone-table-wrap"></div>
       </section>
@@ -81,16 +81,16 @@
       <aside class="stone-panel stone-preview-panel">
         <div class="stone-panel-head compact">
           <div>
-            <h2>盘面预览</h2>
-            <p id="stone-preview-meta">选择一条成绩查看详情。</p>
+            <h2>&#30424;&#38754;&#39044;&#35272;</h2>
+            <p id="stone-preview-meta">&#36873;&#25321;&#19968;&#26465;&#25104;&#32489;&#26597;&#30475;&#35814;&#24773;&#12290;</p>
           </div>
         </div>
-        <div id="stone-board-preview" class="stone-board-preview empty">暂无盘面</div>
+        <div id="stone-board-preview" class="stone-board-preview empty">&#26242;&#26080;&#30424;&#38754;</div>
         <dl class="stone-detail-list">
-          <div><dt>玩家</dt><dd id="stone-detail-nickname">--</dd></div>
-          <div><dt>分数</dt><dd id="stone-detail-score">--</dd></div>
-          <div><dt>耗时</dt><dd id="stone-detail-duration">--</dd></div>
-          <div><dt>时间</dt><dd id="stone-detail-ended">--</dd></div>
+          <div><dt>&#29609;&#23478;</dt><dd id="stone-detail-nickname">--</dd></div>
+          <div><dt>&#20998;&#25968;</dt><dd id="stone-detail-score">--</dd></div>
+          <div><dt>&#32791;&#26102;</dt><dd id="stone-detail-duration">--</dd></div>
+          <div><dt>&#26102;&#38388;</dt><dd id="stone-detail-ended">--</dd></div>
         </dl>
       </aside>
     </section>

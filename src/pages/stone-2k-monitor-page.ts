@@ -1,4 +1,4 @@
-import "../../js/api_shared_utils.js";
+﻿import "../../js/api_shared_utils.js";
 
 type ApiSharedUtilsLike = {
   buildApiBaseCandidates?: () => string[];
@@ -8,7 +8,7 @@ type MonitorWindow = Window & {
   ApiSharedUtils?: ApiSharedUtilsLike;
 };
 
-type StoneRun = {
+type Capped2kRun = {
   id?: unknown;
   user_id?: unknown;
   nickname?: unknown;
@@ -36,7 +36,7 @@ type StatusState = "idle" | "busy" | "ok" | "err";
 const REMOTE_API_BASE = "https://taihe.fun/api";
 const REFRESH_INTERVAL_MS = 15000;
 
-let latestRows: StoneRun[] = [];
+let latestRows: Capped2kRun[] = [];
 let selectedId = "";
 let refreshTimer = 0;
 let refreshInFlight = false;
@@ -112,9 +112,9 @@ async function apiGet(path: string): Promise<ApiResult> {
   return { success: false, error: lastError };
 }
 
-function normalizeRows(payload: ApiResult): StoneRun[] {
+function normalizeRows(payload: ApiResult): Capped2kRun[] {
   const raw = Array.isArray(payload.data) ? payload.data : Array.isArray(payload.rows) ? payload.rows : [];
-  return raw.filter((row): row is StoneRun => !!row && typeof row === "object" && !Array.isArray(row));
+  return raw.filter((row): row is Capped2kRun => !!row && typeof row === "object" && !Array.isArray(row));
 }
 
 function normalizeBoard(raw: unknown): number[][] {
@@ -139,12 +139,12 @@ function formatDuration(value: unknown): string {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  if (hours > 0) return `${hours}时 ${minutes}分 ${seconds}秒`;
-  if (minutes > 0) return `${minutes}分 ${seconds}秒`;
-  return `${seconds}秒`;
+  if (hours > 0) return `${hours}\u65f6 ${minutes}\u5206 ${seconds}\u79d2`;
+  if (minutes > 0) return `${minutes}\u5206 ${seconds}\u79d2`;
+  return `${seconds}\u79d2`;
 }
 
-function getRunId(row: StoneRun, index: number): string {
+function getRunId(row: Capped2kRun, index: number): string {
   return toText(row.id).trim() || [row.user_id, row.nickname, row.score, row.ended_at, index].map(toText).join("|");
 }
 
@@ -154,13 +154,13 @@ function tileClass(value: number): string {
   return "stone-tile v" + value;
 }
 
-function renderBoard(row: StoneRun | null): void {
+function renderBoard(row: Capped2kRun | null): void {
   const target = byId("stone-board-preview");
   if (!target) return;
   const board = normalizeBoard(row?.final_board);
   if (!board.length) {
     target.className = "stone-board-preview empty";
-    target.textContent = "暂无盘面";
+    target.textContent = "\u6682\u65e0\u76d8\u9762";
     return;
   }
   target.className = "stone-board-preview";
@@ -171,19 +171,19 @@ function renderBoard(row: StoneRun | null): void {
   }).join("");
 }
 
-function renderSelected(row: StoneRun | null): void {
+function renderSelected(row: Capped2kRun | null): void {
   renderBoard(row);
-  setText("stone-preview-meta", row ? `#${escapeHtml(toText(row.id).slice(0, 10) || toText(row.user_id))}` : "选择一条成绩查看详情。");
+  setText("stone-preview-meta", row ? `#${escapeHtml(toText(row.id).slice(0, 10) || toText(row.user_id))}` : "\u9009\u62e9\u4e00\u6761\u6210\u7ee9\u67e5\u770b\u8be6\u60c5\u3002");
   setText("stone-detail-nickname", row ? toText(row.nickname) || "--" : "--");
   setText("stone-detail-score", row ? formatInteger(row.score) : "--");
   setText("stone-detail-duration", row ? formatDuration(row.duration_ms) : "--");
   setText("stone-detail-ended", row ? formatDateTime(row.ended_at || row.created_at) : "--");
 }
 
-function renderStats(rows: StoneRun[]): void {
+function renderStats(rows: Capped2kRun[]): void {
   const bestScore = rows.reduce((max, row) => Math.max(max, toNumber(row.score, 0)), 0);
   const bestTile = rows.reduce((max, row) => Math.max(max, toNumber(row.best_tile, 0)), 0);
-  const latest = rows.reduce<StoneRun | null>((best, row) => {
+  const latest = rows.reduce<Capped2kRun | null>((best, row) => {
     if (!best) return row;
     return new Date(toText(row.created_at || row.ended_at)).getTime() > new Date(toText(best.created_at || best.ended_at)).getTime() ? row : best;
   }, null);
@@ -193,11 +193,11 @@ function renderStats(rows: StoneRun[]): void {
   setText("stone-stat-latest", latest ? formatDateTime(latest.created_at || latest.ended_at) : "--");
 }
 
-function renderTable(rows: StoneRun[]): void {
+function renderTable(rows: Capped2kRun[]): void {
   const target = byId("stone-table-wrap");
   if (!target) return;
   if (!rows.length) {
-    target.innerHTML = '<div class="stone-empty">暂无成绩，可调整昵称筛选或等待用户上传。</div>';
+    target.innerHTML = '<div class="stone-empty">\u6682\u65e0\u6210\u7ee9\uff0c\u53ef\u8c03\u6574\u6635\u79f0\u7b5b\u9009\u6216\u7b49\u5f85\u7528\u6237\u4e0a\u4f20\u3002</div>';
     renderSelected(null);
     return;
   }
@@ -215,7 +215,7 @@ function renderTable(rows: StoneRun[]): void {
     </tr>`;
   }).join("");
   target.innerHTML = `<table class="stone-runs-table"><thead><tr>
-    <th>#</th><th>玩家</th><th>分数</th><th>最大砖块</th><th>耗时</th><th>时间</th><th>原因</th>
+    <th>#</th><th>\u73a9\u5bb6</th><th>\u5206\u6570</th><th>\u6700\u5927\u7816\u5757</th><th>\u8017\u65f6</th><th>\u65f6\u95f4</th><th>\u539f\u56e0</th>
   </tr></thead><tbody>${body}</tbody></table>`;
   target.querySelectorAll<HTMLTableRowElement>("tbody tr").forEach((rowNode) => {
     rowNode.addEventListener("click", () => {
@@ -244,18 +244,18 @@ async function refreshRuns(): Promise<void> {
   if (refreshInFlight) return;
   refreshInFlight = true;
   setButtonBusy("stone-refresh", true);
-  setStatus("正在刷新 2K Stone 成绩…", "busy");
+  setStatus("\u6b63\u5728\u5237\u65b0 2K \u5c01\u9876\u6210\u7ee9\u2026", "busy");
   try {
     const result = await apiGet(buildQueryPath());
     if (result.success !== true) {
-      throw new Error(toText(result.error || result.message || result.code || "加载失败"));
+      throw new Error(toText(result.error || result.message || result.code || "\u52a0\u8f7d\u5931\u8d25"));
     }
     latestRows = normalizeRows(result);
     renderStats(latestRows);
     renderTable(latestRows);
-    setStatus(`已加载 ${latestRows.length} 条成绩，最后刷新：${new Date().toLocaleTimeString("zh-CN", { hour12: false })}`, "ok");
+    setStatus(`\u5df2\u52a0\u8f7d ${latestRows.length} \u6761\u6210\u7ee9\uff0c\u6700\u540e\u5237\u65b0\uff1a${new Date().toLocaleTimeString("zh-CN", { hour12: false })}`, "ok");
   } catch (error) {
-    setStatus("加载失败：" + (error instanceof Error ? error.message : String(error)), "err");
+    setStatus("\u52a0\u8f7d\u5931\u8d25\uff1a" + (error instanceof Error ? error.message : String(error)), "err");
   } finally {
     refreshInFlight = false;
     setButtonBusy("stone-refresh", false);
@@ -267,7 +267,7 @@ function downloadJson(): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "stone-2k-runs.json";
+  link.download = "capped-2k-runs.json";
   document.body.appendChild(link);
   link.click();
   link.remove();
