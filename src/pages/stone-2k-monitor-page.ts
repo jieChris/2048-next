@@ -35,6 +35,7 @@ type StatusState = "idle" | "busy" | "ok" | "err";
 
 const REMOTE_API_BASE = "https://taihe.fun/api";
 const REFRESH_INTERVAL_MS = 15000;
+const REQUEST_TIMEOUT_MS = 10000;
 
 let latestRows: Capped2kRun[] = [];
 let selectedId = "";
@@ -100,13 +101,19 @@ function getApiBases(): string[] {
 async function apiGet(path: string): Promise<ApiResult> {
   let lastError = "api_unavailable";
   for (const base of getApiBases()) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const response = await fetch(base + path, { method: "GET" });
+      const response = await fetch(base + path, { method: "GET", signal: controller.signal });
       const data = (await response.json().catch(() => null)) as ApiResult | null;
       if (data) return data;
       lastError = toText(response.statusText || response.status);
     } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
+      lastError = error instanceof DOMException && error.name === "AbortError"
+        ? "请求超时，请稍后重试"
+        : error instanceof Error ? error.message : String(error);
+    } finally {
+      window.clearTimeout(timeoutId);
     }
   }
   return { success: false, error: lastError };
