@@ -173,7 +173,9 @@ body[data-page="stone-2k-monitor"] {
   font-weight: 900;
 }
 
-.stone-field input {
+.stone-field input,
+.stone-field select,
+.stone-field textarea {
   box-sizing: border-box;
   width: 100%;
   border: 1px solid var(--stone-line-strong);
@@ -185,7 +187,19 @@ body[data-page="stone-2k-monitor"] {
   outline: none;
 }
 
-.stone-field input:focus {
+.stone-field textarea {
+  min-height: 76px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.stone-field.medium {
+  width: 170px;
+}
+
+.stone-field input:focus,
+.stone-field select:focus,
+.stone-field textarea:focus {
   border-color: rgba(183, 99, 49, 0.58);
   box-shadow: 0 0 0 4px rgba(183, 99, 49, 0.12);
 }

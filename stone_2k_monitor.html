@@ -27,12 +27,29 @@
 
     <section class="stone-control-card" aria-label="&#31579;&#36873;&#19982;&#21047;&#26032;">
       <div class="stone-field grow">
-        <label for="stone-filter-names">&#29609;&#23478;&#26165;&#31216;</label>
-        <input id="stone-filter-names" type="text" placeholder="&#30041;&#31354;&#26597;&#30475;&#20840;&#37096;&#65307;&#22810;&#20010;&#26165;&#31216;&#29992;&#36887;&#21495;&#20998;&#38548;">
+        <label for="stone-filter-names">&#29609;&#23478;&#26165;&#31216;&#21015;&#34920;</label>
+        <textarea id="stone-filter-names" class="stone-names-input" rows="3" placeholder="&#30041;&#31354;&#26597;&#30475;&#20840;&#37096;&#65307;&#22810;&#20010;&#26165;&#31216;&#21487;&#29992;&#25442;&#34892;&#12289;&#36887;&#21495;&#12289;&#20013;&#25991;&#36887;&#21495;&#20998;&#38548;"></textarea>
       </div>
       <div class="stone-field small">
         <label for="stone-filter-limit">&#26465;&#25968;</label>
         <input id="stone-filter-limit" type="number" min="1" max="200" value="50">
+      </div>
+      <div class="stone-field medium">
+        <label for="stone-sort-by">&#25490;&#24207;</label>
+        <select id="stone-sort-by">
+          <option value="score_desc">&#20998;&#25968;&#38477;&#24207;</option>
+          <option value="score_asc">&#20998;&#25968;&#21319;&#24207;</option>
+          <option value="time_desc">&#26102;&#38388;&#38477;&#24207;</option>
+          <option value="time_asc">&#26102;&#38388;&#21319;&#24207;</option>
+        </select>
+      </div>
+      <div class="stone-field medium">
+        <label for="stone-start-at">&#24320;&#22987;&#26102;&#38388;</label>
+        <input id="stone-start-at" type="datetime-local">
+      </div>
+      <div class="stone-field medium">
+        <label for="stone-end-at">&#32467;&#26463;&#26102;&#38388;</label>
+        <input id="stone-end-at" type="datetime-local">
       </div>
       <label class="stone-check">
         <input id="stone-filter-latest" type="checkbox">

@@ -63,7 +63,7 @@ function escapeHtml(value: string): string {
 }
 
 function getInputValue(id: string): string {
-  return toText((byId<HTMLInputElement>(id)?.value || "").trim());
+  return toText((byId<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id)?.value || "").trim());
 }
 
 function isChecked(id: string): boolean {
@@ -233,9 +233,17 @@ function renderTable(rows: Capped2kRun[]): void {
 function buildQueryPath(): string {
   const params = new URLSearchParams();
   const names = getInputValue("stone-filter-names");
+  const sortValue = getInputValue("stone-sort-by") || "score_desc";
+  const sortParts = sortValue.split("_");
+  const startAt = getInputValue("stone-start-at");
+  const endAt = getInputValue("stone-end-at");
   const limit = Math.max(1, Math.min(200, Math.floor(toNumber(getInputValue("stone-filter-limit"), 50))));
   params.set("limit", String(limit));
   if (names) params.set("names", names);
+  params.set("sort_by", sortParts[0] === "time" ? "time" : "score");
+  params.set("sort_order", sortParts[1] === "asc" ? "asc" : "desc");
+  if (startAt) params.set("start_at", new Date(startAt).toISOString());
+  if (endAt) params.set("end_at", new Date(endAt).toISOString());
   if (isChecked("stone-filter-latest")) params.set("latest_only", "true");
   return "/stone-2k/runs?" + params.toString();
 }
@@ -289,8 +297,11 @@ export function bootstrapStone2kMonitorPage(): void {
   byId("stone-auto-refresh")?.addEventListener("change", restartAutoRefresh);
   byId("stone-filter-latest")?.addEventListener("change", () => void refreshRuns());
   byId("stone-filter-limit")?.addEventListener("change", () => void refreshRuns());
+  byId("stone-sort-by")?.addEventListener("change", () => void refreshRuns());
+  byId("stone-start-at")?.addEventListener("change", () => void refreshRuns());
+  byId("stone-end-at")?.addEventListener("change", () => void refreshRuns());
   byId("stone-filter-names")?.addEventListener("keydown", (event) => {
-    if (event instanceof KeyboardEvent && event.key === "Enter") void refreshRuns();
+    if (event instanceof KeyboardEvent && event.key === "Enter" && (event.ctrlKey || event.metaKey)) void refreshRuns();
   });
   restartAutoRefresh();
   void refreshRuns();
