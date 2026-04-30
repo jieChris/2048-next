@@ -156,6 +156,7 @@
   var submitLock = false;
   var recordSubmitLock = false;
   var stone2kSubmitLock = false;
+  var activeStone2kSubmitSignature = "";
   var modeIntroBound = false;
   var langSyncBound = false;
   var pollingStarted = false;
@@ -2220,8 +2221,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!payload) return null;
     var modeKey = toText(payload.mode_key).trim();
     var score = Math.floor(Number(payload.score) || 0);
-    var bestTile = Math.floor(Number(payload.best_tile) || 0);
-    if (modeKey !== "capped_4x4_pow2_no_undo" || !(score >= 0) || bestTile < 2048) return null;
+    if (modeKey !== "capped_4x4_pow2_no_undo" || !(score >= 0)) return null;
     if (!Array.isArray(payload.final_board)) return null;
     return payload;
   }
@@ -2231,17 +2231,22 @@ function shouldAutoLoadOnlineLeaderboard() {
     return key === "capped_4x4_pow2_no_undo";
   }
 
+  function hasStone2kRunProgress(manager) {
+    if (!manager) return false;
+    return !!(manager.hasGameStarted || (Array.isArray(manager.moveHistory) && manager.moveHistory.length > 0));
+  }
+
   function buildStone2kRunPayload(manager, modeLike, score) {
     if (!manager || !isStone2kStatsMode(manager, modeLike)) return null;
+    if (!hasStone2kRunProgress(manager)) return null;
     var bestTile = resolveManagerBestTileValue(manager);
-    if (bestTile < 2048) return null;
     return {
       mode_key: "capped_4x4_pow2_no_undo",
       score: Math.floor(Number(score) || 0),
       best_tile: bestTile,
       duration_ms: resolveManagerDurationMs(manager),
       ended_at: new Date().toISOString(),
-      end_reason: resolveSessionEndReason(manager) || "capped_2k",
+      end_reason: resolveSessionEndReason(manager) || "progress",
       final_board: resolveManagerFinalBoard(manager),
       client_record_id: resolveManagerClientRecordIdForSubmit(manager) || null
     };
@@ -2973,6 +2978,7 @@ async function refreshLeaderboard(modeLike) {
     }
 
     stone2kSubmitLock = true;
+    activeStone2kSubmitSignature = pendingState.signature;
     var result = null;
     try {
       writePendingStone2kSubmitState(pendingState.signature, pendingState, pendingState.payload);
@@ -2981,11 +2987,22 @@ async function refreshLeaderboard(modeLike) {
       });
     } finally {
       stone2kSubmitLock = false;
+      activeStone2kSubmitSignature = "";
     }
 
     if (result && result.success) {
       safeSetStorage(STORAGE_LAST_STONE_2K_SUBMIT_KEY, pendingState.signature);
-      clearPendingStone2kSubmitState();
+      var latestPendingState = readPendingStone2kSubmitState();
+      if (!latestPendingState || latestPendingState.signature === pendingState.signature) {
+        clearPendingStone2kSubmitState();
+      } else {
+        runPromiseSafely(function () {
+          return retryPendingStone2kSubmit({
+            keepalive: opts.keepalive === true,
+            forcePendingRetry: true
+          });
+        });
+      }
       return result;
     }
 
@@ -3021,7 +3038,12 @@ async function refreshLeaderboard(modeLike) {
 
     await retryPendingStone2kSubmit(opts);
     if (!getAuthToken()) return;
-    if (stone2kSubmitLock) return;
+    if (stone2kSubmitLock) {
+      if (!activeStone2kSubmitSignature || activeStone2kSubmitSignature !== signature) {
+        writePendingStone2kSubmitState(signature, readPendingStone2kSubmitState(), payload);
+      }
+      return;
+    }
 
     var lastSignature = toText(safeGetStorage(STORAGE_LAST_STONE_2K_SUBMIT_KEY));
     var pendingState = readPendingStone2kSubmitState();
@@ -3030,6 +3052,7 @@ async function refreshLeaderboard(modeLike) {
     if (signature && signature === pendingSignature && shouldDeferPendingStone2kSubmitRetry(pendingState)) return;
 
     stone2kSubmitLock = true;
+    activeStone2kSubmitSignature = signature;
     var result = null;
     try {
       writePendingStone2kSubmitState(signature, pendingState, payload);
@@ -3038,11 +3061,22 @@ async function refreshLeaderboard(modeLike) {
       });
     } finally {
       stone2kSubmitLock = false;
+      activeStone2kSubmitSignature = "";
     }
 
     if (result && result.success) {
       safeSetStorage(STORAGE_LAST_STONE_2K_SUBMIT_KEY, signature);
-      clearPendingStone2kSubmitState();
+      var latestPendingState = readPendingStone2kSubmitState();
+      if (!latestPendingState || latestPendingState.signature === signature) {
+        clearPendingStone2kSubmitState();
+      } else {
+        runPromiseSafely(function () {
+          return retryPendingStone2kSubmit({
+            keepalive: opts.keepalive === true,
+            forcePendingRetry: true
+          });
+        });
+      }
       return;
     }
 

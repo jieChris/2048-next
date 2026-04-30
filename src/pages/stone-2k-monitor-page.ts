@@ -1,4 +1,4 @@
-﻿import "../../js/api_shared_utils.js";
+import "../../js/api_shared_utils.js";
 
 type ApiSharedUtilsLike = {
   buildApiBaseCandidates?: () => string[];
@@ -32,10 +32,13 @@ type ApiResult = {
 };
 
 type StatusState = "idle" | "busy" | "ok" | "err";
+type LockState = "locked" | "unlocked";
 
 const REMOTE_API_BASE = "https://taihe.fun/api";
 const REFRESH_INTERVAL_MS = 15000;
 const REQUEST_TIMEOUT_MS = 10000;
+const MONITOR_ACCESS_PASSCODE = "stone2k-_gjWBeZM7fDtML0SaQDr7ZKE3oa7c6pwi2f4qN13B7w";
+const MONITOR_ACCESS_STORAGE_KEY = "stone-2k-monitor.access-granted";
 
 let latestRows: Capped2kRun[] = [];
 let selectedId = "";
@@ -98,6 +101,89 @@ function getApiBases(): string[] {
   return bases.length ? bases : [window.location.origin + "/api", REMOTE_API_BASE];
 }
 
+function hasStoredAccess(): boolean {
+  try {
+    return window.sessionStorage.getItem(MONITOR_ACCESS_STORAGE_KEY) === "granted";
+  } catch {
+    return false;
+  }
+}
+
+function setStoredAccess(granted: boolean): void {
+  try {
+    if (granted) window.sessionStorage.setItem(MONITOR_ACCESS_STORAGE_KEY, "granted");
+    else window.sessionStorage.removeItem(MONITOR_ACCESS_STORAGE_KEY);
+  } catch {
+    // noop
+  }
+}
+
+function getLockState(): LockState {
+  return document.body.getAttribute("data-stone-monitor-locked") === "unlocked" ? "unlocked" : "locked";
+}
+
+function setLockState(state: LockState): void {
+  document.body.setAttribute("data-stone-monitor-locked", state);
+  byId("stone-monitor-shell")?.setAttribute("aria-hidden", String(state !== "unlocked"));
+}
+
+function setGateBusy(busy: boolean): void {
+  setButtonBusy("stone-access-submit", busy);
+  const input = byId<HTMLInputElement>("stone-access-key");
+  if (input) input.disabled = busy;
+}
+
+function setGateError(message = ""): void {
+  const errorNode = byId("stone-access-error");
+  if (!errorNode) return;
+  if (message) {
+    errorNode.hidden = false;
+    errorNode.textContent = message;
+  } else {
+    errorNode.hidden = true;
+    errorNode.textContent = "";
+  }
+}
+
+function setAccessMeta(state: LockState, message = ""): void {
+  const badge = byId("stone-access-badge");
+  const hint = byId("stone-access-hint");
+  if (badge) {
+    badge.setAttribute("data-state", state);
+    badge.textContent = state === "unlocked" ? "已验证访问口令" : "需要访问口令";
+  }
+  if (hint) {
+    hint.textContent = state === "unlocked"
+      ? "当前会话已解锁，可查看实时成绩、盘面和筛选结果。"
+      : message || "输入访问口令后，才会加载该监测页的数据。";
+  }
+}
+
+function clearMonitorData(): void {
+  latestRows = [];
+  selectedId = "";
+  renderStats([], null);
+  renderTable([]);
+}
+
+function lockMonitor(message = "请输入访问口令以进入监测页。", clearInput = false): void {
+  clearMonitorData();
+  setLockState("locked");
+  setAccessMeta("locked", message);
+  setGateError("");
+  const input = byId<HTMLInputElement>("stone-access-key");
+  if (input) {
+    if (clearInput) input.value = "";
+    window.setTimeout(() => input.focus(), 0);
+  }
+}
+
+function unlockMonitor(): void {
+  setLockState("unlocked");
+  setAccessMeta("unlocked");
+  setGateError("");
+}
+
 async function apiGet(path: string): Promise<ApiResult> {
   let lastError = "api_unavailable";
   for (const base of getApiBases()) {
@@ -146,9 +232,9 @@ function formatDuration(value: unknown): string {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  if (hours > 0) return `${hours}\u65f6 ${minutes}\u5206 ${seconds}\u79d2`;
-  if (minutes > 0) return `${minutes}\u5206 ${seconds}\u79d2`;
-  return `${seconds}\u79d2`;
+  if (hours > 0) return `${hours}时 ${minutes}分 ${seconds}秒`;
+  if (minutes > 0) return `${minutes}分 ${seconds}秒`;
+  return `${seconds}秒`;
 }
 
 function getRunId(row: Capped2kRun, index: number): string {
@@ -167,7 +253,7 @@ function renderBoard(row: Capped2kRun | null): void {
   const board = normalizeBoard(row?.final_board);
   if (!board.length) {
     target.className = "stone-board-preview empty";
-    target.textContent = "\u6682\u65e0\u76d8\u9762";
+    target.textContent = "暂无盘面";
     return;
   }
   target.className = "stone-board-preview";
@@ -180,21 +266,21 @@ function renderBoard(row: Capped2kRun | null): void {
 
 function renderSelected(row: Capped2kRun | null): void {
   renderBoard(row);
-  setText("stone-preview-meta", row ? `#${escapeHtml(toText(row.id).slice(0, 10) || toText(row.user_id))}` : "\u9009\u62e9\u4e00\u6761\u6210\u7ee9\u67e5\u770b\u8be6\u60c5\u3002");
+  setText("stone-preview-meta", row ? `#${escapeHtml(toText(row.id).slice(0, 10) || toText(row.user_id))}` : "选择一条成绩查看详情。");
   setText("stone-detail-nickname", row ? toText(row.nickname) || "--" : "--");
   setText("stone-detail-score", row ? formatInteger(row.score) : "--");
   setText("stone-detail-duration", row ? formatDuration(row.duration_ms) : "--");
   setText("stone-detail-ended", row ? formatDateTime(row.ended_at || row.created_at) : "--");
 }
 
-function renderStats(rows: Capped2kRun[]): void {
+function renderStats(rows: Capped2kRun[], total: number | null): void {
   const bestScore = rows.reduce((max, row) => Math.max(max, toNumber(row.score, 0)), 0);
   const bestTile = rows.reduce((max, row) => Math.max(max, toNumber(row.best_tile, 0)), 0);
   const latest = rows.reduce<Capped2kRun | null>((best, row) => {
     if (!best) return row;
     return new Date(toText(row.created_at || row.ended_at)).getTime() > new Date(toText(best.created_at || best.ended_at)).getTime() ? row : best;
   }, null);
-  setText("stone-stat-count", formatInteger(rows.length));
+  setText("stone-stat-count", typeof total === "number" && total >= 0 ? formatInteger(total) : formatInteger(rows.length));
   setText("stone-stat-best-score", bestScore > 0 ? formatInteger(bestScore) : "--");
   setText("stone-stat-best-tile", bestTile > 0 ? formatInteger(bestTile) : "--");
   setText("stone-stat-latest", latest ? formatDateTime(latest.created_at || latest.ended_at) : "--");
@@ -204,7 +290,7 @@ function renderTable(rows: Capped2kRun[]): void {
   const target = byId("stone-table-wrap");
   if (!target) return;
   if (!rows.length) {
-    target.innerHTML = '<div class="stone-empty">\u6682\u65e0\u6210\u7ee9\uff0c\u53ef\u8c03\u6574\u6635\u79f0\u7b5b\u9009\u6216\u7b49\u5f85\u7528\u6237\u4e0a\u4f20\u3002</div>';
+    target.innerHTML = '<div class="stone-empty">暂无成绩，可调整昵称筛选、时间范围，或等待用户上传。</div>';
     renderSelected(null);
     return;
   }
@@ -222,7 +308,7 @@ function renderTable(rows: Capped2kRun[]): void {
     </tr>`;
   }).join("");
   target.innerHTML = `<table class="stone-runs-table"><thead><tr>
-    <th>#</th><th>\u73a9\u5bb6</th><th>\u5206\u6570</th><th>\u6700\u5927\u7816\u5757</th><th>\u8017\u65f6</th><th>\u65f6\u95f4</th><th>\u539f\u56e0</th>
+    <th>#</th><th>玩家</th><th>分数</th><th>最大砖块</th><th>耗时</th><th>时间</th><th>原因</th>
   </tr></thead><tbody>${body}</tbody></table>`;
   target.querySelectorAll<HTMLTableRowElement>("tbody tr").forEach((rowNode) => {
     rowNode.addEventListener("click", () => {
@@ -246,6 +332,7 @@ function buildQueryPath(): string {
   const endAt = getInputValue("stone-end-at");
   const limit = Math.max(1, Math.min(200, Math.floor(toNumber(getInputValue("stone-filter-limit"), 50))));
   params.set("limit", String(limit));
+  params.set("count", "true");
   if (names) params.set("names", names);
   params.set("sort_by", sortParts[0] === "time" ? "time" : "score");
   params.set("sort_order", sortParts[1] === "asc" ? "asc" : "desc");
@@ -255,22 +342,25 @@ function buildQueryPath(): string {
   return "/stone-2k/runs?" + params.toString();
 }
 
-async function refreshRuns(): Promise<void> {
-  if (refreshInFlight) return;
+async function refreshRuns(): Promise<boolean> {
+  if (refreshInFlight || getLockState() !== "unlocked") return false;
   refreshInFlight = true;
   setButtonBusy("stone-refresh", true);
-  setStatus("\u6b63\u5728\u5237\u65b0 2K \u5c01\u9876\u6210\u7ee9\u2026", "busy");
+  setStatus("正在刷新 2K 封顶成绩…", "busy");
   try {
     const result = await apiGet(buildQueryPath());
     if (result.success !== true) {
-      throw new Error(toText(result.error || result.message || result.code || "\u52a0\u8f7d\u5931\u8d25"));
+      throw new Error(toText(result.error || result.message || result.code || "加载失败"));
     }
     latestRows = normalizeRows(result);
-    renderStats(latestRows);
+    const total = typeof result.total === "number" ? Number(result.total) : null;
+    renderStats(latestRows, Number.isFinite(total) ? total : null);
     renderTable(latestRows);
-    setStatus(`\u5df2\u52a0\u8f7d ${latestRows.length} \u6761\u6210\u7ee9\uff0c\u6700\u540e\u5237\u65b0\uff1a${new Date().toLocaleTimeString("zh-CN", { hour12: false })}`, "ok");
+    setStatus(`已加载 ${formatInteger(typeof total === "number" ? total : latestRows.length)} 条成绩，最后刷新：${new Date().toLocaleTimeString("zh-CN", { hour12: false })}`, "ok");
+    return true;
   } catch (error) {
-    setStatus("\u52a0\u8f7d\u5931\u8d25\uff1a" + (error instanceof Error ? error.message : String(error)), "err");
+    setStatus("加载失败：" + (error instanceof Error ? error.message : String(error)), "err");
+    return false;
   } finally {
     refreshInFlight = false;
     setButtonBusy("stone-refresh", false);
@@ -292,10 +382,39 @@ function downloadJson(): void {
 function restartAutoRefresh(): void {
   if (refreshTimer) window.clearInterval(refreshTimer);
   refreshTimer = 0;
-  if (!isChecked("stone-auto-refresh")) return;
+  if (!isChecked("stone-auto-refresh") || getLockState() !== "unlocked") return;
   refreshTimer = window.setInterval(() => {
     if (document.visibilityState === "visible") void refreshRuns();
   }, REFRESH_INTERVAL_MS);
+}
+
+async function submitAccessKey(): Promise<void> {
+  const key = getInputValue("stone-access-key");
+  if (!key) {
+    setGateError("请输入访问口令。");
+    byId<HTMLInputElement>("stone-access-key")?.focus();
+    return;
+  }
+  if (key !== MONITOR_ACCESS_PASSCODE) {
+    setGateError("口令错误，请重新输入。");
+    setStatus("访问口令错误。", "err");
+    byId<HTMLInputElement>("stone-access-key")?.focus();
+    return;
+  }
+  setGateBusy(true);
+  setStoredAccess(true);
+  unlockMonitor();
+  restartAutoRefresh();
+  setStatus("口令正确，正在加载数据…", "busy");
+  await refreshRuns();
+  setGateBusy(false);
+}
+
+function resetAccessKey(): void {
+  setStoredAccess(false);
+  lockMonitor("页面已重新上锁，请输入访问口令。", true);
+  restartAutoRefresh();
+  setStatus("页面已上锁。", "idle");
 }
 
 export function bootstrapStone2kMonitorPage(): void {
@@ -307,9 +426,23 @@ export function bootstrapStone2kMonitorPage(): void {
   byId("stone-sort-by")?.addEventListener("change", () => void refreshRuns());
   byId("stone-start-at")?.addEventListener("change", () => void refreshRuns());
   byId("stone-end-at")?.addEventListener("change", () => void refreshRuns());
+  byId("stone-change-key")?.addEventListener("click", resetAccessKey);
+  byId<HTMLFormElement>("stone-access-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void submitAccessKey();
+  });
   byId("stone-filter-names")?.addEventListener("keydown", (event) => {
     if (event instanceof KeyboardEvent && event.key === "Enter" && (event.ctrlKey || event.metaKey)) void refreshRuns();
   });
+
+  if (hasStoredAccess()) {
+    unlockMonitor();
+    restartAutoRefresh();
+    void refreshRuns();
+    return;
+  }
+
+  lockMonitor("请输入访问口令以进入监测页。", true);
   restartAutoRefresh();
-  void refreshRuns();
+  setStatus("该页面已上锁，请先输入访问口令。", "idle");
 }

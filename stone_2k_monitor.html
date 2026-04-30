@@ -7,59 +7,98 @@
   <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260409-1">
   <link href="style/main.css?v=20260327-01" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
-  <link href="style/stone_2k_monitor.css?v=20260430-02" rel="stylesheet" type="text/css">
+  <link href="style/stone_2k_monitor.css?v=20260430-03" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://taihe.fun https://www.taihe.fun; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
-<body data-page="stone-2k-monitor">
-  <main class="stone-monitor-shell">
+<body data-page="stone-2k-monitor" data-stone-monitor-locked="locked">
+  <section id="stone-access-gate" class="stone-access-gate" aria-live="polite">
+    <div class="stone-access-card">
+      <p class="stone-access-kicker">Protected Monitor</p>
+      <h2>输入访问口令</h2>
+      <p class="stone-access-copy">该页面仅供内部查看。输入正确口令后，才会加载监测内容。</p>
+      <form id="stone-access-form" class="stone-access-form">
+        <label class="stone-access-label" for="stone-access-key">访问口令</label>
+        <input id="stone-access-key" class="stone-access-input" type="password" autocomplete="current-password" placeholder="请输入访问口令">
+        <p id="stone-access-error" class="stone-access-error" hidden>口令错误，请重新输入。</p>
+        <div class="stone-access-actions">
+          <button id="stone-access-submit" class="stone-button" type="submit">进入监测页</button>
+          <a class="stone-button ghost" href="modes.html">返回模式列表</a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <main id="stone-monitor-shell" class="stone-monitor-shell" aria-hidden="true">
     <header class="stone-hero">
-      <div class="stone-hero-copy">
-        <p class="stone-kicker">2048 Hidden Metrics</p>
-        <h1>2K &#23553;&#39030;&#25104;&#32489;&#30417;&#27979;</h1>
-        <p>&#29420;&#31435;&#26597;&#30475; 4x4 2048 &#23553;&#39030;&#27169;&#24335;&#19978;&#20256;&#30340;&#38544;&#34255;&#32479;&#35745;&#65292;&#19981;&#36827;&#20837;&#20844;&#24320;&#25490;&#34892;&#27036;&#12290;</p>
+      <div class="stone-hero-main">
+        <div class="stone-hero-copy">
+          <p class="stone-kicker">2048 Hidden Metrics</p>
+          <h1>2K &#23553;&#39030;&#25104;&#32489;&#30417;&#27979;</h1>
+          <p>&#29420;&#31435;&#26597;&#30475; 4x4 2048 &#23553;&#39030;&#27169;&#24335;&#19978;&#20256;&#30340;&#38544;&#34255;&#32479;&#35745;&#65292;&#19981;&#36827;&#20837;&#20844;&#24320;&#25490;&#34892;&#27036;&#12290;</p>
+        </div>
+        <div class="stone-hero-meta">
+          <span id="stone-access-badge" class="stone-hero-badge">&#31561;&#24453;&#21475;&#20196;&#39564;&#35777;</span>
+          <p id="stone-access-hint" class="stone-hero-hint">&#36755;&#20837;&#21475;&#20196;&#21518;&#21487;&#26597;&#30475;&#23454;&#26102;&#25104;&#32489;&#19982;&#30424;&#38754;&#35814;&#24773;&#12290;</p>
+        </div>
       </div>
-      <nav class="stone-nav" aria-label="&#39029;&#38754;&#23548;&#33322;">
-        <a class="stone-button ghost" href="modes.html">&#27169;&#24335;&#21015;&#34920;</a>
-        <a class="stone-button ghost" href="capped_2048.html">&#24320;&#22987;&#23553;&#39030;&#27169;&#24335;</a>
-      </nav>
+      <div class="stone-hero-side">
+        <div class="stone-nav-wrap">
+          <button id="stone-change-key" class="stone-button ghost slim" type="button">&#37325;&#26032;&#19978;&#38145;</button>
+          <nav class="stone-nav" aria-label="&#39029;&#38754;&#23548;&#33322;">
+            <a class="stone-button ghost" href="modes.html">&#27169;&#24335;&#21015;&#34920;</a>
+            <a class="stone-button ghost" href="capped_2048.html">&#24320;&#22987;&#23553;&#39030;&#27169;&#24335;</a>
+          </nav>
+        </div>
+      </div>
     </header>
 
     <section class="stone-control-card" aria-label="&#31579;&#36873;&#19982;&#21047;&#26032;">
-      <div class="stone-field grow">
-        <label for="stone-filter-names">&#29609;&#23478;&#26165;&#31216;&#21015;&#34920;</label>
-        <textarea id="stone-filter-names" class="stone-names-input" rows="3" placeholder="&#30041;&#31354;&#26597;&#30475;&#20840;&#37096;&#65307;&#22810;&#20010;&#26165;&#31216;&#21487;&#29992;&#25442;&#34892;&#12289;&#36887;&#21495;&#12289;&#20013;&#25991;&#36887;&#21495;&#20998;&#38548;"></textarea>
+      <div class="stone-control-grid">
+        <div class="stone-field grow stone-field-names">
+          <label for="stone-filter-names">&#29609;&#23478;&#26165;&#31216;&#21015;&#34920;</label>
+          <textarea id="stone-filter-names" class="stone-names-input" rows="3" placeholder="&#30041;&#31354;&#26597;&#30475;&#20840;&#37096;&#65307;&#22810;&#20010;&#26165;&#31216;&#21487;&#29992;&#25442;&#34892;&#12289;&#36887;&#21495;&#12289;&#20013;&#25991;&#36887;&#21495;&#20998;&#38548;"></textarea>
+          <p class="stone-field-help">&#25903;&#25345;&#21333;&#20010;&#26165;&#31216;&#31934;&#26597;&#65292;&#20063;&#25903;&#25345;&#19968;&#27425;&#30417;&#25511;&#22810;&#20010;&#29609;&#23478;&#12290;</p>
+        </div>
+        <div class="stone-filter-grid">
+          <div class="stone-field small">
+            <label for="stone-filter-limit">&#26465;&#25968;</label>
+            <input id="stone-filter-limit" type="number" min="1" max="200" value="50">
+          </div>
+          <div class="stone-field medium">
+            <label for="stone-sort-by">&#25490;&#24207;</label>
+            <select id="stone-sort-by">
+              <option value="score_desc">&#20998;&#25968;&#38477;&#24207;</option>
+              <option value="score_asc">&#20998;&#25968;&#21319;&#24207;</option>
+              <option value="time_desc">&#26102;&#38388;&#38477;&#24207;</option>
+              <option value="time_asc">&#26102;&#38388;&#21319;&#24207;</option>
+            </select>
+          </div>
+          <div class="stone-field medium">
+            <label for="stone-start-at">&#24320;&#22987;&#26102;&#38388;</label>
+            <input id="stone-start-at" type="datetime-local">
+          </div>
+          <div class="stone-field medium">
+            <label for="stone-end-at">&#32467;&#26463;&#26102;&#38388;</label>
+            <input id="stone-end-at" type="datetime-local">
+          </div>
+        </div>
       </div>
-      <div class="stone-field small">
-        <label for="stone-filter-limit">&#26465;&#25968;</label>
-        <input id="stone-filter-limit" type="number" min="1" max="200" value="50">
+      <div class="stone-control-footer">
+        <div class="stone-toggle-row">
+          <label class="stone-check">
+            <input id="stone-filter-latest" type="checkbox">
+            <span>&#27599;&#20154;&#20165;&#26368;&#39640;&#19968;&#26465;</span>
+          </label>
+          <label class="stone-check">
+            <input id="stone-auto-refresh" type="checkbox" checked>
+            <span>&#33258;&#21160;&#21047;&#26032;</span>
+          </label>
+        </div>
+        <div class="stone-action-row">
+          <button id="stone-refresh" class="stone-button" type="button">&#21047;&#26032;&#25968;&#25454;</button>
+        </div>
       </div>
-      <div class="stone-field medium">
-        <label for="stone-sort-by">&#25490;&#24207;</label>
-        <select id="stone-sort-by">
-          <option value="score_desc">&#20998;&#25968;&#38477;&#24207;</option>
-          <option value="score_asc">&#20998;&#25968;&#21319;&#24207;</option>
-          <option value="time_desc">&#26102;&#38388;&#38477;&#24207;</option>
-          <option value="time_asc">&#26102;&#38388;&#21319;&#24207;</option>
-        </select>
-      </div>
-      <div class="stone-field medium">
-        <label for="stone-start-at">&#24320;&#22987;&#26102;&#38388;</label>
-        <input id="stone-start-at" type="datetime-local">
-      </div>
-      <div class="stone-field medium">
-        <label for="stone-end-at">&#32467;&#26463;&#26102;&#38388;</label>
-        <input id="stone-end-at" type="datetime-local">
-      </div>
-      <label class="stone-check">
-        <input id="stone-filter-latest" type="checkbox">
-        <span>&#27599;&#20154;&#20165;&#26368;&#39640;&#19968;&#26465;</span>
-      </label>
-      <label class="stone-check">
-        <input id="stone-auto-refresh" type="checkbox" checked>
-        <span>&#33258;&#21160;&#21047;&#26032;</span>
-      </label>
-      <button id="stone-refresh" class="stone-button" type="button">&#21047;&#26032;&#25968;&#25454;</button>
     </section>
 
     <p id="stone-status" class="stone-status" aria-live="polite">&#27491;&#22312;&#20934;&#22791;&#25968;&#25454;&#28304;&#8230;</p>
@@ -67,19 +106,19 @@
     <section class="stone-stats-grid" aria-label="&#27010;&#35272;&#32479;&#35745;">
       <article class="stone-stat-card">
         <span>&#35760;&#24405;&#25968;</span>
-        <strong id="stone-stat-count">--</strong>
+        <strong id="stone-stat-count" class="stone-stat-value">--</strong>
       </article>
       <article class="stone-stat-card">
         <span>&#26368;&#39640;&#20998;</span>
-        <strong id="stone-stat-best-score">--</strong>
+        <strong id="stone-stat-best-score" class="stone-stat-value">--</strong>
       </article>
       <article class="stone-stat-card">
         <span>&#26368;&#39640;&#30742;&#22359;</span>
-        <strong id="stone-stat-best-tile">--</strong>
+        <strong id="stone-stat-best-tile" class="stone-stat-value">--</strong>
       </article>
       <article class="stone-stat-card">
         <span>&#26368;&#36817;&#19978;&#20256;</span>
-        <strong id="stone-stat-latest">--</strong>
+        <strong id="stone-stat-latest" class="stone-stat-value is-latest">--</strong>
       </article>
     </section>
 
