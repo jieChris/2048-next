@@ -2,8 +2,14 @@
 # Replace placeholders before production use.
 
 upstream game_data_api {
-    server 127.0.0.1:3000;
+    server 127.0.0.1:3010;
     keepalive 32;
+}
+
+upstream auth_worker_api {
+    # Replace with the dedicated auth Worker origin, not the public site /api route.
+    server auth-api.taihe.fun:443;
+    keepalive 16;
 }
 
 server {
@@ -19,6 +25,54 @@ server {
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy strict-origin-when-cross-origin always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    # Account/auth routes remain on Cloudflare Worker.
+    location ~ ^/api/(login|register|password)(/|$) {
+        proxy_pass https://auth_worker_api;
+        proxy_ssl_server_name on;
+        proxy_ssl_name auth-api.taihe.fun;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host auth-api.taihe.fun;
+        proxy_set_header X-Request-Id $request_id;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+
+    location ~ ^/api/(me|user/me|user/nickname)(/|$) {
+        proxy_pass https://auth_worker_api;
+        proxy_ssl_server_name on;
+        proxy_ssl_name auth-api.taihe.fun;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host auth-api.taihe.fun;
+        proxy_set_header X-Request-Id $request_id;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+
+    # Game data routes are served by the self-hosted Node/Postgres API.
+    location = /api {
+        proxy_pass http://game_data_api/api;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Request-Id $request_id;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
 
     location /api/ {
         proxy_pass http://game_data_api;

@@ -20,16 +20,30 @@
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 	}
 
-	@api path /api/*
-	reverse_proxy @api 127.0.0.1:3000 {
-		header_up Host {host}
-		header_up X-Request-Id {http.request.header.X-Request-Id}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		health_uri /health
-		health_interval 30s
-		health_timeout 5s
+	@api path /api /api/*
+	@authApi path /api/login* /api/register* /api/password* /api/me* /api/user/me* /api/user/nickname*
+	handle @authApi {
+		reverse_proxy https://auth-api.taihe.fun {
+			header_up Host auth-api.taihe.fun
+			header_up X-Request-Id {http.request.header.X-Request-Id}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
 	}
 
-	file_server
+	handle @api {
+		reverse_proxy 127.0.0.1:3010 {
+			header_up Host {host}
+			header_up X-Request-Id {http.request.header.X-Request-Id}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			health_uri /health
+			health_interval 30s
+			health_timeout 5s
+		}
+	}
+
+	handle {
+		file_server
+	}
 }
