@@ -546,24 +546,33 @@ HTMLActuator.prototype.tryAutoContinueWithoutPrompt = function () {
   var manager = typeof window !== "undefined" ? window.game_manager : null;
   if (!manager) return false;
 
+  var keepPlayingHandler = null;
   if (typeof manager.keepPlaying === "function") {
+    keepPlayingHandler = manager.keepPlaying;
+  } else {
     try {
-      manager.keepPlaying();
-      return true;
+      keepPlayingHandler = Object.getPrototypeOf(manager).keepPlaying;
     } catch (_err) {}
+  }
+
+  if (typeof keepPlayingHandler === "function") {
+    try {
+      keepPlayingHandler.call(manager);
+      return true;
+    } catch (_err2) {}
   }
 
   // keepPlaying 在当前实现中通常是布尔状态字段（而不是方法）。
   try {
     manager.keepPlaying = true;
-  } catch (_err2) {
+  } catch (_err3) {
     return false;
   }
 
   if (manager.actuator && typeof manager.actuator.continue === "function") {
     try {
       manager.actuator.continue();
-    } catch (_err3) {}
+    } catch (_err4) {}
   }
   return true;
 };

@@ -706,7 +706,14 @@ function applySavedManagerProgressState(manager, saved) {
 }
 
 function applySavedManagerTimerState(manager, saved) {
-  manager.accumulatedTime = Number.isFinite(saved.duration_ms) && saved.duration_ms >= 0 ? Math.floor(saved.duration_ms) : 0;
+  var savedDurationMs = Number.isFinite(saved.duration_ms) && saved.duration_ms >= 0 ? Math.floor(saved.duration_ms) : 0;
+  var savedStartedAtMs = Number(saved.timer_started_at_ms);
+  var isTerminatedTimerState = !!(saved.over || (saved.won && !saved.keep_playing));
+  var isActiveTimer = saved.timer_status === 1 && !isTerminatedTimerState && !saved.timer_frozen;
+  if (isActiveTimer && Number.isFinite(savedStartedAtMs) && savedStartedAtMs > 0) {
+    savedDurationMs = Math.max(savedDurationMs, Date.now() - Math.floor(savedStartedAtMs));
+  }
+  manager.accumulatedTime = savedDurationMs;
   manager.time = manager.accumulatedTime;
   manager.startTime = null;
   manager.timerStatus = 0;
@@ -1035,9 +1042,13 @@ function buildSavedGameStateReplayStatePayload(manager, now, saveOptions) {
 
 function buildSavedGameStateTimerCorePayload(manager) {
   var isTerminatedState = !!(manager.over || (manager.won && !manager.keepPlaying));
+  var timerStartedAtMs = manager.startTime && typeof manager.startTime.getTime === "function"
+    ? manager.startTime.getTime()
+    : (Number.isFinite(Number(manager.timerStartedAtMs)) ? Math.floor(Number(manager.timerStartedAtMs)) : null);
   return {
     timer_status: isTerminatedState ? 0 : (manager.timerStatus === 1 ? 1 : 0),
     duration_ms: manager.getDurationMs(),
+    timer_started_at_ms: isTerminatedState ? null : timerStartedAtMs,
     has_game_started: !!manager.hasGameStarted,
     timer_frozen: isTerminatedState
   };
@@ -1277,6 +1288,7 @@ function buildLiteSavedGameStatePayloadFallback(manager, payload) {
       timer_status: timerStatus === 1 ? 1 : 0,
       timer_frozen: isTimerFrozen,
       duration_ms: Number.isFinite(timerDurationMs) ? Math.floor(timerDurationMs) : 0,
+      timer_started_at_ms: Number.isFinite(Number(payload.timer_started_at_ms)) ? Math.floor(Number(payload.timer_started_at_ms)) : null,
       has_game_started: hasGameStarted
     }
   );

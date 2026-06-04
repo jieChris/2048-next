@@ -143,8 +143,17 @@ function bindGameManagerInputEvents(manager) {
     }
   });
   manager.inputManager.on("keepPlaying", function () {
-    if (typeof managerForInput.keepPlaying === "function") {
-      managerForInput.keepPlaying();
+    var keepPlayingHandler = null;
+    try {
+      keepPlayingHandler = Object.getPrototypeOf(managerForInput).keepPlaying;
+    } catch (_err) {}
+    if (typeof keepPlayingHandler === "function") {
+      keepPlayingHandler.call(managerForInput);
+      return;
+    }
+    managerForInput.keepPlaying = true;
+    if (managerForInput.actuator && typeof managerForInput.actuator.continue === "function") {
+      managerForInput.actuator.continue();
     }
   });
 }

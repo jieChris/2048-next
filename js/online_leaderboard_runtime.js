@@ -1332,7 +1332,6 @@ function shouldAutoLoadOnlineLeaderboard() {
 
     var hasAuth = !!getAuthToken();
     var activeSession = hasAuth ? readActiveRankedSessionRecord(modeKey) : null;
-    if (hasAuth && !activeSession) return true;
     if (!activeSession) return false;
     var activeToken = toText(activeSession.ranked_session_token).trim();
     if (activeToken && !checkpointToken) return true;
