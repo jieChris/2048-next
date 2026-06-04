@@ -2273,8 +2273,12 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!Number.isFinite(safeLimit) || safeLimit <= 0) safeLimit = DEFAULT_BOARD_LIMIT;
     safeLimit = Math.floor(safeLimit);
 
-    var modeBucket = resolveLeaderboardMode(modeLike);
+    var modeKey = toText(modeLike).trim();
+    var modeBucket = resolveLeaderboardMode(modeKey || modeLike);
     var path = "/leaderboard?limit=" + encodeURIComponent(String(safeLimit));
+    if (modeKey) {
+      path += "&mode_key=" + encodeURIComponent(modeKey);
+    }
     if (modeBucket) {
       path += "&mode=" + encodeURIComponent(modeBucket);
     }
@@ -2546,14 +2550,16 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
 async function refreshLeaderboard(modeLike) {
-  var modeBucket = resolveLeaderboardMode(modeLike) || "";
-    var result = await getLeaderboard(DEFAULT_BOARD_LIMIT, modeLike);
+  var modeKey = toText(modeLike).trim();
+  var modeBucket = resolveLeaderboardMode(modeKey || modeLike) || "";
+  var cacheKey = modeKey || modeBucket;
+    var result = await getLeaderboard(DEFAULT_BOARD_LIMIT, modeKey || modeLike);
     if (!result || !result.success) {
       renderModeIntroLeaderboard([]);
       return false;
     }
     cachedLeaderboard = Array.isArray(result.data) ? result.data : [];
-    cachedLeaderboardMode = modeBucket;
+    cachedLeaderboardMode = cacheKey;
     renderModeIntroLeaderboard(cachedLeaderboard);
     return true;
   }
@@ -2576,7 +2582,7 @@ async function refreshLeaderboard(modeLike) {
     if (
       !forceRefresh &&
       !timerLeaderboardLoading &&
-      timerLeaderboardCacheMode === modeBucket &&
+      timerLeaderboardCacheMode === modeKey &&
       timerLeaderboardCacheRows.length > 0 &&
       now - timerLeaderboardCacheTime < 12000
     ) {
@@ -2589,7 +2595,7 @@ async function refreshLeaderboard(modeLike) {
 
     if (timerLeaderboardLoading) return true;
     timerLeaderboardLoading = true;
-    var result = await getLeaderboard(TIMER_LEADERBOARD_FETCH_LIMIT, modeBucket);
+    var result = await getLeaderboard(TIMER_LEADERBOARD_FETCH_LIMIT, modeKey);
     timerLeaderboardLoading = false;
 
     if (!result || !result.success) {
@@ -2599,7 +2605,7 @@ async function refreshLeaderboard(modeLike) {
 
     var rows = Array.isArray(result.data) ? result.data : [];
     timerLeaderboardCacheRows = rows;
-    timerLeaderboardCacheMode = modeBucket;
+    timerLeaderboardCacheMode = modeKey;
     timerLeaderboardCacheTime = Date.now();
     renderTimerLeaderboardRows(rows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT), resolveSelfRank(rows));
     return true;
@@ -3201,7 +3207,8 @@ async function refreshLeaderboard(modeLike) {
     introBtn.addEventListener("click", function () {
       var modeKey = getCurrentModeKey();
       var modeBucket = resolveLeaderboardMode(modeKey) || "";
-      if (cachedLeaderboard.length > 0 && cachedLeaderboardMode === modeBucket) {
+      var cacheKey = modeKey || modeBucket;
+      if (cachedLeaderboard.length > 0 && cachedLeaderboardMode === cacheKey) {
         renderModeIntroLeaderboard(cachedLeaderboard);
       } else {
         refreshLeaderboard(modeKey);
