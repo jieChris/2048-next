@@ -779,7 +779,6 @@ function hasRankedCheckpointLocalMirrorForSetup(manager) {
 
 function readRankedCheckpointLocalMirrorSavedStateForSetup(manager) {
   if (!manager || manager.rankPolicy !== "ranked") return null;
-  if (hasRankedCheckpointAuthTokenForSetup(manager)) return null;
   var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
   var modeKey = typeof manager.modeKey === "string" && manager.modeKey
     ? manager.modeKey
@@ -791,7 +790,15 @@ function readRankedCheckpointLocalMirrorSavedStateForSetup(manager) {
     var raw = storage.getItem("ranked_checkpoint_local_mirror:v1:" + modeKey);
     if (!(typeof raw === "string" && raw)) return null;
     var parsed = JSON.parse(raw);
-    var uiState = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    if (!(parsed && typeof parsed === "object" && !Array.isArray(parsed))) return null;
+    var currentUserId = String(storage.getItem("2048_auth_userId_v1") || "").trim();
+    var ownerUserId = String(parsed.owner_user_id || "").trim();
+    if (currentUserId) {
+      if (!ownerUserId || ownerUserId !== currentUserId) return null;
+    } else if (ownerUserId) {
+      return null;
+    }
+    var uiState = parsed.ui_state && typeof parsed.ui_state === "object" && !Array.isArray(parsed.ui_state)
       ? parsed.ui_state
       : null;
     var savedState = uiState && typeof uiState === "object" && !Array.isArray(uiState)
@@ -867,6 +874,7 @@ function placeStoneTilesForSetup(manager) {
 function resolveSetupRestoreAndInitialBoardState(manager, hasInputSeed, normalizedOptions) {
   if (!manager) return { restoredFromSavedState: false };
   var restoredFromSavedState = false;
+  var restoredFromRankedLocalMirror = false;
   var skipStartTiles = !!normalizedOptions.skipStartTiles;
   if (shouldTryRestoreSavedStateInSetup(manager, hasInputSeed, normalizedOptions)) {
     restoredFromSavedState = tryRestoreLatestSavedState(manager);
@@ -875,11 +883,12 @@ function resolveSetupRestoreAndInitialBoardState(manager, hasInputSeed, normaliz
     var rankedLocalMirrorSavedState = readRankedCheckpointLocalMirrorSavedStateForSetup(manager);
     if (rankedLocalMirrorSavedState && typeof applySavedStateRestore === "function") {
       restoredFromSavedState = applySavedStateRestore(manager, rankedLocalMirrorSavedState);
+      restoredFromRankedLocalMirror = !!restoredFromSavedState;
     }
   }
   manager.needsRankedCheckpointRestore =
-    !restoredFromSavedState &&
-    shouldScheduleRankedCheckpointRestoreInSetup(manager, hasInputSeed, normalizedOptions);
+    shouldScheduleRankedCheckpointRestoreInSetup(manager, hasInputSeed, normalizedOptions) &&
+    (!restoredFromSavedState || (restoredFromRankedLocalMirror && hasRankedCheckpointAuthTokenForSetup(manager)));
   manager.rankCheckpointRestorePending = !!manager.needsRankedCheckpointRestore;
   if (!skipStartTiles && !restoredFromSavedState) {
     placeStoneTilesForSetup(manager);

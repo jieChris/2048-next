@@ -1442,6 +1442,14 @@ function shouldAutoLoadOnlineLeaderboard() {
     var candidates = [];
     if (remoteCheckpoint) candidates.push({ source: "remote", data: remoteCheckpoint });
     if (localMirror) candidates.push({ source: "local", data: localMirror });
+    candidates.sort(function (a, b) {
+      var at = resolveRankedCheckpointTimestampMs(a && a.data);
+      var bt = resolveRankedCheckpointTimestampMs(b && b.data);
+      if (at !== bt) return bt - at;
+      if (a.source === "remote" && b.source !== "remote") return -1;
+      if (b.source === "remote" && a.source !== "remote") return 1;
+      return 0;
+    });
     return candidates;
   }
 
