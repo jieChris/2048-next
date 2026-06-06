@@ -174,4 +174,83 @@ test.describe("Home user display", () => {
     expect(Math.abs(Number(layout.gap) - 3)).toBeLessThanOrEqual(1);
     expect(Math.abs(Number(layout.combinedWidth) - Number(layout.rowWidth))).toBeLessThanOrEqual(1);
   });
+
+  test("mobile board starts before a slow ranked session request completes", async ({ page }) => {
+    await page.setViewportSize({ width: 414, height: 896 });
+    await page.route("**/api/ranked-session/start", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 10_000));
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false })
+      });
+    });
+    await page.route("**/api/leaderboard**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+    await page.route("**/api/user/**/records**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+    await page.route("**/api/ranked-checkpoint**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: null })
+      });
+    });
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "slow_ranked_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "12");
+      window.localStorage.removeItem("ranked_session_active:v1:standard_4x4_pow2_no_undo");
+      window.localStorage.removeItem("ranked_session_prefetch:v1:standard_4x4_pow2_no_undo");
+    });
+
+    const response = await page.goto("/2048.html?slow-ranked-layout-smoke=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+
+    await page.waitForFunction(
+      () => {
+        const manager = (window as any).game_manager;
+        return !!manager && !!manager.actuator;
+      },
+      null,
+      { timeout: 3_000 }
+    );
+
+    const layout = await page.evaluate(() => {
+      const rect = (selector: string) => {
+        const element = document.querySelector(selector);
+        const bounds = element?.getBoundingClientRect();
+        if (!bounds) return null;
+        return {
+          width: bounds.width,
+          height: bounds.height
+        };
+      };
+      return {
+        game: rect(".game-container"),
+        grid: rect(".grid-container"),
+        firstCell: rect(".grid-cell"),
+        tileContainer: rect(".tile-container"),
+        tileCount: document.querySelectorAll(".tile").length
+      };
+    });
+
+    expect(layout.game?.width).toBeGreaterThanOrEqual(390);
+    expect(layout.grid?.width).toBeGreaterThanOrEqual(370);
+    expect(layout.tileContainer?.width).toBeGreaterThanOrEqual(370);
+    expect(layout.firstCell?.width).toBeGreaterThanOrEqual(80);
+    expect(layout.tileCount).toBeGreaterThan(0);
+  });
 });

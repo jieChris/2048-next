@@ -75,7 +75,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
     });
   }
   await runBootstrapPipeline(pageId);
-  await bootstrapRankedSessionForHomeFamilyPage(pageId);
+  void bootstrapRankedSessionForHomeFamilyPage(pageId).catch(() => {});
   registerEngineFacade(
     typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
   );
