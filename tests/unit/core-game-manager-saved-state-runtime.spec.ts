@@ -691,6 +691,7 @@ describe("core game manager saved state runtime", () => {
     expect(payload).toEqual({
       timer_status: 0,
       duration_ms: 1234,
+      timer_started_at_ms: null,
       has_game_started: true,
       timer_frozen: true
     });

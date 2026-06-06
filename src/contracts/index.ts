@@ -659,7 +659,7 @@ export const CORE_CONTRACT_COVERAGE_MATRIX: readonly ContractCoverageMatrixEntry
     assertions: [
       "tests/unit/contracts.spec.ts::contracts history owner diagnostics helpers",
       "tests/smoke/history-records-owner-filter.smoke.spec.ts::separates guest/account records and filters by owner",
-      "tests/smoke/history-records-view-models.smoke.spec.ts::renders record head and final board"
+      "tests/smoke/history-records-view-list-export.smoke.spec.ts::supports export-all and single-record export"
     ]
   },
   {

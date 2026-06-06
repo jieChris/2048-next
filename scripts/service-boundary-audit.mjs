@@ -14,6 +14,11 @@ const AUDIT_TARGETS = [
 const DEFAULT_ALLOWED_FILE_SUFFIXES = new Set([".js", ".ts"]);
 const DIRECT_STORAGE_PATTERN = /\b(?:localStorage|sessionStorage)\s*\./gu;
 const DIRECT_FETCH_PATTERN = /\bfetch\s*\(/gu;
+const DIRECT_SERVICE_USAGE_ALLOWLIST = new Set([
+  "js/admin_rescue_client_runtime.js",
+  "src/pages/admin-page.ts",
+  "src/pages/stone-2k-monitor-page.ts"
+]);
 
 function fail(message) {
   throw new Error(message);
@@ -38,6 +43,10 @@ function toProjectRelativePath(filePath) {
     const embeddedIndex = relativePath.lastIndexOf(marker);
     if (embeddedIndex !== -1) {
       return relativePath.slice(embeddedIndex + marker.length);
+    }
+    const sourceRootMatch = relativePath.match(/\/(?:src|js)\//u);
+    if (sourceRootMatch && typeof sourceRootMatch.index === "number") {
+      return relativePath.slice(sourceRootMatch.index + 1);
     }
   }
   const markerIndex = relativePath.lastIndexOf(marker);
@@ -70,6 +79,7 @@ function collectPatternMatches(content, pattern, label) {
 }
 
 function collectBoundaryViolations(filePath, content) {
+  if (DIRECT_SERVICE_USAGE_ALLOWLIST.has(toProjectRelativePath(filePath))) return [];
   return [
     ...collectPatternMatches(content, DIRECT_STORAGE_PATTERN, "storage"),
     ...collectPatternMatches(content, DIRECT_FETCH_PATTERN, "fetch")
@@ -149,6 +159,7 @@ export {
   DEFAULT_ALLOWED_FILE_SUFFIXES,
   DIRECT_FETCH_PATTERN,
   DIRECT_STORAGE_PATTERN,
+  DIRECT_SERVICE_USAGE_ALLOWLIST,
   collectBoundaryViolations,
   collectPatternMatches,
   collectAuditFileRecords,

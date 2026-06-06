@@ -53,7 +53,6 @@ function resolveStatsPanelLanguage(manager, documentLike) {
   } catch (_errStorage) {}
   try {
     var root = documentLike && documentLike.documentElement ? documentLike.documentElement : null;
-    if (!root && windowLike && windowLike.document) root = windowLike.document.documentElement;
     if (root && typeof root.getAttribute === "function") {
       lang = normalizeStatsPanelLanguage(root.getAttribute("data-ui-lang") || root.getAttribute("lang"));
       if (lang) return lang;

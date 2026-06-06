@@ -297,7 +297,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalFetch = window.fetch.bind(window);
       window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
         const url = typeof input === "string" ? input : String((input as Request).url || input);
-        if (url.includes("/records")) {
+        const pathname = new URL(url, window.location.href).pathname;
+        const method = String((init && init.method) || "GET").toUpperCase();
+        if (pathname === "/api/records" && method === "POST") {
           let parsedPayload: Record<string, unknown> | null = null;
           if (init && typeof init.body === "string" && init.body.length > 0) {
             try {
@@ -420,7 +422,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalFetch = window.fetch.bind(window);
       window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
         const url = typeof input === "string" ? input : String((input as Request).url || input);
-        if (url.includes("/records")) {
+        const pathname = new URL(url, window.location.href).pathname;
+        const method = String((init && init.method) || "GET").toUpperCase();
+        if (pathname === "/api/records" && method === "POST") {
           let parsedPayload: Record<string, unknown> | null = null;
           if (init && typeof init.body === "string" && init.body.length > 0) {
             try {
@@ -648,7 +652,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const originalFetch = window.fetch.bind(window);
       window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
         const url = typeof input === "string" ? input : String((input as Request).url || input);
-        if (url.includes("/records")) {
+        const pathname = new URL(url, window.location.href).pathname;
+        const method = String((init && init.method) || "GET").toUpperCase();
+        if (pathname === "/api/records" && method === "POST") {
           let parsedPayload: Record<string, unknown> | null = null;
           if (init && typeof init.body === "string" && init.body.length > 0) {
             try {

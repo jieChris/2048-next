@@ -122,7 +122,7 @@ function normalizeNoXSelectionLanguage(value) {
   return "";
 }
 
-function resolveNoXSelectionLanguage(windowLike) {
+function resolveNoXSelectionLanguage(manager, windowLike) {
   var lang = "";
   try {
     if (windowLike && windowLike.UII18N && typeof windowLike.UII18N.getLanguage === "function") {
@@ -138,8 +138,7 @@ function resolveNoXSelectionLanguage(windowLike) {
     if (lang) return lang;
   } catch (_errStorage) {}
   try {
-    var documentLike = windowLike && windowLike.document ? windowLike.document : null;
-    if (!documentLike && typeof document !== "undefined") documentLike = document;
+    var documentLike = resolveManagerDocumentLike(manager);
     var root = documentLike && documentLike.documentElement ? documentLike.documentElement : null;
     if (root && typeof root.getAttribute === "function") {
       lang = normalizeNoXSelectionLanguage(root.getAttribute("data-ui-lang") || root.getAttribute("lang"));
@@ -149,13 +148,13 @@ function resolveNoXSelectionLanguage(windowLike) {
   return "zh";
 }
 
-function buildNoXSelectionTitle(windowLike) {
-  if (resolveNoXSelectionLanguage(windowLike) === "en") return "Choose forbidden X";
+function buildNoXSelectionTitle(manager, windowLike) {
+  if (resolveNoXSelectionLanguage(manager, windowLike) === "en") return "Choose forbidden X";
   return "\u9009\u62e9 NO X \u7684 X";
 }
 
-function buildNoXSelectionSubtitle(windowLike) {
-  if (resolveNoXSelectionLanguage(windowLike) === "en") return "Click one option. If X appears, game ends.";
+function buildNoXSelectionSubtitle(manager, windowLike) {
+  if (resolveNoXSelectionLanguage(manager, windowLike) === "en") return "Click one option. If X appears, game ends.";
   return "\u70b9\u51fb\u9009\u62e9 64~32k\uff0c\u82e5\u5408\u6210\u51fa X \u6570\uff0c\u672c\u5c40\u7acb\u5373\u7ed3\u675f\u3002";
 }
 
@@ -215,7 +214,7 @@ function ensureNoXSelectionOverlayForManager(manager) {
   panel.style.boxSizing = "border-box";
 
   var title = documentLike.createElement("div");
-  title.textContent = buildNoXSelectionTitle(windowLike);
+  title.textContent = buildNoXSelectionTitle(manager, windowLike);
   title.style.fontSize = "20px";
   title.style.fontWeight = "700";
   title.style.color = "#5a5249";
@@ -223,7 +222,7 @@ function ensureNoXSelectionOverlayForManager(manager) {
   panel.appendChild(title);
 
   var subtitle = documentLike.createElement("div");
-  subtitle.textContent = buildNoXSelectionSubtitle(windowLike);
+  subtitle.textContent = buildNoXSelectionSubtitle(manager, windowLike);
   subtitle.style.fontSize = "14px";
   subtitle.style.color = "#7b7167";
   subtitle.style.marginBottom = "14px";
