@@ -102,6 +102,7 @@ body[data-page="game"] h1.title {
   display: block;
   width: 234px;
   height: 106.2621px;
+  margin-left: -25px;
   max-width: none;
 }
 
@@ -160,7 +161,7 @@ body[data-page="game"] h1.title {
   align-items: flex-end;
   justify-content: center;
   background: #bbada0;
-  padding: 18px 4px 8px;
+  padding: 18px 10px 1px;
   font-size: 25px;
   height: 55px;
   line-height: 1.05;
@@ -170,10 +171,11 @@ body[data-page="game"] h1.title {
   margin-top: 8px;
   text-align: center;
   box-sizing: border-box;
-  width: 75px;
-  max-width: 75px;
+  flex: 0 0 auto;
+  width: auto;
+  max-width: none;
   min-width: 75px;
-  overflow: hidden;
+  overflow: visible;
   white-space: nowrap;
 }
 
