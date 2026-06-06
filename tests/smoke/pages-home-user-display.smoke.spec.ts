@@ -253,4 +253,52 @@ test.describe("Home user display", () => {
     expect(layout.firstCell?.width).toBeGreaterThanOrEqual(80);
     expect(layout.tileCount).toBeGreaterThan(0);
   });
+
+  test("mobile board starts before deferred home scripts finish loading", async ({ page }) => {
+    await page.setViewportSize({ width: 414, height: 896 });
+    await page.route("**/js/announcement_manager.js", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 10_000));
+      await route.continue();
+    });
+    await page.route("**/js/online_leaderboard_runtime.js", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 10_000));
+      await route.continue();
+    });
+
+    const response = await page.goto("/2048.html?slow-deferred-scripts-smoke=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+
+    await page.waitForFunction(
+      () => {
+        const manager = (window as any).game_manager;
+        return !!manager && !!manager.actuator;
+      },
+      null,
+      { timeout: 3_000 }
+    );
+
+    const layout = await page.evaluate(() => {
+      const rect = (selector: string) => {
+        const element = document.querySelector(selector);
+        const bounds = element?.getBoundingClientRect();
+        if (!bounds) return null;
+        return {
+          width: bounds.width,
+          height: bounds.height
+        };
+      };
+      return {
+        grid: rect(".grid-container"),
+        tileContainer: rect(".tile-container"),
+        tileCount: document.querySelectorAll(".tile").length
+      };
+    });
+
+    expect(layout.grid?.width).toBeGreaterThanOrEqual(370);
+    expect(layout.tileContainer?.width).toBeGreaterThanOrEqual(370);
+    expect(layout.tileCount).toBeGreaterThan(0);
+  });
 });

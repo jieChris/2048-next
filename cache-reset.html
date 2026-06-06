@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <title>2048 缓存修复</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #faf8ef;
+      color: #776e65;
+      font: 18px/1.6 Arial, "Microsoft YaHei", sans-serif;
+      text-align: center;
+    }
+
+    main {
+      width: min(88vw, 420px);
+    }
+
+    a {
+      color: #8f7a66;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>正在修复缓存</h1>
+    <p>请稍等，页面会自动返回 2048。</p>
+    <p><a id="fallback-link" href="./2048.html">手动返回首页</a></p>
+  </main>
+  <script>
+    (function () {
+      var target = "./2048.html?cache_reset=" + Date.now();
+      var fallbackLink = document.getElementById("fallback-link");
+      if (fallbackLink) fallbackLink.href = target;
+
+      function clearCaches() {
+        if (!("caches" in window) || !window.caches || typeof caches.keys !== "function") {
+          return Promise.resolve();
+        }
+        return caches.keys().then(function (names) {
+          return Promise.all(names.map(function (name) {
+            return caches.delete(name);
+          }));
+        });
+      }
+
+      function unregisterServiceWorkers() {
+        if (!("serviceWorker" in navigator) || !navigator.serviceWorker.getRegistrations) {
+          return Promise.resolve();
+        }
+        return navigator.serviceWorker.getRegistrations().then(function (registrations) {
+          return Promise.all(registrations.map(function (registration) {
+            return registration.unregister();
+          }));
+        });
+      }
+
+      Promise.resolve()
+        .then(unregisterServiceWorkers)
+        .then(clearCaches)
+        .catch(function () {})
+        .then(function () {
+          window.location.replace(target);
+        });
+    })();
+  </script>
+</body>
+</html>

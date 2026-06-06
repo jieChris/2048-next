@@ -4,10 +4,16 @@ import { bootstrapRankedSessionForHomeFamilyPage } from "../bootstrap/ranked-ses
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
-import { getPageManifest } from "./runtime-manifest";
+import { getPageManifest, type RuntimeCapability } from "./runtime-manifest";
 import { resolveHomeFamilyScriptsByCapabilities } from "./home-family-shared";
 
 const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
+const GAME_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
+  "core",
+  "capped-core",
+  "standard-startup",
+  "capped-startup"
+]);
 
 function readNightBackgroundPreference(): boolean {
   if (typeof window === "undefined") {
@@ -60,6 +66,24 @@ async function runBootstrapPipeline(pageId: string): Promise<void> {
   }
 }
 
+async function loadHomeFamilyRuntimeScripts(capabilities: readonly RuntimeCapability[]): Promise<void> {
+  const startupCapabilities = capabilities.filter((capability) =>
+    GAME_STARTUP_CAPABILITIES.has(capability)
+  );
+  if (startupCapabilities.length === 0 || startupCapabilities.length === capabilities.length) {
+    await loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(capabilities));
+    return;
+  }
+
+  const deferredCapabilities = capabilities.filter(
+    (capability) => !GAME_STARTUP_CAPABILITIES.has(capability)
+  );
+  await loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(startupCapabilities));
+  void loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(deferredCapabilities)).catch(
+    () => {}
+  );
+}
+
 export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   const manifest = getPageManifest(pageId);
   if (!manifest) {
@@ -79,6 +103,5 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   registerEngineFacade(
     typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
   );
-  const scripts = resolveHomeFamilyScriptsByCapabilities(manifest.capabilities);
-  await loadLegacyScriptsSequentially(scripts);
+  await loadHomeFamilyRuntimeScripts(manifest.capabilities);
 }
