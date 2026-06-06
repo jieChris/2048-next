@@ -75,6 +75,7 @@ export function applyTimerModuleSettingsPageInit(input: {
     applyUi({
       toggle,
       noteElement,
+      documentLike: source.documentLike,
       windowLike: source.windowLike,
       timerModuleRuntime: source.timerModuleRuntime,
       retryDelayMs: fallbackRetryDelay,

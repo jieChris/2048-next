@@ -34,7 +34,7 @@
   var COPY = {
     zh: {
       pageTitle: "2048 账号设置",
-      kicker: "2048 Online Hub",
+      kicker: "2048 在线中心",
       title: "账号设置",
       subtitle: "在这里统一管理昵称、密码和登录状态。",
       navAccount: "返回账号中心",
@@ -681,4 +681,3 @@
     init();
   }
 })(typeof window !== "undefined" ? window : undefined);
-

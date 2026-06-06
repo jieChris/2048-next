@@ -55,6 +55,7 @@ describe("bootstrap timer module settings page host", () => {
       expect.objectContaining({
         toggle,
         noteElement: note,
+        documentLike: expect.any(Object),
         retryDelayMs: 80,
         scheduleRetry: expect.any(Function)
       })

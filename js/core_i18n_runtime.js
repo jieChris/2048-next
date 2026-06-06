@@ -140,12 +140,17 @@
     { s: "#top-settings-btn", a: "title", zh: "设置", en: "Settings" },
     { s: "#top-restart-btn", a: "title", zh: "新游戏", en: "New Game" },
     { s: "#top-restart-btn", a: "aria-label", zh: "新游戏", en: "New Game" },
+    { s: ".site-logo", a: "alt", zh: "2048 标志", en: "2048 Logo" },
     { s: "#top-undo-btn", a: "title", zh: "撤回", en: "Undo" },
     { s: "#practice-mobile-undo-btn", a: "title", zh: "撤回", en: "Undo" },
     { s: "#practice-mobile-undo-btn", a: "aria-label", zh: "撤回", en: "Undo" },
     { s: "#timerbox-toggle-btn", a: "title", zh: "展开计时器", en: "Toggle Timers" },
     { s: "#timerbox-toggle-btn", a: "aria-label", zh: "展开计时器", en: "Toggle Timers" },
-    { s: "#history-keyword", a: "placeholder", zh: "模式/分数/ID", en: "Mode / Score / ID" },
+    { s: ".timer-scroll-btn[data-scroll-dir='-1']", a: "title", zh: "向上滚动", en: "Scroll Up" },
+    { s: ".timer-scroll-btn[data-scroll-dir='-1']", a: "aria-label", zh: "向上滚动", en: "Scroll Up" },
+    { s: ".timer-scroll-btn[data-scroll-dir='1']", a: "title", zh: "向下滚动", en: "Scroll Down" },
+    { s: ".timer-scroll-btn[data-scroll-dir='1']", a: "aria-label", zh: "向下滚动", en: "Scroll Down" },
+    { s: "#history-keyword", a: "placeholder", zh: "模式/分数/编号", en: "Mode / Score / ID" },
     { s: "#palette-name-input", a: "placeholder", zh: "输入色板名称", en: "Palette name" }
   ];
 
@@ -196,12 +201,12 @@
     ["北欧冰霜", "Nordic Frost"], ["黑金奢华", "Black Gold"], ["燕园秋色", "Yanyuan Autumn"], ["马年大吉", "Year of the Horse"],
     ["合并数字，合成 2048 方块！ 本页为无撤回版。", "Create the 2048 tile! This page has no undo."],
     ["合并数字，合成 2048 方块！ 按 Z 可撤销。", "Merge numbers to create the 2048 tile! Press Z to undo."],
-    ["玩法说明： 使用 方向键、WASD、KHJL 移动方块。本页不支持撤回，按 R 键重开游戏。当两个相同数字的方块接触时，它们会 合并成一个！", "How to play: Use Arrow keys, WASD, or KHJL to move tiles. Undo is disabled on this page. Press R to restart. When two tiles with the same number touch, they merge into one."],
-    ["玩法说明： 使用 方向键、WASD、KHJL 移动方块，按 Z 键撤回上一步，按 R 键重开游戏。当两个相同数字的方块接触时，它们会 合并成一个！", "How to play: Use Arrow keys, WASD, or KHJL to move tiles. Press Z to undo and R to restart. When two tiles with the same number touch, they merge into one."],
+    ["玩法说明： 使用方向键、WASD 或 KHJL 移动方块。本页不支持撤回。按 R 重新开始。当两个相同数字的方块接触时，它们会合并成一个！", "How to play: Use Arrow keys, WASD, or KHJL to move tiles. Undo is disabled on this page. Press R to restart. When two tiles with the same number touch, they merge into one."],
+    ["玩法说明： 使用方向键、WASD 或 KHJL 移动方块。按 Z 撤回，按 R 重新开始。当两个相同数字的方块接触时，它们会合并成一个！", "How to play: Use Arrow keys, WASD, or KHJL to move tiles. Press Z to undo and R to restart. When two tiles with the same number touch, they merge into one."],
     ["方向键", "Arrow keys"],
     ["移动方块", "move tiles"],
-    ["按 R 键重开游戏", "press R to restart"],
-    ["按 Z 键撤回上一步", "press Z to undo one step"],
+    ["按 R 重新开始", "press R to restart"],
+    ["按 Z 撤回一步", "press Z to undo one step"],
     ["当两个相同数字的方块接触时，它们会 合并成一个！", "When two tiles with the same number touch, they merge into one!"],
     ["公告：综合考虑取消开源，欢迎访问 2048next.cn。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 2048next.cn。", "公告：综合考虑取消开源，欢迎访问 2048next.cn。本站（taihe.fun）在该项目完成后将关闭入口，仅开放 2048next.cn。"],
     ["欢迎加入中国第一2048交流群：", "Join the 2048 community group: "],
@@ -622,7 +627,7 @@
       if (exp) {
         setTextIfChanged(exp, lang === "en"
           ? "How to play: use Arrow keys, WASD, or KHJL to move tiles. Undo is disabled on this page. Press R to restart. When two equal tiles touch, they merge into one."
-          : "玩法说明： 使用 方向键、WASD、KHJL 移动方块。本页不支持撤回，按 R 键重开游戏。当两个相同数字的方块接触时，它们会合并成一个！");
+          : "玩法说明： 使用方向键、WASD 或 KHJL 移动方块。本页不支持撤回。按 R 重新开始。当两个相同数字的方块接触时，它们会合并成一个！");
       }
       var copy = global.document.querySelectorAll(".mobile-hide-project-copy");
       if (copy[0]) {
@@ -644,7 +649,7 @@
       if (undoExp) {
         setTextIfChanged(undoExp, lang === "en"
           ? "How to play: use Arrow keys, WASD, or KHJL to move tiles. Press Z to undo and R to restart. When two equal tiles touch, they merge into one."
-          : "玩法说明： 使用 方向键、WASD、KHJL 移动方块，按 Z 键撤回上一步，按 R 键重开游戏。当两个相同数字的方块接触时，它们会 合并成一个！");
+          : "玩法说明： 使用方向键、WASD 或 KHJL 移动方块。按 Z 撤回，按 R 重新开始。当两个相同数字的方块接触时，它们会合并成一个！");
       }
     }
   }

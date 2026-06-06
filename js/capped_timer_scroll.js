@@ -8,10 +8,26 @@
   var suppressObserverDepth = 0;
   var immediateUpdateQueued = false;
 
+  function readTimerScrollLanguage() {
+    try {
+      var attr = document && document.documentElement ? String(document.documentElement.getAttribute("data-ui-lang") || "") : "";
+      if (attr.toLowerCase().indexOf("en") === 0) return "en";
+      if (attr.toLowerCase().indexOf("zh") === 0) return "zh";
+    } catch (_err) {}
+    try {
+      var stored = window.localStorage ? String(window.localStorage.getItem("ui_language_v1") || "") : "";
+      if (stored.toLowerCase().indexOf("en") === 0) return "en";
+    } catch (_err2) {}
+    return "zh";
+  }
+
   function setScrollButtonVisual(button, dir) {
     if (!button) return;
     var isUp = String(dir) === "-1";
-    var label = isUp ? "\u4E0A\u79FB" : "\u4E0B\u79FB";
+    var isEnglish = readTimerScrollLanguage() === "en";
+    var label = isEnglish
+      ? (isUp ? "Scroll Up" : "Scroll Down")
+      : (isUp ? "\u5411\u4E0A\u6EDA\u52A8" : "\u5411\u4E0B\u6EDA\u52A8");
     button.setAttribute("aria-label", label);
     button.setAttribute("title", label);
     button.innerHTML = isUp

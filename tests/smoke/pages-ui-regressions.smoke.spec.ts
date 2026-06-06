@@ -2,6 +2,153 @@ import { expect, test } from "@playwright/test";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  async function routeI18nAuditApi(page: import("@playwright/test").Page) {
+    await page.route("**/api/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("/user/me") || url.includes("/user/12")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 12, nickname: "小明", created_at: "2026-03-21 15:45:05" }
+          })
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+  }
+
+  async function collectVisibleLanguageTexts(page: import("@playwright/test").Page) {
+    return await page.evaluate(() => {
+      const results: Array<{ kind: string; selector: string; text: string }> = [];
+      const seen = new Set<string>();
+      const ignoredIds = new Set(["user-value-name"]);
+
+      function isVisible(element: Element) {
+        const styles = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return styles.display !== "none" && styles.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+      }
+
+      function selectorFor(element: Element) {
+        return element.id ? "#" + element.id : element.tagName.toLowerCase();
+      }
+
+      function add(kind: string, element: Element | Document, textLike: unknown) {
+        const text = String(textLike || "").replace(/\s+/g, " ").trim();
+        if (!text) return;
+        const selector = element instanceof Document ? "document" : selectorFor(element);
+        if (selector.startsWith("#") && ignoredIds.has(selector.slice(1))) return;
+        const key = kind + "|" + selector + "|" + text;
+        if (seen.has(key)) return;
+        seen.add(key);
+        results.push({ kind, selector, text });
+      }
+
+      for (const element of Array.from(document.querySelectorAll("body *"))) {
+        if (!isVisible(element)) continue;
+        if (
+          element.childNodes.length === 1 &&
+          element.childNodes[0] &&
+          element.childNodes[0].nodeType === Node.TEXT_NODE
+        ) {
+          add("text", element, element.textContent);
+        }
+        for (const attr of ["title", "aria-label", "placeholder", "alt"]) {
+          if (element.hasAttribute(attr)) add(attr, element, element.getAttribute(attr));
+        }
+      }
+      add("document.title", document, document.title);
+      return results;
+    });
+  }
+
+  function stripAllowedChinesePageTerms(text: string) {
+    return text
+      .replace(/\bIPS\b/gu, "")
+      .replace(/\bWASD\b/gu, "")
+      .replace(/\bKHJL\b/gu, "")
+      .replace(/\bNo X\b/gu, "")
+      .replace(/\b[RKZ]\b/gu, "")
+      .replace(/\b\d+k\b/giu, "");
+  }
+
+  test("key pages keep Chinese and English UI copy separated", async ({ page }) => {
+    const pages = [
+      "/2048.html",
+      "/account.html",
+      "/account_settings.html",
+      "/register.html",
+      "/password.html",
+      "/user.html?id=12&nickname=%E5%B0%8F%E6%98%8E",
+      "/history.html",
+      "/modes.html",
+      "/Practice_board.html"
+    ];
+
+    for (const lang of ["zh", "en"] as const) {
+      for (const target of pages) {
+        await routeI18nAuditApi(page);
+        await page.addInitScript((value) => {
+          window.localStorage.setItem("ui_language_v1", value);
+          window.localStorage.setItem("practice_guide_shown_v2", "1");
+          window.localStorage.setItem("practice_guide_mobile_shown_v1", "1");
+        }, lang);
+        const response = await page.goto(target, { waitUntil: "domcontentloaded" });
+        expect(response, `${target} response should exist`).not.toBeNull();
+        expect(response?.ok(), `${target} response should be 2xx`).toBeTruthy();
+        await expect(page.locator("body")).toBeVisible();
+        await page.waitForTimeout(800);
+
+        const texts = await collectVisibleLanguageTexts(page);
+        const violations = texts.filter((item) => {
+          if (lang === "en") return /[\u3400-\u9fff]/u.test(item.text);
+          return /[A-Za-z]/u.test(stripAllowedChinesePageTerms(item.text));
+        });
+
+        expect(violations, `${target} ${lang} language violations`).toEqual([]);
+      }
+    }
+  });
+
+  test("timer module settings description updates immediately when language toggles", async ({ page }) => {
+    await routeI18nAuditApi(page);
+    await page.addInitScript(() => {
+      window.localStorage.setItem("ui_language_v1", "en");
+      window.localStorage.setItem("home_guide_seen_v1", "1");
+      window.localStorage.setItem("settings_timer_module_view_v1", "timer");
+    });
+
+    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Home response should exist").not.toBeNull();
+    expect(response?.ok(), "Home response should be 2xx").toBeTruthy();
+    await waitForWindowCondition(
+      page,
+      () => typeof (window as any).openSettingsModal === "function",
+      "settings modal opener ready"
+    );
+
+    await page.evaluate(() => {
+      (window as any).openSettingsModal();
+    });
+    await expect(page.locator("#settings-modal")).toHaveCSS("display", "flex");
+    await expect(page.locator("#timer-module-view-label")).toHaveText(
+      "Turn on to show timers, turn off to show leaderboard."
+    );
+
+    await page.click("label.language-settings-switch");
+
+    await expect(page.locator("#timer-module-view-label")).toHaveText(
+      "开启时显示计时器，关闭时显示排行榜。"
+    );
+  });
+
   async function seedBrokenPracticeTimerSave(page: import("@playwright/test").Page) {
     const seedResponse = await page.goto("/Practice_board.html?practice_fresh=1", {
       waitUntil: "domcontentloaded"

@@ -6,6 +6,7 @@
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var STORAGE_TOKEN_KEY = "2048_auth_token_v1";
   var STORAGE_USER_ID_KEY = "2048_auth_userId_v1";
+  var STORAGE_NICKNAME_KEY = "2048_auth_nickname_v1";
   var DEFAULT_API_TIMEOUT_MS = 12000;
   var AUTH_API_TIMEOUT_MS = 30000;
   var RECORD_REPLAY_API_TIMEOUT_MS = 30000;
@@ -73,7 +74,7 @@
     var migrations = [
       { oldKey: "token",    newKey: "2048_auth_token_v1" },
       { oldKey: "userId",   newKey: "2048_auth_userId_v1" },
-      { oldKey: "nickname", newKey: "2048_auth_nickname_v1" }
+      { oldKey: "nickname", newKey: STORAGE_NICKNAME_KEY }
     ];
     try {
       var storage = resolveLocalStorage();
@@ -135,11 +136,12 @@
     var COPY = {
     zh: {
       pageTitle: "2048 用户主页",
-      kicker: "2048 Online Hub",
+      kicker: "2048 在线中心",
       title: "用户主页",
       subtitle: "查看该用户历史记录，可按时间/分数排序。",
       navHome: "回首页",
       navAccount: "账号中心",
+      navLogout: "退出账号",
       infoHeading: "基础信息",
       labelName: "昵称：",
       labelCreated: "注册时间：",
@@ -189,6 +191,7 @@
       subtitle: "View user history records sorted by time or score.",
       navHome: "Home",
       navAccount: "Account",
+      navLogout: "Sign Out",
       infoHeading: "Basic Info",
       labelName: "Nickname:",
       labelCreated: "Created:",
@@ -290,7 +293,8 @@
   }
 
   function resolveProfilePageTitle() {
-    var baseTitle = "\u7528\u6237\u4e3b\u9875";
+    var baseTitle = currentLang === "en" ? "User Profile" : "\u7528\u6237\u4e3b\u9875";
+    if (currentLang === "en") return baseTitle;
     if (isOwnProfile) return baseTitle;
     var nickname = toText(resolvedProfileNickname || targetNicknameHint).trim();
     return nickname ? baseTitle + "-" + nickname : baseTitle;
@@ -1816,6 +1820,7 @@
       "user-subtitle": resolveProfileSubtitleText(),
       "user-nav-home": t("navHome"),
       "user-nav-account": t("navAccount"),
+      "user-nav-logout": t("navLogout"),
       "user-info-heading": t("infoHeading"),
       "user-label-name": t("labelName"),
       "user-label-created": t("labelCreated"),
@@ -1874,6 +1879,12 @@
     setI18nReady(true);
   }
 
+  function clearAuthState() {
+    removeLocalStorageItem(STORAGE_TOKEN_KEY);
+    removeLocalStorageItem(STORAGE_USER_ID_KEY);
+    removeLocalStorageItem(STORAGE_NICKNAME_KEY);
+  }
+
   function bindEvents() {
     var refreshBtn = byId("user-record-refresh");
     var modeSelect = byId("user-record-mode");
@@ -1882,8 +1893,15 @@
     var visibilitySelect = byId("user-record-visibility");
     var prevBtn = byId("user-record-prev");
     var nextBtn = byId("user-record-next");
+    var logoutBtn = byId("user-nav-logout");
 
     if (refreshBtn) refreshBtn.addEventListener("click", function () { refreshRecords(false); });
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", function () {
+        clearAuthState();
+        global.location.href = "account.html";
+      });
+    }
     if (modeSelect) modeSelect.addEventListener("change", function () { refreshRecords(true); });
     if (sortBySelect) sortBySelect.addEventListener("change", function () { refreshRecords(true); });
     if (orderSelect) orderSelect.addEventListener("change", function () { refreshRecords(true); });

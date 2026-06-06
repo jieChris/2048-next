@@ -47,6 +47,135 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page).toHaveTitle("用户主页");
   });
 
+  test("user profile logout button clears current account and opens account center", async ({ page }) => {
+    await page.addInitScript(() => {
+      if (!window.location.pathname.endsWith("/user.html")) return;
+      window.localStorage.setItem("2048_auth_token_v1", "test-token-logout");
+      window.localStorage.setItem("2048_auth_userId_v1", "12");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Hui");
+    });
+
+    await page.route("**/api/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("/user/me")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 12, nickname: "Hui", created_at: "2026-03-21 15:45:05" }
+          })
+        });
+        return;
+      }
+      if (url.includes("/user/12/records")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true, data: [] })
+        });
+        return;
+      }
+      if (url.includes("/user/12")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 12, nickname: "Hui", created_at: "2026-03-21 15:45:05" }
+          })
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    const response = await page.goto("/user.html?id=12&nickname=Hui", { waitUntil: "domcontentloaded" });
+    expect(response, "User response should exist").not.toBeNull();
+    expect(response?.ok(), "User response should be 2xx").toBeTruthy();
+
+    await expect(page.locator("#user-nav-account")).toBeVisible();
+    await expect(page.locator("#user-nav-logout")).toBeVisible();
+
+    await page.click("#user-nav-logout");
+    await page.waitForURL(/account\.html/);
+
+    const authSnapshot = await page.evaluate(() => ({
+      token: window.localStorage.getItem("2048_auth_token_v1"),
+      userId: window.localStorage.getItem("2048_auth_userId_v1"),
+      nickname: window.localStorage.getItem("2048_auth_nickname_v1")
+    }));
+
+    expect(authSnapshot).toEqual({
+      token: null,
+      userId: null,
+      nickname: null
+    });
+  });
+
+  test("user info card keeps intrinsic height beside taller record card", async ({ page }) => {
+    await page.setViewportSize({ width: 1117, height: 837 });
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "test-token-info-card");
+      window.localStorage.setItem("2048_auth_userId_v1", "12");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Hui");
+    });
+
+    await page.route("**/api/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("/user/me") || url.includes("/user/12")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 12, nickname: "Hui", created_at: "2026-03-21 15:45:05" }
+          })
+        });
+        return;
+      }
+      if (url.includes("/user/12/records")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: [
+              { id: 1, mode: "classic", score: 5012, updated_at: "2026-06-01 10:19:29" }
+            ]
+          })
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    const response = await page.goto("/user.html?id=12&nickname=Hui", { waitUntil: "domcontentloaded" });
+    expect(response, "User response should exist").not.toBeNull();
+    expect(response?.ok(), "User response should be 2xx").toBeTruthy();
+    await expect(page.locator(".user-info-card")).toBeVisible();
+    await expect(page.locator(".user-record-card")).toBeVisible();
+
+    const heights = await page.evaluate(() => {
+      const infoCard = document.querySelector(".user-info-card");
+      const recordCard = document.querySelector(".user-record-card");
+      return {
+        info: infoCard ? infoCard.getBoundingClientRect().height : 0,
+        record: recordCard ? recordCard.getBoundingClientRect().height : 0
+      };
+    });
+
+    expect(heights.info).toBeLessThan(heights.record - 100);
+  });
+
   test("other user profile title is 用户主页-<用户名>", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "test-token-other");

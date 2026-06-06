@@ -25,12 +25,17 @@ body[data-page="user-profile"][data-i18n-ready="0"] {
 .user-grid {
   display: grid;
   grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+  align-items: start;
   gap: 14px;
 }
 
 .user-info-card,
 .user-record-card {
   padding: 14px;
+}
+
+.user-info-card {
+  align-self: start;
 }
 
 .user-info-lines {

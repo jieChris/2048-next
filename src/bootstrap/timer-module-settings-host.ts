@@ -84,6 +84,28 @@ function readUiLang(windowLike: unknown): "zh" | "en" {
   }
 }
 
+function resolveLeaderboardSupport(windowLike: unknown, manager: unknown, documentLike: unknown): boolean {
+  const onlineRuntime = toRecord(toRecord(windowLike).OnlineLeaderboardRuntime);
+  const isModeSupported = asFunction<(modeKey: unknown) => boolean>(onlineRuntime.isLeaderboardModeSupported);
+  if (!isModeSupported) return false;
+
+  const body = toRecord(documentLike).body;
+  const bodyGetAttribute = asFunction<(name: string) => string | null>(toRecord(body).getAttribute);
+  const bodyMode = bodyGetAttribute ? resolveText(bodyGetAttribute.call(body, "data-mode-id")) : "";
+  const managerRecord = toRecord(manager);
+  const modeKey =
+    resolveText(managerRecord.modeKey) ||
+    resolveText(managerRecord.mode) ||
+    resolveText(toRecord(managerRecord.modeConfig).key) ||
+    bodyMode;
+
+  try {
+    return !!isModeSupported.call(onlineRuntime, modeKey);
+  } catch (_err) {
+    return false;
+  }
+}
+
 export interface LegacyUndoSettingsCleanupResult {
   hadToggle: boolean;
   didRemoveRow: boolean;
@@ -277,10 +299,13 @@ export function applyTimerModuleSettingsUi(input: {
       manager,
       fallbackViewMode: "timer"
     });
+    const hasLeaderboard = resolveLeaderboardSupport(windowLike, manager, source.documentLike);
+    const lang = readUiLang(windowLike);
     const settingsState = toRecord(
       resolveTimerModuleSettingsState({
         viewMode,
-        lang: readUiLang(windowLike)
+        hasLeaderboard,
+        lang
       })
     );
     const toggleRecord = toRecord(toggle);
@@ -292,7 +317,7 @@ export function applyTimerModuleSettingsUi(input: {
     );
     if (titleElement) {
       toRecord(titleElement).textContent = resolveText(
-        settingsState.toggleTitleText || (readUiLang(windowLike) === "en" ? "Timer Mode" : "\u8ba1\u65f6\u5668\u6a21\u5f0f")
+        settingsState.toggleTitleText || (lang === "en" ? "Timer Mode" : "\u8ba1\u65f6\u5668\u6a21\u5f0f")
       );
     }
     const switchLabel = querySelector(
@@ -307,15 +332,33 @@ export function applyTimerModuleSettingsUi(input: {
         (setAttribute as unknown as Function).call(
           switchLabel,
           "aria-label",
-          resolveText(settingsState.toggleTitleText || (readUiLang(windowLike) === "en" ? "Timer Mode" : "\u8ba1\u65f6\u5668\u6a21\u5f0f"))
+          resolveText(settingsState.toggleTitleText || (lang === "en" ? "Timer Mode" : "\u8ba1\u65f6\u5668\u6a21\u5f0f"))
         );
       }
+    }
+    const toggleLabel = getElementById(source.documentLike, "timer-module-view-label");
+    if (toggleLabel) {
+      toRecord(toggleLabel).textContent = resolveText(settingsState.toggleLabelText);
+    }
+    const closest = asFunction<(selector: string) => unknown>(toggleRecord.closest);
+    const row = closest ? (closest as unknown as Function).call(toggle, ".settings-row") : null;
+    if (row) {
+      toRecord(toRecord(row).style).display = settingsState.rowVisible === false ? "none" : "";
     }
     if (noteElement) {
       toRecord(noteElement).textContent = resolveText(settingsState.noteText);
     }
     if (syncMobileTimerboxUi) {
       syncMobileTimerboxUi();
+    }
+    const onlineRuntime = toRecord(windowLike.OnlineLeaderboardRuntime);
+    const refreshTimerLeaderboardPanel = asFunction<(force?: boolean) => unknown>(
+      onlineRuntime.refreshTimerLeaderboardPanel
+    );
+    if (refreshTimerLeaderboardPanel) {
+      try {
+        refreshTimerLeaderboardPanel(true);
+      } catch (_errRefresh) {}
     }
     didSync = true;
   };

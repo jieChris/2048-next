@@ -269,6 +269,73 @@ describe("bootstrap timer module settings host", () => {
     expect(syncMobileTimerboxUi).toHaveBeenCalledTimes(2);
   });
 
+  it("updates timer module description when language changes while settings modal stays open", () => {
+    const toggle = {
+      __timerViewBound: false,
+      checked: false,
+      disabled: true,
+      addEventListener: vi.fn()
+    };
+    const note = {
+      textContent: ""
+    };
+    const description = {
+      textContent: "Turn on to show timers, turn off to show leaderboard."
+    };
+    let lang = "en";
+    const windowLike: Record<string, unknown> = {
+      game_manager: {
+        getTimerModuleViewMode() {
+          return "timer";
+        }
+      },
+      localStorage: {
+        getItem(key: string) {
+          return key === "ui_language_v1" ? lang : null;
+        }
+      },
+      addEventListener: vi.fn()
+    };
+    const timerRuntime = {
+      ...createTimerRuntime(),
+      resolveTimerModuleSettingsState(payload: { lang?: string; viewMode?: string }) {
+        const isEnglish = payload.lang === "en";
+        return {
+          toggleDisabled: false,
+          toggleChecked: payload.viewMode !== "hidden",
+          toggleTitleText: isEnglish ? "Timer Mode" : "计时器模式",
+          toggleLabelText: isEnglish
+            ? "Turn on to show timers, turn off to show leaderboard."
+            : "开启时显示计时器，关闭时显示排行榜。",
+          noteText: isEnglish ? "Timer note" : "计时器说明"
+        };
+      }
+    };
+
+    const result = applyTimerModuleSettingsUi({
+      toggle,
+      noteElement: note,
+      windowLike,
+      documentLike: {
+        getElementById(id: string) {
+          return id === "timer-module-view-label" ? description : null;
+        },
+        querySelector() {
+          return null;
+        }
+      },
+      timerModuleRuntime: timerRuntime
+    });
+
+    expect(result.didSync).toBe(true);
+    expect(description.textContent).toBe("Turn on to show timers, turn off to show leaderboard.");
+
+    lang = "zh";
+    (windowLike.syncTimerModuleSettingsUI as () => void)();
+
+    expect(description.textContent).toBe("开启时显示计时器，关闭时显示排行榜。");
+  });
+
   it("skips rebinding when toggle is already bound", () => {
     const addEventListener = vi.fn();
     const toggle = {

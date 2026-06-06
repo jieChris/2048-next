@@ -78,8 +78,8 @@ h1.title a {
   margin: 0;
   color: #776e65;
   font-size: 25px;
-  height: 50px;
-  line-height: 50px;
+  height: 34px;
+  line-height: 34px;
   font-weight: 700;
   text-align: left;
   white-space: nowrap;
@@ -87,6 +87,11 @@ h1.title a {
   text-overflow: ellipsis;
   text-decoration: none;
   cursor: pointer;
+}
+
+body[data-page="game"][data-top-button-style="icon"] .home-user-display {
+  height: 50px;
+  line-height: 50px;
 }
 
 body[data-page="game"] h1.title {
@@ -171,10 +176,10 @@ body[data-page="game"] h1.title {
   margin-top: 8px;
   text-align: center;
   box-sizing: border-box;
-  flex: 0 0 auto;
-  width: auto;
-  max-width: none;
-  min-width: 75px;
+  flex: 0 0 129.375px;
+  width: 129.375px;
+  max-width: 129.375px;
+  min-width: 129.375px;
   overflow: visible;
   white-space: nowrap;
 }
@@ -4844,9 +4849,9 @@ body[data-page="practice"] #test-grid-container.practice-grid-locked .grid-cell 
     float: none;
     display: flex;
     width: 100%;
-    justify-content: space-between;
+    justify-content: stretch;
     align-items: stretch;
-    gap: 8px;
+    gap: 3px;
     text-align: initial;
   }
 
@@ -4854,7 +4859,9 @@ body[data-page="practice"] #test-grid-container.practice-grid-locked .grid-cell 
   body[data-page="game"] .best-container,
   body[data-page="replay"] .score-container,
   body[data-page="replay"] .best-container {
-    flex: 1 1 0;
+    flex: 1 1 calc((100% - 3px) / 2);
+    width: calc((100% - 3px) / 2);
+    max-width: none;
     min-width: 0;
     margin-top: 0;
     box-sizing: border-box;
@@ -4883,7 +4890,7 @@ body[data-page="practice"] #test-grid-container.practice-grid-locked .grid-cell 
 @media screen and (max-width: 520px) {
   body[data-page="game"] .scores-container,
   body[data-page="replay"] .scores-container {
-    gap: 6px;
+    gap: 3px;
   }
 
   body[data-page="game"] .score-container,

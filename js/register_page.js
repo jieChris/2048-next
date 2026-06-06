@@ -32,7 +32,7 @@
   var COPY = {
     zh: {
       pageTitle: "2048 \u6ce8\u518c",
-      kicker: "2048 Online Hub",
+      kicker: "2048 在线中心",
       title: "\u6ce8\u518c\u8d26\u53f7",
       subtitle: "\u6ce8\u518c\u524d\u8bf7\u5148\u5b8c\u6210\u4eba\u673a\u9a8c\u8bc1\uff0c\u5e76\u901a\u8fc7\u6635\u79f0\u53ef\u7528\u6027\u6821\u9a8c\u3002",
       heading: "\u6ce8\u518c",

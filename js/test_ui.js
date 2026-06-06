@@ -66,6 +66,103 @@ document.addEventListener("DOMContentLoaded", function () {
     return window.CorePracticeModeRuntime || null;
   }
 
+  function readPracticeUiLang() {
+    try {
+      if (window.UII18N && typeof window.UII18N.getLanguage === "function") {
+        var fromRuntime = String(window.UII18N.getLanguage() || "").toLowerCase();
+        if (fromRuntime.indexOf("en") === 0) return "en";
+        if (fromRuntime.indexOf("zh") === 0) return "zh";
+      }
+      var fromStorage = String(window.localStorage && window.localStorage.getItem("ui_language_v1") || "").toLowerCase();
+      if (fromStorage.indexOf("en") === 0) return "en";
+    } catch (_err) {}
+    return "zh";
+  }
+
+  function formatPracticeDimension(width, height, lang) {
+    return String(width) + (lang === "en" ? "x" : "×") + String(height);
+  }
+
+  function localizePracticeModeLabel(label, lang) {
+    var text = String(label || "").trim();
+    if (lang === "en") {
+      return text
+        .replace(/默认练习板/g, "Default Practice Board")
+        .replace(/练习板（直通）/g, "Practice Board (Direct)")
+        .replace(/斐波那契/g, "Fibonacci")
+        .replace(/标准版/g, "Standard")
+        .replace(/经典版/g, "Classic")
+        .replace(/封顶版/g, "Capped")
+        .replace(/自定义4率/g, "Custom 4-Rate")
+        .replace(/概率/g, "Spawn")
+        .replace(/八方向/g, "8-Direction")
+        .replace(/无撤回/g, "No Undo")
+        .replace(/可撤回/g, "Undo")
+        .replace(/（/g, "(")
+        .replace(/）/g, ")")
+        .replace(/(\d+)×(\d+)/g, "$1x$2");
+    }
+    return text
+      .replace(/Default Practice Board/gi, "默认练习板")
+      .replace(/Practice Board \(Direct\)/gi, "练习板（直通）")
+      .replace(/Practice Board/gi, "练习板")
+      .replace(/Fibonacci/gi, "斐波那契")
+      .replace(/Diagonal/gi, "八方向")
+      .replace(/Standard/gi, "标准")
+      .replace(/Classic/gi, "经典")
+      .replace(/Capped/gi, "封顶")
+      .replace(/Spawn/gi, "概率")
+      .replace(/No Undo/gi, "无撤回")
+      .replace(/Undo/gi, "可撤回")
+      .replace(/(\d+)x(\d+)/gi, "$1×$2");
+  }
+
+  function getPracticeBoardCodeCopy() {
+    var lang = readPracticeUiLang();
+    if (lang === "en") {
+      return {
+        buttonLabel: "Enter Board Code",
+        title: "Enter Board Code",
+        placeholder: "Enter board code",
+        confirm: "Confirm",
+        gameNotReady: "The game has not finished initializing. Please try again later.",
+        emptyCode: "Enter a board code.",
+        invalidChars: "Board code only supports 0-9 and A-F.",
+        invalidLength: "Length must be 8, 9, 12, or 16 characters.",
+        invalidCell: "Board code contains invalid characters.",
+        invalidNumber: "Board code contains an invalid number.",
+        cappedOverflow: "This capped mode only supports tiles up to ",
+        applyFail: "Failed to apply board code. Please try again later."
+      };
+    }
+    return {
+      buttonLabel: "输入盘面代码",
+      title: "输入盘面代码",
+      placeholder: "输入盘面代码",
+      confirm: "确认",
+      gameNotReady: "游戏尚未完成初始化，请稍后重试。",
+      emptyCode: "请输入盘面代码。",
+      invalidChars: "盘面代码仅支持 0-9 和 A-F。",
+      invalidLength: "长度仅支持 8、9、12、16 位。",
+      invalidCell: "盘面代码包含非法字符。",
+      invalidNumber: "棋盘码包含非法数字。",
+      cappedOverflow: "当前封顶模式最多只能放置到 ",
+      applyFail: "应用盘面代码失败，请稍后重试。"
+    };
+  }
+
+  function syncPracticeBoardCodeUi() {
+    var copy = getPracticeBoardCodeCopy();
+    if (practiceBoardCodeToggleBtn) {
+      practiceBoardCodeToggleBtn.setAttribute("title", copy.buttonLabel);
+      practiceBoardCodeToggleBtn.setAttribute("aria-label", copy.buttonLabel);
+    }
+    var title = document.getElementById("practice-board-code-title");
+    if (title) title.textContent = copy.title;
+    if (practiceBoardCodeInput) practiceBoardCodeInput.setAttribute("placeholder", copy.placeholder);
+    if (practiceBoardCodeConfirmBtn) practiceBoardCodeConfirmBtn.textContent = copy.confirm;
+  }
+
   function resolvePracticeModeKeyParam() {
     var practiceRuntime = getPracticeModeRuntime();
     if (practiceRuntime && typeof practiceRuntime.parsePracticeModeKey === "function") {
@@ -239,27 +336,41 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function getPracticeModeRulesetText(ruleset) {
-    return ruleset === "fibonacci" ? "斐波那契" : "2 的幂";
+    var lang = readPracticeUiLang();
+    if (ruleset === "fibonacci") return lang === "en" ? "Fibonacci" : "斐波那契";
+    return lang === "en" ? "Powers of 2" : "2 的幂";
   }
 
   function syncPracticeModePickerUi() {
+    syncPracticeBoardCodeUi();
+    var lang = readPracticeUiLang();
     var activeKey = resolveCurrentPracticeModeSelectionKey();
     if (activeKey) currentPracticeModeSelectionKey = activeKey;
     var activeMode = findPracticeSelectableModeByKey(activeKey);
-    var activeLabel = activeMode ? activeMode.label : "默认练习板";
+    var activeLabel = localizePracticeModeLabel(
+      activeMode ? activeMode.label : (lang === "en" ? "Default Practice Board" : "默认练习板"),
+      lang
+    );
     if (practiceModePickerBtn) {
-      var title = "选择模式（当前：" + activeLabel + "）";
+      var title = lang === "en"
+        ? "Choose Mode (Current: " + activeLabel + ")"
+        : "选择模式（当前：" + activeLabel + "）";
       practiceModePickerBtn.setAttribute("title", title);
       practiceModePickerBtn.setAttribute("aria-label", title);
       practiceModePickerBtn.setAttribute("data-active-practice-mode-key", activeKey || "");
     }
     if (practiceModeCurrent) {
-      practiceModeCurrent.textContent = "当前模式：" + activeLabel;
+      practiceModeCurrent.textContent = lang === "en"
+        ? "Current Mode: " + activeLabel
+        : "当前模式：" + activeLabel;
     }
     if (practiceModeBadge) {
       practiceModeBadge.textContent = activeLabel;
       practiceModeBadge.setAttribute("title", activeLabel);
-      practiceModeBadge.setAttribute("aria-label", "当前练习板模式：" + activeLabel);
+      practiceModeBadge.setAttribute(
+        "aria-label",
+        lang === "en" ? "Current practice board mode: " + activeLabel : "当前练习板模式：" + activeLabel
+      );
     }
     if (!practiceModeList) return;
     practiceModeList.innerHTML = "";
@@ -267,7 +378,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!modes.length) {
       var empty = document.createElement("div");
       empty.className = "practice-mode-empty";
-      empty.textContent = "暂无可选模式";
+      empty.textContent = lang === "en" ? "No modes available" : "暂无可选模式";
       practiceModeList.appendChild(empty);
       return;
     }
@@ -283,13 +394,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
       var label = document.createElement("span");
       label.className = "practice-mode-option-label";
-      label.textContent = option.label;
+      label.textContent = localizePracticeModeLabel(option.label, lang);
       button.appendChild(label);
 
       var meta = document.createElement("span");
       meta.className = "practice-mode-option-meta";
       meta.textContent =
-        option.board_width + "x" + option.board_height + " · " + getPracticeModeRulesetText(option.ruleset);
+        formatPracticeDimension(option.board_width, option.board_height, lang) +
+        " · " +
+        getPracticeModeRulesetText(option.ruleset);
       button.appendChild(meta);
 
       practiceModeList.appendChild(button);
@@ -355,7 +468,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var manager = window.game_manager;
     if (!option) return false;
     if (!manager || typeof manager.restartWithBoard !== "function") {
-      alert("游戏尚未完成初始化，请稍后重试。");
+      alert(getPracticeBoardCodeCopy().gameNotReady);
       return false;
     }
     var modeConfig = cloneJsonSafe(option.practiceConfig) || option.practiceConfig;
@@ -401,16 +514,17 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function decodePracticeBoardCode(raw) {
+    var copy = getPracticeBoardCodeCopy();
     var code = normalizePracticeBoardCodeInput(raw);
     if (!code) {
-      return { ok: false, message: "请输入盘面代码。" };
+      return { ok: false, message: copy.emptyCode };
     }
     if (!/^[0-9A-F]+$/.test(code)) {
-      return { ok: false, message: "盘面代码仅支持 0-9 和 A-F。" };
+      return { ok: false, message: copy.invalidChars };
     }
     var shape = resolvePracticeBoardShapeByLength(code.length);
     if (!shape) {
-      return { ok: false, message: "长度仅支持 8、9、12、16 位。" };
+      return { ok: false, message: copy.invalidLength };
     }
 
     var board = [];
@@ -420,7 +534,7 @@ document.addEventListener("DOMContentLoaded", function () {
       for (var x = 0; x < shape.width; x++) {
         var value = decodePracticeBoardCellValue(code.charAt(cursor));
         if (value === null) {
-          return { ok: false, message: "盘面代码包含非法字符。" };
+          return { ok: false, message: copy.invalidCell };
         }
         row.push(value);
         cursor += 1;
@@ -456,7 +570,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function applyPracticeBoardCode(rawCode) {
     var manager = window.game_manager;
     if (!manager || typeof manager.restartWithBoard !== "function") {
-      alert("游戏尚未完成初始化，请稍后重试。");
+      alert(getPracticeBoardCodeCopy().gameNotReady);
       return false;
     }
 
@@ -485,7 +599,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return true;
     } catch (err) {
       console.error("Practice board code apply failed:", err);
-      alert("应用盘面代码失败，请稍后重试。");
+      alert(getPracticeBoardCodeCopy().applyFail);
       return false;
     }
   }
@@ -808,6 +922,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function validatePracticeBoardValuesAgainstMaxTile(board, maxTile) {
+    var copy = getPracticeBoardCodeCopy();
     if (!Number.isFinite(maxTile) || maxTile <= 0) {
       return { ok: true };
     }
@@ -817,12 +932,12 @@ document.addEventListener("DOMContentLoaded", function () {
       for (var x = 0; x < row.length; x++) {
         var value = Number(row[x]);
         if (!Number.isInteger(value) || value < 0) {
-          return { ok: false, message: "棋盘码包含非法数字。" };
+          return { ok: false, message: copy.invalidNumber };
         }
         if (value > maxTile) {
           return {
             ok: false,
-            message: "当前封顶模式最多只能放置到 " + String(maxTile) + "。"
+            message: copy.cappedOverflow + String(maxTile) + (readPracticeUiLang() === "en" ? "." : "。")
           };
         }
       }
@@ -1519,6 +1634,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (typeof manager.move === "function") manager.move(-2);
     });
   }
+  syncPracticeBoardCodeUi();
   syncPracticeGestureEntryUi();
   syncPracticeSetupPhaseUi();
   requestPracticeRelayout();

@@ -20,6 +20,35 @@ function applyInvalidatedTimerPlaceholders(manager, elementIds) {
 
 var IPS_WINDOW_MS = 1000;
 
+function normalizeStatsDisplayLanguage(value) {
+  var lang = String(value || "").trim().toLowerCase();
+  if (lang.indexOf("en") === 0) return "en";
+  if (lang.indexOf("zh") === 0) return "zh";
+  return "";
+}
+
+function resolveStatsDisplayLanguage(manager) {
+  try {
+    var windowLike = manager && manager.window ? manager.window : (typeof window !== "undefined" ? window : null);
+    if (windowLike && windowLike.UII18N && typeof windowLike.UII18N.getLanguage === "function") {
+      var fromRuntime = normalizeStatsDisplayLanguage(windowLike.UII18N.getLanguage());
+      if (fromRuntime) return fromRuntime;
+    }
+    var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
+    if (storage && typeof storage.getItem === "function") {
+      var fromStorage = normalizeStatsDisplayLanguage(storage.getItem("ui_language_v1"));
+      if (fromStorage) return fromStorage;
+    }
+    var documentLike = manager && manager.document ? manager.document : (windowLike && windowLike.document);
+    var root = documentLike && documentLike.documentElement;
+    if (root && typeof root.getAttribute === "function") {
+      var fromRoot = normalizeStatsDisplayLanguage(root.getAttribute("data-ui-lang") || root.getAttribute("lang"));
+      if (fromRoot) return fromRoot;
+    }
+  } catch (_err) {}
+  return "zh";
+}
+
 function resolveStatsIpsNowMs(rawNowMs) {
   var nowMs = Number(rawNowMs);
   if (Number.isFinite(nowMs) && nowMs >= 0) return Math.floor(nowMs);
@@ -145,6 +174,11 @@ function resolveIpsDisplayTextFallback(ms, ipsInputCount) {
   return "IPS: " + avgIps;
 }
 
+function localizeIpsDisplayText(text, lang) {
+  var raw = String(text || "");
+  return raw.replace(/^输入\s*[:：]\s*/u, "IPS: ");
+}
+
 function resolveIpsDisplayTextByCore(manager, ms, ipsInputCount) {
   return resolveCorePayloadCallWith(manager, "callCoreReplayExecutionRuntime", "resolveIpsDisplayText", createIpsDisplayResolvePayload(ms, ipsInputCount), undefined, function (currentManager, coreCallResult) {
     return currentManager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (coreValue) {
@@ -156,10 +190,11 @@ function resolveIpsDisplayTextByCore(manager, ms, ipsInputCount) {
 }
 
 function resolveIpsDisplayText(manager, ms, ipsInputCount) {
-  if (!manager) return "IPS: 0";
+  var lang = resolveStatsDisplayLanguage(manager);
+  if (!manager) return localizeIpsDisplayText("IPS: 0", lang);
   var ipsText = resolveIpsDisplayTextByCore(manager, ms, ipsInputCount);
-  if (ipsText) return ipsText;
-  return resolveIpsDisplayTextFallback(ms, ipsInputCount);
+  if (ipsText) return localizeIpsDisplayText(ipsText, lang);
+  return localizeIpsDisplayText(resolveIpsDisplayTextFallback(ms, ipsInputCount), lang);
 }
 
 function getActualFourRate(manager) {

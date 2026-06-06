@@ -161,6 +161,19 @@ body[data-page="account-hub"][data-i18n-ready="0"] {
   transform: translateY(-1px);
 }
 
+.account-action-row .replay-button:disabled,
+.account-action-row .replay-button.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.25);
+}
+
+.account-action-row .replay-button:disabled:hover,
+.account-action-row .replay-button.is-disabled:hover {
+  transform: none;
+}
+
 .account-tip {
   margin: 10px 0 0;
   min-height: 20px;
@@ -801,5 +814,4 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-row
     font-size: 11px;
   }
 }
-
 

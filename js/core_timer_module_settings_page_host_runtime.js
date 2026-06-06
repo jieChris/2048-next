@@ -57,6 +57,7 @@
       applyUi({
         toggle: toggle,
         noteElement: noteElement,
+        documentLike: source.documentLike,
         windowLike: source.windowLike,
         timerModuleRuntime: source.timerModuleRuntime,
         retryDelayMs: fallbackRetryDelay,

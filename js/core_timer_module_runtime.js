@@ -74,13 +74,10 @@
     return {
       toggleDisabled: false,
       toggleChecked: isTimerMode,
-      toggleLabelText: isTimerMode
-        ? lang === "en"
-          ? "Timers are shown in the right panel."
-          : "\u5f53\u524d\u53f3\u4fa7\u663e\u793a\u8ba1\u65f6\u5668\u3002"
-        : lang === "en"
-          ? "Leaderboard is shown in the right panel."
-          : "\u5f53\u524d\u53f3\u4fa7\u663e\u793a\u6392\u884c\u699c\u3002",
+      toggleLabelText:
+        lang === "en"
+          ? "Turn on to show timers, turn off to show leaderboard."
+          : "\u5f00\u542f\u65f6\u663e\u793a\u8ba1\u65f6\u5668\uff0c\u5173\u95ed\u65f6\u663e\u793a\u6392\u884c\u699c\u3002",
       noteText: isTimerMode
         ? lang === "en"
           ? "Switch off to show the leaderboard in the right panel."

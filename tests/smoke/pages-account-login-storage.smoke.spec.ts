@@ -65,6 +65,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Account response should exist").not.toBeNull();
     expect(response?.ok(), "Account response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
+    await expect(page.locator(".account-user-card")).toBeHidden();
 
     await page.fill("#account-email", "smoke@example.com");
     await page.fill("#account-password", "smoke_password");
@@ -89,6 +90,81 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.nickname).toBe("Smoke");
     expect(loginCalls).toBe(1);
     expect(recordUploadCalls).toBe(0);
+    await expect(page.locator(".account-auth-form-surface")).toBeHidden();
+    await expect(page.locator("#account-action-row")).toBeHidden();
+    await expect(page.locator("#account-auth-subtitle")).toBeHidden();
+    await expect(page.locator(".account-user-card")).toBeVisible();
+  });
+
+  test("account login disables auth actions and shows loading state while pending", async ({ page }) => {
+    let resolveLogin: (() => void) | null = null;
+    const loginStarted = new Promise<void>((resolve) => {
+      resolveLogin = resolve;
+    });
+
+    await page.route("**/api/**", async (route) => {
+      const requestUrl = new URL(route.request().url());
+      const pathname = requestUrl.pathname;
+
+      if (pathname.endsWith("/api/login")) {
+        await loginStarted;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            token: "pending_token",
+            userId: 44,
+            nickname: "PendingSmoke"
+          })
+        });
+        return;
+      }
+
+      if (pathname.endsWith("/api/me")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              id: 44,
+              nickname: "PendingSmoke",
+              email: "pending@example.com",
+              created_at: "2026-03-16T00:00:00Z"
+            }
+          })
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    const response = await page.goto("/account.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Account response should exist").not.toBeNull();
+    expect(response?.ok(), "Account response should be 2xx").toBeTruthy();
+
+    await page.fill("#account-email", "pending@example.com");
+    await page.fill("#account-password", "pending_password");
+
+    const loginRequestPromise = page.waitForRequest((request) => new URL(request.url()).pathname.endsWith("/api/login"));
+    await page.click("#account-login-btn");
+    await loginRequestPromise;
+
+    await expect(page.locator("#account-login-btn")).toBeDisabled();
+    await expect(page.locator("#account-login-btn")).toHaveText("登录中...");
+    await expect(page.locator("#account-open-register-btn")).toHaveAttribute("aria-disabled", "true");
+    await expect(page.locator("#account-open-reset-password-btn")).toHaveAttribute("aria-disabled", "true");
+
+    resolveLogin?.();
+
+    await page.waitForFunction(() => window.localStorage.getItem("2048_auth_token_v1") === "pending_token");
+    await expect(page.locator("#account-action-row")).toBeHidden();
   });
 
   test("account login supports Enter and hides failed login tip on refocus", async ({ page }) => {

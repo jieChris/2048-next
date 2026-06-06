@@ -92,6 +92,7 @@
   var loginCaptchaRequired = false;
   var loginCaptchaId = "";
   var loginCaptchaLoading = false;
+  var loginSubmitting = false;
   var leaderboardPage = 1;
   var leaderboardTotalPages = 0;
   var leaderboardHasPrev = false;
@@ -100,7 +101,7 @@
   var COPY = {
     zh: {
       pageTitle: "2048 账号中心",
-      kicker: "2048 Online Hub",
+      kicker: "2048 在线中心",
       title: "账号中心",
       subtitle: "登录后可查看在线排行榜。",
       navSettings: "账号设置",
@@ -122,6 +123,7 @@
       loginCaptchaLoading: "正在加载图片验证码...",
       loginCaptchaPrompt: "登录失败次数过多，请先完成图片验证码",
       loginBtn: "登录",
+      loginLoading: "登录中...",
       registerBtn: "去注册",
       resetPasswordBtn: "找回密码",
       userTitle: "当前账号信息",
@@ -134,6 +136,7 @@
       guideOpen: "打开指引",
       boardHeading: "在线排行榜",
       boardSubtitle: "按模式和榜单筛选后查看排行。",
+      boardFilterAria: "排行榜筛选",
       boardMode: "模式",
       boardMetric: "榜单",
       boardLimit: "条数",
@@ -194,6 +197,7 @@
       loginCaptchaLoading: "Loading captcha...",
       loginCaptchaPrompt: "Too many failed logins, complete captcha first",
       loginBtn: "Login",
+      loginLoading: "Logging in...",
       registerBtn: "Create Account",
       resetPasswordBtn: "Forgot Password",
       userTitle: "Current User",
@@ -206,6 +210,7 @@
       guideOpen: "Open Guide",
       boardHeading: "Leaderboard",
       boardSubtitle: "Filter by mode and metric.",
+      boardFilterAria: "Leaderboard Filters",
       boardMode: "Mode",
       boardMetric: "Metric",
       boardLimit: "Limit",
@@ -1026,7 +1031,10 @@
     }
 
     var authGrid = byId("account-auth-grid");
+    var authFormSurface = document.querySelector(".account-auth-form-surface");
+    var authSubtitle = byId("account-auth-subtitle");
     var actionRow = byId("account-action-row");
+    var userCard = document.querySelector(".account-user-card");
     var authTip = byId("account-auth-tip");
     var loginBtn = byId("account-login-btn");
     var registerBtn = byId("account-open-register-btn");
@@ -1036,7 +1044,10 @@
     var captchaWrap = byId("account-login-captcha-wrap");
 
     if (authGrid) authGrid.style.display = isAuthed ? "none" : "";
-    if (actionRow) actionRow.style.display = "";
+    if (authFormSurface) authFormSurface.style.display = isAuthed ? "none" : "";
+    if (authSubtitle) authSubtitle.style.display = isAuthed ? "none" : "";
+    if (actionRow) actionRow.style.display = isAuthed ? "none" : "";
+    if (userCard) userCard.style.display = isAuthed ? "" : "none";
     if (loginBtn) loginBtn.style.display = isAuthed ? "none" : "";
     if (registerBtn) registerBtn.style.display = isAuthed ? "none" : "";
     if (resetPasswordBtn) resetPasswordBtn.style.display = isAuthed ? "none" : "";
@@ -1048,6 +1059,46 @@
       if (passwordInput) passwordInput.value = "";
       setLoginCaptchaRequiredState(false);
     }
+  }
+
+  function setDisabledLinkState(linkNode, disabled) {
+    if (!linkNode) return;
+    if (disabled) {
+      if (!linkNode.hasAttribute("data-prev-tabindex")) {
+        var previousTabIndex = linkNode.getAttribute("tabindex");
+        linkNode.setAttribute("data-prev-tabindex", previousTabIndex == null ? "" : previousTabIndex);
+      }
+      linkNode.setAttribute("aria-disabled", "true");
+      linkNode.setAttribute("tabindex", "-1");
+      linkNode.classList.add("is-disabled");
+      return;
+    }
+
+    linkNode.setAttribute("aria-disabled", "false");
+    linkNode.classList.remove("is-disabled");
+    var storedTabIndex = linkNode.getAttribute("data-prev-tabindex");
+    if (storedTabIndex != null) {
+      if (storedTabIndex) linkNode.setAttribute("tabindex", storedTabIndex);
+      else linkNode.removeAttribute("tabindex");
+      linkNode.removeAttribute("data-prev-tabindex");
+    }
+  }
+
+  function setLoginSubmittingState(isSubmitting) {
+    loginSubmitting = !!isSubmitting;
+
+    var loginBtn = byId("account-login-btn");
+    var registerBtn = byId("account-open-register-btn");
+    var resetPasswordBtn = byId("account-open-reset-password-btn");
+
+    if (loginBtn) {
+      loginBtn.disabled = loginSubmitting;
+      loginBtn.classList.toggle("is-loading", loginSubmitting);
+      loginBtn.textContent = loginSubmitting ? t("loginLoading") : t("loginBtn");
+    }
+
+    setDisabledLinkState(registerBtn, loginSubmitting);
+    setDisabledLinkState(resetPasswordBtn, loginSubmitting);
   }
 
   async function refreshLeaderboard(resetPage) {
@@ -1144,6 +1195,8 @@
   }
 
   async function onLoginClick() {
+    if (loginSubmitting) return;
+
     var email = toText(byId("account-email") && byId("account-email").value).trim();
     var password = toText(byId("account-password") && byId("account-password").value).trim();
     var captchaAnswer = toText(byId("account-login-captcha-answer") && byId("account-login-captcha-answer").value).trim().toUpperCase();
@@ -1164,31 +1217,36 @@
       payload.captcha_answer = captchaAnswer;
     }
 
-    var result = await login(payload);
-    if (result && result.success) {
-      setLoginCaptchaRequiredState(false);
-      saveAuth(result);
-      syncAuthState();
-      setTip(byId("account-auth-tip"), t("loginOk"), "ok");
-      refreshUserInfo({ silentTimeout: true });
-      refreshLeaderboard();
-      return;
-    }
-
-    if (shouldRequireLoginCaptcha(result)) {
-      setLoginCaptchaRequiredState(true);
-      var code = resolveLoginCaptchaCode(result);
-      var mustRefreshCaptcha =
-        !loginCaptchaId ||
-        code === "IMAGE_CAPTCHA_INVALID" ||
-        code === "IMAGE_CAPTCHA_EXPIRED" ||
-        code === "IMAGE_CAPTCHA_ATTEMPTS_EXCEEDED";
-      if (mustRefreshCaptcha) {
-        await refreshLoginCaptchaChallenge(false);
+    setLoginSubmittingState(true);
+    try {
+      var result = await login(payload);
+      if (result && result.success) {
+        setLoginCaptchaRequiredState(false);
+        saveAuth(result);
+        syncAuthState();
+        setTip(byId("account-auth-tip"), t("loginOk"), "ok");
+        refreshUserInfo({ silentTimeout: true });
+        refreshLeaderboard();
+        return;
       }
-    }
 
-    setTip(byId("account-auth-tip"), resolveServerError(result, "loginFail"), "err");
+      if (shouldRequireLoginCaptcha(result)) {
+        setLoginCaptchaRequiredState(true);
+        var code = resolveLoginCaptchaCode(result);
+        var mustRefreshCaptcha =
+          !loginCaptchaId ||
+          code === "IMAGE_CAPTCHA_INVALID" ||
+          code === "IMAGE_CAPTCHA_EXPIRED" ||
+          code === "IMAGE_CAPTCHA_ATTEMPTS_EXCEEDED";
+        if (mustRefreshCaptcha) {
+          await refreshLoginCaptchaChallenge(false);
+        }
+      }
+
+      setTip(byId("account-auth-tip"), resolveServerError(result, "loginFail"), "err");
+    } finally {
+      setLoginSubmittingState(false);
+    }
   }
 
   function triggerLoginFromKeyboard(eventLike) {
@@ -1266,6 +1324,8 @@
     if (passwordInput) passwordInput.setAttribute("placeholder", t("passwordPlaceholder"));
     if (loginCaptchaInput) loginCaptchaInput.setAttribute("placeholder", t("loginCaptchaPlaceholder"));
     if (loginCaptchaImage) loginCaptchaImage.setAttribute("alt", t("loginCaptchaLabel"));
+    var boardFilterRow = global.document.querySelector(".account-board-filter-row");
+    if (boardFilterRow) boardFilterRow.setAttribute("aria-label", t("boardFilterAria"));
     refreshModeSelectOptions();
     refreshMetricSelectOptions();
     syncLeaderboardMetricColumnHeader(getSelectedLeaderboardMetric());

@@ -29,7 +29,7 @@
   var COPY = {
     zh: {
       pageTitle: "2048 密码中心",
-      kicker: "2048 Online Hub",
+      kicker: "2048 在线中心",
       title: "密码中心",
       subtitle: "可找回密码，也可在登录后修改密码。",
       heading: "密码操作",

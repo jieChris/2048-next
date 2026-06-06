@@ -51,7 +51,7 @@ const HISTORY_STATIC_COPY: Record<
     owner: "归属",
     allOwners: "全部归属",
     keyword: "关键词",
-    keywordPlaceholder: "模式/分数/ID",
+    keywordPlaceholder: "模式/分数/编号",
     sort: "排序",
     sortEndedDesc: "按时间（新到旧）",
     sortEndedAsc: "按时间（旧到新）",
