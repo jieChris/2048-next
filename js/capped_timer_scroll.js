@@ -8,6 +8,25 @@
   var suppressObserverDepth = 0;
   var immediateUpdateQueued = false;
 
+  function readUiLanguageFromStorage() {
+    var runtime = window.CoreStorageRuntime || null;
+    if (
+      runtime &&
+      typeof runtime.resolveStorageByName === "function" &&
+      typeof runtime.safeReadStorageItem === "function"
+    ) {
+      var storageLike = runtime.resolveStorageByName({
+        windowLike: window,
+        storageName: "localStorage"
+      });
+      return String(runtime.safeReadStorageItem({
+        storageLike: storageLike,
+        key: "ui_language_v1"
+      }) || "");
+    }
+    return "";
+  }
+
   function readTimerScrollLanguage() {
     try {
       var attr = document && document.documentElement ? String(document.documentElement.getAttribute("data-ui-lang") || "") : "";
@@ -15,7 +34,7 @@
       if (attr.toLowerCase().indexOf("zh") === 0) return "zh";
     } catch (_err) {}
     try {
-      var stored = window.localStorage ? String(window.localStorage.getItem("ui_language_v1") || "") : "";
+      var stored = readUiLanguageFromStorage();
       if (stored.toLowerCase().indexOf("en") === 0) return "en";
     } catch (_err2) {}
     return "zh";

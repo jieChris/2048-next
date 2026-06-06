@@ -39,7 +39,7 @@ function resolveStatsDisplayLanguage(manager) {
       var fromStorage = normalizeStatsDisplayLanguage(storage.getItem("ui_language_v1"));
       if (fromStorage) return fromStorage;
     }
-    var documentLike = manager && manager.document ? manager.document : (windowLike && windowLike.document);
+    var documentLike = resolveManagerDocumentLike(manager);
     var root = documentLike && documentLike.documentElement;
     if (root && typeof root.getAttribute === "function") {
       var fromRoot = normalizeStatsDisplayLanguage(root.getAttribute("data-ui-lang") || root.getAttribute("lang"));

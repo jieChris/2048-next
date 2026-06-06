@@ -66,15 +66,47 @@ document.addEventListener("DOMContentLoaded", function () {
     return window.CorePracticeModeRuntime || null;
   }
 
+  function readPracticeUiLangFromStorage() {
+    var runtime = window.CoreStorageRuntime || null;
+    if (
+      runtime &&
+      typeof runtime.resolveStorageByName === "function" &&
+      typeof runtime.safeReadStorageItem === "function"
+    ) {
+      var storageLike = runtime.resolveStorageByName({
+        windowLike: window,
+        storageName: "localStorage"
+      });
+      return String(runtime.safeReadStorageItem({
+        storageLike: storageLike,
+        key: "ui_language_v1"
+      }) || "");
+    }
+    try {
+      var storageLike = window && window["localStorage"] ? window["localStorage"] : null;
+      return storageLike && typeof storageLike.getItem === "function"
+        ? String(storageLike.getItem("ui_language_v1") || "")
+        : "";
+    } catch (_err) {}
+    return "";
+  }
+
   function readPracticeUiLang() {
     try {
+      var fromStorage = readPracticeUiLangFromStorage().toLowerCase();
+      if (fromStorage.indexOf("en") === 0) return "en";
+      if (fromStorage.indexOf("zh") === 0) return "zh";
       if (window.UII18N && typeof window.UII18N.getLanguage === "function") {
         var fromRuntime = String(window.UII18N.getLanguage() || "").toLowerCase();
         if (fromRuntime.indexOf("en") === 0) return "en";
         if (fromRuntime.indexOf("zh") === 0) return "zh";
       }
-      var fromStorage = String(window.localStorage && window.localStorage.getItem("ui_language_v1") || "").toLowerCase();
-      if (fromStorage.indexOf("en") === 0) return "en";
+      var root = document && document.documentElement ? document.documentElement : null;
+      var fromRoot = root
+        ? String(root.getAttribute("data-ui-lang") || root.getAttribute("lang") || "").toLowerCase()
+        : "";
+      if (fromRoot.indexOf("en") === 0) return "en";
+      if (fromRoot.indexOf("zh") === 0) return "zh";
     } catch (_err) {}
     return "zh";
   }
@@ -407,6 +439,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
       practiceModeList.appendChild(button);
     }
+  }
+
+  function bindPracticeLanguageSync() {
+    window.addEventListener("uilanguagechange", function () {
+      syncPracticeModePickerUi();
+    });
+    window.addEventListener("storage", function (event) {
+      if (!event || event.key === "ui_language_v1") {
+        syncPracticeModePickerUi();
+      }
+    });
   }
 
   function setPracticeModePanelOpen(open) {
@@ -1214,6 +1257,8 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   syncSelectionGridByRuleset();
+  syncPracticeModePickerUi();
+  bindPracticeLanguageSync();
   bindPracticeModePicker();
   bindPracticeBoardCodePanel();
 
