@@ -2383,24 +2383,6 @@
   }
 
   var currentThemeId = DEFAULT_THEME;
-  var horseSwRegisterAttempted = false;
-
-  function registerHorseCacheServiceWorker() {
-    if (horseSwRegisterAttempted) return;
-    horseSwRegisterAttempted = true;
-    if (typeof window === "undefined" || typeof navigator === "undefined") return;
-    if (!("serviceWorker" in navigator)) return;
-
-    var doRegister = function () {
-      navigator.serviceWorker.register("./horse-cache-sw.js", { scope: "./" }).catch(function () {});
-    };
-
-    if (document.readyState === "complete") {
-      doRegister();
-      return;
-    }
-    window.addEventListener("load", doRegister, { once: true });
-  }
 
   function applyTheme(themeId) {
     var id = themes[themeId] ? themeId : DEFAULT_THEME;
@@ -2790,6 +2772,5 @@
     applyTheme: applyTheme
   };
 
-  registerHorseCacheServiceWorker();
   applyTheme(getSavedTheme());
 })();
