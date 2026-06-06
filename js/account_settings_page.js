@@ -42,7 +42,7 @@
       nicknameHeading: "修改昵称",
       currentNicknameLabel: "当前昵称",
       newNicknameLabel: "新昵称",
-      newNicknamePlaceholder: "请输入新昵称（2-20字符）",
+      newNicknamePlaceholder: "请输入新昵称（2-10字符）",
       saveNicknameBtn: "保存昵称",
       passwordHeading: "修改密码",
       currentPasswordLabel: "当前密码",
@@ -55,7 +55,7 @@
       requireLogin: "请先登录",
       requireNickname: "请输入昵称",
       nicknameNoChange: "昵称未变化",
-      invalidNickname: "昵称需 2-20 位，仅支持中文、字母、数字、空格、下划线和短横线",
+      invalidNickname: "昵称需 2-10 位，仅支持中文、字母、数字、空格、下划线和短横线",
       nicknameUnavailableInline: "当前昵称不可用，请更换昵称",
       nicknameCheckFailed: "昵称校验失败，请稍后重试",
       nicknameUpdated: "昵称修改成功",
@@ -79,7 +79,7 @@
       nicknameHeading: "Change Nickname",
       currentNicknameLabel: "Current Nickname",
       newNicknameLabel: "New Nickname",
-      newNicknamePlaceholder: "Enter new nickname (2-20 chars)",
+      newNicknamePlaceholder: "Enter new nickname (2-10 chars)",
       saveNicknameBtn: "Save Nickname",
       passwordHeading: "Change Password",
       currentPasswordLabel: "Current Password",
@@ -92,7 +92,7 @@
       requireLogin: "Please sign in first",
       requireNickname: "Please enter nickname",
       nicknameNoChange: "Nickname is unchanged",
-      invalidNickname: "Nickname must be 2-20 chars and use letters/numbers/spaces/_/-/Chinese only",
+      invalidNickname: "Nickname must be 2-10 chars and use letters/numbers/spaces/_/-/Chinese only",
       nicknameUnavailableInline: "Nickname unavailable, please choose another",
       nicknameCheckFailed: "Nickname validation failed, please retry",
       nicknameUpdated: "Nickname updated",
@@ -111,7 +111,7 @@
   var ERROR_CODE_COPY = {
     zh: {
       EMPTY: "昵称不能为空",
-      LENGTH: "昵称长度需在 2-20 个字符",
+      LENGTH: "昵称长度需在 2-10 个字符",
       CHARS: "昵称仅支持中文、字母、数字、空格、下划线和短横线",
       INVALID: "昵称不可用，请更换",
       RESERVED: "昵称不可用，请更换",
@@ -128,7 +128,7 @@
     },
     en: {
       EMPTY: "Nickname cannot be empty",
-      LENGTH: "Nickname length must be 2-20 characters",
+      LENGTH: "Nickname length must be 2-10 characters",
       CHARS: "Nickname supports letters, numbers, spaces, underscores and hyphens only",
       INVALID: "Nickname is not allowed",
       RESERVED: "Nickname is not allowed",
@@ -207,7 +207,7 @@
 
   function isValidNickname(nicknameLike) {
     var nickname = toText(nicknameLike).trim();
-    if (nickname.length < 2 || nickname.length > 20) return false;
+    if (nickname.length < 2 || nickname.length > 10) return false;
     return /^[\u4E00-\u9FA5A-Za-z0-9 _-]+$/.test(nickname);
   }
 

@@ -252,7 +252,7 @@
   var ERROR_CODE_COPY = {
     zh: {
       EMPTY: "昵称不能为空",
-      LENGTH: "昵称长度需在 2-20 个字符",
+      LENGTH: "昵称长度需在 2-10 个字符",
       CHARS: "昵称仅支持中文、字母、数字、空格、下划线和短横线",
       INVALID: "昵称不可用，请更换",
       RESERVED: "昵称不可用，请更换",
@@ -269,7 +269,7 @@
     },
     en: {
       EMPTY: "Nickname cannot be empty",
-      LENGTH: "Nickname length must be 2-20 characters",
+      LENGTH: "Nickname length must be 2-10 characters",
       CHARS: "Nickname supports letters, numbers, spaces, underscores and hyphens only",
       INVALID: "Nickname is not allowed",
       RESERVED: "Nickname is not allowed",

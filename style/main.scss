@@ -53,7 +53,7 @@ h1.title {
   top: -56px;
   left: 0;
   width: max-content;
-  max-width: 220px;
+  max-width: none;
   box-sizing: border-box;
   margin: 0;
   color: #776e65;
@@ -63,8 +63,7 @@ h1.title {
   font-weight: 700;
   text-align: left;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
   text-decoration: none;
   cursor: pointer;
 }
@@ -80,6 +79,7 @@ body[data-page="game"] h1.title {
 
 .site-logo {
   margin-left: -25px;
+  height: auto;
 }
 
 @include keyframes(move-up) {

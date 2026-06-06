@@ -43,7 +43,7 @@
       passwordLabel: "\u5bc6\u7801",
       passwordPlaceholder: "\u8bf7\u8f93\u5165\u5bc6\u7801",
       nicknameLabel: "\u6635\u79f0",
-      nicknamePlaceholder: "\u8bf7\u8f93\u5165\u6635\u79f0\uff082-20\u5b57\u7b26\uff09",
+      nicknamePlaceholder: "\u8bf7\u8f93\u5165\u6635\u79f0\uff082-10\u5b57\u7b26\uff09",
       emailCodeLabel: "\u90ae\u7bb1\u9a8c\u8bc1\u7801",
       emailCodePlaceholder: "\u8bf7\u8f93\u5165\u90ae\u7bb1\u6536\u5230\u76846\u4f4d\u9a8c\u8bc1\u7801",
       turnstileLabel: "\u4eba\u673a\u9a8c\u8bc1",
@@ -57,7 +57,7 @@
       codeSent: "\u9a8c\u8bc1\u7801\u5df2\u53d1\u9001\uff0c\u8bf7\u67e5\u6536\u90ae\u7bb1\u540e\u8f93\u5165\u9a8c\u8bc1\u7801\u518d\u70b9\u51fb\u6ce8\u518c",
       invalidEmail: "\u8bf7\u8f93\u5165\u6b63\u786e\u7684\u90ae\u7bb1\u683c\u5f0f",
       invalidPassword: "\u5bc6\u7801\u9700\u4e3a8-16\u4f4d\uff0c\u4e14\u81f3\u5c11\u5305\u542b\u5b57\u6bcd/\u6570\u5b57/\u7b26\u53f7\u4e2d\u7684\u4e24\u79cd",
-      invalidNickname: "\u6635\u79f0\u9700\u4e3a2-20\u4f4d\uff0c\u4ec5\u652f\u6301\u4e2d\u6587\u3001\u5b57\u6bcd\u3001\u6570\u5b57\u3001\u7a7a\u683c\u3001\u4e0b\u5212\u7ebf\u548c\u77ed\u6a2a\u7ebf",
+      invalidNickname: "\u6635\u79f0\u9700\u4e3a2-10\u4f4d\uff0c\u4ec5\u652f\u6301\u4e2d\u6587\u3001\u5b57\u6bcd\u3001\u6570\u5b57\u3001\u7a7a\u683c\u3001\u4e0b\u5212\u7ebf\u548c\u77ed\u6a2a\u7ebf",
       nicknameTaken: "\u6635\u79f0\u5df2\u88ab\u5360\u7528\uff0c\u8bf7\u66f4\u6362",
       nicknameUnavailableInline: "\u5f53\u524d\u6635\u79f0\u4e0d\u53ef\u7528\uff0c\u8bf7\u66f4\u6362\u6635\u79f0",
       nicknameCheckFailed: "\u6635\u79f0\u6821\u9a8c\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5",
@@ -78,7 +78,7 @@
       passwordLabel: "Password",
       passwordPlaceholder: "Enter password",
       nicknameLabel: "Nickname",
-      nicknamePlaceholder: "Enter nickname (2-20 chars)",
+      nicknamePlaceholder: "Enter nickname (2-10 chars)",
       emailCodeLabel: "Email Verification Code",
       emailCodePlaceholder: "Enter 6-digit code from email",
       turnstileLabel: "Human Verification",
@@ -92,7 +92,7 @@
       codeSent: "Verification code sent. Enter it and click Register again.",
       invalidEmail: "Please enter a valid email address",
       invalidPassword: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
-      invalidNickname: "Nickname must be 2-20 chars and use letters/numbers/spaces/_/-/Chinese only",
+      invalidNickname: "Nickname must be 2-10 chars and use letters/numbers/spaces/_/-/Chinese only",
       nicknameTaken: "Nickname already exists",
       nicknameUnavailableInline: "Nickname unavailable, please choose another",
       nicknameCheckFailed: "Nickname validation failed, please retry",
@@ -107,7 +107,7 @@
       INVALID_EMAIL: "\u90ae\u7bb1\u683c\u5f0f\u4e0d\u6b63\u786e",
       WEAK_PASSWORD: "\u5bc6\u7801\u9700\u4e3a8-16\u4f4d\uff0c\u4e14\u81f3\u5c11\u5305\u542b\u5b57\u6bcd/\u6570\u5b57/\u7b26\u53f7\u4e2d\u7684\u4e24\u79cd",
       EMPTY: "\u6635\u79f0\u4e0d\u80fd\u4e3a\u7a7a",
-      LENGTH: "\u6635\u79f0\u957f\u5ea6\u9700\u5728 2-20 \u4e2a\u5b57\u7b26",
+      LENGTH: "\u6635\u79f0\u957f\u5ea6\u9700\u5728 2-10 \u4e2a\u5b57\u7b26",
       CHARS: "\u6635\u79f0\u4ec5\u652f\u6301\u4e2d\u6587\u3001\u5b57\u6bcd\u3001\u6570\u5b57\u3001\u7a7a\u683c\u3001\u4e0b\u5212\u7ebf\u548c\u77ed\u6a2a\u7ebf",
       INVALID: "\u6635\u79f0\u4e0d\u53ef\u7528\uff0c\u8bf7\u66f4\u6362",
       RESERVED: "\u6635\u79f0\u4e0d\u53ef\u7528\uff0c\u8bf7\u66f4\u6362",
@@ -137,7 +137,7 @@
       INVALID_EMAIL: "Invalid email format",
       WEAK_PASSWORD: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
       EMPTY: "Nickname cannot be empty",
-      LENGTH: "Nickname length must be 2-20 characters",
+      LENGTH: "Nickname length must be 2-10 characters",
       CHARS: "Nickname supports letters, numbers, spaces, underscores and hyphens only",
       INVALID: "Nickname is not allowed",
       RESERVED: "Nickname is not allowed",
@@ -308,7 +308,7 @@
 
   function isValidNickname(nicknameLike) {
     var nickname = toText(nicknameLike).trim();
-    if (nickname.length < 2 || nickname.length > 20) return false;
+    if (nickname.length < 2 || nickname.length > 10) return false;
     return /^[\u4E00-\u9FA5A-Za-z0-9 _-]+$/.test(nickname);
   }
 
