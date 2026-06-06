@@ -8,9 +8,9 @@
 
 1. `window.GAME_API_BASE_URL`：显式 override，仍保持最高优先级。
 2. 当前同源 `/api`：例如 `https://2048next.cn/api`。
-3. 远端 fallback：默认 `https://taihe.fun/api`，可用 `window.GAME_API_FALLBACK_BASE_URL` 覆盖。
+3. 远端 fallback：默认 `https://2048next.cn/api`，可用 `window.GAME_API_FALLBACK_BASE_URL` 覆盖。
 
-`2048next.cn`、`www.2048next.cn`、`taihe.fun`、`www.taihe.fun` 以及其他非本地主机默认启用远端 fallback。本地开发主机（`localhost`、`127.*`、`::1`）默认只使用同源 `/api`，除非设置 `window.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK = "true"` 或显式 `GAME_API_BASE_URL`。
+`2048next.cn`、`www.2048next.cn` 以及其他非本地主机默认启用远端 fallback。本地开发主机（`localhost`、`127.*`、`::1`）默认只使用同源 `/api`，除非设置 `window.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK = "true"` 或显式 `GAME_API_BASE_URL`。旧域名 `taihe.fun` 不再使用同源后端，默认直接转向 `https://2048next.cn/api`。
 
 ## 前端调用路径
 

@@ -11,7 +11,7 @@ const child = spawn(
     cwd: process.cwd(),
     env: {
       ...process.env,
-      VITE_API_PROXY_TARGET: process.env.VITE_API_PROXY_TARGET || "https://taihe.fun"
+      VITE_API_PROXY_TARGET: process.env.VITE_API_PROXY_TARGET || "https://2048next.cn"
     },
     stdio: "inherit",
     shell: process.platform === "win32"

@@ -300,7 +300,7 @@
     global.document.title = resolveProfilePageTitle();
   }
 
-  var DEFAULT_REMOTE_API_BASE_URL = "https://taihe.fun/api";
+  var DEFAULT_REMOTE_API_BASE_URL = "https://2048next.cn/api";
 
   function normalizeApiBase(base) {
     return toText(base).trim().replace(/\/+$/, "");
@@ -319,9 +319,13 @@
   function shouldUseRemoteApiFallback(hostname, allowCrossOriginFallback) {
     var host = toText(hostname).toLowerCase();
     if (allowCrossOriginFallback) return true;
-    if (host === "taihe.fun" || host === "www.taihe.fun") return true;
     if (host === "2048next.cn" || host === "www.2048next.cn") return true;
     return !!host && !isLocalDevelopmentHostname(host);
+  }
+
+  function shouldUseSameOriginApi(hostname) {
+    var host = toText(hostname).toLowerCase();
+    return host !== "taihe.fun" && host !== "www.taihe.fun";
   }
 
   function buildApiBaseCandidates() {
@@ -343,7 +347,7 @@
     var allowCrossOriginFallback = toText(global.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK).toLowerCase() === "true";
     var remoteFallback = normalizeApiBase(global.GAME_API_FALLBACK_BASE_URL) || DEFAULT_REMOTE_API_BASE_URL;
 
-    if (/^https?:\/\//i.test(origin)) push(origin + "/api");
+    if (/^https?:\/\//i.test(origin) && shouldUseSameOriginApi(hostname)) push(origin + "/api");
 
     if (shouldUseRemoteApiFallback(hostname, allowCrossOriginFallback)) {
       push(remoteFallback);

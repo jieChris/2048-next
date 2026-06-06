@@ -2,6 +2,7 @@ import { createBootstrapPipeline, resolvePageDescriptor } from "../bootstrap/pag
 import { registerEngineFacade, type EngineFacadeWindowLike } from "../bootstrap/engine-facade-host";
 import { bootstrapRankedSessionForHomeFamilyPage } from "../bootstrap/ranked-session";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
+import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
 import { getPageManifest } from "./runtime-manifest";
 import { resolveHomeFamilyScriptsByCapabilities } from "./home-family-shared";
@@ -66,6 +67,13 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   }
 
   bindNightBackgroundSync();
+  if (pageId === "index" && typeof window !== "undefined" && typeof document !== "undefined") {
+    bindHomeUserDisplay({
+      documentLike: document,
+      windowLike: window,
+      storageLike: window.localStorage
+    });
+  }
   await runBootstrapPipeline(pageId);
   await bootstrapRankedSessionForHomeFamilyPage(pageId);
   registerEngineFacade(

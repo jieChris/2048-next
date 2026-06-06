@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Favicon Preview</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
+  <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260606-fillframe">
+  <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260606-fillframe">
+  <style>
+    :root {
+      color: #26231f;
+      background: #faf8ef;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: start center;
+      padding: 42px 20px;
+      box-sizing: border-box;
+    }
+
+    main {
+      width: min(960px, 100%);
+    }
+
+    h1 {
+      margin: 0 0 20px;
+      font-size: 24px;
+      line-height: 1.2;
+      color: #4d463d;
+      letter-spacing: 0;
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    .preview-panel {
+      background: #f1eadf;
+      border: 1px solid #d7cbbb;
+      border-radius: 8px;
+      padding: 18px;
+    }
+
+    .preview-panel h2 {
+      margin: 0 0 14px;
+      font-size: 15px;
+      line-height: 1.2;
+      color: #63594e;
+      letter-spacing: 0;
+    }
+
+    .favicon-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-height: 64px;
+    }
+
+    .tab-strip {
+      display: flex;
+      align-items: end;
+      gap: 4px;
+      height: 44px;
+      padding: 0 10px;
+      background: #e7e8eb;
+      border: 1px solid #c9ccd1;
+      border-radius: 8px 8px 0 0;
+      overflow: hidden;
+    }
+
+    .tab {
+      width: 214px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      box-sizing: border-box;
+      background: #fff;
+      border: 1px solid #c9ccd1;
+      border-bottom: 0;
+      border-radius: 8px 8px 0 0;
+      color: #333;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .favicon-frame {
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(45deg, #d8d0c5 25%, transparent 25%),
+        linear-gradient(-45deg, #d8d0c5 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #d8d0c5 75%),
+        linear-gradient(-45deg, transparent 75%, #d8d0c5 75%);
+      background-size: 12px 12px;
+      background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+      border: 1px solid #c9bba8;
+    }
+
+    .favicon-sample {
+      display: block;
+      image-rendering: auto;
+      flex: 0 0 auto;
+    }
+
+    .sample-16 {
+      width: 16px;
+      height: 16px;
+    }
+
+    .sample-24 {
+      width: 24px;
+      height: 24px;
+    }
+
+    .sample-32 {
+      width: 32px;
+      height: 32px;
+    }
+
+    .sample-48 {
+      width: 48px;
+      height: 48px;
+    }
+
+    .sample-96 {
+      width: 96px;
+      height: 96px;
+    }
+
+    .sample-source {
+      width: 96px;
+      height: 96px;
+      object-fit: contain;
+    }
+
+    .label {
+      font-size: 13px;
+      color: #776b5e;
+      line-height: 1.35;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Favicon Preview</h1>
+    <section class="preview-grid" aria-label="favicon previews">
+      <article class="preview-panel">
+        <h2>Chrome 标签页模拟</h2>
+        <div class="tab-strip">
+          <div class="tab">
+            <img class="favicon-sample sample-32" src="meta/favicon.svg?v=20260606-fillframe" alt="页签图标 32px">
+            <span>2048</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="preview-panel">
+        <h2>线上旧图标</h2>
+        <div class="favicon-row">
+          <img class="favicon-sample sample-16" src="meta/legacy-favicon.svg?v=20260409-1" alt="旧版 16px favicon">
+          <img class="favicon-sample sample-24" src="meta/legacy-favicon.svg?v=20260409-1" alt="旧版 24px favicon">
+          <img class="favicon-sample sample-32" src="meta/legacy-favicon.svg?v=20260409-1" alt="旧版 32px favicon">
+          <span class="label">线上当前版本</span>
+        </div>
+      </article>
+
+      <article class="preview-panel">
+        <h2>真实尺寸</h2>
+        <div class="favicon-row">
+          <img class="favicon-sample sample-16" src="meta/favicon.svg?v=20260606-fillframe" alt="16px favicon">
+          <img class="favicon-sample sample-24" src="meta/favicon.svg?v=20260606-fillframe" alt="24px favicon">
+          <img class="favicon-sample sample-32" src="meta/favicon.svg?v=20260606-fillframe" alt="32px favicon">
+          <span class="label">16 / 24 / 32px</span>
+        </div>
+      </article>
+
+      <article class="preview-panel">
+        <h2>放大检查</h2>
+        <div class="favicon-row">
+          <span class="favicon-frame">
+            <img class="favicon-sample sample-96" src="meta/favicon.svg?v=20260606-fillframe" alt="放大 favicon">
+          </span>
+          <span class="label">用于看裁切边缘</span>
+        </div>
+      </article>
+
+      <article class="preview-panel">
+        <h2>PNG 图标</h2>
+        <div class="favicon-row">
+          <img class="favicon-sample sample-48" src="meta/icon-192.png?v=20260606-fillframe" alt="PNG favicon 48px">
+          <img class="favicon-sample sample-48" src="meta/apple-touch-icon.png?v=20260606-fillframe" alt="Apple touch icon 48px">
+          <span class="label">manifest / touch icon</span>
+        </div>
+      </article>
+
+      <article class="preview-panel">
+        <h2>旧版 PNG 图标</h2>
+        <div class="favicon-row">
+          <img class="favicon-sample sample-48" src="meta/legacy-apple-touch-icon.png?v=20260409-1" alt="旧版 Apple touch icon 48px">
+          <img class="favicon-sample sample-32" src="meta/legacy-favicon.ico?v=20260409-1" alt="旧版 ICO 32px">
+          <span class="label">线上旧资源</span>
+        </div>
+      </article>
+
+      <article class="preview-panel">
+        <h2>旧版 PNG 满幅</h2>
+        <div class="favicon-row">
+          <span class="favicon-frame">
+            <img class="favicon-sample sample-source" src="meta/legacy-apple-touch-icon.png?v=20260409-1" alt="旧版 PNG 满幅 logo">
+          </span>
+          <span class="label">180px 线上旧 PNG</span>
+        </div>
+      </article>
+
+
+      <article class="preview-panel">
+        <h2>当前原图</h2>
+        <div class="favicon-row">
+          <span class="favicon-frame">
+            <img class="favicon-sample sample-source" src="meta/source-square-logo-active.png?v=20260606-fillframe" alt="当前原图 logo">
+          </span>
+          <span class="label">683x719，当前处理基准</span>
+        </div>
+      </article>
+
+      <article class="preview-panel">
+        <h2>中心裁切 1.5x</h2>
+        <div class="favicon-row">
+          <span class="favicon-frame">
+            <img class="favicon-sample sample-source" src="meta/source-square-logo-crop-1_5.png?v=20260606-fillframe" alt="中心裁切 1.5x logo">
+          </span>
+          <span class="label">683px 中心裁切</span>
+        </div>
+      </article>
+
+      <article class="preview-panel">
+        <h2>中心裁切 1.5x 拉高</h2>
+        <div class="favicon-row">
+          <span class="favicon-frame">
+            <img class="favicon-sample sample-source" src="meta/source-square-logo-crop-1_5-tall.png?v=20260606-fillframe" alt="中心裁切 1.5x 高度拉伸 logo">
+          </span>
+          <span class="label">683x719，高度 +5.21%</span>
+        </div>
+      </article>
+
+      <article class="preview-panel">
+        <h2>铺满图框</h2>
+        <div class="favicon-row">
+          <span class="favicon-frame">
+            <img class="favicon-sample sample-source" src="meta/source-square-logo-active-fill-frame.png?v=20260606-fillframe" alt="铺满图框 logo">
+          </span>
+          <span class="label">578px 视觉满幅裁切</span>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

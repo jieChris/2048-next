@@ -18,7 +18,7 @@ type RescueModeOption = {
 };
 
 const AUTH_TOKEN_KEY = "2048_auth_token_v1";
-const REMOTE_API_BASE = "https://taihe.fun/api";
+const REMOTE_API_BASE = "https://2048next.cn/api";
 const RESCUE_MODE_OPTIONS: RescueModeOption[] = [
   { label: "4x4 \u65e0\u64a4\u56de", modeKey: "standard_4x4_pow2_no_undo", modeBucket: "standard_no_undo" },
   { label: "4x4 \u6709\u64a4\u56de", modeKey: "classic_4x4_pow2_undo", modeBucket: "standard_undo" },

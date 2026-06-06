@@ -5,7 +5,7 @@ const AUTH_TOKEN_STORAGE_KEY = "2048_auth_token_v1";
 const AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
 const ACTIVE_SESSION_STORAGE_KEY_PREFIX = "ranked_session_active:v1:";
 const PREFETCH_SESSION_STORAGE_KEY_PREFIX = "ranked_session_prefetch:v1:";
-const DEFAULT_REMOTE_API_BASE_URL = "https://taihe.fun/api";
+const DEFAULT_REMOTE_API_BASE_URL = "https://2048next.cn/api";
 
 const RANKED_MODE_KEYS = new Set([
   "standard_4x4_pow2_no_undo",
@@ -104,9 +104,13 @@ function isLocalDevelopmentHostname(hostname: unknown): boolean {
 function shouldUseRemoteApiFallback(hostname: unknown, allowCrossOriginFallback: boolean): boolean {
   const host = String(hostname || "").toLowerCase();
   if (allowCrossOriginFallback) return true;
-  if (host === "taihe.fun" || host === "www.taihe.fun") return true;
   if (host === "2048next.cn" || host === "www.2048next.cn") return true;
   return !!host && !isLocalDevelopmentHostname(host);
+}
+
+function shouldUseSameOriginApi(hostname: unknown): boolean {
+  const host = String(hostname || "").toLowerCase();
+  return host !== "taihe.fun" && host !== "www.taihe.fun";
 }
 
 export function buildRankedSessionApiBaseCandidates(windowLike: RankedSessionWindowLike): string[] {
@@ -126,7 +130,7 @@ export function buildRankedSessionApiBaseCandidates(windowLike: RankedSessionWin
     String(windowLike.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK || "").toLowerCase() === "true";
   const remoteFallback = normalizeApiBase(windowLike.GAME_API_FALLBACK_BASE_URL) || DEFAULT_REMOTE_API_BASE_URL;
 
-  if (/^https?:\/\//i.test(origin)) {
+  if (/^https?:\/\//i.test(origin) && shouldUseSameOriginApi(hostname)) {
     push(`${origin}/api`);
   }
   if (shouldUseRemoteApiFallback(hostname, allowCrossOriginFallback)) {

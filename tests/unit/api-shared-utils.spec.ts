@@ -34,8 +34,7 @@ describe("api shared utils API base candidates", () => {
     });
 
     expect(api?.buildApiBaseCandidates()).toEqual([
-      "https://2048next.cn/api",
-      "https://taihe.fun/api"
+      "https://2048next.cn/api"
     ]);
   });
 
@@ -50,9 +49,19 @@ describe("api shared utils API base candidates", () => {
 
     expect(api?.buildApiBaseCandidates()).toEqual([
       "https://staging.example.com/api",
-      "https://2048next.cn/api",
-      "https://taihe.fun/api"
+      "https://2048next.cn/api"
     ]);
+  });
+
+  it("uses 2048next.cn instead of the deprecated taihe.fun backend", () => {
+    const api = loadApiSharedUtils({
+      location: {
+        hostname: "taihe.fun",
+        origin: "https://2048next.cn"
+      }
+    });
+
+    expect(api?.buildApiBaseCandidates()).toEqual(["https://2048next.cn/api"]);
   });
 
   it("does not add production fallback for local development unless enabled", () => {

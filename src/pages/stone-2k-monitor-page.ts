@@ -34,7 +34,7 @@ type ApiResult = {
 type StatusState = "idle" | "busy" | "ok" | "err";
 type LockState = "locked" | "unlocked";
 
-const REMOTE_API_BASE = "https://taihe.fun/api";
+const REMOTE_API_BASE = "https://2048next.cn/api";
 const REFRESH_INTERVAL_MS = 15000;
 const REQUEST_TIMEOUT_MS = 10000;
 const MONITOR_ACCESS_PASSCODE = "stone2k-_gjWBeZM7fDtML0SaQDr7ZKE3oa7c6pwi2f4qN13B7w";

@@ -1,6 +1,6 @@
 ﻿# 2048 Next（中文说明）
 
-[点击游玩！](https://www.taihe.fun)
+[点击游玩！](https://www.2048next.cn)
 
 一个基于 Web 的 2048 变体项目，包含标准模式、撤回模式、练习板、回放、历史记录与移动端适配等功能。项目当前以模块化运行时方式组织核心逻辑，便于持续重构和回归测试。
 
@@ -96,7 +96,7 @@ npm run dev
 npm run dev:cloud-api
 ```
 
-该命令会把前端 `/api/*` 代理到 `https://taihe.fun/api/*`。
+该命令会把前端 `/api/*` 代理到 `https://2048next.cn/api/*`。
 
 如你的 API 端口不是 `8787`，可在启动前设置：
 
@@ -122,13 +122,13 @@ npm run preview
 
 `npm run preview` 会先执行一次 `build`，然后启动本地预览站点。`npm run build` 单独执行时仍会生成可部署的 `dist/` 目录。当前多页面入口依赖 Vite 处理后的模块资源，生产环境应发布 `dist/`，而不是直接托管仓库源码。
 
-`npm run preview` 默认会把本地预览站点的 `/api/*` 请求代理到 `https://taihe.fun/api/*`，因此在不启动本地 API 仓的情况下，也可以直接登录、查看排行榜并使用在线功能。
+`npm run preview` 默认会把本地预览站点的 `/api/*` 请求代理到 `https://2048next.cn/api/*`，因此在不启动本地 API 仓的情况下，也可以直接登录、查看排行榜并使用在线功能。
 
 如果你要改用其他 API 目标，可在启动前覆盖：
 
 ```bash
 # Windows PowerShell
-$env:VITE_API_PROXY_TARGET="https://taihe.fun"
+$env:VITE_API_PROXY_TARGET="https://2048next.cn"
 npm run preview
 ```
 

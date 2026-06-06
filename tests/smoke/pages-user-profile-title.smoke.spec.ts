@@ -285,7 +285,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           body: JSON.stringify({
             success: true,
             mode: "signed_url",
-            url: "https://taihe.fun/replay-envelope.json"
+            url: "https://2048next.cn/replay-envelope.json"
           })
         });
         return;
@@ -312,7 +312,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       await route.fallback();
     });
 
-    await page.route("https://taihe.fun/replay-envelope.json", async (route) => {
+    await page.route("https://2048next.cn/replay-envelope.json", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",

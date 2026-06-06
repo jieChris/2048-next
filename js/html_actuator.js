@@ -477,12 +477,27 @@ HTMLActuator.prototype.positionClass = function (position) {
   return "tile-position-" + position.x + "-" + position.y;
 };
 
+HTMLActuator.prototype.resolveScoreSizeClass = function (score) {
+  var value = Math.abs(Math.floor(Number(score) || 0));
+  if (value >= 1000000) return "score-value-tiny";
+  if (value >= 10000) return "score-value-compact";
+  return "";
+};
+
+HTMLActuator.prototype.applyScoreSizeClass = function (container, score) {
+  if (!container || !container.classList) return;
+  container.classList.remove("score-value-compact", "score-value-tiny");
+  var className = this.resolveScoreSizeClass(score);
+  if (className) container.classList.add(className);
+};
+
 HTMLActuator.prototype.updateScore = function (score) {
   this.clearContainer(this.scoreContainer);
 
   var difference = score - this.score;
   this.score = score;
 
+  this.applyScoreSizeClass(this.scoreContainer, this.score);
   this.scoreContainer.textContent = this.score;
 
   if (difference > 0) {
@@ -495,6 +510,7 @@ HTMLActuator.prototype.updateScore = function (score) {
 };
 
 HTMLActuator.prototype.updateBestScore = function (bestScore) {
+  this.applyScoreSizeClass(this.bestContainer, bestScore);
   this.bestContainer.textContent = bestScore;
 };
 

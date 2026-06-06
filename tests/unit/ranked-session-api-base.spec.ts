@@ -11,7 +11,18 @@ describe("ranked session API base candidates", () => {
           origin: "https://www.2048next.cn"
         }
       } as Window)
-    ).toEqual(["https://www.2048next.cn/api", "https://taihe.fun/api"]);
+    ).toEqual(["https://www.2048next.cn/api", "https://2048next.cn/api"]);
+  });
+
+  it("uses 2048next.cn instead of the deprecated taihe.fun backend", () => {
+    expect(
+      buildRankedSessionApiBaseCandidates({
+        location: {
+          hostname: "taihe.fun",
+          origin: "https://2048next.cn"
+        }
+      } as Window)
+    ).toEqual(["https://2048next.cn/api"]);
   });
 
   it("keeps local development on same-origin unless cross-origin fallback is enabled", () => {

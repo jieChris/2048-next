@@ -41,7 +41,7 @@
     var origin = toText(global.location && global.location.origin).replace(/\/+$/, "");
     var bases = [];
     if (origin) bases.push(origin + "/api");
-    bases.push("https://taihe.fun/api");
+    bases.push("https://2048next.cn/api");
     return bases;
   }
 

@@ -57,7 +57,7 @@ Generated: 2026-03-15 (Baseline Snapshot)
 ┌─────────────────▼───────────────────────────────────────┐
 │  Storage & API                                           │
 │  - localStorage (game state, history, settings)         │
-│  - External API: https://taihe.fun (leaderboard)        │
+│  - External API: https://2048next.cn (leaderboard)        │
 └─────────────────────────────────────────────────────────┘
 
 ## Data Flow: Game Move

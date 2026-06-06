@@ -60,7 +60,8 @@ export default defineConfig(({ mode }) => {
           modes: resolve(__dirname, "modes.html"),
           history: resolve(__dirname, "history.html"),
           stone_2k_monitor: resolve(__dirname, "stone_2k_monitor.html"),
-          relay_5x5: resolve(__dirname, "relay_5x5.html")
+          relay_5x5: resolve(__dirname, "relay_5x5.html"),
+          favicon_preview: resolve(__dirname, "favicon-preview.html")
         }
       }
     }

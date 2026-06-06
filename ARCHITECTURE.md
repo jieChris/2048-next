@@ -50,7 +50,7 @@ Vite entry points. Uses `runtime-manifest.ts` for declarative dependency managem
 1. **Game Move**: Input → GameManager → runtime helpers → Core move-apply → scoring → actuator render
 2. **Replay**: Import string → replay-codec decode → step-by-step execution via core replay functions
 3. **History**: Game end → HistoryRecord → IndexedDB storage (with localStorage migration)
-4. **Leaderboard**: Score submit → SubmitPayload → external API (taihe.fun)
+4. **Leaderboard**: Score submit → SubmitPayload → external API (2048next.cn)
 
 ## Build
 

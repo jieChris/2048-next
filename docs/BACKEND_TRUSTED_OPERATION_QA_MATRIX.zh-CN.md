@@ -23,8 +23,8 @@
 | M0-SCORE-002 | 裸分覆盖历史高分 | `POST /api/score` | 合法 token，提交明显高于真实记录的 `score=2147483647` | records / leaderboard / user best score 均不得采纳该分数 | 用户资料和榜单前后快照 |
 | M0-SECRET-001 | `AUTH_TOKEN_SECRET` 缺失 | `GET /health` 或服务启动 | staging 删除 / 置空 `AUTH_TOKEN_SECRET` 后启动 | 服务拒绝启动，或 `/health` 返回非 2xx 且标记 auth secret 缺失；不得进入可写状态 | 启动日志、health 响应 |
 | M0-SECRET-002 | `RANKED_SESSION_SECRET` 缺失 | `POST /api/ranked-session/start` 或服务启动 | staging 删除 / 置空 `RANKED_SESSION_SECRET` 后启动 | 排位 session 创建被拒绝，或服务健康检查失败；不得回退到 password/OTP pepper | 响应体、配置检查日志 |
-| M0-API-001 | 镜像域 API fallback 顺序 | 前端 API base 解析 / 网络请求 | 在 `https://2048next.cn` 打开页面，拦截首个 API 请求 | 第一优先级必须是同源 `/api`；仅同源失败且允许时才 fallback 到 `https://taihe.fun/api` | 浏览器 network HAR、CSP 无跨域错误 |
-| M0-API-002 | fallback 开关关闭 | 前端 API base 解析 / 网络请求 | `GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK=false`，同源 `/api` 返回 503 | 不得访问 `https://taihe.fun/api`；UI 显示可理解失败状态 | network HAR、控制台日志 |
+| M0-API-001 | 镜像域 API fallback 顺序 | 前端 API base 解析 / 网络请求 | 在 `https://2048next.cn` 打开页面，拦截首个 API 请求 | 第一优先级必须是同源 `/api`；仅同源失败且允许时才 fallback 到 `https://2048next.cn/api` | 浏览器 network HAR、CSP 无跨域错误 |
+| M0-API-002 | fallback 开关关闭 | 前端 API base 解析 / 网络请求 | `GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK=false`，同源 `/api` 返回 503 | 不得访问 `https://2048next.cn/api`；UI 显示可理解失败状态 | network HAR、控制台日志 |
 
 M0 发布签字条件：
 

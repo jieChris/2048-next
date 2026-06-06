@@ -51,7 +51,7 @@ API repo 使用 `wrangler.jsonc`，关键配置如下：
 | D1 database | `2048_scores` |
 | D1 database id | `d3a45837-cced-438c-abad-e37b9912944e` |
 | D1 remote | `true` |
-| routes | `taihe.fun/api`, `taihe.fun/api/*`, `2048next.cn/api`, `2048next.cn/api/*` |
+| routes | `2048next.cn/api`, `2048next.cn/api/*` |
 
 非敏感 vars 已在 `wrangler.jsonc` 中配置：
 
