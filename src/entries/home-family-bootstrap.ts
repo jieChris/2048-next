@@ -14,6 +14,13 @@ const GAME_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
   "standard-startup",
   "capped-startup"
 ]);
+const UI_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
+  "settings-and-panel",
+  "top-button-style",
+  "index-tail",
+  "i18n"
+]);
+const INDEX_CRITICAL_BUNDLE_URL = "./js/home_standard_critical_bundle.js?v=20260606-critical1";
 
 function readNightBackgroundPreference(): boolean {
   if (typeof window === "undefined") {
@@ -78,10 +85,22 @@ async function loadHomeFamilyRuntimeScripts(capabilities: readonly RuntimeCapabi
   const deferredCapabilities = capabilities.filter(
     (capability) => !GAME_STARTUP_CAPABILITIES.has(capability)
   );
-  await loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(startupCapabilities));
-  void loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(deferredCapabilities)).catch(
-    () => {}
+  const uiStartupCapabilities = deferredCapabilities.filter((capability) =>
+    UI_STARTUP_CAPABILITIES.has(capability)
   );
+  const backgroundCapabilities = deferredCapabilities.filter(
+    (capability) => !UI_STARTUP_CAPABILITIES.has(capability)
+  );
+
+  await loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(startupCapabilities));
+  if (uiStartupCapabilities.length > 0) {
+    await loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(uiStartupCapabilities));
+  }
+  if (backgroundCapabilities.length > 0) {
+    void loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(backgroundCapabilities)).catch(
+      () => {}
+    );
+  }
 }
 
 export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
@@ -103,5 +122,12 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   registerEngineFacade(
     typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
   );
+  if (pageId === "index") {
+    await loadLegacyScriptsSequentially([INDEX_CRITICAL_BUNDLE_URL]);
+    void loadLegacyScriptsSequentially(
+      resolveHomeFamilyScriptsByCapabilities(["announcement", "leaderboard"])
+    ).catch(() => {});
+    return;
+  }
   await loadHomeFamilyRuntimeScripts(manifest.capabilities);
 }

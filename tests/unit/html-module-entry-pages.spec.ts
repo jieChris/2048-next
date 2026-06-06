@@ -54,6 +54,17 @@ describe("module entry html pages", () => {
     });
   }
 
+  it("2048.html provides a nomodule fallback for old embedded browsers", () => {
+    const html = readHtml("2048.html");
+
+    expect(html).toContain(
+      '<script nomodule src="/js/legacy_index_nomodule_loader.js?v=20260606-nomodule1"></script>'
+    );
+    expect(html.indexOf("legacy_index_nomodule_loader.js")).toBeLessThan(
+      html.indexOf('type="module" src="./src/entries/index.ts"')
+    );
+  });
+
   it("palette.html preserves required palette editor mounts", () => {
     const html = readHtml("palette.html");
 

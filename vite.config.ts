@@ -1,5 +1,191 @@
-import { defineConfig, loadEnv } from "vite";
+import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import { resolve } from "path";
+
+const HOME_STANDARD_CRITICAL_BUNDLE = "home_standard_critical_bundle.js";
+const HOME_STANDARD_CRITICAL_FILES = [
+  "seedrandom.js",
+  "animframe_polyfill.js",
+  "core_crypto_random_runtime.js",
+  "core_bootstrap_runtime.js",
+  "keyboard_input_manager.js",
+  "theme_manager.js",
+  "mode_catalog.js",
+  "html_actuator.js",
+  "grid.js",
+  "tile.js",
+  "local_score_manager.js",
+  "local_history_store.js",
+  "core_rules_runtime.js",
+  "core_mode_runtime.js",
+  "core_special_rules_runtime.js",
+  "core_direction_lock_runtime.js",
+  "core_grid_scan_runtime.js",
+  "core_move_scan_runtime.js",
+  "core_move_path_runtime.js",
+  "core_timer_interval_runtime.js",
+  "core_scoring_runtime.js",
+  "core_merge_effects_runtime.js",
+  "core_post_move_runtime.js",
+  "core_post_move_record_runtime.js",
+  "core_post_undo_record_runtime.js",
+  "core_undo_restore_runtime.js",
+  "core_undo_snapshot_runtime.js",
+  "core_undo_tile_snapshot_runtime.js",
+  "core_undo_tile_restore_runtime.js",
+  "core_undo_restore_payload_runtime.js",
+  "core_undo_stack_entry_runtime.js",
+  "core_replay_codec_runtime.js",
+  "core_replay_v4_actions_runtime.js",
+  "core_replay_import_runtime.js",
+  "core_replay_execution_runtime.js",
+  "core_replay_dispatch_runtime.js",
+  "core_replay_lifecycle_runtime.js",
+  "core_replay_timer_runtime.js",
+  "core_replay_flow_runtime.js",
+  "core_replay_control_runtime.js",
+  "core_replay_loop_runtime.js",
+  "core_move_apply_runtime.js",
+  "core_game_settings_storage_runtime.js",
+  "core_game_manager_client_record_id_runtime.js",
+  "core_game_manager_base_helpers_runtime.js",
+  "core_game_manager_env_helpers_runtime.js",
+  "core_game_manager_runtime_call_helpers_runtime.js",
+  "core_game_manager_saved_state_helpers_runtime.js",
+  "core_ranked_checkpoint_local_mirror_fallback_runtime.js",
+  "core_game_manager_runtime_accessor_helpers_runtime.js",
+  "core_game_manager_stats_ui_helpers_runtime.js",
+  "core_game_manager_move_input_helpers_runtime.js",
+  "core_game_manager_stats_display_helpers_runtime.js",
+  "core_game_manager_panel_timer_helpers_runtime.js",
+  "core_game_manager_undo_stats_helpers_runtime.js",
+  "core_game_manager_restart_setup_helpers_runtime.js",
+  "core_game_manager_setup_timer_ui_helpers_runtime.js",
+  "core_game_manager_session_init_helpers_runtime.js",
+  "core_game_manager_common_runtime.js",
+  "core_game_manager_replay_helpers_runtime.js",
+  "core_game_manager_mode_rules_helpers_runtime.js",
+  "core_game_manager_static_runtime.js",
+  "core_game_manager_bindings_runtime.js",
+  "game_manager.js",
+  "core_mode_catalog_runtime.js",
+  "core_practice_mode_runtime.js",
+  "core_home_mode_runtime.js",
+  "core_home_runtime_contract_runtime.js",
+  "core_home_startup_host_runtime.js",
+  "core_home_page_host_runtime.js",
+  "core_undo_action_runtime.js",
+  "application.js",
+  "core_practice_transfer_runtime.js",
+  "core_practice_transfer_host_runtime.js",
+  "core_practice_transfer_page_host_runtime.js",
+  "core_capped_timer_scroll_runtime.js",
+  "capped_timer_scroll.js",
+  "core_timer_module_runtime.js",
+  "core_timer_module_settings_host_runtime.js",
+  "core_timer_module_settings_page_host_runtime.js",
+  "core_theme_settings_runtime.js",
+  "core_theme_settings_host_runtime.js",
+  "core_theme_settings_page_host_runtime.js",
+  "core_home_guide_runtime.js",
+  "core_mobile_hint_runtime.js",
+  "core_mobile_hint_ui_runtime.js",
+  "core_mobile_hint_modal_runtime.js",
+  "core_mobile_hint_open_host_runtime.js",
+  "core_mobile_hint_ui_host_runtime.js",
+  "core_mobile_hint_host_runtime.js",
+  "core_mobile_hint_page_host_runtime.js",
+  "core_mobile_timerbox_runtime.js",
+  "core_mobile_timerbox_host_runtime.js",
+  "core_mobile_timerbox_page_host_runtime.js",
+  "core_mobile_undo_top_runtime.js",
+  "core_mobile_undo_top_availability_host_runtime.js",
+  "core_mobile_undo_top_host_runtime.js",
+  "core_top_actions_runtime.js",
+  "core_top_actions_host_runtime.js",
+  "core_top_actions_page_host_runtime.js",
+  "core_mobile_top_buttons_runtime.js",
+  "core_mobile_top_buttons_page_host_runtime.js",
+  "core_mobile_viewport_runtime.js",
+  "core_mobile_viewport_page_host_runtime.js",
+  "core_storage_runtime.js",
+  "core_bgm_runtime.js",
+  "core_night_mode_runtime.js",
+  "core_replay_modal_runtime.js",
+  "core_settings_modal_host_runtime.js",
+  "core_settings_modal_page_host_runtime.js",
+  "core_top_button_style_runtime.js",
+  "core_replay_export_runtime.js",
+  "core_replay_page_host_runtime.js",
+  "core_pretty_time_runtime.js",
+  "core_responsive_relayout_runtime.js",
+  "core_responsive_relayout_host_runtime.js",
+  "core_top_action_bindings_host_runtime.js",
+  "core_game_over_undo_host_runtime.js",
+  "core_index_ui_startup_host_runtime.js",
+  "core_home_guide_dom_host_runtime.js",
+  "core_home_guide_done_notice_host_runtime.js",
+  "core_home_guide_highlight_host_runtime.js",
+  "core_home_guide_panel_host_runtime.js",
+  "core_home_guide_finish_host_runtime.js",
+  "core_home_guide_start_host_runtime.js",
+  "core_home_guide_controls_host_runtime.js",
+  "core_home_guide_step_flow_host_runtime.js",
+  "core_home_guide_step_host_runtime.js",
+  "core_home_guide_step_view_host_runtime.js",
+  "core_home_guide_settings_host_runtime.js",
+  "core_home_guide_startup_host_runtime.js",
+  "core_home_guide_page_host_runtime.js",
+  "core_index_ui_runtime_contract_runtime.js",
+  "core_index_ui_page_host_runtime.js",
+  "core_index_ui_page_resolvers_host_runtime.js",
+  "core_index_ui_page_actions_host_runtime.js",
+  "index_ui.js",
+  "core_i18n_runtime.js"
+];
+
+async function readHomeStandardCriticalBundle(): Promise<string> {
+  const chunks = [];
+  for (const fileName of HOME_STANDARD_CRITICAL_FILES) {
+    const filePath = resolve(__dirname, "js", fileName);
+    const content = await readFile(filePath, "utf8");
+    chunks.push(`\n/* ${fileName} */\n${content}\n;`);
+  }
+  return chunks.join("\n");
+}
+
+function copyRootLegacyScriptsPlugin(): Plugin {
+  return {
+    name: "copy-root-legacy-scripts",
+    async closeBundle() {
+      const sourceDir = resolve(__dirname, "js");
+      const targetDir = resolve(__dirname, "dist", "js");
+      await mkdir(targetDir, { recursive: true });
+      await cp(sourceDir, targetDir, { recursive: true });
+      await writeFile(
+        resolve(targetDir, HOME_STANDARD_CRITICAL_BUNDLE),
+        await readHomeStandardCriticalBundle(),
+        "utf8"
+      );
+    },
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url || !req.url.split("?")[0].endsWith(`/js/${HOME_STANDARD_CRITICAL_BUNDLE}`)) {
+          next();
+          return;
+        }
+        try {
+          const bundle = await readHomeStandardCriticalBundle();
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+          res.end(bundle);
+        } catch (error) {
+          next(error as Error);
+        }
+      });
+    }
+  };
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -30,6 +216,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: "./",
+    plugins: [copyRootLegacyScriptsPlugin()],
     server: {
       proxy: apiProxy
     },
