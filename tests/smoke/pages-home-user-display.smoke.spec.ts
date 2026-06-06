@@ -254,6 +254,43 @@ test.describe("Home user display", () => {
     expect(layout.tileCount).toBeGreaterThan(0);
   });
 
+  test("mobile static board shell fills the board before scripts run", async ({ page }) => {
+    await page.setViewportSize({ width: 414, height: 896 });
+    await page.route("**/*.js", async (route) => {
+      await route.abort();
+    });
+
+    const response = await page.goto("/2048.html?static-board-shell-smoke=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+
+    const layout = await page.evaluate(() => {
+      const rect = (selector: string) => {
+        const element = document.querySelector(selector);
+        const bounds = element?.getBoundingClientRect();
+        if (!bounds) return null;
+        return {
+          width: bounds.width,
+          height: bounds.height
+        };
+      };
+      return {
+        game: rect(".game-container"),
+        grid: rect(".grid-container"),
+        firstCell: rect(".grid-cell")
+      };
+    });
+
+    expect(layout.game?.width).toBeGreaterThanOrEqual(390);
+    expect(layout.game?.height).toBeGreaterThanOrEqual(390);
+    expect(layout.grid?.width).toBeGreaterThanOrEqual(370);
+    expect(layout.grid?.height).toBeGreaterThanOrEqual(370);
+    expect(layout.firstCell?.width).toBeGreaterThanOrEqual(80);
+    expect(layout.firstCell?.height).toBeGreaterThanOrEqual(80);
+  });
+
   test("mobile board starts before deferred home scripts finish loading", async ({ page }) => {
     await page.setViewportSize({ width: 414, height: 896 });
     await page.route("**/js/announcement_manager.js", async (route) => {

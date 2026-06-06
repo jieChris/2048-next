@@ -4678,6 +4678,37 @@ body[data-page="practice"] #test-grid-container.practice-grid-locked .grid-cell 
     height: calc(100vw - 10px);
   }
 
+  body[data-page="game"] .grid-container,
+  body[data-page="game"] .tile-container {
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    width: auto;
+    height: auto;
+  }
+
+  body[data-page="game"] .grid-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  body[data-page="game"] .grid-row {
+    display: flex;
+    flex: 1 1 0;
+    min-height: 0;
+    margin-bottom: 10px;
+  }
+
+  body[data-page="game"] .grid-cell {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    height: auto;
+    margin-right: 10px;
+    float: none;
+  }
+
   body[data-page="practice"] .game-container {
     width: calc(100% - 10px);
     max-width: none;
