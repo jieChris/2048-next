@@ -58,28 +58,21 @@ npm run dev
 
 ### 3.1 本地联调 API（登录/账号/排行榜可直接测）
 
-前端仓已内置 `/api` 代理，默认转发到 `http://127.0.0.1:8787`。  
+前端仓已内置 `/api` 代理，默认转发到本地 `2048-ranked` 后端：`http://127.0.0.1:3000`。  
 可直接一键启动（推荐）：
 
 ```bash
 npm run dev:local
 ```
 
-默认 `API` 以本地模式启动（`wrangler dev --local`），不依赖 Cloudflare 远程 tail 通道，更稳定。  
-如果你需要连远程资源调试，可改成：
-
-```bash
-# Windows PowerShell
-$env:LOCAL_API_MODE="remote"
-npm run dev:local
-```
+默认要求 `2048-ranked` 仓库与当前前端仓库在同一父目录，且后端 `.env` 已配置 Supabase/Postgres 连接。
 
 手动两端启动方式：
 
-1. 在 `2048-game-api` 仓启动 Worker：
+1. 在 `2048-ranked` 仓启动后端：
 
 ```bash
-npx wrangler dev --port 8787
+npm run dev -- --port 3000
 ```
 
 2. 在当前前端仓启动：
@@ -90,7 +83,7 @@ npm run dev
 
 这样页面里所有 `/api/*` 请求都会转发到本地 API，不需要先推服务器。
 
-如果本地网络无法稳定连接 Cloudflare 开发通道，但你仍希望在本地页面使用线上 API（含 CF 服务），可直接运行：
+如果你希望本地页面使用线上 `2048next.cn` API，可直接运行：
 
 ```bash
 npm run dev:cloud-api
@@ -98,11 +91,11 @@ npm run dev:cloud-api
 
 该命令会把前端 `/api/*` 代理到 `https://2048next.cn/api/*`。
 
-如你的 API 端口不是 `8787`，可在启动前设置：
+如你的 API 端口不是 `3000`，可在启动前设置：
 
 ```bash
 # Windows PowerShell
-$env:VITE_API_PROXY_TARGET="http://127.0.0.1:8799"
+$env:VITE_API_PROXY_TARGET="http://127.0.0.1:3001"
 npm run dev
 ```
 
@@ -110,7 +103,7 @@ npm run dev
 
 ```bash
 # Windows PowerShell
-$env:LOCAL_API_DIR="G:\\2048\\2048undo\\2048-game-api\\2048-game-api"
+$env:LOCAL_API_DIR="G:\\2048\\2048-ranked"
 npm run dev:local
 ```
 

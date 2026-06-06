@@ -148,9 +148,8 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## 9. 游戏数据后端迁移说明
 
-本文档只覆盖静态站点 `dist/` 发布。若上线独立游戏数据后端、Postgres、replay 文件存储、D1/COS 迁移、备份恢复和 `/api/*` 反代灰度，请使用：
+本文档只覆盖静态站点 `dist/` 发布。游戏数据后端统一使用 `2048-ranked` + Supabase/Postgres；旧 D1/COS 不再作为迁移或运行路径。若配置 `/api/*` 反代、备份恢复或新后端发布，请使用：
 
 - `docs/SRE_GAME_DATA_OPERATIONS_RUNBOOK.zh-CN.md`
 - `deploy/caddy/2048-next.Caddyfile.example`
 - `deploy/nginx/2048-next.nginx.conf.example`
-- `scripts/migrations/README.md`

@@ -7,10 +7,9 @@ const argv = process.argv.slice(2);
 if (argv.includes("--help") || argv.includes("-h")) {
   console.log("Usage: npm run dev:local");
   console.log("Env:");
-  console.log("  LOCAL_API_DIR   API repo directory");
-  console.log("  LOCAL_API_PORT  API port (default: 8787)");
+  console.log("  LOCAL_API_DIR   2048-ranked repo directory");
+  console.log("  LOCAL_API_PORT  API port (default: 3000)");
   console.log("  LOCAL_WEB_PORT  Web port (default: 5173)");
-  console.log("  LOCAL_API_MODE  local | remote (default: local)");
   console.log("  VITE_API_PROXY_TARGET  explicit proxy target for web");
   process.exit(0);
 }
@@ -18,22 +17,20 @@ if (argv.includes("--help") || argv.includes("-h")) {
 const rootDir = process.cwd();
 const apiDir =
   (process.env.LOCAL_API_DIR || "").trim() ||
-  path.resolve(rootDir, "..", "2048-game-api", "2048-game-api");
+  path.resolve(rootDir, "..", "2048-ranked");
 
-const parsedApiPort = Number.parseInt(process.env.LOCAL_API_PORT || "8787", 10);
-const apiPort = Number.isFinite(parsedApiPort) && parsedApiPort > 0 ? parsedApiPort : 8787;
+const parsedApiPort = Number.parseInt(process.env.LOCAL_API_PORT || "3000", 10);
+const apiPort = Number.isFinite(parsedApiPort) && parsedApiPort > 0 ? parsedApiPort : 3000;
 
 const parsedWebPort = Number.parseInt(process.env.LOCAL_WEB_PORT || "5173", 10);
 const webPort = Number.isFinite(parsedWebPort) && parsedWebPort > 0 ? parsedWebPort : 5173;
-const apiMode = (process.env.LOCAL_API_MODE || "local").trim().toLowerCase() === "remote" ? "remote" : "local";
 
 if (!existsSync(apiDir)) {
   console.error(`[dev:local] API repo not found: ${apiDir}`);
-  console.error("[dev:local] Set LOCAL_API_DIR to your 2048-game-api directory and retry.");
+  console.error("[dev:local] Set LOCAL_API_DIR to your 2048-ranked directory and retry.");
   process.exit(1);
 }
 
-const npxCmd = process.platform === "win32" ? "npx.cmd" : "npx";
 const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
 
 const children = [];
@@ -87,25 +84,9 @@ for (const sig of ["SIGINT", "SIGTERM", "SIGBREAK"]) {
 const apiBase = `http://127.0.0.1:${apiPort}`;
 console.log(`[dev:local] API dir: ${apiDir}`);
 console.log(`[dev:local] API base: ${apiBase}`);
-console.log(`[dev:local] API mode: ${apiMode}`);
 console.log(`[dev:local] Web port: ${webPort}`);
 
-const apiArgs = [
-  "wrangler",
-  "dev",
-  "--port",
-  String(apiPort),
-  "--show-interactive-dev-session=false",
-  "--log-level",
-  "warn"
-];
-if (apiMode === "local") {
-  apiArgs.push("--local", "--persist-to", path.resolve(apiDir, ".wrangler", "state", "dev-local"));
-} else {
-  apiArgs.push("--remote");
-}
-
-spawnManaged("api", npxCmd, apiArgs, apiDir);
+spawnManaged("api", npmCmd, ["run", "dev", "--", "--port", String(apiPort)], apiDir);
 spawnManaged(
   "web",
   npmCmd,
