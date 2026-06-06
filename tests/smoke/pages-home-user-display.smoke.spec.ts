@@ -77,6 +77,12 @@ test.describe("Home user display", () => {
       const manager = (window as any).game_manager;
       return !!manager && !!manager.actuator;
     });
+    await page.evaluate(async () => {
+      const fontSet = document.fonts;
+      if (fontSet && typeof fontSet.ready?.then === "function") {
+        await fontSet.ready;
+      }
+    });
 
     const scoreboard = await page.evaluate(() => {
       const manager = (window as any).game_manager;
