@@ -4678,12 +4678,6 @@ body[data-page="practice"] #test-grid-container.practice-grid-locked .grid-cell 
     height: calc(100vw - 10px);
   }
 
-  @supports (aspect-ratio: 1 / 1) {
-    body[data-page="game"] .game-container {
-      height: auto;
-    }
-  }
-
   body[data-page="practice"] .game-container {
     width: calc(100% - 10px);
     max-width: none;
