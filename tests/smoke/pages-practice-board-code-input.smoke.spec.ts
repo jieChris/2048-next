@@ -1,4 +1,19 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+
+async function openPracticeBoardCodePanel(page: Page): Promise<void> {
+  const panel = page.locator("#practice-board-code-panel");
+  const input = page.locator("#practice-board-code-input");
+  const isOpen = await panel
+    .evaluate((element) => element.classList.contains("is-open"))
+    .catch(() => false);
+
+  if (!isOpen) {
+    await page.locator("#practice-board-code-btn").click();
+  }
+
+  await expect(panel).toHaveClass(/is-open/);
+  await expect(input).toBeVisible();
+}
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("practice board code input applies a valid board payload", async ({ page }) => {
@@ -11,7 +26,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.waitForFunction(() => Boolean((window as any).game_manager) && Boolean((window as any).Tile));
 
-    await page.click("#practice-board-code-btn");
+    await openPracticeBoardCodePanel(page);
     await page.fill("#practice-board-code-input", "1234000000000000");
     await page.click("#practice-board-code-confirm");
 
@@ -62,7 +77,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.waitForFunction(() => Boolean((window as any).game_manager) && Boolean((window as any).Tile));
 
-    await page.click("#practice-board-code-btn");
+    await openPracticeBoardCodePanel(page);
     await page.fill("#practice-board-code-input", "1234000000000000");
     await page.click("#practice-board-code-confirm");
 
@@ -84,7 +99,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
     expect(baseline).not.toBeNull();
 
-    await page.click("#practice-board-code-btn");
+    await openPracticeBoardCodePanel(page);
     await page.fill("#practice-board-code-input", "1234Z00000000000");
 
     let dialogMessage = "";
@@ -128,7 +143,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForFunction(() => Boolean((window as any).game_manager) && Boolean((window as any).Tile));
 
     const applyCode = async (code: string) => {
-      await page.click("#practice-board-code-btn");
+      await openPracticeBoardCodePanel(page);
       await page.fill("#practice-board-code-input", code);
       await page.click("#practice-board-code-confirm");
       return expect
@@ -240,7 +255,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("body")).toBeVisible();
     await page.waitForFunction(() => Boolean((window as any).game_manager) && Boolean((window as any).Tile));
 
-    await page.click("#practice-board-code-btn");
+    await openPracticeBoardCodePanel(page);
     await page.fill("#practice-board-code-input", "1100000000000000");
     await page.click("#practice-board-code-confirm");
 
@@ -262,7 +277,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
     expect(before).not.toBeNull();
 
-    await page.click("#practice-board-code-btn");
+    await openPracticeBoardCodePanel(page);
     await page.click("#practice-board-code-input");
     await page.fill("#practice-board-code-input", "");
     await page.keyboard.type("13AD");
@@ -330,7 +345,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
     expect(baseline).not.toBeNull();
 
-    await page.click("#practice-board-code-btn");
+    await openPracticeBoardCodePanel(page);
     await page.fill("#practice-board-code-input", "7000000000000000");
 
     let dialogMessage = "";
