@@ -356,7 +356,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.locator('.selection-tile[data-value="32768"]').click();
     await page.locator('.grid-cell[data-x="0"][data-y="0"]').click();
-    await page.waitForTimeout(120);
+    await expect(page.locator("#timer32768")).toHaveText("---------");
 
     const beforeMove = await page.evaluate(() => {
       const manager = (window as any).game_manager;
