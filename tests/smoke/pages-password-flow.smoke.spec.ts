@@ -12,18 +12,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.addInitScript(() => {
       window.localStorage.setItem("ui_language_v1", "en");
-      (window as unknown as { GAME_TURNSTILE_SITE_KEY?: string }).GAME_TURNSTILE_SITE_KEY = "turnstile-site-test";
-      (window as unknown as { turnstile?: { render: (host: unknown, options?: Record<string, unknown>) => string; reset: (id: string) => void } }).turnstile = {
-        render: (_host: unknown, options?: Record<string, unknown>) => {
-          if (options && typeof options.callback === "function") {
-            (options.callback as (token: string) => void)("turnstile-token-test");
-          }
-          return "turnstile-widget-test";
-        },
-        reset: (_id: string) => {
-          return;
-        }
-      };
     });
 
     await page.route("**/api/**", async (route) => {
@@ -99,8 +87,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(changeCalls).toBe(1);
 
     expect(resetStartPayload?.email).toBe("smoke@example.com");
-    expect(resetStartPayload?.turnstile_token).toBe("turnstile-token-test");
-    expect(resetStartPayload?.captchaToken).toBe("turnstile-token-test");
+    expect(resetStartPayload?.turnstile_token).toBeUndefined();
+    expect(resetStartPayload?.captchaToken).toBeUndefined();
 
     expect(resetVerifyPayload?.email).toBe("smoke@example.com");
     expect(resetVerifyPayload?.code).toBe("135790");

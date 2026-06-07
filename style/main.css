@@ -442,7 +442,7 @@ body.home-guide-active #timer-scroll-controls {
 }
 
 .timer-leaderboard-summary.is-period-leaderboard {
-  font-size: 23px;
+  font-size: 22px;
 }
 
 .timer-leaderboard-summary:focus-visible {
@@ -462,6 +462,26 @@ body.home-guide-active #timer-scroll-controls {
       var(--timerbox-main-tile-width)
   );
   max-width: 100%;
+}
+
+#timer-leaderboard-panel.is-loading .timer-leaderboard-row {
+  animation: leaderboard-loading-pulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes leaderboard-loading-pulse {
+  from {
+    opacity: 0.48;
+  }
+
+  to {
+    opacity: 0.92;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #timer-leaderboard-panel.is-loading .timer-leaderboard-row {
+    animation-duration: 1.4s;
+  }
 }
 
 .timer-leaderboard-row::after {
@@ -2957,12 +2977,15 @@ body[data-page="practice"] .top-action-btn.reset-btn .reset-bottom-mover {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   width: 100%;
+  justify-items: center;
 }
 
 .toolkit-entry-actions .replay-button {
   min-width: 0;
+  width: min(205px, 100%);
   min-height: 48px;
   padding: 0 16px;
+  box-sizing: border-box;
   text-align: center;
   display: inline-flex;
   align-items: center;

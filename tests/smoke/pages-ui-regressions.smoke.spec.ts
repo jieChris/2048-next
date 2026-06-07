@@ -170,29 +170,43 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#settings-modal")).toHaveCSS("display", "flex");
 
     const alignment = await page.evaluate(() => {
-      const centerOf = (selector: string) => {
+      const rectOf = (selector: string) => {
         const element = document.querySelector(selector) as HTMLElement | null;
         if (!element) return null;
         const rect = element.getBoundingClientRect();
-        return Math.round(rect.left + rect.width / 2);
+        return {
+          center: Math.round(rect.left + rect.width / 2),
+          width: Math.round(rect.width)
+        };
       };
       const rows = Array.from(
         document.querySelectorAll(".settings-modal-content > .settings-row.settings-toggle-row")
       ).slice(0, 2) as HTMLElement[];
-      const rowCenters = rows.map((row) => {
+      const rowRects = rows.map((row) => {
         const rect = row.getBoundingClientRect();
-        return Math.round(rect.left + rect.width / 2);
+        return {
+          center: Math.round(rect.left + rect.width / 2),
+          width: Math.round(rect.width)
+        };
       });
+      const palette = rectOf("#toolkit-palette-link");
+      const account = rectOf("#toolkit-account-link");
       return {
-        leftColumnCenter: rowCenters[0] ?? null,
-        rightColumnCenter: rowCenters[1] ?? null,
-        paletteCenter: centerOf("#toolkit-palette-link"),
-        accountCenter: centerOf("#toolkit-account-link")
+        leftColumnCenter: rowRects[0]?.center ?? null,
+        rightColumnCenter: rowRects[1]?.center ?? null,
+        leftColumnWidth: rowRects[0]?.width ?? null,
+        rightColumnWidth: rowRects[1]?.width ?? null,
+        paletteCenter: palette?.center ?? null,
+        accountCenter: account?.center ?? null,
+        paletteWidth: palette?.width ?? null,
+        accountWidth: account?.width ?? null
       };
     });
 
     expect(Math.abs(Number(alignment.paletteCenter) - Number(alignment.leftColumnCenter))).toBeLessThanOrEqual(1);
     expect(Math.abs(Number(alignment.accountCenter) - Number(alignment.rightColumnCenter))).toBeLessThanOrEqual(1);
+    expect(Number(alignment.paletteWidth)).toBeLessThan(Number(alignment.leftColumnWidth));
+    expect(Number(alignment.accountWidth)).toBeLessThan(Number(alignment.rightColumnWidth));
   });
 
   async function seedBrokenPracticeTimerSave(page: import("@playwright/test").Page) {
@@ -588,7 +602,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("leaderboard view reuses timer row layout for rank and nickname+score rows", async ({ page }) => {
     const leaderboardRequests: string[] = [];
-    await page.route("**/api/leaderboard?**", async (route) => {
+    await page.route("**/leaderboard?**", async (route) => {
       leaderboardRequests.push(route.request().url());
       await route.fulfill({
         status: 200,
@@ -639,8 +653,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         };
       }
 
-      await runtime.refreshTimerLeaderboardPanel(true);
       manager.setTimerModuleViewMode("hidden");
+      await runtime.refreshTimerLeaderboardPanel(true);
       await new Promise((resolve) => {
         window.requestAnimationFrame(() => {
           window.requestAnimationFrame(() => resolve(null));
@@ -723,25 +737,30 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.locator("#timer-leaderboard-summary").click();
     await periodRequest;
     await expect(page.locator("#timer-leaderboard-summary")).toHaveText("日榜 TOP 10");
-    await expect(page.locator("#timer-leaderboard-summary")).toHaveCSS("font-size", "23px");
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveCSS("font-size", "22px");
 
     periodRequest = waitForPeriodRequest("week");
     await page.locator("#timer-leaderboard-summary").click();
     await periodRequest;
     await expect(page.locator("#timer-leaderboard-summary")).toHaveText("周榜 TOP 10");
-    await expect(page.locator("#timer-leaderboard-summary")).toHaveCSS("font-size", "23px");
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveCSS("font-size", "22px");
 
     periodRequest = waitForPeriodRequest("month");
     await page.locator("#timer-leaderboard-summary").click();
     await periodRequest;
     await expect(page.locator("#timer-leaderboard-summary")).toHaveText("月榜 TOP 10");
-    await expect(page.locator("#timer-leaderboard-summary")).toHaveCSS("font-size", "23px");
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveCSS("font-size", "22px");
 
-    periodRequest = waitForPeriodRequest("all");
     await page.locator("#timer-leaderboard-summary").click();
-    await periodRequest;
     await expect(page.locator("#timer-leaderboard-summary")).toHaveText("TOP 10");
     await expect(page.locator("#timer-leaderboard-summary")).toHaveCSS("font-size", "25px");
+
+    const requestCountBeforeCachedSwitch = leaderboardRequests.length;
+    await page.locator("#timer-leaderboard-summary").click();
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveText("日榜 TOP 10");
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveCSS("font-size", "22px");
+    await page.waitForTimeout(100);
+    expect(leaderboardRequests.length).toBe(requestCountBeforeCachedSwitch);
   });
 
   test("leaderboard frame renders placeholders while online data is loading", async ({ page }) => {
@@ -771,6 +790,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       });
       expect(response, "Index response should exist").not.toBeNull();
       expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+      await expect(page.locator("body")).toBeVisible();
       await waitForWindowCondition(
         page,
         () =>
@@ -795,6 +815,192 @@ test.describe("Legacy Multi-Page Smoke", () => {
       releaseLeaderboard?.();
       await page.evaluate(async () => {
         await (window as any).__pendingLeaderboardRefresh?.catch?.(() => undefined);
+      }).catch(() => undefined);
+    }
+  });
+
+  test("leaderboard period switch shows loading placeholders before uncached data resolves", async ({ page }) => {
+    let releaseDayLeaderboard: (() => void) | null = null;
+    const pendingDayLeaderboard = new Promise<void>((resolve) => {
+      releaseDayLeaderboard = resolve;
+    });
+
+    await page.route("**/api/leaderboard?**", async (route) => {
+      const url = new URL(route.request().url());
+      const period = url.searchParams.get("period") || "all";
+
+      if (period === "day") {
+        await pendingDayLeaderboard;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: [{ user_id: 9, nickname: "DayUser", score: 512 }]
+          })
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: [{ user_id: 7, nickname: "AllUser", score: 4096 }]
+        })
+      });
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_userId_v1", "8");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Hui");
+      window.localStorage.setItem("home_guide_seen_v1", "1");
+    });
+
+    try {
+      const response = await page.goto("/2048.html", {
+        waitUntil: "domcontentloaded"
+      });
+      expect(response, "Index response should exist").not.toBeNull();
+      expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+      await waitForWindowCondition(
+        page,
+        () =>
+          Boolean((window as any).game_manager) &&
+          Boolean((window as any).OnlineLeaderboardRuntime?.refreshTimerLeaderboardPanel),
+        12_000
+      );
+
+      await page.evaluate(async () => {
+        const manager = (window as any).game_manager;
+        const runtime = (window as any).OnlineLeaderboardRuntime;
+        await runtime.refreshTimerLeaderboardPanel(true);
+        manager.setTimerModuleViewMode("hidden");
+      });
+
+      await expect(page.locator("#timer-leaderboard-summary")).toHaveText("TOP 10");
+      await expect(page.locator("#timer-leaderboard-list .timer-leaderboard-row").nth(0)).toContainText(
+        "AllUser-4096"
+      );
+
+      await page.locator("#timer-leaderboard-summary").click();
+
+      await expect(page.locator("#timer-leaderboard-summary")).toHaveText("日榜 TOP 10");
+      await expect(page.locator("#timer-leaderboard-panel")).toHaveClass(/is-loading/);
+      await expect(page.locator("#timer-leaderboard-list .timer-leaderboard-row").nth(0)).toContainText("--");
+      await expect(page.locator("#timer-leaderboard-list .timer-leaderboard-row").nth(0)).not.toContainText(
+        "AllUser-4096"
+      );
+      await expect(page.locator("#timer-leaderboard-list .timer-leaderboard-row").nth(0)).toHaveCSS(
+        "animation-name",
+        "leaderboard-loading-pulse"
+      );
+
+      releaseDayLeaderboard?.();
+      await expect(page.locator("#timer-leaderboard-panel")).not.toHaveClass(/is-loading/);
+      await expect(page.locator("#timer-leaderboard-list .timer-leaderboard-row").nth(0)).toContainText(
+        "DayUser-512"
+      );
+    } finally {
+      releaseDayLeaderboard?.();
+    }
+  });
+
+  test("leaderboard background refresh keeps current rows visible while data reloads", async ({ page }) => {
+    let holdBackgroundRefresh = false;
+    let releaseRefresh: (() => void) | null = null;
+    const pendingRefresh = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+
+    await page.route("**/api/leaderboard?**", async (route) => {
+      if (holdBackgroundRefresh) {
+        await pendingRefresh;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: holdBackgroundRefresh
+            ? [{ user_id: 7, nickname: "FreshUser", score: 8192 }]
+            : [{ user_id: 7, nickname: "StableUser", score: 4096 }]
+        })
+      });
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_userId_v1", "8");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Hui");
+      window.localStorage.setItem("home_guide_seen_v1", "1");
+    });
+
+    try {
+      const response = await page.goto("/2048.html", {
+        waitUntil: "domcontentloaded"
+      });
+      expect(response, "Index response should exist").not.toBeNull();
+      expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+      await waitForWindowCondition(
+        page,
+        () =>
+          Boolean((window as any).game_manager) &&
+          Boolean((window as any).OnlineLeaderboardRuntime?.refreshTimerLeaderboardPanel),
+        12_000
+      );
+
+      await page.evaluate(async () => {
+        const manager = (window as any).game_manager;
+        const runtime = (window as any).OnlineLeaderboardRuntime;
+        await runtime.refreshTimerLeaderboardPanel(true);
+        manager.setTimerModuleViewMode("hidden");
+        await new Promise((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => resolve(null));
+          });
+        });
+      });
+
+      await expect(page.locator("#timer-leaderboard-summary")).toHaveText("TOP 10");
+      await expect(page.locator("#timer-leaderboard-list .timer-leaderboard-row").nth(0)).toContainText(
+        "StableUser-4096"
+      );
+      await expect(page.locator("#timer-leaderboard-panel")).not.toHaveClass(/is-loading/);
+
+      holdBackgroundRefresh = true;
+      await page.evaluate(() => {
+        const runtime = (window as any).OnlineLeaderboardRuntime;
+        const originalNow = Date.now;
+        const staleNow = originalNow() + 13_000;
+        Date.now = () => staleNow;
+        (window as any).__restoreDateNowForLeaderboardTest = () => {
+          Date.now = originalNow;
+        };
+        (window as any).__pendingLeaderboardRefresh = runtime.refreshTimerLeaderboardPanel(false);
+      });
+
+      await expect(page.locator("#timer-leaderboard-summary")).toHaveText("TOP 10");
+      await expect(page.locator("#timer-leaderboard-panel")).not.toHaveClass(/is-loading/);
+      await expect(page.locator("#timer-leaderboard-list .timer-leaderboard-row").nth(0)).toContainText(
+        "StableUser-4096"
+      );
+      await expect(page.locator("#timer-leaderboard-list .timer-leaderboard-row").nth(0)).not.toContainText("--");
+
+      releaseRefresh?.();
+      await page.evaluate(async () => {
+        await (window as any).__pendingLeaderboardRefresh;
+        (window as any).__restoreDateNowForLeaderboardTest?.();
+      });
+      await expect(page.locator("#timer-leaderboard-panel")).not.toHaveClass(/is-loading/);
+      await expect(page.locator("#timer-leaderboard-list .timer-leaderboard-row").nth(0)).toContainText(
+        "FreshUser-8192"
+      );
+    } finally {
+      releaseRefresh?.();
+      await page.evaluate(async () => {
+        await (window as any).__pendingLeaderboardRefresh?.catch?.(() => undefined);
+        (window as any).__restoreDateNowForLeaderboardTest?.();
       }).catch(() => undefined);
     }
   });

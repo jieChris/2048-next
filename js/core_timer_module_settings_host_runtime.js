@@ -339,15 +339,6 @@
       if (syncMobileTimerboxUi) {
         syncMobileTimerboxUi();
       }
-      var onlineRuntime = toRecord(windowLike).OnlineLeaderboardRuntime;
-      var refreshTimerLeaderboardPanel = asFunction(
-        toRecord(onlineRuntime).refreshTimerLeaderboardPanel
-      );
-      if (refreshTimerLeaderboardPanel) {
-        try {
-          refreshTimerLeaderboardPanel(true);
-        } catch (_errRefresh) {}
-      }
       didSync = true;
     };
 

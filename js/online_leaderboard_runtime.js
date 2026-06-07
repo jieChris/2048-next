@@ -153,6 +153,9 @@
   var timerLeaderboardCacheRows = [];
   var timerLeaderboardCacheMode = "";
   var timerLeaderboardCacheTime = 0;
+  var timerLeaderboardCacheByKey = Object.create(null);
+  var timerLeaderboardLoadingByKey = Object.create(null);
+  var timerLeaderboardRenderedSignature = "";
   var timerLeaderboardLoading = false;
   var timerLeaderboardPeriod = "all";
   var submitLock = false;
@@ -786,10 +789,9 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function cycleTimerLeaderboardPeriod() {
     timerLeaderboardPeriod = getNextTimerLeaderboardPeriod(timerLeaderboardPeriod);
-    timerLeaderboardCacheTime = 0;
     updateTimerLeaderboardHeader();
     runPromiseSafely(function () {
-      return refreshTimerLeaderboardPanel(true);
+      return refreshTimerLeaderboardPanel(false, true);
     });
   }
 
@@ -831,7 +833,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     }
 
     updateTimerLeaderboardHeader();
-    if (byId("timer-leaderboard-list") && !timerLeaderboardCacheRows.length) {
+    if (byId("timer-leaderboard-list") && !resolveCurrentTimerLeaderboardCacheRows().length) {
       renderTimerLeaderboardPlaceholderRows();
     }
     return panel;
@@ -1037,10 +1039,92 @@ function shouldAutoLoadOnlineLeaderboard() {
       fixedNameFontSize,
       selfProfileUrl
     );
+    if (rows.length > 0) {
+      setTimerLeaderboardPanelLoading(false);
+    }
   }
 
   function renderTimerLeaderboardPlaceholderRows() {
     renderTimerLeaderboardRows([], null);
+  }
+
+  function hasTimerLeaderboardLoadingRequests() {
+    return Object.keys(timerLeaderboardLoadingByKey).length > 0;
+  }
+
+  function setTimerLeaderboardPanelLoading(loading) {
+    var panel = byId("timer-leaderboard-panel");
+    if (!panel || !panel.classList) return;
+    var nextLoading = !!loading;
+    if (panel.classList.contains("is-loading") !== nextLoading) {
+      panel.classList.toggle("is-loading", nextLoading);
+    }
+    var nextBusy = nextLoading ? "true" : "false";
+    if (panel.getAttribute("aria-busy") !== nextBusy) {
+      panel.setAttribute("aria-busy", nextBusy);
+    }
+  }
+
+  function resolveCurrentTimerLeaderboardCacheKey() {
+    var modeKey = getCurrentModeKey();
+    var period = normalizeTimerLeaderboardPeriod(timerLeaderboardPeriod);
+    return modeKey + "|" + period;
+  }
+
+  function getTimerLeaderboardCacheEntry(cacheKey) {
+    var entry = timerLeaderboardCacheByKey[cacheKey];
+    return entry && Array.isArray(entry.rows) ? entry : null;
+  }
+
+  function resolveCurrentTimerLeaderboardCacheRows() {
+    var cacheKey = resolveCurrentTimerLeaderboardCacheKey();
+    var entry = getTimerLeaderboardCacheEntry(cacheKey);
+    if (entry) return entry.rows;
+    if (timerLeaderboardCacheMode === cacheKey) return timerLeaderboardCacheRows;
+    return [];
+  }
+
+  function renderTimerLeaderboardCacheEntry(entry) {
+    var rows = entry && Array.isArray(entry.rows) ? entry.rows : [];
+    var key = entry && entry.key ? entry.key : "";
+    var signature = key + "|" + rows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT).map(function (row, index) {
+      return [
+        index,
+        toText(row && row.user_id).trim(),
+        toText(row && row.nickname).trim(),
+        Math.floor(Number(row && row.score) || 0)
+      ].join(":");
+    }).join(",");
+    timerLeaderboardCacheRows = rows;
+    timerLeaderboardCacheMode = key;
+    timerLeaderboardCacheTime = entry && Number(entry.time) ? Number(entry.time) : 0;
+    setTimerLeaderboardPanelLoading(false);
+    if (signature && signature === timerLeaderboardRenderedSignature) return;
+    renderTimerLeaderboardRows(rows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT), resolveSelfRank(rows));
+    timerLeaderboardRenderedSignature = signature;
+    setTimerLeaderboardPanelLoading(false);
+  }
+
+  function renderTimerLeaderboardLoadingPlaceholder(cacheKey, allowReplaceVisibleRows) {
+    if (cacheKey !== resolveCurrentTimerLeaderboardCacheKey()) return;
+    if (!allowReplaceVisibleRows && hasVisibleTimerLeaderboardRows()) {
+      setTimerLeaderboardPanelLoading(false);
+      return;
+    }
+    timerLeaderboardRenderedSignature = "";
+    renderTimerLeaderboardPlaceholderRows();
+    setTimerLeaderboardPanelLoading(true);
+  }
+
+  function hasVisibleTimerLeaderboardRows() {
+    var list = byId("timer-leaderboard-list");
+    if (!list || typeof list.querySelector !== "function") return false;
+    var firstNameTile = list.querySelector(
+      ".timer-leaderboard-row:not(.is-empty):not(.is-self) .timer-leaderboard-name-tile"
+    );
+    if (!firstNameTile) return false;
+    var text = toText(firstNameTile.textContent).trim();
+    return !!text && text !== "--";
   }
 
   function resolveSelfRank(rows) {
@@ -2570,9 +2654,10 @@ function shouldAutoLoadOnlineLeaderboard() {
         global.syncTimerModuleSettingsUI();
       }
       updateTimerLeaderboardHeader();
+      var rows = resolveCurrentTimerLeaderboardCacheRows();
       renderTimerLeaderboardRows(
-        timerLeaderboardCacheRows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT),
-        resolveSelfRank(timerLeaderboardCacheRows)
+        rows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT),
+        resolveSelfRank(rows)
       );
     });
 
@@ -2583,9 +2668,10 @@ function shouldAutoLoadOnlineLeaderboard() {
         global.syncTimerModuleSettingsUI();
       }
       updateTimerLeaderboardHeader();
+      var rows = resolveCurrentTimerLeaderboardCacheRows();
       renderTimerLeaderboardRows(
-        timerLeaderboardCacheRows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT),
-        resolveSelfRank(timerLeaderboardCacheRows)
+        rows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT),
+        resolveSelfRank(rows)
       );
     });
   }
@@ -2646,7 +2732,7 @@ async function refreshLeaderboard(modeLike) {
     return true;
   }
 
-  async function refreshTimerLeaderboardPanel(forceRefresh) {
+  async function refreshTimerLeaderboardPanel(forceRefresh, preferCached) {
     var timerBox = byId("timerbox");
     if (!timerBox) return true;
     ensureTimerLeaderboardPanel();
@@ -2657,41 +2743,85 @@ async function refreshLeaderboard(modeLike) {
     var modeBucket = resolveLeaderboardMode(modeKey) || "";
     var period = normalizeTimerLeaderboardPeriod(timerLeaderboardPeriod);
     var cacheKey = modeKey + "|" + period;
-  if (!modeBucket) {
-    renderTimerLeaderboardPlaceholderRows();
-    return true;
-  }
-
-  var now = Date.now();
-    if (
-      !forceRefresh &&
-      !timerLeaderboardLoading &&
-      timerLeaderboardCacheMode === cacheKey &&
-      timerLeaderboardCacheRows.length > 0 &&
-      now - timerLeaderboardCacheTime < 12000
-    ) {
-      renderTimerLeaderboardRows(
-        timerLeaderboardCacheRows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT),
-        resolveSelfRank(timerLeaderboardCacheRows)
-      );
+    if (!modeBucket) {
+      renderTimerLeaderboardPlaceholderRows();
+      setTimerLeaderboardPanelLoading(false);
       return true;
     }
 
-    if (timerLeaderboardLoading) return true;
+    var now = Date.now();
+    var cachedEntry = getTimerLeaderboardCacheEntry(cacheKey);
+    if (preferCached && cachedEntry) {
+      renderTimerLeaderboardCacheEntry(cachedEntry);
+      return true;
+    }
+    if (preferCached && !cachedEntry) {
+      renderTimerLeaderboardLoadingPlaceholder(cacheKey, true);
+    }
+    var legacyCacheMatchesCurrentKey = !!(
+      timerLeaderboardCacheMode === cacheKey &&
+      Array.isArray(timerLeaderboardCacheRows) &&
+      timerLeaderboardCacheRows.length > 0
+    );
+    var hasRowsForCurrentCache = !!(
+      (
+        cachedEntry &&
+        Array.isArray(cachedEntry.rows) &&
+        cachedEntry.rows.length > 0
+      ) ||
+      legacyCacheMatchesCurrentKey ||
+      hasVisibleTimerLeaderboardRows()
+    );
+    var keepCachedRowsDuringRefresh = hasRowsForCurrentCache && !preferCached;
+    if (
+      !forceRefresh &&
+      !timerLeaderboardLoadingByKey[cacheKey] &&
+      cachedEntry &&
+      cachedEntry.rows.length > 0 &&
+      now - cachedEntry.time < 12000
+    ) {
+      renderTimerLeaderboardCacheEntry(cachedEntry);
+      return true;
+    }
+
+    if (timerLeaderboardLoadingByKey[cacheKey]) {
+      if (!keepCachedRowsDuringRefresh) {
+        renderTimerLeaderboardLoadingPlaceholder(cacheKey, false);
+      }
+      return true;
+    }
+    timerLeaderboardLoadingByKey[cacheKey] = true;
     timerLeaderboardLoading = true;
+    if (keepCachedRowsDuringRefresh) {
+      setTimerLeaderboardPanelLoading(false);
+    } else {
+      renderTimerLeaderboardLoadingPlaceholder(cacheKey, false);
+    }
     var result = await getLeaderboard(TIMER_LEADERBOARD_FETCH_LIMIT, modeKey, period);
-    timerLeaderboardLoading = false;
+    delete timerLeaderboardLoadingByKey[cacheKey];
+    timerLeaderboardLoading = hasTimerLeaderboardLoadingRequests();
 
     if (!result || !result.success) {
-      renderTimerLeaderboardPlaceholderRows();
+      if (
+        cacheKey === resolveCurrentTimerLeaderboardCacheKey() &&
+        !keepCachedRowsDuringRefresh &&
+        !hasVisibleTimerLeaderboardRows()
+      ) {
+        renderTimerLeaderboardPlaceholderRows();
+        setTimerLeaderboardPanelLoading(false);
+      }
       return false;
     }
 
     var rows = Array.isArray(result.data) ? result.data : [];
-    timerLeaderboardCacheRows = rows;
-    timerLeaderboardCacheMode = cacheKey;
-    timerLeaderboardCacheTime = Date.now();
-    renderTimerLeaderboardRows(rows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT), resolveSelfRank(rows));
+    timerLeaderboardCacheByKey[cacheKey] = {
+      key: cacheKey,
+      rows: rows,
+      time: Date.now()
+    };
+    if (cacheKey === resolveCurrentTimerLeaderboardCacheKey()) {
+      renderTimerLeaderboardCacheEntry(timerLeaderboardCacheByKey[cacheKey]);
+    }
     return true;
   }
 
@@ -3312,6 +3442,10 @@ async function refreshLeaderboard(modeLike) {
     return global.document.hidden ? MODE_INTRO_REFRESH_INTERVAL_HIDDEN_MS : MODE_INTRO_REFRESH_INTERVAL_VISIBLE_MS;
   }
 
+  function shouldRefreshTimerLeaderboardFromPolling() {
+    return !resolveCurrentTimerLeaderboardCacheRows().length && !hasVisibleTimerLeaderboardRows();
+  }
+
   function clearPollingTimer() {
     if (pollingUsingScheduler) return;
     if (!pollingTickTimer) return;
@@ -3394,7 +3528,10 @@ async function refreshLeaderboard(modeLike) {
       await maybeSubmitStone2kRun();
       await maybeSaveRankedCheckpoint(global.game_manager, {}).catch(function () {});
 
-      if (now - pollingLastTimerRefreshTime >= resolveTimerRefreshIntervalMs()) {
+      if (
+        shouldRefreshTimerLeaderboardFromPolling() &&
+        now - pollingLastTimerRefreshTime >= resolveTimerRefreshIntervalMs()
+      ) {
         pollingLastTimerRefreshTime = now;
         var timerOk = await refreshTimerLeaderboardPanel(false);
         if (!timerOk) tickFailed = true;
