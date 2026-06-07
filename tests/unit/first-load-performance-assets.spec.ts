@@ -6,7 +6,7 @@ describe("first-load performance assets", () => {
     const html = readFileSync("2048.html", "utf8");
 
     expect(html).toContain(
-      '<link rel="preload" href="js/home_standard_critical_bundle.js?v=20260606-critical1" as="script">'
+      '<link rel="preload" href="js/home_standard_critical_bundle.js?v=20260607-critical2" as="script">'
     );
   });
 

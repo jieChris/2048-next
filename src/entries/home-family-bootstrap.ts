@@ -20,7 +20,7 @@ const UI_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
   "index-tail",
   "i18n"
 ]);
-const INDEX_CRITICAL_BUNDLE_URL = "./js/home_standard_critical_bundle.js?v=20260606-critical1";
+const INDEX_CRITICAL_BUNDLE_URL = "./js/home_standard_critical_bundle.js?v=20260607-critical2";
 
 function readNightBackgroundPreference(): boolean {
   if (typeof window === "undefined") {
