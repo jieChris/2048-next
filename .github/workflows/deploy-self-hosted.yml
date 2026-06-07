@@ -92,6 +92,9 @@ jobs:
           test -n "${DEPLOY_ROOT}" || { echo "Missing secret: DEPLOY_ROOT" >&2; exit 1; }
           test -n "${DEPLOY_PORT}" || { echo "Missing secret: DEPLOY_PORT" >&2; exit 1; }
 
+      - name: Checkout deployment config
+        uses: actions/checkout@v4
+
       - name: Download release package
         uses: actions/download-artifact@v4
         with:
@@ -170,17 +173,37 @@ jobs:
           echo "ERROR: failed to upload package after scp/legacy-scp/ssh-stream retries." >&2
           exit 1
 
+      - name: Upload Nginx config
+        run: |
+          set -euo pipefail
+          config_path="deploy/nginx/2048-next.nginx.conf.example"
+          remote_path="/tmp/2048-next-nginx-${RELEASE_ID}.conf"
+          test -f "${config_path}"
+
+          for attempt in 1 2 3; do
+            if scp ${SSH_COMMON_OPTS} -P "${DEPLOY_PORT}" \
+              "${config_path}" \
+              "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_path}"; then
+              exit 0
+            fi
+            echo "WARN: nginx config upload attempt ${attempt} failed, retrying..." >&2
+            sleep $((attempt * 5))
+          done
+          echo "ERROR: failed to upload nginx config after 3 attempts." >&2
+          exit 1
+
       - name: Activate release (atomic symlink)
         run: |
           set -euo pipefail
           for attempt in 1 2 3; do
             if ssh ${SSH_COMMON_OPTS} -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-              "bash -s -- '${DEPLOY_ROOT}' '${ARTIFACT_NAME}' '${RELEASE_ID}' '${DEPLOY_KEEP_RELEASES}'" <<'REMOTE'
+              "bash -s -- '${DEPLOY_ROOT}' '${ARTIFACT_NAME}' '${RELEASE_ID}' '${DEPLOY_KEEP_RELEASES}' '/tmp/2048-next-nginx-${RELEASE_ID}.conf'" <<'REMOTE'
             set -euo pipefail
             deploy_root="$1"
             artifact_name="$2"
             release_id="$3"
             keep_releases="$4"
+            nginx_config_path="$5"
 
             releases_dir="${deploy_root}/releases"
             release_dir="${releases_dir}/${release_id}"
@@ -202,6 +225,11 @@ jobs:
             tar -xzf "/tmp/${artifact_name}" -C "${release_dir}"
             ln -sfn "${release_dir}" "${deploy_root}/current"
             rm -f "/tmp/${artifact_name}"
+
+            if [ -f "${nginx_config_path}" ]; then
+              cp "${nginx_config_path}" "${deploy_root}/nginx.conf"
+              rm -f "${nginx_config_path}"
+            fi
 
             if command -v docker >/dev/null 2>&1 && [ -f "${deploy_root}/nginx.conf" ]; then
               docker_network_args=()

@@ -22,21 +22,32 @@ function readPngSize(path: string): { width: number; height: number } {
 }
 
 describe("wide logo asset", () => {
-  it("stores the height-stretched wide logo as a separate source asset", () => {
+  it("stores the height-stretched wide logo sources, including a small first-paint asset", () => {
     expect(readPngSize("meta/logo.png")).toEqual({ width: 976, height: 400 });
     expect(readPngSize("meta/logo-tall.png")).toEqual({ width: 976, height: 421 });
+    expect(readPngSize("meta/logo-tall-small.png")).toEqual({ width: 468, height: 202 });
   });
 
-  it("uses the stretched logo file without fixed display-height stretching", () => {
+  it("uses the small stretched logo file without fixed display-height stretching", () => {
     for (const file of WIDE_LOGO_HTML_FILES) {
       const html = readFileSync(file, "utf8");
-      expect(html, file).toContain("meta/logo-tall.png?v=20260607-tall");
+      expect(html, file).toContain("meta/logo-tall-small.png?v=20260607-logo-small");
       expect(html, file).not.toContain("meta/logo.png");
+      expect(html, file).not.toContain("meta/logo-tall.png");
       expect(html, file).not.toMatch(/height\s*:\s*10(?:1|6\.2621)px/);
     }
 
     const mainCss = readFileSync("style/main.css", "utf8");
     expect(mainCss).toContain("height: auto;");
     expect(mainCss).not.toContain("height: 106.2621px;");
+  });
+
+  it("marks the main game logo as a high priority image with stable dimensions", () => {
+    const html = readFileSync("2048.html", "utf8");
+
+    expect(html).toContain('width="234"');
+    expect(html).toContain('height="101"');
+    expect(html).toContain('fetchpriority="high"');
+    expect(html).toContain('decoding="async"');
   });
 });

@@ -1,5 +1,4 @@
-# 2048-next Nginx reverse proxy example.
-# Replace placeholders before production use.
+# 2048-next Nginx reverse proxy config for the self-hosted static container.
 
 upstream game_data_api {
     server 127.0.0.1:3010;
@@ -8,13 +7,26 @@ upstream game_data_api {
 
 server {
     listen 80;
-    server_name 2048next.example.com;
+    server_name 2048next.cn www.2048next.cn _;
 
-    root /var/www/2048-next/current;
+    root /usr/share/nginx/html;
     index index.html;
 
     access_log /var/log/nginx/2048-next.access.log;
     error_log /var/log/nginx/2048-next.error.log warn;
+
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_types
+        application/javascript
+        application/json
+        application/manifest+json
+        application/wasm
+        image/svg+xml
+        text/css
+        text/javascript
+        text/plain;
 
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy strict-origin-when-cross-origin always;
@@ -56,7 +68,23 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    location ~* \.(?:js|mjs|css|png|jpg|jpeg|gif|webp|avif|svg|ico|woff2?|ttf|otf|wasm)$ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
+    location ~* \.(?:html|webmanifest)$ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=60, s-maxage=300, stale-while-revalidate=300" always;
+    }
+
+    location = / {
+        try_files /2048.html =404;
+        add_header Cache-Control "public, max-age=60, s-maxage=300, stale-while-revalidate=300" always;
+    }
+
     location / {
         try_files $uri $uri/ =404;
+        add_header Cache-Control "public, max-age=60, s-maxage=300, stale-while-revalidate=300" always;
     }
 }
