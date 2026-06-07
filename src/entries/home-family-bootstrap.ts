@@ -143,7 +143,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
     });
   }
   await runBootstrapPipeline(pageId);
-  void bootstrapRankedSessionForHomeFamilyPage(pageId).catch(() => {});
+  await bootstrapRankedSessionForHomeFamilyPage(pageId).catch(() => {});
   registerEngineFacade(
     typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
   );
