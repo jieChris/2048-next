@@ -1,5 +1,6 @@
 @font-face {
     font-family: "Clear Sans";
+    font-display: swap;
     src: url("ClearSans-Light-webfont.eot");
     src: url("ClearSans-Light-webfont.eot?#iefix") format("embedded-opentype"),
          url("ClearSans-Light-webfont.svg#clear_sans_lightregular") format("svg"),
@@ -10,6 +11,7 @@
 
 @font-face {
     font-family: "Clear Sans";
+    font-display: swap;
     src: url("ClearSans-Regular-webfont.eot");
     src: url("ClearSans-Regular-webfont.eot?#iefix") format("embedded-opentype"),
          url("ClearSans-Regular-webfont.svg#clear_sansregular") format("svg"),
@@ -20,6 +22,7 @@
 
 @font-face {
     font-family: "Clear Sans";
+    font-display: swap;
     src: url("ClearSans-Bold-webfont.eot");
     src: url("ClearSans-Bold-webfont.eot?#iefix") format("embedded-opentype"),
          url("ClearSans-Bold-webfont.svg#clear_sansbold") format("svg"),
@@ -27,4 +30,3 @@
     font-weight: 700;
     font-style: normal;
 }
-
