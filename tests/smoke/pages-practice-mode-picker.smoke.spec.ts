@@ -5,10 +5,32 @@ async function waitForPracticeBoardReady(page: import("@playwright/test").Page) 
     () =>
       Boolean((window as any).game_manager) &&
       typeof (window as any).game_manager.restartWithBoard === "function" &&
-      document.getElementById("practice-mode-picker-btn") !== null,
+      document.getElementById("practice-mode-picker-btn") !== null &&
+      document.querySelectorAll("#practice-mode-list [data-practice-mode-key]").length > 0,
     null,
     { timeout: 15_000 }
   );
+  await expect(page.locator("#practice-mode-picker-btn")).toBeVisible();
+  await expect(page.locator("#practice-mode-picker-btn")).toBeEnabled();
+}
+
+async function openPracticeModePanel(page: import("@playwright/test").Page) {
+  const picker = page.locator("#practice-mode-picker-btn");
+  const panel = page.locator("#practice-mode-panel");
+
+  await expect(picker).toBeVisible();
+  await expect(picker).toBeEnabled();
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (await panel.evaluate((element) => element.classList.contains("is-open"))) return;
+    await picker.click();
+    try {
+      await expect(panel).toHaveClass(/is-open/, { timeout: 2_000 });
+      return;
+    } catch (error) {
+      if (attempt === 1) throw error;
+    }
+  }
 }
 
 test.describe("Practice Board Mode Picker", () => {
@@ -28,8 +50,7 @@ test.describe("Practice Board Mode Picker", () => {
     await expect(page.locator("body")).toBeVisible();
     await waitForPracticeBoardReady(page);
 
-    await page.click("#practice-mode-picker-btn");
-    await expect(page.locator("#practice-mode-panel")).toHaveClass(/is-open/);
+    await openPracticeModePanel(page);
     await page.click('[data-practice-mode-key="fib_3x3_no_undo"]');
     await expect(page.locator("#practice-mode-panel")).not.toHaveClass(/is-open/);
 
@@ -86,8 +107,7 @@ test.describe("Practice Board Mode Picker", () => {
     await expect(page.locator("body")).toBeVisible();
     await waitForPracticeBoardReady(page);
 
-    await page.click("#practice-mode-picker-btn");
-    await expect(page.locator("#practice-mode-panel")).toHaveClass(/is-open/);
+    await openPracticeModePanel(page);
     await page.click('[data-practice-mode-key="diag_4x4_pow2_no_undo"]');
 
     await expect
@@ -167,8 +187,7 @@ test.describe("Practice Board Mode Picker", () => {
     await expect(page.locator("body")).toBeVisible();
     await waitForPracticeBoardReady(page);
 
-    await page.click("#practice-mode-picker-btn");
-    await expect(page.locator("#practice-mode-panel")).toHaveClass(/is-open/);
+    await openPracticeModePanel(page);
 
     await expect(page.locator('[data-practice-mode-key="standard_4x4_pow2_no_undo"]')).toHaveCount(1);
     await expect(page.locator('[data-practice-mode-key="capped_4x4_pow2_64_no_undo"]')).toHaveCount(1);
@@ -196,8 +215,7 @@ test.describe("Practice Board Mode Picker", () => {
     await expect(page.locator("body")).toBeVisible();
     await waitForPracticeBoardReady(page);
 
-    await page.click("#practice-mode-picker-btn");
-    await expect(page.locator("#practice-mode-panel")).toHaveClass(/is-open/);
+    await openPracticeModePanel(page);
     await page.click('[data-practice-mode-key="capped_4x4_pow2_64_no_undo"]');
     await expect(page.locator("#practice-mode-panel")).not.toHaveClass(/is-open/);
 
