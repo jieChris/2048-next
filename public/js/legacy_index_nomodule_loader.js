@@ -160,7 +160,7 @@
     "core_undo_action_runtime.js",
     "application.js"
   ];
-  coreScripts = ["home_standard_critical_bundle.js"];
+  coreScripts = ["home_standard_startup_bundle.js"];
 
   var uiStartupScripts = [
     "core_practice_transfer_runtime.js",
@@ -230,7 +230,7 @@
     "index_ui.js",
     "core_i18n_runtime.js"
   ];
-  uiStartupScripts = [];
+  uiStartupScripts = ["home_standard_deferred_bundle.js"];
 
   var backgroundScripts = [
     "announcement_records.js",

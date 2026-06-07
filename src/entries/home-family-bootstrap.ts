@@ -20,7 +20,8 @@ const UI_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
   "index-tail",
   "i18n"
 ]);
-const INDEX_CRITICAL_BUNDLE_URL = "./js/home_standard_critical_bundle.js?v=20260607-critical2";
+const INDEX_STARTUP_BUNDLE_URL = "./js/home_standard_startup_bundle.js?v=20260607-startup1";
+const INDEX_DEFERRED_BUNDLE_URL = "./js/home_standard_deferred_bundle.js?v=20260607-deferred1";
 
 function readNightBackgroundPreference(): boolean {
   if (typeof window === "undefined") {
@@ -103,6 +104,30 @@ async function loadHomeFamilyRuntimeScripts(capabilities: readonly RuntimeCapabi
   }
 }
 
+function scheduleIndexDeferredRuntimeLoad(): void {
+  if (typeof window === "undefined") return;
+
+  const loadDeferredRuntime = () => {
+    void loadLegacyScriptsSequentially([
+      INDEX_DEFERRED_BUNDLE_URL,
+      ...resolveHomeFamilyScriptsByCapabilities(["announcement", "leaderboard"])
+    ]).catch(() => {});
+  };
+
+  const requestIdleCallback = (
+    window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
+    }
+  ).requestIdleCallback;
+
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(loadDeferredRuntime, { timeout: 1_000 });
+    return;
+  }
+
+  window.setTimeout(loadDeferredRuntime, 0);
+}
+
 export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   const manifest = getPageManifest(pageId);
   if (!manifest) {
@@ -123,10 +148,8 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
     typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
   );
   if (pageId === "index") {
-    await loadLegacyScriptsSequentially([INDEX_CRITICAL_BUNDLE_URL]);
-    void loadLegacyScriptsSequentially(
-      resolveHomeFamilyScriptsByCapabilities(["announcement", "leaderboard"])
-    ).catch(() => {});
+    await loadLegacyScriptsSequentially([INDEX_STARTUP_BUNDLE_URL]);
+    scheduleIndexDeferredRuntimeLoad();
     return;
   }
   await loadHomeFamilyRuntimeScripts(manifest.capabilities);

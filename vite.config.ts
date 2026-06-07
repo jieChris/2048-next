@@ -2,8 +2,9 @@ import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { resolve } from "path";
 
-const HOME_STANDARD_CRITICAL_BUNDLE = "home_standard_critical_bundle.js";
-const HOME_STANDARD_CRITICAL_FILES = [
+const HOME_STANDARD_STARTUP_BUNDLE = "home_standard_startup_bundle.js";
+const HOME_STANDARD_DEFERRED_BUNDLE = "home_standard_deferred_bundle.js";
+const HOME_STANDARD_STARTUP_FILES = [
   "seedrandom.js",
   "animframe_polyfill.js",
   "core_crypto_random_runtime.js",
@@ -75,7 +76,9 @@ const HOME_STANDARD_CRITICAL_FILES = [
   "core_home_startup_host_runtime.js",
   "core_home_page_host_runtime.js",
   "core_undo_action_runtime.js",
-  "application.js",
+  "application.js"
+];
+const HOME_STANDARD_DEFERRED_FILES = [
   "core_practice_transfer_runtime.js",
   "core_practice_transfer_host_runtime.js",
   "core_practice_transfer_page_host_runtime.js",
@@ -144,9 +147,9 @@ const HOME_STANDARD_CRITICAL_FILES = [
   "core_i18n_runtime.js"
 ];
 
-async function readHomeStandardCriticalBundle(): Promise<string> {
+async function readHomeStandardBundle(fileNames: readonly string[]): Promise<string> {
   const chunks = [];
-  for (const fileName of HOME_STANDARD_CRITICAL_FILES) {
+  for (const fileName of fileNames) {
     const filePath = resolve(__dirname, "js", fileName);
     const content = await readFile(filePath, "utf8");
     chunks.push(`\n/* ${fileName} */\n${content}\n;`);
@@ -163,19 +166,30 @@ function copyRootLegacyScriptsPlugin(): Plugin {
       await mkdir(targetDir, { recursive: true });
       await cp(sourceDir, targetDir, { recursive: true });
       await writeFile(
-        resolve(targetDir, HOME_STANDARD_CRITICAL_BUNDLE),
-        await readHomeStandardCriticalBundle(),
+        resolve(targetDir, HOME_STANDARD_STARTUP_BUNDLE),
+        await readHomeStandardBundle(HOME_STANDARD_STARTUP_FILES),
+        "utf8"
+      );
+      await writeFile(
+        resolve(targetDir, HOME_STANDARD_DEFERRED_BUNDLE),
+        await readHomeStandardBundle(HOME_STANDARD_DEFERRED_FILES),
         "utf8"
       );
     },
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        if (!req.url || !req.url.split("?")[0].endsWith(`/js/${HOME_STANDARD_CRITICAL_BUNDLE}`)) {
+        const pathName = req.url ? req.url.split("?")[0] : "";
+        const bundleFiles: Record<string, readonly string[]> = {
+          [`/js/${HOME_STANDARD_STARTUP_BUNDLE}`]: HOME_STANDARD_STARTUP_FILES,
+          [`/js/${HOME_STANDARD_DEFERRED_BUNDLE}`]: HOME_STANDARD_DEFERRED_FILES
+        };
+        const fileNames = bundleFiles[pathName];
+        if (!fileNames) {
           next();
           return;
         }
         try {
-          const bundle = await readHomeStandardCriticalBundle();
+          const bundle = await readHomeStandardBundle(fileNames);
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/javascript; charset=utf-8");
           res.end(bundle);
