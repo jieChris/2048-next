@@ -149,6 +149,52 @@ test.describe("Legacy Multi-Page Smoke", () => {
     );
   });
 
+  test("settings toolkit entry buttons align with their setting columns", async ({ page }) => {
+    await routeI18nAuditApi(page);
+    await page.addInitScript(() => {
+      window.localStorage.setItem("home_guide_seen_v1", "1");
+    });
+
+    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Home response should exist").not.toBeNull();
+    expect(response?.ok(), "Home response should be 2xx").toBeTruthy();
+    await waitForWindowCondition(
+      page,
+      () => typeof (window as any).openSettingsModal === "function",
+      "settings modal opener ready"
+    );
+
+    await page.evaluate(() => {
+      (window as any).openSettingsModal();
+    });
+    await expect(page.locator("#settings-modal")).toHaveCSS("display", "flex");
+
+    const alignment = await page.evaluate(() => {
+      const centerOf = (selector: string) => {
+        const element = document.querySelector(selector) as HTMLElement | null;
+        if (!element) return null;
+        const rect = element.getBoundingClientRect();
+        return Math.round(rect.left + rect.width / 2);
+      };
+      const rows = Array.from(
+        document.querySelectorAll(".settings-modal-content > .settings-row.settings-toggle-row")
+      ).slice(0, 2) as HTMLElement[];
+      const rowCenters = rows.map((row) => {
+        const rect = row.getBoundingClientRect();
+        return Math.round(rect.left + rect.width / 2);
+      });
+      return {
+        leftColumnCenter: rowCenters[0] ?? null,
+        rightColumnCenter: rowCenters[1] ?? null,
+        paletteCenter: centerOf("#toolkit-palette-link"),
+        accountCenter: centerOf("#toolkit-account-link")
+      };
+    });
+
+    expect(Math.abs(Number(alignment.paletteCenter) - Number(alignment.leftColumnCenter))).toBeLessThanOrEqual(1);
+    expect(Math.abs(Number(alignment.accountCenter) - Number(alignment.rightColumnCenter))).toBeLessThanOrEqual(1);
+  });
+
   async function seedBrokenPracticeTimerSave(page: import("@playwright/test").Page) {
     const seedResponse = await page.goto("/Practice_board.html?practice_fresh=1", {
       waitUntil: "domcontentloaded"
@@ -541,7 +587,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("leaderboard view reuses timer row layout for rank and nickname+score rows", async ({ page }) => {
+    const leaderboardRequests: string[] = [];
     await page.route("**/api/leaderboard?**", async (route) => {
+      leaderboardRequests.push(route.request().url());
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -559,6 +607,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_userId_v1", "8");
       window.localStorage.setItem("2048_auth_nickname_v1", "Bob");
+      window.localStorage.setItem("home_guide_seen_v1", "1");
     });
 
     const response = await page.goto("/2048.html", {
@@ -622,6 +671,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         panelDisplay: panel ? String(window.getComputedStyle(panel).display || "") : "",
         summaryText: summary ? String(summary.textContent || "").trim() : "",
         summaryLabel: summary ? String(summary.getAttribute("data-label") || "") : "",
+        summaryRole: summary ? String(summary.getAttribute("role") || "") : "",
+        summaryFontSize: summary ? String(window.getComputedStyle(summary).fontSize || "") : "",
         firstRankClassName: firstRank ? String(firstRank.className || "") : "",
         firstNameClassName: firstName ? String(firstName.className || "") : "",
         firstRankText: firstRank ? String(firstRank.textContent || "").trim() : "",
@@ -644,6 +695,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.panelDisplay).toBe("block");
     expect(snapshot.summaryText).toBe("TOP 10");
     expect(snapshot.summaryLabel).toBe("排行榜");
+    expect(snapshot.summaryRole).toBe("button");
+    expect(snapshot.summaryFontSize).toBe("25px");
     expect(snapshot.firstRankClassName).toContain("timertile");
     expect(snapshot.firstNameClassName).toContain("timertile");
     expect(snapshot.firstRankText).toBe("1");
@@ -656,6 +709,94 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.selfNameWidth).toBe(187);
     expect(snapshot.firstNameRightDelta).toBeLessThanOrEqual(1);
     expect(snapshot.selfNameRightDelta).toBeLessThanOrEqual(1);
+    expect(
+      leaderboardRequests.some((url) => new URL(url).searchParams.get("period") === "all")
+    ).toBe(true);
+
+    const waitForPeriodRequest = (period: string) =>
+      page.waitForRequest((request) => {
+        if (!request.url().includes("/api/leaderboard?")) return false;
+        return new URL(request.url()).searchParams.get("period") === period;
+      });
+
+    let periodRequest = waitForPeriodRequest("day");
+    await page.locator("#timer-leaderboard-summary").click();
+    await periodRequest;
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveText("日榜 TOP 10");
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveCSS("font-size", "23px");
+
+    periodRequest = waitForPeriodRequest("week");
+    await page.locator("#timer-leaderboard-summary").click();
+    await periodRequest;
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveText("周榜 TOP 10");
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveCSS("font-size", "23px");
+
+    periodRequest = waitForPeriodRequest("month");
+    await page.locator("#timer-leaderboard-summary").click();
+    await periodRequest;
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveText("月榜 TOP 10");
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveCSS("font-size", "23px");
+
+    periodRequest = waitForPeriodRequest("all");
+    await page.locator("#timer-leaderboard-summary").click();
+    await periodRequest;
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveText("TOP 10");
+    await expect(page.locator("#timer-leaderboard-summary")).toHaveCSS("font-size", "25px");
+  });
+
+  test("leaderboard frame renders placeholders while online data is loading", async ({ page }) => {
+    let releaseLeaderboard: (() => void) | null = null;
+    const pendingLeaderboard = new Promise<void>((resolve) => {
+      releaseLeaderboard = resolve;
+    });
+
+    await page.route("**/api/leaderboard?**", async (route) => {
+      await pendingLeaderboard;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("home_guide_seen_v1", "1");
+      window.localStorage.setItem("2048_auth_userId_v1", "8");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Hui");
+    });
+
+    try {
+      const response = await page.goto("/2048.html", {
+        waitUntil: "domcontentloaded"
+      });
+      expect(response, "Index response should exist").not.toBeNull();
+      expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+      await waitForWindowCondition(
+        page,
+        () =>
+          Boolean((window as any).game_manager) &&
+          Boolean((window as any).OnlineLeaderboardRuntime?.refreshTimerLeaderboardPanel),
+        12_000
+      );
+
+      await page.evaluate(() => {
+        const manager = (window as any).game_manager;
+        const runtime = (window as any).OnlineLeaderboardRuntime;
+        manager.setTimerModuleViewMode("hidden");
+        (window as any).__pendingLeaderboardRefresh = runtime.refreshTimerLeaderboardPanel(true);
+      });
+
+      await expect(page.locator("#timer-leaderboard-panel")).toBeVisible();
+      await expect(page.locator("#timer-leaderboard-summary")).toHaveText("TOP 10");
+      await expect(page.locator("#timer-leaderboard-list .timer-leaderboard-row")).toHaveCount(11);
+      await expect(page.locator("#timer-leaderboard-list .timer-leaderboard-row").nth(0)).toContainText("--");
+      await expect(page.locator("#timer-leaderboard-list .timer-leaderboard-row.is-self")).toContainText("Hui-0");
+    } finally {
+      releaseLeaderboard?.();
+      await page.evaluate(async () => {
+        await (window as any).__pendingLeaderboardRefresh?.catch?.(() => undefined);
+      }).catch(() => undefined);
+    }
   });
 
   test("timer legend tiles reuse board tile foreground and background colors", async ({ page }) => {

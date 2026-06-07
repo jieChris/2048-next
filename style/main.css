@@ -423,6 +423,8 @@ body.home-guide-active #timer-scroll-controls {
   border-radius: 3px;
   color: white;
   margin-top: 8px;
+  cursor: pointer !important;
+  user-select: none;
 }
 
 .timer-leaderboard-summary:after {
@@ -436,6 +438,16 @@ body.home-guide-active #timer-scroll-controls {
   line-height: 13px;
   text-align: center;
   color: #eee4da;
+  cursor: pointer !important;
+}
+
+.timer-leaderboard-summary.is-period-leaderboard {
+  font-size: 23px;
+}
+
+.timer-leaderboard-summary:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 3px;
 }
 
 .timer-leaderboard-list {
@@ -2944,7 +2956,7 @@ body[data-page="practice"] .top-action-btn.reset-btn .reset-bottom-mover {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  width: min(100%, 420px);
+  width: 100%;
 }
 
 .toolkit-entry-actions .replay-button {

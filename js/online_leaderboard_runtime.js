@@ -119,6 +119,7 @@
   };
   var TIMER_LEADERBOARD_TOP_LIMIT = 10;
   var TIMER_LEADERBOARD_FETCH_LIMIT = 200;
+  var TIMER_LEADERBOARD_PERIODS = ["all", "day", "week", "month"];
   var POLL_BASE_INTERVAL_VISIBLE_MS = 5000;
   var POLL_BASE_INTERVAL_HIDDEN_MS = 12000;
   var TIMER_REFRESH_INTERVAL_VISIBLE_MS = 20000;
@@ -153,6 +154,7 @@
   var timerLeaderboardCacheMode = "";
   var timerLeaderboardCacheTime = 0;
   var timerLeaderboardLoading = false;
+  var timerLeaderboardPeriod = "all";
   var submitLock = false;
   var recordSubmitLock = false;
   var stone2kSubmitLock = false;
@@ -716,6 +718,37 @@ function shouldAutoLoadOnlineLeaderboard() {
     return raw === "en" ? "en" : "zh";
   }
 
+  function normalizeTimerLeaderboardPeriod(periodLike) {
+    var value = toText(periodLike).trim().toLowerCase();
+    for (var i = 0; i < TIMER_LEADERBOARD_PERIODS.length; i += 1) {
+      if (TIMER_LEADERBOARD_PERIODS[i] === value) return value;
+    }
+    return "all";
+  }
+
+  function getTimerLeaderboardPeriodLabel(periodLike, lang) {
+    var period = normalizeTimerLeaderboardPeriod(periodLike);
+    if (period === "day") return lang === "en" ? "Daily TOP 10" : "日榜 TOP 10";
+    if (period === "week") return lang === "en" ? "Weekly TOP 10" : "周榜 TOP 10";
+    if (period === "month") return lang === "en" ? "Monthly TOP 10" : "月榜 TOP 10";
+    return "TOP 10";
+  }
+
+  function getTimerLeaderboardPeriodTitle(periodLike, lang) {
+    var period = normalizeTimerLeaderboardPeriod(periodLike);
+    if (period === "day") return lang === "en" ? "Daily leaderboard" : "日榜";
+    if (period === "week") return lang === "en" ? "Weekly leaderboard" : "周榜";
+    if (period === "month") return lang === "en" ? "Monthly leaderboard" : "月榜";
+    return lang === "en" ? "Overall leaderboard" : "总榜";
+  }
+
+  function getNextTimerLeaderboardPeriod(periodLike) {
+    var period = normalizeTimerLeaderboardPeriod(periodLike);
+    var index = TIMER_LEADERBOARD_PERIODS.indexOf(period);
+    if (index < 0) index = 0;
+    return TIMER_LEADERBOARD_PERIODS[(index + 1) % TIMER_LEADERBOARD_PERIODS.length];
+  }
+
   function resolveLeaderboardMode(modeLike) {
     var key = toText(modeLike).trim().toLowerCase();
     if (!key) return null;
@@ -751,6 +784,29 @@ function shouldAutoLoadOnlineLeaderboard() {
     return !!resolveLeaderboardMode(modeLike);
   }
 
+  function cycleTimerLeaderboardPeriod() {
+    timerLeaderboardPeriod = getNextTimerLeaderboardPeriod(timerLeaderboardPeriod);
+    timerLeaderboardCacheTime = 0;
+    updateTimerLeaderboardHeader();
+    runPromiseSafely(function () {
+      return refreshTimerLeaderboardPanel(true);
+    });
+  }
+
+  function bindTimerLeaderboardSummary(summary) {
+    if (!summary || summary.__timerLeaderboardPeriodBound) return;
+    summary.__timerLeaderboardPeriodBound = true;
+    summary.addEventListener("click", function () {
+      cycleTimerLeaderboardPeriod();
+    });
+    summary.addEventListener("keydown", function (eventLike) {
+      var key = toText(eventLike && eventLike.key).toLowerCase();
+      if (key !== "enter" && key !== " ") return;
+      if (eventLike && typeof eventLike.preventDefault === "function") eventLike.preventDefault();
+      cycleTimerLeaderboardPeriod();
+    });
+  }
+
   function ensureTimerLeaderboardPanel() {
     var timerBox = byId("timerbox");
     if (!timerBox) return null;
@@ -762,6 +818,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
       var summary = createEl("div", "timer-leaderboard-summary", "");
       summary.id = "timer-leaderboard-summary";
+      bindTimerLeaderboardSummary(summary);
 
       var list = createEl("div", "timer-leaderboard-list", "");
       list.id = "timer-leaderboard-list";
@@ -769,9 +826,14 @@ function shouldAutoLoadOnlineLeaderboard() {
       panel.appendChild(summary);
       panel.appendChild(list);
       timerBox.appendChild(panel);
+    } else {
+      bindTimerLeaderboardSummary(byId("timer-leaderboard-summary"));
     }
 
     updateTimerLeaderboardHeader();
+    if (byId("timer-leaderboard-list") && !timerLeaderboardCacheRows.length) {
+      renderTimerLeaderboardPlaceholderRows();
+    }
     return panel;
   }
 
@@ -779,9 +841,15 @@ function shouldAutoLoadOnlineLeaderboard() {
     var lang = getLanguage();
     var summary = byId("timer-leaderboard-summary");
     if (!summary) return;
-    summary.textContent = "TOP 10";
+    var period = normalizeTimerLeaderboardPeriod(timerLeaderboardPeriod);
+    summary.textContent = getTimerLeaderboardPeriodLabel(period, lang);
+    summary.classList.toggle("is-period-leaderboard", period !== "all");
     summary.setAttribute("data-label", lang === "en" ? "LEADERBOARD" : "排行榜");
-    summary.setAttribute("title", lang === "en" ? "Leaderboard" : "排行榜");
+    summary.setAttribute("title", getTimerLeaderboardPeriodTitle(period, lang));
+    summary.setAttribute("role", "button");
+    summary.setAttribute("tabindex", "0");
+    summary.setAttribute("aria-label", getTimerLeaderboardPeriodTitle(period, lang));
+    summary.style.cursor = "pointer";
   }
 
   function resolveRankTileFontSize(rankText) {
@@ -969,6 +1037,10 @@ function shouldAutoLoadOnlineLeaderboard() {
       fixedNameFontSize,
       selfProfileUrl
     );
+  }
+
+  function renderTimerLeaderboardPlaceholderRows() {
+    renderTimerLeaderboardRows([], null);
   }
 
   function resolveSelfRank(rows) {
@@ -2276,14 +2348,16 @@ function shouldAutoLoadOnlineLeaderboard() {
     ].join("|");
   }
 
-  function getLeaderboard(limit, modeLike) {
+  function getLeaderboard(limit, modeLike, periodLike) {
     var safeLimit = Number(limit);
     if (!Number.isFinite(safeLimit) || safeLimit <= 0) safeLimit = DEFAULT_BOARD_LIMIT;
     safeLimit = Math.floor(safeLimit);
 
     var modeKey = toText(modeLike).trim();
     var modeBucket = resolveLeaderboardMode(modeKey || modeLike);
+    var period = normalizeTimerLeaderboardPeriod(periodLike);
     var path = "/leaderboard?limit=" + encodeURIComponent(String(safeLimit));
+    path += "&period=" + encodeURIComponent(period);
     if (modeKey) {
       path += "&mode_key=" + encodeURIComponent(modeKey);
     }
@@ -2561,7 +2635,7 @@ async function refreshLeaderboard(modeLike) {
   var modeKey = toText(modeLike).trim();
   var modeBucket = resolveLeaderboardMode(modeKey || modeLike) || "";
   var cacheKey = modeKey || modeBucket;
-    var result = await getLeaderboard(DEFAULT_BOARD_LIMIT, modeKey || modeLike);
+    var result = await getLeaderboard(DEFAULT_BOARD_LIMIT, modeKey || modeLike, "all");
     if (!result || !result.success) {
       renderModeIntroLeaderboard([]);
       return false;
@@ -2581,8 +2655,10 @@ async function refreshLeaderboard(modeLike) {
 
     var modeKey = getCurrentModeKey();
     var modeBucket = resolveLeaderboardMode(modeKey) || "";
+    var period = normalizeTimerLeaderboardPeriod(timerLeaderboardPeriod);
+    var cacheKey = modeKey + "|" + period;
   if (!modeBucket) {
-    renderTimerLeaderboardRows([], null);
+    renderTimerLeaderboardPlaceholderRows();
     return true;
   }
 
@@ -2590,7 +2666,7 @@ async function refreshLeaderboard(modeLike) {
     if (
       !forceRefresh &&
       !timerLeaderboardLoading &&
-      timerLeaderboardCacheMode === modeKey &&
+      timerLeaderboardCacheMode === cacheKey &&
       timerLeaderboardCacheRows.length > 0 &&
       now - timerLeaderboardCacheTime < 12000
     ) {
@@ -2603,17 +2679,17 @@ async function refreshLeaderboard(modeLike) {
 
     if (timerLeaderboardLoading) return true;
     timerLeaderboardLoading = true;
-    var result = await getLeaderboard(TIMER_LEADERBOARD_FETCH_LIMIT, modeKey);
+    var result = await getLeaderboard(TIMER_LEADERBOARD_FETCH_LIMIT, modeKey, period);
     timerLeaderboardLoading = false;
 
     if (!result || !result.success) {
-      renderTimerLeaderboardRows([], null);
+      renderTimerLeaderboardPlaceholderRows();
       return false;
     }
 
     var rows = Array.isArray(result.data) ? result.data : [];
     timerLeaderboardCacheRows = rows;
-    timerLeaderboardCacheMode = modeKey;
+    timerLeaderboardCacheMode = cacheKey;
     timerLeaderboardCacheTime = Date.now();
     renderTimerLeaderboardRows(rows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT), resolveSelfRank(rows));
     return true;
