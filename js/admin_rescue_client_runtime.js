@@ -89,9 +89,15 @@
 
   function resolveOffer(payload) {
     var record = toRecord(payload);
+    if (Array.isArray(record.data)) return toRecord(record.data[0]);
     var data = toRecord(record.data);
+    if (Array.isArray(data.data)) return toRecord(data.data[0]);
+    if (Array.isArray(data.rows)) return toRecord(data.rows[0]);
+    if (Array.isArray(data.items)) return toRecord(data.items[0]);
     if (data.offer && typeof data.offer === "object") return toRecord(data.offer);
     if (data.id) return data;
+    if (Array.isArray(record.rows)) return toRecord(record.rows[0]);
+    if (Array.isArray(record.items)) return toRecord(record.items[0]);
     if (record.offer && typeof record.offer === "object") return toRecord(record.offer);
     if (record.id) return record;
     return {};
