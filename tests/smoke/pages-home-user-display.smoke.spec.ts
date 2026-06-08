@@ -186,8 +186,16 @@ test.describe("Home user display", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
 
-    await page.click("#top-settings-btn");
-    await page.waitForSelector("#toolkit-palette-link", { state: "visible" });
+    const settingsBtn = page.locator("#top-settings-btn");
+    const paletteLink = page.locator("#toolkit-palette-link");
+    await expect(settingsBtn).toBeVisible();
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (await paletteLink.isVisible().catch(() => false)) break;
+      await settingsBtn.click();
+      await paletteLink.waitFor({ state: "visible", timeout: 1_000 }).catch(() => {});
+    }
+    await expect(paletteLink).toBeVisible();
 
     const layout = await page.evaluate(() => {
       const visibleToggleRows = Array.from(document.querySelectorAll("#settings-modal .settings-toggle-row"))

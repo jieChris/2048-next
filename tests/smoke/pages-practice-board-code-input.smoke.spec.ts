@@ -319,7 +319,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       () =>
         Boolean((window as any).game_manager) &&
         typeof (window as any).game_manager.restartWithBoard === "function" &&
-        document.getElementById("practice-mode-picker-btn") !== null
+        document.getElementById("practice-mode-picker-btn") !== null &&
+        document.querySelectorAll("#practice-mode-list [data-practice-mode-key]").length > 0
     );
 
     await page.click("#practice-mode-picker-btn");
