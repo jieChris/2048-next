@@ -56,6 +56,19 @@
     return result;
   }
 
+  function hasDirectionListEntries(value) {
+    return Array.isArray(value) && value.length > 0;
+  }
+
+  function hasCountMapEntries(value) {
+    if (!(value && typeof value === "object") || Array.isArray(value)) return false;
+    for (var key in value) {
+      if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+      if (Math.floor(Number(value[key]) || 0) > 0) return true;
+    }
+    return false;
+  }
+
   function normalizeNonNegativeInteger(value) {
     var numeric = Math.floor(Number(value));
     return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
@@ -313,11 +326,11 @@
     );
     return {
       replayString: decodedState.replayString || toText(readOfferValue(offer, "replay_string") || readOfferValue(offer, "replayString")).trim(),
-      moveHistory: explicitMoveHistory || decodedState.moveHistory || null,
+      moveHistory: hasDirectionListEntries(explicitMoveHistory) ? explicitMoveHistory : decodedState.moveHistory || explicitMoveHistory || null,
       replayCompactLog: toText(readOfferValue(offer, "replay_compact_log")),
       sessionReplayV1: sessionReplayV1 && typeof sessionReplayV1 === "object" ? sessionReplayV1 : decodedState.sessionReplayV1 || null,
       sessionReplayV3: sessionReplayV3 && typeof sessionReplayV3 === "object" ? sessionReplayV3 : null,
-      spawnValueCounts: explicitSpawnCounts || decodedState.spawnValueCounts || null,
+      spawnValueCounts: hasCountMapEntries(explicitSpawnCounts) ? explicitSpawnCounts : decodedState.spawnValueCounts || explicitSpawnCounts || null,
       successfulMoveCount: successfulMoveCount,
       undoUsed: undoUsed
     };

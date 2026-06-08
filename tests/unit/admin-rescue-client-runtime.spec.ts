@@ -165,6 +165,8 @@ describe("admin rescue client runtime", () => {
                 [0, 0, 0, 0],
                 [0, 0, 0, 0]
               ],
+              move_history: [],
+              spawn_value_counts: {},
               replay_string: replayString
             }
           ]
