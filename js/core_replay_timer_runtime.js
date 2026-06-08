@@ -37,6 +37,36 @@
     var opts = input || {};
     var nowRaw = Number(opts.nowMs);
     var nowMs = Number.isFinite(nowRaw) ? nowRaw : Date.now();
+    var offsetRaw = Number(opts.timerElapsedOffsetMs);
+    var offsetMs =
+      opts.timerElapsedOffsetMs !== undefined && opts.timerElapsedOffsetMs !== null && Number.isFinite(offsetRaw) && offsetRaw >= 0
+        ? Math.floor(offsetRaw)
+        : 0;
+    var serverAnchorRaw = Number(opts.timerAnchorServerMs);
+    var serverNowRaw = Number(opts.timerServerNowMs);
+    if (
+      opts.timerStatus === 1 &&
+      opts.timerAnchorServerMs !== undefined &&
+      opts.timerAnchorServerMs !== null &&
+      Number.isFinite(serverAnchorRaw) &&
+      serverAnchorRaw >= 0 &&
+      opts.timerServerNowMs !== undefined &&
+      opts.timerServerNowMs !== null &&
+      Number.isFinite(serverNowRaw) &&
+      serverNowRaw >= 0
+    ) {
+      return Math.max(0, Math.floor(offsetMs + Math.max(0, serverNowRaw - serverAnchorRaw)));
+    }
+    var localAnchorRaw = Number(opts.timerAnchorLocalMs);
+    if (
+      opts.timerStatus === 1 &&
+      opts.timerAnchorLocalMs !== undefined &&
+      opts.timerAnchorLocalMs !== null &&
+      Number.isFinite(localAnchorRaw) &&
+      localAnchorRaw >= 0
+    ) {
+      return Math.max(0, Math.floor(offsetMs + Math.max(0, nowMs - localAnchorRaw)));
+    }
     var ms = 0;
     if (opts.timerStatus === 1 && Number.isFinite(Number(opts.startTimeMs))) {
       ms = nowMs - Number(opts.startTimeMs);

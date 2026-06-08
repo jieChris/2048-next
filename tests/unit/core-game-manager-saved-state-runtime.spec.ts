@@ -85,6 +85,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     collectSavedTimerFixedRowsState: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStateDiagnosticsPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStateTimerCorePayload: (manager: Record<string, unknown>) => Record<string, unknown>;
+    applySavedManagerTimerState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
     buildSavedGameStateProgressPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStatePayload: (manager: Record<string, unknown>, now: number) => Record<string, unknown> | null;
     buildLiteSavedGameStatePayloadFallback: (
@@ -453,7 +454,9 @@ describe("core game manager saved state runtime", () => {
       },
       clonePlain(value: unknown) {
         return JSON.parse(JSON.stringify(value));
-      }
+      },
+      setRuntimeUndoStack: vi.fn(),
+      setRuntimeRedoStack: vi.fn()
     };
 
     const fullPayload = runtime.buildSavedGameStatePayload(manager, 1000) as Record<string, unknown>;
@@ -692,9 +695,112 @@ describe("core game manager saved state runtime", () => {
       timer_status: 0,
       duration_ms: 1234,
       timer_started_at_ms: null,
+      timer_elapsed_offset_ms: null,
+      timer_anchor_local_ms: null,
+      timer_anchor_server_ms: null,
       has_game_started: true,
       timer_frozen: true
     });
+  });
+
+  it("saves active timer anchors for resumable ranked games", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const payload = runtime.buildSavedGameStateTimerCorePayload({
+      timerStatus: 1,
+      over: false,
+      won: false,
+      keepPlaying: false,
+      hasGameStarted: true,
+      startTime: new Date(1_000),
+      timerElapsedOffsetMs: 2_500,
+      timerAnchorLocalMs: 10_000,
+      timerAnchorServerMs: 20_000,
+      getDurationMs() {
+        return 7_500;
+      }
+    });
+
+    expect(payload).toEqual({
+      timer_status: 1,
+      duration_ms: 7_500,
+      timer_started_at_ms: 1_000,
+      timer_elapsed_offset_ms: 2_500,
+      timer_anchor_local_ms: 10_000,
+      timer_anchor_server_ms: 20_000,
+      has_game_started: true,
+      timer_frozen: false
+    });
+  });
+
+  it("restores active timer duration from saved anchors across closed-page time", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(20_000);
+    const runtime = loadSavedStateRuntime([32768], { Date });
+    const manager = {
+      accumulatedTime: 0,
+      time: 0,
+      startTime: new Date(1),
+      timerStatus: 1,
+      timerFrozen: false
+    };
+
+    runtime.applySavedManagerTimerState(manager, {
+      duration_ms: 3_000,
+      timer_status: 1,
+      timer_elapsed_offset_ms: 1_000,
+      timer_anchor_local_ms: 5_000,
+      timer_anchor_server_ms: 15_000,
+      over: false,
+      won: false,
+      keep_playing: false,
+      timer_frozen: false
+    });
+
+    expect(manager.accumulatedTime).toBe(16_000);
+    expect(manager.time).toBe(16_000);
+    expect(manager.timerElapsedOffsetMs).toBe(1_000);
+    expect(manager.timerAnchorLocalMs).toBe(5_000);
+    expect(manager.timerAnchorServerMs).toBe(15_000);
+    expect(manager.startTime).toBeNull();
+    expect(manager.timerStatus).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it("preserves replay v1 last event time so closed-page time remains in the next move delta", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(20_000);
+    const runtime = loadSavedStateRuntime([32768], { Date });
+    const manager = {
+      moveHistory: [],
+      replayCompactLog: "",
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      },
+      setRuntimeUndoStack(value: unknown) {
+        this.undoStack = value;
+      },
+      setRuntimeRedoStack(value: unknown) {
+        this.redoStack = value;
+      }
+    };
+
+    runtime.applySavedManagerReplayState(manager, {
+      move_history: [],
+      replay_compact_log: "",
+      session_replay_v1: {
+        v: 1,
+        board_width: 4,
+        board_height: 4,
+        init_tiles: [],
+        records: [],
+        last_event_at_ms: 12_345,
+        supported: true
+      },
+      session_replay_v3: null
+    });
+
+    expect((manager.sessionReplayV1 as Record<string, unknown>).last_event_at_ms).toBe(12_345);
+    vi.useRealTimers();
   });
 
   it("does not auto-resume timer on restore when saved state is frozen", () => {
@@ -741,7 +847,7 @@ describe("core game manager saved state runtime", () => {
     expect((manager.elements.timer as { textContent: string }).textContent).toBe("4321");
   });
 
-  it("restores session replay v1 and resets its idle timer after refresh", () => {
+  it("restores session replay v1 and preserves its idle timer after refresh", () => {
     const runtime = loadSavedStateRuntime([32768]);
     const savedLastEventAt = 1234;
     const manager = {
@@ -818,7 +924,7 @@ describe("core game manager saved state runtime", () => {
       seed: 9,
       supported: true
     });
-    expect((manager.sessionReplayV1 as { last_event_at_ms: number }).last_event_at_ms).not.toBe(savedLastEventAt);
+    expect((manager.sessionReplayV1 as { last_event_at_ms: number }).last_event_at_ms).toBe(savedLastEventAt);
     expect((manager.sessionReplayV1 as { records: unknown[] }).records).toEqual([
       { kind: "move", dir: 1, spawnIndex: 3, spawnValueBit: 0, deltaMs: 40 }
     ]);

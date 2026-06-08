@@ -280,6 +280,27 @@
     return Number.isFinite(duration) && duration >= 0 ? Math.floor(duration) : 0;
   }
 
+  function normalizeUnixMilliseconds(value) {
+    if (value === undefined || value === null || value === "") return null;
+    if (typeof value === "string" && !/^-?\d+(\.\d+)?$/.test(value.trim())) {
+      var parsedMs = Date.parse(value);
+      return Number.isFinite(parsedMs) ? Math.floor(parsedMs) : null;
+    }
+    var numeric = Math.floor(Number(value));
+    if (!Number.isFinite(numeric)) return null;
+    if (numeric > 0 && numeric < 100000000000) return numeric * 1000;
+    return numeric;
+  }
+
+  function resolveAcceptedAtMsFromOffer(offer) {
+    return normalizeUnixMilliseconds(firstPresent([
+      readOfferValue(offer, "accepted_at"),
+      readOfferValue(offer, "acceptedAt"),
+      readOfferValue(offer, "server_accepted_at"),
+      readOfferValue(offer, "serverAcceptedAt")
+    ]));
+  }
+
   function normalizeReplayBase64Body(text) {
     var normalized = toText(text).replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
     if (!normalized) return "";
@@ -562,7 +583,8 @@
       ranked_session_token: token,
       issued_at: issuedAt,
       exp: exp,
-      owner_user_id: readAuthUserId() || null
+      owner_user_id: readAuthUserId() || null,
+      client_received_at_ms: Date.now()
     };
     var written = writeStorageItem(storage, activeKey, JSON.stringify(record));
     if (written) removeStorageItem(storage, prefetchKey);
@@ -660,6 +682,10 @@
     manager.time = durationMs;
     manager.startTime = null;
     manager.timerStatus = 0;
+    manager.timerElapsedOffsetMs = durationMs;
+    manager.timerAnchorLocalMs = null;
+    manager.timerAnchorServerMs = null;
+    manager.pendingTimerAnchorServerMs = resolveAcceptedAtMsFromOffer(offer) || Date.now();
     manager.hasGameStarted = true;
     manager.over = false;
     manager.won = false;
@@ -669,6 +695,7 @@
       manager.replayStartBoardMatrix = manager.getFinalBoardMatrix();
     }
     applyOfferReplayStateToManager(manager, offer);
+    if (typeof manager.startTimer === "function") manager.startTimer();
     if (typeof manager.actuate === "function") manager.actuate();
     if (typeof manager.saveGameState === "function") manager.saveGameState({ force: true, forceFull: true });
     return true;
@@ -704,6 +731,9 @@
       if (accepted && accepted.success === false) {
         global.alert(resolveCopy().acceptFailed);
         return;
+      }
+      if (accepted && accepted.data && typeof accepted.data === "object") {
+        offer.accepted_at = accepted.data.accepted_at || accepted.data.acceptedAt || offer.accepted_at;
       }
       if (!applyOfferToManager(manager, offer, board, score, durationMs)) {
         global.alert(resolveCopy().applyFailed);

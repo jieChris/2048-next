@@ -344,6 +344,9 @@ function updateActuateStatsAndPanel(manager) {
 
 function resolveActuateElapsedMs(manager) {
   if (!manager) return 0;
+  if (typeof manager.getDurationMs === "function") {
+    return manager.getDurationMs();
+  }
   if (manager.timerStatus === 1 && manager.startTime && typeof manager.startTime.getTime === "function") {
     return Date.now() - manager.startTime.getTime();
   }

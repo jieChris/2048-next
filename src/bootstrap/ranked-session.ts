@@ -34,6 +34,7 @@ export interface RankedSessionRecord {
   issued_at: number;
   exp: number;
   owner_user_id?: string | null | undefined;
+  client_received_at_ms?: number | null | undefined;
 }
 
 export interface RankedChallengeContext {
@@ -214,6 +215,10 @@ function normalizeRankedSessionRecord(
     owner_user_id:
       typeof parsed.owner_user_id === "string" && parsed.owner_user_id.trim()
         ? parsed.owner_user_id.trim()
+        : null,
+    client_received_at_ms:
+      Number.isFinite(Number(parsed.client_received_at_ms)) && Number(parsed.client_received_at_ms) >= 0
+        ? Math.floor(Number(parsed.client_received_at_ms))
         : null
   };
 }
@@ -393,6 +398,7 @@ export function createRankedSessionRuntime(
             return session
               ? {
                   ...session,
+                  client_received_at_ms: Date.now(),
                   owner_user_id: ownerUserIdResolver() || null
                 }
               : null;

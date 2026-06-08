@@ -666,7 +666,10 @@ function normalizeSavedReplayV1Session(manager, session) {
   if (!isNonArrayObject(cloned)) return null;
   if (!Array.isArray(cloned.init_tiles) || !Array.isArray(cloned.records)) return null;
   if (!Number.isInteger(cloned.board_width) || !Number.isInteger(cloned.board_height)) return null;
-  cloned.last_event_at_ms = Date.now();
+  var lastEventAtMs = Number(cloned.last_event_at_ms);
+  cloned.last_event_at_ms = Number.isFinite(lastEventAtMs) && lastEventAtMs >= 0
+    ? Math.floor(lastEventAtMs)
+    : Date.now();
   cloned.supported = cloned.supported !== false;
   return cloned;
 }
@@ -725,8 +728,19 @@ function applySavedManagerProgressState(manager, saved) {
 function applySavedManagerTimerState(manager, saved) {
   var savedDurationMs = Number.isFinite(saved.duration_ms) && saved.duration_ms >= 0 ? Math.floor(saved.duration_ms) : 0;
   var savedStartedAtMs = Number(saved.timer_started_at_ms);
+  var savedElapsedOffsetMs = Number(saved.timer_elapsed_offset_ms);
+  var savedAnchorLocalMs = Number(saved.timer_anchor_local_ms);
+  var savedAnchorServerMs = Number(saved.timer_anchor_server_ms);
   var isTerminatedTimerState = !!(saved.over || (saved.won && !saved.keep_playing));
   var isActiveTimer = saved.timer_status === 1 && !isTerminatedTimerState && !saved.timer_frozen;
+  var hasAnchor = Number.isFinite(savedAnchorLocalMs) && savedAnchorLocalMs >= 0;
+  var hasOffset = Number.isFinite(savedElapsedOffsetMs) && savedElapsedOffsetMs >= 0;
+  if (isActiveTimer && hasAnchor) {
+    var anchorDurationMs = (hasOffset ? Math.floor(savedElapsedOffsetMs) : 0) + Math.max(0, Date.now() - Math.floor(savedAnchorLocalMs));
+    if (Number.isFinite(anchorDurationMs) && anchorDurationMs >= 0) {
+      savedDurationMs = Math.max(savedDurationMs, Math.floor(anchorDurationMs));
+    }
+  }
   if (isActiveTimer && Number.isFinite(savedStartedAtMs) && savedStartedAtMs > 0) {
     savedDurationMs = Math.max(savedDurationMs, Date.now() - Math.floor(savedStartedAtMs));
   }
@@ -735,6 +749,12 @@ function applySavedManagerTimerState(manager, saved) {
   manager.startTime = null;
   manager.timerStatus = 0;
   manager.timerFrozen = !!saved.timer_frozen;
+  manager.timerElapsedOffsetMs = isActiveTimer && hasOffset ? Math.floor(savedElapsedOffsetMs) : savedDurationMs;
+  manager.timerAnchorLocalMs = isActiveTimer && hasAnchor ? Math.floor(savedAnchorLocalMs) : null;
+  manager.timerAnchorServerMs =
+    isActiveTimer && Number.isFinite(savedAnchorServerMs) && savedAnchorServerMs >= 0
+      ? Math.floor(savedAnchorServerMs)
+      : null;
 }
 
 function applySavedManagerBoardSnapshotState(manager, saved) {
@@ -1062,10 +1082,22 @@ function buildSavedGameStateTimerCorePayload(manager) {
   var timerStartedAtMs = manager.startTime && typeof manager.startTime.getTime === "function"
     ? manager.startTime.getTime()
     : (Number.isFinite(Number(manager.timerStartedAtMs)) ? Math.floor(Number(manager.timerStartedAtMs)) : null);
+  var timerElapsedOffsetMs = Number(manager.timerElapsedOffsetMs);
+  var timerAnchorLocalMs = Number(manager.timerAnchorLocalMs);
+  var timerAnchorServerMs = Number(manager.timerAnchorServerMs);
   return {
     timer_status: isTerminatedState ? 0 : (manager.timerStatus === 1 ? 1 : 0),
     duration_ms: manager.getDurationMs(),
     timer_started_at_ms: isTerminatedState ? null : timerStartedAtMs,
+    timer_elapsed_offset_ms: isTerminatedState || !Number.isFinite(timerElapsedOffsetMs) || timerElapsedOffsetMs < 0
+      ? null
+      : Math.floor(timerElapsedOffsetMs),
+    timer_anchor_local_ms: isTerminatedState || !Number.isFinite(timerAnchorLocalMs) || timerAnchorLocalMs < 0
+      ? null
+      : Math.floor(timerAnchorLocalMs),
+    timer_anchor_server_ms: isTerminatedState || !Number.isFinite(timerAnchorServerMs) || timerAnchorServerMs < 0
+      ? null
+      : Math.floor(timerAnchorServerMs),
     has_game_started: !!manager.hasGameStarted,
     timer_frozen: isTerminatedState
   };
@@ -1306,6 +1338,9 @@ function buildLiteSavedGameStatePayloadFallback(manager, payload) {
       timer_frozen: isTimerFrozen,
       duration_ms: Number.isFinite(timerDurationMs) ? Math.floor(timerDurationMs) : 0,
       timer_started_at_ms: Number.isFinite(Number(payload.timer_started_at_ms)) ? Math.floor(Number(payload.timer_started_at_ms)) : null,
+      timer_elapsed_offset_ms: Number.isFinite(Number(payload.timer_elapsed_offset_ms)) ? Math.floor(Number(payload.timer_elapsed_offset_ms)) : null,
+      timer_anchor_local_ms: Number.isFinite(Number(payload.timer_anchor_local_ms)) ? Math.floor(Number(payload.timer_anchor_local_ms)) : null,
+      timer_anchor_server_ms: Number.isFinite(Number(payload.timer_anchor_server_ms)) ? Math.floor(Number(payload.timer_anchor_server_ms)) : null,
       has_game_started: hasGameStarted
     }
   );

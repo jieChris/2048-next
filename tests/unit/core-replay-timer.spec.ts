@@ -78,6 +78,32 @@ describe("core replay timer: resolveDurationMs", () => {
     ).toBe(987);
   });
 
+  it("uses server timer anchors before local clock anchors when active", () => {
+    expect(
+      resolveDurationMs({
+        timerStatus: 1,
+        timerElapsedOffsetMs: 2500,
+        timerAnchorLocalMs: 1000,
+        timerAnchorServerMs: 90000,
+        timerServerNowMs: 97500,
+        nowMs: 200000
+      })
+    ).toBe(10000);
+  });
+
+  it("does not treat null server timer anchors as Unix zero", () => {
+    expect(
+      resolveDurationMs({
+        timerStatus: 1,
+        timerElapsedOffsetMs: 1000,
+        timerAnchorLocalMs: 5000,
+        timerAnchorServerMs: 15000,
+        timerServerNowMs: null,
+        nowMs: 20000
+      })
+    ).toBe(16000);
+  });
+
   it("falls back to session-start delta when accumulated time is negative", () => {
     expect(
       resolveDurationMs({

@@ -33,6 +33,10 @@ export interface DurationMsInput {
   timerStatus?: number | null;
   startTimeMs?: number | null;
   accumulatedTime?: number | null;
+  timerElapsedOffsetMs?: number | null;
+  timerAnchorLocalMs?: number | null;
+  timerAnchorServerMs?: number | null;
+  timerServerNowMs?: number | null;
   sessionStartedAt?: number | null;
   nowMs?: number | null;
 }
@@ -67,6 +71,36 @@ export function shouldStopReplayAtTick(input: ReplayTickStopInput): boolean {
 export function resolveDurationMs(input: DurationMsInput): number {
   const nowRaw = Number(input.nowMs);
   const nowMs = Number.isFinite(nowRaw) ? nowRaw : Date.now();
+  const offsetRaw = Number(input.timerElapsedOffsetMs);
+  const offsetMs =
+    input.timerElapsedOffsetMs !== undefined && input.timerElapsedOffsetMs !== null && Number.isFinite(offsetRaw) && offsetRaw >= 0
+      ? Math.floor(offsetRaw)
+      : 0;
+  const serverAnchorRaw = Number(input.timerAnchorServerMs);
+  const serverNowRaw = Number(input.timerServerNowMs);
+  if (
+    input.timerStatus === 1 &&
+    input.timerAnchorServerMs !== undefined &&
+    input.timerAnchorServerMs !== null &&
+    Number.isFinite(serverAnchorRaw) &&
+    serverAnchorRaw >= 0 &&
+    input.timerServerNowMs !== undefined &&
+    input.timerServerNowMs !== null &&
+    Number.isFinite(serverNowRaw) &&
+    serverNowRaw >= 0
+  ) {
+    return Math.max(0, Math.floor(offsetMs + Math.max(0, serverNowRaw - serverAnchorRaw)));
+  }
+  const localAnchorRaw = Number(input.timerAnchorLocalMs);
+  if (
+    input.timerStatus === 1 &&
+    input.timerAnchorLocalMs !== undefined &&
+    input.timerAnchorLocalMs !== null &&
+    Number.isFinite(localAnchorRaw) &&
+    localAnchorRaw >= 0
+  ) {
+    return Math.max(0, Math.floor(offsetMs + Math.max(0, nowMs - localAnchorRaw)));
+  }
   let ms = 0;
   if (input.timerStatus === 1 && Number.isFinite(Number(input.startTimeMs))) {
     ms = nowMs - Number(input.startTimeMs);

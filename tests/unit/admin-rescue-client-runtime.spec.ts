@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 function loadRuntime(extraContext?: Record<string, unknown>, options?: { loadCodec?: boolean }) {
   const scriptPath = path.resolve(process.cwd(), "js/admin_rescue_client_runtime.js");
@@ -12,6 +12,7 @@ function loadRuntime(extraContext?: Record<string, unknown>, options?: { loadCod
   const storage = new Map<string, string>([["2048_auth_token_v1", "token"]]);
   const context = {
     console,
+    Date,
     localStorage: {
       getItem(key: string) {
         return storage.get(String(key)) || "";
@@ -77,6 +78,10 @@ function encodeReplayV1Payload(context: Record<string, unknown>): string {
 }
 
 describe("admin rescue client runtime", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("applies replay and stats fields from a rescue offer", async () => {
     const offer = {
       id: "rescue_full_state",
@@ -152,6 +157,8 @@ describe("admin rescue client runtime", () => {
   });
 
   it("applies ranked session context from a rescue offer", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_780_919_012_000);
     const nowSec = Math.floor(Date.now() / 1000);
     const rankedSessionToken = createRankedSessionToken({
       v: "rs1",
@@ -226,6 +233,10 @@ describe("admin rescue client runtime", () => {
         return JSON.parse(JSON.stringify(value));
       },
       actuate: vi.fn(),
+      startTimer: vi.fn(function () {
+        this.timerStatus = 1;
+        this.pendingTimerAnchorServerMs = null;
+      }),
       saveGameState: vi.fn()
     };
 
@@ -259,9 +270,14 @@ describe("admin rescue client runtime", () => {
       ranked_session_token: rankedSessionToken,
       issued_at: nowSec,
       exp: nowSec + 3600,
-      owner_user_id: "7"
+      owner_user_id: "7",
+      client_received_at_ms: 1_780_919_012_000
     });
     expect(context.localStorage.getItem("ranked_session_prefetch:v1:standard_4x4_pow2_no_undo")).toBe("");
+    expect(manager.timerElapsedOffsetMs).toBe(12077797);
+    expect(manager.pendingTimerAnchorServerMs).toBeNull();
+    expect(manager.startTimer).toHaveBeenCalled();
+    expect(manager.saveGameState).toHaveBeenCalledWith({ force: true, forceFull: true });
   });
 
   it("derives replay and stats fields from a v1 replay string", async () => {

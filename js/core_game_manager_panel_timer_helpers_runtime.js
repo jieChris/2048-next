@@ -8,6 +8,7 @@ function normalizePanelTimerRecordObject(value, fallbackValue) {
 
 var MIN_TIMER_UPDATE_INTERVAL_MS = 33;
 var HIDDEN_TIMER_UPDATE_INTERVAL_MS = 250;
+var RANKED_SESSION_ACTIVE_KEY_PREFIX_FOR_TIMER = "ranked_session_active:v1:";
 
 function isDocumentHiddenLike() {
   if (typeof document === "undefined" || !document) return false;
@@ -224,7 +225,7 @@ function executeTimerTick(manager) {
   if (typeof checkAndHandleMoveTimeout === "function" && checkAndHandleMoveTimeout(manager, nowMs)) {
     return;
   }
-  var time = nowMs - manager.startTime.getTime();
+  var time = resolveTimerElapsedMs(manager, nowMs);
   manager.time = time;
   var timerEl = resolveManagerElementById(manager, "timer");
   if (timerEl) timerEl.textContent = manager.pretty(time);
@@ -238,29 +239,130 @@ function executeTimerTick(manager) {
   manager.lastStatsPanelUpdateAt = time;
 }
 
+function normalizeTimerAnchorMs(rawValue) {
+  if (rawValue === undefined || rawValue === null || rawValue === "") return null;
+  var ms = Math.floor(Number(rawValue));
+  return Number.isFinite(ms) && ms >= 0 ? ms : null;
+}
+
+function resolveTimerModeKey(manager) {
+  return String(manager && (manager.modeKey || manager.mode) || "").trim();
+}
+
+function resolveTimerWindowLike(manager) {
+  if (manager && typeof manager.getWindowLike === "function") {
+    try {
+      var windowLike = manager.getWindowLike();
+      if (windowLike) return windowLike;
+    } catch (_errManagerWindow) {}
+  }
+  if (typeof window !== "undefined" && window) return window;
+  return null;
+}
+
+function readTimerActiveRankedSession(manager) {
+  var modeKey = resolveTimerModeKey(manager);
+  if (!modeKey) return null;
+  var windowLike = resolveTimerWindowLike(manager);
+  var storage = windowLike && windowLike.localStorage;
+  if (!(storage && typeof storage.getItem === "function")) return null;
+  try {
+    var raw = storage.getItem(RANKED_SESSION_ACTIVE_KEY_PREFIX_FOR_TIMER + modeKey);
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    if (!(parsed && typeof parsed === "object")) return null;
+    if (parsed.mode_key && String(parsed.mode_key).trim() !== modeKey) return null;
+    return parsed;
+  } catch (_errStorage) {
+    return null;
+  }
+}
+
+function resolveTimerServerNowMs(manager, nowMs) {
+  var activeSession = readTimerActiveRankedSession(manager);
+  var issuedAtMs = normalizeTimerAnchorMs(Number(activeSession && activeSession.issued_at) * 1000);
+  var receivedAtMs = normalizeTimerAnchorMs(activeSession && activeSession.client_received_at_ms);
+  if (issuedAtMs !== null && receivedAtMs !== null) {
+    return Math.max(0, issuedAtMs + Math.max(0, nowMs - receivedAtMs));
+  }
+  var pendingServerMs = normalizeTimerAnchorMs(manager && manager.pendingTimerAnchorServerMs);
+  return pendingServerMs !== null ? pendingServerMs : null;
+}
+
+function resolveTimerElapsedOffsetMs(manager) {
+  var offsetMs = normalizeTimerAnchorMs(manager && manager.timerElapsedOffsetMs);
+  if (offsetMs !== null) return offsetMs;
+  offsetMs = normalizeTimerAnchorMs(manager && manager.accumulatedTime);
+  return offsetMs !== null ? offsetMs : 0;
+}
+
+function hasTimerAnchor(manager) {
+  return normalizeTimerAnchorMs(manager && manager.timerAnchorLocalMs) !== null;
+}
+
+function ensureTimerAnchors(manager, nowMs) {
+  if (!manager) return;
+  if (!hasTimerAnchor(manager)) {
+    manager.timerElapsedOffsetMs = resolveTimerElapsedOffsetMs(manager);
+    manager.timerAnchorLocalMs = nowMs;
+    var serverNowMs = resolveTimerServerNowMs(manager, nowMs);
+    manager.timerAnchorServerMs = serverNowMs !== null ? serverNowMs : nowMs;
+  }
+  manager.pendingTimerAnchorServerMs = null;
+}
+
+function clearActiveTimerAnchors(manager, elapsedMs) {
+  if (!manager) return;
+  manager.timerElapsedOffsetMs = normalizeTimerAnchorMs(elapsedMs) || 0;
+  manager.timerAnchorLocalMs = null;
+  manager.timerAnchorServerMs = null;
+}
+
+function resolveTimerElapsedMs(manager, nowMs) {
+  if (!manager) return 0;
+  var anchorServerMs = normalizeTimerAnchorMs(manager.timerAnchorServerMs);
+  if (anchorServerMs !== null) {
+    var serverNowMs = resolveTimerServerNowMs(manager, nowMs);
+    if (serverNowMs !== null) {
+      var offsetMsForServer = resolveTimerElapsedOffsetMs(manager);
+      return Math.max(0, Math.floor(offsetMsForServer + Math.max(0, serverNowMs - anchorServerMs)));
+    }
+  }
+  var anchorLocalMs = normalizeTimerAnchorMs(manager.timerAnchorLocalMs);
+  if (anchorLocalMs !== null) {
+    var offsetMs = resolveTimerElapsedOffsetMs(manager);
+    return Math.max(0, Math.floor(offsetMs + Math.max(0, nowMs - anchorLocalMs)));
+  }
+  if (manager.timerStatus === 1 && manager.startTime && typeof manager.startTime.getTime === "function") {
+    return Math.max(0, Math.floor(nowMs - manager.startTime.getTime()));
+  }
+  return resolveTimerElapsedOffsetMs(manager);
+}
+
 function startTimer(manager) {
   if (!manager || manager.timerStatus !== 0) return;
+  var nowMs = Date.now();
+  ensureTimerAnchors(manager, nowMs);
+  var durationMs = resolveTimerElapsedMs(manager, nowMs);
   manager.timerStatus = 1;
   manager.hasGameStarted = true;
   manager.timerFrozen = false;
-  // Convert accumulated time back to a start timestamp relative to now
-  manager.startTime = new Date(Date.now() - (manager.accumulatedTime || 0));
+  manager.accumulatedTime = durationMs;
+  manager.time = durationMs;
+  manager.startTime = new Date(nowMs - durationMs);
   manager.notifyUndoSettingsStateChanged();
   manager.lastStatsPanelUpdateAt = 0;
   bindTimerVisibilityChangeListener(manager);
   restartTimerIntervalWithCurrentSettings(manager);
   if (typeof updateMoveTimeoutHud === "function") {
-    updateMoveTimeoutHud(manager, Date.now());
+    updateMoveTimeoutHud(manager, nowMs);
   }
 }
 
 function stopTimer(manager) {
   if (!(manager && manager.timerStatus === 1)) return;
-  if (!manager.startTime || typeof manager.startTime.getTime !== "function") {
-    manager.accumulatedTime = manager.accumulatedTime || 0;
-  } else {
-    manager.accumulatedTime = Date.now() - manager.startTime.getTime();
-  }
+  manager.accumulatedTime = resolveTimerElapsedMs(manager, Date.now());
+  clearActiveTimerAnchors(manager, manager.accumulatedTime);
   manager.timerFrozen = !!(manager.over || (manager.won && !manager.keepPlaying));
   clearInterval(manager.timerID);
   manager.timerID = null;
@@ -313,12 +415,7 @@ function normalizeDurationMsForReplayTimer(rawMs) {
 }
 
 function resolveDurationMsFallbackValue(currentManager, nowMs) {
-  var ms;
-  if (currentManager.timerStatus === 1 && currentManager.startTime) {
-    ms = nowMs - currentManager.startTime.getTime();
-  } else {
-    ms = currentManager.accumulatedTime || 0;
-  }
+  var ms = resolveTimerElapsedMs(currentManager, nowMs);
   if (!Number.isFinite(ms) || ms < 0) {
     ms = nowMs - (currentManager.sessionStartedAt || nowMs);
   }
@@ -333,6 +430,10 @@ function buildDurationMsResolvePayload(manager, nowMs) {
         ? manager.startTime.getTime()
         : null,
     accumulatedTime: manager.accumulatedTime,
+    timerElapsedOffsetMs: manager.timerElapsedOffsetMs,
+    timerAnchorLocalMs: manager.timerAnchorLocalMs,
+    timerAnchorServerMs: manager.timerAnchorServerMs,
+    timerServerNowMs: resolveTimerServerNowMs(manager, nowMs),
     sessionStartedAt: manager.sessionStartedAt,
     nowMs: nowMs
   };
