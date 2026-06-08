@@ -4,7 +4,10 @@
   if (!global) return;
 
   var AUTH_TOKEN_KEY = "2048_auth_token_v1";
+  var AUTH_USER_ID_KEY = "2048_auth_userId_v1";
   var CHECKED_SESSION_KEY_PREFIX = "admin_rescue_checked_session_v1:";
+  var ACTIVE_RANKED_SESSION_KEY_PREFIX = "ranked_session_active:v1:";
+  var PREFETCH_RANKED_SESSION_KEY_PREFIX = "ranked_session_prefetch:v1:";
   var activeChecks = {};
 
   function toText(value) {
@@ -302,6 +305,63 @@
     }
   }
 
+  function decodeBase64Json(base64Text) {
+    var normalized = normalizeReplayBase64Body(base64Text);
+    if (!normalized || typeof global.atob !== "function") return null;
+    try {
+      return JSON.parse(global.atob(normalized));
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function decodeRankedSessionTokenPayload(token) {
+    var text = toText(token).trim();
+    if (text.indexOf("rs1.") !== 0) return null;
+    var parts = text.split(".");
+    if (parts.length !== 3) return null;
+    var payload = decodeBase64Json(parts[1]);
+    return payload && typeof payload === "object" && !Array.isArray(payload) ? payload : null;
+  }
+
+  function normalizeUnixSeconds(value) {
+    if (value === undefined || value === null || value === "") return null;
+    if (typeof value === "string" && !/^-?\d+(\.\d+)?$/.test(value.trim())) {
+      var parsedMs = Date.parse(value);
+      return Number.isFinite(parsedMs) ? Math.floor(parsedMs / 1000) : null;
+    }
+    var numeric = Math.floor(Number(value));
+    if (!Number.isFinite(numeric)) return null;
+    if (numeric > 100000000000) return Math.floor(numeric / 1000);
+    return numeric;
+  }
+
+  function readAuthUserId() {
+    try {
+      var storage = getStorage();
+      return storage ? toText(storage.getItem(AUTH_USER_ID_KEY)).trim() : "";
+    } catch (_err) {
+      return "";
+    }
+  }
+
+  function removeStorageItem(storage, key) {
+    if (!storage || typeof storage.removeItem !== "function" || !key) return;
+    try {
+      storage.removeItem(key);
+    } catch (_err) {}
+  }
+
+  function writeStorageItem(storage, key, value) {
+    if (!storage || typeof storage.setItem !== "function" || !key) return false;
+    try {
+      storage.setItem(key, value);
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
   function resolveReplayV1Prefix() {
     var ctor = global.GameManager || {};
     var prefix = toText(ctor.REPLAY_V1_RPL_BASE64_PREFIX).trim();
@@ -414,13 +474,15 @@
       sessionReplayV3.ranked_session_token,
       sessionReplayV3.rankedSessionToken
     ])).trim();
+    var tokenPayload = decodeRankedSessionTokenPayload(token) || {};
     var challengeId = toText(firstPresent([
       readOfferValue(offer, "challenge_id"),
       readOfferValue(offer, "challengeId"),
       sessionReplayV1.challenge_id,
       sessionReplayV1.challengeId,
       sessionReplayV3.challenge_id,
-      sessionReplayV3.challengeId
+      sessionReplayV3.challengeId,
+      tokenPayload.challenge_id
     ])).trim();
     var seed = normalizeOptionalInteger(firstPresent([
       readOfferValue(offer, "seed"),
@@ -431,7 +493,8 @@
       sessionReplayV1.initialSeed,
       sessionReplayV3.seed,
       sessionReplayV3.initial_seed,
-      sessionReplayV3.initialSeed
+      sessionReplayV3.initialSeed,
+      tokenPayload.seed
     ]));
     var modeKey = toText(firstPresent([
       readOfferValue(offer, "mode_key"),
@@ -440,15 +503,70 @@
       sessionReplayV1.modeKey,
       sessionReplayV3.mode_key,
       sessionReplayV3.modeKey,
+      tokenPayload.mode_key,
       manager && manager.modeKey
     ])).trim();
+    var issuedAt = normalizeUnixSeconds(firstPresent([
+      readOfferValue(offer, "ranked_session_issued_at"),
+      readOfferValue(offer, "issued_at"),
+      readOfferValue(offer, "issuedAt"),
+      sessionReplayV1.issued_at,
+      sessionReplayV1.issuedAt,
+      sessionReplayV3.issued_at,
+      sessionReplayV3.issuedAt,
+      tokenPayload.iat
+    ]));
+    var exp = normalizeUnixSeconds(firstPresent([
+      readOfferValue(offer, "ranked_session_expires_at"),
+      readOfferValue(offer, "ranked_session_exp"),
+      sessionReplayV1.exp,
+      sessionReplayV1.expires_at,
+      sessionReplayV1.expiresAt,
+      sessionReplayV3.exp,
+      sessionReplayV3.expires_at,
+      sessionReplayV3.expiresAt,
+      tokenPayload.exp
+    ]));
     if (!token && !challengeId && seed === null) return null;
     return {
       rankedSessionToken: token,
       challengeId: challengeId,
       seed: seed,
-      modeKey: modeKey
+      modeKey: modeKey,
+      issuedAt: issuedAt,
+      exp: exp
     };
+  }
+
+  function persistRankedSessionState(manager, rankedState) {
+    if (!manager || !rankedState) return false;
+    var modeKey = toText(rankedState.modeKey || manager.modeKey).trim();
+    var challengeId = toText(rankedState.challengeId).trim().toLowerCase();
+    var token = toText(rankedState.rankedSessionToken).trim();
+    var seed = Math.floor(Number(rankedState.seed));
+    var issuedAt = Math.floor(Number(rankedState.issuedAt));
+    var exp = Math.floor(Number(rankedState.exp));
+    if (!modeKey || !challengeId || !token) return false;
+    if (!Number.isInteger(seed) || seed < 0) return false;
+    if (!Number.isInteger(issuedAt) || issuedAt <= 0) return false;
+    if (!Number.isInteger(exp) || exp <= Math.floor(Date.now() / 1000)) return false;
+    var storage = getStorage();
+    if (!storage) return false;
+    var activeKey = ACTIVE_RANKED_SESSION_KEY_PREFIX + modeKey;
+    var prefetchKey = PREFETCH_RANKED_SESSION_KEY_PREFIX + modeKey;
+    var record = {
+      mode_key: modeKey,
+      mode_bucket: null,
+      challenge_id: challengeId,
+      seed: seed,
+      ranked_session_token: token,
+      issued_at: issuedAt,
+      exp: exp,
+      owner_user_id: readAuthUserId() || null
+    };
+    var written = writeStorageItem(storage, activeKey, JSON.stringify(record));
+    if (written) removeStorageItem(storage, prefetchKey);
+    return written;
   }
 
   function applyRankedSessionStateToManager(manager, rankedState) {
@@ -477,6 +595,7 @@
         ranked_session_token: rankedState.rankedSessionToken || toText(manager.rankedSessionToken).trim()
       };
     }
+    persistRankedSessionState(manager, rankedState);
   }
 
   function deriveStepCountersFromMoveHistory(moveHistory) {

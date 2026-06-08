@@ -18,6 +18,9 @@ function loadRuntime(extraContext?: Record<string, unknown>, options?: { loadCod
       },
       setItem(key: string, value: string) {
         storage.set(String(key), String(value));
+      },
+      removeItem(key: string) {
+        storage.delete(String(key));
       }
     },
     location: { origin: "https://2048next.cn" },
@@ -43,6 +46,14 @@ function loadRuntime(extraContext?: Record<string, unknown>, options?: { loadCod
     };
     fetch: ReturnType<typeof vi.fn>;
   };
+}
+
+function encodeBase64UrlJson(value: unknown): string {
+  return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+}
+
+function createRankedSessionToken(payload: Record<string, unknown>): string {
+  return `rs1.${encodeBase64UrlJson(payload)}.mock-signature`;
 }
 
 function encodeReplayV1Payload(context: Record<string, unknown>): string {
@@ -141,6 +152,16 @@ describe("admin rescue client runtime", () => {
   });
 
   it("applies ranked session context from a rescue offer", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const rankedSessionToken = createRankedSessionToken({
+      v: "rs1",
+      sub: 7,
+      mode_key: "standard_4x4_pow2_no_undo",
+      challenge_id: "rescue-new-challenge",
+      seed: 123456,
+      iat: nowSec,
+      exp: nowSec + 3600
+    });
     const offer = {
       id: "rescue_ranked_session",
       board: [
@@ -162,7 +183,7 @@ describe("admin rescue client runtime", () => {
         board_height: 4,
         challenge_id: "rescue-new-challenge",
         seed: 123456,
-        ranked_session_token: "rs1.mock-token",
+        ranked_session_token: rankedSessionToken,
         init_tiles: [{ cellIndex: 0, valueBit: 0 }],
         records: [{ kind: "move", dir: 1, spawnIndex: 3, spawnValueBit: 0, deltaMs: 40 }],
         supported: true
@@ -170,6 +191,19 @@ describe("admin rescue client runtime", () => {
       spawn_value_counts: { "2": 2, "4": 1 }
     };
     const context = loadRuntime({ GAME_CHALLENGE_CONTEXT: null });
+    context.localStorage.setItem("2048_auth_userId_v1", "7");
+    context.localStorage.setItem(
+      "ranked_session_prefetch:v1:standard_4x4_pow2_no_undo",
+      JSON.stringify({
+        mode_key: "standard_4x4_pow2_no_undo",
+        challenge_id: "prefetched-session",
+        seed: 222,
+        ranked_session_token: "prefetched-token",
+        issued_at: nowSec,
+        exp: nowSec + 3600,
+        owner_user_id: "7"
+      })
+    );
     context.fetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ success: true, data: [offer] })
@@ -197,7 +231,7 @@ describe("admin rescue client runtime", () => {
 
     await context.AdminRescueClientRuntime.checkAndOfferRescue(manager);
 
-    expect(manager.rankedSessionToken).toBe("rs1.mock-token");
+    expect(manager.rankedSessionToken).toBe(rankedSessionToken);
     expect(manager.challengeId).toBe("rescue-new-challenge");
     expect(manager.initialSeed).toBe(123456);
     expect(manager.seed).toBe(123456);
@@ -205,15 +239,29 @@ describe("admin rescue client runtime", () => {
       expect.objectContaining({
         challenge_id: "rescue-new-challenge",
         seed: 123456,
-        ranked_session_token: "rs1.mock-token"
+        ranked_session_token: rankedSessionToken
       })
     );
     expect(context.GAME_CHALLENGE_CONTEXT).toEqual({
       id: "rescue-new-challenge",
       mode_key: "standard_4x4_pow2_no_undo",
       seed: 123456,
-      ranked_session_token: "rs1.mock-token"
+      ranked_session_token: rankedSessionToken
     });
+    const activeSession = JSON.parse(
+      String(context.localStorage.getItem("ranked_session_active:v1:standard_4x4_pow2_no_undo") || "{}")
+    );
+    expect(activeSession).toEqual({
+      mode_key: "standard_4x4_pow2_no_undo",
+      mode_bucket: null,
+      challenge_id: "rescue-new-challenge",
+      seed: 123456,
+      ranked_session_token: rankedSessionToken,
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    });
+    expect(context.localStorage.getItem("ranked_session_prefetch:v1:standard_4x4_pow2_no_undo")).toBe("");
   });
 
   it("derives replay and stats fields from a v1 replay string", async () => {
