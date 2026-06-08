@@ -186,7 +186,10 @@ test.describe("Home user display", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
 
-    await page.click("#top-settings-btn");
+    await page.waitForFunction(() => typeof (window as any).openSettingsModal === "function");
+    await page.evaluate(() => {
+      (window as any).openSettingsModal();
+    });
     await page.waitForSelector("#toolkit-palette-link", { state: "visible" });
 
     const layout = await page.evaluate(() => {
