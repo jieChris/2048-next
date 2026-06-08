@@ -376,6 +376,10 @@ body.home-guide-active #timer-scroll-controls {
   z-index: 3240;
 }
 
+body.home-guide-active .top-action-buttons {
+  z-index: 3240;
+}
+
 #timerbox.timerbox-hidden-mode {
   position: relative;
 }

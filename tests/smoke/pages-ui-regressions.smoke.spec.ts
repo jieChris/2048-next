@@ -303,6 +303,35 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(afterClick.row65536Hidden).not.toBe("1");
   });
 
+  test("homepage guide overlay does not block export replay action", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.removeItem("home_guide_seen_v1");
+    });
+
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(
+      page,
+      () => {
+        const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
+        return (
+          !!overlay &&
+          window.getComputedStyle(overlay).display === "block" &&
+          String(document.body.className || "").indexOf("home-guide-active") !== -1 &&
+          typeof (window as any).exportReplay === "function"
+        );
+      },
+      12_000
+    );
+
+    await page.locator("#top-export-replay-btn").click();
+    await expect(page.locator("#replay-modal")).toBeVisible();
+  });
+
   test("timer scroll controls stay hidden below 11 active rows and show at 11", async ({
     page
   }) => {

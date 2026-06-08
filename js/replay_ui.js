@@ -39,6 +39,11 @@
     totalMs: 0,
     startUnixMs: null
   };
+  var replayImportedStatsMeta = {
+    available: false,
+    totalSteps: 0,
+    spawnValueCounts: {}
+  };
 
   var cloudReplayContract =
     window && window.CLOUD_REPLAY_CONTRACT && typeof window.CLOUD_REPLAY_CONTRACT === "object"
@@ -295,6 +300,34 @@
     replayTimelineMeta.cumulativeMsByStep = [];
     replayTimelineMeta.totalMs = 0;
     replayTimelineMeta.startUnixMs = null;
+  }
+
+  function resetReplayImportedStatsMeta() {
+    replayImportedStatsMeta.available = false;
+    replayImportedStatsMeta.totalSteps = 0;
+    replayImportedStatsMeta.spawnValueCounts = {};
+  }
+
+  function normalizeReplayImportedSpawnValue(rawSpawn) {
+    var value = rawSpawn && typeof rawSpawn === "object" ? Number(rawSpawn.value) : Number(rawSpawn);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return Math.floor(value);
+  }
+
+  function captureReplayStatsFromImportedManager(gameManager) {
+    resetReplayImportedStatsMeta();
+    var replayMoves = Array.isArray(gameManager && gameManager.replayMoves) ? gameManager.replayMoves : [];
+    var replaySpawns = Array.isArray(gameManager && gameManager.replaySpawns) ? gameManager.replaySpawns : [];
+    var counts = {};
+    for (var i = 0; i < replaySpawns.length; i += 1) {
+      var value = normalizeReplayImportedSpawnValue(replaySpawns[i]);
+      if (value === null) continue;
+      var key = String(value);
+      counts[key] = (counts[key] || 0) + 1;
+    }
+    replayImportedStatsMeta.available = replayMoves.length > 0 || Object.keys(counts).length > 0;
+    replayImportedStatsMeta.totalSteps = replayMoves.length;
+    replayImportedStatsMeta.spawnValueCounts = counts;
   }
 
   function normalizeReplayDeltaMs(raw) {
@@ -938,6 +971,7 @@
     if (!ok) {
       throw new Error("import_rejected:" + toText(sourceLabel || "unknown"));
     }
+    captureReplayStatsFromImportedManager(gameManager);
     return true;
   }
 
@@ -1214,6 +1248,9 @@
   }
 
   function resolveReplaySpawnCount(gameManager, value) {
+    if (replayImportedStatsMeta.available) {
+      return Math.max(0, Math.floor(Number(replayImportedStatsMeta.spawnValueCounts[String(value)]) || 0));
+    }
     if (!gameManager) return 0;
     if (value === 2 && Number.isFinite(Number(gameManager.spawnTwos))) {
       return Math.max(0, Math.floor(Number(gameManager.spawnTwos) || 0));
@@ -1227,6 +1264,9 @@
   }
 
   function resolveReplayTotalSteps(gameManager) {
+    if (replayImportedStatsMeta.available) {
+      return Math.max(0, Math.floor(Number(replayImportedStatsMeta.totalSteps) || 0));
+    }
     if (!gameManager) return 0;
     var replayMoves = Array.isArray(gameManager.replayMoves) ? gameManager.replayMoves : null;
     if (replayMoves) return replayMoves.length;
@@ -1395,6 +1435,7 @@
       if (!ok) throw new Error("binary_import_rejected");
       applyReplayCompatibilityNotice(createReplayCompatibilityMeta("legacy_v9rpl", true));
       captureReplayTimelineFromRplBuffer(buffer);
+      captureReplayStatsFromImportedManager(gameManager);
       clearReplayTransientQueryState();
       return true;
     }
@@ -1672,6 +1713,7 @@
     gameManager.replayIndex = 0;
 
     resetReplayTimelineMeta();
+    resetReplayImportedStatsMeta();
     clearReplayDiagnosticsPanel();
     clearReplayCompatibilityNotice();
     clearReplayImportedFileBaseName();
@@ -2357,6 +2399,7 @@
     clearReplayImportedFileBaseName();
     clearReplayFileDropState();
     resetReplayTimelineMeta();
+    resetReplayImportedStatsMeta();
     stopReplayAutoPlayback();
     setReplayDiagnosticsVisible(false);
     updateReplayStatLabelsUI();

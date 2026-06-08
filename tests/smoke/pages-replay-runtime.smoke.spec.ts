@@ -712,6 +712,68 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.replayMovesLength).toBe(0);
   });
 
+  test("replay stats modal shows full imported v1 replay stats before playback finishes", async ({
+    browser
+  }) => {
+    const gamePage = await browser.newPage();
+    const gameResponse = await gamePage.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(gameResponse).not.toBeNull();
+    expect(gameResponse?.ok()).toBeTruthy();
+    await expect(gamePage.locator("body")).toBeVisible();
+    await gamePage.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.move === "function" && typeof manager.serialize === "function";
+    });
+
+    const replayText = await gamePage.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const trySuccessfulMove = () => {
+        const startLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+        for (const direction of [0, 1, 2, 3]) {
+          manager.move(direction);
+          const nextLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+          if (nextLength > startLength) return true;
+        }
+        return false;
+      };
+
+      for (let i = 0; i < 8; i += 1) {
+        if (!trySuccessfulMove()) break;
+      }
+      return String(manager.serialize());
+    });
+    await gamePage.close();
+
+    const replayPage = await browser.newPage();
+    const replayResponse = await replayPage.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(replayResponse).not.toBeNull();
+    expect(replayResponse?.ok()).toBeTruthy();
+    await expect(replayPage.locator("body")).toBeVisible();
+    await replayPage.waitForFunction(() => {
+      return !!(window as any).ReplayLogicV1 && typeof (window as any).ReplayLogicV1.importReplayPayloadV1 === "function";
+    });
+
+    await replayPage.evaluate((payload) => {
+      (window as any).ReplayLogicV1.importReplayPayloadV1(payload, "smoke_stats");
+      if ((window as any).game_manager && typeof (window as any).game_manager.pause === "function") {
+        (window as any).game_manager.pause();
+      }
+    }, replayText);
+
+    await replayPage.locator("#replay-toggle-diagnostics-btn").click();
+    await expect(replayPage.locator("#replay-modal")).toBeVisible();
+    const statsText = await replayPage.locator("#replay-textarea").inputValue();
+
+    expect(statsText).toContain("总步数：");
+    expect(statsText).not.toContain("总步数：0");
+    expect(statsText).not.toContain("出2数量：0\n出4数量：0");
+    await replayPage.close();
+  });
+
   test("live v1 replay serialization keeps start timestamp within backend-safe integer range", async ({
     browser
   }) => {
