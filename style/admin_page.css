@@ -47,6 +47,13 @@
   line-height: 1.4;
 }
 
+.admin-card h3 {
+  margin: 0;
+  color: #5a4b3f;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
 .panel-pill {
   flex: 0 0 auto;
   border: 1px solid #d8c9b8;
@@ -146,6 +153,26 @@ body[data-page="admin-console"] .settings-select:focus {
 
 .admin-board-textarea {
   min-height: 130px;
+}
+
+.admin-replay-textarea {
+  min-height: 96px;
+}
+
+.admin-file-input {
+  min-height: 42px;
+}
+
+.admin-upload-panel {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid rgba(216, 201, 184, 0.82);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.admin-upload-panel .admin-upload-head {
+  margin-bottom: 10px;
 }
 
 .admin-output,

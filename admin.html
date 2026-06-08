@@ -99,6 +99,28 @@
             <input id="admin-rescue-expires" class="admin-input" type="number" min="1" max="720" value="168">
           </label>
         </div>
+        <div class="admin-upload-panel">
+          <div class="panel-head admin-upload-head">
+            <div>
+              <h3>&#20174;&#22238;&#25918;&#25991;&#20214;&#31614;&#21457;</h3>
+              <p>&#19978;&#20256; replay-v1 &#25991;&#20214;&#65292;&#21518;&#31471;&#33258;&#21160;&#35299;&#26512;&#30424;&#38754;&#12289;&#20998;&#25968;&#12289;&#32479;&#35745;&#21644;&#22238;&#25918;&#25968;&#25454;&#12290;</p>
+            </div>
+          </div>
+          <div class="admin-form-grid admin-rescue-grid">
+            <label>&#29992;&#25143; ID / &#26165;&#31216;
+              <input id="admin-rescue-target-user" class="admin-input" type="text" placeholder="&#20363;&#22914; 17 &#25110; Jay">
+            </label>
+            <label>&#22238;&#25918;&#25991;&#20214;
+              <input id="admin-rescue-replay-file" class="admin-input admin-file-input" type="file" accept=".txt,.rpl,text/plain">
+            </label>
+          </div>
+          <label class="admin-sql-label">&#25110;&#30452;&#25509;&#31896;&#36148;&#22238;&#25918;&#20869;&#23481;
+            <textarea id="admin-rescue-replay-text" class="admin-textarea admin-replay-textarea" spellcheck="false" placeholder="REPLAY_v1RPL_B64_..."></textarea>
+          </label>
+          <div class="admin-actions">
+            <button id="admin-create-rescue-from-replay" class="replay-button" type="button">&#19978;&#20256;&#24182;&#31614;&#21457;&#24674;&#22797;&#21333;</button>
+          </div>
+        </div>
         <label class="admin-sql-label">&#30424;&#38754; JSON&#65288;4 x 4 &#25968;&#32452;&#65289;
           <textarea id="admin-rescue-board" class="admin-textarea admin-board-textarea" spellcheck="false" placeholder="&#36755;&#20837; 4x4 &#30424;&#38754; JSON&#65292;&#20363;&#22914; [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]"></textarea>
         </label>

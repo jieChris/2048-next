@@ -82,6 +82,13 @@ function parseNonNegativeInt(id: string, fallback: number): number {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
+async function readSelectedFileText(id: string): Promise<string> {
+  const input = byId<HTMLInputElement>(id);
+  const file = input?.files?.[0];
+  if (!file) return "";
+  return (await file.text()).trim();
+}
+
 function getAuthToken(): string {
   try {
     return window.localStorage.getItem(AUTH_TOKEN_KEY) || "";
@@ -237,9 +244,10 @@ async function checkAuth(): Promise<boolean> {
   try {
     const result = await apiRequest("/admin/me", { method: "GET" });
     renderOutput(output, result);
-    const ok = result.success !== false && result.admin === true;
+    const authData = result.data && typeof result.data === "object" && !Array.isArray(result.data) ? result.data as JsonRecord : {};
+    const ok = result.success !== false && (result.admin === true || authData.admin === true);
     if (ok) {
-      const user = result.user as JsonRecord | undefined;
+      const user = (result.user && typeof result.user === "object" ? result.user : authData) as JsonRecord | undefined;
       setAuthState(true, "\u5df2\u6388\u6743");
       setTip(byId("admin-query-tip"), "\u7ba1\u7406\u5458\u6743\u9650\u6b63\u5e38" + (user?.id ? " ID=" + user.id : ""), "ok", 3500);
       return true;
@@ -389,6 +397,61 @@ async function createRescueOffer(): Promise<void> {
   }
 }
 
+async function createRescueOfferFromReplay(): Promise<void> {
+  if (rescueSubmitInFlight) return;
+  if (!(await ensureAdminReady())) return;
+  clearTip(byId("admin-rescue-tip"));
+  syncRescueModeFields();
+  const targetUser = getInputValue("admin-rescue-target-user") || getInputValue("admin-rescue-user-id");
+  const modeKey = getInputValue("admin-rescue-mode-key");
+  const replayText = (await readSelectedFileText("admin-rescue-replay-file")) || getInputValue("admin-rescue-replay-text");
+  if (!targetUser || !modeKey) {
+    setTip(byId("admin-rescue-tip"), "\u8bf7\u586b\u5199\u7528\u6237 ID / \u6635\u79f0\u5e76\u9009\u62e9\u6a21\u5f0f", "err");
+    return;
+  }
+  if (!replayText) {
+    setTip(byId("admin-rescue-tip"), "\u8bf7\u9009\u62e9\u56de\u653e\u6587\u4ef6\u6216\u7c98\u8d34\u56de\u653e\u5185\u5bb9", "err");
+    return;
+  }
+  const payload = {
+    target_user: targetUser,
+    mode_key: modeKey,
+    replay_string: replayText,
+    expires_in_hours: parsePositiveInt("admin-rescue-expires", 168),
+    reason: getInputValue("admin-rescue-reason")
+  };
+  rescueSubmitInFlight = true;
+  setButtonBusy("admin-create-rescue-from-replay", true);
+  setTip(byId("admin-rescue-tip"), "\u6b63\u5728\u89e3\u6790\u56de\u653e\u5e76\u7b7e\u53d1\u6062\u590d\u5355...", "busy");
+  renderOutput(byId("admin-rescue-output"), { status: "submitting_replay", target_user: targetUser, mode_key: modeKey });
+  try {
+    const result = await apiRequest("/admin/rescue-offers/from-replay", { method: "POST", body: JSON.stringify(payload) });
+    renderOutput(byId("admin-rescue-output"), result);
+    if (result.success === false) {
+      setTip(byId("admin-rescue-tip"), "\u4ece\u56de\u653e\u7b7e\u53d1\u5931\u8d25\uff1a" + getErrorMessage(result, "unknown"), "err");
+      return;
+    }
+    const data = result.data as JsonRecord | undefined;
+    const summary = result.summary as JsonRecord | undefined;
+    if (data) {
+      setInputValue("admin-rescue-score", toText(data.score || ""));
+      setInputValue("admin-rescue-duration", toText(data.duration_ms || ""));
+      if (data.board) setInputValue("admin-rescue-board", stringify(data.board));
+    }
+    setTip(
+      byId("admin-rescue-tip"),
+      "\u5df2\u4ece\u56de\u653e\u7b7e\u53d1\u6062\u590d\u5355" +
+        (data?.id ? " ID=" + data.id : "") +
+        (summary?.score != null ? " / \u5206\u6570 " + summary.score : ""),
+      "ok",
+      6000
+    );
+  } finally {
+    rescueSubmitInFlight = false;
+    setButtonBusy("admin-create-rescue-from-replay", false);
+  }
+}
+
 async function listRescueOffers(): Promise<void> {
   if (!(await ensureAdminReady())) return;
   const userId = parsePositiveInt("admin-rescue-user-id", 0);
@@ -414,9 +477,10 @@ function bind(id: string, handler: () => void | Promise<void>): void {
 }
 
 function bindTipReset(): void {
-  for (const id of ["admin-rescue-user-id", "admin-rescue-score", "admin-rescue-duration", "admin-rescue-expires", "admin-rescue-board", "admin-rescue-reason"]) {
+  for (const id of ["admin-rescue-user-id", "admin-rescue-target-user", "admin-rescue-score", "admin-rescue-duration", "admin-rescue-expires", "admin-rescue-board", "admin-rescue-replay-text", "admin-rescue-reason"]) {
     byId<HTMLInputElement | HTMLTextAreaElement>(id)?.addEventListener("input", () => clearTip(byId("admin-rescue-tip")));
   }
+  byId<HTMLInputElement>("admin-rescue-replay-file")?.addEventListener("change", () => clearTip(byId("admin-rescue-tip")));
   for (const id of ["admin-table-select", "admin-table-limit", "admin-table-page", "admin-sql"]) {
     byId<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id)?.addEventListener("input", () => clearTip(byId("admin-query-tip")));
     byId<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id)?.addEventListener("change", () => clearTip(byId("admin-query-tip")));
@@ -434,6 +498,7 @@ export function bootstrapAdminPage(): void {
   bind("admin-run-sql", runSql);
   bind("admin-export-result", exportLatestResult);
   bind("admin-create-rescue", createRescueOffer);
+  bind("admin-create-rescue-from-replay", createRescueOfferFromReplay);
   bind("admin-list-rescue", listRescueOffers);
   void checkAuth();
 }
