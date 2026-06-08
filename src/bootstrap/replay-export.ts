@@ -17,6 +17,7 @@ const REPLAY_EXPORT_COPY: Record<
   {
     copySuccess: string;
     copyFailure: string;
+    exportFailure: string;
     downloadFailure: string;
     openPageFailure: string;
     downloadButton: string;
@@ -29,6 +30,7 @@ const REPLAY_EXPORT_COPY: Record<
   zh: {
     copySuccess: "回放代码已复制到剪贴板！",
     copyFailure: "自动复制失败，请手动从文本框复制。",
+    exportFailure: "导出回放失败，请刷新页面后重试。",
     downloadFailure: "导出文件失败，请稍后重试。",
     openPageFailure: "打开回放页面失败，请稍后重试。",
     downloadButton: "导出文件",
@@ -40,6 +42,7 @@ const REPLAY_EXPORT_COPY: Record<
   en: {
     copySuccess: "Replay code copied to clipboard.",
     copyFailure: "Automatic copy failed. Please copy from the text box manually.",
+    exportFailure: "Replay export failed. Please refresh the page and try again.",
     downloadFailure: "Export failed. Please try again later.",
     openPageFailure: "Could not open the replay page. Please try again later.",
     downloadButton: "Download File",
@@ -110,6 +113,12 @@ function resolveReplayExportLanguage(input: Record<string, unknown>): ReplayExpo
 
 function resolveReplayExportCopy(input: Record<string, unknown>) {
   return REPLAY_EXPORT_COPY[resolveReplayExportLanguage(input)];
+}
+
+function resolveFallbackReplayString(manager: Record<string, unknown>): string {
+  const rescueReplayString = manager.rescueReplayString;
+  const replay = rescueReplayString == null ? "" : String(rescueReplayString).trim();
+  return replay;
 }
 
 function resolveAlert(input: Record<string, unknown>): (message: string) => void {
@@ -634,6 +643,7 @@ export function applyReplayExport(input: {
   consoleLike?: unknown;
 }): {
   exported: boolean;
+  error?: boolean;
   replay?: string;
 } {
   const source = toRecord(input);
@@ -645,7 +655,21 @@ export function applyReplayExport(input: {
     };
   }
 
-  const replay = String(serialize.call(manager));
+  let replay = "";
+  try {
+    replay = String(serialize.call(manager));
+  } catch (error) {
+    replay = resolveFallbackReplayString(manager);
+    if (!replay) {
+      const copy = resolveReplayExportCopy(source);
+      resolveConsoleError(source)("Replay export failed", error);
+      resolveAlert(source)(copy.exportFailure);
+      return {
+        exported: false,
+        error: true
+      };
+    }
+  }
   const isV1 = replay.startsWith("REPLAY_v1RPL_B64_");
   const showReplayModal = asFunction<
     (

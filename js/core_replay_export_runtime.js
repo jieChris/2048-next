@@ -16,6 +16,7 @@
     zh: {
       copySuccess: "回放代码已复制到剪贴板！",
       copyFailure: "自动复制失败，请手动从文本框复制。",
+      exportFailure: "\u5bfc\u51fa\u56de\u653e\u5931\u8d25\uff0c\u8bf7\u5237\u65b0\u9875\u9762\u540e\u91cd\u8bd5\u3002",
       downloadFailure: "导出文件失败，请稍后重试。",
       openPageFailure: "\u6253\u5f00\u56de\u653e\u9875\u9762\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002",
       downloadButton: "导出文件",
@@ -27,6 +28,7 @@
     en: {
       copySuccess: "Replay code copied to clipboard.",
       copyFailure: "Automatic copy failed. Please copy from the text box manually.",
+      exportFailure: "Replay export failed. Please refresh the page and try again.",
       downloadFailure: "Export failed. Please try again later.",
       openPageFailure: "Could not open the replay page. Please try again later.",
       downloadButton: "Download File",
@@ -96,6 +98,12 @@
 
   function resolveReplayExportCopy(input) {
     return REPLAY_EXPORT_COPY[resolveReplayExportLanguage(input)];
+  }
+
+  function resolveFallbackReplayString(manager) {
+    var rescueReplayString = manager.rescueReplayString;
+    var replay = rescueReplayString == null ? "" : String(rescueReplayString).trim();
+    return replay;
   }
 
   function resolveAlert(input) {
@@ -545,7 +553,21 @@
       };
     }
 
-    var replay = String(serialize.call(manager));
+    var replay = "";
+    try {
+      replay = String(serialize.call(manager));
+    } catch (error) {
+      replay = resolveFallbackReplayString(manager);
+      if (!replay) {
+        var failureCopy = resolveReplayExportCopy(source);
+        resolveConsoleError(source)("Replay export failed", error);
+        resolveAlert(source)(failureCopy.exportFailure);
+        return {
+          exported: false,
+          error: true
+        };
+      }
+    }
     var isV1 = replay.indexOf("REPLAY_v1RPL_B64_") === 0;
     var showReplayModal = asFunction(source.showReplayModal);
     if (showReplayModal) {

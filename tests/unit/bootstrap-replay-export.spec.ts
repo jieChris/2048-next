@@ -8,6 +8,56 @@ describe("bootstrap replay export", () => {
     expect(result).toEqual({ exported: false });
   });
 
+  it("shows a visible failure message when replay serialization fails", () => {
+    const alertLike = vi.fn();
+    const error = vi.fn();
+    const showReplayModal = vi.fn();
+
+    const result = applyReplayExport({
+      gameManager: {
+        serialize() {
+          throw new Error("boom");
+        }
+      },
+      showReplayModal,
+      alertLike,
+      consoleLike: { error }
+    });
+
+    expect(result).toEqual({ exported: false, error: true });
+    expect(showReplayModal).not.toHaveBeenCalled();
+    expect(alertLike).toHaveBeenCalledWith("导出回放失败，请刷新页面后重试。");
+    expect(error).toHaveBeenCalledWith("Replay export failed", expect.any(Error));
+  });
+
+  it("uses rescue replay string when live serialization fails", () => {
+    const alertLike = vi.fn();
+    const showReplayModal = vi.fn();
+
+    const result = applyReplayExport({
+      gameManager: {
+        rescueReplayString: "REPLAY_v1RPL_B64_rescue",
+        serialize() {
+          throw new Error("boom");
+        }
+      },
+      showReplayModal,
+      alertLike
+    });
+
+    expect(result).toEqual({
+      exported: true,
+      replay: "REPLAY_v1RPL_B64_rescue"
+    });
+    expect(showReplayModal).toHaveBeenCalledWith(
+      "导出回放 (v1)",
+      "REPLAY_v1RPL_B64_rescue",
+      "复制回放",
+      expect.any(Function)
+    );
+    expect(alertLike).not.toHaveBeenCalled();
+  });
+
   it("exports replay, opens modal and only copies via the explicit copy action", async () => {
     const alertLike = vi.fn();
     const writeText = vi.fn(() => Promise.resolve(undefined));
@@ -393,5 +443,3 @@ describe("bootstrap replay export", () => {
     expect(alertLike).toHaveBeenCalledTimes(1);
   });
 });
-
-
