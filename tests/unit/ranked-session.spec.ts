@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createRankedSessionRuntime } from "../../src/bootstrap/ranked-session";
+import {
+  bindRankedSessionAuthTransitionReload,
+  createRankedSessionRuntime
+} from "../../src/bootstrap/ranked-session";
 
 const MODE_KEY = "standard_4x4_pow2_no_undo";
 const ACTIVE_KEY = `ranked_session_active:v1:${MODE_KEY}`;
@@ -21,6 +24,8 @@ class MemoryStorage {
     this.values.delete(key);
   }
 }
+
+type ListenerMap = Record<string, Array<(eventLike?: { key?: string }) => void>>;
 
 function createSession(overrides: Record<string, unknown> = {}) {
   const nowSec = Math.floor(Date.now() / 1000);
@@ -237,5 +242,38 @@ describe("ranked session runtime", () => {
     const prefetched = JSON.parse(storage.getItem(PREFETCH_KEY) || "{}");
     expect(prefetched.ranked_session_token).toBe("current-user-token");
     expect(prefetched.owner_user_id).toBe("7");
+  });
+
+  it("reloads a ranked page when auth state changes after the page was restored", () => {
+    const storage = new MemoryStorage();
+    const listeners: ListenerMap = {};
+    const reload = vi.fn();
+    const clearModeSession = vi.fn();
+    const windowLike = {
+      localStorage: storage,
+      location: {
+        search: "",
+        hostname: "2048next.cn",
+        origin: "https://2048next.cn",
+        reload
+      },
+      addEventListener: vi.fn((type: string, listener: (eventLike?: { key?: string }) => void) => {
+        listeners[type] = listeners[type] || [];
+        listeners[type].push(listener);
+      })
+    } as unknown as Window;
+
+    bindRankedSessionAuthTransitionReload(
+      windowLike,
+      { clearModeSession } as unknown as ReturnType<typeof createRankedSessionRuntime>,
+      MODE_KEY
+    );
+
+    storage.setItem("2048_auth_token_v1", "logged-in-token");
+    storage.setItem("2048_auth_userId_v1", "17");
+    listeners.pageshow?.forEach((listener) => listener());
+
+    expect(clearModeSession).toHaveBeenCalledWith(MODE_KEY);
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });

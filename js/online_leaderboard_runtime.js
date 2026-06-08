@@ -1457,6 +1457,14 @@ function shouldAutoLoadOnlineLeaderboard() {
     }
   }
 
+  function resolveRankedCheckpointSessionId(checkpointData) {
+    if (!isPlainRecord(checkpointData)) return "";
+    return (
+      toText(checkpointData.challenge_id).trim().toLowerCase() ||
+      toText(checkpointData.ranked_session_id).trim().toLowerCase()
+    );
+  }
+
   function shouldRejectRankedCheckpointForRestore(checkpointData, modeLike) {
     if (!isPlainRecord(checkpointData)) return false;
     var modeKey = resolveRankedCheckpointLocalMirrorModeKey(modeLike || checkpointData.mode_key);
@@ -1489,6 +1497,14 @@ function shouldAutoLoadOnlineLeaderboard() {
     var hasAuth = !!getAuthToken();
     var activeSession = hasAuth ? readActiveRankedSessionRecord(modeKey) : null;
     if (!activeSession) return false;
+    var activeChallengeId = toText(activeSession.challenge_id).trim().toLowerCase();
+    var checkpointChallengeId = resolveRankedCheckpointSessionId(checkpointData);
+    if (activeChallengeId && checkpointChallengeId && activeChallengeId === checkpointChallengeId) {
+      return false;
+    }
+    if (checkpointChallengeId) {
+      return false;
+    }
     var activeToken = toText(activeSession.ranked_session_token).trim();
     if (activeToken && !checkpointToken) return true;
     if (activeToken && checkpointToken && activeToken !== checkpointToken) return true;

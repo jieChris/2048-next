@@ -6,6 +6,10 @@ const AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
 const ACTIVE_SESSION_STORAGE_KEY_PREFIX = "ranked_session_active:v1:";
 const PREFETCH_SESSION_STORAGE_KEY_PREFIX = "ranked_session_prefetch:v1:";
 const DEFAULT_REMOTE_API_BASE_URL = "https://2048next.cn/api";
+const AUTH_STATE_STORAGE_KEYS = new Set([
+  AUTH_TOKEN_STORAGE_KEY,
+  AUTH_USER_ID_STORAGE_KEY
+]);
 
 const RANKED_MODE_KEYS = new Set([
   "standard_4x4_pow2_no_undo",
@@ -484,6 +488,43 @@ export function createRankedSessionRuntime(
   return runtime;
 }
 
+function resolveAuthStateSignature(windowLike: RankedSessionWindowLike): string {
+  return `${readAuthUserId(windowLike)}\u0000${readAuthToken(windowLike)}`;
+}
+
+export function bindRankedSessionAuthTransitionReload(
+  windowLike: RankedSessionWindowLike,
+  runtime: Pick<RankedSessionRuntime, "clearModeSession">,
+  modeKey: string | null
+): void {
+  if (!modeKey || !isRankedModeKey(modeKey)) return;
+  if (typeof windowLike.addEventListener !== "function") return;
+
+  let authStateSignature = resolveAuthStateSignature(windowLike);
+  let reloadScheduled = false;
+
+  const reloadForAuthTransition = (): void => {
+    if (reloadScheduled) return;
+    const currentAuthStateSignature = resolveAuthStateSignature(windowLike);
+    if (currentAuthStateSignature === authStateSignature) return;
+    authStateSignature = currentAuthStateSignature;
+    reloadScheduled = true;
+    try {
+      runtime.clearModeSession(modeKey);
+    } catch (_err) {}
+    try {
+      windowLike.location.reload();
+    } catch (_err) {}
+  };
+
+  windowLike.addEventListener("pageshow", reloadForAuthTransition);
+  windowLike.addEventListener("focus", reloadForAuthTransition);
+  windowLike.addEventListener("storage", (eventLike: StorageEvent): void => {
+    if (eventLike.key && !AUTH_STATE_STORAGE_KEYS.has(eventLike.key)) return;
+    reloadForAuthTransition();
+  });
+}
+
 export async function bootstrapRankedSessionForHomeFamilyPage(
   pageId: string
 ): Promise<void> {
@@ -493,6 +534,7 @@ export async function bootstrapRankedSessionForHomeFamilyPage(
   windowLike.RankedSessionRuntime = runtime;
   const modeKey = runtime.resolvePageModeKey();
   if (!modeKey) return;
+  bindRankedSessionAuthTransitionReload(windowLike, runtime, modeKey);
   if (!readAuthToken(windowLike)) return;
 
   let activeContext = runtime.getCurrentContext(modeKey);

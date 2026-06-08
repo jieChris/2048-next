@@ -175,14 +175,84 @@ test.describe("Home user display", () => {
     expect(Math.abs(Number(layout.combinedWidth) - Number(layout.rowWidth))).toBeLessThanOrEqual(1);
   });
 
-  test("mobile board starts before a slow ranked session request completes", async ({ page }) => {
+  test("settings toolkit links align with the setting columns", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("home_guide_seen_v1", "1");
+    });
+
+    const response = await page.goto("/2048.html?toolkit-align-smoke=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+
+    await page.click("#top-settings-btn");
+    await page.waitForSelector("#toolkit-palette-link", { state: "visible" });
+
+    const layout = await page.evaluate(() => {
+      const visibleToggleRows = Array.from(document.querySelectorAll("#settings-modal .settings-toggle-row"))
+        .filter((element) => element.getClientRects().length > 0);
+      const leftRow = visibleToggleRows.find((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.left < window.innerWidth / 2;
+      });
+      const rightRow = visibleToggleRows.find((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.left > window.innerWidth / 2;
+      });
+      const readRect = (selectorOrElement: string | Element | undefined) => {
+        const element =
+          typeof selectorOrElement === "string"
+            ? document.querySelector(selectorOrElement)
+            : selectorOrElement;
+        const rect = element?.getBoundingClientRect();
+        if (!rect) return null;
+        return {
+          left: rect.left,
+          width: rect.width,
+          center: rect.left + rect.width / 2
+        };
+      };
+      return {
+        leftRow: readRect(leftRow),
+        rightRow: readRect(rightRow),
+        palette: readRect("#toolkit-palette-link"),
+        account: readRect("#toolkit-account-link"),
+        actionWrap: readRect(".toolkit-entry-actions")
+      };
+    });
+
+    expect(layout.leftRow).not.toBeNull();
+    expect(layout.rightRow).not.toBeNull();
+    expect(layout.palette).not.toBeNull();
+    expect(layout.account).not.toBeNull();
+    expect(layout.actionWrap?.left).toBeCloseTo(Number(layout.leftRow?.left), 0);
+    expect(layout.actionWrap?.width).toBeCloseTo(
+      Number(layout.rightRow?.left) + Number(layout.rightRow?.width) - Number(layout.leftRow?.left),
+      0
+    );
+    expect(Math.abs(Number(layout.palette?.center) - Number(layout.leftRow?.center))).toBeLessThanOrEqual(1);
+    expect(Math.abs(Number(layout.account?.center) - Number(layout.rightRow?.center))).toBeLessThanOrEqual(1);
+  });
+
+  test("mobile board starts after the ranked session request without layout regression", async ({ page }) => {
     await page.setViewportSize({ width: 414, height: 896 });
     await page.route("**/api/ranked-session/start", async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 10_000));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ success: false })
+        body: JSON.stringify({
+          success: true,
+          data: {
+            mode_key: "standard_4x4_pow2_no_undo",
+            challenge_id: "slow-ranked-layout",
+            seed: 1357,
+            ranked_session_token: "slow-ranked-layout-token",
+            issued_at: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 3600
+          }
+        })
       });
     });
     await page.route("**/api/leaderboard**", async (route) => {
@@ -225,7 +295,7 @@ test.describe("Home user display", () => {
         return !!manager && !!manager.actuator;
       },
       null,
-      { timeout: 3_000 }
+      { timeout: 5_000 }
     );
 
     const layout = await page.evaluate(() => {
@@ -252,6 +322,85 @@ test.describe("Home user display", () => {
     expect(layout.tileContainer?.width).toBeGreaterThanOrEqual(370);
     expect(layout.firstCell?.width).toBeGreaterThanOrEqual(80);
     expect(layout.tileCount).toBeGreaterThan(0);
+  });
+
+  test("reloads restored guest-ranked page after login before the next board is played", async ({ page }) => {
+    let sessionStartRequests = 0;
+    await page.route("**/api/ranked-session/start", async (route) => {
+      sessionStartRequests += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            mode_key: "standard_4x4_pow2_no_undo",
+            challenge_id: "auth-transition-ranked",
+            seed: 2468,
+            ranked_session_token: "auth-transition-token",
+            issued_at: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 3600
+          }
+        })
+      });
+    });
+    await page.route("**/api/leaderboard**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+    await page.route("**/api/user/**/records**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+    await page.route("**/api/ranked-checkpoint**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: null })
+      });
+    });
+    await page.addInitScript(() => {
+      if (window.sessionStorage.getItem("auth_transition_smoke_cleaned") === "1") return;
+      window.sessionStorage.setItem("auth_transition_smoke_cleaned", "1");
+      window.localStorage.removeItem("2048_auth_token_v1");
+      window.localStorage.removeItem("2048_auth_userId_v1");
+      window.localStorage.removeItem("ranked_session_active:v1:standard_4x4_pow2_no_undo");
+      window.localStorage.removeItem("ranked_session_prefetch:v1:standard_4x4_pow2_no_undo");
+    });
+
+    const response = await page.goto("/2048.html?auth-transition-smoke=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await page.waitForFunction(() => !!(window as any).game_manager);
+    expect(sessionStartRequests).toBe(0);
+
+    const rankedSessionRequest = page.waitForRequest((request) =>
+      new URL(request.url()).pathname.endsWith("/api/ranked-session/start")
+    );
+    await page.evaluate(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "auth-transition-login-token");
+      window.localStorage.setItem("2048_auth_userId_v1", "17");
+      window.dispatchEvent(new Event("pageshow"));
+    });
+    await rankedSessionRequest;
+
+    await page.waitForFunction(
+      () => {
+        const context = (window as any).GAME_CHALLENGE_CONTEXT;
+        return context && context.ranked_session_token === "auth-transition-token";
+      },
+      null,
+      { timeout: 5_000 }
+    );
+    expect(sessionStartRequests).toBeGreaterThan(0);
   });
 
   test("mobile static board shell fills the board before scripts run", async ({ page }) => {

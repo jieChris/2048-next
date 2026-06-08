@@ -200,7 +200,14 @@ function loadOnlineLeaderboardRuntime(options: {
     window: windowLike,
     console,
     setTimeout,
-    clearTimeout
+    clearTimeout,
+    applySavedStateRestore(manager: Record<string, unknown>, savedState: Record<string, unknown>) {
+      manager.score = Number(savedState.score || 0);
+      manager.over = !!savedState.over;
+      manager.won = !!savedState.won;
+      manager.keepPlaying = !!savedState.keep_playing;
+      return true;
+    }
   });
 
   return { fetchCalls, fetchImpl, storage, windowLike };
@@ -1031,5 +1038,83 @@ describe("online leaderboard terminal submission", () => {
     expect(manager.rankCheckpointRestorePending).toBe(false);
     expect(manager.lastRankedCheckpointRestoreError).toBe("");
     expect(manager.score).toBe(0);
+  });
+
+  it("restores a ranked checkpoint when the challenge matches but the token was refreshed", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    storage.setItem(
+      ACTIVE_SESSION_KEY,
+      JSON.stringify({
+        mode_key: MODE_KEY,
+        challenge_id: "ranked-active",
+        seed: 456,
+        ranked_session_token: "old-active-token",
+        issued_at: nowSec,
+        exp: nowSec + 3600,
+        owner_user_id: "7"
+      })
+    );
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      over: false,
+      score: 0,
+      hasGameStarted: false,
+      moveHistory: [],
+      needsRankedCheckpointRestore: true,
+      lastRankedCheckpointRestoreError: "",
+      actuate: vi.fn(),
+      updateUndoUiState: vi.fn(),
+      notifyUndoSettingsStateChanged: vi.fn(),
+      updateStatsPanel: vi.fn()
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.includes("/ranked-checkpoint")) {
+          return createJsonResponse({
+            success: true,
+            data: {
+              mode_key: MODE_KEY,
+              mode_bucket: "standard_no_undo",
+              challenge_id: "ranked-active",
+              ranked_session_id: "ranked-active",
+              ranked_session_token: "refreshed-token",
+              client_record_id: "same-session-record",
+              replay_string: "refreshed-replay",
+              duration_ms: 3000,
+              updated_at: new Date().toISOString(),
+              ui_state: {
+                saved_state: {
+                  v: 1,
+                  saved_at: Date.now(),
+                  mode_key: MODE_KEY,
+                  board_width: 4,
+                  board_height: 4,
+                  ruleset: "pow2",
+                  board: [[1024, 1024, 0, 0]],
+                  score: 454348,
+                  over: false,
+                  won: false,
+                  keep_playing: false
+                }
+              }
+            }
+          });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    runtime.windowLike.OnlineLeaderboardRuntime.scheduleRankedCheckpointRestore(manager, {
+      delayMs: 0
+    });
+    await flushRuntimePromises();
+
+    expect(manager.needsRankedCheckpointRestore).toBe(false);
+    expect(manager.rankCheckpointRestorePending).toBe(false);
+    expect(manager.lastRankedCheckpointRestoreError).toBe("");
+    expect(manager.score).toBe(454348);
   });
 });
