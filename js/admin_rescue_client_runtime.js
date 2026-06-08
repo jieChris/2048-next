@@ -74,6 +74,21 @@
     return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
   }
 
+  function firstPresent(values) {
+    if (!Array.isArray(values)) return undefined;
+    for (var i = 0; i < values.length; i += 1) {
+      var value = values[i];
+      if (value !== undefined && value !== null && value !== "") return value;
+    }
+    return undefined;
+  }
+
+  function normalizeOptionalInteger(value) {
+    if (value === undefined || value === null || value === "") return null;
+    var numeric = Math.floor(Number(value));
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
   function getStorage() {
     try {
       return global.localStorage || null;
@@ -388,6 +403,82 @@
     };
   }
 
+  function resolveRankedSessionStateFromOffer(manager, offer, replayState) {
+    var sessionReplayV1 = toRecord(replayState && replayState.sessionReplayV1);
+    var sessionReplayV3 = toRecord(replayState && replayState.sessionReplayV3);
+    var token = toText(firstPresent([
+      readOfferValue(offer, "ranked_session_token"),
+      readOfferValue(offer, "rankedSessionToken"),
+      sessionReplayV1.ranked_session_token,
+      sessionReplayV1.rankedSessionToken,
+      sessionReplayV3.ranked_session_token,
+      sessionReplayV3.rankedSessionToken
+    ])).trim();
+    var challengeId = toText(firstPresent([
+      readOfferValue(offer, "challenge_id"),
+      readOfferValue(offer, "challengeId"),
+      sessionReplayV1.challenge_id,
+      sessionReplayV1.challengeId,
+      sessionReplayV3.challenge_id,
+      sessionReplayV3.challengeId
+    ])).trim();
+    var seed = normalizeOptionalInteger(firstPresent([
+      readOfferValue(offer, "seed"),
+      readOfferValue(offer, "initial_seed"),
+      readOfferValue(offer, "initialSeed"),
+      sessionReplayV1.seed,
+      sessionReplayV1.initial_seed,
+      sessionReplayV1.initialSeed,
+      sessionReplayV3.seed,
+      sessionReplayV3.initial_seed,
+      sessionReplayV3.initialSeed
+    ]));
+    var modeKey = toText(firstPresent([
+      readOfferValue(offer, "mode_key"),
+      readOfferValue(offer, "modeKey"),
+      sessionReplayV1.mode_key,
+      sessionReplayV1.modeKey,
+      sessionReplayV3.mode_key,
+      sessionReplayV3.modeKey,
+      manager && manager.modeKey
+    ])).trim();
+    if (!token && !challengeId && seed === null) return null;
+    return {
+      rankedSessionToken: token,
+      challengeId: challengeId,
+      seed: seed,
+      modeKey: modeKey
+    };
+  }
+
+  function applyRankedSessionStateToManager(manager, rankedState) {
+    if (!manager || !rankedState) return;
+    if (rankedState.rankedSessionToken) manager.rankedSessionToken = rankedState.rankedSessionToken;
+    if (rankedState.challengeId) manager.challengeId = rankedState.challengeId;
+    if (rankedState.seed !== null) {
+      manager.initialSeed = rankedState.seed;
+      manager.seed = rankedState.seed;
+    }
+    if (manager.sessionReplayV1 && typeof manager.sessionReplayV1 === "object") {
+      if (rankedState.challengeId) manager.sessionReplayV1.challenge_id = rankedState.challengeId;
+      if (rankedState.seed !== null) manager.sessionReplayV1.seed = rankedState.seed;
+      if (rankedState.rankedSessionToken) manager.sessionReplayV1.ranked_session_token = rankedState.rankedSessionToken;
+    }
+    if (manager.sessionReplayV3 && typeof manager.sessionReplayV3 === "object") {
+      if (rankedState.challengeId) manager.sessionReplayV3.challenge_id = rankedState.challengeId;
+      if (rankedState.seed !== null) manager.sessionReplayV3.seed = rankedState.seed;
+      if (rankedState.rankedSessionToken) manager.sessionReplayV3.ranked_session_token = rankedState.rankedSessionToken;
+    }
+    if (rankedState.challengeId) {
+      global.GAME_CHALLENGE_CONTEXT = {
+        id: rankedState.challengeId,
+        mode_key: rankedState.modeKey || toText(manager.modeKey).trim(),
+        seed: rankedState.seed !== null ? rankedState.seed : manager.initialSeed,
+        ranked_session_token: rankedState.rankedSessionToken || toText(manager.rankedSessionToken).trim()
+      };
+    }
+  }
+
   function deriveStepCountersFromMoveHistory(moveHistory) {
     var result = { successfulMoveCount: 0, undoUsed: 0 };
     if (!Array.isArray(moveHistory)) return result;
@@ -419,6 +510,7 @@
       manager.spawnFours = manager.spawnValueCounts["4"] || 0;
     }
     if (replayState.replayString) manager.rescueReplayString = replayState.replayString;
+    applyRankedSessionStateToManager(manager, resolveRankedSessionStateFromOffer(manager, offer, replayState));
   }
 
   function resolveReasonFromOffer(offer) {

@@ -140,6 +140,82 @@ describe("admin rescue client runtime", () => {
     expect(manager.rescueReplayString).toBe("REPLAY_v1RPL_B64_demo");
   });
 
+  it("applies ranked session context from a rescue offer", async () => {
+    const offer = {
+      id: "rescue_ranked_session",
+      board: [
+        [16, 64, 128, 32768],
+        [8, 2, 2, 0],
+        [4, 0, 0, 0],
+        [0, 2, 0, 0]
+      ],
+      score: 454348,
+      duration_ms: 12077797,
+      mode_key: "standard_4x4_pow2_no_undo",
+      challenge_id: "rescue-new-challenge",
+      seed: 123456,
+      session_replay_v1: {
+        v: 1,
+        mode_key: "standard_4x4_pow2_no_undo",
+        ruleset: "pow2",
+        board_width: 4,
+        board_height: 4,
+        challenge_id: "rescue-new-challenge",
+        seed: 123456,
+        ranked_session_token: "rs1.mock-token",
+        init_tiles: [{ cellIndex: 0, valueBit: 0 }],
+        records: [{ kind: "move", dir: 1, spawnIndex: 3, spawnValueBit: 0, deltaMs: 40 }],
+        supported: true
+      },
+      spawn_value_counts: { "2": 2, "4": 1 }
+    };
+    const context = loadRuntime({ GAME_CHALLENGE_CONTEXT: null });
+    context.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: [offer] })
+    });
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      modeConfig: { key: "standard_4x4_pow2_no_undo" },
+      rankPolicy: "ranked",
+      rankedSessionToken: "",
+      challengeId: null,
+      initialSeed: 0,
+      seed: 0,
+      moveHistory: [],
+      spawnValueCounts: {},
+      restartWithBoard: vi.fn(),
+      getFinalBoardMatrix() {
+        return offer.board;
+      },
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      },
+      actuate: vi.fn(),
+      saveGameState: vi.fn()
+    };
+
+    await context.AdminRescueClientRuntime.checkAndOfferRescue(manager);
+
+    expect(manager.rankedSessionToken).toBe("rs1.mock-token");
+    expect(manager.challengeId).toBe("rescue-new-challenge");
+    expect(manager.initialSeed).toBe(123456);
+    expect(manager.seed).toBe(123456);
+    expect(manager.sessionReplayV1).toEqual(
+      expect.objectContaining({
+        challenge_id: "rescue-new-challenge",
+        seed: 123456,
+        ranked_session_token: "rs1.mock-token"
+      })
+    );
+    expect(context.GAME_CHALLENGE_CONTEXT).toEqual({
+      id: "rescue-new-challenge",
+      mode_key: "standard_4x4_pow2_no_undo",
+      seed: 123456,
+      ranked_session_token: "rs1.mock-token"
+    });
+  });
+
   it("derives replay and stats fields from a v1 replay string", async () => {
     const context = loadRuntime(
       {
