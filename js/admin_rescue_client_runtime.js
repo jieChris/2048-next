@@ -236,4 +236,8 @@
     checkAndOfferRescue: checkAndOfferRescue,
     scheduleCheck: scheduleCheck
   };
+
+  if (global.game_manager) {
+    scheduleCheck(global.game_manager);
+  }
 })(typeof window !== "undefined" ? window : undefined);
