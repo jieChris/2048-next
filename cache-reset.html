@@ -51,19 +51,43 @@
         }
       }
 
+      function removeStorageKeysByPrefix(storage, prefixes) {
+        if (!storage) return;
+        try {
+          for (var index = storage.length - 1; index >= 0; index -= 1) {
+            var key = storage.key(index);
+            if (!key) continue;
+            if (prefixes.some(function (prefix) { return key.indexOf(prefix) === 0; })) {
+              storage.removeItem(key);
+            }
+          }
+        } catch (_err) {}
+      }
+
+      function clearSavedStateWindowName() {
+        try {
+          var rawName = typeof window.name === "string" ? window.name : "";
+          if (!rawName) return;
+          var marker = "__gm_saved_state_v1__=";
+          var kept = rawName.split("&").filter(function (part) {
+            return part.indexOf(marker) !== 0;
+          });
+          window.name = kept.join("&");
+        } catch (_err) {}
+      }
+
       function clearRankedCheckpointState() {
-        if (!shouldClearRankedCheckpointState() || !window.localStorage) return;
+        if (!shouldClearRankedCheckpointState()) return;
         var prefixes = [
           "ranked_checkpoint_local_mirror:v1:",
-          "ranked_checkpoint_cleared_at:v1:"
+          "ranked_checkpoint_cleared_at:v1:",
+          "savedGameStateByMode:v1:",
+          "savedGameStateLiteByMode:v1:",
+          "savedGameStateSyncByMode:v1:"
         ];
-        for (var index = window.localStorage.length - 1; index >= 0; index -= 1) {
-          var key = window.localStorage.key(index);
-          if (!key) continue;
-          if (prefixes.some(function (prefix) { return key.indexOf(prefix) === 0; })) {
-            window.localStorage.removeItem(key);
-          }
-        }
+        removeStorageKeysByPrefix(window.localStorage, prefixes);
+        removeStorageKeysByPrefix(window.sessionStorage, prefixes);
+        clearSavedStateWindowName();
       }
 
       function clearCaches() {
