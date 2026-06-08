@@ -13,6 +13,11 @@
   width: min(1440px, calc(100vw - 28px));
 }
 
+body[data-page="admin-console"][data-admin-access="checking"] .admin-page-shell,
+body[data-page="admin-console"][data-admin-access="denied"] .admin-page-shell {
+  visibility: hidden;
+}
+
 .admin-grid {
   display: grid;
   grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);

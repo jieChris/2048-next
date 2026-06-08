@@ -12,4 +12,16 @@ describe("admin replay rescue upload UI", () => {
     expect(html).toContain('id="admin-create-rescue-from-replay"');
     expect(page).toContain("/admin/rescue-offers/from-replay");
   });
+
+  it("gates the admin page before authorization is confirmed", () => {
+    const root = process.cwd();
+    const html = readFileSync(resolve(root, "admin.html"), "utf8");
+    const page = readFileSync(resolve(root, "src/pages/admin-page.ts"), "utf8");
+    const css = readFileSync(resolve(root, "style/admin_page.css"), "utf8");
+
+    expect(html).toContain('data-admin-access="checking"');
+    expect(css).toContain('[data-admin-access="checking"] .admin-page-shell');
+    expect(page).toContain('checkAuth({ redirectOnDeny: true })');
+    expect(page).toContain('window.location.replace(ADMIN_DENIED_REDIRECT)');
+  });
 });

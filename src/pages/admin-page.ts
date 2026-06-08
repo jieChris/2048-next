@@ -19,6 +19,7 @@ type RescueModeOption = {
 
 const AUTH_TOKEN_KEY = "2048_auth_token_v1";
 const REMOTE_API_BASE = "https://2048next.cn/api";
+const ADMIN_DENIED_REDIRECT = "account.html?admin_required=1";
 const RESCUE_MODE_OPTIONS: RescueModeOption[] = [
   { label: "4x4 \u65e0\u64a4\u56de", modeKey: "standard_4x4_pow2_no_undo", modeBucket: "standard_no_undo" },
   { label: "4x4 \u6709\u64a4\u56de", modeKey: "classic_4x4_pow2_undo", modeBucket: "standard_undo" },
@@ -36,6 +37,7 @@ const RESCUE_MODE_OPTIONS: RescueModeOption[] = [
 let latestResult: unknown = null;
 let isAdminAuthorized = false;
 let rescueSubmitInFlight = false;
+let initialAccessCheckDone = false;
 const tipTimers = new WeakMap<HTMLElement, number>();
 
 function byId<T extends HTMLElement>(id: string): T | null {
@@ -158,6 +160,16 @@ function setButtonBusy(id: string, busy: boolean): void {
   button.toggleAttribute("aria-busy", busy);
 }
 
+function setAdminAccessState(state: "checking" | "granted" | "denied"): void {
+  document.body.setAttribute("data-admin-access", state);
+}
+
+function redirectDeniedAdminAccess(): void {
+  setAdminAccessState("denied");
+  if (window.location.pathname.endsWith("/account.html") || window.location.pathname.endsWith("/account")) return;
+  window.location.replace(ADMIN_DENIED_REDIRECT);
+}
+
 function renderOutput(node: HTMLElement | null, value: unknown): void {
   if (node) node.textContent = stringify(value);
 }
@@ -235,7 +247,7 @@ function setAuthState(ok: boolean, label: string): void {
   }
 }
 
-async function checkAuth(): Promise<boolean> {
+async function checkAuth(options: { redirectOnDeny?: boolean } = {}): Promise<boolean> {
   const output = byId("admin-auth-output");
   clearTip(byId("admin-query-tip"));
   setButtonBusy("admin-check-auth", true);
@@ -248,14 +260,17 @@ async function checkAuth(): Promise<boolean> {
     const ok = result.success !== false && (result.admin === true || authData.admin === true);
     if (ok) {
       const user = (result.user && typeof result.user === "object" ? result.user : authData) as JsonRecord | undefined;
+      setAdminAccessState("granted");
       setAuthState(true, "\u5df2\u6388\u6743");
       setTip(byId("admin-query-tip"), "\u7ba1\u7406\u5458\u6743\u9650\u6b63\u5e38" + (user?.id ? " ID=" + user.id : ""), "ok", 3500);
       return true;
     }
     setAuthState(false, result.code === "NO_TOKEN" ? "\u672a\u767b\u5f55" : "\u65e0\u6743\u9650");
     setTip(byId("admin-query-tip"), getErrorMessage(result, "\u6743\u9650\u68c0\u67e5\u5931\u8d25"), "err");
+    if (options.redirectOnDeny) redirectDeniedAdminAccess();
     return false;
   } finally {
+    initialAccessCheckDone = true;
     setButtonBusy("admin-check-auth", false);
   }
 }
@@ -490,6 +505,7 @@ function bindTipReset(): void {
 export function bootstrapAdminPage(): void {
   if (typeof document === "undefined") return;
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
+  if (!initialAccessCheckDone) setAdminAccessState("checking");
   initRescueModeSelect();
   bindTipReset();
   bind("admin-check-auth", async () => { await checkAuth(); });
@@ -500,5 +516,5 @@ export function bootstrapAdminPage(): void {
   bind("admin-create-rescue", createRescueOffer);
   bind("admin-create-rescue-from-replay", createRescueOfferFromReplay);
   bind("admin-list-rescue", listRescueOffers);
-  void checkAuth();
+  void checkAuth({ redirectOnDeny: true });
 }
