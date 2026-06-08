@@ -700,6 +700,23 @@ function applySavedManagerProgressState(manager, saved) {
   manager.comboStreak = Number.isInteger(saved.combo_streak) ? saved.combo_streak : 0;
   manager.successfulMoveCount = Number.isInteger(saved.successful_move_count) ? saved.successful_move_count : 0;
   manager.undoUsed = Number.isInteger(saved.undo_used) ? saved.undo_used : 0;
+  if (
+    manager.successfulMoveCount === 0 &&
+    manager.undoUsed === 0 &&
+    Array.isArray(manager.moveHistory) &&
+    manager.moveHistory.length > 0
+  ) {
+    var derivedSuccessfulMoveCount = 0;
+    var derivedUndoUsed = 0;
+    for (var i = 0; i < manager.moveHistory.length; i += 1) {
+      var direction = Math.floor(Number(manager.moveHistory[i]));
+      if (!Number.isInteger(direction)) continue;
+      if (direction < 0) derivedUndoUsed += 1;
+      else derivedSuccessfulMoveCount += 1;
+    }
+    manager.successfulMoveCount = derivedSuccessfulMoveCount;
+    manager.undoUsed = derivedUndoUsed;
+  }
   manager.lockConsumedAtMoveCount = Number.isInteger(saved.lock_consumed_at_move_count) ? saved.lock_consumed_at_move_count : -1;
   manager.lockedDirectionTurn = Number.isInteger(saved.locked_direction_turn) ? saved.locked_direction_turn : null;
   manager.lockedDirection = Number.isInteger(saved.locked_direction) ? saved.locked_direction : null;

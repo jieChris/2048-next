@@ -105,6 +105,8 @@ describe("admin rescue client runtime", () => {
       moveHistory: [],
       replayCompactLog: "",
       spawnValueCounts: {},
+      successfulMoveCount: 0,
+      undoUsed: 0,
       restartWithBoard: vi.fn(),
       setRuntimeScore(value: number) {
         this.score = value;
@@ -127,6 +129,8 @@ describe("admin rescue client runtime", () => {
     });
     expect(manager.score).toBe(454348);
     expect(manager.moveHistory).toEqual([0, 1, 2]);
+    expect(manager.successfulMoveCount).toBe(3);
+    expect(manager.undoUsed).toBe(0);
     expect(manager.replayCompactLog).toBe("abc");
     expect(manager.sessionReplayV1).toEqual(expect.objectContaining({ mode_key: "standard_4x4_pow2_no_undo" }));
     expect(manager.sessionReplayV3).toEqual({ v: 3, actions: [["m", 1]] });
@@ -174,6 +178,8 @@ describe("admin rescue client runtime", () => {
       modeConfig: { ruleset: "pow2" },
       moveHistory: [],
       spawnValueCounts: {},
+      successfulMoveCount: 0,
+      undoUsed: 0,
       restartWithBoard: vi.fn(),
       getFinalBoardMatrix() {
         return [
@@ -193,6 +199,8 @@ describe("admin rescue client runtime", () => {
     await context.AdminRescueClientRuntime.checkAndOfferRescue(manager);
 
     expect(manager.moveHistory).toEqual([1, 2]);
+    expect(manager.successfulMoveCount).toBe(2);
+    expect(manager.undoUsed).toBe(0);
     expect(manager.spawnValueCounts).toEqual({ "2": 1, "4": 1 });
     expect(manager.spawnTwos).toBe(1);
     expect(manager.spawnFours).toBe(1);

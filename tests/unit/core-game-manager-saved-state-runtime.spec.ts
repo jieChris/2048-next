@@ -831,6 +831,37 @@ describe("core game manager saved state runtime", () => {
     expect(manager.spawnFours).toBe(1);
   });
 
+  it("derives missing progress counters from restored move history", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const manager = {
+      moveHistory: [],
+      successfulMoveCount: 0,
+      undoUsed: 0,
+      setRuntimeUndoStack(value: unknown) {
+        this.undoStack = value;
+      },
+      setRuntimeRedoStack(value: unknown) {
+        this.redoStack = value;
+      },
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      }
+    };
+
+    runtime.applySavedManagerReplayState(manager, {
+      move_history: [0, 1, -1, 2],
+      replay_compact_log: "",
+      spawn_value_counts: {}
+    });
+    runtime.applySavedManagerProgressState(manager, {
+      successful_move_count: 0,
+      undo_used: 0
+    });
+
+    expect(manager.successfulMoveCount).toBe(3);
+    expect(manager.undoUsed).toBe(1);
+  });
+
   it("keeps win-prompt saved states restorable", () => {
     const runtime = loadSavedStateRuntime([32768]);
     const manager = {

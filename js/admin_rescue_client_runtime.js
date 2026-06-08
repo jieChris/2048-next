@@ -56,6 +56,11 @@
     return result;
   }
 
+  function normalizeNonNegativeInteger(value) {
+    var numeric = Math.floor(Number(value));
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+  }
+
   function getStorage() {
     try {
       return global.localStorage || null;
@@ -298,14 +303,36 @@
     var explicitSpawnCounts = normalizeCountMap(readOfferValue(offer, "spawn_value_counts"));
     var sessionReplayV1 = readOfferValue(offer, "session_replay_v1");
     var sessionReplayV3 = readOfferValue(offer, "session_replay_v3");
+    var successfulMoveCount = normalizeNonNegativeInteger(
+      readOfferValue(offer, "successful_move_count") != null
+        ? readOfferValue(offer, "successful_move_count")
+        : readOfferValue(offer, "successfulMoveCount")
+    );
+    var undoUsed = normalizeNonNegativeInteger(
+      readOfferValue(offer, "undo_used") != null ? readOfferValue(offer, "undo_used") : readOfferValue(offer, "undoUsed")
+    );
     return {
       replayString: decodedState.replayString || toText(readOfferValue(offer, "replay_string") || readOfferValue(offer, "replayString")).trim(),
       moveHistory: explicitMoveHistory || decodedState.moveHistory || null,
       replayCompactLog: toText(readOfferValue(offer, "replay_compact_log")),
       sessionReplayV1: sessionReplayV1 && typeof sessionReplayV1 === "object" ? sessionReplayV1 : decodedState.sessionReplayV1 || null,
       sessionReplayV3: sessionReplayV3 && typeof sessionReplayV3 === "object" ? sessionReplayV3 : null,
-      spawnValueCounts: explicitSpawnCounts || decodedState.spawnValueCounts || null
+      spawnValueCounts: explicitSpawnCounts || decodedState.spawnValueCounts || null,
+      successfulMoveCount: successfulMoveCount,
+      undoUsed: undoUsed
     };
+  }
+
+  function deriveStepCountersFromMoveHistory(moveHistory) {
+    var result = { successfulMoveCount: 0, undoUsed: 0 };
+    if (!Array.isArray(moveHistory)) return result;
+    for (var i = 0; i < moveHistory.length; i += 1) {
+      var direction = Math.floor(Number(moveHistory[i]));
+      if (!Number.isInteger(direction)) continue;
+      if (direction < 0) result.undoUsed += 1;
+      else result.successfulMoveCount += 1;
+    }
+    return result;
   }
 
   function applyOfferReplayStateToManager(manager, offer) {
@@ -313,6 +340,11 @@
     if (replayState.moveHistory) manager.moveHistory = replayState.moveHistory.slice();
     manager.ipsInputTimes = [];
     if (Array.isArray(manager.moveHistory)) manager.ipsInputCount = manager.moveHistory.length;
+    var stepCounters = deriveStepCountersFromMoveHistory(manager.moveHistory);
+    manager.successfulMoveCount = replayState.successfulMoveCount !== null
+      ? replayState.successfulMoveCount
+      : stepCounters.successfulMoveCount;
+    manager.undoUsed = replayState.undoUsed !== null ? replayState.undoUsed : stepCounters.undoUsed;
     if (replayState.replayCompactLog) manager.replayCompactLog = replayState.replayCompactLog;
     if (replayState.sessionReplayV1) manager.sessionReplayV1 = clonePlain(manager, replayState.sessionReplayV1, null);
     if (replayState.sessionReplayV3) manager.sessionReplayV3 = clonePlain(manager, replayState.sessionReplayV3, null);
