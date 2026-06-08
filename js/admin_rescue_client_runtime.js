@@ -15,6 +15,47 @@
     return value && typeof value === "object" && !Array.isArray(value) ? value : {};
   }
 
+  function clonePlain(manager, value, fallbackValue) {
+    if (value == null) return fallbackValue;
+    if (manager && typeof manager.safeClonePlain === "function") {
+      try {
+        return manager.safeClonePlain(value, fallbackValue);
+      } catch (_errSafeClone) {}
+    }
+    if (manager && typeof manager.clonePlain === "function") {
+      try {
+        return manager.clonePlain(value);
+      } catch (_errClone) {}
+    }
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (_errJson) {
+      return fallbackValue;
+    }
+  }
+
+  function normalizeDirectionList(value) {
+    if (!Array.isArray(value)) return null;
+    var result = [];
+    for (var i = 0; i < value.length; i += 1) {
+      var direction = Math.floor(Number(value[i]));
+      if (!Number.isInteger(direction)) return null;
+      result.push(direction);
+    }
+    return result;
+  }
+
+  function normalizeCountMap(value) {
+    if (!(value && typeof value === "object") || Array.isArray(value)) return null;
+    var result = {};
+    for (var key in value) {
+      if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+      var numeric = Math.max(0, Math.floor(Number(value[key]) || 0));
+      result[String(key)] = numeric;
+    }
+    return result;
+  }
+
   function getStorage() {
     try {
       return global.localStorage || null;
@@ -119,6 +160,13 @@
     }
   }
 
+  function readOfferValue(offer, key) {
+    var payload = parseOfferPayload(offer) || {};
+    if (payload && Object.prototype.hasOwnProperty.call(payload, key)) return payload[key];
+    if (offer && Object.prototype.hasOwnProperty.call(offer, key)) return offer[key];
+    return undefined;
+  }
+
   function resolveBoardFromOffer(offer) {
     var payload = parseOfferPayload(offer) || {};
     var rawBoard = payload.board || offer.board;
@@ -142,6 +190,138 @@
     var payload = parseOfferPayload(offer) || {};
     var duration = Number(payload.duration_ms != null ? payload.duration_ms : offer.duration_ms);
     return Number.isFinite(duration) && duration >= 0 ? Math.floor(duration) : 0;
+  }
+
+  function normalizeReplayBase64Body(text) {
+    var normalized = toText(text).replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
+    if (!normalized) return "";
+    var mod = normalized.length % 4;
+    if (mod === 2) normalized += "==";
+    else if (mod === 3) normalized += "=";
+    else if (mod === 1) return "";
+    return normalized;
+  }
+
+  function decodeBase64ToBytes(base64Text) {
+    var normalized = normalizeReplayBase64Body(base64Text);
+    if (!normalized || typeof global.atob !== "function" || typeof Uint8Array === "undefined") return null;
+    try {
+      var binary = global.atob(normalized);
+      var bytes = new Uint8Array(binary.length);
+      for (var i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i) & 0xff;
+      }
+      return bytes;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function resolveReplayV1Prefix() {
+    var ctor = global.GameManager || {};
+    var prefix = toText(ctor.REPLAY_V1_RPL_BASE64_PREFIX).trim();
+    return prefix || "REPLAY_v1RPL_B64_";
+  }
+
+  function decodeReplayStringV1(replayString) {
+    var text = toText(replayString).trim();
+    var prefix = resolveReplayV1Prefix();
+    if (!text || text.indexOf(prefix) !== 0) return null;
+    var codec = global.CoreReplayCodecRuntime || {};
+    if (typeof codec.decodeReplayV1Rpl !== "function") return null;
+    var bytes = decodeBase64ToBytes(text.substring(prefix.length));
+    if (!bytes) return null;
+    try {
+      return codec.decodeReplayV1Rpl(bytes);
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function resolveRuleset(manager, offer) {
+    var raw = readOfferValue(offer, "ruleset");
+    var ruleset = toText(raw || (manager && manager.ruleset) || (manager && manager.modeConfig && manager.modeConfig.ruleset)).trim().toLowerCase();
+    return ruleset === "fibonacci" ? "fibonacci" : "pow2";
+  }
+
+  function decodeReplayStringState(manager, offer) {
+    var replayString = toText(readOfferValue(offer, "replay_string") || readOfferValue(offer, "replayString")).trim();
+    if (!replayString) return null;
+    var decoded = decodeReplayStringV1(replayString);
+    if (!decoded || !Array.isArray(decoded.records)) return { replayString: replayString };
+    var ruleset = resolveRuleset(manager, offer);
+    var records = [];
+    var moveHistory = [];
+    var spawnCounts = {};
+    var width = Math.max(1, Math.floor(Number(decoded.width) || (manager && manager.width) || 4));
+    var fib = ruleset === "fibonacci";
+    for (var i = 0; i < decoded.records.length; i += 1) {
+      var record = decoded.records[i];
+      if (!record || record.kind === "ext") continue;
+      records.push(clonePlain(manager, record, record));
+      if (record.kind === "move") {
+        var direction = Math.floor(Number(record.dir));
+        if (Number.isInteger(direction)) moveHistory.push(direction);
+        var value = fib ? (record.spawnValueBit === 1 ? 2 : 1) : (record.spawnValueBit === 1 ? 4 : 2);
+        spawnCounts[String(value)] = (spawnCounts[String(value)] || 0) + 1;
+      } else if (record.kind === "undo1") {
+        moveHistory.push(-1);
+      } else if (record.kind === "undon") {
+        var count = Math.max(1, Math.floor(Number(record.undoCount) || 0));
+        for (var j = 0; j < count; j += 1) moveHistory.push(-1);
+      }
+    }
+    return {
+      replayString: replayString,
+      moveHistory: moveHistory,
+      spawnValueCounts: spawnCounts,
+      sessionReplayV1: {
+        v: 1,
+        mode_key: toText(readOfferValue(offer, "mode_key") || (manager && manager.modeKey)).trim(),
+        ruleset: ruleset,
+        board_width: width,
+        board_height: Math.max(1, Math.floor(Number(decoded.height) || (manager && manager.height) || 4)),
+        start_unix_ms: decoded.startUnixMs || Date.now(),
+        challenge_id: toText(readOfferValue(offer, "challenge_id") || readOfferValue(offer, "challengeId")).trim() || null,
+        seed: Math.max(0, Math.floor(Number(readOfferValue(offer, "seed") || readOfferValue(offer, "initial_seed") || readOfferValue(offer, "initialSeed") || 0) || 0)),
+        init_tiles: Array.isArray(decoded.initTiles) ? clonePlain(manager, decoded.initTiles, []) : [],
+        records: records,
+        last_event_at_ms: Date.now(),
+        supported: true
+      }
+    };
+  }
+
+  function resolveReplayStateFromOffer(manager, offer) {
+    var decodedState = decodeReplayStringState(manager, offer) || {};
+    var explicitMoveHistory = normalizeDirectionList(readOfferValue(offer, "move_history"));
+    var explicitSpawnCounts = normalizeCountMap(readOfferValue(offer, "spawn_value_counts"));
+    var sessionReplayV1 = readOfferValue(offer, "session_replay_v1");
+    var sessionReplayV3 = readOfferValue(offer, "session_replay_v3");
+    return {
+      replayString: decodedState.replayString || toText(readOfferValue(offer, "replay_string") || readOfferValue(offer, "replayString")).trim(),
+      moveHistory: explicitMoveHistory || decodedState.moveHistory || null,
+      replayCompactLog: toText(readOfferValue(offer, "replay_compact_log")),
+      sessionReplayV1: sessionReplayV1 && typeof sessionReplayV1 === "object" ? sessionReplayV1 : decodedState.sessionReplayV1 || null,
+      sessionReplayV3: sessionReplayV3 && typeof sessionReplayV3 === "object" ? sessionReplayV3 : null,
+      spawnValueCounts: explicitSpawnCounts || decodedState.spawnValueCounts || null
+    };
+  }
+
+  function applyOfferReplayStateToManager(manager, offer) {
+    var replayState = resolveReplayStateFromOffer(manager, offer);
+    if (replayState.moveHistory) manager.moveHistory = replayState.moveHistory.slice();
+    manager.ipsInputTimes = [];
+    if (Array.isArray(manager.moveHistory)) manager.ipsInputCount = manager.moveHistory.length;
+    if (replayState.replayCompactLog) manager.replayCompactLog = replayState.replayCompactLog;
+    if (replayState.sessionReplayV1) manager.sessionReplayV1 = clonePlain(manager, replayState.sessionReplayV1, null);
+    if (replayState.sessionReplayV3) manager.sessionReplayV3 = clonePlain(manager, replayState.sessionReplayV3, null);
+    if (replayState.spawnValueCounts) {
+      manager.spawnValueCounts = clonePlain(manager, replayState.spawnValueCounts, {});
+      manager.spawnTwos = manager.spawnValueCounts["2"] || 0;
+      manager.spawnFours = manager.spawnValueCounts["4"] || 0;
+    }
+    if (replayState.replayString) manager.rescueReplayString = replayState.replayString;
   }
 
   function resolveReasonFromOffer(offer) {
@@ -178,6 +358,7 @@
       manager.initialBoardMatrix = manager.getFinalBoardMatrix();
       manager.replayStartBoardMatrix = manager.getFinalBoardMatrix();
     }
+    applyOfferReplayStateToManager(manager, offer);
     if (typeof manager.actuate === "function") manager.actuate();
     if (typeof manager.saveGameState === "function") manager.saveGameState({ force: true, forceFull: true });
     return true;
