@@ -186,10 +186,21 @@ test.describe("Home user display", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
 
-    await page.waitForFunction(() => typeof (window as any).openSettingsModal === "function");
-    await page.evaluate(() => {
-      (window as any).openSettingsModal();
+    await page.click("#top-settings-btn");
+    const didOpenViaClick = await page.evaluate(() => {
+      const modal = document.getElementById("settings-modal");
+      if (!modal) return false;
+      const style = window.getComputedStyle(modal);
+      return style.display !== "none" && style.visibility !== "hidden" && modal.getClientRects().length > 0;
     });
+    if (!didOpenViaClick) {
+      await page.waitForFunction(() => typeof (window as any).openSettingsModal === "function", {
+        timeout: 5000
+      });
+      await page.evaluate(() => {
+        (window as any).openSettingsModal();
+      });
+    }
     await page.waitForSelector("#toolkit-palette-link", { state: "visible" });
 
     const layout = await page.evaluate(() => {
