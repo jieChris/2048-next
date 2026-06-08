@@ -217,4 +217,86 @@ describe("admin rescue client runtime", () => {
     );
     expect((manager.sessionReplayV1 as { records: unknown[] }).records).toHaveLength(2);
   });
+
+  it("uses English copy for rescue prompts and success alerts when UI language is English", async () => {
+    const offer = {
+      id: "rescue_en",
+      board: [
+        [2, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      score: 128,
+      duration_ms: 1000
+    };
+    const context = loadRuntime({
+      UII18N: {
+        getLanguage: () => "en"
+      }
+    });
+    context.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: [offer] })
+    });
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      modeConfig: {},
+      moveHistory: [],
+      restartWithBoard: vi.fn(),
+      setRuntimeScore(value: number) {
+        this.score = value;
+      },
+      getFinalBoardMatrix() {
+        return offer.board;
+      },
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      },
+      actuate: vi.fn(),
+      saveGameState: vi.fn()
+    };
+
+    await context.AdminRescueClientRuntime.checkAndOfferRescue(manager);
+
+    expect(context.confirm).toHaveBeenCalledWith(
+      "An administrator has issued a game recovery for you.\n\nReplace the current board with the issued recovery board?\nRecovery score: 128"
+    );
+    expect(context.alert).toHaveBeenCalledWith("Recovery board applied.");
+  });
+
+  it("uses English copy for rescue accept failures", async () => {
+    const offer = {
+      id: "rescue_en_failure",
+      board: [
+        [2, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ]
+    };
+    const context = loadRuntime({
+      UII18N: {
+        getLanguage: () => "en"
+      }
+    });
+    context.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: [offer] })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ success: false })
+      });
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      modeConfig: {},
+      moveHistory: []
+    };
+
+    await context.AdminRescueClientRuntime.checkAndOfferRescue(manager);
+
+    expect(context.alert).toHaveBeenCalledWith("Recovery confirmation failed. Please refresh and try again.");
+  });
 });

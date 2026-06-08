@@ -91,6 +91,58 @@
     }
   }
 
+  function normalizeLang(value) {
+    var lang = toText(value).trim().toLowerCase();
+    return lang.indexOf("en") === 0 ? "en" : "zh";
+  }
+
+  function resolveLanguage() {
+    try {
+      if (global.UII18N && typeof global.UII18N.getLanguage === "function") {
+        return normalizeLang(global.UII18N.getLanguage());
+      }
+    } catch (_errI18n) {}
+    try {
+      var storage = getStorage();
+      if (storage) {
+        var stored = normalizeLang(storage.getItem("ui_language_v1"));
+        if (stored === "en") return "en";
+      }
+    } catch (_errStorage) {}
+    try {
+      var root = global.document && global.document.documentElement;
+      if (root && typeof root.getAttribute === "function") {
+        var attr = normalizeLang(root.getAttribute("data-ui-lang") || root.getAttribute("lang"));
+        if (attr === "en") return "en";
+      }
+    } catch (_errRoot) {}
+    try {
+      return normalizeLang(global.navigator && (global.navigator.language || global.navigator.userLanguage));
+    } catch (_errNavigator) {
+      return "zh";
+    }
+  }
+
+  function resolveCopy() {
+    return resolveLanguage() === "en"
+      ? {
+          defaultReason: "An administrator has issued a game recovery for you.",
+          confirmQuestion: "Replace the current board with the issued recovery board?",
+          recoveryScore: "Recovery score: ",
+          acceptFailed: "Recovery confirmation failed. Please refresh and try again.",
+          applyFailed: "Failed to apply the recovery board. Please contact an administrator.",
+          applied: "Recovery board applied."
+        }
+      : {
+          defaultReason: "管理员为你签发了一份恢复对局。",
+          confirmQuestion: "是否将当前盘面替换为签发的恢复盘面？",
+          recoveryScore: "恢复分数：",
+          acceptFailed: "恢复单确认失败，请刷新后重试。",
+          applyFailed: "恢复盘面应用失败，请联系管理员。",
+          applied: "恢复盘面已应用。"
+        };
+  }
+
   function buildApiBases() {
     var utils = global.ApiSharedUtils || {};
     if (typeof utils.buildApiBaseCandidates === "function") {
@@ -370,13 +422,15 @@
   }
 
   function resolveReasonFromOffer(offer) {
-    return toText((offer && offer.reason) || "管理员为你签发了一份恢复对局。");
+    var raw = toText(offer && offer.reason).trim();
+    return raw || resolveCopy().defaultReason;
   }
 
   function confirmOffer(offer, score) {
+    var copy = resolveCopy();
     var reason = resolveReasonFromOffer(offer);
-    var message = reason + "\n\n是否将当前盘面替换为签发的恢复盘面？";
-    if (score > 0) message += "\n恢复分数：" + score;
+    var message = reason + "\n\n" + copy.confirmQuestion;
+    if (score > 0) message += "\n" + copy.recoveryScore + score;
     return global.confirm(message);
   }
 
@@ -437,15 +491,15 @@
       }
       var accepted = await apiRequest("/rescue-offers/" + encodeURIComponent(offerId) + "/accept", { method: "POST" });
       if (accepted && accepted.success === false) {
-        global.alert("恢复单确认失败，请刷新后重试。");
+        global.alert(resolveCopy().acceptFailed);
         return;
       }
       if (!applyOfferToManager(manager, offer, board, score, durationMs)) {
-        global.alert("恢复盘面应用失败，请联系管理员。");
+        global.alert(resolveCopy().applyFailed);
         return;
       }
       await apiRequest("/rescue-offers/" + encodeURIComponent(offerId) + "/consume", { method: "POST" });
-      global.alert("恢复盘面已应用。");
+      global.alert(resolveCopy().applied);
     } finally {
       activeChecks[modeKey] = false;
     }
