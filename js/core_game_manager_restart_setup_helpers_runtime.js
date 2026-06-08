@@ -742,7 +742,29 @@ function shouldTryRestoreSavedStateInSetup(manager, hasInputSeed, normalizedOpti
   if (!manager) return false;
   var skipStartTiles = !!normalizedOptions.skipStartTiles;
   if (hasInputSeed || skipStartTiles || normalizedOptions.disableStateRestore) return false;
+  if (shouldForceRankedCheckpointRestoreInSetup(manager)) return false;
   return shouldUseSavedGameState(manager);
+}
+
+function shouldForceRankedCheckpointRestoreInSetup(manager) {
+  if (!manager || manager.rankPolicy !== "ranked") return false;
+  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
+  var search = "";
+  try {
+    search = windowLike && windowLike.location ? String(windowLike.location.search || "") : "";
+  } catch (_err) {
+    search = "";
+  }
+  if (!search) return false;
+  try {
+    var params = new URLSearchParams(search);
+    return (
+      params.get("force_ranked_checkpoint") === "1" ||
+      params.get("restore_ranked_checkpoint") === "1"
+    );
+  } catch (_errParams) {
+    return search.indexOf("force_ranked_checkpoint=1") >= 0 || search.indexOf("restore_ranked_checkpoint=1") >= 0;
+  }
 }
 
 function hasRankedCheckpointAuthTokenForSetup(manager) {
@@ -878,7 +900,14 @@ function resolveSetupRestoreAndInitialBoardState(manager, hasInputSeed, normaliz
   if (shouldTryRestoreSavedStateInSetup(manager, hasInputSeed, normalizedOptions)) {
     restoredFromSavedState = tryRestoreLatestSavedState(manager);
   }
-  if (!restoredFromSavedState && !hasInputSeed && !skipStartTiles && !normalizedOptions.disableStateRestore) {
+  var forceRankedCheckpointRestore = shouldForceRankedCheckpointRestoreInSetup(manager);
+  if (
+    !forceRankedCheckpointRestore &&
+    !restoredFromSavedState &&
+    !hasInputSeed &&
+    !skipStartTiles &&
+    !normalizedOptions.disableStateRestore
+  ) {
     var rankedLocalMirrorSavedState = readRankedCheckpointLocalMirrorSavedStateForSetup(manager);
     if (rankedLocalMirrorSavedState && typeof applySavedStateRestore === "function") {
       restoredFromSavedState = applySavedStateRestore(manager, rankedLocalMirrorSavedState);

@@ -35,10 +35,6 @@
   </main>
   <script>
     (function () {
-      var target = "./2048.html?cache_reset=" + Date.now();
-      var fallbackLink = document.getElementById("fallback-link");
-      if (fallbackLink) fallbackLink.href = target;
-
       function shouldClearRankedCheckpointState() {
         try {
           var params = new URLSearchParams(window.location.search || "");
@@ -50,6 +46,13 @@
           return false;
         }
       }
+
+      var target = "./2048.html?cache_reset=" + Date.now();
+      if (shouldClearRankedCheckpointState()) {
+        target += "&force_ranked_checkpoint=1";
+      }
+      var fallbackLink = document.getElementById("fallback-link");
+      if (fallbackLink) fallbackLink.href = target;
 
       function removeStorageKeysByPrefix(storage, prefixes) {
         if (!storage) return;
