@@ -39,6 +39,33 @@
       var fallbackLink = document.getElementById("fallback-link");
       if (fallbackLink) fallbackLink.href = target;
 
+      function shouldClearRankedCheckpointState() {
+        try {
+          var params = new URLSearchParams(window.location.search || "");
+          return (
+            params.get("restore_ranked_checkpoint") === "1" ||
+            params.get("clear_ranked_checkpoint") === "1"
+          );
+        } catch (_err) {
+          return false;
+        }
+      }
+
+      function clearRankedCheckpointState() {
+        if (!shouldClearRankedCheckpointState() || !window.localStorage) return;
+        var prefixes = [
+          "ranked_checkpoint_local_mirror:v1:",
+          "ranked_checkpoint_cleared_at:v1:"
+        ];
+        for (var index = window.localStorage.length - 1; index >= 0; index -= 1) {
+          var key = window.localStorage.key(index);
+          if (!key) continue;
+          if (prefixes.some(function (prefix) { return key.indexOf(prefix) === 0; })) {
+            window.localStorage.removeItem(key);
+          }
+        }
+      }
+
       function clearCaches() {
         if (!("caches" in window) || !window.caches || typeof caches.keys !== "function") {
           return Promise.resolve();
@@ -62,6 +89,7 @@
       }
 
       Promise.resolve()
+        .then(clearRankedCheckpointState)
         .then(unregisterServiceWorkers)
         .then(clearCaches)
         .catch(function () {})
