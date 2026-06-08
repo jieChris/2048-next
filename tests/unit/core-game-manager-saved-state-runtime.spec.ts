@@ -468,6 +468,57 @@ describe("core game manager saved state runtime", () => {
     expect(litePayload.session_replay_v1).not.toBe(sessionReplayV1);
   });
 
+  it("uses rescue replay string when live replay serialization is unavailable during save", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      mode: "standard_4x4_pow2_no_undo",
+      width: 4,
+      height: 4,
+      ruleset: "pow2",
+      score: 1024,
+      over: false,
+      won: false,
+      keepPlaying: false,
+      initialSeed: 1,
+      seed: 2,
+      spawnValueCounts: {},
+      moveHistory: [],
+      undoStack: [],
+      redoStack: [],
+      replayCompactLog: "",
+      sessionReplayV1: null,
+      sessionReplayV3: null,
+      rescueReplayString: "REPLAY_v1RPL_B64_rescue_saved",
+      hasGameStarted: true,
+      getDurationMs() {
+        return 1234;
+      },
+      getFinalBoardMatrix() {
+        return [
+          [2, 0, 0, 0],
+          [0, 4, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ];
+      },
+      safeClonePlain(value: unknown, fallback: unknown) {
+        try {
+          return JSON.parse(JSON.stringify(value));
+        } catch {
+          return fallback;
+        }
+      },
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      }
+    };
+
+    const fullPayload = runtime.buildSavedGameStatePayload(manager, 1000, { force: true }) as Record<string, unknown>;
+
+    expect(fullPayload.replay_string).toBe("REPLAY_v1RPL_B64_rescue_saved");
+  });
+
   it("prefers richer saved payloads when timestamps are equal", () => {
     const runtime = loadSavedStateRuntime([32768]);
     const savedAt = 1700000000000;
@@ -801,6 +852,34 @@ describe("core game manager saved state runtime", () => {
 
     expect((manager.sessionReplayV1 as Record<string, unknown>).last_event_at_ms).toBe(12_345);
     vi.useRealTimers();
+  });
+
+  it("restores saved replay string as rescue replay fallback", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const manager = {
+      moveHistory: [],
+      replayCompactLog: "",
+      rescueReplayString: "",
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      },
+      setRuntimeUndoStack(value: unknown) {
+        this.undoStack = value;
+      },
+      setRuntimeRedoStack(value: unknown) {
+        this.redoStack = value;
+      }
+    };
+
+    runtime.applySavedManagerReplayState(manager, {
+      move_history: [],
+      replay_compact_log: "",
+      replay_string: "REPLAY_v1RPL_B64_restored",
+      session_replay_v1: null,
+      session_replay_v3: null
+    });
+
+    expect(manager.rescueReplayString).toBe("REPLAY_v1RPL_B64_restored");
   });
 
   it("does not auto-resume timer on restore when saved state is frozen", () => {

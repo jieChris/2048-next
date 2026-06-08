@@ -688,6 +688,9 @@ function applySavedManagerReplayState(manager, saved) {
     manager.setRuntimeRedoStack([]);
   }
   manager.replayCompactLog = typeof saved.replay_compact_log === "string" ? saved.replay_compact_log : "";
+  manager.rescueReplayString = typeof saved.replay_string === "string" && saved.replay_string.trim()
+    ? saved.replay_string.trim()
+    : "";
   manager.sessionReplayV1 = normalizeSavedReplayV1Session(manager, saved.session_replay_v1);
   manager.sessionReplayV3 = isNonArrayObject(saved.session_replay_v3)
     ? manager.clonePlain(saved.session_replay_v3)
@@ -1057,6 +1060,9 @@ function resolveReplayStringForSavedPayload(manager, now, saveOptions) {
     }
   } catch (_err) {
     replayString = "";
+  }
+  if (!replayString && manager.rescueReplayString != null) {
+    replayString = String(manager.rescueReplayString || "").trim();
   }
   if (replayString) {
     manager.lastReplayStringSavedAt = now;
