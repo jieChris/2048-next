@@ -135,6 +135,12 @@ function resolveWindowNameSavedCandidate(manager, windowLike) {
 function resolveSavedPayloadRichnessScore(payload) {
   if (!normalizeSavedStateRecordObject(payload, null)) return -1;
   var richnessKeys = [
+    "move_history",
+    "replay_compact_log",
+    "session_replay_v1",
+    "session_replay_v3",
+    "spawn_value_counts",
+    "replay_string",
     "timer_fixed_rows",
     "timer_dynamic_rows_capped",
     "timer_dynamic_rows_overflow",
@@ -146,9 +152,57 @@ function resolveSavedPayloadRichnessScore(payload) {
   ];
   var score = 0;
   for (var keyIndex = 0; keyIndex < richnessKeys.length; keyIndex++) {
-    if (Object.prototype.hasOwnProperty.call(payload, richnessKeys[keyIndex])) score += 1;
+    var richnessValue = payload[richnessKeys[keyIndex]];
+    if (typeof richnessValue === "string") {
+      if (richnessValue.trim()) score += 1;
+      continue;
+    }
+    if (Array.isArray(richnessValue)) {
+      if (richnessValue.length > 0) score += 1;
+      continue;
+    }
+    if (isNonArrayObject(richnessValue)) {
+      if (Object.keys(richnessValue).length > 0) score += 1;
+      continue;
+    }
+    if (typeof richnessValue !== "undefined" && richnessValue !== null) score += 1;
   }
   return score;
+}
+function areSavedScoresCompatibleForPosition(leftScore, rightScore) {
+  var normalizedLeftScore = Number(leftScore);
+  var normalizedRightScore = Number(rightScore);
+  if (!Number.isFinite(normalizedLeftScore) || !Number.isFinite(normalizedRightScore)) return true;
+  return normalizedLeftScore === normalizedRightScore;
+}
+function areSavedBoardRowsEqual(leftRow, rightRow) {
+  if (!Array.isArray(leftRow) || !Array.isArray(rightRow)) return false;
+  if (leftRow.length !== rightRow.length) return false;
+  for (var i = 0; i < leftRow.length; i++) {
+    if (Number(leftRow[i]) !== Number(rightRow[i])) return false;
+  }
+  return true;
+}
+function areSavedBoardsEqual(leftBoard, rightBoard) {
+  if (!Array.isArray(leftBoard) || !Array.isArray(rightBoard)) return false;
+  if (leftBoard.length !== rightBoard.length) return false;
+  for (var y = 0; y < leftBoard.length; y++) {
+    if (!areSavedBoardRowsEqual(leftBoard[y], rightBoard[y])) return false;
+  }
+  return true;
+}
+function areSavedPayloadsSamePosition(left, right) {
+  if (!normalizeSavedStateRecordObject(left, null) || !normalizeSavedStateRecordObject(right, null)) return false;
+  if (String(left.mode_key || "") !== String(right.mode_key || "")) return false;
+  if (!areSavedScoresCompatibleForPosition(left.score, right.score)) return false;
+  return areSavedBoardsEqual(left.board, right.board);
+}
+function shouldPreferNewerSavedPayload(best, next) {
+  if (!normalizeSavedStateRecordObject(best, null)) return true;
+  var bestRichness = resolveSavedPayloadRichnessScore(best);
+  var nextRichness = resolveSavedPayloadRichnessScore(next);
+  if (nextRichness < bestRichness && areSavedPayloadsSamePosition(best, next)) return false;
+  return true;
 }
 function resolveLatestSavedPayloadCandidate(candidates) {
   var best = null;
@@ -163,6 +217,7 @@ function resolveLatestSavedPayloadCandidate(candidates) {
     var bestAt = Number(best.saved_at) || 0;
     var nextAt = Number(nextCandidate.saved_at) || 0;
     if (nextAt > bestAt) {
+      if (!shouldPreferNewerSavedPayload(best, nextCandidate)) continue;
       best = nextCandidate;
       continue;
     }

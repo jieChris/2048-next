@@ -878,6 +878,88 @@ describe("core game manager saved state runtime", () => {
     ).toEqual(fullWindowPayload);
   });
 
+  it("keeps richer rescue saved payloads ahead of newer lite snapshots", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const fullRescuePayload = {
+      saved_at: 1700000000000,
+      mode_key: "standard_4x4_pow2_no_undo",
+      board: [
+        [16, 64, 128, 32768],
+        [8, 2, 2, 0],
+        [4, 0, 0, 0],
+        [0, 2, 0, 0]
+      ],
+      move_history: [0, 1, 2],
+      replay_string: "REPLAY_v1RPL_B64_rescue",
+      timer_fixed_rows: {
+        "32768": { timerText: "1:23.456", legendText: "32768" }
+      },
+      timer_secondary_rows: [
+        { parent: 32768, child: 8192, time: "1:20.000" }
+      ]
+    };
+    const newerLitePayload = {
+      saved_at: 1700000001000,
+      mode_key: "standard_4x4_pow2_no_undo",
+      board: [
+        [16, 64, 128, 32768],
+        [8, 2, 2, 0],
+        [4, 0, 0, 0],
+        [0, 2, 0, 0]
+      ],
+      move_history: [],
+      replay_string: "",
+      timer_fixed_rows: undefined,
+      timer_secondary_rows: undefined
+    };
+
+    expect(
+      runtime.resolveLatestSavedPayloadCandidate([fullRescuePayload, newerLitePayload])
+    ).toEqual(fullRescuePayload);
+  });
+
+  it("accepts newer lite snapshots after the saved board position changes", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const fullRescuePayload = {
+      saved_at: 1700000000000,
+      mode_key: "standard_4x4_pow2_no_undo",
+      score: 65536,
+      board: [
+        [16, 64, 128, 32768],
+        [8, 2, 2, 0],
+        [4, 0, 0, 0],
+        [0, 2, 0, 0]
+      ],
+      move_history: [0, 1, 2],
+      replay_string: "REPLAY_v1RPL_B64_rescue",
+      timer_fixed_rows: {
+        "32768": { timerText: "1:23.456", legendText: "32768" }
+      },
+      timer_secondary_rows: [
+        { parent: 32768, child: 8192, time: "1:20.000" }
+      ]
+    };
+    const newerLitePayload = {
+      saved_at: 1700000001000,
+      mode_key: "standard_4x4_pow2_no_undo",
+      score: 65540,
+      board: [
+        [16, 64, 128, 32768],
+        [8, 4, 0, 0],
+        [4, 0, 0, 0],
+        [0, 2, 0, 2]
+      ],
+      move_history: [],
+      replay_string: "",
+      timer_fixed_rows: undefined,
+      timer_secondary_rows: undefined
+    };
+
+    expect(
+      runtime.resolveLatestSavedPayloadCandidate([fullRescuePayload, newerLitePayload])
+    ).toEqual(newerLitePayload);
+  });
+
   it("resets saved-state throttles when clearing a restarted game", () => {
     const runtime = loadSavedStateRuntime([32768], {
       callCoreStorageRuntime() {
