@@ -186,7 +186,6 @@
     var cap = Number(cappedTargetValue);
     var resolvedCap = Number.isFinite(cap) && cap > 0 ? cap : 2048;
     if (resolvedCap >= 16384) return "11px";
-    if (resolvedCap >= 8192) return "13px";
     if (resolvedCap >= 1024) return "14px";
     if (resolvedCap >= 128) return "18px";
     return "22px";

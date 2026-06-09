@@ -80,6 +80,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
   vm.runInNewContext(script, context);
   return context as {
     applySavedTimerFixedRowsState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
+    applySavedDynamicTimerRowsState: (manager: Record<string, unknown>, container: Record<string, unknown>, rowsState: unknown[], cappedState: Record<string, unknown>) => void;
     applySavedTimerPostRestoreState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
     applySavedManagerReplayState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
     collectSavedTimerFixedRowsState: (manager: Record<string, unknown>) => Record<string, unknown>;
@@ -193,7 +194,7 @@ describe("core game manager saved state runtime", () => {
     expect(timer64k.textContent).toBe("6:42.000");
   });
 
-  it("preserves existing fixed timer legend font size when saved size is empty", () => {
+  it("uses client fixed timer legend font size when saved size is empty", () => {
     const runtime = loadSavedStateRuntime([4096, 32768]);
     const row4096 = createElement({
       legend: { text: "4096", className: "timertile timer-legend-4096", fontSize: "14px" }
@@ -236,7 +237,7 @@ describe("core game manager saved state runtime", () => {
     );
 
     expect(row4096.querySelector(".timertile")?.style.fontSize).toBe("14px");
-    expect(row32768.querySelector(".timertile")?.style.fontSize).toBe("13px");
+    expect(row32768.querySelector(".timertile")?.style.fontSize).toBe("11px");
   });
 
   it("self-heals empty restored fixed timer legend font size for five digit labels", () => {
@@ -333,6 +334,146 @@ describe("core game manager saved state runtime", () => {
 
     expect(row16384.querySelector(".timertile")?.style.fontSize).toBe("11px");
     expect(row32768.querySelector(".timertile")?.style.fontSize).toBe("11px");
+  });
+
+  it("ignores restored fixed timer row presentation styles and uses client rendering rules", () => {
+    const runtime = loadSavedStateRuntime([1024, 2048, 4096, 8192, 16384, 32768]);
+    const rows: Record<string, ReturnType<typeof createElement>> = {};
+    const timers: Record<string, { textContent: string }> = {};
+    for (const slotId of ["1024", "2048", "4096", "8192", "16384", "32768"]) {
+      rows[slotId] = createElement({
+        display: "",
+        visibility: "",
+        pointerEvents: "",
+        legend: { text: slotId, className: `timertile timer-legend-${slotId}`, fontSize: "" }
+      });
+      timers[`timer${slotId}`] = { textContent: "" };
+    }
+    const manager = {
+      getTimerRowEl(slotId: string) {
+        return rows[slotId] || null;
+      },
+      elements: timers,
+      getCappedTimerLegendClass() {
+        return "timertile timer-legend-32768";
+      }
+    };
+
+    runtime.applySavedTimerFixedRowsState(
+      manager,
+      {
+        timer_fixed_rows: {
+          "1024": { display: "none", visibility: "hidden", pointerEvents: "none", timerText: "1.000", legendText: "1024", legendClass: "timertile timer-legend-bad", legendFontSize: "40px" },
+          "2048": { display: "none", visibility: "hidden", pointerEvents: "none", timerText: "2.000", legendText: "2048", legendClass: "timertile timer-legend-bad", legendFontSize: "40px" },
+          "4096": { display: "none", visibility: "hidden", pointerEvents: "none", timerText: "3.000", legendText: "4096", legendClass: "timertile timer-legend-bad", legendFontSize: "40px" },
+          "8192": { display: "none", visibility: "hidden", pointerEvents: "none", timerText: "4.000", legendText: "8192", legendClass: "timertile timer-legend-bad", legendFontSize: "40px" },
+          "16384": { display: "none", visibility: "hidden", pointerEvents: "none", timerText: "5.000", legendText: "16384", legendClass: "timertile timer-legend-bad", legendFontSize: "40px" },
+          "32768": { display: "none", visibility: "hidden", pointerEvents: "none", timerText: "6.000", legendText: "32768", legendClass: "timertile timer-legend-bad", legendFontSize: "40px" }
+        }
+      },
+      { isCappedMode: false }
+    );
+
+    for (const slotId of ["1024", "2048", "4096", "8192"]) {
+      expect(rows[slotId].style.display).toBe("");
+      expect(rows[slotId].style.visibility).toBe("");
+      expect(rows[slotId].style.pointerEvents).toBe("");
+      expect(rows[slotId].querySelector(".timertile")?.className).toBe(`timertile timer-legend-${slotId}`);
+      expect(rows[slotId].querySelector(".timertile")?.style.fontSize).toBe("14px");
+    }
+    for (const slotId of ["16384", "32768"]) {
+      expect(rows[slotId].style.display).toBe("");
+      expect(rows[slotId].style.visibility).toBe("");
+      expect(rows[slotId].style.pointerEvents).toBe("");
+      expect(rows[slotId].querySelector(".timertile")?.className).toBe(`timertile timer-legend-${slotId}`);
+      expect(rows[slotId].querySelector(".timertile")?.style.fontSize).toBe("11px");
+    }
+    expect(timers.timer32768.textContent).toBe("6.000");
+  });
+
+  it("ignores restored dynamic timer row presentation styles and uses client rendering rules", () => {
+    type FakeElement = {
+      children: FakeElement[];
+      className: string;
+      textContent: string;
+      style: { cssText: string; color: string; fontSize: string };
+      attributes: Map<string, string>;
+      appendChild(child: FakeElement): void;
+      setAttribute(name: string, value: string): void;
+      getAttribute(name: string): string | null;
+    };
+    function createFakeElement(): FakeElement {
+      const style = { color: "", fontSize: "" } as { cssText: string; color: string; fontSize: string };
+      Object.defineProperty(style, "cssText", {
+        get() {
+          return `color: ${style.color}; font-size: ${style.fontSize};`;
+        },
+        set(value: string) {
+          const colorMatch = String(value).match(/color:\s*([^;]+)/);
+          const fontMatch = String(value).match(/font-size:\s*([^;]+)/);
+          if (colorMatch) style.color = colorMatch[1].trim();
+          if (fontMatch) style.fontSize = fontMatch[1].trim();
+        }
+      });
+      return {
+        children: [],
+        className: "",
+        textContent: "",
+        style,
+        attributes: new Map<string, string>(),
+        appendChild(child: FakeElement) {
+          this.children.push(child);
+        },
+        setAttribute(name: string, value: string) {
+          this.attributes.set(name, value);
+        },
+        getAttribute(name: string) {
+          return this.attributes.get(name) || null;
+        }
+      };
+    }
+    const runtime = loadSavedStateRuntime(
+      [32768],
+      {
+        resolveManagerDocumentLike() {
+          return { createElement: createFakeElement };
+        }
+      }
+    );
+    const container = createFakeElement();
+    const manager = {
+      resolveProvidedCappedModeState() {
+        return { isCappedMode: false, cappedTargetValue: 32768 };
+      },
+      getCappedTimerLegendClass(value: number) {
+        return `timertile timer-legend-${value}`;
+      },
+      getCappedTimerFontSize() {
+        return "11px";
+      }
+    };
+
+    runtime.applySavedDynamicTimerRowsState(
+      manager,
+      container,
+      [
+        {
+          repeat: "",
+          label: "32768",
+          labelClass: "timertile timer-legend-bad",
+          labelFontSize: "40px",
+          time: "1:39:11.334"
+        }
+      ],
+      { isCappedMode: false, cappedTargetValue: 32768 }
+    );
+
+    const row = container.children[0];
+    const legend = row.children[0];
+    const timer = row.children[1];
+    expect(legend.className).toBe("timertile timer-legend-32768");
+    expect(legend.style.fontSize).toBe("11px");
+    expect(timer.textContent).toBe("1:39:11.334");
   });
 
   it("preserves legitimate business-hidden fixed rows on restore", () => {

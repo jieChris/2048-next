@@ -437,9 +437,7 @@ function normalizeSavedDynamicTimerRowInfo(rowState) {
   return {
     repeat: parseInt(source.repeat, 10),
     labelText: typeof source.label === "string" ? source.label : "",
-    timeText: typeof source.time === "string" ? source.time : "",
-    labelClass: typeof source.labelClass === "string" ? source.labelClass : "",
-    labelFontSize: typeof source.labelFontSize === "string" ? source.labelFontSize : ""
+    timeText: typeof source.time === "string" ? source.time : ""
   };
 }
 function shouldApplySavedDynamicTimerRowRepeat(rowInfo) {
@@ -457,16 +455,16 @@ function createSavedDynamicTimerRowContainer(documentLike, rowInfo, shouldApplyR
 function createSavedDynamicTimerLegendElement(manager, documentLike, resolvedCappedState, rowInfo, shouldApplyRepeat) {
   var legend = documentLike.createElement("div");
   if (!legend) return null;
-  legend.className = manager.getCappedTimerLegendClass(resolvedCappedState.cappedTargetValue);
+  var labelValue = resolveTimerLegendNumericValue(rowInfo.labelText);
+  var targetValue = shouldApplyRepeat && resolvedCappedState.isCappedMode
+    ? resolvedCappedState.cappedTargetValue
+    : (labelValue || resolvedCappedState.cappedTargetValue);
+  legend.className = resolveTimerLegendClassByValue(targetValue) || manager.getCappedTimerLegendClass(targetValue);
   legend.style.cssText =
     "color: #f9f6f2; font-size: " +
-    manager.getCappedTimerFontSize(resolvedCappedState.cappedTargetValue) +
+    (resolveTimerLegendFontSizeByValue(targetValue) || manager.getCappedTimerFontSize(targetValue)) +
     ";";
   legend.textContent = rowInfo.labelText;
-  if (!(shouldApplyRepeat && resolvedCappedState.isCappedMode) && rowInfo.labelClass) {
-    legend.className = rowInfo.labelClass;
-  }
-  if (rowInfo.labelFontSize) legend.style.fontSize = rowInfo.labelFontSize;
   return legend;
 }
 function createSavedDynamicTimerValueElement(documentLike, rowInfo) {
@@ -563,14 +561,6 @@ function shouldIgnoreSavedTimerRowDisplay(row, rowState) {
 }
 function applySavedTimerRowVisibilityState(row, rowState) {
   if (!row) return;
-  if (shouldIgnoreSavedTimerRowDisplay(row, rowState)) {
-    row.style.visibility = typeof rowState.visibility === "string" ? rowState.visibility : "";
-    row.style.pointerEvents = typeof rowState.pointerEvents === "string" ? rowState.pointerEvents : "";
-    return;
-  }
-  row.style.display = typeof rowState.display === "string" ? rowState.display : "";
-  row.style.visibility = typeof rowState.visibility === "string" ? rowState.visibility : "";
-  row.style.pointerEvents = typeof rowState.pointerEvents === "string" ? rowState.pointerEvents : "";
 }
 function applySavedTimerRowRepeatState(row, rowState) {
   if (!row) return;
@@ -584,38 +574,38 @@ function resolveTimerLegendValueFromClassName(className) {
   var match = String(className || "").match(/(?:^|\s)timer-legend-(\d+)(?:\s|$)/);
   return match ? Number(match[1]) : null;
 }
+function resolveTimerLegendNumericValue(value) {
+  var numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
 function resolveTimerLegendValueForFontSize(legend, rowState) {
-  var fromText = Number(typeof rowState.legendText === "string" ? rowState.legendText : legend.textContent);
-  if (Number.isFinite(fromText) && fromText > 0) return fromText;
-  var fromClass = resolveTimerLegendValueFromClassName(rowState.legendClass || legend.className);
-  return Number.isFinite(fromClass) && fromClass > 0 ? fromClass : null;
+  var fromText = resolveTimerLegendNumericValue(typeof rowState.legendText === "string" ? rowState.legendText : legend.textContent);
+  if (fromText) return fromText;
+  return resolveTimerLegendValueFromClassName(legend.className);
+}
+function resolveTimerLegendClassByValue(value) {
+  var tileValue = resolveTimerLegendNumericValue(value);
+  return tileValue ? ("timertile timer-legend-" + String(tileValue)) : "";
 }
 function resolveTimerLegendFontSizeByValue(value) {
   var tileValue = Number(value);
   if (!Number.isFinite(tileValue) || tileValue <= 0) return "";
   if (tileValue >= 16384) return "11px";
-  if (tileValue >= 8192) return "13px";
   if (tileValue >= 1024) return "14px";
   if (tileValue >= 128) return "18px";
   return "22px";
 }
 function normalizeSavedTimerLegendFontSize(legend, rowState) {
-  var savedFontSize = typeof rowState.legendFontSize === "string" ? rowState.legendFontSize : "";
-  var expectedFontSize = resolveTimerLegendFontSizeByValue(resolveTimerLegendValueForFontSize(legend, rowState));
-  if (savedFontSize) {
-    if (expectedFontSize === "11px") return expectedFontSize;
-    return savedFontSize;
-  }
-  var currentFontSize = legend && legend.style && typeof legend.style.fontSize === "string" ? legend.style.fontSize : "";
-  if (currentFontSize) return "";
-  return expectedFontSize;
+  return resolveTimerLegendFontSizeByValue(resolveTimerLegendValueForFontSize(legend, rowState));
 }
 function applySavedTimerRowLegendState(manager, row, legend, rowState, cappedStateForRestore) {
   if (!manager || !row || !legend) return;
+  var legendValue = resolveTimerLegendValueForFontSize(legend, rowState);
   if (row.getAttribute("data-capped-repeat") && cappedStateForRestore.isCappedMode) {
     legend.className = manager.getCappedTimerLegendClass(cappedStateForRestore.cappedTargetValue);
-  } else if (typeof rowState.legendClass === "string" && rowState.legendClass) {
-    legend.className = rowState.legendClass;
+  } else {
+    var legendClass = resolveTimerLegendClassByValue(legendValue);
+    if (legendClass) legend.className = legendClass;
   }
   if (typeof rowState.legendText === "string") legend.textContent = rowState.legendText;
   var normalizedFontSize = normalizeSavedTimerLegendFontSize(legend, rowState);
@@ -849,9 +839,7 @@ function applySavedTimerDomState(manager, saved, cappedStateForRestore) {
 function resolveSavedTimerFixedRowLegendState(row) {
   var legend = row ? row.querySelector(".timertile") : null;
   return {
-    legendText: legend ? (legend.textContent || "") : "",
-    legendClass: legend ? (legend.className || "") : "",
-    legendFontSize: legend ? (legend.style.fontSize || "") : ""
+    legendText: legend ? (legend.textContent || "") : ""
   };
 }
 
@@ -878,9 +866,7 @@ function buildSavedTimerFixedRowEntry(row, timerEl) {
     pointerEvents: visibilityState.pointerEvents,
     repeat: row.getAttribute("data-capped-repeat") || "",
     timerText: timerEl.textContent || "",
-    legendText: legendState.legendText,
-    legendClass: legendState.legendClass,
-    legendFontSize: legendState.legendFontSize
+    legendText: legendState.legendText
   };
 }
 
@@ -908,8 +894,6 @@ function resolveSavedDynamicTimerRowState(row) {
   return {
     repeat: row.getAttribute("data-capped-repeat") || "",
     label: legend ? (legend.textContent || "") : "",
-    labelClass: legend ? (legend.className || "") : "",
-    labelFontSize: legend ? (legend.style.fontSize || "") : "",
     time: timer ? (timer.textContent || "") : ""
   };
 }
