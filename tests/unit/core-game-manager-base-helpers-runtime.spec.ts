@@ -604,6 +604,27 @@ describe("core game manager base helpers runtime", () => {
     expect(timer.textContent).toBe("");
   });
 
+  it("restores secondary timer rows from alternate text and millisecond fields", () => {
+    const runtime = loadBaseHelpersRuntime([8192, 16384]);
+    const timerFromText = { textContent: "" };
+    const timerFromMs = { textContent: "" };
+    const manager = { elements: {} };
+    runtime.resolveSecondaryTimerDescriptors = () =>
+      [
+        { parent: 8192, child: 4096, timerEl: timerFromText },
+        { parent: 16384, child: 8192, timerEl: timerFromMs }
+      ] as Array<Record<string, unknown>>;
+    runtime.refreshSecondaryTimerRowsVisibility = () => {};
+
+    runtime.applySecondaryTimerRowsState(manager, [
+      { parent: 8192, child: 4096, timerText: "15:51.578" },
+      { parent: 16384, child: 8192, duration_ms: 3_113_683 }
+    ]);
+
+    expect(timerFromText.textContent).toBe("15:51.578");
+    expect(timerFromMs.textContent).toBe("51:53.683");
+  });
+
   it("reattaches detached secondary timer row into target container", () => {
     const runtime = loadBaseHelpersRuntime([8192]);
     const targetContainer = createContainerElement();

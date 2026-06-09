@@ -1260,11 +1260,55 @@ function collectSecondaryTimerRowsState(manager) {
   return rows;
 }
 
+function isSecondaryTimerDisplayTimeText(value) {
+  if (typeof value !== "string") return false;
+  if (value === "") return true;
+  return value.indexOf(":") !== -1 || value.indexOf(".") !== -1 || value === "---------" || value === "DNF";
+}
+function formatSecondaryTimerDurationMs(value) {
+  var raw = Number(value);
+  if (!Number.isFinite(raw) || raw < 0) return null;
+  var time = Math.floor(raw);
+  var bits = time % 1000;
+  time = (time - bits) / 1000;
+  var secs = time % 60;
+  var mins = ((time - secs) / 60) % 60;
+  var hours = (time - secs - 60 * mins) / 3600;
+  var text = String(bits);
+  if (bits < 10) text = "0" + text;
+  if (bits < 100) text = "0" + text;
+  text = secs + "." + text;
+  if (secs < 10 && (mins > 0 || hours > 0)) text = "0" + text;
+  if (mins > 0 || hours > 0) text = mins + ":" + text;
+  if (mins < 10 && hours > 0) text = "0" + text;
+  if (hours > 0) text = hours + ":" + text;
+  return text;
+}
+function resolveSecondaryTimerRowStateDurationMs(state) {
+  var msKeys = ["duration_ms", "elapsed_ms", "timer_ms", "time_ms", "durationMs", "elapsedMs", "timerMs", "timeMs"];
+  for (var i = 0; i < msKeys.length; i++) {
+    if (!Object.prototype.hasOwnProperty.call(state, msKeys[i])) continue;
+    var formatted = formatSecondaryTimerDurationMs(state[msKeys[i]]);
+    if (formatted !== null) return formatted;
+  }
+  return null;
+}
 function normalizeSecondaryTimerRowStateTime(state) {
   if (!isCoreHelperRecordObject(state)) return null;
-  if (!Object.prototype.hasOwnProperty.call(state, "time")) return "";
-  if (typeof state.time !== "string") return null;
-  return state.time;
+  var textKeys = ["time", "timerText", "timer_text", "text", "valueText", "value_text"];
+  var fallbackText = null;
+  for (var i = 0; i < textKeys.length; i++) {
+    if (!Object.prototype.hasOwnProperty.call(state, textKeys[i])) continue;
+    var rawText = state[textKeys[i]];
+    if (typeof rawText !== "string") continue;
+    if (isSecondaryTimerDisplayTimeText(rawText)) return rawText;
+    if (fallbackText === null) fallbackText = rawText;
+  }
+  var durationText = resolveSecondaryTimerRowStateDurationMs(state);
+  if (durationText !== null) return durationText;
+  if (fallbackText !== null) return fallbackText;
+  if (Object.prototype.hasOwnProperty.call(state, "time")) return null;
+  return "";
 }
 
 function applySecondaryTimerRowsState(manager, rowsState) {

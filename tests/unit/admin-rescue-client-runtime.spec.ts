@@ -233,6 +233,63 @@ describe("admin rescue client runtime", () => {
     expect(manager.saveGameState).toHaveBeenCalledWith({ force: true, forceFull: true });
   });
 
+  it("restores nested saved-state secondary timer rows from a rescue offer payload", async () => {
+    const nestedSecondaryRows = [
+      { parent: 8192, child: 4096, timerText: "15:51.578" },
+      { parent: 16384, child: 8192, duration_ms: 3_113_683 }
+    ];
+    const offer = {
+      id: "rescue_nested_timer_rows",
+      board: [
+        [16, 64, 128, 32768],
+        [8, 2, 2, 0],
+        [4, 0, 0, 0],
+        [0, 2, 0, 0]
+      ],
+      score: 454348,
+      duration_ms: 12_077_797,
+      payload: {
+        saved_state: {
+          timer_secondary_rows: nestedSecondaryRows
+        }
+      }
+    };
+    const applySavedStateRestore = vi.fn(() => true);
+    const context = loadRuntime({ applySavedStateRestore });
+    context.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: [offer] })
+    });
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      modeConfig: {},
+      score: 0,
+      moveHistory: [],
+      restartWithBoard: vi.fn(),
+      setRuntimeScore(value: number) {
+        this.score = value;
+      },
+      getFinalBoardMatrix() {
+        return offer.board;
+      },
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      },
+      actuate: vi.fn(),
+      startTimer: vi.fn(),
+      saveGameState: vi.fn()
+    };
+
+    await context.AdminRescueClientRuntime.checkAndOfferRescue(manager);
+
+    expect(applySavedStateRestore).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        timer_secondary_rows: nestedSecondaryRows
+      })
+    );
+  });
+
   it("applies ranked session context from a rescue offer", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_780_919_012_000);

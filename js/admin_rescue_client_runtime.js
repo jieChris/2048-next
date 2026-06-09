@@ -248,10 +248,28 @@
     }
   }
 
+  function readOwnValue(record, key) {
+    return record && Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+  }
+
   function readOfferValue(offer, key) {
     var payload = parseOfferPayload(offer) || {};
-    if (payload && Object.prototype.hasOwnProperty.call(payload, key)) return payload[key];
-    if (offer && Object.prototype.hasOwnProperty.call(offer, key)) return offer[key];
+    var directPayloadValue = readOwnValue(payload, key);
+    if (directPayloadValue !== undefined) return directPayloadValue;
+    var payloadSavedState = toRecord(payload.saved_state || payload.savedState);
+    var payloadSavedStateValue = readOwnValue(payloadSavedState, key);
+    if (payloadSavedStateValue !== undefined) return payloadSavedStateValue;
+    var payloadUiState = toRecord(payload.ui_state || payload.uiState);
+    var payloadUiStateValue = readOwnValue(payloadUiState, key);
+    if (payloadUiStateValue !== undefined) return payloadUiStateValue;
+    var directOfferValue = readOwnValue(offer, key);
+    if (directOfferValue !== undefined) return directOfferValue;
+    var offerSavedState = toRecord(offer && (offer.saved_state || offer.savedState));
+    var offerSavedStateValue = readOwnValue(offerSavedState, key);
+    if (offerSavedStateValue !== undefined) return offerSavedStateValue;
+    var offerUiState = toRecord(offer && (offer.ui_state || offer.uiState));
+    var offerUiStateValue = readOwnValue(offerUiState, key);
+    if (offerUiStateValue !== undefined) return offerUiStateValue;
     return undefined;
   }
 
