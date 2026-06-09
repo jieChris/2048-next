@@ -640,6 +640,7 @@ function resolveCappedTimerTargetValue(manager, cappedTargetValue) {
 function resolveCappedTimerFontSizeFallback(targetValue) {
   var cap = Number(targetValue);
   if (!Number.isFinite(cap) || cap <= 0) cap = 2048;
+  if (cap >= 16384) return "11px";
   if (cap >= 8192) return "13px";
   if (cap >= 1024) return "14px";
   if (cap >= 128) return "18px";

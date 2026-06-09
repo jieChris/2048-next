@@ -582,6 +582,32 @@ function applySavedTimerRowRepeatState(row, rowState) {
   }
   row.removeAttribute("data-capped-repeat");
 }
+function resolveTimerLegendValueFromClassName(className) {
+  var match = String(className || "").match(/(?:^|\s)timer-legend-(\d+)(?:\s|$)/);
+  return match ? Number(match[1]) : null;
+}
+function resolveTimerLegendValueForFontSize(legend, rowState) {
+  var fromText = Number(typeof rowState.legendText === "string" ? rowState.legendText : legend.textContent);
+  if (Number.isFinite(fromText) && fromText > 0) return fromText;
+  var fromClass = resolveTimerLegendValueFromClassName(rowState.legendClass || legend.className);
+  return Number.isFinite(fromClass) && fromClass > 0 ? fromClass : null;
+}
+function resolveTimerLegendFontSizeByValue(value) {
+  var tileValue = Number(value);
+  if (!Number.isFinite(tileValue) || tileValue <= 0) return "";
+  if (tileValue >= 16384) return "11px";
+  if (tileValue >= 8192) return "13px";
+  if (tileValue >= 1024) return "14px";
+  if (tileValue >= 128) return "18px";
+  return "22px";
+}
+function normalizeSavedTimerLegendFontSize(legend, rowState) {
+  var savedFontSize = typeof rowState.legendFontSize === "string" ? rowState.legendFontSize : "";
+  if (savedFontSize) return savedFontSize;
+  var currentFontSize = legend && legend.style && typeof legend.style.fontSize === "string" ? legend.style.fontSize : "";
+  if (currentFontSize) return "";
+  return resolveTimerLegendFontSizeByValue(resolveTimerLegendValueForFontSize(legend, rowState));
+}
 function applySavedTimerRowLegendState(manager, row, legend, rowState, cappedStateForRestore) {
   if (!manager || !row || !legend) return;
   if (row.getAttribute("data-capped-repeat") && cappedStateForRestore.isCappedMode) {
@@ -590,8 +616,9 @@ function applySavedTimerRowLegendState(manager, row, legend, rowState, cappedSta
     legend.className = rowState.legendClass;
   }
   if (typeof rowState.legendText === "string") legend.textContent = rowState.legendText;
-  if (typeof rowState.legendFontSize === "string" && rowState.legendFontSize) {
-    legend.style.fontSize = rowState.legendFontSize;
+  var normalizedFontSize = normalizeSavedTimerLegendFontSize(legend, rowState);
+  if (normalizedFontSize) {
+    legend.style.fontSize = normalizedFontSize;
   }
 }
 function applySavedDynamicTimerRowsState(manager, container, rowsState, cappedStateForRestore) {

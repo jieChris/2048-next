@@ -397,6 +397,8 @@ describe("core mode: capped timer placeholder policy", () => {
     expect(resolveCappedTimerLegendFontSize(128)).toBe("18px");
     expect(resolveCappedTimerLegendFontSize(1024)).toBe("14px");
     expect(resolveCappedTimerLegendFontSize(8192)).toBe("13px");
+    expect(resolveCappedTimerLegendFontSize(16384)).toBe("11px");
+    expect(resolveCappedTimerLegendFontSize(65536)).toBe("11px");
     expect(resolveCappedTimerLegendFontSize(null)).toBe("14px");
   });
 
