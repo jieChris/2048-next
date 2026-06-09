@@ -882,6 +882,45 @@ describe("core game manager saved state runtime", () => {
     expect(manager.rescueReplayString).toBe("REPLAY_v1RPL_B64_restored");
   });
 
+  it("preserves existing replay data when a lite sync snapshot has no replay payload", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const existingSessionReplayV1 = {
+      v: 1,
+      board_width: 4,
+      board_height: 4,
+      init_tiles: [{ cellIndex: 0, valueBit: 0 }],
+      records: [{ kind: "move", dir: 1, spawnIndex: 2, spawnValueBit: 0, deltaMs: 16 }],
+      last_event_at_ms: 12_345,
+      supported: true
+    };
+    const manager = {
+      moveHistory: [1],
+      replayCompactLog: "",
+      rescueReplayString: "REPLAY_v1RPL_B64_existing",
+      sessionReplayV1: existingSessionReplayV1,
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      },
+      setRuntimeUndoStack(value: unknown) {
+        this.undoStack = value;
+      },
+      setRuntimeRedoStack(value: unknown) {
+        this.redoStack = value;
+      }
+    };
+
+    runtime.applySavedManagerReplayState(manager, {
+      move_history: [],
+      replay_compact_log: "",
+      replay_string: "",
+      session_replay_v1: null,
+      session_replay_v3: null
+    });
+
+    expect(manager.rescueReplayString).toBe("REPLAY_v1RPL_B64_existing");
+    expect(manager.sessionReplayV1).toEqual(existingSessionReplayV1);
+  });
+
   it("does not auto-resume timer on restore when saved state is frozen", () => {
     const runtime = loadSavedStateRuntime([32768]);
     const startTimer = vi.fn();

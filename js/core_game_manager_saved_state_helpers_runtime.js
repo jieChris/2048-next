@@ -688,10 +688,18 @@ function applySavedManagerReplayState(manager, saved) {
     manager.setRuntimeRedoStack([]);
   }
   manager.replayCompactLog = typeof saved.replay_compact_log === "string" ? saved.replay_compact_log : "";
-  manager.rescueReplayString = typeof saved.replay_string === "string" && saved.replay_string.trim()
-    ? saved.replay_string.trim()
-    : "";
-  manager.sessionReplayV1 = normalizeSavedReplayV1Session(manager, saved.session_replay_v1);
+  var savedReplayString = typeof saved.replay_string === "string" ? saved.replay_string.trim() : "";
+  if (savedReplayString) {
+    manager.rescueReplayString = savedReplayString;
+  } else if (typeof manager.rescueReplayString !== "string") {
+    manager.rescueReplayString = "";
+  }
+  var savedSessionReplayV1 = normalizeSavedReplayV1Session(manager, saved.session_replay_v1);
+  if (savedSessionReplayV1) {
+    manager.sessionReplayV1 = savedSessionReplayV1;
+  } else if (!manager.sessionReplayV1 && Object.prototype.hasOwnProperty.call(saved, "session_replay_v1")) {
+    manager.sessionReplayV1 = null;
+  }
   manager.sessionReplayV3 = isNonArrayObject(saved.session_replay_v3)
     ? manager.clonePlain(saved.session_replay_v3)
     : manager.sessionReplayV3;
