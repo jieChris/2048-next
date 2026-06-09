@@ -460,9 +460,12 @@ function createSavedDynamicTimerLegendElement(manager, documentLike, resolvedCap
     ? resolvedCappedState.cappedTargetValue
     : (labelValue || resolvedCappedState.cappedTargetValue);
   legend.className = resolveTimerLegendClassByValue(targetValue) || manager.getCappedTimerLegendClass(targetValue);
+  var fallbackLegendFontSize = typeof manager.getCappedTimerLegendFontSize === "function"
+    ? manager.getCappedTimerLegendFontSize(targetValue)
+    : manager.getCappedTimerFontSize(targetValue);
   legend.style.cssText =
     "color: #f9f6f2; font-size: " +
-    (resolveTimerLegendFontSizeByValue(targetValue) || manager.getCappedTimerFontSize(targetValue)) +
+    (resolveTimerLegendFontSizeByValue(targetValue) || fallbackLegendFontSize) +
     ";";
   legend.textContent = rowInfo.labelText;
   return legend;
@@ -517,7 +520,10 @@ function normalizeCappedRepeatLegendClasses(manager, cappedState) {
   if (!resolvedCappedState.isCappedMode) return;
   var rows = documentLike.querySelectorAll("#timerbox [data-capped-repeat]");
   var targetValue = resolvedCappedState.cappedTargetValue;
-  var legendClass = manager.getCappedTimerLegendClass(targetValue), fontSize = manager.getCappedTimerFontSize(targetValue);
+  var legendClass = manager.getCappedTimerLegendClass(targetValue);
+  var fontSize = typeof manager.getCappedTimerLegendFontSize === "function"
+    ? manager.getCappedTimerLegendFontSize(targetValue)
+    : manager.getCappedTimerFontSize(targetValue);
   for (var i = 0; i < rows.length; i++) {
     var row = rows[i];
     if (!row || !row.querySelector) continue;

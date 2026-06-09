@@ -637,7 +637,7 @@ function resolveCappedTimerTargetValue(manager, cappedTargetValue) {
   return targetValue === null ? 2048 : targetValue;
 }
 
-function resolveCappedTimerFontSizeFallback(targetValue) {
+function resolveCappedTimerLegendFontSizeFallback(targetValue) {
   var cap = Number(targetValue);
   if (!Number.isFinite(cap) || cap <= 0) cap = 2048;
   if (cap >= 16384) return "11px";
@@ -646,7 +646,7 @@ function resolveCappedTimerFontSizeFallback(targetValue) {
   return "22px";
 }
 
-function getCappedTimerFontSize(manager, cappedTargetValue) {
+function getCappedTimerLegendFontSize(manager, cappedTargetValue) {
   if (!manager) return "22px";
   var targetValue = resolveCappedTimerTargetValue(manager, cappedTargetValue);
   return resolveCorePayloadCallWith(
@@ -657,10 +657,14 @@ function getCappedTimerFontSize(manager, cappedTargetValue) {
     "",
     function (currentManager, coreCallResult) {
       return currentManager.resolveCoreStringCallOrFallback(coreCallResult, function () {
-        return resolveCappedTimerFontSizeFallback(targetValue);
+        return resolveCappedTimerLegendFontSizeFallback(targetValue);
       });
     }
   );
+}
+
+function getCappedTimerFontSize(manager, cappedTargetValue) {
+  return getCappedTimerLegendFontSize(manager, cappedTargetValue);
 }
 
 function normalizeCappedPlaceholderRowValues(values) {

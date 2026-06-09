@@ -1180,6 +1180,15 @@ function resolveCappedPlaceholderSlotValue(manager, cappedState, milestoneCount)
   return normalizeCappedPlaceholderSlotValue(slotValue);
 }
 
+function applyCappedPlaceholderLegendStyle(manager, legend, cappedState, nextLabel) {
+  if (!manager || !legend || !cappedState) return;
+  legend.className = manager.getCappedTimerLegendClass(cappedState.cappedTargetValue);
+  legend.textContent = nextLabel;
+  legend.style.fontSize = typeof manager.getCappedTimerLegendFontSize === "function"
+    ? manager.getCappedTimerLegendFontSize(cappedState.cappedTargetValue)
+    : manager.getCappedTimerFontSize(cappedState.cappedTargetValue);
+}
+
 function tryWriteCappedPlaceholderMilestoneRow(manager, cappedState, milestoneCount, nextLabel, timeStr) {
   if (!manager || !cappedState) return false;
   var placeholderSlotId = resolveCappedPlaceholderSlotValue(manager, cappedState, milestoneCount);
@@ -1188,11 +1197,7 @@ function tryWriteCappedPlaceholderMilestoneRow(manager, cappedState, milestoneCo
   var timerEl = resolveManagerElementById(manager, "timer" + placeholderSlotId);
   if (!row || !timerEl) return false;
   var legend = row.querySelector(".timertile");
-  if (legend) {
-    legend.className = manager.getCappedTimerLegendClass(cappedState.cappedTargetValue);
-    legend.textContent = nextLabel;
-    legend.style.fontSize = manager.getCappedTimerFontSize(cappedState.cappedTargetValue);
-  }
+  applyCappedPlaceholderLegendStyle(manager, legend, cappedState, nextLabel);
   row.style.display = ""; row.style.visibility = ""; row.style.pointerEvents = "";
   row.setAttribute("data-capped-repeat", String(milestoneCount));
   timerEl.textContent = timeStr;

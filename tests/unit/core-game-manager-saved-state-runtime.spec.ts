@@ -391,6 +391,53 @@ describe("core game manager saved state runtime", () => {
     expect(timers.timer32768.textContent).toBe("6.000");
   });
 
+  it("uses the legend font-size API for left timer labels without touching right timer values", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const row32768 = createElement({
+      legend: { text: "32768", className: "timertile timer-legend-32768", fontSize: "" }
+    });
+    const timer32768 = {
+      textContent: "",
+      style: { fontSize: "19px" }
+    };
+    const manager = {
+      getTimerRowEl(slotId: string) {
+        return slotId === "32768" ? row32768 : null;
+      },
+      elements: {
+        timer32768
+      },
+      getCappedTimerLegendClass() {
+        return "timertile timer-legend-32768";
+      },
+      getCappedTimerLegendFontSize() {
+        return "11px";
+      },
+      getCappedTimerFontSize() {
+        throw new Error("right timer font-size API must not be used for legend labels");
+      }
+    };
+
+    runtime.applySavedTimerFixedRowsState(
+      manager,
+      {
+        timer_fixed_rows: {
+          "32768": {
+            repeat: "2",
+            timerText: "6.000",
+            legendText: "32768"
+          }
+        }
+      },
+      { isCappedMode: true, cappedTargetValue: 32768 }
+    );
+
+    expect(row32768.querySelector(".timertile")?.className).toBe("timertile timer-legend-32768");
+    expect(row32768.querySelector(".timertile")?.style.fontSize).toBe("11px");
+    expect(timer32768.textContent).toBe("6.000");
+    expect(timer32768.style.fontSize).toBe("19px");
+  });
+
   it("ignores restored dynamic timer row presentation styles and uses client rendering rules", () => {
     type FakeElement = {
       children: FakeElement[];
@@ -448,8 +495,11 @@ describe("core game manager saved state runtime", () => {
       getCappedTimerLegendClass(value: number) {
         return `timertile timer-legend-${value}`;
       },
-      getCappedTimerFontSize() {
+      getCappedTimerLegendFontSize() {
         return "11px";
+      },
+      getCappedTimerFontSize() {
+        throw new Error("right timer font-size API must not be used for dynamic legend labels");
       }
     };
 
@@ -473,6 +523,7 @@ describe("core game manager saved state runtime", () => {
     const timer = row.children[1];
     expect(legend.className).toBe("timertile timer-legend-32768");
     expect(legend.style.fontSize).toBe("11px");
+    expect(timer.style.fontSize).toBe("");
     expect(timer.textContent).toBe("1:39:11.334");
   });
 

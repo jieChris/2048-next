@@ -222,6 +222,7 @@ function bindCappedUiBindings() {
     ["resetProgressiveCapped64Rows", resetProgressiveCapped64Rows],
     ["resolveCappedTargetValueOrNull", resolveCappedTargetValueOrNull],
     ["getCappedTimerLegendClass", getCappedTimerLegendClass],
+    ["getCappedTimerLegendFontSize", getCappedTimerLegendFontSize],
     ["getCappedTimerFontSize", getCappedTimerFontSize],
     ["getCappedPlaceholderRowValues", getCappedPlaceholderRowValues],
     ["getCappedOverflowContainer", getCappedOverflowContainer],
