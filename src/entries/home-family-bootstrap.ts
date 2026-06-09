@@ -20,8 +20,8 @@ const UI_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
   "index-tail",
   "i18n"
 ]);
-const INDEX_STARTUP_BUNDLE_URL = "./js/home_standard_startup_bundle.js?v=20260607-startup1";
-const INDEX_DEFERRED_BUNDLE_URL = "./js/home_standard_deferred_bundle.js?v=20260607-deferred1";
+const INDEX_STARTUP_BUNDLE_URL = "./js/home_standard_startup_bundle.js?v=20260609-rescue-export1";
+const INDEX_DEFERRED_BUNDLE_URL = "./js/home_standard_deferred_bundle.js?v=20260609-rescue-export1";
 
 function readNightBackgroundPreference(): boolean {
   if (typeof window === "undefined") {

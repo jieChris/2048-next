@@ -53,6 +53,6 @@ describe("home family bootstrap ranked session ordering", () => {
     releaseRankedSession?.();
     await pendingBootstrap;
 
-    expect(loadCalls).toEqual([["./js/home_standard_startup_bundle.js?v=20260607-startup1"]]);
+    expect(loadCalls).toEqual([["./js/home_standard_startup_bundle.js?v=20260609-rescue-export1"]]);
   });
 });
