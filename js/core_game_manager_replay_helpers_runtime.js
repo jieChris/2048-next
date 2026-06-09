@@ -1619,6 +1619,7 @@ function assignAutoSubmitPayloadFields(target, fields) {
 }
 
 function buildAutoSubmitPayloadBase(manager, endedAt, bestTileValue) {
+  var replayPayload = resolveAutoSubmitReplayPayload(manager);
   return {
     mode: resolveReplayModeTag(manager.modeKey, manager.mode),
     mode_key: manager.modeKey, board_width: manager.width, board_height: manager.height,
@@ -1627,8 +1628,45 @@ function buildAutoSubmitPayloadBase(manager, endedAt, bestTileValue) {
     challenge_id: manager.challengeId || null,
     special_rules_snapshot: manager.clonePlain(manager.specialRules || {}),
     score: manager.score, best_tile: bestTileValue, duration_ms: getDurationMs(manager),
-    final_board: getFinalBoardMatrix(manager), ended_at: endedAt, replay: serializeReplayV3(manager),
-    replay_string: serializeReplay(manager)
+    final_board: getFinalBoardMatrix(manager), ended_at: endedAt, replay: replayPayload.replay,
+    replay_string: replayPayload.replayString
+  };
+}
+
+function resolveAutoSubmitRescueReplayString(manager) {
+  var replay = manager && manager.rescueReplayString != null ? String(manager.rescueReplayString || "").trim() : "";
+  return replay || "";
+}
+
+function createAutoSubmitReplayWrapper(replayString) {
+  if (!replayString) return null;
+  return {
+    v: 1,
+    replay_logic_version: "v1",
+    replay_string: replayString
+  };
+}
+
+function resolveAutoSubmitReplayPayload(manager) {
+  var replayString = "";
+  try {
+    replayString = String(serializeReplay(manager) || "").trim();
+  } catch (_err) {
+    replayString = "";
+  }
+  if (!replayString) replayString = resolveAutoSubmitRescueReplayString(manager);
+
+  var replay = null;
+  try {
+    replay = serializeReplayV3(manager);
+  } catch (_err2) {
+    replay = null;
+  }
+  if (!replay && replayString) replay = createAutoSubmitReplayWrapper(replayString);
+
+  return {
+    replay: replay,
+    replayString: replayString
   };
 }
 

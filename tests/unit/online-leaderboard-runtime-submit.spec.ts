@@ -372,6 +372,42 @@ describe("online leaderboard terminal submission", () => {
     });
   });
 
+  it("submits recovered online records with rescue replay fallback when live serialization is unavailable", async () => {
+    const localAutoSubmit = vi.fn(function (this: Record<string, unknown>) {
+      this.sessionSubmitDone = true;
+    });
+    const manager = createTerminatedManager({
+      tryAutoSubmitOnGameOver: localAutoSubmit,
+      serialize: vi.fn(() => {
+        throw new Error("replay_v1_unavailable");
+      }),
+      serializeV3: vi.fn(() => null),
+      rescueReplayString: "REPLAY_v1RPL_B64_rescue"
+    });
+    let recordPayload: Record<string, unknown> | null = null;
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records")) {
+          recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
+          return createJsonResponse({ success: true, data: { id: "record-from-rescue" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.tryAutoSubmitOnGameOver as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(localAutoSubmit).toHaveBeenCalledTimes(1);
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
+    expect(recordPayload).toMatchObject({
+      mode_key: MODE_KEY,
+      score: 4096,
+      replay_string: "REPLAY_v1RPL_B64_rescue"
+    });
+  });
+
   it("uses keepalive when flushing terminal record during pagehide", async () => {
     const manager = createTerminatedManager();
     const runtime = loadOnlineLeaderboardRuntime({

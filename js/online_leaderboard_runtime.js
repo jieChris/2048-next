@@ -2280,6 +2280,10 @@ function shouldAutoLoadOnlineLeaderboard() {
       }
     }
 
+    if (!replayString) {
+      replayString = toText(manager && manager.rescueReplayString).trim();
+    }
+
     var replayV3 = null;
     if (typeof manager.serializeV3 === "function") {
       try {
@@ -2295,6 +2299,13 @@ function shouldAutoLoadOnlineLeaderboard() {
       } catch (_err3) {
         replayString = "";
       }
+    }
+    if (!replayV3 && replayString) {
+      replayV3 = {
+        v: 1,
+        replay_logic_version: "v1",
+        replay_string: replayString
+      };
     }
 
     return {
