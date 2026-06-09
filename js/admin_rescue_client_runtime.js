@@ -280,6 +280,79 @@
     return Number.isFinite(duration) && duration >= 0 ? Math.floor(duration) : 0;
   }
 
+  var SAVED_STATE_OFFER_KEYS = [
+    "timer_status",
+    "timer_frozen",
+    "timer_started_at_ms",
+    "timer_elapsed_offset_ms",
+    "timer_anchor_local_ms",
+    "timer_anchor_server_ms",
+    "timer_module_view",
+    "timer_fixed_rows",
+    "timer_dynamic_rows_capped",
+    "timer_dynamic_rows_overflow",
+    "timer_secondary_rows",
+    "timer_secondary_expanded_parents",
+    "timer_sub_8192",
+    "timer_sub_16384",
+    "timer_sub_visible",
+    "has_game_started",
+    "reached_32k",
+    "capped_milestone_count",
+    "initial_board_matrix",
+    "replay_start_board_matrix",
+    "practice_restart_board_matrix",
+    "practice_restart_mode_config",
+    "move_history",
+    "ips_input_count",
+    "replay_compact_log",
+    "session_replay_v1",
+    "session_replay_v3",
+    "spawn_value_counts",
+    "replay_string"
+  ];
+
+  function hasSavedStateTimerPayload(offer) {
+    return (
+      readOfferValue(offer, "timer_fixed_rows") !== undefined ||
+      readOfferValue(offer, "timer_dynamic_rows_capped") !== undefined ||
+      readOfferValue(offer, "timer_dynamic_rows_overflow") !== undefined ||
+      readOfferValue(offer, "timer_secondary_rows") !== undefined ||
+      readOfferValue(offer, "timer_elapsed_offset_ms") !== undefined ||
+      readOfferValue(offer, "timer_anchor_local_ms") !== undefined ||
+      readOfferValue(offer, "timer_anchor_server_ms") !== undefined
+    );
+  }
+
+  function buildOfferSavedStatePayload(manager, offer, board, score, durationMs) {
+    var saved = {
+      board: board,
+      score: score,
+      duration_ms: durationMs,
+      timer_status: 1,
+      timer_frozen: false,
+      has_game_started: true,
+      over: false,
+      won: false,
+      keep_playing: false
+    };
+    for (var i = 0; i < SAVED_STATE_OFFER_KEYS.length; i += 1) {
+      var key = SAVED_STATE_OFFER_KEYS[i];
+      var value = readOfferValue(offer, key);
+      if (value !== undefined) saved[key] = value;
+    }
+    if (!saved.initial_board_matrix && manager && typeof manager.getFinalBoardMatrix === "function") {
+      saved.initial_board_matrix = manager.getFinalBoardMatrix();
+    }
+    return saved;
+  }
+
+  function applyOfferSavedStatePayload(manager, offer, board, score, durationMs) {
+    if (typeof applySavedStateRestore !== "function") return false;
+    if (!hasSavedStateTimerPayload(offer)) return false;
+    return !!applySavedStateRestore(manager, buildOfferSavedStatePayload(manager, offer, board, score, durationMs));
+  }
+
   function normalizeUnixMilliseconds(value) {
     if (value === undefined || value === null || value === "") return null;
     if (typeof value === "string" && !/^-?\d+(\.\d+)?$/.test(value.trim())) {
@@ -694,6 +767,7 @@
       manager.initialBoardMatrix = manager.getFinalBoardMatrix();
       manager.replayStartBoardMatrix = manager.getFinalBoardMatrix();
     }
+    applyOfferSavedStatePayload(manager, offer, board, score, durationMs);
     applyOfferReplayStateToManager(manager, offer);
     if (typeof manager.startTimer === "function") manager.startTimer();
     if (typeof manager.actuate === "function") manager.actuate();

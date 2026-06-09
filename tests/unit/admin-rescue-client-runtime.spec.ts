@@ -156,6 +156,83 @@ describe("admin rescue client runtime", () => {
     expect(manager.rescueReplayString).toBe("REPLAY_v1RPL_B64_demo");
   });
 
+  it("restores timer row state from a rescue offer saved-state payload", async () => {
+    const offer = {
+      id: "rescue_timer_rows",
+      board: [
+        [16, 64, 128, 32768],
+        [8, 2, 2, 0],
+        [4, 0, 0, 0],
+        [0, 2, 0, 0]
+      ],
+      score: 454348,
+      duration_ms: 12_077_797,
+      timer_status: 1,
+      timer_elapsed_offset_ms: 12_077_797,
+      timer_anchor_local_ms: 1_780_900_000_000,
+      timer_anchor_server_ms: 1_780_900_000_000,
+      timer_fixed_rows: {
+        "32768": {
+          timerText: "3:21:56.161",
+          display: "",
+          visibility: "",
+          pointerEvents: "",
+          legendText: "32768",
+          legendClass: "timertile timer-legend-32768",
+          legendFontSize: ""
+        }
+      },
+      timer_secondary_rows: [
+        { parent: 32768, child: 8192, time: "3:02:11.000" }
+      ],
+      has_game_started: true
+    };
+    const applySavedStateRestore = vi.fn(() => true);
+    const context = loadRuntime({ applySavedStateRestore });
+    context.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: [offer] })
+    });
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      modeConfig: {},
+      score: 0,
+      moveHistory: [],
+      restartWithBoard: vi.fn(),
+      setRuntimeScore(value: number) {
+        this.score = value;
+      },
+      getFinalBoardMatrix() {
+        return offer.board;
+      },
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      },
+      actuate: vi.fn(),
+      startTimer: vi.fn(),
+      saveGameState: vi.fn()
+    };
+
+    await context.AdminRescueClientRuntime.checkAndOfferRescue(manager);
+
+    expect(applySavedStateRestore).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        board: offer.board,
+        score: 454348,
+        duration_ms: 12_077_797,
+        timer_status: 1,
+        timer_elapsed_offset_ms: 12_077_797,
+        timer_anchor_local_ms: 1_780_900_000_000,
+        timer_anchor_server_ms: 1_780_900_000_000,
+        timer_fixed_rows: offer.timer_fixed_rows,
+        timer_secondary_rows: offer.timer_secondary_rows,
+        has_game_started: true
+      })
+    );
+    expect(manager.saveGameState).toHaveBeenCalledWith({ force: true, forceFull: true });
+  });
+
   it("applies ranked session context from a rescue offer", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_780_919_012_000);
