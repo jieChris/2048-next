@@ -287,6 +287,54 @@ describe("core game manager saved state runtime", () => {
     expect(row65536.querySelector(".timertile")?.style.fontSize).toBe("11px");
   });
 
+  it("self-heals legacy oversized restored fixed timer legend font size for five digit labels", () => {
+    const runtime = loadSavedStateRuntime([16384, 32768]);
+    const row16384 = createElement({
+      legend: { text: "16384", className: "timertile timer-legend-16384", fontSize: "" }
+    });
+    const row32768 = createElement({
+      legend: { text: "32768", className: "timertile timer-legend-32768", fontSize: "" }
+    });
+    const manager = {
+      getTimerRowEl(slotId: string) {
+        if (slotId === "16384") return row16384;
+        if (slotId === "32768") return row32768;
+        return null;
+      },
+      elements: {
+        timer16384: { textContent: "" },
+        timer32768: { textContent: "" }
+      },
+      getCappedTimerLegendClass() {
+        return "timertile";
+      }
+    };
+
+    runtime.applySavedTimerFixedRowsState(
+      manager,
+      {
+        timer_fixed_rows: {
+          "16384": {
+            timerText: "48:00.000",
+            legendText: "16384",
+            legendClass: "timertile timer-legend-16384",
+            legendFontSize: "13px"
+          },
+          "32768": {
+            timerText: "1:39:11.334",
+            legendText: "32768",
+            legendClass: "timertile timer-legend-32768",
+            legendFontSize: "12px"
+          }
+        }
+      },
+      { isCappedMode: false }
+    );
+
+    expect(row16384.querySelector(".timertile")?.style.fontSize).toBe("11px");
+    expect(row32768.querySelector(".timertile")?.style.fontSize).toBe("11px");
+  });
+
   it("preserves legitimate business-hidden fixed rows on restore", () => {
     const runtime = loadSavedStateRuntime([32768]);
     const row32k = createElement({

@@ -410,7 +410,6 @@ function removeSavedKeysFromStoragesFallback(stores, keys) {
     }
   }
 }
-
 function resetSavedGameStatePersistenceThrottleAfterClear(manager) {
   if (!manager) return;
   manager.lastSavedGameStateAt = 0;
@@ -419,7 +418,6 @@ function resetSavedGameStatePersistenceThrottleAfterClear(manager) {
   manager.lastSavedStateSyncPublishedAt = 0;
   manager.lastReplayStringSavedAt = 0;
 }
-
 function clearSavedGameState(manager, modeKey) {
   if (!manager) return;
   writeWindowNameSavedPayload(manager, modeKey, null);
@@ -603,10 +601,14 @@ function resolveTimerLegendFontSizeByValue(value) {
 }
 function normalizeSavedTimerLegendFontSize(legend, rowState) {
   var savedFontSize = typeof rowState.legendFontSize === "string" ? rowState.legendFontSize : "";
-  if (savedFontSize) return savedFontSize;
+  var expectedFontSize = resolveTimerLegendFontSizeByValue(resolveTimerLegendValueForFontSize(legend, rowState));
+  if (savedFontSize) {
+    if (expectedFontSize === "11px") return expectedFontSize;
+    return savedFontSize;
+  }
   var currentFontSize = legend && legend.style && typeof legend.style.fontSize === "string" ? legend.style.fontSize : "";
   if (currentFontSize) return "";
-  return resolveTimerLegendFontSizeByValue(resolveTimerLegendValueForFontSize(legend, rowState));
+  return expectedFontSize;
 }
 function applySavedTimerRowLegendState(manager, row, legend, rowState, cappedStateForRestore) {
   if (!manager || !row || !legend) return;
@@ -702,7 +704,6 @@ function normalizeSavedReplayV1Session(manager, session) {
   cloned.supported = cloned.supported !== false;
   return cloned;
 }
-
 function applySavedManagerReplayState(manager, saved) {
   manager.moveHistory = Array.isArray(saved.move_history) ? saved.move_history.slice() : [];
   manager.ipsInputTimes = [];
@@ -732,7 +733,6 @@ function applySavedManagerReplayState(manager, saved) {
   manager.spawnTwos = manager.spawnValueCounts["2"] || 0;
   manager.spawnFours = manager.spawnValueCounts["4"] || 0;
 }
-
 function applySavedManagerProgressState(manager, saved) {
   manager.comboStreak = Number.isInteger(saved.combo_streak) ? saved.combo_streak : 0;
   manager.successfulMoveCount = Number.isInteger(saved.successful_move_count) ? saved.successful_move_count : 0;
@@ -758,7 +758,6 @@ function applySavedManagerProgressState(manager, saved) {
   manager.lockedDirectionTurn = Number.isInteger(saved.locked_direction_turn) ? saved.locked_direction_turn : null;
   manager.lockedDirection = Number.isInteger(saved.locked_direction) ? saved.locked_direction : null;
 }
-
 function applySavedManagerTimerState(manager, saved) {
   var savedDurationMs = Number.isFinite(saved.duration_ms) && saved.duration_ms >= 0 ? Math.floor(saved.duration_ms) : 0;
   var savedStartedAtMs = Number(saved.timer_started_at_ms);
@@ -790,7 +789,6 @@ function applySavedManagerTimerState(manager, saved) {
       ? Math.floor(savedAnchorServerMs)
       : null;
 }
-
 function applySavedManagerBoardSnapshotState(manager, saved) {
   manager.initialBoardMatrix =
     (Array.isArray(saved.initial_board_matrix) && saved.initial_board_matrix.length === manager.height)
@@ -1187,7 +1185,6 @@ function buildSavedGameStateTimerSnapshotPayload(manager, timerSnapshot, subStat
     timer_sub_visible: subState.timer_sub_visible
   };
 }
-
 function buildSavedGameStatePayload(manager, now, saveOptions) {
   if (!manager) return null;
   var documentLike = resolveManagerDocumentLike(manager);
@@ -1204,7 +1201,6 @@ function buildSavedGameStatePayload(manager, now, saveOptions) {
     buildSavedGameStateDiagnosticsPayload(manager)
   );
 }
-
 function buildPersistSavedPayloadToStoragesCorePayload(stores, persistKey, persistPayload) {
   return {
     storages: stores,
@@ -1212,7 +1208,6 @@ function buildPersistSavedPayloadToStoragesCorePayload(stores, persistKey, persi
     payload: persistPayload
   };
 }
-
 function persistSavedPayloadToStorages(manager, persistKey, persistPayload) {
   if (!manager) return false;
   var stores = getSavedGameStateStorages(manager);
@@ -1225,7 +1220,6 @@ function persistSavedPayloadToStorages(manager, persistKey, persistPayload) {
     function () { return persistSavedPayloadToStoragesFallback(stores, persistKey, persistPayload); }
   );
 }
-
 function serializeSavedPayloadForStorage(persistPayload) {
   var serialized = null;
   try {
@@ -1235,7 +1229,6 @@ function serializeSavedPayloadForStorage(persistPayload) {
   }
   return typeof serialized === "string" ? serialized : null;
 }
-
 function writeSerializedPayloadToStores(stores, persistKey, serialized) {
   if (!Array.isArray(stores) || stores.length === 0) return false;
   if (typeof serialized !== "string") return false;
@@ -1247,12 +1240,10 @@ function writeSerializedPayloadToStores(stores, persistKey, serialized) {
   }
   return false;
 }
-
 function persistSavedPayloadToStoragesFallback(stores, persistKey, persistPayload) {
   var serialized = serializeSavedPayloadForStorage(persistPayload);
   return writeSerializedPayloadToStores(stores, persistKey, serialized);
 }
-
 function buildLiteSavedGameStateMetaPayload(manager, payload) {
   return {
     v: GameManager.SAVED_GAME_STATE_VERSION,
@@ -1264,7 +1255,6 @@ function buildLiteSavedGameStateMetaPayload(manager, payload) {
     ruleset: payload.ruleset || manager.ruleset
   };
 }
-
 function buildLiteSavedGameStateProgressPayload(payload) {
   return {
     reached_32k: !!payload.reached_32k,
@@ -1279,7 +1269,6 @@ function buildLiteSavedGameStateProgressPayload(payload) {
     ranked_session_token: payload.ranked_session_token || null
   };
 }
-
 function buildLiteSavedGameStateBoardSnapshotPayload(manager, payload) {
   return {
     initial_board_matrix: Array.isArray(payload.initial_board_matrix)
@@ -1296,7 +1285,6 @@ function buildLiteSavedGameStateBoardSnapshotPayload(manager, payload) {
       : (manager.practiceRestartModeConfig ? manager.safeClonePlain(manager.practiceRestartModeConfig, null) : null)
   };
 }
-
 function buildLiteSavedGameStateReplayTrimPayload(manager, payload) {
   return {
     move_history: [],
@@ -1306,14 +1294,12 @@ function buildLiteSavedGameStateReplayTrimPayload(manager, payload) {
     session_replay_v3: null
   };
 }
-
 function resolveLiteSavedNumericSeed(value, fallback) {
   var seedValue = Number(value);
   if (Number.isFinite(seedValue)) return seedValue;
   var fallbackSeed = Number(fallback);
   return Number.isFinite(fallbackSeed) ? fallbackSeed : 0;
 }
-
 function buildLiteSavedGameStateCoreRestorePayload(manager, payload) {
   var source = normalizeSavedStateRecordObject(payload, {});
   var board = Array.isArray(source.board) ? cloneBoardMatrix(source.board) : manager.getFinalBoardMatrix();
@@ -1341,7 +1327,6 @@ function buildLiteSavedGameStateCoreRestorePayload(manager, payload) {
       : null
   };
 }
-
 function buildLiteSavedGameStateDiagnosticsPayload(payload) {
   if (!isNonArrayObject(payload)) {
     return { diagnostics_index_entries: [] };
@@ -1350,7 +1335,6 @@ function buildLiteSavedGameStateDiagnosticsPayload(payload) {
     diagnostics_index_entries: normalizeSavedStateDiagnosticsIndexEntries(payload.diagnostics_index_entries)
   };
 }
-
 function buildLiteSavedGameStatePayloadFallback(manager, payload) {
   if (!manager) return null;
   if (!normalizeSavedStateRecordObject(payload, null)) return null;
@@ -1378,7 +1362,6 @@ function buildLiteSavedGameStatePayloadFallback(manager, payload) {
     }
   );
 }
-
 function buildLiteSavedGameStateCoreCallPayload(manager, payload) {
   if (!manager) return { payload: payload };
   return {
@@ -1406,13 +1389,11 @@ function buildLiteSavedGameStateCoreCallPayload(manager, payload) {
     capped64Unlocked: payload ? payload.capped64_unlocked : null
   };
 }
-
 function buildLiteSavedGameStateReplayRestorePayload(manager, payloadSource) {
   return {
     session_replay_v1: cloneSavedReplaySessionState(manager, payloadSource && payloadSource.session_replay_v1, null)
   };
 }
-
 function ensureLiteSavedGameStateRestoreFields(manager, litePayload, payloadSource) {
   if (!manager) return null;
   var normalizedLite = normalizeSavedStateRecordObject(litePayload, null);
@@ -1424,7 +1405,6 @@ function ensureLiteSavedGameStateRestoreFields(manager, litePayload, payloadSour
     buildLiteSavedGameStateReplayRestorePayload(manager, payloadSource)
   );
 }
-
 function buildLiteSavedGameStatePayload(manager, payloadSource) {
   if (!(manager && normalizeSavedStateRecordObject(payloadSource, null))) return null;
   var litePayloadCoreCallResult = callCoreStorageRuntime(
@@ -1438,7 +1418,6 @@ function buildLiteSavedGameStatePayload(manager, payloadSource) {
   }, function () { return buildLiteSavedGameStatePayloadFallback(manager, payloadSource); });
   return ensureLiteSavedGameStateRestoreFields(manager, litePayload, payloadSource);
 }
-
 function persistSavedPayloadWithLiteFallback(manager, key, liteKey, fullPayload, litePayload) {
   var hasFullPayload = !!normalizeSavedStateRecordObject(fullPayload, null);
   var persisted = false;
@@ -1463,7 +1442,6 @@ function persistSavedPayloadWithLiteFallback(manager, key, liteKey, fullPayload,
     persistedFull: !!persistedFull
   };
 }
-
 function persistSavedGameStatePayload(manager, persistPlan) {
   if (!manager || !persistPlan) return { persisted: false, persistedFull: false };
   var fullPayload = normalizeSavedStateRecordObject(persistPlan.fullPayload, null);
@@ -1481,21 +1459,18 @@ function persistSavedGameStatePayload(manager, persistPlan) {
   writeWindowNameSavedPayload(manager, manager.modeKey, windowNamePayload);
   return persistSavedPayloadWithLiteFallback(manager, key, liteKey, fullPayload, litePayload);
 }
-
 function resolveLatestSavedPayloadForRestore(manager) {
   if (!manager) return null;
   var windowLike = manager.getWindowLike();
   var windowNameSavedCandidate = resolveWindowNameSavedCandidate(manager, windowLike);
   return resolveLatestSavedPayloadForManager(manager, windowNameSavedCandidate);
 }
-
 function handleSavedStateRestoreDecisionFailure(manager, restoreDecision) {
   if (!(manager && restoreDecision)) return false;
   if (restoreDecision.canRestore) return false;
   if (restoreDecision.shouldClearSavedState) clearSavedGameState(manager);
   return true;
 }
-
 function applySavedStateRestore(manager, saved) {
   if (!(manager && saved)) return false;
   try {
@@ -1510,7 +1485,6 @@ function applySavedStateRestore(manager, saved) {
     return false;
   }
 }
-
 function tryRestoreLatestSavedState(manager) {
   if (!manager) return false;
   var saved = resolveLatestSavedPayloadForRestore(manager);

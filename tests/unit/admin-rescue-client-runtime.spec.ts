@@ -441,6 +441,87 @@ describe("admin rescue client runtime", () => {
     expect(restoredElapsedMs).toBeGreaterThan(offer.duration_ms);
   });
 
+  it("persists rescue ranked session identifiers into the saved-state payload", async () => {
+    const rankedSessionToken = createRankedSessionToken({
+      v: "rs1",
+      sub: 17,
+      mode_key: "standard_4x4_pow2_no_undo",
+      challenge_id: "rescue-persist-session",
+      seed: 987654,
+      iat: 100,
+      exp: 3600
+    });
+    const offer = {
+      id: "rescue_persist_session",
+      board: [
+        [16, 64, 128, 32768],
+        [8, 2, 2, 0],
+        [4, 0, 0, 0],
+        [0, 2, 0, 0]
+      ],
+      score: 454348,
+      duration_ms: 5_981_479,
+      mode_key: "standard_4x4_pow2_no_undo",
+      challenge_id: "rescue-persist-session",
+      seed: 987654,
+      ranked_session_token: rankedSessionToken,
+      timer_fixed_rows: {
+        "32768": {
+          timerText: "1:39:11.334",
+          legendText: "32768",
+          legendClass: "timertile timer-legend-32768",
+          legendFontSize: "13px"
+        }
+      }
+    };
+    const savedPayloads: Array<Record<string, unknown>> = [];
+    const applySavedStateRestore = vi.fn((_manager: Record<string, unknown>, saved: Record<string, unknown>) => {
+      savedPayloads.push(saved);
+      return true;
+    });
+    const context = loadRuntime({ applySavedStateRestore });
+    context.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: [offer] })
+    });
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      modeConfig: {},
+      rankPolicy: "ranked",
+      rankedSessionToken: "old-token",
+      challengeId: "old-challenge",
+      initialSeed: 1,
+      seed: 1,
+      score: 0,
+      moveHistory: [],
+      spawnValueCounts: {},
+      restartWithBoard: vi.fn(),
+      setRuntimeScore(value: number) {
+        this.score = value;
+      },
+      getFinalBoardMatrix() {
+        return offer.board;
+      },
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      },
+      actuate: vi.fn(),
+      startTimer: vi.fn(),
+      saveGameState: vi.fn()
+    };
+
+    await context.AdminRescueClientRuntime.checkAndOfferRescue(manager);
+
+    expect(savedPayloads[0]).toEqual(
+      expect.objectContaining({
+        challenge_id: "rescue-persist-session",
+        ranked_session_token: rankedSessionToken,
+        initial_seed: 987654,
+        seed: 987654
+      })
+    );
+  });
+
   it("derives replay and stats fields from a v1 replay string", async () => {
     const context = loadRuntime(
       {

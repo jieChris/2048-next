@@ -281,6 +281,11 @@
   }
 
   var SAVED_STATE_OFFER_KEYS = [
+    "mode_key",
+    "challenge_id",
+    "ranked_session_token",
+    "initial_seed",
+    "seed",
     "timer_status",
     "timer_frozen",
     "timer_started_at_ms",
@@ -341,6 +346,19 @@
       var value = readOfferValue(offer, key);
       if (value !== undefined) saved[key] = value;
     }
+    if (!saved.mode_key && manager && manager.modeKey) saved.mode_key = manager.modeKey;
+    if (!saved.challenge_id && manager && manager.challengeId) saved.challenge_id = manager.challengeId;
+    if (!saved.ranked_session_token && manager && manager.rankedSessionToken) {
+      saved.ranked_session_token = manager.rankedSessionToken;
+    }
+    if (saved.initial_seed === undefined && manager && Number.isFinite(Number(manager.initialSeed))) {
+      saved.initial_seed = Number(manager.initialSeed);
+    }
+    if (saved.seed === undefined && manager && Number.isFinite(Number(manager.seed))) {
+      saved.seed = Number(manager.seed);
+    }
+    if (saved.initial_seed === undefined && saved.seed !== undefined) saved.initial_seed = saved.seed;
+    if (saved.seed === undefined && saved.initial_seed !== undefined) saved.seed = saved.initial_seed;
     if (!saved.initial_board_matrix && manager && typeof manager.getFinalBoardMatrix === "function") {
       saved.initial_board_matrix = manager.getFinalBoardMatrix();
     }
