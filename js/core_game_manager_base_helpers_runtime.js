@@ -454,8 +454,7 @@ function resolveSecondaryTimerIndentLevel(parentValue, childValue) {
 
 function resolveSecondaryTimerLegendFontSize(value) {
   var slotValue = normalizeSecondaryTimerValue(value) || 2048;
-  if (slotValue >= 65536) return "12px";
-  if (slotValue >= 16384) return "13px";
+  if (slotValue >= 16384) return "11px";
   if (slotValue >= 1024) return "14px";
   if (slotValue >= 128) return "18px";
   return "22px";

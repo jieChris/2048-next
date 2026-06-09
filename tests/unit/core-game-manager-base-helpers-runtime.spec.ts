@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 type MockElement = {
   id?: string;
+  className?: string;
   nodeType?: number;
   style: Record<string, string>;
   parentNode: MockElement | null;
@@ -124,7 +125,7 @@ function createContainerElement() {
   return container;
 }
 
-function loadBaseHelpersRuntime(slotIds: number[]) {
+function loadBaseHelpersRuntime(slotIds: number[], options?: { documentLike?: { createElement: (tagName: string) => MockElement } }) {
   const scriptPath = path.resolve(process.cwd(), "js/core_game_manager_base_helpers_runtime.js");
   const script = readFileSync(scriptPath, "utf8");
   const context = {
@@ -137,7 +138,7 @@ function loadBaseHelpersRuntime(slotIds: number[]) {
       return Object.prototype.hasOwnProperty.call(elements, id) ? elements[id] : null;
     },
     resolveManagerDocumentLike() {
-      return null;
+      return options?.documentLike || null;
     }
   } as Record<string, unknown>;
 
@@ -626,6 +627,53 @@ describe("core game manager base helpers runtime", () => {
     expect(resolved).toBe(detachedRow);
     expect(detachedRow.parentNode).toBe(targetContainer);
     expect(targetContainer.children?.includes(detachedRow)).toBe(true);
+  });
+
+  it("uses compact left legend font sizes for five-digit secondary timer rows", () => {
+    function createDocumentElement(tagName: string) {
+      const element = createContainerElement();
+      element.tagName = tagName;
+      element.setAttribute = (name: string, value: string) => {
+        (element as MockElement & { attrs?: Record<string, string> }).attrs = {
+          ...((element as MockElement & { attrs?: Record<string, string> }).attrs || {}),
+          [String(name)]: String(value)
+        };
+      };
+      element.getAttribute = (name: string) =>
+        ((element as MockElement & { attrs?: Record<string, string> }).attrs || {})[String(name)] || null;
+      return element;
+    }
+    const runtime = loadBaseHelpersRuntime([32768, 65536], {
+      documentLike: {
+        createElement: createDocumentElement
+      }
+    });
+    const targetContainer = createContainerElement();
+    const manager = {
+      elements: {}
+    };
+
+    const row32768 = runtime.ensureSecondaryTimerDescriptorRow(
+      manager,
+      targetContainer,
+      "timer-row-secondary-65536-32768",
+      65536,
+      32768
+    ) as MockElement;
+    const row16384 = runtime.ensureSecondaryTimerDescriptorRow(
+      manager,
+      targetContainer,
+      "timer-row-secondary-32768-16384",
+      32768,
+      16384
+    ) as MockElement;
+
+    const legend32768 = row32768.children?.[0] as MockElement;
+    const legend16384 = row16384.children?.[0] as MockElement;
+    expect(legend32768.className).toBe("timertile timer-secondary-legend timer-legend-32768");
+    expect(legend32768.style.fontSize).toBe("11px");
+    expect(legend16384.className).toBe("timertile timer-secondary-legend timer-legend-16384");
+    expect(legend16384.style.fontSize).toBe("11px");
   });
 
   it("removes only canonical stale secondary rows during descriptor refresh", () => {
