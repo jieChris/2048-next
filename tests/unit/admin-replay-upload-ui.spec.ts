@@ -13,6 +13,17 @@ describe("admin replay rescue upload UI", () => {
     expect(page).toContain("/admin/rescue-offers/from-replay");
   });
 
+  it("exposes a readable rescue offer history view", () => {
+    const root = process.cwd();
+    const html = readFileSync(resolve(root, "admin.html"), "utf8");
+    const page = readFileSync(resolve(root, "src/pages/admin-page.ts"), "utf8");
+
+    expect(html).toContain('id="admin-rescue-history"');
+    expect(page).toContain('renderRescueOfferHistory');
+    expect(page).toContain('game_progress_status');
+    expect(page).toContain('final_record_id');
+  });
+
   it("gates the admin page before authorization is confirmed", () => {
     const root = process.cwd();
     const html = readFileSync(resolve(root, "admin.html"), "utf8");

@@ -767,8 +767,8 @@
       manager.initialBoardMatrix = manager.getFinalBoardMatrix();
       manager.replayStartBoardMatrix = manager.getFinalBoardMatrix();
     }
-    applyOfferSavedStatePayload(manager, offer, board, score, durationMs);
     applyOfferReplayStateToManager(manager, offer);
+    applyOfferSavedStatePayload(manager, offer, board, score, durationMs);
     if (typeof manager.startTimer === "function") manager.startTimer();
     if (typeof manager.actuate === "function") manager.actuate();
     if (typeof manager.saveGameState === "function") manager.saveGameState({ force: true, forceFull: true });

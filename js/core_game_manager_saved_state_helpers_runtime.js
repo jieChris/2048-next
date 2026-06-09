@@ -590,7 +590,9 @@ function applySavedTimerRowLegendState(manager, row, legend, rowState, cappedSta
     legend.className = rowState.legendClass;
   }
   if (typeof rowState.legendText === "string") legend.textContent = rowState.legendText;
-  legend.style.fontSize = typeof rowState.legendFontSize === "string" ? rowState.legendFontSize : "";
+  if (typeof rowState.legendFontSize === "string" && rowState.legendFontSize) {
+    legend.style.fontSize = rowState.legendFontSize;
+  }
 }
 function applySavedDynamicTimerRowsState(manager, container, rowsState, cappedStateForRestore) {
   if (!manager || !container) return;

@@ -203,6 +203,98 @@ function renderTable(target: HTMLElement | null, payload: unknown): void {
   target.innerHTML = '<table class="admin-result-table"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
 }
 
+function formatDateTime(value: unknown): string {
+  const text = toText(value).trim();
+  if (!text) return "";
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return text;
+  return date.toLocaleString("zh-CN", { hour12: false });
+}
+
+function formatDurationMs(value: unknown): string {
+  const ms = Math.floor(Number(value));
+  if (!Number.isFinite(ms) || ms < 0) return "";
+  const seconds = Math.floor(ms / 1000);
+  const milli = String(ms % 1000).padStart(3, "0");
+  const s = seconds % 60;
+  const minutes = Math.floor(seconds / 60);
+  const m = minutes % 60;
+  const h = Math.floor(minutes / 60);
+  if (h > 0) return h + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0") + "." + milli;
+  if (minutes > 0) return minutes + ":" + String(s).padStart(2, "0") + "." + milli;
+  return s + "." + milli;
+}
+
+function rescueStatusLabel(status: unknown): string {
+  switch (toText(status)) {
+    case "pending": return "待处理";
+    case "accepted": return "已接受";
+    case "consumed": return "已应用";
+    case "rejected": return "已拒绝";
+    case "expired": return "已过期";
+    default: return toText(status) || "未知";
+  }
+}
+
+function gameProgressLabel(status: unknown): string {
+  switch (toText(status)) {
+    case "not_started": return "未开始";
+    case "accepted_not_applied": return "已接受未应用";
+    case "applied_no_ranked_session": return "已应用，未关联排位会话";
+    case "in_progress": return "游戏进行中";
+    case "finished": return "已结束";
+    case "rejected": return "已拒绝";
+    case "expired": return "已过期";
+    case "abandoned": return "已废弃";
+    default: return toText(status) || "未知";
+  }
+}
+
+function renderStatusPill(text: string, rawStatus: unknown): string {
+  const status = toText(rawStatus).replace(/[^a-z0-9_-]/gi, "-").toLowerCase() || "unknown";
+  return '<span class="admin-status-pill admin-status-' + escapeHtml(status) + '">' + escapeHtml(text) + '</span>';
+}
+
+function renderRescueOfferHistory(target: HTMLElement | null, payload: unknown): void {
+  if (!target) return;
+  const rows = normalizeRows(payload);
+  if (!rows.length) {
+    target.innerHTML = '<div class="admin-empty-state">暂无恢复单记录</div>';
+    return;
+  }
+  const body = rows.map((row) => {
+    const user = "#" + formatCell(row.user_id) + (row.target_nickname ? " / " + formatCell(row.target_nickname) : "");
+    const rescueStatus = toText(row.rescue_status || row.status);
+    const progressStatus = toText(row.game_progress_status);
+    const finalScore = row.final_score == null || row.final_score === "" ? "" : formatCell(row.final_score);
+    const finalRecordId = toText(row.final_record_id);
+    const sessionId = toText(row.game_session_id || row.challenge_id);
+    return "<tr>" +
+      "<td>" + escapeHtml(formatDateTime(row.created_at)) + "</td>" +
+      '<td class="admin-mono-cell" title="' + escapeHtml(toText(row.id)) + '">' + escapeHtml(toText(row.id)) + "</td>" +
+      "<td>" + escapeHtml(user) + "</td>" +
+      "<td>" + escapeHtml(formatCell(row.mode_key)) + "</td>" +
+      "<td>" + escapeHtml(formatCell(row.score)) + "</td>" +
+      "<td>" + escapeHtml(formatDurationMs(row.duration_ms)) + "</td>" +
+      "<td>" + renderStatusPill(rescueStatusLabel(rescueStatus), rescueStatus) + "</td>" +
+      "<td>" + renderStatusPill(gameProgressLabel(progressStatus), progressStatus) + "</td>" +
+      "<td>" + escapeHtml(finalScore) + "</td>" +
+      '<td class="admin-mono-cell" title="' + escapeHtml(finalRecordId) + '">' + escapeHtml(finalRecordId) + "</td>" +
+      '<td class="admin-mono-cell" title="' + escapeHtml(sessionId) + '">' + escapeHtml(sessionId) + "</td>" +
+      "<td>" + escapeHtml(formatDateTime(row.accepted_at)) + "</td>" +
+      "<td>" + escapeHtml(formatDateTime(row.rejected_at)) + "</td>" +
+      "<td>" + escapeHtml(formatDateTime(row.game_finished_at || row.final_ended_at)) + "</td>" +
+    "</tr>";
+  }).join("");
+  target.innerHTML =
+    '<table class="admin-result-table admin-rescue-history-table">' +
+      "<thead><tr>" +
+        "<th>签发时间</th><th>恢复单</th><th>用户</th><th>模式</th><th>恢复分数</th><th>恢复时长</th>" +
+        "<th>恢复单状态</th><th>对局状态</th><th>最终分数</th><th>最终记录</th><th>会话</th>" +
+        "<th>接受时间</th><th>拒绝时间</th><th>结束时间</th>" +
+      "</tr></thead><tbody>" + body + "</tbody></table>";
+}
+
 function fillTableSelect(payload: unknown): void {
   const select = byId<HTMLSelectElement>("admin-table-select");
   if (!select) return;
@@ -396,6 +488,7 @@ async function createRescueOffer(): Promise<void> {
   rescueSubmitInFlight = true;
   setButtonBusy("admin-create-rescue", true);
   setTip(byId("admin-rescue-tip"), "\u6b63\u5728\u7b7e\u53d1\u6062\u590d\u5355...", "busy");
+  renderRescueOfferHistory(byId("admin-rescue-history"), []);
   renderOutput(byId("admin-rescue-output"), { status: "submitting", payload });
   try {
     const result = await apiRequest("/admin/rescue-offers", { method: "POST", body: JSON.stringify(payload) });
@@ -438,6 +531,7 @@ async function createRescueOfferFromReplay(): Promise<void> {
   rescueSubmitInFlight = true;
   setButtonBusy("admin-create-rescue-from-replay", true);
   setTip(byId("admin-rescue-tip"), "\u6b63\u5728\u89e3\u6790\u56de\u653e\u5e76\u7b7e\u53d1\u6062\u590d\u5355...", "busy");
+  renderRescueOfferHistory(byId("admin-rescue-history"), []);
   renderOutput(byId("admin-rescue-output"), { status: "submitting_replay", target_user: targetUser, mode_key: modeKey });
   try {
     const result = await apiRequest("/admin/rescue-offers/from-replay", { method: "POST", body: JSON.stringify(payload) });
@@ -475,6 +569,7 @@ async function listRescueOffers(): Promise<void> {
   setTip(byId("admin-rescue-tip"), "\u6b63\u5728\u67e5\u770b\u6062\u590d\u5355...", "busy");
   try {
     const result = await apiRequest(path, { method: "GET" });
+    renderRescueOfferHistory(byId("admin-rescue-history"), result);
     renderOutput(byId("admin-rescue-output"), result);
     const rowCount = normalizeRows(result).length;
     setTip(byId("admin-rescue-tip"), result.success === false ? "\u67e5\u770b\u5931\u8d25\uff1a" + getErrorMessage(result, "unknown") : "\u5df2\u8fd4\u56de " + rowCount + " \u6761\u6062\u590d\u5355", result.success === false ? "err" : "ok", result.success === false ? 0 : 3500);
