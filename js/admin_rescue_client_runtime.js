@@ -763,6 +763,16 @@
     applyRankedSessionStateToManager(manager, resolveRankedSessionStateFromOffer(manager, offer, replayState));
   }
 
+  function resetRescueSubmitIdentity(manager) {
+    if (!manager) return;
+    manager.sessionSubmitDone = false;
+    if (typeof assignManagerClientRecordId === "function") {
+      assignManagerClientRecordId(manager, "");
+    } else {
+      manager.clientRecordId = "";
+    }
+  }
+
   function resolveReasonFromOffer(offer) {
     var raw = toText(offer && offer.reason).trim();
     return raw || resolveCopy().defaultReason;
@@ -805,6 +815,7 @@
     }
     applyOfferReplayStateToManager(manager, offer);
     applyOfferSavedStatePayload(manager, offer, board, score, durationMs);
+    resetRescueSubmitIdentity(manager);
     if (typeof manager.startTimer === "function") manager.startTimer();
     if (typeof manager.actuate === "function") manager.actuate();
     if (typeof manager.saveGameState === "function") manager.saveGameState({ force: true, forceFull: true });

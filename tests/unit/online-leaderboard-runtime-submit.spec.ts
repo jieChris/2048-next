@@ -408,6 +408,46 @@ describe("online leaderboard terminal submission", () => {
     });
   });
 
+  it("submits repeated recovered records when a new client record id distinguishes the session", async () => {
+    const manager = createTerminatedManager({
+      serialize: vi.fn(() => {
+        throw new Error("replay_v1_unavailable");
+      }),
+      serializeV3: vi.fn(() => null),
+      rescueReplayString: "REPLAY_v1RPL_B64_same_rescue",
+      clientRecordId: "rec_rescue_first"
+    });
+    const recordPayloads: Record<string, unknown>[] = [];
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records")) {
+          recordPayloads.push(init.body ? (JSON.parse(init.body) as Record<string, unknown>) : {});
+          return createJsonResponse({ success: true, data: { id: `record-${recordPayloads.length}` } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    manager.clientRecordId = "rec_rescue_second";
+    manager.sessionSubmitDone = false;
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.filter((call) => call.url.endsWith("/records"))).toHaveLength(2);
+    expect(recordPayloads.map((payload) => payload.client_record_id)).toEqual([
+      "rec_rescue_first",
+      "rec_rescue_second"
+    ]);
+    expect(recordPayloads.map((payload) => payload.replay_string)).toEqual([
+      "REPLAY_v1RPL_B64_same_rescue",
+      "REPLAY_v1RPL_B64_same_rescue"
+    ]);
+  });
+
   it("uses keepalive when flushing terminal record during pagehide", async () => {
     const manager = createTerminatedManager();
     const runtime = loadOnlineLeaderboardRuntime({

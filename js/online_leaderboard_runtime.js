@@ -2924,8 +2924,13 @@ async function refreshLeaderboard(modeLike) {
     var seed = manager && manager.initialSeed != null ? String(manager.initialSeed) : "seedless";
     var score = Math.floor(Number(payload && payload.score) || 0);
     var moveCount = Array.isArray(manager && manager.moveHistory) ? manager.moveHistory.length : 0;
-    var replayFingerprint = buildReplaySubmitFingerprint(payload && payload.replay_string);
-    return [modeKey, seed, replayFingerprint, String(score), String(moveCount)].join("|");
+    var replayString = toText(payload && payload.replay_string);
+    var rescueReplayString = toText(manager && manager.rescueReplayString).trim();
+    var clientRecordId = rescueReplayString && replayString.trim() === rescueReplayString
+      ? toText(payload && payload.client_record_id).trim()
+      : "";
+    var replayFingerprint = buildReplaySubmitFingerprint(replayString);
+    return [modeKey, seed, clientRecordId, replayFingerprint, String(score), String(moveCount)].join("|");
   }
 
   function shouldSkipLegacyScoreSubmit(manager) {

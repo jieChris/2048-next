@@ -156,6 +156,65 @@ describe("admin rescue client runtime", () => {
     expect(manager.rescueReplayString).toBe("REPLAY_v1RPL_B64_demo");
   });
 
+  it("starts each accepted rescue offer as a new submittable session", async () => {
+    const offer = {
+      id: "rescue_new_session",
+      board: [
+        [16, 64, 128, 32768],
+        [8, 2, 2, 0],
+        [4, 0, 0, 0],
+        [0, 2, 0, 0]
+      ],
+      score: 454348,
+      duration_ms: 12077797,
+      payload: {
+        saved_state: {
+          client_record_id: "rec_from_rescue_payload"
+        }
+      },
+      replay_string: "REPLAY_v1RPL_B64_demo"
+    };
+    const context = loadRuntime({
+      assignManagerClientRecordId: vi.fn((manager: Record<string, unknown>) => {
+        manager.clientRecordId = "rec_new_rescue_session";
+        return "rec_new_rescue_session";
+      })
+    });
+    context.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: [offer] })
+    });
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      modeConfig: {},
+      score: 0,
+      clientRecordId: "rec_previous_session",
+      sessionSubmitDone: true,
+      moveHistory: [],
+      replayCompactLog: "",
+      spawnValueCounts: {},
+      successfulMoveCount: 0,
+      undoUsed: 0,
+      restartWithBoard: vi.fn(),
+      setRuntimeScore(value: number) {
+        this.score = value;
+      },
+      getFinalBoardMatrix() {
+        return offer.board;
+      },
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      },
+      actuate: vi.fn(),
+      saveGameState: vi.fn()
+    };
+
+    await context.AdminRescueClientRuntime.checkAndOfferRescue(manager);
+
+    expect(manager.sessionSubmitDone).toBe(false);
+    expect(manager.clientRecordId).toBe("rec_new_rescue_session");
+  });
+
   it("restores timer row state from a rescue offer saved-state payload", async () => {
     const offer = {
       id: "rescue_timer_rows",
