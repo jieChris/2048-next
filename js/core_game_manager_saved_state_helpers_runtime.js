@@ -689,17 +689,11 @@ function applySavedManagerReplayState(manager, saved) {
   }
   manager.replayCompactLog = typeof saved.replay_compact_log === "string" ? saved.replay_compact_log : "";
   var savedReplayString = typeof saved.replay_string === "string" ? saved.replay_string.trim() : "";
-  if (savedReplayString) {
-    manager.rescueReplayString = savedReplayString;
-  } else if (typeof manager.rescueReplayString !== "string") {
-    manager.rescueReplayString = "";
-  }
+  if (savedReplayString) manager.rescueReplayString = savedReplayString;
+  else if (typeof manager.rescueReplayString !== "string") manager.rescueReplayString = "";
   var savedSessionReplayV1 = normalizeSavedReplayV1Session(manager, saved.session_replay_v1);
-  if (savedSessionReplayV1) {
-    manager.sessionReplayV1 = savedSessionReplayV1;
-  } else if (!manager.sessionReplayV1 && Object.prototype.hasOwnProperty.call(saved, "session_replay_v1")) {
-    manager.sessionReplayV1 = null;
-  }
+  if (savedSessionReplayV1) manager.sessionReplayV1 = savedSessionReplayV1;
+  else if (!manager.sessionReplayV1 && Object.prototype.hasOwnProperty.call(saved, "session_replay_v1")) manager.sessionReplayV1 = null;
   manager.sessionReplayV3 = isNonArrayObject(saved.session_replay_v3)
     ? manager.clonePlain(saved.session_replay_v3)
     : manager.sessionReplayV3;
@@ -1091,27 +1085,23 @@ function buildSavedGameStateReplayStatePayload(manager, now, saveOptions) {
   };
 }
 
+function normalizeSavedTimerMs(value) {
+  var numeric = Number(value);
+  return Number.isFinite(numeric) && numeric >= 0 ? Math.floor(numeric) : null;
+}
+
 function buildSavedGameStateTimerCorePayload(manager) {
   var isTerminatedState = !!(manager.over || (manager.won && !manager.keepPlaying));
   var timerStartedAtMs = manager.startTime && typeof manager.startTime.getTime === "function"
     ? manager.startTime.getTime()
-    : (Number.isFinite(Number(manager.timerStartedAtMs)) ? Math.floor(Number(manager.timerStartedAtMs)) : null);
-  var timerElapsedOffsetMs = Number(manager.timerElapsedOffsetMs);
-  var timerAnchorLocalMs = Number(manager.timerAnchorLocalMs);
-  var timerAnchorServerMs = Number(manager.timerAnchorServerMs);
+    : normalizeSavedTimerMs(manager.timerStartedAtMs);
   return {
     timer_status: isTerminatedState ? 0 : (manager.timerStatus === 1 ? 1 : 0),
     duration_ms: manager.getDurationMs(),
     timer_started_at_ms: isTerminatedState ? null : timerStartedAtMs,
-    timer_elapsed_offset_ms: isTerminatedState || !Number.isFinite(timerElapsedOffsetMs) || timerElapsedOffsetMs < 0
-      ? null
-      : Math.floor(timerElapsedOffsetMs),
-    timer_anchor_local_ms: isTerminatedState || !Number.isFinite(timerAnchorLocalMs) || timerAnchorLocalMs < 0
-      ? null
-      : Math.floor(timerAnchorLocalMs),
-    timer_anchor_server_ms: isTerminatedState || !Number.isFinite(timerAnchorServerMs) || timerAnchorServerMs < 0
-      ? null
-      : Math.floor(timerAnchorServerMs),
+    timer_elapsed_offset_ms: isTerminatedState ? null : normalizeSavedTimerMs(manager.timerElapsedOffsetMs),
+    timer_anchor_local_ms: isTerminatedState ? null : normalizeSavedTimerMs(manager.timerAnchorLocalMs),
+    timer_anchor_server_ms: isTerminatedState ? null : normalizeSavedTimerMs(manager.timerAnchorServerMs),
     has_game_started: !!manager.hasGameStarted,
     timer_frozen: isTerminatedState
   };
