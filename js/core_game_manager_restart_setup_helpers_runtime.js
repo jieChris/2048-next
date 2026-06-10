@@ -685,11 +685,19 @@ function resetSetupReplayAndSpawnState(manager) {
 }
 
 function resetSetupTimerAndInputState(manager) {
+  if (manager.timerID !== null && typeof manager.timerID !== "undefined" && typeof clearInterval === "function") {
+    clearInterval(manager.timerID);
+  }
   manager.timerStatus = 0;
   manager.startTime = null;
   manager.timerID = null;
   manager.time = 0;
   manager.accumulatedTime = 0;
+  manager.timerElapsedOffsetMs = 0;
+  manager.timerAnchorLocalMs = null;
+  manager.timerAnchorServerMs = null;
+  manager.pendingTimerAnchorServerMs = null;
+  manager.timerUpdateIntervalMs = null;
   manager.timerFrozen = false;
   manager.pendingMoveInput = null;
   manager.moveInputFlushScheduled = false;

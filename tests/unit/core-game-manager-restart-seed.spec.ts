@@ -9,6 +9,7 @@ type RestartSeedRuntime = {
     manager: Record<string, unknown> | null,
     inputSeed?: unknown
   ) => { hasInputSeed: boolean; rankedSessionContext?: Record<string, unknown> | null };
+  resetSetupTimerAndInputState: (manager: Record<string, unknown>) => void;
 };
 
 function loadRestartSeedRuntime(options?: {
@@ -34,6 +35,7 @@ function loadRestartSeedRuntime(options?: {
     Math: math,
     Uint32Array,
     crypto: options?.globalCrypto || null,
+    clearInterval: vi.fn(),
     Date: { now: dateNow },
     performance: { now: performanceNow }
   } as Record<string, unknown>;
@@ -187,5 +189,39 @@ describe("core game manager restart seed runtime", () => {
     expect(manager.replayMode).toBe(false);
     expect(cryptoLike.getRandomValues).not.toHaveBeenCalled();
     expect(mathRandom).not.toHaveBeenCalled();
+  });
+
+  it("clears restored timer offsets and anchors when setting up a fresh game", () => {
+    const { runtime } = loadRestartSeedRuntime();
+    const manager = {
+      timerStatus: 1,
+      startTime: new Date(100_000),
+      timerID: 99,
+      time: 45_000,
+      accumulatedTime: 45_000,
+      timerElapsedOffsetMs: 45_000,
+      timerAnchorLocalMs: 100_000,
+      timerAnchorServerMs: 90_000,
+      pendingTimerAnchorServerMs: 95_000,
+      timerFrozen: true,
+      pendingMoveInput: { direction: 1 },
+      moveInputFlushScheduled: true,
+      lastMoveInputAt: 123,
+      moveDeadlineAt: 456
+    } as Record<string, unknown>;
+
+    runtime.resetSetupTimerAndInputState(manager);
+
+    expect((runtime as unknown as { clearInterval: ReturnType<typeof vi.fn> }).clearInterval).toHaveBeenCalledWith(99);
+    expect(manager.timerStatus).toBe(0);
+    expect(manager.startTime).toBeNull();
+    expect(manager.timerID).toBeNull();
+    expect(manager.time).toBe(0);
+    expect(manager.accumulatedTime).toBe(0);
+    expect(manager.timerElapsedOffsetMs).toBe(0);
+    expect(manager.timerAnchorLocalMs).toBeNull();
+    expect(manager.timerAnchorServerMs).toBeNull();
+    expect(manager.pendingTimerAnchorServerMs).toBeNull();
+    expect(manager.timerFrozen).toBe(false);
   });
 });
