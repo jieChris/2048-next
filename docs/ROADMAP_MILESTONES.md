@@ -1,3 +1,24 @@
+# Stage-1 Legacy Retirement Delta (2026-06-13)
+
+## Phase Decision
+- `WS4-03-next`
+  - status: in_progress
+  - progress: `modes-page.ts` removed one legacy page import, retained the saved night background visual contract, and left page smoke passing
+- `WS6-01A`
+  - status: in_progress
+  - progress: operational page direct storage/API exceptions moved into typed `services/storage` owners
+- `Refactor gate`
+  - status: passing
+  - progress: prepush audit blockers in replay autosubmit and saved-state helper size were reduced without behavior changes
+
+## Evidence
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npm run audit:service-boundary`
+- targeted Vitest suites for `browser-storage`, `api-client`, and `stone-2k-monitor`
+- `npm run test:smoke:pages`
+- `npm run build`
+- `npm run verify:prepush`
+
 # A-F Collaborative Delta (2026-03-22, Batch-WS4-03)
 
 ## Phase Decision

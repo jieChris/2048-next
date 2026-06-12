@@ -1647,23 +1647,29 @@ function createAutoSubmitReplayWrapper(replayString) {
   };
 }
 
-function resolveAutoSubmitReplayPayload(manager) {
+function resolveAutoSubmitReplayString(manager) {
   var replayString = "";
   try {
     replayString = String(serializeReplay(manager) || "").trim();
   } catch (_err) {
     replayString = "";
   }
-  if (!replayString) replayString = resolveAutoSubmitRescueReplayString(manager);
+  return replayString || resolveAutoSubmitRescueReplayString(manager);
+}
 
+function resolveAutoSubmitReplayObject(manager, replayString) {
   var replay = null;
   try {
     replay = serializeReplayV3(manager);
   } catch (_err2) {
     replay = null;
   }
-  if (!replay && replayString) replay = createAutoSubmitReplayWrapper(replayString);
+  return replay || createAutoSubmitReplayWrapper(replayString);
+}
 
+function resolveAutoSubmitReplayPayload(manager) {
+  var replayString = resolveAutoSubmitReplayString(manager);
+  var replay = resolveAutoSubmitReplayObject(manager, replayString);
   return {
     replay: replay,
     replayString: replayString

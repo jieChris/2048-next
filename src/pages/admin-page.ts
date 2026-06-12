@@ -1,15 +1,7 @@
-﻿import "../../js/api_shared_utils.js";
+﻿import { createAdminService } from "../services/admin-rescue";
 
 type JsonRecord = Record<string, unknown>;
 type TipState = "ok" | "err" | "busy" | "idle";
-
-type ApiSharedUtilsLike = {
-  buildApiBaseCandidates?: () => string[];
-};
-
-type AdminWindow = Window & {
-  ApiSharedUtils?: ApiSharedUtilsLike;
-};
 
 type RescueModeOption = {
   label: string;
@@ -17,8 +9,6 @@ type RescueModeOption = {
   modeBucket: string;
 };
 
-const AUTH_TOKEN_KEY = "2048_auth_token_v1";
-const REMOTE_API_BASE = "https://2048next.cn/api";
 const ADMIN_DENIED_REDIRECT = "account.html?admin_required=1";
 const RESCUE_MODE_OPTIONS: RescueModeOption[] = [
   { label: "4x4 \u65e0\u64a4\u56de", modeKey: "standard_4x4_pow2_no_undo", modeBucket: "standard_no_undo" },
@@ -91,43 +81,18 @@ async function readSelectedFileText(id: string): Promise<string> {
   return (await file.text()).trim();
 }
 
-function getAuthToken(): string {
-  try {
-    return window.localStorage.getItem(AUTH_TOKEN_KEY) || "";
-  } catch (_err) {
-    return "";
-  }
-}
-
-function getApiBases(): string[] {
-  const win = window as AdminWindow;
-  const bases = [...(win.ApiSharedUtils?.buildApiBaseCandidates?.() || [])];
-  if (!bases.includes(REMOTE_API_BASE)) bases.push(REMOTE_API_BASE);
-  return bases.length ? bases : [window.location.origin + "/api", REMOTE_API_BASE];
-}
-
 function getErrorMessage(result: JsonRecord | null | undefined, fallback: string): string {
   return toText(result?.error || result?.message || result?.code || fallback);
 }
 
+function createAdminPageService() {
+  return createAdminService({
+    windowLike: typeof window === "undefined" ? null : window
+  });
+}
+
 async function apiRequest(path: string, options: RequestInit = {}): Promise<JsonRecord> {
-  const token = getAuthToken();
-  if (!token) return { success: false, code: "NO_TOKEN", error: "\u672a\u767b\u5f55\u6216 token \u4e0d\u5b58\u5728" };
-  let lastError = "api_unavailable";
-  for (const base of getApiBases()) {
-    try {
-      const headers = new Headers(options.headers || {});
-      headers.set("Authorization", "Bearer " + token);
-      if (options.body !== undefined && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-      const response = await fetch(base + path, { ...options, headers });
-      const data = (await response.json().catch(() => null)) as JsonRecord | null;
-      if (data) return data;
-      lastError = toText(response.statusText || response.status);
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
-    }
-  }
-  return { success: false, error: lastError };
+  return createAdminPageService().request(path, options);
 }
 
 function clearTip(node: HTMLElement | null): void {

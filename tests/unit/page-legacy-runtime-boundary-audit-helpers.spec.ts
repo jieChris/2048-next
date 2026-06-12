@@ -118,4 +118,13 @@ describe("page-legacy-runtime-boundary-audit helpers", () => {
       /unexpected legacy page imports/
     );
   });
+
+  it("keeps operational TS pages out of the legacy api shared utils allowlist", () => {
+    expect(PAGE_LEGACY_IMPORT_ALLOWLIST["admin-page.ts"]).toBeUndefined();
+    expect(PAGE_LEGACY_IMPORT_ALLOWLIST["stone-2k-monitor-page.ts"]).toBeUndefined();
+  });
+
+  it("keeps modes page out of the legacy page import allowlist", () => {
+    expect(PAGE_LEGACY_IMPORT_ALLOWLIST["modes-page.ts"]).toBeUndefined();
+  });
 });

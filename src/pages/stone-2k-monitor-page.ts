@@ -1,12 +1,10 @@
-import "../../js/api_shared_utils.js";
-
-type ApiSharedUtilsLike = {
-  buildApiBaseCandidates?: () => string[];
-};
-
-type MonitorWindow = Window & {
-  ApiSharedUtils?: ApiSharedUtilsLike;
-};
+import {
+  createBrowserStorageAccess,
+  readStorageValue,
+  removeStorageValue,
+  writeStorageValue
+} from "../storage/browser-storage";
+import { createStone2kMonitorService } from "../services/stone-2k-monitor";
 
 type Capped2kRun = {
   id?: unknown;
@@ -34,9 +32,7 @@ type ApiResult = {
 type StatusState = "idle" | "busy" | "ok" | "err";
 type LockState = "locked" | "unlocked";
 
-const REMOTE_API_BASE = "https://2048next.cn/api";
 const REFRESH_INTERVAL_MS = 15000;
-const REQUEST_TIMEOUT_MS = 10000;
 const MONITOR_ACCESS_PASSCODE = "stone2k-_gjWBeZM7fDtML0SaQDr7ZKE3oa7c6pwi2f4qN13B7w";
 const MONITOR_ACCESS_STORAGE_KEY = "stone-2k-monitor.access-granted";
 
@@ -94,28 +90,29 @@ function setButtonBusy(id: string, busy: boolean): void {
   button.toggleAttribute("aria-busy", busy);
 }
 
-function getApiBases(): string[] {
-  const win = window as MonitorWindow;
-  const bases = [...(win.ApiSharedUtils?.buildApiBaseCandidates?.() || [])];
-  if (!bases.includes(REMOTE_API_BASE)) bases.push(REMOTE_API_BASE);
-  return bases.length ? bases : [window.location.origin + "/api", REMOTE_API_BASE];
+function createMonitorService() {
+  return createStone2kMonitorService({
+    windowLike: typeof window === "undefined" ? null : window
+  });
 }
 
 function hasStoredAccess(): boolean {
-  try {
-    return window.sessionStorage.getItem(MONITOR_ACCESS_STORAGE_KEY) === "granted";
-  } catch {
-    return false;
-  }
+  const storageAccess = createBrowserStorageAccess({
+    windowLike: typeof window === "undefined" ? null : window
+  });
+  return readStorageValue(storageAccess.session(), MONITOR_ACCESS_STORAGE_KEY) === "granted";
 }
 
 function setStoredAccess(granted: boolean): void {
-  try {
-    if (granted) window.sessionStorage.setItem(MONITOR_ACCESS_STORAGE_KEY, "granted");
-    else window.sessionStorage.removeItem(MONITOR_ACCESS_STORAGE_KEY);
-  } catch {
-    // noop
+  const storageAccess = createBrowserStorageAccess({
+    windowLike: typeof window === "undefined" ? null : window
+  });
+  const storageLike = storageAccess.session();
+  if (granted) {
+    writeStorageValue(storageLike, MONITOR_ACCESS_STORAGE_KEY, "granted");
+    return;
   }
+  removeStorageValue(storageLike, MONITOR_ACCESS_STORAGE_KEY);
 }
 
 function getLockState(): LockState {
@@ -182,27 +179,6 @@ function unlockMonitor(): void {
   setLockState("unlocked");
   setAccessMeta("unlocked");
   setGateError("");
-}
-
-async function apiGet(path: string): Promise<ApiResult> {
-  let lastError = "api_unavailable";
-  for (const base of getApiBases()) {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    try {
-      const response = await fetch(base + path, { method: "GET", signal: controller.signal });
-      const data = (await response.json().catch(() => null)) as ApiResult | null;
-      if (data) return data;
-      lastError = toText(response.statusText || response.status);
-    } catch (error) {
-      lastError = error instanceof DOMException && error.name === "AbortError"
-        ? "请求超时，请稍后重试"
-        : error instanceof Error ? error.message : String(error);
-    } finally {
-      window.clearTimeout(timeoutId);
-    }
-  }
-  return { success: false, error: lastError };
 }
 
 function normalizeRows(payload: ApiResult): Capped2kRun[] {
@@ -323,32 +299,20 @@ function renderTable(rows: Capped2kRun[]): void {
   renderSelected(selected);
 }
 
-function buildQueryPath(): string {
-  const params = new URLSearchParams();
-  const names = getInputValue("stone-filter-names");
-  const sortValue = getInputValue("stone-sort-by") || "score_desc";
-  const sortParts = sortValue.split("_");
-  const startAt = getInputValue("stone-start-at");
-  const endAt = getInputValue("stone-end-at");
-  const limit = Math.max(1, Math.min(200, Math.floor(toNumber(getInputValue("stone-filter-limit"), 50))));
-  params.set("limit", String(limit));
-  params.set("count", "true");
-  if (names) params.set("names", names);
-  params.set("sort_by", sortParts[0] === "time" ? "time" : "score");
-  params.set("sort_order", sortParts[1] === "asc" ? "asc" : "desc");
-  if (startAt) params.set("start_at", new Date(startAt).toISOString());
-  if (endAt) params.set("end_at", new Date(endAt).toISOString());
-  if (isChecked("stone-filter-latest")) params.set("latest_only", "true");
-  return "/stone-2k/runs?" + params.toString();
-}
-
 async function refreshRuns(): Promise<boolean> {
   if (refreshInFlight || getLockState() !== "unlocked") return false;
   refreshInFlight = true;
   setButtonBusy("stone-refresh", true);
   setStatus("正在刷新 2K 封顶成绩…", "busy");
   try {
-    const result = await apiGet(buildQueryPath());
+    const result = await createMonitorService().listRuns({
+      names: getInputValue("stone-filter-names"),
+      sortValue: getInputValue("stone-sort-by") || "score_desc",
+      startAt: getInputValue("stone-start-at"),
+      endAt: getInputValue("stone-end-at"),
+      limit: Math.floor(toNumber(getInputValue("stone-filter-limit"), 50)),
+      latestOnly: isChecked("stone-filter-latest")
+    });
     if (result.success !== true) {
       throw new Error(toText(result.error || result.message || result.code || "加载失败"));
     }

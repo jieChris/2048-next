@@ -135,20 +135,10 @@ function resolveWindowNameSavedCandidate(manager, windowLike) {
 function resolveSavedPayloadRichnessScore(payload) {
   if (!normalizeSavedStateRecordObject(payload, null)) return -1;
   var richnessKeys = [
-    "move_history",
-    "replay_compact_log",
-    "session_replay_v1",
-    "session_replay_v3",
-    "spawn_value_counts",
-    "replay_string",
-    "timer_fixed_rows",
-    "timer_dynamic_rows_capped",
-    "timer_dynamic_rows_overflow",
-    "timer_secondary_rows",
-    "timer_secondary_expanded_parents",
-    "timer_sub_8192",
-    "timer_sub_16384",
-    "timer_sub_visible"
+    "move_history", "replay_compact_log", "session_replay_v1", "session_replay_v3",
+    "spawn_value_counts", "replay_string", "timer_fixed_rows", "timer_dynamic_rows_capped",
+    "timer_dynamic_rows_overflow", "timer_secondary_rows", "timer_secondary_expanded_parents",
+    "timer_sub_8192", "timer_sub_16384", "timer_sub_visible"
   ];
   var score = 0;
   for (var keyIndex = 0; keyIndex < richnessKeys.length; keyIndex++) {
@@ -855,10 +845,9 @@ function applySavedManagerBoardSnapshotState(manager, saved) {
       : null;
   manager.practiceRestartModeConfig =
     isNonArrayObject(saved.practice_restart_mode_config)
-      ? manager.clonePlain(saved.practice_restart_mode_config)
-      : null;
+    ? manager.clonePlain(saved.practice_restart_mode_config)
+    : null;
 }
-
 function applySavedManagerCoreState(manager, saved) {
   if (!manager || !saved) return;
   applySavedManagerBaseState(manager, saved);
@@ -867,7 +856,6 @@ function applySavedManagerCoreState(manager, saved) {
   applySavedManagerTimerState(manager, saved);
   applySavedManagerBoardSnapshotState(manager, saved);
 }
-
 function applySavedTimerPostRestoreState(manager, saved, cappedStateForRestore) {
   if (!manager || !saved) return;
   normalizeCappedRepeatLegendClasses(manager, cappedStateForRestore);
@@ -880,7 +868,6 @@ function applySavedTimerPostRestoreState(manager, saved, cappedStateForRestore) 
     manager.startTimer();
   }
 }
-
 function applySavedTimerDomState(manager, saved, cappedStateForRestore) {
   if (!manager || !saved) return;
   var documentLike = resolveManagerDocumentLike(manager);
@@ -896,14 +883,12 @@ function applySavedTimerDomState(manager, saved, cappedStateForRestore) {
   }
   applySavedTimerSubState(manager, saved);
 }
-
 function resolveSavedTimerFixedRowLegendState(row) {
   var legend = row ? row.querySelector(".timertile") : null;
   return {
     legendText: legend ? (legend.textContent || "") : ""
   };
 }
-
 function resolveSavedTimerFixedRowVisibilityState(row) {
   var state = {
     display: row && row.style ? (row.style.display || "") : "",
@@ -1088,28 +1073,17 @@ function buildSavedGameStateDiagnosticsPayload(manager) {
 
 function buildSavedGameStateMetaPayload(manager, now) {
   return {
-    v: GameManager.SAVED_GAME_STATE_VERSION,
-    saved_at: now,
-    terminated: false,
-    mode_key: manager.modeKey,
-    board_width: manager.width,
-    board_height: manager.height,
-    ruleset: manager.ruleset
+    v: GameManager.SAVED_GAME_STATE_VERSION, saved_at: now, terminated: false,
+    mode_key: manager.modeKey, board_width: manager.width, board_height: manager.height, ruleset: manager.ruleset
   };
 }
 
 function buildSavedGameStateCoreStatePayload(manager) {
   return {
-    board: manager.getFinalBoardMatrix(),
-    score: manager.score,
-    over: manager.over,
-    won: manager.won,
-    keep_playing: manager.keepPlaying,
-    initial_seed: manager.initialSeed,
-    seed: manager.seed,
+    board: manager.getFinalBoardMatrix(), score: manager.score, over: manager.over, won: manager.won,
+    keep_playing: manager.keepPlaying, initial_seed: manager.initialSeed, seed: manager.seed,
     client_record_id: resolveManagerClientRecordId(manager),
-    spawn_value_counts: manager.spawnValueCounts || {},
-    reached_32k: !!manager.reached32k,
+    spawn_value_counts: manager.spawnValueCounts || {}, reached_32k: !!manager.reached32k,
     capped_milestone_count: Number.isInteger(manager.cappedMilestoneCount) ? manager.cappedMilestoneCount : 0,
     capped64_unlocked: manager.capped64Unlocked || null
   };
@@ -1148,10 +1122,8 @@ function buildSavedGameStateReplayStatePayload(manager, now, saveOptions) {
   return {
     move_history: Array.isArray(manager.moveHistory) ? manager.moveHistory : [],
     ips_input_count: Number.isInteger(manager.ipsInputCount) && manager.ipsInputCount >= 0 ? manager.ipsInputCount : 0,
-    undo_stack: Array.isArray(manager.undoStack) ? manager.undoStack : [],
-    redo_stack: Array.isArray(manager.redoStack) ? manager.redoStack : [],
-    replay_compact_log: manager.replayCompactLog || "",
-    session_replay_v1: cloneSavedReplaySessionState(manager, manager.sessionReplayV1, null),
+    undo_stack: Array.isArray(manager.undoStack) ? manager.undoStack : [], redo_stack: Array.isArray(manager.redoStack) ? manager.redoStack : [],
+    replay_compact_log: manager.replayCompactLog || "", session_replay_v1: cloneSavedReplaySessionState(manager, manager.sessionReplayV1, null),
     session_replay_v3: manager.sessionReplayV3 || null,
     replay_string: resolveReplayStringForSavedPayload(manager, now, saveOptions)
   };
@@ -1193,8 +1165,7 @@ function buildSavedGameStateProgressPayload(manager) {
   return {
     combo_streak: Number.isInteger(manager.comboStreak) ? manager.comboStreak : 0,
     successful_move_count: Number.isInteger(manager.successfulMoveCount) ? manager.successfulMoveCount : 0,
-    undo_used: Number.isInteger(manager.undoUsed) ? manager.undoUsed : 0,
-    challenge_id: manager.challengeId || null,
+    undo_used: Number.isInteger(manager.undoUsed) ? manager.undoUsed : 0, challenge_id: manager.challengeId || null,
     ranked_session_token: manager.rankedSessionToken || null
   };
 }
@@ -1202,8 +1173,7 @@ function buildSavedGameStateProgressPayload(manager) {
 function buildSavedGameStateDirectionLockPayload(manager) {
   return {
     lock_consumed_at_move_count: Number.isInteger(manager.lockConsumedAtMoveCount) ? manager.lockConsumedAtMoveCount : -1,
-    locked_direction_turn: Number.isInteger(manager.lockedDirectionTurn) ? manager.lockedDirectionTurn : null,
-    locked_direction: Number.isInteger(manager.lockedDirection) ? manager.lockedDirection : null
+    locked_direction_turn: Number.isInteger(manager.lockedDirectionTurn) ? manager.lockedDirectionTurn : null, locked_direction: Number.isInteger(manager.lockedDirection) ? manager.lockedDirection : null
   };
 }
 
@@ -1211,8 +1181,7 @@ function buildSavedGameStateBoardSnapshotPayload(manager) {
   return {
     initial_board_matrix: manager.initialBoardMatrix ? cloneBoardMatrix(manager.initialBoardMatrix) : manager.getFinalBoardMatrix(),
     replay_start_board_matrix: manager.replayStartBoardMatrix ? cloneBoardMatrix(manager.replayStartBoardMatrix) : null,
-    practice_restart_board_matrix: manager.practiceRestartBoardMatrix ? cloneBoardMatrix(manager.practiceRestartBoardMatrix) : null,
-    practice_restart_mode_config: manager.practiceRestartModeConfig ? manager.safeClonePlain(manager.practiceRestartModeConfig, null) : null
+    practice_restart_board_matrix: manager.practiceRestartBoardMatrix ? cloneBoardMatrix(manager.practiceRestartBoardMatrix) : null, practice_restart_mode_config: manager.practiceRestartModeConfig ? manager.safeClonePlain(manager.practiceRestartModeConfig, null) : null
   };
 }
 
@@ -1220,14 +1189,11 @@ function buildSavedGameStateTimerSnapshotPayload(manager, timerSnapshot, subStat
   var snapshot = normalizeSavedStateRecordObject(timerSnapshot, {});
   return {
     timer_module_view: manager.getTimerModuleViewMode ? manager.getTimerModuleViewMode() : "timer",
-    timer_fixed_rows: snapshot.timerFixedRowsState || {},
-    timer_dynamic_rows_capped: Array.isArray(snapshot.timerDynamicRowsCappedState) ? snapshot.timerDynamicRowsCappedState : [],
+    timer_fixed_rows: snapshot.timerFixedRowsState || {}, timer_dynamic_rows_capped: Array.isArray(snapshot.timerDynamicRowsCappedState) ? snapshot.timerDynamicRowsCappedState : [],
     timer_dynamic_rows_overflow: Array.isArray(snapshot.timerDynamicRowsOverflowState) ? snapshot.timerDynamicRowsOverflowState : [],
     timer_secondary_rows: Array.isArray(subState.timer_secondary_rows) ? subState.timer_secondary_rows : [],
     timer_secondary_expanded_parents: Array.isArray(subState.timer_secondary_expanded_parents) ? subState.timer_secondary_expanded_parents : [],
-    timer_sub_8192: subState.timer_sub_8192,
-    timer_sub_16384: subState.timer_sub_16384,
-    timer_sub_visible: subState.timer_sub_visible
+    timer_sub_8192: subState.timer_sub_8192, timer_sub_16384: subState.timer_sub_16384, timer_sub_visible: subState.timer_sub_visible
   };
 }
 function buildSavedGameStatePayload(manager, now, saveOptions) {
@@ -1248,9 +1214,7 @@ function buildSavedGameStatePayload(manager, now, saveOptions) {
 }
 function buildPersistSavedPayloadToStoragesCorePayload(stores, persistKey, persistPayload) {
   return {
-    storages: stores,
-    key: persistKey,
-    payload: persistPayload
+    storages: stores, key: persistKey, payload: persistPayload
   };
 }
 function persistSavedPayloadToStorages(manager, persistKey, persistPayload) {
@@ -1291,27 +1255,19 @@ function persistSavedPayloadToStoragesFallback(stores, persistKey, persistPayloa
 }
 function buildLiteSavedGameStateMetaPayload(manager, payload) {
   return {
-    v: GameManager.SAVED_GAME_STATE_VERSION,
-    saved_at: Number(payload.saved_at) || Date.now(),
-    terminated: false,
-    mode_key: payload.mode_key || manager.modeKey,
-    board_width: Number(payload.board_width) || manager.width,
-    board_height: Number(payload.board_height) || manager.height,
-    ruleset: payload.ruleset || manager.ruleset
+    v: GameManager.SAVED_GAME_STATE_VERSION, saved_at: Number(payload.saved_at) || Date.now(), terminated: false,
+    mode_key: payload.mode_key || manager.modeKey, board_width: Number(payload.board_width) || manager.width,
+    board_height: Number(payload.board_height) || manager.height, ruleset: payload.ruleset || manager.ruleset
   };
 }
 function buildLiteSavedGameStateProgressPayload(payload) {
   return {
-    reached_32k: !!payload.reached_32k,
-    capped_milestone_count: Number.isInteger(payload.capped_milestone_count) ? payload.capped_milestone_count : 0,
-    combo_streak: Number.isInteger(payload.combo_streak) ? payload.combo_streak : 0,
-    successful_move_count: Number.isInteger(payload.successful_move_count) ? payload.successful_move_count : 0,
+    reached_32k: !!payload.reached_32k, capped_milestone_count: Number.isInteger(payload.capped_milestone_count) ? payload.capped_milestone_count : 0,
+    combo_streak: Number.isInteger(payload.combo_streak) ? payload.combo_streak : 0, successful_move_count: Number.isInteger(payload.successful_move_count) ? payload.successful_move_count : 0,
     undo_used: Number.isInteger(payload.undo_used) ? payload.undo_used : 0,
     lock_consumed_at_move_count: Number.isInteger(payload.lock_consumed_at_move_count) ? payload.lock_consumed_at_move_count : -1,
-    locked_direction_turn: Number.isInteger(payload.locked_direction_turn) ? payload.locked_direction_turn : null,
-    locked_direction: Number.isInteger(payload.locked_direction) ? payload.locked_direction : null,
-    challenge_id: payload.challenge_id || null,
-    ranked_session_token: payload.ranked_session_token || null
+    locked_direction_turn: Number.isInteger(payload.locked_direction_turn) ? payload.locked_direction_turn : null, locked_direction: Number.isInteger(payload.locked_direction) ? payload.locked_direction : null,
+    challenge_id: payload.challenge_id || null, ranked_session_token: payload.ranked_session_token || null
   };
 }
 function buildLiteSavedGameStateBoardSnapshotPayload(manager, payload) {
@@ -1332,9 +1288,7 @@ function buildLiteSavedGameStateBoardSnapshotPayload(manager, payload) {
 }
 function buildLiteSavedGameStateReplayTrimPayload(manager, payload) {
   return {
-    move_history: [],
-    undo_stack: [],
-    replay_compact_log: "",
+    move_history: [], undo_stack: [], replay_compact_log: "",
     session_replay_v1: cloneSavedReplaySessionState(manager, payload && payload.session_replay_v1, null),
     session_replay_v3: null
   };

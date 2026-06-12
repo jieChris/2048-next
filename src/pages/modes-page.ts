@@ -1,4 +1,3 @@
-import "../../js/theme_manager.js";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 
 const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
