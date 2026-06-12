@@ -187,6 +187,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks post-move runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_post_move_runtime.js",
+      symbolName: "corePostMoveRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(

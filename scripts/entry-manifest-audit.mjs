@@ -34,6 +34,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_scoring_runtime.js",
     symbolName: "coreScoringRuntimeUrl"
+  },
+  {
+    scriptPath: "core_post_move_runtime.js",
+    symbolName: "corePostMoveRuntimeUrl"
   }
 ];
 
