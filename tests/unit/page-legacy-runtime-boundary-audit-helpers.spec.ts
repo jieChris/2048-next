@@ -127,4 +127,10 @@ describe("page-legacy-runtime-boundary-audit helpers", () => {
   it("keeps modes page out of the legacy page import allowlist", () => {
     expect(PAGE_LEGACY_IMPORT_ALLOWLIST["modes-page.ts"]).toBeUndefined();
   });
+
+  it("keeps history page off the legacy theme manager allowlist", () => {
+    expect(PAGE_LEGACY_IMPORT_ALLOWLIST["history-page.ts"]?.has("../../js/theme_manager.js")).toBe(
+      false
+    );
+  });
 });

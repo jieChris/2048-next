@@ -15,7 +15,6 @@ const PAGE_LEGACY_IMPORT_ALLOWLIST = {
     "../../js/account_settings_page.js"
   ]),
   "history-page.ts": new Set([
-    "../../js/theme_manager.js",
     "../../js/mode_catalog.js",
     "../../js/core_game_settings_storage_runtime.js",
     "../../js/local_history_store.js"

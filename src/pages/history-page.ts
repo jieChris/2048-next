@@ -1,4 +1,3 @@
-import "../../js/theme_manager.js";
 import "../../js/mode_catalog.js";
 import "../../js/core_game_settings_storage_runtime.js";
 import "../../js/local_history_store.js";

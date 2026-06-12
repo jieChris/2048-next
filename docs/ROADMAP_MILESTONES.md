@@ -1,3 +1,17 @@
+# Stage-1B History Theme Delta (2026-06-13)
+
+## Phase Decision
+- `WS4-03-next`
+  - status: in_progress
+  - progress: `history-page.ts` removed the legacy `theme_manager.js` page import; remaining history imports are `mode_catalog`, `core_game_settings_storage_runtime`, and `local_history_store`.
+
+## Evidence
+- `node scripts/page-legacy-runtime-boundary-audit.mjs` reports `legacyImports=18`
+- `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts`
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+- history record smoke coverage
+- shared night/background page smoke coverage
+
 # Stage-1 Legacy Retirement Delta (2026-06-13)
 
 ## Phase Decision
