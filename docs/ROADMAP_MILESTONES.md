@@ -1,3 +1,18 @@
+# Stage-1C Service Boundary Allowlist Zero (2026-06-13)
+
+## Phase Decision
+- `WS6-01A`
+  - status: done
+  - progress: `DIRECT_SERVICE_USAGE_ALLOWLIST` is empty. `admin_rescue_client_runtime.js` no longer calls browser storage or API transport directly; it consumes the typed `AdminRescueClientServiceBoundary` installed during home-family bootstrap.
+
+## Evidence
+- RED: `npx vitest run tests/unit/service-boundary-audit-helpers.spec.ts` failed while `js/admin_rescue_client_runtime.js` was allowlisted.
+- GREEN: `npx vitest run tests/unit/service-boundary-audit-helpers.spec.ts tests/unit/admin-rescue-client-runtime.spec.ts`
+- `npm run audit:service-boundary` reports `violations=0` with an empty allowlist.
+- `npm run audit:page-legacy-runtime-boundary` reports `legacyImports=0`.
+- `npm run audit:game-manager`
+- `npm run build`
+
 # Stage-1B Page Legacy Allowlist Zero Delta (2026-06-13)
 
 ## Phase Decision

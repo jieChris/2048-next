@@ -10,6 +10,7 @@ function loadRuntime(extraContext?: Record<string, unknown>, options?: { loadCod
   const codecScriptPath = path.resolve(process.cwd(), "js/core_replay_codec_runtime.js");
   const codecScript = readFileSync(codecScriptPath, "utf8");
   const storage = new Map<string, string>([["2048_auth_token_v1", "token"]]);
+  const fetchMock = vi.fn();
   const context = {
     console,
     Date,
@@ -34,7 +35,17 @@ function loadRuntime(extraContext?: Record<string, unknown>, options?: { loadCod
     atob(value: string) {
       return Buffer.from(String(value), "base64").toString("binary");
     },
-    fetch: vi.fn(),
+    fetch: fetchMock,
+    AdminRescueClientServiceBoundary: {
+      getStorage() {
+        return context.localStorage;
+      },
+      async request(pathName: string, requestOptions?: RequestInit) {
+        const response = await fetchMock(`https://2048next.cn/api${pathName}`, requestOptions);
+        const data = await response.json().catch(() => null);
+        return data && typeof data === "object" ? data : { success: false, error: "api_unavailable" };
+      }
+    },
     ...(extraContext || {})
   } as Record<string, unknown>;
 

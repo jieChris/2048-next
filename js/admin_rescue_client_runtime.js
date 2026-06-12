@@ -92,9 +92,16 @@
     return Number.isFinite(numeric) ? numeric : null;
   }
 
+  function getServiceBoundary() {
+    var boundary = global.AdminRescueClientServiceBoundary;
+    return boundary && typeof boundary === "object" ? boundary : {};
+  }
+
   function getStorage() {
+    var boundary = getServiceBoundary();
+    if (typeof boundary.getStorage !== "function") return null;
     try {
-      return global.localStorage || null;
+      return boundary.getStorage() || null;
     } catch (_err) {
       return null;
     }
@@ -176,28 +183,24 @@
 
   async function apiRequest(path, options) {
     var opts = options || {};
-    var token = getAuthToken();
-    var bases = buildApiBases();
-    var lastError = "api_unavailable";
-    for (var i = 0; i < bases.length; i += 1) {
-      var headers = Object.assign({}, opts.headers || {});
-      if (token) headers.Authorization = "Bearer " + token;
-      if (opts.body !== undefined && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
-      try {
-        var response = await global.fetch(bases[i] + path, {
-          method: opts.method || "GET",
-          headers: headers,
-          body: opts.body === undefined ? undefined : JSON.stringify(opts.body)
-        });
-        var data = await response.json().catch(function () { return null; });
-        if (response.ok && data) return data;
-        if (data && typeof data === "object") return data;
-        lastError = "HTTP " + response.status;
-      } catch (error) {
-        lastError = error && error.message ? error.message : String(error);
+    var boundary = getServiceBoundary();
+    if (typeof boundary.request !== "function") {
+      return { success: false, error: "service_boundary_unavailable" };
+    }
+    var headers = Object.assign({}, opts.headers || {});
+    if (opts.body !== undefined && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+    try {
+      return await boundary.request(path, {
+        method: opts.method || "GET",
+        headers: headers,
+        body: opts.body === undefined ? undefined : JSON.stringify(opts.body)
+      });
+    } catch (error) {
+      return {
+        success: false,
+        error: error && error.message ? error.message : String(error)
       }
     }
-    return { success: false, error: lastError };
   }
 
   function normalizeBoard(board) {

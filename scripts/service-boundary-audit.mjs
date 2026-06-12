@@ -14,7 +14,7 @@ const AUDIT_TARGETS = [
 const DEFAULT_ALLOWED_FILE_SUFFIXES = new Set([".js", ".ts"]);
 const DIRECT_STORAGE_PATTERN = /\b(?:localStorage|sessionStorage)\s*\./gu;
 const DIRECT_FETCH_PATTERN = /\bfetch\s*\(/gu;
-const DIRECT_SERVICE_USAGE_ALLOWLIST = new Set(["js/admin_rescue_client_runtime.js"]);
+const DIRECT_SERVICE_USAGE_ALLOWLIST = new Set();
 
 function fail(message) {
   throw new Error(message);
