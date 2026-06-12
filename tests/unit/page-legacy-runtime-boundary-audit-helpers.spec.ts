@@ -123,4 +123,8 @@ describe("page-legacy-runtime-boundary-audit helpers", () => {
     expect(PAGE_LEGACY_IMPORT_ALLOWLIST["admin-page.ts"]).toBeUndefined();
     expect(PAGE_LEGACY_IMPORT_ALLOWLIST["stone-2k-monitor-page.ts"]).toBeUndefined();
   });
+
+  it("keeps modes page out of the legacy page import allowlist", () => {
+    expect(PAGE_LEGACY_IMPORT_ALLOWLIST["modes-page.ts"]).toBeUndefined();
+  });
 });
