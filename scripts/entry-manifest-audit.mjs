@@ -38,6 +38,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_post_move_runtime.js",
     symbolName: "corePostMoveRuntimeUrl"
+  },
+  {
+    scriptPath: "core_merge_effects_runtime.js",
+    symbolName: "coreMergeEffectsRuntimeUrl"
   }
 ];
 

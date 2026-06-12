@@ -4,6 +4,7 @@ import { bootstrapRankedSessionForHomeFamilyPage } from "../bootstrap/ranked-ses
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-rescue-client-service-boundary";
+import { installMergeEffectsRuntime } from "../bootstrap/merge-effects-runtime";
 import { installPostMoveRuntime } from "../bootstrap/post-move-runtime";
 import { installScoringRuntime } from "../bootstrap/scoring-runtime";
 import { installTimerIntervalRuntime } from "../bootstrap/timer-interval-runtime";
@@ -152,6 +153,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
     typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
   );
   installAdminRescueClientServiceBoundary();
+  installMergeEffectsRuntime();
   installPostMoveRuntime();
   installScoringRuntime();
   installTimerIntervalRuntime();
