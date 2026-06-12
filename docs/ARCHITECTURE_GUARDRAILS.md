@@ -1,3 +1,23 @@
+# Guardrail Delta (2026-06-13, Stage-1E Scoring Runtime TS Boundary)
+
+## Batch Impact
+- `CoreScoringRuntime` is now installed from `src/bootstrap/scoring-runtime.ts` before home-family legacy scripts load.
+- `src/core/scoring.ts` remains the tested TypeScript owner for post-move scoring and combo bonus calculation.
+- `js/core_scoring_runtime.js` was retired from active play/replay/home/capped runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` now uses `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` to block retired runtime scripts, including scoring, from returning to active manifests.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-scoring-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-scoring.spec.ts tests/unit/bootstrap-scoring-runtime.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-13, Stage-1D Timer Interval Runtime TS Boundary)
 
 ## Batch Impact
