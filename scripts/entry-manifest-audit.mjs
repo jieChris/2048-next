@@ -26,6 +26,17 @@ const PAGE_ENTRY_SPECS = [
   { htmlFile: "user.html", entryFile: "user-profile.ts", pageId: "user-profile", architecture: "manifest-bootstrap" }
 ];
 
+const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
+  {
+    scriptPath: "core_timer_interval_runtime.js",
+    symbolName: "coreTimerIntervalRuntimeUrl"
+  },
+  {
+    scriptPath: "core_scoring_runtime.js",
+    symbolName: "coreScoringRuntimeUrl"
+  }
+];
+
 function fail(message) {
   throw new Error(message);
 }
@@ -230,14 +241,19 @@ async function runEntryManifestAudit() {
 
   ensureCapabilityMapped(shared, "play", "playLegacyScripts");
   ensureCapabilityMapped(shared, "replay", "replayLegacyScripts");
-  ensureRetiredRuntimeScriptAbsent(playRuntimeScripts, "src/entries/play-runtime-scripts.ts", {
-    scriptPath: "core_timer_interval_runtime.js",
-    symbolName: "coreTimerIntervalRuntimeUrl"
-  });
-  ensureRetiredRuntimeScriptAbsent(shared, "src/entries/home-family-shared.ts", {
-    scriptPath: "core_timer_interval_runtime.js",
-    symbolName: "coreTimerIntervalRuntimeUrl"
-  });
+  for (const retiredRuntimeScript of RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS) {
+    ensureRetiredRuntimeScriptAbsent(
+      playRuntimeScripts,
+      "src/entries/play-runtime-scripts.ts",
+      retiredRuntimeScript
+    );
+    ensureRetiredRuntimeScriptAbsent(
+      replayRuntimeScripts,
+      "src/entries/replay-runtime-scripts.ts",
+      retiredRuntimeScript
+    );
+    ensureRetiredRuntimeScriptAbsent(shared, "src/entries/home-family-shared.ts", retiredRuntimeScript);
+  }
   ensureAllPageEntriesExist(pageEntryRecords);
   ensurePageEntryArchitectures(pageEntryRecords);
 
@@ -296,6 +312,7 @@ if (isDirectCliExecution()) {
 
 export {
   PAGE_ENTRY_SPECS,
+  RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS,
   collectPageEntryRecords,
   detectEntryArchitecture,
   ensureCapabilityMapped,

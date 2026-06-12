@@ -13,7 +13,8 @@ import {
   ensureImportAndExportOrderAligned,
   ensureRetiredRuntimeScriptAbsent,
   ensureScriptOrderConstraints,
-  extractScriptImportOrder
+  extractScriptImportOrder,
+  RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS
 } from "../../scripts/entry-manifest-audit.mjs";
 
 describe("entry-manifest-audit helpers", () => {
@@ -177,6 +178,13 @@ describe("entry-manifest-audit helpers", () => {
         }
       )
     ).toThrow(/retired runtime script/);
+  });
+
+  it("tracks scoring runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_scoring_runtime.js",
+      symbolName: "coreScoringRuntimeUrl"
+    });
   });
 
   it("detects import/export order drift", () => {
