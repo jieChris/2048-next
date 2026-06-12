@@ -61,4 +61,34 @@ describe("history page runtime", () => {
       { value: "practice", text: "练习板（直通）" }
     ]);
   });
+
+  it("loads history through an injected store without a global legacy LocalHistoryStore", async () => {
+    const dom = createHistoryDocument();
+    const windowLike = dom.window as unknown as Window & {
+      LocalHistoryStore?: unknown;
+    };
+    delete windowLike.LocalHistoryStore;
+    let listCalls = 0;
+
+    bootstrapHistoryPageRuntime({
+      windowLike,
+      documentLike: dom.window.document,
+      modeCatalog: {
+        listModes: () => [],
+        getMode: () => null
+      },
+      historyStore: {
+        getAll: () => [],
+        listRecords: () => {
+          listCalls += 1;
+          return { items: [], total: 0, page: 1, page_size: 30 };
+        }
+      }
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(listCalls).toBe(1);
+    expect(dom.window.document.getElementById("history-status")?.textContent).toBe("");
+  });
 });

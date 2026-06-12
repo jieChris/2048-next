@@ -1,3 +1,20 @@
+# Guardrail Delta (2026-06-13, Stage-1B History Local Store)
+
+## Batch Impact
+- `history-page.ts` no longer imports any `../../js/*.js` legacy runtime directly.
+- History store access now goes through an injected page runtime boundary.
+- `history-page.ts` was removed from `PAGE_LEGACY_IMPORT_ALLOWLIST`.
+- `PAGE_LEGACY_IMPORT_ALLOWLIST` shrank from `legacyImports=16` to `legacyImports=15`.
+
+## Verification
+- RED: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/history-page-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/history-page-runtime.spec.ts`
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx tsc --noEmit`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/history-records-view-list-export.smoke.spec.ts tests/smoke/history-records-import-core.smoke.spec.ts tests/smoke/history-records-import-mode-filter.smoke.spec.ts tests/smoke/history-records-owner-filter.smoke.spec.ts`
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+
 # Guardrail Delta (2026-06-13, Stage-1B History Storage Runtime)
 
 ## Batch Impact
