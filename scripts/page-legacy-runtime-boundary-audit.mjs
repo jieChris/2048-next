@@ -14,7 +14,6 @@ const PAGE_LEGACY_IMPORT_ALLOWLIST = {
     "../../js/api_shared_utils.js",
     "../../js/account_settings_page.js"
   ]),
-  "admin-page.ts": new Set(["../../js/api_shared_utils.js"]),
   "history-page.ts": new Set([
     "../../js/theme_manager.js",
     "../../js/mode_catalog.js",
@@ -30,7 +29,6 @@ const PAGE_LEGACY_IMPORT_ALLOWLIST = {
   ]),
   "password-page.ts": new Set(["../../js/api_shared_utils.js", "../../js/password_page.js"]),
   "register-page.ts": new Set(["../../js/api_shared_utils.js", "../../js/register_page.js"]),
-  "stone-2k-monitor-page.ts": new Set(["../../js/api_shared_utils.js"]),
   "user-profile-page.ts": new Set([
     "../../js/core_game_settings_storage_runtime.js",
     "../../js/user_profile_page.js"

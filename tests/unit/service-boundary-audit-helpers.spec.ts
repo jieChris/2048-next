@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectBoundaryViolations,
   collectPatternMatches,
+  DIRECT_SERVICE_USAGE_ALLOWLIST,
   ensureNoBoundaryViolations,
   normalizePortablePath,
   shouldAuditFile,
@@ -74,5 +75,10 @@ describe("service-boundary-audit helpers", () => {
   it("builds project-relative paths", () => {
     const filePath = path.resolve("G:/2048/2048undo/2048-next/src/example.ts");
     expect(toProjectRelativePath(filePath)).toBe("src/example.ts");
+  });
+
+  it("keeps page-level service boundary exceptions out of the baseline", () => {
+    expect(DIRECT_SERVICE_USAGE_ALLOWLIST.has("src/pages/admin-page.ts")).toBe(false);
+    expect(DIRECT_SERVICE_USAGE_ALLOWLIST.has("src/pages/stone-2k-monitor-page.ts")).toBe(false);
   });
 });
