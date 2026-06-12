@@ -4,6 +4,7 @@ import { bootstrapRankedSessionForHomeFamilyPage } from "../bootstrap/ranked-ses
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-rescue-client-service-boundary";
+import { installTimerIntervalRuntime } from "../bootstrap/timer-interval-runtime";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
 import { getPageManifest, type RuntimeCapability } from "./runtime-manifest";
 import { resolveHomeFamilyScriptsByCapabilities } from "./home-family-shared";
@@ -149,6 +150,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
     typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
   );
   installAdminRescueClientServiceBoundary();
+  installTimerIntervalRuntime();
   if (pageId === "index") {
     await loadLegacyScriptsSequentially([INDEX_STARTUP_BUNDLE_URL]);
     scheduleIndexDeferredRuntimeLoad();

@@ -11,6 +11,7 @@ import {
   ensurePageEntryArchitectures,
   ensureEntryUsesManifest,
   ensureImportAndExportOrderAligned,
+  ensureRetiredRuntimeScriptAbsent,
   ensureScriptOrderConstraints,
   extractScriptImportOrder
 } from "../../scripts/entry-manifest-audit.mjs";
@@ -155,6 +156,27 @@ describe("entry-manifest-audit helpers", () => {
 
     expect(result.importOrder).toEqual(["alphaUrl", "betaUrl"]);
     expect(result.exportedOrder).toEqual(["alphaUrl", "betaUrl"]);
+  });
+
+  it("rejects retired runtime scripts in entry manifest modules", () => {
+    const invalidModule = [
+      'import coreTimerIntervalRuntimeUrl from "../../js/core_timer_interval_runtime.js?url";',
+      "",
+      "export const playLegacyScripts = [",
+      "  coreTimerIntervalRuntimeUrl,",
+      "] as const;"
+    ].join("\n");
+
+    expect(() =>
+      ensureRetiredRuntimeScriptAbsent(
+        invalidModule,
+        "src/entries/play-runtime-scripts.ts",
+        {
+          scriptPath: "core_timer_interval_runtime.js",
+          symbolName: "coreTimerIntervalRuntimeUrl"
+        }
+      )
+    ).toThrow(/retired runtime script/);
   });
 
   it("detects import/export order drift", () => {

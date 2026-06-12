@@ -1,3 +1,23 @@
+# Guardrail Delta (2026-06-13, Stage-1D Timer Interval Runtime TS Boundary)
+
+## Batch Impact
+- `CoreTimerIntervalRuntime` is now installed from `src/bootstrap/timer-interval-runtime.ts` before home-family legacy scripts load.
+- `src/core/timer-interval.ts` remains the tested TypeScript owner for timer interval, move throttle, and timer invalidation helpers.
+- `js/core_timer_interval_runtime.js` was retired from active play/home/capped runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` now blocks `core_timer_interval_runtime.js` / `coreTimerIntervalRuntimeUrl` from returning to active entry manifests.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-timer-interval-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-timer-interval.spec.ts tests/unit/bootstrap-timer-interval-runtime.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-13, Stage-1C Service Boundary Allowlist Zero)
 
 ## Batch Impact
