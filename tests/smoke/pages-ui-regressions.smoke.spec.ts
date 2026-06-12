@@ -438,12 +438,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       page,
       () =>
         Boolean((window as any).game_manager) &&
+        Array.from(document.scripts).some((script) => script.src.includes("/js/test_ui.js")) &&
         document.querySelector('.selection-tile[data-value="32768"]') !== null &&
         document.querySelector('.grid-cell[data-x="0"][data-y="0"]') !== null,
       12_000
     );
 
     await page.locator('.selection-tile[data-value="32768"]').click();
+    await expect(page.locator('.selection-tile[data-value="32768"]')).toHaveClass(/selected/);
     await page.locator('.grid-cell[data-x="0"][data-y="0"]').click();
     await expect(page.locator("#timer32768")).toHaveText("---------");
 
