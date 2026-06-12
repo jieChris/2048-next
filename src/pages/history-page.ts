@@ -1,8 +1,7 @@
-import "../../js/theme_manager.js";
-import "../../js/mode_catalog.js";
-import "../../js/core_game_settings_storage_runtime.js";
-import "../../js/local_history_store.js";
 import { runRefactorCutoverMigration } from "../bootstrap/refactor-cutover-migration";
+import { resolveHistoryLocalStore } from "../bootstrap/history-local-store";
+import { resolveHistoryModeCatalog } from "../bootstrap/history-mode-catalog";
+import { createHistoryStorageRuntime } from "../bootstrap/history-storage-runtime";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { bootstrapHistoryPageRuntime } from "./history-page-runtime";
 
@@ -241,5 +240,11 @@ export function bootstrapHistoryPage(): void {
       }
     });
   }
-  bootstrapHistoryPageRuntime({ windowLike: window, documentLike: document });
+  bootstrapHistoryPageRuntime({
+    windowLike: window,
+    documentLike: document,
+    modeCatalog: resolveHistoryModeCatalog(window),
+    storageRuntime: createHistoryStorageRuntime(),
+    historyStore: resolveHistoryLocalStore(window)
+  });
 }

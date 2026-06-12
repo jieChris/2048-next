@@ -1,6 +1,4 @@
-﻿import "../../js/theme_manager.js";
-import "../../js/palette_page.js";
-import "../../js/core_i18n_runtime.js";
+﻿import { installPaletteLegacyRuntime } from "../bootstrap/palette-legacy-runtime";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { applyThemeSettingsUi } from "../bootstrap/theme-settings-host";
 import { applyThemeSettingsPageInit } from "../bootstrap/theme-settings-page-host";
@@ -192,6 +190,7 @@ function applyThemePageCopy(): void {
 }
 
 export function bootstrapPalettePage(): void {
+  installPaletteLegacyRuntime();
   syncNightBackgroundAttribute();
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
   if (document.body) {

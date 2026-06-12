@@ -1,3 +1,86 @@
+# Guardrail Delta (2026-06-13, Stage-1B Page Legacy Allowlist Zero)
+
+## Batch Impact
+- `PAGE_LEGACY_IMPORT_ALLOWLIST` is now empty.
+- Remaining legacy page runtimes were moved out of `src/pages/*` direct imports and behind explicit `src/bootstrap/*-legacy-runtime.ts` adapters.
+- `page-legacy-runtime-boundary-audit` now reports `legacyImports=0` for page shell files.
+- Follow-up work should replace adapter internals with typed owners, but page shell exceptions are closed.
+
+## Verification
+- RED: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/account-settings-page-bootstrap.spec.ts`
+- GREEN: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/account-settings-page-bootstrap.spec.ts`
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx tsc --noEmit`
+- direct-page refactor-contract smoke for account, account-settings, palette, password, register, and user-profile
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-shared-settings-toggles.smoke.spec.ts tests/smoke/pages-account-leaderboard-metric-filter.smoke.spec.ts tests/smoke/pages-user-profile-title.smoke.spec.ts`
+
+# Guardrail Delta (2026-06-13, Stage-1B History Local Store)
+
+## Batch Impact
+- `history-page.ts` no longer imports any `../../js/*.js` legacy runtime directly.
+- History store access now goes through an injected page runtime boundary.
+- `history-page.ts` was removed from `PAGE_LEGACY_IMPORT_ALLOWLIST`.
+- `PAGE_LEGACY_IMPORT_ALLOWLIST` shrank from `legacyImports=16` to `legacyImports=15`.
+
+## Verification
+- RED: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/history-page-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/history-page-runtime.spec.ts`
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx tsc --noEmit`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/history-records-view-list-export.smoke.spec.ts tests/smoke/history-records-import-core.smoke.spec.ts tests/smoke/history-records-import-mode-filter.smoke.spec.ts tests/smoke/history-records-owner-filter.smoke.spec.ts`
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+
+# Guardrail Delta (2026-06-13, Stage-1B History Storage Runtime)
+
+## Batch Impact
+- `history-page.ts` no longer imports `../../js/core_game_settings_storage_runtime.js` directly.
+- History record normalization now uses a TypeScript adapter over `src/core/game-settings-storage.ts`.
+- `PAGE_LEGACY_IMPORT_ALLOWLIST` shrank from `legacyImports=17` to `legacyImports=16`.
+- The only remaining history page legacy import is `local_history_store`.
+
+## Verification
+- RED: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/history-page-controller.spec.ts`
+- GREEN: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/history-page-controller.spec.ts`
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx tsc --noEmit`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/history-records-view-list-export.smoke.spec.ts tests/smoke/history-records-import-core.smoke.spec.ts tests/smoke/history-records-import-mode-filter.smoke.spec.ts tests/smoke/history-records-owner-filter.smoke.spec.ts`
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+
+# Guardrail Delta (2026-06-13, Stage-1B History Mode Catalog)
+
+## Batch Impact
+- `history-page.ts` no longer imports `../../js/mode_catalog.js` directly.
+- History mode catalog access now goes through an injected page runtime/controller boundary.
+- `PAGE_LEGACY_IMPORT_ALLOWLIST` shrank from `legacyImports=18` to `legacyImports=17`.
+- Remaining history page legacy imports are `core_game_settings_storage_runtime` and `local_history_store`.
+
+## Verification
+- RED: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/history-page-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/history-page-runtime.spec.ts`
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npm run audit:service-boundary`
+- `npx tsc --noEmit`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/history-records-import-mode-filter.smoke.spec.ts`
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+
+# Guardrail Delta (2026-06-13, Stage-1B History Theme)
+
+## Batch Impact
+- `history-page.ts` no longer imports `../../js/theme_manager.js`.
+- `PAGE_LEGACY_IMPORT_ALLOWLIST` shrank from `legacyImports=19` to `legacyImports=18`.
+- Remaining history page legacy imports are deliberately deferred to follow-up batches with behavior-specific owners.
+
+## Verification
+- `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts`
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/history-records-view-list-export.smoke.spec.ts tests/smoke/history-records-import-core.smoke.spec.ts tests/smoke/history-records-import-mode-filter.smoke.spec.ts tests/smoke/history-records-owner-filter.smoke.spec.ts`
+- `npx playwright test --config=playwright.config.ts tests/smoke/pages-shared-settings-toggles.smoke.spec.ts -g "night preference reaches utility and direct pages with darkened key surfaces"`
+
 # Guardrail Delta (2026-06-13, Stage-1 Legacy Retirement)
 
 ## Batch Impact

@@ -44,6 +44,12 @@ export interface HistoryModeCatalog {
     board_width?: unknown;
     board_height?: unknown;
   } | null | undefined;
+  listModes?: () => Array<{
+    key?: unknown;
+    label?: unknown;
+    board_width?: unknown;
+    board_height?: unknown;
+  } | null | undefined>;
 }
 
 export interface HistoryNormalizeOptions {

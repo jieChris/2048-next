@@ -1,11 +1,16 @@
 ﻿import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { createHistoryPageController } from "./history-page-controller";
 import type { HistoryDiagnosticsIndexEntry, HistoryRecordViewModel } from "../features/history/history-record-normalize";
+import type { HistoryModeCatalog } from "../features/history/history-record-normalize";
+import type { HistoryNormalizeRuntime } from "../features/history/history-record-normalize";
 import type { HistoryFilterState, HistoryFilterStateDefaults } from "../features/history/history-filter-state";
 
 export interface HistoryPageRuntimeOptions {
   windowLike?: Window | null | undefined;
   documentLike?: Document | null | undefined;
+  modeCatalog?: HistoryModeCatalog | null | undefined;
+  storageRuntime?: HistoryNormalizeRuntime | null | undefined;
+  historyStore?: Record<string, unknown> | null | undefined;
 }
 
 const UI_LANGUAGE_KEY = "ui_language_v1";
@@ -206,8 +211,7 @@ function isPromiseLike(value: unknown): value is Promise<unknown> {
   return !!value && (typeof value === "object" || typeof value === "function") && typeof (value as any).then === "function";
 }
 
-async function callStore(windowLike: Window, methodName: string, ...args: unknown[]) {
-  const store = (windowLike as any).LocalHistoryStore;
+async function callStore(store: Record<string, unknown> | null, methodName: string, ...args: unknown[]) {
   if (!store) {
     throw new Error("local_history_store_missing");
   }
@@ -351,6 +355,7 @@ function renderSummary(
 function renderList(
   windowLike: Window,
   documentLike: Document,
+  historyStore: Record<string, unknown> | null,
   items: unknown[],
   controller: ReturnType<typeof createHistoryPageController>,
   lang: HistoryUiLang,
@@ -413,7 +418,7 @@ function renderList(
     if (exportBtn) {
       exportBtn.addEventListener("click", () => {
         try {
-          const store = (windowLike as any).LocalHistoryStore;
+          const store = historyStore as any;
           const result = store.exportRecords([item.id]);
           const onPayload = (payload: unknown) => {
             const safeMode = toText(item.mode_key || "mode").replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -445,7 +450,7 @@ function renderList(
     if (deleteBtn) {
       deleteBtn.addEventListener("click", async () => {
         if (!windowLike.confirm(copy.deleteConfirm)) return;
-        const ok = await callStore(windowLike, "deleteById", item.id);
+        const ok = await callStore(historyStore, "deleteById", item.id);
         if (!ok) {
           setStatus(documentLike, copy.deleteFailed, true);
           return;
@@ -482,18 +487,13 @@ function applyControls(documentLike: Document, state: HistoryFilterState): void 
 }
 
 function initModeFilter(
-  windowLike: Window,
   documentLike: Document,
   controller: ReturnType<typeof createHistoryPageController>,
   lang: HistoryUiLang
 ): void {
   const modeSelect = documentLike.getElementById("history-mode") as HTMLSelectElement | null;
   if (!modeSelect) return;
-  const catalog = (windowLike as any).ModeCatalog;
-  const listModes =
-    catalog && typeof catalog.listModes === "function"
-      ? catalog.listModes()
-      : [];
+  const listModes = controller.listModes();
   for (let i = 0; i < listModes.length; i += 1) {
     const mode = listModes[i] || {};
     if (!mode.key || !mode.label) continue;
@@ -522,7 +522,7 @@ function sortOwnerEntries(entries: Array<{ isGuest: boolean; label: string }>): 
 }
 
 async function rebuildOwnerFilterOptions(
-  windowLike: Window,
+  historyStore: Record<string, unknown> | null,
   documentLike: Document,
   controller: ReturnType<typeof createHistoryPageController>,
   lang: HistoryUiLang,
@@ -533,7 +533,7 @@ async function rebuildOwnerFilterOptions(
 
   let records: unknown[] = [];
   try {
-    const all = await callStore(windowLike, "getAll");
+    const all = await callStore(historyStore, "getAll");
     records = Array.isArray(all) ? all : [];
   } catch (_err) {
     records = [];
@@ -587,6 +587,7 @@ async function rebuildOwnerFilterOptions(
 }
 
 function bindImport(
+  historyStore: Record<string, unknown> | null,
   windowLike: Window,
   documentLike: Document,
   resolveLang: () => HistoryUiLang,
@@ -622,7 +623,7 @@ function bindImport(
     reader.onload = async () => {
       try {
         const text = typeof reader.result === "string" ? reader.result : "";
-        const result = await callStore(windowLike, "importRecords", text, { merge });
+        const result = await callStore(historyStore, "importRecords", text, { merge });
         const lang = resolveLang();
         setStatus(
           documentLike,
@@ -651,8 +652,15 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
   const windowLike = options?.windowLike || (typeof window !== "undefined" ? window : null);
   const documentLike = options?.documentLike || (typeof document !== "undefined" ? document : null);
   if (!windowLike || !documentLike) return;
+  const historyStore =
+    options?.historyStore || ((windowLike as any).LocalHistoryStore as Record<string, unknown> | null) || null;
 
-  const controller = createHistoryPageController({ windowLike, documentLike });
+  const controller = createHistoryPageController({
+    windowLike,
+    documentLike,
+    modeCatalog: options?.modeCatalog || null,
+    storageRuntime: options?.storageRuntime || null
+  });
   const storageLike = resolveStorageByName({
     windowLike: windowLike as unknown as Record<string, unknown>,
     storageName: "localStorage"
@@ -675,7 +683,7 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
     if (resetPage) state.page = 1;
 
     try {
-      const result = await callStore(windowLike, "listRecords", {
+      const result = await callStore(historyStore, "listRecords", {
         mode_key: state.modeKey,
         owner_key: state.ownerKey,
         keyword: state.keyword,
@@ -687,13 +695,14 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
       renderList(
         windowLike,
         documentLike,
+        historyStore,
         Array.isArray(result.items) ? result.items : [],
         controller,
         lang,
         loadHistory
       );
       renderSummary(documentLike, result || {}, state, lang);
-      await rebuildOwnerFilterOptions(windowLike, documentLike, controller, lang, state.ownerKey);
+      await rebuildOwnerFilterOptions(historyStore, documentLike, controller, lang, state.ownerKey);
       setStatus(documentLike, "", false);
     } catch (_err) {
       setStatus(documentLike, getHistoryCopy(resolveLang()).loadFailed, true);
@@ -701,13 +710,13 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
   };
 
   const bootstrap = () => {
-    if (!(windowLike as any).LocalHistoryStore) {
+    if (!historyStore) {
       setStatus(documentLike, getHistoryCopy(resolveLang()).moduleMissing, true);
       return;
     }
 
-    initModeFilter(windowLike, documentLike, controller, resolveLang());
-    rebuildOwnerFilterOptions(windowLike, documentLike, controller, resolveLang(), state.ownerKey)
+    initModeFilter(documentLike, controller, resolveLang());
+    rebuildOwnerFilterOptions(historyStore, documentLike, controller, resolveLang(), state.ownerKey)
       .then(() => {
         applyControls(documentLike, state);
         loadHistory(true);
@@ -759,7 +768,7 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
     if (exportAllBtn) {
       exportAllBtn.addEventListener("click", () => {
         try {
-          const store = (windowLike as any).LocalHistoryStore;
+          const store = historyStore as any;
           const result = store.exportRecords();
           const handlePayload = (payload: unknown) => {
             const dateTag = new Date().toISOString().slice(0, 10);
@@ -786,7 +795,7 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
           return;
         }
         try {
-          await callStore(windowLike, "clearAll");
+          await callStore(historyStore, "clearAll");
           setStatus(documentLike, getHistoryCopy(resolveLang()).clearAllSuccess, false);
           await loadHistory(true);
         } catch (_err) {
@@ -795,7 +804,7 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
       });
     }
 
-    bindImport(windowLike, documentLike, resolveLang, loadHistory);
+    bindImport(historyStore, windowLike, documentLike, resolveLang, loadHistory);
   };
 
   if (documentLike.readyState === "loading") {
@@ -804,4 +813,3 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
     bootstrap();
   }
 }
-

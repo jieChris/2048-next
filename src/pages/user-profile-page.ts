@@ -1,11 +1,11 @@
-import "../../js/core_game_settings_storage_runtime.js";
-import "../../js/user_profile_page.js";
+import { installUserProfileLegacyRuntime } from "../bootstrap/user-profile-legacy-runtime";
 
 export function bootstrapUserProfilePage(): void {
   if (typeof document === "undefined") {
     return;
   }
 
+  installUserProfileLegacyRuntime();
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
   if (document.body) {
     document.body.setAttribute("data-page-family", "profile-history-replay");

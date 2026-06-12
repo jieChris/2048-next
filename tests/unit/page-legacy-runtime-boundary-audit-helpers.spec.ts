@@ -57,7 +57,7 @@ describe("page-legacy-runtime-boundary-audit helpers", () => {
     ]);
   });
 
-  it("allows the current legacy page import baseline", () => {
+  it("blocks the former legacy page import baseline", () => {
     const records = [
       {
         fileName: "account-page.ts",
@@ -79,9 +79,8 @@ describe("page-legacy-runtime-boundary-audit helpers", () => {
       }
     ];
 
-    expect(() => ensureNoNewLegacyPageImports(collectPageLegacyImportRecords(records))).not.toThrow();
-    expect(PAGE_LEGACY_IMPORT_ALLOWLIST["account-page.ts"].has("../../js/account_page.js")).toBe(
-      true
+    expect(() => ensureNoNewLegacyPageImports(collectPageLegacyImportRecords(records))).toThrow(
+      /unexpected legacy page imports/
     );
   });
 
@@ -126,5 +125,33 @@ describe("page-legacy-runtime-boundary-audit helpers", () => {
 
   it("keeps modes page out of the legacy page import allowlist", () => {
     expect(PAGE_LEGACY_IMPORT_ALLOWLIST["modes-page.ts"]).toBeUndefined();
+  });
+
+  it("keeps history page off the legacy mode catalog allowlist", () => {
+    expect(PAGE_LEGACY_IMPORT_ALLOWLIST["history-page.ts"]?.has("../../js/mode_catalog.js")).not.toBe(
+      true
+    );
+  });
+
+  it("keeps history page off the legacy theme manager allowlist", () => {
+    expect(PAGE_LEGACY_IMPORT_ALLOWLIST["history-page.ts"]?.has("../../js/theme_manager.js")).not.toBe(
+      true
+    );
+  });
+
+  it("keeps history page off the legacy game settings storage runtime allowlist", () => {
+    expect(
+      PAGE_LEGACY_IMPORT_ALLOWLIST["history-page.ts"]?.has(
+        "../../js/core_game_settings_storage_runtime.js"
+      )
+    ).not.toBe(true);
+  });
+
+  it("keeps history page out of the legacy page import allowlist", () => {
+    expect(PAGE_LEGACY_IMPORT_ALLOWLIST["history-page.ts"]).toBeUndefined();
+  });
+
+  it("keeps the page legacy import allowlist empty", () => {
+    expect(Object.keys(PAGE_LEGACY_IMPORT_ALLOWLIST)).toEqual([]);
   });
 });

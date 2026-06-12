@@ -1,3 +1,74 @@
+# Stage-1B Page Legacy Allowlist Zero Delta (2026-06-13)
+
+## Phase Decision
+- `WS4-03-next`
+  - status: done
+  - progress: `PAGE_LEGACY_IMPORT_ALLOWLIST` is empty; page shells no longer import `../../js/*.js` directly. Legacy runtime side effects are isolated behind explicit `src/bootstrap/*-legacy-runtime.ts` adapters for follow-up owner replacement.
+
+## Evidence
+- `node scripts/page-legacy-runtime-boundary-audit.mjs` reports `legacyImports=0`
+- `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/account-settings-page-bootstrap.spec.ts`
+- `npx tsc --noEmit`
+- direct-page refactor-contract smoke for account/account-settings/palette/password/register/user-profile
+- shared settings, account, and user-profile smoke coverage
+
+# Stage-1B History Local Store Delta (2026-06-13)
+
+## Phase Decision
+- `WS4-03-next`
+  - status: in_progress
+  - progress: `history-page.ts` no longer imports any `../../js/*.js` legacy runtime directly and has been removed from `PAGE_LEGACY_IMPORT_ALLOWLIST`. History store access is injected through the page runtime boundary.
+
+## Evidence
+- `node scripts/page-legacy-runtime-boundary-audit.mjs` reports `legacyImports=15`
+- `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/history-page-runtime.spec.ts`
+- `npx tsc --noEmit`
+- history record smoke coverage
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+
+# Stage-1B History Storage Runtime Delta (2026-06-13)
+
+## Phase Decision
+- `WS4-03-next`
+  - status: in_progress
+  - progress: `history-page.ts` removed the legacy `core_game_settings_storage_runtime.js` page import; history record normalization now uses a TypeScript adapter over `src/core/game-settings-storage.ts`.
+
+## Evidence
+- `node scripts/page-legacy-runtime-boundary-audit.mjs` reports `legacyImports=16`
+- `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/history-page-controller.spec.ts`
+- `npx tsc --noEmit`
+- history record smoke coverage
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+
+# Stage-1B History Mode Catalog Delta (2026-06-13)
+
+## Phase Decision
+- `WS4-03-next`
+  - status: in_progress
+  - progress: `history-page.ts` removed the legacy `mode_catalog.js` page import; history mode catalog resolution is now injected through the page runtime/controller boundary.
+
+## Evidence
+- `node scripts/page-legacy-runtime-boundary-audit.mjs` reports `legacyImports=17`
+- `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/history-page-runtime.spec.ts`
+- `npm run audit:service-boundary`
+- `npx tsc --noEmit`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/history-records-import-mode-filter.smoke.spec.ts`
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+
+# Stage-1B History Theme Delta (2026-06-13)
+
+## Phase Decision
+- `WS4-03-next`
+  - status: in_progress
+  - progress: `history-page.ts` removed the legacy `theme_manager.js` page import; remaining history imports are `mode_catalog`, `core_game_settings_storage_runtime`, and `local_history_store`.
+
+## Evidence
+- `node scripts/page-legacy-runtime-boundary-audit.mjs` reports `legacyImports=18`
+- `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts`
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+- history record smoke coverage
+- shared night/background page smoke coverage
+
 # Stage-1 Legacy Retirement Delta (2026-06-13)
 
 ## Phase Decision
