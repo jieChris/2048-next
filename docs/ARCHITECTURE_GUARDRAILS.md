@@ -1,3 +1,20 @@
+# Guardrail Delta (2026-06-13, Stage-1B History Storage Runtime)
+
+## Batch Impact
+- `history-page.ts` no longer imports `../../js/core_game_settings_storage_runtime.js` directly.
+- History record normalization now uses a TypeScript adapter over `src/core/game-settings-storage.ts`.
+- `PAGE_LEGACY_IMPORT_ALLOWLIST` shrank from `legacyImports=17` to `legacyImports=16`.
+- The only remaining history page legacy import is `local_history_store`.
+
+## Verification
+- RED: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/history-page-controller.spec.ts`
+- GREEN: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/history-page-controller.spec.ts`
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx tsc --noEmit`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/history-records-view-list-export.smoke.spec.ts tests/smoke/history-records-import-core.smoke.spec.ts tests/smoke/history-records-import-mode-filter.smoke.spec.ts tests/smoke/history-records-owner-filter.smoke.spec.ts`
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+
 # Guardrail Delta (2026-06-13, Stage-1B History Mode Catalog)
 
 ## Batch Impact

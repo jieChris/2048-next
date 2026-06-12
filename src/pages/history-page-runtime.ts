@@ -2,12 +2,14 @@
 import { createHistoryPageController } from "./history-page-controller";
 import type { HistoryDiagnosticsIndexEntry, HistoryRecordViewModel } from "../features/history/history-record-normalize";
 import type { HistoryModeCatalog } from "../features/history/history-record-normalize";
+import type { HistoryNormalizeRuntime } from "../features/history/history-record-normalize";
 import type { HistoryFilterState, HistoryFilterStateDefaults } from "../features/history/history-filter-state";
 
 export interface HistoryPageRuntimeOptions {
   windowLike?: Window | null | undefined;
   documentLike?: Document | null | undefined;
   modeCatalog?: HistoryModeCatalog | null | undefined;
+  storageRuntime?: HistoryNormalizeRuntime | null | undefined;
 }
 
 const UI_LANGUAGE_KEY = "ui_language_v1";
@@ -652,7 +654,8 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
   const controller = createHistoryPageController({
     windowLike,
     documentLike,
-    modeCatalog: options?.modeCatalog || null
+    modeCatalog: options?.modeCatalog || null,
+    storageRuntime: options?.storageRuntime || null
   });
   const storageLike = resolveStorageByName({
     windowLike: windowLike as unknown as Record<string, unknown>,

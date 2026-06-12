@@ -1,3 +1,17 @@
+# Stage-1B History Storage Runtime Delta (2026-06-13)
+
+## Phase Decision
+- `WS4-03-next`
+  - status: in_progress
+  - progress: `history-page.ts` removed the legacy `core_game_settings_storage_runtime.js` page import; history record normalization now uses a TypeScript adapter over `src/core/game-settings-storage.ts`.
+
+## Evidence
+- `node scripts/page-legacy-runtime-boundary-audit.mjs` reports `legacyImports=16`
+- `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/history-page-controller.spec.ts`
+- `npx tsc --noEmit`
+- history record smoke coverage
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+
 # Stage-1B History Mode Catalog Delta (2026-06-13)
 
 ## Phase Decision

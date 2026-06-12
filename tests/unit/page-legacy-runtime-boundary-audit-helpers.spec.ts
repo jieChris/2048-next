@@ -139,4 +139,12 @@ describe("page-legacy-runtime-boundary-audit helpers", () => {
       false
     );
   });
+
+  it("keeps history page off the legacy game settings storage runtime allowlist", () => {
+    expect(
+      PAGE_LEGACY_IMPORT_ALLOWLIST["history-page.ts"]?.has(
+        "../../js/core_game_settings_storage_runtime.js"
+      )
+    ).toBe(false);
+  });
 });

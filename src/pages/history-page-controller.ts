@@ -11,6 +11,7 @@ import {
   resolveModeLabel,
   resolveReplayCode,
   type HistoryModeCatalog,
+  type HistoryNormalizeRuntime,
   type HistoryRecordViewModel
 } from "../features/history/history-record-normalize";
 import { createHistoryBoardPreviewNode } from "../features/history/history-board-preview";
@@ -19,6 +20,7 @@ export interface HistoryPageControllerDeps {
   windowLike?: Window | null | undefined;
   documentLike?: Document | null | undefined;
   modeCatalog?: HistoryModeCatalog | null | undefined;
+  storageRuntime?: HistoryNormalizeRuntime | null | undefined;
 }
 
 export interface HistoryPageController {
@@ -39,7 +41,7 @@ export function createHistoryPageController(options?: HistoryPageControllerDeps)
     windowLike: windowLike ? (windowLike as unknown as Record<string, unknown>) : undefined,
     storageName: "localStorage"
   });
-  const runtime = windowLike ? (windowLike as any).CoreGameSettingsStorageRuntime : null;
+  const runtime = options?.storageRuntime || (windowLike ? (windowLike as any).CoreGameSettingsStorageRuntime : null);
   const modeCatalog = options?.modeCatalog || (windowLike ? (windowLike as any).ModeCatalog : null);
 
   return {
