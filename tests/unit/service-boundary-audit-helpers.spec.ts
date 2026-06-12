@@ -81,4 +81,8 @@ describe("service-boundary-audit helpers", () => {
     expect(DIRECT_SERVICE_USAGE_ALLOWLIST.has("src/pages/admin-page.ts")).toBe(false);
     expect(DIRECT_SERVICE_USAGE_ALLOWLIST.has("src/pages/stone-2k-monitor-page.ts")).toBe(false);
   });
+
+  it("does not carry direct service usage exceptions", () => {
+    expect(Array.from(DIRECT_SERVICE_USAGE_ALLOWLIST)).toEqual([]);
+  });
 });

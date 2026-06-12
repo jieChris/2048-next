@@ -1,3 +1,19 @@
+# Guardrail Delta (2026-06-13, Stage-1C Service Boundary Allowlist Zero)
+
+## Batch Impact
+- `DIRECT_SERVICE_USAGE_ALLOWLIST` is now empty.
+- `admin_rescue_client_runtime.js` no longer calls browser storage or API transport directly.
+- The admin rescue legacy runtime now consumes a typed `AdminRescueClientServiceBoundary` installed before home-family legacy scripts load.
+- `service-boundary-audit` now reports `violations=0` without file exceptions.
+
+## Verification
+- RED: `npx vitest run tests/unit/service-boundary-audit-helpers.spec.ts`
+- GREEN: `npx vitest run tests/unit/service-boundary-audit-helpers.spec.ts tests/unit/admin-rescue-client-runtime.spec.ts`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run audit:game-manager`
+- `npm run build`
+
 # Guardrail Delta (2026-06-13, Stage-1B Page Legacy Allowlist Zero)
 
 ## Batch Impact

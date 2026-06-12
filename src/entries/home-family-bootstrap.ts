@@ -3,6 +3,7 @@ import { registerEngineFacade, type EngineFacadeWindowLike } from "../bootstrap/
 import { bootstrapRankedSessionForHomeFamilyPage } from "../bootstrap/ranked-session";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
+import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-rescue-client-service-boundary";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
 import { getPageManifest, type RuntimeCapability } from "./runtime-manifest";
 import { resolveHomeFamilyScriptsByCapabilities } from "./home-family-shared";
@@ -147,6 +148,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   registerEngineFacade(
     typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
   );
+  installAdminRescueClientServiceBoundary();
   if (pageId === "index") {
     await loadLegacyScriptsSequentially([INDEX_STARTUP_BUNDLE_URL]);
     scheduleIndexDeferredRuntimeLoad();
