@@ -11,8 +11,10 @@ describe("account-settings page bootstrap", () => {
   it("wraps the legacy module and marks the unified page system", () => {
     const source = readSource("src/pages/account-settings-page.ts");
 
-    expect(source).toContain('import "../../js/api_shared_utils.js";');
-    expect(source).toContain('import "../../js/account_settings_page.js";');
+    expect(source).toContain('import { installAccountSettingsLegacyRuntime } from "../bootstrap/account-settings-legacy-runtime";');
+    expect(source).not.toContain('import "../../js/api_shared_utils.js";');
+    expect(source).not.toContain('import "../../js/account_settings_page.js";');
+    expect(source).toContain("installAccountSettingsLegacyRuntime();");
     expect(source).toContain('document.documentElement.setAttribute("data-page-system", "unified-page-system");');
     expect(source).toContain('document.body.setAttribute("data-page-family", "account-settings");');
   });

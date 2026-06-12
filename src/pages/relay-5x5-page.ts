@@ -1,5 +1,4 @@
-import "../../js/api_shared_utils.js";
-import "../../js/relay_5x5_page.js";
+import { installRelay5x5LegacyRuntime } from "../bootstrap/relay-5x5-legacy-runtime";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 
 const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
@@ -35,6 +34,7 @@ export function bootstrapRelay5x5Page(): void {
   if (typeof document === "undefined") {
     return;
   }
+  installRelay5x5LegacyRuntime();
   syncNightBackgroundAttribute();
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
   if (document.body) {

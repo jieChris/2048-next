@@ -8,25 +8,7 @@ const repoRoot = path.resolve(__dirname, "..");
 const pagesDir = path.resolve(repoRoot, "src", "pages");
 
 const LEGACY_JS_IMPORT_PREFIX = "../../js/";
-const PAGE_LEGACY_IMPORT_ALLOWLIST = {
-  "account-page.ts": new Set(["../../js/api_shared_utils.js", "../../js/account_page.js"]),
-  "account-settings-page.ts": new Set([
-    "../../js/api_shared_utils.js",
-    "../../js/account_settings_page.js"
-  ]),
-  "relay-5x5-page.ts": new Set(["../../js/api_shared_utils.js", "../../js/relay_5x5_page.js"]),
-  "palette-page.ts": new Set([
-    "../../js/theme_manager.js",
-    "../../js/palette_page.js",
-    "../../js/core_i18n_runtime.js"
-  ]),
-  "password-page.ts": new Set(["../../js/api_shared_utils.js", "../../js/password_page.js"]),
-  "register-page.ts": new Set(["../../js/api_shared_utils.js", "../../js/register_page.js"]),
-  "user-profile-page.ts": new Set([
-    "../../js/core_game_settings_storage_runtime.js",
-    "../../js/user_profile_page.js"
-  ])
-};
+const PAGE_LEGACY_IMPORT_ALLOWLIST = {};
 
 function fail(message) {
   throw new Error(message);

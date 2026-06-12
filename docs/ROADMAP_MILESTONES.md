@@ -1,3 +1,17 @@
+# Stage-1B Page Legacy Allowlist Zero Delta (2026-06-13)
+
+## Phase Decision
+- `WS4-03-next`
+  - status: done
+  - progress: `PAGE_LEGACY_IMPORT_ALLOWLIST` is empty; page shells no longer import `../../js/*.js` directly. Legacy runtime side effects are isolated behind explicit `src/bootstrap/*-legacy-runtime.ts` adapters for follow-up owner replacement.
+
+## Evidence
+- `node scripts/page-legacy-runtime-boundary-audit.mjs` reports `legacyImports=0`
+- `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/account-settings-page-bootstrap.spec.ts`
+- `npx tsc --noEmit`
+- direct-page refactor-contract smoke for account/account-settings/palette/password/register/user-profile
+- shared settings, account, and user-profile smoke coverage
+
 # Stage-1B History Local Store Delta (2026-06-13)
 
 ## Phase Decision

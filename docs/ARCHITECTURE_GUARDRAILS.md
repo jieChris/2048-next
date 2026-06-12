@@ -1,3 +1,20 @@
+# Guardrail Delta (2026-06-13, Stage-1B Page Legacy Allowlist Zero)
+
+## Batch Impact
+- `PAGE_LEGACY_IMPORT_ALLOWLIST` is now empty.
+- Remaining legacy page runtimes were moved out of `src/pages/*` direct imports and behind explicit `src/bootstrap/*-legacy-runtime.ts` adapters.
+- `page-legacy-runtime-boundary-audit` now reports `legacyImports=0` for page shell files.
+- Follow-up work should replace adapter internals with typed owners, but page shell exceptions are closed.
+
+## Verification
+- RED: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/account-settings-page-bootstrap.spec.ts`
+- GREEN: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/account-settings-page-bootstrap.spec.ts`
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npx tsc --noEmit`
+- direct-page refactor-contract smoke for account, account-settings, palette, password, register, and user-profile
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-shared-settings-toggles.smoke.spec.ts tests/smoke/pages-account-leaderboard-metric-filter.smoke.spec.ts tests/smoke/pages-user-profile-title.smoke.spec.ts`
+
 # Guardrail Delta (2026-06-13, Stage-1B History Local Store)
 
 ## Batch Impact

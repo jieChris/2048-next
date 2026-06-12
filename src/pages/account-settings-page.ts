@@ -1,5 +1,4 @@
-import "../../js/api_shared_utils.js";
-import "../../js/account_settings_page.js";
+import { installAccountSettingsLegacyRuntime } from "../bootstrap/account-settings-legacy-runtime";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 
 const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
@@ -36,6 +35,7 @@ export function bootstrapAccountSettingsPage(): void {
     return;
   }
 
+  installAccountSettingsLegacyRuntime();
   syncNightBackgroundAttribute();
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
   if (document.body) {
