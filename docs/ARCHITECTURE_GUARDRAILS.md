@@ -1,3 +1,20 @@
+# Guardrail Delta (2026-06-13, Stage-1 Legacy Retirement)
+
+## Batch Impact
+- `modes-page.ts` no longer imports `../../js/theme_manager.js`; the page legacy import allowlist shrank by one entry.
+- `admin-page.ts` and `stone-2k-monitor-page.ts` moved direct storage/API behavior behind `src/services` and `src/storage` owners and no longer import `../../js/api_shared_utils.js`.
+- `DIRECT_SERVICE_USAGE_ALLOWLIST` now retains only the legacy runtime exception that still lives under `js/`.
+- `game-manager-audit` prepush blockers were reduced without behavior changes: replay autosubmit serialization fallback was split into smaller helpers, and saved-state helper line count is below the guardrail.
+
+## Verification
+- `npx vitest run tests/unit/service-boundary-audit-helpers.spec.ts tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/admin-replay-upload-ui.spec.ts tests/unit/services-api-client.spec.ts tests/unit/services-stone-2k-monitor.spec.ts tests/unit/storage-browser-storage.spec.ts`
+- `npm run audit:service-boundary`
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npm run audit:entry-manifest && npm run audit:page-legacy-runtime-boundary && npm run audit:service-boundary && npm run test:unit && npm run test:smoke:pages && npm run build`
+- `npm run test:smoke:pages`
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-modes-page-system.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # A-F Guardrail Delta (2026-03-22, Batch-WS4-03)
 
 ## Batch Impact
