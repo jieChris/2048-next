@@ -1,11 +1,13 @@
 ﻿import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { createHistoryPageController } from "./history-page-controller";
 import type { HistoryDiagnosticsIndexEntry, HistoryRecordViewModel } from "../features/history/history-record-normalize";
+import type { HistoryModeCatalog } from "../features/history/history-record-normalize";
 import type { HistoryFilterState, HistoryFilterStateDefaults } from "../features/history/history-filter-state";
 
 export interface HistoryPageRuntimeOptions {
   windowLike?: Window | null | undefined;
   documentLike?: Document | null | undefined;
+  modeCatalog?: HistoryModeCatalog | null | undefined;
 }
 
 const UI_LANGUAGE_KEY = "ui_language_v1";
@@ -482,18 +484,13 @@ function applyControls(documentLike: Document, state: HistoryFilterState): void 
 }
 
 function initModeFilter(
-  windowLike: Window,
   documentLike: Document,
   controller: ReturnType<typeof createHistoryPageController>,
   lang: HistoryUiLang
 ): void {
   const modeSelect = documentLike.getElementById("history-mode") as HTMLSelectElement | null;
   if (!modeSelect) return;
-  const catalog = (windowLike as any).ModeCatalog;
-  const listModes =
-    catalog && typeof catalog.listModes === "function"
-      ? catalog.listModes()
-      : [];
+  const listModes = controller.listModes();
   for (let i = 0; i < listModes.length; i += 1) {
     const mode = listModes[i] || {};
     if (!mode.key || !mode.label) continue;
@@ -652,7 +649,11 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
   const documentLike = options?.documentLike || (typeof document !== "undefined" ? document : null);
   if (!windowLike || !documentLike) return;
 
-  const controller = createHistoryPageController({ windowLike, documentLike });
+  const controller = createHistoryPageController({
+    windowLike,
+    documentLike,
+    modeCatalog: options?.modeCatalog || null
+  });
   const storageLike = resolveStorageByName({
     windowLike: windowLike as unknown as Record<string, unknown>,
     storageName: "localStorage"
@@ -706,7 +707,7 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
       return;
     }
 
-    initModeFilter(windowLike, documentLike, controller, resolveLang());
+    initModeFilter(documentLike, controller, resolveLang());
     rebuildOwnerFilterOptions(windowLike, documentLike, controller, resolveLang(), state.ownerKey)
       .then(() => {
         applyControls(documentLike, state);
@@ -804,4 +805,3 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
     bootstrap();
   }
 }
-

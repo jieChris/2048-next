@@ -1,3 +1,18 @@
+# Stage-1B History Mode Catalog Delta (2026-06-13)
+
+## Phase Decision
+- `WS4-03-next`
+  - status: in_progress
+  - progress: `history-page.ts` removed the legacy `mode_catalog.js` page import; history mode catalog resolution is now injected through the page runtime/controller boundary.
+
+## Evidence
+- `node scripts/page-legacy-runtime-boundary-audit.mjs` reports `legacyImports=17`
+- `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/history-page-runtime.spec.ts`
+- `npm run audit:service-boundary`
+- `npx tsc --noEmit`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/history-records-import-mode-filter.smoke.spec.ts`
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+
 # Stage-1B History Theme Delta (2026-06-13)
 
 ## Phase Decision

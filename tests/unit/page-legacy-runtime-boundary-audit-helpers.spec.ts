@@ -133,4 +133,10 @@ describe("page-legacy-runtime-boundary-audit helpers", () => {
       false
     );
   });
+
+  it("keeps history page off the legacy mode catalog allowlist", () => {
+    expect(PAGE_LEGACY_IMPORT_ALLOWLIST["history-page.ts"]?.has("../../js/mode_catalog.js")).toBe(
+      false
+    );
+  });
 });

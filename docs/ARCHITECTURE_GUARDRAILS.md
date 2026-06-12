@@ -1,3 +1,21 @@
+# Guardrail Delta (2026-06-13, Stage-1B History Mode Catalog)
+
+## Batch Impact
+- `history-page.ts` no longer imports `../../js/mode_catalog.js` directly.
+- History mode catalog access now goes through an injected page runtime/controller boundary.
+- `PAGE_LEGACY_IMPORT_ALLOWLIST` shrank from `legacyImports=18` to `legacyImports=17`.
+- Remaining history page legacy imports are `core_game_settings_storage_runtime` and `local_history_store`.
+
+## Verification
+- RED: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/history-page-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/page-legacy-runtime-boundary-audit-helpers.spec.ts tests/unit/history-page-runtime.spec.ts`
+- `node scripts/page-legacy-runtime-boundary-audit.mjs`
+- `npm run audit:service-boundary`
+- `npx tsc --noEmit`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/history-records-import-mode-filter.smoke.spec.ts`
+- `npx playwright test --config=playwright.refactor-contract.config.ts tests/refactor-contract/pages-history-page-system.smoke.spec.ts`
+
 # Guardrail Delta (2026-06-13, Stage-1B History Theme)
 
 ## Batch Impact
