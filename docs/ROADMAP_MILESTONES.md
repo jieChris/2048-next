@@ -1,3 +1,22 @@
+# Stage-1D Timer Interval Runtime TS Boundary (2026-06-13)
+
+## Phase Decision
+- `WS-runtime-01`
+  - status: done
+  - progress: `CoreTimerIntervalRuntime` is installed from `src/bootstrap/timer-interval-runtime.ts`; `js/core_timer_interval_runtime.js` is no longer referenced by active play/home/capped runtime manifests.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `ensureRetiredRuntimeScriptAbsent` existed.
+- RED: `npx vitest run tests/unit/bootstrap-timer-interval-runtime.spec.ts` failed before `src/bootstrap/timer-interval-runtime.ts` existed.
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-timer-interval.spec.ts tests/unit/bootstrap-timer-interval-runtime.spec.ts`
+- `npm run audit:entry-manifest` reports the active manifests no longer reference `core_timer_interval_runtime.js`.
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1C Service Boundary Allowlist Zero (2026-06-13)
 
 ## Phase Decision

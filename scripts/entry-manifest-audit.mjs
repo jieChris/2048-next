@@ -77,6 +77,18 @@ function ensureEntryHasNoLegacyImports(entryContent, entryName) {
   }
 }
 
+function ensureRetiredRuntimeScriptAbsent(moduleContent, moduleName, retiredScript) {
+  const matches = [];
+  if (moduleContent.includes(retiredScript.scriptPath)) {
+    matches.push(retiredScript.scriptPath);
+  }
+  if (moduleContent.includes(retiredScript.symbolName)) {
+    matches.push(retiredScript.symbolName);
+  }
+  if (matches.length === 0) return;
+  fail(`${moduleName}: retired runtime script still referenced (${matches.join(", ")})`);
+}
+
 function detectEntryArchitecture(entryContent) {
   return String(entryContent || "").match(/bootstrapHomeFamilyPage|bootstrapDirectPage/)
     ? "manifest-bootstrap"
@@ -218,6 +230,14 @@ async function runEntryManifestAudit() {
 
   ensureCapabilityMapped(shared, "play", "playLegacyScripts");
   ensureCapabilityMapped(shared, "replay", "replayLegacyScripts");
+  ensureRetiredRuntimeScriptAbsent(playRuntimeScripts, "src/entries/play-runtime-scripts.ts", {
+    scriptPath: "core_timer_interval_runtime.js",
+    symbolName: "coreTimerIntervalRuntimeUrl"
+  });
+  ensureRetiredRuntimeScriptAbsent(shared, "src/entries/home-family-shared.ts", {
+    scriptPath: "core_timer_interval_runtime.js",
+    symbolName: "coreTimerIntervalRuntimeUrl"
+  });
   ensureAllPageEntriesExist(pageEntryRecords);
   ensurePageEntryArchitectures(pageEntryRecords);
 
@@ -285,6 +305,7 @@ export {
   ensureDirectPageUsesManifest,
   ensureEntryUsesManifest,
   ensureImportAndExportOrderAligned,
+  ensureRetiredRuntimeScriptAbsent,
   ensureScriptOrderConstraints,
   extractScriptImportOrder,
   isDirectCliExecution,
