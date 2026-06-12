@@ -194,6 +194,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks merge-effects runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_merge_effects_runtime.js",
+      symbolName: "coreMergeEffectsRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
