@@ -24,6 +24,18 @@ export interface HomeGuideStartupHostResult {
   delayMs: number;
 }
 
+export interface HomeGuideStartupHostRuntime {
+  applyHomeGuideAutoStart: typeof applyHomeGuideAutoStart;
+}
+
+export interface HomeGuideStartupHostRuntimeWindowLike {
+  CoreHomeGuideStartupHostRuntime?: HomeGuideStartupHostRuntime;
+}
+
+export interface HomeGuideStartupHostRuntimeInstallOptions {
+  windowLike?: HomeGuideStartupHostRuntimeWindowLike | null | undefined;
+}
+
 export function applyHomeGuideAutoStart(input: {
   homeGuideRuntime?: unknown;
   locationLike?: unknown;
@@ -88,4 +100,25 @@ export function applyHomeGuideAutoStart(input: {
     scheduled: true,
     delayMs
   };
+}
+
+export function createHomeGuideStartupHostRuntime(): HomeGuideStartupHostRuntime {
+  return {
+    applyHomeGuideAutoStart
+  };
+}
+
+export function installHomeGuideStartupHostRuntime(
+  options: HomeGuideStartupHostRuntimeInstallOptions = {}
+): HomeGuideStartupHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeGuideStartupHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuideStartupHostRuntime) {
+    windowLike.CoreHomeGuideStartupHostRuntime = createHomeGuideStartupHostRuntime();
+  }
+  return windowLike.CoreHomeGuideStartupHostRuntime || null;
 }

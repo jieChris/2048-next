@@ -1,8 +1,42 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { applyHomeGuideAutoStart } from "../../src/bootstrap/home-guide-startup-host";
+import {
+  applyHomeGuideAutoStart,
+  createHomeGuideStartupHostRuntime,
+  installHomeGuideStartupHostRuntime,
+  type HomeGuideStartupHostRuntime
+} from "../../src/bootstrap/home-guide-startup-host";
 
 describe("bootstrap home guide startup host", () => {
+  it("creates the legacy CoreHomeGuideStartupHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeGuideStartupHostRuntime();
+
+    expect(runtime.applyHomeGuideAutoStart).toBe(applyHomeGuideAutoStart);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeGuideStartupHostRuntime?: HomeGuideStartupHostRuntime } = {};
+
+    const installed = installHomeGuideStartupHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeGuideStartupHostRuntime);
+    expect(installed?.applyHomeGuideAutoStart).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing startup host runtime", () => {
+    const existing = createHomeGuideStartupHostRuntime();
+    const windowLike = { CoreHomeGuideStartupHostRuntime: existing };
+
+    const installed = installHomeGuideStartupHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeGuideStartupHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeGuideStartupHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("schedules guide start when auto-start condition is met", () => {
     const startHomeGuide = vi.fn();
     const setTimeoutLike = vi.fn((handler: () => unknown, _ms: number) => {
