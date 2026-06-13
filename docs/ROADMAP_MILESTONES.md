@@ -1,3 +1,22 @@
+# Stage-1BK Crypto-Random Runtime TS Boundary (2026-06-14)
+
+## Phase Decision
+- `WS-runtime-60`
+  - status: done
+  - progress: `CoreCryptoRandomRuntime` is installed from `src/utils/crypto-random.ts`; `js/core_crypto_random_runtime.js` is no longer referenced by active play/replay/home/capped runtime manifests.
+
+## Evidence
+- RED: `npx vitest run tests/unit/crypto-random.spec.ts` failed before `createCryptoRandomRuntime` / `installCryptoRandomRuntime` existed.
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` exposed the crypto-random runtime retirement entry.
+- GREEN: `npx vitest run tests/unit/crypto-random.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:entry-manifest` reports active manifests no longer reference `core_crypto_random_runtime.js`.
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1BJ Rules Runtime TS Boundary (2026-06-14)
 
 ## Phase Decision

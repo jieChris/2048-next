@@ -1,6 +1,5 @@
 import seedrandomUrl from "../../js/seedrandom.js?url";
 import animframePolyfillUrl from "../../js/animframe_polyfill.js?url";
-import coreCryptoRandomRuntimeUrl from "../../js/core_crypto_random_runtime.js?url";
 import coreBootstrapRuntimeUrl from "../../js/core_bootstrap_runtime.js?url";
 import keyboardInputManagerUrl from "../../js/keyboard_input_manager.js?url";
 import themeManagerUrl from "../../js/theme_manager.js?url";
@@ -103,7 +102,6 @@ import coreI18nRuntimeUrl from "../../js/core_i18n_runtime.js?url";
 export const playLegacyScripts = [
   seedrandomUrl,
   animframePolyfillUrl,
-  coreCryptoRandomRuntimeUrl,
   coreBootstrapRuntimeUrl,
   keyboardInputManagerUrl,
   themeManagerUrl,

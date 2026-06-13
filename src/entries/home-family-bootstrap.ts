@@ -63,6 +63,7 @@ import { installUndoStackEntryRuntime } from "../bootstrap/undo-stack-entry-runt
 import { installUndoTileRestoreRuntime } from "../bootstrap/undo-tile-restore-runtime";
 import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-runtime";
 import { installRulesRuntime } from "../core/rules";
+import { installCryptoRandomRuntime } from "../utils/crypto-random";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
 import { getPageManifest, type RuntimeCapability } from "./runtime-manifest";
 import { resolveHomeFamilyScriptsByCapabilities } from "./home-family-shared";
@@ -207,6 +208,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   registerEngineFacade(
     typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
   );
+  installCryptoRandomRuntime();
   installAdminRescueClientServiceBoundary();
   installDirectionLockRuntime();
   installGameOverUndoHostRuntime();
