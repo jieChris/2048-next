@@ -565,6 +565,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks undo-action runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_undo_action_runtime.js",
+      symbolName: "coreUndoActionRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(

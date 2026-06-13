@@ -1,3 +1,23 @@
+# Guardrail Delta (2026-06-14, Stage-1BH Undo-Action Runtime TS Boundary)
+
+## Batch Impact
+- `CoreUndoActionRuntime` is now installed from `src/bootstrap/undo-action.ts` before home/play legacy scripts load.
+- The installer preserves the legacy runtime global shape: `canTriggerUndo`, `resolveUndoModeIdFromBody`, `resolveUndoModeId`, `isUndoCapableMode`, `resolveUndoCapabilityFromContext`, `isUndoInteractionEnabled`, `tryTriggerUndo`, and `tryTriggerUndoFromContext`.
+- `js/core_undo_action_runtime.js` was retired from active play/home runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_undo_action_runtime.js` / `coreUndoActionRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/bootstrap-undo-action.spec.ts`
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- GREEN: `npx vitest run tests/unit/bootstrap-undo-action.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-14, Stage-1BG Practice-Mode Runtime TS Boundary)
 
 ## Batch Impact

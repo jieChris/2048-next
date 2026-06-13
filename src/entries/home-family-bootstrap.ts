@@ -54,6 +54,7 @@ import { installScoringRuntime } from "../bootstrap/scoring-runtime";
 import { installSettingsModalHostRuntime } from "../bootstrap/settings-modal-host";
 import { installSettingsModalPageHostRuntime } from "../bootstrap/settings-modal-page-host";
 import { installTimerIntervalRuntime } from "../bootstrap/timer-interval-runtime";
+import { installUndoActionRuntime } from "../bootstrap/undo-action";
 import { installUndoRestoreRuntime } from "../bootstrap/undo-restore-runtime";
 import { installUndoRestorePayloadRuntime } from "../bootstrap/undo-restore-payload-runtime";
 import { installUndoSnapshotRuntime } from "../bootstrap/undo-snapshot-runtime";
@@ -225,6 +226,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installHomeStartupHostRuntime();
   installPracticeModeRuntime();
   installHomeModeRuntime();
+  installUndoActionRuntime();
   installHomeRuntimeContractRuntime();
   installHomePageHostRuntime();
   installIndexUiStartupHostRuntime();
