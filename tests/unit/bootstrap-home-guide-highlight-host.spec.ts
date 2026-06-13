@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   applyHomeGuideHighlightClear,
-  applyHomeGuideTargetElevation
+  applyHomeGuideTargetElevation,
+  createHomeGuideHighlightHostRuntime,
+  installHomeGuideHighlightHostRuntime,
+  type HomeGuideHighlightHostRuntime
 } from "../../src/bootstrap/home-guide-highlight-host";
 
 function createNode() {
@@ -15,6 +18,37 @@ function createNode() {
 }
 
 describe("bootstrap home guide highlight host", () => {
+  it("creates the legacy CoreHomeGuideHighlightHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeGuideHighlightHostRuntime();
+
+    expect(runtime.applyHomeGuideHighlightClear).toBe(applyHomeGuideHighlightClear);
+    expect(runtime.applyHomeGuideTargetElevation).toBe(applyHomeGuideTargetElevation);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeGuideHighlightHostRuntime?: HomeGuideHighlightHostRuntime } = {};
+
+    const installed = installHomeGuideHighlightHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeGuideHighlightHostRuntime);
+    expect(installed?.applyHomeGuideHighlightClear).toBeTypeOf("function");
+    expect(installed?.applyHomeGuideTargetElevation).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing highlight host runtime", () => {
+    const existing = createHomeGuideHighlightHostRuntime();
+    const windowLike = { CoreHomeGuideHighlightHostRuntime: existing };
+
+    const installed = installHomeGuideHighlightHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeGuideHighlightHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeGuideHighlightHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("clears target/scoped/elevated classes and resets state", () => {
     const target = createNode();
     const scopedA = createNode();

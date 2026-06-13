@@ -90,6 +90,19 @@ export interface HomeGuideTargetElevationResult {
   didScopeTopActions: boolean;
 }
 
+export interface HomeGuideHighlightHostRuntime {
+  applyHomeGuideHighlightClear: typeof applyHomeGuideHighlightClear;
+  applyHomeGuideTargetElevation: typeof applyHomeGuideTargetElevation;
+}
+
+export interface HomeGuideHighlightHostRuntimeWindowLike {
+  CoreHomeGuideHighlightHostRuntime?: HomeGuideHighlightHostRuntime;
+}
+
+export interface HomeGuideHighlightHostRuntimeInstallOptions {
+  windowLike?: HomeGuideHighlightHostRuntimeWindowLike | null | undefined;
+}
+
 export function applyHomeGuideTargetElevation(input: {
   target?: unknown;
   homeGuideRuntime?: unknown;
@@ -144,4 +157,26 @@ export function applyHomeGuideTargetElevation(input: {
     didElevateHost,
     didScopeTopActions
   };
+}
+
+export function createHomeGuideHighlightHostRuntime(): HomeGuideHighlightHostRuntime {
+  return {
+    applyHomeGuideHighlightClear,
+    applyHomeGuideTargetElevation
+  };
+}
+
+export function installHomeGuideHighlightHostRuntime(
+  options: HomeGuideHighlightHostRuntimeInstallOptions = {}
+): HomeGuideHighlightHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeGuideHighlightHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuideHighlightHostRuntime) {
+    windowLike.CoreHomeGuideHighlightHostRuntime = createHomeGuideHighlightHostRuntime();
+  }
+  return windowLike.CoreHomeGuideHighlightHostRuntime || null;
 }
