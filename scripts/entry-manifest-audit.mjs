@@ -130,6 +130,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_replay_v4_actions_runtime.js",
     symbolName: "coreReplayV4ActionsRuntimeUrl"
+  },
+  {
+    scriptPath: "core_replay_import_runtime.js",
+    symbolName: "coreReplayImportRuntimeUrl"
   }
 ];
 

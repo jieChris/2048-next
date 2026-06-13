@@ -1,3 +1,22 @@
+# Stage-1AD Replay-Import Runtime TS Boundary (2026-06-13)
+
+## Phase Decision
+- `WS-runtime-27`
+  - status: done
+  - progress: `CoreReplayImportRuntime` is installed from `src/bootstrap/replay-import-runtime.ts`; `js/core_replay_import_runtime.js` is no longer referenced by active play/replay/home/capped runtime manifests.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` exposed the replay-import retirement entry.
+- RED: `npx vitest run tests/unit/bootstrap-replay-import-runtime.spec.ts` failed before `src/bootstrap/replay-import-runtime.ts` existed.
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-replay-import.spec.ts tests/unit/bootstrap-replay-import-runtime.spec.ts`
+- `npm run audit:entry-manifest` reports active manifests no longer reference `core_replay_import_runtime.js`.
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1AC Replay-V4-Actions Runtime TS Boundary (2026-06-13)
 
 ## Phase Decision
