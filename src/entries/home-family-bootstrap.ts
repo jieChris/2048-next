@@ -22,6 +22,7 @@ import { installHomeGuideStepHostRuntime } from "../bootstrap/home-guide-step-ho
 import { installHomeGuideStepViewHostRuntime } from "../bootstrap/home-guide-step-view-host";
 import { installHomeGuideStartupHostRuntime } from "../bootstrap/home-guide-startup-host";
 import { installHomePageHostRuntime } from "../bootstrap/home-page-host";
+import { installHomeRuntimeContractRuntime } from "../bootstrap/home-runtime-contract";
 import { installHomeStartupHostRuntime } from "../bootstrap/home-startup-host";
 import { installIndexUiStartupHostRuntime } from "../bootstrap/index-ui-startup-host";
 import { installMergeEffectsRuntime } from "../bootstrap/merge-effects-runtime";
@@ -220,6 +221,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installHomeGuideStepViewHostRuntime();
   installHomeGuideStartupHostRuntime();
   installHomeStartupHostRuntime();
+  installHomeRuntimeContractRuntime();
   installHomePageHostRuntime();
   installIndexUiStartupHostRuntime();
   installMergeEffectsRuntime();

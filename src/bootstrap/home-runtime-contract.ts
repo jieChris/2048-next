@@ -59,3 +59,36 @@ export function resolveHomeRuntimeContracts(
     bootstrapRuntime
   };
 }
+
+export interface HomeRuntimeContractRuntime {
+  resolveHomeRuntimeContracts: typeof resolveHomeRuntimeContracts;
+}
+
+export interface HomeRuntimeContractRuntimeWindowLike {
+  CoreHomeRuntimeContractRuntime?: HomeRuntimeContractRuntime;
+}
+
+export interface HomeRuntimeContractRuntimeInstallOptions {
+  windowLike?: HomeRuntimeContractRuntimeWindowLike | null | undefined;
+}
+
+export function createHomeRuntimeContractRuntime(): HomeRuntimeContractRuntime {
+  return {
+    resolveHomeRuntimeContracts
+  };
+}
+
+export function installHomeRuntimeContractRuntime(
+  options: HomeRuntimeContractRuntimeInstallOptions = {}
+): HomeRuntimeContractRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeRuntimeContractRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeRuntimeContractRuntime) {
+    windowLike.CoreHomeRuntimeContractRuntime = createHomeRuntimeContractRuntime();
+  }
+  return windowLike.CoreHomeRuntimeContractRuntime || null;
+}
