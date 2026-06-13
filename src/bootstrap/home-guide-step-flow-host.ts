@@ -47,6 +47,18 @@ export interface HomeGuideStepFlowHostResult {
   step: unknown;
 }
 
+export interface HomeGuideStepFlowHostRuntime {
+  applyHomeGuideStepFlow: typeof applyHomeGuideStepFlow;
+}
+
+export interface HomeGuideStepFlowHostRuntimeWindowLike {
+  CoreHomeGuideStepFlowHostRuntime?: HomeGuideStepFlowHostRuntime;
+}
+
+export interface HomeGuideStepFlowHostRuntimeInstallOptions {
+  windowLike?: HomeGuideStepFlowHostRuntimeWindowLike | null | undefined;
+}
+
 export function applyHomeGuideStepFlow(input: {
   index?: unknown;
   documentLike?: unknown;
@@ -231,4 +243,25 @@ export function applyHomeGuideStepFlow(input: {
     stepIndex: resolvedIndex,
     step
   };
+}
+
+export function createHomeGuideStepFlowHostRuntime(): HomeGuideStepFlowHostRuntime {
+  return {
+    applyHomeGuideStepFlow
+  };
+}
+
+export function installHomeGuideStepFlowHostRuntime(
+  options: HomeGuideStepFlowHostRuntimeInstallOptions = {}
+): HomeGuideStepFlowHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeGuideStepFlowHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuideStepFlowHostRuntime) {
+    windowLike.CoreHomeGuideStepFlowHostRuntime = createHomeGuideStepFlowHostRuntime();
+  }
+  return windowLike.CoreHomeGuideStepFlowHostRuntime || null;
 }
