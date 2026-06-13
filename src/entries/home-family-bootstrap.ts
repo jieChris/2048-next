@@ -14,6 +14,7 @@ import { installHomeGuideHighlightHostRuntime } from "../bootstrap/home-guide-hi
 import { installHomeGuidePanelHostRuntime } from "../bootstrap/home-guide-panel-host";
 import { installHomeGuideStartHostRuntime } from "../bootstrap/home-guide-start-host";
 import { installHomeGuideStepFlowHostRuntime } from "../bootstrap/home-guide-step-flow-host";
+import { installHomeGuideStepHostRuntime } from "../bootstrap/home-guide-step-host";
 import { installIndexUiStartupHostRuntime } from "../bootstrap/index-ui-startup-host";
 import { installMergeEffectsRuntime } from "../bootstrap/merge-effects-runtime";
 import { installMoveApplyRuntime } from "../bootstrap/move-apply-runtime";
@@ -203,6 +204,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installHomeGuidePanelHostRuntime();
   installHomeGuideStartHostRuntime();
   installHomeGuideStepFlowHostRuntime();
+  installHomeGuideStepHostRuntime();
   installIndexUiStartupHostRuntime();
   installMergeEffectsRuntime();
   installMoveApplyRuntime();

@@ -41,6 +41,19 @@ export interface HomeGuideStepOrchestrationResult {
   loopCount: number;
 }
 
+export interface HomeGuideStepHostRuntime {
+  applyHomeGuideStep: typeof applyHomeGuideStep;
+  applyHomeGuideStepOrchestration: typeof applyHomeGuideStepOrchestration;
+}
+
+export interface HomeGuideStepHostRuntimeWindowLike {
+  CoreHomeGuideStepHostRuntime?: HomeGuideStepHostRuntime;
+}
+
+export interface HomeGuideStepHostRuntimeInstallOptions {
+  windowLike?: HomeGuideStepHostRuntimeWindowLike | null | undefined;
+}
+
 export function applyHomeGuideStep(input: {
   index?: unknown;
   stepFlowHostRuntime?: unknown;
@@ -238,4 +251,26 @@ export function applyHomeGuideStepOrchestration(input: {
     finalIndex: nextIndex,
     loopCount
   };
+}
+
+export function createHomeGuideStepHostRuntime(): HomeGuideStepHostRuntime {
+  return {
+    applyHomeGuideStep,
+    applyHomeGuideStepOrchestration
+  };
+}
+
+export function installHomeGuideStepHostRuntime(
+  options: HomeGuideStepHostRuntimeInstallOptions = {}
+): HomeGuideStepHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeGuideStepHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuideStepHostRuntime) {
+    windowLike.CoreHomeGuideStepHostRuntime = createHomeGuideStepHostRuntime();
+  }
+  return windowLike.CoreHomeGuideStepHostRuntime || null;
 }
