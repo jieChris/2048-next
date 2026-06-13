@@ -14,6 +14,7 @@ import { installPostMoveRuntime } from "../bootstrap/post-move-runtime";
 import { installPostUndoRecordRuntime } from "../bootstrap/post-undo-record-runtime";
 import { installScoringRuntime } from "../bootstrap/scoring-runtime";
 import { installTimerIntervalRuntime } from "../bootstrap/timer-interval-runtime";
+import { installUndoRestorePayloadRuntime } from "../bootstrap/undo-restore-payload-runtime";
 import { installUndoSnapshotRuntime } from "../bootstrap/undo-snapshot-runtime";
 import { installUndoTileRestoreRuntime } from "../bootstrap/undo-tile-restore-runtime";
 import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-runtime";
@@ -172,6 +173,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installPostUndoRecordRuntime();
   installScoringRuntime();
   installTimerIntervalRuntime();
+  installUndoRestorePayloadRuntime();
   installUndoSnapshotRuntime();
   installUndoTileRestoreRuntime();
   installUndoTileSnapshotRuntime();
