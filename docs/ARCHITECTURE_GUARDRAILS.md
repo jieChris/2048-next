@@ -1,3 +1,23 @@
+# Guardrail Delta (2026-06-14, Stage-1BK Crypto-Random Runtime TS Boundary)
+
+## Batch Impact
+- `CoreCryptoRandomRuntime` is now installed from `src/utils/crypto-random.ts` before home/play/replay/capped legacy scripts load.
+- The installer preserves the legacy runtime global shape for random buffer filling, integer/float generation, seed generation, hex/base36 output, and random IDs.
+- `js/core_crypto_random_runtime.js` was retired from active play/replay/home/capped runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_crypto_random_runtime.js` / `coreCryptoRandomRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/crypto-random.spec.ts`
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- GREEN: `npx vitest run tests/unit/crypto-random.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-14, Stage-1BJ Rules Runtime TS Boundary)
 
 ## Batch Impact

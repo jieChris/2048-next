@@ -9,7 +9,6 @@ import coreAnnouncementRuntimeUrl from "../../js/core_announcement_runtime.js?ur
 import announcementManagerUrl from "../../js/announcement_manager.js?url";
 import seedrandomUrl from "../../js/seedrandom.js?url";
 import animframePolyfillUrl from "../../js/animframe_polyfill.js?url";
-import coreCryptoRandomRuntimeUrl from "../../js/core_crypto_random_runtime.js?url";
 import keyboardInputManagerUrl from "../../js/keyboard_input_manager.js?url";
 import cappedInputManagerUrl from "../../js/capped_input_manager.js?url";
 import themeManagerUrl from "../../js/theme_manager.js?url";
@@ -108,7 +107,6 @@ export const homeAnnouncementScripts = [
 export const homeCoreScripts = [
   seedrandomUrl,
   animframePolyfillUrl,
-  coreCryptoRandomRuntimeUrl,
   coreBootstrapRuntimeUrl,
   keyboardInputManagerUrl,
   themeManagerUrl,
@@ -147,7 +145,6 @@ export const homeCoreScripts = [
 export const cappedCoreScripts = [
   seedrandomUrl,
   animframePolyfillUrl,
-  coreCryptoRandomRuntimeUrl,
   coreBootstrapRuntimeUrl,
   cappedInputManagerUrl,
   themeManagerUrl,
