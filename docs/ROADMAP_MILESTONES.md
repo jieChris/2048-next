@@ -1,3 +1,22 @@
+# Stage-1S Undo-Restore Runtime TS Boundary (2026-06-13)
+
+## Phase Decision
+- `WS-runtime-16`
+  - status: done
+  - progress: `CoreUndoRestoreRuntime` is installed from `src/bootstrap/undo-restore-runtime.ts`; `js/core_undo_restore_runtime.js` is no longer referenced by active play/replay/home/capped runtime manifests.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` exposed the undo-restore retirement entry.
+- RED: `npx vitest run tests/unit/bootstrap-undo-restore-runtime.spec.ts` failed before `src/bootstrap/undo-restore-runtime.ts` existed.
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-undo-restore.spec.ts tests/unit/bootstrap-undo-restore-runtime.spec.ts`
+- `npm run audit:entry-manifest` reports active manifests no longer reference `core_undo_restore_runtime.js`.
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1R Undo-Stack-Entry Runtime TS Boundary (2026-06-13)
 
 ## Phase Decision

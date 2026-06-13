@@ -23,7 +23,6 @@ import coreModeCatalogRuntimeUrl from "../../js/core_mode_catalog_runtime.js?url
 import coreRulesRuntimeUrl from "../../js/core_rules_runtime.js?url";
 import coreModeRuntimeUrl from "../../js/core_mode_runtime.js?url";
 import coreSpecialRulesRuntimeUrl from "../../js/core_special_rules_runtime.js?url";
-import coreUndoRestoreRuntimeUrl from "../../js/core_undo_restore_runtime.js?url";
 import coreReplayCodecRuntimeUrl from "../../js/core_replay_codec_runtime.js?url";
 import coreReplayV4ActionsRuntimeUrl from "../../js/core_replay_v4_actions_runtime.js?url";
 import coreReplayImportRuntimeUrl from "../../js/core_replay_import_runtime.js?url";
@@ -165,7 +164,6 @@ export const homeCoreScripts = [
   coreRulesRuntimeUrl,
   coreModeRuntimeUrl,
   coreSpecialRulesRuntimeUrl,
-  coreUndoRestoreRuntimeUrl,
   coreReplayCodecRuntimeUrl,
   coreReplayV4ActionsRuntimeUrl,
   coreReplayImportRuntimeUrl,
@@ -218,7 +216,6 @@ export const cappedCoreScripts = [
   coreRulesRuntimeUrl,
   coreModeRuntimeUrl,
   coreSpecialRulesRuntimeUrl,
-  coreUndoRestoreRuntimeUrl,
   coreReplayCodecRuntimeUrl,
   coreReplayV4ActionsRuntimeUrl,
   coreReplayImportRuntimeUrl,
