@@ -47,6 +47,7 @@ describe("bootstrap replay export", () => {
 
     expect(result).toEqual({
       exported: true,
+      format: "v1-rpl-base64",
       replay: "REPLAY_v1RPL_B64_rescue"
     });
     expect(showReplayModal).toHaveBeenCalledWith(
@@ -101,7 +102,7 @@ describe("bootstrap replay export", () => {
       alertLike
     });
 
-    expect(result).toEqual({ exported: true, replay: "replay-v4" });
+    expect(result).toEqual({ exported: true, format: "text", replay: "replay-v4" });
     expect(showReplayModal).toHaveBeenCalledTimes(1);
     expect(showReplayModal).toHaveBeenCalledWith(
       "导出回放",
