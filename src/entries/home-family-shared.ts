@@ -19,7 +19,6 @@ import gridUrl from "../../js/grid.js?url";
 import tileUrl from "../../js/tile.js?url";
 import localScoreManagerUrl from "../../js/local_score_manager.js?url";
 import localHistoryStoreUrl from "../../js/local_history_store.js?url";
-import coreModeCatalogRuntimeUrl from "../../js/core_mode_catalog_runtime.js?url";
 import coreRulesRuntimeUrl from "../../js/core_rules_runtime.js?url";
 import coreModeRuntimeUrl from "../../js/core_mode_runtime.js?url";
 import coreSpecialRulesRuntimeUrl from "../../js/core_special_rules_runtime.js?url";
@@ -160,7 +159,6 @@ export const cappedCoreScripts = [
   tileUrl,
   localScoreManagerUrl,
   localHistoryStoreUrl,
-  coreModeCatalogRuntimeUrl,
   coreRulesRuntimeUrl,
   coreModeRuntimeUrl,
   coreSpecialRulesRuntimeUrl,
@@ -188,7 +186,6 @@ export const cappedCoreScripts = [
 ] as const;
 
 export const homeStandardStartupScripts = [
-  coreModeCatalogRuntimeUrl,
   applicationUrl
 ] as const;
 

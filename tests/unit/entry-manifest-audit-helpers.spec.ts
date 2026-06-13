@@ -572,6 +572,26 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks mode-catalog runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_mode_catalog_runtime.js",
+      symbolName: "coreModeCatalogRuntimeUrl"
+    });
+  });
+
+  it("detects retired runtime references in capped entry content", () => {
+    expect(() =>
+      ensureRetiredRuntimeScriptAbsent(
+        'import "../../js/core_mode_catalog_runtime.js";',
+        "src/entries/capped.ts",
+        {
+          scriptPath: "core_mode_catalog_runtime.js",
+          symbolName: "coreModeCatalogRuntimeUrl"
+        }
+      )
+    ).toThrow(/src\/entries\/capped\.ts: retired runtime script still referenced/);
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(

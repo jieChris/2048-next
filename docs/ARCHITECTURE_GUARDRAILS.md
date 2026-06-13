@@ -1,3 +1,23 @@
+# Guardrail Delta (2026-06-14, Stage-1BI Mode-Catalog Runtime TS Boundary)
+
+## Batch Impact
+- `CoreModeCatalogRuntime` is now installed from `src/bootstrap/mode-catalog.ts` before home/play/replay/capped legacy scripts load.
+- The installer preserves the legacy runtime global shape: `resolveCatalogModeWithDefault`.
+- `js/core_mode_catalog_runtime.js` was retired from active play/replay/home runtime manifests and from `src/entries/capped.ts` without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_mode_catalog_runtime.js` / `coreModeCatalogRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`, including capped entry direct imports.
+
+## Verification
+- RED: `npx vitest run tests/unit/bootstrap-mode-catalog.spec.ts`
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- GREEN: `npx vitest run tests/unit/bootstrap-mode-catalog.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-14, Stage-1BH Undo-Action Runtime TS Boundary)
 
 ## Batch Impact
