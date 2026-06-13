@@ -3,16 +3,61 @@ import { describe, expect, it } from "vitest";
 import {
   buildPracticeModeConfigFromSelection,
   buildPracticeModeConfig,
-  parsePracticeRuleset
+  createPracticeModeRuntime,
+  installPracticeModeRuntime,
+  parsePracticeModeKey,
+  parsePracticeRuleset,
+  type PracticeModeRuntime
 } from "../../src/bootstrap/practice-mode";
 import { normalizeModeConfig } from "../../src/core/mode";
 
 describe("bootstrap practice mode", () => {
+  it("creates the legacy CorePracticeModeRuntime shape from TypeScript functions", () => {
+    const runtime = createPracticeModeRuntime();
+
+    expect(runtime.parsePracticeRuleset).toBe(parsePracticeRuleset);
+    expect(runtime.parsePracticeModeKey).toBe(parsePracticeModeKey);
+    expect(runtime.buildPracticeModeConfig).toBe(buildPracticeModeConfig);
+    expect(runtime.buildPracticeModeConfigFromSelection).toBe(buildPracticeModeConfigFromSelection);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CorePracticeModeRuntime?: PracticeModeRuntime } = {};
+
+    const installed = installPracticeModeRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CorePracticeModeRuntime);
+    expect(installed?.buildPracticeModeConfig).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing practice mode runtime", () => {
+    const existing = createPracticeModeRuntime();
+    const windowLike = { CorePracticeModeRuntime: existing };
+
+    const installed = installPracticeModeRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CorePracticeModeRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installPracticeModeRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("parses practice ruleset query", () => {
     expect(parsePracticeRuleset("?practice_ruleset=fibonacci")).toBe("fibonacci");
     expect(parsePracticeRuleset("?practice_ruleset=pow2")).toBe("pow2");
     expect(parsePracticeRuleset("?practice_ruleset=other")).toBe("pow2");
     expect(parsePracticeRuleset("")).toBe("pow2");
+  });
+
+  it("parses practice mode key query and ignores the direct practice sentinel", () => {
+    expect(parsePracticeModeKey("?practice_mode_key=capped_4x4_pow2_64_no_undo")).toBe(
+      "capped_4x4_pow2_64_no_undo"
+    );
+    expect(parsePracticeModeKey("?practice_mode_key=practice")).toBe("");
+    expect(parsePracticeModeKey("?practice_mode_key=%20%20")).toBe("");
+    expect(parsePracticeModeKey("")).toBe("");
   });
 
   it("builds fibonacci practice mode config", () => {

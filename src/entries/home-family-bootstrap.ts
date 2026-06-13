@@ -33,6 +33,7 @@ import { installMoveScanRuntime } from "../bootstrap/move-scan-runtime";
 import { installPostMoveRecordRuntime } from "../bootstrap/post-move-record-runtime";
 import { installPostMoveRuntime } from "../bootstrap/post-move-runtime";
 import { installPostUndoRecordRuntime } from "../bootstrap/post-undo-record-runtime";
+import { installPracticeModeRuntime } from "../bootstrap/practice-mode";
 import { installPrettyTimeRuntime } from "../bootstrap/pretty-time";
 import { installReplayCodecRuntime } from "../bootstrap/replay-codec-runtime";
 import { installReplayControlRuntime } from "../bootstrap/replay-control-runtime";
@@ -222,6 +223,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installHomeGuideStepViewHostRuntime();
   installHomeGuideStartupHostRuntime();
   installHomeStartupHostRuntime();
+  installPracticeModeRuntime();
   installHomeModeRuntime();
   installHomeRuntimeContractRuntime();
   installHomePageHostRuntime();

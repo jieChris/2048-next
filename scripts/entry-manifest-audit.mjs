@@ -246,6 +246,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_home_mode_runtime.js",
     symbolName: "coreHomeModeRuntimeUrl"
+  },
+  {
+    scriptPath: "core_practice_mode_runtime.js",
+    symbolName: "corePracticeModeRuntimeUrl"
   }
 ];
 

@@ -160,3 +160,40 @@ export function buildPracticeModeConfigFromSelection<T extends PracticeModeConfi
 
   return cfg;
 }
+
+export interface PracticeModeRuntime {
+  parsePracticeRuleset: typeof parsePracticeRuleset;
+  parsePracticeModeKey: typeof parsePracticeModeKey;
+  buildPracticeModeConfig: typeof buildPracticeModeConfig;
+  buildPracticeModeConfigFromSelection: typeof buildPracticeModeConfigFromSelection;
+}
+
+export interface PracticeModeRuntimeWindowLike {
+  CorePracticeModeRuntime?: PracticeModeRuntime;
+}
+
+export interface PracticeModeRuntimeInstallOptions {
+  windowLike?: PracticeModeRuntimeWindowLike | null | undefined;
+}
+
+export function createPracticeModeRuntime(): PracticeModeRuntime {
+  return {
+    parsePracticeRuleset,
+    parsePracticeModeKey,
+    buildPracticeModeConfig,
+    buildPracticeModeConfigFromSelection
+  };
+}
+
+export function installPracticeModeRuntime(
+  options: PracticeModeRuntimeInstallOptions = {}
+): PracticeModeRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined" ? null : (window as unknown as PracticeModeRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CorePracticeModeRuntime) {
+    windowLike.CorePracticeModeRuntime = createPracticeModeRuntime();
+  }
+  return windowLike.CorePracticeModeRuntime || null;
+}
