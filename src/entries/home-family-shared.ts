@@ -23,7 +23,6 @@ import coreModeCatalogRuntimeUrl from "../../js/core_mode_catalog_runtime.js?url
 import coreRulesRuntimeUrl from "../../js/core_rules_runtime.js?url";
 import coreModeRuntimeUrl from "../../js/core_mode_runtime.js?url";
 import coreSpecialRulesRuntimeUrl from "../../js/core_special_rules_runtime.js?url";
-import coreGridScanRuntimeUrl from "../../js/core_grid_scan_runtime.js?url";
 import coreMoveScanRuntimeUrl from "../../js/core_move_scan_runtime.js?url";
 import coreMovePathRuntimeUrl from "../../js/core_move_path_runtime.js?url";
 import corePostUndoRecordRuntimeUrl from "../../js/core_post_undo_record_runtime.js?url";
@@ -173,7 +172,6 @@ export const homeCoreScripts = [
   coreRulesRuntimeUrl,
   coreModeRuntimeUrl,
   coreSpecialRulesRuntimeUrl,
-  coreGridScanRuntimeUrl,
   coreMoveScanRuntimeUrl,
   coreMovePathRuntimeUrl,
   corePostUndoRecordRuntimeUrl,
@@ -234,7 +232,6 @@ export const cappedCoreScripts = [
   coreRulesRuntimeUrl,
   coreModeRuntimeUrl,
   coreSpecialRulesRuntimeUrl,
-  coreGridScanRuntimeUrl,
   coreMoveScanRuntimeUrl,
   coreMovePathRuntimeUrl,
   corePostUndoRecordRuntimeUrl,
