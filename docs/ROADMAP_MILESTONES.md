@@ -1,3 +1,22 @@
+# Stage-1O Undo-Tile-Snapshot Runtime TS Boundary (2026-06-13)
+
+## Phase Decision
+- `WS-runtime-12`
+  - status: done
+  - progress: `CoreUndoTileSnapshotRuntime` is installed from `src/bootstrap/undo-tile-snapshot-runtime.ts`; `js/core_undo_tile_snapshot_runtime.js` is no longer referenced by active play/replay/home/capped runtime manifests.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` exposed the undo-tile-snapshot retirement entry.
+- RED: `npx vitest run tests/unit/bootstrap-undo-tile-snapshot-runtime.spec.ts` failed before `src/bootstrap/undo-tile-snapshot-runtime.ts` existed.
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-undo-tile-snapshot.spec.ts tests/unit/bootstrap-undo-tile-snapshot-runtime.spec.ts`
+- `npm run audit:entry-manifest` reports active manifests no longer reference `core_undo_tile_snapshot_runtime.js`.
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1N Post-Undo-Record Runtime TS Boundary (2026-06-13)
 
 ## Phase Decision

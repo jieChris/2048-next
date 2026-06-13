@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-13, Stage-1O Undo-Tile-Snapshot Runtime TS Boundary)
+
+## Batch Impact
+- `CoreUndoTileSnapshotRuntime` is now installed from `src/bootstrap/undo-tile-snapshot-runtime.ts` before home-family legacy scripts load.
+- `src/core/undo-tile-snapshot.ts` remains the tested TypeScript owner for undo tile snapshot serialization.
+- The installer preserves legacy tolerance for missing `input`, `tile`, and `target` objects while keeping the pure core API strict.
+- `js/core_undo_tile_snapshot_runtime.js` was retired from active play/replay/home/capped runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_undo_tile_snapshot_runtime.js` / `coreUndoTileSnapshotRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-undo-tile-snapshot-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-undo-tile-snapshot.spec.ts tests/unit/bootstrap-undo-tile-snapshot-runtime.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-13, Stage-1N Post-Undo-Record Runtime TS Boundary)
 
 ## Batch Impact

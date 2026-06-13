@@ -15,6 +15,7 @@ import { installPostUndoRecordRuntime } from "../bootstrap/post-undo-record-runt
 import { installScoringRuntime } from "../bootstrap/scoring-runtime";
 import { installTimerIntervalRuntime } from "../bootstrap/timer-interval-runtime";
 import { installUndoSnapshotRuntime } from "../bootstrap/undo-snapshot-runtime";
+import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-runtime";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
 import { getPageManifest, type RuntimeCapability } from "./runtime-manifest";
 import { resolveHomeFamilyScriptsByCapabilities } from "./home-family-shared";
@@ -171,6 +172,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installScoringRuntime();
   installTimerIntervalRuntime();
   installUndoSnapshotRuntime();
+  installUndoTileSnapshotRuntime();
   if (pageId === "index") {
     await loadLegacyScriptsSequentially([INDEX_STARTUP_BUNDLE_URL]);
     scheduleIndexDeferredRuntimeLoad();
