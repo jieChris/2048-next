@@ -66,6 +66,18 @@ export interface HomeGuideStartHostResult {
   hasDom: boolean;
 }
 
+export interface HomeGuideStartHostRuntime {
+  applyHomeGuideStart: typeof applyHomeGuideStart;
+}
+
+export interface HomeGuideStartHostRuntimeWindowLike {
+  CoreHomeGuideStartHostRuntime?: HomeGuideStartHostRuntime;
+}
+
+export interface HomeGuideStartHostRuntimeInstallOptions {
+  windowLike?: HomeGuideStartHostRuntimeWindowLike | null | undefined;
+}
+
 export function applyHomeGuideStart(input: {
   homeGuideRuntime?: unknown;
   homeGuideState?: unknown;
@@ -151,4 +163,25 @@ export function applyHomeGuideStart(input: {
     didStart: true,
     hasDom: !!(dom.overlay && dom.panel)
   };
+}
+
+export function createHomeGuideStartHostRuntime(): HomeGuideStartHostRuntime {
+  return {
+    applyHomeGuideStart
+  };
+}
+
+export function installHomeGuideStartHostRuntime(
+  options: HomeGuideStartHostRuntimeInstallOptions = {}
+): HomeGuideStartHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeGuideStartHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuideStartHostRuntime) {
+    windowLike.CoreHomeGuideStartHostRuntime = createHomeGuideStartHostRuntime();
+  }
+  return windowLike.CoreHomeGuideStartHostRuntime || null;
 }
