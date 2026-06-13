@@ -181,3 +181,40 @@ export function applySettingsModalClose(input: {
     closed: true
   };
 }
+
+export interface ReplayModalRuntime {
+  applyReplayModalOpen: typeof applyReplayModalOpen;
+  applyReplayModalClose: typeof applyReplayModalClose;
+  applySettingsModalOpen: typeof applySettingsModalOpen;
+  applySettingsModalClose: typeof applySettingsModalClose;
+}
+
+export interface ReplayModalRuntimeWindowLike {
+  CoreReplayModalRuntime?: ReplayModalRuntime;
+}
+
+export interface ReplayModalRuntimeInstallOptions {
+  windowLike?: ReplayModalRuntimeWindowLike | null | undefined;
+}
+
+export function createReplayModalRuntime(): ReplayModalRuntime {
+  return {
+    applyReplayModalOpen,
+    applyReplayModalClose,
+    applySettingsModalOpen,
+    applySettingsModalClose
+  };
+}
+
+export function installReplayModalRuntime(
+  options: ReplayModalRuntimeInstallOptions = {}
+): ReplayModalRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined" ? null : (window as unknown as ReplayModalRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreReplayModalRuntime) {
+    windowLike.CoreReplayModalRuntime = createReplayModalRuntime();
+  }
+  return windowLike.CoreReplayModalRuntime || null;
+}
