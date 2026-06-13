@@ -1,3 +1,23 @@
+# Guardrail Delta (2026-06-14, Stage-1BF Home-Mode Runtime TS Boundary)
+
+## Batch Impact
+- `CoreHomeModeRuntime` is now installed from `src/bootstrap/home-mode.ts` before home-family legacy scripts load.
+- The installer preserves the legacy runtime global shape: `DEFAULT_HOME_MODE_KEY`, `resolveHomeModeKey`, `resolveHomeModeSelection`, and `resolveHomeModeSelectionFromContext`.
+- `js/core_home_mode_runtime.js` was retired from active play/home runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_home_mode_runtime.js` / `coreHomeModeRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/bootstrap-home-mode.spec.ts`
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- GREEN: `npx vitest run tests/unit/bootstrap-home-mode.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-14, Stage-1BE Home-Runtime-Contract TS Boundary)
 
 ## Batch Impact

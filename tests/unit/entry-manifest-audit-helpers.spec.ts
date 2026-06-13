@@ -551,6 +551,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks home-mode runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_home_mode_runtime.js",
+      symbolName: "coreHomeModeRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(

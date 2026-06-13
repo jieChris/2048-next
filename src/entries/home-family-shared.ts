@@ -47,7 +47,6 @@ import coreGameManagerBindingsRuntimeUrl from "../../js/core_game_manager_bindin
 import gameManagerUrl from "../../js/game_manager.js?url";
 import coreBootstrapRuntimeUrl from "../../js/core_bootstrap_runtime.js?url";
 import corePracticeModeRuntimeUrl from "../../js/core_practice_mode_runtime.js?url";
-import coreHomeModeRuntimeUrl from "../../js/core_home_mode_runtime.js?url";
 import coreUndoActionRuntimeUrl from "../../js/core_undo_action_runtime.js?url";
 import applicationUrl from "../../js/application.js?url";
 import corePracticeTransferRuntimeUrl from "../../js/core_practice_transfer_runtime.js?url";
@@ -193,7 +192,6 @@ export const cappedCoreScripts = [
 export const homeStandardStartupScripts = [
   coreModeCatalogRuntimeUrl,
   corePracticeModeRuntimeUrl,
-  coreHomeModeRuntimeUrl,
   coreUndoActionRuntimeUrl,
   applicationUrl
 ] as const;
