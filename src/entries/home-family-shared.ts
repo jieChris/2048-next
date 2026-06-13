@@ -29,7 +29,6 @@ import coreReplayImportRuntimeUrl from "../../js/core_replay_import_runtime.js?u
 import coreReplayExecutionRuntimeUrl from "../../js/core_replay_execution_runtime.js?url";
 import coreReplayDispatchRuntimeUrl from "../../js/core_replay_dispatch_runtime.js?url";
 import coreReplayLifecycleRuntimeUrl from "../../js/core_replay_lifecycle_runtime.js?url";
-import coreReplayTimerRuntimeUrl from "../../js/core_replay_timer_runtime.js?url";
 import coreReplayFlowRuntimeUrl from "../../js/core_replay_flow_runtime.js?url";
 import coreReplayControlRuntimeUrl from "../../js/core_replay_control_runtime.js?url";
 import coreReplayLoopRuntimeUrl from "../../js/core_replay_loop_runtime.js?url";
@@ -169,7 +168,6 @@ export const homeCoreScripts = [
   coreReplayExecutionRuntimeUrl,
   coreReplayDispatchRuntimeUrl,
   coreReplayLifecycleRuntimeUrl,
-  coreReplayTimerRuntimeUrl,
   coreReplayFlowRuntimeUrl,
   coreReplayControlRuntimeUrl,
   coreReplayLoopRuntimeUrl,
@@ -220,7 +218,6 @@ export const cappedCoreScripts = [
   coreReplayExecutionRuntimeUrl,
   coreReplayDispatchRuntimeUrl,
   coreReplayLifecycleRuntimeUrl,
-  coreReplayTimerRuntimeUrl,
   coreReplayFlowRuntimeUrl,
   coreReplayControlRuntimeUrl,
   coreReplayLoopRuntimeUrl,
