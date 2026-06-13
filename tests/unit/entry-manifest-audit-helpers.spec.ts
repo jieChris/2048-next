@@ -264,6 +264,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks undo-restore-payload runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_undo_restore_payload_runtime.js",
+      symbolName: "coreUndoRestorePayloadRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
