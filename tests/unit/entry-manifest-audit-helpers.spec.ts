@@ -271,6 +271,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks undo-stack-entry runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_undo_stack_entry_runtime.js",
+      symbolName: "coreUndoStackEntryRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(

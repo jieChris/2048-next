@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-13, Stage-1R Undo-Stack-Entry Runtime TS Boundary)
+
+## Batch Impact
+- `CoreUndoStackEntryRuntime` is now installed from `src/bootstrap/undo-stack-entry-runtime.ts` before home-family legacy scripts load.
+- `src/core/undo-stack-entry.ts` remains the tested TypeScript owner for undo stack entry normalization.
+- The installer preserves legacy tolerance for missing `input` while keeping the pure core API strict.
+- `js/core_undo_stack_entry_runtime.js` was retired from active play/replay/home/capped runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_undo_stack_entry_runtime.js` / `coreUndoStackEntryRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-undo-stack-entry-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-undo-stack-entry.spec.ts tests/unit/bootstrap-undo-stack-entry-runtime.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-13, Stage-1Q Undo-Restore-Payload Runtime TS Boundary)
 
 ## Batch Impact
