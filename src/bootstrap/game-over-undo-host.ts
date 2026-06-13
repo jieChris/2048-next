@@ -58,6 +58,18 @@ export interface GameOverUndoHostResult {
   boundControlCount: number;
 }
 
+export interface GameOverUndoHostRuntime {
+  bindGameOverUndoControl: typeof bindGameOverUndoControl;
+}
+
+export interface GameOverUndoHostRuntimeWindowLike {
+  CoreGameOverUndoHostRuntime?: GameOverUndoHostRuntime;
+}
+
+export interface GameOverUndoHostRuntimeInstallOptions {
+  windowLike?: GameOverUndoHostRuntimeWindowLike | null | undefined;
+}
+
 export function bindGameOverUndoControl(input: {
   getElementById?: unknown;
   tryUndo?: unknown;
@@ -123,4 +135,25 @@ export function bindGameOverUndoControl(input: {
     didBind: boundControlCount > 0,
     boundControlCount
   };
+}
+
+export function createGameOverUndoHostRuntime(): GameOverUndoHostRuntime {
+  return {
+    bindGameOverUndoControl
+  };
+}
+
+export function installGameOverUndoHostRuntime(
+  options: GameOverUndoHostRuntimeInstallOptions = {}
+): GameOverUndoHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as GameOverUndoHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreGameOverUndoHostRuntime) {
+    windowLike.CoreGameOverUndoHostRuntime = createGameOverUndoHostRuntime();
+  }
+  return windowLike.CoreGameOverUndoHostRuntime || null;
 }
