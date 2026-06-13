@@ -182,6 +182,7 @@ test.describe("History smoke: import", () => {
 
     await page.click("#history-import-replace-btn");
     await page.dispatchEvent("#history-import-file", "change");
+    await expect(page.locator(".history-item")).toHaveCount(1);
 
     const snapshot = await page.evaluate(() => {
       const all = (window as any).LocalHistoryStore.getAll();
