@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-13, Stage-1AC Replay-V4-Actions Runtime TS Boundary)
+
+## Batch Impact
+- `CoreReplayV4ActionsRuntime` is now installed from `src/bootstrap/replay-v4-actions-runtime.ts` before home-family legacy scripts load.
+- `src/core/replay-v4-actions.ts` remains the tested TypeScript owner for v4C replay action decoding.
+- The installer preserves the legacy runtime global shape and malformed escape throw behavior while delegating decoding to the TypeScript core.
+- `js/core_replay_v4_actions_runtime.js` was retired from active play/replay/home/capped runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_replay_v4_actions_runtime.js` / `coreReplayV4ActionsRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-replay-v4-actions-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-replay-v4-actions.spec.ts tests/unit/bootstrap-replay-v4-actions-runtime.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-13, Stage-1AB Replay-Codec Runtime TS Boundary)
 
 ## Batch Impact

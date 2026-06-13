@@ -21,6 +21,7 @@ import { installReplayFlowRuntime } from "../bootstrap/replay-flow-runtime";
 import { installReplayLifecycleRuntime } from "../bootstrap/replay-lifecycle-runtime";
 import { installReplayLoopRuntime } from "../bootstrap/replay-loop-runtime";
 import { installReplayTimerRuntime } from "../bootstrap/replay-timer-runtime";
+import { installReplayV4ActionsRuntime } from "../bootstrap/replay-v4-actions-runtime";
 import { installScoringRuntime } from "../bootstrap/scoring-runtime";
 import { installTimerIntervalRuntime } from "../bootstrap/timer-interval-runtime";
 import { installUndoRestoreRuntime } from "../bootstrap/undo-restore-runtime";
@@ -184,6 +185,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installPostMoveRuntime();
   installPostUndoRecordRuntime();
   installReplayCodecRuntime();
+  installReplayV4ActionsRuntime();
   installReplayControlRuntime();
   installReplayDispatchRuntime();
   installReplayExecutionRuntime();

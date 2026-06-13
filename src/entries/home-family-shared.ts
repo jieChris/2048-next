@@ -23,7 +23,6 @@ import coreModeCatalogRuntimeUrl from "../../js/core_mode_catalog_runtime.js?url
 import coreRulesRuntimeUrl from "../../js/core_rules_runtime.js?url";
 import coreModeRuntimeUrl from "../../js/core_mode_runtime.js?url";
 import coreSpecialRulesRuntimeUrl from "../../js/core_special_rules_runtime.js?url";
-import coreReplayV4ActionsRuntimeUrl from "../../js/core_replay_v4_actions_runtime.js?url";
 import coreReplayImportRuntimeUrl from "../../js/core_replay_import_runtime.js?url";
 import coreGameSettingsStorageRuntimeUrl from "../../js/core_game_settings_storage_runtime.js?url";
 import coreGameManagerClientRecordIdRuntimeUrl from "../../js/core_game_manager_client_record_id_runtime.js?url";
@@ -155,7 +154,6 @@ export const homeCoreScripts = [
   coreRulesRuntimeUrl,
   coreModeRuntimeUrl,
   coreSpecialRulesRuntimeUrl,
-  coreReplayV4ActionsRuntimeUrl,
   coreReplayImportRuntimeUrl,
   coreGameSettingsStorageRuntimeUrl,
   coreGameManagerClientRecordIdRuntimeUrl,
@@ -198,7 +196,6 @@ export const cappedCoreScripts = [
   coreRulesRuntimeUrl,
   coreModeRuntimeUrl,
   coreSpecialRulesRuntimeUrl,
-  coreReplayV4ActionsRuntimeUrl,
   coreReplayImportRuntimeUrl,
   coreGameSettingsStorageRuntimeUrl,
   coreGameManagerClientRecordIdRuntimeUrl,
