@@ -222,6 +222,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks grid-scan runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_grid_scan_runtime.js",
+      symbolName: "coreGridScanRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(

@@ -54,6 +54,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_direction_lock_runtime.js",
     symbolName: "coreDirectionLockRuntimeUrl"
+  },
+  {
+    scriptPath: "core_grid_scan_runtime.js",
+    symbolName: "coreGridScanRuntimeUrl"
   }
 ];
 
