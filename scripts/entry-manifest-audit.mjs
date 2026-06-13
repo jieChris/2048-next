@@ -50,6 +50,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_undo_snapshot_runtime.js",
     symbolName: "coreUndoSnapshotRuntimeUrl"
+  },
+  {
+    scriptPath: "core_direction_lock_runtime.js",
+    symbolName: "coreDirectionLockRuntimeUrl"
   }
 ];
 
