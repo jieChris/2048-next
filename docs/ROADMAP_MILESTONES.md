@@ -1,3 +1,22 @@
+# Stage-1BE Home-Runtime-Contract TS Boundary (2026-06-14)
+
+## Phase Decision
+- `WS-runtime-54`
+  - status: done
+  - progress: `CoreHomeRuntimeContractRuntime` is installed from `src/bootstrap/home-runtime-contract.ts`; `js/core_home_runtime_contract_runtime.js` is no longer referenced by active play/home runtime manifests.
+
+## Evidence
+- RED: `npx vitest run tests/unit/bootstrap-home-runtime-contract.spec.ts` failed before `createHomeRuntimeContractRuntime` / `installHomeRuntimeContractRuntime` existed.
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` exposed the home-runtime-contract retirement entry.
+- GREEN: `npx vitest run tests/unit/bootstrap-home-runtime-contract.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:entry-manifest` reports active manifests no longer reference `core_home_runtime_contract_runtime.js`.
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1BD Home-Page-Host Runtime TS Boundary (2026-06-14)
 
 ## Phase Decision

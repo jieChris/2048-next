@@ -544,6 +544,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks home-runtime-contract runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_home_runtime_contract_runtime.js",
+      symbolName: "coreHomeRuntimeContractRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
