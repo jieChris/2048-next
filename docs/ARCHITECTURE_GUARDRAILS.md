@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-13, Stage-1T Move-Apply Runtime TS Boundary)
+
+## Batch Impact
+- `CoreMoveApplyRuntime` is now installed from `src/bootstrap/move-apply-runtime.ts` before home-family legacy scripts load.
+- `src/core/move-apply.ts` remains the tested TypeScript owner for tile merge/move interaction planning.
+- The installer preserves legacy tolerance for missing `input`, `cell`, `farthest`, and `next` objects while keeping the pure core API strict.
+- `js/core_move_apply_runtime.js` was retired from active play/replay/home/capped runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_move_apply_runtime.js` / `coreMoveApplyRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-move-apply-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-move-apply.spec.ts tests/unit/bootstrap-move-apply-runtime.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-13, Stage-1S Undo-Restore Runtime TS Boundary)
 
 ## Batch Impact
