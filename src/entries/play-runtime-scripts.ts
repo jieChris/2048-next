@@ -95,7 +95,6 @@ import coreReplayModalRuntimeUrl from "../../js/core_replay_modal_runtime.js?url
 import coreSettingsModalHostRuntimeUrl from "../../js/core_settings_modal_host_runtime.js?url";
 import coreSettingsModalPageHostRuntimeUrl from "../../js/core_settings_modal_page_host_runtime.js?url";
 import coreTopButtonStyleRuntimeUrl from "../../js/core_top_button_style_runtime.js?url";
-import coreReplayPageHostRuntimeUrl from "../../js/core_replay_page_host_runtime.js?url";
 import corePrettyTimeRuntimeUrl from "../../js/core_pretty_time_runtime.js?url";
 import coreResponsiveRelayoutRuntimeUrl from "../../js/core_responsive_relayout_runtime.js?url";
 import coreResponsiveRelayoutHostRuntimeUrl from "../../js/core_responsive_relayout_host_runtime.js?url";
@@ -224,7 +223,6 @@ export const playLegacyScripts = [
   coreSettingsModalHostRuntimeUrl,
   coreSettingsModalPageHostRuntimeUrl,
   coreTopButtonStyleRuntimeUrl,
-  coreReplayPageHostRuntimeUrl,
   corePrettyTimeRuntimeUrl,
   coreResponsiveRelayoutRuntimeUrl,
   coreResponsiveRelayoutHostRuntimeUrl,

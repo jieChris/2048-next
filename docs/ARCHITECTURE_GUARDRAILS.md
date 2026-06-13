@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-13, Stage-1AF Replay-Page-Host Runtime TS Boundary)
+
+## Batch Impact
+- `CoreReplayPageHostRuntime` is now installed from `src/bootstrap/replay-page-host.ts` before home-family legacy scripts load.
+- `src/bootstrap/replay-page-host.ts` remains the tested TypeScript owner for replay modal/export page-host orchestration.
+- The installer preserves the legacy runtime global shape: action resolver creation, modal page open/close, export page action, and export-from-context.
+- `js/core_replay_page_host_runtime.js` was retired from active play/home runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_replay_page_host_runtime.js` / `coreReplayPageHostRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-replay-page-host-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/bootstrap-replay-page-host.spec.ts tests/unit/bootstrap-replay-page-host-runtime.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-13, Stage-1AE Replay-Export Runtime TS Boundary)
 
 ## Batch Impact
