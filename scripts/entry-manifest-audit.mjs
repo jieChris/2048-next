@@ -158,6 +158,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_pretty_time_runtime.js",
     symbolName: "corePrettyTimeRuntimeUrl"
+  },
+  {
+    scriptPath: "core_responsive_relayout_runtime.js",
+    symbolName: "coreResponsiveRelayoutRuntimeUrl"
   }
 ];
 
