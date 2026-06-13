@@ -86,3 +86,38 @@ export function applySettingsModalCloseOrchestration(input: {
     didClose: true
   };
 }
+
+export interface SettingsModalHostRuntime {
+  applySettingsModalOpenOrchestration: typeof applySettingsModalOpenOrchestration;
+  applySettingsModalCloseOrchestration: typeof applySettingsModalCloseOrchestration;
+}
+
+export interface SettingsModalHostRuntimeWindowLike {
+  CoreSettingsModalHostRuntime?: SettingsModalHostRuntime;
+}
+
+export interface SettingsModalHostRuntimeInstallOptions {
+  windowLike?: SettingsModalHostRuntimeWindowLike | null | undefined;
+}
+
+export function createSettingsModalHostRuntime(): SettingsModalHostRuntime {
+  return {
+    applySettingsModalOpenOrchestration,
+    applySettingsModalCloseOrchestration
+  };
+}
+
+export function installSettingsModalHostRuntime(
+  options: SettingsModalHostRuntimeInstallOptions = {}
+): SettingsModalHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as SettingsModalHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreSettingsModalHostRuntime) {
+    windowLike.CoreSettingsModalHostRuntime = createSettingsModalHostRuntime();
+  }
+  return windowLike.CoreSettingsModalHostRuntime || null;
+}
