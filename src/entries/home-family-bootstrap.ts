@@ -13,6 +13,7 @@ import { installMoveScanRuntime } from "../bootstrap/move-scan-runtime";
 import { installPostMoveRecordRuntime } from "../bootstrap/post-move-record-runtime";
 import { installPostMoveRuntime } from "../bootstrap/post-move-runtime";
 import { installPostUndoRecordRuntime } from "../bootstrap/post-undo-record-runtime";
+import { installReplayControlRuntime } from "../bootstrap/replay-control-runtime";
 import { installReplayFlowRuntime } from "../bootstrap/replay-flow-runtime";
 import { installReplayTimerRuntime } from "../bootstrap/replay-timer-runtime";
 import { installScoringRuntime } from "../bootstrap/scoring-runtime";
@@ -177,6 +178,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installPostMoveRecordRuntime();
   installPostMoveRuntime();
   installPostUndoRecordRuntime();
+  installReplayControlRuntime();
   installReplayFlowRuntime();
   installReplayTimerRuntime();
   installScoringRuntime();
