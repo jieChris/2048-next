@@ -1,3 +1,22 @@
+# Stage-1AC Replay-V4-Actions Runtime TS Boundary (2026-06-13)
+
+## Phase Decision
+- `WS-runtime-26`
+  - status: done
+  - progress: `CoreReplayV4ActionsRuntime` is installed from `src/bootstrap/replay-v4-actions-runtime.ts`; `js/core_replay_v4_actions_runtime.js` is no longer referenced by active play/replay/home/capped runtime manifests.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` exposed the replay-v4-actions retirement entry.
+- RED: `npx vitest run tests/unit/bootstrap-replay-v4-actions-runtime.spec.ts` failed before `src/bootstrap/replay-v4-actions-runtime.ts` existed.
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-replay-v4-actions.spec.ts tests/unit/bootstrap-replay-v4-actions-runtime.spec.ts`
+- `npm run audit:entry-manifest` reports active manifests no longer reference `core_replay_v4_actions_runtime.js`.
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1AB Replay-Codec Runtime TS Boundary (2026-06-13)
 
 ## Phase Decision
