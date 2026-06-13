@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { applyHomeGuideDomEnsure } from "../../src/bootstrap/home-guide-dom-host";
+import {
+  applyHomeGuideDomEnsure,
+  createHomeGuideDomHostRuntime,
+  installHomeGuideDomHostRuntime,
+  type HomeGuideDomHostRuntime
+} from "../../src/bootstrap/home-guide-dom-host";
 
 function createDocumentHarness() {
   const nodesById: Record<string, Record<string, unknown>> = {};
@@ -40,7 +45,36 @@ function createDocumentHarness() {
 }
 
 describe("bootstrap home guide dom host", () => {
-  it("creates missing overlay/banner and writes them into state", () => {
+  it("creates the legacy CoreHomeGuideDomHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeGuideDomHostRuntime();
+
+    expect(runtime.applyHomeGuideDomEnsure).toBe(applyHomeGuideDomEnsure);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeGuideDomHostRuntime?: HomeGuideDomHostRuntime } = {};
+
+    const installed = installHomeGuideDomHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeGuideDomHostRuntime);
+    expect(installed?.applyHomeGuideDomEnsure).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing dom host runtime", () => {
+    const existing = createHomeGuideDomHostRuntime();
+    const windowLike = { CoreHomeGuideDomHostRuntime: existing };
+
+    const installed = installHomeGuideDomHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeGuideDomHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeGuideDomHostRuntime({ windowLike: null })).toBeNull();
+  });
+
+  it("creates missing overlay/panel and writes them into state", () => {
     const harness = createDocumentHarness();
     const homeGuideState: Record<string, unknown> = {};
 
@@ -58,22 +92,22 @@ describe("bootstrap home guide dom host", () => {
     expect(result.createdPanel).toBe(true);
     expect(harness.appendedNodes).toHaveLength(2);
     expect((result.overlay as Record<string, unknown>).id).toBe("home-guide-overlay");
-    expect((result.panel as Record<string, unknown>).id).toBe("home-guide-message-banner");
+    expect((result.panel as Record<string, unknown>).id).toBe("home-guide-panel");
     expect((result.panel as Record<string, unknown>).innerHTML).toBe("<div>guide panel</div>");
     expect(homeGuideState.overlay).toBe(result.overlay);
     expect(homeGuideState.panel).toBe(result.panel);
   });
 
-  it("reuses existing overlay/banner without recreating", () => {
+  it("reuses existing overlay/panel without recreating", () => {
     const harness = createDocumentHarness();
     harness.nodesById["home-guide-overlay"] = {
       id: "home-guide-overlay",
       className: "home-guide-overlay",
       style: { display: "none" }
     };
-    harness.nodesById["home-guide-message-banner"] = {
-      id: "home-guide-message-banner",
-      className: "home-guide-message-banner",
+    harness.nodesById["home-guide-panel"] = {
+      id: "home-guide-panel",
+      className: "home-guide-panel",
       style: { display: "none" },
       innerHTML: "existing"
     };

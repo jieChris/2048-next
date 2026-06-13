@@ -222,6 +222,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_home_guide_runtime.js",
     symbolName: "coreHomeGuideRuntimeUrl"
+  },
+  {
+    scriptPath: "core_home_guide_dom_host_runtime.js",
+    symbolName: "coreHomeGuideDomHostRuntimeUrl"
   }
 ];
 
