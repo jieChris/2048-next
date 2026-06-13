@@ -27,6 +27,7 @@ import { installReplayPageHostRuntime } from "../bootstrap/replay-page-host";
 import { installReplayTimerRuntime } from "../bootstrap/replay-timer-runtime";
 import { installReplayV4ActionsRuntime } from "../bootstrap/replay-v4-actions-runtime";
 import { installScoringRuntime } from "../bootstrap/scoring-runtime";
+import { installSettingsModalHostRuntime } from "../bootstrap/settings-modal-host";
 import { installTimerIntervalRuntime } from "../bootstrap/timer-interval-runtime";
 import { installUndoRestoreRuntime } from "../bootstrap/undo-restore-runtime";
 import { installUndoRestorePayloadRuntime } from "../bootstrap/undo-restore-payload-runtime";
@@ -202,6 +203,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installReplayPageHostRuntime();
   installReplayTimerRuntime();
   installScoringRuntime();
+  installSettingsModalHostRuntime();
   installTimerIntervalRuntime();
   installUndoRestoreRuntime();
   installUndoRestorePayloadRuntime();

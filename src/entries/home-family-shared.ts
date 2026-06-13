@@ -88,7 +88,6 @@ import coreMobileViewportPageHostRuntimeUrl from "../../js/core_mobile_viewport_
 import coreStorageRuntimeUrl from "../../js/core_storage_runtime.js?url";
 import coreBgmRuntimeUrl from "../../js/core_bgm_runtime.js?url";
 import coreNightModeRuntimeUrl from "../../js/core_night_mode_runtime.js?url";
-import coreSettingsModalHostRuntimeUrl from "../../js/core_settings_modal_host_runtime.js?url";
 import coreSettingsModalPageHostRuntimeUrl from "../../js/core_settings_modal_page_host_runtime.js?url";
 import coreTopButtonStyleRuntimeUrl from "../../js/core_top_button_style_runtime.js?url";
 import corePrettyTimeRuntimeUrl from "../../js/core_pretty_time_runtime.js?url";
@@ -268,7 +267,6 @@ export const homeSettingsAndPanelScripts = [
   coreStorageRuntimeUrl,
   coreBgmRuntimeUrl,
   coreNightModeRuntimeUrl,
-  coreSettingsModalHostRuntimeUrl,
   coreSettingsModalPageHostRuntimeUrl
 ] as const;
 

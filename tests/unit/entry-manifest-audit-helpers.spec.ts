@@ -383,6 +383,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks settings-modal-host runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_settings_modal_host_runtime.js",
+      symbolName: "coreSettingsModalHostRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
