@@ -162,6 +162,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_responsive_relayout_runtime.js",
     symbolName: "coreResponsiveRelayoutRuntimeUrl"
+  },
+  {
+    scriptPath: "core_responsive_relayout_host_runtime.js",
+    symbolName: "coreResponsiveRelayoutHostRuntimeUrl"
   }
 ];
 

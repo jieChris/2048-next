@@ -43,6 +43,19 @@ export interface ResponsiveRelayoutRequestHostFromContextResult {
   requestResult: ResponsiveRelayoutRequestHostResult;
 }
 
+export interface ResponsiveRelayoutHostRuntime {
+  applyResponsiveRelayoutRequest: typeof applyResponsiveRelayoutRequest;
+  applyResponsiveRelayoutRequestFromContext: typeof applyResponsiveRelayoutRequestFromContext;
+}
+
+export interface ResponsiveRelayoutHostRuntimeWindowLike {
+  CoreResponsiveRelayoutHostRuntime?: ResponsiveRelayoutHostRuntime;
+}
+
+export interface ResponsiveRelayoutHostRuntimeInstallOptions {
+  windowLike?: ResponsiveRelayoutHostRuntimeWindowLike | null | undefined;
+}
+
 export function applyResponsiveRelayoutRequest(input: {
   responsiveRelayoutRuntime?: unknown;
   isTimerboxMobileScope?: unknown;
@@ -167,4 +180,26 @@ export function applyResponsiveRelayoutRequestFromContext(input: {
     managerResolved: !!manager,
     requestResult
   };
+}
+
+export function createResponsiveRelayoutHostRuntime(): ResponsiveRelayoutHostRuntime {
+  return {
+    applyResponsiveRelayoutRequest,
+    applyResponsiveRelayoutRequestFromContext
+  };
+}
+
+export function installResponsiveRelayoutHostRuntime(
+  options: ResponsiveRelayoutHostRuntimeInstallOptions = {}
+): ResponsiveRelayoutHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as ResponsiveRelayoutHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreResponsiveRelayoutHostRuntime) {
+    windowLike.CoreResponsiveRelayoutHostRuntime = createResponsiveRelayoutHostRuntime();
+  }
+  return windowLike.CoreResponsiveRelayoutHostRuntime || null;
 }

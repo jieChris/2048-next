@@ -92,7 +92,6 @@ import coreMobileTopButtonsPageHostRuntimeUrl from "../../js/core_mobile_top_but
 import coreMobileViewportRuntimeUrl from "../../js/core_mobile_viewport_runtime.js?url";
 import coreMobileViewportPageHostRuntimeUrl from "../../js/core_mobile_viewport_page_host_runtime.js?url";
 import coreTopButtonStyleRuntimeUrl from "../../js/core_top_button_style_runtime.js?url";
-import coreResponsiveRelayoutHostRuntimeUrl from "../../js/core_responsive_relayout_host_runtime.js?url";
 import coreTopActionBindingsHostRuntimeUrl from "../../js/core_top_action_bindings_host_runtime.js?url";
 import coreGameOverUndoHostRuntimeUrl from "../../js/core_game_over_undo_host_runtime.js?url";
 import coreIndexUiStartupHostRuntimeUrl from "../../js/core_index_ui_startup_host_runtime.js?url";
@@ -215,7 +214,6 @@ export const playLegacyScripts = [
   coreMobileViewportRuntimeUrl,
   coreMobileViewportPageHostRuntimeUrl,
   coreTopButtonStyleRuntimeUrl,
-  coreResponsiveRelayoutHostRuntimeUrl,
   coreTopActionBindingsHostRuntimeUrl,
   coreGameOverUndoHostRuntimeUrl,
   coreIndexUiStartupHostRuntimeUrl,
