@@ -530,7 +530,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       behavior: "smooth"
     });
     expect(snapshot.doneNotice).toEqual({
-      message: "指引已完成，可在账号中心重新打开新手指引。",
+      message: "指引已完成，可在设置中重新打开新手指引。",
       hideDelayMs: 2600
     });
     expect(snapshot.doneNoticeStyle).toMatchObject({

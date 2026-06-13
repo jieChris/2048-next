@@ -472,8 +472,8 @@
     var lang = readUiLang();
     var defaultMessage = resolveLangText(
       lang,
-        "指引已完成，可在账号中心重新打开新手指引。",
-        "Guide completed. You can reopen Beginner Guide from Account Center."
+        "指引已完成，可在设置中重新打开新手指引。",
+        "Guide completed. You can reopen Beginner Guide in Settings."
     );
     var rawMessage = typeof opts.message === "string" ? opts.message.trim() : "";
     var hideDelayMs = Math.max(0, Math.floor(toFiniteNumber(opts.hideDelayMs, 2600)));

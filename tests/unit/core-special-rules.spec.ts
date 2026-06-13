@@ -1,6 +1,42 @@
 import { describe, expect, it } from "vitest";
 
-import { computeSpecialRulesState } from "../../src/core/special-rules";
+import {
+  computeSpecialRulesState,
+  createSpecialRulesRuntime,
+  installSpecialRulesRuntime,
+  type SpecialRulesRuntime
+} from "../../src/core/special-rules";
+
+describe("core special rules runtime installer", () => {
+  it("creates the legacy CoreSpecialRulesRuntime shape from TypeScript functions", () => {
+    const runtime = createSpecialRulesRuntime();
+
+    expect(runtime.computeSpecialRulesState).toBe(computeSpecialRulesState);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreSpecialRulesRuntime?: SpecialRulesRuntime } = {};
+
+    const installed = installSpecialRulesRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreSpecialRulesRuntime);
+    expect(installed?.computeSpecialRulesState).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing special rules runtime", () => {
+    const existing = createSpecialRulesRuntime();
+    const windowLike = { CoreSpecialRulesRuntime: existing };
+
+    const installed = installSpecialRulesRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreSpecialRulesRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installSpecialRulesRuntime({ windowLike: null })).toBeNull();
+  });
+});
 
 describe("core special rules: computeSpecialRulesState", () => {
   it("builds blocked cells set/list with bounds filtering", () => {

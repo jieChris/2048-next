@@ -266,6 +266,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_crypto_random_runtime.js",
     symbolName: "coreCryptoRandomRuntimeUrl"
+  },
+  {
+    scriptPath: "core_special_rules_runtime.js",
+    symbolName: "coreSpecialRulesRuntimeUrl"
   }
 ];
 

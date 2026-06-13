@@ -23,6 +23,18 @@ export interface SpecialRulesState {
   itemModeRules: ItemModeRules | null;
 }
 
+export interface SpecialRulesRuntime {
+  computeSpecialRulesState: typeof computeSpecialRulesState;
+}
+
+export interface SpecialRulesRuntimeWindowLike {
+  CoreSpecialRulesRuntime?: SpecialRulesRuntime;
+}
+
+export interface SpecialRulesRuntimeInstallOptions {
+  windowLike?: SpecialRulesRuntimeWindowLike | null | undefined;
+}
+
 function normalizePointList(rawList: unknown, width: number, height: number): CellPoint[] {
   const source = Array.isArray(rawList) ? rawList : [];
   const out: CellPoint[] = [];
@@ -135,4 +147,23 @@ export function computeSpecialRulesState(
     moveTimeoutMs,
     itemModeRules
   };
+}
+
+export function createSpecialRulesRuntime(): SpecialRulesRuntime {
+  return {
+    computeSpecialRulesState
+  };
+}
+
+export function installSpecialRulesRuntime(
+  options: SpecialRulesRuntimeInstallOptions = {}
+): SpecialRulesRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined" ? null : (window as unknown as SpecialRulesRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreSpecialRulesRuntime) {
+    windowLike.CoreSpecialRulesRuntime = createSpecialRulesRuntime();
+  }
+  return windowLike.CoreSpecialRulesRuntime || null;
 }
