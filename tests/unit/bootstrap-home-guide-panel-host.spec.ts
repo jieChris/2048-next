@@ -2,10 +2,44 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   applyHomeGuidePanelPosition,
-  resolveHomeGuideTargetVisibility
+  createHomeGuidePanelHostRuntime,
+  installHomeGuidePanelHostRuntime,
+  resolveHomeGuideTargetVisibility,
+  type HomeGuidePanelHostRuntime
 } from "../../src/bootstrap/home-guide-panel-host";
 
 describe("bootstrap home guide panel host", () => {
+  it("creates the legacy CoreHomeGuidePanelHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeGuidePanelHostRuntime();
+
+    expect(runtime.applyHomeGuidePanelPosition).toBe(applyHomeGuidePanelPosition);
+    expect(runtime.resolveHomeGuideTargetVisibility).toBe(resolveHomeGuideTargetVisibility);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeGuidePanelHostRuntime?: HomeGuidePanelHostRuntime } = {};
+
+    const installed = installHomeGuidePanelHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeGuidePanelHostRuntime);
+    expect(installed?.applyHomeGuidePanelPosition).toBeTypeOf("function");
+    expect(installed?.resolveHomeGuideTargetVisibility).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing panel host runtime", () => {
+    const existing = createHomeGuidePanelHostRuntime();
+    const windowLike = { CoreHomeGuidePanelHostRuntime: existing };
+
+    const installed = installHomeGuidePanelHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeGuidePanelHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeGuidePanelHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("positions panel by applying layout resolver twice", () => {
     const panel = {
       style: {},
