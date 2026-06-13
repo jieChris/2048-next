@@ -1,3 +1,25 @@
+# Guardrail Delta (2026-06-13, Stage-1AE Replay-Export Runtime TS Boundary)
+
+## Batch Impact
+- `CoreReplayExportRuntime` is now installed from `src/bootstrap/replay-export.ts` before home-family legacy scripts load.
+- `src/bootstrap/replay-export.ts` remains the tested TypeScript owner for replay export, clipboard copy, download, and open-page handoff behavior.
+- The installer preserves the legacy runtime global shape, including `applyReplayClipboardCopy`, `applyReplayExport`, and the legacy `format` result field.
+- `js/core_replay_export_runtime.js` was retired from active play/home runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_replay_export_runtime.js` / `coreReplayExportRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/bootstrap-replay-export.spec.ts`
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-replay-export-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/bootstrap-replay-export.spec.ts tests/unit/bootstrap-replay-export-runtime.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-13, Stage-1AD Replay-Import Runtime TS Boundary)
 
 ## Batch Impact

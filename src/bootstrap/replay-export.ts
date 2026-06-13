@@ -644,6 +644,7 @@ export function applyReplayExport(input: {
 }): {
   exported: boolean;
   error?: boolean;
+  format?: "text" | "v1-rpl-base64";
   replay?: string;
 } {
   const source = toRecord(input);
@@ -707,6 +708,42 @@ export function applyReplayExport(input: {
 
   return {
     exported: true,
+    format: isV1 ? "v1-rpl-base64" : "text",
     replay
   };
+}
+
+export interface ReplayExportRuntime {
+  applyReplayClipboardCopy: typeof applyReplayClipboardCopy;
+  applyReplayExport: typeof applyReplayExport;
+}
+
+export interface ReplayExportRuntimeWindowLike {
+  CoreReplayExportRuntime?: ReplayExportRuntime;
+}
+
+export interface ReplayExportRuntimeInstallOptions {
+  windowLike?: ReplayExportRuntimeWindowLike | null | undefined;
+}
+
+export function createReplayExportRuntime(): ReplayExportRuntime {
+  return {
+    applyReplayClipboardCopy,
+    applyReplayExport
+  };
+}
+
+export function installReplayExportRuntime(
+  options: ReplayExportRuntimeInstallOptions = {}
+): ReplayExportRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as ReplayExportRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreReplayExportRuntime) {
+    windowLike.CoreReplayExportRuntime = createReplayExportRuntime();
+  }
+  return windowLike.CoreReplayExportRuntime || null;
 }

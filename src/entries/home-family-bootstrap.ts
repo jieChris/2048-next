@@ -17,6 +17,7 @@ import { installReplayCodecRuntime } from "../bootstrap/replay-codec-runtime";
 import { installReplayControlRuntime } from "../bootstrap/replay-control-runtime";
 import { installReplayDispatchRuntime } from "../bootstrap/replay-dispatch-runtime";
 import { installReplayExecutionRuntime } from "../bootstrap/replay-execution-runtime";
+import { installReplayExportRuntime } from "../bootstrap/replay-export";
 import { installReplayFlowRuntime } from "../bootstrap/replay-flow-runtime";
 import { installReplayImportRuntime } from "../bootstrap/replay-import-runtime";
 import { installReplayLifecycleRuntime } from "../bootstrap/replay-lifecycle-runtime";
@@ -191,6 +192,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installReplayControlRuntime();
   installReplayDispatchRuntime();
   installReplayExecutionRuntime();
+  installReplayExportRuntime();
   installReplayFlowRuntime();
   installReplayLifecycleRuntime();
   installReplayLoopRuntime();
