@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { applyHomeGuideSettingsUi } from "../../src/bootstrap/home-guide-settings-host";
+import {
+  applyHomeGuideSettingsUi,
+  createHomeGuideSettingsHostRuntime,
+  installHomeGuideSettingsHostRuntime,
+  type HomeGuideSettingsHostRuntime
+} from "../../src/bootstrap/home-guide-settings-host";
 
 function createHarness() {
   const triggerHandlers: Record<string, () => void> = {};
@@ -60,6 +65,35 @@ function createHarness() {
 }
 
 describe("bootstrap home guide settings host", () => {
+  it("creates the legacy CoreHomeGuideSettingsHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeGuideSettingsHostRuntime();
+
+    expect(runtime.applyHomeGuideSettingsUi).toBe(applyHomeGuideSettingsUi);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeGuideSettingsHostRuntime?: HomeGuideSettingsHostRuntime } = {};
+
+    const installed = installHomeGuideSettingsHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeGuideSettingsHostRuntime);
+    expect(installed?.applyHomeGuideSettingsUi).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing settings host runtime", () => {
+    const existing = createHomeGuideSettingsHostRuntime();
+    const windowLike = { CoreHomeGuideSettingsHostRuntime: existing };
+
+    const installed = installHomeGuideSettingsHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeGuideSettingsHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeGuideSettingsHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("keeps settings free of guide actions and exposes a noop sync hook", () => {
     const harness = createHarness();
     const windowLike: Record<string, unknown> = {};

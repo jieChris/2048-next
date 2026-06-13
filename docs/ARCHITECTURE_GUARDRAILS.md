@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-14, Stage-1AW Home-Guide-Settings-Host Runtime TS Boundary)
+
+## Batch Impact
+- `CoreHomeGuideSettingsHostRuntime` is now installed from `src/bootstrap/home-guide-settings-host.ts` before home-family legacy scripts load.
+- `src/bootstrap/home-guide-settings-host.ts` remains the tested TypeScript owner for settings guide-row removal and noop `syncHomeGuideSettingsUI` assignment.
+- The installer preserves the legacy runtime global shape: `applyHomeGuideSettingsUi`.
+- `js/core_home_guide_settings_host_runtime.js` was retired from active play/home runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_home_guide_settings_host_runtime.js` / `coreHomeGuideSettingsHostRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/bootstrap-home-guide-settings-host.spec.ts`
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- GREEN: `npx vitest run tests/unit/bootstrap-home-guide-settings-host.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-14, Stage-1AV Home-Guide-Step-Host Runtime TS Boundary)
 
 ## Batch Impact

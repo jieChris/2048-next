@@ -12,6 +12,7 @@ import { installHomeGuideDoneNoticeHostRuntime } from "../bootstrap/home-guide-d
 import { installHomeGuideFinishHostRuntime } from "../bootstrap/home-guide-finish-host";
 import { installHomeGuideHighlightHostRuntime } from "../bootstrap/home-guide-highlight-host";
 import { installHomeGuidePanelHostRuntime } from "../bootstrap/home-guide-panel-host";
+import { installHomeGuideSettingsHostRuntime } from "../bootstrap/home-guide-settings-host";
 import { installHomeGuideStartHostRuntime } from "../bootstrap/home-guide-start-host";
 import { installHomeGuideStepFlowHostRuntime } from "../bootstrap/home-guide-step-flow-host";
 import { installHomeGuideStepHostRuntime } from "../bootstrap/home-guide-step-host";
@@ -202,6 +203,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installHomeGuideFinishHostRuntime();
   installHomeGuideHighlightHostRuntime();
   installHomeGuidePanelHostRuntime();
+  installHomeGuideSettingsHostRuntime();
   installHomeGuideStartHostRuntime();
   installHomeGuideStepFlowHostRuntime();
   installHomeGuideStepHostRuntime();

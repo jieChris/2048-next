@@ -37,6 +37,18 @@ export interface HomeGuideSettingsHostResult {
   didSync: boolean;
 }
 
+export interface HomeGuideSettingsHostRuntime {
+  applyHomeGuideSettingsUi: typeof applyHomeGuideSettingsUi;
+}
+
+export interface HomeGuideSettingsHostRuntimeWindowLike {
+  CoreHomeGuideSettingsHostRuntime?: HomeGuideSettingsHostRuntime;
+}
+
+export interface HomeGuideSettingsHostRuntimeInstallOptions {
+  windowLike?: HomeGuideSettingsHostRuntimeWindowLike | null | undefined;
+}
+
 export function applyHomeGuideSettingsUi(input: {
   documentLike?: unknown;
   windowLike?: unknown;
@@ -60,4 +72,25 @@ export function applyHomeGuideSettingsUi(input: {
     didAssignSync,
     didSync: false
   };
+}
+
+export function createHomeGuideSettingsHostRuntime(): HomeGuideSettingsHostRuntime {
+  return {
+    applyHomeGuideSettingsUi
+  };
+}
+
+export function installHomeGuideSettingsHostRuntime(
+  options: HomeGuideSettingsHostRuntimeInstallOptions = {}
+): HomeGuideSettingsHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeGuideSettingsHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuideSettingsHostRuntime) {
+    windowLike.CoreHomeGuideSettingsHostRuntime = createHomeGuideSettingsHostRuntime();
+  }
+  return windowLike.CoreHomeGuideSettingsHostRuntime || null;
 }
