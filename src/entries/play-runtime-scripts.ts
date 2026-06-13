@@ -33,7 +33,6 @@ import corePlayCustomSpawnRuntimeUrl from "../../js/core_play_custom_spawn_runti
 import coreRulesRuntimeUrl from "../../js/core_rules_runtime.js?url";
 import coreModeRuntimeUrl from "../../js/core_mode_runtime.js?url";
 import coreSpecialRulesRuntimeUrl from "../../js/core_special_rules_runtime.js?url";
-import corePostUndoRecordRuntimeUrl from "../../js/core_post_undo_record_runtime.js?url";
 import coreUndoRestoreRuntimeUrl from "../../js/core_undo_restore_runtime.js?url";
 import coreUndoTileSnapshotRuntimeUrl from "../../js/core_undo_tile_snapshot_runtime.js?url";
 import coreUndoTileRestoreRuntimeUrl from "../../js/core_undo_tile_restore_runtime.js?url";
@@ -180,7 +179,6 @@ export const playLegacyScripts = [
   coreRulesRuntimeUrl,
   coreModeRuntimeUrl,
   coreSpecialRulesRuntimeUrl,
-  corePostUndoRecordRuntimeUrl,
   coreUndoRestoreRuntimeUrl,
   coreUndoTileSnapshotRuntimeUrl,
   coreUndoTileRestoreRuntimeUrl,
