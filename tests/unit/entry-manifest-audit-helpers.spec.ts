@@ -474,6 +474,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks home-guide-step-flow-host runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_home_guide_step_flow_host_runtime.js",
+      symbolName: "coreHomeGuideStepFlowHostRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(

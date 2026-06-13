@@ -1,8 +1,42 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { applyHomeGuideStepFlow } from "../../src/bootstrap/home-guide-step-flow-host";
+import {
+  applyHomeGuideStepFlow,
+  createHomeGuideStepFlowHostRuntime,
+  installHomeGuideStepFlowHostRuntime,
+  type HomeGuideStepFlowHostRuntime
+} from "../../src/bootstrap/home-guide-step-flow-host";
 
 describe("bootstrap home guide step flow host", () => {
+  it("creates the legacy CoreHomeGuideStepFlowHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeGuideStepFlowHostRuntime();
+
+    expect(runtime.applyHomeGuideStepFlow).toBe(applyHomeGuideStepFlow);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeGuideStepFlowHostRuntime?: HomeGuideStepFlowHostRuntime } = {};
+
+    const installed = installHomeGuideStepFlowHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeGuideStepFlowHostRuntime);
+    expect(installed?.applyHomeGuideStepFlow).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing step-flow host runtime", () => {
+    const existing = createHomeGuideStepFlowHostRuntime();
+    const windowLike = { CoreHomeGuideStepFlowHostRuntime: existing };
+
+    const installed = installHomeGuideStepFlowHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeGuideStepFlowHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeGuideStepFlowHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("finishes guide when step index state requests completion", () => {
     const finishHomeGuide = vi.fn();
 
