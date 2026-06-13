@@ -82,6 +82,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_undo_restore_payload_runtime.js",
     symbolName: "coreUndoRestorePayloadRuntimeUrl"
+  },
+  {
+    scriptPath: "core_undo_stack_entry_runtime.js",
+    symbolName: "coreUndoStackEntryRuntimeUrl"
   }
 ];
 

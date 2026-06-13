@@ -16,6 +16,7 @@ import { installScoringRuntime } from "../bootstrap/scoring-runtime";
 import { installTimerIntervalRuntime } from "../bootstrap/timer-interval-runtime";
 import { installUndoRestorePayloadRuntime } from "../bootstrap/undo-restore-payload-runtime";
 import { installUndoSnapshotRuntime } from "../bootstrap/undo-snapshot-runtime";
+import { installUndoStackEntryRuntime } from "../bootstrap/undo-stack-entry-runtime";
 import { installUndoTileRestoreRuntime } from "../bootstrap/undo-tile-restore-runtime";
 import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-runtime";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
@@ -175,6 +176,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installTimerIntervalRuntime();
   installUndoRestorePayloadRuntime();
   installUndoSnapshotRuntime();
+  installUndoStackEntryRuntime();
   installUndoTileRestoreRuntime();
   installUndoTileSnapshotRuntime();
   if (pageId === "index") {
