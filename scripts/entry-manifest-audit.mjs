@@ -114,6 +114,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_replay_lifecycle_runtime.js",
     symbolName: "coreReplayLifecycleRuntimeUrl"
+  },
+  {
+    scriptPath: "core_replay_dispatch_runtime.js",
+    symbolName: "coreReplayDispatchRuntimeUrl"
   }
 ];
 

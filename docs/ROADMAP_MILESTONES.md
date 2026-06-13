@@ -1,3 +1,22 @@
+# Stage-1Z Replay-Dispatch Runtime TS Boundary (2026-06-13)
+
+## Phase Decision
+- `WS-runtime-23`
+  - status: done
+  - progress: `CoreReplayDispatchRuntime` is installed from `src/bootstrap/replay-dispatch-runtime.ts`; `js/core_replay_dispatch_runtime.js` is no longer referenced by active play/replay/home/capped runtime manifests.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` exposed the replay-dispatch retirement entry.
+- RED: `npx vitest run tests/unit/bootstrap-replay-dispatch-runtime.spec.ts` failed before `src/bootstrap/replay-dispatch-runtime.ts` existed.
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-replay-dispatch.spec.ts tests/unit/bootstrap-replay-dispatch-runtime.spec.ts`
+- `npm run audit:entry-manifest` reports active manifests no longer reference `core_replay_dispatch_runtime.js`.
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1Y Replay-Lifecycle Runtime TS Boundary (2026-06-13)
 
 ## Phase Decision
