@@ -19,7 +19,6 @@ import coreMoveScanRuntimeUrl from "../../js/core_move_scan_runtime.js?url";
 import coreMovePathRuntimeUrl from "../../js/core_move_path_runtime.js?url";
 import corePostUndoRecordRuntimeUrl from "../../js/core_post_undo_record_runtime.js?url";
 import coreUndoRestoreRuntimeUrl from "../../js/core_undo_restore_runtime.js?url";
-import coreUndoSnapshotRuntimeUrl from "../../js/core_undo_snapshot_runtime.js?url";
 import coreUndoTileSnapshotRuntimeUrl from "../../js/core_undo_tile_snapshot_runtime.js?url";
 import coreUndoTileRestoreRuntimeUrl from "../../js/core_undo_tile_restore_runtime.js?url";
 import coreUndoRestorePayloadRuntimeUrl from "../../js/core_undo_restore_payload_runtime.js?url";
@@ -87,7 +86,6 @@ export const replayLegacyScripts = [
   coreMovePathRuntimeUrl,
   corePostUndoRecordRuntimeUrl,
   coreUndoRestoreRuntimeUrl,
-  coreUndoSnapshotRuntimeUrl,
   coreUndoTileSnapshotRuntimeUrl,
   coreUndoTileRestoreRuntimeUrl,
   coreUndoRestorePayloadRuntimeUrl,
