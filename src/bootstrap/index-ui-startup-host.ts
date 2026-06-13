@@ -35,6 +35,18 @@ export interface IndexUiStartupHostResult {
   boundResponsiveRelayoutListeners: boolean;
 }
 
+export interface IndexUiStartupHostRuntime {
+  applyIndexUiStartup: typeof applyIndexUiStartup;
+}
+
+export interface IndexUiStartupHostRuntimeWindowLike {
+  CoreIndexUiStartupHostRuntime?: IndexUiStartupHostRuntime;
+}
+
+export interface IndexUiStartupHostRuntimeInstallOptions {
+  windowLike?: IndexUiStartupHostRuntimeWindowLike | null | undefined;
+}
+
 export function applyIndexUiStartup(input: {
   topActionBindingsHostRuntime?: unknown;
   gameOverUndoHostRuntime?: unknown;
@@ -126,4 +138,25 @@ export function applyIndexUiStartup(input: {
     initCallCount,
     boundResponsiveRelayoutListeners
   };
+}
+
+export function createIndexUiStartupHostRuntime(): IndexUiStartupHostRuntime {
+  return {
+    applyIndexUiStartup
+  };
+}
+
+export function installIndexUiStartupHostRuntime(
+  options: IndexUiStartupHostRuntimeInstallOptions = {}
+): IndexUiStartupHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as IndexUiStartupHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreIndexUiStartupHostRuntime) {
+    windowLike.CoreIndexUiStartupHostRuntime = createIndexUiStartupHostRuntime();
+  }
+  return windowLike.CoreIndexUiStartupHostRuntime || null;
 }

@@ -170,6 +170,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_game_over_undo_host_runtime.js",
     symbolName: "coreGameOverUndoHostRuntimeUrl"
+  },
+  {
+    scriptPath: "core_index_ui_startup_host_runtime.js",
+    symbolName: "coreIndexUiStartupHostRuntimeUrl"
   }
 ];
 
