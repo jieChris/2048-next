@@ -20,6 +20,19 @@ export interface HomeGuidePanelPositionResult {
   didPosition: boolean;
 }
 
+export interface HomeGuidePanelHostRuntime {
+  applyHomeGuidePanelPosition: typeof applyHomeGuidePanelPosition;
+  resolveHomeGuideTargetVisibility: typeof resolveHomeGuideTargetVisibility;
+}
+
+export interface HomeGuidePanelHostRuntimeWindowLike {
+  CoreHomeGuidePanelHostRuntime?: HomeGuidePanelHostRuntime;
+}
+
+export interface HomeGuidePanelHostRuntimeInstallOptions {
+  windowLike?: HomeGuidePanelHostRuntimeWindowLike | null | undefined;
+}
+
 export function applyHomeGuidePanelPosition(input: {
   homeGuideState?: unknown;
   homeGuideRuntime?: unknown;
@@ -139,4 +152,24 @@ export function resolveHomeGuideTargetVisibility(input: {
     viewportWidth,
     viewportHeight
   });
+}
+
+export function createHomeGuidePanelHostRuntime(): HomeGuidePanelHostRuntime {
+  return {
+    applyHomeGuidePanelPosition,
+    resolveHomeGuideTargetVisibility
+  };
+}
+
+export function installHomeGuidePanelHostRuntime(
+  options: HomeGuidePanelHostRuntimeInstallOptions = {}
+): HomeGuidePanelHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined" ? null : (window as unknown as HomeGuidePanelHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuidePanelHostRuntime) {
+    windowLike.CoreHomeGuidePanelHostRuntime = createHomeGuidePanelHostRuntime();
+  }
+  return windowLike.CoreHomeGuidePanelHostRuntime || null;
 }
