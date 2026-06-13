@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { applyHomeGuideDoneNotice } from "../../src/bootstrap/home-guide-done-notice-host";
+import {
+  applyHomeGuideDoneNotice,
+  createHomeGuideDoneNoticeHostRuntime,
+  installHomeGuideDoneNoticeHostRuntime,
+  type HomeGuideDoneNoticeHostRuntime
+} from "../../src/bootstrap/home-guide-done-notice-host";
 
 function createHarness() {
   const nodesById: Record<string, Record<string, unknown>> = {};
@@ -36,6 +41,37 @@ function createHarness() {
 }
 
 describe("bootstrap home guide done notice host", () => {
+  it("creates the legacy CoreHomeGuideDoneNoticeHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeGuideDoneNoticeHostRuntime();
+
+    expect(runtime.applyHomeGuideDoneNotice).toBe(applyHomeGuideDoneNotice);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: {
+      CoreHomeGuideDoneNoticeHostRuntime?: HomeGuideDoneNoticeHostRuntime;
+    } = {};
+
+    const installed = installHomeGuideDoneNoticeHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeGuideDoneNoticeHostRuntime);
+    expect(installed?.applyHomeGuideDoneNotice).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing done-notice host runtime", () => {
+    const existing = createHomeGuideDoneNoticeHostRuntime();
+    const windowLike = { CoreHomeGuideDoneNoticeHostRuntime: existing };
+
+    const installed = installHomeGuideDoneNoticeHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeGuideDoneNoticeHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeGuideDoneNoticeHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("creates toast once and updates timer on repeated calls", () => {
     const harness = createHarness();
     const clearTimeoutLike = vi.fn();

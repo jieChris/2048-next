@@ -46,6 +46,18 @@ export interface HomeGuideDoneNoticeHostResult {
   hideDelayMs: number;
 }
 
+export interface HomeGuideDoneNoticeHostRuntime {
+  applyHomeGuideDoneNotice: typeof applyHomeGuideDoneNotice;
+}
+
+export interface HomeGuideDoneNoticeHostRuntimeWindowLike {
+  CoreHomeGuideDoneNoticeHostRuntime?: HomeGuideDoneNoticeHostRuntime;
+}
+
+export interface HomeGuideDoneNoticeHostRuntimeInstallOptions {
+  windowLike?: HomeGuideDoneNoticeHostRuntimeWindowLike | null | undefined;
+}
+
 export function applyHomeGuideDoneNotice(input: {
   documentLike?: unknown;
   homeGuideRuntime?: unknown;
@@ -121,4 +133,25 @@ export function applyHomeGuideDoneNotice(input: {
     created,
     hideDelayMs
   };
+}
+
+export function createHomeGuideDoneNoticeHostRuntime(): HomeGuideDoneNoticeHostRuntime {
+  return {
+    applyHomeGuideDoneNotice
+  };
+}
+
+export function installHomeGuideDoneNoticeHostRuntime(
+  options: HomeGuideDoneNoticeHostRuntimeInstallOptions = {}
+): HomeGuideDoneNoticeHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeGuideDoneNoticeHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuideDoneNoticeHostRuntime) {
+    windowLike.CoreHomeGuideDoneNoticeHostRuntime = createHomeGuideDoneNoticeHostRuntime();
+  }
+  return windowLike.CoreHomeGuideDoneNoticeHostRuntime || null;
 }

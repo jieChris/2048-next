@@ -1,3 +1,22 @@
+# Stage-1AO Home-Guide-Done-Notice-Host Runtime TS Boundary (2026-06-13)
+
+## Phase Decision
+- `WS-runtime-38`
+  - status: done
+  - progress: `CoreHomeGuideDoneNoticeHostRuntime` is installed from `src/bootstrap/home-guide-done-notice-host.ts`; `js/core_home_guide_done_notice_host_runtime.js` is no longer referenced by active play/home runtime manifests.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` exposed the home-guide-done-notice-host retirement entry.
+- RED: `npx vitest run tests/unit/bootstrap-home-guide-done-notice-host.spec.ts` failed before `createHomeGuideDoneNoticeHostRuntime` / `installHomeGuideDoneNoticeHostRuntime` existed.
+- GREEN: `npx vitest run tests/unit/bootstrap-home-guide-done-notice-host.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:entry-manifest` reports active manifests no longer reference `core_home_guide_done_notice_host_runtime.js`.
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1AN Index-UI-Startup-Host Runtime TS Boundary (2026-06-13)
 
 ## Phase Decision

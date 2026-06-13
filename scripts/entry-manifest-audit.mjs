@@ -174,6 +174,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_index_ui_startup_host_runtime.js",
     symbolName: "coreIndexUiStartupHostRuntimeUrl"
+  },
+  {
+    scriptPath: "core_home_guide_done_notice_host_runtime.js",
+    symbolName: "coreHomeGuideDoneNoticeHostRuntimeUrl"
   }
 ];
 
