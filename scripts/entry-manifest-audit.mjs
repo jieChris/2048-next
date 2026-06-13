@@ -46,6 +46,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_post_move_record_runtime.js",
     symbolName: "corePostMoveRecordRuntimeUrl"
+  },
+  {
+    scriptPath: "core_undo_snapshot_runtime.js",
+    symbolName: "coreUndoSnapshotRuntimeUrl"
   }
 ];
 

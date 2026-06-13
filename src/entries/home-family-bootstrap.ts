@@ -9,6 +9,7 @@ import { installPostMoveRecordRuntime } from "../bootstrap/post-move-record-runt
 import { installPostMoveRuntime } from "../bootstrap/post-move-runtime";
 import { installScoringRuntime } from "../bootstrap/scoring-runtime";
 import { installTimerIntervalRuntime } from "../bootstrap/timer-interval-runtime";
+import { installUndoSnapshotRuntime } from "../bootstrap/undo-snapshot-runtime";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
 import { getPageManifest, type RuntimeCapability } from "./runtime-manifest";
 import { resolveHomeFamilyScriptsByCapabilities } from "./home-family-shared";
@@ -159,6 +160,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installPostMoveRuntime();
   installScoringRuntime();
   installTimerIntervalRuntime();
+  installUndoSnapshotRuntime();
   if (pageId === "index") {
     await loadLegacyScriptsSequentially([INDEX_STARTUP_BUNDLE_URL]);
     scheduleIndexDeferredRuntimeLoad();

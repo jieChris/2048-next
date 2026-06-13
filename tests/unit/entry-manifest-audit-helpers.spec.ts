@@ -208,6 +208,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks undo-snapshot runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_undo_snapshot_runtime.js",
+      symbolName: "coreUndoSnapshotRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
