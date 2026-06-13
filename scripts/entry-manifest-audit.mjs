@@ -282,6 +282,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_crypto_random_runtime.js"
+  },
+  {
+    scriptPath: "core_rules_runtime.js"
   }
 ];
 
