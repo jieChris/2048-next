@@ -1,3 +1,23 @@
+# Guardrail Delta (2026-06-14, Stage-1BQ Mode-Catalog Bundle Runtime Retirement)
+
+## Batch Impact
+- `CoreModeCatalogRuntime` remains installed from `src/bootstrap/mode-catalog.ts` before home/play/replay/capped legacy scripts load.
+- `js/core_mode_catalog_runtime.js` was removed from `HOME_STANDARD_STARTUP_FILES` in `vite.config.ts`, preventing the Vite-generated home startup bundle from overwriting the TypeScript-installed runtime.
+- The legacy `js/core_mode_catalog_runtime.js` file remains in place.
+- `entry-manifest-audit` now blocks `core_mode_catalog_runtime.js` from re-entering the focused Vite bundled retired registry.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- GREEN: `npx vitest run tests/unit/bootstrap-mode-catalog.spec.ts`
+- `PW_WEB_PORT=4279 npm run test:smoke:index-ui`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-14, Stage-1BP Rules Bundle Runtime Retirement)
 
 ## Batch Impact

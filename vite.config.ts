@@ -66,7 +66,6 @@ const HOME_STANDARD_STARTUP_FILES = [
   "core_game_manager_static_runtime.js",
   "core_game_manager_bindings_runtime.js",
   "game_manager.js",
-  "core_mode_catalog_runtime.js",
   "core_practice_mode_runtime.js",
   "core_home_mode_runtime.js",
   "core_home_runtime_contract_runtime.js",
