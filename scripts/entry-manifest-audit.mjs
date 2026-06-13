@@ -58,6 +58,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_grid_scan_runtime.js",
     symbolName: "coreGridScanRuntimeUrl"
+  },
+  {
+    scriptPath: "core_move_scan_runtime.js",
+    symbolName: "coreMoveScanRuntimeUrl"
   }
 ];
 
