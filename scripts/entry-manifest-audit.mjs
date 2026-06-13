@@ -150,6 +150,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_settings_modal_host_runtime.js",
     symbolName: "coreSettingsModalHostRuntimeUrl"
+  },
+  {
+    scriptPath: "core_settings_modal_page_host_runtime.js",
+    symbolName: "coreSettingsModalPageHostRuntimeUrl"
   }
 ];
 
