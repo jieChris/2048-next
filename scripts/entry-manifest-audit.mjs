@@ -62,6 +62,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_move_scan_runtime.js",
     symbolName: "coreMoveScanRuntimeUrl"
+  },
+  {
+    scriptPath: "core_move_path_runtime.js",
+    symbolName: "coreMovePathRuntimeUrl"
   }
 ];
 
