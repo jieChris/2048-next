@@ -5,10 +5,52 @@ import {
   applyHomeGuideAutoStartPageFromContext,
   applyHomeGuideSettingsPageInit,
   createHomeGuideLifecycleResolvers,
-  createHomeGuidePageResolvers
+  createHomeGuidePageHostRuntime,
+  createHomeGuidePageResolvers,
+  installHomeGuidePageHostRuntime,
+  type HomeGuidePageHostRuntime
 } from "../../src/bootstrap/home-guide-page-host";
 
 describe("bootstrap home guide page host", () => {
+  it("creates the legacy CoreHomeGuidePageHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeGuidePageHostRuntime();
+
+    expect(runtime.createHomeGuidePageResolvers).toBe(createHomeGuidePageResolvers);
+    expect(runtime.createHomeGuideLifecycleResolvers).toBe(createHomeGuideLifecycleResolvers);
+    expect(runtime.applyHomeGuideSettingsPageInit).toBe(applyHomeGuideSettingsPageInit);
+    expect(runtime.applyHomeGuideAutoStartPage).toBe(applyHomeGuideAutoStartPage);
+    expect(runtime.applyHomeGuideAutoStartPageFromContext).toBe(
+      applyHomeGuideAutoStartPageFromContext
+    );
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeGuidePageHostRuntime?: HomeGuidePageHostRuntime } = {};
+
+    const installed = installHomeGuidePageHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeGuidePageHostRuntime);
+    expect(installed?.createHomeGuidePageResolvers).toBeTypeOf("function");
+    expect(installed?.createHomeGuideLifecycleResolvers).toBeTypeOf("function");
+    expect(installed?.applyHomeGuideSettingsPageInit).toBeTypeOf("function");
+    expect(installed?.applyHomeGuideAutoStartPage).toBeTypeOf("function");
+    expect(installed?.applyHomeGuideAutoStartPageFromContext).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing page host runtime", () => {
+    const existing = createHomeGuidePageHostRuntime();
+    const windowLike = { CoreHomeGuidePageHostRuntime: existing };
+
+    const installed = installHomeGuidePageHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeGuidePageHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeGuidePageHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("returns false result when settings host api is missing", () => {
     const result = applyHomeGuideSettingsPageInit({
       homeGuideSettingsHostRuntime: {}

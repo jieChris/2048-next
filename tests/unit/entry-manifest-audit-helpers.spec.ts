@@ -502,6 +502,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks home-guide-page-host runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_home_guide_page_host_runtime.js",
+      symbolName: "coreHomeGuidePageHostRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
