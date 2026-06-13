@@ -2,10 +2,44 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   applyHomeGuideFinish,
-  applyHomeGuideFinishFromContext
+  applyHomeGuideFinishFromContext,
+  createHomeGuideFinishHostRuntime,
+  installHomeGuideFinishHostRuntime,
+  type HomeGuideFinishHostRuntime
 } from "../../src/bootstrap/home-guide-finish-host";
 
 describe("bootstrap home guide finish host", () => {
+  it("creates the legacy CoreHomeGuideFinishHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeGuideFinishHostRuntime();
+
+    expect(runtime.applyHomeGuideFinish).toBe(applyHomeGuideFinish);
+    expect(runtime.applyHomeGuideFinishFromContext).toBe(applyHomeGuideFinishFromContext);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeGuideFinishHostRuntime?: HomeGuideFinishHostRuntime } = {};
+
+    const installed = installHomeGuideFinishHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeGuideFinishHostRuntime);
+    expect(installed?.applyHomeGuideFinish).toBeTypeOf("function");
+    expect(installed?.applyHomeGuideFinishFromContext).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing finish host runtime", () => {
+    const existing = createHomeGuideFinishHostRuntime();
+    const windowLike = { CoreHomeGuideFinishHostRuntime: existing };
+
+    const installed = installHomeGuideFinishHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeGuideFinishHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeGuideFinishHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("applies finish lifecycle, marks seen, syncs settings and shows done notice", () => {
     const clearHomeGuideHighlight = vi.fn();
     const markHomeGuideSeen = vi.fn();
