@@ -9,6 +9,7 @@ import { installGameOverUndoHostRuntime } from "../bootstrap/game-over-undo-host
 import { installGridScanRuntime } from "../bootstrap/grid-scan-runtime";
 import { installHomeGuideRuntime } from "../bootstrap/home-guide";
 import { installHomeGuideControlsHostRuntime } from "../bootstrap/home-guide-controls-host";
+import { installHomeGuideDomHostRuntime } from "../bootstrap/home-guide-dom-host";
 import { installHomeGuideDoneNoticeHostRuntime } from "../bootstrap/home-guide-done-notice-host";
 import { installHomeGuideFinishHostRuntime } from "../bootstrap/home-guide-finish-host";
 import { installHomeGuideHighlightHostRuntime } from "../bootstrap/home-guide-highlight-host";
@@ -203,6 +204,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installGridScanRuntime();
   installHomeGuideRuntime();
   installHomeGuideControlsHostRuntime();
+  installHomeGuideDomHostRuntime();
   installHomeGuideDoneNoticeHostRuntime();
   installHomeGuideFinishHostRuntime();
   installHomeGuideHighlightHostRuntime();

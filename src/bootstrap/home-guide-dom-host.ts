@@ -32,12 +32,6 @@ function appendChild(node: unknown, child: unknown): void {
   (append as unknown as Function).call(node, child);
 }
 
-function removeChild(node: unknown, child: unknown): void {
-  const remove = asFunction<(value: unknown) => unknown>(toRecord(node).removeChild);
-  if (!remove) return;
-  (remove as unknown as Function).call(node, child);
-}
-
 function applyOverlayShape(overlay: Record<string, unknown>): void {
   overlay.id = "home-guide-overlay";
   overlay.className = "home-guide-overlay";
@@ -45,12 +39,12 @@ function applyOverlayShape(overlay: Record<string, unknown>): void {
   style.display = "none";
 }
 
-function applyBannerShape(banner: Record<string, unknown>, panelInnerHtml: string): void {
-  banner.id = "home-guide-message-banner";
-  banner.className = "home-guide-message-banner";
-  const style = toRecord(banner.style);
+function applyPanelShape(panel: Record<string, unknown>, panelInnerHtml: string): void {
+  panel.id = "home-guide-panel";
+  panel.className = "home-guide-panel";
+  const style = toRecord(panel.style);
   style.display = "none";
-  banner.innerHTML = panelInnerHtml;
+  panel.innerHTML = panelInnerHtml;
 }
 
 export interface HomeGuideDomHostResult {
@@ -71,8 +65,7 @@ export function applyHomeGuideDomEnsure(input: {
   const homeGuideState = toRecord(source.homeGuideState);
 
   let overlay = getElementById(documentLike, "home-guide-overlay");
-  let panel = getElementById(documentLike, "home-guide-message-banner");
-  const legacyPanel = getElementById(documentLike, "home-guide-panel");
+  let panel = getElementById(documentLike, "home-guide-panel");
 
   let createdOverlay = false;
   let createdPanel = false;
@@ -94,28 +87,15 @@ export function applyHomeGuideDomEnsure(input: {
     }
   }
 
-  if (!panel && legacyPanel) {
-    const legacyPanelRecord = toRecord(legacyPanel);
-    applyBannerShape(legacyPanelRecord, panelInnerHtml);
-    panel = legacyPanelRecord;
-  }
-
   if (!panel) {
     const nextPanel = createElement(documentLike, "div");
     if (nextPanel) {
-      applyBannerShape(toRecord(nextPanel), panelInnerHtml);
+      applyPanelShape(toRecord(nextPanel), panelInnerHtml);
       if (body) {
         appendChild(body, nextPanel);
       }
       panel = nextPanel;
       createdPanel = true;
-    }
-  }
-
-  if (legacyPanel && panel && legacyPanel !== panel) {
-    const parentNode = toRecord(toRecord(legacyPanel).parentNode);
-    if (parentNode) {
-      removeChild(parentNode, legacyPanel);
     }
   }
 
@@ -128,4 +108,37 @@ export function applyHomeGuideDomEnsure(input: {
     createdOverlay,
     createdPanel
   };
+}
+
+export interface HomeGuideDomHostRuntime {
+  applyHomeGuideDomEnsure: typeof applyHomeGuideDomEnsure;
+}
+
+export interface HomeGuideDomHostRuntimeWindowLike {
+  CoreHomeGuideDomHostRuntime?: HomeGuideDomHostRuntime;
+}
+
+export interface HomeGuideDomHostRuntimeInstallOptions {
+  windowLike?: HomeGuideDomHostRuntimeWindowLike | null | undefined;
+}
+
+export function createHomeGuideDomHostRuntime(): HomeGuideDomHostRuntime {
+  return {
+    applyHomeGuideDomEnsure
+  };
+}
+
+export function installHomeGuideDomHostRuntime(
+  options: HomeGuideDomHostRuntimeInstallOptions = {}
+): HomeGuideDomHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeGuideDomHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuideDomHostRuntime) {
+    windowLike.CoreHomeGuideDomHostRuntime = createHomeGuideDomHostRuntime();
+  }
+  return windowLike.CoreHomeGuideDomHostRuntime || null;
 }

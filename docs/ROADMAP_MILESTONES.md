@@ -1,3 +1,22 @@
+# Stage-1BA Home-Guide-Dom-Host Runtime TS Boundary (2026-06-14)
+
+## Phase Decision
+- `WS-runtime-50`
+  - status: done
+  - progress: `CoreHomeGuideDomHostRuntime` is installed from `src/bootstrap/home-guide-dom-host.ts`; `js/core_home_guide_dom_host_runtime.js` is no longer referenced by active play/home runtime manifests.
+
+## Evidence
+- RED: `npx vitest run tests/unit/bootstrap-home-guide-dom-host.spec.ts` failed before `createHomeGuideDomHostRuntime` / `installHomeGuideDomHostRuntime` existed and while the TS DOM host still created `home-guide-message-banner` for `homeGuideState.panel`.
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` exposed the home-guide-dom-host retirement entry.
+- GREEN: `npx vitest run tests/unit/bootstrap-home-guide-dom-host.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:entry-manifest` reports active manifests no longer reference `core_home_guide_dom_host_runtime.js`.
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1AZ Home-Guide Runtime TS Boundary (2026-06-14)
 
 ## Phase Decision
