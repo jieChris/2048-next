@@ -92,7 +92,6 @@ import coreTopButtonStyleRuntimeUrl from "../../js/core_top_button_style_runtime
 import coreTopActionBindingsHostRuntimeUrl from "../../js/core_top_action_bindings_host_runtime.js?url";
 import coreHomeGuideDomHostRuntimeUrl from "../../js/core_home_guide_dom_host_runtime.js?url";
 import coreHomeGuideStepViewHostRuntimeUrl from "../../js/core_home_guide_step_view_host_runtime.js?url";
-import coreHomeGuidePageHostRuntimeUrl from "../../js/core_home_guide_page_host_runtime.js?url";
 import coreIndexUiRuntimeContractRuntimeUrl from "../../js/core_index_ui_runtime_contract_runtime.js?url";
 import coreIndexUiPageHostRuntimeUrl from "../../js/core_index_ui_page_host_runtime.js?url";
 import coreIndexUiPageResolversHostRuntimeUrl from "../../js/core_index_ui_page_resolvers_host_runtime.js?url";
@@ -259,7 +258,6 @@ export const homeIndexTailScripts = [
   coreTopActionBindingsHostRuntimeUrl,
   coreHomeGuideDomHostRuntimeUrl,
   coreHomeGuideStepViewHostRuntimeUrl,
-  coreHomeGuidePageHostRuntimeUrl,
   coreIndexUiRuntimeContractRuntimeUrl,
   coreIndexUiPageHostRuntimeUrl,
   coreIndexUiPageResolversHostRuntimeUrl,

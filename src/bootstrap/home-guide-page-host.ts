@@ -196,6 +196,22 @@ export interface HomeGuideAutoStartPageFromContextResult {
   pageResult: HomeGuideAutoStartPageResult;
 }
 
+export interface HomeGuidePageHostRuntime {
+  createHomeGuidePageResolvers: typeof createHomeGuidePageResolvers;
+  createHomeGuideLifecycleResolvers: typeof createHomeGuideLifecycleResolvers;
+  applyHomeGuideSettingsPageInit: typeof applyHomeGuideSettingsPageInit;
+  applyHomeGuideAutoStartPage: typeof applyHomeGuideAutoStartPage;
+  applyHomeGuideAutoStartPageFromContext: typeof applyHomeGuideAutoStartPageFromContext;
+}
+
+export interface HomeGuidePageHostRuntimeWindowLike {
+  CoreHomeGuidePageHostRuntime?: HomeGuidePageHostRuntime;
+}
+
+export interface HomeGuidePageHostRuntimeInstallOptions {
+  windowLike?: HomeGuidePageHostRuntimeWindowLike | null | undefined;
+}
+
 export interface HomeGuidePageResolvers {
   isHomePage: () => boolean;
   getHomeGuideSteps: () => unknown;
@@ -550,4 +566,29 @@ export function applyHomeGuideAutoStartPageFromContext(input: {
     localStorageResolved: !!storageLike,
     pageResult
   };
+}
+
+export function createHomeGuidePageHostRuntime(): HomeGuidePageHostRuntime {
+  return {
+    createHomeGuidePageResolvers,
+    createHomeGuideLifecycleResolvers,
+    applyHomeGuideSettingsPageInit,
+    applyHomeGuideAutoStartPage,
+    applyHomeGuideAutoStartPageFromContext
+  };
+}
+
+export function installHomeGuidePageHostRuntime(
+  options: HomeGuidePageHostRuntimeInstallOptions = {}
+): HomeGuidePageHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeGuidePageHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuidePageHostRuntime) {
+    windowLike.CoreHomeGuidePageHostRuntime = createHomeGuidePageHostRuntime();
+  }
+  return windowLike.CoreHomeGuidePageHostRuntime || null;
 }

@@ -1,3 +1,22 @@
+# Stage-1AY Home-Guide-Page-Host Runtime TS Boundary (2026-06-14)
+
+## Phase Decision
+- `WS-runtime-48`
+  - status: done
+  - progress: `CoreHomeGuidePageHostRuntime` is installed from `src/bootstrap/home-guide-page-host.ts`; `js/core_home_guide_page_host_runtime.js` is no longer referenced by active play/home runtime manifests.
+
+## Evidence
+- RED: `npx vitest run tests/unit/bootstrap-home-guide-page-host.spec.ts` failed before `createHomeGuidePageHostRuntime` / `installHomeGuidePageHostRuntime` existed.
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` exposed the home-guide-page-host retirement entry.
+- GREEN: `npx vitest run tests/unit/bootstrap-home-guide-page-host.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:entry-manifest` reports active manifests no longer reference `core_home_guide_page_host_runtime.js`.
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1AX Home-Guide-Startup-Host Runtime TS Boundary (2026-06-14)
 
 ## Phase Decision
