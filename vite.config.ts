@@ -90,7 +90,6 @@ const HOME_STANDARD_DEFERRED_FILES = [
   "core_theme_settings_runtime.js",
   "core_theme_settings_host_runtime.js",
   "core_theme_settings_page_host_runtime.js",
-  "core_home_guide_runtime.js",
   "core_mobile_hint_runtime.js",
   "core_mobile_hint_ui_runtime.js",
   "core_mobile_hint_modal_runtime.js",
