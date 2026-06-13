@@ -21,3 +21,34 @@ export function formatPrettyTime(value: unknown): string {
   if (hours > 0) text = hours + ":" + text;
   return text;
 }
+
+export interface PrettyTimeRuntime {
+  formatPrettyTime: typeof formatPrettyTime;
+}
+
+export interface PrettyTimeRuntimeWindowLike {
+  CorePrettyTimeRuntime?: PrettyTimeRuntime;
+}
+
+export interface PrettyTimeRuntimeInstallOptions {
+  windowLike?: PrettyTimeRuntimeWindowLike | null | undefined;
+}
+
+export function createPrettyTimeRuntime(): PrettyTimeRuntime {
+  return {
+    formatPrettyTime
+  };
+}
+
+export function installPrettyTimeRuntime(
+  options: PrettyTimeRuntimeInstallOptions = {}
+): PrettyTimeRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined" ? null : (window as unknown as PrettyTimeRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CorePrettyTimeRuntime) {
+    windowLike.CorePrettyTimeRuntime = createPrettyTimeRuntime();
+  }
+  return windowLike.CorePrettyTimeRuntime || null;
+}
