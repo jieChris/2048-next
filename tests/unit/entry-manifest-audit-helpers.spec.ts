@@ -306,6 +306,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks replay-control runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_replay_control_runtime.js",
+      symbolName: "coreReplayControlRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
