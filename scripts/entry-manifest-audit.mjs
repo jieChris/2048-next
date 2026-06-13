@@ -276,6 +276,9 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
 const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   {
     scriptPath: "core_home_guide_runtime.js"
+  },
+  {
+    scriptPath: "core_special_rules_runtime.js"
   }
 ];
 

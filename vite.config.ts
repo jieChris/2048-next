@@ -19,7 +19,6 @@ const HOME_STANDARD_STARTUP_FILES = [
   "local_history_store.js",
   "core_rules_runtime.js",
   "core_mode_runtime.js",
-  "core_special_rules_runtime.js",
   "core_direction_lock_runtime.js",
   "core_grid_scan_runtime.js",
   "core_move_scan_runtime.js",
