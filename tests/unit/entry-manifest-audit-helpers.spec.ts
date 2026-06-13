@@ -285,6 +285,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks move-apply runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_move_apply_runtime.js",
+      symbolName: "coreMoveApplyRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(

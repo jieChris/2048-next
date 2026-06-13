@@ -7,6 +7,7 @@ import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-resc
 import { installDirectionLockRuntime } from "../bootstrap/direction-lock-runtime";
 import { installGridScanRuntime } from "../bootstrap/grid-scan-runtime";
 import { installMergeEffectsRuntime } from "../bootstrap/merge-effects-runtime";
+import { installMoveApplyRuntime } from "../bootstrap/move-apply-runtime";
 import { installMovePathRuntime } from "../bootstrap/move-path-runtime";
 import { installMoveScanRuntime } from "../bootstrap/move-scan-runtime";
 import { installPostMoveRecordRuntime } from "../bootstrap/post-move-record-runtime";
@@ -168,6 +169,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installDirectionLockRuntime();
   installGridScanRuntime();
   installMergeEffectsRuntime();
+  installMoveApplyRuntime();
   installMovePathRuntime();
   installMoveScanRuntime();
   installPostMoveRecordRuntime();
