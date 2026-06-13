@@ -14,6 +14,7 @@ import { installPostMoveRecordRuntime } from "../bootstrap/post-move-record-runt
 import { installPostMoveRuntime } from "../bootstrap/post-move-runtime";
 import { installPostUndoRecordRuntime } from "../bootstrap/post-undo-record-runtime";
 import { installReplayControlRuntime } from "../bootstrap/replay-control-runtime";
+import { installReplayDispatchRuntime } from "../bootstrap/replay-dispatch-runtime";
 import { installReplayFlowRuntime } from "../bootstrap/replay-flow-runtime";
 import { installReplayLifecycleRuntime } from "../bootstrap/replay-lifecycle-runtime";
 import { installReplayLoopRuntime } from "../bootstrap/replay-loop-runtime";
@@ -181,6 +182,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installPostMoveRuntime();
   installPostUndoRecordRuntime();
   installReplayControlRuntime();
+  installReplayDispatchRuntime();
   installReplayFlowRuntime();
   installReplayLifecycleRuntime();
   installReplayLoopRuntime();

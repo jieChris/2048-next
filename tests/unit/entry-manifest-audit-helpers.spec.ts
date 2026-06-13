@@ -327,6 +327,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks replay-dispatch runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_replay_dispatch_runtime.js",
+      symbolName: "coreReplayDispatchRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
