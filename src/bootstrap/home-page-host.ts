@@ -171,3 +171,40 @@ export function applyHomePageUndo(input: {
     result
   };
 }
+
+export interface HomePageHostRuntime {
+  resolveHomePageDefaults: typeof resolveHomePageDefaults;
+  resolveHomePageRuntimes: typeof resolveHomePageRuntimes;
+  applyHomePageBootstrap: typeof applyHomePageBootstrap;
+  applyHomePageUndo: typeof applyHomePageUndo;
+}
+
+export interface HomePageHostRuntimeWindowLike {
+  CoreHomePageHostRuntime?: HomePageHostRuntime;
+}
+
+export interface HomePageHostRuntimeInstallOptions {
+  windowLike?: HomePageHostRuntimeWindowLike | null | undefined;
+}
+
+export function createHomePageHostRuntime(): HomePageHostRuntime {
+  return {
+    resolveHomePageDefaults,
+    resolveHomePageRuntimes,
+    applyHomePageBootstrap,
+    applyHomePageUndo
+  };
+}
+
+export function installHomePageHostRuntime(
+  options: HomePageHostRuntimeInstallOptions = {}
+): HomePageHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined" ? null : (window as unknown as HomePageHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomePageHostRuntime) {
+    windowLike.CoreHomePageHostRuntime = createHomePageHostRuntime();
+  }
+  return windowLike.CoreHomePageHostRuntime || null;
+}
