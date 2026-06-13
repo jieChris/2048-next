@@ -64,7 +64,6 @@ import coreTimerModuleSettingsPageHostRuntimeUrl from "../../js/core_timer_modul
 import coreThemeSettingsRuntimeUrl from "../../js/core_theme_settings_runtime.js?url";
 import coreThemeSettingsHostRuntimeUrl from "../../js/core_theme_settings_host_runtime.js?url";
 import coreThemeSettingsPageHostRuntimeUrl from "../../js/core_theme_settings_page_host_runtime.js?url";
-import coreHomeGuideRuntimeUrl from "../../js/core_home_guide_runtime.js?url";
 import coreMobileHintRuntimeUrl from "../../js/core_mobile_hint_runtime.js?url";
 import coreMobileHintUiRuntimeUrl from "../../js/core_mobile_hint_ui_runtime.js?url";
 import coreMobileHintModalRuntimeUrl from "../../js/core_mobile_hint_modal_runtime.js?url";
@@ -226,7 +225,6 @@ export const homeSettingsAndPanelScripts = [
   coreThemeSettingsRuntimeUrl,
   coreThemeSettingsHostRuntimeUrl,
   coreThemeSettingsPageHostRuntimeUrl,
-  coreHomeGuideRuntimeUrl,
   coreMobileHintRuntimeUrl,
   coreMobileHintUiRuntimeUrl,
   coreMobileHintModalRuntimeUrl,
