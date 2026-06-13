@@ -404,6 +404,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks responsive-relayout runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_responsive_relayout_runtime.js",
+      symbolName: "coreResponsiveRelayoutRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(

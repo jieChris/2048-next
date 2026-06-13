@@ -92,3 +92,38 @@ export function applyResponsiveRelayout(input: {
     managerActuated
   };
 }
+
+export interface ResponsiveRelayoutRuntime {
+  resolveResponsiveRelayoutRequest: typeof resolveResponsiveRelayoutRequest;
+  applyResponsiveRelayout: typeof applyResponsiveRelayout;
+}
+
+export interface ResponsiveRelayoutRuntimeWindowLike {
+  CoreResponsiveRelayoutRuntime?: ResponsiveRelayoutRuntime;
+}
+
+export interface ResponsiveRelayoutRuntimeInstallOptions {
+  windowLike?: ResponsiveRelayoutRuntimeWindowLike | null | undefined;
+}
+
+export function createResponsiveRelayoutRuntime(): ResponsiveRelayoutRuntime {
+  return {
+    resolveResponsiveRelayoutRequest,
+    applyResponsiveRelayout
+  };
+}
+
+export function installResponsiveRelayoutRuntime(
+  options: ResponsiveRelayoutRuntimeInstallOptions = {}
+): ResponsiveRelayoutRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as ResponsiveRelayoutRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreResponsiveRelayoutRuntime) {
+    windowLike.CoreResponsiveRelayoutRuntime = createResponsiveRelayoutRuntime();
+  }
+  return windowLike.CoreResponsiveRelayoutRuntime || null;
+}

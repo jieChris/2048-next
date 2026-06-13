@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-13, Stage-1AK Responsive-Relayout Runtime TS Boundary)
+
+## Batch Impact
+- `CoreResponsiveRelayoutRuntime` is now installed from `src/bootstrap/responsive-relayout.ts` before home-family legacy scripts load.
+- `src/bootstrap/responsive-relayout.ts` remains the tested TypeScript owner for responsive relayout request resolution and application.
+- The installer preserves the legacy runtime global shape: `resolveResponsiveRelayoutRequest` and `applyResponsiveRelayout`.
+- `js/core_responsive_relayout_runtime.js` was retired from active play/home runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_responsive_relayout_runtime.js` / `coreResponsiveRelayoutRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-responsive-relayout-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/bootstrap-responsive-relayout.spec.ts tests/unit/bootstrap-responsive-relayout-runtime.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-13, Stage-1AJ Pretty-Time Runtime TS Boundary)
 
 ## Batch Impact
