@@ -2,16 +2,55 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   canTriggerUndo,
+  createUndoActionRuntime,
+  installUndoActionRuntime,
   isUndoCapableMode,
   isUndoInteractionEnabled,
   resolveUndoCapabilityFromContext,
   resolveUndoModeIdFromBody,
   resolveUndoModeId,
   tryTriggerUndo,
-  tryTriggerUndoFromContext
+  tryTriggerUndoFromContext,
+  type UndoActionRuntime
 } from "../../src/bootstrap/undo-action";
 
 describe("bootstrap undo action", () => {
+  it("creates the legacy CoreUndoActionRuntime shape from TypeScript functions", () => {
+    const runtime = createUndoActionRuntime();
+
+    expect(runtime.canTriggerUndo).toBe(canTriggerUndo);
+    expect(runtime.resolveUndoModeIdFromBody).toBe(resolveUndoModeIdFromBody);
+    expect(runtime.resolveUndoModeId).toBe(resolveUndoModeId);
+    expect(runtime.isUndoCapableMode).toBe(isUndoCapableMode);
+    expect(runtime.resolveUndoCapabilityFromContext).toBe(resolveUndoCapabilityFromContext);
+    expect(runtime.isUndoInteractionEnabled).toBe(isUndoInteractionEnabled);
+    expect(runtime.tryTriggerUndo).toBe(tryTriggerUndo);
+    expect(runtime.tryTriggerUndoFromContext).toBe(tryTriggerUndoFromContext);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreUndoActionRuntime?: UndoActionRuntime } = {};
+
+    const installed = installUndoActionRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreUndoActionRuntime);
+    expect(installed?.tryTriggerUndo).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing undo action runtime", () => {
+    const existing = createUndoActionRuntime();
+    const windowLike = { CoreUndoActionRuntime: existing };
+
+    const installed = installUndoActionRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreUndoActionRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installUndoActionRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("returns false when manager is unavailable", () => {
     expect(canTriggerUndo(null)).toBe(false);
     expect(canTriggerUndo({})).toBe(false);

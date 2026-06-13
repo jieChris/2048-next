@@ -250,6 +250,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_practice_mode_runtime.js",
     symbolName: "corePracticeModeRuntimeUrl"
+  },
+  {
+    scriptPath: "core_undo_action_runtime.js",
+    symbolName: "coreUndoActionRuntimeUrl"
   }
 ];
 

@@ -60,7 +60,6 @@ import coreStorageRuntimeUrl from "../../js/core_storage_runtime.js?url";
 import playApplicationUrl from "../../js/play_application.js?url";
 import coreCappedTimerScrollRuntimeUrl from "../../js/core_capped_timer_scroll_runtime.js?url";
 import cappedTimerScrollUrl from "../../js/capped_timer_scroll.js?url";
-import coreUndoActionRuntimeUrl from "../../js/core_undo_action_runtime.js?url";
 import corePracticeTransferRuntimeUrl from "../../js/core_practice_transfer_runtime.js?url";
 import corePracticeTransferHostRuntimeUrl from "../../js/core_practice_transfer_host_runtime.js?url";
 import corePracticeTransferPageHostRuntimeUrl from "../../js/core_practice_transfer_page_host_runtime.js?url";
@@ -166,7 +165,6 @@ export const playLegacyScripts = [
   playApplicationUrl,
   coreCappedTimerScrollRuntimeUrl,
   cappedTimerScrollUrl,
-  coreUndoActionRuntimeUrl,
   corePracticeTransferRuntimeUrl,
   corePracticeTransferHostRuntimeUrl,
   corePracticeTransferPageHostRuntimeUrl,

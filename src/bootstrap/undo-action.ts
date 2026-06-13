@@ -183,3 +183,48 @@ export function isUndoInteractionEnabled(
       manager.isUndoInteractionEnabled()
   );
 }
+
+export interface UndoActionRuntime {
+  canTriggerUndo: typeof canTriggerUndo;
+  resolveUndoModeIdFromBody: typeof resolveUndoModeIdFromBody;
+  resolveUndoModeId: typeof resolveUndoModeId;
+  isUndoCapableMode: typeof isUndoCapableMode;
+  resolveUndoCapabilityFromContext: typeof resolveUndoCapabilityFromContext;
+  isUndoInteractionEnabled: typeof isUndoInteractionEnabled;
+  tryTriggerUndo: typeof tryTriggerUndo;
+  tryTriggerUndoFromContext: typeof tryTriggerUndoFromContext;
+}
+
+export interface UndoActionRuntimeWindowLike {
+  CoreUndoActionRuntime?: UndoActionRuntime;
+}
+
+export interface UndoActionRuntimeInstallOptions {
+  windowLike?: UndoActionRuntimeWindowLike | null | undefined;
+}
+
+export function createUndoActionRuntime(): UndoActionRuntime {
+  return {
+    canTriggerUndo,
+    resolveUndoModeIdFromBody,
+    resolveUndoModeId,
+    isUndoCapableMode,
+    resolveUndoCapabilityFromContext,
+    isUndoInteractionEnabled,
+    tryTriggerUndo,
+    tryTriggerUndoFromContext
+  };
+}
+
+export function installUndoActionRuntime(
+  options: UndoActionRuntimeInstallOptions = {}
+): UndoActionRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined" ? null : (window as unknown as UndoActionRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreUndoActionRuntime) {
+    windowLike.CoreUndoActionRuntime = createUndoActionRuntime();
+  }
+  return windowLike.CoreUndoActionRuntime || null;
+}
