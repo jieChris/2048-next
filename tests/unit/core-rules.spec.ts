@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   applySpawnValueCount,
+  createRulesRuntime,
   getActualSecondaryRateText,
   getMergedValue,
   getSpawnCount,
@@ -10,10 +11,54 @@ import {
   getTimerMilestoneSlotByValue,
   getTotalSpawnCount,
   getTimerMilestoneValues,
+  installRulesRuntime,
   nextFibonacci,
   normalizeSpawnTable,
-  pickSpawnValue
+  pickSpawnValue,
+  type RulesRuntime
 } from "../../src/core/rules";
+
+describe("core rules runtime installer", () => {
+  it("creates the legacy CoreRulesRuntime shape from TypeScript functions", () => {
+    const runtime = createRulesRuntime();
+
+    expect(runtime.normalizeSpawnTable).toBe(normalizeSpawnTable);
+    expect(runtime.getTheoreticalMaxTile).toBe(getTheoreticalMaxTile);
+    expect(runtime.pickSpawnValue).toBe(pickSpawnValue);
+    expect(runtime.getSpawnStatPair).toBe(getSpawnStatPair);
+    expect(runtime.getSpawnCount).toBe(getSpawnCount);
+    expect(runtime.getTotalSpawnCount).toBe(getTotalSpawnCount);
+    expect(runtime.getActualSecondaryRateText).toBe(getActualSecondaryRateText);
+    expect(runtime.applySpawnValueCount).toBe(applySpawnValueCount);
+    expect(runtime.nextFibonacci).toBe(nextFibonacci);
+    expect(runtime.getMergedValue).toBe(getMergedValue);
+    expect(runtime.getTimerMilestoneValues).toBe(getTimerMilestoneValues);
+    expect(runtime.getTimerMilestoneSlotByValue).toBe(getTimerMilestoneSlotByValue);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreRulesRuntime?: RulesRuntime } = {};
+
+    const installed = installRulesRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreRulesRuntime);
+    expect(installed?.getMergedValue).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing rules runtime", () => {
+    const existing = createRulesRuntime();
+    const windowLike = { CoreRulesRuntime: existing };
+
+    const installed = installRulesRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreRulesRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installRulesRuntime({ windowLike: null })).toBeNull();
+  });
+});
 
 describe("core rules: normalizeSpawnTable", () => {
   it("filters invalid entries and keeps valid weighted values", () => {

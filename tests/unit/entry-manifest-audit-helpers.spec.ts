@@ -579,6 +579,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks rules runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_rules_runtime.js",
+      symbolName: "coreRulesRuntimeUrl"
+    });
+  });
+
   it("detects retired runtime references in capped entry content", () => {
     expect(() =>
       ensureRetiredRuntimeScriptAbsent(

@@ -62,6 +62,7 @@ import { installUndoSnapshotRuntime } from "../bootstrap/undo-snapshot-runtime";
 import { installUndoStackEntryRuntime } from "../bootstrap/undo-stack-entry-runtime";
 import { installUndoTileRestoreRuntime } from "../bootstrap/undo-tile-restore-runtime";
 import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-runtime";
+import { installRulesRuntime } from "../core/rules";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
 import { getPageManifest, type RuntimeCapability } from "./runtime-manifest";
 import { resolveHomeFamilyScriptsByCapabilities } from "./home-family-shared";
@@ -226,6 +227,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installHomeGuideStartupHostRuntime();
   installHomeStartupHostRuntime();
   installModeCatalogRuntime();
+  installRulesRuntime();
   installPracticeModeRuntime();
   installHomeModeRuntime();
   installUndoActionRuntime();
