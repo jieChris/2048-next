@@ -23,7 +23,6 @@ import coreModeCatalogRuntimeUrl from "../../js/core_mode_catalog_runtime.js?url
 import coreRulesRuntimeUrl from "../../js/core_rules_runtime.js?url";
 import coreModeRuntimeUrl from "../../js/core_mode_runtime.js?url";
 import coreSpecialRulesRuntimeUrl from "../../js/core_special_rules_runtime.js?url";
-import coreMovePathRuntimeUrl from "../../js/core_move_path_runtime.js?url";
 import corePostUndoRecordRuntimeUrl from "../../js/core_post_undo_record_runtime.js?url";
 import coreUndoRestoreRuntimeUrl from "../../js/core_undo_restore_runtime.js?url";
 import coreUndoTileSnapshotRuntimeUrl from "../../js/core_undo_tile_snapshot_runtime.js?url";
@@ -171,7 +170,6 @@ export const homeCoreScripts = [
   coreRulesRuntimeUrl,
   coreModeRuntimeUrl,
   coreSpecialRulesRuntimeUrl,
-  coreMovePathRuntimeUrl,
   corePostUndoRecordRuntimeUrl,
   coreUndoRestoreRuntimeUrl,
   coreUndoTileSnapshotRuntimeUrl,
@@ -230,7 +228,6 @@ export const cappedCoreScripts = [
   coreRulesRuntimeUrl,
   coreModeRuntimeUrl,
   coreSpecialRulesRuntimeUrl,
-  coreMovePathRuntimeUrl,
   corePostUndoRecordRuntimeUrl,
   coreUndoRestoreRuntimeUrl,
   coreUndoTileSnapshotRuntimeUrl,

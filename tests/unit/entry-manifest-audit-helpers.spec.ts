@@ -236,6 +236,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks move-path runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_move_path_runtime.js",
+      symbolName: "coreMovePathRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
