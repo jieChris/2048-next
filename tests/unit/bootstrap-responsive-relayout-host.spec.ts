@@ -2,10 +2,46 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   applyResponsiveRelayoutRequest,
-  applyResponsiveRelayoutRequestFromContext
+  applyResponsiveRelayoutRequestFromContext,
+  createResponsiveRelayoutHostRuntime,
+  installResponsiveRelayoutHostRuntime,
+  type ResponsiveRelayoutHostRuntime
 } from "../../src/bootstrap/responsive-relayout-host";
 
 describe("bootstrap responsive relayout host", () => {
+  it("creates the legacy CoreResponsiveRelayoutHostRuntime shape from TypeScript functions", () => {
+    const runtime = createResponsiveRelayoutHostRuntime();
+
+    expect(runtime.applyResponsiveRelayoutRequest).toBe(applyResponsiveRelayoutRequest);
+    expect(runtime.applyResponsiveRelayoutRequestFromContext).toBe(
+      applyResponsiveRelayoutRequestFromContext
+    );
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreResponsiveRelayoutHostRuntime?: ResponsiveRelayoutHostRuntime } = {};
+
+    const installed = installResponsiveRelayoutHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreResponsiveRelayoutHostRuntime);
+    expect(installed?.applyResponsiveRelayoutRequest).toBeTypeOf("function");
+    expect(installed?.applyResponsiveRelayoutRequestFromContext).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing host runtime", () => {
+    const existing = createResponsiveRelayoutHostRuntime();
+    const windowLike = { CoreResponsiveRelayoutHostRuntime: existing };
+
+    const installed = installResponsiveRelayoutHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreResponsiveRelayoutHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installResponsiveRelayoutHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("returns fallback result when runtime contract is missing", () => {
     const timer = { id: 1 };
     const result = applyResponsiveRelayoutRequest({
