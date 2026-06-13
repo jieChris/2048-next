@@ -74,3 +74,36 @@ export function resolveHomeStartupFromContext(
     defaultBoardWidth
   };
 }
+
+export interface HomeStartupHostRuntime {
+  resolveHomeStartupFromContext: typeof resolveHomeStartupFromContext;
+}
+
+export interface HomeStartupHostRuntimeWindowLike {
+  CoreHomeStartupHostRuntime?: HomeStartupHostRuntime;
+}
+
+export interface HomeStartupHostRuntimeInstallOptions {
+  windowLike?: HomeStartupHostRuntimeWindowLike | null | undefined;
+}
+
+export function createHomeStartupHostRuntime(): HomeStartupHostRuntime {
+  return {
+    resolveHomeStartupFromContext
+  };
+}
+
+export function installHomeStartupHostRuntime(
+  options: HomeStartupHostRuntimeInstallOptions = {}
+): HomeStartupHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeStartupHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeStartupHostRuntime) {
+    windowLike.CoreHomeStartupHostRuntime = createHomeStartupHostRuntime();
+  }
+  return windowLike.CoreHomeStartupHostRuntime || null;
+}
