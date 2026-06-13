@@ -1,3 +1,22 @@
+# Stage-1L Move-Scan Runtime TS Boundary (2026-06-13)
+
+## Phase Decision
+- `WS-runtime-09`
+  - status: done
+  - progress: `CoreMoveScanRuntime` is installed from `src/bootstrap/move-scan-runtime.ts`; `js/core_move_scan_runtime.js` is no longer referenced by active play/replay/home/capped runtime manifests.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` exposed the move-scan retirement entry.
+- RED: `npx vitest run tests/unit/bootstrap-move-scan-runtime.spec.ts` failed before `src/bootstrap/move-scan-runtime.ts` existed.
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-move-scan.spec.ts tests/unit/bootstrap-move-scan-runtime.spec.ts`
+- `npm run audit:entry-manifest` reports active manifests no longer reference `core_move_scan_runtime.js`.
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1K Grid-Scan Runtime TS Boundary (2026-06-13)
 
 ## Phase Decision

@@ -229,6 +229,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks move-scan runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_move_scan_runtime.js",
+      symbolName: "coreMoveScanRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
