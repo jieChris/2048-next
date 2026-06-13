@@ -1,8 +1,42 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { applyHomeGuideStart } from "../../src/bootstrap/home-guide-start-host";
+import {
+  applyHomeGuideStart,
+  createHomeGuideStartHostRuntime,
+  installHomeGuideStartHostRuntime,
+  type HomeGuideStartHostRuntime
+} from "../../src/bootstrap/home-guide-start-host";
 
 describe("bootstrap home guide start host", () => {
+  it("creates the legacy CoreHomeGuideStartHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeGuideStartHostRuntime();
+
+    expect(runtime.applyHomeGuideStart).toBe(applyHomeGuideStart);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeGuideStartHostRuntime?: HomeGuideStartHostRuntime } = {};
+
+    const installed = installHomeGuideStartHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeGuideStartHostRuntime);
+    expect(installed?.applyHomeGuideStart).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing start host runtime", () => {
+    const existing = createHomeGuideStartHostRuntime();
+    const windowLike = { CoreHomeGuideStartHostRuntime: existing };
+
+    const installed = installHomeGuideStartHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeGuideStartHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeGuideStartHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("applies start lifecycle, session state and layer display", () => {
     const overlay = { style: { display: "none" } };
     const panel = { style: { display: "none" } };
