@@ -263,3 +263,44 @@ export function applyReplayExportPageActionFromContext(input: {
     exportResult
   };
 }
+
+export interface ReplayPageHostRuntime {
+  createReplayPageActionResolvers: typeof createReplayPageActionResolvers;
+  applyReplayModalPageOpen: typeof applyReplayModalPageOpen;
+  applyReplayModalPageClose: typeof applyReplayModalPageClose;
+  applyReplayExportPageAction: typeof applyReplayExportPageAction;
+  applyReplayExportPageActionFromContext: typeof applyReplayExportPageActionFromContext;
+}
+
+export interface ReplayPageHostRuntimeWindowLike {
+  CoreReplayPageHostRuntime?: ReplayPageHostRuntime;
+}
+
+export interface ReplayPageHostRuntimeInstallOptions {
+  windowLike?: ReplayPageHostRuntimeWindowLike | null | undefined;
+}
+
+export function createReplayPageHostRuntime(): ReplayPageHostRuntime {
+  return {
+    createReplayPageActionResolvers,
+    applyReplayModalPageOpen,
+    applyReplayModalPageClose,
+    applyReplayExportPageAction,
+    applyReplayExportPageActionFromContext
+  };
+}
+
+export function installReplayPageHostRuntime(
+  options: ReplayPageHostRuntimeInstallOptions = {}
+): ReplayPageHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as ReplayPageHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreReplayPageHostRuntime) {
+    windowLike.CoreReplayPageHostRuntime = createReplayPageHostRuntime();
+  }
+  return windowLike.CoreReplayPageHostRuntime || null;
+}
