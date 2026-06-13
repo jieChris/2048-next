@@ -292,6 +292,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks replay-timer runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_replay_timer_runtime.js",
+      symbolName: "coreReplayTimerRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
