@@ -98,6 +98,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_replay_timer_runtime.js",
     symbolName: "coreReplayTimerRuntimeUrl"
+  },
+  {
+    scriptPath: "core_replay_flow_runtime.js",
+    symbolName: "coreReplayFlowRuntimeUrl"
   }
 ];
 
