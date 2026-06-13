@@ -230,6 +230,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_home_guide_step_view_host_runtime.js",
     symbolName: "coreHomeGuideStepViewHostRuntimeUrl"
+  },
+  {
+    scriptPath: "core_home_startup_host_runtime.js",
+    symbolName: "coreHomeStartupHostRuntimeUrl"
   }
 ];
 

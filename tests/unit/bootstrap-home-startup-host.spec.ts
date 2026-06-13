@@ -1,8 +1,42 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { resolveHomeStartupFromContext } from "../../src/bootstrap/home-startup-host";
+import {
+  createHomeStartupHostRuntime,
+  installHomeStartupHostRuntime,
+  resolveHomeStartupFromContext,
+  type HomeStartupHostRuntime
+} from "../../src/bootstrap/home-startup-host";
 
 describe("bootstrap home startup host", () => {
+  it("creates the legacy CoreHomeStartupHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeStartupHostRuntime();
+
+    expect(runtime.resolveHomeStartupFromContext).toBe(resolveHomeStartupFromContext);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeStartupHostRuntime?: HomeStartupHostRuntime } = {};
+
+    const installed = installHomeStartupHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeStartupHostRuntime);
+    expect(installed?.resolveHomeStartupFromContext).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing startup host runtime", () => {
+    const existing = createHomeStartupHostRuntime();
+    const windowLike = { CoreHomeStartupHostRuntime: existing };
+
+    const installed = installHomeStartupHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeStartupHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeStartupHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("resolves selection from page context and returns startup payload", () => {
     const resolveHomeModeSelectionFromContext = vi.fn(() => ({
       modeKey: "practice",

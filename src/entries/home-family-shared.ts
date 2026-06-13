@@ -49,7 +49,6 @@ import coreBootstrapRuntimeUrl from "../../js/core_bootstrap_runtime.js?url";
 import corePracticeModeRuntimeUrl from "../../js/core_practice_mode_runtime.js?url";
 import coreHomeModeRuntimeUrl from "../../js/core_home_mode_runtime.js?url";
 import coreHomeRuntimeContractRuntimeUrl from "../../js/core_home_runtime_contract_runtime.js?url";
-import coreHomeStartupHostRuntimeUrl from "../../js/core_home_startup_host_runtime.js?url";
 import coreHomePageHostRuntimeUrl from "../../js/core_home_page_host_runtime.js?url";
 import coreUndoActionRuntimeUrl from "../../js/core_undo_action_runtime.js?url";
 import applicationUrl from "../../js/application.js?url";
@@ -198,7 +197,6 @@ export const homeStandardStartupScripts = [
   corePracticeModeRuntimeUrl,
   coreHomeModeRuntimeUrl,
   coreHomeRuntimeContractRuntimeUrl,
-  coreHomeStartupHostRuntimeUrl,
   coreHomePageHostRuntimeUrl,
   coreUndoActionRuntimeUrl,
   applicationUrl
