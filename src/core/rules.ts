@@ -217,3 +217,56 @@ export function getTimerMilestoneSlotByValue(
   }
   return slotMap;
 }
+
+export interface RulesRuntime {
+  normalizeSpawnTable: typeof normalizeSpawnTable;
+  getTheoreticalMaxTile: typeof getTheoreticalMaxTile;
+  pickSpawnValue: typeof pickSpawnValue;
+  getSpawnStatPair: typeof getSpawnStatPair;
+  getSpawnCount: typeof getSpawnCount;
+  getTotalSpawnCount: typeof getTotalSpawnCount;
+  getActualSecondaryRateText: typeof getActualSecondaryRateText;
+  applySpawnValueCount: typeof applySpawnValueCount;
+  nextFibonacci: typeof nextFibonacci;
+  getMergedValue: typeof getMergedValue;
+  getTimerMilestoneValues: typeof getTimerMilestoneValues;
+  getTimerMilestoneSlotByValue: typeof getTimerMilestoneSlotByValue;
+}
+
+export interface RulesRuntimeWindowLike {
+  CoreRulesRuntime?: RulesRuntime;
+}
+
+export interface RulesRuntimeInstallOptions {
+  windowLike?: RulesRuntimeWindowLike | null | undefined;
+}
+
+export function createRulesRuntime(): RulesRuntime {
+  return {
+    normalizeSpawnTable,
+    getTheoreticalMaxTile,
+    pickSpawnValue,
+    getSpawnStatPair,
+    getSpawnCount,
+    getTotalSpawnCount,
+    getActualSecondaryRateText,
+    applySpawnValueCount,
+    nextFibonacci,
+    getMergedValue,
+    getTimerMilestoneValues,
+    getTimerMilestoneSlotByValue
+  };
+}
+
+export function installRulesRuntime(
+  options: RulesRuntimeInstallOptions = {}
+): RulesRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined" ? null : (window as unknown as RulesRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreRulesRuntime) {
+    windowLike.CoreRulesRuntime = createRulesRuntime();
+  }
+  return windowLike.CoreRulesRuntime || null;
+}
