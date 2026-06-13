@@ -37,7 +37,6 @@ import coreDirectionLockRuntimeUrl from "../../js/core_direction_lock_runtime.js
 import coreGridScanRuntimeUrl from "../../js/core_grid_scan_runtime.js?url";
 import coreMoveScanRuntimeUrl from "../../js/core_move_scan_runtime.js?url";
 import coreMovePathRuntimeUrl from "../../js/core_move_path_runtime.js?url";
-import corePostMoveRecordRuntimeUrl from "../../js/core_post_move_record_runtime.js?url";
 import corePostUndoRecordRuntimeUrl from "../../js/core_post_undo_record_runtime.js?url";
 import coreUndoRestoreRuntimeUrl from "../../js/core_undo_restore_runtime.js?url";
 import coreUndoSnapshotRuntimeUrl from "../../js/core_undo_snapshot_runtime.js?url";
@@ -190,7 +189,6 @@ export const playLegacyScripts = [
   coreGridScanRuntimeUrl,
   coreMoveScanRuntimeUrl,
   coreMovePathRuntimeUrl,
-  corePostMoveRecordRuntimeUrl,
   corePostUndoRecordRuntimeUrl,
   coreUndoRestoreRuntimeUrl,
   coreUndoSnapshotRuntimeUrl,
