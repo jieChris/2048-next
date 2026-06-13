@@ -386,4 +386,43 @@ export function applySettingsModalPageClose(input: {
   };
 }
 
+export interface SettingsModalPageHostRuntime {
+  createSettingsModalActionResolvers: typeof createSettingsModalActionResolvers;
+  createSettingsModalInitResolvers: typeof createSettingsModalInitResolvers;
+  applySettingsModalPageOpen: typeof applySettingsModalPageOpen;
+  applySettingsModalPageClose: typeof applySettingsModalPageClose;
+}
+
+export interface SettingsModalPageHostRuntimeWindowLike {
+  CoreSettingsModalPageHostRuntime?: SettingsModalPageHostRuntime;
+}
+
+export interface SettingsModalPageHostRuntimeInstallOptions {
+  windowLike?: SettingsModalPageHostRuntimeWindowLike | null | undefined;
+}
+
+export function createSettingsModalPageHostRuntime(): SettingsModalPageHostRuntime {
+  return {
+    createSettingsModalActionResolvers,
+    createSettingsModalInitResolvers,
+    applySettingsModalPageOpen,
+    applySettingsModalPageClose
+  };
+}
+
+export function installSettingsModalPageHostRuntime(
+  options: SettingsModalPageHostRuntimeInstallOptions = {}
+): SettingsModalPageHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as SettingsModalPageHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreSettingsModalPageHostRuntime) {
+    windowLike.CoreSettingsModalPageHostRuntime = createSettingsModalPageHostRuntime();
+  }
+  return windowLike.CoreSettingsModalPageHostRuntime || null;
+}
+
 export { resolveWinPromptNoteTextLegacy };
