@@ -7,7 +7,6 @@ const HOME_STANDARD_DEFERRED_BUNDLE = "home_standard_deferred_bundle.js";
 const HOME_STANDARD_STARTUP_FILES = [
   "seedrandom.js",
   "animframe_polyfill.js",
-  "core_crypto_random_runtime.js",
   "core_bootstrap_runtime.js",
   "keyboard_input_manager.js",
   "theme_manager.js",
