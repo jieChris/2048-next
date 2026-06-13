@@ -8,6 +8,7 @@ import { installDirectionLockRuntime } from "../bootstrap/direction-lock-runtime
 import { installGameOverUndoHostRuntime } from "../bootstrap/game-over-undo-host";
 import { installGridScanRuntime } from "../bootstrap/grid-scan-runtime";
 import { installHomeGuideDoneNoticeHostRuntime } from "../bootstrap/home-guide-done-notice-host";
+import { installHomeGuideFinishHostRuntime } from "../bootstrap/home-guide-finish-host";
 import { installHomeGuideHighlightHostRuntime } from "../bootstrap/home-guide-highlight-host";
 import { installHomeGuidePanelHostRuntime } from "../bootstrap/home-guide-panel-host";
 import { installIndexUiStartupHostRuntime } from "../bootstrap/index-ui-startup-host";
@@ -193,6 +194,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installGameOverUndoHostRuntime();
   installGridScanRuntime();
   installHomeGuideDoneNoticeHostRuntime();
+  installHomeGuideFinishHostRuntime();
   installHomeGuideHighlightHostRuntime();
   installHomeGuidePanelHostRuntime();
   installIndexUiStartupHostRuntime();

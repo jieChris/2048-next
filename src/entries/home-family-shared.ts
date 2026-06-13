@@ -91,7 +91,6 @@ import coreNightModeRuntimeUrl from "../../js/core_night_mode_runtime.js?url";
 import coreTopButtonStyleRuntimeUrl from "../../js/core_top_button_style_runtime.js?url";
 import coreTopActionBindingsHostRuntimeUrl from "../../js/core_top_action_bindings_host_runtime.js?url";
 import coreHomeGuideDomHostRuntimeUrl from "../../js/core_home_guide_dom_host_runtime.js?url";
-import coreHomeGuideFinishHostRuntimeUrl from "../../js/core_home_guide_finish_host_runtime.js?url";
 import coreHomeGuideStartHostRuntimeUrl from "../../js/core_home_guide_start_host_runtime.js?url";
 import coreHomeGuideControlsHostRuntimeUrl from "../../js/core_home_guide_controls_host_runtime.js?url";
 import coreHomeGuideStepFlowHostRuntimeUrl from "../../js/core_home_guide_step_flow_host_runtime.js?url";
@@ -265,7 +264,6 @@ export const homeTopButtonStyleScripts = [coreTopButtonStyleRuntimeUrl] as const
 export const homeIndexTailScripts = [
   coreTopActionBindingsHostRuntimeUrl,
   coreHomeGuideDomHostRuntimeUrl,
-  coreHomeGuideFinishHostRuntimeUrl,
   coreHomeGuideStartHostRuntimeUrl,
   coreHomeGuideControlsHostRuntimeUrl,
   coreHomeGuideStepFlowHostRuntimeUrl,

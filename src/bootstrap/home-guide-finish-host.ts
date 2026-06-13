@@ -93,6 +93,19 @@ export interface HomeGuideFinishHostContextResult {
   finishResult: HomeGuideFinishHostResult;
 }
 
+export interface HomeGuideFinishHostRuntime {
+  applyHomeGuideFinish: typeof applyHomeGuideFinish;
+  applyHomeGuideFinishFromContext: typeof applyHomeGuideFinishFromContext;
+}
+
+export interface HomeGuideFinishHostRuntimeWindowLike {
+  CoreHomeGuideFinishHostRuntime?: HomeGuideFinishHostRuntime;
+}
+
+export interface HomeGuideFinishHostRuntimeInstallOptions {
+  windowLike?: HomeGuideFinishHostRuntimeWindowLike | null | undefined;
+}
+
 export function applyHomeGuideFinish(input: {
   homeGuideRuntime?: unknown;
   homeGuideState?: unknown;
@@ -240,4 +253,26 @@ export function applyHomeGuideFinishFromContext(input: {
     localStorageResolved: !!storageLike,
     finishResult
   };
+}
+
+export function createHomeGuideFinishHostRuntime(): HomeGuideFinishHostRuntime {
+  return {
+    applyHomeGuideFinish,
+    applyHomeGuideFinishFromContext
+  };
+}
+
+export function installHomeGuideFinishHostRuntime(
+  options: HomeGuideFinishHostRuntimeInstallOptions = {}
+): HomeGuideFinishHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeGuideFinishHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuideFinishHostRuntime) {
+    windowLike.CoreHomeGuideFinishHostRuntime = createHomeGuideFinishHostRuntime();
+  }
+  return windowLike.CoreHomeGuideFinishHostRuntime || null;
 }
