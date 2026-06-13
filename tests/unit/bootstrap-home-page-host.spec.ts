@@ -3,11 +3,46 @@ import { describe, expect, it, vi } from "vitest";
 import {
   applyHomePageBootstrap,
   applyHomePageUndo,
+  createHomePageHostRuntime,
+  installHomePageHostRuntime,
   resolveHomePageDefaults,
-  resolveHomePageRuntimes
+  resolveHomePageRuntimes,
+  type HomePageHostRuntime
 } from "../../src/bootstrap/home-page-host";
 
 describe("bootstrap home page host", () => {
+  it("creates the legacy CoreHomePageHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomePageHostRuntime();
+
+    expect(runtime.resolveHomePageDefaults).toBe(resolveHomePageDefaults);
+    expect(runtime.resolveHomePageRuntimes).toBe(resolveHomePageRuntimes);
+    expect(runtime.applyHomePageBootstrap).toBe(applyHomePageBootstrap);
+    expect(runtime.applyHomePageUndo).toBe(applyHomePageUndo);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomePageHostRuntime?: HomePageHostRuntime } = {};
+
+    const installed = installHomePageHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomePageHostRuntime);
+    expect(installed?.applyHomePageBootstrap).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing home page host runtime", () => {
+    const existing = createHomePageHostRuntime();
+    const windowLike = { CoreHomePageHostRuntime: existing };
+
+    const installed = installHomePageHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomePageHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomePageHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("resolves home page defaults with baseline values", () => {
     const defaults = resolveHomePageDefaults();
 
