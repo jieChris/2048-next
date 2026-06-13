@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-14, Stage-1BB Home-Guide-Step-View-Host Runtime TS Boundary)
+
+## Batch Impact
+- `CoreHomeGuideStepViewHostRuntime` is now installed from `src/bootstrap/home-guide-step-view-host.ts` before home-family legacy scripts load.
+- `src/bootstrap/home-guide-step-view-host.ts` preserves the active legacy `home-guide-panel` / `home-guide-message-banner` rendering contract and schedules `positionHomeGuidePanel` through `requestAnimationFrame`.
+- The installer preserves the legacy runtime global shape: `applyHomeGuideStepView`.
+- `js/core_home_guide_step_view_host_runtime.js` was retired from active play/home runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_home_guide_step_view_host_runtime.js` / `coreHomeGuideStepViewHostRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/bootstrap-home-guide-step-view-host.spec.ts`
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- GREEN: `npx vitest run tests/unit/bootstrap-home-guide-step-view-host.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-14, Stage-1BA Home-Guide-Dom-Host Runtime TS Boundary)
 
 ## Batch Impact
