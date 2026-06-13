@@ -397,6 +397,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks pretty-time runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_pretty_time_runtime.js",
+      symbolName: "corePrettyTimeRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
