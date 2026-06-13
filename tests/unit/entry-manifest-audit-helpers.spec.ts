@@ -215,6 +215,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks direction-lock runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_direction_lock_runtime.js",
+      symbolName: "coreDirectionLockRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
