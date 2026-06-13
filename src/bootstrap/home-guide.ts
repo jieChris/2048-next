@@ -376,6 +376,44 @@ export interface IsHomeGuideTargetVisibleOptions {
   viewportHeight?: number | null | undefined;
 }
 
+export interface HomeGuideRuntime {
+  resolveHomeGuidePathname: typeof resolveHomeGuidePathname;
+  isHomePagePath: typeof isHomePagePath;
+  buildHomeGuideSteps: typeof buildHomeGuideSteps;
+  buildHomeGuidePanelInnerHtml: typeof buildHomeGuidePanelInnerHtml;
+  buildHomeGuideSettingsRowInnerHtml: typeof buildHomeGuideSettingsRowInnerHtml;
+  readHomeGuideSeenValue: typeof readHomeGuideSeenValue;
+  markHomeGuideSeen: typeof markHomeGuideSeen;
+  shouldAutoStartHomeGuide: typeof shouldAutoStartHomeGuide;
+  resolveHomeGuideAutoStart: typeof resolveHomeGuideAutoStart;
+  resolveHomeGuideSettingsState: typeof resolveHomeGuideSettingsState;
+  resolveHomeGuideStepUiState: typeof resolveHomeGuideStepUiState;
+  resolveHomeGuideStepRenderState: typeof resolveHomeGuideStepRenderState;
+  resolveHomeGuideStepIndexState: typeof resolveHomeGuideStepIndexState;
+  resolveHomeGuideStepTargetState: typeof resolveHomeGuideStepTargetState;
+  resolveHomeGuideElevationPlan: typeof resolveHomeGuideElevationPlan;
+  resolveHomeGuideBindingState: typeof resolveHomeGuideBindingState;
+  resolveHomeGuideControlAction: typeof resolveHomeGuideControlAction;
+  resolveHomeGuideToggleAction: typeof resolveHomeGuideToggleAction;
+  resolveHomeGuideLifecycleState: typeof resolveHomeGuideLifecycleState;
+  resolveHomeGuideSessionState: typeof resolveHomeGuideSessionState;
+  resolveHomeGuideLayerDisplayState: typeof resolveHomeGuideLayerDisplayState;
+  resolveHomeGuideFinishState: typeof resolveHomeGuideFinishState;
+  resolveHomeGuideTargetScrollState: typeof resolveHomeGuideTargetScrollState;
+  resolveHomeGuideDoneNotice: typeof resolveHomeGuideDoneNotice;
+  resolveHomeGuideDoneNoticeStyle: typeof resolveHomeGuideDoneNoticeStyle;
+  resolveHomeGuidePanelLayout: typeof resolveHomeGuidePanelLayout;
+  isHomeGuideTargetVisible: typeof isHomeGuideTargetVisible;
+}
+
+export interface HomeGuideRuntimeWindowLike {
+  CoreHomeGuideRuntime?: HomeGuideRuntime;
+}
+
+export interface HomeGuideRuntimeInstallOptions {
+  windowLike?: HomeGuideRuntimeWindowLike | null | undefined;
+}
+
 interface HomeGuideLocalizedStep {
   selector: string;
   titleZh: string;
@@ -970,6 +1008,51 @@ export function isHomeGuideTargetVisible(options: IsHomeGuideTargetVisibleOption
     }
   }
   return true;
+}
+
+export function createHomeGuideRuntime(): HomeGuideRuntime {
+  return {
+    resolveHomeGuidePathname,
+    isHomePagePath,
+    buildHomeGuideSteps,
+    buildHomeGuidePanelInnerHtml,
+    buildHomeGuideSettingsRowInnerHtml,
+    readHomeGuideSeenValue,
+    markHomeGuideSeen,
+    shouldAutoStartHomeGuide,
+    resolveHomeGuideAutoStart,
+    resolveHomeGuideSettingsState,
+    resolveHomeGuideStepUiState,
+    resolveHomeGuideStepRenderState,
+    resolveHomeGuideStepIndexState,
+    resolveHomeGuideStepTargetState,
+    resolveHomeGuideElevationPlan,
+    resolveHomeGuideBindingState,
+    resolveHomeGuideControlAction,
+    resolveHomeGuideToggleAction,
+    resolveHomeGuideLifecycleState,
+    resolveHomeGuideSessionState,
+    resolveHomeGuideLayerDisplayState,
+    resolveHomeGuideFinishState,
+    resolveHomeGuideTargetScrollState,
+    resolveHomeGuideDoneNotice,
+    resolveHomeGuideDoneNoticeStyle,
+    resolveHomeGuidePanelLayout,
+    isHomeGuideTargetVisible
+  };
+}
+
+export function installHomeGuideRuntime(
+  options: HomeGuideRuntimeInstallOptions = {}
+): HomeGuideRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined" ? null : (window as unknown as HomeGuideRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuideRuntime) {
+    windowLike.CoreHomeGuideRuntime = createHomeGuideRuntime();
+  }
+  return windowLike.CoreHomeGuideRuntime || null;
 }
 
 export { buildHomeGuideSettingsRowInnerHtmlLegacy };

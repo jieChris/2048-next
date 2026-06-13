@@ -7,6 +7,7 @@ import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-resc
 import { installDirectionLockRuntime } from "../bootstrap/direction-lock-runtime";
 import { installGameOverUndoHostRuntime } from "../bootstrap/game-over-undo-host";
 import { installGridScanRuntime } from "../bootstrap/grid-scan-runtime";
+import { installHomeGuideRuntime } from "../bootstrap/home-guide";
 import { installHomeGuideControlsHostRuntime } from "../bootstrap/home-guide-controls-host";
 import { installHomeGuideDoneNoticeHostRuntime } from "../bootstrap/home-guide-done-notice-host";
 import { installHomeGuideFinishHostRuntime } from "../bootstrap/home-guide-finish-host";
@@ -200,6 +201,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installDirectionLockRuntime();
   installGameOverUndoHostRuntime();
   installGridScanRuntime();
+  installHomeGuideRuntime();
   installHomeGuideControlsHostRuntime();
   installHomeGuideDoneNoticeHostRuntime();
   installHomeGuideFinishHostRuntime();

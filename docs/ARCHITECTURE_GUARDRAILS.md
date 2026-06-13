@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-14, Stage-1AZ Home-Guide Runtime TS Boundary)
+
+## Batch Impact
+- `CoreHomeGuideRuntime` is now installed from `src/bootstrap/home-guide.ts` before home-family legacy scripts load.
+- `src/bootstrap/home-guide.ts` remains the tested TypeScript owner for home-guide path resolution, step construction, settings state, lifecycle state, panel layout, target visibility, and completion notice runtime functions.
+- The installer preserves the legacy runtime global shape exposed by `js/core_home_guide_runtime.js`.
+- `js/core_home_guide_runtime.js` was retired from active play/home runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_home_guide_runtime.js` / `coreHomeGuideRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/bootstrap-home-guide.spec.ts`
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- GREEN: `npx vitest run tests/unit/bootstrap-home-guide.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-14, Stage-1AY Home-Guide-Page-Host Runtime TS Boundary)
 
 ## Batch Impact

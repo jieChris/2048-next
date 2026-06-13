@@ -4,7 +4,9 @@ import {
   buildHomeGuidePanelInnerHtml,
   buildHomeGuideSettingsRowInnerHtml,
   buildHomeGuideSteps,
+  createHomeGuideRuntime,
   isHomeGuideTargetVisible,
+  installHomeGuideRuntime,
   resolveHomeGuidePathname,
   isHomePagePath,
   markHomeGuideSeen,
@@ -27,10 +29,68 @@ import {
   resolveHomeGuideTargetScrollState,
   resolveHomeGuideStepUiState,
   resolveHomeGuideSettingsState,
-  shouldAutoStartHomeGuide
+  shouldAutoStartHomeGuide,
+  type HomeGuideRuntime
 } from "../../src/bootstrap/home-guide";
 
 describe("bootstrap home guide", () => {
+  it("creates the legacy CoreHomeGuideRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeGuideRuntime();
+
+    expect(runtime.resolveHomeGuidePathname).toBe(resolveHomeGuidePathname);
+    expect(runtime.isHomePagePath).toBe(isHomePagePath);
+    expect(runtime.buildHomeGuideSteps).toBe(buildHomeGuideSteps);
+    expect(runtime.buildHomeGuidePanelInnerHtml).toBe(buildHomeGuidePanelInnerHtml);
+    expect(runtime.buildHomeGuideSettingsRowInnerHtml).toBe(buildHomeGuideSettingsRowInnerHtml);
+    expect(runtime.readHomeGuideSeenValue).toBe(readHomeGuideSeenValue);
+    expect(runtime.markHomeGuideSeen).toBe(markHomeGuideSeen);
+    expect(runtime.shouldAutoStartHomeGuide).toBe(shouldAutoStartHomeGuide);
+    expect(runtime.resolveHomeGuideAutoStart).toBe(resolveHomeGuideAutoStart);
+    expect(runtime.resolveHomeGuideSettingsState).toBe(resolveHomeGuideSettingsState);
+    expect(runtime.resolveHomeGuideStepUiState).toBe(resolveHomeGuideStepUiState);
+    expect(runtime.resolveHomeGuideStepRenderState).toBe(resolveHomeGuideStepRenderState);
+    expect(runtime.resolveHomeGuideStepIndexState).toBe(resolveHomeGuideStepIndexState);
+    expect(runtime.resolveHomeGuideStepTargetState).toBe(resolveHomeGuideStepTargetState);
+    expect(runtime.resolveHomeGuideElevationPlan).toBe(resolveHomeGuideElevationPlan);
+    expect(runtime.resolveHomeGuideBindingState).toBe(resolveHomeGuideBindingState);
+    expect(runtime.resolveHomeGuideControlAction).toBe(resolveHomeGuideControlAction);
+    expect(runtime.resolveHomeGuideToggleAction).toBe(resolveHomeGuideToggleAction);
+    expect(runtime.resolveHomeGuideLifecycleState).toBe(resolveHomeGuideLifecycleState);
+    expect(runtime.resolveHomeGuideSessionState).toBe(resolveHomeGuideSessionState);
+    expect(runtime.resolveHomeGuideLayerDisplayState).toBe(resolveHomeGuideLayerDisplayState);
+    expect(runtime.resolveHomeGuideFinishState).toBe(resolveHomeGuideFinishState);
+    expect(runtime.resolveHomeGuideTargetScrollState).toBe(resolveHomeGuideTargetScrollState);
+    expect(runtime.resolveHomeGuideDoneNotice).toBe(resolveHomeGuideDoneNotice);
+    expect(runtime.resolveHomeGuideDoneNoticeStyle).toBe(resolveHomeGuideDoneNoticeStyle);
+    expect(runtime.resolveHomeGuidePanelLayout).toBe(resolveHomeGuidePanelLayout);
+    expect(runtime.isHomeGuideTargetVisible).toBe(isHomeGuideTargetVisible);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeGuideRuntime?: HomeGuideRuntime } = {};
+
+    const installed = installHomeGuideRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeGuideRuntime);
+    expect(installed?.buildHomeGuideSteps).toBeTypeOf("function");
+    expect(installed?.resolveHomeGuidePanelLayout).toBeTypeOf("function");
+    expect(installed?.isHomeGuideTargetVisible).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing home guide runtime", () => {
+    const existing = createHomeGuideRuntime();
+    const windowLike = { CoreHomeGuideRuntime: existing };
+
+    const installed = installHomeGuideRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeGuideRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeGuideRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("resolves pathname safely from location-like object", () => {
     expect(
       resolveHomeGuidePathname({
