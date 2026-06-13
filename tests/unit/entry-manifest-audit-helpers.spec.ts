@@ -558,6 +558,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks practice-mode runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_practice_mode_runtime.js",
+      symbolName: "corePracticeModeRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
