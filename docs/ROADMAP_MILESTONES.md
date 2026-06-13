@@ -1,3 +1,22 @@
+# Stage-1BM Home-Guide Bundle Runtime Retirement (2026-06-14)
+
+## Phase Decision
+- `WS-runtime-62`
+  - status: done
+  - progress: `CoreHomeGuideRuntime` remains installed from `src/bootstrap/home-guide.ts`; `js/core_home_guide_runtime.js` is no longer included in the Vite-generated home deferred bundle list in `vite.config.ts`.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS` existed.
+- RED/GREEN: `npm run audit:entry-manifest` failed while `vite.config.ts` referenced `core_home_guide_runtime.js`, then passed after removal.
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `PW_WEB_PORT=4276 npm run test:smoke:index-ui`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1BL Special-Rules Runtime TS Boundary (2026-06-14)
 
 ## Phase Decision

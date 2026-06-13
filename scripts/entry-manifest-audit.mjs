@@ -273,6 +273,12 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   }
 ];
 
+const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
+  {
+    scriptPath: "core_home_guide_runtime.js"
+  }
+];
+
 function fail(message) {
   throw new Error(message);
 }
@@ -450,6 +456,7 @@ async function runEntryManifestAudit() {
   const shared = await readUtf8("src/entries/home-family-shared.ts");
   const playRuntimeScripts = await readUtf8("src/entries/play-runtime-scripts.ts");
   const replayRuntimeScripts = await readUtf8("src/entries/replay-runtime-scripts.ts");
+  const viteConfig = await readUtf8("vite.config.ts");
 
   ensureEntryUsesManifest(playEntry, "src/entries/play.ts", "play");
   ensureEntryUsesManifest(replayEntry, "src/entries/replay.ts", "replay");
@@ -491,6 +498,9 @@ async function runEntryManifestAudit() {
     );
     ensureRetiredRuntimeScriptAbsent(cappedEntry, "src/entries/capped.ts", retiredRuntimeScript);
     ensureRetiredRuntimeScriptAbsent(shared, "src/entries/home-family-shared.ts", retiredRuntimeScript);
+  }
+  for (const retiredRuntimeScript of BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS) {
+    ensureRetiredRuntimeScriptAbsent(viteConfig, "vite.config.ts", retiredRuntimeScript);
   }
   ensureAllPageEntriesExist(pageEntryRecords);
   ensurePageEntryArchitectures(pageEntryRecords);
@@ -549,6 +559,7 @@ if (isDirectCliExecution()) {
 }
 
 export {
+  BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS,
   PAGE_ENTRY_SPECS,
   RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS,
   collectPageEntryRecords,

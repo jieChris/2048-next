@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { startHomeGuideFromPageHost } from "./support/home-guide";
+import { startHomeGuideFromPageHost, waitForHomeGuidePageHostReady } from "./support/home-guide";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
@@ -15,16 +15,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await waitForWindowCondition(page, () => {
-      const runtime = (window as any).CoreHomeGuideRuntime;
-      const pageHostRuntime = (window as any).CoreHomeGuidePageHostRuntime;
-      return (
-        !!runtime &&
-        !!pageHostRuntime &&
-        typeof runtime.resolveHomeGuideElevationPlan === "function" &&
-        typeof pageHostRuntime.createHomeGuidePageResolvers === "function"
-      );
-    });
+    await waitForHomeGuidePageHostReady(page);
 
     expect(await startHomeGuideFromPageHost(page)).toBe(true);
     await expect

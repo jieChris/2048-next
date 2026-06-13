@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS,
   PAGE_ENTRY_SPECS,
   collectPageEntryRecords,
   detectEntryArchitecture,
@@ -516,6 +517,12 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks home-guide runtime as a retired Vite bundled runtime script", () => {
+    expect(BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS).toContainEqual({
+      scriptPath: "core_home_guide_runtime.js"
+    });
+  });
+
   it("tracks home-guide-dom-host runtime as a retired active-manifest script", () => {
     expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
       scriptPath: "core_home_guide_dom_host_runtime.js",
@@ -611,6 +618,18 @@ describe("entry-manifest-audit helpers", () => {
         }
       )
     ).toThrow(/src\/entries\/capped\.ts: retired runtime script still referenced/);
+  });
+
+  it("detects retired runtime references in Vite bundle config content", () => {
+    expect(() =>
+      ensureRetiredRuntimeScriptAbsent(
+        'const HOME_STANDARD_DEFERRED_FILES = ["core_home_guide_runtime.js"];',
+        "vite.config.ts",
+        {
+          scriptPath: "core_home_guide_runtime.js"
+        }
+      )
+    ).toThrow(/vite\.config\.ts: retired runtime script still referenced/);
   });
 
   it("detects import/export order drift", () => {

@@ -1,5 +1,30 @@
 import type { Page } from "@playwright/test";
 
+import { waitForWindowCondition } from "./runtime-ready";
+
+export async function waitForHomeGuidePageHostReady(page: Page): Promise<void> {
+  await waitForWindowCondition(page, () => {
+    const pageHostRuntime = (window as any).CoreHomeGuidePageHostRuntime;
+    return (
+      !!pageHostRuntime &&
+      typeof pageHostRuntime.createHomeGuidePageResolvers === "function" &&
+      !!(window as any).CoreHomeGuideRuntime &&
+      !!(window as any).CoreHomeGuideDomHostRuntime &&
+      !!(window as any).CoreHomeGuideHighlightHostRuntime &&
+      !!(window as any).CoreHomeGuidePanelHostRuntime &&
+      !!(window as any).CoreHomeGuideDoneNoticeHostRuntime &&
+      !!(window as any).CoreHomeGuideFinishHostRuntime &&
+      !!(window as any).CoreHomeGuideStepHostRuntime &&
+      !!(window as any).CoreHomeGuideStepFlowHostRuntime &&
+      !!(window as any).CoreHomeGuideStepViewHostRuntime &&
+      !!(window as any).CoreHomeGuideStartHostRuntime &&
+      !!(window as any).CoreHomeGuideControlsHostRuntime &&
+      !!(window as any).CoreMobileViewportRuntime &&
+      !!(window as any).CoreStorageRuntime
+    );
+  });
+}
+
 export async function startHomeGuideFromPageHost(page: Page): Promise<boolean> {
   return page.evaluate(() => {
     const pageHostRuntime = (window as any).CoreHomeGuidePageHostRuntime;

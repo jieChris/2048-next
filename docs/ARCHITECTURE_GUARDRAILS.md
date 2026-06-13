@@ -1,3 +1,23 @@
+# Guardrail Delta (2026-06-14, Stage-1BM Home-Guide Bundle Runtime Retirement)
+
+## Batch Impact
+- `CoreHomeGuideRuntime` remains installed from `src/bootstrap/home-guide.ts` before home-family legacy scripts load.
+- `js/core_home_guide_runtime.js` was removed from `HOME_STANDARD_DEFERRED_FILES` in `vite.config.ts`, preventing the Vite-generated home deferred bundle from overwriting the TypeScript-installed runtime.
+- The legacy `js/core_home_guide_runtime.js` file remains in place for archive/legacy-browser compatibility.
+- `entry-manifest-audit` now includes a focused bundled-runtime retired registry that blocks `core_home_guide_runtime.js` from re-entering `vite.config.ts`.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `PW_WEB_PORT=4276 npm run test:smoke:index-ui`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-14, Stage-1BL Special-Rules Runtime TS Boundary)
 
 ## Batch Impact
