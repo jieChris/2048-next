@@ -91,7 +91,6 @@ import coreMobileTopButtonsRuntimeUrl from "../../js/core_mobile_top_buttons_run
 import coreMobileTopButtonsPageHostRuntimeUrl from "../../js/core_mobile_top_buttons_page_host_runtime.js?url";
 import coreMobileViewportRuntimeUrl from "../../js/core_mobile_viewport_runtime.js?url";
 import coreMobileViewportPageHostRuntimeUrl from "../../js/core_mobile_viewport_page_host_runtime.js?url";
-import coreReplayModalRuntimeUrl from "../../js/core_replay_modal_runtime.js?url";
 import coreSettingsModalHostRuntimeUrl from "../../js/core_settings_modal_host_runtime.js?url";
 import coreSettingsModalPageHostRuntimeUrl from "../../js/core_settings_modal_page_host_runtime.js?url";
 import coreTopButtonStyleRuntimeUrl from "../../js/core_top_button_style_runtime.js?url";
@@ -219,7 +218,6 @@ export const playLegacyScripts = [
   coreMobileTopButtonsPageHostRuntimeUrl,
   coreMobileViewportRuntimeUrl,
   coreMobileViewportPageHostRuntimeUrl,
-  coreReplayModalRuntimeUrl,
   coreSettingsModalHostRuntimeUrl,
   coreSettingsModalPageHostRuntimeUrl,
   coreTopButtonStyleRuntimeUrl,
