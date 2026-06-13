@@ -1,3 +1,23 @@
+# Guardrail Delta (2026-06-13, Stage-1H Post-Move-Record Runtime TS Boundary)
+
+## Batch Impact
+- `CorePostMoveRecordRuntime` is now installed from `src/bootstrap/post-move-record-runtime.ts` before home-family legacy scripts load.
+- `src/core/post-move-record.ts` remains the tested TypeScript owner for move-history and session replay record decisions.
+- `js/core_post_move_record_runtime.js` was retired from active play/replay/home/capped runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_post_move_record_runtime.js` / `corePostMoveRecordRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-post-move-record-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-post-move-record.spec.ts tests/unit/bootstrap-post-move-record-runtime.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-13, Stage-1G Merge-Effects Runtime TS Boundary)
 
 ## Batch Impact

@@ -5,6 +5,7 @@ import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage"
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-rescue-client-service-boundary";
 import { installMergeEffectsRuntime } from "../bootstrap/merge-effects-runtime";
+import { installPostMoveRecordRuntime } from "../bootstrap/post-move-record-runtime";
 import { installPostMoveRuntime } from "../bootstrap/post-move-runtime";
 import { installScoringRuntime } from "../bootstrap/scoring-runtime";
 import { installTimerIntervalRuntime } from "../bootstrap/timer-interval-runtime";
@@ -154,6 +155,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   );
   installAdminRescueClientServiceBoundary();
   installMergeEffectsRuntime();
+  installPostMoveRecordRuntime();
   installPostMoveRuntime();
   installScoringRuntime();
   installTimerIntervalRuntime();
