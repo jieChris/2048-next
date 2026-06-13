@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_HOME_MODE_KEY,
+  createHomeModeRuntime,
+  installHomeModeRuntime,
   resolveHomeModeKey,
   resolveHomeModeSelection,
-  resolveHomeModeSelectionFromContext
+  resolveHomeModeSelectionFromContext,
+  type HomeModeRuntime
 } from "../../src/bootstrap/home-mode";
 
 function createCatalog(items: Record<string, Record<string, unknown>>) {
@@ -16,6 +19,38 @@ function createCatalog(items: Record<string, Record<string, unknown>>) {
 }
 
 describe("bootstrap home mode", () => {
+  it("creates the legacy CoreHomeModeRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeModeRuntime();
+
+    expect(runtime.DEFAULT_HOME_MODE_KEY).toBe(DEFAULT_HOME_MODE_KEY);
+    expect(runtime.resolveHomeModeKey).toBe(resolveHomeModeKey);
+    expect(runtime.resolveHomeModeSelection).toBe(resolveHomeModeSelection);
+    expect(runtime.resolveHomeModeSelectionFromContext).toBe(resolveHomeModeSelectionFromContext);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeModeRuntime?: HomeModeRuntime } = {};
+
+    const installed = installHomeModeRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeModeRuntime);
+    expect(installed?.resolveHomeModeSelection).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing home mode runtime", () => {
+    const existing = createHomeModeRuntime();
+    const windowLike = { CoreHomeModeRuntime: existing };
+
+    const installed = installHomeModeRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeModeRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeModeRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("resolves home mode key from body data attribute", () => {
     expect(resolveHomeModeKey("practice")).toBe("practice");
     expect(resolveHomeModeKey("  capped_4x4_pow2_no_undo  ")).toBe("capped_4x4_pow2_no_undo");

@@ -119,3 +119,40 @@ export function resolveHomeModeSelectionFromContext<T extends PracticeModeConfig
     modeCatalog: opts.modeCatalog
   });
 }
+
+export interface HomeModeRuntime {
+  DEFAULT_HOME_MODE_KEY: typeof DEFAULT_HOME_MODE_KEY;
+  resolveHomeModeKey: typeof resolveHomeModeKey;
+  resolveHomeModeSelection: typeof resolveHomeModeSelection;
+  resolveHomeModeSelectionFromContext: typeof resolveHomeModeSelectionFromContext;
+}
+
+export interface HomeModeRuntimeWindowLike {
+  CoreHomeModeRuntime?: HomeModeRuntime;
+}
+
+export interface HomeModeRuntimeInstallOptions {
+  windowLike?: HomeModeRuntimeWindowLike | null | undefined;
+}
+
+export function createHomeModeRuntime(): HomeModeRuntime {
+  return {
+    DEFAULT_HOME_MODE_KEY,
+    resolveHomeModeKey,
+    resolveHomeModeSelection,
+    resolveHomeModeSelectionFromContext
+  };
+}
+
+export function installHomeModeRuntime(
+  options: HomeModeRuntimeInstallOptions = {}
+): HomeModeRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined" ? null : (window as unknown as HomeModeRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeModeRuntime) {
+    windowLike.CoreHomeModeRuntime = createHomeModeRuntime();
+  }
+  return windowLike.CoreHomeModeRuntime || null;
+}
