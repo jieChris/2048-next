@@ -243,6 +243,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks post-undo-record runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_post_undo_record_runtime.js",
+      symbolName: "corePostUndoRecordRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(

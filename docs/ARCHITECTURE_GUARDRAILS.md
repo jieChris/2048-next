@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-13, Stage-1N Post-Undo-Record Runtime TS Boundary)
+
+## Batch Impact
+- `CorePostUndoRecordRuntime` is now installed from `src/bootstrap/post-undo-record-runtime.ts` before home-family legacy scripts load.
+- `src/core/post-undo-record.ts` remains the tested TypeScript owner for undo recording decisions and session replay action payloads.
+- The installer preserves the legacy global runtime shape while delegating to the TypeScript owner.
+- `js/core_post_undo_record_runtime.js` was retired from active play/replay/home/capped runtime manifests without deleting the legacy file.
+- `entry-manifest-audit` blocks `core_post_undo_record_runtime.js` / `corePostUndoRecordRuntimeUrl` through `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS`.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-post-undo-record-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/core-post-undo-record.spec.ts tests/unit/bootstrap-post-undo-record-runtime.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-13, Stage-1M Move-Path Runtime TS Boundary)
 
 ## Batch Impact
