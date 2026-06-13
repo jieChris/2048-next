@@ -5,6 +5,7 @@ import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage"
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-rescue-client-service-boundary";
 import { installDirectionLockRuntime } from "../bootstrap/direction-lock-runtime";
+import { installGameOverUndoHostRuntime } from "../bootstrap/game-over-undo-host";
 import { installGridScanRuntime } from "../bootstrap/grid-scan-runtime";
 import { installMergeEffectsRuntime } from "../bootstrap/merge-effects-runtime";
 import { installMoveApplyRuntime } from "../bootstrap/move-apply-runtime";
@@ -185,6 +186,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   );
   installAdminRescueClientServiceBoundary();
   installDirectionLockRuntime();
+  installGameOverUndoHostRuntime();
   installGridScanRuntime();
   installMergeEffectsRuntime();
   installMoveApplyRuntime();

@@ -418,6 +418,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks game-over-undo-host runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_game_over_undo_host_runtime.js",
+      symbolName: "coreGameOverUndoHostRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(

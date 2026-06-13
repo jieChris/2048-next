@@ -90,7 +90,6 @@ import coreBgmRuntimeUrl from "../../js/core_bgm_runtime.js?url";
 import coreNightModeRuntimeUrl from "../../js/core_night_mode_runtime.js?url";
 import coreTopButtonStyleRuntimeUrl from "../../js/core_top_button_style_runtime.js?url";
 import coreTopActionBindingsHostRuntimeUrl from "../../js/core_top_action_bindings_host_runtime.js?url";
-import coreGameOverUndoHostRuntimeUrl from "../../js/core_game_over_undo_host_runtime.js?url";
 import coreIndexUiStartupHostRuntimeUrl from "../../js/core_index_ui_startup_host_runtime.js?url";
 import coreHomeGuideDomHostRuntimeUrl from "../../js/core_home_guide_dom_host_runtime.js?url";
 import coreHomeGuideDoneNoticeHostRuntimeUrl from "../../js/core_home_guide_done_notice_host_runtime.js?url";
@@ -269,7 +268,6 @@ export const homeTopButtonStyleScripts = [coreTopButtonStyleRuntimeUrl] as const
 
 export const homeIndexTailScripts = [
   coreTopActionBindingsHostRuntimeUrl,
-  coreGameOverUndoHostRuntimeUrl,
   coreIndexUiStartupHostRuntimeUrl,
   coreHomeGuideDomHostRuntimeUrl,
   coreHomeGuideDoneNoticeHostRuntimeUrl,
