@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { applyHomeGuideControls } from "../../src/bootstrap/home-guide-controls-host";
+import {
+  applyHomeGuideControls,
+  createHomeGuideControlsHostRuntime,
+  installHomeGuideControlsHostRuntime,
+  type HomeGuideControlsHostRuntime
+} from "../../src/bootstrap/home-guide-controls-host";
 
 function createButton(bound = false) {
   const handlers: Record<string, () => void> = {};
@@ -14,6 +19,35 @@ function createButton(bound = false) {
 }
 
 describe("bootstrap home guide controls host", () => {
+  it("creates the legacy CoreHomeGuideControlsHostRuntime shape from TypeScript functions", () => {
+    const runtime = createHomeGuideControlsHostRuntime();
+
+    expect(runtime.applyHomeGuideControls).toBe(applyHomeGuideControls);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreHomeGuideControlsHostRuntime?: HomeGuideControlsHostRuntime } = {};
+
+    const installed = installHomeGuideControlsHostRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreHomeGuideControlsHostRuntime);
+    expect(installed?.applyHomeGuideControls).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing controls host runtime", () => {
+    const existing = createHomeGuideControlsHostRuntime();
+    const windowLike = { CoreHomeGuideControlsHostRuntime: existing };
+
+    const installed = installHomeGuideControlsHostRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreHomeGuideControlsHostRuntime).toBe(existing);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installHomeGuideControlsHostRuntime({ windowLike: null })).toBeNull();
+  });
+
   it("binds prev/next/skip controls and dispatches guide actions", () => {
     const prevBtn = createButton();
     const nextBtn = createButton();

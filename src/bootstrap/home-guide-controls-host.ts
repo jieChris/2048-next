@@ -208,6 +208,18 @@ export interface HomeGuideControlsHostResult {
   didSyncSettings: boolean;
 }
 
+export interface HomeGuideControlsHostRuntime {
+  applyHomeGuideControls: typeof applyHomeGuideControls;
+}
+
+export interface HomeGuideControlsHostRuntimeWindowLike {
+  CoreHomeGuideControlsHostRuntime?: HomeGuideControlsHostRuntime;
+}
+
+export interface HomeGuideControlsHostRuntimeInstallOptions {
+  windowLike?: HomeGuideControlsHostRuntimeWindowLike | null | undefined;
+}
+
 export function applyHomeGuideControls(input: {
   documentLike?: unknown;
   homeGuideRuntime?: unknown;
@@ -288,4 +300,25 @@ export function applyHomeGuideControls(input: {
     didKickoff: true,
     didSyncSettings
   };
+}
+
+export function createHomeGuideControlsHostRuntime(): HomeGuideControlsHostRuntime {
+  return {
+    applyHomeGuideControls
+  };
+}
+
+export function installHomeGuideControlsHostRuntime(
+  options: HomeGuideControlsHostRuntimeInstallOptions = {}
+): HomeGuideControlsHostRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined"
+      ? null
+      : (window as unknown as HomeGuideControlsHostRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreHomeGuideControlsHostRuntime) {
+    windowLike.CoreHomeGuideControlsHostRuntime = createHomeGuideControlsHostRuntime();
+  }
+  return windowLike.CoreHomeGuideControlsHostRuntime || null;
 }
