@@ -257,6 +257,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks undo-tile-restore runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_undo_tile_restore_runtime.js",
+      symbolName: "coreUndoTileRestoreRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(

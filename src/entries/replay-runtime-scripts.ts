@@ -14,7 +14,6 @@ import coreRulesRuntimeUrl from "../../js/core_rules_runtime.js?url";
 import coreModeRuntimeUrl from "../../js/core_mode_runtime.js?url";
 import coreSpecialRulesRuntimeUrl from "../../js/core_special_rules_runtime.js?url";
 import coreUndoRestoreRuntimeUrl from "../../js/core_undo_restore_runtime.js?url";
-import coreUndoTileRestoreRuntimeUrl from "../../js/core_undo_tile_restore_runtime.js?url";
 import coreUndoRestorePayloadRuntimeUrl from "../../js/core_undo_restore_payload_runtime.js?url";
 import coreUndoStackEntryRuntimeUrl from "../../js/core_undo_stack_entry_runtime.js?url";
 import coreReplayCodecRuntimeUrl from "../../js/core_replay_codec_runtime.js?url";
@@ -75,7 +74,6 @@ export const replayLegacyScripts = [
   coreModeRuntimeUrl,
   coreSpecialRulesRuntimeUrl,
   coreUndoRestoreRuntimeUrl,
-  coreUndoTileRestoreRuntimeUrl,
   coreUndoRestorePayloadRuntimeUrl,
   coreUndoStackEntryRuntimeUrl,
   coreReplayCodecRuntimeUrl,
