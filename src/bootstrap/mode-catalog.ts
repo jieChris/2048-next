@@ -15,3 +15,34 @@ export function resolveCatalogModeWithDefault(
     null
   );
 }
+
+export interface ModeCatalogRuntime {
+  resolveCatalogModeWithDefault: typeof resolveCatalogModeWithDefault;
+}
+
+export interface ModeCatalogRuntimeWindowLike {
+  CoreModeCatalogRuntime?: ModeCatalogRuntime;
+}
+
+export interface ModeCatalogRuntimeInstallOptions {
+  windowLike?: ModeCatalogRuntimeWindowLike | null | undefined;
+}
+
+export function createModeCatalogRuntime(): ModeCatalogRuntime {
+  return {
+    resolveCatalogModeWithDefault
+  };
+}
+
+export function installModeCatalogRuntime(
+  options: ModeCatalogRuntimeInstallOptions = {}
+): ModeCatalogRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined" ? null : (window as unknown as ModeCatalogRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreModeCatalogRuntime) {
+    windowLike.CoreModeCatalogRuntime = createModeCatalogRuntime();
+  }
+  return windowLike.CoreModeCatalogRuntime || null;
+}

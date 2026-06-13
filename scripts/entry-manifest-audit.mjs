@@ -254,6 +254,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_undo_action_runtime.js",
     symbolName: "coreUndoActionRuntimeUrl"
+  },
+  {
+    scriptPath: "core_mode_catalog_runtime.js",
+    symbolName: "coreModeCatalogRuntimeUrl"
   }
 ];
 
@@ -430,6 +434,7 @@ async function runEntryManifestAudit() {
   const userProfileEntry = await readUtf8("src/entries/user-profile.ts");
   const modesEntry = await readUtf8("src/entries/modes.ts");
   const paletteEntry = await readUtf8("src/entries/palette.ts");
+  const cappedEntry = await readUtf8("src/entries/capped.ts");
   const shared = await readUtf8("src/entries/home-family-shared.ts");
   const playRuntimeScripts = await readUtf8("src/entries/play-runtime-scripts.ts");
   const replayRuntimeScripts = await readUtf8("src/entries/replay-runtime-scripts.ts");
@@ -472,6 +477,7 @@ async function runEntryManifestAudit() {
       "src/entries/replay-runtime-scripts.ts",
       retiredRuntimeScript
     );
+    ensureRetiredRuntimeScriptAbsent(cappedEntry, "src/entries/capped.ts", retiredRuntimeScript);
     ensureRetiredRuntimeScriptAbsent(shared, "src/entries/home-family-shared.ts", retiredRuntimeScript);
   }
   ensureAllPageEntriesExist(pageEntryRecords);

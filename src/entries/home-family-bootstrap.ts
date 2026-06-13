@@ -27,6 +27,7 @@ import { installHomeRuntimeContractRuntime } from "../bootstrap/home-runtime-con
 import { installHomeStartupHostRuntime } from "../bootstrap/home-startup-host";
 import { installIndexUiStartupHostRuntime } from "../bootstrap/index-ui-startup-host";
 import { installMergeEffectsRuntime } from "../bootstrap/merge-effects-runtime";
+import { installModeCatalogRuntime } from "../bootstrap/mode-catalog";
 import { installMoveApplyRuntime } from "../bootstrap/move-apply-runtime";
 import { installMovePathRuntime } from "../bootstrap/move-path-runtime";
 import { installMoveScanRuntime } from "../bootstrap/move-scan-runtime";
@@ -224,6 +225,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installHomeGuideStepViewHostRuntime();
   installHomeGuideStartupHostRuntime();
   installHomeStartupHostRuntime();
+  installModeCatalogRuntime();
   installPracticeModeRuntime();
   installHomeModeRuntime();
   installUndoActionRuntime();
