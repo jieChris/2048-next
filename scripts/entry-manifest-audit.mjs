@@ -70,6 +70,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
   {
     scriptPath: "core_post_undo_record_runtime.js",
     symbolName: "corePostUndoRecordRuntimeUrl"
+  },
+  {
+    scriptPath: "core_undo_tile_snapshot_runtime.js",
+    symbolName: "coreUndoTileSnapshotRuntimeUrl"
   }
 ];
 
