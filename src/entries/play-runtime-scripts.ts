@@ -93,7 +93,6 @@ import coreMobileViewportRuntimeUrl from "../../js/core_mobile_viewport_runtime.
 import coreMobileViewportPageHostRuntimeUrl from "../../js/core_mobile_viewport_page_host_runtime.js?url";
 import coreTopButtonStyleRuntimeUrl from "../../js/core_top_button_style_runtime.js?url";
 import coreTopActionBindingsHostRuntimeUrl from "../../js/core_top_action_bindings_host_runtime.js?url";
-import coreIndexUiStartupHostRuntimeUrl from "../../js/core_index_ui_startup_host_runtime.js?url";
 import coreHomeGuideDomHostRuntimeUrl from "../../js/core_home_guide_dom_host_runtime.js?url";
 import coreHomeGuideDoneNoticeHostRuntimeUrl from "../../js/core_home_guide_done_notice_host_runtime.js?url";
 import coreHomeGuideHighlightHostRuntimeUrl from "../../js/core_home_guide_highlight_host_runtime.js?url";
@@ -214,7 +213,6 @@ export const playLegacyScripts = [
   coreMobileViewportPageHostRuntimeUrl,
   coreTopButtonStyleRuntimeUrl,
   coreTopActionBindingsHostRuntimeUrl,
-  coreIndexUiStartupHostRuntimeUrl,
   coreHomeGuideDomHostRuntimeUrl,
   coreHomeGuideDoneNoticeHostRuntimeUrl,
   coreHomeGuideHighlightHostRuntimeUrl,

@@ -425,6 +425,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks index-ui-startup-host runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_index_ui_startup_host_runtime.js",
+      symbolName: "coreIndexUiStartupHostRuntimeUrl"
+    });
+  });
+
   it("detects import/export order drift", () => {
     expect(() =>
       ensureImportAndExportOrderAligned(
