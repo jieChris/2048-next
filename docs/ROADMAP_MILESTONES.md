@@ -1,3 +1,22 @@
+# Stage-1BN Special-Rules Bundle Runtime Retirement (2026-06-14)
+
+## Phase Decision
+- `WS-runtime-63`
+  - status: done
+  - progress: `CoreSpecialRulesRuntime` remains installed from `src/core/special-rules.ts`; `js/core_special_rules_runtime.js` is no longer included in the Vite-generated home startup bundle list in `vite.config.ts`.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS` included `core_special_rules_runtime.js`.
+- RED/GREEN: `npm run audit:entry-manifest` failed while `vite.config.ts` referenced `core_special_rules_runtime.js`, then passed after removal.
+- GREEN: `npx vitest run tests/unit/core-special-rules.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4279 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1BM Home-Guide Bundle Runtime Retirement (2026-06-14)
 
 ## Phase Decision
