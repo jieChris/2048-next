@@ -298,6 +298,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_direction_lock_runtime.js"
+  },
+  {
+    scriptPath: "core_grid_scan_runtime.js"
   }
 ];
 
