@@ -349,6 +349,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_replay_v4_actions_runtime.js"
+  },
+  {
+    scriptPath: "core_replay_import_runtime.js"
   }
 ];
 
