@@ -29,6 +29,14 @@ test.describe("Runtime contract smoke", () => {
       const pageErrors: string[] = [];
       const consoleErrors: string[] = [];
 
+      await page.route("**/api/leaderboard**", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true, data: [] })
+        });
+      });
+
       page.on("pageerror", (err) => {
         pageErrors.push(err.message);
       });
