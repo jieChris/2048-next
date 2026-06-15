@@ -152,6 +152,45 @@ export interface DetectModeInput {
   defaultModeKey?: string | null;
 }
 
+export interface CoreModeRuntime {
+  normalizeSpecialRules: typeof normalizeSpecialRules;
+  normalizeModeConfig: typeof normalizeModeConfig;
+  resolveCappedModeState: typeof resolveCappedModeState;
+  isCappedModeState: typeof isCappedModeState;
+  getCappedTargetValue: typeof getCappedTargetValue;
+  isProgressiveCapped64Mode: typeof isProgressiveCapped64Mode;
+  resolveCappedTimerLegendFontSize: typeof resolveCappedTimerLegendFontSize;
+  resolveCappedTimerLegendClass: typeof resolveCappedTimerLegendClass;
+  formatCappedRepeatLabel: typeof formatCappedRepeatLabel;
+  resolveCappedPlaceholderRowValues: typeof resolveCappedPlaceholderRowValues;
+  resolveCappedPlaceholderSlotByRepeatCount: typeof resolveCappedPlaceholderSlotByRepeatCount;
+  resolveCappedRowVisibilityPlan: typeof resolveCappedRowVisibilityPlan;
+  createProgressiveCapped64UnlockedState: typeof createProgressiveCapped64UnlockedState;
+  resolveProgressiveCapped64Unlock: typeof resolveProgressiveCapped64Unlock;
+  isGameTerminatedState: typeof isGameTerminatedState;
+  getForcedUndoSetting: typeof getForcedUndoSetting;
+  isUndoAllowedByMode: typeof isUndoAllowedByMode;
+  isUndoSettingFixedForMode: typeof isUndoSettingFixedForMode;
+  canToggleUndoSetting: typeof canToggleUndoSetting;
+  resolveUndoPolicyState: typeof resolveUndoPolicyState;
+  isUndoInteractionEnabled: typeof isUndoInteractionEnabled;
+  isTimerLeaderboardAvailableByMode: typeof isTimerLeaderboardAvailableByMode;
+  resolveLegacyModeFromModeKey: typeof resolveLegacyModeFromModeKey;
+  resolveModeCatalogAlias: typeof resolveModeCatalogAlias;
+  resolveModeConfigModeKey: typeof resolveModeConfigModeKey;
+  resolveModeCatalogConfig: typeof resolveModeCatalogConfig;
+  resolveModeConfigFromCatalog: typeof resolveModeConfigFromCatalog;
+  resolveDetectedMode: typeof resolveDetectedMode;
+}
+
+export interface CoreModeRuntimeWindowLike {
+  CoreModeRuntime?: CoreModeRuntime;
+}
+
+export interface CoreModeRuntimeInstallOptions {
+  windowLike?: CoreModeRuntimeWindowLike | null | undefined;
+}
+
 export function clonePlain<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -564,4 +603,58 @@ export function resolveDetectedMode(input: DetectModeInput): string {
     return "standard_4x4_pow2_no_undo";
   }
   return "classic_4x4_pow2_undo";
+}
+
+export function createCoreModeRuntime(): CoreModeRuntime {
+  return {
+    normalizeSpecialRules,
+    normalizeModeConfig,
+    resolveCappedModeState,
+    isCappedModeState,
+    getCappedTargetValue,
+    isProgressiveCapped64Mode,
+    resolveCappedTimerLegendFontSize,
+    resolveCappedTimerLegendClass,
+    formatCappedRepeatLabel,
+    resolveCappedPlaceholderRowValues,
+    resolveCappedPlaceholderSlotByRepeatCount,
+    resolveCappedRowVisibilityPlan,
+    createProgressiveCapped64UnlockedState,
+    resolveProgressiveCapped64Unlock,
+    isGameTerminatedState,
+    getForcedUndoSetting,
+    isUndoAllowedByMode,
+    isUndoSettingFixedForMode,
+    canToggleUndoSetting,
+    resolveUndoPolicyState,
+    isUndoInteractionEnabled,
+    isTimerLeaderboardAvailableByMode,
+    resolveLegacyModeFromModeKey,
+    resolveModeCatalogAlias,
+    resolveModeConfigModeKey,
+    resolveModeCatalogConfig,
+    resolveModeConfigFromCatalog,
+    resolveDetectedMode
+  };
+}
+
+export function installCoreModeRuntime(
+  options: CoreModeRuntimeInstallOptions = {}
+): CoreModeRuntime | null {
+  const windowLike =
+    options.windowLike ||
+    (typeof window === "undefined" ? null : (window as unknown as CoreModeRuntimeWindowLike));
+  if (!windowLike) return null;
+  if (!windowLike.CoreModeRuntime) {
+    windowLike.CoreModeRuntime = createCoreModeRuntime();
+    return windowLike.CoreModeRuntime || null;
+  }
+  const target = windowLike.CoreModeRuntime as CoreModeRuntime & Record<string, unknown>;
+  const runtime = createCoreModeRuntime();
+  for (const [key, value] of Object.entries(runtime)) {
+    if (typeof target[key] !== "function") {
+      target[key] = value;
+    }
+  }
+  return target;
 }

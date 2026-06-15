@@ -22,13 +22,16 @@ import {
   isUndoAllowedByMode,
   isUndoSettingFixedForMode,
   normalizeModeConfig,
+  createCoreModeRuntime,
+  installCoreModeRuntime,
   resolveDetectedMode,
   resolveLegacyModeFromModeKey,
   resolveModeConfigModeKey,
   resolveModeConfigFromCatalog,
   resolveModeCatalogConfig,
   resolveModeCatalogAlias,
-  normalizeSpecialRules
+  normalizeSpecialRules,
+  type CoreModeRuntime
 } from "../../src/core/mode";
 
 const DEFAULT_MODE_CONFIG = {
@@ -44,6 +47,84 @@ const DEFAULT_MODE_CONFIG = {
   rank_policy: "ranked",
   special_rules: {}
 };
+
+describe("core mode runtime installer", () => {
+  it("creates the legacy CoreModeRuntime shape from TypeScript functions", () => {
+    const runtime = createCoreModeRuntime();
+
+    expect(runtime.normalizeSpecialRules).toBe(normalizeSpecialRules);
+    expect(runtime.normalizeModeConfig).toBe(normalizeModeConfig);
+    expect(runtime.resolveCappedModeState).toBe(resolveCappedModeState);
+    expect(runtime.isCappedModeState).toBe(isCappedModeState);
+    expect(runtime.getCappedTargetValue).toBe(getCappedTargetValue);
+    expect(runtime.isProgressiveCapped64Mode).toBe(isProgressiveCapped64Mode);
+    expect(runtime.resolveCappedTimerLegendFontSize).toBe(resolveCappedTimerLegendFontSize);
+    expect(runtime.resolveCappedTimerLegendClass).toBe(resolveCappedTimerLegendClass);
+    expect(runtime.formatCappedRepeatLabel).toBe(formatCappedRepeatLabel);
+    expect(runtime.resolveCappedPlaceholderRowValues).toBe(resolveCappedPlaceholderRowValues);
+    expect(runtime.resolveCappedPlaceholderSlotByRepeatCount).toBe(
+      resolveCappedPlaceholderSlotByRepeatCount
+    );
+    expect(runtime.resolveCappedRowVisibilityPlan).toBe(resolveCappedRowVisibilityPlan);
+    expect(runtime.createProgressiveCapped64UnlockedState).toBe(
+      createProgressiveCapped64UnlockedState
+    );
+    expect(runtime.resolveProgressiveCapped64Unlock).toBe(resolveProgressiveCapped64Unlock);
+    expect(runtime.isGameTerminatedState).toBe(isGameTerminatedState);
+    expect(runtime.getForcedUndoSetting).toBe(getForcedUndoSetting);
+    expect(runtime.isUndoAllowedByMode).toBe(isUndoAllowedByMode);
+    expect(runtime.isUndoSettingFixedForMode).toBe(isUndoSettingFixedForMode);
+    expect(runtime.canToggleUndoSetting).toBe(canToggleUndoSetting);
+    expect(runtime.resolveUndoPolicyState).toBe(resolveUndoPolicyState);
+    expect(runtime.isUndoInteractionEnabled).toBe(isUndoInteractionEnabled);
+    expect(runtime.isTimerLeaderboardAvailableByMode).toBe(isTimerLeaderboardAvailableByMode);
+    expect(runtime.resolveLegacyModeFromModeKey).toBe(resolveLegacyModeFromModeKey);
+    expect(runtime.resolveModeCatalogAlias).toBe(resolveModeCatalogAlias);
+    expect(runtime.resolveModeConfigModeKey).toBe(resolveModeConfigModeKey);
+    expect(runtime.resolveModeCatalogConfig).toBe(resolveModeCatalogConfig);
+    expect(runtime.resolveModeConfigFromCatalog).toBe(resolveModeConfigFromCatalog);
+    expect(runtime.resolveDetectedMode).toBe(resolveDetectedMode);
+  });
+
+  it("installs the runtime on a supplied window-like object", () => {
+    const windowLike: { CoreModeRuntime?: CoreModeRuntime } = {};
+
+    const installed = installCoreModeRuntime({ windowLike });
+
+    expect(installed).toBe(windowLike.CoreModeRuntime);
+    expect(installed?.normalizeModeConfig).toBeTypeOf("function");
+  });
+
+  it("does not overwrite an existing core mode runtime", () => {
+    const existing = createCoreModeRuntime();
+    const windowLike = { CoreModeRuntime: existing };
+
+    const installed = installCoreModeRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(windowLike.CoreModeRuntime).toBe(existing);
+  });
+
+  it("fills missing methods on an existing core mode runtime namespace", () => {
+    const normalizeModeConfigOverride = () => DEFAULT_MODE_CONFIG;
+    const existing = {
+      normalizeModeConfig: normalizeModeConfigOverride
+    };
+    const windowLike = {
+      CoreModeRuntime: existing as Partial<CoreModeRuntime> as CoreModeRuntime
+    };
+
+    const installed = installCoreModeRuntime({ windowLike });
+
+    expect(installed).toBe(existing);
+    expect(installed?.normalizeModeConfig).toBe(normalizeModeConfigOverride);
+    expect(installed?.resolveUndoPolicyState).toBe(resolveUndoPolicyState);
+  });
+
+  it("returns null when no window-like target is available", () => {
+    expect(installCoreModeRuntime({ windowLike: null })).toBeNull();
+  });
+});
 
 describe("core mode: normalizeSpecialRules", () => {
   it("returns empty object for invalid rules payload", () => {
