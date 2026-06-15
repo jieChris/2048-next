@@ -153,7 +153,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
-    await page.waitForFunction(() => !!(window as any).game_manager && !!(window as any).OnlineLeaderboardRuntime);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return (
+        !!manager &&
+        !!(window as any).OnlineLeaderboardRuntime &&
+        typeof manager.tryAutoSubmitOnGameOver === "function"
+      );
+    });
 
     await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -176,8 +183,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.over = true;
       manager.won = false;
       manager.keepPlaying = false;
+      manager.sessionSubmitDone = false;
       manager.score = Math.max(512, Number(manager.score || 0));
-      window.dispatchEvent(new Event("online"));
+      manager.tryAutoSubmitOnGameOver();
     });
 
     await expect

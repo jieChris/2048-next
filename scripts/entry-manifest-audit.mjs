@@ -316,6 +316,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_merge_effects_runtime.js"
+  },
+  {
+    scriptPath: "core_post_move_runtime.js"
   }
 ];
 
