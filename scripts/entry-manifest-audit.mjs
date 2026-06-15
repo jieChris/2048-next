@@ -260,6 +260,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
     symbolName: "coreModeCatalogRuntimeUrl"
   },
   {
+    scriptPath: "core_mode_runtime.js",
+    symbolName: "coreModeRuntimeUrl"
+  },
+  {
     scriptPath: "core_rules_runtime.js",
     symbolName: "coreRulesRuntimeUrl"
   },

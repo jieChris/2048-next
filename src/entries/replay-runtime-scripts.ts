@@ -8,7 +8,6 @@ import gridUrl from "../../js/grid.js?url";
 import tileUrl from "../../js/tile.js?url";
 import localScoreManagerUrl from "../../js/local_score_manager.js?url";
 import localHistoryStoreUrl from "../../js/local_history_store.js?url";
-import coreModeRuntimeUrl from "../../js/core_mode_runtime.js?url";
 import coreGameSettingsStorageRuntimeUrl from "../../js/core_game_settings_storage_runtime.js?url";
 import coreGameManagerClientRecordIdRuntimeUrl from "../../js/core_game_manager_client_record_id_runtime.js?url";
 import coreGameManagerBaseHelpersRuntimeUrl from "../../js/core_game_manager_base_helpers_runtime.js?url";
@@ -50,7 +49,6 @@ export const replayLegacyScripts = [
   tileUrl,
   localScoreManagerUrl,
   localHistoryStoreUrl,
-  coreModeRuntimeUrl,
   coreGameSettingsStorageRuntimeUrl,
   coreGameManagerClientRecordIdRuntimeUrl,
   coreGameManagerBaseHelpersRuntimeUrl,

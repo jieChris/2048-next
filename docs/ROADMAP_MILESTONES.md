@@ -1,3 +1,24 @@
+# Stage-1BR Core-Mode Runtime TS Boundary (2026-06-14)
+
+## Phase Decision
+- `WS-runtime-67`
+  - status: done
+  - progress: `CoreModeRuntime` is installed from `src/core/mode.ts`; `js/core_mode_runtime.js` is no longer referenced by active play/replay/home/capped runtime manifests.
+  - follow-up: Vite startup bundle retirement remains open because `vite.config.ts` still includes `core_mode_runtime.js` by policy for a separate bundle-retirement PR.
+
+## Evidence
+- RED: `npx vitest run tests/unit/core-mode.spec.ts` failed before `src/core/mode.ts` exported `createCoreModeRuntime` / `installCoreModeRuntime`.
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` included `core_mode_runtime.js`.
+- RED/GREEN: `npm run audit:entry-manifest` failed while active manifests referenced `core_mode_runtime.js`, then passed after manifest removal.
+- GREEN: `npx vitest run tests/unit/core-mode.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4280 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1BQ Mode-Catalog Bundle Runtime Retirement (2026-06-14)
 
 ## Phase Decision

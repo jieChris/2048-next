@@ -62,6 +62,7 @@ import { installUndoSnapshotRuntime } from "../bootstrap/undo-snapshot-runtime";
 import { installUndoStackEntryRuntime } from "../bootstrap/undo-stack-entry-runtime";
 import { installUndoTileRestoreRuntime } from "../bootstrap/undo-tile-restore-runtime";
 import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-runtime";
+import { installCoreModeRuntime } from "../core/mode";
 import { installRulesRuntime } from "../core/rules";
 import { installSpecialRulesRuntime } from "../core/special-rules";
 import { installCryptoRandomRuntime } from "../utils/crypto-random";
@@ -232,6 +233,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installModeCatalogRuntime();
   installRulesRuntime();
   installSpecialRulesRuntime();
+  installCoreModeRuntime();
   installPracticeModeRuntime();
   installHomeModeRuntime();
   installUndoActionRuntime();
