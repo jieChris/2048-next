@@ -613,6 +613,12 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks undo-tile-snapshot runtime as a retired Vite bundled runtime script", () => {
+    expect(BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS).toContainEqual({
+      scriptPath: "core_undo_tile_snapshot_runtime.js"
+    });
+  });
+
   it("tracks post-undo-record runtime as a retired Vite bundled runtime script", () => {
     expect(BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS).toContainEqual({
       scriptPath: "core_post_undo_record_runtime.js"
