@@ -1,3 +1,23 @@
+# Stage-1CD Undo-Restore Bundle Runtime Retirement (2026-06-15)
+
+## Phase Decision
+- `WS-runtime-79`
+  - status: done
+  - progress: `CoreUndoRestoreRuntime` remains installed from `src/bootstrap/undo-restore-runtime.ts`; `js/core_undo_restore_runtime.js` is no longer included in the Vite-generated home startup bundle list in `vite.config.ts`.
+  - follow-up: `public/js/legacy_index_nomodule_loader.js` still references `core_undo_restore_runtime.js` for separate legacy-browser policy work.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS` included `core_undo_restore_runtime.js`.
+- RED/GREEN: `npm run audit:entry-manifest` failed while `vite.config.ts` referenced `core_undo_restore_runtime.js`, then passed after removal.
+- GREEN: `npx vitest run tests/unit/bootstrap-undo-restore-runtime.spec.ts tests/unit/core-undo-restore.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4292 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1CC Post-Undo-Record Bundle Runtime Retirement (2026-06-15)
 
 ## Phase Decision
