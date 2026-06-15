@@ -330,6 +330,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
     scriptPath: "core_undo_tile_snapshot_runtime.js"
   },
   {
+    scriptPath: "core_undo_tile_restore_runtime.js"
+  },
+  {
     scriptPath: "core_post_undo_record_runtime.js"
   },
   {
