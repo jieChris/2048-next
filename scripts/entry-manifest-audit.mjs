@@ -336,6 +336,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
     scriptPath: "core_undo_restore_payload_runtime.js"
   },
   {
+    scriptPath: "core_undo_stack_entry_runtime.js"
+  },
+  {
     scriptPath: "core_post_undo_record_runtime.js"
   },
   {
