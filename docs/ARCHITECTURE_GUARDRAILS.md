@@ -17,6 +17,8 @@
 - `npm run build`
 - `PW_WEB_PORT=4289 npm run test:smoke:index-ui`
 - `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- CI follow-up: `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-online-submit-persist-retry.smoke.spec.ts`
+- CI follow-up: `npm run test:smoke:ci`
 - `npm run verify:prepush`
 
 # Guardrail Delta (2026-06-15, Stage-1BZ Merge-Effects Bundle Runtime Retirement)

@@ -121,6 +121,19 @@ npm run verify:prepush
 
 Expected: all gates pass.
 
+- [x] **Step 3a: Stabilize PR Refactor Gate smoke**
+
+CI `Refactor Gate` failed in `tests/smoke/pages-online-submit-persist-retry.smoke.spec.ts` because the record-persist smoke depended on `online` polling timing while startup polling could still be active. The smoke now triggers the wrapped terminal submit hook directly, preserving the pending-record replay assertions while avoiding polling timing as the test driver.
+
+Run:
+
+```bash
+npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-online-submit-persist-retry.smoke.spec.ts
+npm run test:smoke:ci
+```
+
+Expected: all commands pass.
+
 - [ ] **Step 4: Commit, push, PR**
 
 Run:
