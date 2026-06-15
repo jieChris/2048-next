@@ -367,6 +367,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_replay_flow_runtime.js"
+  },
+  {
+    scriptPath: "core_replay_control_runtime.js"
   }
 ];
 
