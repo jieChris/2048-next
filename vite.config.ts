@@ -16,7 +16,6 @@ const HOME_STANDARD_STARTUP_FILES = [
   "tile.js",
   "local_score_manager.js",
   "local_history_store.js",
-  "core_merge_effects_runtime.js",
   "core_post_move_runtime.js",
   "core_post_move_record_runtime.js",
   "core_post_undo_record_runtime.js",
