@@ -301,6 +301,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_grid_scan_runtime.js"
+  },
+  {
+    scriptPath: "core_move_scan_runtime.js"
   }
 ];
 
