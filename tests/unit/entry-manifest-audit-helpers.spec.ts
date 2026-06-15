@@ -649,6 +649,12 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks replay-codec runtime as a retired Vite bundled runtime script", () => {
+    expect(BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS).toContainEqual({
+      scriptPath: "core_replay_codec_runtime.js"
+    });
+  });
+
   it("tracks home-guide-dom-host runtime as a retired active-manifest script", () => {
     expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
       scriptPath: "core_home_guide_dom_host_runtime.js",

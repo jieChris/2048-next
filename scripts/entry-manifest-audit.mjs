@@ -343,6 +343,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_undo_restore_runtime.js"
+  },
+  {
+    scriptPath: "core_replay_codec_runtime.js"
   }
 ];
 
