@@ -307,6 +307,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_move_path_runtime.js"
+  },
+  {
+    scriptPath: "core_timer_interval_runtime.js"
   }
 ];
 
