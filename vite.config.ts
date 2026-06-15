@@ -16,7 +16,6 @@ const HOME_STANDARD_STARTUP_FILES = [
   "tile.js",
   "local_score_manager.js",
   "local_history_store.js",
-  "core_undo_snapshot_runtime.js",
   "core_undo_tile_snapshot_runtime.js",
   "core_undo_tile_restore_runtime.js",
   "core_undo_restore_payload_runtime.js",

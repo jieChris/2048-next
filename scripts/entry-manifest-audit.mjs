@@ -324,6 +324,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
     scriptPath: "core_post_move_record_runtime.js"
   },
   {
+    scriptPath: "core_undo_snapshot_runtime.js"
+  },
+  {
     scriptPath: "core_post_undo_record_runtime.js"
   },
   {
