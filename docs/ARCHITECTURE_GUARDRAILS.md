@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-15, Stage-1BS Core-Mode Bundle Runtime Retirement)
+
+## Batch Impact
+- `CoreModeRuntime` remains installed from `src/core/mode.ts` before home/play/replay/capped legacy scripts load.
+- `js/core_mode_runtime.js` was removed from `HOME_STANDARD_STARTUP_FILES` in `vite.config.ts`, preventing the Vite-generated home startup bundle from overwriting the TypeScript-installed runtime.
+- The legacy `js/core_mode_runtime.js` file remains in place.
+- `public/js/legacy_index_nomodule_loader.js` still references `core_mode_runtime.js`; legacy-browser policy remains a separate follow-up stage.
+- `entry-manifest-audit` now blocks `core_mode_runtime.js` from re-entering the focused Vite bundled retired registry.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- GREEN: `npx vitest run tests/unit/core-mode.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4281 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-14, Stage-1BR Core-Mode Runtime TS Boundary)
 
 ## Batch Impact
