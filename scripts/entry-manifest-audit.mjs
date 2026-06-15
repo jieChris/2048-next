@@ -313,6 +313,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_scoring_runtime.js"
+  },
+  {
+    scriptPath: "core_merge_effects_runtime.js"
   }
 ];
 
