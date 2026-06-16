@@ -394,6 +394,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_game_manager_client_record_id_runtime.js"
+  },
+  {
+    scriptPath: "core_game_manager_base_helpers_runtime.js"
   }
 ];
 
