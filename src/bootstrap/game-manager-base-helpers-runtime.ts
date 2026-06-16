@@ -1,5 +1,6 @@
 import {
   applySecondaryTimerRowsState,
+  applySecondaryTimerExpandedParentsState,
   bindSecondaryTimerParentToggleEvents,
   collectSecondaryTimerExpandedParents,
   collectSecondaryTimerRowsState,
@@ -10,11 +11,15 @@ import {
   createUnavailableCoreCallResult,
   ensureSecondaryTimerDescriptorRow,
   getSecondaryTimerChildValues,
+  getSecondaryTimerExpandedStateMap,
   getSecondaryTimerParentValues,
+  getSecondaryTimerSlotIds,
   hasOwnKey,
   invalidateSecondaryTimersByLimit,
   isCoreCallAvailable,
   isNonArrayObject,
+  isSecondaryTimerParentExpanded,
+  isSecondaryTimerParentReached,
   isSecondaryTimerPowerOfTwo,
   normalizeSecondaryTimerValue,
   parseSecondaryTimerRowIdentity,
@@ -39,13 +44,16 @@ import {
   resolveSecondaryTimerPlacementDebugSummary,
   resolveSecondaryTimerPlacementDebugSummaryFromSnapshot,
   resolveSecondaryTimerRowId,
+  resolveSecondaryTimerSlotIndexByValue,
   resolveSecondaryTimerSlotByValue,
   resolveSecondaryTimerValueId,
   resolveSecondaryTimerWidthByLevel,
   resetSecondaryTimerRowsForSetup,
   safeClonePlain,
+  setSecondaryTimerParentExpanded,
   stampSecondaryTimerDescriptor,
   stampSecondaryTimersForMergedValue,
+  toggleSecondaryTimerParentExpanded,
   tryHandleCoreRawValue
 } from "../core/game-manager-base-helpers";
 
@@ -70,11 +78,19 @@ export interface GameManagerBaseHelpersRuntime {
   readOptionValue: typeof readOptionValue;
   normalizeSecondaryTimerValue: typeof normalizeSecondaryTimerValue;
   isSecondaryTimerPowerOfTwo: typeof isSecondaryTimerPowerOfTwo;
+  getSecondaryTimerSlotIds: typeof getSecondaryTimerSlotIds;
+  resolveSecondaryTimerSlotIndexByValue: typeof resolveSecondaryTimerSlotIndexByValue;
   getSecondaryTimerParentValues: typeof getSecondaryTimerParentValues;
   getSecondaryTimerChildValues: typeof getSecondaryTimerChildValues;
   resolveSecondaryTimerDisplayValueBySlot: typeof resolveSecondaryTimerDisplayValueBySlot;
   resolveSecondaryTimerSlotByValue: typeof resolveSecondaryTimerSlotByValue;
+  getSecondaryTimerExpandedStateMap: typeof getSecondaryTimerExpandedStateMap;
+  isSecondaryTimerParentExpanded: typeof isSecondaryTimerParentExpanded;
+  isSecondaryTimerParentReached: typeof isSecondaryTimerParentReached;
+  setSecondaryTimerParentExpanded: typeof setSecondaryTimerParentExpanded;
+  toggleSecondaryTimerParentExpanded: typeof toggleSecondaryTimerParentExpanded;
   collectSecondaryTimerExpandedParents: typeof collectSecondaryTimerExpandedParents;
+  applySecondaryTimerExpandedParentsState: typeof applySecondaryTimerExpandedParentsState;
   bindSecondaryTimerParentToggleEvents: typeof bindSecondaryTimerParentToggleEvents;
   resolveSecondaryTimerRowId: typeof resolveSecondaryTimerRowId;
   resolveSecondaryTimerValueId: typeof resolveSecondaryTimerValueId;
@@ -136,11 +152,19 @@ export function createGameManagerBaseHelpersRuntime(): GameManagerBaseHelpersRun
     readOptionValue,
     normalizeSecondaryTimerValue,
     isSecondaryTimerPowerOfTwo,
+    getSecondaryTimerSlotIds,
+    resolveSecondaryTimerSlotIndexByValue,
     getSecondaryTimerParentValues,
     getSecondaryTimerChildValues,
     resolveSecondaryTimerDisplayValueBySlot,
     resolveSecondaryTimerSlotByValue,
+    getSecondaryTimerExpandedStateMap,
+    isSecondaryTimerParentExpanded,
+    isSecondaryTimerParentReached,
+    setSecondaryTimerParentExpanded,
+    toggleSecondaryTimerParentExpanded,
     collectSecondaryTimerExpandedParents,
+    applySecondaryTimerExpandedParentsState,
     bindSecondaryTimerParentToggleEvents,
     resolveSecondaryTimerRowId,
     resolveSecondaryTimerValueId,

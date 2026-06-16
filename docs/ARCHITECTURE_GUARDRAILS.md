@@ -1,3 +1,30 @@
+# Guardrail Delta (2026-06-16, Stage-1DC Core Game Manager Base Helpers Active Manifest Retirement)
+
+## Batch Impact
+- `core_game_manager_base_helpers_runtime.js` is no longer referenced by active home/capped/play/replay runtime manifests.
+- `src/bootstrap/game-manager-base-helpers-runtime.ts` remains the modern installer for the migrated legacy global helper names before active legacy scripts load.
+- `src/core/game-manager-base-helpers.ts` remains the tested TypeScript owner for low-level base helpers, mode payload helpers, and secondary timer helpers.
+- `isSecondaryTimerParentReached` is exported through the TypeScript boundary because active practice-board restart/setup paths call that legacy global through replay helper invalidation.
+- `vite.config.ts` still includes `core_game_manager_base_helpers_runtime.js` in `HOME_STANDARD_STARTUP_FILES`; Vite bundle retirement remains a separate follow-up stage.
+- `public/js/legacy_index_nomodule_loader.js` still references `core_game_manager_base_helpers_runtime.js`; legacy-browser policy remains separate.
+- `entry-manifest-audit` now blocks `core_game_manager_base_helpers_runtime.js` / `coreGameManagerBaseHelpersRuntimeUrl` from re-entering active manifests.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts tests/unit/bootstrap-game-manager-base-helpers-runtime.spec.ts tests/unit/core-game-manager-base-helpers.spec.ts tests/unit/core-game-manager-base-helpers-runtime.spec.ts`
+- GREEN: `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-contracts-saved-session.smoke.spec.ts`
+- CI follow-up RED: PR #126 `Smoke (pages)` failed because `isSecondaryTimerParentReached` was not installed after retiring the active legacy runtime.
+- CI follow-up GREEN: `npx vitest run tests/unit/bootstrap-game-manager-base-helpers-runtime.spec.ts`
+- CI follow-up GREEN: `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-practice-board-code-input.smoke.spec.ts tests/smoke/pages-ui-regressions.smoke.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4319 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-16, Stage-1DB Core Game Manager Base Helpers Secondary Timer Boundary)
 
 ## Batch Impact
