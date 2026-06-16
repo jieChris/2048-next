@@ -7,6 +7,8 @@ import {
 } from "../../src/bootstrap/game-manager-base-helpers-runtime";
 import {
   clonePlain,
+  createCoreModeContextPayload,
+  createCoreModeDefaultsPayload,
   createUnavailableCoreCallResult,
   hasOwnKey,
   isCoreCallAvailable,
@@ -36,6 +38,8 @@ const expectedRuntime = {
   resolveCoreRawCallValueOrUndefined,
   tryHandleCoreRawValue,
   isNonArrayObject,
+  createCoreModeDefaultsPayload,
+  createCoreModeContextPayload,
   createUnavailableCoreCallResult,
   clonePlain,
   safeClonePlain,
