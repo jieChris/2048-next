@@ -1,12 +1,26 @@
 import {
+  applySecondaryTimerRowsState,
+  bindSecondaryTimerParentToggleEvents,
+  collectSecondaryTimerExpandedParents,
+  collectSecondaryTimerRowsState,
   clonePlain,
+  createSecondaryTimerPlacementDebugSnapshot,
   createCoreModeContextPayload,
   createCoreModeDefaultsPayload,
   createUnavailableCoreCallResult,
+  ensureSecondaryTimerDescriptorRow,
+  getSecondaryTimerChildValues,
+  getSecondaryTimerParentValues,
   hasOwnKey,
+  invalidateSecondaryTimersByLimit,
   isCoreCallAvailable,
   isNonArrayObject,
+  isSecondaryTimerPowerOfTwo,
+  normalizeSecondaryTimerValue,
+  parseSecondaryTimerRowIdentity,
+  placeSecondaryTimerRowsNearParents,
   readOptionValue,
+  refreshSecondaryTimerRowsVisibility,
   resolveCoreBooleanCallOrFallback,
   resolveCoreNumericCallOrFallback,
   resolveCoreObjectCallOrFallback,
@@ -15,7 +29,23 @@ import {
   resolveNormalizedCoreValueOrFallback,
   resolveNormalizedCoreValueOrFallbackAllowNull,
   resolveNormalizedCoreValueOrUndefined,
+  resolveSecondaryTimerDescriptors,
+  resolveSecondaryTimerDisplayValueBySlot,
+  resolveSecondaryTimerIndentLevel,
+  resolveSecondaryTimerLegendFontSize,
+  resolveSecondaryTimerParentAnchor,
+  resolveSecondaryTimerPlacementDiagnosticsIndexEntry,
+  resolveSecondaryTimerPlacementDiagnosticsPayload,
+  resolveSecondaryTimerPlacementDebugSummary,
+  resolveSecondaryTimerPlacementDebugSummaryFromSnapshot,
+  resolveSecondaryTimerRowId,
+  resolveSecondaryTimerSlotByValue,
+  resolveSecondaryTimerValueId,
+  resolveSecondaryTimerWidthByLevel,
+  resetSecondaryTimerRowsForSetup,
   safeClonePlain,
+  stampSecondaryTimerDescriptor,
+  stampSecondaryTimersForMergedValue,
   tryHandleCoreRawValue
 } from "../core/game-manager-base-helpers";
 
@@ -38,6 +68,36 @@ export interface GameManagerBaseHelpersRuntime {
   safeClonePlain: typeof safeClonePlain;
   hasOwnKey: typeof hasOwnKey;
   readOptionValue: typeof readOptionValue;
+  normalizeSecondaryTimerValue: typeof normalizeSecondaryTimerValue;
+  isSecondaryTimerPowerOfTwo: typeof isSecondaryTimerPowerOfTwo;
+  getSecondaryTimerParentValues: typeof getSecondaryTimerParentValues;
+  getSecondaryTimerChildValues: typeof getSecondaryTimerChildValues;
+  resolveSecondaryTimerDisplayValueBySlot: typeof resolveSecondaryTimerDisplayValueBySlot;
+  resolveSecondaryTimerSlotByValue: typeof resolveSecondaryTimerSlotByValue;
+  collectSecondaryTimerExpandedParents: typeof collectSecondaryTimerExpandedParents;
+  bindSecondaryTimerParentToggleEvents: typeof bindSecondaryTimerParentToggleEvents;
+  resolveSecondaryTimerRowId: typeof resolveSecondaryTimerRowId;
+  resolveSecondaryTimerValueId: typeof resolveSecondaryTimerValueId;
+  parseSecondaryTimerRowIdentity: typeof parseSecondaryTimerRowIdentity;
+  resolveSecondaryTimerIndentLevel: typeof resolveSecondaryTimerIndentLevel;
+  resolveSecondaryTimerLegendFontSize: typeof resolveSecondaryTimerLegendFontSize;
+  resolveSecondaryTimerWidthByLevel: typeof resolveSecondaryTimerWidthByLevel;
+  ensureSecondaryTimerDescriptorRow: typeof ensureSecondaryTimerDescriptorRow;
+  resolveSecondaryTimerDescriptors: typeof resolveSecondaryTimerDescriptors;
+  resolveSecondaryTimerParentAnchor: typeof resolveSecondaryTimerParentAnchor;
+  placeSecondaryTimerRowsNearParents: typeof placeSecondaryTimerRowsNearParents;
+  refreshSecondaryTimerRowsVisibility: typeof refreshSecondaryTimerRowsVisibility;
+  resetSecondaryTimerRowsForSetup: typeof resetSecondaryTimerRowsForSetup;
+  stampSecondaryTimerDescriptor: typeof stampSecondaryTimerDescriptor;
+  stampSecondaryTimersForMergedValue: typeof stampSecondaryTimersForMergedValue;
+  invalidateSecondaryTimersByLimit: typeof invalidateSecondaryTimersByLimit;
+  collectSecondaryTimerRowsState: typeof collectSecondaryTimerRowsState;
+  applySecondaryTimerRowsState: typeof applySecondaryTimerRowsState;
+  createSecondaryTimerPlacementDebugSnapshot: typeof createSecondaryTimerPlacementDebugSnapshot;
+  resolveSecondaryTimerPlacementDebugSummaryFromSnapshot: typeof resolveSecondaryTimerPlacementDebugSummaryFromSnapshot;
+  resolveSecondaryTimerPlacementDebugSummary: typeof resolveSecondaryTimerPlacementDebugSummary;
+  resolveSecondaryTimerPlacementDiagnosticsPayload: typeof resolveSecondaryTimerPlacementDiagnosticsPayload;
+  resolveSecondaryTimerPlacementDiagnosticsIndexEntry: typeof resolveSecondaryTimerPlacementDiagnosticsIndexEntry;
 }
 
 export type GameManagerBaseHelpersRuntimeWindowLike = Partial<GameManagerBaseHelpersRuntime>;
@@ -73,7 +133,37 @@ export function createGameManagerBaseHelpersRuntime(): GameManagerBaseHelpersRun
     clonePlain,
     safeClonePlain,
     hasOwnKey,
-    readOptionValue
+    readOptionValue,
+    normalizeSecondaryTimerValue,
+    isSecondaryTimerPowerOfTwo,
+    getSecondaryTimerParentValues,
+    getSecondaryTimerChildValues,
+    resolveSecondaryTimerDisplayValueBySlot,
+    resolveSecondaryTimerSlotByValue,
+    collectSecondaryTimerExpandedParents,
+    bindSecondaryTimerParentToggleEvents,
+    resolveSecondaryTimerRowId,
+    resolveSecondaryTimerValueId,
+    parseSecondaryTimerRowIdentity,
+    resolveSecondaryTimerIndentLevel,
+    resolveSecondaryTimerLegendFontSize,
+    resolveSecondaryTimerWidthByLevel,
+    ensureSecondaryTimerDescriptorRow,
+    resolveSecondaryTimerDescriptors,
+    resolveSecondaryTimerParentAnchor,
+    placeSecondaryTimerRowsNearParents,
+    refreshSecondaryTimerRowsVisibility,
+    resetSecondaryTimerRowsForSetup,
+    stampSecondaryTimerDescriptor,
+    stampSecondaryTimersForMergedValue,
+    invalidateSecondaryTimersByLimit,
+    collectSecondaryTimerRowsState,
+    applySecondaryTimerRowsState,
+    createSecondaryTimerPlacementDebugSnapshot,
+    resolveSecondaryTimerPlacementDebugSummaryFromSnapshot,
+    resolveSecondaryTimerPlacementDebugSummary,
+    resolveSecondaryTimerPlacementDiagnosticsPayload,
+    resolveSecondaryTimerPlacementDiagnosticsIndexEntry
   };
 }
 
