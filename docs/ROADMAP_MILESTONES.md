@@ -1,3 +1,25 @@
+# Stage-1DB Core Game Manager Base Helpers Secondary Timer Boundary (2026-06-16)
+
+## Phase Decision
+- `WS-runtime-103`
+  - status: done
+  - progress: `src/core/game-manager-base-helpers.ts` now owns secondary timer normalization, hierarchy, expanded parent state, descriptor, placement diagnostics, stamping, invalidation, and row-state restore helpers; `src/bootstrap/game-manager-base-helpers-runtime.ts` installs those legacy global names before home/play/replay/capped scripts load.
+  - follow-up: active manifest and Vite bundle references to `core_game_manager_base_helpers_runtime.js` remain intentionally in place for later active-manifest and bundle retirement stages; `public/js/legacy_index_nomodule_loader.js` remains separate legacy-browser policy work.
+
+## Evidence
+- RED: `npx vitest run tests/unit/core-game-manager-base-helpers.spec.ts` failed before secondary timer helpers were exported.
+- RED: `npx vitest run tests/unit/bootstrap-game-manager-base-helpers-runtime.spec.ts` failed before the runtime installer exposed secondary timer helper names.
+- GREEN: `npx vitest run tests/unit/bootstrap-game-manager-base-helpers-runtime.spec.ts tests/unit/core-game-manager-base-helpers.spec.ts tests/unit/core-game-manager-base-helpers-runtime.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4318 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
+
 # Stage-1DA Core Game Manager Base Helpers Mode Payload Boundary (2026-06-16)
 
 ## Phase Decision

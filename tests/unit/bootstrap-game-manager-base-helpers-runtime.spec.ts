@@ -6,14 +6,28 @@ import {
   type GameManagerBaseHelpersRuntimeWindowLike
 } from "../../src/bootstrap/game-manager-base-helpers-runtime";
 import {
+  applySecondaryTimerRowsState,
+  bindSecondaryTimerParentToggleEvents,
+  collectSecondaryTimerExpandedParents,
+  collectSecondaryTimerRowsState,
   clonePlain,
+  createSecondaryTimerPlacementDebugSnapshot,
+  ensureSecondaryTimerDescriptorRow,
   createCoreModeContextPayload,
   createCoreModeDefaultsPayload,
   createUnavailableCoreCallResult,
+  getSecondaryTimerChildValues,
+  getSecondaryTimerParentValues,
   hasOwnKey,
+  invalidateSecondaryTimersByLimit,
   isCoreCallAvailable,
   isNonArrayObject,
+  isSecondaryTimerPowerOfTwo,
+  normalizeSecondaryTimerValue,
+  parseSecondaryTimerRowIdentity,
+  placeSecondaryTimerRowsNearParents,
   readOptionValue,
+  refreshSecondaryTimerRowsVisibility,
   resolveCoreBooleanCallOrFallback,
   resolveCoreNumericCallOrFallback,
   resolveCoreObjectCallOrFallback,
@@ -22,7 +36,23 @@ import {
   resolveNormalizedCoreValueOrFallback,
   resolveNormalizedCoreValueOrFallbackAllowNull,
   resolveNormalizedCoreValueOrUndefined,
+  resolveSecondaryTimerDescriptors,
+  resolveSecondaryTimerDisplayValueBySlot,
+  resolveSecondaryTimerIndentLevel,
+  resolveSecondaryTimerLegendFontSize,
+  resolveSecondaryTimerParentAnchor,
+  resolveSecondaryTimerPlacementDiagnosticsIndexEntry,
+  resolveSecondaryTimerPlacementDiagnosticsPayload,
+  resolveSecondaryTimerPlacementDebugSummary,
+  resolveSecondaryTimerPlacementDebugSummaryFromSnapshot,
+  resolveSecondaryTimerRowId,
+  resolveSecondaryTimerSlotByValue,
+  resolveSecondaryTimerValueId,
+  resolveSecondaryTimerWidthByLevel,
+  resetSecondaryTimerRowsForSetup,
   safeClonePlain,
+  stampSecondaryTimerDescriptor,
+  stampSecondaryTimersForMergedValue,
   tryHandleCoreRawValue
 } from "../../src/core/game-manager-base-helpers";
 
@@ -44,12 +74,48 @@ const expectedRuntime = {
   clonePlain,
   safeClonePlain,
   hasOwnKey,
-  readOptionValue
+  readOptionValue,
+  normalizeSecondaryTimerValue,
+  isSecondaryTimerPowerOfTwo,
+  getSecondaryTimerParentValues,
+  getSecondaryTimerChildValues,
+  resolveSecondaryTimerDisplayValueBySlot,
+  resolveSecondaryTimerSlotByValue,
+  collectSecondaryTimerExpandedParents,
+  bindSecondaryTimerParentToggleEvents,
+  resolveSecondaryTimerRowId,
+  resolveSecondaryTimerValueId,
+  parseSecondaryTimerRowIdentity,
+  resolveSecondaryTimerIndentLevel,
+  resolveSecondaryTimerLegendFontSize,
+  resolveSecondaryTimerWidthByLevel,
+  ensureSecondaryTimerDescriptorRow,
+  resolveSecondaryTimerDescriptors,
+  resolveSecondaryTimerParentAnchor,
+  placeSecondaryTimerRowsNearParents,
+  refreshSecondaryTimerRowsVisibility,
+  resetSecondaryTimerRowsForSetup,
+  stampSecondaryTimerDescriptor,
+  stampSecondaryTimersForMergedValue,
+  invalidateSecondaryTimersByLimit,
+  collectSecondaryTimerRowsState,
+  applySecondaryTimerRowsState,
+  createSecondaryTimerPlacementDebugSnapshot,
+  resolveSecondaryTimerPlacementDebugSummaryFromSnapshot,
+  resolveSecondaryTimerPlacementDebugSummary,
+  resolveSecondaryTimerPlacementDiagnosticsPayload,
+  resolveSecondaryTimerPlacementDiagnosticsIndexEntry
 };
 
 describe("game manager base helpers runtime installer", () => {
   it("creates the legacy global function shape from TypeScript helpers", () => {
-    expect(createGameManagerBaseHelpersRuntime()).toEqual(expectedRuntime);
+    const runtime = createGameManagerBaseHelpersRuntime();
+
+    expect(runtime).toEqual(expectedRuntime);
+    for (const name of Object.keys(expectedRuntime)) {
+      expect(Object.prototype.hasOwnProperty.call(runtime, name)).toBe(true);
+      expect(typeof runtime[name as keyof typeof runtime]).toBe("function");
+    }
   });
 
   it("installs missing legacy global functions on a supplied window-like object", () => {
@@ -59,6 +125,8 @@ describe("game manager base helpers runtime installer", () => {
 
     expect(installed).toEqual(expectedRuntime);
     for (const [name, fn] of Object.entries(expectedRuntime)) {
+      expect(typeof fn).toBe("function");
+      expect(Object.prototype.hasOwnProperty.call(windowLike, name)).toBe(true);
       expect(windowLike[name as keyof GameManagerBaseHelpersRuntimeWindowLike]).toBe(fn);
     }
   });

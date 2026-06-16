@@ -1,3 +1,25 @@
+# Guardrail Delta (2026-06-16, Stage-1DB Core Game Manager Base Helpers Secondary Timer Boundary)
+
+## Batch Impact
+- `src/core/game-manager-base-helpers.ts` now owns secondary timer value normalization, slot hierarchy, expanded parent state, descriptor creation, placement diagnostics, stamping, invalidation, and row-state restore helpers that previously only lived in `js/core_game_manager_base_helpers_runtime.js`.
+- `src/bootstrap/game-manager-base-helpers-runtime.ts` installs the migrated secondary timer legacy global helper names before home/play/replay/capped legacy scripts load.
+- Active manifest references and the Vite home startup bundle reference to `js/core_game_manager_base_helpers_runtime.js` remain intentionally in place because this stage only transfers TypeScript ownership; retirement is a later stage.
+- `public/js/legacy_index_nomodule_loader.js` still references `core_game_manager_base_helpers_runtime.js`; legacy-browser policy remains separate.
+- The legacy `js/core_game_manager_base_helpers_runtime.js` file remains in place.
+
+## Verification
+- RED: `npx vitest run tests/unit/core-game-manager-base-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-game-manager-base-helpers-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/bootstrap-game-manager-base-helpers-runtime.spec.ts tests/unit/core-game-manager-base-helpers.spec.ts tests/unit/core-game-manager-base-helpers-runtime.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4318 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-16, Stage-1DA Core Game Manager Base Helpers Mode Payload Boundary)
 
 ## Batch Impact
