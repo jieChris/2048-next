@@ -1,5 +1,7 @@
 import {
   clonePlain,
+  createCoreModeContextPayload,
+  createCoreModeDefaultsPayload,
   createUnavailableCoreCallResult,
   hasOwnKey,
   isCoreCallAvailable,
@@ -29,6 +31,8 @@ export interface GameManagerBaseHelpersRuntime {
   resolveCoreRawCallValueOrUndefined: typeof resolveCoreRawCallValueOrUndefined;
   tryHandleCoreRawValue: typeof tryHandleCoreRawValue;
   isNonArrayObject: typeof isNonArrayObject;
+  createCoreModeDefaultsPayload: typeof createCoreModeDefaultsPayload;
+  createCoreModeContextPayload: typeof createCoreModeContextPayload;
   createUnavailableCoreCallResult: typeof createUnavailableCoreCallResult;
   clonePlain: typeof clonePlain;
   safeClonePlain: typeof safeClonePlain;
@@ -63,6 +67,8 @@ export function createGameManagerBaseHelpersRuntime(): GameManagerBaseHelpersRun
     resolveCoreRawCallValueOrUndefined,
     tryHandleCoreRawValue,
     isNonArrayObject,
+    createCoreModeDefaultsPayload,
+    createCoreModeContextPayload,
     createUnavailableCoreCallResult,
     clonePlain,
     safeClonePlain,

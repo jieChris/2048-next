@@ -1,3 +1,23 @@
+# Guardrail Delta (2026-06-16, Stage-1DA Core Game Manager Base Helpers Mode Payload Boundary)
+
+## Batch Impact
+- `src/core/game-manager-base-helpers.ts` now owns `createCoreModeDefaultsPayload` and `createCoreModeContextPayload` in addition to the previously migrated low-level call/resolve helpers.
+- `src/bootstrap/game-manager-base-helpers-runtime.ts` installs those legacy global helper names before home/play/replay/capped legacy scripts load.
+- Active manifest references and the Vite home startup bundle reference to `js/core_game_manager_base_helpers_runtime.js` remain intentionally in place because secondary timer helpers still require a later TypeScript boundary stage.
+- The legacy `js/core_game_manager_base_helpers_runtime.js` file remains in place.
+
+## Verification
+- RED: `npx vitest run tests/unit/core-game-manager-base-helpers.spec.ts tests/unit/bootstrap-game-manager-base-helpers-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/bootstrap-game-manager-base-helpers-runtime.spec.ts tests/unit/core-game-manager-base-helpers.spec.ts tests/unit/core-game-manager-base-helpers-runtime.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4317 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-16, Stage-1CZ Core Game Manager Base Helpers TypeScript Boundary)
 
 ## Batch Impact

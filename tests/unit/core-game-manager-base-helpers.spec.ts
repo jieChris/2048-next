@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   clonePlain,
   createUnavailableCoreCallResult,
+  createCoreModeContextPayload,
+  createCoreModeDefaultsPayload,
   hasOwnKey,
   isCoreCallAvailable,
   isNonArrayObject,
@@ -108,6 +110,47 @@ describe("core game manager base helpers", () => {
     expect(handler).toHaveBeenCalledTimes(1);
     expect(tryHandleCoreRawValue(manager, { available: false, value: "x" }, handler)).toBe(false);
     expect(tryHandleCoreRawValue(null, { available: true, value: "x" }, handler)).toBe(false);
+  });
+
+  it("creates core mode default and context payloads with legacy merge order", () => {
+    const previousGameManager = (globalThis as { GameManager?: unknown }).GameManager;
+    (globalThis as { GameManager?: { DEFAULT_MODE_KEY: string } }).GameManager = {
+      DEFAULT_MODE_KEY: "standard-default"
+    };
+    const manager = {
+      modeKey: "current-key",
+      mode: { size: 4 },
+      createCoreModeDefaultsPayload: vi.fn((payload: Record<string, unknown>) =>
+        createCoreModeDefaultsPayload(payload)
+      )
+    };
+
+    try {
+      expect(createCoreModeDefaultsPayload({ setting: true })).toEqual({
+        defaultModeKey: "standard-default",
+        setting: true
+      });
+      expect(createCoreModeDefaultsPayload({ defaultModeKey: "payload-default" })).toEqual({
+        defaultModeKey: "payload-default"
+      });
+      expect(createCoreModeContextPayload(manager, { setting: "context" })).toEqual({
+        defaultModeKey: "standard-default",
+        currentModeKey: "current-key",
+        currentMode: { size: 4 },
+        setting: "context"
+      });
+      expect(manager.createCoreModeDefaultsPayload).toHaveBeenCalledWith({
+        currentModeKey: "current-key",
+        currentMode: { size: 4 },
+        setting: "context"
+      });
+      expect(createCoreModeContextPayload(null, { setting: "fallback" })).toEqual({
+        defaultModeKey: "standard-default",
+        setting: "fallback"
+      });
+    } finally {
+      (globalThis as { GameManager?: unknown }).GameManager = previousGameManager;
+    }
   });
 
   it("preserves object, clone, own-key, unavailable-result, and option-reading legacy edges", () => {

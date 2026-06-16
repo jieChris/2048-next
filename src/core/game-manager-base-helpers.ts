@@ -9,6 +9,9 @@ export type CoreRawValueHandler = (this: CoreBaseHelperManagerLike, value: unkno
 
 export interface CoreBaseHelperManagerLike {
   isCoreCallAvailable?: (coreCallResult: unknown) => boolean;
+  mode?: unknown;
+  modeKey?: unknown;
+  createCoreModeDefaultsPayload?: (payload: unknown) => unknown;
   resolveNormalizedCoreValueOrUndefined?: (
     coreCallResult: unknown,
     normalizer?: unknown
@@ -172,6 +175,51 @@ export function tryHandleCoreRawValue(
 
 export function isNonArrayObject(value: unknown): boolean {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function resolveDefaultModeKey(): unknown {
+  const globalRecord = typeof globalThis === "undefined"
+    ? null
+    : (globalThis as unknown as { GameManager?: { DEFAULT_MODE_KEY?: unknown } });
+  return globalRecord?.GameManager?.DEFAULT_MODE_KEY;
+}
+
+export function createCoreModeDefaultsPayload(payload: unknown): Record<PropertyKey, unknown> {
+  const source = isCoreHelperRecordObject(payload) ? payload : {};
+  return Object.assign(
+    {
+      defaultModeKey: resolveDefaultModeKey()
+    },
+    source
+  );
+}
+
+export function createCoreModeContextPayload(
+  manager: CoreBaseHelperManagerLike | null | undefined,
+  payload: unknown
+): unknown {
+  if (!manager) return createCoreModeDefaultsPayload(payload);
+  const source = isCoreHelperRecordObject(payload) ? payload : {};
+  if (typeof manager.createCoreModeDefaultsPayload === "function") {
+    return manager.createCoreModeDefaultsPayload(
+      Object.assign(
+        {
+          currentModeKey: manager.modeKey,
+          currentMode: manager.mode
+        },
+        source
+      )
+    );
+  }
+  return createCoreModeDefaultsPayload(
+    Object.assign(
+      {
+        currentModeKey: manager.modeKey,
+        currentMode: manager.mode
+      },
+      source
+    )
+  );
 }
 
 export function createUnavailableCoreCallResult(): { available: false; value: null } {
