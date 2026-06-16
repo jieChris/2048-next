@@ -239,7 +239,7 @@ npm run verify:prepush
 
 Expected: all gates pass.
 
-- [ ] **Step 4: Commit, push, PR**
+- [x] **Step 4: Commit, push, PR**
 
 Run:
 
