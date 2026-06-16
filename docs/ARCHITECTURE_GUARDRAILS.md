@@ -1,3 +1,25 @@
+# Guardrail Delta (2026-06-16, Stage-1CZ Core Game Manager Base Helpers TypeScript Boundary)
+
+## Batch Impact
+- `src/core/game-manager-base-helpers.ts` now owns the low-level core game-manager call-resolution, normalization, cloning, own-key, and option-reading helpers that previously only lived in `js/core_game_manager_base_helpers_runtime.js`.
+- `src/bootstrap/game-manager-base-helpers-runtime.ts` installs the migrated legacy global helper names before home/play/replay/capped legacy scripts load.
+- `src/entries/home-family-bootstrap.ts` wires the installer after the client-record-id runtime installer and before legacy runtime manifests execute.
+- Active manifest references and the Vite home startup bundle reference to `js/core_game_manager_base_helpers_runtime.js` remain intentionally in place for later retirement stages.
+- The legacy `js/core_game_manager_base_helpers_runtime.js` file remains in place.
+
+## Verification
+- RED: `npx vitest run tests/unit/core-game-manager-base-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-game-manager-base-helpers-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/core-game-manager-base-helpers.spec.ts tests/unit/bootstrap-game-manager-base-helpers-runtime.spec.ts tests/unit/core-game-manager-base-helpers-runtime.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4316 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-16, Stage-1CY Client-Record-ID Bundle Runtime Retirement)
 
 ## Batch Impact
