@@ -1,3 +1,25 @@
+# Guardrail Delta (2026-06-16, Stage-1CX Client-Record-ID Active Manifest Retirement)
+
+## Batch Impact
+- `core_game_manager_client_record_id_runtime.js` is no longer referenced by active home/play/replay/capped manifests.
+- `src/bootstrap/game-manager-client-record-id-runtime.ts` remains the modern installer for legacy global helper names before home/play/replay/capped legacy scripts load.
+- `src/core/game-manager-client-record-id.ts` remains the tested TypeScript owner for manager client record ID creation, assignment, and resolution.
+- `vite.config.ts` still includes `core_game_manager_client_record_id_runtime.js` in `HOME_STANDARD_STARTUP_FILES`; Vite bundle retirement remains a separate follow-up stage.
+- `public/js/legacy_index_nomodule_loader.js` still references `core_game_manager_client_record_id_runtime.js`; legacy-browser policy remains a separate follow-up stage.
+- `entry-manifest-audit` now blocks `core_game_manager_client_record_id_runtime.js` / `coreGameManagerClientRecordIdRuntimeUrl` from re-entering active manifests.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- GREEN: `npx vitest run tests/unit/bootstrap-game-manager-client-record-id-runtime.spec.ts tests/unit/core-game-manager-client-record-id.spec.ts tests/unit/core-game-manager-saved-state-runtime.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4314 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-16, Stage-1CW Client-Record-ID TypeScript Boundary)
 
 ## Batch Impact

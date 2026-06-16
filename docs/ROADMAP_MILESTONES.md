@@ -1,3 +1,23 @@
+# Stage-1CX Client-Record-ID Active Manifest Retirement (2026-06-16)
+
+## Phase Decision
+- `WS-runtime-99`
+  - status: done
+  - progress: `core_game_manager_client_record_id_runtime.js` is no longer referenced by active home/play/replay/capped manifests; `src/bootstrap/game-manager-client-record-id-runtime.ts` remains the modern installer for legacy helper names.
+  - follow-up: `vite.config.ts` still includes `core_game_manager_client_record_id_runtime.js` in `HOME_STANDARD_STARTUP_FILES`, and `public/js/legacy_index_nomodule_loader.js` still references it for separate bundle and legacy-browser policy stages.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` included `core_game_manager_client_record_id_runtime.js`.
+- RED/GREEN: `npm run audit:entry-manifest` failed while active manifests referenced `coreGameManagerClientRecordIdRuntimeUrl`, then passed after removal.
+- GREEN: `npx vitest run tests/unit/bootstrap-game-manager-client-record-id-runtime.spec.ts tests/unit/core-game-manager-client-record-id.spec.ts tests/unit/core-game-manager-saved-state-runtime.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4314 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1CW Client-Record-ID TypeScript Boundary (2026-06-16)
 
 ## Phase Decision
