@@ -1,3 +1,23 @@
+# Stage-1CY Client-Record-ID Bundle Runtime Retirement (2026-06-16)
+
+## Phase Decision
+- `WS-runtime-100`
+  - status: done
+  - progress: `src/bootstrap/game-manager-client-record-id-runtime.ts` remains the modern installer; `js/core_game_manager_client_record_id_runtime.js` is no longer included in `HOME_STANDARD_STARTUP_FILES`, so the Vite-generated home startup bundle no longer overwrites the TypeScript-installed runtime.
+  - follow-up: `public/js/legacy_index_nomodule_loader.js` still references `core_game_manager_client_record_id_runtime.js` for separate legacy-browser policy work.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS` included `core_game_manager_client_record_id_runtime.js`.
+- RED/GREEN: `npm run audit:entry-manifest` failed while `vite.config.ts` referenced `core_game_manager_client_record_id_runtime.js`, then passed after removal.
+- GREEN: `npx vitest run tests/unit/bootstrap-game-manager-client-record-id-runtime.spec.ts tests/unit/core-game-manager-client-record-id.spec.ts tests/unit/core-game-manager-saved-state-runtime.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4315 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1CX Client-Record-ID Active Manifest Retirement (2026-06-16)
 
 ## Phase Decision
