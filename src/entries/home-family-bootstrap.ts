@@ -6,6 +6,7 @@ import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-rescue-client-service-boundary";
 import { installDirectionLockRuntime } from "../bootstrap/direction-lock-runtime";
 import { installGameOverUndoHostRuntime } from "../bootstrap/game-over-undo-host";
+import { installGameManagerClientRecordIdRuntime } from "../bootstrap/game-manager-client-record-id-runtime";
 import { installGameSettingsStorageRuntime } from "../bootstrap/game-settings-storage-runtime";
 import { installGridScanRuntime } from "../bootstrap/grid-scan-runtime";
 import { installHomeGuideRuntime } from "../bootstrap/home-guide";
@@ -212,6 +213,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
     typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
   );
   installCryptoRandomRuntime();
+  installGameManagerClientRecordIdRuntime();
   installAdminRescueClientServiceBoundary();
   installDirectionLockRuntime();
   installGameOverUndoHostRuntime();
