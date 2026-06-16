@@ -293,6 +293,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks game-settings-storage runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_game_settings_storage_runtime.js",
+      symbolName: "coreGameSettingsStorageRuntimeUrl"
+    });
+  });
+
   it("tracks replay-timer runtime as a retired active-manifest script", () => {
     expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
       scriptPath: "core_replay_timer_runtime.js",

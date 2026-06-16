@@ -1,3 +1,24 @@
+# Stage-1CU Game-Settings-Storage Active Manifest Retirement (2026-06-16)
+
+## Phase Decision
+- `WS-runtime-96`
+  - status: done
+  - progress: `CoreGameSettingsStorageRuntime` is installed from `src/bootstrap/game-settings-storage-runtime.ts`; `js/core_game_settings_storage_runtime.js` is no longer referenced by active home/capped/play/replay runtime manifests.
+  - follow-up: `vite.config.ts` still includes `core_game_settings_storage_runtime.js` in `HOME_STANDARD_STARTUP_FILES`, and `public/js/legacy_index_nomodule_loader.js` still references it for separate bundle and legacy-browser policy stages.
+
+## Evidence
+- RED: `npx vitest run tests/unit/bootstrap-game-settings-storage-runtime.spec.ts` failed before `src/bootstrap/game-settings-storage-runtime.ts` existed.
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` included `core_game_settings_storage_runtime.js`.
+- RED/GREEN: `npm run audit:entry-manifest` failed while active manifests referenced `coreGameSettingsStorageRuntimeUrl`, then passed after removal.
+- GREEN: `npx vitest run tests/unit/bootstrap-game-settings-storage-runtime.spec.ts tests/unit/core-game-settings-storage.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4311 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1CT Move-Apply Bundle Runtime Retirement (2026-06-16)
 
 ## Phase Decision
