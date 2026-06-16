@@ -96,6 +96,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
     symbolName: "coreMoveApplyRuntimeUrl"
   },
   {
+    scriptPath: "core_game_settings_storage_runtime.js",
+    symbolName: "coreGameSettingsStorageRuntimeUrl"
+  },
+  {
     scriptPath: "core_replay_timer_runtime.js",
     symbolName: "coreReplayTimerRuntimeUrl"
   },

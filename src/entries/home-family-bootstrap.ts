@@ -6,6 +6,7 @@ import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-rescue-client-service-boundary";
 import { installDirectionLockRuntime } from "../bootstrap/direction-lock-runtime";
 import { installGameOverUndoHostRuntime } from "../bootstrap/game-over-undo-host";
+import { installGameSettingsStorageRuntime } from "../bootstrap/game-settings-storage-runtime";
 import { installGridScanRuntime } from "../bootstrap/grid-scan-runtime";
 import { installHomeGuideRuntime } from "../bootstrap/home-guide";
 import { installHomeGuideControlsHostRuntime } from "../bootstrap/home-guide-controls-host";
@@ -240,6 +241,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installHomeRuntimeContractRuntime();
   installHomePageHostRuntime();
   installIndexUiStartupHostRuntime();
+  installGameSettingsStorageRuntime();
   installMergeEffectsRuntime();
   installMoveApplyRuntime();
   installMovePathRuntime();

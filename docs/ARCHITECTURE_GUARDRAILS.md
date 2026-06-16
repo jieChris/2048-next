@@ -1,3 +1,26 @@
+# Guardrail Delta (2026-06-16, Stage-1CU Game-Settings-Storage Active Manifest Retirement)
+
+## Batch Impact
+- `CoreGameSettingsStorageRuntime` is now installed from `src/bootstrap/game-settings-storage-runtime.ts` before home/play/replay/capped legacy scripts load.
+- `src/core/game-settings-storage.ts` remains the tested TypeScript owner for storage flags, saved-state payloads, timer/undo maps, history owner metadata, diagnostics, and history record normalization.
+- `js/core_game_settings_storage_runtime.js` was removed from active home/capped/play/replay runtime manifests without deleting the legacy file.
+- `vite.config.ts` still includes `core_game_settings_storage_runtime.js` in `HOME_STANDARD_STARTUP_FILES`; Vite bundle retirement remains a separate follow-up stage.
+- `public/js/legacy_index_nomodule_loader.js` still references `core_game_settings_storage_runtime.js`; legacy-browser policy remains a separate follow-up stage.
+- `entry-manifest-audit` now blocks `core_game_settings_storage_runtime.js` / `coreGameSettingsStorageRuntimeUrl` from re-entering active manifests.
+
+## Verification
+- RED: `npx vitest run tests/unit/bootstrap-game-settings-storage-runtime.spec.ts`
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- GREEN: `npx vitest run tests/unit/bootstrap-game-settings-storage-runtime.spec.ts tests/unit/core-game-settings-storage.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4311 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-16, Stage-1CT Move-Apply Bundle Runtime Retirement)
 
 ## Batch Impact
