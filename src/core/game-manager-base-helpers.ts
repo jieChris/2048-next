@@ -1008,7 +1008,7 @@ export function resolveSecondaryTimerDescriptors(
   return Array.isArray(descriptors) ? descriptors : [];
 }
 
-function isSecondaryTimerParentReached(
+export function isSecondaryTimerParentReached(
   manager: SecondaryTimerManagerLike | null | undefined,
   parentValue: unknown
 ): boolean {
