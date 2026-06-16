@@ -1,3 +1,23 @@
+# Stage-1CS Replay-Loop Bundle Runtime Retirement (2026-06-16)
+
+## Phase Decision
+- `WS-runtime-94`
+  - status: done
+  - progress: `CoreReplayLoopRuntime` remains installed from `src/bootstrap/replay-loop-runtime.ts`; `js/core_replay_loop_runtime.js` is no longer included in the Vite-generated home startup bundle list in `vite.config.ts`.
+  - follow-up: `public/js/legacy_index_nomodule_loader.js` still references `core_replay_loop_runtime.js` for separate legacy-browser policy work.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS` included `core_replay_loop_runtime.js`.
+- RED/GREEN: `npm run audit:entry-manifest` failed while `vite.config.ts` referenced `core_replay_loop_runtime.js`, then passed after removal.
+- GREEN: `npx vitest run tests/unit/bootstrap-replay-loop-runtime.spec.ts tests/unit/core-replay-loop.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4308 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1CR Replay-Control Bundle Runtime Retirement (2026-06-16)
 
 ## Phase Decision
