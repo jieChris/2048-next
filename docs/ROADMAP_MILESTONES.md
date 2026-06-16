@@ -1,3 +1,24 @@
+# Stage-1CW Client-Record-ID TypeScript Boundary (2026-06-16)
+
+## Phase Decision
+- `WS-runtime-98`
+  - status: done
+  - progress: `src/core/game-manager-client-record-id.ts` now owns manager client record ID creation, assignment, and resolution; `src/bootstrap/game-manager-client-record-id-runtime.ts` installs the legacy global function names before home/play/replay/capped legacy scripts load.
+  - follow-up: active manifest and Vite bundle references to `js/core_game_manager_client_record_id_runtime.js` remain intentionally in place for the next retirement stage.
+
+## Evidence
+- RED: `npx vitest run tests/unit/core-game-manager-client-record-id.spec.ts` failed before `src/core/game-manager-client-record-id.ts` existed.
+- RED: `npx vitest run tests/unit/bootstrap-game-manager-client-record-id-runtime.spec.ts` failed before `src/bootstrap/game-manager-client-record-id-runtime.ts` existed.
+- GREEN: `npx vitest run tests/unit/core-game-manager-client-record-id.spec.ts tests/unit/bootstrap-game-manager-client-record-id-runtime.spec.ts tests/unit/core-game-manager-saved-state-runtime.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4313 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Stage-1CV Game-Settings-Storage Bundle Runtime Retirement (2026-06-16)
 
 ## Phase Decision
