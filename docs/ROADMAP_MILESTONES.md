@@ -1,3 +1,26 @@
+# Stage-1DD Core Game Manager Base Helpers Bundle Retirement (2026-06-17)
+
+## Phase Decision
+- `WS-runtime-105`
+  - status: done
+  - progress: `core_game_manager_base_helpers_runtime.js` is no longer included in `HOME_STANDARD_STARTUP_FILES`; `src/bootstrap/game-manager-base-helpers-runtime.ts` remains the modern installer for migrated base-helper globals.
+  - follow-up: `public/js/legacy_index_nomodule_loader.js` still references `core_game_manager_base_helpers_runtime.js` for a separate legacy-browser policy stage.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS` included `core_game_manager_base_helpers_runtime.js`.
+- RED/GREEN: `npm run audit:entry-manifest` failed while `vite.config.ts` referenced `core_game_manager_base_helpers_runtime.js`, then passed after removal.
+- GREEN: `npx vitest run tests/unit/bootstrap-game-manager-base-helpers-runtime.spec.ts tests/unit/core-game-manager-base-helpers.spec.ts tests/unit/core-game-manager-base-helpers-runtime.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4321 npm run test:smoke:index-ui`
+- `PW_WEB_PORT=4322 npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `PW_WEB_PORT=4323 npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-contracts-saved-session.smoke.spec.ts`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-practice-board-code-input.smoke.spec.ts tests/smoke/pages-ui-regressions.smoke.spec.ts`
+- `npm run verify:prepush`
+
+
 # Stage-1DC Core Game Manager Base Helpers Active Manifest Retirement (2026-06-16)
 
 ## Phase Decision

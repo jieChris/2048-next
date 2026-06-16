@@ -1,3 +1,26 @@
+# Guardrail Delta (2026-06-17, Stage-1DD Core Game Manager Base Helpers Bundle Retirement)
+
+## Batch Impact
+- `core_game_manager_base_helpers_runtime.js` is no longer included in `HOME_STANDARD_STARTUP_FILES`, so the Vite-generated home startup bundle no longer overwrites the TypeScript-installed base-helper globals.
+- `src/bootstrap/game-manager-base-helpers-runtime.ts` remains the modern installer for the migrated base-helper legacy global names before active legacy scripts load.
+- `src/core/game-manager-base-helpers.ts` remains the tested TypeScript owner for low-level base helpers, mode payload helpers, secondary timer helpers, and practice-board invalidation support.
+- `public/js/legacy_index_nomodule_loader.js` still references `core_game_manager_base_helpers_runtime.js`; legacy-browser policy remains separate.
+- `entry-manifest-audit` now blocks `core_game_manager_base_helpers_runtime.js` from re-entering the Vite home startup bundle.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- RED/GREEN: `npm run audit:entry-manifest`
+- GREEN: `npx vitest run tests/unit/bootstrap-game-manager-base-helpers-runtime.spec.ts tests/unit/core-game-manager-base-helpers.spec.ts tests/unit/core-game-manager-base-helpers-runtime.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4321 npm run test:smoke:index-ui`
+- `PW_WEB_PORT=4322 npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `PW_WEB_PORT=4323 npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-contracts-saved-session.smoke.spec.ts`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-practice-board-code-input.smoke.spec.ts tests/smoke/pages-ui-regressions.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-16, Stage-1DC Core Game Manager Base Helpers Active Manifest Retirement)
 
 ## Batch Impact
