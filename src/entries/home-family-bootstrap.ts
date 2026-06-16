@@ -8,6 +8,7 @@ import { installDirectionLockRuntime } from "../bootstrap/direction-lock-runtime
 import { installGameOverUndoHostRuntime } from "../bootstrap/game-over-undo-host";
 import { installGameManagerBaseHelpersRuntime } from "../bootstrap/game-manager-base-helpers-runtime";
 import { installGameManagerClientRecordIdRuntime } from "../bootstrap/game-manager-client-record-id-runtime";
+import { installGameManagerEnvHelpersRuntime } from "../bootstrap/game-manager-env-helpers-runtime";
 import { installGameSettingsStorageRuntime } from "../bootstrap/game-settings-storage-runtime";
 import { installGridScanRuntime } from "../bootstrap/grid-scan-runtime";
 import { installHomeGuideRuntime } from "../bootstrap/home-guide";
@@ -216,6 +217,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installCryptoRandomRuntime();
   installGameManagerClientRecordIdRuntime();
   installGameManagerBaseHelpersRuntime();
+  installGameManagerEnvHelpersRuntime();
   installAdminRescueClientServiceBoundary();
   installDirectionLockRuntime();
   installGameOverUndoHostRuntime();
