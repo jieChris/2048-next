@@ -380,6 +380,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_move_apply_runtime.js"
+  },
+  {
+    scriptPath: "core_game_settings_storage_runtime.js"
   }
 ];
 
