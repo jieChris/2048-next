@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-17, Stage-1DF Core Game Manager Runtime Call Helpers TypeScript Boundary)
+
+## Batch Impact
+- `src/core/game-manager-runtime-call-helpers.ts` now owns runtime method dispatch, core payload/args resolution, storage runtime calls, score/replay/undo state mutation, and grid cell writes.
+- `src/bootstrap/game-manager-runtime-call-helpers-runtime.ts` installs the migrated legacy global helper names before active home-family game-manager scripts load.
+- `src/entries/home-family-bootstrap.ts` wires the runtime-call helper installer immediately after `installGameManagerEnvHelpersRuntime()`.
+- Active manifest references, `HOME_STANDARD_STARTUP_FILES`, `js/core_game_manager_runtime_call_helpers_runtime.js`, and `public/js/legacy_index_nomodule_loader.js` remain intentionally in place; retirement is a later stage.
+
+## Verification
+- RED: `npx vitest run tests/unit/core-game-manager-runtime-call-helpers.spec.ts`
+- RED: `npx vitest run tests/unit/bootstrap-game-manager-runtime-call-helpers-runtime.spec.ts`
+- GREEN: `npx vitest run tests/unit/bootstrap-game-manager-runtime-call-helpers-runtime.spec.ts tests/unit/core-game-manager-runtime-call-helpers.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4325 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-17, Stage-1DE Core Game Manager Env Helpers TypeScript Boundary)
 
 ## Batch Impact
