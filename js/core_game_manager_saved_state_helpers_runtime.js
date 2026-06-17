@@ -745,34 +745,23 @@ function normalizeSavedReplayV1Session(manager, session) {
   cloned.supported = cloned.supported !== false;
   return cloned;
 }
-function applySavedManagerReplayState(manager, saved) {
-  manager.moveHistory = Array.isArray(saved.move_history) ? saved.move_history.slice() : [];
-  manager.ipsInputTimes = [];
-  manager.ipsInputCount = Number.isInteger(saved.ips_input_count) && saved.ips_input_count >= 0
-    ? saved.ips_input_count
-    : manager.moveHistory.length;
-  if (shouldRestoreSavedStateUndoHistory(manager)) {
-    manager.setRuntimeUndoStack(Array.isArray(saved.undo_stack) ? saved.undo_stack.slice() : []);
-    manager.setRuntimeRedoStack(Array.isArray(saved.redo_stack) ? saved.redo_stack.slice() : []);
-  } else {
-    manager.setRuntimeUndoStack([]);
-    manager.setRuntimeRedoStack([]);
+function resolveCoreSavedManagerReplayStateRuntime() {
+  if (typeof CoreSavedManagerReplayStateRuntime !== "undefined" && CoreSavedManagerReplayStateRuntime) {
+    return CoreSavedManagerReplayStateRuntime;
   }
-  manager.replayCompactLog = typeof saved.replay_compact_log === "string" ? saved.replay_compact_log : "";
-  var savedReplayString = typeof saved.replay_string === "string" ? saved.replay_string.trim() : "";
-  if (savedReplayString) manager.rescueReplayString = savedReplayString;
-  else if (typeof manager.rescueReplayString !== "string") manager.rescueReplayString = "";
-  var savedSessionReplayV1 = normalizeSavedReplayV1Session(manager, saved.session_replay_v1);
-  if (savedSessionReplayV1) manager.sessionReplayV1 = savedSessionReplayV1;
-  else if (!manager.sessionReplayV1 && Object.prototype.hasOwnProperty.call(saved, "session_replay_v1")) manager.sessionReplayV1 = null;
-  manager.sessionReplayV3 = isNonArrayObject(saved.session_replay_v3)
-    ? manager.clonePlain(saved.session_replay_v3)
-    : manager.sessionReplayV3;
-  manager.spawnValueCounts = isNonArrayObject(saved.spawn_value_counts)
-    ? manager.clonePlain(saved.spawn_value_counts)
-    : {};
-  manager.spawnTwos = manager.spawnValueCounts["2"] || 0;
-  manager.spawnFours = manager.spawnValueCounts["4"] || 0;
+  if (typeof window !== "undefined" && window && window.CoreSavedManagerReplayStateRuntime) {
+    return window.CoreSavedManagerReplayStateRuntime;
+  }
+  return null;
+}
+function applySavedManagerReplayState(manager, saved) {
+  var runtime = resolveCoreSavedManagerReplayStateRuntime();
+  if (runtime && typeof runtime.applySavedManagerReplayState === "function") {
+    runtime.applySavedManagerReplayState(manager, saved, {
+      normalizeSavedReplayV1Session: normalizeSavedReplayV1Session,
+      shouldRestoreSavedStateUndoHistory: shouldRestoreSavedStateUndoHistory
+    });
+  }
 }
 function applySavedManagerProgressState(manager, saved) {
   manager.comboStreak = Number.isInteger(saved.combo_streak) ? saved.combo_streak : 0;
