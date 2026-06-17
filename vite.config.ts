@@ -16,7 +16,6 @@ const HOME_STANDARD_STARTUP_FILES = [
   "tile.js",
   "local_score_manager.js",
   "local_history_store.js",
-  "core_game_manager_runtime_call_helpers_runtime.js",
   "core_game_manager_saved_state_helpers_runtime.js",
   "core_ranked_checkpoint_local_mirror_fallback_runtime.js",
   "core_game_manager_runtime_accessor_helpers_runtime.js",

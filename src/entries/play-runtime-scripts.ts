@@ -30,7 +30,6 @@ import coreCustomSpawnRuntimeUrl from "../../js/core_custom_spawn_runtime.js?url
 import corePlayCustomSpawnRuntimeUrl from "../../js/core_play_custom_spawn_runtime.js?url";
 import coreBgmRuntimeUrl from "../../js/core_bgm_runtime.js?url";
 import coreNightModeRuntimeUrl from "../../js/core_night_mode_runtime.js?url";
-import coreGameManagerRuntimeCallHelpersRuntimeUrl from "../../js/core_game_manager_runtime_call_helpers_runtime.js?url";
 import coreGameManagerSavedStateHelpersRuntimeUrl from "../../js/core_game_manager_saved_state_helpers_runtime.js?url";
 import coreGameManagerRuntimeAccessorHelpersRuntimeUrl from "../../js/core_game_manager_runtime_accessor_helpers_runtime.js?url";
 import coreGameManagerStatsUiHelpersRuntimeUrl from "../../js/core_game_manager_stats_ui_helpers_runtime.js?url";
@@ -125,7 +124,6 @@ export const playLegacyScripts = [
   corePlayCustomSpawnRuntimeUrl,
   coreBgmRuntimeUrl,
   coreNightModeRuntimeUrl,
-  coreGameManagerRuntimeCallHelpersRuntimeUrl,
   coreGameManagerSavedStateHelpersRuntimeUrl,
   coreGameManagerRuntimeAccessorHelpersRuntimeUrl,
   coreGameManagerStatsUiHelpersRuntimeUrl,
