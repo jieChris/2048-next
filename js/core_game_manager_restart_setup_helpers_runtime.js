@@ -25,6 +25,20 @@ function resolveCoreRankedCheckpointLocalMirrorSetupRuntime(manager) {
   return null;
 }
 
+function resolveCoreRankedSessionSetupContextRuntime(manager) {
+  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  if (windowLike && windowLike.CoreRankedSessionSetupContextRuntime) {
+    return windowLike.CoreRankedSessionSetupContextRuntime;
+  }
+  if (
+    typeof CoreRankedSessionSetupContextRuntime !== "undefined" &&
+    CoreRankedSessionSetupContextRuntime
+  ) {
+    return CoreRankedSessionSetupContextRuntime;
+  }
+  return null;
+}
+
 function ensureNoXSelectionOverlayForManager(manager) {
   var runtime = resolveCoreNoXSelectionRuntime(manager);
   if (runtime && typeof runtime.ensureNoXSelectionOverlayForManager === "function") {
@@ -288,28 +302,11 @@ function resolveFreshSetupSeed(manager) {
 }
 
 function resolveSetupRankedSessionContext(manager) {
-  if (!manager || manager.rankPolicy !== "ranked") return null;
-  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
-  var context = windowLike && windowLike.GAME_CHALLENGE_CONTEXT ? windowLike.GAME_CHALLENGE_CONTEXT : null;
-  if (!context || typeof context !== "object" || Array.isArray(context)) return null;
-  var modeKey = typeof manager.modeKey === "string" && manager.modeKey
-    ? manager.modeKey
-    : (typeof manager.mode === "string" ? manager.mode : "");
-  var contextModeKey = typeof context.mode_key === "string" ? context.mode_key.trim() : "";
-  if (modeKey && contextModeKey && contextModeKey !== modeKey) return null;
-  var challengeId = typeof context.id === "string" ? context.id.trim() : "";
-  var seed = Math.floor(Number(context.seed));
-  var rankedSessionToken = typeof context.ranked_session_token === "string"
-    ? context.ranked_session_token.trim()
-    : "";
-  if (!challengeId) return null;
-  if (!Number.isInteger(seed) || seed < 0) return null;
-  return {
-    id: challengeId,
-    mode_key: contextModeKey || modeKey,
-    seed: seed,
-    ranked_session_token: rankedSessionToken
-  };
+  var runtime = resolveCoreRankedSessionSetupContextRuntime(manager);
+  if (runtime && typeof runtime.resolveSetupRankedSessionContext === "function") {
+    return runtime.resolveSetupRankedSessionContext(manager);
+  }
+  return null;
 }
 
 function initializeSetupSeedAndReplayState(manager, inputSeed) {

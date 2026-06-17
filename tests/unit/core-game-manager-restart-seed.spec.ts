@@ -4,6 +4,8 @@ import vm from "node:vm";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { createRankedSessionSetupContextRuntime } from "../../src/core/ranked-session-setup-context";
+
 type RestartSeedRuntime = {
   initializeSetupSeedAndReplayState: (
     manager: Record<string, unknown> | null,
@@ -39,6 +41,7 @@ function loadRestartSeedRuntime(options?: {
     Date: { now: dateNow },
     performance: { now: performanceNow }
   } as Record<string, unknown>;
+  context.CoreRankedSessionSetupContextRuntime = createRankedSessionSetupContextRuntime();
 
   vm.runInNewContext(script, context);
 
