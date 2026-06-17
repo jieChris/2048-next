@@ -77,6 +77,7 @@ import { installRankedSessionSetupContextRuntime } from "../core/ranked-session-
 import { installPreAccessorManagerForwardBindingsRuntime } from "../core/pre-accessor-manager-forward-bindings";
 import { installResetSetupReplayAndSpawnStateRuntime } from "../core/reset-setup-replay-and-spawn-state";
 import { installRestartGameRuntime } from "../core/restart-game";
+import { installSavedManagerTimerStateRuntime } from "../core/saved-manager-timer-state";
 import { installSessionReplaySnapshotRuntime } from "../core/session-replay-snapshot";
 import { installSetupRestoreInitialBoardStateRuntime } from "../core/setup-restore-initial-board-state";
 import { installSetupStateInitializationRuntime } from "../core/setup-state-initialization";
@@ -269,6 +270,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installPreAccessorManagerForwardBindingsRuntime();
   installResetSetupReplayAndSpawnStateRuntime();
   installRestartGameRuntime();
+  installSavedManagerTimerStateRuntime();
   installSessionReplaySnapshotRuntime();
   installSetupRestoreInitialBoardStateRuntime();
   installSetupStateInitializationRuntime();

@@ -799,36 +799,20 @@ function applySavedManagerProgressState(manager, saved) {
   manager.lockedDirectionTurn = Number.isInteger(saved.locked_direction_turn) ? saved.locked_direction_turn : null;
   manager.lockedDirection = Number.isInteger(saved.locked_direction) ? saved.locked_direction : null;
 }
+function resolveCoreSavedManagerTimerStateRuntime() {
+  if (typeof CoreSavedManagerTimerStateRuntime !== "undefined" && CoreSavedManagerTimerStateRuntime) {
+    return CoreSavedManagerTimerStateRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CoreSavedManagerTimerStateRuntime) {
+    return window.CoreSavedManagerTimerStateRuntime;
+  }
+  return null;
+}
 function applySavedManagerTimerState(manager, saved) {
-  var savedDurationMs = Number.isFinite(saved.duration_ms) && saved.duration_ms >= 0 ? Math.floor(saved.duration_ms) : 0;
-  var savedStartedAtMs = Number(saved.timer_started_at_ms);
-  var savedElapsedOffsetMs = Number(saved.timer_elapsed_offset_ms);
-  var savedAnchorLocalMs = Number(saved.timer_anchor_local_ms);
-  var savedAnchorServerMs = Number(saved.timer_anchor_server_ms);
-  var isTerminatedTimerState = !!(saved.over || (saved.won && !saved.keep_playing));
-  var isActiveTimer = saved.timer_status === 1 && !isTerminatedTimerState && !saved.timer_frozen;
-  var hasAnchor = Number.isFinite(savedAnchorLocalMs) && savedAnchorLocalMs >= 0;
-  var hasOffset = Number.isFinite(savedElapsedOffsetMs) && savedElapsedOffsetMs >= 0;
-  if (isActiveTimer && hasAnchor) {
-    var anchorDurationMs = (hasOffset ? Math.floor(savedElapsedOffsetMs) : 0) + Math.max(0, Date.now() - Math.floor(savedAnchorLocalMs));
-    if (Number.isFinite(anchorDurationMs) && anchorDurationMs >= 0) {
-      savedDurationMs = Math.max(savedDurationMs, Math.floor(anchorDurationMs));
-    }
+  var runtime = resolveCoreSavedManagerTimerStateRuntime();
+  if (runtime && typeof runtime.applySavedManagerTimerState === "function") {
+    runtime.applySavedManagerTimerState(manager, saved);
   }
-  if (isActiveTimer && Number.isFinite(savedStartedAtMs) && savedStartedAtMs > 0) {
-    savedDurationMs = Math.max(savedDurationMs, Date.now() - Math.floor(savedStartedAtMs));
-  }
-  manager.accumulatedTime = savedDurationMs;
-  manager.time = manager.accumulatedTime;
-  manager.startTime = null;
-  manager.timerStatus = 0;
-  manager.timerFrozen = !!saved.timer_frozen;
-  manager.timerElapsedOffsetMs = isActiveTimer && hasOffset ? Math.floor(savedElapsedOffsetMs) : savedDurationMs;
-  manager.timerAnchorLocalMs = isActiveTimer && hasAnchor ? Math.floor(savedAnchorLocalMs) : null;
-  manager.timerAnchorServerMs =
-    isActiveTimer && Number.isFinite(savedAnchorServerMs) && savedAnchorServerMs >= 0
-      ? Math.floor(savedAnchorServerMs)
-      : null;
 }
 function applySavedManagerBoardSnapshotState(manager, saved) {
   manager.initialBoardMatrix =
