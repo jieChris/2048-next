@@ -25,6 +25,8 @@ export interface SpecialRulesState {
 
 export interface SpecialRulesRuntime {
   computeSpecialRulesState: typeof computeSpecialRulesState;
+  applySpecialRulesStateSnapshot: typeof applySpecialRulesStateSnapshot;
+  applySpecialRulesStateFallback: typeof applySpecialRulesStateFallback;
 }
 
 export interface SpecialRulesRuntimeWindowLike {
@@ -82,24 +84,124 @@ function normalizeMoveTimeoutMs(rawValue: unknown): number | null {
   return timeoutMs;
 }
 
+function resolvePositiveIntegerRuleValue(
+  source: Record<string, unknown>,
+  primaryKey: string,
+  fallbackKey: string,
+  defaultValue: number
+): number {
+  if (Number.isInteger(source[primaryKey]) && Number(source[primaryKey]) > 0) {
+    return Number(source[primaryKey]);
+  }
+  if (Number.isInteger(source[fallbackKey]) && Number(source[fallbackKey]) > 0) {
+    return Number(source[fallbackKey]);
+  }
+  return defaultValue;
+}
+
 function normalizeItemModeRules(rawValue: unknown): ItemModeRules | null {
   if (!rawValue || typeof rawValue !== "object" || Array.isArray(rawValue)) return null;
   const source = rawValue as Record<string, unknown>;
   if (source.enabled === false) return null;
-  const grantEveryMoves =
-    Number.isInteger(source.grant_every_moves) && Number(source.grant_every_moves) > 0
-      ? Number(source.grant_every_moves)
-      : 6;
-  const maxPerItem =
-    Number.isInteger(source.max_per_item) && Number(source.max_per_item) > 0
-      ? Number(source.max_per_item)
-      : 3;
-
   return {
     enabled: true,
-    grantEveryMoves,
-    maxPerItem
+    grantEveryMoves: resolvePositiveIntegerRuleValue(source, "grantEveryMoves", "grant_every_moves", 6),
+    maxPerItem: resolvePositiveIntegerRuleValue(source, "maxPerItem", "max_per_item", 3)
   };
+}
+
+export interface SpecialRulesManagerLike {
+  width?: unknown;
+  height?: unknown;
+  specialRules?: PlainRecord | null | undefined;
+  clonePlain?: (value: unknown) => unknown;
+  blockedCellSet?: Record<string, true>;
+  blockedCellsList?: CellPoint[];
+  stoneCellsList?: CellPoint[];
+  stoneValueSet?: Record<string, true>;
+  undoLimit?: number | null;
+  comboMultiplier?: number;
+  directionLockRules?: unknown | null;
+  allowedDirections?: number[];
+  allowedDirectionSet?: Record<string, true>;
+  moveTimeoutMs?: number | null;
+  itemModeRules?: ItemModeRules | null;
+}
+
+function normalizeRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function cloneManagerPlain(manager: SpecialRulesManagerLike, value: unknown): unknown {
+  return typeof manager.clonePlain === "function" ? manager.clonePlain(value) : safeClonePlain(value, null);
+}
+
+function resolveStoneMarkerValue(index: number): number {
+  return 3 + (Number(index) * 2);
+}
+
+function applyStoneStateToManager(manager: SpecialRulesManagerLike, stoneCellsList: unknown): void {
+  manager.stoneCellsList = Array.isArray(stoneCellsList) ? stoneCellsList.slice() : [];
+  manager.stoneValueSet = {};
+  for (let index = 0; index < manager.stoneCellsList.length; index += 1) {
+    manager.stoneValueSet[String(resolveStoneMarkerValue(index))] = true;
+  }
+}
+
+function normalizeMoveDirectionsForManager(rawDirections: unknown): number[] {
+  const source = Array.isArray(rawDirections) ? rawDirections : [];
+  const out: number[] = [];
+  for (let index = 0; index < source.length; index += 1) {
+    const dir = Number(source[index]);
+    if (!Number.isInteger(dir) || dir < 0 || dir > 7) continue;
+    if (out.indexOf(dir) !== -1) continue;
+    out.push(dir);
+  }
+  return out.length > 0 ? out : [0, 1, 2, 3];
+}
+
+function applyMoveDirectionsToManager(manager: SpecialRulesManagerLike, rawDirections: unknown): void {
+  manager.allowedDirections = normalizeMoveDirectionsForManager(rawDirections);
+  manager.allowedDirectionSet = {};
+  for (let index = 0; index < manager.allowedDirections.length; index += 1) {
+    manager.allowedDirectionSet[String(manager.allowedDirections[index])] = true;
+  }
+}
+
+function normalizeItemModeRulesForManager(rawRules: unknown): ItemModeRules | null {
+  return normalizeItemModeRules(rawRules);
+}
+
+export function applySpecialRulesStateSnapshot(
+  manager: SpecialRulesManagerLike | null | undefined,
+  stateValue: unknown
+): void {
+  if (!manager) return;
+  const state = normalizeRecord(stateValue);
+  manager.blockedCellSet = normalizeRecord(state.blockedCellSet) as Record<string, true>;
+  manager.blockedCellsList = Array.isArray(state.blockedCellsList) ? state.blockedCellsList as CellPoint[] : [];
+  applyStoneStateToManager(manager, normalizePointList(state.stoneCellsList, Number(manager.width), Number(manager.height)));
+  manager.undoLimit =
+    Number.isInteger(state.undoLimit) && Number(state.undoLimit) >= 0 ? Number(state.undoLimit) : null;
+  manager.comboMultiplier =
+    Number.isFinite(state.comboMultiplier) && Number(state.comboMultiplier) > 1
+      ? Number(state.comboMultiplier)
+      : 1;
+  manager.directionLockRules = isRecord(state.directionLockRules)
+    ? cloneManagerPlain(manager, state.directionLockRules)
+    : null;
+  applyMoveDirectionsToManager(manager, state.movementDirections);
+  manager.moveTimeoutMs =
+    Number.isInteger(state.moveTimeoutMs) && Number(state.moveTimeoutMs) > 0
+      ? Number(state.moveTimeoutMs)
+      : null;
+  manager.itemModeRules = normalizeItemModeRulesForManager(state.itemModeRules);
 }
 
 export function computeSpecialRulesState(
@@ -149,9 +251,21 @@ export function computeSpecialRulesState(
   };
 }
 
+export function applySpecialRulesStateFallback(manager: SpecialRulesManagerLike | null | undefined): void {
+  if (!manager) return;
+  const state = computeSpecialRulesState(
+    manager.specialRules || {},
+    Number(manager.width),
+    Number(manager.height)
+  );
+  applySpecialRulesStateSnapshot(manager, state);
+}
+
 export function createSpecialRulesRuntime(): SpecialRulesRuntime {
   return {
-    computeSpecialRulesState
+    computeSpecialRulesState,
+    applySpecialRulesStateSnapshot,
+    applySpecialRulesStateFallback
   };
 }
 
@@ -164,6 +278,11 @@ export function installSpecialRulesRuntime(
   if (!windowLike) return null;
   if (!windowLike.CoreSpecialRulesRuntime) {
     windowLike.CoreSpecialRulesRuntime = createSpecialRulesRuntime();
+  } else {
+    const runtime = createSpecialRulesRuntime();
+    windowLike.CoreSpecialRulesRuntime.computeSpecialRulesState ||= runtime.computeSpecialRulesState;
+    windowLike.CoreSpecialRulesRuntime.applySpecialRulesStateSnapshot ||= runtime.applySpecialRulesStateSnapshot;
+    windowLike.CoreSpecialRulesRuntime.applySpecialRulesStateFallback ||= runtime.applySpecialRulesStateFallback;
   }
   return windowLike.CoreSpecialRulesRuntime || null;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applySpecialRulesStateSnapshot,
   computeSpecialRulesState,
   createSpecialRulesRuntime,
   installSpecialRulesRuntime,
@@ -12,6 +13,7 @@ describe("core special rules runtime installer", () => {
     const runtime = createSpecialRulesRuntime();
 
     expect(runtime.computeSpecialRulesState).toBe(computeSpecialRulesState);
+    expect(runtime.applySpecialRulesStateSnapshot).toBe(applySpecialRulesStateSnapshot);
   });
 
   it("installs the runtime on a supplied window-like object", () => {
@@ -21,6 +23,7 @@ describe("core special rules runtime installer", () => {
 
     expect(installed).toBe(windowLike.CoreSpecialRulesRuntime);
     expect(installed?.computeSpecialRulesState).toBeTypeOf("function");
+    expect(installed?.applySpecialRulesStateSnapshot).toBeTypeOf("function");
   });
 
   it("does not overwrite an existing special rules runtime", () => {
@@ -100,5 +103,41 @@ describe("core special rules: computeSpecialRulesState", () => {
 
     (raw.direction_lock as { every_k_moves: number }).every_k_moves = 99;
     expect((state.directionLockRules as { every_k_moves: number }).every_k_moves).toBe(3);
+  });
+
+  it("applies a computed state snapshot to the legacy manager shape", () => {
+    const manager = {
+      width: 4,
+      height: 4,
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      }
+    };
+
+    applySpecialRulesStateSnapshot(manager, {
+      blockedCellSet: { "0:0": true },
+      blockedCellsList: [{ x: 0, y: 0 }],
+      stoneCellsList: [{ x: 1, y: 1 }],
+      undoLimit: 2,
+      comboMultiplier: 3,
+      directionLockRules: { every_k_moves: 4 },
+      movementDirections: [0, 2, 2, 9],
+      moveTimeoutMs: 1500,
+      itemModeRules: { enabled: true, grantEveryMoves: 5, maxPerItem: 2 }
+    });
+
+    expect(manager).toMatchObject({
+      blockedCellSet: { "0:0": true },
+      blockedCellsList: [{ x: 0, y: 0 }],
+      stoneCellsList: [{ x: 1, y: 1 }],
+      stoneValueSet: { "3": true },
+      undoLimit: 2,
+      comboMultiplier: 3,
+      directionLockRules: { every_k_moves: 4 },
+      allowedDirections: [0, 2],
+      allowedDirectionSet: { "0": true, "2": true },
+      moveTimeoutMs: 1500,
+      itemModeRules: { enabled: true, grantEveryMoves: 5, maxPerItem: 2 }
+    });
   });
 });
