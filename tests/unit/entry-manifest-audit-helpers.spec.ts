@@ -328,6 +328,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks replay-helpers runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_game_manager_replay_helpers_runtime.js",
+      symbolName: "coreGameManagerReplayHelpersRuntimeUrl"
+    });
+  });
+
   it("tracks base-helpers runtime as a retired active-manifest script", () => {
     expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
       scriptPath: "core_game_manager_base_helpers_runtime.js",
@@ -791,6 +798,12 @@ describe("entry-manifest-audit helpers", () => {
   it("tracks runtime-accessor-helpers runtime as a retired Vite bundled runtime script", () => {
     expect(BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS).toContainEqual({
       scriptPath: "core_game_manager_runtime_accessor_helpers_runtime.js"
+    });
+  });
+
+  it("tracks replay-helpers runtime as a retired Vite bundled runtime script", () => {
+    expect(BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS).toContainEqual({
+      scriptPath: "core_game_manager_replay_helpers_runtime.js"
     });
   });
 
