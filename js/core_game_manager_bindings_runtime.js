@@ -32,6 +32,37 @@ var STANDARD_GAME_MANAGER_CORE_RUNTIME_KEYS = [
   "TimerInterval"
 ];
 
+var PRE_ACCESSOR_MANAGER_FORWARD_BINDINGS = {
+  encodeReplay128: encodeReplay128,
+  decodeReplay128: decodeReplay128,
+  resolveCoreObjectCallOrFallback: resolveCoreObjectCallOrFallback,
+  resolveCoreBooleanCallOrFallback: resolveCoreBooleanCallOrFallback,
+  resolveCoreNumericCallOrFallback: resolveCoreNumericCallOrFallback,
+  resolveCoreStringCallOrFallback: resolveCoreStringCallOrFallback,
+  resolveNormalizedCoreValueOrUndefined: resolveNormalizedCoreValueOrUndefined,
+  resolveNormalizedCoreValueOrFallback: resolveNormalizedCoreValueOrFallback,
+  resolveNormalizedCoreValueOrFallbackAllowNull: resolveNormalizedCoreValueOrFallbackAllowNull,
+  resolveCoreRawCallValueOrUndefined: resolveCoreRawCallValueOrUndefined,
+  tryHandleCoreRawValue: tryHandleCoreRawValue,
+  createCoreModeContextPayload: createCoreModeContextPayload,
+  setRuntimeScore: setRuntimeScore,
+  addRuntimeScoreDelta: addRuntimeScoreDelta,
+  setRuntimeReplayIndex: setRuntimeReplayIndex,
+  setRuntimeReplayMoves: setRuntimeReplayMoves,
+  setRuntimeReplaySpawns: setRuntimeReplaySpawns,
+  setRuntimeReplayMovesV2: setRuntimeReplayMovesV2,
+  setRuntimeUndoEnabled: setRuntimeUndoEnabled,
+  setRuntimeDisableSessionSync: setRuntimeDisableSessionSync,
+  setRuntimeReplayDelay: setRuntimeReplayDelay,
+  setRuntimeGrid: setRuntimeGrid,
+  setRuntimeUndoStack: setRuntimeUndoStack,
+  setRuntimeRedoStack: setRuntimeRedoStack,
+  pushRuntimeUndoStackEntry: pushRuntimeUndoStackEntry,
+  clearRuntimeRedoStack: clearRuntimeRedoStack,
+  writeRuntimeGridCell: writeRuntimeGridCell,
+  clearRuntimeGridCell: clearRuntimeGridCell
+};
+
 function bindGameManagerPrototypeMethod(methodName, bindingFactory) {
   if (!(typeof methodName === "string" && methodName)) return;
   if (typeof bindingFactory !== "function") return;
@@ -74,37 +105,22 @@ function bindGameManagerPrototypeForwardBatch(bindings) {
   }
 }
 
+function resolveCorePreAccessorManagerForwardBindingsRuntime() {
+  if (typeof CorePreAccessorManagerForwardBindingsRuntime !== "undefined" && CorePreAccessorManagerForwardBindingsRuntime) {
+    return CorePreAccessorManagerForwardBindingsRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CorePreAccessorManagerForwardBindingsRuntime) {
+    return window.CorePreAccessorManagerForwardBindingsRuntime;
+  }
+  return null;
+}
+
 function createPreAccessorManagerForwardBindings() {
-  return [
-    ["encodeReplay128", encodeReplay128],
-    ["decodeReplay128", decodeReplay128],
-    ["resolveCoreObjectCallOrFallback", resolveCoreObjectCallOrFallback],
-    ["resolveCoreBooleanCallOrFallback", resolveCoreBooleanCallOrFallback],
-    ["resolveCoreNumericCallOrFallback", resolveCoreNumericCallOrFallback],
-    ["resolveCoreStringCallOrFallback", resolveCoreStringCallOrFallback],
-    ["resolveNormalizedCoreValueOrUndefined", resolveNormalizedCoreValueOrUndefined],
-    ["resolveNormalizedCoreValueOrFallback", resolveNormalizedCoreValueOrFallback],
-    ["resolveNormalizedCoreValueOrFallbackAllowNull", resolveNormalizedCoreValueOrFallbackAllowNull],
-    ["resolveCoreRawCallValueOrUndefined", resolveCoreRawCallValueOrUndefined],
-    ["tryHandleCoreRawValue", tryHandleCoreRawValue],
-    ["createCoreModeContextPayload", createCoreModeContextPayload],
-    ["setRuntimeScore", setRuntimeScore],
-    ["addRuntimeScoreDelta", addRuntimeScoreDelta],
-    ["setRuntimeReplayIndex", setRuntimeReplayIndex],
-    ["setRuntimeReplayMoves", setRuntimeReplayMoves],
-    ["setRuntimeReplaySpawns", setRuntimeReplaySpawns],
-    ["setRuntimeReplayMovesV2", setRuntimeReplayMovesV2],
-    ["setRuntimeUndoEnabled", setRuntimeUndoEnabled],
-    ["setRuntimeDisableSessionSync", setRuntimeDisableSessionSync],
-    ["setRuntimeReplayDelay", setRuntimeReplayDelay],
-    ["setRuntimeGrid", setRuntimeGrid],
-    ["setRuntimeUndoStack", setRuntimeUndoStack],
-    ["setRuntimeRedoStack", setRuntimeRedoStack],
-    ["pushRuntimeUndoStackEntry", pushRuntimeUndoStackEntry],
-    ["clearRuntimeRedoStack", clearRuntimeRedoStack],
-    ["writeRuntimeGridCell", writeRuntimeGridCell],
-    ["clearRuntimeGridCell", clearRuntimeGridCell]
-  ];
+  var runtime = resolveCorePreAccessorManagerForwardBindingsRuntime();
+  if (runtime && typeof runtime.createPreAccessorManagerForwardBindings === "function") {
+    return runtime.createPreAccessorManagerForwardBindings(PRE_ACCESSOR_MANAGER_FORWARD_BINDINGS);
+  }
+  return [];
 }
 
 function createPreAccessorPlainForwardBindings() {

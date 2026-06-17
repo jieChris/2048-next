@@ -29,6 +29,9 @@ describe("home family bootstrap ranked session ordering", () => {
     vi.doMock("../../src/bootstrap/home-user-display", () => ({
       bindHomeUserDisplay: vi.fn()
     }));
+    vi.doMock("../../src/core/pre-accessor-manager-forward-bindings", () => ({
+      installPreAccessorManagerForwardBindingsRuntime: vi.fn()
+    }));
     vi.doMock("../../src/entries/legacy-loader", () => ({
       loadLegacyScriptsSequentially: vi.fn(async (scripts: string[]) => {
         loadCalls.push(scripts);
@@ -57,5 +60,48 @@ describe("home family bootstrap ranked session ordering", () => {
       ["./js/core_game_manager_replay_helpers_runtime.js?v=20260617-replay-compat"],
       ["./js/home_standard_startup_bundle.js?v=20260609-rescue-sync1"]
     ]);
+  });
+
+  it("installs the pre-accessor manager-forward bindings runtime before loading game scripts", async () => {
+    const installPreAccessorManagerForwardBindingsRuntime = vi.fn();
+
+    vi.doMock("../../src/bootstrap/page-bootstrap", () => ({
+      createBootstrapPipeline: () => [],
+      resolvePageDescriptor: () => ({ id: "play" })
+    }));
+    vi.doMock("../../src/bootstrap/engine-facade-host", () => ({
+      registerEngineFacade: vi.fn()
+    }));
+    vi.doMock("../../src/bootstrap/ranked-session", () => ({
+      bootstrapRankedSessionForHomeFamilyPage: vi.fn(async () => {})
+    }));
+    vi.doMock("../../src/bootstrap/storage", () => ({
+      resolveStorageByName: () => null,
+      safeReadStorageItem: () => ""
+    }));
+    vi.doMock("../../src/bootstrap/home-user-display", () => ({
+      bindHomeUserDisplay: vi.fn()
+    }));
+    vi.doMock("../../src/core/pre-accessor-manager-forward-bindings", () => ({
+      installPreAccessorManagerForwardBindingsRuntime
+    }));
+    vi.doMock("../../src/entries/legacy-loader", () => ({
+      loadLegacyScriptsSequentially: vi.fn(async () => {})
+    }));
+    vi.doMock("../../src/entries/runtime-manifest", () => ({
+      getPageManifest: () => ({
+        id: "play",
+        capabilities: ["core", "standard-startup"]
+      })
+    }));
+    vi.doMock("../../src/entries/home-family-shared", () => ({
+      resolveHomeFamilyScriptsByCapabilities: () => ["mock-runtime.js"]
+    }));
+
+    const { bootstrapHomeFamilyPage } = await import("../../src/entries/home-family-bootstrap");
+
+    await bootstrapHomeFamilyPage("play");
+
+    expect(installPreAccessorManagerForwardBindingsRuntime).toHaveBeenCalledTimes(1);
   });
 });
