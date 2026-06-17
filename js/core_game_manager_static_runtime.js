@@ -171,62 +171,23 @@ function createGameManagerFallbackPow2BoardModeConfigs() {
   return configs;
 }
 
-function createGameManagerFallbackPow2VariantModeConfigs() {
-  var spawn50 = createFallbackPow2ModeConfig(
-    "spawn50_3x3_pow2_no_undo",
-    "3x3 Spawn 50/50 (No Undo)",
-    3,
-    3,
-    false,
-    null,
-    "none",
-    [{ value: 2, weight: 50 }, { value: 4, weight: 50 }]
-  );
-  spawn50.mode_family = "pow2";
-  spawn50.special_rules = {};
-  spawn50.rank_policy = "unranked";
-
-  var diag3NoUndo = createFallbackPow2ModeConfig("diag_3x3_pow2_no_undo", "Diagonal 3x3 (No Undo)", 3, 3, false, null, "none");
-  var diag4NoUndo = createFallbackPow2ModeConfig("diag_4x4_pow2_no_undo", "Diagonal 4x4 (No Undo)", 4, 4, false, null, "none");
-  var diag4x3NoUndo = createFallbackPow2ModeConfig("diag_3x4_pow2_no_undo", "Diagonal 4x3 (No Undo)", 4, 3, false, null, "none");
-  var diag4x2NoUndo = createFallbackPow2ModeConfig("diag_2x4_pow2_no_undo", "Diagonal 4x2 (No Undo)", 4, 2, false, null, "none");
-  var itemNoUndo = createFallbackPow2ModeConfig("item_4x4_pow2_no_undo", "Item Mode 4x4 (No Undo)", 4, 4, false, null, "none");
-  var stoneNoUndo = createFallbackPow2ModeConfig("stone_4x4_pow2_no_undo", "Stone Mode 4x4 (No Undo)", 4, 4, false, null, "none");
-  var timed5sNoUndo = createFallbackPow2ModeConfig("timed5s_4x4_pow2_no_undo", "Timed 5s 4x4 (No Undo)", 4, 4, false, null, "none");
-  var noXNoUndo = createFallbackPow2ModeConfig("nox_4x4_pow2_no_undo", "NO X 4x4 (No Undo)", 4, 4, false, null, "none");
-
-  var variantList = [diag3NoUndo, diag4NoUndo, diag4x3NoUndo, diag4x2NoUndo, itemNoUndo, stoneNoUndo, timed5sNoUndo, noXNoUndo];
-  for (var i = 0; i < variantList.length; i++) {
-    var item = variantList[i];
-    item.mode_family = "pow2";
-    item.special_rules = {};
-    item.rank_policy = "unranked";
+function resolveCoreFallbackModeConfigsRuntime() {
+  var windowLike = typeof window !== "undefined" ? window : null;
+  if (windowLike && windowLike.CoreFallbackModeConfigsRuntime) {
+    return windowLike.CoreFallbackModeConfigsRuntime;
   }
+  if (typeof CoreFallbackModeConfigsRuntime !== "undefined" && CoreFallbackModeConfigsRuntime) {
+    return CoreFallbackModeConfigsRuntime;
+  }
+  return null;
+}
 
-  diag3NoUndo.special_rules.allow_diagonal_moves = true;
-  diag4NoUndo.special_rules.allow_diagonal_moves = true;
-  diag4x3NoUndo.special_rules.allow_diagonal_moves = true;
-  diag4x2NoUndo.special_rules.allow_diagonal_moves = true;
-  itemNoUndo.mode_family = "item";
-  itemNoUndo.special_rules.item_mode = { enabled: true, grant_every_moves: 6, max_per_item: 3 };
-  stoneNoUndo.mode_family = "stone";
-  stoneNoUndo.special_rules.stone_tiles = [[1, 1], [2, 2]];
-  timed5sNoUndo.mode_family = "timed";
-  timed5sNoUndo.special_rules.move_timeout_ms = 5000;
-  noXNoUndo.special_rules.no_x_enabled = true;
-  noXNoUndo.special_rules.no_x_target = null;
-
-  return {
-    spawn50_3x3_pow2_no_undo: spawn50,
-    diag_3x3_pow2_no_undo: diag3NoUndo,
-    diag_4x4_pow2_no_undo: diag4NoUndo,
-    diag_3x4_pow2_no_undo: diag4x3NoUndo,
-    diag_2x4_pow2_no_undo: diag4x2NoUndo,
-    item_4x4_pow2_no_undo: itemNoUndo,
-    stone_4x4_pow2_no_undo: stoneNoUndo,
-    timed5s_4x4_pow2_no_undo: timed5sNoUndo,
-    nox_4x4_pow2_no_undo: noXNoUndo
-  };
+function createGameManagerFallbackPow2VariantModeConfigs() {
+  var runtime = resolveCoreFallbackModeConfigsRuntime();
+  if (runtime && typeof runtime.createGameManagerFallbackPow2VariantModeConfigs === "function") {
+    return runtime.createGameManagerFallbackPow2VariantModeConfigs();
+  }
+  return {};
 }
 
 function createGameManagerFallbackPow2ModeConfigs(defaultModeConfig) {
