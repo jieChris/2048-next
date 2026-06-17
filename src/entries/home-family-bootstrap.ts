@@ -71,6 +71,7 @@ import { installUndoTileRestoreRuntime } from "../bootstrap/undo-tile-restore-ru
 import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-runtime";
 import { installCoreModeRuntime } from "../core/mode";
 import { installRulesRuntime } from "../core/rules";
+import { installSingleModePageLockRuntime } from "../core/single-mode-page-lock";
 import { installSpecialRulesRuntime } from "../core/special-rules";
 import { installCryptoRandomRuntime } from "../utils/crypto-random";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
@@ -247,6 +248,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installModeCatalogRuntime();
   installRulesRuntime();
   installSpecialRulesRuntime();
+  installSingleModePageLockRuntime();
   installCoreModeRuntime();
   installPracticeModeRuntime();
   installHomeModeRuntime();

@@ -1222,178 +1222,45 @@ function resolveSingleModePageTabId(windowLike) {
   return tabId;
 }
 
+function resolveCoreSingleModePageLockRuntime(manager) {
+  var windowLike = manager && manager.windowLike ? manager.windowLike : resolveSingleModePageLockWindowLike(manager);
+  if (windowLike && windowLike.CoreSingleModePageLockRuntime) {
+    return windowLike.CoreSingleModePageLockRuntime;
+  }
+  if (typeof CoreSingleModePageLockRuntime !== "undefined" && CoreSingleModePageLockRuntime) {
+    return CoreSingleModePageLockRuntime;
+  }
+  return null;
+}
+
+function createSingleModePageLockRuntimeOptions() {
+  return {
+    keyPrefix: resolveSingleModePageLockKeyPrefix(),
+    tabIdSessionKey: resolveSingleModePageTabIdSessionKey(),
+    ttlMs: resolveSingleModePageLockTtlMs(),
+    heartbeatMs: resolveSingleModePageHeartbeatMs(),
+    createId: createRestartRandomId
+  };
+}
+
 function releaseSingleModePageLockStateObject(lockState) {
-  if (!lockState) return;
-  var windowLike = lockState.windowLike;
-  if (lockState.heartbeatId && windowLike && typeof windowLike.clearInterval === "function") {
-    windowLike.clearInterval(lockState.heartbeatId);
-    lockState.heartbeatId = 0;
-  }
-  if (windowLike && typeof windowLike.removeEventListener === "function") {
-    if (typeof lockState.beforeUnloadHandler === "function") {
-      windowLike.removeEventListener("beforeunload", lockState.beforeUnloadHandler);
-    }
-    if (typeof lockState.pageHideHandler === "function") {
-      windowLike.removeEventListener("pagehide", lockState.pageHideHandler);
-    }
-    if (typeof lockState.storageHandler === "function") {
-      windowLike.removeEventListener("storage", lockState.storageHandler);
-    }
-  }
-  var latest = readSingleModePageLockRecord(lockState.storageLike, lockState.lockKey);
-  if (isSingleModePageLockOwnedBy(latest, lockState.tabId, lockState.token, lockState.instanceId)) {
-    removeSingleModePageStorageItemSafe(lockState.storageLike, lockState.lockKey);
-  }
-  if (windowLike && windowLike.__playSinglePageModeLockState === lockState) {
-    windowLike.__playSinglePageModeLockState = null;
+  var runtime = resolveCoreSingleModePageLockRuntime(lockState);
+  if (runtime && typeof runtime.releaseSingleModePageLockStateObject === "function") {
+    runtime.releaseSingleModePageLockStateObject(lockState);
   }
 }
 
 function releaseSingleModePageLock(manager) {
-  if (!manager) return;
-  if (manager.singleModePageLockState) {
-    releaseSingleModePageLockStateObject(manager.singleModePageLockState);
-    manager.singleModePageLockState = null;
+  var runtime = resolveCoreSingleModePageLockRuntime(manager);
+  if (runtime && typeof runtime.releaseSingleModePageLock === "function") {
+    runtime.releaseSingleModePageLock(manager);
   }
-}
-
-function shouldSkipSingleModePageLock(manager) {
-  if (!manager) return true;
-  var windowLike = resolveSingleModePageLockWindowLike(manager);
-  var pathname = "";
-  try {
-    pathname = windowLike && windowLike.location && typeof windowLike.location.pathname === "string"
-      ? windowLike.location.pathname
-      : "";
-  } catch (_errPathname) {
-    pathname = "";
-  }
-  var normalizedPath = String(pathname || "").toLowerCase();
-  return (
-    normalizedPath.indexOf("replay.html") !== -1 ||
-    normalizedPath.indexOf("practice_board.html") !== -1
-  );
 }
 
 function ensureSingleModePageLock(manager) {
-  if (!manager) return true;
-  if (shouldSkipSingleModePageLock(manager)) {
-    releaseSingleModePageLock(manager);
-    return true;
-  }
-  var modeKey = String(manager.modeKey || manager.mode || "");
-  if (!modeKey) return true;
-  var windowLike = resolveSingleModePageLockWindowLike(manager);
-  var storageLike = resolveSingleModePageLocalStorage(manager, windowLike);
-  if (!storageLike) return true;
-
-  var managerState = manager.singleModePageLockState;
-  if (managerState && managerState.modeKey === modeKey) return true;
-  if (managerState && managerState.modeKey !== modeKey) {
-    releaseSingleModePageLock(manager);
-  }
-
-  var windowState = windowLike && isNonArrayObject(windowLike.__playSinglePageModeLockState)
-    ? windowLike.__playSinglePageModeLockState
-    : null;
-  if (windowState && windowState.modeKey === modeKey) {
-    manager.singleModePageLockState = windowState;
-    return true;
-  }
-  if (windowState && windowState.modeKey !== modeKey) {
-    releaseSingleModePageLockStateObject(windowState);
-  }
-
-  var lockKey = resolveSingleModePageLockKey(modeKey);
-  var ttlMs = resolveSingleModePageLockTtlMs();
-  var heartbeatMs = resolveSingleModePageHeartbeatMs();
-  var nowMs = Date.now();
-  var tabId = resolveSingleModePageTabId(windowLike);
-  var instanceId = resolveSingleModePageWindowInstanceId(windowLike);
-  var token = createSingleModePageLockToken();
-
-  var currentRecord = readSingleModePageLockRecord(storageLike, lockKey);
-  if (
-    currentRecord &&
-    currentRecord.instanceId !== instanceId &&
-    isSingleModePageLockFresh(currentRecord, nowMs, ttlMs)
-  ) {
-    return false;
-  }
-
-  if (!writeSingleModePageLockRecord(storageLike, lockKey, tabId, token, modeKey, instanceId, nowMs)) {
-    return true;
-  }
-
-  var confirmedRecord = readSingleModePageLockRecord(storageLike, lockKey);
-  if (!isSingleModePageLockOwnedBy(confirmedRecord, tabId, token, instanceId)) {
-    return false;
-  }
-
-  var lockState = {
-    windowLike: windowLike,
-    storageLike: storageLike,
-    lockKey: lockKey,
-    modeKey: modeKey,
-    tabId: tabId,
-    token: token,
-    instanceId: instanceId,
-    heartbeatId: 0,
-    beforeUnloadHandler: null,
-    pageHideHandler: null,
-    storageHandler: null,
-    conflictHandled: false
-  };
-
-  function releaseCurrentState() {
-    releaseSingleModePageLockStateObject(lockState);
-    if (manager.singleModePageLockState === lockState) {
-      manager.singleModePageLockState = null;
-    }
-  }
-
-  function handleOwnershipConflict() {
-    if (lockState.conflictHandled) return;
-    lockState.conflictHandled = true;
-    releaseCurrentState();
-    handleSingleModePageDuplicate(manager);
-  }
-
-  function heartbeatLock() {
-    var latest = readSingleModePageLockRecord(storageLike, lockKey);
-    if (!isSingleModePageLockOwnedBy(latest, tabId, token, instanceId)) {
-      handleOwnershipConflict();
-      return;
-    }
-    writeSingleModePageLockRecord(storageLike, lockKey, tabId, token, modeKey, instanceId, Date.now());
-  }
-
-  function onStorageChanged(eventLike) {
-    if (!eventLike || eventLike.key !== lockKey) return;
-    var latest = readSingleModePageLockRecord(storageLike, lockKey);
-    if (!isSingleModePageLockOwnedBy(latest, tabId, token, instanceId)) {
-      handleOwnershipConflict();
-    }
-  }
-
-  lockState.beforeUnloadHandler = releaseCurrentState;
-  lockState.pageHideHandler = releaseCurrentState;
-  lockState.storageHandler = onStorageChanged;
-
-  if (windowLike && typeof windowLike.addEventListener === "function") {
-    windowLike.addEventListener("beforeunload", lockState.beforeUnloadHandler);
-    windowLike.addEventListener("pagehide", lockState.pageHideHandler);
-    windowLike.addEventListener("storage", lockState.storageHandler);
-  }
-  if (windowLike && typeof windowLike.setInterval === "function") {
-    lockState.heartbeatId = windowLike.setInterval(heartbeatLock, heartbeatMs);
-  }
-
-  if (windowLike) {
-    windowLike.__playSinglePageModeLockState = lockState;
-  }
-  manager.singleModePageLockState = lockState;
-  return true;
+  var runtime = resolveCoreSingleModePageLockRuntime(manager);
+  if (!(runtime && typeof runtime.ensureSingleModePageLock === "function")) return true;
+  return runtime.ensureSingleModePageLock(manager, createSingleModePageLockRuntimeOptions());
 }
 
 function handleSingleModePageDuplicate(manager) {
