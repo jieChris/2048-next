@@ -69,6 +69,7 @@ import { installUndoSnapshotRuntime } from "../bootstrap/undo-snapshot-runtime";
 import { installUndoStackEntryRuntime } from "../bootstrap/undo-stack-entry-runtime";
 import { installUndoTileRestoreRuntime } from "../bootstrap/undo-tile-restore-runtime";
 import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-runtime";
+import { installFallbackModeConfigsRuntime } from "../core/game-manager-fallback-mode-configs";
 import { installCoreModeRuntime } from "../core/mode";
 import { installNoXSelectionRuntime } from "../core/no-x-selection-overlay";
 import { installRulesRuntime } from "../core/rules";
@@ -251,6 +252,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installSpecialRulesRuntime();
   installSingleModePageLockRuntime();
   installNoXSelectionRuntime();
+  installFallbackModeConfigsRuntime();
   installCoreModeRuntime();
   installPracticeModeRuntime();
   installHomeModeRuntime();
