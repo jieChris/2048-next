@@ -96,34 +96,24 @@ function initializeGameManagerCoreFields(manager, size, InputManager, Actuator, 
   manager.cornerIpsEl = null;
 }
 
+function resolveCoreGameManagerRuntimeStateRuntime() {
+  if (typeof CoreGameManagerRuntimeStateRuntime !== "undefined" && CoreGameManagerRuntimeStateRuntime) {
+    return CoreGameManagerRuntimeStateRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CoreGameManagerRuntimeStateRuntime) {
+    return window.CoreGameManagerRuntimeStateRuntime;
+  }
+  return null;
+}
+
 function initializeGameManagerRuntimeState(manager) {
-  if (!manager) return;
-  manager.startTiles = 2; manager.maxTile = Infinity; manager.mode = detectMode(manager); manager.modeConfig = null;
-  manager.ruleset = "pow2"; manager.rankedBucket = "none"; manager.disableSessionSync = false;
-  manager.spawnTable = [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
-  manager.sessionSubmitDone = false; manager.sessionReplayV3 = null; manager.timerModuleView = "timer";
-  manager.timerLeaderboardLoadId = 0; manager.timerModuleBaseHeight = 0; manager.timerUpdateIntervalMs = 33;
-  manager.lastStatsPanelUpdateAt = 0;
-  manager.pendingMoveInput = null; manager.moveInputFlushScheduled = false; manager.lastMoveInputAt = 0;
-  manager.allowedDirections = [0, 1, 2, 3]; manager.allowedDirectionSet = { "0": true, "1": true, "2": true, "3": true };
-  manager.stoneCellsList = []; manager.stoneValueSet = {};
-  manager.itemModeRules = null; manager.itemInventory = createEmptyItemInventory(); manager.itemProgress = 0;
-  manager.nextSpawnSuppressed = false; manager.nextSpawnValueOverride = null;
-  manager.moveTimeoutMs = null; manager.moveDeadlineAt = null;
-  manager.practiceRestartBoardMatrix = null; manager.practiceRestartModeConfig = null;
-  manager.noXTriggered = false; manager.noXTriggeredTile = null;
-  manager.noXSelectionPending = false; manager.noXPendingDefaultTarget = null;
-  manager.timerFrozen = false;
-  manager.clientRecordId = "";
-  manager.needsRankedCheckpointRestore = false;
-  manager.rankCheckpointRestorePending = false;
-  manager.rankCheckpointRestoreScheduled = false;
-  manager.rankCheckpointApplying = false;
-  manager.rankCheckpointSaveConflict = "";
-  manager.lastRankedCheckpointSignature = "";
-  manager.lastRankedCheckpointSavedAt = 0;
-  manager.lastRankedCheckpointSaveError = "";
-  manager.singleModePageLockState = null;
+  var runtime = resolveCoreGameManagerRuntimeStateRuntime();
+  if (runtime && typeof runtime.initializeGameManagerRuntimeState === "function") {
+    runtime.initializeGameManagerRuntimeState(manager, {
+      detectMode: detectMode,
+      createEmptyItemInventory: createEmptyItemInventory
+    });
+  }
 }
 
 function resolveCoreGameManagerInputEventsRuntime() {
