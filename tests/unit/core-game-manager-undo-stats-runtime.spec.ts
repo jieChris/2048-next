@@ -6,9 +6,17 @@ import { describe, expect, it, vi } from "vitest";
 
 type UndoStatsRuntime = {
   applyUndoRestoredTiles: (manager: Record<string, unknown>, undoPayload: Record<string, unknown>) => void;
+  handleUndoMove: (manager: Record<string, unknown>, direction: number) => boolean;
 };
 
 function loadUndoStatsRuntime(options?: {
+  undoMoveHandlerRuntime?: {
+    handleUndoMove?: (
+      manager: Record<string, unknown> | null,
+      direction: number,
+      operations: Record<string, unknown>
+    ) => boolean;
+  };
   undoRestoredTilesRuntime?: {
     applyUndoRestoredTiles?: (
       manager: Record<string, unknown> | null,
@@ -24,6 +32,7 @@ function loadUndoStatsRuntime(options?: {
   const script = readFileSync(scriptPath, "utf8");
   const context = {
     console,
+    actuate: vi.fn(),
     Tile: class Tile {
       x: number;
       y: number;
@@ -46,6 +55,7 @@ function loadUndoStatsRuntime(options?: {
         fallback: unknown
       ) => fallback
     ),
+    CoreGameManagerUndoMoveHandlerRuntime: options?.undoMoveHandlerRuntime,
     CoreGameManagerUndoRestoredTilesRuntime: options?.undoRestoredTilesRuntime
   } as Record<string, unknown>;
 
@@ -72,6 +82,41 @@ function createManager() {
 }
 
 describe("core game manager undo stats runtime", () => {
+  it("delegates undo move handling to the TypeScript runtime", () => {
+    const handleUndoMove = vi.fn(() => true);
+    const runtime = loadUndoStatsRuntime({
+      undoMoveHandlerRuntime: {
+        handleUndoMove
+      }
+    });
+    const manager = {
+      undoStack: [],
+      redoStack: [],
+      modeKey: "standard_4x4_pow2_undo",
+      undoLimit: null,
+      undoUsed: 0,
+      normalizeUndoStackEntry: vi.fn(),
+      resolveUndoPolicyStateForMode: vi.fn(() => ({ isUndoInteractionEnabled: true }))
+    };
+
+    expect(runtime.handleUndoMove(manager, -1)).toBe(true);
+
+    expect(handleUndoMove).toHaveBeenCalledWith(
+      manager,
+      -1,
+      expect.objectContaining({
+        actuate: expect.any(Function),
+        canExecuteRedoMove: expect.any(Function),
+        canExecuteUndoMove: expect.any(Function),
+        executeRedoRestorePipeline: expect.any(Function),
+        executeUndoRestorePipeline: expect.any(Function),
+        pushRedoSnapshotBeforeUndo: expect.any(Function),
+        shouldStartTimerAfterRedoRestore: expect.any(Function),
+        shouldStartTimerAfterUndoRestore: expect.any(Function)
+      })
+    );
+  });
+
   it("delegates undo restored tile application to the TypeScript runtime", () => {
     const applyUndoRestoredTiles = vi.fn();
     const runtime = loadUndoStatsRuntime({

@@ -931,33 +931,31 @@ function shouldStartTimerAfterUndoRestore(manager, undoRestore) {
     : manager.timerStatus === 0;
 }
 
+function resolveCoreGameManagerUndoMoveHandlerRuntime() {
+  if (typeof CoreGameManagerUndoMoveHandlerRuntime !== "undefined" && CoreGameManagerUndoMoveHandlerRuntime) {
+    return CoreGameManagerUndoMoveHandlerRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CoreGameManagerUndoMoveHandlerRuntime) {
+    return window.CoreGameManagerUndoMoveHandlerRuntime;
+  }
+  return null;
+}
+
 function handleUndoMove(manager, direction) {
-  if (!manager || (direction != -1 && direction != -2)) return false;
-
-  if (direction == -2) {
-    if (!canExecuteRedoMove(manager)) {
-      return true;
-    }
-    var redoRestore = executeRedoRestorePipeline(manager);
-    if (!redoRestore) return true;
-    actuate(manager);
-    if (shouldStartTimerAfterRedoRestore(manager, redoRestore)) {
-      manager.startTimer();
-    }
-    return true;
+  var runtime = resolveCoreGameManagerUndoMoveHandlerRuntime();
+  if (runtime && typeof runtime.handleUndoMove === "function") {
+    return runtime.handleUndoMove(manager, direction, {
+      actuate: actuate,
+      canExecuteRedoMove: canExecuteRedoMove,
+      canExecuteUndoMove: canExecuteUndoMove,
+      executeRedoRestorePipeline: executeRedoRestorePipeline,
+      executeUndoRestorePipeline: executeUndoRestorePipeline,
+      pushRedoSnapshotBeforeUndo: pushRedoSnapshotBeforeUndo,
+      shouldStartTimerAfterRedoRestore: shouldStartTimerAfterRedoRestore,
+      shouldStartTimerAfterUndoRestore: shouldStartTimerAfterUndoRestore
+    });
   }
-
-  if (!canExecuteUndoMove(manager)) {
-    return true;
-  }
-  var upcomingUndoEntry = manager.normalizeUndoStackEntry(manager.undoStack[manager.undoStack.length - 1]);
-  pushRedoSnapshotBeforeUndo(manager, upcomingUndoEntry);
-  var undoRestore = executeUndoRestorePipeline(manager, direction);
-  actuate(manager);
-  if (shouldStartTimerAfterUndoRestore(manager, undoRestore)) {
-    manager.startTimer();
-  }
-  return true;
+  return false;
 }
 
 function buildUndoRestoreStatePayload(manager, prev) {
