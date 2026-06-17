@@ -307,6 +307,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks env-helpers runtime as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_game_manager_env_helpers_runtime.js",
+      symbolName: "coreGameManagerEnvHelpersRuntimeUrl"
+    });
+  });
+
   it("tracks base-helpers runtime as a retired active-manifest script", () => {
     expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
       scriptPath: "core_game_manager_base_helpers_runtime.js",
@@ -752,6 +759,12 @@ describe("entry-manifest-audit helpers", () => {
   it("tracks client-record-id runtime as a retired Vite bundled runtime script", () => {
     expect(BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS).toContainEqual({
       scriptPath: "core_game_manager_client_record_id_runtime.js"
+    });
+  });
+
+  it("tracks env-helpers runtime as a retired Vite bundled runtime script", () => {
+    expect(BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS).toContainEqual({
+      scriptPath: "core_game_manager_env_helpers_runtime.js"
     });
   });
 
