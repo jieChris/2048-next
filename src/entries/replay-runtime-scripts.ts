@@ -9,7 +9,6 @@ import tileUrl from "../../js/tile.js?url";
 import localScoreManagerUrl from "../../js/local_score_manager.js?url";
 import localHistoryStoreUrl from "../../js/local_history_store.js?url";
 import coreGameManagerSavedStateHelpersRuntimeUrl from "../../js/core_game_manager_saved_state_helpers_runtime.js?url";
-import coreGameManagerRuntimeAccessorHelpersRuntimeUrl from "../../js/core_game_manager_runtime_accessor_helpers_runtime.js?url";
 import coreGameManagerStatsUiHelpersRuntimeUrl from "../../js/core_game_manager_stats_ui_helpers_runtime.js?url";
 import coreGameManagerMoveInputHelpersRuntimeUrl from "../../js/core_game_manager_move_input_helpers_runtime.js?url";
 import coreGameManagerStatsDisplayHelpersRuntimeUrl from "../../js/core_game_manager_stats_display_helpers_runtime.js?url";
@@ -44,7 +43,6 @@ export const replayLegacyScripts = [
   localScoreManagerUrl,
   localHistoryStoreUrl,
   coreGameManagerSavedStateHelpersRuntimeUrl,
-  coreGameManagerRuntimeAccessorHelpersRuntimeUrl,
   coreGameManagerStatsUiHelpersRuntimeUrl,
   coreGameManagerMoveInputHelpersRuntimeUrl,
   coreGameManagerStatsDisplayHelpersRuntimeUrl,

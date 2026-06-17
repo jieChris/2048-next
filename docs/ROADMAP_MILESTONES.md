@@ -1,3 +1,24 @@
+# Stage-1DK Core Game Manager Runtime Accessor Helpers Retirement (2026-06-17)
+
+## Phase Decision
+- `WS-runtime-112`
+  - status: done
+  - progress: `core_game_manager_runtime_accessor_helpers_runtime.js` is retired from active home/capped/play/replay manifests and from `HOME_STANDARD_STARTUP_FILES`; `entry-manifest-audit` now prevents re-entry in both modern paths.
+  - follow-up: `src/bootstrap/game-manager-runtime-accessor-helpers-runtime.ts` remains the active TypeScript installer; `js/core_game_manager_runtime_accessor_helpers_runtime.js` and `public/js/legacy_index_nomodule_loader.js` remain for the separate legacy-browser policy stage.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` and `BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS` included `core_game_manager_runtime_accessor_helpers_runtime.js`.
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4336 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
+
 # Stage-1DJ Core Game Manager Runtime Call Helpers Retirement (2026-06-17)
 
 ## Phase Decision
