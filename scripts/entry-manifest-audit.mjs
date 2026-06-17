@@ -112,6 +112,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
     symbolName: "coreGameManagerRuntimeCallHelpersRuntimeUrl"
   },
   {
+    scriptPath: "core_game_manager_runtime_accessor_helpers_runtime.js",
+    symbolName: "coreGameManagerRuntimeAccessorHelpersRuntimeUrl"
+  },
+  {
     scriptPath: "core_game_manager_base_helpers_runtime.js",
     symbolName: "coreGameManagerBaseHelpersRuntimeUrl"
   },
@@ -412,6 +416,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_game_manager_runtime_call_helpers_runtime.js"
+  },
+  {
+    scriptPath: "core_game_manager_runtime_accessor_helpers_runtime.js"
   },
   {
     scriptPath: "core_game_manager_base_helpers_runtime.js"

@@ -18,7 +18,6 @@ const HOME_STANDARD_STARTUP_FILES = [
   "local_history_store.js",
   "core_game_manager_saved_state_helpers_runtime.js",
   "core_ranked_checkpoint_local_mirror_fallback_runtime.js",
-  "core_game_manager_runtime_accessor_helpers_runtime.js",
   "core_game_manager_stats_ui_helpers_runtime.js",
   "core_game_manager_move_input_helpers_runtime.js",
   "core_game_manager_stats_display_helpers_runtime.js",
