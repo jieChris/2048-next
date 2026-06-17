@@ -73,6 +73,7 @@ import { installFallbackModeConfigsRuntime } from "../core/game-manager-fallback
 import { installCoreModeRuntime } from "../core/mode";
 import { installRankedCheckpointLocalMirrorSetupRuntime } from "../core/ranked-checkpoint-local-mirror-setup";
 import { installRankedSessionSetupContextRuntime } from "../core/ranked-session-setup-context";
+import { installSessionReplaySnapshotRuntime } from "../core/session-replay-snapshot";
 import { installNoXSelectionRuntime } from "../core/no-x-selection-overlay";
 import { installRulesRuntime } from "../core/rules";
 import { installSetupUiStateRuntime } from "../core/setup-ui-state";
@@ -258,6 +259,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installFallbackModeConfigsRuntime();
   installRankedCheckpointLocalMirrorSetupRuntime();
   installRankedSessionSetupContextRuntime();
+  installSessionReplaySnapshotRuntime();
   installSetupUiStateRuntime();
   installCoreModeRuntime();
   installPracticeModeRuntime();

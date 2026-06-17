@@ -39,6 +39,17 @@ function resolveCoreRankedSessionSetupContextRuntime(manager) {
   return null;
 }
 
+function resolveCoreSessionReplaySnapshotRuntime(manager) {
+  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  if (windowLike && windowLike.CoreSessionReplaySnapshotRuntime) {
+    return windowLike.CoreSessionReplaySnapshotRuntime;
+  }
+  if (typeof CoreSessionReplaySnapshotRuntime !== "undefined" && CoreSessionReplaySnapshotRuntime) {
+    return CoreSessionReplaySnapshotRuntime;
+  }
+  return null;
+}
+
 function ensureNoXSelectionOverlayForManager(manager) {
   var runtime = resolveCoreNoXSelectionRuntime(manager);
   if (runtime && typeof runtime.ensureNoXSelectionOverlayForManager === "function") {
@@ -352,44 +363,11 @@ function resolveSetupRankedSessionToken(rankedSessionContext) {
     : "";
 }
 
-function resolveReplayModeTagFromModeKey(modeKey, fallbackMode) {
-  var key = typeof modeKey === "string" && modeKey ? modeKey : fallbackMode || "";
-  if (key && key.indexOf("capped") !== -1) return "capped";
-  if (key && key.indexOf("practice") !== -1) return "practice";
-  return "classic";
-}
-
 function initializeSetupSessionReplaySnapshot(manager) {
-  if (!manager) return;
-  manager.sessionReplayV3 = {
-    v: 3,
-    mode: resolveReplayModeTagFromModeKey(manager.modeKey, manager.mode),
-    mode_key: manager.modeKey,
-    board_width: manager.width,
-    board_height: manager.height,
-    ruleset: manager.ruleset,
-    undo_enabled: !!manager.modeConfig.undo_enabled,
-    mode_family: manager.modeFamily,
-    rank_policy: manager.rankPolicy,
-    special_rules_snapshot: manager.clonePlain(manager.specialRules || {}),
-    challenge_id: manager.challengeId,
-    seed: manager.initialSeed,
-    actions: []
-  };
-  manager.sessionReplayV1 = {
-    v: 1,
-    mode_key: manager.modeKey,
-    ruleset: manager.ruleset,
-    board_width: manager.width,
-    board_height: manager.height,
-    start_unix_ms: Date.now(),
-    challenge_id: manager.challengeId || null,
-    seed: manager.initialSeed,
-    init_tiles: [],
-    records: [],
-    last_event_at_ms: Date.now(),
-    supported: true
-  };
+  var runtime = resolveCoreSessionReplaySnapshotRuntime(manager);
+  if (runtime && typeof runtime.initializeSetupSessionReplaySnapshot === "function") {
+    runtime.initializeSetupSessionReplaySnapshot(manager);
+  }
 }
 
 function resolveReplayV1InitTilesFromBoardMatrix(board, width, height, ruleset) {
