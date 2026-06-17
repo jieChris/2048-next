@@ -7,10 +7,17 @@ import { describe, expect, it, vi } from "vitest";
 import { createGameManagerInputEventsRuntime } from "../../src/core/game-manager-input-events";
 
 type SessionInitRuntime = {
+  initializeGameManagerRuntimeState: (manager: Record<string, unknown>) => void;
   bindGameManagerInputEvents: (manager: Record<string, unknown>) => void;
 };
 
 function loadSessionInitRuntime(options?: {
+  runtimeStateRuntime?: {
+    initializeGameManagerRuntimeState?: (
+      manager: Record<string, unknown> | null,
+      operations: Record<string, unknown>
+    ) => void;
+  };
   inputEventsRuntime?: {
     bindGameManagerInputEvents?: (
       manager: Record<string, unknown> | null,
@@ -29,7 +36,10 @@ function loadSessionInitRuntime(options?: {
       TIMER_SLOT_IDS: []
     },
     Date,
+    createEmptyItemInventory: vi.fn(() => ({ hammer: 0, swap: 0 })),
+    detectMode: vi.fn(() => "classic"),
     handleMoveInput: vi.fn(),
+    CoreGameManagerRuntimeStateRuntime: options?.runtimeStateRuntime,
     CoreGameManagerInputEventsRuntime:
       options?.inputEventsRuntime || createGameManagerInputEventsRuntime()
   } as Record<string, unknown>;
@@ -54,6 +64,26 @@ function createInputManagerStub(): {
 }
 
 describe("core game manager session init runtime", () => {
+  it("delegates runtime state initialization to the TypeScript runtime", () => {
+    const initializeGameManagerRuntimeState = vi.fn();
+    const runtime = loadSessionInitRuntime({
+      runtimeStateRuntime: {
+        initializeGameManagerRuntimeState
+      }
+    });
+    const manager = {} as Record<string, unknown>;
+
+    runtime.initializeGameManagerRuntimeState(manager);
+
+    expect(initializeGameManagerRuntimeState).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        detectMode: expect.any(Function),
+        createEmptyItemInventory: expect.any(Function)
+      })
+    );
+  });
+
   it("delegates input event binding to the TypeScript runtime", () => {
     const bindGameManagerInputEvents = vi.fn();
     const runtime = loadSessionInitRuntime({
