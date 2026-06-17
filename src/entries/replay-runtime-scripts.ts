@@ -17,7 +17,6 @@ import coreGameManagerUndoStatsHelpersRuntimeUrl from "../../js/core_game_manage
 import coreGameManagerRestartSetupHelpersRuntimeUrl from "../../js/core_game_manager_restart_setup_helpers_runtime.js?url";
 import coreGameManagerSetupTimerUiHelpersRuntimeUrl from "../../js/core_game_manager_setup_timer_ui_helpers_runtime.js?url";
 import coreGameManagerSessionInitHelpersRuntimeUrl from "../../js/core_game_manager_session_init_helpers_runtime.js?url";
-import coreGameManagerReplayHelpersRuntimeUrl from "../../js/core_game_manager_replay_helpers_runtime.js?url";
 import coreGameManagerModeRulesHelpersRuntimeUrl from "../../js/core_game_manager_mode_rules_helpers_runtime.js?url";
 import coreGameManagerStaticRuntimeUrl from "../../js/core_game_manager_static_runtime.js?url";
 import coreGameManagerBindingsRuntimeUrl from "../../js/core_game_manager_bindings_runtime.js?url";
@@ -51,7 +50,6 @@ export const replayLegacyScripts = [
   coreGameManagerRestartSetupHelpersRuntimeUrl,
   coreGameManagerSetupTimerUiHelpersRuntimeUrl,
   coreGameManagerSessionInitHelpersRuntimeUrl,
-  coreGameManagerReplayHelpersRuntimeUrl,
   coreGameManagerModeRulesHelpersRuntimeUrl,
   coreGameManagerStaticRuntimeUrl,
   coreGameManagerBindingsRuntimeUrl,

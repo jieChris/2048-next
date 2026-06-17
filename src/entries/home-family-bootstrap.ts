@@ -9,6 +9,7 @@ import { installGameOverUndoHostRuntime } from "../bootstrap/game-over-undo-host
 import { installGameManagerBaseHelpersRuntime } from "../bootstrap/game-manager-base-helpers-runtime";
 import { installGameManagerClientRecordIdRuntime } from "../bootstrap/game-manager-client-record-id-runtime";
 import { installGameManagerEnvHelpersRuntime } from "../bootstrap/game-manager-env-helpers-runtime";
+import { installGameManagerReplayHelperGlobals } from "../bootstrap/game-manager-replay-helpers-runtime";
 import { installGameManagerRuntimeAccessorHelpersRuntime } from "../bootstrap/game-manager-runtime-accessor-helpers-runtime";
 import { installGameManagerRuntimeCallHelpersRuntime } from "../bootstrap/game-manager-runtime-call-helpers-runtime";
 import { installGameSettingsStorageRuntime } from "../bootstrap/game-settings-storage-runtime";
@@ -77,6 +78,7 @@ import { getPageManifest, type RuntimeCapability } from "./runtime-manifest";
 import { resolveHomeFamilyScriptsByCapabilities } from "./home-family-shared";
 
 const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
+const LEGACY_REPLAY_HELPERS_RUNTIME_URL = "./js/core_game_manager_replay_helpers_runtime.js?v=20260617-replay-compat";
 const GAME_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
   "core",
   "capped-core",
@@ -144,6 +146,7 @@ async function runBootstrapPipeline(pageId: string): Promise<void> {
 }
 
 async function loadHomeFamilyRuntimeScripts(capabilities: readonly RuntimeCapability[]): Promise<void> {
+  await loadLegacyScriptsSequentially([LEGACY_REPLAY_HELPERS_RUNTIME_URL]);
   const startupCapabilities = capabilities.filter((capability) =>
     GAME_STARTUP_CAPABILITIES.has(capability)
   );
@@ -273,6 +276,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installReplayModalRuntime();
   installReplayPageHostRuntime();
   installReplayTimerRuntime();
+  installGameManagerReplayHelperGlobals();
   installScoringRuntime();
   installResponsiveRelayoutRuntime();
   installResponsiveRelayoutHostRuntime();
@@ -286,6 +290,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installUndoTileRestoreRuntime();
   installUndoTileSnapshotRuntime();
   if (pageId === "index") {
+    await loadLegacyScriptsSequentially([LEGACY_REPLAY_HELPERS_RUNTIME_URL]);
     await loadLegacyScriptsSequentially([INDEX_STARTUP_BUNDLE_URL]);
     scheduleIndexDeferredRuntimeLoad();
     return;

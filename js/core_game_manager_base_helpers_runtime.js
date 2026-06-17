@@ -194,33 +194,36 @@ function resolveSecondaryTimerDisplayValueBySlot(manager, slotValue) {
   return slot;
 }
 
+function resolveSecondaryTimerSlotFromMilestoneMap(manager, value) {
+  var slotByMilestone = manager && isCoreHelperRecordObject(manager.timerMilestoneSlotByValue)
+    ? manager.timerMilestoneSlotByValue
+    : null;
+  if (!slotByMilestone || !Object.prototype.hasOwnProperty.call(slotByMilestone, String(value))) {
+    return null;
+  }
+  return normalizeSecondaryTimerValue(slotByMilestone[String(value)]);
+}
+
+function resolveSecondaryTimerSlotFromMilestoneList(manager, value) {
+  var milestones = manager && Array.isArray(manager.timerMilestones) ? manager.timerMilestones : null;
+  if (!milestones) return null;
+  var slots = getSecondaryTimerSlotIds();
+  for (var i = 0; i < milestones.length; i++) {
+    if (Number(milestones[i]) !== value) continue;
+    if (i >= slots.length) return null;
+    return normalizeSecondaryTimerValue(slots[i]);
+  }
+  return null;
+}
+
 function resolveSecondaryTimerSlotByValue(manager, rawValue) {
   var value = normalizeSecondaryTimerValue(rawValue);
   if (value === null) return null;
 
-  var slotByMilestone = manager && isCoreHelperRecordObject(manager.timerMilestoneSlotByValue)
-    ? manager.timerMilestoneSlotByValue
-    : null;
-  if (slotByMilestone && Object.prototype.hasOwnProperty.call(slotByMilestone, String(value))) {
-    var mappedSlot = normalizeSecondaryTimerValue(slotByMilestone[String(value)]);
-    if (mappedSlot !== null) return mappedSlot;
-  }
-
-  var slotIndex = resolveSecondaryTimerSlotIndexByValue(value);
-  if (slotIndex >= 0) return value;
-
-  var milestones = manager && Array.isArray(manager.timerMilestones) ? manager.timerMilestones : null;
-  if (milestones) {
-    for (var i = 0; i < milestones.length; i++) {
-      if (Number(milestones[i]) !== value) continue;
-      var slots = getSecondaryTimerSlotIds();
-      if (i >= slots.length) break;
-      var slotFromIndex = normalizeSecondaryTimerValue(slots[i]);
-      if (slotFromIndex !== null) return slotFromIndex;
-    }
-  }
-
-  return value;
+  var mappedSlot = resolveSecondaryTimerSlotFromMilestoneMap(manager, value);
+  if (mappedSlot !== null) return mappedSlot;
+  if (resolveSecondaryTimerSlotIndexByValue(value) >= 0) return value;
+  return resolveSecondaryTimerSlotFromMilestoneList(manager, value) || value;
 }
 
 function getSecondaryTimerParentValues() {
@@ -473,46 +476,67 @@ function createSecondaryTimerRowElement(manager, parentValue, childValue) {
   if (!manager) return null;
   var documentLike = resolveManagerDocumentLike(manager);
   if (!(documentLike && typeof documentLike.createElement === "function")) return null;
-
-  var parent = normalizeSecondaryTimerValue(parentValue);
-  var child = normalizeSecondaryTimerValue(childValue);
-  if (parent === null || child === null) return null;
+  var context = resolveSecondaryTimerRowBuildContext(parentValue, childValue);
+  if (!context) return null;
 
   var row = documentLike.createElement("div");
   if (!row) return null;
 
-  var rowId = resolveSecondaryTimerRowId(parent, child);
-  var valueId = resolveSecondaryTimerValueId(parent, child);
-  var level = resolveSecondaryTimerIndentLevel(parent, child);
-  var order = parent + (level / 1000);
-
-  row.id = rowId;
+  row.id = context.rowId;
   row.className = "timer-row-item timer-secondary-row";
-  row.setAttribute("data-secondary-parent", String(parent));
-  row.setAttribute("data-secondary-child", String(child));
-  row.setAttribute("data-secondary-hidden", "1");
-  row.setAttribute("data-timer-order", String(order));
-  row.style.display = "none";
-  row.style.paddingLeft = String(level * 5) + "px";
+  configureSecondaryTimerRowElement(row, context);
+  row.appendChild(createSecondaryTimerLegendElement(documentLike, manager, context.child));
+  row.appendChild(createSecondaryTimerValueElement(documentLike, context.valueId, context.level));
+  appendSecondaryTimerRowBreaks(documentLike, row);
+  return row;
+}
 
+function resolveSecondaryTimerRowBuildContext(parentValue, childValue) {
+  var parent = normalizeSecondaryTimerValue(parentValue);
+  var child = normalizeSecondaryTimerValue(childValue);
+  if (parent === null || child === null) return null;
+  var level = resolveSecondaryTimerIndentLevel(parent, child);
+  return {
+    parent: parent,
+    child: child,
+    rowId: resolveSecondaryTimerRowId(parent, child),
+    valueId: resolveSecondaryTimerValueId(parent, child),
+    level: level,
+    order: parent + (level / 1000)
+  };
+}
+
+function configureSecondaryTimerRowElement(row, context) {
+  row.setAttribute("data-secondary-parent", String(context.parent));
+  row.setAttribute("data-secondary-child", String(context.child));
+  row.setAttribute("data-secondary-hidden", "1");
+  row.setAttribute("data-timer-order", String(context.order));
+  row.style.display = "none";
+  row.style.paddingLeft = String(context.level * 5) + "px";
+}
+
+function createSecondaryTimerLegendElement(documentLike, manager, child) {
   var legend = documentLike.createElement("div");
   legend.className = "timertile timer-secondary-legend timer-legend-" + String(child);
   legend.style.color = "#f9f6f2";
   legend.style.fontSize = resolveSecondaryTimerLegendFontSize(child);
   legend.textContent = String(resolveSecondaryTimerDisplayValueBySlot(manager, child) || child);
+  return legend;
+}
 
+function createSecondaryTimerValueElement(documentLike, valueId, level) {
   var timer = documentLike.createElement("div");
   timer.className = "timertile";
   timer.id = valueId;
   timer.style.marginLeft = "6px";
   var timerWidth = resolveSecondaryTimerWidthByLevel(level);
   timer.style.width = String(timerWidth) + "px";
+  return timer;
+}
 
-  row.appendChild(legend);
-  row.appendChild(timer);
+function appendSecondaryTimerRowBreaks(documentLike, row) {
   row.appendChild(documentLike.createElement("br"));
   row.appendChild(documentLike.createElement("br"));
-  return row;
 }
 
 function resolveSecondaryTimerContainer(manager) {
@@ -610,6 +634,13 @@ function removeStaleSecondaryTimerRows(container, validRowIds) {
   }
 }
 
+function collectSecondaryTimerDescriptorsForParents(manager, container, descriptors, validRowIds) {
+  var parents = getSecondaryTimerParentValues();
+  for (var parentIndex = 0; parentIndex < parents.length; parentIndex++) {
+    collectSecondaryTimerDescriptorsForParent(manager, container, parents[parentIndex], descriptors, validRowIds);
+  }
+}
+
 function ensureSecondaryTimerRows(manager) {
   if (!manager) return [];
   var container = resolveSecondaryTimerContainer(manager);
@@ -617,15 +648,9 @@ function ensureSecondaryTimerRows(manager) {
 
   var descriptors = [];
   var validRowIds = {};
-  var parents = getSecondaryTimerParentValues();
 
-  for (var parentIndex = 0; parentIndex < parents.length; parentIndex++) {
-    var parent = parents[parentIndex];
-    collectSecondaryTimerDescriptorsForParent(manager, container, parent, descriptors, validRowIds);
-  }
-
+  collectSecondaryTimerDescriptorsForParents(manager, container, descriptors, validRowIds);
   removeStaleSecondaryTimerRows(container, validRowIds);
-
   bindSecondaryTimerParentToggleEvents(manager);
   return descriptors;
 }
@@ -672,22 +697,22 @@ function isSecondaryTimerBreakNode(node) {
   );
 }
 
+function resolveNextNonWhitespaceSecondaryTimerNode(node) {
+  var cursor = node || null;
+  while (cursor && isSecondaryTimerWhitespaceNode(cursor)) {
+    cursor = cursor.nextSibling || null;
+  }
+  return cursor;
+}
+
 function resolveSecondaryTimerAnchorAfterLegacyBreaks(parentTimer) {
   var anchor = parentTimer;
-  var cursor = parentTimer ? parentTimer.nextSibling : null;
+  var cursor = resolveNextNonWhitespaceSecondaryTimerNode(parentTimer ? parentTimer.nextSibling : null);
   var brCount = 0;
-  while (cursor) {
-    if (isSecondaryTimerWhitespaceNode(cursor)) {
-      cursor = cursor.nextSibling;
-      continue;
-    }
-    if (isSecondaryTimerBreakNode(cursor) && brCount < 2) {
-      anchor = cursor;
-      brCount += 1;
-      cursor = cursor.nextSibling;
-      continue;
-    }
-    break;
+  while (cursor && isSecondaryTimerBreakNode(cursor) && brCount < 2) {
+    anchor = cursor;
+    brCount += 1;
+    cursor = resolveNextNonWhitespaceSecondaryTimerNode(cursor.nextSibling || null);
   }
   return anchor;
 }
@@ -814,13 +839,6 @@ function resolveSecondaryTimerPlacementDebugCounterValue(counter, key) {
   return Number(counter[key]) || 0;
 }
 
-function resolveSecondaryTimerPlacementDedupeStrategy(dedupeKey) {
-  if (typeof dedupeKey !== "string" || !dedupeKey) return "row-reference";
-  if (dedupeKey.indexOf("row-id:") === 0) return "row-id";
-  if (dedupeKey.indexOf("parent-child:") === 0) return "parent-child";
-  return "row-reference";
-}
-
 var SECONDARY_TIMER_PLACEMENT_DIAGNOSTIC_FIELDS = [
   "totalDescriptors",
   "validPlacementDescriptors",
@@ -834,6 +852,13 @@ var SECONDARY_TIMER_PLACEMENT_DIAGNOSTIC_FIELDS = [
 ];
 var SECONDARY_TIMER_PLACEMENT_DIAGNOSTICS_KEY = "secondaryTimerPlacement";
 var SECONDARY_TIMER_PLACEMENT_DIAGNOSTICS_SCHEMA_VERSION = 1;
+
+function resolveSecondaryTimerPlacementDedupeStrategy(dedupeKey) {
+  if (typeof dedupeKey !== "string" || !dedupeKey) return "row-reference";
+  if (dedupeKey.indexOf("row-id:") === 0) return "row-id";
+  if (dedupeKey.indexOf("parent-child:") === 0) return "parent-child";
+  return "row-reference";
+}
 
 function createSecondaryTimerPlacementDebugSummaryDefaults() {
   return {
@@ -849,27 +874,27 @@ function createSecondaryTimerPlacementDebugSummaryDefaults() {
   };
 }
 
-function resolveSecondaryTimerPlacementDebugSummaryFromSnapshot(debugSnapshot) {
-  var summary = createSecondaryTimerPlacementDebugSummaryDefaults();
-  if (!isCoreHelperRecordObject(debugSnapshot)) return summary;
+function applySecondaryTimerPlacementDebugSummaryCounts(summary, debugSnapshot) {
   summary.totalDescriptors = Number(debugSnapshot.totalDescriptors) || 0;
   summary.validPlacementDescriptors = Number(debugSnapshot.validPlacementDescriptors) || 0;
   summary.placed = Number(debugSnapshot.placed) || 0;
   summary.skippedDuplicate = Number(debugSnapshot.skippedDuplicate) || 0;
   summary.skippedMissingAnchor = Number(debugSnapshot.skippedMissingAnchor) || 0;
   summary.dedupeKeyKinds = countSecondaryTimerPlacementDebugKeys(debugSnapshot.dedupeKeyHits);
-  summary.rowIdStrategyHits = resolveSecondaryTimerPlacementDebugCounterValue(
-    debugSnapshot.dedupeStrategyHits,
-    "row-id"
-  );
-  summary.parentChildStrategyHits = resolveSecondaryTimerPlacementDebugCounterValue(
-    debugSnapshot.dedupeStrategyHits,
-    "parent-child"
-  );
-  summary.rowReferenceStrategyHits = resolveSecondaryTimerPlacementDebugCounterValue(
-    debugSnapshot.dedupeStrategyHits,
-    "row-reference"
-  );
+}
+
+function applySecondaryTimerPlacementDebugSummaryStrategyHits(summary, debugSnapshot) {
+  var strategyHits = debugSnapshot.dedupeStrategyHits;
+  summary.rowIdStrategyHits = resolveSecondaryTimerPlacementDebugCounterValue(strategyHits, "row-id");
+  summary.parentChildStrategyHits = resolveSecondaryTimerPlacementDebugCounterValue(strategyHits, "parent-child");
+  summary.rowReferenceStrategyHits = resolveSecondaryTimerPlacementDebugCounterValue(strategyHits, "row-reference");
+}
+
+function resolveSecondaryTimerPlacementDebugSummaryFromSnapshot(debugSnapshot) {
+  var summary = createSecondaryTimerPlacementDebugSummaryDefaults();
+  if (!isCoreHelperRecordObject(debugSnapshot)) return summary;
+  applySecondaryTimerPlacementDebugSummaryCounts(summary, debugSnapshot);
+  applySecondaryTimerPlacementDebugSummaryStrategyHits(summary, debugSnapshot);
   return summary;
 }
 
@@ -1054,26 +1079,26 @@ function hasSeenSecondaryTimerPlacementRowReference(seenPlacementRowRefs, row) {
   return false;
 }
 
+function shouldSkipSecondaryTimerPlacementDedupeKey(seenPlacementRows, dedupeKey, debugSnapshot) {
+  markSecondaryTimerPlacementDedupeObserved(debugSnapshot, dedupeKey);
+  if (seenPlacementRows[dedupeKey]) return true;
+  seenPlacementRows[dedupeKey] = true;
+  return false;
+}
+
+function shouldSkipSecondaryTimerPlacementRowReference(seenPlacementRowRefs, row, debugSnapshot) {
+  if (!row) return false;
+  incrementSecondaryTimerPlacementDebugCount(debugSnapshot.dedupeStrategyHits, "row-reference");
+  if (hasSeenSecondaryTimerPlacementRowReference(seenPlacementRowRefs, row)) return true;
+  seenPlacementRowRefs.push(row);
+  return false;
+}
+
 function shouldSkipSecondaryTimerPlacementRow(seenPlacementRows, seenPlacementRowRefs, placementInfo, debugSnapshot) {
   if (!placementInfo) return false;
   var dedupeKey = placementInfo.dedupeKey;
-  if (dedupeKey && seenPlacementRows) {
-    markSecondaryTimerPlacementDedupeObserved(debugSnapshot, dedupeKey);
-    if (seenPlacementRows[dedupeKey]) return true;
-    seenPlacementRows[dedupeKey] = true;
-    return false;
-  }
-  var row = placementInfo.row;
-  if (!row) return false;
-  incrementSecondaryTimerPlacementDebugCount(
-    debugSnapshot ? debugSnapshot.dedupeStrategyHits : null,
-    "row-reference"
-  );
-  if (hasSeenSecondaryTimerPlacementRowReference(seenPlacementRowRefs, row)) return true;
-  if (Array.isArray(seenPlacementRowRefs)) {
-    seenPlacementRowRefs.push(row);
-  }
-  return false;
+  if (dedupeKey) return shouldSkipSecondaryTimerPlacementDedupeKey(seenPlacementRows, dedupeKey, debugSnapshot);
+  return shouldSkipSecondaryTimerPlacementRowReference(seenPlacementRowRefs, placementInfo.row, debugSnapshot);
 }
 
 function canPlaceSecondaryTimerRowNearParent(timerBox, anchor) {
@@ -1104,35 +1129,53 @@ function applySecondaryTimerHiddenRowState(row) {
   row.style.pointerEvents = "";
 }
 
+function createSecondaryTimerPlacementContext(listLength) {
+  return {
+    debugSnapshot: createSecondaryTimerPlacementDebugSnapshot(listLength),
+    tailByParent: {},
+    seenPlacementRows: {},
+    seenPlacementRowRefs: []
+  };
+}
+
+function shouldPlaceSecondaryTimerDescriptor(placementInfo, context) {
+  context.debugSnapshot.validPlacementDescriptors += 1;
+  if (!shouldSkipSecondaryTimerPlacementRow(
+    context.seenPlacementRows,
+    context.seenPlacementRowRefs,
+    placementInfo,
+    context.debugSnapshot
+  )) return true;
+  context.debugSnapshot.skippedDuplicate += 1;
+  return false;
+}
+
+function placeSecondaryTimerDescriptorNearParent(manager, timerBox, descriptor, context) {
+  var placementInfo = resolveSecondaryTimerPlacementInfo(descriptor);
+  if (!placementInfo) return;
+  if (!shouldPlaceSecondaryTimerDescriptor(placementInfo, context)) return;
+  var anchor = resolveSecondaryTimerPlacementAnchor(manager, timerBox, context.tailByParent, placementInfo);
+  if (!canPlaceSecondaryTimerRowNearParent(timerBox, anchor)) {
+    context.debugSnapshot.skippedMissingAnchor += 1;
+    return;
+  }
+  placeSecondaryTimerRowAfterAnchor(timerBox, anchor, placementInfo.row);
+  context.tailByParent[placementInfo.key] = placementInfo.row;
+  context.debugSnapshot.placed += 1;
+}
+
 function placeSecondaryTimerRowsNearParents(manager, descriptors) {
   if (!manager) return;
   var timerBox = resolveManagerElementById(manager, "timerbox");
   if (!timerBox) return;
   var list = Array.isArray(descriptors) ? descriptors : [];
-  var debugSnapshot = createSecondaryTimerPlacementDebugSnapshot(list.length);
-  var tailByParent = {};
-  var seenPlacementRows = {};
-  var seenPlacementRowRefs = [];
+  var context = createSecondaryTimerPlacementContext(list.length);
 
   for (var i = 0; i < list.length; i++) {
-    var placementInfo = resolveSecondaryTimerPlacementInfo(list[i]);
-    if (!placementInfo) continue;
-    debugSnapshot.validPlacementDescriptors += 1;
-    if (shouldSkipSecondaryTimerPlacementRow(seenPlacementRows, seenPlacementRowRefs, placementInfo, debugSnapshot)) {
-      debugSnapshot.skippedDuplicate += 1;
-      continue;
-    }
-    var anchor = resolveSecondaryTimerPlacementAnchor(manager, timerBox, tailByParent, placementInfo);
-    if (!canPlaceSecondaryTimerRowNearParent(timerBox, anchor)) {
-      debugSnapshot.skippedMissingAnchor += 1;
-      continue;
-    }
-    placeSecondaryTimerRowAfterAnchor(timerBox, anchor, placementInfo.row);
-    tailByParent[placementInfo.key] = placementInfo.row;
-    debugSnapshot.placed += 1;
+    placeSecondaryTimerDescriptorNearParent(manager, timerBox, list[i], context);
   }
 
-  publishSecondaryTimerPlacementDebugSnapshot(manager, debugSnapshot);
+  publishSecondaryTimerPlacementDebugSnapshot(manager, context.debugSnapshot);
   appendSecondaryTimerScrollControls(manager, timerBox);
 }
 
@@ -1223,23 +1266,24 @@ function applySecondaryTimerInvalidationText(descriptor, text) {
   return true;
 }
 
+function applySecondaryTimerInvalidationToDescriptors(descriptors, limit, text) {
+  var changed = false;
+  for (var i = 0; i < descriptors.length; i++) {
+    var descriptor = descriptors[i];
+    if (!canInvalidateSecondaryTimerDescriptorByLimit(descriptor, limit)) continue;
+    if (applySecondaryTimerInvalidationText(descriptor, text)) changed = true;
+  }
+  return changed;
+}
+
 function invalidateSecondaryTimersByLimit(manager, limitValue, placeholderText) {
   if (!manager) return false;
   var limit = resolveSecondaryTimerSlotByValue(manager, limitValue);
   if (limit === null || limit < 2048) return false;
   var text = resolveSecondaryTimerInvalidationPlaceholderText(placeholderText);
   var descriptors = resolveSecondaryTimerDescriptors(manager);
-  var changed = false;
-  for (var i = 0; i < descriptors.length; i++) {
-    var descriptor = descriptors[i];
-    if (!canInvalidateSecondaryTimerDescriptorByLimit(descriptor, limit)) continue;
-    if (applySecondaryTimerInvalidationText(descriptor, text)) {
-      changed = true;
-    }
-  }
-  if (changed) {
-    refreshSecondaryTimerRowsVisibility(manager);
-  }
+  var changed = applySecondaryTimerInvalidationToDescriptors(descriptors, limit, text);
+  if (changed) refreshSecondaryTimerRowsVisibility(manager);
   return changed;
 }
 
@@ -1311,37 +1355,44 @@ function normalizeSecondaryTimerRowStateTime(state) {
   return "";
 }
 
-function applySecondaryTimerRowsState(manager, rowsState) {
-  if (!manager) return;
-  var descriptors = resolveSecondaryTimerDescriptors(manager);
+function resolveSecondaryTimerRowStateKey(state) {
+  var parent = normalizeSecondaryTimerValue(state.parent);
+  var child = normalizeSecondaryTimerValue(state.child);
+  if (!isValidSecondaryTimerParentChildPair(parent, child)) return null;
+  return String(parent) + "|" + String(child);
+}
+
+function collectSecondaryTimerRowsStateByKey(rowsState) {
   var stateByKey = {};
   var rows = Array.isArray(rowsState) ? rowsState : [];
-
   for (var i = 0; i < rows.length; i++) {
     var state = rows[i];
     if (!isCoreHelperRecordObject(state)) continue;
-    var parent = normalizeSecondaryTimerValue(state.parent);
-    var child = normalizeSecondaryTimerValue(state.child);
-    if (!isValidSecondaryTimerParentChildPair(parent, child)) continue;
+    var key = resolveSecondaryTimerRowStateKey(state);
+    if (!key) continue;
     var time = normalizeSecondaryTimerRowStateTime(state);
     if (time === null) continue;
-    stateByKey[String(parent) + "|" + String(child)] = {
+    stateByKey[key] = {
       time: time
     };
   }
+  return stateByKey;
+}
 
+function applySecondaryTimerRowStateToDescriptors(descriptors, stateByKey) {
   for (var descriptorIndex = 0; descriptorIndex < descriptors.length; descriptorIndex++) {
     var descriptor = descriptors[descriptorIndex];
-    if (!descriptor) continue;
+    if (!descriptor || !descriptor.timerEl) continue;
     var key = String(descriptor.parent) + "|" + String(descriptor.child);
     var rowState = stateByKey[key];
-    if (!descriptor.timerEl) continue;
-    if (!rowState) {
-      descriptor.timerEl.textContent = "";
-      continue;
-    }
-    descriptor.timerEl.textContent = rowState.time;
+    descriptor.timerEl.textContent = rowState ? rowState.time : "";
   }
+}
 
+function applySecondaryTimerRowsState(manager, rowsState) {
+  if (!manager) return;
+  var descriptors = resolveSecondaryTimerDescriptors(manager);
+  var stateByKey = collectSecondaryTimerRowsStateByKey(rowsState);
+  applySecondaryTimerRowStateToDescriptors(descriptors, stateByKey);
   refreshSecondaryTimerRowsVisibility(manager);
 }

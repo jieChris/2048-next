@@ -1,3 +1,23 @@
+# Guardrail Delta (2026-06-17, Stage-1DL Core Game Manager Replay Helpers Runtime Retirement)
+
+## Batch Impact
+- `src/bootstrap/game-manager-replay-helpers-runtime.ts` now owns the migrated replay-helper globals that `core_game_manager_bindings_runtime.js` still expects during modern page bootstrap.
+- `src/entries/home-family-bootstrap.ts` installs the replay-helper globals before active home-family legacy scripts load.
+- `core_game_manager_replay_helpers_runtime.js` is no longer referenced by active home/capped/play/replay runtime manifests or by `HOME_STANDARD_STARTUP_FILES`.
+- `js/core_game_manager_replay_helpers_runtime.js` remains in the repository and `public/js/legacy_index_nomodule_loader.js` still references it for the separate legacy-browser policy path.
+- `entry-manifest-audit` now blocks `core_game_manager_replay_helpers_runtime.js` / `coreGameManagerReplayHelpersRuntimeUrl` from re-entering active manifests and the Vite home startup bundle.
+
+## Verification
+- `npx vitest run tests/unit/bootstrap-game-manager-replay-helpers-runtime.spec.ts tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `PW_WEB_PORT=4337 npm run test:smoke:index-ui`
+- `PW_WEB_PORT=4337 npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4337 npm run verify:prepush`
+
 # Stage-1DK Core Game Manager Runtime Accessor Helpers Retirement (2026-06-17)
 
 ## Phase Decision

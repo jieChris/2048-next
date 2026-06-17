@@ -116,6 +116,10 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
     symbolName: "coreGameManagerRuntimeAccessorHelpersRuntimeUrl"
   },
   {
+    scriptPath: "core_game_manager_replay_helpers_runtime.js",
+    symbolName: "coreGameManagerReplayHelpersRuntimeUrl"
+  },
+  {
     scriptPath: "core_game_manager_base_helpers_runtime.js",
     symbolName: "coreGameManagerBaseHelpersRuntimeUrl"
   },
@@ -419,6 +423,9 @@ const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
   },
   {
     scriptPath: "core_game_manager_runtime_accessor_helpers_runtime.js"
+  },
+  {
+    scriptPath: "core_game_manager_replay_helpers_runtime.js"
   },
   {
     scriptPath: "core_game_manager_base_helpers_runtime.js"
