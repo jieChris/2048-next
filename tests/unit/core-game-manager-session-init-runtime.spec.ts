@@ -4,11 +4,20 @@ import vm from "node:vm";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { createGameManagerInputEventsRuntime } from "../../src/core/game-manager-input-events";
+
 type SessionInitRuntime = {
   bindGameManagerInputEvents: (manager: Record<string, unknown>) => void;
 };
 
-function loadSessionInitRuntime(): SessionInitRuntime {
+function loadSessionInitRuntime(options?: {
+  inputEventsRuntime?: {
+    bindGameManagerInputEvents?: (
+      manager: Record<string, unknown> | null,
+      operations: Record<string, unknown>
+    ) => void;
+  };
+}): SessionInitRuntime {
   const scriptPath = path.resolve(
     process.cwd(),
     "js/core_game_manager_session_init_helpers_runtime.js"
@@ -19,7 +28,10 @@ function loadSessionInitRuntime(): SessionInitRuntime {
     GameManager: {
       TIMER_SLOT_IDS: []
     },
-    Date
+    Date,
+    handleMoveInput: vi.fn(),
+    CoreGameManagerInputEventsRuntime:
+      options?.inputEventsRuntime || createGameManagerInputEventsRuntime()
   } as Record<string, unknown>;
 
   vm.runInNewContext(script, context);
@@ -42,6 +54,27 @@ function createInputManagerStub(): {
 }
 
 describe("core game manager session init runtime", () => {
+  it("delegates input event binding to the TypeScript runtime", () => {
+    const bindGameManagerInputEvents = vi.fn();
+    const runtime = loadSessionInitRuntime({
+      inputEventsRuntime: {
+        bindGameManagerInputEvents
+      }
+    });
+    const manager = {
+      inputManager: createInputManagerStub()
+    } as Record<string, unknown>;
+
+    runtime.bindGameManagerInputEvents(manager);
+
+    expect(bindGameManagerInputEvents).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        handleMoveInput: expect.any(Function)
+      })
+    );
+  });
+
   it("dispatches restart input through the current manager method", () => {
     const runtime = loadSessionInitRuntime();
     const inputManager = createInputManagerStub();

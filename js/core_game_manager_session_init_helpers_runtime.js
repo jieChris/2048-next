@@ -126,36 +126,23 @@ function initializeGameManagerRuntimeState(manager) {
   manager.singleModePageLockState = null;
 }
 
+function resolveCoreGameManagerInputEventsRuntime() {
+  if (typeof CoreGameManagerInputEventsRuntime !== "undefined" && CoreGameManagerInputEventsRuntime) {
+    return CoreGameManagerInputEventsRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CoreGameManagerInputEventsRuntime) {
+    return window.CoreGameManagerInputEventsRuntime;
+  }
+  return null;
+}
+
 function bindGameManagerInputEvents(manager) {
-  if (!manager || !manager.inputManager) return;
-  var managerForInput = manager;
-  manager.inputManager.on("move", function (direction) {
-    handleMoveInput(managerForInput, direction);
-  });
-  manager.inputManager.on("item", function (itemKey) {
-    if (typeof managerForInput.useItem === "function") {
-      managerForInput.useItem(itemKey);
-    }
-  });
-  manager.inputManager.on("restart", function () {
-    if (typeof managerForInput.restart === "function") {
-      managerForInput.restart();
-    }
-  });
-  manager.inputManager.on("keepPlaying", function () {
-    var keepPlayingHandler = null;
-    try {
-      keepPlayingHandler = Object.getPrototypeOf(managerForInput).keepPlaying;
-    } catch (_err) {}
-    if (typeof keepPlayingHandler === "function") {
-      keepPlayingHandler.call(managerForInput);
-      return;
-    }
-    managerForInput.keepPlaying = true;
-    if (managerForInput.actuator && typeof managerForInput.actuator.continue === "function") {
-      managerForInput.actuator.continue();
-    }
-  });
+  var runtime = resolveCoreGameManagerInputEventsRuntime();
+  if (runtime && typeof runtime.bindGameManagerInputEvents === "function") {
+    runtime.bindGameManagerInputEvents(manager, {
+      handleMoveInput: handleMoveInput
+    });
+  }
 }
 
 function bindGameManagerSavedStatePersistence(manager) {
