@@ -1,3 +1,25 @@
+# Stage-1DG Core Game Manager Runtime Accessor Helpers TypeScript Boundary (2026-06-17)
+
+## Phase Decision
+- `WS-runtime-108`
+  - status: done
+  - progress: `src/core/game-manager-runtime-accessor-helpers.ts` now owns runtime accessor object detection and `GameManager.prototype` getter/resolver/caller registration; `src/bootstrap/game-manager-runtime-accessor-helpers-runtime.ts` installs their legacy global names before active home-family game-manager scripts load.
+  - follow-up: active manifest references, `HOME_STANDARD_STARTUP_FILES`, `js/core_game_manager_runtime_accessor_helpers_runtime.js`, and `public/js/legacy_index_nomodule_loader.js` remain intentionally in place for later retirement stages.
+
+## Evidence
+- RED: `npx vitest run tests/unit/core-game-manager-runtime-accessor-helpers.spec.ts` failed while `src/core/game-manager-runtime-accessor-helpers.ts` exported no helpers.
+- RED: `npx vitest run tests/unit/bootstrap-game-manager-runtime-accessor-helpers-runtime.spec.ts` failed while `src/bootstrap/game-manager-runtime-accessor-helpers-runtime.ts` did not exist.
+- GREEN: `npx vitest run tests/unit/bootstrap-game-manager-runtime-accessor-helpers-runtime.spec.ts tests/unit/core-game-manager-runtime-accessor-helpers.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4326 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
+
 # Stage-1DF Core Game Manager Runtime Call Helpers TypeScript Boundary (2026-06-17)
 
 ## Phase Decision
