@@ -32,10 +32,12 @@ type RestartSeedRuntime = {
 };
 
 function loadRestartSeedRuntime(options?: {
+  browserConfirm?: (this: unknown, message: string) => boolean;
   globalCrypto?: { getRandomValues?: (values: Uint32Array) => Uint32Array | void } | null;
   mathRandomValue?: number;
   nowMs?: number;
   performanceNowMs?: number;
+  windowLike?: Record<string, unknown>;
   sessionReplaySnapshotRuntime?: {
     initializeSetupSessionReplaySnapshot?: (manager: Record<string, unknown> | null) => void;
   };
@@ -84,10 +86,12 @@ function loadRestartSeedRuntime(options?: {
     console,
     Math: math,
     Uint32Array,
+    confirm: options?.browserConfirm,
     crypto: options?.globalCrypto || null,
     clearInterval: vi.fn(),
     Date: { now: dateNow },
-    performance: { now: performanceNow }
+    performance: { now: performanceNow },
+    window: options?.windowLike
   } as Record<string, unknown>;
   context.CoreRankedSessionSetupContextRuntime = createRankedSessionSetupContextRuntime();
   context.CoreSessionReplaySnapshotRuntime =
@@ -373,6 +377,33 @@ describe("core game manager restart seed runtime", () => {
         restartWithBoard: expect.any(Function)
       })
     );
+  });
+
+  it("binds browser confirm to window before delegating restart orchestration", () => {
+    const windowLike: Record<string, unknown> = {};
+    const browserConfirm = vi.fn(function (this: unknown, message: string) {
+      if (this !== windowLike) {
+        throw new TypeError("Illegal invocation");
+      }
+      return message === "Start a new game?";
+    });
+    windowLike.confirm = browserConfirm;
+    const restartGame = vi.fn((_manager: Record<string, unknown> | null, operations) => {
+      const confirmRestart = operations.confirmRestart as (message: string) => boolean;
+
+      expect(confirmRestart("Start a new game?")).toBe(true);
+    });
+    const { runtime } = loadRestartSeedRuntime({
+      browserConfirm,
+      windowLike,
+      restartGameRuntime: {
+        restartGame
+      }
+    });
+
+    runtime.restartGame({ modeKey: "standard_4x4_pow2_no_undo" });
+
+    expect(browserConfirm).toHaveBeenCalledWith("Start a new game?");
   });
 
   it("clears restored timer offsets and anchors when setting up a fresh game", () => {

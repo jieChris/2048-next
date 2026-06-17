@@ -141,11 +141,24 @@ function resolveRestartConfirmMessage(manager) {
     : "\u662f\u5426\u786e\u8ba4\u5f00\u59cb\u65b0\u6e38\u620f\uff1f";
 }
 
+function resolveRestartConfirmOperation() {
+  if (typeof window !== "undefined" && window && typeof window.confirm === "function") {
+    return window.confirm.bind(window);
+  }
+  if (typeof confirm === "function") {
+    if (typeof globalThis !== "undefined" && globalThis && globalThis.confirm === confirm) {
+      return confirm.bind(globalThis);
+    }
+    return confirm;
+  }
+  return function () { return false; };
+}
+
 function restartGame(manager) {
   var runtime = resolveCoreRestartGameRuntime(manager);
   if (runtime && typeof runtime.restartGame === "function") {
     runtime.restartGame(manager, {
-      confirmRestart: typeof confirm === "function" ? confirm : function () { return false; },
+      confirmRestart: resolveRestartConfirmOperation(),
       resolveRestartConfirmMessage: resolveRestartConfirmMessage,
       shouldClearPracticeBoardOnRestart: shouldClearPracticeBoardOnRestart,
       createEmptyPracticeBoardMatrix: createEmptyPracticeBoardMatrix,
