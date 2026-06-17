@@ -4,6 +4,8 @@ import vm from "node:vm";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { createSavedManagerTimerStateRuntime } from "../../src/core/saved-manager-timer-state";
+
 function createElement(options?: {
   display?: string;
   visibility?: string;
@@ -73,6 +75,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     resolveManagerDocumentLike() {
       return null;
     },
+    CoreSavedManagerTimerStateRuntime: createSavedManagerTimerStateRuntime(),
     ...(extraContext || {})
   } as Record<string, unknown>;
 
@@ -105,6 +108,25 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
 }
 
 describe("core game manager saved state runtime", () => {
+  it("delegates saved manager timer state restore to the TypeScript runtime", () => {
+    const applySavedManagerTimerState = vi.fn();
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreSavedManagerTimerStateRuntime: {
+        applySavedManagerTimerState
+      }
+    });
+    const manager = {
+      accumulatedTime: 0
+    };
+    const saved = {
+      duration_ms: 1234
+    };
+
+    runtime.applySavedManagerTimerState(manager, saved);
+
+    expect(applySavedManagerTimerState).toHaveBeenCalledWith(manager, saved);
+  });
+
   it("does not persist scroll-hidden fixed timer rows as business-hidden", () => {
     const runtime = loadSavedStateRuntime([32768, 65536]);
     const row32k = createElement({

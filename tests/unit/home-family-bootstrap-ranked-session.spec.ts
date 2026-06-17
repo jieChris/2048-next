@@ -65,6 +65,7 @@ describe("home family bootstrap ranked session ordering", () => {
   it("installs the pre-accessor manager-forward bindings runtime before loading game scripts", async () => {
     const installGameManagerInputEventsRuntime = vi.fn();
     const installPreAccessorManagerForwardBindingsRuntime = vi.fn();
+    const installSavedManagerTimerStateRuntime = vi.fn();
 
     vi.doMock("../../src/bootstrap/page-bootstrap", () => ({
       createBootstrapPipeline: () => [],
@@ -85,6 +86,9 @@ describe("home family bootstrap ranked session ordering", () => {
     }));
     vi.doMock("../../src/core/pre-accessor-manager-forward-bindings", () => ({
       installPreAccessorManagerForwardBindingsRuntime
+    }));
+    vi.doMock("../../src/core/saved-manager-timer-state", () => ({
+      installSavedManagerTimerStateRuntime
     }));
     vi.doMock("../../src/core/game-manager-input-events", () => ({
       installGameManagerInputEventsRuntime
@@ -108,5 +112,6 @@ describe("home family bootstrap ranked session ordering", () => {
 
     expect(installGameManagerInputEventsRuntime).toHaveBeenCalledTimes(1);
     expect(installPreAccessorManagerForwardBindingsRuntime).toHaveBeenCalledTimes(1);
+    expect(installSavedManagerTimerStateRuntime).toHaveBeenCalledTimes(1);
   });
 });
