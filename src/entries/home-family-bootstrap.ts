@@ -70,6 +70,7 @@ import { installUndoStackEntryRuntime } from "../bootstrap/undo-stack-entry-runt
 import { installUndoTileRestoreRuntime } from "../bootstrap/undo-tile-restore-runtime";
 import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-runtime";
 import { installCoreModeRuntime } from "../core/mode";
+import { installNoXSelectionRuntime } from "../core/no-x-selection-overlay";
 import { installRulesRuntime } from "../core/rules";
 import { installSingleModePageLockRuntime } from "../core/single-mode-page-lock";
 import { installSpecialRulesRuntime } from "../core/special-rules";
@@ -249,6 +250,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installRulesRuntime();
   installSpecialRulesRuntime();
   installSingleModePageLockRuntime();
+  installNoXSelectionRuntime();
   installCoreModeRuntime();
   installPracticeModeRuntime();
   installHomeModeRuntime();
