@@ -132,32 +132,41 @@ function resolveWindowNameSavedCandidate(manager, windowLike) {
   var marker = GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY + "=";
   return resolveWindowNameSavedCandidateFallback(manager, windowLike, marker);
 }
-function resolveSavedPayloadRichnessScore(payload) {
+var SAVED_PAYLOAD_RICHNESS_KEYS = [
+  "move_history", "replay_compact_log", "session_replay_v1", "session_replay_v3",
+  "spawn_value_counts", "replay_string", "timer_fixed_rows", "timer_dynamic_rows_capped",
+  "timer_dynamic_rows_overflow", "timer_secondary_rows", "timer_secondary_expanded_parents",
+  "timer_sub_8192", "timer_sub_16384", "timer_sub_visible"
+];
+function isSavedPayloadRichnessValuePresent(richnessValue) {
+  if (typeof richnessValue === "string") return !!richnessValue.trim();
+  if (Array.isArray(richnessValue)) return richnessValue.length > 0;
+  if (isNonArrayObject(richnessValue)) return Object.keys(richnessValue).length > 0;
+  return typeof richnessValue !== "undefined" && richnessValue !== null;
+}
+function resolveCoreSavedPayloadRichnessRuntime() {
+  if (typeof CoreSavedPayloadRichnessRuntime !== "undefined" && CoreSavedPayloadRichnessRuntime) {
+    return CoreSavedPayloadRichnessRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CoreSavedPayloadRichnessRuntime) {
+    return window.CoreSavedPayloadRichnessRuntime;
+  }
+  return null;
+}
+function resolveSavedPayloadRichnessScoreFallback(payload) {
   if (!normalizeSavedStateRecordObject(payload, null)) return -1;
-  var richnessKeys = [
-    "move_history", "replay_compact_log", "session_replay_v1", "session_replay_v3",
-    "spawn_value_counts", "replay_string", "timer_fixed_rows", "timer_dynamic_rows_capped",
-    "timer_dynamic_rows_overflow", "timer_secondary_rows", "timer_secondary_expanded_parents",
-    "timer_sub_8192", "timer_sub_16384", "timer_sub_visible"
-  ];
   var score = 0;
-  for (var keyIndex = 0; keyIndex < richnessKeys.length; keyIndex++) {
-    var richnessValue = payload[richnessKeys[keyIndex]];
-    if (typeof richnessValue === "string") {
-      if (richnessValue.trim()) score += 1;
-      continue;
-    }
-    if (Array.isArray(richnessValue)) {
-      if (richnessValue.length > 0) score += 1;
-      continue;
-    }
-    if (isNonArrayObject(richnessValue)) {
-      if (Object.keys(richnessValue).length > 0) score += 1;
-      continue;
-    }
-    if (typeof richnessValue !== "undefined" && richnessValue !== null) score += 1;
+  for (var keyIndex = 0; keyIndex < SAVED_PAYLOAD_RICHNESS_KEYS.length; keyIndex++) {
+    if (isSavedPayloadRichnessValuePresent(payload[SAVED_PAYLOAD_RICHNESS_KEYS[keyIndex]])) score += 1;
   }
   return score;
+}
+function resolveSavedPayloadRichnessScore(payload) {
+  var runtime = resolveCoreSavedPayloadRichnessRuntime();
+  if (runtime && typeof runtime.resolveSavedPayloadRichnessScore === "function") {
+    return runtime.resolveSavedPayloadRichnessScore(payload);
+  }
+  return resolveSavedPayloadRichnessScoreFallback(payload);
 }
 function areSavedScoresCompatibleForPosition(leftScore, rightScore) {
   var normalizedLeftScore = Number(leftScore);

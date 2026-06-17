@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createSavedManagerReplayStateRuntime } from "../../src/core/saved-manager-replay-state";
 import { createSavedManagerTimerStateRuntime } from "../../src/core/saved-manager-timer-state";
+import { createSavedPayloadRichnessRuntime } from "../../src/core/saved-payload-richness";
 
 function createElement(options?: {
   display?: string;
@@ -81,6 +82,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     },
     CoreSavedManagerReplayStateRuntime: createSavedManagerReplayStateRuntime(),
     CoreSavedManagerTimerStateRuntime: createSavedManagerTimerStateRuntime(),
+    CoreSavedPayloadRichnessRuntime: createSavedPayloadRichnessRuntime(),
     ...(extraContext || {})
   } as Record<string, unknown>;
 
@@ -102,6 +104,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
       payload: Record<string, unknown>
     ) => Record<string, unknown> | null;
     clearSavedGameState: (manager: Record<string, unknown>, modeKey?: string) => void;
+    resolveSavedPayloadRichnessScore: (payload: unknown) => number;
     resolveSavedStateRestoreDecision: (
       manager: Record<string, unknown>,
       saved: Record<string, unknown>
@@ -113,6 +116,21 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
 }
 
 describe("core game manager saved state runtime", () => {
+  it("delegates saved payload richness scoring to the TypeScript runtime", () => {
+    const resolveSavedPayloadRichnessScore = vi.fn(() => 7);
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreSavedPayloadRichnessRuntime: {
+        resolveSavedPayloadRichnessScore
+      }
+    });
+    const payload = {
+      replay_string: "REPLAY_v1RPL_B64_saved"
+    };
+
+    expect(runtime.resolveSavedPayloadRichnessScore(payload)).toBe(7);
+    expect(resolveSavedPayloadRichnessScore).toHaveBeenCalledWith(payload);
+  });
+
   it("delegates saved manager replay state restore to the TypeScript runtime", () => {
     const applySavedManagerReplayState = vi.fn();
     const runtime = loadSavedStateRuntime([32768], {

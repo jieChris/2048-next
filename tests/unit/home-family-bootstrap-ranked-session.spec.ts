@@ -70,6 +70,7 @@ describe("home family bootstrap ranked session ordering", () => {
     const installSavedManagerReplayStateRuntime = vi.fn();
     const installPreAccessorManagerForwardBindingsRuntime = vi.fn();
     const installSavedManagerTimerStateRuntime = vi.fn();
+    const installSavedPayloadRichnessRuntime = vi.fn();
 
     vi.doMock("../../src/bootstrap/page-bootstrap", () => ({
       createBootstrapPipeline: () => [],
@@ -93,6 +94,9 @@ describe("home family bootstrap ranked session ordering", () => {
     }));
     vi.doMock("../../src/core/saved-manager-timer-state", () => ({
       installSavedManagerTimerStateRuntime
+    }));
+    vi.doMock("../../src/core/saved-payload-richness", () => ({
+      installSavedPayloadRichnessRuntime
     }));
     vi.doMock("../../src/core/game-manager-input-events", () => ({
       installGameManagerInputEventsRuntime
@@ -133,5 +137,6 @@ describe("home family bootstrap ranked session ordering", () => {
     expect(installSavedManagerReplayStateRuntime).toHaveBeenCalledTimes(1);
     expect(installPreAccessorManagerForwardBindingsRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedManagerTimerStateRuntime).toHaveBeenCalledTimes(1);
+    expect(installSavedPayloadRichnessRuntime).toHaveBeenCalledTimes(1);
   });
 });

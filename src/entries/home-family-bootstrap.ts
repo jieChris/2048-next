@@ -82,6 +82,7 @@ import { installResetSetupReplayAndSpawnStateRuntime } from "../core/reset-setup
 import { installRestartGameRuntime } from "../core/restart-game";
 import { installSavedManagerReplayStateRuntime } from "../core/saved-manager-replay-state";
 import { installSavedManagerTimerStateRuntime } from "../core/saved-manager-timer-state";
+import { installSavedPayloadRichnessRuntime } from "../core/saved-payload-richness";
 import { installSessionReplaySnapshotRuntime } from "../core/session-replay-snapshot";
 import { installSetupRestoreInitialBoardStateRuntime } from "../core/setup-restore-initial-board-state";
 import { installSetupStateInitializationRuntime } from "../core/setup-state-initialization";
@@ -279,6 +280,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installRestartGameRuntime();
   installSavedManagerReplayStateRuntime();
   installSavedManagerTimerStateRuntime();
+  installSavedPayloadRichnessRuntime();
   installSessionReplaySnapshotRuntime();
   installSetupRestoreInitialBoardStateRuntime();
   installSetupStateInitializationRuntime();
