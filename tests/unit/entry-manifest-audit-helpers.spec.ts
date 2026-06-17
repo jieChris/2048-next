@@ -314,6 +314,13 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
+  it("tracks common game-manager shell as a retired active-manifest script", () => {
+    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
+      scriptPath: "core_game_manager_common_runtime.js",
+      symbolName: "coreGameManagerCommonRuntimeUrl"
+    });
+  });
+
   it("tracks replay-timer runtime as a retired active-manifest script", () => {
     expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
       scriptPath: "core_replay_timer_runtime.js",
@@ -751,6 +758,12 @@ describe("entry-manifest-audit helpers", () => {
   it("tracks base-helpers runtime as a retired Vite bundled runtime script", () => {
     expect(BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS).toContainEqual({
       scriptPath: "core_game_manager_base_helpers_runtime.js"
+    });
+  });
+
+  it("tracks common game-manager shell as a retired Vite bundled runtime script", () => {
+    expect(BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS).toContainEqual({
+      scriptPath: "core_game_manager_common_runtime.js"
     });
   });
 

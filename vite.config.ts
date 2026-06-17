@@ -29,7 +29,6 @@ const HOME_STANDARD_STARTUP_FILES = [
   "core_game_manager_restart_setup_helpers_runtime.js",
   "core_game_manager_setup_timer_ui_helpers_runtime.js",
   "core_game_manager_session_init_helpers_runtime.js",
-  "core_game_manager_common_runtime.js",
   "core_game_manager_replay_helpers_runtime.js",
   "core_game_manager_mode_rules_helpers_runtime.js",
   "core_game_manager_static_runtime.js",
