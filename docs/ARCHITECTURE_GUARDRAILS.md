@@ -1,3 +1,24 @@
+# Guardrail Delta (2026-06-17, Stage-1DI Core Game Manager Env Helpers Retirement)
+
+## Batch Impact
+- `core_game_manager_env_helpers_runtime.js` is no longer referenced by active home/capped/play/replay runtime manifests.
+- `core_game_manager_env_helpers_runtime.js` is no longer included in `HOME_STANDARD_STARTUP_FILES`, so the Vite-generated home startup bundle no longer carries the legacy env-helper runtime.
+- `src/bootstrap/game-manager-env-helpers-runtime.ts` remains the modern installer for migrated env-helper globals before active legacy scripts load.
+- `js/core_game_manager_env_helpers_runtime.js` remains in the repository, and `public/js/legacy_index_nomodule_loader.js` still references it for the separate legacy-browser policy path.
+- `entry-manifest-audit` now blocks `core_game_manager_env_helpers_runtime.js` / `coreGameManagerEnvHelpersRuntimeUrl` from re-entering active manifests and blocks the script from re-entering the Vite home startup bundle.
+
+## Verification
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4334 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
 # Guardrail Delta (2026-06-17, Stage-1DH Core Game Manager Common Shell Retirement)
 
 ## Batch Impact
