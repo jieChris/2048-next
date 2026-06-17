@@ -4,6 +4,7 @@ import vm from "node:vm";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { createSavedManagerReplayStateRuntime } from "../../src/core/saved-manager-replay-state";
 import { createSavedManagerTimerStateRuntime } from "../../src/core/saved-manager-timer-state";
 
 function createElement(options?: {
@@ -56,9 +57,9 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
   const scriptPath = path.resolve(process.cwd(), "js/core_game_manager_saved_state_helpers_runtime.js");
   const clientRecordScript = readFileSync(clientRecordScriptPath, "utf8");
   const script = readFileSync(scriptPath, "utf8");
-  const context = {
-    console,
-    GameManager: {
+    const context = {
+      console,
+      GameManager: {
       TIMER_SLOT_IDS: slotIds,
       SAVED_GAME_STATE_VERSION: 1,
       SAVED_GAME_STATE_KEY_PREFIX: "savedGameStateByMode:v1:",
@@ -68,6 +69,9 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     isNonArrayObject(value: unknown) {
       return !!value && typeof value === "object" && !Array.isArray(value);
     },
+    shouldRestoreSavedStateUndoHistory() {
+      return true;
+    },
     resolveManagerElementById(manager: Record<string, unknown>, id: string) {
       const elements = (manager.elements || {}) as Record<string, unknown>;
       return Object.prototype.hasOwnProperty.call(elements, id) ? elements[id] : null;
@@ -75,6 +79,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     resolveManagerDocumentLike() {
       return null;
     },
+    CoreSavedManagerReplayStateRuntime: createSavedManagerReplayStateRuntime(),
     CoreSavedManagerTimerStateRuntime: createSavedManagerTimerStateRuntime(),
     ...(extraContext || {})
   } as Record<string, unknown>;
@@ -108,6 +113,35 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
 }
 
 describe("core game manager saved state runtime", () => {
+  it("delegates saved manager replay state restore to the TypeScript runtime", () => {
+    const applySavedManagerReplayState = vi.fn();
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreSavedManagerReplayStateRuntime: {
+        applySavedManagerReplayState
+      }
+    });
+    const manager = {
+      moveHistory: [],
+      setRuntimeUndoStack: vi.fn(),
+      setRuntimeRedoStack: vi.fn()
+    };
+    const saved = {
+      move_history: [0, 1],
+      replay_compact_log: "compact"
+    };
+
+    runtime.applySavedManagerReplayState(manager, saved);
+
+    expect(applySavedManagerReplayState).toHaveBeenCalledWith(
+      manager,
+      saved,
+      expect.objectContaining({
+        normalizeSavedReplayV1Session: expect.any(Function),
+        shouldRestoreSavedStateUndoHistory: expect.any(Function)
+      })
+    );
+  });
+
   it("delegates saved manager timer state restore to the TypeScript runtime", () => {
     const applySavedManagerTimerState = vi.fn();
     const runtime = loadSavedStateRuntime([32768], {
@@ -117,6 +151,9 @@ describe("core game manager saved state runtime", () => {
     });
     const manager = {
       accumulatedTime: 0
+      ,
+      setRuntimeUndoStack: vi.fn(),
+      setRuntimeRedoStack: vi.fn()
     };
     const saved = {
       duration_ms: 1234

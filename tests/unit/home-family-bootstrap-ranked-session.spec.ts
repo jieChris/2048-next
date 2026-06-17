@@ -66,6 +66,7 @@ describe("home family bootstrap ranked session ordering", () => {
     const installGameManagerInputEventsRuntime = vi.fn();
     const installGameManagerRuntimeStateRuntime = vi.fn();
     const installGameManagerUndoRestoredTilesRuntime = vi.fn();
+    const installSavedManagerReplayStateRuntime = vi.fn();
     const installPreAccessorManagerForwardBindingsRuntime = vi.fn();
     const installSavedManagerTimerStateRuntime = vi.fn();
 
@@ -101,6 +102,9 @@ describe("home family bootstrap ranked session ordering", () => {
     vi.doMock("../../src/core/game-manager-undo-restored-tiles", () => ({
       installGameManagerUndoRestoredTilesRuntime
     }));
+    vi.doMock("../../src/core/saved-manager-replay-state", () => ({
+      installSavedManagerReplayStateRuntime
+    }));
     vi.doMock("../../src/entries/legacy-loader", () => ({
       loadLegacyScriptsSequentially: vi.fn(async () => {})
     }));
@@ -121,6 +125,7 @@ describe("home family bootstrap ranked session ordering", () => {
     expect(installGameManagerInputEventsRuntime).toHaveBeenCalledTimes(1);
     expect(installGameManagerRuntimeStateRuntime).toHaveBeenCalledTimes(1);
     expect(installGameManagerUndoRestoredTilesRuntime).toHaveBeenCalledTimes(1);
+    expect(installSavedManagerReplayStateRuntime).toHaveBeenCalledTimes(1);
     expect(installPreAccessorManagerForwardBindingsRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedManagerTimerStateRuntime).toHaveBeenCalledTimes(1);
   });
