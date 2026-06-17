@@ -474,32 +474,62 @@ function applySetupModeConfigBaseFields(manager, cfg) {
 function createSpecialRulesStateResolveArgs(manager) {
   return [manager.specialRules || {}, manager.width, manager.height, manager.clonePlain.bind(manager)];
 }
-function applySpecialRulesStateSnapshot(manager, stateValue) {
-  if (!manager) return;
-  var state = normalizeModeRulesRecordObject(stateValue, {});
+
+function applySpecialRulesStateSnapshotFromCore(manager, stateValue) {
+  if (!manager) return false;
+  return resolveCoreArgsCallWith(
+    manager,
+    "callCoreSpecialRulesRuntime",
+    "applySpecialRulesStateSnapshot",
+    [manager, stateValue],
+    false,
+    function (currentManager, coreCallResult) {
+      return currentManager.isCoreCallAvailable(coreCallResult);
+    }
+  );
+}
+function applySpecialRulesBlockedStateSnapshot(manager, state) {
   manager.blockedCellSet = isModeRulesRecordObject(state.blockedCellSet)
     ? state.blockedCellSet
     : {};
   manager.blockedCellsList = Array.isArray(state.blockedCellsList) ? state.blockedCellsList : [];
-  applyStoneStateToManager(
-    manager,
-    normalizeStoneCellsList(state.stoneCellsList, manager.width, manager.height)
-  );
+}
+function applySpecialRulesScalarStateSnapshot(manager, state) {
   manager.undoLimit = (Number.isInteger(state.undoLimit) && state.undoLimit >= 0)
     ? state.undoLimit
     : null;
   manager.comboMultiplier = (Number.isFinite(state.comboMultiplier) && state.comboMultiplier > 1)
     ? Number(state.comboMultiplier)
     : 1;
+}
+function applySpecialRulesDirectionStateSnapshot(manager, state) {
   manager.directionLockRules = isModeRulesRecordObject(state.directionLockRules)
     ? manager.clonePlain(state.directionLockRules)
     : null;
   applyMoveDirectionsToManager(manager, state.movementDirections);
+}
+function applySpecialRulesTimeoutAndItemStateSnapshot(manager, state) {
   manager.moveTimeoutMs =
     Number.isInteger(state.moveTimeoutMs) && Number(state.moveTimeoutMs) > 0
       ? Number(state.moveTimeoutMs)
       : null;
   manager.itemModeRules = normalizeItemModeRulesForManager(state.itemModeRules);
+}
+function applySpecialRulesStateSnapshotLegacy(manager, stateValue) {
+  if (!manager) return;
+  var state = normalizeModeRulesRecordObject(stateValue, {});
+  applySpecialRulesBlockedStateSnapshot(manager, state);
+  applyStoneStateToManager(
+    manager,
+    normalizeStoneCellsList(state.stoneCellsList, manager.width, manager.height)
+  );
+  applySpecialRulesScalarStateSnapshot(manager, state);
+  applySpecialRulesDirectionStateSnapshot(manager, state);
+  applySpecialRulesTimeoutAndItemStateSnapshot(manager, state);
+}
+function applySpecialRulesStateSnapshot(manager, stateValue) {
+  if (applySpecialRulesStateSnapshotFromCore(manager, stateValue)) return;
+  applySpecialRulesStateSnapshotLegacy(manager, stateValue);
 }
 function applySpecialRulesStateFromCore(manager) {
   if (!manager) return false;
@@ -542,20 +572,29 @@ function applyBlockedCellsFromSpecialRulesFallback(manager, safeRules) {
     manager.blockedCellsList.push(point);
   }
 }
-function applySpecialRulesStateFallback(manager) {
-  if (!manager) return;
-  var safeRules = normalizeModeRulesRecordObject(manager.specialRules || {}, {});
-  applyBlockedCellsFromSpecialRulesFallback(manager, safeRules);
-  applyStoneStateToManager(
+
+function applySpecialRulesStateFallbackFromCore(manager) {
+  if (!manager) return false;
+  return resolveCoreArgsCallWith(
     manager,
-    normalizeStoneCellsList(safeRules.stone_tiles, manager.width, manager.height)
+    "callCoreSpecialRulesRuntime",
+    "applySpecialRulesStateFallback",
+    [manager],
+    false,
+    function (currentManager, coreCallResult) {
+      return currentManager.isCoreCallAvailable(coreCallResult);
+    }
   );
+}
+function applySpecialRulesFallbackScalarState(manager, safeRules) {
   manager.undoLimit = (Number.isInteger(safeRules.undo_limit) && safeRules.undo_limit >= 0)
     ? safeRules.undo_limit
     : null;
   manager.comboMultiplier = (Number.isFinite(safeRules.combo_multiplier) && safeRules.combo_multiplier > 1)
     ? Number(safeRules.combo_multiplier)
     : 1;
+}
+function applySpecialRulesFallbackDirectionState(manager, safeRules) {
   manager.directionLockRules = isModeRulesRecordObject(safeRules.direction_lock)
     ? manager.clonePlain(safeRules.direction_lock)
     : null;
@@ -565,11 +604,29 @@ function applySpecialRulesStateFallback(manager) {
       ? safeRules.movement_directions
       : (safeRules.allow_diagonal_moves === true ? [0, 1, 2, 3, 4, 5, 6, 7] : getDefaultMoveDirections())
   );
+}
+function applySpecialRulesFallbackTimeoutAndItemState(manager, safeRules) {
   manager.moveTimeoutMs =
     Number.isInteger(safeRules.move_timeout_ms) && Number(safeRules.move_timeout_ms) > 0
       ? Number(safeRules.move_timeout_ms)
       : null;
   manager.itemModeRules = normalizeItemModeRulesForManager(safeRules.item_mode);
+}
+function applySpecialRulesStateFallbackLegacy(manager) {
+  if (!manager) return;
+  var safeRules = normalizeModeRulesRecordObject(manager.specialRules || {}, {});
+  applyBlockedCellsFromSpecialRulesFallback(manager, safeRules);
+  applyStoneStateToManager(
+    manager,
+    normalizeStoneCellsList(safeRules.stone_tiles, manager.width, manager.height)
+  );
+  applySpecialRulesFallbackScalarState(manager, safeRules);
+  applySpecialRulesFallbackDirectionState(manager, safeRules);
+  applySpecialRulesFallbackTimeoutAndItemState(manager, safeRules);
+}
+function applySpecialRulesStateFallback(manager) {
+  if (applySpecialRulesStateFallbackFromCore(manager)) return;
+  applySpecialRulesStateFallbackLegacy(manager);
 }
 function syncScoreManagerModeKeyForSetup(manager, modeKey) {
   if (!manager || !manager.scoreManager || typeof manager.scoreManager.setModeKey !== "function") return;
