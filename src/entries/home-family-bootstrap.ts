@@ -9,6 +9,7 @@ import { installGameOverUndoHostRuntime } from "../bootstrap/game-over-undo-host
 import { installGameManagerBaseHelpersRuntime } from "../bootstrap/game-manager-base-helpers-runtime";
 import { installGameManagerClientRecordIdRuntime } from "../bootstrap/game-manager-client-record-id-runtime";
 import { installGameManagerEnvHelpersRuntime } from "../bootstrap/game-manager-env-helpers-runtime";
+import { installGameManagerRuntimeAccessorHelpersRuntime } from "../bootstrap/game-manager-runtime-accessor-helpers-runtime";
 import { installGameManagerRuntimeCallHelpersRuntime } from "../bootstrap/game-manager-runtime-call-helpers-runtime";
 import { installGameSettingsStorageRuntime } from "../bootstrap/game-settings-storage-runtime";
 import { installGridScanRuntime } from "../bootstrap/grid-scan-runtime";
@@ -220,6 +221,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installGameManagerBaseHelpersRuntime();
   installGameManagerEnvHelpersRuntime();
   installGameManagerRuntimeCallHelpersRuntime();
+  installGameManagerRuntimeAccessorHelpersRuntime();
   installAdminRescueClientServiceBoundary();
   installDirectionLockRuntime();
   installGameOverUndoHostRuntime();
