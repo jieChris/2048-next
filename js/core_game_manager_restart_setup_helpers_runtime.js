@@ -89,6 +89,17 @@ function resolveCoreResetSetupReplayAndSpawnStateRuntime(manager) {
   return null;
 }
 
+function resolveCoreRestartGameRuntime(manager) {
+  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  if (windowLike && windowLike.CoreRestartGameRuntime) {
+    return windowLike.CoreRestartGameRuntime;
+  }
+  if (typeof CoreRestartGameRuntime !== "undefined" && CoreRestartGameRuntime) {
+    return CoreRestartGameRuntime;
+  }
+  return null;
+}
+
 function ensureNoXSelectionOverlayForManager(manager) {
   var runtime = resolveCoreNoXSelectionRuntime(manager);
   if (runtime && typeof runtime.ensureNoXSelectionOverlayForManager === "function") {
@@ -130,34 +141,30 @@ function resolveRestartConfirmMessage(manager) {
     : "\u662f\u5426\u786e\u8ba4\u5f00\u59cb\u65b0\u6e38\u620f\uff1f";
 }
 
-function restartGame(manager) {
-  if (!manager) return;
-  if (!confirm(resolveRestartConfirmMessage(manager))) return;
-  manager.actuator.continue();
-  manager.setRuntimeUndoStack([]);
-  manager.setRuntimeRedoStack([]);
-  manager.clearSavedGameState(manager.modeKey);
-  if (manager.modeKey === "practice" && manager.practiceRestartBoardMatrix) {
-    if (shouldClearPracticeBoardOnRestart(manager)) {
-      restartWithBoard(
-        manager,
-        createEmptyPracticeBoardMatrix(manager),
-        manager.practiceRestartModeConfig || manager.modeConfig,
-        { setPracticeRestartBase: true }
-      );
-      manager.isTestMode = true;
-      return;
-    }
-    restartWithBoard(
-      manager,
-      manager.practiceRestartBoardMatrix,
-      manager.practiceRestartModeConfig || manager.modeConfig,
-      { preservePracticeRestartBase: true }
-    );
-    manager.isTestMode = true;
-    return;
+function resolveRestartConfirmOperation() {
+  if (typeof window !== "undefined" && window && typeof window.confirm === "function") {
+    return window.confirm.bind(window);
   }
-  manager.setup(undefined, { disableStateRestore: true });
+  if (typeof confirm === "function") {
+    if (typeof globalThis !== "undefined" && globalThis && globalThis.confirm === confirm) {
+      return confirm.bind(globalThis);
+    }
+    return confirm;
+  }
+  return function () { return false; };
+}
+
+function restartGame(manager) {
+  var runtime = resolveCoreRestartGameRuntime(manager);
+  if (runtime && typeof runtime.restartGame === "function") {
+    runtime.restartGame(manager, {
+      confirmRestart: resolveRestartConfirmOperation(),
+      resolveRestartConfirmMessage: resolveRestartConfirmMessage,
+      shouldClearPracticeBoardOnRestart: shouldClearPracticeBoardOnRestart,
+      createEmptyPracticeBoardMatrix: createEmptyPracticeBoardMatrix,
+      restartWithBoard: restartWithBoard
+    });
+  }
 }
 
 function createEmptyPracticeBoardMatrix(manager) {

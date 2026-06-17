@@ -74,6 +74,7 @@ import { installCoreModeRuntime } from "../core/mode";
 import { installRankedCheckpointLocalMirrorSetupRuntime } from "../core/ranked-checkpoint-local-mirror-setup";
 import { installRankedSessionSetupContextRuntime } from "../core/ranked-session-setup-context";
 import { installResetSetupReplayAndSpawnStateRuntime } from "../core/reset-setup-replay-and-spawn-state";
+import { installRestartGameRuntime } from "../core/restart-game";
 import { installSessionReplaySnapshotRuntime } from "../core/session-replay-snapshot";
 import { installSetupRestoreInitialBoardStateRuntime } from "../core/setup-restore-initial-board-state";
 import { installSetupStateInitializationRuntime } from "../core/setup-state-initialization";
@@ -263,6 +264,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installRankedCheckpointLocalMirrorSetupRuntime();
   installRankedSessionSetupContextRuntime();
   installResetSetupReplayAndSpawnStateRuntime();
+  installRestartGameRuntime();
   installSessionReplaySnapshotRuntime();
   installSetupRestoreInitialBoardStateRuntime();
   installSetupStateInitializationRuntime();
