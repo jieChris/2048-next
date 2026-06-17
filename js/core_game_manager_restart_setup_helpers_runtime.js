@@ -50,6 +50,20 @@ function resolveCoreSessionReplaySnapshotRuntime(manager) {
   return null;
 }
 
+function resolveCoreSetupRestoreInitialBoardStateRuntime(manager) {
+  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  if (windowLike && windowLike.CoreSetupRestoreInitialBoardStateRuntime) {
+    return windowLike.CoreSetupRestoreInitialBoardStateRuntime;
+  }
+  if (
+    typeof CoreSetupRestoreInitialBoardStateRuntime !== "undefined" &&
+    CoreSetupRestoreInitialBoardStateRuntime
+  ) {
+    return CoreSetupRestoreInitialBoardStateRuntime;
+  }
+  return null;
+}
+
 function ensureNoXSelectionOverlayForManager(manager) {
   var runtime = resolveCoreNoXSelectionRuntime(manager);
   if (runtime && typeof runtime.ensureNoXSelectionOverlayForManager === "function") {
@@ -610,36 +624,21 @@ function placeStoneTilesForSetup(manager) {
 }
 
 function resolveSetupRestoreAndInitialBoardState(manager, hasInputSeed, normalizedOptions) {
-  if (!manager) return { restoredFromSavedState: false };
-  var restoredFromSavedState = false;
-  var restoredFromRankedLocalMirror = false;
-  var skipStartTiles = !!normalizedOptions.skipStartTiles;
-  if (shouldTryRestoreSavedStateInSetup(manager, hasInputSeed, normalizedOptions)) {
-    restoredFromSavedState = tryRestoreLatestSavedState(manager);
+  var runtime = resolveCoreSetupRestoreInitialBoardStateRuntime(manager);
+  if (runtime && typeof runtime.resolveSetupRestoreAndInitialBoardState === "function") {
+    return runtime.resolveSetupRestoreAndInitialBoardState(manager, hasInputSeed, normalizedOptions, {
+      shouldTryRestoreSavedStateInSetup: shouldTryRestoreSavedStateInSetup,
+      tryRestoreLatestSavedState: typeof tryRestoreLatestSavedState === "function" ? tryRestoreLatestSavedState : undefined,
+      shouldForceRankedCheckpointRestoreInSetup: shouldForceRankedCheckpointRestoreInSetup,
+      readRankedCheckpointLocalMirrorSavedStateForSetup: readRankedCheckpointLocalMirrorSavedStateForSetup,
+      applySavedStateRestore: typeof applySavedStateRestore === "function" ? applySavedStateRestore : undefined,
+      shouldScheduleRankedCheckpointRestoreInSetup: shouldScheduleRankedCheckpointRestoreInSetup,
+      hasRankedCheckpointAuthTokenForSetup: hasRankedCheckpointAuthTokenForSetup,
+      placeStoneTilesForSetup: placeStoneTilesForSetup,
+      seedInitialTilesAndSnapshotBoard: seedInitialTilesAndSnapshotBoard
+    });
   }
-  var forceRankedCheckpointRestore = shouldForceRankedCheckpointRestoreInSetup(manager);
-  if (
-    !forceRankedCheckpointRestore &&
-    !restoredFromSavedState &&
-    !hasInputSeed &&
-    !skipStartTiles &&
-    !normalizedOptions.disableStateRestore
-  ) {
-    var rankedLocalMirrorSavedState = readRankedCheckpointLocalMirrorSavedStateForSetup(manager);
-    if (rankedLocalMirrorSavedState && typeof applySavedStateRestore === "function") {
-      restoredFromSavedState = applySavedStateRestore(manager, rankedLocalMirrorSavedState);
-      restoredFromRankedLocalMirror = !!restoredFromSavedState;
-    }
-  }
-  manager.needsRankedCheckpointRestore =
-    shouldScheduleRankedCheckpointRestoreInSetup(manager, hasInputSeed, normalizedOptions) &&
-    (!restoredFromSavedState || (restoredFromRankedLocalMirror && hasRankedCheckpointAuthTokenForSetup(manager)));
-  manager.rankCheckpointRestorePending = !!manager.needsRankedCheckpointRestore;
-  if (!skipStartTiles && !restoredFromSavedState) {
-    placeStoneTilesForSetup(manager);
-    seedInitialTilesAndSnapshotBoard(manager);
-  }
-  return { restoredFromSavedState: restoredFromSavedState };
+  return { restoredFromSavedState: false };
 }
 
 function resolveCoreSetupUiStateRuntime(manager) {

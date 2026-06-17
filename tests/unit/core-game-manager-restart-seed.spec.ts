@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createRankedSessionSetupContextRuntime } from "../../src/core/ranked-session-setup-context";
 import { createSessionReplaySnapshotRuntime } from "../../src/core/session-replay-snapshot";
+import { createSetupRestoreInitialBoardStateRuntime } from "../../src/core/setup-restore-initial-board-state";
 
 type RestartSeedRuntime = {
   initializeSetupSeedAndReplayState: (
@@ -13,6 +14,11 @@ type RestartSeedRuntime = {
     inputSeed?: unknown
   ) => { hasInputSeed: boolean; rankedSessionContext?: Record<string, unknown> | null };
   initializeSetupSessionReplaySnapshot: (manager: Record<string, unknown> | null) => void;
+  resolveSetupRestoreAndInitialBoardState: (
+    manager: Record<string, unknown> | null,
+    hasInputSeed: boolean,
+    normalizedOptions: Record<string, unknown>
+  ) => { restoredFromSavedState: boolean };
   resetSetupTimerAndInputState: (manager: Record<string, unknown>) => void;
 };
 
@@ -23,6 +29,14 @@ function loadRestartSeedRuntime(options?: {
   performanceNowMs?: number;
   sessionReplaySnapshotRuntime?: {
     initializeSetupSessionReplaySnapshot?: (manager: Record<string, unknown> | null) => void;
+  };
+  setupRestoreInitialBoardStateRuntime?: {
+    resolveSetupRestoreAndInitialBoardState?: (
+      manager: Record<string, unknown> | null,
+      hasInputSeed: boolean,
+      normalizedOptions: Record<string, unknown>,
+      operations: Record<string, unknown>
+    ) => { restoredFromSavedState: boolean };
   };
 }) {
   const scriptPath = path.resolve(
@@ -49,6 +63,8 @@ function loadRestartSeedRuntime(options?: {
   context.CoreRankedSessionSetupContextRuntime = createRankedSessionSetupContextRuntime();
   context.CoreSessionReplaySnapshotRuntime =
     options?.sessionReplaySnapshotRuntime || createSessionReplaySnapshotRuntime();
+  context.CoreSetupRestoreInitialBoardStateRuntime =
+    options?.setupRestoreInitialBoardStateRuntime || createSetupRestoreInitialBoardStateRuntime();
 
   vm.runInNewContext(script, context);
 
@@ -215,6 +231,37 @@ describe("core game manager restart seed runtime", () => {
     expect(initializeSetupSessionReplaySnapshot).toHaveBeenCalledWith(manager);
     expect(manager.sessionReplayV3).toBeUndefined();
     expect(manager.sessionReplayV1).toBeUndefined();
+  });
+
+  it("delegates setup restore and initial board state resolution to the TypeScript runtime", () => {
+    const resolveSetupRestoreAndInitialBoardState = vi.fn(() => ({ restoredFromSavedState: true }));
+    const { runtime } = loadRestartSeedRuntime({
+      setupRestoreInitialBoardStateRuntime: {
+        resolveSetupRestoreAndInitialBoardState
+      }
+    });
+    const manager = { modeKey: "standard_4x4_pow2_no_undo" } as Record<string, unknown>;
+    const normalizedOptions = { disableStateRestore: false };
+
+    const result = runtime.resolveSetupRestoreAndInitialBoardState(manager, false, normalizedOptions);
+
+    expect(result).toEqual({ restoredFromSavedState: true });
+    expect(resolveSetupRestoreAndInitialBoardState).toHaveBeenCalledWith(
+      manager,
+      false,
+      normalizedOptions,
+      expect.objectContaining({
+        shouldTryRestoreSavedStateInSetup: expect.any(Function),
+        tryRestoreLatestSavedState: undefined,
+        shouldForceRankedCheckpointRestoreInSetup: expect.any(Function),
+        readRankedCheckpointLocalMirrorSavedStateForSetup: expect.any(Function),
+        applySavedStateRestore: undefined,
+        shouldScheduleRankedCheckpointRestoreInSetup: expect.any(Function),
+        hasRankedCheckpointAuthTokenForSetup: expect.any(Function),
+        placeStoneTilesForSetup: expect.any(Function),
+        seedInitialTilesAndSnapshotBoard: expect.any(Function)
+      })
+    );
   });
 
   it("clears restored timer offsets and anchors when setting up a fresh game", () => {

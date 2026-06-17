@@ -74,6 +74,7 @@ import { installCoreModeRuntime } from "../core/mode";
 import { installRankedCheckpointLocalMirrorSetupRuntime } from "../core/ranked-checkpoint-local-mirror-setup";
 import { installRankedSessionSetupContextRuntime } from "../core/ranked-session-setup-context";
 import { installSessionReplaySnapshotRuntime } from "../core/session-replay-snapshot";
+import { installSetupRestoreInitialBoardStateRuntime } from "../core/setup-restore-initial-board-state";
 import { installNoXSelectionRuntime } from "../core/no-x-selection-overlay";
 import { installRulesRuntime } from "../core/rules";
 import { installSetupUiStateRuntime } from "../core/setup-ui-state";
@@ -260,6 +261,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installRankedCheckpointLocalMirrorSetupRuntime();
   installRankedSessionSetupContextRuntime();
   installSessionReplaySnapshotRuntime();
+  installSetupRestoreInitialBoardStateRuntime();
   installSetupUiStateRuntime();
   installCoreModeRuntime();
   installPracticeModeRuntime();
