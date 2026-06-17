@@ -11,6 +11,20 @@ function resolveCoreNoXSelectionRuntime(manager) {
   return null;
 }
 
+function resolveCoreRankedCheckpointLocalMirrorSetupRuntime(manager) {
+  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  if (windowLike && windowLike.CoreRankedCheckpointLocalMirrorSetupRuntime) {
+    return windowLike.CoreRankedCheckpointLocalMirrorSetupRuntime;
+  }
+  if (
+    typeof CoreRankedCheckpointLocalMirrorSetupRuntime !== "undefined" &&
+    CoreRankedCheckpointLocalMirrorSetupRuntime
+  ) {
+    return CoreRankedCheckpointLocalMirrorSetupRuntime;
+  }
+  return null;
+}
+
 function ensureNoXSelectionOverlayForManager(manager) {
   var runtime = resolveCoreNoXSelectionRuntime(manager);
   if (runtime && typeof runtime.ensureNoXSelectionOverlayForManager === "function") {
@@ -546,55 +560,19 @@ function hasRankedCheckpointAuthTokenForSetup(manager) {
 }
 
 function hasRankedCheckpointLocalMirrorForSetup(manager) {
-  if (!manager || manager.rankPolicy !== "ranked") return false;
-  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
-  var modeKey = typeof manager.modeKey === "string" && manager.modeKey
-    ? manager.modeKey
-    : (typeof manager.mode === "string" ? manager.mode : "");
-  if (!modeKey) return false;
-  try {
-    var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
-    if (!storage || typeof storage.getItem !== "function") return false;
-    var raw = storage.getItem("ranked_checkpoint_local_mirror:v1:" + modeKey);
-    return typeof raw === "string" && raw.trim().length > 0;
-  } catch (_err) {
-    return false;
+  var runtime = resolveCoreRankedCheckpointLocalMirrorSetupRuntime(manager);
+  if (runtime && typeof runtime.hasRankedCheckpointLocalMirrorForSetup === "function") {
+    return runtime.hasRankedCheckpointLocalMirrorForSetup(manager);
   }
+  return false;
 }
 
 function readRankedCheckpointLocalMirrorSavedStateForSetup(manager) {
-  if (!manager || manager.rankPolicy !== "ranked") return null;
-  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
-  var modeKey = typeof manager.modeKey === "string" && manager.modeKey
-    ? manager.modeKey
-    : (typeof manager.mode === "string" ? manager.mode : "");
-  if (!modeKey) return null;
-  try {
-    var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
-    if (!storage || typeof storage.getItem !== "function") return null;
-    var raw = storage.getItem("ranked_checkpoint_local_mirror:v1:" + modeKey);
-    if (!(typeof raw === "string" && raw)) return null;
-    var parsed = JSON.parse(raw);
-    if (!(parsed && typeof parsed === "object" && !Array.isArray(parsed))) return null;
-    var currentUserId = String(storage.getItem("2048_auth_userId_v1") || "").trim();
-    var ownerUserId = String(parsed.owner_user_id || "").trim();
-    if (currentUserId) {
-      if (!ownerUserId || ownerUserId !== currentUserId) return null;
-    } else if (ownerUserId) {
-      return null;
-    }
-    var uiState = parsed.ui_state && typeof parsed.ui_state === "object" && !Array.isArray(parsed.ui_state)
-      ? parsed.ui_state
-      : null;
-    var savedState = uiState && typeof uiState === "object" && !Array.isArray(uiState)
-      ? uiState.saved_state
-      : null;
-    if (!(savedState && typeof savedState === "object" && !Array.isArray(savedState))) return null;
-    if (String(savedState.mode_key || "").trim() !== modeKey) return null;
-    return savedState;
-  } catch (_err) {
-    return null;
+  var runtime = resolveCoreRankedCheckpointLocalMirrorSetupRuntime(manager);
+  if (runtime && typeof runtime.readRankedCheckpointLocalMirrorSavedStateForSetup === "function") {
+    return runtime.readRankedCheckpointLocalMirrorSavedStateForSetup(manager);
   }
+  return null;
 }
 
 function shouldScheduleRankedCheckpointRestoreInSetup(manager, hasInputSeed, normalizedOptions) {
