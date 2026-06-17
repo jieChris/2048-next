@@ -1,3 +1,24 @@
+# Stage-1DH Core Game Manager Common Shell Retirement (2026-06-17)
+
+## Phase Decision
+- `WS-runtime-109`
+  - status: done
+  - progress: `core_game_manager_common_runtime.js` is retired from active home/capped/play/replay manifests and from `HOME_STANDARD_STARTUP_FILES`; `entry-manifest-audit` now prevents re-entry in both modern paths.
+  - follow-up: `js/core_game_manager_common_runtime.js` remains as an empty compatibility shell, and `public/js/legacy_index_nomodule_loader.js` still references it for the separate legacy-browser policy stage.
+
+## Evidence
+- RED: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts` failed before `RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS` and `BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS` included `core_game_manager_common_runtime.js`.
+- GREEN: `npx vitest run tests/unit/entry-manifest-audit-helpers.spec.ts`
+- `npm run audit:entry-manifest`
+- `npm run audit:game-manager`
+- `npm run audit:service-boundary`
+- `npm run audit:page-legacy-runtime-boundary`
+- `npm run build`
+- `PW_WEB_PORT=4333 npm run test:smoke:index-ui`
+- `npx playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts`
+- `npm run verify:prepush`
+
+
 # Stage-1DG Core Game Manager Runtime Accessor Helpers TypeScript Boundary (2026-06-17)
 
 ## Phase Decision
