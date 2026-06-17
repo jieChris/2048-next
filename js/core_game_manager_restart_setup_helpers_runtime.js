@@ -75,6 +75,20 @@ function resolveCoreSetupStateInitializationRuntime(manager) {
   return null;
 }
 
+function resolveCoreResetSetupReplayAndSpawnStateRuntime(manager) {
+  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  if (windowLike && windowLike.CoreResetSetupReplayAndSpawnStateRuntime) {
+    return windowLike.CoreResetSetupReplayAndSpawnStateRuntime;
+  }
+  if (
+    typeof CoreResetSetupReplayAndSpawnStateRuntime !== "undefined" &&
+    CoreResetSetupReplayAndSpawnStateRuntime
+  ) {
+    return CoreResetSetupReplayAndSpawnStateRuntime;
+  }
+  return null;
+}
+
 function ensureNoXSelectionOverlayForManager(manager) {
   var runtime = resolveCoreNoXSelectionRuntime(manager);
   if (runtime && typeof runtime.ensureNoXSelectionOverlayForManager === "function") {
@@ -431,27 +445,13 @@ function syncSetupSessionReplayV1InitTiles(manager) {
 }
 
 function resetSetupReplayAndSpawnState(manager) {
-  manager.moveHistory = [];
-  manager.replayCompactLog = "";
-  manager.initialBoardMatrix = null;
-  manager.replayStartBoardMatrix = null;
-  manager.rankedSessionToken = "";
-  if (typeof assignManagerClientRecordId === "function") {
-    assignManagerClientRecordId(manager, "");
-  } else {
-    manager.clientRecordId = "";
+  var runtime = resolveCoreResetSetupReplayAndSpawnStateRuntime(manager);
+  if (runtime && typeof runtime.resetSetupReplayAndSpawnState === "function") {
+    runtime.resetSetupReplayAndSpawnState(manager, {
+      assignManagerClientRecordId:
+        typeof assignManagerClientRecordId === "function" ? assignManagerClientRecordId : undefined
+    });
   }
-  manager.sessionSubmitDone = false;
-  manager.needsRankedCheckpointRestore = false;
-  manager.rankCheckpointRestorePending = false;
-  manager.rankCheckpointRestoreScheduled = false;
-  manager.rankCheckpointApplying = false;
-  manager.rankCheckpointSaveConflict = "";
-  manager.lastRankedCheckpointSignature = "";
-  manager.lastRankedCheckpointSavedAt = 0;
-  manager.lastRankedCheckpointSaveError = "";
-  manager.lastSpawn = null;
-  manager.forcedSpawn = null;
 }
 
 function resetSetupTimerAndInputState(manager) {
