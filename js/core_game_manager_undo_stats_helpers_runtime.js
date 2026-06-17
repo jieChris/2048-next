@@ -570,33 +570,27 @@ function writeRuntimeGridCellForUndo(manager, x, y, tile) {
   return true;
 }
 
+function resolveCoreGameManagerUndoRestoredTilesRuntime() {
+  if (typeof CoreGameManagerUndoRestoredTilesRuntime !== "undefined" && CoreGameManagerUndoRestoredTilesRuntime) {
+    return CoreGameManagerUndoRestoredTilesRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CoreGameManagerUndoRestoredTilesRuntime) {
+    return window.CoreGameManagerUndoRestoredTilesRuntime;
+  }
+  return null;
+}
+
 function applyUndoRestoredTiles(manager, undoPayload) {
-  if (!manager) return;
-  manager.grid.build();
-  setRuntimeScoreForUndo(manager, Number.isFinite(undoPayload.score) && typeof undoPayload.score === "number"
-    ? Number(undoPayload.score)
-    : 0);
-  var undoTiles = Array.isArray(undoPayload.tiles) ? undoPayload.tiles : [];
-  var gridWidth = manager.grid && Array.isArray(manager.grid.cells) ? manager.grid.cells.length : 0;
-  var gridHeight = Number.isInteger(manager.height) && manager.height > 0
-    ? manager.height
-    : (Number.isInteger(manager.width) && manager.width > 0 ? manager.width : gridWidth);
-  for (var undoTileIndex = 0; undoTileIndex < undoTiles.length; undoTileIndex++) {
-    var restored = createUndoRestoreTile(manager, undoTiles[undoTileIndex]);
-    var x = Number(restored && restored.x);
-    var y = Number(restored && restored.y);
-    if (!Number.isInteger(x) || !Number.isInteger(y)) continue;
-    if (x < 0 || y < 0 || x >= gridWidth || y >= gridHeight) continue;
-    if (!manager.grid.cells[x]) continue;
-    var tile = new Tile({ x: restored.x, y: restored.y }, restored.value);
-    if (typeof manager.isStoneValue === "function" && manager.isStoneValue(restored.value)) {
-      tile.isStone = true;
-    }
-    tile.previousPosition = {
-      x: restored.previousPosition.x,
-      y: restored.previousPosition.y
-    };
-    writeRuntimeGridCellForUndo(manager, tile.x, tile.y, tile);
+  var runtime = resolveCoreGameManagerUndoRestoredTilesRuntime();
+  if (runtime && typeof runtime.applyUndoRestoredTiles === "function") {
+    runtime.applyUndoRestoredTiles(manager, undoPayload, {
+      createUndoRestoreTile: createUndoRestoreTile,
+      createTile: function (position, value) {
+        return new Tile(position, value);
+      },
+      setRuntimeScoreForUndo: setRuntimeScoreForUndo,
+      writeRuntimeGridCellForUndo: writeRuntimeGridCellForUndo
+    });
   }
 }
 
