@@ -64,6 +64,17 @@ function resolveCoreSetupRestoreInitialBoardStateRuntime(manager) {
   return null;
 }
 
+function resolveCoreSetupStateInitializationRuntime(manager) {
+  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  if (windowLike && windowLike.CoreSetupStateInitializationRuntime) {
+    return windowLike.CoreSetupStateInitializationRuntime;
+  }
+  if (typeof CoreSetupStateInitializationRuntime !== "undefined" && CoreSetupStateInitializationRuntime) {
+    return CoreSetupStateInitializationRuntime;
+  }
+  return null;
+}
+
 function ensureNoXSelectionOverlayForManager(manager) {
   var runtime = resolveCoreNoXSelectionRuntime(manager);
   if (runtime && typeof runtime.ensureNoXSelectionOverlayForManager === "function") {
@@ -659,36 +670,28 @@ function finalizeSetupUiAndStatsState(manager, preferredTimerModuleView, restore
   }
 }
 
+function createSetupStateInitializationOperations() {
+  return {
+    initializeSetupSeedAndReplayState: initializeSetupSeedAndReplayState,
+    resetSetupRuntimeState: resetSetupRuntimeState,
+    resolveSetupChallengeId: resolveSetupChallengeId,
+    resolveSetupRankedSessionToken: resolveSetupRankedSessionToken,
+    initializeSetupSessionReplaySnapshot: initializeSetupSessionReplaySnapshot,
+    initializeTimerMilestones: typeof initializeTimerMilestones === "function" ? initializeTimerMilestones : undefined,
+    resetRoundStatsState: typeof resetRoundStatsState === "function" ? resetRoundStatsState : undefined,
+    resetTimerUiForSetup: typeof resetTimerUiForSetup === "function" ? resetTimerUiForSetup : undefined,
+    resolvePreferredTimerModuleViewForSetup: resolvePreferredTimerModuleViewForSetup,
+    resolveSetupRestoreAndInitialBoardState: resolveSetupRestoreAndInitialBoardState,
+    syncSetupSessionReplayV1InitTiles: syncSetupSessionReplayV1InitTiles,
+    finalizeSetupUiAndStatsState: finalizeSetupUiAndStatsState
+  };
+}
+
 function runSetupStateInitialization(manager, inputSeed, setupOptions) {
-  if (!manager) return;
-  var normalizedOptions = isNonArrayObject(setupOptions) ? setupOptions : {};
-  var seedState = initializeSetupSeedAndReplayState(manager, inputSeed);
-  resetSetupRuntimeState(manager);
-  manager.challengeId = resolveSetupChallengeId(manager, normalizedOptions, seedState.rankedSessionContext);
-  manager.rankedSessionToken = resolveSetupRankedSessionToken(seedState.rankedSessionContext);
-  initializeSetupSessionReplaySnapshot(manager);
-  initializeTimerMilestones(manager);
-  resetRoundStatsState(manager);
-  resetTimerUiForSetup(manager);
-  var preferredTimerModuleView = resolvePreferredTimerModuleViewForSetup(manager);
-  var restoreState = resolveSetupRestoreAndInitialBoardState(
-    manager,
-    seedState.hasInputSeed,
-    normalizedOptions
-  );
-  syncSetupSessionReplayV1InitTiles(manager);
-  finalizeSetupUiAndStatsState(manager, preferredTimerModuleView, restoreState.restoredFromSavedState);
-  try {
-    var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
-    if (
-      manager.needsRankedCheckpointRestore &&
-      windowLike &&
-      windowLike.OnlineLeaderboardRuntime &&
-      typeof windowLike.OnlineLeaderboardRuntime.scheduleRankedCheckpointRestore === "function"
-    ) {
-      windowLike.OnlineLeaderboardRuntime.scheduleRankedCheckpointRestore(manager, { reason: "setup" });
-    }
-  } catch (_errCheckpointRestore) {}
+  var runtime = resolveCoreSetupStateInitializationRuntime(manager);
+  if (runtime && typeof runtime.runSetupStateInitialization === "function") {
+    runtime.runSetupStateInitialization(manager, inputSeed, setupOptions, createSetupStateInitializationOperations());
+  }
 }
 
 function resolveGlobalSetupModeConfig(manager) {
