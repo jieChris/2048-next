@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createRankedSessionSetupContextRuntime } from "../../src/core/ranked-session-setup-context";
 import { createResetSetupReplayAndSpawnStateRuntime } from "../../src/core/reset-setup-replay-and-spawn-state";
+import { createRestartGameRuntime } from "../../src/core/restart-game";
 import { createSessionReplaySnapshotRuntime } from "../../src/core/session-replay-snapshot";
 import { createSetupRestoreInitialBoardStateRuntime } from "../../src/core/setup-restore-initial-board-state";
 import { createSetupStateInitializationRuntime } from "../../src/core/setup-state-initialization";
@@ -26,6 +27,7 @@ type RestartSeedRuntime = {
     inputSeed?: unknown,
     setupOptions?: unknown
   ) => void;
+  restartGame: (manager: Record<string, unknown> | null) => void;
   resetSetupTimerAndInputState: (manager: Record<string, unknown>) => void;
 };
 
@@ -55,6 +57,12 @@ function loadRestartSeedRuntime(options?: {
   };
   resetSetupReplayAndSpawnStateRuntime?: {
     resetSetupReplayAndSpawnState?: (
+      manager: Record<string, unknown> | null,
+      operations: Record<string, unknown>
+    ) => void;
+  };
+  restartGameRuntime?: {
+    restartGame?: (
       manager: Record<string, unknown> | null,
       operations: Record<string, unknown>
     ) => void;
@@ -90,6 +98,7 @@ function loadRestartSeedRuntime(options?: {
     options?.setupStateInitializationRuntime || createSetupStateInitializationRuntime();
   context.CoreResetSetupReplayAndSpawnStateRuntime =
     options?.resetSetupReplayAndSpawnStateRuntime || createResetSetupReplayAndSpawnStateRuntime();
+  context.CoreRestartGameRuntime = options?.restartGameRuntime || createRestartGameRuntime();
 
   vm.runInNewContext(script, context);
 
@@ -341,6 +350,29 @@ describe("core game manager restart seed runtime", () => {
       })
     );
     expect(manager.clientRecordId).toBe("client-1");
+  });
+
+  it("delegates restart game orchestration to the TypeScript runtime", () => {
+    const restartGame = vi.fn();
+    const { runtime } = loadRestartSeedRuntime({
+      restartGameRuntime: {
+        restartGame
+      }
+    });
+    const manager = { modeKey: "practice" } as Record<string, unknown>;
+
+    runtime.restartGame(manager);
+
+    expect(restartGame).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        confirmRestart: expect.any(Function),
+        resolveRestartConfirmMessage: expect.any(Function),
+        shouldClearPracticeBoardOnRestart: expect.any(Function),
+        createEmptyPracticeBoardMatrix: expect.any(Function),
+        restartWithBoard: expect.any(Function)
+      })
+    );
   });
 
   it("clears restored timer offsets and anchors when setting up a fresh game", () => {

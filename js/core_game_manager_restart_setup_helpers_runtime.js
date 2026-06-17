@@ -89,6 +89,17 @@ function resolveCoreResetSetupReplayAndSpawnStateRuntime(manager) {
   return null;
 }
 
+function resolveCoreRestartGameRuntime(manager) {
+  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  if (windowLike && windowLike.CoreRestartGameRuntime) {
+    return windowLike.CoreRestartGameRuntime;
+  }
+  if (typeof CoreRestartGameRuntime !== "undefined" && CoreRestartGameRuntime) {
+    return CoreRestartGameRuntime;
+  }
+  return null;
+}
+
 function ensureNoXSelectionOverlayForManager(manager) {
   var runtime = resolveCoreNoXSelectionRuntime(manager);
   if (runtime && typeof runtime.ensureNoXSelectionOverlayForManager === "function") {
@@ -131,33 +142,16 @@ function resolveRestartConfirmMessage(manager) {
 }
 
 function restartGame(manager) {
-  if (!manager) return;
-  if (!confirm(resolveRestartConfirmMessage(manager))) return;
-  manager.actuator.continue();
-  manager.setRuntimeUndoStack([]);
-  manager.setRuntimeRedoStack([]);
-  manager.clearSavedGameState(manager.modeKey);
-  if (manager.modeKey === "practice" && manager.practiceRestartBoardMatrix) {
-    if (shouldClearPracticeBoardOnRestart(manager)) {
-      restartWithBoard(
-        manager,
-        createEmptyPracticeBoardMatrix(manager),
-        manager.practiceRestartModeConfig || manager.modeConfig,
-        { setPracticeRestartBase: true }
-      );
-      manager.isTestMode = true;
-      return;
-    }
-    restartWithBoard(
-      manager,
-      manager.practiceRestartBoardMatrix,
-      manager.practiceRestartModeConfig || manager.modeConfig,
-      { preservePracticeRestartBase: true }
-    );
-    manager.isTestMode = true;
-    return;
+  var runtime = resolveCoreRestartGameRuntime(manager);
+  if (runtime && typeof runtime.restartGame === "function") {
+    runtime.restartGame(manager, {
+      confirmRestart: typeof confirm === "function" ? confirm : function () { return false; },
+      resolveRestartConfirmMessage: resolveRestartConfirmMessage,
+      shouldClearPracticeBoardOnRestart: shouldClearPracticeBoardOnRestart,
+      createEmptyPracticeBoardMatrix: createEmptyPracticeBoardMatrix,
+      restartWithBoard: restartWithBoard
+    });
   }
-  manager.setup(undefined, { disableStateRestore: true });
 }
 
 function createEmptyPracticeBoardMatrix(manager) {
