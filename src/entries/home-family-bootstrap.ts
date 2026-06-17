@@ -73,6 +73,7 @@ import { installFallbackModeConfigsRuntime } from "../core/game-manager-fallback
 import { installCoreModeRuntime } from "../core/mode";
 import { installNoXSelectionRuntime } from "../core/no-x-selection-overlay";
 import { installRulesRuntime } from "../core/rules";
+import { installSetupUiStateRuntime } from "../core/setup-ui-state";
 import { installSingleModePageLockRuntime } from "../core/single-mode-page-lock";
 import { installSpecialRulesRuntime } from "../core/special-rules";
 import { installCryptoRandomRuntime } from "../utils/crypto-random";
@@ -253,6 +254,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installSingleModePageLockRuntime();
   installNoXSelectionRuntime();
   installFallbackModeConfigsRuntime();
+  installSetupUiStateRuntime();
   installCoreModeRuntime();
   installPracticeModeRuntime();
   installHomeModeRuntime();

@@ -689,41 +689,22 @@ function resolveSetupRestoreAndInitialBoardState(manager, hasInputSeed, normaliz
   return { restoredFromSavedState: restoredFromSavedState };
 }
 
+function resolveCoreSetupUiStateRuntime(manager) {
+  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  if (windowLike && windowLike.CoreSetupUiStateRuntime) {
+    return windowLike.CoreSetupUiStateRuntime;
+  }
+  if (typeof CoreSetupUiStateRuntime !== "undefined" && CoreSetupUiStateRuntime) {
+    return CoreSetupUiStateRuntime;
+  }
+  return null;
+}
+
 function finalizeSetupUiAndStatsState(manager, preferredTimerModuleView, restoredFromSavedState) {
-  if (!manager) return;
-  refreshSpawnRateDisplay(manager);
-  manager.updateUndoUiState();
-  manager.notifyUndoSettingsStateChanged();
-  manager.applyTimerModuleView(preferredTimerModuleView, true);
-  manager.actuate();
-  if (restoredFromSavedState) {
-    if (!manager.callWindowMethod("cappedTimerReset")) {
-      manager.callWindowMethod("updateTimerScroll");
-    }
+  var runtime = resolveCoreSetupUiStateRuntime(manager);
+  if (runtime && typeof runtime.finalizeSetupUiAndStatsState === "function") {
+    runtime.finalizeSetupUiAndStatsState(manager, preferredTimerModuleView, restoredFromSavedState);
   }
-  if (typeof updateItemModeHud === "function") {
-    updateItemModeHud(manager);
-  }
-  if (typeof resetMoveTimeoutDeadline === "function") {
-    resetMoveTimeoutDeadline(manager, Date.now());
-  }
-  if (
-    typeof hasMoveTimeoutMode === "function" &&
-    hasMoveTimeoutMode(manager) &&
-    !manager.replayMode &&
-    manager.timerStatus === 0
-  ) {
-    manager.startTimer();
-  }
-  if (typeof updateMoveTimeoutHud === "function") {
-    updateMoveTimeoutHud(manager, Date.now());
-  }
-  if (restoredFromSavedState) {
-    manager.updateStatsPanel();
-  } else {
-    manager.updateStatsPanel(0, 0, 0);
-  }
-  ensureNoXSelectionOverlayForManager(manager);
 }
 
 function runSetupStateInitialization(manager, inputSeed, setupOptions) {
