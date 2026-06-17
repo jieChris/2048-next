@@ -72,6 +72,7 @@ import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-
 import { installFallbackModeConfigsRuntime } from "../core/game-manager-fallback-mode-configs";
 import { installGameManagerInputEventsRuntime } from "../core/game-manager-input-events";
 import { installGameManagerRuntimeStateRuntime } from "../core/game-manager-runtime-state";
+import { installGameManagerUndoMoveHandlerRuntime } from "../core/game-manager-undo-move-handler";
 import { installGameManagerUndoRestoredTilesRuntime } from "../core/game-manager-undo-restored-tiles";
 import { installCoreModeRuntime } from "../core/mode";
 import { installRankedCheckpointLocalMirrorSetupRuntime } from "../core/ranked-checkpoint-local-mirror-setup";
@@ -269,6 +270,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installFallbackModeConfigsRuntime();
   installGameManagerInputEventsRuntime();
   installGameManagerRuntimeStateRuntime();
+  installGameManagerUndoMoveHandlerRuntime();
   installGameManagerUndoRestoredTilesRuntime();
   installRankedCheckpointLocalMirrorSetupRuntime();
   installRankedSessionSetupContextRuntime();
