@@ -5,12 +5,14 @@ import vm from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 
 import { createRankedSessionSetupContextRuntime } from "../../src/core/ranked-session-setup-context";
+import { createSessionReplaySnapshotRuntime } from "../../src/core/session-replay-snapshot";
 
 type RestartSeedRuntime = {
   initializeSetupSeedAndReplayState: (
     manager: Record<string, unknown> | null,
     inputSeed?: unknown
   ) => { hasInputSeed: boolean; rankedSessionContext?: Record<string, unknown> | null };
+  initializeSetupSessionReplaySnapshot: (manager: Record<string, unknown> | null) => void;
   resetSetupTimerAndInputState: (manager: Record<string, unknown>) => void;
 };
 
@@ -19,6 +21,9 @@ function loadRestartSeedRuntime(options?: {
   mathRandomValue?: number;
   nowMs?: number;
   performanceNowMs?: number;
+  sessionReplaySnapshotRuntime?: {
+    initializeSetupSessionReplaySnapshot?: (manager: Record<string, unknown> | null) => void;
+  };
 }) {
   const scriptPath = path.resolve(
     process.cwd(),
@@ -42,6 +47,8 @@ function loadRestartSeedRuntime(options?: {
     performance: { now: performanceNow }
   } as Record<string, unknown>;
   context.CoreRankedSessionSetupContextRuntime = createRankedSessionSetupContextRuntime();
+  context.CoreSessionReplaySnapshotRuntime =
+    options?.sessionReplaySnapshotRuntime || createSessionReplaySnapshotRuntime();
 
   vm.runInNewContext(script, context);
 
@@ -192,6 +199,22 @@ describe("core game manager restart seed runtime", () => {
     expect(manager.replayMode).toBe(false);
     expect(cryptoLike.getRandomValues).not.toHaveBeenCalled();
     expect(mathRandom).not.toHaveBeenCalled();
+  });
+
+  it("delegates setup session replay snapshot initialization to the TypeScript runtime", () => {
+    const initializeSetupSessionReplaySnapshot = vi.fn();
+    const { runtime } = loadRestartSeedRuntime({
+      sessionReplaySnapshotRuntime: {
+        initializeSetupSessionReplaySnapshot
+      }
+    });
+    const manager = { modeKey: "practice" } as Record<string, unknown>;
+
+    runtime.initializeSetupSessionReplaySnapshot(manager);
+
+    expect(initializeSetupSessionReplaySnapshot).toHaveBeenCalledWith(manager);
+    expect(manager.sessionReplayV3).toBeUndefined();
+    expect(manager.sessionReplayV1).toBeUndefined();
   });
 
   it("clears restored timer offsets and anchors when setting up a fresh game", () => {
