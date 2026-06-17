@@ -5,6 +5,7 @@ import vm from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 
 import { createRankedSessionSetupContextRuntime } from "../../src/core/ranked-session-setup-context";
+import { createResetSetupReplayAndSpawnStateRuntime } from "../../src/core/reset-setup-replay-and-spawn-state";
 import { createSessionReplaySnapshotRuntime } from "../../src/core/session-replay-snapshot";
 import { createSetupRestoreInitialBoardStateRuntime } from "../../src/core/setup-restore-initial-board-state";
 import { createSetupStateInitializationRuntime } from "../../src/core/setup-state-initialization";
@@ -52,6 +53,12 @@ function loadRestartSeedRuntime(options?: {
       operations: Record<string, unknown>
     ) => void;
   };
+  resetSetupReplayAndSpawnStateRuntime?: {
+    resetSetupReplayAndSpawnState?: (
+      manager: Record<string, unknown> | null,
+      operations: Record<string, unknown>
+    ) => void;
+  };
 }) {
   const scriptPath = path.resolve(
     process.cwd(),
@@ -81,6 +88,8 @@ function loadRestartSeedRuntime(options?: {
     options?.setupRestoreInitialBoardStateRuntime || createSetupRestoreInitialBoardStateRuntime();
   context.CoreSetupStateInitializationRuntime =
     options?.setupStateInitializationRuntime || createSetupStateInitializationRuntime();
+  context.CoreResetSetupReplayAndSpawnStateRuntime =
+    options?.resetSetupReplayAndSpawnStateRuntime || createResetSetupReplayAndSpawnStateRuntime();
 
   vm.runInNewContext(script, context);
 
@@ -311,6 +320,27 @@ describe("core game manager restart seed runtime", () => {
         finalizeSetupUiAndStatsState: expect.any(Function)
       })
     );
+  });
+
+  it("delegates setup replay and spawn reset to the TypeScript runtime", () => {
+    const resetSetupReplayAndSpawnState = vi.fn();
+    const { runtime } = loadRestartSeedRuntime({
+      resetSetupReplayAndSpawnStateRuntime: {
+        resetSetupReplayAndSpawnState
+      }
+    });
+    const manager = { clientRecordId: "client-1" } as Record<string, unknown>;
+
+    (runtime as unknown as { resetSetupReplayAndSpawnState: (manager: Record<string, unknown>) => void })
+      .resetSetupReplayAndSpawnState(manager);
+
+    expect(resetSetupReplayAndSpawnState).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        assignManagerClientRecordId: undefined
+      })
+    );
+    expect(manager.clientRecordId).toBe("client-1");
   });
 
   it("clears restored timer offsets and anchors when setting up a fresh game", () => {
