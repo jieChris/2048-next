@@ -13,6 +13,7 @@ export interface SetupTimerRowNormalizeOperations {
 
 export interface SetupTimerRowNormalizeRuntime {
   normalizeLegacyTimerRowsForSetup: typeof normalizeLegacyTimerRowsForSetup;
+  appendSetupTimerTrailingNodes: typeof appendSetupTimerTrailingNodes;
 }
 
 export interface SetupTimerRowNormalizeWindowLike {
@@ -31,6 +32,66 @@ function normalizeSetupTimerSlotValue(slotValue: unknown): number | null {
 
 function canCreateElement(documentLike: { createElement?: unknown } | null): boolean {
   return !!documentLike && typeof documentLike.createElement === "function";
+}
+
+interface SetupTimerTrailingNodeLike {
+  nodeType?: unknown;
+  nodeValue?: unknown;
+  tagName?: unknown;
+  nextSibling?: unknown;
+}
+
+interface SetupTimerTrailingRowLike {
+  appendChild: (node: SetupTimerTrailingNodeLike) => unknown;
+}
+
+function isSetupTimerTrailingNode(value: unknown): value is SetupTimerTrailingNodeLike {
+  return !!value && typeof value === "object";
+}
+
+function isSetupTimerTrailingRow(value: unknown): value is SetupTimerTrailingRowLike {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    typeof (value as { appendChild?: unknown }).appendChild === "function"
+  );
+}
+
+function isSetupWhitespaceTextNode(node: unknown): node is SetupTimerTrailingNodeLike {
+  return (
+    isSetupTimerTrailingNode(node) &&
+    node.nodeType === 3 &&
+    String(node.nodeValue || "").trim() === ""
+  );
+}
+
+function isSetupBreakNode(node: unknown): node is SetupTimerTrailingNodeLike {
+  return (
+    isSetupTimerTrailingNode(node) &&
+    node.nodeType === 1 &&
+    !!node.tagName &&
+    String(node.tagName).toLowerCase() === "br"
+  );
+}
+
+export function appendSetupTimerTrailingNodes(row: unknown, nextAfterTimer: unknown): number {
+  if (!isSetupTimerTrailingRow(row)) return 0;
+  let cursor = nextAfterTimer;
+  let movedBr = 0;
+  while (cursor && movedBr < 2) {
+    if (isSetupWhitespaceTextNode(cursor)) {
+      const whitespaceNode = cursor;
+      cursor = cursor.nextSibling;
+      row.appendChild(whitespaceNode);
+      continue;
+    }
+    if (!isSetupBreakNode(cursor)) break;
+    const brNode = cursor;
+    cursor = cursor.nextSibling;
+    row.appendChild(brNode);
+    movedBr += 1;
+  }
+  return movedBr;
 }
 
 export function normalizeLegacyTimerRowsForSetup(
@@ -57,7 +118,8 @@ export function normalizeLegacyTimerRowsForSetup(
 
 export function createSetupTimerRowNormalizeRuntime(): SetupTimerRowNormalizeRuntime {
   return {
-    normalizeLegacyTimerRowsForSetup
+    normalizeLegacyTimerRowsForSetup,
+    appendSetupTimerTrailingNodes
   };
 }
 
