@@ -422,11 +422,18 @@ function buildSavedGameStatePersistPlan(manager, now, saveOptions) {
   var litePayloadSource = normalizeSavedStateRecordObject(fullPayload, null)
     || buildSavedGameStateLiteSourcePayload(manager, now);
   if (!normalizeSavedStateRecordObject(litePayloadSource, null)) return null;
-  return {
-    fullPayload: normalizeSavedStateRecordObject(fullPayload, null),
-    litePayloadSource: litePayloadSource,
-    preferFullWindowNamePayload: !!(saveOptions && (saveOptions.force || saveOptions.forceFull))
-  };
+  return { fullPayload: normalizeSavedStateRecordObject(fullPayload, null), litePayloadSource: litePayloadSource, preferFullWindowNamePayload: !!(saveOptions && (saveOptions.force || saveOptions.forceFull)) };
+}
+function applySavedGameStatePersistTimestamps(manager, persistPlan, persistResult, now) {
+  var context = { now: now, hasFullPayload: !!(persistPlan && normalizeSavedStateRecordObject(persistPlan.fullPayload, null)), persistedFull: !!(persistResult && persistResult.persistedFull) };
+  var runtime = typeof CoreSavedStatePersistTimestampsRuntime !== "undefined" && CoreSavedStatePersistTimestampsRuntime ? CoreSavedStatePersistTimestampsRuntime : (typeof window !== "undefined" && window ? window.CoreSavedStatePersistTimestampsRuntime : null);
+  if (runtime && typeof runtime.applySavedStatePersistTimestamps === "function") {
+    runtime.applySavedStatePersistTimestamps(manager, context);
+    return;
+  }
+  manager.lastSavedGameStateAt = context.now;
+  if (context.hasFullPayload) manager.lastSavedGameStateFullAttemptAt = context.now;
+  if (context.persistedFull) manager.lastSavedGameStateFullAt = context.now;
 }
 function saveGameState(manager, options) {
   if (!manager) return;
@@ -443,13 +450,7 @@ function saveGameState(manager, options) {
     if (!normalizeSavedStateRecordObject(persistPlan, null)) return;
     var persistResult = persistSavedGameStatePayload(manager, persistPlan);
     if (!(persistResult && persistResult.persisted)) return;
-    manager.lastSavedGameStateAt = now;
-    if (normalizeSavedStateRecordObject(persistPlan.fullPayload, null)) {
-      manager.lastSavedGameStateFullAttemptAt = now;
-    }
-    if (persistResult.persistedFull) {
-      manager.lastSavedGameStateFullAt = now;
-    }
+    applySavedGameStatePersistTimestamps(manager, persistPlan, persistResult, now);
     rememberSavedStateKnownSavedAt(manager, now);
   } catch (_err) {}
 }

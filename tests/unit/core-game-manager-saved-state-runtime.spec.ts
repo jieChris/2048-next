@@ -116,6 +116,12 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     resolveLatestSavedPayloadCandidate: (
       candidates: Array<Record<string, unknown> | null | undefined>
     ) => Record<string, unknown> | null;
+    applySavedGameStatePersistTimestamps: (
+      manager: Record<string, unknown>,
+      persistPlan: Record<string, unknown>,
+      persistResult: Record<string, unknown>,
+      now: number
+    ) => void;
   };
 }
 
@@ -133,6 +139,30 @@ describe("core game manager saved state runtime", () => {
 
     expect(runtime.resolveSavedPayloadRichnessScore(payload)).toBe(7);
     expect(resolveSavedPayloadRichnessScore).toHaveBeenCalledWith(payload);
+  });
+
+  it("delegates saved-state persist timestamp updates to the TypeScript runtime", () => {
+    const applySavedStatePersistTimestamps = vi.fn();
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreSavedStatePersistTimestampsRuntime: {
+        applySavedStatePersistTimestamps
+      }
+    });
+    const manager = {};
+    const fullPayload = { saved_at: 123 };
+
+    runtime.applySavedGameStatePersistTimestamps(
+      manager,
+      { fullPayload },
+      { persistedFull: true },
+      1234
+    );
+
+    expect(applySavedStatePersistTimestamps).toHaveBeenCalledWith(manager, {
+      now: 1234,
+      hasFullPayload: true,
+      persistedFull: true
+    });
   });
 
   it("delegates saved manager replay state restore to the TypeScript runtime", () => {
