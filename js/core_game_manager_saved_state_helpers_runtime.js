@@ -934,27 +934,16 @@ function collectSavedDynamicTimerRowsState(container) {
   return dynamicRowsState;
 }
 
-function resolveLegacySecondaryTimerSubStateFromRows(rows) {
-  var state = {
-    timer_sub_8192: "",
-    timer_sub_16384: "",
-    timer_sub_visible: false
-  };
+function resolveLegacySecondaryTimerSubStateFromRowsFallback(rows) {
+  var state = { timer_sub_8192: "", timer_sub_16384: "", timer_sub_visible: false };
   var list = Array.isArray(rows) ? rows : [];
-  for (var i = 0; i < list.length; i++) {
-    var row = list[i];
-    if (!isNonArrayObject(row)) continue;
-    if (Number(row.parent) !== 32768) continue;
-    var child = Number(row.child);
-    if (child === 8192) {
-      state.timer_sub_8192 = typeof row.time === "string" ? row.time : "";
-      if (row.display === "block") state.timer_sub_visible = true;
-    } else if (child === 16384) {
-      state.timer_sub_16384 = typeof row.time === "string" ? row.time : "";
-      if (row.display === "block") state.timer_sub_visible = true;
-    }
-  }
+  for (var i = 0; i < list.length; i++) { var row = list[i]; if (!isNonArrayObject(row) || Number(row.parent) !== 32768) continue; var child = Number(row.child); if (child !== 8192 && child !== 16384) continue; state[child === 8192 ? "timer_sub_8192" : "timer_sub_16384"] = typeof row.time === "string" ? row.time : ""; if (row.display === "block") state.timer_sub_visible = true; }
   return state;
+}
+function resolveLegacySecondaryTimerSubStateFromRows(rows) {
+  var runtime = resolveCoreSavedManagerTimerStateRuntime();
+  if (runtime && typeof runtime.resolveLegacySecondaryTimerSubStateFromRows === "function") return runtime.resolveLegacySecondaryTimerSubStateFromRows(rows);
+  return resolveLegacySecondaryTimerSubStateFromRowsFallback(rows);
 }
 
 function collectSavedTimerSubState(manager, documentLike) {

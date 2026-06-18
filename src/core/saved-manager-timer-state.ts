@@ -22,8 +22,15 @@ export interface SavedManagerTimerStateSavedLike {
   timer_frozen?: unknown;
 }
 
+export interface LegacySecondaryTimerSubState {
+  timer_sub_8192: string;
+  timer_sub_16384: string;
+  timer_sub_visible: boolean;
+}
+
 export interface SavedManagerTimerStateRuntime {
   applySavedManagerTimerState: typeof applySavedManagerTimerState;
+  resolveLegacySecondaryTimerSubStateFromRows: typeof resolveLegacySecondaryTimerSubStateFromRows;
 }
 
 export interface SavedManagerTimerStateWindowLike {
@@ -63,6 +70,34 @@ function resolveActiveTimerDuration(saved: SavedManagerTimerStateSavedLike): num
   return savedDurationMs;
 }
 
+function isNonArrayObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+export function resolveLegacySecondaryTimerSubStateFromRows(
+  rows: unknown
+): LegacySecondaryTimerSubState {
+  const state: LegacySecondaryTimerSubState = {
+    timer_sub_8192: "",
+    timer_sub_16384: "",
+    timer_sub_visible: false
+  };
+  const list = Array.isArray(rows) ? rows : [];
+  for (const row of list) {
+    if (!isNonArrayObject(row) || Number(row.parent) !== 32768) continue;
+    const child = Number(row.child);
+    if (child === 8192) {
+      state.timer_sub_8192 = typeof row.time === "string" ? row.time : "";
+    } else if (child === 16384) {
+      state.timer_sub_16384 = typeof row.time === "string" ? row.time : "";
+    } else {
+      continue;
+    }
+    if (row.display === "block") state.timer_sub_visible = true;
+  }
+  return state;
+}
+
 export function applySavedManagerTimerState(
   manager: SavedManagerTimerStateManagerLike | null | undefined,
   saved: SavedManagerTimerStateSavedLike
@@ -96,7 +131,8 @@ export function applySavedManagerTimerState(
 
 export function createSavedManagerTimerStateRuntime(): SavedManagerTimerStateRuntime {
   return {
-    applySavedManagerTimerState
+    applySavedManagerTimerState,
+    resolveLegacySecondaryTimerSubStateFromRows
   };
 }
 
