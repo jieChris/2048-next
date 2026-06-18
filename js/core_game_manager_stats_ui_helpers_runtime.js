@@ -21,6 +21,17 @@ function normalizeStatsPanelLanguage(value) {
   if (lang.indexOf("zh") === 0) return "zh";
   return "";
 }
+var STATS_PANEL_COPY_EN = {
+  button: "Stats", title: "Stats Summary", totalSteps: "Total Steps", moveSteps: "Move Steps",
+  undoSteps: "Undo Steps", primarySpawns: "2 Spawns", secondarySpawns: "4 Spawns",
+  secondaryRate: "Actual 4-Rate", close: "Close"
+};
+var STATS_PANEL_COPY_ZH = {
+  button: "\u7edf\u8ba1", title: "\u7edf\u8ba1\u6c47\u603b", totalSteps: "\u603b\u6b65\u6570",
+  moveSteps: "\u79fb\u52a8\u6b65\u6570", undoSteps: "\u64a4\u56de\u6b65\u6570",
+  primarySpawns: "\u51fa2\u6570\u91cf", secondarySpawns: "\u51fa4\u6570\u91cf",
+  secondaryRate: "\u5b9e\u9645\u51fa4\u7387", close: "\u5173\u95ed"
+};
 
 function resolveStatsPanelWindowLike(manager, documentLike) {
   if (manager && typeof manager.getWindowLike === "function") {
@@ -33,58 +44,64 @@ function resolveStatsPanelWindowLike(manager, documentLike) {
   if (typeof window !== "undefined") return window;
   return null;
 }
-
-function resolveStatsPanelLanguage(manager, documentLike) {
-  var windowLike = resolveStatsPanelWindowLike(manager, documentLike);
-  var lang = "";
+function resolveCoreStatsPanelCopyRuntime() {
+  if (typeof CoreStatsPanelCopyRuntime !== "undefined" && CoreStatsPanelCopyRuntime) return CoreStatsPanelCopyRuntime;
+  if (typeof window !== "undefined" && window && window.CoreStatsPanelCopyRuntime) return window.CoreStatsPanelCopyRuntime;
+  return null;
+}
+function readStatsPanelI18nLanguage(windowLike) {
   try {
     var i18n = windowLike && windowLike.UII18N;
-    if (i18n && typeof i18n.getLanguage === "function") {
-      lang = normalizeStatsPanelLanguage(i18n.getLanguage());
-      if (lang) return lang;
-    }
+    return i18n && typeof i18n.getLanguage === "function" ? i18n.getLanguage() : "";
   } catch (_errI18n) {}
+  return "";
+}
+function readStatsPanelStorageLanguage(windowLike) {
   try {
     var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
-    lang = storage && typeof storage.getItem === "function"
-      ? normalizeStatsPanelLanguage(storage.getItem("ui_language_v1"))
-      : "";
-    if (lang) return lang;
+    return storage && typeof storage.getItem === "function" ? storage.getItem("ui_language_v1") : "";
   } catch (_errStorage) {}
+  return "";
+}
+function readStatsPanelDocumentLanguage(documentLike) {
   try {
     var root = documentLike && documentLike.documentElement ? documentLike.documentElement : null;
     if (root && typeof root.getAttribute === "function") {
-      lang = normalizeStatsPanelLanguage(root.getAttribute("data-ui-lang") || root.getAttribute("lang"));
-      if (lang) return lang;
+      return root.getAttribute("data-ui-lang") || root.getAttribute("lang");
     }
   } catch (_errDocument) {}
-  return "zh";
+  return "";
 }
-
+function createStatsPanelLanguageSources(manager, documentLike) {
+  var windowLike = resolveStatsPanelWindowLike(manager, documentLike);
+  return {
+    i18nLanguage: readStatsPanelI18nLanguage(windowLike),
+    storageLanguage: readStatsPanelStorageLanguage(windowLike),
+    documentLanguage: readStatsPanelDocumentLanguage(documentLike)
+  };
+}
+function resolveStatsPanelLanguageFallback(sources) {
+  return normalizeStatsPanelLanguage(sources.i18nLanguage) ||
+    normalizeStatsPanelLanguage(sources.storageLanguage) ||
+    normalizeStatsPanelLanguage(sources.documentLanguage) || "zh";
+}
+function resolveStatsPanelLanguage(manager, documentLike) {
+  var sources = createStatsPanelLanguageSources(manager, documentLike);
+  var runtime = resolveCoreStatsPanelCopyRuntime();
+  if (runtime && typeof runtime.resolveStatsPanelLanguage === "function") {
+    return runtime.resolveStatsPanelLanguage(sources);
+  }
+  return resolveStatsPanelLanguageFallback(sources);
+}
+function resolveStatsPanelCopyFallback(lang) {
+  return Object.assign({}, lang === "en" ? STATS_PANEL_COPY_EN : STATS_PANEL_COPY_ZH);
+}
 function resolveStatsPanelCopy(lang) {
-  return lang === "en"
-    ? {
-      button: "Stats",
-      title: "Stats Summary",
-      totalSteps: "Total Steps",
-      moveSteps: "Move Steps",
-      undoSteps: "Undo Steps",
-      primarySpawns: "2 Spawns",
-      secondarySpawns: "4 Spawns",
-      secondaryRate: "Actual 4-Rate",
-      close: "Close"
-    }
-    : {
-      button: "\u7edf\u8ba1",
-      title: "\u7edf\u8ba1\u6c47\u603b",
-      totalSteps: "\u603b\u6b65\u6570",
-      moveSteps: "\u79fb\u52a8\u6b65\u6570",
-      undoSteps: "\u64a4\u56de\u6b65\u6570",
-      primarySpawns: "\u51fa2\u6570\u91cf",
-      secondarySpawns: "\u51fa4\u6570\u91cf",
-      secondaryRate: "\u5b9e\u9645\u51fa4\u7387",
-      close: "\u5173\u95ed"
-    };
+  var runtime = resolveCoreStatsPanelCopyRuntime();
+  if (runtime && typeof runtime.resolveStatsPanelCopy === "function") {
+    return runtime.resolveStatsPanelCopy(lang);
+  }
+  return resolveStatsPanelCopyFallback(lang);
 }
 
 function pushUniqueStatsPanelKeyPart(parts, value) {
