@@ -29,6 +29,7 @@ type RestartSeedRuntime = {
   ) => void;
   restartGame: (manager: Record<string, unknown> | null) => void;
   resetSetupTimerAndInputState: (manager: Record<string, unknown>) => void;
+  resolveSingleModePageTabId: (windowLike: Record<string, unknown> | null) => string;
 };
 
 function loadRestartSeedRuntime(options?: {
@@ -69,6 +70,12 @@ function loadRestartSeedRuntime(options?: {
       operations: Record<string, unknown>
     ) => void;
   };
+  singleModePageLockRuntime?: {
+    resolveSingleModePageTabId?: (
+      windowLike: Record<string, unknown> | null,
+      options: Record<string, unknown>
+    ) => string;
+  };
 }) {
   const scriptPath = path.resolve(
     process.cwd(),
@@ -103,6 +110,9 @@ function loadRestartSeedRuntime(options?: {
   context.CoreResetSetupReplayAndSpawnStateRuntime =
     options?.resetSetupReplayAndSpawnStateRuntime || createResetSetupReplayAndSpawnStateRuntime();
   context.CoreRestartGameRuntime = options?.restartGameRuntime || createRestartGameRuntime();
+  if (options?.singleModePageLockRuntime) {
+    context.CoreSingleModePageLockRuntime = options.singleModePageLockRuntime;
+  }
 
   vm.runInNewContext(script, context);
 
@@ -115,6 +125,26 @@ function loadRestartSeedRuntime(options?: {
 }
 
 describe("core game manager restart seed runtime", () => {
+  it("delegates single-mode tab id resolution to the core runtime", () => {
+    const resolveSingleModePageTabId = vi.fn(() => "tab-from-runtime");
+    const windowLike = {};
+    const { runtime } = loadRestartSeedRuntime({
+      windowLike,
+      singleModePageLockRuntime: {
+        resolveSingleModePageTabId
+      }
+    });
+
+    expect(runtime.resolveSingleModePageTabId(windowLike)).toBe("tab-from-runtime");
+    expect(resolveSingleModePageTabId).toHaveBeenCalledWith(
+      windowLike,
+      expect.objectContaining({
+        tabIdSessionKey: "playModeSinglePageTabId:v1",
+        createId: expect.any(Function)
+      })
+    );
+  });
+
   it("uses crypto-backed fresh seeds without changing the seed type", () => {
     const cryptoLike = {
       getRandomValues: vi.fn((values: Uint32Array) => {

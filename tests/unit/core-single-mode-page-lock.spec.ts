@@ -4,7 +4,8 @@ import {
   createSingleModePageLockRuntime,
   ensureSingleModePageLock,
   installSingleModePageLockRuntime,
-  releaseSingleModePageLock
+  releaseSingleModePageLock,
+  resolveSingleModePageTabId
 } from "../../src/core/single-mode-page-lock";
 
 function createStorage(initial: Record<string, string> = {}) {
@@ -49,7 +50,21 @@ describe("core single mode page lock", () => {
 
     expect(runtime).toBe((windowLike as any).CoreSingleModePageLockRuntime);
     expect(runtime?.ensureSingleModePageLock).toBe(ensureSingleModePageLock);
+    expect(runtime?.resolveSingleModePageTabId).toBe(resolveSingleModePageTabId);
     expect(createSingleModePageLockRuntime().releaseSingleModePageLock).toBe(releaseSingleModePageLock);
+  });
+
+  it("resolves and caches a tab id through session storage", () => {
+    const windowLike = createWindowLike();
+
+    expect(
+      resolveSingleModePageTabId(windowLike, {
+        createId: (prefix) => `${prefix}-id`,
+        tabIdSessionKey: "tab-key"
+      })
+    ).toBe("tab-id");
+    expect(windowLike.sessionStorage.dump()).toEqual({ "tab-key": "tab-id" });
+    expect((windowLike as any).__playSinglePageTabId).toBe("tab-id");
   });
 
   it("creates a lock record and manager state for a playable page", () => {

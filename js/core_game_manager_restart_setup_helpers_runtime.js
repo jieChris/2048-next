@@ -897,14 +897,24 @@ function isSingleModePageLockFresh(record, nowMs, ttlMs) {
   return (nowMs - record.updatedAt) <= ttlMs;
 }
 
-function resolveSingleModePageTabId(windowLike) {
-  if (
-    windowLike &&
-    typeof windowLike.__playSinglePageTabId === "string" &&
-    windowLike.__playSinglePageTabId
-  ) {
-    return windowLike.__playSinglePageTabId;
-  }
+function resolveCoreSingleModePageLockRuntimeForWindow(windowLike) {
+  if (windowLike && windowLike.CoreSingleModePageLockRuntime) return windowLike.CoreSingleModePageLockRuntime;
+  return typeof CoreSingleModePageLockRuntime !== "undefined" && CoreSingleModePageLockRuntime
+    ? CoreSingleModePageLockRuntime
+    : null;
+}
+
+function resolveSingleModePageTabIdByRuntime(windowLike) {
+  var runtime = resolveCoreSingleModePageLockRuntimeForWindow(windowLike);
+  if (!(runtime && typeof runtime.resolveSingleModePageTabId === "function")) return "";
+  var sessionKey = typeof GameManager !== "undefined" && typeof GameManager.SINGLE_MODE_PAGE_TAB_ID_SESSION_KEY === "string" && GameManager.SINGLE_MODE_PAGE_TAB_ID_SESSION_KEY
+    ? GameManager.SINGLE_MODE_PAGE_TAB_ID_SESSION_KEY
+    : "playModeSinglePageTabId:v1";
+  return runtime.resolveSingleModePageTabId(windowLike, { tabIdSessionKey: sessionKey, createId: createRestartRandomId });
+}
+
+function resolveSingleModePageTabIdFallback(windowLike) {
+  if (windowLike && typeof windowLike.__playSinglePageTabId === "string" && windowLike.__playSinglePageTabId) return windowLike.__playSinglePageTabId;
   var sessionStorageLike = resolveSingleModePageSessionStorage(windowLike);
   var sessionKey = resolveSingleModePageTabIdSessionKey();
   var tabId = readSingleModePageStorageItemSafe(sessionStorageLike, sessionKey);
@@ -912,13 +922,14 @@ function resolveSingleModePageTabId(windowLike) {
     tabId = createRestartRandomId("tab", 10);
     writeSingleModePageStorageItemSafe(sessionStorageLike, sessionKey, tabId);
   }
-  if (!(typeof tabId === "string" && tabId)) {
-    tabId = createRestartRandomId("tab", 10);
-  }
-  if (windowLike) {
-    windowLike.__playSinglePageTabId = tabId;
-  }
+  if (!(typeof tabId === "string" && tabId)) tabId = createRestartRandomId("tab", 10);
+  if (windowLike) windowLike.__playSinglePageTabId = tabId;
   return tabId;
+}
+
+function resolveSingleModePageTabId(windowLike) {
+  var tabId = resolveSingleModePageTabIdByRuntime(windowLike);
+  return typeof tabId === "string" && tabId ? tabId : resolveSingleModePageTabIdFallback(windowLike);
 }
 
 function resolveCoreSingleModePageLockRuntime(manager) {

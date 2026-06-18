@@ -63,6 +63,7 @@ export interface SingleModePageLockRuntime {
   ensureSingleModePageLock: typeof ensureSingleModePageLock;
   releaseSingleModePageLock: typeof releaseSingleModePageLock;
   releaseSingleModePageLockStateObject: typeof releaseSingleModePageLockStateObject;
+  resolveSingleModePageTabId: typeof resolveSingleModePageTabId;
 }
 
 export interface SingleModePageLockRuntimeWindowLike {
@@ -171,6 +172,13 @@ function resolveTabId(windowLike: WindowLike | null, options: SingleModePageLock
   }
   if (windowLike) windowLike.__playSinglePageTabId = tabId;
   return tabId;
+}
+
+export function resolveSingleModePageTabId(
+  windowLike: WindowLike | null,
+  options: SingleModePageLockOptions = {}
+): string {
+  return resolveTabId(windowLike, options);
 }
 
 function resolveWindowInstanceId(windowLike: WindowLike | null, options: SingleModePageLockOptions): string {
@@ -408,7 +416,8 @@ export function createSingleModePageLockRuntime(): SingleModePageLockRuntime {
   return {
     ensureSingleModePageLock,
     releaseSingleModePageLock,
-    releaseSingleModePageLockStateObject
+    releaseSingleModePageLockStateObject,
+    resolveSingleModePageTabId
   };
 }
 
