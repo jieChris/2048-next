@@ -8,28 +8,29 @@ function resolveClientRecordIdCrypto() {
   } catch (_err) {}
   return null;
 }
-function buildClientRecordIdRandomSuffix() {
-  if (
-    typeof CoreCryptoRandomRuntime !== "undefined" &&
-    CoreCryptoRandomRuntime &&
-    typeof CoreCryptoRandomRuntime.randomHex === "function"
-  ) {
-    return CoreCryptoRandomRuntime.randomHex(12);
-  }
+function buildClientRecordIdRandomSuffixByRuntime() {
+  var runtime = typeof CoreGameManagerClientRecordIdRuntime !== "undefined" && CoreGameManagerClientRecordIdRuntime ? CoreGameManagerClientRecordIdRuntime : null;
+  if (!(runtime && typeof runtime.buildClientRecordIdRandomSuffix === "function")) return "";
+  var suffix = runtime.buildClientRecordIdRandomSuffix();
+  return typeof suffix === "string" && suffix ? suffix : "";
+}
+function buildClientRecordIdRandomSuffixFallback() {
+  if (typeof CoreCryptoRandomRuntime !== "undefined" && CoreCryptoRandomRuntime && typeof CoreCryptoRandomRuntime.randomHex === "function") return CoreCryptoRandomRuntime.randomHex(12);
   var cryptoLike = resolveClientRecordIdCrypto();
   if (cryptoLike && typeof cryptoLike.getRandomValues === "function" && typeof Uint8Array !== "undefined") {
     try {
       var bytes = new Uint8Array(12);
       cryptoLike.getRandomValues(bytes);
       var hex = "";
-      for (var byteIndex = 0; byteIndex < bytes.length; byteIndex++) {
-        hex += bytes[byteIndex].toString(16).padStart(2, "0");
-      }
+      for (var byteIndex = 0; byteIndex < bytes.length; byteIndex++) hex += bytes[byteIndex].toString(16).padStart(2, "0");
       if (hex) return hex;
     } catch (_errRandom) {}
   }
   clientRecordIdFallbackCounter = (clientRecordIdFallbackCounter + 1) >>> 0;
   return Date.now().toString(36) + clientRecordIdFallbackCounter.toString(36).padStart(6, "0");
+}
+function buildClientRecordIdRandomSuffix() {
+  return buildClientRecordIdRandomSuffixByRuntime() || buildClientRecordIdRandomSuffixFallback();
 }
 function createManagerClientRecordId() {
   var cryptoLike = resolveClientRecordIdCrypto();

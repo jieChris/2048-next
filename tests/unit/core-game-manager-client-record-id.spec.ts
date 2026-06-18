@@ -2,11 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   assignManagerClientRecordId,
+  buildClientRecordIdRandomSuffix,
   createManagerClientRecordId,
   resolveManagerClientRecordId
 } from "../../src/core/game-manager-client-record-id";
 
 describe("core game manager client record id helpers", () => {
+  it("builds random suffixes from 12 bytes of random hex", () => {
+    expect(buildClientRecordIdRandomSuffix({ randomHex: (byteCount) => `hex-${byteCount}` })).toBe(
+      "hex-12"
+    );
+  });
+
   it("creates legacy-shaped record ids from randomUUID without dashes", () => {
     const id = createManagerClientRecordId({
       randomUUID: () => "12345678-90ab-cdef-1234-567890abcdef"
