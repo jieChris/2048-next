@@ -83,6 +83,7 @@ import { installRestartGameRuntime } from "../core/restart-game";
 import { installSavedManagerProgressStateRuntime } from "../core/saved-manager-progress-state";
 import { installSavedManagerReplayStateRuntime } from "../core/saved-manager-replay-state";
 import { installSavedManagerTimerStateRuntime } from "../core/saved-manager-timer-state";
+import { installSavedPayloadCandidateRuntime } from "../core/saved-payload-candidate";
 import { installSavedPayloadRichnessRuntime } from "../core/saved-payload-richness";
 import { installSavedStatePersistTimestampsRuntime } from "../core/saved-state-persist-timestamps";
 import { installSavedStateSyncPayloadRuntime } from "../core/saved-state-sync-payload";
@@ -285,6 +286,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installSavedManagerProgressStateRuntime();
   installSavedManagerReplayStateRuntime();
   installSavedManagerTimerStateRuntime();
+  installSavedPayloadCandidateRuntime();
   installSavedPayloadRichnessRuntime();
   installSavedStatePersistTimestampsRuntime();
   installSavedStateSyncPayloadRuntime();

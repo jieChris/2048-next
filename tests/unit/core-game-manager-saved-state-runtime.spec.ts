@@ -142,6 +142,19 @@ describe("core game manager saved state runtime", () => {
     expect(resolveSavedPayloadRichnessScore).toHaveBeenCalledWith(payload);
   });
 
+  it("delegates latest saved payload candidate selection to the TypeScript runtime", () => {
+    const resolveLatestSavedPayloadCandidate = vi.fn(() => ({ saved_at: 2 }));
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreSavedPayloadCandidateRuntime: {
+        resolveLatestSavedPayloadCandidate
+      }
+    });
+    const candidates = [{ saved_at: 1 }, { saved_at: 2 }];
+
+    expect(runtime.resolveLatestSavedPayloadCandidate(candidates)).toEqual({ saved_at: 2 });
+    expect(resolveLatestSavedPayloadCandidate).toHaveBeenCalledWith(candidates);
+  });
+
   it("delegates saved-state persist timestamp updates to the TypeScript runtime", () => {
     const applySavedStatePersistTimestamps = vi.fn();
     const runtime = loadSavedStateRuntime([32768], {

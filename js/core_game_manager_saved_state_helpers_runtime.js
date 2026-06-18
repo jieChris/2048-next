@@ -203,29 +203,24 @@ function shouldPreferNewerSavedPayload(best, next) {
   if (nextRichness < bestRichness && areSavedPayloadsSamePosition(best, next)) return false;
   return true;
 }
-function resolveLatestSavedPayloadCandidate(candidates) {
+function resolveLatestSavedPayloadCandidateFallback(candidates) {
   var best = null;
   if (!Array.isArray(candidates)) return best;
   for (var candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
     var nextCandidate = candidates[candidateIndex];
     if (!normalizeSavedStateRecordObject(nextCandidate, null)) continue;
-    if (!normalizeSavedStateRecordObject(best, null)) {
-      best = nextCandidate;
-      continue;
-    }
+    if (!best) { best = nextCandidate; continue; }
     var bestAt = Number(best.saved_at) || 0;
     var nextAt = Number(nextCandidate.saved_at) || 0;
-    if (nextAt > bestAt) {
-      if (!shouldPreferNewerSavedPayload(best, nextCandidate)) continue;
-      best = nextCandidate;
-      continue;
-    }
-    if (nextAt < bestAt) continue;
-    if (resolveSavedPayloadRichnessScore(nextCandidate) > resolveSavedPayloadRichnessScore(best)) {
-      best = nextCandidate;
-    }
+    if (nextAt > bestAt && shouldPreferNewerSavedPayload(best, nextCandidate)) best = nextCandidate;
+    else if (nextAt === bestAt && resolveSavedPayloadRichnessScore(nextCandidate) > resolveSavedPayloadRichnessScore(best)) best = nextCandidate;
   }
   return best;
+}
+function resolveLatestSavedPayloadCandidate(candidates) {
+  var runtime = typeof CoreSavedPayloadCandidateRuntime !== "undefined" && CoreSavedPayloadCandidateRuntime ? CoreSavedPayloadCandidateRuntime : (typeof window !== "undefined" && window ? window.CoreSavedPayloadCandidateRuntime : null);
+  if (runtime && typeof runtime.resolveLatestSavedPayloadCandidate === "function") return runtime.resolveLatestSavedPayloadCandidate(candidates);
+  return resolveLatestSavedPayloadCandidateFallback(candidates);
 }
 function resolveLatestSavedPayloadForManager(manager, windowNameSavedCandidate) {
   if (!manager) return null;
