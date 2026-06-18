@@ -1411,29 +1411,34 @@ function buildLiteSavedGameStatePayload(manager, payloadSource) {
   }, function () { return buildLiteSavedGameStatePayloadFallback(manager, payloadSource); });
   return ensureLiteSavedGameStateRestoreFields(manager, litePayload, payloadSource);
 }
-function persistSavedPayloadWithLiteFallback(manager, key, liteKey, fullPayload, litePayload) {
+function persistSavedPayloadWithLiteFallbackByRuntime(manager, key, liteKey, fullPayload, litePayload) {
+  var runtime = typeof CoreSavedPayloadPersistFallbackRuntime !== "undefined" && CoreSavedPayloadPersistFallbackRuntime ? CoreSavedPayloadPersistFallbackRuntime : (typeof window !== "undefined" && window ? window.CoreSavedPayloadPersistFallbackRuntime : null);
+  if (!(runtime && typeof runtime.persistSavedPayloadWithLiteFallback === "function")) return null;
+  return runtime.persistSavedPayloadWithLiteFallback({ manager: manager, key: key, liteKey: liteKey, fullPayload: fullPayload, litePayload: litePayload }, {
+    persistPayload: function (currentManager, persistKey, persistPayload) { return persistSavedPayloadToStorages(currentManager, persistKey, persistPayload); },
+    clearSavedState: function (currentManager, modeKey) { clearSavedGameState(currentManager, modeKey); }
+  });
+}
+function persistSavedPayloadWithLiteFallbackFallback(manager, key, liteKey, fullPayload, litePayload) {
   var hasFullPayload = !!normalizeSavedStateRecordObject(fullPayload, null);
   var persisted = false;
   var persistedFull = false;
   if (hasFullPayload) {
     persistedFull = persistSavedPayloadToStorages(manager, key, fullPayload);
     persisted = persistedFull;
-    if (!persisted) {
-      persisted = persistSavedPayloadToStorages(manager, key, litePayload);
-    }
+    if (!persisted) persisted = persistSavedPayloadToStorages(manager, key, litePayload);
   }
   var litePersisted = persistSavedPayloadToStorages(manager, liteKey, litePayload);
   if (!(persisted || litePersisted)) {
     clearSavedGameState(manager, manager.modeKey);
-    if (hasFullPayload) {
-      persisted = persistSavedPayloadToStorages(manager, key, litePayload);
-    }
+    if (hasFullPayload) persisted = persistSavedPayloadToStorages(manager, key, litePayload);
     litePersisted = persistSavedPayloadToStorages(manager, liteKey, litePayload);
   }
-  return {
-    persisted: !!(persisted || litePersisted),
-    persistedFull: !!persistedFull
-  };
+  return { persisted: !!(persisted || litePersisted), persistedFull: !!persistedFull };
+}
+function persistSavedPayloadWithLiteFallback(manager, key, liteKey, fullPayload, litePayload) {
+  var result = persistSavedPayloadWithLiteFallbackByRuntime(manager, key, liteKey, fullPayload, litePayload);
+  return normalizeSavedStateRecordObject(result, null) || persistSavedPayloadWithLiteFallbackFallback(manager, key, liteKey, fullPayload, litePayload);
 }
 function persistSavedGameStatePayload(manager, persistPlan) {
   if (!manager || !persistPlan) return { persisted: false, persistedFull: false };
