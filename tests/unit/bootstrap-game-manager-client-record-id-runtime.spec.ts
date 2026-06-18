@@ -7,6 +7,7 @@ import {
 } from "../../src/bootstrap/game-manager-client-record-id-runtime";
 import {
   assignManagerClientRecordId,
+  buildClientRecordIdRandomSuffix,
   createManagerClientRecordId,
   resolveManagerClientRecordId
 } from "../../src/core/game-manager-client-record-id";
@@ -16,6 +17,7 @@ describe("game manager client record id runtime installer", () => {
     const runtime = createGameManagerClientRecordIdRuntime();
 
     expect(runtime.createManagerClientRecordId).toBe(createManagerClientRecordId);
+    expect(runtime.buildClientRecordIdRandomSuffix).toBe(buildClientRecordIdRandomSuffix);
     expect(runtime.assignManagerClientRecordId).toBe(assignManagerClientRecordId);
     expect(runtime.resolveManagerClientRecordId).toBe(resolveManagerClientRecordId);
   });
@@ -26,7 +28,9 @@ describe("game manager client record id runtime installer", () => {
     const installed = installGameManagerClientRecordIdRuntime({ windowLike });
 
     expect(installed).not.toBeNull();
+    expect(windowLike.CoreGameManagerClientRecordIdRuntime).toBe(installed);
     expect(windowLike.createManagerClientRecordId).toBe(createManagerClientRecordId);
+    expect(windowLike.buildClientRecordIdRandomSuffix).toBe(buildClientRecordIdRandomSuffix);
     expect(windowLike.assignManagerClientRecordId).toBe(assignManagerClientRecordId);
     expect(windowLike.resolveManagerClientRecordId).toBe(resolveManagerClientRecordId);
   });

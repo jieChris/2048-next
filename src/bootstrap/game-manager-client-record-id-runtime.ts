@@ -1,17 +1,21 @@
 import {
   assignManagerClientRecordId,
+  buildClientRecordIdRandomSuffix,
   createManagerClientRecordId,
   resolveManagerClientRecordId
 } from "../core/game-manager-client-record-id";
 
 export interface GameManagerClientRecordIdRuntime {
   createManagerClientRecordId: typeof createManagerClientRecordId;
+  buildClientRecordIdRandomSuffix: typeof buildClientRecordIdRandomSuffix;
   assignManagerClientRecordId: typeof assignManagerClientRecordId;
   resolveManagerClientRecordId: typeof resolveManagerClientRecordId;
 }
 
 export interface GameManagerClientRecordIdRuntimeWindowLike {
+  CoreGameManagerClientRecordIdRuntime?: GameManagerClientRecordIdRuntime;
   createManagerClientRecordId?: typeof createManagerClientRecordId;
+  buildClientRecordIdRandomSuffix?: typeof buildClientRecordIdRandomSuffix;
   assignManagerClientRecordId?: typeof assignManagerClientRecordId;
   resolveManagerClientRecordId?: typeof resolveManagerClientRecordId;
 }
@@ -23,6 +27,7 @@ export interface GameManagerClientRecordIdRuntimeInstallOptions {
 export function createGameManagerClientRecordIdRuntime(): GameManagerClientRecordIdRuntime {
   return {
     createManagerClientRecordId,
+    buildClientRecordIdRandomSuffix,
     assignManagerClientRecordId,
     resolveManagerClientRecordId
   };
@@ -42,15 +47,26 @@ export function installGameManagerClientRecordIdRuntime(
   if (typeof windowLike.createManagerClientRecordId !== "function") {
     windowLike.createManagerClientRecordId = runtime.createManagerClientRecordId;
   }
+  if (typeof windowLike.buildClientRecordIdRandomSuffix !== "function") {
+    windowLike.buildClientRecordIdRandomSuffix = runtime.buildClientRecordIdRandomSuffix;
+  }
   if (typeof windowLike.assignManagerClientRecordId !== "function") {
     windowLike.assignManagerClientRecordId = runtime.assignManagerClientRecordId;
   }
   if (typeof windowLike.resolveManagerClientRecordId !== "function") {
     windowLike.resolveManagerClientRecordId = runtime.resolveManagerClientRecordId;
   }
-
-  return {
+  if (!windowLike.CoreGameManagerClientRecordIdRuntime) {
+    windowLike.CoreGameManagerClientRecordIdRuntime = {
+      createManagerClientRecordId: windowLike.createManagerClientRecordId,
+      buildClientRecordIdRandomSuffix: windowLike.buildClientRecordIdRandomSuffix,
+      assignManagerClientRecordId: windowLike.assignManagerClientRecordId,
+      resolveManagerClientRecordId: windowLike.resolveManagerClientRecordId
+    };
+  }
+  return windowLike.CoreGameManagerClientRecordIdRuntime || {
     createManagerClientRecordId: windowLike.createManagerClientRecordId,
+    buildClientRecordIdRandomSuffix: windowLike.buildClientRecordIdRandomSuffix,
     assignManagerClientRecordId: windowLike.assignManagerClientRecordId,
     resolveManagerClientRecordId: windowLike.resolveManagerClientRecordId
   };

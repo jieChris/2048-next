@@ -18,7 +18,7 @@ function resolveRandomUUID(options?: ClientRecordIdOptions): (() => string) | nu
     : null;
 }
 
-function buildClientRecordIdRandomSuffix(options?: ClientRecordIdOptions): string {
+export function buildClientRecordIdRandomSuffix(options?: ClientRecordIdOptions): string {
   const randomHex = options?.randomHex || defaultRandomHex;
   return randomHex(12);
 }
