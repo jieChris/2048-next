@@ -81,6 +81,7 @@ import { installPreAccessorManagerForwardBindingsRuntime } from "../core/pre-acc
 import { installResetSetupReplayAndSpawnStateRuntime } from "../core/reset-setup-replay-and-spawn-state";
 import { installRestartGameRuntime } from "../core/restart-game";
 import { installSavedManagerProgressStateRuntime } from "../core/saved-manager-progress-state";
+import { installSavedManagerBaseStateRuntime } from "../core/saved-manager-base-state";
 import { installSavedManagerReplayStateRuntime } from "../core/saved-manager-replay-state";
 import { installSavedManagerTimerStateRuntime } from "../core/saved-manager-timer-state";
 import { installSavedPayloadCandidateRuntime } from "../core/saved-payload-candidate";
@@ -285,6 +286,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installPreAccessorManagerForwardBindingsRuntime();
   installResetSetupReplayAndSpawnStateRuntime();
   installRestartGameRuntime();
+  installSavedManagerBaseStateRuntime();
   installSavedManagerProgressStateRuntime();
   installSavedManagerReplayStateRuntime();
   installSavedManagerTimerStateRuntime();
