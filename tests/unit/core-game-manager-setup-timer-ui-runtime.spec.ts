@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 type SetupTimerUiRuntime = {
   normalizeLegacyTimerRowsForSetup: (manager: Record<string, unknown> | null) => void;
+  appendSetupTimerTrailingNodes: (row: unknown, nextAfterTimer: unknown) => number;
 };
 
 function loadSetupTimerUiRuntime(extraContext?: Record<string, unknown>): SetupTimerUiRuntime {
@@ -68,5 +69,20 @@ describe("core game manager setup timer ui runtime", () => {
     expect(operations.resolveExistingRow(manager, "timer-row-2048")).toBe(existingRow);
     operations.ensureRowItemClass(existingRow);
     expect(existingRow.className).toBe("legacy-row timer-row-item");
+  });
+
+  it("delegates setup timer trailing node movement to the TypeScript runtime", () => {
+    const appendSetupTimerTrailingNodes = vi.fn(() => 7);
+    const runtime = loadSetupTimerUiRuntime({
+      CoreSetupTimerRowNormalizeRuntime: {
+        normalizeLegacyTimerRowsForSetup: vi.fn(),
+        appendSetupTimerTrailingNodes
+      }
+    });
+    const row = { id: "timer-row-2048" };
+    const nextAfterTimer = { nodeType: 3, nodeValue: " " };
+
+    expect(runtime.appendSetupTimerTrailingNodes(row, nextAfterTimer)).toBe(7);
+    expect(appendSetupTimerTrailingNodes).toHaveBeenCalledWith(row, nextAfterTimer);
   });
 });

@@ -65,27 +65,25 @@ function createSetupTimerRowElement(documentLike, rowId) {
   return row;
 }
 
-function appendSetupTimerTrailingNodes(row, nextAfterTimer) {
+function resolveCoreSetupTimerRowNormalizeRuntime() {
+  return typeof CoreSetupTimerRowNormalizeRuntime !== "undefined" && CoreSetupTimerRowNormalizeRuntime ? CoreSetupTimerRowNormalizeRuntime : (typeof window !== "undefined" && window ? window.CoreSetupTimerRowNormalizeRuntime : null);
+}
+
+function appendSetupTimerTrailingNodesFallback(row, nextAfterTimer) {
   if (!row) return 0;
   var cursor = nextAfterTimer;
   var movedBr = 0;
   while (cursor && movedBr < 2) {
-    if (isSetupWhitespaceTextNode(cursor)) {
-      var whitespaceNode = cursor;
-      cursor = cursor.nextSibling;
-      row.appendChild(whitespaceNode);
-      continue;
-    }
-    if (isSetupBreakNode(cursor)) {
-      var brNode = cursor;
-      cursor = cursor.nextSibling;
-      row.appendChild(brNode);
-      movedBr += 1;
-      continue;
-    }
-    break;
+    if (isSetupWhitespaceTextNode(cursor)) { var whitespaceNode = cursor; cursor = cursor.nextSibling; row.appendChild(whitespaceNode); continue; }
+    if (!isSetupBreakNode(cursor)) break;
+    var brNode = cursor; cursor = cursor.nextSibling; row.appendChild(brNode); movedBr += 1;
   }
   return movedBr;
+}
+function appendSetupTimerTrailingNodes(row, nextAfterTimer) {
+  var runtime = resolveCoreSetupTimerRowNormalizeRuntime();
+  if (runtime && typeof runtime.appendSetupTimerTrailingNodes === "function") return runtime.appendSetupTimerTrailingNodes(row, nextAfterTimer);
+  return appendSetupTimerTrailingNodesFallback(row, nextAfterTimer);
 }
 
 function ensureSetupTimerTrailingBreakNodes(row, documentLike, movedBr) {
@@ -117,7 +115,7 @@ function createSetupTimerRowForSlot(manager, timerBox, documentLike, slot) {
 }
 
 function normalizeLegacyTimerRowsForSetupByRuntime(manager) {
-  var runtime = typeof CoreSetupTimerRowNormalizeRuntime !== "undefined" && CoreSetupTimerRowNormalizeRuntime ? CoreSetupTimerRowNormalizeRuntime : (typeof window !== "undefined" && window ? window.CoreSetupTimerRowNormalizeRuntime : null);
+  var runtime = resolveCoreSetupTimerRowNormalizeRuntime();
   if (!(runtime && typeof runtime.normalizeLegacyTimerRowsForSetup === "function")) return false;
   return runtime.normalizeLegacyTimerRowsForSetup({ manager: manager, timerSlotIds: getSetupTimerSlotIds() }, {
     resolveTimerBox: function (currentManager) { return resolveManagerElementById(currentManager, "timerbox"); },
