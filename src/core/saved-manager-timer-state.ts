@@ -28,8 +28,19 @@ export interface LegacySecondaryTimerSubState {
   timer_sub_visible: boolean;
 }
 
+export interface SavedTimerSubStateInput {
+  secondaryRows?: unknown;
+  expandedParents?: unknown;
+}
+
+export interface SavedTimerSubState extends LegacySecondaryTimerSubState {
+  timer_secondary_rows: unknown[];
+  timer_secondary_expanded_parents: unknown[];
+}
+
 export interface SavedManagerTimerStateRuntime {
   applySavedManagerTimerState: typeof applySavedManagerTimerState;
+  buildSavedTimerSubState: typeof buildSavedTimerSubState;
   resolveLegacySecondaryTimerSubStateFromRows: typeof resolveLegacySecondaryTimerSubStateFromRows;
 }
 
@@ -98,6 +109,19 @@ export function resolveLegacySecondaryTimerSubStateFromRows(
   return state;
 }
 
+export function buildSavedTimerSubState(input: SavedTimerSubStateInput): SavedTimerSubState {
+  const secondaryRows = Array.isArray(input.secondaryRows) ? input.secondaryRows : [];
+  const expandedParents = Array.isArray(input.expandedParents) ? input.expandedParents : [];
+  const legacyState = resolveLegacySecondaryTimerSubStateFromRows(secondaryRows);
+  return {
+    timer_secondary_rows: secondaryRows,
+    timer_secondary_expanded_parents: expandedParents,
+    timer_sub_8192: legacyState.timer_sub_8192,
+    timer_sub_16384: legacyState.timer_sub_16384,
+    timer_sub_visible: legacyState.timer_sub_visible
+  };
+}
+
 export function applySavedManagerTimerState(
   manager: SavedManagerTimerStateManagerLike | null | undefined,
   saved: SavedManagerTimerStateSavedLike
@@ -132,6 +156,7 @@ export function applySavedManagerTimerState(
 export function createSavedManagerTimerStateRuntime(): SavedManagerTimerStateRuntime {
   return {
     applySavedManagerTimerState,
+    buildSavedTimerSubState,
     resolveLegacySecondaryTimerSubStateFromRows
   };
 }

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   applySavedManagerTimerState,
+  buildSavedTimerSubState,
   createSavedManagerTimerStateRuntime,
   installSavedManagerTimerStateRuntime,
   resolveLegacySecondaryTimerSubStateFromRows,
@@ -22,6 +23,32 @@ function createManager() {
 }
 
 describe("core saved manager timer state runtime", () => {
+  it("builds saved timer sub-state with secondary rows and legacy compatibility fields", () => {
+    const secondaryRows = [
+      { parent: 32768, child: 8192, time: "0:08.192", display: "none" },
+      { parent: 32768, child: 16384, time: "0:16.384", display: "block" }
+    ];
+    const expandedParents = [32768];
+
+    expect(buildSavedTimerSubState({ secondaryRows, expandedParents })).toEqual({
+      timer_secondary_rows: secondaryRows,
+      timer_secondary_expanded_parents: expandedParents,
+      timer_sub_8192: "0:08.192",
+      timer_sub_16384: "0:16.384",
+      timer_sub_visible: true
+    });
+  });
+
+  it("normalizes invalid saved timer sub-state inputs to empty arrays and legacy fields", () => {
+    expect(buildSavedTimerSubState({ secondaryRows: null, expandedParents: "bad" })).toEqual({
+      timer_secondary_rows: [],
+      timer_secondary_expanded_parents: [],
+      timer_sub_8192: "",
+      timer_sub_16384: "",
+      timer_sub_visible: false
+    });
+  });
+
   it("derives legacy secondary timer fields from compatible secondary rows", () => {
     expect(
       resolveLegacySecondaryTimerSubStateFromRows([
@@ -130,6 +157,7 @@ describe("core saved manager timer state runtime", () => {
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createSavedManagerTimerStateRuntime();
     expect(runtime.applySavedManagerTimerState).toBe(applySavedManagerTimerState);
+    expect(runtime.buildSavedTimerSubState).toBe(buildSavedTimerSubState);
     expect(runtime.resolveLegacySecondaryTimerSubStateFromRows).toBe(
       resolveLegacySecondaryTimerSubStateFromRows
     );
@@ -141,11 +169,18 @@ describe("core saved manager timer state runtime", () => {
     expect(windowLike.CoreSavedManagerTimerStateRuntime?.applySavedManagerTimerState).toBe(
       applySavedManagerTimerState
     );
+    expect(windowLike.CoreSavedManagerTimerStateRuntime?.buildSavedTimerSubState).toBe(
+      buildSavedTimerSubState
+    );
     expect(windowLike.CoreSavedManagerTimerStateRuntime?.resolveLegacySecondaryTimerSubStateFromRows).toBe(
       resolveLegacySecondaryTimerSubStateFromRows
     );
 
-    const existing = { applySavedManagerTimerState: vi.fn(), resolveLegacySecondaryTimerSubStateFromRows: vi.fn() };
+    const existing = {
+      applySavedManagerTimerState: vi.fn(),
+      buildSavedTimerSubState: vi.fn(),
+      resolveLegacySecondaryTimerSubStateFromRows: vi.fn()
+    };
     expect(
       installSavedManagerTimerStateRuntime({
         windowLike: { CoreSavedManagerTimerStateRuntime: existing }

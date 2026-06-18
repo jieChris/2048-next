@@ -101,6 +101,10 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     applySavedManagerTimerState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
     buildSavedGameStateProgressPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStatePayload: (manager: Record<string, unknown>, now: number) => Record<string, unknown> | null;
+    collectSavedTimerSubState: (
+      manager: Record<string, unknown>,
+      documentLike: Record<string, unknown> | null
+    ) => Record<string, unknown>;
     resolveLegacySecondaryTimerSubStateFromRows: (rows: unknown) => Record<string, unknown>;
     buildLiteSavedGameStatePayloadFallback: (
       manager: Record<string, unknown>,
@@ -337,6 +341,31 @@ describe("core game manager saved state runtime", () => {
 
     expect(runtime.resolveLegacySecondaryTimerSubStateFromRows(rows)).toBe(resolved);
     expect(resolveLegacySecondaryTimerSubStateFromRows).toHaveBeenCalledWith(rows);
+  });
+
+  it("delegates saved timer sub-state composition to the TypeScript runtime", () => {
+    const secondaryRows = [{ parent: 32768, child: 8192, time: "0:08.192" }];
+    const expandedParents = [32768];
+    const resolved = {
+      timer_secondary_rows: secondaryRows,
+      timer_secondary_expanded_parents: expandedParents,
+      timer_sub_8192: "0:08.192",
+      timer_sub_16384: "",
+      timer_sub_visible: false
+    };
+    const buildSavedTimerSubState = vi.fn(() => resolved);
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreSavedManagerTimerStateRuntime: {
+        applySavedManagerTimerState: vi.fn(),
+        buildSavedTimerSubState
+      },
+      collectSecondaryTimerRowsState: vi.fn(() => secondaryRows),
+      collectSecondaryTimerExpandedParents: vi.fn(() => expandedParents)
+    });
+    const manager = { id: "manager" };
+
+    expect(runtime.collectSavedTimerSubState(manager, {})).toBe(resolved);
+    expect(buildSavedTimerSubState).toHaveBeenCalledWith({ secondaryRows, expandedParents });
   });
 
   it("does not persist scroll-hidden fixed timer rows as business-hidden", () => {
