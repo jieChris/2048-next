@@ -8,12 +8,17 @@ import { createGameManagerInputEventsRuntime } from "../../src/core/game-manager
 
 type SessionInitRuntime = {
   initializeGameManagerRuntimeState: (manager: Record<string, unknown>) => void;
+  resetRoundStatsState: (manager: Record<string, unknown>) => void;
   bindGameManagerInputEvents: (manager: Record<string, unknown>) => void;
 };
 
 function loadSessionInitRuntime(options?: {
   runtimeStateRuntime?: {
     initializeGameManagerRuntimeState?: (
+      manager: Record<string, unknown> | null,
+      operations: Record<string, unknown>
+    ) => void;
+    resetRoundStatsState?: (
       manager: Record<string, unknown> | null,
       operations: Record<string, unknown>
     ) => void;
@@ -39,6 +44,8 @@ function loadSessionInitRuntime(options?: {
     createEmptyItemInventory: vi.fn(() => ({ hammer: 0, swap: 0 })),
     detectMode: vi.fn(() => "classic"),
     handleMoveInput: vi.fn(),
+    updateItemModeHud: vi.fn(),
+    updateMoveTimeoutHud: vi.fn(),
     CoreGameManagerRuntimeStateRuntime: options?.runtimeStateRuntime,
     CoreGameManagerInputEventsRuntime:
       options?.inputEventsRuntime || createGameManagerInputEventsRuntime()
@@ -80,6 +87,31 @@ describe("core game manager session init runtime", () => {
       expect.objectContaining({
         detectMode: expect.any(Function),
         createEmptyItemInventory: expect.any(Function)
+      })
+    );
+  });
+
+  it("delegates round stats reset to the TypeScript runtime", () => {
+    const resetRoundStatsState = vi.fn();
+    const runtime = loadSessionInitRuntime({
+      runtimeStateRuntime: {
+        resetRoundStatsState
+      }
+    });
+    const manager = {
+      mode: "practice",
+      loadUndoSettingForMode: vi.fn(() => true)
+    } as Record<string, unknown>;
+
+    runtime.resetRoundStatsState(manager);
+
+    expect(resetRoundStatsState).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        createEmptyItemInventory: expect.any(Function),
+        updateItemModeHud: expect.any(Function),
+        updateMoveTimeoutHud: expect.any(Function),
+        nowMs: expect.any(Number)
       })
     );
   });
