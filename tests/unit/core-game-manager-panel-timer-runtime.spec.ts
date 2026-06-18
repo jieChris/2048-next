@@ -4,7 +4,7 @@ import vm from "node:vm";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-function loadPanelTimerRuntime() {
+function loadPanelTimerRuntime(extraContext: Record<string, unknown> = {}) {
   const scriptPath = path.resolve(process.cwd(), "js/core_game_manager_panel_timer_helpers_runtime.js");
   const script = readFileSync(scriptPath, "utf8");
   const context = {
@@ -37,7 +37,8 @@ function loadPanelTimerRuntime() {
       fallback: (currentManager: Record<string, unknown>, coreCallResult: unknown) => unknown
     ) {
       return fallback(manager, undefined);
-    }
+    },
+    ...extraContext
   } as Record<string, unknown>;
 
   vm.runInNewContext(script, context);
@@ -45,6 +46,7 @@ function loadPanelTimerRuntime() {
     startTimer: (manager: Record<string, unknown>) => void;
     stopTimer: (manager: Record<string, unknown>) => void;
     getDurationMs: (manager: Record<string, unknown>) => number;
+    buildSavedStateSyncTrimPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
   };
 }
 
@@ -184,5 +186,24 @@ describe("core game manager panel timer runtime", () => {
     });
 
     expect(runtime.getDurationMs(manager)).toBe(102_500);
+  });
+
+  it("delegates saved-state sync trim payload construction to the core runtime", () => {
+    const buildSavedStateSyncTrimPayload = vi.fn(() => ({
+      move_history: ["from-runtime"],
+      ips_input_count: 7
+    }));
+    const runtime = loadPanelTimerRuntime({
+      CoreSavedStateSyncPayloadRuntime: {
+        buildSavedStateSyncTrimPayload
+      }
+    });
+    const manager = createManager({ ipsInputCount: 2 });
+
+    expect(runtime.buildSavedStateSyncTrimPayload(manager)).toEqual({
+      move_history: ["from-runtime"],
+      ips_input_count: 7
+    });
+    expect(buildSavedStateSyncTrimPayload).toHaveBeenCalledWith(manager);
   });
 });

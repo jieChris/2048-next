@@ -1111,6 +1111,39 @@ function ensureSavedStateSyncClientId(manager) {
   return manager.savedStateSyncClientId;
 }
 
+function resolveCoreSavedStateSyncPayloadRuntime() {
+  if (typeof CoreSavedStateSyncPayloadRuntime !== "undefined" && CoreSavedStateSyncPayloadRuntime) {
+    return CoreSavedStateSyncPayloadRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CoreSavedStateSyncPayloadRuntime) {
+    return window.CoreSavedStateSyncPayloadRuntime;
+  }
+  return null;
+}
+
+function buildSavedStateSyncTrimPayloadFallback(manager) {
+  return {
+    move_history: [],
+    undo_stack: [],
+    redo_stack: [],
+    replay_compact_log: "",
+    session_replay_v3: null,
+    replay_string: "",
+    ips_input_count:
+      manager && Number.isInteger(manager.ipsInputCount) && manager.ipsInputCount >= 0
+        ? manager.ipsInputCount
+        : 0
+  };
+}
+
+function buildSavedStateSyncTrimPayload(manager) {
+  var runtime = resolveCoreSavedStateSyncPayloadRuntime();
+  if (runtime && typeof runtime.buildSavedStateSyncTrimPayload === "function") {
+    return runtime.buildSavedStateSyncTrimPayload(manager);
+  }
+  return buildSavedStateSyncTrimPayloadFallback(manager);
+}
+
 function buildSavedStateSyncStatePayload(manager, now) {
   if (!manager) return null;
   var safeNow = Number.isFinite(Number(now)) ? Math.floor(Number(now)) : Date.now();
@@ -1121,19 +1154,7 @@ function buildSavedStateSyncStatePayload(manager, now) {
     buildSavedGameStateProgressPayload(manager),
     buildSavedGameStateDirectionLockPayload(manager),
     buildSavedGameStateTimerCorePayload(manager),
-    {
-      // Keep cross-tab sync lightweight to avoid per-move full snapshot serialization.
-      move_history: [],
-      undo_stack: [],
-      redo_stack: [],
-      replay_compact_log: "",
-      session_replay_v3: null,
-      replay_string: "",
-      ips_input_count:
-        Number.isInteger(manager.ipsInputCount) && manager.ipsInputCount >= 0
-          ? manager.ipsInputCount
-          : 0
-    }
+    buildSavedStateSyncTrimPayload(manager)
   );
 }
 
