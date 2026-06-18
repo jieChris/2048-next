@@ -91,6 +91,7 @@ import { installRulesRuntime } from "../core/rules";
 import { installSetupUiStateRuntime } from "../core/setup-ui-state";
 import { installSingleModePageLockRuntime } from "../core/single-mode-page-lock";
 import { installSpecialRulesRuntime } from "../core/special-rules";
+import { installStatsPanelCopyRuntime } from "../core/stats-panel-copy";
 import { installCryptoRandomRuntime } from "../utils/crypto-random";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
 import { getPageManifest, type RuntimeCapability } from "./runtime-manifest";
@@ -285,6 +286,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installSetupRestoreInitialBoardStateRuntime();
   installSetupStateInitializationRuntime();
   installSetupUiStateRuntime();
+  installStatsPanelCopyRuntime();
   installCoreModeRuntime();
   installPracticeModeRuntime();
   installHomeModeRuntime();
