@@ -946,26 +946,25 @@ function resolveLegacySecondaryTimerSubStateFromRows(rows) {
   return resolveLegacySecondaryTimerSubStateFromRowsFallback(rows);
 }
 
-function collectSavedTimerSubState(manager, documentLike) {
-  if (!documentLike) {
-    return {
-      timer_secondary_rows: [],
-      timer_secondary_expanded_parents: [],
-      timer_sub_8192: "",
-      timer_sub_16384: "",
-      timer_sub_visible: false
-    };
-  }
-  var secondaryRows = collectSecondaryTimerRowsState(manager);
-  var expandedParents = collectSecondaryTimerExpandedParents(manager);
+function buildSavedTimerSubStateFallback(secondaryRows, expandedParents) {
   var legacyState = resolveLegacySecondaryTimerSubStateFromRows(secondaryRows);
   return {
-    timer_secondary_rows: secondaryRows,
-    timer_secondary_expanded_parents: expandedParents,
+    timer_secondary_rows: Array.isArray(secondaryRows) ? secondaryRows : [],
+    timer_secondary_expanded_parents: Array.isArray(expandedParents) ? expandedParents : [],
     timer_sub_8192: legacyState.timer_sub_8192,
     timer_sub_16384: legacyState.timer_sub_16384,
     timer_sub_visible: legacyState.timer_sub_visible
   };
+}
+function buildSavedTimerSubState(secondaryRows, expandedParents) {
+  var runtime = resolveCoreSavedManagerTimerStateRuntime();
+  if (runtime && typeof runtime.buildSavedTimerSubState === "function") return runtime.buildSavedTimerSubState({ secondaryRows: secondaryRows, expandedParents: expandedParents });
+  return buildSavedTimerSubStateFallback(secondaryRows, expandedParents);
+}
+function collectSavedTimerSubState(manager, documentLike) {
+  var secondaryRows = documentLike ? collectSecondaryTimerRowsState(manager) : [];
+  var expandedParents = documentLike ? collectSecondaryTimerExpandedParents(manager) : [];
+  return buildSavedTimerSubState(secondaryRows, expandedParents);
 }
 
 function collectSavedTimerDomSnapshotState(manager, documentLike) {
