@@ -123,6 +123,13 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
       persistResult: Record<string, unknown>,
       now: number
     ) => void;
+    persistSavedPayloadWithLiteFallback: (
+      manager: Record<string, unknown>,
+      key: string,
+      liteKey: string,
+      fullPayload: Record<string, unknown> | null,
+      litePayload: Record<string, unknown>
+    ) => Record<string, unknown>;
   };
 }
 
@@ -153,6 +160,38 @@ describe("core game manager saved state runtime", () => {
 
     expect(runtime.resolveLatestSavedPayloadCandidate(candidates)).toEqual({ saved_at: 2 });
     expect(resolveLatestSavedPayloadCandidate).toHaveBeenCalledWith(candidates);
+  });
+
+  it("delegates saved payload persist fallback sequencing to the TypeScript runtime", () => {
+    const persistSavedPayloadWithLiteFallback = vi.fn(() => ({
+      persisted: true,
+      persistedFull: false
+    }));
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreSavedPayloadPersistFallbackRuntime: {
+        persistSavedPayloadWithLiteFallback
+      }
+    });
+    const manager = { modeKey: "practice" };
+    const fullPayload = { saved_at: 1 };
+    const litePayload = { saved_at: 1, lite: true };
+
+    expect(
+      runtime.persistSavedPayloadWithLiteFallback(
+        manager,
+        "full-key",
+        "lite-key",
+        fullPayload,
+        litePayload
+      )
+    ).toEqual({ persisted: true, persistedFull: false });
+    expect(persistSavedPayloadWithLiteFallback).toHaveBeenCalledWith(
+      { manager, key: "full-key", liteKey: "lite-key", fullPayload, litePayload },
+      expect.objectContaining({
+        persistPayload: expect.any(Function),
+        clearSavedState: expect.any(Function)
+      })
+    );
   });
 
   it("delegates saved-state persist timestamp updates to the TypeScript runtime", () => {
