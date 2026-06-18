@@ -1281,28 +1281,33 @@ function resolveLiteSavedNumericSeed(value, fallback) {
   var fallbackSeed = Number(fallback);
   return Number.isFinite(fallbackSeed) ? fallbackSeed : 0;
 }
+function resolveLiteSavedScore(manager, source) {
+  var score = Number(source.score);
+  return Math.floor((Number.isFinite(score) && score >= 0) ? score : Number(manager.score) || 0);
+}
+function resolveLiteSavedIpsInputCount(source) {
+  var ipsInputCount = Number(source.ips_input_count);
+  if (Number.isFinite(ipsInputCount) && ipsInputCount >= 0) return Math.floor(ipsInputCount);
+  return Array.isArray(source.move_history) ? source.move_history.length : 0;
+}
+function resolveLiteSavedClientRecordId(manager, source) {
+  return typeof source.client_record_id === "string" && source.client_record_id
+    ? source.client_record_id
+    : resolveManagerClientRecordId(manager);
+}
 function buildLiteSavedGameStateCoreRestorePayload(manager, payload) {
   var source = normalizeSavedStateRecordObject(payload, {});
-  var board = Array.isArray(source.board) ? cloneBoardMatrix(source.board) : manager.getFinalBoardMatrix();
-  var score = Number(source.score);
-  if (!Number.isFinite(score) || score < 0) score = Number(manager.score) || 0;
-  var ipsInputCount = Number(source.ips_input_count);
-  if (!Number.isFinite(ipsInputCount) || ipsInputCount < 0) {
-    ipsInputCount = Array.isArray(source.move_history) ? source.move_history.length : 0;
-  }
   return {
-    board: board,
-    score: Math.floor(score),
+    board: Array.isArray(source.board) ? cloneBoardMatrix(source.board) : manager.getFinalBoardMatrix(),
+    score: resolveLiteSavedScore(manager, source),
     over: !!source.over,
     won: !!source.won,
     keep_playing: !!source.keep_playing,
     initial_seed: resolveLiteSavedNumericSeed(source.initial_seed, manager.initialSeed),
     seed: resolveLiteSavedNumericSeed(source.seed, manager.seed),
-    client_record_id: typeof source.client_record_id === "string" && source.client_record_id
-      ? source.client_record_id
-      : resolveManagerClientRecordId(manager),
+    client_record_id: resolveLiteSavedClientRecordId(manager, source),
     spawn_value_counts: isNonArrayObject(source.spawn_value_counts) ? manager.clonePlain(source.spawn_value_counts) : {},
-    ips_input_count: Math.floor(ipsInputCount),
+    ips_input_count: resolveLiteSavedIpsInputCount(source),
     capped64_unlocked: isNonArrayObject(source.capped64_unlocked)
       ? manager.safeClonePlain(source.capped64_unlocked, null)
       : null
@@ -1316,13 +1321,24 @@ function buildLiteSavedGameStateDiagnosticsPayload(payload) {
     diagnostics_index_entries: normalizeSavedStateDiagnosticsIndexEntries(payload.diagnostics_index_entries)
   };
 }
-function buildLiteSavedGameStatePayloadFallback(manager, payload) {
-  if (!manager) return null;
-  if (!normalizeSavedStateRecordObject(payload, null)) return null;
+function buildLiteSavedGameStateTimerPayload(payload) {
   var timerStatus = Number(payload.timer_status);
   var isTimerFrozen = !!payload.timer_frozen;
   var timerDurationMs = Number(payload.duration_ms);
-  var hasGameStarted = !!payload.has_game_started;
+  return {
+    timer_status: timerStatus === 1 ? 1 : 0,
+    timer_frozen: isTimerFrozen,
+    duration_ms: Number.isFinite(timerDurationMs) ? Math.floor(timerDurationMs) : 0,
+    timer_started_at_ms: Number.isFinite(Number(payload.timer_started_at_ms)) ? Math.floor(Number(payload.timer_started_at_ms)) : null,
+    timer_elapsed_offset_ms: Number.isFinite(Number(payload.timer_elapsed_offset_ms)) ? Math.floor(Number(payload.timer_elapsed_offset_ms)) : null,
+    timer_anchor_local_ms: Number.isFinite(Number(payload.timer_anchor_local_ms)) ? Math.floor(Number(payload.timer_anchor_local_ms)) : null,
+    timer_anchor_server_ms: Number.isFinite(Number(payload.timer_anchor_server_ms)) ? Math.floor(Number(payload.timer_anchor_server_ms)) : null,
+    has_game_started: !!payload.has_game_started
+  };
+}
+function buildLiteSavedGameStatePayloadFallback(manager, payload) {
+  if (!manager) return null;
+  if (!normalizeSavedStateRecordObject(payload, null)) return null;
   return Object.assign(
     {},
     buildLiteSavedGameStateMetaPayload(manager, payload),
@@ -1331,22 +1347,11 @@ function buildLiteSavedGameStatePayloadFallback(manager, payload) {
     buildLiteSavedGameStateBoardSnapshotPayload(manager, payload),
     buildLiteSavedGameStateReplayTrimPayload(manager, payload),
     buildLiteSavedGameStateDiagnosticsPayload(payload),
-    {
-      timer_status: timerStatus === 1 ? 1 : 0,
-      timer_frozen: isTimerFrozen,
-      duration_ms: Number.isFinite(timerDurationMs) ? Math.floor(timerDurationMs) : 0,
-      timer_started_at_ms: Number.isFinite(Number(payload.timer_started_at_ms)) ? Math.floor(Number(payload.timer_started_at_ms)) : null,
-      timer_elapsed_offset_ms: Number.isFinite(Number(payload.timer_elapsed_offset_ms)) ? Math.floor(Number(payload.timer_elapsed_offset_ms)) : null,
-      timer_anchor_local_ms: Number.isFinite(Number(payload.timer_anchor_local_ms)) ? Math.floor(Number(payload.timer_anchor_local_ms)) : null,
-      timer_anchor_server_ms: Number.isFinite(Number(payload.timer_anchor_server_ms)) ? Math.floor(Number(payload.timer_anchor_server_ms)) : null,
-      has_game_started: hasGameStarted
-    }
+    buildLiteSavedGameStateTimerPayload(payload)
   );
 }
-function buildLiteSavedGameStateCoreCallPayload(manager, payload) {
-  if (!manager) return { payload: payload };
+function buildLiteSavedGameStateCoreCallManagerPayload(manager) {
   return {
-    payload: payload,
     savedStateVersion: GameManager.SAVED_GAME_STATE_VERSION,
     modeKey: manager.modeKey,
     width: manager.width,
@@ -1361,7 +1366,11 @@ function buildLiteSavedGameStateCoreCallPayload(manager, payload) {
     initialBoardMatrix: manager.initialBoardMatrix,
     replayStartBoardMatrix: manager.replayStartBoardMatrix,
     practiceRestartBoardMatrix: manager.practiceRestartBoardMatrix,
-    practiceRestartModeConfig: manager.practiceRestartModeConfig,
+    practiceRestartModeConfig: manager.practiceRestartModeConfig
+  };
+}
+function buildLiteSavedGameStateCoreCallSourcePayload(payload) {
+  return {
     over: !!(payload && payload.over),
     won: !!(payload && payload.won),
     keepPlaying: !!(payload && payload.keep_playing),
@@ -1369,6 +1378,14 @@ function buildLiteSavedGameStateCoreCallPayload(manager, payload) {
     ipsInputCount: payload ? payload.ips_input_count : null,
     capped64Unlocked: payload ? payload.capped64_unlocked : null
   };
+}
+function buildLiteSavedGameStateCoreCallPayload(manager, payload) {
+  if (!manager) return { payload: payload };
+  return Object.assign(
+    { payload: payload },
+    buildLiteSavedGameStateCoreCallManagerPayload(manager),
+    buildLiteSavedGameStateCoreCallSourcePayload(payload)
+  );
 }
 function buildLiteSavedGameStateReplayRestorePayload(manager, payloadSource) {
   return {

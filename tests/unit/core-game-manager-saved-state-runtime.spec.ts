@@ -103,6 +103,10 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
       manager: Record<string, unknown>,
       payload: Record<string, unknown>
     ) => Record<string, unknown> | null;
+    buildLiteSavedGameStatePayload: (
+      manager: Record<string, unknown>,
+      payload: Record<string, unknown>
+    ) => Record<string, unknown> | null;
     clearSavedGameState: (manager: Record<string, unknown>, modeKey?: string) => void;
     resolveSavedPayloadRichnessScore: (payload: unknown) => number;
     resolveSavedStateRestoreDecision: (
@@ -877,6 +881,79 @@ describe("core game manager saved state runtime", () => {
     const litePayload = runtime.buildLiteSavedGameStatePayloadFallback(manager, fullPayload) as Record<string, unknown>;
     expect(litePayload.session_replay_v1).toEqual(sessionReplayV1);
     expect(litePayload.session_replay_v1).not.toBe(sessionReplayV1);
+  });
+
+  it("delegates lite saved payload construction to the core storage runtime with manager context", () => {
+    const buildLiteSavedGameStatePayload = vi.fn(() => ({
+      v: 1,
+      board: [[2]],
+      session_replay_v1: null
+    }));
+    const runtime = loadSavedStateRuntime([32768], {
+      callCoreStorageRuntime(
+        _manager: Record<string, unknown>,
+        method: string,
+        payload: Record<string, unknown>
+      ) {
+        if (method === "buildLiteSavedGameStatePayload") {
+          return buildLiteSavedGameStatePayload(payload);
+        }
+        return undefined;
+      }
+    });
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      width: 4,
+      height: 4,
+      ruleset: "pow2",
+      score: 128,
+      initialSeed: 11,
+      seed: 22,
+      getDurationMs: () => 3000,
+      getFinalBoardMatrix: () => [[2, 0, 0, 0]],
+      clonePlain: (value: unknown) => JSON.parse(JSON.stringify(value)),
+      safeClonePlain: (value: unknown, fallback: unknown) => {
+        try {
+          return JSON.parse(JSON.stringify(value));
+        } catch {
+          return fallback;
+        }
+      },
+      resolveNormalizedCoreValueOrFallback(value: unknown) {
+        return value;
+      },
+      isNonArrayObject(value: unknown) {
+        return !!value && typeof value === "object" && !Array.isArray(value);
+      }
+    };
+    const sourcePayload = {
+      saved_at: 1,
+      board: [[4]],
+      session_replay_v1: {
+        board_width: 4,
+        board_height: 4,
+        init_tiles: [],
+        records: []
+      }
+    };
+
+    runtime.buildLiteSavedGameStatePayload(manager, sourcePayload);
+
+    expect(buildLiteSavedGameStatePayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: sourcePayload,
+        savedStateVersion: 1,
+        modeKey: "standard_4x4_pow2_no_undo",
+        width: 4,
+        height: 4,
+        ruleset: "pow2",
+        score: 128,
+        initialSeed: 11,
+        seed: 22,
+        durationMs: 3000,
+        finalBoardMatrix: [[2, 0, 0, 0]]
+      })
+    );
   });
 
   it("uses rescue replay string when live replay serialization is unavailable during save", () => {
