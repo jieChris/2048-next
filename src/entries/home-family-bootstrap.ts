@@ -80,6 +80,7 @@ import { installRankedSessionSetupContextRuntime } from "../core/ranked-session-
 import { installPreAccessorManagerForwardBindingsRuntime } from "../core/pre-accessor-manager-forward-bindings";
 import { installResetSetupReplayAndSpawnStateRuntime } from "../core/reset-setup-replay-and-spawn-state";
 import { installRestartGameRuntime } from "../core/restart-game";
+import { installSavedManagerProgressStateRuntime } from "../core/saved-manager-progress-state";
 import { installSavedManagerReplayStateRuntime } from "../core/saved-manager-replay-state";
 import { installSavedManagerTimerStateRuntime } from "../core/saved-manager-timer-state";
 import { installSavedPayloadRichnessRuntime } from "../core/saved-payload-richness";
@@ -281,6 +282,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installPreAccessorManagerForwardBindingsRuntime();
   installResetSetupReplayAndSpawnStateRuntime();
   installRestartGameRuntime();
+  installSavedManagerProgressStateRuntime();
   installSavedManagerReplayStateRuntime();
   installSavedManagerTimerStateRuntime();
   installSavedPayloadRichnessRuntime();

@@ -68,6 +68,7 @@ describe("home family bootstrap ranked session ordering", () => {
     const installGameManagerUndoMoveHandlerRuntime = vi.fn();
     const installGameManagerUndoRestoredTilesRuntime = vi.fn();
     const installSavedManagerReplayStateRuntime = vi.fn();
+    const installSavedManagerProgressStateRuntime = vi.fn();
     const installPreAccessorManagerForwardBindingsRuntime = vi.fn();
     const installSavedManagerTimerStateRuntime = vi.fn();
     const installSavedPayloadRichnessRuntime = vi.fn();
@@ -125,6 +126,9 @@ describe("home family bootstrap ranked session ordering", () => {
     vi.doMock("../../src/core/saved-manager-replay-state", () => ({
       installSavedManagerReplayStateRuntime
     }));
+    vi.doMock("../../src/core/saved-manager-progress-state", () => ({
+      installSavedManagerProgressStateRuntime
+    }));
     vi.doMock("../../src/entries/legacy-loader", () => ({
       loadLegacyScriptsSequentially: vi.fn(async () => {})
     }));
@@ -147,6 +151,7 @@ describe("home family bootstrap ranked session ordering", () => {
     expect(installGameManagerUndoMoveHandlerRuntime).toHaveBeenCalledTimes(1);
     expect(installGameManagerUndoRestoredTilesRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedManagerReplayStateRuntime).toHaveBeenCalledTimes(1);
+    expect(installSavedManagerProgressStateRuntime).toHaveBeenCalledTimes(1);
     expect(installPreAccessorManagerForwardBindingsRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedManagerTimerStateRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedPayloadRichnessRuntime).toHaveBeenCalledTimes(1);

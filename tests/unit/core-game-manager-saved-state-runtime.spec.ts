@@ -93,6 +93,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     applySavedDynamicTimerRowsState: (manager: Record<string, unknown>, container: Record<string, unknown>, rowsState: unknown[], cappedState: Record<string, unknown>) => void;
     applySavedTimerPostRestoreState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
     applySavedManagerReplayState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
+    applySavedManagerProgressState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
     collectSavedTimerFixedRowsState: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStateDiagnosticsPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStateTimerCorePayload: (manager: Record<string, unknown>) => Record<string, unknown>;
@@ -192,6 +193,26 @@ describe("core game manager saved state runtime", () => {
         shouldRestoreSavedStateUndoHistory: expect.any(Function)
       })
     );
+  });
+
+  it("delegates saved manager progress state restore to the TypeScript runtime", () => {
+    const applySavedManagerProgressState = vi.fn();
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreSavedManagerProgressStateRuntime: {
+        applySavedManagerProgressState
+      }
+    });
+    const manager = {
+      moveHistory: [0, -1]
+    };
+    const saved = {
+      successful_move_count: 0,
+      undo_used: 0
+    };
+
+    runtime.applySavedManagerProgressState(manager, saved);
+
+    expect(applySavedManagerProgressState).toHaveBeenCalledWith(manager, saved);
   });
 
   it("delegates saved manager timer state restore to the TypeScript runtime", () => {
