@@ -91,6 +91,7 @@ import { installSavedStateSyncPayloadRuntime } from "../core/saved-state-sync-pa
 import { installSessionReplaySnapshotRuntime } from "../core/session-replay-snapshot";
 import { installSetupRestoreInitialBoardStateRuntime } from "../core/setup-restore-initial-board-state";
 import { installSetupStateInitializationRuntime } from "../core/setup-state-initialization";
+import { installSetupTimerRowNormalizeRuntime } from "../core/setup-timer-row-normalize";
 import { installNoXSelectionRuntime } from "../core/no-x-selection-overlay";
 import { installRulesRuntime } from "../core/rules";
 import { installSetupUiStateRuntime } from "../core/setup-ui-state";
@@ -295,6 +296,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installSessionReplaySnapshotRuntime();
   installSetupRestoreInitialBoardStateRuntime();
   installSetupStateInitializationRuntime();
+  installSetupTimerRowNormalizeRuntime();
   installSetupUiStateRuntime();
   installStatsPanelCopyRuntime();
   installCoreModeRuntime();

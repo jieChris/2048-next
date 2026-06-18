@@ -76,6 +76,7 @@ describe("home family bootstrap ranked session ordering", () => {
     const installSavedPayloadRichnessRuntime = vi.fn();
     const installSavedStatePersistTimestampsRuntime = vi.fn();
     const installSavedStateSyncPayloadRuntime = vi.fn();
+    const installSetupTimerRowNormalizeRuntime = vi.fn();
     const installStatsPanelCopyRuntime = vi.fn();
 
     vi.doMock("../../src/bootstrap/page-bootstrap", () => ({
@@ -115,6 +116,9 @@ describe("home family bootstrap ranked session ordering", () => {
     }));
     vi.doMock("../../src/core/saved-state-sync-payload", () => ({
       installSavedStateSyncPayloadRuntime
+    }));
+    vi.doMock("../../src/core/setup-timer-row-normalize", () => ({
+      installSetupTimerRowNormalizeRuntime
     }));
     vi.doMock("../../src/core/stats-panel-copy", () => ({
       installStatsPanelCopyRuntime
@@ -167,6 +171,7 @@ describe("home family bootstrap ranked session ordering", () => {
     expect(installSavedPayloadRichnessRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedStatePersistTimestampsRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedStateSyncPayloadRuntime).toHaveBeenCalledTimes(1);
+    expect(installSetupTimerRowNormalizeRuntime).toHaveBeenCalledTimes(1);
     expect(installStatsPanelCopyRuntime).toHaveBeenCalledTimes(1);
   });
 });
