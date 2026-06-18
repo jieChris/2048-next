@@ -116,28 +116,37 @@ function createSetupTimerRowForSlot(manager, timerBox, documentLike, slot) {
   ensureSetupTimerTrailingBreakNodes(row, documentLike, movedBr);
 }
 
-function normalizeLegacyTimerRowsForSetup(manager) {
+function normalizeLegacyTimerRowsForSetupByRuntime(manager) {
+  var runtime = typeof CoreSetupTimerRowNormalizeRuntime !== "undefined" && CoreSetupTimerRowNormalizeRuntime ? CoreSetupTimerRowNormalizeRuntime : (typeof window !== "undefined" && window ? window.CoreSetupTimerRowNormalizeRuntime : null);
+  if (!(runtime && typeof runtime.normalizeLegacyTimerRowsForSetup === "function")) return false;
+  return runtime.normalizeLegacyTimerRowsForSetup({ manager: manager, timerSlotIds: getSetupTimerSlotIds() }, {
+    resolveTimerBox: function (currentManager) { return resolveManagerElementById(currentManager, "timerbox"); },
+    resolveDocumentLike: function (currentManager) { return resolveManagerDocumentLike(currentManager); },
+    resolveExistingRow: function (currentManager, rowId) { return resolveManagerElementById(currentManager, rowId); },
+    ensureRowItemClass: function (row) { ensureSetupTimerRowItemClass(row); },
+    createRowForSlot: function (currentManager, timerBox, documentLike, slot) { createSetupTimerRowForSlot(currentManager, timerBox, documentLike, slot); }
+  }) === true;
+}
+
+function normalizeLegacyTimerRowsForSetupFallback(manager) {
   if (!manager) return;
   var timerBox = resolveManagerElementById(manager, "timerbox");
   if (!timerBox) return;
-
   var slots = getSetupTimerSlotIds();
   var documentLike = resolveManagerDocumentLike(manager);
   if (!(documentLike && typeof documentLike.createElement === "function")) return;
-
   for (var i = 0; i < slots.length; i++) {
     var slot = normalizeSetupTimerSlotValue(slots[i]);
     if (slot === null) continue;
-
     var rowId = "timer-row-" + String(slot);
     var existingRow = resolveManagerElementById(manager, rowId);
-    if (existingRow) {
-      ensureSetupTimerRowItemClass(existingRow);
-      continue;
-    }
-
+    if (existingRow) { ensureSetupTimerRowItemClass(existingRow); continue; }
     createSetupTimerRowForSlot(manager, timerBox, documentLike, slot);
   }
+}
+
+function normalizeLegacyTimerRowsForSetup(manager) {
+  if (!normalizeLegacyTimerRowsForSetupByRuntime(manager)) normalizeLegacyTimerRowsForSetupFallback(manager);
 }
 
 function cleanupLegacyTimerboxBreakNodesForSetup(manager) {
