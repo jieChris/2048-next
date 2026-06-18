@@ -94,6 +94,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     applySavedTimerPostRestoreState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
     applySavedManagerReplayState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
     applySavedManagerProgressState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
+    applySavedManagerBaseState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
     collectSavedTimerFixedRowsState: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStateDiagnosticsPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStateTimerCorePayload: (manager: Record<string, unknown>) => Record<string, unknown>;
@@ -190,6 +191,35 @@ describe("core game manager saved state runtime", () => {
       expect.objectContaining({
         persistPayload: expect.any(Function),
         clearSavedState: expect.any(Function)
+      })
+    );
+  });
+
+  it("delegates saved manager base state restore to the TypeScript runtime", () => {
+    const applySavedManagerBaseState = vi.fn();
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreSavedManagerBaseStateRuntime: {
+        applySavedManagerBaseState
+      }
+    });
+    const manager = {
+      setRuntimeScore: vi.fn(),
+      clonePlain: vi.fn((value) => ({ cloned: value }))
+    };
+    const saved = {
+      score: 128,
+      client_record_id: "rec_saved"
+    };
+
+    runtime.applySavedManagerBaseState(manager, saved);
+
+    expect(applySavedManagerBaseState).toHaveBeenCalledWith(
+      manager,
+      saved,
+      expect.objectContaining({
+        setRuntimeScore: expect.any(Function),
+        clonePlain: expect.any(Function),
+        assignClientRecordId: expect.any(Function)
       })
     );
   });

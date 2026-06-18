@@ -699,7 +699,13 @@ function applySavedTimerSubState(manager, saved) {
     : resolveLegacySavedSecondaryRows(saved);
   applySecondaryTimerRowsState(manager, secondaryRows);
 }
-function applySavedManagerBaseState(manager, saved) {
+function applySavedManagerBaseStateByRuntime(manager, saved) {
+  var runtime = typeof CoreSavedManagerBaseStateRuntime !== "undefined" && CoreSavedManagerBaseStateRuntime ? CoreSavedManagerBaseStateRuntime : (typeof window !== "undefined" && window ? window.CoreSavedManagerBaseStateRuntime : null);
+  if (!(runtime && typeof runtime.applySavedManagerBaseState === "function")) return false;
+  runtime.applySavedManagerBaseState(manager, saved, { setRuntimeScore: function (currentManager, score) { currentManager.setRuntimeScore(score); }, clonePlain: function (value) { return manager.clonePlain(value); }, assignClientRecordId: function (currentManager, clientRecordId) { assignManagerClientRecordId(currentManager, clientRecordId); } });
+  return true;
+}
+function applySavedManagerBaseStateFallback(manager, saved) {
   manager.setRuntimeScore(Number.isInteger(saved.score) && saved.score >= 0 ? saved.score : 0);
   manager.over = !!saved.over;
   manager.won = !!saved.won;
@@ -708,19 +714,15 @@ function applySavedManagerBaseState(manager, saved) {
   manager.seed = Number.isFinite(saved.seed) ? Number(saved.seed) : manager.initialSeed;
   manager.reached32k = !!saved.reached_32k;
   manager.cappedMilestoneCount = Number.isInteger(saved.capped_milestone_count) ? saved.capped_milestone_count : 0;
-  manager.capped64Unlocked = isNonArrayObject(saved.capped64_unlocked)
-    ? manager.clonePlain(saved.capped64_unlocked)
-    : manager.capped64Unlocked;
-  assignManagerClientRecordId(
-    manager,
-    typeof saved.client_record_id === "string" ? saved.client_record_id : ""
-  );
+  manager.capped64Unlocked = isNonArrayObject(saved.capped64_unlocked) ? manager.clonePlain(saved.capped64_unlocked) : manager.capped64Unlocked;
+  assignManagerClientRecordId(manager, typeof saved.client_record_id === "string" ? saved.client_record_id : "");
   manager.challengeId = typeof saved.challenge_id === "string" && saved.challenge_id ? saved.challenge_id : null;
-  if (typeof saved.ranked_session_token === "string") {
-    manager.rankedSessionToken = saved.ranked_session_token;
-  }
+  if (typeof saved.ranked_session_token === "string") manager.rankedSessionToken = saved.ranked_session_token;
   manager.hasGameStarted = !!saved.has_game_started;
   manager.sessionSubmitDone = false;
+}
+function applySavedManagerBaseState(manager, saved) {
+  if (!applySavedManagerBaseStateByRuntime(manager, saved)) applySavedManagerBaseStateFallback(manager, saved);
 }
 function cloneSavedReplaySessionState(manager, session, fallbackValue) {
   if (!isNonArrayObject(session)) return fallbackValue;
