@@ -4,6 +4,7 @@ import {
   createGameManagerRuntimeStateRuntime,
   initializeGameManagerRuntimeState,
   installGameManagerRuntimeStateRuntime,
+  resetRoundStatsState,
   type GameManagerRuntimeStateRuntime
 } from "../../src/core/game-manager-runtime-state";
 
@@ -15,6 +16,60 @@ function createOperations() {
 }
 
 describe("core game manager runtime state", () => {
+  it("resets per-round stats and refreshes item and move-timeout HUD state", () => {
+    const manager: Record<string, unknown> = {
+      mode: "practice",
+      comboStreak: 9,
+      successfulMoveCount: 42,
+      ipsInputCount: 6,
+      ipsInputTimes: [1, 2],
+      undoUsed: 5,
+      lockConsumedAtMoveCount: 8,
+      lockedDirectionTurn: 3,
+      lockedDirection: 1,
+      spawnValueCounts: { 2: 3 },
+      spawnTwos: 11,
+      spawnFours: 7,
+      itemProgress: 99,
+      itemInventory: { hammer: 2 },
+      nextSpawnSuppressed: true,
+      nextSpawnValueOverride: 4,
+      undoEnabled: false,
+      loadUndoSettingForMode: vi.fn(() => true)
+    };
+    const operations = {
+      createEmptyItemInventory: vi.fn(() => ({ hammer: 0, swap: 0 })),
+      updateItemModeHud: vi.fn(),
+      updateMoveTimeoutHud: vi.fn(),
+      nowMs: 12345
+    };
+
+    resetRoundStatsState(manager, operations);
+
+    expect(operations.createEmptyItemInventory).toHaveBeenCalledTimes(1);
+    expect(manager).toMatchObject({
+      comboStreak: 0,
+      successfulMoveCount: 0,
+      ipsInputCount: 0,
+      ipsInputTimes: [],
+      undoUsed: 0,
+      lockConsumedAtMoveCount: -1,
+      lockedDirectionTurn: null,
+      lockedDirection: null,
+      spawnValueCounts: {},
+      spawnTwos: 0,
+      spawnFours: 0,
+      itemProgress: 0,
+      itemInventory: { hammer: 0, swap: 0 },
+      nextSpawnSuppressed: false,
+      nextSpawnValueOverride: null,
+      undoEnabled: true
+    });
+    expect(manager.loadUndoSettingForMode).toHaveBeenCalledWith("practice");
+    expect(operations.updateItemModeHud).toHaveBeenCalledWith(manager);
+    expect(operations.updateMoveTimeoutHud).toHaveBeenCalledWith(manager, 12345);
+  });
+
   it("initializes the game manager runtime defaults through injected legacy operations", () => {
     const manager: Record<string, unknown> = {
       existing: "preserved"
@@ -82,6 +137,7 @@ describe("core game manager runtime state", () => {
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createGameManagerRuntimeStateRuntime();
     expect(runtime.initializeGameManagerRuntimeState).toBe(initializeGameManagerRuntimeState);
+    expect(runtime.resetRoundStatsState).toBe(resetRoundStatsState);
 
     const windowLike: { CoreGameManagerRuntimeStateRuntime?: GameManagerRuntimeStateRuntime } = {};
     expect(installGameManagerRuntimeStateRuntime({ windowLike })).toBe(
@@ -90,8 +146,11 @@ describe("core game manager runtime state", () => {
     expect(windowLike.CoreGameManagerRuntimeStateRuntime?.initializeGameManagerRuntimeState).toBe(
       initializeGameManagerRuntimeState
     );
+    expect(windowLike.CoreGameManagerRuntimeStateRuntime?.resetRoundStatsState).toBe(
+      resetRoundStatsState
+    );
 
-    const existing = { initializeGameManagerRuntimeState: vi.fn() };
+    const existing = { initializeGameManagerRuntimeState: vi.fn(), resetRoundStatsState: vi.fn() };
     expect(
       installGameManagerRuntimeStateRuntime({
         windowLike: { CoreGameManagerRuntimeStateRuntime: existing }

@@ -24,8 +24,21 @@ export interface GameManagerRuntimeStateManagerLike {
   itemModeRules?: unknown;
   itemInventory?: unknown;
   itemProgress?: number;
+  comboStreak?: number;
+  successfulMoveCount?: number;
+  ipsInputCount?: number;
+  ipsInputTimes?: unknown[];
+  undoUsed?: number;
+  lockConsumedAtMoveCount?: number;
+  lockedDirectionTurn?: number | null;
+  lockedDirection?: number | null;
+  spawnValueCounts?: Record<string, unknown>;
+  spawnTwos?: number;
+  spawnFours?: number;
   nextSpawnSuppressed?: boolean;
   nextSpawnValueOverride?: unknown;
+  undoEnabled?: boolean;
+  loadUndoSettingForMode?: (mode: unknown) => boolean;
   moveTimeoutMs?: number | null;
   moveDeadlineAt?: number | null;
   practiceRestartBoardMatrix?: unknown;
@@ -50,10 +63,14 @@ export interface GameManagerRuntimeStateManagerLike {
 export interface GameManagerRuntimeStateOperations {
   detectMode?: (manager: GameManagerRuntimeStateManagerLike) => unknown;
   createEmptyItemInventory?: () => unknown;
+  updateItemModeHud?: (manager: GameManagerRuntimeStateManagerLike) => void;
+  updateMoveTimeoutHud?: (manager: GameManagerRuntimeStateManagerLike, nowMs: number) => void;
+  nowMs?: number;
 }
 
 export interface GameManagerRuntimeStateRuntime {
   initializeGameManagerRuntimeState: typeof initializeGameManagerRuntimeState;
+  resetRoundStatsState: typeof resetRoundStatsState;
 }
 
 export interface GameManagerRuntimeStateWindowLike {
@@ -120,9 +137,35 @@ export function initializeGameManagerRuntimeState(
   manager.singleModePageLockState = null;
 }
 
+export function resetRoundStatsState(
+  manager: GameManagerRuntimeStateManagerLike | null | undefined,
+  operations: GameManagerRuntimeStateOperations = {}
+): void {
+  if (!manager) return;
+  manager.comboStreak = 0;
+  manager.successfulMoveCount = 0;
+  manager.ipsInputCount = 0;
+  manager.ipsInputTimes = [];
+  manager.undoUsed = 0;
+  manager.lockConsumedAtMoveCount = -1;
+  manager.lockedDirectionTurn = null;
+  manager.lockedDirection = null;
+  manager.spawnValueCounts = {};
+  manager.spawnTwos = 0;
+  manager.spawnFours = 0;
+  manager.itemProgress = 0;
+  manager.itemInventory = operations.createEmptyItemInventory?.() ?? {};
+  manager.nextSpawnSuppressed = false;
+  manager.nextSpawnValueOverride = null;
+  manager.undoEnabled = manager.loadUndoSettingForMode?.(manager.mode) ?? false;
+  operations.updateItemModeHud?.(manager);
+  operations.updateMoveTimeoutHud?.(manager, operations.nowMs ?? Date.now());
+}
+
 export function createGameManagerRuntimeStateRuntime(): GameManagerRuntimeStateRuntime {
   return {
-    initializeGameManagerRuntimeState
+    initializeGameManagerRuntimeState,
+    resetRoundStatsState
   };
 }
 

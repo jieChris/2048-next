@@ -58,26 +58,43 @@ function initializeTimerMilestones(manager) {
   manager.callWindowNamespaceMethod("ThemeManager", "syncTimerLegendStyles");
 }
 
-function resetRoundStatsState(manager) {
+function resetRoundStatsStateFallback(manager) {
   if (!manager) return;
-  manager.comboStreak = 0;
-  manager.successfulMoveCount = 0;
-  manager.ipsInputCount = 0;
+  manager.comboStreak = 0; manager.successfulMoveCount = 0; manager.ipsInputCount = 0;
   manager.ipsInputTimes = [];
-  manager.undoUsed = 0;
-  manager.lockConsumedAtMoveCount = -1;
-  manager.lockedDirectionTurn = null;
-  manager.lockedDirection = null;
+  manager.undoUsed = 0; manager.lockConsumedAtMoveCount = -1;
+  manager.lockedDirectionTurn = null; manager.lockedDirection = null;
   manager.spawnValueCounts = {};
-  manager.spawnTwos = 0;
-  manager.spawnFours = 0;
-  manager.itemProgress = 0;
+  manager.spawnTwos = 0; manager.spawnFours = 0; manager.itemProgress = 0;
   manager.itemInventory = createEmptyItemInventory();
-  manager.nextSpawnSuppressed = false;
-  manager.nextSpawnValueOverride = null;
+  manager.nextSpawnSuppressed = false; manager.nextSpawnValueOverride = null;
   manager.undoEnabled = manager.loadUndoSettingForMode(manager.mode);
   if (typeof updateItemModeHud === "function") updateItemModeHud(manager);
   if (typeof updateMoveTimeoutHud === "function") updateMoveTimeoutHud(manager, Date.now());
+}
+
+function resolveCoreGameManagerRuntimeStateRuntime() {
+  if (typeof CoreGameManagerRuntimeStateRuntime !== "undefined" && CoreGameManagerRuntimeStateRuntime) {
+    return CoreGameManagerRuntimeStateRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CoreGameManagerRuntimeStateRuntime) {
+    return window.CoreGameManagerRuntimeStateRuntime;
+  }
+  return null;
+}
+
+function resetRoundStatsState(manager) {
+  var runtime = resolveCoreGameManagerRuntimeStateRuntime();
+  if (runtime && typeof runtime.resetRoundStatsState === "function") {
+    runtime.resetRoundStatsState(manager, {
+      createEmptyItemInventory: createEmptyItemInventory,
+      updateItemModeHud: typeof updateItemModeHud === "function" ? updateItemModeHud : undefined,
+      updateMoveTimeoutHud: typeof updateMoveTimeoutHud === "function" ? updateMoveTimeoutHud : undefined,
+      nowMs: Date.now()
+    });
+    return;
+  }
+  resetRoundStatsStateFallback(manager);
 }
 
 function initializeGameManagerCoreFields(manager, size, InputManager, Actuator, ScoreManager) {
@@ -94,16 +111,6 @@ function initializeGameManagerCoreFields(manager, size, InputManager, Actuator, 
     : null;
   manager.cornerRateEl = null;
   manager.cornerIpsEl = null;
-}
-
-function resolveCoreGameManagerRuntimeStateRuntime() {
-  if (typeof CoreGameManagerRuntimeStateRuntime !== "undefined" && CoreGameManagerRuntimeStateRuntime) {
-    return CoreGameManagerRuntimeStateRuntime;
-  }
-  if (typeof window !== "undefined" && window && window.CoreGameManagerRuntimeStateRuntime) {
-    return window.CoreGameManagerRuntimeStateRuntime;
-  }
-  return null;
 }
 
 function initializeGameManagerRuntimeState(manager) {
