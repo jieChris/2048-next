@@ -71,6 +71,7 @@ describe("home family bootstrap ranked session ordering", () => {
     const installPreAccessorManagerForwardBindingsRuntime = vi.fn();
     const installSavedManagerTimerStateRuntime = vi.fn();
     const installSavedPayloadRichnessRuntime = vi.fn();
+    const installSavedStatePersistTimestampsRuntime = vi.fn();
     const installSavedStateSyncPayloadRuntime = vi.fn();
     const installStatsPanelCopyRuntime = vi.fn();
 
@@ -99,6 +100,9 @@ describe("home family bootstrap ranked session ordering", () => {
     }));
     vi.doMock("../../src/core/saved-payload-richness", () => ({
       installSavedPayloadRichnessRuntime
+    }));
+    vi.doMock("../../src/core/saved-state-persist-timestamps", () => ({
+      installSavedStatePersistTimestampsRuntime
     }));
     vi.doMock("../../src/core/saved-state-sync-payload", () => ({
       installSavedStateSyncPayloadRuntime
@@ -146,6 +150,7 @@ describe("home family bootstrap ranked session ordering", () => {
     expect(installPreAccessorManagerForwardBindingsRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedManagerTimerStateRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedPayloadRichnessRuntime).toHaveBeenCalledTimes(1);
+    expect(installSavedStatePersistTimestampsRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedStateSyncPayloadRuntime).toHaveBeenCalledTimes(1);
     expect(installStatsPanelCopyRuntime).toHaveBeenCalledTimes(1);
   });
