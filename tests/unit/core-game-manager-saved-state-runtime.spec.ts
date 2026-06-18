@@ -101,6 +101,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     applySavedManagerTimerState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
     buildSavedGameStateProgressPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStatePayload: (manager: Record<string, unknown>, now: number) => Record<string, unknown> | null;
+    resolveLegacySecondaryTimerSubStateFromRows: (rows: unknown) => Record<string, unknown>;
     buildLiteSavedGameStatePayloadFallback: (
       manager: Record<string, unknown>,
       payload: Record<string, unknown>
@@ -317,6 +318,25 @@ describe("core game manager saved state runtime", () => {
     runtime.applySavedManagerTimerState(manager, saved);
 
     expect(applySavedManagerTimerState).toHaveBeenCalledWith(manager, saved);
+  });
+
+  it("delegates legacy secondary timer sub-state derivation to the TypeScript runtime", () => {
+    const resolved = {
+      timer_sub_8192: "0:08.192",
+      timer_sub_16384: "0:16.384",
+      timer_sub_visible: true
+    };
+    const resolveLegacySecondaryTimerSubStateFromRows = vi.fn(() => resolved);
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreSavedManagerTimerStateRuntime: {
+        applySavedManagerTimerState: vi.fn(),
+        resolveLegacySecondaryTimerSubStateFromRows
+      }
+    });
+    const rows = [{ parent: 32768, child: 8192, time: "0:08.192", display: "block" }];
+
+    expect(runtime.resolveLegacySecondaryTimerSubStateFromRows(rows)).toBe(resolved);
+    expect(resolveLegacySecondaryTimerSubStateFromRows).toHaveBeenCalledWith(rows);
   });
 
   it("does not persist scroll-hidden fixed timer rows as business-hidden", () => {

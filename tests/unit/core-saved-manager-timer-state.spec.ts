@@ -4,6 +4,7 @@ import {
   applySavedManagerTimerState,
   createSavedManagerTimerStateRuntime,
   installSavedManagerTimerStateRuntime,
+  resolveLegacySecondaryTimerSubStateFromRows,
   type SavedManagerTimerStateRuntime
 } from "../../src/core/saved-manager-timer-state";
 
@@ -21,6 +22,36 @@ function createManager() {
 }
 
 describe("core saved manager timer state runtime", () => {
+  it("derives legacy secondary timer fields from compatible secondary rows", () => {
+    expect(
+      resolveLegacySecondaryTimerSubStateFromRows([
+        { parent: 32768, child: 8192, time: "0:08.192", display: "none" },
+        { parent: 32768, child: 16384, time: "0:16.384", display: "block" },
+        { parent: 16384, child: 8192, time: "wrong-parent", display: "block" },
+        { parent: 32768, child: 4096, time: "wrong-child", display: "block" }
+      ])
+    ).toEqual({
+      timer_sub_8192: "0:08.192",
+      timer_sub_16384: "0:16.384",
+      timer_sub_visible: true
+    });
+  });
+
+  it("normalizes invalid secondary timer rows to empty legacy fields", () => {
+    expect(
+      resolveLegacySecondaryTimerSubStateFromRows([
+        null,
+        "bad",
+        { parent: 32768, child: 8192, time: 8192, display: "block" },
+        { parent: 32768, child: 16384, time: null, display: "none" }
+      ])
+    ).toEqual({
+      timer_sub_8192: "",
+      timer_sub_16384: "",
+      timer_sub_visible: true
+    });
+  });
+
   it("restores active timer duration from saved anchors across closed-page time", () => {
     vi.useFakeTimers();
     vi.setSystemTime(20_000);
@@ -99,6 +130,9 @@ describe("core saved manager timer state runtime", () => {
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createSavedManagerTimerStateRuntime();
     expect(runtime.applySavedManagerTimerState).toBe(applySavedManagerTimerState);
+    expect(runtime.resolveLegacySecondaryTimerSubStateFromRows).toBe(
+      resolveLegacySecondaryTimerSubStateFromRows
+    );
 
     const windowLike: { CoreSavedManagerTimerStateRuntime?: SavedManagerTimerStateRuntime } = {};
     expect(installSavedManagerTimerStateRuntime({ windowLike })).toBe(
@@ -107,8 +141,11 @@ describe("core saved manager timer state runtime", () => {
     expect(windowLike.CoreSavedManagerTimerStateRuntime?.applySavedManagerTimerState).toBe(
       applySavedManagerTimerState
     );
+    expect(windowLike.CoreSavedManagerTimerStateRuntime?.resolveLegacySecondaryTimerSubStateFromRows).toBe(
+      resolveLegacySecondaryTimerSubStateFromRows
+    );
 
-    const existing = { applySavedManagerTimerState: vi.fn() };
+    const existing = { applySavedManagerTimerState: vi.fn(), resolveLegacySecondaryTimerSubStateFromRows: vi.fn() };
     expect(
       installSavedManagerTimerStateRuntime({
         windowLike: { CoreSavedManagerTimerStateRuntime: existing }
