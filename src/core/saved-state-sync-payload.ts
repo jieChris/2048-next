@@ -14,6 +14,7 @@ export interface SavedStateSyncTrimPayload {
 
 export interface SavedStateSyncPayloadRuntime {
   buildSavedStateSyncTrimPayload: typeof buildSavedStateSyncTrimPayload;
+  parseSavedStateSyncEventPayload: typeof parseSavedStateSyncEventPayload;
 }
 
 export interface SavedStateSyncPayloadWindowLike {
@@ -26,6 +27,16 @@ export interface SavedStateSyncPayloadRuntimeInstallOptions {
 
 function normalizeIpsInputCount(value: unknown): number {
   return Number.isInteger(value) && Number(value) >= 0 ? Number(value) : 0;
+}
+
+function normalizeRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function resolveSavedAt(saved: Record<string, unknown> | null): number {
+  const value = Number(saved?.saved_at);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.floor(value);
 }
 
 export function buildSavedStateSyncTrimPayload(
@@ -42,9 +53,36 @@ export function buildSavedStateSyncTrimPayload(
   };
 }
 
+export function parseSavedStateSyncEventPayload(raw: unknown): {
+  sourceClientId: string;
+  savedAt: number;
+  state: Record<string, unknown>;
+} | null {
+  if (typeof raw !== "string" || !raw) return null;
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (_err) {
+    return null;
+  }
+  const payload = normalizeRecord(parsed);
+  if (!payload) return null;
+  const state = normalizeRecord(payload.state);
+  if (!state) return null;
+  let savedAt = resolveSavedAt(state);
+  if (!(savedAt > 0)) savedAt = resolveSavedAt(payload);
+  if (!(savedAt > 0)) return null;
+  return {
+    sourceClientId: typeof payload.source_client_id === "string" ? payload.source_client_id : "",
+    savedAt,
+    state
+  };
+}
+
 export function createSavedStateSyncPayloadRuntime(): SavedStateSyncPayloadRuntime {
   return {
-    buildSavedStateSyncTrimPayload
+    buildSavedStateSyncTrimPayload,
+    parseSavedStateSyncEventPayload
   };
 }
 

@@ -1218,25 +1218,26 @@ function buildSavedStateSyncEventPayload(manager, now) {
   };
 }
 
-function parseSavedStateSyncEventPayload(manager, raw) {
-  if (!(manager && typeof raw === "string" && raw)) return null;
+function parseSavedStateSyncEventPayloadFallback(raw) {
+  if (!(typeof raw === "string" && raw)) return null;
   var parsed = null;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (_errParse) {
-    return null;
-  }
+  try { parsed = JSON.parse(raw); } catch (_errParse) { return null; }
   if (!normalizeSavedStateRecordObject(parsed, null)) return null;
   var state = normalizeSavedStateRecordObject(parsed.state, null);
   if (!state) return null;
   var savedAt = resolveSavedStateSavedAt(state);
   if (!(savedAt > 0)) savedAt = resolveSavedStateSavedAt(parsed);
   if (!(savedAt > 0)) return null;
-  return {
-    sourceClientId: typeof parsed.source_client_id === "string" ? parsed.source_client_id : "",
-    savedAt: savedAt,
-    state: state
-  };
+  return { sourceClientId: typeof parsed.source_client_id === "string" ? parsed.source_client_id : "", savedAt: savedAt, state: state };
+}
+
+function parseSavedStateSyncEventPayload(manager, raw) {
+  if (!manager) return null;
+  var runtime = resolveCoreSavedStateSyncPayloadRuntime();
+  if (runtime && typeof runtime.parseSavedStateSyncEventPayload === "function") {
+    return runtime.parseSavedStateSyncEventPayload(raw);
+  }
+  return parseSavedStateSyncEventPayloadFallback(raw);
 }
 
 function resolveSavedStateSyncRestoreDecision(manager, saved) {
