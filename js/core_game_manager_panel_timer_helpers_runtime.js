@@ -581,25 +581,48 @@ function resolveCappedModeState(manager) {
   return manager.cloneResolvedCappedModeState(resolvedState);
 }
 
-function setTimerRowVisibleState(manager, value, visible, keepSpace) {
+function resolveCoreGameManagerTimerRowVisibleStateRuntime() {
+  if (typeof CoreGameManagerTimerRowVisibleStateRuntime !== "undefined" && CoreGameManagerTimerRowVisibleStateRuntime) return CoreGameManagerTimerRowVisibleStateRuntime;
+  if (typeof window !== "undefined" && window && window.CoreGameManagerTimerRowVisibleStateRuntime) return window.CoreGameManagerTimerRowVisibleStateRuntime;
+  return null;
+}
+
+function applyTimerRowVisibleStyle(row) {
+  row.style.display = "block";
+  row.style.visibility = "visible";
+  row.style.pointerEvents = "";
+}
+
+function applyTimerRowHiddenStyle(row, keepSpace) {
+  if (keepSpace) {
+    row.style.display = "block";
+    row.style.visibility = "hidden";
+    row.style.pointerEvents = "none";
+    return;
+  }
+  row.style.display = "none";
+  row.style.visibility = "";
+  row.style.pointerEvents = "";
+}
+
+function setTimerRowVisibleStateFallback(manager, value, visible, keepSpace) {
   if (!manager) return;
   var row = manager.getTimerRowEl(value);
   if (!row) return;
   if (row && typeof row.removeAttribute === "function") {
     row.removeAttribute("data-scroll-hidden");
   }
-  row.style.display = "block";
-  if (visible) {
-    row.style.visibility = "visible";
-    row.style.pointerEvents = "";
-  } else if (keepSpace) {
-    row.style.visibility = "hidden";
-    row.style.pointerEvents = "none";
-  } else {
-    row.style.display = "none";
-    row.style.visibility = "";
-    row.style.pointerEvents = "";
+  if (visible) applyTimerRowVisibleStyle(row);
+  else applyTimerRowHiddenStyle(row, keepSpace);
+}
+
+function setTimerRowVisibleState(manager, value, visible, keepSpace) {
+  var runtime = resolveCoreGameManagerTimerRowVisibleStateRuntime();
+  if (runtime && typeof runtime.setTimerRowVisibleState === "function") {
+    runtime.setTimerRowVisibleState(manager, value, visible, keepSpace);
+    return;
   }
+  setTimerRowVisibleStateFallback(manager, value, visible, keepSpace);
 }
 
 function resolveProgressiveCapped64UnlockedStateFallback(unlockedState) {

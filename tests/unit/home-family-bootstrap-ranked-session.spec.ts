@@ -69,6 +69,7 @@ describe("home family bootstrap ranked session ordering", () => {
     const installGameManagerSavedStatePersistenceBindingRuntime = vi.fn();
     const installGameManagerRedoRestoreStateRuntime = vi.fn();
     const installGameManagerTimerElapsedRuntime = vi.fn();
+    const installGameManagerTimerRowVisibleStateRuntime = vi.fn();
     const installGameManagerUndoMoveHandlerRuntime = vi.fn();
     const installGameManagerUndoRestoredTilesRuntime = vi.fn();
     const installSavedManagerBaseStateRuntime = vi.fn();
@@ -146,6 +147,9 @@ describe("home family bootstrap ranked session ordering", () => {
     vi.doMock("../../src/core/game-manager-timer-elapsed", () => ({
       installGameManagerTimerElapsedRuntime
     }));
+    vi.doMock("../../src/core/game-manager-timer-row-visible-state", () => ({
+      installGameManagerTimerRowVisibleStateRuntime
+    }));
     vi.doMock("../../src/core/game-manager-undo-move-handler", () => ({
       installGameManagerUndoMoveHandlerRuntime
     }));
@@ -184,6 +188,7 @@ describe("home family bootstrap ranked session ordering", () => {
     expect(installGameManagerSavedStatePersistenceBindingRuntime).toHaveBeenCalledTimes(1);
     expect(installGameManagerRedoRestoreStateRuntime).toHaveBeenCalledTimes(1);
     expect(installGameManagerTimerElapsedRuntime).toHaveBeenCalledTimes(1);
+    expect(installGameManagerTimerRowVisibleStateRuntime).toHaveBeenCalledTimes(1);
     expect(installGameManagerUndoMoveHandlerRuntime).toHaveBeenCalledTimes(1);
     expect(installGameManagerUndoRestoredTilesRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedManagerBaseStateRuntime).toHaveBeenCalledTimes(1);
