@@ -64,6 +64,7 @@ describe("home family bootstrap ranked session ordering", () => {
 
   it("installs the pre-accessor manager-forward bindings runtime before loading game scripts", async () => {
     const installGameManagerInputEventsRuntime = vi.fn();
+    const installGameManagerActuatorPayloadStateRuntime = vi.fn();
     const installGameManagerRuntimeStateRuntime = vi.fn();
     const installGameManagerSavedStatePersistenceBindingRuntime = vi.fn();
     const installGameManagerUndoMoveHandlerRuntime = vi.fn();
@@ -128,6 +129,9 @@ describe("home family bootstrap ranked session ordering", () => {
     vi.doMock("../../src/core/game-manager-input-events", () => ({
       installGameManagerInputEventsRuntime
     }));
+    vi.doMock("../../src/core/game-manager-actuator-payload-state", () => ({
+      installGameManagerActuatorPayloadStateRuntime
+    }));
     vi.doMock("../../src/core/game-manager-runtime-state", () => ({
       installGameManagerRuntimeStateRuntime
     }));
@@ -167,6 +171,7 @@ describe("home family bootstrap ranked session ordering", () => {
     await bootstrapHomeFamilyPage("play");
 
     expect(installGameManagerInputEventsRuntime).toHaveBeenCalledTimes(1);
+    expect(installGameManagerActuatorPayloadStateRuntime).toHaveBeenCalledTimes(1);
     expect(installGameManagerRuntimeStateRuntime).toHaveBeenCalledTimes(1);
     expect(installGameManagerSavedStatePersistenceBindingRuntime).toHaveBeenCalledTimes(1);
     expect(installGameManagerUndoMoveHandlerRuntime).toHaveBeenCalledTimes(1);

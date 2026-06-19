@@ -5,6 +5,7 @@ import vm from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 
 type StatsDisplayRuntimeContext = {
+  createActuatorPayloadState: (manager: Record<string, unknown>) => Record<string, unknown>;
   resolveStatsDisplayLanguage: (manager: Record<string, unknown>) => string;
 };
 
@@ -56,5 +57,42 @@ describe("core game manager stats display runtime", () => {
       storageLanguage: "zh-CN",
       documentLanguage: "en-GB"
     });
+  });
+
+  it("delegates actuator payload creation to the TypeScript runtime", () => {
+    const payload = { fromRuntime: true };
+    const createActuatorPayloadState = vi.fn(() => payload);
+    const isGameTerminated = vi.fn(() => true);
+    const runtime = loadStatsDisplayRuntime({
+      CoreGameManagerActuatorPayloadStateRuntime: {
+        createActuatorPayloadState
+      },
+      isGameTerminated
+    });
+    const manager = {
+      score: 16,
+      over: false,
+      won: false,
+      scoreManager: {
+        get: vi.fn(() => 32)
+      },
+      stoneValueSet: {},
+      blockedCellsList: []
+    };
+
+    expect(runtime.createActuatorPayloadState(manager)).toBe(payload);
+    expect(createActuatorPayloadState).toHaveBeenCalledTimes(1);
+    expect(createActuatorPayloadState).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        isGameTerminated: expect.any(Function)
+      })
+    );
+
+    const operations = createActuatorPayloadState.mock.calls[0]?.[1] as {
+      isGameTerminated: (currentManager: Record<string, unknown>) => boolean;
+    };
+    expect(operations.isGameTerminated(manager)).toBe(true);
+    expect(isGameTerminated).toHaveBeenCalledWith(manager);
   });
 });
