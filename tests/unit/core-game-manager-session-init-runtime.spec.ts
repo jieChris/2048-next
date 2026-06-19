@@ -9,6 +9,7 @@ import { createGameManagerInputEventsRuntime } from "../../src/core/game-manager
 type SessionInitRuntime = {
   initializeGameManagerRuntimeState: (manager: Record<string, unknown>) => void;
   resetRoundStatsState: (manager: Record<string, unknown>) => void;
+  bindGameManagerSavedStatePersistence: (manager: Record<string, unknown>) => void;
   bindGameManagerInputEvents: (manager: Record<string, unknown>) => void;
 };
 
@@ -25,6 +26,12 @@ function loadSessionInitRuntime(options?: {
   };
   inputEventsRuntime?: {
     bindGameManagerInputEvents?: (
+      manager: Record<string, unknown> | null,
+      operations: Record<string, unknown>
+    ) => void;
+  };
+  persistenceBindingRuntime?: {
+    bindGameManagerSavedStatePersistence?: (
       manager: Record<string, unknown> | null,
       operations: Record<string, unknown>
     ) => void;
@@ -46,9 +53,12 @@ function loadSessionInitRuntime(options?: {
     handleMoveInput: vi.fn(),
     updateItemModeHud: vi.fn(),
     updateMoveTimeoutHud: vi.fn(),
+    saveGameState: vi.fn(),
+    bindSavedStateSyncStorageListener: vi.fn(),
     CoreGameManagerRuntimeStateRuntime: options?.runtimeStateRuntime,
     CoreGameManagerInputEventsRuntime:
-      options?.inputEventsRuntime || createGameManagerInputEventsRuntime()
+      options?.inputEventsRuntime || createGameManagerInputEventsRuntime(),
+    CoreGameManagerSavedStatePersistenceBindingRuntime: options?.persistenceBindingRuntime
   } as Record<string, unknown>;
 
   vm.runInNewContext(script, context);
@@ -133,6 +143,30 @@ describe("core game manager session init runtime", () => {
       manager,
       expect.objectContaining({
         handleMoveInput: expect.any(Function)
+      })
+    );
+  });
+
+  it("delegates saved-state persistence binding to the TypeScript runtime", () => {
+    const bindGameManagerSavedStatePersistence = vi.fn();
+    const runtime = loadSessionInitRuntime({
+      persistenceBindingRuntime: {
+        bindGameManagerSavedStatePersistence
+      }
+    });
+    const manager = {
+      getWindowLike: vi.fn(() => ({
+        addEventListener: vi.fn()
+      }))
+    } as Record<string, unknown>;
+
+    runtime.bindGameManagerSavedStatePersistence(manager);
+
+    expect(bindGameManagerSavedStatePersistence).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        saveGameState: expect.any(Function),
+        bindSavedStateSyncStorageListener: expect.any(Function)
       })
     );
   });

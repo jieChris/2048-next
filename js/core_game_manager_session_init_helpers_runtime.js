@@ -142,26 +142,43 @@ function bindGameManagerInputEvents(manager) {
   }
 }
 
-function bindGameManagerSavedStatePersistence(manager) {
+function resolveCoreGameManagerSavedStatePersistenceBindingRuntime() {
+  if (typeof CoreGameManagerSavedStatePersistenceBindingRuntime !== "undefined" && CoreGameManagerSavedStatePersistenceBindingRuntime) {
+    return CoreGameManagerSavedStatePersistenceBindingRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CoreGameManagerSavedStatePersistenceBindingRuntime) {
+    return window.CoreGameManagerSavedStatePersistenceBindingRuntime;
+  }
+  return null;
+}
+
+function bindGameManagerSavedStatePersistenceFallback(manager) {
   if (!manager) return;
   var windowLikeForPersistence = manager.getWindowLike();
   if (!(windowLikeForPersistence && !manager.savedGameStateBound)) return;
   var saveHandler = function () {
     saveGameState(manager, { force: true });
     try {
-      if (
-        windowLikeForPersistence &&
-        windowLikeForPersistence.OnlineLeaderboardRuntime &&
-        typeof windowLikeForPersistence.OnlineLeaderboardRuntime.persistRankedCheckpointOnPageHide === "function"
-      ) {
-        windowLikeForPersistence.OnlineLeaderboardRuntime.persistRankedCheckpointOnPageHide(manager);
-      }
+      var rankedRuntime = windowLikeForPersistence && windowLikeForPersistence.OnlineLeaderboardRuntime;
+      var persistRankedCheckpoint = rankedRuntime && rankedRuntime.persistRankedCheckpointOnPageHide;
+      if (typeof persistRankedCheckpoint === "function") persistRankedCheckpoint(manager);
     } catch (_errCheckpoint) {}
   };
   windowLikeForPersistence.addEventListener("beforeunload", saveHandler);
   windowLikeForPersistence.addEventListener("pagehide", saveHandler);
   bindSavedStateSyncStorageListener(manager, windowLikeForPersistence);
   manager.savedGameStateBound = true;
+}
+function bindGameManagerSavedStatePersistence(manager) {
+  var runtime = resolveCoreGameManagerSavedStatePersistenceBindingRuntime();
+  if (runtime && typeof runtime.bindGameManagerSavedStatePersistence === "function") {
+    runtime.bindGameManagerSavedStatePersistence(manager, {
+      saveGameState: saveGameState,
+      bindSavedStateSyncStorageListener: bindSavedStateSyncStorageListener
+    });
+    return;
+  }
+  bindGameManagerSavedStatePersistenceFallback(manager);
 }
 
 function initializeGameManagerUi(manager) {
