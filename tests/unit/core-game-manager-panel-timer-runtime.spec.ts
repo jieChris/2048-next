@@ -54,6 +54,7 @@ function loadPanelTimerRuntime(extraContext: Record<string, unknown> = {}) {
       keepSpace: boolean
     ) => void;
     buildSavedStateSyncTrimPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
+    parseSavedStateSyncEventPayload: (manager: Record<string, unknown>, raw: string) => Record<string, unknown> | null;
   };
 }
 
@@ -259,5 +260,23 @@ describe("core game manager panel timer runtime", () => {
       ips_input_count: 7
     });
     expect(buildSavedStateSyncTrimPayload).toHaveBeenCalledWith(manager);
+  });
+
+  it("delegates saved-state sync event parsing to the core runtime", () => {
+    const parsed = {
+      sourceClientId: "tab-runtime",
+      savedAt: 111,
+      state: { saved_at: 111 }
+    };
+    const parseSavedStateSyncEventPayload = vi.fn(() => parsed);
+    const runtime = loadPanelTimerRuntime({
+      CoreSavedStateSyncPayloadRuntime: {
+        parseSavedStateSyncEventPayload
+      }
+    });
+    const manager = createManager();
+
+    expect(runtime.parseSavedStateSyncEventPayload(manager, "{\"state\":{}}")).toBe(parsed);
+    expect(parseSavedStateSyncEventPayload).toHaveBeenCalledWith("{\"state\":{}}");
   });
 });
