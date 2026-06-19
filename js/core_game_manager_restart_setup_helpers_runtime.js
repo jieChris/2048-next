@@ -479,25 +479,29 @@ function resetSetupReplayAndSpawnState(manager) {
   }
 }
 
-function resetSetupTimerAndInputState(manager) {
+function resetSetupTimerAndInputStateFallback(manager) {
   if (manager.timerID !== null && typeof manager.timerID !== "undefined" && typeof clearInterval === "function") {
     clearInterval(manager.timerID);
   }
-  manager.timerStatus = 0;
-  manager.startTime = null;
-  manager.timerID = null;
-  manager.time = 0;
-  manager.accumulatedTime = 0;
-  manager.timerElapsedOffsetMs = 0;
-  manager.timerAnchorLocalMs = null;
-  manager.timerAnchorServerMs = null;
-  manager.pendingTimerAnchorServerMs = null;
-  manager.timerUpdateIntervalMs = null;
+  manager.timerStatus = 0; manager.time = 0; manager.accumulatedTime = 0; manager.timerElapsedOffsetMs = 0;
+  manager.startTime = null; manager.timerID = null; manager.timerAnchorLocalMs = null;
+  manager.timerAnchorServerMs = null; manager.pendingTimerAnchorServerMs = null; manager.timerUpdateIntervalMs = null;
   manager.timerFrozen = false;
   manager.pendingMoveInput = null;
   manager.moveInputFlushScheduled = false;
   manager.lastMoveInputAt = 0;
   manager.moveDeadlineAt = null;
+}
+
+function resetSetupTimerAndInputState(manager) {
+  var runtime = resolveCoreSetupStateInitializationRuntime(manager);
+  if (runtime && typeof runtime.resetSetupTimerAndInputState === "function") {
+    runtime.resetSetupTimerAndInputState(manager, {
+      clearInterval: typeof clearInterval === "function" ? clearInterval : undefined
+    });
+    return;
+  }
+  resetSetupTimerAndInputStateFallback(manager);
 }
 
 function resetSetupRuntimeState(manager) {
