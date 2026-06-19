@@ -321,7 +321,13 @@ function syncBestScoreBeforeActuate(manager) {
   }
 }
 
-function createActuatorPayloadState(manager) {
+function resolveCoreGameManagerActuatorPayloadStateRuntime() {
+  if (typeof CoreGameManagerActuatorPayloadStateRuntime !== "undefined" && CoreGameManagerActuatorPayloadStateRuntime) return CoreGameManagerActuatorPayloadStateRuntime;
+  if (typeof window !== "undefined" && window && window.CoreGameManagerActuatorPayloadStateRuntime) return window.CoreGameManagerActuatorPayloadStateRuntime;
+  return null;
+}
+
+function collectActuatorStoneValuesFallback(manager) {
   var stoneValues = [];
   if (manager && manager.stoneValueSet && typeof manager.stoneValueSet === "object") {
     for (var key in manager.stoneValueSet) {
@@ -332,6 +338,10 @@ function createActuatorPayloadState(manager) {
       stoneValues.push(value);
     }
   }
+  return stoneValues;
+}
+
+function createActuatorPayloadStateFallback(manager) {
   return {
     score: manager.score,
     over: manager.over,
@@ -339,8 +349,18 @@ function createActuatorPayloadState(manager) {
     bestScore: manager.scoreManager.get(),
     terminated: isGameTerminated(manager),
     blockedCells: manager.blockedCellsList || [],
-    stoneValues: stoneValues
+    stoneValues: collectActuatorStoneValuesFallback(manager)
   };
+}
+
+function createActuatorPayloadState(manager) {
+  var runtime = resolveCoreGameManagerActuatorPayloadStateRuntime();
+  if (runtime && typeof runtime.createActuatorPayloadState === "function") {
+    return runtime.createActuatorPayloadState(manager, {
+      isGameTerminated: isGameTerminated
+    });
+  }
+  return createActuatorPayloadStateFallback(manager);
 }
 
 function normalizeActuateStatsNumber(value) {

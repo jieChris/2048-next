@@ -70,6 +70,7 @@ import { installUndoStackEntryRuntime } from "../bootstrap/undo-stack-entry-runt
 import { installUndoTileRestoreRuntime } from "../bootstrap/undo-tile-restore-runtime";
 import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-runtime";
 import { installFallbackModeConfigsRuntime } from "../core/game-manager-fallback-mode-configs";
+import { installGameManagerActuatorPayloadStateRuntime } from "../core/game-manager-actuator-payload-state";
 import { installGameManagerInputEventsRuntime } from "../core/game-manager-input-events";
 import { installGameManagerRuntimeStateRuntime } from "../core/game-manager-runtime-state";
 import { installGameManagerSavedStatePersistenceBindingRuntime } from "../core/game-manager-saved-state-persistence-binding";
@@ -278,6 +279,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installSingleModePageLockRuntime();
   installNoXSelectionRuntime();
   installFallbackModeConfigsRuntime();
+  installGameManagerActuatorPayloadStateRuntime();
   installGameManagerInputEventsRuntime();
   installGameManagerRuntimeStateRuntime();
   installGameManagerSavedStatePersistenceBindingRuntime();
