@@ -424,7 +424,7 @@ function initializeSetupSessionReplaySnapshot(manager) {
   }
 }
 
-function resolveReplayV1InitTilesFromBoardMatrix(board, width, height, ruleset) {
+function resolveReplayV1InitTilesFromBoardMatrixFallback(board, width, height, ruleset) {
   if (!Array.isArray(board) || board.length !== height) return null;
   var fib = String(ruleset || "pow2") === "fibonacci";
   var initTiles = [];
@@ -434,21 +434,31 @@ function resolveReplayV1InitTilesFromBoardMatrix(board, width, height, ruleset) 
     for (var x = 0; x < width; x++) {
       var value = Number(row[x]);
       if (value === 0) continue;
-      if (fib) {
-        if (value !== 1 && value !== 2) return null;
-      } else if (value !== 2 && value !== 4) {
-        return null;
-      }
+      if (fib && value !== 1 && value !== 2) return null;
+      if (!fib && value !== 2 && value !== 4) return null;
       initTiles.push({ cellIndex: y * width + x, valueBit: fib ? (value === 2 ? 1 : 0) : (value === 4 ? 1 : 0) });
     }
   }
   return initTiles;
 }
 
+function resolveReplayV1InitTilesFromBoardMatrix(manager, board, width, height, ruleset) {
+  var runtime = resolveCoreSessionReplaySnapshotRuntime(manager);
+  if (runtime && typeof runtime.resolveReplayV1InitTilesFromBoardMatrix === "function") {
+    return runtime.resolveReplayV1InitTilesFromBoardMatrix({
+      board: board,
+      width: width,
+      height: height,
+      ruleset: ruleset
+    });
+  }
+  return resolveReplayV1InitTilesFromBoardMatrixFallback(board, width, height, ruleset);
+}
+
 function syncSetupSessionReplayV1InitTiles(manager) {
   if (!(manager && manager.sessionReplayV1)) return;
   var board = Array.isArray(manager.initialBoardMatrix) ? manager.initialBoardMatrix : manager.getFinalBoardMatrix();
-  var initTiles = resolveReplayV1InitTilesFromBoardMatrix(board, manager.width, manager.height, manager.ruleset);
+  var initTiles = resolveReplayV1InitTilesFromBoardMatrix(manager, board, manager.width, manager.height, manager.ruleset);
   manager.sessionReplayV1.mode_key = manager.modeKey;
   manager.sessionReplayV1.ruleset = manager.ruleset;
   manager.sessionReplayV1.board_width = manager.width;

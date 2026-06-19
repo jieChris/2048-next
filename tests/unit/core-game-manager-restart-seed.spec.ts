@@ -13,6 +13,13 @@ import { createSetupStateInitializationRuntime } from "../../src/core/setup-stat
 
 type RestartSeedRuntime = {
   createFallbackFreshSetupSeed: (manager: Record<string, unknown> | null) => number;
+  resolveReplayV1InitTilesFromBoardMatrix: (
+    manager: Record<string, unknown> | null,
+    board: unknown,
+    width: number,
+    height: number,
+    ruleset: string
+  ) => unknown;
   initializeSetupSeedAndReplayState: (
     manager: Record<string, unknown> | null,
     inputSeed?: unknown
@@ -42,6 +49,9 @@ function loadRestartSeedRuntime(options?: {
   windowLike?: Record<string, unknown>;
   sessionReplaySnapshotRuntime?: {
     initializeSetupSessionReplaySnapshot?: (manager: Record<string, unknown> | null) => void;
+    resolveReplayV1InitTilesFromBoardMatrix?: (
+      payload: Record<string, unknown>
+    ) => unknown;
   };
   setupRestoreInitialBoardStateRuntime?: {
     resolveSetupRestoreAndInitialBoardState?: (
@@ -270,6 +280,27 @@ describe("core game manager restart seed runtime", () => {
     expect(manager.disableSessionSync).toBe(true);
     expect(cryptoLike.getRandomValues).not.toHaveBeenCalled();
     expect(mathRandom).not.toHaveBeenCalled();
+  });
+
+  it("delegates replay v1 init tile resolution to the TypeScript runtime", () => {
+    const initTiles = [{ cellIndex: 3, valueBit: 1 }];
+    const resolveReplayV1InitTilesFromBoardMatrix = vi.fn(() => initTiles);
+    const { runtime } = loadRestartSeedRuntime({
+      sessionReplaySnapshotRuntime: {
+        initializeSetupSessionReplaySnapshot: vi.fn(),
+        resolveReplayV1InitTilesFromBoardMatrix
+      }
+    });
+    const manager = {} as Record<string, unknown>;
+    const board = [[2, 4]];
+
+    expect(runtime.resolveReplayV1InitTilesFromBoardMatrix(manager, board, 2, 1, "pow2")).toBe(initTiles);
+    expect(resolveReplayV1InitTilesFromBoardMatrix).toHaveBeenCalledWith({
+      board,
+      width: 2,
+      height: 1,
+      ruleset: "pow2"
+    });
   });
 
   it("uses preloaded ranked session seed without entering replay mode", () => {

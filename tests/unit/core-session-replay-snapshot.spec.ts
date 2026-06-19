@@ -4,10 +4,49 @@ import {
   createSessionReplaySnapshotRuntime,
   initializeSetupSessionReplaySnapshot,
   installSessionReplaySnapshotRuntime,
+  resolveReplayV1InitTilesFromBoardMatrix,
   type SessionReplaySnapshotRuntime
 } from "../../src/core/session-replay-snapshot";
 
 describe("core session replay snapshot runtime", () => {
+  it("resolves replay v1 init tiles from pow2 and fibonacci boards", () => {
+    expect(
+      resolveReplayV1InitTilesFromBoardMatrix(
+        [
+          [2, 0, 4],
+          [0, 2, 0]
+        ],
+        3,
+        2,
+        "pow2"
+      )
+    ).toEqual([
+      { cellIndex: 0, valueBit: 0 },
+      { cellIndex: 2, valueBit: 1 },
+      { cellIndex: 4, valueBit: 0 }
+    ]);
+
+    expect(
+      resolveReplayV1InitTilesFromBoardMatrix(
+        [
+          [1, 0],
+          [2, 1]
+        ],
+        2,
+        2,
+        "fibonacci"
+      )
+    ).toEqual([
+      { cellIndex: 0, valueBit: 0 },
+      { cellIndex: 2, valueBit: 1 },
+      { cellIndex: 3, valueBit: 0 }
+    ]);
+
+    expect(resolveReplayV1InitTilesFromBoardMatrix([[2, 8]], 2, 1, "pow2")).toBeNull();
+    expect(resolveReplayV1InitTilesFromBoardMatrix([[1, 4]], 2, 1, "fibonacci")).toBeNull();
+    expect(resolveReplayV1InitTilesFromBoardMatrix([[2]], 2, 1, "pow2")).toBeNull();
+  });
+
   it("initializes V3 and V1 replay snapshots from setup manager state", () => {
     vi.spyOn(Date, "now")
       .mockReturnValueOnce(1_700_000_000_111)
@@ -89,14 +128,21 @@ describe("core session replay snapshot runtime", () => {
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createSessionReplaySnapshotRuntime();
     expect(runtime.initializeSetupSessionReplaySnapshot).toBe(initializeSetupSessionReplaySnapshot);
+    expect(runtime.resolveReplayV1InitTilesFromBoardMatrix).toBe(resolveReplayV1InitTilesFromBoardMatrix);
 
     const windowLike: { CoreSessionReplaySnapshotRuntime?: SessionReplaySnapshotRuntime } = {};
     expect(installSessionReplaySnapshotRuntime({ windowLike })).toBe(windowLike.CoreSessionReplaySnapshotRuntime);
     expect(windowLike.CoreSessionReplaySnapshotRuntime?.initializeSetupSessionReplaySnapshot).toBe(
       initializeSetupSessionReplaySnapshot
     );
+    expect(windowLike.CoreSessionReplaySnapshotRuntime?.resolveReplayV1InitTilesFromBoardMatrix).toBe(
+      resolveReplayV1InitTilesFromBoardMatrix
+    );
 
-    const existing = { initializeSetupSessionReplaySnapshot: vi.fn() };
+    const existing = {
+      initializeSetupSessionReplaySnapshot: vi.fn(),
+      resolveReplayV1InitTilesFromBoardMatrix: vi.fn()
+    };
     expect(installSessionReplaySnapshotRuntime({ windowLike: { CoreSessionReplaySnapshotRuntime: existing } })).toBe(
       existing
     );
