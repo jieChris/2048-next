@@ -47,6 +47,12 @@ function loadPanelTimerRuntime(extraContext: Record<string, unknown> = {}) {
     stopTimer: (manager: Record<string, unknown>) => void;
     getDurationMs: (manager: Record<string, unknown>) => number;
     resolveTimerElapsedMs: (manager: Record<string, unknown>, nowMs: number) => number;
+    setTimerRowVisibleState: (
+      manager: Record<string, unknown>,
+      value: number,
+      visible: boolean,
+      keepSpace: boolean
+    ) => void;
     buildSavedStateSyncTrimPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
   };
 }
@@ -220,6 +226,20 @@ describe("core game manager panel timer runtime", () => {
     };
     expect(operations.resolveTimerElapsedOffsetMs(manager)).toBe(250);
     expect(operations.resolveTimerServerNowMs(manager, 9_000)).toBe(2_000);
+  });
+
+  it("delegates timer row visibility state to the TypeScript runtime", () => {
+    const setTimerRowVisibleState = vi.fn();
+    const runtime = loadPanelTimerRuntime({
+      CoreGameManagerTimerRowVisibleStateRuntime: {
+        setTimerRowVisibleState
+      }
+    });
+    const manager = createManager();
+
+    runtime.setTimerRowVisibleState(manager, 64, false, true);
+
+    expect(setTimerRowVisibleState).toHaveBeenCalledWith(manager, 64, false, true);
   });
 
   it("delegates saved-state sync trim payload construction to the core runtime", () => {
