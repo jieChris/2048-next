@@ -75,6 +75,7 @@ import { installGameManagerInputEventsRuntime } from "../core/game-manager-input
 import { installGameManagerRedoRestoreStateRuntime } from "../core/game-manager-redo-restore-state";
 import { installGameManagerRuntimeStateRuntime } from "../core/game-manager-runtime-state";
 import { installGameManagerSavedStatePersistenceBindingRuntime } from "../core/game-manager-saved-state-persistence-binding";
+import { installGameManagerTimerElapsedRuntime } from "../core/game-manager-timer-elapsed";
 import { installGameManagerUndoMoveHandlerRuntime } from "../core/game-manager-undo-move-handler";
 import { installGameManagerUndoRestoredTilesRuntime } from "../core/game-manager-undo-restored-tiles";
 import { installCoreModeRuntime } from "../core/mode";
@@ -285,6 +286,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installGameManagerRedoRestoreStateRuntime();
   installGameManagerRuntimeStateRuntime();
   installGameManagerSavedStatePersistenceBindingRuntime();
+  installGameManagerTimerElapsedRuntime();
   installGameManagerUndoMoveHandlerRuntime();
   installGameManagerUndoRestoredTilesRuntime();
   installRankedCheckpointLocalMirrorSetupRuntime();
