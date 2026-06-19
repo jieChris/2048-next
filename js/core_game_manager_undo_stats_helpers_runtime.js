@@ -865,26 +865,49 @@ function canExecuteRedoMove(manager) {
   return ensureRedoStack(manager).length > 0;
 }
 
-function buildRedoRestoreState(manager, entry) {
+function resolveCoreGameManagerRedoRestoreStateRuntime() {
+  if (typeof CoreGameManagerRedoRestoreStateRuntime !== "undefined" && CoreGameManagerRedoRestoreStateRuntime) return CoreGameManagerRedoRestoreStateRuntime;
+  if (typeof window !== "undefined" && window && window.CoreGameManagerRedoRestoreStateRuntime) return window.CoreGameManagerRedoRestoreStateRuntime;
+  return null;
+}
+
+function normalizeRedoRestoreNonNegativeInteger(value, fallback) {
+  return Number.isInteger(value) && value >= 0 ? value : fallback;
+}
+
+function normalizeRedoRestoreInteger(value, fallback) {
+  return Number.isInteger(value) ? value : fallback;
+}
+
+function createRedoRestoreCounterState(source, fallback) {
+  return {
+    comboStreak: normalizeRedoRestoreNonNegativeInteger(source.comboStreak, fallback.comboStreak),
+    successfulMoveCount: normalizeRedoRestoreNonNegativeInteger(source.successfulMoveCount, fallback.successfulMoveCount),
+    lockConsumedAtMoveCount: normalizeRedoRestoreInteger(source.lockConsumedAtMoveCount, fallback.lockConsumedAtMoveCount),
+    lockedDirectionTurn: normalizeRedoRestoreInteger(source.lockedDirectionTurn, fallback.lockedDirectionTurn),
+    lockedDirection: normalizeRedoRestoreInteger(source.lockedDirection, fallback.lockedDirection),
+    undoUsed: normalizeRedoRestoreNonNegativeInteger(source.undoUsed, fallback.undoUsed)
+  };
+}
+
+function buildRedoRestoreStateFallback(manager, entry) {
   var fallback = manager.getUndoStateFallbackValues();
   var source = manager.normalizeUndoStackEntry(entry) || fallback;
-  return {
-    comboStreak: Number.isInteger(source.comboStreak) && source.comboStreak >= 0 ? source.comboStreak : fallback.comboStreak,
-    successfulMoveCount: Number.isInteger(source.successfulMoveCount) && source.successfulMoveCount >= 0
-      ? source.successfulMoveCount
-      : fallback.successfulMoveCount,
-    lockConsumedAtMoveCount: Number.isInteger(source.lockConsumedAtMoveCount)
-      ? source.lockConsumedAtMoveCount
-      : fallback.lockConsumedAtMoveCount,
-    lockedDirectionTurn: Number.isInteger(source.lockedDirectionTurn) ? source.lockedDirectionTurn : fallback.lockedDirectionTurn,
-    lockedDirection: Number.isInteger(source.lockedDirection) ? source.lockedDirection : fallback.lockedDirection,
-    undoUsed: Number.isInteger(source.undoUsed) && source.undoUsed >= 0 ? source.undoUsed : fallback.undoUsed,
-    over: false,
-    won: false,
-    keepPlaying: false,
-    shouldClearMessage: true,
-    shouldStartTimer: manager.timerStatus === 0
-  };
+  var state = createRedoRestoreCounterState(source, fallback);
+  state.over = false;
+  state.won = false;
+  state.keepPlaying = false;
+  state.shouldClearMessage = true;
+  state.shouldStartTimer = manager.timerStatus === 0;
+  return state;
+}
+
+function buildRedoRestoreState(manager, entry) {
+  var runtime = resolveCoreGameManagerRedoRestoreStateRuntime();
+  if (runtime && typeof runtime.buildRedoRestoreState === "function") {
+    return runtime.buildRedoRestoreState(manager, entry);
+  }
+  return buildRedoRestoreStateFallback(manager, entry);
 }
 
 function executeRedoRestorePipeline(manager) {
