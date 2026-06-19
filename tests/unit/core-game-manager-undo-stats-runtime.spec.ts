@@ -6,10 +6,20 @@ import { describe, expect, it, vi } from "vitest";
 
 type UndoStatsRuntime = {
   applyUndoRestoredTiles: (manager: Record<string, unknown>, undoPayload: Record<string, unknown>) => void;
+  buildRedoRestoreState: (
+    manager: Record<string, unknown>,
+    entry: Record<string, unknown>
+  ) => Record<string, unknown>;
   handleUndoMove: (manager: Record<string, unknown>, direction: number) => boolean;
 };
 
 function loadUndoStatsRuntime(options?: {
+  redoRestoreStateRuntime?: {
+    buildRedoRestoreState?: (
+      manager: Record<string, unknown> | null,
+      entry: Record<string, unknown> | null
+    ) => Record<string, unknown>;
+  };
   undoMoveHandlerRuntime?: {
     handleUndoMove?: (
       manager: Record<string, unknown> | null,
@@ -55,6 +65,7 @@ function loadUndoStatsRuntime(options?: {
         fallback: unknown
       ) => fallback
     ),
+    CoreGameManagerRedoRestoreStateRuntime: options?.redoRestoreStateRuntime,
     CoreGameManagerUndoMoveHandlerRuntime: options?.undoMoveHandlerRuntime,
     CoreGameManagerUndoRestoredTilesRuntime: options?.undoRestoredTilesRuntime
   } as Record<string, unknown>;
@@ -82,6 +93,27 @@ function createManager() {
 }
 
 describe("core game manager undo stats runtime", () => {
+  it("delegates redo restore state building to the TypeScript runtime", () => {
+    const redoRestore = { shouldStartTimer: true };
+    const buildRedoRestoreState = vi.fn(() => redoRestore);
+    const runtime = loadUndoStatsRuntime({
+      redoRestoreStateRuntime: {
+        buildRedoRestoreState
+      }
+    });
+    const manager = {
+      getUndoStateFallbackValues: vi.fn(),
+      normalizeUndoStackEntry: vi.fn(),
+      timerStatus: 0
+    };
+    const entry = {
+      comboStreak: 2
+    };
+
+    expect(runtime.buildRedoRestoreState(manager, entry)).toBe(redoRestore);
+    expect(buildRedoRestoreState).toHaveBeenCalledWith(manager, entry);
+  });
+
   it("delegates undo move handling to the TypeScript runtime", () => {
     const handleUndoMove = vi.fn(() => true);
     const runtime = loadUndoStatsRuntime({
