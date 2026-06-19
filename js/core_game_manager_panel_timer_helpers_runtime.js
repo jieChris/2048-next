@@ -318,25 +318,49 @@ function clearActiveTimerAnchors(manager, elapsedMs) {
   manager.timerAnchorServerMs = null;
 }
 
-function resolveTimerElapsedMs(manager, nowMs) {
-  if (!manager) return 0;
+function resolveCoreGameManagerTimerElapsedRuntime() {
+  if (typeof CoreGameManagerTimerElapsedRuntime !== "undefined" && CoreGameManagerTimerElapsedRuntime) return CoreGameManagerTimerElapsedRuntime;
+  if (typeof window !== "undefined" && window && window.CoreGameManagerTimerElapsedRuntime) return window.CoreGameManagerTimerElapsedRuntime;
+  return null;
+}
+
+function resolveTimerElapsedFromServerAnchor(manager, nowMs) {
   var anchorServerMs = normalizeTimerAnchorMs(manager.timerAnchorServerMs);
-  if (anchorServerMs !== null) {
-    var serverNowMs = resolveTimerServerNowMs(manager, nowMs);
-    if (serverNowMs !== null) {
-      var offsetMsForServer = resolveTimerElapsedOffsetMs(manager);
-      return Math.max(0, Math.floor(offsetMsForServer + Math.max(0, serverNowMs - anchorServerMs)));
-    }
-  }
+  if (anchorServerMs === null) return null;
+  var serverNowMs = resolveTimerServerNowMs(manager, nowMs);
+  if (serverNowMs === null) return null;
+  var offsetMs = resolveTimerElapsedOffsetMs(manager);
+  return Math.max(0, Math.floor(offsetMs + Math.max(0, serverNowMs - anchorServerMs)));
+}
+
+function resolveTimerElapsedFromLocalAnchor(manager, nowMs) {
   var anchorLocalMs = normalizeTimerAnchorMs(manager.timerAnchorLocalMs);
-  if (anchorLocalMs !== null) {
-    var offsetMs = resolveTimerElapsedOffsetMs(manager);
-    return Math.max(0, Math.floor(offsetMs + Math.max(0, nowMs - anchorLocalMs)));
-  }
+  if (anchorLocalMs === null) return null;
+  var offsetMs = resolveTimerElapsedOffsetMs(manager);
+  return Math.max(0, Math.floor(offsetMs + Math.max(0, nowMs - anchorLocalMs)));
+}
+
+function resolveTimerElapsedMsFallback(manager, nowMs) {
+  if (!manager) return 0;
+  var serverElapsedMs = resolveTimerElapsedFromServerAnchor(manager, nowMs);
+  if (serverElapsedMs !== null) return serverElapsedMs;
+  var localElapsedMs = resolveTimerElapsedFromLocalAnchor(manager, nowMs);
+  if (localElapsedMs !== null) return localElapsedMs;
   if (manager.timerStatus === 1 && manager.startTime && typeof manager.startTime.getTime === "function") {
     return Math.max(0, Math.floor(nowMs - manager.startTime.getTime()));
   }
   return resolveTimerElapsedOffsetMs(manager);
+}
+
+function resolveTimerElapsedMs(manager, nowMs) {
+  var runtime = resolveCoreGameManagerTimerElapsedRuntime();
+  if (runtime && typeof runtime.resolveTimerElapsedMs === "function") {
+    return runtime.resolveTimerElapsedMs(manager, nowMs, {
+      resolveTimerElapsedOffsetMs: resolveTimerElapsedOffsetMs,
+      resolveTimerServerNowMs: resolveTimerServerNowMs
+    });
+  }
+  return resolveTimerElapsedMsFallback(manager, nowMs);
 }
 
 function startTimer(manager) {

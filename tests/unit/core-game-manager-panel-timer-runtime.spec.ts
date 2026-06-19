@@ -46,6 +46,7 @@ function loadPanelTimerRuntime(extraContext: Record<string, unknown> = {}) {
     startTimer: (manager: Record<string, unknown>) => void;
     stopTimer: (manager: Record<string, unknown>) => void;
     getDurationMs: (manager: Record<string, unknown>) => number;
+    resolveTimerElapsedMs: (manager: Record<string, unknown>, nowMs: number) => number;
     buildSavedStateSyncTrimPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
   };
 }
@@ -186,6 +187,39 @@ describe("core game manager panel timer runtime", () => {
     });
 
     expect(runtime.getDurationMs(manager)).toBe(102_500);
+  });
+
+  it("delegates timer elapsed resolution to the TypeScript runtime", () => {
+    const resolveTimerElapsedMs = vi.fn(() => 12_345);
+    const runtime = loadPanelTimerRuntime({
+      CoreGameManagerTimerElapsedRuntime: {
+        resolveTimerElapsedMs
+      }
+    });
+    const manager = createManager({
+      timerStatus: 1,
+      timerElapsedOffsetMs: 250,
+      timerAnchorLocalMs: 1_000,
+      timerAnchorServerMs: 2_000,
+      pendingTimerAnchorServerMs: 2_000
+    });
+
+    expect(runtime.resolveTimerElapsedMs(manager, 9_000)).toBe(12_345);
+    expect(resolveTimerElapsedMs).toHaveBeenCalledWith(
+      manager,
+      9_000,
+      expect.objectContaining({
+        resolveTimerElapsedOffsetMs: expect.any(Function),
+        resolveTimerServerNowMs: expect.any(Function)
+      })
+    );
+
+    const operations = resolveTimerElapsedMs.mock.calls[0]?.[2] as {
+      resolveTimerElapsedOffsetMs: (currentManager: Record<string, unknown>) => number;
+      resolveTimerServerNowMs: (currentManager: Record<string, unknown>, nowMs: number) => number | null;
+    };
+    expect(operations.resolveTimerElapsedOffsetMs(manager)).toBe(250);
+    expect(operations.resolveTimerServerNowMs(manager, 9_000)).toBe(2_000);
   });
 
   it("delegates saved-state sync trim payload construction to the core runtime", () => {
