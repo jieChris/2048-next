@@ -28,6 +28,7 @@ export interface RestartGameOperations {
 
 export interface RestartGameRuntime {
   restartGame: typeof restartGame;
+  createFallbackFreshSetupSeed: typeof createFallbackFreshSetupSeed;
 }
 
 export interface RestartGameWindowLike {
@@ -40,6 +41,31 @@ export interface RestartGameRuntimeInstallOptions {
 
 function getPracticeModeConfig(manager: RestartGameManagerLike): unknown {
   return manager.practiceRestartModeConfig || manager.modeConfig;
+}
+
+export interface FallbackFreshSetupSeedInput {
+  nowMs?: unknown;
+  performanceNowMicros?: unknown;
+  counter?: unknown;
+}
+
+function normalizeSeedMixInteger(value: unknown): number {
+  const normalized = Math.floor(Number(value) || 0);
+  return Number.isFinite(normalized) && normalized > 0 ? normalized : 0;
+}
+
+export function createFallbackFreshSetupSeed(input: FallbackFreshSetupSeedInput): number {
+  const now = Math.max(0, normalizeSeedMixInteger(input.nowMs));
+  const perfNow = Math.max(0, normalizeSeedMixInteger(input.performanceNowMicros));
+  const counter = Math.max(0, normalizeSeedMixInteger(input.counter));
+  const mixedHigh = Math.imul((now >>> 0) ^ (counter >>> 0), 2654435761) >>> 0;
+  const mixedLow = Math.imul((perfNow >>> 0) ^ ((counter * 2246822519) >>> 0), 3266489917) >>> 0;
+  const high =
+    (mixedHigh ^ (Math.floor(now / 4294967296) & 2097151) ^ (perfNow & 2097151) ^ (counter & 2097151)) &
+    2097151;
+  const low =
+    (mixedLow ^ (now >>> 0) ^ ((perfNow * 2654435761) >>> 0) ^ ((counter * 2246822519) >>> 0)) >>> 0;
+  return high * 4294967296 + low;
 }
 
 function restartPracticeGame(manager: RestartGameManagerLike, operations: RestartGameOperations): boolean {
@@ -81,7 +107,8 @@ export function restartGame(
 
 export function createRestartGameRuntime(): RestartGameRuntime {
   return {
-    restartGame
+    restartGame,
+    createFallbackFreshSetupSeed
   };
 }
 

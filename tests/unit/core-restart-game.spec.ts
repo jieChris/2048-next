@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  createFallbackFreshSetupSeed,
   createRestartGameRuntime,
   installRestartGameRuntime,
   restartGame,
@@ -23,6 +24,16 @@ function createManager(overrides: Record<string, unknown> = {}) {
 }
 
 describe("core restart game runtime", () => {
+  it("creates deterministic fallback fresh setup seeds from mixed timing inputs", () => {
+    expect(
+      createFallbackFreshSetupSeed({
+        nowMs: 1_700_000_000_000,
+        performanceNowMicros: 123_456,
+        counter: 1
+      })
+    ).toBe(8_306_243_390_012_204);
+  });
+
   it("does nothing when restart confirmation is denied", () => {
     const manager = createManager();
     const operations = {
@@ -119,12 +130,16 @@ describe("core restart game runtime", () => {
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createRestartGameRuntime();
     expect(runtime.restartGame).toBe(restartGame);
+    expect(runtime.createFallbackFreshSetupSeed).toBe(createFallbackFreshSetupSeed);
 
     const windowLike: { CoreRestartGameRuntime?: RestartGameRuntime } = {};
     expect(installRestartGameRuntime({ windowLike })).toBe(windowLike.CoreRestartGameRuntime);
     expect(windowLike.CoreRestartGameRuntime?.restartGame).toBe(restartGame);
+    expect(windowLike.CoreRestartGameRuntime?.createFallbackFreshSetupSeed).toBe(
+      createFallbackFreshSetupSeed
+    );
 
-    const existing = { restartGame: vi.fn() };
+    const existing = { restartGame: vi.fn(), createFallbackFreshSetupSeed: vi.fn() };
     expect(installRestartGameRuntime({ windowLike: { CoreRestartGameRuntime: existing } })).toBe(
       existing
     );

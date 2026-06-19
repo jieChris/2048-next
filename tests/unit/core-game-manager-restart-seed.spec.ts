@@ -12,6 +12,7 @@ import { createSetupRestoreInitialBoardStateRuntime } from "../../src/core/setup
 import { createSetupStateInitializationRuntime } from "../../src/core/setup-state-initialization";
 
 type RestartSeedRuntime = {
+  createFallbackFreshSetupSeed: (manager: Record<string, unknown> | null) => number;
   initializeSetupSeedAndReplayState: (
     manager: Record<string, unknown> | null,
     inputSeed?: unknown
@@ -69,6 +70,7 @@ function loadRestartSeedRuntime(options?: {
       manager: Record<string, unknown> | null,
       operations: Record<string, unknown>
     ) => void;
+    createFallbackFreshSetupSeed?: (payload: Record<string, unknown>) => number;
   };
   singleModePageLockRuntime?: {
     resolveSingleModePageTabId?: (
@@ -172,6 +174,27 @@ describe("core game manager restart seed runtime", () => {
     expect(manager.disableSessionSync).toBe(false);
     expect(cryptoLike.getRandomValues).toHaveBeenCalledTimes(1);
     expect(mathRandom).not.toHaveBeenCalled();
+  });
+
+  it("delegates fallback fresh setup seed mixing to the core restart runtime", () => {
+    const createFallbackFreshSetupSeed = vi.fn(() => 987_654_321);
+    const { runtime } = loadRestartSeedRuntime({
+      nowMs: 1_234,
+      performanceNowMs: 5.678,
+      restartGameRuntime: {
+        restartGame: vi.fn(),
+        createFallbackFreshSetupSeed
+      }
+    });
+    const manager = {} as Record<string, unknown>;
+
+    expect(runtime.createFallbackFreshSetupSeed(manager)).toBe(987_654_321);
+    expect(manager.freshSetupSeedCounter).toBe(1);
+    expect(createFallbackFreshSetupSeed).toHaveBeenCalledWith({
+      nowMs: 1_234,
+      performanceNowMicros: 5_678,
+      counter: 1
+    });
   });
 
   it("mixes fallback fresh seeds without Math.random when crypto seed generation fails", () => {

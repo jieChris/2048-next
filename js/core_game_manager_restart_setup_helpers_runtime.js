@@ -332,10 +332,7 @@ function resolveFreshSetupSeedCounter(manager) {
   return counter;
 }
 
-function createFallbackFreshSetupSeed(manager) {
-  var now = Math.max(0, Math.floor(Date.now()));
-  var perfNow = resolveFreshSetupPerformanceNow(manager);
-  var counter = resolveFreshSetupSeedCounter(manager);
+function createFallbackFreshSetupSeedFallback(now, perfNow, counter) {
   var mixedHigh = Math.imul((now >>> 0) ^ (counter >>> 0), 2654435761) >>> 0;
   var mixedLow = Math.imul((perfNow >>> 0) ^ ((counter * 2246822519) >>> 0), 3266489917) >>> 0;
   var high = (
@@ -351,6 +348,17 @@ function createFallbackFreshSetupSeed(manager) {
     ((counter * 2246822519) >>> 0)
   ) >>> 0;
   return high * 4294967296 + low;
+}
+
+function createFallbackFreshSetupSeed(manager) {
+  var now = Math.max(0, Math.floor(Date.now()));
+  var perfNow = resolveFreshSetupPerformanceNow(manager);
+  var counter = resolveFreshSetupSeedCounter(manager);
+  var runtime = resolveCoreRestartGameRuntime();
+  if (runtime && typeof runtime.createFallbackFreshSetupSeed === "function") {
+    return runtime.createFallbackFreshSetupSeed({ nowMs: now, performanceNowMicros: perfNow, counter: counter });
+  }
+  return createFallbackFreshSetupSeedFallback(now, perfNow, counter);
 }
 
 function resolveFreshSetupSeed(manager) {
