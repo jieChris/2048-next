@@ -27,24 +27,50 @@ function normalizeStatsDisplayLanguage(value) {
   return "";
 }
 
+function resolveCoreStatsPanelCopyRuntimeForDisplay() {
+  if (typeof CoreStatsPanelCopyRuntime !== "undefined" && CoreStatsPanelCopyRuntime) return CoreStatsPanelCopyRuntime;
+  if (typeof window !== "undefined" && window && window.CoreStatsPanelCopyRuntime) return window.CoreStatsPanelCopyRuntime;
+  return null;
+}
+
+function resolveStatsDisplayWindowLike(manager) {
+  return manager && manager.window ? manager.window : (typeof window !== "undefined" ? window : null);
+}
+
+function readStatsDisplayStorageLanguage(windowLike) {
+  var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
+  return storage && typeof storage.getItem === "function" ? storage.getItem("ui_language_v1") : "";
+}
+
+function readStatsDisplayDocumentLanguage(manager) {
+  var documentLike = resolveManagerDocumentLike(manager);
+  var root = documentLike && documentLike.documentElement;
+  return root && typeof root.getAttribute === "function" ? root.getAttribute("data-ui-lang") || root.getAttribute("lang") : "";
+}
+
+function createStatsDisplayLanguageSources(manager) {
+  var windowLike = resolveStatsDisplayWindowLike(manager);
+  var runtime = windowLike && windowLike.UII18N;
+  return {
+    i18nLanguage: runtime && typeof runtime.getLanguage === "function" ? runtime.getLanguage() : "",
+    storageLanguage: readStatsDisplayStorageLanguage(windowLike),
+    documentLanguage: readStatsDisplayDocumentLanguage(manager)
+  };
+}
+
+function resolveStatsDisplayLanguageFallback(sources) {
+  return normalizeStatsDisplayLanguage(sources.i18nLanguage) || normalizeStatsDisplayLanguage(sources.storageLanguage) || normalizeStatsDisplayLanguage(sources.documentLanguage) || "zh";
+}
+
 function resolveStatsDisplayLanguage(manager) {
   try {
-    var windowLike = manager && manager.window ? manager.window : (typeof window !== "undefined" ? window : null);
-    if (windowLike && windowLike.UII18N && typeof windowLike.UII18N.getLanguage === "function") {
-      var fromRuntime = normalizeStatsDisplayLanguage(windowLike.UII18N.getLanguage());
+    var sources = createStatsDisplayLanguageSources(manager);
+    var runtime = resolveCoreStatsPanelCopyRuntimeForDisplay();
+    if (runtime && typeof runtime.resolveStatsPanelLanguage === "function") {
+      var fromRuntime = normalizeStatsDisplayLanguage(runtime.resolveStatsPanelLanguage(sources));
       if (fromRuntime) return fromRuntime;
     }
-    var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
-    if (storage && typeof storage.getItem === "function") {
-      var fromStorage = normalizeStatsDisplayLanguage(storage.getItem("ui_language_v1"));
-      if (fromStorage) return fromStorage;
-    }
-    var documentLike = resolveManagerDocumentLike(manager);
-    var root = documentLike && documentLike.documentElement;
-    if (root && typeof root.getAttribute === "function") {
-      var fromRoot = normalizeStatsDisplayLanguage(root.getAttribute("data-ui-lang") || root.getAttribute("lang"));
-      if (fromRoot) return fromRoot;
-    }
+    return resolveStatsDisplayLanguageFallback(sources);
   } catch (_err) {}
   return "zh";
 }
