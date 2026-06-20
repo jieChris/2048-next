@@ -921,16 +921,18 @@ function buildRedoRestoreState(manager, entry) {
   return buildRedoRestoreStateFallback(manager, entry);
 }
 
-function executeRedoRestorePipeline(manager) {
+function resolveCoreGameManagerRedoRestorePipelineRuntime() {
+  if (typeof CoreGameManagerRedoRestorePipelineRuntime !== "undefined" && CoreGameManagerRedoRestorePipelineRuntime) return CoreGameManagerRedoRestorePipelineRuntime;
+  if (typeof window !== "undefined" && window && window.CoreGameManagerRedoRestorePipelineRuntime) return window.CoreGameManagerRedoRestorePipelineRuntime;
+  return null;
+}
+
+function executeRedoRestorePipelineFallback(manager) {
   var redoStack = ensureRedoStack(manager);
   var redoEntry = manager.normalizeUndoStackEntry(redoStack.pop());
   if (!redoEntry) return null;
 
-  var undoPreviousPositionByCurrentKey = buildUndoPreviousPositionMapFromRedoEntry(manager, redoEntry);
-  undoPreviousPositionByCurrentKey = mergeUndoPositionMap(
-    undoPreviousPositionByCurrentKey,
-    redoEntry.motionMap
-  );
+  var undoPreviousPositionByCurrentKey = mergeUndoPositionMap(buildUndoPreviousPositionMapFromRedoEntry(manager, redoEntry), redoEntry.motionMap);
   var undoSnapshot = createCurrentUndoStackEntrySnapshot(manager, {
     previousPositionByCurrentKey: undoPreviousPositionByCurrentKey
   });
@@ -940,6 +942,19 @@ function executeRedoRestorePipeline(manager) {
   var redoRestore = buildRedoRestoreState(manager, redoEntry);
   applyUndoRestoreState(manager, redoRestore);
   return redoRestore;
+}
+
+function executeRedoRestorePipeline(manager) {
+  var runtime = resolveCoreGameManagerRedoRestorePipelineRuntime();
+  if (runtime && typeof runtime.executeRedoRestorePipeline === "function") {
+    return runtime.executeRedoRestorePipeline(manager, {
+      ensureRedoStack: ensureRedoStack, buildUndoPreviousPositionMapFromRedoEntry: buildUndoPreviousPositionMapFromRedoEntry,
+      mergeUndoPositionMap: mergeUndoPositionMap, createCurrentUndoStackEntrySnapshot: createCurrentUndoStackEntrySnapshot,
+      applyUndoRestoredTiles: applyUndoRestoredTiles, buildRedoRestoreState: buildRedoRestoreState,
+      applyUndoRestoreState: applyUndoRestoreState
+    });
+  }
+  return executeRedoRestorePipelineFallback(manager);
 }
 
 function shouldStartTimerAfterRedoRestore(manager, redoRestore) {
