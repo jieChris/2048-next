@@ -153,6 +153,11 @@ function resolveCoreSavedPayloadRichnessRuntime() {
   }
   return null;
 }
+function resolveCoreSavedPayloadReplayStringRuntime() {
+  return typeof CoreSavedPayloadReplayStringRuntime !== "undefined" && CoreSavedPayloadReplayStringRuntime
+    ? CoreSavedPayloadReplayStringRuntime
+    : (typeof window !== "undefined" && window ? window.CoreSavedPayloadReplayStringRuntime : null);
+}
 function resolveSavedPayloadRichnessScoreFallback(payload) {
   if (!normalizeSavedStateRecordObject(payload, null)) return -1;
   var score = 0;
@@ -1064,25 +1069,30 @@ function shouldIncludeReplayStringInSavedPayload(manager, now, saveOptions) {
   return (now - lastSavedAt) >= 8000;
 }
 
-function resolveReplayStringForSavedPayload(manager, now, saveOptions) {
-  if (!(manager && shouldIncludeReplayStringInSavedPayload(manager, now, saveOptions))) {
+function trySerializeReplayForSavedPayloadFallback(manager) {
+  try {
+    return typeof serializeReplay === "function" ? String(serializeReplay(manager) || "") : "";
+  } catch (_err) {
     return "";
   }
-  var replayString = "";
-  try {
-    if (typeof serializeReplay === "function") {
-      replayString = String(serializeReplay(manager) || "");
-    }
-  } catch (_err) {
-    replayString = "";
-  }
-  if (!replayString && manager.rescueReplayString != null) {
-    replayString = String(manager.rescueReplayString || "").trim();
-  }
-  if (replayString) {
-    manager.lastReplayStringSavedAt = now;
-  }
+}
+
+function resolveReplayStringForSavedPayloadFallback(manager, now, saveOptions) {
+  if (!(manager && shouldIncludeReplayStringInSavedPayload(manager, now, saveOptions))) return "";
+  var replayString = trySerializeReplayForSavedPayloadFallback(manager);
+  if (!replayString && manager.rescueReplayString != null) replayString = String(manager.rescueReplayString || "").trim();
+  if (replayString) manager.lastReplayStringSavedAt = now;
   return replayString;
+}
+
+function resolveReplayStringForSavedPayload(manager, now, saveOptions) {
+  var runtime = resolveCoreSavedPayloadReplayStringRuntime();
+  if (runtime && typeof runtime.resolveReplayStringForSavedPayload === "function") {
+    return runtime.resolveReplayStringForSavedPayload(manager, now, saveOptions, {
+      serializeReplay: typeof serializeReplay === "function" ? serializeReplay : undefined
+    });
+  }
+  return resolveReplayStringForSavedPayloadFallback(manager, now, saveOptions);
 }
 
 function buildSavedGameStateReplayStatePayload(manager, now, saveOptions) {
