@@ -448,7 +448,13 @@ function mergeUndoPositionMap(baseMap, extraMap) {
   return merged;
 }
 
-function createNormalizedUndoStackEntry(manager, source, fallbackState, tiles, motionMap) {
+function resolveCoreGameManagerNormalizedUndoEntryRuntime() {
+  if (typeof CoreGameManagerNormalizedUndoEntryRuntime !== "undefined" && CoreGameManagerNormalizedUndoEntryRuntime) return CoreGameManagerNormalizedUndoEntryRuntime;
+  if (typeof window !== "undefined" && window && window.CoreGameManagerNormalizedUndoEntryRuntime) return window.CoreGameManagerNormalizedUndoEntryRuntime;
+  return null;
+}
+
+function createNormalizedUndoStackEntryFallback(source, fallbackState, tiles, motionMap) {
   return {
     score: normalizeUndoScoreOrFallback(source, fallbackState.score),
     tiles: tiles,
@@ -457,15 +463,20 @@ function createNormalizedUndoStackEntry(manager, source, fallbackState, tiles, m
       source.successfulMoveCount,
       fallbackState.successfulMoveCount
     ),
-    lockConsumedAtMoveCount: normalizeUndoIntegerOrFallback(
-      source.lockConsumedAtMoveCount,
-      fallbackState.lockConsumedAtMoveCount
-    ),
+    lockConsumedAtMoveCount: normalizeUndoIntegerOrFallback(source.lockConsumedAtMoveCount, fallbackState.lockConsumedAtMoveCount),
     lockedDirectionTurn: normalizeUndoIntegerOrFallback(source.lockedDirectionTurn, fallbackState.lockedDirectionTurn),
     lockedDirection: normalizeUndoIntegerOrFallback(source.lockedDirection, fallbackState.lockedDirection),
     undoUsed: normalizeUndoNonNegativeIntegerOrFallback(source.undoUsed, fallbackState.undoUsed),
     motionMap: normalizeUndoPositionMap(motionMap)
   };
+}
+
+function createNormalizedUndoStackEntry(manager, source, fallbackState, tiles, motionMap) {
+  var runtime = resolveCoreGameManagerNormalizedUndoEntryRuntime();
+  if (runtime && typeof runtime.createNormalizedUndoStackEntry === "function") {
+    return runtime.createNormalizedUndoStackEntry(manager, source, fallbackState, tiles, motionMap);
+  }
+  return createNormalizedUndoStackEntryFallback(source, fallbackState, tiles, motionMap);
 }
 
 function normalizeUndoStackEntry(manager, entry) {
