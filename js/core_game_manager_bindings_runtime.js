@@ -79,6 +79,24 @@ var POST_ACCESSOR_MANAGER_FORWARD_BINDINGS = {
   updateItemModeHud: updateItemModeHud, updateMoveTimeoutHud: updateMoveTimeoutHud
 };
 
+var CAPPED_UI_MANAGER_FORWARD_BINDING_NAMES = [
+  "setTimerRowVisibleState", "setCapped64RowVisible", "resolveProgressiveCapped64UnlockedState",
+  "resetProgressiveCapped64Rows", "resolveCappedTargetValueOrNull", "getCappedTimerLegendClass",
+  "getCappedTimerLegendFontSize", "getCappedTimerFontSize", "getCappedPlaceholderRowValues",
+  "getCappedOverflowContainer", "openStatsPanel", "closeStatsPanel", "getTimerModuleViewMode",
+  "applyTimerModuleView", "setTimerModuleViewMode"
+];
+var CAPPED_UI_MANAGER_FORWARD_BINDINGS = {
+  setTimerRowVisibleState: setTimerRowVisibleState, setCapped64RowVisible: setCapped64RowVisible,
+  resolveProgressiveCapped64UnlockedState: resolveProgressiveCapped64UnlockedState,
+  resetProgressiveCapped64Rows: resetProgressiveCapped64Rows, resolveCappedTargetValueOrNull: resolveCappedTargetValueOrNull,
+  getCappedTimerLegendClass: getCappedTimerLegendClass, getCappedTimerLegendFontSize: getCappedTimerLegendFontSize,
+  getCappedTimerFontSize: getCappedTimerFontSize, getCappedPlaceholderRowValues: getCappedPlaceholderRowValues,
+  getCappedOverflowContainer: getCappedOverflowContainer, openStatsPanel: openStatsPanel,
+  closeStatsPanel: closeStatsPanel, getTimerModuleViewMode: getTimerModuleViewMode,
+  applyTimerModuleView: applyTimerModuleView, setTimerModuleViewMode: setTimerModuleViewMode
+};
+
 function bindGameManagerPrototypeMethod(methodName, bindingFactory) {
   if (!(typeof methodName === "string" && methodName)) return;
   if (typeof bindingFactory !== "function") return;
@@ -134,6 +152,12 @@ function resolveCorePreAccessorManagerForwardBindingsRuntime() {
 function resolveCorePostAccessorManagerForwardBindingsRuntime() {
   if (typeof CorePostAccessorManagerForwardBindingsRuntime !== "undefined" && CorePostAccessorManagerForwardBindingsRuntime) return CorePostAccessorManagerForwardBindingsRuntime;
   if (typeof window !== "undefined" && window && window.CorePostAccessorManagerForwardBindingsRuntime) return window.CorePostAccessorManagerForwardBindingsRuntime;
+  return null;
+}
+
+function resolveCoreCappedUiManagerForwardBindingsRuntime() {
+  if (typeof CoreCappedUiManagerForwardBindingsRuntime !== "undefined" && CoreCappedUiManagerForwardBindingsRuntime) return CoreCappedUiManagerForwardBindingsRuntime;
+  if (typeof window !== "undefined" && window && window.CoreCappedUiManagerForwardBindingsRuntime) return window.CoreCappedUiManagerForwardBindingsRuntime;
   return null;
 }
 
@@ -246,24 +270,16 @@ function bindCappedModeBindings() {
   });
 }
 
+function createCappedUiManagerForwardBindings() {
+  var runtime = resolveCoreCappedUiManagerForwardBindingsRuntime();
+  if (runtime && typeof runtime.createCappedUiManagerForwardBindings === "function") {
+    return runtime.createCappedUiManagerForwardBindings(CAPPED_UI_MANAGER_FORWARD_BINDINGS);
+  }
+  return createForwardBindingsFromNames(CAPPED_UI_MANAGER_FORWARD_BINDING_NAMES, CAPPED_UI_MANAGER_FORWARD_BINDINGS);
+}
+
 function bindCappedUiBindings() {
-  bindGameManagerPrototypeManagerForwardBatch([
-    ["setTimerRowVisibleState", setTimerRowVisibleState],
-    ["setCapped64RowVisible", setCapped64RowVisible],
-    ["resolveProgressiveCapped64UnlockedState", resolveProgressiveCapped64UnlockedState],
-    ["resetProgressiveCapped64Rows", resetProgressiveCapped64Rows],
-    ["resolveCappedTargetValueOrNull", resolveCappedTargetValueOrNull],
-    ["getCappedTimerLegendClass", getCappedTimerLegendClass],
-    ["getCappedTimerLegendFontSize", getCappedTimerLegendFontSize],
-    ["getCappedTimerFontSize", getCappedTimerFontSize],
-    ["getCappedPlaceholderRowValues", getCappedPlaceholderRowValues],
-    ["getCappedOverflowContainer", getCappedOverflowContainer],
-    ["openStatsPanel", openStatsPanel],
-    ["closeStatsPanel", closeStatsPanel],
-    ["getTimerModuleViewMode", getTimerModuleViewMode],
-    ["applyTimerModuleView", applyTimerModuleView],
-    ["setTimerModuleViewMode", setTimerModuleViewMode]
-  ]);
+  bindGameManagerPrototypeManagerForwardBatch(createCappedUiManagerForwardBindings());
 }
 
 function bindUndoAndStatsBindings() {
