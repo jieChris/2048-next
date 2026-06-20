@@ -35,6 +35,24 @@ const PRE_ACCESSOR_MANAGER_BINDING_NAMES = [
   "clearRuntimeGridCell"
 ] as const;
 
+const POST_ACCESSOR_MANAGER_BINDING_NAMES = [
+  "readOptionValue",
+  "resolveUndoPolicyStateForMode",
+  "getUndoStateFallbackValues",
+  "normalizeUndoStackEntry",
+  "createUndoTileSnapshot",
+  "normalizeSpawnTable",
+  "normalizeModeConfig",
+  "resolveModeConfig",
+  "normalizeSpecialRules",
+  "getActiveMoveDirections",
+  "isDirectionAllowed",
+  "isStoneValue",
+  "useItem",
+  "updateItemModeHud",
+  "updateMoveTimeoutHud"
+] as const;
+
 const TOP_LEVEL_GAMEPLAY_BINDING_REFERENCES = [
   "restartGame",
   "restartWithSeed",
@@ -71,9 +89,13 @@ const TOP_LEVEL_GAMEPLAY_BINDING_REFERENCES = [
 
 type BindingsRuntimeContext = {
   createPreAccessorManagerForwardBindings: () => [string, unknown][];
+  createPostAccessorManagerForwardBindings: () => [string, unknown][];
 };
 
 function loadBindingsRuntime(options?: {
+  postAccessorRuntime?: {
+    createPostAccessorManagerForwardBindings?: (operations: Record<string, unknown>) => [string, unknown][];
+  };
   preAccessorRuntime?: {
     createPreAccessorManagerForwardBindings?: (operations: Record<string, unknown>) => [string, unknown][];
   };
@@ -85,9 +107,13 @@ function loadBindingsRuntime(options?: {
   const context = {
     console,
     GameManager: { prototype: {} },
+    CorePostAccessorManagerForwardBindingsRuntime: options?.postAccessorRuntime,
     CorePreAccessorManagerForwardBindingsRuntime: options?.preAccessorRuntime
   } as Record<string, unknown>;
   for (const name of PRE_ACCESSOR_MANAGER_BINDING_NAMES) {
+    context[name] = vi.fn();
+  }
+  for (const name of POST_ACCESSOR_MANAGER_BINDING_NAMES) {
     context[name] = vi.fn();
   }
   for (const name of TOP_LEVEL_GAMEPLAY_BINDING_REFERENCES) {
@@ -99,6 +125,26 @@ function loadBindingsRuntime(options?: {
 }
 
 describe("core game manager bindings runtime", () => {
+  it("delegates post-accessor manager-forward binding creation to the TypeScript runtime", () => {
+    const runtimeBindings: [string, unknown][] = [["fromRuntime", vi.fn()]];
+    const createPostAccessorManagerForwardBindings = vi.fn(() => runtimeBindings);
+    const runtime = loadBindingsRuntime({
+      postAccessorRuntime: {
+        createPostAccessorManagerForwardBindings
+      }
+    });
+
+    const bindings = runtime.createPostAccessorManagerForwardBindings();
+
+    expect(bindings).toBe(runtimeBindings);
+    expect(createPostAccessorManagerForwardBindings).toHaveBeenCalledTimes(1);
+    expect(createPostAccessorManagerForwardBindings).toHaveBeenCalledWith(
+      expect.objectContaining(
+        Object.fromEntries(POST_ACCESSOR_MANAGER_BINDING_NAMES.map((name) => [name, expect.any(Function)]))
+      )
+    );
+  });
+
   it("delegates pre-accessor manager-forward binding creation to the TypeScript runtime", () => {
     const runtimeBindings: [string, unknown][] = [["fromRuntime", vi.fn()]];
     const createPreAccessorManagerForwardBindings = vi.fn(() => runtimeBindings);

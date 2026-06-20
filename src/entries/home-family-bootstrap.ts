@@ -83,6 +83,7 @@ import { installGameManagerTimerRowVisibleStateRuntime } from "../core/game-mana
 import { installGameManagerUndoMoveHandlerRuntime } from "../core/game-manager-undo-move-handler";
 import { installGameManagerUndoRestoredTilesRuntime } from "../core/game-manager-undo-restored-tiles";
 import { installCoreModeRuntime } from "../core/mode";
+import { installPostAccessorManagerForwardBindingsRuntime } from "../core/post-accessor-manager-forward-bindings";
 import { installRankedCheckpointLocalMirrorSetupRuntime } from "../core/ranked-checkpoint-local-mirror-setup";
 import { installRankedSessionSetupContextRuntime } from "../core/ranked-session-setup-context";
 import { installPreAccessorManagerForwardBindingsRuntime } from "../core/pre-accessor-manager-forward-bindings";
@@ -300,6 +301,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installGameManagerUndoRestoredTilesRuntime();
   installRankedCheckpointLocalMirrorSetupRuntime();
   installRankedSessionSetupContextRuntime();
+  installPostAccessorManagerForwardBindingsRuntime();
   installPreAccessorManagerForwardBindingsRuntime();
   installResetSetupReplayAndSpawnStateRuntime();
   installRestartGameRuntime();
