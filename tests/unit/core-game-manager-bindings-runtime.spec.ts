@@ -53,6 +53,24 @@ const POST_ACCESSOR_MANAGER_BINDING_NAMES = [
   "updateMoveTimeoutHud"
 ] as const;
 
+const CAPPED_UI_BINDING_NAMES = [
+  "setTimerRowVisibleState",
+  "setCapped64RowVisible",
+  "resolveProgressiveCapped64UnlockedState",
+  "resetProgressiveCapped64Rows",
+  "resolveCappedTargetValueOrNull",
+  "getCappedTimerLegendClass",
+  "getCappedTimerLegendFontSize",
+  "getCappedTimerFontSize",
+  "getCappedPlaceholderRowValues",
+  "getCappedOverflowContainer",
+  "openStatsPanel",
+  "closeStatsPanel",
+  "getTimerModuleViewMode",
+  "applyTimerModuleView",
+  "setTimerModuleViewMode"
+] as const;
+
 const TOP_LEVEL_GAMEPLAY_BINDING_REFERENCES = [
   "restartGame",
   "restartWithSeed",
@@ -88,11 +106,15 @@ const TOP_LEVEL_GAMEPLAY_BINDING_REFERENCES = [
 ] as const;
 
 type BindingsRuntimeContext = {
+  createCappedUiManagerForwardBindings: () => [string, unknown][];
   createPreAccessorManagerForwardBindings: () => [string, unknown][];
   createPostAccessorManagerForwardBindings: () => [string, unknown][];
 };
 
 function loadBindingsRuntime(options?: {
+  cappedUiRuntime?: {
+    createCappedUiManagerForwardBindings?: (operations: Record<string, unknown>) => [string, unknown][];
+  };
   postAccessorRuntime?: {
     createPostAccessorManagerForwardBindings?: (operations: Record<string, unknown>) => [string, unknown][];
   };
@@ -107,6 +129,7 @@ function loadBindingsRuntime(options?: {
   const context = {
     console,
     GameManager: { prototype: {} },
+    CoreCappedUiManagerForwardBindingsRuntime: options?.cappedUiRuntime,
     CorePostAccessorManagerForwardBindingsRuntime: options?.postAccessorRuntime,
     CorePreAccessorManagerForwardBindingsRuntime: options?.preAccessorRuntime
   } as Record<string, unknown>;
@@ -114,6 +137,9 @@ function loadBindingsRuntime(options?: {
     context[name] = vi.fn();
   }
   for (const name of POST_ACCESSOR_MANAGER_BINDING_NAMES) {
+    context[name] = vi.fn();
+  }
+  for (const name of CAPPED_UI_BINDING_NAMES) {
     context[name] = vi.fn();
   }
   for (const name of TOP_LEVEL_GAMEPLAY_BINDING_REFERENCES) {
@@ -125,6 +151,26 @@ function loadBindingsRuntime(options?: {
 }
 
 describe("core game manager bindings runtime", () => {
+  it("delegates capped UI manager-forward binding creation to the TypeScript runtime", () => {
+    const runtimeBindings: [string, unknown][] = [["fromRuntime", vi.fn()]];
+    const createCappedUiManagerForwardBindings = vi.fn(() => runtimeBindings);
+    const runtime = loadBindingsRuntime({
+      cappedUiRuntime: {
+        createCappedUiManagerForwardBindings
+      }
+    });
+
+    const bindings = runtime.createCappedUiManagerForwardBindings();
+
+    expect(bindings).toBe(runtimeBindings);
+    expect(createCappedUiManagerForwardBindings).toHaveBeenCalledTimes(1);
+    expect(createCappedUiManagerForwardBindings).toHaveBeenCalledWith(
+      expect.objectContaining(
+        Object.fromEntries(CAPPED_UI_BINDING_NAMES.map((name) => [name, expect.any(Function)]))
+      )
+    );
+  });
+
   it("delegates post-accessor manager-forward binding creation to the TypeScript runtime", () => {
     const runtimeBindings: [string, unknown][] = [["fromRuntime", vi.fn()]];
     const createPostAccessorManagerForwardBindings = vi.fn(() => runtimeBindings);
