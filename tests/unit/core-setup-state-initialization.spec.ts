@@ -4,6 +4,7 @@ import {
   createSetupStateInitializationRuntime,
   installSetupStateInitializationRuntime,
   resetSetupTimerAndInputState,
+  resolveSetupChallengeId,
   runSetupStateInitialization,
   type SetupStateInitializationRuntime
 } from "../../src/core/setup-state-initialization";
@@ -44,6 +45,37 @@ function createOperations(calls: string[] = []) {
 }
 
 describe("core setup state initialization runtime", () => {
+  it("resolves setup challenge id by options, ranked context, then window context", () => {
+    const manager = {
+      getWindowLike: () => ({
+        GAME_CHALLENGE_CONTEXT: {
+          id: "rch_window"
+        }
+      })
+    };
+
+    expect(resolveSetupChallengeId(manager, { challengeId: "rch_options" }, { id: "rch_ranked" })).toBe(
+      "rch_options"
+    );
+    expect(resolveSetupChallengeId(manager, {}, { id: "rch_ranked" })).toBe("rch_ranked");
+    expect(resolveSetupChallengeId(manager, {}, null)).toBe("rch_window");
+  });
+
+  it("returns null for setup challenge id when manager or window context is unavailable", () => {
+    expect(resolveSetupChallengeId(null, {}, null)).toBeNull();
+    expect(
+      resolveSetupChallengeId(
+        {
+          getWindowLike: () => {
+            throw new Error("window unavailable");
+          }
+        },
+        {},
+        {}
+      )
+    ).toBeNull();
+  });
+
   it("resets setup timer and pending input state", () => {
     const clearInterval = vi.fn();
     const manager = {
@@ -186,6 +218,7 @@ describe("core setup state initialization runtime", () => {
     const runtime = createSetupStateInitializationRuntime();
     expect(runtime.runSetupStateInitialization).toBe(runSetupStateInitialization);
     expect(runtime.resetSetupTimerAndInputState).toBe(resetSetupTimerAndInputState);
+    expect(runtime.resolveSetupChallengeId).toBe(resolveSetupChallengeId);
 
     const windowLike: { CoreSetupStateInitializationRuntime?: SetupStateInitializationRuntime } = {};
     expect(installSetupStateInitializationRuntime({ windowLike })).toBe(
@@ -197,8 +230,15 @@ describe("core setup state initialization runtime", () => {
     expect(windowLike.CoreSetupStateInitializationRuntime?.resetSetupTimerAndInputState).toBe(
       resetSetupTimerAndInputState
     );
+    expect(windowLike.CoreSetupStateInitializationRuntime?.resolveSetupChallengeId).toBe(
+      resolveSetupChallengeId
+    );
 
-    const existing = { runSetupStateInitialization: vi.fn(), resetSetupTimerAndInputState: vi.fn() };
+    const existing = {
+      runSetupStateInitialization: vi.fn(),
+      resetSetupTimerAndInputState: vi.fn(),
+      resolveSetupChallengeId: vi.fn()
+    };
     expect(
       installSetupStateInitializationRuntime({
         windowLike: { CoreSetupStateInitializationRuntime: existing }
