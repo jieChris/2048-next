@@ -21,6 +21,9 @@ export interface SetupStateInitializationManagerLike {
 }
 
 export interface SetupStateInitializationWindowLike {
+  GAME_CHALLENGE_CONTEXT?: {
+    id?: unknown;
+  } | null;
   OnlineLeaderboardRuntime?: {
     scheduleRankedCheckpointRestore?: (
       manager: SetupStateInitializationManagerLike,
@@ -71,6 +74,7 @@ export interface SetupStateInitializationOperations {
 export interface SetupStateInitializationRuntime {
   runSetupStateInitialization: typeof runSetupStateInitialization;
   resetSetupTimerAndInputState: typeof resetSetupTimerAndInputState;
+  resolveSetupChallengeId: typeof resolveSetupChallengeId;
 }
 
 export interface SetupStateInitializationRuntimeWindowLike {
@@ -113,6 +117,28 @@ export function resetSetupTimerAndInputState(
   manager.moveInputFlushScheduled = false;
   manager.lastMoveInputAt = 0;
   manager.moveDeadlineAt = null;
+}
+
+export function resolveSetupChallengeId(
+  manager: SetupStateInitializationManagerLike | null | undefined,
+  normalizedOptions: Record<string, unknown>,
+  rankedSessionContext: unknown
+): unknown {
+  if (!manager) return null;
+  let challengeId: unknown =
+    typeof normalizedOptions.challengeId === "string" && normalizedOptions.challengeId
+      ? normalizedOptions.challengeId
+      : null;
+  if (!challengeId && isNonArrayRecord(rankedSessionContext) && rankedSessionContext.id) {
+    challengeId = rankedSessionContext.id;
+  }
+  try {
+    const windowLike = typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+    if (!challengeId && windowLike?.GAME_CHALLENGE_CONTEXT?.id) {
+      challengeId = windowLike.GAME_CHALLENGE_CONTEXT.id;
+    }
+  } catch (_error) {}
+  return challengeId;
 }
 
 function scheduleRankedCheckpointRestoreIfNeeded(manager: SetupStateInitializationManagerLike): void {
@@ -171,7 +197,8 @@ export function runSetupStateInitialization(
 export function createSetupStateInitializationRuntime(): SetupStateInitializationRuntime {
   return {
     runSetupStateInitialization,
-    resetSetupTimerAndInputState
+    resetSetupTimerAndInputState,
+    resolveSetupChallengeId
   };
 }
 

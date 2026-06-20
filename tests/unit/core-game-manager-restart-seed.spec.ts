@@ -33,6 +33,11 @@ type RestartSeedRuntime = {
   shouldForceRankedCheckpointRestoreInSetup: (
     manager: Record<string, unknown> | null
   ) => boolean;
+  resolveSetupChallengeId: (
+    manager: Record<string, unknown> | null,
+    normalizedOptions: Record<string, unknown>,
+    rankedSessionContext: unknown
+  ) => unknown;
   runSetupStateInitialization: (
     manager: Record<string, unknown> | null,
     inputSeed?: unknown,
@@ -79,6 +84,11 @@ function loadRestartSeedRuntime(options?: {
       manager: Record<string, unknown> | null,
       operations: Record<string, unknown>
     ) => void;
+    resolveSetupChallengeId?: (
+      manager: Record<string, unknown> | null,
+      normalizedOptions: Record<string, unknown>,
+      rankedSessionContext: unknown
+    ) => unknown;
   };
   resetSetupReplayAndSpawnStateRuntime?: {
     resetSetupReplayAndSpawnState?: (
@@ -593,5 +603,28 @@ describe("core game manager restart seed runtime", () => {
 
     expect(runtime.resolveRestartConfirmLanguage(manager)).toBe("en");
     expect(resolveRestartConfirmLanguage).toHaveBeenCalledWith(manager);
+  });
+
+  it("delegates setup challenge id resolution to the TypeScript runtime", () => {
+    const resolveSetupChallengeId = vi.fn(() => "rch_runtime");
+    const { runtime } = loadRestartSeedRuntime({
+      setupStateInitializationRuntime: {
+        runSetupStateInitialization: vi.fn(),
+        resetSetupTimerAndInputState: vi.fn(),
+        resolveSetupChallengeId
+      }
+    });
+    const manager = {
+      getWindowLike: vi.fn(() => ({
+        GAME_CHALLENGE_CONTEXT: {
+          id: "rch_window"
+        }
+      }))
+    } as Record<string, unknown>;
+    const options = { challengeId: "rch_options" };
+    const rankedContext = { id: "rch_ranked" };
+
+    expect(runtime.resolveSetupChallengeId(manager, options, rankedContext)).toBe("rch_runtime");
+    expect(resolveSetupChallengeId).toHaveBeenCalledWith(manager, options, rankedContext);
   });
 });

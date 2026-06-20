@@ -404,7 +404,14 @@ function initializeSetupSeedAndReplayState(manager, inputSeed) {
   };
 }
 
-function resolveSetupChallengeId(manager, normalizedOptions, rankedSessionContext) {
+function readSetupWindowChallengeId(manager) {
+  var windowLike = manager.getWindowLike();
+  return windowLike && windowLike.GAME_CHALLENGE_CONTEXT && windowLike.GAME_CHALLENGE_CONTEXT.id
+    ? windowLike.GAME_CHALLENGE_CONTEXT.id
+    : null;
+}
+
+function resolveSetupChallengeIdFallback(manager, normalizedOptions, rankedSessionContext) {
   if (!manager) return null;
   var challengeId = typeof normalizedOptions.challengeId === "string" && normalizedOptions.challengeId
     ? normalizedOptions.challengeId
@@ -412,16 +419,16 @@ function resolveSetupChallengeId(manager, normalizedOptions, rankedSessionContex
   if (!challengeId && rankedSessionContext && rankedSessionContext.id) {
     challengeId = rankedSessionContext.id;
   }
-  var windowLike = manager.getWindowLike();
-  if (
-    !challengeId &&
-    windowLike &&
-    windowLike.GAME_CHALLENGE_CONTEXT &&
-    windowLike.GAME_CHALLENGE_CONTEXT.id
-  ) {
-    challengeId = windowLike.GAME_CHALLENGE_CONTEXT.id;
-  }
+  if (!challengeId) challengeId = readSetupWindowChallengeId(manager);
   return challengeId;
+}
+
+function resolveSetupChallengeId(manager, normalizedOptions, rankedSessionContext) {
+  var runtime = resolveCoreSetupStateInitializationRuntime(manager);
+  if (runtime && typeof runtime.resolveSetupChallengeId === "function") {
+    return runtime.resolveSetupChallengeId(manager, normalizedOptions, rankedSessionContext);
+  }
+  return resolveSetupChallengeIdFallback(manager, normalizedOptions, rankedSessionContext);
 }
 
 function resolveSetupRankedSessionToken(rankedSessionContext) {
