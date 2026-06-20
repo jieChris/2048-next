@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 type StatsDisplayRuntimeContext = {
   createActuatorPayloadState: (manager: Record<string, unknown>) => Record<string, unknown>;
+  finalizeActuatePersistence: (manager: Record<string, unknown>) => void;
   resolveStatsDisplayLanguage: (manager: Record<string, unknown>) => string;
 };
 
@@ -27,6 +28,39 @@ function loadStatsDisplayRuntime(extraContext?: Record<string, unknown>): StatsD
 }
 
 describe("core game manager stats display runtime", () => {
+  it("delegates actuate persistence finalization to the TypeScript runtime", () => {
+    const finalizeActuatePersistence = vi.fn();
+    const consumeSkipActuatePersistenceOnce = vi.fn(() => false);
+    const publishSavedStateSyncSnapshot = vi.fn();
+    const isTerminalSessionForPersistence = vi.fn(() => false);
+    const saveGameState = vi.fn();
+    const runtime = loadStatsDisplayRuntime({
+      CoreGameManagerActuatePersistenceRuntime: {
+        finalizeActuatePersistence
+      },
+      consumeSkipActuatePersistenceOnce,
+      publishSavedStateSyncSnapshot,
+      isTerminalSessionForPersistence,
+      saveGameState
+    });
+    const manager = {
+      modeKey: "standard",
+      over: false
+    };
+
+    runtime.finalizeActuatePersistence(manager);
+
+    expect(finalizeActuatePersistence).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        consumeSkipActuatePersistenceOnce: expect.any(Function),
+        publishSavedStateSyncSnapshot: expect.any(Function),
+        isTerminalSessionForPersistence: expect.any(Function),
+        saveGameState: expect.any(Function)
+      })
+    );
+  });
+
   it("delegates stats display language resolution to the TypeScript stats panel runtime", () => {
     const resolveStatsPanelLanguage = vi.fn(() => "zh");
     const runtime = loadStatsDisplayRuntime({

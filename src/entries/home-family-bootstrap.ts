@@ -71,6 +71,7 @@ import { installUndoTileRestoreRuntime } from "../bootstrap/undo-tile-restore-ru
 import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-runtime";
 import { installFallbackModeConfigsRuntime } from "../core/game-manager-fallback-mode-configs";
 import { installGameManagerActuatorPayloadStateRuntime } from "../core/game-manager-actuator-payload-state";
+import { installGameManagerActuatePersistenceRuntime } from "../core/game-manager-actuate-persistence";
 import { installGameManagerInputEventsRuntime } from "../core/game-manager-input-events";
 import { installGameManagerNormalizedUndoEntryRuntime } from "../core/game-manager-normalized-undo-entry";
 import { installGameManagerRedoRestoreStateRuntime } from "../core/game-manager-redo-restore-state";
@@ -284,6 +285,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installSingleModePageLockRuntime();
   installNoXSelectionRuntime();
   installFallbackModeConfigsRuntime();
+  installGameManagerActuatePersistenceRuntime();
   installGameManagerActuatorPayloadStateRuntime();
   installGameManagerInputEventsRuntime();
   installGameManagerNormalizedUndoEntryRuntime();

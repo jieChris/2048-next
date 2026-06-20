@@ -288,11 +288,15 @@ function getActualSecondaryRate(manager) {
   );
 }
 
-function finalizeActuatePersistence(manager) {
+function resolveCoreGameManagerActuatePersistenceRuntime() {
+  if (typeof CoreGameManagerActuatePersistenceRuntime !== "undefined" && CoreGameManagerActuatePersistenceRuntime) return CoreGameManagerActuatePersistenceRuntime;
+  if (typeof window !== "undefined" && window && window.CoreGameManagerActuatePersistenceRuntime) return window.CoreGameManagerActuatePersistenceRuntime;
+  return null;
+}
+
+function finalizeActuatePersistenceFallback(manager) {
   if (!manager) return;
-  if (typeof consumeSkipActuatePersistenceOnce === "function" && consumeSkipActuatePersistenceOnce(manager)) {
-    return;
-  }
+  if (typeof consumeSkipActuatePersistenceOnce === "function" && consumeSkipActuatePersistenceOnce(manager)) return;
   if (typeof publishSavedStateSyncSnapshot === "function") {
     publishSavedStateSyncSnapshot(manager);
   }
@@ -306,6 +310,19 @@ function finalizeActuatePersistence(manager) {
     return;
   }
   saveGameState(manager);
+}
+
+function finalizeActuatePersistence(manager) {
+  var runtime = resolveCoreGameManagerActuatePersistenceRuntime();
+  if (runtime && typeof runtime.finalizeActuatePersistence === "function") {
+    return runtime.finalizeActuatePersistence(manager, {
+      consumeSkipActuatePersistenceOnce: typeof consumeSkipActuatePersistenceOnce === "function" ? consumeSkipActuatePersistenceOnce : undefined,
+      publishSavedStateSyncSnapshot: typeof publishSavedStateSyncSnapshot === "function" ? publishSavedStateSyncSnapshot : undefined,
+      isTerminalSessionForPersistence: typeof isTerminalSessionForPersistence === "function" ? isTerminalSessionForPersistence : undefined,
+      saveGameState: typeof saveGameState === "function" ? saveGameState : undefined
+    });
+  }
+  return finalizeActuatePersistenceFallback(manager);
 }
 
 function syncBestScoreBeforeActuate(manager) {
