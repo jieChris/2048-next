@@ -68,6 +68,10 @@ function loadRestartSeedRuntime(options?: {
       setupOptions: unknown,
       operations: Record<string, unknown>
     ) => void;
+    resetSetupTimerAndInputState?: (
+      manager: Record<string, unknown> | null,
+      operations: Record<string, unknown>
+    ) => void;
   };
   resetSetupReplayAndSpawnStateRuntime?: {
     resetSetupReplayAndSpawnState?: (
@@ -522,5 +526,27 @@ describe("core game manager restart seed runtime", () => {
     expect(manager.timerAnchorServerMs).toBeNull();
     expect(manager.pendingTimerAnchorServerMs).toBeNull();
     expect(manager.timerFrozen).toBe(false);
+  });
+
+  it("delegates setup timer and input reset to the TypeScript runtime", () => {
+    const resetSetupTimerAndInputState = vi.fn();
+    const { runtime } = loadRestartSeedRuntime({
+      setupStateInitializationRuntime: {
+        runSetupStateInitialization: vi.fn(),
+        resetSetupTimerAndInputState
+      }
+    });
+    const manager = {
+      timerID: 99
+    } as Record<string, unknown>;
+
+    runtime.resetSetupTimerAndInputState(manager);
+
+    expect(resetSetupTimerAndInputState).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        clearInterval: expect.any(Function)
+      })
+    );
   });
 });

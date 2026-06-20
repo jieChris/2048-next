@@ -2,6 +2,21 @@ export interface SetupStateInitializationManagerLike {
   challengeId?: unknown;
   rankedSessionToken?: unknown;
   needsRankedCheckpointRestore?: boolean;
+  timerID?: unknown;
+  timerStatus?: unknown;
+  startTime?: unknown;
+  time?: unknown;
+  accumulatedTime?: unknown;
+  timerElapsedOffsetMs?: unknown;
+  timerAnchorLocalMs?: unknown;
+  timerAnchorServerMs?: unknown;
+  pendingTimerAnchorServerMs?: unknown;
+  timerUpdateIntervalMs?: unknown;
+  timerFrozen?: unknown;
+  pendingMoveInput?: unknown;
+  moveInputFlushScheduled?: unknown;
+  lastMoveInputAt?: unknown;
+  moveDeadlineAt?: unknown;
   getWindowLike?: () => SetupStateInitializationWindowLike | null;
 }
 
@@ -55,6 +70,7 @@ export interface SetupStateInitializationOperations {
 
 export interface SetupStateInitializationRuntime {
   runSetupStateInitialization: typeof runSetupStateInitialization;
+  resetSetupTimerAndInputState: typeof resetSetupTimerAndInputState;
 }
 
 export interface SetupStateInitializationRuntimeWindowLike {
@@ -67,6 +83,36 @@ export interface SetupStateInitializationRuntimeInstallOptions {
 
 function isNonArrayRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+export interface ResetSetupTimerAndInputStateOperations {
+  clearInterval?: (timerId: unknown) => void;
+}
+
+export function resetSetupTimerAndInputState(
+  manager: SetupStateInitializationManagerLike | null | undefined,
+  operations: ResetSetupTimerAndInputStateOperations = {}
+): void {
+  if (!manager) return;
+  if (manager.timerID !== null && typeof manager.timerID !== "undefined") {
+    const clearIntervalCallback = operations.clearInterval;
+    clearIntervalCallback?.(manager.timerID);
+  }
+  manager.timerStatus = 0;
+  manager.startTime = null;
+  manager.timerID = null;
+  manager.time = 0;
+  manager.accumulatedTime = 0;
+  manager.timerElapsedOffsetMs = 0;
+  manager.timerAnchorLocalMs = null;
+  manager.timerAnchorServerMs = null;
+  manager.pendingTimerAnchorServerMs = null;
+  manager.timerUpdateIntervalMs = null;
+  manager.timerFrozen = false;
+  manager.pendingMoveInput = null;
+  manager.moveInputFlushScheduled = false;
+  manager.lastMoveInputAt = 0;
+  manager.moveDeadlineAt = null;
 }
 
 function scheduleRankedCheckpointRestoreIfNeeded(manager: SetupStateInitializationManagerLike): void {
@@ -124,7 +170,8 @@ export function runSetupStateInitialization(
 
 export function createSetupStateInitializationRuntime(): SetupStateInitializationRuntime {
   return {
-    runSetupStateInitialization
+    runSetupStateInitialization,
+    resetSetupTimerAndInputState
   };
 }
 

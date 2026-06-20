@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createSetupStateInitializationRuntime,
   installSetupStateInitializationRuntime,
+  resetSetupTimerAndInputState,
   runSetupStateInitialization,
   type SetupStateInitializationRuntime
 } from "../../src/core/setup-state-initialization";
@@ -43,6 +44,62 @@ function createOperations(calls: string[] = []) {
 }
 
 describe("core setup state initialization runtime", () => {
+  it("resets setup timer and pending input state", () => {
+    const clearInterval = vi.fn();
+    const manager = {
+      timerStatus: 1,
+      startTime: new Date(100_000),
+      timerID: 99,
+      time: 45_000,
+      accumulatedTime: 45_000,
+      timerElapsedOffsetMs: 45_000,
+      timerAnchorLocalMs: 100_000,
+      timerAnchorServerMs: 90_000,
+      pendingTimerAnchorServerMs: 95_000,
+      timerUpdateIntervalMs: 250,
+      timerFrozen: true,
+      pendingMoveInput: { direction: 1 },
+      moveInputFlushScheduled: true,
+      lastMoveInputAt: 123,
+      moveDeadlineAt: 456
+    };
+
+    resetSetupTimerAndInputState(manager, { clearInterval });
+
+    expect(clearInterval).toHaveBeenCalledWith(99);
+    expect(manager).toMatchObject({
+      timerStatus: 0,
+      startTime: null,
+      timerID: null,
+      time: 0,
+      accumulatedTime: 0,
+      timerElapsedOffsetMs: 0,
+      timerAnchorLocalMs: null,
+      timerAnchorServerMs: null,
+      pendingTimerAnchorServerMs: null,
+      timerUpdateIntervalMs: null,
+      timerFrozen: false,
+      pendingMoveInput: null,
+      moveInputFlushScheduled: false,
+      lastMoveInputAt: 0,
+      moveDeadlineAt: null
+    });
+  });
+
+  it("invokes clear interval as an unbound callback", () => {
+    const observedThisValues: unknown[] = [];
+    const manager = {
+      timerID: 99
+    };
+    const clearInterval = function (this: unknown, _timerId: unknown) {
+      observedThisValues.push(this);
+    };
+
+    resetSetupTimerAndInputState(manager, { clearInterval });
+
+    expect(observedThisValues).toEqual([undefined]);
+  });
+
   it("runs setup initialization operations in the legacy order", () => {
     const calls: string[] = [];
     const operations = createOperations(calls);
@@ -128,6 +185,7 @@ describe("core setup state initialization runtime", () => {
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createSetupStateInitializationRuntime();
     expect(runtime.runSetupStateInitialization).toBe(runSetupStateInitialization);
+    expect(runtime.resetSetupTimerAndInputState).toBe(resetSetupTimerAndInputState);
 
     const windowLike: { CoreSetupStateInitializationRuntime?: SetupStateInitializationRuntime } = {};
     expect(installSetupStateInitializationRuntime({ windowLike })).toBe(
@@ -136,8 +194,11 @@ describe("core setup state initialization runtime", () => {
     expect(windowLike.CoreSetupStateInitializationRuntime?.runSetupStateInitialization).toBe(
       runSetupStateInitialization
     );
+    expect(windowLike.CoreSetupStateInitializationRuntime?.resetSetupTimerAndInputState).toBe(
+      resetSetupTimerAndInputState
+    );
 
-    const existing = { runSetupStateInitialization: vi.fn() };
+    const existing = { runSetupStateInitialization: vi.fn(), resetSetupTimerAndInputState: vi.fn() };
     expect(
       installSetupStateInitializationRuntime({
         windowLike: { CoreSetupStateInitializationRuntime: existing }
