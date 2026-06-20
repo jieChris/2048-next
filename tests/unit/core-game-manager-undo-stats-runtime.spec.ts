@@ -17,10 +17,17 @@ type UndoStatsRuntime = {
     tiles: Record<string, unknown>[],
     motionMap: Record<string, unknown>
   ) => Record<string, unknown>;
+  executeRedoRestorePipeline: (manager: Record<string, unknown>) => Record<string, unknown> | null;
   handleUndoMove: (manager: Record<string, unknown>, direction: number) => boolean;
 };
 
 function loadUndoStatsRuntime(options?: {
+  redoRestorePipelineRuntime?: {
+    executeRedoRestorePipeline?: (
+      manager: Record<string, unknown> | null,
+      operations: Record<string, unknown>
+    ) => Record<string, unknown> | null;
+  };
   normalizedUndoEntryRuntime?: {
     createNormalizedUndoStackEntry?: (
       manager: Record<string, unknown> | null,
@@ -81,6 +88,7 @@ function loadUndoStatsRuntime(options?: {
         fallback: unknown
       ) => fallback
     ),
+    CoreGameManagerRedoRestorePipelineRuntime: options?.redoRestorePipelineRuntime,
     CoreGameManagerNormalizedUndoEntryRuntime: options?.normalizedUndoEntryRuntime,
     CoreGameManagerRedoRestoreStateRuntime: options?.redoRestoreStateRuntime,
     CoreGameManagerUndoMoveHandlerRuntime: options?.undoMoveHandlerRuntime,
@@ -110,6 +118,35 @@ function createManager() {
 }
 
 describe("core game manager undo stats runtime", () => {
+  it("delegates redo restore pipeline execution to the TypeScript runtime", () => {
+    const redoRestore = { shouldStartTimer: true };
+    const executeRedoRestorePipeline = vi.fn(() => redoRestore);
+    const runtime = loadUndoStatsRuntime({
+      redoRestorePipelineRuntime: {
+        executeRedoRestorePipeline
+      }
+    });
+    const manager = {
+      undoStack: [],
+      redoStack: [],
+      normalizeUndoStackEntry: vi.fn()
+    };
+
+    expect(runtime.executeRedoRestorePipeline(manager)).toBe(redoRestore);
+    expect(executeRedoRestorePipeline).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        applyUndoRestoredTiles: expect.any(Function),
+        applyUndoRestoreState: expect.any(Function),
+        buildRedoRestoreState: expect.any(Function),
+        buildUndoPreviousPositionMapFromRedoEntry: expect.any(Function),
+        createCurrentUndoStackEntrySnapshot: expect.any(Function),
+        ensureRedoStack: expect.any(Function),
+        mergeUndoPositionMap: expect.any(Function)
+      })
+    );
+  });
+
   it("delegates normalized undo stack entry creation to the TypeScript runtime", () => {
     const normalizedEntry = { score: 128, tiles: [], motionMap: null };
     const createNormalizedUndoStackEntry = vi.fn(() => normalizedEntry);

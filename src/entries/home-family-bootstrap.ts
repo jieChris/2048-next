@@ -74,6 +74,7 @@ import { installGameManagerActuatorPayloadStateRuntime } from "../core/game-mana
 import { installGameManagerActuatePersistenceRuntime } from "../core/game-manager-actuate-persistence";
 import { installGameManagerInputEventsRuntime } from "../core/game-manager-input-events";
 import { installGameManagerNormalizedUndoEntryRuntime } from "../core/game-manager-normalized-undo-entry";
+import { installGameManagerRedoRestorePipelineRuntime } from "../core/game-manager-redo-restore-pipeline";
 import { installGameManagerRedoRestoreStateRuntime } from "../core/game-manager-redo-restore-state";
 import { installGameManagerRuntimeStateRuntime } from "../core/game-manager-runtime-state";
 import { installGameManagerSavedStatePersistenceBindingRuntime } from "../core/game-manager-saved-state-persistence-binding";
@@ -289,6 +290,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installGameManagerActuatorPayloadStateRuntime();
   installGameManagerInputEventsRuntime();
   installGameManagerNormalizedUndoEntryRuntime();
+  installGameManagerRedoRestorePipelineRuntime();
   installGameManagerRedoRestoreStateRuntime();
   installGameManagerRuntimeStateRuntime();
   installGameManagerSavedStatePersistenceBindingRuntime();
