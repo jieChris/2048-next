@@ -553,15 +553,19 @@ function shouldTryRestoreSavedStateInSetup(manager, hasInputSeed, normalizedOpti
   return shouldUseSavedGameState(manager);
 }
 
-function shouldForceRankedCheckpointRestoreInSetup(manager) {
-  if (!manager || manager.rankPolicy !== "ranked") return false;
-  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
-  var search = "";
+function readSetupLocationSearch(manager) {
   try {
-    search = windowLike && windowLike.location ? String(windowLike.location.search || "") : "";
+    var windowLike = manager && manager.getWindowLike ? manager.getWindowLike() : null;
+    var search = windowLike && windowLike.location ? String(windowLike.location.search || "") : "";
+    return search;
   } catch (_err) {
-    search = "";
+    return "";
   }
+}
+
+function shouldForceRankedCheckpointRestoreInSetupFallback(manager) {
+  if (!manager || manager.rankPolicy !== "ranked") return false;
+  var search = readSetupLocationSearch(manager);
   if (!search) return false;
   try {
     var params = new URLSearchParams(search);
@@ -572,6 +576,14 @@ function shouldForceRankedCheckpointRestoreInSetup(manager) {
   } catch (_errParams) {
     return search.indexOf("force_ranked_checkpoint=1") >= 0 || search.indexOf("restore_ranked_checkpoint=1") >= 0;
   }
+}
+
+function shouldForceRankedCheckpointRestoreInSetup(manager) {
+  var runtime = resolveCoreSetupRestoreInitialBoardStateRuntime(manager);
+  if (runtime && typeof runtime.shouldForceRankedCheckpointRestoreInSetup === "function") {
+    return runtime.shouldForceRankedCheckpointRestoreInSetup(manager) === true;
+  }
+  return shouldForceRankedCheckpointRestoreInSetupFallback(manager);
 }
 
 function hasRankedCheckpointAuthTokenForSetup(manager) {

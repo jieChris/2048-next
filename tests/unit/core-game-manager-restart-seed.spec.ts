@@ -30,6 +30,9 @@ type RestartSeedRuntime = {
     hasInputSeed: boolean,
     normalizedOptions: Record<string, unknown>
   ) => { restoredFromSavedState: boolean };
+  shouldForceRankedCheckpointRestoreInSetup: (
+    manager: Record<string, unknown> | null
+  ) => boolean;
   runSetupStateInitialization: (
     manager: Record<string, unknown> | null,
     inputSeed?: unknown,
@@ -60,6 +63,9 @@ function loadRestartSeedRuntime(options?: {
       normalizedOptions: Record<string, unknown>,
       operations: Record<string, unknown>
     ) => { restoredFromSavedState: boolean };
+    shouldForceRankedCheckpointRestoreInSetup?: (
+      manager: Record<string, unknown> | null
+    ) => boolean;
   };
   setupStateInitializationRuntime?: {
     runSetupStateInitialization?: (
@@ -548,5 +554,21 @@ describe("core game manager restart seed runtime", () => {
         clearInterval: expect.any(Function)
       })
     );
+  });
+
+  it("delegates forced ranked checkpoint restore detection to the TypeScript runtime", () => {
+    const shouldForceRankedCheckpointRestoreInSetup = vi.fn(() => true);
+    const { runtime } = loadRestartSeedRuntime({
+      setupRestoreInitialBoardStateRuntime: {
+        resolveSetupRestoreAndInitialBoardState: vi.fn(),
+        shouldForceRankedCheckpointRestoreInSetup
+      }
+    });
+    const manager = {
+      rankPolicy: "ranked"
+    } as Record<string, unknown>;
+
+    expect(runtime.shouldForceRankedCheckpointRestoreInSetup(manager)).toBe(true);
+    expect(shouldForceRankedCheckpointRestoreInSetup).toHaveBeenCalledWith(manager);
   });
 });

@@ -4,10 +4,58 @@ import {
   createSetupRestoreInitialBoardStateRuntime,
   installSetupRestoreInitialBoardStateRuntime,
   resolveSetupRestoreAndInitialBoardState,
+  shouldForceRankedCheckpointRestoreInSetup,
   type SetupRestoreInitialBoardStateRuntime
 } from "../../src/core/setup-restore-initial-board-state";
 
 describe("core setup restore and initial board state runtime", () => {
+  it("detects forced ranked checkpoint restore query flags for ranked setup", () => {
+    const manager = {
+      rankPolicy: "ranked",
+      getWindowLike: () => ({
+        location: {
+          search: "?force_ranked_checkpoint=1"
+        }
+      })
+    };
+
+    expect(shouldForceRankedCheckpointRestoreInSetup(manager)).toBe(true);
+    expect(
+      shouldForceRankedCheckpointRestoreInSetup({
+        ...manager,
+        getWindowLike: () => ({
+          location: {
+            search: "?restore_ranked_checkpoint=1"
+          }
+        })
+      })
+    ).toBe(true);
+  });
+
+  it("does not force ranked checkpoint restore outside ranked setup or when search is unavailable", () => {
+    expect(shouldForceRankedCheckpointRestoreInSetup(null)).toBe(false);
+    expect(
+      shouldForceRankedCheckpointRestoreInSetup({
+        rankPolicy: "casual",
+        getWindowLike: () => ({
+          location: {
+            search: "?force_ranked_checkpoint=1"
+          }
+        })
+      })
+    ).toBe(false);
+    expect(
+      shouldForceRankedCheckpointRestoreInSetup({
+        rankPolicy: "ranked",
+        getWindowLike: () => ({
+          get location() {
+            throw new Error("location unavailable");
+          }
+        })
+      })
+    ).toBe(false);
+  });
+
   it("restores the latest saved state and skips initial board generation", () => {
     const manager: Record<string, unknown> = {};
     const operations = {
@@ -113,6 +161,9 @@ describe("core setup restore and initial board state runtime", () => {
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createSetupRestoreInitialBoardStateRuntime();
     expect(runtime.resolveSetupRestoreAndInitialBoardState).toBe(resolveSetupRestoreAndInitialBoardState);
+    expect(runtime.shouldForceRankedCheckpointRestoreInSetup).toBe(
+      shouldForceRankedCheckpointRestoreInSetup
+    );
 
     const windowLike: { CoreSetupRestoreInitialBoardStateRuntime?: SetupRestoreInitialBoardStateRuntime } = {};
     expect(installSetupRestoreInitialBoardStateRuntime({ windowLike })).toBe(
@@ -121,8 +172,14 @@ describe("core setup restore and initial board state runtime", () => {
     expect(windowLike.CoreSetupRestoreInitialBoardStateRuntime?.resolveSetupRestoreAndInitialBoardState).toBe(
       resolveSetupRestoreAndInitialBoardState
     );
+    expect(windowLike.CoreSetupRestoreInitialBoardStateRuntime?.shouldForceRankedCheckpointRestoreInSetup).toBe(
+      shouldForceRankedCheckpointRestoreInSetup
+    );
 
-    const existing = { resolveSetupRestoreAndInitialBoardState: vi.fn() };
+    const existing = {
+      resolveSetupRestoreAndInitialBoardState: vi.fn(),
+      shouldForceRankedCheckpointRestoreInSetup: vi.fn()
+    };
     expect(
       installSetupRestoreInitialBoardStateRuntime({
         windowLike: { CoreSetupRestoreInitialBoardStateRuntime: existing }

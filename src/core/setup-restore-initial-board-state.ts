@@ -1,6 +1,8 @@
 export interface SetupRestoreInitialBoardStateManagerLike {
   needsRankedCheckpointRestore?: boolean;
   rankCheckpointRestorePending?: boolean;
+  rankPolicy?: unknown;
+  getWindowLike?: () => SetupRestoreInitialBoardStateWindowLike | null;
 }
 
 export interface SetupRestoreInitialBoardStateOptionsLike {
@@ -42,10 +44,14 @@ export interface SetupRestoreInitialBoardStateOperations {
 
 export interface SetupRestoreInitialBoardStateRuntime {
   resolveSetupRestoreAndInitialBoardState: typeof resolveSetupRestoreAndInitialBoardState;
+  shouldForceRankedCheckpointRestoreInSetup: typeof shouldForceRankedCheckpointRestoreInSetup;
 }
 
 export interface SetupRestoreInitialBoardStateWindowLike {
   CoreSetupRestoreInitialBoardStateRuntime?: SetupRestoreInitialBoardStateRuntime;
+  location?: {
+    search?: unknown;
+  } | null;
 }
 
 export interface SetupRestoreInitialBoardStateRuntimeInstallOptions {
@@ -94,9 +100,30 @@ export function resolveSetupRestoreAndInitialBoardState(
   return { restoredFromSavedState };
 }
 
+export function shouldForceRankedCheckpointRestoreInSetup(
+  manager: SetupRestoreInitialBoardStateManagerLike | null | undefined
+): boolean {
+  if (!manager || manager.rankPolicy !== "ranked") return false;
+  let search = "";
+  try {
+    const windowLike = typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+    search = windowLike?.location ? String(windowLike.location.search || "") : "";
+  } catch (_error) {
+    search = "";
+  }
+  if (!search) return false;
+  try {
+    const params = new URLSearchParams(search);
+    return params.get("force_ranked_checkpoint") === "1" || params.get("restore_ranked_checkpoint") === "1";
+  } catch (_error) {
+    return search.includes("force_ranked_checkpoint=1") || search.includes("restore_ranked_checkpoint=1");
+  }
+}
+
 export function createSetupRestoreInitialBoardStateRuntime(): SetupRestoreInitialBoardStateRuntime {
   return {
-    resolveSetupRestoreAndInitialBoardState
+    resolveSetupRestoreAndInitialBoardState,
+    shouldForceRankedCheckpointRestoreInSetup
   };
 }
 
