@@ -4,6 +4,7 @@ export interface RestartGameManagerLike {
   practiceRestartBoardMatrix?: unknown;
   practiceRestartModeConfig?: unknown;
   isTestMode?: boolean;
+  getWindowLike?: () => RestartGameWindowLike | null;
   actuator?: {
     continue?: () => void;
   } | null;
@@ -29,10 +30,17 @@ export interface RestartGameOperations {
 export interface RestartGameRuntime {
   restartGame: typeof restartGame;
   createFallbackFreshSetupSeed: typeof createFallbackFreshSetupSeed;
+  resolveRestartConfirmLanguage: typeof resolveRestartConfirmLanguage;
 }
 
 export interface RestartGameWindowLike {
   CoreRestartGameRuntime?: RestartGameRuntime;
+  UII18N?: {
+    getLanguage?: () => unknown;
+  } | null;
+  localStorage?: {
+    getItem?: (key: string) => unknown;
+  } | null;
 }
 
 export interface RestartGameRuntimeInstallOptions {
@@ -90,6 +98,27 @@ function restartPracticeGame(manager: RestartGameManagerLike, operations: Restar
   return true;
 }
 
+export function resolveRestartConfirmLanguage(manager: RestartGameManagerLike | null | undefined): "en" | "zh" {
+  const windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  try {
+    const i18n = windowLike?.UII18N;
+    if (i18n && typeof i18n.getLanguage === "function") {
+      const fromI18n = String(i18n.getLanguage() || "").toLowerCase();
+      if (fromI18n.startsWith("en")) return "en";
+      if (fromI18n.startsWith("zh")) return "zh";
+    }
+  } catch (_error) {}
+  try {
+    const storageLike = windowLike?.localStorage;
+    const fromStorage =
+      storageLike && typeof storageLike.getItem === "function"
+        ? String(storageLike.getItem("ui_language_v1") || "").toLowerCase()
+        : "";
+    if (fromStorage.startsWith("en")) return "en";
+  } catch (_error) {}
+  return "zh";
+}
+
 export function restartGame(
   manager: RestartGameManagerLike | null | undefined,
   operations: RestartGameOperations = {}
@@ -108,7 +137,8 @@ export function restartGame(
 export function createRestartGameRuntime(): RestartGameRuntime {
   return {
     restartGame,
-    createFallbackFreshSetupSeed
+    createFallbackFreshSetupSeed,
+    resolveRestartConfirmLanguage
   };
 }
 

@@ -5,6 +5,7 @@ import {
   createRestartGameRuntime,
   installRestartGameRuntime,
   restartGame,
+  resolveRestartConfirmLanguage,
   type RestartGameRuntime
 } from "../../src/core/restart-game";
 
@@ -24,6 +25,65 @@ function createManager(overrides: Record<string, unknown> = {}) {
 }
 
 describe("core restart game runtime", () => {
+  it("resolves restart confirmation language from i18n before storage", () => {
+    const manager = createManager({
+      getWindowLike: () => ({
+        UII18N: {
+          getLanguage: () => "en-US"
+        },
+        localStorage: {
+          getItem: () => "zh-CN"
+        }
+      })
+    });
+
+    expect(resolveRestartConfirmLanguage(manager)).toBe("en");
+  });
+
+  it("falls back to storage language and defaults to Chinese", () => {
+    expect(
+      resolveRestartConfirmLanguage(
+        createManager({
+          getWindowLike: () => ({
+            localStorage: {
+              getItem: () => "en"
+            }
+          })
+        })
+      )
+    ).toBe("en");
+    expect(
+      resolveRestartConfirmLanguage(
+        createManager({
+          getWindowLike: () => ({
+            localStorage: {
+              getItem: () => "fr"
+            }
+          })
+        })
+      )
+    ).toBe("zh");
+  });
+
+  it("defaults restart confirmation language when browser access throws", () => {
+    const manager = createManager({
+      getWindowLike: () => ({
+        UII18N: {
+          getLanguage: () => {
+            throw new Error("i18n unavailable");
+          }
+        },
+        localStorage: {
+          getItem: () => {
+            throw new Error("storage unavailable");
+          }
+        }
+      })
+    });
+
+    expect(resolveRestartConfirmLanguage(manager)).toBe("zh");
+  });
+
   it("creates deterministic fallback fresh setup seeds from mixed timing inputs", () => {
     expect(
       createFallbackFreshSetupSeed({
@@ -131,6 +191,7 @@ describe("core restart game runtime", () => {
     const runtime = createRestartGameRuntime();
     expect(runtime.restartGame).toBe(restartGame);
     expect(runtime.createFallbackFreshSetupSeed).toBe(createFallbackFreshSetupSeed);
+    expect(runtime.resolveRestartConfirmLanguage).toBe(resolveRestartConfirmLanguage);
 
     const windowLike: { CoreRestartGameRuntime?: RestartGameRuntime } = {};
     expect(installRestartGameRuntime({ windowLike })).toBe(windowLike.CoreRestartGameRuntime);
@@ -138,8 +199,15 @@ describe("core restart game runtime", () => {
     expect(windowLike.CoreRestartGameRuntime?.createFallbackFreshSetupSeed).toBe(
       createFallbackFreshSetupSeed
     );
+    expect(windowLike.CoreRestartGameRuntime?.resolveRestartConfirmLanguage).toBe(
+      resolveRestartConfirmLanguage
+    );
 
-    const existing = { restartGame: vi.fn(), createFallbackFreshSetupSeed: vi.fn() };
+    const existing = {
+      restartGame: vi.fn(),
+      createFallbackFreshSetupSeed: vi.fn(),
+      resolveRestartConfirmLanguage: vi.fn()
+    };
     expect(installRestartGameRuntime({ windowLike: { CoreRestartGameRuntime: existing } })).toBe(
       existing
     );

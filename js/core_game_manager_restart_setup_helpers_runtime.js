@@ -115,24 +115,37 @@ function resolveSetupNoXModeConfig(manager, modeConfig, setupOptions, inputSeed)
   return modeConfig;
 }
 
-function resolveRestartConfirmLanguage(manager) {
+function normalizeRestartConfirmLanguagePrefix(value) {
+  var normalized = String(value || "").toLowerCase();
+  if (normalized.indexOf("en") === 0) return "en";
+  if (normalized.indexOf("zh") === 0) return "zh";
+  return "";
+}
+
+function resolveRestartConfirmLanguageFallback(manager) {
   var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
   try {
     var i18n = windowLike && windowLike.UII18N;
     if (i18n && typeof i18n.getLanguage === "function") {
-      var fromI18n = String(i18n.getLanguage() || "").toLowerCase();
-      if (fromI18n.indexOf("en") === 0) return "en";
-      if (fromI18n.indexOf("zh") === 0) return "zh";
+      var fromI18n = normalizeRestartConfirmLanguagePrefix(i18n.getLanguage());
+      if (fromI18n) return fromI18n;
     }
   } catch (_errI18n) {}
   try {
     var storageLike = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
-    var fromStorage = storageLike && typeof storageLike.getItem === "function"
-      ? String(storageLike.getItem("ui_language_v1") || "").toLowerCase()
-      : "";
-    if (fromStorage.indexOf("en") === 0) return "en";
+    var fromStorage = storageLike && typeof storageLike.getItem === "function" ? storageLike.getItem("ui_language_v1") : "";
+    if (normalizeRestartConfirmLanguagePrefix(fromStorage) === "en") return "en";
   } catch (_errStorage) {}
   return "zh";
+}
+
+function resolveRestartConfirmLanguage(manager) {
+  var runtime = resolveCoreRestartGameRuntime(manager);
+  if (runtime && typeof runtime.resolveRestartConfirmLanguage === "function") {
+    var language = runtime.resolveRestartConfirmLanguage(manager);
+    return language === "en" ? "en" : "zh";
+  }
+  return resolveRestartConfirmLanguageFallback(manager);
 }
 
 function resolveRestartConfirmMessage(manager) {

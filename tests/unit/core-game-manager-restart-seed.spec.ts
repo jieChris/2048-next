@@ -40,6 +40,7 @@ type RestartSeedRuntime = {
   ) => void;
   restartGame: (manager: Record<string, unknown> | null) => void;
   resetSetupTimerAndInputState: (manager: Record<string, unknown>) => void;
+  resolveRestartConfirmLanguage: (manager: Record<string, unknown> | null) => string;
   resolveSingleModePageTabId: (windowLike: Record<string, unknown> | null) => string;
 };
 
@@ -91,6 +92,7 @@ function loadRestartSeedRuntime(options?: {
       operations: Record<string, unknown>
     ) => void;
     createFallbackFreshSetupSeed?: (payload: Record<string, unknown>) => number;
+    resolveRestartConfirmLanguage?: (manager: Record<string, unknown> | null) => string;
   };
   singleModePageLockRuntime?: {
     resolveSingleModePageTabId?: (
@@ -570,5 +572,26 @@ describe("core game manager restart seed runtime", () => {
 
     expect(runtime.shouldForceRankedCheckpointRestoreInSetup(manager)).toBe(true);
     expect(shouldForceRankedCheckpointRestoreInSetup).toHaveBeenCalledWith(manager);
+  });
+
+  it("delegates restart confirm language resolution to the TypeScript runtime", () => {
+    const resolveRestartConfirmLanguage = vi.fn(() => "en");
+    const { runtime } = loadRestartSeedRuntime({
+      restartGameRuntime: {
+        restartGame: vi.fn(),
+        createFallbackFreshSetupSeed: vi.fn(),
+        resolveRestartConfirmLanguage
+      }
+    });
+    const manager = {
+      getWindowLike: vi.fn(() => ({
+        localStorage: {
+          getItem: vi.fn(() => "zh")
+        }
+      }))
+    } as Record<string, unknown>;
+
+    expect(runtime.resolveRestartConfirmLanguage(manager)).toBe("en");
+    expect(resolveRestartConfirmLanguage).toHaveBeenCalledWith(manager);
   });
 });
