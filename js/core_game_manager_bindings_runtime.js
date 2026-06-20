@@ -63,6 +63,22 @@ var PRE_ACCESSOR_MANAGER_FORWARD_BINDINGS = {
   clearRuntimeGridCell: clearRuntimeGridCell
 };
 
+var POST_ACCESSOR_MANAGER_FORWARD_BINDING_NAMES = [
+  "readOptionValue", "resolveUndoPolicyStateForMode", "getUndoStateFallbackValues",
+  "normalizeUndoStackEntry", "createUndoTileSnapshot", "normalizeSpawnTable", "normalizeModeConfig",
+  "resolveModeConfig", "normalizeSpecialRules", "getActiveMoveDirections", "isDirectionAllowed",
+  "isStoneValue", "useItem", "updateItemModeHud", "updateMoveTimeoutHud"
+];
+var POST_ACCESSOR_MANAGER_FORWARD_BINDINGS = {
+  readOptionValue: readOptionValue, resolveUndoPolicyStateForMode: resolveUndoPolicyStateForMode,
+  getUndoStateFallbackValues: getUndoStateFallbackValues, normalizeUndoStackEntry: normalizeUndoStackEntry,
+  createUndoTileSnapshot: createUndoTileSnapshot, normalizeSpawnTable: normalizeSpawnTable,
+  normalizeModeConfig: normalizeModeConfig, resolveModeConfig: resolveModeConfig,
+  normalizeSpecialRules: normalizeSpecialRules, getActiveMoveDirections: getActiveMoveDirections,
+  isDirectionAllowed: isDirectionAllowed, isStoneValue: isStoneValue, useItem: useItem,
+  updateItemModeHud: updateItemModeHud, updateMoveTimeoutHud: updateMoveTimeoutHud
+};
+
 function bindGameManagerPrototypeMethod(methodName, bindingFactory) {
   if (!(typeof methodName === "string" && methodName)) return;
   if (typeof bindingFactory !== "function") return;
@@ -113,6 +129,18 @@ function resolveCorePreAccessorManagerForwardBindingsRuntime() {
     return window.CorePreAccessorManagerForwardBindingsRuntime;
   }
   return null;
+}
+
+function resolveCorePostAccessorManagerForwardBindingsRuntime() {
+  if (typeof CorePostAccessorManagerForwardBindingsRuntime !== "undefined" && CorePostAccessorManagerForwardBindingsRuntime) return CorePostAccessorManagerForwardBindingsRuntime;
+  if (typeof window !== "undefined" && window && window.CorePostAccessorManagerForwardBindingsRuntime) return window.CorePostAccessorManagerForwardBindingsRuntime;
+  return null;
+}
+
+function createForwardBindingsFromNames(names, operations) {
+  var bindings = [];
+  for (var index = 0; index < names.length; index++) bindings.push([names[index], operations[names[index]]]);
+  return bindings;
 }
 
 function createPreAccessorManagerForwardBindings() {
@@ -184,23 +212,11 @@ function createPostAccessorPlainForwardBindings() {
 }
 
 function createPostAccessorManagerForwardBindings() {
-  return [
-    ["readOptionValue", readOptionValue],
-    ["resolveUndoPolicyStateForMode", resolveUndoPolicyStateForMode],
-    ["getUndoStateFallbackValues", getUndoStateFallbackValues],
-    ["normalizeUndoStackEntry", normalizeUndoStackEntry],
-    ["createUndoTileSnapshot", createUndoTileSnapshot],
-    ["normalizeSpawnTable", normalizeSpawnTable],
-    ["normalizeModeConfig", normalizeModeConfig],
-    ["resolveModeConfig", resolveModeConfig],
-    ["normalizeSpecialRules", normalizeSpecialRules],
-    ["getActiveMoveDirections", getActiveMoveDirections],
-    ["isDirectionAllowed", isDirectionAllowed],
-    ["isStoneValue", isStoneValue],
-    ["useItem", useItem],
-    ["updateItemModeHud", updateItemModeHud],
-    ["updateMoveTimeoutHud", updateMoveTimeoutHud]
-  ];
+  var runtime = resolveCorePostAccessorManagerForwardBindingsRuntime();
+  if (runtime && typeof runtime.createPostAccessorManagerForwardBindings === "function") {
+    return runtime.createPostAccessorManagerForwardBindings(POST_ACCESSOR_MANAGER_FORWARD_BINDINGS);
+  }
+  return createForwardBindingsFromNames(POST_ACCESSOR_MANAGER_FORWARD_BINDING_NAMES, POST_ACCESSOR_MANAGER_FORWARD_BINDINGS);
 }
 
 function createCappedModeManagerForwardBindings() {
