@@ -10,10 +10,26 @@ type UndoStatsRuntime = {
     manager: Record<string, unknown>,
     entry: Record<string, unknown>
   ) => Record<string, unknown>;
+  createNormalizedUndoStackEntry: (
+    manager: Record<string, unknown>,
+    source: Record<string, unknown>,
+    fallbackState: Record<string, unknown>,
+    tiles: Record<string, unknown>[],
+    motionMap: Record<string, unknown>
+  ) => Record<string, unknown>;
   handleUndoMove: (manager: Record<string, unknown>, direction: number) => boolean;
 };
 
 function loadUndoStatsRuntime(options?: {
+  normalizedUndoEntryRuntime?: {
+    createNormalizedUndoStackEntry?: (
+      manager: Record<string, unknown> | null,
+      source: Record<string, unknown>,
+      fallbackState: Record<string, unknown>,
+      tiles: Record<string, unknown>[],
+      motionMap: Record<string, unknown> | null
+    ) => Record<string, unknown>;
+  };
   redoRestoreStateRuntime?: {
     buildRedoRestoreState?: (
       manager: Record<string, unknown> | null,
@@ -65,6 +81,7 @@ function loadUndoStatsRuntime(options?: {
         fallback: unknown
       ) => fallback
     ),
+    CoreGameManagerNormalizedUndoEntryRuntime: options?.normalizedUndoEntryRuntime,
     CoreGameManagerRedoRestoreStateRuntime: options?.redoRestoreStateRuntime,
     CoreGameManagerUndoMoveHandlerRuntime: options?.undoMoveHandlerRuntime,
     CoreGameManagerUndoRestoredTilesRuntime: options?.undoRestoredTilesRuntime
@@ -93,6 +110,32 @@ function createManager() {
 }
 
 describe("core game manager undo stats runtime", () => {
+  it("delegates normalized undo stack entry creation to the TypeScript runtime", () => {
+    const normalizedEntry = { score: 128, tiles: [], motionMap: null };
+    const createNormalizedUndoStackEntry = vi.fn(() => normalizedEntry);
+    const runtime = loadUndoStatsRuntime({
+      normalizedUndoEntryRuntime: {
+        createNormalizedUndoStackEntry
+      }
+    });
+    const manager = {};
+    const source = { score: Number.NaN };
+    const fallbackState = { score: 128 };
+    const tiles: Record<string, unknown>[] = [];
+    const motionMap = { "0,0": { x: 0, y: 0 } };
+
+    expect(
+      runtime.createNormalizedUndoStackEntry(manager, source, fallbackState, tiles, motionMap)
+    ).toBe(normalizedEntry);
+    expect(createNormalizedUndoStackEntry).toHaveBeenCalledWith(
+      manager,
+      source,
+      fallbackState,
+      tiles,
+      motionMap
+    );
+  });
+
   it("delegates redo restore state building to the TypeScript runtime", () => {
     const redoRestore = { shouldStartTimer: true };
     const buildRedoRestoreState = vi.fn(() => redoRestore);
