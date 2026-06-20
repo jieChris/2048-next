@@ -101,6 +101,11 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     applySavedManagerTimerState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
     buildSavedGameStateProgressPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStatePayload: (manager: Record<string, unknown>, now: number) => Record<string, unknown> | null;
+    resolveReplayStringForSavedPayload: (
+      manager: Record<string, unknown>,
+      now: number,
+      saveOptions?: Record<string, unknown>
+    ) => string;
     collectSavedTimerSubState: (
       manager: Record<string, unknown>,
       documentLike: Record<string, unknown> | null
@@ -196,6 +201,33 @@ describe("core game manager saved state runtime", () => {
       expect.objectContaining({
         persistPayload: expect.any(Function),
         clearSavedState: expect.any(Function)
+      })
+    );
+  });
+
+  it("delegates saved payload replay string resolution to the TypeScript runtime", () => {
+    const resolveReplayStringForSavedPayload = vi.fn(() => "REPLAY_v1RPL_B64_runtime");
+    const serializeReplay = vi.fn(() => "REPLAY_v1RPL_B64_live");
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreSavedPayloadReplayStringRuntime: {
+        resolveReplayStringForSavedPayload
+      },
+      serializeReplay
+    });
+    const manager = {
+      rescueReplayString: "REPLAY_v1RPL_B64_rescue"
+    };
+    const saveOptions = { force: true };
+
+    expect(runtime.resolveReplayStringForSavedPayload(manager, 10_000, saveOptions)).toBe(
+      "REPLAY_v1RPL_B64_runtime"
+    );
+    expect(resolveReplayStringForSavedPayload).toHaveBeenCalledWith(
+      manager,
+      10_000,
+      saveOptions,
+      expect.objectContaining({
+        serializeReplay: expect.any(Function)
       })
     );
   });

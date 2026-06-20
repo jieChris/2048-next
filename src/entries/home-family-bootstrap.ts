@@ -91,6 +91,7 @@ import { installSavedManagerReplayStateRuntime } from "../core/saved-manager-rep
 import { installSavedManagerTimerStateRuntime } from "../core/saved-manager-timer-state";
 import { installSavedPayloadCandidateRuntime } from "../core/saved-payload-candidate";
 import { installSavedPayloadPersistFallbackRuntime } from "../core/saved-payload-persist-fallback";
+import { installSavedPayloadReplayStringRuntime } from "../core/saved-payload-replay-string";
 import { installSavedPayloadRichnessRuntime } from "../core/saved-payload-richness";
 import { installSavedStatePersistTimestampsRuntime } from "../core/saved-state-persist-timestamps";
 import { installSavedStateSyncPayloadRuntime } from "../core/saved-state-sync-payload";
@@ -302,6 +303,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installSavedManagerTimerStateRuntime();
   installSavedPayloadCandidateRuntime();
   installSavedPayloadPersistFallbackRuntime();
+  installSavedPayloadReplayStringRuntime();
   installSavedPayloadRichnessRuntime();
   installSavedStatePersistTimestampsRuntime();
   installSavedStateSyncPayloadRuntime();
