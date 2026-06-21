@@ -75,6 +75,12 @@ function resolveCoreSetupStateInitializationRuntime(manager) {
   return null;
 }
 
+function resolveCoreSetupGameRuntime(manager) {
+  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  if (windowLike && windowLike.CoreSetupGameRuntime) return windowLike.CoreSetupGameRuntime;
+  return typeof CoreSetupGameRuntime !== "undefined" && CoreSetupGameRuntime ? CoreSetupGameRuntime : null;
+}
+
 function resolveCoreResetSetupReplayAndSpawnStateRuntime(manager) {
   var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
   if (windowLike && windowLike.CoreResetSetupReplayAndSpawnStateRuntime) {
@@ -1039,7 +1045,21 @@ function handleSingleModePageDuplicate(manager) {
   }
 }
 
-function setupGame(manager, inputSeed, options) {
+function createSetupGameOperations() {
+  return {
+    applySetupModeConfig: function (manager, cfg) { if (typeof applySetupModeConfig === "function") applySetupModeConfig(manager, cfg); },
+    createGrid: function (width, height) { return typeof Grid === "function" ? new Grid(width, height) : { width: width, height: height }; },
+    detectMode: function (manager) { return typeof detectMode === "function" ? detectMode(manager) : ""; },
+    ensureSingleModePageLock: function (manager) { return typeof ensureSingleModePageLock === "function" ? ensureSingleModePageLock(manager) : true; },
+    handleSingleModePageDuplicate: function (manager) { if (typeof handleSingleModePageDuplicate === "function") handleSingleModePageDuplicate(manager); },
+    isNonArrayObject: function (value) { return typeof isNonArrayObject === "function" ? isNonArrayObject(value) : !!value && typeof value === "object" && !Array.isArray(value); },
+    resolveSetupModeConfig: function (manager, setupOptions, detectedMode) { return typeof resolveSetupModeConfig === "function" ? resolveSetupModeConfig(manager, setupOptions, detectedMode) : null; },
+    resolveSetupNoXModeConfig: function (manager, cfg, setupOptions, inputSeed) { return typeof resolveSetupNoXModeConfig === "function" ? resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed) : cfg; },
+    runSetupStateInitialization: function (manager, inputSeed, setupOptions) { if (typeof runSetupStateInitialization === "function") runSetupStateInitialization(manager, inputSeed, setupOptions); }
+  };
+}
+
+function setupGameFallback(manager, inputSeed, options) {
   if (!manager) return;
   var setupOptions = isNonArrayObject(options) ? options : {};
   var detectedMode = detectMode(manager);
@@ -1047,14 +1067,17 @@ function setupGame(manager, inputSeed, options) {
   var cfg = manager.normalizeModeConfig(resolvedModeConfig && resolvedModeConfig.key, resolvedModeConfig);
   cfg = resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed);
   applySetupModeConfig(manager, cfg);
-  if (!ensureSingleModePageLock(manager)) {
-    handleSingleModePageDuplicate(manager);
-    return;
-  }
+  if (!ensureSingleModePageLock(manager)) { handleSingleModePageDuplicate(manager); return; }
   manager.setRuntimeGrid(new Grid(manager.width, manager.height));
   manager.setRuntimeScore(0);
-  manager.over = false;
-  manager.won = false;
-  manager.keepPlaying = false;
+  manager.over = false; manager.won = false; manager.keepPlaying = false;
   runSetupStateInitialization(manager, inputSeed, setupOptions);
+}
+
+function setupGame(manager, inputSeed, options) {
+  var runtime = resolveCoreSetupGameRuntime(manager);
+  if (runtime && typeof runtime.setupGame === "function") {
+    return runtime.setupGame(manager, inputSeed, options, createSetupGameOperations());
+  }
+  return setupGameFallback(manager, inputSeed, options);
 }

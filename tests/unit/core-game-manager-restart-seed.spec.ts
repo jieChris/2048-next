@@ -9,6 +9,7 @@ import { createResetSetupReplayAndSpawnStateRuntime } from "../../src/core/reset
 import { createRestartGameRuntime } from "../../src/core/restart-game";
 import { createSessionReplaySnapshotRuntime } from "../../src/core/session-replay-snapshot";
 import { createSetupRestoreInitialBoardStateRuntime } from "../../src/core/setup-restore-initial-board-state";
+import { createSetupGameRuntime } from "../../src/core/setup-game";
 import { createSetupStateInitializationRuntime } from "../../src/core/setup-state-initialization";
 
 type RestartSeedRuntime = {
@@ -47,6 +48,11 @@ type RestartSeedRuntime = {
   resetSetupTimerAndInputState: (manager: Record<string, unknown>) => void;
   resolveRestartConfirmLanguage: (manager: Record<string, unknown> | null) => string;
   resolveSingleModePageTabId: (windowLike: Record<string, unknown> | null) => string;
+  setupGame: (
+    manager: Record<string, unknown> | null,
+    inputSeed?: unknown,
+    options?: unknown
+  ) => void;
 };
 
 function loadRestartSeedRuntime(options?: {
@@ -90,6 +96,14 @@ function loadRestartSeedRuntime(options?: {
       rankedSessionContext: unknown
     ) => unknown;
   };
+  setupGameRuntime?: {
+    setupGame?: (
+      manager: Record<string, unknown> | null,
+      inputSeed: unknown,
+      options: unknown,
+      operations: Record<string, unknown>
+    ) => void;
+  };
   resetSetupReplayAndSpawnStateRuntime?: {
     resetSetupReplayAndSpawnState?: (
       manager: Record<string, unknown> | null,
@@ -105,6 +119,10 @@ function loadRestartSeedRuntime(options?: {
     resolveRestartConfirmLanguage?: (manager: Record<string, unknown> | null) => string;
   };
   singleModePageLockRuntime?: {
+    ensureSingleModePageLock?: (
+      manager: Record<string, unknown> | null,
+      options: Record<string, unknown>
+    ) => boolean;
     resolveSingleModePageTabId?: (
       windowLike: Record<string, unknown> | null,
       options: Record<string, unknown>
@@ -141,6 +159,7 @@ function loadRestartSeedRuntime(options?: {
     options?.setupRestoreInitialBoardStateRuntime || createSetupRestoreInitialBoardStateRuntime();
   context.CoreSetupStateInitializationRuntime =
     options?.setupStateInitializationRuntime || createSetupStateInitializationRuntime();
+  context.CoreSetupGameRuntime = options?.setupGameRuntime || createSetupGameRuntime();
   context.CoreResetSetupReplayAndSpawnStateRuntime =
     options?.resetSetupReplayAndSpawnStateRuntime || createResetSetupReplayAndSpawnStateRuntime();
   context.CoreRestartGameRuntime = options?.restartGameRuntime || createRestartGameRuntime();
@@ -159,6 +178,45 @@ function loadRestartSeedRuntime(options?: {
 }
 
 describe("core game manager restart seed runtime", () => {
+  it("delegates setup game orchestration to the TypeScript runtime", () => {
+    const setupGame = vi.fn();
+    const { runtime } = loadRestartSeedRuntime({
+      setupGameRuntime: {
+        setupGame
+      },
+      singleModePageLockRuntime: {
+        ensureSingleModePageLock: vi.fn(() => false)
+      }
+    });
+    const manager = {
+      width: 4,
+      height: 4,
+      normalizeModeConfig: vi.fn(() => ({ key: "practice" })),
+      setRuntimeGrid: vi.fn(),
+      setRuntimeScore: vi.fn()
+    };
+    const options = { restore: true };
+
+    runtime.setupGame(manager, 123, options);
+
+    expect(setupGame).toHaveBeenCalledWith(
+      manager,
+      123,
+      options,
+      expect.objectContaining({
+        applySetupModeConfig: expect.any(Function),
+        createGrid: expect.any(Function),
+        detectMode: expect.any(Function),
+        ensureSingleModePageLock: expect.any(Function),
+        handleSingleModePageDuplicate: expect.any(Function),
+        isNonArrayObject: expect.any(Function),
+        resolveSetupModeConfig: expect.any(Function),
+        resolveSetupNoXModeConfig: expect.any(Function),
+        runSetupStateInitialization: expect.any(Function)
+      })
+    );
+  });
+
   it("delegates single-mode tab id resolution to the core runtime", () => {
     const resolveSingleModePageTabId = vi.fn(() => "tab-from-runtime");
     const windowLike = {};
