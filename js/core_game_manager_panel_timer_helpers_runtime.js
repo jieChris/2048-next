@@ -219,9 +219,14 @@ function shouldUpdateStatsPanelAtTimerTick(manager, overlay, time) {
   return true;
 }
 
-function executeTimerTick(manager) {
+function resolveCoreGameManagerTimerTickRuntime() {
+  if (typeof CoreGameManagerTimerTickRuntime !== "undefined" && CoreGameManagerTimerTickRuntime) return CoreGameManagerTimerTickRuntime;
+  if (typeof window !== "undefined" && window && window.CoreGameManagerTimerTickRuntime) return window.CoreGameManagerTimerTickRuntime;
+  return null;
+}
+
+function executeTimerTickFallback(manager, nowMs) {
   if (!(manager.startTime && typeof manager.startTime.getTime === "function")) return;
-  var nowMs = Date.now();
   if (typeof checkAndHandleMoveTimeout === "function" && checkAndHandleMoveTimeout(manager, nowMs)) {
     return;
   }
@@ -237,6 +242,20 @@ function executeTimerTick(manager) {
   if (!shouldUpdateStatsPanelAtTimerTick(manager, overlay, time)) return;
   manager.updateStatsPanel();
   manager.lastStatsPanelUpdateAt = time;
+}
+
+function executeTimerTick(manager) {
+  var nowMs = Date.now();
+  var runtime = resolveCoreGameManagerTimerTickRuntime();
+  if (runtime && typeof runtime.executeTimerTick === "function") {
+    return runtime.executeTimerTick(manager, {
+      checkAndHandleMoveTimeout: typeof checkAndHandleMoveTimeout === "function" ? checkAndHandleMoveTimeout : undefined,
+      resolveTimerElapsedMs: resolveTimerElapsedMs, resolveManagerElementById: resolveManagerElementById,
+      updateMoveTimeoutHud: typeof updateMoveTimeoutHud === "function" ? updateMoveTimeoutHud : undefined,
+      refreshIpsDisplay: refreshIpsDisplay, shouldUpdateStatsPanelAtTimerTick: shouldUpdateStatsPanelAtTimerTick
+    }, nowMs);
+  }
+  return executeTimerTickFallback(manager, nowMs);
 }
 
 function normalizeTimerAnchorMs(rawValue) {

@@ -43,6 +43,7 @@ function loadPanelTimerRuntime(extraContext: Record<string, unknown> = {}) {
 
   vm.runInNewContext(script, context);
   return context as typeof context & {
+    executeTimerTick: (manager: Record<string, unknown>) => void;
     startTimer: (manager: Record<string, unknown>) => void;
     stopTimer: (manager: Record<string, unknown>) => void;
     getDurationMs: (manager: Record<string, unknown>) => number;
@@ -86,6 +87,37 @@ function createManager(overrides: Record<string, unknown> = {}) {
 describe("core game manager panel timer runtime", () => {
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("delegates timer ticks to the TypeScript runtime", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(50_000);
+    const executeTimerTick = vi.fn();
+    const runtime = loadPanelTimerRuntime({
+      CoreGameManagerTimerTickRuntime: {
+        executeTimerTick
+      },
+      checkAndHandleMoveTimeout: vi.fn(() => false),
+      updateMoveTimeoutHud: vi.fn()
+    });
+    const manager = createManager({
+      startTime: new Date(40_000)
+    });
+
+    runtime.executeTimerTick(manager);
+
+    expect(executeTimerTick).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        checkAndHandleMoveTimeout: expect.any(Function),
+        refreshIpsDisplay: expect.any(Function),
+        resolveManagerElementById: expect.any(Function),
+        resolveTimerElapsedMs: expect.any(Function),
+        shouldUpdateStatsPanelAtTimerTick: expect.any(Function),
+        updateMoveTimeoutHud: expect.any(Function)
+      }),
+      50_000
+    );
   });
 
   it("starts a ranked timer from the first valid move and keeps counting while the page is closed", () => {
