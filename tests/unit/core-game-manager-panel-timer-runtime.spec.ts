@@ -4,6 +4,8 @@ import vm from "node:vm";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createGameManagerTimerStartRuntime } from "../../src/core/game-manager-timer-start";
+
 function loadPanelTimerRuntime(extraContext: Record<string, unknown> = {}) {
   const scriptPath = path.resolve(process.cwd(), "js/core_game_manager_panel_timer_helpers_runtime.js");
   const script = readFileSync(scriptPath, "utf8");
@@ -16,6 +18,7 @@ function loadPanelTimerRuntime(extraContext: Record<string, unknown> = {}) {
       hidden: false,
       addEventListener: vi.fn()
     },
+    CoreGameManagerTimerStartRuntime: createGameManagerTimerStartRuntime(),
     resolveManagerElementById: vi.fn(() => null),
     refreshIpsDisplay: vi.fn(),
     resolveCorePayloadCallWith(
@@ -117,6 +120,34 @@ describe("core game manager panel timer runtime", () => {
         updateMoveTimeoutHud: expect.any(Function)
       }),
       50_000
+    );
+  });
+
+  it("delegates timer starts to the TypeScript runtime", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(75_000);
+    const startTimer = vi.fn();
+    const updateMoveTimeoutHud = vi.fn();
+    const runtime = loadPanelTimerRuntime({
+      CoreGameManagerTimerStartRuntime: {
+        startTimer
+      },
+      updateMoveTimeoutHud
+    });
+    const manager = createManager();
+
+    runtime.startTimer(manager);
+
+    expect(startTimer).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        bindTimerVisibilityChangeListener: expect.any(Function),
+        ensureTimerAnchors: expect.any(Function),
+        resolveTimerElapsedMs: expect.any(Function),
+        restartTimerIntervalWithCurrentSettings: expect.any(Function),
+        updateMoveTimeoutHud
+      }),
+      75_000
     );
   });
 
