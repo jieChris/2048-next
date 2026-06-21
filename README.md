@@ -58,21 +58,21 @@ npm run dev
 
 ### 3.1 本地联调 API（登录/账号/排行榜可直接测）
 
-前端仓已内置 `/api` 代理，默认转发到本地 `2048-ranked` 后端：`http://127.0.0.1:3000`。  
+前端仓已内置 `/api` 代理，默认转发到本地 `2048-game-api` 后端：`http://127.0.0.1:3000`。  
 可直接一键启动（推荐）：
 
 ```bash
 npm run dev:local
 ```
 
-默认要求 `2048-ranked` 仓库与当前前端仓库在同一父目录，且后端 `.env` 已配置 Supabase/Postgres 连接。
+默认要求 `2048-game-api/2048-game-api` 仓库与当前前端仓库在同一父目录，且后端 `.env` 已配置 Postgres、token secret、Resend 邮件等运行配置。
 
 手动两端启动方式：
 
-1. 在 `2048-ranked` 仓启动后端：
+1. 在 `2048-game-api/2048-game-api` 仓启动后端：
 
 ```bash
-npm run dev -- --port 3000
+HTTP_PORT=3000 npm run dev:server
 ```
 
 2. 在当前前端仓启动：
@@ -103,7 +103,7 @@ npm run dev
 
 ```bash
 # Windows PowerShell
-$env:LOCAL_API_DIR="G:\\2048\\2048-ranked"
+$env:LOCAL_API_DIR="G:\\2048\\2048-game-api\\2048-game-api"
 npm run dev:local
 ```
 

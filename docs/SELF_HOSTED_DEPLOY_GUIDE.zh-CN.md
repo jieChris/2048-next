@@ -146,9 +146,9 @@ sudo nginx -t && sudo systemctl reload nginx
 
 只要构建发生在 GitHub Actions，而服务器只负责接收 `dist` 文件并提供静态访问，就不需要在服务器安装 Node.js 或 npm。
 
-## 9. 游戏数据后端迁移说明
+## 9. 后端路由说明
 
-本文档只覆盖静态站点 `dist/` 发布。游戏数据后端统一使用 `2048-ranked` + Supabase/Postgres；旧 D1/COS 不再作为迁移或运行路径。若配置 `/api/*` 反代、备份恢复或新后端发布，请使用：
+本文档只覆盖静态站点 `dist/` 发布。账号、游戏数据、排行榜和管理数据后端统一使用 `2048-game-api` + PostgreSQL；`2048-next` 生产 Nginx 应把 `/api/*` 反代到 `2048-game-api`，而不是指向 `2048-ranked` 或旧 Worker/D1。若配置 `/api/*` 反代、备份恢复或后端发布，请使用：
 
 - `docs/SRE_GAME_DATA_OPERATIONS_RUNBOOK.zh-CN.md`
 - `deploy/caddy/2048-next.Caddyfile.example`

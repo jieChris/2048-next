@@ -7,7 +7,7 @@ const argv = process.argv.slice(2);
 if (argv.includes("--help") || argv.includes("-h")) {
   console.log("Usage: npm run dev:local");
   console.log("Env:");
-  console.log("  LOCAL_API_DIR   2048-ranked repo directory");
+  console.log("  LOCAL_API_DIR   2048-game-api repo directory");
   console.log("  LOCAL_API_PORT  API port (default: 3000)");
   console.log("  LOCAL_WEB_PORT  Web port (default: 5173)");
   console.log("  VITE_API_PROXY_TARGET  explicit proxy target for web");
@@ -17,7 +17,7 @@ if (argv.includes("--help") || argv.includes("-h")) {
 const rootDir = process.cwd();
 const apiDir =
   (process.env.LOCAL_API_DIR || "").trim() ||
-  path.resolve(rootDir, "..", "2048-ranked");
+  path.resolve(rootDir, "..", "2048-game-api", "2048-game-api");
 
 const parsedApiPort = Number.parseInt(process.env.LOCAL_API_PORT || "3000", 10);
 const apiPort = Number.isFinite(parsedApiPort) && parsedApiPort > 0 ? parsedApiPort : 3000;
@@ -27,7 +27,7 @@ const webPort = Number.isFinite(parsedWebPort) && parsedWebPort > 0 ? parsedWebP
 
 if (!existsSync(apiDir)) {
   console.error(`[dev:local] API repo not found: ${apiDir}`);
-  console.error("[dev:local] Set LOCAL_API_DIR to your 2048-ranked directory and retry.");
+  console.error("[dev:local] Set LOCAL_API_DIR to your 2048-game-api directory and retry.");
   process.exit(1);
 }
 
@@ -86,7 +86,10 @@ console.log(`[dev:local] API dir: ${apiDir}`);
 console.log(`[dev:local] API base: ${apiBase}`);
 console.log(`[dev:local] Web port: ${webPort}`);
 
-spawnManaged("api", npmCmd, ["run", "dev", "--", "--port", String(apiPort)], apiDir);
+spawnManaged("api", npmCmd, ["run", "dev:server"], apiDir, {
+  HTTP_PORT: String(apiPort),
+  PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL || apiBase
+});
 spawnManaged(
   "web",
   npmCmd,
