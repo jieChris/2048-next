@@ -105,6 +105,7 @@ import { installSavedStatePersistTimestampsRuntime } from "../core/saved-state-p
 import { installSavedStateSyncPublishRuntime } from "../core/saved-state-sync-publish";
 import { installSavedStateSyncPayloadRuntime } from "../core/saved-state-sync-payload";
 import { installSessionReplaySnapshotRuntime } from "../core/session-replay-snapshot";
+import { installSetupGameRuntime } from "../core/setup-game";
 import { installSetupRestoreInitialBoardStateRuntime } from "../core/setup-restore-initial-board-state";
 import { installSetupStateInitializationRuntime } from "../core/setup-state-initialization";
 import { installSetupTimerRowNormalizeRuntime } from "../core/setup-timer-row-normalize";
@@ -326,6 +327,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installSavedStateSyncPublishRuntime();
   installSavedStateSyncPayloadRuntime();
   installSessionReplaySnapshotRuntime();
+  installSetupGameRuntime();
   installSetupRestoreInitialBoardStateRuntime();
   installSetupStateInitializationRuntime();
   installSetupTimerRowNormalizeRuntime();
