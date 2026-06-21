@@ -4,6 +4,7 @@ import vm from "node:vm";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { createCappedRepeatLegendRuntime } from "../../src/core/capped-repeat-legend";
 import { createSavedManagerReplayStateRuntime } from "../../src/core/saved-manager-replay-state";
 import { createSavedManagerTimerStateRuntime } from "../../src/core/saved-manager-timer-state";
 import { createSavedPayloadRichnessRuntime } from "../../src/core/saved-payload-richness";
@@ -13,7 +14,7 @@ function createElement(options?: {
   visibility?: string;
   pointerEvents?: string;
   attributes?: Record<string, string>;
-  legend?: { text?: string; className?: string; fontSize?: string } | null;
+  legend?: { text?: string; className?: string; color?: string; fontSize?: string } | null;
 }) {
   const attrs = new Map<string, string>(Object.entries(options?.attributes || {}));
   const legendOptions = options?.legend || null;
@@ -22,6 +23,7 @@ function createElement(options?: {
         textContent: legendOptions.text || "",
         className: legendOptions.className || "timertile",
         style: {
+          color: legendOptions.color || "",
           fontSize: legendOptions.fontSize || ""
         }
       }
@@ -80,6 +82,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     resolveManagerDocumentLike() {
       return null;
     },
+    CoreCappedRepeatLegendRuntime: createCappedRepeatLegendRuntime(),
     CoreSavedManagerReplayStateRuntime: createSavedManagerReplayStateRuntime(),
     CoreSavedManagerTimerStateRuntime: createSavedManagerTimerStateRuntime(),
     CoreSavedPayloadRichnessRuntime: createSavedPayloadRichnessRuntime(),
@@ -99,6 +102,10 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     buildSavedGameStateDiagnosticsPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStateTimerCorePayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     applySavedManagerTimerState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
+    normalizeCappedRepeatLegendClasses: (
+      manager: Record<string, unknown>,
+      cappedState: Record<string, unknown>
+    ) => void;
     buildSavedGameStateProgressPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     buildSavedGameStatePayload: (manager: Record<string, unknown>, now: number) => Record<string, unknown> | null;
     resolveReplayStringForSavedPayload: (
@@ -354,6 +361,35 @@ describe("core game manager saved state runtime", () => {
     runtime.applySavedManagerTimerState(manager, saved);
 
     expect(applySavedManagerTimerState).toHaveBeenCalledWith(manager, saved);
+  });
+
+  it("delegates capped repeat legend normalization to the TypeScript runtime", () => {
+    const normalizeCappedRepeatLegendClasses = vi.fn();
+    const documentLike = { id: "document-like" };
+    const resolveManagerDocumentLike = vi.fn(() => documentLike);
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreCappedRepeatLegendRuntime: {
+        normalizeCappedRepeatLegendClasses
+      },
+      resolveManagerDocumentLike
+    });
+    const manager = { id: "manager" };
+    const cappedState = { isCappedMode: true };
+
+    runtime.normalizeCappedRepeatLegendClasses(manager, cappedState);
+
+    expect(normalizeCappedRepeatLegendClasses).toHaveBeenCalledWith(
+      manager,
+      cappedState,
+      expect.objectContaining({
+        resolveManagerDocumentLike: expect.any(Function)
+      })
+    );
+    const operations = normalizeCappedRepeatLegendClasses.mock.calls[0]?.[2] as {
+      resolveManagerDocumentLike: (manager: Record<string, unknown>) => unknown;
+    };
+    expect(operations.resolveManagerDocumentLike(manager)).toBe(documentLike);
+    expect(resolveManagerDocumentLike).toHaveBeenCalledWith(manager);
   });
 
   it("delegates legacy secondary timer sub-state derivation to the TypeScript runtime", () => {

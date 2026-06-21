@@ -158,6 +158,7 @@ function resolveCoreSavedPayloadReplayStringRuntime() {
     ? CoreSavedPayloadReplayStringRuntime
     : (typeof window !== "undefined" && window ? window.CoreSavedPayloadReplayStringRuntime : null);
 }
+function resolveCoreCappedRepeatLegendRuntime() { return typeof CoreCappedRepeatLegendRuntime !== "undefined" && CoreCappedRepeatLegendRuntime ? CoreCappedRepeatLegendRuntime : (typeof window !== "undefined" && window ? window.CoreCappedRepeatLegendRuntime : null); }
 function resolveSavedPayloadRichnessScoreFallback(payload) {
   if (!normalizeSavedStateRecordObject(payload, null)) return -1;
   var score = 0;
@@ -568,26 +569,27 @@ function createSavedDynamicTimerRow(manager, rowState, cappedState) {
   if (!appendSavedDynamicTimerRowChildren(documentLike, rowDiv, legend, val)) return null;
   return rowDiv;
 }
-function normalizeCappedRepeatLegendClasses(manager, cappedState) {
+function updateCappedRepeatLegendRow(row, legendClass, fontSize) {
+  if (!row || !row.querySelector) return;
+  var legend = row.querySelector(".timertile");
+  if (!legend) return;
+  legend.className = legendClass; legend.style.color = "#f9f6f2"; legend.style.fontSize = fontSize;
+}
+function normalizeCappedRepeatLegendClassesFallback(manager, cappedState) {
   if (!manager) return;
   var documentLike = resolveManagerDocumentLike(manager), resolvedCappedState = manager.resolveProvidedCappedModeState(cappedState);
-  if (!documentLike || typeof documentLike.querySelectorAll !== "function") return;
-  if (!resolvedCappedState.isCappedMode) return;
-  var rows = documentLike.querySelectorAll("#timerbox [data-capped-repeat]");
-  var targetValue = resolvedCappedState.cappedTargetValue;
-  var legendClass = manager.getCappedTimerLegendClass(targetValue);
+  if (!documentLike || typeof documentLike.querySelectorAll !== "function" || !resolvedCappedState.isCappedMode) return;
+  var targetValue = resolvedCappedState.cappedTargetValue, rows = documentLike.querySelectorAll("#timerbox [data-capped-repeat]"), legendClass = manager.getCappedTimerLegendClass(targetValue);
   var fontSize = typeof manager.getCappedTimerLegendFontSize === "function"
     ? manager.getCappedTimerLegendFontSize(targetValue)
     : manager.getCappedTimerFontSize(targetValue);
-  for (var i = 0; i < rows.length; i++) {
-    var row = rows[i];
-    if (!row || !row.querySelector) continue;
-    var legend = row.querySelector(".timertile");
-    if (!legend) continue;
-    legend.className = legendClass;
-    legend.style.color = "#f9f6f2"; legend.style.fontSize = fontSize;
-  }
+  for (var i = 0; i < rows.length; i++) updateCappedRepeatLegendRow(rows[i], legendClass, fontSize);
   manager.callWindowNamespaceMethod("ThemeManager", "syncTimerLegendStyles");
+}
+function normalizeCappedRepeatLegendClasses(manager, cappedState) {
+  var runtime = resolveCoreCappedRepeatLegendRuntime();
+  if (runtime && typeof runtime.normalizeCappedRepeatLegendClasses === "function") return runtime.normalizeCappedRepeatLegendClasses(manager, cappedState, { resolveManagerDocumentLike: resolveManagerDocumentLike });
+  return normalizeCappedRepeatLegendClassesFallback(manager, cappedState);
 }
 function applySavedTimerFixedRowsState(manager, saved, cappedStateForRestore) {
   if (!manager || !saved) return;
