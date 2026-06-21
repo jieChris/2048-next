@@ -382,9 +382,14 @@ function resolveTimerElapsedMs(manager, nowMs) {
   return resolveTimerElapsedMsFallback(manager, nowMs);
 }
 
-function startTimer(manager) {
+function resolveCoreGameManagerTimerStartRuntime() {
+  if (typeof CoreGameManagerTimerStartRuntime !== "undefined" && CoreGameManagerTimerStartRuntime) return CoreGameManagerTimerStartRuntime;
+  if (typeof window !== "undefined" && window && window.CoreGameManagerTimerStartRuntime) return window.CoreGameManagerTimerStartRuntime;
+  return null;
+}
+
+function startTimerFallback(manager, nowMs) {
   if (!manager || manager.timerStatus !== 0) return;
-  var nowMs = Date.now();
   ensureTimerAnchors(manager, nowMs);
   var durationMs = resolveTimerElapsedMs(manager, nowMs);
   manager.timerStatus = 1;
@@ -397,9 +402,21 @@ function startTimer(manager) {
   manager.lastStatsPanelUpdateAt = 0;
   bindTimerVisibilityChangeListener(manager);
   restartTimerIntervalWithCurrentSettings(manager);
-  if (typeof updateMoveTimeoutHud === "function") {
-    updateMoveTimeoutHud(manager, nowMs);
+  if (typeof updateMoveTimeoutHud === "function") updateMoveTimeoutHud(manager, nowMs);
+}
+
+function startTimer(manager) {
+  var nowMs = Date.now(), runtime = resolveCoreGameManagerTimerStartRuntime();
+  if (runtime && typeof runtime.startTimer === "function") {
+    return runtime.startTimer(manager, {
+      bindTimerVisibilityChangeListener: bindTimerVisibilityChangeListener,
+      ensureTimerAnchors: ensureTimerAnchors,
+      resolveTimerElapsedMs: resolveTimerElapsedMs,
+      restartTimerIntervalWithCurrentSettings: restartTimerIntervalWithCurrentSettings,
+      updateMoveTimeoutHud: typeof updateMoveTimeoutHud === "function" ? updateMoveTimeoutHud : undefined
+    }, nowMs);
   }
+  return startTimerFallback(manager, nowMs);
 }
 
 function stopTimer(manager) {

@@ -82,6 +82,7 @@ import { installGameManagerRuntimeStateRuntime } from "../core/game-manager-runt
 import { installGameManagerSavedStatePersistenceBindingRuntime } from "../core/game-manager-saved-state-persistence-binding";
 import { installGameManagerTimerElapsedRuntime } from "../core/game-manager-timer-elapsed";
 import { installGameManagerTimerTickRuntime } from "../core/game-manager-timer-tick";
+import { installGameManagerTimerStartRuntime } from "../core/game-manager-timer-start";
 import { installGameManagerTimerRowVisibleStateRuntime } from "../core/game-manager-timer-row-visible-state";
 import { installGameManagerUndoMoveHandlerRuntime } from "../core/game-manager-undo-move-handler";
 import { installGameManagerUndoRestoredTilesRuntime } from "../core/game-manager-undo-restored-tiles";
@@ -302,6 +303,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installGameManagerSavedStatePersistenceBindingRuntime();
   installGameManagerTimerElapsedRuntime();
   installGameManagerTimerTickRuntime();
+  installGameManagerTimerStartRuntime();
   installGameManagerTimerRowVisibleStateRuntime();
   installGameManagerUndoMoveHandlerRuntime();
   installGameManagerUndoRestoredTilesRuntime();
