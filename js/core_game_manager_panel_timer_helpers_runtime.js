@@ -1332,11 +1332,28 @@ function shouldSkipSavedStateSyncPublishByThrottle(manager, now) {
   return (now - manager.lastSavedStateSyncPublishedAt) < resolveSavedStateSyncThrottleMs(manager);
 }
 
-function publishSavedStateSyncSnapshot(manager) {
+function resolveCoreSavedStateSyncPublishRuntime() {
+  if (typeof CoreSavedStateSyncPublishRuntime !== "undefined" && CoreSavedStateSyncPublishRuntime) return CoreSavedStateSyncPublishRuntime;
+  if (typeof window !== "undefined" && window && window.CoreSavedStateSyncPublishRuntime) return window.CoreSavedStateSyncPublishRuntime;
+  return null;
+}
+
+function createSavedStateSyncPublishOperations() {
+  return {
+    buildSavedStateSyncEventPayload: function (manager, now) { return buildSavedStateSyncEventPayload(manager, now); },
+    canWriteToStorage: function (storage) { return typeof canWriteToStorage === "function" && canWriteToStorage(storage); },
+    rememberSavedStateKnownSavedAt: function (manager, savedAt) { return rememberSavedStateKnownSavedAt(manager, savedAt); },
+    resolveSavedGameStateSyncStorageKey: function (manager) { return resolveSavedGameStateSyncStorageKey(manager); },
+    shouldSkipSavedStateSyncPublishByThrottle: shouldSkipSavedStateSyncPublishByThrottle,
+    shouldUseSavedGameState: function (manager) { return typeof shouldUseSavedGameState === "function" && shouldUseSavedGameState(manager); },
+    writeStorageJsonPayload: function (storage, key, payload) { return writeStorageJsonPayloadFallback(storage, key, payload); }
+  };
+}
+
+function publishSavedStateSyncSnapshotFallback(manager, now) {
   if (!manager) return false;
   if (!shouldUseSavedGameState(manager)) return false;
   if (manager.replayMode) return false;
-  var now = Date.now();
   if (shouldSkipSavedStateSyncPublishByThrottle(manager, now)) return false;
   var storage = manager.getWebStorageByName("localStorage");
   if (!canWriteToStorage(storage)) return false;
@@ -1350,6 +1367,14 @@ function publishSavedStateSyncSnapshot(manager) {
     rememberSavedStateKnownSavedAt(manager, eventPayload.saved_at);
   }
   return written;
+}
+
+function publishSavedStateSyncSnapshot(manager) {
+  var now = Date.now(), runtime = resolveCoreSavedStateSyncPublishRuntime();
+  if (runtime && typeof runtime.publishSavedStateSyncSnapshot === "function") {
+    return runtime.publishSavedStateSyncSnapshot(manager, createSavedStateSyncPublishOperations(), now);
+  }
+  return publishSavedStateSyncSnapshotFallback(manager, now);
 }
 
 function handleSavedStateSyncStorageEvent(manager, storageEvent) {

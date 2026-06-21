@@ -5,6 +5,7 @@ import vm from "node:vm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createGameManagerTimerStartRuntime } from "../../src/core/game-manager-timer-start";
+import { createSavedStateSyncPublishRuntime } from "../../src/core/saved-state-sync-publish";
 
 function loadPanelTimerRuntime(extraContext: Record<string, unknown> = {}) {
   const scriptPath = path.resolve(process.cwd(), "js/core_game_manager_panel_timer_helpers_runtime.js");
@@ -19,6 +20,7 @@ function loadPanelTimerRuntime(extraContext: Record<string, unknown> = {}) {
       addEventListener: vi.fn()
     },
     CoreGameManagerTimerStartRuntime: createGameManagerTimerStartRuntime(),
+    CoreSavedStateSyncPublishRuntime: createSavedStateSyncPublishRuntime(),
     resolveManagerElementById: vi.fn(() => null),
     refreshIpsDisplay: vi.fn(),
     resolveCorePayloadCallWith(
@@ -57,6 +59,7 @@ function loadPanelTimerRuntime(extraContext: Record<string, unknown> = {}) {
       visible: boolean,
       keepSpace: boolean
     ) => void;
+    publishSavedStateSyncSnapshot: (manager: Record<string, unknown>) => boolean;
     buildSavedStateSyncTrimPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     parseSavedStateSyncEventPayload: (manager: Record<string, unknown>, raw: string) => Record<string, unknown> | null;
   };
@@ -341,5 +344,32 @@ describe("core game manager panel timer runtime", () => {
 
     expect(runtime.parseSavedStateSyncEventPayload(manager, "{\"state\":{}}")).toBe(parsed);
     expect(parseSavedStateSyncEventPayload).toHaveBeenCalledWith("{\"state\":{}}");
+  });
+
+  it("delegates saved-state sync snapshot publishing to the core runtime", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(88_000);
+    const publishSavedStateSyncSnapshot = vi.fn(() => true);
+    const runtime = loadPanelTimerRuntime({
+      CoreSavedStateSyncPublishRuntime: {
+        publishSavedStateSyncSnapshot
+      }
+    });
+    const manager = createManager({ replayMode: true });
+
+    expect(runtime.publishSavedStateSyncSnapshot(manager)).toBe(true);
+    expect(publishSavedStateSyncSnapshot).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        buildSavedStateSyncEventPayload: expect.any(Function),
+        canWriteToStorage: expect.any(Function),
+        rememberSavedStateKnownSavedAt: expect.any(Function),
+        resolveSavedGameStateSyncStorageKey: expect.any(Function),
+        shouldSkipSavedStateSyncPublishByThrottle: expect.any(Function),
+        shouldUseSavedGameState: expect.any(Function),
+        writeStorageJsonPayload: expect.any(Function)
+      }),
+      88_000
+    );
   });
 });

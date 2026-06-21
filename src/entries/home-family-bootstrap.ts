@@ -102,6 +102,7 @@ import { installSavedPayloadPersistFallbackRuntime } from "../core/saved-payload
 import { installSavedPayloadReplayStringRuntime } from "../core/saved-payload-replay-string";
 import { installSavedPayloadRichnessRuntime } from "../core/saved-payload-richness";
 import { installSavedStatePersistTimestampsRuntime } from "../core/saved-state-persist-timestamps";
+import { installSavedStateSyncPublishRuntime } from "../core/saved-state-sync-publish";
 import { installSavedStateSyncPayloadRuntime } from "../core/saved-state-sync-payload";
 import { installSessionReplaySnapshotRuntime } from "../core/session-replay-snapshot";
 import { installSetupRestoreInitialBoardStateRuntime } from "../core/setup-restore-initial-board-state";
@@ -322,6 +323,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installSavedPayloadReplayStringRuntime();
   installSavedPayloadRichnessRuntime();
   installSavedStatePersistTimestampsRuntime();
+  installSavedStateSyncPublishRuntime();
   installSavedStateSyncPayloadRuntime();
   installSessionReplaySnapshotRuntime();
   installSetupRestoreInitialBoardStateRuntime();
