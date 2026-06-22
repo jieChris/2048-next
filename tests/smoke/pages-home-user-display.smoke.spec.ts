@@ -68,6 +68,68 @@ test.describe("Home user display", () => {
     expect(Number(alignment.labelWidth)).toBeLessThan(Number(alignment.headingWidth) / 2);
   });
 
+  test("shows the account badge on regular direct pages", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_userId_v1", "19");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
+    });
+
+    const response = await page.goto("/modes.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Modes response should exist").not.toBeNull();
+    expect(response?.ok(), "Modes response should be 2xx").toBeTruthy();
+
+    const badge = page.locator("#home-user-display");
+    await expect(badge).toHaveText("Jay");
+    await expect(badge).toHaveClass(/home-user-display--global/);
+    await expect(badge).toHaveAttribute("href", /user\.html\?id=19&nickname=Jay$/);
+  });
+
+  test("aligns the account badge with the game header on play pages", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_userId_v1", "19");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
+    });
+
+    const response = await page.goto("/play.html?mode_key=board_3x3_pow2_no_undo", { waitUntil: "domcontentloaded" });
+    expect(response, "Play response should exist").not.toBeNull();
+    expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
+
+    const badge = page.locator("#home-user-display");
+    await expect(badge).toHaveText("Jay");
+    await expect(badge).not.toHaveClass(/home-user-display--global/);
+
+    const layout = await page.evaluate(() => {
+      const label = document.getElementById("home-user-display");
+      const logo = document.querySelector(".site-logo");
+      const labelRect = label?.getBoundingClientRect();
+      const logoRect = logo?.getBoundingClientRect();
+      return {
+        labelLeft: labelRect?.left ?? null,
+        logoLeft: logoRect?.left ?? null,
+        labelTop: labelRect?.top ?? null,
+        logoTop: logoRect?.top ?? null
+      };
+    });
+
+    expect(layout.labelLeft).not.toBeNull();
+    expect(layout.logoLeft).not.toBeNull();
+    expect(Math.abs((Number(layout.labelLeft) - 25) - Number(layout.logoLeft))).toBeLessThanOrEqual(1);
+    expect(Number(layout.labelTop)).toBeLessThan(Number(layout.logoTop));
+  });
+
+  test("does not show the account badge on practice pages", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_userId_v1", "19");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
+    });
+
+    const response = await page.goto("/Practice_board.html?practice_fresh=1", { waitUntil: "domcontentloaded" });
+    expect(response, "Practice response should exist").not.toBeNull();
+    expect(response?.ok(), "Practice response should be 2xx").toBeTruthy();
+
+    await expect(page.locator("#home-user-display")).toHaveCount(0);
+  });
+
   test("keeps long score values fully visible", async ({ page }) => {
     const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
     expect(response, "Index response should exist").not.toBeNull();

@@ -27,4 +27,19 @@ describe("home user display style", () => {
     expect(html).toContain("style/main.css?v=20260608-toolkit-align");
     expect(html).not.toContain("style/main.css?v=20260607-userdisplay");
   });
+
+  it("defines a fixed global variant without changing the home label base rule", () => {
+    const css = readFileSync("style/main.css", "utf8");
+    const scss = readFileSync("style/main.scss", "utf8");
+
+    for (const source of [css, scss]) {
+      const baseRule = extractRule(source, ".home-user-display");
+      const globalRule = extractRule(source, ".home-user-display--global");
+      expect(baseRule).toContain("position: absolute;");
+      expect(globalRule).toContain("position: fixed;");
+      expect(globalRule).toContain("top: 22px;");
+      expect(globalRule).toContain("left: 24px;");
+      expect(globalRule).toContain("text-overflow: ellipsis;");
+    }
+  });
 });

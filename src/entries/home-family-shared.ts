@@ -7,6 +7,7 @@ import {
 import announcementRecordsUrl from "../../js/announcement_records.js?url";
 import coreAnnouncementRuntimeUrl from "../../js/core_announcement_runtime.js?url";
 import announcementManagerUrl from "../../js/announcement_manager.js?url";
+import gameDialogRuntimeUrl from "../../js/game_dialog_runtime.js?url";
 import seedrandomUrl from "../../js/seedrandom.js?url";
 import animframePolyfillUrl from "../../js/animframe_polyfill.js?url";
 import keyboardInputManagerUrl from "../../js/keyboard_input_manager.js?url";
@@ -95,6 +96,7 @@ export const homeAnnouncementScripts = [
 ] as const;
 
 export const homeCoreScripts = [
+  gameDialogRuntimeUrl,
   seedrandomUrl,
   animframePolyfillUrl,
   coreBootstrapRuntimeUrl,

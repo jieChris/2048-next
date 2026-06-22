@@ -210,6 +210,64 @@ describe("ranked session runtime", () => {
     );
   });
 
+  it("clears auth and ranked session state when ranked session creation is unauthorized", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(ACTIVE_KEY, JSON.stringify(createSession()));
+    storage.setItem(PREFETCH_KEY, JSON.stringify(createSession({ challenge_id: "prefetch" })));
+    storage.setItem("2048_auth_nickname_v1", "Jay");
+    const fetchImpl = vi.fn(async () => {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized", code: "UNAUTHORIZED" }), {
+        status: 401,
+        headers: { "content-type": "application/json" }
+      });
+    });
+    const runtime = createRankedSessionRuntime(createWindowLike(storage, fetchImpl), "index");
+
+    await expect(runtime.startNextSession(MODE_KEY)).resolves.toBe(false);
+
+    expect(runtime.getLastFailureReason()).toBe("unauthorized");
+    expect(storage.getItem("2048_auth_token_v1")).toBeNull();
+    expect(storage.getItem("2048_auth_userId_v1")).toBeNull();
+    expect(storage.getItem("2048_auth_nickname_v1")).toBeNull();
+    expect(storage.getItem(ACTIVE_KEY)).toBeNull();
+    expect(storage.getItem(PREFETCH_KEY)).toBeNull();
+  });
+
+  it("does not reload the current page after runtime-cleared auth from unauthorized session creation", async () => {
+    const storage = new MemoryStorage();
+    const listeners: ListenerMap = {};
+    const reload = vi.fn();
+    const fetchImpl = vi.fn(async () => {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized", code: "UNAUTHORIZED" }), {
+        status: 401,
+        headers: { "content-type": "application/json" }
+      });
+    });
+    const windowLike = createWindowLike(storage, fetchImpl) as Window & {
+      addEventListener: (type: string, listener: (eventLike?: { key?: string }) => void) => void;
+      location: Location & { reload: () => void };
+    };
+    windowLike.location = {
+      search: "",
+      hostname: "2048next.cn",
+      origin: "https://2048next.cn",
+      reload
+    } as Location & { reload: () => void };
+    windowLike.addEventListener = vi.fn((type: string, listener: (eventLike?: { key?: string }) => void) => {
+      listeners[type] = listeners[type] || [];
+      listeners[type].push(listener);
+    });
+    const runtime = createRankedSessionRuntime(windowLike, "index");
+    bindRankedSessionAuthTransitionReload(windowLike, runtime, MODE_KEY);
+
+    await expect(runtime.startNextSession(MODE_KEY)).resolves.toBe(false);
+    listeners.focus?.forEach((listener) => listener());
+
+    expect(runtime.getLastFailureReason()).toBe("unauthorized");
+    expect(storage.getItem("2048_auth_token_v1")).toBeNull();
+    expect(reload).not.toHaveBeenCalled();
+  });
+
   it("drops stored ranked sessions that do not belong to the current user", async () => {
     const storage = new MemoryStorage();
     storage.setItem(

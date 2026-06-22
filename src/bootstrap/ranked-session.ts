@@ -3,6 +3,8 @@ import { resolveStorageByName, safeReadStorageItem, safeSetStorageItem } from ".
 
 const AUTH_TOKEN_STORAGE_KEY = "2048_auth_token_v1";
 const AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
+const AUTH_NICKNAME_STORAGE_KEY = "2048_auth_nickname_v1";
+const RANKED_SESSION_SUPPRESS_NEXT_AUTH_RELOAD_KEY = "__rankedSessionSuppressNextAuthReload";
 const ACTIVE_SESSION_STORAGE_KEY_PREFIX = "ranked_session_active:v1:";
 const PREFETCH_SESSION_STORAGE_KEY_PREFIX = "ranked_session_prefetch:v1:";
 const DEFAULT_REMOTE_API_BASE_URL = "https://2048next.cn/api";
@@ -49,6 +51,7 @@ export interface RankedSessionRuntime {
   promotePrefetchedSession: (modeLike?: string | null | undefined) => boolean;
   startNextSession: (modeLike?: string | null | undefined) => Promise<boolean>;
   ensurePrefetch: (modeLike?: string | null | undefined) => Promise<boolean>;
+  getLastFailureReason: () => string;
   clearActiveSession: (modeLike?: string | null | undefined) => void;
   clearModeSession: (modeLike?: string | null | undefined) => void;
   resolvePageModeKey: () => string | null;
@@ -153,6 +156,29 @@ function removeStorageKey(storageLike: Storage | null, key: string): void {
   try {
     storageLike.removeItem(key);
   } catch (_err) {}
+}
+
+function clearAuthSession(storageLike: Storage | null): void {
+  removeStorageKey(storageLike, AUTH_TOKEN_STORAGE_KEY);
+  removeStorageKey(storageLike, AUTH_USER_ID_STORAGE_KEY);
+  removeStorageKey(storageLike, AUTH_NICKNAME_STORAGE_KEY);
+}
+
+function markInternalAuthTransition(windowLike: RankedSessionWindowLike): void {
+  try {
+    (windowLike as unknown as Record<string, unknown>)[RANKED_SESSION_SUPPRESS_NEXT_AUTH_RELOAD_KEY] = true;
+  } catch (_err) {}
+}
+
+function consumeInternalAuthTransition(windowLike: RankedSessionWindowLike): boolean {
+  try {
+    const target = windowLike as unknown as Record<string, unknown>;
+    if (target[RANKED_SESSION_SUPPRESS_NEXT_AUTH_RELOAD_KEY] !== true) return false;
+    target[RANKED_SESSION_SUPPRESS_NEXT_AUTH_RELOAD_KEY] = false;
+    return true;
+  } catch (_err) {
+    return false;
+  }
 }
 
 function readAuthToken(windowLike: RankedSessionWindowLike): string {
@@ -302,6 +328,7 @@ export function createRankedSessionRuntime(
   const pageModeResolver = () => resolveRankedModeKeyForPage(windowLike, pageId);
   const sessionRequestCache = new Map<string, Promise<RankedSessionRecord | null>>();
   const ownerUserIdResolver = () => readAuthUserId(windowLike);
+  let lastFailureReason = "";
 
   const resolveModeKey = (modeLike?: string | null | undefined): string | null => {
     const explicitModeKey = String(modeLike || "").trim();
@@ -363,9 +390,16 @@ export function createRankedSessionRuntime(
 
   const requestSession = async (modeKey: string): Promise<RankedSessionRecord | null> => {
     const authToken = readAuthToken(windowLike);
-    if (!authToken || !isRankedModeKey(modeKey)) return null;
+    lastFailureReason = "";
+    if (!authToken || !isRankedModeKey(modeKey)) {
+      lastFailureReason = !authToken ? "unauthorized" : "invalid_mode";
+      return null;
+    }
     const fetchLike = resolveFetchLike(windowLike);
-    if (!fetchLike) return null;
+    if (!fetchLike) {
+      lastFailureReason = "fetch_unavailable";
+      return null;
+    }
     const requestKey = `start:${modeKey}`;
     const existing = sessionRequestCache.get(requestKey);
     if (existing) return existing;
@@ -385,16 +419,29 @@ export function createRankedSessionRuntime(
             const payload = (await response.json().catch(() => null)) as {
               success?: boolean;
               data?: Record<string, unknown>;
+              code?: string;
+              error?: string;
             } | null;
             if (!response.ok) {
+              if (response.status === 401 || response.status === 403) {
+                clearAuthSession(storageLike);
+                markInternalAuthTransition(windowLike);
+                clearActiveSession(modeKey);
+                clearPrefetchedSession(modeKey);
+                lastFailureReason = "unauthorized";
+                return null;
+              }
+              lastFailureReason = payload?.code || payload?.error || `http_${response.status}`;
               if (!payload && index < apiBases.length - 1) continue;
               return null;
             }
             if (!payload || payload.success !== true) {
+              lastFailureReason = payload?.code || payload?.error || "api_failure";
               if (index < apiBases.length - 1) continue;
               return null;
             }
             const session = normalizeRankedSessionRecord(payload.data || null, modeKey);
+            if (!session) lastFailureReason = "invalid_response";
             return session
               ? {
                   ...session,
@@ -403,6 +450,7 @@ export function createRankedSessionRuntime(
                 }
               : null;
           } catch (_requestErr) {
+            lastFailureReason = "network";
             if (index >= apiBases.length - 1) {
               return null;
             }
@@ -475,6 +523,9 @@ export function createRankedSessionRuntime(
       }
       return writePrefetchedSession(modeKey, session);
     },
+    getLastFailureReason() {
+      return lastFailureReason;
+    },
     clearActiveSession(modeLike) {
       const modeKey = resolveModeKey(modeLike);
       if (!modeKey) return;
@@ -514,6 +565,7 @@ export function bindRankedSessionAuthTransitionReload(
     const currentAuthStateSignature = resolveAuthStateSignature(windowLike);
     if (currentAuthStateSignature === authStateSignature) return;
     authStateSignature = currentAuthStateSignature;
+    if (consumeInternalAuthTransition(windowLike)) return;
     reloadScheduled = true;
     try {
       runtime.clearModeSession(modeKey);

@@ -45,6 +45,14 @@
     spawnValueCounts: {}
   };
 
+  function showGameAlert(message) {
+    if (window.GameDialog && typeof window.GameDialog.alert === "function") {
+      window.GameDialog.alert(message);
+      return;
+    }
+    alert(message);
+  }
+
   var cloudReplayContract =
     window && window.CLOUD_REPLAY_CONTRACT && typeof window.CLOUD_REPLAY_CONTRACT === "object"
       ? window.CLOUD_REPLAY_CONTRACT
@@ -1156,7 +1164,7 @@
     clearReplayFileDropState();
     if (!file || replayFileImportBusy) return;
     if (!isReplayImportFileExtensionAllowed(file.name)) {
-      alert(t("importFileFailed") + ": " + t("importFileTypeInvalid"));
+      showGameAlert(t("importFileFailed") + ": " + t("importFileTypeInvalid"));
       return;
     }
     importReplayFromFile(file);
@@ -1361,7 +1369,7 @@
         }
         updateReplayUI();
       } catch (error) {
-        alert(t("importReplayFailed") + ": " + resolveReplayImportErrorMessage(error));
+        showGameAlert(t("importReplayFailed") + ": " + resolveReplayImportErrorMessage(error));
       }
     }, { inputMode: "multiline" });
   }
@@ -1457,7 +1465,7 @@
   async function importReplayFromFile(file) {
     if (!file || replayFileImportBusy) return;
     if (!isReplayImportFileExtensionAllowed(file.name)) {
-      alert(t("importFileFailed") + ": " + t("importFileTypeInvalid"));
+      showGameAlert(t("importFileFailed") + ": " + t("importFileTypeInvalid"));
       return;
     }
     var gameManager = window.game_manager;
@@ -1482,7 +1490,7 @@
       updateReplayUI();
       requestReplayRelayout();
     } catch (error) {
-      alert(t("importFileFailed") + ": " + resolveReplayImportErrorMessage(error));
+      showGameAlert(t("importFileFailed") + ": " + resolveReplayImportErrorMessage(error));
     } finally {
       replayFileImportBusy = false;
     }
@@ -1786,7 +1794,7 @@
       replayQueryRetryCount += 1;
       if (replayQueryRetryCount > REPLAY_QUERY_MAX_RETRIES) {
         clearReplayQueryRetryTimer();
-        alert("game_manager_not_ready");
+        showGameAlert("game_manager_not_ready");
         return;
       }
       scheduleReplayQueryRetry();
@@ -1837,15 +1845,15 @@
         clearReplayQueryRetryTimer();
         if (cloudMessage.indexOf("cloud_payload_version_mismatch:") === 0) {
           var payloadVersion = normalizePositiveInteger(cloudMessage.split(":")[1]);
-          alert(resolveCloudReplayVersionMismatchMessage("payload", CLOUD_REPLAY_PAYLOAD_VERSION, payloadVersion));
+          showGameAlert(resolveCloudReplayVersionMismatchMessage("payload", CLOUD_REPLAY_PAYLOAD_VERSION, payloadVersion));
           return;
         }
         if (cloudMessage.indexOf("cloud_replay_file_version_mismatch:") === 0) {
           var replayVersion = normalizePositiveInteger(cloudMessage.split(":")[1]);
-          alert(resolveCloudReplayVersionMismatchMessage("file", CLOUD_REPLAY_FILE_VERSION, replayVersion));
+          showGameAlert(resolveCloudReplayVersionMismatchMessage("file", CLOUD_REPLAY_FILE_VERSION, replayVersion));
           return;
         }
-        alert(t("cloudLoadFailed") + ": " + cloudMessage);
+        showGameAlert(t("cloudLoadFailed") + ": " + cloudMessage);
       }
       return;
     }
@@ -1883,7 +1891,7 @@
         }
         clearReplayTransientQueryState();
         clearReplayDiagnosticsPanel();
-        alert(t("localLoadFailed") + ": " + localReplayMessage);
+        showGameAlert(t("localLoadFailed") + ": " + localReplayMessage);
       }
       return;
     }
@@ -1919,7 +1927,7 @@
         }
         clearReplayQueryRetryTimer();
         clearReplayDiagnosticsPanel();
-        alert(t("localLoadFailed") + ": " + localMessage);
+        showGameAlert(t("localLoadFailed") + ": " + localMessage);
       }
     }
   }
@@ -2235,12 +2243,12 @@
         var raw = toText(text).trim();
         var next = Number(raw);
         if (!Number.isFinite(next)) {
-          alert(resolveReplayTimelineLabel("setSpeedInvalid"));
+          showGameAlert(resolveReplayTimelineLabel("setSpeedInvalid"));
           return;
         }
         var floored = Math.floor(next);
         if (floored < REPLAY_STEP_INTERVAL_MIN_MS || floored > REPLAY_STEP_INTERVAL_MAX_MS) {
-          alert(resolveReplayTimelineLabel("setSpeedInvalid"));
+          showGameAlert(resolveReplayTimelineLabel("setSpeedInvalid"));
           return;
         }
         replayUiSetReplaySpeed(floored);

@@ -44,7 +44,7 @@ type RestartSeedRuntime = {
     inputSeed?: unknown,
     setupOptions?: unknown
   ) => void;
-  restartGame: (manager: Record<string, unknown> | null) => void;
+  restartGame: (manager: Record<string, unknown> | null) => void | Promise<void>;
   resetSetupTimerAndInputState: (manager: Record<string, unknown>) => void;
   resolveRestartConfirmLanguage: (manager: Record<string, unknown> | null) => string;
   resolveSingleModePageTabId: (windowLike: Record<string, unknown> | null) => string;
@@ -115,6 +115,10 @@ function loadRestartSeedRuntime(options?: {
       manager: Record<string, unknown> | null,
       operations: Record<string, unknown>
     ) => void;
+    restartGameAsync?: (
+      manager: Record<string, unknown> | null,
+      operations: Record<string, unknown>
+    ) => Promise<void>;
     createFallbackFreshSetupSeed?: (payload: Record<string, unknown>) => number;
     resolveRestartConfirmLanguage?: (manager: Record<string, unknown> | null) => string;
   };
@@ -568,6 +572,37 @@ describe("core game manager restart seed runtime", () => {
     runtime.restartGame({ modeKey: "standard_4x4_pow2_no_undo" });
 
     expect(browserConfirm).toHaveBeenCalledWith("Start a new game?");
+  });
+
+  it("uses the game dialog for restart confirmation before falling back to browser confirm", async () => {
+    const browserConfirm = vi.fn(() => true);
+    const gameDialogConfirm = vi.fn(async (message: string) => message === "Start a new game?");
+    const windowLike: Record<string, unknown> = {
+      confirm: browserConfirm,
+      GameDialog: {
+        confirm: gameDialogConfirm
+      }
+    };
+    const restartGameAsync = vi.fn(async (_manager: Record<string, unknown> | null, operations) => {
+      const confirmRestartAsync = operations.confirmRestartAsync as (message: string) => Promise<boolean>;
+
+      expect(await confirmRestartAsync("Start a new game?")).toBe(true);
+    });
+    const { runtime } = loadRestartSeedRuntime({
+      browserConfirm,
+      windowLike,
+      restartGameRuntime: {
+        restartGame: vi.fn(),
+        restartGameAsync
+      }
+    });
+
+    await runtime.restartGame({ modeKey: "standard_4x4_pow2_no_undo" });
+
+    expect(gameDialogConfirm).toHaveBeenCalledWith("Start a new game?", {
+      kind: "confirm"
+    });
+    expect(browserConfirm).not.toHaveBeenCalled();
   });
 
   it("clears restored timer offsets and anchors when setting up a fresh game", () => {

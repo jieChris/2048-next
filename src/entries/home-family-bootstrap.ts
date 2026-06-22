@@ -250,9 +250,10 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   }
 
   bindNightBackgroundSync();
-  if (pageId === "index" && typeof window !== "undefined" && typeof document !== "undefined") {
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
     bindHomeUserDisplay({
       documentLike: document,
+      pageId,
       windowLike: window,
       storageLike: window.localStorage
     });

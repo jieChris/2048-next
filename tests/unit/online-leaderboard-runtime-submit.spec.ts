@@ -339,6 +339,13 @@ describe("online leaderboard terminal submission", () => {
       score: 2048,
       replay_string: "pending-replay-v1"
     });
+    expect(
+      runtime.fetchCalls.some(
+        (call) =>
+          call.url.includes("/leaderboard?") &&
+          call.url.includes("mode_key=standard_4x4_pow2_no_undo")
+      )
+    ).toBe(true);
   });
 
   it("submits online record when local terminal auto-submit runs", async () => {
@@ -493,6 +500,13 @@ describe("online leaderboard terminal submission", () => {
 
     expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
     expect(runtime.fetchCalls.some((call) => call.url.endsWith("/score"))).toBe(false);
+    expect(
+      runtime.fetchCalls.some(
+        (call) =>
+          call.url.includes("/leaderboard?") &&
+          call.url.includes("mode_key=standard_4x4_pow2_no_undo")
+      )
+    ).toBe(true);
     expect(recordPayload).toMatchObject({
       mode_key: MODE_KEY,
       ranked_session_token: null,
@@ -574,6 +588,67 @@ describe("online leaderboard terminal submission", () => {
     expect(manager.lastRankedCheckpointSaveError).toBe("RANKED_SESSION_EXPIRED");
     expect(runtime.windowLike.alert).toHaveBeenCalledTimes(1);
     expect(runtime.fetchCalls.some((call) => call.url.endsWith("/score"))).toBe(false);
+  });
+
+  it("keeps pending record payload when upload auth is rejected so the user can re-login and retry", async () => {
+    const storage = new MemoryStorage();
+    const manager = createTerminatedManager();
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse(
+            { success: false, error: "Unauthorized", code: "UNAUTHORIZED" },
+            false,
+            401
+          );
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    const pendingRaw = storage.getItem(PENDING_RECORD_KEY);
+    expect(pendingRaw).not.toBeNull();
+    expect(JSON.parse(pendingRaw || "{}")).toMatchObject({
+      ownerUserId: "7",
+      payload: {
+        mode_key: MODE_KEY,
+        score: 4096,
+        replay_string: "replay-v1"
+      }
+    });
+    expect(storage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBeNull();
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
+  });
+
+  it("keeps a terminal record pending when auth was cleared before the game-over submit runs", async () => {
+    const storage = new MemoryStorage();
+    const manager = createTerminatedManager();
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+    storage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    const pendingRaw = storage.getItem(PENDING_RECORD_KEY);
+    expect(pendingRaw).not.toBeNull();
+    expect(JSON.parse(pendingRaw || "{}")).toMatchObject({
+      ownerUserId: "7",
+      payload: {
+        mode_key: MODE_KEY,
+        score: 4096,
+        replay_string: "replay-v1"
+      }
+    });
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
   });
 
   it("marks ranked checkpoints cleared synchronously before restart delete completes", async () => {
@@ -839,7 +914,7 @@ describe("online leaderboard terminal submission", () => {
     expect(runtime.windowLike.alert).not.toHaveBeenCalled();
   });
 
-  it("keeps the current game and alerts when on-demand ranked session creation fails", async () => {
+  it("falls back to a non-ranked restart without blocking alert when on-demand ranked session creation fails", async () => {
     const storage = new MemoryStorage();
     const nowSec = Math.floor(Date.now() / 1000);
     storage.setItem(
@@ -854,11 +929,29 @@ describe("online leaderboard terminal submission", () => {
         owner_user_id: "7"
       })
     );
-    const originalRestart = vi.fn();
+    const originalRestart = vi.fn(function (this: Record<string, unknown>) {
+      this.over = false;
+      this.score = 0;
+      if (typeof this.setup === "function") {
+        this.setup(undefined, { disableStateRestore: true });
+      }
+      if (typeof this.actuate === "function") {
+        this.actuate();
+      }
+    });
+    const setup = vi.fn();
+    const actuate = vi.fn();
     const manager = createTerminatedManager({
       rankPolicy: "ranked",
+      modeConfig: {
+        key: MODE_KEY,
+        rank_policy: "ranked",
+        ranked_bucket: "daily"
+      },
       rankedSessionToken: "old-ranked-token",
-      restart: originalRestart
+      restart: originalRestart,
+      setup,
+      actuate
     });
     const runtime = loadOnlineLeaderboardRuntime({
       manager,
@@ -877,16 +970,33 @@ describe("online leaderboard terminal submission", () => {
     runtime.windowLike.RankedSessionRuntime = {
       promotePrefetchedSession: vi.fn(() => false),
       startNextSession: vi.fn(async () => false),
-      ensurePrefetch
+      ensurePrefetch,
+      clearModeSession: vi.fn((modeKey: string) => {
+        storage.removeItem(`ranked_session_active:v1:${modeKey}`);
+        storage.removeItem(`ranked_session_prefetch:v1:${modeKey}`);
+      })
     };
 
     (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
     await flushRuntimePromises();
 
-    expect(originalRestart).not.toHaveBeenCalled();
+    expect(originalRestart).toHaveBeenCalledTimes(1);
+    expect(manager.rankPolicy).toBe("unranked");
+    expect(setup).toHaveBeenCalledWith(undefined, {
+      disableStateRestore: true,
+      modeConfig: {
+        key: MODE_KEY,
+        rank_policy: "unranked",
+        ranked_bucket: "none"
+      }
+    });
+    expect(actuate).toHaveBeenCalledTimes(2);
+    expect(manager.over).toBe(false);
+    expect(manager.score).toBe(0);
     expect(ensurePrefetch).toHaveBeenCalledWith(MODE_KEY);
-    expect(runtime.windowLike.alert).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}").ranked_session_token).toBe("old-ranked-token");
+    expect(runtime.windowLike.alert).not.toHaveBeenCalled();
+    expect(storage.getItem(ACTIVE_SESSION_KEY)).toBeNull();
+    expect(manager.rankedSessionToken).toBe("");
   });
 
   it("does not restore stale ranked checkpoints from a previous active session", async () => {

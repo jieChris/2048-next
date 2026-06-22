@@ -40,6 +40,7 @@ const HOME_STANDARD_STARTUP_FILES = [
 ];
 const HOME_STANDARD_DEFERRED_FILES = [
   "core_practice_transfer_runtime.js",
+  "game_dialog_runtime.js",
   "core_practice_transfer_host_runtime.js",
   "core_practice_transfer_page_host_runtime.js",
   "core_capped_timer_scroll_runtime.js",

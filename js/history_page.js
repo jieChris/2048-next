@@ -11,6 +11,13 @@
     return value == null ? "" : String(value);
   }
 
+  function confirmWithGameDialog(message) {
+    if (window.GameDialog && typeof window.GameDialog.confirm === "function") {
+      return window.GameDialog.confirm(message, { kind: "danger" });
+    }
+    return Promise.resolve(typeof confirm === "function" ? confirm(message) : true);
+  }
+
   function resolveLocalStorage() {
     try {
       if (typeof localStorage === "undefined") return null;
@@ -633,7 +640,7 @@
       if (deleteBtn) {
         deleteBtn.addEventListener("click", (function (id) {
           return async function () {
-            if (!confirm("确认删除这条记录？")) return;
+            if (!(await confirmWithGameDialog("确认删除这条记录？"))) return;
             var ok = await callStore("deleteById", id);
             if (!ok) {
               setStatus("删除失败", true);
@@ -801,8 +808,8 @@
       openPicker(true);
     });
 
-    importReplaceBtn.addEventListener("click", function () {
-      if (!confirm("确认导入并替换全部当前历史记录？")) return;
+    importReplaceBtn.addEventListener("click", async function () {
+      if (!(await confirmWithGameDialog("确认导入并替换全部当前历史记录？"))) return;
       openPicker(false);
     });
 
@@ -944,7 +951,7 @@
     var clearAllBtn = $("history-clear-all-btn");
     if (clearAllBtn) {
       clearAllBtn.addEventListener("click", async function () {
-        if (!confirm("确认清空全部本地历史记录？此操作不可撤销。")) return;
+        if (!(await confirmWithGameDialog("确认清空全部本地历史记录？此操作不可撤销。"))) return;
         try {
           await callStore("clearAll");
           setStatus("已清空全部历史记录", false);

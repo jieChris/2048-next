@@ -5,6 +5,7 @@ import {
   createRestartGameRuntime,
   installRestartGameRuntime,
   restartGame,
+  restartGameAsync,
   resolveRestartConfirmLanguage,
   type RestartGameRuntime
 } from "../../src/core/restart-game";
@@ -132,6 +133,40 @@ describe("core restart game runtime", () => {
     expect(operations.restartWithBoard).not.toHaveBeenCalled();
   });
 
+  it("clears transient state after async restart confirmation is accepted", async () => {
+    const manager = createManager();
+    const operations = {
+      confirmRestartAsync: vi.fn(async () => true),
+      resolveRestartConfirmMessage: vi.fn(() => "Start a new game?"),
+      restartWithBoard: vi.fn(),
+      createEmptyPracticeBoardMatrix: vi.fn(),
+      shouldClearPracticeBoardOnRestart: vi.fn()
+    };
+
+    await restartGameAsync(manager, operations);
+
+    expect(operations.confirmRestartAsync).toHaveBeenCalledWith("Start a new game?");
+    expect(manager.actuator.continue).toHaveBeenCalledTimes(1);
+    expect(manager.setRuntimeUndoStack).toHaveBeenCalledWith([]);
+    expect(manager.setRuntimeRedoStack).toHaveBeenCalledWith([]);
+    expect(manager.clearSavedGameState).toHaveBeenCalledWith("standard_4x4_pow2_no_undo");
+    expect(manager.setup).toHaveBeenCalledWith(undefined, { disableStateRestore: true });
+  });
+
+  it("does nothing when async restart confirmation is denied", async () => {
+    const manager = createManager();
+    const operations = {
+      confirmRestartAsync: vi.fn(async () => false),
+      resolveRestartConfirmMessage: vi.fn(() => "Start a new game?")
+    };
+
+    await restartGameAsync(manager, operations);
+
+    expect(operations.confirmRestartAsync).toHaveBeenCalledWith("Start a new game?");
+    expect(manager.actuator.continue).not.toHaveBeenCalled();
+    expect(manager.setup).not.toHaveBeenCalled();
+  });
+
   it("clears a practice restart board before the first move when it matches the current board", () => {
     const emptyBoard = [
       [0, 0],
@@ -190,12 +225,14 @@ describe("core restart game runtime", () => {
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createRestartGameRuntime();
     expect(runtime.restartGame).toBe(restartGame);
+    expect(runtime.restartGameAsync).toBe(restartGameAsync);
     expect(runtime.createFallbackFreshSetupSeed).toBe(createFallbackFreshSetupSeed);
     expect(runtime.resolveRestartConfirmLanguage).toBe(resolveRestartConfirmLanguage);
 
     const windowLike: { CoreRestartGameRuntime?: RestartGameRuntime } = {};
     expect(installRestartGameRuntime({ windowLike })).toBe(windowLike.CoreRestartGameRuntime);
     expect(windowLike.CoreRestartGameRuntime?.restartGame).toBe(restartGame);
+    expect(windowLike.CoreRestartGameRuntime?.restartGameAsync).toBe(restartGameAsync);
     expect(windowLike.CoreRestartGameRuntime?.createFallbackFreshSetupSeed).toBe(
       createFallbackFreshSetupSeed
     );

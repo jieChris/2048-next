@@ -86,6 +86,14 @@
     return global["fetch"](url, requestInit);
   };
 
+  function promptWithGameDialog(message, defaultValue, options) {
+    if (global.GameDialog && typeof global.GameDialog.prompt === "function") {
+      return global.GameDialog.prompt(message, defaultValue, options || {});
+    }
+    if (typeof global.prompt !== "function") return Promise.resolve(null);
+    return Promise.resolve(global.prompt(message, defaultValue));
+  }
+
   var apiBases = buildApiBaseCandidates();
   var activeApiBase = apiBases[0];
   var currentLang = readLanguage();
@@ -1153,10 +1161,13 @@
     }
   }
 
-  function promptRegisterNickname() {
+  async function promptRegisterNickname() {
     var promptText = t("registerNicknamePrompt");
-    if (typeof global.prompt !== "function") return null;
-    var nickname = global.prompt(promptText, "");
+    var nickname = await promptWithGameDialog(promptText, "", {
+      title: t("navRegister"),
+      confirmText: t("navRegister"),
+      placeholder: isEnglishUi() ? "Nickname" : "昵称"
+    });
     if (nickname == null) return null;
     return toText(nickname).trim();
   }
@@ -1178,7 +1189,7 @@
       return;
     }
 
-    var nickname = promptRegisterNickname();
+    var nickname = await promptRegisterNickname();
     if (nickname === null) return;
     if (!nickname) {
       setTip(byId("account-auth-tip"), t("requireNickname"), "err");

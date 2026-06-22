@@ -794,6 +794,94 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(leaderboardRequests.length).toBe(requestCountBeforeCachedSwitch);
   });
 
+  test("leaderboard row compacts long allowed nickname and score without clipping", async ({ page }) => {
+    await page.route("**/leaderboard?**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: [
+            {
+              user_id: 7,
+              nickname: "Alice",
+              score: 4096
+            },
+            {
+              user_id: 77,
+              nickname: "Phrlova112",
+              score: 12345678
+            }
+          ]
+        })
+      });
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("home_guide_seen_v1", "1");
+    });
+
+    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await waitForWindowCondition(
+      page,
+      () =>
+        Boolean((window as any).game_manager) &&
+        Boolean((window as any).OnlineLeaderboardRuntime?.refreshTimerLeaderboardPanel),
+      12_000
+    );
+
+    const snapshot = await page.evaluate(async () => {
+      const manager = (window as any).game_manager;
+      const runtime = (window as any).OnlineLeaderboardRuntime;
+      manager.setTimerModuleViewMode("hidden");
+      await runtime.refreshTimerLeaderboardPanel(true);
+      await new Promise((resolve) => {
+        window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));
+      });
+
+      const nameTile = document.querySelector(
+        "#timer-leaderboard-list .timer-leaderboard-row:nth-child(2) .timer-leaderboard-name-tile"
+      ) as HTMLElement | null;
+      const nickname = nameTile?.querySelector(".timer-leaderboard-nickname") as HTMLElement | null;
+      const score = nameTile?.querySelector(".timer-leaderboard-score") as HTMLElement | null;
+      const tileRect = nameTile?.getBoundingClientRect() || null;
+      const nickRect = nickname?.getBoundingClientRect() || null;
+      const scoreRect = score?.getBoundingClientRect() || null;
+
+      return {
+        tileText: String(nameTile?.textContent || "").trim(),
+        nicknameText: String(nickname?.textContent || "").trim(),
+        scoreText: String(score?.textContent || "").trim(),
+        tileFontSize: nameTile ? String(window.getComputedStyle(nameTile).fontSize || "") : "",
+        tileWidth: tileRect ? Math.round(tileRect.width) : null,
+        tileClientWidth: nameTile ? Math.round(nameTile.clientWidth) : null,
+        tileScrollWidth: nameTile ? Math.round(nameTile.scrollWidth) : null,
+        nicknameClientWidth: nickname ? Math.round(nickname.clientWidth) : null,
+        nicknameScrollWidth: nickname ? Math.round(nickname.scrollWidth) : null,
+        nicknameRight: nickRect ? Math.round(nickRect.right) : null,
+        scoreLeft: scoreRect ? Math.round(scoreRect.left) : null,
+        scoreRightDelta: tileRect && scoreRect ? Math.round(Math.abs(tileRect.right - scoreRect.right)) : null
+      };
+    });
+
+    expect(snapshot.tileText).toBe("Phrlova112-12345678");
+    expect(snapshot.nicknameText).toBe("Phrlova112");
+    expect(snapshot.scoreText).toBe("12345678");
+    expect(parseFloat(snapshot.tileFontSize)).toBeLessThanOrEqual(13);
+    expect(snapshot.tileWidth).toBe(187);
+    expect(snapshot.tileScrollWidth).not.toBeNull();
+    expect(snapshot.tileClientWidth).not.toBeNull();
+    expect((snapshot.tileScrollWidth ?? 0) <= (snapshot.tileClientWidth ?? 0) + 1).toBe(true);
+    expect(snapshot.nicknameScrollWidth).not.toBeNull();
+    expect(snapshot.nicknameClientWidth).not.toBeNull();
+    expect((snapshot.nicknameScrollWidth ?? 0) <= (snapshot.nicknameClientWidth ?? 0) + 1).toBe(true);
+    expect(snapshot.nicknameRight).not.toBeNull();
+    expect(snapshot.scoreLeft).not.toBeNull();
+    expect((snapshot.nicknameRight ?? 0) <= (snapshot.scoreLeft ?? 0)).toBe(true);
+  });
+
   test("leaderboard frame renders placeholders while online data is loading", async ({ page }) => {
     let releaseLeaderboard: (() => void) | null = null;
     const pendingLeaderboard = new Promise<void>((resolve) => {

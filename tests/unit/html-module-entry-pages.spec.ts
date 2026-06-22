@@ -27,6 +27,8 @@ const ENTRY_PAGES: HtmlEntryExpectation[] = [
   { htmlPath: "PKU2048.html", entryPath: "./src/entries/pku2048.ts" }
 ];
 
+const TIMER_LEADERBOARD_SHELL_PAGES = ["2048.html", "play.html", "undo_2048.html", "capped_2048.html"];
+
 function readHtml(relativePath: string): string {
   const htmlPath = path.resolve(process.cwd(), relativePath);
   return readFileSync(htmlPath, "utf8");
@@ -74,4 +76,23 @@ describe("module entry html pages", () => {
     expect(html).toContain('id="palette-preview-fib"');
     expect(html).not.toContain('id="palette-preview-legend"');
   });
+
+  for (const htmlPath of TIMER_LEADERBOARD_SHELL_PAGES) {
+    it(`${htmlPath} includes a static timer leaderboard placeholder shell`, () => {
+      const html = readHtml(htmlPath);
+      const timerBoxStart = html.indexOf('id="timerbox"');
+      const timerBoxEnd = html.indexOf('<div class="game-container"', timerBoxStart);
+      const timerBoxHtml = html.slice(timerBoxStart, timerBoxEnd);
+      const placeholderRows = timerBoxHtml.match(/class="timer-leaderboard-row/g) || [];
+
+      expect(timerBoxStart, `${htmlPath} should include #timerbox`).toBeGreaterThanOrEqual(0);
+      expect(timerBoxEnd, `${htmlPath} should include a game container after #timerbox`).toBeGreaterThan(timerBoxStart);
+      expect(timerBoxHtml).toContain('id="timer-leaderboard-panel"');
+      expect(timerBoxHtml).toContain('id="timer-leaderboard-summary"');
+      expect(timerBoxHtml).toContain('id="timer-leaderboard-list"');
+      expect(timerBoxHtml).toContain('aria-busy="true"');
+      expect(placeholderRows).toHaveLength(11);
+      expect(timerBoxHtml).toContain('class="timer-leaderboard-row is-self"');
+    });
+  }
 });

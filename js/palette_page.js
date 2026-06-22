@@ -63,6 +63,13 @@
     return global.document.getElementById(id);
   }
 
+  function confirmWithGameDialog(message, options) {
+    if (global.GameDialog && typeof global.GameDialog.confirm === "function") {
+      return global.GameDialog.confirm(message, options || {});
+    }
+    return Promise.resolve(global.confirm ? global.confirm(message) : true);
+  }
+
   function lockBodyScroll() {
     if (bodyScrollLockState.active) return;
     var body = global.document.body;
@@ -998,10 +1005,12 @@
       refresh();
     });
 
-    deleteBtn.addEventListener("click", function () {
+    deleteBtn.addEventListener("click", async function () {
       var activeId = resolveText(getActiveTilePaletteId.call(themeManager));
       if (!activeId) return;
-      if (global.confirm && !global.confirm(isEnglishUi() ? "Delete current palette?" : "\u786e\u8ba4\u5220\u9664\u5f53\u524d\u8272\u677f\uff1f")) return;
+      if (!(await confirmWithGameDialog(isEnglishUi() ? "Delete current palette?" : "\u786e\u8ba4\u5220\u9664\u5f53\u524d\u8272\u677f\uff1f", {
+        kind: "danger"
+      }))) return;
       var deleted = !!deleteTilePalette.call(themeManager, activeId);
       if (!deleted) {
         setNote(isEnglishUi() ? "Current palette cannot be deleted." : "\u5f53\u524d\u8272\u677f\u4e0d\u53ef\u5220\u9664\u3002", "err");

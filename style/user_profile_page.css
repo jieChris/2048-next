@@ -246,11 +246,24 @@ body[data-page="user-profile"] .user-record-tools .settings-select:focus-visible
 }
 
 .user-replay-btn,
+.user-replay-export-btn,
 .user-record-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 32px;
+  height: auto;
   padding: 6px 10px;
   border-radius: 7px;
   font-size: 12px;
   line-height: 1.2;
+  white-space: nowrap;
+}
+
+.user-replay-btn,
+.user-replay-export-btn {
+  min-width: 78px;
 }
 
 .user-danger-btn {

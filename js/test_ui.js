@@ -1,4 +1,12 @@
 document.addEventListener("DOMContentLoaded", function () {
+  function showGameAlert(message) {
+    if (window.GameDialog && typeof window.GameDialog.alert === "function") {
+      window.GameDialog.alert(message);
+      return;
+    }
+    alert(message);
+  }
+
   var PRACTICE_TRANSFER_KEY = "practice_board_transfer_v1";
   var PRACTICE_TRANSFER_SESSION_KEY = "practice_board_transfer_session_v1";
   var gridContainer = document.getElementById("test-grid-container");
@@ -511,7 +519,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var manager = window.game_manager;
     if (!option) return false;
     if (!manager || typeof manager.restartWithBoard !== "function") {
-      alert(getPracticeBoardCodeCopy().gameNotReady);
+      showGameAlert(getPracticeBoardCodeCopy().gameNotReady);
       return false;
     }
     var modeConfig = cloneJsonSafe(option.practiceConfig) || option.practiceConfig;
@@ -531,7 +539,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return true;
     } catch (err) {
       console.error("Practice mode selection failed:", err);
-      alert("切换练习模式失败，请稍后重试。");
+      showGameAlert("切换练习模式失败，请稍后重试。");
       return false;
     }
   }
@@ -613,13 +621,13 @@ document.addEventListener("DOMContentLoaded", function () {
   function applyPracticeBoardCode(rawCode) {
     var manager = window.game_manager;
     if (!manager || typeof manager.restartWithBoard !== "function") {
-      alert(getPracticeBoardCodeCopy().gameNotReady);
+      showGameAlert(getPracticeBoardCodeCopy().gameNotReady);
       return false;
     }
 
     var decoded = decodePracticeBoardCode(rawCode);
     if (!decoded.ok) {
-      alert(decoded.message);
+      showGameAlert(decoded.message);
       return false;
     }
 
@@ -627,7 +635,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var maxTile = Number(modeConfig && modeConfig.max_tile);
     var boardValidation = validatePracticeBoardValuesAgainstMaxTile(decoded.board, maxTile);
     if (!boardValidation.ok) {
-      alert(boardValidation.message);
+      showGameAlert(boardValidation.message);
       return false;
     }
     try {
@@ -642,7 +650,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return true;
     } catch (err) {
       console.error("Practice board code apply failed:", err);
-      alert(getPracticeBoardCodeCopy().applyFail);
+      showGameAlert(getPracticeBoardCodeCopy().applyFail);
       return false;
     }
   }
@@ -1215,7 +1223,7 @@ document.addEventListener("DOMContentLoaded", function () {
       syncPracticeSetupPhaseUi();
     } catch (err) {
       console.error("Practice transfer restore failed:", err);
-      alert("练习板载入盘面失败，请重试。");
+      showGameAlert("练习板载入盘面失败，请重试。");
     }
   }
 

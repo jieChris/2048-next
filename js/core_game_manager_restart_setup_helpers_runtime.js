@@ -173,8 +173,34 @@ function resolveRestartConfirmOperation() {
   return function () { return false; };
 }
 
+function resolveRestartConfirmOperationAsync() {
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    window.GameDialog &&
+    typeof window.GameDialog.confirm === "function"
+  ) {
+    return function (message) {
+      return window.GameDialog.confirm(message, { kind: "confirm" });
+    };
+  }
+  var confirmRestart = resolveRestartConfirmOperation();
+  return function (message) {
+    return Promise.resolve(confirmRestart(message));
+  };
+}
+
 function restartGame(manager) {
   var runtime = resolveCoreRestartGameRuntime(manager);
+  if (runtime && typeof runtime.restartGameAsync === "function") {
+    return runtime.restartGameAsync(manager, {
+      confirmRestartAsync: resolveRestartConfirmOperationAsync(),
+      resolveRestartConfirmMessage: resolveRestartConfirmMessage,
+      shouldClearPracticeBoardOnRestart: shouldClearPracticeBoardOnRestart,
+      createEmptyPracticeBoardMatrix: createEmptyPracticeBoardMatrix,
+      restartWithBoard: restartWithBoard
+    });
+  }
   if (runtime && typeof runtime.restartGame === "function") {
     runtime.restartGame(manager, {
       confirmRestart: resolveRestartConfirmOperation(),

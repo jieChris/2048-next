@@ -1,5 +1,6 @@
 import seedrandomUrl from "../../js/seedrandom.js?url";
 import animframePolyfillUrl from "../../js/animframe_polyfill.js?url";
+import gameDialogRuntimeUrl from "../../js/game_dialog_runtime.js?url";
 import replayInputManagerUrl from "../../js/replay_input_manager.js?url";
 import themeManagerUrl from "../../js/theme_manager.js?url";
 import modeCatalogUrl from "../../js/mode_catalog.js?url";
@@ -33,6 +34,7 @@ import coreCloudReplayContractRuntimeUrl from "../../js/core_cloud_replay_contra
 export const replayLegacyScripts = [
   seedrandomUrl,
   animframePolyfillUrl,
+  gameDialogRuntimeUrl,
   replayInputManagerUrl,
   themeManagerUrl,
   modeCatalogUrl,

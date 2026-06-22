@@ -211,6 +211,18 @@ function isPromiseLike(value: unknown): value is Promise<unknown> {
   return !!value && (typeof value === "object" || typeof value === "function") && typeof (value as any).then === "function";
 }
 
+async function confirmWithGameDialog(
+  windowLike: Window,
+  message: string,
+  options?: { kind?: "confirm" | "danger"; title?: string }
+): Promise<boolean> {
+  const dialog = (windowLike as any).GameDialog;
+  if (dialog && typeof dialog.confirm === "function") {
+    return !!(await dialog.confirm(message, options || {}));
+  }
+  return typeof windowLike.confirm === "function" ? windowLike.confirm(message) : true;
+}
+
 async function callStore(store: Record<string, unknown> | null, methodName: string, ...args: unknown[]) {
   if (!store) {
     throw new Error("local_history_store_missing");
@@ -449,7 +461,7 @@ function renderList(
     const deleteBtn = node.querySelector(".history-delete-btn") as HTMLButtonElement | null;
     if (deleteBtn) {
       deleteBtn.addEventListener("click", async () => {
-        if (!windowLike.confirm(copy.deleteConfirm)) return;
+        if (!(await confirmWithGameDialog(windowLike, copy.deleteConfirm, { kind: "danger" }))) return;
         const ok = await callStore(historyStore, "deleteById", item.id);
         if (!ok) {
           setStatus(documentLike, copy.deleteFailed, true);
@@ -611,8 +623,8 @@ function bindImport(
     openPicker(true);
   });
 
-  importReplaceBtn.addEventListener("click", () => {
-    if (!windowLike.confirm(getHistoryCopy(resolveLang()).importReplaceConfirm)) return;
+  importReplaceBtn.addEventListener("click", async () => {
+    if (!(await confirmWithGameDialog(windowLike, getHistoryCopy(resolveLang()).importReplaceConfirm, { kind: "danger" }))) return;
     openPicker(false);
   });
 
@@ -791,7 +803,7 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
     const clearAllBtn = documentLike.getElementById("history-clear-all-btn") as HTMLButtonElement | null;
     if (clearAllBtn) {
       clearAllBtn.addEventListener("click", async () => {
-        if (!windowLike.confirm(getHistoryCopy(resolveLang()).clearAllConfirm)) {
+        if (!(await confirmWithGameDialog(windowLike, getHistoryCopy(resolveLang()).clearAllConfirm, { kind: "danger" }))) {
           return;
         }
         try {

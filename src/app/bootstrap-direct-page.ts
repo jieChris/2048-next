@@ -1,4 +1,6 @@
 import { createBootstrapPipeline, resolvePageDescriptor } from "../bootstrap/page-bootstrap";
+import { installGameDialog } from "../bootstrap/game-dialog";
+import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { getPageManifest } from "../entries/runtime-manifest";
 import { bindStandaloneInternalNavigation } from "./standalone-navigation";
 
@@ -29,6 +31,15 @@ export async function bootstrapDirectPage(
       document.body.setAttribute("data-page-entry-architecture", "manifest-bootstrap");
       document.body.setAttribute("data-page-manifest-id", manifest.pageId);
     }
+  }
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    installGameDialog(window);
+    bindHomeUserDisplay({
+      documentLike: document,
+      pageId: manifest.pageId,
+      windowLike: window,
+      storageLike: window.localStorage
+    });
   }
 
   if (typeof pageInit === "function") {

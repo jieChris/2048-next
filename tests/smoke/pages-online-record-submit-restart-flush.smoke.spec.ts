@@ -405,6 +405,113 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.payloadFinalBoardIsArray).toBe(true);
   });
 
+  test("ranked restart falls back to a playable new game when next session creation fails", async ({ page }) => {
+    const modeKey = "standard_4x4_pow2_no_undo";
+    const nowSec = Math.floor(Date.now() / 1000);
+    const oldSession = {
+      mode_key: modeKey,
+      challenge_id: "ranked-old",
+      seed: 123,
+      ranked_session_token: "old-ranked-token",
+      issued_at: nowSec - 60,
+      exp: nowSec + 3600,
+      owner_user_id: "42"
+    };
+
+    await page.route("**/api/records", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: { id: "record-fallback" } })
+      });
+    });
+    await page.route("**/api/ranked-checkpoint**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, deleted: route.request().method() === "DELETE" })
+      });
+    });
+    await page.route("**/api/ranked-session/start", async (route) => {
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, error: "Unauthorized", code: "UNAUTHORIZED" })
+      });
+    });
+    await page.route("**/api/leaderboard**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    await page.addInitScript(
+      ({ modeKey: injectedModeKey, oldSession: injectedOld }) => {
+        window.localStorage.setItem("2048_auth_token_v1", "expired_smoke_token");
+        window.localStorage.setItem("2048_auth_userId_v1", "42");
+        window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+        window.localStorage.setItem("ranked_session_active:v1:" + injectedModeKey, JSON.stringify(injectedOld));
+        window.localStorage.removeItem("ranked_session_prefetch:v1:" + injectedModeKey);
+        window.localStorage.removeItem("online_last_record_submit_signature_v1");
+        (window as any).__rankedRestartAlerts = [];
+        window.alert = (message?: unknown) => {
+          (window as any).__rankedRestartAlerts.push(String(message || ""));
+        };
+        window.confirm = () => true;
+      },
+      { modeKey, oldSession }
+    );
+
+    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && !!(window as any).OnlineLeaderboardRuntime;
+    });
+
+    await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      manager.replayMode = false;
+      manager.over = true;
+      manager.won = false;
+      manager.keepPlaying = false;
+      manager.score = 2048;
+      manager.moveHistory = [0, 1, 2];
+      manager.successfulMoveCount = 3;
+      manager.rankedSessionToken = "old-ranked-token";
+      manager.challengeId = "ranked-old";
+      manager.serialize = () => "old-ranked-replay";
+      manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2] });
+      manager.restart();
+    });
+
+    await expect
+      .poll(
+        () =>
+          page.evaluate((injectedModeKey) => ({
+            over: !!(window as any).game_manager?.over,
+            score: Number((window as any).game_manager?.score || 0),
+            managerToken: String((window as any).game_manager?.rankedSessionToken || ""),
+            activeSession: window.localStorage.getItem("ranked_session_active:v1:" + injectedModeKey),
+            authToken: window.localStorage.getItem("2048_auth_token_v1"),
+            alerts: ((window as any).__rankedRestartAlerts || []).length
+          })),
+        { timeout: 5000 }
+      )
+      .toMatchObject({
+        over: false,
+        score: 0,
+        managerToken: "",
+        activeSession: null,
+        authToken: null,
+        alerts: 0
+      });
+  });
+
   test("online record submit follows local terminal auto-submit without polling", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__DISABLE_ONLINE_LEADERBOARD__ = true;

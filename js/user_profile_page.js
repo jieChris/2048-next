@@ -69,6 +69,13 @@
     } catch (_err) {}
   }
 
+  function confirmWithGameDialog(message, options) {
+    if (global.GameDialog && typeof global.GameDialog.confirm === "function") {
+      return global.GameDialog.confirm(message, options || {});
+    }
+    return Promise.resolve(typeof global.confirm === "function" ? global.confirm(message) : true);
+  }
+
   // --- localStorage key migration (old bare keys -> namespaced keys) ---
   (function migrateStorageKeys() {
     var migrations = [
@@ -159,6 +166,9 @@
       refreshBtn: "刷新",
       deleteBtn: "删除记录",
       restoreBtn: "恢复记录",
+      exportReplayBtn: "导出回放",
+      exportReplayOk: "回放文件已导出",
+      exportReplayFail: "导出回放失败",
       deleteConfirm: "确认删除该记录？删除后可在 3 天内恢复。",
       deleting: "正在删除记录...",
       restoring: "正在恢复记录...",
@@ -209,6 +219,9 @@
       refreshBtn: "Refresh",
       deleteBtn: "Delete Record",
       restoreBtn: "Restore Record",
+      exportReplayBtn: "Export Replay",
+      exportReplayOk: "Replay file exported",
+      exportReplayFail: "Failed to export replay",
       deleteConfirm: "Delete this record? It can be restored within 3 days.",
       deleting: "Deleting record...",
       restoring: "Restoring record...",
@@ -1419,6 +1432,52 @@
     });
   }
 
+  function buildReplayExportFilename(record) {
+    var rawId = toText(record && record.id).trim() || "unknown";
+    var safeId = rawId.replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || "unknown";
+    return "2048-record-" + safeId + "-replay.json";
+  }
+
+  function downloadTextFile(filename, textContent, mimeType) {
+    if (!global.Blob || !global.URL || typeof global.URL.createObjectURL !== "function") return false;
+    var documentLike = global.document;
+    if (!documentLike || typeof documentLike.createElement !== "function" || !documentLike.body) return false;
+    var blob = new global.Blob([toText(textContent)], { type: mimeType || "application/json;charset=utf-8" });
+    var objectUrl = "";
+    var anchor = null;
+    try {
+      objectUrl = global.URL.createObjectURL(blob);
+      anchor = documentLike.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = filename;
+      anchor.style.display = "none";
+      documentLike.body.appendChild(anchor);
+      anchor.click();
+      documentLike.body.removeChild(anchor);
+      global.URL.revokeObjectURL(objectUrl);
+      return true;
+    } catch (_error) {
+      if (anchor && anchor.parentNode) {
+        try { anchor.parentNode.removeChild(anchor); } catch (_removeError) {}
+      }
+      if (objectUrl && typeof global.URL.revokeObjectURL === "function") {
+        try { global.URL.revokeObjectURL(objectUrl); } catch (_revokeError) {}
+      }
+      return false;
+    }
+  }
+
+  function exportReplayByRecord(record, detail) {
+    var payload = createReplaySessionPayload(record, detail);
+    if (!payload) {
+      setTip(currentLang === "en" ? "Replay payload is missing." : "\u8be5\u8bb0\u5f55\u7f3a\u5c11\u56de\u653e\u6570\u636e", "err");
+      return false;
+    }
+    var ok = downloadTextFile(buildReplayExportFilename(record), payload, "application/json;charset=utf-8");
+    setTip(ok ? t("exportReplayOk") : t("exportReplayFail"), ok ? "ok" : "err");
+    return ok;
+  }
+
   async function openReplayByRecord(record, detail) {
     var replayFileVersion = normalizeReplayFileVersion(
       (detail && detail.replay_file_version) || (record && record.replay_file_version) || CLOUD_REPLAY_FILE_VERSION
@@ -1498,6 +1557,16 @@
     });
     actions.appendChild(replayBtn);
 
+    var exportReplayBtn = global.document.createElement("button");
+    exportReplayBtn.type = "button";
+    exportReplayBtn.className = "replay-button user-replay-export-btn";
+    exportReplayBtn.textContent = t("exportReplayBtn");
+    exportReplayBtn.addEventListener("click", function (eventLike) {
+      if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
+      exportReplayByRecord(record, detail);
+    });
+    actions.appendChild(exportReplayBtn);
+
     if (isOwnProfile) {
       if (isDeletedRecord(record)) {
         var restoreBtn = global.document.createElement("button");
@@ -1526,17 +1595,19 @@
         deleteBtn.textContent = t("deleteBtn");
         deleteBtn.addEventListener("click", function (eventLike) {
           if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
-          if (typeof global.confirm === "function" && !global.confirm(t("deleteConfirm"))) return;
-          setTip(t("deleting"), "");
-          deleteUserRecord(record.id).then(function (result) {
-            if (result && result.success) {
-              setTip(t("deleteOk"), "ok");
-              refreshRecords(false);
-              return;
-            }
-            setTip(toText(result && result.error) || t("deleteFail"), "err");
-          }).catch(function (error) {
-            setTip(toText(error && error.message) || t("deleteFail"), "err");
+          confirmWithGameDialog(t("deleteConfirm"), { kind: "danger" }).then(function (confirmed) {
+            if (!confirmed) return;
+            setTip(t("deleting"), "");
+            deleteUserRecord(record.id).then(function (result) {
+              if (result && result.success) {
+                setTip(t("deleteOk"), "ok");
+                refreshRecords(false);
+                return;
+              }
+              setTip(toText(result && result.error) || t("deleteFail"), "err");
+            }).catch(function (error) {
+              setTip(toText(error && error.message) || t("deleteFail"), "err");
+            });
           });
         });
         actions.appendChild(deleteBtn);

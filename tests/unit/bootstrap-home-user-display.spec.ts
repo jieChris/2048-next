@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  bindHomeUserDisplay,
   resolveHomeUserDisplayHref,
   resolveHomeUserDisplayName,
   syncHomeUserDisplay
@@ -55,5 +56,113 @@ describe("bootstrap home user display", () => {
     expect(syncHomeUserDisplay({ documentLike, storageLike })).toBe(true);
     expect(label.textContent).toBe("Alice");
     expect(label.href).toBe("user.html?id=7&nickname=Alice");
+  });
+
+  it("creates a global label for regular pages without an existing node", () => {
+    const appended: Array<{ textContent?: string | null; href?: string; className?: string; id?: string }> = [];
+    const documentLike = {
+      body: {
+        appendChild(node: (typeof appended)[number]) {
+          appended.push(node);
+          return node;
+        }
+      },
+      createElement(tagName: string) {
+        expect(tagName).toBe("a");
+        return {
+          setAttribute(name: string, value: string) {
+            if (name === "aria-live") this.ariaLive = value;
+          }
+        } as { ariaLive?: string; textContent?: string | null; href?: string; className?: string; id?: string; setAttribute(name: string, value: string): void };
+      },
+      getElementById() {
+        return null;
+      }
+    };
+    const storageLike = {
+      getItem(key: string) {
+        if (key === "2048_auth_userId_v1") return "19";
+        if (key === "2048_auth_nickname_v1") return "Jay";
+        return null;
+      }
+    };
+
+    expect(bindHomeUserDisplay({ documentLike, storageLike, pageId: "modes" })).toBe(true);
+    expect(appended).toHaveLength(1);
+    expect(appended[0]).toMatchObject({
+      id: "home-user-display",
+      className: "home-user-display home-user-display--global",
+      textContent: "Jay",
+      href: "user.html?id=19&nickname=Jay"
+    });
+  });
+
+  it("creates a heading-aligned label for game pages with a heading container", () => {
+    const bodyAppended: unknown[] = [];
+    const headingAppended: Array<{ textContent?: string | null; href?: string; className?: string; id?: string }> = [];
+    const heading = {
+      appendChild(node: (typeof headingAppended)[number]) {
+        headingAppended.push(node);
+        return node;
+      }
+    };
+    const documentLike = {
+      body: {
+        appendChild(node: unknown) {
+          bodyAppended.push(node);
+          return node;
+        }
+      },
+      createElement() {
+        return {
+          setAttribute() {}
+        } as { textContent?: string | null; href?: string; className?: string; id?: string; setAttribute(name: string, value: string): void };
+      },
+      getElementById() {
+        return null;
+      },
+      querySelector(selector: string) {
+        return selector === ".heading" ? heading : null;
+      }
+    };
+    const storageLike = {
+      getItem(key: string) {
+        if (key === "2048_auth_userId_v1") return "19";
+        if (key === "2048_auth_nickname_v1") return "Jay";
+        return null;
+      }
+    };
+
+    expect(bindHomeUserDisplay({ documentLike, storageLike, pageId: "play" })).toBe(true);
+    expect(bodyAppended).toHaveLength(0);
+    expect(headingAppended).toHaveLength(1);
+    expect(headingAppended[0]).toMatchObject({
+      id: "home-user-display",
+      className: "home-user-display",
+      textContent: "Jay",
+      href: "user.html?id=19&nickname=Jay"
+    });
+  });
+
+  it("does not create a global label on excluded utility pages", () => {
+    const appended: unknown[] = [];
+    const documentLike = {
+      body: {
+        appendChild(node: unknown) {
+          appended.push(node);
+          return node;
+        }
+      },
+      createElement() {
+        return {};
+      },
+      getElementById() {
+        return null;
+      }
+    };
+
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "practice" })).toBe(false);
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "replay" })).toBe(false);
+    expect(appended).toHaveLength(0);
   });
 });

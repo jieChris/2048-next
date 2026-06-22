@@ -220,4 +220,105 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(String(recordBodies[0]?.replay_string || "").length).toBeGreaterThan(0);
     expect(String(recordBodies[1]?.replay_string || "")).toBe(String(recordBodies[0]?.replay_string || ""));
   });
+
+  test("online record submit keeps terminal payload pending when auth was cleared before upload", async ({ page }) => {
+    let recordCalls = 0;
+    const recordBodies: Array<Record<string, unknown>> = [];
+
+    await page.route("**/api/records", async (route) => {
+      recordCalls += 1;
+      recordBodies.push(route.request().postDataJSON() as Record<string, unknown>);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, id: "rec-smoke-auth-restored" })
+      });
+    });
+
+    await page.route("**/api/score", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true })
+      });
+    });
+
+    await page.route("**/api/leaderboard**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "42");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+      if (!window.localStorage.getItem("__smoke_auth_cleared_record_seeded__")) {
+        window.localStorage.removeItem("online_last_record_submit_signature_v1");
+        window.localStorage.removeItem("online_pending_record_submit_signature_v1");
+        window.localStorage.setItem("__smoke_auth_cleared_record_seeded__", "1");
+      }
+      (window as any).GAME_API_REQUEST_TIMEOUT_MS = 120;
+    });
+
+    const response = await page.goto("/play.html?mode_key=board_3x3_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return (
+        !!manager &&
+        !!(window as any).OnlineLeaderboardRuntime &&
+        typeof manager.tryAutoSubmitOnGameOver === "function"
+      );
+    });
+
+    await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      manager.replayMode = false;
+      manager.over = true;
+      manager.won = false;
+      manager.keepPlaying = false;
+      manager.sessionSubmitDone = false;
+      manager.score = Math.max(512, Number(manager.score || 0));
+      window.localStorage.removeItem("2048_auth_token_v1");
+      manager.tryAutoSubmitOnGameOver();
+    });
+
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => String(window.localStorage.getItem("online_pending_record_submit_signature_v1") || "")),
+        { timeout: 4000 }
+      )
+      .not.toBe("");
+    expect(recordCalls).toBe(0);
+
+    await page.evaluate(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token_restored");
+      window.localStorage.setItem("2048_auth_userId_v1", "42");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+    });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => !!(window as any).OnlineLeaderboardRuntime);
+
+    await expect
+      .poll(() => recordCalls, { timeout: 6000 })
+      .toBeGreaterThanOrEqual(1);
+
+    const finalSnapshot = await page.evaluate(() => ({
+      pending: String(window.localStorage.getItem("online_pending_record_submit_signature_v1") || ""),
+      last: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || "")
+    }));
+
+    expect(finalSnapshot.pending).toBe("");
+    expect(finalSnapshot.last.length).toBeGreaterThan(0);
+    expect(recordBodies).toHaveLength(1);
+    expect(String(recordBodies[0]?.mode_key || "")).toBe("board_3x3_pow2_no_undo");
+    expect(String(recordBodies[0]?.replay_string || "").length).toBeGreaterThan(0);
+  });
 });

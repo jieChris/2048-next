@@ -41,3 +41,93 @@ Use these checks after boundary-sensitive changes:
 - `npm run audit:service-boundary`
 - `npm run verify:prepush`
 - Targeted smoke tests for account, records, leaderboard, ranked session, and admin rescue flows when touched.
+
+## Scenario: Pending Score Uploads After Expired Auth
+
+### 1. Scope / Trigger
+
+- Trigger: Browser-side game result submission touches both local retry queues and authenticated backend APIs.
+- Affected client flows: `/score`, `/records`, and stone-2k submission retries from `js/online_leaderboard_runtime.js`.
+
+### 2. Signatures
+
+- Record upload: `POST <apiBase>/records`
+- Score upload: `POST <apiBase>/score`
+- Stone-2k upload: `POST <apiBase>/stone-2k`
+- Auth header: `Authorization: Bearer <token>`
+- Pending storage keys:
+  - `online_pending_score_submit_v1`
+  - `online_pending_record_submit_signature_v1`
+  - `online_pending_stone_2k_submit_v1`
+
+### 3. Contracts
+
+- Terminal `/records` payloads must be persisted to `online_pending_record_submit_signature_v1` before the code checks whether an auth token is currently present. A ranked-session 401 can clear auth immediately before game-over submit hooks run; the terminal payload must survive that ordering.
+- A pre-auth pending write is only a durability step. It must not be counted as a network upload attempt for retry/backoff purposes when the same call will immediately submit the payload.
+- On authenticated upload success, the matching pending key may be cleared.
+- On permanent non-auth validation errors, the matching pending key may be cleared only when the backend has definitively rejected the payload.
+- On `401`, `403`, `UNAUTHORIZED`, or equivalent expired-session upload errors, clear only the auth session keys and keep the pending payload so the user can re-login and retry.
+- Manual logout may clear both auth session keys and pending upload state.
+
+### 4. Validation & Error Matrix
+
+- `2xx success:true` -> clear matching pending payload.
+- `401/403` or `code: "UNAUTHORIZED"` -> clear token/user/nickname only; keep pending payload.
+- Transient network/server error -> keep pending payload and retry later.
+- Backend payload validation failure -> do not retry the same invalid payload indefinitely.
+
+### 5. Good/Base/Bad Cases
+
+- Good: User finishes a game with an expired token, record upload receives 401, pending record remains in local storage, auth token is removed, and re-login can replay the pending upload.
+- Good: Ranked-session startup clears an expired auth token before `maybeSubmitRecordOnGameOver()` runs; the terminal record payload is still written to pending storage and is retried after login returns.
+- Base: User finishes a game while logged in with a valid token, backend accepts the record, and pending storage is cleared.
+- Bad: Upload receives 401 and the frontend calls full `clearAuth()`, deleting pending results before the user has a chance to re-login.
+- Bad: Pending is written once before token validation and then the same pending state is reused for immediate upload, causing `retryCount` to increment before the first network attempt and doubling the transient retry delay.
+
+### 6. Tests Required
+
+- Unit test: simulate `/records` returning 401 and assert pending record payload remains while auth token is removed.
+- Unit test: remove auth before game-over submit runs and assert a terminal pending record is written without calling `/records`.
+- Unit coverage for score and stone-2k uploads should follow the same assertion pattern when those paths change.
+- Smoke test: persisted pending record is replayed after auth/session recovery.
+- Smoke test: transient `/records` failures retry after the expected first backoff interval; pre-auth pending durability writes must not advance `retryCount` for the first network attempt.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```js
+if (isUnauthorizedSubmitErrorText(errorText)) {
+  clearPendingRecordSubmitSignature();
+  clearAuth();
+  return;
+}
+```
+
+#### Correct
+
+```js
+if (isUnauthorizedSubmitErrorText(errorText)) {
+  clearAuthSessionOnly();
+  return;
+}
+```
+
+#### Wrong
+
+```js
+writePendingRecordSubmitSignature(signature, pendingState, payload);
+pendingState = readPendingRecordSubmitState();
+if (!getAuthToken()) return;
+// The immediate upload below now treats the durability write as a previous attempt.
+writePendingRecordSubmitSignature(signature, pendingState, payload);
+```
+
+#### Correct
+
+```js
+writePendingRecordSubmitSignature(signature, pendingState, payload);
+if (!getAuthToken()) return;
+// The first real upload still records retryCount as the first network attempt.
+writePendingRecordSubmitSignature(signature, pendingState, payload);
+```

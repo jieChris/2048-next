@@ -356,19 +356,123 @@ function shouldAutoLoadOnlineLeaderboard() {
     );
   }
 
-  function alertRankedRestartSessionUnavailable() {
-    if (global && typeof global.alert === "function") {
-      global.alert(
-        getLanguage() === "en"
-          ? "Could not create the next ranked game. Please check your connection or sign in again."
-          : "\u65b0\u7684\u6392\u4f4d\u5bf9\u5c40\u521b\u5efa\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u7f51\u7edc\u6216\u91cd\u65b0\u767b\u5f55\u540e\u518d\u8bd5\u3002"
-      );
+  function noteRankedRestartSessionUnavailable(runtime) {
+    var reason = "";
+    if (runtime && typeof runtime.getLastFailureReason === "function") {
+      try {
+        reason = toText(runtime.getLastFailureReason()).trim();
+      } catch (_errReason) {
+        reason = "";
+      }
+    }
+    if (isUnauthorizedSubmitErrorText(reason)) {
+      clearAuthSessionOnly();
     }
   }
 
   function scheduleRankedSessionPrefetchForRestart(modeKey, runtime) {
     if (runtime && typeof runtime.ensurePrefetch === "function") {
       runtime.ensurePrefetch(modeKey).catch(function () {});
+    }
+  }
+
+  function clearRankedRestartStateForFallback(manager, modeKey, runtime) {
+    noteRankedRestartSessionUnavailable(runtime);
+    if (runtime && typeof runtime.clearModeSession === "function") {
+      try {
+        runtime.clearModeSession(modeKey);
+      } catch (_errClearMode) {}
+    } else if (runtime && typeof runtime.clearActiveSession === "function") {
+      try {
+        runtime.clearActiveSession(modeKey);
+      } catch (_errClearActive) {}
+    }
+    if (modeKey) {
+      clearRankedCheckpointLocalMirror(modeKey);
+    }
+    if (manager) {
+      manager.rankPolicy = "unranked";
+      manager.rankedSessionToken = "";
+      manager.challengeId = null;
+    }
+    if (
+      global &&
+      global.GAME_CHALLENGE_CONTEXT &&
+      toText(global.GAME_CHALLENGE_CONTEXT.mode_key).trim() === modeKey
+    ) {
+      global.GAME_CHALLENGE_CONTEXT = null;
+    }
+  }
+
+  function cloneRankedFallbackModeConfig(manager, modeKey) {
+    var source = manager && manager.modeConfig && typeof manager.modeConfig === "object"
+      ? manager.modeConfig
+      : null;
+    var cloned = null;
+    if (source && manager && typeof manager.clonePlain === "function") {
+      try {
+        cloned = manager.clonePlain(source);
+      } catch (_errClone) {
+        cloned = null;
+      }
+    }
+    if (!cloned && source) {
+      try {
+        cloned = JSON.parse(JSON.stringify(source));
+      } catch (_errJson) {
+        cloned = null;
+      }
+    }
+    if (!cloned || typeof cloned !== "object" || Array.isArray(cloned)) {
+      cloned = {};
+    }
+    cloned.key = toText(cloned.key).trim() || toText(manager && (manager.modeKey || manager.mode)).trim() || modeKey;
+    cloned.rank_policy = "unranked";
+    cloned.ranked_bucket = "none";
+    return cloned;
+  }
+
+  function mergeRankedFallbackSetupOptions(manager, options, modeKey) {
+    var setupOptions = options && typeof options === "object" && !Array.isArray(options)
+      ? options
+      : {};
+    var mergedOptions = {};
+    for (var key in setupOptions) {
+      if (Object.prototype.hasOwnProperty.call(setupOptions, key)) {
+        mergedOptions[key] = setupOptions[key];
+      }
+    }
+    mergedOptions.disableStateRestore = true;
+    mergedOptions.modeConfig = cloneRankedFallbackModeConfig(manager, modeKey);
+    return mergedOptions;
+  }
+
+  function callRestartWithRankedFallbackSetup(manager, original, thisArg, args, modeKey) {
+    if (!(manager && typeof manager.setup === "function")) {
+      return original.apply(thisArg, args || []);
+    }
+    var originalSetup = manager.setup;
+    manager.setup = function (inputSeed, options) {
+      return originalSetup.call(
+        this,
+        inputSeed,
+        mergeRankedFallbackSetupOptions(this || manager, options, modeKey)
+      );
+    };
+    try {
+      return original.apply(thisArg, args || []);
+    } finally {
+      manager.setup = originalSetup;
+    }
+  }
+
+  function restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime) {
+    clearRankedRestartStateForFallback(manager, modeKey, runtime);
+    callRestartWithRankedFallbackSetup(manager, original, thisArg, args, modeKey);
+    if (manager && typeof manager.actuate === "function") {
+      try {
+        manager.actuate();
+      } catch (_errActuate) {}
     }
   }
 
@@ -390,7 +494,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     var runtime = getRankedSessionRuntime();
     if (!runtime || typeof runtime.startNextSession !== "function") {
       scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
-      alertRankedRestartSessionUnavailable();
+      restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime);
       return true;
     }
     if (manager && manager.rankedRestartPreparing === true) return true;
@@ -403,7 +507,7 @@ function shouldAutoLoadOnlineLeaderboard() {
         function (ready) {
           if (!ready) {
             scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
-            alertRankedRestartSessionUnavailable();
+            restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime);
             return;
           }
           if (!(manager && (manager.rankCheckpointApplying === true || manager.replayMode === true))) {
@@ -412,7 +516,7 @@ function shouldAutoLoadOnlineLeaderboard() {
           original.apply(thisArg, args || []);
         },
         function () {
-          alertRankedRestartSessionUnavailable();
+          restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime);
         }
       )
       .then(
@@ -464,6 +568,12 @@ function shouldAutoLoadOnlineLeaderboard() {
     safeRemoveStorage(STORAGE_PENDING_SCORE_SUBMIT_KEY);
     safeRemoveStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY);
     safeRemoveStorage(STORAGE_PENDING_STONE_2K_SUBMIT_KEY);
+  }
+
+  function clearAuthSessionOnly() {
+    safeRemoveStorage(STORAGE_TOKEN_KEY);
+    safeRemoveStorage(STORAGE_USER_ID_KEY);
+    safeRemoveStorage(STORAGE_NICKNAME_KEY);
   }
 
   function clearPendingScoreSubmitState() {
@@ -866,10 +976,14 @@ function shouldAutoLoadOnlineLeaderboard() {
     var rows = Array.isArray(topRows) ? topRows : [];
     if (rows.length === 0) return "14px";
     var firstText = formatLeaderboardNameAndScore(rows[0], lang);
-    var length = toText(firstText).trim().length;
-    if (length >= 20) return "10px";
+    return resolveTimerLeaderboardNameTileFontSize(firstText);
+  }
+
+  function resolveTimerLeaderboardNameTileFontSize(text) {
+    var length = toText(text).trim().length;
+    if (length >= 22) return "10px";
     if (length >= 18) return "11px";
-    if (length >= 15) return "12px";
+    if (length >= 16) return "12px";
     return "14px";
   }
 
@@ -935,7 +1049,37 @@ function shouldAutoLoadOnlineLeaderboard() {
     nameTile.removeAttribute("role");
   }
 
-  function updateTimerLeaderboardRowNode(row, rankText, nameText, rowClassName, rankClassName, fixedNameFontSize, profileUrl) {
+  function renderTimerLeaderboardNameTileContent(nameTile, nameText, displayParts) {
+    if (!nameTile) return;
+    var fullText = toText(nameText);
+    var parts = displayParts && typeof displayParts === "object" ? displayParts : null;
+    if (!parts) {
+      nameTile.textContent = fullText;
+      nameTile.title = fullText;
+      return;
+    }
+
+    var nicknameText = toText(parts.nickname);
+    var scoreText = toText(parts.score);
+    if (!nicknameText || !scoreText) {
+      nameTile.textContent = fullText;
+      nameTile.title = fullText;
+      return;
+    }
+
+    nameTile.textContent = "";
+    nameTile.title = fullText;
+
+    var nicknameEl = createEl("span", "timer-leaderboard-nickname", nicknameText);
+    var separatorEl = createEl("span", "timer-leaderboard-separator", "-");
+    var scoreEl = createEl("span", "timer-leaderboard-score", scoreText);
+
+    nameTile.appendChild(nicknameEl);
+    nameTile.appendChild(separatorEl);
+    nameTile.appendChild(scoreEl);
+  }
+
+  function updateTimerLeaderboardRowNode(row, rankText, nameText, rowClassName, rankClassName, fixedNameFontSize, profileUrl, displayParts) {
     if (!row) return;
     row.className = "timer-leaderboard-row" + (rowClassName ? " " + rowClassName : "");
 
@@ -961,18 +1105,29 @@ function shouldAutoLoadOnlineLeaderboard() {
     rankTile.style.fontSize = addPxDelta(resolveRankTileFontSize(rankText), TIMER_LEADERBOARD_FONT_DELTA_PX);
 
     nameTile.className = "timertile timer-leaderboard-name-tile";
-    nameTile.textContent = toText(nameText);
-    nameTile.title = toText(nameText);
-    nameTile.style.fontSize = addPxDelta(toText(fixedNameFontSize || "14px"), TIMER_LEADERBOARD_FONT_DELTA_PX);
+    renderTimerLeaderboardNameTileContent(nameTile, nameText, displayParts);
+    nameTile.style.fontSize = addPxDelta(
+      resolveTimerLeaderboardNameTileFontSize(nameText) || toText(fixedNameFontSize || "14px"),
+      TIMER_LEADERBOARD_FONT_DELTA_PX
+    );
     applyNameTileProfileLink(nameTile, profileUrl);
   }
 
-  function formatLeaderboardNameAndScore(item, lang) {
+  function resolveLeaderboardDisplayParts(item, lang) {
     var source = item && typeof item === "object" ? item : {};
     var nickname = normalizeLeaderboardNickname(source.nickname);
     if (!nickname) nickname = lang === "en" ? "Anonymous" : "匿名";
     var scoreValue = Math.floor(Number(source.score) || 0);
-    return nickname + "-" + String(scoreValue);
+    var scoreText = String(scoreValue);
+    return {
+      nickname: nickname,
+      score: scoreText,
+      text: nickname + "-" + scoreText
+    };
+  }
+
+  function formatLeaderboardNameAndScore(item, lang) {
+    return resolveLeaderboardDisplayParts(item, lang).text;
   }
 
   function renderTimerLeaderboardRows(topRows, selfEntry) {
@@ -987,7 +1142,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
     for (var i = 0; i < rows.length && i < TIMER_LEADERBOARD_TOP_LIMIT; i += 1) {
       var item = rows[i] || {};
-      var displayText = formatLeaderboardNameAndScore(item, lang);
+      var displayParts = resolveLeaderboardDisplayParts(item, lang);
       var profileUrl = buildUserProfileUrl(item.user_id, item.nickname);
       var rankClassName = "";
       if (i === 0) rankClassName = "is-top-1";
@@ -996,11 +1151,12 @@ function shouldAutoLoadOnlineLeaderboard() {
       updateTimerLeaderboardRowNode(
         rowNodes[rowCursor],
         String(i + 1),
-        displayText,
+        displayParts.text,
         "",
         rankClassName,
         fixedNameFontSize,
-        profileUrl
+        profileUrl,
+        displayParts
       );
       rowCursor += 1;
     }
@@ -1019,25 +1175,26 @@ function shouldAutoLoadOnlineLeaderboard() {
     }
 
     var myRankText = "--";
-    var myIdentityAndScore = formatLeaderboardNameAndScore({
+    var myIdentityParts = resolveLeaderboardDisplayParts({
       nickname: getNickname() || (lang === "en" ? "You" : "我"),
       score: 0
     }, lang);
 
     if (selfEntry) {
       myRankText = String(selfEntry.rank || "--");
-      myIdentityAndScore = formatLeaderboardNameAndScore(selfEntry, lang);
+      myIdentityParts = resolveLeaderboardDisplayParts(selfEntry, lang);
     }
     var selfProfileUrl = selfEntry ? buildUserProfileUrl(selfEntry.user_id, selfEntry.nickname) : "";
 
     updateTimerLeaderboardRowNode(
       rowNodes[TIMER_LEADERBOARD_TOP_LIMIT],
       myRankText,
-      myIdentityAndScore,
+      myIdentityParts.text,
       "is-self",
       "",
       fixedNameFontSize,
-      selfProfileUrl
+      selfProfileUrl,
+      myIdentityParts
     );
     if (rows.length > 0) {
       setTimerLeaderboardPanelLoading(false);
@@ -2852,6 +3009,12 @@ async function refreshLeaderboard(modeLike) {
     return true;
   }
 
+  function refreshLeaderboardsAfterRecordSubmit(modeLike) {
+    var modeKey = toText(modeLike).trim() || getCurrentModeKey();
+    refreshLeaderboard(modeKey);
+    refreshTimerLeaderboardPanel(true);
+  }
+
   function shouldTreatWinStopAsTerminalFallback(manager) {
     if (!manager || manager.over || !manager.won || manager.keepPlaying) return false;
     var modeConfig = manager.modeConfig && typeof manager.modeConfig === "object" ? manager.modeConfig : null;
@@ -3015,8 +3178,7 @@ async function refreshLeaderboard(modeLike) {
 
     var errorText = toText(result && result.error ? result.error : "score_submit_failed");
     if (isUnauthorizedSubmitErrorText(errorText)) {
-      clearPendingScoreSubmitState();
-      clearAuth();
+      clearAuthSessionOnly();
       return;
     }
     if (!isTransientOnlineSubmitErrorText(errorText)) {
@@ -3026,7 +3188,6 @@ async function refreshLeaderboard(modeLike) {
 
   async function maybeSubmitRecordOnGameOver() {
     var opts = arguments.length > 0 && arguments[0] && typeof arguments[0] === "object" ? arguments[0] : {};
-    if (!getAuthToken()) return;
 
     var manager = opts.manager || global.game_manager;
     if (!manager || manager.replayMode || !isSessionTerminated(manager)) {
@@ -3050,7 +3211,6 @@ async function refreshLeaderboard(modeLike) {
     var signature = buildRecordSubmitSignature(manager, payload);
 
     await retryPendingRecordSubmit(opts);
-    if (!getAuthToken()) return;
     if (recordSubmitLock) return;
 
     var lastSignature = toText(safeGetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY));
@@ -3058,6 +3218,10 @@ async function refreshLeaderboard(modeLike) {
     var pendingSignature = pendingState ? pendingState.signature : "";
     if (signature && signature === lastSignature) return;
     if (signature && signature === pendingSignature && shouldDeferPendingRecordSubmitRetry(pendingState)) return;
+    if (signature && signature !== pendingSignature) {
+      writePendingRecordSubmitSignature(signature, pendingState, payload);
+    }
+    if (!getAuthToken()) return;
 
     recordSubmitLock = true;
     var result = null;
@@ -3074,6 +3238,7 @@ async function refreshLeaderboard(modeLike) {
       safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY, signature);
       clearPendingRecordSubmitSignature();
       cleanupRankedStateAfterRecordSubmit(manager, payload);
+      refreshLeaderboardsAfterRecordSubmit(payload && payload.mode_key);
       return;
     }
 
@@ -3084,8 +3249,7 @@ async function refreshLeaderboard(modeLike) {
       return;
     }
     if (isUnauthorizedSubmitErrorText(errorText)) {
-      clearPendingRecordSubmitSignature();
-      clearAuth();
+      clearAuthSessionOnly();
       return;
     }
     if (!isTransientRecordSubmitErrorText(errorText)) {
@@ -3139,8 +3303,7 @@ async function refreshLeaderboard(modeLike) {
 
     var errorText = toText(result && result.error ? result.error : "score_submit_failed");
     if (isUnauthorizedSubmitErrorText(errorText)) {
-      clearPendingScoreSubmitState();
-      clearAuth();
+      clearAuthSessionOnly();
       return result;
     }
     if (!isTransientOnlineSubmitErrorText(errorText)) {
@@ -3184,6 +3347,7 @@ async function refreshLeaderboard(modeLike) {
       clearPendingRecordSubmitSignature();
       var currentManager = global.game_manager;
       cleanupRankedStateAfterRecordSubmit(currentManager, pendingState.payload);
+      refreshLeaderboardsAfterRecordSubmit(pendingState.payload && pendingState.payload.mode_key);
       return result;
     }
 
@@ -3199,8 +3363,7 @@ async function refreshLeaderboard(modeLike) {
       return result;
     }
     if (isUnauthorizedSubmitErrorText(errorText)) {
-      clearPendingRecordSubmitSignature();
-      clearAuth();
+      clearAuthSessionOnly();
       return result;
     }
     if (!isTransientRecordSubmitErrorText(errorText)) {
@@ -3259,8 +3422,7 @@ async function refreshLeaderboard(modeLike) {
 
     var errorText = toText(result && result.error ? result.error : "stone_2k_submit_failed");
     if (isUnauthorizedSubmitErrorText(errorText)) {
-      clearPendingStone2kSubmitState();
-      clearAuth();
+      clearAuthSessionOnly();
       return result;
     }
     if (!isTransientOnlineSubmitErrorText(errorText)) {
@@ -3333,8 +3495,7 @@ async function refreshLeaderboard(modeLike) {
 
     var errorText = toText(result && result.error ? result.error : "stone_2k_submit_failed");
     if (isUnauthorizedSubmitErrorText(errorText)) {
-      clearPendingStone2kSubmitState();
-      clearAuth();
+      clearAuthSessionOnly();
       return;
     }
     if (!isTransientOnlineSubmitErrorText(errorText)) {

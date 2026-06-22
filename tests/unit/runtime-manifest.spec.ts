@@ -7,6 +7,7 @@ import {
   getAllDeclaredCapabilities,
   validateManifestCapabilities
 } from "../../src/entries/runtime-manifest";
+import { resolveHomeFamilyScriptsByCapabilities } from "../../src/entries/home-family-shared";
 
 describe("runtime-manifest: PAGE_MANIFESTS", () => {
   it("has 19 page entries", () => {
@@ -83,5 +84,19 @@ describe("runtime-manifest: validateManifestCapabilities", () => {
     const entry = PAGE_MANIFESTS[0];
     const errors = validateManifestCapabilities(entry, smallSet);
     expect(errors.length).toBeGreaterThan(0);
+  });
+});
+
+describe("home-family runtime script order", () => {
+  it("loads the game dialog before the restart runtime during game startup", () => {
+    const scripts = resolveHomeFamilyScriptsByCapabilities(["core", "standard-startup"]);
+    const gameDialogIndex = scripts.findIndex((script) => script.includes("game_dialog_runtime"));
+    const restartRuntimeIndex = scripts.findIndex((script) =>
+      script.includes("core_game_manager_restart_setup_helpers_runtime")
+    );
+
+    expect(gameDialogIndex).toBeGreaterThanOrEqual(0);
+    expect(restartRuntimeIndex).toBeGreaterThanOrEqual(0);
+    expect(gameDialogIndex).toBeLessThan(restartRuntimeIndex);
   });
 });

@@ -16,6 +16,7 @@ export interface RestartGameManagerLike {
 
 export interface RestartGameOperations {
   confirmRestart?: (message: string) => boolean;
+  confirmRestartAsync?: (message: string) => Promise<boolean>;
   resolveRestartConfirmMessage?: (manager: RestartGameManagerLike) => string;
   shouldClearPracticeBoardOnRestart?: (manager: RestartGameManagerLike) => boolean;
   createEmptyPracticeBoardMatrix?: (manager: RestartGameManagerLike) => unknown;
@@ -29,6 +30,7 @@ export interface RestartGameOperations {
 
 export interface RestartGameRuntime {
   restartGame: typeof restartGame;
+  restartGameAsync: typeof restartGameAsync;
   createFallbackFreshSetupSeed: typeof createFallbackFreshSetupSeed;
   resolveRestartConfirmLanguage: typeof resolveRestartConfirmLanguage;
 }
@@ -98,6 +100,18 @@ function restartPracticeGame(manager: RestartGameManagerLike, operations: Restar
   return true;
 }
 
+function performRestartAfterConfirm(
+  manager: RestartGameManagerLike,
+  operations: RestartGameOperations
+): void {
+  manager.actuator?.continue?.();
+  manager.setRuntimeUndoStack?.([]);
+  manager.setRuntimeRedoStack?.([]);
+  manager.clearSavedGameState?.(manager.modeKey);
+  if (restartPracticeGame(manager, operations)) return;
+  manager.setup?.(undefined, { disableStateRestore: true });
+}
+
 export function resolveRestartConfirmLanguage(manager: RestartGameManagerLike | null | undefined): "en" | "zh" {
   const windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
   try {
@@ -126,17 +140,26 @@ export function restartGame(
   if (!manager) return;
   const message = operations.resolveRestartConfirmMessage?.(manager) || "";
   if (operations.confirmRestart?.(message) !== true) return;
-  manager.actuator?.continue?.();
-  manager.setRuntimeUndoStack?.([]);
-  manager.setRuntimeRedoStack?.([]);
-  manager.clearSavedGameState?.(manager.modeKey);
-  if (restartPracticeGame(manager, operations)) return;
-  manager.setup?.(undefined, { disableStateRestore: true });
+  performRestartAfterConfirm(manager, operations);
+}
+
+export async function restartGameAsync(
+  manager: RestartGameManagerLike | null | undefined,
+  operations: RestartGameOperations = {}
+): Promise<void> {
+  if (!manager) return;
+  const message = operations.resolveRestartConfirmMessage?.(manager) || "";
+  const confirmed = operations.confirmRestartAsync
+    ? await operations.confirmRestartAsync(message)
+    : operations.confirmRestart?.(message) === true;
+  if (confirmed !== true) return;
+  performRestartAfterConfirm(manager, operations);
 }
 
 export function createRestartGameRuntime(): RestartGameRuntime {
   return {
     restartGame,
+    restartGameAsync,
     createFallbackFreshSetupSeed,
     resolveRestartConfirmLanguage
   };
