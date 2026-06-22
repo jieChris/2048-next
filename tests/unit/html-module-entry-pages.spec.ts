@@ -95,4 +95,21 @@ describe("module entry html pages", () => {
       expect(timerBoxHtml).toContain('class="timer-leaderboard-row is-self"');
     });
   }
+
+  it("moves local history entry from game headers to the account center", () => {
+    for (const htmlPath of TIMER_LEADERBOARD_SHELL_PAGES) {
+      const html = readHtml(htmlPath);
+      const topActionsStart = html.indexOf('class="top-action-buttons"');
+      const topActionsEnd = html.indexOf("</div>", topActionsStart);
+      const topActionsHtml = html.slice(topActionsStart, topActionsEnd);
+
+      expect(topActionsStart, `${htmlPath} should include top actions`).toBeGreaterThanOrEqual(0);
+      expect(topActionsHtml).not.toContain('id="top-history-btn"');
+      expect(topActionsHtml).not.toContain('href="history.html"');
+    }
+
+    const accountHtml = readHtml("account.html");
+    expect(accountHtml).toContain('id="account-nav-history"');
+    expect(accountHtml).toContain('href="history.html"');
+  });
 });

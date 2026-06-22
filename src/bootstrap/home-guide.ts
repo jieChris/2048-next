@@ -473,13 +473,6 @@ const BASE_HOME_GUIDE_STEPS: HomeGuideLocalizedStep[] = [
     descEn: "Open mode selection and switch rules or board sizes."
   },
   {
-    selector: "#top-history-btn",
-    titleZh: "历史记录",
-    titleEn: "History",
-    descZh: "查看本地历史对局，支持回放、导入和导出。",
-    descEn: "View local history records with replay/import/export support."
-  },
-  {
     selector: "#top-settings-btn",
     titleZh: "设置按钮",
     titleEn: "Settings",
