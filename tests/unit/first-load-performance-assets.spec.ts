@@ -6,7 +6,7 @@ describe("first-load performance assets", () => {
     const html = readFileSync("2048.html", "utf8");
 
     expect(html).toContain(
-      '<link rel="preload" href="js/home_standard_startup_bundle.js?v=20260609-rescue-sync1" as="script">'
+      '<link rel="preload" href="js/home_standard_startup_bundle.js?v=20260622-game-dialog" as="script">'
     );
     expect(html).not.toContain("home_standard_deferred_bundle");
   });
