@@ -289,6 +289,19 @@ body[data-page="game"] h1.title {
   --timerbox-tile-gap: 6px;
   --timerbox-main-tile-width: 187px;
   --timerbox-summary-padding-x: 25px;
+  --leaderboard-rank-bg: #9a8a7b;
+  --leaderboard-rank-text: #fffaf2;
+  --leaderboard-rank-top-1-bg: linear-gradient(180deg, #efd06b 0%, #d7a934 100%);
+  --leaderboard-rank-top-1-text: #5d4711;
+  --leaderboard-rank-top-2-bg: linear-gradient(180deg, #ddd8cf 0%, #b9b1a6 100%);
+  --leaderboard-rank-top-2-text: #574f48;
+  --leaderboard-rank-top-3-bg: linear-gradient(180deg, #d6a56a 0%, #aa7441 100%);
+  --leaderboard-rank-top-3-text: #fff7ec;
+  --leaderboard-rank-self-bg: linear-gradient(180deg, #d96758 0%, #ba463d 100%);
+  --leaderboard-rank-self-text: #fff8f4;
+  --leaderboard-rank-shadow: 0 5px 12px rgba(119, 110, 101, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  --leaderboard-rank-top-shadow: 0 5px 12px rgba(119, 110, 101, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  --leaderboard-rank-self-shadow: 0 5px 12px rgba(156, 65, 54, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.26);
 }
 
 .timer-scroll-btn {
@@ -509,28 +522,33 @@ body.home-guide-active .top-action-buttons {
 }
 
 .timer-leaderboard-rank-tile {
-  background: #8f7a66;
-  color: #f9f6f2;
+  background: var(--leaderboard-rank-bg);
+  color: var(--leaderboard-rank-text);
+  box-shadow: var(--leaderboard-rank-shadow);
 }
 
 .timer-leaderboard-rank-tile.is-top-1 {
-  background: #d8ab00;
-  box-shadow: 0 0 10px 2px rgba(216, 171, 0, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  background: var(--leaderboard-rank-top-1-bg);
+  color: var(--leaderboard-rank-top-1-text);
+  box-shadow: var(--leaderboard-rank-top-shadow);
 }
 
 .timer-leaderboard-rank-tile.is-top-2 {
-  background: #c9c5bb;
-  box-shadow: 0 0 10px 2px rgba(201, 197, 187, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  background: var(--leaderboard-rank-top-2-bg);
+  color: var(--leaderboard-rank-top-2-text);
+  box-shadow: var(--leaderboard-rank-top-shadow);
 }
 
 .timer-leaderboard-rank-tile.is-top-3 {
-  background: #b7832d;
-  box-shadow: 0 0 10px 2px rgba(183, 131, 45, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  background: var(--leaderboard-rank-top-3-bg);
+  color: var(--leaderboard-rank-top-3-text);
+  box-shadow: var(--leaderboard-rank-top-shadow);
 }
 
 .timer-leaderboard-row.is-self .timer-leaderboard-rank-tile {
-  background: #d61212;
-  box-shadow: 0 0 10px 2px rgba(214, 18, 18, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  background: var(--leaderboard-rank-self-bg);
+  color: var(--leaderboard-rank-self-text);
+  box-shadow: var(--leaderboard-rank-self-shadow);
 }
 
 .timer-leaderboard-row .timer-leaderboard-name-tile {
@@ -5455,6 +5473,26 @@ html[data-night-background="1"] .timer-leaderboard-row .timer-leaderboard-name-t
 html[data-night-background="1"] .timer-leaderboard-row:not(.is-self) .timer-leaderboard-rank-tile:not(.is-top-1):not(.is-top-2):not(.is-top-3) {
   background: linear-gradient(180deg, rgba(52, 70, 96, 0.96) 0%, rgba(34, 47, 67, 0.96) 100%);
   color: #f7efe2;
+}
+
+html[data-night-background="1"] .timer-leaderboard-rank-tile.is-top-1 {
+  background: linear-gradient(180deg, #d6b85b 0%, #a77828 100%);
+  color: #fff6df;
+}
+
+html[data-night-background="1"] .timer-leaderboard-rank-tile.is-top-2 {
+  background: linear-gradient(180deg, #aeb7c0 0%, #74808d 100%);
+  color: #fff8ee;
+}
+
+html[data-night-background="1"] .timer-leaderboard-rank-tile.is-top-3 {
+  background: linear-gradient(180deg, #bd8759 0%, #784d34 100%);
+  color: #fff2e4;
+}
+
+html[data-night-background="1"] .timer-leaderboard-row.is-self .timer-leaderboard-rank-tile {
+  background: linear-gradient(180deg, #c75c55 0%, #843b3f 100%);
+  color: #fff8f4;
 }
 
 html[data-night-background="1"] .timer-leaderboard-row.is-self .timer-leaderboard-name-tile {
