@@ -96,7 +96,7 @@ describe("module entry html pages", () => {
     });
   }
 
-  it("moves local history entry from game headers to the account center", () => {
+  it("moves local history entry from game headers to account-related pages", () => {
     for (const htmlPath of TIMER_LEADERBOARD_SHELL_PAGES) {
       const html = readHtml(htmlPath);
       const topActionsStart = html.indexOf('class="top-action-buttons"');
@@ -111,5 +111,9 @@ describe("module entry html pages", () => {
     const accountHtml = readHtml("account.html");
     expect(accountHtml).toContain('id="account-nav-history"');
     expect(accountHtml).toContain('href="history.html"');
+
+    const userHtml = readHtml("user.html");
+    expect(userHtml).toContain('id="user-nav-history"');
+    expect(userHtml).toContain('href="history.html"');
   });
 });
