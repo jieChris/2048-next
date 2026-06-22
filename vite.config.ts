@@ -5,6 +5,7 @@ import { resolve } from "path";
 const HOME_STANDARD_STARTUP_BUNDLE = "home_standard_startup_bundle.js";
 const HOME_STANDARD_DEFERRED_BUNDLE = "home_standard_deferred_bundle.js";
 const HOME_STANDARD_STARTUP_FILES = [
+  "game_dialog_runtime.js",
   "seedrandom.js",
   "animframe_polyfill.js",
   "core_bootstrap_runtime.js",
@@ -40,7 +41,6 @@ const HOME_STANDARD_STARTUP_FILES = [
 ];
 const HOME_STANDARD_DEFERRED_FILES = [
   "core_practice_transfer_runtime.js",
-  "game_dialog_runtime.js",
   "core_practice_transfer_host_runtime.js",
   "core_practice_transfer_page_host_runtime.js",
   "core_capped_timer_scroll_runtime.js",

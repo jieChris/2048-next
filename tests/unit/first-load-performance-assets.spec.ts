@@ -11,6 +11,22 @@ describe("first-load performance assets", () => {
     expect(html).not.toContain("home_standard_deferred_bundle");
   });
 
+  it("loads the game dialog in the startup bundle before restart handling", () => {
+    const viteConfig = readFileSync("vite.config.ts", "utf8");
+    const startupStart = viteConfig.indexOf("const HOME_STANDARD_STARTUP_FILES = [");
+    const startupEnd = viteConfig.indexOf("];", startupStart);
+    const deferredStart = viteConfig.indexOf("const HOME_STANDARD_DEFERRED_FILES = [");
+    const deferredEnd = viteConfig.indexOf("];", deferredStart);
+    const startupBlock = viteConfig.slice(startupStart, startupEnd);
+    const deferredBlock = viteConfig.slice(deferredStart, deferredEnd);
+
+    expect(startupBlock).toContain('"game_dialog_runtime.js"');
+    expect(startupBlock.indexOf('"game_dialog_runtime.js"')).toBeLessThan(
+      startupBlock.indexOf('"core_game_manager_restart_setup_helpers_runtime.js"')
+    );
+    expect(deferredBlock).not.toContain('"game_dialog_runtime.js"');
+  });
+
   it("uses swap font loading for Clear Sans faces", () => {
     const css = readFileSync("style/fonts/clear-sans.css", "utf8");
 
