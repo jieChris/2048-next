@@ -21,6 +21,24 @@ function getElementById(documentLike: unknown, id: string): unknown {
   return (getter as unknown as Function).call(documentLike, id);
 }
 
+function querySelector(node: unknown, selector: string): unknown {
+  const query = asFunction<(value: string) => unknown>(toRecord(node).querySelector);
+  if (!query) return null;
+  return (query as unknown as Function).call(node, selector);
+}
+
+function appendChild(node: unknown, child: unknown): void {
+  const append = asFunction<(value: unknown) => unknown>(toRecord(node).appendChild);
+  if (!append) return;
+  (append as unknown as Function).call(node, child);
+}
+
+function insertBefore(node: unknown, child: unknown, anchor: unknown): void {
+  const insert = asFunction<(value: unknown, before: unknown) => unknown>(toRecord(node).insertBefore);
+  if (!insert) return;
+  (insert as unknown as Function).call(node, child, anchor);
+}
+
 function bindListener(
   element: unknown,
   eventName: string,
@@ -130,6 +148,237 @@ function resolveLocalizedWinPromptNoteText(enabled: boolean, windowLike?: unknow
   return enabled
     ? "合成 2048 时会弹出胜利提示，可选择继续游戏。"
     : "合成 2048 时不弹出胜利提示，将自动继续游戏。";
+}
+
+export interface NormalizeSettingsModalContentResult {
+  hasModal: boolean;
+  didNormalize: boolean;
+  hasInlineStats: boolean;
+}
+
+function escapeAttribute(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function buildSettingsToggleRowHtml(options: {
+  rowId?: string;
+  inputId: string;
+  title: string;
+  desc?: string;
+  descId?: string;
+  noteId?: string;
+  note?: string;
+  sliderInnerHtml?: string;
+}): string {
+  const rowId = options.rowId ? ` id="${escapeAttribute(options.rowId)}"` : "";
+  const desc = options.desc
+    ? `<div${options.descId ? ` id="${escapeAttribute(options.descId)}"` : ""} class="settings-toggle-desc">${options.desc}</div>`
+    : "";
+  const note = options.noteId
+    ? `<div id="${escapeAttribute(options.noteId)}" class="settings-note">${options.note || ""}</div>`
+    : "";
+  return (
+    `<div${rowId} class="settings-row settings-toggle-row">` +
+    `<div class="settings-toggle-main">` +
+    `<div class="settings-toggle-copy">` +
+    `<label for="${escapeAttribute(options.inputId)}" class="settings-toggle-title">${options.title}</label>` +
+    desc +
+    `</div>` +
+    `<label class="settings-switch" for="${escapeAttribute(options.inputId)}" aria-label="${escapeAttribute(options.title)}">` +
+    `<input id="${escapeAttribute(options.inputId)}" type="checkbox">` +
+    `<span class="settings-switch-slider">${options.sliderInnerHtml || ""}</span>` +
+    `</label>` +
+    `</div>` +
+    note +
+    `</div>`
+  );
+}
+
+function buildToolkitEntryRowHtml(lang: "zh" | "en"): string {
+  return (
+    `<div id="toolkit-entry-row" class="settings-row toolkit-entry-row">` +
+    `<div class="toolkit-entry-actions">` +
+    `<a id="toolkit-palette-link" class="replay-button" href="palette.html">${lang === "en" ? "Theme Settings" : "主题设置"}</a>` +
+    `<a id="toolkit-account-link" class="replay-button" href="account.html">${lang === "en" ? "Account Center" : "账号中心"}</a>` +
+    `</div>` +
+    `</div>`
+  );
+}
+
+function buildCanonicalSettingsModalInnerHtml(options: {
+  lang: "zh" | "en";
+  hasInlineStats: boolean;
+}): string {
+  const lang = options.lang;
+  const isEn = lang === "en";
+  const rows = [
+    `<h3>${isEn ? "Settings" : "设置"}</h3>`,
+    buildSettingsToggleRowHtml({
+      inputId: "win-prompt-toggle",
+      title: isEn ? "Win Prompt" : "胜利提示",
+      desc: isEn ? "Show a win prompt after reaching 2048" : "合成 2048 后弹出胜利提示",
+      noteId: "win-prompt-note"
+    }),
+    buildSettingsToggleRowHtml({
+      rowId: "bgm-settings-row",
+      inputId: "bgm-toggle",
+      title: isEn ? "Background Music" : "背景音乐",
+      descId: "bgm-toggle-desc",
+      desc: isEn
+        ? "Loop background music on this page after enabling"
+        : "开启后在当前页面循环播放背景音乐",
+      noteId: "bgm-note",
+      note: isEn
+        ? "Audio is not requested until enabled, keeping the page fast."
+        : "默认不加载音频，开启后才会开始请求，避免拖慢页面。"
+    }),
+    buildSettingsToggleRowHtml({
+      rowId: "night-bg-settings-row",
+      inputId: "night-bg-toggle",
+      title: isEn ? "Night Mode" : "夜间模式",
+      descId: "night-bg-toggle-desc",
+      desc: isEn ? "Use a softer night background" : "为页面切换成柔和的夜间模式",
+      noteId: "night-bg-note",
+      note: isEn
+        ? "This setting is shared across pages with settings dialogs."
+        : "开启后会在所有带设置弹窗的页面同步生效。"
+    })
+  ];
+
+  if (options.hasInlineStats) {
+    rows.push(
+      buildSettingsToggleRowHtml({
+        inputId: "pku2048-inline-stats-toggle",
+        title: isEn ? "Stats Panel" : "统计面板",
+        descId: "pku2048-inline-stats-desc",
+        desc: isEn ? "Show inline on page." : "直接显示在页面中",
+        sliderInnerHtml: `<span class="settings-inline-desc-sr" style="display:none;">${
+          isEn ? "Show inline on page." : "直接显示在页面中"
+        }</span>`
+      })
+    );
+  }
+
+  rows.push(buildToolkitEntryRowHtml(lang));
+  return rows.join("");
+}
+
+function getSettingsRowId(row: unknown): string {
+  const rowRecord = toRecord(row);
+  const rowId = String(rowRecord.id || "");
+  if (rowId) return rowId;
+  const input = querySelector(row, "input");
+  return String(toRecord(input).id || "");
+}
+
+const CANONICAL_SETTINGS_ROW_IDS = [
+  "win-prompt-toggle",
+  "bgm-settings-row",
+  "night-bg-settings-row",
+  "pku2048-inline-stats-toggle",
+  "timer-module-view-toggle",
+  "top-button-style-settings-row",
+  "ui-language-settings-row",
+  "home-guide-trigger-btn",
+  "toolkit-entry-row"
+] as const;
+
+const DYNAMIC_SETTINGS_ROW_IDS = [
+  "timer-module-view-toggle",
+  "top-button-style-settings-row",
+  "ui-language-settings-row",
+  "home-guide-trigger-btn"
+] as const;
+
+function reorderSettingsRows(content: unknown): void {
+  for (const rowId of CANONICAL_SETTINGS_ROW_IDS) {
+    const row =
+      rowId === "toolkit-entry-row" || rowId.endsWith("-row")
+        ? getElementById(toRecord(content).ownerDocument, rowId)
+        : null;
+    const targetRow =
+      row ||
+      (() => {
+        const control = getElementById(toRecord(content).ownerDocument, rowId);
+        const closest = asFunction<(selector: string) => unknown>(toRecord(control).closest);
+        return closest && control ? (closest as unknown as Function).call(control, ".settings-row") : null;
+      })();
+    if (targetRow && toRecord(targetRow).parentNode === content) {
+      appendChild(content, targetRow);
+    }
+  }
+}
+
+export function normalizeSettingsModalContent(input: {
+  documentLike?: unknown;
+  windowLike?: unknown;
+}): NormalizeSettingsModalContentResult {
+  const source = toRecord(input);
+  const documentLike = source.documentLike;
+  const modal = getElementById(documentLike, "settings-modal");
+  if (!modal) {
+    return {
+      hasModal: false,
+      didNormalize: false,
+      hasInlineStats: false
+    };
+  }
+
+  const content = querySelector(modal, ".settings-modal-content");
+  if (!content) {
+    return {
+      hasModal: true,
+      didNormalize: false,
+      hasInlineStats: false
+    };
+  }
+
+  const existingRows: unknown[] = [];
+  const children = toRecord(toRecord(content).children);
+  const childrenLength = typeof children.length === "number" ? Math.max(0, Math.floor(children.length)) : 0;
+  for (let i = 0; i < childrenLength; i += 1) {
+    const child = children[i];
+    const rowId = getSettingsRowId(child);
+    if (DYNAMIC_SETTINGS_ROW_IDS.includes(rowId as (typeof DYNAMIC_SETTINGS_ROW_IDS)[number])) {
+      existingRows.push(child);
+    }
+  }
+
+  const hasInlineStats =
+    !!getElementById(documentLike, "pku2048-inline-stats-toggle") ||
+    existingRows.some((row) => getSettingsRowId(row) === "pku2048-inline-stats-toggle");
+  const hasCanonicalBase =
+    !!getElementById(documentLike, "win-prompt-toggle") &&
+    !!getElementById(documentLike, "bgm-toggle") &&
+    !!getElementById(documentLike, "night-bg-toggle") &&
+    !!getElementById(documentLike, "toolkit-entry-row");
+
+  if (!hasCanonicalBase) {
+    toRecord(content).innerHTML = buildCanonicalSettingsModalInnerHtml({
+      lang: readUiLanguage(source.windowLike),
+      hasInlineStats
+    });
+    for (const row of existingRows) {
+      const toolkitEntry = getElementById(documentLike, "toolkit-entry-row");
+      if (toolkitEntry && toRecord(toolkitEntry).parentNode === content) {
+        insertBefore(content, row, toolkitEntry);
+      } else {
+        appendChild(content, row);
+      }
+    }
+  }
+
+  reorderSettingsRows(content);
+
+  return {
+    hasModal: true,
+    didNormalize: true,
+    hasInlineStats
+  };
 }
 
 export interface SettingsModalActionResolvers {
@@ -249,6 +498,7 @@ export function createSettingsModalActionResolvers(input: {
   settingsModalHostRuntime?: unknown;
   replayModalRuntime?: unknown;
   documentLike?: unknown;
+  windowLike?: unknown;
   removeLegacyUndoSettingsUI?: unknown;
   initThemeSettingsUI?: unknown;
   initTimerModuleSettingsUI?: unknown;
@@ -267,6 +517,7 @@ export function createSettingsModalActionResolvers(input: {
         settingsModalHostRuntime: source.settingsModalHostRuntime,
         replayModalRuntime: source.replayModalRuntime,
         documentLike: source.documentLike,
+        windowLike: source.windowLike,
         removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
         initThemeSettingsUI: source.initThemeSettingsUI,
         initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
@@ -278,6 +529,7 @@ export function createSettingsModalActionResolvers(input: {
       settingsModalHostRuntime: source.settingsModalHostRuntime,
       replayModalRuntime: source.replayModalRuntime,
       documentLike: source.documentLike,
+      windowLike: source.windowLike,
       removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
       initThemeSettingsUI: source.initThemeSettingsUI,
       initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
@@ -319,6 +571,7 @@ export function applySettingsModalPageOpen(input: {
   settingsModalHostRuntime?: unknown;
   replayModalRuntime?: unknown;
   documentLike?: unknown;
+  windowLike?: unknown;
   removeLegacyUndoSettingsUI?: unknown;
   initThemeSettingsUI?: unknown;
   initTimerModuleSettingsUI?: unknown;
@@ -336,6 +589,11 @@ export function applySettingsModalPageOpen(input: {
       didApply: false
     };
   }
+
+  normalizeSettingsModalContent({
+    documentLike: source.documentLike,
+    windowLike: source.windowLike
+  });
 
   applyOpen({
     replayModalRuntime: source.replayModalRuntime,
@@ -389,6 +647,7 @@ export function applySettingsModalPageClose(input: {
 export interface SettingsModalPageHostRuntime {
   createSettingsModalActionResolvers: typeof createSettingsModalActionResolvers;
   createSettingsModalInitResolvers: typeof createSettingsModalInitResolvers;
+  normalizeSettingsModalContent: typeof normalizeSettingsModalContent;
   applySettingsModalPageOpen: typeof applySettingsModalPageOpen;
   applySettingsModalPageClose: typeof applySettingsModalPageClose;
 }
@@ -405,6 +664,7 @@ export function createSettingsModalPageHostRuntime(): SettingsModalPageHostRunti
   return {
     createSettingsModalActionResolvers,
     createSettingsModalInitResolvers,
+    normalizeSettingsModalContent,
     applySettingsModalPageOpen,
     applySettingsModalPageClose
   };

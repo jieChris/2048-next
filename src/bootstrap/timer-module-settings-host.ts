@@ -179,9 +179,11 @@ export function ensureTimerModuleSettingsToggle(input: {
   rowRecord.className = "settings-row settings-toggle-row";
   rowRecord.innerHTML = buildSettingsRow ? String(buildSettingsRow()) : "";
 
+  const toolkitEntry = querySelector(content, "#toolkit-entry-row");
   const actions = querySelector(content, ".replay-modal-actions");
-  if (actions && toRecord(actions).parentNode === content) {
-    insertBefore(content, row, actions);
+  const anchor = toolkitEntry && toRecord(toolkitEntry).parentNode === content ? toolkitEntry : actions;
+  if (anchor && toRecord(anchor).parentNode === content) {
+    insertBefore(content, row, anchor);
   } else {
     appendChild(content, row);
   }

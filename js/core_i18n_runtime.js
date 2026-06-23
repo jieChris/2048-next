@@ -770,9 +770,11 @@
         '    <span id="ui-language-toggle-thumb" class="language-switch-thumb">\u4e2d</span>' +
         '  </label>' +
         '</div>';
+      var toolkitEntry = modal.querySelector("#toolkit-entry-row");
       var actions = modal.querySelector(".replay-modal-actions");
-      if (actions && actions.parentNode && typeof actions.parentNode.insertBefore === "function") {
-        actions.parentNode.insertBefore(row, actions);
+      var anchor = toolkitEntry && toolkitEntry.parentNode === modal ? toolkitEntry : actions;
+      if (anchor && anchor.parentNode && typeof anchor.parentNode.insertBefore === "function") {
+        anchor.parentNode.insertBefore(row, anchor);
       } else {
         modal.appendChild(row);
       }

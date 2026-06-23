@@ -476,29 +476,146 @@ function shouldAutoLoadOnlineLeaderboard() {
     }
   }
 
-  function prepareRankedSessionForRestart(manager) {
-    if (shouldSkipRankedSessionPreparationForRestart(manager)) return true;
-    var modeKey = resolveManagerRankedModeKey(manager);
-    var runtime = getRankedSessionRuntime();
-    if (runtime && typeof runtime.promotePrefetchedSession === "function") {
-      if (runtime.promotePrefetchedSession(modeKey)) {
-        return true;
-      }
-    }
-    return false;
+  function markRankedRestartPreparationDone(manager) {
+    if (manager) manager.rankedRestartPreparing = false;
   }
 
-  function beginAsyncRankedRestart(manager, original, thisArg, args) {
-    if (shouldSkipRankedSessionPreparationForRestart(manager)) return false;
-    var modeKey = resolveManagerRankedModeKey(manager);
-    var runtime = getRankedSessionRuntime();
-    if (!runtime || typeof runtime.startNextSession !== "function") {
-      scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
-      restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime);
-      return true;
+  function continueRankedRestartAfterSetupIntent(manager, originalSetup, setupThisArg, setupArgs, modeKey, runtime) {
+    var shouldActuateAfterFallbackSetup = false;
+    Promise.resolve()
+      .then(function () {
+        return runtime.startNextSession(modeKey);
+      })
+      .then(
+        function (ready) {
+          if (!ready) {
+            shouldActuateAfterFallbackSetup = true;
+            scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
+            clearRankedRestartStateForFallback(manager, modeKey, runtime);
+            return originalSetup.apply(
+              setupThisArg,
+              [
+                setupArgs[0],
+                mergeRankedFallbackSetupOptions(setupThisArg || manager, setupArgs[1], modeKey)
+              ]
+            );
+          }
+          if (!(manager && (manager.rankCheckpointApplying === true || manager.replayMode === true))) {
+            clearRankedCheckpointForManager(manager, { keepalive: true }).catch(function () {});
+          }
+          return originalSetup.apply(setupThisArg, setupArgs);
+        },
+        function () {
+          shouldActuateAfterFallbackSetup = true;
+          clearRankedRestartStateForFallback(manager, modeKey, runtime);
+          return originalSetup.apply(
+            setupThisArg,
+            [
+              setupArgs[0],
+              mergeRankedFallbackSetupOptions(setupThisArg || manager, setupArgs[1], modeKey)
+            ]
+          );
+        }
+      )
+      .then(
+        function () {
+          if (shouldActuateAfterFallbackSetup && manager && typeof manager.actuate === "function") {
+            try {
+              manager.actuate();
+            } catch (_errActuate) {}
+          }
+          markRankedRestartPreparationDone(manager);
+        },
+        function (err) {
+          markRankedRestartPreparationDone(manager);
+          global.setTimeout(function () {
+            throw err;
+          }, 0);
+        }
+      );
+  }
+
+  function beginAsyncRankedRestartAfterConfirmation(manager, original, thisArg, args, modeKey, runtime) {
+    if (!(manager && typeof manager.setup === "function")) {
+      Promise.resolve()
+        .then(function () {
+          return runtime.startNextSession(modeKey);
+        })
+        .then(
+          function (ready) {
+            if (!ready) {
+              scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
+              restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime);
+              return;
+            }
+            if (!(manager && (manager.rankCheckpointApplying === true || manager.replayMode === true))) {
+              clearRankedCheckpointForManager(manager, { keepalive: true }).catch(function () {});
+            }
+            original.apply(thisArg, args || []);
+          },
+          function () {
+            restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime);
+          }
+        )
+        .then(
+          function () {
+            markRankedRestartPreparationDone(manager);
+          },
+          function (err) {
+            markRankedRestartPreparationDone(manager);
+            global.setTimeout(function () {
+              throw err;
+            }, 0);
+          }
+        );
+      return;
     }
-    if (manager && manager.rankedRestartPreparing === true) return true;
-    if (manager) manager.rankedRestartPreparing = true;
+
+    var originalSetup = manager.setup;
+    var setupIntercepted = false;
+    var restored = false;
+    function restoreSetup() {
+      if (!restored && manager.setup === rankedRestartSetupInterceptor) {
+        manager.setup = originalSetup;
+      }
+      restored = true;
+    }
+    function rankedRestartSetupInterceptor() {
+      setupIntercepted = true;
+      var setupThisArg = this || manager;
+      var setupArgs = Array.prototype.slice.call(arguments);
+      restoreSetup();
+      continueRankedRestartAfterSetupIntent(manager, originalSetup, setupThisArg, setupArgs, modeKey, runtime);
+    }
+    manager.setup = rankedRestartSetupInterceptor;
+
+    var result;
+    try {
+      result = original.apply(thisArg, args || []);
+    } catch (err) {
+      restoreSetup();
+      markRankedRestartPreparationDone(manager);
+      throw err;
+    }
+
+    Promise.resolve(result).then(
+      function () {
+        if (!setupIntercepted) {
+          restoreSetup();
+          markRankedRestartPreparationDone(manager);
+        }
+      },
+      function (err) {
+        restoreSetup();
+        markRankedRestartPreparationDone(manager);
+        global.setTimeout(function () {
+          throw err;
+        }, 0);
+      }
+    );
+  }
+
+  function beginAsyncRankedRestartBeforeOriginal(manager, original, thisArg, args, modeKey, runtime) {
     Promise.resolve()
       .then(function () {
         return runtime.startNextSession(modeKey);
@@ -521,15 +638,45 @@ function shouldAutoLoadOnlineLeaderboard() {
       )
       .then(
         function () {
-          if (manager) manager.rankedRestartPreparing = false;
+          markRankedRestartPreparationDone(manager);
         },
         function (err) {
-          if (manager) manager.rankedRestartPreparing = false;
+          markRankedRestartPreparationDone(manager);
           global.setTimeout(function () {
             throw err;
           }, 0);
         }
       );
+  }
+
+  function prepareRankedSessionForRestart(manager) {
+    if (shouldSkipRankedSessionPreparationForRestart(manager)) return true;
+    var modeKey = resolveManagerRankedModeKey(manager);
+    var runtime = getRankedSessionRuntime();
+    if (runtime && typeof runtime.promotePrefetchedSession === "function") {
+      if (runtime.promotePrefetchedSession(modeKey)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function beginAsyncRankedRestart(manager, original, thisArg, args, options) {
+    if (shouldSkipRankedSessionPreparationForRestart(manager)) return false;
+    var modeKey = resolveManagerRankedModeKey(manager);
+    var runtime = getRankedSessionRuntime();
+    if (!runtime || typeof runtime.startNextSession !== "function") {
+      scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
+      restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime);
+      return true;
+    }
+    if (manager && manager.rankedRestartPreparing === true) return true;
+    if (manager) manager.rankedRestartPreparing = true;
+    if (options && options.afterConfirmation === true) {
+      beginAsyncRankedRestartAfterConfirmation(manager, original, thisArg, args, modeKey, runtime);
+    } else {
+      beginAsyncRankedRestartBeforeOriginal(manager, original, thisArg, args, modeKey, runtime);
+    }
     return true;
   }
 
@@ -3484,7 +3631,8 @@ async function refreshLeaderboard(modeLike) {
               currentManager,
               original,
               this,
-              Array.prototype.slice.call(arguments)
+              Array.prototype.slice.call(arguments),
+              { afterConfirmation: methodName === "restart" }
             );
             return currentManager;
           }

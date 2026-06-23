@@ -7,6 +7,7 @@ import {
   createSettingsModalInitResolvers,
   createSettingsModalPageHostRuntime,
   installSettingsModalPageHostRuntime,
+  normalizeSettingsModalContent,
   type SettingsModalPageHostRuntime
 } from "../../src/bootstrap/settings-modal-page-host";
 
@@ -16,6 +17,7 @@ describe("bootstrap settings-modal-page-host runtime", () => {
 
     expect(runtime.createSettingsModalActionResolvers).toBe(createSettingsModalActionResolvers);
     expect(runtime.createSettingsModalInitResolvers).toBe(createSettingsModalInitResolvers);
+    expect(runtime.normalizeSettingsModalContent).toBe(normalizeSettingsModalContent);
     expect(runtime.applySettingsModalPageOpen).toBe(applySettingsModalPageOpen);
     expect(runtime.applySettingsModalPageClose).toBe(applySettingsModalPageClose);
   });
@@ -28,6 +30,7 @@ describe("bootstrap settings-modal-page-host runtime", () => {
     expect(installed).toBe(windowLike.CoreSettingsModalPageHostRuntime);
     expect(installed?.createSettingsModalActionResolvers).toBeTypeOf("function");
     expect(installed?.createSettingsModalInitResolvers).toBeTypeOf("function");
+    expect(installed?.normalizeSettingsModalContent).toBeTypeOf("function");
     expect(installed?.applySettingsModalPageOpen).toBeTypeOf("function");
     expect(installed?.applySettingsModalPageClose).toBeTypeOf("function");
   });

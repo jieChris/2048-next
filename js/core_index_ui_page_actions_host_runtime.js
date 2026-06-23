@@ -228,6 +228,7 @@
         settingsModalHostRuntime: source.settingsModalHostRuntime,
         replayModalRuntime: source.replayModalRuntime,
         documentLike: source.documentLike || null,
+        windowLike: source.windowLike || null,
         removeLegacyUndoSettingsUI: removeLegacyUndoSettingsUI,
         initThemeSettingsUI: initThemeSettingsUI,
         initTimerModuleSettingsUI: initTimerModuleSettingsUI,

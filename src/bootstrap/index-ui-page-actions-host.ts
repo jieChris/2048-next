@@ -300,6 +300,7 @@ export function createIndexUiPageActionResolvers(input: {
       settingsModalHostRuntime: source.settingsModalHostRuntime,
       replayModalRuntime: source.replayModalRuntime,
       documentLike: source.documentLike || null,
+      windowLike: source.windowLike || null,
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,

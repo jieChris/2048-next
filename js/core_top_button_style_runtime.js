@@ -436,9 +436,11 @@
       copy.iconModeNote +
       "</div>";
 
+    var toolkitEntry = querySelector(content, "#toolkit-entry-row");
     var actions = querySelector(content, SETTINGS_ACTIONS_SELECTOR);
-    if (actions && actions.parentNode === content && content.insertBefore) {
-      content.insertBefore(row, actions);
+    var anchor = toolkitEntry && toolkitEntry.parentNode === content ? toolkitEntry : actions;
+    if (anchor && anchor.parentNode === content && content.insertBefore) {
+      content.insertBefore(row, anchor);
     } else if (content.appendChild) {
       content.appendChild(row);
     }

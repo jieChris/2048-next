@@ -1,13 +1,110 @@
 import { describe, expect, it, vi } from "vitest";
+import { JSDOM } from "jsdom";
 
 import {
   createSettingsModalInitResolvers,
   createSettingsModalActionResolvers,
   applySettingsModalPageClose,
-  applySettingsModalPageOpen
+  applySettingsModalPageOpen,
+  normalizeSettingsModalContent
 } from "../../src/bootstrap/settings-modal-page-host";
 
 describe("bootstrap settings modal page host", () => {
+  it("normalizes settings rows to one canonical order across page templates", () => {
+    const dom = new JSDOM(`
+      <div id="settings-modal" class="replay-modal-overlay" style="display: none;">
+        <div class="replay-modal-content settings-modal-content">
+          <h3>设置</h3>
+          <div id="toolkit-entry-row" class="settings-row toolkit-entry-row">
+            <div class="toolkit-entry-actions">
+              <a id="toolkit-palette-link" class="replay-button" href="palette.html">主题设置</a>
+            </div>
+          </div>
+          <div id="night-bg-settings-row" class="settings-row settings-toggle-row"></div>
+          <div class="settings-row settings-toggle-row">
+            <label for="pku2048-inline-stats-toggle" class="settings-toggle-title">统计面板</label>
+            <input id="pku2048-inline-stats-toggle" type="checkbox">
+          </div>
+          <div id="bgm-settings-row" class="settings-row settings-toggle-row"></div>
+          <div class="settings-row settings-toggle-row">
+            <label for="win-prompt-toggle" class="settings-toggle-title">胜利提示</label>
+            <input id="win-prompt-toggle" type="checkbox">
+          </div>
+        </div>
+      </div>
+    `);
+
+    const result = normalizeSettingsModalContent({
+      documentLike: dom.window.document
+    });
+
+    expect(result).toEqual({
+      hasModal: true,
+      didNormalize: true,
+      hasInlineStats: true
+    });
+    expect(
+      Array.from(dom.window.document.querySelectorAll(".settings-modal-content > .settings-row"))
+        .map((row) => {
+          const input = row.querySelector("input");
+          return row.id || input?.id || "";
+        })
+    ).toEqual([
+      "win-prompt-toggle",
+      "bgm-settings-row",
+      "night-bg-settings-row",
+      "pku2048-inline-stats-toggle",
+      "toolkit-entry-row"
+    ]);
+    expect(dom.window.document.querySelectorAll("#win-prompt-toggle")).toHaveLength(1);
+    expect(dom.window.document.querySelectorAll("#bgm-toggle")).toHaveLength(1);
+    expect(dom.window.document.querySelectorAll("#night-bg-toggle")).toHaveLength(1);
+    expect(dom.window.document.querySelector("#toolkit-account-link")).not.toBeNull();
+  });
+
+  it("preserves dynamic settings rows and reuses canonical nodes on repeated opens", () => {
+    const dom = new JSDOM(`
+      <div id="settings-modal">
+        <div class="settings-modal-content">
+          <h3>设置</h3>
+          <div id="top-button-style-settings-row" class="settings-row settings-toggle-row">
+            <input id="top-button-style-toggle" type="checkbox">
+          </div>
+          <div id="ui-language-settings-row" class="settings-row settings-toggle-row">
+            <input id="ui-language-toggle" type="checkbox">
+          </div>
+          <div id="toolkit-entry-row" class="settings-row toolkit-entry-row"></div>
+        </div>
+      </div>
+    `, {
+      url: "https://example.test/"
+    });
+
+    normalizeSettingsModalContent({
+      documentLike: dom.window.document
+    });
+    const winPromptToggle = dom.window.document.getElementById("win-prompt-toggle");
+    const topButtonStyleRow = dom.window.document.getElementById("top-button-style-settings-row");
+
+    normalizeSettingsModalContent({
+      documentLike: dom.window.document
+    });
+
+    expect(dom.window.document.getElementById("win-prompt-toggle")).toBe(winPromptToggle);
+    expect(dom.window.document.getElementById("top-button-style-settings-row")).toBe(topButtonStyleRow);
+    expect(
+      Array.from(dom.window.document.querySelectorAll(".settings-modal-content > .settings-row"))
+        .map((row) => row.id || row.querySelector("input")?.id || "")
+    ).toEqual([
+      "win-prompt-toggle",
+      "bgm-settings-row",
+      "night-bg-settings-row",
+      "top-button-style-settings-row",
+      "ui-language-settings-row",
+      "toolkit-entry-row"
+    ]);
+  });
+
   it("creates settings action resolvers with safe fallbacks", () => {
     const resolvers = createSettingsModalActionResolvers({});
     expect(typeof resolvers.openSettingsModal).toBe("function");

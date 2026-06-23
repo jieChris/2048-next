@@ -106,14 +106,15 @@ describe("bootstrap timer module settings host", () => {
     expect(toggle.style.display).toBe("none");
   });
 
-  it("creates timer settings row before replay actions and returns inserted toggle", () => {
+  it("creates timer settings row before toolkit entry and returns inserted toggle", () => {
     const nodes: Record<string, unknown> = {};
     const toggle = { id: "timer-module-view-toggle" };
-    const actions = { parentNode: null as unknown };
+    const toolkitRow = { parentNode: null as unknown };
     const content = {
       insertedRow: null as unknown,
       querySelector(selector: string) {
-        return selector === ".replay-modal-actions" ? actions : null;
+        if (selector === "#toolkit-entry-row") return toolkitRow;
+        return null;
       },
       insertBefore(row: unknown) {
         this.insertedRow = row;
@@ -121,7 +122,7 @@ describe("bootstrap timer module settings host", () => {
       },
       appendChild: vi.fn()
     };
-    actions.parentNode = content;
+    toolkitRow.parentNode = content;
 
     const modal = {
       querySelector(selector: string) {

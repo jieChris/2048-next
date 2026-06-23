@@ -100,9 +100,11 @@
     rowRecord.className = "settings-row settings-action-row";
     rowRecord.innerHTML = resolveText(buildRowInnerHtml ? buildRowInnerHtml() : "");
 
+    var toolkitEntry = querySelector(content, "#toolkit-entry-row");
     var actions = querySelector(content, ".replay-modal-actions");
-    if (actions && toRecord(actions).parentNode === content) {
-      insertBefore(content, row, actions);
+    var anchor = toolkitEntry && toRecord(toolkitEntry).parentNode === content ? toolkitEntry : actions;
+    if (anchor && toRecord(anchor).parentNode === content) {
+      insertBefore(content, row, anchor);
     } else {
       appendChild(content, row);
     }
