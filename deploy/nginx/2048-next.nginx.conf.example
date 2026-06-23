@@ -76,15 +76,18 @@ server {
     location ~* \.(?:html|webmanifest)$ {
         try_files $uri =404;
         add_header Cache-Control "public, max-age=60, s-maxage=300, stale-while-revalidate=300" always;
+        add_header Cloudflare-CDN-Cache-Control "public, max-age=300, stale-while-revalidate=300" always;
     }
 
     location = / {
         try_files /2048.html =404;
         add_header Cache-Control "public, max-age=60, s-maxage=300, stale-while-revalidate=300" always;
+        add_header Cloudflare-CDN-Cache-Control "public, max-age=300, stale-while-revalidate=300" always;
     }
 
     location / {
         try_files $uri $uri/ =404;
         add_header Cache-Control "public, max-age=60, s-maxage=300, stale-while-revalidate=300" always;
+        add_header Cloudflare-CDN-Cache-Control "public, max-age=300, stale-while-revalidate=300" always;
     }
 }
