@@ -15,6 +15,14 @@ async function openPracticeBoardCodePanel(page: Page): Promise<void> {
   await expect(input).toBeVisible();
 }
 
+async function readAndDismissGameDialogAlert(page: Page): Promise<string> {
+  await expect(page.locator("#game-dialog-overlay.is-open")).toBeVisible();
+  const message = (await page.locator("#game-dialog-message").textContent())?.trim() || "";
+  await page.locator("#game-dialog-confirm").click();
+  await expect(page.locator("#game-dialog-overlay.is-open")).toBeHidden();
+  return message;
+}
+
 test.describe("Legacy Multi-Page Smoke", () => {
   test("practice board code input applies a valid board payload", async ({ page }) => {
     const response = await page.goto("/Practice_board.html?practice_guide_seen=1", {
@@ -102,12 +110,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await openPracticeBoardCodePanel(page);
     await page.fill("#practice-board-code-input", "1234Z00000000000");
 
-    let dialogMessage = "";
-    page.once("dialog", async (dialog) => {
-      dialogMessage = dialog.message();
-      await dialog.accept();
-    });
     await page.locator("#practice-board-code-confirm").click({ force: true });
+    const dialogMessage = await readAndDismissGameDialogAlert(page);
     expect(dialogMessage.length).toBeGreaterThan(0);
 
     await expect
@@ -349,12 +353,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await openPracticeBoardCodePanel(page);
     await page.fill("#practice-board-code-input", "7000000000000000");
 
-    let dialogMessage = "";
-    page.once("dialog", async (dialog) => {
-      dialogMessage = dialog.message();
-      await dialog.accept();
-    });
     await page.locator("#practice-board-code-confirm").click({ force: true });
+    const dialogMessage = await readAndDismissGameDialogAlert(page);
     expect(dialogMessage).toContain("64");
 
     await expect

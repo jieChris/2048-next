@@ -2,6 +2,12 @@ import { expect, test } from "@playwright/test";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  async function confirmGameDialog(page: import("@playwright/test").Page) {
+    await expect(page.locator("#game-dialog-overlay.is-open")).toBeVisible();
+    await page.locator("#game-dialog-confirm").click();
+    await expect(page.locator("#game-dialog-overlay.is-open")).toBeHidden();
+  }
+
   async function routeI18nAuditApi(page: import("@playwright/test").Page) {
     await page.route("**/api/**", async (route) => {
       const url = route.request().url();
@@ -556,8 +562,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(afterMove.tileAt30).toBe(32768);
     expect(afterMove.timer16384Sub).toBe("");
 
-    page.once("dialog", (dialog) => dialog.accept());
     await page.click(".restart-button");
+    await confirmGameDialog(page);
     await page.waitForTimeout(250);
 
     const afterRestart = await page.evaluate(() => {
@@ -589,8 +595,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(afterSetupPlacement.tileAt10).toBe(16384);
     expect(afterSetupPlacement.timer16384Sub).toBe("---------");
 
-    page.once("dialog", (dialog) => dialog.accept());
     await page.click(".restart-button");
+    await confirmGameDialog(page);
     await page.waitForTimeout(250);
 
     const afterSecondRestart = await page.evaluate(() => {

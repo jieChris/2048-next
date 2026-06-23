@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("History smoke: import", () => {
+  async function confirmGameDialog(page: import("@playwright/test").Page) {
+    await expect(page.locator("#game-dialog-overlay.is-open")).toBeVisible();
+    await page.locator("#game-dialog-confirm").click();
+    await expect(page.locator("#game-dialog-overlay.is-open")).toBeHidden();
+  }
+
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
       window.confirm = () => true;
@@ -181,6 +187,8 @@ test.describe("History smoke: import", () => {
     });
 
     await page.click("#history-import-replace-btn");
+    await confirmGameDialog(page);
+    await expect(page.locator("#history-import-file")).toHaveAttribute("data-import-mode", "replace");
     await page.dispatchEvent("#history-import-file", "change");
     await expect(page.locator(".history-item")).toHaveCount(1);
 

@@ -615,6 +615,7 @@ function bindImport(
 
   function openPicker(nextMerge: boolean) {
     merge = !!nextMerge;
+    fileInputEl.setAttribute("data-import-mode", merge ? "merge" : "replace");
     fileInputEl.value = "";
     fileInputEl.click();
   }

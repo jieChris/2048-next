@@ -529,12 +529,14 @@ export function buildHomeGuideSteps(options: BuildHomeGuideStepsOptions): HomeGu
     desc: resolveLangText(lang, step.descZh, step.descEn)
   }));
   if (opts.isCompactViewport) {
-    steps.splice(9, 0, {
+    const restartIndex = steps.findIndex((step) => step.selector === "#top-restart-btn");
+    const insertIndex = restartIndex >= 0 ? restartIndex : steps.length;
+    steps.splice(insertIndex, 0, {
       selector: MOBILE_HINT_STEP.selector,
       title: resolveLangText(lang, MOBILE_HINT_STEP.titleZh, MOBILE_HINT_STEP.titleEn),
       desc: resolveLangText(lang, MOBILE_HINT_STEP.descZh, MOBILE_HINT_STEP.descEn)
     });
-    steps.splice(10, 0, {
+    steps.splice(insertIndex + 1, 0, {
       selector: MOBILE_TIMERBOX_TOGGLE_STEP.selector,
       title: resolveLangText(
         lang,

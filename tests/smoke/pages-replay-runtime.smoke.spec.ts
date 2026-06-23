@@ -62,6 +62,14 @@ async function importReplayFileByDropAndConfirm(
   await expect(importedFileName).toHaveText(expectedBaseName);
 }
 
+async function readAndDismissGameDialogAlert(page: Page): Promise<string> {
+  await expect(page.locator("#game-dialog-overlay.is-open")).toBeVisible();
+  const message = (await page.locator("#game-dialog-message").textContent())?.trim() || "";
+  await page.locator("#game-dialog-confirm").click();
+  await expect(page.locator("#game-dialog-overlay.is-open")).toBeHidden();
+  return message;
+}
+
 test.describe("Legacy Multi-Page Smoke", () => {
   test("replay step controls advance replay index deterministically and rewinds without seek", async ({ page }) => {
     const response = await page.goto("/replay.html", {
@@ -1195,19 +1203,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok()).toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
 
-    await page.waitForFunction(
-      () => Array.isArray((window as any).__replayLoadAlerts) && (window as any).__replayLoadAlerts.length > 0
-    );
+    const alertMessage = await readAndDismissGameDialogAlert(page);
 
     const snapshot = await page.evaluate(() => {
       return {
-        alerts: ((window as any).__replayLoadAlerts || []).map((item: unknown) => String(item || "")),
         payloadAfter: window.sessionStorage.getItem("cloud_replay_payload_v1")
       };
     });
 
-    expect(snapshot.alerts.length).toBeGreaterThan(0);
-    expect(snapshot.alerts.some((item: string) => item.toLowerCase().includes("version") || item.includes("版本"))).toBe(true);
+    expect(alertMessage.toLowerCase().includes("version") || alertMessage.includes("版本")).toBe(true);
     expect(snapshot.payloadAfter).not.toBeNull();
   });
 
@@ -1396,18 +1400,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForFunction(() => {
-      return Number(((window as any).__replayLoadAlerts || []).length || 0) > 0;
-    });
+    const alertMessage = await readAndDismissGameDialogAlert(page);
 
-    const snapshot = await page.evaluate(() => {
-      return {
-        alerts: ((window as any).__replayLoadAlerts || []).map((item: unknown) => String(item || ""))
-      };
-    });
-
-    expect(snapshot.alerts.length).toBeGreaterThan(0);
-    expect(snapshot.alerts[0].length).toBeGreaterThan(0);
+    expect(alertMessage.length).toBeGreaterThan(0);
   });
 
   test("replay ui no longer includes onboarding guide storage runtime", async ({ page }) => {

@@ -800,6 +800,7 @@
 
     function openPicker(nextMerge) {
       merge = !!nextMerge;
+      fileInput.setAttribute("data-import-mode", merge ? "merge" : "replace");
       fileInput.value = "";
       fileInput.click();
     }

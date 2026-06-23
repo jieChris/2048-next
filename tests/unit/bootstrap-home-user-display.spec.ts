@@ -12,6 +12,16 @@ describe("bootstrap home user display", () => {
     expect(resolveHomeUserDisplayName({ storageLike: null })).toBe("游客");
   });
 
+  it("uses English guest text when the UI language is English", () => {
+    const storageLike = {
+      getItem(key: string) {
+        return key === "ui_language_v1" ? "en" : null;
+      }
+    };
+
+    expect(resolveHomeUserDisplayName({ storageLike })).toBe("Guest");
+  });
+
   it("uses stored nickname when available", () => {
     const storageLike = {
       getItem(key: string) {

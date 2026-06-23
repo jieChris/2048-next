@@ -126,12 +126,16 @@
       }
     ];
     if (opts.isCompactViewport) {
-      steps.splice(9, 0, {
+      var restartIndex = steps.findIndex(function (step) {
+        return step.selector === "#top-restart-btn";
+      });
+      var insertIndex = restartIndex >= 0 ? restartIndex : steps.length;
+      steps.splice(insertIndex, 0, {
         selector: "#top-mobile-hint-btn",
         title: resolveLangText(lang, "提示文本", "Guide"),
         desc: resolveLangText(lang, "移动端可用此按钮打开提示弹窗，集中查看玩法说明与项目说明。", "On mobile, open this to view gameplay and project tips.")
       });
-      steps.splice(10, 0, {
+      steps.splice(insertIndex + 1, 0, {
         selector: "#timerbox-toggle-btn",
         title: resolveLangText(lang, "展开计时器", "Toggle Timers"),
         desc: resolveLangText(lang, "移动端点击此按钮可展开或收起计时器面板。", "On mobile, use this button to expand or collapse the timer panel.")

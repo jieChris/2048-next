@@ -1,6 +1,8 @@
 const AUTH_NICKNAME_STORAGE_KEY = "2048_auth_nickname_v1";
 const AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
-const DEFAULT_GUEST_LABEL = "游客";
+const UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";
+const DEFAULT_GUEST_LABEL_ZH = "游客";
+const DEFAULT_GUEST_LABEL_EN = "Guest";
 
 type StorageLike = {
   getItem?: (key: string) => string | null;
@@ -60,8 +62,21 @@ function readUserId(storageLike: unknown): string {
   }
 }
 
+function readUiLanguage(storageLike: unknown): "en" | "zh" {
+  const storage = toRecord(storageLike) as StorageLike;
+  if (typeof storage.getItem !== "function") return "zh";
+  try {
+    const raw = String(storage.getItem(UI_LANGUAGE_STORAGE_KEY) || "").trim().toLowerCase();
+    return raw.startsWith("en") ? "en" : "zh";
+  } catch {
+    return "zh";
+  }
+}
+
 export function resolveHomeUserDisplayName(input: { storageLike?: unknown }): string {
-  return readNickname(input.storageLike) || DEFAULT_GUEST_LABEL;
+  const nickname = readNickname(input.storageLike);
+  if (nickname) return nickname;
+  return readUiLanguage(input.storageLike) === "en" ? DEFAULT_GUEST_LABEL_EN : DEFAULT_GUEST_LABEL_ZH;
 }
 
 export function resolveHomeUserDisplayHref(input: { storageLike?: unknown }): string {
