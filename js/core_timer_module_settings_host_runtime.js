@@ -370,6 +370,13 @@
         });
         manager.setTimerModuleViewMode(resolveText(appliedViewMode));
         sync();
+        var onlineRuntime = toRecord(windowLike.OnlineLeaderboardRuntime);
+        var refreshTimerLeaderboardPanel = asFunction(onlineRuntime.refreshTimerLeaderboardPanel);
+        if (refreshTimerLeaderboardPanel) {
+          try {
+            refreshTimerLeaderboardPanel(false, true);
+          } catch (_errRefresh) {}
+        }
       });
     }
 

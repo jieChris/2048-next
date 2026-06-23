@@ -351,15 +351,6 @@ export function applyTimerModuleSettingsUi(input: {
     if (syncMobileTimerboxUi) {
       syncMobileTimerboxUi();
     }
-    const onlineRuntime = toRecord(windowLike.OnlineLeaderboardRuntime);
-    const refreshTimerLeaderboardPanel = asFunction<(force?: boolean) => unknown>(
-      onlineRuntime.refreshTimerLeaderboardPanel
-    );
-    if (refreshTimerLeaderboardPanel) {
-      try {
-        refreshTimerLeaderboardPanel(true);
-      } catch (_errRefresh) {}
-    }
     didSync = true;
   };
 
@@ -391,6 +382,15 @@ export function applyTimerModuleSettingsUi(input: {
       });
       (manager.setTimerModuleViewMode as (viewMode: string) => unknown)(resolveText(appliedViewMode));
       sync();
+      const onlineRuntime = toRecord(windowLike.OnlineLeaderboardRuntime);
+      const refreshTimerLeaderboardPanel = asFunction<
+        (force?: boolean, preferCached?: boolean) => unknown
+      >(onlineRuntime.refreshTimerLeaderboardPanel);
+      if (refreshTimerLeaderboardPanel) {
+        try {
+          refreshTimerLeaderboardPanel(false, true);
+        } catch (_errRefresh) {}
+      }
     });
   }
 

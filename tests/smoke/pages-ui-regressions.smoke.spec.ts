@@ -149,6 +149,70 @@ test.describe("Legacy Multi-Page Smoke", () => {
     );
   });
 
+  test("timer module settings toggle switches to leaderboard without waiting for leaderboard fetch", async ({
+    page
+  }) => {
+    let releaseLeaderboard: (() => void) | null = null;
+    const leaderboardGate = new Promise<void>((resolve) => {
+      releaseLeaderboard = resolve;
+    });
+    await page.route("**/api/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("/leaderboard")) {
+        await leaderboardGate;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+    await page.addInitScript(() => {
+      window.localStorage.setItem("home_guide_seen_v1", "1");
+      window.localStorage.setItem(
+        "settings_timer_module_view_by_mode_v1",
+        JSON.stringify({ standard_4x4_pow2_no_undo: "timer" })
+      );
+    });
+
+    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Home response should exist").not.toBeNull();
+    expect(response?.ok(), "Home response should be 2xx").toBeTruthy();
+    await waitForWindowCondition(
+      page,
+      () =>
+        typeof (window as any).openSettingsModal === "function" &&
+        Boolean((window as any).OnlineLeaderboardRuntime?.refreshTimerLeaderboardPanel),
+      "settings and leaderboard runtime ready"
+    );
+
+    await page.evaluate(() => {
+      (window as any).openSettingsModal();
+    });
+    await expect(page.locator("#settings-modal")).toHaveCSS("display", "flex");
+    await expect(page.locator("#timer-module-view-toggle")).toBeChecked();
+
+    await page.click("label.settings-switch[for='timer-module-view-toggle']");
+    const snapshot = await page.evaluate(() => {
+      const timerBox = document.getElementById("timerbox");
+      const panel = document.getElementById("timer-leaderboard-panel");
+      return {
+        timerBoxClassName: String(timerBox?.className || ""),
+        panelExists: !!panel,
+        rowCount: document.querySelectorAll("#timer-leaderboard-list .timer-leaderboard-row").length,
+        firstRowText: String(
+          document.querySelector("#timer-leaderboard-list .timer-leaderboard-row")?.textContent || ""
+        ).trim()
+      };
+    });
+    releaseLeaderboard?.();
+
+    expect(snapshot.timerBoxClassName).toContain("timerbox-leaderboard-mode");
+    expect(snapshot.panelExists).toBe(true);
+    expect(snapshot.rowCount).toBeGreaterThan(0);
+    expect(snapshot.firstRowText).toContain("--");
+  });
+
   test("settings toolkit entry buttons align with their setting columns", async ({ page }) => {
     await routeI18nAuditApi(page);
     await page.addInitScript(() => {

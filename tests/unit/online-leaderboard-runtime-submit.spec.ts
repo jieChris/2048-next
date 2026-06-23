@@ -651,6 +651,38 @@ describe("online leaderboard terminal submission", () => {
     expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
   });
 
+  it("keeps ranked page-hide progress local without uploading a cloud checkpoint", async () => {
+    const storage = new MemoryStorage();
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      over: false,
+      hasGameStarted: true,
+      moveHistory: [0],
+      successfulMoveCount: 1,
+      score: 1024,
+      rankedSessionToken: "active-ranked-token"
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.includes("/ranked-checkpoint")) {
+          return createJsonResponse({ success: true, verified: true, data: {} });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    const onlineRuntime = runtime.windowLike.OnlineLeaderboardRuntime as {
+      persistRankedCheckpointOnPageHide: (manager: Record<string, unknown>) => void;
+    };
+    onlineRuntime.persistRankedCheckpointOnPageHide(manager);
+    await flushRuntimePromises();
+
+    expect(storage.getItem(CHECKPOINT_MIRROR_KEY)).not.toBeNull();
+    expect(runtime.fetchCalls.some((call) => call.url.includes("/ranked-checkpoint"))).toBe(false);
+  });
+
   it("marks ranked checkpoints cleared synchronously before restart delete completes", async () => {
     const storage = new MemoryStorage();
     storage.setItem(
@@ -1226,7 +1258,7 @@ describe("online leaderboard terminal submission", () => {
     expect(manager.score).toBe(0);
   });
 
-  it("restores a ranked checkpoint when the challenge matches but the token was refreshed", async () => {
+  it("does not restore cloud ranked checkpoints even when the challenge matches", async () => {
     const storage = new MemoryStorage();
     const nowSec = Math.floor(Date.now() / 1000);
     storage.setItem(
@@ -1301,6 +1333,7 @@ describe("online leaderboard terminal submission", () => {
     expect(manager.needsRankedCheckpointRestore).toBe(false);
     expect(manager.rankCheckpointRestorePending).toBe(false);
     expect(manager.lastRankedCheckpointRestoreError).toBe("");
-    expect(manager.score).toBe(454348);
+    expect(manager.score).toBe(0);
+    expect(runtime.fetchCalls.some((call) => call.url.includes("/ranked-checkpoint"))).toBe(false);
   });
 });

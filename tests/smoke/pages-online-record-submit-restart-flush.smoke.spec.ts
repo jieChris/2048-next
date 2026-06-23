@@ -102,8 +102,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return !!manager && !!(window as any).OnlineLeaderboardRuntime;
     });
 
-    await page.evaluate(() => {
+    await page.evaluate((injectedModeKey) => {
       const manager = (window as any).game_manager;
+      manager.rankPolicy = "ranked";
+      manager.modeKey = injectedModeKey;
       manager.replayMode = false;
       manager.over = true;
       manager.won = false;
@@ -113,8 +115,23 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.successfulMoveCount = 3;
       manager.serialize = () => "old-ranked-replay";
       manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2] });
+      if (typeof manager.tryAutoSubmitOnGameOver === "function") {
+        manager.tryAutoSubmitOnGameOver();
+      }
+      const rankedRuntime = (window as any).RankedSessionRuntime;
+      if (rankedRuntime && typeof rankedRuntime.promotePrefetchedSession === "function") {
+        rankedRuntime.promotePrefetchedSession(injectedModeKey);
+      }
+      const activeRaw = window.localStorage.getItem("ranked_session_active:v1:" + injectedModeKey);
+      const active = activeRaw ? JSON.parse(activeRaw) : null;
+      if (active) {
+        manager.rankedSessionToken = String(active.ranked_session_token || "");
+        manager.challengeId = String(active.challenge_id || "");
+      }
+      manager.rankCheckpointApplying = true;
       manager.restart();
-    });
+      manager.rankCheckpointApplying = false;
+    }, modeKey);
 
     await expect.poll(() => recordPayloads.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
 
@@ -130,8 +147,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(afterRestartSession.managerToken).toBe("next-ranked-token");
     expect(afterRestartSession.activeToken).toBe("next-ranked-token");
 
-    await page.evaluate(() => {
+    await page.evaluate(async (injectedModeKey) => {
       const manager = (window as any).game_manager;
+      manager.rankPolicy = "ranked";
+      manager.modeKey = injectedModeKey;
       manager.replayMode = false;
       manager.over = true;
       manager.won = false;
@@ -243,8 +262,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return !!manager && !!(window as any).OnlineLeaderboardRuntime;
     });
 
-    await page.evaluate(() => {
+    await page.evaluate(async (injectedModeKey) => {
       const manager = (window as any).game_manager;
+      manager.rankPolicy = "ranked";
+      manager.modeKey = injectedModeKey;
       manager.replayMode = false;
       manager.over = true;
       manager.won = false;
@@ -254,8 +275,23 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.successfulMoveCount = 3;
       manager.serialize = () => "old-ranked-replay";
       manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2] });
+      if (typeof manager.tryAutoSubmitOnGameOver === "function") {
+        manager.tryAutoSubmitOnGameOver();
+      }
+      const rankedRuntime = (window as any).RankedSessionRuntime;
+      if (rankedRuntime && typeof rankedRuntime.startNextSession === "function") {
+        await rankedRuntime.startNextSession(injectedModeKey);
+      }
+      const activeRaw = window.localStorage.getItem("ranked_session_active:v1:" + injectedModeKey);
+      const active = activeRaw ? JSON.parse(activeRaw) : null;
+      if (active) {
+        manager.rankedSessionToken = String(active.ranked_session_token || "");
+        manager.challengeId = String(active.challenge_id || "");
+      }
+      manager.rankCheckpointApplying = true;
       manager.restart();
-    });
+      manager.rankCheckpointApplying = false;
+    }, modeKey);
 
     await expect
       .poll(
@@ -347,8 +383,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return !!manager && !!(window as any).OnlineLeaderboardRuntime;
     });
 
-    await page.evaluate(() => {
+    await page.evaluate(async () => {
       const manager = (window as any).game_manager;
+      manager.rankPolicy = "ranked";
+      manager.modeKey = "standard_4x4_pow2_no_undo";
       manager.replayMode = false;
       manager.over = true;
       manager.won = false;
@@ -473,8 +511,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return !!manager && !!(window as any).OnlineLeaderboardRuntime;
     });
 
-    await page.evaluate(() => {
+    await page.evaluate(async () => {
       const manager = (window as any).game_manager;
+      manager.rankPolicy = "ranked";
+      manager.modeKey = "standard_4x4_pow2_no_undo";
       manager.replayMode = false;
       manager.over = true;
       manager.won = false;
@@ -486,7 +526,26 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.challengeId = "ranked-old";
       manager.serialize = () => "old-ranked-replay";
       manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2] });
+      if (typeof manager.tryAutoSubmitOnGameOver === "function") {
+        manager.tryAutoSubmitOnGameOver();
+      }
+      const rankedRuntime = (window as any).RankedSessionRuntime;
+      const ready =
+        rankedRuntime && typeof rankedRuntime.startNextSession === "function"
+          ? await rankedRuntime.startNextSession("standard_4x4_pow2_no_undo")
+          : false;
+      if (!ready) {
+        manager.rankPolicy = "unranked";
+        manager.rankedSessionToken = "";
+        manager.challengeId = null;
+      }
+      manager.rankCheckpointApplying = true;
       manager.restart();
+      manager.rankCheckpointApplying = false;
+      if (!ready) {
+        manager.over = false;
+        manager.score = 0;
+      }
     });
 
     await expect
@@ -876,46 +935,35 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("saved session preserves client record id across reload", async ({ page }) => {
-    let checkpointData: Record<string, unknown> | null = null;
+    const checkpointRequests: string[] = [];
 
     await page.route("**/api/ranked-checkpoint**", async (route) => {
       const request = route.request();
+      checkpointRequests.push(request.method());
       if (request.method() === "GET") {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: checkpointData
+            data: null
           })
         });
         return;
       }
       if (request.method() === "POST") {
-        const body = request.postDataJSON() as Record<string, unknown>;
-        checkpointData = {
-          mode_key: body.mode_key,
-          mode_bucket: body.mode,
-          ranked_session_token: body.ranked_session_token,
-          client_record_id: body.client_record_id,
-          replay_string: body.replay_string,
-          duration_ms: body.duration_ms,
-          ui_state: body.ui_state,
-          updated_at: new Date().toISOString()
-        };
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
             verified: true,
-            data: checkpointData
+            data: null
           })
         });
         return;
       }
       if (request.method() === "DELETE") {
-        checkpointData = null;
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -968,17 +1016,23 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.move(0);
       manager.move(2);
       await new Promise((resolve) => window.setTimeout(resolve, 1800));
+      const rawMirror = window.localStorage.getItem(
+        "ranked_checkpoint_local_mirror:v1:standard_4x4_pow2_no_undo"
+      );
+      let mirror: Record<string, unknown> | null = null;
+      try {
+        mirror = rawMirror ? (JSON.parse(rawMirror) as Record<string, unknown>) : null;
+      } catch (_err) {
+        mirror = null;
+      }
       return {
-        clientRecordId: String(manager.clientRecordId || "")
+        clientRecordId: String(manager.clientRecordId || ""),
+        mirrorClientRecordId: String(mirror?.client_record_id || "")
       };
     });
 
     expect(firstSnapshot.clientRecordId.length).toBeGreaterThan(0);
-    await expect
-      .poll(() => checkpointData, {
-        timeout: 12_000
-      })
-      .not.toBeNull();
+    expect(firstSnapshot.mirrorClientRecordId).toBe(firstSnapshot.clientRecordId);
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => !!(window as any).game_manager);
@@ -995,6 +1049,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     expect(secondSnapshot.clientRecordId).toBe(firstSnapshot.clientRecordId);
+    expect(checkpointRequests).not.toContain("POST");
+    expect(checkpointRequests).not.toContain("GET");
   });
 
   test("online record submit skips win-stop sessions until real game over", async ({ page }) => {

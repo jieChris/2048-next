@@ -677,49 +677,38 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(restoredSnapshot.moveHistoryLength).toBeGreaterThanOrEqual(liveSnapshot.moveHistoryLength);
   });
 
-  test("ranked play modes restore verified cloud checkpoints instead of local injected payloads", async ({
+  test("ranked play modes restore local checkpoint mirror instead of local injected payloads", async ({
     page
   }) => {
-    let checkpointData: Record<string, unknown> | null = null;
+    const checkpointRequests: string[] = [];
 
     await page.route("**/api/ranked-checkpoint**", async (route) => {
       const request = route.request();
+      checkpointRequests.push(request.method());
       if (request.method() === "GET") {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: checkpointData
+            data: null
           })
         });
         return;
       }
       if (request.method() === "POST") {
-        const body = request.postDataJSON() as Record<string, unknown>;
-        checkpointData = {
-          mode_key: body.mode_key,
-          mode_bucket: body.mode,
-          ranked_session_token: body.ranked_session_token,
-          client_record_id: body.client_record_id,
-          replay_string: body.replay_string,
-          duration_ms: body.duration_ms,
-          ui_state: body.ui_state,
-          updated_at: new Date().toISOString()
-        };
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
             verified: true,
-            data: checkpointData
+            data: null
           })
         });
         return;
       }
       if (request.method() === "DELETE") {
-        checkpointData = null;
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -783,16 +772,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return {
         clientRecordId: String(manager.clientRecordId || ""),
         replayString: typeof manager.serialize === "function" ? String(manager.serialize() || "") : "",
+        hasLocalMirror:
+          typeof window.localStorage.getItem("ranked_checkpoint_local_mirror:v1:standard_4x4_pow2_no_undo") ===
+          "string",
         score: Number(manager.score || 0),
         board
       };
     });
 
-    await expect
-      .poll(() => checkpointData, {
-        timeout: 12_000
-      })
-      .not.toBeNull();
+    expect(liveSnapshot.hasLocalMirror).toBe(true);
 
     await page.addInitScript(() => {
       const modeKey = "standard_4x4_pow2_no_undo";
@@ -856,13 +844,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(restoredSnapshot.restorePending).toBe(false);
     expect(restoredSnapshot.restoreNeeded).toBe(false);
     expect(restoredSnapshot.score).not.toBe(424242);
+    expect(checkpointRequests).not.toContain("POST");
+    expect(checkpointRequests).not.toContain("GET");
   });
 
-  test("ranked restart blocks stale cloud checkpoint restore on immediate reload", async ({
+  test("ranked startup and restart ignore stale cloud checkpoint restore", async ({
     page
   }) => {
     const modeKey = "standard_4x4_pow2_no_undo";
     const now = Date.now();
+    const checkpointRequests: string[] = [];
     const oldBoard = [
       [1024, 1024, 0, 0],
       [0, 0, 0, 0],
@@ -901,6 +892,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.route("**/api/ranked-checkpoint**", async (route) => {
       const request = route.request();
+      checkpointRequests.push(request.method());
       if (request.method() === "GET") {
         await route.fulfill({
           status: 200,
@@ -989,19 +981,27 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok(), "Initial ranked play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
     await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
-    await page.waitForFunction(() => Number((window as any).game_manager?.score || 0) === 424242, {
-      timeout: 12_000
-    });
+    await page.waitForFunction(
+      () => {
+        const manager = (window as any).game_manager;
+        return (
+          !!manager &&
+          manager.rankCheckpointRestorePending !== true &&
+          manager.needsRankedCheckpointRestore !== true
+        );
+      },
+      { timeout: 12_000 }
+    );
 
-    const restoredOld = await page.evaluate(() => {
+    const initialSnapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;
       return {
         score: Number(manager.score || 0),
         board: manager.getFinalBoardMatrix()
       };
     });
-    expect(restoredOld.score).toBe(424242);
-    expect(restoredOld.board).toEqual(oldBoard);
+    expect(initialSnapshot.score).not.toBe(424242);
+    expect(initialSnapshot.board).not.toEqual(oldBoard);
 
     const clearMarkerWritten = await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -1038,6 +1038,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
     expect(afterReload.score).not.toBe(424242);
     expect(afterReload.board).not.toEqual(oldBoard);
+    expect(checkpointRequests).not.toContain("GET");
+    expect(checkpointRequests).not.toContain("POST");
   });
 
   test("ranked home page restores local checkpoint mirror across immediate reload without auth", async ({

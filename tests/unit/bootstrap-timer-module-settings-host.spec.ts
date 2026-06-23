@@ -269,6 +269,54 @@ describe("bootstrap timer module settings host", () => {
     expect(syncMobileTimerboxUi).toHaveBeenCalledTimes(2);
   });
 
+  it("refreshes the timer leaderboard immediately only after the view toggle changes", () => {
+    const toggleHandlers: Record<string, () => void> = {};
+    const toggle = {
+      __timerViewBound: false,
+      checked: true,
+      disabled: true,
+      addEventListener(name: string, handler: () => void) {
+        toggleHandlers[name] = handler;
+      }
+    };
+    let viewMode = "timer";
+    const refreshTimerLeaderboardPanel = vi.fn();
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      getTimerModuleViewMode() {
+        return viewMode;
+      },
+      setTimerModuleViewMode(nextViewMode: string) {
+        viewMode = nextViewMode;
+      }
+    };
+    const windowLike: Record<string, unknown> = {
+      game_manager: manager,
+      OnlineLeaderboardRuntime: {
+        isLeaderboardModeSupported: vi.fn(() => true),
+        refreshTimerLeaderboardPanel
+      }
+    };
+
+    applyTimerModuleSettingsUi({
+      toggle,
+      noteElement: { textContent: "" },
+      windowLike,
+      timerModuleRuntime: createTimerRuntime(),
+      scheduleRetry: vi.fn(),
+      syncMobileTimerboxUi: vi.fn()
+    });
+
+    expect(refreshTimerLeaderboardPanel).not.toHaveBeenCalled();
+
+    toggle.checked = false;
+    toggleHandlers.change();
+
+    expect(viewMode).toBe("hidden");
+    expect(refreshTimerLeaderboardPanel).toHaveBeenCalledTimes(1);
+    expect(refreshTimerLeaderboardPanel).toHaveBeenCalledWith(false, true);
+  });
+
   it("updates timer module description when language changes while settings modal stays open", () => {
     const toggle = {
       __timerViewBound: false,

@@ -2231,52 +2231,11 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   async function maybeSaveRankedCheckpoint(manager, options) {
-    if (!shouldUseRankedCheckpoint(manager)) return false;
-    if (!getAuthToken()) return false;
-    if (manager.rankCheckpointRestorePending === true || manager.rankCheckpointApplying === true) return false;
-    if (toText(manager.rankCheckpointSaveConflict).trim()) return false;
-    if (isSessionTerminated(manager)) return false;
-    var payload = buildRankedCheckpointPayload(manager);
-    if (!payload) return false;
-    var opts = isPlainRecord(options) ? options : {};
-    var now = Date.now();
-    var signature = buildRankedCheckpointSignature(manager, payload);
-    if (!opts.force) {
-      if (signature && signature === toText(manager.lastRankedCheckpointSignature).trim()) return false;
-      if ((now - Number(manager.lastRankedCheckpointSavedAt || 0)) < RANKED_CHECKPOINT_MIN_SAVE_INTERVAL_MS) {
-        return false;
-      }
-    }
-    var result = await submitRankedCheckpoint(payload, INTERNAL_SUBMIT_TOKEN, {
-      keepalive: opts.keepalive === true
-    });
-    if (result && result.success) {
-      manager.rankCheckpointSaveConflict = "";
-      manager.lastRankedCheckpointSaveError = "";
-      manager.lastRankedCheckpointSignature = signature;
-      manager.lastRankedCheckpointSavedAt = now;
-      clearRankedCheckpointClearMarker(payload.mode_key);
-      return true;
-    }
-    if (isRankedSessionExpiredResult(result)) {
-      handleRankedSessionExpired(manager, toText(payload && payload.mode_key).trim());
-      return false;
-    }
-    manager.lastRankedCheckpointSaveError = toText(result && (result.code || result.error)).trim();
-    if (isRankedCheckpointConflictCode(result && result.code)) {
-      manager.rankCheckpointSaveConflict = toText(result.code).trim();
-    }
     return false;
   }
 
   function scheduleRankedCheckpointSave(manager, options) {
-    if (!manager) return;
-    var opts = isPlainRecord(options) ? options : {};
     clearRankedCheckpointSaveTimer();
-    rankedCheckpointSaveTimer = global.setTimeout(function () {
-      rankedCheckpointSaveTimer = 0;
-      maybeSaveRankedCheckpoint(manager, opts).catch(function () {});
-    }, opts.delayMs > 0 ? Number(opts.delayMs) : RANKED_CHECKPOINT_SAVE_DEBOUNCE_MS);
   }
 
   async function clearRankedCheckpointForManager(manager, options) {
@@ -2315,29 +2274,11 @@ function shouldAutoLoadOnlineLeaderboard() {
     manager.rankCheckpointRestorePending = true;
     var expectedModeKey = toText(manager.modeKey || manager.mode).trim();
     var localMirror = readRankedCheckpointLocalMirror(expectedModeKey);
-    var result = null;
-    if (getAuthToken()) {
-      try {
-        result = await loadRankedCheckpoint(expectedModeKey);
-      } catch (_errLoad) {
-        result = null;
-      }
-    }
-    if (isRankedSessionExpiredResult(result)) {
-      handleRankedSessionExpired(manager, expectedModeKey);
-      manager.needsRankedCheckpointRestore = false;
-      manager.rankCheckpointRestorePending = false;
-      return false;
-    }
     if (toText(manager.modeKey || manager.mode).trim() !== expectedModeKey) {
       manager.rankCheckpointRestorePending = false;
       return false;
     }
-    var checkpointData = normalizeRankedCheckpointResponseData(result);
-    if (checkpointData && shouldRejectRankedCheckpointForRestore(checkpointData, expectedModeKey)) {
-      checkpointData = null;
-    }
-    var candidates = buildRankedCheckpointRestoreCandidates(localMirror, checkpointData);
+    var candidates = buildRankedCheckpointRestoreCandidates(localMirror, null);
     var restored = false;
     for (var i = 0; i < candidates.length; i += 1) {
       var candidate = candidates[i];
@@ -2376,7 +2317,6 @@ function shouldAutoLoadOnlineLeaderboard() {
   function persistRankedCheckpointOnPageHide(manager) {
     clearRankedCheckpointSaveTimer();
     persistRankedCheckpointLocalMirror(manager);
-    maybeSaveRankedCheckpoint(manager, { force: true, keepalive: true }).catch(function () {});
   }
 
   function resolveManagerBestTileValue(manager) {
