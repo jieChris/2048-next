@@ -66,6 +66,22 @@ describe("core restart game runtime", () => {
     ).toBe("zh");
   });
 
+  it("falls back to the document language when runtime language storage is unavailable", () => {
+    expect(
+      resolveRestartConfirmLanguage(
+        createManager({
+          getWindowLike: () => ({
+            document: {
+              documentElement: {
+                getAttribute: vi.fn((name: string) => name === "data-ui-lang" ? "en" : "")
+              }
+            }
+          })
+        })
+      )
+    ).toBe("en");
+  });
+
   it("defaults restart confirmation language when browser access throws", () => {
     const manager = createManager({
       getWindowLike: () => ({

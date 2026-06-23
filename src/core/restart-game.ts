@@ -37,6 +37,12 @@ export interface RestartGameRuntime {
 
 export interface RestartGameWindowLike {
   CoreRestartGameRuntime?: RestartGameRuntime;
+  document?: {
+    documentElement?: {
+      getAttribute?: (name: string) => unknown;
+      lang?: unknown;
+    } | null;
+  } | null;
   UII18N?: {
     getLanguage?: () => unknown;
   } | null;
@@ -51,6 +57,13 @@ export interface RestartGameRuntimeInstallOptions {
 
 function getPracticeModeConfig(manager: RestartGameManagerLike): unknown {
   return manager.practiceRestartModeConfig || manager.modeConfig;
+}
+
+function normalizeRestartConfirmLanguage(value: unknown): "en" | "zh" | "" {
+  const normalized = String(value || "").toLowerCase();
+  if (normalized.startsWith("en")) return "en";
+  if (normalized.startsWith("zh")) return "zh";
+  return "";
 }
 
 export interface FallbackFreshSetupSeedInput {
@@ -117,18 +130,24 @@ export function resolveRestartConfirmLanguage(manager: RestartGameManagerLike | 
   try {
     const i18n = windowLike?.UII18N;
     if (i18n && typeof i18n.getLanguage === "function") {
-      const fromI18n = String(i18n.getLanguage() || "").toLowerCase();
-      if (fromI18n.startsWith("en")) return "en";
-      if (fromI18n.startsWith("zh")) return "zh";
+      const fromI18n = normalizeRestartConfirmLanguage(i18n.getLanguage());
+      if (fromI18n) return fromI18n;
     }
   } catch (_error) {}
   try {
     const storageLike = windowLike?.localStorage;
     const fromStorage =
       storageLike && typeof storageLike.getItem === "function"
-        ? String(storageLike.getItem("ui_language_v1") || "").toLowerCase()
+        ? normalizeRestartConfirmLanguage(storageLike.getItem("ui_language_v1"))
         : "";
-    if (fromStorage.startsWith("en")) return "en";
+    if (fromStorage) return fromStorage;
+  } catch (_error) {}
+  try {
+    const root = windowLike?.document?.documentElement;
+    const fromRoot = normalizeRestartConfirmLanguage(
+      root?.getAttribute?.("data-ui-lang") || root?.getAttribute?.("lang") || root?.lang
+    );
+    if (fromRoot) return fromRoot;
   } catch (_error) {}
   return "zh";
 }

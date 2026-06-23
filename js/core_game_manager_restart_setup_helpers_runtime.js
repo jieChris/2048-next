@@ -140,8 +140,20 @@ function resolveRestartConfirmLanguageFallback(manager) {
   try {
     var storageLike = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
     var fromStorage = storageLike && typeof storageLike.getItem === "function" ? storageLike.getItem("ui_language_v1") : "";
-    if (normalizeRestartConfirmLanguagePrefix(fromStorage) === "en") return "en";
+    var storageLang = normalizeRestartConfirmLanguagePrefix(fromStorage);
+    if (storageLang) return storageLang;
   } catch (_errStorage) {}
+  try {
+    var root = windowLike && windowLike.document ? windowLike.document.documentElement : null;
+    var fromRoot = root
+      ? (
+          (typeof root.getAttribute === "function" && (root.getAttribute("data-ui-lang") || root.getAttribute("lang"))) ||
+          root.lang
+        )
+      : "";
+    var rootLang = normalizeRestartConfirmLanguagePrefix(fromRoot);
+    if (rootLang) return rootLang;
+  } catch (_errRoot) {}
   return "zh";
 }
 
