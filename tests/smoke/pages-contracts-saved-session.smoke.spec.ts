@@ -904,12 +904,22 @@ test.describe("Legacy Multi-Page Smoke", () => {
       { timeout: 12_000 }
     );
 
-    const liveSnapshot = await page.evaluate(async () => {
+    await page.evaluate(() => {
       const manager = (window as any).game_manager;
       manager.move(2);
       manager.move(0);
       manager.move(2);
-      await new Promise((resolve) => window.setTimeout(resolve, 1800));
+    });
+    await page.waitForFunction(
+      () =>
+        typeof window.localStorage.getItem(
+          "ranked_checkpoint_local_mirror:v1:standard_4x4_pow2_no_undo"
+        ) === "string",
+      { timeout: 8_000 }
+    );
+
+    const liveSnapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
       const board =
         typeof manager.getFinalBoardMatrix === "function"
           ? manager.getFinalBoardMatrix()
