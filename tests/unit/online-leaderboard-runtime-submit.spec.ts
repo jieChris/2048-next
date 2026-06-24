@@ -1023,6 +1023,70 @@ describe("online leaderboard terminal submission", () => {
     });
   });
 
+  it("does not clear active storage when the manager has already advanced to the next ranked token", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const oldSession = {
+      mode_key: MODE_KEY,
+      challenge_id: "ranked-old",
+      seed: 123,
+      ranked_session_token: "old-ranked-token",
+      issued_at: nowSec - 60,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    };
+    const nextSession = {
+      mode_key: MODE_KEY,
+      challenge_id: "ranked-next",
+      seed: 456,
+      ranked_session_token: "next-ranked-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    };
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(oldSession));
+    let resolveRecordSubmit: ((value: Record<string, unknown>) => void) | null = null;
+
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      rankedSessionToken: "old-ranked-token",
+      tryAutoSubmitOnGameOver: vi.fn()
+    });
+    let recordPayload: Record<string, unknown> | null = null;
+    loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records")) {
+          recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
+          await new Promise<Record<string, unknown>>((resolve) => {
+            resolveRecordSubmit = resolve;
+          });
+          return createJsonResponse({ success: true, data: { id: "record-old" } });
+        }
+        if (url.includes("/ranked-checkpoint")) {
+          return createJsonResponse({ success: true, deleted: true });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.tryAutoSubmitOnGameOver as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+    manager.rankedSessionToken = nextSession.ranked_session_token;
+    manager.challengeId = nextSession.challenge_id;
+    manager.initialSeed = nextSession.seed;
+    manager.seed = nextSession.seed;
+    resolveRecordSubmit?.({ success: true });
+    await flushRuntimePromises();
+
+    expect(recordPayload?.ranked_session_token).toBe("old-ranked-token");
+    expect(manager.rankedSessionToken).toBe("next-ranked-token");
+    expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}").ranked_session_token).toBe(
+      "old-ranked-token"
+    );
+  });
+
   it("creates the next ranked session on demand when restart has no prefetched session", async () => {
     const storage = new MemoryStorage();
     const nowSec = Math.floor(Date.now() / 1000);

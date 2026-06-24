@@ -368,10 +368,18 @@ function shouldAutoLoadOnlineLeaderboard() {
     var submittedToken = toText(payload && payload.ranked_session_token).trim();
     var activeSession = readActiveRankedSessionRecord(modeKey);
     var activeToken = toText(activeSession && activeSession.ranked_session_token).trim();
+    var managerModeKey = toText(manager && (manager.modeKey || manager.mode)).trim();
+    var managerToken = resolveRankedSessionTokenForManager(manager);
+    if (
+      managerToken &&
+      (!managerModeKey || managerModeKey === modeKey) &&
+      managerToken !== submittedToken
+    ) {
+      return false;
+    }
     if (submittedToken && activeToken && activeToken !== submittedToken) return false;
     if (submittedToken && !activeToken) return false;
     if (!submittedToken && activeToken) return false;
-    var managerToken = resolveRankedSessionTokenForManager(manager);
     if (
       submittedToken &&
       managerToken === submittedToken &&
