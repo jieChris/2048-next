@@ -30,6 +30,7 @@
   var RANKED_CHECKPOINT_LOCAL_MIRROR_KEY_PREFIX = "ranked_checkpoint_local_mirror:v1:";
   var RANKED_CHECKPOINT_CLEAR_MARKER_KEY_PREFIX = "ranked_checkpoint_cleared_at:v1:";
   var RANKED_SESSION_ACTIVE_KEY_PREFIX = "ranked_session_active:v1:";
+  var RANKED_RESTART_SETUP_DEFERRED = { rankedRestartSetupDeferred: true };
 
   function resolveLocalStorage() {
     try {
@@ -287,15 +288,67 @@ function shouldAutoLoadOnlineLeaderboard() {
     return Number.isSafeInteger(contextSeed) && contextSeed >= 0 ? contextSeed : null;
   }
 
-  function buildRankedVerificationPayload(manager) {
+  function normalizeRankedSessionSeed(valueLike) {
+    var seed = Math.floor(Number(valueLike));
+    return Number.isSafeInteger(seed) && seed >= 0 ? seed : null;
+  }
+
+  function resolveRankedContextChallengeId(context) {
+    return toText(context && context.id).trim() || toText(context && context.challenge_id).trim();
+  }
+
+  function resolveRankedSubmitContextForManager(manager) {
     if (!shouldUseRankedCheckpoint(manager)) return null;
+    var modeKey = resolveManagerRankedModeKey(manager);
+    var directToken = toText(manager && manager.rankedSessionToken).trim();
+    var directChallengeId = toText(manager && manager.challengeId).trim();
+    var directSeed = normalizeRankedSessionSeed(manager && manager.initialSeed);
+    var context = resolveRankedSessionContextForMode(modeKey);
+    var contextToken = toText(context && context.ranked_session_token).trim();
+    var contextChallengeId = resolveRankedContextChallengeId(context);
+    var contextSeed = normalizeRankedSessionSeed(context && context.seed);
+
+    if (directToken) {
+      if (directSeed === null) return null;
+      if (contextToken && contextToken === directToken && contextSeed !== null && contextSeed !== directSeed) {
+        return null;
+      }
+      if (contextToken && contextToken !== directToken) {
+        return {
+          modeKey: modeKey,
+          challengeId: directChallengeId || null,
+          seed: directSeed,
+          token: directToken
+        };
+      }
+      return {
+        modeKey: modeKey,
+        challengeId: directChallengeId || contextChallengeId || null,
+        seed: directSeed,
+        token: directToken
+      };
+    }
+
+    if (!contextToken || contextSeed === null) return null;
+    if (directSeed !== null && directSeed !== contextSeed) return null;
+    return {
+      modeKey: modeKey,
+      challengeId: contextChallengeId || null,
+      seed: contextSeed,
+      token: contextToken
+    };
+  }
+
+  function buildRankedVerificationPayload(manager) {
+    var rankedContext = resolveRankedSubmitContextForManager(manager);
+    if (!rankedContext) return null;
     return {
       random_source: "server_seed",
       replay_format: "v1",
-      challenge_id: resolveRankedChallengeIdForManager(manager) || null,
-      seed: resolveRankedSeedForManager(manager),
-      mode_key: resolveManagerRankedModeKey(manager),
-      ranked_session_token: resolveRankedSessionTokenForManager(manager) || null
+      challenge_id: rankedContext.challengeId,
+      seed: rankedContext.seed,
+      mode_key: rankedContext.modeKey,
+      ranked_session_token: rankedContext.token
     };
   }
 
@@ -376,112 +429,66 @@ function shouldAutoLoadOnlineLeaderboard() {
     }
   }
 
-  function clearRankedRestartStateForFallback(manager, modeKey, runtime) {
+  function noteRankedRestartSessionBlocked(runtime) {
     noteRankedRestartSessionUnavailable(runtime);
-    if (runtime && typeof runtime.clearModeSession === "function") {
-      try {
-        runtime.clearModeSession(modeKey);
-      } catch (_errClearMode) {}
-    } else if (runtime && typeof runtime.clearActiveSession === "function") {
-      try {
-        runtime.clearActiveSession(modeKey);
-      } catch (_errClearActive) {}
-    }
-    if (modeKey) {
-      clearRankedCheckpointLocalMirror(modeKey);
-    }
-    if (manager) {
-      manager.rankPolicy = "unranked";
-      manager.rankedSessionToken = "";
-      manager.challengeId = null;
-    }
-    if (
-      global &&
-      global.GAME_CHALLENGE_CONTEXT &&
-      toText(global.GAME_CHALLENGE_CONTEXT.mode_key).trim() === modeKey
-    ) {
-      global.GAME_CHALLENGE_CONTEXT = null;
-    }
   }
 
-  function cloneRankedFallbackModeConfig(manager, modeKey) {
-    var source = manager && manager.modeConfig && typeof manager.modeConfig === "object"
-      ? manager.modeConfig
-      : null;
-    var cloned = null;
-    if (source && manager && typeof manager.clonePlain === "function") {
-      try {
-        cloned = manager.clonePlain(source);
-      } catch (_errClone) {
-        cloned = null;
-      }
-    }
-    if (!cloned && source) {
-      try {
-        cloned = JSON.parse(JSON.stringify(source));
-      } catch (_errJson) {
-        cloned = null;
-      }
-    }
-    if (!cloned || typeof cloned !== "object" || Array.isArray(cloned)) {
-      cloned = {};
-    }
-    cloned.key = toText(cloned.key).trim() || toText(manager && (manager.modeKey || manager.mode)).trim() || modeKey;
-    cloned.rank_policy = "unranked";
-    cloned.ranked_bucket = "none";
-    return cloned;
-  }
-
-  function mergeRankedFallbackSetupOptions(manager, options, modeKey) {
-    var setupOptions = options && typeof options === "object" && !Array.isArray(options)
-      ? options
-      : {};
-    var mergedOptions = {};
-    for (var key in setupOptions) {
-      if (Object.prototype.hasOwnProperty.call(setupOptions, key)) {
-        mergedOptions[key] = setupOptions[key];
-      }
-    }
-    mergedOptions.disableStateRestore = true;
-    mergedOptions.modeConfig = cloneRankedFallbackModeConfig(manager, modeKey);
-    return mergedOptions;
-  }
-
-  function callRestartWithRankedFallbackSetup(manager, original, thisArg, args, modeKey) {
-    if (!(manager && typeof manager.setup === "function")) {
-      return original.apply(thisArg, args || []);
-    }
-    var originalSetup = manager.setup;
-    manager.setup = function (inputSeed, options) {
-      return originalSetup.call(
-        this,
-        inputSeed,
-        mergeRankedFallbackSetupOptions(this || manager, options, modeKey)
-      );
+  function snapshotRankedRestartManagerState(manager) {
+    if (!manager) return null;
+    return {
+      over: manager.over,
+      won: manager.won,
+      keepPlaying: manager.keepPlaying,
+      score: manager.score,
+      initialSeed: manager.initialSeed,
+      seed: manager.seed,
+      rankPolicy: manager.rankPolicy,
+      rankedSessionToken: manager.rankedSessionToken,
+      challengeId: manager.challengeId,
+      hasGameStarted: manager.hasGameStarted,
+      successfulMoveCount: manager.successfulMoveCount,
+      clientRecordId: manager.clientRecordId,
+      grid: manager.grid,
+      moveHistory: Array.isArray(manager.moveHistory) ? manager.moveHistory.slice() : manager.moveHistory
     };
-    try {
-      return original.apply(thisArg, args || []);
-    } finally {
-      manager.setup = originalSetup;
+  }
+
+  function restoreRankedRestartManagerState(manager, snapshot) {
+    if (!manager || !snapshot) return;
+    manager.over = snapshot.over;
+    manager.won = snapshot.won;
+    manager.keepPlaying = snapshot.keepPlaying;
+    manager.score = snapshot.score;
+    manager.initialSeed = snapshot.initialSeed;
+    manager.seed = snapshot.seed;
+    manager.rankPolicy = snapshot.rankPolicy;
+    manager.rankedSessionToken = snapshot.rankedSessionToken;
+    manager.challengeId = snapshot.challengeId;
+    manager.hasGameStarted = snapshot.hasGameStarted;
+    manager.successfulMoveCount = snapshot.successfulMoveCount;
+    manager.clientRecordId = snapshot.clientRecordId;
+    manager.grid = snapshot.grid;
+    manager.moveHistory = Array.isArray(snapshot.moveHistory) ? snapshot.moveHistory.slice() : snapshot.moveHistory;
+  }
+
+  function blockRankedRestartUntilSessionReady(manager, modeKey, runtime, snapshot) {
+    noteRankedRestartSessionBlocked(runtime);
+    scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
+    restoreRankedRestartManagerState(manager, snapshot);
+    if (manager) {
+      manager.rankedRestartBlockedUntilSessionReady = true;
     }
   }
 
-  function restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime) {
-    clearRankedRestartStateForFallback(manager, modeKey, runtime);
-    callRestartWithRankedFallbackSetup(manager, original, thisArg, args, modeKey);
-    if (manager && typeof manager.actuate === "function") {
-      try {
-        manager.actuate();
-      } catch (_errActuate) {}
-    }
+  function isRankedRestartSetupDeferredError(err) {
+    return err === RANKED_RESTART_SETUP_DEFERRED;
   }
 
   function markRankedRestartPreparationDone(manager) {
     if (manager) manager.rankedRestartPreparing = false;
   }
 
-  function continueRankedRestartAfterSetupIntent(manager, originalSetup, setupThisArg, setupArgs, modeKey, runtime) {
-    var shouldActuateAfterFallbackSetup = false;
+  function continueRankedRestartAfterSetupIntent(manager, originalSetup, setupThisArg, setupArgs, modeKey, runtime, snapshot) {
     Promise.resolve()
       .then(function () {
         return runtime.startNextSession(modeKey);
@@ -489,41 +496,21 @@ function shouldAutoLoadOnlineLeaderboard() {
       .then(
         function (ready) {
           if (!ready) {
-            shouldActuateAfterFallbackSetup = true;
-            scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
-            clearRankedRestartStateForFallback(manager, modeKey, runtime);
-            return originalSetup.apply(
-              setupThisArg,
-              [
-                setupArgs[0],
-                mergeRankedFallbackSetupOptions(setupThisArg || manager, setupArgs[1], modeKey)
-              ]
-            );
+            blockRankedRestartUntilSessionReady(manager, modeKey, runtime, snapshot);
+            return;
           }
+          if (manager) manager.rankedRestartBlockedUntilSessionReady = false;
           if (!(manager && (manager.rankCheckpointApplying === true || manager.replayMode === true))) {
             clearRankedCheckpointForManager(manager, { keepalive: true }).catch(function () {});
           }
           return originalSetup.apply(setupThisArg, setupArgs);
         },
         function () {
-          shouldActuateAfterFallbackSetup = true;
-          clearRankedRestartStateForFallback(manager, modeKey, runtime);
-          return originalSetup.apply(
-            setupThisArg,
-            [
-              setupArgs[0],
-              mergeRankedFallbackSetupOptions(setupThisArg || manager, setupArgs[1], modeKey)
-            ]
-          );
+          blockRankedRestartUntilSessionReady(manager, modeKey, runtime, snapshot);
         }
       )
       .then(
         function () {
-          if (shouldActuateAfterFallbackSetup && manager && typeof manager.actuate === "function") {
-            try {
-              manager.actuate();
-            } catch (_errActuate) {}
-          }
           markRankedRestartPreparationDone(manager);
         },
         function (err) {
@@ -544,17 +531,17 @@ function shouldAutoLoadOnlineLeaderboard() {
         .then(
           function (ready) {
             if (!ready) {
-              scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
-              restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime);
+              blockRankedRestartUntilSessionReady(manager, modeKey, runtime, null);
               return;
             }
+            if (manager) manager.rankedRestartBlockedUntilSessionReady = false;
             if (!(manager && (manager.rankCheckpointApplying === true || manager.replayMode === true))) {
               clearRankedCheckpointForManager(manager, { keepalive: true }).catch(function () {});
             }
             original.apply(thisArg, args || []);
           },
           function () {
-            restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime);
+            blockRankedRestartUntilSessionReady(manager, modeKey, runtime, null);
           }
         )
         .then(
@@ -572,6 +559,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     }
 
     var originalSetup = manager.setup;
+    var restartSnapshot = snapshotRankedRestartManagerState(manager);
     var setupIntercepted = false;
     var restored = false;
     function restoreSetup() {
@@ -585,7 +573,16 @@ function shouldAutoLoadOnlineLeaderboard() {
       var setupThisArg = this || manager;
       var setupArgs = Array.prototype.slice.call(arguments);
       restoreSetup();
-      continueRankedRestartAfterSetupIntent(manager, originalSetup, setupThisArg, setupArgs, modeKey, runtime);
+      continueRankedRestartAfterSetupIntent(
+        manager,
+        originalSetup,
+        setupThisArg,
+        setupArgs,
+        modeKey,
+        runtime,
+        restartSnapshot
+      );
+      throw RANKED_RESTART_SETUP_DEFERRED;
     }
     manager.setup = rankedRestartSetupInterceptor;
 
@@ -594,6 +591,9 @@ function shouldAutoLoadOnlineLeaderboard() {
       result = original.apply(thisArg, args || []);
     } catch (err) {
       restoreSetup();
+      if (isRankedRestartSetupDeferredError(err)) {
+        return;
+      }
       markRankedRestartPreparationDone(manager);
       throw err;
     }
@@ -607,6 +607,9 @@ function shouldAutoLoadOnlineLeaderboard() {
       },
       function (err) {
         restoreSetup();
+        if (isRankedRestartSetupDeferredError(err)) {
+          return;
+        }
         markRankedRestartPreparationDone(manager);
         global.setTimeout(function () {
           throw err;
@@ -623,17 +626,17 @@ function shouldAutoLoadOnlineLeaderboard() {
       .then(
         function (ready) {
           if (!ready) {
-            scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
-            restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime);
+            blockRankedRestartUntilSessionReady(manager, modeKey, runtime, null);
             return;
           }
+          if (manager) manager.rankedRestartBlockedUntilSessionReady = false;
           if (!(manager && (manager.rankCheckpointApplying === true || manager.replayMode === true))) {
             clearRankedCheckpointForManager(manager, { keepalive: true }).catch(function () {});
           }
           original.apply(thisArg, args || []);
         },
         function () {
-          restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime);
+          blockRankedRestartUntilSessionReady(manager, modeKey, runtime, null);
         }
       )
       .then(
@@ -666,8 +669,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     var modeKey = resolveManagerRankedModeKey(manager);
     var runtime = getRankedSessionRuntime();
     if (!runtime || typeof runtime.startNextSession !== "function") {
-      scheduleRankedSessionPrefetchForRestart(modeKey, runtime);
-      restartWithoutRankedSession(manager, original, thisArg, args, modeKey, runtime);
+      blockRankedRestartUntilSessionReady(manager, modeKey, runtime, null);
       return true;
     }
     if (manager && manager.rankedRestartPreparing === true) return true;
@@ -2016,13 +2018,14 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!(manager.hasGameStarted || (Array.isArray(manager.moveHistory) && manager.moveHistory.length > 0))) {
       return null;
     }
+    var rankedContext = resolveRankedSubmitContextForManager(manager);
     return {
       mode: resolveLeaderboardMode(manager.modeKey || manager.mode),
       mode_key: toText(manager.modeKey || manager.mode).trim(),
-      ranked_session_token: resolveRankedSessionTokenForManager(manager) || null,
-      challenge_id: resolveRankedChallengeIdForManager(manager) || null,
-      initial_seed: resolveRankedSeedForManager(manager),
-      seed: resolveRankedSeedForManager(manager),
+      ranked_session_token: rankedContext ? rankedContext.token : null,
+      challenge_id: rankedContext ? rankedContext.challengeId : null,
+      initial_seed: rankedContext ? rankedContext.seed : null,
+      seed: rankedContext ? rankedContext.seed : null,
       ranked_verification: buildRankedVerificationPayload(manager),
       client_record_id: resolveManagerClientRecordIdForSubmit(manager) || null,
       duration_ms: resolveManagerDurationMs(manager),
@@ -2601,22 +2604,17 @@ function shouldAutoLoadOnlineLeaderboard() {
     var bestTile = resolveManagerBestTileValue(manager);
     var minStepStats = buildRecordMinStepStats(manager, bestTile);
     var clientRecordId = resolveManagerClientRecordIdForSubmit(manager);
-    var isRankedSubmit = shouldUseRankedCheckpoint(manager);
+    var rankedContext = resolveRankedSubmitContextForManager(manager);
     var rankedVerification = buildRankedVerificationPayload(manager);
-    var rankedSeed = isRankedSubmit ? resolveRankedSeedForManager(manager) : null;
 
     return {
       mode: modeBucket || toText(manager.mode).trim() || modeKey,
       mode_key: modeKey,
       mode_bucket: modeBucket || undefined,
-      ranked_session_token: isRankedSubmit
-        ? (resolveRankedSessionTokenForManager(manager) || null)
-        : null,
-      challenge_id: isRankedSubmit
-        ? (resolveRankedChallengeIdForManager(manager) || null)
-        : null,
-      initial_seed: rankedSeed,
-      seed: rankedSeed,
+      ranked_session_token: rankedContext ? rankedContext.token : null,
+      challenge_id: rankedContext ? rankedContext.challengeId : null,
+      initial_seed: rankedContext ? rankedContext.seed : null,
+      seed: rankedContext ? rankedContext.seed : null,
       ranked_verification: rankedVerification,
       score: Math.floor(Number(score) || 0),
       best_tile: bestTile,

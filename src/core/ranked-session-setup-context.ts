@@ -51,6 +51,7 @@ export function resolveSetupRankedSessionContext(
   const rankedSessionToken =
     typeof context.ranked_session_token === "string" ? context.ranked_session_token.trim() : "";
   if (!challengeId) return null;
+  if (!rankedSessionToken) return null;
   if (!Number.isInteger(seed) || seed < 0) return null;
   return {
     id: challengeId,

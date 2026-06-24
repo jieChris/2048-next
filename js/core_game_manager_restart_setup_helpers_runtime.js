@@ -431,6 +431,11 @@ function resolveSetupRankedSessionContext(manager) {
   return null;
 }
 
+function hasLegalRankedSetupSeed(manager) {
+  if (!manager || manager.rankPolicy !== "ranked") return true;
+  return !!resolveSetupRankedSessionContext(manager);
+}
+
 function initializeSetupSeedAndReplayState(manager, inputSeed) {
   if (!manager) return { hasInputSeed: false, rankedSessionContext: null };
   var hasInputSeed = typeof inputSeed !== "undefined";
@@ -1090,6 +1095,7 @@ function createSetupGameOperations() {
     detectMode: function (manager) { return typeof detectMode === "function" ? detectMode(manager) : ""; },
     ensureSingleModePageLock: function (manager) { return typeof ensureSingleModePageLock === "function" ? ensureSingleModePageLock(manager) : true; },
     handleSingleModePageDuplicate: function (manager) { if (typeof handleSingleModePageDuplicate === "function") handleSingleModePageDuplicate(manager); },
+    hasLegalRankedSetupSeed: function (manager) { return hasLegalRankedSetupSeed(manager); },
     isNonArrayObject: function (value) { return typeof isNonArrayObject === "function" ? isNonArrayObject(value) : !!value && typeof value === "object" && !Array.isArray(value); },
     resolveSetupModeConfig: function (manager, setupOptions, detectedMode) { return typeof resolveSetupModeConfig === "function" ? resolveSetupModeConfig(manager, setupOptions, detectedMode) : null; },
     resolveSetupNoXModeConfig: function (manager, cfg, setupOptions, inputSeed) { return typeof resolveSetupNoXModeConfig === "function" ? resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed) : cfg; },
@@ -1105,6 +1111,11 @@ function setupGameFallback(manager, inputSeed, options) {
   var cfg = manager.normalizeModeConfig(resolvedModeConfig && resolvedModeConfig.key, resolvedModeConfig);
   cfg = resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed);
   applySetupModeConfig(manager, cfg);
+  if (manager.rankPolicy === "ranked" && !hasLegalRankedSetupSeed(manager)) {
+    manager.rankedSetupBlockedUntilSessionReady = true;
+    return;
+  }
+  manager.rankedSetupBlockedUntilSessionReady = false;
   if (!ensureSingleModePageLock(manager)) { handleSingleModePageDuplicate(manager); return; }
   manager.setRuntimeGrid(new Grid(manager.width, manager.height));
   manager.setRuntimeScore(0);

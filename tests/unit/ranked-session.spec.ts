@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  bindRankedSessionPrefetchWarmup,
   bindRankedSessionAuthTransitionReload,
   createRankedSessionRuntime
 } from "../../src/bootstrap/ranked-session";
@@ -333,5 +334,73 @@ describe("ranked session runtime", () => {
 
     expect(clearModeSession).toHaveBeenCalledWith(MODE_KEY);
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("warms up the next ranked session when the page becomes active again", async () => {
+    const storage = new MemoryStorage();
+    const listeners: ListenerMap = {};
+    const documentListeners: ListenerMap = {};
+    const ensurePrefetch = vi.fn(async () => true);
+    const documentLike = {
+      visibilityState: "visible",
+      addEventListener: vi.fn((type: string, listener: (eventLike?: { key?: string }) => void) => {
+        documentListeners[type] = documentListeners[type] || [];
+        documentListeners[type].push(listener);
+      })
+    };
+    const windowLike = createWindowLike(storage) as Window & {
+      document: Document & { visibilityState: DocumentVisibilityState };
+      addEventListener: (type: string, listener: (eventLike?: { key?: string }) => void) => void;
+      setTimeout: (handler: () => void, timeout?: number) => number;
+    };
+    windowLike.document = documentLike as Document & { visibilityState: DocumentVisibilityState };
+    windowLike.addEventListener = vi.fn((type: string, listener: (eventLike?: { key?: string }) => void) => {
+      listeners[type] = listeners[type] || [];
+      listeners[type].push(listener);
+    });
+    windowLike.setTimeout = vi.fn((handler: () => void) => {
+      handler();
+      return 1;
+    });
+
+    bindRankedSessionPrefetchWarmup(windowLike, { ensurePrefetch }, MODE_KEY);
+
+    expect(windowLike.addEventListener).toHaveBeenCalledWith("pageshow", expect.any(Function));
+    expect(windowLike.addEventListener).toHaveBeenCalledWith("focus", expect.any(Function));
+    expect(windowLike.addEventListener).toHaveBeenCalledWith("online", expect.any(Function));
+    expect(documentLike.addEventListener).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
+
+    listeners.focus?.forEach((listener) => listener());
+    await flushMicrotasks();
+
+    expect(ensurePrefetch).toHaveBeenCalledTimes(1);
+    expect(ensurePrefetch).toHaveBeenCalledWith(MODE_KEY);
+
+    Object.defineProperty(documentLike, "visibilityState", { value: "hidden", configurable: true });
+    documentListeners.visibilitychange?.forEach((listener) => listener());
+    await flushMicrotasks();
+
+    expect(ensurePrefetch).toHaveBeenCalledTimes(1);
+
+    Object.defineProperty(documentLike, "visibilityState", { value: "visible", configurable: true });
+    documentListeners.visibilitychange?.forEach((listener) => listener());
+    await flushMicrotasks();
+
+    expect(ensurePrefetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not bind ranked prefetch warmup when the player is signed out", () => {
+    const storage = new MemoryStorage();
+    const ensurePrefetch = vi.fn(async () => true);
+    const windowLike = createWindowLike(storage) as Window & {
+      addEventListener: (type: string, listener: (eventLike?: { key?: string }) => void) => void;
+    };
+    storage.removeItem("2048_auth_token_v1");
+    windowLike.addEventListener = vi.fn();
+
+    bindRankedSessionPrefetchWarmup(windowLike, { ensurePrefetch }, MODE_KEY);
+
+    expect(windowLike.addEventListener).not.toHaveBeenCalled();
+    expect(ensurePrefetch).not.toHaveBeenCalled();
   });
 });
