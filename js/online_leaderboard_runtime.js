@@ -375,6 +375,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       (!managerModeKey || managerModeKey === modeKey) &&
       managerToken !== submittedToken
     ) {
+      mirrorActiveRankedSessionFromManager(manager, modeKey);
       return false;
     }
     if (submittedToken && activeToken && activeToken !== submittedToken) return false;
@@ -398,6 +399,60 @@ function shouldAutoLoadOnlineLeaderboard() {
       if (submittedToken && contextToken && contextToken !== submittedToken) return false;
       if (!submittedToken && contextToken) return false;
       global.GAME_CHALLENGE_CONTEXT = null;
+    }
+    return true;
+  }
+
+  function mirrorActiveRankedSessionFromManager(manager, modeKey) {
+    if (!manager || !modeKey) return false;
+    var managerModeKey = toText(manager.modeKey || manager.mode).trim();
+    if (managerModeKey && managerModeKey !== modeKey) return false;
+    var rankedToken = toText(manager.rankedSessionToken).trim();
+    var challengeId = toText(manager.challengeId).trim().toLowerCase();
+    var seed = normalizeRankedSessionSeed(manager.initialSeed);
+    var context = null;
+    if (
+      global &&
+      global.GAME_CHALLENGE_CONTEXT &&
+      typeof global.GAME_CHALLENGE_CONTEXT === "object" &&
+      !Array.isArray(global.GAME_CHALLENGE_CONTEXT) &&
+      (
+        !toText(global.GAME_CHALLENGE_CONTEXT.mode_key).trim() ||
+        toText(global.GAME_CHALLENGE_CONTEXT.mode_key).trim() === modeKey
+      )
+    ) {
+      context = global.GAME_CHALLENGE_CONTEXT;
+    }
+    if (!rankedToken && context) rankedToken = toText(context.ranked_session_token).trim();
+    if (!challengeId && context) {
+      challengeId = (
+        toText(context.challenge_id).trim() ||
+        toText(context.id).trim()
+      ).toLowerCase();
+    }
+    if (seed === null && context) seed = normalizeRankedSessionSeed(context.seed);
+    if (!rankedToken || !challengeId || seed === null) return false;
+    var nowSec = Math.floor(Date.now() / 1000);
+    writeLocalStorageItem(
+      RANKED_SESSION_ACTIVE_KEY_PREFIX + modeKey,
+      JSON.stringify({
+        mode_key: modeKey,
+        challenge_id: challengeId,
+        seed: seed,
+        ranked_session_token: rankedToken,
+        issued_at: nowSec,
+        exp: nowSec + 3600,
+        owner_user_id: toText(getUserId()).trim() || null,
+        client_received_at_ms: Date.now()
+      })
+    );
+    if (global) {
+      global.GAME_CHALLENGE_CONTEXT = {
+        id: challengeId,
+        mode_key: modeKey,
+        seed: seed,
+        ranked_session_token: rankedToken
+      };
     }
     return true;
   }

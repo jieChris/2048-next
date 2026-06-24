@@ -1023,7 +1023,7 @@ describe("online leaderboard terminal submission", () => {
     });
   });
 
-  it("does not clear active storage when the manager has already advanced to the next ranked token", async () => {
+  it("mirrors the next active storage when the manager has already advanced to the next ranked token", async () => {
     const storage = new MemoryStorage();
     const nowSec = Math.floor(Date.now() / 1000);
     const oldSession = {
@@ -1082,9 +1082,10 @@ describe("online leaderboard terminal submission", () => {
 
     expect(recordPayload?.ranked_session_token).toBe("old-ranked-token");
     expect(manager.rankedSessionToken).toBe("next-ranked-token");
-    expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}").ranked_session_token).toBe(
-      "old-ranked-token"
-    );
+    const activeSession = JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}");
+    expect(activeSession.ranked_session_token).toBe("next-ranked-token");
+    expect(activeSession.challenge_id).toBe("ranked-next");
+    expect(activeSession.seed).toBe(nextSession.seed);
   });
 
   it("creates the next ranked session on demand when restart has no prefetched session", async () => {
