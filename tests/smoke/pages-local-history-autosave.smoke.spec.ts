@@ -1,7 +1,14 @@
 import { expect, test } from "@playwright/test";
+import { installRankedSessionForMode } from "./support/ranked-session";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("local history auto-save only persists on game over", async ({ page }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      clearPrefetch: true,
+      clearSavedState: true,
+      seed: 603,
+      token: "smoke-token-local-history"
+    });
     await page.addInitScript(() => {
       try {
         window.localStorage.removeItem("local_game_history_v1");

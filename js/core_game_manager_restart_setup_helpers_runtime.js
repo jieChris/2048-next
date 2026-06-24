@@ -1098,6 +1098,50 @@ function clearRankedBlockedBoardView(manager) {
   } catch (_err) {}
 }
 
+function normalizeSetupPageIdentity(value) {
+  return String(value || "").toLowerCase();
+}
+
+function readSetupPageAttribute(elementLike, attributeName) {
+  if (!elementLike) return "";
+  try {
+    if (typeof elementLike.getAttribute === "function") {
+      var attributeValue = elementLike.getAttribute(attributeName);
+      if (attributeValue) return attributeValue;
+    }
+  } catch (_errAttribute) {}
+  try {
+    if (elementLike.dataset && elementLike.dataset.page) return elementLike.dataset.page;
+  } catch (_errDataset) {}
+  return "";
+}
+
+function resolveSetupLocationLike(manager, documentLike) {
+  try {
+    if (documentLike && documentLike.location) return documentLike.location;
+  } catch (_errDocumentLocation) {}
+  try {
+    var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+    if (windowLike && windowLike.location) return windowLike.location;
+  } catch (_errWindowLocation) {}
+  return null;
+}
+
+function isRankedSeedRequiredForSetup(manager) {
+  var documentLike = null;
+  try {
+    documentLike = typeof resolveManagerDocumentLike === "function" ? resolveManagerDocumentLike(manager) : null;
+  } catch (_errDocument) {}
+  var body = documentLike && documentLike.body ? documentLike.body : null;
+  if (normalizeSetupPageIdentity(readSetupPageAttribute(body, "data-page")) === "replay") return false;
+  var locationLike = resolveSetupLocationLike(manager, documentLike);
+  var pathname = "";
+  try {
+    pathname = locationLike && locationLike.pathname ? String(locationLike.pathname) : "";
+  } catch (_errPathname) {}
+  return normalizeSetupPageIdentity(pathname).indexOf("replay.html") === -1;
+}
+
 function createSetupGameOperations() {
   return {
     applySetupModeConfig: function (manager, cfg) { if (typeof applySetupModeConfig === "function") applySetupModeConfig(manager, cfg); },
@@ -1107,6 +1151,7 @@ function createSetupGameOperations() {
     ensureSingleModePageLock: function (manager) { return typeof ensureSingleModePageLock === "function" ? ensureSingleModePageLock(manager) : true; },
     handleSingleModePageDuplicate: function (manager) { if (typeof handleSingleModePageDuplicate === "function") handleSingleModePageDuplicate(manager); },
     hasLegalRankedSetupSeed: function (manager) { return hasLegalRankedSetupSeed(manager); },
+    isRankedSeedRequiredForSetup: function (manager) { return isRankedSeedRequiredForSetup(manager); },
     isNonArrayObject: function (value) { return typeof isNonArrayObject === "function" ? isNonArrayObject(value) : !!value && typeof value === "object" && !Array.isArray(value); },
     resolveSetupModeConfig: function (manager, setupOptions, detectedMode) { return typeof resolveSetupModeConfig === "function" ? resolveSetupModeConfig(manager, setupOptions, detectedMode) : null; },
     resolveSetupNoXModeConfig: function (manager, cfg, setupOptions, inputSeed) { return typeof resolveSetupNoXModeConfig === "function" ? resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed) : cfg; },
@@ -1122,8 +1167,10 @@ function setupGameFallback(manager, inputSeed, options) {
   var cfg = manager.normalizeModeConfig(resolvedModeConfig && resolvedModeConfig.key, resolvedModeConfig);
   cfg = resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed);
   applySetupModeConfig(manager, cfg);
-  if (manager.rankPolicy === "ranked" && !hasLegalRankedSetupSeed(manager)) {
+  if (manager.rankPolicy === "ranked" && isRankedSeedRequiredForSetup(manager) && !hasLegalRankedSetupSeed(manager)) {
     manager.rankedSetupBlockedUntilSessionReady = true;
+    manager.rankedSessionToken = "";
+    manager.challengeId = null;
     manager.setRuntimeGrid(null);
     clearRankedBlockedBoardView(manager);
     return;

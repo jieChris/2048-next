@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { installRankedSessionForMode } from "./support/ranked-session";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
@@ -374,6 +375,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("homepage guide overlay does not block export replay action", async ({ page }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      clearPrefetch: true,
+      clearSavedState: true,
+      seed: 602,
+      token: "smoke-token-guide-export"
+    });
     await page.addInitScript(() => {
       window.localStorage.removeItem("home_guide_seen_v1");
     });

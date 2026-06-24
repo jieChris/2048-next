@@ -7,6 +7,8 @@ export interface SetupGameManagerLike {
   } | null;
   rankPolicy?: unknown;
   rankedSetupBlockedUntilSessionReady?: boolean;
+  rankedSessionToken?: unknown;
+  challengeId?: unknown;
   over?: boolean;
   won?: boolean;
   keepPlaying?: boolean;
@@ -30,6 +32,7 @@ export interface SetupGameOperations {
     inputSeed: unknown
   ) => unknown;
   applySetupModeConfig: (manager: SetupGameManagerLike, config: unknown) => void;
+  isRankedSeedRequiredForSetup?: (manager: SetupGameManagerLike) => boolean;
   hasLegalRankedSetupSeed?: (manager: SetupGameManagerLike) => boolean;
   ensureSingleModePageLock: (manager: SetupGameManagerLike) => boolean;
   handleSingleModePageDuplicate: (manager: SetupGameManagerLike) => void;
@@ -75,8 +78,15 @@ export function setupGame(
     inputSeed
   );
   operations.applySetupModeConfig(manager, cfg);
-  if (manager.rankPolicy === "ranked" && operations.hasLegalRankedSetupSeed?.(manager) === false) {
+  const rankedSeedRequired = operations.isRankedSeedRequiredForSetup?.(manager) !== false;
+  if (
+    manager.rankPolicy === "ranked" &&
+    rankedSeedRequired &&
+    operations.hasLegalRankedSetupSeed?.(manager) === false
+  ) {
     manager.rankedSetupBlockedUntilSessionReady = true;
+    manager.rankedSessionToken = "";
+    manager.challengeId = null;
     manager.setRuntimeGrid(null);
     operations.clearRankedBlockedBoardView?.(manager);
     return;

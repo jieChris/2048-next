@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { installRankedSessionForMode } from "./support/ranked-session";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test.describe.configure({ mode: "serial" });
@@ -127,6 +128,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
       if (active) {
         manager.rankedSessionToken = String(active.ranked_session_token || "");
         manager.challengeId = String(active.challenge_id || "");
+        const activeSeed = Math.floor(Number(active.seed));
+        if (Number.isSafeInteger(activeSeed) && activeSeed >= 0) {
+          manager.initialSeed = activeSeed;
+          manager.seed = activeSeed;
+        }
+        (window as any).GAME_CHALLENGE_CONTEXT = {
+          id: String(active.challenge_id || ""),
+          mode_key: String(active.mode_key || injectedModeKey),
+          seed: activeSeed,
+          ranked_session_token: String(active.ranked_session_token || "")
+        };
       }
       manager.rankCheckpointApplying = true;
       manager.restart();
@@ -134,16 +146,36 @@ test.describe("Legacy Multi-Page Smoke", () => {
     }, modeKey);
 
     await expect.poll(() => recordPayloads.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() => {
+            const manager = (window as any).game_manager;
+            return {
+              blocked: !!manager?.rankedSetupBlockedUntilSessionReady,
+              initialSeed: Math.floor(Number(manager?.initialSeed)),
+              managerToken: String(manager?.rankedSessionToken || "")
+            };
+          }),
+        { timeout: 5000 }
+      )
+      .toEqual({
+        blocked: false,
+        initialSeed: nextSession.seed,
+        managerToken: "next-ranked-token"
+      });
 
     const afterRestartSession = await page.evaluate((injectedModeKey) => {
       const raw = window.localStorage.getItem("ranked_session_active:v1:" + injectedModeKey);
       const active = raw ? JSON.parse(raw) : null;
       return {
+        initialSeed: Math.floor(Number((window as any).game_manager?.initialSeed)),
         managerToken: String((window as any).game_manager?.rankedSessionToken || ""),
         activeToken: active ? String(active.ranked_session_token || "") : ""
       };
     }, modeKey);
     expect(recordPayloads[0]?.ranked_session_token).toBe("old-ranked-token");
+    expect(afterRestartSession.initialSeed).toBe(nextSession.seed);
     expect(afterRestartSession.managerToken).toBe("next-ranked-token");
     expect(afterRestartSession.activeToken).toBe("next-ranked-token");
 
@@ -319,6 +351,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("online record submit flushes before restart when game is already over", async ({ page }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      clearPrefetch: true,
+      clearSavedState: true,
+      seed: 640,
+      token: "smoke-token-flush-before-restart"
+    });
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
       window.localStorage.setItem("2048_auth_userId_v1", "42");
@@ -455,8 +493,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       exp: nowSec + 3600,
       owner_user_id: "42"
     };
+    let recordRequests = 0;
 
     await page.route("**/api/records", async (route) => {
+      recordRequests += 1;
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -491,6 +531,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
         window.localStorage.setItem("2048_auth_userId_v1", "42");
         window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
         window.localStorage.setItem("ranked_session_active:v1:" + injectedModeKey, JSON.stringify(injectedOld));
+        (window as any).GAME_CHALLENGE_CONTEXT = {
+          id: String(injectedOld.challenge_id || ""),
+          mode_key: String(injectedOld.mode_key || injectedModeKey),
+          seed: Number(injectedOld.seed),
+          ranked_session_token: String(injectedOld.ranked_session_token || "")
+        };
         window.localStorage.removeItem("ranked_session_prefetch:v1:" + injectedModeKey);
         window.localStorage.removeItem("online_last_record_submit_signature_v1");
         (window as any).__rankedRestartAlerts = [];
@@ -516,19 +562,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.rankPolicy = "ranked";
       manager.modeKey = "standard_4x4_pow2_no_undo";
       manager.replayMode = false;
-      manager.over = true;
+      manager.over = false;
       manager.won = false;
       manager.keepPlaying = false;
       manager.score = 2048;
       manager.moveHistory = [0, 1, 2];
       manager.successfulMoveCount = 3;
-      manager.rankedSessionToken = "old-ranked-token";
-      manager.challengeId = "ranked-old";
-      manager.serialize = () => "old-ranked-replay";
-      manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2] });
-      if (typeof manager.tryAutoSubmitOnGameOver === "function") {
-        manager.tryAutoSubmitOnGameOver();
-      }
+      manager.sessionSubmitDone = true;
       const rankedRuntime = (window as any).RankedSessionRuntime;
       const ready =
         rankedRuntime && typeof rankedRuntime.startNextSession === "function"
@@ -537,9 +577,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.rankCheckpointApplying = true;
       manager.restart();
       manager.rankCheckpointApplying = false;
-      if (!ready && typeof manager.move === "function") {
-        manager.move(0);
-      }
     });
 
     await expect
@@ -571,9 +608,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         authToken: null,
         alerts: 0
       });
+    expect(recordRequests).toBe(0);
   });
 
   test("online record submit follows local terminal auto-submit without polling", async ({ page }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      clearPrefetch: true,
+      clearSavedState: true,
+      seed: 641,
+      token: "smoke-token-local-terminal-submit"
+    });
     await page.addInitScript(() => {
       (window as any).__DISABLE_ONLINE_LEADERBOARD__ = true;
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
@@ -688,6 +732,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("online record submit flushes capped completion win-stop sessions before restart", async ({ page }) => {
+    await installRankedSessionForMode(page, "capped_4x4_pow2_64_no_undo", {
+      clearPrefetch: true,
+      clearSavedState: true,
+      seed: 645,
+      token: "smoke-token-capped-win-stop"
+    });
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
       window.localStorage.setItem("2048_auth_userId_v1", "42");
@@ -806,6 +856,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("online record submit retries transient pending failures after backoff", async ({ page }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      clearPrefetch: true,
+      clearSavedState: true,
+      seed: 642,
+      token: "smoke-token-submit-retry"
+    });
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
       window.localStorage.setItem("2048_auth_userId_v1", "42");
@@ -1056,6 +1112,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("online record submit skips win-stop sessions until real game over", async ({ page }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      clearPrefetch: true,
+      clearSavedState: true,
+      seed: 643,
+      token: "smoke-token-win-stop-skip"
+    });
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
       window.localStorage.setItem("2048_auth_userId_v1", "42");
@@ -1155,6 +1217,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("online record submit dedupes identical replay payloads even if client record id changes", async ({ page }) => {
+    await installRankedSessionForMode(page, "board_3x3_pow2_no_undo", {
+      clearPrefetch: true,
+      clearSavedState: true,
+      seed: 644,
+      token: "smoke-token-dedupe-3x3"
+    });
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
       window.localStorage.setItem("2048_auth_userId_v1", "42");

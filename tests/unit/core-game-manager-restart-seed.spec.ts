@@ -227,6 +227,7 @@ describe("core game manager restart seed runtime", () => {
         ensureSingleModePageLock: expect.any(Function),
         handleSingleModePageDuplicate: expect.any(Function),
         clearRankedBlockedBoardView: expect.any(Function),
+        isRankedSeedRequiredForSetup: expect.any(Function),
         isNonArrayObject: expect.any(Function),
         resolveSetupModeConfig: expect.any(Function),
         resolveSetupNoXModeConfig: expect.any(Function),
@@ -261,6 +262,38 @@ describe("core game manager restart seed runtime", () => {
     expect((manager.actuator as { clearContainer: ReturnType<typeof vi.fn> }).clearContainer).toHaveBeenCalledWith(
       tileContainer
     );
+  });
+
+  it("does not require ranked setup seed on replay pages", () => {
+    let operations: Record<string, unknown> | null = null;
+    const setupGame = vi.fn((_manager, _inputSeed, _options, runtimeOperations) => {
+      operations = runtimeOperations;
+    });
+    const replayDocument = {
+      body: {
+        getAttribute: vi.fn((name: string) => (name === "data-page" ? "replay" : ""))
+      },
+      location: {
+        pathname: "/replay.html"
+      }
+    };
+    const resolveManagerDocumentLike = vi.fn(() => replayDocument);
+    const { runtime } = loadRestartSeedRuntime({
+      resolveManagerDocumentLike,
+      setupGameRuntime: {
+        setupGame
+      }
+    });
+    const manager = {} as Record<string, unknown>;
+
+    runtime.setupGame(manager, undefined, {});
+    expect(operations).not.toBeNull();
+
+    const isRequired = operations?.isRankedSeedRequiredForSetup as
+      | ((target: Record<string, unknown>) => boolean)
+      | undefined;
+    expect(isRequired?.(manager)).toBe(false);
+    expect(resolveManagerDocumentLike).toHaveBeenCalledWith(manager);
   });
 
   it("delegates single-mode tab id resolution to the core runtime", () => {
