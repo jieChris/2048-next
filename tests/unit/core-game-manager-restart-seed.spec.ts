@@ -228,6 +228,7 @@ describe("core game manager restart seed runtime", () => {
         handleSingleModePageDuplicate: expect.any(Function),
         clearRankedBlockedBoardView: expect.any(Function),
         isRankedSeedRequiredForSetup: expect.any(Function),
+        shouldBlockRankedSetupWithoutSeed: expect.any(Function),
         isNonArrayObject: expect.any(Function),
         resolveSetupModeConfig: expect.any(Function),
         resolveSetupNoXModeConfig: expect.any(Function),
@@ -294,6 +295,66 @@ describe("core game manager restart seed runtime", () => {
       | undefined;
     expect(isRequired?.(manager)).toBe(false);
     expect(resolveManagerDocumentLike).toHaveBeenCalledWith(manager);
+  });
+
+  it("only blocks unseeded ranked setup when an auth token is present", () => {
+    let operations: Record<string, unknown> | null = null;
+    const setupGame = vi.fn((_manager, _inputSeed, _options, runtimeOperations) => {
+      operations = runtimeOperations;
+    });
+    const { runtime } = loadRestartSeedRuntime({
+      setupGameRuntime: {
+        setupGame
+      }
+    });
+    const storage = {
+      value: "",
+      getItem: vi.fn(() => storage.value)
+    };
+    const manager = {
+      rankPolicy: "ranked",
+      modeKey: "standard_4x4_pow2_no_undo",
+      width: 4,
+      height: 4,
+      modeConfig: {
+        rank_policy: "ranked",
+        board_width: 4,
+        board_height: 4
+      },
+      getWindowLike: vi.fn(() => ({ localStorage: storage }))
+    } as Record<string, unknown>;
+
+    runtime.setupGame(manager, undefined, {});
+    expect(operations).not.toBeNull();
+
+    const shouldBlock = operations?.shouldBlockRankedSetupWithoutSeed as
+      | ((target: Record<string, unknown>) => boolean)
+      | undefined;
+    expect(shouldBlock?.(manager)).toBe(false);
+
+    storage.value = "smoke-token";
+    expect(shouldBlock?.(manager)).toBe(true);
+
+    manager.modeKey = "board_3x3_pow2_no_undo";
+    manager.width = 3;
+    manager.height = 3;
+    manager.modeConfig = {
+      rank_policy: "ranked",
+      board_width: 3,
+      board_height: 3
+    };
+    expect(shouldBlock?.(manager)).toBe(false);
+
+    manager.rankPolicy = "unranked";
+    manager.modeKey = "capped_4x4_pow2_64_no_undo";
+    manager.width = 4;
+    manager.height = 4;
+    manager.modeConfig = {
+      rank_policy: "unranked",
+      board_width: 4,
+      board_height: 4
+    };
+    expect(shouldBlock?.(manager)).toBe(false);
   });
 
   it("delegates single-mode tab id resolution to the core runtime", () => {

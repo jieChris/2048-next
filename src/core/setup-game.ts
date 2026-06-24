@@ -33,6 +33,7 @@ export interface SetupGameOperations {
   ) => unknown;
   applySetupModeConfig: (manager: SetupGameManagerLike, config: unknown) => void;
   isRankedSeedRequiredForSetup?: (manager: SetupGameManagerLike) => boolean;
+  shouldBlockRankedSetupWithoutSeed?: (manager: SetupGameManagerLike) => boolean;
   hasLegalRankedSetupSeed?: (manager: SetupGameManagerLike) => boolean;
   ensureSingleModePageLock: (manager: SetupGameManagerLike) => boolean;
   handleSingleModePageDuplicate: (manager: SetupGameManagerLike) => void;
@@ -79,9 +80,11 @@ export function setupGame(
   );
   operations.applySetupModeConfig(manager, cfg);
   const rankedSeedRequired = operations.isRankedSeedRequiredForSetup?.(manager) !== false;
+  const shouldBlockUnseededRankedSetup = operations.shouldBlockRankedSetupWithoutSeed?.(manager) !== false;
   if (
     manager.rankPolicy === "ranked" &&
     rankedSeedRequired &&
+    shouldBlockUnseededRankedSetup &&
     operations.hasLegalRankedSetupSeed?.(manager) === false
   ) {
     manager.rankedSetupBlockedUntilSessionReady = true;

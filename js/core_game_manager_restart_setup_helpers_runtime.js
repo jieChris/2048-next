@@ -1142,6 +1142,31 @@ function isRankedSeedRequiredForSetup(manager) {
   return normalizeSetupPageIdentity(pathname).indexOf("replay.html") === -1;
 }
 
+function shouldBlockRankedSetupWithoutSeed(manager) {
+  if (!(manager && manager.rankPolicy === "ranked")) return false;
+  var modeKey = "";
+  try {
+    modeKey = String(manager.modeKey || manager.mode || "");
+  } catch (_errModeKey) {}
+  var modeConfig = manager.modeConfig && typeof manager.modeConfig === "object" ? manager.modeConfig : null;
+  var configRankPolicy = "";
+  try {
+    configRankPolicy = modeConfig ? String(modeConfig.rank_policy || modeConfig.rankPolicy || "").toLowerCase() : "";
+  } catch (_errConfigRankPolicy) {}
+  if (configRankPolicy && configRankPolicy !== "ranked") return false;
+  var width = Math.floor(Number(manager.width || (modeConfig && modeConfig.board_width)));
+  var height = Math.floor(Number(manager.height || (modeConfig && modeConfig.board_height)));
+  var isFourByFour =
+    (width === 4 && height === 4) ||
+    modeKey === "standard_4x4_pow2_no_undo" ||
+    modeKey === "classic_4x4_pow2_undo" ||
+    modeKey === "capped_4x4_pow2_no_undo";
+  if (!isFourByFour) {
+    return false;
+  }
+  return hasRankedCheckpointAuthTokenForSetup(manager);
+}
+
 function createSetupGameOperations() {
   return {
     applySetupModeConfig: function (manager, cfg) { if (typeof applySetupModeConfig === "function") applySetupModeConfig(manager, cfg); },
@@ -1152,6 +1177,7 @@ function createSetupGameOperations() {
     handleSingleModePageDuplicate: function (manager) { if (typeof handleSingleModePageDuplicate === "function") handleSingleModePageDuplicate(manager); },
     hasLegalRankedSetupSeed: function (manager) { return hasLegalRankedSetupSeed(manager); },
     isRankedSeedRequiredForSetup: function (manager) { return isRankedSeedRequiredForSetup(manager); },
+    shouldBlockRankedSetupWithoutSeed: function (manager) { return shouldBlockRankedSetupWithoutSeed(manager); },
     isNonArrayObject: function (value) { return typeof isNonArrayObject === "function" ? isNonArrayObject(value) : !!value && typeof value === "object" && !Array.isArray(value); },
     resolveSetupModeConfig: function (manager, setupOptions, detectedMode) { return typeof resolveSetupModeConfig === "function" ? resolveSetupModeConfig(manager, setupOptions, detectedMode) : null; },
     resolveSetupNoXModeConfig: function (manager, cfg, setupOptions, inputSeed) { return typeof resolveSetupNoXModeConfig === "function" ? resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed) : cfg; },
@@ -1167,7 +1193,12 @@ function setupGameFallback(manager, inputSeed, options) {
   var cfg = manager.normalizeModeConfig(resolvedModeConfig && resolvedModeConfig.key, resolvedModeConfig);
   cfg = resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed);
   applySetupModeConfig(manager, cfg);
-  if (manager.rankPolicy === "ranked" && isRankedSeedRequiredForSetup(manager) && !hasLegalRankedSetupSeed(manager)) {
+  if (
+    manager.rankPolicy === "ranked" &&
+    isRankedSeedRequiredForSetup(manager) &&
+    shouldBlockRankedSetupWithoutSeed(manager) &&
+    !hasLegalRankedSetupSeed(manager)
+  ) {
     manager.rankedSetupBlockedUntilSessionReady = true;
     manager.rankedSessionToken = "";
     manager.challengeId = null;

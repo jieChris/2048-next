@@ -481,7 +481,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.payloadFinalBoardIsArray).toBe(true);
   });
 
-  test("ranked restart stays blocked with an empty board when next session creation fails", async ({ page }) => {
+  test("ranked restart falls back to a non-submittable local board when next session creation fails", async ({ page }) => {
     const modeKey = "standard_4x4_pow2_no_undo";
     const nowSec = Math.floor(Date.now() / 1000);
     const oldSession = {
@@ -599,10 +599,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         { timeout: 5000 }
       )
       .toMatchObject({
-        blocked: true,
-        gridIsNull: true,
+        blocked: false,
+        gridIsNull: false,
         moveHistoryLength: 3,
-        tileCount: 0,
+        tileCount: 2,
         managerToken: "",
         activeSession: null,
         authToken: null,

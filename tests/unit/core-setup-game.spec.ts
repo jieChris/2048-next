@@ -139,6 +139,32 @@ describe("core setup game runtime", () => {
     expect(clearRankedBlockedBoardView).not.toHaveBeenCalled();
   });
 
+  it("allows ranked setup without a seed when the host does not need to block unseeded setup", () => {
+    const manager = createManager();
+    manager.rankPolicy = "ranked";
+    const clearRankedBlockedBoardView = vi.fn();
+    const operations = createOperations({
+      applySetupModeConfig: vi.fn((target: typeof manager) => {
+        target.rankPolicy = "ranked";
+      }),
+      clearRankedBlockedBoardView,
+      hasLegalRankedSetupSeed: vi.fn(() => false),
+      shouldBlockRankedSetupWithoutSeed: vi.fn(() => false)
+    });
+
+    setupGame(manager, undefined, {}, operations);
+
+    expect(operations.shouldBlockRankedSetupWithoutSeed).toHaveBeenCalledWith(manager);
+    expect(operations.hasLegalRankedSetupSeed).not.toHaveBeenCalled();
+    expect(operations.ensureSingleModePageLock).toHaveBeenCalledWith(manager);
+    expect(operations.createGrid).toHaveBeenCalledWith(4, 4);
+    expect(manager.setRuntimeGrid).toHaveBeenCalledWith({ id: "grid" });
+    expect(manager.setRuntimeScore).toHaveBeenCalledWith(0);
+    expect(operations.runSetupStateInitialization).toHaveBeenCalledWith(manager, undefined, {});
+    expect((manager as Record<string, unknown>).rankedSetupBlockedUntilSessionReady).toBe(false);
+    expect(clearRankedBlockedBoardView).not.toHaveBeenCalled();
+  });
+
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createSetupGameRuntime();
     expect(runtime.setupGame).toBe(setupGame);

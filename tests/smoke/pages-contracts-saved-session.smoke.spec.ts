@@ -244,6 +244,92 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.tileCount).toBe(0);
   });
 
+  test("guest ranked setup without an issued seed still creates a non-submittable local board", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+      (window as any).GAME_CHALLENGE_CONTEXT = null;
+    });
+
+    const response = await page.goto("/play.html?mode_key=board_3x3_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      return {
+        blocked: !!manager.rankedSetupBlockedUntilSessionReady,
+        challengeId: manager.challengeId || null,
+        rankedSessionToken: manager.rankedSessionToken || "",
+        hasGrid: !!manager.grid,
+        modeKey: manager.modeKey,
+        tileCount: document.querySelectorAll(".tile-container .tile").length
+      };
+    });
+
+    expect(snapshot).toEqual({
+      blocked: false,
+      challengeId: null,
+      rankedSessionToken: "",
+      hasGrid: true,
+      modeKey: "board_3x3_pow2_no_undo",
+      tileCount: 2
+    });
+  });
+
+  test("authenticated non-4x4 ranked setup without an issued seed still creates a non-submittable local board", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "42");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+      (window as any).GAME_CHALLENGE_CONTEXT = null;
+    });
+    await page.route("**/api/ranked-session/start", async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, code: "SMOKE_SEED_DOWN" })
+      });
+    });
+
+    const response = await page.goto("/play.html?mode_key=board_3x3_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      return {
+        blocked: !!manager.rankedSetupBlockedUntilSessionReady,
+        challengeId: manager.challengeId || null,
+        rankedSessionToken: manager.rankedSessionToken || "",
+        hasGrid: !!manager.grid,
+        modeKey: manager.modeKey,
+        tileCount: document.querySelectorAll(".tile-container .tile").length
+      };
+    });
+
+    expect(snapshot).toEqual({
+      blocked: false,
+      challengeId: null,
+      rankedSessionToken: "",
+      hasGrid: true,
+      modeKey: "board_3x3_pow2_no_undo",
+      tileCount: 2
+    });
+  });
+
   test("saved-state restore rejects version-mismatch payload", async ({ page }) => {
     await page.addInitScript(() => {
       const modeKey = "practice";
