@@ -30,6 +30,7 @@
   var RANKED_CHECKPOINT_LOCAL_MIRROR_KEY_PREFIX = "ranked_checkpoint_local_mirror:v1:";
   var RANKED_CHECKPOINT_CLEAR_MARKER_KEY_PREFIX = "ranked_checkpoint_cleared_at:v1:";
   var RANKED_SESSION_ACTIVE_KEY_PREFIX = "ranked_session_active:v1:";
+  var RANKED_SESSION_PREFETCH_KEY_PREFIX = "ranked_session_prefetch:v1:";
   var RANKED_RESTART_SETUP_DEFERRED = { rankedRestartSetupDeferred: true };
 
   function resolveLocalStorage() {
@@ -381,6 +382,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (submittedToken && activeToken && activeToken !== submittedToken) return false;
     if (submittedToken && !activeToken) return false;
     if (!submittedToken && activeToken) return false;
+    if (submittedToken && hasDistinctPrefetchedRankedSession(modeKey, activeSession)) return false;
     if (
       submittedToken &&
       managerToken === submittedToken &&
@@ -400,6 +402,22 @@ function shouldAutoLoadOnlineLeaderboard() {
       if (!submittedToken && contextToken) return false;
       global.GAME_CHALLENGE_CONTEXT = null;
     }
+    return true;
+  }
+
+  function hasDistinctPrefetchedRankedSession(modeKey, activeSession) {
+    var prefetched = readPrefetchedRankedSessionRecord(modeKey);
+    if (!prefetched) return false;
+    var prefetchedToken = toText(prefetched.ranked_session_token).trim();
+    var prefetchedChallengeId = toText(prefetched.challenge_id).trim().toLowerCase();
+    var prefetchedSeed = normalizeRankedSessionSeed(prefetched.seed);
+    if (!prefetchedToken || !prefetchedChallengeId || prefetchedSeed === null) return false;
+    var activeToken = toText(activeSession && activeSession.ranked_session_token).trim();
+    var activeChallengeId = toText(activeSession && activeSession.challenge_id).trim().toLowerCase();
+    var activeSeed = normalizeRankedSessionSeed(activeSession && activeSession.seed);
+    if (activeToken && activeToken === prefetchedToken) return false;
+    if (activeChallengeId && activeChallengeId === prefetchedChallengeId) return false;
+    if (activeSeed !== null && activeSeed === prefetchedSeed) return false;
     return true;
   }
 
@@ -1810,10 +1828,10 @@ function shouldAutoLoadOnlineLeaderboard() {
     return normalizeTimestampMs(savedState && savedState.saved_at);
   }
 
-  function readActiveRankedSessionRecord(modeLike) {
+  function readStoredRankedSessionRecord(storagePrefix, modeLike) {
     var modeKey = resolveRankedCheckpointLocalMirrorModeKey(modeLike);
     if (!modeKey) return null;
-    var raw = readLocalStorageItem(RANKED_SESSION_ACTIVE_KEY_PREFIX + modeKey);
+    var raw = readLocalStorageItem(storagePrefix + modeKey);
     if (!raw) return null;
     try {
       var parsed = JSON.parse(raw);
@@ -1825,6 +1843,14 @@ function shouldAutoLoadOnlineLeaderboard() {
     } catch (_err) {
       return null;
     }
+  }
+
+  function readActiveRankedSessionRecord(modeLike) {
+    return readStoredRankedSessionRecord(RANKED_SESSION_ACTIVE_KEY_PREFIX, modeLike);
+  }
+
+  function readPrefetchedRankedSessionRecord(modeLike) {
+    return readStoredRankedSessionRecord(RANKED_SESSION_PREFETCH_KEY_PREFIX, modeLike);
   }
 
   function resolveRankedCheckpointSessionId(checkpointData) {
