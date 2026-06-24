@@ -352,11 +352,6 @@ function shouldAutoLoadOnlineLeaderboard() {
     };
   }
 
-  function resolveActiveRankedSessionToken(modeLike) {
-    var context = resolveRankedSessionContextForMode(modeLike);
-    return toText(context && context.ranked_session_token).trim();
-  }
-
   function shouldClearCurrentManagerRankedCheckpointForRecord(manager, payload) {
     if (!shouldUseRankedCheckpoint(manager)) return false;
     var modeKey = toText(payload && payload.mode_key).trim();
@@ -367,18 +362,25 @@ function shouldAutoLoadOnlineLeaderboard() {
     return currentToken === submittedToken;
   }
 
-  function clearActiveRankedSessionForRecordPayload(payload) {
+  function clearActiveRankedSessionForRecordPayload(payload, manager) {
     var modeKey = toText(payload && payload.mode_key).trim();
     if (!modeKey) return false;
     var submittedToken = toText(payload && payload.ranked_session_token).trim();
-    var activeToken = resolveActiveRankedSessionToken(modeKey);
+    var activeSession = readActiveRankedSessionRecord(modeKey);
+    var activeToken = toText(activeSession && activeSession.ranked_session_token).trim();
     if (submittedToken && activeToken && activeToken !== submittedToken) return false;
+    if (submittedToken && !activeToken) return false;
     if (!submittedToken && activeToken) return false;
-    var rankedSessionRuntime = getRankedSessionRuntime();
-    if (rankedSessionRuntime && typeof rankedSessionRuntime.clearActiveSession === "function") {
-      rankedSessionRuntime.clearActiveSession(modeKey);
-      return true;
+    var managerToken = resolveRankedSessionTokenForManager(manager);
+    if (
+      submittedToken &&
+      managerToken === submittedToken &&
+      manager &&
+      (manager.rankedRestartPreparing === true || manager.rankedRestartBlockedUntilSessionReady === true)
+    ) {
+      return false;
     }
+    removeLocalStorageItem(RANKED_SESSION_ACTIVE_KEY_PREFIX + modeKey);
     if (
       global &&
       global.GAME_CHALLENGE_CONTEXT &&
@@ -388,14 +390,13 @@ function shouldAutoLoadOnlineLeaderboard() {
       if (submittedToken && contextToken && contextToken !== submittedToken) return false;
       if (!submittedToken && contextToken) return false;
       global.GAME_CHALLENGE_CONTEXT = null;
-      return true;
     }
-    return false;
+    return true;
   }
 
   function cleanupRankedStateAfterRecordSubmit(manager, payload) {
     var shouldClearCheckpoint = shouldClearCurrentManagerRankedCheckpointForRecord(manager, payload);
-    clearActiveRankedSessionForRecordPayload(payload);
+    clearActiveRankedSessionForRecordPayload(payload, manager);
     if (shouldClearCheckpoint) {
       clearRankedCheckpointForManager(manager, { keepalive: true }).catch(function () {});
     }
