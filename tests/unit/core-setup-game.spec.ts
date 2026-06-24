@@ -88,10 +88,13 @@ describe("core setup game runtime", () => {
   it("blocks ranked setup before creating a board when no legal ranked seed is active", () => {
     const manager = createManager();
     manager.rankPolicy = "ranked";
+    (manager as Record<string, unknown>).grid = { stale: true };
+    const clearRankedBlockedBoardView = vi.fn();
     const operations = createOperations({
       applySetupModeConfig: vi.fn((target: typeof manager) => {
         target.rankPolicy = "ranked";
       }),
+      clearRankedBlockedBoardView,
       hasLegalRankedSetupSeed: vi.fn(() => false)
     });
 
@@ -100,10 +103,11 @@ describe("core setup game runtime", () => {
     expect(operations.hasLegalRankedSetupSeed).toHaveBeenCalledWith(manager);
     expect(operations.ensureSingleModePageLock).not.toHaveBeenCalled();
     expect(operations.createGrid).not.toHaveBeenCalled();
-    expect(manager.setRuntimeGrid).not.toHaveBeenCalled();
     expect(manager.setRuntimeScore).not.toHaveBeenCalled();
     expect(operations.runSetupStateInitialization).not.toHaveBeenCalled();
     expect((manager as Record<string, unknown>).rankedSetupBlockedUntilSessionReady).toBe(true);
+    expect(manager.setRuntimeGrid).toHaveBeenCalledWith(null);
+    expect(clearRankedBlockedBoardView).toHaveBeenCalledWith(manager);
   });
 
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {

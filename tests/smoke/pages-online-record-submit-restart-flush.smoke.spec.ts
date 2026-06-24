@@ -443,7 +443,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.payloadFinalBoardIsArray).toBe(true);
   });
 
-  test("ranked restart falls back to a playable new game when next session creation fails", async ({ page }) => {
+  test("ranked restart stays blocked with an empty board when next session creation fails", async ({ page }) => {
     const modeKey = "standard_4x4_pow2_no_undo";
     const nowSec = Math.floor(Date.now() / 1000);
     const oldSession = {
@@ -534,17 +534,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
         rankedRuntime && typeof rankedRuntime.startNextSession === "function"
           ? await rankedRuntime.startNextSession("standard_4x4_pow2_no_undo")
           : false;
-      if (!ready) {
-        manager.rankPolicy = "unranked";
-        manager.rankedSessionToken = "";
-        manager.challengeId = null;
-      }
       manager.rankCheckpointApplying = true;
       manager.restart();
       manager.rankCheckpointApplying = false;
-      if (!ready) {
-        manager.over = false;
-        manager.score = 0;
+      if (!ready && typeof manager.move === "function") {
+        manager.move(0);
       }
     });
 
@@ -555,6 +549,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
             over: !!(window as any).game_manager?.over,
             score: Number((window as any).game_manager?.score || 0),
             managerToken: String((window as any).game_manager?.rankedSessionToken || ""),
+            blocked: !!(window as any).game_manager?.rankedSetupBlockedUntilSessionReady,
+            gridIsNull: (window as any).game_manager?.grid === null,
+            moveHistoryLength: Array.isArray((window as any).game_manager?.moveHistory)
+              ? (window as any).game_manager.moveHistory.length
+              : 0,
+            tileCount: document.querySelectorAll(".tile-container .tile").length,
             activeSession: window.localStorage.getItem("ranked_session_active:v1:" + injectedModeKey),
             authToken: window.localStorage.getItem("2048_auth_token_v1"),
             alerts: ((window as any).__rankedRestartAlerts || []).length
@@ -562,8 +562,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         { timeout: 5000 }
       )
       .toMatchObject({
-        over: false,
-        score: 0,
+        blocked: true,
+        gridIsNull: true,
+        moveHistoryLength: 3,
+        tileCount: 0,
         managerToken: "",
         activeSession: null,
         authToken: null,

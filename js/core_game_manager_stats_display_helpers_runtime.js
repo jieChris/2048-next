@@ -425,6 +425,7 @@ function refreshActuateTimerAndIps(manager) {
 
 function actuate(manager) {
   if (!manager) return;
+  if (manager.rankedSetupBlockedUntilSessionReady) return;
   syncBestScoreBeforeActuate(manager);
   manager.actuator.actuate(manager.grid, createActuatorPayloadState(manager));
   updateActuateStatsAndPanel(manager);

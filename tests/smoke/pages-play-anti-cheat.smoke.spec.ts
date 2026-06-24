@@ -1,11 +1,17 @@
 import { expect, test } from "@playwright/test";
 
+import { installRankedSessionForMode } from "./support/ranked-session";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Play Anti-Cheat Smoke", () => {
   test("no-undo modes do not allow console-forced undo after runtime flag tampering", async ({
     page
   }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      seed: 717,
+      token: "anti-cheat-standard-token"
+    });
+
     const response = await page.goto("/play.html?mode=standard_4x4_pow2_no_undo", {
       waitUntil: "domcontentloaded"
     });

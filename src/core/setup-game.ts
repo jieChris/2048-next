@@ -1,6 +1,10 @@
 export interface SetupGameManagerLike {
   width: number;
   height: number;
+  actuator?: {
+    clearContainer?: (container: unknown) => void;
+    tileContainer?: unknown;
+  } | null;
   rankPolicy?: unknown;
   rankedSetupBlockedUntilSessionReady?: boolean;
   over?: boolean;
@@ -35,6 +39,7 @@ export interface SetupGameOperations {
     inputSeed: unknown,
     setupOptions: Record<string, unknown>
   ) => void;
+  clearRankedBlockedBoardView?: (manager: SetupGameManagerLike) => void;
 }
 
 export interface SetupGameRuntime {
@@ -72,6 +77,8 @@ export function setupGame(
   operations.applySetupModeConfig(manager, cfg);
   if (manager.rankPolicy === "ranked" && operations.hasLegalRankedSetupSeed?.(manager) === false) {
     manager.rankedSetupBlockedUntilSessionReady = true;
+    manager.setRuntimeGrid(null);
+    operations.clearRankedBlockedBoardView?.(manager);
     return;
   }
   manager.rankedSetupBlockedUntilSessionReady = false;

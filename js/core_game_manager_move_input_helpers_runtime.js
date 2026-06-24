@@ -425,6 +425,7 @@ function flushPendingMoveInput(manager) {
 
 function shouldAbortMoveBeforePlanning(manager, direction) {
   if (!manager) return true;
+  if (manager.rankedSetupBlockedUntilSessionReady) return true;
   if (manager.noXSelectionPending === true) {
     if (typeof ensureNoXSelectionOverlayForManager === "function") {
       ensureNoXSelectionOverlayForManager(manager);

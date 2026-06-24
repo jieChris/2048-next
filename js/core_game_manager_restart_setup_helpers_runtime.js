@@ -144,7 +144,8 @@ function resolveRestartConfirmLanguageFallback(manager) {
     if (storageLang) return storageLang;
   } catch (_errStorage) {}
   try {
-    var root = windowLike && windowLike.document ? windowLike.document.documentElement : null;
+    var documentLike = typeof resolveManagerDocumentLike === "function" ? resolveManagerDocumentLike(manager) : null;
+    var root = documentLike && documentLike.documentElement ? documentLike.documentElement : null;
     var fromRoot = root
       ? (
           (typeof root.getAttribute === "function" && (root.getAttribute("data-ui-lang") || root.getAttribute("lang"))) ||
@@ -297,6 +298,7 @@ function restartWithBoard(manager, board, modeConfig, options) {
   manager.actuator.continue();
   var setupArgs = createRestartWithBoardSetupArgs(modeConfig, normalizedOptions);
   manager.setup(setupArgs.setupSeed, setupArgs.setupOptions);
+  if (manager.rankedSetupBlockedUntilSessionReady) return;
   setBoardFromMatrix(manager, board);
   if (manager.modeKey === "practice" && !normalizedOptions.asReplay && typeof applyPracticeSetupTimerStateFromBoard === "function") {
     applyPracticeSetupTimerStateFromBoard(manager, board);
@@ -1088,9 +1090,18 @@ function handleSingleModePageDuplicate(manager) {
   }
 }
 
+function clearRankedBlockedBoardView(manager) {
+  var actuator = manager && manager.actuator ? manager.actuator : null;
+  if (!(actuator && typeof actuator.clearContainer === "function")) return;
+  try {
+    actuator.clearContainer(actuator.tileContainer || null);
+  } catch (_err) {}
+}
+
 function createSetupGameOperations() {
   return {
     applySetupModeConfig: function (manager, cfg) { if (typeof applySetupModeConfig === "function") applySetupModeConfig(manager, cfg); },
+    clearRankedBlockedBoardView: clearRankedBlockedBoardView,
     createGrid: function (width, height) { return typeof Grid === "function" ? new Grid(width, height) : { width: width, height: height }; },
     detectMode: function (manager) { return typeof detectMode === "function" ? detectMode(manager) : ""; },
     ensureSingleModePageLock: function (manager) { return typeof ensureSingleModePageLock === "function" ? ensureSingleModePageLock(manager) : true; },
@@ -1113,6 +1124,8 @@ function setupGameFallback(manager, inputSeed, options) {
   applySetupModeConfig(manager, cfg);
   if (manager.rankPolicy === "ranked" && !hasLegalRankedSetupSeed(manager)) {
     manager.rankedSetupBlockedUntilSessionReady = true;
+    manager.setRuntimeGrid(null);
+    clearRankedBlockedBoardView(manager);
     return;
   }
   manager.rankedSetupBlockedUntilSessionReady = false;

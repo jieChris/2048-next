@@ -5,6 +5,7 @@ import vm from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 
 type StatsDisplayRuntimeContext = {
+  actuate: (manager: Record<string, unknown>) => void;
   createActuatorPayloadState: (manager: Record<string, unknown>) => Record<string, unknown>;
   finalizeActuatePersistence: (manager: Record<string, unknown>) => void;
   resolveStatsDisplayLanguage: (manager: Record<string, unknown>) => string;
@@ -17,6 +18,7 @@ function loadStatsDisplayRuntime(extraContext?: Record<string, unknown>): StatsD
   );
   const context = {
     console,
+    isNonArrayObject: (value: unknown) => !!value && typeof value === "object" && !Array.isArray(value),
     resolveManagerDocumentLike(manager: Record<string, unknown>) {
       return manager.documentLike || null;
     },
@@ -128,5 +130,28 @@ describe("core game manager stats display runtime", () => {
     };
     expect(operations.isGameTerminated(manager)).toBe(true);
     expect(isGameTerminated).toHaveBeenCalledWith(manager);
+  });
+
+  it("does not actuate a ranked setup that is blocked until a legal seed is ready", () => {
+    const runtime = loadStatsDisplayRuntime({
+      isGameTerminated: vi.fn(() => false)
+    });
+    const manager = {
+      rankedSetupBlockedUntilSessionReady: true,
+      actuator: {
+        actuate: vi.fn()
+      },
+      scoreManager: {
+        get: vi.fn()
+      },
+      computeStepStats: vi.fn(),
+      updateStatsPanel: vi.fn()
+    } as Record<string, unknown>;
+
+    runtime.actuate(manager);
+
+    expect((manager.actuator as { actuate: ReturnType<typeof vi.fn> }).actuate).not.toHaveBeenCalled();
+    expect(manager.computeStepStats).not.toHaveBeenCalled();
+    expect(manager.updateStatsPanel).not.toHaveBeenCalled();
   });
 });
