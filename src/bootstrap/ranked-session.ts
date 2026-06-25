@@ -17,14 +17,30 @@ const RANKED_MODE_KEYS = new Set([
   "standard_4x4_pow2_no_undo",
   "classic_4x4_pow2_undo",
   "capped_4x4_pow2_no_undo",
+  "capped_4x4_pow2_64_no_undo",
+  "capped_4x4_pow2_1024_no_undo",
+  "capped_4x4_pow2_4096_no_undo",
   "board_3x3_pow2_no_undo",
   "board_3x3_pow2_undo",
   "board_2x4_pow2_no_undo",
   "board_2x4_pow2_undo",
   "board_3x4_pow2_no_undo",
   "board_3x4_pow2_undo",
+  "board_5x5_pow2_no_undo",
+  "board_5x5_pow2_undo",
+  "diag_3x3_pow2_no_undo",
+  "diag_4x4_pow2_no_undo",
+  "diag_3x4_pow2_no_undo",
+  "diag_2x4_pow2_no_undo",
+  "obstacle_4x4_pow2_no_undo",
+  "fib_4x4_no_undo",
+  "fib_4x4_undo",
   "fib_3x3_no_undo",
-  "fib_3x3_undo"
+  "fib_3x3_undo",
+  "fib_4x3_no_undo",
+  "fib_4x3_undo",
+  "fib_4x2_no_undo",
+  "fib_4x2_undo"
 ]);
 
 export interface RankedSessionRecord {

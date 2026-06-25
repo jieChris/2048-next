@@ -206,7 +206,7 @@
       undo_enabled: true,
       max_tile: base.max_tile,
       spawn_table: base.spawn_table,
-      ranked_bucket: base.ranked_bucket || "none",
+      ranked_bucket: base.ranked_bucket_undo || base.ranked_bucket || "none",
       mode_family: base.mode_family,
       special_rules: base.special_rules,
       rank_policy: base.rank_policy
@@ -220,7 +220,7 @@
       undo_enabled: false,
       max_tile: base.max_tile,
       spawn_table: base.spawn_table,
-      ranked_bucket: base.ranked_bucket || "none",
+      ranked_bucket: base.ranked_bucket_no_undo || base.ranked_bucket || "none",
       mode_family: base.mode_family,
       special_rules: base.special_rules,
       rank_policy: base.rank_policy
@@ -277,6 +277,7 @@
     ruleset: "pow2",
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
     ranked_bucket: "pow2_3x3",
+    ranked_bucket_undo: "pow2_3x3_undo",
     mode_family: "pow2",
     rank_policy: "ranked"
   });
@@ -290,6 +291,7 @@
     ruleset: "pow2",
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
     ranked_bucket: "pow2_3x4",
+    ranked_bucket_undo: "pow2_3x4_undo",
     mode_family: "pow2",
     rank_policy: "ranked"
   });
@@ -303,6 +305,7 @@
     ruleset: "pow2",
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
     ranked_bucket: "pow2_2x4",
+    ranked_bucket_undo: "pow2_2x4_undo",
     mode_family: "pow2",
     rank_policy: "ranked"
   });
@@ -314,8 +317,10 @@
     board_height: 4,
     ruleset: "fibonacci",
     spawn_table: [{ value: 1, weight: 90 }, { value: 2, weight: 10 }],
+    ranked_bucket: "fib_4x4",
+    ranked_bucket_undo: "fib_4x4_undo",
     mode_family: "fibonacci",
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   addPair({
@@ -326,6 +331,7 @@
     ruleset: "fibonacci",
     spawn_table: [{ value: 1, weight: 90 }, { value: 2, weight: 10 }],
     ranked_bucket: "fib_3x3",
+    ranked_bucket_undo: "fib_3x3_undo",
     mode_family: "fibonacci",
     rank_policy: "ranked"
   });
@@ -340,7 +346,9 @@
       ruleset: "pow2",
       spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
       mode_family: "pow2",
-      rank_policy: "unranked"
+      ranked_bucket_no_undo: size === 5 ? "pow2_5x5" : "none",
+      ranked_bucket_undo: size === 5 ? "pow2_5x5_undo" : "none",
+      rank_policy: size === 5 ? "ranked" : "unranked"
     });
   }
 
@@ -352,8 +360,10 @@
     board_height: 3,
     ruleset: "fibonacci",
     spawn_table: [{ value: 1, weight: 90 }, { value: 2, weight: 10 }],
+    ranked_bucket: "fib_4x3",
+    ranked_bucket_undo: "fib_4x3_undo",
     mode_family: "fibonacci",
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   addPair({
@@ -363,8 +373,10 @@
     board_height: 2,
     ruleset: "fibonacci",
     spawn_table: [{ value: 1, weight: 90 }, { value: 2, weight: 10 }],
+    ranked_bucket: "fib_4x2",
+    ranked_bucket_undo: "fib_4x2_undo",
     mode_family: "fibonacci",
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   // Phase 1: extra capped variants
@@ -377,9 +389,9 @@
     undo_enabled: false,
     max_tile: 1024,
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
-    ranked_bucket: "none",
+    ranked_bucket: "capped_1024",
     mode_family: "pow2",
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   add({
@@ -391,9 +403,9 @@
     undo_enabled: false,
     max_tile: 64,
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
-    ranked_bucket: "none",
+    ranked_bucket: "capped_64",
     mode_family: "pow2",
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   add({
@@ -405,9 +417,9 @@
     undo_enabled: false,
     max_tile: 4096,
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
-    ranked_bucket: "none",
+    ranked_bucket: "capped_4096",
     mode_family: "pow2",
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   addPair({
@@ -510,10 +522,10 @@
     ruleset: "pow2",
     undo_enabled: false,
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
-    ranked_bucket: "none",
+    ranked_bucket: "obstacle_4x4",
     mode_family: "obstacle",
     special_rules: { blocked_cells: [[1, 1], [2, 2]] },
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   add({
@@ -524,10 +536,10 @@
     ruleset: "pow2",
     undo_enabled: false,
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
-    ranked_bucket: "none",
+    ranked_bucket: "diag_3x3",
     mode_family: "pow2",
     special_rules: { allow_diagonal_moves: true },
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   add({
@@ -538,10 +550,10 @@
     ruleset: "pow2",
     undo_enabled: false,
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
-    ranked_bucket: "none",
+    ranked_bucket: "diag_4x4",
     mode_family: "pow2",
     special_rules: { allow_diagonal_moves: true },
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   add({
@@ -552,10 +564,10 @@
     ruleset: "pow2",
     undo_enabled: false,
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
-    ranked_bucket: "none",
+    ranked_bucket: "diag_3x4",
     mode_family: "pow2",
     special_rules: { allow_diagonal_moves: true },
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   add({
@@ -566,10 +578,10 @@
     ruleset: "pow2",
     undo_enabled: false,
     spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
-    ranked_bucket: "none",
+    ranked_bucket: "diag_2x4",
     mode_family: "pow2",
     special_rules: { allow_diagonal_moves: true },
-    rank_policy: "unranked"
+    rank_policy: "ranked"
   });
 
   add({

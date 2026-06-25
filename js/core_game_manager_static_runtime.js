@@ -199,10 +199,14 @@ function createGameManagerFallbackPow2ModeConfigs(defaultModeConfig) {
 
 function createGameManagerFallbackFibModeConfigs() {
   return {
-    fib_4x4_undo: createFallbackFibModeConfig("fib_4x4_undo", "Fibonacci 4x4 (Undo)", 4, 4, true, null, "none"),
-    fib_4x4_no_undo: createFallbackFibModeConfig("fib_4x4_no_undo", "Fibonacci 4x4 (No Undo)", 4, 4, false, null, "none"),
-    fib_3x3_undo: createFallbackFibModeConfig("fib_3x3_undo", "Fibonacci 3x3 (Undo)", 3, 3, true, null, "fib_3x3"),
-    fib_3x3_no_undo: createFallbackFibModeConfig("fib_3x3_no_undo", "Fibonacci 3x3 (No Undo)", 3, 3, false, null, "fib_3x3")
+    fib_4x4_undo: createFallbackFibModeConfig("fib_4x4_undo", "Fibonacci 4x4 (Undo)", 4, 4, true, null, "fib_4x4_undo"),
+    fib_4x4_no_undo: createFallbackFibModeConfig("fib_4x4_no_undo", "Fibonacci 4x4 (No Undo)", 4, 4, false, null, "fib_4x4"),
+    fib_3x3_undo: createFallbackFibModeConfig("fib_3x3_undo", "Fibonacci 3x3 (Undo)", 3, 3, true, null, "fib_3x3_undo"),
+    fib_3x3_no_undo: createFallbackFibModeConfig("fib_3x3_no_undo", "Fibonacci 3x3 (No Undo)", 3, 3, false, null, "fib_3x3"),
+    fib_4x3_undo: createFallbackFibModeConfig("fib_4x3_undo", "Fibonacci 4x3 (Undo)", 4, 3, true, null, "fib_4x3_undo"),
+    fib_4x3_no_undo: createFallbackFibModeConfig("fib_4x3_no_undo", "Fibonacci 4x3 (No Undo)", 4, 3, false, null, "fib_4x3"),
+    fib_4x2_undo: createFallbackFibModeConfig("fib_4x2_undo", "Fibonacci 4x2 (Undo)", 4, 2, true, null, "fib_4x2_undo"),
+    fib_4x2_no_undo: createFallbackFibModeConfig("fib_4x2_no_undo", "Fibonacci 4x2 (No Undo)", 4, 2, false, null, "fib_4x2")
   };
 }
 

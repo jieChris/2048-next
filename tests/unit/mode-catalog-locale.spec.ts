@@ -3,6 +3,13 @@ import { resolve } from "node:path";
 import * as vm from "node:vm";
 import { describe, expect, it } from "vitest";
 
+interface TestMode {
+  key?: string;
+  label?: string;
+  ranked_bucket?: string;
+  rank_policy?: string;
+}
+
 function loadModeCatalog(lang: "zh" | "en") {
   const code = readFileSync(resolve(process.cwd(), "js/mode_catalog.js"), "utf8");
   const sandbox: Record<string, unknown> = {
@@ -19,8 +26,8 @@ function loadModeCatalog(lang: "zh" | "en") {
   sandbox.global = sandbox.window;
   sandbox.self = sandbox.window;
   vm.runInNewContext(code, sandbox, { filename: "mode_catalog.js" });
-  const windowLike = sandbox.window as { ModeCatalog?: { getMode?: (key: string) => { label?: string } | null; listModes?: () => Array<{ key?: string; label?: string }> } };
-  return windowLike.ModeCatalog || (sandbox.module as { exports: unknown }).exports as { getMode?: (key: string) => { label?: string } | null; listModes?: () => Array<{ key?: string; label?: string }> };
+  const windowLike = sandbox.window as { ModeCatalog?: { getMode?: (key: string) => TestMode | null; listModes?: () => TestMode[] } };
+  return windowLike.ModeCatalog || (sandbox.module as { exports: unknown }).exports as { getMode?: (key: string) => TestMode | null; listModes?: () => TestMode[] };
 }
 
 describe("mode catalog localization", () => {
@@ -38,6 +45,19 @@ describe("mode catalog localization", () => {
 
     expect(zhCatalog.getMode?.("fib_4x2_no_undo")?.label).toBe("斐波那契 4x2");
     expect(enCatalog.getMode?.("fib_4x2_no_undo")?.label).toBe("Fibonacci 4x2");
+  });
+
+  it("exposes Fibonacci leaderboard buckets for undo and no-undo variants", () => {
+    const catalog = loadModeCatalog("zh");
+
+    expect(catalog.getMode?.("fib_4x4_no_undo")).toMatchObject({ ranked_bucket: "fib_4x4", rank_policy: "ranked" });
+    expect(catalog.getMode?.("fib_4x4_undo")).toMatchObject({ ranked_bucket: "fib_4x4_undo", rank_policy: "ranked" });
+    expect(catalog.getMode?.("fib_3x3_no_undo")).toMatchObject({ ranked_bucket: "fib_3x3", rank_policy: "ranked" });
+    expect(catalog.getMode?.("fib_3x3_undo")).toMatchObject({ ranked_bucket: "fib_3x3_undo", rank_policy: "ranked" });
+    expect(catalog.getMode?.("fib_4x3_no_undo")).toMatchObject({ ranked_bucket: "fib_4x3", rank_policy: "ranked" });
+    expect(catalog.getMode?.("fib_4x3_undo")).toMatchObject({ ranked_bucket: "fib_4x3_undo", rank_policy: "ranked" });
+    expect(catalog.getMode?.("fib_4x2_no_undo")).toMatchObject({ ranked_bucket: "fib_4x2", rank_policy: "ranked" });
+    expect(catalog.getMode?.("fib_4x2_undo")).toMatchObject({ ranked_bucket: "fib_4x2_undo", rank_policy: "ranked" });
   });
 
   it("returns localized generated special mode labels by language", () => {
@@ -64,4 +84,3 @@ describe("mode catalog localization", () => {
     expect(keys).not.toContain("spawn80_4x4_pow2_no_undo");
   });
 });
-

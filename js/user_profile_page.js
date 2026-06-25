@@ -132,12 +132,33 @@
 
   var LEADERBOARD_MODE_OPTIONS = [
     { value: "all", zh: "\u5168\u90e8", en: "All" },
-    { value: "standard_no_undo", zh: "\u666e\u901a\u65e0\u64a4\u56de", en: "Standard (No Undo)" },
-    { value: "standard_undo", zh: "\u53ef\u64a4\u56de", en: "With Undo" },
-    { value: "pow2_3x3", zh: "3x3", en: "3x3" },
-    { value: "pow2_2x4", zh: "2x4", en: "2x4" },
-    { value: "pow2_3x4", zh: "3x4", en: "3x4" },
-    { value: "fib_3x3", zh: "\u6590\u6ce2\u90a3\u59513x3", en: "Fibonacci 3x3" }
+    { value: "standard_no_undo", zh: "4x4无撤回", en: "4x4 (No Undo)" },
+    { value: "standard_undo", zh: "4x4可撤回", en: "4x4 (Undo)" },
+    { value: "pow2_3x3", zh: "3x3无撤回", en: "3x3 (No Undo)" },
+    { value: "pow2_3x3_undo", zh: "3x3可撤回", en: "3x3 (Undo)" },
+    { value: "pow2_2x4", zh: "4x2无撤回", en: "4x2 (No Undo)" },
+    { value: "pow2_2x4_undo", zh: "4x2可撤回", en: "4x2 (Undo)" },
+    { value: "pow2_3x4", zh: "4x3无撤回", en: "4x3 (No Undo)" },
+    { value: "pow2_3x4_undo", zh: "4x3可撤回", en: "4x3 (Undo)" },
+    { value: "pow2_5x5", zh: "5x5无撤回", en: "5x5 (No Undo)" },
+    { value: "pow2_5x5_undo", zh: "5x5可撤回", en: "5x5 (Undo)" },
+    { value: "diag_3x3", zh: "3x3八方向", en: "3x3 Diagonal" },
+    { value: "diag_4x4", zh: "4x4八方向", en: "4x4 Diagonal" },
+    { value: "diag_3x4", zh: "4x3八方向", en: "4x3 Diagonal" },
+    { value: "diag_2x4", zh: "4x2八方向", en: "4x2 Diagonal" },
+    { value: "capped_64", zh: "64封顶", en: "64 Capped" },
+    { value: "capped", zh: "2048封顶", en: "2048 Capped" },
+    { value: "capped_1024", zh: "1024封顶", en: "1024 Capped" },
+    { value: "capped_4096", zh: "4096封顶", en: "4096 Capped" },
+    { value: "obstacle_4x4", zh: "障碍块", en: "Obstacle" },
+    { value: "fib_4x4", zh: "斐波那契4x4无撤回", en: "Fibonacci 4x4 (No Undo)" },
+    { value: "fib_4x4_undo", zh: "斐波那契4x4可撤回", en: "Fibonacci 4x4 (Undo)" },
+    { value: "fib_3x3", zh: "斐波那契3x3无撤回", en: "Fibonacci 3x3 (No Undo)" },
+    { value: "fib_3x3_undo", zh: "斐波那契3x3可撤回", en: "Fibonacci 3x3 (Undo)" },
+    { value: "fib_4x3", zh: "斐波那契4x3无撤回", en: "Fibonacci 4x3 (No Undo)" },
+    { value: "fib_4x3_undo", zh: "斐波那契4x3可撤回", en: "Fibonacci 4x3 (Undo)" },
+    { value: "fib_4x2", zh: "斐波那契4x2无撤回", en: "Fibonacci 4x2 (No Undo)" },
+    { value: "fib_4x2_undo", zh: "斐波那契4x2可撤回", en: "Fibonacci 4x2 (Undo)" }
   ];
 
     var COPY = {
@@ -181,12 +202,33 @@
       colMode: "模式",
       colScore: "分数",
       colDate: "更新时间",
-      mode_standard_no_undo: "普通无撤回",
-      mode_standard_undo: "可撤回",
-      mode_pow2_3x3: "3x3",
-      mode_pow2_2x4: "2x4",
-      mode_pow2_3x4: "3x4",
-      mode_fib_3x3: "斐波那契3x3",
+      mode_standard_no_undo: "4x4无撤回",
+      mode_standard_undo: "4x4可撤回",
+      mode_pow2_3x3: "3x3无撤回",
+      mode_pow2_3x3_undo: "3x3可撤回",
+      mode_pow2_2x4: "4x2无撤回",
+      mode_pow2_2x4_undo: "4x2可撤回",
+      mode_pow2_3x4: "4x3无撤回",
+      mode_pow2_3x4_undo: "4x3可撤回",
+      mode_pow2_5x5: "5x5无撤回",
+      mode_pow2_5x5_undo: "5x5可撤回",
+      mode_diag_3x3: "3x3八方向",
+      mode_diag_4x4: "4x4八方向",
+      mode_diag_3x4: "4x3八方向",
+      mode_diag_2x4: "4x2八方向",
+      mode_capped_64: "64封顶",
+      mode_capped: "2048封顶",
+      mode_capped_1024: "1024封顶",
+      mode_capped_4096: "4096封顶",
+      mode_obstacle_4x4: "障碍块",
+      mode_fib_4x4: "斐波那契4x4无撤回",
+      mode_fib_4x4_undo: "斐波那契4x4可撤回",
+      mode_fib_3x3: "斐波那契3x3无撤回",
+      mode_fib_3x3_undo: "斐波那契3x3可撤回",
+      mode_fib_4x3: "斐波那契4x3无撤回",
+      mode_fib_4x3_undo: "斐波那契4x3可撤回",
+      mode_fib_4x2: "斐波那契4x2无撤回",
+      mode_fib_4x2_undo: "斐波那契4x2可撤回",
       loading: "加载中...",
       updated: "记录已更新",
       empty: "该用户暂无可显示记录",
@@ -235,12 +277,33 @@
       colMode: "Mode",
       colScore: "Score",
       colDate: "Updated",
-      mode_standard_no_undo: "Standard (No Undo)",
-      mode_standard_undo: "With Undo",
-      mode_pow2_3x3: "3x3",
-      mode_pow2_2x4: "2x4",
-      mode_pow2_3x4: "3x4",
-      mode_fib_3x3: "Fibonacci 3x3",
+      mode_standard_no_undo: "4x4 (No Undo)",
+      mode_standard_undo: "4x4 (Undo)",
+      mode_pow2_3x3: "3x3 (No Undo)",
+      mode_pow2_3x3_undo: "3x3 (Undo)",
+      mode_pow2_2x4: "4x2 (No Undo)",
+      mode_pow2_2x4_undo: "4x2 (Undo)",
+      mode_pow2_3x4: "4x3 (No Undo)",
+      mode_pow2_3x4_undo: "4x3 (Undo)",
+      mode_pow2_5x5: "5x5 (No Undo)",
+      mode_pow2_5x5_undo: "5x5 (Undo)",
+      mode_diag_3x3: "3x3 Diagonal",
+      mode_diag_4x4: "4x4 Diagonal",
+      mode_diag_3x4: "4x3 Diagonal",
+      mode_diag_2x4: "4x2 Diagonal",
+      mode_capped_64: "64 Capped",
+      mode_capped: "2048 Capped",
+      mode_capped_1024: "1024 Capped",
+      mode_capped_4096: "4096 Capped",
+      mode_obstacle_4x4: "Obstacle",
+      mode_fib_4x4: "Fibonacci 4x4 (No Undo)",
+      mode_fib_4x4_undo: "Fibonacci 4x4 (Undo)",
+      mode_fib_3x3: "Fibonacci 3x3 (No Undo)",
+      mode_fib_3x3_undo: "Fibonacci 3x3 (Undo)",
+      mode_fib_4x3: "Fibonacci 4x3 (No Undo)",
+      mode_fib_4x3_undo: "Fibonacci 4x3 (Undo)",
+      mode_fib_4x2: "Fibonacci 4x2 (No Undo)",
+      mode_fib_4x2_undo: "Fibonacci 4x2 (Undo)",
       loading: "Loading...",
       updated: "Records updated",
       empty: "No records to show for this user.",
@@ -873,6 +936,29 @@
   function resolveModeLabel(modeBucket) {
     var key = "mode_" + toText(modeBucket).trim();
     return t(key) || toText(modeBucket).trim() || "--";
+  }
+
+  function resolveRecordModeLabel(record) {
+    var source = record && typeof record === "object" ? record : {};
+    var modeKey = toText(source.mode_key).trim();
+    var modeBucket = toText(source.mode_bucket).trim();
+    if (currentLang !== "en") {
+      if (modeKey === "standard_4x4_pow2_no_undo" || modeKey === "classic_no_undo" || modeBucket === "standard_no_undo") {
+        return "\u7ecf\u51784x4";
+      }
+      if (modeKey === "classic_4x4_pow2_undo" || modeBucket === "standard_undo") {
+        return "4x4\u53ef\u64a4\u56de";
+      }
+    }
+    if (currentLang === "en") {
+      if (modeKey === "standard_4x4_pow2_no_undo" || modeKey === "classic_no_undo" || modeBucket === "standard_no_undo") {
+        return "Classic 4x4";
+      }
+      if (modeKey === "classic_4x4_pow2_undo" || modeBucket === "standard_undo") {
+        return "4x4 Undo";
+      }
+    }
+    return resolveModeLabel(modeBucket || modeKey);
   }
 
   function getModeFilterValue() {
@@ -1643,7 +1729,7 @@
 
     var mode = global.document.createElement("span");
     mode.className = "user-record-mode";
-    mode.textContent = resolveModeLabel(record.mode_bucket);
+    mode.textContent = resolveRecordModeLabel(record);
     row.appendChild(mode);
 
     var score = global.document.createElement("span");

@@ -186,6 +186,36 @@ describe("ranked session runtime", () => {
     expect(fetchImpl).toHaveBeenCalled();
   });
 
+  it("starts ranked sessions for Fibonacci leaderboard modes", async () => {
+    const storage = new MemoryStorage();
+    const modeKey = "fib_4x2_undo";
+    const activeKey = `ranked_session_active:v1:${modeKey}`;
+    const fetchImpl = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: createSession({
+            mode_key: modeKey,
+            challenge_id: "ranked-fib",
+            seed: 444,
+            ranked_session_token: "fib-token"
+          })
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    });
+    const runtime = createRankedSessionRuntime(createWindowLike(storage, fetchImpl), "play");
+
+    await expect(runtime.startNextSession(modeKey)).resolves.toBe(true);
+
+    expect(fetchImpl).toHaveBeenCalled();
+    expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body || "{}"))).toMatchObject({ mode_key: modeKey });
+    expect(JSON.parse(storage.getItem(activeKey) || "{}")).toMatchObject({
+      mode_key: modeKey,
+      ranked_session_token: "fib-token"
+    });
+  });
+
   it("does not activate an on-demand ranked session that reuses the active seed", async () => {
     const storage = new MemoryStorage();
     const activeSession = createSession();

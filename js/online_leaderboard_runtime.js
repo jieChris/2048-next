@@ -97,7 +97,13 @@
     standard_no_undo: "standard_no_undo",
     standard_4x4_pow2_no_undo: "standard_no_undo",
     capped_4x4_pow2_no_undo: "capped",
+    capped_4x4_pow2_64_no_undo: "capped_64",
+    capped_4x4_pow2_1024_no_undo: "capped_1024",
+    capped_4x4_pow2_4096_no_undo: "capped_4096",
     capped: "capped",
+    capped_64: "capped_64",
+    capped_1024: "capped_1024",
+    capped_4096: "capped_4096",
 
     classic_undo: "standard_undo",
     standard_undo: "standard_undo",
@@ -105,19 +111,48 @@
 
     pow2_3x3: "pow2_3x3",
     board_3x3_pow2_no_undo: "pow2_3x3",
-    board_3x3_pow2_undo: "pow2_3x3",
+    board_3x3_pow2_undo: "pow2_3x3_undo",
+    pow2_3x3_undo: "pow2_3x3_undo",
 
     pow2_2x4: "pow2_2x4",
     board_2x4_pow2_no_undo: "pow2_2x4",
-    board_2x4_pow2_undo: "pow2_2x4",
+    board_2x4_pow2_undo: "pow2_2x4_undo",
+    pow2_2x4_undo: "pow2_2x4_undo",
 
     pow2_3x4: "pow2_3x4",
     board_3x4_pow2_no_undo: "pow2_3x4",
-    board_3x4_pow2_undo: "pow2_3x4",
+    board_3x4_pow2_undo: "pow2_3x4_undo",
+    pow2_3x4_undo: "pow2_3x4_undo",
 
+    pow2_5x5: "pow2_5x5",
+    board_5x5_pow2_no_undo: "pow2_5x5",
+    pow2_5x5_undo: "pow2_5x5_undo",
+    board_5x5_pow2_undo: "pow2_5x5_undo",
+
+    diag_3x3: "diag_3x3",
+    diag_3x3_pow2_no_undo: "diag_3x3",
+    diag_4x4: "diag_4x4",
+    diag_4x4_pow2_no_undo: "diag_4x4",
+    diag_3x4: "diag_3x4",
+    diag_3x4_pow2_no_undo: "diag_3x4",
+    diag_2x4: "diag_2x4",
+    diag_2x4_pow2_no_undo: "diag_2x4",
+
+    obstacle_4x4: "obstacle_4x4",
+    obstacle_4x4_pow2_no_undo: "obstacle_4x4",
+
+    fib_4x4: "fib_4x4",
+    fib_4x4_no_undo: "fib_4x4",
+    fib_4x4_undo: "fib_4x4_undo",
     fib_3x3: "fib_3x3",
     fib_3x3_no_undo: "fib_3x3",
-    fib_3x3_undo: "fib_3x3"
+    fib_3x3_undo: "fib_3x3_undo",
+    fib_4x3: "fib_4x3",
+    fib_4x3_no_undo: "fib_4x3",
+    fib_4x3_undo: "fib_4x3_undo",
+    fib_4x2: "fib_4x2",
+    fib_4x2_no_undo: "fib_4x2",
+    fib_4x2_undo: "fib_4x2_undo"
   };
   var TIMER_LEADERBOARD_TOP_LIMIT = 10;
   var TIMER_LEADERBOARD_FETCH_LIMIT = 10;
