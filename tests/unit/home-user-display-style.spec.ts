@@ -24,7 +24,8 @@ describe("home user display style", () => {
   it("uses a fresh stylesheet cache key on the main game page", () => {
     const html = readFileSync("2048.html", "utf8");
 
-    expect(html).toContain("style/main.css?v=20260608-toolkit-align");
+    expect(html).toContain("style/main.css?v=20260623-leaderboard-rank");
+    expect(html).not.toContain("style/main.css?v=20260608-toolkit-align");
     expect(html).not.toContain("style/main.css?v=20260607-userdisplay");
   });
 

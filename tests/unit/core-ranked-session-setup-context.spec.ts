@@ -50,14 +50,15 @@ describe("core ranked session setup context runtime", () => {
   it("uses manager mode when context omits mode_key", () => {
     const manager = createManager({
       id: "challenge-2",
-      seed: 7
+      seed: 7,
+      ranked_session_token: "token-2"
     });
 
     expect(resolveSetupRankedSessionContext(manager)).toMatchObject({
       id: "challenge-2",
       mode_key: MODE_KEY,
       seed: 7,
-      ranked_session_token: ""
+      ranked_session_token: "token-2"
     });
   });
 
@@ -65,12 +66,13 @@ describe("core ranked session setup context runtime", () => {
     expect(resolveSetupRankedSessionContext({ rankPolicy: "practice" })).toBeNull();
     expect(resolveSetupRankedSessionContext(createManager({ id: "x", mode_key: "other", seed: 1 }))).toBeNull();
     expect(resolveSetupRankedSessionContext(createManager({ id: "", seed: 1 }))).toBeNull();
+    expect(resolveSetupRankedSessionContext(createManager({ id: "x", seed: 1 }))).toBeNull();
     expect(resolveSetupRankedSessionContext(createManager({ id: "x", seed: -1 }))).toBeNull();
     expect(resolveSetupRankedSessionContext(createManager({ id: "x", seed: "bad" }))).toBeNull();
   });
 
   it("floors decimal seed values to preserve legacy setup behavior", () => {
-    expect(resolveSetupRankedSessionContext(createManager({ id: "x", seed: 1.5 }))).toMatchObject({
+    expect(resolveSetupRankedSessionContext(createManager({ id: "x", seed: 1.5, ranked_session_token: "token" }))).toMatchObject({
       id: "x",
       seed: 1
     });

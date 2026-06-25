@@ -1,6 +1,11 @@
 export interface SetupRestoreInitialBoardStateManagerLike {
+  challengeId?: unknown;
+  initialSeed?: unknown;
   needsRankedCheckpointRestore?: boolean;
   rankCheckpointRestorePending?: boolean;
+  rankedSessionToken?: unknown;
+  mode?: unknown;
+  modeKey?: unknown;
   rankPolicy?: unknown;
   getWindowLike?: () => SetupRestoreInitialBoardStateWindowLike | null;
 }
@@ -49,6 +54,7 @@ export interface SetupRestoreInitialBoardStateRuntime {
 
 export interface SetupRestoreInitialBoardStateWindowLike {
   CoreSetupRestoreInitialBoardStateRuntime?: SetupRestoreInitialBoardStateRuntime;
+  GAME_CHALLENGE_CONTEXT?: unknown;
   location?: {
     search?: unknown;
   } | null;
@@ -56,6 +62,86 @@ export interface SetupRestoreInitialBoardStateWindowLike {
 
 export interface SetupRestoreInitialBoardStateRuntimeInstallOptions {
   windowLike?: SetupRestoreInitialBoardStateWindowLike | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeSeed(value: unknown): number | null {
+  const seed = Math.floor(Number(value));
+  return Number.isSafeInteger(seed) && seed >= 0 ? seed : null;
+}
+
+function resolveManagerModeKey(manager: SetupRestoreInitialBoardStateManagerLike): string {
+  return normalizeText(manager.modeKey) || normalizeText(manager.mode);
+}
+
+function resolveWindowChallengeContext(
+  manager: SetupRestoreInitialBoardStateManagerLike
+): Record<string, unknown> | null {
+  try {
+    const windowLike = typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+    return isRecord(windowLike?.GAME_CHALLENGE_CONTEXT) ? windowLike.GAME_CHALLENGE_CONTEXT : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function resolveCurrentRankedToken(
+  manager: SetupRestoreInitialBoardStateManagerLike,
+  context: Record<string, unknown> | null
+): string {
+  return normalizeText(manager.rankedSessionToken) || normalizeText(context?.ranked_session_token);
+}
+
+function resolveCurrentRankedChallengeId(
+  manager: SetupRestoreInitialBoardStateManagerLike,
+  context: Record<string, unknown> | null
+): string {
+  return (
+    normalizeText(manager.challengeId) ||
+    normalizeText(context?.id) ||
+    normalizeText(context?.challenge_id)
+  );
+}
+
+function resolveCurrentRankedSeed(
+  manager: SetupRestoreInitialBoardStateManagerLike,
+  context: Record<string, unknown> | null
+): number | null {
+  const managerSeed = normalizeSeed(manager.initialSeed);
+  if (managerSeed !== null) return managerSeed;
+  return normalizeSeed(context?.seed);
+}
+
+function isRankedLocalMirrorSavedStateValidForRestore(
+  manager: SetupRestoreInitialBoardStateManagerLike,
+  savedState: unknown
+): boolean {
+  if (manager.rankPolicy !== "ranked") return true;
+  if (!isRecord(savedState)) return false;
+  const context = resolveWindowChallengeContext(manager);
+  const managerModeKey = resolveManagerModeKey(manager);
+  const savedModeKey = normalizeText(savedState.mode_key);
+  if (managerModeKey && savedModeKey && savedModeKey !== managerModeKey) return false;
+
+  const currentToken = resolveCurrentRankedToken(manager, context);
+  const savedToken = normalizeText(savedState.ranked_session_token);
+  if (!currentToken || !savedToken || currentToken !== savedToken) return false;
+
+  const currentChallengeId = resolveCurrentRankedChallengeId(manager, context);
+  const savedChallengeId = normalizeText(savedState.challenge_id);
+  if (!currentChallengeId || !savedChallengeId || currentChallengeId !== savedChallengeId) return false;
+
+  const currentSeed = resolveCurrentRankedSeed(manager, context);
+  const savedSeed = normalizeSeed(savedState.initial_seed);
+  if (currentSeed === null || savedSeed === null) return false;
+  return currentSeed === savedSeed;
 }
 
 export function resolveSetupRestoreAndInitialBoardState(
@@ -82,7 +168,11 @@ export function resolveSetupRestoreAndInitialBoardState(
   ) {
     const rankedLocalMirrorSavedState =
       operations.readRankedCheckpointLocalMirrorSavedStateForSetup?.(manager);
-    if (rankedLocalMirrorSavedState && typeof operations.applySavedStateRestore === "function") {
+    if (
+      rankedLocalMirrorSavedState &&
+      typeof operations.applySavedStateRestore === "function" &&
+      isRankedLocalMirrorSavedStateValidForRestore(manager, rankedLocalMirrorSavedState)
+    ) {
       restoredFromSavedState = operations.applySavedStateRestore(manager, rankedLocalMirrorSavedState) === true;
       restoredFromRankedLocalMirror = !!restoredFromSavedState;
     }

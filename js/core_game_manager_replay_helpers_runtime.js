@@ -3235,8 +3235,8 @@ function resolveReplayV1RulesetFromExt(decoded) {
 
 function resolveReplayV1ModeKeyByShape(width, height, hasUndo) {
   if (width === 4 && height === 4) return hasUndo ? "classic_4x4_pow2_undo" : "standard_4x4_pow2_no_undo";
-  if (width === 3 && height === 4) return hasUndo ? "board_3x4_pow2_undo" : "board_3x4_pow2_no_undo";
-  if (width === 2 && height === 4) return hasUndo ? "board_2x4_pow2_undo" : "board_2x4_pow2_no_undo";
+  if (width === 4 && height === 3) return hasUndo ? "board_3x4_pow2_undo" : "board_3x4_pow2_no_undo";
+  if (width === 4 && height === 2) return hasUndo ? "board_2x4_pow2_undo" : "board_2x4_pow2_no_undo";
   if (width === 3 && height === 3) return hasUndo ? "board_3x3_pow2_undo" : "board_3x3_pow2_no_undo";
   return GameManager.DEFAULT_MODE_KEY;
 }

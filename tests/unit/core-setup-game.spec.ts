@@ -26,6 +26,7 @@ function createManager() {
   return {
     width: 4,
     height: 4,
+    rankPolicy: "unranked",
     normalizeModeConfig: vi.fn(() => ({ key: "practice-normalized", size: 4 })),
     setRuntimeGrid: vi.fn(),
     setRuntimeScore: vi.fn(),
@@ -82,6 +83,27 @@ describe("core setup game runtime", () => {
     expect(operations.handleSingleModePageDuplicate).toHaveBeenCalledWith(manager);
     expect(manager.setRuntimeGrid).not.toHaveBeenCalled();
     expect(operations.runSetupStateInitialization).not.toHaveBeenCalled();
+  });
+
+  it("blocks ranked setup before creating a board when no legal ranked seed is active", () => {
+    const manager = createManager();
+    manager.rankPolicy = "ranked";
+    const operations = createOperations({
+      applySetupModeConfig: vi.fn((target: typeof manager) => {
+        target.rankPolicy = "ranked";
+      }),
+      hasLegalRankedSetupSeed: vi.fn(() => false)
+    });
+
+    setupGame(manager, undefined, {}, operations);
+
+    expect(operations.hasLegalRankedSetupSeed).toHaveBeenCalledWith(manager);
+    expect(operations.ensureSingleModePageLock).not.toHaveBeenCalled();
+    expect(operations.createGrid).not.toHaveBeenCalled();
+    expect(manager.setRuntimeGrid).not.toHaveBeenCalled();
+    expect(manager.setRuntimeScore).not.toHaveBeenCalled();
+    expect(operations.runSetupStateInitialization).not.toHaveBeenCalled();
+    expect((manager as Record<string, unknown>).rankedSetupBlockedUntilSessionReady).toBe(true);
   });
 
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {

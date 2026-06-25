@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2048 NEXT UI Preview</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
+  <link href="style/ui-preview.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+  <main class="preview-shell">
+    <header class="preview-header">
+      <div>
+        <p class="preview-kicker">2048 NEXT</p>
+        <h1>UI 预览工作台</h1>
+      </div>
+      <img class="preview-logo" src="meta/logo-tall-small.png?v=20260607-logo-small" alt="2048 NEXT">
+    </header>
+
+    <section class="stage" aria-label="游戏页右侧排行榜预览">
+      <div class="game-context" aria-hidden="true">
+        <div class="top-tools">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="score-row">
+          <div><small>SCORE</small><strong>0</strong></div>
+          <div><small>BEST</small><strong>456268</strong></div>
+        </div>
+        <div class="board">
+          <span></span><span class="tile">2</span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+          <span></span><span class="tile">2</span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+
+      <div class="leaderboard-grid">
+        <article class="leaderboard-card palette-current" aria-label="当前排行榜配色">
+          <div class="palette-title">
+            <span>当前基准</span>
+            <small>线上色彩</small>
+          </div>
+          <div class="leaderboard">
+            <div class="leaderboard-summary" data-label="LEADERBOARD">TOP 10</div>
+            <div class="leaderboard-list">
+              <div class="leaderboard-row"><div class="rank top-1">1</div><div class="name">XLB-830820</div></div>
+              <div class="leaderboard-row"><div class="rank top-2">2</div><div class="name">8192摆烂-288852</div></div>
+              <div class="leaderboard-row"><div class="rank top-3">3</div><div class="name">skycat-175092</div></div>
+              <div class="leaderboard-row"><div class="rank">4</div><div class="name">huanhuan-36068</div></div>
+              <div class="leaderboard-row"><div class="rank">5</div><div class="name">Sslime1207-10616</div></div>
+              <div class="leaderboard-row"><div class="rank">6</div><div class="name">Hui-5012</div></div>
+              <div class="leaderboard-row"><div class="rank">7</div><div class="name">Jay-3312</div></div>
+              <div class="leaderboard-row self"><div class="rank">7</div><div class="name">Jay-3312</div></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="leaderboard-card palette-flat-warm" aria-label="暖金扁平排行榜配色">
+          <div class="palette-title">
+            <span>A. NEXT 标志色</span>
+            <small>推荐</small>
+          </div>
+          <div class="leaderboard">
+            <div class="leaderboard-summary" data-label="LEADERBOARD">TOP 10</div>
+            <div class="leaderboard-list">
+              <div class="leaderboard-row"><div class="rank top-1">1</div><div class="name">XLB-830820</div></div>
+              <div class="leaderboard-row"><div class="rank top-2">2</div><div class="name">8192摆烂-288852</div></div>
+              <div class="leaderboard-row"><div class="rank top-3">3</div><div class="name">skycat-175092</div></div>
+              <div class="leaderboard-row"><div class="rank">4</div><div class="name">huanhuan-36068</div></div>
+              <div class="leaderboard-row"><div class="rank">5</div><div class="name">Sslime1207-10616</div></div>
+              <div class="leaderboard-row"><div class="rank">6</div><div class="name">Hui-5012</div></div>
+              <div class="leaderboard-row"><div class="rank">7</div><div class="name">Jay-3312</div></div>
+              <div class="leaderboard-row self"><div class="rank">7</div><div class="name">Jay-3312</div></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="leaderboard-card palette-flat-muted" aria-label="低饱和扁平排行榜配色">
+          <div class="palette-title">
+            <span>B. 竞技克制</span>
+            <small>稳重</small>
+          </div>
+          <div class="leaderboard">
+            <div class="leaderboard-summary" data-label="LEADERBOARD">TOP 10</div>
+            <div class="leaderboard-list">
+              <div class="leaderboard-row"><div class="rank top-1">1</div><div class="name">XLB-830820</div></div>
+              <div class="leaderboard-row"><div class="rank top-2">2</div><div class="name">8192摆烂-288852</div></div>
+              <div class="leaderboard-row"><div class="rank top-3">3</div><div class="name">skycat-175092</div></div>
+              <div class="leaderboard-row"><div class="rank">4</div><div class="name">huanhuan-36068</div></div>
+              <div class="leaderboard-row"><div class="rank">5</div><div class="name">Sslime1207-10616</div></div>
+              <div class="leaderboard-row"><div class="rank">6</div><div class="name">Hui-5012</div></div>
+              <div class="leaderboard-row"><div class="rank">7</div><div class="name">Jay-3312</div></div>
+              <div class="leaderboard-row self"><div class="rank">7</div><div class="name">Jay-3312</div></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="leaderboard-card palette-flat-crisp" aria-label="清爽扁平排行榜配色">
+          <div class="palette-title">
+            <span>C. 清爽活力</span>
+            <small>更年轻</small>
+          </div>
+          <div class="leaderboard">
+            <div class="leaderboard-summary" data-label="LEADERBOARD">TOP 10</div>
+            <div class="leaderboard-list">
+              <div class="leaderboard-row"><div class="rank top-1">1</div><div class="name">XLB-830820</div></div>
+              <div class="leaderboard-row"><div class="rank top-2">2</div><div class="name">8192摆烂-288852</div></div>
+              <div class="leaderboard-row"><div class="rank top-3">3</div><div class="name">skycat-175092</div></div>
+              <div class="leaderboard-row"><div class="rank">4</div><div class="name">huanhuan-36068</div></div>
+              <div class="leaderboard-row"><div class="rank">5</div><div class="name">Sslime1207-10616</div></div>
+              <div class="leaderboard-row"><div class="rank">6</div><div class="name">Hui-5012</div></div>
+              <div class="leaderboard-row"><div class="rank">7</div><div class="name">Jay-3312</div></div>
+              <div class="leaderboard-row self"><div class="rank">7</div><div class="name">Jay-3312</div></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

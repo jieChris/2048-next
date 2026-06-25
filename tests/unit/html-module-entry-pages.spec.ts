@@ -92,6 +92,9 @@ describe("module entry html pages", () => {
       expect(timerBoxHtml).toContain('id="timer-leaderboard-list"');
       expect(timerBoxHtml).toContain('aria-busy="true"');
       expect(placeholderRows).toHaveLength(11);
+      expect(timerBoxHtml).toContain('class="timertile timer-leaderboard-rank-tile is-top-1"');
+      expect(timerBoxHtml).toContain('class="timertile timer-leaderboard-rank-tile is-top-2"');
+      expect(timerBoxHtml).toContain('class="timertile timer-leaderboard-rank-tile is-top-3"');
       expect(timerBoxHtml).toContain('class="timer-leaderboard-row is-self"');
     });
   }

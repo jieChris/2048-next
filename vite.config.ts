@@ -223,6 +223,7 @@ export default defineConfig(({ mode }) => {
           stone_2k_monitor: resolve(__dirname, "stone_2k_monitor.html"),
           relay_5x5: resolve(__dirname, "relay_5x5.html"),
           favicon_preview: resolve(__dirname, "favicon-preview.html"),
+          ui_preview: resolve(__dirname, "ui-preview.html"),
           cache_reset: resolve(__dirname, "cache-reset.html")
         }
       }

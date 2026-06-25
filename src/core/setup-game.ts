@@ -1,6 +1,8 @@
 export interface SetupGameManagerLike {
   width: number;
   height: number;
+  rankPolicy?: unknown;
+  rankedSetupBlockedUntilSessionReady?: boolean;
   over?: boolean;
   won?: boolean;
   keepPlaying?: boolean;
@@ -24,6 +26,7 @@ export interface SetupGameOperations {
     inputSeed: unknown
   ) => unknown;
   applySetupModeConfig: (manager: SetupGameManagerLike, config: unknown) => void;
+  hasLegalRankedSetupSeed?: (manager: SetupGameManagerLike) => boolean;
   ensureSingleModePageLock: (manager: SetupGameManagerLike) => boolean;
   handleSingleModePageDuplicate: (manager: SetupGameManagerLike) => void;
   createGrid: (width: number, height: number) => unknown;
@@ -67,6 +70,11 @@ export function setupGame(
     inputSeed
   );
   operations.applySetupModeConfig(manager, cfg);
+  if (manager.rankPolicy === "ranked" && operations.hasLegalRankedSetupSeed?.(manager) === false) {
+    manager.rankedSetupBlockedUntilSessionReady = true;
+    return;
+  }
+  manager.rankedSetupBlockedUntilSessionReady = false;
   if (!operations.ensureSingleModePageLock(manager)) {
     operations.handleSingleModePageDuplicate(manager);
     return;

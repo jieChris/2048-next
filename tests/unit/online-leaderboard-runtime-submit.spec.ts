@@ -13,7 +13,9 @@ const CHECKPOINT_MIRROR_KEY = `ranked_checkpoint_local_mirror:v1:${MODE_KEY}`;
 const CHECKPOINT_CLEAR_KEY = `ranked_checkpoint_cleared_at:v1:user:7:${MODE_KEY}`;
 const PENDING_RECORD_KEY = "online_pending_record_submit_signature_v1";
 const PENDING_SCORE_KEY = "online_pending_score_submit_v1";
+const LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
 const BEST_SCORE_KEY = `bestScoreByMode:${MODE_KEY}`;
+const TIMER_LEADERBOARD_CACHE_KEY = `timer_leaderboard_cache:v1:${MODE_KEY}|all`;
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -53,11 +55,14 @@ function createElementStub(tagName: string): Record<string, unknown> {
     textContent: "",
     innerHTML: "",
     parentNode: null,
+    style: {},
     classList: {
       add: vi.fn(),
       remove: vi.fn(),
+      contains: vi.fn(() => false),
       toggle: vi.fn()
     },
+    addEventListener: vi.fn(),
     appendChild(child: Record<string, unknown>) {
       child.parentNode = this;
       (this.children as unknown[]).push(child);
@@ -73,6 +78,9 @@ function createElementStub(tagName: string): Record<string, unknown> {
     },
     getAttribute(name: string) {
       return this[name] || null;
+    },
+    removeAttribute(name: string) {
+      delete this[name];
     },
     querySelector: vi.fn(() => null)
   };
@@ -166,6 +174,7 @@ function loadOnlineLeaderboardRuntime(options: {
       origin: "https://2048next.cn",
       pathname: "/2048.html"
     },
+    URLSearchParams,
     game_manager: options.manager,
     ApiSharedUtils: {
       toText(value: unknown) {
@@ -226,6 +235,16 @@ function createDeferred<T>() {
     reject = rejectPromise;
   });
   return { promise, resolve, reject };
+}
+
+function collectTextContent(node: unknown): string {
+  if (!node || typeof node !== "object") return "";
+  const record = node as Record<string, unknown>;
+  const ownText = typeof record.textContent === "string" ? record.textContent : "";
+  const childText = Array.isArray(record.children)
+    ? record.children.map((child) => collectTextContent(child)).join(" ")
+    : "";
+  return `${ownText} ${childText}`.trim();
 }
 
 describe("online leaderboard terminal submission", () => {
@@ -529,6 +548,64 @@ describe("online leaderboard terminal submission", () => {
     });
   });
 
+  it("renders persisted timer leaderboard cache immediately while refreshing in the background", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      TIMER_LEADERBOARD_CACHE_KEY,
+      JSON.stringify({
+        key: `${MODE_KEY}|all`,
+        rows: [{ user_id: 11, nickname: "CachedUser", score: 8192 }],
+        time: Date.now() - 60_000
+      })
+    );
+
+    const list = createElementStub("div");
+    list.id = "timer-leaderboard-list";
+    const summary = createElementStub("div");
+    summary.id = "timer-leaderboard-summary";
+    const panel = createElementStub("div");
+    panel.id = "timer-leaderboard-panel";
+    const timerBox = createElementStub("div");
+    timerBox.id = "timerbox";
+    const elements: Record<string, Record<string, unknown>> = {
+      "timerbox": timerBox,
+      "timer-leaderboard-panel": panel,
+      "timer-leaderboard-summary": summary,
+      "timer-leaderboard-list": list
+    };
+
+    const refreshDeferred = createDeferred<Record<string, unknown>>();
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({
+        over: false,
+        score: 0,
+        getTimerModuleViewMode: vi.fn(() => "hidden")
+      }),
+      storage,
+      disableOnlineLeaderboard: false,
+      fetchImpl: async (url) => {
+        if (url.includes("/leaderboard?")) return refreshDeferred.promise;
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    const documentLike = runtime.windowLike.document as Record<string, unknown>;
+    documentLike.getElementById = vi.fn((id: string) => elements[id] || null);
+
+    const onlineRuntime = runtime.windowLike.OnlineLeaderboardRuntime as {
+      refreshTimerLeaderboardPanel: (force?: boolean, preferCached?: boolean) => Promise<boolean>;
+    };
+    const refreshPromise = onlineRuntime.refreshTimerLeaderboardPanel(false, true);
+
+    const renderedText = collectTextContent(list);
+    expect(renderedText).toContain("CachedUser");
+    expect(renderedText).toContain("8192");
+    expect(runtime.fetchCalls.find((call) => call.url.includes("/leaderboard?"))?.url).toContain("limit=10");
+
+    refreshDeferred.resolve(createJsonResponse({ success: true, data: [] }));
+    await refreshPromise;
+    await flushRuntimePromises();
+  });
+
   it("clears ranked state and prompts when final record submit reports an expired session", async () => {
     const storage = new MemoryStorage();
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
@@ -600,6 +677,84 @@ describe("online leaderboard terminal submission", () => {
     expect(runtime.fetchCalls.some((call) => call.url.endsWith("/score"))).toBe(false);
   });
 
+  it("does not pair a current ranked token with a replay started from a different seed", async () => {
+    const storage = new MemoryStorage();
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      rankedSessionToken: "",
+      challengeId: null,
+      initialSeed: 111,
+      seed: 111
+    });
+    let recordPayload: Record<string, unknown> | null = null;
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records")) {
+          recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
+          return createJsonResponse({ success: true, data: { id: "record-1" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    runtime.windowLike.GAME_CHALLENGE_CONTEXT = {
+      id: "ranked-current",
+      mode_key: MODE_KEY,
+      seed: 222,
+      ranked_session_token: "current-ranked-token"
+    };
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(recordPayload).not.toBeNull();
+    expect(recordPayload?.ranked_session_token).toBeNull();
+    expect(recordPayload?.challenge_id).toBeNull();
+    expect(recordPayload?.ranked_verification).toBeNull();
+    expect(recordPayload?.initial_seed).toBeNull();
+    expect(recordPayload?.seed).toBeNull();
+  });
+
+  it("does not trust a manager ranked token when the active ranked seed differs from the replay seed", async () => {
+    const storage = new MemoryStorage();
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      rankedSessionToken: "current-ranked-token",
+      challengeId: "ranked-current",
+      initialSeed: 111,
+      seed: 111
+    });
+    let recordPayload: Record<string, unknown> | null = null;
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records")) {
+          recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
+          return createJsonResponse({ success: true, data: { id: "record-1" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    runtime.windowLike.GAME_CHALLENGE_CONTEXT = {
+      id: "ranked-current",
+      mode_key: MODE_KEY,
+      seed: 222,
+      ranked_session_token: "current-ranked-token"
+    };
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(recordPayload).not.toBeNull();
+    expect(recordPayload?.ranked_session_token).toBeNull();
+    expect(recordPayload?.challenge_id).toBeNull();
+    expect(recordPayload?.ranked_verification).toBeNull();
+    expect(recordPayload?.initial_seed).toBeNull();
+    expect(recordPayload?.seed).toBeNull();
+  });
+
   it("keeps pending record payload when upload auth is rejected so the user can re-login and retry", async () => {
     const storage = new MemoryStorage();
     const manager = createTerminatedManager();
@@ -659,6 +814,34 @@ describe("online leaderboard terminal submission", () => {
       }
     });
     expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+  });
+
+  it("does not resubmit the same terminal record after a non-transient record validation error", async () => {
+    const storage = new MemoryStorage();
+    const manager = createTerminatedManager();
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse(
+            { success: false, error: "Replay verification failed", code: "REPLAY_VERIFY_FAILED" },
+            false,
+            400
+          );
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.filter((call) => call.url.endsWith("/records"))).toHaveLength(1);
+    expect(storage.getItem(PENDING_RECORD_KEY)).toBeNull();
+    expect(storage.getItem(LAST_RECORD_SUBMIT_KEY)).toBeTruthy();
   });
 
   it("keeps ranked page-hide progress local without uploading a cloud checkpoint", async () => {
@@ -1118,7 +1301,7 @@ describe("online leaderboard terminal submission", () => {
     expect(manager.rankedRestartPreparing).toBe(false);
   });
 
-  it("falls back to a non-ranked restart without blocking alert when on-demand ranked session creation fails", async () => {
+  it("does not start a ranked board when on-demand ranked session creation fails", async () => {
     const storage = new MemoryStorage();
     const nowSec = Math.floor(Date.now() / 1000);
     storage.setItem(
@@ -1185,22 +1368,68 @@ describe("online leaderboard terminal submission", () => {
     await flushRuntimePromises();
 
     expect(originalRestart).toHaveBeenCalledTimes(1);
-    expect(manager.rankPolicy).toBe("unranked");
-    expect(setup).toHaveBeenCalledWith(undefined, {
-      disableStateRestore: true,
-      modeConfig: {
-        key: MODE_KEY,
-        rank_policy: "unranked",
-        ranked_bucket: "none"
-      }
-    });
-    expect(actuate).toHaveBeenCalledTimes(2);
-    expect(manager.over).toBe(false);
-    expect(manager.score).toBe(0);
+    expect(manager.rankPolicy).toBe("ranked");
+    expect(setup).not.toHaveBeenCalled();
+    expect(actuate).not.toHaveBeenCalled();
+    expect(manager.over).toBe(true);
+    expect(manager.score).toBe(4096);
     expect(ensurePrefetch).toHaveBeenCalledWith(MODE_KEY);
     expect(runtime.windowLike.alert).not.toHaveBeenCalled();
-    expect(storage.getItem(ACTIVE_SESSION_KEY)).toBeNull();
-    expect(manager.rankedSessionToken).toBe("");
+    expect(storage.getItem(ACTIVE_SESSION_KEY)).not.toBeNull();
+    expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}").ranked_session_token).toBe("old-ranked-token");
+    expect(manager.rankedSessionToken).toBe("old-ranked-token");
+    expect(manager.rankedRestartBlockedUntilSessionReady).toBe(true);
+    expect(manager.rankedRestartPreparing).toBe(false);
+  });
+
+  it("does not call restartWithSeed when ranked session creation fails before setup", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    storage.setItem(
+      ACTIVE_SESSION_KEY,
+      JSON.stringify({
+        mode_key: MODE_KEY,
+        challenge_id: "ranked-old",
+        seed: 123,
+        ranked_session_token: "old-ranked-token",
+        issued_at: nowSec - 60,
+        exp: nowSec + 3600,
+        owner_user_id: "7"
+      })
+    );
+    const originalRestartWithSeed = vi.fn(function (this: Record<string, unknown>) {
+      this.over = false;
+      this.score = 0;
+    });
+    const setup = vi.fn();
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      rankedSessionToken: "old-ranked-token",
+      restartWithSeed: originalRestartWithSeed,
+      setup
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+    const ensurePrefetch = vi.fn(async () => false);
+    runtime.windowLike.RankedSessionRuntime = {
+      promotePrefetchedSession: vi.fn(() => false),
+      startNextSession: vi.fn(async () => false),
+      ensurePrefetch
+    };
+
+    (manager.restartWithSeed as { call: (thisArg: unknown, seed: number) => void }).call(manager, 999);
+    await flushRuntimePromises();
+
+    expect(originalRestartWithSeed).not.toHaveBeenCalled();
+    expect(setup).not.toHaveBeenCalled();
+    expect(manager.over).toBe(true);
+    expect(manager.score).toBe(4096);
+    expect(ensurePrefetch).toHaveBeenCalledWith(MODE_KEY);
+    expect(manager.rankedRestartBlockedUntilSessionReady).toBe(true);
+    expect(manager.rankedRestartPreparing).toBe(false);
   });
 
   it("does not restore stale ranked checkpoints from a previous active session", async () => {

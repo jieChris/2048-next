@@ -551,11 +551,49 @@ HTMLActuator.prototype.message = function (won) {
   }
 
   var type = won ? "game-won" : "game-over";
-  var message = won ? "\u4f60\u8d62\u4e86\uff01" : "\u6e38\u620f\u7ed3\u675f\uff01";
+  var message = this.resolveEndMessageCopy(won);
 
   this.activeMessageType = type;
   this.messageContainer.classList.add(type);
   this.messageContainer.getElementsByTagName("p")[0].textContent = message;
+};
+
+HTMLActuator.prototype.resolveEndMessageLanguage = function () {
+  if (typeof window !== "undefined") {
+    var i18n = window.UII18N || window.CoreI18nRuntime;
+    if (i18n && typeof i18n.getLanguage === "function") {
+      try {
+        var fromI18n = String(i18n.getLanguage() || "").trim().toLowerCase();
+        if (fromI18n.indexOf("en") === 0) return "en";
+        if (fromI18n.indexOf("zh") === 0) return "zh";
+      } catch (_err) {}
+    }
+  }
+  if (typeof document !== "undefined" && document.documentElement) {
+    try {
+      var fromRoot = String(
+        document.documentElement.getAttribute("data-ui-lang") ||
+        document.documentElement.getAttribute("lang") ||
+        ""
+      ).trim().toLowerCase();
+      if (fromRoot.indexOf("en") === 0) return "en";
+      if (fromRoot.indexOf("zh") === 0) return "zh";
+    } catch (_err2) {}
+  }
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      var fromStorage = String(window.localStorage.getItem("ui_language_v1") || "").trim().toLowerCase();
+      if (fromStorage.indexOf("en") === 0) return "en";
+      if (fromStorage.indexOf("zh") === 0) return "zh";
+    } catch (_err3) {}
+  }
+  return "zh";
+};
+
+HTMLActuator.prototype.resolveEndMessageCopy = function (won) {
+  var language = this.resolveEndMessageLanguage();
+  if (language === "en") return won ? "You win!" : "Game over!";
+  return won ? "\u4f60\u8d62\u4e86\uff01" : "\u6e38\u620f\u7ed3\u675f\uff01";
 };
 
 HTMLActuator.prototype.tryAutoContinueWithoutPrompt = function () {

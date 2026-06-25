@@ -583,6 +583,52 @@ export function bindRankedSessionAuthTransitionReload(
   });
 }
 
+export function bindRankedSessionPrefetchWarmup(
+  windowLike: RankedSessionWindowLike,
+  runtime: Pick<RankedSessionRuntime, "ensurePrefetch">,
+  modeKey: string | null
+): void {
+  if (!modeKey || !isRankedModeKey(modeKey)) return;
+  if (!readAuthToken(windowLike)) return;
+  if (typeof windowLike.addEventListener !== "function") return;
+
+  let warmupInFlight = false;
+  const documentLike = windowLike.document;
+  const isPageVisible = (): boolean =>
+    !documentLike || documentLike.visibilityState === "visible" || !documentLike.visibilityState;
+
+  const warmup = (): void => {
+    if (warmupInFlight || !isPageVisible() || !readAuthToken(windowLike)) return;
+    warmupInFlight = true;
+    void Promise.resolve(runtime.ensurePrefetch(modeKey))
+      .catch(() => false)
+      .then(() => {
+        warmupInFlight = false;
+      });
+  };
+
+  const scheduleWarmup = (): void => {
+    if (!isPageVisible()) return;
+    if (typeof windowLike.requestIdleCallback === "function") {
+      windowLike.requestIdleCallback(warmup, { timeout: 1_500 });
+      return;
+    }
+    if (typeof windowLike.setTimeout === "function") {
+      windowLike.setTimeout(warmup, 0);
+      return;
+    }
+    warmup();
+  };
+
+  windowLike.addEventListener("pageshow", scheduleWarmup);
+  windowLike.addEventListener("focus", scheduleWarmup);
+  windowLike.addEventListener("online", scheduleWarmup);
+  if (documentLike && typeof documentLike.addEventListener === "function") {
+    documentLike.addEventListener("visibilitychange", scheduleWarmup);
+  }
+  scheduleWarmup();
+}
+
 export async function bootstrapRankedSessionForHomeFamilyPage(
   pageId: string
 ): Promise<void> {
@@ -594,6 +640,7 @@ export async function bootstrapRankedSessionForHomeFamilyPage(
   if (!modeKey) return;
   bindRankedSessionAuthTransitionReload(windowLike, runtime, modeKey);
   if (!readAuthToken(windowLike)) return;
+  bindRankedSessionPrefetchWarmup(windowLike, runtime, modeKey);
 
   let activeContext = runtime.getCurrentContext(modeKey);
   if (!activeContext) {

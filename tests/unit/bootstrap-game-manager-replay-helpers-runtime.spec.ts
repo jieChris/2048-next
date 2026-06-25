@@ -8,7 +8,7 @@ import {
   serializeReplay,
   tryAutoSubmitOnGameOver
 } from "../../src/bootstrap/game-manager-replay-helpers-runtime";
-import { decodeReplayV1Rpl } from "../../src/core/replay-codec";
+import { decodeReplayV1Rpl, encodeReplayV1Rpl } from "../../src/core/replay-codec";
 
 function createGrid() {
   return {
@@ -136,6 +136,49 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(manager.replayIndex).toBe(0);
     expect(manager.replayMode).toBe(true);
     expect(manager.restartWithSeed).toHaveBeenCalledWith(0.25, { key: "standard_4x4_pow2_no_undo" });
+  });
+
+  it("infers rectangular replay mode keys from width then height when v1 metadata has no mode key", () => {
+    const importedModes: string[] = [];
+    const replayText = (width: number, height: number) =>
+      `REPLAY_v1RPL_B64_${Buffer.from(encodeReplayV1Rpl({
+        width,
+        height,
+        initTiles: [],
+        records: []
+      })).toString("base64")}`;
+    const manager = {
+      replayMoves: [],
+      replaySpawns: [],
+      replayIndex: 0,
+      replayMode: false,
+      modeKey: "standard_4x4_pow2_no_undo",
+      resolveModeConfig: vi.fn((modeKey: string) => ({ key: modeKey })),
+      restartWithBoard: vi.fn(),
+      loadUndoSettingForMode: vi.fn(() => false),
+      resolveUndoPolicyStateForMode: vi.fn(() => ({ forcedUndoSetting: null })),
+      updateUndoUiState: vi.fn(),
+      notifyUndoSettingsStateChanged: vi.fn(),
+      getWindowLike: () => ({
+        atob(value: string) {
+          return Buffer.from(value, "base64").toString("binary");
+        },
+        GameManager: {
+          REPLAY_V1_RPL_BASE64_PREFIX: "REPLAY_v1RPL_B64_"
+        }
+      })
+    };
+
+    importReplay(manager, replayText(4, 2));
+    importedModes.push((manager.restartWithBoard.mock.calls.at(-1)?.[1] as { key: string }).key);
+
+    importReplay(manager, replayText(4, 3));
+    importedModes.push((manager.restartWithBoard.mock.calls.at(-1)?.[1] as { key: string }).key);
+
+    expect(importedModes).toEqual([
+      "board_2x4_pow2_no_undo",
+      "board_3x4_pow2_no_undo"
+    ]);
   });
 
   it("syncs practice restart board snapshots after setup custom tile edits", () => {

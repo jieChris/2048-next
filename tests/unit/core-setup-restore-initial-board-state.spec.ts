@@ -107,6 +107,76 @@ describe("core setup restore and initial board state runtime", () => {
     expect(operations.seedInitialTilesAndSnapshotBoard).not.toHaveBeenCalled();
   });
 
+  it("ignores a ranked local mirror from a different active ranked session", () => {
+    const manager: Record<string, unknown> = {
+      rankPolicy: "ranked",
+      modeKey: "board_2x4_pow2_no_undo",
+      initialSeed: 222,
+      rankedSessionToken: "active-token",
+      challengeId: "ranked-active"
+    };
+    const mirrorSavedState = {
+      mode_key: "board_2x4_pow2_no_undo",
+      initial_seed: 111,
+      ranked_session_token: "old-token",
+      challenge_id: "ranked-old"
+    };
+    const operations = {
+      shouldTryRestoreSavedStateInSetup: vi.fn(() => false),
+      tryRestoreLatestSavedState: vi.fn(),
+      shouldForceRankedCheckpointRestoreInSetup: vi.fn(() => false),
+      readRankedCheckpointLocalMirrorSavedStateForSetup: vi.fn(() => mirrorSavedState),
+      applySavedStateRestore: vi.fn(() => true),
+      shouldScheduleRankedCheckpointRestoreInSetup: vi.fn(() => true),
+      hasRankedCheckpointAuthTokenForSetup: vi.fn(() => true),
+      placeStoneTilesForSetup: vi.fn(),
+      seedInitialTilesAndSnapshotBoard: vi.fn()
+    };
+
+    const result = resolveSetupRestoreAndInitialBoardState(manager, false, {}, operations);
+
+    expect(result).toEqual({ restoredFromSavedState: false });
+    expect(operations.applySavedStateRestore).not.toHaveBeenCalled();
+    expect(manager.needsRankedCheckpointRestore).toBe(true);
+    expect(manager.rankCheckpointRestorePending).toBe(true);
+    expect(operations.placeStoneTilesForSetup).toHaveBeenCalledWith(manager);
+    expect(operations.seedInitialTilesAndSnapshotBoard).toHaveBeenCalledWith(manager);
+  });
+
+  it("restores a ranked local mirror from the current active ranked session", () => {
+    const manager: Record<string, unknown> = {
+      rankPolicy: "ranked",
+      modeKey: "board_2x4_pow2_no_undo",
+      initialSeed: 222,
+      rankedSessionToken: "active-token",
+      challengeId: "ranked-active"
+    };
+    const mirrorSavedState = {
+      mode_key: "board_2x4_pow2_no_undo",
+      initial_seed: 222,
+      ranked_session_token: "active-token",
+      challenge_id: "ranked-active"
+    };
+    const operations = {
+      shouldTryRestoreSavedStateInSetup: vi.fn(() => false),
+      tryRestoreLatestSavedState: vi.fn(),
+      shouldForceRankedCheckpointRestoreInSetup: vi.fn(() => false),
+      readRankedCheckpointLocalMirrorSavedStateForSetup: vi.fn(() => mirrorSavedState),
+      applySavedStateRestore: vi.fn(() => true),
+      shouldScheduleRankedCheckpointRestoreInSetup: vi.fn(() => true),
+      hasRankedCheckpointAuthTokenForSetup: vi.fn(() => true),
+      placeStoneTilesForSetup: vi.fn(),
+      seedInitialTilesAndSnapshotBoard: vi.fn()
+    };
+
+    const result = resolveSetupRestoreAndInitialBoardState(manager, false, {}, operations);
+
+    expect(result).toEqual({ restoredFromSavedState: true });
+    expect(operations.applySavedStateRestore).toHaveBeenCalledWith(manager, mirrorSavedState);
+    expect(operations.placeStoneTilesForSetup).not.toHaveBeenCalled();
+    expect(operations.seedInitialTilesAndSnapshotBoard).not.toHaveBeenCalled();
+  });
+
   it("generates the initial board when no restore path succeeds", () => {
     const manager: Record<string, unknown> = {};
     const operations = {

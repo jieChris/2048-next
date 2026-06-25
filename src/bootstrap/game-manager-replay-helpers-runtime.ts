@@ -220,8 +220,8 @@ function resolveReplayModeKeyFromDecoded(manager: ManagerLike, decoded: Record<s
   const width = Number(decoded.width);
   const height = Number(decoded.height);
   if (width === 3 && height === 3) return "board_3x3_pow2_no_undo";
-  if (width === 3 && height === 4) return "board_3x4_pow2_no_undo";
-  if (width === 2 && height === 4) return "board_2x4_pow2_no_undo";
+  if (width === 4 && height === 3) return "board_3x4_pow2_no_undo";
+  if (width === 4 && height === 2) return "board_2x4_pow2_no_undo";
   if (width === 4 && height === 4) return "standard_4x4_pow2_no_undo";
   return String(manager.modeKey || manager.mode || "standard_4x4_pow2_no_undo");
 }
