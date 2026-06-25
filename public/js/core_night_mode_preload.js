@@ -11,7 +11,28 @@
     capped_4x4_pow2_no_undo: true,
     capped_4x4_pow2_64_no_undo: true,
     capped_4x4_pow2_1024_no_undo: true,
-    capped_4x4_pow2_4096_no_undo: true
+    capped_4x4_pow2_4096_no_undo: true,
+    board_3x3_pow2_no_undo: true,
+    board_3x3_pow2_undo: true,
+    board_2x4_pow2_no_undo: true,
+    board_2x4_pow2_undo: true,
+    board_3x4_pow2_no_undo: true,
+    board_3x4_pow2_undo: true,
+    board_5x5_pow2_no_undo: true,
+    board_5x5_pow2_undo: true,
+    diag_3x3_pow2_no_undo: true,
+    diag_4x4_pow2_no_undo: true,
+    diag_3x4_pow2_no_undo: true,
+    diag_2x4_pow2_no_undo: true,
+    obstacle_4x4_pow2_no_undo: true,
+    fib_4x4_no_undo: true,
+    fib_4x4_undo: true,
+    fib_3x3_no_undo: true,
+    fib_3x3_undo: true,
+    fib_4x3_no_undo: true,
+    fib_4x3_undo: true,
+    fib_4x2_no_undo: true,
+    fib_4x2_undo: true
   };
 
   function resolveNightBackgroundCssText() {

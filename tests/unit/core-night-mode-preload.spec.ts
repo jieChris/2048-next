@@ -183,4 +183,19 @@ describe("core night mode preload", () => {
 
     expect(result.documentElement.getAttribute("data-initial-timer-leaderboard")).toBe("1");
   });
+
+  it("marks initial leaderboard view for ranked board variants such as 3x3 undo", () => {
+    const result = runNightModePreload("0", false, {
+      storageValues: {
+        settings_night_background_enabled_v1: "0",
+        settings_timer_module_view_by_mode_v1: JSON.stringify({
+          board_3x3_pow2_undo: "hidden"
+        })
+      },
+      pathname: "/play.html",
+      search: "?mode_key=board_3x3_pow2_undo"
+    });
+
+    expect(result.documentElement.getAttribute("data-initial-timer-leaderboard")).toBe("1");
+  });
 });
