@@ -10,6 +10,7 @@
   var STORAGE_PENDING_SCORE_SUBMIT_KEY = "online_pending_score_submit_v1";
   var STORAGE_LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
   var STORAGE_PENDING_RECORD_SUBMIT_KEY = "online_pending_record_submit_signature_v1";
+  var STORAGE_LAST_RECORD_SUBMIT_RESULT_KEY = "online_last_record_submit_result_v1";
   var STORAGE_LAST_STONE_2K_SUBMIT_KEY = "online_last_stone_2k_submit_signature_v1";
   var STORAGE_PENDING_STONE_2K_SUBMIT_KEY = "online_pending_stone_2k_submit_v1";
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
@@ -1084,6 +1085,23 @@ function shouldAutoLoadOnlineLeaderboard() {
     );
   }
 
+  function writeLastRecordSubmitResult(payload, result, ok) {
+    var data = result && typeof result === "object" ? result : {};
+    safeSetStorage(
+      STORAGE_LAST_RECORD_SUBMIT_RESULT_KEY,
+      JSON.stringify({
+        ok: ok === true,
+        status: Math.floor(Number(data.status) || 0) || null,
+        mode_key: toText(payload && payload.mode_key).trim(),
+        mode_bucket: toText(payload && (payload.mode_bucket || payload.mode)).trim(),
+        code: toText(data.code).trim() || null,
+        error: toText(data.error).trim() || null,
+        detail: toText(data.detail).trim() || null,
+        at: Date.now()
+      })
+    );
+  }
+
   function isTransientOnlineSubmitErrorText(errorTextLike) {
     var text = toText(errorTextLike).trim().toLowerCase();
     if (!text) return false;
@@ -1717,6 +1735,7 @@ function shouldAutoLoadOnlineLeaderboard() {
             continue;
           }
           if (data && typeof data === "object") {
+            if (typeof data.status === "undefined") data.status = response.status;
             return data;
           }
           return { error: "HTTP " + response.status };
@@ -3510,6 +3529,7 @@ async function refreshLeaderboard(modeLike) {
     }
 
     if (result && result.success) {
+      writeLastRecordSubmitResult(payload, result, true);
       safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY, signature);
       clearPendingRecordSubmitSignature();
       cleanupRankedStateAfterRecordSubmit(manager, payload);
@@ -3518,6 +3538,7 @@ async function refreshLeaderboard(modeLike) {
     }
 
     var errorText = toText(result && result.error ? result.error : "record_submit_failed");
+    writeLastRecordSubmitResult(payload, result, false);
     if (isRankedSessionExpiredResult(result)) {
       clearPendingRecordSubmitSignature();
       handleRankedSessionExpired(manager, modeKey);
@@ -3619,6 +3640,7 @@ async function refreshLeaderboard(modeLike) {
     }
 
     if (result && result.success) {
+      writeLastRecordSubmitResult(pendingState.payload, result, true);
       safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY, pendingState.signature);
       clearPendingRecordSubmitSignature();
       var currentManager = global.game_manager;
@@ -3628,6 +3650,7 @@ async function refreshLeaderboard(modeLike) {
     }
 
     var errorText = toText(result && result.error ? result.error : "record_submit_failed");
+    writeLastRecordSubmitResult(pendingState.payload, result, false);
     if (isRankedSessionExpiredResult(result)) {
       var expiredModeKey = toText(pendingState.payload && pendingState.payload.mode_key).trim() || getCurrentModeKey();
       var expiredManager = global.game_manager;

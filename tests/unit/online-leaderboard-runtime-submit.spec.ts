@@ -14,6 +14,7 @@ const CHECKPOINT_CLEAR_KEY = `ranked_checkpoint_cleared_at:v1:user:7:${MODE_KEY}
 const PENDING_RECORD_KEY = "online_pending_record_submit_signature_v1";
 const PENDING_SCORE_KEY = "online_pending_score_submit_v1";
 const LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
+const LAST_RECORD_RESULT_KEY = "online_last_record_submit_result_v1";
 const BEST_SCORE_KEY = `bestScoreByMode:${MODE_KEY}`;
 const TIMER_LEADERBOARD_CACHE_KEY = `timer_leaderboard_cache:v1:${MODE_KEY}|all`;
 
@@ -139,6 +140,10 @@ function createTerminatedManager(overrides: Record<string, unknown> = {}): Recor
     move: vi.fn(),
     ...overrides
   };
+}
+
+function activeSessionKeyForMode(modeKey: string): string {
+  return `ranked_session_active:v1:${modeKey}`;
 }
 
 function createScoreManagerStub(storage: MemoryStorage, score: number): Record<string, unknown> {
@@ -405,6 +410,62 @@ describe("online leaderboard terminal submission", () => {
       mode_key: MODE_KEY,
       score: 4096,
       replay_string: "replay-v1"
+    });
+  });
+
+  it.each([
+    ["fib_4x4_no_undo", "fib_4x4"],
+    ["board_3x3_pow2_undo", "pow2_3x3_undo"]
+  ])("submits terminal ranked records for expanded mode %s", async (modeKey, modeBucket) => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      activeSessionKeyForMode(modeKey),
+      JSON.stringify({
+        mode_key: modeKey,
+        challenge_id: `ranked-${modeKey}`,
+        seed: 123,
+        ranked_session_token: `ranked-token-${modeKey}`,
+        issued_at: Math.floor(Date.now() / 1000) - 60,
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        owner_user_id: "7"
+      })
+    );
+    const localAutoSubmit = vi.fn(function (this: Record<string, unknown>) {
+      this.sessionSubmitDone = true;
+    });
+    const manager = createTerminatedManager({
+      mode: modeKey,
+      modeKey,
+      rankPolicy: "ranked",
+      rankedBucket: modeBucket,
+      rankedSessionToken: `ranked-token-${modeKey}`,
+      challengeId: `ranked-${modeKey}`,
+      tryAutoSubmitOnGameOver: localAutoSubmit
+    });
+    let recordPayload: Record<string, unknown> | null = null;
+    loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records")) {
+          recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
+          return createJsonResponse({ success: true, data: { id: "record-expanded-mode" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.tryAutoSubmitOnGameOver as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(recordPayload).toMatchObject({
+      mode: modeBucket,
+      mode_key: modeKey,
+      mode_bucket: modeBucket,
+      ranked_session_token: `ranked-token-${modeKey}`,
+      challenge_id: `ranked-${modeKey}`,
+      seed: 123,
+      end_reason: "game_over"
     });
   });
 
@@ -866,6 +927,41 @@ describe("online leaderboard terminal submission", () => {
     });
     expect(storage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBeNull();
     expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
+  });
+
+  it("stores the last record submit failure code for diagnostics", async () => {
+    const storage = new MemoryStorage();
+    const manager = createTerminatedManager();
+    loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse(
+            {
+              success: false,
+              error: "Replay is not terminal",
+              code: "REPLAY_NOT_TERMINATED",
+              detail: "replay payload does not describe a terminated game"
+            },
+            false,
+            400
+          );
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(JSON.parse(storage.getItem(LAST_RECORD_RESULT_KEY) || "{}")).toMatchObject({
+      ok: false,
+      status: 400,
+      mode_key: MODE_KEY,
+      code: "REPLAY_NOT_TERMINATED",
+      error: "Replay is not terminal"
+    });
   });
 
   it("keeps a terminal record pending when auth was cleared before the game-over submit runs", async () => {
