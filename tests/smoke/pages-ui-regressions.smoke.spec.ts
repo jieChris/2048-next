@@ -220,6 +220,97 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.firstRowText).toContain("--");
   });
 
+  test("initial leaderboard view shows the embedded shell before ranked startup and leaderboard data finish", async ({
+    page
+  }) => {
+    let releaseRankedSession: (() => void) | null = null;
+    const rankedSessionGate = new Promise<void>((resolve) => {
+      releaseRankedSession = resolve;
+    });
+    let releaseLeaderboard: (() => void) | null = null;
+    const leaderboardGate = new Promise<void>((resolve) => {
+      releaseLeaderboard = resolve;
+    });
+
+    await page.route("**/api/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("/ranked-session/start")) {
+        await rankedSessionGate;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              mode_key: "standard_4x4_pow2_no_undo",
+              challenge_id: "leaderboard-shell-startup",
+              seed: 2468,
+              ranked_session_token: "leaderboard-shell-token",
+              issued_at: Math.floor(Date.now() / 1000),
+              exp: Math.floor(Date.now() / 1000) + 3600
+            }
+          })
+        });
+        return;
+      }
+      if (url.includes("/leaderboard")) {
+        await leaderboardGate;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "leaderboard-shell-token");
+      window.localStorage.setItem("home_guide_seen_v1", "1");
+      window.localStorage.setItem(
+        "settings_timer_module_view_by_mode_v1",
+        JSON.stringify({ standard_4x4_pow2_no_undo: "hidden" })
+      );
+      window.localStorage.removeItem("ranked_session_active:v1:standard_4x4_pow2_no_undo");
+      window.localStorage.removeItem("ranked_session_prefetch:v1:standard_4x4_pow2_no_undo");
+    });
+
+    try {
+      const response = await page.goto("/2048.html?leaderboard-shell-startup=1", {
+        waitUntil: "commit"
+      });
+      expect(response, "Home response should exist").not.toBeNull();
+      expect(response?.ok(), "Home response should be 2xx").toBeTruthy();
+      await page.waitForSelector("#timerbox");
+
+      const snapshot = await page.evaluate(() => {
+        const root = document.documentElement;
+        const timerBox = document.getElementById("timerbox") as HTMLElement | null;
+        const panel = document.getElementById("timer-leaderboard-panel") as HTMLElement | null;
+        const firstRow = document.querySelector(
+          "#timer-leaderboard-list .timer-leaderboard-row"
+        ) as HTMLElement | null;
+        return {
+          initialAttr: root.getAttribute("data-initial-timer-leaderboard"),
+          timerBoxClassName: String(timerBox?.className || ""),
+          panelDisplay: panel ? window.getComputedStyle(panel).display : "",
+          panelVisibility: panel ? window.getComputedStyle(panel).visibility : "",
+          firstRowText: String(firstRow?.textContent || "").trim(),
+          hasManager: Boolean((window as any).game_manager)
+        };
+      });
+
+      expect(snapshot.hasManager).toBe(false);
+      expect(snapshot.initialAttr).toBe("1");
+      expect(snapshot.timerBoxClassName).not.toContain("timerbox-leaderboard-mode");
+      expect(snapshot.panelDisplay).toBe("block");
+      expect(snapshot.panelVisibility).toBe("visible");
+      expect(snapshot.firstRowText).toContain("--");
+    } finally {
+      releaseRankedSession?.();
+      releaseLeaderboard?.();
+    }
+  });
+
   test("settings toolkit entry buttons align with their setting columns", async ({ page }) => {
     await routeI18nAuditApi(page);
     await page.addInitScript(() => {

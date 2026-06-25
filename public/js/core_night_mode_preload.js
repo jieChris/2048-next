@@ -1,9 +1,18 @@
 (function () {
   var STORAGE_KEY = "settings_night_background_enabled_v1";
+  var TIMER_MODULE_VIEW_SETTINGS_KEY = "settings_timer_module_view_by_mode_v1";
   var STYLE_ID = "night-background-style";
   var doc = document;
   var documentElement = doc && doc.documentElement;
   if (!documentElement) return;
+  var RANKED_MODE_KEYS = {
+    standard_4x4_pow2_no_undo: true,
+    classic_4x4_pow2_undo: true,
+    capped_4x4_pow2_no_undo: true,
+    capped_4x4_pow2_64_no_undo: true,
+    capped_4x4_pow2_1024_no_undo: true,
+    capped_4x4_pow2_4096_no_undo: true
+  };
 
   function resolveNightBackgroundCssText() {
     return [
@@ -30,8 +39,53 @@
     return style;
   }
 
+  function readStorageItem(key) {
+    try {
+      return window.localStorage ? window.localStorage.getItem(key) : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function resolveInitialModeKey() {
+    var search = "";
+    var pathname = "";
+    try {
+      search = String(window.location && window.location.search || "");
+      pathname = String(window.location && window.location.pathname || "");
+    } catch (_err) {}
+    try {
+      var params = new URLSearchParams(search);
+      var fromQuery = String(params.get("mode_key") || params.get("mode") || "").trim();
+      if (fromQuery) return fromQuery;
+    } catch (_errParams) {}
+    if (/undo_2048\.html$/i.test(pathname)) return "classic_4x4_pow2_undo";
+    if (/capped_2048\.html$/i.test(pathname)) return "capped_4x4_pow2_no_undo";
+    if (/2048\.html$/i.test(pathname) || /play\.html$/i.test(pathname)) {
+      return "standard_4x4_pow2_no_undo";
+    }
+    return "";
+  }
+
+  function syncInitialTimerLeaderboardAttribute() {
+    try {
+      var modeKey = resolveInitialModeKey();
+      if (!RANKED_MODE_KEYS[modeKey]) {
+        documentElement.removeAttribute("data-initial-timer-leaderboard");
+        return;
+      }
+      var raw = readStorageItem(TIMER_MODULE_VIEW_SETTINGS_KEY);
+      var map = raw ? JSON.parse(raw) : {};
+      if (map && map[modeKey] === "hidden") {
+        documentElement.setAttribute("data-initial-timer-leaderboard", "1");
+        return;
+      }
+    } catch (_errTimerModule) {}
+    documentElement.removeAttribute("data-initial-timer-leaderboard");
+  }
+
   try {
-    if (window.localStorage && window.localStorage.getItem(STORAGE_KEY) === "1") {
+    if (readStorageItem(STORAGE_KEY) === "1") {
       documentElement.setAttribute("data-night-background", "1");
       documentElement.style.colorScheme = "dark";
       var style = ensureStyleTag();
@@ -46,4 +100,6 @@
     documentElement.removeAttribute("data-night-background");
     documentElement.style.colorScheme = "";
   }
+
+  syncInitialTimerLeaderboardAttribute();
 })();

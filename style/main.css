@@ -297,7 +297,7 @@ body[data-page="game"] h1.title {
   --leaderboard-rank-top-2-text: #fffaf2;
   --leaderboard-rank-top-3-bg: #729b8b;
   --leaderboard-rank-top-3-text: #fffaf2;
-  --leaderboard-rank-self-bg: #b7aa9d;
+  --leaderboard-rank-self-bg: #b27f58;
   --leaderboard-rank-self-text: #fffaf2;
   --leaderboard-rank-shadow: 0 5px 12px rgba(119, 110, 101, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.28);
   --leaderboard-rank-top-shadow: none;
@@ -416,7 +416,17 @@ body.home-guide-active .top-action-buttons {
   visibility: hidden !important;
 }
 
+html[data-initial-timer-leaderboard="1"] #timerbox > * {
+  display: none !important;
+  visibility: hidden !important;
+}
+
 #timerbox.timerbox-hidden-mode.timerbox-leaderboard-mode > #timer-leaderboard-panel {
+  visibility: visible !important;
+}
+
+html[data-initial-timer-leaderboard="1"] #timerbox > #timer-leaderboard-panel {
+  display: block !important;
   visibility: visible !important;
 }
 
@@ -5494,7 +5504,7 @@ html[data-night-background="1"] .timer-leaderboard-rank-tile.is-top-3 {
 }
 
 html[data-night-background="1"] .timer-leaderboard-row.is-self .timer-leaderboard-rank-tile {
-  background: #b7aa9d;
+  background: #b27f58;
   color: #fffaf2;
 }
 

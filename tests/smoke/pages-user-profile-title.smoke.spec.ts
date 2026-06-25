@@ -251,7 +251,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 ended_at: "2026-03-14T10:00:00.000Z",
                 created_at: "2026-03-14 10:01:02"
               }
-            ]
+            ],
+            page: 1,
+            limit: 20,
+            total: 41
           })
         });
         return;
@@ -275,8 +278,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok(), "User response should be 2xx").toBeTruthy();
     await page.waitForSelector(".user-record-item");
 
+    await expect(page.locator(".user-record-mode").first()).toHaveText("经典4x4");
     await expect(page.locator("#user-col-date")).toHaveText("上传时间");
     await expect(page.locator(".user-record-date").first()).toHaveText("2026-03-14 18:01:02");
+    await expect(page.locator("#user-record-page")).toHaveText("第1/3页");
   });
 
   test("user profile supports mode filter and expandable record detail", async ({ page }) => {

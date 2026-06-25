@@ -158,6 +158,13 @@ function translateLegacyChineseModeLabel(fallback: string, modeKey: string): str
   return "";
 }
 
+function resolveKnownChineseHistoryModeLabel(modeKey: string): string {
+  const key = toText(modeKey).trim().toLowerCase();
+  if (key === "standard_4x4_pow2_no_undo" || key === "classic_no_undo") return "经典4x4";
+  if (key === "classic_4x4_pow2_undo") return "4x4可撤回";
+  return "";
+}
+
 export function resolveModeLabel(
   modeKey: string,
   fallback: string,
@@ -165,6 +172,10 @@ export function resolveModeLabel(
 ): string {
   const catalog = options?.modeCatalog || null;
   const lang = normalizeModeLabelLang(options?.lang);
+  if (lang !== "en") {
+    const knownChineseLabel = resolveKnownChineseHistoryModeLabel(modeKey);
+    if (knownChineseLabel) return knownChineseLabel;
+  }
   if (catalog && typeof catalog.getMode === "function") {
     try {
       const mode = catalog.getMode(modeKey);

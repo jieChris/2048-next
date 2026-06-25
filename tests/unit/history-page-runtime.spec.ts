@@ -62,6 +62,44 @@ describe("history page runtime", () => {
     ]);
   });
 
+  it("uses concise 4x4 labels in the mode filter", async () => {
+    const dom = createHistoryDocument();
+    const windowLike = dom.window as unknown as Window & {
+      LocalHistoryStore: Record<string, unknown>;
+    };
+    windowLike.LocalHistoryStore = {
+      getAll: () => [],
+      listRecords: () => ({ items: [], total: 0, page: 1, page_size: 30 })
+    };
+
+    bootstrapHistoryPageRuntime({
+      windowLike,
+      documentLike: dom.window.document,
+      modeCatalog: {
+        listModes: () => [
+          { key: "standard_4x4_pow2_no_undo", label: "普通无撤回", board_width: 4, board_height: 4 },
+          { key: "classic_4x4_pow2_undo", label: "经典版 4x4（可撤回）", board_width: 4, board_height: 4 }
+        ],
+        getMode: (modeKey) =>
+          modeKey === "classic_4x4_pow2_undo"
+            ? { label: "经典版 4x4（可撤回）", board_width: 4, board_height: 4 }
+            : { label: "普通无撤回", board_width: 4, board_height: 4 }
+      }
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const options = Array.from(dom.window.document.querySelectorAll("#history-mode option")).map((option) => ({
+      value: option.getAttribute("value"),
+      text: option.textContent
+    }));
+    expect(options).toEqual([
+      { value: "", text: "全部模式" },
+      { value: "standard_4x4_pow2_no_undo", text: "经典4x4" },
+      { value: "classic_4x4_pow2_undo", text: "4x4可撤回" }
+    ]);
+  });
+
   it("loads history through an injected store without a global legacy LocalHistoryStore", async () => {
     const dom = createHistoryDocument();
     const windowLike = dom.window as unknown as Window & {

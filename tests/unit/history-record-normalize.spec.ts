@@ -40,6 +40,28 @@ describe("history-record-normalize", () => {
     expect(label).toBe("Pow2 Mode");
   });
 
+  it("uses concise 4x4 labels for Chinese history records", () => {
+    expect(
+      resolveModeLabel("standard_4x4_pow2_no_undo", "普通无撤回", {
+        lang: "zh",
+        modeCatalog: {
+          getMode: () => ({ label: "标准版 4x4（无撤回）", board_width: 4, board_height: 4 })
+        }
+      })
+    ).toBe("经典4x4");
+
+    expect(
+      resolveModeLabel("classic_4x4_pow2_undo", "经典版 4x4（可撤回）", {
+        lang: "zh",
+        modeCatalog: {
+          getMode: () => ({ label: "经典版 4x4（可撤回）", board_width: 4, board_height: 4 })
+        }
+      })
+    ).toBe("4x4可撤回");
+
+    expect(resolveModeLabel("classic_no_undo", "普通无撤回", { lang: "zh" })).toBe("经典4x4");
+  });
+
   it("falls back to the provided label before the mode key", () => {
     expect(resolveModeLabel("diag_4x2_pow2_no_undo", "Diagonal 4x2")).toBe("Diagonal 4x2");
   });

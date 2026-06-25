@@ -65,14 +65,25 @@ function createMockDocument() {
   };
 }
 
-function runNightModePreload(storageValue: string | null, shouldThrow = false) {
+function runNightModePreload(
+  storageValue: string | null,
+  shouldThrow = false,
+  options: {
+    storageValues?: Record<string, string | null>;
+    pathname?: string;
+    search?: string;
+  } = {}
+) {
   const scriptPath = path.resolve(process.cwd(), "public/js/core_night_mode_preload.js");
   const script = readFileSync(scriptPath, "utf8");
   const { doc, documentElement, headChildren } = createMockDocument();
   const localStorage = {
-    getItem(_key: string) {
+    getItem(key: string) {
       if (shouldThrow) {
         throw new Error("storage unavailable");
+      }
+      if (options.storageValues && Object.prototype.hasOwnProperty.call(options.storageValues, key)) {
+        return options.storageValues[key];
       }
       return storageValue;
     }
@@ -80,7 +91,12 @@ function runNightModePreload(storageValue: string | null, shouldThrow = false) {
   const context = {
     console,
     document: doc,
-    localStorage
+    localStorage,
+    URLSearchParams,
+    location: {
+      pathname: options.pathname || "/2048.html",
+      search: options.search || ""
+    }
   } as Record<string, unknown>;
   context.window = context;
 
@@ -123,5 +139,48 @@ describe("core night mode preload", () => {
     expect(result.documentElement.getAttribute("data-night-background")).toBeNull();
     expect(result.documentElement.style.colorScheme).toBe("");
     expect(result.getStyleNode()).toBeNull();
+  });
+
+  it("marks initial leaderboard view when the current ranked mode is saved as hidden", () => {
+    const result = runNightModePreload("0", false, {
+      storageValues: {
+        settings_night_background_enabled_v1: "0",
+        settings_timer_module_view_by_mode_v1: JSON.stringify({
+          standard_4x4_pow2_no_undo: "hidden"
+        })
+      },
+      pathname: "/2048.html"
+    });
+
+    expect(result.documentElement.getAttribute("data-initial-timer-leaderboard")).toBe("1");
+  });
+
+  it("does not mark initial leaderboard view when the current ranked mode is saved as timer", () => {
+    const result = runNightModePreload("0", false, {
+      storageValues: {
+        settings_night_background_enabled_v1: "0",
+        settings_timer_module_view_by_mode_v1: JSON.stringify({
+          standard_4x4_pow2_no_undo: "timer"
+        })
+      },
+      pathname: "/2048.html"
+    });
+
+    expect(result.documentElement.getAttribute("data-initial-timer-leaderboard")).toBeNull();
+  });
+
+  it("resolves play.html mode keys from the query before marking the initial leaderboard view", () => {
+    const result = runNightModePreload("0", false, {
+      storageValues: {
+        settings_night_background_enabled_v1: "0",
+        settings_timer_module_view_by_mode_v1: JSON.stringify({
+          classic_4x4_pow2_undo: "hidden"
+        })
+      },
+      pathname: "/play.html",
+      search: "?mode_key=classic_4x4_pow2_undo"
+    });
+
+    expect(result.documentElement.getAttribute("data-initial-timer-leaderboard")).toBe("1");
   });
 });

@@ -769,19 +769,50 @@
       Number(
         pagination.page != null ? pagination.page :
         pagination.current_page != null ? pagination.current_page :
+        result && result.page != null ? result.page :
+        result && result.current_page != null ? result.current_page :
         page
       ) || page
     );
     if (rawPage <= 0) rawPage = page;
+
+    var rawTotal = Math.floor(
+      Number(
+        pagination.total != null ? pagination.total :
+        pagination.total_count != null ? pagination.total_count :
+        pagination.record_count != null ? pagination.record_count :
+        result && result.total != null ? result.total :
+        result && result.total_count != null ? result.total_count :
+        result && result.record_count != null ? result.record_count :
+        0
+      ) || 0
+    );
+    if (rawTotal < 0) rawTotal = 0;
+    var rawLimit = Math.floor(
+      Number(
+        pagination.limit != null ? pagination.limit :
+        pagination.page_size != null ? pagination.page_size :
+        result && result.limit != null ? result.limit :
+        result && result.page_size != null ? result.page_size :
+        size
+      ) || size
+    );
+    if (rawLimit <= 0) rawLimit = size;
 
     var rawTotalPages = Math.floor(
       Number(
         pagination.total_pages != null ? pagination.total_pages :
         pagination.pages != null ? pagination.pages :
         pagination.page_count != null ? pagination.page_count :
+        result && result.total_pages != null ? result.total_pages :
+        result && result.pages != null ? result.pages :
+        result && result.page_count != null ? result.page_count :
         0
       ) || 0
     );
+    if (rawTotalPages <= 0 && rawTotal > 0) {
+      rawTotalPages = Math.ceil(rawTotal / rawLimit);
+    }
     if (rawTotalPages < 0) rawTotalPages = 0;
 
     var hasPrev = typeof pagination.has_prev === "boolean" ? pagination.has_prev : rawPage > 1;
