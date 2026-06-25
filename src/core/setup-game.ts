@@ -1,8 +1,14 @@
 export interface SetupGameManagerLike {
   width: number;
   height: number;
+  actuator?: {
+    clearContainer?: (container: unknown) => void;
+    tileContainer?: unknown;
+  } | null;
   rankPolicy?: unknown;
   rankedSetupBlockedUntilSessionReady?: boolean;
+  rankedSessionToken?: unknown;
+  challengeId?: unknown;
   over?: boolean;
   won?: boolean;
   keepPlaying?: boolean;
@@ -26,6 +32,8 @@ export interface SetupGameOperations {
     inputSeed: unknown
   ) => unknown;
   applySetupModeConfig: (manager: SetupGameManagerLike, config: unknown) => void;
+  isRankedSeedRequiredForSetup?: (manager: SetupGameManagerLike) => boolean;
+  shouldBlockRankedSetupWithoutSeed?: (manager: SetupGameManagerLike) => boolean;
   hasLegalRankedSetupSeed?: (manager: SetupGameManagerLike) => boolean;
   ensureSingleModePageLock: (manager: SetupGameManagerLike) => boolean;
   handleSingleModePageDuplicate: (manager: SetupGameManagerLike) => void;
@@ -35,6 +43,7 @@ export interface SetupGameOperations {
     inputSeed: unknown,
     setupOptions: Record<string, unknown>
   ) => void;
+  clearRankedBlockedBoardView?: (manager: SetupGameManagerLike) => void;
 }
 
 export interface SetupGameRuntime {
@@ -70,8 +79,19 @@ export function setupGame(
     inputSeed
   );
   operations.applySetupModeConfig(manager, cfg);
-  if (manager.rankPolicy === "ranked" && operations.hasLegalRankedSetupSeed?.(manager) === false) {
+  const rankedSeedRequired = operations.isRankedSeedRequiredForSetup?.(manager) !== false;
+  const shouldBlockUnseededRankedSetup = operations.shouldBlockRankedSetupWithoutSeed?.(manager) !== false;
+  if (
+    manager.rankPolicy === "ranked" &&
+    rankedSeedRequired &&
+    shouldBlockUnseededRankedSetup &&
+    operations.hasLegalRankedSetupSeed?.(manager) === false
+  ) {
     manager.rankedSetupBlockedUntilSessionReady = true;
+    manager.rankedSessionToken = "";
+    manager.challengeId = null;
+    manager.setRuntimeGrid(null);
+    operations.clearRankedBlockedBoardView?.(manager);
     return;
   }
   manager.rankedSetupBlockedUntilSessionReady = false;

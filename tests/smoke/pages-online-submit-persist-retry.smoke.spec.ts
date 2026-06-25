@@ -1,5 +1,7 @@
 ﻿import { expect, test } from "@playwright/test";
 
+import { installRankedSessionForMode } from "./support/ranked-session";
+
 test.describe("Legacy Multi-Page Smoke", () => {
   test("online score submit replays persisted pending payload after reload", async ({ page }) => {
     let scoreCalls = 0;
@@ -102,6 +104,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("online record submit replays persisted pending payload after reload", async ({ page }) => {
+    await installRankedSessionForMode(page, "board_3x3_pow2_no_undo", {
+      ownerUserId: "42",
+      seed: 818,
+      token: "persist-record-3x3-token"
+    });
+
     let recordCalls = 0;
     const recordBodies: Array<Record<string, unknown>> = [];
 
@@ -222,6 +230,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("online record submit keeps terminal payload pending when auth was cleared before upload", async ({ page }) => {
+    await installRankedSessionForMode(page, "board_3x3_pow2_no_undo", {
+      ownerUserId: "42",
+      seed: 919,
+      token: "auth-cleared-3x3-token"
+    });
+
     let recordCalls = 0;
     const recordBodies: Array<Record<string, unknown>> = [];
 

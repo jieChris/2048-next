@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { installRankedSessionForMode } from "./support/ranked-session";
+
 test.describe("Legacy Multi-Page Smoke", () => {
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {
     const response = await page.goto("/play.html?mode_key=spawn_custom_4x4_pow2_no_undo&four_rate=25", {
@@ -311,6 +313,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("play page suppresses 2048 win prompt when win-prompt setting is disabled", async ({ page }) => {
+    await installRankedSessionForMode(page, "classic_4x4_pow2_undo", {
+      seed: 515,
+      token: "win-prompt-classic-token"
+    });
+
     const response = await page.goto("/play.html?mode_key=classic_4x4_pow2_undo", {
       waitUntil: "domcontentloaded"
     });
@@ -332,19 +339,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("win_prompt_enabled", "0");
 
       const manager = (window as any).game_manager;
-      if (!manager || typeof manager.restartWithBoard !== "function" || typeof manager.move !== "function") {
+      if (!manager || typeof manager.actuate !== "function") {
         return null;
       }
 
-      const board = [
-        [1024, 1024, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0]
-      ];
-      manager.restartWithBoard(board, null, { preserveSeed: true, preserveMode: true });
-      manager.move(3);
-      if (!manager.won) manager.move(1);
+      manager.over = false;
+      manager.won = true;
+      manager.keepPlaying = false;
+      manager.actuate();
 
       await new Promise((resolve) => window.setTimeout(resolve, 260));
 
@@ -359,6 +361,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
             ? actuator.shouldShowWinPrompt()
             : null,
         won: Boolean(manager.won),
+        blocked: !!manager.rankedSetupBlockedUntilSessionReady,
         keepPlayingState: (manager as any).keepPlaying,
         hasWonPromptClass: className.indexOf("game-won") !== -1,
         messageText: text
@@ -368,6 +371,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot, "win-prompt suppression snapshot should exist").not.toBeNull();
     expect(snapshot?.storageValue).toBe("0");
     expect(snapshot?.shouldShowWinPrompt).toBe(false);
+    expect(snapshot?.blocked).toBe(false);
     expect(snapshot?.won).toBe(true);
     expect(snapshot?.keepPlayingState).toBe(true);
     expect(snapshot?.hasWonPromptClass).toBe(false);
@@ -377,6 +381,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("game-over overlay temporarily hides for screenshots on blank click and page return", async ({
     page
   }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      seed: 616,
+      token: "overlay-standard-token"
+    });
+
     const response = await page.goto("/play.html?mode_key=standard_4x4_pow2_no_undo", {
       waitUntil: "domcontentloaded"
     });

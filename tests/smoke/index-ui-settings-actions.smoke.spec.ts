@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { installRankedSessionForMode } from "./support/ranked-session";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
@@ -250,6 +251,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("index replay export uses transient copy notice and closes on overlay click", async ({
     page
   }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      clearPrefetch: true,
+      clearSavedState: true,
+      seed: 601,
+      token: "smoke-token-index-export"
+    });
+
     const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });

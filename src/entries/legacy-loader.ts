@@ -45,17 +45,35 @@ export function loadLegacyScriptsSequentially(urls: readonly string[]): Promise<
     head.appendChild(preload);
   }
 
-  return urls.reduce<Promise<void>>((chain, url) => {
-    return chain.then(
-      () =>
-        new Promise<void>((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = url;
-          script.async = false;
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error("Failed to load legacy script: " + url));
-          head.appendChild(script);
-        })
-    );
-  }, Promise.resolve());
+  return new Promise<void>((resolve, reject) => {
+    if (urls.length === 0) {
+      resolve();
+      return;
+    }
+
+    let remaining = urls.length;
+    let settled = false;
+    const completeOne = () => {
+      if (settled) return;
+      remaining -= 1;
+      if (remaining === 0) {
+        settled = true;
+        resolve();
+      }
+    };
+    const fail = (url: string) => {
+      if (settled) return;
+      settled = true;
+      reject(new Error("Failed to load legacy script: " + url));
+    };
+
+    for (const url of urls) {
+      const script = document.createElement("script");
+      script.src = url;
+      script.async = false;
+      script.onload = completeOne;
+      script.onerror = () => fail(url);
+      head.appendChild(script);
+    }
+  });
 }

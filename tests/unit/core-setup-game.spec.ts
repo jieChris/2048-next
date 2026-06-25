@@ -88,10 +88,15 @@ describe("core setup game runtime", () => {
   it("blocks ranked setup before creating a board when no legal ranked seed is active", () => {
     const manager = createManager();
     manager.rankPolicy = "ranked";
+    (manager as Record<string, unknown>).rankedSessionToken = "stale-token";
+    (manager as Record<string, unknown>).challengeId = "stale-challenge";
+    (manager as Record<string, unknown>).grid = { stale: true };
+    const clearRankedBlockedBoardView = vi.fn();
     const operations = createOperations({
       applySetupModeConfig: vi.fn((target: typeof manager) => {
         target.rankPolicy = "ranked";
       }),
+      clearRankedBlockedBoardView,
       hasLegalRankedSetupSeed: vi.fn(() => false)
     });
 
@@ -100,10 +105,64 @@ describe("core setup game runtime", () => {
     expect(operations.hasLegalRankedSetupSeed).toHaveBeenCalledWith(manager);
     expect(operations.ensureSingleModePageLock).not.toHaveBeenCalled();
     expect(operations.createGrid).not.toHaveBeenCalled();
-    expect(manager.setRuntimeGrid).not.toHaveBeenCalled();
     expect(manager.setRuntimeScore).not.toHaveBeenCalled();
     expect(operations.runSetupStateInitialization).not.toHaveBeenCalled();
     expect((manager as Record<string, unknown>).rankedSetupBlockedUntilSessionReady).toBe(true);
+    expect((manager as Record<string, unknown>).rankedSessionToken).toBe("");
+    expect((manager as Record<string, unknown>).challengeId).toBeNull();
+    expect(manager.setRuntimeGrid).toHaveBeenCalledWith(null);
+    expect(clearRankedBlockedBoardView).toHaveBeenCalledWith(manager);
+  });
+
+  it("allows ranked setup without a seed when the current page does not require ranked seed setup", () => {
+    const manager = createManager();
+    manager.rankPolicy = "ranked";
+    const clearRankedBlockedBoardView = vi.fn();
+    const operations = createOperations({
+      applySetupModeConfig: vi.fn((target: typeof manager) => {
+        target.rankPolicy = "ranked";
+      }),
+      clearRankedBlockedBoardView,
+      hasLegalRankedSetupSeed: vi.fn(() => false),
+      isRankedSeedRequiredForSetup: vi.fn(() => false)
+    });
+
+    setupGame(manager, undefined, {}, operations);
+
+    expect(operations.hasLegalRankedSetupSeed).not.toHaveBeenCalled();
+    expect(operations.ensureSingleModePageLock).toHaveBeenCalledWith(manager);
+    expect(operations.createGrid).toHaveBeenCalledWith(4, 4);
+    expect(manager.setRuntimeGrid).toHaveBeenCalledWith({ id: "grid" });
+    expect(manager.setRuntimeScore).toHaveBeenCalledWith(0);
+    expect(operations.runSetupStateInitialization).toHaveBeenCalledWith(manager, undefined, {});
+    expect((manager as Record<string, unknown>).rankedSetupBlockedUntilSessionReady).toBe(false);
+    expect(clearRankedBlockedBoardView).not.toHaveBeenCalled();
+  });
+
+  it("allows ranked setup without a seed when the host does not need to block unseeded setup", () => {
+    const manager = createManager();
+    manager.rankPolicy = "ranked";
+    const clearRankedBlockedBoardView = vi.fn();
+    const operations = createOperations({
+      applySetupModeConfig: vi.fn((target: typeof manager) => {
+        target.rankPolicy = "ranked";
+      }),
+      clearRankedBlockedBoardView,
+      hasLegalRankedSetupSeed: vi.fn(() => false),
+      shouldBlockRankedSetupWithoutSeed: vi.fn(() => false)
+    });
+
+    setupGame(manager, undefined, {}, operations);
+
+    expect(operations.shouldBlockRankedSetupWithoutSeed).toHaveBeenCalledWith(manager);
+    expect(operations.hasLegalRankedSetupSeed).not.toHaveBeenCalled();
+    expect(operations.ensureSingleModePageLock).toHaveBeenCalledWith(manager);
+    expect(operations.createGrid).toHaveBeenCalledWith(4, 4);
+    expect(manager.setRuntimeGrid).toHaveBeenCalledWith({ id: "grid" });
+    expect(manager.setRuntimeScore).toHaveBeenCalledWith(0);
+    expect(operations.runSetupStateInitialization).toHaveBeenCalledWith(manager, undefined, {});
+    expect((manager as Record<string, unknown>).rankedSetupBlockedUntilSessionReady).toBe(false);
+    expect(clearRankedBlockedBoardView).not.toHaveBeenCalled();
   });
 
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {

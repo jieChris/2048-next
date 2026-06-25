@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { installRankedSessionForMode } from "./support/ranked-session";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
@@ -148,11 +149,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("restart immediately persists the fresh opening seed for reload safety", async ({
     page
   }) => {
-    await page.addInitScript(() => {
-      window.localStorage.clear();
-      window.sessionStorage.clear();
-      window.name = "";
-      window.confirm = () => true;
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      clearSavedState: true,
+      confirmRestart: true,
+      resetStorage: true,
+      seed: 111,
+      token: "restart-seed-token"
     });
 
     const response = await page.goto("/2048.html", {
@@ -183,6 +185,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           ? manager.getFinalBoardMatrix()
           : null;
       return {
+        blocked: !!manager.rankedSetupBlockedUntilSessionReady,
         seed: manager.initialSeed,
         board,
         savedSeed: saved ? saved.initial_seed : null,
@@ -190,8 +193,141 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
 
+    expect(snapshot.blocked).toBe(false);
     expect(snapshot.savedSeed).toBe(snapshot.seed);
     expect(snapshot.savedBoard).toEqual(snapshot.board);
+  });
+
+  test("ranked setup without a legal seed clears visible tiles and keeps movement blocked", async ({
+    page
+  }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      confirmRestart: true,
+      resetStorage: true,
+      seed: 222,
+      token: "blocked-restart-initial-token"
+    });
+
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+
+    await page.waitForFunction(() => document.querySelectorAll(".tile-container .tile").length > 0, null, {
+      timeout: 12_000
+    });
+
+    const snapshot = await page.evaluate(async () => {
+      const manager = (window as any).game_manager;
+      const modeKey = "standard_4x4_pow2_no_undo";
+      window.localStorage.removeItem("ranked_session_active:v1:" + modeKey);
+      window.localStorage.removeItem("ranked_session_prefetch:v1:" + modeKey);
+      (window as any).GAME_CHALLENGE_CONTEXT = null;
+      const beforeMoveHistoryLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+      manager.setup(undefined, { disableStateRestore: true });
+      manager.move(0);
+      return {
+        blocked: !!manager.rankedSetupBlockedUntilSessionReady,
+        gridIsNull: manager.grid === null,
+        moveHistoryLength: Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0,
+        beforeMoveHistoryLength,
+        tileCount: document.querySelectorAll(".tile-container .tile").length
+      };
+    });
+
+    expect(snapshot.blocked).toBe(true);
+    expect(snapshot.gridIsNull).toBe(true);
+    expect(snapshot.moveHistoryLength).toBe(snapshot.beforeMoveHistoryLength);
+    expect(snapshot.tileCount).toBe(0);
+  });
+
+  test("guest ranked setup without an issued seed still creates a non-submittable local board", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+      (window as any).GAME_CHALLENGE_CONTEXT = null;
+    });
+
+    const response = await page.goto("/play.html?mode_key=board_3x3_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      return {
+        blocked: !!manager.rankedSetupBlockedUntilSessionReady,
+        challengeId: manager.challengeId || null,
+        rankedSessionToken: manager.rankedSessionToken || "",
+        hasGrid: !!manager.grid,
+        modeKey: manager.modeKey,
+        tileCount: document.querySelectorAll(".tile-container .tile").length
+      };
+    });
+
+    expect(snapshot).toEqual({
+      blocked: false,
+      challengeId: null,
+      rankedSessionToken: "",
+      hasGrid: true,
+      modeKey: "board_3x3_pow2_no_undo",
+      tileCount: 2
+    });
+  });
+
+  test("authenticated non-4x4 ranked setup without an issued seed still creates a non-submittable local board", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "42");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+      (window as any).GAME_CHALLENGE_CONTEXT = null;
+    });
+    await page.route("**/api/ranked-session/start", async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, code: "SMOKE_SEED_DOWN" })
+      });
+    });
+
+    const response = await page.goto("/play.html?mode_key=board_3x3_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      return {
+        blocked: !!manager.rankedSetupBlockedUntilSessionReady,
+        challengeId: manager.challengeId || null,
+        rankedSessionToken: manager.rankedSessionToken || "",
+        hasGrid: !!manager.grid,
+        modeKey: manager.modeKey,
+        tileCount: document.querySelectorAll(".tile-container .tile").length
+      };
+    });
+
+    expect(snapshot).toEqual({
+      blocked: false,
+      challengeId: null,
+      rankedSessionToken: "",
+      hasGrid: true,
+      modeKey: "board_3x3_pow2_no_undo",
+      tileCount: 2
+    });
   });
 
   test("saved-state restore rejects version-mismatch payload", async ({ page }) => {
@@ -335,6 +471,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("non-practice replay session survives reload and can keep exporting replay", async ({
     page
   }) => {
+    await installRankedSessionForMode(page, "classic_4x4_pow2_undo", {
+      clearSavedState: true,
+      seed: 212,
+      token: "classic-replay-token"
+    });
+
     await page.addInitScript(() => {
       const modeKey = "classic_4x4_pow2_undo";
       window.localStorage.removeItem("savedGameStateByMode:v1:" + modeKey);
@@ -443,6 +585,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("ranked play modes ignore injected local saved-state payloads", async ({ page }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      seed: 313,
+      token: "ignore-local-save-token"
+    });
+
     await page.addInitScript(() => {
       const modeKey = "standard_4x4_pow2_no_undo";
       const payload = {
@@ -757,12 +904,22 @@ test.describe("Legacy Multi-Page Smoke", () => {
       { timeout: 12_000 }
     );
 
-    const liveSnapshot = await page.evaluate(async () => {
+    await page.evaluate(() => {
       const manager = (window as any).game_manager;
       manager.move(2);
       manager.move(0);
       manager.move(2);
-      await new Promise((resolve) => window.setTimeout(resolve, 1800));
+    });
+    await page.waitForFunction(
+      () =>
+        typeof window.localStorage.getItem(
+          "ranked_checkpoint_local_mirror:v1:standard_4x4_pow2_no_undo"
+        ) === "string",
+      { timeout: 8_000 }
+    );
+
+    const liveSnapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
       const board =
         typeof manager.getFinalBoardMatrix === "function"
           ? manager.getFinalBoardMatrix()
@@ -1045,6 +1202,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("ranked home page restores local checkpoint mirror across immediate reload without auth", async ({
     page
   }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      authToken: null,
+      ownerUserId: null,
+      seed: 414,
+      token: "local-mirror-no-auth-token"
+    });
+
     await page.addInitScript(() => {
       window.localStorage.removeItem("2048_auth_token_v1");
       window.localStorage.removeItem("2048_auth_userId_v1");

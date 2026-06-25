@@ -30,6 +30,7 @@
   var RANKED_CHECKPOINT_LOCAL_MIRROR_KEY_PREFIX = "ranked_checkpoint_local_mirror:v1:";
   var RANKED_CHECKPOINT_CLEAR_MARKER_KEY_PREFIX = "ranked_checkpoint_cleared_at:v1:";
   var RANKED_SESSION_ACTIVE_KEY_PREFIX = "ranked_session_active:v1:";
+  var RANKED_SESSION_PREFETCH_KEY_PREFIX = "ranked_session_prefetch:v1:";
   var RANKED_RESTART_SETUP_DEFERRED = { rankedRestartSetupDeferred: true };
 
   function resolveLocalStorage() {
@@ -353,11 +354,6 @@ function shouldAutoLoadOnlineLeaderboard() {
     };
   }
 
-  function resolveActiveRankedSessionToken(modeLike) {
-    var context = resolveRankedSessionContextForMode(modeLike);
-    return toText(context && context.ranked_session_token).trim();
-  }
-
   function shouldClearCurrentManagerRankedCheckpointForRecord(manager, payload) {
     if (!shouldUseRankedCheckpoint(manager)) return false;
     var modeKey = toText(payload && payload.mode_key).trim();
@@ -368,18 +364,35 @@ function shouldAutoLoadOnlineLeaderboard() {
     return currentToken === submittedToken;
   }
 
-  function clearActiveRankedSessionForRecordPayload(payload) {
+  function clearActiveRankedSessionForRecordPayload(payload, manager) {
     var modeKey = toText(payload && payload.mode_key).trim();
     if (!modeKey) return false;
     var submittedToken = toText(payload && payload.ranked_session_token).trim();
-    var activeToken = resolveActiveRankedSessionToken(modeKey);
-    if (submittedToken && activeToken && activeToken !== submittedToken) return false;
-    if (!submittedToken && activeToken) return false;
-    var rankedSessionRuntime = getRankedSessionRuntime();
-    if (rankedSessionRuntime && typeof rankedSessionRuntime.clearActiveSession === "function") {
-      rankedSessionRuntime.clearActiveSession(modeKey);
-      return true;
+    var activeSession = readActiveRankedSessionRecord(modeKey);
+    var activeToken = toText(activeSession && activeSession.ranked_session_token).trim();
+    var managerModeKey = toText(manager && (manager.modeKey || manager.mode)).trim();
+    var managerToken = resolveRankedSessionTokenForManager(manager);
+    if (
+      managerToken &&
+      (!managerModeKey || managerModeKey === modeKey) &&
+      managerToken !== submittedToken
+    ) {
+      mirrorActiveRankedSessionFromManager(manager, modeKey);
+      return false;
     }
+    if (submittedToken && activeToken && activeToken !== submittedToken) return false;
+    if (submittedToken && !activeToken) return false;
+    if (!submittedToken && activeToken) return false;
+    if (submittedToken && hasDistinctPrefetchedRankedSession(modeKey, activeSession)) return false;
+    if (
+      submittedToken &&
+      managerToken === submittedToken &&
+      manager &&
+      (manager.rankedRestartPreparing === true || manager.rankedRestartBlockedUntilSessionReady === true)
+    ) {
+      return false;
+    }
+    removeLocalStorageItem(RANKED_SESSION_ACTIVE_KEY_PREFIX + modeKey);
     if (
       global &&
       global.GAME_CHALLENGE_CONTEXT &&
@@ -389,14 +402,83 @@ function shouldAutoLoadOnlineLeaderboard() {
       if (submittedToken && contextToken && contextToken !== submittedToken) return false;
       if (!submittedToken && contextToken) return false;
       global.GAME_CHALLENGE_CONTEXT = null;
-      return true;
     }
-    return false;
+    return true;
+  }
+
+  function hasDistinctPrefetchedRankedSession(modeKey, activeSession) {
+    var prefetched = readPrefetchedRankedSessionRecord(modeKey);
+    if (!prefetched) return false;
+    var prefetchedToken = toText(prefetched.ranked_session_token).trim();
+    var prefetchedChallengeId = toText(prefetched.challenge_id).trim().toLowerCase();
+    var prefetchedSeed = normalizeRankedSessionSeed(prefetched.seed);
+    if (!prefetchedToken || !prefetchedChallengeId || prefetchedSeed === null) return false;
+    var activeToken = toText(activeSession && activeSession.ranked_session_token).trim();
+    var activeChallengeId = toText(activeSession && activeSession.challenge_id).trim().toLowerCase();
+    var activeSeed = normalizeRankedSessionSeed(activeSession && activeSession.seed);
+    if (activeToken && activeToken === prefetchedToken) return false;
+    if (activeChallengeId && activeChallengeId === prefetchedChallengeId) return false;
+    if (activeSeed !== null && activeSeed === prefetchedSeed) return false;
+    return true;
+  }
+
+  function mirrorActiveRankedSessionFromManager(manager, modeKey) {
+    if (!manager || !modeKey) return false;
+    var managerModeKey = toText(manager.modeKey || manager.mode).trim();
+    if (managerModeKey && managerModeKey !== modeKey) return false;
+    var rankedToken = toText(manager.rankedSessionToken).trim();
+    var challengeId = toText(manager.challengeId).trim().toLowerCase();
+    var seed = normalizeRankedSessionSeed(manager.initialSeed);
+    var context = null;
+    if (
+      global &&
+      global.GAME_CHALLENGE_CONTEXT &&
+      typeof global.GAME_CHALLENGE_CONTEXT === "object" &&
+      !Array.isArray(global.GAME_CHALLENGE_CONTEXT) &&
+      (
+        !toText(global.GAME_CHALLENGE_CONTEXT.mode_key).trim() ||
+        toText(global.GAME_CHALLENGE_CONTEXT.mode_key).trim() === modeKey
+      )
+    ) {
+      context = global.GAME_CHALLENGE_CONTEXT;
+    }
+    if (!rankedToken && context) rankedToken = toText(context.ranked_session_token).trim();
+    if (!challengeId && context) {
+      challengeId = (
+        toText(context.challenge_id).trim() ||
+        toText(context.id).trim()
+      ).toLowerCase();
+    }
+    if (seed === null && context) seed = normalizeRankedSessionSeed(context.seed);
+    if (!rankedToken || !challengeId || seed === null) return false;
+    var nowSec = Math.floor(Date.now() / 1000);
+    writeLocalStorageItem(
+      RANKED_SESSION_ACTIVE_KEY_PREFIX + modeKey,
+      JSON.stringify({
+        mode_key: modeKey,
+        challenge_id: challengeId,
+        seed: seed,
+        ranked_session_token: rankedToken,
+        issued_at: nowSec,
+        exp: nowSec + 3600,
+        owner_user_id: toText(getUserId()).trim() || null,
+        client_received_at_ms: Date.now()
+      })
+    );
+    if (global) {
+      global.GAME_CHALLENGE_CONTEXT = {
+        id: challengeId,
+        mode_key: modeKey,
+        seed: seed,
+        ranked_session_token: rankedToken
+      };
+    }
+    return true;
   }
 
   function cleanupRankedStateAfterRecordSubmit(manager, payload) {
     var shouldClearCheckpoint = shouldClearCurrentManagerRankedCheckpointForRecord(manager, payload);
-    clearActiveRankedSessionForRecordPayload(payload);
+    clearActiveRankedSessionForRecordPayload(payload, manager);
     if (shouldClearCheckpoint) {
       clearRankedCheckpointForManager(manager, { keepalive: true }).catch(function () {});
     }
@@ -1811,10 +1893,10 @@ function shouldAutoLoadOnlineLeaderboard() {
     return normalizeTimestampMs(savedState && savedState.saved_at);
   }
 
-  function readActiveRankedSessionRecord(modeLike) {
+  function readStoredRankedSessionRecord(storagePrefix, modeLike) {
     var modeKey = resolveRankedCheckpointLocalMirrorModeKey(modeLike);
     if (!modeKey) return null;
-    var raw = readLocalStorageItem(RANKED_SESSION_ACTIVE_KEY_PREFIX + modeKey);
+    var raw = readLocalStorageItem(storagePrefix + modeKey);
     if (!raw) return null;
     try {
       var parsed = JSON.parse(raw);
@@ -1826,6 +1908,14 @@ function shouldAutoLoadOnlineLeaderboard() {
     } catch (_err) {
       return null;
     }
+  }
+
+  function readActiveRankedSessionRecord(modeLike) {
+    return readStoredRankedSessionRecord(RANKED_SESSION_ACTIVE_KEY_PREFIX, modeLike);
+  }
+
+  function readPrefetchedRankedSessionRecord(modeLike) {
+    return readStoredRankedSessionRecord(RANKED_SESSION_PREFETCH_KEY_PREFIX, modeLike);
   }
 
   function resolveRankedCheckpointSessionId(checkpointData) {
@@ -2083,13 +2173,14 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!(manager.hasGameStarted || (Array.isArray(manager.moveHistory) && manager.moveHistory.length > 0))) {
       return null;
     }
+    var rankedContext = resolveRankedSubmitContextForManager(manager);
     return {
       mode: resolveLeaderboardMode(manager.modeKey || manager.mode),
       mode_key: toText(manager.modeKey || manager.mode).trim(),
-      ranked_session_token: resolveRankedSessionTokenForManager(manager) || null,
-      challenge_id: resolveRankedChallengeIdForManager(manager) || null,
-      initial_seed: resolveRankedSeedForManager(manager),
-      seed: resolveRankedSeedForManager(manager),
+      ranked_session_token: rankedContext ? rankedContext.token : null,
+      challenge_id: rankedContext ? rankedContext.challengeId : null,
+      initial_seed: rankedContext ? rankedContext.seed : null,
+      seed: rankedContext ? rankedContext.seed : null,
       ranked_verification: buildRankedVerificationPayload(manager),
       client_record_id: resolveManagerClientRecordIdForSubmit(manager) || null,
       duration_ms: resolveManagerDurationMs(manager),
@@ -2669,16 +2760,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     var minStepStats = buildRecordMinStepStats(manager, bestTile);
     var clientRecordId = resolveManagerClientRecordIdForSubmit(manager);
     var rankedContext = resolveRankedSubmitContextForManager(manager);
-    var rankedVerification = rankedContext
-      ? {
-          random_source: "server_seed",
-          replay_format: "v1",
-          challenge_id: rankedContext.challengeId,
-          seed: rankedContext.seed,
-          mode_key: rankedContext.modeKey,
-          ranked_session_token: rankedContext.token
-        }
-      : null;
+    var rankedVerification = buildRankedVerificationPayload(manager);
 
     return {
       mode: modeBucket || toText(manager.mode).trim() || modeKey,

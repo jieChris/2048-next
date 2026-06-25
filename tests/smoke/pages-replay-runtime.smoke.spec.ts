@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
+import { installRankedSessionForMode } from "./support/ranked-session";
 
 const STABLE_SPARSE_CHECKPOINT_REPLAY_TEXT = readFileSync(
   "tests/fixtures/replays/legacy-real-v9-text-replay.txt",
@@ -60,6 +61,15 @@ async function importReplayFileByDropAndConfirm(
     return Array.isArray(manager?.replayMoves) && manager.replayMoves.length > 0;
   });
   await expect(importedFileName).toHaveText(expectedBaseName);
+}
+
+async function installLiveReplaySourceSession(page: Page, modeKey: string, seed: number) {
+  await installRankedSessionForMode(page, modeKey, {
+    clearPrefetch: true,
+    clearSavedState: true,
+    seed,
+    token: `smoke-token-live-replay-${modeKey}-${seed}`
+  });
 }
 
 async function readAndDismissGameDialogAlert(page: Page): Promise<string> {
@@ -724,6 +734,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     browser
   }) => {
     const gamePage = await browser.newPage();
+    await installLiveReplaySourceSession(gamePage, "standard_4x4_pow2_no_undo", 606);
     const gameResponse = await gamePage.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
@@ -790,8 +801,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       { url: "/play.html?mode_key=board_3x3_pow2_no_undo", expectedModeKey: "board_3x3_pow2_no_undo" }
     ];
 
+    let seed = 610;
     for (const testCase of cases) {
       const page = await browser.newPage();
+      await installLiveReplaySourceSession(page, testCase.expectedModeKey, seed);
+      seed += 1;
       const response = await page.goto(testCase.url, {
         waitUntil: "domcontentloaded"
       });
@@ -863,8 +877,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       { url: "/play.html?mode_key=board_3x3_pow2_no_undo", expectedModeKey: "board_3x3_pow2_no_undo" }
     ];
 
+    let seed = 620;
     for (const testCase of cases) {
       const page = await browser.newPage();
+      await installLiveReplaySourceSession(page, testCase.expectedModeKey, seed);
+      seed += 1;
       const response = await page.goto(testCase.url, {
         waitUntil: "domcontentloaded"
       });
@@ -963,6 +980,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("5x5 mode serializes replay as v1 with per-step deltaMs", async ({ page }) => {
+    await installLiveReplaySourceSession(page, "board_5x5_pow2_no_undo", 630);
     const response = await page.goto("/play.html?mode_key=board_5x5_pow2_no_undo", {
       waitUntil: "domcontentloaded"
     });

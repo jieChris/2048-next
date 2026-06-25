@@ -45,6 +45,12 @@ type RestartSeedRuntime = {
     setupOptions?: unknown
   ) => void;
   restartGame: (manager: Record<string, unknown> | null) => void | Promise<void>;
+  restartWithBoard: (
+    manager: Record<string, unknown> | null,
+    board: unknown,
+    modeConfig?: unknown,
+    options?: unknown
+  ) => void;
   resetSetupTimerAndInputState: (manager: Record<string, unknown>) => void;
   resolveRestartConfirmLanguage: (manager: Record<string, unknown> | null) => string;
   resolveSingleModePageTabId: (windowLike: Record<string, unknown> | null) => string;
@@ -122,6 +128,9 @@ function loadRestartSeedRuntime(options?: {
     createFallbackFreshSetupSeed?: (payload: Record<string, unknown>) => number;
     resolveRestartConfirmLanguage?: (manager: Record<string, unknown> | null) => string;
   };
+  resolveManagerDocumentLike?: (manager: Record<string, unknown> | null) => unknown;
+  setBoardFromMatrix?: (manager: Record<string, unknown> | null, board: unknown) => void;
+  getFinalBoardMatrix?: (manager: Record<string, unknown> | null) => unknown;
   singleModePageLockRuntime?: {
     ensureSingleModePageLock?: (
       manager: Record<string, unknown> | null,
@@ -154,6 +163,10 @@ function loadRestartSeedRuntime(options?: {
     clearInterval: vi.fn(),
     Date: { now: dateNow },
     performance: { now: performanceNow },
+    isNonArrayObject: (value: unknown) => !!value && typeof value === "object" && !Array.isArray(value),
+    resolveManagerDocumentLike: options?.resolveManagerDocumentLike,
+    setBoardFromMatrix: options?.setBoardFromMatrix,
+    getFinalBoardMatrix: options?.getFinalBoardMatrix,
     window: options?.windowLike
   } as Record<string, unknown>;
   context.CoreRankedSessionSetupContextRuntime = createRankedSessionSetupContextRuntime();
@@ -213,12 +226,135 @@ describe("core game manager restart seed runtime", () => {
         detectMode: expect.any(Function),
         ensureSingleModePageLock: expect.any(Function),
         handleSingleModePageDuplicate: expect.any(Function),
+        clearRankedBlockedBoardView: expect.any(Function),
+        isRankedSeedRequiredForSetup: expect.any(Function),
+        shouldBlockRankedSetupWithoutSeed: expect.any(Function),
         isNonArrayObject: expect.any(Function),
         resolveSetupModeConfig: expect.any(Function),
         resolveSetupNoXModeConfig: expect.any(Function),
         runSetupStateInitialization: expect.any(Function)
       })
     );
+  });
+
+  it("clears rendered tiles when delegated setup blocks a ranked game without a legal seed", () => {
+    let operations: Record<string, unknown> | null = null;
+    const setupGame = vi.fn((_manager, _inputSeed, _options, runtimeOperations) => {
+      operations = runtimeOperations;
+    });
+    const { runtime } = loadRestartSeedRuntime({
+      setupGameRuntime: {
+        setupGame
+      }
+    });
+    const tileContainer = { id: "tiles" };
+    const manager = {
+      actuator: {
+        clearContainer: vi.fn(),
+        tileContainer
+      }
+    } as Record<string, unknown>;
+
+    runtime.setupGame(manager, undefined, {});
+    expect(operations).not.toBeNull();
+
+    (operations?.clearRankedBlockedBoardView as (target: Record<string, unknown>) => void)(manager);
+
+    expect((manager.actuator as { clearContainer: ReturnType<typeof vi.fn> }).clearContainer).toHaveBeenCalledWith(
+      tileContainer
+    );
+  });
+
+  it("does not require ranked setup seed on replay pages", () => {
+    let operations: Record<string, unknown> | null = null;
+    const setupGame = vi.fn((_manager, _inputSeed, _options, runtimeOperations) => {
+      operations = runtimeOperations;
+    });
+    const replayDocument = {
+      body: {
+        getAttribute: vi.fn((name: string) => (name === "data-page" ? "replay" : ""))
+      },
+      location: {
+        pathname: "/replay.html"
+      }
+    };
+    const resolveManagerDocumentLike = vi.fn(() => replayDocument);
+    const { runtime } = loadRestartSeedRuntime({
+      resolveManagerDocumentLike,
+      setupGameRuntime: {
+        setupGame
+      }
+    });
+    const manager = {} as Record<string, unknown>;
+
+    runtime.setupGame(manager, undefined, {});
+    expect(operations).not.toBeNull();
+
+    const isRequired = operations?.isRankedSeedRequiredForSetup as
+      | ((target: Record<string, unknown>) => boolean)
+      | undefined;
+    expect(isRequired?.(manager)).toBe(false);
+    expect(resolveManagerDocumentLike).toHaveBeenCalledWith(manager);
+  });
+
+  it("only blocks unseeded ranked setup when an auth token is present", () => {
+    let operations: Record<string, unknown> | null = null;
+    const setupGame = vi.fn((_manager, _inputSeed, _options, runtimeOperations) => {
+      operations = runtimeOperations;
+    });
+    const { runtime } = loadRestartSeedRuntime({
+      setupGameRuntime: {
+        setupGame
+      }
+    });
+    const storage = {
+      value: "",
+      getItem: vi.fn(() => storage.value)
+    };
+    const manager = {
+      rankPolicy: "ranked",
+      modeKey: "standard_4x4_pow2_no_undo",
+      width: 4,
+      height: 4,
+      modeConfig: {
+        rank_policy: "ranked",
+        board_width: 4,
+        board_height: 4
+      },
+      getWindowLike: vi.fn(() => ({ localStorage: storage }))
+    } as Record<string, unknown>;
+
+    runtime.setupGame(manager, undefined, {});
+    expect(operations).not.toBeNull();
+
+    const shouldBlock = operations?.shouldBlockRankedSetupWithoutSeed as
+      | ((target: Record<string, unknown>) => boolean)
+      | undefined;
+    expect(shouldBlock?.(manager)).toBe(false);
+
+    storage.value = "smoke-token";
+    expect(shouldBlock?.(manager)).toBe(true);
+
+    manager.modeKey = "board_3x3_pow2_no_undo";
+    manager.width = 3;
+    manager.height = 3;
+    manager.modeConfig = {
+      rank_policy: "ranked",
+      board_width: 3,
+      board_height: 3
+    };
+    expect(shouldBlock?.(manager)).toBe(false);
+
+    manager.rankPolicy = "unranked";
+    manager.modeKey = "capped_4x4_pow2_64_no_undo";
+    manager.width = 4;
+    manager.height = 4;
+    manager.modeConfig = {
+      rank_policy: "unranked",
+      board_width: 4,
+      board_height: 4
+    };
+    expect(shouldBlock?.(manager)).toBe(false);
   });
 
   it("delegates single-mode tab id resolution to the core runtime", () => {
@@ -312,6 +448,36 @@ describe("core game manager restart seed runtime", () => {
     expect(manager.freshSetupSeedCounter).toBe(1);
     expect(cryptoLike.getRandomValues).toHaveBeenCalledTimes(1);
     expect(mathRandom).not.toHaveBeenCalled();
+  });
+
+  it("does not write a board or actuate when ranked restart setup is blocked until a seed is ready", () => {
+    const setBoardFromMatrix = vi.fn();
+    const getFinalBoardMatrix = vi.fn(() => [[0, 0], [0, 0]]);
+    const { runtime } = loadRestartSeedRuntime({ setBoardFromMatrix, getFinalBoardMatrix });
+    const manager = {
+      actuator: {
+        continue: vi.fn()
+      },
+      rankedSetupBlockedUntilSessionReady: false,
+      setup: vi.fn(function (this: Record<string, unknown>) {
+        this.rankedSetupBlockedUntilSessionReady = true;
+      }),
+      actuate: vi.fn(),
+    } as Record<string, unknown>;
+
+    runtime.restartWithBoard(manager, [[2, 0], [0, 0]], null, { preserveSeed: true });
+
+    expect(manager.actuator.continue).toHaveBeenCalledTimes(1);
+    expect(manager.setup).toHaveBeenCalledWith(undefined, {
+      skipStartTiles: true,
+      modeConfig: null,
+      disableStateRestore: true
+    });
+    expect(manager.initialBoardMatrix).toBeUndefined();
+    expect(manager.replayStartBoardMatrix).toBeUndefined();
+    expect(setBoardFromMatrix).not.toHaveBeenCalled();
+    expect(getFinalBoardMatrix).not.toHaveBeenCalled();
+    expect(manager.actuate).not.toHaveBeenCalled();
   });
 
   it("does not repeat fallback fresh seeds without Math.random", () => {
@@ -696,6 +862,30 @@ describe("core game manager restart seed runtime", () => {
 
     expect(runtime.resolveRestartConfirmLanguage(manager)).toBe("en");
     expect(resolveRestartConfirmLanguage).toHaveBeenCalledWith(manager);
+  });
+
+  it("uses the env document helper when restart confirm fallback reads the root language", () => {
+    const documentElement = {
+      getAttribute: vi.fn((name: string) => (name === "data-ui-lang" ? "en-US" : ""))
+    };
+    const resolveManagerDocumentLike = vi.fn(() => ({ documentElement }));
+    const { runtime } = loadRestartSeedRuntime({
+      resolveManagerDocumentLike,
+      restartGameRuntime: {
+        restartGame: vi.fn(),
+        createFallbackFreshSetupSeed: vi.fn()
+      }
+    });
+    const manager = {
+      getWindowLike: vi.fn(() => ({
+        localStorage: {
+          getItem: vi.fn(() => "")
+        }
+      }))
+    } as Record<string, unknown>;
+
+    expect(runtime.resolveRestartConfirmLanguage(manager)).toBe("en");
+    expect(resolveManagerDocumentLike).toHaveBeenCalledWith(manager);
   });
 
   it("delegates setup challenge id resolution to the TypeScript runtime", () => {

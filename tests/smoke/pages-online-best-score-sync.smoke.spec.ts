@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { installRankedSessionForMode } from "./support/ranked-session";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   const modeKey = "standard_4x4_pow2_no_undo";
@@ -6,6 +7,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("authenticated game page syncs account best score into the visible best tile", async ({ page }) => {
     const bestScoreRequests: string[] = [];
+    await installRankedSessionForMode(page, modeKey, {
+      clearPrefetch: true,
+      clearSavedState: true,
+      seed: 604,
+      token: "smoke-token-best-sync"
+    });
 
     await page.route("**/api/user/42/records**", async (route) => {
       bestScoreRequests.push(route.request().url());
@@ -55,6 +62,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("authenticated game page keeps a higher local best score", async ({ page }) => {
+    await installRankedSessionForMode(page, modeKey, {
+      clearPrefetch: true,
+      clearSavedState: true,
+      seed: 605,
+      token: "smoke-token-best-local"
+    });
+
     await page.route("**/api/user/42/records**", async (route) => {
       await route.fulfill({
         status: 200,
