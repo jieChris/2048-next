@@ -33,7 +33,11 @@
 		}
 	}
 
-	@static path_regexp static \.(js|mjs|css|png|jpg|jpeg|gif|webp|avif|svg|ico|woff2?|ttf|otf|wasm)$
+	@code_assets path_regexp code_assets \.(js|mjs|css|wasm)$
+	header @code_assets Cache-Control "no-cache"
+	header @code_assets Cloudflare-CDN-Cache-Control "public, max-age=300, stale-while-revalidate=300"
+
+	@static path_regexp static \.(png|jpg|jpeg|gif|webp|avif|svg|ico|woff2?|ttf|otf)$
 	header @static Cache-Control "public, max-age=31536000, immutable"
 
 	@html path_regexp html ^(?:/|.*\.(?:html|webmanifest))$

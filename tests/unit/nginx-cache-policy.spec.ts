@@ -2,14 +2,14 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("self-hosted nginx cache policy", () => {
-  it("serves immutable static assets and short-cached HTML without no-store", () => {
+  it("revalidates fixed-name code assets while long-caching media assets", () => {
     const config = readFileSync("deploy/nginx/2048-next.nginx.conf.example", "utf8");
 
     expect(config).toContain("root /usr/share/nginx/html;");
     expect(config).toContain("gzip on;");
     expect(config).not.toContain("no-store");
-    expect(config).not.toContain("no-cache");
-    expect(config).toMatch(/location\s+~\*\s+\\\.\(\?:js\|mjs\|css[\s\S]*?max-age=31536000,\s*immutable/);
+    expect(config).toMatch(/location\s+~\*\s+\\\.\(\?:js\|mjs\|css\|wasm\)[\s\S]*?Cache-Control "no-cache"/);
+    expect(config).toMatch(/location\s+~\*\s+\\\.\(\?:png\|jpg\|jpeg[\s\S]*?max-age=31536000,\s*immutable/);
     expect(config).toMatch(/location\s+~\*\s+\\\.\(\?:html\|webmanifest\)[\s\S]*?s-maxage=300/);
     expect(config).toContain("stale-while-revalidate=300");
   });
