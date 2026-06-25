@@ -582,7 +582,8 @@ HTMLActuator.prototype.resolveEndMessageLanguage = function () {
   }
   if (typeof window !== "undefined" && window.localStorage) {
     try {
-      var fromStorage = String(window.localStorage.getItem("ui_language_v1") || "").trim().toLowerCase();
+      var storage = window.localStorage;
+      var fromStorage = String(storage.getItem("ui_language_v1") || "").trim().toLowerCase();
       if (fromStorage.indexOf("en") === 0) return "en";
       if (fromStorage.indexOf("zh") === 0) return "zh";
     } catch (_err3) {}
