@@ -58,7 +58,7 @@ describe("home family bootstrap ranked session ordering", () => {
 
     expect(loadCalls).toEqual([
       ["./js/core_game_manager_replay_helpers_runtime.js?v=20260617-replay-compat"],
-      ["./js/home_standard_startup_bundle.js?v=20260622-game-dialog"]
+      ["./js/home_standard_startup_bundle.js?v=20260625-ranked-cache"]
     ]);
   });
 

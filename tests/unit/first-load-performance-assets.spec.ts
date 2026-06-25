@@ -6,7 +6,7 @@ describe("first-load performance assets", () => {
     const html = readFileSync("2048.html", "utf8");
 
     expect(html).toContain(
-      '<link rel="preload" href="js/home_standard_startup_bundle.js?v=20260622-game-dialog" as="script">'
+      '<link rel="preload" href="js/home_standard_startup_bundle.js?v=20260625-ranked-cache" as="script">'
     );
     expect(html).not.toContain("core_game_manager_replay_helpers_runtime.js");
     expect(html).not.toContain("home_standard_deferred_bundle");

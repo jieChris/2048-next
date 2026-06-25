@@ -49,7 +49,7 @@
   }
 
   function withJsPath(fileName) {
-    return "js/" + fileName + "?v=20260606-nomodule1";
+    return "js/" + fileName + "?v=20260625-ranked-cache";
   }
 
   function loadScript(fileName, done) {

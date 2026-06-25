@@ -134,8 +134,8 @@ const UI_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
   "index-tail",
   "i18n"
 ]);
-const INDEX_STARTUP_BUNDLE_URL = "./js/home_standard_startup_bundle.js?v=20260622-game-dialog";
-const INDEX_DEFERRED_BUNDLE_URL = "./js/home_standard_deferred_bundle.js?v=20260622-game-dialog";
+const INDEX_STARTUP_BUNDLE_URL = "./js/home_standard_startup_bundle.js?v=20260625-ranked-cache";
+const INDEX_DEFERRED_BUNDLE_URL = "./js/home_standard_deferred_bundle.js?v=20260625-ranked-cache";
 
 function readNightBackgroundPreference(): boolean {
   if (typeof window === "undefined") {
