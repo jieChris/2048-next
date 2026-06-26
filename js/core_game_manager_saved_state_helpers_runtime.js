@@ -891,7 +891,6 @@ function resolveSavedTimerFixedRowVisibilityState(row) {
   }
   return state;
 }
-
 function buildSavedTimerFixedRowEntry(row, timerEl) {
   var legendState = resolveSavedTimerFixedRowLegendState(row);
   var visibilityState = resolveSavedTimerFixedRowVisibilityState(row);
@@ -917,7 +916,6 @@ function collectSavedTimerFixedRowsState(manager) {
   }
   return timerFixedRowsState;
 }
-
 function isSavedDynamicTimerRowElement(row) {
   return !!(row && row.classList && row.classList.contains("timer-row-item"));
 }
@@ -1015,7 +1013,6 @@ function resolveSavedStateSecondaryPlacementDiagnosticsEntry(manager) {
   }
   return null;
 }
-
 function isSavedStateDiagnosticsIndexEntry(value) {
   if (!isNonArrayObject(value)) return false;
   if (!(typeof value.key === "string" && value.key)) return false;
@@ -1038,7 +1035,6 @@ function normalizeSavedStateDiagnosticsIndexEntries(entries) {
   }
   return normalized;
 }
-
 function buildSavedGameStateDiagnosticsPayload(manager) {
   var entries = [];
   var secondaryPlacementEntry = resolveSavedStateSecondaryPlacementDiagnosticsEntry(manager);

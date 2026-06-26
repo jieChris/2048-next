@@ -345,6 +345,17 @@ function isResumableSavedStatePayload(payload: Record<string, unknown> | null, m
   return Array.isArray(payload.board);
 }
 
+function isRankedBoundSavedStatePayload(payload: Record<string, unknown> | null, modeKey: string): boolean {
+  if (!payload) return false;
+  if (!isResumableSavedStatePayload(payload, modeKey)) return false;
+  return (
+    typeof payload.ranked_session_token === "string" &&
+    payload.ranked_session_token.trim().length > 0 &&
+    typeof payload.challenge_id === "string" &&
+    payload.challenge_id.trim().length > 0
+  );
+}
+
 function hasResumableLocalSavedStateForMode(
   windowLike: RankedSessionWindowLike,
   modeKey: string
@@ -361,6 +372,25 @@ function hasResumableLocalSavedStateForMode(
       key
     });
     return isResumableSavedStatePayload(normalizeSavedStatePayload(raw), modeKey);
+  });
+}
+
+function hasRankedBoundLocalSavedStateForMode(
+  windowLike: RankedSessionWindowLike,
+  modeKey: string
+): boolean {
+  const storageLike = resolveLocalStorage(windowLike);
+  if (!storageLike) return false;
+  const keys = [
+    `${SAVED_GAME_STATE_STORAGE_KEY_PREFIX}${modeKey}`,
+    `${SAVED_GAME_STATE_LITE_STORAGE_KEY_PREFIX}${modeKey}`
+  ];
+  return keys.some((key) => {
+    const raw = safeReadStorageItem({
+      storageLike,
+      key
+    });
+    return isRankedBoundSavedStatePayload(normalizeSavedStatePayload(raw), modeKey);
   });
 }
 
@@ -714,12 +744,20 @@ export async function bootstrapRankedSessionForHomeFamilyPage(
   let activeContext = runtime.getCurrentContext(modeKey);
   if (!activeContext) {
     if (hasResumableLocalSavedStateForMode(windowLike, modeKey)) {
-      await runtime.ensurePrefetch(modeKey);
-      return;
-    }
-    const prefetchedReady = await runtime.ensurePrefetch(modeKey);
-    if (prefetchedReady && runtime.promotePrefetchedSession(modeKey)) {
-      activeContext = runtime.getCurrentContext(modeKey);
+      if (hasRankedBoundLocalSavedStateForMode(windowLike, modeKey)) {
+        await runtime.ensurePrefetch(modeKey);
+        return;
+      }
+      if (await runtime.startNextSession(modeKey)) {
+        activeContext = runtime.getCurrentContext(modeKey);
+      } else {
+        await runtime.ensurePrefetch(modeKey);
+      }
+    } else {
+      const prefetchedReady = await runtime.ensurePrefetch(modeKey);
+      if (prefetchedReady && runtime.promotePrefetchedSession(modeKey)) {
+        activeContext = runtime.getCurrentContext(modeKey);
+      }
     }
   }
   if (activeContext) windowLike.GAME_CHALLENGE_CONTEXT = activeContext;

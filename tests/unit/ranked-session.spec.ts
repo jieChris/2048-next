@@ -512,4 +512,66 @@ describe("ranked session runtime", () => {
       seed: 111
     });
   });
+
+  it("activates a ranked session after login when only guest local progress exists", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      `savedGameStateByMode:v1:${MODE_KEY}`,
+      JSON.stringify({
+        v: 1,
+        mode_key: MODE_KEY,
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        board: [
+          [2, 0, 0, 0],
+          [0, 4, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        over: false,
+        initial_seed: 111
+      })
+    );
+    const fetchImpl = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: createSession({
+            challenge_id: "ranked-after-login",
+            seed: 2468,
+            ranked_session_token: "ranked-after-login-token"
+          })
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    });
+    const windowLike = createWindowLike(storage, fetchImpl) as Window & {
+      addEventListener: (type: string, listener: (eventLike?: { key?: string }) => void) => void;
+      setTimeout: (handler: () => void, timeout?: number) => number;
+    };
+    windowLike.addEventListener = vi.fn();
+    windowLike.setTimeout = vi.fn(() => 1);
+    const previousWindow = (globalThis as { window?: unknown }).window;
+    (globalThis as { window?: unknown }).window = windowLike;
+
+    try {
+      await bootstrapRankedSessionForHomeFamilyPage("index");
+      await flushMicrotasks();
+    } finally {
+      (globalThis as { window?: unknown }).window = previousWindow;
+    }
+
+    expect(JSON.parse(storage.getItem(ACTIVE_KEY) || "{}")).toMatchObject({
+      ranked_session_token: "ranked-after-login-token",
+      seed: 2468
+    });
+    expect(storage.getItem(PREFETCH_KEY)).toBeNull();
+    expect((windowLike as Window & { GAME_CHALLENGE_CONTEXT?: unknown }).GAME_CHALLENGE_CONTEXT).toMatchObject({
+      id: "ranked-after-login",
+      mode_key: MODE_KEY,
+      ranked_session_token: "ranked-after-login-token",
+      seed: 2468
+    });
+  });
 });
