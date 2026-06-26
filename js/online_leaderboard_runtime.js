@@ -1408,7 +1408,6 @@ function shouldAutoLoadOnlineLeaderboard() {
       rankTile.__timerLeaderboardSelfRankBreakoutEasterEggBinding = runtime.bindBreakoutEasterEgg(rankTile, {
         gameUrl: BREAKOUT_EASTER_EGG_GAME_URL,
         enableClickEffect: true,
-        logoSrc: "meta/favicon.svg?v=20260606-fillframe",
         logoAlt: "2048",
         triggerCount: BREAKOUT_EASTER_EGG_TRIGGER_COUNT
       }) || true;

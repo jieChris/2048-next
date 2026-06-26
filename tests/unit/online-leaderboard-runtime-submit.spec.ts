@@ -938,11 +938,14 @@ describe("online leaderboard terminal submission", () => {
       expect.objectContaining({
         gameUrl: "./easter-eggs/breakout/index.html",
         enableClickEffect: true,
-        logoSrc: "meta/favicon.svg?v=20260606-fillframe",
         logoAlt: "2048",
         triggerCount: 19
       })
     );
+    const bindOptions = (
+      runtime.windowLike.CoreBreakoutEasterEggRuntime.bindBreakoutEasterEgg as ReturnType<typeof vi.fn>
+    ).mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(bindOptions).not.toHaveProperty("logoSrc");
     expect(runtime.windowLike.CoreBreakoutEasterEggRuntime.bindBreakoutEasterEgg).not.toHaveBeenCalledWith(
       firstRankTile,
       expect.anything()
