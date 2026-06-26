@@ -66,27 +66,80 @@ body {
   display: none !important;
 }
 
+.breakout-drop-tile_2,
 .breakout-drop-expand {
   --breakout-drop-tile-value: "2";
   --breakout-drop-tile-background: #eee4da;
   --breakout-drop-tile-color: #776e65;
 }
 
+.breakout-drop-tile_4,
 .breakout-drop-split {
   --breakout-drop-tile-value: "4";
   --breakout-drop-tile-background: #ede0c8;
   --breakout-drop-tile-color: #776e65;
 }
 
+.breakout-drop-tile_8,
 .breakout-drop-triple {
   --breakout-drop-tile-value: "8";
   --breakout-drop-tile-background: #f2b179;
   --breakout-drop-tile-color: #f9f6f2;
 }
 
+.breakout-drop-tile_16,
 .breakout-drop-shield {
   --breakout-drop-tile-value: "16";
   --breakout-drop-tile-background: #f59563;
   --breakout-drop-tile-color: #f9f6f2;
   --breakout-drop-tile-font-size: 12px;
+}
+
+.breakout-drop-tile_32 {
+  --breakout-drop-tile-value: "32";
+  --breakout-drop-tile-background: #f67c5f;
+  --breakout-drop-tile-color: #f9f6f2;
+  --breakout-drop-tile-font-size: 12px;
+}
+
+.breakout-drop-tile_64 {
+  --breakout-drop-tile-value: "64";
+  --breakout-drop-tile-background: #f65e3b;
+  --breakout-drop-tile-color: #f9f6f2;
+  --breakout-drop-tile-font-size: 12px;
+}
+
+.breakout-drop-tile_128 {
+  --breakout-drop-tile-value: "128";
+  --breakout-drop-tile-background: #edcf72;
+  --breakout-drop-tile-color: #f9f6f2;
+  --breakout-drop-tile-font-size: 10px;
+}
+
+.breakout-drop-tile_256 {
+  --breakout-drop-tile-value: "256";
+  --breakout-drop-tile-background: #edcc61;
+  --breakout-drop-tile-color: #f9f6f2;
+  --breakout-drop-tile-font-size: 10px;
+}
+
+.breakout-drop-tile_512 {
+  --breakout-drop-tile-value: "512";
+  --breakout-drop-tile-background: #edc850;
+  --breakout-drop-tile-color: #f9f6f2;
+  --breakout-drop-tile-font-size: 10px;
+}
+
+.breakout-drop-tile_1024 {
+  --breakout-drop-tile-value: "1024";
+  --breakout-drop-tile-background: #edc53f;
+  --breakout-drop-tile-color: #f9f6f2;
+  --breakout-drop-tile-font-size: 8px;
+}
+
+.breakout-drop-tile_2048 {
+  --breakout-drop-tile-value: "2048";
+  --breakout-drop-tile-background: #edc22e;
+  --breakout-drop-tile-color: #f9f6f2;
+  --breakout-drop-tile-font-size: 8px;
 }

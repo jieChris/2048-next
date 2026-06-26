@@ -83,6 +83,17 @@ class FakeElement {
       if (selector === "[data-breakout-easter-egg-overlay=\"1\"]") {
         return node.getAttribute("data-breakout-easter-egg-overlay") === "1";
       }
+      if (
+        selector === "link[rel~=\"icon\"][href]" ||
+        selector === "link[rel=\"icon\"][href]"
+      ) {
+        const rel = node.getAttribute("rel") || "";
+        return (
+          node.tagName.toLowerCase() === "link" &&
+          rel.split(/\s+/).includes("icon") &&
+          !!node.getAttribute("href")
+        );
+      }
       if (selector === ".breakout-easter-egg-frame") {
         return node.classList.contains("breakout-easter-egg-frame");
       }
@@ -107,15 +118,19 @@ class FakeElement {
 
 function createDocumentLike() {
   const body = new FakeElement("body");
+  const head = new FakeElement("head");
   const documentElement = new FakeElement("html");
+  documentElement.appendChild(head);
+  documentElement.appendChild(body);
   return {
     body,
+    head,
     documentElement,
     createElement(tagName: string) {
       return new FakeElement(tagName);
     },
     querySelector(selector: string) {
-      return body.querySelector(selector);
+      return documentElement.querySelector(selector);
     }
   };
 }
@@ -186,7 +201,7 @@ describe("breakout easter egg", () => {
       expect.objectContaining({
         root: target,
         particleKind: "image",
-        imageSrc: "meta/favicon.svg?v=20260606-fillframe",
+        imageSrc: "./favicon.ico",
         imageAlt: "2048",
         imageBurst: true,
         cleanupTimeoutMs: 1200,
@@ -331,10 +346,43 @@ describe("breakout easter egg", () => {
     expect(documentLike.body.querySelector("[data-breakout-easter-egg-overlay=\"1\"]")).toBeNull();
   });
 
-  it("passes fallback logo metadata to the burst effect", () => {
+  it("reads fallback logo metadata from the current favicon link", () => {
     const target = new FakeElement("button");
     const documentLike = createDocumentLike();
     const windowLike = createWindowLike();
+    const favicon = new FakeElement("link");
+    favicon.setAttribute("rel", "shortcut icon");
+    favicon.setAttribute("href", "/assets/favicon-current.svg?v=20260626");
+    documentLike.head.appendChild(favicon);
+
+    bindBreakoutEasterEgg(target, {
+      documentLike,
+      windowLike,
+      triggerCount: 1,
+      logoAlt: "custom"
+    });
+
+    target.dispatch("click");
+
+    expect(windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect).toHaveBeenCalledWith({
+      root: target,
+      particleKind: "image",
+      imageSrc: "/assets/favicon-current.svg?v=20260626",
+      imageAlt: "custom",
+      imageBurst: true,
+      cleanupTimeoutMs: 1200,
+      onComplete: expect.any(Function)
+    });
+  });
+
+  it("lets an explicit logo source override the current favicon link", () => {
+    const target = new FakeElement("button");
+    const documentLike = createDocumentLike();
+    const windowLike = createWindowLike();
+    const favicon = new FakeElement("link");
+    favicon.setAttribute("rel", "icon");
+    favicon.setAttribute("href", "/assets/favicon-current.svg");
+    documentLike.head.appendChild(favicon);
 
     bindBreakoutEasterEgg(target, {
       documentLike,

@@ -22,12 +22,33 @@ describe("breakout easter egg assets", () => {
     const bridgeCss = readFileSync(path.join(BREAKOUT_ROOT, "host-bridge.css"), "utf8");
     expect(bridgeCss).toContain(".modal-overlay.breakout-overlay");
     expect(bridgeCss).toContain(".breakout-drop-expand");
-    expect(bridgeCss).toContain('--breakout-drop-tile-value: "2"');
-    expect(bridgeCss).toContain('--breakout-drop-tile-value: "4"');
-    expect(bridgeCss).toContain('--breakout-drop-tile-value: "8"');
-    expect(bridgeCss).toContain('--breakout-drop-tile-value: "16"');
+    for (const tileValue of ["2", "4", "8", "16", "32", "64", "128", "256", "512", "1024", "2048"]) {
+      expect(bridgeCss).toContain(`--breakout-drop-tile-value: "${tileValue}"`);
+      expect(bridgeCss).toContain(`.breakout-drop-tile_${tileValue}`);
+    }
     expect(bridgeCss).toContain(".breakout-drop::before");
     expect(bridgeCss).toContain(".breakout-drop-icon");
+    const builtAssetText = assets
+      .filter((fileName) => fileName.endsWith(".js") || fileName.endsWith(".css"))
+      .map((fileName) => readFileSync(path.join(assetsPath, fileName), "utf8"))
+      .join("\n");
+    expect(builtAssetText).toContain("breakout-drop-count-tile");
+    expect(builtAssetText).toContain("breakout-drop-count-tile-expand");
+    expect(builtAssetText).toContain("breakout-drop-count-tile-split");
+    expect(builtAssetText).toContain("breakout-drop-count-tile-triple");
+    expect(builtAssetText).toContain("breakout-drop-count-tile-shield");
+    for (const tileValue of ["2", "4", "8", "16", "32", "64", "128", "256", "512", "1024", "2048"]) {
+      expect(builtAssetText).toContain(`"${tileValue}"`);
+      expect(builtAssetText).toContain(`tile_${tileValue}`);
+      expect(builtAssetText).toContain(`breakout-drop-tile_${tileValue}`);
+      expect(builtAssetText).toContain(`breakout-drop-count-tile-tile_${tileValue}`);
+    }
+    expect(builtAssetText).toContain("breakout-mobile-controls");
+    expect(builtAssetText).toContain("breakout-mobile-launch-btn");
+    expect(builtAssetText).toContain("breakout-mobile-move-btn");
+    expect(builtAssetText).toContain("onPointerDown");
+    expect(builtAssetText).toContain("onPointerUp");
+    expect(builtAssetText).toContain("onPointerCancel");
     const bridgeScript = readFileSync(path.join(BREAKOUT_ROOT, "host-bridge.js"), "utf8");
     expect(bridgeScript).toContain("2048-next-breakout-easter-egg");
     expect(bridgeScript).toContain('closestElement(target, ".breakout-window-btn")');

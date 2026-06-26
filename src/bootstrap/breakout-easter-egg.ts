@@ -75,7 +75,7 @@ export interface BreakoutEasterEggRuntimeInstallOptions {
 
 const DEFAULT_GAME_URL = "./easter-eggs/breakout/index.html";
 const DEFAULT_LOGO_ALT = "2048";
-const DEFAULT_LOGO_SRC = "meta/favicon.svg?v=20260606-fillframe";
+const DEFAULT_LOGO_SRC = "./favicon.ico";
 const DEFAULT_ENABLE_CLICK_EFFECT = false;
 const DEFAULT_TRIGGER_COUNT = 19;
 const DEFAULT_RESET_TIMEOUT_MS = 1500;
@@ -100,6 +100,25 @@ function resolveWindowLike(options: BreakoutEasterEggOptions): BreakoutEasterEgg
 
 function resolveText(value: string | null | undefined, fallback: string): string {
   return typeof value === "string" && value ? value : fallback;
+}
+
+function resolveCurrentFaviconHref(
+  documentLike: BreakoutEasterEggDocumentLike | null
+): string | null {
+  if (!documentLike || typeof documentLike.querySelector !== "function") return null;
+  try {
+    const icon = documentLike.querySelector('link[rel~="icon"][href]');
+    const href = icon && typeof icon.getAttribute === "function" ? icon.getAttribute("href") : null;
+    return typeof href === "string" && href ? href : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function resolveLogoSrc(options: BreakoutEasterEggOptions): string {
+  const explicitLogoSrc = resolveText(options.logoSrc, "");
+  if (explicitLogoSrc) return explicitLogoSrc;
+  return resolveCurrentFaviconHref(resolveDocumentLike(options)) || DEFAULT_LOGO_SRC;
 }
 
 function resolvePositiveInteger(value: number | null | undefined, fallback: number): number {
@@ -464,7 +483,7 @@ export function bindBreakoutEasterEgg(
         const particle = flyingRuntime.triggerFlyingClickEffect({
           root: target || null,
           particleKind: "image",
-          imageSrc: resolveText(options.logoSrc, DEFAULT_LOGO_SRC),
+          imageSrc: resolveLogoSrc(options),
           imageAlt: resolveText(options.logoAlt, DEFAULT_LOGO_ALT),
           imageBurst: true,
           cleanupTimeoutMs: 1200,
