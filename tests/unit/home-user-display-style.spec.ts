@@ -24,7 +24,18 @@ describe("home user display style", () => {
   it("uses a fresh stylesheet cache key on the main game page", () => {
     const html = readFileSync("2048.html", "utf8");
 
-    expect(html).toContain("style/main.css?v=20260623-leaderboard-rank");
+    expect(html).toContain("style/main.css?v=20260626-breakout-window-controls");
+    expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-burst");
+    expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-favicon");
+    expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-fast");
+    expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-continuous");
+    expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-rollback");
+    expect(html).not.toContain("style/main.css?v=20260625-flying-tiles-smooth");
+    expect(html).not.toContain("style/main.css?v=20260625-breakout-easter-egg");
+    expect(html).not.toContain('"style/main.css?v=20260625-flying-tiles"');
+    expect(html).not.toContain("style/main.css?v=20260625-rank-tile-no-select");
+    expect(html).not.toContain("style/main.css?v=20260625-rank-tile-pointer");
+    expect(html).not.toContain("style/main.css?v=20260623-leaderboard-rank");
     expect(html).not.toContain("style/main.css?v=20260608-toolkit-align");
     expect(html).not.toContain("style/main.css?v=20260607-userdisplay");
   });

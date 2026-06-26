@@ -824,6 +824,198 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(restoredSnapshot.moveHistoryLength).toBeGreaterThanOrEqual(liveSnapshot.moveHistoryLength);
   });
 
+  test("ranked play modes keep local saved progress when the active ranked session expires", async ({
+    page
+  }) => {
+    const modeKey = "standard_4x4_pow2_no_undo";
+    let sessionRequestCount = 0;
+
+    await page.route("**/api/ranked-checkpoint**", async (route) => {
+      const request = route.request();
+      if (request.method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: null
+          })
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          verified: true,
+          data: null
+        })
+      });
+    });
+
+    await page.route("**/api/ranked-session/start", async (route) => {
+      sessionRequestCount += 1;
+      const nowSec = Math.floor(Date.now() / 1000);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            mode_key: modeKey,
+            challenge_id: `expired-local-prefetch-${sessionRequestCount}`,
+            seed: 800 + sessionRequestCount,
+            ranked_session_token: `expired-local-prefetch-token-${sessionRequestCount}`,
+            issued_at: nowSec,
+            exp: nowSec + 3600
+          }
+        })
+      });
+    });
+
+    await page.addInitScript((activeModeKey) => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "1");
+      window.localStorage.setItem("2048_auth_nickname_v1", "SmokeUser");
+      if (!window.sessionStorage.getItem("__smoke_ranked_expired_saved_state_resume_reset__")) {
+        window.localStorage.setItem(
+          "ranked_session_active:v1:" + activeModeKey,
+          JSON.stringify({
+            mode_key: activeModeKey,
+            challenge_id: "expired-local-active",
+            seed: 717,
+            ranked_session_token: "expired-local-active-token",
+            issued_at: nowSec,
+            exp: nowSec + 3600,
+            owner_user_id: "1"
+          })
+        );
+        window.localStorage.removeItem("ranked_session_prefetch:v1:" + activeModeKey);
+        window.localStorage.removeItem("savedGameStateByMode:v1:" + activeModeKey);
+        window.localStorage.removeItem("savedGameStateLiteByMode:v1:" + activeModeKey);
+        window.name = "";
+        window.sessionStorage.setItem("__smoke_ranked_expired_saved_state_resume_reset__", "1");
+      }
+    }, modeKey);
+
+    const response = await page.goto(`/play.html?mode_key=${encodeURIComponent(modeKey)}`, {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Initial ranked play response should exist").not.toBeNull();
+    expect(response?.ok(), "Initial ranked play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+
+    const liveSnapshot = await page.evaluate((activeModeKey) => {
+      const manager = (window as any).game_manager;
+      const trySuccessfulMove = (): boolean => {
+        const startLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+        for (const direction of [0, 1, 2, 3]) {
+          manager.move(direction);
+          const nextLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+          if (nextLength > startLength) return true;
+        }
+        return false;
+      };
+      const movedFirst = trySuccessfulMove();
+      const movedSecond = trySuccessfulMove();
+      const save = (window as any).saveGameState;
+      if (typeof save === "function") save(manager, { force: true });
+      const raw = window.localStorage.getItem("savedGameStateByMode:v1:" + activeModeKey);
+      const nowSec = Math.floor(Date.now() / 1000);
+      window.localStorage.setItem(
+        "ranked_session_active:v1:" + activeModeKey,
+        JSON.stringify({
+          mode_key: activeModeKey,
+          challenge_id: "expired-local-active",
+          seed: 717,
+          ranked_session_token: "expired-local-active-token",
+          issued_at: nowSec - 7200,
+          exp: nowSec - 1,
+          owner_user_id: "1"
+        })
+      );
+      window.localStorage.removeItem("ranked_session_prefetch:v1:" + activeModeKey);
+      return {
+        board: manager.getFinalBoardMatrix(),
+        score: Number(manager.score || 0),
+        seed: Number(manager.initialSeed),
+        rankedSessionToken: String(manager.rankedSessionToken || ""),
+        movedFirst,
+        movedSecond,
+        moveHistoryLength: Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0,
+        hasSavedPayload: typeof raw === "string" && raw.length > 0
+      };
+    }, modeKey);
+
+    expect(liveSnapshot.hasSavedPayload).toBe(true);
+    expect(liveSnapshot.movedFirst).toBe(true);
+    expect(liveSnapshot.movedSecond).toBe(true);
+    expect(liveSnapshot.moveHistoryLength).toBeGreaterThan(0);
+    expect(liveSnapshot.seed).toBe(717);
+    expect(liveSnapshot.rankedSessionToken).toBe("expired-local-active-token");
+
+    const reloadResponse = await page.reload({ waitUntil: "domcontentloaded" });
+    expect(reloadResponse, "Reloaded ranked play response should exist").not.toBeNull();
+    expect(reloadResponse?.ok(), "Reloaded ranked play response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+    await page.waitForFunction(
+      () => {
+        const manager = (window as any).game_manager;
+        return (
+          !!manager &&
+          manager.rankCheckpointRestorePending !== true &&
+          manager.needsRankedCheckpointRestore !== true
+        );
+      },
+      { timeout: 12_000 }
+    );
+
+    const restoredSnapshot = await page.evaluate((activeModeKey) => {
+      const manager = (window as any).game_manager;
+      const activeRaw = window.localStorage.getItem("ranked_session_active:v1:" + activeModeKey);
+      let active: Record<string, unknown> | null = null;
+      try {
+        active = activeRaw ? (JSON.parse(activeRaw) as Record<string, unknown>) : null;
+      } catch (_err) {
+        active = null;
+      }
+      const prefetchRaw = window.localStorage.getItem("ranked_session_prefetch:v1:" + activeModeKey);
+      let prefetch: Record<string, unknown> | null = null;
+      try {
+        prefetch = prefetchRaw ? (JSON.parse(prefetchRaw) as Record<string, unknown>) : null;
+      } catch (_err) {
+        prefetch = null;
+      }
+      return {
+        board: manager.getFinalBoardMatrix(),
+        score: Number(manager.score || 0),
+        seed: Number(manager.initialSeed),
+        rankedSessionToken: String(manager.rankedSessionToken || ""),
+        moveHistoryLength: Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0,
+        hasSavedPayload: !!window.localStorage.getItem("savedGameStateByMode:v1:" + activeModeKey),
+        activeRaw,
+        activeToken: String(active?.ranked_session_token || ""),
+        activeSeed: Number(active?.seed || 0),
+        prefetchedToken: String(prefetch?.ranked_session_token || "")
+      };
+    }, modeKey);
+
+    expect(restoredSnapshot.board).toEqual(liveSnapshot.board);
+    expect(restoredSnapshot.score).toBe(liveSnapshot.score);
+    expect(restoredSnapshot.seed).toBe(liveSnapshot.seed);
+    expect(restoredSnapshot.rankedSessionToken).toBe(liveSnapshot.rankedSessionToken);
+    expect(restoredSnapshot.moveHistoryLength).toBeGreaterThanOrEqual(liveSnapshot.moveHistoryLength);
+    expect(restoredSnapshot.hasSavedPayload).toBe(true);
+    expect(restoredSnapshot.activeRaw).not.toBeNull();
+    expect(restoredSnapshot.activeToken).toBe("expired-local-active-token");
+    expect(restoredSnapshot.activeSeed).toBe(717);
+    expect(restoredSnapshot.prefetchedToken).toContain("expired-local-prefetch-token");
+  });
+
   test("ranked play modes restore local checkpoint mirror instead of local injected payloads", async ({
     page
   }) => {

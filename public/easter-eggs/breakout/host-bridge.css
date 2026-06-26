@@ -1,0 +1,92 @@
+html,
+body,
+#root {
+  background: transparent !important;
+}
+
+body {
+  background: transparent !important;
+}
+
+.shell {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.console-panel {
+  display: none !important;
+}
+
+.modal-overlay.breakout-overlay {
+  background: transparent !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.breakout-overlay {
+  padding: 0 !important;
+}
+
+.breakout-drop {
+  --breakout-drop-tile-value: "2";
+  --breakout-drop-tile-background: #eee4da;
+  --breakout-drop-tile-color: #776e65;
+  --breakout-drop-tile-shadow: none;
+  --breakout-drop-tile-font-size: 14px;
+
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.breakout-drop::before {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--breakout-drop-tile-color);
+  background: var(--breakout-drop-tile-background);
+  box-shadow: var(--breakout-drop-tile-shadow);
+  content: var(--breakout-drop-tile-value);
+  font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: var(--breakout-drop-tile-font-size);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
+  text-shadow: none;
+}
+
+.breakout-drop-icon {
+  display: none !important;
+}
+
+.breakout-drop-expand {
+  --breakout-drop-tile-value: "2";
+  --breakout-drop-tile-background: #eee4da;
+  --breakout-drop-tile-color: #776e65;
+}
+
+.breakout-drop-split {
+  --breakout-drop-tile-value: "4";
+  --breakout-drop-tile-background: #ede0c8;
+  --breakout-drop-tile-color: #776e65;
+}
+
+.breakout-drop-triple {
+  --breakout-drop-tile-value: "8";
+  --breakout-drop-tile-background: #f2b179;
+  --breakout-drop-tile-color: #f9f6f2;
+}
+
+.breakout-drop-shield {
+  --breakout-drop-tile-value: "16";
+  --breakout-drop-tile-background: #f59563;
+  --breakout-drop-tile-color: #f9f6f2;
+  --breakout-drop-tile-font-size: 12px;
+}

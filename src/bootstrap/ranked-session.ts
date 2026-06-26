@@ -7,6 +7,8 @@ const AUTH_NICKNAME_STORAGE_KEY = "2048_auth_nickname_v1";
 const RANKED_SESSION_SUPPRESS_NEXT_AUTH_RELOAD_KEY = "__rankedSessionSuppressNextAuthReload";
 const ACTIVE_SESSION_STORAGE_KEY_PREFIX = "ranked_session_active:v1:";
 const PREFETCH_SESSION_STORAGE_KEY_PREFIX = "ranked_session_prefetch:v1:";
+const SAVED_GAME_STATE_STORAGE_KEY_PREFIX = "savedGameStateByMode:v1:";
+const SAVED_GAME_STATE_LITE_STORAGE_KEY_PREFIX = "savedGameStateLiteByMode:v1:";
 const DEFAULT_REMOTE_API_BASE_URL = "https://2048next.cn/api";
 const AUTH_STATE_STORAGE_KEYS = new Set([
   AUTH_TOKEN_STORAGE_KEY,
@@ -80,6 +82,10 @@ interface RankedSessionWindowLike extends Window {
   GAME_API_BASE_URL?: unknown;
   GAME_API_FALLBACK_BASE_URL?: unknown;
   RankedSessionRuntime?: RankedSessionRuntime;
+}
+
+interface NormalizeRankedSessionOptions {
+  allowExpired?: boolean;
 }
 
 function isRankedModeKey(modeLike: unknown): modeLike is string {
@@ -221,7 +227,8 @@ function resolveModeStorageKey(prefix: string, modeKey: string): string {
 
 function normalizeRankedSessionRecord(
   rawValue: unknown,
-  expectedModeKey: string
+  expectedModeKey: string,
+  options: NormalizeRankedSessionOptions = {}
 ): RankedSessionRecord | null {
   if (!rawValue) return null;
   let parsed: Record<string, unknown> | null = null;
@@ -245,7 +252,7 @@ function normalizeRankedSessionRecord(
   if (!challengeId || !rankedSessionToken) return null;
   if (!Number.isInteger(seed) || seed < 0) return null;
   if (!Number.isInteger(issuedAt) || issuedAt <= 0) return null;
-  if (!Number.isInteger(exp) || exp <= Math.floor(Date.now() / 1000)) return null;
+  if (!Number.isInteger(exp) || (!options.allowExpired && exp <= Math.floor(Date.now() / 1000))) return null;
   return {
     mode_key: modeKey,
     mode_bucket: typeof parsed.mode_bucket === "string" ? parsed.mode_bucket : null,
@@ -269,13 +276,14 @@ function readRankedSessionRecord(
   storageLike: Storage | null,
   storageKey: string,
   expectedModeKey: string,
-  expectedOwnerUserId: string
+  expectedOwnerUserId: string,
+  options: NormalizeRankedSessionOptions = {}
 ): RankedSessionRecord | null {
   const raw = safeReadStorageItem({
     storageLike,
     key: storageKey
   });
-  const normalized = normalizeRankedSessionRecord(raw, expectedModeKey);
+  const normalized = normalizeRankedSessionRecord(raw, expectedModeKey, options);
   if (
     normalized &&
     (!expectedOwnerUserId || normalized.owner_user_id === expectedOwnerUserId)
@@ -310,6 +318,50 @@ function buildChallengeContext(record: RankedSessionRecord | null): RankedChalle
     seed: record.seed,
     ranked_session_token: record.ranked_session_token
   };
+}
+
+function normalizeSavedStatePayload(rawValue: unknown): Record<string, unknown> | null {
+  if (!rawValue) return null;
+  if (typeof rawValue === "string") {
+    try {
+      const parsed = JSON.parse(rawValue) as unknown;
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+  return rawValue && typeof rawValue === "object" && !Array.isArray(rawValue)
+    ? (rawValue as Record<string, unknown>)
+    : null;
+}
+
+function isResumableSavedStatePayload(payload: Record<string, unknown> | null, modeKey: string): boolean {
+  if (!payload) return false;
+  if (String(payload.mode_key || "").trim() !== modeKey) return false;
+  if (payload.terminated === true) return false;
+  if (payload.over === true && modeKey !== "practice") return false;
+  return Array.isArray(payload.board);
+}
+
+function hasResumableLocalSavedStateForMode(
+  windowLike: RankedSessionWindowLike,
+  modeKey: string
+): boolean {
+  const storageLike = resolveLocalStorage(windowLike);
+  if (!storageLike) return false;
+  const keys = [
+    `${SAVED_GAME_STATE_STORAGE_KEY_PREFIX}${modeKey}`,
+    `${SAVED_GAME_STATE_LITE_STORAGE_KEY_PREFIX}${modeKey}`
+  ];
+  return keys.some((key) => {
+    const raw = safeReadStorageItem({
+      storageLike,
+      key
+    });
+    return isResumableSavedStatePayload(normalizeSavedStatePayload(raw), modeKey);
+  });
 }
 
 function syncWindowChallengeContext(
@@ -357,7 +409,8 @@ export function createRankedSessionRuntime(
       storageLike,
       resolveModeStorageKey(ACTIVE_SESSION_STORAGE_KEY_PREFIX, modeKey),
       modeKey,
-      ownerUserIdResolver()
+      ownerUserIdResolver(),
+      { allowExpired: true }
     );
 
   const readPrefetchedSession = (modeKey: string): RankedSessionRecord | null =>
@@ -660,6 +713,10 @@ export async function bootstrapRankedSessionForHomeFamilyPage(
 
   let activeContext = runtime.getCurrentContext(modeKey);
   if (!activeContext) {
+    if (hasResumableLocalSavedStateForMode(windowLike, modeKey)) {
+      await runtime.ensurePrefetch(modeKey);
+      return;
+    }
     const prefetchedReady = await runtime.ensurePrefetch(modeKey);
     if (prefetchedReady && runtime.promotePrefetchedSession(modeKey)) {
       activeContext = runtime.getCurrentContext(modeKey);

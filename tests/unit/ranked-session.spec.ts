@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   bindRankedSessionPrefetchWarmup,
   bindRankedSessionAuthTransitionReload,
+  bootstrapRankedSessionForHomeFamilyPage,
   createRankedSessionRuntime
 } from "../../src/bootstrap/ranked-session";
 
@@ -432,5 +433,83 @@ describe("ranked session runtime", () => {
 
     expect(windowLike.addEventListener).not.toHaveBeenCalled();
     expect(ensurePrefetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps an expired active ranked session during bootstrap when local saved progress exists", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    storage.setItem(
+      ACTIVE_KEY,
+      JSON.stringify(
+        createSession({
+          issued_at: nowSec - 7200,
+          exp: nowSec - 1
+        })
+      )
+    );
+    storage.setItem(
+      `savedGameStateByMode:v1:${MODE_KEY}`,
+      JSON.stringify({
+        v: 1,
+        mode_key: MODE_KEY,
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        board: [
+          [2, 0, 0, 0],
+          [0, 4, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        over: false,
+        initial_seed: 111,
+        challenge_id: "ranked-active",
+        ranked_session_token: "active-token"
+      })
+    );
+    const fetchImpl = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: createSession({
+            challenge_id: "ranked-next-after-expiry",
+            seed: 222,
+            ranked_session_token: "next-after-expiry-token"
+          })
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    });
+    const windowLike = createWindowLike(storage, fetchImpl) as Window & {
+      addEventListener: (type: string, listener: (eventLike?: { key?: string }) => void) => void;
+      setTimeout: (handler: () => void, timeout?: number) => number;
+    };
+    windowLike.addEventListener = vi.fn();
+    windowLike.setTimeout = vi.fn(() => 1);
+    const previousWindow = (globalThis as { window?: unknown }).window;
+    (globalThis as { window?: unknown }).window = windowLike;
+
+    try {
+      await bootstrapRankedSessionForHomeFamilyPage("index");
+      await flushMicrotasks();
+    } finally {
+      (globalThis as { window?: unknown }).window = previousWindow;
+    }
+
+    expect(JSON.parse(storage.getItem(ACTIVE_KEY) || "{}")).toMatchObject({
+      ranked_session_token: "active-token",
+      seed: 111,
+      exp: nowSec - 1
+    });
+    expect(JSON.parse(storage.getItem(PREFETCH_KEY) || "{}")).toMatchObject({
+      ranked_session_token: "next-after-expiry-token",
+      seed: 222
+    });
+    expect((windowLike as Window & { GAME_CHALLENGE_CONTEXT?: unknown }).GAME_CHALLENGE_CONTEXT).toMatchObject({
+      id: "ranked-active",
+      mode_key: MODE_KEY,
+      ranked_session_token: "active-token",
+      seed: 111
+    });
   });
 });

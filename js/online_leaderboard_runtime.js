@@ -18,7 +18,7 @@
   var SCORE_SUBMIT_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
   var SCORE_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
   var SCORE_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
-  var RECORD_SUBMIT_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
+  var RECORD_SUBMIT_PENDING_TTL_MS = 0;
   var RECORD_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
   var RECORD_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
   var STONE_2K_SUBMIT_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
@@ -33,6 +33,8 @@
   var RANKED_SESSION_ACTIVE_KEY_PREFIX = "ranked_session_active:v1:";
   var RANKED_SESSION_PREFETCH_KEY_PREFIX = "ranked_session_prefetch:v1:";
   var RANKED_RESTART_SETUP_DEFERRED = { rankedRestartSetupDeferred: true };
+  var BREAKOUT_EASTER_EGG_GAME_URL = "./easter-eggs/breakout/index.html";
+  var BREAKOUT_EASTER_EGG_TRIGGER_COUNT = 19;
 
   function resolveLocalStorage() {
     try {
@@ -914,7 +916,7 @@ function shouldAutoLoadOnlineLeaderboard() {
         var payload = payloadNormalizer(parsed.payload);
         var ownerUserId = toText(parsed.ownerUserId || parsed.owner_user_id).trim();
         if (!signature) return null;
-        if (createdAt > 0 && now - createdAt > ttlMs) return null;
+        if (ttlMs > 0 && createdAt > 0 && now - createdAt > ttlMs) return null;
         return {
           signature: signature,
           payload: payload,
@@ -1371,6 +1373,48 @@ function shouldAutoLoadOnlineLeaderboard() {
     nameTile.appendChild(scoreEl);
   }
 
+  function unbindSelfTimerLeaderboardRankTileFlyingEffect(rankTile) {
+    if (!rankTile || !rankTile.__timerLeaderboardSelfRankFlyingEffectBinding) return;
+    var binding = rankTile.__timerLeaderboardSelfRankFlyingEffectBinding;
+    rankTile.__timerLeaderboardSelfRankFlyingEffectBinding = null;
+    if (binding && typeof binding.destroy === "function") {
+      try {
+        binding.destroy();
+      } catch (_err) {}
+    }
+  }
+
+  function bindSelfTimerLeaderboardRankTileFlyingEffect(rankTile) {
+    if (!rankTile || rankTile.__timerLeaderboardSelfRankFlyingEffectBinding) return;
+    rankTile.__timerLeaderboardSelfRankFlyingEffectBinding = true;
+  }
+
+  function unbindSelfTimerLeaderboardRankTileBreakoutEasterEgg(rankTile) {
+    if (!rankTile || !rankTile.__timerLeaderboardSelfRankBreakoutEasterEggBinding) return;
+    var binding = rankTile.__timerLeaderboardSelfRankBreakoutEasterEggBinding;
+    rankTile.__timerLeaderboardSelfRankBreakoutEasterEggBinding = null;
+    if (binding && typeof binding.destroy === "function") {
+      try {
+        binding.destroy();
+      } catch (_err) {}
+    }
+  }
+
+  function bindSelfTimerLeaderboardRankTileBreakoutEasterEgg(rankTile) {
+    if (!rankTile || rankTile.__timerLeaderboardSelfRankBreakoutEasterEggBinding) return;
+    var runtime = global.CoreBreakoutEasterEggRuntime;
+    if (!runtime || typeof runtime.bindBreakoutEasterEgg !== "function") return;
+    try {
+      rankTile.__timerLeaderboardSelfRankBreakoutEasterEggBinding = runtime.bindBreakoutEasterEgg(rankTile, {
+        gameUrl: BREAKOUT_EASTER_EGG_GAME_URL,
+        enableClickEffect: true,
+        logoSrc: "meta/favicon.svg?v=20260606-fillframe",
+        logoAlt: "2048",
+        triggerCount: BREAKOUT_EASTER_EGG_TRIGGER_COUNT
+      }) || true;
+    } catch (_err) {}
+  }
+
   function updateTimerLeaderboardRowNode(row, rankText, nameText, rowClassName, rankClassName, fixedNameFontSize, profileUrl, displayParts) {
     if (!row) return;
     row.className = "timer-leaderboard-row" + (rowClassName ? " " + rowClassName : "");
@@ -1395,6 +1439,13 @@ function shouldAutoLoadOnlineLeaderboard() {
     rankTile.className = "timertile timer-leaderboard-rank-tile" + (rankClassName ? " " + rankClassName : "");
     rankTile.textContent = toText(rankText);
     rankTile.style.fontSize = addPxDelta(resolveRankTileFontSize(rankText), TIMER_LEADERBOARD_FONT_DELTA_PX);
+    if (rowClassName === "is-self") {
+      bindSelfTimerLeaderboardRankTileFlyingEffect(rankTile);
+      bindSelfTimerLeaderboardRankTileBreakoutEasterEgg(rankTile);
+    } else {
+      unbindSelfTimerLeaderboardRankTileFlyingEffect(rankTile);
+      unbindSelfTimerLeaderboardRankTileBreakoutEasterEgg(rankTile);
+    }
 
     nameTile.className = "timertile timer-leaderboard-name-tile";
     renderTimerLeaderboardNameTileContent(nameTile, nameText, displayParts);
@@ -3328,6 +3379,23 @@ async function refreshLeaderboard(modeLike) {
     return !!manager.over || shouldTreatWinStopAsTerminalFallback(manager);
   }
 
+  function isUndoEnabledModeForTerminalSubmit(manager) {
+    if (!manager) return false;
+    var modeConfig = manager.modeConfig && typeof manager.modeConfig === "object" ? manager.modeConfig : null;
+    if (modeConfig && modeConfig.undo_enabled === true) return true;
+    if (manager.undoEnabled === true) return true;
+    var modeKey = toText(manager.modeKey || manager.mode).trim().toLowerCase();
+    if (modeKey && modeKey.indexOf("no_undo") < 0 && modeKey.indexOf("_undo") >= 0) return true;
+    var modeBucket = toText(manager.rankedBucket || resolveLeaderboardMode(modeKey)).trim().toLowerCase();
+    return !!(modeBucket && modeBucket.indexOf("no_undo") < 0 && modeBucket.indexOf("_undo") >= 0);
+  }
+
+  function shouldDeferUndoTerminalSubmit(manager, options) {
+    var opts = options && typeof options === "object" ? options : {};
+    if (opts.allowUndoTerminalSubmit === true) return false;
+    return !!(manager && isSessionTerminated(manager) && isUndoEnabledModeForTerminalSubmit(manager));
+  }
+
   function resolveSessionEndReason(manager) {
     if (!manager) return "";
     if (typeof resolveTerminalSessionEndReason === "function") {
@@ -3423,6 +3491,10 @@ async function refreshLeaderboard(modeLike) {
       await retryPendingScoreSubmit(opts);
       return;
     }
+    if (shouldDeferUndoTerminalSubmit(manager, opts)) {
+      await retryPendingScoreSubmit(opts);
+      return;
+    }
 
     var score = Math.floor(Number(manager.score) || 0);
     if (!(score > 0)) {
@@ -3488,6 +3560,10 @@ async function refreshLeaderboard(modeLike) {
       await retryPendingRecordSubmit(opts);
       return;
     }
+    if (shouldDeferUndoTerminalSubmit(manager, opts)) {
+      await retryPendingRecordSubmit(opts);
+      return;
+    }
 
     var score = Math.floor(Number(manager.score) || 0);
     if (!(score > 0)) {
@@ -3540,8 +3616,6 @@ async function refreshLeaderboard(modeLike) {
     var errorText = toText(result && result.error ? result.error : "record_submit_failed");
     writeLastRecordSubmitResult(payload, result, false);
     if (isRankedSessionExpiredResult(result)) {
-      clearPendingRecordSubmitSignature();
-      handleRankedSessionExpired(manager, modeKey);
       return;
     }
     if (isUnauthorizedSubmitErrorText(errorText)) {
@@ -3652,13 +3726,6 @@ async function refreshLeaderboard(modeLike) {
     var errorText = toText(result && result.error ? result.error : "record_submit_failed");
     writeLastRecordSubmitResult(pendingState.payload, result, false);
     if (isRankedSessionExpiredResult(result)) {
-      var expiredModeKey = toText(pendingState.payload && pendingState.payload.mode_key).trim() || getCurrentModeKey();
-      var expiredManager = global.game_manager;
-      if (expiredManager && toText(expiredManager.modeKey || expiredManager.mode).trim() !== expiredModeKey) {
-        expiredManager = null;
-      }
-      clearPendingRecordSubmitSignature();
-      handleRankedSessionExpired(expiredManager, expiredModeKey);
       return result;
     }
     if (isUnauthorizedSubmitErrorText(errorText)) {
@@ -3813,15 +3880,16 @@ async function refreshLeaderboard(modeLike) {
     } catch (_err) {}
   }
 
-  function triggerImmediateOnlineSubmit() {
+  function triggerImmediateOnlineSubmit(options) {
+    var opts = options && typeof options === "object" ? options : {};
     runPromiseSafely(function () {
-      return maybeSubmitRecordOnGameOver();
+      return maybeSubmitRecordOnGameOver(opts);
     });
     runPromiseSafely(function () {
-      return maybeSubmitScoreOnGameOver();
+      return maybeSubmitScoreOnGameOver(opts);
     });
     runPromiseSafely(function () {
-      return maybeSubmitStone2kRun();
+      return maybeSubmitStone2kRun(opts);
     });
   }
 
@@ -3833,11 +3901,16 @@ async function refreshLeaderboard(modeLike) {
     var wrapped = function () {
       var currentManager = this || manager;
       if (timing === "before") {
-        triggerImmediateOnlineSubmit();
-        if (
+        var isRestartMethod =
           methodName === "restart" ||
           methodName === "restartWithSeed" ||
-          methodName === "restartWithBoard"
+          methodName === "restartWithBoard";
+        triggerImmediateOnlineSubmit({
+          allowUndoTerminalSubmit: isRestartMethod,
+          manager: currentManager
+        });
+        if (
+          isRestartMethod
         ) {
           if (!prepareRankedSessionForRestart(currentManager)) {
             beginAsyncRankedRestart(

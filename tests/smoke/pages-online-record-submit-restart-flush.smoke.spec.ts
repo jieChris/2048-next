@@ -734,7 +734,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test.describe("expanded ranked mode terminal uploads", () => {
     for (const { modeKey, modeBucket } of [
       { modeKey: "fib_4x4_no_undo", modeBucket: "fib_4x4" },
-      { modeKey: "board_3x3_pow2_undo", modeBucket: "pow2_3x3_undo" }
+      { modeKey: "board_3x3_pow2_no_undo", modeBucket: "pow2_3x3" }
     ]) {
       test(`${modeKey} posts a terminal record with ranked context`, async ({ page }) => {
         await installRankedSessionForMode(page, modeKey, {
@@ -831,6 +831,140 @@ test.describe("Legacy Multi-Page Smoke", () => {
         });
       });
     }
+  });
+
+  test("ranked undo mode submits the terminal record only when restarting after death", async ({ page }) => {
+    const modeKey = "classic_4x4_pow2_undo";
+    const modeBucket = "standard_undo";
+    const recordPayloads: Array<Record<string, unknown>> = [];
+    let sessionStartRequests = 0;
+
+    await page.route("**/api/records", async (route) => {
+      recordPayloads.push(route.request().postDataJSON() as Record<string, unknown>);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: { id: `record-undo-${recordPayloads.length}` }
+        })
+      });
+    });
+    await page.route("**/api/ranked-session/start", async (route) => {
+      sessionStartRequests += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            mode_key: modeKey,
+            challenge_id: `ranked-undo-next-${sessionStartRequests}`,
+            seed: 900 + sessionStartRequests,
+            ranked_session_token: `next-ranked-undo-token-${sessionStartRequests}`,
+            issued_at: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 3600
+          }
+        })
+      });
+    });
+    await page.route("**/api/ranked-checkpoint**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: route.request().method() === "GET" ? null : undefined,
+          deleted: route.request().method() === "DELETE" ? true : undefined,
+          verified: route.request().method() === "POST" ? true : undefined
+        })
+      });
+    });
+    await page.route("**/api/leaderboard**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    await installRankedSessionForMode(page, modeKey, {
+      clearPrefetch: true,
+      clearSavedState: true,
+      confirmRestart: true,
+      seed: 641,
+      token: "smoke-token-undo-deferred"
+    });
+    await page.addInitScript(() => {
+      (window as any).__DISABLE_ONLINE_LEADERBOARD__ = true;
+      window.localStorage.removeItem("online_last_record_submit_signature_v1");
+      window.localStorage.removeItem("online_pending_record_submit_signature_v1");
+      window.localStorage.removeItem("last_session_submit_result_v1");
+    });
+
+    const response = await page.goto(`/play.html?mode_key=${encodeURIComponent(modeKey)}`, {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return (
+        !!manager &&
+        !!(window as any).OnlineLeaderboardRuntime &&
+        typeof manager.tryAutoSubmitOnGameOver === "function" &&
+        typeof manager.restart === "function"
+      );
+    });
+
+    await page.evaluate((injectedModeKey) => {
+      const manager = (window as any).game_manager;
+      const context = (window as any).GAME_CHALLENGE_CONTEXT || {};
+      manager.rankPolicy = "ranked";
+      manager.modeKey = injectedModeKey;
+      manager.replayMode = false;
+      manager.over = true;
+      manager.won = false;
+      manager.keepPlaying = false;
+      manager.undoEnabled = true;
+      manager.modeConfig = Object.assign({}, manager.modeConfig || {}, {
+        key: injectedModeKey,
+        undo_enabled: true,
+        rank_policy: "ranked",
+        ranked_bucket: "standard_undo"
+      });
+      manager.rankedBucket = "standard_undo";
+      manager.rankedSessionToken = String(context.ranked_session_token || "smoke-token-undo-deferred");
+      manager.challengeId = String(context.id || context.challenge_id || `smoke-${injectedModeKey}`);
+      manager.initialSeed = Number(context.seed || 641);
+      manager.seed = Number(context.seed || 641);
+      manager.score = Math.max(1024, Number(manager.score || 0));
+      manager.moveHistory = [0, 1, 2, 3];
+      manager.successfulMoveCount = 4;
+      manager.serialize = () => '{"v":3,"actions":[0,1,2,3]}';
+      manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2, 3] });
+
+      manager.tryAutoSubmitOnGameOver();
+    }, modeKey);
+
+    await page.waitForTimeout(300);
+    expect(recordPayloads).toHaveLength(0);
+
+    await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      manager.restart();
+    });
+
+    await expect.poll(() => recordPayloads.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
+    expect(recordPayloads[0]).toMatchObject({
+      mode_key: modeKey,
+      mode_bucket: modeBucket,
+      ranked_session_token: "smoke-token-undo-deferred",
+      end_reason: "game_over"
+    });
+    expect(sessionStartRequests).toBeGreaterThanOrEqual(1);
   });
 
   test("online record submit flushes capped completion win-stop sessions before restart", async ({ page }) => {

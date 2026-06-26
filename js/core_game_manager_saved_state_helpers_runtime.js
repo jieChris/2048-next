@@ -317,19 +317,22 @@ function normalizeSavedStateRankedPayloadSeed(saved) {
 }
 function isSavedStateRankedSessionValidForRestore(manager, saved) {
   if (!isSavedStateRestrictedForRankedMode(manager)) return true;
-  var currentToken = resolveSavedStateRankedSessionToken(manager);
   var savedToken = typeof (saved && saved.ranked_session_token) === "string"
     ? saved.ranked_session_token.trim()
     : "";
-  if (!currentToken || !savedToken || currentToken !== savedToken) return false;
-  var currentChallengeId = resolveSavedStateRankedChallengeId(manager);
   var savedChallengeId = typeof (saved && saved.challenge_id) === "string"
     ? saved.challenge_id.trim()
     : "";
-  if (!currentChallengeId || !savedChallengeId || currentChallengeId !== savedChallengeId) return false;
-  var currentSeed = resolveSavedStateRankedSeed(manager);
   var savedSeed = normalizeSavedStateRankedPayloadSeed(saved);
-  if (currentSeed === null || savedSeed === null) return false;
+  if (!savedToken || !savedChallengeId || savedSeed === null) return false;
+
+  var currentToken = resolveSavedStateRankedSessionToken(manager);
+  var currentChallengeId = resolveSavedStateRankedChallengeId(manager);
+  if (!currentToken && !currentChallengeId) return true;
+  if (!currentToken || currentToken !== savedToken) return false;
+  if (!currentChallengeId || currentChallengeId !== savedChallengeId) return false;
+  var currentSeed = resolveSavedStateRankedSeed(manager);
+  if (currentSeed === null) return false;
   return currentSeed === savedSeed;
 }
 function resolveSavedStateUndoModeConfig(manager) {

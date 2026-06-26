@@ -657,6 +657,21 @@ function shouldForceRankedCheckpointRestoreInSetup(manager) {
   return shouldForceRankedCheckpointRestoreInSetupFallback(manager);
 }
 
+function hasRestorableSavedStateForUnseededRankedSetup(manager) {
+  if (!manager) return false;
+  if (manager.__savedStateRestoreSkippedForCurrentSetup === true) return false;
+  if (typeof resolveLatestSavedPayloadForRestore !== "function") return false;
+  if (typeof resolveSavedStateRestoreDecision !== "function") return false;
+  try {
+    var saved = resolveLatestSavedPayloadForRestore(manager);
+    if (!saved || typeof saved !== "object" || Array.isArray(saved)) return false;
+    var decision = resolveSavedStateRestoreDecision(manager, saved);
+    return !!(decision && decision.canRestore === true);
+  } catch (_err) {
+    return false;
+  }
+}
+
 function hasRankedCheckpointAuthTokenForSetup(manager) {
   if (!manager || manager.rankPolicy !== "ranked") return false;
   var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
@@ -1164,6 +1179,9 @@ function shouldBlockRankedSetupWithoutSeed(manager) {
   if (!isFourByFour) {
     return false;
   }
+  if (hasRestorableSavedStateForUnseededRankedSetup(manager)) {
+    return false;
+  }
   return hasRankedCheckpointAuthTokenForSetup(manager);
 }
 
@@ -1215,9 +1233,31 @@ function setupGameFallback(manager, inputSeed, options) {
 }
 
 function setupGame(manager, inputSeed, options) {
-  var runtime = resolveCoreSetupGameRuntime(manager);
-  if (runtime && typeof runtime.setupGame === "function") {
-    return runtime.setupGame(manager, inputSeed, options, createSetupGameOperations());
+  var setupOptions = isNonArrayObject(options) ? options : {};
+  var previousSavedStateRestoreSkipped = manager && manager.__savedStateRestoreSkippedForCurrentSetup;
+  if (manager) {
+    manager.__savedStateRestoreSkippedForCurrentSetup = !!(
+      setupOptions.disableStateRestore ||
+      setupOptions.skipStartTiles
+    );
   }
-  return setupGameFallback(manager, inputSeed, options);
+  var runtime = resolveCoreSetupGameRuntime(manager);
+  try {
+    if (runtime && typeof runtime.setupGame === "function") {
+      return runtime.setupGame(manager, inputSeed, options, createSetupGameOperations());
+    }
+    return setupGameFallback(manager, inputSeed, options);
+  } finally {
+    if (manager) {
+      if (typeof previousSavedStateRestoreSkipped === "undefined") {
+        try {
+          delete manager.__savedStateRestoreSkippedForCurrentSetup;
+        } catch (_errDelete) {
+          manager.__savedStateRestoreSkippedForCurrentSetup = undefined;
+        }
+      } else {
+        manager.__savedStateRestoreSkippedForCurrentSetup = previousSavedStateRestoreSkipped;
+      }
+    }
+  }
 }

@@ -5,9 +5,11 @@ import vm from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 
 const MODE_KEY = "standard_4x4_pow2_no_undo";
+const UNDO_MODE_KEY = "classic_4x4_pow2_undo";
 const AUTH_TOKEN_STORAGE_KEY = "2048_auth_token_v1";
 const AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
 const ACTIVE_SESSION_KEY = `ranked_session_active:v1:${MODE_KEY}`;
+const UNDO_ACTIVE_SESSION_KEY = `ranked_session_active:v1:${UNDO_MODE_KEY}`;
 const PREFETCH_SESSION_KEY = `ranked_session_prefetch:v1:${MODE_KEY}`;
 const CHECKPOINT_MIRROR_KEY = `ranked_checkpoint_local_mirror:v1:${MODE_KEY}`;
 const CHECKPOINT_CLEAR_KEY = `ranked_checkpoint_cleared_at:v1:user:7:${MODE_KEY}`;
@@ -48,6 +50,7 @@ interface FetchCall {
 }
 
 function createElementStub(tagName: string): Record<string, unknown> {
+  const listeners = new Map<string, Array<(event?: unknown) => void>>();
   return {
     tagName: tagName.toUpperCase(),
     children: [],
@@ -63,7 +66,28 @@ function createElementStub(tagName: string): Record<string, unknown> {
       contains: vi.fn(() => false),
       toggle: vi.fn()
     },
-    addEventListener: vi.fn(),
+    addEventListener: vi.fn((type: string, listener: (event?: unknown) => void) => {
+      const handlers = listeners.get(type) || [];
+      handlers.push(listener);
+      listeners.set(type, handlers);
+    }),
+    removeEventListener: vi.fn((type: string, listener: (event?: unknown) => void) => {
+      const handlers = listeners.get(type) || [];
+      listeners.set(
+        type,
+        handlers.filter((handler) => handler !== listener)
+      );
+    }),
+    dispatchEvent(event: { type?: string }) {
+      const handlers = listeners.get(String(event && event.type ? event.type : ""));
+      if (!handlers) return true;
+      handlers.forEach((handler) => handler(event));
+      return true;
+    },
+    dispatch(type: string, event?: unknown) {
+      const handlers = listeners.get(type) || [];
+      handlers.forEach((handler) => handler(event));
+    },
     appendChild(child: Record<string, unknown>) {
       child.parentNode = this;
       (this.children as unknown[]).push(child);
@@ -382,6 +406,65 @@ describe("online leaderboard terminal submission", () => {
     ).toBe(true);
   });
 
+  it("keeps old ranked pending record payloads retryable beyond the normal offline retry window", async () => {
+    const storage = new MemoryStorage();
+    const now = Date.now();
+    storage.setItem(
+      PENDING_RECORD_KEY,
+      JSON.stringify({
+        signature: "old-ranked-record-signature",
+        payload: {
+          mode_key: MODE_KEY,
+          score: 4096,
+          replay_string: "old-ranked-replay-v1",
+          ranked_session_token: "ranked-token",
+          challenge_id: "ranked-1",
+          initial_seed: 123,
+          seed: 123,
+          ranked_verification: {
+            random_source: "server_seed",
+            replay_format: "v1",
+            challenge_id: "ranked-1",
+            seed: 123,
+            mode_key: MODE_KEY,
+            ranked_session_token: "ranked-token"
+          }
+        },
+        ownerUserId: "7",
+        createdAt: now - 10 * 24 * 60 * 60 * 1000,
+        lastAttemptAt: now - 10 * 24 * 60 * 60 * 1000,
+        retryCount: 8
+      })
+    );
+    let recordPayload: Record<string, unknown> | null = null;
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      storage,
+      disableOnlineLeaderboard: false,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records")) {
+          recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
+          return createJsonResponse({ success: true, data: { id: "record-old-ranked-pending" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
+    expect(recordPayload).toMatchObject({
+      mode_key: MODE_KEY,
+      score: 4096,
+      replay_string: "old-ranked-replay-v1",
+      ranked_session_token: "ranked-token",
+      challenge_id: "ranked-1",
+      initial_seed: 123,
+      seed: 123
+    });
+    expect(storage.getItem(PENDING_RECORD_KEY)).toBeNull();
+  });
+
   it("submits online record when local terminal auto-submit runs", async () => {
     const localAutoSubmit = vi.fn(function (this: Record<string, unknown>) {
       this.sessionSubmitDone = true;
@@ -415,7 +498,7 @@ describe("online leaderboard terminal submission", () => {
 
   it.each([
     ["fib_4x4_no_undo", "fib_4x4"],
-    ["board_3x3_pow2_undo", "pow2_3x3_undo"]
+    ["board_3x3_pow2_no_undo", "pow2_3x3"]
   ])("submits terminal ranked records for expanded mode %s", async (modeKey, modeBucket) => {
     const storage = new MemoryStorage();
     storage.setItem(
@@ -464,6 +547,81 @@ describe("online leaderboard terminal submission", () => {
       mode_bucket: modeBucket,
       ranked_session_token: `ranked-token-${modeKey}`,
       challenge_id: `ranked-${modeKey}`,
+      seed: 123,
+      end_reason: "game_over"
+    });
+  });
+
+  it("defers ranked undo-mode death record submit until restart", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      UNDO_ACTIVE_SESSION_KEY,
+      JSON.stringify({
+        mode_key: UNDO_MODE_KEY,
+        challenge_id: "ranked-undo",
+        seed: 123,
+        ranked_session_token: "ranked-token-undo",
+        issued_at: Math.floor(Date.now() / 1000) - 60,
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        owner_user_id: "7"
+      })
+    );
+    const localAutoSubmit = vi.fn(function (this: Record<string, unknown>) {
+      this.sessionSubmitDone = true;
+    });
+    const originalRestart = vi.fn(function (this: Record<string, unknown>) {
+      this.over = false;
+      this.score = 0;
+      this.moveHistory = [];
+      this.clientRecordId = "rec_client_undo_next";
+    });
+    const manager = createTerminatedManager({
+      mode: UNDO_MODE_KEY,
+      modeKey: UNDO_MODE_KEY,
+      modeConfig: {
+        key: UNDO_MODE_KEY,
+        undo_enabled: true,
+        rank_policy: "ranked",
+        ranked_bucket: "standard_undo"
+      },
+      undoEnabled: true,
+      rankPolicy: "ranked",
+      rankedBucket: "standard_undo",
+      rankedSessionToken: "ranked-token-undo",
+      challengeId: "ranked-undo",
+      tryAutoSubmitOnGameOver: localAutoSubmit,
+      restart: originalRestart
+    });
+    let recordPayload: Record<string, unknown> | null = null;
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records")) {
+          recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
+          return createJsonResponse({ success: true, data: { id: "record-undo-mode" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.tryAutoSubmitOnGameOver as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(localAutoSubmit).toHaveBeenCalledTimes(1);
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+    expect(recordPayload).toBeNull();
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
+    expect(recordPayload).toMatchObject({
+      mode: "standard_undo",
+      mode_key: UNDO_MODE_KEY,
+      mode_bucket: "standard_undo",
+      ranked_session_token: "ranked-token-undo",
+      challenge_id: "ranked-undo",
       seed: 123,
       end_reason: "game_over"
     });
@@ -667,6 +825,130 @@ describe("online leaderboard terminal submission", () => {
     await flushRuntimePromises();
   });
 
+  it("leaves flying click effects to the hidden easter egg binding", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      TIMER_LEADERBOARD_CACHE_KEY,
+      JSON.stringify({
+        key: `${MODE_KEY}|all`,
+        rows: [{ user_id: 11, nickname: "CachedUser", score: 8192 }],
+        time: Date.now() - 60_000
+      })
+    );
+
+    const list = createElementStub("div");
+    list.id = "timer-leaderboard-list";
+    const summary = createElementStub("div");
+    summary.id = "timer-leaderboard-summary";
+    const panel = createElementStub("div");
+    panel.id = "timer-leaderboard-panel";
+    const timerBox = createElementStub("div");
+    timerBox.id = "timerbox";
+    const elements: Record<string, Record<string, unknown>> = {
+      "timerbox": timerBox,
+      "timer-leaderboard-panel": panel,
+      "timer-leaderboard-summary": summary,
+      "timer-leaderboard-list": list
+    };
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({
+        over: false,
+        score: 0,
+        getTimerModuleViewMode: vi.fn(() => "hidden")
+      }),
+      storage,
+      disableOnlineLeaderboard: false,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+    runtime.windowLike.CoreFlyingClickEffectRuntime = {
+      bindFlyingClickEffect: vi.fn()
+    };
+    const documentLike = runtime.windowLike.document as Record<string, unknown>;
+    documentLike.getElementById = vi.fn((id: string) => elements[id] || null);
+
+    const onlineRuntime = runtime.windowLike.OnlineLeaderboardRuntime as {
+      refreshTimerLeaderboardPanel: (force?: boolean, preferCached?: boolean) => Promise<boolean>;
+    };
+    await onlineRuntime.refreshTimerLeaderboardPanel(false, true);
+
+    const selfRow = (list.children as Array<Record<string, unknown>>)[10];
+    const rankTile = (selfRow.children as Array<Record<string, unknown>>)[0];
+    expect(rankTile.__timerLeaderboardSelfRankFlyingEffectBinding).toBe(true);
+    expect(runtime.windowLike.CoreFlyingClickEffectRuntime.bindFlyingClickEffect).not.toHaveBeenCalled();
+  });
+
+  it("binds the hidden breakout easter egg only to the self timer leaderboard rank tile", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      TIMER_LEADERBOARD_CACHE_KEY,
+      JSON.stringify({
+        key: `${MODE_KEY}|all`,
+        rows: [{ user_id: 11, nickname: "CachedUser", score: 8192 }],
+        time: Date.now() - 60_000
+      })
+    );
+
+    const list = createElementStub("div");
+    list.id = "timer-leaderboard-list";
+    const summary = createElementStub("div");
+    summary.id = "timer-leaderboard-summary";
+    const panel = createElementStub("div");
+    panel.id = "timer-leaderboard-panel";
+    const timerBox = createElementStub("div");
+    timerBox.id = "timerbox";
+    const elements: Record<string, Record<string, unknown>> = {
+      "timerbox": timerBox,
+      "timer-leaderboard-panel": panel,
+      "timer-leaderboard-summary": summary,
+      "timer-leaderboard-list": list
+    };
+
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({
+        over: false,
+        score: 0,
+        getTimerModuleViewMode: vi.fn(() => "hidden")
+      }),
+      storage,
+      disableOnlineLeaderboard: false,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+    runtime.windowLike.CoreBreakoutEasterEggRuntime = {
+      bindBreakoutEasterEgg: vi.fn(() => ({
+        destroy: vi.fn()
+      })),
+      openBreakoutEasterEgg: vi.fn()
+    };
+    const documentLike = runtime.windowLike.document as Record<string, unknown>;
+    documentLike.getElementById = vi.fn((id: string) => elements[id] || null);
+
+    const onlineRuntime = runtime.windowLike.OnlineLeaderboardRuntime as {
+      refreshTimerLeaderboardPanel: (force?: boolean, preferCached?: boolean) => Promise<boolean>;
+    };
+    await onlineRuntime.refreshTimerLeaderboardPanel(false, true);
+
+    const firstRow = (list.children as Array<Record<string, unknown>>)[0];
+    const firstRankTile = (firstRow.children as Array<Record<string, unknown>>)[0];
+    const selfRow = (list.children as Array<Record<string, unknown>>)[10];
+    const selfRankTile = (selfRow.children as Array<Record<string, unknown>>)[0];
+
+    expect(runtime.windowLike.CoreBreakoutEasterEggRuntime.bindBreakoutEasterEgg).toHaveBeenCalledTimes(1);
+    expect(runtime.windowLike.CoreBreakoutEasterEggRuntime.bindBreakoutEasterEgg).toHaveBeenCalledWith(
+      selfRankTile,
+      expect.objectContaining({
+        gameUrl: "./easter-eggs/breakout/index.html",
+        enableClickEffect: true,
+        logoSrc: "meta/favicon.svg?v=20260606-fillframe",
+        logoAlt: "2048",
+        triggerCount: 19
+      })
+    );
+    expect(runtime.windowLike.CoreBreakoutEasterEggRuntime.bindBreakoutEasterEgg).not.toHaveBeenCalledWith(
+      firstRankTile,
+      expect.anything()
+    );
+  });
+
   it("does not pair a current ranked token with a replay started from a different seed", async () => {
     const storage = new MemoryStorage();
     const manager = createTerminatedManager({
@@ -745,7 +1027,7 @@ describe("online leaderboard terminal submission", () => {
     expect(recordPayload?.seed).toBeNull();
   });
 
-  it("clears ranked state and prompts when final record submit reports an expired session", async () => {
+  it("keeps ranked state and pending record retryable when final record submit reports an expired session", async () => {
     const storage = new MemoryStorage();
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
     const session = {
@@ -805,14 +1087,26 @@ describe("online leaderboard terminal submission", () => {
     (manager.move as { call: (thisArg: unknown) => void }).call(manager);
     await flushRuntimePromises();
 
-    expect(clearModeSession).toHaveBeenCalledWith(MODE_KEY);
-    expect(storage.getItem(ACTIVE_SESSION_KEY)).toBeNull();
-    expect(storage.getItem(PREFETCH_SESSION_KEY)).toBeNull();
-    expect(storage.getItem(CHECKPOINT_MIRROR_KEY)).toBeNull();
-    expect(storage.getItem(PENDING_RECORD_KEY)).toBeNull();
-    expect(manager.rankedSessionToken).toBe("");
-    expect(manager.lastRankedCheckpointSaveError).toBe("RANKED_SESSION_EXPIRED");
-    expect(runtime.windowLike.alert).toHaveBeenCalledTimes(1);
+    expect(clearModeSession).not.toHaveBeenCalled();
+    expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}")).toMatchObject({
+      ranked_session_token: "ranked-token",
+      challenge_id: "ranked-1",
+      seed: 123
+    });
+    expect(storage.getItem(PREFETCH_SESSION_KEY)).not.toBeNull();
+    expect(JSON.parse(storage.getItem(PENDING_RECORD_KEY) || "{}")).toMatchObject({
+      signature: expect.any(String),
+      payload: {
+        mode_key: MODE_KEY,
+        ranked_session_token: "ranked-token",
+        challenge_id: "ranked-1",
+        initial_seed: 123,
+        seed: 123
+      }
+    });
+    expect(manager.rankedSessionToken).toBe("ranked-token");
+    expect(manager.lastRankedCheckpointSaveError || "").not.toBe("RANKED_SESSION_EXPIRED");
+    expect(runtime.windowLike.alert).not.toHaveBeenCalled();
     expect(runtime.fetchCalls.some((call) => call.url.endsWith("/score"))).toBe(false);
   });
 

@@ -5,6 +5,8 @@ import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage"
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-rescue-client-service-boundary";
 import { installDirectionLockRuntime } from "../bootstrap/direction-lock-runtime";
+import { installBreakoutEasterEggRuntime } from "../bootstrap/breakout-easter-egg";
+import { installFlyingClickEffectRuntime } from "../bootstrap/flying-click-effect";
 import { installGameOverUndoHostRuntime } from "../bootstrap/game-over-undo-host";
 import { installGameManagerBaseHelpersRuntime } from "../bootstrap/game-manager-base-helpers-runtime";
 import { installGameManagerClientRecordIdRuntime } from "../bootstrap/game-manager-client-record-id-runtime";
@@ -271,6 +273,8 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installGameManagerRuntimeAccessorHelpersRuntime();
   installAdminRescueClientServiceBoundary();
   installDirectionLockRuntime();
+  installBreakoutEasterEggRuntime();
+  installFlyingClickEffectRuntime();
   installGameOverUndoHostRuntime();
   installGridScanRuntime();
   installHomeGuideRuntime();
