@@ -103,6 +103,9 @@ describe("admin beta access UI", () => {
     await flushAsync();
 
     expect(dom.window.document.getElementById("admin-beta-access-list")?.textContent).toContain("invitee@example.com");
+    expect(dom.window.document.querySelector(".admin-beta-access-table-head")?.textContent).toContain("邮箱");
+    expect(dom.window.document.querySelector(".admin-beta-access-identity .admin-beta-access-email")).not.toBeNull();
+    expect(dom.window.document.querySelector(".admin-beta-access-lifecycle")?.textContent).toContain("当前有效");
     expect(dom.window.document.querySelector("[data-admin-beta-access-revoke='1']")).not.toBeNull();
   });
 

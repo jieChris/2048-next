@@ -83,23 +83,25 @@
             <button id="admin-beta-access-refresh" class="replay-button" type="button">刷新名单</button>
           </div>
         </div>
-        <div class="admin-form-grid admin-beta-access-form">
-          <label>邮箱
-            <input id="admin-beta-access-email" class="admin-input" type="email" autocomplete="off" placeholder="invitee@example.com">
-          </label>
-          <label>备注
-            <input id="admin-beta-access-note" class="admin-input" type="text" maxlength="200" placeholder="来源 / 批次 / 说明">
-          </label>
-          <label>状态
-            <select id="admin-beta-access-status" class="settings-select">
-              <option value="active">仅有效</option>
-              <option value="all">全部</option>
-              <option value="revoked">已撤销</option>
-            </select>
-          </label>
-        </div>
-        <div class="admin-actions">
-          <button id="admin-beta-access-add" class="replay-button" type="button">加入内测</button>
+        <div class="admin-beta-access-console">
+          <div class="admin-form-grid admin-beta-access-form">
+            <label class="admin-beta-access-email-field">邮箱
+              <input id="admin-beta-access-email" class="admin-input" type="email" autocomplete="off" placeholder="invitee@example.com">
+            </label>
+            <label class="admin-beta-access-note-field">备注
+              <input id="admin-beta-access-note" class="admin-input" type="text" maxlength="200" placeholder="来源 / 批次 / 说明">
+            </label>
+            <label class="admin-beta-access-status-field">状态
+              <select id="admin-beta-access-status" class="settings-select">
+                <option value="active">仅有效</option>
+                <option value="all">全部</option>
+                <option value="revoked">已撤销</option>
+              </select>
+            </label>
+            <div class="admin-beta-access-submit">
+              <button id="admin-beta-access-add" class="replay-button" type="button">加入内测</button>
+            </div>
+          </div>
         </div>
         <p id="admin-beta-access-tip" class="admin-tip" aria-live="polite"></p>
         <div id="admin-beta-access-list" class="admin-beta-access-list" aria-live="polite"></div>

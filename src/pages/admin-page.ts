@@ -294,7 +294,7 @@ function renderBetaAccessAllowlist(payload: unknown): void {
     target.innerHTML = '<div class="admin-empty-state">暂无内测名单记录</div>';
     return;
   }
-  target.innerHTML = rows.map((row) => {
+  const listRows = rows.map((row) => {
     const id = toText(row.id);
     const email = toText(row.email);
     const status = toText(row.status || "active");
@@ -305,14 +305,19 @@ function renderBetaAccessAllowlist(payload: unknown): void {
       ? '<button class="replay-button" type="button" data-admin-beta-access-revoke="' + escapeHtml(id) + '">撤销</button>'
       : '<span class="admin-beta-access-meta">无操作</span>';
     return '<div class="admin-beta-access-row">' +
-      '<div><div class="admin-beta-access-email">' + escapeHtml(email) + '</div>' +
+      '<div class="admin-beta-access-identity"><div class="admin-beta-access-email" title="' + escapeHtml(email) + '">' + escapeHtml(email) + '</div>' +
       '<div class="admin-beta-access-meta">ID ' + escapeHtml(id) + (createdAt ? " · " + escapeHtml(createdAt) : "") + '</div></div>' +
-      '<div>' + renderStatusPill(betaAccessStatusLabel(status), status) + '</div>' +
-      '<div class="admin-beta-access-note">' + escapeHtml(note || "无备注") + '</div>' +
-      '<div class="admin-beta-access-meta">' + escapeHtml(revokedAt ? "撤销于 " + revokedAt : "当前有效") + '</div>' +
+      '<div class="admin-beta-access-status">' + renderStatusPill(betaAccessStatusLabel(status), status) + '</div>' +
+      '<div class="admin-beta-access-note" title="' + escapeHtml(note || "无备注") + '">' + escapeHtml(note || "无备注") + '</div>' +
+      '<div class="admin-beta-access-lifecycle">' + escapeHtml(revokedAt ? "撤销于 " + revokedAt : "当前有效") + '</div>' +
       '<div class="admin-beta-access-actions">' + action + '</div>' +
     "</div>";
   }).join("");
+  target.innerHTML =
+    '<div class="admin-beta-access-table-head" aria-hidden="true">' +
+      '<span>邮箱</span><span>状态</span><span>备注</span><span>资格</span><span>操作</span>' +
+    '</div>' +
+    listRows;
   bindBetaAccessListActions();
 }
 
