@@ -1,8 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { mockAcceptedBetaAccess } from "./support/beta-access";
 import { startHomeGuideFromPageHost, waitForHomeGuidePageHostReady } from "./support/home-guide";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockAcceptedBetaAccess(page);
+  });
+
   test("home guide only highlights the active target on index page", async ({ page }) => {
     await page.addInitScript(() => {
       try {

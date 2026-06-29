@@ -1,9 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+import { mockAcceptedBetaAccess } from "./support/beta-access";
 import { installRankedSessionForMode } from "./support/ranked-session";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Play Anti-Cheat Smoke", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockAcceptedBetaAccess(page);
+  });
+
   test("no-undo modes do not allow console-forced undo after runtime flag tampering", async ({
     page
   }) => {

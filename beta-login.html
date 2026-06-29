@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>2048 NEXT 内测访问</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
+  <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260606-fillframe">
+  <link href="style/beta_access.css?v=20260627-01" rel="stylesheet" type="text/css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
+</head>
+<body class="beta-access-body" data-page="beta-login">
+  <main class="beta-entry-shell">
+    <section class="beta-entry-panel" aria-labelledby="beta-login-title">
+      <div class="beta-brand-lockup">
+        <span class="beta-mark">2048</span>
+        <span class="beta-phase">Closed Beta</span>
+      </div>
+      <h1 id="beta-login-title">内测访问登录</h1>
+      <p class="beta-copy">本项目当前为局部内测。请使用受邀邮箱对应账号登录，或先完成受邀邮箱注册。</p>
+      <p class="beta-contact-copy">内测交流群：1103144436</p>
+
+      <div class="beta-tabs" role="tablist" aria-label="内测访问方式">
+        <button id="beta-login-tab-login" class="beta-tab is-active" type="button" data-beta-tab="login" role="tab" aria-selected="true">登录</button>
+        <button id="beta-login-tab-register" class="beta-tab" type="button" data-beta-tab="register" role="tab" aria-selected="false">注册</button>
+      </div>
+
+      <section id="beta-login-form" class="beta-form-section" data-beta-form="login">
+        <label>邮箱
+          <input id="beta-login-email" class="beta-input" type="email" autocomplete="email" placeholder="invitee@example.com">
+        </label>
+        <label>密码
+          <input id="beta-login-password" class="beta-input" type="password" autocomplete="current-password" placeholder="请输入密码">
+        </label>
+        <button id="beta-login-submit" class="beta-primary-button" type="button">登录并继续</button>
+      </section>
+
+      <section id="beta-register-form" class="beta-form-section" data-beta-form="register" hidden>
+        <label>邮箱
+          <input id="beta-register-email" class="beta-input" type="email" autocomplete="email" placeholder="受邀邮箱">
+        </label>
+        <label>昵称
+          <input id="beta-register-nickname" class="beta-input" type="text" maxlength="16" autocomplete="nickname" placeholder="2-10 个字符">
+        </label>
+        <label>密码
+          <input id="beta-register-password" class="beta-input" type="password" autocomplete="new-password" placeholder="至少 10 位">
+        </label>
+        <div class="beta-code-row">
+          <label>邮箱验证码
+            <input id="beta-register-code" class="beta-input" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6 位验证码">
+          </label>
+          <button id="beta-register-send" class="beta-secondary-button" type="button">发送验证码</button>
+        </div>
+        <button id="beta-register-submit" class="beta-primary-button" type="button">完成注册</button>
+      </section>
+
+      <p id="beta-login-tip" class="beta-tip" aria-live="polite"></p>
+    </section>
+  </main>
+  <script type="module" src="./src/entries/beta-login.ts"></script>
+</body>
+</html>

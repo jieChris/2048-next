@@ -9,7 +9,7 @@ type RescueModeOption = {
   modeBucket: string;
 };
 
-const ADMIN_DENIED_REDIRECT = "account.html?admin_required=1";
+const ADMIN_DENIED_REDIRECT = "beta-login.html?admin_required=1&next=admin.html";
 const RESCUE_MODE_OPTIONS: RescueModeOption[] = [
   { label: "4x4 \u65e0\u64a4\u56de", modeKey: "standard_4x4_pow2_no_undo", modeBucket: "standard_no_undo" },
   { label: "4x4 \u6709\u64a4\u56de", modeKey: "classic_4x4_pow2_undo", modeBucket: "standard_undo" },
@@ -34,6 +34,11 @@ let latestResult: unknown = null;
 let isAdminAuthorized = false;
 let rescueSubmitInFlight = false;
 let initialAccessCheckDone = false;
+let canManageSuperAdmins = false;
+let latestAchievementRows: JsonRecord[] = [];
+let latestSuperAdminRows: JsonRecord[] = [];
+let selectedAchievementId = "";
+let selectedAchievementRules: JsonRecord[] = [];
 const tipTimers = new WeakMap<HTMLElement, number>();
 
 function byId<T extends HTMLElement>(id: string): T | null {
@@ -66,7 +71,7 @@ function getInputValue(id: string): string {
 }
 
 function setInputValue(id: string, value: string): void {
-  const input = byId<HTMLInputElement>(id);
+  const input = byId<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id);
   if (input) input.value = value;
 }
 
@@ -137,7 +142,7 @@ function setAdminAccessState(state: "checking" | "granted" | "denied"): void {
 
 function redirectDeniedAdminAccess(): void {
   setAdminAccessState("denied");
-  if (window.location.pathname.endsWith("/account.html") || window.location.pathname.endsWith("/account")) return;
+  if (window.location.pathname.endsWith("/beta-login.html") || window.location.pathname.endsWith("/beta-login")) return;
   window.location.replace(ADMIN_DENIED_REDIRECT);
 }
 
@@ -266,6 +271,254 @@ function renderRescueOfferHistory(target: HTMLElement | null, payload: unknown):
       "</tr></thead><tbody>" + body + "</tbody></table>";
 }
 
+function betaAccessStatusLabel(status: unknown): string {
+  switch (toText(status)) {
+    case "active": return "有效";
+    case "revoked": return "已撤销";
+    default: return toText(status) || "未知";
+  }
+}
+
+function betaAccessListPath(): string {
+  const status = getInputValue("admin-beta-access-status") || "active";
+  const params = new URLSearchParams();
+  if (status && status !== "all") params.set("status", status);
+  return "/admin/beta-access/allowlist" + (params.toString() ? "?" + params.toString() : "");
+}
+
+function renderBetaAccessAllowlist(payload: unknown): void {
+  const target = byId("admin-beta-access-list");
+  if (!target) return;
+  const rows = normalizeRows(payload);
+  if (!rows.length) {
+    target.innerHTML = '<div class="admin-empty-state">暂无内测名单记录</div>';
+    return;
+  }
+  target.innerHTML = rows.map((row) => {
+    const id = toText(row.id);
+    const email = toText(row.email);
+    const status = toText(row.status || "active");
+    const note = toText(row.note);
+    const createdAt = formatDateTime(row.created_at || row.createdAt);
+    const revokedAt = formatDateTime(row.revoked_at || row.revokedAt);
+    const action = status === "active"
+      ? '<button class="replay-button" type="button" data-admin-beta-access-revoke="' + escapeHtml(id) + '">撤销</button>'
+      : '<span class="admin-beta-access-meta">无操作</span>';
+    return '<div class="admin-beta-access-row">' +
+      '<div><div class="admin-beta-access-email">' + escapeHtml(email) + '</div>' +
+      '<div class="admin-beta-access-meta">ID ' + escapeHtml(id) + (createdAt ? " · " + escapeHtml(createdAt) : "") + '</div></div>' +
+      '<div>' + renderStatusPill(betaAccessStatusLabel(status), status) + '</div>' +
+      '<div class="admin-beta-access-note">' + escapeHtml(note || "无备注") + '</div>' +
+      '<div class="admin-beta-access-meta">' + escapeHtml(revokedAt ? "撤销于 " + revokedAt : "当前有效") + '</div>' +
+      '<div class="admin-beta-access-actions">' + action + '</div>' +
+    "</div>";
+  }).join("");
+  bindBetaAccessListActions();
+}
+
+function setSuperAdminManagementState(enabled: boolean): void {
+  canManageSuperAdmins = enabled;
+  const card = byId<HTMLElement>("admin-super-admin-card");
+  if (card) card.hidden = !enabled;
+  if (!enabled) {
+    latestSuperAdminRows = [];
+    const list = byId("admin-super-admin-list");
+    if (list) list.innerHTML = "";
+    clearTip(byId("admin-super-admin-tip"));
+  }
+}
+
+function superAdminDisplayName(row: JsonRecord): string {
+  return toText(row.nickname || row.display_name || row.displayName || row.email || ("#" + toText(row.id))).trim();
+}
+
+function renderSuperAdminUsers(payload: unknown): void {
+  const target = byId("admin-super-admin-list");
+  if (!target) return;
+  latestSuperAdminRows = normalizeRows(payload);
+  if (!latestSuperAdminRows.length) {
+    target.innerHTML = '<div class="admin-empty-state">暂无超级管理员记录</div>';
+    return;
+  }
+  target.innerHTML = latestSuperAdminRows.map((row) => {
+    const id = Number(row.id);
+    const idText = toText(row.id);
+    const email = toText(row.email);
+    const displayName = superAdminDisplayName(row);
+    const createdAt = formatDateTime(row.created_at || row.createdAt);
+    const lastLoginAt = formatDateTime(row.last_login_at || row.lastLoginAt);
+    const action = id === 0
+      ? '<span class="admin-super-admin-root-badge">最高权限</span>'
+      : '<button class="replay-button" type="button" data-admin-super-admin-revoke="' + escapeHtml(idText) + '">撤销</button>';
+    return '<div class="admin-super-admin-row">' +
+      '<div><div class="admin-beta-access-email">#' + escapeHtml(idText) + ' · ' + escapeHtml(displayName) + '</div>' +
+      '<div class="admin-beta-access-meta">' + escapeHtml(email || "未设置邮箱") + '</div></div>' +
+      '<div>' + renderStatusPill(id === 0 ? "Root" : "Super Admin", id === 0 ? "root" : "active") + '</div>' +
+      '<div class="admin-beta-access-meta">' + escapeHtml(createdAt ? "创建 " + createdAt : "创建时间未知") + '</div>' +
+      '<div class="admin-beta-access-meta">' + escapeHtml(lastLoginAt ? "最近登录 " + lastLoginAt : "暂无登录记录") + '</div>' +
+      '<div class="admin-beta-access-actions">' + action + '</div>' +
+    "</div>";
+  }).join("");
+  bindSuperAdminListActions();
+}
+
+async function loadSuperAdminUsers(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
+  if (!canManageSuperAdmins) return;
+  setButtonBusy("admin-super-admin-refresh", true);
+  setTip(byId("admin-super-admin-tip"), "正在加载超级管理员列表...", "busy");
+  try {
+    const result = await apiRequest("/admin/super-admins", { method: "GET" });
+    if (result.success === false) {
+      setTip(byId("admin-super-admin-tip"), "加载失败：" + getErrorMessage(result, "unknown"), "err");
+      return;
+    }
+    renderSuperAdminUsers(result);
+    setTip(byId("admin-super-admin-tip"), "已加载 " + latestSuperAdminRows.length + " 个超级管理员", "ok", 3000);
+  } finally {
+    setButtonBusy("admin-super-admin-refresh", false);
+  }
+}
+
+async function addSuperAdminUser(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
+  if (!canManageSuperAdmins) {
+    setTip(byId("admin-super-admin-tip"), "只有最高权限管理员可以设立超级管理员", "err");
+    return;
+  }
+  const userId = parsePositiveInt("admin-super-admin-user-id", 0);
+  if (!userId) {
+    setTip(byId("admin-super-admin-tip"), "请填写有效用户 ID", "err");
+    return;
+  }
+  setButtonBusy("admin-super-admin-add", true);
+  setTip(byId("admin-super-admin-tip"), "正在设为超级管理员...", "busy");
+  try {
+    const result = await apiRequest("/admin/super-admins", {
+      method: "POST",
+      body: JSON.stringify({ user_id: userId })
+    });
+    if (result.success === false) {
+      setTip(byId("admin-super-admin-tip"), "授权失败：" + getErrorMessage(result, "unknown"), "err");
+      return;
+    }
+    setInputValue("admin-super-admin-user-id", "");
+    setTip(byId("admin-super-admin-tip"), "已设为超级管理员", "ok", 3000);
+    await loadSuperAdminUsers();
+  } finally {
+    setButtonBusy("admin-super-admin-add", false);
+  }
+}
+
+async function revokeSuperAdminUser(id: string): Promise<void> {
+  if (!(await ensureAdminReady())) return;
+  if (!canManageSuperAdmins) {
+    setTip(byId("admin-super-admin-tip"), "只有最高权限管理员可以撤销超级管理员", "err");
+    return;
+  }
+  const normalizedId = toText(id).trim();
+  if (!normalizedId || normalizedId === "0") {
+    setTip(byId("admin-super-admin-tip"), "最高权限管理员不可被撤销", "err");
+    return;
+  }
+  setTip(byId("admin-super-admin-tip"), "正在撤销超级管理员权限...", "busy");
+  try {
+    const result = await apiRequest("/admin/super-admins/" + encodeURIComponent(normalizedId), {
+      method: "DELETE"
+    });
+    if (result.success === false) {
+      setTip(byId("admin-super-admin-tip"), "撤销失败：" + getErrorMessage(result, "unknown"), "err");
+      return;
+    }
+    setTip(byId("admin-super-admin-tip"), "已撤销超级管理员权限", "ok", 3000);
+    await loadSuperAdminUsers();
+  } finally {
+    setButtonBusy("admin-super-admin-refresh", false);
+  }
+}
+
+function bindSuperAdminListActions(): void {
+  byId("admin-super-admin-list")?.querySelectorAll<HTMLButtonElement>("[data-admin-super-admin-revoke]").forEach((button) => {
+    button.addEventListener("click", () => {
+      void revokeSuperAdminUser(button.dataset.adminSuperAdminRevoke || "");
+    });
+  });
+}
+
+async function loadBetaAccessAllowlist(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
+  setButtonBusy("admin-beta-access-refresh", true);
+  setTip(byId("admin-beta-access-tip"), "正在加载内测名单...", "busy");
+  try {
+    const result = await apiRequest(betaAccessListPath(), { method: "GET" });
+    renderBetaAccessAllowlist(result);
+    const rowCount = normalizeRows(result).length;
+    setTip(
+      byId("admin-beta-access-tip"),
+      result.success === false ? "加载名单失败：" + getErrorMessage(result, "unknown") : "已加载 " + rowCount + " 条记录",
+      result.success === false ? "err" : "ok",
+      result.success === false ? 0 : 3000
+    );
+  } finally {
+    setButtonBusy("admin-beta-access-refresh", false);
+  }
+}
+
+async function addBetaAccessAllowlist(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
+  const email = getInputValue("admin-beta-access-email").toLowerCase();
+  const note = getInputValue("admin-beta-access-note");
+  if (!email || !email.includes("@")) {
+    setTip(byId("admin-beta-access-tip"), "请填写有效邮箱", "err");
+    return;
+  }
+  setButtonBusy("admin-beta-access-add", true);
+  setTip(byId("admin-beta-access-tip"), "正在加入内测名单...", "busy");
+  try {
+    const result = await apiRequest("/admin/beta-access/allowlist", {
+      method: "POST",
+      body: JSON.stringify({ email, note })
+    });
+    if (result.success === false) {
+      setTip(byId("admin-beta-access-tip"), "加入失败：" + getErrorMessage(result, "unknown"), "err");
+      return;
+    }
+    setInputValue("admin-beta-access-email", "");
+    setTip(byId("admin-beta-access-tip"), "已加入内测名单", "ok", 3000);
+    await loadBetaAccessAllowlist();
+  } finally {
+    setButtonBusy("admin-beta-access-add", false);
+  }
+}
+
+async function revokeBetaAccessAllowlist(id: string): Promise<void> {
+  if (!(await ensureAdminReady())) return;
+  const normalizedId = toText(id).trim();
+  if (!normalizedId) return;
+  setTip(byId("admin-beta-access-tip"), "正在撤销内测资格...", "busy");
+  try {
+    const result = await apiRequest("/admin/beta-access/allowlist/" + encodeURIComponent(normalizedId), {
+      method: "DELETE"
+    });
+    if (result.success === false) {
+      setTip(byId("admin-beta-access-tip"), "撤销失败：" + getErrorMessage(result, "unknown"), "err");
+      return;
+    }
+    setTip(byId("admin-beta-access-tip"), "已撤销内测资格", "ok", 3000);
+    await loadBetaAccessAllowlist();
+  } finally {
+    setButtonBusy("admin-beta-access-refresh", false);
+  }
+}
+
+function bindBetaAccessListActions(): void {
+  byId("admin-beta-access-list")?.querySelectorAll<HTMLButtonElement>("[data-admin-beta-access-revoke]").forEach((button) => {
+    button.addEventListener("click", () => {
+      void revokeBetaAccessAllowlist(button.dataset.adminBetaAccessRevoke || "");
+    });
+  });
+}
+
 function fillTableSelect(payload: unknown): void {
   const select = byId<HTMLSelectElement>("admin-table-select");
   if (!select) return;
@@ -323,11 +576,15 @@ async function checkAuth(options: { redirectOnDeny?: boolean } = {}): Promise<bo
     const ok = result.success !== false && (result.admin === true || authData.admin === true);
     if (ok) {
       const user = (result.user && typeof result.user === "object" ? result.user : authData) as JsonRecord | undefined;
+      const rootAdmin = authData.rootAdmin === true || authData.root_admin === true;
+      const canManage = rootAdmin || authData.canManageSuperAdmins === true || authData.can_manage_super_admins === true;
       setAdminAccessState("granted");
+      setSuperAdminManagementState(canManage);
       setAuthState(true, "\u5df2\u6388\u6743");
       setTip(byId("admin-query-tip"), "\u7ba1\u7406\u5458\u6743\u9650\u6b63\u5e38" + (user?.id ? " ID=" + user.id : ""), "ok", 3500);
       return true;
     }
+    setSuperAdminManagementState(false);
     setAuthState(false, result.code === "NO_TOKEN" ? "\u672a\u767b\u5f55" : "\u65e0\u6743\u9650");
     setTip(byId("admin-query-tip"), getErrorMessage(result, "\u6743\u9650\u68c0\u67e5\u5931\u8d25"), "err");
     if (options.redirectOnDeny) redirectDeniedAdminAccess();
@@ -549,6 +806,345 @@ async function listRescueOffers(): Promise<void> {
   }
 }
 
+function achievementId(row: JsonRecord | null | undefined): string {
+  return toText(row?.id || row?.achievement_id).trim();
+}
+
+function achievementStatusLabel(status: unknown): string {
+  switch (toText(status)) {
+    case "draft": return "草稿";
+    case "active": return "已启用";
+    case "archived": return "已归档";
+    default: return toText(status) || "未知";
+  }
+}
+
+function renderAchievementIcon(row: JsonRecord): string {
+  const name = toText(row.name || row.title || row.id || "成");
+  const iconUrl = toText(row.icon_url || row.iconUrl).trim();
+  const fallback = escapeHtml(name.slice(0, 1) || "成");
+  return '<span class="admin-achievement-icon">' +
+    (iconUrl ? '<img src="' + escapeHtml(iconUrl) + '" alt="">' : fallback) +
+    "</span>";
+}
+
+function filteredAchievementRows(): JsonRecord[] {
+  const keyword = getInputValue("admin-achievement-search").toLowerCase();
+  const status = getInputValue("admin-achievement-status-filter") || "all";
+  return latestAchievementRows.filter((row) => {
+    const haystack = [row.id, row.name, row.description, row.series_id].map(toText).join(" ").toLowerCase();
+    const matchesKeyword = !keyword || haystack.includes(keyword);
+    const matchesStatus = status === "all" || toText(row.status || "draft") === status;
+    return matchesKeyword && matchesStatus;
+  });
+}
+
+function renderAchievementList(): void {
+  const target = byId("admin-achievement-list");
+  if (!target) return;
+  const rows = filteredAchievementRows();
+  if (!rows.length) {
+    target.innerHTML = '<div class="admin-empty-state">暂无成就定义</div>';
+    return;
+  }
+  target.innerHTML = rows.map((row) => {
+    const id = achievementId(row);
+    const name = toText(row.name || id);
+    const status = toText(row.status || "draft");
+    const ruleCount = Array.isArray(row.rules) ? row.rules.length : 0;
+    return '<button type="button" class="admin-achievement-item' + (id === selectedAchievementId ? " is-selected" : "") + '" data-achievement-id="' + escapeHtml(id) + '">' +
+      renderAchievementIcon(row) +
+      '<span><span class="admin-achievement-item-title"><strong>' + escapeHtml(name) + '</strong>' +
+      renderStatusPill(achievementStatusLabel(status), status) +
+      '</span><p>' + escapeHtml(id) + " · 等级 " + escapeHtml(toText(row.level || 1)) + " · " + ruleCount + " 条规则</p></span>" +
+    "</button>";
+  }).join("");
+  target.querySelectorAll<HTMLButtonElement>(".admin-achievement-item").forEach((button) => {
+    button.addEventListener("click", () => selectAchievement(button.dataset.achievementId || ""));
+  });
+}
+
+function renderAchievementRules(): void {
+  const target = byId("admin-achievement-rules");
+  if (!target) return;
+  if (!selectedAchievementRules.length) {
+    target.innerHTML = '<div class="admin-empty-state">暂无规则</div>';
+    return;
+  }
+  target.innerHTML = selectedAchievementRules.map((rule, index) => {
+    const type = toText(rule.type || "manual_grant");
+    const params = rule.params && typeof rule.params === "object" ? rule.params : {};
+    return '<div class="admin-achievement-rule-row">' +
+      '<code>' + escapeHtml(type + " " + stringify(params)) + '</code>' +
+      '<button class="replay-button" type="button" data-rule-index="' + index + '">删除</button>' +
+    "</div>";
+  }).join("");
+  target.querySelectorAll<HTMLButtonElement>("button[data-rule-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.ruleIndex);
+      if (Number.isFinite(index)) {
+        selectedAchievementRules.splice(index, 1);
+        renderAchievementRules();
+      }
+    });
+  });
+}
+
+function clearAchievementForm(): void {
+  selectedAchievementId = "";
+  selectedAchievementRules = [];
+  setInputValue("admin-achievement-id", "");
+  setInputValue("admin-achievement-name", "");
+  setInputValue("admin-achievement-series", "");
+  setInputValue("admin-achievement-level", "1");
+  setInputValue("admin-achievement-status", "draft");
+  setInputValue("admin-achievement-sort", "0");
+  setInputValue("admin-achievement-icon-url", "");
+  setInputValue("admin-achievement-description", "");
+  setInputValue("admin-achievement-grant-id", "");
+  renderAchievementRules();
+  renderAchievementList();
+}
+
+function fillAchievementForm(row: JsonRecord): void {
+  const id = achievementId(row);
+  selectedAchievementId = id;
+  selectedAchievementRules = Array.isArray(row.rules) ? row.rules.map(toRecordLike) : [];
+  setInputValue("admin-achievement-id", id);
+  setInputValue("admin-achievement-name", toText(row.name));
+  setInputValue("admin-achievement-series", toText(row.series_id));
+  setInputValue("admin-achievement-level", toText(row.level || 1));
+  setInputValue("admin-achievement-status", toText(row.status || "draft"));
+  setInputValue("admin-achievement-sort", toText(row.sort_order || 0));
+  setInputValue("admin-achievement-icon-url", toText(row.icon_url));
+  setInputValue("admin-achievement-description", toText(row.description));
+  setInputValue("admin-achievement-grant-id", id);
+  setInputValue("admin-achievement-backfill-id", id);
+  renderAchievementRules();
+  renderAchievementList();
+}
+
+function toRecordLike(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
+}
+
+function selectAchievement(id: string): void {
+  const row = latestAchievementRows.find((item) => achievementId(item) === id);
+  if (row) fillAchievementForm(row);
+}
+
+function collectAchievementPayload(): JsonRecord | null {
+  const name = getInputValue("admin-achievement-name");
+  const description = getInputValue("admin-achievement-description");
+  if (!name || !description) {
+    setTip(byId("admin-achievement-tip"), "请填写成就名称和简介", "err");
+    return null;
+  }
+  const payload: JsonRecord = {
+    name,
+    description,
+    level: parsePositiveInt("admin-achievement-level", 1),
+    status: getInputValue("admin-achievement-status") || "draft",
+    sort_order: parseNonNegativeInt("admin-achievement-sort", 0),
+    rules: selectedAchievementRules
+  };
+  const seriesId = getInputValue("admin-achievement-series");
+  const iconUrl = getInputValue("admin-achievement-icon-url");
+  if (seriesId) payload.series_id = seriesId;
+  if (iconUrl) payload.icon_url = iconUrl;
+  return payload;
+}
+
+function collectAchievementRule(): JsonRecord {
+  const type = getInputValue("admin-achievement-rule-type") || "manual_grant";
+  const params: JsonRecord = {};
+  const tile = parseNonNegativeInt("admin-achievement-rule-tile", 0);
+  const count = parseNonNegativeInt("admin-achievement-rule-count", 0);
+  const modeKey = getInputValue("admin-achievement-rule-mode");
+  const eventId = getInputValue("admin-achievement-rule-event");
+  const rank = parseNonNegativeInt("admin-achievement-rule-rank", 0);
+  if (tile > 0) params.tile = tile;
+  if (count > 0) params.count = count;
+  if (modeKey) params.mode_key = modeKey;
+  if (eventId) params.event_id = eventId;
+  if (rank > 0) params.rank = rank;
+  return { type, params };
+}
+
+async function refreshAchievements(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
+  setButtonBusy("admin-achievement-refresh", true);
+  setTip(byId("admin-achievement-tip"), "正在加载成就...", "busy");
+  try {
+    const result = await apiRequest("/admin/achievements", { method: "GET" });
+    latestAchievementRows = normalizeRows(result);
+    if (result.success === false) {
+      setTip(byId("admin-achievement-tip"), "加载成就失败：" + getErrorMessage(result, "unknown"), "err");
+    } else {
+      setTip(byId("admin-achievement-tip"), "已加载 " + latestAchievementRows.length + " 个成就", "ok", 3000);
+    }
+    renderAchievementList();
+    renderOutput(byId("admin-achievement-output"), result);
+  } finally {
+    setButtonBusy("admin-achievement-refresh", false);
+  }
+}
+
+async function createAchievement(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
+  const payload = collectAchievementPayload();
+  if (!payload) return;
+  setButtonBusy("admin-achievement-create", true);
+  setTip(byId("admin-achievement-tip"), "正在创建成就...", "busy");
+  try {
+    const result = await apiRequest("/admin/achievements", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    renderOutput(byId("admin-achievement-output"), result);
+    if (result.success === false) {
+      setTip(byId("admin-achievement-tip"), "创建失败：" + getErrorMessage(result, "unknown"), "err");
+      return;
+    }
+    setTip(byId("admin-achievement-tip"), "成就已创建", "ok", 3000);
+    await refreshAchievements();
+  } finally {
+    setButtonBusy("admin-achievement-create", false);
+  }
+}
+
+async function saveAchievement(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
+  const id = getInputValue("admin-achievement-id") || selectedAchievementId;
+  if (!id) {
+    setTip(byId("admin-achievement-tip"), "请先选择一个成就，或点击创建成就", "err");
+    return;
+  }
+  const payload = collectAchievementPayload();
+  if (!payload) return;
+  setButtonBusy("admin-achievement-save", true);
+  setTip(byId("admin-achievement-tip"), "正在保存成就...", "busy");
+  try {
+    const updateResult = await apiRequest("/admin/achievements/" + encodeURIComponent(id), {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+    if (updateResult.success === false) {
+      renderOutput(byId("admin-achievement-output"), updateResult);
+      setTip(byId("admin-achievement-tip"), "保存失败：" + getErrorMessage(updateResult, "unknown"), "err");
+      return;
+    }
+    const rulesResult = await apiRequest("/admin/achievements/" + encodeURIComponent(id) + "/rules", {
+      method: "POST",
+      body: JSON.stringify({ rules: selectedAchievementRules })
+    });
+    renderOutput(byId("admin-achievement-output"), { update: updateResult, rules: rulesResult });
+    if (rulesResult.success === false) {
+      setTip(byId("admin-achievement-tip"), "规则保存失败：" + getErrorMessage(rulesResult, "unknown"), "err");
+      return;
+    }
+    setTip(byId("admin-achievement-tip"), "成就已保存", "ok", 3000);
+    await refreshAchievements();
+  } finally {
+    setButtonBusy("admin-achievement-save", false);
+  }
+}
+
+async function uploadAchievementIcon(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
+  const id = getInputValue("admin-achievement-id") || selectedAchievementId;
+  const file = byId<HTMLInputElement>("admin-achievement-icon-file")?.files?.[0];
+  if (!id || !file) {
+    setTip(byId("admin-achievement-tip"), "请先选择成就和图标文件", "err");
+    return;
+  }
+  const formData = new FormData();
+  formData.append("icon", file);
+  setButtonBusy("admin-achievement-upload-icon", true);
+  setTip(byId("admin-achievement-tip"), "正在上传图标...", "busy");
+  try {
+    const result = await apiRequest("/admin/achievements/" + encodeURIComponent(id) + "/icon", {
+      method: "POST",
+      body: formData
+    });
+    renderOutput(byId("admin-achievement-output"), result);
+    if (result.success === false) {
+      setTip(byId("admin-achievement-tip"), "图标上传失败：" + getErrorMessage(result, "unknown"), "err");
+      return;
+    }
+    setTip(byId("admin-achievement-tip"), "图标已上传", "ok", 3000);
+    await refreshAchievements();
+  } finally {
+    setButtonBusy("admin-achievement-upload-icon", false);
+  }
+}
+
+async function grantAchievement(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
+  const userId = parsePositiveInt("admin-achievement-grant-user", 0);
+  const achievementIdValue = getInputValue("admin-achievement-grant-id");
+  if (!userId || !achievementIdValue) {
+    setTip(byId("admin-achievement-tip"), "请填写用户 ID 和成就 ID", "err");
+    return;
+  }
+  const payload: JsonRecord = {
+    user_id: userId,
+    achievement_id: achievementIdValue,
+    source: getInputValue("admin-achievement-grant-source") || "manual"
+  };
+  const note = getInputValue("admin-achievement-grant-note");
+  if (note) payload.note = note;
+  setButtonBusy("admin-achievement-grant", true);
+  setTip(byId("admin-achievement-tip"), "正在发放成就...", "busy");
+  try {
+    const result = await apiRequest("/admin/achievements/grant", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    renderOutput(byId("admin-achievement-output"), result);
+    setTip(
+      byId("admin-achievement-tip"),
+      result.success === false ? "发放失败：" + getErrorMessage(result, "unknown") : "成就已发放",
+      result.success === false ? "err" : "ok",
+      result.success === false ? 0 : 3000
+    );
+  } finally {
+    setButtonBusy("admin-achievement-grant", false);
+  }
+}
+
+async function backfillAchievements(): Promise<void> {
+  if (!(await ensureAdminReady())) return;
+  const userId = parsePositiveInt("admin-achievement-backfill-user", 0);
+  const achievementIdValue = getInputValue("admin-achievement-backfill-id");
+  const payload: JsonRecord = {};
+  if (userId) payload.user_id = userId;
+  if (achievementIdValue) payload.achievement_id = achievementIdValue;
+  if (!window.confirm("确认执行成就回填？该操作应当由后端保证幂等。")) return;
+  setButtonBusy("admin-achievement-backfill", true);
+  setTip(byId("admin-achievement-tip"), "正在执行回填...", "busy");
+  try {
+    const result = await apiRequest("/admin/achievements/backfill", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    renderOutput(byId("admin-achievement-output"), result);
+    setTip(
+      byId("admin-achievement-tip"),
+      result.success === false ? "回填失败：" + getErrorMessage(result, "unknown") : "回填任务已提交",
+      result.success === false ? "err" : "ok",
+      result.success === false ? 0 : 3000
+    );
+  } finally {
+    setButtonBusy("admin-achievement-backfill", false);
+  }
+}
+
+function addAchievementRule(): void {
+  selectedAchievementRules = [...selectedAchievementRules, collectAchievementRule()];
+  renderAchievementRules();
+}
+
 function bind(id: string, handler: () => void | Promise<void>): void {
   byId<HTMLButtonElement>(id)?.addEventListener("click", () => {
     Promise.resolve(handler()).catch((error) => {
@@ -566,6 +1162,44 @@ function bindTipReset(): void {
     byId<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id)?.addEventListener("input", () => clearTip(byId("admin-query-tip")));
     byId<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id)?.addEventListener("change", () => clearTip(byId("admin-query-tip")));
   }
+  for (const id of ["admin-beta-access-email", "admin-beta-access-note", "admin-beta-access-status"]) {
+    byId<HTMLInputElement | HTMLSelectElement>(id)?.addEventListener("input", () => clearTip(byId("admin-beta-access-tip")));
+    byId<HTMLInputElement | HTMLSelectElement>(id)?.addEventListener("change", () => clearTip(byId("admin-beta-access-tip")));
+  }
+  byId<HTMLInputElement>("admin-super-admin-user-id")?.addEventListener("input", () => clearTip(byId("admin-super-admin-tip")));
+  for (const id of [
+    "admin-achievement-search",
+    "admin-achievement-status-filter",
+    "admin-achievement-name",
+    "admin-achievement-series",
+    "admin-achievement-level",
+    "admin-achievement-status",
+    "admin-achievement-sort",
+    "admin-achievement-icon-url",
+    "admin-achievement-description",
+    "admin-achievement-rule-type",
+    "admin-achievement-rule-tile",
+    "admin-achievement-rule-count",
+    "admin-achievement-rule-mode",
+    "admin-achievement-rule-event",
+    "admin-achievement-rule-rank",
+    "admin-achievement-grant-user",
+    "admin-achievement-grant-id",
+    "admin-achievement-grant-source",
+    "admin-achievement-grant-note",
+    "admin-achievement-backfill-user",
+    "admin-achievement-backfill-id"
+  ]) {
+    const node = byId<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id);
+    node?.addEventListener("input", () => {
+      clearTip(byId("admin-achievement-tip"));
+      if (id === "admin-achievement-search") renderAchievementList();
+    });
+    node?.addEventListener("change", () => {
+      clearTip(byId("admin-achievement-tip"));
+      if (id === "admin-achievement-status-filter") renderAchievementList();
+    });
+  }
 }
 
 export function bootstrapAdminPage(): void {
@@ -573,6 +1207,7 @@ export function bootstrapAdminPage(): void {
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
   if (!initialAccessCheckDone) setAdminAccessState("checking");
   initRescueModeSelect();
+  clearAchievementForm();
   bindTipReset();
   bind("admin-check-auth", async () => { await checkAuth(); });
   bind("admin-refresh-tables", refreshTables);
@@ -582,5 +1217,26 @@ export function bootstrapAdminPage(): void {
   bind("admin-create-rescue", createRescueOffer);
   bind("admin-create-rescue-from-replay", createRescueOfferFromReplay);
   bind("admin-list-rescue", listRescueOffers);
-  void checkAuth({ redirectOnDeny: true });
+  bind("admin-beta-access-refresh", loadBetaAccessAllowlist);
+  bind("admin-beta-access-add", addBetaAccessAllowlist);
+  bind("admin-super-admin-refresh", loadSuperAdminUsers);
+  bind("admin-super-admin-add", addSuperAdminUser);
+  bind("admin-achievement-refresh", refreshAchievements);
+  bind("admin-achievement-new", () => {
+    clearAchievementForm();
+    setTip(byId("admin-achievement-tip"), "已切换到新建草稿", "ok", 2500);
+  });
+  bind("admin-achievement-create", createAchievement);
+  bind("admin-achievement-save", saveAchievement);
+  bind("admin-achievement-upload-icon", uploadAchievementIcon);
+  bind("admin-achievement-add-rule", addAchievementRule);
+  bind("admin-achievement-grant", grantAchievement);
+  bind("admin-achievement-backfill", backfillAchievements);
+  void checkAuth({ redirectOnDeny: true }).then((ok) => {
+    if (ok) {
+      void refreshAchievements();
+      void loadBetaAccessAllowlist();
+      if (canManageSuperAdmins) void loadSuperAdminUsers();
+    }
+  });
 }

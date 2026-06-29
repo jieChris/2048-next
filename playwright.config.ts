@@ -18,6 +18,20 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     headless: true,
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: BASE_URL,
+          localStorage: [
+            {
+              name: "2048_beta_access_smoke_bypass_v1",
+              value: "1"
+            }
+          ]
+        }
+      ]
+    },
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off"

@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+import { mockAcceptedBetaAccess } from "./support/beta-access";
+
 test.describe("History smoke: mode and filter", () => {
   test("supports mode filter, keyword and score sort", async ({ page }) => {
+    await mockAcceptedBetaAccess(page);
+
     const response = await page.goto("/history.html", { waitUntil: "domcontentloaded" });
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();

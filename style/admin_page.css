@@ -32,6 +32,10 @@ body[data-page="admin-console"][data-admin-access="denied"] .admin-page-shell {
   grid-row: span 2;
 }
 
+.admin-achievement-card {
+  grid-column: 1 / -1;
+}
+
 .admin-card h2,
 .admin-card p {
   margin: 0;
@@ -297,10 +301,254 @@ body[data-page="admin-console"] .settings-select:focus {
   background: rgba(194, 71, 59, 0.09);
 }
 
+.admin-status-root {
+  border-color: rgba(178, 125, 46, 0.32);
+  color: #8c621f;
+  background: rgba(178, 125, 46, 0.12);
+}
+
 .admin-empty-state {
   padding: 12px;
   color: #8c7a67;
   font-size: 13px;
+}
+
+.admin-panel-actions {
+  margin: 0;
+}
+
+.admin-beta-access-form {
+  grid-template-columns: minmax(220px, 1.2fr) minmax(220px, 1fr) 140px;
+}
+
+.admin-super-admin-card {
+  grid-column: 1 / -1;
+}
+
+.admin-super-admin-card[hidden] {
+  display: none;
+}
+
+.admin-super-admin-form {
+  grid-template-columns: minmax(220px, 360px);
+}
+
+.admin-beta-access-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.admin-beta-access-row,
+.admin-super-admin-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) 100px minmax(160px, 1fr) 150px auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(216, 201, 184, 0.72);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.admin-super-admin-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.admin-super-admin-root-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(178, 125, 46, 0.28);
+  border-radius: 10px;
+  color: #8c621f;
+  background: rgba(178, 125, 46, 0.1);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.admin-beta-access-email {
+  font-weight: 800;
+  color: #4d4339;
+  overflow-wrap: anywhere;
+}
+
+.admin-beta-access-note {
+  color: #6f5f4f;
+  overflow-wrap: anywhere;
+}
+
+.admin-beta-access-meta {
+  color: #8c7a67;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.admin-beta-access-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.admin-achievement-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.admin-achievement-list-panel,
+.admin-achievement-editor {
+  min-width: 0;
+}
+
+.admin-achievement-filter-grid {
+  grid-template-columns: minmax(0, 1fr) 140px;
+  margin-bottom: 10px;
+}
+
+.admin-achievement-list {
+  display: grid;
+  gap: 8px;
+  max-height: 700px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.admin-achievement-item {
+  width: 100%;
+  border: 1px solid rgba(216, 201, 184, 0.88);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 10px;
+  text-align: left;
+  color: #4d4339;
+  background: rgba(255, 255, 255, 0.58);
+  cursor: pointer;
+  font: inherit;
+}
+
+.admin-achievement-item:hover,
+.admin-achievement-item.is-selected {
+  border-color: #b49a7b;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.admin-achievement-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #f9f6f2;
+  background: linear-gradient(145deg, #8f7a66, #5f5144);
+  font-size: 18px;
+  font-weight: 900;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.22);
+}
+
+.admin-achievement-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-achievement-item-title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.admin-achievement-item-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-achievement-item p {
+  margin: 4px 0 0;
+  color: #8c7a67;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.admin-achievement-form-grid {
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+}
+
+.admin-achievement-description {
+  min-height: 76px;
+}
+
+.admin-achievement-rule-panel {
+  margin-top: 12px;
+}
+
+.admin-achievement-rule-grid {
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+}
+
+.admin-achievement-rules {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.admin-achievement-rule-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(216, 201, 184, 0.72);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.5);
+  color: #6f5f4f;
+  font-size: 12px;
+}
+
+.admin-achievement-rule-row code {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.admin-achievement-rule-row button {
+  flex: 0 0 auto;
+}
+
+.admin-achievement-ops {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.admin-achievement-op-grid {
+  grid-template-columns: repeat(3, minmax(90px, 1fr));
+}
+
+.admin-achievement-note {
+  min-height: 58px;
+}
+
+.admin-file-action {
+  position: relative;
+  display: inline-flex;
+  overflow: hidden;
+}
+
+.admin-file-action input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .admin-tip {
@@ -340,7 +588,17 @@ body[data-page="admin-console"] .settings-select:focus {
 @media (max-width: 980px) {
   .admin-grid,
   .admin-form-grid,
-  .admin-rescue-grid {
+  .admin-rescue-grid,
+  .admin-beta-access-form,
+  .admin-beta-access-row,
+  .admin-super-admin-form,
+  .admin-super-admin-row,
+  .admin-achievement-layout,
+  .admin-achievement-ops {
     grid-template-columns: 1fr;
+  }
+
+  .admin-beta-access-actions {
+    justify-content: flex-start;
   }
 }

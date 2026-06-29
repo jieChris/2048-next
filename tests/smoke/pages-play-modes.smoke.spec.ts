@@ -1,8 +1,13 @@
 import { expect, test } from "@playwright/test";
 
+import { mockAcceptedBetaAccess } from "./support/beta-access";
 import { installRankedSessionForMode } from "./support/ranked-session";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockAcceptedBetaAccess(page);
+  });
+
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {
     const response = await page.goto("/play.html?mode_key=spawn_custom_4x4_pow2_no_undo&four_rate=25", {
       waitUntil: "domcontentloaded"
@@ -470,6 +475,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("obstacle mode keeps grid aligned with obstacle cells sized like normal cells", async ({
     page
   }) => {
+    await installRankedSessionForMode(page, "obstacle_4x4_pow2_no_undo", {
+      clearPrefetch: true,
+      clearSavedState: true
+    });
     const response = await page.goto("/play.html?mode_key=obstacle_4x4_pow2_no_undo", {
       waitUntil: "domcontentloaded"
     });

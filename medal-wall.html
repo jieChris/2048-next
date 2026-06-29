@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>2048 勋章墙</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
+  <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260606-fillframe">
+  <link rel="shortcut icon" href="meta/favicon.ico?v=20260606-fillframe">
+  <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260606-fillframe">
+  <link rel="manifest" href="site.webmanifest?v=20260606-fillframe">
+  <script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
+  <script src="/js/beta_access_preload.js?v=20260627-01"></script>
+  <link href="style/main.css?v=20260608-toolkit-align" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
+  <link href="style/achievements_page.css?v=20260626-01" rel="stylesheet" type="text/css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
+</head>
+<body data-page="achievements">
+  <main class="palette-page-shell achievements-page-shell">
+    <header class="palette-page-header achievements-header">
+      <div class="palette-title-wrap">
+        <p class="palette-kicker">2048 Collection</p>
+        <h1 class="palette-title">成就</h1>
+        <p class="palette-subtitle">查看已获得成就，并选择最多三个展示在个人资料中。</p>
+      </div>
+      <span id="achievements-user-name" class="achievements-header-user" aria-live="polite">游客</span>
+      <nav class="palette-nav">
+        <a class="replay-button palette-nav-btn" href="account.html">账号中心</a>
+        <a class="replay-button palette-nav-btn" href="2048.html">返回游戏</a>
+      </nav>
+    </header>
+
+    <section class="achievements-overview">
+      <section class="card-surface achievements-summary-card">
+        <div class="panel-head achievements-panel-head">
+          <div>
+            <h2>收集进度</h2>
+            <p id="achievements-summary-copy">正在读取成就数据。</p>
+          </div>
+          <span id="achievements-status" class="panel-pill">加载中</span>
+        </div>
+        <div id="achievements-stats" class="achievements-stats" aria-live="polite"></div>
+      </section>
+
+      <section class="card-surface achievements-showcase-card">
+        <div class="panel-head achievements-panel-head">
+          <div>
+            <h2>展示成就</h2>
+            <p>最多展示三个已获得成就。</p>
+          </div>
+          <button id="achievements-edit-showcase" class="replay-button" type="button">编辑展示</button>
+        </div>
+        <div id="achievements-showcase" class="achievements-showcase" aria-live="polite"></div>
+        <div id="achievements-showcase-actions" class="achievements-showcase-actions" hidden>
+          <button id="achievements-save-showcase" class="replay-button" type="button">保存展示</button>
+          <button id="achievements-cancel-showcase" class="replay-button" type="button">取消</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="achievements-workspace">
+      <section class="card-surface achievements-list-card">
+        <div class="achievements-wall-head">
+          <div>
+            <h2>成就勋章墙</h2>
+            <p>已点亮和未点亮的成就会同时展示，已点亮成就排在前方。</p>
+          </div>
+        </div>
+        <div class="achievements-filter-row" role="group" aria-label="成就筛选">
+          <button class="achievement-filter is-active" type="button" data-filter="all">全部</button>
+          <button class="achievement-filter" type="button" data-filter="earned">已获得</button>
+          <button class="achievement-filter" type="button" data-filter="locked">未获得</button>
+          <button class="achievement-filter" type="button" data-filter="event">活动</button>
+          <button class="achievement-filter" type="button" data-filter="milestone">里程碑</button>
+        </div>
+        <div id="achievements-list" class="achievements-list" aria-live="polite"></div>
+      </section>
+
+      <aside id="achievement-detail" class="card-surface achievement-detail" aria-live="polite">
+        <div class="achievement-detail-empty">选择一个成就查看详情。</div>
+      </aside>
+    </section>
+
+    <p id="achievements-tip" class="achievements-tip" aria-live="polite"></p>
+  </main>
+
+  <script type="module" src="./src/entries/achievements.ts"></script>
+</body>
+</html>

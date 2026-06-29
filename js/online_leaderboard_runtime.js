@@ -643,6 +643,43 @@ function shouldAutoLoadOnlineLeaderboard() {
       );
   }
 
+  function continueRankedRestartWithoutSetupIntent(manager, modeKey, runtime, snapshot) {
+    Promise.resolve()
+      .then(function () {
+        return runtime.startNextSession(modeKey);
+      })
+      .then(
+        function (ready) {
+          if (!ready) {
+            blockRankedRestartUntilSessionReady(manager, modeKey, runtime, snapshot);
+            return;
+          }
+          if (manager) manager.rankedRestartBlockedUntilSessionReady = false;
+          if (!(manager && (manager.rankCheckpointApplying === true || manager.replayMode === true))) {
+            clearRankedCheckpointForManager(manager, { keepalive: true }).catch(function () {});
+          }
+        },
+        function () {
+          blockRankedRestartUntilSessionReady(manager, modeKey, runtime, snapshot);
+        }
+      )
+      .then(
+        function () {
+          markRankedRestartPreparationDone(manager);
+        },
+        function (err) {
+          markRankedRestartPreparationDone(manager);
+          global.setTimeout(function () {
+            throw err;
+          }, 0);
+        }
+      );
+  }
+
+  function isRankedRestartPromiseLike(value) {
+    return !!(value && typeof value.then === "function");
+  }
+
   function beginAsyncRankedRestartAfterConfirmation(manager, original, thisArg, args, modeKey, runtime) {
     if (!(manager && typeof manager.setup === "function")) {
       Promise.resolve()
@@ -718,11 +755,16 @@ function shouldAutoLoadOnlineLeaderboard() {
       markRankedRestartPreparationDone(manager);
       throw err;
     }
+    var resultIsPromiseLike = isRankedRestartPromiseLike(result);
 
     Promise.resolve(result).then(
       function () {
         if (!setupIntercepted) {
           restoreSetup();
+          if (!resultIsPromiseLike) {
+            continueRankedRestartWithoutSetupIntent(manager, modeKey, runtime, restartSnapshot);
+            return;
+          }
           markRankedRestartPreparationDone(manager);
         }
       },
@@ -3911,13 +3953,35 @@ async function refreshLeaderboard(modeLike) {
         if (
           isRestartMethod
         ) {
-          if (!prepareRankedSessionForRestart(currentManager)) {
+          if (methodName === "restart") {
+            var rankedRestartRuntime = getRankedSessionRuntime();
+            if (rankedRestartRuntime && typeof rankedRestartRuntime.startNextSession === "function") {
+              if (
+                beginAsyncRankedRestart(
+                  currentManager,
+                  original,
+                  this,
+                  Array.prototype.slice.call(arguments),
+                  { afterConfirmation: true }
+                )
+              ) {
+                return currentManager;
+              }
+            } else if (!prepareRankedSessionForRestart(currentManager)) {
+              beginAsyncRankedRestart(
+                currentManager,
+                original,
+                this,
+                Array.prototype.slice.call(arguments)
+              );
+              return currentManager;
+            }
+          } else if (!prepareRankedSessionForRestart(currentManager)) {
             beginAsyncRankedRestart(
               currentManager,
               original,
               this,
-              Array.prototype.slice.call(arguments),
-              { afterConfirmation: methodName === "restart" }
+              Array.prototype.slice.call(arguments)
             );
             return currentManager;
           }

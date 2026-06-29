@@ -97,7 +97,7 @@ describe("bootstrap home user display", () => {
       }
     };
 
-    expect(bindHomeUserDisplay({ documentLike, storageLike, pageId: "modes" })).toBe(true);
+    expect(bindHomeUserDisplay({ documentLike, storageLike, pageId: "history" })).toBe(true);
     expect(appended).toHaveLength(1);
     expect(appended[0]).toMatchObject({
       id: "home-user-display",
@@ -154,7 +154,7 @@ describe("bootstrap home user display", () => {
     });
   });
 
-  it("does not create a global label on excluded utility pages", () => {
+  it("does not create a global label on excluded utility pages and hub pages", () => {
     const appended: unknown[] = [];
     const documentLike = {
       body: {
@@ -173,6 +173,12 @@ describe("bootstrap home user display", () => {
 
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "practice" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "replay" })).toBe(false);
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "account" })).toBe(false);
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "account-hub" })).toBe(false);
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "achievements" })).toBe(false);
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "palette" })).toBe(false);
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "palette-hub" })).toBe(false);
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "modes" })).toBe(false);
     expect(appended).toHaveLength(0);
   });
 });

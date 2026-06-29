@@ -1077,6 +1077,16 @@
     return textColors;
   }
 
+  function buildFollowThemePaletteTextColors(theme, ruleset, backgroundColors) {
+    var textColors = buildDefaultPaletteTextColors(theme, ruleset, backgroundColors);
+    if (theme && theme.id === "classic" && ruleset === "pow2") {
+      for (var i = 6; i <= 10; i++) {
+        textColors[i] = "#f9f6f2";
+      }
+    }
+    return textColors;
+  }
+
   function buildDefaultPaletteBorderColors(theme, ruleset, backgroundColors) {
     var bgColors = normalizePaletteColorArray(backgroundColors, buildThemePaletteColors(theme, ruleset));
     var borderColors = [];
@@ -1149,11 +1159,15 @@
   }
 
   function createFollowThemePalette(theme) {
+    var pow2 = buildThemePaletteColors(theme, "pow2");
+    var fibonacci = buildThemePaletteColors(theme, "fibonacci");
     return {
       id: DEFAULT_TILE_PALETTE_ID,
       name: "跟随主题",
-      pow2: buildThemePaletteColors(theme, "pow2"),
-      fibonacci: buildThemePaletteColors(theme, "fibonacci"),
+      pow2: pow2,
+      fibonacci: fibonacci,
+      pow2Text: buildFollowThemePaletteTextColors(theme, "pow2", pow2),
+      fibonacciText: buildFollowThemePaletteTextColors(theme, "fibonacci", fibonacci),
       createdAt: 0,
       updatedAt: 0,
       source: "follow",

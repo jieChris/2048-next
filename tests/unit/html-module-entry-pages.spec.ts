@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -14,6 +14,7 @@ const ENTRY_PAGES: HtmlEntryExpectation[] = [
   { htmlPath: "relay_5x5.html", entryPath: "./src/entries/relay-5x5.ts" },
   { htmlPath: "modes.html", entryPath: "./src/entries/modes.ts" },
   { htmlPath: "account.html", entryPath: "./src/entries/account.ts" },
+  { htmlPath: "medal-wall.html", entryPath: "./src/entries/achievements.ts" },
   { htmlPath: "account_settings.html", entryPath: "./src/entries/account-settings.ts" },
   { htmlPath: "register.html", entryPath: "./src/entries/register.ts" },
   { htmlPath: "password.html", entryPath: "./src/entries/password.ts" },
@@ -114,9 +115,44 @@ describe("module entry html pages", () => {
     const accountHtml = readHtml("account.html");
     expect(accountHtml).toContain('id="account-nav-history"');
     expect(accountHtml).toContain('href="history.html"');
+    expect(accountHtml).not.toContain('id="account-nav-achievements"');
+    expect(accountHtml).not.toContain('href="achievements.html"');
+    expect(accountHtml).not.toContain('href="medal-wall.html"');
 
     const userHtml = readHtml("user.html");
     expect(userHtml).toContain('id="user-nav-history"');
     expect(userHtml).toContain('href="history.html"');
+  });
+
+  it("admin.html includes the achievement management mounts", () => {
+    const html = readHtml("admin.html");
+
+    [
+      'id="admin-achievement-list"',
+      'id="admin-achievement-name"',
+      'id="admin-achievement-description"',
+      'id="admin-achievement-rule-type"',
+      'id="admin-achievement-create"',
+      'id="admin-achievement-save"',
+      'id="admin-achievement-upload-icon"',
+      'id="admin-achievement-grant"',
+      'id="admin-achievement-backfill"'
+    ].forEach((fragment) => {
+      expect(html).toContain(fragment);
+    });
+  });
+
+  it("medal-wall.html exposes the centered username and medal wall", () => {
+    const html = readHtml("medal-wall.html");
+
+    expect(html).toContain('id="achievements-user-name"');
+    expect(html).toContain('class="achievements-header-user"');
+    expect(html).not.toContain('id="achievements-user-link"');
+    expect(html).toContain("成就勋章墙");
+    expect(html).toContain("已点亮和未点亮的成就会同时展示");
+  });
+
+  it("does not keep the old public achievements direct page", () => {
+    expect(existsSync(path.resolve(process.cwd(), "achievements.html"))).toBe(false);
   });
 });

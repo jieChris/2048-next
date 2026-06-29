@@ -1,8 +1,13 @@
 ﻿import { expect, test } from "@playwright/test";
 
+import { mockAcceptedBetaAccess } from "./support/beta-access";
 import { installRankedSessionForMode } from "./support/ranked-session";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockAcceptedBetaAccess(page);
+  });
+
   test("online score submit replays persisted pending payload after reload", async ({ page }) => {
     let scoreCalls = 0;
     const scoreBodies: Array<Record<string, unknown>> = [];

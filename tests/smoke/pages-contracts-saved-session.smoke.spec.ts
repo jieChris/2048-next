@@ -1,8 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { mockAcceptedBetaAccess } from "./support/beta-access";
 import { installRankedSessionForMode } from "./support/ranked-session";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockAcceptedBetaAccess(page);
+  });
+
   test("session-init payload contract holds on play startup runtime", async ({
     page
   }) => {
@@ -198,6 +203,126 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.savedBoard).toEqual(snapshot.board);
   });
 
+  test("canceling the keyboard restart dialog keeps the saved game for reload", async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      const marker = "__smoke_restart_cancel_prefetch_initialized__";
+      const modeKey = "standard_4x4_pow2_no_undo";
+      const nowSec = Math.floor(Date.now() / 1000);
+      window.localStorage.setItem("2048_auth_token_v1", "restart-cancel-auth-token");
+      window.localStorage.setItem("2048_auth_userId_v1", "42");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+      if (window.sessionStorage.getItem(marker)) return;
+      window.localStorage.clear();
+      window.name = "";
+      window.sessionStorage.setItem(marker, "1");
+      window.localStorage.setItem("2048_auth_token_v1", "restart-cancel-auth-token");
+      window.localStorage.setItem("2048_auth_userId_v1", "42");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
+      window.localStorage.setItem(
+        "ranked_session_active:v1:" + modeKey,
+        JSON.stringify({
+          mode_key: modeKey,
+          challenge_id: "restart-cancel-active",
+          seed: 119,
+          ranked_session_token: "restart-cancel-active-token",
+          issued_at: nowSec - 60,
+          exp: nowSec + 3600,
+          owner_user_id: "42"
+        })
+      );
+      window.localStorage.setItem(
+        "ranked_session_prefetch:v1:" + modeKey,
+        JSON.stringify({
+          mode_key: modeKey,
+          challenge_id: "restart-cancel-prefetch",
+          seed: 120,
+          ranked_session_token: "restart-cancel-prefetch-token",
+          issued_at: nowSec,
+          exp: nowSec + 3600,
+          owner_user_id: "42"
+        })
+      );
+    });
+
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Game response should exist").not.toBeNull();
+    expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForWindowCondition(
+      page,
+      () =>
+        Boolean((window as any).game_manager) && typeof (window as any).saveGameState === "function",
+      12_000
+    );
+
+    const beforeCancel = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const save = (window as any).saveGameState;
+      const modeKey = String(manager.modeKey || manager.mode || "standard_4x4_pow2_no_undo");
+      const boardSnapshot = () =>
+        typeof manager.getFinalBoardMatrix === "function"
+          ? manager.getFinalBoardMatrix()
+          : null;
+      const initialBoardJson = JSON.stringify(boardSnapshot());
+      for (const direction of [0, 1, 2, 3]) {
+        manager.move(direction);
+        if (JSON.stringify(boardSnapshot()) !== initialBoardJson) break;
+      }
+      save(manager, { force: true, forceFull: true });
+      const savedRaw = window.localStorage.getItem("savedGameStateByMode:v1:" + modeKey);
+      return {
+        board: boardSnapshot(),
+        score: Number(manager.score || 0),
+        savedRaw
+      };
+    });
+
+    expect(beforeCancel.savedRaw).toEqual(expect.any(String));
+
+    await page.keyboard.press("KeyR");
+    await expect(page.locator("#game-dialog-overlay.is-open")).toBeVisible();
+    await page.locator("#game-dialog-cancel").click();
+    await expect(page.locator("#game-dialog-overlay.is-open")).toBeHidden();
+
+    const afterCancel = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const modeKey = String(manager.modeKey || manager.mode || "standard_4x4_pow2_no_undo");
+      return {
+        board:
+          typeof manager.getFinalBoardMatrix === "function"
+            ? manager.getFinalBoardMatrix()
+            : null,
+        score: Number(manager.score || 0),
+        savedRaw: window.localStorage.getItem("savedGameStateByMode:v1:" + modeKey)
+      };
+    });
+
+    expect(afterCancel.board).toEqual(beforeCancel.board);
+    expect(afterCancel.score).toBe(beforeCancel.score);
+    expect(afterCancel.savedRaw).toBe(beforeCancel.savedRaw);
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+
+    const afterReload = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      return {
+        board:
+          typeof manager.getFinalBoardMatrix === "function"
+            ? manager.getFinalBoardMatrix()
+            : null,
+        score: Number(manager.score || 0)
+      };
+    });
+
+    expect(afterReload.board).toEqual(beforeCancel.board);
+    expect(afterReload.score).toBe(beforeCancel.score);
+  });
+
   test("ranked setup without a legal seed clears visible tiles and keeps movement blocked", async ({
     page
   }) => {
@@ -244,7 +369,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.tileCount).toBe(0);
   });
 
-  test("guest ranked setup without an issued seed still creates a non-submittable local board", async ({
+  test("accepted beta ranked setup without an issued seed still creates a non-submittable local board", async ({
     page
   }) => {
     await page.addInitScript(() => {
@@ -1352,13 +1477,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(initialSnapshot.score).not.toBe(424242);
     expect(initialSnapshot.board).not.toEqual(oldBoard);
 
-    const clearMarkerWritten = await page.evaluate(() => {
+    await page.evaluate(() => {
       const manager = (window as any).game_manager;
       manager.restart();
-      return !!window.localStorage.getItem(
-        "ranked_checkpoint_cleared_at:v1:user:1:standard_4x4_pow2_no_undo"
-      );
     });
+    await expect(page.locator("#game-dialog-overlay.is-open")).toBeVisible();
+    await page.locator("#game-dialog-confirm").click();
+    await expect(page.locator("#game-dialog-overlay.is-open")).toBeHidden();
+    const clearMarkerWritten = await page.evaluate(() =>
+      !!window.localStorage.getItem(
+        "ranked_checkpoint_cleared_at:v1:user:1:standard_4x4_pow2_no_undo"
+      )
+    );
     expect(clearMarkerWritten).toBe(true);
 
     const reloadResponse = await page.reload({ waitUntil: "domcontentloaded" });
@@ -1391,20 +1521,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(checkpointRequests).not.toContain("POST");
   });
 
-  test("ranked home page restores local checkpoint mirror across immediate reload without auth", async ({
+  test("ranked home page restores local checkpoint mirror across immediate reload for accepted beta user", async ({
     page
   }) => {
     await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
-      authToken: null,
-      ownerUserId: null,
+      authToken: "smoke_token",
+      ownerUserId: "42",
       seed: 414,
-      token: "local-mirror-no-auth-token"
+      token: "local-mirror-beta-auth-token"
     });
 
     await page.addInitScript(() => {
-      window.localStorage.removeItem("2048_auth_token_v1");
-      window.localStorage.removeItem("2048_auth_userId_v1");
-      window.localStorage.removeItem("2048_auth_nickname_v1");
+      window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
+      window.localStorage.setItem("2048_auth_userId_v1", "42");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
       if (!window.sessionStorage.getItem("__smoke_ranked_local_mirror_reset__")) {
         window.localStorage.removeItem("ranked_checkpoint_local_mirror:v1:standard_4x4_pow2_no_undo");
         window.sessionStorage.setItem("__smoke_ranked_local_mirror_reset__", "1");

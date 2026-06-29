@@ -68,20 +68,18 @@ test.describe("Home user display", () => {
     expect(Number(alignment.labelWidth)).toBeLessThan(Number(alignment.headingWidth) / 2);
   });
 
-  test("shows the account badge on regular direct pages", async ({ page }) => {
+  test("does not show the account badge on hub and mode-selection pages", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_userId_v1", "19");
       window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
     });
 
-    const response = await page.goto("/modes.html", { waitUntil: "domcontentloaded" });
-    expect(response, "Modes response should exist").not.toBeNull();
-    expect(response?.ok(), "Modes response should be 2xx").toBeTruthy();
-
-    const badge = page.locator("#home-user-display");
-    await expect(badge).toHaveText("Jay");
-    await expect(badge).toHaveClass(/home-user-display--global/);
-    await expect(badge).toHaveAttribute("href", /user\.html\?id=19&nickname=Jay$/);
+    for (const path of ["/account.html", "/palette.html", "/modes.html", "/medal-wall.html"]) {
+      const response = await page.goto(path, { waitUntil: "domcontentloaded" });
+      expect(response, `${path} response should exist`).not.toBeNull();
+      expect(response?.ok(), `${path} response should be 2xx`).toBeTruthy();
+      await expect(page.locator("#home-user-display")).toHaveCount(0);
+    }
   });
 
   test("aligns the account badge with the game header on play pages", async ({ page }) => {

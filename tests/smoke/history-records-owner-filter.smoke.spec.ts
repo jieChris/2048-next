@@ -1,7 +1,11 @@
-﻿import { expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+
+import { mockAcceptedBetaAccess } from "./support/beta-access";
 
 test.describe("History smoke: owner label and filter", () => {
   test("separates guest/account records and filters by owner", async ({ page }) => {
+    await mockAcceptedBetaAccess(page);
+
     const response = await page.goto("/history.html", { waitUntil: "domcontentloaded" });
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();

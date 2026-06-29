@@ -1,6 +1,7 @@
 import { createBootstrapPipeline, resolvePageDescriptor } from "../bootstrap/page-bootstrap";
 import { installGameDialog } from "../bootstrap/game-dialog";
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
+import { runBetaAccessGate, shouldRunBetaAccessGate } from "../bootstrap/access-gate";
 import { getPageManifest } from "../entries/runtime-manifest";
 import { bindStandaloneInternalNavigation } from "./standalone-navigation";
 
@@ -40,6 +41,17 @@ export async function bootstrapDirectPage(
       windowLike: window,
       storageLike: window.localStorage
     });
+  }
+
+  if (shouldRunBetaAccessGate(manifest.pageId)) {
+    const access = await runBetaAccessGate(manifest.pageId);
+    if (!access.allowed) {
+      bindStandaloneInternalNavigation();
+      return {
+        pageId: manifest.pageId,
+        architecture: "manifest-bootstrap"
+      };
+    }
   }
 
   if (typeof pageInit === "function") {

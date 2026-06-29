@@ -1,7 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { mockAcceptedBetaAccess } from "./support/beta-access";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockAcceptedBetaAccess(page);
+  });
+
   test("home guide runtime provides homepage auto-start gating", async ({ page }) => {
     const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"

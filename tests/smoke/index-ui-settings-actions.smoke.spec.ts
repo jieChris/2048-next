@@ -1,8 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { mockAcceptedBetaAccess } from "./support/beta-access";
 import { installRankedSessionForMode } from "./support/ranked-session";
 import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockAcceptedBetaAccess(page);
+  });
+
   test("index ui delegates settings modal orchestration to host runtime helper", async ({ page }) => {
     const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"

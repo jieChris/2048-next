@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { mockAcceptedBetaAccess } from "./support/beta-access";
+
 test.describe("History smoke: import", () => {
   async function confirmGameDialog(page: import("@playwright/test").Page) {
     await expect(page.locator("#game-dialog-overlay.is-open")).toBeVisible();
@@ -8,6 +10,7 @@ test.describe("History smoke: import", () => {
   }
 
   test.beforeEach(async ({ page }) => {
+    await mockAcceptedBetaAccess(page);
     await page.addInitScript(() => {
       window.confirm = () => true;
       (window as any).__historyImportMockText = "{\"records\":[]}";

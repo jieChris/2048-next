@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  AUTH_TOKEN_KEY,
   buildApiBaseCandidates,
   createJsonApiClient,
   readAuthToken
@@ -28,12 +29,13 @@ describe("services: api-client", () => {
   it("reads auth token through storage owner", () => {
     const storage = {
       getItem(key: string) {
-        return key === "2048_auth_token_v1" ? "token-1" : null;
+        return key === AUTH_TOKEN_KEY ? "token-1" : null;
       },
       setItem() {},
       removeItem() {}
     };
 
+    expect(AUTH_TOKEN_KEY).toBe("2048_auth_token_v1");
     expect(readAuthToken({ storageLike: storage })).toBe("token-1");
   });
 
@@ -61,6 +63,26 @@ describe("services: api-client", () => {
     );
     const headers = fetchLike.mock.calls[0][1].headers as Headers;
     expect(headers.get("Authorization")).toBe("Bearer token-1");
+  });
+
+  it("does not force JSON content type for FormData uploads", async () => {
+    const fetchLike = vi.fn().mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      json: () => Promise.resolve({ success: true })
+    });
+    const client = createJsonApiClient({
+      bases: ["https://api.test"],
+      fetchLike,
+      token: "token-1"
+    });
+    const body = new FormData();
+    body.append("icon", new Blob(["x"], { type: "image/png" }), "icon.png");
+
+    await client.request("/admin/achievements/a-1/icon", { method: "POST", body });
+
+    const headers = fetchLike.mock.calls[0][1].headers as Headers;
+    expect(headers.get("Content-Type")).toBeNull();
   });
 
   it("returns a stable error object when all bases fail", async () => {

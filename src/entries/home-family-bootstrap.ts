@@ -1,5 +1,6 @@
 import { createBootstrapPipeline, resolvePageDescriptor } from "../bootstrap/page-bootstrap";
 import { registerEngineFacade, type EngineFacadeWindowLike } from "../bootstrap/engine-facade-host";
+import { runBetaAccessGate, shouldRunBetaAccessGate } from "../bootstrap/access-gate";
 import { bootstrapRankedSessionForHomeFamilyPage } from "../bootstrap/ranked-session";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
@@ -252,6 +253,10 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   }
 
   bindNightBackgroundSync();
+  if (shouldRunBetaAccessGate(pageId)) {
+    const access = await runBetaAccessGate(pageId);
+    if (!access.allowed) return;
+  }
   if (typeof window !== "undefined" && typeof document !== "undefined") {
     bindHomeUserDisplay({
       documentLike: document,

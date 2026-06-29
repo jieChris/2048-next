@@ -1984,6 +1984,90 @@ describe("online leaderboard terminal submission", () => {
     expect(manager.rankedRestartPreparing).toBe(false);
   });
 
+  it("does not promote a prefetched ranked session before restart confirmation is accepted", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const oldSession = {
+      mode_key: MODE_KEY,
+      challenge_id: "ranked-old",
+      seed: 123,
+      ranked_session_token: "old-ranked-token",
+      issued_at: nowSec - 60,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    };
+    const nextSession = {
+      mode_key: MODE_KEY,
+      challenge_id: "ranked-next",
+      seed: 456,
+      ranked_session_token: "next-ranked-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    };
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(oldSession));
+    storage.setItem(PREFETCH_SESSION_KEY, JSON.stringify(nextSession));
+
+    const confirmDeferred = createDeferred<boolean>();
+    let confirmationShown = false;
+    const setup = vi.fn();
+    const originalRestart = vi.fn(function (this: Record<string, unknown>) {
+      confirmationShown = true;
+      return confirmDeferred.promise.then((confirmed) => {
+        if (!confirmed) return;
+        (this.setup as (...args: unknown[]) => void)(undefined, { disableStateRestore: true });
+      });
+    });
+    const manager = createTerminatedManager({
+      over: false,
+      rankPolicy: "ranked",
+      rankedSessionToken: "old-ranked-token",
+      challengeId: "ranked-old",
+      restart: originalRestart,
+      setup
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+    const promotePrefetchedSession = vi.fn(() => {
+      storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(nextSession));
+      storage.removeItem(PREFETCH_SESSION_KEY);
+      runtime.windowLike.GAME_CHALLENGE_CONTEXT = {
+        id: nextSession.challenge_id,
+        mode_key: MODE_KEY,
+        seed: nextSession.seed,
+        ranked_session_token: nextSession.ranked_session_token
+      };
+      return true;
+    });
+    runtime.windowLike.RankedSessionRuntime = {
+      promotePrefetchedSession,
+      startNextSession: vi.fn(async () => true),
+      ensurePrefetch: vi.fn(async () => true),
+      clearActiveSession: vi.fn()
+    };
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+
+    expect(confirmationShown).toBe(true);
+    expect(promotePrefetchedSession).not.toHaveBeenCalled();
+
+    confirmDeferred.resolve(false);
+    await flushRuntimePromises();
+
+    expect(promotePrefetchedSession).not.toHaveBeenCalled();
+    expect(runtime.windowLike.RankedSessionRuntime.startNextSession).not.toHaveBeenCalled();
+    expect(setup).not.toHaveBeenCalled();
+    expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}").ranked_session_token).toBe(
+      "old-ranked-token"
+    );
+    expect(JSON.parse(storage.getItem(PREFETCH_SESSION_KEY) || "{}").ranked_session_token).toBe(
+      "next-ranked-token"
+    );
+  });
+
   it("does not start a ranked board when on-demand ranked session creation fails", async () => {
     const storage = new MemoryStorage();
     const nowSec = Math.floor(Date.now() / 1000);

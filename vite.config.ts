@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { resolve } from "path";
 
@@ -161,6 +161,18 @@ function copyRootLegacyScriptsPlugin(): Plugin {
   };
 }
 
+function copyOpenApiContractPlugin(): Plugin {
+  return {
+    name: "copy-openapi-contract",
+    async closeBundle() {
+      const sourceDir = resolve(__dirname, "openapi");
+      const targetDir = resolve(__dirname, "dist", "openapi");
+      await rm(targetDir, { recursive: true, force: true });
+      await cp(sourceDir, targetDir, { recursive: true });
+    }
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const apiProxyTarget = (env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3000").trim();
@@ -190,7 +202,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: "./",
-    plugins: [copyRootLegacyScriptsPlugin()],
+    plugins: [copyRootLegacyScriptsPlugin(), copyOpenApiContractPlugin()],
     server: {
       proxy: apiProxy
     },
@@ -211,6 +223,9 @@ export default defineConfig(({ mode }) => {
           practice: resolve(__dirname, "Practice_board.html"),
           PKU2048: resolve(__dirname, "PKU2048.html"),
           palette: resolve(__dirname, "palette.html"),
+          achievements: resolve(__dirname, "medal-wall.html"),
+          beta_login: resolve(__dirname, "beta-login.html"),
+          beta_access: resolve(__dirname, "beta-access.html"),
           account: resolve(__dirname, "account.html"),
           admin: resolve(__dirname, "admin.html"),
           account_settings: resolve(__dirname, "account_settings.html"),
@@ -224,6 +239,7 @@ export default defineConfig(({ mode }) => {
           relay_5x5: resolve(__dirname, "relay_5x5.html"),
           favicon_preview: resolve(__dirname, "favicon-preview.html"),
           ui_preview: resolve(__dirname, "ui-preview.html"),
+          api_docs: resolve(__dirname, "api-docs.html"),
           cache_reset: resolve(__dirname, "cache-reset.html")
         }
       }

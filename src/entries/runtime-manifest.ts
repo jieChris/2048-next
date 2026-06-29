@@ -94,6 +94,11 @@ export const PAGE_MANIFESTS: readonly PageManifestEntry[] = [
     capabilities: ["account"]
   },
   {
+    pageId: "achievements",
+    htmlFile: "medal-wall.html",
+    capabilities: ["account"]
+  },
+  {
     pageId: "admin",
     htmlFile: "admin.html",
     capabilities: ["admin"]

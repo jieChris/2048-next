@@ -1,6 +1,5 @@
 # Saved State Sync Event Payload Retirement Implementation Plan
-
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:test-driven-development for behavior changes and superpowers:verification-before-completion before publishing.
+> **For agentic workers:** Use Trellis/Trellies as the default project workflow. Before implementation, debugging, review, or code modification, check for and follow `.trellis/`, `.trellis/spec/`, Trellis task files, Trellis skills, and Trellis commands when available. Do not use legacy Superpower Skill instructions. If old Superpower instructions conflict with Trellis/Trellies, Trellis/Trellies wins. Steps use checkbox syntax for tracking.
 
 **Goal:** Move cross-tab saved-state sync event parsing from the legacy panel timer runtime hotspot into the tested TypeScript saved-state sync payload runtime.
 

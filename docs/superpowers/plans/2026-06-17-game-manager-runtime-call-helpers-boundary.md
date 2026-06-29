@@ -1,6 +1,5 @@
 # Game Manager Runtime Call Helpers Boundary Implementation Plan
-
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** Use Trellis/Trellies as the default project workflow. Before implementation, debugging, review, or code modification, check for and follow `.trellis/`, `.trellis/spec/`, Trellis task files, Trellis skills, and Trellis commands when available. Do not use legacy Superpower Skill instructions. If old Superpower instructions conflict with Trellis/Trellies, Trellis/Trellies wins. Steps use checkbox syntax for tracking.
 
 **Goal:** Move the legacy game-manager runtime call and runtime state mutation globals from `js/core_game_manager_runtime_call_helpers_runtime.js` into a tested TypeScript boundary and install them before active legacy game-manager scripts load.
 

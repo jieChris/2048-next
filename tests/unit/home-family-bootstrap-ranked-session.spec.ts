@@ -29,6 +29,10 @@ describe("home family bootstrap ranked session ordering", () => {
     vi.doMock("../../src/bootstrap/home-user-display", () => ({
       bindHomeUserDisplay: vi.fn()
     }));
+    vi.doMock("../../src/bootstrap/access-gate", () => ({
+      runBetaAccessGate: vi.fn(async () => ({ allowed: true })),
+      shouldRunBetaAccessGate: vi.fn(() => true)
+    }));
     vi.doMock("../../src/core/pre-accessor-manager-forward-bindings", () => ({
       installPreAccessorManagerForwardBindingsRuntime: vi.fn()
     }));
@@ -101,6 +105,10 @@ describe("home family bootstrap ranked session ordering", () => {
     }));
     vi.doMock("../../src/bootstrap/home-user-display", () => ({
       bindHomeUserDisplay: vi.fn()
+    }));
+    vi.doMock("../../src/bootstrap/access-gate", () => ({
+      runBetaAccessGate: vi.fn(async () => ({ allowed: true })),
+      shouldRunBetaAccessGate: vi.fn(() => true)
     }));
     vi.doMock("../../src/core/pre-accessor-manager-forward-bindings", () => ({
       installPreAccessorManagerForwardBindingsRuntime

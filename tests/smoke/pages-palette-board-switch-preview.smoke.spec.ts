@@ -1,6 +1,37 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test("classic follow-theme uses white text from 128 through 2K like 4K", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
+    });
+    const response = await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Palette response should exist").not.toBeNull();
+    expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
+    await expect(page.locator("#palette-preview-board .preview-tile")).toHaveCount(16);
+
+    const colors = await page.evaluate(() => {
+      const targetLabels = ["128", "256", "512", "1K", "2K", "4K"];
+      const result: Record<string, string> = {};
+      const tiles = Array.from(document.querySelectorAll("#palette-preview-board .preview-tile"));
+      for (const label of targetLabels) {
+        const tile = tiles.find((node) => String(node.textContent || "").trim() === label);
+        result[label] = tile ? window.getComputedStyle(tile).color : "";
+      }
+      return result;
+    });
+
+    expect(colors).toEqual({
+      "128": "rgb(249, 246, 242)",
+      "256": "rgb(249, 246, 242)",
+      "512": "rgb(249, 246, 242)",
+      "1K": "rgb(249, 246, 242)",
+      "2K": "rgb(249, 246, 242)",
+      "4K": "rgb(249, 246, 242)"
+    });
+  });
+
   test("palette board switch updates preview board", async ({ page }) => {
     const response = await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
     expect(response, "Palette response should exist").not.toBeNull();

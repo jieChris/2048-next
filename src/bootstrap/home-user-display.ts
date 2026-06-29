@@ -30,8 +30,14 @@ type HomeUserDisplayNodeLike = {
 };
 
 const GLOBAL_HOME_USER_DISPLAY_EXCLUDED_PAGE_IDS = new Set([
+  "account",
+  "account-hub",
+  "achievements",
   "admin",
   "index_test",
+  "modes",
+  "palette",
+  "palette-hub",
   "pku2048",
   "practice",
   "replay",

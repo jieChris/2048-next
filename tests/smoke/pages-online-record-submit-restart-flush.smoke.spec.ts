@@ -1,8 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { mockAcceptedBetaAccess } from "./support/beta-access";
 import { installRankedSessionForMode } from "./support/ranked-session";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test.describe.configure({ mode: "serial" });
+
+  test.beforeEach(async ({ page }) => {
+    await mockAcceptedBetaAccess(page);
+  });
 
   test("ranked record submit after restart preserves the next session for leaderboard upload", async ({ page }) => {
     const modeKey = "standard_4x4_pow2_no_undo";

@@ -73,6 +73,60 @@
         <div id="admin-result" class="admin-result-wrap"></div>
       </section>
 
+      <section class="card-surface admin-card admin-beta-access-card">
+        <div class="panel-head">
+          <div>
+            <h2>内测用户管理</h2>
+            <p>将邮箱加入受邀用户行列；用户之后注册同一邮箱即可获得内测资格。</p>
+          </div>
+          <div class="admin-actions admin-panel-actions">
+            <button id="admin-beta-access-refresh" class="replay-button" type="button">刷新名单</button>
+          </div>
+        </div>
+        <div class="admin-form-grid admin-beta-access-form">
+          <label>邮箱
+            <input id="admin-beta-access-email" class="admin-input" type="email" autocomplete="off" placeholder="invitee@example.com">
+          </label>
+          <label>备注
+            <input id="admin-beta-access-note" class="admin-input" type="text" maxlength="200" placeholder="来源 / 批次 / 说明">
+          </label>
+          <label>状态
+            <select id="admin-beta-access-status" class="settings-select">
+              <option value="active">仅有效</option>
+              <option value="all">全部</option>
+              <option value="revoked">已撤销</option>
+            </select>
+          </label>
+        </div>
+        <div class="admin-actions">
+          <button id="admin-beta-access-add" class="replay-button" type="button">加入内测</button>
+        </div>
+        <p id="admin-beta-access-tip" class="admin-tip" aria-live="polite"></p>
+        <div id="admin-beta-access-list" class="admin-beta-access-list" aria-live="polite"></div>
+      </section>
+
+      <section id="admin-super-admin-card" class="card-surface admin-card admin-super-admin-card" hidden>
+        <div class="panel-head">
+          <div>
+            <h2>超级管理员管理</h2>
+            <p>仅最高权限管理员可设立或罢黜其他超级管理员；ID 0 不可被撤销。</p>
+          </div>
+          <div class="admin-actions admin-panel-actions">
+            <button id="admin-super-admin-refresh" class="replay-button" type="button">刷新列表</button>
+          </div>
+        </div>
+        <div class="admin-form-grid admin-super-admin-form">
+          <label>用户 ID
+            <input id="admin-super-admin-user-id" class="admin-input" type="number" min="1" placeholder="输入要授权的用户 ID">
+          </label>
+        </div>
+        <div class="admin-actions">
+          <button id="admin-super-admin-add" class="replay-button" type="button">设为超级管理员</button>
+        </div>
+        <p id="admin-super-admin-tip" class="admin-tip" aria-live="polite"></p>
+        <div id="admin-super-admin-list" class="admin-super-admin-list" aria-live="polite"></div>
+      </section>
+
       <section class="card-surface admin-card admin-rescue-card">
         <div class="panel-head">
           <div>
@@ -134,6 +188,159 @@
         <p id="admin-rescue-tip" class="admin-tip" aria-live="polite"></p>
         <div id="admin-rescue-history" class="admin-rescue-history" aria-live="polite"></div>
         <pre id="admin-rescue-output" class="admin-output" aria-live="polite"></pre>
+      </section>
+
+      <section class="card-surface admin-card admin-achievement-card">
+        <div class="panel-head">
+          <div>
+            <h2>成就管理</h2>
+            <p>创建成就、维护规则、上传图标，并对用户手动发放或回填历史记录。</p>
+          </div>
+          <div class="admin-actions admin-panel-actions">
+            <button id="admin-achievement-refresh" class="replay-button" type="button">刷新成就</button>
+            <button id="admin-achievement-new" class="replay-button" type="button">新建草稿</button>
+          </div>
+        </div>
+
+        <div class="admin-achievement-layout">
+          <div class="admin-achievement-list-panel">
+            <div class="admin-form-grid admin-achievement-filter-grid">
+              <label>搜索
+                <input id="admin-achievement-search" class="admin-input" type="search" placeholder="名称 / ID / 系列">
+              </label>
+              <label>状态
+                <select id="admin-achievement-status-filter" class="settings-select">
+                  <option value="all">全部</option>
+                  <option value="draft">草稿</option>
+                  <option value="active">已启用</option>
+                  <option value="archived">已归档</option>
+                </select>
+              </label>
+            </div>
+            <div id="admin-achievement-list" class="admin-achievement-list" aria-live="polite"></div>
+          </div>
+
+          <div class="admin-achievement-editor">
+            <input id="admin-achievement-id" type="hidden">
+            <div class="admin-form-grid admin-achievement-form-grid">
+              <label>名称
+                <input id="admin-achievement-name" class="admin-input" type="text" maxlength="64" placeholder="例如：首次 2048">
+              </label>
+              <label>系列 ID
+                <input id="admin-achievement-series" class="admin-input" type="text" placeholder="例如：tile-2048">
+              </label>
+              <label>等级
+                <input id="admin-achievement-level" class="admin-input" type="number" min="1" value="1">
+              </label>
+              <label>状态
+                <select id="admin-achievement-status" class="settings-select">
+                  <option value="draft">草稿</option>
+                  <option value="active">已启用</option>
+                  <option value="archived">已归档</option>
+                </select>
+              </label>
+              <label>排序
+                <input id="admin-achievement-sort" class="admin-input" type="number" value="0">
+              </label>
+              <label>图标 URL
+                <input id="admin-achievement-icon-url" class="admin-input" type="text" placeholder="/assets/...">
+              </label>
+            </div>
+
+            <label class="admin-sql-label">简介
+              <textarea id="admin-achievement-description" class="admin-textarea admin-achievement-description" maxlength="280" spellcheck="false" placeholder="说明这个成就代表什么。"></textarea>
+            </label>
+
+            <div class="admin-upload-panel admin-achievement-rule-panel">
+              <div class="panel-head admin-upload-head">
+                <div>
+                  <h3>获得规则</h3>
+                  <p>规则会在保存时整体替换。可先保存草稿，再启用。</p>
+                </div>
+              </div>
+              <div class="admin-form-grid admin-achievement-rule-grid">
+                <label>规则类型
+                  <select id="admin-achievement-rule-type" class="settings-select">
+                    <option value="max_tile_reached">首次达成方块</option>
+                    <option value="nth_max_tile_reached">第 N 次达成方块</option>
+                    <option value="event_rank">活动排名</option>
+                    <option value="manual_grant">手动发放</option>
+                  </select>
+                </label>
+                <label>方块
+                  <input id="admin-achievement-rule-tile" class="admin-input" type="number" min="2" placeholder="2048">
+                </label>
+                <label>次数
+                  <input id="admin-achievement-rule-count" class="admin-input" type="number" min="1" placeholder="200">
+                </label>
+                <label>模式
+                  <input id="admin-achievement-rule-mode" class="admin-input" type="text" placeholder="可选 mode_key">
+                </label>
+                <label>活动 ID
+                  <input id="admin-achievement-rule-event" class="admin-input" type="text" placeholder="event_2026">
+                </label>
+                <label>名次
+                  <input id="admin-achievement-rule-rank" class="admin-input" type="number" min="1" placeholder="1">
+                </label>
+              </div>
+              <div class="admin-actions">
+                <button id="admin-achievement-add-rule" class="replay-button" type="button">添加规则</button>
+              </div>
+              <div id="admin-achievement-rules" class="admin-achievement-rules" aria-live="polite"></div>
+            </div>
+
+            <div class="admin-actions">
+              <button id="admin-achievement-create" class="replay-button" type="button">创建成就</button>
+              <button id="admin-achievement-save" class="replay-button" type="button">保存修改</button>
+              <label class="admin-file-action">
+                <span class="replay-button">选择图标</span>
+                <input id="admin-achievement-icon-file" type="file" accept="image/*">
+              </label>
+              <button id="admin-achievement-upload-icon" class="replay-button" type="button">上传图标</button>
+            </div>
+
+            <div class="admin-achievement-ops">
+              <div class="admin-upload-panel">
+                <h3>手动发放</h3>
+                <div class="admin-form-grid admin-achievement-op-grid">
+                  <label>用户 ID
+                    <input id="admin-achievement-grant-user" class="admin-input" type="number" min="1">
+                  </label>
+                  <label>成就 ID
+                    <input id="admin-achievement-grant-id" class="admin-input" type="text">
+                  </label>
+                  <label>来源
+                    <select id="admin-achievement-grant-source" class="settings-select">
+                      <option value="manual">手动</option>
+                      <option value="event">活动</option>
+                      <option value="backfill">回填</option>
+                    </select>
+                  </label>
+                </div>
+                <label class="admin-sql-label">备注
+                  <textarea id="admin-achievement-grant-note" class="admin-textarea admin-achievement-note" spellcheck="false"></textarea>
+                </label>
+                <button id="admin-achievement-grant" class="replay-button" type="button">发放成就</button>
+              </div>
+
+              <div class="admin-upload-panel">
+                <h3>历史回填</h3>
+                <div class="admin-form-grid admin-achievement-op-grid">
+                  <label>用户 ID（可选）
+                    <input id="admin-achievement-backfill-user" class="admin-input" type="number" min="1">
+                  </label>
+                  <label>成就 ID（可选）
+                    <input id="admin-achievement-backfill-id" class="admin-input" type="text">
+                  </label>
+                </div>
+                <button id="admin-achievement-backfill" class="replay-button" type="button">执行回填</button>
+              </div>
+            </div>
+
+            <p id="admin-achievement-tip" class="admin-tip" aria-live="polite"></p>
+            <pre id="admin-achievement-output" class="admin-output" aria-live="polite"></pre>
+          </div>
+        </div>
       </section>
     </section>
   </main>

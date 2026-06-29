@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { bootstrapDirectPage } from "../../src/app/bootstrap-direct-page";
+import { runBetaAccessGate } from "../../src/bootstrap/access-gate";
+
+vi.mock("../../src/bootstrap/access-gate", () => ({
+  runBetaAccessGate: vi.fn(async () => ({ allowed: true })),
+  shouldRunBetaAccessGate: vi.fn((pageId: string) => !["admin", "beta-login", "beta-access", "cache-reset"].includes(pageId))
+}));
 
 const originalDocument = globalThis.document;
 const originalWindow = globalThis.window;
@@ -18,6 +24,7 @@ function createDocumentLike() {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.mocked(runBetaAccessGate).mockResolvedValue({ allowed: true });
   if (originalDocument === undefined) {
     delete (globalThis as { document?: Document }).document;
   } else {
@@ -106,7 +113,7 @@ describe("app: bootstrap-direct-page", () => {
       writable: true
     });
 
-    await bootstrapDirectPage("modes");
+    await bootstrapDirectPage("history");
 
     expect(appended).toHaveLength(1);
     expect(appended[0]).toMatchObject({
@@ -119,5 +126,25 @@ describe("app: bootstrap-direct-page", () => {
 
   it("rejects unknown page manifests", async () => {
     await expect(bootstrapDirectPage("not-a-page")).rejects.toThrow(/Unknown direct page manifest/);
+  });
+
+  it("stops direct page initialization when beta access gate blocks the page", async () => {
+    vi.mocked(runBetaAccessGate).mockResolvedValueOnce({ allowed: false });
+    const init = vi.fn();
+
+    const result = await bootstrapDirectPage("history", init);
+
+    expect(runBetaAccessGate).toHaveBeenCalledWith("history");
+    expect(init).not.toHaveBeenCalled();
+    expect(result).toEqual({ pageId: "history", architecture: "manifest-bootstrap" });
+  });
+
+  it("runs beta access gate for account direct page", async () => {
+    const init = vi.fn();
+
+    await bootstrapDirectPage("account", init);
+
+    expect(runBetaAccessGate).toHaveBeenCalledWith("account");
+    expect(init).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>2048 NEXT 内测准入</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
+  <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260606-fillframe">
+  <link href="style/beta_access.css?v=20260627-01" rel="stylesheet" type="text/css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
+</head>
+<body class="beta-access-body" data-page="beta-access">
+  <main class="beta-entry-shell beta-notice-shell">
+    <section class="beta-entry-panel beta-notice-panel" aria-labelledby="beta-access-title">
+      <div class="beta-brand-lockup">
+        <span class="beta-mark">2048</span>
+        <span class="beta-phase">Closed Beta</span>
+      </div>
+      <h1 id="beta-access-title">内测准入</h1>
+      <p id="beta-access-summary" class="beta-copy">正在检查当前账号的内测状态。</p>
+
+      <section id="beta-blocked-section" class="beta-state-section" hidden>
+        <h2>当前账号暂未获得内测资格</h2>
+        <p id="beta-blocked-copy">请联系管理员将你的邮箱加入内测名单后再访问。</p>
+        <button id="beta-switch-account" class="beta-primary-button" type="button">切换账号</button>
+      </section>
+
+      <section id="beta-notice-section" class="beta-state-section" hidden>
+        <h2>内测须知与用户协议（Beta Notice）</h2>
+        <div class="beta-notice-copy">
+          <p>欢迎体验本网站内测版本。在继续访问或使用本服务之前，请您务必阅读并同意以下内容。</p>
+          <h3>1. 内测版本说明</h3>
+          <p>本网站当前处于内部测试（Beta）阶段，并非最终正式版本。所有功能、数值、规则及界面均可能在不通知的情况下进行调整、重构或删除。</p>
+          <h3>2. 数据与进度风险</h3>
+          <p>在内测期间，您的游戏数据、成绩、排名、进度等可能随时被重置或清除；内测数据不会继承到正式版本；因版本更新、Bug 修复、服务器维护等原因，数据丢失可能不可恢复。</p>
+          <h3>3. 稳定性与 Bug 说明</h3>
+          <p>内测版本可能存在功能异常或错误、页面卡顿、闪退或加载失败、数据不同步或显示异常、游戏逻辑错误导致结果不准确，极端情况下可能导致进度丢失或回档。</p>
+          <h3>4. 使用风险自担</h3>
+          <p>继续使用本内测版本，即表示您理解并接受可能存在的程序缺陷与数据风险，因使用内测版本导致的任何数据损失或体验问题，以及版本变更带来的功能调整或中断。</p>
+          <h3>5. 正式版本说明</h3>
+          <p>未来正式版本发布后，将尽可能提供更稳定的体验，但当前内测内容不代表最终品质或最终规则。</p>
+          <h3>6. 反馈与支持</h3>
+          <p>如果您在使用过程中遇到问题或有建议，欢迎通过内测反馈群 / 社区、GitHub Issue（如适用）或网站内反馈入口反馈。</p>
+          <h3>7. 同意与继续访问</h3>
+          <p>若您选择继续访问或使用本网站，即表示您已阅读并理解本内测须知，同意承担内测期间可能存在的风险，并同意参与本次内测体验。如您不同意以上内容，请立即关闭页面。</p>
+        </div>
+        <label class="beta-agreement">
+          <input id="beta-notice-check" type="checkbox">
+          <span>我已阅读并同意内测须知，理解内测期间可能存在的数据与稳定性风险。</span>
+        </label>
+        <div class="beta-action-row">
+          <button id="beta-notice-logout" class="beta-secondary-button" type="button">不同意，退出登录</button>
+          <button id="beta-notice-accept" class="beta-primary-button" type="button" disabled>同意并继续</button>
+        </div>
+      </section>
+
+      <p id="beta-access-tip" class="beta-tip" aria-live="polite"></p>
+    </section>
+  </main>
+  <script type="module" src="./src/entries/beta-access.ts"></script>
+</body>
+</html>

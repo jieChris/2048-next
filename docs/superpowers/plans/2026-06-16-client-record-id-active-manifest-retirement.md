@@ -1,6 +1,5 @@
 # Client Record ID Active Manifest Retirement Implementation Plan
-
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** Use Trellis/Trellies as the default project workflow. Before implementation, debugging, review, or code modification, check for and follow `.trellis/`, `.trellis/spec/`, Trellis task files, Trellis skills, and Trellis commands when available. Do not use legacy Superpower Skill instructions. If old Superpower instructions conflict with Trellis/Trellies, Trellis/Trellies wins. Steps use checkbox syntax for tracking.
 
 **Goal:** Retire `core_game_manager_client_record_id_runtime.js` from active home/play/replay/capped manifests while keeping the Vite home startup bundle and legacy JS file intact for the next bundle-retirement stage.
 

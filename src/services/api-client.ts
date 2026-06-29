@@ -31,7 +31,7 @@ export interface JsonApiClient {
 }
 
 const DEFAULT_REMOTE_API_BASE = "https://2048next.cn/api";
-const AUTH_TOKEN_KEY = "2048_auth_token_v1";
+export const AUTH_TOKEN_KEY = "2048_auth_token_v1";
 
 function normalizeBase(value: string): string {
   return value.replace(/\/+$/u, "");
@@ -39,6 +39,14 @@ function normalizeBase(value: string): string {
 
 function toText(value: unknown): string {
   return value == null ? "" : String(value);
+}
+
+function shouldUseJsonContentType(body: unknown): boolean {
+  if (body === undefined || body === null) return false;
+  if (typeof FormData !== "undefined" && body instanceof FormData) return false;
+  if (typeof URLSearchParams !== "undefined" && body instanceof URLSearchParams) return false;
+  if (typeof Blob !== "undefined" && body instanceof Blob) return false;
+  return true;
 }
 
 export function buildApiBaseCandidates(options: BuildApiBaseCandidatesOptions = {}): string[] {
@@ -70,7 +78,7 @@ export function createJsonApiClient(options: JsonApiClientOptions): JsonApiClien
         try {
           const headers = new Headers(requestOptions.headers || {});
           if (options.token) headers.set("Authorization", "Bearer " + options.token);
-          if (requestOptions.body !== undefined && !headers.has("Content-Type")) {
+          if (shouldUseJsonContentType(requestOptions.body) && !headers.has("Content-Type")) {
             headers.set("Content-Type", "application/json");
           }
           const response = await fetchLike(base + path, { ...requestOptions, headers });

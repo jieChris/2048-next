@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { mockAcceptedBetaAccess } from "./support/beta-access";
+
 interface SmokePage {
   name: string;
   path: string;
@@ -28,6 +30,8 @@ test.describe("Runtime contract smoke", () => {
     test(`loads ${entry.name} without runtime errors`, async ({ page }) => {
       const pageErrors: string[] = [];
       const consoleErrors: string[] = [];
+
+      await mockAcceptedBetaAccess(page);
 
       await page.route("**/api/leaderboard**", async (route) => {
         await route.fulfill({

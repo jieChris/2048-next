@@ -1,0 +1,1852 @@
+openapi: 3.1.0
+info:
+  title: 2048 Next API
+  version: 1.0.0
+  summary: Versioned API contract for 2048 Next.
+  description: >
+    Source-controlled API contract for the current game, account, leaderboard,
+    ranked session, rescue, admin, and planned achievement endpoints.
+servers:
+  - url: /api
+    description: Same-origin API proxy.
+  - url: https://2048next.cn/api
+    description: Production API.
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+  - name: Users
+  - name: Leaderboard
+  - name: Records
+  - name: Ranked
+  - name: Relay
+  - name: Rescue
+  - name: Admin
+  - name: Achievements
+paths:
+  /register:
+    post:
+      tags: [Auth]
+      summary: Register a new user with nickname and credentials.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: Registration result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      token:
+                        type: string
+                      user:
+                        $ref: "#/components/schemas/User"
+
+  /register/check-nickname:
+    get:
+      tags: [Auth]
+      summary: Check nickname availability.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/NicknameQuery"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /register/start:
+    post:
+      tags: [Auth]
+      summary: Start an email verification registration flow.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterStartRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /register/verify:
+    post:
+      tags: [Auth]
+      summary: Complete registration with verification code.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterVerifyRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/AuthResponse"
+
+  /login:
+    post:
+      tags: [Auth]
+      summary: Login with account credentials.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/AuthResponse"
+
+  /login/captcha:
+    post:
+      tags: [Auth]
+      summary: Request a login captcha when required.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                nickname:
+                  type: string
+                email:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /password/change:
+    post:
+      tags: [Auth]
+      summary: Change password for the authenticated user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordChangeRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /password/reset/start:
+    post:
+      tags: [Auth]
+      summary: Start password reset flow.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /password/reset/verify:
+    post:
+      tags: [Auth]
+      summary: Complete password reset with verification code.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email, code, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                password:
+                  type: string
+                  minLength: 6
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /me:
+    get:
+      tags: [Users]
+      summary: Legacy alias for the authenticated user profile.
+      deprecated: true
+      responses:
+        "200":
+          $ref: "#/components/responses/UserResponse"
+
+  /user/me:
+    get:
+      tags: [Users]
+      summary: Get the authenticated user profile.
+      responses:
+        "200":
+          $ref: "#/components/responses/UserResponse"
+
+  /user/me/nickname:
+    post:
+      tags: [Users]
+      summary: Update the authenticated user's nickname.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [nickname]
+              properties:
+                nickname:
+                  type: string
+                  minLength: 1
+                  maxLength: 32
+      responses:
+        "200":
+          $ref: "#/components/responses/UserResponse"
+
+  /user/nickname:
+    post:
+      tags: [Users]
+      summary: Legacy alias for updating the authenticated user's nickname.
+      deprecated: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [nickname]
+              properties:
+                nickname:
+                  type: string
+                  minLength: 1
+                  maxLength: 32
+      responses:
+        "200":
+          $ref: "#/components/responses/UserResponse"
+
+  /user/{userId}:
+    get:
+      tags: [Users]
+      summary: Get a public user profile.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      responses:
+        "200":
+          $ref: "#/components/responses/UserResponse"
+
+  /user/{userId}/records:
+    get:
+      tags: [Records]
+      summary: List user records.
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+        - $ref: "#/components/parameters/PageQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+        - name: mode
+          in: query
+          schema:
+            type: string
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [time, score]
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+        - name: visibility
+          in: query
+          schema:
+            type: string
+            enum: [active, deleted, all]
+      responses:
+        "200":
+          description: User records.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      records:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/GameRecord"
+
+  /leaderboard:
+    get:
+      tags: [Leaderboard]
+      summary: Read leaderboard rows.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/LimitQuery"
+        - $ref: "#/components/parameters/PageQuery"
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [all, daily, weekly, monthly]
+        - name: mode
+          in: query
+          schema:
+            type: string
+        - name: mode_key
+          in: query
+          schema:
+            type: string
+        - name: metric
+          in: query
+          schema:
+            type: string
+            enum: [score, time]
+      responses:
+        "200":
+          description: Leaderboard result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/LeaderboardEntry"
+
+  /score:
+    post:
+      tags: [Records]
+      summary: Legacy score submission endpoint.
+      deprecated: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScoreSubmitRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /records:
+    post:
+      tags: [Records]
+      summary: Submit a completed game record.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameRecordSubmitRequest"
+      responses:
+        "200":
+          description: Record submission result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      record:
+                        $ref: "#/components/schemas/GameRecord"
+                      achievements:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/UserAchievement"
+
+  /records/{recordId}:
+    delete:
+      tags: [Records]
+      summary: Soft-delete a record owned by the authenticated user.
+      parameters:
+        - $ref: "#/components/parameters/RecordIdPath"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /records/{recordId}/restore:
+    post:
+      tags: [Records]
+      summary: Restore a soft-deleted record.
+      parameters:
+        - $ref: "#/components/parameters/RecordIdPath"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /records/{recordId}/replay:
+    get:
+      tags: [Records]
+      summary: Get or download a record replay.
+      parameters:
+        - $ref: "#/components/parameters/RecordIdPath"
+        - name: download
+          in: query
+          schema:
+            type: string
+            enum: [signed_url]
+      responses:
+        "200":
+          description: Replay payload or signed URL.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      replay:
+                        type: string
+                      signed_url:
+                        type: string
+
+  /replay/version:
+    get:
+      tags: [Records]
+      summary: Read replay API capability metadata.
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /ranked-session/start:
+    post:
+      tags: [Ranked]
+      summary: Issue a ranked session seed and token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RankedSessionStartRequest"
+      responses:
+        "200":
+          description: Ranked session.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RankedSession"
+
+  /ranked-checkpoint:
+    get:
+      tags: [Ranked]
+      summary: Read the authenticated user's ranked checkpoint for a mode.
+      parameters:
+        - name: mode_key
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ranked checkpoint.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RankedCheckpoint"
+    put:
+      tags: [Ranked]
+      summary: Persist ranked checkpoint state.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RankedCheckpoint"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+    delete:
+      tags: [Ranked]
+      summary: Clear ranked checkpoint state for a mode.
+      parameters:
+        - name: mode_key
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /relay/cases:
+    get:
+      tags: [Relay]
+      summary: List relay cases for relay mode clients.
+      security: []
+      parameters:
+        - name: board
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Relay case list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/RelayCase"
+
+  /relay/cases/{caseId}/snapshot:
+    get:
+      tags: [Relay]
+      summary: Read the latest relay case board snapshot.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/RelayCaseIdPath"
+      responses:
+        "200":
+          description: Relay case snapshot.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RelayCase"
+
+  /relay/cases/{caseId}/replay:
+    get:
+      tags: [Relay]
+      summary: Read the replay payload for a relay case.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/RelayCaseIdPath"
+      responses:
+        "200":
+          description: Relay case replay payload.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      replay:
+                        type: string
+                      replay_string:
+                        type: string
+                      data:
+                        type: object
+                        additionalProperties: true
+
+  /relay/cases/{caseId}/create:
+    post:
+      tags: [Relay]
+      summary: Create or initialize a relay case shell.
+      parameters:
+        - $ref: "#/components/parameters/RelayCaseIdPath"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelayCaseActionRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /relay/cases/{caseId}/delete:
+    post:
+      tags: [Relay]
+      summary: Delete a relay case.
+      parameters:
+        - $ref: "#/components/parameters/RelayCaseIdPath"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /relay/cases/{caseId}/claim:
+    post:
+      tags: [Relay]
+      summary: Claim a relay case for the current player.
+      parameters:
+        - $ref: "#/components/parameters/RelayCaseIdPath"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelayCaseActionRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /relay/cases/{caseId}/request-claim:
+    post:
+      tags: [Relay]
+      summary: Request permission to claim a relay case.
+      parameters:
+        - $ref: "#/components/parameters/RelayCaseIdPath"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelayCaseActionRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /relay/cases/{caseId}/submit:
+    post:
+      tags: [Relay]
+      summary: Submit progress for a relay case.
+      parameters:
+        - $ref: "#/components/parameters/RelayCaseIdPath"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelayCaseActionRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /relay/cases/{caseId}/designate-target:
+    post:
+      tags: [Relay]
+      summary: Designate the next target player for a relay case.
+      parameters:
+        - $ref: "#/components/parameters/RelayCaseIdPath"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelayCaseActionRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /relay/cases/{caseId}/handoff:
+    post:
+      tags: [Relay]
+      summary: Hand off a relay case to the next player.
+      parameters:
+        - $ref: "#/components/parameters/RelayCaseIdPath"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelayCaseActionRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /stone-2k/runs:
+    post:
+      tags: [Records]
+      summary: Submit Stone 2K monitor run data.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /rescue-offers/active:
+    get:
+      tags: [Rescue]
+      summary: Read an active rescue offer for the authenticated user and mode.
+      parameters:
+        - name: mode_key
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Active rescue offer.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RescueOffer"
+
+  /rescue-offers/{offerId}/accept:
+    post:
+      tags: [Rescue]
+      summary: Accept a rescue offer.
+      parameters:
+        - $ref: "#/components/parameters/OfferIdPath"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /rescue-offers/{offerId}/reject:
+    post:
+      tags: [Rescue]
+      summary: Reject a rescue offer.
+      parameters:
+        - $ref: "#/components/parameters/OfferIdPath"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /rescue-offers/{offerId}/consume:
+    post:
+      tags: [Rescue]
+      summary: Mark a rescue offer as consumed by the game client.
+      parameters:
+        - $ref: "#/components/parameters/OfferIdPath"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /admin/me:
+    get:
+      tags: [Admin]
+      summary: Check administrator permission.
+      responses:
+        "200":
+          description: Admin permission state.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      admin:
+                        type: boolean
+                      super_admin:
+                        type: boolean
+                      user:
+                        $ref: "#/components/schemas/User"
+
+  /admin/tables:
+    get:
+      tags: [Admin]
+      summary: List inspectable database tables.
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /admin/table/{tableName}:
+    get:
+      tags: [Admin]
+      summary: Read rows from an admin-visible table.
+      parameters:
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/PageQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /admin/query:
+    post:
+      tags: [Admin]
+      summary: Execute an admin SQL query.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [sql]
+              properties:
+                sql:
+                  type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /admin/rescue-offers:
+    get:
+      tags: [Admin, Rescue]
+      summary: List rescue offers.
+      parameters:
+        - name: user_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Rescue offer list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/RescueOffer"
+    post:
+      tags: [Admin, Rescue]
+      summary: Create a rescue offer for a user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminRescueOfferCreateRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /admin/rescue-offers/from-replay:
+    post:
+      tags: [Admin, Rescue]
+      summary: Create a rescue offer by parsing a replay string.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [target_user, mode_key, replay_string]
+              properties:
+                target_user:
+                  type: string
+                mode_key:
+                  type: string
+                replay_string:
+                  type: string
+                expires_in_hours:
+                  type: integer
+                  minimum: 1
+                reason:
+                  type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /achievements:
+    get:
+      tags: [Achievements]
+      summary: List public achievement definitions.
+      security: []
+      responses:
+        "200":
+          description: Achievement catalog.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Achievement"
+
+  /user/me/achievements:
+    get:
+      tags: [Achievements, Users]
+      summary: List achievements earned by the authenticated user.
+      responses:
+        "200":
+          description: User achievements.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/UserAchievement"
+
+  /user/{userId}/achievements:
+    get:
+      tags: [Achievements, Users]
+      summary: List public achievements earned by a user.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      responses:
+        "200":
+          description: Public user achievements.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/UserAchievement"
+
+  /user/me/achievement-showcase:
+    get:
+      tags: [Achievements, Users]
+      summary: Read the authenticated user's showcase achievements.
+      responses:
+        "200":
+          description: Showcase achievements.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AchievementShowcase"
+    put:
+      tags: [Achievements, Users]
+      summary: Set up to three showcase achievements.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AchievementShowcaseUpdateRequest"
+      responses:
+        "200":
+          description: Updated showcase achievements.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AchievementShowcase"
+
+  /admin/achievements:
+    get:
+      tags: [Admin, Achievements]
+      summary: List achievement definitions for super administrators.
+      responses:
+        "200":
+          description: Admin achievement catalog.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Achievement"
+    post:
+      tags: [Admin, Achievements]
+      summary: Create an achievement definition.
+      description: Requires super administrator permission.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AchievementCreateRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/AchievementResponse"
+
+  /admin/achievements/{achievementId}:
+    patch:
+      tags: [Admin, Achievements]
+      summary: Update an achievement definition.
+      description: Requires super administrator permission.
+      parameters:
+        - $ref: "#/components/parameters/AchievementIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AchievementUpdateRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/AchievementResponse"
+
+  /admin/achievements/{achievementId}/icon:
+    post:
+      tags: [Admin, Achievements]
+      summary: Upload an achievement icon.
+      description: Requires super administrator permission.
+      parameters:
+        - $ref: "#/components/parameters/AchievementIdPath"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [icon]
+              properties:
+                icon:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          $ref: "#/components/responses/AchievementResponse"
+
+  /admin/achievements/{achievementId}/rules:
+    post:
+      tags: [Admin, Achievements]
+      summary: Replace achievement unlock rules.
+      description: Requires super administrator permission.
+      parameters:
+        - $ref: "#/components/parameters/AchievementIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [rules]
+              properties:
+                rules:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/AchievementRule"
+      responses:
+        "200":
+          $ref: "#/components/responses/AchievementResponse"
+
+  /admin/achievements/grant:
+    post:
+      tags: [Admin, Achievements]
+      summary: Manually grant an achievement to a user.
+      description: Requires super administrator permission.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AchievementGrantRequest"
+      responses:
+        "200":
+          description: Granted user achievement.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/UserAchievement"
+
+  /admin/achievements/backfill:
+    post:
+      tags: [Admin, Achievements]
+      summary: Recalculate achievements from existing verified records.
+      description: Requires super administrator permission and must be idempotent.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                user_id:
+                  type: integer
+                  minimum: 1
+                achievement_id:
+                  type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserIdPath:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    RecordIdPath:
+      name: recordId
+      in: path
+      required: true
+      schema:
+        type: string
+    OfferIdPath:
+      name: offerId
+      in: path
+      required: true
+      schema:
+        type: string
+    AchievementIdPath:
+      name: achievementId
+      in: path
+      required: true
+      schema:
+        type: string
+    RelayCaseIdPath:
+      name: caseId
+      in: path
+      required: true
+      schema:
+        type: string
+    PageQuery:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitQuery:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 10
+    NicknameQuery:
+      name: nickname
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 32
+
+  responses:
+    ApiEnvelopeResponse:
+      description: Generic API envelope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiEnvelope"
+    AuthResponse:
+      description: Authenticated user and token.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiEnvelope"
+              - type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/User"
+    UserResponse:
+      description: User profile result.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiEnvelope"
+              - type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+                  data:
+                    $ref: "#/components/schemas/User"
+    AchievementResponse:
+      description: Achievement definition result.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiEnvelope"
+              - type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Achievement"
+
+  schemas:
+    ApiEnvelope:
+      type: object
+      additionalProperties: true
+      properties:
+        success:
+          type: boolean
+        error:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+
+    User:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        nickname:
+          type: string
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        admin:
+          type: boolean
+        super_admin:
+          type: boolean
+
+    RegisterRequest:
+      type: object
+      additionalProperties: true
+      required: [nickname, password]
+      properties:
+        nickname:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+
+    RegisterStartRequest:
+      type: object
+      additionalProperties: false
+      required: [nickname, email, password]
+      properties:
+        nickname:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+
+    RegisterVerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [nickname, email, password, code]
+      properties:
+        nickname:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        code:
+          type: string
+
+    LoginRequest:
+      type: object
+      additionalProperties: true
+      required: [password]
+      properties:
+        nickname:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        captcha:
+          type: string
+
+    PasswordChangeRequest:
+      type: object
+      additionalProperties: false
+      required: [old_password, new_password]
+      properties:
+        old_password:
+          type: string
+        new_password:
+          type: string
+          minLength: 6
+
+    LeaderboardEntry:
+      type: object
+      additionalProperties: true
+      properties:
+        rank:
+          type: integer
+        user_id:
+          type: integer
+        nickname:
+          type: string
+        score:
+          type: integer
+        duration_ms:
+          type: integer
+        mode:
+          type: string
+        mode_key:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+
+    ScoreSubmitRequest:
+      type: object
+      additionalProperties: true
+      required: [score]
+      properties:
+        score:
+          type: integer
+          minimum: 0
+        mode:
+          type: string
+        mode_key:
+          type: string
+
+    GameRecord:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        user_id:
+          type: integer
+        nickname:
+          type: string
+        score:
+          type: integer
+        duration_ms:
+          type: integer
+        mode:
+          type: string
+        mode_key:
+          type: string
+        mode_bucket:
+          type: string
+        max_tile:
+          type: integer
+        replay:
+          type: string
+        replay_url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+
+    GameRecordSubmitRequest:
+      type: object
+      additionalProperties: true
+      required: [score, mode_key]
+      properties:
+        client_record_id:
+          type: string
+        score:
+          type: integer
+          minimum: 0
+        duration_ms:
+          type: integer
+          minimum: 0
+        mode:
+          type: string
+        mode_key:
+          type: string
+        mode_bucket:
+          type: string
+        max_tile:
+          type: integer
+          minimum: 0
+        replay:
+          type: string
+        replay_string:
+          type: string
+        session_replay_v1:
+          type: object
+          additionalProperties: true
+        ranked_session_token:
+          type: string
+        challenge_id:
+          type: string
+        rescue_id:
+          type: string
+        admin_rescue:
+          type: boolean
+
+    RankedSessionStartRequest:
+      type: object
+      additionalProperties: true
+      required: [mode_key]
+      properties:
+        mode_key:
+          type: string
+        mode:
+          type: string
+        mode_bucket:
+          type: string
+        board_width:
+          type: integer
+        board_height:
+          type: integer
+        ruleset:
+          type: string
+
+    RankedSession:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        challenge_id:
+          type: string
+        seed:
+          type: string
+        ranked_session_token:
+          type: string
+        mode_key:
+          type: string
+        issued_at:
+          type: string
+          format: date-time
+
+    RankedCheckpoint:
+      type: object
+      additionalProperties: true
+      required: [mode_key]
+      properties:
+        mode_key:
+          type: string
+        board:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+        score:
+          type: integer
+        duration_ms:
+          type: integer
+        state:
+          type: object
+          additionalProperties: true
+        ranked_session_token:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+
+    RescueOffer:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        user_id:
+          type: integer
+        target_nickname:
+          type: string
+        mode_key:
+          type: string
+        mode_bucket:
+          type: string
+        board:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+        score:
+          type: integer
+        duration_ms:
+          type: integer
+        status:
+          type: string
+        game_progress_status:
+          type: string
+        reason:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+
+    AdminRescueOfferCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [user_id, mode_key, mode_bucket, board, score, duration_ms]
+      properties:
+        user_id:
+          type: integer
+          minimum: 1
+        mode_key:
+          type: string
+        mode_bucket:
+          type: string
+        board:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+        score:
+          type: integer
+          minimum: 0
+        duration_ms:
+          type: integer
+          minimum: 0
+        expires_in_hours:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+
+    RelayCase:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        case_id:
+          type: string
+        board:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+        board_size:
+          type: string
+        status:
+          type: string
+        current_user_id:
+          type: integer
+        current_nickname:
+          type: string
+        target_user_id:
+          type: integer
+        target_nickname:
+          type: string
+        score:
+          type: integer
+        duration_ms:
+          type: integer
+        replay:
+          type: string
+        replay_string:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+
+    RelayCaseActionRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        user_id:
+          type: integer
+          minimum: 1
+        nickname:
+          type: string
+        target_user_id:
+          type: integer
+          minimum: 1
+        target_nickname:
+          type: string
+        board:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+        score:
+          type: integer
+          minimum: 0
+        duration_ms:
+          type: integer
+          minimum: 0
+        replay:
+          type: string
+        replay_string:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+
+    Achievement:
+      type: object
+      additionalProperties: false
+      required: [id, name, description, icon_url, status]
+      properties:
+        id:
+          type: string
+        series_id:
+          type: string
+        level:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        description:
+          type: string
+          maxLength: 280
+        name_i18n:
+          $ref: "#/components/schemas/LocalizedText"
+        description_i18n:
+          $ref: "#/components/schemas/LocalizedText"
+        icon_url:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, archived]
+        sort_order:
+          type: integer
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/AchievementRule"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AchievementRule:
+      type: object
+      additionalProperties: false
+      required: [type, params]
+      properties:
+        type:
+          type: string
+          enum:
+            - max_tile_reached
+            - nth_max_tile_reached
+            - max_tile_within_duration
+            - event_rank
+            - manual_grant
+        params:
+          type: object
+          additionalProperties: true
+          properties:
+            tile:
+              type: integer
+            count:
+              type: integer
+            duration_ms:
+              type: integer
+            mode_key:
+              type: string
+            event_id:
+              type: string
+            rank:
+              type: integer
+
+    LocalizedText:
+      type: object
+      additionalProperties:
+        type: string
+
+    UserAchievement:
+      type: object
+      additionalProperties: false
+      required: [achievement, earned_at]
+      properties:
+        achievement:
+          $ref: "#/components/schemas/Achievement"
+        earned_at:
+          type: string
+          format: date-time
+        source:
+          type: string
+          enum: [record, event, manual, backfill]
+        record_id:
+          type: string
+        event_id:
+          type: string
+
+    AchievementShowcase:
+      type: object
+      additionalProperties: false
+      required: [achievements]
+      properties:
+        achievements:
+          type: array
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/UserAchievement"
+
+    AchievementShowcaseUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [achievement_ids]
+      properties:
+        achievement_ids:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+
+    AchievementCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [name, description]
+      properties:
+        series_id:
+          type: string
+        level:
+          type: integer
+          minimum: 1
+          default: 1
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        description:
+          type: string
+          maxLength: 280
+        name_i18n:
+          $ref: "#/components/schemas/LocalizedText"
+        description_i18n:
+          $ref: "#/components/schemas/LocalizedText"
+        icon_url:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, archived]
+          default: draft
+        sort_order:
+          type: integer
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/AchievementRule"
+
+    AchievementUpdateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        series_id:
+          type: string
+        level:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        description:
+          type: string
+          maxLength: 280
+        name_i18n:
+          $ref: "#/components/schemas/LocalizedText"
+        description_i18n:
+          $ref: "#/components/schemas/LocalizedText"
+        icon_url:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, archived]
+        sort_order:
+          type: integer
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/AchievementRule"
+
+    AchievementGrantRequest:
+      type: object
+      additionalProperties: false
+      required: [user_id, achievement_id]
+      properties:
+        user_id:
+          type: integer
+          minimum: 1
+        achievement_id:
+          type: string
+        source:
+          type: string
+          enum: [manual, event, backfill]
+          default: manual
+        record_id:
+          type: string
+        event_id:
+          type: string
+        note:
+          type: string
